@@ -47,7 +47,7 @@ class PasswordUpdate(BaseModel):
 async def reset_password(body: PasswordUpdate, authorization: str = Header(...)):
     token = authorization.removeprefix("Bearer ").strip()
     if not token:
-        raise HTTPException(status_code=401, detail="Geen geldig token")
+        raise HTTPException(status_code=401, detail="Invalid token")
     db = get_db()
     try:
         db.auth.set_session(token, "")
