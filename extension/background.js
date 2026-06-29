@@ -294,7 +294,8 @@ async function checkSoldListings() {
   for (const [platform, soldUrl] of Object.entries(soldUrls)) {
     try {
       // Fetch active listings for this platform from backend
-      const resp = await fetch(`${serverUrl}/api/listings/?platform=${platform}&status=active`).catch(() => null);
+      const authHeaders = await getAuthHeaders();
+      const resp = await fetch(`${serverUrl}/api/listings/?platform=${platform}&status=active`, { headers: authHeaders }).catch(() => null);
       if (!resp?.ok) continue;
       const allListings = await resp.json();
       const active = allListings.filter(l => l.platform === platform && l.status === "active" && l.platform_listing_id);
