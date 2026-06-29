@@ -1251,7 +1251,7 @@ async function doMarkActive(itemId) {
     ));
     document.getElementById('modal-mark-active')?.remove();
     await loadAll();
-  } catch(e) { alert('Fout: ' + e.message); }
+  } catch(e) { alert('Error: ' + e.message); }
 }
 
 function openCrosslist(itemId) {
