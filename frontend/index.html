@@ -384,5 +384,28 @@ footer strong { color: rgba(255,255,255,.8); }
   <strong>CrossList EU</strong> — crosslisteu.com &nbsp;·&nbsp; © 2026
 </footer>
 
+<script>
+function toggleLang() {
+  const cur = localStorage.getItem('lang') || 'nl';
+  setLang(cur === 'nl' ? 'en' : 'nl');
+}
+function setLang(lang) {
+  localStorage.setItem('lang', lang);
+  const btn = document.getElementById('lang-btn');
+  if (btn) btn.textContent = lang === 'nl' ? 'EN' : 'NL';
+  document.querySelectorAll('[data-en]').forEach(el => {
+    if (!el.dataset.nl) el.dataset.nl = el.textContent;
+    el.textContent = lang === 'en' ? el.dataset.en : el.dataset.nl;
+  });
+  document.querySelectorAll('[data-en-html]').forEach(el => {
+    if (!el.dataset.nlHtml) el.dataset.nlHtml = el.innerHTML;
+    el.innerHTML = lang === 'en' ? el.dataset.enHtml : el.dataset.nlHtml;
+  });
+}
+document.addEventListener('DOMContentLoaded', () => {
+  const saved = localStorage.getItem('lang') || 'nl';
+  if (saved === 'en') setLang('en');
+});
+</script>
 </body>
 </html>
