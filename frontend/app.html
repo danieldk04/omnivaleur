@@ -1398,7 +1398,7 @@ async function uploadFiles(files) {
       if (!res.ok) throw new Error(await res.text());
       const { url } = await res.json();
       _photoUrls[idx] = url;
-    } catch(err) { _photoUrls.splice(idx,1); alert('Upload mislukt: '+err.message); }
+    } catch(err) { _photoUrls.splice(idx,1); alert('Upload failed: '+err.message); }
     URL.revokeObjectURL(localUrl);
     renderPhotoGrid();
   }
