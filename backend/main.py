@@ -4,7 +4,7 @@ logging.basicConfig(level=logging.INFO, format="%(levelname)s %(name)s: %(messag
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
-from backend.api import items, listings, platforms, webhooks, jobs, uploads, shopify
+from backend.api import items, listings, platforms, webhooks, jobs, uploads, shopify, auth
 from backend.scheduler import start_scheduler, stop_scheduler
 
 
