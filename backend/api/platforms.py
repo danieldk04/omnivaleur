@@ -1,19 +1,19 @@
 """
 Platform auth endpoints — login endpoints for all platforms.
 """
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Depends
 from backend.database import get_db
 from backend.platforms.marktplaats import MarktplaatsPlatform, TweedehandsPlatform
 from backend.platforms.ebay import EbayPlatform
 from backend.models import AIListingRequest
 from backend.services.ai_listing import generate_listing_from_photos
+from backend.api.deps import get_current_user
 
 router = APIRouter(prefix="/platforms", tags=["platforms"])
-MVP_USER_ID = "00000000-0000-0000-0000-000000000001"
 
 
 @router.post("/marktplaats/bootstrap")
-async def marktplaats_bootstrap(body: dict):
+async def marktplaats_bootstrap(body: dict, user_id: str = Depends(get_current_user)):
     """Bootstrap Marktplaats session via Playwright. Body: {email, password}"""
     try:
         session = await MarktplaatsPlatform().bootstrap_session(body["email"], body["password"])
