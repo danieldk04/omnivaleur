@@ -178,11 +178,22 @@ async function getServerUrl() {
   });
 }
 
+async function getAuthHeaders() {
+  return new Promise((resolve) => {
+    chrome.storage.sync.get(["authToken"], (s) => {
+      const headers = { "Content-Type": "application/json" };
+      if (s.authToken) headers["Authorization"] = `Bearer ${s.authToken}`;
+      resolve(headers);
+    });
+  });
+}
+
 async function pollJobs() {
   const serverUrl = await getServerUrl();
+  const headers = await getAuthHeaders();
   for (const platform of EXTENSION_PLATFORMS) {
     try {
-      const res = await fetch(`${serverUrl}/api/jobs/pending?platform=${platform}`);
+      const res = await fetch(`${serverUrl}/api/jobs/pending?platform=${platform}`, { headers });
       if (!res.ok) continue;
       const jobs = await res.json();
       for (const job of jobs) {
