@@ -855,7 +855,7 @@ function renderListingBadges(itemId) {
     }
   }
 
-  if (!badges.length) return `<span style="color:var(--muted);font-size:11px">Niet gepubliceerd</span> <button class="btn btn-sm btn-outline" style="font-size:10px;padding:2px 7px;margin-left:4px" onclick="openMarkActiveModal('${itemId}',event)">+ markeer actief</button>`;
+  if (!badges.length) return `<span style="color:var(--muted);font-size:11px">Not published</span> <button class="btn btn-sm btn-outline" style="font-size:10px;padding:2px 7px;margin-left:4px" onclick="openMarkActiveModal('${itemId}',event)">+ mark active</button>`;
   return badges.join('');
 }
 
