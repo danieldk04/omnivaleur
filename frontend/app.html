@@ -884,7 +884,7 @@ function applyFilters() {
     return true;
   });
 
-  document.getElementById('filter-count').textContent = `${filtered.length} van ${state.items.length}`;
+  document.getElementById('filter-count').textContent = `${filtered.length} of ${state.items.length}`;
   renderItemsTable(filtered);
 }
 
