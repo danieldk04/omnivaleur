@@ -1408,8 +1408,8 @@ async function uploadFiles(files) {
 function closeModal(id){document.getElementById(id).style.display='none';}
 function closeOnOverlay(e,id){if(e.target.id===id)closeModal(id);}
 function esc(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
-function conditionLabel(c){return{new_with_tags:'Nieuw met kaartje',new:'Nieuw',good:'Zo goed als nieuw',fair:'Gedragen',poor:'Beschadigd'}[c]||c||'—';}
-function fmtDate(d){if(!d)return'—';const dt=new Date(d);return dt.toLocaleDateString('nl-NL',{day:'2-digit',month:'short',year:'numeric'});}
+function conditionLabel(c){return{new_with_tags:'New with tags',new:'New',good:'Like new',fair:'Used',poor:'Damaged'}[c]||c||'—';}
+function fmtDate(d){if(!d)return'—';const dt=new Date(d);return dt.toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'});}
 function publishedAt(itemId){
   const listing=state.listings.filter(l=>l.item_id===itemId&&l.status==='active'&&l.listed_at).sort((a,b)=>new Date(a.listed_at)-new Date(b.listed_at))[0];
   return listing?fmtDate(listing.listed_at):null;
