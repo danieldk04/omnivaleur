@@ -1723,15 +1723,14 @@ function publishedAt(itemId){
 
 // ── Init ─────────────────────────────────────────────────────────
 const _urlParams = new URLSearchParams(window.location.search);
-if (_urlParams.get('billing') === 'success') {
-  history.replaceState({}, '', window.location.pathname);
-  showView('prijs');
-} else if (_urlParams.get('billing') === 'cancel') {
+if (_urlParams.get('billing') === 'success' || _urlParams.get('billing') === 'cancel') {
   history.replaceState({}, '', window.location.pathname);
   showView('prijs');
 }
 loadAll();
+loadBillingStatus();
 setInterval(loadAll, 15000);
+setInterval(loadBillingStatus, 60000);
 </script>
 </body>
 </html>
