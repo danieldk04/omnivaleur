@@ -1198,7 +1198,7 @@ async function delistItem(itemId, title) {
 async function markListingActive(itemId, platform, event) {
   event?.stopPropagation();
   const label = PLATFORM_LABELS[platform] || platform;
-  if (!confirm(`Markeer listing op ${label} als actief gepubliceerd?`)) return;
+  if (!confirm(`Mark listing on ${label} as actively published?`)) return;
   try {
     const r = await apiFetch(`${API}/api/listings/mark-active`, {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
