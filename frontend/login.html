@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Inloggen — CrossList EU</title>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --bg: #f8f9fa; --surface: #fff; --border: #e5e7eb;
+  --text: #111827; --muted: #6b7280; --primary: #111827;
+  --red: #dc2626; --red-bg: #fee2e2; --radius: 8px;
+}
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 24px; }
+.logo { font-size: 18px; font-weight: 700; letter-spacing: -.3px; margin-bottom: 32px; }
+.card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 36px; width: 100%; max-width: 360px; }
+h1 { font-size: 20px; font-weight: 700; margin-bottom: 4px; }
+.subtitle { font-size: 13px; color: var(--muted); margin-bottom: 28px; }
+label { display: block; font-size: 13px; font-weight: 500; margin-bottom: 6px; }
+input { width: 100%; padding: 10px 12px; border: 1px solid var(--border); border-radius: var(--radius); font-size: 14px; outline: none; transition: border-color .15s; }
+input:focus { border-color: var(--primary); }
+.field { margin-bottom: 16px; }
+.btn { width: 100%; padding: 10px; background: var(--primary); color: #fff; border: none; border-radius: var(--radius); font-size: 14px; font-weight: 500; cursor: pointer; margin-top: 8px; transition: opacity .15s; }
+.btn:hover { opacity: .85; }
+.error { background: var(--red-bg); color: var(--red); font-size: 13px; padding: 10px 12px; border-radius: var(--radius); margin-bottom: 16px; display: none; }
+.back { margin-top: 20px; font-size: 13px; color: var(--muted); text-align: center; }
+.back a { color: var(--primary); font-weight: 500; }
+</style>
+</head>
+<body>
+
+<div class="logo">CrossList EU</div>
+
+<div class="card">
+  <h1>Inloggen</h1>
+  <p class="subtitle">Voer je wachtwoord in om door te gaan</p>
+
+  <div id="error" class="error">Onjuist wachtwoord. Probeer opnieuw.</div>
+
+  <form onsubmit="doLogin(event)">
+    <div class="field">
+      <label for="password">Wachtwoord</label>
+      <input type="password" id="password" placeholder="••••••••" autofocus autocomplete="current-password">
+    </div>
+    <button type="submit" class="btn">Inloggen →</button>
+  </form>
+</div>
+
+<div class="back"><a href="landing.html">← Terug naar homepage</a></div>
+
+<script>
+const PASSWORD = 'crosslist2025';
+
+function doLogin(e) {
+  e.preventDefault();
+  const val = document.getElementById('password').value;
+  if (val === PASSWORD) {
+    sessionStorage.setItem('cl_auth', '1');
+    window.location.href = 'index.html';
+  } else {
+    document.getElementById('error').style.display = 'block';
+    document.getElementById('password').value = '';
+    document.getElementById('password').focus();
+  }
+}
+</script>
+
+</body>
+</html>
