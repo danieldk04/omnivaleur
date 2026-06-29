@@ -1272,7 +1272,7 @@ async function doCrosslist() {
     });
     closeModal('modal-crosslist');
     await loadAll();
-  } catch(e) { alert('Fout: ' + e.message); }
+  } catch(e) { alert('Error: ' + e.message); }
 }
 
 function renderPlatformCheckboxes(containerId, itemId) {
