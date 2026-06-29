@@ -36,7 +36,7 @@ async def forgot_password(body: ResetRequest):
         )
     except Exception:
         pass
-    return {"ok": True, "message": "Als dit e-mailadres bekend is, ontvang je een resetlink."}
+    return {"ok": True, "message": "If this email is registered, you will receive a reset link."}
 
 
 class PasswordUpdate(BaseModel):
