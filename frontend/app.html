@@ -973,7 +973,7 @@ async function doBulkCrosslist() {
       done++;
     } catch { errors++; }
   }
-  alert(`${done} artikel${done !== 1 ? 'en' : ''} ingepland voor publicatie${errors ? `, ${errors} fout(en)` : ''}.`);
+  alert(`${done} item${done !== 1 ? 's' : ''} queued for publishing${errors ? `, ${errors} error(s)` : ''}.`);
   clearSelection();
   await loadAll();
 }
