@@ -26723,3 +26723,9 @@ INFO httpx: HTTP Request: GET https://bgpeoaavbiaurpvybcqe.supabase.co/rest/v1/j
 INFO:     127.0.0.1:57430 - "GET /api/jobs/pending?platform=2dehands HTTP/1.1" 200 OK
 INFO httpx: HTTP Request: GET https://bgpeoaavbiaurpvybcqe.supabase.co/rest/v1/jobs?select=%2A&user_id=eq.00000000-0000-0000-0000-000000000001&status=eq.pending&platform=eq.vinted&order=created_at.asc&limit=5 "HTTP/2 200 OK"
 INFO:     127.0.0.1:57430 - "GET /api/jobs/pending?platform=vinted HTTP/1.1" 200 OK
+INFO httpx: HTTP Request: GET https://bgpeoaavbiaurpvybcqe.supabase.co/rest/v1/jobs?select=%2A&user_id=eq.00000000-0000-0000-0000-000000000001&status=eq.pending&platform=eq.marktplaats&order=created_at.asc&limit=5 "HTTP/2 200 OK"
+INFO:     127.0.0.1:57439 - "GET /api/jobs/pending?platform=marktplaats HTTP/1.1" 200 OK
+INFO httpx: HTTP Request: GET https://bgpeoaavbiaurpvybcqe.supabase.co/rest/v1/jobs?select=%2A&user_id=eq.00000000-0000-0000-0000-000000000001&status=eq.pending&platform=eq.2dehands&order=created_at.asc&limit=5 "HTTP/2 200 OK"
+INFO:     127.0.0.1:57439 - "GET /api/jobs/pending?platform=2dehands HTTP/1.1" 200 OK
+INFO httpx: HTTP Request: GET https://bgpeoaavbiaurpvybcqe.supabase.co/rest/v1/jobs?select=%2A&user_id=eq.00000000-0000-0000-0000-000000000001&status=eq.pending&platform=eq.vinted&order=created_at.asc&limit=5 "HTTP/2 200 OK"
+INFO:     127.0.0.1:57439 - "GET /api/jobs/pending?platform=vinted HTTP/1.1" 200 OK
