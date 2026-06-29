@@ -1557,6 +1557,14 @@ function publishedAt(itemId){
 }
 
 // ── Init ─────────────────────────────────────────────────────────
+const _urlParams = new URLSearchParams(window.location.search);
+if (_urlParams.get('billing') === 'success') {
+  history.replaceState({}, '', window.location.pathname);
+  showView('prijs');
+} else if (_urlParams.get('billing') === 'cancel') {
+  history.replaceState({}, '', window.location.pathname);
+  showView('prijs');
+}
 loadAll();
 setInterval(loadAll, 15000);
 </script>
