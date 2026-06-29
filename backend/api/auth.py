@@ -30,7 +30,7 @@ class ResetRequest(BaseModel):
 async def forgot_password(body: ResetRequest):
     db = get_db()
     try:
-        db.auth.reset_password_email(
+        db.auth.reset_password_for_email(
             body.email,
             options={"redirect_to": "https://crosslisteu.com/reset-password.html"}
         )
