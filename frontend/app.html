@@ -903,7 +903,6 @@ function showView(name) {
   const titles = { dashboard: 'Dashboard', items: 'Items', help: 'Help', protections: 'Protections', prijs: 'Abonnement' };
   document.getElementById('topbar-title').textContent = titles[name] || name;
   if (name === 'items') { clearSelection(); applyFilters(); }
-  if (name === 'prijs') { loadBillingStatus(); }
 }
 
 // ── Billing ──────────────────────────────────────────────────────
