@@ -1142,7 +1142,7 @@ async function saveItem() {
   if (!data.title || !data.price) return alert('Title and price are required');
 
   const btn = document.getElementById('save-btn');
-  btn.disabled = true; btn.textContent = 'Bezig...';
+  btn.disabled = true; btn.textContent = 'Saving...';
   try {
     let itemId = id;
     if (id) {
