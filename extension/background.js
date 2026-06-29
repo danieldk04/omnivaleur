@@ -310,6 +310,7 @@ async function checkSoldListings() {
           console.log(`[CrossList] Sold detected: ${listing.platform_listing_id} on ${platform}, triggering delist`);
           await fetch(`${serverUrl}/api/listings/sold?item_id=${listing.item_id}&platform=${platform}`, {
             method: "POST",
+            headers: authHeaders,
           }).catch(e => console.error("[CrossList] sold trigger failed:", e));
         }
       }
