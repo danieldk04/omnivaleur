@@ -119,17 +119,18 @@ footer strong { color: rgba(255,255,255,.8); }
 <body>
 
 <nav>
-  <div class="nav-logo">
+  <a href="/" class="nav-logo">
     <img src="Logo Crosslist EU.png" alt="CrossList EU">
     <span class="grad-text">CrossList EU</span>
-  </div>
+  </a>
   <div class="nav-links">
-    <a href="/marketplaces">Marktplaatsen</a>
-    <a href="#hoe-het-werkt">Hoe het werkt</a>
+    <a href="/marketplaces" data-en="Marketplaces">Marktplaatsen</a>
+    <a href="#hoe-het-werkt" data-en="How it works">Hoe het werkt</a>
   </div>
   <div class="nav-actions">
-    <a href="/login" class="btn btn-outline">Inloggen</a>
-    <a href="/register" class="btn btn-primary">Gratis starten →</a>
+    <button class="lang-toggle" onclick="toggleLang()" id="lang-btn">EN</button>
+    <a href="/login" class="btn btn-outline" data-en="Log in">Inloggen</a>
+    <a href="/register" class="btn btn-primary" data-en="7 days free →">7 dagen gratis →</a>
   </div>
 </nav>
 
