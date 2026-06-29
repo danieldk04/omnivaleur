@@ -942,40 +942,40 @@ function renderBilling(data) {
     upgradeCard.style.display = 'none';
     activeCard.style.display  = 'block';
     const until = current_period_end ? new Date(current_period_end).toLocaleDateString('nl-NL') : '—';
-    document.getElementById('billing-active-detail').textContent = `Actief · verlengt op ${until}`;
+    document.getElementById('billing-active-detail').textContent = `Active · renews on ${until}`;
     document.getElementById('billing-next-date').textContent = until;
-    document.getElementById('billing-status-badge').textContent = 'Actief';
+    document.getElementById('billing-status-badge').textContent = 'Active';
     document.getElementById('billing-status-badge').className = 'status-pill active';
-    document.getElementById('nav-prijs-label').textContent = 'Abonnement ✓';
+    document.getElementById('nav-prijs-label').textContent = 'Subscription ✓';
 
   } else if (status === 'past_due') {
     upgradeCard.style.display = 'none';
     activeCard.style.display  = 'block';
-    document.getElementById('billing-active-detail').textContent = 'Betaling vereist om toegang te behouden';
+    document.getElementById('billing-active-detail').textContent = 'Payment required to keep access';
     document.getElementById('billing-next-date').textContent = '—';
-    document.getElementById('billing-status-badge').textContent = 'Betaling mislukt';
+    document.getElementById('billing-status-badge').textContent = 'Payment failed';
     document.getElementById('billing-status-badge').className = 'status-pill past_due';
-    document.getElementById('nav-prijs-label').textContent = 'Abonnement ⚠';
+    document.getElementById('nav-prijs-label').textContent = 'Subscription ⚠';
 
   } else if (status === 'trialing') {
     const days = trial_ends_at ? Math.max(0, Math.ceil((new Date(trial_ends_at) - Date.now()) / 86400000)) : 0;
     upgradeCard.style.display = 'block';
     activeCard.style.display  = 'none';
     const note = document.getElementById('pricing-trial-note');
-    if (note) note.textContent = days > 0 ? `Nog ${days} dag${days !== 1 ? 'en' : ''} gratis · Geen creditcard nodig` : 'Gratis periode verloopt vandaag';
+    if (note) note.textContent = days > 0 ? `${days} day${days !== 1 ? 's' : ''} left in free trial · No credit card needed` : 'Your free trial expires today';
     const btn = document.getElementById('btn-checkout');
-    if (btn) btn.textContent = days > 0 ? `Start ${days} dag${days !== 1 ? 'en' : ''} gratis →` : 'Activeer Pro →';
-    document.getElementById('nav-prijs-label').textContent = days > 0 ? `Abonnement (${days}d)` : 'Abonnement';
+    if (btn) btn.textContent = days > 0 ? `Start ${days}-day free trial →` : 'Activate Pro →';
+    document.getElementById('nav-prijs-label').textContent = days > 0 ? `Subscription (${days}d)` : 'Subscription';
 
   } else {
     // trial_expired / canceled / unknown
     upgradeCard.style.display = 'block';
     activeCard.style.display  = 'none';
     const note = document.getElementById('pricing-trial-note');
-    if (note) note.textContent = 'Activeer Pro om verder te crosslisten';
+    if (note) note.textContent = 'Your trial has ended — activate Pro to continue';
     const btn = document.getElementById('btn-checkout');
-    if (btn) btn.textContent = 'Activeer Pro →';
-    document.getElementById('nav-prijs-label').textContent = 'Abonnement ⚠';
+    if (btn) btn.textContent = 'Activate Pro →';
+    document.getElementById('nav-prijs-label').textContent = 'Subscription ⚠';
   }
 }
 
