@@ -691,6 +691,15 @@ function dismissExtOverlay() {
 setTimeout(showExtOverlay, 800);
 
 const API = window.location.hostname === 'localhost' ? 'http://localhost:8001' : 'https://api.crosslisteu.com';
+const TOKEN = sessionStorage.getItem('cl_token') || '';
+
+function apiFetch(url, opts = {}) {
+  return fetch(url, {
+    ...opts,
+    headers: { 'Authorization': `Bearer ${TOKEN}`, ...(opts.headers || {}) },
+  });
+}
+
 const PLATFORMS = ['marktplaats', '2dehands', 'vinted', 'ebay', 'etsy', 'shopify'];
 const PLATFORM_LABELS = { marktplaats: 'Marktplaats', '2dehands': '2dehands', ebay: 'eBay', etsy: 'Etsy', shopify: 'Shopify', vinted: 'Vinted' };
 const PLATFORM_ICONS = { marktplaats: '🇳🇱', '2dehands': '🇧🇪', vinted: '👕', ebay: '🛒', etsy: '🎨', shopify: '🏪' };
