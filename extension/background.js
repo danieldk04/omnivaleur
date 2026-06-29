@@ -267,9 +267,10 @@ chrome.tabs.onUpdated.addListener(async (tabId, changeInfo) => {
     ? `https://www.2dehands.be/v/listing/${listingId}`
     : null;
 
+  const completeHeaders = await getAuthHeaders();
   await fetch(`${meta.serverUrl}/api/jobs/${meta.jobId}/complete`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: completeHeaders,
     body: JSON.stringify({ platform_listing_id: listingId, platform_listing_url: listingUrl }),
   });
 
