@@ -594,11 +594,11 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
 
   if (msg.type === "JOB_DONE") {
     const { platform, jobId, serverUrl, result } = msg;
-    fetch(`${serverUrl}/api/jobs/${jobId}/complete`, {
+    getAuthHeaders().then(headers => fetch(`${serverUrl}/api/jobs/${jobId}/complete`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers,
       body: JSON.stringify(result),
-    }).then(() => {
+    })).then(() => {
       chrome.storage.local.remove(`job_${platform}`);
       // Keep tab open 2s so user can see the listing was created
       setTimeout(() => chrome.tabs.remove(sender.tab.id), 2000);
