@@ -1345,8 +1345,8 @@ function updateBidLabel() {
 function updateCategoryOptions(selectedCategory) {
   const gender = document.getElementById('f-gender').value;
   const sel = document.getElementById('f-category');
-  if (!gender || !CATEGORIES[gender]) { sel.innerHTML = '<option value="">— kies eerst geslacht —</option>'; return; }
-  sel.innerHTML = '<option value="">— kies categorie —</option>';
+  if (!gender || !CATEGORIES[gender]) { sel.innerHTML = '<option value="">— choose gender first —</option>'; return; }
+  sel.innerHTML = '<option value="">— choose category —</option>';
   for (const [val, label] of CATEGORIES[gender]) {
     const opt = document.createElement('option');
     opt.value = val; opt.textContent = label;
