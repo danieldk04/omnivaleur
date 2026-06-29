@@ -9,10 +9,9 @@ from datetime import datetime, timezone
 from backend.database import get_db
 from backend.platforms import get_platform
 
-_ENGLISH_PLATFORMS = {"vinted", "shopify"}
-# marktplaats/2dehands: user enters Dutch directly — no translation needed.
-# Translating via MyMemory truncates at 500 chars and garbles descriptions.
-_DUTCH_PLATFORMS: set[str] = set()
+_ENGLISH_PLATFORMS = {"vinted", "shopify", "ebay", "etsy"}
+# marktplaats/2dehands require Dutch — user now enters English, so translate EN→NL.
+_DUTCH_PLATFORMS: set[str] = {"marktplaats", "2dehands"}
 
 logger = logging.getLogger(__name__)
 
