@@ -992,7 +992,7 @@ async function bulkDelist() {
       done++;
     } catch { errors++; }
   }
-  alert(`${done} gedelist${errors ? `, ${errors} fout(en)` : ''}.`);
+  alert(`${done} delisted${errors ? `, ${errors} error(s)` : ''}.`);
   clearSelection();
   await loadAll();
 }
