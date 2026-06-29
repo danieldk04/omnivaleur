@@ -635,8 +635,34 @@ input[type="checkbox"].row-check { width: 15px; height: 15px; cursor: pointer; a
   </div>
 </div>
 
+<!-- EXTENSION INSTALL OVERLAY -->
+<div id="ext-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:500;align-items:center;justify-content:center;padding:20px">
+  <div style="background:#fff;border-radius:20px;max-width:480px;width:100%;padding:40px;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,.2)">
+    <div style="width:64px;height:64px;border-radius:16px;background:linear-gradient(135deg,#2563eb,#34d399);display:flex;align-items:center;justify-content:center;font-size:28px;margin:0 auto 20px">🧩</div>
+    <h2 style="font-size:22px;font-weight:800;margin-bottom:10px;letter-spacing:-.3px">Installeer de Chrome-extensie</h2>
+    <p style="font-size:14px;color:#64748b;line-height:1.6;margin-bottom:8px">CrossList EU werkt via een Chrome-extensie die automatisch inlogt op Marktplaats, 2dehands en Vinted om je artikelen te plaatsen.</p>
+    <p style="font-size:13px;color:#94a3b8;margin-bottom:28px">Zonder de extensie kun je geen artikelen publiceren.</p>
+    <div style="display:flex;flex-direction:column;gap:10px">
+      <a href="https://chrome.google.com/webstore" target="_blank" style="display:block;padding:13px;background:linear-gradient(135deg,#2563eb,#34d399);color:#fff;border-radius:100px;font-size:15px;font-weight:700;text-decoration:none;box-shadow:0 2px 12px rgba(37,99,235,.3)">Download Chrome-extensie →</a>
+      <button onclick="dismissExtOverlay()" style="padding:11px;background:transparent;border:1.5px solid #e2e8f0;border-radius:100px;font-size:14px;font-weight:600;color:#64748b;cursor:pointer">Ik heb de extensie al geïnstalleerd</button>
+    </div>
+  </div>
+</div>
+
 <script>
 if (!sessionStorage.getItem('cl_auth')) { window.location.href = '/login'; }
+
+function showExtOverlay() {
+  if (!localStorage.getItem('cl_ext_ok')) {
+    document.getElementById('ext-overlay').style.display = 'flex';
+  }
+}
+function dismissExtOverlay() {
+  localStorage.setItem('cl_ext_ok', '1');
+  document.getElementById('ext-overlay').style.display = 'none';
+}
+// Show after a brief delay so the page loads first
+setTimeout(showExtOverlay, 800);
 
 const API = window.location.hostname === 'localhost' ? 'http://localhost:8001' : 'https://api.crosslisteu.com';
 const PLATFORMS = ['marktplaats', '2dehands', 'vinted', 'ebay', 'etsy', 'shopify'];
