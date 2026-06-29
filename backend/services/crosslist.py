@@ -311,8 +311,6 @@ async def handle_item_sold(item_id: str, sold_on_platform: str):
             logger.error(f"Failed to delist {listing['platform']} listing {listing['id']}: {result}")
 
 
-_MVP_USER_ID = "00000000-0000-0000-0000-000000000001"
-
 # Marktplaats free listings expire silently after 28 days.
 # We relist 1 day early to avoid gaps in visibility.
 _MARKTPLAATS_EXPIRY_DAYS = 27
