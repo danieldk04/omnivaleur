@@ -206,8 +206,9 @@ async function pollJobs() {
 }
 
 async function processJob(job, serverUrl) {
+  const headers = await getAuthHeaders();
   // Claim job first
-  const claimRes = await fetch(`${serverUrl}/api/jobs/${job.id}/claim`, { method: "POST" });
+  const claimRes = await fetch(`${serverUrl}/api/jobs/${job.id}/claim`, { method: "POST", headers });
   if (!claimRes.ok) return; // Already claimed by another instance
 
   // Store job for content script to pick up
