@@ -1,19 +1,15 @@
-"""
-Job queue API — Chrome extension polls these endpoints.
-"""
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Depends
 from backend.database import get_db
+from backend.api.deps import get_current_user
 from datetime import datetime, timezone
 
 router = APIRouter(prefix="/jobs", tags=["jobs"])
-MVP_USER_ID = "00000000-0000-0000-0000-000000000001"
 
 
 @router.get("/pending")
-async def get_pending_jobs(platform: str = None):
-    """Extension polls this. Optionally filter by platform."""
+async def get_pending_jobs(platform: str = None, user_id: str = Depends(get_current_user)):
     db = get_db()
-    q = db.table("jobs").select("*").eq("user_id", MVP_USER_ID).eq("status", "pending")
+    q = db.table("jobs").select("*").eq("user_id", user_id).eq("status", "pending")
     if platform:
         q = q.eq("platform", platform)
     result = q.order("created_at").limit(5).execute()
@@ -21,23 +17,21 @@ async def get_pending_jobs(platform: str = None):
 
 
 @router.post("/{job_id}/claim")
-async def claim_job(job_id: str):
-    """Extension claims a job before processing (prevents double processing)."""
+async def claim_job(job_id: str, user_id: str = Depends(get_current_user)):
     db = get_db()
     result = db.table("jobs").update({
         "status": "claimed",
         "claimed_at": datetime.now(timezone.utc).isoformat(),
-    }).eq("id", job_id).eq("status", "pending").execute()
+    }).eq("id", job_id).eq("user_id", user_id).eq("status", "pending").execute()
     if not result.data:
         raise HTTPException(status_code=409, detail="Job already claimed or not found")
     return result.data[0]
 
 
 @router.post("/{job_id}/complete")
-async def complete_job(job_id: str, body: dict):
-    """Extension reports success. body: {platform_listing_id, platform_listing_url}"""
+async def complete_job(job_id: str, body: dict, user_id: str = Depends(get_current_user)):
     db = get_db()
-    job = db.table("jobs").select("*").eq("id", job_id).single().execute().data
+    job = db.table("jobs").select("*").eq("id", job_id).eq("user_id", user_id).single().execute().data
     if not job:
         raise HTTPException(status_code=404, detail="Job not found")
 
@@ -47,12 +41,10 @@ async def complete_job(job_id: str, body: dict):
         "done_at": datetime.now(timezone.utc).isoformat(),
     }).eq("id", job_id).execute()
 
-    # Update or create listing record
     if job["action"] == "create":
         if body.get("platform_listing_id"):
             existing = db.table("listings").select("id").eq("item_id", job["item_id"]).eq("platform", job["platform"]).execute()
             if existing.data:
-                # Update all matching rows — avoids stale duplicates staying "pending"
                 db.table("listings").update({
                     "platform_listing_id": body["platform_listing_id"],
                     "platform_listing_url": body.get("platform_listing_url"),
@@ -69,7 +61,6 @@ async def complete_job(job_id: str, body: dict):
                     "listed_at": datetime.now(timezone.utc).isoformat(),
                 }).execute()
         else:
-            # Extension reported success but sent no listing ID — mark error
             db.table("listings").update({
                 "status": "error",
                 "error_message": "Extension completed job but returned no platform_listing_id",
@@ -82,16 +73,14 @@ async def complete_job(job_id: str, body: dict):
 
 
 @router.post("/{job_id}/error")
-async def fail_job(job_id: str, body: dict):
-    """Extension reports failure. body: {error: '...'}"""
+async def fail_job(job_id: str, body: dict, user_id: str = Depends(get_current_user)):
     db = get_db()
-    job = db.table("jobs").select("item_id,platform,action").eq("id", job_id).single().execute().data
+    job = db.table("jobs").select("item_id,platform,action").eq("id", job_id).eq("user_id", user_id).single().execute().data
     db.table("jobs").update({
         "status": "error",
         "result": body,
         "done_at": datetime.now(timezone.utc).isoformat(),
     }).eq("id", job_id).execute()
-    # Keep listing in sync — pending listings must become error so the dashboard shows it
     if job and job["action"] == "create":
         db.table("listings").update({
             "status": "error",
@@ -101,9 +90,9 @@ async def fail_job(job_id: str, body: dict):
 
 
 @router.get("/status/{job_id}")
-async def get_job_status(job_id: str):
+async def get_job_status(job_id: str, user_id: str = Depends(get_current_user)):
     db = get_db()
-    result = db.table("jobs").select("*").eq("id", job_id).single().execute()
+    result = db.table("jobs").select("*").eq("id", job_id).eq("user_id", user_id).single().execute()
     if not result.data:
         raise HTTPException(status_code=404, detail="Job not found")
     return result.data
