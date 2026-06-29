@@ -1,6 +1,6 @@
 """
-Claude Vision — analyse kleding foto's en genereer platform-specifieke listings.
-Geeft gestructureerde JSON terug met merk, type, maat, kleur, conditie en teksten.
+Claude Vision — analyse clothing photos and generate platform-specific listings.
+Returns structured JSON with brand, type, size, colour, condition and copy.
 """
 import json
 import logging
