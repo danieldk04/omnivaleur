@@ -952,7 +952,7 @@ function updateBulkBar() {
 function openBulkCrosslist() {
   const n = selectedIds.size;
   if (!n) return;
-  document.getElementById('bulk-crosslist-count').textContent = `${n} artikel${n !== 1 ? 'en' : ''} geselecteerd`;
+  document.getElementById('bulk-crosslist-count').textContent = `${n} item${n !== 1 ? 's' : ''} selected`;
   renderPlatformCheckboxes('bulk-crosslist-checkboxes');
   document.getElementById('modal-bulk-crosslist').style.display = 'flex';
 }
