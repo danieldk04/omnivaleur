@@ -751,10 +751,10 @@ function showView(name) {
 // ── Data loading ─────────────────────────────────────────────────
 async function loadAll() {
   const [itemsRes, listingsRes, jobsRes, platformsRes] = await Promise.allSettled([
-    fetch(`${API}/api/items/`).then(r => r.json()),
-    fetch(`${API}/api/listings/`).then(r => r.json()),
-    fetch(`${API}/api/jobs/pending`).then(r => r.json()),
-    fetch(`${API}/api/platforms/status`).then(r => r.json()),
+    apiFetch(`${API}/api/items/`).then(r => r.json()),
+    apiFetch(`${API}/api/listings/`).then(r => r.json()),
+    apiFetch(`${API}/api/jobs/pending`).then(r => r.json()),
+    apiFetch(`${API}/api/platforms/status`).then(r => r.json()),
   ]);
   if (itemsRes.status === 'fulfilled') state.items = Array.isArray(itemsRes.value) ? itemsRes.value : [];
   if (listingsRes.status === 'fulfilled') state.listings = Array.isArray(listingsRes.value) ? listingsRes.value : [];
