@@ -1,0 +1,5 @@
+/login     /login.html     200
+/register  /register.html  200
+/app       /app.html       200
+/forgot-password  /forgot-password.html  200
+/reset-password   /reset-password.html   200
