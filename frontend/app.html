@@ -1390,7 +1390,7 @@ async function uploadFiles(files) {
     renderPhotoGrid();
     const grid = document.getElementById('photo-preview-grid');
     const thumb = grid.children[idx];
-    if (thumb) { const ov = document.createElement('div'); ov.className='photo-thumb-uploading'; ov.textContent='Uploaden…'; thumb.appendChild(ov); }
+    if (thumb) { const ov = document.createElement('div'); ov.className='photo-thumb-uploading'; ov.textContent='Uploading…'; thumb.appendChild(ov); }
     try {
       const form = new FormData();
       form.append('file', file);
