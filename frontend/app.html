@@ -1206,7 +1206,7 @@ async function markListingActive(itemId, platform, event) {
     });
     if (!r.ok) throw new Error(await r.text());
     await loadAll();
-  } catch(e) { alert('Fout: ' + e.message); }
+  } catch(e) { alert('Error: ' + e.message); }
 }
 
 function openMarkActiveModal(itemId, event) {
