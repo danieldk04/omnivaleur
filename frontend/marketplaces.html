@@ -1,10 +1,10 @@
 <!DOCTYPE html>
-<html lang="nl">
+<html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Marktplaatsen — CrossList EU</title>
-<meta name="description" content="CrossList EU werkt met alle grote Europese marktplaatsen. Eén klik, alle platformen — voor alle 27 EU-landen.">
+<title>Marketplaces — CrossList EU</title>
+<meta name="description" content="CrossList EU works with all major European marketplaces. One click, all platforms — across all 27 EU countries.">
 <link rel="icon" type="image/png" href="Logo Crosslist EU.png">
 <style>
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -33,8 +33,6 @@ nav { position: sticky; top: 0; z-index: 100; background: rgba(255,255,255,.92);
 .nav-links a { font-size: 14px; font-weight: 500; color: var(--muted); transition: color .15s; }
 .nav-links a:hover, .nav-links a.active { color: var(--text); }
 .nav-actions { display: flex; gap: 10px; align-items: center; }
-.lang-toggle { background: none; border: 1.5px solid var(--border); border-radius: 100px; padding: 5px 12px; font-size: 12px; font-weight: 700; cursor: pointer; color: var(--muted); transition: all .15s; letter-spacing: .05em; font-family: inherit; }
-.lang-toggle:hover { border-color: var(--blue); color: var(--blue); }
 .btn { display: inline-flex; align-items: center; gap: 6px; padding: 9px 20px; border-radius: 100px; font-size: 14px; font-weight: 600; cursor: pointer; border: none; transition: all .2s; white-space: nowrap; }
 .btn-outline { background: transparent; border: 1.5px solid var(--border); color: var(--text); }
 .btn-outline:hover { border-color: var(--blue); color: var(--blue); }
@@ -83,15 +81,6 @@ nav { position: sticky; top: 0; z-index: 100; background: rgba(255,255,255,.92);
 .platform-countries { display: flex; flex-wrap: wrap; gap: 6px; }
 .country-tag { font-size: 12px; background: var(--bg); border: 1px solid var(--border); border-radius: 6px; padding: 3px 8px; color: var(--muted); display: flex; align-items: center; gap: 4px; }
 
-/* FEATURED PLATFORMS (big ones) */
-.featured-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 24px; margin-top: 48px; }
-.featured-card { background: var(--bg); border: 1px solid var(--border); border-radius: 20px; padding: 36px; position: relative; overflow: hidden; }
-.featured-card::after { content: ''; position: absolute; bottom: -30px; right: -30px; width: 140px; height: 140px; background: radial-gradient(circle, rgba(37,99,235,.06) 0%, transparent 70%); pointer-events: none; }
-.featured-num { font-size: 48px; font-weight: 900; line-height: 1; margin-bottom: 4px; }
-.featured-label { font-size: 13px; color: var(--muted); margin-bottom: 20px; }
-.featured-card h3 { font-size: 22px; font-weight: 800; margin-bottom: 10px; }
-.featured-card p { font-size: 14px; color: var(--muted); line-height: 1.7; }
-
 /* STATS */
 .stats-bar { background: linear-gradient(135deg, var(--blue), var(--mint)); padding: 48px 40px; display: flex; justify-content: center; gap: 0; }
 .stat-item { text-align: center; padding: 0 48px; border-right: 1px solid rgba(255,255,255,.2); }
@@ -134,7 +123,6 @@ footer strong { color: rgba(255,255,255,.8); }
 .coming-chip { background: var(--surface); border: 1px dashed var(--border); border-radius: 100px; padding: 8px 18px; font-size: 13px; color: var(--muted); display: flex; align-items: center; gap: 6px; }
 
 @media (max-width: 768px) {
-  .featured-grid { grid-template-columns: 1fr; }
   nav { padding: 0 20px; }
   .nav-links { display: none; }
   .hero { padding: 60px 20px 50px; }
@@ -158,56 +146,55 @@ footer strong { color: rgba(255,255,255,.8); }
     <span class="grad-text">CrossList EU</span>
   </a>
   <div class="nav-links">
-    <a href="/marketplaces" class="active" data-en="Marketplaces">Marktplaatsen</a>
-    <a href="/#hoe-het-werkt" data-en="How it works">Hoe het werkt</a>
+    <a href="/marketplaces" class="active">Marketplaces</a>
+    <a href="/#how-it-works">How it works</a>
   </div>
   <div class="nav-actions">
-    <button class="lang-toggle" onclick="toggleLang()" id="lang-btn">EN</button>
-    <a href="/login" class="btn btn-outline" data-en="Log in">Inloggen</a>
-    <a href="/register" class="btn btn-primary" data-en="7 days free →">7 dagen gratis →</a>
+    <a href="/login" class="btn btn-outline">Log in</a>
+    <a href="/register" class="btn btn-primary">7 days free →</a>
   </div>
 </nav>
 
 <!-- HERO -->
 <section class="hero">
-  <div class="hero-badge" data-en="🌍 27 EU countries · 10+ marketplaces">🌍 27 EU-landen · 10+ marktplaatsen</div>
-  <h1 data-en-html="One dashboard for <span class=&quot;grad-text&quot;>all of Europe</span>">Eén dashboard voor <span class="grad-text">heel Europa</span></h1>
-  <p data-en="CrossList EU connects you to the largest resale platforms in every EU country. List once — we publish everywhere.">CrossList EU verbindt je met de grootste koopjesplatformen van elk EU-land. Zet je artikel één keer online — wij plaatsen het overal.</p>
+  <div class="hero-badge">🌍 27 EU countries · 10+ marketplaces</div>
+  <h1>One dashboard for <span class="grad-text">all of Europe</span></h1>
+  <p>CrossList EU connects you to the largest resale platforms in every EU country. List once — we publish everywhere.</p>
   <div class="hero-cta">
-    <a href="/register" class="btn btn-primary" data-en="Start 7-day free trial →">7 dagen gratis proberen →</a>
-    <a href="/login" class="btn btn-outline" data-en="Log in">Inloggen</a>
+    <a href="/register" class="btn btn-primary">Start 7-day free trial →</a>
+    <a href="/login" class="btn btn-outline">Log in</a>
   </div>
 </section>
 
 <!-- EU COUNTRIES STRIP -->
 <div class="countries-strip">
-  <h2>Actief in alle 27 EU-landen</h2>
+  <h2>Active across all 27 EU countries</h2>
   <div class="countries-grid">
-    <div class="country-chip"><span class="flag">🇳🇱</span> Nederland</div>
-    <div class="country-chip"><span class="flag">🇧🇪</span> België</div>
-    <div class="country-chip"><span class="flag">🇩🇪</span> Duitsland</div>
-    <div class="country-chip"><span class="flag">🇫🇷</span> Frankrijk</div>
-    <div class="country-chip"><span class="flag">🇪🇸</span> Spanje</div>
-    <div class="country-chip"><span class="flag">🇮🇹</span> Italië</div>
-    <div class="country-chip"><span class="flag">🇵🇱</span> Polen</div>
+    <div class="country-chip"><span class="flag">🇳🇱</span> Netherlands</div>
+    <div class="country-chip"><span class="flag">🇧🇪</span> Belgium</div>
+    <div class="country-chip"><span class="flag">🇩🇪</span> Germany</div>
+    <div class="country-chip"><span class="flag">🇫🇷</span> France</div>
+    <div class="country-chip"><span class="flag">🇪🇸</span> Spain</div>
+    <div class="country-chip"><span class="flag">🇮🇹</span> Italy</div>
+    <div class="country-chip"><span class="flag">🇵🇱</span> Poland</div>
     <div class="country-chip"><span class="flag">🇵🇹</span> Portugal</div>
-    <div class="country-chip"><span class="flag">🇸🇪</span> Zweden</div>
-    <div class="country-chip"><span class="flag">🇩🇰</span> Denemarken</div>
+    <div class="country-chip"><span class="flag">🇸🇪</span> Sweden</div>
+    <div class="country-chip"><span class="flag">🇩🇰</span> Denmark</div>
     <div class="country-chip"><span class="flag">🇫🇮</span> Finland</div>
-    <div class="country-chip"><span class="flag">🇦🇹</span> Oostenrijk</div>
-    <div class="country-chip"><span class="flag">🇨🇿</span> Tsjechië</div>
-    <div class="country-chip"><span class="flag">🇭🇺</span> Hongarije</div>
-    <div class="country-chip"><span class="flag">🇷🇴</span> Roemenië</div>
-    <div class="country-chip"><span class="flag">🇬🇷</span> Griekenland</div>
-    <div class="country-chip"><span class="flag">🇧🇬</span> Bulgarije</div>
-    <div class="country-chip"><span class="flag">🇸🇰</span> Slowakije</div>
-    <div class="country-chip"><span class="flag">🇭🇷</span> Kroatië</div>
-    <div class="country-chip"><span class="flag">🇸🇮</span> Slovenië</div>
-    <div class="country-chip"><span class="flag">🇱🇹</span> Litouwen</div>
-    <div class="country-chip"><span class="flag">🇱🇻</span> Letland</div>
-    <div class="country-chip"><span class="flag">🇪🇪</span> Estland</div>
-    <div class="country-chip"><span class="flag">🇱🇺</span> Luxemburg</div>
-    <div class="country-chip"><span class="flag">🇮🇪</span> Ierland</div>
+    <div class="country-chip"><span class="flag">🇦🇹</span> Austria</div>
+    <div class="country-chip"><span class="flag">🇨🇿</span> Czech Republic</div>
+    <div class="country-chip"><span class="flag">🇭🇺</span> Hungary</div>
+    <div class="country-chip"><span class="flag">🇷🇴</span> Romania</div>
+    <div class="country-chip"><span class="flag">🇬🇷</span> Greece</div>
+    <div class="country-chip"><span class="flag">🇧🇬</span> Bulgaria</div>
+    <div class="country-chip"><span class="flag">🇸🇰</span> Slovakia</div>
+    <div class="country-chip"><span class="flag">🇭🇷</span> Croatia</div>
+    <div class="country-chip"><span class="flag">🇸🇮</span> Slovenia</div>
+    <div class="country-chip"><span class="flag">🇱🇹</span> Lithuania</div>
+    <div class="country-chip"><span class="flag">🇱🇻</span> Latvia</div>
+    <div class="country-chip"><span class="flag">🇪🇪</span> Estonia</div>
+    <div class="country-chip"><span class="flag">🇱🇺</span> Luxembourg</div>
+    <div class="country-chip"><span class="flag">🇮🇪</span> Ireland</div>
     <div class="country-chip"><span class="flag">🇨🇾</span> Cyprus</div>
     <div class="country-chip"><span class="flag">🇲🇹</span> Malta</div>
   </div>
@@ -217,11 +204,11 @@ footer strong { color: rgba(255,255,255,.8); }
 <div class="stats-bar">
   <div class="stat-item">
     <div class="stat-num">27</div>
-    <div class="stat-label">EU-landen</div>
+    <div class="stat-label">EU countries</div>
   </div>
   <div class="stat-item">
     <div class="stat-num">10+</div>
-    <div class="stat-label">Marktplaatsen</div>
+    <div class="stat-label">Marketplaces</div>
   </div>
   <div class="stat-item">
     <div class="stat-num">1</div>
@@ -229,15 +216,15 @@ footer strong { color: rgba(255,255,255,.8); }
   </div>
   <div class="stat-item">
     <div class="stat-num">∞</div>
-    <div class="stat-label">Uren bespaard</div>
+    <div class="stat-label">Hours saved</div>
   </div>
 </div>
 
 <!-- MAIN PLATFORMS -->
 <div class="section">
-  <div class="section-label">Geïntegreerde marktplaatsen</div>
-  <h2 class="section-title">Alle grote Europese platforms, <span class="grad-text">op één plek</span></h2>
-  <p class="section-sub">Van lokale toppers zoals Marktplaats tot Europese giganten zoals Vinted — CrossList EU synchroniseert ze allemaal.</p>
+  <div class="section-label">Integrated marketplaces</div>
+  <h2 class="section-title">All major European platforms, <span class="grad-text">in one place</span></h2>
+  <p class="section-sub">From local favourites like Marktplaats to pan-European giants like Vinted — CrossList EU syncs them all.</p>
 
   <div class="platforms-grid">
 
@@ -250,9 +237,9 @@ footer strong { color: rgba(255,255,255,.8); }
         </div>
       </div>
       <h3>Marktplaats</h3>
-      <p>De grootste tweedehands marktplaats van Nederland met 8 miljoen unieke bezoekers per maand. Onmisbaar voor elke Nederlandse reseller.</p>
+      <p>The largest second-hand marketplace in the Netherlands with 8 million unique visitors per month. Essential for every Dutch reseller.</p>
       <div class="platform-countries">
-        <span class="country-tag"><span>🇳🇱</span> Nederland</span>
+        <span class="country-tag"><span>🇳🇱</span> Netherlands</span>
       </div>
     </div>
 
@@ -265,7 +252,7 @@ footer strong { color: rgba(255,255,255,.8); }
         </div>
       </div>
       <h3>Vinted</h3>
-      <p>Meer dan 105 miljoen gebruikers in heel Europa. Het grootste kledingplatform van de EU, actief in 21 landen — perfect voor mode en accessoires.</p>
+      <p>Over 105 million users across Europe. The largest fashion platform in the EU, active in 21 countries — perfect for clothing and accessories.</p>
       <div class="platform-countries">
         <span class="country-tag"><span>🇳🇱</span> NL</span>
         <span class="country-tag"><span>🇧🇪</span> BE</span>
@@ -286,10 +273,10 @@ footer strong { color: rgba(255,255,255,.8); }
         </div>
       </div>
       <h3>2dehands</h3>
-      <p>De Belgische equivalent van Marktplaats. Zowel Nederlandstalig als Franstalig — onmisbaar voor heel België.</p>
+      <p>The Belgian equivalent of Marktplaats. Covers both Dutch and French-speaking Belgium — essential for the entire Belgian market.</p>
       <div class="platform-countries">
-        <span class="country-tag"><span>🇧🇪</span> Vlaanderen</span>
-        <span class="country-tag"><span>🇧🇪</span> Wallonië</span>
+        <span class="country-tag"><span>🇧🇪</span> Flanders</span>
+        <span class="country-tag"><span>🇧🇪</span> Wallonia</span>
       </div>
     </div>
 
@@ -297,12 +284,12 @@ footer strong { color: rgba(255,255,255,.8); }
       <div class="platform-header">
         <div class="platform-logo-box">🛒</div>
         <div class="platform-badges">
-          <span class="badge badge-soon">Binnenkort</span>
+          <span class="badge badge-soon">Coming soon</span>
           <span class="badge badge-eu">Pan-EU</span>
         </div>
       </div>
-      <h3>eBay Europa</h3>
-      <p>367 miljoen maandelijkse bezoeken in Europa. De go-to marktplaats voor elektronica, verzamelaars en mode in Duitsland, Frankrijk, Italië en Spanje.</p>
+      <h3>eBay Europe</h3>
+      <p>367 million monthly visits across Europe. The go-to marketplace for electronics, collectibles and fashion in Germany, France, Italy and Spain.</p>
       <div class="platform-countries">
         <span class="country-tag"><span>🇩🇪</span> DE</span>
         <span class="country-tag"><span>🇫🇷</span> FR</span>
@@ -317,15 +304,15 @@ footer strong { color: rgba(255,255,255,.8); }
       <div class="platform-header">
         <div class="platform-logo-box">🇩🇪</div>
         <div class="platform-badges">
-          <span class="badge badge-soon">Binnenkort</span>
+          <span class="badge badge-soon">Coming soon</span>
           <span class="badge badge-eu">🇩🇪 DE</span>
         </div>
       </div>
       <h3>Kleinanzeigen</h3>
-      <p>De grootste advertentiesite van Duitsland (voorheen eBay Kleinanzeigen) met meer dan 35 miljoen actieve gebruikers — cruciaal voor de DACH-markt.</p>
+      <p>Germany's largest classifieds site (formerly eBay Kleinanzeigen) with over 35 million active users — crucial for the DACH market.</p>
       <div class="platform-countries">
-        <span class="country-tag"><span>🇩🇪</span> Duitsland</span>
-        <span class="country-tag"><span>🇦🇹</span> Oostenrijk</span>
+        <span class="country-tag"><span>🇩🇪</span> Germany</span>
+        <span class="country-tag"><span>🇦🇹</span> Austria</span>
       </div>
     </div>
 
@@ -333,14 +320,14 @@ footer strong { color: rgba(255,255,255,.8); }
       <div class="platform-header">
         <div class="platform-logo-box">🇪🇸</div>
         <div class="platform-badges">
-          <span class="badge badge-soon">Binnenkort</span>
+          <span class="badge badge-soon">Coming soon</span>
           <span class="badge badge-eu">🇪🇸 ES</span>
         </div>
       </div>
       <h3>Wallapop</h3>
-      <p>De meest gebruikte tweedehands app in Spanje met 15+ miljoen gebruikers. Sterk in mode, elektronica en meubels in Spanje en Portugal.</p>
+      <p>The most used second-hand app in Spain with 15+ million users. Strong in fashion, electronics and furniture in Spain and Portugal.</p>
       <div class="platform-countries">
-        <span class="country-tag"><span>🇪🇸</span> Spanje</span>
+        <span class="country-tag"><span>🇪🇸</span> Spain</span>
         <span class="country-tag"><span>🇵🇹</span> Portugal</span>
       </div>
     </div>
@@ -349,12 +336,12 @@ footer strong { color: rgba(255,255,255,.8); }
       <div class="platform-header">
         <div class="platform-logo-box">🧶</div>
         <div class="platform-badges">
-          <span class="badge badge-soon">Binnenkort</span>
-          <span class="badge badge-eu">Wereld</span>
+          <span class="badge badge-soon">Coming soon</span>
+          <span class="badge badge-eu">Global</span>
         </div>
       </div>
       <h3>Etsy</h3>
-      <p>Wereldwijd platform voor handgemaakte, vintage en unieke producten. Groot publiek in West-Europa voor creatieve en ambachtelijke artikelen.</p>
+      <p>Global platform for handmade, vintage and unique products. Large audience in Western Europe for creative and artisan items.</p>
       <div class="platform-countries">
         <span class="country-tag"><span>🇩🇪</span> DE</span>
         <span class="country-tag"><span>🇫🇷</span> FR</span>
@@ -366,14 +353,14 @@ footer strong { color: rgba(255,255,255,.8); }
 
     <div class="platform-card">
       <div class="platform-header">
-        <div class="platform-logo-box">🏪</div>
+        <div class="platform-logo-box">📘</div>
         <div class="platform-badges">
-          <span class="badge badge-soon">Binnenkort</span>
+          <span class="badge badge-soon">Coming soon</span>
           <span class="badge badge-eu">Pan-EU</span>
         </div>
       </div>
       <h3>Facebook Marketplace</h3>
-      <p>Lokaal en pan-Europees bereik via Facebook. Sterk voor meubels, elektronica en kleding in alle EU-landen. Ingebouwde chat met kopers.</p>
+      <p>Local and pan-European reach via Facebook. Strong for furniture, electronics and clothing across all EU countries. Built-in buyer chat.</p>
       <div class="platform-countries">
         <span class="country-tag"><span>🇳🇱</span> NL</span>
         <span class="country-tag"><span>🇧🇪</span> BE</span>
@@ -391,7 +378,7 @@ footer strong { color: rgba(255,255,255,.8); }
         </div>
       </div>
       <h3>Shopify</h3>
-      <p>Bouw je eigen webshop en synchroniseer je voorraad automatisch. Ideaal voor professionele resellers die een eigen kanaal willen naast de marktplaatsen.</p>
+      <p>Build your own webshop and sync your inventory automatically. Ideal for professional resellers who want their own channel alongside the marketplaces.</p>
       <div class="platform-countries">
         <span class="country-tag"><span>🇳🇱</span> NL</span>
         <span class="country-tag"><span>🇩🇪</span> DE</span>
@@ -405,8 +392,8 @@ footer strong { color: rgba(255,255,255,.8); }
 
 <!-- COMING SOON -->
 <div class="coming-soon">
-  <div class="section-label" style="text-align:center">Op de roadmap</div>
-  <h2 class="section-title" style="text-align:center;font-size:clamp(22px,3vw,30px)">Meer platforms komen eraan</h2>
+  <div class="section-label" style="text-align:center">On the roadmap</div>
+  <h2 class="section-title" style="text-align:center;font-size:clamp(22px,3vw,30px)">More platforms coming</h2>
   <div class="coming-grid">
     <div class="coming-chip">🇫🇷 Vide Dressing</div>
     <div class="coming-chip">🇩🇪 Momox Fashion</div>
@@ -424,44 +411,44 @@ footer strong { color: rgba(255,255,255,.8); }
 <!-- HOW IT WORKS -->
 <div class="how-bg">
   <div style="max-width:780px;margin:0 auto;text-align:center">
-    <div class="section-label">Zo werkt het</div>
-    <h2 class="section-title">Van één artikel naar <span class="grad-text">heel Europa</span></h2>
-    <p class="section-sub" style="margin:0 auto">CrossList EU maakt crosslisten zo makkelijk dat je er nooit meer over na hoeft te denken.</p>
+    <div class="section-label">How it works</div>
+    <h2 class="section-title">From one item to <span class="grad-text">all of Europe</span></h2>
+    <p class="section-sub" style="margin:0 auto">CrossList EU makes cross-listing so easy you'll never have to think about it again.</p>
   </div>
   <div class="steps">
     <div class="step">
       <div class="step-num">1</div>
       <div class="step-text">
-        <h3>Installeer de Chrome-extensie</h3>
-        <p>De extensie werkt op de achtergrond en detecteert automatisch je producten op de platforms die je al gebruikt. Eenmalige installatie, altijd actief.</p>
+        <h3>Install the Chrome extension</h3>
+        <p>The extension runs in the background and automatically detects your products on the platforms you already use. Install once, always active.</p>
       </div>
     </div>
     <div class="step">
       <div class="step-num">2</div>
       <div class="step-text">
-        <h3>Importeer je bestaande artikelen</h3>
-        <p>Open een bestaande listing op Marktplaats of Vinted — CrossList EU importeert foto's, beschrijving, prijs en categorie automatisch naar je dashboard.</p>
+        <h3>Import your existing items</h3>
+        <p>Open an existing listing on Marktplaats or Vinted — CrossList EU automatically imports photos, description, price and category to your dashboard.</p>
       </div>
     </div>
     <div class="step">
       <div class="step-num">3</div>
       <div class="step-text">
-        <h3>Kies je doelmarkten</h3>
-        <p>Selecteer op welke marktplaatsen en in welke landen je het artikel wil plaatsen. Kies uit 10+ platformen verspreid over 27 EU-landen.</p>
+        <h3>Choose your target markets</h3>
+        <p>Select which marketplaces and countries to list in. Choose from 10+ platforms across 27 EU countries.</p>
       </div>
     </div>
     <div class="step">
       <div class="step-num">4</div>
       <div class="step-text">
-        <h3>CrossList EU plaatst alles automatisch</h3>
-        <p>Onze extensie vult formulieren in, past categorieën aan per platform en plaatst je artikel. Jij hoeft niets te doen — wij doen het werk.</p>
+        <h3>CrossList EU publishes everything automatically</h3>
+        <p>Our extension fills in forms, adapts categories per platform and posts your item. You don't have to do a thing — we do the work.</p>
       </div>
     </div>
     <div class="step">
       <div class="step-num">5</div>
       <div class="step-text">
-        <h3>Verkoop · synchroniseer · herhaal</h3>
-        <p>Zodra een artikel verkocht is op één platform, haalt CrossList EU het automatisch overal vandaan. Nooit meer dubbele verkopen of verouderde listings.</p>
+        <h3>Sell · sync · repeat</h3>
+        <p>Once an item sells on one platform, CrossList EU automatically removes it everywhere else. No more double sales or outdated listings.</p>
       </div>
     </div>
   </div>
@@ -469,89 +456,89 @@ footer strong { color: rgba(255,255,255,.8); }
 
 <!-- FAQ -->
 <div class="faq-section">
-  <div class="section-label">Veelgestelde vragen</div>
-  <h2 class="section-title">Alles over de <span class="grad-text">marktplaatsen</span></h2>
+  <div class="section-label">Frequently asked questions</div>
+  <h2 class="section-title">Everything about the <span class="grad-text">marketplaces</span></h2>
 
   <div class="faq-list">
 
     <div class="faq-item">
       <button class="faq-question" onclick="toggleFaq(this)">
-        Welke marktplaatsen zijn nu beschikbaar?
+        Which marketplaces are available now?
         <div class="faq-icon">+</div>
       </button>
-      <div class="faq-answer">Op dit moment zijn Marktplaats (NL), Vinted (pan-EU), 2dehands (BE) en Shopify volledig geïntegreerd. eBay Europa, Etsy, Kleinanzeigen (DE), Wallapop (ES) en Facebook Marketplace komen binnenkort. We voegen continu nieuwe platforms toe op basis van gebruikersfeedback.</div>
+      <div class="faq-answer">Currently Marktplaats (NL), Vinted (pan-EU), 2dehands (BE) and Shopify are fully integrated. eBay Europe, Etsy, Kleinanzeigen (DE), Wallapop (ES) and Facebook Marketplace are coming soon. We continuously add new platforms based on user feedback.</div>
     </div>
 
     <div class="faq-item">
       <button class="faq-question" onclick="toggleFaq(this)">
-        Heb ik een account nodig op elke marktplaats?
+        Do I need an account on every marketplace?
         <div class="faq-icon">+</div>
       </button>
-      <div class="faq-answer">Ja, je hebt een eigen account nodig op elke marktplaats waarop je wil publiceren. CrossList EU plaatst de artikelen namens jou via je eigen ingelogde browser, zodat alles onder jouw naam en reputatie blijft staan.</div>
+      <div class="faq-answer">Yes, you need your own account on each marketplace you want to publish to. CrossList EU posts items on your behalf via your own logged-in browser, so everything stays under your name and reputation.</div>
     </div>
 
     <div class="faq-item">
       <button class="faq-question" onclick="toggleFaq(this)">
-        Werkt CrossList EU in alle EU-landen?
+        Does CrossList EU work in all EU countries?
         <div class="faq-icon">+</div>
       </button>
-      <div class="faq-answer">Ja. CrossList EU is ontworpen voor alle 27 EU-lidstaten. De platformbeschikbaarheid per land verschilt — zo is Marktplaats alleen in Nederland actief — maar het dashboard werkt overal. We breiden continu de platformdekking per land uit.</div>
+      <div class="faq-answer">Yes. CrossList EU is designed for all 27 EU member states. Platform availability per country varies — Marktplaats is only active in the Netherlands, for example — but the dashboard works everywhere. We continuously expand platform coverage per country.</div>
     </div>
 
     <div class="faq-item">
       <button class="faq-question" onclick="toggleFaq(this)">
-        Wat gebeurt er als ik een artikel op één platform verkoop?
+        What happens when I sell an item on one platform?
         <div class="faq-icon">+</div>
       </button>
-      <div class="faq-answer">Zodra je een verkoop markeert in CrossList EU (of de extensie dit detecteert), worden alle andere listings automatisch verwijderd of gedeactiveerd. Zo voorkom je dubbele verkopen en verouderde advertenties op de andere platformen.</div>
+      <div class="faq-answer">Once you mark a sale in CrossList EU (or the extension detects it), all other listings are automatically removed or deactivated. This prevents double sales and outdated listings on other platforms.</div>
     </div>
 
     <div class="faq-item">
       <button class="faq-question" onclick="toggleFaq(this)">
-        Worden beschrijvingen automatisch vertaald?
+        Are descriptions automatically translated?
         <div class="faq-icon">+</div>
       </button>
-      <div class="faq-answer">Ja! CrossList EU heeft ingebouwde automatische vertaling. Als je een Nederlandse beschrijving invoert en publiceert naar Vinted Frankrijk of eBay Duitsland, vertalen wij de tekst automatisch naar de juiste taal. Je kan de vertaling altijd controleren en aanpassen voor publicatie.</div>
+      <div class="faq-answer">Yes! CrossList EU has built-in automatic translation. You enter everything in English. For Marktplaats and 2dehands, titles and descriptions are automatically translated to Dutch. For international platforms like Vinted, eBay and Etsy, your English content is used directly.</div>
     </div>
 
     <div class="faq-item">
       <button class="faq-question" onclick="toggleFaq(this)">
-        Zijn alle marktplaatsen inbegrepen in elk abonnement?
+        Are all marketplaces included in every plan?
         <div class="faq-icon">+</div>
       </button>
-      <div class="faq-answer">Alle live platforms zijn beschikbaar in elk betaald abonnement. Er zijn geen extra kosten per platform. Je betaalt één prijs en krijgt toegang tot alles wat CrossList EU te bieden heeft.</div>
+      <div class="faq-answer">All live platforms are available in every paid plan. There are no extra costs per platform. You pay one price and get access to everything CrossList EU offers.</div>
     </div>
 
     <div class="faq-item">
       <button class="faq-question" onclick="toggleFaq(this)">
-        Hoe verschilt CrossList EU van Vendoo of List Perfectly?
+        How is CrossList EU different from Vendoo or List Perfectly?
         <div class="faq-icon">+</div>
       </button>
-      <div class="faq-answer">Vendoo en List Perfectly zijn primair gericht op de Amerikaanse markt (Poshmark, Mercari, eBay US). CrossList EU focust exclusief op Europese platformen: Marktplaats, Vinted, 2dehands, Kleinanzeigen, Wallapop en meer. Wij ondersteunen ook EU-specifieke zaken zoals meertaligheid, DAC7-rapportage en de juiste platformcategorieën voor Europa.</div>
+      <div class="faq-answer">Vendoo and List Perfectly are primarily focused on the US market (Poshmark, Mercari, eBay US). CrossList EU focuses exclusively on European platforms: Marktplaats, Vinted, 2dehands, Kleinanzeigen, Wallapop and more. We also support EU-specific features like multilingual listings, DAC7 reporting and the correct platform categories for Europe.</div>
     </div>
 
     <div class="faq-item">
       <button class="faq-question" onclick="toggleFaq(this)">
-        Kan ik meerdere accounts gebruiken voor dezelfde marktplaats?
+        Can I use multiple accounts for the same marketplace?
         <div class="faq-icon">+</div>
       </button>
-      <div class="faq-answer">Op dit moment ondersteunt CrossList EU één account per marktplaats. Meerdere accounts per platform is op de roadmap voor professionele resellers en teams. Je kan ons contacten als dit voor jou urgent is.</div>
+      <div class="faq-answer">Currently CrossList EU supports one account per marketplace. Multiple accounts per platform is on the roadmap for professional resellers and teams. Contact us if this is urgent for you.</div>
     </div>
 
     <div class="faq-item">
       <button class="faq-question" onclick="toggleFaq(this)">
-        Welke Chrome-extensie heb ik nodig?
+        Which Chrome extension do I need?
         <div class="faq-icon">+</div>
       </button>
-      <div class="faq-answer">CrossList EU werkt via een officiële Chrome-extensie die je eenmalig installeert. De extensie communiceert met je CrossList EU dashboard en plaatst artikelen automatisch op de marktplaatsen. Zonder de extensie werkt de automatische publicatie niet — maar het importeren en beheren van je voorraad doe je gewoon in het dashboard.</div>
+      <div class="faq-answer">CrossList EU works via an official Chrome extension that you install once. The extension communicates with your CrossList EU dashboard and automatically posts items to the marketplaces. Without the extension, automatic publishing does not work — but you can still import and manage your inventory in the dashboard.</div>
     </div>
 
     <div class="faq-item">
       <button class="faq-question" onclick="toggleFaq(this)">
-        Zijn mijn gegevens veilig en GDPR-compliant?
+        Is my data safe and GDPR-compliant?
         <div class="faq-icon">+</div>
       </button>
-      <div class="faq-answer">Absoluut. CrossList EU slaat alle data op op Europese servers, voldoet volledig aan de GDPR/AVG en deelt nooit gegevens met derden. Je marktplaats-inloggegevens verlaten nooit je eigen browser — de extensie werkt altijd via jouw ingelogde sessie.</div>
+      <div class="faq-answer">Absolutely. CrossList EU stores all data on European servers, is fully GDPR-compliant and never shares data with third parties. Your marketplace login credentials never leave your own browser — the extension always works via your own logged-in session.</div>
     </div>
 
   </div>
@@ -559,39 +546,17 @@ footer strong { color: rgba(255,255,255,.8); }
 
 <!-- CTA -->
 <div class="cta-block">
-  <h2 data-en="Ready to reach all of Europe?">Klaar om heel Europa te bereiken?</h2>
-  <p data-en="7 days free. No credit card needed. Start today.">7 dagen gratis uitproberen. Geen creditcard nodig.</p>
-  <a href="/register" class="btn btn-white" style="font-size:15px;padding:13px 32px" data-en="Start free trial →">7 dagen gratis proberen →</a>
+  <h2>Ready to reach all of Europe?</h2>
+  <p>7 days free. No credit card needed. Start today.</p>
+  <a href="/register" class="btn btn-white" style="font-size:15px;padding:13px 32px">Start free trial →</a>
 </div>
 
 <footer>
-  <strong>CrossList EU</strong> — Eén dashboard voor alle Europese marktplaatsen<br>
-  <span style="margin-top:8px;display:inline-block">© 2026 CrossList EU · <a href="/" style="color:inherit">Home</a> · <a href="/login" style="color:inherit">Inloggen</a> · <a href="/register" style="color:inherit">Registreren</a></span>
+  <strong>CrossList EU</strong> — One dashboard for all European marketplaces<br>
+  <span style="margin-top:8px;display:inline-block">© 2026 CrossList EU · <a href="/" style="color:inherit">Home</a> · <a href="/login" style="color:inherit">Log in</a> · <a href="/register" style="color:inherit">Register</a></span>
 </footer>
 
 <script>
-function toggleLang() {
-  const cur = localStorage.getItem('lang') || 'nl';
-  setLang(cur === 'nl' ? 'en' : 'nl');
-}
-function setLang(lang) {
-  localStorage.setItem('lang', lang);
-  const btn = document.getElementById('lang-btn');
-  if (btn) btn.textContent = lang === 'nl' ? 'EN' : 'NL';
-  document.querySelectorAll('[data-en]').forEach(el => {
-    if (!el.dataset.nl) el.dataset.nl = el.textContent;
-    el.textContent = lang === 'en' ? el.dataset.en : el.dataset.nl;
-  });
-  document.querySelectorAll('[data-en-html]').forEach(el => {
-    if (!el.dataset.nlHtml) el.dataset.nlHtml = el.innerHTML;
-    el.innerHTML = lang === 'en' ? el.dataset.enHtml : el.dataset.nlHtml;
-  });
-}
-document.addEventListener('DOMContentLoaded', () => {
-  const saved = localStorage.getItem('lang') || 'nl';
-  if (saved === 'en') setLang('en');
-});
-
 function toggleFaq(btn) {
   const item = btn.closest('.faq-item');
   const wasOpen = item.classList.contains('open');
