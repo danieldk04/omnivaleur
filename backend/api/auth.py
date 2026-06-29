@@ -39,6 +39,24 @@ async def forgot_password(body: ResetRequest):
     return {"ok": True, "message": "Als dit e-mailadres bekend is, ontvang je een resetlink."}
 
 
+class PasswordUpdate(BaseModel):
+    password: str
+
+
+@router.post("/reset-password")
+async def reset_password(body: PasswordUpdate, authorization: str = Header(...)):
+    token = authorization.removeprefix("Bearer ").strip()
+    if not token:
+        raise HTTPException(status_code=401, detail="Geen geldig token")
+    db = get_db()
+    try:
+        db.auth.set_session(token, "")
+        db.auth.update_user({"password": body.password})
+        return {"ok": True, "message": "Wachtwoord gewijzigd."}
+    except Exception as e:
+        raise HTTPException(status_code=400, detail="Wachtwoord wijzigen mislukt. De link is mogelijk verlopen.")
+
+
 @router.post("/login")
 async def login(body: AuthRequest):
     db = get_db()
