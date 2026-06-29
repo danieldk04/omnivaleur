@@ -16,8 +16,8 @@ async def register(body: AuthRequest):
     try:
         res = db.auth.sign_up({"email": body.email, "password": body.password})
         if res.user is None:
-            raise HTTPException(status_code=400, detail="Registratie mislukt")
-        return {"ok": True, "message": "Account aangemaakt. Check je e-mail om te bevestigen."}
+            raise HTTPException(status_code=400, detail="Registration failed")
+        return {"ok": True, "message": "Account created. Check your email to confirm."}
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 
