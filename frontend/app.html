@@ -1159,7 +1159,7 @@ async function saveItem() {
     closeModal('modal-add');
     await loadAll();
   } catch(e) {
-    alert('Fout: ' + e.message);
+    alert('Error: ' + e.message);
   } finally {
     btn.disabled = false;
   }
