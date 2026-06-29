@@ -779,7 +779,7 @@ function renderDashboard() {
   document.getElementById('stat-active-sub').textContent = `op ${new Set(state.listings.filter(l=>l.status==='active').map(l=>l.platform)).size} platforms`;
   document.getElementById('stat-unpublished').textContent = unpublished;
   document.getElementById('stat-queued').textContent = queued;
-  document.getElementById('stat-queued-sub').textContent = queued ? 'wacht op extension' : 'niets in wachtrij';
+  document.getElementById('stat-queued-sub').textContent = queued ? 'waiting for extension' : 'nothing queued';
 
   const banner = document.getElementById('jobs-banner');
   if (queued > 0) {
