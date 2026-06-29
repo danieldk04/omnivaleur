@@ -63,7 +63,7 @@ async def create_checkout(user_id: str = Depends(get_current_user)):
         success_url=f"{settings.app_url}/app.html?billing=success",
         cancel_url=f"{settings.app_url}/app.html?billing=cancel",
         subscription_data={
-            "trial_period_days": 14,
+            "trial_period_days": 7,
             "metadata": {"user_id": user_id},
         },
         metadata={"user_id": user_id},
