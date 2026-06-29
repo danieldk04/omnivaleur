@@ -1184,13 +1184,13 @@ async function delistItem(itemId, title) {
       (byStatus[r.status] = byStatus[r.status] || []).push(PLATFORM_LABELS[r.platform] || r.platform || r.message);
     }
     const summary = [];
-    if (byStatus.delisted) summary.push(`✓ Gedelist: ${byStatus.delisted.join(', ')}`);
-    if (byStatus.queued)   summary.push(`⏳ In wachtrij: ${byStatus.queued.join(', ')}`);
-    if (byStatus.error)    summary.push(`✗ Fout: ${byStatus.error.join(', ')}`);
-    alert(summary.join('\n') || 'Klaar.');
+    if (byStatus.delisted) summary.push(`✓ Delisted: ${byStatus.delisted.join(', ')}`);
+    if (byStatus.queued)   summary.push(`⏳ Queued: ${byStatus.queued.join(', ')}`);
+    if (byStatus.error)    summary.push(`✗ Error: ${byStatus.error.join(', ')}`);
+    alert(summary.join('\n') || 'Done.');
     await loadAll();
   } catch (e) {
-    alert('Fout bij delisten: ' + e.message);
+    alert('Delist error: ' + e.message);
   }
 }
 
