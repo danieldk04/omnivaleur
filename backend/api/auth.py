@@ -52,7 +52,7 @@ async def reset_password(body: PasswordUpdate, authorization: str = Header(...))
     try:
         db.auth.set_session(token, "")
         db.auth.update_user({"password": body.password})
-        return {"ok": True, "message": "Wachtwoord gewijzigd."}
+        return {"ok": True, "message": "Password updated."}
     except Exception as e:
         raise HTTPException(status_code=400, detail="Wachtwoord wijzigen mislukt. De link is mogelijk verlopen.")
 
