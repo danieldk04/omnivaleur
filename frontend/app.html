@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="nl">
+<html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -740,12 +740,12 @@ function showView(name) {
   document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
   document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
   document.getElementById('view-' + name).classList.add('active');
-  const navNames = ['dashboard', 'items', 'platforms'];
+  const navNames = ['dashboard', 'items', 'help'];
   document.querySelectorAll('.nav-item')[navNames.indexOf(name)]?.classList.add('active');
-  const titles = { dashboard: 'Dashboard', items: 'Artikelen', platforms: 'Platforms', protections: 'Beschermingen' };
+  const titles = { dashboard: 'Dashboard', items: 'Artikelen', help: 'Help', protections: 'Beschermingen' };
   document.getElementById('topbar-title').textContent = titles[name] || name;
   if (name === 'items') { clearSelection(); applyFilters(); }
-  if (name === 'platforms') renderPlatforms();
+  // help view needs no data fetch;
 }
 
 // ── Data loading ─────────────────────────────────────────────────
@@ -965,7 +965,7 @@ async function doBulkCrosslist() {
   let done = 0, errors = 0;
   for (const id of ids) {
     try {
-      const res = await fetch(`${API}/api/items/${id}/crosslist`, {
+      const res = await apiFetch(`${API}/api/items/${id}/crosslist`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ platforms: selected }),
       });
@@ -988,7 +988,7 @@ async function bulkDelist() {
   let done = 0, errors = 0;
   for (const id of ids) {
     try {
-      await fetch(`${API}/api/items/${id}/delist`, { method: 'POST' });
+      await apiFetch(`${API}/api/items/${id}/delist`, { method: 'POST' });
       done++;
     } catch { errors++; }
   }
@@ -1009,7 +1009,7 @@ async function bulkDelete() {
   let done = 0, errors = 0;
   for (const id of ids) {
     try {
-      const res = await fetch(`${API}/api/items/${id}`, { method: 'DELETE' });
+      const res = await apiFetch(`${API}/api/items/${id}`, { method: 'DELETE' });
       if (!res.ok) throw new Error(await res.text());
       done++;
     } catch { errors++; }
@@ -1146,14 +1146,14 @@ async function saveItem() {
   try {
     let itemId = id;
     if (id) {
-      await fetch(`${API}/api/items/${id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) });
+      await apiFetch(`${API}/api/items/${id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) });
     } else {
-      const res = await fetch(`${API}/api/items/`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) });
+      const res = await apiFetch(`${API}/api/items/`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) });
       const created = await res.json();
       itemId = created.id;
       const selected = [...document.querySelectorAll('#platform-checkboxes input:checked')].map(c => c.value);
       if (selected.length && itemId) {
-        await fetch(`${API}/api/items/${itemId}/crosslist`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ platforms: selected }) });
+        await apiFetch(`${API}/api/items/${itemId}/crosslist`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ platforms: selected }) });
       }
     }
     closeModal('modal-add');
@@ -1177,7 +1177,7 @@ async function delistItem(itemId, title) {
   if (!confirm(msg)) return;
 
   try {
-    const res = await fetch(`${API}/api/items/${itemId}/delist`, { method: 'POST' });
+    const res = await apiFetch(`${API}/api/items/${itemId}/delist`, { method: 'POST' });
     const data = await res.json();
     const byStatus = {};
     for (const r of (data.results || [])) {
@@ -1200,7 +1200,7 @@ async function markListingActive(itemId, platform, event) {
   const label = PLATFORM_LABELS[platform] || platform;
   if (!confirm(`Markeer listing op ${label} als actief gepubliceerd?`)) return;
   try {
-    const r = await fetch(`${API}/api/listings/mark-active`, {
+    const r = await apiFetch(`${API}/api/listings/mark-active`, {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ item_id: itemId, platform }),
     });
@@ -1244,7 +1244,7 @@ async function doMarkActive(itemId) {
   if (!selected.length) return alert('Kies minimaal één platform');
   try {
     await Promise.all(selected.map(platform =>
-      fetch(`${API}/api/listings/mark-active`, {
+      apiFetch(`${API}/api/listings/mark-active`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ item_id: itemId, platform }),
       })
@@ -1266,7 +1266,7 @@ async function doCrosslist() {
   const selected = [...document.querySelectorAll('#crosslist-platform-checkboxes input:checked')].map(c => c.value);
   if (!selected.length) return alert('Kies minimaal één platform');
   try {
-    await fetch(`${API}/api/items/${state.crosslistItemId}/crosslist`, {
+    await apiFetch(`${API}/api/items/${state.crosslistItemId}/crosslist`, {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ platforms: selected }),
     });
@@ -1394,7 +1394,7 @@ async function uploadFiles(files) {
     try {
       const form = new FormData();
       form.append('file', file);
-      const res = await fetch(`${API}/api/uploads/photo`, { method: 'POST', body: form });
+      const res = await apiFetch(`${API}/api/uploads/photo`, { method: 'POST', body: form });
       if (!res.ok) throw new Error(await res.text());
       const { url } = await res.json();
       _photoUrls[idx] = url;
