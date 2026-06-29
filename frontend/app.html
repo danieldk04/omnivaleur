@@ -911,7 +911,7 @@ function renderItemsTable(items) {
       </td>
     </tr>`;
   }).join('');
-  document.getElementById('items-body').innerHTML = rows || '<tr><td colspan="8"><div class="empty"><h3>Geen artikelen gevonden</h3><p>Pas de filters aan</p></div></td></tr>';
+  document.getElementById('items-body').innerHTML = rows || '<tr><td colspan="8"><div class="empty"><h3>No items found</h3><p>Adjust the filters</p></div></td></tr>';
   updateBulkBar();
 }
 
