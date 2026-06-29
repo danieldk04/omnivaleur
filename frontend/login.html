@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="nl">
+<html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Inloggen — CrossList EU</title>
+<title>Log in — CrossList EU</title>
 <link rel="icon" type="image/png" href="Logo Crosslist EU.png">
 <style>
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -39,27 +39,27 @@ input:focus { border-color: var(--blue); background: #fff; }
 </div>
 
 <div class="card">
-  <h1>Welkom terug</h1>
-  <p class="subtitle">Log in op je account</p>
+  <h1>Welcome back</h1>
+  <p class="subtitle">Log in to your account</p>
 
   <div id="error" class="error"></div>
 
   <form onsubmit="doLogin(event)">
     <div class="field">
-      <label for="email">E-mailadres</label>
-      <input type="email" id="email" placeholder="naam@voorbeeld.nl" autofocus autocomplete="email">
+      <label for="email">Email address</label>
+      <input type="email" id="email" placeholder="name@example.com" autofocus autocomplete="email">
     </div>
     <div class="field">
-      <label for="password">Wachtwoord</label>
+      <label for="password">Password</label>
       <input type="password" id="password" placeholder="••••••••" autocomplete="current-password">
     </div>
-    <button type="submit" class="btn" id="btn">Inloggen →</button>
+    <button type="submit" class="btn" id="btn">Log in →</button>
   </form>
 
   <div class="links">
-    <span>Nog geen account? <a href="/register">Gratis aanmaken</a></span>
-    <a href="/forgot-password">Wachtwoord vergeten?</a>
-    <a href="/">← Terug naar homepage</a>
+    <span>No account yet? <a href="/register">Start free</a></span>
+    <a href="/forgot-password">Forgot password?</a>
+    <a href="/">← Back to homepage</a>
   </div>
 </div>
 
@@ -74,7 +74,7 @@ async function doLogin(e) {
   const errEl = document.getElementById('error');
   errEl.style.display = 'none';
   btn.disabled = true;
-  btn.textContent = 'Inloggen...';
+  btn.textContent = 'Logging in...';
   try {
     const res = await fetch(`${API}/api/auth/login`, {
       method: 'POST',
@@ -82,7 +82,7 @@ async function doLogin(e) {
       body: JSON.stringify({ email, password })
     });
     const data = await res.json();
-    if (!res.ok) throw new Error(data.detail || 'Inloggen mislukt');
+    if (!res.ok) throw new Error(data.detail || 'Login failed');
     sessionStorage.setItem('cl_auth', '1');
     sessionStorage.setItem('cl_token', data.access_token);
     sessionStorage.setItem('cl_email', data.user.email);
@@ -91,7 +91,7 @@ async function doLogin(e) {
     errEl.textContent = err.message;
     errEl.style.display = 'block';
     btn.disabled = false;
-    btn.textContent = 'Inloggen →';
+    btn.textContent = 'Log in →';
   }
 }
 </script>
