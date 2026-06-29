@@ -905,9 +905,9 @@ function renderItemsTable(items) {
       <td style="white-space:nowrap;font-size:12px">${pubDate ? `<span style="color:var(--green)">${pubDate}</span>` : '<span style="color:var(--muted)">—</span>'}</td>
       <td><div class="platform-badges">${renderListingBadges(item.id)}</div></td>
       <td style="white-space:nowrap">
-        <button class="btn btn-sm btn-primary" onclick="openCrosslist('${item.id}')">Publiceer</button>
-        <button class="btn btn-sm btn-outline" onclick="editItem('${item.id}')" style="margin-left:4px">Bewerk</button>
-        <button class="btn btn-sm btn-danger" onclick="delistItem('${item.id}','${esc(item.title)}')" style="margin-left:4px" title="Delist van alle platforms">Delist</button>
+        <button class="btn btn-sm btn-primary" onclick="openCrosslist('${item.id}')">Publish</button>
+        <button class="btn btn-sm btn-outline" onclick="editItem('${item.id}')" style="margin-left:4px">Edit</button>
+        <button class="btn btn-sm btn-danger" onclick="delistItem('${item.id}','${esc(item.title)}')" style="margin-left:4px" title="Delist from all platforms">Delist</button>
       </td>
     </tr>`;
   }).join('');
