@@ -70,4 +70,4 @@ async def login(body: AuthRequest):
             "user": {"id": res.user.id, "email": res.user.email},
         }
     except Exception as e:
-        raise HTTPException(status_code=401, detail="Onjuiste inloggegevens")
+        raise HTTPException(status_code=401, detail="Invalid email or password")
