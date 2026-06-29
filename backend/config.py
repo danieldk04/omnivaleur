@@ -31,6 +31,7 @@ class Settings(BaseSettings):
     cloudinary_api_secret: str = ""
 
     stripe_secret_key: str = ""
+    stripe_publishable_key: str = ""
     stripe_webhook_secret: str = ""
     stripe_price_id: str = ""
     app_url: str = "https://app.crosslisteu.com"
