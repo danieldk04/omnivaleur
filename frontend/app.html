@@ -636,7 +636,7 @@ input[type="checkbox"].row-check { width: 15px; height: 15px; cursor: pointer; a
 </div>
 
 <script>
-if (!sessionStorage.getItem('cl_auth')) { window.location.href = 'login.html'; }
+if (!sessionStorage.getItem('cl_auth')) { window.location.href = '/login'; }
 
 const API = window.location.hostname === 'localhost' ? 'http://localhost:8001' : 'https://api.crosslisteu.com';
 const PLATFORMS = ['marktplaats', '2dehands', 'vinted', 'ebay', 'etsy', 'shopify'];
