@@ -983,7 +983,7 @@ async function bulkDelist() {
   if (!ids.length) return;
   const names = ids.map(id => state.items.find(i => i.id === id)?.title || id).slice(0, 3).join(', ');
   const more = ids.length > 3 ? ` en ${ids.length - 3} meer` : '';
-  if (!confirm(`Delist ${ids.length} artikel(en) van alle platforms?\n${names}${more}`)) return;
+  if (!confirm(`Delist ${ids.length} item(s) from all platforms?\n${names}${more}`)) return;
 
   let done = 0, errors = 0;
   for (const id of ids) {
