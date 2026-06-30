@@ -16,31 +16,44 @@ _DUTCH_PLATFORMS: set[str] = {"marktplaats", "2dehands"}
 logger = logging.getLogger(__name__)
 
 
-async def _translate(text: str, langpair: str) -> str:
-    """Translate text via MyMemory free API. langpair e.g. 'nl|en' or 'en|nl'."""
+async def _translate_with_claude(text: str, target_lang: str, brand: str | None = None) -> str:
+    """Translate text using Claude. Preserves brand names, formatting and paragraph structure."""
     if not text or not text.strip():
         return text
     try:
-        import httpx
-        async with httpx.AsyncClient(timeout=8) as client:
-            r = await client.get(
-                "https://api.mymemory.translated.net/get",
-                params={"q": text[:500], "langpair": langpair},
-            )
-            data = r.json()
-            translated = data.get("responseData", {}).get("translatedText", "")
-            return translated if translated else text
+        import anthropic as _anthropic
+        from backend.config import settings as _settings
+        _client = _anthropic.Anthropic(api_key=_settings.anthropic_api_key)
+
+        lang_name = "Dutch" if target_lang == "nl" else "English"
+        brand_note = f' The word "{brand}" is a brand name — never translate it, keep it exactly as-is.' if brand else ""
+
+        prompt = (
+            f"Translate the following second-hand clothing listing text to {lang_name}."
+            f"{brand_note}"
+            " Preserve the exact paragraph breaks, bullet points, line breaks and formatting."
+            " Keep numbers, sizes, measurements and condition scores (e.g. 7-8/10) unchanged."
+            " Return only the translated text, nothing else.\n\n"
+            f"{text}"
+        )
+        response = _client.messages.create(
+            model="claude-haiku-4-5-20251001",
+            max_tokens=1024,
+            messages=[{"role": "user", "content": prompt}],
+        )
+        result = response.content[0].text.strip()
+        return result if result else text
     except Exception as e:
-        logger.warning(f"Translation ({langpair}) failed, using original: {e}")
+        logger.warning(f"Claude translation to {target_lang} failed: {e}")
         return text
 
 
-async def _translate_to_english(text: str) -> str:
-    return await _translate(text, "nl|en")
+async def _translate_to_english(text: str, brand: str | None = None) -> str:
+    return await _translate_with_claude(text, "en", brand)
 
 
-async def _translate_to_dutch(text: str) -> str:
-    return await _translate(text, "en|nl")
+async def _translate_to_dutch(text: str, brand: str | None = None) -> str:
+    return await _translate_with_claude(text, "nl", brand)
 
 
 # Platforms handled by the Chrome extension (form automation in real browser)
