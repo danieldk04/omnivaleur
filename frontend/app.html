@@ -1326,10 +1326,11 @@ function renderBilling(data) {
   if (emailEl) emailEl.textContent = sessionStorage.getItem('cl_email') || '—';
 
   if (!data) {
+    // Billing check failed — fail open, don't block
     upgradeCard.style.display = 'block';
     activeCard.style.display = 'none';
-    showPaywall('Start your 7-day free trial to access CrossList EU.', 'Start 7-day free trial →');
-    document.getElementById('nav-prijs-label').textContent = 'Subscription';
+    hidePaywall();
+    document.getElementById('nav-prijs-label').textContent = 'Account';
     return;
   }
 
