@@ -198,7 +198,7 @@ class MarktplaatsPlatform(PlatformBase):
                 [...document.querySelectorAll('[data-testid]')]
                     .map(e => e.getAttribute('data-testid'))
             """)
-            logger.error(f"{self._platform}: data-testids on page: {testids}")
+            logger.debug(f"{self._platform}: data-testids on page: {testids}")
 
             # Description — scroll into view then JS click + keyboard type
             desc_text = (item.get("description") or "")[:2000]
