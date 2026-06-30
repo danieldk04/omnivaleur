@@ -31,10 +31,11 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=[
         "https://app.crosslisteu.com",
-        "chrome-extension://",
+        "https://api.crosslisteu.com",
         "http://localhost:3000",
         "http://localhost:8000",
     ],
+    allow_origin_regex=r"chrome-extension://.*",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
