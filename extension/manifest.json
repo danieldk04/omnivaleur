@@ -35,12 +35,12 @@
       "run_at": "document_idle"
     },
     {
-      "matches": ["https://www.marktplaats.nl/mijn-marktplaats/advertenties/*"],
+      "matches": ["https://www.marktplaats.nl/mijn-marktplaats/advertenties/*", "https://www.marktplaats.nl/seller/view/*"],
       "js": ["content/shared.js", "content/marktplaats.js"],
       "run_at": "document_idle"
     },
     {
-      "matches": ["https://www.2dehands.be/mijn-2dehands/advertenties/*"],
+      "matches": ["https://www.2dehands.be/mijn-2dehands/advertenties/*", "https://www.2dehands.be/seller/view/*"],
       "js": ["content/shared.js", "content/tweedehands.js"],
       "run_at": "document_idle"
     }
