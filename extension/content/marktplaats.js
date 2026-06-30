@@ -17,7 +17,7 @@
     } else {
       await fillForm(item);
       const id = await submitListing(/marktplaats\.nl\/v\/[^/]+\/(m\d+)/);
-      send("JOB_DONE", { platform_listing_id: id, platform_listing_url: `https://www.marktplaats.nl/seller/view/${id}` });
+      send("JOB_DONE", { platform_listing_id: id, platform_listing_url: `https://www.marktplaats.nl/v/listing/${id}` });
     }
   } catch (e) {
     send("JOB_ERROR", null, String(e)); // tab stays open (background no longer closes it)
