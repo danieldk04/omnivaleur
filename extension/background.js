@@ -124,8 +124,8 @@ const MP_CATEGORIES = {
 const MP_DEFAULT = { cat1: 621, cat3: 636, bucketId: 162 }; // fallback: dames jeans
 
 function getDeleteUrl(platform, payload) {
-  if (platform === "marktplaats") return "https://www.marktplaats.nl/mijn-marktplaats/advertenties/actief";
-  if (platform === "2dehands")   return "https://www.2dehands.be/mijn-2dehands/advertenties/actief";
+  if (platform === "marktplaats") return "https://www.marktplaats.nl/mijn-marktplaats/advertenties";
+  if (platform === "2dehands")   return "https://www.2dehands.be/mijn-2dehands/advertenties";
   if (platform === "vinted")     return payload?.platform_listing_id
     ? `https://www.vinted.com/items/${payload.platform_listing_id}`
     : null;
