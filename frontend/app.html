@@ -1429,9 +1429,9 @@ function renderItemsTable(items) {
         <div><div class="item-title">${esc(item.title)}</div><div class="item-meta">${item.brand || '—'}${item.size ? ' · ' + item.size : ''}</div></div>
       </div></td>
       <td><strong>€${item.price}</strong></td>
-      <td>${conditionLabel(item.condition)}</td>
-      <td style="white-space:nowrap;color:var(--muted);font-size:12px">${fmtDate(item.created_at)}</td>
-      <td style="white-space:nowrap;font-size:12px">${pubDate ? `<span style="color:var(--green)">${pubDate}</span>` : '<span style="color:var(--muted)">—</span>'}</td>
+      <td class="hide-mobile">${conditionLabel(item.condition)}</td>
+      <td class="hide-mobile" style="white-space:nowrap;color:var(--muted);font-size:12px">${fmtDate(item.created_at)}</td>
+      <td class="hide-mobile" style="white-space:nowrap;font-size:12px">${pubDate ? `<span style="color:var(--green)">${pubDate}</span>` : '<span style="color:var(--muted)">—</span>'}</td>
       <td><div class="platform-badges">${renderListingBadges(item.id)}</div></td>
       <td style="white-space:nowrap">
         <button class="btn btn-sm btn-primary" onclick="openCrosslist('${item.id}')">Publish</button>
