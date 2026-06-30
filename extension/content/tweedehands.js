@@ -24,39 +24,36 @@
   }
 
   async function deleteListing2dh(listingId) {
-    // Navigate directly to the listing page (seller/view/{id}) — no overview page needed.
-    await sleep(2000);
+    // We land on /v/listing/{id} — the listing detail page.
+    await sleep(2500);
 
-    const actionsBtn = document.querySelector(
-      'button[aria-label*="opties"], button[aria-label*="menu"], button[aria-label*="actions"], ' +
-      '[data-testid*="action"], [data-testid*="kebab"], [data-testid*="more"], [aria-label*="Meer"]'
-    );
-    if (actionsBtn) {
-      actionsBtn.click();
-      await sleep(600);
+    async function findAndClickDelete() {
+      return [...document.querySelectorAll('button, a, [role="menuitem"], [role="option"], li')]
+        .find(el => /verwijder/i.test(el.textContent?.trim()));
     }
 
-    let deleteEl = [...document.querySelectorAll('button, a, [role="menuitem"], [role="option"]')]
-      .find(el => /verwijder/i.test(el.textContent));
+    let deleteEl = await findAndClickDelete();
 
     if (!deleteEl) {
-      const moreBtn = [...document.querySelectorAll('button')]
-        .find(el => /\.\.\.|opties|meer|beheer/i.test(el.textContent) || el.getAttribute('aria-label')?.match(/opties|meer|beheer/i));
-      if (moreBtn) { moreBtn.click(); await sleep(600); }
-      deleteEl = [...document.querySelectorAll('button, a, [role="menuitem"]')]
-        .find(el => /verwijder/i.test(el.textContent));
+      const triggers = [...document.querySelectorAll('button, [role="button"]')].filter(el => {
+        const label = (el.textContent + ' ' + (el.getAttribute('aria-label') || '')).toLowerCase();
+        return /opties|meer|beheer|\.\.\.|menu|actions/i.test(label) || el.querySelector('svg');
+      });
+      for (const btn of triggers) {
+        btn.click();
+        await sleep(500);
+        deleteEl = await findAndClickDelete();
+        if (deleteEl) break;
+      }
     }
 
-    if (!deleteEl) throw new Error("Delete button not found for listing " + listingId + " — check if already removed or page layout changed");
+    if (!deleteEl) throw new Error("Verwijder button not found on listing " + listingId);
     deleteEl.click();
     await sleep(800);
 
     const confirmBtn = [...document.querySelectorAll('button')]
-      .find(el => /verwijder|bevestig|ok|ja\b/i.test(el.textContent));
-    if (confirmBtn) {
-      confirmBtn.click();
-      await sleep(1000);
-    }
+      .find(el => /verwijder|bevestig|ok|ja\b/i.test(el.textContent?.trim()));
+    if (confirmBtn) { confirmBtn.click(); await sleep(1000); }
   }
 
   // 2dehands only renders these 7 tags; anything else crashes the editor.
