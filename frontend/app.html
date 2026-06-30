@@ -840,6 +840,26 @@ input[type="checkbox"].row-check { width: 15px; height: 15px; cursor: pointer; a
           <div style="font-size:14px;opacity:.8;margin-bottom:24px">7 days free · No credit card · Start in minutes</div>
           <button onclick="startCheckout()" style="padding:14px 36px;background:#fff;color:#1d4ed8;border:none;border-radius:10px;font-size:15px;font-weight:700;cursor:pointer">Start free trial →</button>
         </div>
+
+        <!-- Account info (always visible, also during trial) -->
+        <div class="card" style="max-width:580px;margin:32px auto 0">
+          <div class="card-header"><h2>Account</h2></div>
+          <div style="padding:20px 22px;display:flex;flex-direction:column;gap:14px">
+            <div style="display:flex;align-items:center;justify-content:space-between">
+              <div>
+                <div style="font-size:11px;font-weight:600;color:var(--muted);margin-bottom:2px">Email address</div>
+                <div style="font-size:14px;font-weight:600" id="account-email-trial">—</div>
+              </div>
+            </div>
+            <div style="border-top:1px solid var(--border);padding-top:14px;display:flex;align-items:center;justify-content:space-between">
+              <div>
+                <div style="font-size:13px;font-weight:600;color:var(--text)">Log out</div>
+                <div style="font-size:12px;color:var(--muted)">You will be redirected to the login page</div>
+              </div>
+              <button onclick="document.getElementById('logout-btn').click()" class="btn btn-outline btn-sm">Log out</button>
+            </div>
+          </div>
+        </div>
       </div>
 
     </div>
