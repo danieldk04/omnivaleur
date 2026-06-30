@@ -2034,8 +2034,8 @@ const CATEGORIES = {
 };
 
 function togglePlatformPrices() {
-  const enabled = document.getElementById('f-platform-price-enabled').checked;
-  document.getElementById('platform-price-fields').style.display = enabled ? 'grid' : 'none';
+  const el = document.getElementById('platform-price-fields');
+  el.style.display = document.getElementById('f-platform-price-enabled').checked ? 'grid' : 'none';
 }
 
 function toggleBidField() {
