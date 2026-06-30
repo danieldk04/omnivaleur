@@ -9,7 +9,7 @@ from backend.services.crosslist import handle_item_sold
 
 logger = logging.getLogger(__name__)
 
-POLL_PLATFORMS = {"vinted"}  # Add others if they lack reliable webhooks
+POLL_PLATFORMS = {"vinted", "marktplaats", "2dehands"}
 
 
 async def poll_platform_statuses():
