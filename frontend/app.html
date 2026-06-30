@@ -1546,7 +1546,7 @@ function renderPlatformMatrix(itemId) {
     if (!byPlatform[j.platform]) byPlatform[j.platform] = { status: 'pending' };
   }
 
-  const SHORT = { marktplaats: 'MP', '2dehands': '2dh', vinted: 'Vinted', ebay: 'eBay', etsy: 'Etsy', shopify: 'Shop' };
+  const SHORT = { marktplaats: 'MP', '2dehands': '2dh', vinted: 'V', ebay: 'eBay', etsy: 'Etsy', shopify: 'Shop' };
 
   const chips = PLATFORMS.map(p => {
     const icon = PLATFORM_ICONS[p];
@@ -1556,13 +1556,13 @@ function renderPlatformMatrix(itemId) {
       return `<span class="pm-chip pm-none" title="${PLATFORM_LABELS[p]}: not listed">${icon} ${label}</span>`;
     }
     if (l.status === 'active') {
-      return `<span class="pm-chip pm-active" title="${PLATFORM_LABELS[p]}: listed">${icon} ${label} ✓</span>`;
+      return `<span class="pm-chip pm-active" title="${PLATFORM_LABELS[p]}: listed ✓">${icon} ${label}</span>`;
     }
     if (l.status === 'pending' || l.status === 'queued') {
-      return `<span class="pm-chip pm-pending" title="${PLATFORM_LABELS[p]}: publishing…">${icon} ${label} ⏳</span>`;
+      return `<span class="pm-chip pm-pending" title="${PLATFORM_LABELS[p]}: publishing…">${icon} ${label}</span>`;
     }
     if (l.status === 'error') {
-      return `<span class="pm-chip pm-error" title="Error — click to mark as active" onclick="markListingActive('${itemId}','${p}',event)">${icon} ${label} !</span>`;
+      return `<span class="pm-chip pm-error" title="${PLATFORM_LABELS[p]}: error — click to fix" onclick="markListingActive('${itemId}','${p}',event)">${icon} ${label}</span>`;
     }
     return `<span class="pm-chip pm-none" title="${PLATFORM_LABELS[p]}">${icon} ${label}</span>`;
   });
