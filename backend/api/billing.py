@@ -17,13 +17,15 @@ def _get_or_create_subscription(user_id: str) -> dict:
     result = db.table("subscriptions").select("*").eq("user_id", user_id).execute()
     if result.data:
         return result.data[0]
-    # Auto-create trial subscription for new users
-    new_sub = db.table("subscriptions").insert({
-        "user_id": user_id,
-        "status": "trialing",
-        "plan": "pro",
-    }).execute()
-    return new_sub.data[0]
+    try:
+        new_sub = db.table("subscriptions").insert({
+            "user_id": user_id,
+            "status": "trialing",
+            "plan": "pro",
+        }).execute()
+        return new_sub.data[0]
+    except Exception:
+        return {"user_id": user_id, "status": "trialing", "plan": "pro"}
 
 
 @router.get("/status")
