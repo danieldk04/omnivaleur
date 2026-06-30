@@ -259,7 +259,7 @@ class MarktplaatsPlatform(PlatformBase):
                 desc: document.querySelector('[data-testid="text-editor-input_nl-NL"]')?.textContent,
                 submitBtn: !!document.querySelector('button[type="submit"]'),
             })""")
-            logger.error(f"{self._platform} form state before submit: {form_state}")
+            logger.info(f"{self._platform} form state before submit: {form_state}")
 
             # Submit
             await page.evaluate("document.querySelector('button[type=\"submit\"]').click()")
