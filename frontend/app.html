@@ -1024,6 +1024,26 @@ input[type="checkbox"].row-check { width: 15px; height: 15px; cursor: pointer; a
           </div>
         </div>
       </div>
+      <div class="form-group" style="background:#f8faff;border:1px solid #e0e7ff;border-radius:10px;padding:12px 14px">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
+          <input type="checkbox" id="f-platform-price-enabled" style="width:16px;height:16px;margin:0;cursor:pointer;accent-color:var(--blue)" onchange="togglePlatformPrices()">
+          <label for="f-platform-price-enabled" style="margin:0;text-transform:none;letter-spacing:0;font-size:13px;font-weight:600;color:var(--text);cursor:pointer">Different price per platform <span style="font-weight:400;color:var(--muted)">(optional)</span></label>
+        </div>
+        <div id="platform-price-fields" style="display:none;display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px">
+          <div class="form-group" style="margin:0">
+            <label style="font-size:10px">🇳🇱 Marktplaats (€)</label>
+            <input id="f-price-mp" type="number" step="0.01" min="0" placeholder="same as base">
+          </div>
+          <div class="form-group" style="margin:0">
+            <label style="font-size:10px">🇧🇪 2dehands (€)</label>
+            <input id="f-price-2dh" type="number" step="0.01" min="0" placeholder="same as base">
+          </div>
+          <div class="form-group" style="margin:0">
+            <label style="font-size:10px">👗 Vinted (€)</label>
+            <input id="f-price-vinted" type="number" step="0.01" min="0" placeholder="same as base">
+          </div>
+        </div>
+      </div>
       <div class="form-row">
         <div class="form-group">
           <label>Purchase price (€)</label>
@@ -1037,7 +1057,24 @@ input[type="checkbox"].row-check { width: 15px; height: 15px; cursor: pointer; a
         </div>
         <div class="form-group">
           <label>Size</label>
-          <input id="f-size" type="text" placeholder="e.g. M / 32">
+          <select id="f-size">
+            <option value="">— select size —</option>
+            <optgroup label="Standard">
+              <option>XXS</option><option>XS</option><option>S</option><option>M</option><option>L</option><option>XL</option><option>XXL</option><option>3XL</option>
+            </optgroup>
+            <optgroup label="Numeric (EU)">
+              <option>32</option><option>34</option><option>36</option><option>38</option><option>40</option><option>42</option><option>44</option><option>46</option><option>48</option><option>50</option><option>52</option>
+            </optgroup>
+            <optgroup label="Jeans (waist)">
+              <option>W26</option><option>W27</option><option>W28</option><option>W29</option><option>W30</option><option>W31</option><option>W32</option><option>W33</option><option>W34</option><option>W36</option><option>W38</option>
+            </optgroup>
+            <optgroup label="Shoes (EU)">
+              <option>35</option><option>36</option><option>37</option><option>38</option><option>39</option><option>40</option><option>41</option><option>42</option><option>43</option><option>44</option><option>45</option><option>46</option>
+            </optgroup>
+            <optgroup label="Kids">
+              <option>56</option><option>62</option><option>68</option><option>74</option><option>80</option><option>86</option><option>92</option><option>98</option><option>104</option><option>110</option><option>116</option><option>122</option><option>128</option><option>134</option><option>140</option><option>146</option><option>152</option><option>158</option><option>164</option>
+            </optgroup>
+          </select>
         </div>
       </div>
       <div class="form-row">
