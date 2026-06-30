@@ -820,48 +820,203 @@ input[type="checkbox"].row-check { width: 15px; height: 15px; cursor: pointer; a
     <div id="view-help" class="view">
       <div class="view-header">
         <h1>Help &amp; guide</h1>
-        <p>How does CrossList EU work?</p>
+        <p>Everything you need to get started with CrossList EU</p>
       </div>
-      <div style="max-width:680px;display:flex;flex-direction:column;gap:16px">
 
-        <div class="card">
-          <div class="card-header"><h2>🧩 Chrome extension required</h2></div>
-          <div style="padding:20px 24px;font-size:13px;color:var(--muted);line-height:1.75">
-            CrossList EU publishes listings via a Chrome extension. The extension automatically logs in to Marktplaats, 2dehands and Vinted and posts your listing.<br><br>
-            <strong style="color:var(--text)">Without the extension, publishing does not work.</strong><br><br>
-            <a href="https://chrome.google.com/webstore" target="_blank" class="btn btn-primary btn-sm" style="text-decoration:none">Download Chrome extension →</a>
-          </div>
-        </div>
+      <style>
+        .help-grid { display:grid; grid-template-columns:1fr 1fr; gap:16px; max-width:900px; }
+        .help-grid .card.full { grid-column:1/-1; }
+        .help-steps { display:flex; flex-direction:column; gap:0; }
+        .help-step { display:flex; gap:16px; align-items:flex-start; padding:14px 0; border-bottom:1px solid var(--border); }
+        .help-step:last-child { border-bottom:none; padding-bottom:0; }
+        .help-step-num { width:30px;height:30px;border-radius:50%;background:var(--grad);color:#fff;font-size:12px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px }
+        .help-step-title { font-weight:700;font-size:13px;margin-bottom:3px;color:var(--text) }
+        .help-step-desc { font-size:13px;color:var(--muted);line-height:1.6 }
+        .help-faq { display:flex;flex-direction:column;gap:0 }
+        .help-faq-item { border-bottom:1px solid var(--border) }
+        .help-faq-item:last-child { border-bottom:none }
+        .help-faq-q { display:flex;justify-content:space-between;align-items:center;padding:14px 0;cursor:pointer;font-size:13px;font-weight:600;color:var(--text);gap:12px;user-select:none }
+        .help-faq-q svg { flex-shrink:0;color:var(--muted);transition:transform .2s }
+        .help-faq-a { font-size:13px;color:var(--muted);line-height:1.65;padding-bottom:14px;display:none }
+        .help-faq-item.open .help-faq-a { display:block }
+        .help-faq-item.open .help-faq-q svg { transform:rotate(180deg) }
+        .dash-explain { display:grid;grid-template-columns:1fr 1fr;gap:10px }
+        .dash-stat-card { background:var(--sidebar-hover);border-radius:10px;padding:14px 16px }
+        .dash-stat-label { font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);margin-bottom:6px }
+        .dash-stat-desc { font-size:13px;color:var(--text);line-height:1.55 }
+        .ext-status-hint { display:flex;align-items:center;gap:10px;padding:12px 16px;border-radius:10px;font-size:13px;line-height:1.5 }
+        .ext-status-hint.warn { background:#fffbeb;border:1px solid #fde68a;color:#92400e }
+        .ext-status-hint.ok { background:#f0fdf4;border:1px solid #bbf7d0;color:#166534 }
+        @media(max-width:700px){
+          .help-grid { grid-template-columns:1fr }
+          .help-grid .card.full { grid-column:1 }
+          .dash-explain { grid-template-columns:1fr }
+        }
+      </style>
 
-        <div class="card">
-          <div class="card-header"><h2>📋 Step-by-step guide</h2></div>
-          <div style="padding:20px 24px">
-            <div style="display:flex;flex-direction:column;gap:16px">
-              <div style="display:flex;gap:16px;align-items:flex-start">
-                <div style="width:28px;height:28px;border-radius:50%;background:var(--grad);color:#fff;font-size:12px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0">1</div>
-                <div><div style="font-weight:700;font-size:13px;margin-bottom:3px">Create an item</div><div style="font-size:13px;color:var(--muted)">Click "New item", fill in the details and upload photos. All text can be in English.</div></div>
+      <div class="help-grid">
+
+        <!-- Getting started -->
+        <div class="card full">
+          <div class="card-header"><h2>📋 How it works — step by step</h2></div>
+          <div style="padding:4px 24px 20px">
+            <div class="help-steps">
+              <div class="help-step">
+                <div class="help-step-num">1</div>
+                <div><div class="help-step-title">Install the Chrome extension</div><div class="help-step-desc">Download the CrossList EU extension from the Chrome Web Store and log in with your account. The extension runs silently in the background — you don't need to open it again.</div></div>
               </div>
-              <div style="display:flex;gap:16px;align-items:flex-start">
-                <div style="width:28px;height:28px;border-radius:50%;background:var(--grad);color:#fff;font-size:12px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0">2</div>
-                <div><div style="font-weight:700;font-size:13px;margin-bottom:3px">Choose platforms</div><div style="font-size:13px;color:var(--muted)">Select which marketplaces to publish to and click "Save &amp; publish".</div></div>
+              <div class="help-step">
+                <div class="help-step-num">2</div>
+                <div><div class="help-step-title">Create an item here in the dashboard</div><div class="help-step-desc">Click <strong>+ New item</strong>, fill in the title, description, price, size and photos. Write everything in English — CrossList EU handles the Dutch translation for Marktplaats &amp; 2dehands automatically.</div></div>
               </div>
-              <div style="display:flex;gap:16px;align-items:flex-start">
-                <div style="width:28px;height:28px;border-radius:50%;background:var(--grad);color:#fff;font-size:12px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0">3</div>
-                <div><div style="font-weight:700;font-size:13px;margin-bottom:3px">Extension does the rest</div><div style="font-size:13px;color:var(--muted)">The Chrome extension opens the platforms in the background and posts your listing automatically — with Dutch translation where needed.</div></div>
+              <div class="help-step">
+                <div class="help-step-num">3</div>
+                <div><div class="help-step-title">Choose platforms and publish</div><div class="help-step-desc">Select which marketplaces to list on (Marktplaats, 2dehands, Vinted, Shopify) and click <strong>Save &amp; publish</strong>. The job is added to the queue.</div></div>
               </div>
-              <div style="display:flex;gap:16px;align-items:flex-start">
-                <div style="width:28px;height:28px;border-radius:50%;background:var(--grad);color:#fff;font-size:12px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0">4</div>
-                <div><div style="font-weight:700;font-size:13px;margin-bottom:3px">Item sold?</div><div style="font-size:13px;color:var(--muted)">Mark it as sold and all other listings are automatically removed across all platforms.</div></div>
+              <div class="help-step">
+                <div class="help-step-num">4</div>
+                <div><div class="help-step-title">Extension picks up the job automatically</div><div class="help-step-desc">Within 15 seconds, the Chrome extension picks up the job and opens the marketplace in a new tab. It fills in all fields, uploads your photos and submits the listing — fully automated. The tab closes when done.</div></div>
+              </div>
+              <div class="help-step">
+                <div class="help-step-num">5</div>
+                <div><div class="help-step-title">Item sold? Mark it sold once</div><div class="help-step-desc">When your item sells anywhere, click <strong>Mark as sold</strong> in the dashboard. CrossList EU automatically removes the listing from all other platforms so you avoid double sales.</div></div>
               </div>
             </div>
           </div>
         </div>
 
+        <!-- Dashboard explained -->
         <div class="card">
-          <div class="card-header"><h2>✉️ Contact support</h2></div>
-          <div style="padding:20px 24px;font-size:13px;color:var(--muted);line-height:1.75">
-            Questions or issues? Email us at <a href="mailto:info@revaleur.com" style="color:var(--blue);font-weight:700">info@revaleur.com</a> and we'll get back to you quickly.<br><br>
-            <span style="font-size:12px">Revaleur · KVK 86792423 · Kleine Melanen 5, 4614RG Bergen op Zoom</span>
+          <div class="card-header"><h2>🖥️ Dashboard explained</h2></div>
+          <div style="padding:12px 24px 20px">
+            <div class="dash-explain">
+              <div class="dash-stat-card">
+                <div class="dash-stat-label">Total items</div>
+                <div class="dash-stat-desc">All items you have created, regardless of status.</div>
+              </div>
+              <div class="dash-stat-card">
+                <div class="dash-stat-label">Active listings</div>
+                <div class="dash-stat-desc">Items currently live on at least one marketplace.</div>
+              </div>
+              <div class="dash-stat-card">
+                <div class="dash-stat-label">Not published</div>
+                <div class="dash-stat-desc">Items created but not yet sent to any platform.</div>
+              </div>
+              <div class="dash-stat-card">
+                <div class="dash-stat-label">Queued</div>
+                <div class="dash-stat-desc">Jobs waiting for the Chrome extension to pick up and execute.</div>
+              </div>
+            </div>
+            <div style="margin-top:14px;font-size:13px;color:var(--muted);line-height:1.6">
+              The <strong style="color:var(--text)">yellow banner</strong> at the top appears when there are queued jobs. It disappears automatically once the extension has processed them. If it stays visible for more than a minute, make sure the extension is installed and you are logged in.
+            </div>
+          </div>
+        </div>
+
+        <!-- Extension setup -->
+        <div class="card">
+          <div class="card-header"><h2>🧩 Chrome extension setup</h2></div>
+          <div style="padding:12px 24px 20px;display:flex;flex-direction:column;gap:12px">
+            <div class="ext-status-hint warn">
+              <span style="font-size:18px">⚠️</span>
+              <span>The extension must be installed <em>and</em> you must be logged in inside the extension popup. Without this, jobs will never be processed.</span>
+            </div>
+            <div style="font-size:13px;color:var(--muted);line-height:1.65">
+              <strong style="color:var(--text);display:block;margin-bottom:6px">Setup checklist:</strong>
+              <div style="display:flex;flex-direction:column;gap:6px">
+                <div style="display:flex;gap:8px"><span style="color:var(--blue)">✓</span><span>Install the extension from the Chrome Web Store</span></div>
+                <div style="display:flex;gap:8px"><span style="color:var(--blue)">✓</span><span>Click the extension icon and log in with your CrossList EU email &amp; password</span></div>
+                <div style="display:flex;gap:8px"><span style="color:var(--blue)">✓</span><span>You should see <em>"Extension active — ready to publish"</em> in the popup</span></div>
+                <div style="display:flex;gap:8px"><span style="color:var(--blue)">✓</span><span>Make sure Chrome is running when you publish items</span></div>
+              </div>
+            </div>
+            <a href="https://chrome.google.com/webstore" target="_blank" class="btn btn-primary btn-sm" style="text-decoration:none;text-align:center">Download Chrome extension →</a>
+          </div>
+        </div>
+
+        <!-- FAQ -->
+        <div class="card full">
+          <div class="card-header"><h2>❓ Frequently asked questions</h2></div>
+          <div style="padding:0 24px 8px">
+            <div class="help-faq">
+
+              <div class="help-faq-item">
+                <div class="help-faq-q" onclick="this.parentElement.classList.toggle('open')">
+                  Why is my listing stuck in "Queued"?
+                  <svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"/></svg>
+                </div>
+                <div class="help-faq-a">The Chrome extension is either not installed, not logged in, or Chrome isn't running. Open the extension popup and check that it says "Extension active — ready to publish". Once the extension is active it will pick up the job within 15 seconds.</div>
+              </div>
+
+              <div class="help-faq-item">
+                <div class="help-faq-q" onclick="this.parentElement.classList.toggle('open')">
+                  The extension opens a tab but the listing doesn't get submitted — what's wrong?
+                  <svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"/></svg>
+                </div>
+                <div class="help-faq-a">This usually means you are not logged in to that marketplace in Chrome. Open Marktplaats, 2dehands or Vinted manually and log in. After that, try publishing again — the extension uses your existing browser session.</div>
+              </div>
+
+              <div class="help-faq-item">
+                <div class="help-faq-q" onclick="this.parentElement.classList.toggle('open')">
+                  Do I need to be logged in to the marketplaces separately?
+                  <svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"/></svg>
+                </div>
+                <div class="help-faq-a">Yes. The extension uses your existing browser sessions on Marktplaats, 2dehands and Vinted. Log in to each platform at least once in Chrome and your session will be remembered. CrossList EU never stores your marketplace passwords.</div>
+              </div>
+
+              <div class="help-faq-item">
+                <div class="help-faq-q" onclick="this.parentElement.classList.toggle('open')">
+                  Can I write my listings in English?
+                  <svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"/></svg>
+                </div>
+                <div class="help-faq-a">Yes — always write in English. CrossList EU automatically translates your title and description to Dutch when posting to Marktplaats and 2dehands. For Vinted and Shopify the English text is used directly.</div>
+              </div>
+
+              <div class="help-faq-item">
+                <div class="help-faq-q" onclick="this.parentElement.classList.toggle('open')">
+                  What happens when an item sells on one platform?
+                  <svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"/></svg>
+                </div>
+                <div class="help-faq-a">Click "Mark as sold" on the item in your dashboard. CrossList EU will queue delist jobs for all other platforms and the extension will remove those listings automatically. This prevents you from accidentally selling the same item twice.</div>
+              </div>
+
+              <div class="help-faq-item">
+                <div class="help-faq-q" onclick="this.parentElement.classList.toggle('open')">
+                  Which platforms are supported?
+                  <svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"/></svg>
+                </div>
+                <div class="help-faq-a">Currently: <strong>Marktplaats</strong>, <strong>2dehands</strong>, <strong>Vinted</strong> and <strong>Shopify</strong>. eBay, Etsy, Kleinanzeigen and Facebook Marketplace are in development. Marktplaats, 2dehands and Vinted are handled by the Chrome extension; Shopify is connected via the official API.</div>
+              </div>
+
+              <div class="help-faq-item">
+                <div class="help-faq-q" onclick="this.parentElement.classList.toggle('open')">
+                  Are my marketplace passwords stored?
+                  <svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"/></svg>
+                </div>
+                <div class="help-faq-a">No. CrossList EU never sees or stores your marketplace passwords. The Chrome extension uses the browser session you already have — just like you being logged in normally. Only your CrossList EU account password is used to log in to this dashboard.</div>
+              </div>
+
+              <div class="help-faq-item">
+                <div class="help-faq-q" onclick="this.parentElement.classList.toggle('open')">
+                  Can I use CrossList EU on multiple devices?
+                  <svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"/></svg>
+                </div>
+                <div class="help-faq-a">The dashboard works on any device and browser. The Chrome extension needs to be installed on the specific Chrome browser where you want publishing to happen. Jobs are processed by whichever Chrome instance has the extension installed and is running.</div>
+              </div>
+
+            </div>
+          </div>
+        </div>
+
+        <!-- Contact -->
+        <div class="card full">
+          <div class="card-header"><h2>✉️ Still need help?</h2></div>
+          <div style="padding:16px 24px 20px;display:flex;align-items:center;justify-content:space-between;gap:20px;flex-wrap:wrap">
+            <div style="font-size:13px;color:var(--muted);line-height:1.65">
+              Can't find your answer above? Email us and we'll get back to you within one business day.<br>
+              <span style="font-size:12px;color:var(--muted);margin-top:4px;display:block">Revaleur · KVK 86792423 · Kleine Melanen 5, 4614RG Bergen op Zoom</span>
+            </div>
+            <a href="mailto:info@revaleur.com" class="btn btn-primary btn-sm" style="text-decoration:none;white-space:nowrap">Email support →</a>
           </div>
         </div>
 
