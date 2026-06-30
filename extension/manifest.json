@@ -40,9 +40,6 @@
       "run_at": "document_idle"
     }
   ],
-  "externally_connectable": {
-    "matches": ["https://crosslisteu.com/*", "https://www.crosslisteu.com/*", "https://app.crosslisteu.com/*"]
-  },
   "action": {
     "default_popup": "popup.html",
     "default_title": "CrossList EU"
