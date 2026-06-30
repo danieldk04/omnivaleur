@@ -555,6 +555,14 @@ async function _mwFillBrand(brand) {
 // Content scripts call this when done
 
 chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
+  if (msg.type === "SYNC_TOKEN" && msg.token) {
+    chrome.storage.sync.set({ authToken: msg.token, userEmail: msg.email || "" }, () => {
+      sendResponse({ ok: true });
+      pollJobs();
+    });
+    return true;
+  }
+
   if (msg.type === "FILL_DESC") {
     console.log("[CrossList] FILL_DESC received, tab:", sender.tab?.id, "text len:", msg.text?.length);
     chrome.scripting.executeScript({
