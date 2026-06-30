@@ -553,16 +553,6 @@ async function _mwFillBrand(brand) {
 }
 
 // Content scripts call this when done
-// Accept token sync from the web app (crosslisteu.com)
-chrome.runtime.onMessageExternal.addListener((msg, sender, sendResponse) => {
-  if (msg.type === "SYNC_TOKEN" && msg.token) {
-    chrome.storage.sync.set({ authToken: msg.token, userEmail: msg.email || "" }, () => {
-      sendResponse({ ok: true });
-      pollJobs(); // pick up any queued jobs immediately
-    });
-    return true;
-  }
-});
 
 chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   if (msg.type === "FILL_DESC") {
