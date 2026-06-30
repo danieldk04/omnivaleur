@@ -28,14 +28,20 @@ def _get_or_create_subscription(user_id: str) -> dict:
 
 @router.get("/status")
 async def billing_status(user_id: str = Depends(get_current_user)):
-    sub = _get_or_create_subscription(user_id)
-    return {
-        "status": sub["status"],
-        "plan": sub["plan"],
-        "trial_ends_at": sub.get("trial_ends_at"),
-        "current_period_end": sub.get("current_period_end"),
-        "stripe_subscription_id": sub.get("stripe_subscription_id"),
-    }
+    try:
+        sub = _get_or_create_subscription(user_id)
+        return {
+            "status": sub["status"],
+            "plan": sub.get("plan", "pro"),
+            "trial_ends_at": sub.get("trial_ends_at"),
+            "current_period_end": sub.get("current_period_end"),
+            "stripe_subscription_id": sub.get("stripe_subscription_id"),
+        }
+    except Exception as e:
+        import logging
+        logging.getLogger(__name__).error(f"billing_status error for {user_id}: {e}")
+        # Return trialing so the user isn't blocked if DB lookup fails
+        return {"status": "trialing", "plan": "pro", "trial_ends_at": None, "current_period_end": None}
 
 
 @router.post("/checkout")
