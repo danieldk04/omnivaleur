@@ -216,12 +216,12 @@ class MarktplaatsPlatform(PlatformBase):
                     await page.wait_for_timeout(300)
                     await page.keyboard.type(desc_text, delay=5)
                     desc_filled = True
-                    logger.error(f"{self._platform}: description filled via {desc_sel}")
+                    logger.info(f"{self._platform}: description filled via {desc_sel}")
                     break
                 except Exception as e:
-                    logger.error(f"{self._platform}: desc selector {desc_sel} failed: {e}")
+                    logger.warning(f"{self._platform}: desc selector {desc_sel} failed: {e}")
             if not desc_filled:
-                logger.error(f"{self._platform}: all description selectors failed")
+                logger.warning(f"{self._platform}: all description selectors failed")
 
             # Price
             await page.locator('input[name="price.value"]').fill(str(item["price"]))
