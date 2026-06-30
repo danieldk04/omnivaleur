@@ -125,15 +125,14 @@ const MP_DEFAULT = { cat1: 621, cat3: 636, bucketId: 162 }; // fallback: dames j
 
 function getDeleteUrl(platform, payload) {
   if (platform === "marktplaats") {
-    // Navigate directly to the listing's own page — avoids broken /mijn-marktplaats/advertenties URL
+    if (payload?.platform_listing_id) return `https://www.marktplaats.nl/v/listing/${payload.platform_listing_id}`;
     if (payload?.platform_listing_url) return payload.platform_listing_url;
-    if (payload?.platform_listing_id) return `https://www.marktplaats.nl/seller/view/${payload.platform_listing_id}`;
-    return "https://www.marktplaats.nl/mijn-marktplaats";
+    return "https://www.marktplaats.nl";
   }
   if (platform === "2dehands") {
+    if (payload?.platform_listing_id) return `https://www.2dehands.be/v/listing/${payload.platform_listing_id}`;
     if (payload?.platform_listing_url) return payload.platform_listing_url;
-    if (payload?.platform_listing_id) return `https://www.2dehands.be/seller/view/${payload.platform_listing_id}`;
-    return "https://www.2dehands.be/mijn-2dehands";
+    return "https://www.2dehands.be";
   }
   if (platform === "vinted") return payload?.platform_listing_id
     ? `https://www.vinted.com/items/${payload.platform_listing_id}`
