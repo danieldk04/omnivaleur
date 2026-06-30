@@ -477,5 +477,19 @@ nav { position: sticky; top: 0; z-index: 100; background: rgba(255,255,255,.92);
   </div>
 </footer>
 
+<script>
+// Handle Supabase auth redirects (email confirmation, password reset)
+(function() {
+  if (!window.location.hash) return;
+  const params = Object.fromEntries(
+    window.location.hash.slice(1).split('&').map(p => { const [k,v] = p.split('='); return [k, decodeURIComponent(v||'')]; })
+  );
+  if (params.access_token && params.type === 'signup') {
+    window.location.replace('/login?confirmed=1');
+  } else if (params.access_token && params.type === 'recovery') {
+    window.location.replace('/reset-password' + window.location.hash);
+  }
+})();
+</script>
 </body>
 </html>
