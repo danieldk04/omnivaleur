@@ -2024,6 +2024,11 @@ const CATEGORIES = {
   ],
 };
 
+function togglePlatformPrices() {
+  const enabled = document.getElementById('f-platform-price-enabled').checked;
+  document.getElementById('platform-price-fields').style.display = enabled ? 'grid' : 'none';
+}
+
 function toggleBidField() {
   const checked = document.getElementById('f-bid-enabled').checked;
   document.getElementById('bid-pct-group').style.display = checked ? 'block' : 'none';
