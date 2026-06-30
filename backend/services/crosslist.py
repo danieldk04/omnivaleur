@@ -112,12 +112,23 @@ async def publish_to_platforms(item_id: str, platforms: list[str], user_id: str)
     if need_nl:
         dutch_item = translations[1]
 
+    _PLATFORM_PRICE_FIELD = {
+        "marktplaats": "price_marktplaats",
+        "2dehands": "price_2dehands",
+        "vinted": "price_vinted",
+    }
+
     def _pick(platform: str) -> dict:
         if platform in _ENGLISH_PLATFORMS and english_item:
-            return english_item
-        if platform in _DUTCH_PLATFORMS and dutch_item:
-            return dutch_item
-        return item
+            base = english_item
+        elif platform in _DUTCH_PLATFORMS and dutch_item:
+            base = dutch_item
+        else:
+            base = item
+        price_field = _PLATFORM_PRICE_FIELD.get(platform)
+        if price_field and base.get(price_field):
+            return {**base, "price": base[price_field]}
+        return base
 
     # API platforms: run concurrently server-side
     if api_platforms:
