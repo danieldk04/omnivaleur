@@ -108,7 +108,7 @@ async def marktplaats_debug(user_id: str = Depends(get_current_user)):
     all_requests = []
 
     async with async_playwright() as p:
-        browser = await p.chromium.launch(headless=False)  # visible so we can see what happens
+        browser = await p.chromium.launch(headless=True)
         context = await browser.new_context(user_agent=ua, locale="nl-NL")
 
         # Inject cookies for all relevant Marktplaats domains
