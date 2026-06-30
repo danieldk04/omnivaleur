@@ -1322,9 +1322,8 @@ function renderBilling(data) {
   function hidePaywall() { paywall.style.display = 'none'; }
 
   // Populate account email
-  const auth = JSON.parse(sessionStorage.getItem('cl_auth') || '{}');
   const emailEl = document.getElementById('account-email');
-  if (emailEl && auth.email) emailEl.textContent = auth.email;
+  if (emailEl) emailEl.textContent = sessionStorage.getItem('cl_email') || '—';
 
   if (!data) {
     upgradeCard.style.display = 'block';
