@@ -206,8 +206,8 @@ nav { position: sticky; top: 0; z-index: 100; background: rgba(255,255,255,.92);
         <img src="Logo Crosslist EU.png" alt="CrossList EU" style="height:32px;width:auto">
         <span style="background:linear-gradient(135deg,#60a5fa,#34d399);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text">CrossList EU</span>
       </a>
-      <p>Cross-list your second-hand items on all European marketplaces in seconds.</p>
-      <p style="margin-top:4px"><a href="mailto:info@revaleur.com">info@revaleur.com</a></p>
+      <p>Cross-list your second-hand items on all European marketplaces in seconds. Built for Marktplaats, 2dehands, Vinted and Shopify.</p>
+      <p style="margin-top:4px">Business inquiries: <a href="mailto:info@revaleur.com">info@revaleur.com</a></p>
     </div>
     <div class="footer-col">
       <h4>Platform</h4>
@@ -216,6 +216,7 @@ nav { position: sticky; top: 0; z-index: 100; background: rgba(255,255,255,.92);
         <li><a href="/marketplaces">Marketplaces</a></li>
         <li><a href="/#pricing">Pricing</a></li>
         <li><a href="/login">Login</a></li>
+        <li><a href="/register">Start free trial</a></li>
       </ul>
     </div>
     <div class="footer-col">
@@ -236,16 +237,18 @@ nav { position: sticky; top: 0; z-index: 100; background: rgba(255,255,255,.92);
       </ul>
     </div>
   </div>
-  <div style="border-top:1px solid rgba(255,255,255,.08);padding:20px 40px">
-    <div style="max-width:1200px;margin:0 auto;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
-      <span style="font-size:12px;color:rgba(255,255,255,.35)">© 2026 Revaleur · KVK 86792423 · VAT NL004117227B97 · Kleine Melanen 5, 4614RG Bergen op Zoom</span>
-      <div style="display:flex;gap:20px">
-        <a href="/privacy" style="font-size:12px;color:rgba(255,255,255,.4)">Privacy Policy</a>
-        <a href="/terms" style="font-size:12px;color:rgba(255,255,255,.4)">Terms of Service</a>
-      </div>
+  <div class="footer-bottom">
+    <span>© 2026 Revaleur · KVK 86792423 · VAT NL004117227B97 · Kleine Melanen 5, 4614RG Bergen op Zoom</span>
+    <div class="footer-bottom-links">
+      <a href="/privacy">Privacy Policy</a>
+      <a href="/terms">Terms of Service</a>
     </div>
   </div>
 </footer>
+<script>
+function toggleMenu(){const o=document.getElementById('mobile-menu').classList.toggle('open');document.getElementById('hamburger').classList.toggle('open',o);document.body.style.overflow=o?'hidden':'';}
+function closeMenu(){document.getElementById('mobile-menu').classList.remove('open');document.getElementById('hamburger').classList.remove('open');document.body.style.overflow='';}
+</script>
 
 </body>
 </html>
