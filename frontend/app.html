@@ -1809,6 +1809,12 @@ function editItem(id) {
   document.getElementById('f-material').value = item.material || '';
   document.getElementById('f-gender').value = item.gender || '';
   document.getElementById('f-shopify-title').value = item.shopify_title || '';
+  document.getElementById('f-price-mp').value = item.price_marktplaats || '';
+  document.getElementById('f-price-2dh').value = item.price_2dehands || '';
+  document.getElementById('f-price-vinted').value = item.price_vinted || '';
+  const hasPlatformPrices = !!(item.price_marktplaats || item.price_2dehands || item.price_vinted);
+  document.getElementById('f-platform-price-enabled').checked = hasPlatformPrices;
+  document.getElementById('platform-price-fields').style.display = hasPlatformPrices ? 'grid' : 'none';
   document.getElementById('f-bid-enabled').checked = !!item.bid_percentage;
   document.getElementById('f-bid-pct').value = item.bid_percentage || '';
   document.getElementById('bid-pct-group').style.display = item.bid_percentage ? 'block' : 'none';
