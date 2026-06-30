@@ -15,6 +15,11 @@
   },
   "content_scripts": [
     {
+      "matches": ["https://crosslisteu.com/*", "https://www.crosslisteu.com/*"],
+      "js": ["content/webapp_sync.js"],
+      "run_at": "document_idle"
+    },
+    {
       "matches": ["https://www.marktplaats.nl/plaats/*"],
       "js": ["content/shared.js", "content/marktplaats.js"],
       "run_at": "document_idle"
