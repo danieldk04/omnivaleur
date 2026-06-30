@@ -86,8 +86,11 @@ class EbayPlatform(PlatformBase):
         expires_at = credentials.get("token_expires_at")
         if isinstance(expires_at, str):
             expires_at = datetime.fromisoformat(expires_at)
-        if expires_at and datetime.now(timezone.utc) >= expires_at:
-            return await self.refresh_credentials(credentials)
+        if expires_at:
+            if expires_at.tzinfo is None:
+                expires_at = expires_at.replace(tzinfo=timezone.utc)
+            if datetime.now(timezone.utc) >= expires_at:
+                return await self.refresh_credentials(credentials)
         return credentials
 
     async def create_listing(self, item: dict, credentials: dict) -> dict:
