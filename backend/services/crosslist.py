@@ -320,12 +320,12 @@ async def handle_item_sold(item_id: str, sold_on_platform: str):
         "sold_at": datetime.now(timezone.utc).isoformat(),
     }).eq("item_id", item_id).eq("platform", sold_on_platform).execute()
 
-    # Find other active listings
+    # Find other active/relisting listings to delist
     other = (
         db.table("listings")
         .select("*")
         .eq("item_id", item_id)
-        .eq("status", "active")
+        .in_("status", ["active", "relisting"])
         .neq("platform", sold_on_platform)
         .execute()
     )
