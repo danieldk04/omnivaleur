@@ -1526,10 +1526,14 @@ function renderDashboard() {
 }
 
 function renderListingBadges(itemId) {
-  const itemListings = state.listings.filter(l => l.item_id === itemId);
-  const pendingJobs = state.jobs.filter(j => j.item_id === itemId);
+  return renderPlatformMatrix(itemId);
+}
 
-  // Deduplicate per platform, best status wins
+function renderPlatformMatrix(itemId) {
+  const itemListings = state.listings.filter(l => l.item_id === itemId);
+  const pendingJobs  = state.jobs.filter(j => j.item_id === itemId && j.status === 'pending');
+
+  // Best status per platform (active > pending > error > delisted)
   const STATUS_RANK = { active: 0, queued: 1, pending: 1, error: 2, delisted: 3 };
   const byPlatform = {};
   for (const l of itemListings) {
@@ -1538,31 +1542,32 @@ function renderListingBadges(itemId) {
       byPlatform[l.platform] = l;
     }
   }
-
-  const badges = [];
-
-  // Active platforms: green badge, with subtle warning if there's also an error record
-  for (const [platform, l] of Object.entries(byPlatform)) {
-    if (l.status === 'active') {
-      const label = PLATFORM_LABELS[platform] || platform;
-      badges.push(`<span class="badge active">${label}</span>`);
-    } else if (l.status === 'error') {
-      // Show error only if no active listing exists for this platform
-      const label = PLATFORM_LABELS[platform] || platform;
-      badges.push(`<span class="badge-error-subtle" title="Click to manually mark as published" style="cursor:pointer" onclick="markListingActive('${itemId}','${platform}',event)">⚠️ ${label}</span>`);
-    }
-    // delisted: don't show
-  }
-
-  // Pending jobs for platforms not yet in listings
   for (const j of pendingJobs) {
-    if (!byPlatform[j.platform]) {
-      badges.push(`<span class="badge queued">${PLATFORM_LABELS[j.platform] || j.platform} ⏳</span>`);
-    }
+    if (!byPlatform[j.platform]) byPlatform[j.platform] = { status: 'pending' };
   }
 
-  if (!badges.length) return `<span style="color:var(--muted);font-size:11px">Not published</span> <button class="btn btn-sm btn-outline" style="font-size:10px;padding:2px 7px;margin-left:4px" onclick="openMarkActiveModal('${itemId}',event)">+ mark active</button>`;
-  return badges.join('');
+  const SHORT = { marktplaats: 'MP', '2dehands': '2dh', vinted: 'Vinted', ebay: 'eBay', etsy: 'Etsy', shopify: 'Shop' };
+
+  const chips = PLATFORMS.map(p => {
+    const icon = PLATFORM_ICONS[p];
+    const label = SHORT[p] || p;
+    const l = byPlatform[p];
+    if (!l || l.status === 'delisted') {
+      return `<span class="pm-chip pm-none" title="${PLATFORM_LABELS[p]}: not listed">${icon} ${label}</span>`;
+    }
+    if (l.status === 'active') {
+      return `<span class="pm-chip pm-active" title="${PLATFORM_LABELS[p]}: listed">${icon} ${label} ✓</span>`;
+    }
+    if (l.status === 'pending' || l.status === 'queued') {
+      return `<span class="pm-chip pm-pending" title="${PLATFORM_LABELS[p]}: publishing…">${icon} ${label} ⏳</span>`;
+    }
+    if (l.status === 'error') {
+      return `<span class="pm-chip pm-error" title="Error — click to mark as active" onclick="markListingActive('${itemId}','${p}',event)">${icon} ${label} !</span>`;
+    }
+    return `<span class="pm-chip pm-none" title="${PLATFORM_LABELS[p]}">${icon} ${label}</span>`;
+  });
+
+  return `<div class="pm-grid">${chips.join('')}</div>`;
 }
 
 // ── Items view with filters ───────────────────────────────────────
