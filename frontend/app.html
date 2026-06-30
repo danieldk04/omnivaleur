@@ -2108,9 +2108,15 @@ function renderPlatformCheckboxes(containerId, itemId) {
     : new Set();
   document.getElementById(containerId).innerHTML = PLATFORMS.map(p => {
     const already = activePlatforms.has(p);
-    return `<label class="platform-checkbox" style="${already ? 'opacity:.5' : ''}">
-      <input type="checkbox" value="${p}"${already ? ' disabled title="Already published on this platform"' : ''}>
-      <span>${PLATFORM_LABELS[p]}${already ? ' ✓' : ''}</span>
+    if (already) {
+      return `<div class="pm-cb-listed">
+        <span>${PLATFORM_ICONS[p]} ${PLATFORM_LABELS[p]}</span>
+        <span class="pm-cb-check">✓ Listed</span>
+      </div>`;
+    }
+    return `<label class="platform-checkbox">
+      <input type="checkbox" value="${p}">
+      <span>${PLATFORM_ICONS[p]} ${PLATFORM_LABELS[p]}</span>
     </label>`;
   }).join('');
 }
