@@ -2270,6 +2270,204 @@ loadAll();
 loadBillingStatus();
 setInterval(loadAll, 15000);
 setInterval(loadBillingStatus, 60000);
+
+// ── Analytics ─────────────────────────────────────────────────────
+let anPeriodDays = 90;
+let _anChartRevenue = null;
+let _anChartSales = null;
+
+function setAnPeriod(days) {
+  anPeriodDays = days;
+  document.querySelectorAll('.an-period-tab').forEach(t => {
+    t.classList.toggle('active', parseInt(t.dataset.days) === days);
+  });
+  renderAnalytics();
+}
+
+function anFilterDate(dateStr) {
+  if (!dateStr) return false;
+  if (anPeriodDays === 0) return true;
+  const d = new Date(dateStr);
+  const cutoff = new Date();
+  cutoff.setDate(cutoff.getDate() - anPeriodDays);
+  return d >= cutoff;
+}
+
+function renderAnalytics() {
+  // Gather sold listings within period
+  const soldListings = state.listings.filter(l => l.status === 'sold' && anFilterDate(l.sold_at));
+
+  // Deduplicate: one sale per item (first sold listing per item_id)
+  const seenItems = new Set();
+  const sales = [];
+  for (const l of soldListings.sort((a, b) => new Date(a.sold_at) - new Date(b.sold_at))) {
+    if (!seenItems.has(l.item_id)) {
+      seenItems.add(l.item_id);
+      const item = state.items.find(i => i.id === l.item_id);
+      if (item) sales.push({ listing: l, item });
+    }
+  }
+
+  // KPIs
+  const revenue = sales.reduce((s, { item }) => s + (item.price || 0), 0);
+  const profitSales = sales.filter(({ item }) => item.purchase_price != null);
+  const profit = profitSales.reduce((s, { item }) => s + ((item.price || 0) - (item.purchase_price || 0)), 0);
+  const avgProfit = profitSales.length ? profit / profitSales.length : null;
+
+  // Previous period delta for revenue & sales
+  let prevRevenue = null, prevSales = null;
+  if (anPeriodDays > 0) {
+    const prevListings = state.listings.filter(l => {
+      if (l.status !== 'sold' || !l.sold_at) return false;
+      const d = new Date(l.sold_at);
+      const now = new Date();
+      const start = new Date(); start.setDate(now.getDate() - anPeriodDays * 2);
+      const end = new Date(); end.setDate(now.getDate() - anPeriodDays);
+      return d >= start && d < end;
+    });
+    const prevSeen = new Set();
+    const prevSalesArr = [];
+    for (const l of prevListings) {
+      if (!prevSeen.has(l.item_id)) {
+        prevSeen.add(l.item_id);
+        const item = state.items.find(i => i.id === l.item_id);
+        if (item) prevSalesArr.push(item);
+      }
+    }
+    prevRevenue = prevSalesArr.reduce((s, i) => s + (i.price || 0), 0);
+    prevSales = prevSalesArr.length;
+  }
+
+  function deltaEl(cur, prev, isCurrency) {
+    if (prev === null || prev === 0) return '';
+    const pct = ((cur - prev) / prev * 100).toFixed(0);
+    const cls = cur >= prev ? 'up' : 'down';
+    const sign = cur >= prev ? '▲' : '▼';
+    const label = isCurrency ? `${sign} ${Math.abs(pct)}% vs prev period` : `${sign} ${Math.abs(pct)}%`;
+    return `<span class="an-kpi-delta ${cls}">${label}</span>`;
+  }
+
+  document.getElementById('an-revenue').textContent = '€' + revenue.toFixed(2);
+  document.getElementById('an-revenue-delta').innerHTML = deltaEl(revenue, prevRevenue, true);
+  document.getElementById('an-profit').textContent = profitSales.length ? '€' + profit.toFixed(2) : '—';
+  document.getElementById('an-profit-sub').textContent = profitSales.length < sales.length
+    ? `${sales.length - profitSales.length} item(s) missing purchase price` : '';
+  document.getElementById('an-sales').textContent = sales.length;
+  document.getElementById('an-sales-delta').innerHTML = deltaEl(sales.length, prevSales, false);
+  document.getElementById('an-avg-profit').textContent = avgProfit !== null ? '€' + avgProfit.toFixed(2) : '—';
+  document.getElementById('an-avg-sub').textContent = avgProfit !== null ? `based on ${profitSales.length} sale(s)` : 'Add purchase prices to items';
+
+  // Build daily buckets for charts
+  const days = anPeriodDays || 365;
+  const buckets = [];
+  for (let i = days - 1; i >= 0; i--) {
+    const d = new Date(); d.setDate(d.getDate() - i);
+    buckets.push({ label: d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }), date: d.toISOString().slice(0, 10), rev: 0, profit: 0, count: 0 });
+  }
+  for (const { listing, item } of sales) {
+    const day = listing.sold_at?.slice(0, 10);
+    const b = buckets.find(b => b.date === day);
+    if (b) {
+      b.rev += item.price || 0;
+      if (item.purchase_price != null) b.profit += (item.price || 0) - (item.purchase_price || 0);
+      b.count++;
+    }
+  }
+
+  // Collapse to weekly buckets if period > 90d
+  let chartBuckets = buckets;
+  if (days > 90) {
+    const weekly = [];
+    for (let i = 0; i < buckets.length; i += 7) {
+      const slice = buckets.slice(i, i + 7);
+      weekly.push({
+        label: slice[0].label,
+        rev: slice.reduce((s, b) => s + b.rev, 0),
+        profit: slice.reduce((s, b) => s + b.profit, 0),
+        count: slice.reduce((s, b) => s + b.count, 0),
+      });
+    }
+    chartBuckets = weekly;
+  }
+
+  const labels = chartBuckets.map(b => b.label);
+  const revData = chartBuckets.map(b => +b.rev.toFixed(2));
+  const profitData = chartBuckets.map(b => +b.profit.toFixed(2));
+  const countData = chartBuckets.map(b => b.count);
+
+  // Revenue vs Profit line chart
+  if (_anChartRevenue) _anChartRevenue.destroy();
+  _anChartRevenue = new Chart(document.getElementById('an-chart-revenue'), {
+    type: 'line',
+    data: {
+      labels,
+      datasets: [
+        { label: 'Revenue', data: revData, borderColor: '#818cf8', backgroundColor: 'rgba(129,140,248,.12)', fill: true, tension: .35, pointRadius: days <= 30 ? 3 : 0, borderWidth: 2 },
+        { label: 'Profit', data: profitData, borderColor: '#34d399', backgroundColor: 'rgba(52,211,153,.08)', fill: true, tension: .35, pointRadius: days <= 30 ? 3 : 0, borderWidth: 2 },
+      ],
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { position: 'top', labels: { font: { size: 11 }, boxWidth: 10 } }, tooltip: { callbacks: { label: ctx => `€${ctx.parsed.y.toFixed(2)}` } } },
+      scales: { y: { beginAtZero: true, ticks: { callback: v => '€' + v, font: { size: 10 } }, grid: { color: '#f1f5f9' } }, x: { ticks: { maxTicksLimit: 8, font: { size: 10 } }, grid: { display: false } } },
+    },
+  });
+
+  // Sales bar chart
+  if (_anChartSales) _anChartSales.destroy();
+  _anChartSales = new Chart(document.getElementById('an-chart-sales'), {
+    type: 'bar',
+    data: { labels, datasets: [{ label: 'Sales', data: countData, backgroundColor: '#2563eb', borderRadius: 4 }] },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: { y: { beginAtZero: true, ticks: { stepSize: 1, font: { size: 10 } }, grid: { color: '#f1f5f9' } }, x: { ticks: { maxTicksLimit: 8, font: { size: 10 } }, grid: { display: false } } },
+    },
+  });
+
+  // Platform breakdown
+  const byPlatform = {};
+  for (const { listing, item } of sales) {
+    const p = listing.platform;
+    if (!byPlatform[p]) byPlatform[p] = { rev: 0, count: 0 };
+    byPlatform[p].rev += item.price || 0;
+    byPlatform[p].count++;
+  }
+  const maxRev = Math.max(...Object.values(byPlatform).map(v => v.rev), 1);
+  const platColors = { marktplaats: '#e63946', '2dehands': '#e63946', vinted: '#09b7a4', ebay: '#e53238', etsy: '#f1641e', shopify: '#96bf48' };
+
+  const platList = document.getElementById('an-platform-list');
+  if (!Object.keys(byPlatform).length) {
+    platList.innerHTML = '<li class="an-empty">No sales yet</li>';
+  } else {
+    platList.innerHTML = Object.entries(byPlatform)
+      .sort((a, b) => b[1].rev - a[1].rev)
+      .map(([p, v]) => `
+        <li class="an-platform-row">
+          <span style="font-size:13px;width:22px">${PLATFORM_ICONS[p] || '🏪'}</span>
+          <span style="min-width:80px;font-weight:600;font-size:12px">${PLATFORM_LABELS[p] || p}</span>
+          <div class="an-platform-bar-wrap"><div class="an-platform-bar" style="width:${(v.rev/maxRev*100).toFixed(0)}%;background:${platColors[p]||'var(--blue)'}"></div></div>
+          <span class="an-platform-val">€${v.rev.toFixed(0)}</span>
+        </li>`).join('');
+  }
+
+  const avgPlatList = document.getElementById('an-avg-platform-list');
+  if (!Object.keys(byPlatform).length) {
+    avgPlatList.innerHTML = '<li class="an-empty">No sales yet</li>';
+  } else {
+    const avgs = Object.entries(byPlatform).map(([p, v]) => [p, v.rev / v.count]);
+    const maxAvg = Math.max(...avgs.map(([,v]) => v), 1);
+    avgPlatList.innerHTML = avgs
+      .sort((a, b) => b[1] - a[1])
+      .map(([p, avg]) => `
+        <li class="an-platform-row">
+          <span style="font-size:13px;width:22px">${PLATFORM_ICONS[p] || '🏪'}</span>
+          <span style="min-width:80px;font-weight:600;font-size:12px">${PLATFORM_LABELS[p] || p}</span>
+          <div class="an-platform-bar-wrap"><div class="an-platform-bar" style="width:${(avg/maxAvg*100).toFixed(0)}%;background:${platColors[p]||'var(--blue)'}"></div></div>
+          <span class="an-platform-val">€${avg.toFixed(0)}</span>
+        </li>`).join('');
+  }
+}
 </script>
 </body>
 </html>
