@@ -81,9 +81,8 @@ async def marktplaats_webhook(request: Request):
 
     if event in ("sold", "closed") and ad_id:
         db = get_db()
-        listing = db.table("listings").select("item_id").eq("platform_listing_id", ad_id).in_("platform", ["marktplaats", "2dehands"]).execute()
+        listing = db.table("listings").select("item_id,platform").eq("platform_listing_id", ad_id).in_("platform", ["marktplaats", "2dehands"]).execute()
         if listing.data:
-            platform = "marktplaats"  # determine from payload if needed
-            await handle_item_sold(listing.data[0]["item_id"], platform)
+            await handle_item_sold(listing.data[0]["item_id"], listing.data[0]["platform"])
 
     return {"status": "ok"}
