@@ -24,26 +24,30 @@
   }
 
   async function deleteListing2dh(listingId) {
-    await waitForEl('[data-testid="my-listings-item"], .listing-card, article', 15000);
-    await sleep(1000);
+    // Navigate directly to the listing page (seller/view/{id}) — no overview page needed.
+    await sleep(2000);
 
-    const allLinks = [...document.querySelectorAll('a[href*="' + listingId + '"]')];
-    if (!allLinks.length) throw new Error("Listing " + listingId + " not found on page — may already be deleted");
-
-    const card = allLinks[0].closest('article, [data-testid*="listing"], li, .listing-card, tr') || allLinks[0].parentElement.parentElement;
-
-    const actionsBtn = card.querySelector(
+    const actionsBtn = document.querySelector(
       'button[aria-label*="opties"], button[aria-label*="menu"], button[aria-label*="actions"], ' +
-      '[data-testid*="action"], [data-testid*="kebab"], [data-testid*="more"]'
+      '[data-testid*="action"], [data-testid*="kebab"], [data-testid*="more"], [aria-label*="Meer"]'
     );
     if (actionsBtn) {
       actionsBtn.click();
       await sleep(600);
     }
 
-    const deleteEl = [...document.querySelectorAll('button, a, [role="menuitem"]')]
+    let deleteEl = [...document.querySelectorAll('button, a, [role="menuitem"], [role="option"]')]
       .find(el => /verwijder/i.test(el.textContent));
-    if (!deleteEl) throw new Error("Delete button not found for listing " + listingId);
+
+    if (!deleteEl) {
+      const moreBtn = [...document.querySelectorAll('button')]
+        .find(el => /\.\.\.|opties|meer|beheer/i.test(el.textContent) || el.getAttribute('aria-label')?.match(/opties|meer|beheer/i));
+      if (moreBtn) { moreBtn.click(); await sleep(600); }
+      deleteEl = [...document.querySelectorAll('button, a, [role="menuitem"]')]
+        .find(el => /verwijder/i.test(el.textContent));
+    }
+
+    if (!deleteEl) throw new Error("Delete button not found for listing " + listingId + " — check if already removed or page layout changed");
     deleteEl.click();
     await sleep(800);
 
