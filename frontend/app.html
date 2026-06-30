@@ -287,107 +287,123 @@ input[type="checkbox"].row-check { width: 15px; height: 15px; cursor: pointer; a
 </head>
 <body>
 
+<!-- ══════════════════════════════════════════════════════════════════
+     SIDEBAR
+══════════════════════════════════════════════════════════════════ -->
 <div class="sidebar">
   <div class="logo">
-    <span>CrossList EU</span>
-    <small>Revaleur</small>
+    <img src="Logo Crosslist EU.png" alt="CrossList EU">
+    <span class="logo-text grad-text">CrossList EU</span>
   </div>
+
   <nav class="nav">
+    <div class="nav-section-label">Main</div>
+
     <div class="nav-item active" onclick="showView('dashboard')">
-      <svg viewBox="0 0 20 20" fill="currentColor"><path d="M2 10a8 8 0 1116 0A8 8 0 012 10zm8-3a1 1 0 00-.867.5 1 1 0 11-1.731-1A3 3 0 0113 10a3.001 3.001 0 01-2 2.83V13a1 1 0 11-2 0v-1a1 1 0 011-1 1 1 0 100-2zm0 8a1 1 0 100-2 1 1 0 000 2z"/></svg>
-      Dashboard
+      <svg viewBox="0 0 20 20" fill="currentColor"><path d="M3 4a1 1 0 011-1h12a1 1 0 011 1v2a1 1 0 01-1 1H4a1 1 0 01-1-1V4zM3 10a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H4a1 1 0 01-1-1v-6zM14 9a1 1 0 00-1 1v6a1 1 0 001 1h2a1 1 0 001-1v-6a1 1 0 00-1-1h-2z"/></svg>
+      <span>Dashboard</span>
     </div>
+
     <div class="nav-item" onclick="showView('items')">
-      <svg viewBox="0 0 20 20" fill="currentColor"><path d="M4 3a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V5a2 2 0 00-2-2H4zm3 2h6v4H7V5zm-2 8v-2h2v2H5zm0-4v-2h2v2H5zm4 4v-2h2v2H9zm0-4v-2h2v2H9zm4 4v-2h2v2h-2zm0-4v-2h2v2h-2z"/></svg>
-      Items
+      <svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z" clip-rule="evenodd"/></svg>
+      <span>Items</span>
     </div>
-    <div class="nav-item" onclick="showView('help')">
-      <svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-8-3a1 1 0 00-.867.5 1 1 0 11-1.731-1A3 3 0 0113 10a3.001 3.001 0 01-2 2.83V13a1 1 0 11-2 0v-1a1 1 0 011-1 1 1 0 100-2zm0 8a1 1 0 100-2 1 1 0 000 2z" clip-rule="evenodd"/></svg>
-      Help
+
+    <div class="nav-section-label">Tools</div>
+
+    <div class="nav-item" onclick="showView('calculator')">
+      <svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M6 2a2 2 0 00-2 2v12a2 2 0 002 2h8a2 2 0 002-2V4a2 2 0 00-2-2H6zm1 2a1 1 0 000 2h6a1 1 0 100-2H7zm6 7a1 1 0 011 1v3a1 1 0 11-2 0v-3a1 1 0 011-1zm-3 3a1 1 0 100 2h.01a1 1 0 100-2H10zm-4 1a1 1 0 011-1h.01a1 1 0 110 2H7a1 1 0 01-1-1zm1-4a1 1 0 100 2h.01a1 1 0 100-2H7zm2 1a1 1 0 011-1h.01a1 1 0 110 2H10a1 1 0 01-1-1zm4-4a1 1 0 100 2h.01a1 1 0 100-2H13zM9 9a1 1 0 011-1h.01a1 1 0 110 2H10a1 1 0 01-1-1zM7 8a1 1 0 000 2h.01a1 1 0 000-2H7z" clip-rule="evenodd"/></svg>
+      <span>Margin calculator</span>
     </div>
+
+    <div class="nav-section-label">Account</div>
+
     <div class="nav-item" onclick="showView('protections')">
       <svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M2.166 4.999A11.954 11.954 0 0010 1.944 11.954 11.954 0 0017.834 5c.11.65.166 1.32.166 2.001 0 5.225-3.34 9.67-8 11.317C5.34 16.67 2 12.225 2 7c0-.682.057-1.35.166-2.001zm11.541 3.708a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>
-      Protections
+      <span>Protections</span>
     </div>
+
     <div class="nav-item" onclick="showView('prijs')">
       <svg viewBox="0 0 20 20" fill="currentColor"><path d="M4 4a2 2 0 00-2 2v4a2 2 0 002 2V6h10a2 2 0 00-2-2H4zm2 6a2 2 0 012-2h8a2 2 0 012 2v4a2 2 0 01-2 2H8a2 2 0 01-2-2v-4zm6 4a2 2 0 100-4 2 2 0 000 4z"/></svg>
       <span id="nav-prijs-label">Subscription</span>
     </div>
+
+    <div class="nav-item" onclick="showView('help')">
+      <svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-8-3a1 1 0 00-.867.5 1 1 0 11-1.731-1A3 3 0 0113 10a3.001 3.001 0 01-2 2.83V13a1 1 0 11-2 0v-1a1 1 0 011-1 1 1 0 100-2zm0 8a1 1 0 100-2 1 1 0 000 2z" clip-rule="evenodd"/></svg>
+      <span>Help</span>
+    </div>
   </nav>
+
   <div class="sidebar-bottom">
     <div class="ext-status">
       <div class="ext-dot" id="ext-dot"></div>
-      <span id="ext-label">Loading extension...</span>
+      <span id="ext-label">Loading...</span>
     </div>
-    <div style="margin-top:10px">
-      <button onclick="sessionStorage.removeItem('cl_auth'); window.location.href='/'" style="background:transparent;border:none;color:rgba(255,255,255,.4);font-size:12px;cursor:pointer;padding:0;">Log out</button>
-    </div>
+    <button onclick="sessionStorage.removeItem('cl_auth'); window.location.href='/'" style="background:transparent;border:none;color:rgba(255,255,255,.3);font-size:11px;cursor:pointer;padding:4px 0;margin-top:6px;text-align:left;width:100%;">← Log out</button>
   </div>
 </div>
 
+<!-- ══════════════════════════════════════════════════════════════════
+     MAIN
+══════════════════════════════════════════════════════════════════ -->
 <div class="main">
   <div class="topbar">
-    <div class="topbar-title" id="topbar-title">Dashboard</div>
+    <div class="topbar-left">
+      <div class="topbar-title" id="topbar-title">Dashboard</div>
+      <span class="topbar-badge" id="topbar-badge" style="display:none"></span>
+    </div>
     <button class="btn btn-primary" onclick="openAddItem()">
-      <svg width="14" height="14" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clip-rule="evenodd"/></svg>
+      <svg width="13" height="13" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clip-rule="evenodd"/></svg>
       New item
     </button>
   </div>
 
   <div class="content">
 
-    <!-- DASHBOARD VIEW -->
+    <!-- ── DASHBOARD VIEW ──────────────────────────────────────────── -->
     <div id="view-dashboard" class="view active">
+
       <div id="trial-banner" class="trial-banner" style="display:none"></div>
       <div id="jobs-banner" class="jobs-banner" style="display:none">
-        <span>⏳ <span id="jobs-count">0</span> job(s) waiting for Chrome extension</span>
+        <div style="display:flex;align-items:center;gap:8px">
+          <span>⏳</span>
+          <span><strong><span id="jobs-count">0</span> job(s)</strong> waiting for Chrome extension to pick up</span>
+        </div>
         <button class="btn btn-sm btn-outline" onclick="loadAll()">Refresh</button>
       </div>
+
+      <!-- Stats row -->
       <div class="stats" id="stats">
         <div class="stat">
-          <div class="stat-label">Items</div>
+          <div class="stat-icon">📦</div>
+          <div class="stat-label">Total items</div>
           <div class="stat-value" id="stat-items">—</div>
           <div class="stat-sub" id="stat-items-sub"></div>
         </div>
         <div class="stat">
+          <div class="stat-icon">🟢</div>
           <div class="stat-label">Active listings</div>
           <div class="stat-value" id="stat-active">—</div>
           <div class="stat-sub" id="stat-active-sub"></div>
         </div>
         <div class="stat">
+          <div class="stat-icon">📭</div>
           <div class="stat-label">Not published</div>
           <div class="stat-value" id="stat-unpublished">—</div>
-          <div class="stat-sub"><a href="#" onclick="showView('items');setFilter('pub','no');return false" style="color:var(--blue);font-size:12px">View →</a></div>
+          <div class="stat-sub"><a href="#" onclick="showView('items');setFilter('pub','no');return false" style="color:var(--blue);font-size:12px;font-weight:600">View →</a></div>
         </div>
         <div class="stat">
+          <div class="stat-icon">⏳</div>
           <div class="stat-label">Queued</div>
           <div class="stat-value" id="stat-queued">—</div>
           <div class="stat-sub" id="stat-queued-sub"></div>
         </div>
       </div>
+
+      <!-- Platform breakdown chips -->
       <div class="platform-breakdown" id="platform-breakdown"></div>
 
-      <!-- MARGE CALCULATOR -->
-      <div class="card" style="margin-bottom:16px">
-        <div class="card-header">
-          <h2>Margin calculator</h2>
-          <span style="font-size:12px;color:var(--muted)">Calculate selling price per platform based on desired net profit</span>
-        </div>
-        <div style="padding:16px 20px">
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px;max-width:480px">
-            <div class="form-group" style="margin:0">
-              <label style="margin-bottom:4px">Purchase price (€)</label>
-              <input type="number" id="mc-cost" min="0" step="0.01" placeholder="0.00" oninput="calcMargin()" style="width:100%">
-            </div>
-            <div class="form-group" style="margin:0">
-              <label style="margin-bottom:4px">Desired net profit (€)</label>
-              <input type="number" id="mc-profit" min="0" step="0.01" placeholder="10.00" oninput="calcMargin()" style="width:100%">
-            </div>
-          </div>
-          <div id="mc-results" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:10px"></div>
-        </div>
-      </div>
-
+      <!-- Recent items table -->
       <div class="card">
         <div class="card-header">
           <h2>Recent items</h2>
@@ -396,21 +412,27 @@ input[type="checkbox"].row-check { width: 15px; height: 15px; cursor: pointer; a
         <div class="table-wrap">
           <table>
             <thead><tr><th>Item</th><th>Price</th><th>Platforms</th><th>Actions</th></tr></thead>
-            <tbody id="dashboard-items-body"><tr><td colspan="4" class="empty">Loading...</td></tr></tbody>
+            <tbody id="dashboard-items-body"><tr><td colspan="4"><div class="empty"><div class="empty-icon">📦</div><h3>No items yet</h3><p>Add your first item to get started</p><button class="btn btn-primary btn-sm" onclick="openAddItem()">+ New item</button></div></td></tr></tbody>
           </table>
         </div>
       </div>
     </div>
 
-    <!-- ITEMS VIEW -->
+    <!-- ── ITEMS VIEW ──────────────────────────────────────────────── -->
     <div id="view-items" class="view">
       <div class="card">
         <div class="card-header">
-          <h2>All items</h2>
-          <button class="btn btn-primary btn-sm" onclick="openAddItem()">+ New</button>
+          <div>
+            <h2>All items</h2>
+            <div class="card-header-sub" id="items-sub-label"></div>
+          </div>
+          <button class="btn btn-primary btn-sm" onclick="openAddItem()">
+            <svg width="12" height="12" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clip-rule="evenodd"/></svg>
+            New item
+          </button>
         </div>
         <div class="filter-bar">
-          <span class="filter-label">Filter:</span>
+          <span class="filter-label">Filter</span>
           <select id="filter-pub" onchange="applyFilters()">
             <option value="all">All statuses</option>
             <option value="no">Not published</option>
@@ -425,17 +447,16 @@ input[type="checkbox"].row-check { width: 15px; height: 15px; cursor: pointer; a
             <option value="etsy">Etsy</option>
             <option value="shopify">Shopify</option>
           </select>
-          <input type="text" id="filter-search" placeholder="Search by title / brand…" oninput="applyFilters()" style="min-width:180px">
+          <input type="text" id="filter-search" placeholder="Search by title or brand…" oninput="applyFilters()" style="min-width:200px">
           <span class="filter-spacer"></span>
-          <span id="filter-count" style="font-size:12px;color:var(--muted)"></span>
+          <span id="filter-count" style="font-size:12px;color:var(--muted);font-weight:500"></span>
         </div>
-        <!-- Bulk action bar -->
         <div class="bulk-bar" id="bulk-bar">
-          <strong id="bulk-count">0</strong> selected
+          <strong id="bulk-count">0</strong> selected &nbsp;·
           <button class="btn btn-sm btn-success" onclick="openBulkCrosslist()">Publish to…</button>
-          <button class="btn btn-sm btn-warning" onclick="bulkDelist()">Delist from platforms</button>
-          <button class="btn btn-sm btn-danger" onclick="bulkDelete()">Remove from dashboard</button>
-          <button class="btn btn-sm btn-outline" onclick="clearSelection()">Deselect</button>
+          <button class="btn btn-sm btn-warning" onclick="bulkDelist()">Delist all</button>
+          <button class="btn btn-sm btn-danger" onclick="bulkDelete()">Delete</button>
+          <button class="btn btn-sm btn-ghost" onclick="clearSelection()">Deselect</button>
         </div>
         <div class="table-wrap">
           <table>
@@ -446,193 +467,174 @@ input[type="checkbox"].row-check { width: 15px; height: 15px; cursor: pointer; a
                 <th>Price</th>
                 <th>Condition</th>
                 <th>Created</th>
-                <th>Published</th>
+                <th>First listed</th>
                 <th>Platforms</th>
                 <th>Actions</th>
               </tr>
             </thead>
-            <tbody id="items-body"><tr><td colspan="8" class="empty">Loading...</td></tr></tbody>
+            <tbody id="items-body"><tr><td colspan="8"><div class="empty"><div class="empty-icon">🔍</div><h3>Loading items…</h3></div></td></tr></tbody>
           </table>
         </div>
       </div>
     </div>
 
-    <!-- HELP VIEW -->
-    <div id="view-help" class="view">
-      <div style="max-width:640px">
-        <div style="font-size:22px;font-weight:700;margin-bottom:4px">Help &amp; guide</div>
-        <div style="font-size:13px;color:var(--muted);margin-bottom:24px">How does CrossList EU work?</div>
-
-        <div class="card" style="margin-bottom:16px">
-          <div class="card-header"><h2>🧩 Chrome extension required</h2></div>
-          <div style="padding:16px 20px;font-size:13px;color:var(--muted);line-height:1.7">
-            CrossList EU publishes items via a Chrome extension. The extension automatically logs in to Marktplaats, 2dehands and Vinted and posts your listing.<br><br>
-            <strong style="color:var(--text)">Without the extension, publishing does not work.</strong><br><br>
-            <a href="https://chrome.google.com/webstore" target="_blank" style="display:inline-flex;align-items:center;gap:6px;padding:8px 18px;background:var(--primary);color:#fff;border-radius:6px;font-weight:600;font-size:13px;">Download Chrome extension →</a>
+    <!-- ── MARGIN CALCULATOR VIEW ──────────────────────────────────── -->
+    <div id="view-calculator" class="view">
+      <div class="view-header">
+        <h1>Margin calculator</h1>
+        <p>Enter your purchase price and desired profit — we calculate the minimum selling price per platform including fees.</p>
+      </div>
+      <div class="card" style="max-width:680px">
+        <div class="card-header"><h2>💶 Calculate selling price</h2></div>
+        <div style="padding:22px">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:24px">
+            <div class="form-group" style="margin:0">
+              <label>Purchase price (€)</label>
+              <input type="number" id="mc-cost" min="0" step="0.01" placeholder="0.00" oninput="calcMargin()">
+            </div>
+            <div class="form-group" style="margin:0">
+              <label>Desired net profit (€)</label>
+              <input type="number" id="mc-profit" min="0" step="0.01" placeholder="10.00" oninput="calcMargin()">
+            </div>
           </div>
+          <div id="mc-results" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:12px"></div>
+          <div id="mc-empty" style="color:var(--muted);font-size:13px;padding:12px 0">Fill in both fields to see results.</div>
         </div>
+      </div>
 
-        <div class="card" style="margin-bottom:16px">
-          <div class="card-header"><h2>📋 How does it work?</h2></div>
-          <div style="padding:16px 20px;font-size:13px;color:var(--muted);line-height:1.8">
-            <div style="margin-bottom:10px"><strong style="color:var(--text)">1. Create an item</strong><br>Click "New item", fill in the details and upload photos.</div>
-            <div style="margin-bottom:10px"><strong style="color:var(--text)">2. Choose platforms</strong><br>Select which marketplaces to publish to and click "Save &amp; publish".</div>
-            <div style="margin-bottom:10px"><strong style="color:var(--text)">3. Extension does the rest</strong><br>The Chrome extension opens the platforms in the background and posts your listing automatically.</div>
-            <div><strong style="color:var(--text)">4. Sold?</strong><br>Mark an item as sold and all other listings are automatically removed.</div>
-          </div>
-        </div>
-
-        <div class="card">
-          <div class="card-header"><h2>✉️ Contact</h2></div>
-          <div style="padding:16px 20px;font-size:13px;color:var(--muted);line-height:1.7">
-            Questions or issues? Email <a href="mailto:danieldekoning66@gmail.com" style="color:var(--blue);font-weight:600">danieldekoning66@gmail.com</a>.
-          </div>
+      <!-- Tips -->
+      <div style="max-width:680px;margin-top:20px;padding:20px 24px;background:#fff;border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow-sm)">
+        <div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--blue);margin-bottom:12px">Platform fees guide</div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:8px;font-size:13px;color:var(--muted)">
+          <div>🇳🇱 Marktplaats — no commission</div>
+          <div>🇧🇪 2dehands — no commission</div>
+          <div>👗 Vinted — no commission</div>
+          <div>🛒 eBay — 13.25% + €0.35</div>
+          <div>🎨 Etsy — 6.5% + €0.20</div>
+          <div>🏪 Shopify — 2% transaction</div>
         </div>
       </div>
     </div>
 
-    <!-- BESCHERMINGEN VIEW -->
+    <!-- ── PROTECTIONS VIEW ────────────────────────────────────────── -->
     <div id="view-protections" class="view">
-      <div style="margin-bottom:20px">
-        <div style="font-size:22px;font-weight:700;margin-bottom:4px">Automatic protections</div>
-        <div style="font-size:13px;color:var(--muted)">CrossList EU resolves these issues automatically — you don't have to do anything.</div>
+      <div class="view-header">
+        <h1>Automatic protections</h1>
+        <p>CrossList EU handles these issues automatically — you don't have to do anything.</p>
       </div>
-      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:16px">
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(310px,1fr));gap:20px">
 
-        <div class="card">
-          <div style="padding:20px">
-            <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px">
-              <div class="protection-icon green" style="width:40px;height:40px;font-size:18px">🔄</div>
-              <div>
-                <div style="font-weight:600;font-size:14px">Marktplaats auto-relist</div>
-                <div class="protection-badge" style="margin-top:3px">✓ Active — every 6 hours</div>
-              </div>
-            </div>
-            <div style="font-size:13px;color:var(--muted);line-height:1.6;margin-bottom:10px">Free Marktplaats listings expire silently after 28 days. CrossList checks every 6 hours and automatically relists after 27 days so you stay visible.</div>
-            <div style="font-size:12px;color:var(--muted);border-top:1px solid var(--border);padding-top:10px">
-              <strong>Without this:</strong> listing disappears after 28 days without warning.
+        <div class="protection-card">
+          <div class="protection-card-header">
+            <div class="protection-icon green">🔄</div>
+            <div>
+              <div style="font-weight:700;font-size:14px">Marktplaats auto-relist</div>
+              <div class="protection-status">✓ Active — every 6 hours</div>
             </div>
           </div>
+          <div style="font-size:13px;color:var(--muted);line-height:1.65;margin-bottom:12px">Free Marktplaats listings expire silently after 28 days. CrossList checks every 6 hours and automatically relists after 27 days so you stay visible.</div>
+          <div style="font-size:12px;color:var(--muted);border-top:1px solid var(--border);padding-top:10px"><strong style="color:var(--text)">Without this:</strong> your listing disappears after 28 days without any warning.</div>
         </div>
 
-        <div class="card">
-          <div style="padding:20px">
-            <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px">
-              <div class="protection-icon blue" style="width:40px;height:40px;font-size:18px">🛡️</div>
-              <div>
-                <div style="font-weight:600;font-size:14px">Vinted photo protection</div>
-                <div class="protection-badge" style="margin-top:3px">✓ Active — every upload</div>
-              </div>
-            </div>
-            <div style="font-size:13px;color:var(--muted);line-height:1.6;margin-bottom:10px">Vinted detects identical photos from other platforms via pixel-hashing and may ban your account. CrossList slightly modifies each photo via canvas rendering — invisible to the eye, but a unique hash for Vinted.</div>
-            <div style="font-size:12px;color:var(--muted);border-top:1px solid var(--border);padding-top:10px">
-              <strong>Without this:</strong> risk of account ban on Vinted.
+        <div class="protection-card">
+          <div class="protection-card-header">
+            <div class="protection-icon blue">🛡️</div>
+            <div>
+              <div style="font-weight:700;font-size:14px">Vinted photo protection</div>
+              <div class="protection-status">✓ Active — every upload</div>
             </div>
           </div>
+          <div style="font-size:13px;color:var(--muted);line-height:1.65;margin-bottom:12px">Vinted detects identical photos from other platforms via pixel-hashing. CrossList slightly modifies each photo via canvas — invisible to the eye, unique hash for Vinted.</div>
+          <div style="font-size:12px;color:var(--muted);border-top:1px solid var(--border);padding-top:10px"><strong style="color:var(--text)">Without this:</strong> risk of account ban on Vinted.</div>
         </div>
 
-        <div class="card">
-          <div style="padding:20px">
-            <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px">
-              <div class="protection-icon green" style="width:40px;height:40px;font-size:18px">🧹</div>
-              <div>
-                <div style="font-weight:600;font-size:14px">2dehands formatting fix</div>
-                <div class="protection-badge" style="margin-top:3px">✓ Active — every publish</div>
-              </div>
-            </div>
-            <div style="font-size:13px;color:var(--muted);line-height:1.6;margin-bottom:10px">2dehands only supports 7 HTML tags in descriptions. Other tags crash the editor. CrossList automatically strips all unsupported formatting before publishing.</div>
-            <div style="font-size:12px;color:var(--muted);border-top:1px solid var(--border);padding-top:10px">
-              <strong>Without this:</strong> publish fails or description is empty.
+        <div class="protection-card">
+          <div class="protection-card-header">
+            <div class="protection-icon green">🧹</div>
+            <div>
+              <div style="font-weight:700;font-size:14px">2dehands formatting fix</div>
+              <div class="protection-status">✓ Active — every publish</div>
             </div>
           </div>
+          <div style="font-size:13px;color:var(--muted);line-height:1.65;margin-bottom:12px">2dehands only supports 7 HTML tags in descriptions. CrossList automatically strips all unsupported formatting before publishing.</div>
+          <div style="font-size:12px;color:var(--muted);border-top:1px solid var(--border);padding-top:10px"><strong style="color:var(--text)">Without this:</strong> publish fails or description is empty.</div>
         </div>
 
-        <div class="card">
-          <div style="padding:20px">
-            <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px">
-              <div class="protection-icon purple" style="width:40px;height:40px;font-size:18px">🌐</div>
-              <div>
-                <div style="font-weight:600;font-size:14px">Auto-translation</div>
-                <div class="protection-badge" style="margin-top:3px">✓ Active — Marktplaats &amp; 2dehands</div>
-              </div>
-            </div>
-            <div style="font-size:13px;color:var(--muted);line-height:1.6;margin-bottom:10px">Marktplaats and 2dehands are Dutch-language platforms. You enter everything in English — CrossList automatically translates titles and descriptions to Dutch before publishing.</div>
-            <div style="font-size:12px;color:var(--muted);border-top:1px solid var(--border);padding-top:10px">
-              <strong>Without this:</strong> English text visible on Dutch-language platforms.
+        <div class="protection-card">
+          <div class="protection-card-header">
+            <div class="protection-icon purple">🇳🇱</div>
+            <div>
+              <div style="font-weight:700;font-size:14px">Dutch auto-translation</div>
+              <div class="protection-status">✓ Active — Marktplaats &amp; 2dehands</div>
             </div>
           </div>
+          <div style="font-size:13px;color:var(--muted);line-height:1.65;margin-bottom:12px">You enter listings in English — CrossList automatically translates titles and descriptions to Dutch before publishing on Marktplaats and 2dehands.</div>
+          <div style="font-size:12px;color:var(--muted);border-top:1px solid var(--border);padding-top:10px"><strong style="color:var(--text)">Without this:</strong> English text visible on Dutch-language platforms.</div>
         </div>
 
-        <div class="card">
-          <div style="padding:20px">
-            <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px">
-              <div class="protection-icon blue" style="width:40px;height:40px;font-size:18px">⚡</div>
-              <div>
-                <div style="font-weight:600;font-size:14px">Sale sync</div>
-                <div class="protection-badge" style="margin-top:3px">✓ Active — all platforms</div>
-              </div>
-            </div>
-            <div style="font-size:13px;color:var(--muted);line-height:1.6;margin-bottom:10px">Once an item sells on one platform, all other active listings are automatically removed. No double sales, no manual cleanup.</div>
-            <div style="font-size:12px;color:var(--muted);border-top:1px solid var(--border);padding-top:10px">
-              <strong>Without this:</strong> risk of double sales and negative reviews.
+        <div class="protection-card">
+          <div class="protection-card-header">
+            <div class="protection-icon blue">⚡</div>
+            <div>
+              <div style="font-weight:700;font-size:14px">Sale sync</div>
+              <div class="protection-status">✓ Active — all platforms</div>
             </div>
           </div>
+          <div style="font-size:13px;color:var(--muted);line-height:1.65;margin-bottom:12px">Once an item sells on one platform, all other active listings are automatically removed. No double sales, no manual cleanup.</div>
+          <div style="font-size:12px;color:var(--muted);border-top:1px solid var(--border);padding-top:10px"><strong style="color:var(--text)">Without this:</strong> risk of double sales and negative reviews.</div>
         </div>
 
-        <div class="card">
-          <div style="padding:20px">
-            <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px">
-              <div class="protection-icon yellow" style="width:40px;height:40px;font-size:18px">📋</div>
-              <div>
-                <div style="font-weight:600;font-size:14px">Marktplaats editor fix</div>
-                <div class="protection-badge" style="margin-top:3px">✓ Active — every publish</div>
-              </div>
-            </div>
-            <div style="font-size:13px;color:var(--muted);line-height:1.6;margin-bottom:10px">Marktplaats uses its own rich-text editor (Lexical) that does not respond to standard DOM input. CrossList fills the editor correctly via the internal EditorState API.</div>
-            <div style="font-size:12px;color:var(--muted);border-top:1px solid var(--border);padding-top:10px">
-              <strong>Without this:</strong> description stays empty on publish.
+        <div class="protection-card">
+          <div class="protection-card-header">
+            <div class="protection-icon yellow">📋</div>
+            <div>
+              <div style="font-weight:700;font-size:14px">Marktplaats editor fix</div>
+              <div class="protection-status">✓ Active — every publish</div>
             </div>
           </div>
+          <div style="font-size:13px;color:var(--muted);line-height:1.65;margin-bottom:12px">Marktplaats uses a custom rich-text editor (Lexical) that ignores standard DOM input. CrossList fills it correctly via the internal EditorState API.</div>
+          <div style="font-size:12px;color:var(--muted);border-top:1px solid var(--border);padding-top:10px"><strong style="color:var(--text)">Without this:</strong> description stays empty on publish.</div>
         </div>
 
       </div>
     </div>
 
-    <!-- PRIJS / ABONNEMENT VIEW -->
+    <!-- ── SUBSCRIPTION VIEW ───────────────────────────────────────── -->
     <div id="view-prijs" class="view">
 
-      <!-- Active subscription state -->
+      <!-- Active subscription -->
       <div id="billing-active-card" style="display:none">
         <div class="active-plan-card">
           <div class="active-plan-header">
             <div>
-              <div style="font-size:11px;font-weight:700;color:#2563eb;text-transform:uppercase;letter-spacing:1px;margin-bottom:4px">Current plan</div>
-              <div style="font-size:20px;font-weight:800">CrossList EU Pro</div>
-              <div id="billing-active-detail" style="font-size:13px;color:var(--muted);margin-top:3px"></div>
+              <div style="font-size:11px;font-weight:700;color:var(--blue);text-transform:uppercase;letter-spacing:1.2px;margin-bottom:6px">Current plan</div>
+              <div style="font-size:22px;font-weight:900;letter-spacing:-.4px">CrossList EU Pro</div>
+              <div id="billing-active-detail" style="font-size:13px;color:var(--muted);margin-top:4px"></div>
             </div>
             <span id="billing-status-badge" class="status-pill active">Active</span>
           </div>
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:18px">
-            <div style="background:#f8faff;border-radius:8px;padding:12px 16px">
-              <div style="font-size:11px;color:var(--muted);margin-bottom:2px">Plan</div>
-              <div style="font-weight:600;font-size:13px">Pro · €19.99/mo</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:20px">
+            <div style="background:#f8faff;border:1px solid #e0e7ff;border-radius:10px;padding:14px 16px">
+              <div style="font-size:11px;color:var(--muted);font-weight:600;margin-bottom:4px">Plan</div>
+              <div style="font-weight:700;font-size:14px">Pro · €19.99/mo</div>
             </div>
-            <div style="background:#f8faff;border-radius:8px;padding:12px 16px">
-              <div style="font-size:11px;color:var(--muted);margin-bottom:2px">Next billing date</div>
-              <div style="font-weight:600;font-size:13px" id="billing-next-date">—</div>
+            <div style="background:#f8faff;border:1px solid #e0e7ff;border-radius:10px;padding:14px 16px">
+              <div style="font-size:11px;color:var(--muted);font-weight:600;margin-bottom:4px">Next billing date</div>
+              <div style="font-weight:700;font-size:14px" id="billing-next-date">—</div>
             </div>
           </div>
-          <button onclick="openPortal()" style="width:100%;padding:12px;background:var(--primary);color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer">Manage subscription →</button>
+          <button onclick="openPortal()" class="btn btn-primary" style="width:100%;justify-content:center;font-size:14px;border-radius:10px;padding:13px">Manage subscription →</button>
         </div>
 
-        <div style="max-width:440px;margin:0 auto">
-          <div style="font-size:13px;font-weight:600;margin-bottom:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em">What's included</div>
+        <div style="max-width:560px;margin:0 auto">
+          <div class="section-label" style="margin-bottom:16px">What's included</div>
           <div class="pricing-features-grid">
             <div class="pricing-feature-item"><div class="pricing-feature-icon">🔁</div><div><div class="pricing-feature-title">Unlimited crosslisting</div><div class="pricing-feature-desc">List as many items as you want across all platforms</div></div></div>
             <div class="pricing-feature-item"><div class="pricing-feature-icon">🤖</div><div><div class="pricing-feature-title">AI descriptions</div><div class="pricing-feature-desc">Generate professional listings from photos</div></div></div>
-            <div class="pricing-feature-item" style="border-color:#2563eb;background:#f0f7ff"><div class="pricing-feature-icon" style="background:#dbeafe">🇳🇱</div><div><div class="pricing-feature-title" style="color:#1d4ed8">Dutch listings — auto-translated</div><div class="pricing-feature-desc">Your listings are automatically written in Dutch for Marktplaats & 2dehands</div></div></div>
+            <div class="pricing-feature-item" style="border-color:var(--blue);background:#f0f7ff"><div class="pricing-feature-icon" style="background:#dbeafe">🇳🇱</div><div><div class="pricing-feature-title" style="color:var(--blue-dark)">Dutch listings — auto-translated</div><div class="pricing-feature-desc">Automatically written in Dutch for Marktplaats &amp; 2dehands</div></div></div>
             <div class="pricing-feature-item"><div class="pricing-feature-icon">🛒</div><div><div class="pricing-feature-title">Auto-delist on sale</div><div class="pricing-feature-desc">Sold on one platform → removed everywhere else</div></div></div>
             <div class="pricing-feature-item"><div class="pricing-feature-icon">📅</div><div><div class="pricing-feature-title">Marktplaats auto-relist</div><div class="pricing-feature-desc">Automatically re-listed every 27 days</div></div></div>
+            <div class="pricing-feature-item"><div class="pricing-feature-icon">💶</div><div><div class="pricing-feature-title">Margin calculator</div><div class="pricing-feature-desc">Know your minimum selling price per platform</div></div></div>
           </div>
         </div>
       </div>
