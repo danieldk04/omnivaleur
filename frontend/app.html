@@ -703,49 +703,15 @@ input[type="checkbox"].row-check { width: 15px; height: 15px; cursor: pointer; a
 
     <!-- ── ACCOUNT / SUBSCRIPTION VIEW ─────────────────────────────── -->
     <div id="view-prijs" class="view">
+      <div style="max-width:600px;margin:0 auto">
 
-      <!-- Active subscription — account management page -->
-      <div id="billing-active-card" style="display:none;max-width:600px;margin:0 auto">
-
-        <!-- Status card -->
-        <div class="active-plan-card" style="margin-bottom:20px">
-          <div class="active-plan-header">
-            <div>
-              <div style="font-size:11px;font-weight:700;color:var(--blue);text-transform:uppercase;letter-spacing:1.2px;margin-bottom:6px">Your plan</div>
-              <div style="font-size:22px;font-weight:900;letter-spacing:-.4px">CrossList EU Pro</div>
-              <div id="billing-active-detail" style="font-size:13px;color:var(--muted);margin-top:4px"></div>
-            </div>
-            <span id="billing-status-badge" class="status-pill active">Active</span>
-          </div>
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:20px">
-            <div style="background:#f8faff;border:1px solid #e0e7ff;border-radius:10px;padding:14px 16px">
-              <div style="font-size:11px;color:var(--muted);font-weight:600;margin-bottom:4px">Price</div>
-              <div style="font-weight:700;font-size:14px">€19.99 / month</div>
-            </div>
-            <div style="background:#f8faff;border:1px solid #e0e7ff;border-radius:10px;padding:14px 16px">
-              <div style="font-size:11px;color:var(--muted);font-weight:600;margin-bottom:4px">Next billing date</div>
-              <div style="font-weight:700;font-size:14px" id="billing-next-date">—</div>
-            </div>
-          </div>
-          <div style="display:flex;gap:10px;flex-wrap:wrap">
-            <button onclick="openPortal()" class="btn btn-primary" style="flex:1;justify-content:center;min-width:180px">Manage subscription →</button>
-            <button onclick="openPortal()" class="btn btn-outline" style="flex:1;justify-content:center;min-width:140px">Download invoices</button>
-          </div>
-          <div style="margin-top:10px;padding:10px 12px;background:#f8faff;border-radius:8px;font-size:12px;color:var(--muted);display:flex;align-items:center;gap:8px">
-            <svg width="14" height="14" viewBox="0 0 20 20" fill="currentColor" style="flex-shrink:0;color:#6b7280"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"/></svg>
-            You can update your payment method, download invoices, and cancel your subscription from the customer portal. Access remains active until the end of the billing period.
-          </div>
-        </div>
-
-        <!-- Account info -->
+        <!-- Account info — always visible -->
         <div class="card" style="margin-bottom:20px">
           <div class="card-header"><h2>Account</h2></div>
           <div style="padding:20px 22px;display:flex;flex-direction:column;gap:14px">
-            <div style="display:flex;align-items:center;justify-content:space-between">
-              <div>
-                <div style="font-size:11px;font-weight:600;color:var(--muted);margin-bottom:2px">Email address</div>
-                <div style="font-size:14px;font-weight:600" id="account-email">—</div>
-              </div>
+            <div>
+              <div style="font-size:11px;font-weight:600;color:var(--muted);margin-bottom:2px">Email address</div>
+              <div style="font-size:14px;font-weight:600" id="account-email">—</div>
             </div>
             <div style="border-top:1px solid var(--border);padding-top:14px;display:flex;align-items:center;justify-content:space-between">
               <div>
@@ -757,114 +723,59 @@ input[type="checkbox"].row-check { width: 15px; height: 15px; cursor: pointer; a
           </div>
         </div>
 
-      </div>
+        <!-- Subscription card — content swapped by renderBilling() -->
+        <div class="card">
+          <div class="card-header"><h2>Subscription</h2></div>
 
-      <!-- Upgrade / trial state (paywall) -->
-      <div id="billing-upgrade-card" style="display:none">
-
-        <!-- Account info (always visible at top) -->
-        <div class="card" style="max-width:580px;margin:0 auto 28px">
-          <div class="card-header"><h2>Account</h2></div>
-          <div style="padding:20px 22px;display:flex;flex-direction:column;gap:14px">
-            <div style="display:flex;align-items:center;justify-content:space-between">
+          <!-- Active / past_due state -->
+          <div id="billing-active-card" style="display:none;padding:20px 22px">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
               <div>
-                <div style="font-size:11px;font-weight:600;color:var(--muted);margin-bottom:2px">Email address</div>
-                <div style="font-size:14px;font-weight:600" id="account-email-trial">—</div>
+                <div style="font-size:15px;font-weight:700">CrossList EU Pro</div>
+                <div id="billing-active-detail" style="font-size:13px;color:var(--muted);margin-top:2px"></div>
+              </div>
+              <span id="billing-status-badge" class="status-pill active">Active</span>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:20px">
+              <div style="background:#f8faff;border:1px solid #e0e7ff;border-radius:10px;padding:14px 16px">
+                <div style="font-size:11px;color:var(--muted);font-weight:600;margin-bottom:4px">Price</div>
+                <div style="font-weight:700;font-size:14px">€19.99 / month</div>
+              </div>
+              <div style="background:#f8faff;border:1px solid #e0e7ff;border-radius:10px;padding:14px 16px">
+                <div style="font-size:11px;color:var(--muted);font-weight:600;margin-bottom:4px">Next billing date</div>
+                <div style="font-weight:700;font-size:14px" id="billing-next-date">—</div>
               </div>
             </div>
-            <div style="border-top:1px solid var(--border);padding-top:14px;display:flex;align-items:center;justify-content:space-between">
-              <div>
-                <div style="font-size:13px;font-weight:600;color:var(--text)">Log out</div>
-                <div style="font-size:12px;color:var(--muted)">You will be redirected to the login page</div>
-              </div>
-              <button onclick="document.getElementById('logout-btn').click()" class="btn btn-outline btn-sm">Log out</button>
+            <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px">
+              <button onclick="openPortal()" class="btn btn-primary" style="flex:1;justify-content:center;min-width:180px">Manage subscription →</button>
+              <button onclick="openPortal()" class="btn btn-outline" style="flex:1;justify-content:center;min-width:140px">Download invoices</button>
+            </div>
+            <div style="padding:10px 12px;background:#f8faff;border-radius:8px;font-size:12px;color:var(--muted);display:flex;align-items:center;gap:8px">
+              <svg width="14" height="14" viewBox="0 0 20 20" fill="currentColor" style="flex-shrink:0"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"/></svg>
+              Manage your payment method, download invoices, and cancel from the customer portal.
             </div>
           </div>
-        </div>
 
-        <div class="pricing-hero">
-          <h1>One plan. Everything included.</h1>
-          <p>CrossList EU Pro gives you everything you need to sell smarter across European marketplaces.</p>
-        </div>
+          <!-- Trial / no subscription state -->
+          <div id="billing-upgrade-card" style="display:none;padding:20px 22px">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+              <div>
+                <div style="font-size:15px;font-weight:700">CrossList EU Pro</div>
+                <div id="pricing-trial-note" style="font-size:13px;color:var(--muted);margin-top:2px">7-day free trial · No credit card required</div>
+              </div>
+              <span id="billing-trial-badge" class="status-pill" style="background:#fef3c7;color:#92400e">Trial</span>
+            </div>
+            <div style="background:#f8faff;border:1px solid #e0e7ff;border-radius:10px;padding:14px 16px;margin-bottom:16px">
+              <div style="font-size:11px;color:var(--muted);font-weight:600;margin-bottom:4px">Price after trial</div>
+              <div style="font-weight:700;font-size:14px">€19.99 / month</div>
+            </div>
+            <button id="btn-checkout" class="btn btn-primary" onclick="startCheckout()" style="width:100%;justify-content:center;font-size:14px;padding:12px">Activate Pro →</button>
+            <div style="margin-top:8px;font-size:11px;color:var(--muted);text-align:center">Pay via iDEAL, Bancontact or credit card · Cancel anytime</div>
+          </div>
 
-        <div class="pricing-card">
-          <div class="pricing-badge">Most popular</div>
-          <div class="pricing-plan-name">Pro</div>
-          <div class="pricing-amount">€19.99<span>/mo</span></div>
-          <div class="pricing-trial-note" id="pricing-trial-note">7-day free trial · No credit card required</div>
-          <ul class="pricing-features">
-            <li>Unlimited crosslisting on all platforms</li>
-            <li>Marktplaats, 2dehands, Vinted & Shopify</li>
-            <li style="color:#1d4ed8;font-weight:600">🇳🇱 Listings auto-translated to Dutch for Marktplaats & 2dehands</li>
-            <li>AI-generated descriptions from photos</li>
-            <li>Auto-delist when sold (cross-platform)</li>
-            <li>Marktplaats auto-relist every 27 days</li>
-            <li>Sales dashboard & profit tracking</li>
-            <li>Priority email support</li>
-          </ul>
-          <button id="btn-checkout" class="pricing-cta" onclick="startCheckout()">Start 7-day free trial →</button>
-          <div class="pricing-fine">Then €19.99/month · Cancel anytime<br>Pay via iDEAL, Bancontact or credit card</div>
-        </div>
-
-        <!-- Dutch translation USP highlight -->
-        <div style="max-width:640px;margin:0 auto 32px;background:linear-gradient(135deg,#eff6ff,#f0fdf4);border:1.5px solid #bfdbfe;border-radius:14px;padding:24px 28px;display:flex;align-items:flex-start;gap:18px">
-          <div style="font-size:36px;flex-shrink:0">🇳🇱</div>
-          <div>
-            <div style="font-size:15px;font-weight:700;color:#1e40af;margin-bottom:6px">Your listings speak Dutch — automatically</div>
-            <div style="font-size:13px;color:#374151;line-height:1.6">Most crosslisting tools are built for the US market. CrossList EU is built for Europe. When you list on <strong>Marktplaats</strong> or <strong>2dehands</strong>, your title and description are automatically written in Dutch — so your listings look native and convert better.</div>
-          </div>
-        </div>
-
-        <!-- All features -->
-        <div style="max-width:640px;margin:0 auto 40px">
-          <div style="text-align:center;font-size:18px;font-weight:700;margin-bottom:20px">Everything included in Pro</div>
-          <div class="pricing-features-grid">
-            <div class="pricing-feature-item"><div class="pricing-feature-icon">🔁</div><div><div class="pricing-feature-title">Crosslisting</div><div class="pricing-feature-desc">One item, live on all platforms — in seconds</div></div></div>
-            <div class="pricing-feature-item"><div class="pricing-feature-icon">🤖</div><div><div class="pricing-feature-title">AI descriptions</div><div class="pricing-feature-desc">Upload photos, get a ready-to-publish listing</div></div></div>
-            <div class="pricing-feature-item" style="border-color:#93c5fd;background:#f0f7ff"><div class="pricing-feature-icon" style="background:#dbeafe">🇳🇱</div><div><div class="pricing-feature-title" style="color:#1d4ed8">Dutch auto-translation</div><div class="pricing-feature-desc">Listings on Marktplaats & 2dehands are written in Dutch automatically</div></div></div>
-            <div class="pricing-feature-item"><div class="pricing-feature-icon">🛒</div><div><div class="pricing-feature-title">Auto-delist on sale</div><div class="pricing-feature-desc">Sale detected → removed from all other platforms</div></div></div>
-            <div class="pricing-feature-item"><div class="pricing-feature-icon">📅</div><div><div class="pricing-feature-title">Auto-relist</div><div class="pricing-feature-desc">Marktplaats listings expire after 28 days — we relist automatically</div></div></div>
-            <div class="pricing-feature-item"><div class="pricing-feature-icon">📊</div><div><div class="pricing-feature-title">Dashboard</div><div class="pricing-feature-desc">All items, listings and profit in one overview</div></div></div>
-            <div class="pricing-feature-item"><div class="pricing-feature-icon">💶</div><div><div class="pricing-feature-title">Margin calculator</div><div class="pricing-feature-desc">Calculate your selling price based on desired profit</div></div></div>
-            <div class="pricing-feature-item"><div class="pricing-feature-icon">📬</div><div><div class="pricing-feature-title">Support</div><div class="pricing-feature-desc">Direct help via email for any questions or issues</div></div></div>
-          </div>
-        </div>
-
-        <!-- FAQ -->
-        <div style="max-width:580px;margin:0 auto 40px">
-          <div style="text-align:center;font-size:18px;font-weight:700;margin-bottom:20px">Frequently asked questions</div>
-          <div class="faq-item" onclick="toggleFaq(this)">
-            <div class="faq-q">Can I try CrossList EU for free? <svg class="faq-chevron" width="16" height="16" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"/></svg></div>
-            <div class="faq-a">Yes — you get 7 days of full Pro access for free. No credit card required to get started.</div>
-          </div>
-          <div class="faq-item" onclick="toggleFaq(this)">
-            <div class="faq-q">Which payment methods do you accept? <svg class="faq-chevron" width="16" height="16" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"/></svg></div>
-            <div class="faq-a">We accept iDEAL, Bancontact and all major credit cards via Stripe — Europe's most trusted payment provider.</div>
-          </div>
-          <div class="faq-item" onclick="toggleFaq(this)">
-            <div class="faq-q">Can I cancel at any time? <svg class="faq-chevron" width="16" height="16" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"/></svg></div>
-            <div class="faq-a">Yes, no hassle. Cancel anytime from your customer portal. You keep access until the end of your billing period.</div>
-          </div>
-          <div class="faq-item" onclick="toggleFaq(this)">
-            <div class="faq-q">Are my platform credentials safe? <svg class="faq-chevron" width="16" height="16" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"/></svg></div>
-            <div class="faq-a">CrossList EU works via your own browser (Chrome extension) and stores session cookies — not your password in plain text. Your data is never shared with third parties.</div>
-          </div>
-          <div class="faq-item" onclick="toggleFaq(this)">
-            <div class="faq-q">Which marketplaces are supported? <svg class="faq-chevron" width="16" height="16" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"/></svg></div>
-            <div class="faq-a">Currently: Marktplaats, 2dehands, Vinted and Shopify. eBay, Etsy, Kleinanzeigen and Facebook Marketplace are in development.</div>
-          </div>
-        </div>
-
-        <!-- Bottom CTA -->
-        <div style="max-width:580px;margin:0 auto;background:linear-gradient(135deg,#1e3a8a,#2563eb);border-radius:16px;padding:36px;text-align:center;color:#fff">
-          <div style="font-size:22px;font-weight:800;margin-bottom:8px">Ready to sell smarter?</div>
-          <div style="font-size:14px;opacity:.8;margin-bottom:24px">7 days free · No credit card · Start in minutes</div>
-          <button onclick="startCheckout()" style="padding:14px 36px;background:#fff;color:#1d4ed8;border:none;border-radius:10px;font-size:15px;font-weight:700;cursor:pointer">Start free trial →</button>
         </div>
 
       </div>
-
-    </div>
     </div><!-- /view-prijs -->
 
     <!-- ── HELP VIEW ──────────────────────────────────────────────── -->
