@@ -299,10 +299,10 @@ async function bgDeleteMp2dh(job, serverUrl) {
   const title = (payload.title || "").substring(0, 35);
   const listingId = payload.platform_listing_id || "";
 
-  // Navigate directly to account/advertenties overview
+  // Navigate directly to the seller's listings overview
   const overviewUrl = platform === "marktplaats"
-    ? "https://www.marktplaats.nl/account/advertenties"
-    : "https://www.2dehands.be/account/advertenties";
+    ? "https://www.marktplaats.nl/my-account/sell/index.html"
+    : "https://www.2dehands.be/my-account/sell/index.html";
 
   const tabId = await new Promise((res, rej) =>
     chrome.tabs.create({ url: overviewUrl, active: true }, t =>
