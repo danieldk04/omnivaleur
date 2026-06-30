@@ -563,6 +563,68 @@ input[type="checkbox"].row-check { width: 15px; height: 15px; cursor: pointer; a
       </div>
     </div>
 
+    <!-- ── ANALYTICS VIEW ───────────────────────────────────────────── -->
+    <div id="view-analytics" class="view">
+      <div class="an-header">
+        <h2 style="font-size:18px;font-weight:800;color:var(--text)">Analytics</h2>
+        <div class="an-period-tabs" id="an-period-tabs">
+          <button class="an-period-tab" data-days="7" onclick="setAnPeriod(7)">7d</button>
+          <button class="an-period-tab" data-days="30" onclick="setAnPeriod(30)">30d</button>
+          <button class="an-period-tab active" data-days="90" onclick="setAnPeriod(90)">90d</button>
+          <button class="an-period-tab" data-days="365" onclick="setAnPeriod(365)">1y</button>
+          <button class="an-period-tab" data-days="0" onclick="setAnPeriod(0)">All</button>
+        </div>
+      </div>
+
+      <!-- KPI cards -->
+      <div class="an-kpi-grid">
+        <div class="an-kpi">
+          <div class="an-kpi-label">Revenue</div>
+          <div class="an-kpi-value" id="an-revenue">—</div>
+          <div id="an-revenue-delta"></div>
+        </div>
+        <div class="an-kpi">
+          <div class="an-kpi-label">Profit</div>
+          <div class="an-kpi-value" id="an-profit">—</div>
+          <div class="an-kpi-sub" id="an-profit-sub"></div>
+        </div>
+        <div class="an-kpi">
+          <div class="an-kpi-label">Sales</div>
+          <div class="an-kpi-value" id="an-sales">—</div>
+          <div id="an-sales-delta"></div>
+        </div>
+        <div class="an-kpi">
+          <div class="an-kpi-label">Avg. order profit</div>
+          <div class="an-kpi-value" id="an-avg-profit">—</div>
+          <div class="an-kpi-sub" id="an-avg-sub"></div>
+        </div>
+      </div>
+
+      <!-- Main charts -->
+      <div class="an-charts">
+        <div class="an-chart-card">
+          <div class="an-chart-title">Revenue vs. Profit</div>
+          <div class="an-chart-wrap"><canvas id="an-chart-revenue"></canvas></div>
+        </div>
+        <div class="an-chart-card">
+          <div class="an-chart-title">Sales per day</div>
+          <div class="an-chart-wrap"><canvas id="an-chart-sales"></canvas></div>
+        </div>
+      </div>
+
+      <!-- Bottom row -->
+      <div class="an-bottom">
+        <div class="an-chart-card">
+          <div class="an-chart-title">Revenue by platform</div>
+          <ul class="an-platform-list" id="an-platform-list"><li class="an-empty">No sales yet</li></ul>
+        </div>
+        <div class="an-chart-card">
+          <div class="an-chart-title">Average sale price by platform</div>
+          <ul class="an-platform-list" id="an-avg-platform-list"><li class="an-empty">No sales yet</li></ul>
+        </div>
+      </div>
+    </div>
+
     <!-- ── ITEMS VIEW ──────────────────────────────────────────────── -->
     <div id="view-items" class="view">
       <div class="card">
