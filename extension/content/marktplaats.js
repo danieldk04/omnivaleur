@@ -24,44 +24,40 @@
   }
 
   async function deleteListingMp(listingId) {
-    // We land on the direct listing page (seller/view/{id}).
-    // Wait for the page to load, then find and click delete.
-    await sleep(2000);
+    // We land on /v/listing/{id} — the listing detail page.
+    // Wait for page to render, then find the delete action.
+    await sleep(2500);
 
-    // Try kebab / options menu first (may be inside an action bar)
-    const actionsBtn = document.querySelector(
-      'button[aria-label*="opties"], button[aria-label*="menu"], button[aria-label*="actions"], ' +
-      '[data-testid*="action"], [data-testid*="kebab"], [data-testid*="more"], [aria-label*="Meer"]'
-    );
-    if (actionsBtn) {
-      actionsBtn.click();
-      await sleep(600);
+    async function findAndClickDelete() {
+      return [...document.querySelectorAll('button, a, [role="menuitem"], [role="option"], li')]
+        .find(el => /verwijder/i.test(el.textContent?.trim()));
     }
 
-    // Find "Verwijder" button/link anywhere on page or in dropdown
-    let deleteEl = [...document.querySelectorAll('button, a, [role="menuitem"], [role="option"]')]
-      .find(el => /verwijder/i.test(el.textContent));
+    // 1. Check if delete is directly visible
+    let deleteEl = await findAndClickDelete();
 
-    // Fallback: look for a "..." / options button if delete not yet visible
+    // 2. Try every button that looks like a menu/options trigger
     if (!deleteEl) {
-      const moreBtn = [...document.querySelectorAll('button')]
-        .find(el => /\.\.\.|opties|meer|beheer/i.test(el.textContent) || el.getAttribute('aria-label')?.match(/opties|meer|beheer/i));
-      if (moreBtn) { moreBtn.click(); await sleep(600); }
-      deleteEl = [...document.querySelectorAll('button, a, [role="menuitem"]')]
-        .find(el => /verwijder/i.test(el.textContent));
+      const triggers = [...document.querySelectorAll('button, [role="button"]')].filter(el => {
+        const label = (el.textContent + ' ' + (el.getAttribute('aria-label') || '')).toLowerCase();
+        return /opties|meer|beheer|\.\.\.|menu|actions/i.test(label) || el.querySelector('svg');
+      });
+      for (const btn of triggers) {
+        btn.click();
+        await sleep(500);
+        deleteEl = await findAndClickDelete();
+        if (deleteEl) break;
+      }
     }
 
-    if (!deleteEl) throw new Error("Delete button not found for listing " + listingId + " — check if already removed or page layout changed");
+    if (!deleteEl) throw new Error("Verwijder button not found on listing " + listingId);
     deleteEl.click();
     await sleep(800);
 
-    // Confirm deletion dialog
+    // Confirm dialog if it appears
     const confirmBtn = [...document.querySelectorAll('button')]
-      .find(el => /verwijder|bevestig|ok|ja\b/i.test(el.textContent));
-    if (confirmBtn) {
-      confirmBtn.click();
-      await sleep(1000);
-    }
+      .find(el => /verwijder|bevestig|ok|ja\b/i.test(el.textContent?.trim()));
+    if (confirmBtn) { confirmBtn.click(); await sleep(1000); }
   }
 
   async function fillForm(item) {
