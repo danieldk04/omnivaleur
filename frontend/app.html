@@ -1312,41 +1312,64 @@ async function loadBillingStatus() {
 function renderBilling(data) {
   const upgradeCard = document.getElementById('billing-upgrade-card');
   const activeCard  = document.getElementById('billing-active-card');
-  if (!data) { upgradeCard.style.display = 'block'; activeCard.style.display = 'none'; return; }
+  const paywall     = document.getElementById('paywall-overlay');
+
+  function showPaywall(msg, cta) {
+    document.getElementById('paywall-msg').textContent = msg;
+    document.getElementById('paywall-cta').textContent = cta;
+    paywall.style.display = 'flex';
+  }
+  function hidePaywall() { paywall.style.display = 'none'; }
+
+  // Populate account email
+  const auth = JSON.parse(sessionStorage.getItem('cl_auth') || '{}');
+  const emailEl = document.getElementById('account-email');
+  if (emailEl && auth.email) emailEl.textContent = auth.email;
+
+  if (!data) {
+    upgradeCard.style.display = 'block';
+    activeCard.style.display = 'none';
+    showPaywall('Start your 7-day free trial to access CrossList EU.', 'Start 7-day free trial →');
+    document.getElementById('nav-prijs-label').textContent = 'Subscription';
+    return;
+  }
 
   const { status, trial_ends_at, current_period_end } = data;
 
   if (status === 'active') {
+    hidePaywall();
     upgradeCard.style.display = 'none';
     activeCard.style.display  = 'block';
-    const until = current_period_end ? new Date(current_period_end).toLocaleDateString('nl-NL') : '—';
+    const until = current_period_end ? new Date(current_period_end).toLocaleDateString('en-GB') : '—';
     document.getElementById('billing-active-detail').textContent = `Active · renews on ${until}`;
     document.getElementById('billing-next-date').textContent = until;
     document.getElementById('billing-status-badge').textContent = 'Active';
     document.getElementById('billing-status-badge').className = 'status-pill active';
-    document.getElementById('nav-prijs-label').textContent = 'Subscription ✓';
+    document.getElementById('nav-prijs-label').textContent = 'Account';
 
   } else if (status === 'past_due') {
+    hidePaywall();
     upgradeCard.style.display = 'none';
     activeCard.style.display  = 'block';
     document.getElementById('billing-active-detail').textContent = 'Payment required to keep access';
     document.getElementById('billing-next-date').textContent = '—';
     document.getElementById('billing-status-badge').textContent = 'Payment failed';
     document.getElementById('billing-status-badge').className = 'status-pill past_due';
-    document.getElementById('nav-prijs-label').textContent = 'Subscription ⚠';
+    document.getElementById('nav-prijs-label').textContent = 'Account ⚠';
 
   } else if (status === 'trialing') {
     const days = trial_ends_at ? Math.max(0, Math.ceil((new Date(trial_ends_at) - Date.now()) / 86400000)) : 0;
+    hidePaywall();
     upgradeCard.style.display = 'block';
     activeCard.style.display  = 'none';
     const note = document.getElementById('pricing-trial-note');
     if (note) note.textContent = days > 0 ? `${days} day${days !== 1 ? 's' : ''} left in free trial · No credit card needed` : 'Your free trial expires today';
     const btn = document.getElementById('btn-checkout');
     if (btn) btn.textContent = days > 0 ? `Start ${days}-day free trial →` : 'Activate Pro →';
-    document.getElementById('nav-prijs-label').textContent = days > 0 ? `Subscription (${days}d)` : 'Subscription';
+    document.getElementById('nav-prijs-label').textContent = days > 0 ? `Trial (${days}d left)` : 'Trial expiring';
 
   } else {
-    // trial_expired / canceled / unknown
+    // trial_expired / canceled / unknown — block access
     upgradeCard.style.display = 'block';
     activeCard.style.display  = 'none';
     const note = document.getElementById('pricing-trial-note');
@@ -1354,6 +1377,7 @@ function renderBilling(data) {
     const btn = document.getElementById('btn-checkout');
     if (btn) btn.textContent = 'Activate Pro →';
     document.getElementById('nav-prijs-label').textContent = 'Subscription ⚠';
+    showPaywall('Your free trial has ended. Activate Pro to continue using CrossList EU.', 'Activate Pro →');
   }
 }
 
