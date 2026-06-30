@@ -451,7 +451,7 @@ window.CL = (() => {
   }
 
   return {
-    sleep, qs, waitForEl, fillInput, fillNativeSelect, clickRadioByValue, fillDescription,
+    sleep, qs, waitForEl, fillInput, fillInputHuman, fillNativeSelect, clickRadioByValue, fillDescription,
     findFieldByLabel, selectDropdown, fillBrand, fillManufacturer, selectBundleFree,
     selectPackageSize, uploadPhotos, submitListing, step, closePopup, smartTrunc, fillBidding,
   };
