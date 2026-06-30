@@ -287,8 +287,8 @@ chrome.alarms.onAlarm.addListener((alarm) => {
 async function checkSoldListings() {
   const serverUrl = await getServerUrl();
   const soldUrls = {
-    marktplaats: "https://www.marktplaats.nl/mijn-marktplaats/advertenties/verkocht",
-    "2dehands":  "https://www.2dehands.be/mijn-2dehands/advertenties/verkocht",
+    marktplaats: "https://www.marktplaats.nl/mijn-marktplaats/advertenties",
+    "2dehands":  "https://www.2dehands.be/mijn-2dehands/advertenties",
   };
 
   for (const [platform, soldUrl] of Object.entries(soldUrls)) {
