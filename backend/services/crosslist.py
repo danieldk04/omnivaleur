@@ -404,7 +404,9 @@ async def _delist_one(listing: dict):
 
     try:
         platform = get_platform(listing["platform"])
-        await platform.delete_listing(listing["platform_listing_id"], credentials)
+        deleted = await platform.delete_listing(listing["platform_listing_id"], credentials)
+        if deleted is False:
+            raise RuntimeError(f"delete_listing returned False for {listing['platform']} listing {listing['platform_listing_id']}")
         db.table("listings").update({
             "status": "delisted",
         }).eq("id", listing["id"]).execute()
