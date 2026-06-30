@@ -129,13 +129,19 @@ tr.selected td { background: #eff6ff; }
 .badge-error-subtle { display: inline-flex; align-items: center; gap: 4px; padding: 3px 9px; border-radius: 999px; font-size: 11px; font-weight: 600; white-space: nowrap; color: var(--muted); cursor: pointer; }
 .badge-error-subtle:hover { background: #f1f5f9; }
 .platform-badges { display: flex; flex-wrap: wrap; gap: 4px; }
-.pm-grid { display: flex; gap: 4px; flex-wrap: nowrap; align-items: center; }
-.pm-chip { display: inline-flex; align-items: center; gap: 3px; padding: 3px 7px; border-radius: 6px; font-size: 11px; font-weight: 700; white-space: nowrap; cursor: default; line-height: 1.35; }
-.pm-chip.pm-active { background: #d1fae5; color: #065f46; border: 1.5px solid #6ee7b7; }
-.pm-chip.pm-pending { background: #fef3c7; color: #92400e; border: 1.5px solid #fcd34d; }
-.pm-chip.pm-error { background: #fff7ed; color: #c2410c; cursor: pointer; border: 1.5px solid #fbbf24; }
-.pm-chip.pm-none { display: none; }
-.pm-empty { font-size: 11px; color: #cbd5e1; font-style: italic; }
+.pm-matrix { display: flex; gap: 3px; align-items: center; }
+.pm-dot { display: flex; flex-direction: column; align-items: center; gap: 2px; width: 34px; }
+.pm-dot-icon { width: 26px; height: 26px; border-radius: 7px; display: flex; align-items: center; justify-content: center; font-size: 13px; border: 1.5px solid transparent; position: relative; }
+.pm-dot-icon.s-active { background: #d1fae5; border-color: #6ee7b7; }
+.pm-dot-icon.s-pending { background: #fef3c7; border-color: #fcd34d; }
+.pm-dot-icon.s-error { background: #fff7ed; border-color: #fbbf24; }
+.pm-dot-icon.s-none { background: #f1f5f9; border-color: #e2e8f0; opacity: .45; }
+.pm-dot-icon .pm-dot-badge { position: absolute; bottom: -3px; right: -3px; width: 12px; height: 12px; border-radius: 50%; border: 1.5px solid #fff; font-size: 7px; display: flex; align-items: center; justify-content: center; font-weight: 800; line-height: 1; }
+.pm-dot-icon.s-active .pm-dot-badge { background: #059669; color: #fff; }
+.pm-dot-icon.s-pending .pm-dot-badge { background: #d97706; color: #fff; }
+.pm-dot-icon.s-error .pm-dot-badge { background: #dc2626; color: #fff; }
+.pm-dot-label { font-size: 9px; font-weight: 700; color: #94a3b8; letter-spacing: .2px; text-transform: uppercase; }
+.pm-dot-icon.s-active + .pm-dot-label { color: #065f46; }
 .pm-cb-listed { display: flex; align-items: center; gap: 8px; padding: 9px 13px; border: 1.5px solid #6ee7b7; border-radius: 8px; background: #f0fdf4; }
 .pm-cb-listed span { font-size: 13px; font-weight: 600; color: #065f46; }
 .pm-cb-listed .pm-cb-check { font-size: 13px; margin-left: auto; color: #059669; font-weight: 800; }
