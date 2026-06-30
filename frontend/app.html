@@ -129,12 +129,16 @@ tr.selected td { background: #eff6ff; }
 .badge-error-subtle { display: inline-flex; align-items: center; gap: 4px; padding: 3px 9px; border-radius: 999px; font-size: 11px; font-weight: 600; white-space: nowrap; color: var(--muted); cursor: pointer; }
 .badge-error-subtle:hover { background: #f1f5f9; }
 .platform-badges { display: flex; flex-wrap: wrap; gap: 4px; }
-.pm-grid { display: flex; gap: 4px; flex-wrap: nowrap; }
-.pm-chip { display: inline-flex; align-items: center; gap: 2px; padding: 2px 6px; border-radius: 5px; font-size: 10.5px; font-weight: 600; white-space: nowrap; cursor: default; line-height: 1.4; }
-.pm-chip.pm-active { background: #d1fae5; color: #065f46; }
-.pm-chip.pm-pending { background: #fef3c7; color: #92400e; }
-.pm-chip.pm-error { background: #fff7ed; color: #c2410c; cursor: pointer; border: 1px solid #fed7aa; }
-.pm-chip.pm-none { background: #f8fafc; color: #94a3b8; border: 1px solid #e2e8f0; }
+.pm-grid { display: flex; gap: 4px; flex-wrap: nowrap; align-items: center; }
+.pm-chip { display: inline-flex; align-items: center; gap: 3px; padding: 3px 7px; border-radius: 6px; font-size: 11px; font-weight: 700; white-space: nowrap; cursor: default; line-height: 1.35; }
+.pm-chip.pm-active { background: #d1fae5; color: #065f46; border: 1.5px solid #6ee7b7; }
+.pm-chip.pm-pending { background: #fef3c7; color: #92400e; border: 1.5px solid #fcd34d; }
+.pm-chip.pm-error { background: #fff7ed; color: #c2410c; cursor: pointer; border: 1.5px solid #fbbf24; }
+.pm-chip.pm-none { display: none; }
+.pm-empty { font-size: 11px; color: #cbd5e1; font-style: italic; }
+.pm-cb-listed { display: flex; align-items: center; gap: 8px; padding: 9px 13px; border: 1.5px solid #6ee7b7; border-radius: 8px; background: #f0fdf4; }
+.pm-cb-listed span { font-size: 13px; font-weight: 600; color: #065f46; }
+.pm-cb-listed .pm-cb-check { font-size: 13px; margin-left: auto; color: #059669; font-weight: 800; }
 
 /* ── Modal ──────────────────────────────────────────────────────── */
 .modal-overlay { position: fixed; inset: 0; background: rgba(15,23,42,.5); backdrop-filter: blur(4px); z-index: 200; display: flex; align-items: center; justify-content: center; padding: 20px; }
