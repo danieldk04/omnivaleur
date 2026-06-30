@@ -122,9 +122,25 @@ footer strong { color: rgba(255,255,255,.8); }
 .coming-grid { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; max-width: 800px; margin: 32px auto 0; }
 .coming-chip { background: var(--surface); border: 1px dashed var(--border); border-radius: 100px; padding: 8px 18px; font-size: 13px; color: var(--muted); display: flex; align-items: center; gap: 6px; }
 
+.hamburger { display: none; flex-direction: column; justify-content: center; gap: 5px; width: 40px; height: 40px; padding: 8px; background: transparent; border: none; cursor: pointer; border-radius: 8px; flex-shrink: 0; }
+.hamburger:hover { background: rgba(0,0,0,.04); }
+.hamburger span { display: block; height: 2px; width: 100%; background: var(--text); border-radius: 2px; transition: all .22s; transform-origin: center; }
+.hamburger.open span:nth-child(1) { transform: translateY(7px) rotate(45deg); }
+.hamburger.open span:nth-child(2) { opacity: 0; transform: scaleX(0); }
+.hamburger.open span:nth-child(3) { transform: translateY(-7px) rotate(-45deg); }
+.mobile-menu { display: none; position: fixed; top: 64px; left: 0; right: 0; bottom: 0; background: #fff; z-index: 99; flex-direction: column; padding: 24px 24px 32px; overflow-y: auto; border-top: 1px solid var(--border); }
+.mobile-menu.open { display: flex; }
+.mobile-menu a { font-size: 17px; font-weight: 600; color: var(--text); padding: 16px 0; border-bottom: 1px solid var(--border); text-decoration: none; transition: color .15s; }
+.mobile-menu a:last-of-type { border-bottom: none; }
+.mobile-menu a:hover { color: var(--blue); }
+.mobile-menu .mobile-actions { display: flex; flex-direction: column; gap: 10px; margin-top: 28px; }
+.mobile-menu .mobile-actions a { border: none; padding: 0; font-size: 15px; }
+.mobile-menu .mobile-actions .btn { width: 100%; justify-content: center; }
+
 @media (max-width: 768px) {
   nav { padding: 0 20px; }
-  .nav-links { display: none; }
+  .nav-links, .nav-actions { display: none; }
+  .hamburger { display: flex; }
   .hero { padding: 60px 20px 50px; }
   .countries-strip { padding: 40px 20px; }
   .section { padding: 60px 20px; }
