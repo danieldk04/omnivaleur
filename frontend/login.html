@@ -91,13 +91,6 @@ async function doLogin(e) {
     sessionStorage.setItem('cl_auth', '1');
     sessionStorage.setItem('cl_token', data.access_token);
     sessionStorage.setItem('cl_email', data.user.email);
-    // Sync token to Chrome extension if installed
-    try {
-      const extId = localStorage.getItem('cl_ext_id');
-      if (extId && chrome?.runtime?.sendMessage) {
-        chrome.runtime.sendMessage(extId, { type: 'SYNC_TOKEN', token: data.access_token, email: data.user.email });
-      }
-    } catch (_) {}
     window.location.href = '/app';
   } catch (err) {
     errEl.textContent = err.message;
