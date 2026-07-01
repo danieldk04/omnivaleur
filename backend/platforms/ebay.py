@@ -71,7 +71,7 @@ class EbayPlatform(PlatformBase):
                 },
             )
             resp.raise_for_status()
-            return resp.json()
+            return _with_expiry(resp.json())
 
     async def refresh_credentials(self, credentials: dict) -> dict:
         async with httpx.AsyncClient() as client:
