@@ -8,11 +8,32 @@ import hashlib
 import hmac
 import logging
 import os
+import re
 from typing import Optional
+from urllib.parse import urlencode
+from backend.config import settings
 
 logger = logging.getLogger(__name__)
 
 SHOPIFY_WEBHOOK_SECRET = os.getenv("SHOPIFY_WEBHOOK_SECRET", "")
+
+_SHOP_DOMAIN_RE = re.compile(r"^[a-z0-9][a-z0-9-]*\.myshopify\.com$")
+
+
+def is_valid_shop_domain(shop: str) -> bool:
+    """Only allow genuine *.myshopify.com hosts — prevents SSRF via a crafted `shop` param."""
+    return bool(_SHOP_DOMAIN_RE.match(shop or ""))
+
+
+def verify_install_hmac(params: dict) -> bool:
+    """Verify the HMAC Shopify attaches to OAuth install/callback redirects."""
+    if not settings.shopify_client_secret:
+        return True  # skip in dev before app credentials are configured
+    received = params.get("hmac", "")
+    pairs = sorted((k, v) for k, v in params.items() if k not in ("hmac", "signature"))
+    message = "&".join(f"{k}={v}" for k, v in pairs)
+    digest = hmac.new(settings.shopify_client_secret.encode(), message.encode(), hashlib.sha256).hexdigest()
+    return hmac.compare_digest(digest, received or "")
 
 
 def verify_webhook(raw_body: bytes, hmac_header: str) -> bool:
