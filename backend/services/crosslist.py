@@ -116,6 +116,8 @@ async def publish_to_platforms(item_id: str, platforms: list[str], user_id: str)
         "marktplaats": "price_marktplaats",
         "2dehands": "price_2dehands",
         "vinted": "price_vinted",
+        "ebay": "price_ebay",
+        "shopify": "price_shopify",
     }
 
     def _pick(platform: str) -> dict:
