@@ -614,6 +614,41 @@ function closeMenu() {
   document.body.style.overflow = '';
 }
 
+// Scroll-reveal for sections/cards
+(function() {
+  const els = document.querySelectorAll('.reveal');
+  if (!('IntersectionObserver' in window) || !els.length) {
+    els.forEach(el => el.classList.add('in-view'));
+    animateCounts(document);
+    return;
+  }
+  const io = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        entry.target.classList.add('in-view');
+        if (entry.target.querySelector('[data-count]')) animateCounts(entry.target);
+        io.unobserve(entry.target);
+      }
+    });
+  }, { threshold: 0.2 });
+  els.forEach(el => io.observe(el));
+})();
+
+function animateCounts(scope) {
+  scope.querySelectorAll('[data-count]').forEach(el => {
+    const target = parseFloat(el.dataset.count);
+    const suffix = el.dataset.suffix || '';
+    const dur = 1100, start = performance.now();
+    function frame(now) {
+      const p = Math.min(1, (now - start) / dur);
+      const eased = 1 - Math.pow(1 - p, 3);
+      el.textContent = Math.round(target * eased) + suffix;
+      if (p < 1) requestAnimationFrame(frame);
+    }
+    requestAnimationFrame(frame);
+  });
+}
+
 // Handle Supabase auth redirects (email confirmation, password reset)
 (function() {
   if (!window.location.hash) return;
