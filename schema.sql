@@ -98,3 +98,8 @@ CREATE TABLE IF NOT EXISTS subscriptions (
 -- since eBay's offer-level endpoints (withdraw/status) are keyed by offerId.
 ALTER TABLE items ADD COLUMN IF NOT EXISTS ebay_category_id VARCHAR(50);
 ALTER TABLE listings ADD COLUMN IF NOT EXISTS platform_offer_id VARCHAR(100);
+
+-- Per-platform price overrides for eBay and Shopify (mirrors the existing
+-- price_marktplaats/price_2dehands/price_vinted columns).
+ALTER TABLE items ADD COLUMN IF NOT EXISTS price_ebay NUMERIC(10,2);
+ALTER TABLE items ADD COLUMN IF NOT EXISTS price_shopify NUMERIC(10,2);
