@@ -77,6 +77,35 @@ async def ebay_callback(code: str, user_id: str = Depends(get_current_user)):
     return {"status": "connected", "platform": "ebay"}
 
 
+@router.get("/shopify/auth-url")
+async def shopify_auth_url(shop: str, user_id: str = Depends(get_current_user)):
+    shop = shop.strip().lower()
+    if not is_valid_shop_domain(shop):
+        raise HTTPException(
+            status_code=400,
+            detail="Enter a valid Shopify store domain, e.g. your-store.myshopify.com",
+        )
+    try:
+        return {"url": ShopifyPlatform().get_authorization_url(shop, state=user_id)}
+    except RuntimeError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.get("/shopify/callback")
+async def shopify_callback(shop: str, code: str, request: Request, user_id: str = Depends(get_current_user)):
+    shop = shop.strip().lower()
+    if not is_valid_shop_domain(shop):
+        raise HTTPException(status_code=400, detail="Invalid shop domain")
+    if not verify_install_hmac(dict(request.query_params)):
+        raise HTTPException(status_code=400, detail="Invalid request signature")
+    try:
+        tokens = await ShopifyPlatform().exchange_code(shop, code)
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Shopify authorization failed: {e}")
+    _save_credentials(user_id, "shopify", tokens)
+    return {"status": "connected", "platform": "shopify"}
+
+
 @router.post("/vinted/bootstrap")
 async def vinted_bootstrap(body: dict, user_id: str = Depends(get_current_user)):
     """
