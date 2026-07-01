@@ -28,7 +28,7 @@ def kenburns_clip(src, start, dur, rect0, rect1, out, fps=FPS):
     x_expr = f"{x0}+({x1}-{x0})*(t/{D})"
     y_expr = f"{y0}+({y1}-{y0})*(t/{D})"
     w_expr = f"{w0}+({w1}-{w0})*(t/{D})"
-    h_expr = f"({w_expr})*16/9"
+    h_expr = f"{h0}+({h1}-{h0})*(t/{D})"
     vf = (
         f"crop=w='{w_expr}':h='{h_expr}':x='{x_expr}':y='{y_expr}',"
         f"scale={W}:{H},fps={fps},format=yuv420p"
