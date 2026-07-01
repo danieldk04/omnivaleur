@@ -1,12 +1,11 @@
 """Record real screens of the live CrossList EU app for the marketing video.
 
 Uses the seeded demo account (real items, real UI, real interactions). For screens
-that are naturally empty on a fresh demo account (analytics, platform connection
-status), we inject richer front-end display data purely for the recording — no
-backend writes, nothing persisted.
+that are naturally empty/sparse on a fresh demo account (analytics numbers, eBay/
+Shopify connection state, platform icons), we inject richer front-end display data
+purely for the recording via page.evaluate — no backend writes, nothing persisted.
 """
 import pathlib
-import time
 from playwright.sync_api import sync_playwright
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
@@ -20,17 +19,14 @@ BASE = "https://crosslisteu.com"
 
 W, H = 1600, 1000
 
-LOGO_SWAP_JS = f"""
-() => {{
-  const map = {{
-    'marktplaats.nl': 'file://{ASSETS}/marktplaats.png',
-    '2dehands.be': 'file://{ASSETS}/2dehands.png',
-    'vinted': 'file://{ASSETS}/vinted.png',
-    'ebay': 'file://{ASSETS}/ebay.webp',
-    'shopify': 'file://{ASSETS}/shopify.webp',
-  }};
-}}
-"""
+PLATFORM_LOGOS = {
+    "marktplaats": f"file://{ASSETS}/marktplaats.png",
+    "2dehands": f"file://{ASSETS}/2dehands.png",
+    "vinted": f"file://{ASSETS}/vinted.png",
+    "ebay": f"file://{ASSETS}/ebay.webp",
+    "shopify": f"file://{ASSETS}/shopify.webp",
+}
+
 
 def new_ctx(p, name):
     browser = p.chromium.launch()
@@ -41,6 +37,15 @@ def new_ctx(p, name):
     )
     page = ctx.new_page()
     return browser, ctx, page
+
+
+def rename_last_video(prefix):
+    videos = sorted(OUT_DIR.glob("*.webm"), key=lambda f: f.stat().st_mtime)
+    final = videos[-1]
+    target = OUT_DIR / f"{prefix}.webm"
+    final.rename(target)
+    print("Saved", target)
+
 
 def login(page):
     page.goto(f"{BASE}/login")
@@ -54,6 +59,7 @@ def login(page):
         pass
     page.wait_for_timeout(400)
 
+
 def smooth_scroll(page, target_y, duration_ms=1200, steps=40):
     start = page.evaluate("window.scrollY")
     for i in range(1, steps + 1):
@@ -61,38 +67,38 @@ def smooth_scroll(page, target_y, duration_ms=1200, steps=40):
         page.evaluate(f"window.scrollTo(0,{y})")
         page.wait_for_timeout(duration_ms // steps)
 
+
 def move_mouse_smooth(page, x1, y1, x2, y2, steps=25, delay=12):
     for i in range(steps + 1):
         t = i / steps
-        # ease-out
-        t = 1 - (1 - t) ** 3
+        t = 1 - (1 - t) ** 3  # ease-out
         page.mouse.move(x1 + (x2 - x1) * t, y1 + (y2 - y1) * t)
         page.wait_for_timeout(delay)
 
-def swap_platform_icons(page):
-    """Replace the emoji/text platform icons with real brand logos, client-side only."""
-    page.evaluate(f"""
-    () => {{
-      const LOGO = {{
-        'Marktplaats': 'file://{ASSETS}/marktplaats.png',
-        '2dehands': 'file://{ASSETS}/2dehands.png',
-        'Vinted': 'file://{ASSETS}/vinted.png',
-        'eBay': 'file://{ASSETS}/ebay.webp',
-        'Shopify': 'file://{ASSETS}/shopify.webp',
-      }};
-      document.querySelectorAll('h3, strong, b, div, span').forEach(el => {{
-        if (el.children.length) return;
-        const txt = (el.textContent||'').trim();
-        if (LOGO[txt] && el.parentElement) {{
-          const row = el.closest('div');
-        }}
-      }});
-      // Target the platform row icon elements directly (first emoji-ish cell in each row).
-      document.querySelectorAll('div').forEach(row => {{
-        const label = row.querySelector(':scope > div:nth-child(2)');
-      }});
-    }}
-    """)
+
+def swap_platform_logos(page):
+    """Real Platforms page: swap the emoji glyphs for actual brand logo images."""
+    page.evaluate(
+        """(logos) => {
+            const order = ['marktplaats','2dehands','vinted','ebay','etsy','shopify'];
+            const spans = [...document.querySelectorAll('#platforms-body span')]
+              .filter(s => s.style.fontSize === '22px');
+            spans.forEach((span, i) => {
+              const key = order[i];
+              const src = logos[key];
+              if (!src) return;
+              span.innerHTML = '';
+              const img = document.createElement('img');
+              img.src = src;
+              img.style.width = '30px';
+              img.style.height = '30px';
+              img.style.objectFit = 'contain';
+              img.style.borderRadius = '6px';
+              span.appendChild(img);
+            });
+        }""",
+        PLATFORM_LOGOS,
+    )
 
 
 with sync_playwright() as p:
@@ -102,69 +108,52 @@ with sync_playwright() as p:
     page.wait_for_timeout(600)
     move_mouse_smooth(page, 200, 200, 400, 130, steps=15)
     page.wait_for_timeout(300)
-    smooth_scroll(page, 250, duration_ms=1400)
+    smooth_scroll(page, 280, duration_ms=1400)
     page.wait_for_timeout(400)
     move_mouse_smooth(page, 400, 400, 700, 620, steps=20)
-    page.wait_for_timeout(1000)
+    page.wait_for_timeout(1200)
     ctx.close(); browser.close()
+    rename_last_video("01_dashboard")
 
-    # ---- Segment 2: Items grid close-up ----
+    # ---- Segment 2: Items list close-up ----
     browser, ctx, page = new_ctx(p, "items")
     login(page)
     page.evaluate("showView('items')")
     page.wait_for_timeout(900)
     move_mouse_smooth(page, 300, 200, 500, 500, steps=20)
-    page.wait_for_timeout(1600)
+    page.wait_for_timeout(1800)
     ctx.close(); browser.close()
+    rename_last_video("02_items")
 
-    # ---- Segment 3: Platforms page with real logos ----
+    # ---- Segment 3: Platforms page with real logos + all connected ----
     browser, ctx, page = new_ctx(p, "platforms")
     login(page)
     page.evaluate("showView('platforms')")
     page.wait_for_timeout(700)
-    # Swap the little platform icon cells for real logos.
-    page.evaluate(f"""
-    () => {{
-      const rows = [...document.querySelectorAll('div')].filter(d => {{
-        const t = d.textContent || '';
-        return d.children.length >= 1 && /Marktplaats|2dehands|Vinted|eBay|Shopify/.test(t) && d.querySelector('div');
-      }});
-    }}
-    """)
-    # Simpler: find each platform name node, then its preceding sibling icon container.
-    for name, file in [
-        ("Marktplaats", "marktplaats.png"),
-        ("2dehands", "2dehands.png"),
-        ("Vinted", "vinted.png"),
-        ("eBay", "ebay.webp"),
-        ("Shopify", "shopify.webp"),
-    ]:
-        page.evaluate(f"""
-        (name) => {{
-          const els = [...document.querySelectorAll('div,strong,b')];
-          const nameEl = els.find(e => e.children.length === 0 && e.textContent.trim() === name);
-          if (!nameEl) return;
-          let row = nameEl;
-          for (let i=0;i<5;i++) {{ if (!row.parentElement) break; row = row.parentElement; if (row.style && getComputedStyle(row).display==='flex') break; }}
-          const iconEl = row.querySelector('img, span, div');
-        }}
-        """, name)
+    page.evaluate("""() => {
+        if (window.state && !state.connected.includes('ebay')) state.connected.push('ebay');
+        if (window.state && !state.connected.includes('shopify')) state.connected.push('shopify');
+        if (typeof renderPlatforms === 'function') renderPlatforms();
+    }""")
     page.wait_for_timeout(300)
+    swap_platform_logos(page)
+    page.wait_for_timeout(400)
     move_mouse_smooth(page, 300, 200, 500, 550, steps=25)
-    page.wait_for_timeout(1500)
+    page.wait_for_timeout(1800)
     ctx.close(); browser.close()
+    rename_last_video("03_platforms")
 
     # ---- Segment 4: Analytics with injected rich chart data ----
     browser, ctx, page = new_ctx(p, "analytics")
     login(page)
     page.evaluate("showView('analytics')")
     page.wait_for_timeout(900)
-    page.evaluate("""
-    () => {
-      document.getElementById('an-revenue').textContent = '€1,840.00';
-      document.getElementById('an-profit').textContent = '€1,120.00';
-      document.getElementById('an-sales').textContent = '38';
-      document.getElementById('an-avg-profit').textContent = '€29.50';
+    page.evaluate("""() => {
+      const setTxt = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
+      setTxt('an-revenue', '€1,840.00');
+      setTxt('an-profit', '€1,120.00');
+      setTxt('an-sales', '38');
+      setTxt('an-avg-profit', '€29.50');
       const labels = ['3 Apr','15 Apr','27 Apr','9 May','21 May','2 Jun','14 Jun','26 Jun'];
       const rev = [120,180,140,260,210,340,290,380];
       const profit = [70,110,90,160,130,210,180,240];
@@ -182,28 +171,28 @@ with sync_playwright() as p:
       }
       const platList = document.getElementById('an-platform-list');
       if (platList) platList.innerHTML = `
-        <li class="an-platform-row" style="display:flex;align-items:center;gap:10px;padding:6px 0">
+        <li style="display:flex;align-items:center;gap:10px;padding:6px 0">
           <span style="font-weight:600;font-size:12px;min-width:90px">Marktplaats</span>
           <div style="flex:1;background:#f1f5f9;border-radius:4px;height:8px;overflow:hidden"><div style="width:85%;height:100%;background:#2563eb"></div></div>
           <span style="font-size:12px;font-weight:700">€780</span>
         </li>
-        <li class="an-platform-row" style="display:flex;align-items:center;gap:10px;padding:6px 0">
+        <li style="display:flex;align-items:center;gap:10px;padding:6px 0">
           <span style="font-weight:600;font-size:12px;min-width:90px">Vinted</span>
           <div style="flex:1;background:#f1f5f9;border-radius:4px;height:8px;overflow:hidden"><div style="width:60%;height:100%;background:#34d399"></div></div>
           <span style="font-size:12px;font-weight:700">€540</span>
         </li>
-        <li class="an-platform-row" style="display:flex;align-items:center;gap:10px;padding:6px 0">
+        <li style="display:flex;align-items:center;gap:10px;padding:6px 0">
           <span style="font-weight:600;font-size:12px;min-width:90px">eBay</span>
           <div style="flex:1;background:#f1f5f9;border-radius:4px;height:8px;overflow:hidden"><div style="width:35%;height:100%;background:#f59e0b"></div></div>
           <span style="font-size:12px;font-weight:700">€320</span>
         </li>
       `;
-    }
-    """)
-    page.wait_for_timeout(900)
+    }""")
+    page.wait_for_timeout(1000)
     move_mouse_smooth(page, 300, 300, 700, 450, steps=25)
-    page.wait_for_timeout(1500)
+    page.wait_for_timeout(1600)
     ctx.close(); browser.close()
+    rename_last_video("04_analytics")
 
     # ---- Segment 5: Margin calculator, live typing ----
     browser, ctx, page = new_ctx(p, "calculator")
@@ -214,7 +203,7 @@ with sync_playwright() as p:
     purchase_input = None
     profit_input = None
     for inp in inputs:
-        ph = (inp.get_attribute("placeholder") or "")
+        ph = inp.get_attribute("placeholder") or ""
         if "0.00" in ph:
             purchase_input = inp
         if "10.00" in ph:
@@ -229,7 +218,8 @@ with sync_playwright() as p:
         page.wait_for_timeout(200)
         profit_input.fill("")
         profit_input.type("22", delay=110)
-    page.wait_for_timeout(1800)
+    page.wait_for_timeout(2000)
     ctx.close(); browser.close()
+    rename_last_video("05_calculator")
 
 print("Done. Segments in", OUT_DIR)
