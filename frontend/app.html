@@ -2355,6 +2355,8 @@ const _urlParams = new URLSearchParams(window.location.search);
 if (_urlParams.get('billing') === 'success' || _urlParams.get('billing') === 'cancel') {
   history.replaceState({}, '', window.location.pathname);
   showView('prijs');
+} else if (window.location.hash === '#platforms') {
+  showView('platforms');
 }
 loadAll();
 loadBillingStatus();
