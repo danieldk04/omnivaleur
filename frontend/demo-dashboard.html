@@ -213,6 +213,7 @@ tr:last-child td { border-bottom: none; }
   </div>
 </div>
 
+<div class="cursor-dot" id="cursor"></div>
 <script>
 const items = [
   { emoji: "🧥", title: "Nike Tech Fleece Jas", meta: "Maat M · Zo goed als nieuw", price: "€48", status: ["s-active","s-active","s-active","s-none"] },
@@ -223,14 +224,99 @@ const items = [
 ];
 const labels = ["MP","2DH","VIN","SHOP"];
 const icons = { "s-active": "✓", "s-pending": "…", "s-error": "!", "s-none": "" };
-document.getElementById('demo-rows').innerHTML = items.map(it => `
-  <tr>
+
+const rowsEl = document.getElementById('demo-rows');
+rowsEl.innerHTML = items.map((it, ri) => `
+  <tr class="demo-row" style="animation-delay:${ri * 90}ms">
     <td><div class="item-info"><div class="item-photo">${it.emoji}</div><div><div class="item-title">${it.title}</div><div class="item-meta">${it.meta}</div></div></div></td>
     <td>${it.price}</td>
     <td><span class="badge active">● Active</span></td>
-    <td><div class="pm-matrix">${it.status.map((s,i)=>`<div class="pm-dot"><div class="pm-dot-icon ${s}">${icons[s]}</div><span class="pm-dot-label">${labels[i]}</span></div>`).join('')}</div></td>
+    <td><div class="pm-matrix">${it.status.map((s,i)=>`<div class="pm-dot"><div class="pm-dot-icon s-none" data-row="${ri}" data-plat="${i}"><span class="ic"></span></div><span class="pm-dot-label">${labels[i]}</span></div>`).join('')}</div></td>
   </tr>
 `).join('');
+
+function setDot(el, state, animate) {
+  el.className = 'pm-dot-icon ' + state + (animate ? ' pop ring' : '');
+  el.querySelector('.ic').textContent = icons[state];
+  if (animate) setTimeout(() => el.classList.remove('pop', 'ring'), 500);
+}
+
+// Sequentially "publish" each dot across all rows, like watching it go live.
+const allDots = [...document.querySelectorAll('.pm-dot-icon')];
+const targetState = {};
+items.forEach((it, ri) => it.status.forEach((s, pi) => targetState[ri + '-' + pi] = s));
+
+allDots.forEach((el, idx) => {
+  const key = el.dataset.row + '-' + el.dataset.plat;
+  const final = targetState[key];
+  if (final === 's-none') return;
+  setTimeout(() => {
+    setDot(el, 's-pending', false);
+    setTimeout(() => setDot(el, final, true), 550);
+  }, 700 + idx * 160);
+});
+
+// Count-up stat numbers.
+function countUp(el) {
+  const target = parseFloat(el.dataset.target);
+  const suffix = el.dataset.suffix || '';
+  const prefix = el.dataset.prefix || '';
+  const thousands = el.dataset.thousands === '1';
+  const isFloat = target % 1 !== 0;
+  const dur = 1200, start = performance.now();
+  function frame(now) {
+    const p = Math.min(1, (now - start) / dur);
+    const eased = 1 - Math.pow(1 - p, 3);
+    const val = target * eased;
+    const display = isFloat ? val.toFixed(1) : Math.round(val).toLocaleString(thousands ? 'nl-NL' : undefined);
+    el.textContent = prefix + display + suffix;
+    if (p < 1) requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+}
+setTimeout(() => document.querySelectorAll('.stat-value[data-target]').forEach(countUp), 200);
+
+// Ambient "live" loop: occasional dot re-sync + counters ticking up.
+function ambientLoop() {
+  const activeDots = allDots.filter(el => el.classList.contains('s-active'));
+  if (activeDots.length) {
+    const el = activeDots[Math.floor(Math.random() * activeDots.length)];
+    setDot(el, 's-pending', false);
+    setTimeout(() => setDot(el, 's-active', true), 500);
+  }
+  const liveEl = document.getElementById('stat-live');
+  if (liveEl && Math.random() > 0.4) {
+    let v = parseInt(liveEl.textContent.replace(/\D/g, ''), 10) || 129;
+    v += 1;
+    if (v > 145) v = 129;
+    liveEl.textContent = v;
+    liveEl.classList.add('tick');
+    setTimeout(() => liveEl.classList.remove('tick'), 350);
+  }
+  setTimeout(ambientLoop, 2600 + Math.random() * 1400);
+}
+setTimeout(ambientLoop, 3000);
+
+// Fake cursor visiting the "New item" button, then a random platform dot.
+const cursor = document.getElementById('cursor');
+function moveCursorTo(target) {
+  const r = target.getBoundingClientRect();
+  cursor.style.left = (r.left + r.width / 2 - 9) + 'px';
+  cursor.style.top = (r.top + r.height / 2 - 9) + 'px';
+  cursor.style.opacity = '1';
+}
+function cursorLoop() {
+  const btn = document.getElementById('new-item-btn');
+  const dots = document.querySelectorAll('.pm-dot-icon.s-active');
+  const target = Math.random() > 0.5 && btn ? btn : (dots[Math.floor(Math.random() * dots.length)] || btn);
+  if (target) {
+    moveCursorTo(target);
+    setTimeout(() => { cursor.classList.add('click'); setTimeout(() => cursor.classList.remove('click'), 350); }, 1100);
+  }
+  setTimeout(() => { cursor.style.opacity = '0'; }, 2000);
+  setTimeout(cursorLoop, 4200 + Math.random() * 1800);
+}
+setTimeout(cursorLoop, 2800);
 </script>
 </body>
 </html>
