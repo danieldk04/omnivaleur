@@ -55,9 +55,16 @@ def rename_last_video(prefix):
 
 
 def login(page):
-    # Neutralize the extension-install overlay before any of its own script runs,
-    # so its internal setTimeout(800ms) can never re-show it mid-recording.
-    page.add_init_script("window.showExtOverlay = function(){};")
+    # Neutralize the extension-install overlay via CSS injected before first paint —
+    # app.html's own `function showExtOverlay(){}` declaration would clobber a JS
+    # override, but a !important style rule survives regardless of script timing.
+    page.add_init_script(
+        "document.addEventListener('DOMContentLoaded', () => {"
+        "  const s = document.createElement('style');"
+        "  s.textContent = '#ext-overlay{display:none !important}';"
+        "  document.head.appendChild(s);"
+        "});"
+    )
     page.goto(f"{BASE}/login")
     page.fill("#email", EMAIL)
     page.fill("#password", PASSWORD)
