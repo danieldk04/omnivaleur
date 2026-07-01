@@ -58,39 +58,42 @@ src_v2 = OUT / "crosslisteu_social_v2.mp4"
 extract(src_v2, 0.0, 2.85, WORK / "00_intro.mp4")
 clips.append(WORK / "00_intro.mp4")
 
-# ---- 2. REAL Dashboard — pan across stat cards then down into item rows ----
-kenburns_clip(REAL / "01_dashboard.webm", 4.3, 2.1,
-              rect0=(260, 60, 1340), rect1=(260, 60, 900),
+# Source frame is 1600x1000. A 9:16 crop window has h = w*16/9, so w must stay
+# <= 562 to fit the 1000px source height. Pans below sweep x/y/w within that bound.
+
+# ---- 2. REAL Dashboard — start on stat cards, pan down+in to item rows/photos ----
+kenburns_clip(REAL / "01_dashboard.webm", 4.3, 2.2,
+              rect0=(270, 55, 555), rect1=(270, 55, 500),
               out=WORK / "10_dash_a.mp4")
-kenburns_clip(REAL / "01_dashboard.webm", 6.0, 2.2,
-              rect0=(260, 380, 1200), rect1=(260, 420, 760),
+kenburns_clip(REAL / "01_dashboard.webm", 6.2, 2.0,
+              rect0=(270, 430, 500), rect1=(270, 430, 430),
               out=WORK / "11_dash_b.mp4")
 clips += [WORK / "10_dash_a.mp4", WORK / "11_dash_b.mp4"]
 
 # ---- 3. REAL Items list — real product photos, zoom in ----
 kenburns_clip(REAL / "02_items.webm", 3.2, 2.6,
-              rect0=(260, 340, 1300), rect1=(260, 380, 820),
+              rect0=(270, 340, 545), rect1=(270, 340, 460),
               out=WORK / "20_items.mp4")
 clips.append(WORK / "20_items.mp4")
 
 # ---- 4. REAL Platforms — real brand logos, connected badges ----
 kenburns_clip(REAL / "03_platforms.webm", 3.2, 2.6,
-              rect0=(260, 150, 1340), rect1=(260, 150, 820),
+              rect0=(270, 150, 555), rect1=(270, 150, 470),
               out=WORK / "30_platforms.mp4")
 clips.append(WORK / "30_platforms.mp4")
 
 # ---- 5. REAL Analytics — real Chart.js charts with data ----
 kenburns_clip(REAL / "04_analytics.webm", 3.8, 2.3,
-              rect0=(260, 130, 1340), rect1=(260, 130, 780),
+              rect0=(270, 130, 555), rect1=(270, 130, 480),
               out=WORK / "40_an_a.mp4")
-kenburns_clip(REAL / "04_analytics.webm", 5.8, 1.3,
-              rect0=(260, 260, 1000), rect1=(1050, 260, 900),
+kenburns_clip(REAL / "04_analytics.webm", 5.9, 1.3,
+              rect0=(270, 250, 500), rect1=(1080, 250, 460),
               out=WORK / "41_an_b.mp4")
 clips += [WORK / "40_an_a.mp4", WORK / "41_an_b.mp4"]
 
 # ---- 6. REAL Margin calculator — live computed results ----
-kenburns_clip(REAL / "05_calculator.webm", 5.0, 2.6,
-              rect0=(260, 150, 1340), rect1=(260, 300, 820),
+kenburns_clip(REAL / "05_calculator.webm", 5.1, 2.6,
+              rect0=(270, 150, 555), rect1=(270, 320, 480),
               out=WORK / "50_calc.mp4")
 clips.append(WORK / "50_calc.mp4")
 
