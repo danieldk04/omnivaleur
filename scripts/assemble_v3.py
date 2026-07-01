@@ -18,17 +18,24 @@ def run(cmd):
     subprocess.run(cmd, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
 
 
+SRC_FPS = 25  # Playwright's bundled ffmpeg records webm at a fixed 25fps.
+
+
 def kenburns_clip(src, start, dur, rect0, rect1, out, fps=FPS):
-    """rect = (x, y, w) in source pixel space; h is derived as w*16/9 to keep 9:16."""
+    """rect = (x, y, w) in source pixel space; h is derived as w*16/9 to keep 9:16.
+
+    Uses the frame-counter variable 'n' (not 't') in the crop expressions — this
+    ffmpeg build only evaluates w/h/x/y per-frame when driven by 'n'.
+    """
     x0, y0, w0 = rect0
     x1, y1, w1 = rect1
     h0 = w0 * 16 / 9
     h1 = w1 * 16 / 9
-    D = dur
-    x_expr = f"{x0}+({x1}-{x0})*(t/{D})"
-    y_expr = f"{y0}+({y1}-{y0})*(t/{D})"
-    w_expr = f"{w0}+({w1}-{w0})*(t/{D})"
-    h_expr = f"{h0}+({h1}-{h0})*(t/{D})"
+    total_frames = max(1, round(dur * SRC_FPS))
+    x_expr = f"{x0}+({x1}-{x0})*(n/{total_frames})"
+    y_expr = f"{y0}+({y1}-{y0})*(n/{total_frames})"
+    w_expr = f"{w0}+({w1}-{w0})*(n/{total_frames})"
+    h_expr = f"{h0}+({h1}-{h0})*(n/{total_frames})"
     vf = (
         f"crop=w='{w_expr}':h='{h_expr}':x='{x_expr}':y='{y_expr}',"
         f"scale={W}:{H},fps={fps},format=yuv420p"
