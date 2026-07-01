@@ -13,12 +13,18 @@ with sync_playwright() as p:
     page.fill("#password", "95rwPSLgHxncWDV")
     page.click("button[type=submit], form button")
     page.wait_for_timeout(3000)
-    page.screenshot(path=str(OUT / "01_after_login.png"))
-    print("URL after login:", page.url)
 
-    # Try navigating the sidebar - dump nav items.
-    items = page.eval_on_selector_all(".nav-item, [data-view], .sidebar a, .sidebar [onclick]", "els => els.map(e => e.outerHTML.slice(0,200))")
-    for it in items[:40]:
-        print(it)
+    # Dismiss the extension-install overlay if present.
+    try:
+        page.click("text=I already have the extension installed", timeout=2000)
+    except Exception:
+        pass
+    page.wait_for_timeout(500)
+    page.screenshot(path=str(OUT / "01_dashboard.png"))
+
+    for view in ["items", "analytics", "calculator", "platforms", "protections", "prijs"]:
+        page.evaluate(f"showView('{view}')")
+        page.wait_for_timeout(700)
+        page.screenshot(path=str(OUT / f"02_{view}.png"))
 
     browser.close()
