@@ -1923,6 +1923,25 @@ async function connectEbay() {
   }
 }
 
+async function connectShopify() {
+  let shop = prompt('Enter your Shopify store domain (e.g. your-store.myshopify.com):');
+  if (!shop) return;
+  shop = shop.trim().toLowerCase().replace(/^https?:\/\//, '').replace(/\/$/, '');
+  if (!shop.includes('.')) shop += '.myshopify.com';
+  try {
+    const res = await apiFetch(`${API}/api/platforms/shopify/auth-url?shop=${encodeURIComponent(shop)}`);
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      alert(err.detail || 'Shopify is not configured yet. Contact support.');
+      return;
+    }
+    const { url } = await res.json();
+    window.location.href = url;
+  } catch (e) {
+    alert('Could not start Shopify connection: ' + e.message);
+  }
+}
+
 // ── Extension status ─────────────────────────────────────────────
 function renderExtStatus() {
   const dot = document.getElementById('ext-dot');
