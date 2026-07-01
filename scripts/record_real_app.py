@@ -55,6 +55,9 @@ def rename_last_video(prefix):
 
 
 def login(page):
+    # Neutralize the extension-install overlay before any of its own script runs,
+    # so its internal setTimeout(800ms) can never re-show it mid-recording.
+    page.add_init_script("window.showExtOverlay = function(){};")
     page.goto(f"{BASE}/login")
     page.fill("#email", EMAIL)
     page.fill("#password", PASSWORD)
