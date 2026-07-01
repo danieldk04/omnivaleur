@@ -182,10 +182,10 @@ class EbayPlatform(PlatformBase):
             _raise_with_ebay_error(pub_resp, "publishing offer")
             listing_id = pub_resp.json().get("listingId", offer_id)
 
-        tld = "com" if settings.ebay_marketplace_id == "EBAY_US" else settings.ebay_marketplace_id.split("_")[-1].lower()
+        domain = _MARKETPLACE_DOMAINS.get(settings.ebay_marketplace_id, "ebay.com")
         return {
             "platform_listing_id": listing_id,
-            "platform_listing_url": f"https://www.ebay.{tld}/itm/{listing_id}",
+            "platform_listing_url": f"https://www.{domain}/itm/{listing_id}",
         }
 
     async def delete_listing(self, platform_listing_id: str, credentials: dict) -> bool:
