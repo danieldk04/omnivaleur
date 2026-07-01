@@ -18,6 +18,8 @@ class Settings(BaseSettings):
     shopify_store: str = ""
     shopify_client_id: str = ""
     shopify_client_secret: str = ""
+    shopify_scopes: str = "read_products,write_products"
+    shopify_redirect_uri: str = "https://crosslisteu.com/shopify-callback.html"
 
     ebay_app_id: str = ""
     ebay_cert_id: str = ""
