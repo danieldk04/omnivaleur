@@ -260,6 +260,81 @@ def _raise_with_ebay_error(resp: httpx.Response, action: str) -> None:
     raise RuntimeError(f"eBay error while {action}: {detail}")
 
 
+_app_token_cache: dict = {"token": None, "expires_at": 0}
+_category_tree_cache: dict = {"tree_id": None}
+
+
+def _basic_auth_header() -> str:
+    raw = f"{settings.ebay_app_id}:{settings.ebay_cert_id}"
+    return base64.b64encode(raw.encode()).decode()
+
+
+async def _get_app_token() -> str:
+    """App-level token (client_credentials grant) for public catalog data
+    like category suggestions — no connected eBay user account required."""
+    now = time.time()
+    if _app_token_cache["token"] and now < _app_token_cache["expires_at"] - 60:
+        return _app_token_cache["token"]
+    async with httpx.AsyncClient() as client:
+        resp = await client.post(
+            TOKEN_URL,
+            headers={
+                "Authorization": f"Basic {_basic_auth_header()}",
+                "Content-Type": "application/x-www-form-urlencoded",
+            },
+            data={
+                "grant_type": "client_credentials",
+                "scope": "https://api.ebay.com/oauth/api_scope",
+            },
+        )
+        resp.raise_for_status()
+        data = resp.json()
+    _app_token_cache["token"] = data["access_token"]
+    _app_token_cache["expires_at"] = now + data.get("expires_in", 7200)
+    return _app_token_cache["token"]
+
+
+async def _get_category_tree_id() -> str:
+    if _category_tree_cache["tree_id"]:
+        return _category_tree_cache["tree_id"]
+    token = await _get_app_token()
+    async with httpx.AsyncClient() as client:
+        resp = await client.get(
+            f"{TAXONOMY_API}/get_default_category_tree_id",
+            params={"marketplace_id": settings.ebay_marketplace_id},
+            headers={"Authorization": f"Bearer {token}"},
+        )
+        resp.raise_for_status()
+        tree_id = resp.json()["categoryTreeId"]
+    _category_tree_cache["tree_id"] = tree_id
+    return tree_id
+
+
+async def suggest_categories(query: str) -> list[dict]:
+    """Look up eBay category suggestions for free text via the Taxonomy API,
+    so users don't have to hunt for category IDs manually."""
+    if not settings.ebay_app_id:
+        raise RuntimeError("eBay is not configured yet: set EBAY_APP_ID and EBAY_CERT_ID.")
+    if not query or not query.strip():
+        return []
+    token = await _get_app_token()
+    tree_id = await _get_category_tree_id()
+    async with httpx.AsyncClient() as client:
+        resp = await client.get(
+            f"{TAXONOMY_API}/category_tree/{tree_id}/get_category_suggestions",
+            params={"q": query},
+            headers={"Authorization": f"Bearer {token}"},
+        )
+        resp.raise_for_status()
+        data = resp.json()
+    results = []
+    for s in data.get("categorySuggestions", [])[:10]:
+        ancestors = [a["categoryName"] for a in reversed(s.get("categoryTreeNodeAncestors", []))]
+        path = " > ".join(ancestors + [s["category"]["categoryName"]])
+        results.append({"category_id": s["category"]["categoryId"], "name": path})
+    return results
+
+
 def _map_condition(condition: str) -> str:
     return {
         "new": "NEW",
