@@ -28,7 +28,7 @@ class Settings(BaseSettings):
     ebay_sandbox: bool = False
     ebay_default_category_id: str = ""
     ebay_verification_token: str = ""
-    ebay_webhook_url: str = "https://api.crosslisteu.com/api/webhooks/ebay"
+    ebay_webhook_url: str = "https://crosslisteu.com/api/webhooks/ebay"
 
     anthropic_api_key: str = ""
 
