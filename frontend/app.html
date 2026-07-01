@@ -786,7 +786,7 @@ input[type="checkbox"].row-check { width: 15px; height: 15px; cursor: pointer; a
             <div class="protection-icon green">🔄</div>
             <div>
               <div style="font-weight:700;font-size:14px">Marktplaats auto-relist</div>
-              <div class="protection-status">✓ Active — every 6 hours</div>
+              <div class="protection-status"><span class="protection-status-dot"></span> Active — every 6 hours</div>
             </div>
           </div>
           <div style="font-size:13px;color:var(--muted);line-height:1.65;margin-bottom:12px">Free Marktplaats listings expire silently after 28 days. CrossList checks every 6 hours and automatically relists after 27 days so you stay visible.</div>
@@ -798,7 +798,7 @@ input[type="checkbox"].row-check { width: 15px; height: 15px; cursor: pointer; a
             <div class="protection-icon blue">🛡️</div>
             <div>
               <div style="font-weight:700;font-size:14px">Vinted photo protection</div>
-              <div class="protection-status">✓ Active — every upload</div>
+              <div class="protection-status"><span class="protection-status-dot"></span> Active — every upload</div>
             </div>
           </div>
           <div style="font-size:13px;color:var(--muted);line-height:1.65;margin-bottom:12px">Vinted detects identical photos from other platforms via pixel-hashing. CrossList slightly modifies each photo via canvas — invisible to the eye, unique hash for Vinted.</div>
@@ -810,7 +810,7 @@ input[type="checkbox"].row-check { width: 15px; height: 15px; cursor: pointer; a
             <div class="protection-icon green">🧹</div>
             <div>
               <div style="font-weight:700;font-size:14px">2dehands formatting fix</div>
-              <div class="protection-status">✓ Active — every publish</div>
+              <div class="protection-status"><span class="protection-status-dot"></span> Active — every publish</div>
             </div>
           </div>
           <div style="font-size:13px;color:var(--muted);line-height:1.65;margin-bottom:12px">2dehands only supports 7 HTML tags in descriptions. CrossList automatically strips all unsupported formatting before publishing.</div>
@@ -822,7 +822,7 @@ input[type="checkbox"].row-check { width: 15px; height: 15px; cursor: pointer; a
             <div class="protection-icon purple">🇳🇱</div>
             <div>
               <div style="font-weight:700;font-size:14px">Dutch auto-translation</div>
-              <div class="protection-status">✓ Active — Marktplaats &amp; 2dehands</div>
+              <div class="protection-status"><span class="protection-status-dot"></span> Active — Marktplaats &amp; 2dehands</div>
             </div>
           </div>
           <div style="font-size:13px;color:var(--muted);line-height:1.65;margin-bottom:12px">You enter listings in English — CrossList automatically translates titles and descriptions to Dutch before publishing on Marktplaats and 2dehands.</div>
@@ -834,7 +834,7 @@ input[type="checkbox"].row-check { width: 15px; height: 15px; cursor: pointer; a
             <div class="protection-icon blue">⚡</div>
             <div>
               <div style="font-weight:700;font-size:14px">Sale sync</div>
-              <div class="protection-status">✓ Active — all platforms</div>
+              <div class="protection-status"><span class="protection-status-dot"></span> Active — all platforms</div>
             </div>
           </div>
           <div style="font-size:13px;color:var(--muted);line-height:1.65;margin-bottom:12px">Once an item sells on one platform, all other active listings are automatically removed. No double sales, no manual cleanup.</div>
@@ -846,7 +846,7 @@ input[type="checkbox"].row-check { width: 15px; height: 15px; cursor: pointer; a
             <div class="protection-icon yellow">📋</div>
             <div>
               <div style="font-weight:700;font-size:14px">Marktplaats editor fix</div>
-              <div class="protection-status">✓ Active — every publish</div>
+              <div class="protection-status"><span class="protection-status-dot"></span> Active — every publish</div>
             </div>
           </div>
           <div style="font-size:13px;color:var(--muted);line-height:1.65;margin-bottom:12px">Marktplaats uses a custom rich-text editor (Lexical) that ignores standard DOM input. CrossList fills it correctly via the internal EditorState API.</div>
@@ -1920,7 +1920,7 @@ function renderPlatforms() {
     const cfg = PLATFORM_CONNECT[p.id];
     let action = '';
     if (p.type === 'extension') {
-      action = `<span style="font-size:11px;color:var(--muted)">Auto-detected</span>`;
+      action = `<span class="badge active">✓ Auto-detected</span>`;
     } else if (ok && cfg?.connectable) {
       action = `<div style="display:flex;align-items:center;gap:8px">
         <span class="badge active">✓ Connected</span>
