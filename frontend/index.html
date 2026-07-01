@@ -111,7 +111,8 @@ nav { position: sticky; top: 0; z-index: 100; background: rgba(255,255,255,.92);
 
 /* STATS */
 .stats-bar { background: linear-gradient(135deg, var(--blue), var(--mint)); padding: 48px 40px; display: flex; justify-content: center; gap: 0; }
-.stat-item { text-align: center; padding: 0 48px; border-right: 1px solid rgba(255,255,255,.2); }
+.stat-item { text-align: center; padding: 0 48px; border-right: 1px solid rgba(255,255,255,.2); transition: transform .25s; }
+.stat-item:hover { transform: translateY(-3px); }
 .stat-item:last-child { border-right: none; }
 .stat-num { font-size: 40px; font-weight: 900; color: #fff; line-height: 1; }
 .stat-label { font-size: 13px; color: rgba(255,255,255,.75); margin-top: 6px; }
