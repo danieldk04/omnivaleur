@@ -195,12 +195,15 @@ async def _publish_one(item: dict, platform_name: str, credentials: dict, user_i
         platform = get_platform(platform_name)
         result = await platform.create_listing(item, credentials)
 
-        db.table("listings").update({
+        listing_update = {
             "platform_listing_id": result["platform_listing_id"],
             "platform_listing_url": result["platform_listing_url"],
             "status": "active",
             "listed_at": datetime.now(timezone.utc).isoformat(),
-        }).eq("id", listing_id).execute()
+        }
+        if "platform_offer_id" in result:
+            listing_update["platform_offer_id"] = result["platform_offer_id"]
+        db.table("listings").update(listing_update).eq("id", listing_id).execute()
 
         _log_event(listing_id, "listed", result)
         return {"listing_id": listing_id, "platform": platform_name, "status": "active", **result}
