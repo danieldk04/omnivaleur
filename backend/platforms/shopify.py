@@ -114,17 +114,67 @@ from backend.platforms.base import PlatformBase
 from backend.platforms.shopify_importer import create_product, delete_product
 
 
+def _shop_creds(credentials: dict) -> tuple[Optional[str], Optional[str]]:
+    extra = (credentials or {}).get("extra_data") or {}
+    return extra.get("shop_domain"), credentials.get("access_token") if credentials else None
+
+
 class ShopifyPlatform(PlatformBase):
     platform_name = "shopify"
 
+    def get_authorization_url(self, shop: str, state: str = "") -> str:
+        if not settings.shopify_client_id:
+            raise RuntimeError(
+                "Shopify is not configured yet: set SHOPIFY_CLIENT_ID and SHOPIFY_CLIENT_SECRET "
+                "(from a custom app in your Shopify Partner account) before connecting a store."
+            )
+        params = {
+            "client_id": settings.shopify_client_id,
+            "scope": settings.shopify_scopes,
+            "redirect_uri": settings.shopify_redirect_uri,
+            "state": state,
+        }
+        return f"https://{shop}/admin/oauth/authorize?{urlencode(params)}"
+
+    async def exchange_code(self, shop: str, code: str) -> dict:
+        import httpx
+        async with httpx.AsyncClient() as client:
+            resp = await client.post(
+                f"https://{shop}/admin/oauth/access_token",
+                json={
+                    "client_id": settings.shopify_client_id,
+                    "client_secret": settings.shopify_client_secret,
+                    "code": code,
+                },
+            )
+            resp.raise_for_status()
+            data = resp.json()
+        return {
+            "access_token": data["access_token"],
+            "extra_data": {"shop_domain": shop, "scope": data.get("scope", "")},
+        }
+
     async def create_listing(self, item: dict, credentials: dict) -> dict:
-        return await create_product(item)
+        shop, token = _shop_creds(credentials)
+        if not shop or not token:
+            # No per-user store connected yet — fall back to the single globally
+            # configured store (existing behaviour for the account this was built for).
+            return await create_product(item)
+        product = await ShopifyClient(shop, token).create_product(item)
+        product_id = str(product["id"])
+        return {
+            "platform_listing_id": product_id,
+            "platform_listing_url": f"https://{shop}/products/{product.get('handle', product_id)}",
+        }
 
     async def delete_listing(self, platform_listing_id: str, credentials: dict) -> bool:
-        return await delete_product(platform_listing_id)
+        shop, token = _shop_creds(credentials)
+        if not shop or not token:
+            return await delete_product(platform_listing_id)
+        return await ShopifyClient(shop, token).delete_product(platform_listing_id)
 
     async def refresh_credentials(self, credentials: dict) -> dict:
-        return credentials
+        return credentials  # Shopify offline access tokens don't expire
 
     async def get_listing_status(self, platform_listing_id: str, credentials: dict) -> str:
         return "active"
