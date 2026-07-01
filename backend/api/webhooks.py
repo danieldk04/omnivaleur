@@ -3,25 +3,42 @@ Webhook handlers for platforms that support push notifications.
 Shopify: orders/paid → auto-delist everywhere.
 eBay: item sold notification.
 """
+import hashlib
 from fastapi import APIRouter, Request, HTTPException
 from backend.services.crosslist import handle_item_sold
 from backend.database import get_db
+from backend.config import settings
 
 router = APIRouter(prefix="/webhooks", tags=["webhooks"])
+
+
+@router.get("/ebay")
+async def ebay_webhook_verify(challenge_code: str):
+    """
+    eBay's endpoint-verification handshake (run once when you register the
+    notification URL in the developer portal). eBay sends a GET with
+    ?challenge_code=... and expects back the SHA-256 hash of
+    challengeCode + verificationToken + endpointURL, hex-encoded.
+    Requires EBAY_VERIFICATION_TOKEN to be set to the same value configured
+    in the developer portal (32-80 chars).
+    """
+    if not settings.ebay_verification_token:
+        raise HTTPException(status_code=500, detail="EBAY_VERIFICATION_TOKEN not configured")
+    m = hashlib.sha256()
+    m.update(challenge_code.encode("utf-8"))
+    m.update(settings.ebay_verification_token.encode("utf-8"))
+    m.update(settings.ebay_webhook_url.encode("utf-8"))
+    return {"challengeResponse": m.hexdigest()}
 
 
 @router.post("/ebay")
 async def ebay_webhook(request: Request):
     """
     eBay Marketplace Account Deletion / Item Sold notification.
-    Configure in eBay developer portal under Application Settings > Notifications.
+    Configure in eBay developer portal under Application Settings > Notifications,
+    using EBAY_WEBHOOK_URL as the endpoint and EBAY_VERIFICATION_TOKEN as the token.
     """
     payload = await request.json()
-
-    # eBay sends a challenge token for endpoint verification
-    if "challenge" in payload:
-        return {"challengeResponse": payload["challenge"]}
-
     notification_type = payload.get("metadata", {}).get("topic", "")
 
     if notification_type == "MARKETPLACE_ACCOUNT_DELETION":
