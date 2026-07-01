@@ -1856,6 +1856,12 @@ async function bulkDelete() {
 }
 
 // ── Platforms view ───────────────────────────────────────────────
+const PLATFORM_CONNECT = {
+  ebay: { connectable: true, connect: connectEbay },
+  etsy: { connectable: false, note: 'Coming soon' },
+  shopify: { connectable: false, note: 'Contact us to link your Shopify store' },
+};
+
 function renderPlatforms() {
   const items = [
     { id: 'marktplaats', label: 'Marktplaats', type: 'extension', icon: '🇳🇱' },
@@ -1868,18 +1874,48 @@ function renderPlatforms() {
   const html = items.map(p => {
     const ok = state.connected.includes(p.id);
     const count = state.listings.filter(l => l.platform === p.id && l.status === 'active').length;
-    return `<div style="display:flex;align-items:center;justify-content:space-between;padding:14px 0;border-bottom:1px solid var(--border)">
+    const cfg = PLATFORM_CONNECT[p.id];
+    let action = '';
+    if (p.type === 'extension') {
+      action = `<span style="font-size:11px;color:var(--muted)">Auto-detected</span>`;
+    } else if (ok) {
+      action = `<span class="badge active">✓ Connected</span>`;
+    } else if (cfg?.connectable) {
+      action = `<button class="btn btn-sm btn-primary" onclick="${cfg.connect.name}()">Connect</button>`;
+    } else {
+      action = `<span style="font-size:11px;color:var(--muted)">${cfg?.note || 'Not available yet'}</span>`;
+    }
+    return `<div class="card" style="padding:16px 18px;display:flex;align-items:center;justify-content:space-between">
       <div style="display:flex;align-items:center;gap:12px">
         <span style="font-size:22px">${p.icon}</span>
         <div>
           <div style="font-weight:600">${p.label}</div>
-          <div style="font-size:11px;color:var(--muted)">${p.type === 'extension' ? 'Via Chrome extension' : 'Via officiële API'} · ${count} actieve listing${count !== 1 ? 's' : ''}</div>
+          <div style="font-size:11px;color:var(--muted)">${p.type === 'extension' ? 'Via Chrome extension' : 'Via official API'} · ${count} active listing${count !== 1 ? 's' : ''}</div>
         </div>
       </div>
-      <span class="badge ${ok ? 'active' : 'error'}">${ok ? 'Verbonden' : 'Niet verbonden'}</span>
+      ${action}
     </div>`;
   }).join('');
-  document.getElementById('platforms-body').innerHTML = html;
+  const ebayNote = state.connected.includes('ebay')
+    ? ''
+    : `<div style="font-size:12px;color:var(--muted);padding:2px 4px 4px">eBay requires a category per item — set it under "eBay category" when creating or editing an item.</div>`;
+  document.getElementById('platforms-body').innerHTML = html + ebayNote;
+}
+
+async function connectEbay() {
+  try {
+    const res = await apiFetch(`${API}/api/platforms/ebay/auth-url`);
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      alert(err.detail || 'eBay is not configured yet. Contact support.');
+      return;
+    }
+    const { url } = await res.json();
+    sessionStorage.setItem('cl_ebay_return', '1');
+    window.location.href = url;
+  } catch (e) {
+    alert('Could not start eBay connection: ' + e.message);
+  }
 }
 
 // ── Extension status ─────────────────────────────────────────────
