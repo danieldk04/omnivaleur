@@ -152,7 +152,7 @@ class EbayPlatform(PlatformBase):
                 json=inventory_payload,
                 headers=self._auth_headers(credentials),
             )
-            inv_resp.raise_for_status()
+            _raise_with_ebay_error(inv_resp, "creating inventory item")
 
             # Step 2: Create offer
             offer_payload = {
@@ -162,7 +162,7 @@ class EbayPlatform(PlatformBase):
                 "pricingSummary": {
                     "price": {"value": str(item["price"]), "currency": "EUR"}
                 },
-                "categoryId": item.get("ebay_category_id", ""),
+                "categoryId": category_id,
                 "listingDescription": item.get("description", ""),
                 "quantityLimitPerBuyer": 1,
             }
@@ -171,7 +171,7 @@ class EbayPlatform(PlatformBase):
                 json=offer_payload,
                 headers=self._auth_headers(credentials),
             )
-            offer_resp.raise_for_status()
+            _raise_with_ebay_error(offer_resp, "creating offer")
             offer_id = offer_resp.json()["offerId"]
 
             # Step 3: Publish offer
@@ -179,12 +179,13 @@ class EbayPlatform(PlatformBase):
                 f"{INVENTORY_API}/offer/{offer_id}/publish",
                 headers=self._auth_headers(credentials),
             )
-            pub_resp.raise_for_status()
+            _raise_with_ebay_error(pub_resp, "publishing offer")
             listing_id = pub_resp.json().get("listingId", offer_id)
 
+        tld = "com" if settings.ebay_marketplace_id == "EBAY_US" else settings.ebay_marketplace_id.split("_")[-1].lower()
         return {
             "platform_listing_id": listing_id,
-            "platform_listing_url": f"https://www.ebay.nl/itm/{listing_id}",
+            "platform_listing_url": f"https://www.ebay.{tld}/itm/{listing_id}",
         }
 
     async def delete_listing(self, platform_listing_id: str, credentials: dict) -> bool:
