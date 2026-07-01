@@ -188,21 +188,31 @@ class EbayPlatform(PlatformBase):
             "platform_listing_url": f"https://www.{domain}/itm/{listing_id}",
         }
 
-    async def delete_listing(self, platform_listing_id: str, credentials: dict) -> bool:
+    async def delete_listing(self, offer_id: str, credentials: dict) -> bool:
+        """Ends a live listing. `offer_id` must be the offerId from create_listing
+        (stored as `platform_offer_id`), not the public listingId — eBay's Inventory
+        API operates on offers, and a published offer can only be ended via /withdraw,
+        not DELETE (which only works for never-published offers)."""
         credentials = await self._ensure_fresh_token(credentials)
         async with httpx.AsyncClient() as client:
-            # End the listing via the Trading API fallback approach
+            resp = await client.post(
+                f"{INVENTORY_API}/offer/{offer_id}/withdraw",
+                headers=self._auth_headers(credentials),
+            )
+            if resp.status_code in (200, 204):
+                return True
+            # Fall back to DELETE in case the offer was never actually published.
             resp = await client.delete(
-                f"{INVENTORY_API}/offer/{platform_listing_id}",
+                f"{INVENTORY_API}/offer/{offer_id}",
                 headers=self._auth_headers(credentials),
             )
             return resp.status_code in (200, 204)
 
-    async def get_listing_status(self, platform_listing_id: str, credentials: dict) -> str:
+    async def get_listing_status(self, offer_id: str, credentials: dict) -> str:
         credentials = await self._ensure_fresh_token(credentials)
         async with httpx.AsyncClient() as client:
             resp = await client.get(
-                f"{INVENTORY_API}/offer/{platform_listing_id}",
+                f"{INVENTORY_API}/offer/{offer_id}",
                 headers=self._auth_headers(credentials),
             )
             if resp.status_code == 404:
@@ -213,6 +223,27 @@ class EbayPlatform(PlatformBase):
             if status in ("ENDED", "SOLD"):
                 return "sold"
             return "active"
+
+
+_MARKETPLACE_DOMAINS = {
+    "EBAY_NL": "ebay.nl", "EBAY_DE": "ebay.de", "EBAY_GB": "ebay.co.uk",
+    "EBAY_FR": "ebay.fr", "EBAY_BE": "ebay.be", "EBAY_IT": "ebay.it",
+    "EBAY_ES": "ebay.es", "EBAY_US": "ebay.com",
+}
+
+
+def _raise_with_ebay_error(resp: httpx.Response, action: str) -> None:
+    if resp.is_success:
+        return
+    detail = resp.text[:500]
+    try:
+        errors = resp.json().get("errors", [])
+        if errors:
+            detail = "; ".join(e.get("message", "") for e in errors)
+    except Exception:
+        pass
+    logger.error(f"eBay error while {action}: {resp.status_code} {detail}")
+    raise RuntimeError(f"eBay error while {action}: {detail}")
 
 
 def _map_condition(condition: str) -> str:
