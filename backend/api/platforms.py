@@ -264,6 +264,13 @@ async def platform_status(user_id: str = Depends(get_current_user)):
     return {"connected": connected}
 
 
+@router.delete("/{platform}/disconnect")
+async def disconnect_platform(platform: str, user_id: str = Depends(get_current_user)):
+    db = get_db()
+    db.table("platform_credentials").delete().eq("user_id", user_id).eq("platform", platform).execute()
+    return {"status": "disconnected", "platform": platform}
+
+
 @router.post("/ai-listing")
 async def ai_generate_listing(body: AIListingRequest, user_id: str = Depends(get_current_user)):
     """Generate a listing from photos using Claude Vision."""
