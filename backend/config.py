@@ -44,6 +44,7 @@ class Settings(BaseSettings):
 
     secret_key: str = "change-me"
     polling_interval: int = 300
+    owner_email: str = "dkresellacademy@gmail.com"
 
 
 settings = Settings()
