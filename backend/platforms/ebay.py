@@ -35,6 +35,17 @@ class EbayCategoryRequiredError(Exception):
     """Raised when an item has no eBay category and no default is configured."""
 
 
+def _with_expiry(token_response: dict) -> dict:
+    """eBay returns `expires_in` (seconds), but credentials are refreshed based on
+    an absolute `token_expires_at` — compute and attach it here so callers never
+    have to remember to, which previously meant tokens were reused past expiry."""
+    expires_in = token_response.get("expires_in")
+    if expires_in:
+        expires_at = datetime.now(timezone.utc) + timedelta(seconds=int(expires_in) - 60)
+        token_response = {**token_response, "token_expires_at": expires_at.isoformat()}
+    return token_response
+
+
 class EbayPlatform(PlatformBase):
     platform_name = "ebay"
 
