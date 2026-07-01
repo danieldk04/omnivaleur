@@ -180,9 +180,15 @@ chrome.runtime.onStartup.addListener(pollJobs);
 
 async function getServerUrl() {
   return new Promise((resolve) => {
-    chrome.storage.sync.get({ serverUrl: "https://crosslisteu.com" }, (s) =>
-      resolve(s.serverUrl.replace(/\/$/, ""))
-    );
+    chrome.storage.sync.get({ serverUrl: "https://crosslisteu.com" }, (s) => {
+      let url = s.serverUrl.replace(/\/$/, "");
+      if (url === "https://api.crosslisteu.com") {
+        // Stale value from before the domain consolidation — migrate it.
+        url = "https://crosslisteu.com";
+        chrome.storage.sync.set({ serverUrl: url });
+      }
+      resolve(url);
+    });
   });
 }
 
