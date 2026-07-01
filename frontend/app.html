@@ -1864,7 +1864,7 @@ async function bulkDelete() {
 const PLATFORM_CONNECT = {
   ebay: { connectable: true, connect: connectEbay },
   etsy: { connectable: false, note: 'Coming soon' },
-  shopify: { connectable: false, note: 'Contact us to link your Shopify store' },
+  shopify: { connectable: true, connect: connectShopify },
 };
 
 function renderPlatforms() {
