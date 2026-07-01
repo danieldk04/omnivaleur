@@ -62,7 +62,7 @@ def login(page):
     page.wait_for_url(f"{BASE}/app", timeout=15000)
     # Wait for real data to actually be loaded (not just a fixed timer).
     page.wait_for_function(
-        "window.state && Array.isArray(state.items) && state.items.length > 0",
+        "document.getElementById('stat-items') && document.getElementById('stat-items').textContent.trim() !== '' && document.getElementById('stat-items').textContent.trim() !== '—'",
         timeout=15000,
     )
     try:
@@ -131,7 +131,8 @@ with sync_playwright() as p:
     browser, ctx, page = new_ctx(p, "items")
     login(page)
     page.evaluate("showView('items')")
-    page.wait_for_timeout(900)
+    page.wait_for_selector("table tbody tr, .item-row", timeout=8000)
+    page.wait_for_timeout(200)
     move_mouse_smooth(page, 300, 200, 500, 500, steps=20)
     page.wait_for_timeout(1800)
     ctx.close(); browser.close()
@@ -141,15 +142,15 @@ with sync_playwright() as p:
     browser, ctx, page = new_ctx(p, "platforms")
     login(page)
     page.evaluate("showView('platforms')")
-    page.wait_for_timeout(700)
+    page.wait_for_selector("#platforms-body div", timeout=8000)
     page.evaluate("""() => {
         if (window.state && !state.connected.includes('ebay')) state.connected.push('ebay');
         if (window.state && !state.connected.includes('shopify')) state.connected.push('shopify');
         if (typeof renderPlatforms === 'function') renderPlatforms();
     }""")
-    page.wait_for_timeout(300)
+    page.wait_for_timeout(150)
     swap_platform_logos(page)
-    page.wait_for_timeout(400)
+    page.wait_for_timeout(200)
     move_mouse_smooth(page, 300, 200, 500, 550, steps=25)
     page.wait_for_timeout(1800)
     ctx.close(); browser.close()
@@ -159,7 +160,10 @@ with sync_playwright() as p:
     browser, ctx, page = new_ctx(p, "analytics")
     login(page)
     page.evaluate("showView('analytics')")
-    page.wait_for_timeout(900)
+    page.wait_for_function(
+        "typeof Chart !== 'undefined' && Chart.getChart('an-chart-revenue') && Chart.getChart('an-chart-sales')",
+        timeout=8000,
+    )
     page.evaluate("""() => {
       const setTxt = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
       setTxt('an-revenue', '€1,840.00');
@@ -202,7 +206,7 @@ with sync_playwright() as p:
         </li>
       `;
     }""")
-    page.wait_for_timeout(1000)
+    page.wait_for_timeout(1000)  # let Chart.js finish its update animation
     move_mouse_smooth(page, 300, 300, 700, 450, steps=25)
     page.wait_for_timeout(1600)
     ctx.close(); browser.close()
@@ -212,7 +216,8 @@ with sync_playwright() as p:
     browser, ctx, page = new_ctx(p, "calculator")
     login(page)
     page.evaluate("showView('calculator')")
-    page.wait_for_timeout(700)
+    page.wait_for_selector("input", timeout=8000)
+    page.wait_for_timeout(200)
     inputs = page.query_selector_all("input")
     purchase_input = None
     profit_input = None
