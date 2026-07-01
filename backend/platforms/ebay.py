@@ -14,9 +14,16 @@ from backend.platforms.base import PlatformBase
 
 logger = logging.getLogger(__name__)
 
-AUTH_URL = "https://auth.ebay.com/oauth2/authorize"
-TOKEN_URL = "https://api.ebay.com/identity/v1/oauth2/token"
-INVENTORY_API = "https://api.ebay.com/sell/inventory/v1"
+# eBay exposes parallel sandbox/production environments with different hosts.
+# Toggle via settings.ebay_sandbox while testing against a sandbox developer account.
+if settings.ebay_sandbox:
+    AUTH_URL = "https://auth.sandbox.ebay.com/oauth2/authorize"
+    TOKEN_URL = "https://api.sandbox.ebay.com/identity/v1/oauth2/token"
+    INVENTORY_API = "https://api.sandbox.ebay.com/sell/inventory/v1"
+else:
+    AUTH_URL = "https://auth.ebay.com/oauth2/authorize"
+    TOKEN_URL = "https://api.ebay.com/identity/v1/oauth2/token"
+    INVENTORY_API = "https://api.ebay.com/sell/inventory/v1"
 
 SCOPES = [
     "https://api.ebay.com/oauth/api_scope/sell.inventory",
@@ -24,10 +31,19 @@ SCOPES = [
 ]
 
 
+class EbayCategoryRequiredError(Exception):
+    """Raised when an item has no eBay category and no default is configured."""
+
+
 class EbayPlatform(PlatformBase):
     platform_name = "ebay"
 
     def get_authorization_url(self) -> str:
+        if not settings.ebay_app_id:
+            raise RuntimeError(
+                "eBay is not configured yet: set EBAY_APP_ID and EBAY_CERT_ID "
+                "(from developer.ebay.com) before connecting an eBay account."
+            )
         params = {
             "client_id": settings.ebay_app_id,
             "redirect_uri": settings.ebay_redirect_uri,
