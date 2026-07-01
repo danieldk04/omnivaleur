@@ -186,6 +186,7 @@ class EbayPlatform(PlatformBase):
         return {
             "platform_listing_id": listing_id,
             "platform_listing_url": f"https://www.{domain}/itm/{listing_id}",
+            "platform_offer_id": offer_id,
         }
 
     async def delete_listing(self, offer_id: str, credentials: dict) -> bool:
