@@ -59,12 +59,17 @@ def login(page):
     page.fill("#email", EMAIL)
     page.fill("#password", PASSWORD)
     page.click("form button")
-    page.wait_for_timeout(2500)
+    page.wait_for_url(f"{BASE}/app", timeout=15000)
+    # Wait for real data to actually be loaded (not just a fixed timer).
+    page.wait_for_function(
+        "window.state && Array.isArray(state.items) && state.items.length > 0",
+        timeout=15000,
+    )
     try:
         page.click("text=I already have the extension installed", timeout=2000)
     except Exception:
         pass
-    page.wait_for_timeout(400)
+    page.wait_for_timeout(300)
 
 
 def smooth_scroll(page, target_y, duration_ms=1200, steps=40):
@@ -165,16 +170,18 @@ with sync_playwright() as p:
       const rev = [120,180,140,260,210,340,290,380];
       const profit = [70,110,90,160,130,210,180,240];
       const sales = [2,4,3,6,5,8,6,9];
-      if (window._anChartRevenue) {
-        window._anChartRevenue.data.labels = labels;
-        window._anChartRevenue.data.datasets[0].data = rev;
-        window._anChartRevenue.data.datasets[1].data = profit;
-        window._anChartRevenue.update();
+      const _anChartRevenue = Chart.getChart('an-chart-revenue');
+      if (_anChartRevenue) {
+        _anChartRevenue.data.labels = labels;
+        _anChartRevenue.data.datasets[0].data = rev;
+        _anChartRevenue.data.datasets[1].data = profit;
+        _anChartRevenue.update();
       }
-      if (window._anChartSales) {
-        window._anChartSales.data.labels = labels;
-        window._anChartSales.data.datasets[0].data = sales;
-        window._anChartSales.update();
+      const _anChartSales = Chart.getChart('an-chart-sales');
+      if (_anChartSales) {
+        _anChartSales.data.labels = labels;
+        _anChartSales.data.datasets[0].data = sales;
+        _anChartSales.update();
       }
       const platList = document.getElementById('an-platform-list');
       if (platList) platList.innerHTML = `
