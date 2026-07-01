@@ -111,6 +111,37 @@ tr:last-child td { border-bottom: none; }
 .cursor-dot.click { animation: cursorClick .35s ease; }
 @keyframes cursorClick { 0% { transform: scale(1); } 50% { transform: scale(.7); } 100% { transform: scale(1); } }
 
+/* New-item demo modal */
+.demo-modal-overlay { position: fixed; inset: 0; background: rgba(15,23,42,0); backdrop-filter: blur(0px); z-index: 500; display: flex; align-items: center; justify-content: center; opacity: 0; pointer-events: none; transition: opacity .35s, background .35s, backdrop-filter .35s; }
+.demo-modal-overlay.show { opacity: 1; pointer-events: auto; background: rgba(15,23,42,.45); backdrop-filter: blur(3px); }
+.demo-modal { background: #fff; border-radius: 16px; width: 380px; max-width: 88%; box-shadow: 0 24px 60px rgba(0,0,0,.25); transform: translateY(16px) scale(.97); transition: transform .35s cubic-bezier(.2,.8,.2,1); overflow: hidden; }
+.demo-modal-overlay.show .demo-modal { transform: translateY(0) scale(1); }
+.demo-modal-head { padding: 16px 20px; border-bottom: 1px solid var(--border); font-size: 14px; font-weight: 700; display: flex; align-items: center; justify-content: space-between; }
+.demo-modal-body { padding: 20px; min-height: 190px; }
+.demo-field { margin-bottom: 14px; }
+.demo-field label { display: block; font-size: 10px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; margin-bottom: 5px; }
+.demo-field-box { border: 1.5px solid var(--border); border-radius: 8px; padding: 8px 11px; font-size: 13px; color: var(--text); min-height: 18px; background: #fafbfc; }
+.demo-photo-drop { border: 2px dashed var(--border); border-radius: 10px; height: 64px; display: flex; align-items: center; justify-content: center; font-size: 12px; color: var(--muted); background: #fafbfc; overflow: hidden; position: relative; }
+.demo-photo-drop .thumb { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 28px; background: linear-gradient(135deg,#f1f5f9,#e2e8f0); opacity: 0; transition: opacity .3s; }
+.demo-photo-drop .thumb.show { opacity: 1; }
+.demo-typewriter::after { content: ''; display: inline-block; width: 2px; height: 12px; background: var(--blue); margin-left: 2px; vertical-align: -2px; animation: caretBlink .8s step-end infinite; }
+@keyframes caretBlink { 50% { opacity: 0; } }
+.demo-platform-row { display: flex; gap: 8px; margin-top: 6px; flex-wrap: wrap; }
+.demo-platform-chip { display: flex; align-items: center; gap: 6px; padding: 6px 11px; border: 1.5px solid var(--border); border-radius: 999px; font-size: 12px; font-weight: 600; color: var(--muted); transition: all .3s; }
+.demo-platform-chip .chk { width: 14px; height: 14px; border-radius: 4px; border: 1.5px solid var(--border); display: flex; align-items: center; justify-content: center; font-size: 9px; color: #fff; transition: all .25s; flex-shrink: 0; }
+.demo-platform-chip.on { border-color: #6ee7b7; background: #f0fdf4; color: #065f46; }
+.demo-platform-chip.on .chk { background: #059669; border-color: #059669; }
+.demo-modal-foot { padding: 14px 20px; border-top: 1px solid var(--border); background: #fafbfc; }
+.demo-publish-btn { width: 100%; padding: 10px; border-radius: 999px; border: none; font-size: 13px; font-weight: 700; color: #fff; background: var(--grad); display: flex; align-items: center; justify-content: center; gap: 8px; position: relative; overflow: hidden; }
+.demo-publish-btn.loading::before { content: ''; width: 13px; height: 13px; border: 2px solid rgba(255,255,255,.4); border-top-color: #fff; border-radius: 50%; animation: spin .7s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.demo-success { position: absolute; inset: 0; background: #fff; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; opacity: 0; pointer-events: none; transition: opacity .3s; }
+.demo-success.show { opacity: 1; }
+.demo-success-icon { width: 46px; height: 46px; border-radius: 50%; background: #dcfce7; color: #16a34a; display: flex; align-items: center; justify-content: center; font-size: 22px; animation: successPop .4s cubic-bezier(.2,.8,.2,1); }
+@keyframes successPop { 0% { transform: scale(.4); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
+.demo-modal-body { position: relative; }
+@media (prefers-reduced-motion: reduce) { .demo-modal-overlay, .demo-modal, .demo-success-icon { transition: none !important; animation: none !important; } }
+
 @media (max-width: 900px) {
   .sidebar { display: none; }
   .main { margin-left: 0; }
