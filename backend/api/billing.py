@@ -17,15 +17,18 @@ def _get_or_create_subscription(user_id: str) -> dict:
     result = db.table("subscriptions").select("*").eq("user_id", user_id).execute()
     if result.data:
         return result.data[0]
+    from datetime import datetime, timedelta, timezone
+    trial_ends_at = (datetime.now(timezone.utc) + timedelta(days=7)).isoformat()
     try:
         new_sub = db.table("subscriptions").insert({
             "user_id": user_id,
             "status": "trialing",
             "plan": "pro",
+            "trial_ends_at": trial_ends_at,
         }).execute()
         return new_sub.data[0]
     except Exception:
-        return {"user_id": user_id, "status": "trialing", "plan": "pro"}
+        return {"user_id": user_id, "status": "trialing", "plan": "pro", "trial_ends_at": trial_ends_at}
 
 
 @router.get("/status")
