@@ -144,8 +144,10 @@ with sync_playwright() as p:
     page.evaluate("showView('platforms')")
     page.wait_for_selector("#platforms-body div", timeout=8000)
     page.evaluate("""() => {
-        if (window.state && !state.connected.includes('ebay')) state.connected.push('ebay');
-        if (window.state && !state.connected.includes('shopify')) state.connected.push('shopify');
+        try {
+          if (!state.connected.includes('ebay')) state.connected.push('ebay');
+          if (!state.connected.includes('shopify')) state.connected.push('shopify');
+        } catch (e) {}
         if (typeof renderPlatforms === 'function') renderPlatforms();
     }""")
     page.wait_for_timeout(150)
