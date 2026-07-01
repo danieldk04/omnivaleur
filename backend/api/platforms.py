@@ -60,13 +60,19 @@ async def tweedehands_bootstrap(body: dict, user_id: str = Depends(get_current_u
 
 @router.get("/ebay/auth-url")
 async def ebay_auth_url():
-    return {"url": EbayPlatform().get_authorization_url()}
+    try:
+        return {"url": EbayPlatform().get_authorization_url()}
+    except RuntimeError as e:
+        raise HTTPException(status_code=400, detail=str(e))
 
 
 @router.get("/ebay/callback")
 async def ebay_callback(code: str, user_id: str = Depends(get_current_user)):
-    tokens = await EbayPlatform().exchange_code(code)
-    _save_credentials(user_id, "ebay", tokens)
+    try:
+        tokens = await EbayPlatform().exchange_code(code)
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"eBay authorization failed: {e}")
+    _save_credentials(user_id, "ebay", _with_expiry(tokens))
     return {"status": "connected", "platform": "ebay"}
 
 
