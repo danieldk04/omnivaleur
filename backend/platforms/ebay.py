@@ -89,7 +89,7 @@ class EbayPlatform(PlatformBase):
             )
             resp.raise_for_status()
             data = resp.json()
-            return {**credentials, "access_token": data["access_token"]}
+            return {**credentials, **_with_expiry(data)}
 
     def _auth_headers(self, credentials: dict) -> dict:
         return {
