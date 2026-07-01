@@ -1959,6 +1959,23 @@ async function connectShopify() {
   }
 }
 
+async function disconnectPlatform(platform) {
+  const label = PLATFORM_LABELS[platform] || platform;
+  if (!confirm(`Disconnect ${label}? You'll need to reconnect it before publishing to it again.`)) return;
+  try {
+    const res = await apiFetch(`${API}/api/platforms/${platform}/disconnect`, { method: 'DELETE' });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      alert(err.detail || `Could not disconnect ${label}.`);
+      return;
+    }
+    state.connected = state.connected.filter(p => p !== platform);
+    renderPlatforms();
+  } catch (e) {
+    alert(`Could not disconnect ${label}: ` + e.message);
+  }
+}
+
 async function suggestEbayCategory() {
   const title = document.getElementById('f-title').value.trim();
   const box = document.getElementById('ebay-category-suggestions');
