@@ -103,3 +103,22 @@ ALTER TABLE listings ADD COLUMN IF NOT EXISTS platform_offer_id VARCHAR(100);
 -- price_marktplaats/price_2dehands/price_vinted columns).
 ALTER TABLE items ADD COLUMN IF NOT EXISTS price_ebay NUMERIC(10,2);
 ALTER TABLE items ADD COLUMN IF NOT EXISTS price_shopify NUMERIC(10,2);
+
+-- Listing refresh ("bump" old listings): tracked per-listing so we can enforce
+-- a cooldown and expose "last refreshed" in the dashboard.
+ALTER TABLE listings ADD COLUMN IF NOT EXISTS last_refreshed_at TIMESTAMPTZ;
+ALTER TABLE listings ADD COLUMN IF NOT EXISTS refresh_count INT DEFAULT 0;
+
+-- Jobs can be scheduled for the future (used to jitter the "recreate" half of
+-- a relist so delete→create doesn't fire back-to-back like a script).
+ALTER TABLE jobs ADD COLUMN IF NOT EXISTS scheduled_for TIMESTAMPTZ;
+CREATE INDEX IF NOT EXISTS idx_jobs_scheduled_for ON jobs(scheduled_for);
+
+-- Per-user daily refresh counter, used to cap total refresh actions/day
+-- regardless of how many items a user tries to refresh at once.
+CREATE TABLE IF NOT EXISTS refresh_quota (
+    user_id UUID NOT NULL,
+    day DATE NOT NULL DEFAULT CURRENT_DATE,
+    count INT DEFAULT 0,
+    PRIMARY KEY (user_id, day)
+);
