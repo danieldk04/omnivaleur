@@ -2375,6 +2375,11 @@ function renderRefreshView() {
     (l.platform === 'ebay' && l.status !== 'active')
   );
   if (platformFilter) relevant = relevant.filter(l => l.platform === platformFilter);
+  relevant = relevant.slice().sort((a, b) => {
+    const ia = state.items.find(i => i.id === a.item_id)?.title || '';
+    const ib = state.items.find(i => i.id === b.item_id)?.title || '';
+    return ia.localeCompare(ib) || a.platform.localeCompare(b.platform);
+  });
 
   const rows = relevant.map(l => {
     const item = state.items.find(i => i.id === l.item_id);
