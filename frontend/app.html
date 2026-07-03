@@ -2405,6 +2405,7 @@ async function refreshStaleListings() {
     const lines = (data.results || []).map(x => `${x.item_id.slice(0,8)}… — ${x.status}${x.reason ? ': ' + x.reason : ''}`);
     alert(lines.length ? lines.join('\n') : 'No stale Vinted listings found.');
     await loadAll();
+    if (document.getElementById('view-refresh')?.classList.contains('active')) renderRefreshView();
   } catch (e) {
     alert('Bulk refresh error: ' + e.message);
   }
