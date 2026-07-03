@@ -1,10 +1,55 @@
 {
   "queue": [
-    { "keyword": "marktplaats naar vinted crosslisten 2026", "region": "nl", "pillar": "A", "slug": "marktplaats-naar-vinted", "priority": 1, "status": "pending" },
-    { "keyword": "vinted naar ebay automatisch doorplaatsen 2026", "region": "nl", "pillar": "A", "slug": "vinted-naar-ebay", "priority": 2, "status": "pending" },
-    { "keyword": "2dehands naar vinted crosslisten", "region": "be-nl", "pillar": "A", "slug": "2dehands-naar-vinted", "priority": 3, "status": "pending" },
-    { "keyword": "vinted kleding verkopen automatiseren", "region": "nl", "pillar": "B", "slug": "vinted-kleding-automatiseren", "priority": 4, "status": "pending" },
-    { "keyword": "automatiser vinted vers ebay 2026", "region": "fr", "pillar": "A", "slug": "vinted-vers-ebay", "priority": 5, "status": "pending" }
+    {
+      "keyword": "marktplaats naar vinted crosslisten 2026",
+      "region": "nl",
+      "pillar": "A",
+      "slug": "marktplaats-naar-vinted",
+      "priority": 1,
+      "status": "published"
+    },
+    {
+      "keyword": "vinted naar ebay automatisch doorplaatsen 2026",
+      "region": "nl",
+      "pillar": "A",
+      "slug": "vinted-naar-ebay",
+      "priority": 2,
+      "status": "pending"
+    },
+    {
+      "keyword": "2dehands naar vinted crosslisten",
+      "region": "be-nl",
+      "pillar": "A",
+      "slug": "2dehands-naar-vinted",
+      "priority": 3,
+      "status": "pending"
+    },
+    {
+      "keyword": "vinted kleding verkopen automatiseren",
+      "region": "nl",
+      "pillar": "B",
+      "slug": "vinted-kleding-automatiseren",
+      "priority": 4,
+      "status": "pending"
+    },
+    {
+      "keyword": "automatiser vinted vers ebay 2026",
+      "region": "fr",
+      "pillar": "A",
+      "slug": "vinted-vers-ebay",
+      "priority": 5,
+      "status": "pending"
+    }
   ],
-  "published": []
+  "published": [
+    {
+      "keyword": "marktplaats naar vinted crosslisten 2026",
+      "slug": "marktplaats-naar-vinted",
+      "region": "nl",
+      "pillar": "A",
+      "action": "created",
+      "url_path": "/nl/crosslisten/marktplaats-naar-vinted",
+      "published_at": "2026-07-03T14:04:21.035532+00:00"
+    }
+  ]
 }
