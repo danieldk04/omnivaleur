@@ -2809,6 +2809,7 @@ async function doCrosslist() {
   const btn = document.querySelector('#modal-crosslist .btn-primary');
   btn.disabled = true;
   btn.textContent = 'Adding to queue…';
+  setBusy(true, 'Publishing…');
   try {
     await apiFetch(`${API}/api/items/${state.crosslistItemId}/crosslist`, {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -2821,6 +2822,8 @@ async function doCrosslist() {
     btn.disabled = false;
     btn.textContent = 'Publish';
     alert('Error: ' + e.message);
+  } finally {
+    setBusy(false);
   }
 }
 
