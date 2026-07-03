@@ -149,3 +149,32 @@ CREATE TABLE IF NOT EXISTS import_candidates (
 );
 CREATE INDEX IF NOT EXISTS idx_import_candidates_user_platform ON import_candidates(user_id, platform, status);
 ALTER TABLE import_candidates ADD COLUMN IF NOT EXISTS platform_listed_at TIMESTAMPTZ;
+
+-- Programmatic SEO/GEO content pages (comparison posts, niche pages).
+-- One row = one published URL. `intent_key` is the cannibalization guard:
+-- region + pillar + slug together identify a single search intent, so a
+-- re-run for the same intent updates this row instead of creating a new one.
+CREATE TABLE IF NOT EXISTS content_pages (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    pillar VARCHAR(1) NOT NULL,          -- 'A' (platform combo) or 'B' (niche/audience)
+    region VARCHAR(10) NOT NULL,         -- nl / be-nl / be-fr / fr / de
+    slug VARCHAR(150) NOT NULL,          -- e.g. marktplaats-naar-vinted
+    intent_key VARCHAR(200) GENERATED ALWAYS AS (region || ':' || pillar || ':' || slug) STORED UNIQUE,
+    primary_keyword TEXT NOT NULL,
+    title VARCHAR(70) NOT NULL,
+    meta_description VARCHAR(160) NOT NULL,
+    h1 TEXT NOT NULL,
+    quick_answer TEXT NOT NULL,          -- 40-60 word answer block, rendered as <blockquote>
+    body_html TEXT NOT NULL,             -- H2 question-headings + body, SSR'd as-is
+    faq JSONB NOT NULL DEFAULT '[]',     -- [{question, answer}, ...]
+    featured_image_url TEXT,
+    software_application_json_ld JSONB,
+    competitor_research JSONB,           -- top-3 SERP snapshot + heading map + content-gap notes, kept for audit/re-runs
+    related_slugs TEXT[] DEFAULT '{}',   -- intent_keys of pages linked to/from (orphan-prevention)
+    status VARCHAR(20) DEFAULT 'draft',  -- draft / published
+    published_at TIMESTAMPTZ,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_content_pages_region_pillar ON content_pages(region, pillar, status);
+CREATE INDEX IF NOT EXISTS idx_content_pages_status ON content_pages(status);
