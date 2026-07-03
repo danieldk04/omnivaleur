@@ -2008,6 +2008,7 @@ async function doBulkCrosslist() {
   if (!selected.length) return alert('Choose at least one platform');
   const ids = [...selectedIds];
   closeModal('modal-bulk-crosslist');
+  setBusy(true, `Publishing 0 / ${ids.length}…`);
   let done = 0, errors = 0;
   for (const id of ids) {
     try {
@@ -2018,8 +2019,10 @@ async function doBulkCrosslist() {
       if (!res.ok) throw new Error(await res.text());
       done++;
     } catch { errors++; }
+    document.getElementById('cl-busy-text').textContent = `Publishing ${done + errors} / ${ids.length}…`;
   }
-  alert(`${done} item${done !== 1 ? 's' : ''} queued for publishing${errors ? `, ${errors} error(s)` : ''}.`);
+  setBusy(false);
+  showToast(`${done} item${done !== 1 ? 's' : ''} queued for publishing${errors ? `, ${errors} error(s)` : ''}.`);
   clearSelection();
   await loadAll();
 }
@@ -2031,14 +2034,17 @@ async function bulkDelist() {
   const more = ids.length > 3 ? ` en ${ids.length - 3} meer` : '';
   if (!confirm(`Delist ${ids.length} item(s) from all platforms?\n${names}${more}`)) return;
 
+  setBusy(true, `Delisting 0 / ${ids.length}…`);
   let done = 0, errors = 0;
   for (const id of ids) {
     try {
       await apiFetch(`${API}/api/items/${id}/delist`, { method: 'POST' });
       done++;
     } catch { errors++; }
+    document.getElementById('cl-busy-text').textContent = `Delisting ${done + errors} / ${ids.length}…`;
   }
-  alert(`${done} delisted${errors ? `, ${errors} error(s)` : ''}.`);
+  setBusy(false);
+  showToast(`${done} delisted${errors ? `, ${errors} error(s)` : ''}.`);
   clearSelection();
   await loadAll();
 }
@@ -2052,6 +2058,7 @@ async function bulkDelete() {
   // because delete removes the jobs queue. Delist manually first if needed.
   if (!confirm(`Permanently remove ${ids.length} item(s) from the dashboard?\n${names}${more}\n\nNote: delist them from Marktplaats/2dehands/Vinted first if they are still listed there.`)) return;
 
+  setBusy(true, `Removing 0 / ${ids.length}…`);
   let done = 0, errors = 0;
   for (const id of ids) {
     try {
@@ -2059,8 +2066,10 @@ async function bulkDelete() {
       if (!res.ok) throw new Error(await res.text());
       done++;
     } catch { errors++; }
+    document.getElementById('cl-busy-text').textContent = `Removing ${done + errors} / ${ids.length}…`;
   }
-  alert(`${done} removed${errors ? `, ${errors} error(s)` : ''}.`);
+  setBusy(false);
+  showToast(`${done} removed${errors ? `, ${errors} error(s)` : ''}.`);
   clearSelection();
   await loadAll();
 }
