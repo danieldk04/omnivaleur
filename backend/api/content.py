@@ -80,6 +80,21 @@ async def niche_page(request: Request, region: str, slug: str):
     return _render_page(request, region, "B", slug)
 
 
+@router.get("/{region}/blog", response_class=HTMLResponse)
+async def blog_index(request: Request, region: str):
+    if region not in REGIONS:
+        raise HTTPException(status_code=404, detail="Unknown region")
+    db = get_db()
+    rows = db.table("content_pages").select("*").eq("region", region).eq("status", "published").order("published_at", desc=True).execute().data or []
+    for r in rows:
+        r["url_path"] = f"/{r['region']}/{'crosslisten' if r['pillar'] == 'A' else 'reseller-tools'}/{r['slug']}"
+    return templates.TemplateResponse(
+        request,
+        "blog_index.html",
+        {"pages": rows, "region": region, "canonical": f"{SITE_URL}/{region}/blog"},
+    )
+
+
 @router.get("/sitemap.xml")
 async def content_sitemap():
     db = get_db()
