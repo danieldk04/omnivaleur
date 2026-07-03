@@ -112,10 +112,15 @@ def _jittered_price(price: float) -> float:
 async def refresh_listing(item_id: str, platform: str, user_id: str, strategy: str) -> dict:
     """
     Queue a refresh for one listing.
-    strategy: "content" (safe edit-in-place) or "relist" (delete + scheduled recreate).
+    strategy: "content" (safe edit-in-place, Vinted only) or
+              "relist" (delete + scheduled recreate, Vinted/Marktplaats/2dehands).
     """
-    if strategy not in ("content", "relist"):
-        raise RefreshError("strategy must be 'content' or 'relist'")
+    allowed = PLATFORM_STRATEGIES.get(platform, set())
+    if strategy not in allowed:
+        raise RefreshError(
+            f"'{strategy}' isn't available for {platform}. "
+            f"Available here: {', '.join(sorted(allowed)) or 'none'}."
+        )
 
     db = get_db()
 
