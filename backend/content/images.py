@@ -47,8 +47,8 @@ def _prompt_for_keyword(keyword: str) -> str:
 def _full_prompt(keyword: str) -> str:
     base = _prompt_for_keyword(keyword)
     return (
-        f'Hyperrealistic editorial photograph for a reselling/e-commerce blog. Topic: "{keyword}". '
-        f"{base}. Real, natural-looking human, editorial lighting, shallow depth of field, "
+        f'Hyperrealistic editorial product photograph for a reselling/e-commerce blog. Topic: "{keyword}". '
+        f"{base}. No face or full body visible — hands and product only, editorial lighting, "
         "warm neutral tones, photorealistic skin and fabric texture, sharp focus on the product. "
         "3:2 landscape orientation. No text, no watermarks, no logos, no brand names visible."
     )
