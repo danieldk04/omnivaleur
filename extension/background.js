@@ -442,20 +442,45 @@ async function bgScanVinted(job, serverUrl) {
     });
     await sleep(600);
 
-    const result = await execInTab(tabId, async () => {
-      let userId = null;
+    // Find the numeric member id AND the real country origin (Vinted links to
+    // your home country domain, e.g. vinted.nl, even from the .com entry page —
+    // the items API only exists on that same origin, not on vinted.com).
+    const idInfo = await execInTab(tabId, () => {
+      let userId = null, origin = null;
       const links = [...document.querySelectorAll('a[href*="/member/"]')];
       for (const link of links) {
-        const m = (link.getAttribute("href") || "").match(/\/member\/(\d+)(?:[/?]|$)/);
-        if (m) { userId = m[1]; break; }
+        const href = link.getAttribute("href") || "";
+        const m = href.match(/\/member\/(\d+)(?:[/?]|$)/);
+        if (m) {
+          userId = m[1];
+          try { origin = new URL(href, location.href).origin; } catch (e) { origin = location.origin; }
+          break;
+        }
       }
+      return { userId, origin };
+    });
 
-      if (!userId) return { error: "Could not find your logged-in Vinted account (member id) — make sure you're logged into Vinted in this browser tab." };
+    if (!idInfo?.userId) throw new Error("Could not find your logged-in Vinted account (member id) — make sure you're logged into Vinted in this browser tab.");
 
+    // If the member link points at a different country domain, navigate there
+    // so the items fetch is same-origin (and actually has the right catalog).
+    const currentTab = await new Promise(res => chrome.tabs.get(tabId, res));
+    if (idInfo.origin && currentTab?.url && new URL(currentTab.url).origin !== idInfo.origin) {
+      await new Promise((res, rej) =>
+        chrome.tabs.update(tabId, { url: idInfo.origin + "/" }, () =>
+          chrome.runtime.lastError ? rej(new Error(chrome.runtime.lastError.message)) : res()
+        )
+      );
+      await waitForTabLoad(tabId);
+      await sleep(1500);
+    }
+
+    const userId = idInfo.userId;
+    const result = await execInTab(tabId, async (userId) => {
       const res = await fetch(`/api/v2/users/${userId}/items?order=newest_first&page=1&per_page=200`, {
         headers: { Accept: "application/json" },
       });
-      if (!res.ok) return { error: `Vinted returned HTTP ${res.status} while listing your items (user id ${userId}).` };
+      if (!res.ok) return { error: `Vinted returned HTTP ${res.status} while listing your items (user id ${userId}, ${location.origin}).` };
       const data = await res.json();
       if (data.code && data.code !== 0) return { error: `Vinted API error: ${data.message_code || data.code}` };
 
@@ -469,11 +494,11 @@ async function bgScanVinted(job, serverUrl) {
           title: it.title || "",
           price,
           photo_url: photo,
-          platform_listing_url: it.url || `https://www.vinted.com/items/${it.id}`,
+          platform_listing_url: it.url || `${location.origin}/items/${it.id}`,
         };
       });
       return { items };
-    });
+    }, [userId]);
 
     if (!result) throw new Error("Vinted scan returned nothing — page may not have loaded correctly.");
     if (result.error) throw new Error(result.error);
