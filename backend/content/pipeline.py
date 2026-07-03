@@ -157,7 +157,7 @@ def _save_page_row(
     return {"success": True, "action": action, "url_path": _url_path(language, pillar, slug), "linked": linked_intents, "intent_key": intent_key}
 
 
-async def run_pipeline(keyword: str, region: str, pillar: str, slug: str) -> dict:
+async def run_pipeline(keyword: str, region: str, pillar: str, slug: str, nl_slug: str | None = None) -> dict:
     db = get_db()
 
     logger.info(f"Research voor '{keyword}' ({region})")
