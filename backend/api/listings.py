@@ -2,6 +2,7 @@ from fastapi import APIRouter, HTTPException, BackgroundTasks, Depends
 from backend.models import ListingCreate
 from backend.database import get_db
 from backend.services.crosslist import publish_to_platforms, handle_item_sold
+from backend.services.relist import refresh_listing, refresh_stale_listings, RefreshError, REFRESH_CAPABLE_PLATFORMS
 from backend.api.deps import get_current_user
 from datetime import datetime, timezone
 
