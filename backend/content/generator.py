@@ -97,6 +97,7 @@ HARD STYLE RULES:
 - Concrete data: use real numbers, comparison tables in Markdown where useful, bold **key terms**.
 - Mention the year {CURRENT_YEAR} naturally at least once (platform rules/limits change yearly).
 - Never write a generic intro paragraph before answering the core question — the core answer must be fully delivered within the first 100 words (quick answer + opening line combined).
+- Reminder: every single field below (including TITLE and H1) must be written in {language}, never Dutch, even though the keyword you were given is Dutch.
 
 OUTPUT FORMAT — return EXACTLY this structure, nothing else, no markdown code fences:
 
