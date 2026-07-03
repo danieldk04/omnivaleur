@@ -61,18 +61,11 @@ async def run_pipeline(keyword: str, region: str, pillar: str, slug: str) -> dic
     if not generated:
         return {"success": False, "error": "content generation failed"}
 
-    logger.info(f"Featured image genereren voor '{keyword}'")
-    image_b64 = generate_featured_image_base64(keyword)
+    # Geen AI-gegenereerde featured images meer (zelfde aanpak als Revaleur):
+    # Daniel ontwerpt de afbeeldingen zelf en levert ze handmatig aan, wat
+    # constantere kwaliteit geeft dan AI-generatie. Bij een update wordt een
+    # eventueel al ingesteld image niet overschreven — zie preserve-logica onder.
     featured_image_url = None
-    if image_b64:
-        import base64
-        import uuid
-
-        filename = f"content/{region}-{pillar}-{slug}-{uuid.uuid4().hex[:8]}.jpg"
-        try:
-            featured_image_url = await upload_image(base64.b64decode(image_b64), filename)
-        except Exception as e:
-            logger.warning(f"Image-upload mislukt: {e}")
 
     candidates = [
         {
