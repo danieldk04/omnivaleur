@@ -45,6 +45,29 @@ def _hreflang_variants(pillar: str, slug: str) -> list[dict]:
     return [{"region": r["region"], "url": f"{SITE_URL}/{r['region']}/{folder}/{slug}"} for r in rows]
 
 
+def _language_switch(page: dict) -> dict | None:
+    """
+    Returns the URL of the sibling-language page if one exists, so the
+    template can render an EN/NL toggle. Works in both directions: an
+    English row finds its Dutch companion via translation_of pointing at it;
+    a Dutch row finds its English source directly via its own translation_of.
+    """
+    db = get_db()
+    folder = "crosslisten" if page["pillar"] == "A" else "reseller-tools"
+
+    if page.get("translation_of"):
+        source_intent = page["translation_of"]
+        source_region, source_pillar, source_slug = source_intent.split(":")
+        return {"language": "en", "url": f"/{source_region}/{folder}/{source_slug}"}
+
+    own_intent = f"{page['region']}:{page['pillar']}:{page['slug']}"
+    sibling = db.table("content_pages").select("region,pillar,slug,language").eq("translation_of", own_intent).eq("status", "published").execute().data
+    if sibling:
+        s = sibling[0]
+        return {"language": "nl", "url": f"/{s['region']}/{folder}/{s['slug']}"}
+    return None
+
+
 def _render_page(request: Request, region: str, pillar: str, slug: str) -> HTMLResponse:
     if region not in REGIONS:
         raise HTTPException(status_code=404, detail="Unknown region")
