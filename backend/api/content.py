@@ -143,11 +143,12 @@ async def generate_content_page(body: dict, x_admin_secret: str | None = Header(
 
 
 @router.post("/api/content/set-image")
-async def set_content_image(body: dict):
+async def set_content_image(body: dict, x_admin_secret: str | None = Header(default=None)):
     """
     Attaches a manually-designed featured image to an existing page — the
     pipeline no longer generates images itself (see pipeline.py docstring).
     """
+    _require_admin(x_admin_secret)
     region = body.get("region")
     pillar = body.get("pillar")
     slug = body.get("slug")
