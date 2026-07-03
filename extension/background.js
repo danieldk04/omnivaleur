@@ -489,12 +489,16 @@ async function bgScanVinted(job, serverUrl) {
         const price = priceObj && priceObj.amount != null ? Number(priceObj.amount)
           : (typeof it.price === "number" ? it.price : null);
         const photo = it.photo?.url || it.photos?.[0]?.url || null;
+        // Vinted returns the original upload time as a unix-seconds timestamp
+        // (field name has varied across API versions) — best-effort pick.
+        const listedTs = it.created_at_ts || it.photo?.high_resolution?.timestamp || it.photos?.[0]?.high_resolution?.timestamp || null;
         return {
           platform_listing_id: String(it.id),
           title: it.title || "",
           price,
           photo_url: photo,
           platform_listing_url: it.url || `${location.origin}/items/${it.id}`,
+          platform_listed_at: listedTs ? new Date(listedTs * 1000).toISOString() : null,
         };
       });
       return { items };
