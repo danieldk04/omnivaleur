@@ -63,7 +63,7 @@
 
 <main>
   <nav class="breadcrumbs" aria-label="Breadcrumb">
-    <a href="/">Home</a><span>/</span>
+    <a href="/">{{ 'Home' if page.language == 'nl' else 'Home' }}</a><span>/</span>
     <a href="/blog">Blog</a><span>/</span>
     {{ page.h1[:60] }}{% if page.h1|length > 60 %}…{% endif %}
   </nav>
