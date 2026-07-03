@@ -2409,13 +2409,19 @@ async function delistItem(itemId, title) {
 
 // ── Import existing listings (scan platform → review → link/create) ──────
 const IMPORT_SCANNABLE = { vinted: true, marktplaats: false, '2dehands': false, ebay: false, etsy: false, shopify: false };
+const scanningPlatforms = {}; // platform -> true while a scan is queued/running in the background
 
 function renderImportScanButtons() {
   const html = Object.keys(IMPORT_SCANNABLE).map(p => {
     const available = IMPORT_SCANNABLE[p];
-    const action = available
-      ? `<button class="btn btn-sm btn-primary" onclick="scanPlatform('${p}')">Scan</button>`
-      : `<span class="badge delisted">Coming soon</span>`;
+    let action;
+    if (scanningPlatforms[p]) {
+      action = `<button class="btn btn-sm btn-outline" disabled style="display:flex;align-items:center;gap:6px"><span class="spinner" style="width:12px;height:12px;border-width:2px"></span>Scanning…</button>`;
+    } else if (available) {
+      action = `<button class="btn btn-sm btn-primary" onclick="scanPlatform('${p}')">Scan</button>`;
+    } else {
+      action = `<span class="badge delisted">Coming soon</span>`;
+    }
     return `<div class="card" style="padding:14px 16px;display:flex;align-items:center;justify-content:space-between">
       <div style="display:flex;align-items:center;gap:10px">
         <span style="font-size:18px">${platIcon(p, 20)}</span>
@@ -2433,9 +2439,14 @@ async function scanPlatform(platform) {
     const r = await apiFetch(`${API}/api/imports/scan/${platform}`, { method: 'POST' });
     const data = await r.json();
     if (!r.ok) throw new Error(data.detail || 'Scan failed');
+    scanningPlatforms[platform] = true;
+    renderImportScanButtons();
     showToast(`Scan queued for ${PLATFORM_LABELS[platform] || platform} — results appear below within a minute.`);
-    setTimeout(loadImportCandidates, 15000);
-    setTimeout(loadImportCandidates, 45000);
+    setTimeout(() => loadImportCandidates(platform), 15000);
+    setTimeout(() => loadImportCandidates(platform), 45000);
+    setTimeout(() => { // stop showing "Scanning…" even if nothing was found, so it never gets stuck
+      if (scanningPlatforms[platform]) { scanningPlatforms[platform] = false; renderImportScanButtons(); }
+    }, 60000);
   } catch (e) {
     alert('Scan error: ' + e.message);
   } finally {
@@ -2443,13 +2454,18 @@ async function scanPlatform(platform) {
   }
 }
 
-async function loadImportCandidates() {
+async function loadImportCandidates(finishedScanPlatform) {
   try {
     const r = await apiFetch(`${API}/api/imports/?status=pending`);
     const candidates = await r.json();
     renderImportReview(candidates || []);
   } catch (e) {
     console.error('Failed to load import candidates', e);
+  } finally {
+    if (finishedScanPlatform && scanningPlatforms[finishedScanPlatform]) {
+      scanningPlatforms[finishedScanPlatform] = false;
+      renderImportScanButtons();
+    }
   }
 }
 
