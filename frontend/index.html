@@ -1,0 +1,846 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CrossList EU — One click, all European marketplaces</title>
+<meta name="description" content="CrossList EU publishes your items to Marktplaats, 2dehands, Vinted, eBay and Shopify with one click. Automatic relisting every 27 days, AI-written descriptions and a margin calculator. 7-day free trial.">
+<link rel="canonical" href="https://crosslisteu.com/">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="CrossList EU">
+<meta property="og:title" content="CrossList EU — One click, all European marketplaces">
+<meta property="og:description" content="List once, publish everywhere. Sync your listings across Marktplaats, 2dehands, Vinted, eBay and Shopify — with automatic relisting and AI descriptions.">
+<meta property="og:url" content="https://crosslisteu.com/">
+<meta property="og:image" content="https://crosslisteu.com/Logo%20Crosslist%20EU.png">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="CrossList EU — One click, all European marketplaces">
+<meta name="twitter:description" content="List once, publish everywhere across Marktplaats, 2dehands, Vinted, eBay and Shopify.">
+<meta name="twitter:image" content="https://crosslisteu.com/Logo%20Crosslist%20EU.png">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "Organization",
+  "name": "CrossList EU",
+  "url": "https://crosslisteu.com/",
+  "logo": "https://crosslisteu.com/Logo%20Crosslist%20EU.png"
+}
+</script>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "SoftwareApplication",
+  "name": "CrossList EU",
+  "applicationCategory": "BusinessApplication",
+  "operatingSystem": "Web",
+  "description": "Cross-listing tool that publishes items to Marktplaats, 2dehands, Vinted, eBay and Shopify from one dashboard, with automatic relisting and AI-generated descriptions.",
+  "offers": {
+    "@type": "Offer",
+    "price": "19.99",
+    "priceCurrency": "EUR",
+    "description": "7-day free trial, no credit card required, then €19.99/month"
+  }
+}
+</script>
+<link rel="icon" type="image/png" href="Logo Crosslist EU.png">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --blue: #2563eb;
+  --mint: #34d399;
+  --blue-dark: #1d4ed8;
+  --mint-dark: #10b981;
+  --bg: #f0f9ff;
+  --surface: #fff;
+  --border: #e2e8f0;
+  --text: #0f172a;
+  --muted: #64748b;
+  --radius: 10px;
+}
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: var(--surface); color: var(--text); }
+a { color: inherit; text-decoration: none; }
+
+.grad { background: linear-gradient(135deg, var(--blue) 0%, var(--mint) 100%); }
+.grad-text { background: linear-gradient(135deg, var(--blue), var(--mint)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+
+/* NAV */
+nav { position: sticky; top: 0; z-index: 100; background: rgba(255,255,255,.92); backdrop-filter: blur(12px); border-bottom: 1px solid var(--border); padding: 0 40px; height: 64px; display: flex; align-items: center; justify-content: space-between; }
+.nav-logo { display: flex; align-items: center; gap: 10px; font-size: 17px; font-weight: 800; letter-spacing: -.4px; text-decoration: none; }
+.nav-logo img { height: 36px; width: auto; }
+.nav-links { display: flex; gap: 28px; align-items: center; }
+.nav-links a { font-size: 14px; font-weight: 500; color: var(--muted); transition: color .15s; }
+.nav-links a:hover, .nav-links a.active { color: var(--text); }
+.nav-actions { display: flex; gap: 10px; align-items: center; }
+.btn { display: inline-flex; align-items: center; gap: 6px; padding: 9px 20px; border-radius: 100px; font-size: 14px; font-weight: 600; cursor: pointer; border: none; transition: all .2s; white-space: nowrap; }
+.btn-outline { background: transparent; border: 1.5px solid var(--border); color: var(--text); }
+.btn-outline:hover { border-color: var(--blue); color: var(--blue); }
+.btn-primary { background: linear-gradient(135deg, var(--blue), var(--mint)); color: #fff; box-shadow: 0 2px 12px rgba(37,99,235,.25); }
+.btn-primary:hover { box-shadow: 0 4px 20px rgba(37,99,235,.4); transform: translateY(-1px); }
+
+/* HERO */
+.hero { padding: 90px 40px 70px; text-align: center; background: linear-gradient(180deg, #f0f9ff 0%, #fff 100%); position: relative; overflow: hidden; }
+.hero::before { content: ''; position: absolute; top: -60px; left: 50%; transform: translateX(-50%); width: 700px; height: 700px; background: radial-gradient(circle, rgba(37,99,235,.08) 0%, transparent 70%); pointer-events: none; animation: heroGlow 6s ease-in-out infinite; }
+@keyframes heroGlow { 0%, 100% { opacity: 1; transform: translateX(-50%) scale(1); } 50% { opacity: .7; transform: translateX(-50%) scale(1.08); } }
+.hero-badge { animation: badgeIn .6s ease both; }
+.hero h1 { animation: fadeUp .7s ease .05s both; }
+.hero p { animation: fadeUp .7s ease .15s both; }
+.hero-cta { animation: fadeUp .7s ease .25s both; }
+.platform-logos { animation: fadeUp .7s ease .35s both; }
+@keyframes fadeUp { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes badgeIn { from { opacity: 0; transform: translateY(-8px) scale(.9); } to { opacity: 1; transform: translateY(0) scale(1); } }
+.hero-badge { display: inline-flex; align-items: center; gap: 6px; background: linear-gradient(135deg, rgba(37,99,235,.1), rgba(52,211,153,.1)); border: 1px solid rgba(37,99,235,.2); border-radius: 100px; padding: 6px 14px; font-size: 13px; font-weight: 600; color: var(--blue); margin-bottom: 28px; }
+.hero h1 { font-size: clamp(36px, 6vw, 62px); font-weight: 900; line-height: 1.08; letter-spacing: -1.5px; margin-bottom: 22px; max-width: 820px; margin-left: auto; margin-right: auto; }
+.hero p { font-size: 18px; color: var(--muted); line-height: 1.7; max-width: 560px; margin: 0 auto 40px; }
+.hero-cta { display: flex; gap: 14px; justify-content: center; flex-wrap: wrap; }
+.hero-cta .btn { font-size: 15px; padding: 12px 28px; }
+
+/* PRODUCT SHOWCASE */
+.showcase { padding: 10px 40px 90px; position: relative; }
+.showcase-track { display: flex; align-items: flex-end; justify-content: center; gap: 40px; }
+.showcase-desktop { flex: 1; max-width: 900px; position: relative; }
+.browser-frame { background: #1e293b; border-radius: 14px; padding: 10px 10px 0; box-shadow: 0 30px 70px -15px rgba(15,23,42,.35), 0 10px 30px -10px rgba(15,23,42,.2); }
+.browser-bar { display: flex; align-items: center; gap: 8px; padding: 6px 8px 12px; }
+.browser-dot { width: 10px; height: 10px; border-radius: 50%; }
+.browser-dot.red { background: #f87171; }
+.browser-dot.yellow { background: #fbbf24; }
+.browser-dot.green { background: #4ade80; }
+.browser-url { flex: 1; margin-left: 10px; background: rgba(255,255,255,.08); border-radius: 6px; padding: 5px 12px; font-size: 12px; color: rgba(255,255,255,.5); text-align: center; }
+.browser-body { background: #f0f9ff; border-radius: 8px 8px 0 0; overflow: hidden; }
+.browser-body iframe { display: block; width: 1440px; height: 900px; border: none; transform: scale(0.625); transform-origin: top left; }
+.browser-viewport { width: 900px; height: 562px; overflow: hidden; }
+.showcase-mobile { position: relative; margin-bottom: -20px; }
+.phone-frame { width: 230px; background: #111827; border-radius: 32px; padding: 10px; box-shadow: 0 25px 60px -12px rgba(15,23,42,.4); }
+.phone-notch { width: 60px; height: 16px; background: #111827; border-radius: 0 0 12px 12px; margin: 0 auto; position: relative; z-index: 2; }
+.phone-screen { border-radius: 22px; overflow: hidden; background: #f0f9ff; margin-top: -16px; }
+.phone-screen-viewport { width: 230px; height: 498px; overflow: hidden; }
+.phone-screen iframe { display: block; width: 375px; height: 812px; border: none; transform: scale(0.6133); transform-origin: top left; }
+.showcase-badge { position: absolute; top: -18px; right: 6%; background: #fff; border: 1px solid var(--border); border-radius: 100px; padding: 6px 14px; font-size: 12px; font-weight: 700; color: var(--text); box-shadow: 0 6px 20px rgba(15,23,42,.1); display: flex; align-items: center; gap: 6px; z-index: 3; }
+.showcase-desktop, .showcase-mobile { opacity: 0; transform: translateY(40px); animation: showcaseIn .9s cubic-bezier(.2,.7,.2,1) .3s forwards; }
+.showcase-mobile { animation-delay: .55s; }
+@keyframes showcaseIn { to { opacity: 1; transform: translateY(0); } }
+.browser-frame { animation: floatY 6s ease-in-out infinite; }
+.phone-frame { animation: floatY 5.5s ease-in-out .4s infinite; }
+@keyframes floatY { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
+.showcase-badge { animation: badgeFloat 3.4s ease-in-out infinite; }
+@keyframes badgeFloat { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-4px); } }
+@media (max-width: 900px) {
+  .showcase { display: flex; justify-content: center; align-items: flex-start; padding: 10px 16px 64px; overflow: hidden; }
+  .showcase-track { width: max-content; flex: none; transform-origin: top center; }
+  .showcase-desktop { flex: none; width: 900px; }
+  .showcase-mobile { flex: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .browser-frame, .phone-frame, .showcase-badge, .hero::before { animation: none !important; }
+}
+
+.protection-tile { transition: box-shadow .25s, transform .25s; }
+.protection-tile:hover { box-shadow: 0 8px 28px rgba(15,23,42,.08); transform: translateY(-2px); }
+.pricing-float { transition: box-shadow .3s, transform .3s; }
+.pricing-float:hover { transform: translateY(-4px); box-shadow: 0 16px 50px rgba(37,99,235,.18); }
+
+/* SCROLL REVEAL */
+.reveal { opacity: 0; transform: translateY(24px); transition: opacity .7s ease, transform .7s ease; }
+.reveal.in-view { opacity: 1; transform: translateY(0); }
+.reveal-stagger.in-view > * { animation: fadeUp .6s ease both; }
+.reveal-stagger.in-view > *:nth-child(1) { animation-delay: .05s; }
+.reveal-stagger.in-view > *:nth-child(2) { animation-delay: .12s; }
+.reveal-stagger.in-view > *:nth-child(3) { animation-delay: .19s; }
+.reveal-stagger.in-view > *:nth-child(4) { animation-delay: .26s; }
+.reveal-stagger.in-view > *:nth-child(5) { animation-delay: .33s; }
+.reveal-stagger.in-view > *:nth-child(6) { animation-delay: .4s; }
+
+.platform-logos { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; margin-top: 52px; }
+.platform-chip { background: var(--surface); border: 1px solid var(--border); border-radius: 100px; padding: 8px 18px; font-size: 13px; font-weight: 500; color: var(--muted); display: flex; align-items: center; gap: 7px; box-shadow: 0 1px 4px rgba(0,0,0,.05); }
+.platform-chip.soon { opacity: .55; border-style: dashed; }
+.soon-label { font-size: 10px; font-weight: 700; color: #d97706; background: rgba(245,158,11,.1); padding: 1px 6px; border-radius: 100px; letter-spacing: .03em; }
+
+/* STATS */
+.stats-bar { background: linear-gradient(135deg, var(--blue), var(--mint)); padding: 48px 40px; display: flex; justify-content: center; gap: 0; }
+.stat-item { text-align: center; padding: 0 48px; border-right: 1px solid rgba(255,255,255,.2); transition: transform .25s; }
+.stat-item:hover { transform: translateY(-3px); }
+.stat-item:last-child { border-right: none; }
+.stat-num { font-size: 40px; font-weight: 900; color: #fff; line-height: 1; }
+.stat-label { font-size: 13px; color: rgba(255,255,255,.75); margin-top: 6px; }
+
+/* PROBLEMS */
+.section { max-width: 1100px; margin: 0 auto; padding: 80px 40px; }
+.section-label { font-size: 13px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--blue); margin-bottom: 12px; }
+.section-title { font-size: clamp(26px, 4vw, 40px); font-weight: 800; letter-spacing: -.5px; line-height: 1.2; margin-bottom: 16px; }
+.section-sub { font-size: 17px; color: var(--muted); line-height: 1.6; max-width: 540px; }
+
+.problems { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 20px; margin-top: 48px; }
+.problem-card { background: #fef9f9; border: 1px solid #fecaca; border-radius: var(--radius); padding: 24px; }
+.problem-icon { font-size: 22px; margin-bottom: 12px; }
+.problem-card h3 { font-size: 15px; font-weight: 700; margin-bottom: 6px; color: #991b1b; }
+.problem-card p { font-size: 13px; color: #7f1d1d; line-height: 1.5; opacity: .85; }
+
+/* SOLUTION ARROW */
+.solution-arrow { text-align: center; padding: 32px; font-size: 36px; color: var(--mint); }
+
+/* FEATURES */
+.features { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 24px; margin-top: 48px; }
+.feature-card { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 28px; transition: all .2s; position: relative; overflow: hidden; }
+.feature-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px; background: linear-gradient(90deg, var(--blue), var(--mint)); }
+.feature-card:hover { box-shadow: 0 8px 32px rgba(37,99,235,.1); transform: translateY(-2px); }
+.feature-icon { width: 44px; height: 44px; border-radius: 10px; background: linear-gradient(135deg, rgba(37,99,235,.1), rgba(52,211,153,.1)); display: flex; align-items: center; justify-content: center; font-size: 20px; margin-bottom: 16px; }
+.feature-card h3 { font-size: 16px; font-weight: 700; margin-bottom: 8px; }
+.feature-card p { font-size: 13px; color: var(--muted); line-height: 1.6; }
+
+/* HOW IT WORKS */
+.how { background: var(--bg); padding: 80px 40px; }
+.how-grid { max-width: 1080px; margin: 48px auto 0; display: grid; grid-template-columns: 1fr 1fr; gap: 60px; align-items: start; }
+.steps { display: flex; flex-direction: column; gap: 0; }
+.step { display: flex; gap: 24px; align-items: flex-start; padding: 28px 22px; border-radius: 14px; cursor: default; transition: transform .25s, background .25s; opacity: .45; }
+.step:hover { transform: translateX(4px); }
+.step.active { opacity: 1; background: #fff; box-shadow: var(--shadow-md); }
+.step-num { width: 40px; height: 40px; border-radius: 50%; background: #cbd5e1; color: #fff; font-weight: 800; font-size: 16px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; transition: all .3s; }
+.step.active .step-num { background: linear-gradient(135deg, var(--blue), var(--mint)); transform: scale(1.1); box-shadow: 0 4px 14px rgba(37,99,235,.3); }
+.how-visual-wrap { position: sticky; top: 90px; }
+.how-visual { background: #fff; border: 1px solid var(--border); border-radius: 16px; box-shadow: var(--shadow-md); padding: 26px; height: 300px; position: relative; overflow: hidden; }
+.how-panel { position: absolute; inset: 26px; opacity: 0; transform: translateY(10px) scale(.98); transition: opacity .4s ease, transform .4s ease; pointer-events: none; }
+.how-panel.active { opacity: 1; transform: translateY(0) scale(1); pointer-events: auto; }
+.how-panel-title { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin-bottom: 14px; }
+.how-photo { border: 2px dashed var(--border); border-radius: 10px; height: 64px; display: flex; align-items: center; justify-content: center; font-size: 26px; background: #fafbfc; margin-bottom: 12px; }
+.how-line { height: 11px; border-radius: 4px; background: #e2e8f0; margin-bottom: 9px; }
+.how-line.short { width: 55%; }
+.how-chip-row { display: flex; flex-direction: column; gap: 10px; }
+.how-chip { display: flex; align-items: center; gap: 10px; padding: 11px 14px; border: 1.5px solid var(--border); border-radius: 10px; font-size: 13px; font-weight: 600; color: var(--muted); transition: all .3s; }
+.how-chip .box { width: 16px; height: 16px; border-radius: 5px; border: 1.5px solid var(--border); flex-shrink: 0; display: flex; align-items: center; justify-content: center; color: #fff; font-size: 10px; transition: all .25s; }
+.how-chip.on { border-color: #6ee7b7; background: #f0fdf4; color: #065f46; }
+.how-chip.on .box { background: #059669; border-color: #059669; }
+.how-publish-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-top: 6px; }
+.how-publish-dot { display: flex; flex-direction: column; align-items: center; gap: 6px; }
+.how-publish-icon { width: 34px; height: 34px; border-radius: 9px; background: #f1f5f9; border: 1.5px solid #e2e8f0; display: flex; align-items: center; justify-content: center; font-size: 15px; color: transparent; transition: all .35s; }
+.how-publish-icon.done { background: #d1fae5; border-color: #6ee7b7; color: #059669; }
+.how-publish-label { font-size: 9px; font-weight: 700; color: #94a3b8; text-transform: uppercase; }
+.how-publish-check { text-align: center; margin-top: 18px; font-size: 13px; font-weight: 700; color: #16a34a; opacity: 0; transition: opacity .4s; }
+.how-publish-check.show { opacity: 1; }
+@media (max-width: 900px) {
+  .how-grid { grid-template-columns: 1fr; gap: 24px; }
+  .how-visual-wrap { position: static; order: -1; }
+}
+.step-text h3 { font-size: 16px; font-weight: 700; margin-bottom: 4px; }
+.step-text p { font-size: 14px; color: var(--muted); line-height: 1.5; }
+
+/* CTA BLOCK */
+.cta-block { background: linear-gradient(135deg, var(--blue) 0%, var(--mint) 100%); padding: 80px 40px; text-align: center; }
+.cta-block h2 { font-size: clamp(26px, 4vw, 40px); font-weight: 900; color: #fff; margin-bottom: 14px; letter-spacing: -.5px; }
+.cta-block p { font-size: 17px; color: rgba(255,255,255,.8); margin-bottom: 36px; }
+.btn-white { background: #fff; color: var(--blue); font-weight: 700; }
+.btn-white:hover { box-shadow: 0 8px 24px rgba(0,0,0,.15); transform: translateY(-1px); }
+
+/* FOOTER */
+.site-footer { background: #0f172a; color: rgba(255,255,255,.55); font-size: 13px; }
+.footer-main { max-width: 1200px; margin: 0 auto; padding: 64px 40px 48px; display: grid; grid-template-columns: 2fr 1fr 1fr 1fr; gap: 48px; }
+.footer-brand p { font-size: 13px; line-height: 1.7; margin: 16px 0; color: rgba(255,255,255,.45); max-width: 260px; }
+.footer-brand a { color: rgba(255,255,255,.55); }
+.footer-brand a:hover { color: #fff; }
+.footer-col h4 { font-size: 12px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: rgba(255,255,255,.35); margin-bottom: 16px; }
+.footer-col ul { list-style: none; display: flex; flex-direction: column; gap: 10px; }
+.footer-col ul li a { color: rgba(255,255,255,.6); transition: color .15s; font-size: 14px; }
+.footer-col ul li a:hover { color: #fff; }
+.footer-bottom { border-top: 1px solid rgba(255,255,255,.08); padding: 20px 40px; display: flex; justify-content: space-between; align-items: center; max-width: 1200px; margin: 0 auto; flex-wrap: wrap; gap: 8px; }
+.footer-bottom-links { display: flex; gap: 20px; }
+.footer-bottom-links a { color: rgba(255,255,255,.4); font-size: 12px; transition: color .15s; }
+.footer-bottom-links a:hover { color: #fff; }
+/* ── Hamburger ────────────────────────────────────────────────── */
+.hamburger { display: none; flex-direction: column; justify-content: center; gap: 5px; width: 40px; height: 40px; padding: 8px; background: transparent; border: none; cursor: pointer; border-radius: 8px; flex-shrink: 0; }
+.hamburger:hover { background: rgba(0,0,0,.04); }
+.hamburger span { display: block; height: 2px; width: 100%; background: var(--text); border-radius: 2px; transition: all .22s; transform-origin: center; }
+.hamburger.open span:nth-child(1) { transform: translateY(7px) rotate(45deg); }
+.hamburger.open span:nth-child(2) { opacity: 0; transform: scaleX(0); }
+.hamburger.open span:nth-child(3) { transform: translateY(-7px) rotate(-45deg); }
+
+/* ── Mobile drawer ────────────────────────────────────────────── */
+.mobile-menu { display: none; position: fixed; top: 64px; left: 0; right: 0; bottom: 0; background: #fff; z-index: 99; flex-direction: column; padding: 24px 24px 32px; gap: 0; overflow-y: auto; border-top: 1px solid var(--border); }
+.mobile-menu.open { display: flex; }
+.mobile-menu a { font-size: 17px; font-weight: 600; color: var(--text); padding: 16px 0; border-bottom: 1px solid var(--border); text-decoration: none; transition: color .15s; }
+.mobile-menu a:last-of-type { border-bottom: none; }
+.mobile-menu a:hover { color: var(--blue); }
+.mobile-menu .mobile-actions { display: flex; flex-direction: column; gap: 10px; margin-top: 28px; }
+.mobile-menu .mobile-actions .btn { width: 100%; justify-content: center; font-size: 15px; padding: 13px 20px; border-bottom: none; }
+
+@media (max-width: 768px) {
+  .footer-main { grid-template-columns: 1fr 1fr; gap: 32px; padding: 48px 20px 32px; }
+  .footer-brand { grid-column: 1 / -1; }
+  .footer-bottom { padding: 16px 20px; flex-direction: column; align-items: flex-start; }
+  .nav-links, .nav-actions { display: none; }
+  .hamburger { display: flex; }
+  nav { padding: 0 20px; }
+}
+
+@media (max-width: 600px) {
+  .hero { padding: 60px 20px 50px; }
+  .stats-bar { flex-direction: column; gap: 32px; padding: 48px 20px; }
+  .stat-item { border-right: none; border-bottom: 1px solid rgba(255,255,255,.2); padding-bottom: 28px; }
+  .stat-item:last-child { border-bottom: none; padding-bottom: 0; }
+  .section { padding: 60px 20px; }
+  .how { padding: 60px 20px; }
+  .cta-block { padding: 60px 20px; }
+  .footer-main { grid-template-columns: 1fr; }
+}
+</style>
+</head>
+<body>
+
+<nav>
+  <a href="/" class="nav-logo">
+    <img src="Logo Crosslist EU.png" alt="CrossList EU">
+    <span class="grad-text">CrossList EU</span>
+  </a>
+  <div class="nav-links">
+    <a href="/marketplaces">Marketplaces</a>
+    <a href="#how-it-works">How it works</a>
+    <a href="#pricing">Pricing</a>
+  </div>
+  <div class="nav-actions">
+    <a href="/login" class="btn btn-outline">Log in</a>
+    <a href="/register" class="btn btn-primary">7 days free →</a>
+  </div>
+  <button class="hamburger" id="hamburger" onclick="toggleMenu()" aria-label="Menu">
+    <span></span><span></span><span></span>
+  </button>
+</nav>
+
+<!-- Mobile menu drawer -->
+<div class="mobile-menu" id="mobile-menu">
+  <a href="/marketplaces" onclick="closeMenu()">Marketplaces</a>
+  <a href="#how-it-works" onclick="closeMenu()">How it works</a>
+  <a href="#pricing" onclick="closeMenu()">Pricing</a>
+  <div class="mobile-actions">
+    <a href="/login" class="btn btn-outline" onclick="closeMenu()">Log in</a>
+    <a href="/register" class="btn btn-primary" onclick="closeMenu()">7 days free →</a>
+  </div>
+</div>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="hero-badge">⚡ Save hours every week</div>
+  <h1>One item. <span class="grad-text">All European marketplaces.</span></h1>
+  <p>Stop copy-pasting. CrossList EU automatically lists your second-hand items on Marktplaats, 2dehands, Vinted and more — in seconds.</p>
+  <div class="hero-cta">
+    <a href="/register" class="btn btn-primary">Start 7-day free trial →</a>
+    <a href="/login" class="btn btn-outline">Log in</a>
+  </div>
+  <div class="platform-logos">
+    <div class="platform-chip">🇳🇱 Marktplaats</div>
+    <div class="platform-chip">🇧🇪 2dehands</div>
+    <div class="platform-chip">👗 Vinted</div>
+    <div class="platform-chip">🛒 eBay</div>
+    <div class="platform-chip">🏪 Shopify</div>
+    <div class="platform-chip soon">🎨 Etsy <span class="soon-label">coming soon</span></div>
+    <div class="platform-chip soon">🇩🇪 Kleinanzeigen <span class="soon-label">coming soon</span></div>
+    <div class="platform-chip soon">🇪🇸 Wallapop <span class="soon-label">coming soon</span></div>
+    <div class="platform-chip soon">📘 Facebook Marketplace <span class="soon-label">coming soon</span></div>
+  </div>
+</section>
+
+<!-- PRODUCT SHOWCASE -->
+<div class="showcase">
+  <div class="showcase-track">
+    <div class="showcase-desktop">
+      <div class="showcase-badge">🖥️ Desktop dashboard</div>
+      <div class="browser-frame">
+        <div class="browser-bar">
+          <span class="browser-dot red"></span><span class="browser-dot yellow"></span><span class="browser-dot green"></span>
+          <div class="browser-url">app.crosslisteu.com/dashboard</div>
+        </div>
+        <div class="browser-body">
+          <div class="browser-viewport">
+            <iframe src="demo-dashboard.html" title="CrossList EU dashboard preview" loading="lazy"></iframe>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="showcase-mobile">
+      <div class="showcase-badge" style="right:auto;left:10%">📱 Mobile</div>
+      <div class="phone-frame">
+        <div class="phone-notch"></div>
+        <div class="phone-screen">
+          <div class="phone-screen-viewport">
+            <iframe src="demo-dashboard.html" title="CrossList EU mobile dashboard preview" loading="lazy"></iframe>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- STATS -->
+<div class="stats-bar reveal-stagger reveal">
+  <div class="stat-item">
+    <div class="stat-num" data-count="6" data-suffix="+">0</div>
+    <div class="stat-label">Platforms at once</div>
+  </div>
+  <div class="stat-item">
+    <div class="stat-num" data-count="3" data-suffix="×">0</div>
+    <div class="stat-label">More reach per item</div>
+  </div>
+  <div class="stat-item">
+    <div class="stat-num" data-count="90" data-suffix="%">0</div>
+    <div class="stat-label">Less manual work</div>
+  </div>
+  <div class="stat-item">
+    <div class="stat-num">AI</div>
+    <div class="stat-label">Auto-generated descriptions</div>
+  </div>
+</div>
+
+<!-- PROBLEMS -->
+<div class="section">
+  <div class="section-label">The problem</div>
+  <div class="section-title">Cross-listing is tedious and frustrating</div>
+  <div class="section-sub">Every reseller knows it: entering the same item over and over on every platform.</div>
+  <div class="problems reveal-stagger reveal">
+    <div class="problem-card">
+      <div class="problem-icon">⏱️</div>
+      <h3>Hours of manual work</h3>
+      <p>Save photos, re-upload, retype the description — for every platform separately. Easily 15 minutes per item.</p>
+    </div>
+    <div class="problem-card">
+      <div class="problem-icon">😤</div>
+      <h3>Inconsistent listings</h3>
+      <p>Typos, missing photos, wrong prices — when you do everything manually, errors creep in.</p>
+    </div>
+    <div class="problem-card">
+      <div class="problem-icon">📉</div>
+      <h3>Missed reach</h3>
+      <p>Selling only on Marktplaats? You're missing Belgian buyers on 2dehands and the international market on Vinted and eBay.</p>
+    </div>
+    <div class="problem-card">
+      <div class="problem-icon">🔄</div>
+      <h3>Double sales</h3>
+      <p>Item sold on Marktplaats but still live on 2dehands? That leads to awkward situations with buyers.</p>
+    </div>
+    <div class="problem-card">
+      <div class="problem-icon">💸</div>
+      <h3>Unclear margins</h3>
+      <p>Every marketplace charges different fees. Without an overview you never know what you actually earn.</p>
+    </div>
+    <div class="problem-card">
+      <div class="problem-icon">📱</div>
+      <h3>No central overview</h3>
+      <p>Active listings spread across 5 apps. No idea what's where, or what has been sold for ages.</p>
+    </div>
+  </div>
+</div>
+
+<div class="solution-arrow">↓</div>
+
+<!-- FEATURES -->
+<div class="section" style="padding-top:0">
+  <div class="section-label">The solution</div>
+  <div class="section-title">CrossList EU handles it for you</div>
+  <div class="section-sub">One dashboard for all platforms. No more manual copy-pasting.</div>
+  <div class="features reveal-stagger reveal">
+    <div class="feature-card">
+      <div class="feature-icon">⚡</div>
+      <h3>One click, all platforms</h3>
+      <p>Upload your item once and choose which platforms to publish to. CrossList EU posts it everywhere simultaneously.</p>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">🤖</div>
+      <h3>AI descriptions</h3>
+      <p>Just upload a photo. Our AI recognises the item and automatically writes a professional title and description.</p>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">💶</div>
+      <h3>Margin calculator</h3>
+      <p>Enter your purchase price and desired profit. We instantly calculate the optimal selling price per platform including fees.</p>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">🔄</div>
+      <h3>Automatic sync</h3>
+      <p>Sold something on one platform? All other listings are automatically removed. No more double sales.</p>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">📊</div>
+      <h3>Central dashboard</h3>
+      <p>View all your active listings, status per platform and total reach in one clear dashboard.</p>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">🛡️</div>
+      <h3>Safe &amp; smart</h3>
+      <p>Built-in pacing between uploads so your accounts never get flagged. Works within the rules of every platform.</p>
+    </div>
+  </div>
+</div>
+
+<!-- BUILT-IN PROTECTIONS -->
+<div style="background:#f8fafc;padding:80px 40px">
+  <div style="max-width:1100px;margin:0 auto">
+    <div class="section-label">Built-in protections</div>
+    <div class="section-title">CrossList EU works smart in the background</div>
+    <div class="section-sub" style="margin-bottom:48px">Every platform has its own rules and restrictions. CrossList EU knows them all and resolves them automatically — so you never have to worry.</div>
+    <div class="reveal-stagger reveal" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:20px">
+
+      <div class="protection-tile" style="background:#fff;border:1px solid var(--border);border-radius:14px;padding:24px">
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px">
+          <div style="width:40px;height:40px;border-radius:10px;background:#dcfce7;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0">🔄</div>
+          <div>
+            <div style="font-weight:700;font-size:15px">Marktplaats auto-relist</div>
+            <div style="display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:600;padding:2px 8px;border-radius:999px;background:#dcfce7;color:#16a34a;margin-top:3px">✓ Active — every 6 hours</div>
+          </div>
+        </div>
+        <div style="font-size:13px;color:var(--muted);line-height:1.6;margin-bottom:10px">Free Marktplaats listings expire silently after 28 days. CrossList checks every 6 hours and automatically relists after 27 days so you stay visible.</div>
+        <div style="font-size:12px;color:var(--muted);border-top:1px solid var(--border);padding-top:10px"><strong>Without this:</strong> listing disappears after 28 days without warning.</div>
+      </div>
+
+      <div style="background:#fff;border:1px solid var(--border);border-radius:14px;padding:24px">
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px">
+          <div style="width:40px;height:40px;border-radius:10px;background:#dbeafe;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0">🛡️</div>
+          <div>
+            <div style="font-weight:700;font-size:15px">Vinted photo protection</div>
+            <div style="display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:600;padding:2px 8px;border-radius:999px;background:#dcfce7;color:#16a34a;margin-top:3px">✓ Active — every upload</div>
+          </div>
+        </div>
+        <div style="font-size:13px;color:var(--muted);line-height:1.6;margin-bottom:10px">Vinted detects identical photos from other platforms via pixel-hashing and may ban your account. CrossList slightly modifies each photo via canvas rendering — invisible to the eye, but a unique hash for Vinted.</div>
+        <div style="font-size:12px;color:var(--muted);border-top:1px solid var(--border);padding-top:10px"><strong>Without this:</strong> risk of account ban on Vinted.</div>
+      </div>
+
+      <div style="background:#fff;border:1px solid var(--border);border-radius:14px;padding:24px">
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px">
+          <div style="width:40px;height:40px;border-radius:10px;background:#dcfce7;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0">🧹</div>
+          <div>
+            <div style="font-weight:700;font-size:15px">2dehands formatting fix</div>
+            <div style="display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:600;padding:2px 8px;border-radius:999px;background:#dcfce7;color:#16a34a;margin-top:3px">✓ Active — every publish</div>
+          </div>
+        </div>
+        <div style="font-size:13px;color:var(--muted);line-height:1.6;margin-bottom:10px">2dehands only supports 7 HTML tags in descriptions. Other tags crash the editor. CrossList automatically strips all unsupported formatting before publishing.</div>
+        <div style="font-size:12px;color:var(--muted);border-top:1px solid var(--border);padding-top:10px"><strong>Without this:</strong> publish fails or description is empty.</div>
+      </div>
+
+      <div style="background:#fff;border:1px solid var(--border);border-radius:14px;padding:24px">
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px">
+          <div style="width:40px;height:40px;border-radius:10px;background:#f3e8ff;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0">🌐</div>
+          <div>
+            <div style="font-weight:700;font-size:15px">Auto-translation</div>
+            <div style="display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:600;padding:2px 8px;border-radius:999px;background:#dcfce7;color:#16a34a;margin-top:3px">✓ Active — Marktplaats &amp; 2dehands</div>
+          </div>
+        </div>
+        <div style="font-size:13px;color:var(--muted);line-height:1.6;margin-bottom:10px">Marktplaats and 2dehands are Dutch-language platforms. You enter your listings in English — CrossList automatically translates titles and descriptions to Dutch before publishing.</div>
+        <div style="font-size:12px;color:var(--muted);border-top:1px solid var(--border);padding-top:10px"><strong>Without this:</strong> English text visible on Dutch-language platforms.</div>
+      </div>
+
+      <div style="background:#fff;border:1px solid var(--border);border-radius:14px;padding:24px">
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px">
+          <div style="width:40px;height:40px;border-radius:10px;background:#dbeafe;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0">⚡</div>
+          <div>
+            <div style="font-weight:700;font-size:15px">Sale sync</div>
+            <div style="display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:600;padding:2px 8px;border-radius:999px;background:#dcfce7;color:#16a34a;margin-top:3px">✓ Active — all platforms</div>
+          </div>
+        </div>
+        <div style="font-size:13px;color:var(--muted);line-height:1.6;margin-bottom:10px">Once an item sells on one platform, all other active listings are automatically removed. No double sales, no manual cleanup.</div>
+        <div style="font-size:12px;color:var(--muted);border-top:1px solid var(--border);padding-top:10px"><strong>Without this:</strong> risk of double sales and negative reviews.</div>
+      </div>
+
+      <div style="background:#fff;border:1px solid var(--border);border-radius:14px;padding:24px">
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px">
+          <div style="width:40px;height:40px;border-radius:10px;background:#fef9c3;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0">📋</div>
+          <div>
+            <div style="font-weight:700;font-size:15px">Marktplaats editor fix</div>
+            <div style="display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:600;padding:2px 8px;border-radius:999px;background:#dcfce7;color:#16a34a;margin-top:3px">✓ Active — every publish</div>
+          </div>
+        </div>
+        <div style="font-size:13px;color:var(--muted);line-height:1.6;margin-bottom:10px">Marktplaats uses its own rich-text editor (Lexical) that does not respond to standard DOM input. CrossList fills the editor correctly via the internal EditorState API.</div>
+        <div style="font-size:12px;color:var(--muted);border-top:1px solid var(--border);padding-top:10px"><strong>Without this:</strong> description stays empty on publish.</div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- HOW IT WORKS -->
+<div class="how" id="how-it-works">
+  <div style="max-width:1100px;margin:0 auto;">
+    <div class="section-label" style="text-align:center">How it works</div>
+    <div class="section-title" style="text-align:center;max-width:500px;margin:0 auto 0">Live on all platforms in 3 steps</div>
+  </div>
+  <div class="how-grid">
+    <div class="steps">
+      <div class="step active" data-step="1">
+        <div class="step-num">1</div>
+        <div class="step-text">
+          <h3>Create an item</h3>
+          <p>Upload photos, fill in brand and size. The AI writes the description and suggests a price based on your purchase cost.</p>
+        </div>
+      </div>
+      <div class="step" data-step="2">
+        <div class="step-num">2</div>
+        <div class="step-text">
+          <h3>Choose your platforms</h3>
+          <p>Select which marketplaces to publish to. Marktplaats, 2dehands, Vinted, eBay — or all at once.</p>
+        </div>
+      </div>
+      <div class="step" data-step="3">
+        <div class="step-num">3</div>
+        <div class="step-text">
+          <h3>Publish with one click</h3>
+          <p>CrossList EU handles the rest. Your item is live on all chosen platforms within seconds, with photos and full description.</p>
+        </div>
+      </div>
+    </div>
+    <div class="how-visual-wrap">
+      <div class="how-visual">
+        <div class="how-panel active" data-panel="1">
+          <div class="how-panel-title">New item</div>
+          <div class="how-photo">🧥</div>
+          <div class="how-line"></div>
+          <div class="how-line short"></div>
+        </div>
+        <div class="how-panel" data-panel="2">
+          <div class="how-panel-title">Publish to</div>
+          <div class="how-chip-row">
+            <div class="how-chip"><span class="box"></span>Marktplaats</div>
+            <div class="how-chip"><span class="box"></span>2dehands</div>
+            <div class="how-chip"><span class="box"></span>Vinted</div>
+          </div>
+        </div>
+        <div class="how-panel" data-panel="3">
+          <div class="how-panel-title">Publishing</div>
+          <div class="how-publish-grid">
+            <div class="how-publish-dot"><div class="how-publish-icon">✓</div><span class="how-publish-label">MP</span></div>
+            <div class="how-publish-dot"><div class="how-publish-icon">✓</div><span class="how-publish-label">2DH</span></div>
+            <div class="how-publish-dot"><div class="how-publish-icon">✓</div><span class="how-publish-label">VIN</span></div>
+            <div class="how-publish-dot"><div class="how-publish-icon">✓</div><span class="how-publish-label">EBAY</span></div>
+          </div>
+          <div class="how-publish-check">✓ Live on 4 platforms</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- PRICING -->
+<div id="pricing" style="background:#f8faff;border-top:1px solid var(--border);border-bottom:1px solid var(--border);padding:80px 40px">
+  <div style="max-width:560px;margin:0 auto;text-align:center">
+    <div class="section-label" style="text-align:center">Pricing</div>
+    <div class="section-title" style="text-align:center;margin-bottom:8px">One plan. Everything included.</div>
+    <div style="font-size:16px;color:var(--muted);margin-bottom:48px">No hidden costs. Cancel anytime.</div>
+
+    <div class="reveal pricing-float" style="background:#fff;border:2px solid var(--blue);border-radius:20px;padding:40px;position:relative;box-shadow:0 8px 40px rgba(37,99,235,.1)">
+      <div style="position:absolute;top:-15px;left:50%;transform:translateX(-50%);background:linear-gradient(135deg,var(--blue),var(--mint));color:#fff;font-size:11px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;padding:5px 18px;border-radius:999px;white-space:nowrap">Most popular</div>
+
+      <div style="font-size:13px;font-weight:700;color:var(--blue);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">Pro</div>
+      <div style="font-size:56px;font-weight:900;line-height:1;letter-spacing:-2px;margin-bottom:4px">€19<span style="font-size:28px;font-weight:700">.99</span><span style="font-size:18px;font-weight:500;color:var(--muted)">/mo</span></div>
+      <div style="font-size:14px;color:var(--muted);margin-bottom:32px">7-day free trial · No credit card required</div>
+
+      <ul style="list-style:none;padding:0;margin:0 0 32px;text-align:left;display:flex;flex-direction:column;gap:12px">
+        <li style="display:flex;align-items:center;gap:12px;font-size:15px"><span style="color:#16a34a;font-weight:800;font-size:17px">✓</span> Unlimited crosslisting</li>
+        <li style="display:flex;align-items:center;gap:12px;font-size:15px"><span style="color:#16a34a;font-weight:800;font-size:17px">✓</span> Marktplaats, 2dehands, Vinted &amp; Shopify</li>
+        <li style="display:flex;align-items:center;gap:12px;font-size:15px"><span style="color:#16a34a;font-weight:800;font-size:17px">✓</span> AI descriptions from photos</li>
+        <li style="display:flex;align-items:center;gap:12px;font-size:15px"><span style="color:#16a34a;font-weight:800;font-size:17px">✓</span> Auto-delist when sold</li>
+        <li style="display:flex;align-items:center;gap:12px;font-size:15px"><span style="color:#16a34a;font-weight:800;font-size:17px">✓</span> Marktplaats auto-relist every 27 days</li>
+        <li style="display:flex;align-items:center;gap:12px;font-size:15px"><span style="color:#16a34a;font-weight:800;font-size:17px">✓</span> Sales dashboard &amp; profit tracking</li>
+        <li style="display:flex;align-items:flex-start;gap:12px;font-size:15px;background:#eff6ff;border:1.5px solid #bfdbfe;border-radius:10px;padding:10px 14px;margin-top:4px"><span style="font-size:20px;flex-shrink:0">🇳🇱</span><span><strong style="color:#1d4ed8">Listings auto-translated to Dutch</strong> for Marktplaats &amp; 2dehands — native-looking listings without extra effort</span></li>
+      </ul>
+
+      <a href="/register" class="btn btn-primary" style="width:100%;justify-content:center;font-size:16px;padding:16px;border-radius:12px;box-shadow:0 4px 20px rgba(37,99,235,.3)">Start 7-day free trial →</a>
+      <div style="font-size:12px;color:var(--muted);margin-top:12px">Then €19.99/month · Cancel anytime<br>Pay via iDEAL, Bancontact or credit card</div>
+    </div>
+  </div>
+</div>
+
+<!-- CTA -->
+<div class="cta-block">
+  <h2>Ready to save time?</h2>
+  <p>7 days free. No credit card needed. Start today.</p>
+  <a href="/register" class="btn btn-white btn-primary" style="background:#fff;color:var(--blue);font-size:16px;padding:14px 32px;">Start free trial →</a>
+</div>
+
+<footer class="site-footer">
+  <div class="footer-main">
+    <div class="footer-brand">
+      <a href="/" style="display:inline-flex;align-items:center;gap:10px;font-size:17px;font-weight:800;color:#fff;text-decoration:none">
+        <img src="Logo Crosslist EU.png" alt="CrossList EU" style="height:32px;width:auto">
+        <span style="background:linear-gradient(135deg,#60a5fa,#34d399);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text">CrossList EU</span>
+      </a>
+      <p>Cross-list your second-hand items on all European marketplaces in seconds. Built for Marktplaats, 2dehands, Vinted and Shopify.</p>
+      <p style="margin-top:4px">Business inquiries: <a href="mailto:info@revaleur.com">info@revaleur.com</a></p>
+    </div>
+
+    <div class="footer-col">
+      <h4>Platform</h4>
+      <ul>
+        <li><a href="/#how-it-works">Features</a></li>
+        <li><a href="/marketplaces">Marketplaces</a></li>
+        <li><a href="/#pricing">Pricing</a></li>
+        <li><a href="/login">Login</a></li>
+        <li><a href="/register">Start free trial</a></li>
+      </ul>
+    </div>
+
+    <div class="footer-col">
+      <h4>Company</h4>
+      <ul>
+        <li><a href="/terms">Terms of Service</a></li>
+        <li><a href="/privacy">Privacy Policy</a></li>
+        <li><a href="mailto:info@revaleur.com">Contact</a></li>
+      </ul>
+    </div>
+
+    <div class="footer-col">
+      <h4>Marketplaces</h4>
+      <ul>
+        <li><a href="/marketplaces#marktplaats">🇳🇱 Marktplaats</a></li>
+        <li><a href="/marketplaces#2dehands">🇧🇪 2dehands</a></li>
+        <li><a href="/marketplaces#vinted">Vinted</a></li>
+        <li><a href="/marketplaces#shopify">Shopify</a></li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="footer-bottom">
+    <span>© 2026 Revaleur · KVK 86792423 · VAT NL004117227B97 · Kleine Melanen 5, 4614RG Bergen op Zoom</span>
+    <div class="footer-bottom-links">
+      <a href="/privacy">Privacy Policy</a>
+      <a href="/terms">Terms of Service</a>
+    </div>
+  </div>
+</footer>
+
+<script>
+// Scale the whole showcase (desktop + mobile together) to fit narrow screens,
+// keeping their side-by-side layout instead of stacking them.
+(function() {
+  const wrap = document.querySelector('.showcase');
+  const track = document.querySelector('.showcase-track');
+  if (!wrap || !track) return;
+  const mq = window.matchMedia('(max-width: 900px)');
+  function fitScale() {
+    if (!mq.matches) { track.style.transform = ''; wrap.style.height = ''; return; }
+    track.style.transform = '';
+    const cs = getComputedStyle(wrap);
+    const padX = parseFloat(cs.paddingLeft) + parseFloat(cs.paddingRight);
+    const padTop = parseFloat(cs.paddingTop);
+    const padBottom = parseFloat(cs.paddingBottom);
+    const naturalWidth = track.offsetWidth;
+    const naturalHeight = track.offsetHeight;
+    const scale = (wrap.clientWidth - padX) / naturalWidth;
+    track.style.transform = `scale(${scale})`;
+    wrap.style.height = (naturalHeight * scale + padTop + padBottom) + 'px';
+  }
+  fitScale();
+  window.addEventListener('resize', fitScale);
+})();
+
+function toggleMenu() {
+  const open = document.getElementById('mobile-menu').classList.toggle('open');
+  document.getElementById('hamburger').classList.toggle('open', open);
+  document.body.style.overflow = open ? 'hidden' : '';
+}
+function closeMenu() {
+  document.getElementById('mobile-menu').classList.remove('open');
+  document.getElementById('hamburger').classList.remove('open');
+  document.body.style.overflow = '';
+}
+
+// Scroll-reveal for sections/cards
+(function() {
+  const els = document.querySelectorAll('.reveal');
+  if (!('IntersectionObserver' in window) || !els.length) {
+    els.forEach(el => el.classList.add('in-view'));
+    animateCounts(document);
+    return;
+  }
+  const io = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        entry.target.classList.add('in-view');
+        if (entry.target.querySelector('[data-count]')) animateCounts(entry.target);
+        io.unobserve(entry.target);
+      }
+    });
+  }, { threshold: 0.2 });
+  els.forEach(el => io.observe(el));
+})();
+
+function animateCounts(scope) {
+  scope.querySelectorAll('[data-count]').forEach(el => {
+    const target = parseFloat(el.dataset.count);
+    const suffix = el.dataset.suffix || '';
+    const dur = 1100, start = performance.now();
+    function frame(now) {
+      const p = Math.min(1, (now - start) / dur);
+      const eased = 1 - Math.pow(1 - p, 3);
+      el.textContent = Math.round(target * eased) + suffix;
+      if (p < 1) requestAnimationFrame(frame);
+    }
+    requestAnimationFrame(frame);
+  });
+}
+
+// Scroll-driven "how it works" storytelling: highlight step + swap sticky visual.
+(function() {
+  const steps = [...document.querySelectorAll('.step[data-step]')];
+  const panels = document.querySelectorAll('.how-panel[data-panel]');
+  const howSection = document.getElementById('how-it-works');
+  if (!steps.length || !howSection) return;
+
+  let current = '1';
+  function activate(n) {
+    if (n === current) return;
+    current = n;
+    steps.forEach(s => s.classList.toggle('active', s.dataset.step === n));
+    panels.forEach(p => p.classList.toggle('active', p.dataset.panel === n));
+    if (n === '2') animateChips();
+    if (n === '3') animatePublish();
+  }
+  let chipTimer, publishTimer;
+  function animateChips() {
+    clearTimeout(chipTimer);
+    const chips = document.querySelectorAll('.how-chip');
+    chips.forEach(c => c.classList.remove('on'));
+    chips.forEach((c, i) => { chipTimer = setTimeout(() => c.classList.add('on'), 200 + i * 220); });
+  }
+  function animatePublish() {
+    clearTimeout(publishTimer);
+    const icons = document.querySelectorAll('.how-publish-icon');
+    const check = document.querySelector('.how-publish-check');
+    icons.forEach(ic => ic.classList.remove('done'));
+    check.classList.remove('show');
+    icons.forEach((ic, i) => { publishTimer = setTimeout(() => ic.classList.add('done'), 200 + i * 200); });
+    publishTimer = setTimeout(() => check.classList.add('show'), 200 + icons.length * 200 + 200);
+  }
+
+  // Pick whichever step sits closest to the vertical center of the viewport —
+  // robust even when the whole section fits on one screen (no long scroll runway needed).
+  let ticking = false;
+  function updateActiveStep() {
+    ticking = false;
+    const sectionRect = howSection.getBoundingClientRect();
+    if (sectionRect.bottom < 0 || sectionRect.top > window.innerHeight) return;
+    const viewportCenter = window.innerHeight * 0.5;
+    let closest = steps[0], closestDist = Infinity;
+    steps.forEach(s => {
+      const r = s.getBoundingClientRect();
+      const mid = r.top + r.height / 2;
+      const dist = Math.abs(mid - viewportCenter);
+      if (dist < closestDist) { closestDist = dist; closest = s; }
+    });
+    activate(closest.dataset.step);
+  }
+  function onScroll() {
+    if (ticking) return;
+    ticking = true;
+    requestAnimationFrame(updateActiveStep);
+  }
+  window.addEventListener('scroll', onScroll, { passive: true });
+  window.addEventListener('resize', onScroll);
+  updateActiveStep();
+})();
+
+// Handle Supabase auth redirects (email confirmation, password reset)
+(function() {
+  if (!window.location.hash) return;
+  const params = Object.fromEntries(
+    window.location.hash.slice(1).split('&').map(p => { const [k,v] = p.split('='); return [k, decodeURIComponent(v||'')]; })
+  );
+  if (params.access_token && params.type === 'signup') {
+    window.location.replace('/login?confirmed=1');
+  } else if (params.access_token && params.type === 'recovery') {
+    window.location.replace('/reset-password' + window.location.hash);
+  }
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,124 @@
+"""
+Orkestreert de volledige contentpijplijn voor één keyword/pagina:
+research → generatie → featured image → interne links → opslaan/updaten.
+
+Cannibalisatie-guard: `intent_key` (region:pillar:slug) is UNIQUE in de
+database. Als de intent al bestaat, wordt de bestaande rij overschreven met
+de nieuwe concurrentie-inzichten in plaats van een duplicaat aan te maken —
+dit is de enige plek waar dat besluit wordt genomen.
+"""
+import logging
+import re
+
+from backend.content.generator import generate_page_content
+from backend.content.images import generate_featured_image_base64
+from backend.content.linking import apply_internal_links
+from backend.content.research import research_competitors
+from backend.database import get_db
+from backend.services.image_upload import upload_image
+
+logger = logging.getLogger(__name__)
+
+
+def _url_path(region: str, pillar: str, slug: str) -> str:
+    folder = "crosslisten" if pillar == "A" else "reseller-tools"
+    return f"/{region}/{folder}/{slug}"
+
+
+def _link_terms_for(page: dict) -> list[str]:
+    # Simpele, robuuste ankerwoord-set: de pagina-titel zelf plus de eerste
+    # 2-3 woorden van het primaire keyword (platform/niche-namen zitten daar altijd in).
+    words = re.findall(r"[A-Za-zÀ-ÿ]+", page.get("primary_keyword", ""))
+    return [page["title"]] + words[:3]
+
+
+async def run_pipeline(keyword: str, region: str, pillar: str, slug: str) -> dict:
+    db = get_db()
+    intent_key = f"{region}:{pillar}:{slug}"
+
+    existing = db.table("content_pages").select("*").eq("status", "published").neq("intent_key", intent_key).limit(50).execute().data or []
+    existing_for_prompt = [
+        {"title": p["title"], "url_path": _url_path(p["region"], p["pillar"], p["slug"])}
+        for p in existing
+    ]
+
+    logger.info(f"Research voor '{keyword}' ({region})")
+    research = research_competitors(keyword, region)
+
+    logger.info(f"Content genereren voor '{keyword}'")
+    generated = generate_page_content(keyword, region, pillar, slug, research, existing_for_prompt)
+    if not generated:
+        return {"success": False, "error": "content generation failed"}
+
+    logger.info(f"Featured image genereren voor '{keyword}'")
+    image_b64 = generate_featured_image_base64(keyword)
+    featured_image_url = None
+    if image_b64:
+        import base64
+        import uuid
+
+        filename = f"content/{region}-{pillar}-{slug}-{uuid.uuid4().hex[:8]}.jpg"
+        try:
+            featured_image_url = await upload_image(base64.b64decode(image_b64), filename)
+        except Exception as e:
+            logger.warning(f"Image-upload mislukt: {e}")
+
+    candidates = [
+        {
+            "intent_key": f'{p["region"]}:{p["pillar"]}:{p["slug"]}',
+            "title": p["title"],
+            "url_path": _url_path(p["region"], p["pillar"], p["slug"]),
+            "link_terms": _link_terms_for(p),
+        }
+        for p in existing
+    ]
+    body_with_links, linked_intents = apply_internal_links(generated["body_html"], candidates, intent_key)
+
+    software_json_ld = {
+        "@context": "https://schema.org",
+        "@type": "SoftwareApplication",
+        "name": "CrossList EU",
+        "applicationCategory": "BusinessApplication",
+        "operatingSystem": "Web",
+        "description": "Automatisch crosslisten en synchroniseren van advertenties tussen Marktplaats, 2dehands, Vinted, eBay, Etsy en Shopify, inclusief achtergrond-synchronisatie van voorraad en status.",
+        "offers": {"@type": "Offer", "priceCurrency": "EUR"},
+        "featureList": [
+            "Automatisch crosslisten naar meerdere platforms",
+            "Achtergrond-synchronisatie van verkochte items",
+            "Bulk import van bestaande advertenties",
+        ],
+    }
+
+    row = {
+        "pillar": pillar,
+        "region": region,
+        "slug": slug,
+        "primary_keyword": keyword,
+        "title": generated["title"],
+        "meta_description": generated["meta_description"],
+        "h1": generated["h1"],
+        "quick_answer": generated["quick_answer"],
+        "body_html": body_with_links,
+        "faq": generated["faq"],
+        "featured_image_url": featured_image_url,
+        "software_application_json_ld": software_json_ld,
+        "competitor_research": research,
+        "related_slugs": linked_intents,
+        "status": "published",
+    }
+
+    existing_row = db.table("content_pages").select("id,published_at").eq("intent_key", intent_key).execute().data
+    if existing_row:
+        row_id = existing_row[0]["id"]
+        db.table("content_pages").update(row).eq("id", row_id).execute()
+        logger.info(f"Bestaande pagina bijgewerkt (cannibalisatie voorkomen): {intent_key}")
+        action = "updated"
+    else:
+        from datetime import datetime, timezone
+
+        row["published_at"] = datetime.now(timezone.utc).isoformat()
+        db.table("content_pages").insert(row).execute()
+        logger.info(f"Nieuwe pagina aangemaakt: {intent_key}")
+        action = "created"
+
+    return {"success": True, "action": action, "url_path": _url_path(region, pillar, slug), "linked": linked_intents}

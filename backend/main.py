@@ -53,7 +53,6 @@ app.include_router(shopify.router, prefix="/api")
 app.include_router(imports.router, prefix="/api")
 app.include_router(auth.router)
 app.include_router(billing.router)
-app.include_router(content.router)
 
 
 @app.get("/health")

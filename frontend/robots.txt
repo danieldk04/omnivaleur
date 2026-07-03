@@ -1,0 +1,9 @@
+User-agent: *
+Allow: /
+Disallow: /app.html
+Disallow: /demo-dashboard.html
+Disallow: /ebay-callback.html
+Disallow: /forgot-password.html
+Disallow: /reset-password.html
+
+Sitemap: https://crosslisteu.com/sitemap.xml

@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Terms of Service — CrossList EU</title>
+<meta name="description" content="Read the terms of service for CrossList EU, the cross-listing platform for Marktplaats, 2dehands, Vinted, eBay and Shopify.">
+<link rel="canonical" href="https://crosslisteu.com/terms">
+<link rel="icon" type="image/png" href="Logo Crosslist EU.png">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --blue: #2563eb; --mint: #34d399; --text: #0f172a;
+  --muted: #64748b; --border: #e2e8f0; --surface: #fff; --bg: #f8fafc;
+}
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: var(--surface); color: var(--text); line-height: 1.7; }
+a { color: var(--blue); text-decoration: none; }
+a:hover { text-decoration: underline; }
+
+nav { position: sticky; top: 0; z-index: 100; background: rgba(255,255,255,.92); backdrop-filter: blur(12px); border-bottom: 1px solid var(--border); padding: 0 40px; height: 64px; display: flex; align-items: center; justify-content: space-between; }
+.nav-logo { display: flex; align-items: center; gap: 10px; font-size: 17px; font-weight: 800; letter-spacing: -.4px; text-decoration: none; color: var(--text); }
+.nav-logo img { height: 36px; width: auto; }
+.grad-text { background: linear-gradient(135deg, var(--blue), var(--mint)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+.nav-links { display: flex; gap: 28px; align-items: center; }
+.nav-links a { font-size: 14px; font-weight: 500; color: var(--muted); transition: color .15s; text-decoration: none; }
+.nav-links a:hover { color: var(--text); }
+.nav-actions { display: flex; gap: 10px; align-items: center; }
+.btn { display: inline-flex; align-items: center; gap: 6px; padding: 9px 20px; border-radius: 100px; font-size: 14px; font-weight: 600; cursor: pointer; border: none; transition: all .2s; white-space: nowrap; text-decoration: none !important; }
+.btn-outline { background: transparent; border: 1.5px solid var(--border); color: var(--text); }
+.btn-outline:hover { border-color: var(--blue); color: var(--blue); }
+.btn-primary { background: linear-gradient(135deg, var(--blue), var(--mint)); color: #fff !important; box-shadow: 0 2px 12px rgba(37,99,235,.25); }
+.btn-primary:hover { box-shadow: 0 4px 20px rgba(37,99,235,.4); transform: translateY(-1px); }
+.hamburger { display: none; flex-direction: column; justify-content: center; gap: 5px; width: 40px; height: 40px; padding: 8px; background: transparent; border: none; cursor: pointer; border-radius: 8px; flex-shrink: 0; }
+.hamburger:hover { background: rgba(0,0,0,.04); }
+.hamburger span { display: block; height: 2px; width: 100%; background: var(--text); border-radius: 2px; transition: all .22s; transform-origin: center; }
+.hamburger.open span:nth-child(1) { transform: translateY(7px) rotate(45deg); }
+.hamburger.open span:nth-child(2) { opacity: 0; transform: scaleX(0); }
+.hamburger.open span:nth-child(3) { transform: translateY(-7px) rotate(-45deg); }
+.mobile-menu { display: none; position: fixed; top: 64px; left: 0; right: 0; bottom: 0; background: #fff; z-index: 99; flex-direction: column; padding: 24px 24px 32px; overflow-y: auto; border-top: 1px solid var(--border); }
+.mobile-menu.open { display: flex; }
+.mobile-menu > a { font-size: 17px; font-weight: 600; color: var(--text); padding: 16px 0; border-bottom: 1px solid var(--border); text-decoration: none; transition: color .15s; }
+.mobile-menu > a:hover { color: var(--blue); }
+.mobile-menu .mobile-actions { display: flex; flex-direction: column; gap: 10px; margin-top: 28px; }
+.mobile-menu .mobile-actions .btn { width: 100%; justify-content: center; font-size: 15px; padding: 13px 20px; }
+
+.legal-wrap { max-width: 740px; margin: 0 auto; padding: 64px 40px 100px; }
+.legal-label { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; color: var(--blue); margin-bottom: 12px; }
+.legal-wrap h1 { font-size: 36px; font-weight: 900; letter-spacing: -.5px; margin-bottom: 8px; }
+.legal-wrap .meta { font-size: 14px; color: var(--muted); margin-bottom: 48px; padding-bottom: 32px; border-bottom: 1px solid var(--border); }
+.legal-wrap h2 { font-size: 20px; font-weight: 700; margin: 40px 0 12px; }
+.legal-wrap p { font-size: 15px; color: #334155; margin-bottom: 14px; }
+.legal-wrap ul { margin: 0 0 14px 20px; display: flex; flex-direction: column; gap: 6px; }
+.legal-wrap ul li { font-size: 15px; color: #334155; }
+.legal-wrap .info-box { background: var(--bg); border: 1px solid var(--border); border-radius: 10px; padding: 20px 24px; margin: 24px 0; }
+.legal-wrap .info-box p { margin: 0; }
+
+.site-footer { background: #0f172a; color: rgba(255,255,255,.55); font-size: 13px; }
+.footer-main { max-width: 1200px; margin: 0 auto; padding: 64px 40px 48px; display: grid; grid-template-columns: 2fr 1fr 1fr 1fr; gap: 48px; }
+.footer-brand p { font-size: 13px; line-height: 1.7; margin: 16px 0; color: rgba(255,255,255,.45); max-width: 260px; }
+.footer-brand a { color: rgba(255,255,255,.55); text-decoration: none; }
+.footer-brand a:hover { color: #fff; }
+.footer-col h4 { font-size: 12px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: rgba(255,255,255,.35); margin-bottom: 16px; }
+.footer-col ul { list-style: none; display: flex; flex-direction: column; gap: 10px; }
+.footer-col ul li a { color: rgba(255,255,255,.6); transition: color .15s; font-size: 14px; text-decoration: none; }
+.footer-col ul li a:hover { color: #fff; }
+.footer-bottom { border-top: 1px solid rgba(255,255,255,.08); padding: 20px 40px; display: flex; justify-content: space-between; align-items: center; max-width: 1200px; margin: 0 auto; flex-wrap: wrap; gap: 8px; font-size: 12px; color: rgba(255,255,255,.35); }
+.footer-bottom-links { display: flex; gap: 20px; }
+.footer-bottom-links a { color: rgba(255,255,255,.4); font-size: 12px; transition: color .15s; text-decoration: none; }
+.footer-bottom-links a:hover { color: #fff; }
+
+@media (max-width: 768px) {
+  nav { padding: 0 20px; }
+  .nav-links, .nav-actions { display: none; }
+  .hamburger { display: flex; }
+  .legal-wrap { padding: 40px 20px 80px; }
+  .footer-main { grid-template-columns: 1fr 1fr; gap: 32px; padding: 48px 20px 32px; }
+  .footer-brand { grid-column: 1 / -1; }
+  .footer-bottom { padding: 16px 20px; flex-direction: column; align-items: flex-start; }
+}
+@media (max-width: 480px) {
+  .footer-main { grid-template-columns: 1fr; }
+}
+</style>
+</head>
+<body>
+
+<nav>
+  <a href="/" class="nav-logo">
+    <img src="Logo Crosslist EU.png" alt="CrossList EU">
+    <span class="grad-text">CrossList EU</span>
+  </a>
+  <div class="nav-links">
+    <a href="/marketplaces">Marketplaces</a>
+    <a href="/#how-it-works">How it works</a>
+    <a href="/#pricing">Pricing</a>
+  </div>
+  <div class="nav-actions">
+    <a href="/login" class="btn btn-outline">Log in</a>
+    <a href="/register" class="btn btn-primary">7 days free →</a>
+  </div>
+  <button class="hamburger" id="hamburger" onclick="toggleMenu()" aria-label="Menu">
+    <span></span><span></span><span></span>
+  </button>
+</nav>
+<div class="mobile-menu" id="mobile-menu">
+  <a href="/marketplaces" onclick="closeMenu()">Marketplaces</a>
+  <a href="/#how-it-works" onclick="closeMenu()">How it works</a>
+  <a href="/#pricing" onclick="closeMenu()">Pricing</a>
+  <div class="mobile-actions">
+    <a href="/login" class="btn btn-outline" onclick="closeMenu()">Log in</a>
+    <a href="/register" class="btn btn-primary" onclick="closeMenu()">7 days free →</a>
+  </div>
+</div>
+
+<div class="legal-wrap">
+  <div class="legal-label">Legal</div>
+  <h1>Terms of Service</h1>
+  <p class="meta">Last updated: 29 June 2026 &nbsp;·&nbsp; Effective: 29 June 2026</p>
+
+  <div class="info-box">
+    <p><strong>Revaleur</strong> · Kleine Melanen 5, 4614RG Bergen op Zoom, Netherlands · KVK 86792423 · VAT NL004117227B97 · <a href="mailto:info@revaleur.com">info@revaleur.com</a></p>
+  </div>
+
+  <h2>1. Who we are and what these terms cover</h2>
+  <p>CrossList EU is operated by Revaleur, a company registered in the Netherlands (KVK 86792423). These Terms of Service ("Terms") govern your access to and use of CrossList EU — including our website at crosslisteu.com, the CrossList EU Chrome extension, and associated backend services (collectively, the "Service").</p>
+  <p>By creating an account or using the Service, you agree to these Terms. If you do not agree, do not use the Service.</p>
+
+  <h2>2. The Service</h2>
+  <p>CrossList EU is a cross-listing tool that helps users publish second-hand product listings on multiple European online marketplaces simultaneously, including Marktplaats, 2dehands, Vinted and Shopify. The Service operates via a Chrome browser extension that interacts with marketplace websites on your behalf using your existing marketplace accounts.</p>
+  <p>CrossList EU is an independent tool and is not affiliated with, endorsed by, or officially connected to Marktplaats, 2dehands, Vinted, Shopify, or any other marketplace. Use of those platforms remains subject to their own terms of service.</p>
+
+  <h2>3. Eligibility</h2>
+  <p>You must be at least 18 years old and legally capable of entering into a binding contract to use the Service. By registering, you confirm that the information you provide is accurate and that you are authorised to use the marketplace accounts you connect to CrossList EU.</p>
+
+  <h2>4. Account and subscription</h2>
+  <p>To use CrossList EU you must create an account using a valid email address. You are responsible for keeping your login credentials secure and for all activity under your account.</p>
+  <p>CrossList EU is offered on a subscription basis:</p>
+  <ul>
+    <li><strong>Free trial:</strong> New accounts receive a 7-day free trial with full Pro access. No credit card is required to start the trial.</li>
+    <li><strong>Pro plan:</strong> After the trial, continued access requires an active paid subscription at the then-current price (currently €19.99/month, inclusive of applicable VAT).</li>
+    <li><strong>Billing:</strong> Subscriptions are billed monthly via Stripe. Payment methods accepted include iDEAL, Bancontact and major credit/debit cards.</li>
+    <li><strong>Cancellation:</strong> You may cancel your subscription at any time via the customer portal. Access continues until the end of the current billing period. No refunds are provided for partial months, except where required by applicable law.</li>
+    <li><strong>Price changes:</strong> We will notify you by email at least 30 days before any price increase. Continued use after the effective date constitutes acceptance.</li>
+  </ul>
+
+  <h2>5. Consumer right of withdrawal (EU/EEA)</h2>
+  <p>If you are a consumer resident in the EU or EEA, you have the right to withdraw from this contract within 14 days of entering into it (the "cooling-off period") without giving a reason, in accordance with the EU Consumer Rights Directive (2011/83/EU).</p>
+  <p>However, by starting your free trial or paid subscription you expressly request immediate performance of the Service. If you withdraw during the cooling-off period after the Service has begun, you remain liable for a proportional amount covering the period of use.</p>
+  <p>To exercise the right of withdrawal, notify us at <a href="mailto:info@revaleur.com">info@revaleur.com</a> before the 14-day period expires.</p>
+
+  <h2>6. Acceptable use</h2>
+  <p>You agree to use CrossList EU only for lawful purposes and in accordance with these Terms. You must not:</p>
+  <ul>
+    <li>List items that are illegal, counterfeit, stolen, or that infringe intellectual property rights.</li>
+    <li>Use the Service to send spam or unsolicited communications.</li>
+    <li>Attempt to reverse engineer, scrape, or extract data from CrossList EU itself.</li>
+    <li>Use the Service in a way that could damage, overload or impair the marketplaces you connect to, or that violates their terms of service.</li>
+    <li>Create multiple accounts to abuse the free trial.</li>
+    <li>Use the Service for commercial reselling of access to third parties without our written permission.</li>
+  </ul>
+  <p>We reserve the right to suspend or terminate accounts that violate these rules, without prior notice and without refund.</p>
+
+  <h2>7. Your content</h2>
+  <p>You retain ownership of all product data, photos and descriptions you upload to CrossList EU ("Your Content"). By using the Service, you grant Revaleur a limited, non-exclusive licence to store, process and transmit Your Content solely as necessary to provide the Service (e.g., to send your listing to a marketplace on your behalf).</p>
+  <p>You are solely responsible for ensuring Your Content complies with applicable laws and the rules of each marketplace you publish to.</p>
+
+  <h2>8. Availability and changes</h2>
+  <p>We aim for high availability but do not guarantee uninterrupted access to the Service. Marketplace websites may change their structure at any time, which can temporarily affect CrossList EU's ability to list on those platforms. We will endeavour to restore compatibility as quickly as possible but cannot guarantee uptime for third-party integrations.</p>
+  <p>We reserve the right to modify, suspend or discontinue any part of the Service at any time. We will provide reasonable notice for material changes.</p>
+
+  <h2>9. Limitation of liability</h2>
+  <p>To the maximum extent permitted by applicable law, Revaleur shall not be liable for:</p>
+  <ul>
+    <li>Indirect, incidental, special or consequential damages arising from your use of (or inability to use) the Service.</li>
+    <li>Loss of profits, revenue or data.</li>
+    <li>Actions taken by third-party marketplace platforms (including account suspensions on those platforms).</li>
+    <li>Errors in AI-generated listing descriptions.</li>
+  </ul>
+  <p>Our total aggregate liability to you for any claim arising out of or related to these Terms or the Service is limited to the amount you paid us in the 3 months preceding the claim.</p>
+  <p>Nothing in these Terms excludes or limits liability for death or personal injury caused by negligence, fraud, or any other liability that cannot be excluded under Dutch law.</p>
+
+  <h2>10. Indemnification</h2>
+  <p>You agree to indemnify and hold harmless Revaleur, its directors and employees from any claims, damages or expenses (including legal fees) arising from your use of the Service, Your Content, or your violation of these Terms or any third-party rights.</p>
+
+  <h2>11. Intellectual property</h2>
+  <p>All rights in the CrossList EU software, branding, design and documentation are owned by or licensed to Revaleur. Nothing in these Terms transfers any intellectual property rights to you. You may not copy, modify, distribute or create derivative works of any part of the Service without our written consent.</p>
+
+  <h2>12. Governing law and disputes</h2>
+  <p>These Terms are governed by Dutch law. Any disputes arising from or related to these Terms shall be subject to the exclusive jurisdiction of the competent court in the Netherlands, without prejudice to your rights as a consumer under mandatory provisions of the law of your country of residence.</p>
+  <p>Before initiating legal proceedings, we encourage you to contact us at <a href="mailto:info@revaleur.com">info@revaleur.com</a> to resolve disputes amicably. EU consumers also have access to the EU Online Dispute Resolution platform at <a href="https://ec.europa.eu/consumers/odr" target="_blank" rel="noopener">ec.europa.eu/consumers/odr</a>.</p>
+
+  <h2>13. Changes to these Terms</h2>
+  <p>We may update these Terms from time to time. We will notify you by email at least 14 days before material changes take effect. Your continued use of the Service after the effective date constitutes acceptance of the revised Terms. If you do not accept the changes, you must stop using the Service and cancel your subscription.</p>
+
+  <h2>14. Contact</h2>
+  <div class="info-box">
+    <p><strong>Revaleur</strong><br>
+    Kleine Melanen 5, 4614RG Bergen op Zoom, Netherlands<br>
+    KVK: 86792423 &nbsp;·&nbsp; VAT: NL004117227B97<br>
+    Email: <a href="mailto:info@revaleur.com">info@revaleur.com</a></p>
+  </div>
+</div>
+
+<footer class="site-footer">
+  <div class="footer-main">
+    <div class="footer-brand">
+      <a href="/" style="display:inline-flex;align-items:center;gap:10px;font-size:17px;font-weight:800;color:#fff;text-decoration:none">
+        <img src="Logo Crosslist EU.png" alt="CrossList EU" style="height:32px;width:auto">
+        <span style="background:linear-gradient(135deg,#60a5fa,#34d399);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text">CrossList EU</span>
+      </a>
+      <p>Cross-list your second-hand items on all European marketplaces in seconds. Built for Marktplaats, 2dehands, Vinted and Shopify.</p>
+      <p style="margin-top:4px">Business inquiries: <a href="mailto:info@revaleur.com">info@revaleur.com</a></p>
+    </div>
+    <div class="footer-col">
+      <h4>Platform</h4>
+      <ul>
+        <li><a href="/#how-it-works">Features</a></li>
+        <li><a href="/marketplaces">Marketplaces</a></li>
+        <li><a href="/#pricing">Pricing</a></li>
+        <li><a href="/login">Login</a></li>
+        <li><a href="/register">Start free trial</a></li>
+      </ul>
+    </div>
+    <div class="footer-col">
+      <h4>Company</h4>
+      <ul>
+        <li><a href="/terms">Terms of Service</a></li>
+        <li><a href="/privacy">Privacy Policy</a></li>
+        <li><a href="mailto:info@revaleur.com">Contact</a></li>
+      </ul>
+    </div>
+    <div class="footer-col">
+      <h4>Marketplaces</h4>
+      <ul>
+        <li><a href="/marketplaces">🇳🇱 Marktplaats</a></li>
+        <li><a href="/marketplaces">🇧🇪 2dehands</a></li>
+        <li><a href="/marketplaces">Vinted</a></li>
+        <li><a href="/marketplaces">Shopify</a></li>
+      </ul>
+    </div>
+  </div>
+  <div class="footer-bottom">
+    <span>© 2026 Revaleur · KVK 86792423 · VAT NL004117227B97 · Kleine Melanen 5, 4614RG Bergen op Zoom</span>
+    <div class="footer-bottom-links">
+      <a href="/privacy">Privacy Policy</a>
+      <a href="/terms">Terms of Service</a>
+    </div>
+  </div>
+</footer>
+<script>
+function toggleMenu(){const o=document.getElementById('mobile-menu').classList.toggle('open');document.getElementById('hamburger').classList.toggle('open',o);document.body.style.overflow=o?'hidden':'';}
+function closeMenu(){document.getElementById('mobile-menu').classList.remove('open');document.getElementById('hamburger').classList.remove('open');document.body.style.overflow='';}
+</script>
+
+</body>
+</html>
