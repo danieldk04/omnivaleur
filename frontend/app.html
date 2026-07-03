@@ -1883,7 +1883,6 @@ function renderItemsTable(items) {
       <td style="white-space:nowrap">
         <button class="btn btn-sm btn-primary" onclick="openCrosslist('${item.id}')">Publish</button>
         <button class="btn btn-sm btn-outline" onclick="editItem('${item.id}')" style="margin-left:4px">Edit</button>
-        <button class="btn btn-sm btn-outline" onclick="refreshItem('${item.id}','${esc(item.title)}')" style="margin-left:4px" title="Bump this listing back up (Vinted)">Refresh</button>
         <button class="btn btn-sm btn-danger" onclick="delistItem('${item.id}','${esc(item.title)}')" style="margin-left:4px" title="Delist from all platforms">Delist</button>
       </td>
     </tr>`;
