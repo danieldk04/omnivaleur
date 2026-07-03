@@ -3,7 +3,8 @@ Content-generatie voor programmatic SEO/GEO-pagina's — bouwt op het
 delimiter-outputformat dat we al gebruiken bij Revaleur/AXONGEAR
 (marker-gescheiden tekst i.p.v. JSON, robuuster tegen HTML met quotes in
 de body), maar met de GEO/AEO-structuur uit de CrossList EU briefing:
-quick-answer blockquote, H2's als vragen, en een aparte FAQ-sectie.
+quick-answer blockquote, H2's als vragen, key takeaways, FAQ- en
+Article-schema, en verplichte citaten naar echte (niet-hallucinerende) bronnen.
 """
 import logging
 import re
@@ -15,21 +16,37 @@ from backend.config import settings
 logger = logging.getLogger(__name__)
 
 MODEL = "claude-opus-4-8"
+CURRENT_YEAR = 2026
 
-REGION_LANGUAGE = {
-    "nl": "Dutch (Netherlands)",
-    "be-nl": "Dutch (Belgium — use 'Vlaams' spelling/tone where natural, e.g. 'gsm' is fine but keep it standard Dutch)",
-    "be-fr": "French (Belgium)",
-    "fr": "French (France)",
-    "de": "German",
-}
+# Site is Engelstalig by default (zie CLAUDE-memory: "Language: English only").
+# Uitzondering: content die specifiek over Marktplaats/2dehands gaat EN in een
+# nl/be-nl regio wordt gepubliceerd, krijgt automatisch een Nederlandse versie —
+# dat is precies waar de doelgroep zit en waar Marktplaats/2dehands zelf Nederlands is.
+NL_PLATFORM_TERMS = ("marktplaats", "2dehands")
 
-AI_CLICHES_NL = [
-    "in de dynamische wereld van", "cruciaal", "het is belangrijk om te onthouden",
-    "bovendien", "kortom", "concluderend",
+
+def _resolve_language(keyword: str, region: str) -> str:
+    if region in ("nl", "be-nl") and any(t in keyword.lower() for t in NL_PLATFORM_TERMS):
+        return "Dutch"
+    return "English"
+
+
+AI_CLICHES = [
+    "in today's fast-paced world", "in the dynamic world of", "crucial", "it is important to remember",
+    "moreover", "in conclusion", "to sum up", "seamless", "unlock", "leverage", "delve into",
 ]
 
-CURRENT_YEAR = 2026
+# Alleen echte, HTTP-geverifieerde URLs (gecheckt op 200, geen 404-risico). Claude
+# mag ALLEEN uit deze lijst citeren — nooit zelf een bron-URL verzinnen.
+AUTHORITY_SOURCES = [
+    {"name": "Belastingdienst — DAC7 information for sellers", "url": "https://www.belastingdienst.nl/wps/wcm/connect/nl/ondernemers/content/informatie-voor-verkopers-DAC7", "topic": "DAC7 tax reporting NL"},
+    {"name": "European Commission — DAC7 overview", "url": "https://taxation-customs.ec.europa.eu/taxation/tax-transparency-cooperation/administrative-co-operation-and-mutual-assistance/dac7_en", "topic": "DAC7 tax reporting EU"},
+    {"name": "Your Europe (EU) — consumer shopping rights", "url": "https://europa.eu/youreurope/citizens/consumers/shopping/index_en.htm", "topic": "EU consumer rights"},
+    {"name": "Vinted Help Centre", "url": "https://www.vinted.com/help", "topic": "Vinted policies"},
+    {"name": "Vinted Help — Selling", "url": "https://www.vinted.com/help/4-selling", "topic": "Vinted selling rules"},
+    {"name": "Marktplaats Help & Info", "url": "https://help.marktplaats.nl/s/", "topic": "Marktplaats policies"},
+    {"name": "eBay Help — creating and managing listings", "url": "https://www.ebay.com/help/selling/listings/creating-managing-listings?id=4102", "topic": "eBay listing rules"},
+]
 
 
 def _build_prompt(
@@ -40,17 +57,19 @@ def _build_prompt(
     research: dict,
     existing_pages: list[dict],
 ) -> str:
-    language = REGION_LANGUAGE.get(region, "Dutch (Netherlands)")
+    language = _resolve_language(keyword, region)
 
     competitors_summary = "\n".join(
         f"- {c['url']}\n  H1: {c['h1']}\n  H2's: {c['h2']}"
         for c in research.get("competitors", [])
-    ) or "(geen concurrent-data beschikbaar — schrijf op basis van eigen platformkennis)"
+    ) or "(no competitor data available — write from platform expertise)"
 
     internal_links_block = "\n".join(
         f'- "{p["title"]}" → https://crosslisteu.com{p["url_path"]}'
         for p in existing_pages
-    ) or "(nog geen andere pagina's gepubliceerd)"
+    ) or "(no other pages published yet)"
+
+    sources_block = "\n".join(f'- {s["name"]} ({s["topic"]}): {s["url"]}' for s in AUTHORITY_SOURCES)
 
     return f"""You are an experienced European reseller and full-stack SEO/GEO expert writing for CrossList EU, a SaaS that automatically cross-lists items across Marktplaats, 2dehands, Vinted, eBay, Etsy and Shopify. You write like a reseller helping a colleague, not a marketing department.
 
@@ -61,19 +80,22 @@ URL will be: /{region}/{"crosslisten" if pillar == "A" else "reseller-tools"}/{s
 COMPETITOR RESEARCH (top 3 organic results for this keyword, their heading structure):
 {competitors_summary}
 
-Already-covered subtopics across those top 3 (do not just repeat these — find the content gap, i.e. what 2026 platform rules, limits, updates or reseller pain points they are missing):
+Already-covered subtopics across those top 3 (do not just repeat these — find the content gap, i.e. what {CURRENT_YEAR} platform rules, limits, updates or reseller pain points they are missing):
 {research.get('covered_subtopics') or '(none found)'}
 
-EXISTING CROSSLIST EU PAGES (weave in 2 contextual internal links where genuinely relevant, using these exact URLs):
+EXISTING CROSSLIST EU PAGES (weave in 2 contextual internal links where genuinely relevant, using these exact URLs, natural anchor text):
 {internal_links_block}
 
+AUTHORITY SOURCES — cite 2-3 of these inline as clickable links where relevant to back up claims (tax rules, platform policies). ONLY use these exact URLs verbatim, never invent or guess a URL yourself:
+{sources_block}
+
 HARD STYLE RULES:
-- Forbidden AI-cliché phrases (do NOT use, or their direct equivalents in {language}): {', '.join(AI_CLICHES_NL)}, and never repeat the question back in the intro.
+- Forbidden AI-cliché phrases (do NOT use, in {language} or English): {', '.join(AI_CLICHES)}, and never repeat the question back in the intro.
 - Sentence variation ("burstiness"): deliberately mix short punchy sentences (3-5 words) with longer flowing ones. Never monotone.
 - Active, direct voice: "Install the extension", not "It is recommended to install the extension".
 - Concrete data: use real numbers, comparison tables in Markdown where useful, bold **key terms**.
 - Mention the year {CURRENT_YEAR} naturally at least once (platform rules/limits change yearly).
-- Never write a generic intro paragraph before answering the core question.
+- Never write a generic intro paragraph before answering the core question — the core answer must be fully delivered within the first 100 words (quick answer + opening line combined).
 
 OUTPUT FORMAT — return EXACTLY this structure, nothing else, no markdown code fences:
 
@@ -81,8 +103,9 @@ TITLE: [meta title, max 60 characters, includes the primary keyword, conversion-
 META_DESCRIPTION: [max 155 characters, includes the primary keyword, drives CTR]
 H1: [primary long-tail keyword as a full heading, includes {CURRENT_YEAR}]
 QUICK_ANSWER: [exactly 40-60 words. Answers the core question directly, factually, with zero preamble. This becomes a <blockquote> right under the H1 — AI search engines (ChatGPT, Perplexity, Google AI Overviews) must be able to lift this verbatim as a citable answer.]
+TAKEAWAYS: [3 to 5 short one-line key takeaways, most important facts from the article, each starting with a capital letter, no bullet symbol — just one takeaway per line]
 ===BODY===
-[Full HTML body. Use <h2> headings phrased as complete, grammatically correct questions (integrate the missing subtopics from the content gap analysis). Use <h3> for sub-sections, <p>, <ul>/<ol>, <strong>, <a href="..."> for the internal links listed above, and Markdown-style tables converted to <table> HTML where comparing platforms. Do NOT include an <h1> (already set separately) and do NOT repeat the quick answer. Aim for 1400-1900 words of visible text.]
+[Full HTML body. Use <h2> headings phrased as complete, grammatically correct questions (integrate the missing subtopics from the content gap analysis). Use <h3> for sub-sections, <p>, <ul>/<ol>, <strong>, <a href="..."> for the internal links AND 2-3 authority-source links listed above, and Markdown-style tables converted to <table> HTML where comparing platforms. Do NOT include an <h1> (already set separately) and do NOT repeat the quick answer. Aim for 1400-1900 words of visible text.]
 ===FAQ===
 [4 to 6 H3-level follow-up questions NOT already covered by the competitors above, each with a short (2-4 sentence) answer. Format each pair EXACTLY as:
 Q: [question]
@@ -97,6 +120,10 @@ def _parse_output(raw: str) -> dict:
     def field(name: str) -> str:
         m = re.search(rf"^\s*{name}:\s*(.+)$", text, re.MULTILINE)
         return m.group(1).strip() if m else ""
+
+    takeaways_m = re.search(r"^\s*TAKEAWAYS:\s*(.+?)(?=\n===BODY===)", text, re.MULTILINE | re.DOTALL)
+    takeaways = [t.strip("- ").strip() for t in takeaways_m.group(1).strip().split("\n")] if takeaways_m else []
+    takeaways = [t for t in takeaways if t]
 
     body_start = text.find("===BODY===")
     faq_start = text.find("===FAQ===")
@@ -116,6 +143,7 @@ def _parse_output(raw: str) -> dict:
         "meta_description": field("META_DESCRIPTION"),
         "h1": field("H1"),
         "quick_answer": field("QUICK_ANSWER"),
+        "takeaways": takeaways,
         "body_html": body_html,
         "faq": faq,
     }
