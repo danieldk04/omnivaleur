@@ -902,37 +902,6 @@ input[type="checkbox"].row-check { width: 15px; height: 15px; cursor: pointer; a
         </div>
       </div>
 
-      <!-- ── IMPORT EXISTING LISTINGS ────────────────────────────────── -->
-      <div class="protection-card" style="margin-bottom:24px">
-        <div style="font-weight:700;font-size:13px;margin-bottom:6px">Import listings you already have on the platform itself</div>
-        <div style="font-size:12px;color:var(--muted);margin-bottom:10px">
-          For listings you posted directly on Vinted / Marktplaats / 2dehands (not via CrossList) — scan reads your own "my listings" page and adds anything found to the review list below. Nothing is imported automatically: you link each one to an existing item or fill in the missing details (purchase price, condition, color, etc.) yourself.
-        </div>
-        <div style="display:flex;flex-wrap:wrap;gap:6px">
-          <button class="btn btn-sm btn-outline" onclick="scanPlatform('vinted')">Scan Vinted</button>
-          <button class="btn btn-sm btn-outline" onclick="scanPlatform('marktplaats')">Scan Marktplaats</button>
-          <button class="btn btn-sm btn-outline" onclick="scanPlatform('2dehands')">Scan 2dehands</button>
-        </div>
-      </div>
-
-      <div id="import-review-section" style="display:none;margin-bottom:28px">
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
-          <h3 style="font-size:15px;margin:0">Review imports</h3>
-          <button class="btn btn-sm btn-primary" onclick="bulkImportAllCandidates()">Import all → Items</button>
-        </div>
-        <div style="font-size:12px;color:var(--muted);margin-bottom:10px">Rows with a suggested match get linked to that existing item; the rest become new items (title/price/photo from the scan, condition "good" by default — edit purchase price/brand/size on the item afterwards). Either way they show up in Refresh right after.</div>
-        <table class="data-table">
-          <thead>
-            <tr>
-              <th>Found on platform</th>
-              <th>Match</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-          <tbody id="import-review-body"></tbody>
-        </table>
-      </div>
-
       <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
         <input id="refresh-search" type="text" placeholder="Search item…" oninput="renderRefreshView()" style="flex:1;max-width:280px">
         <select id="refresh-platform-filter" onchange="renderRefreshView()" style="max-width:200px">
