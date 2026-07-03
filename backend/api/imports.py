@@ -71,13 +71,13 @@ async def link_candidate(candidate_id: str, body: dict, user_id: str = Depends(g
         raise HTTPException(status_code=404, detail="Item not found")
 
     existing = db.table("listings").select("id").eq("item_id", item_id).eq("platform", cand["platform"]).execute()
-    now = datetime.now(timezone.utc).isoformat()
+    listed_at = cand.get("platform_listed_at") or datetime.now(timezone.utc).isoformat()
     if existing.data:
         db.table("listings").update({
             "platform_listing_id": cand["platform_listing_id"],
             "platform_listing_url": cand["platform_listing_url"],
             "status": "active",
-            "listed_at": now,
+            "listed_at": listed_at,
         }).eq("id", existing.data[0]["id"]).execute()
     else:
         db.table("listings").insert({
@@ -86,7 +86,7 @@ async def link_candidate(candidate_id: str, body: dict, user_id: str = Depends(g
             "platform_listing_id": cand["platform_listing_id"],
             "platform_listing_url": cand["platform_listing_url"],
             "status": "active",
-            "listed_at": now,
+            "listed_at": listed_at,
         }).execute()
 
     db.table("import_candidates").update({"status": "linked"}).eq("id", candidate_id).execute()
