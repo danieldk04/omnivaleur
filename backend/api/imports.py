@@ -161,6 +161,7 @@ async def bulk_import_candidates(body: dict = None, user_id: str = Depends(get_c
 
     for cand in candidates:
         try:
+            listed_at = cand.get("platform_listed_at") or now
             match_id = _best_match(cand.get("title"), items)
             if match_id:
                 existing = db.table("listings").select("id").eq("item_id", match_id).eq("platform", cand["platform"]).execute()
@@ -169,7 +170,7 @@ async def bulk_import_candidates(body: dict = None, user_id: str = Depends(get_c
                         "platform_listing_id": cand["platform_listing_id"],
                         "platform_listing_url": cand["platform_listing_url"],
                         "status": "active",
-                        "listed_at": now,
+                        "listed_at": listed_at,
                     }).eq("id", existing.data[0]["id"]).execute()
                 else:
                     db.table("listings").insert({
@@ -178,7 +179,7 @@ async def bulk_import_candidates(body: dict = None, user_id: str = Depends(get_c
                         "platform_listing_id": cand["platform_listing_id"],
                         "platform_listing_url": cand["platform_listing_url"],
                         "status": "active",
-                        "listed_at": now,
+                        "listed_at": listed_at,
                     }).execute()
                 db.table("import_candidates").update({"status": "linked"}).eq("id", cand["id"]).execute()
                 linked += 1
@@ -202,7 +203,7 @@ async def bulk_import_candidates(body: dict = None, user_id: str = Depends(get_c
                     "platform_listing_id": cand["platform_listing_id"],
                     "platform_listing_url": cand["platform_listing_url"],
                     "status": "active",
-                    "listed_at": now,
+                    "listed_at": listed_at,
                 }).execute()
 
                 db.table("import_candidates").update({"status": "imported"}).eq("id", cand["id"]).execute()
