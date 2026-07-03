@@ -110,7 +110,7 @@ def _store_scan_results(db, job, scraped: list[dict]):
             "title": title,
             "price": row.get("price"),
             "photo_url": row.get("photo_url"),
-            "suggested_item_id": best_id if best_score >= 0.6 else None,
+            "suggested_item_id": best_id if best_score >= 0.9 else None,
             "status": "pending",
         }, on_conflict="user_id,platform,platform_listing_id").execute()
 
