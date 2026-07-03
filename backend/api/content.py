@@ -114,10 +114,20 @@ async def blog_index(request: Request, region: str):
     for r in rows:
         r["url_path"] = f"/{r['region']}/{'crosslisten' if r['pillar'] == 'A' else 'reseller-tools'}/{r['slug']}"
         r["reading_minutes"] = _reading_minutes(r.get("body_html"))
+
+    item_list_json_ld = {
+        "@context": "https://schema.org",
+        "@type": "ItemList",
+        "itemListElement": [
+            {"@type": "ListItem", "position": i + 1, "url": f"{SITE_URL}{r['url_path']}", "name": r["h1"]}
+            for i, r in enumerate(rows)
+        ],
+    }
+
     return templates.TemplateResponse(
         request,
         "blog_index.html",
-        {"pages": rows, "region": region, "canonical": f"{SITE_URL}/{region}/blog"},
+        {"pages": rows, "region": region, "canonical": f"{SITE_URL}/{region}/blog", "item_list_json_ld": item_list_json_ld},
     )
 
 
