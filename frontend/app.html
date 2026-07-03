@@ -2454,18 +2454,20 @@ async function scanPlatform(platform) {
   }
 }
 
-async function loadImportCandidates(finishedScanPlatform) {
+async function loadImportCandidates(checkScanDonePlatform) {
   try {
     const r = await apiFetch(`${API}/api/imports/?status=pending`);
     const candidates = await r.json();
     renderImportReview(candidates || []);
-  } catch (e) {
-    console.error('Failed to load import candidates', e);
-  } finally {
-    if (finishedScanPlatform && scanningPlatforms[finishedScanPlatform]) {
-      scanningPlatforms[finishedScanPlatform] = false;
+    // Only stop the "Scanning…" spinner once results for that platform actually showed up —
+    // an empty first poll (scan still running in the background) shouldn't clear it early.
+    if (checkScanDonePlatform && scanningPlatforms[checkScanDonePlatform] &&
+        (candidates || []).some(c => c.platform === checkScanDonePlatform)) {
+      scanningPlatforms[checkScanDonePlatform] = false;
       renderImportScanButtons();
     }
+  } catch (e) {
+    console.error('Failed to load import candidates', e);
   }
 }
 
