@@ -158,8 +158,8 @@ async def run_pipeline(keyword: str, region: str, pillar: str, slug: str) -> dic
     research = research_competitors(keyword, region)
 
     logger.info(f"Content genereren (Engels) voor '{keyword}'")
-    existing_for_prompt_rows = db.table("content_pages").select("title,region,pillar,slug").eq("status", "published").limit(50).execute().data or []
-    existing_for_prompt = [{"title": p["title"], "url_path": _url_path(p["region"], p["pillar"], p["slug"])} for p in existing_for_prompt_rows]
+    existing_for_prompt_rows = db.table("content_pages").select("title,language,pillar,slug").eq("status", "published").limit(50).execute().data or []
+    existing_for_prompt = [{"title": p["title"], "url_path": _url_path(p.get("language", "en"), p["pillar"], p["slug"])} for p in existing_for_prompt_rows]
 
     generated = generate_page_content(keyword, region, pillar, slug, research, existing_for_prompt)
     if not generated:
