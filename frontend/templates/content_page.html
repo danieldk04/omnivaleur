@@ -65,6 +65,11 @@
   </nav>
 
   <article>
+    {% if language_switch %}
+    <div class="lang-switch">
+      <a href="{{ language_switch.url }}">{{ 'Lees dit artikel in het Nederlands' if language_switch.language == 'nl' else 'Read this article in English' }}</a>
+    </div>
+    {% endif %}
     <h1>{{ page.h1 }}</h1>
     <blockquote>{{ page.quick_answer }}</blockquote>
 
