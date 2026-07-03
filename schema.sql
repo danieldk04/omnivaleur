@@ -180,3 +180,11 @@ CREATE TABLE IF NOT EXISTS content_pages (
 );
 CREATE INDEX IF NOT EXISTS idx_content_pages_region_pillar ON content_pages(region, pillar, status);
 CREATE INDEX IF NOT EXISTS idx_content_pages_status ON content_pages(status);
+
+-- English is the default site language everywhere. Marktplaats/2dehands
+-- articles additionally get an auto-translated Dutch companion page at the
+-- same region+pillar with slug + '-nl' — `translation_of` points at the
+-- English row's intent_key so both pages can render a language switcher.
+ALTER TABLE content_pages ADD COLUMN IF NOT EXISTS language VARCHAR(5) DEFAULT 'en';
+ALTER TABLE content_pages ADD COLUMN IF NOT EXISTS translation_of VARCHAR(200);
+CREATE INDEX IF NOT EXISTS idx_content_pages_translation_of ON content_pages(translation_of);
