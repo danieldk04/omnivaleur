@@ -6,7 +6,7 @@ render Jinja2 templates directly from `content_pages`, no JS involved.
 from pathlib import Path
 
 from fastapi import APIRouter, Header, HTTPException, Request
-from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 
 from backend.config import settings
