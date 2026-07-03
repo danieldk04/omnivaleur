@@ -2094,12 +2094,12 @@ const PLATFORM_CONNECT = {
 
 function renderPlatforms() {
   const items = [
-    { id: 'marktplaats', label: 'Marktplaats', type: 'extension', icon: '🇳🇱' },
-    { id: '2dehands', label: '2dehands', type: 'extension', icon: '🇧🇪' },
-    { id: 'vinted', label: 'Vinted', type: 'extension', icon: '👕' },
-    { id: 'ebay', label: 'eBay', type: 'api', icon: '🛒' },
-    { id: 'etsy', label: 'Etsy', type: 'api', icon: '🎨' },
-    { id: 'shopify', label: 'Shopify', type: 'api', icon: '🏪' },
+    { id: 'marktplaats', label: 'Marktplaats', type: 'extension', icon: platIcon('marktplaats', 20) },
+    { id: '2dehands', label: '2dehands', type: 'extension', icon: platIcon('2dehands', 20) },
+    { id: 'vinted', label: 'Vinted', type: 'extension', icon: platIcon('vinted', 20) },
+    { id: 'ebay', label: 'eBay', type: 'api', icon: platIcon('ebay', 20) },
+    { id: 'etsy', label: 'Etsy', type: 'api', icon: platIcon('etsy', 20) },
+    { id: 'shopify', label: 'Shopify', type: 'api', icon: platIcon('shopify', 20) },
   ];
   const html = items.map(p => {
     const ok = state.connected.includes(p.id);
