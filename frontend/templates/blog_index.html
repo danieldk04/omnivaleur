@@ -6,21 +6,35 @@
 <title>Blog — CrossList EU</title>
 <meta name="description" content="Guides on cross-listing across Marktplaats, 2dehands, Vinted, eBay, Etsy and Shopify.">
 <link rel="canonical" href="{{ canonical }}">
+<script type="application/ld+json">{{ item_list_json_ld | tojson }}</script>
 <style>
 {% include "_chrome_style.html" %}
-  main{max-width:1000px;margin:0 auto;padding:48px 20px 80px}
-  h1{font-size:2rem;margin-bottom:8px}
-  .subtitle{color:var(--muted);margin-bottom:36px}
+  main{max-width:920px;margin:0 auto;padding:56px 20px 80px}
+  .page-head{text-align:center;margin-bottom:44px}
+  h1{font-size:2.2rem;margin-bottom:10px}
+  .subtitle{color:var(--muted);font-size:16px}
 
-  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:20px}
-  .card{border:1px solid var(--border);border-radius:14px;overflow:hidden;display:flex;flex-direction:column}
-  .card img{width:100%;height:160px;object-fit:cover;display:block;background:#f1f5f9}
-  .card-body{padding:16px 18px;display:flex;flex-direction:column;gap:8px;flex:1}
-  .card-tag{font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--blue-dark)}
-  .card h3{font-size:1.05rem;margin:0;line-height:1.35;color:var(--text)}
-  .card p{font-size:13px;color:var(--muted);margin:0;flex:1}
-  .card a.card-link{color:var(--text);text-decoration:none}
-  .card a.card-link:hover h3{color:var(--blue-dark)}
+  .post-list{display:flex;flex-direction:column;gap:20px}
+  .post-row{display:grid;grid-template-columns:220px 1fr;gap:24px;border:1px solid var(--border);border-radius:16px;overflow:hidden;background:#fff}
+  .post-thumb{background:linear-gradient(135deg,var(--blue) 0%,var(--mint) 100%);display:flex;align-items:center;justify-content:center;min-height:160px;position:relative}
+  .post-thumb img{width:100%;height:100%;object-fit:cover;position:absolute;inset:0}
+  .post-thumb-tag{position:relative;z-index:1;color:#fff;font-size:12px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;text-align:center;padding:0 16px}
+  .post-body{padding:22px 24px 22px 0;display:flex;flex-direction:column;gap:10px}
+  .post-body h2{font-size:1.25rem;margin:0;line-height:1.35}
+  .post-body h2 a{color:var(--text)}
+  .post-body h2 a:hover{color:var(--blue-dark)}
+  .post-meta{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--muted)}
+  .post-meta img{width:24px;height:24px;border-radius:50%;object-fit:cover}
+  .post-excerpt{color:var(--muted);font-size:14px;line-height:1.6;margin:0}
+  .post-cta{align-self:flex-start;margin-top:4px}
+
+  .empty-state{text-align:center;color:var(--muted);padding:60px 20px}
+
+  @media(max-width:640px){
+    .post-row{grid-template-columns:1fr}
+    .post-thumb{min-height:120px}
+    .post-body{padding:18px}
+  }
 </style>
 </head>
 <body>
@@ -29,29 +43,34 @@
 {% include "_nav.html" %}
 
 <main>
-  <nav class="breadcrumbs" aria-label="Breadcrumb">
-    <a href="/">Home</a><span>/</span>Blog
-  </nav>
-  <h1>Cross-listing guides</h1>
-  <p class="subtitle">Platform comparisons, DAC7 rules and reselling tips — updated for 2026.</p>
+  <div class="page-head">
+    <h1>Cross-listing guides</h1>
+    <p class="subtitle">Platform comparisons, DAC7 rules and reselling tips — updated for 2026.</p>
+  </div>
 
-  <div class="grid">
+  <div class="post-list">
     {% for p in pages %}
-    <div class="card">
-      <a class="card-link" href="{{ p.url_path }}">
-        {% if p.featured_image_url %}<img src="{{ p.featured_image_url }}" alt="{{ p.h1 }}">{% endif %}
-        <div class="card-body">
-          <span class="card-tag">{{ 'Platform comparison' if p.pillar == 'A' else 'Reseller guide' }}</span>
-          <h3>{{ p.h1 }}</h3>
-          <p>{{ p.meta_description }}</p>
+    <article class="post-row">
+      <div class="post-thumb">
+        {% if p.featured_image_url %}<img src="{{ p.featured_image_url }}" alt="{{ p.h1 }}">{% else %}<span class="post-thumb-tag">{{ 'Platform comparison' if p.pillar == 'A' else 'Reseller guide' }}</span>{% endif %}
+      </div>
+      <div class="post-body">
+        <h2><a href="{{ p.url_path }}">{{ p.h1 }}</a></h2>
+        <div class="post-meta">
+          <img src="https://bgpeoaavbiaurpvybcqe.supabase.co/storage/v1/object/public/photos/content/author-daniel-crosslisteu.jpg" alt="Daniel">
+          <span>Daniel</span><span>·</span>
+          <span>{{ p.published_at[:10] if p.published_at else '' }}</span><span>·</span>
+          <span>{{ p.reading_minutes }} min read</span>
         </div>
-      </a>
-    </div>
+        <p class="post-excerpt">{{ p.meta_description }}</p>
+        <a class="post-cta btn btn-outline" href="{{ p.url_path }}">Read article</a>
+      </div>
+    </article>
     {% endfor %}
   </div>
 
   {% if not pages %}
-  <p style="color:var(--muted)">No guides published yet for this region.</p>
+  <p class="empty-state">No guides published yet for this region.</p>
   {% endif %}
 </main>
 
