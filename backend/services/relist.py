@@ -268,3 +268,110 @@ async def refresh_stale_listings(user_id: str, platform: str, older_than_days: i
             results.append({"item_id": listing["item_id"], "status": "skipped", "reason": str(e)})
             break  # quota hit — stop trying the rest
     return results
+
+
+async def renew_etsy_listing(item_id: str, user_id: str) -> dict:
+    """
+    Etsy's own official renewal action (PATCH state=active). Real money changes
+    hands here — Etsy charges the normal listing fee — so this is deliberately
+    NOT bundled into the daily refresh quota used by the other platforms; it's
+    a one-click "pay to renew" action the user explicitly triggers, same as
+    clicking Renew on etsy.com.
+    """
+    db = get_db()
+    item_resp = db.table("items").select("*").eq("id", item_id).eq("user_id", user_id).execute()
+    if not item_resp.data:
+        raise RefreshError("Item not found")
+
+    listing_resp = (
+        db.table("listings")
+        .select("*")
+        .eq("item_id", item_id)
+        .eq("platform", "etsy")
+        .in_("status", ["active", "sold", "error"])
+        .execute()
+    )
+    if not listing_resp.data:
+        raise RefreshError("No Etsy listing found for this item")
+    listing = listing_resp.data[0]
+    if not listing.get("platform_listing_id"):
+        raise RefreshError("This Etsy listing has no known listing ID")
+
+    creds_resp = (
+        db.table("platform_credentials")
+        .select("*")
+        .eq("user_id", user_id)
+        .eq("platform", "etsy")
+        .execute()
+    )
+    if not creds_resp.data:
+        raise RefreshError("Etsy isn't connected")
+    credentials = creds_resp.data[0]
+
+    platform = get_platform("etsy")
+    result = await platform.renew_listing(listing["platform_listing_id"], credentials)
+
+    now = datetime.now(timezone.utc).isoformat()
+    db.table("listings").update({
+        "status": "active",
+        "last_refreshed_at": now,
+        "refresh_count": (listing.get("refresh_count") or 0) + 1,
+    }).eq("id", listing["id"]).execute()
+
+    return {"strategy": "renew", "status": "renewed", "etsy_state": result.get("state")}
+
+
+async def relist_ended_ebay_listing(item_id: str, user_id: str) -> dict:
+    """
+    Republish an ENDED eBay offer via eBay's own relist mechanism. Refuses to run
+    if the listing is still active — eBay's duplicate-listing policy prohibits two
+    live listings for the same item, so this only ever touches offers that have
+    already ended (sold, withdrawn, or expired).
+    """
+    db = get_db()
+    item_resp = db.table("items").select("*").eq("id", item_id).eq("user_id", user_id).execute()
+    if not item_resp.data:
+        raise RefreshError("Item not found")
+
+    listing_resp = (
+        db.table("listings")
+        .select("*")
+        .eq("item_id", item_id)
+        .eq("platform", "ebay")
+        .execute()
+    )
+    if not listing_resp.data:
+        raise RefreshError("No eBay listing found for this item")
+    listing = listing_resp.data[0]
+    offer_id = listing.get("platform_offer_id") or listing.get("platform_listing_id")
+    if not offer_id:
+        raise RefreshError("This eBay listing has no known offer ID")
+
+    creds_resp = (
+        db.table("platform_credentials")
+        .select("*")
+        .eq("user_id", user_id)
+        .eq("platform", "ebay")
+        .execute()
+    )
+    if not creds_resp.data:
+        raise RefreshError("eBay isn't connected")
+    credentials = creds_resp.data[0]
+
+    platform = get_platform("ebay")
+    try:
+        result = await platform.relist_ended(offer_id, credentials)
+    except RuntimeError as e:
+        raise RefreshError(str(e))
+
+    now = datetime.now(timezone.utc).isoformat()
+    db.table("listings").update({
+        "status": "active",
+        "platform_listing_id": result["platform_listing_id"],
+        "platform_listing_url": result["platform_listing_url"],
+        "listed_at": now,
+        "last_refreshed_at": now,
+        "refresh_count": (listing.get("refresh_count") or 0) + 1,
+    }).eq("id", listing["id"]).execute()
+
+    return {"strategy": "relist_ended", "status": "relisted", **result}
