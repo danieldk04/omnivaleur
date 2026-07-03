@@ -18,17 +18,16 @@ logger = logging.getLogger(__name__)
 MODEL = "claude-opus-4-8"
 CURRENT_YEAR = 2026
 
-# Site is Engelstalig by default (zie CLAUDE-memory: "Language: English only").
-# Uitzondering: content die specifiek over Marktplaats/2dehands gaat EN in een
-# nl/be-nl regio wordt gepubliceerd, krijgt automatisch een Nederlandse versie —
-# dat is precies waar de doelgroep zit en waar Marktplaats/2dehands zelf Nederlands is.
+# Every article is written in English first (zie CLAUDE-memory: "Language:
+# English only"). Articles specifically about Marktplaats/2dehands in a
+# nl/be-nl region additionally get an auto-translated Dutch companion page —
+# readers can switch between the two on the page itself (see linking.py /
+# pipeline.py for how the two rows get linked via `translation_of`).
 NL_PLATFORM_TERMS = ("marktplaats", "2dehands")
 
 
-def _resolve_language(keyword: str, region: str) -> str:
-    if region in ("nl", "be-nl") and any(t in keyword.lower() for t in NL_PLATFORM_TERMS):
-        return "Dutch"
-    return "English"
+def needs_dutch_translation(keyword: str, region: str) -> bool:
+    return region in ("nl", "be-nl") and any(t in keyword.lower() for t in NL_PLATFORM_TERMS)
 
 
 AI_CLICHES = [
