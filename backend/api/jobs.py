@@ -12,8 +12,11 @@ async def get_pending_jobs(platform: str = None, user_id: str = Depends(get_curr
     q = db.table("jobs").select("*").eq("user_id", user_id).eq("status", "pending")
     if platform:
         q = q.eq("platform", platform)
-    result = q.order("created_at").limit(5).execute()
-    return result.data
+    result = q.order("created_at").limit(20).execute()
+    now = datetime.now(timezone.utc).isoformat()
+    # Jobs with a future scheduled_for (used to jitter relist recreates) aren't due yet.
+    due = [j for j in result.data if not j.get("scheduled_for") or j["scheduled_for"] <= now]
+    return due[:5]
 
 
 @router.post("/{job_id}/claim")
