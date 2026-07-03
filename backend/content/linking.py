@@ -38,16 +38,12 @@ def apply_internal_links(body_html: str, candidates: list[dict], self_intent_key
     """
     body = body_html
     linked: list[str] = []
-    if "<a href=" not in body:
-        pre_existing = 0
-    else:
-        pre_existing = len(re.findall(r"<a href=", body))
 
     for cand in candidates:
+        if len(linked) >= max(min_links, 2):
+            break
         if cand["intent_key"] == self_intent_key:
             continue
-        if len(linked) + (1 if pre_existing else 0) >= min_links and linked:
-            pass  # keep trying — we still want min_links *new* links added below
         if f'href="{cand["url_path"]}"' in body:
             continue
         for term in cand.get("link_terms", []):
