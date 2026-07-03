@@ -127,7 +127,7 @@ def _render_page(request: Request, language: str, pillar: str, slug: str) -> HTM
     )
 
 
-@router.get("/crosslisten/{slug}", response_class=HTMLResponse)
+@router.get("/crosslisting/{slug}", response_class=HTMLResponse)
 async def combo_page_en(request: Request, slug: str):
     return _render_page(request, "en", "A", slug)
 
