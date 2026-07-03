@@ -865,7 +865,7 @@ input[type="checkbox"].row-check { width: 15px; height: 15px; cursor: pointer; a
     <div id="view-refresh" class="view">
       <div class="view-header">
         <h1>Refresh</h1>
-        <p>Bump old Vinted listings that sank in "Newest" — a safe content edit or a legitimate delete + delayed recreate. Rate-limited on purpose: 1x per listing per 14 days, max 8 refreshes/day/account. Not a bot-engagement trick, and it isn't guaranteed to change ranking.</p>
+        <p>Bump old listings that sank in the "Newest" sort — each platform gets whatever mechanism is actually safe and real for it. Rate-limited on purpose: 1x per listing per 14 days, max 8 free refreshes/day/account. Nothing here fakes engagement, and nothing is guaranteed to change ranking.</p>
       </div>
 
       <div class="protections-summary">
@@ -876,15 +876,30 @@ input[type="checkbox"].row-check { width: 15px; height: 15px; cursor: pointer; a
         </div>
       </div>
 
-      <div style="display:flex;gap:10px;margin:16px 0 20px">
-        <button class="btn btn-outline" onclick="refreshStaleListings()">Refresh oldest Vinted listings (bulk)</button>
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px;margin:16px 0 24px">
+        <div class="protection-card">
+          <div style="font-weight:700;font-size:13px;margin-bottom:6px">Vinted &amp; Marktplaats / 2dehands</div>
+          <div style="font-size:12px;color:var(--muted);margin-bottom:10px">Delete + delayed recreate, reusing the same automation that already publishes your listings. Vinted also supports a lower-risk content-only nudge.</div>
+          <button class="btn btn-sm btn-outline" onclick="refreshStaleListings('vinted')">Bulk: Vinted</button>
+          <button class="btn btn-sm btn-outline" onclick="refreshStaleListings('marktplaats')" style="margin-left:6px">Bulk: Marktplaats</button>
+          <button class="btn btn-sm btn-outline" onclick="refreshStaleListings('2dehands')" style="margin-left:6px">Bulk: 2dehands</button>
+        </div>
+        <div class="protection-card">
+          <div style="font-weight:700;font-size:13px;margin-bottom:6px">Etsy — official renewal</div>
+          <div style="font-size:12px;color:var(--muted)">Etsy's own "Renew" action (PATCH state→active) — charges the normal listing fee, gives it a fresh listed date. Real money, so this isn't part of the free daily quota; renew per item below.</div>
+        </div>
+        <div class="protection-card">
+          <div style="font-weight:700;font-size:13px;margin-bottom:6px">eBay — relist ended only</div>
+          <div style="font-size:12px;color:var(--muted)">eBay's duplicate-listing policy forbids bumping a live listing, so this only republishes listings that have already ENDED (sold/expired/withdrawn) via eBay's own relist endpoint.</div>
+        </div>
       </div>
 
       <table class="data-table">
         <thead>
           <tr>
             <th>Item</th>
-            <th>Live since</th>
+            <th>Platform</th>
+            <th>Status</th>
             <th>Last refreshed</th>
             <th>Actions</th>
           </tr>
