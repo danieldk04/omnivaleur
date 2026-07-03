@@ -116,12 +116,6 @@ async def niche_page(request: Request, region: str, slug: str):
     return _render_page(request, region, "B", slug)
 
 
-@router.get("/blog")
-async def blog_index_default():
-    """Global nav link — stable regardless of region routing changes."""
-    return RedirectResponse(url="/nl/blog")
-
-
 def _reading_minutes(body_html: str) -> int:
     import re as _re
 
@@ -129,12 +123,12 @@ def _reading_minutes(body_html: str) -> int:
     return max(1, round(words / 200))
 
 
-@router.get("/{region}/blog", response_class=HTMLResponse)
-async def blog_index(request: Request, region: str):
-    if region not in REGIONS:
-        raise HTTPException(status_code=404, detail="Unknown region")
+def _render_blog_index(request: Request, region: str | None, canonical: str) -> HTMLResponse:
     db = get_db()
-    rows = db.table("content_pages").select("*").eq("region", region).eq("status", "published").is_("translation_of", "null").order("published_at", desc=True).execute().data or []
+    q = db.table("content_pages").select("*").eq("status", "published").is_("translation_of", "null")
+    if region:
+        q = q.eq("region", region)
+    rows = q.order("published_at", desc=True).execute().data or []
     for r in rows:
         r["url_path"] = f"/{r['region']}/{'crosslisten' if r['pillar'] == 'A' else 'reseller-tools'}/{r['slug']}"
         r["reading_minutes"] = _reading_minutes(r.get("body_html"))
@@ -151,8 +145,21 @@ async def blog_index(request: Request, region: str):
     return templates.TemplateResponse(
         request,
         "blog_index.html",
-        {"pages": rows, "region": region, "canonical": f"{SITE_URL}/{region}/blog", "item_list_json_ld": item_list_json_ld},
+        {"pages": rows, "region": region or "nl", "canonical": canonical, "item_list_json_ld": item_list_json_ld},
     )
+
+
+@router.get("/blog", response_class=HTMLResponse)
+async def blog_index_default(request: Request):
+    """Region-neutral canonical blog URL — used everywhere in nav/footer."""
+    return _render_blog_index(request, None, f"{SITE_URL}/blog")
+
+
+@router.get("/{region}/blog", response_class=HTMLResponse)
+async def blog_index(request: Request, region: str):
+    if region not in REGIONS:
+        raise HTTPException(status_code=404, detail="Unknown region")
+    return _render_blog_index(request, region, f"{SITE_URL}/{region}/blog")
 
 
 @router.get("/sitemap.xml")
