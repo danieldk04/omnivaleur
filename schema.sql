@@ -141,6 +141,8 @@ CREATE TABLE IF NOT EXISTS import_candidates (
     suggested_item_id UUID REFERENCES items(id) ON DELETE SET NULL,
     status VARCHAR(20) DEFAULT 'pending', -- pending / linked / imported / ignored
     created_at TIMESTAMPTZ DEFAULT NOW(),
+    platform_listed_at TIMESTAMPTZ, -- when the scrape says it actually went live on the platform, if known
     UNIQUE(user_id, platform, platform_listing_id)
 );
 CREATE INDEX IF NOT EXISTS idx_import_candidates_user_platform ON import_candidates(user_id, platform, status);
+ALTER TABLE import_candidates ADD COLUMN IF NOT EXISTS platform_listed_at TIMESTAMPTZ;
