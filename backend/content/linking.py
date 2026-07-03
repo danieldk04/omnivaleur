@@ -52,7 +52,5 @@ def apply_internal_links(body_html: str, candidates: list[dict], self_intent_key
                 body = new_body
                 linked.append(cand["intent_key"])
                 break
-        if len(linked) >= max(min_links, 2):
-            break
 
     return body, linked
