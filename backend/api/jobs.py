@@ -72,6 +72,10 @@ async def complete_job(job_id: str, body: dict, user_id: str = Depends(get_curre
     elif job["action"] == "delete":
         db.table("listings").update({"status": "delisted"}).eq("item_id", job["item_id"]).eq("platform", job["platform"]).execute()
 
+    elif job["action"] == "content_refresh":
+        # Listing stays active — this is an in-place edit, not a new listing.
+        pass
+
     return {"ok": True}
 
 
