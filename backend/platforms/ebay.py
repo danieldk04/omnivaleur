@@ -222,6 +222,32 @@ class EbayPlatform(PlatformBase):
             )
             return resp.status_code in (200, 204)
 
+    async def relist_ended(self, offer_id: str, credentials: dict) -> dict:
+        """
+        Republish a withdrawn/ended offer via eBay's own publish endpoint — the
+        official "Sell similar / relist" mechanism. Only valid for offers that are
+        NOT currently live: eBay's duplicate-listing policy prohibits having two
+        active listings for the same item, so this must never be called on an
+        offer that's still published (get_listing_status(...) != 'active').
+        """
+        credentials = await self._ensure_fresh_token(credentials)
+        status = await self.get_listing_status(offer_id, credentials)
+        if status == "active":
+            raise RuntimeError("Offer is still live on eBay — relist only applies to ended listings")
+        async with httpx.AsyncClient() as client:
+            resp = await client.post(
+                f"{INVENTORY_API}/offer/{offer_id}/publish",
+                headers=self._auth_headers(credentials),
+            )
+            _raise_with_ebay_error(resp, "relisting ended offer")
+            listing_id = resp.json().get("listingId", offer_id)
+        domain = _MARKETPLACE_DOMAINS.get(settings.ebay_marketplace_id, "ebay.com")
+        return {
+            "platform_listing_id": listing_id,
+            "platform_listing_url": f"https://www.{domain}/itm/{listing_id}",
+            "platform_offer_id": offer_id,
+        }
+
     async def get_listing_status(self, offer_id: str, credentials: dict) -> str:
         credentials = await self._ensure_fresh_token(credentials)
         async with httpx.AsyncClient() as client:
