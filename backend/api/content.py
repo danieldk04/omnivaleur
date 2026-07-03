@@ -98,6 +98,13 @@ async def blog_index_default():
     return RedirectResponse(url="/nl/blog")
 
 
+def _reading_minutes(body_html: str) -> int:
+    import re as _re
+
+    words = len(_re.findall(r"\S+", _re.sub(r"<[^>]+>", " ", body_html or "")))
+    return max(1, round(words / 200))
+
+
 @router.get("/{region}/blog", response_class=HTMLResponse)
 async def blog_index(request: Request, region: str):
     if region not in REGIONS:
@@ -106,6 +113,7 @@ async def blog_index(request: Request, region: str):
     rows = db.table("content_pages").select("*").eq("region", region).eq("status", "published").order("published_at", desc=True).execute().data or []
     for r in rows:
         r["url_path"] = f"/{r['region']}/{'crosslisten' if r['pillar'] == 'A' else 'reseller-tools'}/{r['slug']}"
+        r["reading_minutes"] = _reading_minutes(r.get("body_html"))
     return templates.TemplateResponse(
         request,
         "blog_index.html",
