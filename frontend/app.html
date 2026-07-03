@@ -2451,6 +2451,7 @@ async function applyImportCandidate(candidateId) {
   const itemId = select.value;
 
   if (itemId) {
+    setBusy(true, 'Linking to item…');
     try {
       const r = await apiFetch(`${API}/api/imports/${candidateId}/link`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -2459,8 +2460,11 @@ async function applyImportCandidate(candidateId) {
       if (!r.ok) throw new Error((await r.json()).detail || 'Link failed');
       await loadAll();
       await loadImportCandidates();
+      showToast('Linked.');
     } catch (e) {
       alert('Link error: ' + e.message);
+    } finally {
+      setBusy(false);
     }
     return;
   }
@@ -2470,6 +2474,7 @@ async function applyImportCandidate(candidateId) {
   const brand = prompt('Brand (optional):', '');
   const size = prompt('Size (optional):', '');
   const color = prompt('Color (optional):', '');
+  setBusy(true, 'Creating item…');
   try {
     const r = await apiFetch(`${API}/api/imports/${candidateId}/create-item`, {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -2483,31 +2488,40 @@ async function applyImportCandidate(candidateId) {
     if (!r.ok) throw new Error((await r.json()).detail || 'Import failed');
     await loadAll();
     await loadImportCandidates();
+    showToast('Item created.');
   } catch (e) {
     alert('Import error: ' + e.message);
+  } finally {
+    setBusy(false);
   }
 }
 
 async function bulkImportAllCandidates() {
   if (!confirm('Import all pending candidates now? Matches get linked to the existing item; the rest become new items.')) return;
+  setBusy(true, 'Importing all pending candidates — this can take a while, please wait…');
   try {
     const r = await apiFetch(`${API}/api/imports/bulk-import`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({}) });
     const data = await r.json();
     if (!r.ok) throw new Error(data.detail || 'Bulk import failed');
-    alert(`Done: ${data.linked} linked, ${data.created} created${data.failed ? `, ${data.failed} failed` : ''}.`);
     await loadAll();
     await loadImportCandidates();
+    showToast(`Done: ${data.linked} linked, ${data.created} created${data.failed ? `, ${data.failed} failed` : ''}.`);
   } catch (e) {
     alert('Bulk import error: ' + e.message);
+  } finally {
+    setBusy(false);
   }
 }
 
 async function ignoreImportCandidate(candidateId) {
+  setBusy(true, 'Ignoring…');
   try {
     await apiFetch(`${API}/api/imports/${candidateId}/ignore`, { method: 'POST' });
     await loadImportCandidates();
   } catch (e) {
     alert('Error: ' + e.message);
+  } finally {
+    setBusy(false);
   }
 }
 
