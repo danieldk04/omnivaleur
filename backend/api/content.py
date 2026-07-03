@@ -40,7 +40,10 @@ SITE_URL = "https://crosslisteu.com"
 
 
 def _url_path(language: str, pillar: str, slug: str) -> str:
-    folder = "crosslisten" if pillar == "A" else "reseller-tools"
+    if pillar == "A":
+        folder = "crosslisten" if language and language != "en" else "crosslisting"
+    else:
+        folder = "reseller-tools"
     if language and language != "en":
         suffix = f"-{language}"
         public_slug = slug[: -len(suffix)] if slug.endswith(suffix) else slug
