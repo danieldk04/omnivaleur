@@ -477,7 +477,7 @@ async function bgScanVinted(job, serverUrl) {
 
     const userId = idInfo.userId;
     const result = await execInTab(tabId, async (userId) => {
-      const res = await fetch(`/api/v2/users/${userId}/items?order=newest_first&page=1&per_page=200`, {
+      const res = await fetch(`/api/v2/wardrobe/${userId}/items?order=newest_first&page=1&per_page=200`, {
         headers: { Accept: "application/json" },
       });
       if (!res.ok) return { error: `Vinted returned HTTP ${res.status} while listing your items (user id ${userId}, ${location.origin}).` };
