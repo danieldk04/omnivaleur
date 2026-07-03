@@ -77,7 +77,42 @@ async def complete_job(job_id: str, body: dict, user_id: str = Depends(get_curre
         # Listing stays active — this is an in-place edit, not a new listing.
         pass
 
+    elif job["action"] == "scan":
+        _store_scan_results(db, job, body.get("listings", []))
+
     return {"ok": True}
+
+
+def _store_scan_results(db, job, scraped: list[dict]):
+    """
+    Persist scraped "my listings" cards as import_candidates for manual review.
+    Never touches the items/listings tables directly — a human links or
+    imports each candidate explicitly via /api/imports.
+    """
+    if not scraped:
+        return
+    items = db.table("items").select("id,title").eq("user_id", job["user_id"]).execute().data or []
+    for row in scraped:
+        platform_listing_id = row.get("platform_listing_id")
+        title = row.get("title") or ""
+        if not platform_listing_id:
+            continue
+        best_id, best_score = None, 0.0
+        for it in items:
+            score = SequenceMatcher(None, title.lower(), (it.get("title") or "").lower()).ratio()
+            if score > best_score:
+                best_id, best_score = it["id"], score
+        db.table("import_candidates").upsert({
+            "user_id": job["user_id"],
+            "platform": job["platform"],
+            "platform_listing_id": platform_listing_id,
+            "platform_listing_url": row.get("platform_listing_url"),
+            "title": title,
+            "price": row.get("price"),
+            "photo_url": row.get("photo_url"),
+            "suggested_item_id": best_id if best_score >= 0.6 else None,
+            "status": "pending",
+        }, on_conflict="user_id,platform,platform_listing_id").execute()
 
 
 @router.post("/{job_id}/error")
