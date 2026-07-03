@@ -32,12 +32,18 @@ STATIC_LINK_CANDIDATES = [
 
 def _url_path(language: str, pillar: str, slug: str) -> str:
     """
-    English (the default) gets no URL prefix at all — /crosslisten/{slug}.
-    Only a translated page gets its language as a prefix — /nl/crosslisten/{slug}.
+    English (the default) gets no URL prefix at all — /crosslisting/{slug}.
+    Only a translated page gets its language as a prefix, with the folder
+    name in that language too — /nl/crosslisten/{slug}.
     Translated slugs carry an internal "-{language}" DB-only suffix (to stay
-    unique from the English row); that suffix is stripped for the public URL.
+    unique from the English row, since they're independently-worded Dutch
+    slugs, not just the English slug with a suffix); that suffix is stripped
+    for the public URL.
     """
-    folder = "crosslisten" if pillar == "A" else "reseller-tools"
+    if pillar == "A":
+        folder = "crosslisten" if language and language != "en" else "crosslisting"
+    else:
+        folder = "reseller-tools"
     if language and language != "en":
         suffix = f"-{language}"
         public_slug = slug[: -len(suffix)] if slug.endswith(suffix) else slug
