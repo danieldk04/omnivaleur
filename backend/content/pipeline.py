@@ -93,6 +93,12 @@ async def run_pipeline(keyword: str, region: str, pillar: str, slug: str) -> dic
 
     from datetime import datetime, timezone
 
+    existing_image_row = db.table("content_pages").select("featured_image_url").eq("intent_key", intent_key).execute().data
+    if existing_image_row and existing_image_row[0].get("featured_image_url"):
+        # Een handmatig aangeleverde afbeelding blijft staan bij een content-update —
+        # de pipeline genereert zelf geen afbeeldingen meer (zie module-docstring hierboven).
+        featured_image_url = existing_image_row[0]["featured_image_url"]
+
     now_iso = datetime.now(timezone.utc).isoformat()
     canonical = f"{SITE_URL}{_url_path(region, pillar, slug)}"
     article_json_ld = {
