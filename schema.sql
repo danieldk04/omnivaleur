@@ -165,6 +165,7 @@ CREATE TABLE IF NOT EXISTS content_pages (
     meta_description VARCHAR(160) NOT NULL,
     h1 TEXT NOT NULL,
     quick_answer TEXT NOT NULL,          -- 40-60 word answer block, rendered as <blockquote>
+    takeaways TEXT[] DEFAULT '{}',       -- 3-5 one-line key facts, rendered as a highlighted callout box
     body_html TEXT NOT NULL,             -- H2 question-headings + body, SSR'd as-is
     faq JSONB NOT NULL DEFAULT '[]',     -- [{question, answer}, ...]
     featured_image_url TEXT,
