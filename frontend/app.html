@@ -932,14 +932,22 @@ input[type="checkbox"].row-check { width: 15px; height: 15px; cursor: pointer; a
     <div id="view-import" class="view">
       <div class="view-header">
         <h1>Import listings</h1>
-        <p>For listings you posted directly on Vinted / Marktplaats / 2dehands (not via CrossList) — scan reads your own "my listings" page and adds anything found to the review list below. Nothing is imported automatically: you link each one to an existing item or fill in the missing details (purchase price, condition, color, etc.) yourself.</p>
+        <p>For listings you posted directly on the platform (not via CrossList) — scan reads your own "my listings" page and adds anything found to the review list below. Nothing is imported automatically: you link each one to an existing item or fill in the missing details (purchase price, condition, color, etc.) yourself. Only Vinted is available right now — the other platforms are still in progress.</p>
       </div>
 
       <div class="protection-card" style="margin-bottom:24px">
-        <div style="display:flex;flex-wrap:wrap;gap:6px">
+        <div style="display:flex;flex-wrap:wrap;gap:6px;align-items:center">
           <button class="btn btn-sm btn-outline" onclick="scanPlatform('vinted')">Scan Vinted</button>
-          <button class="btn btn-sm btn-outline" onclick="scanPlatform('marktplaats')">Scan Marktplaats</button>
-          <button class="btn btn-sm btn-outline" onclick="scanPlatform('2dehands')">Scan 2dehands</button>
+          <button class="btn btn-sm btn-outline" disabled title="Coming soon">Scan Marktplaats</button>
+          <span class="badge" style="margin-right:8px">Coming soon</span>
+          <button class="btn btn-sm btn-outline" disabled title="Coming soon">Scan 2dehands</button>
+          <span class="badge" style="margin-right:8px">Coming soon</span>
+          <button class="btn btn-sm btn-outline" disabled title="Coming soon">Scan eBay</button>
+          <span class="badge" style="margin-right:8px">Coming soon</span>
+          <button class="btn btn-sm btn-outline" disabled title="Coming soon">Scan Etsy</button>
+          <span class="badge" style="margin-right:8px">Coming soon</span>
+          <button class="btn btn-sm btn-outline" disabled title="Coming soon">Scan Shopify</button>
+          <span class="badge">Coming soon</span>
         </div>
       </div>
 
