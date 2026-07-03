@@ -2333,62 +2333,88 @@ async function delistItem(itemId, title) {
 // ── Refresh (bump old listings) ────────────────────────────────────
 const REFRESH_COOLDOWN_DAYS = 14;
 const REFRESH_DAILY_CAP = 8;
+const REFRESH_PLATFORM_STRATEGIES = {
+  vinted: ['content', 'relist'],
+  marktplaats: ['relist'],
+  '2dehands': ['relist'],
+};
 
 function renderRefreshView() {
-  const vintedListings = state.listings.filter(l => l.platform === 'vinted' && l.status === 'active');
   const now = Date.now();
 
   const usedToday = state.listings.filter(l => {
     if (!l.last_refreshed_at) return false;
-    const d = new Date(l.last_refreshed_at);
-    return d.toDateString() === new Date().toDateString();
+    return new Date(l.last_refreshed_at).toDateString() === new Date().toDateString();
   }).length;
   document.getElementById('refresh-quota-title').textContent =
     `Refresh quota: ${Math.min(usedToday, REFRESH_DAILY_CAP)} / ${REFRESH_DAILY_CAP} used today`;
 
-  const rows = vintedListings.map(l => {
+  const relevant = state.listings.filter(l =>
+    (REFRESH_PLATFORM_STRATEGIES[l.platform] && l.status === 'active') ||
+    (l.platform === 'etsy' && ['active', 'sold', 'error'].includes(l.status)) ||
+    (l.platform === 'ebay' && l.status !== 'active')
+  );
+
+  const rows = relevant.map(l => {
     const item = state.items.find(i => i.id === l.item_id);
     if (!item) return '';
-    const listedDate = l.listed_at ? fmtDate(l.listed_at) : '—';
-    let cooldownLabel = '<span style="color:var(--muted)">never</span>';
-    let onCooldown = false;
-    if (l.last_refreshed_at) {
-      const elapsedDays = Math.floor((now - new Date(l.last_refreshed_at).getTime()) / 86400000);
-      onCooldown = elapsedDays < REFRESH_COOLDOWN_DAYS;
-      cooldownLabel = onCooldown
-        ? `<span style="color:var(--muted)">${elapsedDays}d ago — ${REFRESH_COOLDOWN_DAYS - elapsedDays}d left</span>`
-        : `<span style="color:var(--green)">${elapsedDays}d ago</span>`;
+    const label = PLATFORM_LABELS[l.platform] || l.platform;
+
+    let statusCell, actionCell;
+    if (l.platform === 'etsy') {
+      statusCell = `<span style="font-size:12px;color:var(--muted)">${l.status}</span>`;
+      actionCell = `<button class="btn btn-sm btn-outline" onclick="renewEtsyItem('${item.id}','${esc(item.title)}')">Renew (fee applies)</button>`;
+    } else if (l.platform === 'ebay') {
+      statusCell = `<span style="font-size:12px;color:var(--muted)">ended (${l.status})</span>`;
+      actionCell = `<button class="btn btn-sm btn-outline" onclick="relistEndedEbayItem('${item.id}','${esc(item.title)}')">Relist ended listing</button>`;
+    } else {
+      let onCooldown = false;
+      if (l.last_refreshed_at) {
+        const elapsedDays = Math.floor((now - new Date(l.last_refreshed_at).getTime()) / 86400000);
+        onCooldown = elapsedDays < REFRESH_COOLDOWN_DAYS;
+        statusCell = onCooldown
+          ? `<span style="color:var(--muted);font-size:12px">${elapsedDays}d ago — ${REFRESH_COOLDOWN_DAYS - elapsedDays}d left</span>`
+          : `<span style="color:var(--green);font-size:12px">${elapsedDays}d ago</span>`;
+      } else {
+        statusCell = '<span style="color:var(--muted);font-size:12px">never refreshed</span>';
+      }
+      actionCell = `<button class="btn btn-sm btn-outline" ${onCooldown ? 'disabled title="On cooldown"' : ''} onclick="refreshItem('${item.id}','${esc(item.title)}','${l.platform}')">Refresh</button>`;
     }
+
     return `<tr>
       <td><div class="item-info">
         <div class="item-photo">${item.photo_urls?.[0] ? `<img src="${item.photo_urls[0]}" style="width:40px;height:40px;border-radius:6px;object-fit:cover">` : '👗'}</div>
         <div><div class="item-title">${esc(item.title)}</div><div class="item-meta">${item.brand || ''}${item.size ? ' · ' + item.size : ''}</div></div>
       </div></td>
-      <td style="white-space:nowrap;font-size:12px;color:var(--muted)">${listedDate}</td>
-      <td style="white-space:nowrap;font-size:12px">${cooldownLabel}</td>
-      <td style="white-space:nowrap">
-        <button class="btn btn-sm btn-outline" ${onCooldown ? 'disabled title="On cooldown"' : ''} onclick="refreshItem('${item.id}','${esc(item.title)}')">Refresh</button>
-      </td>
+      <td style="white-space:nowrap;font-size:12px">${label}</td>
+      <td style="white-space:nowrap">${statusCell}</td>
+      <td style="white-space:nowrap;font-size:12px;color:var(--muted)">${l.last_refreshed_at ? fmtDate(l.last_refreshed_at) : '—'}</td>
+      <td style="white-space:nowrap">${actionCell}</td>
     </tr>`;
   }).join('');
 
   document.getElementById('refresh-body').innerHTML = rows ||
-    '<tr><td colspan="4"><div class="empty"><h3>No active Vinted listings</h3><p>Publish something to Vinted first — refresh only works on live listings.</p></div></td></tr>';
+    '<tr><td colspan="5"><div class="empty"><h3>Nothing to refresh</h3><p>Publish to Vinted, Marktplaats, 2dehands or Etsy first — or wait for an eBay listing to end.</p></div></td></tr>';
 }
 
-function refreshItem(itemId, title) {
-  const hasVinted = state.listings.some(l => l.item_id === itemId && l.platform === 'vinted' && l.status === 'active');
-  if (!hasVinted) { alert('Refresh is currently only available for active Vinted listings.'); return; }
+function refreshItem(itemId, title, platform) {
+  const strategies = REFRESH_PLATFORM_STRATEGIES[platform];
+  if (!strategies) { alert(`Refresh isn't available for ${platform} yet.`); return; }
 
-  const choice = prompt(
-    `Refresh "${title}" on Vinted — choose a strategy:\n\n` +
-    `1 = Content refresh (safe): small price/photo-order edit, zero risk, keeps listing history\n` +
-    `2 = Relist (delete + recreate): moves it back to "Newest", rate-limited to once per 14 days per listing and max 8/day per account\n\n` +
-    `Type 1 or 2:`, '1'
-  );
-  if (choice !== '1' && choice !== '2') return;
-  const strategy = choice === '2' ? 'relist' : 'content';
-  doRefresh(itemId, 'vinted', strategy);
+  let strategy = strategies[0];
+  if (strategies.length > 1) {
+    const choice = prompt(
+      `Refresh "${title}" on ${PLATFORM_LABELS[platform] || platform} — choose a strategy:\n\n` +
+      `1 = Content refresh (safe): small price/photo-order edit, zero risk, keeps listing history\n` +
+      `2 = Relist (delete + recreate): moves it back to "Newest", rate-limited to once per 14 days per listing and max 8/day per account\n\n` +
+      `Type 1 or 2:`, '1'
+    );
+    if (choice !== '1' && choice !== '2') return;
+    strategy = choice === '2' ? 'relist' : 'content';
+  } else if (!confirm(`Relist "${title}" on ${PLATFORM_LABELS[platform] || platform}? This deletes and re-creates the listing after a randomized delay (45min-4h) to avoid a scripted pattern.`)) {
+    return;
+  }
+  doRefresh(itemId, platform, strategy);
 }
 
 async function doRefresh(itemId, platform, strategy) {
@@ -2407,21 +2433,56 @@ async function doRefresh(itemId, platform, strategy) {
   }
 }
 
-async function refreshStaleListings() {
-  if (!confirm('Refresh your oldest active Vinted listings (30+ days old)? This queues a legitimate delete+recreate for up to 5 items, rate-limited and delayed to avoid a scripted pattern.')) return;
+async function refreshStaleListings(platform) {
+  const label = PLATFORM_LABELS[platform] || platform;
+  if (!confirm(`Refresh your oldest active ${label} listings (30+ days old)? This queues a legitimate delete+recreate for up to 5 items, rate-limited and delayed to avoid a scripted pattern.`)) return;
   try {
     const r = await apiFetch(`${API}/api/listings/refresh-stale`, {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ platform: 'vinted', older_than_days: 30, limit: 5 }),
+      body: JSON.stringify({ platform, older_than_days: 30, limit: 5 }),
     });
     const data = await r.json();
     if (!r.ok) throw new Error(data.detail || 'Bulk refresh failed');
     const lines = (data.results || []).map(x => `${x.item_id.slice(0,8)}… — ${x.status}${x.reason ? ': ' + x.reason : ''}`);
-    alert(lines.length ? lines.join('\n') : 'No stale Vinted listings found.');
+    alert(lines.length ? lines.join('\n') : `No stale ${label} listings found.`);
     await loadAll();
     if (document.getElementById('view-refresh')?.classList.contains('active')) renderRefreshView();
   } catch (e) {
     alert('Bulk refresh error: ' + e.message);
+  }
+}
+
+async function renewEtsyItem(itemId, title) {
+  if (!confirm(`Renew "${title}" on Etsy? Etsy charges the normal listing fee for this — it's their own official renewal action, not something CrossList does for free.`)) return;
+  try {
+    const r = await apiFetch(`${API}/api/listings/renew-etsy`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ item_id: itemId }),
+    });
+    const data = await r.json();
+    if (!r.ok) throw new Error(data.detail || 'Renew failed');
+    alert('Renewed on Etsy.');
+    await loadAll();
+    renderRefreshView();
+  } catch (e) {
+    alert('Etsy renew error: ' + e.message);
+  }
+}
+
+async function relistEndedEbayItem(itemId, title) {
+  if (!confirm(`Relist "${title}" on eBay? Only works if the listing has already ended — eBay doesn't allow bumping a live listing.`)) return;
+  try {
+    const r = await apiFetch(`${API}/api/listings/relist-ended-ebay`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ item_id: itemId }),
+    });
+    const data = await r.json();
+    if (!r.ok) throw new Error(data.detail || 'Relist failed');
+    alert('Relisted on eBay.');
+    await loadAll();
+    renderRefreshView();
+  } catch (e) {
+    alert('eBay relist error: ' + e.message);
   }
 }
 
