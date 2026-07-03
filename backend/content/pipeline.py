@@ -11,11 +11,9 @@ import logging
 import re
 
 from backend.content.generator import generate_page_content
-from backend.content.images import generate_featured_image_base64
 from backend.content.linking import apply_internal_links
 from backend.content.research import research_competitors
 from backend.database import get_db
-from backend.services.image_upload import upload_image
 
 logger = logging.getLogger(__name__)
 
