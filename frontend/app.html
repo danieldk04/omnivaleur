@@ -2695,6 +2695,7 @@ async function refreshStaleListings(platform) {
 
 async function renewEtsyItem(itemId, title) {
   if (!confirm(`Renew "${title}" on Etsy? Etsy charges the normal listing fee for this — it's their own official renewal action, not something CrossList does for free.`)) return;
+  setBusy(true, 'Renewing on Etsy…');
   try {
     const r = await apiFetch(`${API}/api/listings/renew-etsy`, {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -2702,16 +2703,19 @@ async function renewEtsyItem(itemId, title) {
     });
     const data = await r.json();
     if (!r.ok) throw new Error(data.detail || 'Renew failed');
-    alert('Renewed on Etsy.');
+    showToast('Renewed on Etsy.');
     await loadAll();
     renderRefreshView();
   } catch (e) {
     alert('Etsy renew error: ' + e.message);
+  } finally {
+    setBusy(false);
   }
 }
 
 async function relistEndedEbayItem(itemId, title) {
   if (!confirm(`Relist "${title}" on eBay? Only works if the listing has already ended — eBay doesn't allow bumping a live listing.`)) return;
+  setBusy(true, 'Relisting on eBay…');
   try {
     const r = await apiFetch(`${API}/api/listings/relist-ended-ebay`, {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -2719,11 +2723,13 @@ async function relistEndedEbayItem(itemId, title) {
     });
     const data = await r.json();
     if (!r.ok) throw new Error(data.detail || 'Relist failed');
-    alert('Relisted on eBay.');
+    showToast('Relisted on eBay.');
     await loadAll();
     renderRefreshView();
   } catch (e) {
     alert('eBay relist error: ' + e.message);
+  } finally {
+    setBusy(false);
   }
 }
 
@@ -2732,6 +2738,7 @@ async function markListingActive(itemId, platform, event) {
   event?.stopPropagation();
   const label = PLATFORM_LABELS[platform] || platform;
   if (!confirm(`Mark listing on ${label} as actively published?`)) return;
+  setBusy(true, `Marking ${label} as published…`);
   try {
     const r = await apiFetch(`${API}/api/listings/mark-active`, {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -2739,7 +2746,7 @@ async function markListingActive(itemId, platform, event) {
     });
     if (!r.ok) throw new Error(await r.text());
     await loadAll();
-  } catch(e) { alert('Error: ' + e.message); }
+  } catch(e) { alert('Error: ' + e.message); } finally { setBusy(false); }
 }
 
 function openMarkActiveModal(itemId, event) {
