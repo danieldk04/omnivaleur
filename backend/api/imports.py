@@ -157,14 +157,13 @@ async def bulk_import_candidates(body: dict = None, user_id: str = Depends(get_c
 
     linked, created, failed = 0, 0, 0
     now = datetime.now(timezone.utc).isoformat()
+    items = db.table("items").select("id,title").eq("user_id", user_id).execute().data or []
 
     for cand in candidates:
         try:
-            if cand.get("suggested_item_id"):
-                item = db.table("items").select("id").eq("id", cand["suggested_item_id"]).eq("user_id", user_id).execute()
-                if not item.data:
-                    raise ValueError("suggested item no longer exists")
-                existing = db.table("listings").select("id").eq("item_id", cand["suggested_item_id"]).eq("platform", cand["platform"]).execute()
+            match_id = _best_match(cand.get("title"), items)
+            if match_id:
+                existing = db.table("listings").select("id").eq("item_id", match_id).eq("platform", cand["platform"]).execute()
                 if existing.data:
                     db.table("listings").update({
                         "platform_listing_id": cand["platform_listing_id"],
@@ -174,7 +173,7 @@ async def bulk_import_candidates(body: dict = None, user_id: str = Depends(get_c
                     }).eq("id", existing.data[0]["id"]).execute()
                 else:
                     db.table("listings").insert({
-                        "item_id": cand["suggested_item_id"],
+                        "item_id": match_id,
                         "platform": cand["platform"],
                         "platform_listing_id": cand["platform_listing_id"],
                         "platform_listing_url": cand["platform_listing_url"],
