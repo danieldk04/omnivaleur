@@ -420,6 +420,123 @@ async function bgDeleteMp2dh(job, serverUrl) {
   }
 }
 
+// ── Scan: read existing listings the user already has on a platform ───────
+// Read-only — only reports candidates to /api/imports for manual review,
+// never touches items/listings directly.
+
+async function bgScanVinted(job, serverUrl) {
+  const sleep = ms => new Promise(r => setTimeout(r, ms));
+  const tabId = await new Promise((res, rej) =>
+    chrome.tabs.create({ url: "https://www.vinted.com/", active: true }, t =>
+      chrome.runtime.lastError ? rej(new Error(chrome.runtime.lastError.message)) : res(t.id)
+    )
+  );
+  try {
+    await waitForTabLoad(tabId);
+    await sleep(2500);
+
+    const result = await execInTab(tabId, async () => {
+      let userId = null;
+      for (const script of document.querySelectorAll("script")) {
+        const m = script.textContent.match(/"current_user"\s*:\s*{\s*"id"\s*:\s*(\d+)/);
+        if (m) { userId = m[1]; break; }
+      }
+      if (!userId) return { error: "Could not find logged-in Vinted user — make sure you're logged into Vinted in this browser." };
+
+      const res = await fetch(`/api/v2/wardrobe/${userId}/items?page=1&per_page=200`, {
+        headers: { Accept: "application/json" },
+      });
+      if (!res.ok) return { error: `Vinted returned ${res.status} while listing your items.` };
+      const data = await res.json();
+      const items = (data.items || []).map(it => ({
+        platform_listing_id: String(it.id),
+        title: it.title || "",
+        price: it.price && it.price.amount != null ? Number(it.price.amount) : (typeof it.price === "number" ? it.price : null),
+        photo_url: it.photo?.url || (it.photos && it.photos[0] && it.photos[0].url) || null,
+        platform_listing_url: it.url || `https://www.vinted.com/items/${it.id}`,
+      }));
+      return { items };
+    });
+
+    if (!result) throw new Error("Vinted scan returned nothing — page may not have loaded correctly.");
+    if (result.error) throw new Error(result.error);
+
+    const completeHeaders = await getAuthHeaders();
+    await fetch(`${serverUrl}/api/jobs/${job.id}/complete`, {
+      method: "POST", headers: completeHeaders,
+      body: JSON.stringify({ listings: result.items }),
+    });
+    console.log(`[CrossList] Vinted scan found ${result.items.length} listings`);
+  } finally {
+    setTimeout(() => chrome.tabs.remove(tabId).catch(() => {}), 2500);
+  }
+}
+
+async function bgScanMp2dh(job, serverUrl) {
+  const sleep = ms => new Promise(r => setTimeout(r, ms));
+  const platform = job.platform;
+  const overviewUrl = platform === "marktplaats"
+    ? "https://www.marktplaats.nl/my-account/sell/index.html"
+    : "https://www.2dehands.be/my-account/sell/index.html";
+
+  const tabId = await new Promise((res, rej) =>
+    chrome.tabs.create({ url: overviewUrl, active: true }, t =>
+      chrome.runtime.lastError ? rej(new Error(chrome.runtime.lastError.message)) : res(t.id)
+    )
+  );
+
+  try {
+    await waitForTabLoad(tabId);
+    await sleep(3000); // let React fully render listings
+
+    const result = await execInTab(tabId, () => {
+      const cards = [...document.querySelectorAll("li, article")].filter(el => {
+        const link = el.querySelector('a[href*="/v/"]');
+        const priceText = el.textContent.match(/€\s?\d/);
+        return link && priceText;
+      });
+
+      const seen = new Set();
+      const items = [];
+      for (const card of cards) {
+        const link = card.querySelector('a[href*="/v/"]');
+        if (!link) continue;
+        const href = link.getAttribute("href") || "";
+        const idMatch = href.match(/(m\d{6,})/);
+        const id = idMatch ? idMatch[1] : href;
+        if (!id || seen.has(id)) continue;
+        seen.add(id);
+
+        const titleEl = [...card.querySelectorAll("*")].find(el =>
+          el.children.length === 0 && el.textContent.trim().length > 5 && el.textContent.trim().length < 120
+        );
+        const priceMatch = card.textContent.match(/€\s?([\d.,]+)/);
+        const img = card.querySelector("img");
+
+        items.push({
+          platform_listing_id: id,
+          title: (titleEl?.textContent || "").trim(),
+          price: priceMatch ? Number(priceMatch[1].replace(/\./g, "").replace(",", ".")) : null,
+          photo_url: img?.src || null,
+          platform_listing_url: href.startsWith("http") ? href : `https://www.${location.hostname}${href}`,
+        });
+      }
+      return { items };
+    });
+
+    if (!result || !result.items) throw new Error("Could not read your listings overview — page structure may have changed.");
+
+    const completeHeaders = await getAuthHeaders();
+    await fetch(`${serverUrl}/api/jobs/${job.id}/complete`, {
+      method: "POST", headers: completeHeaders,
+      body: JSON.stringify({ listings: result.items }),
+    });
+    console.log(`[CrossList] ${platform} scan found ${result.items.length} listings`);
+  } finally {
+    setTimeout(() => chrome.tabs.remove(tabId).catch(() => {}), 2500);
+  }
+}
+
 // ── Auto-detect manual publish ─────────────────────────────────────────────
 // When the user manually clicks "Plaatsen" after an error, the tab URL changes
 // to the listing URL. We detect this and auto-complete the job.
