@@ -100,6 +100,23 @@ async def run_pipeline(keyword: str, region: str, pillar: str, slug: str) -> dic
         ],
     }
 
+    from datetime import datetime, timezone
+
+    now_iso = datetime.now(timezone.utc).isoformat()
+    canonical = f"{SITE_URL}{_url_path(region, pillar, slug)}"
+    article_json_ld = {
+        "@context": "https://schema.org",
+        "@type": "Article",
+        "headline": generated["h1"],
+        "description": generated["meta_description"],
+        "image": featured_image_url or f"{SITE_URL}/Logo Crosslist EU.png",
+        "author": {"@type": "Person", "name": "Daniel", "url": f"{SITE_URL}/nl/reseller-tools/over-de-auteur"},
+        "publisher": {"@type": "Organization", "name": "CrossList EU", "url": SITE_URL},
+        "mainEntityOfPage": {"@type": "WebPage", "@id": canonical},
+        "datePublished": now_iso,
+        "dateModified": now_iso,
+    }
+
     row = {
         "pillar": pillar,
         "region": region,
@@ -109,6 +126,7 @@ async def run_pipeline(keyword: str, region: str, pillar: str, slug: str) -> dic
         "meta_description": generated["meta_description"],
         "h1": generated["h1"],
         "quick_answer": generated["quick_answer"],
+        "takeaways": generated.get("takeaways") or [],
         "body_html": body_with_links,
         "faq": generated["faq"],
         "featured_image_url": featured_image_url,
@@ -121,13 +139,14 @@ async def run_pipeline(keyword: str, region: str, pillar: str, slug: str) -> dic
     existing_row = db.table("content_pages").select("id,published_at").eq("intent_key", intent_key).execute().data
     if existing_row:
         row_id = existing_row[0]["id"]
+        article_json_ld["dateModified"] = now_iso
+        row["article_json_ld"] = article_json_ld
         db.table("content_pages").update(row).eq("id", row_id).execute()
         logger.info(f"Bestaande pagina bijgewerkt (cannibalisatie voorkomen): {intent_key}")
         action = "updated"
     else:
-        from datetime import datetime, timezone
-
-        row["published_at"] = datetime.now(timezone.utc).isoformat()
+        row["published_at"] = now_iso
+        row["article_json_ld"] = article_json_ld
         db.table("content_pages").insert(row).execute()
         logger.info(f"Nieuwe pagina aangemaakt: {intent_key}")
         action = "created"
