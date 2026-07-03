@@ -56,7 +56,7 @@ def _build_prompt(
     research: dict,
     existing_pages: list[dict],
 ) -> str:
-    language = _resolve_language(keyword, region)
+    language = "English"
 
     competitors_summary = "\n".join(
         f"- {c['url']}\n  H1: {c['h1']}\n  H2's: {c['h2']}"
