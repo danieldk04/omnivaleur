@@ -71,8 +71,21 @@ async def _check_one(listing: dict):
             await handle_item_sold(listing["item_id"], platform_name)
 
         elif status == "not_found":
-            logger.warning(f"Listing {listing['id']} not found on {platform_name} — marking delisted")
-            db.table("listings").update({"status": "delisted"}).eq("id", listing["id"]).execute()
+            # A single 404 is often caused by a stale/expired polling session rather than
+            # a genuinely removed listing (confirmed: this previously mass-delisted live
+            # Vinted listings during a session outage). Require 2 consecutive not-found
+            # polls before trusting it enough to actually delist.
+            not_found_count = (listing.get("not_found_count") or 0) + 1
+            if not_found_count >= 2:
+                logger.warning(f"Listing {listing['id']} not found on {platform_name} for {not_found_count} consecutive polls — marking delisted")
+                db.table("listings").update({"status": "delisted", "not_found_count": not_found_count}).eq("id", listing["id"]).execute()
+            else:
+                logger.warning(f"Listing {listing['id']} not found on {platform_name} (1st time) — waiting for confirmation before delisting")
+                db.table("listings").update({"not_found_count": not_found_count}).eq("id", listing["id"]).execute()
+
+        elif status in ("active", "sold"):
+            if listing.get("not_found_count"):
+                db.table("listings").update({"not_found_count": 0}).eq("id", listing["id"]).execute()
 
     except Exception as e:
         logger.error(f"Poll failed for listing {listing['id']}: {e}")
