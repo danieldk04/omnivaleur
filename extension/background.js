@@ -436,25 +436,48 @@ async function bgScanVinted(job, serverUrl) {
     await sleep(2500);
 
     const result = await execInTab(tabId, async () => {
+      // Vinted has no documented "current user" endpoint, so try several ways
+      // to find your own member id before giving up.
       let userId = null;
+
+      // 1) An inline script embedding the logged-in user's id (SPA hydration data).
       for (const script of document.querySelectorAll("script")) {
-        const m = script.textContent.match(/"current_user"\s*:\s*{\s*"id"\s*:\s*(\d+)/);
+        const m = script.textContent.match(/"user"\s*:\s*{\s*"id"\s*:\s*(\d+)/) ||
+                  script.textContent.match(/"current_user"\s*:\s*{\s*"id"\s*:\s*(\d+)/);
         if (m) { userId = m[1]; break; }
       }
-      if (!userId) return { error: "Could not find logged-in Vinted user — make sure you're logged into Vinted in this browser." };
 
-      const res = await fetch(`/api/v2/wardrobe/${userId}/items?page=1&per_page=200`, {
+      // 2) Fallback: your own profile link in the header ("Wardrobe"/"Mijn kleerkast"/avatar).
+      if (!userId) {
+        const links = [...document.querySelectorAll('header a[href*="/member/"], nav a[href*="/member/"]')];
+        for (const link of links) {
+          const m = (link.getAttribute("href") || "").match(/\/member\/(\d+)/);
+          if (m) { userId = m[1]; break; }
+        }
+      }
+
+      if (!userId) return { error: "Could not find your logged-in Vinted account on this page — make sure you're logged into Vinted in this browser tab." };
+
+      const res = await fetch(`/api/v2/users/${userId}/items?order=newest_first&page=1&per_page=200`, {
         headers: { Accept: "application/json" },
       });
-      if (!res.ok) return { error: `Vinted returned ${res.status} while listing your items.` };
+      if (!res.ok) return { error: `Vinted returned HTTP ${res.status} while listing your items (user id ${userId}).` };
       const data = await res.json();
-      const items = (data.items || []).map(it => ({
-        platform_listing_id: String(it.id),
-        title: it.title || "",
-        price: it.price && it.price.amount != null ? Number(it.price.amount) : (typeof it.price === "number" ? it.price : null),
-        photo_url: it.photo?.url || (it.photos && it.photos[0] && it.photos[0].url) || null,
-        platform_listing_url: it.url || `https://www.vinted.com/items/${it.id}`,
-      }));
+      if (data.code && data.code !== 0) return { error: `Vinted API error: ${data.message_code || data.code}` };
+
+      const items = (data.items || []).map(it => {
+        const priceObj = it.price || it.total_item_price;
+        const price = priceObj && priceObj.amount != null ? Number(priceObj.amount)
+          : (typeof it.price === "number" ? it.price : null);
+        const photo = it.photo?.url || it.photos?.[0]?.url || null;
+        return {
+          platform_listing_id: String(it.id),
+          title: it.title || "",
+          price,
+          photo_url: photo,
+          platform_listing_url: it.url || `https://www.vinted.com/items/${it.id}`,
+        };
+      });
       return { items };
     });
 
