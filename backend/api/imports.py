@@ -48,7 +48,12 @@ async def list_import_candidates(platform: str = None, status: str = "pending", 
     if status:
         q = q.eq("status", status)
     result = q.order("created_at", desc=True).limit(500).execute()
-    return result.data
+    candidates = result.data or []
+    if candidates:
+        items = db.table("items").select("id,title").eq("user_id", user_id).execute().data or []
+        for c in candidates:
+            c["suggested_item_id"] = _best_match(c.get("title"), items)
+    return candidates
 
 
 @router.post("/{candidate_id}/link")
