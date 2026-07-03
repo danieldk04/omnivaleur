@@ -122,3 +122,25 @@ CREATE TABLE IF NOT EXISTS refresh_quota (
     count INT DEFAULT 0,
     PRIMARY KEY (user_id, day)
 );
+
+-- Listing import: 'scan' jobs (extension reads the user's own "my listings"
+-- page on a platform and reports back what it finds) land here for manual
+-- review before being linked to an existing item or turned into a new one.
+-- Nothing here is auto-applied — scraped data can only cover what's visible
+-- on a listing card (title/price/photo/url), never fields like purchase
+-- price, condition, color etc., so a human confirms before it becomes real data.
+CREATE TABLE IF NOT EXISTS import_candidates (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID NOT NULL,
+    platform VARCHAR(50) NOT NULL,
+    platform_listing_id VARCHAR(100) NOT NULL,
+    platform_listing_url TEXT,
+    title TEXT,
+    price NUMERIC(10,2),
+    photo_url TEXT,
+    suggested_item_id UUID REFERENCES items(id) ON DELETE SET NULL,
+    status VARCHAR(20) DEFAULT 'pending', -- pending / linked / imported / ignored
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    UNIQUE(user_id, platform, platform_listing_id)
+);
+CREATE INDEX IF NOT EXISTS idx_import_candidates_user_platform ON import_candidates(user_id, platform, status);
