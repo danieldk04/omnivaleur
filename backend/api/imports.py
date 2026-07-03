@@ -206,6 +206,7 @@ async def bulk_import_candidates(body: dict = None, user_id: str = Depends(get_c
                 }).execute()
 
                 db.table("import_candidates").update({"status": "imported"}).eq("id", cand["id"]).execute()
+                items.append({"id": created_item["id"], "title": created_item["title"]})
                 created += 1
         except Exception:
             failed += 1
