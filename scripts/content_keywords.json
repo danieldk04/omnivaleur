@@ -1,55 +1,57 @@
 {
   "queue": [
     {
-      "keyword": "marktplaats naar vinted crosslisten 2026",
+      "keyword": "marktplaats to vinted crosslisting 2026",
       "region": "nl",
       "pillar": "A",
-      "slug": "marktplaats-naar-vinted",
+      "slug": "marktplaats-to-vinted",
+      "nl_slug": "marktplaats-naar-vinted",
       "priority": 1,
       "status": "published"
     },
     {
-      "keyword": "vinted naar ebay automatisch doorplaatsen 2026",
+      "keyword": "vinted to ebay crosslisting 2026",
       "region": "nl",
       "pillar": "A",
-      "slug": "vinted-naar-ebay",
+      "slug": "vinted-to-ebay",
       "priority": 2,
       "status": "pending"
     },
     {
-      "keyword": "2dehands naar vinted crosslisten",
-      "region": "be-nl",
+      "keyword": "2dehands to vinted crosslisting 2026",
+      "region": "nl",
       "pillar": "A",
-      "slug": "2dehands-naar-vinted",
+      "slug": "2dehands-to-vinted",
+      "nl_slug": "2dehands-naar-vinted",
       "priority": 3,
       "status": "pending"
     },
     {
-      "keyword": "vinted kleding verkopen automatiseren",
+      "keyword": "vinted clothing reselling automation",
       "region": "nl",
       "pillar": "B",
-      "slug": "vinted-kleding-automatiseren",
+      "slug": "vinted-clothing-automation",
       "priority": 4,
       "status": "pending"
     },
     {
-      "keyword": "automatiser vinted vers ebay 2026",
-      "region": "fr",
+      "keyword": "vinted to etsy crosslisting 2026",
+      "region": "nl",
       "pillar": "A",
-      "slug": "vinted-vers-ebay",
+      "slug": "vinted-to-etsy",
       "priority": 5,
       "status": "pending"
     }
   ],
   "published": [
     {
-      "keyword": "marktplaats naar vinted crosslisten 2026",
-      "slug": "marktplaats-naar-vinted",
+      "keyword": "marktplaats to vinted crosslisting 2026",
+      "slug": "marktplaats-to-vinted",
       "region": "nl",
       "pillar": "A",
       "action": "created",
-      "url_path": "/nl/crosslisten/marktplaats-naar-vinted",
-      "published_at": "2026-07-03T14:04:21.035532+00:00"
+      "url_path": "/crosslisting/marktplaats-to-vinted",
+      "published_at": "2026-07-03T21:40:00.000000+00:00"
     }
   ]
 }
