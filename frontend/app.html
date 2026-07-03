@@ -2277,6 +2277,54 @@ async function delistItem(itemId, title) {
   }
 }
 
+// ── Refresh (bump old listings) ────────────────────────────────────
+function refreshItem(itemId, title) {
+  const hasVinted = state.listings.some(l => l.item_id === itemId && l.platform === 'vinted' && l.status === 'active');
+  if (!hasVinted) { alert('Refresh is currently only available for active Vinted listings.'); return; }
+
+  const choice = prompt(
+    `Refresh "${title}" on Vinted — choose a strategy:\n\n` +
+    `1 = Content refresh (safe): small price/photo-order edit, zero risk, keeps listing history\n` +
+    `2 = Relist (delete + recreate): moves it back to "Newest", rate-limited to once per 14 days per listing and max 8/day per account\n\n` +
+    `Type 1 or 2:`, '1'
+  );
+  if (choice !== '1' && choice !== '2') return;
+  const strategy = choice === '2' ? 'relist' : 'content';
+  doRefresh(itemId, 'vinted', strategy);
+}
+
+async function doRefresh(itemId, platform, strategy) {
+  try {
+    const r = await apiFetch(`${API}/api/listings/refresh`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ item_id: itemId, platform, strategy }),
+    });
+    const data = await r.json();
+    if (!r.ok) throw new Error(data.detail || 'Refresh failed');
+    alert(data.message || `Refresh queued (${data.strategy}).`);
+    await loadAll();
+  } catch (e) {
+    alert('Refresh error: ' + e.message);
+  }
+}
+
+async function refreshStaleListings() {
+  if (!confirm('Refresh your oldest active Vinted listings (30+ days old)? This queues a legitimate delete+recreate for up to 5 items, rate-limited and delayed to avoid a scripted pattern.')) return;
+  try {
+    const r = await apiFetch(`${API}/api/listings/refresh-stale`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ platform: 'vinted', older_than_days: 30, limit: 5 }),
+    });
+    const data = await r.json();
+    if (!r.ok) throw new Error(data.detail || 'Bulk refresh failed');
+    const lines = (data.results || []).map(x => `${x.item_id.slice(0,8)}… — ${x.status}${x.reason ? ': ' + x.reason : ''}`);
+    alert(lines.length ? lines.join('\n') : 'No stale Vinted listings found.');
+    await loadAll();
+  } catch (e) {
+    alert('Bulk refresh error: ' + e.message);
+  }
+}
+
 // ── Crosslist ────────────────────────────────────────────────────
 async function markListingActive(itemId, platform, event) {
   event?.stopPropagation();
