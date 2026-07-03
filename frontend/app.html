@@ -2372,6 +2372,115 @@ async function delistItem(itemId, title) {
   }
 }
 
+// ── Import existing listings (scan platform → review → link/create) ──────
+async function scanPlatform(platform) {
+  try {
+    const r = await apiFetch(`${API}/api/imports/scan/${platform}`, { method: 'POST' });
+    const data = await r.json();
+    if (!r.ok) throw new Error(data.detail || 'Scan failed');
+    alert(`Scan queued for ${PLATFORM_LABELS[platform] || platform}. The extension picks it up within a minute — results will appear in "Review imports" below once done.`);
+    setTimeout(loadImportCandidates, 15000);
+    setTimeout(loadImportCandidates, 45000);
+  } catch (e) {
+    alert('Scan error: ' + e.message);
+  }
+}
+
+async function loadImportCandidates() {
+  try {
+    const r = await apiFetch(`${API}/api/imports/?status=pending`);
+    const candidates = await r.json();
+    renderImportReview(candidates || []);
+  } catch (e) {
+    console.error('Failed to load import candidates', e);
+  }
+}
+
+function renderImportReview(candidates) {
+  const section = document.getElementById('import-review-section');
+  if (!candidates.length) { section.style.display = 'none'; return; }
+  section.style.display = '';
+
+  const itemOptions = state.items.map(i => `<option value="${i.id}">${esc(i.title)}</option>`).join('');
+
+  document.getElementById('import-review-body').innerHTML = candidates.map(c => `
+    <tr>
+      <td><div class="item-info">
+        <div class="item-photo">${c.photo_url ? `<img src="${c.photo_url}" style="width:40px;height:40px;border-radius:6px;object-fit:cover">` : '👗'}</div>
+        <div><div class="item-title">${esc(c.title || 'Untitled')}</div><div class="item-meta">${PLATFORM_LABELS[c.platform] || c.platform}${c.price ? ' · €' + c.price : ''}</div></div>
+      </div></td>
+      <td style="min-width:200px">
+        <select id="import-match-${c.id}">
+          <option value="">— create new item —</option>
+          ${itemOptions}
+        </select>
+      </td>
+      <td style="white-space:nowrap">
+        <button class="btn btn-sm btn-outline" onclick="applyImportCandidate('${c.id}')">Apply</button>
+        <button class="btn btn-sm btn-outline" onclick="ignoreImportCandidate('${c.id}')" style="margin-left:6px">Ignore</button>
+      </td>
+    </tr>
+  `).join('');
+
+  candidates.forEach(c => {
+    if (c.suggested_item_id) {
+      const sel = document.getElementById(`import-match-${c.id}`);
+      if (sel) sel.value = c.suggested_item_id;
+    }
+  });
+}
+
+async function applyImportCandidate(candidateId) {
+  const select = document.getElementById(`import-match-${candidateId}`);
+  const itemId = select.value;
+
+  if (itemId) {
+    try {
+      const r = await apiFetch(`${API}/api/imports/${candidateId}/link`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ item_id: itemId }),
+      });
+      if (!r.ok) throw new Error((await r.json()).detail || 'Link failed');
+      await loadAll();
+      await loadImportCandidates();
+    } catch (e) {
+      alert('Link error: ' + e.message);
+    }
+    return;
+  }
+
+  // No match selected — collect the fields scraping can't see, then create a new item.
+  const purchase_price = prompt('Purchase price (optional, leave empty to skip):', '');
+  const brand = prompt('Brand (optional):', '');
+  const size = prompt('Size (optional):', '');
+  const color = prompt('Color (optional):', '');
+  try {
+    const r = await apiFetch(`${API}/api/imports/${candidateId}/create-item`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        purchase_price: purchase_price ? Number(purchase_price) : null,
+        brand: brand || null,
+        size: size || null,
+        color: color || null,
+      }),
+    });
+    if (!r.ok) throw new Error((await r.json()).detail || 'Import failed');
+    await loadAll();
+    await loadImportCandidates();
+  } catch (e) {
+    alert('Import error: ' + e.message);
+  }
+}
+
+async function ignoreImportCandidate(candidateId) {
+  try {
+    await apiFetch(`${API}/api/imports/${candidateId}/ignore`, { method: 'POST' });
+    await loadImportCandidates();
+  } catch (e) {
+    alert('Error: ' + e.message);
+  }
+}
+
 // ── Refresh (bump old listings) ────────────────────────────────────
 const REFRESH_COOLDOWN_DAYS = 14;
 const REFRESH_DAILY_CAP = 8;
