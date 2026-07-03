@@ -111,7 +111,7 @@
     {{ page.body_html | safe }}
 
     {% if page.faq %}
-    <h2>Frequently asked questions</h2>
+    <h2>{{ 'Veelgestelde vragen' if page.language == 'nl' else 'Frequently asked questions' }}</h2>
     {% for item in page.faq %}
     <div class="faq-item">
       <h3>{{ item.question }}</h3>
@@ -120,11 +120,19 @@
     {% endfor %}
     {% endif %}
 
+    {% if page.language == 'nl' %}
+    <div class="cta-box">
+      <h3>Stop met listings handmatig kopiëren</h3>
+      <p>CrossList EU publiceert je item in één keer op elk platform en synchroniseert de voorraad automatisch zodra iets verkocht is.</p>
+      <a class="cta-btn" href="https://app.crosslisteu.com">Start gratis proefperiode</a>
+    </div>
+    {% else %}
     <div class="cta-box">
       <h3>Stop copying listings by hand</h3>
       <p>CrossList EU publishes your item to every platform at once and syncs stock automatically when something sells.</p>
       <a class="cta-btn" href="https://app.crosslisteu.com">Start free trial</a>
     </div>
+    {% endif %}
   </article>
 </main>
 
