@@ -36,6 +36,19 @@ def _slugify(text: str) -> str:
     return re.sub(r"-+", "-", text).strip("-")
 
 
+def _performance_block() -> str:
+    """Real GSC performance data on already-published pages, if configured — biases new
+    suggestions toward pillars/topics that are actually getting impressions/clicks
+    instead of guessing cold every cycle."""
+    top_pages = get_top_pages(days=90, row_limit=10)
+    if not top_pages:
+        return "(no Search Console data available yet)"
+    return "\n".join(
+        f"- {p['url']}: {p['clicks']} clicks, {p['impressions']} impressions, avg position {p['position']:.1f}"
+        for p in top_pages
+    )
+
+
 def _build_prompt(existing_keywords: list[str]) -> str:
     existing_block = "\n".join(f"- {k}" for k in existing_keywords) or "(none yet)"
     return f"""You are a programmatic SEO strategist for CrossList EU, a SaaS that cross-lists items across exactly these platforms: {', '.join(PLATFORMS)}. Never propose a combination involving any other platform.
@@ -44,6 +57,9 @@ Propose 5 new content page ideas we have not covered yet. Roughly rotate across 
 - Pillar A (platform combo): "{{platform}} to {{platform}} crosslisting" style, e.g. "vinted to ebay crosslisting" — pick pairs resellers actually care about.
 - Pillar B (niche/audience): "{{niche}} selling automation" style, e.g. "sneaker reselling automation", "vintage clothing crosslisting".
 - Pillar C (honest competitor comparison): "CrossList EU vs {{competitor}}" style, comparing CrossList EU against one named competitor from this list only: {', '.join(COMPETITORS)}. Never invent a competitor name outside this list.
+
+REAL SEARCH CONSOLE PERFORMANCE of already-published pages (last 90 days) — lean toward proposing more ideas similar to whatever is already getting clicks/impressions here, and be more cautious about pillars/topics that show zero traction:
+{_performance_block()}
 
 ALREADY COVERED (do not repeat these or close variants):
 {existing_block}
