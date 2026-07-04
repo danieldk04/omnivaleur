@@ -28,9 +28,26 @@ REDIRECT_PORT = 8765
 SCOPES = ["https://www.googleapis.com/auth/analytics.readonly"]
 
 
+def _get_credentials() -> tuple[str, str]:
+    """Client id/secret ophalen zonder ze in .env te hoeven zetten: eerst uit
+    settings (.env), dan uit losse env-vars, anders interactief vragen. Zo kun je
+    de waarden gewoon uit Railway kopiëren en plakken."""
+    import os
+
+    cid = settings.gsc_client_id or os.environ.get("GSC_CLIENT_ID", "")
+    csec = settings.gsc_client_secret or os.environ.get("GSC_CLIENT_SECRET", "")
+    if not cid:
+        cid = input("Plak je Google OAuth Client ID (uit Railway, gsc_client_id): ").strip()
+    if not csec:
+        from getpass import getpass
+        csec = getpass("Plak je Google OAuth Client Secret (gsc_client_secret): ").strip()
+    return cid, csec
+
+
 def main() -> int:
-    if not (settings.gsc_client_id and settings.gsc_client_secret):
-        print("❌ gsc_client_id / gsc_client_secret ontbreken in .env — vul die eerst in.")
+    client_id, client_secret = _get_credentials()
+    if not (client_id and client_secret):
+        print("❌ Geen client id/secret opgegeven.")
         return 1
 
     try:
