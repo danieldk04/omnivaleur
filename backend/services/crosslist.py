@@ -220,6 +220,34 @@ async def _publish_one(item: dict, platform_name: str, credentials: dict, user_i
         return {"listing_id": listing_id, "platform": platform_name, "status": "error", "error": str(e)}
 
 
+def _last_listed_title(db, item_id: str, platform: str, fallback: str) -> str:
+    """
+    Marktplaats/2dehands listings are published under a Dutch-translated title
+    (see _pick() in publish_to_platforms), but that translation is never
+    persisted anywhere — the `items` row keeps the original title. The delete
+    automation searches the platform's overview page by title text, so passing
+    the untranslated title makes it silently fail to find the listing (and
+    the DOM-verification added in background.js means it now surfaces as a
+    real error instead of a false "delisted"). Recover the title actually used
+    by reading the most recent completed "create" job's payload for this
+    item+platform — that's the exact text that was typed into the platform.
+    """
+    jobs = (
+        db.table("jobs")
+        .select("payload,created_at")
+        .eq("item_id", item_id)
+        .eq("platform", platform)
+        .eq("action", "create")
+        .order("created_at", desc=True)
+        .limit(1)
+        .execute()
+        .data
+    )
+    if jobs and jobs[0].get("payload", {}).get("title"):
+        return jobs[0]["payload"]["title"]
+    return fallback
+
+
 async def delist_all_platforms(item_id: str, user_id: str) -> list[dict]:
     """Delist an item from every platform it is currently active on."""
     db = get_db()
