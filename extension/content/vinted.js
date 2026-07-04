@@ -402,24 +402,17 @@
     confirmBtn.click();
     await sleep(1500);
 
-    // Verify the listing is actually gone via Vinted's own item API before
-    // reporting success — without this, a mis-clicked button (or a confirm
-    // dialog that didn't do what we expected) would still report "done".
-    let stillActive = true;
-    try {
-      const res = await fetch(`/api/v2/items/${listingId}`, { headers: { Accept: "application/json" } });
-      if (res.status === 404 || res.status === 410) {
-        stillActive = false;
-      } else if (res.ok) {
-        const data = await res.json();
-        const item = data?.item;
-        // Vinted marks a removed item's status/is_visible rather than always 404-ing.
-        stillActive = !!item && item.is_visible !== false && item.status_id !== 4;
-      }
-    } catch (e) {
-      throw new Error(`Could not verify Vinted deletion for ID ${listingId}: ${e}`);
+    // Verify the item is actually gone from the wardrobe before reporting
+    // success — the same reliable endpoint we used for the pre-check. Wardrobe
+    // can lag a moment after delete, so poll a few times.
+    let goneAfter = false;
+    for (let i = 0; i < 4; i++) {
+      const present = await isInWardrobe(userId, listingId);
+      if (present === false) { goneAfter = true; break; }
+      if (present === null) throw new Error(`Could not re-read your Vinted wardrobe on ${location.origin} to confirm deletion of ${listingId}.`);
+      await sleep(1500);
     }
-    if (stillActive) throw new Error(`Vinted listing ${listingId} still appears active after confirming delete — removal was not verified`);
+    if (!goneAfter) throw new Error(`Vinted listing ${listingId} is still in your wardrobe after confirming delete — removal was not verified`);
   }
 
   function realClickEl(el) {
