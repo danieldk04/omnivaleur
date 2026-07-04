@@ -34,13 +34,13 @@ def _get_credentials() -> tuple[str, str]:
     de waarden gewoon uit Railway kopiëren en plakken."""
     import os
 
-    cid = settings.gsc_client_id or os.environ.get("GSC_CLIENT_ID", "")
-    csec = settings.gsc_client_secret or os.environ.get("GSC_CLIENT_SECRET", "")
+    cid = settings.gsc_client_id or settings.google_ads_client_id or os.environ.get("GSC_CLIENT_ID", "")
+    csec = settings.gsc_client_secret or settings.google_ads_client_secret or os.environ.get("GSC_CLIENT_SECRET", "")
     if not cid:
-        cid = input("Plak je Google OAuth Client ID (uit Railway, gsc_client_id): ").strip()
+        cid = input("Plak je Google OAuth Client ID (uit Railway = GOOGLE_ADS_CLIENT_ID): ").strip()
     if not csec:
         from getpass import getpass
-        csec = getpass("Plak je Google OAuth Client Secret (gsc_client_secret): ").strip()
+        csec = getpass("Plak je Google OAuth Client Secret (= GOOGLE_ADS_CLIENT_SECRET): ").strip()
     return cid, csec
 
 
