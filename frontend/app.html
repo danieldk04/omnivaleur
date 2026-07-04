@@ -2868,6 +2868,7 @@ async function doRefresh(itemId, platform, strategy) {
     if (!r.ok) throw new Error(data.detail || 'Refresh failed');
     showToast(data.message || `Refresh queued (${data.strategy}).`);
     await loadAll();
+    await loadRelistStatus();
     if (document.getElementById('view-refresh')?.classList.contains('active')) renderRefreshView();
   } catch (e) {
     alert('Refresh error: ' + e.message);
