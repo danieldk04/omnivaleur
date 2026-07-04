@@ -161,3 +161,52 @@ def get_impressions_for_query(keyword: str, days: int = 90) -> int:
         return 0
 
     return sum(row["impressions"] for row in response.get("rows", []))
+
+
+def query_window(
+    dimensions: list[str],
+    start: str,
+    end: str,
+    row_limit: int = 200,
+    dimension_filters: list[dict] | None = None,
+) -> list[dict]:
+    """
+    Generieke GSC-query over een expliciet datumvenster (start/end als ISO-strings).
+    Gebruikt door het wekelijkse analytics-rapport om 'deze week vs vorige week' te
+    vergelijken zonder eigen opslag. Geeft rijen terug met de gevraagde dimensiekeys
+    plus clicks/impressions/ctr/position. Faalt zacht (lege lijst).
+    """
+    service = _get_service()
+    if not service:
+        return []
+
+    body: dict = {
+        "startDate": start,
+        "endDate": end,
+        "dimensions": dimensions,
+        "rowLimit": row_limit,
+    }
+    if dimension_filters:
+        body["dimensionFilterGroups"] = [{"filters": dimension_filters}]
+
+    try:
+        response = (
+            service.searchanalytics()
+            .query(siteUrl=settings.gsc_site_url, body=body)
+            .execute()
+        )
+    except Exception as e:
+        logger.error(f"GSC window-query mislukt ({dimensions} {start}..{end}): {e}")
+        return []
+
+    rows = []
+    for row in response.get("rows", []):
+        rec = {"keys": row["keys"]}
+        rec.update(
+            clicks=row.get("clicks", 0),
+            impressions=row.get("impressions", 0),
+            ctr=row.get("ctr", 0.0),
+            position=row.get("position", 0.0),
+        )
+        rows.append(rec)
+    return rows
