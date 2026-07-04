@@ -165,9 +165,14 @@ function getEditUrl(platform, payload) {
 }
 
 function getMpSyiUrl(platform, item) {
-  // Vinted has a simple listing flow — no category-based URLs needed
+  // Vinted has a simple listing flow — no category-based URLs needed.
+  // Open the create form on the account's real country domain when known
+  // (a relist carries _create_origin recovered from the old listing URL),
+  // otherwise fall back to vinted.com. Opening the wrong domain would create
+  // the new listing on the wrong catalog.
   if (platform === "vinted") {
-    return "https://www.vinted.com/items/new";
+    const origin = item?._create_origin || "https://www.vinted.com";
+    return `${origin}/items/new`;
   }
 
   const base = platform === "marktplaats"
