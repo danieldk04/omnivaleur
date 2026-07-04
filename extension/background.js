@@ -399,14 +399,36 @@ async function bgDeleteMp2dh(job, serverUrl) {
 
     await sleep(800);
 
-    // Confirm dialog if it appears
-    await execInTab(tabId, () => {
+    // Confirm dialog if it appears — must actually find and click a confirm
+    // button, otherwise we'd mark the job "done" while the listing is still live.
+    const clickedConfirm = await execInTab(tabId, () => {
       const btn = [...document.querySelectorAll("button")]
         .find(e => /verwijder|bevestig|ok|ja\b/i.test(e.textContent));
-      if (btn) btn.click();
+      if (btn) { btn.click(); return true; }
+      return false;
     });
 
-    await sleep(1000);
+    if (!clickedConfirm) throw new Error("Confirm button not found — delete may not have gone through, listing was not verified as removed");
+
+    await sleep(1500);
+
+    // Verify the listing card is actually gone before reporting success —
+    // without this check the delete job was marked "done" (and the DB set to
+    // "delisted") even when nothing was actually removed on the platform.
+    const stillPresent = await execInTab(tabId, (title, listingId) => {
+      const allEls = [...document.querySelectorAll("*")];
+      let titleEl = allEls.find(el =>
+        el.children.length === 0 &&
+        el.textContent.trim().startsWith(title.substring(0, 20)) &&
+        el.textContent.trim().length < title.length + 20
+      );
+      if (!titleEl && listingId) {
+        titleEl = [...document.querySelectorAll(`a[href*="${listingId}"]`)][0];
+      }
+      return !!titleEl;
+    }, [title, listingId]);
+
+    if (stillPresent) throw new Error(`Listing "${title}" still visible on ${overviewUrl} after confirming delete — removal was not verified`);
 
     const completeHeaders = await getAuthHeaders();
     await fetch(`${serverUrl}/api/jobs/${job.id}/complete`, {
