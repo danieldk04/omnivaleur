@@ -2672,6 +2672,84 @@ const REFRESH_PLATFORM_STRATEGIES = {
   '2dehands': ['relist'],
 };
 
+// ETA helpers for in-progress relists.
+function relistKey(itemId, platform) { return itemId + '|' + platform; }
+function fmtEta(ms) {
+  if (ms <= 0) return 'any moment now';
+  const m = Math.floor(ms / 60000), s = Math.floor((ms % 60000) / 1000);
+  if (m >= 60) { const h = Math.floor(m/60); return `~${h}h ${m%60}m`; }
+  if (m >= 1) return `~${m}m ${s}s`;
+  return `~${s}s`;
+}
+
+// Fetch active relists and refresh the Refresh view's live bits.
+async function loadRelistStatus() {
+  try {
+    const res = await apiFetch(`${API}/api/jobs/relist-status`);
+    state.relistStatus = Array.isArray(res) ? res : [];
+  } catch (e) { state.relistStatus = []; }
+  updateRelistNavBadge();
+  if (document.getElementById('view-refresh')?.classList.contains('active')) renderRefreshView();
+}
+
+// Small badge on the Refresh nav item when relists are in progress.
+function updateRelistNavBadge() {
+  const navRefresh = [...document.querySelectorAll('.nav-item')].find(n => /refresh/i.test(n.textContent));
+  if (!navRefresh) return;
+  let badge = navRefresh.querySelector('.relist-badge');
+  const n = (state.relistStatus || []).length;
+  if (n > 0) {
+    if (!badge) {
+      badge = document.createElement('span');
+      badge.className = 'relist-badge';
+      badge.style.cssText = 'margin-left:auto;background:var(--mint,#22c55e);color:#04210f;font-size:10px;font-weight:800;padding:1px 7px;border-radius:999px';
+      navRefresh.appendChild(badge);
+    }
+    badge.textContent = n;
+  } else if (badge) { badge.remove(); }
+}
+
+// Live countdown tick — re-renders the in-progress panel every second while visible.
+let _relistTicker = null;
+function ensureRelistTicker() {
+  if (_relistTicker) return;
+  _relistTicker = setInterval(() => {
+    if (!(state.relistStatus || []).length) return;
+    if (document.getElementById('view-refresh')?.classList.contains('active')) renderRelistInProgress();
+  }, 1000);
+}
+
+function renderRelistInProgress() {
+  const box = document.getElementById('relist-inprogress');
+  if (!box) return;
+  const list = state.relistStatus || [];
+  if (!list.length) { box.innerHTML = ''; return; }
+  const now = Date.now();
+  const rows = list.map(r => {
+    const item = state.items.find(i => i.id === r.item_id);
+    const title = item ? esc(item.title) : r.item_id;
+    const label = PLATFORM_LABELS[r.platform] || r.platform;
+    const eta = fmtEta(new Date(r.recreate_at).getTime() - now);
+    const deleteDone = r.delete_status === 'done';
+    const stage = deleteDone
+      ? `Old listing removed ✓ — recreating in <b>${eta}</b>`
+      : (r.delete_status === 'error'
+          ? `<span style="color:var(--red,#dc2626)">Delist failed — recreate aborted to avoid a duplicate</span>`
+          : `Removing old listing…`);
+    return `<div style="display:flex;align-items:center;gap:10px;padding:9px 0;border-top:1px solid rgba(0,0,0,.06)">
+      <span class="spinner" style="width:13px;height:13px;border-width:2px;flex-shrink:0"></span>
+      <div style="flex:1;min-width:0">
+        <div style="font-size:12.5px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${title}</div>
+        <div style="font-size:11.5px;color:var(--muted)">${label} · ${stage}</div>
+      </div>
+    </div>`;
+  }).join('');
+  box.innerHTML = `<div style="border:1px solid rgba(37,99,235,.25);background:rgba(37,99,235,.05);border-radius:12px;padding:12px 15px">
+    <div style="font-weight:700;font-size:13px;display:flex;align-items:center;gap:8px">🔄 Relist in progress <span style="font-weight:500;color:var(--muted);font-size:11.5px">· keep Chrome open until done</span></div>
+    ${rows}
+  </div>`;
+}
+
 function renderRefreshView() {
   const now = Date.now();
 
@@ -2681,6 +2759,11 @@ function renderRefreshView() {
   }).length;
   document.getElementById('refresh-quota-title').textContent =
     `Refresh quota: ${Math.min(usedToday, REFRESH_DAILY_CAP)} / ${REFRESH_DAILY_CAP} used today`;
+
+  renderRelistInProgress();
+  ensureRelistTicker();
+  const relistMap = {};
+  (state.relistStatus || []).forEach(r => { relistMap[relistKey(r.item_id, r.platform)] = r; });
 
   const searchTerm = (document.getElementById('refresh-search')?.value || '').trim().toLowerCase();
   const platformFilter = document.getElementById('refresh-platform-filter')?.value || '';
