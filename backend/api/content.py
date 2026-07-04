@@ -229,7 +229,7 @@ async def generate_content_page(body: dict, x_admin_secret: str | None = Header(
     slug = body.get("slug")
     if not all([keyword, region, pillar, slug]):
         raise HTTPException(status_code=400, detail="keyword, region, pillar and slug are required")
-    if region not in REGIONS or pillar not in {"A", "B"}:
+    if region not in REGIONS or pillar not in {"A", "B", "C"}:
         raise HTTPException(status_code=400, detail="invalid region or pillar")
 
     result = await run_pipeline(keyword, region, pillar, slug)
