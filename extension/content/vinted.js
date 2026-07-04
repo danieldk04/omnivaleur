@@ -509,6 +509,10 @@
 
     const hints = (CAT_HINTS[gender ? `${gender} ${cat}` : cat] || CAT_HINTS[cat] || [])
       .map((h) => h.toLowerCase());
+    // For relisted imports the category is captured straight from Vinted's own
+    // breadcrumb (e.g. "Jumpers & sweaters"), which won't be in CAT_HINTS — use
+    // that raw text as a hint so we can still filter the catalogue to it.
+    if (!hints.length && cat) hints.push(cat);
     const wantMen = gender === "heren" || gender === "men";
     const wantWomen = gender === "dames" || gender === "women";
 
