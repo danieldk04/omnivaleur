@@ -26,12 +26,22 @@ logger = logging.getLogger(__name__)
 SCOPES = ["https://www.googleapis.com/auth/analytics.readonly"]
 
 
+def _oauth_client() -> tuple[str, str]:
+    """De OAuth-client wordt gedeeld met Search Console / Google Ads (zelfde Google
+    Cloud-project). In Railway staan alleen de GOOGLE_ADS_* varianten, dus val daarop
+    terug als de GSC_* niet zijn gezet."""
+    client_id = settings.gsc_client_id or settings.google_ads_client_id
+    client_secret = settings.gsc_client_secret or settings.google_ads_client_secret
+    return client_id, client_secret
+
+
 def is_configured() -> bool:
+    client_id, client_secret = _oauth_client()
     return bool(
         settings.ga4_property_id
         and settings.ga4_refresh_token
-        and settings.gsc_client_id
-        and settings.gsc_client_secret
+        and client_id
+        and client_secret
     )
 
 
@@ -42,12 +52,13 @@ def _get_client():
         from google.oauth2.credentials import Credentials
         from google.analytics.data_v1beta import BetaAnalyticsDataClient
 
+        client_id, client_secret = _oauth_client()
         credentials = Credentials(
             token=None,
             refresh_token=settings.ga4_refresh_token,
             token_uri="https://oauth2.googleapis.com/token",
-            client_id=settings.gsc_client_id,
-            client_secret=settings.gsc_client_secret,
+            client_id=client_id,
+            client_secret=client_secret,
             scopes=SCOPES,
         )
         return BetaAnalyticsDataClient(credentials=credentials)
