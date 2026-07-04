@@ -393,11 +393,17 @@
     deleteEl.click();
     await sleep(800);
 
-    // Confirm in modal — required, not optional. If no confirm button is
-    // found we cannot assume Vinted needed no confirmation; treat it as a
-    // failure rather than silently reporting the job as done.
-    const confirmBtn = [...document.querySelectorAll('button')]
-      .find(el => /^\s*(delete|confirm|yes|remove)\s*$/i.test(el.textContent.trim()));
+    // Confirm in modal — required, not optional. Vinted's dialog button reads
+    // "Confirm and delete" (multiple words), so match on containing confirm/
+    // delete/remove/yes rather than an exact word — but never the Cancel button.
+    // Prefer the dialog/modal scope so we don't grab an unrelated page button.
+    const confirmScope = document.querySelector('[role="dialog"], [role="alertdialog"], [data-testid*="modal"], .ReactModal__Content') || document;
+    const confirmBtn = [...confirmScope.querySelectorAll('button, a[role="button"]')]
+      .find(el => {
+        const t = el.textContent.trim();
+        if (/annuleer|cancel|terug|back/i.test(t)) return false;
+        return /confirm|delete|verwijder|remove|\byes\b|\bja\b/i.test(t) || el.dataset.testid?.includes("delete");
+      });
     if (!confirmBtn) throw new Error("Confirm-delete button not found on Vinted for ID " + listingId + " — deletion was not confirmed");
     confirmBtn.click();
     await sleep(1500);
