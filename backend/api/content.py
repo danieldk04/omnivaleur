@@ -203,11 +203,24 @@ async def blog_index_default(request: Request):
     return _render_blog_index(request, f"{SITE_URL}/blog")
 
 
+STATIC_SITEMAP_URLS = [
+    ("/", "weekly", "1.0"),
+    ("/blog", "daily", "0.9"),
+    ("/marketplaces", "monthly", "0.8"),
+    ("/register", "monthly", "0.9"),
+    ("/privacy", "yearly", "0.3"),
+    ("/terms", "yearly", "0.3"),
+]
+
+
 @router.get("/sitemap.xml")
 async def content_sitemap():
     db = get_db()
     rows = db.table("content_pages").select("language,pillar,slug,updated_at").eq("status", "published").execute().data or []
-    urls = []
+    urls = [
+        f"<url><loc>{SITE_URL}{path}</loc><changefreq>{freq}</changefreq><priority>{prio}</priority></url>"
+        for path, freq, prio in STATIC_SITEMAP_URLS
+    ]
     for r in rows:
         loc = f"{SITE_URL}{_url_path(r.get('language', 'en'), r['pillar'], r['slug'])}"
         urls.append(f"<url><loc>{loc}</loc><lastmod>{r['updated_at']}</lastmod></url>")
