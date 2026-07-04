@@ -41,6 +41,22 @@
       "slug": "vinted-to-etsy",
       "priority": 5,
       "status": "pending"
+    },
+    {
+      "keyword": "crosslist eu vs vendoo",
+      "region": "nl",
+      "pillar": "C",
+      "slug": "crosslisteu-vs-vendoo",
+      "priority": 6,
+      "status": "pending"
+    },
+    {
+      "keyword": "crosslist eu vs list perfectly",
+      "region": "nl",
+      "pillar": "C",
+      "slug": "crosslisteu-vs-list-perfectly",
+      "priority": 7,
+      "status": "pending"
     }
   ],
   "published": [
