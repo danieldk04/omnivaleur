@@ -12,6 +12,8 @@ import re
 import anthropic
 
 from backend.config import settings
+from backend.services.google_ads import meets_volume_threshold
+from backend.services.search_console import get_top_pages
 
 logger = logging.getLogger(__name__)
 
