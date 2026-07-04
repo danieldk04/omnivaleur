@@ -307,18 +307,34 @@
   }
 
   async function deleteListingVinted(listingId) {
-    // We're already on https://www.vinted.com/items/{id}
-    // Wait for the item page to load, then find the seller action menu.
+    // We're on the item page on its real country origin (e.g. vinted.nl) —
+    // getDeleteUrl now navigates to the stored listing URL, so location.origin
+    // is the domain where this item AND the /api/v2 endpoints actually live.
+    // Guard against a stale .com item that never resolves: the API must know
+    // this item on THIS origin, otherwise our later 404-means-deleted check
+    // would be meaningless (it would 404 simply because we're on the wrong
+    // domain — the exact false-success bug we're fixing).
     await waitForEl('[data-testid="item-details"], .item-details, main', 15000);
     await sleep(1000);
+
+    let preCheck;
+    try {
+      preCheck = await fetch(`/api/v2/items/${listingId}`, { headers: { Accept: "application/json" } });
+    } catch (e) {
+      throw new Error(`Could not reach Vinted item API for ID ${listingId} on ${location.origin}: ${e}`);
+    }
+    if (preCheck.status === 404 || preCheck.status === 410) {
+      throw new Error(`Vinted item ${listingId} does not exist on ${location.origin} — wrong domain or already gone; refusing to report a delete we cannot verify.`);
+    }
 
     let entry = findDeleteEntryPoint();
 
     // Layer 3 fallback: the edit page is a confirmed-working URL (used by
     // content-refresh) and often carries its own "Delete listing" control
-    // even when the view page's dropdown couldn't be located.
+    // even when the view page's dropdown couldn't be located. Stay on the
+    // SAME origin we're already on (do not hardcode vinted.com).
     if (!entry) {
-      window.location.href = `https://www.vinted.com/items/${listingId}/edit`;
+      window.location.href = `${location.origin}/items/${listingId}/edit`;
       await waitForEl('input[data-testid="price-input--input"], input[data-testid="title--input"], main', 15000);
       await sleep(1000);
       entry = findDeleteEntryPoint();
