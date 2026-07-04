@@ -289,31 +289,57 @@
     await sleep(1000);
 
     // Vinted shows a "..." or "Edit" menu for the seller on their own item page.
-    // Try common testid patterns for the actions dropdown.
+    // Try common testid patterns for the actions dropdown. This must be found —
+    // without it, searching the *whole* document for a "delete"-looking button
+    // below risks clicking an unrelated element (e.g. a wishlist heart icon or
+    // a cookie-banner button) and then falsely reporting success.
     const actionsBtn = document.querySelector(
       '[data-testid="item-actions-button"], [data-testid="item-menu-button"], ' +
       'button[aria-label*="more"], button[aria-label*="actions"], ' +
       '[data-testid="item-page-actions-dropdown-button"]'
     );
-    if (actionsBtn) {
-      actionsBtn.click();
-      await sleep(600);
-    }
+    if (!actionsBtn) throw new Error("Item actions menu button not found on Vinted item page for ID " + listingId + " — Vinted may have changed its page layout");
+    actionsBtn.click();
+    await sleep(600);
 
-    // Find "Delete" option (Vinted UI is English)
-    const deleteEl = [...document.querySelectorAll('button, a, [role="menuitem"], [data-testid*="delete"]')]
-      .find(el => /delete|remove|delet/i.test(el.textContent) || el.dataset.testid?.includes("delete"));
+    // Scope the "Delete" search to the menu/dialog that just opened (not the
+    // whole page) so it can't match an unrelated button elsewhere on the page.
+    const menu = document.querySelector('[role="menu"], [role="listbox"], [data-testid*="dropdown"], [data-testid*="modal"]') || document;
+    const deleteEl = [...menu.querySelectorAll('button, a, [role="menuitem"]')]
+      .find(el => /^\s*delete\s*$/i.test(el.textContent) || el.dataset.testid?.includes("delete"))
+      || [...document.querySelectorAll('button, a, [role="menuitem"], [data-testid*="delete"]')]
+        .find(el => /delete/i.test(el.textContent) || el.dataset.testid?.includes("delete"));
     if (!deleteEl) throw new Error("Delete option not found on Vinted item page for ID " + listingId);
     deleteEl.click();
     await sleep(800);
 
-    // Confirm in modal if it appears
+    // Confirm in modal — required, not optional. If no confirm button is
+    // found we cannot assume Vinted needed no confirmation; treat it as a
+    // failure rather than silently reporting the job as done.
     const confirmBtn = [...document.querySelectorAll('button')]
-      .find(el => /delete|confirm|yes|remove/i.test(el.textContent));
-    if (confirmBtn) {
-      confirmBtn.click();
-      await sleep(1000);
+      .find(el => /^\s*(delete|confirm|yes|remove)\s*$/i.test(el.textContent.trim()));
+    if (!confirmBtn) throw new Error("Confirm-delete button not found on Vinted for ID " + listingId + " — deletion was not confirmed");
+    confirmBtn.click();
+    await sleep(1500);
+
+    // Verify the listing is actually gone via Vinted's own item API before
+    // reporting success — without this, a mis-clicked button (or a confirm
+    // dialog that didn't do what we expected) would still report "done".
+    let stillActive = true;
+    try {
+      const res = await fetch(`/api/v2/items/${listingId}`, { headers: { Accept: "application/json" } });
+      if (res.status === 404 || res.status === 410) {
+        stillActive = false;
+      } else if (res.ok) {
+        const data = await res.json();
+        const item = data?.item;
+        // Vinted marks a removed item's status/is_visible rather than always 404-ing.
+        stillActive = !!item && item.is_visible !== false && item.status_id !== 4;
+      }
+    } catch (e) {
+      throw new Error(`Could not verify Vinted deletion for ID ${listingId}: ${e}`);
     }
+    if (stillActive) throw new Error(`Vinted listing ${listingId} still appears active after confirming delete — removal was not verified`);
   }
 
   function realClickEl(el) {
