@@ -17,6 +17,7 @@ from backend.content.research import research_competitors
 from backend.content.schema_validate import validate_page
 from backend.database import get_db
 from backend.services.email import notify_published
+from backend.services.indexnow import submit_url
 from backend.services.search_console import get_top_pages
 
 logger = logging.getLogger(__name__)
