@@ -35,7 +35,13 @@
       "run_at": "document_idle"
     },
     {
-      "matches": ["https://www.vinted.com/items/new", "https://www.vinted.com/items/*"],
+      "matches": [
+        "https://www.vinted.com/items/new", "https://www.vinted.com/items/*",
+        "https://www.vinted.nl/items/*",
+        "https://www.vinted.be/items/*",
+        "https://www.vinted.de/items/*",
+        "https://www.vinted.fr/items/*"
+      ],
       "js": ["content/shared.js", "content/vinted.js"],
       "run_at": "document_idle"
     },
