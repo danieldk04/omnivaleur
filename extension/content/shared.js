@@ -303,8 +303,11 @@ window.CL = (() => {
     } catch (e) { console.warn("CrossList photo fetch failed", url, e); return null; }
   }
 
-  // Apply random 1-3px crop per side + canvas re-render (strips EXIF).
-  // Changes every pixel hash without any visible difference — defeats Vinted's duplicate image scanner.
+  // Apply random 1-3px crop per side + a sub-perceptual brightness/contrast/
+  // saturation nudge + canvas re-render (strips EXIF), then re-encode at a
+  // slightly randomised JPEG quality. Changes both the byte hash AND the
+  // perceptual hash without any visible difference — makes Vinted treat these
+  // as genuinely new images on a relist, not a re-upload of the same photos.
   function jitterImage(blob) {
     return new Promise((resolve, reject) => {
       const img = new Image();
@@ -317,8 +320,15 @@ window.CL = (() => {
         canvas.width  = img.naturalWidth  - cx - cw;
         canvas.height = img.naturalHeight - cy - ch;
         const ctx = canvas.getContext("2d");
+        // Imperceptible tone shift (±1.5% brightness, ±1.5% contrast, ±2% sat).
+        const jit = (spread) => 1 + (Math.random() * 2 - 1) * spread;
+        try {
+          ctx.filter = `brightness(${jit(0.015).toFixed(4)}) contrast(${jit(0.015).toFixed(4)}) saturate(${jit(0.02).toFixed(4)})`;
+        } catch (e) { /* filter unsupported → crop+re-encode still changes the hash */ }
         ctx.drawImage(img, -cx, -cy);
-        canvas.toBlob((b) => resolve(b || blob), "image/jpeg", 0.92);
+        // Slightly randomise quality too (0.90–0.93) so the encoder output differs.
+        const q = 0.90 + Math.random() * 0.03;
+        canvas.toBlob((b) => resolve(b || blob), "image/jpeg", q);
       };
       img.onerror = () => { URL.revokeObjectURL(url); resolve(blob); };
       img.src = url;
