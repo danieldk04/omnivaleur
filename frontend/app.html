@@ -2891,6 +2891,7 @@ async function refreshStaleListings(platform) {
     const lines = (data.results || []).map(x => `${x.item_id.slice(0,8)}… — ${x.status}${x.reason ? ': ' + x.reason : ''}`);
     alert(lines.length ? lines.join('\n') : `No stale ${label} listings found.`);
     await loadAll();
+    await loadRelistStatus();
     if (document.getElementById('view-refresh')?.classList.contains('active')) renderRefreshView();
   } catch (e) {
     alert('Bulk refresh error: ' + e.message);
