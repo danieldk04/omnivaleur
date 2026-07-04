@@ -153,6 +153,18 @@ async def niche_page_lang(request: Request, language: str, slug: str):
     return _render_page(request, language, "B", slug)
 
 
+@router.get("/vs/{slug}", response_class=HTMLResponse)
+async def comparison_page_en(request: Request, slug: str):
+    return _render_page(request, "en", "C", slug)
+
+
+@router.get("/{language}/vergelijking/{slug}", response_class=HTMLResponse)
+async def comparison_page_lang(request: Request, language: str, slug: str):
+    if language not in LANGUAGES:
+        raise HTTPException(status_code=404, detail="Unknown language")
+    return _render_page(request, language, "C", slug)
+
+
 def _reading_minutes(body_html: str) -> int:
     import re as _re
 
