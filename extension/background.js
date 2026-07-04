@@ -476,6 +476,132 @@ async function bgDeleteMp2dh(job, serverUrl) {
   }
 }
 
+// ── Background-driven delete for Vinted ───────────────────────────────────
+// Opens the listing on its real country origin, verifies it's in the user's
+// wardrobe (ground truth), clicks Delete + confirm, then verifies it's gone
+// from the wardrobe — all from the background worker so Vinted's post-delete
+// redirect can't kill the flow mid-verification.
+async function bgDeleteVinted(job, serverUrl) {
+  const sleep = ms => new Promise(r => setTimeout(r, ms));
+  const payload = job.payload || {};
+  const listingId = payload.platform_listing_id;
+  if (!listingId) throw new Error("Vinted delete: no platform_listing_id in payload");
+  const url = payload.platform_listing_url || `https://www.vinted.com/items/${listingId}`;
+
+  const tabId = await new Promise((res, rej) =>
+    chrome.tabs.create({ url, active: true }, t =>
+      chrome.runtime.lastError ? rej(new Error(chrome.runtime.lastError.message)) : res(t.id)
+    )
+  );
+
+  try {
+    await waitForTabLoad(tabId);
+    await sleep(2500);
+
+    // 1) Ground truth BEFORE: find member id and confirm the item is live in
+    //    the user's own wardrobe on this origin.
+    const before = await execInTab(tabId, async (lid) => {
+      async function findUserId() {
+        let id = null;
+        for (const a of document.querySelectorAll('a[href*="/member/"]')) {
+          const m = (a.getAttribute("href") || "").match(/\/member\/(\d+)/);
+          if (m) { id = m[1]; break; }
+        }
+        if (id) return id;
+        document.querySelector('#user-menu-button, [data-testid="user-menu-button"]')?.click();
+        await new Promise(r => setTimeout(r, 600));
+        for (const a of document.querySelectorAll('a[href*="/member/"]')) {
+          const m = (a.getAttribute("href") || "").match(/\/member\/(\d+)/);
+          if (m) { id = m[1]; break; }
+        }
+        return id;
+      }
+      const userId = await findUserId();
+      if (!userId) return { userId: null };
+      try {
+        const res = await fetch(`/api/v2/wardrobe/${userId}/items?order=newest_first&page=1&per_page=200`, { headers: { Accept: "application/json" } });
+        if (!res.ok) return { userId, present: null };
+        const data = await res.json();
+        if (data.code && data.code !== 0) return { userId, present: null };
+        return { userId, present: (data.items || []).some(it => String(it.id) === String(lid)) };
+      } catch (e) { return { userId, present: null }; }
+    }, [listingId]);
+
+    if (!before?.userId) throw new Error(`Could not determine your Vinted member id on the item page — make sure you're logged into this Vinted account.`);
+    if (before.present === null) throw new Error(`Could not read your Vinted wardrobe to verify item ${listingId} — aborting to avoid an unverified delete.`);
+    if (before.present === false) throw new Error(`Vinted item ${listingId} is not in your wardrobe — it may already be gone or belong to a different account; nothing to delete.`);
+
+    // 2) Click Delete, then confirm. "Confirm and delete" is multi-word, so
+    //    match on containing confirm/delete and never the Cancel button.
+    const clicked = await execInTab(tabId, async () => {
+      const sleep = ms => new Promise(r => setTimeout(r, ms));
+      // Direct visible Delete button/link, else open a kebab/actions dropdown.
+      let del = [...document.querySelectorAll('button, a, [role="menuitem"], [role="button"]')]
+        .find(e => e.offsetParent !== null && (/^\s*delete\s*$/i.test(e.textContent) || e.dataset.testid?.includes("delete")));
+      if (!del) {
+        const actions = document.querySelector(
+          '[data-testid="item-actions-button"], [data-testid="item-menu-button"], ' +
+          '[data-testid="item-page-actions-dropdown-button"], [data-testid*="kebab"], ' +
+          'button[aria-label*="more" i], button[aria-label*="actions" i], button[aria-label*="options" i]'
+        );
+        if (actions) {
+          actions.click();
+          await sleep(600);
+          const menu = document.querySelector('[role="menu"], [role="listbox"], [data-testid*="dropdown"], [data-testid*="modal"]') || document;
+          del = [...menu.querySelectorAll('button, a, [role="menuitem"]')]
+            .find(e => /^\s*delete\s*$/i.test(e.textContent) || e.dataset.testid?.includes("delete"))
+            || [...document.querySelectorAll('button, a, [role="menuitem"], [data-testid*="delete"]')]
+              .find(e => /delete/i.test(e.textContent) || e.dataset.testid?.includes("delete"));
+        }
+      }
+      if (!del) return { clickedDelete: false };
+      del.click();
+      await sleep(900);
+      const scope = document.querySelector('[role="dialog"], [role="alertdialog"], [data-testid*="modal"], .ReactModal__Content') || document;
+      const confirm = [...scope.querySelectorAll('button, a[role="button"]')]
+        .find(el => {
+          const t = el.textContent.trim();
+          if (/annuleer|cancel|terug|back/i.test(t)) return false;
+          return /confirm|delete|verwijder|remove|\byes\b|\bja\b/i.test(t) || el.dataset.testid?.includes("delete");
+        });
+      if (!confirm) return { clickedDelete: true, clickedConfirm: false };
+      confirm.click();
+      return { clickedDelete: true, clickedConfirm: true };
+    });
+
+    if (!clicked?.clickedDelete) throw new Error(`Delete control not found on Vinted item page for ID ${listingId} — Vinted may have changed its layout.`);
+    if (!clicked.clickedConfirm) throw new Error(`Confirm-delete button not found on Vinted for ID ${listingId} — deletion was not confirmed.`);
+
+    // 3) Give Vinted a moment to process + redirect, then verify the item is
+    //    gone from the wardrobe. The tab is now on some page of the SAME
+    //    origin, so the wardrobe fetch still works. Poll a few times.
+    await sleep(2500);
+    let goneAfter = false;
+    for (let i = 0; i < 5; i++) {
+      const present = await execInTab(tabId, async (userId, lid) => {
+        try {
+          const res = await fetch(`/api/v2/wardrobe/${userId}/items?order=newest_first&page=1&per_page=200`, { headers: { Accept: "application/json" } });
+          if (!res.ok) return null;
+          const data = await res.json();
+          if (data.code && data.code !== 0) return null;
+          return (data.items || []).some(it => String(it.id) === String(lid));
+        } catch (e) { return null; }
+      }, [before.userId, listingId]);
+      if (present === false) { goneAfter = true; break; }
+      await sleep(1800);
+    }
+    if (!goneAfter) throw new Error(`Vinted listing ${listingId} still in your wardrobe after confirming delete — removal was not verified.`);
+
+    const completeHeaders = await getAuthHeaders();
+    await fetch(`${serverUrl}/api/jobs/${job.id}/complete`, {
+      method: "POST", headers: completeHeaders, body: JSON.stringify({}),
+    });
+    console.log(`[CrossList] bgDeleteVinted success: listing ${listingId}`);
+  } finally {
+    setTimeout(() => chrome.tabs.remove(tabId).catch(() => {}), 2500);
+  }
+}
+
 // ── Scan: read existing listings the user already has on a platform ───────
 // Read-only — only reports candidates to /api/imports for manual review,
 // never touches items/listings directly.
