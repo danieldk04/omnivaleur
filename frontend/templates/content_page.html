@@ -78,8 +78,6 @@
     <h1>{{ page.h1 }}</h1>
     <blockquote>{{ page.quick_answer }}</blockquote>
 
-    {% if page.featured_image_url %}<img class="featured-image" src="{{ page.featured_image_url }}" alt="{{ page.h1 }}">{% endif %}
-
     {% if page.takeaways %}
     <div class="takeaways">
       <p class="takeaways-label">{{ 'Belangrijkste punten' if page.language == 'nl' else 'Key takeaways' }}</p>
