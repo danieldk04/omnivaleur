@@ -2796,17 +2796,29 @@ function renderRefreshView() {
       statusCell = `<span style="font-size:12px;color:var(--muted)">ended (${l.status})</span>`;
       actionCell = `<button class="btn btn-sm btn-outline" onclick="relistEndedEbayItem('${item.id}','${esc(item.title)}')">Relist ended listing</button>`;
     } else {
-      let onCooldown = false;
-      if (l.last_refreshed_at) {
-        const elapsedDays = Math.floor((now - new Date(l.last_refreshed_at).getTime()) / 86400000);
-        onCooldown = elapsedDays < REFRESH_COOLDOWN_DAYS;
-        statusCell = onCooldown
-          ? `<span style="color:var(--muted);font-size:12px">${elapsedDays}d ago — ${REFRESH_COOLDOWN_DAYS - elapsedDays}d left</span>`
-          : `<span style="color:var(--green);font-size:12px">${elapsedDays}d ago</span>`;
+      const relist = relistMap[relistKey(l.item_id, l.platform)];
+      if (relist) {
+        // A relist is mid-flight for this listing — show the stage + ETA instead
+        // of the normal cooldown, and block a second refresh until it finishes.
+        const deleteDone = relist.delete_status === 'done';
+        const eta = fmtEta(new Date(relist.recreate_at).getTime() - now);
+        statusCell = deleteDone
+          ? `<span style="color:#2563eb;font-size:12px">↻ recreating in ${eta}</span>`
+          : `<span style="color:#2563eb;font-size:12px">↻ removing old listing…</span>`;
+        actionCell = `<button class="btn btn-sm btn-outline" disabled title="Relist in progress">In progress…</button>`;
       } else {
-        statusCell = '<span style="color:var(--muted);font-size:12px">never refreshed</span>';
+        let onCooldown = false;
+        if (l.last_refreshed_at) {
+          const elapsedDays = Math.floor((now - new Date(l.last_refreshed_at).getTime()) / 86400000);
+          onCooldown = elapsedDays < REFRESH_COOLDOWN_DAYS;
+          statusCell = onCooldown
+            ? `<span style="color:var(--muted);font-size:12px">${elapsedDays}d ago — ${REFRESH_COOLDOWN_DAYS - elapsedDays}d left</span>`
+            : `<span style="color:var(--green);font-size:12px">${elapsedDays}d ago</span>`;
+        } else {
+          statusCell = '<span style="color:var(--muted);font-size:12px">never refreshed</span>';
+        }
+        actionCell = `<button class="btn btn-sm btn-outline" ${onCooldown ? 'disabled title="On cooldown"' : ''} onclick="refreshItem('${item.id}','${esc(item.title)}','${l.platform}')">Refresh</button>`;
       }
-      actionCell = `<button class="btn btn-sm btn-outline" ${onCooldown ? 'disabled title="On cooldown"' : ''} onclick="refreshItem('${item.id}','${esc(item.title)}','${l.platform}')">Refresh</button>`;
     }
 
     return `<tr>
