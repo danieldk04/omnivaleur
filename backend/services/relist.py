@@ -174,8 +174,14 @@ async def refresh_listing(item_id: str, platform: str, user_id: str, strategy: s
         return {"strategy": "content", "job_id": job["id"], "status": "queued"}
 
     # strategy == "relist": delete now, recreate after a randomized delay.
+    # Marktplaats/2dehands publish under a Dutch-translated title (never
+    # persisted anywhere), so the delete automation must search for that
+    # exact title, not item["title"] — otherwise it can't find the listing
+    # on the overview page. Recover it from the last "create" job's payload.
+    from backend.services.crosslist import _last_listed_title
     delete_payload = {
         **item,
+        "title": _last_listed_title(db, item_id, platform, item.get("title", "")),
         "platform_listing_id": listing["platform_listing_id"],
         "platform_listing_url": listing["platform_listing_url"],
     }
