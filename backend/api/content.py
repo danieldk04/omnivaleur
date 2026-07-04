@@ -273,3 +273,36 @@ async def set_content_image(body: dict, x_admin_secret: str | None = Header(defa
 
     db.table("content_pages").update({"featured_image_url": image_url}).eq("id", existing[0]["id"]).execute()
     return {"success": True, "intent_key": intent_key, "image_url": image_url}
+
+
+# ---------------------------------------------------------------------------
+# Wekelijks marketing-dashboard
+# ---------------------------------------------------------------------------
+def _require_dashboard_token(token: str | None) -> None:
+    """Beschermt het dashboard + de handmatige rapport-trigger met een los token
+    (?token=...), zodat de URL niet publiek te openen is. Leeg token = uit."""
+    if not settings.analytics_dashboard_token or token != settings.analytics_dashboard_token:
+        raise HTTPException(status_code=401, detail="unauthorized")
+
+
+@router.get("/analytics", response_class=HTMLResponse)
+async def analytics_dashboard(request: Request, token: str | None = None):
+    _require_dashboard_token(token)
+    from backend.services.analytics_report import build_report
+    report = build_report()
+    return templates.TemplateResponse(
+        "analytics_dashboard.html",
+        {"request": request, "report": report, "token": token, "site_url": SITE_URL},
+    )
+
+
+@router.post("/api/analytics/send-report")
+async def analytics_send_report_now(token: str | None = None):
+    """Handmatig het wekelijkse rapport nu opbouwen + mailen (om te testen)."""
+    _require_dashboard_token(token)
+    from backend.services.analytics_report import build_report, render_email
+    from backend.services.email import send_email
+    report = build_report()
+    subject, body = render_email(report)
+    sent = send_email(subject, body)
+    return {"ok": True, "emailed": sent, "patterns": report["patterns"]}
