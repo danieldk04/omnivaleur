@@ -58,8 +58,8 @@ def main() -> int:
 
     client_config = {
         "installed": {
-            "client_id": settings.gsc_client_id,
-            "client_secret": settings.gsc_client_secret,
+            "client_id": client_id,
+            "client_secret": client_secret,
             "auth_uri": "https://accounts.google.com/o/oauth2/auth",
             "token_uri": "https://oauth2.googleapis.com/token",
             "redirect_uris": [f"http://localhost:{REDIRECT_PORT}/"],
