@@ -57,6 +57,15 @@ class Settings(BaseSettings):
     gsc_refresh_token: str = ""
     gsc_site_url: str = "https://crosslisteu.com"
 
+    # Google Analytics 4 — wekelijks marketingrapport (verkeer + kanaalattributie).
+    # Hergebruikt de GSC OAuth-client (gsc_client_id/secret); alleen een apart refresh
+    # token met de analytics.readonly-scope + het numerieke property-ID zijn nodig.
+    # Leeg = rapport draait door op alleen Search Console + signups.
+    ga4_property_id: str = ""
+    ga4_refresh_token: str = ""
+    # Token dat het /analytics dashboard beschermt (?token=...). Leeg = dashboard uit.
+    analytics_dashboard_token: str = ""
+
     # Google Ads API — search-volume check before a keyword enters the content queue.
     # Optional: pipeline runs without volume filtering if these are blank.
     google_ads_developer_token: str = ""
