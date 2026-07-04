@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex,nofollow">
+<title>Marketing-dashboard — CrossList EU</title>
+<link rel="icon" type="image/png" href="/Logo Crosslist EU.png">
+<style>
+{% include "_chrome_style.html" %}
+  body{background:#f8fafc}
+  main{max-width:1000px;margin:0 auto;padding:28px 18px 80px}
+  .head{display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:12px;margin-bottom:6px}
+  h1{font-size:1.6rem;margin:0}
+  .period{color:var(--muted);font-size:14px;margin:0 0 20px}
+  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:16px;margin-bottom:24px}
+  .card{background:#fff;border:1px solid var(--border);border-radius:14px;padding:18px 20px}
+  .card h2{font-size:13px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin:0 0 10px}
+  .insights{background:var(--purple-bg,#faf5ff);border:1px solid #e9d5ff;border-radius:14px;padding:18px 22px;margin-bottom:24px}
+  .insights ul{list-style:none;margin:0;padding:0}
+  .insights li{padding:6px 0;font-size:15px;line-height:1.5}
+  table{width:100%;border-collapse:collapse;font-size:14px}
+  th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--border)}
+  th{color:var(--muted);font-weight:600;font-size:12px;text-transform:uppercase;letter-spacing:.04em}
+  td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
+  .up{color:#16a34a;font-weight:600}
+  .down{color:#dc2626;font-weight:600}
+  .flat{color:var(--muted)}
+  .pill{display:inline-block;background:#eff6ff;color:var(--blue-dark);border-radius:100px;padding:2px 10px;font-size:12px;font-weight:600}
+  .empty{color:var(--muted);font-size:14px;padding:8px 0}
+  .actions{margin:24px 0}
+  .btn{background:var(--blue,#2563eb);color:#fff;border:none;border-radius:8px;padding:10px 18px;font-weight:600;font-size:14px;cursor:pointer}
+  .btn:disabled{opacity:.6;cursor:default}
+  .note{font-size:12px;color:var(--muted);margin-top:8px}
+  section{margin-bottom:28px}
+  section > h2.sec{font-size:1.1rem;color:var(--text);text-transform:none;letter-spacing:0;margin:0 0 12px}
+  .trunc{max-width:340px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  @media(max-width:600px){.trunc{max-width:150px}main{padding:20px 12px 60px}}
+</style>
+</head>
+<body>
+{% macro delta(v) %}
+  {%- if v is none -%}<span class="flat">nieuw</span>
+  {%- elif v >= 0 -%}<span class="up">+{{ v }}%</span>
+  {%- else -%}<span class="down">{{ v }}%</span>{%- endif -%}
+{% endmacro %}
+
+<main>
+  <div class="head">
+    <h1>📊 Marketing-dashboard</h1>
+    <span class="pill">wekelijks · zondagochtend per e-mail</span>
+  </div>
+  <p class="period">Week {{ report.period.this[0] }} t/m {{ report.period.this[1] }}
+     · vergeleken met {{ report.period.prev[0] }} t/m {{ report.period.prev[1] }}</p>
+
+  <div class="insights">
+    <ul>
+      {% for p in report.patterns %}<li>{{ p }}</li>{% else %}<li class="empty">Nog geen data beschikbaar.</li>{% endfor %}
+    </ul>
+  </div>
+
+  <div class="grid">
+    <div class="card">
+      <h2>SEO-clicks (week)</h2>
+      <div style="font-size:1.8rem;font-weight:700">{{ report.seo.total_clicks or 0 }}</div>
+      <div>{{ delta(report.seo.total_clicks_delta) }} vs vorige week</div>
+    </div>
+    <div class="card">
+      <h2>Impressies (week)</h2>
+      <div style="font-size:1.8rem;font-weight:700">{{ report.seo.total_impressions or 0 }}</div>
+    </div>
+    <div class="card">
+      <h2>Nieuwe signups</h2>
+      {% if report.signups.available %}
+      <div style="font-size:1.8rem;font-weight:700">{{ report.signups.this_week }}</div>
+      <div>{{ delta(report.signups.delta) }} · vorige week {{ report.signups.prev_week }}</div>
+      {% else %}<div class="empty">niet beschikbaar</div>{% endif %}
+    </div>
+    <div class="card">
+      <h2>GA4-verkeer</h2>
+      {% if report.channels.connected %}
+      <div style="font-size:1.8rem;font-weight:700">{{ report.channels.totals.sessions or 0 }}</div>
+      <div class="flat">sessies · {{ report.channels.totals.conversions or 0 }} conversies</div>
+      {% else %}<div class="empty">GA4 nog niet gekoppeld</div>{% endif %}
+    </div>
+  </div>
+
+  <section>
+    <h2 class="sec">🔎 Kanalen — waar komen bezoekers vandaan (GA4)</h2>
+    {% if report.channels.connected %}
+    <div class="card"><table>
+      <tr><th>Kanaal</th><th class="num">Sessies</th><th class="num">vs vorige</th><th class="num">Nieuwe gebr.</th><th class="num">Conversies</th></tr>
+      {% for c in report.channels.channels %}
+      <tr><td>{{ c.sessionDefaultChannelGroup }}</td>
+          <td class="num">{{ c.sessions or 0 }}</td>
+          <td class="num">{{ delta(c.sessions_delta) }}</td>
+          <td class="num">{{ c.newUsers or 0 }}</td>
+          <td class="num">{{ c.conversions or 0 }}</td></tr>
+      {% endfor %}
+    </table></div>
+    {% else %}
+    <div class="card empty">GA4 nog niet gekoppeld. Met GA4 zie je hier hoeveel bezoekers via
+      <b>Organic Social</b> (Instagram/TikTok), <b>Referral</b> (Reddit) en <b>Organic Search</b> (blog/SEO)
+      binnenkomen — en welk kanaal converteert. Zie de setup-instructies.</div>
+    {% endif %}
+  </section>
+
+  <section>
+    <h2 class="sec">🏆 Best presterende blogposts (Search Console)</h2>
+    {% if report.seo.connected %}
+    <div class="card"><table>
+      <tr><th>Pagina</th><th class="num">Clicks</th><th class="num">vs vorige</th><th class="num">Impressies</th><th class="num">Positie</th></tr>
+      {% for p in report.seo.top_pages %}
+      <tr><td class="trunc" title="{{ p.url }}">{{ p.url.replace(site_url, '') or '/' }}</td>
+          <td class="num">{{ p.clicks }}</td>
+          <td class="num">{{ delta(p.clicks_delta) }}</td>
+          <td class="num">{{ p.impressions }}</td>
+          <td class="num">{{ p.position }}</td></tr>
+      {% endfor %}
+    </table></div>
+    {% else %}<div class="card empty">Search Console nog niet gekoppeld.</div>{% endif %}
+  </section>
+
+  <section>
+    <h2 class="sec">📈 Stijgende zoektermen</h2>
+    {% if report.seo.risers %}
+    <div class="card"><table>
+      <tr><th>Zoekterm</th><th class="num">Vorige week</th><th class="num">Deze week</th><th class="num">Positie</th></tr>
+      {% for q in report.seo.risers %}
+      <tr><td>{{ q.query }}</td><td class="num">{{ q.clicks_prev }}</td><td class="num up">{{ q.clicks }}</td><td class="num">{{ q.position }}</td></tr>
+      {% endfor %}
+    </table></div>
+    {% else %}<div class="card empty">Geen stijgende zoektermen deze week.</div>{% endif %}
+  </section>
+
+  <div class="actions">
+    <button class="btn" id="sendBtn" onclick="sendReport()">📧 Verstuur rapport nu (test)</button>
+    <div class="note" id="sendNote">Handig om de e-mail te testen zonder tot zondag te wachten.</div>
+  </div>
+</main>
+
+<script>
+async function sendReport(){
+  const btn=document.getElementById('sendBtn'), note=document.getElementById('sendNote');
+  const token=new URLSearchParams(location.search).get('token')||'';
+  btn.disabled=true; btn.textContent='Bezig…';
+  try{
+    const r=await fetch('/api/analytics/send-report?token='+encodeURIComponent(token),{method:'POST'});
+    const d=await r.json();
+    note.textContent=r.ok?(d.emailed?'✅ Rapport verstuurd naar je inbox.':'⚠️ Rapport gebouwd, maar SMTP is niet geconfigureerd (geen mail verstuurd).'):'❌ Mislukt: '+(d.detail||r.status);
+  }catch(e){note.textContent='❌ Fout: '+e;}
+  btn.disabled=false; btn.textContent='📧 Verstuur rapport nu (test)';
+}
+</script>
+</body>
+</html>
