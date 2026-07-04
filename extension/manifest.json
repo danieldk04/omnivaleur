@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "CrossList EU",
-  "version": "1.0.5",
+  "version": "1.0.6",
   "description": "Automatisch crosslisten naar Marktplaats, 2dehands en meer",
   "permissions": ["storage", "tabs", "alarms", "clipboardWrite", "clipboardRead", "scripting"],
   "host_permissions": [
