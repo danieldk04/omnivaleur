@@ -75,8 +75,10 @@ def _build_prompt(
 CRITICAL LANGUAGE RULE: the target keyword and competitor research below may be phrased in Dutch (that is simply what people search for). You must nonetheless write the ENTIRE article — title, meta description, H1, quick answer, body, FAQ, everything — in {language}. Translate the concept and intent of the Dutch keyword into a natural {language} article. Do NOT copy or echo any Dutch phrasing anywhere in your output, including the H1. If you catch yourself writing a Dutch word, stop and translate it.
 
 Write a COMPLETE programmatic SEO article in {language} for the concept behind this search keyword: "{keyword}"
-Content pillar: {"A (platform-to-platform comparison/combo page)" if pillar == "A" else "B (niche/audience automation page)"}
-URL will be: /{region}/{"crosslisten" if pillar == "A" else "reseller-tools"}/{slug}
+Content pillar: {"A (platform-to-platform comparison/combo page)" if pillar == "A" else "C (honest CrossList EU vs. named competitor comparison)" if pillar == "C" else "B (niche/audience automation page)"}
+URL will be: /{region}/{"crosslisten" if pillar == "A" else "vergelijking" if pillar == "C" else "reseller-tools"}/{slug}
+{"""
+PILLAR C SPECIAL RULES (competitor comparison page): Be scrupulously honest and fair — this is a comparison, not an ad. Include a real Markdown comparison table (pricing, supported platforms, sync behavior, ease of use). Acknowledge at least one genuine strength of the competitor. Never fabricate a competitor feature, price or limitation you don't actually know — if unsure, describe it in general/neutral terms instead of inventing specifics. End with an honest verdict on who each tool is actually best for, not a blanket "CrossList EU wins".""" if pillar == "C" else ""}
 
 COMPETITOR RESEARCH (top 3 organic results for this keyword, their heading structure):
 {competitors_summary}
