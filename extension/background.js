@@ -264,6 +264,20 @@ async function processJob(job, serverUrl) {
     return;
   }
 
+  // Vinted delete: also background-driven. Vinted redirects the seller away
+  // from the item page right after confirming delete, which destroys any
+  // content-script mid-verification (leaving the job stuck "claimed" and the
+  // paired relist recreate blocked forever). The background worker survives
+  // that navigation, so verification + /complete happen reliably here.
+  if (job.action === "delete" && job.platform === "vinted") {
+    try {
+      await bgDeleteVinted(job, serverUrl);
+    } catch (e) {
+      await reportError(job.id, serverUrl, String(e));
+    }
+    return;
+  }
+
   // Scan: read the user's own "my listings" page, report candidates for manual review
   if (job.action === "scan") {
     try {
