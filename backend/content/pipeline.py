@@ -42,6 +42,8 @@ def _url_path(language: str, pillar: str, slug: str) -> str:
     """
     if pillar == "A":
         folder = "crosslisten" if language and language != "en" else "crosslisting"
+    elif pillar == "C":
+        folder = "vergelijking" if language and language != "en" else "vs"
     else:
         folder = "reseller-tools"
     if language and language != "en":
