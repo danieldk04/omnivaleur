@@ -40,6 +40,17 @@ def start_scheduler():
         id="expire_trials",
         replace_existing=True,
     )
+    # Wekelijks marketingrapport — elke zondagochtend 08:00 (NL-tijd) per e-mail.
+    _scheduler.add_job(
+        send_weekly_report,
+        "cron",
+        day_of_week="sun",
+        hour=8,
+        minute=0,
+        timezone="Europe/Amsterdam",
+        id="weekly_marketing_report",
+        replace_existing=True,
+    )
     _scheduler.start()
     return _scheduler
 
