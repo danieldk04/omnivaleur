@@ -53,11 +53,18 @@
     <p class="subtitle">Platform comparisons, DAC7 rules and reselling tips — updated for 2026.</p>
   </div>
 
+  <div class="cat-filters" role="tablist" aria-label="Filter guides by category">
+    <button type="button" class="cat-chip active" data-filter="all">All guides</button>
+    <button type="button" class="cat-chip" data-filter="A">Platform comparisons</button>
+    <button type="button" class="cat-chip" data-filter="B">Reseller guides</button>
+    <button type="button" class="cat-chip" data-filter="C">Vs. competitors</button>
+  </div>
+
   <div class="post-list">
     {% for p in pages %}
-    <article class="post-row">
+    <article class="post-row" data-pillar="{{ p.pillar }}">
       <div class="post-thumb">
-        {% if p.featured_image_url %}<img src="{{ p.featured_image_url }}" alt="{{ p.h1 }}">{% else %}<span class="post-thumb-tag">{{ 'Platform comparison' if p.pillar == 'A' else 'Reseller guide' }}</span>{% endif %}
+        {% if p.featured_image_url %}<img src="{{ p.featured_image_url }}" alt="{{ p.h1 }}">{% else %}<span class="post-thumb-tag">{{ {'A': 'Platform comparison', 'C': 'Vs. competitor'}.get(p.pillar, 'Reseller guide') }}</span>{% endif %}
       </div>
       <div class="post-body">
         <h2><a href="{{ p.url_path }}">{{ p.h1 }}</a></h2>
