@@ -258,7 +258,10 @@
     } else {
       await fillForm(item);
       const id = await submitListing(/\/items\/(\d+)/);
-      send("JOB_DONE", { platform_listing_id: id, platform_listing_url: `https://www.vinted.com/items/${id}` });
+      // Use the origin we actually ended up on (Vinted redirects to the
+      // account's country domain), so the stored URL is the real one this
+      // item lives on — critical for a later delete to hit the right domain.
+      send("JOB_DONE", { platform_listing_id: id, platform_listing_url: `${location.origin}/items/${id}` });
     }
   } catch (e) {
     send("JOB_ERROR", null, String(e));
