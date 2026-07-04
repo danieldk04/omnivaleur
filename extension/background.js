@@ -539,51 +539,48 @@ async function bgDeleteVinted(job, serverUrl) {
     //     (description, attribute rows, category breadcrumb) — best-effort per
     //     field. If this is a relist, complete_job merges it into the create job.
     const snapshot = await execInTab(tabId, async (userId, lid) => {
-      const out = { photo_urls: [], description: "", brand: "", size: "", condition: "", color: "", material: "", category: "", gender: "" };
-      // Wardrobe object for this item — richest structured source.
+      const out = { photo_urls: [], description: "", brand: "", size: "", condition: "", color: "", material: "", category: "", gender: "", price: null, _raw: null };
+      // Wardrobe object for this item — the ONLY reliable structured source.
+      // Whole-page DOM scraping is avoided for brand/size/description because
+      // the item page also renders "Member's items" and a stats line, which
+      // produced junk ("Menu", "17 views 0 favourites") in the first attempt.
+      let it = null;
       try {
         const res = await fetch(`/api/v2/wardrobe/${userId}/items?order=newest_first&page=1&per_page=200`, { headers: { Accept: "application/json" } });
         if (res.ok) {
           const data = await res.json();
-          const it = (data.items || []).find(x => String(x.id) === String(lid));
-          if (it) {
-            const photos = (it.photos || []).map(p => p.full_size_url || p.url).filter(Boolean);
-            if (photos.length) out.photo_urls = photos;
-            else if (it.photo?.url) out.photo_urls = [it.photo.url];
-            out.brand = it.brand_title || it.brand_dto?.title || "";
-            out.size = it.size_title || it.size || "";
-            out.condition = it.status || "";
-            if (it.description) out.description = it.description;
-          }
+          it = (data.items || []).find(x => String(x.id) === String(lid)) || null;
         }
       } catch (e) {}
-      // DOM scraping for anything the wardrobe object omits.
-      const rowValue = (label) => {
-        const rows = [...document.querySelectorAll('[data-testid*="item-attributes"] *, dl div, div[class*="Cell"], li')];
-        for (const el of rows) {
-          const t = el.textContent || "";
-          const re = new RegExp("^\\s*" + label + "\\s*[:\\-]?\\s*(.+)$", "i");
-          const m = t.trim().match(re);
-          if (m && m[1] && m[1].trim().length < 60) return m[1].trim();
-        }
-        // Fallback: a label element next to its value.
-        for (const el of document.querySelectorAll('*')) {
-          if (el.children.length === 0 && new RegExp("^\\s*" + label + "\\s*$", "i").test(el.textContent)) {
-            const sib = el.nextElementSibling || el.parentElement?.nextElementSibling;
-            const v = sib?.textContent?.trim();
-            if (v && v.length < 60) return v;
-          }
-        }
-        return "";
-      };
-      if (!out.brand) out.brand = rowValue("Brand") || rowValue("Merk");
-      if (!out.size) out.size = rowValue("Size") || rowValue("Maat");
-      if (!out.condition) out.condition = rowValue("Condition") || rowValue("Staat");
-      out.color = rowValue("Colour") || rowValue("Color") || rowValue("Kleur");
-      out.material = rowValue("Material") || rowValue("Materiaal");
+      if (it) {
+        // Keep the raw object (trimmed) so we can map any field names precisely.
+        try {
+          const clone = JSON.parse(JSON.stringify(it));
+          if (clone.photos) clone.photos = `[${clone.photos.length} photos]`;
+          out._raw = clone;
+        } catch (e) {}
+        const photos = (it.photos || []).map(p => p.full_size_url || p.url).filter(Boolean);
+        if (photos.length) out.photo_urls = photos;
+        else if (it.photo?.url) out.photo_urls = [it.photo.url];
+        out.brand = it.brand_title || it.brand_dto?.title || it.brand || "";
+        out.size = it.size_title || it.size || "";
+        out.condition = it.status || it.status_title || "";
+        out.description = it.description || "";
+        const pr = it.price?.amount ?? it.price ?? it.total_item_price?.amount;
+        if (pr != null && !isNaN(Number(pr))) out.price = Number(pr);
+        // Colours: Vinted returns color names on the wardrobe object under
+        // varying keys.
+        out.color = it.color1 || it.color1_title || it.colour || "";
+      }
+      // Description: if the wardrobe object didn't carry it, scrape the DOM but
+      // reject the stats line / anything that isn't a real description.
       if (!out.description) {
-        const d = document.querySelector('[itemprop="description"], [data-testid*="description"]');
-        if (d && d.textContent.trim()) out.description = d.textContent.trim();
+        const cand = document.querySelector('[itemprop="description"]')
+          || [...document.querySelectorAll('div, p, span')].find(el =>
+              el.children.length === 0 &&
+              el.textContent.trim().length > 25 &&
+              !/views|favourites|favorieten|weergaven|€|\bcm\b/i.test(el.textContent));
+        if (cand && cand.textContent.trim()) out.description = cand.textContent.trim().slice(0, 1000);
       }
       // Category + gender from the breadcrumb (e.g. Women / Clothing / Jumpers & sweaters / ...).
       const crumbs = [...document.querySelectorAll('nav a, [class*="breadcrumb" i] a, [data-testid*="breadcrumb"] a')]
