@@ -49,7 +49,12 @@ class Settings(BaseSettings):
 
     # Google Search Console — service account JSON (as a raw JSON string, not a file path)
     # for the content pipeline's keyword prioritization + internal-linking signal.
-    gsc_service_account_json: str = ""
+    # OAuth (not a service account — org policy blocks service-account key creation
+    # on this Google Cloud project). Reuses the same OAuth client as Google Ads;
+    # only the refresh token differs (separate consent, separate scope).
+    gsc_client_id: str = ""
+    gsc_client_secret: str = ""
+    gsc_refresh_token: str = ""
     gsc_site_url: str = "https://crosslisteu.com"
 
     # Google Ads API — search-volume check before a keyword enters the content queue.
