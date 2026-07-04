@@ -204,6 +204,19 @@ async def refresh_listing(item_id: str, platform: str, user_id: str, strategy: s
         "price": _jittered_price(float(item.get("price") or 0)) or item.get("price"),
         "photo_urls": _shuffled_photos(item.get("photo_urls") or []),
     }
+    # A Vinted account lives on ONE country domain (e.g. vinted.nl). The create
+    # form must be opened on that same domain, otherwise the recreate lands on
+    # the wrong catalog — the same domain trap that broke delete. Carry the real
+    # origin (recovered from the old listing URL) so the extension opens
+    # {origin}/items/new instead of a hardcoded vinted.com.
+    if platform == "vinted" and listing.get("platform_listing_url"):
+        try:
+            from urllib.parse import urlparse
+            p = urlparse(listing["platform_listing_url"])
+            if p.scheme and p.netloc:
+                create_payload["_create_origin"] = f"{p.scheme}://{p.netloc}"
+        except Exception:
+            pass
     db.table("jobs").insert({
         "user_id": user_id,
         "item_id": item_id,
