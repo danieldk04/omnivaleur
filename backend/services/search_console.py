@@ -5,12 +5,13 @@ performance-data) — welke gepubliceerde pagina's al verkeer trekken (voor inte
 linking en cannibalisatie-detectie) en of een kandidaat-keyword al ergens impressies
 scoort op een bestaande pagina.
 
-Vereist een Google Cloud service-account met "Restricted" toegang toegevoegd in
-Search Console (Instellingen > Gebruikers en machtigingen) voor GSC_SITE_URL.
-Faalt zacht (lege lijst) als gsc_service_account_json niet is geconfigureerd —
+Auth via OAuth refresh token (niet een service account — het Google Cloud project
+staat onder een org policy die service-account key creation blokkeert). Het account
+achter gsc_refresh_token moet zelf "Restricted" (of hoger) toegang hebben in Search
+Console (Instellingen > Gebruikers en machtigingen) voor GSC_SITE_URL.
+Faalt zacht (lege lijst) als de OAuth-settings niet zijn geconfigureerd —
 de pipeline mag hier nooit op vastlopen.
 """
-import json
 import logging
 
 from backend.config import settings
@@ -21,14 +22,20 @@ SCOPES = ["https://www.googleapis.com/auth/webmasters.readonly"]
 
 
 def _get_service():
-    if not settings.gsc_service_account_json:
+    if not (settings.gsc_client_id and settings.gsc_client_secret and settings.gsc_refresh_token):
         return None
     try:
-        from google.oauth2 import service_account
+        from google.oauth2.credentials import Credentials
         from googleapiclient.discovery import build
 
-        info = json.loads(settings.gsc_service_account_json)
-        credentials = service_account.Credentials.from_service_account_info(info, scopes=SCOPES)
+        credentials = Credentials(
+            token=None,
+            refresh_token=settings.gsc_refresh_token,
+            token_uri="https://oauth2.googleapis.com/token",
+            client_id=settings.gsc_client_id,
+            client_secret=settings.gsc_client_secret,
+            scopes=SCOPES,
+        )
         return build("searchconsole", "v1", credentials=credentials, cache_discovery=False)
     except Exception as e:
         logger.error(f"GSC-service kon niet worden opgebouwd: {e}")
