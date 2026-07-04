@@ -113,6 +113,40 @@ async def complete_job(job_id: str, body: dict, user_id: str = Depends(get_curre
     elif job["action"] == "delete":
         db.table("listings").update({"status": "delisted"}).eq("item_id", job["item_id"]).eq("platform", job["platform"]).execute()
 
+        # If this delete is the first half of a relist, the extension may have
+        # snapshotted the full live listing before removing it (imported items
+        # otherwise carry almost no data). Merge that snapshot into the paired,
+        # still-pending recreate ("create") job so the new listing is a faithful
+        # copy instead of just title+price. Only fill fields that are actually
+        # present in the snapshot and missing/empty in the current payload.
+        captured = body.get("captured_listing") or {}
+        if captured:
+            paired = (
+                db.table("jobs")
+                .select("id,payload")
+                .eq("user_id", user_id)
+                .eq("item_id", job["item_id"])
+                .eq("platform", job["platform"])
+                .eq("action", "create")
+                .eq("status", "pending")
+                .gte("created_at", job["created_at"])
+                .order("created_at")
+                .limit(1)
+                .execute()
+                .data
+            )
+            if paired:
+                payload = dict(paired[0].get("payload") or {})
+                for key in ("description", "brand", "size", "condition", "color", "material", "category", "gender"):
+                    val = captured.get(key)
+                    if val and not payload.get(key):
+                        payload[key] = val
+                # Photos: prefer the fuller captured set (imports often keep only 1).
+                cap_photos = captured.get("photo_urls") or []
+                if len(cap_photos) > len(payload.get("photo_urls") or []):
+                    payload["photo_urls"] = cap_photos
+                db.table("jobs").update({"payload": payload}).eq("id", paired[0]["id"]).execute()
+
     elif job["action"] == "content_refresh":
         # Listing stays active — this is an in-place edit, not a new listing.
         pass
