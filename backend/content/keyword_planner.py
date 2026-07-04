@@ -96,6 +96,9 @@ def suggest_keywords(existing_keywords: list[str]) -> list[dict]:
         keyword = idea.get("keyword", "").strip()
         if not keyword:
             continue
+        if not meets_volume_threshold(keyword):
+            logger.info(f"Keyword overgeslagen (te weinig zoekvolume): {keyword}")
+            continue
         slug = _slugify(keyword)
         item = {
             "keyword": keyword,
