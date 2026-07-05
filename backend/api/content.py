@@ -296,6 +296,15 @@ async def analytics_dashboard(request: Request, token: str | None = None):
     )
 
 
+@router.get("/api/analytics/diag")
+async def analytics_diagnostics(token: str | None = None):
+    """Definitieve koppelingscheck (auth vs geen-data) voor GSC + GA4."""
+    _require_dashboard_token(token)
+    from backend.services import search_console as gsc
+    from backend.services import ga4
+    return {"gsc": gsc.diagnostics(), "ga4_configured": ga4.is_configured()}
+
+
 @router.post("/api/analytics/send-report")
 async def analytics_send_report_now(token: str | None = None):
     """Handmatig het wekelijkse rapport nu opbouwen + mailen (om te testen)."""
