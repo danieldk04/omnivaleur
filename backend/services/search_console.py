@@ -21,6 +21,32 @@ logger = logging.getLogger(__name__)
 SCOPES = ["https://www.googleapis.com/auth/webmasters.readonly"]
 
 
+def is_configured() -> bool:
+    """Zijn de credentials aanwezig om überhaupt te kunnen verbinden? (Los van of er
+    al zoekverkeer-data is — een nieuwe site kan verbonden zijn met 0 clicks.)"""
+    client_id = settings.gsc_client_id or settings.google_ads_client_id
+    client_secret = settings.gsc_client_secret or settings.google_ads_client_secret
+    return bool(client_id and client_secret and settings.gsc_refresh_token)
+
+
+def diagnostics() -> dict:
+    """Definitieve check of de GSC-koppeling werkt: probeert de property-lijst op te halen.
+    Gebruikt door het diagnose-endpoint om 'geen data' te onderscheiden van 'kapotte auth'."""
+    if not is_configured():
+        return {"configured": False, "reason": "credentials ontbreken (gsc_refresh_token / client)"}
+    service = _get_service()
+    if not service:
+        return {"configured": True, "auth_ok": False, "reason": "service kon niet worden opgebouwd"}
+    try:
+        entries = service.sites().list().execute().get("siteEntry", [])
+        sites = [{"siteUrl": e.get("siteUrl"), "permission": e.get("permissionLevel")} for e in entries]
+        return {"configured": True, "auth_ok": True,
+                "resolved_site_url": _resolve_site_url(service),
+                "available_sites": sites}
+    except Exception as e:
+        return {"configured": True, "auth_ok": False, "reason": str(e)}
+
+
 def _get_service():
     # De OAuth-client wordt gedeeld met Google Ads (zelfde Cloud-project). In Railway
     # staan alleen de GOOGLE_ADS_* varianten, dus val daarop terug voor client id/secret.
