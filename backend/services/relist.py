@@ -172,6 +172,14 @@ async def refresh_listing(item_id: str, platform: str, user_id: str, strategy: s
     _check_and_increment_quota(db, user_id)
 
     now = datetime.now(timezone.utc)
+    # Captured before we mutate the listing, so a failed job can be rolled back
+    # to exactly the prior cooldown/quota state (see rollback_refresh).
+    rollback = {
+        "listing_id": listing["id"],
+        "day": now.date().isoformat(),
+        "prior_last_refreshed_at": listing.get("last_refreshed_at"),
+        "prior_refresh_count": listing.get("refresh_count") or 0,
+    }
 
     if strategy == "content":
         payload = {
@@ -180,6 +188,7 @@ async def refresh_listing(item_id: str, platform: str, user_id: str, strategy: s
             "platform_listing_url": listing["platform_listing_url"],
             "price": _jittered_price(float(item.get("price") or 0)) or item.get("price"),
             "photo_urls": _shuffled_photos(item.get("photo_urls") or []),
+            "_refresh_rollback": rollback,
         }
         job = db.table("jobs").insert({
             "user_id": user_id,
