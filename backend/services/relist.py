@@ -217,6 +217,9 @@ async def refresh_listing(item_id: str, platform: str, user_id: str, strategy: s
         "title": _last_listed_title(db, item_id, platform, item.get("title", "")),
         "platform_listing_id": listing["platform_listing_id"],
         "platform_listing_url": listing["platform_listing_url"],
+        # If the delist fails the whole relist aborts (the paired create is
+        # skipped in /jobs/pending), so undo the cooldown/quota here too.
+        "_refresh_rollback": rollback,
     }
     db.table("jobs").insert({
         "user_id": user_id,
