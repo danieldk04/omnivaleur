@@ -521,48 +521,46 @@
     if (presentBefore === null) throw new Error(`Could not read your Vinted wardrobe on ${location.origin} to verify item ${listingId} — aborting to avoid an unverified delete.`);
     if (presentBefore === false) throw new Error(`Vinted item ${listingId} is not in your wardrobe on ${location.origin} — it may already be gone or belong to a different account; nothing to delete.`);
 
+    // Wait specifically for the delete-listing button to exist (it renders a beat
+    // after the item-details panel), then locate the entry point.
+    await waitForEl('[data-testid="item-delete-button"], [data-testid="item-actions-button"], [data-testid="item-menu-button"]', 8000).catch(() => {});
     let entry = findDeleteEntryPoint();
 
-    // Layer 3 fallback: the edit page is a confirmed-working URL (used by
-    // content-refresh) and often carries its own "Delete listing" control
-    // even when the view page's dropdown couldn't be located. Stay on the
-    // SAME origin we're already on (do not hardcode vinted.com).
-    if (!entry) {
-      window.location.href = `${location.origin}/items/${listingId}/edit`;
-      await waitForEl('input[data-testid="price-input--input"], input[data-testid="title--input"], main', 15000);
-      await sleep(1000);
-      entry = findDeleteEntryPoint();
-    }
-
-    if (!entry) throw new Error("Delete control not found on Vinted item/edit page for ID " + listingId + " — Vinted may have changed its page layout");
+    if (!entry) throw new Error("Delete control not found on Vinted item page for ID " + listingId + " — Vinted may have changed its page layout");
 
     let deleteEl;
     if (entry.__needsOpen) {
       entry.__needsOpen.click();
       await sleep(600);
       const menu = document.querySelector('[role="menu"], [role="listbox"], [data-testid*="dropdown"], [data-testid*="modal"]') || document;
-      deleteEl = [...menu.querySelectorAll('button, a, [role="menuitem"]')]
-        .find(el => /^\s*delete\s*$/i.test(el.textContent) || el.dataset.testid?.includes("delete"))
-        || [...document.querySelectorAll('button, a, [role="menuitem"], [data-testid*="delete"]')]
-          .find(el => /delete/i.test(el.textContent) || el.dataset.testid?.includes("delete"));
+      deleteEl = menu.querySelector('[data-testid="item-delete-button"]')
+        || [...menu.querySelectorAll('button, a, [role="menuitem"]')]
+          .find(el => !isPhotoDeleteTestid(el.dataset.testid) && /^\s*delete\s*$/i.test(el.textContent));
       if (!deleteEl) throw new Error("Delete option not found in Vinted actions menu for ID " + listingId);
     } else {
       deleteEl = entry;
     }
+    // The button can be laid out at 0x0 until scrolled into view; force layout so
+    // the click reliably opens the confirm dialog.
+    deleteEl.scrollIntoView({ block: "center" });
+    await sleep(300);
     deleteEl.click();
-    await sleep(800);
+    await sleep(1000);
 
-    // Confirm in modal — required, not optional. Vinted's dialog button reads
-    // "Confirm and delete" (multiple words), so match on containing confirm/
-    // delete/remove/yes rather than an exact word — but never the Cancel button.
-    // Prefer the dialog/modal scope so we don't grab an unrelated page button.
+    // Confirm in the modal — required, not optional. The real dialog exposes the
+    // exact testid item-delete-confirmation-button (button reads "Confirm and
+    // delete") alongside item-delete-cancelation-button ("Cancel"). Prefer the
+    // exact confirm testid; only fall back to text matching, and NEVER match the
+    // cancel button or a per-photo remove button.
     const confirmScope = document.querySelector('[role="dialog"], [role="alertdialog"], [data-testid*="modal"], .ReactModal__Content') || document;
-    const confirmBtn = [...confirmScope.querySelectorAll('button, a[role="button"]')]
-      .find(el => {
-        const t = el.textContent.trim();
-        if (/annuleer|cancel|terug|back/i.test(t)) return false;
-        return /confirm|delete|verwijder|remove|\byes\b|\bja\b/i.test(t) || el.dataset.testid?.includes("delete");
-      });
+    const confirmBtn = confirmScope.querySelector('[data-testid="item-delete-confirmation-button"]')
+      || [...confirmScope.querySelectorAll('button, a[role="button"]')]
+        .find(el => {
+          const t = el.textContent.trim();
+          const tid = el.dataset.testid || "";
+          if (/annuleer|cancel|terug|back/i.test(t) || /cancel/i.test(tid) || isPhotoDeleteTestid(tid)) return false;
+          return /confirm|delete|verwijder|remove|\byes\b|\bja\b/i.test(t) || tid === "item-delete-confirmation-button";
+        });
     if (!confirmBtn) throw new Error("Confirm-delete button not found on Vinted for ID " + listingId + " — deletion was not confirmed");
     confirmBtn.click();
     await sleep(1500);
