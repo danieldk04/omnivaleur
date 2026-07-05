@@ -305,6 +305,21 @@ async def analytics_diagnostics(token: str | None = None):
     return {"gsc": gsc.diagnostics(), "ga4_configured": ga4.is_configured()}
 
 
+@router.get("/api/analytics/social")
+async def analytics_social(token: str | None = None):
+    """On-demand social-scrape (traag: ~10-30s). Los endpoint zodat de dashboard-pagina
+    zelf snel blijft — de social-tabel wordt via een knop async geladen."""
+    _require_dashboard_token(token)
+    from backend.services import social_scrape
+    from backend.services.analytics_report import _windows
+    if not social_scrape.is_configured():
+        return {"connected": False}
+    win = _windows()
+    section = social_scrape.weekly(*win["this"])
+    section["insights"] = social_scrape.patterns(section)
+    return section
+
+
 @router.post("/api/analytics/send-report")
 async def analytics_send_report_now(token: str | None = None):
     """Handmatig het wekelijkse rapport nu opbouwen + mailen (om te testen)."""
