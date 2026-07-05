@@ -106,6 +106,66 @@
   </section>
 
   <section>
+    <h2 class="sec">📱 Social media per platform — waar komen je bezoekers vandaan</h2>
+    {% if report.social.connected %}
+      {% if report.social.platforms %}
+      <div class="card"><table>
+        <tr><th>Platform</th><th class="num">Sessies</th><th class="num">vs vorige</th><th class="num">Nieuwe bezoekers</th><th class="num">Conversies</th><th class="num">Conv.%</th></tr>
+        {% for p in report.social.platforms %}
+        <tr><td>{{ p.platform }}</td>
+            <td class="num">{{ p.sessions }}</td>
+            <td class="num">{{ delta(p.sessions_delta) }}</td>
+            <td class="num">{{ p.newUsers }}</td>
+            <td class="num">{{ p.conversions }}</td>
+            <td class="num">{{ p.conv_rate }}%</td></tr>
+        {% endfor %}
+      </table></div>
+      {% else %}
+      <div class="card empty">Nog geen herkend social-verkeer deze week. TikTok/Instagram strippen vaak de
+        referrer, dus tag je post-links met UTM's (zie de linkbouwer onderaan) — dan verschijnen ze hier
+        én op postniveau.</div>
+      {% endif %}
+    {% else %}<div class="card empty">GA4 nog niet gekoppeld.</div>{% endif %}
+  </section>
+
+  <section>
+    <h2 class="sec">🎬 Best presterende posts (UTM-getagd)</h2>
+    {% if report.social.posts %}
+    <div class="card"><table>
+      <tr><th>Platform</th><th>Post / campagne</th><th class="num">Sessies</th><th class="num">Nieuw</th><th class="num">Conversies</th></tr>
+      {% for p in report.social.posts %}
+      <tr><td>{{ p.platform }}</td>
+          <td class="trunc" title="{{ p.sessionManualAdContent or p.sessionCampaignName }}">{{ p.sessionManualAdContent or p.sessionCampaignName }}</td>
+          <td class="num">{{ p.sessions }}</td>
+          <td class="num">{{ p.newUsers }}</td>
+          <td class="num">{{ p.conversions }}</td></tr>
+      {% endfor %}
+    </table></div>
+    {% else %}
+    <div class="card empty">Nog geen postniveau-data. Zodra je UTM-getagde links deelt (linkbouwer onderaan),
+      zie je hier per losse TikTok/Reel/Pin/Reddit-post hoeveel bezoek én signups die opleverde — zo weet je
+      exact wélke content aanslaat.</div>
+    {% endif %}
+  </section>
+
+  <section>
+    <h2 class="sec">🗂️ Blog-prestaties per categorie</h2>
+    {% if report.categories %}
+    <div class="card"><table>
+      <tr><th>Categorie</th><th class="num">Pagina's</th><th class="num">Clicks</th><th class="num">vs vorige</th><th class="num">Impressies</th><th class="num">CTR</th></tr>
+      {% for c in report.categories %}
+      <tr><td>{{ c.category }}</td>
+          <td class="num">{{ c.pages }}</td>
+          <td class="num">{{ c.clicks }}</td>
+          <td class="num">{{ delta(c.clicks_delta) }}</td>
+          <td class="num">{{ c.impressions }}</td>
+          <td class="num">{{ c.ctr }}%</td></tr>
+      {% endfor %}
+    </table></div>
+    {% else %}<div class="card empty">Nog geen categorie-data (Search Console heeft nog geen pagina-clicks).</div>{% endif %}
+  </section>
+
+  <section>
     <h2 class="sec">🏆 Best presterende blogposts (Search Console)</h2>
     {% if report.seo.connected and not report.seo.has_data %}
     <div class="card empty">✅ Search Console is gekoppeld, maar er is nog geen zoekverkeer-data
