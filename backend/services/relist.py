@@ -8,8 +8,8 @@ can't look like scripted spam.
 
 Per-platform, what's actually available differs a lot:
 
-- "content" (Vinted only): light edit of an existing listing (price nudge,
-  photo re-order). Lowest impact, zero account risk. Not offered for
+- "content" (Vinted only): light edit of an existing listing (photo re-order,
+  price left untouched). Lowest impact, zero account risk. Not offered for
   Marktplaats/2dehands because there's no verified edit-page automation for
   them yet (see extension/content/marktplaats.js — it only implements the
   create/delete flow) and shipping an unverified DOM script here would be a
