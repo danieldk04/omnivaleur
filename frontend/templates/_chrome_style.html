@@ -23,12 +23,16 @@ nav{position:sticky;top:0;z-index:100;background:rgba(255,255,255,.95);backdrop-
 .nav-toggle-cb:checked ~ .nav-hamburger span:nth-child(1){transform:translateY(7px) rotate(45deg)}
 .nav-toggle-cb:checked ~ .nav-hamburger span:nth-child(2){opacity:0}
 .nav-toggle-cb:checked ~ .nav-hamburger span:nth-child(3){transform:translateY(-7px) rotate(-45deg)}
+.nav-panel{display:contents}
 @media(max-width:700px){
   .nav-hamburger{display:flex}
-  .nav-links{position:absolute;top:64px;left:0;right:0;flex-direction:column;gap:0;align-items:stretch;background:rgba(255,255,255,.98);backdrop-filter:blur(12px);border-bottom:1px solid var(--border);padding:6px 0;box-shadow:0 8px 24px rgba(15,23,42,.08);display:none}
-  .nav-toggle-cb:checked ~ .nav-links{display:flex}
+  .nav-panel{display:none;position:absolute;top:64px;left:0;right:0;flex-direction:column;background:rgba(255,255,255,.98);backdrop-filter:blur(12px);border-bottom:1px solid var(--border);box-shadow:0 8px 24px rgba(15,23,42,.08)}
+  .nav-toggle-cb:checked ~ .nav-panel{display:flex}
+  .nav-links{flex-direction:column;gap:0;align-items:stretch;padding:6px 0}
   .nav-links a{padding:13px 24px;font-size:15px}
   .nav-links a:hover{background:rgba(0,0,0,.03)}
+  .nav-actions{flex-direction:column;align-items:stretch;gap:10px;padding:16px 24px;border-top:1px solid var(--border)}
+  .nav-actions .btn{width:100%;justify-content:center}
 }
 
 .breadcrumbs{font-size:13px;color:var(--muted);margin-bottom:20px}
