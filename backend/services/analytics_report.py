@@ -341,13 +341,17 @@ def build_report(today: date | None = None) -> dict:
     win = _windows(today)
     seo = _seo_section(win)
     channels = _channels_section(win)
+    social = _social_section(win)
+    categories = _blog_categories(seo)
     signups = _signups_section(win)
-    patterns = _patterns(seo, channels, signups)
+    patterns = _patterns(seo, channels, signups, social, categories)
 
     report = {
         "period": {"this": win["this"], "prev": win["prev"]},
         "seo": seo,
         "channels": channels,
+        "social": social,
+        "categories": categories,
         "signups": signups,
         "patterns": patterns,
     }
