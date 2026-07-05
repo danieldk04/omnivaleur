@@ -43,6 +43,16 @@ def _first(item: dict, keys: list[str], default=0):
     return default
 
 
+def _deep(item: dict, path: str, default=0):
+    """Geneste waarde via dot-pad (bv. 'pin.repin_count'). Faalt zacht naar default."""
+    cur = item
+    for part in path.split("."):
+        if not isinstance(cur, dict):
+            return default
+        cur = cur.get(part)
+    return cur if cur not in (None, "", []) else default
+
+
 def _to_int(v) -> int:
     try:
         return int(float(v))
