@@ -154,6 +154,17 @@
   </section>
 
   <section>
+    <h2 class="sec">🔥 Social content — postprestaties van de week (Apify)</h2>
+    <div class="card">
+      <p class="note" style="margin-top:0">On-platform bereik &amp; engagement per post (TikTok, Instagram, YouTube, Pinterest).
+        Dit scrapet je profielen live, dus het duurt ~10-30s. Deze data zit ook automatisch in je zondagsrapport.</p>
+      <button class="btn" id="socBtn" onclick="loadSocial()">📊 Laad social-postprestaties</button>
+      <div class="note" id="socNote"></div>
+      <div id="socResult" style="margin-top:14px"></div>
+    </div>
+  </section>
+
+  <section>
     <h2 class="sec">🗂️ Blog-prestaties per categorie</h2>
     {% if report.categories %}
     <div class="card"><table>
