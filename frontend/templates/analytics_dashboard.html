@@ -35,6 +35,11 @@
   section{margin-bottom:28px}
   section > h2.sec{font-size:1.1rem;color:var(--text);text-transform:none;letter-spacing:0;margin:0 0 12px}
   .trunc{max-width:340px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .utm-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin-bottom:14px}
+  .utm-grid label{display:flex;flex-direction:column;gap:4px;font-size:12px;font-weight:600;color:var(--muted)}
+  .utm-grid input,.utm-grid select{padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-size:14px;font-weight:400;color:var(--text)}
+  .utm-out{display:flex;gap:8px;align-items:center}
+  .utm-out input{flex:1;padding:9px 11px;border:1px solid var(--border);border-radius:8px;font-size:13px;font-family:ui-monospace,monospace;background:#f8fafc}
   @media(max-width:600px){.trunc{max-width:150px}main{padding:20px 12px 60px}}
 </style>
 </head>
