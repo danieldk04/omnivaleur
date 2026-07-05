@@ -254,7 +254,7 @@ def _signups_section(win: dict) -> dict:
 # ---------------------------------------------------------------------------
 # Patroonherkenning
 # ---------------------------------------------------------------------------
-def _patterns(seo: dict, channels: dict, signups: dict) -> list[str]:
+def _patterns(seo: dict, channels: dict, signups: dict, social: dict, categories: list[dict]) -> list[str]:
     out: list[str] = []
 
     if seo.get("connected"):
