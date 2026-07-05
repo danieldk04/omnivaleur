@@ -453,6 +453,22 @@ def render_email(report: dict) -> tuple[str, str]:
             lines.append(f"    • {c['category']}: {c['clicks']} clicks ({dtxt}), "
                          f"{c['impressions']} impressies, CTR {c['ctr']}% ({c['pages']} pagina's)")
 
+    sc = report.get("social_content", {})
+    if sc.get("connected") and not sc.get("deferred"):
+        lines += ["", "── Social content — posts van de week (Apify) ──"]
+        if sc.get("per_platform"):
+            for p in sc["per_platform"]:
+                lines.append(f"    • {p['platform']}: {p['views']} views, "
+                             f"{p['engagement']} engagement ({p['posts_count']} posts)")
+        if sc.get("by_content"):
+            lines.append("  Best presterende posts (over alle platforms):")
+            for g in sc["by_content"][:5]:
+                title = (g["text"][:60] + "…") if len(g["text"]) > 60 else g["text"]
+                plats = "/".join(g["per_platform"].keys())
+                lines.append(f"    • {g['date']} [{plats}] — {g['total_views']} views: “{title}”")
+        if sc.get("total_posts") == 0:
+            lines.append("    (nog geen posts met bereik deze week)")
+
     sg = report["signups"]
     if sg.get("available"):
         lines += ["", "── Signups ──",
