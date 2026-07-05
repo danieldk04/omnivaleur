@@ -34,7 +34,8 @@
   table{width:100%;border-collapse:collapse;margin:20px 0}
   th,td{border:1px solid var(--border);padding:8px 12px;text-align:left}
   th{background:#f8fafc}
-  .featured-image{width:100%;border-radius:12px;margin:24px 0;display:block}
+  .featured-image-wrap{width:100%;aspect-ratio:16/9;border-radius:12px;margin:24px 0;overflow:hidden;position:relative;background:linear-gradient(135deg,var(--blue) 0%,var(--mint) 100%)}
+  .featured-image-wrap img{width:100%;height:100%;object-fit:cover;position:absolute;inset:0;display:block}
   .faq-item{margin-bottom:20px}
 
   .takeaways{background:var(--purple-bg);border:1px solid #d8b4fe;border-radius:12px;padding:20px 24px;margin:28px 0}
@@ -95,9 +96,11 @@
     </div>
     {% endif %}
     <h1>{{ page.h1 }}</h1>
-    {% if page.featured_image_url %}
-    <img class="featured-image" src="{{ page.featured_image_url }}" alt="{{ page.h1 }}" loading="eager">
-    {% endif %}
+    <div class="featured-image-wrap">
+      {% if page.featured_image_url %}
+      <img src="{{ page.featured_image_url }}" alt="{{ page.h1 }}" loading="eager" onerror="this.style.display='none'">
+      {% endif %}
+    </div>
     <blockquote>{{ page.quick_answer }}</blockquote>
 
     {% if page.takeaways %}
