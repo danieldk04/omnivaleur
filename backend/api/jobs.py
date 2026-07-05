@@ -104,6 +104,38 @@ async def relist_status(user_id: str = Depends(get_current_user)):
     return out
 
 
+@router.post("/reschedule-now")
+async def reschedule_now(body: dict, user_id: str = Depends(get_current_user)):
+    """
+    Bring a scheduled relist recreate forward so it fires on the next poll —
+    clears the jittered delay for a specific item's still-pending "create" job.
+    Only touches the caller's own pending job. Body: {item_id, platform}.
+    """
+    db = get_db()
+    item_id = body.get("item_id")
+    platform = body.get("platform")
+    if not item_id or not platform:
+        raise HTTPException(status_code=400, detail="item_id and platform are required")
+    rows = (
+        db.table("jobs")
+        .select("id")
+        .eq("user_id", user_id)
+        .eq("item_id", item_id)
+        .eq("platform", platform)
+        .eq("action", "create")
+        .eq("status", "pending")
+        .order("created_at", desc=True)
+        .limit(1)
+        .execute()
+        .data
+    )
+    if not rows:
+        raise HTTPException(status_code=404, detail="No pending recreate job found for this item")
+    now = datetime.now(timezone.utc).isoformat()
+    db.table("jobs").update({"scheduled_for": now}).eq("id", rows[0]["id"]).execute()
+    return {"ok": True, "job_id": rows[0]["id"], "scheduled_for": now}
+
+
 @router.post("/{job_id}/claim")
 async def claim_job(job_id: str, user_id: str = Depends(get_current_user)):
     db = get_db()
