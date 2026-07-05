@@ -254,7 +254,7 @@ async def fail_job(job_id: str, body: dict, user_id: str = Depends(get_current_u
     }).eq("id", job_id).execute()
     # A content-refresh or relist-delete bumped the listing's cooldown + daily
     # quota at enqueue time; since the job failed, give both back.
-    rollback = (job or {}).get("payload", {}).get("_refresh_rollback") if job else None
+    rollback = ((job or {}).get("payload") or {}).get("_refresh_rollback")
     if rollback:
         from backend.services.relist import rollback_refresh
         rollback_refresh(rollback, user_id)
