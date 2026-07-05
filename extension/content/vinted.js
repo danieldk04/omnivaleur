@@ -428,18 +428,26 @@
     return changedAndFirstIntact();
   }
 
-  // Find the seller's "Delete" control on the current page, trying several
-  // layers of heuristics since Vinted's exact markup/testids drift over time
-  // and we have no live DOM to pin an exact selector against. Returns the
-  // clickable element, or null if nothing plausible was found.
-  function findDeleteEntryPoint() {
-    // Layer 1: a directly-visible "Delete" button/link on the page (some
-    // Vinted layouts show Edit/Delete as direct buttons, no dropdown).
-    let el = [...document.querySelectorAll('button, a, [role="menuitem"], [role="button"]')]
-      .find(e => e.offsetParent !== null && (/^\s*delete\s*$/i.test(e.textContent) || e.dataset.testid?.includes("delete")));
-    if (el) return el;
+  // A testid that belongs to a PHOTO remove button ("×" on each thumbnail on the
+  // edit page: media-select-grid-delete-button-N), NOT the delete-listing button.
+  // Matching these by a loose "delete" substring would delete a photo instead of
+  // the listing — verified live 2026-07. Always exclude them.
+  const isPhotoDeleteTestid = (tid) => /media-select|grid-delete-button|image-wrapper/i.test(tid || "");
 
-    // Layer 2: open a kebab/"..."/actions dropdown, then look inside it.
+  // Find the seller's "Delete listing" control on the current item page. The real
+  // control has the exact testid "item-delete-button" (verified live 2026-07) and
+  // opens a confirm dialog with item-delete-confirmation-button / -cancelation-button.
+  // Returns the clickable element (or a {__needsOpen} wrapper), or null.
+  function findDeleteEntryPoint() {
+    // Layer 1: the exact delete-listing button, matched by its precise testid.
+    // It can render briefly hidden (0x0) before the item-details panel lays out,
+    // so we accept it regardless of current visibility and scroll it into view
+    // before clicking (see deleteListingVinted). NEVER a loose "delete" match —
+    // that hits the per-photo remove buttons on the edit page.
+    const exact = document.querySelector('[data-testid="item-delete-button"]');
+    if (exact) return exact;
+
+    // Layer 2: open a kebab/"..."/actions dropdown, then look inside it (older layouts).
     const actionsBtn = document.querySelector(
       '[data-testid="item-actions-button"], [data-testid="item-menu-button"], ' +
       '[data-testid="item-page-actions-dropdown-button"], [data-testid*="kebab"], ' +
@@ -449,6 +457,14 @@
       /kebab|dots|more|menu/i.test(b.className + " " + (b.getAttribute("aria-label") || ""))
     );
     if (actionsBtn) return { __needsOpen: actionsBtn };
+
+    // Layer 3: a visible button/link literally labelled "Delete" (whole word) —
+    // but never a per-photo remove button (those carry no text but we guard anyway).
+    const el = [...document.querySelectorAll('button, a, [role="menuitem"], [role="button"]')]
+      .find(e => e.offsetParent !== null && !isPhotoDeleteTestid(e.dataset.testid) &&
+                 /^\s*delete\s*$/i.test(e.textContent));
+    if (el) return el;
+
     return null;
   }
 
