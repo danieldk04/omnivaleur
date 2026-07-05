@@ -327,6 +327,99 @@
     throw new Error("Vinted refresh: clicked Save but the edit form never closed — the update could not be verified.");
   }
 
+  // Locate the uploaded-photo tiles on the edit page. Vinted's markup/testids
+  // drift, so map every visible thumbnail <img> up to its nearest draggable /
+  // list-item ancestor and de-dupe. Returns the tile elements in document order.
+  function findPhotoTiles() {
+    const imgs = [...document.querySelectorAll(
+      '[data-testid*="photo" i] img, [data-testid*="image" i] img, ' +
+      '[class*="photo" i] img, [class*="media" i] img, [class*="Image" i] img'
+    )].filter((im) => im.offsetParent !== null && im.clientWidth > 24 && im.clientHeight > 24);
+    const tiles = [];
+    const seen = new Set();
+    for (const im of imgs) {
+      let el = im;
+      for (let d = 0; d < 6 && el && el !== document.body; d++) {
+        if (el.getAttribute?.("draggable") === "true" ||
+            el.getAttribute?.("role") === "listitem" ||
+            /(^|[\s_-])(sortable|draggable|photo|media|thumbnail)/i.test(el.className || "")) {
+          break;
+        }
+        el = el.parentElement;
+      }
+      if (el && el !== document.body && !seen.has(el)) { seen.add(el); tiles.push(el); }
+    }
+    return tiles;
+  }
+
+  // Signature of the current photo order (last chars of each src) so we can prove
+  // a re-order actually happened rather than trusting the drag blindly.
+  function photoOrderSig() {
+    return findPhotoTiles().map((t) => {
+      const im = t.querySelector("img");
+      return (im?.currentSrc || im?.src || "").slice(-48);
+    }).join("|");
+  }
+
+  // Pointer-based drag (dnd-kit / most modern React sortables listen to pointer
+  // events, NOT native HTML5 drag). Moves src onto dst in several small steps.
+  async function pointerDragTile(src, dst) {
+    const r1 = src.getBoundingClientRect(), r2 = dst.getBoundingClientRect();
+    const from = { x: r1.left + r1.width / 2, y: r1.top + r1.height / 2 };
+    const to = { x: r2.left + r2.width / 2, y: r2.top + r2.height / 2 };
+    const ev = (x, y, extra = {}) => ({ bubbles: true, cancelable: true, composed: true,
+      clientX: x, clientY: y, pointerId: 1, pointerType: "mouse", isPrimary: true,
+      button: 0, buttons: 1, ...extra });
+    src.dispatchEvent(new PointerEvent("pointerdown", ev(from.x, from.y)));
+    src.dispatchEvent(new MouseEvent("mousedown", ev(from.x, from.y)));
+    await sleep(150);
+    const steps = 10;
+    for (let i = 1; i <= steps; i++) {
+      const x = from.x + (to.x - from.x) * (i / steps);
+      const y = from.y + (to.y - from.y) * (i / steps);
+      const over = document.elementFromPoint(x, y) || dst;
+      over.dispatchEvent(new PointerEvent("pointermove", ev(x, y)));
+      over.dispatchEvent(new MouseEvent("mousemove", ev(x, y)));
+      await sleep(55);
+    }
+    dst.dispatchEvent(new PointerEvent("pointerup", ev(to.x, to.y, { buttons: 0 })));
+    dst.dispatchEvent(new MouseEvent("mouseup", ev(to.x, to.y, { buttons: 0 })));
+  }
+
+  // Native HTML5 drag-and-drop fallback (for sortables that use the DnD API).
+  async function html5DragTile(src, dst) {
+    const dt = new DataTransfer();
+    const r1 = src.getBoundingClientRect(), r2 = dst.getBoundingClientRect();
+    const fire = (type, el, r) => el.dispatchEvent(new DragEvent(type, {
+      bubbles: true, cancelable: true, composed: true, dataTransfer: dt,
+      clientX: r.left + r.width / 2, clientY: r.top + r.height / 2 }));
+    fire("dragstart", src, r1); await sleep(100);
+    fire("dragenter", dst, r2); await sleep(100);
+    fire("dragover", dst, r2); await sleep(100);
+    fire("drop", dst, r2); await sleep(100);
+    fire("dragend", src, r1);
+  }
+
+  // Re-order the listing's photos by moving the first photo to the end. Verifies
+  // the on-page order actually changed; returns false if it couldn't (so the
+  // caller can fail honestly instead of saving a no-op).
+  async function reorderPhotosVinted() {
+    let tiles = findPhotoTiles();
+    if (tiles.length < 2) return false;
+    const before = photoOrderSig();
+
+    // Try pointer drag first, then HTML5 drag as a fallback.
+    await pointerDragTile(tiles[0], tiles[tiles.length - 1]);
+    await sleep(700);
+    if (photoOrderSig() !== before) return true;
+
+    tiles = findPhotoTiles();
+    if (tiles.length < 2) return false;
+    await html5DragTile(tiles[0], tiles[tiles.length - 1]);
+    await sleep(700);
+    return photoOrderSig() !== before;
+  }
+
   // Find the seller's "Delete" control on the current page, trying several
   // layers of heuristics since Vinted's exact markup/testids drift over time
   // and we have no live DOM to pin an exact selector against. Returns the
