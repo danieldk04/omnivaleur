@@ -149,3 +149,74 @@ def totals(start: str, end: str) -> dict:
         limit=1,
     )
     return rows[0] if rows else {}
+
+
+# ---------------------------------------------------------------------------
+# Per-platform social + post-niveau (UTM)
+# ---------------------------------------------------------------------------
+# GA4's default-kanaalgroep gooit alle social op één hoop ("Organic Social").
+# Om te weten WELK platform (TikTok vs Instagram vs YouTube vs Pinterest vs
+# Reddit) de bezoekers levert, kijken we naar de ruwe bron (sessionSource) en
+# mappen die naar een leesbaar platform. Substring-match, want GA4 rapporteert
+# bronnen wisselend (tiktok / tiktok.com, l.instagram.com, m.youtube.com, …).
+_PLATFORM_MAP: list[tuple[str, str]] = [
+    ("tiktok", "TikTok"),
+    ("instagram", "Instagram"),
+    ("youtube", "YouTube"),
+    ("pinterest", "Pinterest"),
+    ("reddit", "Reddit"),
+    ("linkedin", "LinkedIn"),
+    ("lnkd", "LinkedIn"),
+    ("facebook", "Facebook"),
+    ("fb.me", "Facebook"),
+    ("t.co", "X / Twitter"),
+    ("twitter", "X / Twitter"),
+    ("x.com", "X / Twitter"),
+    ("threads", "Threads"),
+    ("snapchat", "Snapchat"),
+]
+
+
+def platform_of(source: str) -> str | None:
+    """Mapt een GA4-bron (sessionSource) naar een leesbaar social-platform, of None
+    als het geen (herkend) social kanaal is."""
+    s = (source or "").lower()
+    for needle, label in _PLATFORM_MAP:
+        if needle in s:
+            return label
+    return None
+
+
+def traffic_sources(start: str, end: str, limit: int = 100) -> list[dict]:
+    """Ruwe bron/medium-uitsplitsing — grondstof voor de per-platform social-analyse."""
+    return _run(
+        dimensions=["sessionSource", "sessionMedium"],
+        metrics=["sessions", "activeUsers", "newUsers", "conversions"],
+        start=start,
+        end=end,
+        limit=limit,
+    )
+
+
+def social_posts(start: str, end: str, limit: int = 50) -> list[dict]:
+    """
+    Post-niveau attributie via UTM-tags: campagne (utm_campaign) + content (utm_content).
+    Werkt alleen voor links die je zelf getagd hebt (zie de UTM-bouwer in het dashboard).
+    Zonder UTM's is dit leeg — GA4 kan een individuele TikTok/Reel/Pin niet raden.
+    """
+    rows = _run(
+        dimensions=["sessionSource", "sessionCampaignName", "sessionManualAdContent"],
+        metrics=["sessions", "newUsers", "conversions"],
+        start=start,
+        end=end,
+        limit=limit,
+    )
+    # Filter de ruis weg: alleen rijen met een echte utm_content of utm_campaign.
+    out = []
+    for r in rows:
+        content = r.get("sessionManualAdContent", "")
+        campaign = r.get("sessionCampaignName", "")
+        if content in ("(not set)", "", "(direct)") and campaign in ("(not set)", "", "(direct)", "(organic)", "(referral)"):
+            continue
+        out.append(r)
+    return sorted(out, key=lambda r: r.get("sessions", 0), reverse=True)
