@@ -109,6 +109,10 @@ def _run_actor(actor: str, payload: dict, timeout: int = 90) -> list[dict]:
 # ---------------------------------------------------------------------------
 def _norm(platform, *, id, text, url, date, views=0, likes=0, comments=0,
           shares=0, saves=0, duration=0) -> dict:
+    # Eerst alles naar int (actors geven getallen soms als string terug), pas daarna
+    # optellen — anders faalt 'str + int' op zo'n platform.
+    views, likes, comments, shares, saves = (
+        _to_int(views), _to_int(likes), _to_int(comments), _to_int(shares), _to_int(saves))
     eng = likes + comments + shares + saves
     return {
         "platform": platform,
@@ -116,14 +120,14 @@ def _norm(platform, *, id, text, url, date, views=0, likes=0, comments=0,
         "text": (text or "").strip(),
         "url": url or "",
         "date": _iso_date(date),
-        "views": _to_int(views),
-        "likes": _to_int(likes),
-        "comments": _to_int(comments),
-        "shares": _to_int(shares),
-        "saves": _to_int(saves),
+        "views": views,
+        "likes": likes,
+        "comments": comments,
+        "shares": shares,
+        "saves": saves,
         "duration": _to_int(duration),
         "engagement": eng,
-        "engagement_rate": round(eng / views * 100, 1) if _to_int(views) else 0.0,
+        "engagement_rate": round(eng / views * 100, 1) if views else 0.0,
     }
 
 
