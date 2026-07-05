@@ -47,6 +47,55 @@ def _get_service():
         return None
 
 
+_RESOLVED_SITE_URL: str | None = None
+
+
+def _resolve_site_url(service) -> str:
+    """
+    De GSC-API vereist dat siteUrl EXACT matcht met de geregistreerde property. Die kan
+    een domain-property zijn (`sc-domain:crosslisteu.com`) of een URL-prefix mét slash
+    (`https://crosslisteu.com/`) — onze config-default (`https://crosslisteu.com`) matcht
+    dan niet en levert lege data op. We halen daarom de echte lijst met properties op en
+    kiezen de match voor het geconfigureerde domein. Resultaat wordt gecachet.
+    """
+    global _RESOLVED_SITE_URL
+    if _RESOLVED_SITE_URL:
+        return _RESOLVED_SITE_URL
+
+    configured = settings.gsc_site_url
+    # Domein zonder scheme/slash, voor losse vergelijking (crosslisteu.com).
+    bare = configured.replace("https://", "").replace("http://", "").strip("/")
+
+    try:
+        entries = service.sites().list().execute().get("siteEntry", [])
+        candidates = [e["siteUrl"] for e in entries
+                      if e.get("permissionLevel") not in ("siteUnverifiedUser",)]
+        # Voorkeur: exacte config-match > domain-property > URL-prefix met slash > wat dan ook.
+        pick = None
+        for s in candidates:
+            if s == configured:
+                pick = s; break
+        if not pick:
+            for s in candidates:
+                if s == f"sc-domain:{bare}":
+                    pick = s; break
+        if not pick:
+            for s in candidates:
+                if bare in s:
+                    pick = s; break
+        if pick:
+            _RESOLVED_SITE_URL = pick
+            if pick != configured:
+                logger.info(f"GSC siteUrl auto-gedetecteerd: {pick} (config was {configured})")
+            return pick
+        logger.warning(f"Geen GSC-property gevonden voor {bare}. Beschikbaar: {candidates}")
+    except Exception as e:
+        logger.error(f"GSC sites().list() mislukt: {e}")
+
+    _RESOLVED_SITE_URL = configured
+    return configured
+
+
 def get_top_pages(days: int = 90, row_limit: int = 200) -> list[dict]:
     """
     Top gepubliceerde pagina's op clicks/impressions/positie over de laatste `days`
