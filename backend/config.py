@@ -75,6 +75,7 @@ class Settings(BaseSettings):
     social_instagram: str = "crosslisteu"
     social_youtube: str = "@CrosslistEU"
     social_pinterest: str = "CrosslistEU"
+    social_threads: str = "crosslisteu"
 
     # Google Ads API — search-volume check before a keyword enters the content queue.
     # Optional: pipeline runs without volume filtering if these are blank.
