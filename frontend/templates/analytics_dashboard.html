@@ -107,7 +107,11 @@
 
   <section>
     <h2 class="sec">🏆 Best presterende blogposts (Search Console)</h2>
-    {% if report.seo.connected %}
+    {% if report.seo.connected and not report.seo.has_data %}
+    <div class="card empty">✅ Search Console is gekoppeld, maar er is nog geen zoekverkeer-data
+      in deze week ({{ report.period.this[0] }}–{{ report.period.this[1] }}). Nieuwe pagina's
+      hebben ~enkele dagen tot weken nodig voordat Google impressies/clicks registreert.</div>
+    {% elif report.seo.connected %}
     <div class="card"><table>
       <tr><th>Pagina</th><th class="num">Clicks</th><th class="num">vs vorige</th><th class="num">Impressies</th><th class="num">Positie</th></tr>
       {% for p in report.seo.top_pages %}
