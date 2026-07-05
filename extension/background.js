@@ -886,14 +886,24 @@ chrome.tabs.onUpdated.addListener(async (tabId, changeInfo) => {
   if (!meta) return;
 
   const url = changeInfo.url;
-  const m = url.match(/\/seller\/view\/(m\d+)/) ||
-             url.match(/\/v\/[^/]+\/(m\d+)/) ||
-             url.match(/[?&](m\d{6,})/) ||
-             url.match(/(m\d{8,})/);
+  // Vinted listing ids are plain digits (/items/9331465721), so the m-prefixed
+  // Marktplaats/2dehands patterns never match them. Without a Vinted-specific
+  // pattern the create job stays stuck "claimed" after publish, because Vinted's
+  // post-Upload navigation tears down the content script before it can send
+  // JOB_DONE. Match /items/{digits} for Vinted (never /items/new).
+  let m;
+  if (meta.platform === "vinted") {
+    m = url.match(/\/items\/(\d+)(?:[-/?#]|$)/);
+  } else {
+    m = url.match(/\/seller\/view\/(m\d+)/) ||
+         url.match(/\/v\/[^/]+\/(m\d+)/) ||
+         url.match(/[?&](m\d{6,})/) ||
+         url.match(/(m\d{8,})/);
+  }
   if (!m) return;
 
   const listingId = m[1];
-  console.log(`[CrossList] Auto-detected listing after manual publish: ${listingId} (${meta.platform})`);
+  console.log(`[CrossList] Auto-detected listing after publish: ${listingId} (${meta.platform})`);
 
   // Clear stored job
   chrome.storage.local.remove([key, `job_${meta.platform}`]);
@@ -902,6 +912,8 @@ chrome.tabs.onUpdated.addListener(async (tabId, changeInfo) => {
     ? `https://www.marktplaats.nl/v/listing/${listingId}`
     : meta.platform === "2dehands"
     ? `https://www.2dehands.be/v/listing/${listingId}`
+    : meta.platform === "vinted"
+    ? `${new URL(url).origin}/items/${listingId}`
     : null;
 
   const completeHeaders = await getAuthHeaders();
