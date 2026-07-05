@@ -182,11 +182,14 @@ async def refresh_listing(item_id: str, platform: str, user_id: str, strategy: s
     }
 
     if strategy == "content":
+        # Content refresh keeps the seller's OWN price — no jitter. It re-saves
+        # the listing (with a photo re-order) so Vinted registers a fresh edit
+        # without silently changing what the item is listed for.
         payload = {
             **item,
             "platform_listing_id": listing["platform_listing_id"],
             "platform_listing_url": listing["platform_listing_url"],
-            "price": _jittered_price(float(item.get("price") or 0)) or item.get("price"),
+            "price": float(item["price"]) if item.get("price") not in (None, "") else None,
             "photo_urls": _shuffled_photos(item.get("photo_urls") or []),
             "_refresh_rollback": rollback,
         }
