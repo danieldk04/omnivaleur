@@ -273,16 +273,55 @@
   async function refreshListingVinted(item) {
     await waitForEl('input[data-testid="price-input--input"], input[data-testid="title--input"]', 20000);
     await sleep(500);
-    if (item.price != null) {
-      await step("price", () => fillPriceVinted(item.price));
+    const priceEl = qs('input[data-testid="price-input--input"]');
+    if (!priceEl) throw new Error("Vinted edit: price field not found on the edit page");
+
+    // Decide a VALID target price. Prefer the dashboard's (jittered) price, but
+    // if that's missing/invalid fall back to whatever price the Vinted edit page
+    // already shows — never write €0, which trips Vinted's ">= 1.0" validation.
+    const pageNow = _num(priceEl.value);
+    let target = Number(item.price);
+    if (!(isFinite(target) && target >= 1)) target = (isFinite(pageNow) && pageNow >= 1) ? pageNow : NaN;
+    if (!(isFinite(target) && target >= 1)) {
+      throw new Error("Vinted refresh aborted: no valid price to set (dashboard price is missing and the listing shows €0). Set a price on the item first.");
     }
+
+    // Nudge the price by the smallest sane amount if the target equals what's
+    // already there, so the edit is a real change Vinted will accept/re-rank.
+    if (isFinite(pageNow) && Math.abs(pageNow - target) < 0.01) {
+      target = Math.round((target + 1) * 100) / 100;
+    }
+
+    const ok = await fillPriceVinted(target);
+    if (!ok) throw new Error("Vinted refresh aborted: could not enter a valid price (the field stayed empty/€0 after typing).");
+
     // Save/update button — Vinted's edit page uses the same testid as create ("Save"/"Update").
     const saveBtn = [...document.querySelectorAll('button[data-testid], button')]
       .find(b => b.offsetParent !== null && /^(save|update|opslaan|bijwerken)$/i.test(b.textContent.trim()));
     if (!saveBtn) throw new Error("Vinted edit: save/update button not found");
     await sleep(300);
     saveBtn.click();
-    await sleep(2000);
+
+    // Verify the save actually went through instead of blindly reporting success.
+    // Failure signals we watch for: the price field flips aria-invalid, a visible
+    // validation/error message appears, or we simply stay on the edit form. A real
+    // save either navigates away from the edit page or closes the price field.
+    for (let i = 0; i < 12; i++) {
+      await sleep(600);
+      const stillEditing = qs('input[data-testid="price-input--input"]');
+      if (!stillEditing) return; // navigated away → saved
+      if (stillEditing.getAttribute("aria-invalid") === "true" || _num(stillEditing.value) < 1) {
+        throw new Error("Vinted refresh: save was rejected — the price is invalid (Vinted requires €1.00 or more).");
+      }
+      const errText = [...document.querySelectorAll('[class*="validation"], [class*="Validation"], [role="alert"], [class*="error" i]')]
+        .find(e => e.offsetParent !== null && /price must|greater than|at least|minimaal|moet (groter|ten minste)|ongeldig|invalid/i.test(e.textContent || ""));
+      if (errText) {
+        throw new Error("Vinted refresh: save was rejected — " + errText.textContent.trim().slice(0, 140));
+      }
+    }
+    // Still on the edit form after ~7s with no visible error — treat as failure
+    // rather than falsely reporting success (nothing verified as saved).
+    throw new Error("Vinted refresh: clicked Save but the edit form never closed — the update could not be verified.");
   }
 
   // Find the seller's "Delete" control on the current page, trying several
