@@ -93,7 +93,9 @@ def _seo_section(win: dict) -> dict:
     imp_now = sum(p["impressions"] for p in top_pages)
 
     return {
-        "connected": bool(pages_now or pages_prev),
+        # 'connected' = koppeling werkt (creds aanwezig); data kan 0 zijn bij een nieuwe site.
+        "connected": gsc.is_configured(),
+        "has_data": bool(pages_now or pages_prev),
         "total_clicks": tot_now,
         "total_clicks_delta": _pct_delta(tot_now, tot_prev),
         "total_impressions": imp_now,
