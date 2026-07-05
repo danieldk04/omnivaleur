@@ -295,7 +295,7 @@
     // it didn't, we throw rather than save-and-report-success on a no-op.
     const reordered = await reorderPhotosVinted();
     if (!reordered) {
-      throw new Error("Vinted refresh: couldn't re-order the photos (no draggable photo tiles found, or Vinted didn't accept the drag), so nothing was changed. Use refresh 2 (relist) instead.");
+      throw new Error("Vinted refresh: couldn't re-order the photos while keeping the first one fixed. This needs at least 3 photos, and Vinted must accept the drag. Nothing was changed — use refresh 2 (relist) instead.");
     }
 
     // Save/update button — Vinted's edit page uses the same testid as create ("Save"/"Update").
