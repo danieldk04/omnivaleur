@@ -288,6 +288,44 @@ def _patterns(seo: dict, channels: dict, signups: dict, social: dict, categories
     elif not channels.get("connected"):
         out.append("ℹ️ GA4 nog niet gekoppeld — kanaal- en conversiedata ontbreekt nog.")
 
+    # Social per platform — welk kanaal levert bezoek, en welk converteert het best.
+    if social.get("connected") and social.get("platforms"):
+        top = social["platforms"][0]
+        out.append(
+            f"📱 Beste social-platform: {top['platform']} "
+            f"({top['sessions']} sessies, {top['newUsers']} nieuwe bezoekers)."
+        )
+        converters = [p for p in social["platforms"] if p.get("conversions")]
+        if converters:
+            best = max(converters, key=lambda p: p["conv_rate"])
+            out.append(
+                f"💎 Meest waardevolle social-platform (hoogste conversie): "
+                f"{best['platform']} — {best['conv_rate']}% conversie."
+            )
+        if not social.get("has_utm_data"):
+            out.append("🏷️ Tip: tag je post-links met UTM's (zie de linkbouwer in het dashboard) "
+                       "om per TikTok/Reel/Pin te zien wat bezoek én signups oplevert.")
+    elif social.get("connected"):
+        out.append("📱 Nog geen herkend social-verkeer deze week — begin met UTM-links te delen.")
+
+    # Beste contentcategorie — beslissingswaardig: hier zit je meeste organische bereik.
+    if categories:
+        best_cat = categories[0]
+        if best_cat["clicks"]:
+            out.append(
+                f"🗂️ Sterkste contentcategorie: {best_cat['category']} "
+                f"({best_cat['clicks']} clicks over {best_cat['pages']} pagina's) → "
+                f"hier lonen méér artikelen."
+            )
+        # Categorie met veel impressies maar lage CTR = kans (betere titels/snippets).
+        opportunity = [c for c in categories if c["impressions"] >= 20 and c["ctr"] < 2.0]
+        if opportunity:
+            o = max(opportunity, key=lambda c: c["impressions"])
+            out.append(
+                f"🎯 Kans: {o['category']} krijgt {o['impressions']} impressies maar "
+                f"{o['ctr']}% CTR — scherpere titels/meta kunnen hier clicks winnen."
+            )
+
     if signups.get("available"):
         d = signups.get("delta")
         dtxt = f"{'+' if (d or 0) >= 0 else ''}{d}%" if d is not None else "n.v.t."
