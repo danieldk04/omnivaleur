@@ -418,6 +418,31 @@ def render_email(report: dict) -> tuple[str, str]:
         lines.append("  GA4 nog niet gekoppeld — zie setup-instructies om social/Reddit/"
                      "referral-verkeer te meten.")
 
+    soc = report.get("social", {})
+    if soc.get("connected"):
+        lines += ["", "── Social media per platform (GA4) ──"]
+        if soc.get("platforms"):
+            for p in soc["platforms"][:8]:
+                dtxt = f"{p['sessions_delta']:+}%" if p.get("sessions_delta") is not None else "nieuw"
+                lines.append(
+                    f"    • {p['platform']}: {p['sessions']} sessies ({dtxt}), "
+                    f"{p['newUsers']} nieuw, {p['conversions']} conversies ({p['conv_rate']}%)")
+        else:
+            lines.append("    (nog geen herkend social-verkeer — deel UTM-getagde links)")
+        if soc.get("posts"):
+            lines.append("  Beste posts (UTM):")
+            for p in soc["posts"][:5]:
+                lines.append(f"    • [{p['platform']}] {p.get('sessionManualAdContent') or p.get('sessionCampaignName')}"
+                             f" — {p['sessions']} sessies, {p['conversions']} conversies")
+
+    cats = report.get("categories", [])
+    if cats:
+        lines += ["", "── Blog-prestaties per categorie ──"]
+        for c in cats[:6]:
+            dtxt = f"{c['clicks_delta']:+}%" if c.get("clicks_delta") is not None else "nieuw"
+            lines.append(f"    • {c['category']}: {c['clicks']} clicks ({dtxt}), "
+                         f"{c['impressions']} impressies, CTR {c['ctr']}% ({c['pages']} pagina's)")
+
     sg = report["signups"]
     if sg.get("available"):
         lines += ["", "── Signups ──",
