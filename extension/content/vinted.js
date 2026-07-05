@@ -526,17 +526,54 @@
     }
   }
 
+  // Parse a displayed price ("€12,50", "12.50", "") to a Number (NaN if none).
+  function _num(v) {
+    const s = String(v ?? "").replace(/[^\d.,]/g, "").replace(",", ".");
+    const n = parseFloat(s);
+    return isFinite(n) ? n : NaN;
+  }
+
   // ---- PRICE: Vinted expects a plain number with a DOT (or no decimals). ----
-  function fillPriceVinted(price) {
+  // Vinted's price field is a masked/React-controlled input, so a bare
+  // native-setter + "input" event often gets discarded and the field stays €0.
+  // We type it properly: focus → select-all → clear → set → and if that didn't
+  // stick, fall back to execCommand("insertText") (the same pipeline real typing
+  // uses, which masked inputs honour). Returns true only if the field ends up
+  // holding a valid (>= 1) price. Async so callers can await the verification.
+  async function fillPriceVinted(price) {
     const el = qs('input[data-testid="price-input--input"]');
     if (!el) return false;
-    // Normalise to a clean numeric string: strip currency/spaces, comma→dot.
-    let n = String(price ?? "").replace(/[^\d.,]/g, "").replace(",", ".");
-    const num = parseFloat(n);
-    if (!isFinite(num)) return false;
+    const num = _num(price);
+    if (!isFinite(num) || num < 1) return false;
     // Fixed-2 if there are decimals, else integer — never a trailing comma.
     const out = Number.isInteger(num) ? String(num) : num.toFixed(2);
-    return fillInput(el, out);
+    const setter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, "value").set;
+
+    el.focus();
+    el.dispatchEvent(new Event("focus", { bubbles: true }));
+    try { el.select(); } catch (e) {}
+    // Clear first so we don't append to an existing value.
+    try { setter.call(el, ""); } catch (e) { el.value = ""; }
+    el.dispatchEvent(new InputEvent("input", { bubbles: true, inputType: "deleteContentBackward" }));
+    // Programmatic set + input/change.
+    try { setter.call(el, out); } catch (e) { el.value = out; }
+    el.dispatchEvent(new InputEvent("input", { bubbles: true, inputType: "insertText", data: out }));
+    el.dispatchEvent(new Event("change", { bubbles: true }));
+    await sleep(120);
+
+    // If the masked input rejected the programmatic value, retry via real typing.
+    if (Math.abs((_num(el.value) || -1) - num) >= 0.01) {
+      el.focus();
+      try { el.select(); } catch (e) {}
+      try { document.execCommand("selectAll", false, null); } catch (e) {}
+      try { document.execCommand("insertText", false, out); } catch (e) {}
+      el.dispatchEvent(new Event("change", { bubbles: true }));
+      await sleep(120);
+    }
+    el.dispatchEvent(new Event("blur", { bubbles: true }));
+    await sleep(120);
+    const got = _num(el.value);
+    return isFinite(got) && got >= 1;
   }
 
   // ---- CATEGORY: prefer Vinted's own "Suggested" options, then verify the match. ----
