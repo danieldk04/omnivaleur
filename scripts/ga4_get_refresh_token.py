@@ -25,7 +25,12 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from backend.config import settings  # noqa: E402
 
 REDIRECT_PORT = 8765
-SCOPES = ["https://www.googleapis.com/auth/analytics.readonly"]
+# Eén token dekt zowel het GA4-rapport als Search Console (blogperformance), zodat je
+# hetzelfde token voor GSC_REFRESH_TOKEN én GA4_REFRESH_TOKEN kunt gebruiken.
+SCOPES = [
+    "https://www.googleapis.com/auth/analytics.readonly",
+    "https://www.googleapis.com/auth/webmasters.readonly",
+]
 
 
 def _get_credentials() -> tuple[str, str]:
