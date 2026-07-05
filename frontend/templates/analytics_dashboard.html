@@ -197,6 +197,44 @@
     {% else %}<div class="card empty">Geen stijgende zoektermen deze week.</div>{% endif %}
   </section>
 
+  <section>
+    <h2 class="sec">🏷️ UTM-linkbouwer — plak dit in je posts voor postniveau-tracking</h2>
+    <div class="card">
+      <p class="note" style="margin-top:0">Kies platform + geef de post een herkenbare naam. Plak de gegenereerde
+        link in je bio/omschrijving. Vanaf dan verschijnt die post automatisch in de tabellen hierboven — inclusief
+        hoeveel bezoekers én signups hij oplevert.</p>
+      <div class="utm-grid">
+        <label>Platform
+          <select id="uPlatform">
+            <option value="tiktok">TikTok</option>
+            <option value="instagram">Instagram</option>
+            <option value="youtube">YouTube</option>
+            <option value="pinterest">Pinterest</option>
+            <option value="reddit">Reddit</option>
+            <option value="linkedin">LinkedIn</option>
+            <option value="facebook">Facebook</option>
+            <option value="x">X / Twitter</option>
+            <option value="threads">Threads</option>
+          </select>
+        </label>
+        <label>Landingspagina
+          <input id="uDest" type="text" value="/" placeholder="/ of /blog of /register">
+        </label>
+        <label>Postnaam (utm_content)
+          <input id="uContent" type="text" placeholder="bv. reel-3-tips-crosslisten">
+        </label>
+        <label>Campagne (optioneel)
+          <input id="uCampaign" type="text" placeholder="bv. lancering-juli">
+        </label>
+      </div>
+      <div class="utm-out">
+        <input id="uResult" type="text" readonly>
+        <button class="btn" type="button" onclick="copyUtm()">Kopieer</button>
+      </div>
+      <div class="note" id="uNote"></div>
+    </div>
+  </section>
+
   <div class="actions">
     <button class="btn" id="sendBtn" onclick="sendReport()">📧 Verstuur rapport nu (test)</button>
     <div class="note" id="sendNote">Handig om de e-mail te testen zonder tot zondag te wachten.</div>
