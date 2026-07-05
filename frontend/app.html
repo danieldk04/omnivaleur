@@ -2860,7 +2860,7 @@ function refreshItem(itemId, title, platform) {
   if (strategies.length > 1) {
     const choice = prompt(
       `Refresh "${title}" on ${PLATFORM_LABELS[platform] || platform} — choose a strategy:\n\n` +
-      `1 = Content refresh (safe): re-orders your photos and re-saves, your price stays the same, keeps listing history\n` +
+      `1 = Content refresh (safe): shuffles your photos EXCEPT the first (main) photo, then re-saves. Your price, title and description stay exactly the same. Needs 3+ photos. Keeps listing history.\n` +
       `2 = Relist (delete + recreate): moves it back to "Newest", rate-limited to once per 14 days per listing and max 8/day per account\n\n` +
       `Type 1 or 2:`, '1'
     );
