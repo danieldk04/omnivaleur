@@ -247,6 +247,30 @@
 </main>
 
 <script>
+const SITE_URL = {{ site_url|tojson }};
+function slugify(s){return (s||'').toLowerCase().trim().replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'');}
+function buildUtm(){
+  const plat=document.getElementById('uPlatform').value;
+  let dest=document.getElementById('uDest').value.trim()||'/';
+  if(!dest.startsWith('/')) dest='/'+dest;
+  const content=slugify(document.getElementById('uContent').value);
+  const campaign=slugify(document.getElementById('uCampaign').value)||plat+'-'+(new Date().toISOString().slice(0,7));
+  const params=new URLSearchParams({utm_source:plat,utm_medium:'social',utm_campaign:campaign});
+  if(content) params.set('utm_content',content);
+  const url=SITE_URL+dest+'?'+params.toString();
+  document.getElementById('uResult').value=url;
+  document.getElementById('uNote').textContent=content?'':'Tip: geef een postnaam op zodat je posts individueel meetbaar zijn.';
+  return url;
+}
+function copyUtm(){
+  const url=buildUtm();
+  navigator.clipboard.writeText(url).then(()=>{
+    document.getElementById('uNote').textContent='✅ Gekopieerd — plak deze link in je post.';
+  }).catch(()=>{document.getElementById('uResult').select();});
+}
+['uPlatform','uDest','uContent','uCampaign'].forEach(id=>document.getElementById(id).addEventListener('input',buildUtm));
+buildUtm();
+
 async function sendReport(){
   const btn=document.getElementById('sendBtn'), note=document.getElementById('sendNote');
   const token=new URLSearchParams(location.search).get('token')||'';
