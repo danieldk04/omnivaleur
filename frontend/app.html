@@ -2817,7 +2817,11 @@ function renderRefreshView() {
     // including ones stuck in "error" (still has a platform_listing_id) so they're not silently hidden.
     (REFRESH_PLATFORM_STRATEGIES[l.platform] && (l.status === 'active' || (l.status === 'error' && l.platform_listing_id))) ||
     (l.platform === 'etsy' && ['active', 'sold', 'error'].includes(l.status)) ||
-    (l.platform === 'ebay' && l.status !== 'active')
+    (l.platform === 'ebay' && l.status !== 'active') ||
+    // Mid-flight relist: the old listing was just deleted (status flips to
+    // "delisted"), so without this it would vanish from the table the moment
+    // the delete completes — even though the recreate is still pending.
+    !!relistMap[relistKey(l.item_id, l.platform)]
   );
   if (platformFilter) relevant = relevant.filter(l => l.platform === platformFilter);
   relevant = relevant.slice().sort((a, b) => {
