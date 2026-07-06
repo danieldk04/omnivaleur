@@ -916,10 +916,11 @@ input[type="checkbox"].row-check { width: 15px; height: 15px; cursor: pointer; a
         </div>
       </div>
 
-      <!-- Refresh sub-tabs: normal listing table vs. dedicated relist tracker -->
+      <!-- Refresh sub-tabs: Vinted table, dedicated relist tracker, and the other platforms -->
       <div style="display:flex;gap:6px;margin:16px 0 14px;border-bottom:1px solid var(--border)">
-        <button id="refresh-tab-btn-listings" class="refresh-subtab active" onclick="switchRefreshTab('listings')">All listings</button>
+        <button id="refresh-tab-btn-listings" class="refresh-subtab active" onclick="switchRefreshTab('listings')">Vinted</button>
         <button id="refresh-tab-btn-inprogress" class="refresh-subtab" onclick="switchRefreshTab('inprogress')">Relists in progress<span id="refresh-tab-badge" style="display:none"></span></button>
+        <button id="refresh-tab-btn-other" class="refresh-subtab" onclick="switchRefreshTab('other')">Other platforms</button>
       </div>
 
       <!-- ═══ TAB: Relists in progress — tracks delete→recreate step-by-step ═══ -->
@@ -927,7 +928,23 @@ input[type="checkbox"].row-check { width: 15px; height: 15px; cursor: pointer; a
         <div id="relist-inprogress"></div>
       </div>
 
-      <!-- ═══ TAB: All listings ═══ -->
+      <!-- ═══ TAB: Other platforms — Etsy renew + eBay relist-ended ═══ -->
+      <div id="refresh-tab-other" style="display:none">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Item</th>
+              <th>Platform</th>
+              <th>Status</th>
+              <th>Last refresh</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="refresh-body-other"></tbody>
+        </table>
+      </div>
+
+      <!-- ═══ TAB: Vinted ═══ -->
       <div id="refresh-tab-listings">
 
       <!-- How a relist actually works — full transparency -->
@@ -959,26 +976,22 @@ input[type="checkbox"].row-check { width: 15px; height: 15px; cursor: pointer; a
         </div>
       </details>
 
-      <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;flex-wrap:wrap">
         <input id="refresh-search" type="text" placeholder="Search item…" oninput="renderRefreshView()" style="flex:1;max-width:280px">
-        <select id="refresh-platform-filter" onchange="renderRefreshView()" style="max-width:200px">
-          <option value="">All platforms</option>
-          <option value="vinted">Vinted</option>
-          <option value="marktplaats">Marktplaats</option>
-          <option value="2dehands">2dehands</option>
-          <option value="etsy">Etsy</option>
-          <option value="ebay">eBay</option>
-        </select>
+        <div style="display:flex;gap:6px;flex-wrap:wrap">
+          <button class="refresh-status-chip active" data-status="" onclick="setRefreshStatusFilter('')">All</button>
+          <button class="refresh-status-chip" data-status="never" onclick="setRefreshStatusFilter('never')">Never refreshed</button>
+          <button class="refresh-status-chip" data-status="cooldown" onclick="setRefreshStatusFilter('cooldown')">On cooldown</button>
+          <button class="refresh-status-chip" data-status="ready" onclick="setRefreshStatusFilter('ready')">Ready to refresh</button>
+        </div>
       </div>
 
       <table class="data-table">
         <thead>
           <tr>
             <th>Item</th>
-            <th>Platform</th>
             <th>Status</th>
             <th>Last refresh</th>
-            <th>Photos</th>
             <th>Actions</th>
           </tr>
         </thead>
