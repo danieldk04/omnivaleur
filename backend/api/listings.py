@@ -103,6 +103,11 @@ async def refresh_one_listing(body: dict, user_id: str = Depends(get_current_use
         return result
     except RefreshError as e:
         raise HTTPException(status_code=429, detail=str(e))
+    except Exception as e:
+        # Anything unexpected here (e.g. a schema mismatch) would otherwise bubble up
+        # as a raw, non-JSON 500 page — the frontend's r.json() call then throws its
+        # own confusing "Unexpected token" error instead of showing the real problem.
+        raise HTTPException(status_code=500, detail=f"Refresh failed unexpectedly: {e}")
 
 
 @router.post("/refresh-stale")
