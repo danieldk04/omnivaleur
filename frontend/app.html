@@ -3330,6 +3330,7 @@ function renderPlatformCheckboxes(containerId, itemId) {
   const activePlatforms = itemId
     ? new Set(state.listings.filter(l => l.item_id === itemId && l.status === 'active').map(l => l.platform))
     : new Set();
+  const item = itemId ? state.items.find(i => i.id === itemId) : null;
   document.getElementById(containerId).innerHTML = PLATFORMS.map(p => {
     const already = activePlatforms.has(p);
     if (already) {
@@ -3337,6 +3338,14 @@ function renderPlatformCheckboxes(containerId, itemId) {
         <span>${PLATFORM_ICONS[p]} ${PLATFORM_LABELS[p]}</span>
         <span class="pm-cb-check">✓ Listed</span>
       </div>`;
+    }
+    const missing = item ? missingFieldsForPlatform(item, p) : [];
+    if (missing.length) {
+      return `<label class="platform-checkbox platform-checkbox-disabled" title="Missing: ${esc(missing.join(', '))}">
+        <input type="checkbox" value="${p}" disabled>
+        <span>${PLATFORM_ICONS[p]} ${PLATFORM_LABELS[p]}</span>
+        <span class="pm-cb-missing">Missing: ${esc(missing.join(', '))}</span>
+      </label>`;
     }
     return `<label class="platform-checkbox">
       <input type="checkbox" value="${p}">
