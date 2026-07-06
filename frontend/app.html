@@ -171,6 +171,9 @@ textarea { resize: vertical; min-height: 80px; }
 .platform-checkbox:has(input:checked) { border-color: var(--blue); background: #eff6ff; }
 .platform-checkbox input { width: auto; accent-color: var(--blue); }
 .platform-checkbox span { font-size: 13px; font-weight: 600; }
+.platform-checkbox-disabled { cursor: not-allowed; opacity: .6; flex-wrap: wrap; }
+.platform-checkbox-disabled:hover { border-color: var(--border); background: none; }
+.pm-cb-missing { flex-basis: 100%; font-size: 10.5px; font-weight: 600; color: #b45309; }
 
 /* ── Photo upload ───────────────────────────────────────────────── */
 .photo-drop-zone { border: 2px dashed var(--border); border-radius: var(--radius); padding: 28px 20px; text-align: center; cursor: pointer; transition: all .18s; color: var(--muted); display: flex; flex-direction: column; align-items: center; gap: 8px; background: #fafbfc; }
