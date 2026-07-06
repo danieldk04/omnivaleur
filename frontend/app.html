@@ -2889,7 +2889,6 @@ function renderRefreshView() {
   (state.relistStatus || []).forEach(r => { relistMap[relistKey(r.item_id, r.platform)] = r; });
 
   const searchTerm = (document.getElementById('refresh-search')?.value || '').trim().toLowerCase();
-  const platformFilter = document.getElementById('refresh-platform-filter')?.value || '';
 
   let relevant = state.listings.filter(l =>
     // Vinted/Marktplaats/2dehands: any listing that's actually live on the platform,
@@ -2902,14 +2901,79 @@ function renderRefreshView() {
     // the delete completes — even though the recreate is still pending.
     !!relistMap[relistKey(l.item_id, l.platform)]
   );
-  if (platformFilter) relevant = relevant.filter(l => l.platform === platformFilter);
   relevant = relevant.slice().sort((a, b) => {
     const ia = state.items.find(i => i.id === a.item_id)?.title || '';
     const ib = state.items.find(i => i.id === b.item_id)?.title || '';
     return ia.localeCompare(ib) || a.platform.localeCompare(b.platform);
   });
 
-  const rows = relevant.map(l => {
+  function modeCellFor(l) {
+    if (!l.last_refreshed_at) return '<span style="color:var(--muted);font-size:12px">never refreshed</span>';
+    const modeLabel = l.last_refresh_strategy === 'relist'
+      ? '<span style="background:rgba(37,99,235,.12);color:#1d4ed8;font-size:10.5px;font-weight:700;padding:2px 7px;border-radius:999px">Mode 2 · relist</span>'
+      : l.last_refresh_strategy === 'content'
+        ? '<span style="background:rgba(34,197,94,.12);color:#15803d;font-size:10.5px;font-weight:700;padding:2px 7px;border-radius:999px">Mode 1 · content</span>'
+        : '<span style="background:var(--muted-bg,#f1f5f9);color:var(--muted);font-size:10.5px;font-weight:700;padding:2px 7px;border-radius:999px">mode unknown</span>';
+    return `<div style="display:flex;flex-direction:column;gap:3px;align-items:flex-start">${modeLabel}<span style="font-size:11px;color:var(--muted)">${fmtDate(l.last_refreshed_at)}</span></div>`;
+  }
+
+  // ── Vinted (the only platform with an actual "Refresh" tab right now) ──
+  let vinted = relevant.filter(l => l.platform === 'vinted');
+  let vintedStatus = {}; // item_id|platform -> 'never' | 'cooldown' | 'ready' | 'inprogress'
+  vinted.forEach(l => {
+    if (relistMap[relistKey(l.item_id, l.platform)]) { vintedStatus[l.item_id] = 'inprogress'; return; }
+    if (!l.last_refreshed_at) { vintedStatus[l.item_id] = 'never'; return; }
+    const elapsedDays = Math.floor((now - new Date(l.last_refreshed_at).getTime()) / 86400000);
+    vintedStatus[l.item_id] = elapsedDays < REFRESH_COOLDOWN_DAYS ? 'cooldown' : 'ready';
+  });
+  if (refreshStatusFilter) vinted = vinted.filter(l => vintedStatus[l.item_id] === refreshStatusFilter);
+
+  const vintedRows = vinted.map(l => {
+    const item = state.items.find(i => i.id === l.item_id);
+    if (!item) return '';
+    if (searchTerm && !item.title.toLowerCase().includes(searchTerm)) return '';
+
+    let statusCell, actionCell;
+    const relist = relistMap[relistKey(l.item_id, l.platform)];
+    if (relist) {
+      // A relist is mid-flight for this listing — show the stage + ETA instead
+      // of the normal cooldown, and block a second refresh until it finishes.
+      const deleteDone = relist.delete_status === 'done';
+      const eta = fmtEta(new Date(relist.recreate_at).getTime() - now);
+      statusCell = deleteDone
+        ? `<span style="color:#2563eb;font-size:12px">↻ recreating in ${eta}</span>`
+        : `<span style="color:#2563eb;font-size:12px">↻ removing old listing…</span>`;
+      actionCell = `<button class="btn btn-sm btn-outline" disabled title="Relist in progress">In progress…</button>`;
+    } else {
+      const onCooldown = vintedStatus[l.item_id] === 'cooldown';
+      if (l.last_refreshed_at) {
+        const elapsedDays = Math.floor((now - new Date(l.last_refreshed_at).getTime()) / 86400000);
+        statusCell = onCooldown
+          ? `<span style="color:var(--muted);font-size:12px">${elapsedDays}d ago — ${REFRESH_COOLDOWN_DAYS - elapsedDays}d left</span>`
+          : `<span style="color:var(--green);font-size:12px">${elapsedDays}d ago</span>`;
+      } else {
+        statusCell = '<span style="color:var(--muted);font-size:12px">never refreshed</span>';
+      }
+      actionCell = `<button class="btn btn-sm btn-outline" ${onCooldown ? 'disabled title="On cooldown"' : ''} onclick="refreshItem('${item.id}','${esc(item.title)}','${l.platform}')">Refresh</button>`;
+    }
+
+    return `<tr>
+      <td><div class="item-info">
+        <div class="item-photo">${item.photo_urls?.[0] ? `<img src="${item.photo_urls[0]}" style="width:40px;height:40px;border-radius:6px;object-fit:cover">` : '👗'}</div>
+        <div><div class="item-title">${esc(item.title)}</div><div class="item-meta">${item.brand || ''}${item.size ? ' · ' + item.size : ''}</div></div>
+      </div></td>
+      <td style="white-space:nowrap">${statusCell}</td>
+      <td style="white-space:nowrap">${modeCellFor(l)}</td>
+      <td style="white-space:nowrap">${actionCell}</td>
+    </tr>`;
+  }).join('');
+
+  document.getElementById('refresh-body').innerHTML = vintedRows ||
+    '<tr><td colspan="4"><div class="empty"><h3>Nothing to refresh</h3><p>Publish to Vinted first, or adjust the status filter above.</p></div></td></tr>';
+
+  // ── Other platforms: Etsy renew + eBay relist-ended (own mechanisms, not this quota) ──
+  const other = relevant.filter(l => l.platform !== 'vinted');
+  const otherRows = other.map(l => {
     const item = state.items.find(i => i.id === l.item_id);
     if (!item) return '';
     if (searchTerm && !item.title.toLowerCase().includes(searchTerm)) return '';
@@ -2923,10 +2987,10 @@ function renderRefreshView() {
       statusCell = `<span style="font-size:12px;color:var(--muted)">ended (${l.status})</span>`;
       actionCell = `<button class="btn btn-sm btn-outline" onclick="relistEndedEbayItem('${item.id}','${esc(item.title)}')">Relist ended listing</button>`;
     } else {
+      // marktplaats/2dehands relist support exists in the backend but doesn't have
+      // its own tab yet — surfaced here until it does.
       const relist = relistMap[relistKey(l.item_id, l.platform)];
       if (relist) {
-        // A relist is mid-flight for this listing — show the stage + ETA instead
-        // of the normal cooldown, and block a second refresh until it finishes.
         const deleteDone = relist.delete_status === 'done';
         const eta = fmtEta(new Date(relist.recreate_at).getTime() - now);
         statusCell = deleteDone
@@ -2948,20 +3012,6 @@ function renderRefreshView() {
       }
     }
 
-    let modeCell;
-    if (l.last_refreshed_at) {
-      const modeLabel = l.last_refresh_strategy === 'relist'
-        ? '<span style="background:rgba(37,99,235,.12);color:#1d4ed8;font-size:10.5px;font-weight:700;padding:2px 7px;border-radius:999px">Mode 2 · relist</span>'
-        : l.last_refresh_strategy === 'content'
-          ? '<span style="background:rgba(34,197,94,.12);color:#15803d;font-size:10.5px;font-weight:700;padding:2px 7px;border-radius:999px">Mode 1 · content</span>'
-          : '<span style="background:var(--muted-bg,#f1f5f9);color:var(--muted);font-size:10.5px;font-weight:700;padding:2px 7px;border-radius:999px">mode unknown</span>';
-      modeCell = `<div style="display:flex;flex-direction:column;gap:3px;align-items:flex-start">${modeLabel}<span style="font-size:11px;color:var(--muted)">${fmtDate(l.last_refreshed_at)}</span></div>`;
-    } else {
-      modeCell = '<span style="color:var(--muted);font-size:12px">never refreshed</span>';
-    }
-    const photoCount = item.photo_urls?.length || 0;
-    const photoCell = `<span style="font-size:12px;color:${photoCount > 20 ? '#b45309' : 'var(--muted)'}">${photoCount}${photoCount > 20 ? ' (only 20 uploaded)' : ''}</span>`;
-
     return `<tr>
       <td><div class="item-info">
         <div class="item-photo">${item.photo_urls?.[0] ? `<img src="${item.photo_urls[0]}" style="width:40px;height:40px;border-radius:6px;object-fit:cover">` : '👗'}</div>
@@ -2969,14 +3019,16 @@ function renderRefreshView() {
       </div></td>
       <td style="white-space:nowrap;font-size:12px">${label}</td>
       <td style="white-space:nowrap">${statusCell}</td>
-      <td style="white-space:nowrap">${modeCell}</td>
-      <td style="white-space:nowrap">${photoCell}</td>
+      <td style="white-space:nowrap">${modeCellFor(l)}</td>
       <td style="white-space:nowrap">${actionCell}</td>
     </tr>`;
   }).join('');
 
-  document.getElementById('refresh-body').innerHTML = rows ||
-    '<tr><td colspan="6"><div class="empty"><h3>Nothing to refresh</h3><p>Publish to Vinted, Marktplaats, 2dehands or Etsy first — or wait for an eBay listing to end.</p></div></td></tr>';
+  const otherBody = document.getElementById('refresh-body-other');
+  if (otherBody) {
+    otherBody.innerHTML = otherRows ||
+      '<tr><td colspan="5"><div class="empty"><h3>Nothing here</h3><p>Marktplaats, 2dehands, Etsy or eBay listings will show up once you have any.</p></div></td></tr>';
+  }
 }
 
 function refreshItem(itemId, title, platform) {
