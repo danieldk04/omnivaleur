@@ -179,7 +179,17 @@ function getMpSyiUrl(platform, item) {
     ? "https://www.marktplaats.nl/plaats"
     : "https://www.2dehands.be/plaats";
   const cat = (item?.category || "").toLowerCase().trim();
-  const gender = (item?.gender || "").toLowerCase().trim();
+  // Imported items often have no gender/category saved at all (only title +
+  // 1 photo carry over) — item.gender is then empty and this used to silently
+  // fall through to MP_DEFAULT (Dames Jeans), regardless of what the item
+  // actually is. Recover gender from the title itself before giving up, since
+  // that's usually the one field an imported item does have.
+  let gender = (item?.gender || "").toLowerCase().trim();
+  if (!gender) {
+    const t = (item?.title || "").toLowerCase();
+    if (/\bheren\b|\bmen'?s\b|\bmannen\b/.test(t)) gender = "heren";
+    else if (/\bdames\b|\bwomen'?s\b|\bvrouwen\b/.test(t)) gender = "dames";
+  }
 
   let c;
 
