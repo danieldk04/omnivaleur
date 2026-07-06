@@ -40,5 +40,13 @@ jobs:
           git config user.name "content-bot"
           git config user.email "content-bot@users.noreply.github.com"
           git add scripts/content_keywords.json
-          git diff --staged --quiet || git commit -m "auto: update content keyword queue"
-          git push
+          git diff --staged --quiet && exit 0
+          git commit -m "auto: update content keyword queue"
+          for i in 1 2 3 4 5; do
+            git fetch origin main
+            git rebase origin/main && git push origin HEAD:main && exit 0
+            echo "Push attempt $i failed (concurrent push to main) — retrying after rebase..."
+            sleep $((RANDOM % 10 + 5))
+          done
+          echo "::error::Could not push keyword queue update after 5 attempts"
+          exit 1
