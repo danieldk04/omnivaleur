@@ -61,16 +61,62 @@ EXTENSION_PLATFORMS = {"marktplaats", "2dehands", "vinted"}
 # Platforms handled server-side via official API
 API_PLATFORMS = {"ebay", "etsy", "shopify"}
 
+# Required on every platform — an empty description or zero photos means the
+# extension has nothing to type/upload, so the listing goes out looking broken
+# rather than just "safely bare".
+_UNIVERSAL_REQUIRED = ["description", "photo_urls"]
+# Marktplaats/2dehands render category-specific attribute dropdowns (maat,
+# merk, kleur...) and pick the category itself from `category`/`gender` — those
+# are the fields that silently produced a wrong-category, everything-empty
+# listing before (see extension/background.js MP_CATEGORIES fallback).
+_PLATFORM_REQUIRED = {
+    "marktplaats": ["category", "gender", "brand", "size", "color"],
+    "2dehands": ["category", "gender", "brand", "size", "color"],
+}
+
+
+class CrosslistValidationError(Exception):
+    """Raised when an item is missing data a platform needs — caller should
+    show `missing` to the user and require them to fill it in rather than
+    silently publishing an incomplete listing."""
+    def __init__(self, missing: dict[str, list[str]]):
+        self.missing = missing
+        super().__init__(f"Item is missing required fields: {missing}")
+
+
+def _missing_fields_per_platform(item: dict, platforms: list[str]) -> dict[str, list[str]]:
+    missing: dict[str, list[str]] = {}
+    for platform in platforms:
+        required = _UNIVERSAL_REQUIRED + _PLATFORM_REQUIRED.get(platform, [])
+        gaps = []
+        for field in required:
+            value = item.get(field)
+            if field == "photo_urls":
+                if not value or len(value) == 0:
+                    gaps.append("photos")
+            elif not value or not str(value).strip():
+                gaps.append(field)
+        if gaps:
+            missing[platform] = gaps
+    return missing
+
 
 async def publish_to_platforms(item_id: str, platforms: list[str], user_id: str) -> list[dict]:
     """
     Route each platform to the right handler:
     - Extension platforms → create a job, extension picks it up
     - API platforms → call directly server-side
+
+    Raises CrosslistValidationError instead of publishing if the item is
+    missing data a platform needs — never silently ships a half-empty listing.
     """
     db = get_db()
     item_resp = db.table("items").select("*").eq("id", item_id).single().execute()
     item = item_resp.data
+
+    missing = _missing_fields_per_platform(item, platforms)
+    if missing:
+        raise CrosslistValidationError(missing)
 
     results = []
     api_platforms = [p for p in platforms if p in API_PLATFORMS]
