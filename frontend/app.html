@@ -368,9 +368,10 @@ input[type="checkbox"].row-check { width: 15px; height: 15px; cursor: pointer; a
   /* Main fills full width */
   .main { margin-left: 0; }
 
-  /* Topbar */
-  .topbar { padding: 0 14px; gap: 10px; }
+  /* Topbar: only shown on mobile, just to expose the hamburger */
+  .topbar { display: flex; padding: 0 14px; gap: 10px; height: 52px; align-items: center; background: rgba(255,255,255,.95); backdrop-filter: blur(8px); border-bottom: 1px solid var(--border); position: sticky; top: 0; z-index: 50; }
   .topbar-title { font-size: 14px; }
+  .topbar-new-item { display: none; }
 
   /* Content */
   .content { padding: 14px; }
