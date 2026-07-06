@@ -1,7 +1,7 @@
 from fastapi import APIRouter, HTTPException, BackgroundTasks, Depends
 from backend.models import ListingCreate
 from backend.database import get_db
-from backend.services.crosslist import publish_to_platforms, handle_item_sold
+from backend.services.crosslist import publish_to_platforms, handle_item_sold, CrosslistValidationError
 from backend.services.relist import (
     refresh_listing, refresh_stale_listings, renew_etsy_listing, relist_ended_ebay_listing,
     RefreshError, REFRESH_CAPABLE_PLATFORMS,
