@@ -2787,31 +2787,63 @@ function renderRelistInProgress() {
   const box = document.getElementById('relist-inprogress');
   if (!box) return;
   const list = state.relistStatus || [];
-  if (!list.length) { box.innerHTML = ''; return; }
   const now = Date.now();
-  const rows = list.map(r => {
+
+  if (!list.length) {
+    box.innerHTML = `<div class="empty" style="padding:40px 0">
+      <div class="empty-icon">✅</div>
+      <h3>No relists in progress</h3>
+      <p>When you relist an item, you'll see it here step-by-step — from "old listing removed" to "new listing live" — so it's always clear where it stands.</p>
+    </div>`;
+    return;
+  }
+
+  const cards = list.map(r => {
     const item = state.items.find(i => i.id === r.item_id);
     const title = item ? esc(item.title) : r.item_id;
+    const photo = item?.photo_urls?.[0];
     const label = PLATFORM_LABELS[r.platform] || r.platform;
     const eta = fmtEta(new Date(r.recreate_at).getTime() - now);
     const deleteDone = r.delete_status === 'done';
-    const stage = deleteDone
-      ? `Old listing removed ✓ — recreating in <b>${eta}</b>`
-      : (r.delete_status === 'error'
-          ? `<span style="color:var(--red,#dc2626)">Delist failed — recreate aborted to avoid a duplicate</span>`
-          : `Removing old listing…`);
-    return `<div style="display:flex;align-items:center;gap:10px;padding:9px 0;border-top:1px solid rgba(0,0,0,.06)">
-      <span class="spinner" style="width:13px;height:13px;border-width:2px;flex-shrink:0"></span>
-      <div style="flex:1;min-width:0">
-        <div style="font-size:12.5px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${title}</div>
-        <div style="font-size:11.5px;color:var(--muted)">${label} · ${stage}</div>
+    const deleteFailed = r.delete_status === 'error';
+
+    const step1 = deleteFailed
+      ? { icon: '✕', color: 'var(--red,#dc2626)', label: 'Removing old listing', sub: 'Failed' }
+      : { icon: '✓', color: 'var(--green,#16a34a)', label: 'Old listing removed', sub: deleteDone ? 'Done' : 'In progress…' };
+    const step2 = deleteFailed
+      ? { icon: '✕', color: 'var(--muted)', label: 'Republish as new listing', sub: 'Aborted — would have duplicated the old listing' }
+      : { icon: deleteDone ? '⏳' : '·', color: deleteDone ? 'var(--blue,#2563eb)' : 'var(--muted)', label: 'Republish as new listing', sub: deleteDone ? `In ${eta}` : 'Waiting for step 1' };
+
+    const stepRow = (s, active) => `
+      <div style="display:flex;align-items:center;gap:8px;${active ? '' : 'opacity:.55'}">
+        <span style="width:18px;height:18px;border-radius:50%;background:${s.color};color:#fff;font-size:11px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0">${s.icon}</span>
+        <span style="font-size:12px;font-weight:600">${s.label}</span>
+        <span style="font-size:11.5px;color:var(--muted)">— ${s.sub}</span>
+      </div>`;
+
+    return `<div style="border:1px solid var(--border);border-radius:12px;padding:14px 16px;margin-bottom:12px;background:#fff">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
+        <div style="width:36px;height:36px;border-radius:8px;overflow:hidden;flex-shrink:0;background:#f1f5f9;display:flex;align-items:center;justify-content:center">${photo ? `<img src="${photo}" style="width:100%;height:100%;object-fit:cover">` : '👗'}</div>
+        <div style="min-width:0">
+          <div style="font-size:13px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${title}</div>
+          <div style="font-size:11.5px;color:var(--muted)">${label}</div>
+        </div>
       </div>
+      <div style="display:flex;flex-direction:column;gap:8px;padding-left:2px">
+        ${stepRow(step1, true)}
+        ${stepRow(step2, deleteDone && !deleteFailed)}
+      </div>
+      ${deleteFailed ? `
+        <div style="margin-top:10px;font-size:11.5px;color:var(--red,#dc2626);background:rgba(220,38,38,.06);border-radius:8px;padding:8px 10px">This item's old listing could not be removed — nothing was deleted, and no new listing was created. Check the platform manually, then try refreshing again from the "All listings" tab.</div>
+      ` : (!deleteDone ? `
+        <div style="margin-top:10px;font-size:11.5px;color:var(--muted);background:rgba(37,99,235,.05);border-radius:8px;padding:8px 10px">Right now this item is <b>not live on ${label}</b> — the old listing is being removed. It's a normal, brief in-between state; the new listing publishes automatically once the timer above runs out.</div>
+      ` : `
+        <div style="margin-top:10px;font-size:11.5px;color:var(--muted);background:rgba(37,99,235,.05);border-radius:8px;padding:8px 10px">The old listing is gone and the new one isn't live yet — this is expected. Keep Chrome open (a background window is fine) so the extension can publish it automatically in <b>${eta}</b>. Nothing to do manually, and this can't be undone or sped up from here.</div>
+      `)}
     </div>`;
   }).join('');
-  box.innerHTML = `<div style="border:1px solid rgba(37,99,235,.25);background:rgba(37,99,235,.05);border-radius:12px;padding:12px 15px">
-    <div style="font-weight:700;font-size:13px;display:flex;align-items:center;gap:8px">🔄 Relist in progress <span style="font-weight:500;color:var(--muted);font-size:11.5px">· keep Chrome open until done</span></div>
-    ${rows}
-  </div>`;
+
+  box.innerHTML = `<div style="font-size:12px;color:var(--muted);margin-bottom:12px">${list.length} relist${list.length === 1 ? '' : 's'} currently mid-flight — each one moves through these two steps automatically.</div>${cards}`;
 }
 
 function renderRefreshView() {
