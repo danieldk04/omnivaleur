@@ -3130,32 +3130,77 @@ function renderRefreshView() {
   }
 }
 
+let refreshModalState = null;
+
 function refreshItem(itemId, title, platform) {
   const strategies = REFRESH_PLATFORM_STRATEGIES[platform];
   if (!strategies) { alert(`Refresh isn't available for ${platform} yet.`); return; }
+  const item = state.items.find(i => i.id === itemId);
+  refreshModalState = { itemId, title, platform, strategies, currentPrice: item?.price || 0 };
 
-  let strategy = strategies[0];
-  if (strategies.length > 1) {
-    const choice = prompt(
-      `Refresh "${title}" on ${PLATFORM_LABELS[platform] || platform} — choose a strategy:\n\n` +
-      `1 = Content refresh (safe): shuffles your photos EXCEPT the first (main) photo, then re-saves. Your price, title and description stay exactly the same. Needs 3+ photos. Keeps listing history.\n` +
-      `2 = Relist (delete + recreate): moves it back to "Newest", rate-limited to once per 14 days per listing and max 8/day per account\n\n` +
-      `Type 1 or 2:`, '1'
-    );
-    if (choice !== '1' && choice !== '2') return;
-    strategy = choice === '2' ? 'relist' : 'content';
-  } else if (!confirm(`Relist "${title}" on ${PLATFORM_LABELS[platform] || platform}? This deletes and re-creates the listing after a randomized delay (45min-4h) to avoid a scripted pattern.`)) {
-    return;
-  }
-  doRefresh(itemId, platform, strategy);
+  document.getElementById('refresh-modal-item-name').textContent =
+    `${title} — ${PLATFORM_LABELS[platform] || platform}`;
+
+  const hasChoice = strategies.length > 1;
+  document.getElementById('refresh-modal-strategy-group').style.display = hasChoice ? 'block' : 'none';
+  document.querySelectorAll('input[name="refresh-strategy"]').forEach(r => { r.checked = r.value === (hasChoice ? 'content' : strategies[0]); });
+
+  document.getElementById('refresh-modal-current-price').textContent = (item?.price ?? 0).toFixed(2);
+  document.getElementById('refresh-modal-new-price').value = (item?.price ?? 0).toFixed(2);
+  document.getElementById('refresh-modal-price-delta').textContent = '';
+  onRefreshStrategyChange();
+
+  document.getElementById('modal-refresh').style.display = 'flex';
 }
 
-async function doRefresh(itemId, platform, strategy) {
+function onRefreshStrategyChange() {
+  const strategy = refreshModalState.strategies.length > 1
+    ? document.querySelector('input[name="refresh-strategy"]:checked').value
+    : refreshModalState.strategies[0];
+  document.getElementById('refresh-modal-price-group').style.display = strategy === 'relist' ? 'block' : 'none';
+}
+
+// Fills the price input with (current price - pct) and updates the delta label.
+function applyRefreshPriceSuggestion(pct) {
+  const current = refreshModalState.currentPrice;
+  const suggested = pct === 0 ? current : Math.max(0.01, Math.round(current * (1 - pct) * 100) / 100);
+  document.getElementById('refresh-modal-new-price').value = suggested.toFixed(2);
+  onRefreshPriceEdited();
+}
+
+function onRefreshPriceEdited() {
+  const current = refreshModalState.currentPrice;
+  const newPrice = parseFloat(document.getElementById('refresh-modal-new-price').value) || 0;
+  const delta = document.getElementById('refresh-modal-price-delta');
+  if (!current || newPrice <= 0) { delta.textContent = ''; return; }
+  const pct = Math.round((1 - newPrice / current) * 100);
+  if (pct === 0) { delta.textContent = ''; return; }
+  delta.textContent = pct > 0 ? `-${pct}%` : `+${-pct}%`;
+  delta.style.color = pct > 0 ? 'var(--green)' : '#b45309';
+}
+
+function confirmRefresh() {
+  const { itemId, platform, strategies } = refreshModalState;
+  const strategy = strategies.length > 1
+    ? document.querySelector('input[name="refresh-strategy"]:checked').value
+    : strategies[0];
+  let newPrice = null;
+  if (strategy === 'relist') {
+    newPrice = parseFloat(document.getElementById('refresh-modal-new-price').value);
+    if (!newPrice || newPrice <= 0) { alert('Enter a valid price greater than 0'); return; }
+  }
+  closeModal('modal-refresh');
+  doRefresh(itemId, platform, strategy, newPrice);
+}
+
+async function doRefresh(itemId, platform, strategy, newPrice) {
   setBusy(true, 'Queuing refresh…');
   try {
+    const body = { item_id: itemId, platform, strategy };
+    if (newPrice != null) body.new_price = newPrice;
     const r = await apiFetch(`${API}/api/listings/refresh`, {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ item_id: itemId, platform, strategy }),
+      body: JSON.stringify(body),
     });
     const data = await r.json();
     if (!r.ok) throw new Error(data.detail || 'Refresh failed');
