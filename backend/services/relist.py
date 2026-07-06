@@ -134,6 +134,24 @@ def _jittered_price(price: float) -> float:
     return new_price
 
 
+def _update_listing_refresh_state(db, listing_id: str, fields: dict) -> None:
+    """
+    Update cooldown/quota bookkeeping on the listing. If `last_refresh_strategy`
+    hasn't been migrated onto the listings table yet (schema.sql ADD COLUMN not
+    run), PostgREST fails the WHOLE update — silently breaking the cooldown/count
+    fields too, not just the mode badge. Retry without it so the core refresh
+    flow never depends on that optional column existing.
+    """
+    try:
+        db.table("listings").update(fields).eq("id", listing_id).execute()
+    except Exception as e:
+        if "last_refresh_strategy" in fields and "last_refresh_strategy" in str(e):
+            fallback = {k: v for k, v in fields.items() if k != "last_refresh_strategy"}
+            db.table("listings").update(fallback).eq("id", listing_id).execute()
+        else:
+            raise
+
+
 async def refresh_listing(item_id: str, platform: str, user_id: str, strategy: str) -> dict:
     """
     Queue a refresh for one listing.
