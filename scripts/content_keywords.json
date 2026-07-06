@@ -32,7 +32,7 @@
       "pillar": "B",
       "slug": "vinted-clothing-automation",
       "priority": 4,
-      "status": "pending"
+      "status": "published"
     },
     {
       "keyword": "vinted to etsy crosslisting 2026",
@@ -86,6 +86,15 @@
       "action": "created",
       "url_path": "/crosslisting/2dehands-to-vinted",
       "published_at": "2026-07-06T11:25:47.000000+00:00"
+    },
+    {
+      "keyword": "vinted clothing reselling automation",
+      "slug": "vinted-clothing-automation",
+      "region": "nl",
+      "pillar": "B",
+      "action": "created",
+      "url_path": "/reseller-tools/vinted-clothing-automation",
+      "published_at": "2026-07-06T11:30:46.552071+00:00"
     }
   ]
 }
