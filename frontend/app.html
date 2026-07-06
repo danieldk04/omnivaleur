@@ -2734,18 +2734,38 @@ async function loadRelistStatus() {
 // Small badge on the Refresh nav item when relists are in progress.
 function updateRelistNavBadge() {
   const navRefresh = [...document.querySelectorAll('.nav-item')].find(n => /refresh/i.test(n.textContent));
-  if (!navRefresh) return;
-  let badge = navRefresh.querySelector('.relist-badge');
   const n = (state.relistStatus || []).length;
-  if (n > 0) {
-    if (!badge) {
-      badge = document.createElement('span');
-      badge.className = 'relist-badge';
-      badge.style.cssText = 'margin-left:auto;background:var(--mint,#22c55e);color:#04210f;font-size:10px;font-weight:800;padding:1px 7px;border-radius:999px';
-      navRefresh.appendChild(badge);
-    }
-    badge.textContent = n;
-  } else if (badge) { badge.remove(); }
+  if (navRefresh) {
+    let badge = navRefresh.querySelector('.relist-badge');
+    if (n > 0) {
+      if (!badge) {
+        badge = document.createElement('span');
+        badge.className = 'relist-badge';
+        badge.style.cssText = 'margin-left:auto;background:var(--mint,#22c55e);color:#04210f;font-size:10px;font-weight:800;padding:1px 7px;border-radius:999px';
+        navRefresh.appendChild(badge);
+      }
+      badge.textContent = n;
+    } else if (badge) { badge.remove(); }
+  }
+  // Mirror the same count on the "Relists in progress" sub-tab inside the Refresh page.
+  const tabBadge = document.getElementById('refresh-tab-badge');
+  if (tabBadge) {
+    tabBadge.style.display = n > 0 ? 'inline-block' : 'none';
+    tabBadge.textContent = n;
+  }
+}
+
+// Refresh page has two sub-tabs: the normal listing table, and a dedicated
+// tracker for relists that are mid-flight (old listing deleted, new one not
+// live yet) — so a deleted-but-not-yet-recreated listing is never a mystery.
+let refreshActiveTab = 'listings';
+function switchRefreshTab(tab) {
+  refreshActiveTab = tab;
+  document.getElementById('refresh-tab-btn-listings').classList.toggle('active', tab === 'listings');
+  document.getElementById('refresh-tab-btn-inprogress').classList.toggle('active', tab === 'inprogress');
+  document.getElementById('refresh-tab-listings').style.display = tab === 'listings' ? '' : 'none';
+  document.getElementById('refresh-tab-inprogress').style.display = tab === 'inprogress' ? '' : 'none';
+  if (tab === 'inprogress') renderRelistInProgress();
 }
 
 // Live countdown tick — re-renders the in-progress panel every second while visible.
