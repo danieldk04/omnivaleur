@@ -6,12 +6,6 @@
       "runtimeExecutable": "python3",
       "runtimeArgs": ["-m", "http.server", "3000", "--directory", "frontend"],
       "port": 3000
-    },
-    {
-      "name": "banner-render",
-      "runtimeExecutable": "python3",
-      "runtimeArgs": ["-m", "http.server", "3001", "--directory", "/private/tmp/claude-501/-Users-Danie-Documents-crosslist-eu/c5a133fb-c748-4a22-88c7-34c03818e2a9/scratchpad"],
-      "port": 3001
     }
   ]
 }
