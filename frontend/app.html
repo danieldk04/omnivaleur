@@ -898,10 +898,19 @@ input[type="checkbox"].row-check { width: 15px; height: 15px; cursor: pointer; a
         </div>
       </div>
 
+      <!-- Risk disclosure — always visible, never hidden behind a click -->
+      <div style="display:flex;gap:10px;align-items:flex-start;background:rgba(180,83,9,.07);border:1px solid rgba(180,83,9,.25);border-radius:12px;padding:13px 16px;margin:16px 0">
+        <span style="font-size:16px">⚠️</span>
+        <div style="font-size:12.5px;color:var(--muted);line-height:1.6">
+          <div style="font-weight:700;color:var(--text,#111);margin-bottom:3px;font-size:13px">Refreshing is at your own risk</div>
+          Every marketplace sets its own rules on relisting and automation, and those rules can change. Even though we keep refresh activity slow and human-looking, we <b>cannot guarantee</b> a platform won't flag, limit, or ban an account that relists. <b>You use this feature at your own risk. CrossList EU is not liable</b> for any warning, suspension, ban, lost listing, or fee resulting from a refresh or relist. Use it in line with each platform's terms, and keep your refresh volume reasonable.
+        </div>
+      </div>
+
       <!-- Live in-progress relists (populated by renderRefreshView) -->
       <div id="relist-inprogress"></div>
 
-      <!-- How a relist actually works — full transparency + risk disclosure -->
+      <!-- How a relist actually works — full transparency -->
       <details id="relist-explainer" style="margin:0 0 24px;border:1px solid var(--border);border-radius:12px;background:var(--card,#fff);overflow:hidden">
         <summary style="cursor:pointer;padding:14px 16px;font-weight:700;font-size:13px;list-style:none;display:flex;align-items:center;gap:8px">
           <span style="font-size:15px">ℹ️</span> What actually happens when you refresh (and what stays open)
@@ -924,14 +933,6 @@ input[type="checkbox"].row-check { width: 15px; height: 15px; cursor: pointer; a
             <div>
               <div style="font-weight:700;color:var(--text,#111);margin-bottom:3px">Keep Chrome running until the recreate is done</div>
               The extension does the delete and the delayed recreate. <b>Chrome must stay open</b> (a background window is fine — it doesn't need focus) so the scheduled recreate can fire. You do <b>not</b> need to keep this dashboard tab open, and you don't need to keep the Vinted/Marktplaats tab open. If Chrome is fully closed during the wait, the recreate simply runs the next time you open Chrome.
-            </div>
-          </div>
-
-          <div style="display:flex;gap:10px;align-items:flex-start;background:rgba(180,83,9,.07);border:1px solid rgba(180,83,9,.25);border-radius:10px;padding:11px 13px;margin-top:10px">
-            <span style="font-size:15px">⚠️</span>
-            <div>
-              <div style="font-weight:700;color:var(--text,#111);margin-bottom:3px">Refreshing is at your own risk</div>
-              Every marketplace sets its own rules on relisting and automation, and those rules can change. Even though we keep refresh activity slow and human-looking, we <b>cannot guarantee</b> a platform won't flag, limit, or ban an account that relists. <b>You use this feature at your own risk. CrossList EU is not liable</b> for any warning, suspension, ban, lost listing, or fee resulting from a refresh or relist. Use it in line with each platform's terms, and keep your refresh volume reasonable.
             </div>
           </div>
 
