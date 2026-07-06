@@ -1575,6 +1575,31 @@ function apiFetch(url, opts = {}) {
 }
 
 const PLATFORMS = ['marktplaats', '2dehands', 'vinted', 'ebay', 'etsy', 'shopify'];
+
+// Mirrors backend/services/crosslist.py's _UNIVERSAL_REQUIRED / _PLATFORM_REQUIRED —
+// lets the dashboard warn about missing data before a publish attempt even fires,
+// instead of only finding out after a blocked 422.
+const CROSSLIST_UNIVERSAL_REQUIRED = ['description', 'photo_urls'];
+const CROSSLIST_PLATFORM_REQUIRED = {
+  marktplaats: ['category', 'gender', 'brand', 'size', 'color'],
+  '2dehands': ['category', 'gender', 'brand', 'size', 'color'],
+};
+const CROSSLIST_FIELD_LABELS = { description: 'description', photo_urls: 'photos', category: 'category', gender: 'gender', brand: 'brand', size: 'size', color: 'color' };
+
+function missingFieldsForPlatform(item, platform) {
+  const required = [...CROSSLIST_UNIVERSAL_REQUIRED, ...(CROSSLIST_PLATFORM_REQUIRED[platform] || [])];
+  return required.filter(f => f === 'photo_urls' ? !(item.photo_urls?.length) : !String(item[f] || '').trim())
+    .map(f => CROSSLIST_FIELD_LABELS[f] || f);
+}
+
+function missingFieldsAllPlatforms(item) {
+  const out = {};
+  for (const p of PLATFORMS) {
+    const missing = missingFieldsForPlatform(item, p);
+    if (missing.length) out[p] = missing;
+  }
+  return out;
+}
 const PLATFORM_LABELS = { marktplaats: 'Marktplaats', '2dehands': '2dehands', ebay: 'eBay', etsy: 'Etsy', shopify: 'Shopify', vinted: 'Vinted' };
 const PLATFORM_DOMAINS = { marktplaats: 'marktplaats.nl', '2dehands': '2dehands.be', vinted: 'vinted.nl', ebay: 'ebay.com', etsy: 'etsy.com', shopify: 'shopify.com' };
 const PLATFORM_EMOJI_FALLBACK = { marktplaats: '🇳🇱', '2dehands': '🇧🇪', vinted: '👕', ebay: '🛒', etsy: '🎨', shopify: '🏪' };
