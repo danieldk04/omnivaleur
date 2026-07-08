@@ -243,31 +243,21 @@ nav { position: sticky; top: 0; z-index: 100; background: rgba(255,255,255,.95);
     <img src="Logo Crosslist EU.png" alt="CrossList EU">
     <span class="grad-text">CrossList EU</span>
   </a>
-  <div class="nav-links">
-    <a href="/marketplaces" class="active">Marketplaces</a>
-    <a href="/blog">Blog</a>
-    <a href="/#how-it-works">How it works</a>
-    <a href="/#pricing">Pricing</a>
+  <input type="checkbox" id="nav-toggle" class="nav-toggle-cb">
+  <label for="nav-toggle" class="nav-hamburger" aria-label="Menu"><span></span><span></span><span></span></label>
+  <div class="nav-panel">
+    <div class="nav-links">
+      <a href="/marketplaces" class="active">Marketplaces</a>
+      <a href="/blog">Blog</a>
+      <a href="/#how-it-works">How it works</a>
+      <a href="/#pricing">Pricing</a>
+    </div>
+    <div class="nav-actions">
+      <a href="/login" class="btn btn-outline">Log in</a>
+      <a href="/register" class="btn btn-primary">7 days free →</a>
+    </div>
   </div>
-  <div class="nav-actions">
-    <a href="/login" class="btn btn-outline">Log in</a>
-    <a href="/register" class="btn btn-primary">7 days free →</a>
-  </div>
-  <button class="hamburger" id="hamburger" onclick="toggleMenu()" aria-label="Menu">
-    <span></span><span></span><span></span>
-  </button>
 </nav>
-
-<div class="mobile-menu" id="mobile-menu">
-  <a href="/marketplaces" onclick="closeMenu()">Marketplaces</a>
-  <a href="/blog" onclick="closeMenu()">Blog</a>
-  <a href="/#how-it-works" onclick="closeMenu()">How it works</a>
-  <a href="/#pricing" onclick="closeMenu()">Pricing</a>
-  <div class="mobile-actions">
-    <a href="/login" class="btn btn-outline" onclick="closeMenu()">Log in</a>
-    <a href="/register" class="btn btn-primary" onclick="closeMenu()">7 days free →</a>
-  </div>
-</div>
 
 <!-- HERO -->
 <section class="hero">
