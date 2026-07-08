@@ -146,12 +146,13 @@ def inject_comparison_screenshots(body_html: str, pillar: str, keyword: str) -> 
 
     competitor_key = _competitor_key_in(keyword)
     competitor_shots = COMPETITOR_SCREENSHOTS.get(competitor_key, []) if competitor_key else []
+    our_shots = _local_screenshots_on_disk()
 
     # Interleave: our shot, their shot, our shot, their shot, ... capped at what we have.
     figures = []
-    for i in range(max(len(CROSSLIST_SCREENSHOTS), len(competitor_shots))):
-        if i < len(CROSSLIST_SCREENSHOTS):
-            figures.append(_figure_html(CROSSLIST_SCREENSHOTS[i]))
+    for i in range(max(len(our_shots), len(competitor_shots))):
+        if i < len(our_shots):
+            figures.append(_figure_html(our_shots[i]))
         if i < len(competitor_shots):
             figures.append(_figure_html(competitor_shots[i]))
 
