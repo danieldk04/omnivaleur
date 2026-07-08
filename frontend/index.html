@@ -736,16 +736,6 @@ nav { position: sticky; top: 0; z-index: 100; background: rgba(255,255,255,.95);
   window.addEventListener('resize', fitScale);
 })();
 
-function toggleMenu() {
-  const open = document.getElementById('mobile-menu').classList.toggle('open');
-  document.getElementById('hamburger').classList.toggle('open', open);
-  document.body.style.overflow = open ? 'hidden' : '';
-}
-function closeMenu() {
-  document.getElementById('mobile-menu').classList.remove('open');
-  document.getElementById('hamburger').classList.remove('open');
-  document.body.style.overflow = '';
-}
 
 // Scroll-reveal for sections/cards
 (function() {
