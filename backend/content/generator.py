@@ -8,6 +8,7 @@ Article-schema, en verplichte citaten naar echte (niet-hallucinerende) bronnen.
 """
 import logging
 import re
+from pathlib import Path
 
 import anthropic
 
@@ -17,17 +18,18 @@ logger = logging.getLogger(__name__)
 
 MODEL = "claude-opus-4-8"
 CURRENT_YEAR = 2026
+FRONTEND_DIR = Path(__file__).resolve().parent.parent.parent / "frontend"
 
 # Every article is written in English first (zie CLAUDE-memory: "Language:
-# English only"). Articles specifically about Marktplaats/2dehands in a
-# nl/be-nl region additionally get an auto-translated Dutch companion page —
-# readers can switch between the two on the page itself (see linking.py /
-# pipeline.py for how the two rows get linked via `translation_of`).
-NL_PLATFORM_TERMS = ("marktplaats", "2dehands")
-
-
+# English only"). EVERY article — every pillar, every region — additionally
+# gets an auto-translated Dutch companion page, so nothing is EN-only or
+# NL-only; readers can switch between the two on the page itself (see
+# linking.py / pipeline.py for how the two rows get linked via
+# `translation_of`). This used to be limited to Marktplaats/2dehands
+# articles in nl/be-nl — broadened after Daniel flagged that comparison
+# articles (Pillar C) and others were missing an NL version entirely.
 def needs_dutch_translation(keyword: str, region: str) -> bool:
-    return region in ("nl", "be-nl") and any(t in keyword.lower() for t in NL_PLATFORM_TERMS)
+    return True
 
 
 # Real, manually-captured CrossList EU screenshots (from the seeded demo account) —
