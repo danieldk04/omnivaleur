@@ -32,30 +32,63 @@ def needs_dutch_translation(keyword: str, region: str) -> bool:
 
 # Real, manually-captured CrossList EU screenshots (from the seeded demo account) —
 # never AI-generated, per the "no auto-generated blog images" rule. Re-capture and
-# swap these paths whenever the dashboard UI changes meaningfully.
-CROSSLIST_SCREENSHOTS = {
-    "dashboard": {
+# swap these paths whenever the dashboard UI changes meaningfully. Ordered — this is
+# also the order they get inserted into an article in.
+CROSSLIST_SCREENSHOTS = [
+    {
         "src": "/assets/comparisons/dashboard-overview.png",
         "alt": "CrossList EU dashboard showing items cross-listed across Marktplaats, 2dehands, Vinted, eBay and Shopify",
-        "caption": "CrossList EU's dashboard — every item published across all connected platforms from one place.",
+        "caption": "The CrossList EU dashboard: 15 items live across 5 platforms at once, with a per-platform breakdown of how many listings are active on Marktplaats, 2dehands, Vinted, eBay and Shopify — from a real trial account, not a mockup.",
     },
-    "items": {
+    {
         "src": "/assets/comparisons/items-crosslisted.png",
         "alt": "CrossList EU items list with per-platform status and missing-data warnings before publishing",
-        "caption": "CrossList EU blocks publishing until required fields are filled in per platform — no half-empty listings.",
+        "caption": "Every item shows its status per platform. CrossList EU flags \"Missing data for 2 platforms\" before you publish, instead of letting a half-empty listing go live and get rejected or shadow-suppressed by the marketplace.",
     },
-}
+    {
+        "src": "/assets/comparisons/new-item-form.png",
+        "alt": "CrossList EU new item form with fields that map directly to Marktplaats, 2dehands, Vinted, eBay and Shopify",
+        "caption": "One intake form covers every platform's required fields (brand, size, condition, eBay category, material) — fill it in once, publish everywhere it applies, no separate re-entry per marketplace.",
+    },
+    {
+        "src": "/assets/comparisons/refresh-vinted.png",
+        "alt": "CrossList EU Vinted refresh tool showing daily quota and an explicit risk disclosure",
+        "caption": "The Vinted refresh tool caps itself at 8 free refreshes/day and states outright that it can't guarantee a platform won't flag an account — an explicit risk disclosure most competitors don't show.",
+    },
+    {
+        "src": "/assets/comparisons/analytics-overview.png",
+        "alt": "CrossList EU analytics dashboard with revenue, profit and sales broken down per platform",
+        "caption": "Built-in analytics break revenue and profit down per platform (Shopify, eBay, Vinted) without needing to export anything to a spreadsheet first.",
+    },
+]
 
 # Publicly-hosted marketing screenshots competitors show on their own sites —
 # hotlinked (never re-hosted) so there's no copyright/storage question, standard
 # practice for honest comparison content. Verify these URLs still resolve
 # periodically; if one 404s, drop that competitor's image rather than guess a new one.
 COMPETITOR_SCREENSHOTS = {
-    "vendoo": {
-        "src": "https://cdn.prod.website-files.com/5f622c6681d34140afb9d542/6a206d0df658ff951485abb4_CROSSLISTING%20features%20images%403x.webp",
-        "alt": "Vendoo crosslisting feature screenshot (via vendoo.co)",
-        "caption": "Vendoo's crosslisting screen (source: vendoo.co) — built around eBay/Poshmark/Depop/Mercari, no Marktplaats or 2dehands.",
-    },
+    "vendoo": [
+        {
+            "src": "https://cdn.prod.website-files.com/5f622c6681d34140afb9d542/6a206d0df658ff951485abb4_CROSSLISTING%20features%20images%403x.webp",
+            "alt": "Vendoo crosslisting feature screenshot (via vendoo.co)",
+            "caption": "Vendoo's crosslisting screen (source: vendoo.co) — built around eBay, Poshmark, Depop and Mercari. No Marktplaats, no 2dehands, no EU-first marketplace at all.",
+        },
+        {
+            "src": "https://cdn.prod.website-files.com/5f622c6681d34140afb9d542/6a206d326d3a3ec89baf9dba_BULK%20ACTIONS%20DELIST%20features%20images%403x.webp",
+            "alt": "Vendoo bulk delist/relist feature screenshot (via vendoo.co)",
+            "caption": "Vendoo's bulk delist/relist screen (source: vendoo.co) — comparable in spirit to CrossList EU's refresh tool, but without a stated per-day cap or an explicit ban-risk disclosure.",
+        },
+        {
+            "src": "https://cdn.prod.website-files.com/5f622c6681d34140afb9d542/6a206e401eaf43f976069aad_SALE%20DETECTION%20feature%20images%403x.webp",
+            "alt": "Vendoo sale-detection feature screenshot (via vendoo.co)",
+            "caption": "Vendoo's automated sale-detection screen (source: vendoo.co), showing cross-platform delisting once an item sells — priced in USD, like the rest of the app.",
+        },
+        {
+            "src": "https://cdn.prod.website-files.com/5f622c6681d34140afb9d542/6a206e5481306dd5c79fcf91_ANALYTICS%20features%20images%403x.webp",
+            "alt": "Vendoo analytics feature screenshot (via vendoo.co)",
+            "caption": "Vendoo's analytics screen (source: vendoo.co) — tracks the same kind of revenue/profit split CrossList EU shows, but without EU marketplaces in the platform mix.",
+        },
+    ],
 }
 
 
@@ -74,27 +107,56 @@ def _figure_html(img: dict) -> str:
     )
 
 
+def _h2_positions(body_html: str) -> list[int]:
+    return [m.start() for m in re.finditer(r"<h2", body_html)]
+
+
 def inject_comparison_screenshots(body_html: str, pillar: str, keyword: str) -> str:
     """
-    Pillar C only: sandwiches the Claude-generated comparison table between a real
-    CrossList EU screenshot (before) and the named competitor's own public marketing
-    screenshot (after) — visual proof, not just claims. No-ops if there's no <table>
-    to anchor to, or no matching competitor screenshot on file.
+    Pillar C only: spreads real CrossList EU screenshots and the named competitor's
+    own public marketing screenshots across the article — one image roughly every
+    other H2 section, alternating "our real UI" / "their real UI" — instead of a
+    single image pair. Falls back to anchoring on <table> if the article has fewer
+    H2's than images. No-ops entirely if there's no <table> (Pillar C prompt always
+    includes one) or no matching competitor screenshots on file.
     """
     if pillar != "C" or "<table" not in body_html:
         return body_html
 
     competitor_key = _competitor_key_in(keyword)
-    our_shot = _figure_html(CROSSLIST_SCREENSHOTS["items"])
-    table_start = body_html.find("<table")
-    body_html = body_html[:table_start] + our_shot + body_html[table_start:]
+    competitor_shots = COMPETITOR_SCREENSHOTS.get(competitor_key, []) if competitor_key else []
 
-    if competitor_key:
-        competitor_shot = _figure_html(COMPETITOR_SCREENSHOTS[competitor_key])
-        table_end = body_html.find("</table>")
-        if table_end != -1:
-            insert_at = table_end + len("</table>")
-            body_html = body_html[:insert_at] + competitor_shot + body_html[insert_at:]
+    # Interleave: our shot, their shot, our shot, their shot, ... capped at what we have.
+    figures = []
+    for i in range(max(len(CROSSLIST_SCREENSHOTS), len(competitor_shots))):
+        if i < len(CROSSLIST_SCREENSHOTS):
+            figures.append(_figure_html(CROSSLIST_SCREENSHOTS[i]))
+        if i < len(competitor_shots):
+            figures.append(_figure_html(competitor_shots[i]))
+
+    positions = _h2_positions(body_html)
+    # Skip the very first H2 (intro section shouldn't open on an image) and space
+    # the rest out evenly across the remaining sections.
+    usable_positions = positions[1:]
+
+    if len(usable_positions) < 2:
+        # Not enough structure to interleave — fall back to sandwiching the table.
+        table_start = body_html.find("<table")
+        if figures:
+            body_html = body_html[:table_start] + figures[0] + body_html[table_start:]
+        if len(figures) > 1:
+            table_end = body_html.find("</table>")
+            if table_end != -1:
+                insert_at = table_end + len("</table>")
+                body_html = body_html[:insert_at] + figures[1] + body_html[insert_at:]
+        return body_html
+
+    # Spread figures across usable H2 positions, inserting from the end so earlier
+    # offsets stay valid as the string grows.
+    step = max(len(usable_positions) // max(len(figures), 1), 1)
+    slots = usable_positions[::step][: len(figures)]
+    for pos, fig in sorted(zip(slots, figures), key=lambda pair: pair[0], reverse=True):
+        body_html = body_html[:pos] + fig + body_html[pos:]
 
     return body_html
 
