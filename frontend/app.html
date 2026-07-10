@@ -2668,6 +2668,62 @@ function renderImportScanButtons() {
   document.getElementById('import-scan-grid').innerHTML = html;
 }
 
+let importProgressTimer = null;
+
+const SCAN_STAGE_STEPS = ['opening', 'account', 'listing', 'enriching', 'saving'];
+const SCAN_STAGE_LABELS = {
+  queued: 'Waiting for the browser extension to pick up the scan…',
+  opening: 'Opening the platform…',
+  account: 'Finding your account…',
+  listing: 'Reading your listings…',
+  enriching: 'Fetching full details of each listing…',
+  saving: 'Saving everything to your dashboard…',
+};
+
+function fmtEta(s) {
+  if (s == null) return '';
+  if (s <= 0) return 'almost done';
+  if (s < 60) return `~${s} sec left`;
+  const m = Math.floor(s / 60), r = s % 60;
+  return `~${m} min ${r ? r + ' sec ' : ''}left`;
+}
+
+function renderImportProgress(platform, prog) {
+  const box = document.getElementById('import-progress');
+  box.style.display = '';
+  const stage = prog?.stage || 'queued';
+  const label = SCAN_STAGE_LABELS[stage] || 'Scanning…';
+  const total = prog?.total || 0;
+  const current = prog?.current || 0;
+  const pct = total > 0 ? Math.round((current / total) * 100) : (stage === 'queued' ? 3 : 8);
+  const stepIdx = SCAN_STAGE_STEPS.indexOf(stage);
+  const stepText = stepIdx >= 0 ? `Step ${stepIdx + 1} of ${SCAN_STAGE_STEPS.length}` : '';
+  const counter = (stage === 'enriching' && total) ? `${current} / ${total} listings` : '';
+  const eta = (stage === 'enriching' && prog?.eta_seconds != null) ? fmtEta(prog.eta_seconds) : '';
+  box.innerHTML = `
+    <div class="card" style="padding:16px 18px">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
+        <span class="spinner" style="width:16px;height:16px;border-width:2px"></span>
+        <div style="font-weight:600;font-size:14px">Scanning ${esc(PLATFORM_LABELS[platform] || platform)}</div>
+        ${stepText ? `<span style="margin-left:auto;font-size:12px;color:var(--muted)">${stepText}</span>` : ''}
+      </div>
+      <div style="font-size:13px;color:var(--muted);margin-bottom:10px">${esc(prog?.message || label)}</div>
+      <div style="height:8px;background:var(--border,#e2e8f0);border-radius:999px;overflow:hidden">
+        <div style="height:100%;width:${pct}%;background:linear-gradient(90deg,#2563eb,#34d399);border-radius:999px;transition:width .4s"></div>
+      </div>
+      <div style="display:flex;justify-content:space-between;margin-top:6px;font-size:12px;color:var(--muted)">
+        <span>${esc(counter)}</span>
+        <span>${esc(eta)}</span>
+      </div>
+    </div>`;
+}
+
+function clearImportProgress() {
+  if (importProgressTimer) { clearInterval(importProgressTimer); importProgressTimer = null; }
+  const box = document.getElementById('import-progress');
+  if (box) { box.style.display = 'none'; box.innerHTML = ''; }
+}
+
 async function scanPlatform(platform) {
   setBusy(true, `Queuing ${PLATFORM_LABELS[platform] || platform} scan…`);
   try {
@@ -2676,17 +2732,56 @@ async function scanPlatform(platform) {
     if (!r.ok) throw new Error(data.detail || 'Scan failed');
     scanningPlatforms[platform] = true;
     renderImportScanButtons();
-    showToast(`Scan queued for ${PLATFORM_LABELS[platform] || platform} — results appear below within a minute.`);
-    setTimeout(() => loadImportCandidates(platform), 15000);
-    setTimeout(() => loadImportCandidates(platform), 45000);
-    setTimeout(() => { // stop showing "Scanning…" even if nothing was found, so it never gets stuck
-      if (scanningPlatforms[platform]) { scanningPlatforms[platform] = false; renderImportScanButtons(); }
-    }, 60000);
+    renderImportProgress(platform, { stage: 'queued' });
+    if (data.job_id) pollScanProgress(platform, data.job_id);
+    else { // no job id (shouldn't happen) — fall back to timed reloads
+      setTimeout(() => loadImportCandidates(platform), 15000);
+      setTimeout(() => loadImportCandidates(platform), 45000);
+      setTimeout(() => { if (scanningPlatforms[platform]) { scanningPlatforms[platform] = false; renderImportScanButtons(); clearImportProgress(); } }, 60000);
+    }
   } catch (e) {
+    clearImportProgress();
     alert('Scan error: ' + e.message);
   } finally {
     setBusy(false);
   }
+}
+
+// Poll the scan job's live status and drive the progress panel. The extension
+// posts {stage,message,current,total,eta_seconds} into result._progress as it
+// works; when the job flips to done/error we load the results and stop.
+function pollScanProgress(platform, jobId) {
+  if (importProgressTimer) clearInterval(importProgressTimer);
+  const startedAt = Date.now();
+  importProgressTimer = setInterval(async () => {
+    // Safety net: never poll forever (extension offline, etc.).
+    if (Date.now() - startedAt > 5 * 60 * 1000) {
+      clearInterval(importProgressTimer); importProgressTimer = null;
+      scanningPlatforms[platform] = false; renderImportScanButtons(); clearImportProgress();
+      loadImportCandidates(platform);
+      return;
+    }
+    try {
+      const r = await apiFetch(`${API}/api/jobs/status/${jobId}`);
+      if (!r.ok) return;
+      const job = await r.json();
+      const prog = job.result && job.result._progress;
+      if (job.status === 'done' || job.status === 'error') {
+        clearInterval(importProgressTimer); importProgressTimer = null;
+        scanningPlatforms[platform] = false; renderImportScanButtons();
+        clearImportProgress();
+        if (job.status === 'error') {
+          const msg = (job.result && (job.result.error || job.result.message)) || 'The scan failed. Make sure you are logged into the platform in your browser and the extension is active.';
+          showToast('Scan failed: ' + msg);
+        } else {
+          showToast('Scan complete — review your imported listings below.');
+        }
+        loadImportCandidates(platform);
+      } else if (prog) {
+        renderImportProgress(platform, prog);
+      }
+    } catch (e) { /* transient poll error — keep trying */ }
+  }, 1500);
 }
 
 async function loadImportCandidates(checkScanDonePlatform) {
