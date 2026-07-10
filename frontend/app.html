@@ -2181,7 +2181,7 @@ function renderItemsTable(items) {
       <td class="col-check"><input type="checkbox" class="row-check" ${checked} onchange="toggleRowSelect('${item.id}',this.checked)"></td>
       <td><div class="item-info">
         <div class="item-photo">${item.photo_urls?.[0] ? `<img src="${item.photo_urls[0]}" style="width:40px;height:40px;border-radius:6px;object-fit:cover">` : '👗'}</div>
-        <div><div class="item-title">${esc(item.title)}</div><div class="item-meta">${item.brand || '—'}${item.size ? ' · ' + item.size : ''}</div>${missingBadge}</div>
+        <div><div class="item-title">${esc(item.title)}${(item.sku || '').startsWith('IMP-') ? ` <span class="badge" style="background:#eef2ff;color:#4f46e5;font-size:10px;vertical-align:middle" title="Created by importing an existing platform listing">↓ Imported</span>` : ''}</div><div class="item-meta">${item.brand || '—'}${item.size ? ' · ' + item.size : ''}</div>${missingBadge}</div>
       </div></td>
       <td><strong>€${item.price}</strong></td>
       <td class="hide-mobile">${conditionLabel(item.condition)}</td>
