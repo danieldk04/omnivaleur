@@ -85,7 +85,7 @@ def suggest_keywords(existing_keywords: list[str]) -> list[dict]:
 
     try:
         message = client.messages.create(model=MODEL, max_tokens=2000, messages=[{"role": "user", "content": prompt}])
-        raw = message.content[0].text if message.content else ""
+        raw = "".join(getattr(b, "text", "") or "" for b in (message.content or []))
         raw = raw.strip().removeprefix("```json").removeprefix("```").removesuffix("```").strip()
         ideas = json.loads(raw)
     except Exception as e:
