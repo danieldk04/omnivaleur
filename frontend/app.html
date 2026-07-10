@@ -2650,6 +2650,7 @@ async function delistItem(itemId, title) {
 // ── Import existing listings (scan platform → review → link/create) ──────
 const IMPORT_SCANNABLE = { vinted: true, marktplaats: false, '2dehands': false, ebay: false, etsy: false, shopify: false };
 const scanningPlatforms = {}; // platform -> true while a scan is queued/running in the background
+let importCandidatesById = {}; // id -> candidate, so the item modal can prefill from a scan
 
 function renderImportScanButtons() {
   const html = Object.keys(IMPORT_SCANNABLE).map(p => {
