@@ -2816,6 +2816,8 @@ function matchBadge(reason) {
 
 function renderImportReview(candidates) {
   const section = document.getElementById('import-review-section');
+  importCandidatesById = {};
+  (candidates || []).forEach(c => { importCandidatesById[c.id] = c; });
   if (!candidates.length) { section.style.display = 'none'; return; }
   section.style.display = '';
 
