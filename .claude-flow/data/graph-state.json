@@ -13,8 +13,8 @@
     "mem-feedback_push_to_live----": {
       "id": "mem-feedback_push_to_live----",
       "category": "feedback_push_to_live",
-      "confidence": 0.5,
-      "accessCount": 0,
+      "confidence": 0.55,
+      "accessCount": 1,
       "createdAt": 1783151212563
     },
     "mem-project_zenbtw----": {
@@ -34,15 +34,15 @@
     "mem-shopify_workflow-auto-push-workflow-for-shopify": {
       "id": "mem-shopify_workflow-auto-push-workflow-for-shopify",
       "category": "shopify_workflow",
-      "confidence": 0.6000000000000001,
-      "accessCount": 2,
+      "confidence": 0.6800000000000002,
+      "accessCount": 4,
       "createdAt": 1783151212563
     },
     "mem-shopify_workflow-belangrijk--nooit-content-over": {
       "id": "mem-shopify_workflow-belangrijk--nooit-content-over",
       "category": "shopify_workflow",
-      "confidence": 0.6000000000000001,
-      "accessCount": 2,
+      "confidence": 0.6500000000000001,
+      "accessCount": 3,
       "createdAt": 1783151212563
     },
     "mem-feedback_always_push----": {
@@ -55,8 +55,8 @@
     "mem-project_nexus----": {
       "id": "mem-project_nexus----",
       "category": "project_nexus",
-      "confidence": 0.6000000000000001,
-      "accessCount": 2,
+      "confidence": 0.6500000000000001,
+      "accessCount": 3,
       "createdAt": 1783151212565
     },
     "mem-user_profile----": {
@@ -111,8 +111,8 @@
     "mem-feedback_verify_thoroughly----": {
       "id": "mem-feedback_verify_thoroughly----",
       "category": "feedback_verify_thoroughly",
-      "confidence": 0.5,
-      "accessCount": 0,
+      "confidence": 0.5800000000000001,
+      "accessCount": 2,
       "createdAt": 1783151212568
     },
     "mem-project_competitive_gaps----": {
