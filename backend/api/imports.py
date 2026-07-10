@@ -154,8 +154,11 @@ async def list_import_candidates(platform: str = None, status: str = "pending", 
     candidates = result.data or []
     if candidates:
         items = db.table("items").select("id,title").eq("user_id", user_id).execute().data or []
+        listings_by_id = _listings_by_platform_id(db, items)
         for c in candidates:
-            c["suggested_item_id"] = _best_match(c.get("title"), items)
+            item_id, reason = _match_candidate(c, items, listings_by_id)
+            c["suggested_item_id"] = item_id
+            c["match_reason"] = reason
     return candidates
 
 
