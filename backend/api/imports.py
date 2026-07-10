@@ -26,6 +26,84 @@ def _map_condition(raw: str | None) -> str:
     return "good"
 
 
+# Closed colour vocabulary — multi-word entries first so "light blue" wins over "blue".
+_COLORS = [
+    "light blue", "dark blue", "light green", "dark green", "light grey", "dark grey",
+    "off white", "navy", "royal blue", "blue", "black", "white", "grey", "gray",
+    "burgundy", "maroon", "wine", "red", "olive", "khaki", "green", "beige", "cream",
+    "camel", "tan", "cognac", "brown", "pink", "lilac", "purple", "lavender", "yellow",
+    "mustard", "orange", "silver", "gold", "teal", "turquoise", "multi",
+]
+
+# Garment keyword -> the exact category key per gender (mirrors the frontend CATEGORIES
+# map). Only genders with a sensible category are listed; anything else is left empty
+# rather than guessed wrong. Keys are ordered so more specific words match first.
+_CATEGORY_RULES = [
+    (("blazer", "suit", "pak", "tuxedo"), {"heren": "heren pakken"}),
+    (("turtleneck", "half zip", "half-zip", "jumper", "sweater", "knitted", "knit",
+      "pullover", "cardigan", "fleece", "zip vest", "gilet", "bodywarmer", "vest"),
+     {"heren": "heren truien", "dames": "truien", "unisex": "unisex truien"}),
+    (("hoodie", "sweatshirt"),
+     {"heren": "heren hoodies", "dames": "hoodies", "unisex": "unisex truien"}),
+    (("polo",), {"heren": "heren polo's", "dames": "tops"}),
+    (("overhemd", "buttoned shirt", "dress shirt", "shirt"),
+     {"heren": "heren overhemden", "dames": "blouses"}),
+    (("t-shirt", "tee", "t shirt"), {"heren": "heren t-shirts", "dames": "tops"}),
+    (("loafer", "formal shoe", "derby", "brogue", "oxford"),
+     {"heren": "heren formele schoenen", "dames": "hakken"}),
+    (("sneaker", "trainer"), {"heren": "heren sneakers", "dames": "sneakers dames"}),
+    (("boot",), {"heren": "heren laarzen", "dames": "laarzen dames"}),
+    (("shoe", "loafers"), {"heren": "heren schoenen", "dames": "schoenen dames"}),
+    (("jeans", "denim"), {"heren": "heren jeans", "dames": "jeans"}),
+    (("chino", "trouser", "pants", "pantalon"),
+     {"heren": "heren chinos", "dames": "broeken"}),
+    (("short",), {"heren": "heren shorts", "dames": "shorts"}),
+    (("coat", "jacket", "parka", "bomber"),
+     {"heren": "heren jassen", "dames": "jassen", "unisex": "unisex jassen"}),
+    (("skirt", "rok"), {"dames": "rokken"}),
+    (("dress", "jurk"), {"dames": "jurken casual"}),
+    (("blouse", "tunic"), {"dames": "blouses"}),
+]
+
+
+def _infer_attributes(title: str | None, description: str | None = None) -> dict:
+    """Best-effort colour / gender / category from the listing text. Conservative:
+    only returns a value when confident, so callers can fill empty fields without
+    ever writing a wrong guess (worst case a field just stays empty, as before)."""
+    text = f"{title or ''} {description or ''}".lower()
+    out = {}
+
+    for c in _COLORS:
+        if c in text:
+            out["color"] = "grey" if c == "gray" else c
+            break
+
+    # Gender from explicit keywords only.
+    if any(w in text for w in (" men", "men'", "mens", "male", "heren", " man ")):
+        gender = "heren"
+    elif any(w in text for w in ("women", "woman", "ladies", "dames", "female")):
+        gender = "dames"
+    elif any(w in text for w in ("kids", "child", "boys", "girls", "junior", "kinderen", "baby", "toddler")):
+        gender = "kinderen"
+    elif "unisex" in text:
+        gender = "unisex"
+    else:
+        gender = None
+    if gender:
+        out["gender"] = gender
+
+    # Category needs a known gender to pick the right key.
+    if gender:
+        for keywords, per_gender in _CATEGORY_RULES:
+            if any(k in text for k in keywords):
+                key = per_gender.get(gender)
+                if key:
+                    out["category"] = key
+                break
+
+    return out
+
+
 def _photos_from_candidate(cand: dict) -> list[str]:
     """Full photo list if the scan captured it, else the single thumbnail."""
     photos = cand.get("photo_urls")
