@@ -66,6 +66,12 @@ _CATEGORY_RULES = [
 ]
 
 
+def _word_in(word: str, text: str) -> bool:
+    """Whole-word match so a garment/colour word inside a brand name (e.g. 'suit'
+    in 'Suitsupply') never triggers a false category."""
+    return re.search(r"\b" + re.escape(word) + r"\b", text) is not None
+
+
 def _infer_attributes(title: str | None, description: str | None = None) -> dict:
     """Best-effort colour / gender / category from the listing text. Conservative:
     only returns a value when confident, so callers can fill empty fields without
@@ -73,29 +79,36 @@ def _infer_attributes(title: str | None, description: str | None = None) -> dict
     text = f"{title or ''} {description or ''}".lower()
     out = {}
 
+    # Pick the colour that appears EARLIEST in the text (titles lead with the
+    # colour: "Grey … Blazer"), preferring the longest match at that position.
+    best_pos, best_len, best_color = None, 0, None
     for c in _COLORS:
-        if c in text:
-            out["color"] = "grey" if c == "gray" else c
-            break
+        m = re.search(r"\b" + re.escape(c) + r"\b", text)
+        if m and (best_pos is None or m.start() < best_pos or (m.start() == best_pos and len(c) > best_len)):
+            best_pos, best_len, best_color = m.start(), len(c), c
+    if best_color:
+        out["color"] = "grey" if best_color == "gray" else best_color
 
-    # Gender from explicit keywords only.
-    if any(w in text for w in (" men", "men'", "mens", "male", "heren", " man ")):
+    # Gender from explicit whole-word keywords only.
+    if any(_word_in(w, text) for w in ("men", "mens", "male", "heren")):
         gender = "heren"
-    elif any(w in text for w in ("women", "woman", "ladies", "dames", "female")):
+    elif any(_word_in(w, text) for w in ("women", "woman", "womens", "ladies", "dames", "female")):
         gender = "dames"
-    elif any(w in text for w in ("kids", "child", "boys", "girls", "junior", "kinderen", "baby", "toddler")):
+    elif any(_word_in(w, text) for w in ("kids", "child", "children", "boys", "girls", "junior", "kinderen", "baby", "toddler")):
         gender = "kinderen"
-    elif "unisex" in text:
+    elif _word_in("unisex", text):
         gender = "unisex"
     else:
         gender = None
+    # "women"/"womens" also contain "men" as a substring, but whole-word matching
+    # keeps them distinct, so the order above is safe.
     if gender:
         out["gender"] = gender
 
     # Category needs a known gender to pick the right key.
     if gender:
         for keywords, per_gender in _CATEGORY_RULES:
-            if any(k in text for k in keywords):
+            if any(_word_in(k, text) for k in keywords):
                 key = per_gender.get(gender)
                 if key:
                     out["category"] = key
