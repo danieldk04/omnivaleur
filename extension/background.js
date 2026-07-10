@@ -962,7 +962,11 @@ async function bgScanVinted(job, serverUrl) {
           message: `Fetching details ${idx}/${total}…`,
           current: idx, total, eta_seconds: etaSeconds,
         });
-        await sleep(200); // gentle on Vinted's rate limiter; keeps the SW warm
+        // Adaptive pacing: if this item came back throttled (429) or empty
+        // despite retries, Vinted is rate-limiting us — back off harder for the
+        // next item so we don't drag a whole cluster down. Otherwise stay gentle.
+        const throttled = d && (d._status === 429 || (!d.description && d._status));
+        await sleep(throttled ? 1200 : 200); // keeps the SW warm either way
       }
     } catch (e) {
       console.warn("[CrossList] Vinted enrichment aborted, sending list data only:", e);
