@@ -2195,7 +2195,17 @@ function renderItemsTable(items) {
       </td>
     </tr>`;
   }).join('');
-  document.getElementById('items-body').innerHTML = rows || '<tr><td colspan="8"><div class="empty"><h3>No items found</h3><p>Adjust the filters</p></div></td></tr>';
+  const emptyHtml = state.items.length === 0
+    ? `<tr><td colspan="8"><div class="empty">
+         <h3>No items yet</h3>
+         <p>Add your first item by hand, or import listings you already have on a platform.</p>
+         <div style="display:flex;gap:8px;justify-content:center;margin-top:12px">
+           <button class="btn btn-primary btn-sm" onclick="openAddItem()">New item</button>
+           <button class="btn btn-outline btn-sm" onclick="showView('import')">↓ Import existing listings</button>
+         </div>
+       </div></td></tr>`
+    : '<tr><td colspan="8"><div class="empty"><h3>No items match these filters</h3><p>Try adjusting the filters above.</p></div></td></tr>';
+  document.getElementById('items-body').innerHTML = rows || emptyHtml;
   updateBulkBar();
 }
 
