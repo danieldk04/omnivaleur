@@ -886,12 +886,63 @@ async function bgScanMp2dh(job, serverUrl) {
 
     if (!result || !result.items) throw new Error("Could not read your listings overview — page structure may have changed.");
 
+    // The overview cards only expose title/price/thumbnail. Enrich each listing
+    // by fetching its own page (same-origin) and reading the JSON-LD Product +
+    // description block, so the import carries the full description and every
+    // photo — not just the first one. Best-effort per listing: any failure just
+    // leaves that candidate with the basic card data.
+    const urls = result.items.map(it => it.platform_listing_url).slice(0, 100);
+    const enrichments = await execInTab(tabId, async (urls) => {
+      const sleep = ms => new Promise(r => setTimeout(r, ms));
+      const out = {};
+      for (const url of urls) {
+        try {
+          const res = await fetch(url, { headers: { Accept: "text/html" } });
+          if (!res.ok) continue;
+          const html = await res.text();
+          const doc = new DOMParser().parseFromString(html, "text/html");
+          let description = "", photos = [];
+          // JSON-LD Product — the most stable source for description + images.
+          for (const s of doc.querySelectorAll('script[type="application/ld+json"]')) {
+            try {
+              let data = JSON.parse(s.textContent);
+              const arr = Array.isArray(data) ? data : (data["@graph"] || [data]);
+              const prod = arr.find(x => x && /product/i.test(x["@type"] || ""));
+              if (prod) {
+                if (prod.description && !description) description = String(prod.description).trim();
+                const imgs = prod.image ? (Array.isArray(prod.image) ? prod.image : [prod.image]) : [];
+                for (const im of imgs) { const u = typeof im === "string" ? im : im?.url; if (u) photos.push(u); }
+              }
+            } catch (e) {}
+          }
+          // DOM fallback for the description if JSON-LD didn't carry it.
+          if (!description) {
+            const el = doc.querySelector('[data-collapsable="description"], .Description-description, [class*="Description" i]');
+            if (el && el.textContent.trim().length > 20) description = el.textContent.trim().slice(0, 4000);
+          }
+          out[url] = { description: description.slice(0, 4000), photo_urls: [...new Set(photos)] };
+        } catch (e) {}
+        await sleep(150);
+      }
+      return out;
+    }, [urls]);
+
+    for (const it of result.items) {
+      const e = enrichments && enrichments[it.platform_listing_url];
+      if (!e) continue;
+      if (e.description) it.description = e.description;
+      if (e.photo_urls && e.photo_urls.length) {
+        it.photo_urls = e.photo_urls;
+        it.photo_url = it.photo_url || e.photo_urls[0];
+      }
+    }
+
     const completeHeaders = await getAuthHeaders();
     await fetch(`${serverUrl}/api/jobs/${job.id}/complete`, {
       method: "POST", headers: completeHeaders,
       body: JSON.stringify({ listings: result.items }),
     });
-    console.log(`[CrossList] ${platform} scan found ${result.items.length} listings`);
+    console.log(`[CrossList] ${platform} scan found ${result.items.length} listings (enriched ${Object.keys(enrichments || {}).length})`);
   } finally {
     setTimeout(() => chrome.tabs.remove(tabId).catch(() => {}), 2500);
   }
