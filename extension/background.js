@@ -931,11 +931,11 @@ async function bgScanVinted(job, serverUrl) {
         // One-time diagnostic on the first item so we can see exactly what Vinted
         // returned (visible in the service-worker console AND surfaced to the UI).
         if (idx === 0 && d) {
-          console.log("[CrossList] detail-debug", { status: d._status, err: d._err, descLen: (d.description || "").length, src: d._src || "api" });
+          console.log("[CrossList] detail-debug", { status: d._status, err: d._err, tries: d._tries, descLen: (d.description || "").length, src: d._src || "api" });
           await reportProgress(serverUrl, job.id, {
             stage: "enriching", message: `Found ${total} listings — fetching full details…`,
             current: 0, total,
-            debug: `detail HTTP ${d._status ?? "?"}${d._err ? " err:" + d._err : ""} · desc ${(d.description || "").length} chars (${d._src || "api"})`,
+            debug: `detail HTTP ${d._status ?? "?"}${d._err ? " err:" + d._err : ""} · ${d._tries || 1} tr · desc ${(d.description || "").length} chars (${d._src || "api"})`,
           });
         }
         if (d) {
