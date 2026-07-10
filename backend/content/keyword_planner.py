@@ -17,7 +17,8 @@ from backend.services.search_console import get_top_pages
 
 logger = logging.getLogger(__name__)
 
-MODEL = "claude-opus-4-8"
+# Keyword planning is simple structured output — Haiku is plenty and much cheaper.
+MODEL = "claude-haiku-4-5-20251001"
 
 # The only platforms CrossList EU actually supports — keeps suggestions grounded,
 # never invents a "Wallapop" or "Facebook Marketplace" combo we can't back up.
