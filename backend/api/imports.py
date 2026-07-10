@@ -140,9 +140,9 @@ def _infer_attributes(title: str | None, description: str | None = None) -> dict
             out["category"] = "kinderen schoenen"
         elif any(_garment_in(k) for k in ("sport", "legging", "trainingspak")):
             out["category"] = "kinderen sportkleding"
-        elif _word_in("boys", text) or _word_in("boy", text) or _word_in("jongens", text):
+        elif any(_word_in(w, text) for w in ("boys", "boy", "jongens", "jongen")):
             out["category"] = "jongens kleding"
-        elif _word_in("girls", text) or _word_in("girl", text) or _word_in("meisjes", text):
+        elif any(_word_in(w, text) for w in ("girls", "girl", "meisjes", "meisje")):
             out["category"] = "meisjes kleding"
     elif gender:
         for keywords, per_gender in _CATEGORY_RULES:
