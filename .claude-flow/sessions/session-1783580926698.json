@@ -1,0 +1,24 @@
+{
+  "id": "session-1783580926698",
+  "startedAt": "2026-07-09T07:08:46.698Z",
+  "cwd": "/Users/Danie/Documents/crosslist-eu",
+  "context": {
+    "lastMatchedPatterns": [
+      "mem-feedback_verify_thoroughly----",
+      "mem-MEMORY-memory-index",
+      "mem-shopify_workflow-auto-push-workflow-for-shopify",
+      "mem-project_content_pipeline----",
+      "mem-feedback_manual_images----"
+    ]
+  },
+  "metrics": {
+    "edits": 1,
+    "commands": 0,
+    "tasks": 0,
+    "errors": 0
+  },
+  "updatedAt": "2026-07-09T07:08:47.250Z",
+  "restoredAt": "2026-07-09T14:30:11.215Z",
+  "endedAt": "2026-07-09T14:45:24.356Z",
+  "duration": 27397666
+}
