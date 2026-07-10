@@ -170,6 +170,12 @@ def _backfill_item_from_candidate(db, item_id: str, cand: dict) -> dict:
         photos = _photos_from_candidate(cand)
         if photos:
             patch["photo_urls"] = photos
+    # Colour/gender/category the scan couldn't see: infer from the listing text,
+    # but only fill fields still empty on the item (and never wrong — see _infer_attributes).
+    inferred = _infer_attributes(cand.get("title"), cand.get("description"))
+    for field in ("color", "gender", "category"):
+        if field not in patch and _is_empty(current.get(field)) and inferred.get(field):
+            patch[field] = inferred[field]
     if patch:
         db.table("items").update(patch).eq("id", item_id).execute()
     return patch
