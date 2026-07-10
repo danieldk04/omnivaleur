@@ -985,6 +985,17 @@ async function bgScanVinted(job, serverUrl) {
         const throttled = d && (d._status === 429 || (!d.description && d._status));
         await sleep(throttled ? 1200 : 200); // keeps the SW warm either way
       }
+      // Surface which listings still lack a description and what Vinted returned
+      // for them (api<status>/pg<status>:<pageDescLen>) — visible in the panel.
+      if (noDesc.length) {
+        console.log("[CrossList] no-desc items:", noDesc.join(" "));
+        await reportProgress(serverUrl, job.id, {
+          stage: "enriching", message: `${enriched}/${total} enriched — ${noDesc.length} without description`,
+          current: total, total,
+          debug: `no desc (${noDesc.length}): ${noDesc.slice(0, 12).join(" ")}`,
+        });
+        await sleep(1200); // give the panel a beat to poll this before "saving" overwrites it
+      }
     } catch (e) {
       console.warn("[CrossList] Vinted enrichment aborted, sending list data only:", e);
     }
