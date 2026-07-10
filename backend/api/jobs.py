@@ -151,6 +151,22 @@ async def claim_job(job_id: str, user_id: str = Depends(get_current_user)):
     return result.data[0]
 
 
+@router.post("/{job_id}/progress")
+async def report_job_progress(job_id: str, body: dict, user_id: str = Depends(get_current_user)):
+    """
+    Lightweight live-progress channel for long-running jobs (mainly scans). The
+    extension posts a small {stage, message, current, total} object at each phase;
+    the dashboard polls /status/{job_id} and renders it so the user can see exactly
+    what's happening and how far along it is. Stored in `result` under `_progress`
+    (the final /complete overwrites `result`, so this never lingers).
+    """
+    db = get_db()
+    db.table("jobs").update({
+        "result": {"_progress": {**body, "at": datetime.now(timezone.utc).isoformat()}},
+    }).eq("id", job_id).eq("user_id", user_id).execute()
+    return {"ok": True}
+
+
 @router.post("/{job_id}/complete")
 async def complete_job(job_id: str, body: dict, user_id: str = Depends(get_current_user)):
     db = get_db()
