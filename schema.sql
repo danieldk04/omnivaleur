@@ -153,6 +153,20 @@ CREATE TABLE IF NOT EXISTS import_candidates (
 );
 CREATE INDEX IF NOT EXISTS idx_import_candidates_user_platform ON import_candidates(user_id, platform, status);
 ALTER TABLE import_candidates ADD COLUMN IF NOT EXISTS platform_listed_at TIMESTAMPTZ;
+-- Full listing snapshot captured during scan so an import carries EVERYTHING
+-- (all photos, description, attributes) into the dashboard instead of just the
+-- first photo/title/price. The scan already has this data for free from the
+-- Vinted wardrobe API; MP/2dehands enrich it per-listing. Optional columns —
+-- the scan-store falls back to base fields if a migration hasn't run yet.
+ALTER TABLE import_candidates ADD COLUMN IF NOT EXISTS photo_urls JSONB;   -- all photo URLs, in order
+ALTER TABLE import_candidates ADD COLUMN IF NOT EXISTS description TEXT;
+ALTER TABLE import_candidates ADD COLUMN IF NOT EXISTS brand TEXT;
+ALTER TABLE import_candidates ADD COLUMN IF NOT EXISTS size TEXT;
+ALTER TABLE import_candidates ADD COLUMN IF NOT EXISTS condition TEXT;     -- raw platform condition string, mapped on import
+ALTER TABLE import_candidates ADD COLUMN IF NOT EXISTS category TEXT;
+ALTER TABLE import_candidates ADD COLUMN IF NOT EXISTS gender VARCHAR(20);
+ALTER TABLE import_candidates ADD COLUMN IF NOT EXISTS color TEXT;
+ALTER TABLE import_candidates ADD COLUMN IF NOT EXISTS material TEXT;
 
 -- Programmatic SEO/GEO content pages (comparison posts, niche pages).
 -- One row = one published URL. `intent_key` is the cannibalization guard:
