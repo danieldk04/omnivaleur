@@ -746,9 +746,11 @@ async function bgScanVinted(job, serverUrl) {
     )
   );
   try {
+    await reportProgress(serverUrl, job.id, { stage: "opening", message: "Opening Vinted…", current: 0, total: 0 });
     await waitForTabLoad(tabId);
     await sleep(2500);
 
+    await reportProgress(serverUrl, job.id, { stage: "account", message: "Finding your Vinted account…", current: 0, total: 0 });
     // The account/avatar menu only exposes your numeric member id (/member/{id})
     // once its dropdown is opened — nothing on the page reveals it beforehand.
     await execInTab(tabId, () => {
