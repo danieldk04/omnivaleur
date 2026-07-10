@@ -269,16 +269,32 @@ def _store_scan_results(db, job, scraped: list[dict]):
     if not scraped:
         return
     items = db.table("items").select("id,title").eq("user_id", job["user_id"]).execute().data or []
+    # (platform, listing id) → item_id, so a re-scan of an already-known listing
+    # links back to the exact same item. Scoped by the user's item ids because
+    # the listings table has no user_id column.
+    item_ids = [it["id"] for it in items]
+    listings_by_id = {}
+    if item_ids:
+        lrows = db.table("listings").select("item_id,platform,platform_listing_id").in_("item_id", item_ids).execute().data or []
+        for l in lrows:
+            pid = l.get("platform_listing_id")
+            if pid is not None and l.get("item_id"):
+                listings_by_id[(l.get("platform"), str(pid))] = l["item_id"]
+
     for row in scraped:
         platform_listing_id = row.get("platform_listing_id")
         title = row.get("title") or ""
         if not platform_listing_id:
             continue
-        # Exact title match only — fuzzy matching wrongly links items that differ
-        # solely by size/colour/number (see imports._best_match). A stored
-        # suggestion is a strong hint in the UI, so a wrong one is worse than none.
-        want = " ".join(title.lower().split())
-        best_id = next((it["id"] for it in items if " ".join((it.get("title") or "").lower().split()) == want and want), None)
+        # Strongest signal: the exact same listing id already lives on an item.
+        # Otherwise a UNIQUE exact title match. Fuzzy matching wrongly links items
+        # differing only by size/colour/number (see imports._best_match), so a
+        # wrong suggestion is worse than none.
+        best_id = listings_by_id.get((job["platform"], str(platform_listing_id)))
+        if not best_id:
+            want = " ".join(title.lower().split())
+            title_matches = [it["id"] for it in items if " ".join((it.get("title") or "").lower().split()) == want and want]
+            best_id = title_matches[0] if len(title_matches) == 1 else None
 
         # `photo_urls` (the full ordered list) is the source of truth; keep the
         # single `photo_url` populated too for the old thumbnail/UI path.
