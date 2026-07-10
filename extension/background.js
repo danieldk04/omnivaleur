@@ -864,40 +864,48 @@ async function bgScanVinted(job, serverUrl) {
           d = await execInTab(tabId, async (id) => {
             const nap = ms => new Promise(r => setTimeout(r, ms));
             const out = { _status: null, _err: null, _tries: 0, description: "", color: "", material: "", brand: "", size: "", condition: "", photo_urls: [] };
-            // Try the JSON detail endpoint first (same-origin, carries the full
-            // description that the wardrobe list omits). `credentials:include` +
-            // localize=false mirrors what Vinted's own SPA sends. Retry with
-            // exponential backoff on rate-limits (429/5xx) or an empty body —
-            // throttling is transient, so a short wait usually clears it.
-            for (let attempt = 0; attempt < 4; attempt++) {
-              out._tries = attempt + 1;
-              try {
-                const res = await fetch(`/api/v2/items/${id}?localize=false`, {
-                  headers: { Accept: "application/json" }, credentials: "include",
-                });
-                out._status = res.status;
-                if (res.ok) {
-                  const data = await res.json();
-                  const item = data.item || data || {};
-                  out.description = item.description || item.description_text || "";
-                  out.color = item.color1 || item.color1_title || item.colour || "";
-                  out.material = item.material || item.material_title || "";
-                  out.brand = item.brand_title || item.brand_dto?.title || item.brand || "";
-                  out.size = item.size_title || item.size || "";
-                  out.condition = item.status || item.status_title || "";
-                  out.photo_urls = (item.photos || []).map(p => p.full_size_url || p.url).filter(Boolean);
-                  if (out.description) break; // got what we came for
-                  // 200 but no description is unusual — one more try can't hurt,
-                  // but don't hammer: fall through to backoff.
-                } else if (res.status !== 429 && res.status < 500) {
-                  break; // a real client error (404/403) won't fix itself
+            // Try the JSON detail endpoint (same-origin, carries the full
+            // description that the wardrobe list omits). We try the DEFAULT
+            // (localized) endpoint first — that's exactly what Vinted's item
+            // page uses and what the seller sees, so it always carries the
+            // visible description. `?localize=false` is only a fallback: for
+            // some items it returns a null description, which was the bug.
+            const urls = [`/api/v2/items/${id}`, `/api/v2/items/${id}?localize=false`];
+            for (const url of urls) {
+              // Retry each variant with exponential backoff on rate-limits
+              // (429/5xx) or an empty body — throttling is transient.
+              for (let attempt = 0; attempt < 3; attempt++) {
+                out._tries = (out._tries || 0) + 1;
+                try {
+                  const res = await fetch(url, {
+                    headers: { Accept: "application/json" }, credentials: "include",
+                  });
+                  out._status = res.status;
+                  if (res.ok) {
+                    const data = await res.json();
+                    const item = data.item || data || {};
+                    // Only overwrite fields we don't have yet, so a good value
+                    // from the first URL isn't wiped by an empty one from the second.
+                    if (!out.description) out.description = item.description || item.description_text || "";
+                    if (!out.color) out.color = item.color1 || item.color1_title || item.colour || "";
+                    if (!out.material) out.material = item.material || item.material_title || "";
+                    if (!out.brand) out.brand = item.brand_title || item.brand_dto?.title || item.brand || "";
+                    if (!out.size) out.size = item.size_title || item.size || "";
+                    if (!out.condition) out.condition = item.status || item.status_title || "";
+                    if (!out.photo_urls.length) out.photo_urls = (item.photos || []).map(p => p.full_size_url || p.url).filter(Boolean);
+                    out._err = null;
+                    break; // this variant answered; move to next URL only if still no desc
+                  } else if (res.status !== 429 && res.status < 500) {
+                    break; // a real client error (404/403) won't fix itself
+                  }
+                  out._err = null;
+                } catch (e) { out._err = String(e && e.message || e); }
+                if (attempt < 2) {
+                  const retryAfter = out._status === 429 ? 1500 : 400;
+                  await nap(retryAfter * Math.pow(2, attempt)); // 400/800 or 1500/3000
                 }
-                out._err = null;
-              } catch (e) { out._err = String(e && e.message || e); }
-              if (attempt < 3) {
-                const retryAfter = out._status === 429 ? 1500 : 400;
-                await nap(retryAfter * Math.pow(2, attempt)); // 400/800/1600 or 1500/3000/6000
               }
+              if (out.description) break; // got the description — no need for the other variant
             }
             // Fallback: if the API gave us no description, scrape it from the
             // public item page. Vinted renders the description into the page's
