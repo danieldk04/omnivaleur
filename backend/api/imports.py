@@ -108,9 +108,15 @@ def _match_candidate(cand: dict, items: list[dict], listings_by_id: dict) -> tup
     return None, None
 
 
-def _listings_by_platform_id(db, user_id: str) -> dict:
-    """Map (platform, platform_listing_id) → item_id for the user's known listings."""
-    rows = db.table("listings").select("item_id,platform,platform_listing_id").execute().data or []
+def _listings_by_platform_id(db, items: list[dict]) -> dict:
+    """
+    Map (platform, platform_listing_id) → item_id for the user's known listings.
+    Scoped via the user's item ids (the listings table has no user_id column).
+    """
+    item_ids = [it["id"] for it in items]
+    if not item_ids:
+        return {}
+    rows = db.table("listings").select("item_id,platform,platform_listing_id").in_("item_id", item_ids).execute().data or []
     out = {}
     for l in rows:
         pid = l.get("platform_listing_id")
