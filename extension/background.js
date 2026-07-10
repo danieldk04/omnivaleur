@@ -861,45 +861,69 @@ async function bgScanVinted(job, serverUrl) {
         let d = null;
         try {
           d = await execInTab(tabId, async (id) => {
+            const nap = ms => new Promise(r => setTimeout(r, ms));
+            const out = { _status: null, _err: null, _tries: 0, description: "", color: "", material: "", brand: "", size: "", condition: "", photo_urls: [] };
             // Try the JSON detail endpoint first (same-origin, carries the full
             // description that the wardrobe list omits). `credentials:include` +
-            // localize=false mirrors what Vinted's own SPA sends.
-            const out = { _status: null, _err: null, description: "", color: "", material: "", brand: "", size: "", condition: "", photo_urls: [] };
-            try {
-              const res = await fetch(`/api/v2/items/${id}?localize=false`, {
-                headers: { Accept: "application/json" }, credentials: "include",
-              });
-              out._status = res.status;
-              if (res.ok) {
-                const data = await res.json();
-                const item = data.item || data || {};
-                out.description = item.description || item.description_text || "";
-                out.color = item.color1 || item.color1_title || item.colour || "";
-                out.material = item.material || item.material_title || "";
-                out.brand = item.brand_title || item.brand_dto?.title || item.brand || "";
-                out.size = item.size_title || item.size || "";
-                out.condition = item.status || item.status_title || "";
-                out.photo_urls = (item.photos || []).map(p => p.full_size_url || p.url).filter(Boolean);
+            // localize=false mirrors what Vinted's own SPA sends. Retry with
+            // exponential backoff on rate-limits (429/5xx) or an empty body —
+            // throttling is transient, so a short wait usually clears it.
+            for (let attempt = 0; attempt < 4; attempt++) {
+              out._tries = attempt + 1;
+              try {
+                const res = await fetch(`/api/v2/items/${id}?localize=false`, {
+                  headers: { Accept: "application/json" }, credentials: "include",
+                });
+                out._status = res.status;
+                if (res.ok) {
+                  const data = await res.json();
+                  const item = data.item || data || {};
+                  out.description = item.description || item.description_text || "";
+                  out.color = item.color1 || item.color1_title || item.colour || "";
+                  out.material = item.material || item.material_title || "";
+                  out.brand = item.brand_title || item.brand_dto?.title || item.brand || "";
+                  out.size = item.size_title || item.size || "";
+                  out.condition = item.status || item.status_title || "";
+                  out.photo_urls = (item.photos || []).map(p => p.full_size_url || p.url).filter(Boolean);
+                  if (out.description) break; // got what we came for
+                  // 200 but no description is unusual — one more try can't hurt,
+                  // but don't hammer: fall through to backoff.
+                } else if (res.status !== 429 && res.status < 500) {
+                  break; // a real client error (404/403) won't fix itself
+                }
+                out._err = null;
+              } catch (e) { out._err = String(e && e.message || e); }
+              if (attempt < 3) {
+                const retryAfter = out._status === 429 ? 1500 : 400;
+                await nap(retryAfter * Math.pow(2, attempt)); // 400/800/1600 or 1500/3000/6000
               }
-            } catch (e) { out._err = String(e && e.message || e); }
+            }
             // Fallback: if the API gave us no description, scrape it from the
             // public item page. Vinted renders the description into the page's
             // meta description / embedded JSON, which is reliable even when the
-            // JSON API misbehaves.
+            // JSON API misbehaves. Retry this too — it hits the same limiter.
             if (!out.description) {
-              try {
-                const pageRes = await fetch(`/items/${id}`, { credentials: "include" });
-                if (pageRes.ok) {
-                  const html = await pageRes.text();
-                  let m = html.match(/<meta[^>]+(?:property|name)=["'](?:og:description|description)["'][^>]+content=["']([^"']+)["']/i);
-                  if (!m) m = html.match(/"description":"((?:[^"\\]|\\.)*)"/);
-                  if (m && m[1]) {
-                    try { out.description = JSON.parse('"' + m[1].replace(/"/g, '\\"') + '"'); }
-                    catch (e2) { out.description = m[1]; }
-                    out._src = "page";
+              for (let attempt = 0; attempt < 3; attempt++) {
+                try {
+                  const pageRes = await fetch(`/items/${id}`, { credentials: "include" });
+                  out._pageStatus = pageRes.status;
+                  if (pageRes.ok) {
+                    const html = await pageRes.text();
+                    let m = html.match(/<meta[^>]+(?:property|name)=["'](?:og:description|description)["'][^>]+content=["']([^"']+)["']/i);
+                    if (!m) m = html.match(/"description":"((?:[^"\\]|\\.)*)"/);
+                    if (m && m[1]) {
+                      try { out.description = JSON.parse('"' + m[1].replace(/"/g, '\\"') + '"'); }
+                      catch (e2) { out.description = m[1]; }
+                      out._src = "page";
+                      break;
+                    }
+                    break; // page loaded but no description found — retrying won't help
+                  } else if (pageRes.status !== 429 && pageRes.status < 500) {
+                    break;
                   }
-                }
-              } catch (e) { /* fallback best-effort */ }
+                } catch (e) { /* fallback best-effort */ }
+                if (attempt < 2) await nap(1000 * Math.pow(2, attempt));
+              }
             }
             return out;
           }, [it.platform_listing_id]);
