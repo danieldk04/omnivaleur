@@ -893,12 +893,26 @@ async function bgScanVinted(job, serverUrl) {
             it.photo_url = it.photo_url || d.photo_urls[0];
           }
         }
+        idx++;
+        // Estimate remaining time from the average per-item pace so the user
+        // sees a real "~N sec left", updated live as it goes.
+        const elapsed = (Date.now() - startedAt) / 1000;
+        const perItem = elapsed / idx;
+        const etaSeconds = Math.max(0, Math.round(perItem * (total - idx)));
+        await reportProgress(serverUrl, job.id, {
+          stage: "enriching",
+          message: `Fetching details ${idx}/${total}…`,
+          current: idx, total, eta_seconds: etaSeconds,
+        });
         await sleep(200); // gentle on Vinted's rate limiter; keeps the SW warm
       }
     } catch (e) {
       console.warn("[CrossList] Vinted enrichment aborted, sending list data only:", e);
     }
 
+    await reportProgress(serverUrl, job.id, {
+      stage: "saving", message: "Saving to your dashboard…", current: total, total,
+    });
     const completeHeaders = await getAuthHeaders();
     await fetch(`${serverUrl}/api/jobs/${job.id}/complete`, {
       method: "POST", headers: completeHeaders,
