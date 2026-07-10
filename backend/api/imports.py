@@ -202,30 +202,12 @@ async def link_candidate(candidate_id: str, body: dict, user_id: str = Depends(g
     cand = db.table("import_candidates").select("*").eq("id", candidate_id).eq("user_id", user_id).single().execute().data
     if not cand:
         raise HTTPException(status_code=404, detail="Import candidate not found")
-    item = db.table("items").select("id,description,brand,size,color,material,condition,photo_urls").eq("id", item_id).eq("user_id", user_id).execute()
+    item = db.table("items").select("id").eq("id", item_id).eq("user_id", user_id).execute()
     if not item.data:
         raise HTTPException(status_code=404, detail="Item not found")
 
-    # Backfill: the scan captured rich details (description, colour, …) that an
-    # older/manually-created item may be missing. Fill ONLY the fields that are
-    # currently empty on the item — never overwrite data the user already has.
-    current = item.data[0]
-    patch = {}
-
-    def is_empty(v):
-        return v is None or (isinstance(v, str) and not v.strip()) or (isinstance(v, list) and not v)
-
-    for field in ("description", "brand", "size", "color", "material"):
-        if is_empty(current.get(field)) and not is_empty(cand.get(field)):
-            patch[field] = cand[field]
-    if is_empty(current.get("condition")) and cand.get("condition"):
-        patch["condition"] = _map_condition(cand.get("condition"))
-    if is_empty(current.get("photo_urls")):
-        photos = _photos_from_candidate(cand)
-        if photos:
-            patch["photo_urls"] = photos
-    if patch:
-        db.table("items").update(patch).eq("id", item_id).execute()
+    # Backfill any empty item fields from the freshly scanned candidate.
+    _backfill_item_from_candidate(db, item_id, cand)
 
     existing = db.table("listings").select("id").eq("item_id", item_id).eq("platform", cand["platform"]).execute()
     listed_at = cand.get("platform_listed_at") or datetime.now(timezone.utc).isoformat()
