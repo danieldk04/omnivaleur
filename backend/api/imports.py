@@ -225,12 +225,7 @@ async def bulk_import_candidates(body: dict = None, user_id: str = Depends(get_c
                 db.table("import_candidates").update({"status": "linked"}).eq("id", cand["id"]).execute()
                 linked += 1
             else:
-                item_data = {
-                    "title": cand["title"] or "Untitled",
-                    "price": cand["price"] or 0,
-                    "photo_urls": [cand["photo_url"]] if cand.get("photo_url") else [],
-                    "condition": "good",
-                }
+                item_data = _item_data_from_candidate(cand)
                 item = ItemCreate(**item_data)
                 data = item.model_dump()
                 data["id"] = str(uuid.uuid4())
