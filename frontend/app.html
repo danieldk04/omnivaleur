@@ -2704,7 +2704,7 @@ function renderImportProgress(platform, prog) {
   const stepIdx = SCAN_STAGE_STEPS.indexOf(stage);
   const stepText = stepIdx >= 0 ? `Step ${stepIdx + 1} of ${SCAN_STAGE_STEPS.length}` : '';
   const counter = (stage === 'enriching' && total) ? `${current} / ${total} listings` : '';
-  const eta = (stage === 'enriching' && prog?.eta_seconds != null) ? fmtEta(prog.eta_seconds) : '';
+  const eta = (stage === 'enriching' && prog?.eta_seconds != null) ? fmtScanEta(prog.eta_seconds) : '';
   box.innerHTML = `
     <div class="card" style="padding:16px 18px">
       <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
