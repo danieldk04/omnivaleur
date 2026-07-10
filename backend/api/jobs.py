@@ -275,11 +275,11 @@ def _store_scan_results(db, job, scraped: list[dict]):
         title = row.get("title") or ""
         if not platform_listing_id:
             continue
-        best_id, best_score = None, 0.0
-        for it in items:
-            score = SequenceMatcher(None, title.lower(), (it.get("title") or "").lower()).ratio()
-            if score > best_score:
-                best_id, best_score = it["id"], score
+        # Exact title match only — fuzzy matching wrongly links items that differ
+        # solely by size/colour/number (see imports._best_match). A stored
+        # suggestion is a strong hint in the UI, so a wrong one is worse than none.
+        want = " ".join(title.lower().split())
+        best_id = next((it["id"] for it in items if " ".join((it.get("title") or "").lower().split()) == want and want), None)
 
         # `photo_urls` (the full ordered list) is the source of truth; keep the
         # single `photo_url` populated too for the old thumbnail/UI path.
