@@ -27,13 +27,28 @@ def _map_condition(raw: str | None) -> str:
     return "good"
 
 
-# Closed colour vocabulary — multi-word entries first so "light blue" wins over "blue".
+# Closed colour vocabulary, English + Dutch (incl. common inflected forms like
+# "grijze"/"blauwe"). Compound/longer entries first so "light blue"/"lichtblauw"
+# win over "blue"/"blauw". Whole-word matched, so a re-scan on Dutch listings
+# (Marktplaats/2dehands) fills colour just as well as English ones.
 _COLORS = [
+    # English compounds first
     "light blue", "dark blue", "light green", "dark green", "light grey", "dark grey",
-    "off white", "navy", "royal blue", "blue", "black", "white", "grey", "gray",
-    "burgundy", "maroon", "wine", "red", "olive", "khaki", "green", "beige", "cream",
-    "camel", "tan", "cognac", "brown", "pink", "lilac", "purple", "lavender", "yellow",
-    "mustard", "orange", "silver", "gold", "teal", "turquoise", "multi",
+    "off white", "navy", "royal blue",
+    # Dutch compounds
+    "lichtblauw", "donkerblauw", "marineblauw", "lichtgroen", "donkergroen",
+    "lichtgrijs", "donkergrijs", "gebroken wit",
+    # English base
+    "blue", "black", "white", "grey", "gray", "burgundy", "maroon", "wine", "red",
+    "olive", "khaki", "green", "beige", "cream", "camel", "tan", "cognac", "brown",
+    "pink", "lilac", "purple", "lavender", "yellow", "mustard", "orange", "silver",
+    "gold", "teal", "turquoise", "multi",
+    # Dutch base + inflected forms (irregular endings listed explicitly)
+    "zwart", "zwarte", "wit", "witte", "grijs", "grijze", "blauw", "blauwe",
+    "rood", "rode", "groen", "groene", "bruin", "bruine", "geel", "gele",
+    "paars", "paarse", "roze", "lila", "oranje", "beige", "bordeaux", "marine",
+    "olijfgroen", "kaki", "crème", "creme", "zilver", "zilveren", "goud", "gouden",
+    "zalm", "mint", "ecru", "taupe", "camel", "cognac",
 ]
 
 # Garment keyword -> the exact category key per gender (mirrors the frontend CATEGORIES
