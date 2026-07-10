@@ -56,7 +56,7 @@
       "pillar": "C",
       "slug": "crosslisteu-vs-list-perfectly",
       "priority": 7,
-      "status": "pending"
+      "status": "published"
     }
   ],
   "published": [
@@ -113,6 +113,15 @@
       "action": "created",
       "url_path": "/vs/crosslisteu-vs-vendoo",
       "published_at": "2026-07-07T10:48:05.114784+00:00"
+    },
+    {
+      "keyword": "crosslist eu vs list perfectly",
+      "slug": "crosslisteu-vs-list-perfectly",
+      "region": "nl",
+      "pillar": "C",
+      "action": "created",
+      "url_path": "/vs/crosslisteu-vs-list-perfectly",
+      "published_at": "2026-07-10T19:00:16.031553+00:00"
     }
   ]
 }
