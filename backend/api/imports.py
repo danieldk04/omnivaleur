@@ -111,7 +111,19 @@ def _infer_attributes(title: str | None, description: str | None = None) -> dict
     # "Suitsupply" still never match a garment keyword.
     def _garment_in(k):
         return re.search(r"\b" + re.escape(k) + r"s?\b", text) is not None
-    if gender:
+
+    if gender == "kinderen":
+        # Kids' taxonomy is age/gender-based, not garment-based: a "Boys XL vest"
+        # is simply "jongens kleding". Shoes/sportswear are the only garment splits.
+        if any(_garment_in(k) for k in ("shoe", "sneaker", "boot", "trainer")):
+            out["category"] = "kinderen schoenen"
+        elif any(_garment_in(k) for k in ("sport", "legging", "trainingspak")):
+            out["category"] = "kinderen sportkleding"
+        elif _word_in("boys", text) or _word_in("boy", text) or _word_in("jongens", text):
+            out["category"] = "jongens kleding"
+        elif _word_in("girls", text) or _word_in("girl", text) or _word_in("meisjes", text):
+            out["category"] = "meisjes kleding"
+    elif gender:
         for keywords, per_gender in _CATEGORY_RULES:
             if any(_garment_in(k) for k in keywords):
                 key = per_gender.get(gender)
