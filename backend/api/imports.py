@@ -81,10 +81,42 @@ def _best_match(title: str, items: list[dict]) -> str | None:
     want = _norm_title(title)
     if not want:
         return None
-    for it in items:
-        if _norm_title(it.get("title")) == want:
-            return it["id"]
-    return None
+    matches = [it["id"] for it in items if _norm_title(it.get("title")) == want]
+    # Only trust an exact title if it's UNIQUE — if two items share the title we
+    # can't tell them apart, so leave it unmatched rather than pick one at random.
+    return matches[0] if len(matches) == 1 else None
+
+
+def _match_candidate(cand: dict, items: list[dict], listings_by_id: dict) -> tuple[str | None, str | None]:
+    """
+    Decide which existing item (if any) a scraped listing belongs to, and why.
+    Two confident signals, strongest first:
+      1. same_listing — the exact same platform listing id already lives on an
+         item (we imported/created this listing before). 100% certain.
+      2. same_title  — a single existing item has an identical title.
+    Anything else → (None, None): no auto-link, the row becomes a new item.
+    Returns (item_id, reason).
+    """
+    lid = cand.get("platform_listing_id")
+    if lid is not None:
+        item_id = listings_by_id.get((cand.get("platform"), str(lid)))
+        if item_id and any(it["id"] == item_id for it in items):
+            return item_id, "same_listing"
+    title_match = _best_match(cand.get("title"), items)
+    if title_match:
+        return title_match, "same_title"
+    return None, None
+
+
+def _listings_by_platform_id(db, user_id: str) -> dict:
+    """Map (platform, platform_listing_id) → item_id for the user's known listings."""
+    rows = db.table("listings").select("item_id,platform,platform_listing_id").execute().data or []
+    out = {}
+    for l in rows:
+        pid = l.get("platform_listing_id")
+        if pid is not None and l.get("item_id"):
+            out[(l.get("platform"), str(pid))] = l["item_id"]
+    return out
 
 
 @router.post("/scan/{platform}")
