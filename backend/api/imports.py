@@ -64,6 +64,36 @@ def _item_data_from_candidate(cand: dict, body: dict | None = None) -> dict:
     }
 
 
+def _is_empty(v) -> bool:
+    return v is None or (isinstance(v, str) and not v.strip()) or (isinstance(v, list) and not v)
+
+
+def _backfill_item_from_candidate(db, item_id: str, cand: dict) -> dict:
+    """Fill ONLY the empty fields on an existing item from a freshly scanned
+    candidate (description, colour, photos, …). Never overwrites data the user
+    already has, so linking a rescanned listing enriches — never clobbers — the item.
+    Returns the applied patch (empty if nothing to fill)."""
+    current = db.table("items").select(
+        "description,brand,size,color,material,condition,photo_urls"
+    ).eq("id", item_id).execute().data
+    if not current:
+        return {}
+    current = current[0]
+    patch = {}
+    for field in ("description", "brand", "size", "color", "material"):
+        if _is_empty(current.get(field)) and not _is_empty(cand.get(field)):
+            patch[field] = cand[field]
+    if _is_empty(current.get("condition")) and cand.get("condition"):
+        patch["condition"] = _map_condition(cand.get("condition"))
+    if _is_empty(current.get("photo_urls")):
+        photos = _photos_from_candidate(cand)
+        if photos:
+            patch["photo_urls"] = photos
+    if patch:
+        db.table("items").update(patch).eq("id", item_id).execute()
+    return patch
+
+
 def _norm_title(t: str | None) -> str:
     """Normalise a title for matching: lowercase, collapse all whitespace."""
     return " ".join((t or "").lower().split())
