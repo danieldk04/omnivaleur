@@ -2808,20 +2808,22 @@ async function scanPlatform(platform) {
 // works; when the job flips to done/error we load the results and stop.
 function pollScanProgress(platform, jobId) {
   if (importProgressTimer) clearInterval(importProgressTimer);
+  // We keep polling until the job actually finishes. The only reason to give up
+  // is a genuine stall — the extension went silent (offline/crashed) and stopped
+  // posting progress. A big wardrobe that takes 10+ minutes to enrich must NOT be
+  // cut off, so there is no fixed wall-clock deadline while progress keeps moving.
+  const STALL_MS = 3 * 60 * 1000;        // no new progress at all for 3 min → assume dead
+  const ABSOLUTE_MAX_MS = 45 * 60 * 1000; // ultimate backstop so a timer can't leak forever
   const startedAt = Date.now();
+  let lastAdvanceAt = Date.now();
+  let lastSig = '';
   importProgressTimer = setInterval(async () => {
-    // Safety net: never poll forever (extension offline, etc.).
-    if (Date.now() - startedAt > 5 * 60 * 1000) {
-      clearInterval(importProgressTimer); importProgressTimer = null;
-      scanningPlatforms[platform] = false; renderImportScanButtons(); clearImportProgress();
-      loadImportCandidates(platform);
-      return;
-    }
     try {
       const r = await apiFetch(`${API}/api/jobs/status/${jobId}`);
-      if (!r.ok) return;
+      if (!r.ok) return; // transient — the job may just not be readable this tick
       const job = await r.json();
       const prog = job.result && job.result._progress;
+
       if (job.status === 'done' || job.status === 'error') {
         clearInterval(importProgressTimer); importProgressTimer = null;
         scanningPlatforms[platform] = false; renderImportScanButtons();
@@ -2833,8 +2835,26 @@ function pollScanProgress(platform, jobId) {
           showToast('Scan complete — review your imported listings below.');
         }
         loadImportCandidates(platform);
-      } else if (prog) {
+        return;
+      }
+
+      if (prog) {
         renderImportProgress(platform, prog);
+        // Any change in stage/counter means the extension is alive and working —
+        // reset the stall clock so long-but-healthy scans keep running.
+        const sig = `${prog.stage || ''}|${prog.current || 0}|${prog.total || 0}|${prog.message || ''}`;
+        if (sig !== lastSig) { lastSig = sig; lastAdvanceAt = Date.now(); }
+      }
+
+      const now = Date.now();
+      // Give up ONLY if the extension has gone completely silent (no progress at
+      // all for STALL_MS), or the absolute backstop is hit. Either way, show
+      // whatever candidates already landed rather than spinning forever.
+      if (now - lastAdvanceAt > STALL_MS || now - startedAt > ABSOLUTE_MAX_MS) {
+        clearInterval(importProgressTimer); importProgressTimer = null;
+        scanningPlatforms[platform] = false; renderImportScanButtons(); clearImportProgress();
+        showToast('Scan stopped responding — showing what was found so far. Make sure the CrossList extension is running, then scan again.');
+        loadImportCandidates(platform);
       }
     } catch (e) { /* transient poll error — keep trying */ }
   }, 1500);
