@@ -159,20 +159,7 @@ async def create_item_from_candidate(candidate_id: str, body: dict, user_id: str
     if not cand:
         raise HTTPException(status_code=404, detail="Import candidate not found")
 
-    item_data = {
-        "title": body.get("title") or cand["title"] or "Untitled",
-        "price": body.get("price") if body.get("price") is not None else (cand["price"] or 0),
-        "photo_urls": body.get("photo_urls") or ([cand["photo_url"]] if cand.get("photo_url") else []),
-        "description": body.get("description"),
-        "purchase_price": body.get("purchase_price"),
-        "brand": body.get("brand"),
-        "size": body.get("size"),
-        "condition": body.get("condition", "good"),
-        "category": body.get("category"),
-        "gender": body.get("gender"),
-        "color": body.get("color"),
-        "material": body.get("material"),
-    }
+    item_data = _item_data_from_candidate(cand, body)
     item = ItemCreate(**item_data)
     data = item.model_dump()
     data["id"] = str(uuid.uuid4())
