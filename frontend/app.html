@@ -2842,7 +2842,8 @@ function renderImportReview(candidates) {
         <button class="btn btn-sm btn-outline" onclick="ignoreImportCandidate('${c.id}')" style="margin-left:6px">Ignore</button>
       </td>
     </tr>
-  `).join('');
+  `;
+  }).join('');
 
   candidates.forEach(c => {
     if (c.suggested_item_id) {
