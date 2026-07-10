@@ -114,7 +114,9 @@ def _infer_attributes(title: str | None, description: str | None = None) -> dict
         gender = "heren"
     elif any(_word_in(w, text) for w in ("women", "woman", "womens", "ladies", "dames", "female")):
         gender = "dames"
-    elif any(_word_in(w, text) for w in ("kids", "child", "children", "boys", "girls", "junior", "kinderen", "baby", "toddler")):
+    elif any(_word_in(w, text) for w in ("kids", "child", "children", "boys", "girls", "junior",
+                                          "kinderen", "baby", "toddler",
+                                          "jongen", "jongens", "meisje", "meisjes", "peuter", "tiener")):
         gender = "kinderen"
     elif _word_in("unisex", text):
         gender = "unisex"
