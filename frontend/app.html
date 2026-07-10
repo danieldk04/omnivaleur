@@ -2161,13 +2161,21 @@ function applyFilters(resetPage) {
   const search = document.getElementById('filter-search').value.toLowerCase().trim();
 
   const publishedItemIds = new Set(state.listings.filter(l => l.status === 'active').map(l => l.item_id));
+  // "Delisted" = has a removed listing and nothing live anywhere — dead stock that
+  // shouldn't clutter the active inventory view.
+  const delistedItemIds = new Set(
+    state.listings.filter(l => l.status === 'delisted').map(l => l.item_id)
+      .filter(id => !publishedItemIds.has(id))
+  );
   const platformItemIds = platformFilter !== 'all'
     ? new Set(state.listings.filter(l => l.platform === platformFilter && l.status === 'active').map(l => l.item_id))
     : null;
 
   const filtered = state.items.filter(item => {
     if (pubFilter === 'yes' && !publishedItemIds.has(item.id)) return false;
-    if (pubFilter === 'no' && publishedItemIds.has(item.id)) return false;
+    // "Not published" excludes delisted items — those live under their own filter.
+    if (pubFilter === 'no' && (publishedItemIds.has(item.id) || delistedItemIds.has(item.id))) return false;
+    if (pubFilter === 'delisted' && !delistedItemIds.has(item.id)) return false;
     if (platformItemIds && !platformItemIds.has(item.id)) return false;
     if (search && !item.title.toLowerCase().includes(search) && !(item.brand || '').toLowerCase().includes(search)) return false;
     return true;
