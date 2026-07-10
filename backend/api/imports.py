@@ -106,10 +106,14 @@ def _infer_attributes(title: str | None, description: str | None = None) -> dict
     if gender:
         out["gender"] = gender
 
-    # Category needs a known gender to pick the right key.
+    # Category needs a known gender to pick the right key. Match is plural-tolerant
+    # ("shoe"→"shoes", "shirt"→"shirts") while whole-word, so brand names like
+    # "Suitsupply" still never match a garment keyword.
+    def _garment_in(k):
+        return re.search(r"\b" + re.escape(k) + r"s?\b", text) is not None
     if gender:
         for keywords, per_gender in _CATEGORY_RULES:
-            if any(_word_in(k, text) for k in keywords):
+            if any(_garment_in(k) for k in keywords):
                 key = per_gender.get(gender)
                 if key:
                     out["category"] = key
