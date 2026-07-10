@@ -66,14 +66,27 @@ def _item_data_from_candidate(cand: dict, body: dict | None = None) -> dict:
     }
 
 
+def _norm_title(t: str | None) -> str:
+    """Normalise a title for matching: lowercase, collapse all whitespace."""
+    return " ".join((t or "").lower().split())
+
+
 def _best_match(title: str, items: list[dict]) -> str | None:
-    """Titles are published verbatim to the platform, so a genuine match scores near 1.0."""
-    best_id, best_score = None, 0.0
+    """
+    Only auto-suggest an EXACT title match. Titles are published verbatim to the
+    platform, so a genuine re-import of an existing item has an identical title.
+    Fuzzy matching is dangerous here: items differ only by size/colour/number
+    ("Navy … Men L" vs "Navy … Men XL"), which score ~0.95+ on a character-ratio
+    and get wrongly linked. Exact-only means "no confident match" (→ create new)
+    rather than a wrong link the user has to notice and undo.
+    """
+    want = _norm_title(title)
+    if not want:
+        return None
     for it in items:
-        score = SequenceMatcher(None, (title or "").lower(), (it.get("title") or "").lower()).ratio()
-        if score > best_score:
-            best_id, best_score = it["id"], score
-    return best_id if best_score >= MATCH_THRESHOLD else None
+        if _norm_title(it.get("title")) == want:
+            return it["id"]
+    return None
 
 
 @router.post("/scan/{platform}")
