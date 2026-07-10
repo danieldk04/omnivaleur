@@ -2807,6 +2807,12 @@ async function loadImportCandidates(checkScanDonePlatform) {
   }
 }
 
+function matchBadge(reason) {
+  if (reason === 'same_listing') return `<span class="badge active" title="This exact listing (same platform ID) already exists on this item — a certain match.">🔗 Same listing</span>`;
+  if (reason === 'same_title') return `<span class="badge" style="background:#eff6ff;color:#2563eb" title="One existing item has an identical title.">≈ Same title</span>`;
+  return `<span class="badge" style="background:#f0fdf4;color:#16a34a" title="No confident match — this becomes a new item.">✨ New item</span>`;
+}
+
 function renderImportReview(candidates) {
   const section = document.getElementById('import-review-section');
   if (!candidates.length) { section.style.display = 'none'; return; }
