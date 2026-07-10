@@ -790,15 +790,27 @@ async function bgScanVinted(job, serverUrl) {
         const priceObj = it.price || it.total_item_price;
         const price = priceObj && priceObj.amount != null ? Number(priceObj.amount)
           : (typeof it.price === "number" ? it.price : null);
-        const photo = it.photo?.url || it.photos?.[0]?.url || null;
+        // Full ordered photo list — the whole point of a rich import. Keep the
+        // single photo_url too for the old thumbnail path.
+        const photoUrls = (it.photos || []).map(p => p.full_size_url || p.url).filter(Boolean);
+        const photo = it.photo?.url || photoUrls[0] || null;
+        if (!photoUrls.length && photo) photoUrls.push(photo);
         // Vinted returns the original upload time as a unix-seconds timestamp
         // (field name has varied across API versions) — best-effort pick.
         const listedTs = it.created_at_ts || it.photo?.high_resolution?.timestamp || it.photos?.[0]?.high_resolution?.timestamp || null;
+        // Everything the wardrobe object carries for free — mirrors the field
+        // mapping used by the pre-delete snapshot so imports land fully populated.
         return {
           platform_listing_id: String(it.id),
           title: it.title || "",
           price,
           photo_url: photo,
+          photo_urls: photoUrls,
+          description: it.description || "",
+          brand: it.brand_title || it.brand_dto?.title || it.brand || "",
+          size: it.size_title || it.size || "",
+          condition: it.status || it.status_title || "",
+          color: it.color1 || it.color1_title || it.colour || "",
           platform_listing_url: it.url || `${location.origin}/items/${it.id}`,
           platform_listed_at: listedTs ? new Date(listedTs * 1000).toISOString() : null,
         };
