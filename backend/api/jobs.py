@@ -297,6 +297,16 @@ def _store_scan_results(db, job, scraped: list[dict]):
             title_matches = [it["id"] for it in items if " ".join((it.get("title") or "").lower().split()) == want and want]
             best_id = title_matches[0] if len(title_matches) == 1 else None
 
+        # If this scanned listing already belongs to an item, push the freshly
+        # scraped rich data straight into that item's empty fields. This is what
+        # makes a re-scan actually enrich already-imported items (description,
+        # colour, …) without the user having to re-import anything.
+        if best_id:
+            try:
+                _backfill_item_from_candidate(db, best_id, row)
+            except Exception as e:
+                logger.warning(f"Scan store: item backfill failed for {platform_listing_id}: {e}")
+
         # `photo_urls` (the full ordered list) is the source of truth; keep the
         # single `photo_url` populated too for the old thumbnail/UI path.
         photo_urls = row.get("photo_urls") or ([row["photo_url"]] if row.get("photo_url") else [])
