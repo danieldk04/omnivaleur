@@ -153,8 +153,20 @@ async def niche_page_lang(request: Request, language: str, slug: str):
     return _render_page(request, language, "B", slug)
 
 
+# 301 redirects for comparison slugs that were renamed during the Omnivaleur
+# rebrand (old public slug -> new public slug). Keeps indexed URLs and external
+# links alive after the brand name left the slug.
+_COMPARISON_SLUG_REDIRECTS = {
+    "crosslisteu-vs-vendoo": "omnivaleur-vs-vendoo",
+    "crosslisteu-vs-list-perfectly": "omnivaleur-vs-list-perfectly",
+}
+
+
 @router.get("/vs/{slug}", response_class=HTMLResponse)
 async def comparison_page_en(request: Request, slug: str):
+    new_slug = _COMPARISON_SLUG_REDIRECTS.get(slug)
+    if new_slug:
+        return RedirectResponse(url=f"/vs/{new_slug}", status_code=301)
     return _render_page(request, "en", "C", slug)
 
 
@@ -162,6 +174,9 @@ async def comparison_page_en(request: Request, slug: str):
 async def comparison_page_lang(request: Request, language: str, slug: str):
     if language not in LANGUAGES:
         raise HTTPException(status_code=404, detail="Unknown language")
+    new_slug = _COMPARISON_SLUG_REDIRECTS.get(slug)
+    if new_slug:
+        return RedirectResponse(url=f"/{language}/vergelijking/{new_slug}", status_code=301)
     return _render_page(request, language, "C", slug)
 
 
