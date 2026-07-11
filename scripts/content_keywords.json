@@ -57,6 +57,47 @@
       "slug": "crosslisteu-vs-list-perfectly",
       "priority": 7,
       "status": "published"
+    },
+    {
+      "keyword": "ebay to shopify crosslisting",
+      "region": "nl",
+      "pillar": "A",
+      "slug": "ebay-to-shopify-crosslisting",
+      "status": "published",
+      "priority": 8
+    },
+    {
+      "keyword": "vintage furniture reselling automation",
+      "region": "nl",
+      "pillar": "B",
+      "slug": "vintage-furniture-reselling-automation",
+      "status": "pending",
+      "priority": 9
+    },
+    {
+      "keyword": "crosslist eu vs zenlister",
+      "region": "nl",
+      "pillar": "C",
+      "slug": "crosslist-eu-vs-zenlister",
+      "status": "pending",
+      "priority": 10
+    },
+    {
+      "keyword": "marktplaats to etsy crosslisting 2026",
+      "region": "nl",
+      "pillar": "A",
+      "slug": "marktplaats-to-etsy-crosslisting-2026",
+      "status": "pending",
+      "nl_slug": "marktplaats-naar-etsy-crosslisting",
+      "priority": 11
+    },
+    {
+      "keyword": "sneaker reselling automation platforms",
+      "region": "nl",
+      "pillar": "B",
+      "slug": "sneaker-reselling-automation-platforms",
+      "status": "pending",
+      "priority": 12
     }
   ],
   "published": [
@@ -122,6 +163,15 @@
       "action": "created",
       "url_path": "/vs/crosslisteu-vs-list-perfectly",
       "published_at": "2026-07-10T19:00:16.031553+00:00"
+    },
+    {
+      "keyword": "ebay to shopify crosslisting",
+      "slug": "ebay-to-shopify-crosslisting",
+      "region": "nl",
+      "pillar": "A",
+      "action": "created",
+      "url_path": "/crosslisting/ebay-to-shopify-crosslisting",
+      "published_at": "2026-07-11T09:20:27.286369+00:00"
     }
   ]
 }
