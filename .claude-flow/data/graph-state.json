@@ -6,8 +6,8 @@
     "mem-MEMORY-memory-index": {
       "id": "mem-MEMORY-memory-index",
       "category": "core",
-      "confidence": 0.55,
-      "accessCount": 1,
+      "confidence": 0.5800000000000001,
+      "accessCount": 2,
       "createdAt": 1783151212569
     },
     "mem-feedback_push_to_live----": {
@@ -111,8 +111,8 @@
     "mem-feedback_verify_thoroughly----": {
       "id": "mem-feedback_verify_thoroughly----",
       "category": "feedback_verify_thoroughly",
-      "confidence": 0.55,
-      "accessCount": 1,
+      "confidence": 0.5800000000000001,
+      "accessCount": 2,
       "createdAt": 1783151212568
     },
     "mem-project_competitive_gaps----": {
@@ -125,8 +125,8 @@
     "mem-project_content_pipeline----": {
       "id": "mem-project_content_pipeline----",
       "category": "project_content_pipeline",
-      "confidence": 0.53,
-      "accessCount": 1,
+      "confidence": 0.56,
+      "accessCount": 2,
       "createdAt": 1783151212568
     },
     "mem-reference_blog_automation_sources----": {
@@ -146,8 +146,8 @@
     "mem-revaleur-blog-no-test-publishing----": {
       "id": "mem-revaleur-blog-no-test-publishing----",
       "category": "revaleur-blog-no-test-publishing",
-      "confidence": 0.53,
-      "accessCount": 1,
+      "confidence": 0.56,
+      "accessCount": 2,
       "createdAt": 1783151212569
     },
     "mem-revaleur-blog-system----": {
