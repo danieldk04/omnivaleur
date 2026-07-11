@@ -11,7 +11,7 @@ prefix (/nl/crosslisten/{slug}). See backend/content/pipeline.py's
 from pathlib import Path
 
 from fastapi import APIRouter, Header, HTTPException, Request
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 
 from backend.config import settings
