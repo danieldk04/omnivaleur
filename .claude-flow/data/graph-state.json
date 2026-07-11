@@ -83,8 +83,8 @@
     "mem-project_blog_slug_growth_agent----": {
       "id": "mem-project_blog_slug_growth_agent----",
       "category": "project_blog_slug_growth_agent",
-      "confidence": 0.5,
-      "accessCount": 0,
+      "confidence": 0.53,
+      "accessCount": 1,
       "createdAt": 1783151212566
     },
     "mem-feedback_language----": {
@@ -125,15 +125,15 @@
     "mem-project_content_pipeline----": {
       "id": "mem-project_content_pipeline----",
       "category": "project_content_pipeline",
-      "confidence": 0.56,
-      "accessCount": 2,
+      "confidence": 0.5900000000000001,
+      "accessCount": 3,
       "createdAt": 1783151212568
     },
     "mem-reference_blog_automation_sources----": {
       "id": "mem-reference_blog_automation_sources----",
       "category": "reference_blog_automation_sources",
-      "confidence": 0.5,
-      "accessCount": 0,
+      "confidence": 0.53,
+      "accessCount": 1,
       "createdAt": 1783151212568
     },
     "mem-feedback_auto_push----": {
