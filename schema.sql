@@ -1,4 +1,4 @@
--- ListHub — Supabase/PostgreSQL schema
+-- Omnivaleur — Supabase/PostgreSQL schema
 -- Run this in the Supabase SQL editor to initialise the database.
 
 CREATE TABLE IF NOT EXISTS items (

@@ -1,166 +1,166 @@
 {
   "version": 1,
-  "updatedAt": 1783761243864,
+  "updatedAt": 1783783876043,
   "nodeCount": 23,
   "nodes": {
     "mem-MEMORY-memory-index": {
       "id": "mem-MEMORY-memory-index",
       "category": "core",
-      "confidence": 0.46499999999999997,
+      "confidence": 0.5,
       "accessCount": 0,
       "createdAt": 1783151212569
     },
     "mem-feedback_push_to_live----": {
       "id": "mem-feedback_push_to_live----",
       "category": "feedback_push_to_live",
-      "confidence": 0.46499999999999997,
+      "confidence": 0.5,
       "accessCount": 0,
       "createdAt": 1783151212563
     },
     "mem-project_zenbtw----": {
       "id": "mem-project_zenbtw----",
       "category": "project_zenbtw",
-      "confidence": 0.46499999999999997,
+      "confidence": 0.5,
       "accessCount": 0,
       "createdAt": 1783151212563
     },
     "mem-shopify_workflow----": {
       "id": "mem-shopify_workflow----",
       "category": "shopify_workflow",
-      "confidence": 0.46499999999999997,
+      "confidence": 0.5,
       "accessCount": 0,
       "createdAt": 1783151212563
     },
     "mem-shopify_workflow-auto-push-workflow-for-shopify": {
       "id": "mem-shopify_workflow-auto-push-workflow-for-shopify",
       "category": "shopify_workflow",
-      "confidence": 0.46499999999999997,
+      "confidence": 0.5,
       "accessCount": 0,
       "createdAt": 1783151212563
     },
     "mem-shopify_workflow-belangrijk--nooit-content-over": {
       "id": "mem-shopify_workflow-belangrijk--nooit-content-over",
       "category": "shopify_workflow",
-      "confidence": 0.46499999999999997,
+      "confidence": 0.5,
       "accessCount": 0,
       "createdAt": 1783151212563
     },
     "mem-feedback_always_push----": {
       "id": "mem-feedback_always_push----",
       "category": "feedback_always_push",
-      "confidence": 0.46499999999999997,
+      "confidence": 0.5,
       "accessCount": 0,
       "createdAt": 1783151212564
     },
     "mem-project_nexus----": {
       "id": "mem-project_nexus----",
       "category": "project_nexus",
-      "confidence": 0.46499999999999997,
+      "confidence": 0.5,
       "accessCount": 0,
       "createdAt": 1783151212565
     },
     "mem-user_profile----": {
       "id": "mem-user_profile----",
       "category": "user_profile",
-      "confidence": 0.46499999999999997,
+      "confidence": 0.5,
       "accessCount": 0,
       "createdAt": 1783151212565
     },
     "mem-feedback_blog_factual_accuracy----": {
       "id": "mem-feedback_blog_factual_accuracy----",
       "category": "feedback_blog_factual_accuracy",
-      "confidence": 0.46499999999999997,
+      "confidence": 0.5,
       "accessCount": 0,
       "createdAt": 1783151212566
     },
     "mem-project_anthropic_sdk_node_fetch----": {
       "id": "mem-project_anthropic_sdk_node_fetch----",
       "category": "project_anthropic_sdk_node_fetch",
-      "confidence": 0.46499999999999997,
+      "confidence": 0.5,
       "accessCount": 0,
       "createdAt": 1783151212566
     },
     "mem-project_blog_slug_growth_agent----": {
       "id": "mem-project_blog_slug_growth_agent----",
       "category": "project_blog_slug_growth_agent",
-      "confidence": 0.46499999999999997,
+      "confidence": 0.5,
       "accessCount": 0,
       "createdAt": 1783151212566
     },
     "mem-feedback_language----": {
       "id": "mem-feedback_language----",
       "category": "feedback_language",
-      "confidence": 0.46499999999999997,
+      "confidence": 0.5,
       "accessCount": 0,
       "createdAt": 1783151212567
     },
     "mem-feedback_manual_images----": {
       "id": "mem-feedback_manual_images----",
       "category": "feedback_manual_images",
-      "confidence": 0.46499999999999997,
+      "confidence": 0.5,
       "accessCount": 0,
       "createdAt": 1783151212567
     },
     "mem-feedback_push_railway----": {
       "id": "mem-feedback_push_railway----",
       "category": "feedback_push_railway",
-      "confidence": 0.46499999999999997,
+      "confidence": 0.5,
       "accessCount": 0,
       "createdAt": 1783151212567
     },
     "mem-feedback_verify_thoroughly----": {
       "id": "mem-feedback_verify_thoroughly----",
       "category": "feedback_verify_thoroughly",
-      "confidence": 0.46499999999999997,
+      "confidence": 0.5,
       "accessCount": 0,
       "createdAt": 1783151212568
     },
     "mem-project_competitive_gaps----": {
       "id": "mem-project_competitive_gaps----",
       "category": "project_competitive_gaps",
-      "confidence": 0.46499999999999997,
+      "confidence": 0.5,
       "accessCount": 0,
       "createdAt": 1783151212568
     },
     "mem-project_content_pipeline----": {
       "id": "mem-project_content_pipeline----",
       "category": "project_content_pipeline",
-      "confidence": 0.46499999999999997,
+      "confidence": 0.5,
       "accessCount": 0,
       "createdAt": 1783151212568
     },
     "mem-reference_blog_automation_sources----": {
       "id": "mem-reference_blog_automation_sources----",
       "category": "reference_blog_automation_sources",
-      "confidence": 0.46499999999999997,
+      "confidence": 0.5,
       "accessCount": 0,
       "createdAt": 1783151212568
     },
     "mem-feedback_auto_push----": {
       "id": "mem-feedback_auto_push----",
       "category": "feedback_auto_push",
-      "confidence": 0.46499999999999997,
+      "confidence": 0.5,
       "accessCount": 0,
       "createdAt": 1783151212569
     },
     "mem-revaleur-blog-no-test-publishing----": {
       "id": "mem-revaleur-blog-no-test-publishing----",
       "category": "revaleur-blog-no-test-publishing",
-      "confidence": 0.46499999999999997,
+      "confidence": 0.5,
       "accessCount": 0,
       "createdAt": 1783151212569
     },
     "mem-revaleur-blog-system----": {
       "id": "mem-revaleur-blog-system----",
       "category": "revaleur-blog-system",
-      "confidence": 0.46499999999999997,
+      "confidence": 0.5,
       "accessCount": 0,
       "createdAt": 1783151212569
     },
     "insight-1783155000983-xaii": {
       "id": "insight-1783155000983-xaii",
       "category": "insights",
-      "confidence": 0.46499999999999997,
+      "confidence": 0.5,
       "accessCount": 0,
       "createdAt": 1783155000983
     }

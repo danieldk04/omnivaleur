@@ -1,7 +1,7 @@
 """
 Shopify integration — source of truth for inventory and sales.
 Webhooks: orders/paid → auto-delist from all other platforms.
-Products: sync inventory from Shopify to ListHub items.
+Products: sync inventory from Shopify to Omnivaleur items.
 """
 from __future__ import annotations
 import hashlib

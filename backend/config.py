@@ -73,8 +73,8 @@ class Settings(BaseSettings):
     apify_token: str = ""
     social_tiktok: str = "crosslisteu"
     social_instagram: str = "crosslisteu"
-    social_youtube: str = "@ListHub"
-    social_pinterest: str = "ListHub"
+    social_youtube: str = "@Omnivaleur"
+    social_pinterest: str = "Omnivaleur"
     social_threads: str = "crosslisteu"
 
     # Google Ads API — search-volume check before a keyword enters the content queue.

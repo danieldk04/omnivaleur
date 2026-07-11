@@ -79,7 +79,7 @@ async def get_product(product_id: str) -> dict:
 
 
 async def create_product(item: dict) -> dict:
-    """Create a product on Shopify from a ListHub item dict."""
+    """Create a product on Shopify from a Omnivaleur item dict."""
     token = await _get_token()
 
     body_html = item.get("description", "")

@@ -265,7 +265,7 @@ async function pollJobs() {
         await processJob(job, serverUrl);
       }
     } catch (e) {
-      console.error(`ListHub poll error (${platform}):`, e);
+      console.error(`Omnivaleur poll error (${platform}):`, e);
     }
   }
 }
@@ -322,7 +322,7 @@ async function processJob(job, serverUrl) {
     return;
   }
 
-  console.log(`[ListHub] Opening tab for ${job.platform} job ${job.id}: ${url}`);
+  console.log(`[Omnivaleur] Opening tab for ${job.platform} job ${job.id}: ${url}`);
   chrome.tabs.create({ url, active: true }, (tab) => {
     if (chrome.runtime.lastError) {
       reportError(job.id, serverUrl, "tabs.create failed: " + chrome.runtime.lastError.message);
@@ -491,7 +491,7 @@ async function bgDeleteMp2dh(job, serverUrl) {
       method: "POST", headers: completeHeaders,
       body: JSON.stringify({}),
     });
-    console.log(`[ListHub] bgDelete success: ${platform} listing "${title}"`);
+    console.log(`[Omnivaleur] bgDelete success: ${platform} listing "${title}"`);
 
   } finally {
     setTimeout(() => chrome.tabs.remove(tabId).catch(() => {}), 2500);
@@ -728,7 +728,7 @@ async function bgDeleteVinted(job, serverUrl) {
       // paired relist recreate job (imported items otherwise lack this data).
       body: JSON.stringify({ captured_listing: snapshot }),
     });
-    console.log(`[ListHub] bgDeleteVinted success: listing ${listingId}`, snapshot);
+    console.log(`[Omnivaleur] bgDeleteVinted success: listing ${listingId}`, snapshot);
   } finally {
     setTimeout(() => chrome.tabs.remove(tabId).catch(() => {}), 2500);
   }
@@ -980,7 +980,7 @@ async function bgScanVinted(job, serverUrl) {
         // One-time diagnostic on the first item so we can see exactly what Vinted
         // returned (visible in the service-worker console AND surfaced to the UI).
         if (idx === 0 && d) {
-          console.log("[ListHub] detail-debug", { status: d._status, err: d._err, tries: d._tries, descLen: (d.description || "").length, src: d._src || "api" });
+          console.log("[Omnivaleur] detail-debug", { status: d._status, err: d._err, tries: d._tries, descLen: (d.description || "").length, src: d._src || "api" });
           await reportProgress(serverUrl, job.id, {
             stage: "enriching", message: `Found ${total} listings — fetching full details…`,
             current: 0, total,
@@ -1026,7 +1026,7 @@ async function bgScanVinted(job, serverUrl) {
       // Surface which listings still lack a description and what Vinted returned
       // for them (api<status>/pg<status>:<pageDescLen>) — visible in the panel.
       if (noDesc.length) {
-        console.log("[ListHub] no-desc items:", noDesc.join(" "));
+        console.log("[Omnivaleur] no-desc items:", noDesc.join(" "));
         await reportProgress(serverUrl, job.id, {
           stage: "enriching", message: `${enriched}/${total} enriched — ${noDesc.length} without description`,
           current: total, total,
@@ -1035,7 +1035,7 @@ async function bgScanVinted(job, serverUrl) {
         await sleep(1200); // give the panel a beat to poll this before "saving" overwrites it
       }
     } catch (e) {
-      console.warn("[ListHub] Vinted enrichment aborted, sending list data only:", e);
+      console.warn("[Omnivaleur] Vinted enrichment aborted, sending list data only:", e);
     }
 
     await reportProgress(serverUrl, job.id, {
@@ -1046,7 +1046,7 @@ async function bgScanVinted(job, serverUrl) {
       method: "POST", headers: completeHeaders,
       body: JSON.stringify({ listings: result.items }),
     });
-    console.log(`[ListHub] Vinted scan found ${result.items.length} listings (enriched ${enriched})`);
+    console.log(`[Omnivaleur] Vinted scan found ${result.items.length} listings (enriched ${enriched})`);
   } finally {
     setTimeout(() => chrome.tabs.remove(tabId).catch(() => {}), 2500);
   }
@@ -1162,7 +1162,7 @@ async function bgScanMp2dh(job, serverUrl) {
       method: "POST", headers: completeHeaders,
       body: JSON.stringify({ listings: result.items }),
     });
-    console.log(`[ListHub] ${platform} scan found ${result.items.length} listings (enriched ${Object.keys(enrichments || {}).length})`);
+    console.log(`[Omnivaleur] ${platform} scan found ${result.items.length} listings (enriched ${Object.keys(enrichments || {}).length})`);
   } finally {
     setTimeout(() => chrome.tabs.remove(tabId).catch(() => {}), 2500);
   }
@@ -1196,7 +1196,7 @@ chrome.tabs.onUpdated.addListener(async (tabId, changeInfo) => {
   if (!m) return;
 
   const listingId = m[1];
-  console.log(`[ListHub] Auto-detected listing after publish: ${listingId} (${meta.platform})`);
+  console.log(`[Omnivaleur] Auto-detected listing after publish: ${listingId} (${meta.platform})`);
 
   // Clear stored job
   chrome.storage.local.remove([key, `job_${meta.platform}`]);
@@ -1249,15 +1249,15 @@ async function checkSoldListings() {
 
       for (const listing of active) {
         if (soldIds.includes(listing.platform_listing_id)) {
-          console.log(`[ListHub] Sold detected: ${listing.platform_listing_id} on ${platform}, triggering delist`);
+          console.log(`[Omnivaleur] Sold detected: ${listing.platform_listing_id} on ${platform}, triggering delist`);
           await fetch(`${serverUrl}/api/listings/sold?item_id=${listing.item_id}&platform=${platform}`, {
             method: "POST",
             headers: authHeaders,
-          }).catch(e => console.error("[ListHub] sold trigger failed:", e));
+          }).catch(e => console.error("[Omnivaleur] sold trigger failed:", e));
         }
       }
     } catch (e) {
-      console.error(`[ListHub] sold-check error (${platform}):`, e);
+      console.error(`[Omnivaleur] sold-check error (${platform}):`, e);
     }
   }
 }
@@ -1287,7 +1287,7 @@ function scrapeSoldListings(url, platform) {
         }, (results) => {
           chrome.tabs.remove(tabId).catch(() => {});
           const ids = results?.[0]?.result || [];
-          console.log(`[ListHub] Sold listings scraped from ${platform}:`, ids);
+          console.log(`[Omnivaleur] Sold listings scraped from ${platform}:`, ids);
           resolve(ids);
         });
       };
@@ -1506,7 +1506,7 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   }
 
   if (msg.type === "FILL_DESC") {
-    console.log("[ListHub] FILL_DESC received, tab:", sender.tab?.id, "text len:", msg.text?.length);
+    console.log("[Omnivaleur] FILL_DESC received, tab:", sender.tab?.id, "text len:", msg.text?.length);
     chrome.scripting.executeScript({
       target: { tabId: sender.tab.id },
       world: "MAIN",
@@ -1514,10 +1514,10 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
       args: [msg.selector, msg.text],
     }, (results) => {
       if (chrome.runtime.lastError) {
-        console.error("[ListHub] FILL_DESC failed:", chrome.runtime.lastError.message);
+        console.error("[Omnivaleur] FILL_DESC failed:", chrome.runtime.lastError.message);
         sendResponse(false);
       } else {
-        console.log("[ListHub] FILL_DESC result:", results?.[0]?.result);
+        console.log("[Omnivaleur] FILL_DESC result:", results?.[0]?.result);
         sendResponse(results?.[0]?.result ?? false);
       }
     });
@@ -1525,7 +1525,7 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   }
 
   if (msg.type === "FILL_BRAND") {
-    console.log("[ListHub] FILL_BRAND received, brand:", msg.brand);
+    console.log("[Omnivaleur] FILL_BRAND received, brand:", msg.brand);
     chrome.scripting.executeScript({
       target: { tabId: sender.tab.id },
       world: "MAIN",
@@ -1533,10 +1533,10 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
       args: [msg.brand],
     }, (results) => {
       if (chrome.runtime.lastError) {
-        console.error("[ListHub] FILL_BRAND failed:", chrome.runtime.lastError.message);
+        console.error("[Omnivaleur] FILL_BRAND failed:", chrome.runtime.lastError.message);
         sendResponse(false);
       } else {
-        console.log("[ListHub] FILL_BRAND result:", results?.[0]?.result);
+        console.log("[Omnivaleur] FILL_BRAND result:", results?.[0]?.result);
         sendResponse(results?.[0]?.result ?? false);
       }
     });

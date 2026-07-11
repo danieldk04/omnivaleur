@@ -1,4 +1,4 @@
-"""Record real screens of the live ListHub app for the marketing video.
+"""Record real screens of the live Omnivaleur app for the marketing video.
 
 Uses the seeded demo account (real items, real UI, real interactions). For screens
 that are naturally empty/sparse on a fresh demo account (analytics numbers, eBay/

@@ -1,5 +1,5 @@
 """
-Stripe billing endpoints — subscription management for ListHub Pro.
+Stripe billing endpoints — subscription management for Omnivaleur Pro.
 """
 import stripe
 from fastapi import APIRouter, HTTPException, Depends, Request, Header

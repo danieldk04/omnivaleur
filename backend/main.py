@@ -21,7 +21,7 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(
-    title="ListHub",
+    title="Omnivaleur",
     description="Cross-listing tool for European second-hand marketplaces",
     version="0.1.0",
     lifespan=lifespan,
