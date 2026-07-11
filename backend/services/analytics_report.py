@@ -1,5 +1,5 @@
 """
-Wekelijks marketingrapport voor CrossList EU.
+Wekelijks marketingrapport voor ListHub.
 
 Bundelt de signalen van alle primaire kanalen tot één beeld:
   * SEO/GEO  — Search Console: top-blogposts, stijgende zoektermen, deze week vs vorige week.
@@ -390,7 +390,7 @@ def render_email(report: dict) -> tuple[str, str]:
     """Geeft (subject, plaintext body) voor de wekelijkse e-mail."""
     this_s, this_e = report["period"]["this"]
     lines = [
-        f"CrossList EU — wekelijks marketingrapport",
+        f"ListHub — wekelijks marketingrapport",
         f"Week {this_s} t/m {this_e}",
         f"Dashboard: {SITE_URL}/analytics",
         "",

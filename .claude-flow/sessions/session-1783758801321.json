@@ -1,0 +1,14 @@
+{
+  "id": "session-1783758801321",
+  "startedAt": "2026-07-11T08:33:21.321Z",
+  "cwd": "/Users/Danie/Documents/crosslist-eu",
+  "context": {},
+  "metrics": {
+    "edits": 0,
+    "commands": 0,
+    "tasks": 0,
+    "errors": 0
+  },
+  "endedAt": "2026-07-11T08:48:17.881Z",
+  "duration": 896569
+}

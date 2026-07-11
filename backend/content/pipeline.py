@@ -28,7 +28,7 @@ SITE_URL = "https://crosslisteu.com"
 # content_pages bestaan — zo heeft zelfs de allereerste pagina al zinvolle
 # interne links in plaats van een orphan page.
 STATIC_LINK_CANDIDATES = [
-    {"intent_key": "static:home", "title": "CrossList EU", "url_path": "/", "link_terms": ["CrossList EU"]},
+    {"intent_key": "static:home", "title": "ListHub", "url_path": "/", "link_terms": ["ListHub"]},
     {"intent_key": "static:register", "title": "Start gratis", "url_path": "/register", "link_terms": ["crosslist-tool", "cross-listing tool"]},
     {"intent_key": "static:marketplaces", "title": "Ondersteunde platforms", "url_path": "/marketplaces", "link_terms": ["Marktplaats", "Vinted", "eBay", "Etsy", "Shopify"]},
 ]
@@ -68,7 +68,7 @@ def _software_json_ld() -> dict:
     return {
         "@context": "https://schema.org",
         "@type": "SoftwareApplication",
-        "name": "CrossList EU",
+        "name": "ListHub",
         "applicationCategory": "BusinessApplication",
         "operatingSystem": "Web",
         "description": "Automatically cross-list and sync listings across Marktplaats, 2dehands, Vinted, eBay, Etsy and Shopify, including background inventory sync.",
@@ -125,7 +125,7 @@ def _save_page_row(
         "description": generated["meta_description"],
         "image": featured_image_url or f"{SITE_URL}/Logo Crosslist EU.png",
         "author": {"@type": "Person", "name": "Daniel"},
-        "publisher": {"@type": "Organization", "name": "CrossList EU", "url": SITE_URL},
+        "publisher": {"@type": "Organization", "name": "ListHub", "url": SITE_URL},
         "mainEntityOfPage": {"@type": "WebPage", "@id": canonical},
         "inLanguage": language,
         "datePublished": now_iso,

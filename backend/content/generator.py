@@ -2,7 +2,7 @@
 Content-generatie voor programmatic SEO/GEO-pagina's — bouwt op het
 delimiter-outputformat dat we al gebruiken bij Revaleur/AXONGEAR
 (marker-gescheiden tekst i.p.v. JSON, robuuster tegen HTML met quotes in
-de body), maar met de GEO/AEO-structuur uit de CrossList EU briefing:
+de body), maar met de GEO/AEO-structuur uit de ListHub briefing:
 quick-answer blockquote, H2's als vragen, key takeaways, FAQ- en
 Article-schema, en verplichte citaten naar echte (niet-hallucinerende) bronnen.
 """
@@ -49,34 +49,34 @@ def needs_dutch_translation(keyword: str, region: str) -> bool:
     return True
 
 
-# Real, manually-captured CrossList EU screenshots (from the seeded demo account) —
+# Real, manually-captured ListHub screenshots (from the seeded demo account) —
 # never AI-generated, per the "no auto-generated blog images" rule. Re-capture and
 # swap these paths whenever the dashboard UI changes meaningfully. Ordered — this is
 # also the order they get inserted into an article in.
 CROSSLIST_SCREENSHOTS = [
     {
         "src": "/assets/comparisons/dashboard-overview.png",
-        "alt": "CrossList EU dashboard showing items cross-listed across Marktplaats, 2dehands, Vinted, eBay and Shopify",
-        "caption": "The CrossList EU dashboard: 15 items live across 5 platforms at once, with a per-platform breakdown of how many listings are active on Marktplaats, 2dehands, Vinted, eBay and Shopify — from a real trial account, not a mockup.",
+        "alt": "ListHub dashboard showing items cross-listed across Marktplaats, 2dehands, Vinted, eBay and Shopify",
+        "caption": "The ListHub dashboard: 15 items live across 5 platforms at once, with a per-platform breakdown of how many listings are active on Marktplaats, 2dehands, Vinted, eBay and Shopify — from a real trial account, not a mockup.",
     },
     {
         "src": "/assets/comparisons/items-crosslisted.png",
-        "alt": "CrossList EU items list with per-platform status and missing-data warnings before publishing",
-        "caption": "Every item shows its status per platform. CrossList EU flags \"Missing data for 2 platforms\" before you publish, instead of letting a half-empty listing go live and get rejected or shadow-suppressed by the marketplace.",
+        "alt": "ListHub items list with per-platform status and missing-data warnings before publishing",
+        "caption": "Every item shows its status per platform. ListHub flags \"Missing data for 2 platforms\" before you publish, instead of letting a half-empty listing go live and get rejected or shadow-suppressed by the marketplace.",
     },
     {
         "src": "/assets/comparisons/new-item-form.png",
-        "alt": "CrossList EU new item form with fields that map directly to Marktplaats, 2dehands, Vinted, eBay and Shopify",
+        "alt": "ListHub new item form with fields that map directly to Marktplaats, 2dehands, Vinted, eBay and Shopify",
         "caption": "One intake form covers every platform's required fields (brand, size, condition, eBay category, material) — fill it in once, publish everywhere it applies, no separate re-entry per marketplace.",
     },
     {
         "src": "/assets/comparisons/refresh-vinted.png",
-        "alt": "CrossList EU Vinted refresh tool showing daily quota and an explicit risk disclosure",
+        "alt": "ListHub Vinted refresh tool showing daily quota and an explicit risk disclosure",
         "caption": "The Vinted refresh tool caps itself at 8 free refreshes/day and states outright that it can't guarantee a platform won't flag an account — an explicit risk disclosure most competitors don't show.",
     },
     {
         "src": "/assets/comparisons/analytics-overview.png",
-        "alt": "CrossList EU analytics dashboard with revenue, profit and sales broken down per platform",
+        "alt": "ListHub analytics dashboard with revenue, profit and sales broken down per platform",
         "caption": "Built-in analytics break revenue and profit down per platform (Shopify, eBay, Vinted) without needing to export anything to a spreadsheet first.",
     },
 ]
@@ -95,7 +95,7 @@ COMPETITOR_SCREENSHOTS = {
         {
             "src": "https://cdn.prod.website-files.com/5f622c6681d34140afb9d542/6a206d326d3a3ec89baf9dba_BULK%20ACTIONS%20DELIST%20features%20images%403x.webp",
             "alt": "Vendoo bulk delist/relist feature screenshot (via vendoo.co)",
-            "caption": "Vendoo's bulk delist/relist screen (source: vendoo.co) — comparable in spirit to CrossList EU's refresh tool, but without a stated per-day cap or an explicit ban-risk disclosure.",
+            "caption": "Vendoo's bulk delist/relist screen (source: vendoo.co) — comparable in spirit to ListHub's refresh tool, but without a stated per-day cap or an explicit ban-risk disclosure.",
         },
         {
             "src": "https://cdn.prod.website-files.com/5f622c6681d34140afb9d542/6a206e401eaf43f976069aad_SALE%20DETECTION%20feature%20images%403x.webp",
@@ -105,7 +105,7 @@ COMPETITOR_SCREENSHOTS = {
         {
             "src": "https://cdn.prod.website-files.com/5f622c6681d34140afb9d542/6a206e5481306dd5c79fcf91_ANALYTICS%20features%20images%403x.webp",
             "alt": "Vendoo analytics feature screenshot (via vendoo.co)",
-            "caption": "Vendoo's analytics screen (source: vendoo.co) — tracks the same kind of revenue/profit split CrossList EU shows, but without EU marketplaces in the platform mix.",
+            "caption": "Vendoo's analytics screen (source: vendoo.co) — tracks the same kind of revenue/profit split ListHub shows, but without EU marketplaces in the platform mix.",
         },
     ],
 }
@@ -151,7 +151,7 @@ def _h2_positions(body_html: str) -> list[int]:
 
 def inject_comparison_screenshots(body_html: str, pillar: str, keyword: str) -> str:
     """
-    Pillar C only: spreads real CrossList EU screenshots and the named competitor's
+    Pillar C only: spreads real ListHub screenshots and the named competitor's
     own public marketing screenshots across the article — one image roughly every
     other H2 section, alternating "our real UI" / "their real UI" — instead of a
     single image pair. Falls back to anchoring on <table> if the article has fewer
@@ -240,15 +240,15 @@ def _build_prompt(
 
     sources_block = "\n".join(f'- {s["name"]} ({s["topic"]}): {s["url"]}' for s in AUTHORITY_SOURCES)
 
-    return f"""You are an experienced European reseller and full-stack SEO/GEO expert writing for CrossList EU, a SaaS that automatically cross-lists items across Marktplaats, 2dehands, Vinted, eBay, Etsy and Shopify. You write like a reseller helping a colleague, not a marketing department.
+    return f"""You are an experienced European reseller and full-stack SEO/GEO expert writing for ListHub, a SaaS that automatically cross-lists items across Marktplaats, 2dehands, Vinted, eBay, Etsy and Shopify. You write like a reseller helping a colleague, not a marketing department.
 
 CRITICAL LANGUAGE RULE: the target keyword and competitor research below may be phrased in Dutch (that is simply what people search for). You must nonetheless write the ENTIRE article — title, meta description, H1, quick answer, body, FAQ, everything — in {language}. Translate the concept and intent of the Dutch keyword into a natural {language} article. Do NOT copy or echo any Dutch phrasing anywhere in your output, including the H1. If you catch yourself writing a Dutch word, stop and translate it.
 
 Write a COMPLETE programmatic SEO article in {language} for the concept behind this search keyword: "{keyword}"
-Content pillar: {"A (platform-to-platform comparison/combo page)" if pillar == "A" else "C (honest CrossList EU vs. named competitor comparison)" if pillar == "C" else "B (niche/audience automation page)"}
+Content pillar: {"A (platform-to-platform comparison/combo page)" if pillar == "A" else "C (honest ListHub vs. named competitor comparison)" if pillar == "C" else "B (niche/audience automation page)"}
 URL will be: /{region}/{"crosslisten" if pillar == "A" else "vergelijking" if pillar == "C" else "reseller-tools"}/{slug}
 {"""
-PILLAR C SPECIAL RULES (competitor comparison page): Be scrupulously honest and fair — this is a comparison, not an ad. Include a real Markdown comparison table (pricing, supported platforms, sync behavior, ease of use). Acknowledge at least one genuine strength of the competitor. Never fabricate a competitor feature, price or limitation you don't actually know — if unsure, describe it in general/neutral terms instead of inventing specifics. End with an honest verdict on who each tool is actually best for, not a blanket "CrossList EU wins". Structure the body as AT LEAST 7 distinct <h2> sections (not counting the comparison table's own heading) so screenshots can be spread naturally through the article — e.g. platforms supported, pricing, ease of use/setup, sync & relist behavior, EU-specific handling (Marktplaats/2dehands/Vinted/euro pricing), support/reliability, and the final verdict. Aim for 2200-2800 words of visible text for this pillar specifically (longer than other pillars) — there is a real screenshot of CrossList EU's own dashboard being inserted into this article, and the text needs enough depth to carry it.""" if pillar == "C" else ""}
+PILLAR C SPECIAL RULES (competitor comparison page): Be scrupulously honest and fair — this is a comparison, not an ad. Include a real Markdown comparison table (pricing, supported platforms, sync behavior, ease of use). Acknowledge at least one genuine strength of the competitor. Never fabricate a competitor feature, price or limitation you don't actually know — if unsure, describe it in general/neutral terms instead of inventing specifics. End with an honest verdict on who each tool is actually best for, not a blanket "ListHub wins". Structure the body as AT LEAST 7 distinct <h2> sections (not counting the comparison table's own heading) so screenshots can be spread naturally through the article — e.g. platforms supported, pricing, ease of use/setup, sync & relist behavior, EU-specific handling (Marktplaats/2dehands/Vinted/euro pricing), support/reliability, and the final verdict. Aim for 2200-2800 words of visible text for this pillar specifically (longer than other pillars) — there is a real screenshot of ListHub's own dashboard being inserted into this article, and the text needs enough depth to carry it.""" if pillar == "C" else ""}
 
 COMPETITOR RESEARCH (top 3 organic results for this keyword, their heading structure):
 {competitors_summary}
@@ -256,7 +256,7 @@ COMPETITOR RESEARCH (top 3 organic results for this keyword, their heading struc
 Already-covered subtopics across those top 3 (do not just repeat these — find the content gap, i.e. what {CURRENT_YEAR} platform rules, limits, updates or reseller pain points they are missing):
 {research.get('covered_subtopics') or '(none found)'}
 
-EXISTING CROSSLIST EU PAGES (weave in 2 contextual internal links where genuinely relevant, using these exact URLs, natural anchor text):
+EXISTING ListHub PAGES (weave in 2 contextual internal links where genuinely relevant, using these exact URLs, natural anchor text):
 {internal_links_block}
 
 AUTHORITY SOURCES — cite 2-3 of these inline as clickable links where relevant to back up claims (tax rules, platform policies). ONLY use these exact URLs verbatim, never invent or guess a URL yourself:
@@ -364,7 +364,7 @@ def _build_translation_prompt(generated: dict) -> str:
     takeaways_block = "\n".join(generated["takeaways"])
     faq_block = "\n".join(f"Q: {f['question']}\nA: {f['answer']}" for f in generated["faq"])
 
-    return f"""Translate the following English article into natural, fluent Dutch (Netherlands) for CrossList EU, a cross-listing SaaS. Keep the exact same meaning, tone (helpful reseller talking to a colleague) and HTML structure — do not add or remove headings, links or paragraphs, just translate the text inside them. Keep all <a href="..."> URLs and platform/brand names (Marktplaats, Vinted, eBay, etc.) unchanged. Keep numbers, prices and the year 2026 unchanged.
+    return f"""Translate the following English article into natural, fluent Dutch (Netherlands) for ListHub, a cross-listing SaaS. Keep the exact same meaning, tone (helpful reseller talking to a colleague) and HTML structure — do not add or remove headings, links or paragraphs, just translate the text inside them. Keep all <a href="..."> URLs and platform/brand names (Marktplaats, Vinted, eBay, etc.) unchanged. Keep numbers, prices and the year 2026 unchanged.
 
 OUTPUT FORMAT — return EXACTLY this structure, nothing else, no markdown code fences:
 

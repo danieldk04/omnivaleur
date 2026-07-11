@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Connecting eBay — CrossList EU</title>
+<title>Connecting eBay — ListHub</title>
 <meta name="robots" content="noindex, nofollow">
 <link rel="icon" type="image/png" href="Logo Crosslist EU.png">
 <style>
@@ -31,7 +31,7 @@ p { font-size: 14px; color: var(--muted); line-height: 1.5; }
 
 <div class="logo">
   <img src="Logo Crosslist EU.png" alt="">
-  <span>CrossList EU</span>
+  <span>ListHub</span>
 </div>
 
 <div class="card" id="card">
@@ -59,7 +59,7 @@ function render(icon, title, sub, showBtn) {
   const error = params.get('error') || params.get('error_description');
 
   if (!TOKEN) {
-    render('🔒', 'Please log in first', 'Your session expired — log in to CrossList EU, then try connecting eBay again.', true);
+    render('🔒', 'Please log in first', 'Your session expired — log in to ListHub, then try connecting eBay again.', true);
     return;
   }
   if (error) {
@@ -80,7 +80,7 @@ function render(icon, title, sub, showBtn) {
       render('⚠️', 'Could not connect eBay', err.detail || 'Please try again from the Platforms page.', true);
       return;
     }
-    render('✅', 'eBay connected!', 'You can now publish items directly to eBay from CrossList EU.', false);
+    render('✅', 'eBay connected!', 'You can now publish items directly to eBay from ListHub.', false);
     setTimeout(() => { window.location.href = '/app.html#platforms'; }, 1800);
   } catch (e) {
     render('⚠️', 'Could not connect eBay', String(e.message || e), true);

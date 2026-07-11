@@ -790,7 +790,7 @@
       if (!scored.length) return null;
       // Ambiguity guard: if the top two tie AND gender is unknown, don't guess.
       if (scored.length > 1 && scored[0].s === scored[1].s && !wantMen && !wantWomen) {
-        console.warn("[CrossList] Vinted category ambiguous (no gender on item):",
+        console.warn("[ListHub] Vinted category ambiguous (no gender on item):",
           scored[0].c.text, "vs", scored[1].c.text, "— set item.gender to disambiguate.");
         return null;
       }
@@ -805,7 +805,7 @@
       if (initial.length) break;
       await sleep(250);
     }
-    console.log("[CrossList] Vinted category — gender:", gender || "(none)", "hints:", hints,
+    console.log("[ListHub] Vinted category — gender:", gender || "(none)", "hints:", hints,
       "| found", initial.length, "options:", initial.map((c) => c.text.slice(0, 50)));
     let choice = best(initial);
 
@@ -837,7 +837,7 @@
       || "").toLowerCase();
     if (!display) return false;
     const hintOk = hints.length === 0 || hints.some((h) => display.includes(h));
-    if (!hintOk) console.warn("[CrossList] Vinted category may not match item:", display, "expected one of", hints);
+    if (!hintOk) console.warn("[ListHub] Vinted category may not match item:", display, "expected one of", hints);
     return hintOk;
   }
 
@@ -855,13 +855,13 @@
       if (titleEls.length > 0) break;
       await sleep(100);
     }
-    if (!titleEls.length) { console.warn("[CrossList] material panel: no items found"); return false; }
+    if (!titleEls.length) { console.warn("[ListHub] material panel: no items found"); return false; }
 
     // Exact match first, then partial.
     let best = titleEls.find(e => e.textContent.trim().toLowerCase() === w);
     if (!best) best = titleEls.find(e => e.textContent.trim().toLowerCase().includes(w));
     if (!best) best = titleEls.find(e => w.includes(e.textContent.trim().toLowerCase()) && e.textContent.trim().length > 2);
-    if (!best) { console.warn("[CrossList] Vinted material not found:", value, "→", translated); return false; }
+    if (!best) { console.warn("[ListHub] Vinted material not found:", value, "→", translated); return false; }
 
     // Scroll the item into view within the dropdown container, then realClick it.
     best.scrollIntoView({ block: "nearest" });
@@ -869,7 +869,7 @@
     const cell = best.closest('[class*="web_ui__Cell__cell"]') || best.parentElement || best;
     realClickEl(cell);
     await sleep(500);
-    console.log("[CrossList] material selected:", translated);
+    console.log("[ListHub] material selected:", translated);
     return true;
   }
 
@@ -912,7 +912,7 @@
       if (!triggerEl) await sleep(250);
     }
     if (!triggerEl) {
-      console.warn("[CrossList] Vinted attr not found:", fieldKeys);
+      console.warn("[ListHub] Vinted attr not found:", fieldKeys);
       return false;
     }
 
@@ -948,7 +948,7 @@
         opts.find(e => e.textContent?.trim().toLowerCase() === lv) ||
         opts.find(e => e.textContent?.trim().toLowerCase().startsWith(normSize));
       if (!match) {
-        console.warn("[CrossList] Vinted size option not found:", value, "| available:", opts.slice(0,10).map(e=>e.textContent.trim()));
+        console.warn("[ListHub] Vinted size option not found:", value, "| available:", opts.slice(0,10).map(e=>e.textContent.trim()));
         document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
         return false;
       }
@@ -984,12 +984,12 @@
     }
 
     if (!best || bestScore === 0) {
-      console.warn("[CrossList] Vinted attr option not found:", fieldKeys, value);
+      console.warn("[ListHub] Vinted attr option not found:", fieldKeys, value);
       document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
       return false;
     }
 
-    console.log(`[CrossList] Vinted attr "${fieldKeys}" matched "${best.textContent.trim()}" (score ${bestScore}) for value "${value}"`);
+    console.log(`[ListHub] Vinted attr "${fieldKeys}" matched "${best.textContent.trim()}" (score ${bestScore}) for value "${value}"`);
     const cell = best.closest('[class*="web_ui__Cell__cell"]') || best;
 
     // Colour uses checkboxes (multi-select), condition/material use radios (single-select).

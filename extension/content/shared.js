@@ -82,13 +82,13 @@ window.CL = (() => {
   function runInMainWorld(type, data) {
     return new Promise((resolve) => {
       const timer = setTimeout(() => {
-        console.error("[CrossList] runInMainWorld timeout:", type);
+        console.error("[ListHub] runInMainWorld timeout:", type);
         resolve(false);
       }, 8000);
       chrome.runtime.sendMessage({ type, ...data }, (result) => {
         clearTimeout(timer);
         if (chrome.runtime.lastError) {
-          console.error("[CrossList] sendMessage error:", type, chrome.runtime.lastError.message);
+          console.error("[ListHub] sendMessage error:", type, chrome.runtime.lastError.message);
         }
         resolve(result ?? false);
       });
@@ -300,7 +300,7 @@ window.CL = (() => {
       const name = url.split("/").pop()?.split("?")[0] || "photo.jpg";
       const finalBlob = opts.jitter ? await jitterImage(blob) : blob;
       return new File([finalBlob], name, { type: "image/jpeg" });
-    } catch (e) { console.warn("CrossList photo fetch failed", url, e); return null; }
+    } catch (e) { console.warn("ListHub photo fetch failed", url, e); return null; }
   }
 
   // Apply random 1-3px crop per side + a sub-perceptual brightness/contrast/
@@ -400,7 +400,7 @@ window.CL = (() => {
 
   // run a named step so a single failure never aborts the whole flow
   async function step(name, fn) {
-    try { await fn(); } catch (e) { console.warn(`CrossList step "${name}" failed:`, e); }
+    try { await fn(); } catch (e) { console.warn(`ListHub step "${name}" failed:`, e); }
   }
 
   // Enable "Bieden vanaf" and fill the minimum bid as a percentage of the asking price.

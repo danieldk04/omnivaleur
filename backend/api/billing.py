@@ -1,5 +1,5 @@
 """
-Stripe billing endpoints — subscription management for CrossList EU Pro.
+Stripe billing endpoints — subscription management for ListHub Pro.
 """
 import stripe
 from fastapi import APIRouter, HTTPException, Depends, Request, Header

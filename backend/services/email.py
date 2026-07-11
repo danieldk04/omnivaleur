@@ -48,4 +48,4 @@ def notify_published(keyword: str, url_path: str, action: str, schema_warnings: 
         lines.append("")
         lines.append("Let op — structured-data waarschuwingen (controleer handmatig):")
         lines.extend(f"- {w}" for w in schema_warnings)
-    send_email(subject=f"[CrossList EU blog] {action}: {keyword}", body="\n".join(lines))
+    send_email(subject=f"[ListHub blog] {action}: {keyword}", body="\n".join(lines))

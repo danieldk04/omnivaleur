@@ -2,7 +2,7 @@
 Autonomous keyword expansion — runs whenever scripts/content_keywords.json
 has no pending items left, so the daily publish cron never runs dry. Claude
 proposes new platform-combination and niche/audience keywords, grounded in
-CrossList EU's actual supported platforms (never invents unsupported ones),
+ListHub's actual supported platforms (never invents unsupported ones),
 and avoids duplicating any keyword/slug already in the queue.
 """
 import json
@@ -20,14 +20,14 @@ logger = logging.getLogger(__name__)
 # Keyword planning is simple structured output — Haiku is plenty and much cheaper.
 MODEL = "claude-haiku-4-5-20251001"
 
-# The only platforms CrossList EU actually supports — keeps suggestions grounded,
+# The only platforms ListHub actually supports — keeps suggestions grounded,
 # never invents a "Wallapop" or "Facebook Marketplace" combo we can't back up.
 PLATFORMS = ["Marktplaats", "2dehands", "Vinted", "eBay", "Etsy", "Shopify"]
 NL_PLATFORM_TERMS = ("marktplaats", "2dehands")
 
 # Real competing cross-listing tools — used only for Pillar C (honest comparison
 # pages). Never invent a competitor name that isn't in this list.
-COMPETITORS = ["Vendoo", "List Perfectly", "Crosslist", "Zenlister", "OneShop"]
+COMPETITORS = ["Vendoo", "List Perfectly", "ListHub", "Zenlister", "OneShop"]
 
 
 def _slugify(text: str) -> str:
@@ -52,12 +52,12 @@ def _performance_block() -> str:
 
 def _build_prompt(existing_keywords: list[str]) -> str:
     existing_block = "\n".join(f"- {k}" for k in existing_keywords) or "(none yet)"
-    return f"""You are a programmatic SEO strategist for CrossList EU, a SaaS that cross-lists items across exactly these platforms: {', '.join(PLATFORMS)}. Never propose a combination involving any other platform.
+    return f"""You are a programmatic SEO strategist for ListHub, a SaaS that cross-lists items across exactly these platforms: {', '.join(PLATFORMS)}. Never propose a combination involving any other platform.
 
 Propose 5 new content page ideas we have not covered yet. Roughly rotate across all three types below — don't cluster all 5 in one type, and don't skip Pillar C:
 - Pillar A (platform combo): "{{platform}} to {{platform}} crosslisting" style, e.g. "vinted to ebay crosslisting" — pick pairs resellers actually care about.
 - Pillar B (niche/audience): "{{niche}} selling automation" style, e.g. "sneaker reselling automation", "vintage clothing crosslisting".
-- Pillar C (honest competitor comparison): "CrossList EU vs {{competitor}}" style, comparing CrossList EU against one named competitor from this list only: {', '.join(COMPETITORS)}. Never invent a competitor name outside this list.
+- Pillar C (honest competitor comparison): "ListHub vs {{competitor}}" style, comparing ListHub against one named competitor from this list only: {', '.join(COMPETITORS)}. Never invent a competitor name outside this list.
 
 REAL SEARCH CONSOLE PERFORMANCE of already-published pages (last 90 days) — lean toward proposing more ideas similar to whatever is already getting clicks/impressions here, and be more cautious about pillars/topics that show zero traction:
 {_performance_block()}
