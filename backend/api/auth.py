@@ -17,7 +17,7 @@ async def register(body: AuthRequest):
         res = db.auth.sign_up({
             "email": body.email,
             "password": body.password,
-            "options": {"email_redirect_to": "https://omnivaleur.com/login"},
+            "options": {"email_redirect_to": "https://omnivaleur.com/"},
         })
         if res.user is None:
             raise HTTPException(status_code=400, detail="Registration failed")
@@ -52,7 +52,7 @@ async def resend_confirmation(body: ResetRequest):
         db.auth.resend({
             "type": "signup",
             "email": body.email,
-            "options": {"email_redirect_to": "https://omnivaleur.com/login"},
+            "options": {"email_redirect_to": "https://omnivaleur.com/"},
         })
     except Exception:
         pass
