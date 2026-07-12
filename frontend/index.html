@@ -842,6 +842,11 @@ function animateCounts(scope) {
     window.location.replace('/login?confirmed=1');
   } else if (params.access_token && params.type === 'recovery') {
     window.location.replace('/reset-password' + window.location.hash);
+  } else if (params.error || params.error_code) {
+    // Expired or already-used confirmation link — Supabase returns an error
+    // in the hash instead of a token. Send them to login with a clear notice
+    // rather than leaving them on the homepage with a stray #error hash.
+    window.location.replace('/login?link_error=1');
   }
 })();
 </script>
