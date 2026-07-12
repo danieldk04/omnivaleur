@@ -58,7 +58,7 @@ app.include_router(content.router)
 
 @app.get("/health")
 async def health():
-    return {"status": "ok", "service": "crosslist-eu"}
+    return {"status": "ok", "service": "omnivaleur"}
 
 
 @app.get("/privacy")
