@@ -14,7 +14,11 @@ class AuthRequest(BaseModel):
 async def register(body: AuthRequest):
     db = get_db()
     try:
-        res = db.auth.sign_up({"email": body.email, "password": body.password})
+        res = db.auth.sign_up({
+            "email": body.email,
+            "password": body.password,
+            "options": {"email_redirect_to": "https://omnivaleur.com/login"},
+        })
         if res.user is None:
             raise HTTPException(status_code=400, detail="Registration failed")
         return {"ok": True, "message": "Account created. Check your email to confirm."}
@@ -37,6 +41,22 @@ async def forgot_password(body: ResetRequest):
     except Exception:
         pass
     return {"ok": True, "message": "If this email is registered, you will receive a reset link."}
+
+
+@router.post("/resend-confirmation")
+async def resend_confirmation(body: ResetRequest):
+    """Re-send the signup confirmation email. Best-effort: always returns ok so
+    an unregistered/already-confirmed address can't be probed."""
+    db = get_db()
+    try:
+        db.auth.resend({
+            "type": "signup",
+            "email": body.email,
+            "options": {"email_redirect_to": "https://omnivaleur.com/login"},
+        })
+    except Exception:
+        pass
+    return {"ok": True, "message": "If this email needs confirming, a new link is on its way."}
 
 
 class PasswordUpdate(BaseModel):
