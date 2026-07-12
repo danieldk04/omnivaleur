@@ -71,11 +71,11 @@ class Settings(BaseSettings):
     # Leeg = social-sectie blijft leeg / 'niet gekoppeld'. De handles zijn de
     # publieke gebruikersnamen; comma-gescheiden override kan via env.
     apify_token: str = ""
-    social_tiktok: str = "crosslisteu"
-    social_instagram: str = "crosslisteu"
+    social_tiktok: str = "omnivaleur"
+    social_instagram: str = "omnivaleur"
     social_youtube: str = "@Omnivaleur"
     social_pinterest: str = "Omnivaleur"
-    social_threads: str = "crosslisteu"
+    social_threads: str = "omnivaleur"
 
     # Google Ads API — search-volume check before a keyword enters the content queue.
     # Optional: pipeline runs without volume filtering if these are blank.
