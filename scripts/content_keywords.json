@@ -71,7 +71,7 @@
       "region": "nl",
       "pillar": "B",
       "slug": "vintage-furniture-reselling-automation",
-      "status": "pending",
+      "status": "published",
       "priority": 9
     },
     {
@@ -172,6 +172,15 @@
       "action": "created",
       "url_path": "/crosslisting/ebay-to-shopify-crosslisting",
       "published_at": "2026-07-11T09:20:27.286369+00:00"
+    },
+    {
+      "keyword": "vintage furniture reselling automation",
+      "slug": "vintage-furniture-reselling-automation",
+      "region": "nl",
+      "pillar": "B",
+      "action": "created",
+      "url_path": "/reseller-tools/vintage-furniture-reselling-automation",
+      "published_at": "2026-07-12T09:45:55.561783+00:00"
     }
   ]
 }
