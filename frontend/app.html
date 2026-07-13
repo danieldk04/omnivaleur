@@ -1340,7 +1340,7 @@ input[type="checkbox"].row-check { width: 15px; height: 15px; cursor: pointer; a
       <div class="form-row" style="grid-template-columns:2fr 1fr">
         <div class="form-group">
           <label>Title *</label>
-          <input id="f-title" type="text" placeholder="e.g. Levi's 501 jeans size 32" maxlength="80">
+          <input id="f-title" type="text" placeholder="e.g. Levi's 501 jeans size 32" maxlength="80" oninput="onTitleInputForEbay()">
         </div>
         <div class="form-group">
           <label>SKU <span style="font-weight:400;text-transform:none;letter-spacing:0">(optional)</span></label>
@@ -1484,12 +1484,12 @@ input[type="checkbox"].row-check { width: 15px; height: 15px; cursor: pointer; a
         </div>
         <div class="form-group">
           <label>eBay category <span style="font-weight:400;text-transform:none;letter-spacing:0">(required for eBay)</span></label>
-          <div style="display:flex;gap:6px">
-            <input id="f-ebay-category" type="text" placeholder="e.g. 57988" inputmode="numeric" style="flex:1">
-            <button type="button" class="btn btn-sm" onclick="suggestEbayCategory()">🔍 Auto-detect</button>
-          </div>
-          <div id="ebay-category-suggestions" style="display:none;margin-top:6px"></div>
-          <div style="font-size:11px;color:var(--muted);margin-top:5px">Click "Auto-detect" to find the category from the item title, or enter the ID manually.</div>
+          <select id="f-ebay-category" onchange="onEbayCategoryChange()" style="width:100%">
+            <option value="">— type a title to detect —</option>
+            <option value="__manual__">✏️ Enter category ID manually…</option>
+          </select>
+          <input id="f-ebay-category-manual" type="text" placeholder="e.g. 57988" inputmode="numeric" style="display:none;margin-top:6px;width:100%">
+          <div id="ebay-category-status" style="font-size:11px;color:var(--muted);margin-top:5px">The category is matched automatically from the item title.</div>
         </div>
       </div>
       <div class="form-group">
@@ -2492,54 +2492,118 @@ async function disconnectPlatform(platform) {
   }
 }
 
-async function suggestEbayCategory() {
-  const title = document.getElementById('f-title').value.trim();
-  const box = document.getElementById('ebay-category-suggestions');
-  if (!title) {
-    alert('Enter a title first — the category is detected from it.');
-    return;
+// ── eBay category dropdown (auto-filled from the title) ──────────
+let _ebayCatDebounce = null;
+let _ebayCatSeq = 0;
+
+// Reset the dropdown to its initial state, optionally preserving a
+// previously-saved category id (shown until title suggestions load).
+function resetEbayCategory(keepId) {
+  const sel = document.getElementById('f-ebay-category');
+  const manual = document.getElementById('f-ebay-category-manual');
+  const status = document.getElementById('ebay-category-status');
+  sel.innerHTML = '';
+  const ph = document.createElement('option');
+  ph.value = '';
+  ph.textContent = '— type a title to detect —';
+  sel.appendChild(ph);
+  if (keepId) {
+    const opt = document.createElement('option');
+    opt.value = keepId;
+    opt.textContent = `Current: ${keepId}`;
+    opt.selected = true;
+    sel.appendChild(opt);
   }
-  box.style.display = 'block';
-  box.innerHTML = '<span style="font-size:11px;color:var(--muted)">Searching…</span>';
+  const m = document.createElement('option');
+  m.value = '__manual__';
+  m.textContent = '✏️ Enter category ID manually…';
+  sel.appendChild(m);
+  manual.style.display = 'none';
+  manual.value = '';
+  if (status) status.textContent = 'The category is matched automatically from the item title.';
+}
+
+function onEbayCategoryChange() {
+  const sel = document.getElementById('f-ebay-category');
+  const manual = document.getElementById('f-ebay-category-manual');
+  const isManual = sel.value === '__manual__';
+  manual.style.display = isManual ? 'block' : 'none';
+  if (isManual) manual.focus();
+}
+
+// The eBay category id to persist — the selected option, or the manual
+// entry when "Enter ID manually…" is chosen.
+function getEbayCategoryId() {
+  const sel = document.getElementById('f-ebay-category');
+  if (sel.value === '__manual__') {
+    return document.getElementById('f-ebay-category-manual').value.trim() || null;
+  }
+  return sel.value || null;
+}
+
+// Debounced trigger fired as the title is typed.
+function onTitleInputForEbay() {
+  clearTimeout(_ebayCatDebounce);
+  const title = document.getElementById('f-title').value.trim();
+  if (title.length < 3) return;
+  const sel = document.getElementById('f-ebay-category');
+  const keepId = (sel.value && sel.value !== '__manual__') ? sel.value : '';
+  _ebayCatDebounce = setTimeout(() => loadEbayCategorySuggestions(title, keepId), 500);
+}
+
+async function loadEbayCategorySuggestions(title, keepId) {
+  const sel = document.getElementById('f-ebay-category');
+  const status = document.getElementById('ebay-category-status');
+  if (sel.value === '__manual__') return; // user opted for manual entry
+  const seq = ++_ebayCatSeq;
+  status.textContent = 'Detecting category from title…';
   try {
     const res = await apiFetch(`${API}/api/platforms/ebay/category-suggest?q=${encodeURIComponent(title)}`);
+    if (seq !== _ebayCatSeq) return; // a newer request superseded this one
     if (!res.ok) {
       const err = await res.json().catch(() => ({}));
-      box.innerHTML = `<span style="font-size:11px;color:var(--red)">${err.detail || 'Lookup failed'}</span>`;
+      status.textContent = err.detail || 'Category lookup failed — you can enter an ID manually.';
       return;
     }
     const { suggestions } = await res.json();
-    if (!suggestions || !suggestions.length) {
-      box.innerHTML = '<span style="font-size:11px;color:var(--muted)">No matches — enter the ID manually.</span>';
-      return;
-    }
-    box.innerHTML = '';
-    suggestions.forEach(s => {
-      const row = document.createElement('div');
-      row.style.cssText = 'font-size:12px;padding:6px 8px;border:1px solid var(--border);border-radius:6px;margin-bottom:4px;cursor:pointer;background:#fff';
-      const nameSpan = document.createElement('span');
-      nameSpan.textContent = s.name;
-      const idSpan = document.createElement('span');
-      idSpan.style.color = 'var(--muted)';
-      idSpan.textContent = ` (${s.category_id})`;
-      row.appendChild(nameSpan);
-      row.appendChild(idSpan);
-      row.addEventListener('click', () => pickEbayCategory(s.category_id, s.name));
-      box.appendChild(row);
-    });
+    if (seq !== _ebayCatSeq) return;
+    populateEbayCategorySelect(suggestions || [], keepId);
+    status.textContent = (suggestions && suggestions.length)
+      ? `${suggestions.length} match(es) from the title — top match preselected. Change it if needed.`
+      : 'No matches — choose "Enter category ID manually…".';
   } catch (e) {
-    box.innerHTML = '<span style="font-size:11px;color:var(--red)">Lookup failed: ' + e.message + '</span>';
+    if (seq === _ebayCatSeq) status.textContent = 'Category lookup failed: ' + e.message;
   }
 }
 
-function pickEbayCategory(id, name) {
-  document.getElementById('f-ebay-category').value = id;
-  const box = document.getElementById('ebay-category-suggestions');
-  box.innerHTML = '';
-  const span = document.createElement('span');
-  span.style.cssText = 'font-size:11px;color:#16a34a';
-  span.textContent = `✓ ${name}`;
-  box.appendChild(span);
+function populateEbayCategorySelect(suggestions, keepId) {
+  const sel = document.getElementById('f-ebay-category');
+  sel.innerHTML = '';
+  const ph = document.createElement('option');
+  ph.value = '';
+  ph.textContent = '— select eBay category —';
+  sel.appendChild(ph);
+  let matched = false;
+  suggestions.forEach((s, i) => {
+    const opt = document.createElement('option');
+    opt.value = s.category_id;
+    opt.textContent = `${s.name} (${s.category_id})`;
+    if (keepId && s.category_id === keepId) { opt.selected = true; matched = true; }
+    else if (!keepId && i === 0) { opt.selected = true; }
+    sel.appendChild(opt);
+  });
+  // Preserve a previously-saved id that isn't among the fresh suggestions.
+  if (keepId && !matched) {
+    const opt = document.createElement('option');
+    opt.value = keepId;
+    opt.textContent = `Current: ${keepId}`;
+    opt.selected = true;
+    sel.appendChild(opt);
+  }
+  const m = document.createElement('option');
+  m.value = '__manual__';
+  m.textContent = '✏️ Enter category ID manually…';
+  sel.appendChild(m);
 }
 
 // ── Extension status ─────────────────────────────────────────────
@@ -2570,7 +2634,8 @@ function openAddItem() {
   importCreateCandidateId = null;
   document.getElementById('modal-title').textContent = 'New item';
   document.getElementById('edit-id').value = '';
-  ['f-title','f-sku','f-desc','f-price','f-compare','f-purchase','f-brand','f-color','f-material','f-ebay-category','f-shopify-title','f-price-mp','f-price-2dh','f-price-vinted'].forEach(id => document.getElementById(id).value = '');
+  ['f-title','f-sku','f-desc','f-price','f-compare','f-purchase','f-brand','f-color','f-material','f-shopify-title','f-price-mp','f-price-2dh','f-price-vinted'].forEach(id => document.getElementById(id).value = '');
+  resetEbayCategory('');
   document.getElementById('f-size').value = '';
   document.getElementById('f-gender').value = '';
   document.getElementById('f-bid-enabled').checked = false;
@@ -2605,7 +2670,8 @@ function editItem(id) {
   document.getElementById('f-size').value = item.size || '';
   document.getElementById('f-color').value = item.color || '';
   document.getElementById('f-material').value = item.material || '';
-  document.getElementById('f-ebay-category').value = item.ebay_category_id || '';
+  resetEbayCategory(item.ebay_category_id || '');
+  if (item.title) loadEbayCategorySuggestions(item.title, item.ebay_category_id || '');
   document.getElementById('f-gender').value = item.gender || '';
   document.getElementById('f-shopify-title').value = item.shopify_title || '';
   document.getElementById('f-price-mp').value = item.price_marktplaats || '';
@@ -2649,7 +2715,7 @@ async function saveItem() {
     size: document.getElementById('f-size').value,
     color: document.getElementById('f-color').value.trim(),
     material: document.getElementById('f-material').value.trim() || null,
-    ebay_category_id: document.getElementById('f-ebay-category').value.trim() || null,
+    ebay_category_id: getEbayCategoryId(),
     category: document.getElementById('f-category').value,
     gender: document.getElementById('f-gender').value,
     condition: document.getElementById('f-condition').value,
