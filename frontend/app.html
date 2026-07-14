@@ -3163,8 +3163,13 @@ function fmtEta(ms) {
 // Fetch active relists and refresh the Refresh view's live bits.
 async function loadRelistStatus() {
   try {
+    // apiFetch returns a raw Response — parse the JSON body (the old code did
+    // Array.isArray() on the Response itself, which is never an array, so the
+    // relist list came back empty every time and "Relists in progress" was
+    // always blank even with a live relist).
     const res = await apiFetch(`${API}/api/jobs/relist-status`);
-    state.relistStatus = Array.isArray(res) ? res : [];
+    const data = res.ok ? await res.json() : [];
+    state.relistStatus = Array.isArray(data) ? data : [];
   } catch (e) { state.relistStatus = []; }
   updateRelistNavBadge();
   if (document.getElementById('view-refresh')?.classList.contains('active')) renderRefreshView();
