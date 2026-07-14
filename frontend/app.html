@@ -265,6 +265,36 @@ textarea { resize: vertical; min-height: 80px; }
 .refresh-subtab span { display: inline-block; margin-left: 6px; background: var(--mint,#22c55e); color: #04210f; font-size: 10px; font-weight: 800; padding: 1px 7px; border-radius: 999px; vertical-align: middle; }
 .refresh-status-chip { padding: 6px 12px; border: 1px solid var(--border); background: var(--card,#fff); border-radius: 999px; cursor: pointer; font-size: 12px; font-weight: 600; color: var(--muted); }
 .refresh-status-chip.active { color: #fff; background: var(--blue); border-color: var(--blue); }
+
+/* ── Refresh (Vinted) table — status pills, mode badges, cooldown bar ── */
+.rf-table { width: 100%; border-collapse: separate; border-spacing: 0; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; box-shadow: var(--shadow-sm); }
+.rf-table th { text-align: left; padding: 12px 18px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .07em; color: var(--muted); background: #fafbfc; border-bottom: 1px solid var(--border); white-space: nowrap; }
+.rf-table td { padding: 13px 18px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+.rf-table tbody tr:last-child td { border-bottom: none; }
+.rf-table tbody tr { transition: background .12s; }
+.rf-table tbody tr:hover { background: #f8fafc; }
+.rf-pill { display: inline-flex; align-items: center; gap: 5px; font-size: 11.5px; font-weight: 700; padding: 4px 10px; border-radius: 999px; white-space: nowrap; }
+.rf-pill-never { background: #f1f5f9; color: #64748b; }
+.rf-pill-ready { background: rgba(34,197,94,.14); color: #15803d; }
+.rf-pill-cooldown { background: rgba(180,83,9,.12); color: #b45309; }
+.rf-pill-relisting { background: rgba(37,99,235,.14); color: #1d4ed8; }
+.rf-pill-relisting .rf-spin { display: inline-block; animation: rf-spin 1.4s linear infinite; }
+@keyframes rf-spin { to { transform: rotate(360deg); } }
+.rf-cooldown-bar { margin-top: 6px; width: 116px; max-width: 100%; height: 5px; border-radius: 999px; background: #e2e8f0; overflow: hidden; }
+.rf-cooldown-fill { height: 100%; border-radius: 999px; background: linear-gradient(90deg,#f59e0b,#fbbf24); }
+.rf-mode { display: inline-flex; align-items: center; gap: 5px; font-size: 10.5px; font-weight: 700; padding: 2px 8px; border-radius: 6px; }
+.rf-mode-relist { background: rgba(37,99,235,.12); color: #1d4ed8; }
+.rf-mode-content { background: rgba(34,197,94,.12); color: #15803d; }
+.rf-mode-none { background: #f1f5f9; color: #94a3b8; }
+.rf-sub { font-size: 11px; color: var(--muted); margin-top: 4px; }
+/* Relists-in-progress cards */
+.rl-card { border: 1px solid var(--border); border-radius: 14px; padding: 16px 18px; margin-bottom: 14px; background: var(--surface); box-shadow: var(--shadow-sm); }
+.rl-eta { display: inline-flex; align-items: baseline; gap: 6px; font-size: 20px; font-weight: 900; letter-spacing: -.5px; color: #1d4ed8; }
+.rl-eta small { font-size: 12px; font-weight: 600; color: var(--muted); letter-spacing: 0; }
+.rl-progress { height: 6px; border-radius: 999px; background: #e2e8f0; overflow: hidden; margin: 12px 0 4px; }
+.rl-progress-fill { height: 100%; border-radius: 999px; background: linear-gradient(90deg,#16a34a,#2563eb); transition: width .5s; }
+.rl-step { display: flex; align-items: center; gap: 9px; font-size: 12px; }
+.rl-step-dot { width: 20px; height: 20px; border-radius: 50%; color: #fff; font-size: 11px; font-weight: 800; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
 .an-period-tabs { display: flex; gap: 4px; background: #f1f5f9; border-radius: 8px; padding: 3px; }
 .an-period-tab { padding: 5px 14px; border-radius: 6px; font-size: 12px; font-weight: 600; color: var(--muted); cursor: pointer; border: none; background: transparent; transition: all .15s; }
 .an-period-tab.active { background: #fff; color: var(--text); box-shadow: 0 1px 3px rgba(0,0,0,.1); }
