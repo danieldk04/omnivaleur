@@ -1,3 +1,5 @@
+importScripts("analytics.js");
+
 const POLL_INTERVAL_SECONDS = 15;
 
 // Platforms this extension handles (API platforms like eBay/Etsy are server-side)
@@ -217,6 +219,12 @@ chrome.alarms.onAlarm.addListener((alarm) => {
 chrome.runtime.onInstalled.addListener(pollJobs);
 chrome.runtime.onStartup.addListener(pollJobs);
 
+chrome.runtime.onInstalled.addListener((details) => {
+  gaEvent(details.reason === "install" ? "extension_installed" : "extension_updated", {
+    version: chrome.runtime.getManifest().version,
+  });
+});
+
 async function getServerUrl() {
   return new Promise((resolve) => {
     chrome.storage.sync.get({ serverUrl: "https://omnivaleur.com" }, (s) => {
@@ -275,6 +283,8 @@ async function processJob(job, serverUrl) {
   // Claim job first
   const claimRes = await fetch(`${serverUrl}/api/jobs/${job.id}/claim`, { method: "POST", headers });
   if (!claimRes.ok) return;
+
+  gaEvent("job_started", { action: job.action, platform: job.platform });
 
   // MP/2dh delete: fully background-driven, no content script needed
   if (job.action === "delete" && (job.platform === "marktplaats" || job.platform === "2dehands")) {
@@ -1574,6 +1584,7 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
 });
 
 async function reportError(jobId, serverUrl, error) {
+  gaEvent("job_error", {});
   const headers = await getAuthHeaders();
   await fetch(`${serverUrl}/api/jobs/${jobId}/error`, {
     method: "POST",

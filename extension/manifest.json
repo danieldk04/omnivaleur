@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Omnivaleur",
-  "version": "1.0.7",
+  "version": "1.0.8",
   "description": "Omnivaleur — publiceer je items automatisch op Marktplaats, 2dehands, Vinted en meer",
   "permissions": ["storage", "tabs", "alarms", "clipboardWrite", "clipboardRead", "scripting"],
   "host_permissions": [
@@ -13,7 +13,8 @@
     "https://www.vinted.be/*",
     "https://www.vinted.de/*",
     "https://www.vinted.fr/*",
-    "https://omnivaleur.com/*"
+    "https://omnivaleur.com/*",
+    "https://www.google-analytics.com/*"
   ],
   "background": {
     "service_worker": "background.js"

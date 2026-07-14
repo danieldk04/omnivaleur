@@ -1,5 +1,7 @@
 const SERVER_URL = "https://omnivaleur.com";
 
+if (typeof gaEvent === "function") gaEvent("popup_opened", {});
+
 async function checkLoginState() {
   const { authToken, userEmail } = await chrome.storage.sync.get(["authToken", "userEmail"]);
   if (authToken) {
