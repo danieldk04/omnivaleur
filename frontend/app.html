@@ -3492,11 +3492,51 @@ function confirmRefresh() {
     if (!newPrice || newPrice <= 0) { alert('Enter a valid price greater than 0'); return; }
   }
   closeModal('modal-refresh');
+  const label = PLATFORM_LABELS[platform] || platform;
+  openRefreshBriefing(strategy, label);
   doRefresh(itemId, platform, strategy, newPrice);
 }
 
+// Show the "what happens next" briefing the instant the user confirms — this
+// fills the otherwise-silent gap between clicking Refresh and the extension
+// opening a Vinted tab (which can take up to ~15s to be picked up, plus a few
+// seconds to delete). The user reads exactly what to expect while it queues.
+function openRefreshBriefing(strategy, label) {
+  const title = document.getElementById('rb-title');
+  const intro = document.getElementById('rb-intro');
+  const steps = document.getElementById('rb-steps');
+  const step = (n, icon, head, body) => `
+    <div style="display:flex;gap:11px;align-items:flex-start">
+      <span style="width:24px;height:24px;border-radius:50%;background:var(--grad);color:#fff;font-size:12px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0">${n}</span>
+      <div><div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:2px">${icon} ${head}</div>
+      <div style="font-size:12px;color:var(--muted);line-height:1.55">${body}</div></div>
+    </div>`;
+
+  if (strategy === 'relist') {
+    title.textContent = 'Relisting — here\'s what happens next';
+    intro.innerHTML = `This is a <b>relist</b>: the old ${label} listing is deleted now and automatically republished later with a fresh date, so it climbs back to "Newest".`;
+    steps.innerHTML =
+      step(1, '🗑️', `Extension opens ${label} to delete the old listing`, `Within ~15 seconds a ${label} tab opens on its own and removes the current listing. This is why the item briefly shows as not live — that's expected.`) +
+      step(2, '🙅', `Leave that tab alone`, `Don't click, type in, or close it. The extension drives it automatically and closes it by itself. Interfering makes the relist fail.`) +
+      step(3, '⏳', `New listing is republished automatically`, `After a randomised delay it re-posts the item with all its photos and details. <b>Keep Chrome open</b> (a background window is fine) so this can fire. You can follow it live under "Relists in progress".`);
+  } else {
+    title.textContent = 'Refreshing — here\'s what happens next';
+    intro.innerHTML = `This is a <b>content refresh</b>: a light, in-place edit of your existing ${label} listing — your price, title and description stay exactly the same.`;
+    steps.innerHTML =
+      step(1, '✏️', `Extension opens the ${label} edit page`, `Within ~15 seconds a ${label} tab opens on its own and edits the existing listing (it re-orders your photos, keeping photo 1 first).`) +
+      step(2, '🙅', `Leave that tab alone`, `Don't click, type in, or close it. The extension drives it automatically and closes it by itself when the save is confirmed.`) +
+      step(3, '✓', `Nothing else to do`, `The listing is re-saved so ${label} registers a fresh edit — no delete, no new listing, no price change.`);
+  }
+
+  document.getElementById('rb-spinner').style.display = '';
+  document.getElementById('rb-status-text').textContent = 'Setting up…';
+  const doneBtn = document.getElementById('rb-done-btn');
+  doneBtn.disabled = true;
+  doneBtn.textContent = 'Got it';
+  document.getElementById('modal-relist-briefing').style.display = 'flex';
+}
+
 async function doRefresh(itemId, platform, strategy, newPrice) {
-  setBusy(true, 'Queuing refresh…');
   try {
     const body = { item_id: itemId, platform, strategy };
     if (newPrice != null) body.new_price = newPrice;
@@ -3506,14 +3546,37 @@ async function doRefresh(itemId, platform, strategy, newPrice) {
     });
     const data = await r.json();
     if (!r.ok) throw new Error(data.detail || 'Refresh failed');
-    showToast(data.message || `Refresh queued (${data.strategy}).`);
+
+    // Update the briefing with the concrete outcome so the user sees it worked
+    // and (for a relist) roughly how long the recreate will take.
+    const spinner = document.getElementById('rb-spinner');
+    const statusText = document.getElementById('rb-status-text');
+    const statusBox = document.getElementById('rb-status');
+    const doneBtn = document.getElementById('rb-done-btn');
+    if (spinner) spinner.style.display = 'none';
+    if (statusBox) { statusBox.style.background = 'rgba(34,197,94,.1)'; statusBox.style.borderColor = 'rgba(34,197,94,.3)'; statusBox.style.color = '#15803d'; }
+    if (statusText) {
+      let eta = '';
+      if (strategy === 'relist' && data.recreate_scheduled_for) {
+        eta = ` New listing goes live in ${fmtEta(new Date(data.recreate_scheduled_for).getTime() - Date.now())}.`;
+      }
+      statusText.textContent = `✓ Queued — the extension will open ${PLATFORM_LABELS[platform] || platform} within ~15 seconds.${eta}`;
+    }
+    if (doneBtn) doneBtn.disabled = false;
+
     await loadAll();
     await loadRelistStatus();
+    await pollActivity();
     if (document.getElementById('view-refresh')?.classList.contains('active')) renderRefreshView();
   } catch (e) {
-    alert('Refresh error: ' + e.message);
-  } finally {
-    setBusy(false);
+    const spinner = document.getElementById('rb-spinner');
+    const statusText = document.getElementById('rb-status-text');
+    const statusBox = document.getElementById('rb-status');
+    const doneBtn = document.getElementById('rb-done-btn');
+    if (spinner) spinner.style.display = 'none';
+    if (statusBox) { statusBox.style.background = 'var(--red-bg,#fee2e2)'; statusBox.style.borderColor = '#fca5a5'; statusBox.style.color = 'var(--red,#dc2626)'; }
+    if (statusText) statusText.textContent = '✕ ' + (e.message || 'Refresh failed');
+    if (doneBtn) { doneBtn.disabled = false; doneBtn.textContent = 'Close'; }
   }
 }
 
