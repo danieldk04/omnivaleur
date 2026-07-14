@@ -130,6 +130,9 @@ async def get_pending_jobs(platform: str = None, user_id: str = Depends(get_curr
     # instead of handing them to the extension.
     ready = []
     for j in due:
+        # One publish per platform at a time (see busy_create_platforms above).
+        if j["action"] == "create" and j["platform"] in busy_create_platforms:
+            continue
         if j["action"] == "create" and j.get("scheduled_for"):
             paired_delete = (
                 db.table("jobs")
