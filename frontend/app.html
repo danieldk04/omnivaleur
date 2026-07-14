@@ -3976,7 +3976,9 @@ if (_urlParams.get('billing') === 'success' || _urlParams.get('billing') === 'ca
 }
 loadAll().then(() => { if (window.location.hash === '#platforms') renderPlatforms(); });
 loadBillingStatus();
+pollActivity();
 setInterval(loadAll, 15000);
+setInterval(pollActivity, 4000);
 setInterval(loadBillingStatus, 60000);
 
 // ── Analytics ─────────────────────────────────────────────────────
