@@ -10,14 +10,117 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/jobs", tags=["jobs"])
 
 
+# A claim older than this with no progress means the run was interrupted (the
+# MV3 service worker gets killed the moment Chrome closes or after ~30s idle, so
+# a job can be claimed but never reach /complete or /error). Nothing ever
+# re-surfaced those, so they hung "claimed" forever — blocking paired relists and
+# tripping the "extension is working" banner. We recover them below.
+STALE_CLAIM_MINUTES = 5
+MAX_RECLAIMS = 2
+
+
+def _parse_ts(ts):
+    if not ts:
+        return None
+    try:
+        dt = datetime.fromisoformat(str(ts).replace("Z", "+00:00"))
+    except (ValueError, TypeError):
+        return None
+    return dt.replace(tzinfo=timezone.utc) if dt.tzinfo is None else dt
+
+
+def _recover_stale_claims(db, user_id: str, platform: str, now_dt: datetime) -> None:
+    """
+    Find jobs stuck in 'claimed' with no recent activity and get them unstuck.
+
+    Retry-safe jobs are reset to 'pending' so the extension runs them again:
+      - delete: the extension verifies the listing is still in the wardrobe and
+        no-ops if it's already gone, so a re-run can't double-delete.
+      - scan: read-only.
+      - content_refresh: re-edits the same listing (idempotent).
+      - RELIST create (has scheduled_for): its paired delete already removed the
+        old listing, so republishing can't create a duplicate.
+
+    NOT retry-safe → marked 'error' instead of retried:
+      - an INITIAL crosslist create (no scheduled_for): if the first attempt did
+        publish but the completion just wasn't recorded, re-running would post a
+        DUPLICATE listing. Safer to surface an error and let the user republish.
+      - anything that already hit the reclaim cap (persistently failing).
+    """
+    stale_before = (now_dt - timedelta(minutes=STALE_CLAIM_MINUTES)).isoformat()
+    q = (
+        db.table("jobs")
+        .select("id,action,item_id,platform,scheduled_for,claimed_at,result")
+        .eq("user_id", user_id)
+        .eq("status", "claimed")
+    )
+    if platform:
+        q = q.eq("platform", platform)
+    for j in q.execute().data:
+        claimed = _parse_ts(j.get("claimed_at"))
+        if claimed and claimed.isoformat() > stale_before:
+            continue  # claimed recently — genuinely in progress
+        res = j.get("result") or {}
+        prog_at = _parse_ts((res.get("_progress") or {}).get("at")) if isinstance(res, dict) else None
+        if prog_at and prog_at.isoformat() > stale_before:
+            continue  # long job (e.g. scan) still posting progress
+
+        reclaims = (res.get("_reclaims", 0) if isinstance(res, dict) else 0)
+        is_relist_create = j["action"] == "create" and j.get("scheduled_for")
+        retry_safe = j["action"] in ("delete", "scan", "content_refresh") or is_relist_create
+
+        if retry_safe and reclaims < MAX_RECLAIMS:
+            db.table("jobs").update({
+                "status": "pending",
+                "claimed_at": None,
+                "result": {"_reclaims": reclaims + 1, "_last_reclaim": now_dt.isoformat()},
+            }).eq("id", j["id"]).eq("status", "claimed").execute()
+        else:
+            msg = (
+                "Publishing was interrupted (Chrome likely closed mid-run) and couldn't be "
+                "verified. Nothing was double-listed — publish this item again when Chrome is open."
+                if j["action"] == "create" else
+                f"This {j['action']} job was interrupted and couldn't finish after retries. Try it again."
+            )
+            db.table("jobs").update({
+                "status": "error",
+                "result": {"error": msg},
+                "done_at": now_dt.isoformat(),
+            }).eq("id", j["id"]).eq("status", "claimed").execute()
+            if is_relist_create:
+                db.table("listings").update({
+                    "status": "error",
+                    "error_message": "Relist recreate was interrupted before it finished — the old listing was removed but the new one wasn't confirmed. Refresh again to retry.",
+                }).eq("item_id", j["item_id"]).eq("platform", j["platform"]).execute()
+
+
 @router.get("/pending")
 async def get_pending_jobs(platform: str = None, user_id: str = Depends(get_current_user)):
     db = get_db()
+    now_dt = datetime.now(timezone.utc)
+    # First, rescue anything stuck 'claimed' from an interrupted run.
+    _recover_stale_claims(db, user_id, platform, now_dt)
+
     q = db.table("jobs").select("*").eq("user_id", user_id).eq("status", "pending")
     if platform:
         q = q.eq("platform", platform)
     result = q.order("created_at").limit(20).execute()
-    now = datetime.now(timezone.utc).isoformat()
+    now = now_dt.isoformat()
+
+    # Per-platform in-flight guard: publishing opens a real browser tab and the
+    # create path doesn't wait for one to finish before the next is claimed, so a
+    # bulk publish used to open many tabs at once — most of which failed and got
+    # stuck. Only hand out a create for a platform that has no create currently
+    # in flight (a fresh claim), so publishes run one-at-a-time per platform.
+    busy_create_platforms = set()
+    for c in (
+        db.table("jobs").select("platform,claimed_at")
+        .eq("user_id", user_id).eq("status", "claimed").eq("action", "create")
+        .execute().data
+    ):
+        ct = _parse_ts(c.get("claimed_at"))
+        if ct and ct >= now_dt - timedelta(minutes=STALE_CLAIM_MINUTES):
+            busy_create_platforms.add(c["platform"])
     # Jobs with a future scheduled_for (used to jitter relist recreates) aren't due yet.
     due = [j for j in result.data if not j.get("scheduled_for") or j["scheduled_for"] <= now]
 
