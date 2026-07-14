@@ -114,11 +114,14 @@ async def active_jobs(user_id: str = Depends(get_current_user)):
     dashboard can warn the user to stay hands-off while it works.
 
     Two buckets:
-      - "working": jobs already CLAIMED by the extension. This is the dangerous
-        window — a Chrome tab is open and the extension is deleting/creating/
-        scanning in it. The `/pending` feed drops these the moment they're
-        claimed, which is exactly when the user must NOT interfere, so we expose
-        them here explicitly.
+      - "working": jobs the extension claimed RECENTLY — a Chrome tab is genuinely
+        open and it's deleting/creating/scanning right now. Critically, we only
+        count a claim as "working" if it happened within the last few minutes: a
+        publish/delete finishes in seconds, so a job still "claimed" long after
+        that isn't being worked — it's stuck (Chrome was closed mid-run, the tab
+        failed, etc.). Without this window those abandoned claims made the
+        "extension is working — don't touch" banner show forever even though
+        nothing was happening.
       - "queued": pending jobs that are due now (no future scheduled_for). These
         will be picked up within one poll (~15s). Relist recreates sitting on a
         future timer are deliberately excluded — nothing is happening yet, so
@@ -135,11 +138,30 @@ async def active_jobs(user_id: str = Depends(get_current_user)):
         .execute()
         .data
     )
-    now = datetime.now(timezone.utc).isoformat()
+    now_dt = datetime.now(timezone.utc)
+    now = now_dt.isoformat()
+    # A genuinely active claim is very recent. Beyond this the run is stuck/abandoned.
+    active_cutoff = now_dt - timedelta(minutes=3)
+
+    def _claimed_recently(j) -> bool:
+        ts = j.get("claimed_at")
+        if not ts:
+            return False
+        try:
+            dt = datetime.fromisoformat(str(ts).replace("Z", "+00:00"))
+        except ValueError:
+            return False
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=timezone.utc)
+        return dt >= active_cutoff
+
     working, queued = [], []
     for j in rows:
         if j["status"] == "claimed":
-            working.append(j)
+            # Only surface it as "working now" if the claim is fresh — a stale
+            # claim means the extension isn't actually acting on it anymore.
+            if _claimed_recently(j):
+                working.append(j)
         elif not j.get("scheduled_for") or j["scheduled_for"] <= now:
             queued.append(j)
     return {"working": working, "queued": queued}
