@@ -201,6 +201,23 @@ textarea { resize: vertical; min-height: 80px; }
 
 /* ── Jobs / alert banners ───────────────────────────────────────── */
 .jobs-banner { background: #fffbeb; border: 1px solid #fcd34d; border-radius: var(--radius); padding: 12px 18px; margin-bottom: 20px; display: flex; align-items: center; justify-content: space-between; font-size: 13px; color: #92400e; }
+
+/* ── Global "extension is busy — don't touch anything" activity bar ──
+   Shown on EVERY view (it lives above the view container) whenever the
+   extension is actively working or a due job is about to be picked up, so the
+   user never interacts with the tab it opens or fires new dashboard actions
+   mid-flight. */
+.activity-bar { position: sticky; top: 0; z-index: 90; margin: 0 0 20px; border-radius: var(--radius); padding: 13px 18px; display: flex; align-items: center; gap: 13px; font-size: 13px; line-height: 1.5; box-shadow: var(--shadow-sm); border: 1px solid transparent; }
+.activity-bar .activity-icon { font-size: 20px; flex-shrink: 0; }
+.activity-bar .activity-title { font-weight: 800; }
+.activity-bar .activity-body { min-width: 0; }
+/* Working = a tab is open and the extension is acting in it right now. */
+.activity-bar.working { background: #fef2f2; border-color: #fca5a5; color: #991b1b; }
+.activity-bar.working .activity-dot { width: 11px; height: 11px; border-radius: 50%; background: #dc2626; flex-shrink: 0; animation: activity-pulse 1.1s ease-in-out infinite; }
+/* Queued = nothing open yet, but a job is due within the next poll. */
+.activity-bar.queued { background: #fffbeb; border-color: #fcd34d; color: #92400e; }
+.activity-bar.queued .activity-dot { width: 11px; height: 11px; border-radius: 50%; background: #d97706; flex-shrink: 0; animation: activity-pulse 1.6s ease-in-out infinite; }
+@keyframes activity-pulse { 0%,100% { transform: scale(1); opacity: 1; } 50% { transform: scale(1.55); opacity: .45; } }
 .trial-banner { border-radius: var(--radius); padding: 14px 20px; margin-bottom: 24px; display: flex; align-items: center; justify-content: space-between; gap: 12px; font-size: 13px; }
 .trial-banner.active-sub { display: none !important; }
 
