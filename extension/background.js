@@ -1183,10 +1183,19 @@ chrome.tabs.onUpdated.addListener(async (tabId, changeInfo) => {
   // Marktplaats/2dehands patterns never match them. Without a Vinted-specific
   // pattern the create job stays stuck "claimed" after publish, because Vinted's
   // post-Upload navigation tears down the content script before it can send
-  // JOB_DONE. Match /items/{digits} for Vinted (never /items/new).
+  // JOB_DONE.
+  //
+  // BUT: while the content script is still filling the form, Vinted assigns the
+  // in-progress listing a DRAFT url — /items/{id}/edit or a bare /items/{id} —
+  // long before it's actually published. A loose /items/{digits} match fired on
+  // that draft url, marked the create job "complete" with the draft id, and
+  // closed the tab before anything was really done. A genuinely PUBLISHED Vinted
+  // item always redirects to its slugged canonical url (/items/{id}-{slug}), so
+  // require that hyphen-slug shape: it never matches /items/new, /items/{id}/edit
+  // or a bare draft /items/{id}, only the real post-publish page.
   let m;
   if (meta.platform === "vinted") {
-    m = url.match(/\/items\/(\d+)(?:[-/?#]|$)/);
+    m = url.match(/\/items\/(\d+)-[a-z0-9]/i);
   } else {
     m = url.match(/\/seller\/view\/(m\d+)/) ||
          url.match(/\/v\/[^/]+\/(m\d+)/) ||
