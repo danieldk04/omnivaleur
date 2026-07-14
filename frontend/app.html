@@ -3892,6 +3892,80 @@ document.querySelectorAll('.nav-item').forEach(el => {
   el.addEventListener('click', () => { if (window.innerWidth <= 768) closeSidebar(); });
 });
 
+// ── Extension activity: keep the user hands-off while jobs run ────────
+// The extension does its work by opening a real browser tab and driving the
+// marketplace inside it. If the user clicks/types in that tab, or fires a new
+// action from the dashboard mid-flight, the automation breaks. So we poll a
+// lightweight endpoint often (every 4s — faster than the 15s data reload,
+// because a delete tab can be open for only a few seconds) and show a loud,
+// global banner the whole time anything is running.
+let _activityState = { working: 0, queued: 0 };
+
+const ACTION_VERB = {
+  create: 'publishing a listing',
+  delete: 'removing a listing',
+  content_refresh: 'refreshing a listing',
+  scan: 'reading your listings',
+};
+
+function describeJobs(jobs) {
+  // "Vinted (removing a listing)" style, de-duplicated, max 3 shown.
+  const parts = jobs.slice(0, 3).map(j => {
+    const p = PLATFORM_LABELS[j.platform] || j.platform;
+    const v = ACTION_VERB[j.action] || 'working';
+    return `${p} (${v})`;
+  });
+  const extra = jobs.length - parts.length;
+  return parts.join(', ') + (extra > 0 ? ` +${extra} more` : '');
+}
+
+function renderActivityBar() {
+  const bar = document.getElementById('ext-activity-bar');
+  if (!bar) return;
+  const working = _activityState.working || [];
+  const queued = _activityState.queued || [];
+  const nWorking = working.length, nQueued = queued.length;
+
+  if (nWorking === 0 && nQueued === 0) { bar.style.display = 'none'; return; }
+
+  const title = document.getElementById('ext-activity-title');
+  const text = document.getElementById('ext-activity-text');
+  const icon = document.getElementById('ext-activity-icon');
+
+  if (nWorking > 0) {
+    // A tab is open and the extension is acting in it RIGHT NOW.
+    bar.className = 'activity-bar working';
+    icon.textContent = '⚠️';
+    title.textContent = `Extension is working right now — leave it alone (${describeJobs(working)})`;
+    text.innerHTML = 'It just opened a Chrome tab and is doing this automatically. '
+      + '<b>Don\'t click, type in, or close that tab</b>, and don\'t start new actions here — '
+      + 'the tab closes by itself when it\'s done. Interrupting it makes the listing fail.';
+  } else {
+    // Nothing open yet, but a due job will be picked up within ~15s.
+    bar.className = 'activity-bar queued';
+    icon.textContent = '⏳';
+    title.textContent = `${nQueued} job${nQueued === 1 ? '' : 's'} queued — the extension is about to start`;
+    text.innerHTML = 'Within ~15 seconds the extension opens a tab and handles this automatically ('
+      + describeJobs(queued) + '). '
+      + '<b>Once it starts, leave the tab it opens alone</b> and hold off on new actions until it finishes.';
+  }
+  bar.style.display = 'flex';
+}
+
+async function pollActivity() {
+  try {
+    const r = await apiFetch(`${API}/api/jobs/active`);
+    if (!r.ok) return;
+    const data = await r.json();
+    const prevWorking = (_activityState.working || []).length;
+    _activityState = { working: data.working || [], queued: data.queued || [] };
+    renderActivityBar();
+    // When the extension finishes an active job, pull fresh data promptly so
+    // statuses/badges update without waiting for the next 15s reload.
+    if (prevWorking > 0 && _activityState.working.length === 0) loadAll();
+  } catch (e) { /* transient — try again next tick */ }
+}
+
 // ── Init ─────────────────────────────────────────────────────────
 const _urlParams = new URLSearchParams(window.location.search);
 if (_urlParams.get('billing') === 'success' || _urlParams.get('billing') === 'cancel') {
