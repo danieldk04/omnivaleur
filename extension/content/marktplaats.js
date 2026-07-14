@@ -76,8 +76,21 @@
     await step("bidding",      () => item.bid_percentage && fillBidding(item.price, item.bid_percentage));
   }
 
+  // Ask the background for THIS tab's own job (keyed by tab id), so two tabs can
+  // never read each other's data. Retry briefly to cover the tab-open race.
   function getJob() {
-    return new Promise((r) => chrome.storage.local.get(`job_${PLATFORM}`, (s) => r(s[`job_${PLATFORM}`] || null)));
+    return new Promise((resolve) => {
+      let tries = 0;
+      const ask = () => {
+        chrome.runtime.sendMessage({ type: "GET_JOB" }, (resp) => {
+          if (chrome.runtime.lastError) { /* background not ready yet */ }
+          if (resp && resp.job) return resolve(resp.job);
+          if (++tries < 20) return setTimeout(ask, 150);
+          resolve(null);
+        });
+      };
+      ask();
+    });
   }
   function send(type, result, errorMsg) {
     chrome.runtime.sendMessage({ type, platform: PLATFORM, jobId, serverUrl, result, error: errorMsg });
