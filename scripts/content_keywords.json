@@ -87,7 +87,7 @@
       "region": "nl",
       "pillar": "A",
       "slug": "marktplaats-to-etsy-crosslisting-2026",
-      "status": "pending",
+      "status": "published",
       "nl_slug": "marktplaats-naar-etsy-crosslisting",
       "priority": 11
     },
@@ -190,6 +190,15 @@
       "action": "created",
       "url_path": "/vs/omnivaleur-vs-zenlister",
       "published_at": "2026-07-13T10:53:24.983317+00:00"
+    },
+    {
+      "keyword": "marktplaats to etsy crosslisting 2026",
+      "slug": "marktplaats-to-etsy-crosslisting-2026",
+      "region": "nl",
+      "pillar": "A",
+      "action": "created",
+      "url_path": "/crosslisting/marktplaats-to-etsy-crosslisting-2026",
+      "published_at": "2026-07-14T09:50:02.142219+00:00"
     }
   ]
 }
