@@ -579,6 +579,16 @@ input[type="checkbox"].row-check { width: 15px; height: 15px; cursor: pointer; a
 
   <div class="content">
 
+    <!-- ── Global activity bar: extension busy, user must stay hands-off ─ -->
+    <div id="ext-activity-bar" class="activity-bar" style="display:none">
+      <span class="activity-dot"></span>
+      <span class="activity-icon" id="ext-activity-icon">⚠️</span>
+      <div class="activity-body">
+        <div class="activity-title" id="ext-activity-title"></div>
+        <div id="ext-activity-text"></div>
+      </div>
+    </div>
+
     <!-- ── DASHBOARD VIEW ──────────────────────────────────────────── -->
     <div id="view-dashboard" class="view active">
 
