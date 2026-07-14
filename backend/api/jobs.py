@@ -166,11 +166,10 @@ async def get_pending_jobs(platform: str = None, user_id: str = Depends(get_curr
             # "pending" and will be re-checked on the next poll.
             if paired_delete and paired_delete[0]["status"] != "done":
                 continue
-        if j["action"] == "create":
-            busy_create_platforms.add(j["platform"])  # claim the slot for this response
         ready.append(j)
 
-    return ready[:5]
+    # Extension: exactly one job at a time. Dashboard: the whole queue, to count.
+    return ready[:1] if is_extension_dispatch else ready
 
 
 @router.get("/relist-status")
