@@ -130,7 +130,9 @@ async def get_pending_jobs(platform: str = None, user_id: str = Depends(get_curr
     # instead of handing them to the extension.
     ready = []
     for j in due:
-        # One publish per platform at a time (see busy_create_platforms above).
+        # One publish per platform at a time: skip a create if that platform
+        # already has one in flight (busy_create_platforms) or we've already
+        # queued one for it in this very response.
         if j["action"] == "create" and j["platform"] in busy_create_platforms:
             continue
         if j["action"] == "create" and j.get("scheduled_for"):
