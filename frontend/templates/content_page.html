@@ -145,7 +145,7 @@
     {% for item in page.faq %}
     <div class="faq-item">
       <h3>{{ item.question }}</h3>
-      <p>{{ item.answer }}</p>
+      <p>{{ item.answer_html | safe }}</p>
     </div>
     {% endfor %}
     {% endif %}

@@ -34,6 +34,30 @@ def _require_admin(x_admin_secret: str | None) -> None:
 
 templates = Jinja2Templates(directory=str(Path(__file__).parent.parent.parent / "frontend" / "templates"))
 
+import re as _re
+
+_HTML_TAG_RE = _re.compile(r"<[^>]+>")
+# A bare URL NOT already part of an attribute (href="…") or an anchor's text
+# (>…<). Anything preceded by " ' > or = is inside markup already.
+_BARE_URL_RE = _re.compile(r'(?<![\"\'>=])(https?://[^\s<>"\']+)')
+
+
+def _answer_plain(text: str) -> str:
+    """Plain-text form of an FAQ answer, for JSON-LD structured data — no tags."""
+    return _HTML_TAG_RE.sub("", text or "").strip()
+
+
+def _answer_html(text: str) -> str:
+    """FAQ answers may carry authority-source links from the generator. These
+    must render as real anchors, never as escaped raw ``<a href…>`` tags shown
+    to the reader. Existing ``<a>`` tags are kept as-is; a bare URL the model
+    emitted without an anchor is wrapped so a raw URL is never printed either.
+
+    Rendered with ``| safe`` in the template — the same trust level as
+    ``body_html`` (both come from our own admin-gated generator, not visitors)."""
+    return _BARE_URL_RE.sub(r'<a href="\1">\1</a>', text or "")
+
+
 REGIONS = {"nl", "be-nl", "be-fr", "fr", "de"}
 LANGUAGES = {"nl", "fr", "de"}  # non-English language prefixes this site currently serves
 SITE_URL = "https://omnivaleur.com"
@@ -96,6 +120,11 @@ def _render_page(request: Request, language: str, pillar: str, slug: str) -> HTM
 
     canonical = f"{SITE_URL}{_url_path(language, pillar, slug)}"
 
+    # Pre-render FAQ answers so embedded/authority links show as real anchors
+    # instead of escaped raw tags, and keep a tag-free version for JSON-LD.
+    for item in (page.get("faq") or []):
+        item["answer_html"] = _answer_html(item.get("answer", ""))
+
     faq_json_ld = {
         "@context": "https://schema.org",
         "@type": "FAQPage",
@@ -103,7 +132,7 @@ def _render_page(request: Request, language: str, pillar: str, slug: str) -> HTM
             {
                 "@type": "Question",
                 "name": item["question"],
-                "acceptedAnswer": {"@type": "Answer", "text": item["answer"]},
+                "acceptedAnswer": {"@type": "Answer", "text": _answer_plain(item["answer"])},
             }
             for item in (page.get("faq") or [])
         ],
