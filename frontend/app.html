@@ -115,7 +115,8 @@ td.col-check { padding-left: 22px; }
 tr:last-child td { border-bottom: none; }
 tr:hover td { background: #f8faff; }
 tr.selected td { background: #eff6ff; }
-.item-photo { width: 42px; height: 42px; border-radius: 8px; object-fit: cover; background: linear-gradient(135deg, #f1f5f9, #e2e8f0); display: flex; align-items: center; justify-content: center; color: var(--muted); font-size: 18px; flex-shrink: 0; border: 1px solid var(--border); }
+.item-photo { width: 42px; height: 42px; border-radius: 8px; object-fit: cover; background: linear-gradient(135deg, #f1f5f9, #e2e8f0); display: flex; align-items: center; justify-content: center; color: var(--muted); font-size: 18px; flex-shrink: 0; border: 1px solid var(--border); position: relative; }
+.item-photo-count { position: absolute; bottom: -4px; right: -4px; background: rgba(15,23,42,0.75); color: #fff; font-size: 9px; font-weight: 600; line-height: 1; padding: 2px 4px; border-radius: 6px; }
 .item-info { display: flex; align-items: center; gap: 12px; }
 .item-title { font-weight: 600; font-size: 13px; color: var(--text); }
 .item-meta { font-size: 11px; color: var(--muted); margin-top: 2px; }
