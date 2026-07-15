@@ -187,6 +187,7 @@ async def run_pipeline(keyword: str, region: str, pillar: str, slug: str, nl_slu
     if not generated:
         return {"success": False, "error": "content generation failed"}
     generated["body_html"] = inject_comparison_screenshots(generated["body_html"], pillar, keyword)
+    generated["body_html"] = inject_platform_images(generated["body_html"], keyword, language="en")
 
     schema_warnings = validate_page(generated)
 
