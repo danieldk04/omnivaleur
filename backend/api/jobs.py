@@ -38,13 +38,16 @@ def _recover_stale_claims(db, user_id: str, platform: str, now_dt: datetime) -> 
         no-ops if it's already gone, so a re-run can't double-delete.
       - scan: read-only.
       - content_refresh: re-edits the same listing (idempotent).
-      - RELIST create (has scheduled_for): its paired delete already removed the
-        old listing, so republishing can't create a duplicate.
 
     NOT retry-safe → marked 'error' instead of retried:
-      - an INITIAL crosslist create (no scheduled_for): if the first attempt did
-        publish but the completion just wasn't recorded, re-running would post a
-        DUPLICATE listing. Safer to surface an error and let the user republish.
+      - ANY create job (initial crosslist OR relist recreate): if the first
+        attempt did publish but the completion just wasn't recorded (e.g. the
+        MV3 service worker was killed right after the tab confirmed the
+        listing), re-running would post a DUPLICATE listing. A relist's create
+        is no more idempotent than an initial create — its paired delete only
+        guarantees the OLD listing is gone, not that THIS run didn't already
+        publish the new one. Safer to surface an error and let the user retry
+        manually.
       - anything that already hit the reclaim cap (persistently failing).
     """
     stale_before = (now_dt - timedelta(minutes=STALE_CLAIM_MINUTES)).isoformat()
