@@ -2,6 +2,7 @@ from fastapi import APIRouter, HTTPException, Depends
 from backend.database import get_db
 from backend.api.deps import get_current_user
 from backend.api.imports import _backfill_item_from_candidate
+from backend.services.crosslist import handle_item_sold
 from datetime import datetime, timezone, timedelta
 import logging
 
