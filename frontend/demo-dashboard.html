@@ -95,6 +95,22 @@ tr:last-child td { border-bottom: none; }
 .an-charts-mini { display: flex; align-items: flex-end; gap: 6px; height: 60px; padding: 0 4px; }
 .an-bar { flex: 1; background: var(--grad); border-radius: 4px 4px 0 0; opacity: .85; }
 
+.analytics-grid { display: grid; grid-template-columns: 1.4fr 1fr; gap: 16px; margin-top: 20px; }
+@media (max-width: 900px) { .analytics-grid { grid-template-columns: 1fr; } }
+.chart-wrap { padding: 20px 22px 6px; }
+.chart-bars { display: flex; align-items: flex-end; gap: 10px; height: 140px; }
+.chart-col { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 8px; height: 100%; justify-content: flex-end; }
+.chart-bar { width: 100%; max-width: 26px; border-radius: 5px 5px 0 0; background: var(--grad); opacity: 0; transform: scaleY(0); transform-origin: bottom; transition: transform .7s cubic-bezier(.2,.8,.2,1), opacity .5s; }
+.chart-bar.show { opacity: .9; transform: scaleY(1); }
+.chart-col-label { font-size: 10px; color: var(--muted); font-weight: 600; }
+.platform-split { padding: 4px 22px 20px; display: flex; flex-direction: column; gap: 12px; }
+.split-row { display: flex; align-items: center; gap: 10px; }
+.split-row img { width: 16px; height: 16px; border-radius: 3px; flex-shrink: 0; }
+.split-row-label { font-size: 12px; font-weight: 600; width: 78px; flex-shrink: 0; }
+.split-bar-track { flex: 1; height: 8px; border-radius: 999px; background: #f1f5f9; overflow: hidden; }
+.split-bar-fill { height: 100%; border-radius: 999px; background: var(--grad); width: 0%; transition: width 1s cubic-bezier(.2,.8,.2,1); }
+.split-row-pct { font-size: 11px; font-weight: 700; color: var(--muted); width: 34px; text-align: right; flex-shrink: 0; }
+
 .live-pill { display: inline-flex; align-items: center; gap: 6px; font-size: 11px; font-weight: 700; color: #dc2626; background: #fef2f2; border: 1px solid #fecaca; padding: 4px 10px; border-radius: 999px; }
 .live-dot { width: 6px; height: 6px; border-radius: 50%; background: #dc2626; animation: livepulse 1.4s ease-in-out infinite; }
 @keyframes livepulse { 0%,100% { opacity: 1; transform: scale(1); } 50% { opacity: .35; transform: scale(1.3); } }
