@@ -200,6 +200,7 @@ async def run_pipeline(keyword: str, region: str, pillar: str, slug: str, nl_slu
         logger.info(f"NL-vertaling genereren voor '{keyword}'")
         translated = translate_to_dutch(generated)
         if translated:
+            translated["body_html"] = inject_platform_images(translated["body_html"], keyword, language="nl")
             db_nl_slug = f"{nl_slug or slug}-nl"
             nl_result = _save_page_row(
                 db, region=region, pillar=pillar, slug=db_nl_slug, keyword=keyword,
