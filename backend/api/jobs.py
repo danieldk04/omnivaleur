@@ -81,7 +81,8 @@ def _recover_stale_claims(db, user_id: str, platform: str, now_dt: datetime) -> 
         else:
             msg = (
                 "Publishing was interrupted (Chrome likely closed mid-run) and couldn't be "
-                "verified. Nothing was double-listed — publish this item again when Chrome is open."
+                "verified either way — check whether it actually listed before publishing again "
+                "to avoid a duplicate."
                 if j["action"] == "create" else
                 f"This {j['action']} job was interrupted and couldn't finish after retries. Try it again."
             )
