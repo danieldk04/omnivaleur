@@ -346,7 +346,7 @@ function platformIcon(i) {
 const rowsEl = document.getElementById('demo-rows');
 rowsEl.innerHTML = items.map((it, ri) => `
   <tr class="demo-row" style="animation-delay:${ri * 90}ms">
-    <td><div class="item-info"><div class="item-photo">${it.emoji}</div><div><div class="item-title">${it.title}</div><div class="item-meta">${it.meta}</div></div></div></td>
+    <td><div class="item-info"><div class="item-photo"><img src="${it.photo}" loading="lazy" alt=""></div><div><div class="item-title">${it.title}</div><div class="item-meta">${it.meta}</div></div></div></td>
     <td>${it.price}</td>
     <td><span class="badge active">● Active</span></td>
     <td><div class="pm-matrix">${it.status.map((s,i)=>`<div class="pm-dot"><div class="pm-dot-icon s-none" data-row="${ri}" data-plat="${i}">${platformIcon(i)}<span class="pm-dot-badge ic"></span></div><span class="pm-dot-label">${labels[i]}</span></div>`).join('')}</div></td>
