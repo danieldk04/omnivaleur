@@ -1250,6 +1250,34 @@ chrome.alarms.onAlarm.addListener((alarm) => {
   if (alarm.name === "sold-check") checkSoldListings();
 });
 
+// Vinted has no webhook and no server-side polling (a stale session once let
+// server-side Vinted polling mass-delist live listings by mistake, so that
+// path stays permanently disabled). The only reliable, safe signal for "this
+// Vinted item sold" is the extension's own wardrobe scan, run from the
+// user's real logged-in session. Without a recurring trigger, that scan only
+// ever ran when the user manually clicked "scan" — so a Vinted sale could sit
+// undetected (and the item still listed elsewhere) indefinitely. This queues
+// a scan job every hour; the existing 15s job poller picks it up and runs it
+// like any other job, and the backend reconciles sold items once it completes.
+chrome.alarms.create("vinted-auto-scan", { periodInMinutes: 60 });
+chrome.alarms.onAlarm.addListener((alarm) => {
+  if (alarm.name === "vinted-auto-scan") triggerVintedAutoScan();
+});
+chrome.runtime.onInstalled.addListener(triggerVintedAutoScan);
+chrome.runtime.onStartup.addListener(triggerVintedAutoScan);
+
+async function triggerVintedAutoScan() {
+  try {
+    const serverUrl = await getServerUrl();
+    const headers = await getAuthHeaders();
+    if (!headers.Authorization) return; // not logged into the extension yet
+    await fetch(`${serverUrl}/api/scan/vinted`, { method: "POST", headers });
+    // Job is now pending — the regular 15s pollJobs() loop dispatches it.
+  } catch (e) {
+    console.error("[Omnivaleur] vinted-auto-scan trigger failed:", e);
+  }
+}
+
 async function checkSoldListings() {
   const serverUrl = await getServerUrl();
   const soldUrls = {
