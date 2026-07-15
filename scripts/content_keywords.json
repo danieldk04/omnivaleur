@@ -96,7 +96,7 @@
       "region": "nl",
       "pillar": "B",
       "slug": "sneaker-reselling-automation-platforms",
-      "status": "pending",
+      "status": "published",
       "priority": 12
     }
   ],
@@ -199,6 +199,15 @@
       "action": "created",
       "url_path": "/crosslisting/marktplaats-to-etsy-crosslisting-2026",
       "published_at": "2026-07-14T09:50:02.142219+00:00"
+    },
+    {
+      "keyword": "sneaker reselling automation platforms",
+      "slug": "sneaker-reselling-automation-platforms",
+      "region": "nl",
+      "pillar": "B",
+      "action": "created",
+      "url_path": "/reseller-tools/sneaker-reselling-automation-platforms",
+      "published_at": "2026-07-15T09:54:06.346498+00:00"
     }
   ]
 }
