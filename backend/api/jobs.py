@@ -458,8 +458,51 @@ async def complete_job(job_id: str, body: dict, user_id: str = Depends(get_curre
 
     elif job["action"] == "scan":
         _store_scan_results(db, job, body.get("listings", []))
+        if job["platform"] == "vinted":
+            await _reconcile_vinted_sales(db, job, body.get("listings", []))
 
     return {"ok": True}
+
+
+async def _reconcile_vinted_sales(db, job, scraped: list[dict]):
+    """
+    Vinted has no webhook and (deliberately, after a past incident with a stale
+    session) no server-side polling — so a Vinted sale is otherwise invisible
+    until the user notices it themselves. A wardrobe scan IS an authoritative
+    snapshot of everything still live on Vinted right now: if one of our
+    "active"/"relisting" Vinted listings isn't in that snapshot anymore, it was
+    sold, removed, or ended, and we treat it as sold so the item gets delisted
+    everywhere else automatically.
+
+    Only trust this when the scan actually returned data — an empty list here
+    almost always means the scrape failed/was cut short, not that everything
+    sold at once (see the page-1-failure/throw handling in bgScanVinted).
+    """
+    if not scraped:
+        return
+    scraped_ids = {str(r["platform_listing_id"]) for r in scraped if r.get("platform_listing_id")}
+
+    items = db.table("items").select("id").eq("user_id", job["user_id"]).execute().data or []
+    item_ids = [it["id"] for it in items]
+    if not item_ids:
+        return
+
+    active = (
+        db.table("listings")
+        .select("item_id,platform_listing_id")
+        .eq("platform", "vinted")
+        .in_("item_id", item_ids)
+        .in_("status", ["active", "relisting"])
+        .execute()
+        .data or []
+    )
+    for l in active:
+        pid = l.get("platform_listing_id")
+        if pid is not None and str(pid) not in scraped_ids:
+            try:
+                await handle_item_sold(l["item_id"], "vinted")
+            except Exception as e:
+                logger.warning(f"Vinted sale reconcile failed for item {l['item_id']}: {e}")
 
 
 def _store_scan_results(db, job, scraped: list[dict]):
