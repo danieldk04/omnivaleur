@@ -300,6 +300,22 @@ async def start_scan(platform: str, user_id: str = Depends(get_current_user)):
     if platform not in SCANNABLE_PLATFORMS:
         raise HTTPException(status_code=400, detail=f"Scanning isn't available for {platform}")
     db = get_db()
+    # The extension now also triggers Vinted scans autonomously on a timer; avoid
+    # piling up duplicate scan jobs (and opening a second tab) if one is already
+    # queued or actively running.
+    existing = (
+        db.table("jobs")
+        .select("id")
+        .eq("user_id", user_id)
+        .eq("platform", platform)
+        .eq("action", "scan")
+        .in_("status", ["pending", "claimed"])
+        .limit(1)
+        .execute()
+        .data
+    )
+    if existing:
+        return {"job_id": existing[0]["id"]}
     job = db.table("jobs").insert({
         "id": str(uuid.uuid4()),
         "user_id": user_id,
