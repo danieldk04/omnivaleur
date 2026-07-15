@@ -32,7 +32,10 @@ def _get_or_create_subscription(user_id: str) -> dict:
 
 
 def _is_owner_email(email: str | None) -> bool:
-    return bool(settings.owner_email) and bool(email) and email.lower() == settings.owner_email.lower()
+    if not email or not settings.owner_email:
+        return False
+    owner_emails = {e.strip().lower() for e in settings.owner_email.split(",") if e.strip()}
+    return email.lower() in owner_emails
 
 
 @router.get("/status")
