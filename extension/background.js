@@ -1355,6 +1355,148 @@ function scrapeSoldListings(url, platform) {
   });
 }
 
+// ── Activity notifications: unread messages + open bids/offers ────────────
+// The marketplaces we automate have no seller API for messages/bids, so the
+// only reliable read is the user's own logged-in session. Every 15 min we open
+// each platform's messages page in a background tab, read the unread badge and
+// bid indicators from the DOM, and report the counts to the backend so the
+// dashboard can surface "3 new offers on Marktplaats" in one place. We never
+// read message CONTENTS — only counts. Reply/accept still happens on-platform.
+const NOTIF_SCAN_MINUTES = 15;
+
+// Where to open the messages/bids view per platform, and the deep link we hand
+// the dashboard so the user can jump straight there.
+const NOTIF_SOURCES = {
+  marktplaats: "https://www.marktplaats.nl/messages",
+  "2dehands": "https://www.2dehands.be/messages",
+  vinted: "https://www.vinted.nl/member/messages",
+};
+
+chrome.alarms.create("notif-scan", { periodInMinutes: NOTIF_SCAN_MINUTES });
+chrome.alarms.onAlarm.addListener((alarm) => {
+  if (alarm.name === "notif-scan") scanNotifications();
+});
+chrome.runtime.onInstalled.addListener(scanNotifications);
+chrome.runtime.onStartup.addListener(scanNotifications);
+
+async function scanNotifications() {
+  const serverUrl = await getServerUrl();
+  const headers = await getAuthHeaders();
+  if (!headers.Authorization) return; // not logged into the extension yet
+
+  for (const [platform, url] of Object.entries(NOTIF_SOURCES)) {
+    try {
+      const counts = await scrapeNotificationCounts(url, platform);
+      if (!counts) continue; // not logged in / page didn't load — leave prior snapshot
+      await fetch(`${serverUrl}/api/notifications/report`, {
+        method: "POST",
+        headers,
+        body: JSON.stringify({
+          platform,
+          messages: counts.messages,
+          offers: counts.offers,
+          deep_link: url,
+        }),
+      }).catch((e) => console.error(`[Omnivaleur] notif report failed (${platform}):`, e));
+    } catch (e) {
+      console.error(`[Omnivaleur] notif-scan error (${platform}):`, e);
+    }
+  }
+}
+
+// Opens the messages page in a background tab and reads counts from the DOM.
+// Returns {messages, offers} or null if we couldn't read a logged-in page.
+// NOTE: the selectors below are best-effort against the platforms' current
+// markup and MUST be re-verified against a live logged-in session when a
+// platform changes its layout — a miss degrades to null (no update), never a
+// wrong number.
+function scrapeNotificationCounts(url, platform) {
+  return new Promise((resolve) => {
+    chrome.tabs.create({ url, active: false }, (tab) => {
+      if (chrome.runtime.lastError || !tab) { resolve(null); return; }
+      const tabId = tab.id;
+      let settled = false;
+      const finish = (val) => {
+        if (settled) return;
+        settled = true;
+        chrome.tabs.onUpdated.removeListener(onUpdated);
+        chrome.tabs.remove(tabId).catch(() => {});
+        resolve(val);
+      };
+
+      const onUpdated = (id, info) => {
+        if (id !== tabId || info.status !== "complete") return;
+        chrome.tabs.onUpdated.removeListener(onUpdated);
+        // Give the SPA a moment to render its message list after load.
+        setTimeout(() => {
+          chrome.scripting.executeScript(
+            { target: { tabId }, world: "MAIN", args: [platform], func: _mwReadNotifCounts },
+            (results) => {
+              const val = results?.[0]?.result;
+              finish(val && typeof val.messages === "number" ? val : null);
+            }
+          );
+        }, 2500);
+      };
+
+      chrome.tabs.onUpdated.addListener(onUpdated);
+      setTimeout(() => finish(null), 30000); // hard timeout
+    });
+  });
+}
+
+// Injected into the platform page (MAIN world). Counts unread conversations and
+// those that look like open bids/offers. Heuristic and defensive: if it sees a
+// login wall, it returns null so we don't overwrite with a bogus 0.
+function _mwReadNotifCounts(platform) {
+  const txt = (document.body.innerText || "").toLowerCase();
+  // Login wall → don't report; the user simply isn't signed into this platform.
+  if (/log ?in|inloggen|sign in|aanmelden/.test(txt) && !/bericht|message|verkocht|verzonden/.test(txt)) {
+    return null;
+  }
+
+  const num = (el) => {
+    const m = (el && (el.getAttribute("data-count") || el.textContent) || "").match(/\d+/);
+    return m ? parseInt(m[0], 10) : 0;
+  };
+
+  let messages = 0;
+  let offers = 0;
+
+  if (platform === "vinted") {
+    // Unread conversation rows carry an unread/bold marker; the header bell also
+    // exposes a badge. Try the conversation list first, fall back to the badge.
+    const unreadRows = document.querySelectorAll(
+      '[class*="conversation"] [class*="unread"], [data-testid*="conversation"][class*="unread"], .c-conversation--unread'
+    );
+    messages = unreadRows.length;
+    if (!messages) {
+      const badge = document.querySelector('[class*="notification"] [class*="badge"], [data-testid*="badge"]');
+      messages = num(badge);
+    }
+    // Vinted "offer" rows show an offer/bid chip within the thread preview.
+    offers = document.querySelectorAll('[class*="offer"], [data-testid*="offer"]').length;
+  } else {
+    // Marktplaats / 2dehands share one codebase. Unread conversations are
+    // marked in the inbox list; bids surface as "Bod" / "Bod uitgebracht".
+    const unreadRows = document.querySelectorAll(
+      '[class*="conversation"][class*="unread"], [class*="Conversation"][class*="unread"], li[class*="unread"]'
+    );
+    messages = unreadRows.length;
+    if (!messages) {
+      const badge = document.querySelector('[class*="unread"] [class*="count"], [class*="badge"]');
+      messages = num(badge);
+    }
+    // Count conversation previews that mention a bid.
+    const rows = document.querySelectorAll('[class*="conversation"], li[class*="Conversation"], [class*="inbox"] li');
+    rows.forEach((r) => {
+      if (/\bbod\b|bod uitgebracht|geboden/i.test(r.textContent || "")) offers++;
+    });
+  }
+
+  return { messages: Math.max(0, messages), offers: Math.max(0, offers) };
+}
+
 // ---- Main-world helpers (injected via chrome.scripting, bypasses page CSP) ----
 
 async function _mwFillDescription(selector, descText) {
