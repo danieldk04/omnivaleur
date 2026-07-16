@@ -72,16 +72,12 @@ PLATFORMS = [
         "cap_en": "The eBay interface — global reach and a category structure listings must be mapped into.",
         "cap_nl": "De eBay-interface — wereldwijd bereik en een rubriekenstructuur waar advertenties in moeten passen.",
     },
-    {
-        "key": "etsy",
-        "src": "/assets/platforms/etsy.jpg",
-        "name": "Etsy",
-        "aliases": ["etsy"],
-        "alt_en": "Screenshot of the Etsy marketplace interface",
-        "alt_nl": "Screenshot van de Etsy-interface",
-        "cap_en": "The Etsy storefront — built around handmade, vintage and craft listings.",
-        "cap_nl": "De Etsy-etalage — opgezet rond handgemaakte, vintage en creatieve advertenties.",
-    },
+    # Etsy is bewust WEGGELATEN: het serveert bot-/screenshot-verkeer een
+    # "Access is temporarily restricted"-blokpagina i.p.v. de echte interface,
+    # via elke anonieme screenshot-service. Liever géén beeld dan een blokpagina
+    # in een artikel. Wil je Etsy alsnog toevoegen, maak dan een echte screenshot
+    # vanuit een ingelogde/echte browsersessie, leg 'm neer als
+    # frontend/assets/platforms/etsy.jpg en zet dit blok terug.
     {
         "key": "shopify",
         "src": "/assets/platforms/shopify.jpg",
