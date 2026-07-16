@@ -2151,7 +2151,7 @@ function renderDashboard() {
   // Recent items table
   const rows = state.items.slice(0, 8).map(item => `<tr>
     <td><div class="item-info">
-      <div class="item-photo">${item.photo_urls?.[0] ? `<img src="${item.photo_urls[0]}" style="width:40px;height:40px;border-radius:6px;object-fit:cover">` : '👗'}</div>
+      <div class="item-photo">${itemPhotoThumb(item)}</div>
       <div><div class="item-title">${esc(item.title)}</div>
       <div class="item-meta">${item.brand || ''}${item.size ? ' · ' + item.size : ''}</div></div>
     </div></td>
@@ -2296,7 +2296,7 @@ function renderItemsTable(items) {
     return `<tr class="${rowClass}" id="row-${item.id}">
       <td class="col-check"><input type="checkbox" class="row-check" ${checked} onchange="toggleRowSelect('${item.id}',this.checked)"></td>
       <td><div class="item-info">
-        <div class="item-photo">${item.photo_urls?.[0] ? `<img src="${item.photo_urls[0]}" style="width:40px;height:40px;border-radius:6px;object-fit:cover">` : '👗'}</div>
+        <div class="item-photo">${itemPhotoThumb(item)}</div>
         <div><div class="item-title">${esc(item.title)}${(item.sku || '').startsWith('IMP-') ? ` <span class="badge" style="background:#eef2ff;color:#4f46e5;font-size:10px;vertical-align:middle" title="Created by importing an existing platform listing">↓ Imported</span>` : ''}</div><div class="item-meta">${item.brand || '—'}${item.size ? ' · ' + item.size : ''}</div>${missingBadge}</div>
       </div></td>
       <td><strong>€${item.price}</strong></td>
@@ -3471,7 +3471,7 @@ function renderRefreshView() {
 
     return `<tr>
       <td><div class="item-info">
-        <div class="item-photo">${item.photo_urls?.[0] ? `<img src="${item.photo_urls[0]}" style="width:40px;height:40px;border-radius:6px;object-fit:cover">` : '👗'}</div>
+        <div class="item-photo">${itemPhotoThumb(item)}</div>
         <div><div class="item-title">${esc(item.title)}</div><div class="item-meta">${item.brand || ''}${item.size ? ' · ' + item.size : ''}</div></div>
       </div></td>
       <td>${statusCell}</td>
@@ -3649,6 +3649,28 @@ async function doRefresh(itemId, platform, strategy, newPrice) {
     if (statusBox) { statusBox.style.background = 'var(--red-bg,#fee2e2)'; statusBox.style.borderColor = '#fca5a5'; statusBox.style.color = 'var(--red,#dc2626)'; }
     if (statusText) statusText.textContent = '✕ ' + (e.message || 'Refresh failed');
     if (doneBtn) { doneBtn.disabled = false; doneBtn.textContent = 'Close'; }
+  }
+}
+
+async function retryRelist(itemId, platform, btn) {
+  const label = PLATFORM_LABELS[platform] || platform;
+  if (!confirm(`Retry the relist on ${label}? The old listing is still live, so this safely deletes it again and republishes with a fresh date.`)) return;
+  if (btn) { btn.disabled = true; btn.textContent = 'Retrying…'; }
+  try {
+    const r = await apiFetch(`${API}/api/jobs/relist-retry`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ item_id: itemId, platform }),
+    });
+    const data = await r.json();
+    if (!r.ok) throw new Error(data.detail || 'Retry failed');
+    showToast('Relist re-queued — the extension will open ' + label + ' within ~15 seconds.');
+    await loadAll();
+    await loadRelistStatus();
+    await pollActivity();
+    if (document.getElementById('view-refresh')?.classList.contains('active')) renderRefreshView();
+  } catch (e) {
+    alert('Retry error: ' + e.message);
+    if (btn) { btn.disabled = false; btn.textContent = 'Retry relist'; }
   }
 }
 
