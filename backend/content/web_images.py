@@ -155,7 +155,7 @@ def inject_platform_images(body_html: str, keyword: str, language: str = "en", m
     if not detected:
         return body_html
 
-    figures = [_logo_figure_html(p, language) for p in detected]
+    figures = [_screenshot_figure_html(p, language) for p in detected]
 
     positions = _h2_positions(body_html)
     usable = positions[1:]  # eerste H2 overslaan
