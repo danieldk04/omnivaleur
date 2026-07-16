@@ -703,6 +703,20 @@ input[type="checkbox"].row-check { width: 15px; height: 15px; cursor: pointer; a
       </div>
     </div>
 
+    <!-- ── BERICHTEN / NOTIFICATIONS VIEW ───────────────────────────── -->
+    <div id="view-berichten" class="view">
+      <div class="view-header" style="margin-bottom:18px">
+        <h1>Berichten &amp; biedingen</h1>
+        <p>Eén overzicht van openstaande berichten en biedingen op je platforms. Reageren doe je op het platform zelf — klik op "Openen".</p>
+      </div>
+      <div id="notif-cards" class="stats" style="grid-template-columns:repeat(auto-fill,minmax(240px,1fr))">
+        <div class="stat" style="grid-column:1/-1;color:var(--muted)">Laden…</div>
+      </div>
+      <div style="margin-top:16px;font-size:12px;color:var(--muted);line-height:1.6;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:14px 16px">
+        <strong>Hoe werkt dit?</strong> De desktop-extensie leest de tellers uit je eigen ingelogde sessie op Marktplaats, 2dehands en Vinted (elke 15 min) — alleen de aantallen, nooit de inhoud van je berichten. Zet je computer met de extensie aan om dit up-to-date te houden. eBay/Shopify volgen later via hun officiële API.
+      </div>
+    </div>
+
     <!-- ── ANALYTICS VIEW ───────────────────────────────────────────── -->
     <div id="view-analytics" class="view">
       <div class="an-header">
