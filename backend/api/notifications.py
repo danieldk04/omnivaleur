@@ -21,7 +21,7 @@ router = APIRouter(prefix="/notifications", tags=["notifications"])
 DEFAULT_DEEP_LINKS = {
     "marktplaats": "https://www.marktplaats.nl/messages",
     "2dehands": "https://www.2dehands.be/messages",
-    "vinted": "https://www.vinted.nl/member/messages",
+    "vinted": "https://www.vinted.nl/inbox",
 }
 
 
