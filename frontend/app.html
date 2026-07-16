@@ -1778,6 +1778,26 @@ async function triggerPwaInstall() {
   document.querySelectorAll('.pwa-install-btn').forEach(b => { b.style.display = 'none'; });
 }
 
+// PWA install: capture the native "add to home screen" prompt (Android/Chrome).
+// On iOS there is no such event, so the Help card falls back to manual steps.
+let deferredInstallPrompt = null;
+window.addEventListener('beforeinstallprompt', (e) => {
+  e.preventDefault();
+  deferredInstallPrompt = e;
+  document.querySelectorAll('.pwa-install-btn').forEach(b => { b.style.display = 'inline-block'; });
+});
+window.addEventListener('appinstalled', () => {
+  deferredInstallPrompt = null;
+  document.querySelectorAll('.pwa-install-btn').forEach(b => { b.style.display = 'none'; });
+});
+async function triggerPwaInstall() {
+  if (!deferredInstallPrompt) return;
+  deferredInstallPrompt.prompt();
+  await deferredInstallPrompt.userChoice.catch(() => {});
+  deferredInstallPrompt = null;
+  document.querySelectorAll('.pwa-install-btn').forEach(b => { b.style.display = 'none'; });
+}
+
 function apiFetch(url, opts = {}) {
   return fetch(url, {
     ...opts,
