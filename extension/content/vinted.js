@@ -504,6 +504,48 @@
     }
   }
 
+  // After clicking Upload, Vinted often runs a "check in progress" review before
+  // it redirects to /items/{id} — so submitListing's URL-wait can time out even
+  // though the item WAS created (it goes live minutes later). Rather than falsely
+  // reporting "Relist failed", we confirm the item exists by finding it in the
+  // wardrobe (it shows up there as is_processing within a minute or two) and
+  // recover its real id. Returns {id} or null if it truly never appeared.
+  // `excludeId` is the old (deleted) listing id on a relist, so we never mistake
+  // it for the new one.
+  async function resolveCreatedVintedItem(item, excludeId, timeoutMs) {
+    const norm = (s) => String(s || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+    const target = norm(item.title);
+    if (!target) return null;
+
+    const userId = await getVintedUserId();
+    if (!userId) return null;
+
+    const deadline = Date.now() + timeoutMs;
+    // First pass immediately, then poll — the item can take a moment to register.
+    while (Date.now() < deadline) {
+      try {
+        const res = await fetch(
+          `/api/v2/wardrobe/${userId}/items?order=newest_first&page=1&per_page=50`,
+          { headers: { Accept: "application/json" } }
+        );
+        if (res.ok) {
+          const data = await res.json();
+          const items = (data && data.items) || [];
+          // newest_first → the first title match that isn't the old listing is
+          // the one we just created (a relist posts exactly one new item).
+          const hit = items.find((it) => {
+            if (String(it.id) === String(excludeId)) return false;
+            const t = norm(it.title);
+            return t && (t.includes(target) || target.includes(t));
+          });
+          if (hit) return { id: String(hit.id), processing: !!hit.is_processing };
+        }
+      } catch (_) { /* transient — keep polling */ }
+      await sleep(6000);
+    }
+    return null;
+  }
+
   async function deleteListingVinted(listingId) {
     // We're on the item page on its real country origin (e.g. vinted.nl) —
     // getDeleteUrl now navigates to the stored listing URL, so location.origin
