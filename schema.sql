@@ -226,3 +226,8 @@ CREATE TABLE IF NOT EXISTS platform_notifications (
     PRIMARY KEY (user_id, platform)
 );
 CREATE INDEX IF NOT EXISTS idx_platform_notifications_user ON platform_notifications(user_id);
+-- Match the rest of the schema: access is enforced by the backend (which
+-- filters every query by user_id), not by RLS. New Supabase tables can come
+-- with RLS enabled-but-policyless, which silently blocks ALL writes (the
+-- backend key is subject to RLS), so turn it off to stay consistent.
+ALTER TABLE platform_notifications DISABLE ROW LEVEL SECURITY;
