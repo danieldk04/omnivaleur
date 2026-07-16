@@ -1879,6 +1879,65 @@ function showView(name) {
   if (name === 'import') { renderImportScanButtons(); loadImportCandidates(); }
 }
 
+// ── Notifications (unread messages + open bids across platforms) ─────
+const NOTIF_PLATFORM_LABELS = { marktplaats: 'Marktplaats', '2dehands': '2dehands', vinted: 'Vinted' };
+
+async function loadNotifications() {
+  try {
+    const res = await apiFetch(`${API}/api/notifications/`);
+    if (!res.ok) { renderNotifications(null); return; }
+    const data = await res.json();
+    renderNotifications(data);
+  } catch (e) {
+    renderNotifications(null);
+  }
+}
+
+function updateNotifBadge(total) {
+  const badge = document.getElementById('nav-notif-badge');
+  if (!badge) return;
+  if (total > 0) {
+    badge.textContent = total > 99 ? '99+' : total;
+    badge.style.display = 'flex';
+  } else {
+    badge.style.display = 'none';
+  }
+}
+
+function renderNotifications(data) {
+  const total = data?.total || 0;
+  updateNotifBadge(total);
+
+  const wrap = document.getElementById('notif-cards');
+  if (!wrap) return;
+
+  const rows = (data?.platforms || []).filter(p => (p.messages || 0) + (p.offers || 0) > 0);
+  if (!rows.length) {
+    wrap.innerHTML = `<div class="stat" style="grid-column:1/-1;text-align:center;padding:32px;color:var(--muted)">
+      <div style="font-size:30px;margin-bottom:8px">📭</div>
+      <div style="font-weight:700;color:var(--text);margin-bottom:4px">Niets nieuws</div>
+      <div style="font-size:12px">Geen openstaande berichten of biedingen. Zorg dat je computer met de Omnivaleur-extensie aanstaat zodat we dit voor je kunnen bijhouden.</div>
+    </div>`;
+    return;
+  }
+
+  wrap.innerHTML = rows.map(p => {
+    const label = NOTIF_PLATFORM_LABELS[p.platform] || p.platform;
+    const icon = (typeof PLATFORM_ICONS !== 'undefined' && PLATFORM_ICONS[p.platform]) || '🏪';
+    const parts = [];
+    if (p.messages) parts.push(`<span style="display:inline-flex;align-items:center;gap:5px"><span style="width:8px;height:8px;border-radius:50%;background:var(--blue)"></span>${p.messages} bericht${p.messages === 1 ? '' : 'en'}</span>`);
+    if (p.offers) parts.push(`<span style="display:inline-flex;align-items:center;gap:5px"><span style="width:8px;height:8px;border-radius:50%;background:var(--mint-dark)"></span>${p.offers} bod${p.offers === 1 ? '' : 'en'}</span>`);
+    const when = p.updated_at ? new Date(p.updated_at).toLocaleString('nl-NL', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : '';
+    const link = p.deep_link || '#';
+    return `<div class="stat" style="display:flex;flex-direction:column;gap:10px">
+      <div style="display:flex;align-items:center;gap:8px;font-weight:800;font-size:15px"><span style="font-size:18px">${icon}</span>${label}</div>
+      <div style="display:flex;flex-direction:column;gap:6px;font-size:13px;font-weight:600;color:var(--text)">${parts.join('')}</div>
+      <a href="${link}" target="_blank" rel="noopener" class="btn btn-primary btn-sm" style="margin-top:2px;justify-content:center">Openen op ${label} →</a>
+      ${when ? `<div style="font-size:11px;color:var(--muted)">Bijgewerkt: ${when}</div>` : ''}
+    </div>`;
+  }).join('');
+}
+
 // ── Billing ──────────────────────────────────────────────────────
 let _billingStatus = null;
 
