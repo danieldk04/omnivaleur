@@ -1710,6 +1710,14 @@ setTimeout(showExtOverlay, 800);
 const API = window.location.hostname === 'localhost' ? 'http://localhost:8001' : '';
 const TOKEN = sessionStorage.getItem('cl_token') || '';
 
+// PWA: register the service worker so the dashboard can be installed to the
+// phone's homescreen and open like a native app. Only on https/localhost.
+if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js').catch(() => {});
+  });
+}
+
 function apiFetch(url, opts = {}) {
   return fetch(url, {
     ...opts,
