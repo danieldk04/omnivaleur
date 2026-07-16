@@ -45,6 +45,14 @@ class ListingCreate(BaseModel):
     platforms: list[str]  # ['vinted', 'marktplaats', 'ebay', '2dehands']
 
 
+class NotificationReport(BaseModel):
+    """Extension → backend: current unread/offer counts for one platform."""
+    platform: str
+    messages: int = 0
+    offers: int = 0
+    deep_link: Optional[str] = None
+
+
 class ListingOut(BaseModel):
     id: str
     item_id: str
