@@ -137,6 +137,17 @@ def _h2_positions(body_html: str) -> list[int]:
     return [m.start() for m in re.finditer(r"<h2", body_html)]
 
 
+# Verwijdert eerder-geïnjecteerde platform-figuren (elke <figure> die naar
+# /assets/platforms/ verwijst). Nodig bij een re-backfill: als de screenshots
+# vervangen worden of het figuur-formaat wijzigt, moeten de oude eruit vóórdat
+# de nieuwe erin gaan — anders blijven gebroken/verouderde beelden staan.
+_PLATFORM_FIGURE_RE = re.compile(r"<figure\b[^>]*>(?:(?!</figure>).)*?/assets/platforms/(?:(?!</figure>).)*?</figure>", re.DOTALL)
+
+
+def strip_platform_images(body_html: str) -> str:
+    return _PLATFORM_FIGURE_RE.sub("", body_html)
+
+
 def inject_platform_images(body_html: str, keyword: str, language: str = "en", max_images: int = 4) -> str:
     """
     Verspreidt de logo's van de genoemde platforms over de H2-secties van een
