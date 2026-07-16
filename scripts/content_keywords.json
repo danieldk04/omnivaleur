@@ -98,6 +98,47 @@
       "slug": "sneaker-reselling-automation-platforms",
       "status": "published",
       "priority": 12
+    },
+    {
+      "keyword": "etsy to ebay crosslisting",
+      "region": "nl",
+      "pillar": "A",
+      "slug": "etsy-to-ebay-crosslisting",
+      "status": "published",
+      "priority": 13
+    },
+    {
+      "keyword": "book reselling automation",
+      "region": "nl",
+      "pillar": "B",
+      "slug": "book-reselling-automation",
+      "status": "pending",
+      "priority": 14
+    },
+    {
+      "keyword": "omnivaleur vs oneShop",
+      "region": "nl",
+      "pillar": "C",
+      "slug": "omnivaleur-vs-oneshop",
+      "status": "pending",
+      "priority": 15
+    },
+    {
+      "keyword": "marktplaats to 2dehands crosslisting",
+      "region": "nl",
+      "pillar": "A",
+      "slug": "marktplaats-to-2dehands-crosslisting",
+      "status": "pending",
+      "nl_slug": "marktplaats-naar-2dehands-crosslisting",
+      "priority": 16
+    },
+    {
+      "keyword": "electronics reselling automation platforms",
+      "region": "nl",
+      "pillar": "B",
+      "slug": "electronics-reselling-automation-platforms",
+      "status": "pending",
+      "priority": 17
     }
   ],
   "published": [
@@ -208,6 +249,15 @@
       "action": "created",
       "url_path": "/reseller-tools/sneaker-reselling-automation-platforms",
       "published_at": "2026-07-15T09:54:06.346498+00:00"
+    },
+    {
+      "keyword": "etsy to ebay crosslisting",
+      "slug": "etsy-to-ebay-crosslisting",
+      "region": "nl",
+      "pillar": "A",
+      "action": "created",
+      "url_path": "/crosslisting/etsy-to-ebay-crosslisting",
+      "published_at": "2026-07-16T10:01:02.588615+00:00"
     }
   ]
 }
