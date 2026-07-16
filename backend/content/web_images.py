@@ -119,17 +119,15 @@ def platforms_in(text: str) -> list[dict]:
     return [p for _, p in found]
 
 
-def _logo_figure_html(p: dict, language: str) -> str:
+def _screenshot_figure_html(p: dict, language: str) -> str:
     alt = p["alt_nl"] if language == "nl" else p["alt_en"]
     caption = p["cap_nl"] if language == "nl" else p["cap_en"]
-    # Logo's zijn géén full-bleed foto's: gecentreerd op een lichte kaart met
-    # een vaste hoogte, zodat een klein SVG/PNG niet uitgerekt oogt.
+    # Full-width screenshot, identiek gestyled aan CROSSLIST_SCREENSHOTS in
+    # generator.py zodat platform-screenshots en eigen dashboard-screenshots er
+    # in één artikel consistent uitzien.
     return (
-        f'<figure style="margin:24px 0"><div style="display:flex;align-items:center;'
-        f'justify-content:center;background:#f8fafc;border:1px solid #e2e8f0;'
-        f'border-radius:10px;padding:28px">'
-        f'<img src="{p["src"]}" alt="{alt}" loading="lazy" '
-        f'style="height:52px;width:auto;max-width:70%;object-fit:contain"></div>'
+        f'<figure style="margin:24px 0"><img src="{p["src"]}" alt="{alt}" '
+        f'loading="lazy" style="width:100%;border-radius:10px;border:1px solid #e2e8f0">'
         f'<figcaption style="font-size:13px;color:#64748b;margin-top:8px;'
         f'text-align:center">{caption}</figcaption></figure>'
     )
