@@ -27,69 +27,70 @@ logger = logging.getLogger(__name__)
 
 FRONTEND_DIR = Path(__file__).resolve().parent.parent.parent / "frontend"
 
-# Elk platform: bestandspad + zoekwoorden om het in de tekst te herkennen +
-# een korte, feitelijke bijschrift-zin in EN en NL. De bijschriften zijn
-# bewust kort en neutraal (geen marketing), zodat ze niet als reclame lezen.
+# Elk platform: pad naar de screenshot + zoekwoorden om het in de tekst te
+# herkennen + een korte, feitelijke bijschrift-zin in EN en NL. De bijschriften
+# beschrijven wat op de screenshot te zien is (de interface), bewust kort en
+# neutraal — geen marketing.
 PLATFORMS = [
     {
         "key": "marktplaats",
-        "src": "/assets/platforms/marktplaats.png",
+        "src": "/assets/platforms/marktplaats.jpg",
         "name": "Marktplaats",
         "aliases": ["marktplaats"],
-        "alt_en": "Marktplaats logo",
-        "alt_nl": "Marktplaats-logo",
-        "cap_en": "Marktplaats — the largest general marketplace in the Netherlands.",
-        "cap_nl": "Marktplaats — het grootste algemene handelsplatform van Nederland.",
+        "alt_en": "Screenshot of the Marktplaats marketplace interface",
+        "alt_nl": "Screenshot van de Marktplaats-interface",
+        "cap_en": "The Marktplaats interface — search bar, categories and the listing grid sellers publish into.",
+        "cap_nl": "De Marktplaats-interface — zoekbalk, categorieën en het advertentie-overzicht waar verkopers in plaatsen.",
     },
     {
         "key": "2dehands",
-        "src": "/assets/platforms/2dehands.png",
+        "src": "/assets/platforms/2dehands.jpg",
         "name": "2dehands",
         "aliases": ["2dehands", "2ehands", "tweedehands.be"],
-        "alt_en": "2dehands logo",
-        "alt_nl": "2dehands-logo",
-        "cap_en": "2dehands — the Belgian sister marketplace of Marktplaats.",
-        "cap_nl": "2dehands — het Belgische zusterplatform van Marktplaats.",
+        "alt_en": "Screenshot of the 2dehands marketplace interface",
+        "alt_nl": "Screenshot van de 2dehands-interface",
+        "cap_en": "2dehands — the Belgian sister site of Marktplaats, with the same listing layout.",
+        "cap_nl": "2dehands — de Belgische zustersite van Marktplaats, met dezelfde advertentie-indeling.",
     },
     {
         "key": "vinted",
-        "src": "/assets/platforms/vinted.svg",
+        "src": "/assets/platforms/vinted.jpg",
         "name": "Vinted",
         "aliases": ["vinted"],
-        "alt_en": "Vinted logo",
-        "alt_nl": "Vinted-logo",
-        "cap_en": "Vinted — a fee-free fashion resale app popular across Europe.",
-        "cap_nl": "Vinted — een gratis mode-resale-app, populair in heel Europa.",
+        "alt_en": "Screenshot of the Vinted catalog interface with filters",
+        "alt_nl": "Screenshot van de Vinted-catalogus met filters",
+        "cap_en": "The Vinted catalog — category filters (size, brand, condition) that map to the fields you fill per listing.",
+        "cap_nl": "De Vinted-catalogus — filters op maat, merk en staat, die aansluiten op de velden die je per advertentie invult.",
     },
     {
         "key": "ebay",
-        "src": "/assets/platforms/ebay.svg",
+        "src": "/assets/platforms/ebay.jpg",
         "name": "eBay",
         "aliases": ["ebay", "e-bay"],
-        "alt_en": "eBay logo",
-        "alt_nl": "eBay-logo",
-        "cap_en": "eBay — a global marketplace with a large cross-border buyer base.",
-        "cap_nl": "eBay — een wereldwijd platform met een groot internationaal koperspubliek.",
+        "alt_en": "Screenshot of the eBay marketplace homepage",
+        "alt_nl": "Screenshot van de eBay-marktplaats",
+        "cap_en": "The eBay interface — global reach and a category structure listings must be mapped into.",
+        "cap_nl": "De eBay-interface — wereldwijd bereik en een rubriekenstructuur waar advertenties in moeten passen.",
     },
     {
         "key": "etsy",
-        "src": "/assets/platforms/etsy.svg",
+        "src": "/assets/platforms/etsy.jpg",
         "name": "Etsy",
         "aliases": ["etsy"],
-        "alt_en": "Etsy logo",
-        "alt_nl": "Etsy-logo",
-        "cap_en": "Etsy — a marketplace focused on handmade, vintage and craft items.",
-        "cap_nl": "Etsy — een platform voor handgemaakte, vintage en creatieve producten.",
+        "alt_en": "Screenshot of the Etsy marketplace interface",
+        "alt_nl": "Screenshot van de Etsy-interface",
+        "cap_en": "The Etsy storefront — built around handmade, vintage and craft listings.",
+        "cap_nl": "De Etsy-etalage — opgezet rond handgemaakte, vintage en creatieve advertenties.",
     },
     {
         "key": "shopify",
-        "src": "/assets/platforms/shopify.svg",
+        "src": "/assets/platforms/shopify.jpg",
         "name": "Shopify",
         "aliases": ["shopify"],
-        "alt_en": "Shopify logo",
-        "alt_nl": "Shopify-logo",
-        "cap_en": "Shopify — powers your own branded webshop alongside the marketplaces.",
-        "cap_nl": "Shopify — draait je eigen webshop naast de marktplaatsen.",
+        "alt_en": "Screenshot of the Shopify website",
+        "alt_nl": "Screenshot van de Shopify-website",
+        "cap_en": "Shopify — your own branded webshop running alongside the marketplaces.",
+        "cap_nl": "Shopify — je eigen webshop met eigen huisstijl, naast de marktplaatsen.",
     },
 ]
 
