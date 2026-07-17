@@ -1209,11 +1209,7 @@ async function bgScanVinted(job, serverUrl) {
     await reportProgress(serverUrl, job.id, {
       stage: "saving", message: "Saving to your dashboard…", current: total, total,
     });
-    const completeHeaders = await getAuthHeaders();
-    await fetch(`${serverUrl}/api/jobs/${job.id}/complete`, {
-      method: "POST", headers: completeHeaders,
-      body: JSON.stringify({ listings: result.items }),
-    });
+    await finaliseJob(serverUrl, job.id, "complete", { listings: result.items });
     console.log(`[Omnivaleur] Vinted scan found ${result.items.length} listings (enriched ${enriched})`);
   } finally {
     setTimeout(() => chrome.tabs.remove(tabId).catch(() => {}), 2500);
