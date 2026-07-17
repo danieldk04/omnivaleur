@@ -244,6 +244,8 @@ def _build_prompt(
 
 CRITICAL LANGUAGE RULE: the target keyword and competitor research below may be phrased in Dutch (that is simply what people search for). You must nonetheless write the ENTIRE article — title, meta description, H1, quick answer, body, FAQ, everything — in {language}. Translate the concept and intent of the Dutch keyword into a natural {language} article. Do NOT copy or echo any Dutch phrasing anywhere in your output, including the H1. If you catch yourself writing a Dutch word, stop and translate it.
 
+CRITICAL BRAND RULE: "Omnivaleur" is a brand/product name ONLY — it is a noun, never a verb. NEVER use it as an action. The action of listing an item on multiple marketplaces is "cross-list" / "cross-listing" (the Dutch keyword "crosslisten" translates to the verb "cross-list", NOT to "Omnivaleur"). Wrong: "How to Omnivaleur from Marktplaats to Vinted". Right: "How to cross-list from Marktplaats to Vinted". Use the brand name "Omnivaleur" only to refer to the product itself (e.g. "with Omnivaleur you can…").
+
 Write a COMPLETE programmatic SEO article in {language} for the concept behind this search keyword: "{keyword}"
 Content pillar: {"A (platform-to-platform comparison/combo page)" if pillar == "A" else "C (honest Omnivaleur vs. named competitor comparison)" if pillar == "C" else "B (niche/audience automation page)"}
 URL will be: /{region}/{"crosslisten" if pillar == "A" else "vergelijking" if pillar == "C" else "reseller-tools"}/{slug}
