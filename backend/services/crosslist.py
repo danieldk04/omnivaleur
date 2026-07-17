@@ -56,6 +56,39 @@ async def _translate_to_dutch(text: str, brand: str | None = None) -> str:
     return await _translate_with_claude(text, "nl", brand)
 
 
+async def localize_item_for_platform(item: dict, platform: str) -> dict:
+    """
+    Return `item` with title/description in the language `platform` expects.
+
+    Every path that publishes a listing must go through this. The relist recreate
+    used to build its create payload straight from the DB row, so a refreshed
+    marktplaats/2dehands listing came back in English while the original had been
+    published in Dutch — the item reads as translated on first publish and
+    untranslated after every relist.
+
+    Non-localized platforms (and translation failures) return the item unchanged.
+    """
+    brand = item.get("brand") or None
+    if platform in _DUTCH_PLATFORMS:
+        title, desc = await asyncio.gather(
+            _translate_to_dutch(item.get("title", ""), brand),
+            _translate_to_dutch(item.get("description", ""), brand),
+        )
+    elif platform in _ENGLISH_PLATFORMS:
+        manual_title = (item.get("shopify_title") or "").strip()
+        if manual_title:
+            title = manual_title
+            desc = await _translate_to_english(item.get("description", ""), brand)
+        else:
+            title, desc = await asyncio.gather(
+                _translate_to_english(item.get("title", ""), brand),
+                _translate_to_english(item.get("description", ""), brand),
+            )
+    else:
+        return item
+    return {**item, "title": title, "description": desc}
+
+
 # Platforms handled by the Chrome extension (form automation in real browser)
 EXTENSION_PLATFORMS = {"marktplaats", "2dehands", "vinted"}
 # Platforms handled server-side via official API
