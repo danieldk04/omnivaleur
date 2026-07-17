@@ -122,6 +122,42 @@ const MP_CATEGORIES = {
   "unisex sportkleding":    { cat1: 621,  cat3: 2784, bucketId: 162 },
   "unisex schoenen":        { cat1: 621,  cat3: 625,  bucketId: 164 },
   "unisex accessoires":     { cat1: 621,  cat3: 628,  bucketId: 162 },
+
+  // === GAMES (cat1=356 "Spelcomputers en Games") ===
+  // Non-clothing. URL form is /plaats/{cat1}/{cat3}?bucketId={bucketId}, where
+  // for this branch bucketId = the L2 platform subcategory and cat3 = the L3
+  // console-generation "type". Both are mandatory in Marktplaats' sell flow, so
+  // every game category is pinned to a specific generation. IDs read straight
+  // from the live SYI category picker (verified, not guessed).
+  // -- PlayStation games (bucketId 205 = "Games | Sony PlayStation")
+  "games playstation 5":    { cat1: 356, cat3: 2952, bucketId: 205 },
+  "games playstation 4":    { cat1: 356, cat3: 2889, bucketId: 205 },
+  "games playstation 3":    { cat1: 356, cat3: 1735, bucketId: 205 },
+  "games playstation 2":    { cat1: 356, cat3: 1734, bucketId: 205 },
+  "games playstation 1":    { cat1: 356, cat3: 367,  bucketId: 205 },
+  "games psp":              { cat1: 356, cat3: 1660, bucketId: 205 },
+  "games ps vita":          { cat1: 356, cat3: 2890, bucketId: 205 },
+  // -- Nintendo games (bucketId 204 = "Games | Nintendo")
+  "games nintendo switch":  { cat1: 356, cat3: 2942, bucketId: 204 },
+  "games nintendo wii u":   { cat1: 356, cat3: 2888, bucketId: 204 },
+  "games nintendo wii":     { cat1: 356, cat3: 1630, bucketId: 204 },
+  "games nintendo 3ds":     { cat1: 356, cat3: 2887, bucketId: 204 },
+  "games nintendo ds":      { cat1: 356, cat3: 1659, bucketId: 204 },
+  "games gamecube":         { cat1: 356, cat3: 1730, bucketId: 204 },
+  "games nintendo 64":      { cat1: 356, cat3: 1733, bucketId: 204 },
+  "games snes":             { cat1: 356, cat3: 1732, bucketId: 204 },
+  "games nes":              { cat1: 356, cat3: 1731, bucketId: 204 },
+  "games gameboy":          { cat1: 356, cat3: 363,  bucketId: 204 },
+  // -- Xbox games (bucketId 206 = "Games | Xbox")
+  "games xbox series":      { cat1: 356, cat3: 2953, bucketId: 206 },
+  "games xbox one":         { cat1: 356, cat3: 2891, bucketId: 206 },
+  "games xbox 360":         { cat1: 356, cat3: 1631, bucketId: 206 },
+  "games xbox original":    { cat1: 356, cat3: 368,  bucketId: 206 },
+  // -- Other games (bucketId 207 = "Games | Overige")
+  "games pc":               { cat1: 356, cat3: 365,  bucketId: 207 },
+  "games sega":             { cat1: 356, cat3: 366,  bucketId: 207 },
+  "games atari":            { cat1: 356, cat3: 1729, bucketId: 207 },
+  "games overige":          { cat1: 356, cat3: 364,  bucketId: 207 },
 };
 // NOTE: there is deliberately no catch-all default category. There used to be
 // one (dames jeans), and it meant any item whose category didn't resolve got
