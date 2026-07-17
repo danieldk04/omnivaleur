@@ -541,7 +541,8 @@ async def create_item_from_candidate(candidate_id: str, body: dict, user_id: str
     if not cand:
         raise HTTPException(status_code=404, detail="Import candidate not found")
 
-    item_data = _item_data_from_candidate(cand, body)
+    item_data = _item_data_from_candidate(cand, body, inferred=await _infer_attributes_smart(
+        cand.get("title"), cand.get("description"), cand.get("brand")))
     item = ItemCreate(**item_data)
     data = item.model_dump()
     data["id"] = str(uuid.uuid4())
