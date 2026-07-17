@@ -4276,7 +4276,45 @@ const CATEGORIES = {
     ["unisex truien","Jumpers / Hoodies"],["unisex jassen","Jackets / Coats"],
     ["unisex sportkleding","Sportswear"],["unisex schoenen","Shoes"],["unisex accessoires","Accessories"],
   ],
+  // Non-clothing. Values match the "games ..." keys in the extension's
+  // MP_CATEGORIES exactly — each maps to a verified Marktplaats category tuple.
+  // Games always pin a console generation because Marktplaats requires it.
+  games: [
+    ["games playstation 5","PlayStation 5 — game"],["games playstation 4","PlayStation 4 — game"],
+    ["games playstation 3","PlayStation 3 — game"],["games playstation 2","PlayStation 2 — game"],
+    ["games playstation 1","PlayStation 1 — game"],["games psp","PSP — game"],["games ps vita","PS Vita — game"],
+    ["games nintendo switch","Nintendo Switch — game"],["games nintendo wii u","Nintendo Wii U — game"],
+    ["games nintendo wii","Nintendo Wii — game"],["games nintendo 3ds","Nintendo 3DS — game"],
+    ["games nintendo ds","Nintendo DS — game"],["games gamecube","GameCube — game"],
+    ["games nintendo 64","Nintendo 64 — game"],["games snes","Super Nintendo (SNES) — game"],
+    ["games nes","Nintendo NES — game"],["games gameboy","Game Boy — game"],
+    ["games xbox series","Xbox Series X/S — game"],["games xbox one","Xbox One — game"],
+    ["games xbox 360","Xbox 360 — game"],["games xbox original","Xbox (original) — game"],
+    ["games pc","PC — game"],["games sega","Sega — game"],["games atari","Atari — game"],
+    ["games overige","Other console — game"],
+  ],
 };
+
+// Non-clothing items are recognised purely by their category prefix (mirrors
+// backend crosslist.py _is_non_clothing), so no extra field has to be stored.
+function isNonClothingItem(item) {
+  return String(item?.category || '').trim().toLowerCase().startsWith('games ');
+}
+function currentItemType() {
+  return document.getElementById('f-item-type')?.value || 'clothing';
+}
+// Show/hide the clothing-only fields (gender, size) and rebuild the category
+// dropdown from the right taxonomy when the item type changes.
+function onItemTypeChange() {
+  const isGames = currentItemType() === 'games';
+  document.getElementById('fg-gender').style.display = isGames ? 'none' : '';
+  document.getElementById('fg-size').style.display = isGames ? 'none' : '';
+  if (isGames) {
+    document.getElementById('f-gender').value = '';
+    document.getElementById('f-size').value = '';
+  }
+  updateCategoryOptions();
+}
 
 function togglePlatformPrices() {
   const el = document.getElementById('platform-price-fields');
