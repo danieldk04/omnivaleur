@@ -1766,17 +1766,60 @@ input[type="checkbox"].row-check { width: 15px; height: 15px; cursor: pointer; a
 <script>
 if (!sessionStorage.getItem('cl_auth')) { window.location.href = '/login.html'; }
 
-function showExtOverlay() {
-  if (!localStorage.getItem('cl_ext_ok')) {
-    document.getElementById('ext-overlay').style.display = 'flex';
-  }
+// ── Extension detection ───────────────────────────────────────────
+// The extension's content script (webapp_sync.js) answers our ping with
+// EXT_HELLO. Before this the page had no idea whether the extension existed: it
+// showed an install overlay to everyone until they clicked "I already have it",
+// and the sidebar claimed "Extension active" unconditionally — including when
+// nothing was installed at all.
+//
+// Three real states drive the whole UI: 'missing' (no reply), 'signed-out'
+// (installed, no Omnivaleur token) and 'ready'.
+const EXT_PAGE_SOURCE = 'omnivaleur-page';
+const EXT_SOURCE = 'omnivaleur-extension';
+let extState = { status: 'checking', version: '', email: '' };
+let _extReplyTimer = null;
+
+window.addEventListener('message', (event) => {
+  if (event.source !== window) return;
+  const d = event.data;
+  if (!d || d.source !== EXT_SOURCE || d.type !== 'EXT_HELLO') return;
+  clearTimeout(_extReplyTimer);
+  extState = {
+    status: d.signedIn ? 'ready' : 'signed-out',
+    version: d.version || '',
+    email: d.email || '',
+  };
+  renderExtSetup();
+  if (typeof renderExtStatus === 'function') renderExtStatus();
+});
+
+function pingExtension() {
+  clearTimeout(_extReplyTimer);
+  window.postMessage({ source: EXT_PAGE_SOURCE, type: 'EXT_PING' }, window.location.origin);
+  // No answer in time = not installed. The content script replies synchronously
+  // once the worker wakes, so this only needs to cover a cold service worker.
+  _extReplyTimer = setTimeout(() => {
+    if (extState.status === 'checking') {
+      extState = { status: 'missing', version: '', email: '' };
+      renderExtSetup();
+      if (typeof renderExtStatus === 'function') renderExtStatus();
+    }
+  }, 2500);
 }
+
 function dismissExtOverlay() {
   localStorage.setItem('cl_ext_ok', '1');
   document.getElementById('ext-overlay').style.display = 'none';
 }
-// Show after a brief delay so the page loads first
-setTimeout(showExtOverlay, 800);
+
+// Re-check when the user comes back to the tab — that's exactly when they return
+// from installing the extension or signing in to it.
+document.addEventListener('visibilitychange', () => {
+  if (!document.hidden && extState.status !== 'ready') pingExtension();
+});
+
+setTimeout(pingExtension, 400);
 
 const API = window.location.hostname === 'localhost' ? 'http://localhost:8001' : '';
 const TOKEN = sessionStorage.getItem('cl_token') || '';
