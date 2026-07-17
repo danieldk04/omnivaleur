@@ -687,8 +687,23 @@ async function bgDeleteVinted(job, serverUrl) {
         }
         return "";
       };
-      if (!out.color) out.color = scopeRow(["Colour", "Color", "Kleur"]) || rowValue(["Colour", "Color", "Kleur"]);
-      out.material = scopeRow(["Material", "Materiaal"]) || rowValue(["Material", "Materiaal"]);
+      // Vinted gives every attribute row an exact testid (verified live 2026-07):
+      //   item-attributes-color    -> "Colour\nNavy"
+      //   item-attributes-material -> "Material\nCotton"
+      //   item-attributes-status   -> "Condition\nVery good"
+      // Read those directly — the label/sibling walking below only ever ran on
+      // guessed label text and returned nothing for colour and material, so both
+      // were silently lost on every relist. Each row renders "Label\nValue", so
+      // drop the first line and keep the rest.
+      const attrValue = (testid) => {
+        const el = document.querySelector(`[data-testid="item-attributes-${testid}"]`);
+        const lines = (el?.innerText || "").split("\n").map(s => s.trim()).filter(Boolean);
+        return lines.length > 1 ? lines.slice(1).join(" ") : "";
+      };
+      if (!out.color) out.color = attrValue("color") || scopeRow(["Colour", "Color", "Kleur"]) || rowValue(["Colour", "Color", "Kleur"]);
+      out.material = attrValue("material") || scopeRow(["Material", "Materiaal"]) || rowValue(["Material", "Materiaal"]);
+      if (!out.condition) out.condition = attrValue("status");
+      if (!out.size) out.size = attrValue("size");
       // Category + gender from the breadcrumb (e.g. Women / Clothing / Jumpers & sweaters / ...).
       const crumbs = [...document.querySelectorAll('nav a, [class*="breadcrumb" i] a, [data-testid*="breadcrumb"] a')]
         .map(a => a.textContent.trim()).filter(Boolean);
