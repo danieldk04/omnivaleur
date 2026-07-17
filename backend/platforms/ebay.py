@@ -125,8 +125,29 @@ class EbayPlatform(PlatformBase):
             if expires_at.tzinfo is None:
                 expires_at = expires_at.replace(tzinfo=timezone.utc)
             if datetime.now(timezone.utc) >= expires_at:
-                return await self.refresh_credentials(credentials)
+                refreshed = await self.refresh_credentials(credentials)
+                self._persist_refreshed(credentials, refreshed)
+                return refreshed
         return credentials
+
+    def _persist_refreshed(self, old: dict, new: dict) -> None:
+        """Schrijf een ververste access-token terug naar de database, zodat niet
+        elke call opnieuw hoeft te verversen. Alleen als de credentials uit een
+        echte DB-rij komen (bevat user_id). Niet-blokkerend: een fout hier mag de
+        plaatsing niet laten mislukken."""
+        user_id = old.get("user_id")
+        if not user_id:
+            return
+        try:
+            from backend.database import get_db
+            get_db().table("platform_credentials").update({
+                "access_token": new.get("access_token"),
+                "token_expires_at": new.get("token_expires_at"),
+                # eBay geeft bij refresh geen nieuwe refresh_token terug; behoud de oude.
+                "refresh_token": new.get("refresh_token") or old.get("refresh_token"),
+            }).eq("user_id", user_id).eq("platform", self.platform_name).execute()
+        except Exception as e:
+            logger.warning(f"Kon ververste eBay-token niet opslaan (niet-blokkerend): {e}")
 
     async def create_listing(self, item: dict, credentials: dict) -> dict:
         credentials = await self._ensure_fresh_token(credentials)
