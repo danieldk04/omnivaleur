@@ -551,12 +551,26 @@ async function bgDeleteVinted(job, serverUrl) {
       }
       const userId = await findUserId();
       if (!userId) return { userId: null };
+      // Page through the WHOLE wardrobe. Vinted caps per_page at 96 server-side
+      // and silently ignores anything larger, so the old single "per_page=200"
+      // call only ever proved the 96 NEWEST listings. Any older listing looked
+      // absent, which aborted its delete with "not in your wardrobe" while the
+      // listing was in fact live — verified live 2026-07: item 8557510561 sits
+      // on page 2 of a 536-item wardrobe. Only a full walk may return false.
       try {
-        const res = await fetch(`/api/v2/wardrobe/${userId}/items?order=newest_first&page=1&per_page=200`, { headers: { Accept: "application/json" } });
-        if (!res.ok) return { userId, present: null };
-        const data = await res.json();
-        if (data.code && data.code !== 0) return { userId, present: null };
-        return { userId, present: (data.items || []).some(it => String(it.id) === String(lid)) };
+        for (let page = 1; page <= 60; page++) {
+          const res = await fetch(`/api/v2/wardrobe/${userId}/items?order=newest_first&page=${page}&per_page=96`, { headers: { Accept: "application/json" } });
+          if (!res.ok) return { userId, present: null };
+          const data = await res.json();
+          if (data.code && data.code !== 0) return { userId, present: null };
+          const items = data.items || [];
+          if (items.some(it => String(it.id) === String(lid))) return { userId, present: true };
+          const pg = data.pagination || {};
+          if (items.length === 0) return { userId, present: false };
+          if (pg.total_pages && page >= pg.total_pages) return { userId, present: false };
+          if (!pg.total_pages && items.length < 96) return { userId, present: false };
+        }
+        return { userId, present: null };  // never saw the end — don't claim absent
       } catch (e) { return { userId, present: null }; }
     }, [listingId]);
 
