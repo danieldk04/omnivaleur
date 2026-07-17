@@ -3075,6 +3075,8 @@ function editItem(id) {
   document.getElementById('f-bid-pct').value = item.bid_percentage || '';
   document.getElementById('bid-pct-group').style.display = item.bid_percentage ? 'block' : 'none';
   updateBidLabel();
+  document.getElementById('f-item-type').value = isNonClothingItem(item) ? 'games' : 'clothing';
+  onItemTypeChange();
   updateCategoryOptions(item.category || '');
   document.getElementById('f-condition').value = item.condition || 'good';
   updateConditionHint();
