@@ -1949,8 +1949,15 @@ const CROSSLIST_PLATFORM_REQUIRED = {
 };
 const CROSSLIST_FIELD_LABELS = { description: 'description', photo_urls: 'photos', category: 'category', gender: 'gender', brand: 'brand', size: 'size', color: 'color' };
 
+// Non-clothing items (games) have no gender/size/kleur attributes on Marktplaats,
+// so only the category is platform-required for them — mirrors backend
+// crosslist.py _NON_CLOTHING_PLATFORM_REQUIRED.
+const CROSSLIST_NON_CLOTHING_PLATFORM_REQUIRED = ['category'];
 function missingFieldsForPlatform(item, platform) {
-  const required = [...CROSSLIST_UNIVERSAL_REQUIRED, ...(CROSSLIST_PLATFORM_REQUIRED[platform] || [])];
+  const platReq = (isNonClothingItem(item) && CROSSLIST_PLATFORM_REQUIRED[platform])
+    ? CROSSLIST_NON_CLOTHING_PLATFORM_REQUIRED
+    : (CROSSLIST_PLATFORM_REQUIRED[platform] || []);
+  const required = [...CROSSLIST_UNIVERSAL_REQUIRED, ...platReq];
   return required.filter(f => f === 'photo_urls' ? !(item.photo_urls?.length) : !String(item[f] || '').trim())
     .map(f => CROSSLIST_FIELD_LABELS[f] || f);
 }
