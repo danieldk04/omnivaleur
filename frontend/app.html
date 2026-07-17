@@ -3571,7 +3571,9 @@ function renderRelistInProgress() {
              deleteDone);
 
     const note = deleteFailed
-      ? `<div style="margin-top:12px;font-size:11.5px;color:var(--red,#dc2626);background:rgba(220,38,38,.06);border-radius:8px;padding:9px 11px">The old listing could not be removed — nothing was deleted and no new listing was created, so your item is still live on ${label}. You can retry safely below.</div>
+      ? `<div style="margin-top:12px;font-size:11.5px;color:var(--red,#dc2626);background:rgba(220,38,38,.06);border-radius:8px;padding:9px 11px">The old listing could not be removed — nothing was deleted and no new listing was created, so your item is still live on ${label}. You can retry safely below.${
+          r.delete_error ? `<div style="margin-top:7px;padding-top:7px;border-top:1px solid rgba(220,38,38,.2);color:var(--muted);font-size:11px">${esc(String(r.delete_error).replace(/^Error:\s*/, ''))}</div>` : ''
+        }</div>
          <button class="btn btn-sm" style="margin-top:10px;background:var(--red,#dc2626);color:#fff;border:none;width:100%" onclick="retryRelist('${r.item_id}','${r.platform}',this)">↻ Retry relist</button>`
       : `<div style="margin-top:12px;font-size:11.5px;color:var(--muted);background:rgba(37,99,235,.05);border-radius:8px;padding:9px 11px">${
           phase === 'removing'
