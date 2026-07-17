@@ -1382,11 +1382,11 @@ chrome.tabs.onUpdated.addListener(async (tabId, changeInfo) => {
     ? `${new URL(url).origin}/items/${listingId}`
     : null;
 
-  const completeHeaders = await getAuthHeaders();
-  await fetch(`${meta.serverUrl}/api/jobs/${meta.jobId}/complete`, {
-    method: "POST",
-    headers: completeHeaders,
-    body: JSON.stringify({ platform_listing_id: listingId, platform_listing_url: listingUrl }),
+  // Critical path: this is the ONLY completion signal for a create job, and a
+  // create is not retry-safe server-side — a lost completion gets surfaced to
+  // the user as a possible duplicate. Retry hard, and queue if still unsent.
+  await finaliseJob(meta.serverUrl, meta.jobId, "complete", {
+    platform_listing_id: listingId, platform_listing_url: listingUrl,
   });
 
   setTimeout(() => chrome.tabs.remove(tabId).catch(() => {}), 2000);
