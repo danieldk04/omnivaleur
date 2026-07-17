@@ -106,11 +106,16 @@ class EbayPlatform(PlatformBase):
             data = resp.json()
             return {**credentials, **_with_expiry(data)}
 
-    def _auth_headers(self, credentials: dict) -> dict:
-        return {
+    def _auth_headers(self, credentials: dict, *, write: bool = False) -> dict:
+        headers = {
             "Authorization": f"Bearer {credentials['access_token']}",
             "Content-Type": "application/json",
         }
+        # Write-calls (inventory_item PUT, offer POST) eisen een Content-Language;
+        # eBay weigert ze anders met "Invalid value for header Content-Language".
+        if write:
+            headers["Content-Language"] = _content_language()
+        return headers
 
     async def _ensure_fresh_token(self, credentials: dict) -> dict:
         expires_at = credentials.get("token_expires_at")
