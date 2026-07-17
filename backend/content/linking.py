@@ -15,6 +15,12 @@ def _blocked_ranges(html: str) -> list[tuple[int, int]]:
     ranges = []
     for m in re.finditer(r"<(?:a\b[^>]*|h[1-3][^>]*)>.*?</(?:a|h[1-3])>", html, re.DOTALL | re.IGNORECASE):
         ranges.append((m.start(), m.end()))
+    # Ook alle tag-markup zelf blokkeren (alles tussen < en >), zodat een term die
+    # binnen een attribuutwaarde staat — bv. "vinted" in
+    # src="/assets/platforms/vinted.jpg" — nooit gelinkt wordt. Zonder dit brak de
+    # link-engine <img>/<figure>-tags kapot (anchor midden in de src).
+    for m in re.finditer(r"<[^>]+>", html, re.DOTALL):
+        ranges.append((m.start(), m.end()))
     return ranges
 
 
