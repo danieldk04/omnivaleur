@@ -149,8 +149,14 @@ class CrosslistValidationError(Exception):
 
 def _missing_fields_per_platform(item: dict, platforms: list[str]) -> dict[str, list[str]]:
     missing: dict[str, list[str]] = {}
+    non_clothing = _is_non_clothing(item)
     for platform in platforms:
-        required = _UNIVERSAL_REQUIRED + _PLATFORM_REQUIRED.get(platform, [])
+        platform_required = (
+            _NON_CLOTHING_PLATFORM_REQUIRED
+            if non_clothing and platform in _PLATFORM_REQUIRED
+            else _PLATFORM_REQUIRED.get(platform, [])
+        )
+        required = _UNIVERSAL_REQUIRED + platform_required
         gaps = []
         for field in required:
             value = item.get(field)
