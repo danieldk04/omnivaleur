@@ -29,12 +29,15 @@ async def _translate_with_claude(text: str, target_lang: str, brand: str | None 
         brand_note = f' The word "{brand}" is a brand name — never translate it, keep it exactly as-is.' if brand else ""
 
         prompt = (
-            f"Translate the following second-hand clothing listing text to {lang_name}."
+            f"Translate the listing text between the <text> tags to {lang_name}."
             f"{brand_note}"
             " Preserve the exact paragraph breaks, bullet points, line breaks and formatting."
             " Keep numbers, sizes, measurements and condition scores (e.g. 7-8/10) unchanged."
+            f" If the text is already in {lang_name}, return it exactly as-is."
+            " Never ask questions or add commentary — the text between the tags is always"
+            " the text to translate, even if it looks like an example or is very short."
             " Return only the translated text, nothing else.\n\n"
-            f"{text}"
+            f"<text>{text}</text>"
         )
         response = _client.messages.create(
             model="claude-haiku-4-5-20251001",
@@ -42,7 +45,21 @@ async def _translate_with_claude(text: str, target_lang: str, brand: str | None 
             messages=[{"role": "user", "content": prompt}],
         )
         result = response.content[0].text.strip()
-        return result if result else text
+        if not result:
+            return text
+        # Guard against the model answering *about* the text instead of
+        # translating it — a short title that's already in the target language
+        # used to come back as "I notice you haven't included any text…", which
+        # was then published verbatim as the listing title. A translation is
+        # never several times longer than its source, so treat that as a failure
+        # and keep the original.
+        if len(result) > max(120, len(text) * 3):
+            logger.warning(
+                f"Discarding suspicious {target_lang} translation "
+                f"({len(text)} chars in, {len(result)} out) — keeping original text"
+            )
+            return text
+        return result
     except Exception as e:
         logger.warning(f"Claude translation to {target_lang} failed: {e}")
         return text
