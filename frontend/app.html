@@ -1459,6 +1459,14 @@ input[type="checkbox"].row-check { width: 15px; height: 15px; cursor: pointer; a
     <div class="modal-body">
       <input type="hidden" id="edit-id">
 
+      <div class="form-group">
+        <label>Item type</label>
+        <select id="f-item-type" onchange="onItemTypeChange()">
+          <option value="clothing">Clothing &amp; Shoes</option>
+          <option value="games">Games &amp; Consoles</option>
+        </select>
+      </div>
+
       <div class="form-row" style="grid-template-columns:2fr 1fr">
         <div class="form-group">
           <label>Title *</label>
