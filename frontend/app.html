@@ -2818,8 +2818,11 @@ async function loadEbayCategorySuggestions(title, keepId) {
     const { suggestions } = await res.json();
     if (seq !== _ebayCatSeq) return;
     populateEbayCategorySelect(suggestions || [], keepId);
+    // eBay returns no confidence score, so a single suggestion is not the same
+    // as a good one — the old wording ("top match preselected") sounded certain
+    // while proposing nonsense. Say plainly that it's a suggestion to check.
     status.textContent = (suggestions && suggestions.length)
-      ? `${suggestions.length} match(es) from the title — top match preselected. Change it if needed.`
+      ? `${suggestions.length} suggestion${suggestions.length === 1 ? '' : 's'} from eBay — please check it matches the item.`
       : 'No matches — choose "Enter category ID manually…".';
   } catch (e) {
     if (seq === _ebayCatSeq) status.textContent = 'Category lookup failed: ' + e.message;
