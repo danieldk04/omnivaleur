@@ -1928,10 +1928,7 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
 
 async function reportError(jobId, serverUrl, error) {
   gaEvent("job_error", {});
-  const headers = await getAuthHeaders();
-  await fetch(`${serverUrl}/api/jobs/${jobId}/error`, {
-    method: "POST",
-    headers,
-    body: JSON.stringify({ error }),
-  });
+  // Same reliability need as /complete: a dropped error report leaves the job
+  // claimed until the stale-claim sweep guesses at what happened.
+  await finaliseJob(serverUrl, jobId, "error", { error });
 }
