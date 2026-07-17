@@ -1945,9 +1945,27 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   if (msg.type === "JOB_ERROR") {
     const { platform, jobId, serverUrl, error } = msg;
     finaliseJob(serverUrl, jobId, "error", { error }).finally(() => {
-      chrome.storage.local.remove([`job_${platform}`, `jobtab_${sender.tab?.id}`]);
       // Keep the tab OPEN so the user can review the filled form and finish
       // manually. Closing it here loses all the work that was filled in.
+      //
+      // Crucially, KEEP jobtab_${tabId} too. The onUpdated auto-detect listener
+      // exists precisely to catch that manual "Plaatsen" click and complete the
+      // job — but it bails when the meta is gone. Deleting it here meant a
+      // manually-finished listing went live on the platform while Omnivaleur
+      // still had it as failed: published, but invisible in the dashboard.
+      // /complete has no status guard, so a later completion cleanly overrides
+      // this error. Orphaned keys are cleaned up by the tabs.onRemoved listener.
+      chrome.storage.local.remove([`job_${platform}`]);
+      if (sender.tab?.id) {
+        chrome.storage.local.get(`jobtab_${sender.tab.id}`, (s) => {
+          const meta = s[`jobtab_${sender.tab.id}`];
+          if (meta) {
+            chrome.storage.local.set({
+              [`jobtab_${sender.tab.id}`]: { ...meta, awaitingManualFinish: true },
+            });
+          }
+        });
+      }
     });
     sendResponse({ ok: true });
   }
