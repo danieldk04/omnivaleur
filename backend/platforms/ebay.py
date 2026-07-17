@@ -272,6 +272,20 @@ _MARKETPLACE_DOMAINS = {
     "EBAY_ES": "ebay.es", "EBAY_US": "ebay.com",
 }
 
+# eBay's Inventory API verplicht een Content-Language-header op de write-calls
+# (create/replace inventory_item en create offer). Zonder deze header weigert eBay
+# met "Invalid value for header Content-Language" — de write mislukt dan volledig.
+# Moet een BCP-47 taalcode zijn die past bij de marketplace.
+_MARKETPLACE_LANGUAGES = {
+    "EBAY_NL": "nl-NL", "EBAY_DE": "de-DE", "EBAY_GB": "en-GB",
+    "EBAY_FR": "fr-FR", "EBAY_BE": "nl-BE", "EBAY_IT": "it-IT",
+    "EBAY_ES": "es-ES", "EBAY_US": "en-US",
+}
+
+
+def _content_language() -> str:
+    return _MARKETPLACE_LANGUAGES.get(settings.ebay_marketplace_id, "en-US")
+
 
 def _raise_with_ebay_error(resp: httpx.Response, action: str) -> None:
     if resp.is_success:
