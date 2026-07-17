@@ -203,12 +203,18 @@ function getMpSyiUrl(platform, item) {
   // When gender is heren, always try heren-prefixed first so "truien / vesten" + heren → Heren
   if (gender === "heren") {
     c = MP_CATEGORIES[`heren ${cat}`] || MP_CATEGORIES[cat];
-    // If matched category is still Dames (cat1=621), override to Heren default
-    if (!c || c.cat1 === 621) {
-      c = { cat1: 1776, cat3: 652, bucketId: 169 }; // Heren Truien / Vesten
-    }
+    // A dames category (cat1=621) for a heren item is a mismatch, not a result.
+    if (c && c.cat1 === 621) c = null;
   } else {
-    c = MP_CATEGORIES[cat] || MP_DEFAULT;
+    c = MP_CATEGORIES[cat];
+  }
+
+  if (!c) {
+    throw new CategoryUnresolvedError(
+      cat
+        ? `Category "${cat}"${gender ? ` (${gender})` : ""} doesn't map to a ${platform} category. Set the category on this item and publish again.`
+        : `This item has no category set, so it can't be published to ${platform} without guessing. Set a category on the item and publish again.`
+    );
   }
 
   return `${base}/${c.cat1}/${c.cat3}?bucketId=${c.bucketId}&title=`;
