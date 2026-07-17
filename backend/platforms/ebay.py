@@ -188,7 +188,7 @@ class EbayPlatform(PlatformBase):
             offer_resp = await client.post(
                 f"{INVENTORY_API}/offer",
                 json=offer_payload,
-                headers=self._auth_headers(credentials),
+                headers=self._auth_headers(credentials, write=True),
             )
             _raise_with_ebay_error(offer_resp, "creating offer")
             offer_id = offer_resp.json()["offerId"]
