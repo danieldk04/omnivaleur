@@ -399,7 +399,23 @@ async function pollJobs() {
       if (!res.ok) continue;
       const jobs = await res.json();
       for (const job of jobs) {
-        await processJob(job, serverUrl);
+        try {
+          await processJob(job, serverUrl);
+        } catch (e) {
+          // Last line of defence. processJob claims the job BEFORE doing any
+          // work, and the backend refuses to dispatch anything at all while a
+          // job sits claimed (strict global serialisation). So an unhandled
+          // throw here used to freeze the entire queue — every platform — until
+          // the 5-minute stale sweep, which then killed the job as "interrupted"
+          // rather than telling the user what actually went wrong. Report it
+          // against this job and keep going.
+          console.error(`Omnivaleur job ${job.id} (${job.action}/${platform}) threw:`, e);
+          try {
+            await reportError(job.id, serverUrl, `Extension error: ${e?.message || e}`);
+          } catch (e2) {
+            console.error("Omnivaleur: failed to report job error:", e2);
+          }
+        }
       }
     } catch (e) {
       console.error(`Omnivaleur poll error (${platform}):`, e);
