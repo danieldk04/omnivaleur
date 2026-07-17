@@ -2783,14 +2783,32 @@ function onTitleInputForEbay() {
   _ebayCatDebounce = setTimeout(() => loadEbayCategorySuggestions(title, keepId), 500);
 }
 
+// Brand/category/gender feed the lookup too, so changing them re-detects.
+function onContextInputForEbay() {
+  const sel = document.getElementById('f-ebay-category');
+  if (!sel || sel.value === '__manual__') return;
+  onTitleInputForEbay();
+}
+
 async function loadEbayCategorySuggestions(title, keepId) {
   const sel = document.getElementById('f-ebay-category');
   const status = document.getElementById('ebay-category-status');
   if (sel.value === '__manual__') return; // user opted for manual entry
   const seq = ++_ebayCatSeq;
-  status.textContent = 'Detecting category from title…';
+  status.textContent = 'Detecting category…';
   try {
-    const res = await apiFetch(`${API}/api/platforms/ebay/category-suggest?q=${encodeURIComponent(title)}`);
+    // Send the form's own brand/category/gender alongside the title. Without
+    // them eBay matched on the raw title only — an SKU prefix like "(1324)" and
+    // a shoe size read as model-car scales (1:24 / 1:43), so a pair of shoes was
+    // suggested as "Toys and games > Miniature vehicles".
+    const params = new URLSearchParams({ q: title });
+    const brand = document.getElementById('f-brand')?.value.trim();
+    const cat = document.getElementById('f-category')?.value.trim();
+    const gender = document.getElementById('f-gender')?.value.trim();
+    if (brand) params.set('brand', brand);
+    if (cat) params.set('category', cat);
+    if (gender) params.set('gender', gender);
+    const res = await apiFetch(`${API}/api/platforms/ebay/category-suggest?${params}`);
     if (seq !== _ebayCatSeq) return; // a newer request superseded this one
     if (!res.ok) {
       const err = await res.json().catch(() => ({}));
