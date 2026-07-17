@@ -1905,6 +1905,16 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     return true;
   }
 
+  // Lets the dashboard show what's actually wrong (not installed vs. signed out)
+  // instead of assuming everything is fine. Deliberately reports only whether a
+  // token exists and which account it belongs to — never the token itself.
+  if (msg.type === "GET_AUTH_STATE") {
+    chrome.storage.sync.get(["authToken", "userEmail"], (s) => {
+      sendResponse({ signedIn: !!s.authToken, email: s.userEmail || "" });
+    });
+    return true;
+  }
+
   // A content script asks for ITS OWN tab's job (keyed by tab id), so two tabs
   // can never read each other's data. Returns null if not ready yet — the
   // content script retries briefly to cover the tab-open race.
