@@ -281,7 +281,26 @@ def _photos_from_candidate(cand: dict) -> list[str]:
     return [cand["photo_url"]] if cand.get("photo_url") else []
 
 
-def _item_data_from_candidate(cand: dict, body: dict | None = None) -> dict:
+async def _infer_attributes_smart(title: str | None, description: str | None,
+                                  brand: str | None = None) -> dict:
+    """
+    Category/gender inference for user-facing import paths: Claude first (it can
+    weigh the brand and understands the garment), keyword rules as fallback.
+
+    Kept separate from _infer_attributes because the bulk scan-store path is
+    synchronous and runs per scanned row — it would fire one LLM call per
+    listing. Colour always comes from the cheap keyword pass.
+    """
+    keyword_out = _infer_attributes(title, description)
+    smart = await _classify_with_claude(title, description, brand)
+    if not smart:
+        return keyword_out
+    # Claude wins on gender/category; keep the keyword colour.
+    return {**keyword_out, **smart}
+
+
+def _item_data_from_candidate(cand: dict, body: dict | None = None,
+                              inferred: dict | None = None) -> dict:
     """
     Build the full item payload from a scraped candidate, so an import lands
     with everything the scan captured (all photos, description, brand, size,
