@@ -505,13 +505,41 @@
 
   // Is this listing id currently present in the user's own wardrobe (i.e. still
   // live)? Returns true/false, or null if we couldn't read the wardrobe at all.
+  //
+  // MUST page through the whole wardrobe: Vinted caps per_page server-side and
+  // silently returns fewer items than asked, so a single "page=1&per_page=200"
+  // call only ever proves the NEWEST slice. Older listings fell outside it and
+  // were reported absent, which aborted their delete ("not in your wardrobe")
+  // even though they were live — verified live 2026-07 on item 8557510561.
+  // Only "walked every page without a hit" may return false; any page that
+  // fails to load returns null (unknown), never false.
+  const WARDROBE_PER_PAGE = 96;   // ask big; Vinted may return fewer per page
+  const WARDROBE_MAX_PAGES = 60;  // ~5.7k listings — far beyond any real wardrobe
+
   async function isInWardrobe(userId, listingId) {
+    const want = String(listingId);
     try {
-      const res = await fetch(`/api/v2/wardrobe/${userId}/items?order=newest_first&page=1&per_page=200`, { headers: { Accept: "application/json" } });
-      if (!res.ok) return null;
-      const data = await res.json();
-      if (data.code && data.code !== 0) return null;
-      return (data.items || []).some(it => String(it.id) === String(listingId));
+      for (let page = 1; page <= WARDROBE_MAX_PAGES; page++) {
+        const res = await fetch(
+          `/api/v2/wardrobe/${userId}/items?order=newest_first&page=${page}&per_page=${WARDROBE_PER_PAGE}`,
+          { headers: { Accept: "application/json" } }
+        );
+        if (!res.ok) return null;
+        const data = await res.json();
+        if (data.code && data.code !== 0) return null;
+        const items = data.items || [];
+        if (items.some(it => String(it.id) === want)) return true;
+
+        // Stop when the wardrobe is exhausted. Prefer Vinted's own pagination
+        // metadata; fall back to "short/empty page means last page".
+        const pg = data.pagination || {};
+        if (items.length === 0) return false;
+        if (pg.total_pages && page >= pg.total_pages) return false;
+        if (!pg.total_pages && items.length < WARDROBE_PER_PAGE) return false;
+      }
+      // Ran out of pages without ever seeing the end — we cannot honestly claim
+      // the item is absent, so report "unknown" rather than a false negative.
+      return null;
     } catch (e) {
       return null;
     }
