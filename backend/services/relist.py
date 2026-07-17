@@ -270,8 +270,14 @@ async def refresh_listing(item_id: str, platform: str, user_id: str, strategy: s
         # legitimate reasons (price update, reordered photos), not spoofing.
         relist_price = _jittered_price(float(item.get("price") or 0)) or item.get("price")
 
+    # Publish in the platform's own language, exactly like the original publish
+    # did. Without this the recreate posts the raw English DB row to
+    # marktplaats/2dehands, so a relisted item silently loses its Dutch title.
+    from backend.services.crosslist import localize_item_for_platform
+    localized = await localize_item_for_platform(item, platform)
+
     create_payload = {
-        **item,
+        **localized,
         "price": relist_price,
         # Keep the EXACT original photo order — photo 1 must stay photo 1 (it's the
         # cover image the seller chose). The recreate already gets genuinely new
