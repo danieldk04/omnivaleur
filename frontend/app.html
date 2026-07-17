@@ -4392,11 +4392,12 @@ function updateBidLabel() {
 
 function updateCategoryOptions(selectedCategory) {
   const sel = document.getElementById('f-category');
-  // Games (and future non-clothing types) don't branch on gender — the type
-  // select alone drives the list.
-  if (currentItemType() === 'games') {
+  // Non-clothing types (games, electronics, …) don't branch on gender — the
+  // type select alone names a CATEGORIES list to populate from.
+  const type = currentItemType();
+  if (type !== 'clothing' && CATEGORIES[type]) {
     sel.innerHTML = '<option value="">— choose category —</option>';
-    for (const [val, label] of CATEGORIES.games) {
+    for (const [val, label] of CATEGORIES[type]) {
       const opt = document.createElement('option');
       opt.value = val; opt.textContent = label;
       if (selectedCategory && val === selectedCategory) opt.selected = true;
