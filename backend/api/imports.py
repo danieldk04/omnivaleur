@@ -503,7 +503,8 @@ async def link_candidate(candidate_id: str, body: dict, user_id: str = Depends(g
         raise HTTPException(status_code=404, detail="Item not found")
 
     # Backfill any empty item fields from the freshly scanned candidate.
-    _backfill_item_from_candidate(db, item_id, cand)
+    _backfill_item_from_candidate(db, item_id, cand, inferred=await _infer_attributes_smart(
+        cand.get("title"), cand.get("description"), cand.get("brand")))
 
     existing = db.table("listings").select("id").eq("item_id", item_id).eq("platform", cand["platform"]).execute()
     listed_at = cand.get("platform_listed_at") or datetime.now(timezone.utc).isoformat()
