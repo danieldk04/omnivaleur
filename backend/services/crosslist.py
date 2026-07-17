@@ -123,6 +123,19 @@ _PLATFORM_REQUIRED = {
     "marktplaats": ["category", "gender", "brand", "size", "color"],
     "2dehands": ["category", "gender", "brand", "size", "color"],
 }
+# Non-clothing items (games, consoles, ...) live in a different Marktplaats
+# category tree that has no gender/maat/kleur attributes, so demanding those
+# fields would make an otherwise-complete game listing un-publishable. Such items
+# are recognised by their category prefix (mirrors the "games ..." keys in the
+# extension's MP_CATEGORIES and the frontend CATEGORIES.games group). For them
+# only the category itself is platform-required.
+_NON_CLOTHING_PREFIXES = ("games ",)
+_NON_CLOTHING_PLATFORM_REQUIRED = ["category"]
+
+
+def _is_non_clothing(item: dict) -> bool:
+    cat = str(item.get("category") or "").strip().lower()
+    return cat.startswith(_NON_CLOTHING_PREFIXES)
 
 
 class CrosslistValidationError(Exception):
