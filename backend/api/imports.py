@@ -339,7 +339,8 @@ def _is_empty(v) -> bool:
     return v is None or (isinstance(v, str) and not v.strip()) or (isinstance(v, list) and not v)
 
 
-def _backfill_item_from_candidate(db, item_id: str, cand: dict) -> dict:
+def _backfill_item_from_candidate(db, item_id: str, cand: dict,
+                                  inferred: dict | None = None) -> dict:
     """Fill ONLY the empty fields on an existing item from a freshly scanned
     candidate (description, colour, photos, …). Never overwrites data the user
     already has, so linking a rescanned listing enriches — never clobbers — the item.
