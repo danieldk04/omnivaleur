@@ -4343,8 +4343,20 @@ function updateBidLabel() {
 }
 
 function updateCategoryOptions(selectedCategory) {
-  const gender = document.getElementById('f-gender').value;
   const sel = document.getElementById('f-category');
+  // Games (and future non-clothing types) don't branch on gender — the type
+  // select alone drives the list.
+  if (currentItemType() === 'games') {
+    sel.innerHTML = '<option value="">— choose category —</option>';
+    for (const [val, label] of CATEGORIES.games) {
+      const opt = document.createElement('option');
+      opt.value = val; opt.textContent = label;
+      if (selectedCategory && val === selectedCategory) opt.selected = true;
+      sel.appendChild(opt);
+    }
+    return;
+  }
+  const gender = document.getElementById('f-gender').value;
   if (!gender || !CATEGORIES[gender]) { sel.innerHTML = '<option value="">— choose gender first —</option>'; return; }
   sel.innerHTML = '<option value="">— choose category —</option>';
   for (const [val, label] of CATEGORIES[gender]) {
