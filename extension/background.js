@@ -1360,6 +1360,13 @@ async function bgScanMp2dh(job, serverUrl) {
   }
 }
 
+// Closing a job tab means that job's meta is dead. Without this, jobtab_ keys
+// pile up forever — and because Chrome reuses tab ids after a restart, a brand
+// new tab could inherit a stale entry and complete the wrong job.
+chrome.tabs.onRemoved.addListener((tabId) => {
+  chrome.storage.local.remove(`jobtab_${tabId}`);
+});
+
 // ── Auto-detect manual publish ─────────────────────────────────────────────
 // When the user manually clicks "Plaatsen" after an error, the tab URL changes
 // to the listing URL. We detect this and auto-complete the job.
