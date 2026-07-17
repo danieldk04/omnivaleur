@@ -4319,9 +4319,11 @@ function onItemTypeChange() {
   const isGames = currentItemType() === 'games';
   document.getElementById('fg-gender').style.display = isGames ? 'none' : '';
   document.getElementById('fg-size').style.display = isGames ? 'none' : '';
+  document.getElementById('fg-material').style.display = isGames ? 'none' : '';
   if (isGames) {
     document.getElementById('f-gender').value = '';
     document.getElementById('f-size').value = '';
+    document.getElementById('f-material').value = '';
   }
   updateCategoryOptions();
 }
