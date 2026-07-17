@@ -2971,9 +2971,23 @@ function populateEbayCategorySelect(suggestions, keepId) {
 function renderExtStatus() {
   const dot = document.getElementById('ext-dot');
   const label = document.getElementById('ext-label');
-  const pending = state.jobs.length;
+  if (!dot || !label) return;
+  const pending = state.jobs ? state.jobs.length : 0;
+  // This used to say "Extension active" no matter what — including with nothing
+  // installed — which is exactly how a broken setup stayed invisible. Report the
+  // state we actually detected.
   dot.className = 'ext-dot';
-  label.textContent = pending > 0 ? `${pending} job(s) pending` : 'Extension active';
+  if (extState.status === 'missing') {
+    dot.classList.add('ext-dot-error');
+    label.textContent = 'Extension not detected';
+  } else if (extState.status === 'signed-out') {
+    dot.classList.add('ext-dot-warn');
+    label.textContent = 'Extension not signed in';
+  } else if (extState.status === 'checking') {
+    label.textContent = 'Checking extension…';
+  } else {
+    label.textContent = pending > 0 ? `${pending} job(s) pending` : 'Extension active';
+  }
 }
 
 // ── Add / Edit Item ──────────────────────────────────────────────
