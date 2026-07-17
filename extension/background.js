@@ -1899,14 +1899,13 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
 
   if (msg.type === "JOB_DONE") {
     const { platform, jobId, serverUrl, result } = msg;
-    getAuthHeaders().then(headers => fetch(`${serverUrl}/api/jobs/${jobId}/complete`, {
-      method: "POST",
-      headers,
-      body: JSON.stringify(result),
-    })).then(() => {
+    // Clean up and close regardless of whether the completion landed on the
+    // first try — finaliseJob queues it if not. Previously both of these hung
+    // off .then(), so a failed fetch also stranded the tab open forever.
+    finaliseJob(serverUrl, jobId, "complete", result).finally(() => {
       chrome.storage.local.remove([`job_${platform}`, `jobtab_${sender.tab?.id}`]);
       // Keep tab open 2s so user can see the listing was created
-      setTimeout(() => chrome.tabs.remove(sender.tab.id), 2000);
+      if (sender.tab?.id) setTimeout(() => chrome.tabs.remove(sender.tab.id).catch(() => {}), 2000);
     });
     sendResponse({ ok: true });
   }
