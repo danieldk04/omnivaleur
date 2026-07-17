@@ -6,6 +6,7 @@ Uses OAuth2 with long-lived refresh tokens (18 months).
 from __future__ import annotations
 import base64
 import logging
+import re
 import time
 from datetime import datetime, timezone, timedelta
 from urllib.parse import urlencode
