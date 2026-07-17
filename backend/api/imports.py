@@ -61,6 +61,21 @@ _COLORS = [
 # map). Only genders with a sensible category are listed; anything else is left empty
 # rather than guessed wrong. Keys are ordered so more specific words match first.
 _CATEGORY_RULES = [
+    # Sportswear first: an athletic short is a "sportbroek", not a "short", and
+    # certainly not jeans. Without these rules "sport shorts" fell through to the
+    # generic short/broek rules (or to nothing at all) — the MyProtein bug.
+    (("sports bra", "sport bh", "sportbh"), {"dames": "sport bh"}),
+    (("sports legging", "sportlegging", "gym legging", "yoga legging", "running tight",
+      "hardlooptight", "legging"),
+     {"dames": "sportleggings", "heren": "heren sportbroeken", "unisex": "unisex sportkleding"}),
+    (("sport short", "sportshort", "sportbroek", "gym short", "running short",
+      "training short", "hardloopshort", "korte sportbroek", "zwembroek"),
+     {"dames": "sportbroeken", "heren": "heren sportbroeken",
+      "kinderen": "kinderen sportkleding", "unisex": "unisex sportkleding"}),
+    (("sportkleding", "sportswear", "trainingspak", "tracksuit", "gymwear",
+      "activewear", "voetbalshirt", "wielrenshirt"),
+     {"dames": "sportbroeken", "heren": "heren sportbroeken",
+      "kinderen": "kinderen sportkleding", "unisex": "unisex sportkleding"}),
     (("blazer", "suit", "pak", "tuxedo", "colbert", "kostuum"), {"heren": "heren pakken"}),
     (("turtleneck", "half zip", "half-zip", "jumper", "sweater", "knitted", "knit",
       "pullover", "cardigan", "fleece", "zip vest", "gilet", "bodywarmer", "vest",
