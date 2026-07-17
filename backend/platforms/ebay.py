@@ -169,7 +169,7 @@ class EbayPlatform(PlatformBase):
             inv_resp = await client.put(
                 f"{INVENTORY_API}/inventory_item/{sku}",
                 json=inventory_payload,
-                headers=self._auth_headers(credentials),
+                headers=self._auth_headers(credentials, write=True),
             )
             _raise_with_ebay_error(inv_resp, "creating inventory item")
 
