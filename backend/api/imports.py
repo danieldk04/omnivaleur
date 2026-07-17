@@ -311,7 +311,9 @@ def _item_data_from_candidate(cand: dict, body: dict | None = None,
     body = body or {}
     # Fill colour/gender/category the scan can't see by inferring them from the
     # listing text — only used as a last resort below (body + scan always win).
-    inferred = _infer_attributes(cand.get("title"), cand.get("description"))
+    # Async callers pass the Claude-backed result; otherwise keywords only.
+    if inferred is None:
+        inferred = _infer_attributes(cand.get("title"), cand.get("description"))
 
     def pick(key, cand_key=None, default=None):
         v = body.get(key)
