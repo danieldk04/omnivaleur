@@ -2539,6 +2539,25 @@ function renderPlatformMatrix(itemId) {
   return `<div class="pm-matrix">${dots.join('')}</div>`;
 }
 
+// Manual "mark as listed" — for the rare case the extension published a listing but
+// couldn't auto-confirm it (e.g. Vinted's post-upload review delayed the redirect).
+// Marks the listing active and settles any stuck publish job so the busy banner clears.
+async function markPlatformListed(itemId, platform, label) {
+  if (!confirm(`Mark this item as listed on ${label}?\n\nOnly do this if it's actually live on ${label} — this tells the dashboard the listing exists.`)) return;
+  try {
+    const r = await apiFetch(`${API}/api/listings/mark-active`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ item_id: itemId, platform }),
+    });
+    const data = await parseJsonSafe(r);
+    if (!r.ok) throw new Error(data.detail || 'Could not mark as listed');
+    await loadAll();
+    showToast(`Marked as listed on ${label}.`);
+  } catch (e) {
+    alert('Could not mark as listed: ' + e.message);
+  }
+}
+
 // ── Items view with filters ───────────────────────────────────────
 function setFilter(type, value) {
   if (type === 'pub') document.getElementById('filter-pub').value = value;
