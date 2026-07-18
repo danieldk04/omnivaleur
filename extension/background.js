@@ -3,7 +3,8 @@ importScripts("analytics.js");
 const POLL_INTERVAL_SECONDS = 15;
 
 // Platforms this extension handles (API platforms like eBay/Etsy are server-side)
-const EXTENSION_PLATFORMS = ["marktplaats", "2dehands", "vinted"];
+// "facebook" = Facebook Marketplace (BETA, best-effort — see content/facebook.js)
+const EXTENSION_PLATFORMS = ["marktplaats", "2dehands", "vinted", "facebook"];
 
 // Marktplaats category map: item.category → {cat1, cat3, bucketId}
 // cat1=621 = Dames Kleding, cat1=385 = Heren Kleding
