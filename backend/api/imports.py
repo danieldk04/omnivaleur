@@ -573,11 +573,23 @@ async def bulk_import_candidates(body: dict = None, user_id: str = Depends(get_c
     scraping can't see purchase price/brand/size — those stay editable on the item after).
     """
     db = get_db()
-    platform = (body or {}).get("platform")
+    body = body or {}
+    platform = body.get("platform")
+
+    # Process in bounded batches so a single request can never run long enough for the
+    # reverse proxy / gateway to time out and hand the browser an HTML error page (which
+    # then surfaced as the cryptic "Unexpected token '<' … is not valid JSON"). The
+    # frontend loops, calling this until `remaining` hits 0.
+    try:
+        batch = int(body.get("limit") or 25)
+    except (TypeError, ValueError):
+        batch = 25
+    batch = max(1, min(batch, 100))
+
     q = db.table("import_candidates").select("*").eq("user_id", user_id).eq("status", "pending")
     if platform:
         q = q.eq("platform", platform)
-    candidates = q.execute().data or []
+    candidates = q.limit(batch).execute().data or []
 
     linked, created, failed = 0, 0, 0
     now = datetime.now(timezone.utc).isoformat()
