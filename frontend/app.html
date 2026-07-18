@@ -3562,7 +3562,19 @@ async function bulkImportAllCandidates() {
     }
     await loadAll();
     await loadImportCandidates();
-    showToast(`Done: ${totalLinked} linked, ${totalCreated} created${totalFailed ? `, ${totalFailed} failed` : ''}.`);
+    setBusy(false);
+    // Tell the user clearly whether it worked — not just a toast that vanishes.
+    const imported = totalLinked + totalCreated;
+    const detail = `${totalLinked} linked, ${totalCreated} created${totalFailed ? `, ${totalFailed} failed` : ''}.`;
+    if (imported === 0 && totalFailed === 0) {
+      alert('Nothing to import — there were no pending listings.');
+    } else if (imported === 0 && totalFailed > 0) {
+      alert(`❌ Import failed — ${totalFailed} listing(s) could not be imported.`);
+    } else if (totalFailed > 0) {
+      alert(`⚠️ Import partly succeeded: ${detail}\n\nThe failed ones stay out of your items — you can rescan and retry them.`);
+    } else {
+      alert(`✅ Import successful: ${detail}`);
+    }
   } catch (e) {
     // Even on error, refresh so any items already imported before the failure show up.
     try { await loadAll(); await loadImportCandidates(); } catch {}
