@@ -6,8 +6,9 @@
   // Marktplaats scale: zo goed als nieuw > goed > redelijk > beschadigd
   // Vinted scale: New with tags > New without tags > Very good > Good > Satisfactory
   const CONDITION_MAP = {
-    // English/Marktplaats API keys
-    "new": "New with tags",
+    // Dashboard condition keys (see app.html #f-condition)
+    "new_with_tags": "New with tags",
+    "new": "New without tags",   // dashboard "New (without tags)" — NOT new-with-tags
     "good": "Very good",
     "fair": "Good",
     "poor": "Satisfactory",
