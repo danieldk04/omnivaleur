@@ -2043,7 +2043,7 @@ function smartMissingBadge(item) {
   const n = Object.keys(missingByPlatform).length;
   return chip('#fffbeb', '#b45309', '⚠', `Missing data for ${n} platform${n !== 1 ? 's' : ''}`, fullTip);
 }
-const PLATFORM_LABELS = { marktplaats: 'Marktplaats', '2dehands': '2dehands', ebay: 'eBay', etsy: 'Etsy', shopify: 'Shopify', vinted: 'Vinted' };
+const PLATFORM_LABELS = { marktplaats: 'Marktplaats', '2dehands': '2dehands', ebay: 'eBay', etsy: 'Etsy', shopify: 'Shopify', vinted: 'Vinted', facebook: 'Facebook Marketplace' };
 const PLATFORM_DOMAINS = { marktplaats: 'marktplaats.nl', '2dehands': '2dehands.be', vinted: 'vinted.nl', facebook: 'facebook.com', ebay: 'ebay.com', etsy: 'etsy.com', shopify: 'shopify.com' };
 const PLATFORM_EMOJI_FALLBACK = { marktplaats: '🇳🇱', '2dehands': '🇧🇪', vinted: '👕', facebook: '📘', ebay: '🛒', etsy: '🎨', shopify: '🏪' };
 // Real platform logos via Google's favicon service (no local asset hosting needed) —
