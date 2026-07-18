@@ -22,6 +22,19 @@
   if (!job) return;
   const { id: jobId, serverUrl, payload: item } = job;
 
+  // Facebook redirects the create form to a one-time DMA/GDPR consent gate
+  // (/privacy/consent?flow=fb_dma_marketplace) and to security checkpoints. Our
+  // content script can't fill those, so without this guard the job tab would sit
+  // there and the publish job would silently hang. Fail loudly with a fixable
+  // instruction instead — the user grants the consent once, by hand, then retries.
+  if (/\/privacy\/consent|\/checkpoint/.test(location.href)) {
+    send("JOB_ERROR", null,
+      "Facebook wants a one-time Marketplace consent (or a security check) before " +
+      "it lets anything list. Open Facebook Marketplace once, click ‘Aan de slag’ / " +
+      "complete the check, then publish this item again.");
+    return;
+  }
+
   try {
     if (job.action === "delete") {
       await deleteListingFb(item);
