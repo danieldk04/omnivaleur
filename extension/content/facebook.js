@@ -125,31 +125,46 @@
       || combos.find((el) => labelRe.test((el.textContent || "").slice(0, 60)));
     if (!trigger) return false;
     trigger.click();
-    await sleep(700);
+    await sleep(800);
 
-    // If a search box appeared (category), type the first candidate to filter.
-    const search = [...document.querySelectorAll('input[type="text"], input[type="search"], [role="combobox"] input')]
-      .find((el) => isVisible(el) && el !== trigger && document.activeElement === el);
-    if (search) { await typeInto(search, candidates[0]); await sleep(700); }
-
+    // Options render two ways (both VERIFIED live): "Staat" opens role=option rows,
+    // but "Categorie" opens a tree of plain clickable <div>s (role=null) — so we
+    // can't rely on role=option. Match any visible node whose EXACT text is one of
+    // the candidates, preferring the innermost node (fewest children), then click.
+    const sel = '[role="option"], [role="menuitem"], [role="menuitemradio"], li, div, span, a';
     const deadline = Date.now() + 4000;
     let opt = null;
     while (Date.now() < deadline && !opt) {
-      const opts = [...document.querySelectorAll('[role="option"], [role="menuitem"], [role="menuitemradio"], li')]
-        .filter(isVisible)
-        .map((o) => ({ o, t: (o.textContent || "").trim().toLowerCase() }))
-        .filter((x) => x.t);
+      const nodes = [...document.querySelectorAll(sel)]
+        .filter((el) => isVisible(el) && el.childElementCount <= 3)
+        .map((el) => ({ el, t: (el.textContent || "").trim().toLowerCase() }))
+        .filter((x) => x.t && x.t.length < 60);
+      const innermost = (list) => list.sort((a, b) => a.el.childElementCount - b.el.childElementCount)[0]?.el;
       for (const w of wants) {
-        opt = (opts.find((x) => x.t === w)               // exact match wins
-            || opts.find((x) => x.t.includes(w)))?.o;     // then substring
+        opt = innermost(nodes.filter((x) => x.t === w))          // exact match wins
+           || innermost(nodes.filter((x) => x.t.includes(w)));   // then substring
         if (opt) break;
       }
       if (!opt) await sleep(250);
     }
     if (!opt) return false;
     opt.click();
-    await sleep(400);
+    await sleep(500);
     return true;
+  }
+
+  // Map the item to Facebook's flat clothing categories (VERIFIED leaves:
+  // "Herenkleding en -schoenen" / "Dameskleding en -schoenen"), which are directly
+  // selectable. This is a clothing-first tool, so gender drives the pick; the
+  // generic "Kleding en accessoires" is the fallback when gender is unknown.
+  function fbCategoryCandidates(item) {
+    const g = (item.gender || "").toLowerCase();
+    const cat = (item.category || "").toLowerCase();
+    const isMen = /heren|\bmen\b|man/.test(g) || /heren|\bmen\b/.test(cat);
+    const isWomen = /dames|women|vrouw/.test(g) || /dames|women/.test(cat);
+    if (isMen) return ["Herenkleding en -schoenen", "Men’s clothing & shoes", "Kleding en accessoires"];
+    if (isWomen) return ["Dameskleding en -schoenen", "Women’s clothing & shoes", "Kleding en accessoires"];
+    return ["Kleding en accessoires", "Clothing & accessories"];
   }
 
   async function fillForm(item) {
