@@ -51,7 +51,9 @@
       "matches": [
         "https://www.facebook.com/marketplace/create/*",
         "https://www.facebook.com/marketplace/item/*",
-        "https://www.facebook.com/marketplace/you/*"
+        "https://www.facebook.com/marketplace/you/*",
+        "https://www.facebook.com/privacy/consent/*",
+        "https://www.facebook.com/checkpoint/*"
       ],
       "js": ["content/shared.js", "content/facebook.js"],
       "run_at": "document_idle"
