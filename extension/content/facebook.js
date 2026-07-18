@@ -114,10 +114,15 @@
       .filter(Boolean).map((c) => String(c).toLowerCase().trim());
     if (!wants.length) return false;
 
-    const trigger = [...document.querySelectorAll('[role="combobox"], [aria-haspopup="listbox"], [role="button"], label')]
-      .find((el) => isVisible(el) && labelRe.test(el.getAttribute("aria-label") || ""))
-      || [...document.querySelectorAll('[role="combobox"], [role="button"], label')]
-        .find((el) => isVisible(el) && labelRe.test((el.textContent || "").slice(0, 60)));
+    // VERIFIED live: the Categorie/Staat comboboxes also have NO aria-label —
+    // their name comes from the wrapping <label>. Match aria-label OR the closest
+    // <label> text, then fall back to the element's own text.
+    const comboName = (el) =>
+      el.getAttribute("aria-label") || el.closest("label")?.textContent || "";
+    const combos = [...document.querySelectorAll('[role="combobox"], [aria-haspopup="listbox"], [role="button"]')]
+      .filter(isVisible);
+    const trigger = combos.find((el) => labelRe.test((comboName(el) || "").trim()))
+      || combos.find((el) => labelRe.test((el.textContent || "").slice(0, 60)));
     if (!trigger) return false;
     trigger.click();
     await sleep(700);
