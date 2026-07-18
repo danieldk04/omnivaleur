@@ -4360,7 +4360,7 @@ function renderPlatformCheckboxes(containerId, itemId) {
       : '';
     return `<label class="platform-checkbox">
       <input type="checkbox" value="${p}">
-      <span>${PLATFORM_ICONS[p]} ${PLATFORM_LABELS[p]}${betaTag}</span>
+      <span>${PLATFORM_ICONS[p]} ${label}${betaTag}</span>
     </label>`;
   }).join('');
 }
