@@ -2858,7 +2858,12 @@ function renderPlatforms() {
   const ebayNote = state.connected.includes('ebay')
     ? ''
     : `<div style="font-size:12px;color:var(--muted);padding:2px 4px 4px">eBay requires a category per item — set it under "eBay category" when creating or editing an item.</div>`;
-  document.getElementById('platforms-body').innerHTML = html + ebayNote;
+  const facebookNote = `<div style="font-size:12px;color:#92400e;background:#fef3c7;border-radius:8px;padding:10px 12px;margin-top:10px">
+    <strong>Facebook Marketplace is beta.</strong> Facebook staat automatisch plaatsen niet officieel toe en detecteert dit actief.
+    Publiceren gebeurt in je eigen ingelogde Chrome, maar er is een reëel risico dat Facebook je account markeert of blokkeert.
+    Gebruik dit bewust en op eigen risico — bij voorkeur met een apart account. Verkocht? Verwijder je Facebook-plaatsing zelf als de automatische verwijdering niet lukt.
+  </div>`;
+  document.getElementById('platforms-body').innerHTML = html + ebayNote + facebookNote;
 }
 
 async function connectEbay() {
