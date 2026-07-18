@@ -2049,12 +2049,20 @@ const PLATFORM_DOMAINS = { marktplaats: 'marktplaats.nl', '2dehands': '2dehands.
 const PLATFORM_EMOJI_FALLBACK = { marktplaats: '🇳🇱', '2dehands': '🇧🇪', vinted: '👕', facebook: '📘', ebay: '🛒', etsy: '🎨', shopify: '🏪' };
 // Real platform logos via Google's favicon service (no local asset hosting needed) —
 // falls back to the old emoji if the favicon fails to load (offline, blocked, etc).
+// Platforms whose favicon the Google service can't resolve (Facebook blocks it,
+// which is why its dot showed a generic doc/printer icon) use a bundled logo.
+const LOCAL_LOGOS = { facebook: '/assets/logos/facebook.svg' };
 function platIcon(key, size) {
   size = size || 16;
-  const domain = PLATFORM_DOMAINS[key];
   const fallback = PLATFORM_EMOJI_FALLBACK[key] || '🏪';
+  const style = `width:${size}px;height:${size}px;border-radius:3px;vertical-align:-${Math.round(size*0.15)}px;object-fit:contain`;
+  const local = LOCAL_LOGOS[key];
+  if (local) {
+    return `<img src="${local}" alt="${key}" style="${style}" onerror="this.outerHTML='${fallback}'">`;
+  }
+  const domain = PLATFORM_DOMAINS[key];
   if (!domain) return fallback;
-  return `<img src="https://www.google.com/s2/favicons?sz=64&domain=${domain}" alt="${key}" style="width:${size}px;height:${size}px;border-radius:3px;vertical-align:-${Math.round(size*0.15)}px;object-fit:contain" onerror="this.outerHTML='${fallback}'">`;
+  return `<img src="https://www.google.com/s2/favicons?sz=64&domain=${domain}" alt="${key}" style="${style}" onerror="this.outerHTML='${fallback}'">`;
 }
 const PLATFORM_ICONS = new Proxy({}, { get: (_, key) => platIcon(key) });
 
