@@ -4187,7 +4187,7 @@ async function markListingActive(itemId, platform, event) {
 function openMarkActiveModal(itemId, event) {
   event?.stopPropagation();
   const item = state.items.find(i => i.id === itemId);
-  const platforms = ['marktplaats', '2dehands', 'vinted', 'shopify', 'ebay', 'etsy'];
+  const platforms = ['marktplaats', '2dehands', 'vinted', 'facebook', 'shopify', 'ebay', 'etsy'];
   const checkboxes = platforms.map(p =>
     `<label style="display:flex;align-items:center;gap:8px;padding:6px 0;cursor:pointer">
       <input type="checkbox" value="${p}" style="width:15px;height:15px">
