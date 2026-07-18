@@ -2044,8 +2044,8 @@ function smartMissingBadge(item) {
   return chip('#fffbeb', '#b45309', '⚠', `Missing data for ${n} platform${n !== 1 ? 's' : ''}`, fullTip);
 }
 const PLATFORM_LABELS = { marktplaats: 'Marktplaats', '2dehands': '2dehands', ebay: 'eBay', etsy: 'Etsy', shopify: 'Shopify', vinted: 'Vinted' };
-const PLATFORM_DOMAINS = { marktplaats: 'marktplaats.nl', '2dehands': '2dehands.be', vinted: 'vinted.nl', ebay: 'ebay.com', etsy: 'etsy.com', shopify: 'shopify.com' };
-const PLATFORM_EMOJI_FALLBACK = { marktplaats: '🇳🇱', '2dehands': '🇧🇪', vinted: '👕', ebay: '🛒', etsy: '🎨', shopify: '🏪' };
+const PLATFORM_DOMAINS = { marktplaats: 'marktplaats.nl', '2dehands': '2dehands.be', vinted: 'vinted.nl', facebook: 'facebook.com', ebay: 'ebay.com', etsy: 'etsy.com', shopify: 'shopify.com' };
+const PLATFORM_EMOJI_FALLBACK = { marktplaats: '🇳🇱', '2dehands': '🇧🇪', vinted: '👕', facebook: '📘', ebay: '🛒', etsy: '🎨', shopify: '🏪' };
 // Real platform logos via Google's favicon service (no local asset hosting needed) —
 // falls back to the old emoji if the favicon fails to load (offline, blocked, etc).
 function platIcon(key, size) {
