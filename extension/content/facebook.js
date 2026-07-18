@@ -232,13 +232,13 @@
     return null;
   }
 
-  // Has Facebook shown a photo preview thumbnail yet? It renders the picked files
-  // as blob:/scontent <img>s; their presence confirms the upload was accepted.
+  // Has Facebook shown a photo preview thumbnail yet? Picked files render as
+  // blob: <img>s — verified live. (We deliberately do NOT look at scontent URLs:
+  // FB's own profile/chrome images use those, so they'd give a false positive.)
   async function waitForPhotoPreview(timeout) {
     const deadline = Date.now() + (timeout || 6000);
     while (Date.now() < deadline) {
-      const has = [...document.querySelectorAll("img")]
-        .some((i) => /^blob:/.test(i.src) || i.src.includes("scontent"));
+      const has = [...document.querySelectorAll("img")].some((i) => /^blob:/.test(i.src));
       if (has) return true;
       await sleep(300);
     }
