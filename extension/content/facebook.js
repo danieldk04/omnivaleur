@@ -176,7 +176,13 @@
     // FB localises the whole form (verified NL: "Titel"/"Prijs"/"Categorie"/
     // "Staat"), so every label match accepts both the Dutch and English term.
     await typeInto(findField(/^(titel|title)$/i), smartTrunc(item.title || "", 100));
-    await typeInto(findField(/^(prijs|price)$/i), String(item.price || ""));
+
+    // Price is locale-sensitive. On the Dutch form the number input reads "." as a
+    // THOUSANDS separator, so typing "29.99" is stored as 2999. Detect the field's
+    // language from its own label and type the matching decimal separator ("29,99"
+    // on NL, "29.99" on EN). Whole amounts are typed without decimals.
+    const priceField = findField(/^(prijs|price)$/i);
+    if (priceField) await typeInto(priceField, formatPrice(item.price, priceField));
 
     // Category is required. FB uses its own flat taxonomy (no free-text search),
     // so we map the item to a verified selectable leaf rather than typing.
