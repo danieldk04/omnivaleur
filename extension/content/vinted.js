@@ -956,6 +956,13 @@
       return out;
     };
 
+    // Niche sport-shoe categories Vinted often suggests for a plain sneaker. We only
+    // want these when the listing itself names that sport — otherwise a normal shoe
+    // gets buried in e.g. "Tennis shoes" just because it tied on the generic "shoes".
+    const NICHE_SHOE = ["tennis", "football", "running", "basketball", "hiking",
+      "golf", "cycling", "skate", "boxing", "wrestling", "climbing"];
+    const itemText = `${item.title || ""} ${item.description || ""}`.toLowerCase();
+
     // Score a choice on category hints (+3 each) and gender breadcrumb (+/-).
     const score = (c) => {
       const t = c.text;
@@ -966,6 +973,9 @@
       if (wantMen) { if (isMenRow) s += 3; if (isWomenRow) s -= 5; }
       if (wantWomen) { if (isWomenRow) s += 3; if (isMenRow) s -= 5; }
       if (hints.length === 0 && /shoe|clothing|jacket|dress|jeans/.test(t)) s += 1;
+      // Penalise a niche sport-shoe suggestion unless the listing actually mentions
+      // that sport — keeps ordinary sneakers out of "Tennis shoes" etc.
+      for (const n of NICHE_SHOE) if (t.includes(n) && !itemText.includes(n)) s -= 4;
       return s;
     };
 
