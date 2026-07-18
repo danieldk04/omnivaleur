@@ -650,7 +650,7 @@
           if (hit) return { id: String(hit.id), processing: !!hit.is_processing };
         }
       } catch (_) { /* transient — keep polling */ }
-      await sleep(6000);
+      await sleep(3000);
     }
     return null;
   }
