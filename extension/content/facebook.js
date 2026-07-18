@@ -157,17 +157,15 @@
   // "Herenkleding en -schoenen" / "Dameskleding en -schoenen"), which are directly
   // selectable. This is a clothing-first tool, so gender drives the pick; the
   // generic "Kleding en accessoires" is the fallback when gender is unknown.
-  // Format a price for FB's localised number input. The wrapping <label> tells us
-  // the form language ("Prijs" = NL → comma decimal; "Price" = EN → dot decimal).
-  // Getting this wrong makes FB read the separator as a thousands group (29.99 → 2999).
+  // Format a price for FB's price input. VERIFIED live: FB Marketplace's price
+  // field is INTEGER-ONLY — it rounds whatever you type (29,50 → €30, 19,95 → €20)
+  // and, worse, reads a "." as a thousands separator ("29.99" → 2999). So we skip
+  // separators entirely and type the rounded whole-euro amount, which is exactly
+  // what FB would store anyway. `field` is unused but kept for signature stability.
   function formatPrice(price, field) {
     const num = Number(price);
     if (!Number.isFinite(num)) return String(price || "");
-    const labelText = (field.closest("label")?.textContent || field.getAttribute("aria-label") || "");
-    const isDutch = /prijs/i.test(labelText);
-    // Two decimals only when there's a fractional part; whole euros stay bare.
-    const s = Number.isInteger(num) ? String(num) : num.toFixed(2);
-    return isDutch ? s.replace(".", ",") : s;
+    return String(Math.round(num));
   }
 
   function fbCategoryCandidates(item) {
