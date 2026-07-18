@@ -120,7 +120,7 @@
       "region": "nl",
       "pillar": "C",
       "slug": "omnivaleur-vs-oneshop",
-      "status": "pending",
+      "status": "published",
       "priority": 15
     },
     {
@@ -267,6 +267,15 @@
       "action": "created",
       "url_path": "/reseller-tools/book-reselling-automation",
       "published_at": "2026-07-17T09:50:19.554495+00:00"
+    },
+    {
+      "keyword": "omnivaleur vs oneShop",
+      "slug": "omnivaleur-vs-oneshop",
+      "region": "nl",
+      "pillar": "C",
+      "action": "created",
+      "url_path": "/vs/omnivaleur-vs-oneshop",
+      "published_at": "2026-07-18T09:19:09.061757+00:00"
     }
   ]
 }
