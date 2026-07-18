@@ -470,7 +470,7 @@ async def delist_all_platforms(item_id: str, user_id: str) -> list[dict]:
 # exactly the fragile path this project moved away from — a stale server session
 # has silently mass-delisted live listings before (see services/polling.py). API
 # platforms (eBay/Etsy/Shopify) delete cleanly via their own APIs, server-side.
-_EXTENSION_DELIST_PLATFORMS = {"marktplaats", "2dehands", "vinted"}
+_EXTENSION_DELIST_PLATFORMS = {"marktplaats", "2dehands", "vinted", "facebook"}
 
 
 async def handle_item_sold(item_id: str, sold_on_platform: str):
