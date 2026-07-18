@@ -576,6 +576,7 @@ async def _translate_category_names(results: list[dict]) -> list[dict]:
 
 def _map_condition(condition: str) -> str:
     return {
+        "new_with_tags": "NEW",
         "new": "NEW",
         "good": "USED_EXCELLENT",
         "fair": "USED_GOOD",
