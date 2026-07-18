@@ -238,6 +238,14 @@ function getDeleteUrl(platform, payload) {
       ? `https://www.vinted.com/items/${payload.platform_listing_id}`
       : null;
   }
+  if (platform === "facebook") {
+    // Beta: open the exact item page when we captured it at publish time,
+    // otherwise the seller's "Your listings" page so the content script can
+    // find it by title. FB item pages look like /marketplace/item/{id}.
+    if (payload?.platform_listing_url) return payload.platform_listing_url;
+    if (payload?.platform_listing_id) return `https://www.facebook.com/marketplace/item/${payload.platform_listing_id}`;
+    return "https://www.facebook.com/marketplace/you/selling";
+  }
   return null;
 }
 
