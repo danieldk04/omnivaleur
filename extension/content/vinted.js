@@ -214,8 +214,19 @@
     "unisex sportkleding": ["activewear", "sports"],
     "unisex schoenen":     ["sneakers", "shoes", "trainers"],
     "unisex accessoires":  ["accessories", "scarves", "hats"],
+    // ── English dashboard category keys (the dashboard UI is English, so item.category
+    //    arrives as e.g. "shoes"/"trainers", not the Dutch keys above). Sneakers/
+    //    trainers lead the generic "shoes" list so a plain shoe lands there rather
+    //    than in a niche sport category. The score() niche-penalty backs this up.
+    "shoes":               ["sneakers", "trainers", "shoes", "loafers", "boat shoes"],
+    "sneakers":            ["sneakers", "trainers", "sports shoes"],
+    "trainers":            ["trainers", "sneakers", "sports shoes"],
+    "boots":               ["boots", "ankle boots", "chelsea boots"],
+    "heels":               ["heels", "pumps", "high heels"],
+    "sandals":             ["sandals", "flip flops", "slippers"],
+    "loafers":             ["loafers", "boat shoes", "moccasins"],
     // ── Legacy keys (backwards compat for existing saved items) ────
-    "schoenen":            ["shoes", "loafers", "sneakers", "trainers", "boots"],
+    "schoenen":            ["sneakers", "trainers", "shoes", "loafers", "boots"],
     "truien / vesten":     ["jumpers", "cardigans", "knitwear"],
     "heren truien / vesten": ["jumpers", "sweaters", "cardigans", "knitwear"],
     "heren t-shirts / polo": ["t-shirts", "polo shirts"],
