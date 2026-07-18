@@ -63,13 +63,17 @@
     return controls.find((el) => {
       if (!isVisible(el)) return false;
       // Test each accessible-name source on its own (trimmed) so an anchored
-      // regex like /^titel$/ still matches an aria-label of "Titel".
-      const names = [el.getAttribute("aria-label"), el.getAttribute("placeholder")];
+      // regex like /^titel$/ still matches. VERIFIED on the live FB form: the
+      // Titel/Prijs inputs have NO aria-label/placeholder — their name comes from
+      // the WRAPPING <label> (e.g. <label><span>Titel</span><input></label>), so
+      // el.closest('label').textContent is the source that actually works.
+      const names = [
+        el.getAttribute("aria-label"),
+        el.getAttribute("placeholder"),
+        el.closest("label")?.textContent,
+      ];
       const labelledby = el.getAttribute("aria-labelledby");
-      if (labelledby) {
-        const lbl = document.getElementById(labelledby);
-        if (lbl) names.push(lbl.textContent);
-      }
+      if (labelledby) names.push(document.getElementById(labelledby)?.textContent);
       return names.some((n) => n && labelRe.test(n.trim()));
     });
   }
