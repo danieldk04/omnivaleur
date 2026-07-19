@@ -128,7 +128,7 @@
       "region": "nl",
       "pillar": "A",
       "slug": "marktplaats-to-2dehands-crosslisting",
-      "status": "pending",
+      "status": "published",
       "nl_slug": "marktplaats-naar-2dehands-crosslisting",
       "priority": 16
     },
@@ -276,6 +276,15 @@
       "action": "created",
       "url_path": "/vs/omnivaleur-vs-oneshop",
       "published_at": "2026-07-18T09:19:09.061757+00:00"
+    },
+    {
+      "keyword": "marktplaats to 2dehands crosslisting",
+      "slug": "marktplaats-to-2dehands-crosslisting",
+      "region": "nl",
+      "pillar": "A",
+      "action": "created",
+      "url_path": "/crosslisting/marktplaats-to-2dehands-crosslisting",
+      "published_at": "2026-07-19T09:47:21.501411+00:00"
     }
   ]
 }
