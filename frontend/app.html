@@ -2792,6 +2792,7 @@ async function doBulkCrosslist() {
   setBusy(true, `Publishing 0 / ${ids.length}…`);
   let done = 0, errors = 0;
   const blockedItems = [];
+  const apiErrors = new Set();   // distinct server-side (eBay/Shopify) failures
   for (const id of ids) {
     try {
       const res = await apiFetch(`${API}/api/items/${id}/crosslist`, {
@@ -2807,6 +2808,10 @@ async function doBulkCrosslist() {
         }
         throw new Error(missingMsg || data.detail || 'Publish failed');
       }
+      // res.ok doesn't mean every platform succeeded — API platforms report
+      // per-platform errors in results.
+      (data.results || []).filter(r => r.status === 'error')
+        .forEach(r => apiErrors.add(`${PLATFORM_LABELS[r.platform] || r.platform}: ${r.error || 'failed'}`));
       done++;
     } catch { errors++; }
     document.getElementById('cl-busy-text').textContent = `Publishing ${done + errors} / ${ids.length}…`;
@@ -2815,6 +2820,9 @@ async function doBulkCrosslist() {
   showToast(`${done} item${done !== 1 ? 's' : ''} queued for publishing${errors ? `, ${errors} error(s)` : ''}.`);
   if (blockedItems.length) {
     alert(`${blockedItems.length} item(s) couldn't be published — missing data:\n\n${blockedItems.join('\n')}\n\nFill these in first, then try again.`);
+  }
+  if (apiErrors.size) {
+    alert(`Some platforms rejected the listing:\n\n${[...apiErrors].map(e => '• ' + e).join('\n')}`);
   }
   clearSelection();
   await loadAll();
