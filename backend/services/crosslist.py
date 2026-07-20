@@ -192,16 +192,18 @@ async def publish_to_platforms(item_id: str, platforms: list[str], user_id: str)
 
     # Etsy isn't built yet (shown only as "Coming soon"). Refuse it explicitly so a
     # stray request can never half-publish or fall through to the extension path.
+    # Any not-yet-available platform is returned as a clear error result.
+    results = [
+        {"platform": p, "status": "error",
+         "error": f"{p.capitalize()} is coming soon — you can't publish to it yet."}
+        for p in platforms if p in NOT_YET_AVAILABLE
+    ]
     platforms = [p for p in platforms if p not in NOT_YET_AVAILABLE]
 
     missing = _missing_fields_per_platform(item, platforms)
     if missing:
         raise CrosslistValidationError(missing)
 
-    results = [
-        {"platform": p, "status": "error", "error": f"{p.capitalize()} is coming soon and can't be published to yet."}
-        for p in body_not_available(platforms_requested=None)
-    ] if False else []
     api_platforms = [p for p in platforms if p in API_PLATFORMS]
     ext_platforms = [p for p in platforms if p in EXTENSION_PLATFORMS]
 
