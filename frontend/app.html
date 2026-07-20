@@ -764,6 +764,37 @@ input[type="checkbox"].row-check { width: 15px; height: 15px; cursor: pointer; a
         </div>
       </div>
 
+      <!-- Where the numbers come from: every sale in the period, itemised -->
+      <div class="an-chart-card" style="margin-top:16px">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:4px">
+          <div class="an-chart-title" style="margin-bottom:0">Sales breakdown</div>
+          <div style="font-size:11.5px;color:var(--muted)" id="an-sales-summary"></div>
+        </div>
+        <div style="font-size:11.5px;color:var(--muted);margin-bottom:12px">Every sale counted in the numbers above — which item, where it sold, and the exact profit. Rows without a purchase price aren't counted in Profit yet.</div>
+        <div style="overflow-x:auto">
+          <table class="an-sales-table" id="an-sales-table">
+            <thead>
+              <tr>
+                <th>Sold</th><th>Item</th><th>Platform</th>
+                <th style="text-align:right">Sale price</th>
+                <th style="text-align:right">Purchase</th>
+                <th style="text-align:right">Profit</th>
+                <th style="text-align:right">Margin</th>
+              </tr>
+            </thead>
+            <tbody id="an-sales-tbody"></tbody>
+          </table>
+        </div>
+        <div id="an-sales-empty" class="an-empty" style="display:none;padding:28px 0;text-align:center">No sales in this period yet.</div>
+      </div>
+
+      <!-- Items missing a purchase price — actionable, so Profit becomes complete -->
+      <div class="an-chart-card" id="an-missing-card" style="margin-top:16px;display:none;border:1px solid rgba(245,158,11,.35);background:rgba(245,158,11,.06)">
+        <div class="an-chart-title" style="color:#92400e">⚠️ <span id="an-missing-count">0</span> sold item(s) missing a purchase price</div>
+        <div style="font-size:11.5px;color:#92400e;margin-bottom:12px">These sales count toward Revenue but not Profit. Add what you paid and your profit numbers become accurate.</div>
+        <div id="an-missing-list" style="display:flex;flex-direction:column;gap:8px"></div>
+      </div>
+
       <!-- Active vs inactive listings per platform -->
       <div class="an-chart-card" style="margin-top:16px">
         <div class="an-chart-title">Listings per platform — active vs. inactive</div>
