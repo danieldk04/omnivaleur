@@ -2011,7 +2011,10 @@ async function parseJsonSafe(r) {
   }
 }
 
-const PLATFORMS = ['marktplaats', '2dehands', 'vinted', 'facebook', 'ebay', 'etsy', 'shopify'];
+// Etsy is not built yet (shown as "Coming soon" on the Platforms page only) — it
+// must never appear as a publishable target in item rows, the crosslist picker,
+// analytics or the calculator, so it's deliberately left out of this list.
+const PLATFORMS = ['marktplaats', '2dehands', 'vinted', 'facebook', 'ebay', 'shopify'];
 
 // Mirrors backend/services/crosslist.py's _UNIVERSAL_REQUIRED / _PLATFORM_REQUIRED —
 // lets the dashboard warn about missing data before a publish attempt even fires,
