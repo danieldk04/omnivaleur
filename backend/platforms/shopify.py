@@ -56,6 +56,25 @@ def extract_skus_from_order(order: dict) -> list[str]:
     return skus
 
 
+def extract_sku_prices_from_order(order: dict) -> dict[str, float]:
+    """
+    Map each SKU to the amount actually charged for it (unit price × quantity),
+    so a sale records what the buyer really paid — not the item's asking price.
+    """
+    prices: dict[str, float] = {}
+    for item in order.get("line_items", []):
+        sku = item.get("sku")
+        if not sku:
+            continue
+        try:
+            unit = float(item.get("price") or 0)
+            qty = int(item.get("quantity") or 1)
+            prices[sku] = round(unit * qty, 2)
+        except (ValueError, TypeError):
+            continue
+    return prices
+
+
 class ShopifyClient:
     """Minimal Shopify Admin API client."""
 
