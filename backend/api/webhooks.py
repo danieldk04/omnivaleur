@@ -65,7 +65,7 @@ async def shopify_order_paid(request: Request):
     We find the item by SKU and delist from all other platforms.
     Register in Shopify Partner Dashboard > Webhooks > orders/paid.
     """
-    from backend.platforms.shopify import verify_webhook, extract_skus_from_order
+    from backend.platforms.shopify import verify_webhook, extract_skus_from_order, extract_sku_prices_from_order
     raw = await request.body()
     hmac_header = request.headers.get("X-Shopify-Hmac-Sha256", "")
     if not verify_webhook(raw, hmac_header):
@@ -76,12 +76,14 @@ async def shopify_order_paid(request: Request):
     skus = extract_skus_from_order(order)
     if not skus:
         return {"status": "no_skus"}
+    # Shopify tells us the real amount paid per line item — record it as the sold price.
+    sku_prices = extract_sku_prices_from_order(order)
 
     db = get_db()
     for sku in skus:
         item = db.table("items").select("id").eq("sku", sku).execute()
         if item.data:
-            await handle_item_sold(item.data[0]["id"], "shopify")
+            await handle_item_sold(item.data[0]["id"], "shopify", sold_price=sku_prices.get(sku))
 
     return {"status": "ok", "skus_processed": skus}
 
