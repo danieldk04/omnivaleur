@@ -1,6 +1,6 @@
 #!/bin/bash
-cd /Users/Danie/Documents/crosslist-eu
-export PYTHONPATH=/Users/Danie/Documents/crosslist-eu
+cd /Users/Danie/Documents/omnivaleur
+export PYTHONPATH=/Users/Danie/Documents/omnivaleur
 
 # Kill any existing instance on port 8001
 lsof -ti:8001 | xargs kill -9 2>/dev/null
