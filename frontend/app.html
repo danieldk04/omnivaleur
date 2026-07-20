@@ -4845,6 +4845,16 @@ let _anChartRevenue = null;
 let _anChartSales = null;
 let _anChartListingsPlatform = null;
 
+// Jump straight from a sale row into that item's editor with the purchase-price
+// field focused, so completing profit data is one click from the analytics.
+function addPurchasePrice(itemId) {
+  editItem(itemId);
+  setTimeout(() => {
+    const f = document.getElementById('f-purchase');
+    if (f) { f.focus(); f.scrollIntoView({ block: 'center' }); }
+  }, 150);
+}
+
 function setAnPeriod(days) {
   anPeriodDays = days;
   document.querySelectorAll('.an-period-tab').forEach(t => {
