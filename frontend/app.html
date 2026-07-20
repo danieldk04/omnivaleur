@@ -5164,53 +5164,6 @@ function renderAnalytics() {
     }).join('');
   }
 
-  // ── Missing-purchase-price callout — the exact sold items to fix ──
-  const missingCard = document.getElementById('an-missing-card');
-  const missing = sales.filter(({ item }) => item.purchase_price == null);
-  if (!missing.length) {
-    missingCard.style.display = 'none';
-  } else {
-    missingCard.style.display = 'block';
-    document.getElementById('an-missing-count').textContent = missing.length;
-    document.getElementById('an-missing-list').innerHTML = missing.map(sale => {
-      const { item } = sale;
-      const thumb = item.photo_urls?.[0]
-        ? `<img src="${item.photo_urls[0]}" class="an-sales-thumb">`
-        : `<span class="an-sales-thumb" style="display:flex;align-items:center;justify-content:center">👕</span>`;
-      return `<div style="display:flex;align-items:center;gap:10px;background:var(--surface,#fff);border:1px solid var(--border);border-radius:9px;padding:8px 11px">
-        ${thumb}
-        <span style="flex:1;min-width:0;font-weight:600;font-size:12.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${esc(item.title || '')}">${esc(item.title || 'Untitled')}</span>
-        <span style="font-size:12px;color:var(--muted)">sold €${saleAmt(sale).toFixed(2)}</span>
-        <button class="an-cost-btn" onclick="addPurchasePrice('${item.id}')">＋ Add cost</button>
-      </div>`;
-    }).join('');
-  }
-
-  // ── Unconfirmed sale-price callout — sales still valued at the asking price ──
-  const estCard = document.getElementById('an-estimate-card');
-  if (!estimatedSales.length) {
-    estCard.style.display = 'none';
-  } else {
-    estCard.style.display = 'block';
-    document.getElementById('an-estimate-count').textContent = estimatedSales.length;
-    // Most recent first, so the freshest sales to confirm are on top.
-    const estDesc = estimatedSales.slice().sort((a, b) => new Date(b.listing.sold_at) - new Date(a.listing.sold_at));
-    document.getElementById('an-estimate-list').innerHTML = estDesc.map(sale => {
-      const { listing, item } = sale;
-      const p = listing.platform;
-      const thumb = item.photo_urls?.[0]
-        ? `<img src="${item.photo_urls[0]}" class="an-sales-thumb">`
-        : `<span class="an-sales-thumb" style="display:flex;align-items:center;justify-content:center">👕</span>`;
-      return `<div style="display:flex;align-items:center;gap:10px;background:var(--surface,#fff);border:1px solid var(--border);border-radius:9px;padding:8px 11px">
-        ${thumb}
-        <span style="flex:1;min-width:0;font-weight:600;font-size:12.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${esc(item.title || '')}">${esc(item.title || 'Untitled')}</span>
-        <span style="font-size:12px;color:var(--muted)">${PLATFORM_ICONS[p] || '🏪'} asking €${(item.price || 0).toFixed(2)}</span>
-        <button class="an-cost-btn" onclick="setSoldPrice('${item.id}','${p}',${item.price || 0})">Set actual price</button>
-        <button class="an-notsold-btn" onclick="markNotSold('${item.id}','${p}','${esc(item.title || '').replace(/'/g, '\\\'')}')">Not sold</button>
-      </div>`;
-    }).join('');
-  }
-
   // Active vs inactive listings per platform (all platforms, regardless of period filter)
   const platformCounts = {};
   for (const p of PLATFORMS) platformCounts[p] = { active: 0, inactive: 0 };
