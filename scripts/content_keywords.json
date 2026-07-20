@@ -137,7 +137,7 @@
       "region": "nl",
       "pillar": "B",
       "slug": "electronics-reselling-automation-platforms",
-      "status": "pending",
+      "status": "published",
       "priority": 17
     }
   ],
@@ -285,6 +285,15 @@
       "action": "created",
       "url_path": "/crosslisting/marktplaats-to-2dehands-crosslisting",
       "published_at": "2026-07-19T09:47:21.501411+00:00"
+    },
+    {
+      "keyword": "electronics reselling automation platforms",
+      "slug": "electronics-reselling-automation-platforms",
+      "region": "nl",
+      "pillar": "B",
+      "action": "created",
+      "url_path": "/reseller-tools/electronics-reselling-automation-platforms",
+      "published_at": "2026-07-20T10:44:53.205835+00:00"
     }
   ]
 }
