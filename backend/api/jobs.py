@@ -405,6 +405,95 @@ async def relist_retry(body: dict, user_id: str = Depends(get_current_user)):
     return {"ok": True, **result}
 
 
+@router.post("/relist-cancel")
+async def relist_cancel(body: dict, user_id: str = Depends(get_current_user)):
+    """
+    Cancel a relist that's still mid-flight and put the listing back where it was.
+
+    A relist is only safely reversible WHILE THE OLD LISTING IS STILL LIVE — i.e.
+    the paired "delete" job hasn't completed yet. In that window we cancel both the
+    (pending) delete and the (scheduled) recreate, roll back the cooldown/quota the
+    refresh optimistically spent, and flip the listing straight back to "active".
+    Nothing was ever removed from the platform, so this is a true no-op undo.
+
+    Once the delete HAS completed, the old listing is already gone from the
+    platform and there's nothing to restore — cancelling here would strand the
+    item off-platform forever (exactly the "my listing vanished" bug). So we
+    refuse and tell the UI to offer "Publish now" (reschedule-now) instead, which
+    brings the item back live immediately.
+    """
+    item_id = body.get("item_id")
+    platform = body.get("platform")
+    if not item_id or not platform:
+        raise HTTPException(status_code=400, detail="item_id and platform are required")
+
+    db = get_db()
+
+    # Most recent delete for this relist — its status tells us whether the old
+    # listing is still live (safe to undo) or already gone (can't undo).
+    del_rows = (
+        db.table("jobs")
+        .select("id,status,payload")
+        .eq("user_id", user_id)
+        .eq("item_id", item_id)
+        .eq("platform", platform)
+        .eq("action", "delete")
+        .order("created_at", desc=True)
+        .limit(1)
+        .execute()
+        .data
+        or []
+    )
+    delete_job = del_rows[0] if del_rows else None
+
+    if delete_job and delete_job["status"] == "done":
+        # Old listing already removed — a cancel can't bring it back. Steer the
+        # user to publish the new listing now instead of stranding the item.
+        raise HTTPException(
+            status_code=409,
+            detail="The old listing has already been removed, so this relist can't "
+                   "be cancelled without leaving your item offline. Use \"Publish now\" "
+                   "to bring it back live immediately.",
+        )
+
+    # Old listing is still live (delete pending/claimed/errored, or never ran).
+    # Cancel every outstanding job from this relist so nothing fires later.
+    outstanding = (
+        db.table("jobs")
+        .select("id")
+        .eq("user_id", user_id)
+        .eq("item_id", item_id)
+        .eq("platform", platform)
+        .in_("action", ["delete", "create"])
+        .in_("status", ["pending", "claimed", "error"])
+        .execute()
+        .data
+        or []
+    )
+    for j in outstanding:
+        db.table("jobs").update({
+            "status": "cancelled",
+            "done_at": datetime.now(timezone.utc).isoformat(),
+        }).eq("id", j["id"]).execute()
+
+    # Give back the cooldown + daily-quota slot the refresh spent up front, so a
+    # cancelled relist doesn't count against the user (same rollback the failed-job
+    # path uses).
+    rollback = ((delete_job or {}).get("payload") or {}).get("_refresh_rollback")
+    if rollback:
+        from backend.services.relist import rollback_refresh
+        rollback_refresh(rollback, user_id)
+
+    # The listing was flipped to "relisting" at enqueue time; nothing was ever
+    # removed, so "active" is its true state again. Clear any stale error banner.
+    db.table("listings").update({
+        "status": "active",
+        "error_message": None,
+    }).eq("item_id", item_id).eq("platform", platform).execute()
+
+    return {"ok": True, "cancelled": len(outstanding), "status": "active"}
+
+
 @router.post("/{job_id}/claim")
 async def claim_job(job_id: str, user_id: str = Depends(get_current_user)):
     db = get_db()
