@@ -5037,6 +5037,75 @@ function renderAnalytics() {
         </li>`).join('');
   }
 
+  // ── Sales breakdown table — the itemised source of every number above ──
+  const tbody = document.getElementById('an-sales-tbody');
+  const tableEmpty = document.getElementById('an-sales-empty');
+  const summary = document.getElementById('an-sales-summary');
+  // Most recent sale first — that's what people scan for.
+  const salesDesc = sales.slice().sort((a, b) => new Date(b.listing.sold_at) - new Date(a.listing.sold_at));
+  if (!salesDesc.length) {
+    tbody.innerHTML = '';
+    tableEmpty.style.display = 'block';
+    summary.textContent = '';
+  } else {
+    tableEmpty.style.display = 'none';
+    summary.textContent = `${salesDesc.length} sale(s) · €${revenue.toFixed(2)} revenue` +
+      (profitSales.length ? ` · €${profit.toFixed(2)} profit` : '');
+    tbody.innerHTML = salesDesc.map(({ listing, item }) => {
+      const p = listing.platform;
+      const soldDate = listing.sold_at
+        ? new Date(listing.sold_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: '2-digit' })
+        : '—';
+      const sale = item.price || 0;
+      const hasCost = item.purchase_price != null;
+      const cost = hasCost ? item.purchase_price : null;
+      const prof = hasCost ? sale - cost : null;
+      const margin = (hasCost && sale > 0) ? (prof / sale * 100) : null;
+      const thumb = item.photo_urls?.[0]
+        ? `<img src="${item.photo_urls[0]}" class="an-sales-thumb">`
+        : `<span class="an-sales-thumb" style="display:flex;align-items:center;justify-content:center">👕</span>`;
+      const profCell = hasCost
+        ? `<span class="${prof >= 0 ? 'an-profit-pos' : 'an-profit-neg'}">${prof >= 0 ? '+' : '−'}€${Math.abs(prof).toFixed(2)}</span>`
+        : '<span style="color:var(--muted)">—</span>';
+      const marginCell = margin !== null
+        ? `<span style="color:${margin >= 0 ? '#15803d' : '#dc2626'};font-weight:600">${margin.toFixed(0)}%</span>`
+        : '<span style="color:var(--muted)">—</span>';
+      const costCell = hasCost
+        ? `€${cost.toFixed(2)}`
+        : `<button class="an-cost-btn" onclick="addPurchasePrice('${item.id}')">＋ Add cost</button>`;
+      return `<tr class="${hasCost ? '' : 'an-row-missing'}">
+        <td style="color:var(--muted)">${soldDate}</td>
+        <td><div class="an-sales-item">${thumb}<span class="an-sales-title" title="${esc(item.title || '')}">${esc(item.title || 'Untitled')}</span></div></td>
+        <td><span style="font-size:12px">${PLATFORM_ICONS[p] || '🏪'}</span> ${PLATFORM_LABELS[p] || p}</td>
+        <td class="an-sales-num">€${sale.toFixed(2)}</td>
+        <td class="an-sales-num">${costCell}</td>
+        <td class="an-sales-num">${profCell}</td>
+        <td class="an-sales-num">${marginCell}</td>
+      </tr>`;
+    }).join('');
+  }
+
+  // ── Missing-purchase-price callout — the exact sold items to fix ──
+  const missingCard = document.getElementById('an-missing-card');
+  const missing = sales.filter(({ item }) => item.purchase_price == null);
+  if (!missing.length) {
+    missingCard.style.display = 'none';
+  } else {
+    missingCard.style.display = 'block';
+    document.getElementById('an-missing-count').textContent = missing.length;
+    document.getElementById('an-missing-list').innerHTML = missing.map(({ item }) => {
+      const thumb = item.photo_urls?.[0]
+        ? `<img src="${item.photo_urls[0]}" class="an-sales-thumb">`
+        : `<span class="an-sales-thumb" style="display:flex;align-items:center;justify-content:center">👕</span>`;
+      return `<div style="display:flex;align-items:center;gap:10px;background:var(--surface,#fff);border:1px solid var(--border);border-radius:9px;padding:8px 11px">
+        ${thumb}
+        <span style="flex:1;min-width:0;font-weight:600;font-size:12.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${esc(item.title || '')}">${esc(item.title || 'Untitled')}</span>
+        <span style="font-size:12px;color:var(--muted)">sold €${(item.price || 0).toFixed(2)}</span>
+        <button class="an-cost-btn" onclick="addPurchasePrice('${item.id}')">＋ Add cost</button>
+      </div>`;
+    }).join('');
+  }
+
   // Active vs inactive listings per platform (all platforms, regardless of period filter)
   const platformCounts = {};
   for (const p of PLATFORMS) platformCounts[p] = { active: 0, inactive: 0 };
