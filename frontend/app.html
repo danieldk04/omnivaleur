@@ -330,6 +330,21 @@ textarea { resize: vertical; min-height: 80px; }
 .an-platform-bar { height: 100%; border-radius: 999px; background: var(--blue); }
 .an-platform-val { font-weight: 700; font-size: 12px; color: var(--text); min-width: 44px; text-align: right; }
 .an-empty { text-align: center; padding: 48px; color: var(--muted); font-size: 14px; }
+/* Sales breakdown table */
+.an-sales-table { width: 100%; border-collapse: separate; border-spacing: 0; font-size: 12.5px; }
+.an-sales-table th { text-align: left; padding: 8px 12px; font-size: 10.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); border-bottom: 1px solid var(--border); white-space: nowrap; }
+.an-sales-table td { padding: 10px 12px; border-bottom: 1px solid var(--border); vertical-align: middle; white-space: nowrap; }
+.an-sales-table tbody tr:last-child td { border-bottom: none; }
+.an-sales-table tbody tr:hover { background: #f8fafc; }
+.an-sales-item { display: flex; align-items: center; gap: 9px; min-width: 0; }
+.an-sales-thumb { width: 30px; height: 30px; border-radius: 6px; object-fit: cover; flex-shrink: 0; background: #f1f5f9; }
+.an-sales-title { font-weight: 600; max-width: 240px; overflow: hidden; text-overflow: ellipsis; }
+.an-sales-num { text-align: right; font-variant-numeric: tabular-nums; }
+.an-profit-pos { color: #15803d; font-weight: 700; }
+.an-profit-neg { color: #dc2626; font-weight: 700; }
+.an-cost-btn { border: 1px dashed #f59e0b; background: rgba(245,158,11,.08); color: #b45309; font-size: 11px; font-weight: 700; padding: 3px 9px; border-radius: 6px; cursor: pointer; white-space: nowrap; }
+.an-cost-btn:hover { background: rgba(245,158,11,.16); }
+tr.an-row-missing { background: rgba(245,158,11,.05); }
 @media (max-width: 768px) {
   .an-kpi-grid { grid-template-columns: 1fr 1fr; }
   .an-charts { grid-template-columns: 1fr; }
