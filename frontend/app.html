@@ -2518,7 +2518,8 @@ function renderDashboard() {
   document.getElementById('stat-items').textContent = state.items.length;
   document.getElementById('stat-items-sub').textContent = state.items.length === 1 ? '1 item' : `${state.items.length} items total`;
   document.getElementById('stat-active').textContent = active;
-  document.getElementById('stat-active-sub').textContent = `op ${new Set(state.listings.filter(l=>l.status==='active').map(l=>l.platform)).size} platforms`;
+  const activePlatformCount = new Set(state.listings.filter(l=>l.status==='active').map(l=>l.platform)).size;
+  document.getElementById('stat-active-sub').textContent = `on ${activePlatformCount} platform${activePlatformCount === 1 ? '' : 's'}`;
   document.getElementById('stat-unpublished').textContent = unpublished;
   document.getElementById('stat-queued').textContent = queued;
   document.getElementById('stat-queued-sub').textContent = queued ? 'waiting for extension' : 'nothing queued';
