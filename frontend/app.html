@@ -5171,6 +5171,7 @@ function renderAnalytics() {
         <td class="an-sales-num">${costCell}</td>
         <td class="an-sales-num">${profCell}</td>
         <td class="an-sales-num">${marginCell}</td>
+        <td class="an-sales-num"><button class="an-notsold-btn" title="This item isn't actually sold — put it back to active" onclick="markNotSold('${item.id}','${p}','${esc(item.title || '').replace(/'/g, '\\\'')}')">Not sold</button></td>
       </tr>`;
     }).join('');
   }
