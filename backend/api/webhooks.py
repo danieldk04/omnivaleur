@@ -49,11 +49,25 @@ async def ebay_webhook(request: Request):
     item_data = payload.get("data", {})
     listing_id = item_data.get("listingId") or item_data.get("itemId")
 
+    # Best-effort: eBay sale notifications may carry the actual sale amount under a
+    # few different shapes. Record it when present so revenue reflects reality.
+    def _ebay_sale_price(d):
+        for key in ("salePrice", "totalPrice", "price", "amount"):
+            v = d.get(key)
+            if isinstance(v, dict):
+                v = v.get("value") or v.get("amount")
+            if v is not None:
+                try:
+                    return round(float(v), 2)
+                except (ValueError, TypeError):
+                    pass
+        return None
+
     if listing_id:
         db = get_db()
         listing = db.table("listings").select("item_id").eq("platform_listing_id", str(listing_id)).eq("platform", "ebay").execute()
         if listing.data:
-            await handle_item_sold(listing.data[0]["item_id"], "ebay")
+            await handle_item_sold(listing.data[0]["item_id"], "ebay", sold_price=_ebay_sale_price(item_data))
 
     return {"status": "ok"}
 
