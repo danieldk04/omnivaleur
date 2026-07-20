@@ -64,14 +64,20 @@ def extract_sku_prices_from_order(order: dict) -> dict[str, float]:
     prices: dict[str, float] = {}
     for item in order.get("line_items", []):
         sku = item.get("sku")
-        if not sku:
+        raw = item.get("price")
+        # Skip when the price is absent — recording 0 would wrongly show the item
+        # as "sold for €0.00" and make profit negative. Better to leave it unknown
+        # so analytics falls back to the asking price as a confirmable estimate.
+        if not sku or raw in (None, ""):
             continue
         try:
-            unit = float(item.get("price") or 0)
+            unit = float(raw)
             qty = int(item.get("quantity") or 1)
-            prices[sku] = round(unit * qty, 2)
         except (ValueError, TypeError):
             continue
+        if unit <= 0:
+            continue
+        prices[sku] = round(unit * qty, 2)
     return prices
 
 
