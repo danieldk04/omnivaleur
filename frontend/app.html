@@ -4460,6 +4460,15 @@ function renderPlatformCheckboxes(containerId, itemId) {
         <span class="pm-cb-check">✓ Listed</span>
       </div>`;
     }
+    // eBay/Shopify publish server-side via their API — they must be connected
+    // first, otherwise publishing silently fails. Block selection until then.
+    if (API_PLATFORMS_FE.has(p) && !state.connected.includes(p)) {
+      return `<label class="platform-checkbox platform-checkbox-disabled" title="Connect ${label} first under Platforms">
+        <input type="checkbox" value="${p}" disabled>
+        <span>${PLATFORM_ICONS[p]} ${label}</span>
+        <span class="pm-cb-missing" style="cursor:pointer" onclick="event.preventDefault();closeModal('modal-crosslist');closeModal('modal-bulk-crosslist');showView('platforms')">Not connected — set up →</span>
+      </label>`;
+    }
     const missing = item ? missingFieldsForPlatform(item, p) : [];
     if (missing.length) {
       return `<label class="platform-checkbox platform-checkbox-disabled" title="Missing: ${esc(missing.join(', '))}">
