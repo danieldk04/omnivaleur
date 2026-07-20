@@ -473,20 +473,37 @@ async def delist_all_platforms(item_id: str, user_id: str) -> list[dict]:
 _EXTENSION_DELIST_PLATFORMS = {"marktplaats", "2dehands", "vinted", "facebook"}
 
 
-async def handle_item_sold(item_id: str, sold_on_platform: str):
+async def handle_item_sold(item_id: str, sold_on_platform: str, sold_price: float | None = None):
     """
     Called when an item is confirmed sold on one platform. Marks that listing
     sold and delists every OTHER active listing for the item — extension
     platforms via a queued delete job, API platforms via their API — so the item
     can't be double-sold.
+
+    sold_price: the amount actually received, when the source knows it (Shopify
+    order total, eBay sale price). Left NULL for sources that don't — mainly the
+    Vinted wardrobe scan, which only sees that a listing vanished, not for how
+    much. Analytics falls back to the asking price and asks the user to confirm.
     """
     db = get_db()
 
-    # Mark sold listing
-    db.table("listings").update({
+    # Mark sold listing. Only write sold_price when we actually have it, so a
+    # later confirmed amount is never overwritten with NULL by a re-detection.
+    update = {
         "status": "sold",
         "sold_at": datetime.now(timezone.utc).isoformat(),
-    }).eq("item_id", item_id).eq("platform", sold_on_platform).execute()
+    }
+    if sold_price is not None:
+        update["sold_price"] = round(float(sold_price), 2)
+    try:
+        db.table("listings").update(update).eq("item_id", item_id).eq("platform", sold_on_platform).execute()
+    except Exception as e:
+        # sold_price column not migrated yet — never let that block the sold flow.
+        if "sold_price" in update and "sold_price" in str(e):
+            update.pop("sold_price", None)
+            db.table("listings").update(update).eq("item_id", item_id).eq("platform", sold_on_platform).execute()
+        else:
+            raise
 
     # Find other active/relisting listings to delist
     other = (
