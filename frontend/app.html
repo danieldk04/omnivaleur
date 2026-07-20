@@ -5023,10 +5023,10 @@ function renderAnalytics() {
 
   // Platform breakdown
   const byPlatform = {};
-  for (const { listing, item } of sales) {
-    const p = listing.platform;
+  for (const sale of sales) {
+    const p = sale.listing.platform;
     if (!byPlatform[p]) byPlatform[p] = { rev: 0, count: 0 };
-    byPlatform[p].rev += item.price || 0;
+    byPlatform[p].rev += saleAmt(sale);
     byPlatform[p].count++;
   }
   const maxRev = Math.max(...Object.values(byPlatform).map(v => v.rev), 1);
