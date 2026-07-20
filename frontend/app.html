@@ -5216,6 +5216,7 @@ function renderAnalytics() {
         <span style="flex:1;min-width:0;font-weight:600;font-size:12.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${esc(item.title || '')}">${esc(item.title || 'Untitled')}</span>
         <span style="font-size:12px;color:var(--muted)">${PLATFORM_ICONS[p] || '🏪'} asking €${(item.price || 0).toFixed(2)}</span>
         <button class="an-cost-btn" onclick="setSoldPrice('${item.id}','${p}',${item.price || 0})">Set actual price</button>
+        <button class="an-notsold-btn" onclick="markNotSold('${item.id}','${p}','${esc(item.title || '').replace(/'/g, '\\\'')}')">Not sold</button>
       </div>`;
     }).join('');
   }
