@@ -810,6 +810,13 @@ input[type="checkbox"].row-check { width: 15px; height: 15px; cursor: pointer; a
         <div id="an-missing-list" style="display:flex;flex-direction:column;gap:8px"></div>
       </div>
 
+      <!-- Sales still valued at the asking price — confirm the real amount -->
+      <div class="an-chart-card" id="an-estimate-card" style="margin-top:16px;display:none;border:1px solid rgba(37,99,235,.3);background:rgba(37,99,235,.05)">
+        <div class="an-chart-title" style="color:#1d4ed8">💶 <span id="an-estimate-count">0</span> sale(s) still using the asking price</div>
+        <div style="font-size:11.5px;color:#1d4ed8;margin-bottom:12px">These sold for an unknown amount (e.g. a Vinted sale detected automatically), so we're counting the asking price for now. Set what you actually received and your revenue &amp; profit become exact.</div>
+        <div id="an-estimate-list" style="display:flex;flex-direction:column;gap:8px"></div>
+      </div>
+
       <!-- Active vs inactive listings per platform -->
       <div class="an-chart-card" style="margin-top:16px">
         <div class="an-chart-title">Listings per platform — active vs. inactive</div>
