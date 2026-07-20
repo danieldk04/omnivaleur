@@ -4891,10 +4891,19 @@ function renderAnalytics() {
     }
   }
 
+  // The amount actually received. Items seldom sell at asking price (bids/offers
+  // on Vinted/Marktplaats), so revenue/profit must use the confirmed sold_price.
+  // When it's unknown we fall back to the asking price as an ESTIMATE and flag it
+  // so the user can confirm the real amount.
+  const saleAmt = ({ listing, item }) =>
+    (listing.sold_price != null ? listing.sold_price : (item.price || 0));
+  const isEstimate = ({ listing }) => listing.sold_price == null;
+
   // KPIs
-  const revenue = sales.reduce((s, { item }) => s + (item.price || 0), 0);
+  const revenue = sales.reduce((s, sale) => s + saleAmt(sale), 0);
+  const estimatedSales = sales.filter(isEstimate);
   const profitSales = sales.filter(({ item }) => item.purchase_price != null);
-  const profit = profitSales.reduce((s, { item }) => s + ((item.price || 0) - (item.purchase_price || 0)), 0);
+  const profit = profitSales.reduce((s, sale) => s + (saleAmt(sale) - (sale.item.purchase_price || 0)), 0);
   const avgProfit = profitSales.length ? profit / profitSales.length : null;
 
   // Previous period delta for revenue & sales
@@ -4914,10 +4923,10 @@ function renderAnalytics() {
       if (!prevSeen.has(l.item_id)) {
         prevSeen.add(l.item_id);
         const item = state.items.find(i => i.id === l.item_id);
-        if (item) prevSalesArr.push(item);
+        if (item) prevSalesArr.push({ listing: l, item });
       }
     }
-    prevRevenue = prevSalesArr.reduce((s, i) => s + (i.price || 0), 0);
+    prevRevenue = prevSalesArr.reduce((s, sale) => s + saleAmt(sale), 0);
     prevSales = prevSalesArr.length;
   }
 
