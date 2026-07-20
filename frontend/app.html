@@ -4892,6 +4892,28 @@ async function setSoldPrice(itemId, platform, suggested) {
   }
 }
 
+// Undo a false "sold" (dashboard auto-detected a Vinted sale that didn't happen).
+// Flips the listing back to active so it leaves the analytics again.
+async function markNotSold(itemId, platform, title) {
+  const label = PLATFORM_LABELS[platform] || platform;
+  if (!confirm(`Mark "${title}" as NOT sold on ${label}?\n\nIt was detected as sold automatically. This puts the listing back to active and removes it from your sales — use this if it's actually still for sale.`)) return;
+  try {
+    const r = await apiFetch(`${API}/api/listings/not-sold`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ item_id: itemId, platform }),
+    });
+    const data = await r.json();
+    if (!r.ok) throw new Error(data.detail || 'Could not update');
+    // Reflect locally: the sold listing becomes active again.
+    const l = state.listings.find(x => x.item_id === itemId && x.platform === platform && x.status === 'sold');
+    if (l) { l.status = 'active'; l.sold_at = null; l.sold_price = null; }
+    showToast('Marked as not sold — the listing is active again.');
+    renderAnalytics();
+  } catch (e) {
+    alert('Error: ' + e.message);
+  }
+}
+
 function setAnPeriod(days) {
   anPeriodDays = days;
   document.querySelectorAll('.an-period-tab').forEach(t => {
