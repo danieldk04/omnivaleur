@@ -3994,6 +3994,7 @@ function onRefreshStrategyChange() {
     ? document.querySelector('input[name="refresh-strategy"]:checked').value
     : refreshModalState.strategies[0];
   document.getElementById('refresh-modal-price-group').style.display = strategy === 'relist' ? 'block' : 'none';
+  document.getElementById('refresh-modal-login-warn').style.display = strategy === 'relist' ? 'block' : 'none';
 }
 
 // Fills the price input with (current price - pct) and updates the delta label.
