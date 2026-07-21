@@ -4055,7 +4055,7 @@ async function loadExtensionStatus() {
 function renderExtensionStatus() {
   const data = state.extStatus;
   const queued = (state.jobs || []).length;
-  document.querySelectorAll('.ext-status').forEach(el => {
+  document.querySelectorAll('.comp-status').forEach(el => {
     // online === null/undefined means "unknown" (heartbeat not available yet) —
     // hide rather than show a misleading state.
     if (!data || data.online === null || data.online === undefined) {
@@ -4064,12 +4064,12 @@ function renderExtensionStatus() {
     }
     el.style.display = 'flex';
     if (data.online) {
-      el.className = 'ext-status ext-status-online';
-      el.innerHTML = `<span class="ext-dot"></span><div><b>Your computer is online.</b> Queued publishes and relists run automatically — you can manage everything from your phone.</div>`;
+      el.className = 'comp-status comp-status-online';
+      el.innerHTML = `<span class="comp-dot"></span><div><b>Your computer is online.</b> Queued publishes and relists run automatically — you can manage everything from your phone.</div>`;
     } else {
       const ago = data.last_seen ? ` (last online ${fmtSeenAgo(data.seconds_ago)})` : '';
-      el.className = 'ext-status ext-status-offline';
-      el.innerHTML = `<span class="ext-dot"></span><div><b>No computer online right now${ago}.</b> ${
+      el.className = 'comp-status comp-status-offline';
+      el.innerHTML = `<span class="comp-dot"></span><div><b>No computer online right now${ago}.</b> ${
         queued
           ? `Your ${queued} queued action${queued === 1 ? '' : 's'} will run`
           : 'Anything you queue from your phone will run'
