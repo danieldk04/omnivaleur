@@ -260,6 +260,16 @@ class EbayPlatform(PlatformBase):
         if item.get("material"):
             aspects["Material"] = [item["material"]]
 
+        # eBay clothing categories require category-specific item specifics (Style,
+        # Type, Department, …) that vary per category. Fetch the required aspects
+        # for this category and auto-fill any we're still missing, so publishing
+        # never fails on a "specification X is missing" error. Best-effort.
+        try:
+            required = await _get_required_aspects(category_id)
+            _fill_required_aspects(aspects, item, required)
+        except Exception as e:
+            logger.warning(f"eBay required-aspect enrichment mislukt (niet-blokkerend): {e}")
+
         inventory_payload = {
             "product": {
                 "title": item["title"][:80],
