@@ -1055,6 +1055,10 @@ input[type="checkbox"].row-check { width: 15px; height: 15px; cursor: pointer; a
         <p>Bump old Vinted listings that sank in the "Newest" sort. Rate-limited on purpose: 1x per listing per 14 days, max 8 free refreshes/day/account. Nothing here fakes engagement, and nothing is guaranteed to change ranking. eBay relist-ended lives under <a href="#" onclick="showView('items');return false" style="color:var(--blue)">Items</a> for now — more platforms will get their own tab here as refresh support expands.</p>
       </div>
 
+      <!-- A relist's recreate only fires while a computer with the extension is
+           online — surface that here too, right where "keep Chrome open" matters. -->
+      <div class="ext-status" style="display:none"></div>
+
       <div class="protections-summary">
         <div class="protections-summary-icon">⬆️</div>
         <div>
