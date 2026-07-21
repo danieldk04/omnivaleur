@@ -154,6 +154,34 @@ class EbayPlatform(PlatformBase):
         except Exception as e:
             logger.warning(f"Kon ververste eBay-token niet opslaan (niet-blokkerend): {e}")
 
+    async def _ensure_location(self, client: httpx.AsyncClient, credentials: dict) -> None:
+        """Make sure a merchant location exists; eBay needs it to derive Item.Country
+        when publishing an offer. Idempotent — a 409 (already exists) is fine."""
+        get_resp = await client.get(
+            f"{INVENTORY_API}/location/{MERCHANT_LOCATION_KEY}",
+            headers=self._auth_headers(credentials),
+        )
+        if get_resp.status_code == 200:
+            return
+        address = {"country": settings.ebay_location_country or "NL"}
+        if settings.ebay_location_postal_code:
+            address["postalCode"] = settings.ebay_location_postal_code
+        if settings.ebay_location_city:
+            address["city"] = settings.ebay_location_city
+        create_resp = await client.post(
+            f"{INVENTORY_API}/location/{MERCHANT_LOCATION_KEY}",
+            json={
+                "location": {"address": address},
+                "name": "Omnivaleur",
+                "merchantLocationStatus": "ENABLED",
+                "locationTypes": ["WAREHOUSE"],
+            },
+            headers=self._auth_headers(credentials, write=True),
+        )
+        # 204 = created, 409 = already existed (race). Anything else is a real error.
+        if create_resp.status_code not in (200, 201, 204, 409):
+            _raise_with_ebay_error(create_resp, "creating merchant location")
+
     async def create_listing(self, item: dict, credentials: dict) -> dict:
         if not credentials.get("access_token"):
             raise RuntimeError(
