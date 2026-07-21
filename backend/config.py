@@ -29,6 +29,11 @@ class Settings(BaseSettings):
     ebay_default_category_id: str = ""
     ebay_verification_token: str = ""
     ebay_webhook_url: str = "https://omnivaleur.com/api/webhooks/ebay"
+    # eBay Inventory API requires a merchant (warehouse) location so it can derive
+    # the item's ship-from country. Set your real postcode; country defaults to NL.
+    ebay_location_country: str = "NL"
+    ebay_location_postal_code: str = ""
+    ebay_location_city: str = ""
 
     anthropic_api_key: str = ""
     google_api_key: str = ""  # Gemini image-gen voor content_pages featured images
