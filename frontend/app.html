@@ -2539,6 +2539,9 @@ function renderDashboard() {
   } else {
     banner.style.display = 'none';
   }
+  // Keep the "computer online?" indicator's queued count in sync with the latest
+  // dashboard data (uses the already-fetched status, no extra request).
+  renderExtensionStatus();
 
   // Per-platform breakdown
   const breakdown = document.getElementById('platform-breakdown');
