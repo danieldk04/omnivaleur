@@ -1,8 +1,12 @@
-from fastapi import APIRouter, HTTPException, Header
+import re
+from fastapi import APIRouter, HTTPException, Header, Depends
 from pydantic import BaseModel
 from backend.database import get_db
+from backend.api.deps import get_current_user_full
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
+
+_EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
 
 
 class AuthRequest(BaseModel):
