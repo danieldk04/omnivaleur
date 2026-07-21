@@ -3897,15 +3897,28 @@ function renderRelistInProgress() {
     const msLeft = new Date(r.recreate_at).getTime() - now;
     const deleteDone = r.delete_status === 'done';
     const deleteFailed = r.delete_status === 'error';
+    // The recreate is FINISHED once the extension marks its create job "done".
+    // This is the authoritative "it's live" signal — the backend keeps a done
+    // job in this list for a short window (with recreate_url) precisely so we
+    // can show an explicit confirmation instead of silently vanishing.
+    const recreateDone = !deleteFailed && deleteDone && r.recreate_status === 'done';
     // The recreate is actively running once the extension has claimed it, or
-    // once its scheduled time has passed (it fires on the next poll).
-    const publishing = !deleteFailed && deleteDone && (r.recreate_status === 'claimed' || msLeft <= 0);
+    // once its scheduled time has passed (it fires on the next poll) — but NOT
+    // once it's already done (otherwise it stuck on "Publishing now…" for the
+    // whole done-window because msLeft is also <= 0 by then).
+    const publishing = !recreateDone && !deleteFailed && deleteDone && (r.recreate_status === 'claimed' || msLeft <= 0);
 
     // Phase drives the headline, the progress bar, and which step is lit.
     let phase, pct, headline;
     if (deleteFailed) {
       phase = 'failed'; pct = 100;
       headline = `<span class="rl-eta" style="color:var(--red,#dc2626)">Relist failed</span>`;
+    } else if (recreateDone) {
+      phase = 'live'; pct = 100;
+      const liveLink = r.recreate_url
+        ? ` <a href="${r.recreate_url}" target="_blank" rel="noopener" style="color:var(--green,#16a34a);font-weight:600;font-size:12px">view listing ↗</a>`
+        : '';
+      headline = `<span class="rl-eta" style="color:var(--green,#16a34a)">✓ New listing is live${liveLink}</span>`;
     } else if (!deleteDone) {
       phase = 'removing'; pct = 30;
       headline = `<span class="rl-eta" style="color:#b45309">Removing old listing… <small>step 1 of 2</small></span>`;
