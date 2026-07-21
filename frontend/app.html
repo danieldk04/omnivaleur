@@ -3968,9 +3968,12 @@ function renderRelistInProgress() {
           // clean no-op undo: cancel both jobs, restore the listing, give the
           // quota back. Once the old listing is gone the only safe action is to
           // bring the recreate forward ("Publish now") so the item comes back.
-          !deleteDone
-            ? `<button class="btn btn-sm" style="margin-top:10px;background:transparent;color:var(--muted);border:1px solid var(--border,#e2e8f0);width:100%" onclick="cancelRelist('${r.item_id}','${r.platform}',this)">✕ Cancel relist &amp; keep the current listing</button>`
-            : `<button class="btn btn-sm" style="margin-top:10px;background:var(--blue,#2563eb);color:#fff;border:none;width:100%" onclick="publishRelistNow('${r.item_id}','${r.platform}',this)">↑ Publish the new listing now</button>`
+          // Once it's actually live, no action is needed at all.
+          recreateDone
+            ? ``
+            : !deleteDone
+              ? `<button class="btn btn-sm" style="margin-top:10px;background:transparent;color:var(--muted);border:1px solid var(--border,#e2e8f0);width:100%" onclick="cancelRelist('${r.item_id}','${r.platform}',this)">✕ Cancel relist &amp; keep the current listing</button>`
+              : `<button class="btn btn-sm" style="margin-top:10px;background:var(--blue,#2563eb);color:#fff;border:none;width:100%" onclick="publishRelistNow('${r.item_id}','${r.platform}',this)">↑ Publish the new listing now</button>`
         }`;
 
     return `<div class="rl-card">
