@@ -240,6 +240,8 @@ class EbayPlatform(PlatformBase):
         }
 
         async with httpx.AsyncClient() as client:
+            await self._ensure_location(client, credentials)
+
             inv_resp = await client.put(
                 f"{INVENTORY_API}/inventory_item/{sku}",
                 json=inventory_payload,
