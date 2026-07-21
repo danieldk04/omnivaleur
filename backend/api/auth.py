@@ -138,3 +138,42 @@ async def change_email(body: ChangeEmailRequest, user=Depends(get_current_user_f
         raise HTTPException(status_code=400, detail=f"Could not change email: {e}")
 
     return {"ok": True, "email": new_email, "message": "Email updated. Use it next time you log in."}
+
+
+class ChangeEmailRequest(BaseModel):
+    new_email: str
+    password: str
+
+
+@router.post("/change-email")
+async def change_email(body: ChangeEmailRequest, user=Depends(get_current_user_full)):
+    """Change the logged-in user's account email. Requires the current password
+    (so a hijacked session alone can't move the account), then updates the email
+    via the Supabase admin API and marks it confirmed so the user can log in with
+    it right away."""
+    new_email = (body.new_email or "").strip().lower()
+    if not _EMAIL_RE.match(new_email):
+        raise HTTPException(status_code=400, detail="Enter a valid email address")
+    if new_email == (user.email or "").lower():
+        raise HTTPException(status_code=400, detail="That's already your email")
+
+    db = get_db()
+    # Verify the current password against the account's current email.
+    try:
+        res = db.auth.sign_in_with_password({"email": user.email, "password": body.password})
+        if res.user is None:
+            raise HTTPException(status_code=401, detail="Wrong password")
+    except HTTPException:
+        raise
+    except Exception:
+        raise HTTPException(status_code=401, detail="Wrong password")
+
+    try:
+        db.auth.admin.update_user_by_id(user.id, {"email": new_email, "email_confirm": True})
+    except Exception as e:
+        msg = str(e).lower()
+        if "already" in msg or "registered" in msg or "exists" in msg:
+            raise HTTPException(status_code=409, detail="That email is already in use by another account")
+        raise HTTPException(status_code=400, detail=f"Could not change email: {e}")
+
+    return {"ok": True, "email": new_email, "message": "Email updated. Use it next time you log in."}
