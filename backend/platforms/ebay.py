@@ -150,6 +150,11 @@ class EbayPlatform(PlatformBase):
             logger.warning(f"Kon ververste eBay-token niet opslaan (niet-blokkerend): {e}")
 
     async def create_listing(self, item: dict, credentials: dict) -> dict:
+        if not credentials.get("access_token"):
+            raise RuntimeError(
+                "eBay is not connected — open Platforms and click 'Connect eBay', "
+                "then complete the eBay sign-in before publishing."
+            )
         credentials = await self._ensure_fresh_token(credentials)
         sku = item.get("sku") or item["id"]
 
