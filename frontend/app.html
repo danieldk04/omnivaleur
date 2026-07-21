@@ -3942,11 +3942,13 @@ function renderRelistInProgress() {
       : step('✓', 'var(--green,#16a34a)', 'Old listing removed', deleteDone ? 'Done' : 'In progress…', true);
     const step2 = deleteFailed
       ? step('✕', 'var(--muted)', 'Republish as new listing', 'Aborted — would have duplicated the old listing', false)
-      : step(publishing ? '↻' : (deleteDone ? '⏳' : '·'),
-             deleteDone ? 'var(--blue,#2563eb)' : 'var(--muted)',
-             'Republish as new listing',
-             publishing ? 'Publishing now…' : (deleteDone ? `In ${fmtEta(msLeft)}` : 'Waiting for step 1'),
-             deleteDone);
+      : recreateDone
+        ? step('✓', 'var(--green,#16a34a)', 'Republish as new listing', 'Done — live with a fresh date', true)
+        : step(publishing ? '↻' : (deleteDone ? '⏳' : '·'),
+               deleteDone ? 'var(--blue,#2563eb)' : 'var(--muted)',
+               'Republish as new listing',
+               publishing ? 'Publishing now…' : (deleteDone ? `In ${fmtEta(msLeft)}` : 'Waiting for step 1'),
+               deleteDone);
 
     const note = deleteFailed
       ? `<div style="margin-top:12px;font-size:11.5px;color:var(--red,#dc2626);background:rgba(220,38,38,.06);border-radius:8px;padding:9px 11px">The old listing could not be removed — nothing was deleted and no new listing was created, so your item is still live on ${label}. You can retry safely below.${
