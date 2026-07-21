@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, Depends
+from fastapi import APIRouter, HTTPException, Depends, Request
 from backend.database import get_db
 from backend.api.deps import get_current_user
 from backend.api.imports import _backfill_item_from_candidate
