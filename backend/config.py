@@ -23,7 +23,7 @@ class Settings(BaseSettings):
 
     ebay_app_id: str = ""
     ebay_cert_id: str = ""
-    ebay_redirect_uri: str = "Daniel_de_Konin-Danielde-crossl-bwahwc"
+    ebay_redirect_uri: str = "Daniel_de_Konin-Danielde-crossl-hnjbpa"
     ebay_marketplace_id: str = "EBAY_NL"
     ebay_sandbox: bool = False
     ebay_default_category_id: str = ""
