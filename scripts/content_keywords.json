@@ -139,6 +139,48 @@
       "slug": "electronics-reselling-automation-platforms",
       "status": "published",
       "priority": 17
+    },
+    {
+      "keyword": "2dehands to ebay crosslisting",
+      "region": "nl",
+      "pillar": "A",
+      "slug": "2dehands-to-ebay-crosslisting",
+      "status": "published",
+      "nl_slug": "2dehands-naar-ebay-crosslisting",
+      "priority": 18
+    },
+    {
+      "keyword": "collectibles reselling automation",
+      "region": "nl",
+      "pillar": "B",
+      "slug": "collectibles-reselling-automation",
+      "status": "pending",
+      "priority": 19
+    },
+    {
+      "keyword": "Omnivaleur vs Zenlister",
+      "region": "nl",
+      "pillar": "C",
+      "slug": "omnivaleur-vs-zenlister",
+      "status": "pending",
+      "priority": 20
+    },
+    {
+      "keyword": "marktplaats to shopify crosslisting",
+      "region": "nl",
+      "pillar": "A",
+      "slug": "marktplaats-to-shopify-crosslisting",
+      "status": "pending",
+      "nl_slug": "marktplaats-naar-shopify-crosslisting",
+      "priority": 21
+    },
+    {
+      "keyword": "fashion reselling automation platforms",
+      "region": "nl",
+      "pillar": "B",
+      "slug": "fashion-reselling-automation-platforms",
+      "status": "pending",
+      "priority": 22
     }
   ],
   "published": [
@@ -294,6 +336,15 @@
       "action": "created",
       "url_path": "/reseller-tools/electronics-reselling-automation-platforms",
       "published_at": "2026-07-20T10:44:53.205835+00:00"
+    },
+    {
+      "keyword": "2dehands to ebay crosslisting",
+      "slug": "2dehands-to-ebay-crosslisting",
+      "region": "nl",
+      "pillar": "A",
+      "action": "created",
+      "url_path": "/crosslisting/2dehands-to-ebay-crosslisting",
+      "published_at": "2026-07-21T10:18:49.730886+00:00"
     }
   ]
 }
