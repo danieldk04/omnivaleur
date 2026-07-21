@@ -3955,6 +3955,10 @@ function renderRelistInProgress() {
           r.delete_error ? `<div style="margin-top:7px;padding-top:7px;border-top:1px solid rgba(220,38,38,.2);color:var(--muted);font-size:11px">${esc(String(r.delete_error).replace(/^Error:\s*/, ''))}</div>` : ''
         }</div>
          <button class="btn btn-sm" style="margin-top:10px;background:var(--red,#dc2626);color:#fff;border:none;width:100%" onclick="retryRelist('${r.item_id}','${r.platform}',this)">↻ Retry relist</button>`
+      : recreateDone
+      ? `<div style="margin-top:12px;font-size:11.5px;color:var(--green,#16a34a);background:rgba(22,163,74,.07);border-radius:8px;padding:9px 11px">Done — the new listing is live on ${label} with a fresh "Newest" date. ${
+          r.recreate_url ? `<a href="${r.recreate_url}" target="_blank" rel="noopener" style="color:var(--green,#16a34a);font-weight:600">Open it ↗</a>. ` : ''
+        }This card clears itself automatically.</div>`
       : `<div style="margin-top:12px;font-size:11.5px;color:var(--muted);background:rgba(37,99,235,.05);border-radius:8px;padding:9px 11px">${
           phase === 'removing'
             ? `Right now this item is briefly <b>not live on ${label}</b> — the old listing is being removed, then it's automatically republished with a fresh date. If the extension has a ${label} tab open, <b>don't touch it</b>; it closes by itself.`
