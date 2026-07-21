@@ -346,13 +346,14 @@ async def _publish_one(item: dict, platform_name: str, credentials: dict, user_i
         return {"listing_id": listing_id, "platform": platform_name, "status": "active", **result}
 
     except Exception as e:
-        logger.error(f"Failed to list on {platform_name}: {e}")
+        msg = str(e) or f"{type(e).__name__}: {e!r}"
+        logger.error(f"Failed to list on {platform_name}: {msg}")
         db.table("listings").update({
             "status": "error",
-            "error_message": str(e),
+            "error_message": msg,
         }).eq("id", listing_id).execute()
-        _log_event(listing_id, "error", {"error": str(e)})
-        return {"listing_id": listing_id, "platform": platform_name, "status": "error", "error": str(e)}
+        _log_event(listing_id, "error", {"error": msg})
+        return {"listing_id": listing_id, "platform": platform_name, "status": "error", "error": msg}
 
 
 def _last_listed_title(db, item_id: str, platform: str, fallback: str) -> str:
