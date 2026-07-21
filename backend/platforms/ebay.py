@@ -39,6 +39,11 @@ class EbayCategoryRequiredError(Exception):
     """Raised when an item has no eBay category and no default is configured."""
 
 
+# Every offer must point at a merchant location so eBay can derive Item.Country.
+# One stable key per account is enough; we create it lazily on first publish.
+MERCHANT_LOCATION_KEY = "OMNIVALEUR_MAIN"
+
+
 def _with_expiry(token_response: dict) -> dict:
     """eBay returns `expires_in` (seconds), but credentials are refreshed based on
     an absolute `token_expires_at` — compute and attach it here so callers never
