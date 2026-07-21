@@ -137,6 +137,20 @@ CREATE TABLE IF NOT EXISTS refresh_quota (
     PRIMARY KEY (user_id, day)
 );
 
+-- Extension "is a computer online?" heartbeat. The extension polls
+-- /jobs/pending?platform=... every 15s; each of those polls stamps last_seen
+-- here (no extension change needed — every installed version already polls).
+-- The dashboard reads it via /jobs/extension-status so a user on their phone
+-- can tell whether a computer with the extension is online to actually run
+-- their queued publishes/relists. Purely informational; the whole feature
+-- degrades to "hidden" if this table doesn't exist yet, so the app never
+-- depends on it.
+CREATE TABLE IF NOT EXISTS extension_heartbeat (
+    user_id UUID PRIMARY KEY,
+    last_seen TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    user_agent TEXT
+);
+
 -- Listing import: 'scan' jobs (extension reads the user's own "my listings"
 -- page on a platform and reports back what it finds) land here for manual
 -- review before being linked to an existing item or turned into a new one.
