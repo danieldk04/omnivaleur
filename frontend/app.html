@@ -2913,36 +2913,44 @@ function renderPlatforms() {
     } else {
       action = `<span style="font-size:11px;color:var(--muted)">${cfg?.note || 'Not available yet'}</span>`;
     }
-    return `<div class="card" style="padding:16px 18px;display:flex;align-items:center;justify-content:space-between">
-      <div style="display:flex;align-items:center;gap:12px">
-        <span style="font-size:22px">${p.icon}</span>
-        <div>
-          <div style="font-weight:600">${p.label}</div>
-          <div style="font-size:11px;color:var(--muted)">${p.type === 'extension' ? 'Via Chrome extension' : 'Via official API'} · ${count} active listing${count !== 1 ? 's' : ''}</div>
-        </div>
-      </div>
-      ${action}
-    </div>`;
-  }).join('');
-  const ebayNote = state.connected.includes('ebay')
-    ? `<div id="ebay-shipfrom" class="card" style="padding:14px 18px;margin-top:10px">
-        <div style="font-weight:600;font-size:13px;margin-bottom:2px">📦 eBay ship-from address</div>
-        <div style="font-size:11px;color:var(--muted);margin-bottom:10px">eBay needs the address you ship from to set your listing's country and shipping costs. Uses your own postcode.</div>
+    // eBay gets an inline ship-from sub-section inside its own card, so the
+    // address always reads as belonging to eBay (not a stray card in the grid).
+    let extra = '';
+    if (p.id === 'ebay' && ok) {
+      extra = `<div id="ebay-shipfrom" style="margin-top:14px;padding-top:14px;border-top:1px solid var(--border,#e5e7eb)">
+        <div style="font-weight:600;font-size:12px;margin-bottom:2px">📦 Ship-from address</div>
+        <div style="font-size:11px;color:var(--muted);margin-bottom:10px">eBay uses this to set your listing's country and shipping costs.</div>
         <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end">
-          <div><label style="font-size:10px;display:block">Postcode</label><input id="ebay-sf-postal" type="text" placeholder="1011AB" style="width:120px"></div>
-          <div><label style="font-size:10px;display:block">City (optional)</label><input id="ebay-sf-city" type="text" placeholder="Amsterdam" style="width:150px"></div>
-          <div><label style="font-size:10px;display:block">Country</label><input id="ebay-sf-country" type="text" value="NL" maxlength="2" style="width:60px"></div>
+          <div><label style="font-size:10px;display:block;color:var(--muted)">Postcode</label><input id="ebay-sf-postal" type="text" placeholder="1011AB" style="width:110px"></div>
+          <div><label style="font-size:10px;display:block;color:var(--muted)">City (optional)</label><input id="ebay-sf-city" type="text" placeholder="Amsterdam" style="width:140px"></div>
+          <div><label style="font-size:10px;display:block;color:var(--muted)">Country</label><input id="ebay-sf-country" type="text" value="NL" maxlength="2" style="width:56px"></div>
           <button class="btn btn-sm btn-primary" onclick="saveEbayShipFrom(this)">Save</button>
           <span id="ebay-sf-status" style="font-size:11px;color:var(--muted)"></span>
         </div>
-      </div>`
-    : `<div style="font-size:12px;color:var(--muted);padding:2px 4px 4px">eBay requires a category per item — set it under "eBay category" when creating or editing an item.</div>`;
+      </div>`;
+    } else if (p.id === 'ebay' && !ok) {
+      extra = `<div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--border,#e5e7eb);font-size:11px;color:var(--muted)">Requires a category per item — set it under "eBay category" when creating or editing an item.</div>`;
+    }
+    return `<div class="card" style="padding:16px 18px">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:12px">
+        <div style="display:flex;align-items:center;gap:12px">
+          <span style="font-size:22px">${p.icon}</span>
+          <div>
+            <div style="font-weight:600">${p.label}</div>
+            <div style="font-size:11px;color:var(--muted)">${p.type === 'extension' ? 'Via Chrome extension' : 'Via official API'} · ${count} active listing${count !== 1 ? 's' : ''}</div>
+          </div>
+        </div>
+        ${action}
+      </div>
+      ${extra}
+    </div>`;
+  }).join('');
   const facebookNote = `<div style="font-size:12px;color:#92400e;background:#fef3c7;border-radius:8px;padding:10px 12px;margin-top:10px">
     <strong>Facebook Marketplace is beta.</strong> Facebook does not officially allow automated listing and actively detects it.
     Publishing happens in your own logged-in Chrome, but there is a real risk that Facebook flags or blocks your account.
     Use this deliberately and at your own risk — preferably with a separate account. Sold? Remove your Facebook listing yourself if the automatic removal fails.
   </div>`;
-  document.getElementById('platforms-body').innerHTML = html + ebayNote + facebookNote;
+  document.getElementById('platforms-body').innerHTML = html + facebookNote;
   if (state.connected.includes('ebay')) loadEbayShipFrom();
 }
 
