@@ -19,6 +19,30 @@ router = APIRouter(prefix="/jobs", tags=["jobs"])
 STALE_CLAIM_MINUTES = 5
 MAX_RECLAIMS = 2
 
+# How recently the extension must have polled for us to call a computer "online".
+# The extension polls every 15s, so this tolerates ~3 missed polls before we
+# flip to "offline" — long enough to ride out a brief hiccup, short enough that
+# closing Chrome shows as offline within a minute.
+EXTENSION_ONLINE_WINDOW_SECONDS = 50
+
+
+def _record_extension_heartbeat(db, user_id: str, user_agent: str | None) -> None:
+    """
+    Stamp that a real extension just polled, so a user on their phone can see
+    whether a computer is online to run their queued jobs. Best-effort: this
+    piggybacks on the existing /pending poll (no extension change needed) and
+    must never slow down or break dispatch — if the heartbeat table hasn't been
+    created yet, or the write fails, we silently move on.
+    """
+    try:
+        db.table("extension_heartbeat").upsert({
+            "user_id": user_id,
+            "last_seen": datetime.now(timezone.utc).isoformat(),
+            "user_agent": (user_agent or "")[:300] or None,
+        }).execute()
+    except Exception:
+        pass
+
 
 def _parse_ts(ts):
     if not ts:
