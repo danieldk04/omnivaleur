@@ -222,14 +222,15 @@ textarea { resize: vertical; min-height: 80px; }
 
 /* ── Jobs / alert banners ───────────────────────────────────────── */
 .jobs-banner { background: #fffbeb; border: 1px solid #fcd34d; border-radius: var(--radius); padding: 12px 18px; margin-bottom: 20px; display: flex; align-items: center; justify-content: space-between; font-size: 13px; color: #92400e; }
-/* ── "Is a computer with the extension online?" indicator ─────────── */
-.ext-status { display: flex; align-items: flex-start; gap: 10px; border-radius: var(--radius); padding: 11px 15px; margin-bottom: 20px; font-size: 12.5px; line-height: 1.5; }
-.ext-status-online { background: rgba(22,163,74,.08); border: 1px solid rgba(22,163,74,.32); color: #15803d; }
-.ext-status-offline { background: #fffbeb; border: 1px solid #fcd34d; color: #92400e; }
-.ext-status .ext-dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; margin-top: 4px; }
-.ext-status-online .ext-dot { background: #16a34a; box-shadow: 0 0 0 0 rgba(22,163,74,.5); animation: ext-pulse 2s infinite; }
-.ext-status-offline .ext-dot { background: #d97706; }
-@keyframes ext-pulse { 0% { box-shadow: 0 0 0 0 rgba(22,163,74,.45); } 70% { box-shadow: 0 0 0 7px rgba(22,163,74,0); } 100% { box-shadow: 0 0 0 0 rgba(22,163,74,0); } }
+/* ── "Is a computer with the extension online?" indicator (distinct from the
+      sidebar .ext-status, which detects the extension in THIS browser) ──────── */
+.comp-status { display: flex; align-items: flex-start; gap: 10px; border-radius: var(--radius); padding: 11px 15px; margin-bottom: 20px; font-size: 12.5px; line-height: 1.5; }
+.comp-status-online { background: rgba(22,163,74,.08); border: 1px solid rgba(22,163,74,.32); color: #15803d; }
+.comp-status-offline { background: #fffbeb; border: 1px solid #fcd34d; color: #92400e; }
+.comp-status .comp-dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; margin-top: 4px; }
+.comp-status-online .comp-dot { background: #16a34a; box-shadow: 0 0 0 0 rgba(22,163,74,.5); animation: comp-pulse 2s infinite; }
+.comp-status-offline .comp-dot { background: #d97706; }
+@keyframes comp-pulse { 0% { box-shadow: 0 0 0 0 rgba(22,163,74,.45); } 70% { box-shadow: 0 0 0 7px rgba(22,163,74,0); } 100% { box-shadow: 0 0 0 0 rgba(22,163,74,0); } }
 
 /* ── Global "extension is busy — don't touch anything" activity bar ──
    Shown on EVERY view (it lives above the view container) whenever the
