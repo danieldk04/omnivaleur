@@ -224,6 +224,46 @@ async def get_pending_jobs(request: Request, platform: str = None, user_id: str 
     return ready[:1] if is_extension_dispatch else ready
 
 
+@router.get("/extension-status")
+async def extension_status(user_id: str = Depends(get_current_user)):
+    """
+    Is a computer with the extension online for this user? Powers the dashboard
+    indicator so someone working from their phone knows whether their queued
+    publishes/relists will run now or just wait. Reads the heartbeat stamped by
+    the extension's own /pending polls.
+
+    Returns online=None ("unknown") when the heartbeat table doesn't exist yet,
+    so the frontend can simply hide the indicator instead of showing a wrong
+    "offline". online=False means we've never seen it, or not recently.
+    """
+    db = get_db()
+    try:
+        row = (
+            db.table("extension_heartbeat")
+            .select("last_seen")
+            .eq("user_id", user_id)
+            .limit(1)
+            .execute()
+            .data
+        )
+    except Exception:
+        return {"online": None}  # table not migrated yet — hide the indicator
+
+    if not row or not row[0].get("last_seen"):
+        return {"online": False, "last_seen": None, "seconds_ago": None}
+
+    last_seen = _parse_ts(row[0]["last_seen"])
+    if not last_seen:
+        return {"online": False, "last_seen": None, "seconds_ago": None}
+
+    seconds_ago = int((datetime.now(timezone.utc) - last_seen).total_seconds())
+    return {
+        "online": seconds_ago <= EXTENSION_ONLINE_WINDOW_SECONDS,
+        "last_seen": last_seen.isoformat(),
+        "seconds_ago": max(0, seconds_ago),
+    }
+
+
 @router.get("/relist-status")
 async def relist_status(user_id: str = Depends(get_current_user)):
     """
