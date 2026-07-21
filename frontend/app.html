@@ -3865,12 +3865,21 @@ function ensureRelistTicker() {
   if (_relistTicker) return;
   _relistTicker = setInterval(() => {
     _relistTick++;
-    // Re-fetch from the server every 20s to catch delete→done and completion.
-    if (_relistTick % 20 === 0 && document.getElementById('view-refresh')?.classList.contains('active')) {
-      loadRelistStatus();
-    }
+    const onRefresh = document.getElementById('view-refresh')?.classList.contains('active');
+    // Poll cadence adapts to what's happening: while a relist is about to go live
+    // (delete done + recreate claimed or its scheduled time reached), re-fetch
+    // every 3s so the "✓ live" confirmation appears within seconds of the
+    // extension finishing — instead of the old fixed 20s that left it stuck on
+    // "Publishing now…" long after the item was already published. Otherwise
+    // (nothing imminent) fall back to a light 20s poll.
+    const imminent = (state.relistStatus || []).some(r => {
+      if (r.delete_status !== 'done' || r.recreate_status === 'done') return false;
+      return r.recreate_status === 'claimed' || (new Date(r.recreate_at).getTime() - Date.now()) <= 0;
+    });
+    const everyN = imminent ? 3 : 20;
+    if (onRefresh && _relistTick % everyN === 0) loadRelistStatus();
     if (!(state.relistStatus || []).length) return;
-    if (document.getElementById('view-refresh')?.classList.contains('active')) renderRelistInProgress();
+    if (onRefresh) renderRelistInProgress();
   }, 1000);
 }
 
