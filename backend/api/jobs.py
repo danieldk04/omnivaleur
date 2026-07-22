@@ -860,6 +860,7 @@ def _store_scan_results(db, job, scraped: list[dict]):
 @router.post("/{job_id}/error")
 async def fail_job(job_id: str, body: dict, user_id: str = Depends(get_current_user)):
     db = get_db()
+    _record_extension_heartbeat(db, user_id)  # only the extension reports job errors
     job = db.table("jobs").select("item_id,platform,action,payload").eq("id", job_id).eq("user_id", user_id).single().execute().data
     db.table("jobs").update({
         "status": "error",
