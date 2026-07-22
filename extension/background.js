@@ -2004,7 +2004,7 @@ async function _mwFillDescription(selector, descText) {
       inputType: "deleteContentBackward", bubbles: true, cancelable: true,
     }));
     await sleep(80);
-    for (const [i, line] of descText.split("\n").entries()) {
+    for (const [i, line] of _lines.entries()) {
       if (i > 0) {
         el.dispatchEvent(new InputEvent("beforeinput", {
           inputType: "insertParagraph", bubbles: true, cancelable: true,
