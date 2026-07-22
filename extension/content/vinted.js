@@ -1037,13 +1037,24 @@
 
     const best = (choices) => {
       const scored = choices.map((c) => ({ c, s: score(c) })).filter((x) => x.s > 0)
-        .sort((a, b) => b.s - a.s);
+        // Tiebreak on the SHORTER row text: the leaf ("Men › Jeans") beats a broad
+        // parent, and avoids picking an over-long noisy row on an equal score.
+        .sort((a, b) => (b.s - a.s) || (a.c.text.length - b.c.text.length));
       if (!scored.length) return null;
-      // Ambiguity guard: if the top two tie AND gender is unknown, don't guess.
+      // Ambiguity guard: only bail when the tie is a GENUINE gender clash — a
+      // men-row tied with a women-row while the item has no gender. For everything
+      // else (games, electronics, unisex, or a tie between same-gender leaves) the
+      // tiebreak above is trustworthy, so we commit rather than skip the category.
       if (scored.length > 1 && scored[0].s === scored[1].s && !wantMen && !wantWomen) {
-        console.warn("[Omnivaleur] Vinted category ambiguous (no gender on item):",
-          scored[0].c.text, "vs", scored[1].c.text, "— set item.gender to disambiguate.");
-        return null;
+        const a = scored[0].c.text, b = scored[1].c.text;
+        const genderClash =
+          (/\bmen\b/.test(a) && !/women/.test(a) && /\bwomen\b/.test(b)) ||
+          (/\bwomen\b/.test(a) && /\bmen\b/.test(b) && !/women/.test(b));
+        if (genderClash) {
+          console.warn("[Omnivaleur] Vinted category ambiguous (men vs women, no gender on item):",
+            a, "vs", b, "— set item.gender to disambiguate.");
+          return null;
+        }
       }
       return scored[0].c;
     };
