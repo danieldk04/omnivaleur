@@ -1979,7 +1979,7 @@ async function _mwFillDescription(selector, descText) {
             // Clear existing content
             let c = root.getFirstChild?.();
             while (c) { const n = c.getNextSibling?.(); try { c.remove?.(); } catch (_) {} c = n; }
-            for (const line of descText.split("\n")) {
+            for (const line of _lines) {
               const p = new PClass();
               if (line.length > 0) p.append(new TClass(line));
               root.append(p);
