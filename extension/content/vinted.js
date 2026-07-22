@@ -973,7 +973,10 @@
       // dropdown/listbox with NO gender breadcrumb — Strategy B skips those. Here
       // we harvest every visible option row from the open menu regardless of its
       // breadcrumb, so non-clothing categories get real candidates to score.
-      if (!out.length) {
+      // Gated on an active search term: without it the initial click shows the
+      // top-level category TREE ("Women", "Men", …) and harvesting those could
+      // commit a bare parent category — we only trust C once we've searched.
+      if (!out.length && inp.value.trim().length > 0) {
         const menus = document.querySelectorAll(
           '[role="listbox"], [class*="dropdown"], [class*="Dropdown"], [class*="Menu"], [class*="menu"], [data-testid*="dropdown"]');
         const rows = [];
