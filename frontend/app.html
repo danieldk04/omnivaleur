@@ -231,6 +231,12 @@ textarea { resize: vertical; min-height: 80px; }
 .comp-status-online .comp-dot { background: #16a34a; box-shadow: 0 0 0 0 rgba(22,163,74,.5); animation: comp-pulse 2s infinite; }
 .comp-status-offline .comp-dot { background: #d97706; }
 @keyframes comp-pulse { 0% { box-shadow: 0 0 0 0 rgba(22,163,74,.45); } 70% { box-shadow: 0 0 0 7px rgba(22,163,74,0); } 100% { box-shadow: 0 0 0 0 rgba(22,163,74,0); } }
+/* The "is a computer online?" indicator only makes sense on mobile — it tells a
+   phone user whether a desktop with the extension is around to run their queued
+   actions. On desktop you ARE that computer, so the banner is noise (and the
+   heartbeat can read a false "offline" when the extension isn't mid-poll). Hide
+   it above the mobile breakpoint. !important beats the inline display the JS sets. */
+@media (min-width: 769px) { .comp-status { display: none !important; } }
 
 /* ── Global "extension is busy — don't touch anything" activity bar ──
    Shown on EVERY view (it lives above the view container) whenever the
