@@ -19,27 +19,37 @@ router = APIRouter(prefix="/jobs", tags=["jobs"])
 STALE_CLAIM_MINUTES = 5
 MAX_RECLAIMS = 2
 
-# How recently the extension must have polled for us to call a computer "online".
-# The extension polls every 15s, so this tolerates ~3 missed polls before we
-# flip to "offline" — long enough to ride out a brief hiccup, short enough that
-# closing Chrome shows as offline within a minute.
-EXTENSION_ONLINE_WINDOW_SECONDS = 50
+# How recently the extension must have checked in for us to call a computer
+# "online". The extension's poll alarm is nominally 15s, but Chrome MV3 throttles
+# background alarms to ~30-60s in practice, so a tight window flipped to a false
+# "offline" right before each poll even though Chrome was open. 120s tolerates a
+# throttled alarm plus a couple of missed check-ins; the trade-off is that
+# closing Chrome now shows as offline within ~2 min instead of within one.
+EXTENSION_ONLINE_WINDOW_SECONDS = 120
 
 
-def _record_extension_heartbeat(db, user_id: str, user_agent: str | None) -> None:
+def _record_extension_heartbeat(db, user_id: str, user_agent: str | None = None) -> None:
     """
-    Stamp that a real extension just polled, so a user on their phone can see
-    whether a computer is online to run their queued jobs. Best-effort: this
-    piggybacks on the existing /pending poll (no extension change needed) and
-    must never slow down or break dispatch — if the heartbeat table hasn't been
-    created yet, or the write fails, we silently move on.
+    Stamp that the extension just checked in, so a user on their phone can see
+    whether a computer is online to run their queued jobs. Called from every
+    extension-only endpoint (the platform poll AND claim/progress/complete/error),
+    so any extension activity — not just the dispatch poll — keeps the computer
+    marked online.
+
+    Best-effort: it must never slow down or break dispatch — if the heartbeat
+    table hasn't been created yet, or the write fails, we silently move on.
+    The user_agent is only written when provided, so a check-in without it (e.g.
+    from /complete) refreshes last_seen without wiping the UA the poll captured.
     """
     try:
-        db.table("extension_heartbeat").upsert({
+        row = {
             "user_id": user_id,
             "last_seen": datetime.now(timezone.utc).isoformat(),
-            "user_agent": (user_agent or "")[:300] or None,
-        }).execute()
+        }
+        ua = (user_agent or "")[:300]
+        if ua:
+            row["user_agent"] = ua
+        db.table("extension_heartbeat").upsert(row).execute()
     except Exception:
         pass
 
