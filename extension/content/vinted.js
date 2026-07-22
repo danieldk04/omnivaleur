@@ -804,12 +804,7 @@
     await step("condition",   () => fillAttributeVinted(["condition", "status"], CONDITION_MAP[(item.condition || "").toLowerCase()] || CONDITION_MAP["good"]));
     await step("size",        () => item.size && fillAttributeVinted(["size"], String(item.size)));
     await step("brand",       () => item.brand && fillAttributeVinted(["brand"], item.brand));
-    await step("colour",      () => {
-      const raw = (item.color || item.colour || item.colours || item.colors || "");
-      if (!raw) return;
-      const translated = COLOUR_MAP[raw.toLowerCase()] || raw;
-      return fillAttributeVinted(["colour", "color", "colours", "colors"], translated);
-    });
+    await step("colour",      () => fillColourVinted(item));
     // Colour accordion only commits when another attribute trigger is realClicked.
     // Always open the material trigger to commit the colour selection.
     await sleep(200);
