@@ -1075,7 +1075,7 @@
     //    surfaces a usable option (the captured-category hint is tried too).
     if (!choice && hints.length) {
       for (const h of hints) {
-        fillInput(inp, h);
+        typeSearch(h);
         const deadline = Date.now() + 3500;
         while (Date.now() < deadline && !choice) {
           await sleep(250);
