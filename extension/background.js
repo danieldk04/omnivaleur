@@ -1940,14 +1940,26 @@ async function _mwFillDescription(selector, descText) {
     }
   }
 
+  // Normalise newlines so line-splitting is consistent across platforms/sources.
+  const _lines = descText.replace(/\r\n?/g, "\n").split("\n");
+
   // ── Approach 1: execCommand (most reliable) ───────────────────────────────
   // execCommand fires a REAL native beforeinput event that Chrome and Lexical
   // both handle natively. InputEvent.dataTransfer is always null for synthetic
   // events in Chrome — execCommand bypasses that problem entirely.
+  //
+  // CRITICAL: insert LINE BY LINE. Passing the whole multi-line string to a
+  // single insertText makes Lexical collapse every "\n", gluing all sentences
+  // together. We insert each line and fire a real insertParagraph between them
+  // so paragraph/line breaks survive exactly as written.
   try {
     el.focus();
     document.execCommand("selectAll", false, null);
-    document.execCommand("insertText", false, descText);
+    document.execCommand("delete", false, null);
+    for (let i = 0; i < _lines.length; i++) {
+      if (i > 0) document.execCommand("insertParagraph", false, null);
+      if (_lines[i].length > 0) document.execCommand("insertText", false, _lines[i]);
+    }
     await sleep(300);
     if (lexHasText()) return true;
   } catch (_) {}
