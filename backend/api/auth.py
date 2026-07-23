@@ -90,7 +90,15 @@ async def reset_password(body: PasswordUpdate, authorization: str = Header(...))
 async def login(body: AuthRequest):
     db = get_db()
     try:
-        res = db.auth.sign_in_with_password({"email": body.email, "password": body.password})
+        # See get_current_user_full in deps.py: supabase-py is a blocking client,
+        # so this call ran synchronously on the single event loop and could stall
+        # every other in-flight request (login being the ONE endpoint every
+        # anonymous visitor hits made it especially visible as a hang/empty
+        # response under load).
+        res = await asyncio.to_thread(
+            db.auth.sign_in_with_password,
+            {"email": body.email, "password": body.password},
+        )
         if res.user is None:
             raise HTTPException(status_code=401, detail="Invalid email or password")
         return {
@@ -98,7 +106,9 @@ async def login(body: AuthRequest):
             "access_token": res.session.access_token,
             "user": {"id": res.user.id, "email": res.user.email},
         }
-    except Exception as e:
+    except HTTPException:
+        raise
+    except Exception:
         raise HTTPException(status_code=401, detail="Invalid email or password")
 
 
