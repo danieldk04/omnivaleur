@@ -39,6 +39,21 @@
     return;
   }
 
+  // Facebook redirects here when the logged-in account is a Page, not a personal
+  // profile — Pages can never use Marketplace, no retry or form-fill will help.
+  // Without this guard the job just sat on this dead-end page until it timed out,
+  // with no indication of why. This is an account-type restriction, not something
+  // this extension can work around — the user must switch to their personal
+  // profile (or a personal account) in Chrome before publishing to Facebook.
+  if (/\/marketplace\/ineligible/.test(location.href)) {
+    send("JOB_ERROR", null,
+      "This Facebook account is logged in as a Page, and Pages can't use Marketplace " +
+      "— that's a Facebook restriction, not something we can fix automatically. " +
+      "Log out and back in with your personal profile (or switch profiles in the " +
+      "top-right Facebook menu), then publish this item again.");
+    return;
+  }
+
   try {
     if (job.action === "delete") {
       await deleteListingFb(item);
