@@ -473,34 +473,20 @@ async def delist_all_platforms(item_id: str, user_id: str) -> list[dict]:
                     logger.warning(f"Shopify SKU lookup failed: {e}")
 
         tasks = [_delist_one(listing) for listing in api_active]
-        api_results = await asyncio.gather(*tasks, return_exceptions=True)
+        # Bound the API deletes so a slow/hanging eBay or Shopify call can never
+        # keep the dashboard spinner spinning forever. On timeout the listing is
+        # reported as an error (retryable) instead of blocking the whole request.
+        try:
+            api_results = await asyncio.wait_for(
+                asyncio.gather(*tasks, return_exceptions=True), timeout=45
+            )
+        except asyncio.TimeoutError:
+            api_results = [asyncio.TimeoutError("delete timed out after 45s")] * len(api_active)
         for listing, res in zip(api_active, api_results):
             if isinstance(res, Exception):
                 results.append({"platform": listing["platform"], "status": "error", "error": str(res)})
             else:
                 results.append({"platform": listing["platform"], "status": "delisted"})
-
-    for listing in ext_active:
-        payload = {
-            **item,
-            "title": _last_listed_title(db, item_id, listing["platform"], item.get("title", "")),
-            "platform_listing_id": listing["platform_listing_id"],
-            "platform_listing_url": listing["platform_listing_url"],
-        }
-        job = db.table("jobs").insert({
-            "user_id": user_id,
-            "item_id": item_id,
-            "platform": listing["platform"],
-            "action": "delete",
-            "status": "pending",
-            "payload": payload,
-        }).execute().data[0]
-        results.append({
-            "platform": listing["platform"],
-            "status": "queued",
-            "job_id": job["id"],
-            "message": "Delete job queued — Chrome extension will process this",
-        })
 
     return results
 
