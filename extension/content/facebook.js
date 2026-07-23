@@ -173,7 +173,7 @@
     while (Date.now() < deadline && !opt) {
       const nodes = [...document.querySelectorAll(sel)]
         .filter((el) => isVisible(el) && el.childElementCount <= 3)
-        .map((el) => ({ el, t: (el.textContent || "").trim().toLowerCase() }))
+        .map((el) => ({ el, t: normApos((el.textContent || "").trim().toLowerCase()) }))
         .filter((x) => x.t && x.t.length < 60);
       const innermost = (list) => list.sort((a, b) => a.el.childElementCount - b.el.childElementCount)[0]?.el;
       for (const w of wants) {
