@@ -217,6 +217,26 @@ AUTHORITY_SOURCES = [
     {"name": "eBay Help — creating and managing listings", "url": "https://www.ebay.com/help/selling/listings/creating-managing-listings?id=4102", "topic": "eBay listing rules"},
 ]
 
+# Pillar D specifically — official Terms of Service / Acceptable Use / API policy
+# pages for every platform Omnivaleur touches, plus general data-protection
+# authorities. These back the "how it works / trust & safety / compliance" pillar,
+# so claims about what a platform does or doesn't allow are always sourced to the
+# platform's own legal text, never paraphrased from memory.
+PLATFORM_TOS_SOURCES = [
+    {"name": "Vinted Terms & Conditions", "url": "https://www.vinted.com/terms-of-service", "topic": "Vinted ToS"},
+    {"name": "Vinted Help — Selling", "url": "https://www.vinted.com/help/4-selling", "topic": "Vinted selling rules"},
+    {"name": "eBay User Agreement", "url": "https://www.ebay.com/help/policies/member-behaviour-policies/user-agreement?id=4259", "topic": "eBay ToS"},
+    {"name": "eBay Help — creating and managing listings", "url": "https://www.ebay.com/help/selling/listings/creating-managing-listings?id=4102", "topic": "eBay listing rules"},
+    {"name": "Shopify Terms of Service", "url": "https://www.shopify.com/legal/terms", "topic": "Shopify ToS"},
+    {"name": "Shopify Acceptable Use Policy", "url": "https://www.shopify.com/legal/aup", "topic": "Shopify acceptable use"},
+    {"name": "Shopify API License and Terms of Use", "url": "https://www.shopify.com/legal/api-terms", "topic": "Shopify API terms"},
+    {"name": "Marktplaats Algemene Voorwaarden", "url": "https://www.marktplaats.nl/paginas/algemenevoorwaarden.html", "topic": "Marktplaats ToS"},
+    {"name": "Marktplaats Help & Info", "url": "https://help.marktplaats.nl/s/", "topic": "Marktplaats policies"},
+    {"name": "2dehands Help & Info", "url": "https://help.2dehands.be/s/", "topic": "2dehands policies"},
+    {"name": "Etsy Seller Policy", "url": "https://www.etsy.com/legal/sellers/", "topic": "Etsy seller policy"},
+    {"name": "European Commission — GDPR overview", "url": "https://commission.europa.eu/law/law-topic/data-protection/data-protection-eu_en", "topic": "GDPR / data protection"},
+]
+
 
 def _build_prompt(
     keyword: str,
