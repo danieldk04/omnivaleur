@@ -116,7 +116,11 @@ async def create_product(item: dict) -> dict:
         }
     }
 
-    async with httpx.AsyncClient() as client:
+    # Shopify fetches every image URL server-side while creating the product, so
+    # a listing with several photos regularly needs far more than httpx's default
+    # 5s read timeout — that default is exactly what surfaced as
+    # "Shopify: ReadTimeout: ReadTimeout('')" in the dashboard. Give it room.
+    async with httpx.AsyncClient(timeout=httpx.Timeout(60.0, connect=10.0)) as client:
         resp = await client.post(
             f"https://{settings.shopify_store}/admin/api/2024-10/products.json",
             json=payload,
