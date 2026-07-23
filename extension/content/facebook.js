@@ -247,7 +247,16 @@
     // button next, and throw a vague "layout changed?" error with no indication
     // of WHICH field actually failed. Fail here instead, immediately and
     // specifically, so the user knows exactly what to fix.
-    const titleField = findField(/^(titel|title)$/i);
+    //
+    // Title/Price used a single one-shot findField() (no retry) while Category/
+    // Condition/Description already polled via waitForField/selectCombo. Live
+    // reports showed photos uploading fine and nothing after — with a REAL,
+    // larger photo set (network-fetched, not the single test image this was
+    // verified against) React very plausibly re-renders the form once photo
+    // processing finishes, briefly detaching/reattaching Title/Price. A
+    // one-shot lookup right after a flat 800ms sleep can lose that race even
+    // though the field reappears milliseconds later. Poll like the others do.
+    const titleField = await waitForField(/^(titel|title)$/i, 5000);
     if (!titleField) throw new Error(
       "Could not find the Title field on Facebook's form (layout may have changed). Nothing was published.");
     await typeInto(titleField, smartTrunc(item.title || "", 100));
@@ -256,7 +265,7 @@
     // THOUSANDS separator, so typing "29.99" is stored as 2999. Detect the field's
     // language from its own label and type the matching decimal separator ("29,99"
     // on NL, "29.99" on EN). Whole amounts are typed without decimals.
-    const priceField = findField(/^(prijs|price)$/i);
+    const priceField = await waitForField(/^(prijs|price)$/i, 5000);
     if (!priceField) throw new Error(
       "Could not find the Price field on Facebook's form (layout may have changed). Nothing was published.");
     await typeInto(priceField, formatPrice(item.price, priceField));
