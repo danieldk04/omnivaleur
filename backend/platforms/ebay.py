@@ -687,11 +687,80 @@ async def resolve_category_id(query: str, brand: str | None = None,
     return results[0]["category_id"] if results else None
 
 
+# eBay NL taxonomy segments → English. eBay ignores Accept-Language for the
+# EBAY_NL category tree and always returns Dutch, so we translate the breadcrumb
+# segments ourselves. This static map covers the clothing/accessories tree the
+# dashboard actually uses; it is deterministic, instant and works even when no
+# LLM key is configured (the previous LLM-only path silently left names Dutch
+# whenever the key was missing or the call failed). Keys are lowercased.
+_EBAY_SEGMENT_NL_EN = {
+    "kleding en accessoires": "Clothing & Accessories",
+    "heren: kleding, accessoires": "Men: clothing, accessories",
+    "dames: kleding, accessoires": "Women: clothing, accessories",
+    "kinderen: kleding, accessoires": "Kids: clothing, accessories",
+    "heren: kleding": "Men: clothing",
+    "dames: kleding": "Women: clothing",
+    "kinderen: kleding": "Kids: clothing",
+    "truien en vesten": "Jumpers & cardigans",
+    "mantels, jassen en vesten": "Coats, jackets & waistcoats",
+    "jassen en jacks": "Coats & jackets",
+    "broeken": "Trousers",
+    "spijkerbroeken, jeans": "Jeans",
+    "jeans": "Jeans",
+    "overhemden": "Shirts",
+    "t-shirts": "T-shirts",
+    "shirts": "Shirts",
+    "shirts, tops": "Shirts & tops",
+    "polo's": "Polo shirts",
+    "truien": "Jumpers",
+    "vesten": "Cardigans",
+    "sokken": "Socks",
+    "ondergoed": "Underwear",
+    "schoenen": "Shoes",
+    "accessoires": "Accessories",
+    "tassen": "Bags",
+    "tassen en portemonnees": "Bags & purses",
+    "sjaals, dassen": "Scarves & ties",
+    "riemen": "Belts",
+    "petten en hoeden": "Caps & hats",
+    "jurken": "Dresses",
+    "rokken": "Skirts",
+    "shorts": "Shorts",
+    "sportkleding": "Sportswear",
+    "trainingspakken": "Tracksuits",
+}
+
+
+def _translate_segments_static(name: str) -> str:
+    """Translate a ' > '-joined breadcrumb using the static segment map. Segments
+    not in the map are left as-is (the LLM fallback can pick them up)."""
+    parts = [p.strip() for p in name.split(">")]
+    return " > ".join(_EBAY_SEGMENT_NL_EN.get(p.lower(), p) for p in parts)
+
+
+def _looks_dutch(name: str) -> bool:
+    """True if any segment still contains a known Dutch word after static pass."""
+    lowered = name.lower()
+    return any(w in lowered for w in (
+        "kleding", "heren", "dames", "kinderen", "accessoires", "en vesten",
+        "jassen", "broeken", "schoenen", "tassen", "boeken", "speelgoed",
+    ))
+
+
 async def _translate_category_names(results: list[dict]) -> list[dict]:
     """eBay's Accept-Language override isn't honoured for every marketplace's
     category tree (e.g. EBAY_NL always returns Dutch names) — translate the
-    display names to English ourselves so the UI stays English-only."""
-    if not results or not settings.anthropic_api_key:
+    display names to English ourselves so the UI stays English-only. Static map
+    first (deterministic, offline), LLM only for segments it didn't cover."""
+    if not results:
+        return results
+    # Deterministic pass — guarantees English for the common clothing tree even
+    # with no LLM key configured.
+    for r in results:
+        r["name"] = _translate_segments_static(r["name"])
+    # Only the leftovers (unknown segments still looking Dutch) need the LLM.
+    remaining = [r for r in results if _looks_dutch(r["name"])]
+    if not remaining or not settings.anthropic_api_key:
         return results
     try:
         import anthropic
