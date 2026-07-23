@@ -77,20 +77,34 @@
     )];
     return controls.find((el) => {
       if (!isVisible(el)) return false;
-      // Test each accessible-name source on its own (trimmed) so an anchored
-      // regex like /^titel$/ still matches. VERIFIED on the live FB form: the
-      // Titel/Prijs inputs have NO aria-label/placeholder — their name comes from
-      // the WRAPPING <label> (e.g. <label><span>Titel</span><input></label>), so
-      // el.closest('label').textContent is the source that actually works.
-      const names = [
-        el.getAttribute("aria-label"),
-        el.getAttribute("placeholder"),
-        el.closest("label")?.textContent,
-      ];
-      const labelledby = el.getAttribute("aria-labelledby");
-      if (labelledby) names.push(document.getElementById(labelledby)?.textContent);
-      return names.some((n) => n && labelRe.test(n.trim()));
+      return fieldNameCandidates(el).some((n) => n && labelRe.test(n.trim()));
     });
+  }
+
+  // Gather every plausible accessible-name source for a form control. FB has
+  // changed which of these actually carries the label between releases (verified
+  // live at one point: no aria-label/placeholder, name came only from a wrapping
+  // <label>) — relying on just one source made this whole script silently fill
+  // nothing the next time FB tweaked the markup, with no error to explain why.
+  function fieldNameCandidates(el) {
+    const names = [
+      el.getAttribute("aria-label"),
+      el.getAttribute("placeholder"),
+      el.closest("label")?.textContent,
+    ];
+    const labelledby = el.getAttribute("aria-labelledby");
+    if (labelledby) names.push(document.getElementById(labelledby)?.textContent);
+    // Fallback for layouts where the label is a sibling/ancestor text node
+    // instead of a wrapping <label>, e.g. <div><span>Titel</span><input/></div>.
+    // Walk up a few containers and keep any short text node found — "short" and
+    // an exact/anchored regex test afterwards keep this from matching a whole
+    // multi-field section by accident.
+    let node = el.parentElement;
+    for (let i = 0; i < 4 && node; i++, node = node.parentElement) {
+      const text = node.textContent?.trim();
+      if (text && text.length < 40 && text !== String(el.value || "")) names.push(text);
+    }
+    return names;
   }
 
   function isVisible(el) {
