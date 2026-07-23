@@ -296,11 +296,22 @@
 
   // Click through FB's "Next" → "Publish" and capture the resulting item URL.
   async function publishAndCapture() {
+    // VERIFIED live 2026-07: FB's Volgende/Next button has BOTH matching textContent
+    // AND an identical aria-label ("Volgende" + aria-label="Volgende"). The old
+    // version concatenated the two sources into one string before testing
+    // ("Volgende" + " " + "Volgende" = "Volgende Volgende"), which the anchored
+    // regex /^(volgende|next)$/i never matches — so this silently found nothing,
+    // fillForm's work was thrown away, and the whole publish attempt died here
+    // with a misleading "layout changed?" error (or hung, on the version that
+    // didn't throw). Test each source independently instead.
     const clickByText = (re) => {
       const btn = [...document.querySelectorAll('[role="button"], button, [aria-label]')]
-        .find((b) => isVisible(b) && re.test(
-          (b.textContent || "").trim() + " " + (b.getAttribute("aria-label") || "")
-        ));
+        .find((b) => {
+          if (!isVisible(b)) return false;
+          const text = (b.textContent || "").trim();
+          const aria = (b.getAttribute("aria-label") || "").trim();
+          return re.test(text) || re.test(aria);
+        });
       if (btn) { btn.click(); return true; }
       return false;
     };
