@@ -414,6 +414,34 @@ async def delist_all_platforms(item_id: str, user_id: str) -> list[dict]:
     api_active = [l for l in active_listings if l["platform"] in API_PLATFORMS]
     ext_active = [l for l in active_listings if l["platform"] in EXTENSION_PLATFORMS]
 
+    # Queue the extension-driven delete jobs FIRST. These are the platforms the
+    # user watches happen in their own Chrome (MP/2dehands/Vinted/FB). They must
+    # be dispatched immediately and can never be blocked by a slow or hanging
+    # API-platform delete below — a previous ordering awaited eBay/Shopify first,
+    # so a slow eBay call hung the whole request: the dashboard spinner never
+    # cleared AND these jobs were never created, so Vinted/MP never opened.
+    for listing in ext_active:
+        payload = {
+            **item,
+            "title": _last_listed_title(db, item_id, listing["platform"], item.get("title", "")),
+            "platform_listing_id": listing["platform_listing_id"],
+            "platform_listing_url": listing["platform_listing_url"],
+        }
+        job = db.table("jobs").insert({
+            "user_id": user_id,
+            "item_id": item_id,
+            "platform": listing["platform"],
+            "action": "delete",
+            "status": "pending",
+            "payload": payload,
+        }).execute().data[0]
+        results.append({
+            "platform": listing["platform"],
+            "status": "queued",
+            "job_id": job["id"],
+            "message": "Delete job queued — Chrome extension will process this",
+        })
+
     if api_active:
         # For Shopify listings without a platform_listing_id, look up by SKU first
         for listing in api_active:
