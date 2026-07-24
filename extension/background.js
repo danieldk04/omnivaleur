@@ -632,7 +632,7 @@ const JOB_WATCHDOG_PREFIX = "jobwd_";
 // idle, which silently cancelled the old timer — precisely in the situations that
 // strand a job (content script hung, Chrome idle, worker killed). An alarm wakes
 // the worker back up, so the timeout actually fires.
-function armJobWatchdog(tabId, jobId, platform, serverUrl) {
+function armJobWatchdog(tabId) {
   chrome.alarms.create(`${JOB_WATCHDOG_PREFIX}${tabId}`, { delayInMinutes: JOB_TAB_TIMEOUT_MIN });
 }
 
