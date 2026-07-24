@@ -94,6 +94,7 @@ async def _translate_with_claude(text: str, target_lang: str, brand: str | None 
                 f"({len(text)} chars in, {len(result)} out) — keeping original text"
             )
             return text
+        logger.info("translate→%s out: repr=%r", target_lang, result[:200])
         return result
     except Exception as e:
         logger.warning(f"Claude translation to {target_lang} failed: {e}")
