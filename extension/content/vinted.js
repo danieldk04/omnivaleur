@@ -1155,10 +1155,19 @@
     }
     if (!titleEls.length) return false;
 
-    // exact → startsWith → includes (colour names are short, so keep it tight).
+    // exact → startsWith → includes → reverse-includes (e.g. value "light grey" vs
+    // an option that's just "Grey") → base-colour fallback (strip light/dark modifier).
     let best = titleEls.find((e) => e.textContent.trim().toLowerCase() === w)
       || titleEls.find((e) => e.textContent.trim().toLowerCase().startsWith(w))
-      || titleEls.find((e) => e.textContent.trim().toLowerCase().includes(w));
+      || titleEls.find((e) => e.textContent.trim().toLowerCase().includes(w))
+      || titleEls.find((e) => w.includes(e.textContent.trim().toLowerCase()) && e.textContent.trim().length > 2);
+    if (!best) {
+      const base = w.replace(/^(licht|donker|light|dark)\s*/i, "").trim();
+      if (base && base !== w) {
+        best = titleEls.find((e) => e.textContent.trim().toLowerCase() === base)
+          || titleEls.find((e) => e.textContent.trim().toLowerCase().includes(base));
+      }
+    }
     if (!best) {
       console.warn("[Omnivaleur] Vinted colour not found in panel:", colour);
       return false;
