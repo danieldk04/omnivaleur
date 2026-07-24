@@ -620,7 +620,7 @@ def _fill_required_aspects(aspects: dict, item: dict, required: list[dict]) -> N
         concept = _canonical_concept(low)
         val = _concept_value(concept, item) if concept else None
         if val:
-            aspects[name] = [_best_allowed_match(val, allowed)]
+            aspects[name] = [_best_allowed_match(val, allowed, concept=concept)]
             continue
 
         if low in existing:
