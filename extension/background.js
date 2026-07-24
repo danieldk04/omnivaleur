@@ -2273,6 +2273,7 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     // first try — finaliseJob queues it if not. Previously both of these hung
     // off .then(), so a failed fetch also stranded the tab open forever.
     finaliseJob(serverUrl, jobId, "complete", result).finally(() => {
+      clearJobWatchdog(sender.tab?.id);
       chrome.storage.local.remove([`job_${platform}`, `jobtab_${sender.tab?.id}`]);
       // Keep tab open 2s so user can see the listing was created
       if (sender.tab?.id) setTimeout(() => chrome.tabs.remove(sender.tab.id).catch(() => {}), 2000);
