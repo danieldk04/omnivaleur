@@ -258,3 +258,12 @@ CREATE INDEX IF NOT EXISTS idx_platform_notifications_user ON platform_notificat
 -- with RLS enabled-but-policyless, which silently blocks ALL writes (the
 -- backend key is subject to RLS), so turn it off to stay consistent.
 ALTER TABLE platform_notifications DISABLE ROW LEVEL SECURITY;
+
+-- "Was" price for Shopify's strikethrough compare-at-price display. The
+-- dashboard's item form (frontend/app.html #f-compare, "e.g. original price")
+-- already lets the user type this and sends it on every item save (PATCH
+-- /items/{id}), but the column was never added to the live table — so
+-- shopify_importer.py's `item.get("compare_at_price")` was always None and
+-- Shopify products never got a compare-at price. Manual step required: run
+-- this ALTER on Supabase (it isn't executed automatically by deploys).
+ALTER TABLE items ADD COLUMN IF NOT EXISTS compare_at_price NUMERIC(10,2);
