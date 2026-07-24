@@ -426,7 +426,12 @@ async def create_product(item: dict) -> dict:
                 "price": str(item.get("price", "0")),
                 "compare_at_price": str(item["compare_at_price"]) if item.get("compare_at_price") else None,
                 "sku": item.get("sku", ""),
-                "inventory_management": None,
+                # Track stock with a quantity of exactly 1: every item here is a
+                # single second-hand piece, so Shopify marks it sold out by itself
+                # once it sells instead of letting a second buyer order it.
+                "inventory_management": "shopify",
+                "inventory_policy": "deny",
+                "inventory_quantity": 1,
             }],
             "images": [{"src": url} for url in photo_urls],
         }
