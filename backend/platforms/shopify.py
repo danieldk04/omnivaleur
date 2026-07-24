@@ -100,20 +100,33 @@ class ShopifyClient:
 
     async def create_product(self, item: dict) -> dict:
         import httpx
+        from backend.platforms.shopify_importer import (
+            _product_type_from_item, _public_photo_urls, assign_best_collection,
+        )
         raw_desc = item.get("description") or ""
         body_html = raw_desc.replace("\r\n", "\n").replace("\n", "<br>")
         payload = {
             "product": {
                 "title": item.get("shopify_title") or item["title"],
                 "body_html": body_html,
-                "variants": [{"price": str(item["price"]), "sku": item.get("sku", "")}],
-                "images": [{"src": url} for url in (item.get("photo_urls") or [])[:10]],
+                "product_type": _product_type_from_item(item),
+                "variants": [{
+                    "price": str(item["price"]),
+                    "compare_at_price": str(item["compare_at_price"]) if item.get("compare_at_price") else None,
+                    "sku": item.get("sku", ""),
+                }],
+                "images": [{"src": url} for url in _public_photo_urls(item)],
             }
         }
-        async with httpx.AsyncClient() as c:
+        async with httpx.AsyncClient(timeout=httpx.Timeout(60.0, connect=10.0)) as c:
             r = await c.post(f"{self.base}/products.json", json=payload, headers=self.headers)
             r.raise_for_status()
-            return r.json().get("product", {})
+            product = r.json().get("product", {})
+
+        if product.get("id"):
+            await assign_best_collection(self.base, self.headers, item, str(product["id"]))
+
+        return product
 
     async def delete_product(self, product_id: str) -> bool:
         import httpx
