@@ -37,6 +37,13 @@
   const COLOUR_MAP = {
     "zwart":        "Black",
     "grijs":        "Grey",
+    "gray":         "Grey",   // US spelling — Vinted's own option is "Grey"
+    "lichtgrijs":   "Light grey",
+    "light grey":   "Light grey",
+    "light gray":   "Light grey",
+    "donkergrijs":  "Dark grey",
+    "dark grey":    "Dark grey",
+    "dark gray":    "Dark grey",
     "wit":          "White",
     "crème":        "Cream",
     "creme":        "Cream",
