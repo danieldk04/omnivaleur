@@ -659,6 +659,14 @@ async function fireJobWatchdog(tabId) {
   } catch (e) {
     console.error("[Omnivaleur] Watchdog: failed to report timeout error:", e);
   }
+  // A timed-out CREATE is usually half-filled and finishable by hand, so keep its
+  // tab open and keep the meta alive: closing it would throw away the user's work
+  // and, worse, leave the manual-publish auto-detect with nothing to match on — so
+  // a listing they finished themselves would stay "not posted" in the dashboard.
+  if ((meta.action || "create") === "create") {
+    chrome.storage.local.set({ [key]: { ...meta, awaitingManualFinish: true } });
+    return;
+  }
   chrome.storage.local.remove(key);
   chrome.tabs.remove(tabId).catch(() => {});
 }
