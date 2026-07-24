@@ -340,6 +340,48 @@ def _public_photo_urls(item: dict) -> list[str]:
     return [u for u in urls if isinstance(u, str) and u.startswith(("http://", "https://"))][:250]
 
 
+async def _ensure_stock_of_one(base_url: str, headers: dict, product: dict) -> None:
+    """Shopify has been phasing out setting `inventory_quantity` straight from the
+    product-create payload. When it's ignored the variant lands on 0, which shows the
+    item as SOLD OUT the moment it goes live — worse than not tracking at all. Read
+    back what actually stuck and correct it via the inventory-levels API.
+    Best-effort: logs and returns, never raises."""
+    variant = (product.get("variants") or [{}])[0]
+    try:
+        if int(variant.get("inventory_quantity") or 0) == 1:
+            return
+    except (TypeError, ValueError):
+        pass
+    inventory_item_id = variant.get("inventory_item_id")
+    if not inventory_item_id:
+        logger.warning("Shopify: variant has no inventory_item_id — cannot set stock to 1")
+        return
+    try:
+        async with httpx.AsyncClient(timeout=20.0) as client:
+            loc = await client.get(f"{base_url}/locations.json", headers=headers)
+            loc.raise_for_status()
+            locations = loc.json().get("locations") or []
+            if not locations:
+                logger.warning("Shopify: no locations returned — cannot set stock to 1")
+                return
+            resp = await client.post(
+                f"{base_url}/inventory_levels/set.json",
+                json={"location_id": locations[0]["id"],
+                      "inventory_item_id": inventory_item_id,
+                      "available": 1},
+                headers=headers,
+            )
+            if resp.status_code >= 400:
+                logger.warning(
+                    "Shopify: could not set stock to 1 (%s): %s — the product may show as sold out. "
+                    "Usually means the token lacks write_inventory/read_locations.",
+                    resp.status_code, resp.text[:200])
+            else:
+                logger.info("Shopify: stock set to 1 for inventory item %s", inventory_item_id)
+    except Exception as e:
+        logger.warning(f"Shopify: stock correction failed: {e}")
+
+
 async def _attach_missing_images(base_url: str, headers: dict, product_id: str, urls: list[str], product: dict) -> None:
     """Robust image attachment fallback (ISSUE 3).
 
