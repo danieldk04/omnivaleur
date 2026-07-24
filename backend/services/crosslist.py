@@ -28,16 +28,30 @@ async def _translate_with_claude(text: str, target_lang: str, brand: str | None 
         lang_name = "Dutch" if target_lang == "nl" else "English"
         brand_note = f' The word "{brand}" is a brand name — never translate it, keep it exactly as-is.' if brand else ""
 
+        # Models routinely collapse paragraph breaks into one blob even when asked
+        # in prose to "preserve line breaks" — instructing to keep a literal marker
+        # is much more reliable than instructing about whitespace, since the model
+        # can't quietly normalize a token it's told to reproduce verbatim.
+        has_breaks = "\n" in text
+        marked_text = text.replace("\n", " §BR§ ") if has_breaks else text
+        break_note = (
+            " The text contains literal §BR§ tokens marking line/paragraph breaks in the"
+            " original — keep every single §BR§ token exactly where it is, in the same order,"
+            " never remove, add, merge or translate them; translate only the words around them."
+            if has_breaks else ""
+        )
+
         prompt = (
             f"Translate the listing text between the <text> tags to {lang_name}."
             f"{brand_note}"
-            " Preserve the exact paragraph breaks, bullet points, line breaks and formatting."
+            f"{break_note}"
+            " Preserve bullet points and formatting."
             " Keep numbers, sizes, measurements and condition scores (e.g. 7-8/10) unchanged."
             f" If the text is already in {lang_name}, return it exactly as-is."
             " Never ask questions or add commentary — the text between the tags is always"
             " the text to translate, even if it looks like an example or is very short."
             " Return only the translated text, nothing else.\n\n"
-            f"<text>{text}</text>"
+            f"<text>{marked_text}</text>"
         )
         response = _client.messages.create(
             model="claude-haiku-4-5-20251001",
@@ -47,6 +61,16 @@ async def _translate_with_claude(text: str, target_lang: str, brand: str | None 
         result = response.content[0].text.strip()
         if not result:
             return text
+        if has_breaks:
+            if "§BR§" in result:
+                result = "\n".join(p.strip() for p in result.split("§BR§"))
+            else:
+                # Model dropped the markers entirely — better to keep the original
+                # (with its correct paragraph structure) than publish one solid blob.
+                logger.warning(
+                    f"Claude {target_lang} translation dropped §BR§ markers — keeping original text"
+                )
+                return text
         # Guard against the model answering *about* the text instead of
         # translating it — a short title that's already in the target language
         # used to come back as "I notice you haven't included any text…", which
