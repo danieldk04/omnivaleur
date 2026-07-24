@@ -141,6 +141,7 @@ class ShopifyClient:
                 pid, len(product.get("images") or []), len(photo_urls),
             )
             await _attach_missing_images(self.base, self.headers, pid, photo_urls, product)
+            await _ensure_stock_of_one(self.base, self.headers, product)
             await assign_best_collection(self.base, self.headers, item, pid)
 
         return product
