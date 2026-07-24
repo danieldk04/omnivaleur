@@ -103,6 +103,7 @@ class ShopifyClient:
         from backend.platforms.shopify_importer import (
             _product_type_from_item, _public_photo_urls, assign_best_collection,
             _attach_missing_images, _ensure_stock_of_one,
+            _set_taxonomy_category, _publish_to_all_channels,
         )
         raw_desc = item.get("description") or ""
         body_html = raw_desc.replace("\r\n", "\n").replace("\n", "<br>")
