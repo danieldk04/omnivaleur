@@ -510,34 +510,112 @@ async def _get_required_aspects(category_id: str) -> list[dict]:
     return out
 
 
+# eBay's Taxonomy API returns required-aspect names in the marketplace's own
+# locale (e.g. ebay.nl → "Merk", "Kleur", "Maat", "Afdeling"). Without this map,
+# _fill_required_aspects didn't recognize those as the same concept it already
+# has real data for (brand/color/size/…) and fell back to the closed list's
+# first value — producing a wrong, duplicated aspect (e.g. "Merkloos" next to
+# the correct "Brand: Suitsupply"). Extend with more locales as needed.
+_CONCEPT_ASPECT_SYNONYMS: dict[str, set[str]] = {
+    "brand": {"brand", "merk", "marke", "marca", "marque"},
+    "colour": {"colour", "color", "kleur", "farbe", "couleur", "colore"},
+    "size": {"size", "maat", "größe", "taille", "talla"},
+    "material": {"material", "materiaal", "matériau", "materiale"},
+    "department": {"department", "afdeling", "abteilung", "département", "reparto", "gender"},
+    "type": {"type", "stijl", "style", "typ", "tipo"},
+}
+
+
+def _canonical_concept(aspect_name_lower: str) -> str | None:
+    for concept, synonyms in _CONCEPT_ASPECT_SYNONYMS.items():
+        if aspect_name_lower in synonyms:
+            return concept
+    return None
+
+
+def _concept_value(concept: str, item: dict) -> str | None:
+    """Resolve the real item value for a canonical aspect concept, independent
+    of which language/spelling eBay asked for it under."""
+    if concept == "brand":
+        return item.get("brand") or None
+    if concept == "colour":
+        return item.get("color") or None
+    if concept == "size":
+        return item.get("size") or None
+    if concept == "material":
+        return item.get("material") or None
+    if concept == "type":
+        # The item's product type/category (e.g. "Cardigan") is what eBay's
+        # Type/Style aspects expect — not the crosslist "category" bucket used
+        # for platform routing, but the free-text description of what it is.
+        return item.get("category") or None
+    if concept == "department":
+        gender = (item.get("gender") or "").strip().lower()
+        if "wom" in gender or "vrouw" in gender or "dames" in gender:
+            return "Women"
+        if "men" in gender or "man" in gender or "heren" in gender:
+            return "Men"
+        return None
+    return None
+
+
+def _best_allowed_match(value: str, allowed: list[str]) -> str:
+    """Match a real item value against eBay's closed allowed-values list for an
+    aspect (case-insensitive exact, then substring), so e.g. item color "Grey"
+    lines up with an allowed "Grijs"/"Grey" entry with correct casing. Falls
+    back to the raw value (still real data, just unnormalized) rather than an
+    arbitrary default when nothing matches."""
+    if not allowed:
+        return value
+    low = value.strip().lower()
+    for a in allowed:
+        if a.lower() == low:
+            return a
+    for a in allowed:
+        if low in a.lower() or a.lower() in low:
+            return a
+    return value
+
+
 def _fill_required_aspects(aspects: dict, item: dict, required: list[dict]) -> None:
-    """Fill any required aspect we don't already have. Maps known item fields
-    (gender→Department, size type), otherwise picks the first allowed value from
-    the closed list so eBay accepts the listing (the seller can refine later)."""
+    """Fill any required aspect we don't already have. A required aspect name
+    that's a translated synonym of a concept we have real item data for
+    (brand/colour/size/material/department/type) is filled from that real
+    data — under its own localized key, since eBay's aspects dict keys must
+    match `localizedAspectName` exactly for the category — so no duplicate
+    aspect pair ever disagrees (both hold the same correct value). Only when
+    there's truly no real data for a required aspect do we fall back to the
+    first allowed value so eBay accepts the listing (the seller can refine
+    later)."""
     existing = {k.lower() for k in aspects}
-    gender = (item.get("gender") or "").strip().lower()
     for req in required:
         name = req.get("name")
-        if not name or name.lower() in existing:
+        if not name:
             continue
-        allowed = req.get("values") or []
         low = name.lower()
-        val = None
-        if low == "department":
-            if "wom" in gender or "vrouw" in gender or "dames" in gender:
-                val = "Women"
-            elif "men" in gender or "man" in gender or "heren" in gender:
-                val = "Men"
-        elif low == "size type":
-            val = "Regular"
-        # Fallback: any allowed value satisfies eBay's "required" constraint.
-        if val is None and allowed:
-            val = allowed[0]
-        if val is None:
+        allowed = req.get("values") or []
+
+        concept = _canonical_concept(low)
+        val = _concept_value(concept, item) if concept else None
+        if val:
+            aspects[name] = [_best_allowed_match(val, allowed)]
+            continue
+
+        if low in existing:
+            continue
+
+        # Legacy fallbacks for aspect names outside the synonym map, or where
+        # we genuinely have no real item data for the concept.
+        fallback = None
+        if low == "size type":
+            fallback = "Regular"
+        if fallback is None and allowed:
+            fallback = allowed[0]
+        if fallback is None:
             continue  # free-text required aspect we can't infer — let eBay report it
-        if allowed and val not in allowed:
-            val = allowed[0]
-        aspects[name] = [val]
+        if allowed and fallback not in allowed:
+            fallback = allowed[0]
+        aspects[name] = [fallback]
 
 
 def _clean_ebay_query(query: str) -> str:
