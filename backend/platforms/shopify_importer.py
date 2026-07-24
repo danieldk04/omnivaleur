@@ -507,6 +507,8 @@ async def create_product(item: dict) -> dict:
     # If Shopify couldn't fetch some/all of our src URLs, attach the bytes directly.
     await _attach_missing_images(base_url, headers, product_id, photo_urls, product)
 
+    await _ensure_stock_of_one(base_url, headers, product)
+
     await assign_best_collection(base_url, headers, item, product_id)
 
     return {
