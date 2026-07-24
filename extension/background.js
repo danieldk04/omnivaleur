@@ -2284,6 +2284,9 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   if (msg.type === "JOB_ERROR") {
     const { platform, jobId, serverUrl, error } = msg;
     finaliseJob(serverUrl, jobId, "error", { error }).finally(() => {
+      // The tab is intentionally left open for a manual finish, so stand the
+      // watchdog down — otherwise it would close that tab mid-edit.
+      clearJobWatchdog(sender.tab?.id);
       // Keep the tab OPEN so the user can review the filled form and finish
       // manually. Closing it here loses all the work that was filled in.
       //
