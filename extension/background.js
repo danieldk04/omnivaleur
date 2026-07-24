@@ -2043,7 +2043,7 @@ async function _mwFillDescription(selector, descText) {
           setTimeout(resolve, 600);
         });
         await sleep(200);
-        if (lexHasText()) return true;
+        if (structureOk()) return true;
       } catch (_) {}
     }
   }
