@@ -401,6 +401,20 @@ async def active_jobs(user_id: str = Depends(get_current_user)):
             return True
         return False
 
+    # Settle anything stuck 'claimed' with no activity. The stale sweep used to run
+    # ONLY from /pending, i.e. only while the extension was still polling — but the
+    # cases that strand a job (content script hung on a Vinted colour panel, MV3
+    # service worker killed so armJobWatchdog's setTimeout never fires, Chrome
+    # closed) are exactly the cases where that poll may never come. The dashboard
+    # polls THIS endpoint every 4s, so sweeping here makes a stuck job go terminal
+    # on its own, with no user action. Anti-duplicate protection is unchanged: the
+    # sweep marks a create 'error' and never re-dispatches it.
+    if any(j["status"] == "claimed" and not _is_working(j) for j in rows):
+        try:
+            _recover_stale_claims(db, user_id, None, now_dt)
+        except Exception as e:  # never let the banner endpoint fail on a sweep
+            logger.warning(f"active_jobs: stale-claim sweep failed: {e}")
+
     working, queued = [], []
     for j in rows:
         if j["status"] == "claimed":
