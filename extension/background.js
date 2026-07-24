@@ -1550,6 +1550,7 @@ async function bgScanMp2dh(job, serverUrl) {
 // new tab could inherit a stale entry and complete the wrong job.
 chrome.tabs.onRemoved.addListener((tabId) => {
   chrome.storage.local.remove(`jobtab_${tabId}`);
+  clearJobWatchdog(tabId);
 });
 
 // ── Auto-detect manual publish ─────────────────────────────────────────────
