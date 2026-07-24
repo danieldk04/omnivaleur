@@ -190,6 +190,50 @@ def _public_photo_urls(item: dict) -> list[str]:
     return [u for u in urls if isinstance(u, str) and u.startswith(("http://", "https://"))][:250]
 
 
+async def _attach_missing_images(base_url: str, headers: dict, product_id: str, urls: list[str], product: dict) -> None:
+    """Robust image attachment fallback (ISSUE 3).
+
+    Shopify normally fetches each `images[].src` URL server-side while creating the
+    product. If its servers can't reach our Supabase public URL (bucket not public,
+    egress blocked, ...) those images silently never attach — the product is created
+    fine (price/collections work) but has zero photos. Here, for any photo Shopify
+    didn't attach via `src`, we fetch the bytes OURSELVES (the backend CAN reach
+    Supabase) and POST them as a base64 `attachment`, which can't silently fail the
+    way a remote `src` fetch can.
+
+    Best-effort: never raises, so a photo failure can never abort the product create.
+    """
+    if not urls:
+        return
+    attached = len(product.get("images") or [])
+    if attached >= len(urls):
+        return  # Shopify already fetched every image via src — nothing to do
+    # src attaches in the order sent, so the tail is what failed to fetch.
+    missing = urls[attached:]
+    import base64
+    for url in missing:
+        try:
+            # Reuse the same generous timeout as the create call — Supabase image
+            # fetches plus the Shopify upload can take a while for several photos.
+            async with httpx.AsyncClient(timeout=httpx.Timeout(60.0, connect=10.0)) as client:
+                img = await client.get(url)
+                if img.status_code != 200 or not img.content:
+                    logger.warning(f"Shopify: base64 fallback couldn't fetch {url} (HTTP {img.status_code})")
+                    continue
+                b64 = base64.b64encode(img.content).decode()
+                resp = await client.post(
+                    f"{base_url}/products/{product_id}/images.json",
+                    json={"image": {"attachment": b64}},
+                    headers=headers,
+                )
+                if resp.status_code >= 400:
+                    logger.warning(f"Shopify: base64 image attach failed ({resp.status_code}): {resp.text[:200]}")
+                else:
+                    logger.info(f"Shopify: attached image via base64 fallback for product {product_id} ({url})")
+        except Exception as e:
+            logger.warning(f"Shopify: base64 image fallback errored for {url}: {e}")
+
+
 async def create_product(item: dict) -> dict:
     """Create a product on Shopify from a Omnivaleur item dict."""
     token = await _get_token()
