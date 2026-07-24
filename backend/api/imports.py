@@ -566,7 +566,10 @@ async def create_item_from_candidate(candidate_id: str, body: dict, user_id: str
     data = item.model_dump()
     data["id"] = str(uuid.uuid4())
     data["user_id"] = user_id
-    data["sku"] = f"IMP-{data['id'][:8].upper()}"
+    # Only auto-generate when the user left the SKU blank — this used to overwrite
+    # unconditionally, so a SKU typed in the import form was always discarded.
+    if not data.get("sku"):
+        data["sku"] = f"IMP-{data['id'][:8].upper()}"
     created = db.table("items").insert(data).execute().data[0]
 
     listed_at = cand.get("platform_listed_at") or datetime.now(timezone.utc).isoformat()
