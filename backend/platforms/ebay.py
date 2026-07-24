@@ -545,10 +545,16 @@ def _concept_value(concept: str, item: dict) -> str | None:
     if concept == "material":
         return item.get("material") or None
     if concept == "type":
-        # The item's product type/category (e.g. "Cardigan") is what eBay's
-        # Type/Style aspects expect — not the crosslist "category" bucket used
-        # for platform routing, but the free-text description of what it is.
-        return item.get("category") or None
+        # item["category"] is a coarse crosslist routing bucket (e.g.
+        # "heren truien", labelled "Jumpers / Cardigans" — it deliberately
+        # covers several garment types and is NOT itself a specific type/style
+        # string). Handing that slug straight to eBay's Type/Style aspect would
+        # never match the closed allowed-values list and would write the raw
+        # Dutch slug as the aspect value, which is worse than no data at all.
+        # There is no dedicated free-text garment-type field on the item, so
+        # this concept is resolved separately in _fill_required_aspects by
+        # matching the title against the aspect's own allowed values.
+        return None
     if concept == "department":
         gender = (item.get("gender") or "").strip().lower()
         if "wom" in gender or "vrouw" in gender or "dames" in gender:
