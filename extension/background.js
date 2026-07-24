@@ -1597,6 +1597,7 @@ chrome.tabs.onUpdated.addListener(async (tabId, changeInfo) => {
   console.log(`[Omnivaleur] Auto-detected listing after publish: ${listingId} (${meta.platform})`);
 
   // Clear stored job
+  clearJobWatchdog(tabId);
   chrome.storage.local.remove([key, `job_${meta.platform}`]);
 
   const listingUrl = meta.platform === "marktplaats"
