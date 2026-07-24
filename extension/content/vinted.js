@@ -1293,18 +1293,30 @@
 
     // Up to 2 attempts at the full open+pick cycle, verifying a checkbox sticks.
     for (let attempt = 0; attempt < 2; attempt++) {
-      // Open the panel if it isn't already showing option rows.
-      if (!document.querySelector('[class*="web_ui__Cell__title"]')) {
+      let root = colourPanelRoot(trigger);
+      if (!root) {
+        // The size/brand/condition panel that ran just before us may still be
+        // open; dismiss it first so its rows can't be mistaken for ours.
+        document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+        await sleep(200);
+        trigger.scrollIntoView({ block: "center" });
         realClickEl(trigger);
         await sleep(700);
+        root = colourPanelRoot(trigger);
+      }
+      if (!root) {
+        console.warn("[Omnivaleur] Vinted colour panel didn't open (attempt " + (attempt + 1) + ")");
+        await sleep(400);
+        continue;
       }
       let picked = 0;
       for (const colour of colours) {
-        if (await pickColourInOpenPanel(colour)) picked++;
+        if (await pickColourInOpenPanel(colour, root)) picked++;
         await sleep(200);
       }
-      if (picked > 0 || checkedColourCount() > 0) {
-        console.log("[Omnivaleur] Vinted colour set:", colours.join(", "), `(${Math.max(picked, checkedColourCount())} ticked)`);
+      const ticked = checkedColourCount(root);
+      if (picked > 0 || ticked > 0) {
+        console.log("[Omnivaleur] Vinted colour set:", colours.join(", "), `(${Math.max(picked, ticked)} ticked)`);
         return true;
       }
       // Nothing stuck — close and retry once.
