@@ -128,7 +128,8 @@ async def localize_item_for_platform(item: dict, platform: str) -> dict:
             _translate_to_dutch(item.get("description", ""), brand),
         )
     elif platform in _ENGLISH_PLATFORMS:
-        manual_title = (item.get("shopify_title") or "").strip()
+        # Shopify-only override — Vinted/eBay keep the item's own translated title.
+        manual_title = (item.get("shopify_title") or "").strip() if platform == "shopify" else ""
         if manual_title:
             title = manual_title
             desc = await _translate_to_english(item.get("description", ""), brand)
