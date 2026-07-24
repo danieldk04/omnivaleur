@@ -78,6 +78,15 @@ async def get_product(product_id: str) -> dict:
     return _convert(resp.json()["product"])
 
 
+def _public_photo_urls(item: dict) -> list[str]:
+    """Only http(s) URLs are usable — Shopify fetches every image server-side, so a
+    blob:/data:/local path (e.g. a photo the frontend hasn't finished uploading yet)
+    would silently fail to attach. Shopify's own product image limit is 250, far
+    above what any listing here has, so nothing is truncated below that."""
+    urls = item.get("photo_urls") or []
+    return [u for u in urls if isinstance(u, str) and u.startswith(("http://", "https://"))][:250]
+
+
 async def create_product(item: dict) -> dict:
     """Create a product on Shopify from a Omnivaleur item dict."""
     token = await _get_token()
