@@ -4969,6 +4969,33 @@ function publishedAt(itemId){
   return listing?fmtDate(listing.listed_at):null;
 }
 
+// "Last handled" = the most recent moment we touched this item: its own edit/create
+// time, or the latest time any of its listings went live (a just-published/relisted
+// item counts as freshly handled). Returns an epoch (ms) for sorting.
+function lastHandledAt(item){
+  let ms = 0;
+  for (const t of [item.updated_at, item.created_at]) {
+    if (t) { const v = new Date(t).getTime(); if (v > ms) ms = v; }
+  }
+  for (const l of state.listings) {
+    if (l.item_id === item.id && l.listed_at) {
+      const v = new Date(l.listed_at).getTime(); if (v > ms) ms = v;
+    }
+  }
+  return ms;
+}
+
+// Time-bucket label for the grouped section headers in the Items list.
+function handledBucket(ms){
+  if (!ms) return 'Earlier';
+  const now = Date.now();
+  if (now - ms < 3600e3) return 'Just handled';
+  const startOfToday = new Date(); startOfToday.setHours(0, 0, 0, 0);
+  if (ms >= startOfToday.getTime()) return 'Today';
+  if (now - ms < 7 * 86400e3) return 'This week';
+  return 'Earlier';
+}
+
 // ── Mobile sidebar ───────────────────────────────────────────────
 function toggleSidebar() {
   const open = document.getElementById('sidebar').classList.toggle('open');
