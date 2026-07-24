@@ -298,12 +298,19 @@ async def create_product(item: dict) -> dict:
     product_id = str(product["id"])
     handle = product.get("handle", product_id)
 
-    await assign_best_collection(
-        f"https://{settings.shopify_store}/admin/api/2024-10",
-        {"X-Shopify-Access-Token": token, "Content-Type": "application/json"},
-        item,
-        product_id,
+    _returned = len(product.get("images") or [])
+    logger.info(
+        "Shopify create_product: product %s created with %d/%d image(s) attached via src",
+        product_id, _returned, len(photo_urls),
     )
+
+    base_url = f"https://{settings.shopify_store}/admin/api/2024-10"
+    headers = {"X-Shopify-Access-Token": token, "Content-Type": "application/json"}
+
+    # If Shopify couldn't fetch some/all of our src URLs, attach the bytes directly.
+    await _attach_missing_images(base_url, headers, product_id, photo_urls, product)
+
+    await assign_best_collection(base_url, headers, item, product_id)
 
     return {
         "platform_listing_id": product_id,
