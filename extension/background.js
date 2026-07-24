@@ -1974,6 +1974,20 @@ async function _mwFillDescription(selector, descText) {
   // Normalise newlines so line-splitting is consistent across platforms/sources.
   const _lines = descText.replace(/\r\n?/g, "\n").split("\n");
 
+  // Verifying only that SOME text landed is not enough: Marktplaats's editor
+  // silently ignores execCommand("insertParagraph"), so every line got
+  // concatenated into one glued paragraph ("…kopen!Dit item…") while lexHasText()
+  // still reported success — which is exactly how descriptions shipped as one
+  // solid block. Require the line structure to survive too, otherwise fall
+  // through to the strategies/approaches below that build real paragraphs.
+  const _wantLines = _lines.filter((l) => l.trim().length > 0).length;
+  function structureOk() {
+    if (!lexHasText()) return false;
+    if (_wantLines <= 1) return true;
+    const got = (el.innerText || "").split("\n").filter((l) => l.trim().length > 0).length;
+    return got >= _wantLines;
+  }
+
   // ── Approach 1: execCommand (most reliable) ───────────────────────────────
   // execCommand fires a REAL native beforeinput event that Chrome and Lexical
   // both handle natively. InputEvent.dataTransfer is always null for synthetic
@@ -1981,18 +1995,28 @@ async function _mwFillDescription(selector, descText) {
   //
   // CRITICAL: insert LINE BY LINE. Passing the whole multi-line string to a
   // single insertText makes Lexical collapse every "\n", gluing all sentences
-  // together. We insert each line and fire a real insertParagraph between them
-  // so paragraph/line breaks survive exactly as written.
+  // together. We insert each line and separate them with a real line break so
+  // paragraph breaks survive exactly as written. Editors disagree on which
+  // break command they honour, so try each and keep the one that actually works.
   try {
-    el.focus();
-    document.execCommand("selectAll", false, null);
-    document.execCommand("delete", false, null);
-    for (let i = 0; i < _lines.length; i++) {
-      if (i > 0) document.execCommand("insertParagraph", false, null);
-      if (_lines[i].length > 0) document.execCommand("insertText", false, _lines[i]);
+    const breakStrategies = [
+      () => document.execCommand("insertParagraph", false, null),
+      () => document.execCommand("insertText", false, "\n"),
+      () => document.execCommand("insertLineBreak", false, null),
+      () => document.execCommand("insertHTML", false, "<br>"),
+    ];
+    for (const insertBreak of breakStrategies) {
+      el.focus();
+      document.execCommand("selectAll", false, null);
+      document.execCommand("delete", false, null);
+      for (let i = 0; i < _lines.length; i++) {
+        if (i > 0) { try { insertBreak(); } catch (_) {} }
+        if (_lines[i].length > 0) document.execCommand("insertText", false, _lines[i]);
+      }
+      await sleep(300);
+      if (structureOk()) return true;
+      if (_wantLines <= 1) break; // single-line text — nothing structural to recover
     }
-    await sleep(300);
-    if (lexHasText()) return true;
   } catch (_) {}
 
   // ── Approach 2: Lexical internal update API ───────────────────────────────
