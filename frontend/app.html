@@ -2728,6 +2728,9 @@ function applyFilters(resetPage) {
     return true;
   });
 
+  // Most-recently-handled items first, so the newest work is always on top.
+  filtered.sort((a, b) => lastHandledAt(b) - lastHandledAt(a));
+
   const totalPages = Math.max(1, Math.ceil(filtered.length / ITEMS_PAGE_SIZE));
   if (itemsCurrentPage > totalPages) itemsCurrentPage = totalPages;
   const start = (itemsCurrentPage - 1) * ITEMS_PAGE_SIZE;
