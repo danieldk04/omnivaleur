@@ -33,6 +33,17 @@ async def _translate_with_claude(text: str, target_lang: str, brand: str | None 
         # is much more reliable than instructing about whitespace, since the model
         # can't quietly normalize a token it's told to reproduce verbatim.
         has_breaks = "\n" in text
+        # Diagnostic (ISSUE 2): the MP/2dehands description was rendering as one
+        # glued block ("Wol" + "Pasvorm" → "WolPasvorm"), which only happens when
+        # the text reaching translation has NO "\n" — so has_breaks is False and
+        # the §BR§ preservation path never runs. Log the repr of the incoming text
+        # so the next real publish shows in the server logs whether newlines are
+        # actually present at this point (and are therefore lost upstream, at
+        # storage/generation, rather than in translation).
+        logger.info(
+            "translate→%s in: has_breaks=%s repr=%r",
+            target_lang, has_breaks, text[:200],
+        )
         marked_text = text.replace("\n", " §BR§ ") if has_breaks else text
         break_note = (
             " The text contains literal §BR§ tokens marking line/paragraph breaks in the"
