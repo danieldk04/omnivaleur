@@ -466,6 +466,17 @@ window.CL = (() => {
   // Truncate to maxLen chars without cutting mid-word. Trims at last space before limit.
   function smartTrunc(str, maxLen) {
     if (str.length <= maxLen) return str;
+    // Titles are " - "-separated segments ("(1333) Grijze New Balance Schoenen -
+    // Heren 42 - Nieuw Met Kaartjes"). A plain word-boundary cut leaves a dangling
+    // half-segment ("… - Nieuw Met"), so drop whole trailing segments first and
+    // only fall back to a word cut when even the first segment doesn't fit.
+    const SEP = " - ";
+    if (str.includes(SEP)) {
+      const parts = str.split(SEP);
+      while (parts.length > 1 && parts.join(SEP).length > maxLen) parts.pop();
+      const kept = parts.join(SEP);
+      if (kept.length <= maxLen) return kept;
+    }
     const cut = str.lastIndexOf(" ", maxLen);
     return cut > 0 ? str.slice(0, cut) : str.slice(0, maxLen);
   }
