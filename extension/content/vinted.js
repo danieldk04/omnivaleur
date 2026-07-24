@@ -867,10 +867,38 @@
     if (!el) return false;
     const num = _num(price);
     if (!isFinite(num) || num < 1) return false;
-    // Fixed-2 if there are decimals, else integer — never a trailing comma.
-    const out = Number.isInteger(num) ? String(num) : num.toFixed(2);
-    const setter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, "value").set;
+    // Integers need no separator; only the fractional variants differ by locale.
+    if (Number.isInteger(num)) return await _typePriceVariant(el, String(num), num);
 
+    // Locale-aware separator: Vinted's NL mask wants a COMMA ("34,99"); a DOT
+    // makes the mask drop the fraction → the field reads as invalid ("≥ 1.0").
+    // Prefer the variant matching the detected locale, then try the other. We
+    // VERIFY each attempt sticks (value + no validation error) before accepting.
+    const fixed = num.toFixed(2);
+    const comma = fixed.replace(".", ",");
+    const nlFirst = _vintedLocaleIsComma(el);
+    const variants = nlFirst ? [comma, fixed] : [fixed, comma];
+    for (const out of variants) {
+      if (await _typePriceVariant(el, out, num)) return true;
+    }
+    return false;
+  }
+
+  // True if the page/input locale uses a comma decimal separator (NL etc.).
+  function _vintedLocaleIsComma(el) {
+    const lang = (document.documentElement.getAttribute("lang") || navigator.language || "").toLowerCase();
+    if (/^(nl|de|fr|es|it|pt|pl)/.test(lang)) return true;
+    const hint = (el.getAttribute("placeholder") || el.value || "").trim();
+    if (hint.includes(",")) return true;
+    if (hint.includes(".")) return false;
+    return false; // default: try dot first
+  }
+
+  // Type one formatted value into the masked price input and verify it holds the
+  // intended number with no visible "must be ≥" / invalid error. Returns true only
+  // then — leaving whichever separator worked in the field.
+  async function _typePriceVariant(el, out, num) {
+    const setter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, "value").set;
     el.focus();
     el.dispatchEvent(new Event("focus", { bubbles: true }));
     try { el.select(); } catch (e) {}
@@ -893,9 +921,16 @@
       await sleep(120);
     }
     el.dispatchEvent(new Event("blur", { bubbles: true }));
-    await sleep(120);
+    await sleep(150);
+
+    // Verify: field parses to the intended number AND isn't flagged invalid.
     const got = _num(el.value);
-    return isFinite(got) && got >= 1;
+    if (!isFinite(got) || Math.abs(got - num) >= 0.01) return false;
+    if (el.getAttribute("aria-invalid") === "true") return false;
+    // Mirror the refresh-path error detection for a visible "≥ 1.0" message.
+    const errText = [...document.querySelectorAll('[class*="validation"], [class*="Validation"], [role="alert"], [class*="error" i]')]
+      .find((e) => e.offsetParent !== null && /price must|greater than|at least|minimaal|moet (groter|ten minste)|ongeldig|invalid/i.test(e.textContent || ""));
+    return !errText;
   }
 
   // ---- CATEGORY: prefer Vinted's own "Suggested" options, then verify the match. ----
