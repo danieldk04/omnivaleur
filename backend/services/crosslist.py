@@ -256,15 +256,13 @@ async def publish_to_platforms(item_id: str, platforms: list[str], user_id: str)
     brand = item.get("brand") or None
 
     async def _build_english():
-        manual_title = (item.get("shopify_title") or "").strip()
-        if manual_title:
-            title_en = manual_title
-            desc_en = await _translate_to_english(item.get("description", ""), brand)
-        else:
-            title_en, desc_en = await asyncio.gather(
-                _translate_to_english(item.get("title", ""), brand),
-                _translate_to_english(item.get("description", ""), brand),
-            )
+        # Always the item's OWN translated title. `shopify_title` is a Shopify-only
+        # override and is applied per-platform in _pick() — baking it in here gave
+        # Vinted and eBay the Shopify title too.
+        title_en, desc_en = await asyncio.gather(
+            _translate_to_english(item.get("title", ""), brand),
+            _translate_to_english(item.get("description", ""), brand),
+        )
         return {**item, "title": title_en, "description": desc_en}
 
     async def _build_dutch():
