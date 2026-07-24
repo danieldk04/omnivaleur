@@ -1231,13 +1231,14 @@
 
   // Tick a single colour in the currently-open colour panel. Returns true only if
   // its checkbox ends up checked.
-  async function pickColourInOpenPanel(colour) {
+  async function pickColourInOpenPanel(colour, root) {
     const w = colour.toLowerCase().trim();
+    const scope = root || document;
     let titleEls = [];
     for (let i = 0; i < 20 && !titleEls.length; i++) {
       // No offsetParent filter — long colour lists scroll, so options can be
       // rendered but outside the viewport (this was a key cause of misses).
-      titleEls = [...document.querySelectorAll('[class*="web_ui__Cell__title"]')];
+      titleEls = [...scope.querySelectorAll('[class*="web_ui__Cell__title"]')];
       if (!titleEls.length) await sleep(100);
     }
     if (!titleEls.length) return false;
