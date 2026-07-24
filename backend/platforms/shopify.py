@@ -115,6 +115,9 @@ class ShopifyClient:
             "product": {
                 "title": item.get("shopify_title") or item["title"],
                 "body_html": body_html,
+                # Without this Shopify silently falls back to the SHOP NAME, which is
+                # why every product showed the store as its vendor instead of the brand.
+                "vendor": (item.get("brand") or "").strip(),
                 "product_type": _product_type_from_item(item),
                 "variants": [{
                     "price": str(item["price"]),
