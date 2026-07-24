@@ -200,6 +200,7 @@ async def create_product(item: dict) -> dict:
             "title": item.get("shopify_title") or item["title"],
             "body_html": body_html,
             "vendor": item.get("brand", ""),
+            "product_type": _product_type_from_item(item),
             "tags": ", ".join(tags),
             "status": "active",
             "variants": [{
