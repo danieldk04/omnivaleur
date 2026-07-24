@@ -228,6 +228,14 @@ async def create_product(item: dict) -> dict:
 
     product_id = str(product["id"])
     handle = product.get("handle", product_id)
+
+    await assign_best_collection(
+        f"https://{settings.shopify_store}/admin/api/2024-10",
+        {"X-Shopify-Access-Token": token, "Content-Type": "application/json"},
+        item,
+        product_id,
+    )
+
     return {
         "platform_listing_id": product_id,
         "platform_listing_url": f"https://{settings.shopify_store}/products/{handle}",
