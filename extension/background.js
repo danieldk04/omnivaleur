@@ -625,26 +625,48 @@ async function processJob(job, serverUrl) {
 // stale-claim sweep finally reset it — with no visible error in the meantime.
 // This watchdog force-fails the job itself after a shorter timeout so the
 // queue keeps moving and the user gets an actionable error immediately.
-const JOB_TAB_TIMEOUT_MS = 3 * 60 * 1000; // 3 minutes — generous for slow forms, short vs. the 5-min server sweep
+const JOB_TAB_TIMEOUT_MIN = 3; // minutes — generous for slow forms, short vs. the 5-min server sweep
+const JOB_WATCHDOG_PREFIX = "jobwd_";
 
+// Backed by chrome.alarms, NOT setTimeout: an MV3 service worker is evicted when
+// idle, which silently cancelled the old timer — precisely in the situations that
+// strand a job (content script hung, Chrome idle, worker killed). An alarm wakes
+// the worker back up, so the timeout actually fires.
 function armJobWatchdog(tabId, jobId, platform, serverUrl) {
-  setTimeout(async () => {
-    const key = `jobtab_${tabId}`;
-    const stored = await new Promise((res) => chrome.storage.local.get(key, res));
-    if (!stored[key]) return; // already resolved (JOB_DONE/JOB_ERROR cleared it)
-    console.warn(`[Omnivaleur] Watchdog: job ${jobId} (${platform}) on tab ${tabId} did not finish in time — force-failing.`);
-    try {
-      await reportError(jobId, serverUrl,
-        `Extension timed out waiting for this ${platform} job to finish (no response after 3 minutes). ` +
-        `The page may have changed, needs a manual step, or the extension lost track of the tab. ` +
-        `Check the tab if it's still open, then publish again.`);
-    } catch (e) {
-      console.error("[Omnivaleur] Watchdog: failed to report timeout error:", e);
-    }
-    chrome.storage.local.remove(key);
-    chrome.tabs.remove(tabId).catch(() => {});
-  }, JOB_TAB_TIMEOUT_MS);
+  chrome.alarms.create(`${JOB_WATCHDOG_PREFIX}${tabId}`, { delayInMinutes: JOB_TAB_TIMEOUT_MIN });
 }
+
+function clearJobWatchdog(tabId) {
+  if (tabId == null) return;
+  chrome.alarms.clear(`${JOB_WATCHDOG_PREFIX}${tabId}`);
+}
+
+async function fireJobWatchdog(tabId) {
+  const key = `jobtab_${tabId}`;
+  const stored = await chrome.storage.local.get(key);
+  const meta = stored[key];
+  if (!meta) return; // already resolved (JOB_DONE/JOB_ERROR cleared it)
+  // A job deliberately handed back to the user to finish by hand is already
+  // reported as an error and its tab is kept open on purpose — force-failing it
+  // again would close the very tab they're still typing in.
+  if (meta.awaitingManualFinish) return;
+  console.warn(`[Omnivaleur] Watchdog: job ${meta.jobId} (${meta.platform}) on tab ${tabId} did not finish in time — force-failing.`);
+  try {
+    await reportError(meta.jobId, meta.serverUrl,
+      `Extension timed out waiting for this ${meta.platform} job to finish (no response after ${JOB_TAB_TIMEOUT_MIN} minutes). ` +
+      `The page may have changed, needs a manual step, or the extension lost track of the tab. ` +
+      `Check the tab if it's still open, then publish again.`);
+  } catch (e) {
+    console.error("[Omnivaleur] Watchdog: failed to report timeout error:", e);
+  }
+  chrome.storage.local.remove(key);
+  chrome.tabs.remove(tabId).catch(() => {});
+}
+
+chrome.alarms.onAlarm.addListener((alarm) => {
+  if (!alarm.name.startsWith(JOB_WATCHDOG_PREFIX)) return;
+  fireJobWatchdog(Number(alarm.name.slice(JOB_WATCHDOG_PREFIX.length)));
+});
 
 // ── Background-driven delete for Marktplaats / 2dehands ───────────────────
 // Navigates: homepage → clicks "Mijn [platform]" nav link → finds listing by
