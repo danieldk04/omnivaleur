@@ -629,6 +629,17 @@ def _fill_required_aspects(aspects: dict, item: dict, required: list[dict]) -> N
             aspects[name] = [_best_allowed_match(val, allowed, concept=concept)]
             continue
 
+        if concept == "type" and allowed:
+            # No structured type/style data exists on the item (see
+            # _concept_value) — fall back to scanning the title for one of the
+            # aspect's own allowed values (titles typically contain the actual
+            # garment word, e.g. "... Cardigan ...").
+            title_low = (item.get("title") or "").lower()
+            title_match = next((a for a in allowed if a.lower() in title_low), None)
+            if title_match:
+                aspects[name] = [title_match]
+                continue
+
         if low in existing:
             continue
 
