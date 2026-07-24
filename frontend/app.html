@@ -4883,8 +4883,8 @@ function updateCategoryOptions(selectedCategory) {
 }
 
 // ── Photo upload ──────────────────────────────────────────────────
-let _photoUrls = [], _dragSrcIdx = null;
-function getPhotoUrls() { return [..._photoUrls]; }
+let _photoUrls = [], _dragSrcIdx = null, _uploadsInFlight = 0;
+function getPhotoUrls() { return _photoUrls.filter(u => !u.startsWith('blob:')); }
 function resetPhotoUpload(existing = []) { _photoUrls = [...existing]; renderPhotoGrid(); }
 function renderPhotoGrid() {
   const grid = document.getElementById('photo-preview-grid');
