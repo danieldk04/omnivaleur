@@ -559,12 +559,24 @@ def _concept_value(concept: str, item: dict) -> str | None:
     return None
 
 
-def _best_allowed_match(value: str, allowed: list[str]) -> str:
+# Department/gender allowed-value keywords per canonical side. eBay's closed
+# list for this aspect is itself locale-specific ("Heren"/"Dames" on ebay.nl,
+# "Men's"/"Women's" on ebay.com), so a plain substring match against "Men"/
+# "Women" (see _concept_value) would miss "Heren"/"Dames" entirely.
+_DEPARTMENT_KEYWORDS = {
+    "men": {"men", "man", "mens", "heren", "herren", "homme", "uomo", "hombre"},
+    "women": {"women", "woman", "womens", "dames", "damen", "femme", "donna", "mujer"},
+}
+
+
+def _best_allowed_match(value: str, allowed: list[str], *, concept: str | None = None) -> str:
     """Match a real item value against eBay's closed allowed-values list for an
-    aspect (case-insensitive exact, then substring), so e.g. item color "Grey"
-    lines up with an allowed "Grijs"/"Grey" entry with correct casing. Falls
-    back to the raw value (still real data, just unnormalized) rather than an
-    arbitrary default when nothing matches."""
+    aspect (case-insensitive exact, then substring, then locale-keyword for
+    department), so e.g. item color "Grey" lines up with an allowed "Grijs"/
+    "Grey" entry with correct casing, and canonical "Men"/"Women" lines up with
+    a localized "Heren"/"Dames" entry. Falls back to the raw value (still real
+    data, just unnormalized) rather than an arbitrary default when nothing
+    matches."""
     if not allowed:
         return value
     low = value.strip().lower()
@@ -574,6 +586,16 @@ def _best_allowed_match(value: str, allowed: list[str]) -> str:
     for a in allowed:
         if low in a.lower() or a.lower() in low:
             return a
+    if concept == "department":
+        side = "men" if low in _DEPARTMENT_KEYWORDS["men"] else (
+            "women" if low in _DEPARTMENT_KEYWORDS["women"] else None
+        )
+        if side:
+            keywords = _DEPARTMENT_KEYWORDS[side]
+            for a in allowed:
+                a_low = a.lower()
+                if any(kw in a_low for kw in keywords):
+                    return a
     return value
 
 
