@@ -460,7 +460,9 @@ async def create_product(item: dict) -> dict:
         "product": {
             "title": item.get("shopify_title") or item["title"],
             "body_html": body_html,
-            "vendor": item.get("brand", ""),
+            # `.get("brand", "")` still yields None when the column exists but is
+            # empty, and a null vendor makes Shopify substitute the shop name.
+            "vendor": (item.get("brand") or "").strip(),
             "product_type": _product_type_from_item(item),
             "tags": ", ".join(tags),
             "status": "active",
