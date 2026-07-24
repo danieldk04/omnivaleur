@@ -2772,12 +2772,21 @@ function renderItemsPagination(totalPages, totalFiltered) {
 }
 
 function renderItemsTable(items) {
+  let lastBucket = null;
   const rows = items.map(item => {
     const checked = selectedIds.has(item.id) ? 'checked' : '';
     const rowClass = selectedIds.has(item.id) ? 'selected' : '';
     const pubDate = publishedAt(item.id);
     const missingBadge = smartMissingBadge(item);
-    return `<tr class="${rowClass}" id="row-${item.id}">
+    // Subtle time-section subheader between contiguous groups (list is sorted
+    // most-recently-handled first, so buckets stay contiguous).
+    const bucket = handledBucket(lastHandledAt(item));
+    let header = '';
+    if (bucket !== lastBucket) {
+      lastBucket = bucket;
+      header = `<tr class="items-section-row"><td colspan="8" class="items-section-label">${bucket}</td></tr>`;
+    }
+    return header + `<tr class="${rowClass}" id="row-${item.id}">
       <td class="col-check"><input type="checkbox" class="row-check" ${checked} onchange="toggleRowSelect('${item.id}',this.checked)"></td>
       <td><div class="item-info">
         <div class="item-photo">${itemPhotoThumb(item)}</div>
