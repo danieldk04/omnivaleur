@@ -340,6 +340,17 @@ def _item_data_from_candidate(cand: dict, body: dict | None = None,
         "gender": pick("gender") or inferred.get("gender"),
         "color": pick("color") or inferred.get("color"),
         "material": pick("material"),
+        # Fields the user types in the same form but that used to be dropped here,
+        # so an imported item silently lost its SKU, its Shopify "was" price and
+        # any per-platform price overrides.
+        "sku": body.get("sku"),
+        "shopify_title": body.get("shopify_title"),
+        "compare_at_price": body.get("compare_at_price"),
+        "price_marktplaats": body.get("price_marktplaats"),
+        "price_2dehands": body.get("price_2dehands"),
+        "price_vinted": body.get("price_vinted"),
+        "price_ebay": body.get("price_ebay"),
+        "price_shopify": body.get("price_shopify"),
     }
 
 
