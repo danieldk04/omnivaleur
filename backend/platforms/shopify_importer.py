@@ -426,6 +426,163 @@ async def _attach_missing_images(base_url: str, headers: dict, product_id: str, 
             logger.warning(f"Shopify: base64 image fallback errored for {url}: {e}")
 
 
+# The two features below (Standard Product Taxonomy category + publishing to
+# every sales channel) can only be done through the GraphQL Admin API — REST
+# 2024-10 can't set the taxonomy `category` field, and REST product-create only
+# publishes to a default subset of channels. Both are best-effort, post-create,
+# and can never abort or fail a publish.
+
+# GraphQL requires a modern API version; the per-user ShopifyClient still targets
+# REST 2024-01, so force 2024-10 for the GraphQL endpoint regardless of the REST
+# version baked into base_url.
+def _graphql_url(base_url: str) -> str:
+    return re.sub(r"/api/[\d-]+", "/api/2024-10", base_url) + "/graphql.json"
+
+
+def _shop_key(base_url: str) -> str:
+    m = re.search(r"https?://([^/]+)", base_url or "")
+    return m.group(1) if m else base_url
+
+
+async def _graphql(base_url: str, headers: dict, query: str, variables: dict | None = None) -> dict | None:
+    """POST a GraphQL query. Returns the parsed `data` dict, or None on any
+    transport/HTTP error. Never raises."""
+    try:
+        async with httpx.AsyncClient(timeout=20.0) as client:
+            resp = await client.post(
+                _graphql_url(base_url),
+                json={"query": query, "variables": variables or {}},
+                headers={**headers, "Content-Type": "application/json"},
+            )
+            if resp.status_code >= 400:
+                logger.warning("Shopify GraphQL HTTP %s: %s", resp.status_code, resp.text[:300])
+                return None
+            body = resp.json()
+            if body.get("errors"):
+                logger.warning("Shopify GraphQL errors: %s", str(body["errors"])[:300])
+            return body.get("data")
+    except Exception as e:
+        logger.warning(f"Shopify GraphQL request failed: {e}")
+        return None
+
+
+# Resolved taxonomy nodes keyed by the search term (English product type), mirroring
+# ebay._required_aspects_cache. Value is a taxonomy category gid or None (a cached
+# "no confident match" so we don't re-query for every publish of the same type).
+_taxonomy_cache: dict = {}
+
+_TAXONOMY_SEARCH_QUERY = (
+    "query($q: String!) { taxonomy { categories(first: 5, search: $q) { "
+    "nodes { id name fullName isLeaf } } } }"
+)
+
+_PRODUCT_SET_CATEGORY_MUTATION = (
+    "mutation($id: ID!, $category: ID!) { productUpdate(input: { id: $id, category: $category }) "
+    "{ product { id category { id fullName } } userErrors { field message } } }"
+)
+
+
+async def _resolve_taxonomy_category(base_url: str, headers: dict, search: str) -> str | None:
+    """Find the best Standard Product Taxonomy leaf node id for a product-type
+    search term (e.g. "Sweater"). Prefers a leaf whose name matches the term;
+    else the first leaf; only returns a node on a confident match. Cached per
+    term. Never raises."""
+    key = search.strip().lower()
+    if not key:
+        return None
+    if key in _taxonomy_cache:
+        return _taxonomy_cache[key]
+    data = await _graphql(base_url, headers, _TAXONOMY_SEARCH_QUERY, {"q": search})
+    node_id = None
+    if data:
+        nodes = (((data.get("taxonomy") or {}).get("categories") or {}).get("nodes")) or []
+        leaves = [n for n in nodes if n.get("isLeaf")]
+        # Prefer a leaf whose own name equals the search term, then any leaf whose
+        # name contains it, then the first leaf returned by Shopify's own ranking.
+        exact = next((n for n in leaves if (n.get("name") or "").strip().lower() == key), None)
+        contains = next((n for n in leaves if key in (n.get("name") or "").strip().lower()), None)
+        chosen = exact or contains or (leaves[0] if leaves else None)
+        if chosen:
+            node_id = chosen.get("id")
+            logger.info(
+                "Shopify: taxonomy match for %r → %s (%s)",
+                search, chosen.get("fullName"), node_id,
+            )
+        else:
+            logger.info("Shopify: no taxonomy leaf matched %r among %d node(s)", search, len(nodes))
+    _taxonomy_cache[key] = node_id
+    return node_id
+
+
+async def _set_taxonomy_category(base_url: str, headers: dict, product_id: str, item: dict) -> None:
+    """Set the product's Standard Product Taxonomy category (the admin "Category"
+    column). REST can't set this field, so it goes through GraphQL productUpdate.
+    Best-effort — never raises, never aborts a publish."""
+    search = _product_type_from_item(item)
+    if not search:
+        logger.info("Shopify: no product type to resolve a taxonomy category for product %s", product_id)
+        return
+    category_gid = await _resolve_taxonomy_category(base_url, headers, search)
+    if not category_gid:
+        logger.info("Shopify: no confident taxonomy category for product %s (%r) — leaving empty", product_id, search)
+        return
+    data = await _graphql(
+        base_url, headers, _PRODUCT_SET_CATEGORY_MUTATION,
+        {"id": f"gid://shopify/Product/{product_id}", "category": category_gid},
+    )
+    errors = (((data or {}).get("productUpdate") or {}).get("userErrors")) or []
+    if errors:
+        logger.warning("Shopify: set taxonomy category failed for product %s: %s", product_id, errors)
+    else:
+        cat = (((data or {}).get("productUpdate") or {}).get("product") or {}).get("category") or {}
+        logger.info("Shopify: taxonomy category set for product %s → %s", product_id, cat.get("fullName") or category_gid)
+
+
+# Publication (sales channel) ids keyed by shop domain — they rarely change, so
+# cache per shop to avoid a query on every publish.
+_publications_cache: dict = {}
+
+_PUBLICATIONS_QUERY = "query { publications(first: 50) { nodes { id name } } }"
+
+_PUBLISH_MUTATION = (
+    "mutation($id: ID!, $input: [PublicationInput!]!) { publishablePublish(id: $id, input: $input) "
+    "{ userErrors { field message } } }"
+)
+
+
+async def _get_publication_ids(base_url: str, headers: dict) -> list[str]:
+    key = _shop_key(base_url)
+    if key in _publications_cache:
+        return _publications_cache[key]
+    data = await _graphql(base_url, headers, _PUBLICATIONS_QUERY)
+    ids: list[str] = []
+    if data:
+        nodes = ((data.get("publications") or {}).get("nodes")) or []
+        ids = [n["id"] for n in nodes if n.get("id")]
+        logger.info("Shopify: found %d sales channel(s)/publication(s): %s", len(ids), [n.get("name") for n in nodes])
+        _publications_cache[key] = ids  # only cache a successful fetch
+    return ids
+
+
+async def _publish_to_all_channels(base_url: str, headers: dict, product_id: str) -> None:
+    """Publish the product to every one of the store's sales channels. REST create
+    only lands on a default subset. Best-effort — never raises, never aborts a
+    publish."""
+    ids = await _get_publication_ids(base_url, headers)
+    if not ids:
+        logger.info("Shopify: no publications resolved — skipping all-channel publish for product %s", product_id)
+        return
+    data = await _graphql(
+        base_url, headers, _PUBLISH_MUTATION,
+        {"id": f"gid://shopify/Product/{product_id}", "input": [{"publicationId": pid} for pid in ids]},
+    )
+    errors = (((data or {}).get("publishablePublish") or {}).get("userErrors")) or []
+    if errors:
+        logger.warning("Shopify: publish to channels for product %s had userErrors: %s", product_id, errors)
+    else:
+        logger.info("Shopify: published product %s to %d sales channel(s)", product_id, len(ids))
+
+
 async def create_product(item: dict) -> dict:
     """Create a product on Shopify from a Omnivaleur item dict."""
     token = await _get_token()
