@@ -3368,6 +3368,7 @@ function editItem(id) {
 }
 
 async function saveItem() {
+  if (_uploadsInFlight > 0) return alert('Photos are still uploading — please wait for them to finish before saving.');
   const id = document.getElementById('edit-id').value;
   const data = {
     title: document.getElementById('f-title').value.trim(),
