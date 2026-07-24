@@ -162,7 +162,7 @@
       "region": "nl",
       "pillar": "C",
       "slug": "omnivaleur-vs-zenlister",
-      "status": "pending",
+      "status": "published",
       "priority": 20
     },
     {
@@ -354,6 +354,15 @@
       "action": "created",
       "url_path": "/reseller-tools/collectibles-reselling-automation",
       "published_at": "2026-07-23T10:14:37.830933+00:00"
+    },
+    {
+      "keyword": "Omnivaleur vs Zenlister",
+      "slug": "omnivaleur-vs-zenlister",
+      "region": "nl",
+      "pillar": "C",
+      "action": "updated",
+      "url_path": "/vs/omnivaleur-vs-zenlister",
+      "published_at": "2026-07-24T10:11:05.759469+00:00"
     }
   ]
 }
