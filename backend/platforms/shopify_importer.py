@@ -87,34 +87,88 @@ _STOPWORDS = {
 }
 
 
+# Our category slugs are internal, Dutch and audience-prefixed ("heren truien").
+# A Shopify storefront is a customer-facing English shop, so publishing "Truien"
+# as the product_type leaks the internal taxonomy. Map the garment word of every
+# slug in the app's category list to a normal English product type.
+_NL_EN_TYPE = {
+    "jeans": "Jeans", "broeken": "Trousers", "chinos": "Chinos", "shorts": "Shorts",
+    "rokken": "Skirt", "jurken": "Dress", "blouses": "Blouse", "tops": "Top",
+    "t-shirts": "T-shirt", "polo's": "Polo Shirt", "overhemden": "Shirt",
+    "truien": "Sweater", "hoodies": "Hoodie", "jassen": "Jacket", "pakken": "Suit",
+    "sportbroeken": "Sports Shorts", "sportleggings": "Leggings",
+    "zwemkleding": "Swimwear", "ondergoed": "Underwear", "bh": "Sports Bra",
+    "sneakers": "Sneakers", "schoenen": "Shoes", "hakken": "Heels",
+    "laarzen": "Boots", "sandalen": "Sandals", "accessoires": "Accessories",
+    "sportkleding": "Sportswear", "babykleding": "Baby Clothing",
+    "peuterkleding": "Toddler Clothing", "kleding": "Clothing",
+}
+
+# Words that appear in our English titles but are never the garment itself —
+# every title ends in "- <size> - <condition>", and colours/conditions sit right
+# next to the noun, so without these the "last meaningful word" of
+# "Brown Profuomo Turtleneck - Men XL - Very Good" comes out as "Good".
+_TITLE_NOISE = {
+    "very", "good", "great", "excellent", "perfect", "fair", "poor", "new",
+    "used", "vintage", "condition", "size", "black", "white", "brown", "blue",
+    "green", "grey", "gray", "beige", "navy", "cream", "pink", "purple", "red",
+    "yellow", "orange", "wool", "cotton", "leather", "denim", "silk", "linen",
+}
+
+
+def _english_type_from_category(category: str) -> str:
+    """English product type for one of our internal category slugs, or ""."""
+    cat = (category or "").strip().lower()
+    if not cat:
+        return ""
+    if cat.startswith("games console"):
+        return "Console"
+    if cat.startswith("games "):
+        return "Video Game"
+    if "telefoon" in cat:
+        return "Phone"
+    for word in reversed(cat.split()):
+        if word in _NL_EN_TYPE:
+            return _NL_EN_TYPE[word]
+    return ""
+
+
+def _english_type_from_title(title: str) -> str:
+    """Garment noun out of an English listing title. Only the part BEFORE the
+    first " - " is considered — everything after it is the size/condition suffix
+    ("- Men XL - Very Good"), which is why a naive last-word scan returned
+    "Good"."""
+    head = (title or "").split(" - ")[0]
+    words = [
+        w for w in re.findall(r"[A-Za-z][A-Za-z'\-]*", head)
+        if w.lower() not in _STOPWORDS and w.lower() not in _TITLE_NOISE and len(w) > 2
+    ]
+    return words[-1].capitalize() if words else ""
+
+
 def _product_type_from_item(item: dict) -> str:
     """Best-effort Shopify `product_type` — the field Shopify's own smart
-    collections match on via a "product type is X" rule. Our category taxonomy
-    is Dutch and audience-prefixed (e.g. "heren jassen", "dames truien"); take
-    the last word, which is always the actual garment, so it reads as a normal
-    product type rather than exposing the internal Dutch taxonomy verbatim."""
-    category = (item.get("category") or "").strip()
-    if category:
-        return category.split()[-1].capitalize()
-    item_type = (item.get("item_type") or "").strip()
-    if item_type:
-        return item_type.capitalize()
-    # Neither field is filled in (common for manually created / imported items
-    # with no category picked) — Shopify's admin UI shows "None" for an empty
-    # product_type string, so fall back to the last meaningful word of the
-    # title rather than ever sending "".
-    title_words = [
-        w for w in re.findall(r"[a-zA-Z]+", (item.get("title") or ""))
-        if w.lower() not in _STOPWORDS and len(w) > 2
-    ]
-    return title_words[-1].capitalize() if title_words else ""
+    collections match on via a "product type is X" rule.
+
+    Order: known Dutch category slug → English type (deterministic, and the
+    single most reliable signal), else the item's title, which on the Shopify
+    path is always the English-translated title (crosslist puts shopify in
+    _ENGLISH_PLATFORMS). `item_type` is only "clothing"/"games"/"electronics" —
+    never a garment — so it's the very last resort rather than the first."""
+    mapped = _english_type_from_category(item.get("category") or "")
+    if mapped:
+        return mapped
+    from_title = _english_type_from_title(item.get("title") or "")
+    if from_title:
+        return from_title
+    return (item.get("item_type") or "").strip().capitalize()
 
 
-def _match_collection_id(item: dict, collections: list[dict]) -> int | None:
-    """Keyword-in-title heuristic: pick the custom collection whose title shares
-    the most meaningful words with the item's category/title/brand. No LLM call —
-    this only needs to be roughly right, and a wrong guess (skipping assignment)
-    is far safer than assigning to the wrong collection."""
+def _match_collection_ids_by_tokens(item: dict, collections: list[dict], limit: int) -> list[dict]:
+    """Cheap fallback: custom collections whose title shares meaningful words with
+    the item. Only works when item and store speak the same language, which is
+    exactly why the LLM matcher below exists — but it costs nothing and keeps
+    assignment working when the API key is missing or Anthropic is down."""
     tokens: set[str] = set()
     for field in (item.get("category"), item.get("title"), item.get("brand")):
         if field:
@@ -122,19 +176,84 @@ def _match_collection_id(item: dict, collections: list[dict]) -> int | None:
                 w for w in re.findall(r"[a-zA-Z]+", str(field).lower())
                 if w not in _STOPWORDS and len(w) > 2
             )
-    if not tokens or not collections:
-        return None
-
-    best_id, best_score = None, 0
+    if not tokens:
+        return []
+    scored = []
     for c in collections:
         title_tokens = {
             w for w in re.findall(r"[a-zA-Z]+", (c.get("title") or "").lower())
             if w not in _STOPWORDS
         }
         score = len(tokens & title_tokens)
-        if score > best_score:
-            best_score, best_id = score, c.get("id")
-    return best_id if best_score > 0 else None
+        if score:
+            scored.append((score, c))
+    scored.sort(key=lambda s: -s[0])
+    return [c for _, c in scored[:limit]]
+
+
+async def _match_collection_ids_with_claude(item: dict, collections: list[dict], limit: int) -> list[dict]:
+    """Semantic match: ask Haiku which of the store's own collection titles this
+    item belongs in. Token overlap structurally can't do this — our category is
+    Dutch ("heren truien") while a store's collections are in whatever language
+    and wording the merchant chose ("SWEATERS", "KNITWEAR", "MENSWEAR") — and it
+    can't map a synonym like "Turtleneck" onto "Sweaters" either.
+
+    Returns [] on any failure (including no API key) so the caller falls back.
+    Never invents a collection: only titles returned that EXACTLY match a fetched
+    collection title (case-insensitively) are used.
+    """
+    try:
+        import anthropic as _anthropic
+        from backend.config import settings as _settings
+        if not _settings.anthropic_api_key:
+            return []
+        titles = [str(c.get("title") or "").strip() for c in collections if c.get("title")]
+        if not titles:
+            return []
+
+        facts = {
+            "title": item.get("title"),
+            "brand": item.get("brand"),
+            "product_type": _product_type_from_item(item),
+            "category": item.get("category"),
+            "material": item.get("material"),
+        }
+        described = "\n".join(f"{k}: {v}" for k, v in facts.items() if v)
+        listed = "\n".join(titles)
+        prompt = (
+            "You assign a second-hand fashion product to the collections of a Shopify store.\n\n"
+            f"Product:\n{described}\n\n"
+            f"The store's collections (exact titles):\n{listed}\n\n"
+            "Return the collection titles this product genuinely belongs in, at most "
+            f"{limit}, one per line, copied EXACTLY as written above (same spelling and casing). "
+            "The product and the collections may be in different languages — match on meaning, "
+            "not on words. Only include a collection if the product really fits it; a generic "
+            "catch-all collection is not a fit. If none fit, return exactly NONE. "
+            "Return only the titles or NONE, no commentary."
+        )
+        import asyncio
+        client = _anthropic.Anthropic(api_key=_settings.anthropic_api_key)
+        response = await asyncio.to_thread(
+            lambda: client.messages.create(
+                model="claude-haiku-4-5-20251001",
+                max_tokens=200,
+                messages=[{"role": "user", "content": prompt}],
+            )
+        )
+        raw = response.content[0].text.strip()
+        logger.info("Shopify: collection matcher (Claude) returned: %r", raw[:300])
+        if not raw or raw.strip().upper().startswith("NONE"):
+            return []
+        by_title = {str(c.get("title") or "").strip().lower(): c for c in collections}
+        chosen: list[dict] = []
+        for line in raw.splitlines():
+            c = by_title.get(line.strip().strip("-•* ").lower())
+            if c is not None and c not in chosen:
+                chosen.append(c)
+        return chosen[:limit]
+    except Exception as e:
+        logger.warning(f"Shopify: Claude collection matching failed: {e}")
+        return []
 
 
 async def _get_custom_collections(base_url: str, headers: dict) -> list[dict]:
