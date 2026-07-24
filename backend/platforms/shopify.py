@@ -120,6 +120,11 @@ class ShopifyClient:
                     "price": str(item["price"]),
                     "compare_at_price": str(item["compare_at_price"]) if item.get("compare_at_price") else None,
                     "sku": item.get("sku", ""),
+                    # Single second-hand piece — track stock at 1 so Shopify sells
+                    # it out on its own rather than accepting a second order.
+                    "inventory_management": "shopify",
+                    "inventory_policy": "deny",
+                    "inventory_quantity": 1,
                 }],
                 "images": [{"src": url} for url in photo_urls],
             }
