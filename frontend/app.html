@@ -3425,6 +3425,13 @@ async function saveItem() {
           brand: data.brand, size: data.size, color: data.color,
           material: data.material, category: data.category,
           gender: data.gender, condition: data.condition,
+          // Typed in this same form — omitting them silently dropped the SKU,
+          // the Shopify "was" price and every per-platform price override.
+          sku: data.sku, shopify_title: data.shopify_title,
+          compare_at_price: data.compare_at_price,
+          price_marktplaats: data.price_marktplaats, price_2dehands: data.price_2dehands,
+          price_vinted: data.price_vinted, price_ebay: data.price_ebay,
+          price_shopify: data.price_shopify,
         }),
       });
       if (!r.ok) throw new Error((await r.json()).detail || 'Import failed');
