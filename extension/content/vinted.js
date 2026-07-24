@@ -1238,17 +1238,19 @@
 
     best.scrollIntoView({ block: "nearest" });
     await sleep(150);
+    const before = checkedColourCount();
     const cell = best.closest('[class*="web_ui__Cell__cell"]') || best.parentElement || best;
     const cb = cell.querySelector('input[type="checkbox"]');
     if (cb && cb.checked) return true; // already selected
 
     // Try, in order: the checkbox input, the <label for>, then the row itself.
-    if (cb) { cb.click(); await sleep(250); if (cb.checked) return true; }
+    // Accept as soon as the checkbox is checked OR the panel's ticked count rose.
+    if (cb) { cb.click(); await sleep(250); if (cb.checked || checkedColourCount() > before) return true; }
     const label = cb?.id ? document.querySelector(`label[for="${cb.id}"]`) : null;
-    if (label) { realClickEl(label); await sleep(250); if (cb && cb.checked) return true; }
+    if (label) { realClickEl(label); await sleep(250); if ((cb && cb.checked) || checkedColourCount() > before) return true; }
     realClickEl(cell);
     await sleep(250);
-    return cb ? cb.checked : checkedColourCount() > 0;
+    return (cb ? cb.checked : false) || checkedColourCount() > before;
   }
 
   async function fillColourVinted(item) {
