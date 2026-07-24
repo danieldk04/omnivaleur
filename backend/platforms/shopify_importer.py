@@ -96,7 +96,18 @@ def _product_type_from_item(item: dict) -> str:
     category = (item.get("category") or "").strip()
     if category:
         return category.split()[-1].capitalize()
-    return (item.get("item_type") or "").strip().capitalize()
+    item_type = (item.get("item_type") or "").strip()
+    if item_type:
+        return item_type.capitalize()
+    # Neither field is filled in (common for manually created / imported items
+    # with no category picked) — Shopify's admin UI shows "None" for an empty
+    # product_type string, so fall back to the last meaningful word of the
+    # title rather than ever sending "".
+    title_words = [
+        w for w in re.findall(r"[a-zA-Z]+", (item.get("title") or ""))
+        if w.lower() not in _STOPWORDS and len(w) > 2
+    ]
+    return title_words[-1].capitalize() if title_words else ""
 
 
 def _match_collection_id(item: dict, collections: list[dict]) -> int | None:
