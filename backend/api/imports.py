@@ -661,7 +661,8 @@ async def bulk_import_candidates(body: dict = None, user_id: str = Depends(get_c
                 data = item.model_dump()
                 data["id"] = str(uuid.uuid4())
                 data["user_id"] = user_id
-                data["sku"] = f"IMP-{data['id'][:8].upper()}"
+                if not data.get("sku"):
+                    data["sku"] = f"IMP-{data['id'][:8].upper()}"
                 created_item = db.table("items").insert(data).execute().data[0]
 
                 db.table("listings").insert({
