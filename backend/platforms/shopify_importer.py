@@ -121,7 +121,7 @@ async def create_product(item: dict) -> dict:
                 "sku": item.get("sku", ""),
                 "inventory_management": None,
             }],
-            "images": [{"src": url} for url in item.get("photo_urls", [])[:10]],
+            "images": [{"src": url} for url in _public_photo_urls(item)],
         }
     }
 
