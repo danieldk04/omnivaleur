@@ -2089,10 +2089,12 @@ async function _mwFillDescription(selector, descText) {
       clipboardData: dt, bubbles: true, cancelable: true,
     }));
     await sleep(400);
-    if (lexHasText()) return true;
+    if (structureOk()) return true;
   } catch (_) {}
 
-  return false;
+  // Every strategy failed to keep the paragraph structure. Text that landed at
+  // all still beats an empty description, so report on content as a last resort.
+  return lexHasText();
 }
 
 async function _mwFillBrand(brand) {
