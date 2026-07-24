@@ -102,9 +102,15 @@ class ShopifyClient:
         import httpx
         from backend.platforms.shopify_importer import (
             _product_type_from_item, _public_photo_urls, assign_best_collection,
+            _attach_missing_images,
         )
         raw_desc = item.get("description") or ""
         body_html = raw_desc.replace("\r\n", "\n").replace("\n", "<br>")
+        photo_urls = _public_photo_urls(item)
+        logger.info(
+            "Shopify(client) create_product: sending %d public image URL(s) of %d raw photo_urls; first=%s",
+            len(photo_urls), len(item.get("photo_urls") or []), photo_urls[:2],
+        )
         payload = {
             "product": {
                 "title": item.get("shopify_title") or item["title"],
@@ -115,7 +121,7 @@ class ShopifyClient:
                     "compare_at_price": str(item["compare_at_price"]) if item.get("compare_at_price") else None,
                     "sku": item.get("sku", ""),
                 }],
-                "images": [{"src": url} for url in _public_photo_urls(item)],
+                "images": [{"src": url} for url in photo_urls],
             }
         }
         async with httpx.AsyncClient(timeout=httpx.Timeout(60.0, connect=10.0)) as c:
@@ -124,7 +130,13 @@ class ShopifyClient:
             product = r.json().get("product", {})
 
         if product.get("id"):
-            await assign_best_collection(self.base, self.headers, item, str(product["id"]))
+            pid = str(product["id"])
+            logger.info(
+                "Shopify(client) create_product: product %s created with %d/%d image(s) attached via src",
+                pid, len(product.get("images") or []), len(photo_urls),
+            )
+            await _attach_missing_images(self.base, self.headers, pid, photo_urls, product)
+            await assign_best_collection(self.base, self.headers, item, pid)
 
         return product
 
