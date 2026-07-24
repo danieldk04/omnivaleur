@@ -255,6 +255,15 @@ async def create_product(item: dict) -> dict:
     if item.get("size"):
         tags.append(item["size"])
 
+    photo_urls = _public_photo_urls(item)
+    # Diagnostic (ISSUE 3): make the true cause of "no photos" visible on the next
+    # publish — how many usable public URLs we send vs how many raw photo_urls the
+    # item carried (a big gap means they were blob:/local and got filtered out).
+    logger.info(
+        "Shopify create_product: sending %d public image URL(s) of %d raw photo_urls; first=%s",
+        len(photo_urls), len(item.get("photo_urls") or []), photo_urls[:2],
+    )
+
     payload = {
         "product": {
             "title": item.get("shopify_title") or item["title"],
@@ -269,7 +278,7 @@ async def create_product(item: dict) -> dict:
                 "sku": item.get("sku", ""),
                 "inventory_management": None,
             }],
-            "images": [{"src": url} for url in _public_photo_urls(item)],
+            "images": [{"src": url} for url in photo_urls],
         }
     }
 
