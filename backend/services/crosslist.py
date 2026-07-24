@@ -296,6 +296,9 @@ async def publish_to_platforms(item_id: str, platforms: list[str], user_id: str)
             base = dutch_item
         else:
             base = item
+        manual_title = (item.get("shopify_title") or "").strip()
+        if platform == "shopify" and manual_title:
+            base = {**base, "title": manual_title}
         price_field = _PLATFORM_PRICE_FIELD.get(platform)
         if price_field and base.get(price_field):
             return {**base, "price": base[price_field]}
