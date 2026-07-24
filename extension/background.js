@@ -612,7 +612,7 @@ async function processJob(job, serverUrl) {
     // other's photos, prices, titles and descriptions. Per-tab keying makes that
     // impossible even if two tabs ever run at once.
     chrome.storage.local.set({ [`jobtab_${tab.id}`]: { ...job, jobId: job.id, serverUrl } });
-    armJobWatchdog(tab.id, job.id, job.platform, serverUrl);
+    armJobWatchdog(tab.id);
   });
 }
 
