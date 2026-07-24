@@ -170,10 +170,15 @@ async def assign_best_collection(base_url: str, headers: dict, item: dict, produ
     can't be assigned to directly (see `_product_type_from_item`), so only
     custom/manual collections are targeted here. Best-effort — never raises."""
     collections = await _get_custom_collections(base_url, headers)
+    if not collections:
+        logger.info(f"Shopify: 0 custom collections found for store, skipping collection assignment for product {product_id}")
+        return
     collection_id = _match_collection_id(item, collections)
     if collection_id:
         await _assign_to_collection(base_url, headers, product_id, collection_id)
         logger.info(f"Shopify: assigned product {product_id} to collection {collection_id}")
+    else:
+        logger.info(f"Shopify: no keyword match among {len(collections)} collections for product {product_id}, skipping assignment")
 
 
 def _public_photo_urls(item: dict) -> list[str]:
