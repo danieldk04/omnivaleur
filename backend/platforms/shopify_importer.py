@@ -670,6 +670,10 @@ async def create_product(item: dict) -> dict:
 
     await assign_best_collection(base_url, headers, item, product_id)
 
+    await _set_taxonomy_category(base_url, headers, product_id, item)
+
+    await _publish_to_all_channels(base_url, headers, product_id)
+
     return {
         "platform_listing_id": product_id,
         "platform_listing_url": f"https://{settings.shopify_store}/products/{handle}",
