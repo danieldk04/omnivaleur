@@ -78,6 +78,93 @@ async def get_product(product_id: str) -> dict:
     return _convert(resp.json()["product"])
 
 
+# Category words that describe a garment group ("jassen", "truien") rather than
+# an audience segment — audience words would swamp the token-overlap match (every
+# women's item would "match" every other women's collection) so they're excluded.
+_STOPWORDS = {
+    "heren", "dames", "kinderen", "unisex", "the", "a", "an", "for", "and", "of",
+    "men", "mens", "women", "womens", "kids", "sport", "casual",
+}
+
+
+def _product_type_from_item(item: dict) -> str:
+    """Best-effort Shopify `product_type` — the field Shopify's own smart
+    collections match on via a "product type is X" rule. Our category taxonomy
+    is Dutch and audience-prefixed (e.g. "heren jassen", "dames truien"); take
+    the last word, which is always the actual garment, so it reads as a normal
+    product type rather than exposing the internal Dutch taxonomy verbatim."""
+    category = (item.get("category") or "").strip()
+    if category:
+        return category.split()[-1].capitalize()
+    return (item.get("item_type") or "").strip().capitalize()
+
+
+def _match_collection_id(item: dict, collections: list[dict]) -> int | None:
+    """Keyword-in-title heuristic: pick the custom collection whose title shares
+    the most meaningful words with the item's category/title/brand. No LLM call —
+    this only needs to be roughly right, and a wrong guess (skipping assignment)
+    is far safer than assigning to the wrong collection."""
+    tokens: set[str] = set()
+    for field in (item.get("category"), item.get("title"), item.get("brand")):
+        if field:
+            tokens.update(
+                w for w in re.findall(r"[a-zA-Z]+", str(field).lower())
+                if w not in _STOPWORDS and len(w) > 2
+            )
+    if not tokens or not collections:
+        return None
+
+    best_id, best_score = None, 0
+    for c in collections:
+        title_tokens = {
+            w for w in re.findall(r"[a-zA-Z]+", (c.get("title") or "").lower())
+            if w not in _STOPWORDS
+        }
+        score = len(tokens & title_tokens)
+        if score > best_score:
+            best_score, best_id = score, c.get("id")
+    return best_id if best_score > 0 else None
+
+
+async def _get_custom_collections(base_url: str, headers: dict) -> list[dict]:
+    try:
+        async with httpx.AsyncClient(timeout=20.0) as client:
+            resp = await client.get(
+                f"{base_url}/custom_collections.json", params={"limit": 250}, headers=headers
+            )
+            resp.raise_for_status()
+            return resp.json().get("custom_collections", [])
+    except Exception as e:
+        logger.warning(f"Shopify: failed to fetch custom collections: {e}")
+        return []
+
+
+async def _assign_to_collection(base_url: str, headers: dict, product_id: str, collection_id) -> None:
+    try:
+        async with httpx.AsyncClient(timeout=20.0) as client:
+            resp = await client.post(
+                f"{base_url}/collects.json",
+                json={"collect": {"product_id": int(product_id), "collection_id": collection_id}},
+                headers=headers,
+            )
+            if resp.status_code >= 400:
+                logger.warning(f"Shopify: collect assignment failed ({resp.status_code}): {resp.text}")
+    except Exception as e:
+        logger.warning(f"Shopify: collect assignment error: {e}")
+
+
+async def assign_best_collection(base_url: str, headers: dict, item: dict, product_id: str) -> None:
+    """Auto-detect & assign the best-matching custom collection for a newly
+    created product. Smart collections auto-populate from their own rules and
+    can't be assigned to directly (see `_product_type_from_item`), so only
+    custom/manual collections are targeted here. Best-effort — never raises."""
+    collections = await _get_custom_collections(base_url, headers)
+    collection_id = _match_collection_id(item, collections)
+    if collection_id:
+        await _assign_to_collection(base_url, headers, product_id, collection_id)
+        logger.info(f"Shopify: assigned product {product_id} to collection {collection_id}")
+
+
 def _public_photo_urls(item: dict) -> list[str]:
     """Only http(s) URLs are usable — Shopify fetches every image server-side, so a
     blob:/data:/local path (e.g. a photo the frontend hasn't finished uploading yet)
