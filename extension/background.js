@@ -2074,10 +2074,12 @@ async function _mwFillDescription(selector, descText) {
       }
     }
     await sleep(300);
-    if (lexHasText()) return true;
+    if (structureOk()) return true;
   } catch (_) {}
 
   // ── Approach 4: ClipboardEvent paste ─────────────────────────────────────
+  // A real paste carries the newlines in text/plain, so editors that ignore
+  // every explicit break command usually still reproduce the paragraphs here.
   try {
     const dt = new DataTransfer();
     dt.setData("text/plain", descText);
