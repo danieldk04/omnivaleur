@@ -269,7 +269,7 @@ async def _get_custom_collections(base_url: str, headers: dict) -> list[dict]:
         return []
 
 
-async def _assign_to_collection(base_url: str, headers: dict, product_id: str, collection_id) -> None:
+async def _assign_to_collection(base_url: str, headers: dict, product_id: str, collection_id) -> bool:
     try:
         async with httpx.AsyncClient(timeout=20.0) as client:
             resp = await client.post(
@@ -279,25 +279,56 @@ async def _assign_to_collection(base_url: str, headers: dict, product_id: str, c
             )
             if resp.status_code >= 400:
                 logger.warning(f"Shopify: collect assignment failed ({resp.status_code}): {resp.text}")
+                return False
+            return True
     except Exception as e:
         logger.warning(f"Shopify: collect assignment error: {e}")
+        return False
+
+
+# A product can genuinely belong in several collections ("SWEATERS" and
+# "MENSWEAR"), but spraying it across everything is worse than picking nothing.
+MAX_COLLECTIONS_PER_PRODUCT = 3
 
 
 async def assign_best_collection(base_url: str, headers: dict, item: dict, product_id: str) -> None:
-    """Auto-detect & assign the best-matching custom collection for a newly
-    created product. Smart collections auto-populate from their own rules and
-    can't be assigned to directly (see `_product_type_from_item`), so only
-    custom/manual collections are targeted here. Best-effort — never raises."""
+    """Auto-detect & assign the matching custom collections for a newly created
+    product. Smart collections auto-populate from their own rules and can't be
+    assigned to via collects.json, so only custom/manual collections are targeted
+    here (a store's "ALL VINTAGE"-style collections filling themselves is Shopify
+    doing that, not us). Best-effort — never raises, so a matching failure can
+    never abort the product create."""
     collections = await _get_custom_collections(base_url, headers)
+    logger.info(
+        "Shopify: fetched %d custom collection(s) for product %s: %s",
+        len(collections), product_id,
+        [c.get("title") for c in collections][:20],
+    )
     if not collections:
-        logger.info(f"Shopify: 0 custom collections found for store, skipping collection assignment for product {product_id}")
+        logger.info(
+            f"Shopify: store has 0 CUSTOM collections (smart collections can't be assigned to) — "
+            f"skipping collection assignment for product {product_id}"
+        )
         return
-    collection_id = _match_collection_id(item, collections)
-    if collection_id:
-        await _assign_to_collection(base_url, headers, product_id, collection_id)
-        logger.info(f"Shopify: assigned product {product_id} to collection {collection_id}")
-    else:
-        logger.info(f"Shopify: no keyword match among {len(collections)} collections for product {product_id}, skipping assignment")
+
+    chosen = await _match_collection_ids_with_claude(item, collections, MAX_COLLECTIONS_PER_PRODUCT)
+    how = "claude"
+    if not chosen:
+        chosen = _match_collection_ids_by_tokens(item, collections, MAX_COLLECTIONS_PER_PRODUCT)
+        how = "token-fallback"
+    if not chosen:
+        logger.info(
+            f"Shopify: no collection matched among {len(collections)} custom collection(s) "
+            f"for product {product_id} (claude found none and no keyword overlap) — skipping assignment"
+        )
+        return
+
+    for c in chosen:
+        ok = await _assign_to_collection(base_url, headers, product_id, c.get("id"))
+        logger.info(
+            "Shopify: assign product %s → collection %r (%s) via %s: %s",
+            product_id, c.get("title"), c.get("id"), how, "OK" if ok else "FAILED",
+        )
 
 
 def _public_photo_urls(item: dict) -> list[str]:
