@@ -1193,9 +1193,33 @@
     return out;
   }
 
-  // How many colour checkboxes are currently ticked in the open panel.
-  function checkedColourCount() {
-    const titles = [...document.querySelectorAll('[class*="web_ui__Cell__title"]')];
+  // Resolve the COLOUR dropdown's own panel container, or null when it isn't open.
+  // Every Vinted dropdown renders the same `web_ui__Cell__title` rows, so the old
+  // document-wide queries happily matched the still-open size/brand/material list:
+  // fillColourVinted concluded the colour panel was already open, never clicked its
+  // trigger, then searched that other list for the colour — which is exactly why the
+  // colour silently stayed empty while "Fill in colour to continue" kept showing.
+  function colourPanelRoot(trigger) {
+    const byTestId = document.querySelector('[data-testid="color-select-dropdown"]');
+    if (byTestId && byTestId.querySelector('[class*="web_ui__Cell__title"]')) return byTestId;
+    let node = trigger?.parentElement;
+    for (let i = 0; i < 4 && node; i++) {
+      if (node.querySelector('[class*="web_ui__Cell__title"]')) {
+        // Reject an ancestor wide enough to also contain a DIFFERENT dropdown —
+        // those rows belong to that one, not to us.
+        const foreign = node.querySelector(
+          'input[data-testid$="-select-dropdown-input"]:not([data-testid="color-select-dropdown-input"])');
+        return foreign ? null : node;
+      }
+      node = node.parentElement;
+    }
+    return null;
+  }
+
+  // How many colour checkboxes are ticked, counted INSIDE the colour panel only.
+  function checkedColourCount(root) {
+    const scope = root || document;
+    const titles = [...scope.querySelectorAll('[class*="web_ui__Cell__title"]')];
     let n = 0;
     for (const t of titles) {
       const cell = t.closest('[class*="web_ui__Cell__cell"]') || t.parentElement;
