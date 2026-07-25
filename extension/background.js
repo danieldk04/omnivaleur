@@ -637,9 +637,9 @@ async function processJob(job, serverUrl) {
   }
 
   console.log(`[Omnivaleur] Opening tab for ${job.platform} job ${job.id}: ${url}`);
-  chrome.tabs.create({ url, active: true }, (tab) => {
-    if (chrome.runtime.lastError) {
-      reportError(job.id, serverUrl, "tabs.create failed: " + chrome.runtime.lastError.message);
+  openWorkerTab(url, (tab) => {
+    if (!tab) {
+      reportError(job.id, serverUrl, "tabs.create failed: could not open a tab");
       return;
     }
     // PER-TAB job storage — the whole job, keyed by THIS tab's id. The content
