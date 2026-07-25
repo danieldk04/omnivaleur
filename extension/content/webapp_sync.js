@@ -15,9 +15,13 @@
   function syncToken() {
     const token = sessionStorage.getItem("cl_token");
     const email = sessionStorage.getItem("cl_email") || "";
+    // The refresh token lets the extension mint fresh access tokens on its own,
+    // so background jobs don't die on "Sessie verlopen" once the ~1h access
+    // token expires with no dashboard tab open to re-push one.
+    const refresh = sessionStorage.getItem("cl_refresh") || "";
     if (!token) return Promise.resolve(false);
     return new Promise((resolve) => {
-      chrome.runtime.sendMessage({ type: "SYNC_TOKEN", token, email }, () => {
+      chrome.runtime.sendMessage({ type: "SYNC_TOKEN", token, email, refresh }, () => {
         // lastError = extension reloading/gone. Never throw into the page.
         resolve(!chrome.runtime.lastError);
       });
