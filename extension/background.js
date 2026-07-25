@@ -404,14 +404,74 @@ chrome.storage.onChanged.addListener((changes, area) => {
   if (area === "sync" && changes.authToken) refreshAuthBadge();
 });
 
+// Seconds before a JWT's own expiry at which we proactively refresh. A slow
+// background job (e.g. the Vinted sold scan) can run for many seconds, so we
+// refresh with margin rather than let a call start on a token about to die.
+const TOKEN_REFRESH_MARGIN_S = 120;
+let _refreshInFlight = null;
+
+function _sget(keys) {
+  return new Promise((resolve) => chrome.storage.sync.get(keys, resolve));
+}
+
+// Decode a JWT's `exp` (seconds since epoch) without verifying — we only need to
+// know whether it's about to expire, not to trust it.
+function _jwtExp(token) {
+  try {
+    const p = JSON.parse(atob(token.split(".")[1].replace(/-/g, "+").replace(/_/g, "/")));
+    return typeof p.exp === "number" ? p.exp : null;
+  } catch (e) { return null; }
+}
+
+// Exchange the stored refresh token for a fresh access token via the backend.
+// Deduped so a burst of parallel calls triggers a single refresh. Returns the
+// new access token, or null if we can't refresh (no refresh token / rejected).
+async function refreshAccessToken() {
+  if (_refreshInFlight) return _refreshInFlight;
+  _refreshInFlight = (async () => {
+    const { refreshToken } = await _sget(["refreshToken"]);
+    if (!refreshToken) return null;
+    try {
+      const serverUrl = await getServerUrl();
+      const res = await fetch(`${serverUrl}/api/auth/refresh`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ refresh_token: refreshToken }),
+      });
+      if (!res.ok) {
+        console.warn(`[Omnivaleur] token refresh failed HTTP ${res.status}`);
+        return null;
+      }
+      const data = await res.json();
+      if (!data.access_token) return null;
+      const patch = { authToken: data.access_token };
+      if (data.refresh_token) patch.refreshToken = data.refresh_token; // rotation
+      await new Promise((r) => chrome.storage.sync.set(patch, r));
+      console.log("[Omnivaleur] access token refreshed");
+      return data.access_token;
+    } catch (e) {
+      console.warn("[Omnivaleur] token refresh error:", e);
+      return null;
+    }
+  })().finally(() => { _refreshInFlight = null; });
+  return _refreshInFlight;
+}
+
 async function getAuthHeaders() {
-  return new Promise((resolve) => {
-    chrome.storage.sync.get(["authToken"], (s) => {
-      const headers = { "Content-Type": "application/json" };
-      if (s.authToken) headers["Authorization"] = `Bearer ${s.authToken}`;
-      resolve(headers);
-    });
-  });
+  const { authToken, refreshToken } = await _sget(["authToken", "refreshToken"]);
+  let token = authToken;
+  // Proactively refresh if the token is missing/expired/about-to-expire and we
+  // have a refresh token. This is what keeps long background jobs from failing
+  // with "Sessie verlopen" mid-run.
+  const exp = token ? _jwtExp(token) : null;
+  const soon = exp != null && exp - Date.now() / 1000 < TOKEN_REFRESH_MARGIN_S;
+  if (refreshToken && (!token || soon)) {
+    const fresh = await refreshAccessToken();
+    if (fresh) token = fresh;
+  }
+  const headers = { "Content-Type": "application/json" };
+  if (token) headers["Authorization"] = `Bearer ${token}`;
+  return headers;
 }
 
 // ── Reliable job finalisation ─────────────────────────────────────────────
