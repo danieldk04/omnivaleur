@@ -819,7 +819,12 @@ async function bgDeleteMp2dh(job, serverUrl) {
     }, [title, listingId]);
 
     if (!findResult?.found) {
-      throw new Error(`Listing "${title}" not found on ${overviewUrl}. Is the item actually listed on ${platform}?`);
+      // Not on the overview = already gone. For a delete/sold that IS the goal,
+      // so complete cleanly instead of erroring. This is what unsticks items the
+      // DB wrongly believes are still live: we confirm absence and move on.
+      console.log(`[Omnivaleur] bgDelete: "${title}" not on ${platform} overview — already gone, marking done`);
+      await finaliseJob(serverUrl, job.id, "complete", { note: "already_absent" });
+      return;
     }
     if (!findResult.selected) {
       throw new Error(`Found "${title}" but couldn't tick its checkbox to delete it.`);
