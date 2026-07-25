@@ -775,90 +775,103 @@ async function bgDeleteMp2dh(job, serverUrl) {
     await waitForTabLoad(tabId);
     await sleep(3000); // let React fully render listings
 
-    // Find listing card by title or ID and click its options button
-    const findResult = await execInTab(tabId, (title, listingId) => {
-      const allEls = [...document.querySelectorAll("*")];
+    // Find the listing's row and SELECT its checkbox. The "Mijn zoekertjes"
+    // overview has NO per-card kebab/options menu — deletion is bulk-style:
+    // tick the row's checkbox, then click the single red "Verwijder" button at
+    // the top of the list, then confirm. (The old code hunted for an options
+    // button that doesn't exist, clicked the last card button — "Omhoog
+    // bellen"/"Sneller verkopen" — and removed nothing.) Titles on the overview
+    // are prefixed with the SKU, e.g. "(1323) Grijze Suitsupply Cardigan …", so
+    // both sides are stripped of a leading "(digits)" before matching.
+    const findResult = await execInTab(tabId, (rawTitle, listingId) => {
+      const strip = s => (s || "").replace(/^\s*\(\d+\)\s*/, "").replace(/\s+/g, " ").trim().toLowerCase();
+      const want = strip(rawTitle);
+      const shortWant = want.substring(0, 18);
+      if (!shortWant) return { found: false };
 
-      // Find element containing the title text (prefer smaller, more specific elements)
-      let titleEl = allEls.find(el =>
-        el.children.length === 0 && // leaf node
-        el.textContent.trim().startsWith(title.substring(0, 20)) &&
-        el.textContent.trim().length < title.length + 20
-      );
+      // Locate the title element (leaf node) whose stripped text matches.
+      const leaves = [...document.querySelectorAll("a, h1, h2, h3, span, p, div")]
+        .filter(el => el.children.length === 0 && el.textContent.trim());
+      let titleEl = leaves.find(el => {
+        const t = strip(el.textContent);
+        return t && (t.startsWith(shortWant) || t.includes(shortWant));
+      });
       if (!titleEl && listingId) {
-        titleEl = [...document.querySelectorAll(`a[href*="${listingId}"]`)][0];
-      }
-      if (!titleEl) {
-        // Broader: any element whose text contains the first 15 chars of title
-        titleEl = allEls.find(el => el.textContent.includes(title.substring(0, 15)) && el.tagName !== "BODY" && el.tagName !== "HTML");
+        titleEl = document.querySelector(`a[href*="${listingId}"]`);
       }
       if (!titleEl) return { found: false };
 
-      // Walk up to find a card-like ancestor
-      let card = titleEl;
-      for (let i = 0; i < 8; i++) {
-        if (!card.parentElement) break;
-        card = card.parentElement;
-        if (/article|li/i.test(card.tagName) ||
-            (card.querySelectorAll("button").length > 0 && card.querySelectorAll("a").length > 0)) {
-          break;
-        }
+      // Walk up until we reach an ancestor row that contains a checkbox.
+      let row = titleEl, checkbox = null;
+      for (let i = 0; i < 12 && row; i++) {
+        checkbox = row.querySelector('input[type="checkbox"]');
+        if (checkbox) break;
+        row = row.parentElement;
       }
-
-      // Find an options/kebab/more button inside the card
-      const btns = [...card.querySelectorAll("button")];
-      const optBtn = btns.find(b =>
-        /opties|meer|menu|\.\.\./i.test(b.textContent + (b.getAttribute("aria-label") || "")) ||
-        b.querySelector("svg")
-      ) || btns[btns.length - 1]; // last button is often the options button
-
-      if (optBtn) { optBtn.click(); return { found: true, btn: optBtn.textContent || "svg-btn" }; }
-      return { found: true, btn: null };
+      if (!checkbox) return { found: true, selected: false };
+      if (!checkbox.checked) {
+        checkbox.click();
+        // Some React lists ignore a bare .click() — nudge with events too.
+        checkbox.dispatchEvent(new Event("input", { bubbles: true }));
+        checkbox.dispatchEvent(new Event("change", { bubbles: true }));
+      }
+      return { found: true, selected: !!checkbox.checked };
     }, [title, listingId]);
 
     if (!findResult?.found) {
       throw new Error(`Listing "${title}" not found on ${overviewUrl}. Is the item actually listed on ${platform}?`);
     }
+    if (!findResult.selected) {
+      throw new Error(`Found "${title}" but couldn't tick its checkbox to delete it.`);
+    }
 
-    await sleep(700);
+    await sleep(600);
 
-    // Click Verwijder (in dropdown or directly visible)
+    // Click the top "Verwijder" (trash) button — now enabled by the selection.
     const clickedDelete = await execInTab(tabId, () => {
-      const el = [...document.querySelectorAll("button, a, [role='menuitem'], li")]
-        .find(e => /verwijder/i.test(e.textContent));
+      const el = [...document.querySelectorAll("button, a")]
+        .find(e => /^\s*(🗑\s*)?verwijder(en)?\s*$/i.test(e.textContent.trim()) && !e.disabled);
       if (el) { el.click(); return true; }
       return false;
     });
 
-    if (!clickedDelete) throw new Error("Verwijder button not found — options menu may not have opened");
+    if (!clickedDelete) throw new Error("Top 'Verwijder' button not found or disabled — selection may not have registered");
 
-    await sleep(800);
+    await sleep(900);
 
-    // Confirm dialog if it appears — must actually find and click a confirm
-    // button, otherwise we'd mark the job "done" while the listing is still live.
-    const clickedConfirm = await execInTab(tabId, () => {
-      const btn = [...document.querySelectorAll("button")]
-        .find(e => /verwijder|bevestig|ok|ja\b/i.test(e.textContent));
+    // Confirm dialog, if one appears. Scope to a modal/dialog so we don't just
+    // re-click the top Verwijder button. Confirmation is best-effort: the final
+    // verification below (listing actually gone) is the real source of truth.
+    await execInTab(tabId, () => {
+      const scope = document.querySelector('[role="dialog"], [aria-modal="true"], [class*="odal"], [class*="opup"]') || document;
+      const btn = [...scope.querySelectorAll("button")]
+        .find(e => /verwijder(en)?|bevestig|^ok$|^ja\b/i.test(e.textContent.trim()));
       if (btn) { btn.click(); return true; }
       return false;
     });
 
-    if (!clickedConfirm) throw new Error("Confirm button not found — delete may not have gone through, listing was not verified as removed");
+    await sleep(1600);
 
-    await sleep(1500);
+    // Verify the listing is actually gone before reporting success — without
+    // this the job was marked "done" (DB set to "delisted") even when nothing
+    // was removed. Reload the overview to be sure it's not a stale DOM.
+    await new Promise(res => chrome.tabs.reload(tabId, {}, res));
+    await waitForTabLoad(tabId);
+    await sleep(2500);
 
-    // Verify the listing card is actually gone before reporting success —
-    // without this check the delete job was marked "done" (and the DB set to
-    // "delisted") even when nothing was actually removed on the platform.
-    const stillPresent = await execInTab(tabId, (title, listingId) => {
-      const allEls = [...document.querySelectorAll("*")];
-      let titleEl = allEls.find(el =>
-        el.children.length === 0 &&
-        el.textContent.trim().startsWith(title.substring(0, 20)) &&
-        el.textContent.trim().length < title.length + 20
-      );
+    const stillPresent = await execInTab(tabId, (rawTitle, listingId) => {
+      const strip = s => (s || "").replace(/^\s*\(\d+\)\s*/, "").replace(/\s+/g, " ").trim().toLowerCase();
+      const want = strip(rawTitle);
+      const shortWant = want.substring(0, 18);
+      if (!shortWant) return false;
+      const leaves = [...document.querySelectorAll("a, h1, h2, h3, span, p, div")]
+        .filter(el => el.children.length === 0 && el.textContent.trim());
+      let titleEl = leaves.find(el => {
+        const t = strip(el.textContent);
+        return t && (t.startsWith(shortWant) || t.includes(shortWant));
+      });
       if (!titleEl && listingId) {
-        titleEl = [...document.querySelectorAll(`a[href*="${listingId}"]`)][0];
+        titleEl = document.querySelector(`a[href*="${listingId}"]`);
       }
       return !!titleEl;
     }, [title, listingId]);
