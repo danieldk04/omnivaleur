@@ -349,6 +349,45 @@ class EbayPlatform(PlatformBase):
             )
             return resp.status_code in (200, 204)
 
+    async def resolve_offer_by_sku(self, sku: str, credentials: dict) -> dict | None:
+        """
+        Best-effort lookup of an existing offer by its SKU, for delisting a listing
+        whose offerId/listingId we never stored. eBay's Inventory API keys offers on
+        SKU: getOffers — GET /sell/inventory/v1/offer?sku={sku} — returns every offer
+        for that SKU. Returns {"platform_offer_id", "platform_listing_id"} on success,
+        or None when it can't resolve (unknown sku, no offers, API error). Never raises.
+        """
+        if not sku:
+            return None
+        try:
+            credentials = await self._ensure_fresh_token(credentials)
+            async with httpx.AsyncClient() as client:
+                resp = await client.get(
+                    f"{INVENTORY_API}/offer",
+                    params={"sku": sku},
+                    headers=self._auth_headers(credentials),
+                )
+            if not resp.is_success:
+                logger.warning(f"eBay getOffers by SKU {sku} failed: {resp.status_code} {resp.text[:200]}")
+                return None
+            offers = resp.json().get("offers", []) or []
+            if not offers:
+                return None
+            # Prefer a PUBLISHED offer (the live listing we want to withdraw).
+            offer = next(
+                (o for o in offers if str(o.get("status", "")).upper() == "PUBLISHED"),
+                offers[0],
+            )
+            offer_id = offer.get("offerId")
+            if not offer_id:
+                return None
+            listing_id = (offer.get("listing") or {}).get("listingId")
+            return {"platform_offer_id": str(offer_id),
+                    "platform_listing_id": str(listing_id) if listing_id else None}
+        except Exception as e:
+            logger.warning(f"eBay resolve_offer_by_sku({sku}) error: {e}")
+            return None
+
     async def relist_ended(self, offer_id: str, credentials: dict) -> dict:
         """
         Republish a withdrawn/ended offer via eBay's own publish endpoint — the
