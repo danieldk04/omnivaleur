@@ -2913,16 +2913,18 @@ async function bulkDelist() {
   if (!confirm(`Delist ${ids.length} item(s) from all platforms?\n${names}${more}`)) return;
 
   setBusy(true, `Delisting 0 / ${ids.length}…`);
-  let done = 0, errors = 0;
+  let done = 0, errors = 0, needsLink = 0;
   for (const id of ids) {
     try {
-      await apiFetch(`${API}/api/items/${id}/delist`, { method: 'POST' });
+      const data = await runDelist(id);
+      // bulk is non-interactive: count needs_link as skipped so the user knows to fix them one-by-one
+      needsLink += (data.results || []).filter(r => r.status === 'needs_link').length;
       done++;
     } catch { errors++; }
     document.getElementById('cl-busy-text').textContent = `Delisting ${done + errors} / ${ids.length}…`;
   }
   setBusy(false);
-  showToast(`${done} delisted${errors ? `, ${errors} error(s)` : ''}.`);
+  showToast(`${done} delisted${errors ? `, ${errors} error(s)` : ''}${needsLink ? `, ${needsLink} need a link (delist individually to paste the URL)` : ''}.`);
   clearSelection();
   await loadAll();
 }
