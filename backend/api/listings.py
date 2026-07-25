@@ -9,6 +9,9 @@ from backend.services.relist import (
 from backend.api.deps import get_current_user
 from datetime import datetime, timezone
 import re
+import logging
+
+logger = logging.getLogger("omnivaleur.sold")
 
 router = APIRouter(prefix="/listings", tags=["listings"])
 
