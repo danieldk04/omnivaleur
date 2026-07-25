@@ -539,6 +539,43 @@ async function pollJobs() {
   }
 }
 
+// ── Dedicated worker window ────────────────────────────────────────────────
+// Every automation tab used to spawn into — and yank focus from — whatever the
+// user was doing, so a single publish threw several tabs in their face. Instead
+// we keep ONE reused, UNFOCUSED worker window and open all automation tabs there:
+// the window never comes to the front (no focus theft, no interleaving with the
+// user's own tabs), yet each tab is still the ACTIVE tab of that window, so it
+// stays visible and Chrome doesn't throttle its form-filling timers the way it
+// would a truly hidden background tab. Closing the window just makes the next job
+// open a fresh one.
+let _workerWindowId = null;
+
+chrome.windows.onRemoved.addListener((winId) => {
+  if (winId === _workerWindowId) _workerWindowId = null;
+});
+
+function openWorkerTab(url, callback) {
+  const makeWindow = () =>
+    chrome.windows.create({ url, focused: false }, (w) => {
+      if (chrome.runtime.lastError || !w || !w.tabs || !w.tabs[0]) {
+        // Window creation blocked (rare) — fall back to a plain background tab so
+        // the job still runs rather than failing outright.
+        chrome.tabs.create({ url, active: false }, callback);
+        return;
+      }
+      _workerWindowId = w.id;
+      callback(w.tabs[0]);
+    });
+
+  if (_workerWindowId == null) { makeWindow(); return; }
+  // Reuse the existing worker window. active:true is scoped to THAT window, so it
+  // never steals focus from the user's foreground window.
+  chrome.tabs.create({ url, windowId: _workerWindowId, active: true }, (tab) => {
+    if (chrome.runtime.lastError || !tab) { _workerWindowId = null; makeWindow(); return; }
+    callback(tab);
+  });
+}
+
 async function processJob(job, serverUrl) {
   const headers = await getAuthHeaders();
   // Claim job first
