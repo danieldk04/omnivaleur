@@ -3486,16 +3486,48 @@ async function delistItem(itemId, title) {
 
   setBusy(true, `Delisting "${title}"…`);
   try {
-    const res = await apiFetch(`${API}/api/items/${itemId}/delist`, { method: 'POST' });
-    const data = await res.json();
+    let data = await runDelist(itemId);
+
+    // Interactive: for each platform the backend couldn't locate, ask the user to
+    // paste the listing URL, link it, then re-trigger delist once.
+    const retried = new Set(); // platforms we've already re-linked, to avoid loops
+    let needsLink = (data.results || []).filter(r => r.status === 'needs_link');
+    while (needsLink.length) {
+      let linkedAny = false;
+      for (const r of needsLink) {
+        if (retried.has(r.platform)) continue; // already gave it a URL once — don't re-prompt
+        const label = PLATFORM_LABELS[r.platform] || r.platform;
+        const url = prompt(`Couldn't find your ${label} listing to delist automatically.\nPaste its URL here to link it, then it'll be delisted:`);
+        retried.add(r.platform);
+        if (!url || !url.trim()) continue; // cancelled/empty → leave as still-listed
+        try {
+          await apiFetch(`${API}/api/listings/mark-active`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ item_id: itemId, platform: r.platform, platform_listing_url: url.trim() }),
+          });
+          linkedAny = true;
+        } catch (e) {
+          alert(`Couldn't link ${label}: ${e.message}`);
+        }
+      }
+      if (!linkedAny) break; // nothing new linked → stop
+      setBusy(true, `Delisting "${title}"…`);
+      data = await runDelist(itemId); // re-trigger delist for now-linked platforms
+      // only keep platforms that still need a link AND we haven't already retried
+      needsLink = (data.results || []).filter(r => r.status === 'needs_link' && !retried.has(r.platform));
+    }
+
+    // Final honest summary
     const byStatus = {};
     for (const r of (data.results || [])) {
       (byStatus[r.status] = byStatus[r.status] || []).push(PLATFORM_LABELS[r.platform] || r.platform || r.message);
     }
     const summary = [];
-    if (byStatus.delisted) summary.push(`✓ Delisted: ${byStatus.delisted.join(', ')}`);
-    if (byStatus.queued)   summary.push(`⏳ Queued: ${byStatus.queued.join(', ')}`);
-    if (byStatus.error)    summary.push(`✗ Error: ${byStatus.error.join(', ')}`);
+    if (byStatus.delisted)   summary.push(`✓ Delisted: ${byStatus.delisted.join(', ')}`);
+    if (byStatus.queued)     summary.push(`⏳ Queued (extension will handle): ${byStatus.queued.join(', ')}`);
+    if (byStatus.error)      summary.push(`✗ Error: ${byStatus.error.join(', ')}`);
+    if (byStatus.needs_link) summary.push(`🔗 Still listed (couldn't link): ${byStatus.needs_link.join(', ')}`);
     alert(summary.join('\n') || 'Done.');
     await loadAll();
   } catch (e) {
@@ -3503,6 +3535,11 @@ async function delistItem(itemId, title) {
   } finally {
     setBusy(false);
   }
+}
+
+async function runDelist(itemId) {
+  const res = await apiFetch(`${API}/api/items/${itemId}/delist`, { method: 'POST' });
+  return await res.json();
 }
 
 // ── Import existing listings (scan platform → review → link/create) ──────
