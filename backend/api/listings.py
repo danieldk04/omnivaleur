@@ -110,13 +110,29 @@ async def mark_listing_active(body: dict, user_id: str = Depends(get_current_use
     item = db.table("items").select("id").eq("id", item_id).eq("user_id", user_id).execute()
     if not item.data:
         raise HTTPException(status_code=404, detail="Item not found")
+
+    # Optional link-establishment: the user can paste the live listing's URL (and/or
+    # id) so auto-delist can locate it later. Parse the id from the URL when only a
+    # URL is given. Both stay optional so the plain "mark active" call is unchanged.
+    listing_url = (body.get("platform_listing_url") or "").strip() or None
+    listing_id = (body.get("platform_listing_id") or "").strip() or None
+    if listing_url and not listing_id:
+        listing_id = _parse_listing_id(platform, listing_url)
+
     now = datetime.now(timezone.utc).isoformat()
+    link_fields: dict = {}
+    if listing_url:
+        link_fields["platform_listing_url"] = listing_url
+    if listing_id:
+        link_fields["platform_listing_id"] = listing_id
+
     existing = db.table("listings").select("id").eq("item_id", item_id).eq("platform", platform).execute()
     if existing.data:
         db.table("listings").update({
             "status": "active",
             "error_message": None,
             "listed_at": now,
+            **link_fields,
         }).eq("item_id", item_id).eq("platform", platform).execute()
     else:
         db.table("listings").insert({
@@ -124,6 +140,7 @@ async def mark_listing_active(body: dict, user_id: str = Depends(get_current_use
             "platform": platform,
             "status": "active",
             "listed_at": now,
+            **link_fields,
         }).execute()
 
     # The user marked this listed by hand — so any still-open publish job for this
@@ -139,7 +156,15 @@ async def mark_listing_active(body: dict, user_id: str = Depends(get_current_use
           .eq("action", "create").in_("status", ["pending", "claimed"]).execute()
     except Exception:
         pass
-    return {"ok": True}
+
+    # Return the updated listing row so the frontend can refresh (and confirm the
+    # link was captured).
+    row = (
+        db.table("listings").select("*")
+        .eq("item_id", item_id).eq("platform", platform)
+        .limit(1).execute().data
+    )
+    return {"ok": True, "listing": (row[0] if row else None)}
 
 
 @router.post("/refresh")
