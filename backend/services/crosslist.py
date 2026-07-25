@@ -480,7 +480,56 @@ async def delist_all_platforms(item_id: str, user_id: str) -> list[dict]:
             "message": "Delete job queued — Chrome extension will process this",
         })
 
+    # Listings we genuinely couldn't locate to delist from the backend (no id and
+    # no fallback) — surfaced as needs_link so the user can paste the listing URL.
+    needs_link: list[dict] = []
+
     if api_active:
+        # For eBay listings without an offer/listing id, resolve by SKU. eBay's
+        # Inventory API keys offers on SKU, so getOffers(?sku=) recovers the offerId
+        # we can withdraw. On success persist it and delist normally; on failure we
+        # can't delete via API (no id) — report needs_link instead of faking success.
+        still_delistable = []
+        for listing in api_active:
+            if (listing["platform"] == "ebay"
+                    and not listing.get("platform_offer_id")
+                    and not listing.get("platform_listing_id")):
+                resolved = None
+                sku = item.get("sku", "")
+                try:
+                    creds = (
+                        db.table("platform_credentials").select("*")
+                        .eq("user_id", user_id).eq("platform", "ebay").execute().data
+                    )
+                    if creds and sku:
+                        ebay = get_platform("ebay")
+                        resolved = await ebay.resolve_offer_by_sku(sku, creds[0])
+                except Exception as e:
+                    logger.warning(f"eBay SKU→offer resolution failed for {sku}: {e}")
+                    resolved = None
+                if resolved and resolved.get("platform_offer_id"):
+                    listing["platform_offer_id"] = resolved["platform_offer_id"]
+                    if resolved.get("platform_listing_id"):
+                        listing["platform_listing_id"] = resolved["platform_listing_id"]
+                    try:
+                        upd = {"platform_offer_id": resolved["platform_offer_id"]}
+                        if resolved.get("platform_listing_id"):
+                            upd["platform_listing_id"] = resolved["platform_listing_id"]
+                        db.table("listings").update(upd).eq("id", listing["id"]).execute()
+                    except Exception as e:
+                        logger.warning(f"Persisting resolved eBay ids failed: {e}")
+                    logger.info(f"Resolved eBay offer by SKU {sku} → {resolved['platform_offer_id']}")
+                    still_delistable.append(listing)
+                else:
+                    needs_link.append({
+                        "platform": "ebay",
+                        "status": "needs_link",
+                        "message": "Couldn't locate this ebay listing to delist — paste its URL to link it.",
+                    })
+            else:
+                still_delistable.append(listing)
+        api_active = still_delistable
+
         # For Shopify listings without a platform_listing_id, look up by SKU first
         for listing in api_active:
             if listing["platform"] == "shopify" and not listing.get("platform_listing_id"):
