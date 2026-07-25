@@ -397,6 +397,11 @@ async def reconcile_vinted_orders(body: dict, user_id: str = Depends(get_current
     db = get_db()
     marked_sold = 0
     price_backfilled = 0
+    matched = 0
+    unmatched_skus = []
+    sold_orders = [o for o in orders if isinstance(o, dict) and o.get("sold")]
+    logger.info("[sold] reconcile-vinted-orders: received %d orders (%d marked sold) for user=%s",
+                len(orders), len(sold_orders), user_id)
 
     for o in orders:
         if not isinstance(o, dict) or not o.get("sold"):
@@ -409,7 +414,9 @@ async def reconcile_vinted_orders(body: dict, user_id: str = Depends(get_current
         # Exact + UNIQUE match only. len != 1 → ambiguous/unknown → skip.
         items = db.table("items").select("id").eq("user_id", user_id).eq("sku", sku).execute().data or []
         if len(items) != 1:
+            unmatched_skus.append(sku)
             continue
+        matched += 1
         item_id = items[0]["id"]
 
         vinted_rows = (
