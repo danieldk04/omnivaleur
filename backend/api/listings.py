@@ -77,7 +77,16 @@ async def list_all_listings(
     if status:
         q = q.eq("status", status)
     result = q.limit(2000).execute()
-    return result.data
+    listings = result.data or []
+    # Attach each listing's item title so the extension can title-match sold ads
+    # for listings that have no platform_listing_id (hand-marked / unconfirmed).
+    ids = list({l["item_id"] for l in listings if l.get("item_id")})
+    if ids:
+        items = db.table("items").select("id,title").in_("id", ids).execute().data or []
+        titles = {it["id"]: it.get("title") for it in items}
+        for l in listings:
+            l["title"] = titles.get(l.get("item_id"))
+    return listings
 
 
 @router.post("/publish")
