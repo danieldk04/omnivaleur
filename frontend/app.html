@@ -2712,7 +2712,7 @@ function applyFilters(resetPage) {
   // "Delisted" = has a removed listing and nothing live anywhere — dead stock that
   // shouldn't clutter the active inventory view.
   const delistedItemIds = new Set(
-    state.listings.filter(l => l.status === 'delisted').map(l => l.item_id)
+    state.listings.filter(l => l.status === 'delisted' || l.status === 'sold').map(l => l.item_id)
       .filter(id => !publishedItemIds.has(id))
   );
   const platformItemIds = platformFilter !== 'all'
