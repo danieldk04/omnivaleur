@@ -1985,12 +1985,30 @@ function scrapeVintedOrders(url) {
             target: { tabId },
             world: "MAIN",
             func: () => {
-              // Each order row links to its conversation (/inbox/…). Walk up to the
-              // row and read title (with the "(1234)" SKU), price, and status text.
+              // Each order row links to its conversation (/inbox/…). Vinted has,
+              // however, changed this markup before, so we look for order rows via
+              // several selectors and de-duplicate. A row only ever counts as a
+              // sale when it has a parseable "(1234)" SKU AND is not cancelled/
+              // refunded — so a broader net can't create a false positive.
+              const selectors = [
+                'a[href*="/inbox/"]',
+                'a[href*="/order"]',
+                'a[href*="/transaction"]',
+                '[class*="order" i]',
+                '[data-testid*="order" i]',
+              ];
+              const anchors = new Set();
+              const selectorHits = {};
+              selectors.forEach(sel => {
+                const found = document.querySelectorAll(sel);
+                selectorHits[sel] = found.length;
+                found.forEach(el => anchors.add(el));
+              });
+
               const rows = {};
-              document.querySelectorAll('a[href*="/inbox/"]').forEach(a => {
-                const row = a.closest('div, li, article') || a;
-                const text = (row.innerText || a.innerText || "").replace(/\s+/g, " ").trim();
+              anchors.forEach(el => {
+                const row = el.closest('div, li, article') || el;
+                const text = (row.innerText || el.innerText || "").replace(/\s+/g, " ").trim();
                 const skuM = text.match(/\((\d{3,6})\)/);
                 if (!skuM) return;
                 const sku = skuM[1];
@@ -2005,12 +2023,13 @@ function scrapeVintedOrders(url) {
                   prev.price = priceM[1];
                 }
               });
-              return Object.values(rows);
+              return { orders: Object.values(rows), selectorHits, rowCandidates: anchors.size };
             },
           }, (results) => {
             chrome.tabs.remove(tabId).catch(() => {});
-            const orders = results?.[0]?.result || [];
-            console.log(`[Omnivaleur] Vinted orders scraped: ${orders.length} (sold: ${orders.filter(o => o.sold).length})`);
+            const out = results?.[0]?.result || { orders: [], selectorHits: {}, rowCandidates: 0 };
+            const orders = out.orders || [];
+            console.log(`[Omnivaleur][sold] Vinted: selector hits`, out.selectorHits, `→ ${out.rowCandidates} candidate row(s), ${orders.length} with a (SKU) (sold: ${orders.filter(o => o.sold).length})`);
             resolve(orders);
           });
         }, 2500);
