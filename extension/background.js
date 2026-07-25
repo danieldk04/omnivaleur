@@ -766,8 +766,8 @@ async function bgDeleteMp2dh(job, serverUrl) {
     : "https://www.2dehands.be/my-account/sell/index.html";
 
   const tabId = await new Promise((res, rej) =>
-    chrome.tabs.create({ url: overviewUrl, active: true }, t =>
-      chrome.runtime.lastError ? rej(new Error(chrome.runtime.lastError.message)) : res(t.id)
+    openWorkerTab(overviewUrl, t =>
+      t ? res(t.id) : rej(new Error("could not open worker tab"))
     )
   );
 
@@ -878,16 +878,113 @@ async function bgDeleteMp2dh(job, serverUrl) {
 // wardrobe (ground truth), clicks Delete + confirm, then verifies it's gone
 // from the wardrobe — all from the background worker so Vinted's post-delete
 // redirect can't kill the flow mid-verification.
+// Resolve a Vinted numeric item id from a listing TITLE when no
+// platform_listing_id is known (e.g. items the user marked "published" by hand).
+// Mirrors bgScanVinted: open the wardrobe on the real country origin, find the
+// member id, page the whole wardrobe and match the title with a resilient
+// first-N-chars startsWith/includes compare (titles may be truncated/decorated).
+// Returns { id, origin } or { id: null }.
+async function resolveVintedIdByTitle(title) {
+  const sleep = ms => new Promise(r => setTimeout(r, ms));
+  const tabId = await new Promise((res, rej) =>
+    openWorkerTab("https://www.vinted.nl/", t =>
+      t ? res(t.id) : rej(new Error("could not open worker tab"))
+    )
+  );
+  try {
+    await waitForTabLoad(tabId);
+    await sleep(2500);
+
+    // Open the account menu — the numeric member id (/member/{id}) and the real
+    // country origin are only exposed once the avatar dropdown is opened.
+    await execInTab(tabId, () => {
+      document.querySelector('#user-menu-button, [data-testid="user-menu-button"]')?.click();
+    });
+    await sleep(600);
+
+    const idInfo = await execInTab(tabId, () => {
+      let userId = null, origin = null;
+      for (const link of document.querySelectorAll('a[href*="/member/"]')) {
+        const m = (link.getAttribute("href") || "").match(/\/member\/(\d+)(?:[/?]|$)/);
+        if (m) {
+          userId = m[1];
+          try { origin = new URL(link.getAttribute("href"), location.href).origin; } catch (e) { origin = location.origin; }
+          break;
+        }
+      }
+      return { userId, origin };
+    });
+
+    if (!idInfo?.userId) return { id: null };
+
+    // Navigate to the home-country origin so the wardrobe fetch is same-origin.
+    const currentTab = await new Promise(res => chrome.tabs.get(tabId, res));
+    if (idInfo.origin && currentTab?.url && new URL(currentTab.url).origin !== idInfo.origin) {
+      await new Promise((res, rej) =>
+        chrome.tabs.update(tabId, { url: idInfo.origin + "/" }, () =>
+          chrome.runtime.lastError ? rej(new Error(chrome.runtime.lastError.message)) : res()
+        )
+      );
+      await waitForTabLoad(tabId);
+      await sleep(1500);
+    }
+
+    const found = await execInTab(tabId, async (userId, wantTitle) => {
+      const norm = s => (s || "").toLowerCase().replace(/\s+/g, " ").trim();
+      const want = norm(wantTitle);
+      const short = want.substring(0, 20);
+      const matches = t => {
+        const c = norm(t);
+        if (!c || !short) return false;
+        return c.startsWith(short) || c.includes(short) || want.includes(c.substring(0, 20));
+      };
+      try {
+        for (let page = 1; page <= 60; page++) {
+          const res = await fetch(`/api/v2/wardrobe/${userId}/items?order=newest_first&page=${page}&per_page=96`, { headers: { Accept: "application/json" } });
+          if (!res.ok) return null;
+          const data = await res.json();
+          if (data.code && data.code !== 0) return null;
+          const items = data.items || [];
+          const hit = items.find(it => matches(it.title));
+          if (hit) return String(hit.id);
+          const pg = data.pagination || {};
+          if (items.length === 0) return null;
+          if (pg.total_pages && page >= pg.total_pages) return null;
+          if (!pg.total_pages && items.length < 96) return null;
+        }
+        return null;
+      } catch (e) { return null; }
+    }, [idInfo.userId, title]);
+
+    return { id: found || null, origin: idInfo.origin };
+  } finally {
+    setTimeout(() => chrome.tabs.remove(tabId).catch(() => {}), 2500);
+  }
+}
+
 async function bgDeleteVinted(job, serverUrl) {
   const sleep = ms => new Promise(r => setTimeout(r, ms));
   const payload = job.payload || {};
-  const listingId = payload.platform_listing_id;
-  if (!listingId) throw new Error("Vinted delete: no platform_listing_id in payload");
-  const url = payload.platform_listing_url || `https://www.vinted.com/items/${listingId}`;
+  let listingId = payload.platform_listing_id;
+  let resolvedOrigin = "";
+  // Fallback: no id (e.g. a listing the user marked "published" by hand) — locate
+  // it in the wardrobe by title, then run the existing delete-by-id flow verbatim.
+  if (!listingId) {
+    const title = (payload.title || "").trim();
+    if (!title) throw new Error("Vinted delete: no platform_listing_id and no title in payload");
+    const resolved = await resolveVintedIdByTitle(title);
+    if (!resolved?.id) {
+      throw new Error(`Could not locate "${title}" on Vinted to delist it. Open the listing on Vinted and use "mark as published" (paste its link) so it can be delisted.`);
+    }
+    listingId = resolved.id;
+    resolvedOrigin = resolved.origin || "";
+  }
+  const url = payload.platform_listing_url
+    || (resolvedOrigin ? `${resolvedOrigin}/items/${listingId}` : `https://www.vinted.com/items/${listingId}`);
 
   const tabId = await new Promise((res, rej) =>
-    chrome.tabs.create({ url, active: true }, t =>
-      chrome.runtime.lastError ? rej(new Error(chrome.runtime.lastError.message)) : res(t.id)
+    openWorkerTab(url, t =>
+      t ? res(t.id) : rej(new Error("could not open worker tab"))
     )
   );
 
@@ -1171,8 +1268,8 @@ async function bgDeleteVinted(job, serverUrl) {
 async function bgScanVinted(job, serverUrl) {
   const sleep = ms => new Promise(r => setTimeout(r, ms));
   const tabId = await new Promise((res, rej) =>
-    chrome.tabs.create({ url: "https://www.vinted.nl/", active: true }, t =>
-      chrome.runtime.lastError ? rej(new Error(chrome.runtime.lastError.message)) : res(t.id)
+    openWorkerTab("https://www.vinted.nl/", t =>
+      t ? res(t.id) : rej(new Error("could not open worker tab"))
     )
   );
   try {
@@ -1486,8 +1583,8 @@ async function bgScanMp2dh(job, serverUrl) {
     : "https://www.2dehands.be/my-account/sell/index.html";
 
   const tabId = await new Promise((res, rej) =>
-    chrome.tabs.create({ url: overviewUrl, active: true }, t =>
-      chrome.runtime.lastError ? rej(new Error(chrome.runtime.lastError.message)) : res(t.id)
+    openWorkerTab(overviewUrl, t =>
+      t ? res(t.id) : rej(new Error("could not open worker tab"))
     )
   );
 
@@ -1748,8 +1845,8 @@ async function checkSoldListings() {
 // whether it carries an explicit SOLD/RESERVED label. Returns [{id, sold}].
 function scrapeMarktplaatsAds(url, platform) {
   return new Promise((resolve) => {
-    chrome.tabs.create({ url, active: false }, (tab) => {
-      if (chrome.runtime.lastError) { resolve([]); return; }
+    openWorkerTab(url, (tab) => {
+      if (!tab) { resolve([]); return; }
       const tabId = tab.id;
 
       const onUpdated = (id, info) => {
@@ -1815,8 +1912,8 @@ async function checkVintedOrders() {
 
 function scrapeVintedOrders(url) {
   return new Promise((resolve) => {
-    chrome.tabs.create({ url, active: false }, (tab) => {
-      if (chrome.runtime.lastError) { resolve([]); return; }
+    openWorkerTab(url, (tab) => {
+      if (!tab) { resolve([]); return; }
       const tabId = tab.id;
 
       const onUpdated = (id, info) => {
@@ -1928,8 +2025,8 @@ async function scanNotifications() {
 // wrong number.
 function scrapeNotificationCounts(url, platform) {
   return new Promise((resolve) => {
-    chrome.tabs.create({ url, active: false }, (tab) => {
-      if (chrome.runtime.lastError || !tab) { resolve(null); return; }
+    openWorkerTab(url, (tab) => {
+      if (!tab) { resolve(null); return; }
       const tabId = tab.id;
       let settled = false;
       const finish = (val) => {
