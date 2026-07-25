@@ -8,8 +8,47 @@ from backend.services.relist import (
 )
 from backend.api.deps import get_current_user
 from datetime import datetime, timezone
+import re
 
 router = APIRouter(prefix="/listings", tags=["listings"])
+
+
+def _parse_listing_id(platform: str, url: str) -> str | None:
+    """
+    Extract a platform's listing id from a listing URL the user pastes.
+    Mirrors the regexes the extension already uses (background.js onUpdated
+    auto-detect) so a hand-pasted URL yields the same id the extension would.
+    Best-effort — returns None when nothing matches.
+    """
+    if not url:
+        return None
+    u = url.strip()
+    p = (platform or "").lower()
+    try:
+        if p == "vinted":
+            # /items/{id}-slug or bare /items/{id}
+            m = re.search(r"/items/(\d+)", u)
+            return m.group(1) if m else None
+        if p in ("marktplaats", "2dehands"):
+            # /v/listing/{digits}, m-prefixed id in path or query
+            m = (re.search(r"/v/listing/(\d+)", u)
+                 or re.search(r"/seller/view/(m\d+)", u)
+                 or re.search(r"[?&](m\d{6,})", u)
+                 or re.search(r"(m\d{6,})", u))
+            return m.group(1) if m else None
+        if p == "ebay":
+            m = re.search(r"/itm/(\d+)", u)
+            return m.group(1) if m else None
+        if p == "shopify":
+            # /products/{numeric-id} or /products/{handle}
+            m = re.search(r"/products/(\d+)", u)
+            if m:
+                return m.group(1)
+            m = re.search(r"/products/([a-z0-9][a-z0-9\-]*)", u, re.I)
+            return m.group(1) if m else None
+    except Exception:
+        return None
+    return None
 
 
 def _user_item_ids(db, user_id: str) -> list[str]:
