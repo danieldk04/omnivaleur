@@ -575,6 +575,7 @@ async def delist_all_platforms(item_id: str, user_id: str) -> list[dict]:
             else:
                 results.append({"platform": listing["platform"], "status": "delisted"})
 
+    results.extend(needs_link)
     return results
 
 
