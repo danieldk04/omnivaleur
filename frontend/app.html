@@ -3572,6 +3572,29 @@ async function markSoldItem(itemId, title) {
     if (!platforms.includes(platform)) return alert('Please type one of: ' + platforms.join(', '));
   }
 
+  const base = `${API}/api/listings/sold?item_id=${encodeURIComponent(itemId)}&platform=${encodeURIComponent(platform)}`;
+
+  // Preview step (dry run): ask the backend EXACTLY what a real run would delist,
+  // WITHOUT touching anything. This is the built-in "test mode" — on an item that
+  // isn't live anywhere it plainly says nothing will be removed.
+  setBusy(true, 'Checking what would happen…');
+  let plan;
+  try {
+    const pr = await apiFetch(`${base}&dry_run=true`, { method: 'POST' });
+    if (!pr.ok) throw new Error(await pr.text());
+    plan = await pr.json();
+  } catch (e) {
+    setBusy(false);
+    return alert('Could not check sold action: ' + e.message);
+  }
+  setBusy(false);
+
+  const wouldDelist = plan.would_delist || [];
+  const delistLine = wouldDelist.length
+    ? `⚠️ This will REMOVE the live listing from: ${wouldDelist.map(p => PLATFORM_LABELS[p] || p).join(', ')}.\nThose removals are NOT auto-reversible — you'd have to republish.`
+    : `✅ TEST-SAFE: this item isn't live on any other platform, so NOTHING will be removed anywhere.`;
+  if (!confirm(`Mark "${title}" as sold on ${PLATFORM_LABELS[platform]}?\n\n${delistLine}\n\nThe "sold" status itself is reversible via Analytics → Not sold.`)) return;
+
   // Optional: the real amount received (items rarely sell at asking price). Blank
   // keeps the asking price as a confirmable estimate in Analytics.
   const priceRaw = prompt(`Sale price for "${title}" on ${PLATFORM_LABELS[platform]}? (€)\nLeave empty to use the asking price as an estimate.`);
@@ -3580,9 +3603,9 @@ async function markSoldItem(itemId, title) {
 
   setBusy(true, `Marking "${title}" as sold…`);
   try {
-    const res = await apiFetch(`${API}/api/listings/sold?item_id=${encodeURIComponent(itemId)}&platform=${encodeURIComponent(platform)}${priceParam}`, { method: 'POST' });
+    const res = await apiFetch(`${base}${priceParam}`, { method: 'POST' });
     if (!res.ok) throw new Error(await res.text());
-    showToast(`Marked sold on ${PLATFORM_LABELS[platform]} — delisting elsewhere.`);
+    showToast(`Marked sold on ${PLATFORM_LABELS[platform]}${wouldDelist.length ? ' — delisting elsewhere.' : '.'}`);
     await loadAll();
   } catch (e) {
     alert('Mark sold failed: ' + e.message);
