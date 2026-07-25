@@ -104,12 +104,47 @@ async def login(body: AuthRequest):
         return {
             "ok": True,
             "access_token": res.session.access_token,
+            # The extension caches this and mints fresh access tokens on its own
+            # via /auth/refresh, so background jobs (sold-detector, delete) stop
+            # dying with "Sessie verlopen" when the ~1h access token expires and
+            # no dashboard tab is open to re-push one.
+            "refresh_token": res.session.refresh_token,
             "user": {"id": res.user.id, "email": res.user.email},
         }
     except HTTPException:
         raise
     except Exception:
         raise HTTPException(status_code=401, detail="Invalid email or password")
+
+
+class RefreshRequest(BaseModel):
+    refresh_token: str
+
+
+@router.post("/refresh")
+async def refresh(body: RefreshRequest):
+    """
+    Exchange a Supabase refresh token for a fresh access token. Used by the
+    browser extension so its long-running background work keeps a valid token
+    without the dashboard having to be open. Keeps the Supabase anon key on the
+    server rather than shipping it into the extension.
+    """
+    if not (body.refresh_token or "").strip():
+        raise HTTPException(status_code=401, detail="Sessie verlopen")
+    db = get_db()
+    try:
+        res = await asyncio.to_thread(db.auth.refresh_session, body.refresh_token)
+        if not res.session:
+            raise HTTPException(status_code=401, detail="Sessie verlopen")
+        return {
+            "ok": True,
+            "access_token": res.session.access_token,
+            "refresh_token": res.session.refresh_token,
+        }
+    except HTTPException:
+        raise
+    except Exception:
+        raise HTTPException(status_code=401, detail="Sessie verlopen")
 
 
 class ChangeEmailRequest(BaseModel):
