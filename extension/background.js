@@ -2442,7 +2442,12 @@ async function _mwFillBrand(brand) {
 
 chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   if (msg.type === "SYNC_TOKEN" && msg.token) {
-    chrome.storage.sync.set({ authToken: msg.token, userEmail: msg.email || "" }, () => {
+    const patch = { authToken: msg.token, userEmail: msg.email || "" };
+    // Only overwrite the stored refresh token when the page actually sent one —
+    // an older dashboard build syncs just the access token, and we must not wipe
+    // a good refresh token we already have.
+    if (msg.refresh) patch.refreshToken = msg.refresh;
+    chrome.storage.sync.set(patch, () => {
       sendResponse({ ok: true });
       pollJobs();
     });
