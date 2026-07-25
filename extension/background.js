@@ -1867,7 +1867,8 @@ async function checkSoldListings() {
 }
 
 // Scrape each ad card on the Marktplaats/2dehands "my ads" overview and report
-// whether it carries an explicit SOLD/RESERVED label. Returns [{id, sold}].
+// whether it carries an explicit SOLD/RESERVED label. Returns [{id, title, sold}].
+// The title lets us match sold ads to listings that have no platform id.
 function scrapeMarktplaatsAds(url, platform) {
   return new Promise((resolve) => {
     openWorkerTab(url, (tab) => {
@@ -1888,17 +1889,41 @@ function scrapeMarktplaatsAds(url, platform) {
               if (!m) return;
               const id = m[1];
               const card = a.closest('article, li, [class*="listing" i], [class*="ad" i]') || a.parentElement || a;
-              const text = (card.innerText || "").toLowerCase();
+              const raw = card.innerText || "";
+              const text = raw.toLowerCase();
               const sold = /\bverkocht\b|\bgereserveerd\b|\bsold\b|\breserved\b/.test(text);
-              byId[id] = byId[id] || sold;
-              if (sold) byId[id] = true;
+              // Prefer the link's own text as the title, fall back to the card's first line.
+              const title = (a.innerText || raw.split("\n")[0] || "").trim();
+              const prev = byId[id];
+              if (!prev) byId[id] = { id, title, sold };
+              else { if (sold) prev.sold = true; if (!prev.title && title) prev.title = title; }
             });
-            return Object.entries(byId).map(([id, sold]) => ({ id, sold }));
+            const ads = Object.values(byId);
+            // Diagnostic: if NOTHING shows a sold label, capture what the page
+            // structure / section labels actually look like so we can confirm
+            // whether sold ads even live on this view (they may sit behind a
+            // separate status filter/tab). Also dump a couple of raw card texts.
+            let diag = null;
+            if (!ads.some(x => x.sold)) {
+              const labels = [...document.querySelectorAll('nav a, [role="tab"], button, [class*="tab" i], [class*="filter" i]')]
+                .map(el => (el.innerText || "").replace(/\s+/g, " ").trim())
+                .filter(t => t && t.length < 40).slice(0, 25);
+              const sampleCards = [...document.querySelectorAll('article, li[class*="listing" i], [class*="ad" i]')]
+                .map(el => (el.innerText || "").replace(/\s+/g, " ").trim()).filter(Boolean).slice(0, 3);
+              diag = { pageTitle: document.title, tabOrFilterLabels: labels, sampleCards };
+            }
+            return { ads, diag };
           },
         }, (results) => {
           chrome.tabs.remove(tabId).catch(() => {});
-          const ads = results?.[0]?.result || [];
-          console.log(`[Omnivaleur] ${platform} ads scraped: ${ads.length} (sold: ${ads.filter(a => a.sold).length})`);
+          const out = results?.[0]?.result || { ads: [], diag: null };
+          const ads = out.ads || [];
+          console.log(`[Omnivaleur][sold] ${platform}: scraper found ${ads.length} ad cards (sold-labelled: ${ads.filter(a => a.sold).length})`);
+          if (out.diag) {
+            console.warn(`[Omnivaleur][sold] ${platform}: ZERO sold labels on this page. This is the PRIME SUSPECT — sold ads may live behind a separate status filter/tab, so this default overview never shows them. Page structure follows so we can find the right view:`);
+            console.warn(`[Omnivaleur][sold] ${platform}: tab/filter labels on page:`, out.diag.tabOrFilterLabels);
+            console.warn(`[Omnivaleur][sold] ${platform}: sample raw card text:`, out.diag.sampleCards);
+          }
           resolve(ads);
         });
       };
