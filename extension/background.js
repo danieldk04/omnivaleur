@@ -1812,9 +1812,15 @@ async function checkSoldListings() {
       // Fetch active listings for this platform from backend
       const authHeaders = await getAuthHeaders();
       const resp = await fetch(`${serverUrl}/api/listings/?platform=${platform}&status=active`, { headers: authHeaders }).catch(() => null);
-      if (!resp?.ok) continue;
+      if (!resp?.ok) {
+        console.warn(`[Omnivaleur][sold] ${platform}: could not fetch active listings (HTTP ${resp?.status || "no response"}) — skipping`);
+        continue;
+      }
       const allListings = await resp.json();
-      const active = allListings.filter(l => l.platform === platform && l.status === "active" && l.platform_listing_id);
+      const active = allListings.filter(l => l.platform === platform && l.status === "active");
+      const withId = active.filter(l => l.platform_listing_id);
+      const withoutId = active.filter(l => !l.platform_listing_id);
+      console.log(`[Omnivaleur][sold] ${platform}: ${active.length} active listings (${withId.length} with a platform id, ${withoutId.length} without an id → matched by title)`);
       if (!active.length) continue;
 
       // Scrape the ads overview and read each ad's SOLD marker. We only act on a
@@ -1822,21 +1828,40 @@ async function checkSoldListings() {
       // absent, which on Marktplaats also means "expired" (auto-relisted later)
       // and would wrongly delist a still-live item everywhere. Fail-safe: if no
       // ad shows a sold label, nothing happens.
+      console.log(`[Omnivaleur][sold] ${platform}: opening sold-overview ${soldUrl}`);
       const ads = await scrapeMarktplaatsAds(soldUrl, platform);
-      const soldIds = new Set(ads.filter(a => a.sold).map(a => a.id));
-      if (!soldIds.size) continue;
+      const soldAds = ads.filter(a => a.sold);
+      const soldIds = new Set(soldAds.map(a => a.id).filter(Boolean));
+      // Normalised sold-ad titles for title-based matching (listings without an id).
+      const soldTitles = soldAds.map(a => (a.title || "").toLowerCase().trim()).filter(Boolean);
+      console.log(`[Omnivaleur][sold] ${platform}: ${ads.length} ad cards scraped, ${soldAds.length} carry a sold/reserved label`);
+      if (!soldAds.length) continue;
 
+      let triggered = 0;
       for (const listing of active) {
-        if (soldIds.has(listing.platform_listing_id)) {
-          console.log(`[Omnivaleur] Sold detected (verkocht label): ${listing.platform_listing_id} on ${platform}, triggering delist`);
-          await fetch(`${serverUrl}/api/listings/sold?item_id=${listing.item_id}&platform=${platform}`, {
+        // Match a sold ad either by exact platform id, or — for listings without
+        // an id — by a resilient title match against a POSITIVELY sold ad. We
+        // NEVER infer a sale from absence; only a positive sold label acts.
+        let isSold = listing.platform_listing_id && soldIds.has(listing.platform_listing_id);
+        if (!isSold && !listing.platform_listing_id && listing.title) {
+          const lt = listing.title.toLowerCase().trim();
+          const key = lt.substring(0, 20);
+          isSold = key.length >= 8 && soldTitles.some(st => st.startsWith(key) || st.includes(key));
+          if (isSold) console.log(`[Omnivaleur][sold] ${platform}: matched sold ad by TITLE for "${listing.title}" (no platform id)`);
+        }
+        if (isSold) {
+          triggered++;
+          console.log(`[Omnivaleur][sold] ${platform}: SOLD confirmed (positive label) item_id=${listing.item_id} id=${listing.platform_listing_id || "—"} → triggering cross-platform delist`);
+          const r = await fetch(`${serverUrl}/api/listings/sold?item_id=${listing.item_id}&platform=${platform}`, {
             method: "POST",
             headers: authHeaders,
-          }).catch(e => console.error("[Omnivaleur] sold trigger failed:", e));
+          }).catch(e => { console.error("[Omnivaleur][sold] sold POST failed:", e); return null; });
+          console.log(`[Omnivaleur][sold] ${platform}: POST /api/listings/sold → HTTP ${r?.status ?? "no response"}`);
         }
       }
+      console.log(`[Omnivaleur][sold] ${platform}: ${triggered} listing(s) triggered delist this cycle`);
     } catch (e) {
-      console.error(`[Omnivaleur] sold-check error (${platform}):`, e);
+      console.error(`[Omnivaleur][sold] sold-check error (${platform}):`, e);
     }
   }
 }
