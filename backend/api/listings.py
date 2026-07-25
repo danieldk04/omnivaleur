@@ -447,4 +447,6 @@ async def reconcile_vinted_orders(body: dict, user_id: str = Depends(get_current
         except Exception:
             pass
 
+    logger.info("[sold] reconcile-vinted-orders: matched=%d newly_sold=%d price_backfilled=%d unmatched=%d unmatched_skus=%s",
+                matched, marked_sold, price_backfilled, len(unmatched_skus), unmatched_skus)
     return {"ok": True, "marked_sold": marked_sold, "price_backfilled": price_backfilled}
