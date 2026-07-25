@@ -2034,9 +2034,14 @@ async function checkVintedOrders() {
       console.warn("[Omnivaleur][sold] Vinted: no orders scraped — either no sales, not logged in, or the orders-page selectors no longer match (see scraper logs above)");
       return;
     }
+    // Re-fetch headers here (not the ones captured before the multi-second
+    // scrape): getAuthHeaders proactively refreshes, so the POST always goes out
+    // with a token that isn't about to expire — this is what fixed the
+    // "reconcile → 401 Sessie verlopen" the scan kept hitting.
+    const postHeaders = await getAuthHeaders();
     const r = await fetch(`${serverUrl}/api/listings/reconcile-vinted-orders`, {
       method: "POST",
-      headers: authHeaders,
+      headers: postHeaders,
       body: JSON.stringify({ orders }),
     }).catch(e => { console.error("[Omnivaleur][sold] Vinted reconcile POST failed:", e); return null; });
     let bodyText = "";
