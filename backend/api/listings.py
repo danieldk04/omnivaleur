@@ -260,6 +260,7 @@ async def mark_sold(item_id: str, platform: str, background_tasks: BackgroundTas
     item = db.table("items").select("id").eq("id", item_id).eq("user_id", user_id).execute()
     if not item.data:
         raise HTTPException(status_code=404, detail="Item not found")
+    logger.info("[sold] POST /sold item_id=%s platform=%s sold_price=%s -> delist triggered", item_id, platform, sold_price)
     background_tasks.add_task(handle_item_sold, item_id, platform, sold_price)
     return {"status": "delist_triggered"}
 
