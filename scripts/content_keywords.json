@@ -170,7 +170,7 @@
       "region": "nl",
       "pillar": "A",
       "slug": "marktplaats-to-shopify-crosslisting",
-      "status": "pending",
+      "status": "published",
       "nl_slug": "marktplaats-naar-shopify-crosslisting",
       "priority": 21
     },
@@ -363,6 +363,15 @@
       "action": "updated",
       "url_path": "/vs/omnivaleur-vs-zenlister",
       "published_at": "2026-07-24T10:11:05.759469+00:00"
+    },
+    {
+      "keyword": "marktplaats to shopify crosslisting",
+      "slug": "marktplaats-to-shopify-crosslisting",
+      "region": "nl",
+      "pillar": "A",
+      "action": "created",
+      "url_path": "/crosslisting/marktplaats-to-shopify-crosslisting",
+      "published_at": "2026-07-25T09:31:13.248248+00:00"
     }
   ]
 }
