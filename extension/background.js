@@ -1948,15 +1948,24 @@ async function checkVintedOrders() {
     const serverUrl = await getServerUrl();
     const authHeaders = await getAuthHeaders();
     if (!authHeaders.Authorization) return; // not logged into the extension yet
-    const orders = await scrapeVintedOrders("https://www.vinted.nl/my_orders");
-    if (!orders.length) return;
-    await fetch(`${serverUrl}/api/listings/reconcile-vinted-orders`, {
+    const ordersUrl = "https://www.vinted.nl/my_orders";
+    console.log(`[Omnivaleur][sold] Vinted: opening orders page ${ordersUrl}`);
+    const orders = await scrapeVintedOrders(ordersUrl);
+    console.log(`[Omnivaleur][sold] Vinted: ${orders.length} order(s) with a parseable (SKU) scraped:`, orders);
+    if (!orders.length) {
+      console.warn("[Omnivaleur][sold] Vinted: no orders scraped — either no sales, not logged in, or the orders-page selectors no longer match (see scraper logs above)");
+      return;
+    }
+    const r = await fetch(`${serverUrl}/api/listings/reconcile-vinted-orders`, {
       method: "POST",
       headers: authHeaders,
       body: JSON.stringify({ orders }),
-    }).catch(e => console.error("[Omnivaleur] vinted-orders reconcile failed:", e));
+    }).catch(e => { console.error("[Omnivaleur][sold] Vinted reconcile POST failed:", e); return null; });
+    let bodyText = "";
+    try { bodyText = r ? await r.text() : ""; } catch (_) {}
+    console.log(`[Omnivaleur][sold] Vinted: POST /api/listings/reconcile-vinted-orders → HTTP ${r?.status ?? "no response"} body=${bodyText}`);
   } catch (e) {
-    console.error("[Omnivaleur] checkVintedOrders error:", e);
+    console.error("[Omnivaleur][sold] checkVintedOrders error:", e);
   }
 }
 
