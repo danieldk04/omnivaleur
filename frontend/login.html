@@ -105,6 +105,7 @@ async function doLogin(e) {
     if (!res.ok) throw new Error(data.detail || 'Login failed');
     sessionStorage.setItem('cl_auth', '1');
     sessionStorage.setItem('cl_token', data.access_token);
+    if (data.refresh_token) sessionStorage.setItem('cl_refresh', data.refresh_token);
     sessionStorage.setItem('cl_email', data.user.email);
     window.location.href = '/app';
   } catch (err) {
