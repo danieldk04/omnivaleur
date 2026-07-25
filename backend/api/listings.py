@@ -264,11 +264,28 @@ async def relist_ended_ebay(body: dict, user_id: str = Depends(get_current_user)
 
 
 @router.post("/sold")
-async def mark_sold(item_id: str, platform: str, background_tasks: BackgroundTasks, sold_price: float | None = None, user_id: str = Depends(get_current_user)):
+async def mark_sold(item_id: str, platform: str, background_tasks: BackgroundTasks, sold_price: float | None = None, dry_run: bool = False, user_id: str = Depends(get_current_user)):
     db = get_db()
     item = db.table("items").select("id").eq("id", item_id).eq("user_id", user_id).execute()
     if not item.data:
         raise HTTPException(status_code=404, detail="Item not found")
+
+    # dry_run = a zero-side-effect preview: touches NOTHING (no sold flag, no delist
+    # jobs), just reports which other platforms a real run WOULD delist. Lets the
+    # user rehearse the Sold button safely — nothing gets removed anywhere.
+    if dry_run:
+        others = (
+            db.table("listings")
+            .select("platform,status")
+            .eq("item_id", item_id)
+            .in_("status", ["active", "relisting"])
+            .neq("platform", platform)
+            .execute()
+        )
+        would_delist = sorted({l["platform"] for l in (others.data or [])})
+        logger.info("[sold] DRY-RUN item_id=%s platform=%s would_delist=%s", item_id, platform, would_delist)
+        return {"status": "dry_run", "would_mark_sold": platform, "would_delist": would_delist}
+
     logger.info("[sold] POST /sold item_id=%s platform=%s sold_price=%s -> delist triggered", item_id, platform, sold_price)
     background_tasks.add_task(handle_item_sold, item_id, platform, sold_price)
     return {"status": "delist_triggered"}
