@@ -611,13 +611,32 @@ async def handle_item_sold(item_id: str, sold_on_platform: str, sold_price: floa
     }
     if sold_price is not None:
         update["sold_price"] = round(float(sold_price), 2)
+
+    def _write_sold():
+        existing = (
+            db.table("listings").select("id")
+            .eq("item_id", item_id).eq("platform", sold_on_platform).execute()
+        )
+        if existing.data:
+            db.table("listings").update(update).eq("item_id", item_id).eq("platform", sold_on_platform).execute()
+        else:
+            # No listing record on the sold platform (e.g. the user sold something
+            # Omnivaleur wasn't tracking there, or a manual/unlinked sale). Still
+            # record the sale so it counts in revenue/Analytics rather than silently
+            # doing nothing — the manual "Sold" button must never be a no-op.
+            db.table("listings").insert({
+                "item_id": item_id,
+                "platform": sold_on_platform,
+                **update,
+            }).execute()
+
     try:
-        db.table("listings").update(update).eq("item_id", item_id).eq("platform", sold_on_platform).execute()
+        _write_sold()
     except Exception as e:
         # sold_price column not migrated yet — never let that block the sold flow.
         if "sold_price" in update and "sold_price" in str(e):
             update.pop("sold_price", None)
-            db.table("listings").update(update).eq("item_id", item_id).eq("platform", sold_on_platform).execute()
+            _write_sold()
         else:
             raise
 
