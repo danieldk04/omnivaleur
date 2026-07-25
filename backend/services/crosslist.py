@@ -640,26 +640,47 @@ async def handle_item_sold(item_id: str, sold_on_platform: str, sold_price: floa
         else:
             raise
 
-    # Find other active/relisting listings to delist
+    # Find other listings to delist. We include 'delisted' and 'error' — NOT just
+    # 'active' — on purpose: a broken earlier delete could have flipped the DB to
+    # 'delisted' while the listing is in fact still LIVE on the platform (the
+    # exact state that made "Sold" silently open nothing). "Sold" means "make sure
+    # this is gone everywhere", so we re-attempt removal on any listing that isn't
+    # already the sold one. The extension verifies presence first and treats an
+    # absent listing as success, so re-checking a genuinely-gone one is harmless.
     other = (
         db.table("listings")
         .select("*")
         .eq("item_id", item_id)
-        .in_("status", ["active", "relisting"])
+        .in_("status", ["active", "relisting", "error", "delisted"])
         .neq("platform", sold_on_platform)
         .execute()
     )
 
+    logger.info(
+        "[sold] item_id=%s sold_on=%s → %d other listing(s) to delist: %s",
+        item_id, sold_on_platform, len(other.data or []),
+        [(l["platform"], l["status"]) for l in (other.data or [])],
+    )
+
     if not other.data:
+        logger.info("[sold] item_id=%s: NOTHING to delist (no other listing rows found)", item_id)
         return
 
     item_row = db.table("items").select("*").eq("id", item_id).single().execute().data
     user_id = (item_row or {}).get("user_id")
 
+    # Dedup to one delete per platform (a platform can have both an 'error' and a
+    # 'delisted' row from earlier attempts — we only need one delete job).
+    seen_plat = set()
     api_listings = []
     for listing in other.data:
-        if listing["platform"] in _EXTENSION_DELIST_PLATFORMS and user_id:
+        plat = listing["platform"]
+        if plat in seen_plat:
+            continue
+        seen_plat.add(plat)
+        if plat in _EXTENSION_DELIST_PLATFORMS and user_id:
             _enqueue_extension_delete(db, user_id, item_id, listing, item_row)
+            logger.info("[sold] queued extension delete for %s (was %s)", plat, listing["status"])
         else:
             api_listings.append(listing)
 
