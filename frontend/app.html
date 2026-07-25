@@ -3545,6 +3545,52 @@ async function runDelist(itemId) {
   return await res.json();
 }
 
+// ── Mark item as sold manually (fallback for the auto sold-detector) ──────
+async function markSoldItem(itemId, title) {
+  // Which platforms is this item currently live on? The sale happened on one of
+  // them; marking it sold there records the sale and auto-delists the others.
+  const live = state.listings.filter(l =>
+    l.item_id === itemId && (l.status === 'active' || (l.status === 'error' && l.platform_listing_id))
+  );
+  const platforms = [...new Set(live.map(l => l.platform))];
+
+  let platform;
+  if (platforms.length === 0) {
+    // No tracked live listing — still let the user record the sale, ask where.
+    platform = prompt(`Which platform did "${title}" sell on?\n(marktplaats, 2dehands, vinted, ebay, shopify)`);
+    if (!platform) return;
+    platform = platform.trim().toLowerCase();
+    if (!PLATFORM_LABELS[platform]) return alert('Unknown platform: ' + platform);
+  } else if (platforms.length === 1) {
+    platform = platforms[0];
+    if (!confirm(`Mark "${title}" as sold on ${PLATFORM_LABELS[platform]}?\nIt will be delisted from every other platform.`)) return;
+  } else {
+    const labels = platforms.map(p => PLATFORM_LABELS[p] || p).join(', ');
+    const answer = prompt(`Which platform did "${title}" sell on?\nLive on: ${labels}\n\nType one of: ${platforms.join(', ')}`);
+    if (!answer) return;
+    platform = answer.trim().toLowerCase();
+    if (!platforms.includes(platform)) return alert('Please type one of: ' + platforms.join(', '));
+  }
+
+  // Optional: the real amount received (items rarely sell at asking price). Blank
+  // keeps the asking price as a confirmable estimate in Analytics.
+  const priceRaw = prompt(`Sale price for "${title}" on ${PLATFORM_LABELS[platform]}? (€)\nLeave empty to use the asking price as an estimate.`);
+  if (priceRaw === null) return; // cancelled
+  const priceParam = priceRaw.trim() ? `&sold_price=${encodeURIComponent(parseFloat(priceRaw.replace(',', '.')))}` : '';
+
+  setBusy(true, `Marking "${title}" as sold…`);
+  try {
+    const res = await apiFetch(`${API}/api/listings/sold?item_id=${encodeURIComponent(itemId)}&platform=${encodeURIComponent(platform)}${priceParam}`, { method: 'POST' });
+    if (!res.ok) throw new Error(await res.text());
+    showToast(`Marked sold on ${PLATFORM_LABELS[platform]} — delisting elsewhere.`);
+    await loadAll();
+  } catch (e) {
+    alert('Mark sold failed: ' + e.message);
+  } finally {
+    setBusy(false);
+  }
+}
+
 // ── Import existing listings (scan platform → review → link/create) ──────
 const IMPORT_SCANNABLE = { vinted: true, marktplaats: false, '2dehands': false, ebay: false, etsy: false, shopify: false };
 const scanningPlatforms = {}; // platform -> true while a scan is queued/running in the background
