@@ -959,18 +959,52 @@ async function bgDeleteMp2dh(job, serverUrl) {
 
     await sleep(900);
 
-    // Confirm dialog, if one appears. Scope to a modal/dialog so we don't just
-    // re-click the top Verwijder button. Confirmation is best-effort: the final
-    // verification below (listing actually gone) is the real source of truth.
-    await execInTab(tabId, () => {
-      const scope = document.querySelector('[role="dialog"], [aria-modal="true"], [class*="odal"], [class*="opup"]') || document;
-      const btn = [...scope.querySelectorAll("button")]
-        .find(e => /verwijder(en)?|bevestig|^ok$|^ja\b/i.test(e.textContent.trim()));
-      if (btn) { btn.click(); return true; }
-      return false;
-    });
+    // Confirm dialog. Verified live 2026-07 on marktplaats.nl: clicking the top
+    // Verwijder opens a ReactModal asking "Heb je "<titel>" verkocht via
+    // Marktplaats?" with exactly two buttons — "Niet verkocht via Marktplaats"
+    // and "Verkocht via Marktplaats". NEITHER contains "verwijderen", so the old
+    // regex matched nothing inside the dialog. On top of that the old scope
+    // selector's [class*="odal"] matched <body class="ReactModal__Body--open">
+    // first, so "scope" became the whole page and the search fell back to the
+    // toolbar's own Verwijder button. The modal simply stayed open and NOTHING
+    // was ever deleted — the same silent failure for the delist AND for the
+    // relist ("hard refresh"), whose first step is this delete.
+    //
+    // We always answer "Niet verkocht via <platform>": every delete we drive is
+    // either a sold-elsewhere delist or a relist, so the ad was not sold through
+    // this platform. Clicking the other button would file a false sale on the
+    // user's account.
+    const CONFIRM_STEPS = 3; // MP has added follow-up screens before; handle a short chain
+    for (let step = 0; step < CONFIRM_STEPS; step++) {
+      const res = await execInTab(tabId, () => {
+        // .ReactModalPortal is the real dialog root. Never match on <body>.
+        const modal = [...document.querySelectorAll('.ReactModalPortal, [role="dialog"], [aria-modal="true"]')]
+          .find(el => el.getClientRects().length > 0 && (el.innerText || "").trim());
+        if (!modal) return { open: false };
+        const buttons = [...modal.querySelectorAll('button, a[role="button"]')]
+          .filter(b => !b.disabled && (b.textContent || "").trim());
+        const labels = buttons.map(b => b.textContent.trim().replace(/\s+/g, " "));
+        const pick =
+          // Step 1: the "sold via this platform?" question — decline it.
+          buttons.find(b => /niet\s+verkocht/i.test(b.textContent)) ||
+          // Any follow-up screen: a plain confirm. "annuleren"/"terug" excluded.
+          buttons.find(b => /^(ja|verwijder(en)?|bevestig(en)?|doorgaan|ok)\b/i.test(b.textContent.trim()));
+        if (!pick) return { open: true, clicked: false, labels };
+        pick.click();
+        return { open: true, clicked: true, picked: pick.textContent.trim(), labels };
+      });
 
-    await sleep(1600);
+      if (!res || !res.open) break; // dialog gone — either answered, or none appeared
+      if (!res.clicked) {
+        throw new Error(
+          `The ${platform} delete dialog had no button this extension recognises ` +
+          `(saw: ${(res.labels || []).join(" | ") || "no buttons"}). Nothing was deleted — ` +
+          `${platform} likely changed this screen.`
+        );
+      }
+      console.log(`[Omnivaleur] bgDelete: confirm step ${step + 1} → clicked "${res.picked}"`);
+      await sleep(1500);
+    }
 
     // Verify the listing is actually gone before reporting success — without
     // this the job was marked "done" (DB set to "delisted") even when nothing
@@ -978,6 +1012,10 @@ async function bgDeleteMp2dh(job, serverUrl) {
     await new Promise(res => chrome.tabs.reload(tabId, {}, res));
     await waitForTabLoad(tabId);
     await sleep(2500);
+    // Expand here too: only the first 50 ads render, so on a shop with more than
+    // that an ad sitting at #51+ is simply absent from the DOM — which this check
+    // would read as "successfully deleted" and report a false success.
+    await expandMp2dhOverview(tabId);
 
     const stillPresent = await execInTab(tabId, (rawTitle, listingId) => {
       const strip = s => (s || "").replace(/^\s*\(\d+\)\s*/, "").replace(/\s+/g, " ").trim().toLowerCase();
