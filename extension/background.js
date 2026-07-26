@@ -6,6 +6,18 @@ const POLL_INTERVAL_SECONDS = 15;
 // "facebook" = Facebook Marketplace (BETA, best-effort — see content/facebook.js)
 const EXTENSION_PLATFORMS = ["marktplaats", "2dehands", "vinted", "facebook"];
 
+// Marktplaats files children's clothing by SIZE: the L3 "type" under Babykleding
+// and Kinderkleding literally IS the size (Maat 50 … Maat 176), with no boy/girl
+// split at all. So for those two buckets cat3 has to be resolved from the item's
+// own size instead of being a constant. IDs read from the live SYI picker.
+const MP_BABY_SIZES = {   // Kinderen en Baby's > Babykleding (bucketId 150)
+  50: 568, 56: 569, 62: 570, 68: 571, 74: 572, 80: 573, 86: 574,
+};
+const MP_KIDS_SIZES = {   // Kinderen en Baby's > Kinderkleding (bucketId 153)
+  92: 582, 98: 583, 104: 584, 110: 585, 116: 586, 122: 587, 128: 588,
+  134: 589, 140: 590, 146: 591, 152: 592, 158: 593, 164: 594, 170: 595, 176: 596,
+};
+
 // Marktplaats category map: item.category → {cat1, cat3, bucketId}
 // cat1=621 = Dames Kleding, cat1=385 = Heren Kleding
 // Verified Marktplaats SYI category IDs (from actual URLs)
