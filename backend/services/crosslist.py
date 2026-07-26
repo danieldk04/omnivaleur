@@ -819,7 +819,12 @@ async def _delist_one(listing: dict):
 
     try:
         platform = get_platform(listing["platform"])
-        delete_id = listing.get("platform_offer_id") or listing["platform_listing_id"]
+        # platform_offer_id is an eBay-only concept (Inventory API offers). Using it
+        # as a fallback for every platform meant a stray value on a Shopify row would
+        # be sent to Shopify as a product id, which 404s and reads as "delete failed".
+        delete_id = (
+            listing.get("platform_offer_id") if listing["platform"] == "ebay" else None
+        ) or listing.get("platform_listing_id")
         deleted = await platform.delete_listing(delete_id, credentials)
         if deleted is False:
             raise RuntimeError(f"delete_listing returned False for {listing['platform']} listing {listing['platform_listing_id']}")
