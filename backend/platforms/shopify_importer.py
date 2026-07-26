@@ -104,6 +104,25 @@ _NL_EN_TYPE = {
     "peuterkleding": "Toddler Clothing", "kleding": "Clothing",
 }
 
+# The "sieraden ..." leaves (jewellery, watches, bags — see the frontend
+# CATEGORIES.sieraden group and the extension's MP_CATEGORIES). Keyed on the part
+# after the "sieraden " prefix.
+_SIERADEN_EN_TYPE = {
+    "horloges dames": "Watch", "horloges heren": "Watch",
+    "horloges kinderen": "Watch", "horloges antiek": "Watch",
+    "smartwatch": "Smartwatch", "sporthorloge": "Sports Watch",
+    "activity tracker": "Activity Tracker",
+    "kettingen": "Necklace", "kettinghangers": "Pendant",
+    "armbanden": "Bracelet", "ringen": "Ring", "oorbellen": "Earrings",
+    "bedels": "Charm", "broches": "Brooch", "enkelbandjes": "Anklet",
+    "kindersieraden": "Jewellery", "antiek": "Jewellery",
+    "damestassen": "Handbag", "schoudertassen": "Shoulder Bag",
+    "rugtassen": "Backpack", "reistassen": "Travel Bag",
+    "sporttassen": "Sports Bag", "koffers": "Suitcase",
+    "portemonnees": "Wallet",
+    "zonnebril dames": "Sunglasses", "zonnebril heren": "Sunglasses",
+}
+
 # Words that appear in our English titles but are never the garment itself —
 # every title ends in "- <size> - <condition>", and colours/conditions sit right
 # next to the noun, so without these the "last meaningful word" of
