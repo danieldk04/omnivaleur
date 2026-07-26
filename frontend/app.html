@@ -3478,10 +3478,15 @@ async function saveItem() {
 
 // ── Delist single item ────────────────────────────────────────────
 async function delistItem(itemId, title) {
+  // Mirror the backend's delistable set (crosslist.py _DELISTABLE_STATUSES).
+  // 'delisted' is included on purpose: a delete that only looked like it worked
+  // marked the row delisted while the listing stayed live, and hiding those rows
+  // here meant the confirm dialog never even named the platform that was skipped.
+  const DELISTABLE = ['active', 'error', 'delisted', 'pending', 'relisting'];
   const delistable = state.listings.filter(l =>
-    l.item_id === itemId && (l.status === 'active' || (l.status === 'error' && l.platform_listing_id))
+    l.item_id === itemId && DELISTABLE.includes(l.status)
   );
-  const activePlatforms = delistable.map(l => PLATFORM_LABELS[l.platform] || l.platform);
+  const activePlatforms = [...new Set(delistable.map(l => PLATFORM_LABELS[l.platform] || l.platform))];
   const msg = activePlatforms.length
     ? `Delist "${title}" from: ${activePlatforms.join(', ')}?`
     : `"${title}" has no active listings. Continue anyway?`;
