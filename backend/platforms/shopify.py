@@ -154,9 +154,23 @@ class ShopifyClient:
 
     async def delete_product(self, product_id: str) -> bool:
         import httpx
+        # Returning a bare False here surfaced upstream as "delete_listing returned
+        # False" — which says nothing about WHY (wrong store, revoked token, no
+        # product id, product already gone). Raise with the status and body so the
+        # dashboard shows something the user can actually act on.
+        if not product_id:
+            raise RuntimeError(
+                "No Shopify product id on this listing, so there's nothing to delete. "
+                "Re-link the listing (paste its Shopify URL) and try again."
+            )
         async with httpx.AsyncClient() as c:
             r = await c.delete(f"{self.base}/products/{product_id}.json", headers=self.headers)
-            return r.status_code == 200
+        if r.status_code in (200, 204):
+            return True
+        raise RuntimeError(
+            f"Shopify refused to delete product {product_id} on {self.base}: "
+            f"HTTP {r.status_code} {(r.text or '')[:200]}"
+        )
 
 
 def shopify_product_to_item(product: dict) -> dict:
