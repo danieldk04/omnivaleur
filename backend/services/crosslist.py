@@ -428,12 +428,28 @@ async def delist_all_platforms(item_id: str, user_id: str) -> list[dict]:
     listings_resp = (
         db.table("listings").select("*").eq("item_id", item_id).execute()
     )
-    # Include 'active' listings and ANY 'error' listings (product may exist on platform
-    # even if our status tracking failed). Deduplicate by platform — keep the one with
-    # a platform_listing_id if both exist, otherwise any.
+    # Which rows count as "might still be live on the platform".
+    #
+    # 'delisted' is deliberately included. A delete that only LOOKED like it
+    # worked still flipped this row to 'delisted' while the product stayed live
+    # in the shop — exactly what the Marktplaats confirm-dialog bug and the
+    # Shopify id/SKU bugs did. Once that happened the row was excluded from this
+    # query forever, so every later delist silently skipped that platform: no
+    # error, no mention in the summary, and the listing never removed. Delist
+    # means "make sure this is gone", so re-attempt anything not already sold.
+    # Re-deleting something genuinely gone is harmless: the extension verifies
+    # presence first and treats an absent listing as success, and the API
+    # platforms treat a 404 the same way.
+    #
+    # 'pending' covers a create that never finished — the product can exist on
+    # the platform even though we never recorded its id.
+    #
+    # Deduplicate by platform — keep the one with a platform_listing_id if both
+    # exist, otherwise any.
+    _DELISTABLE_STATUSES = ("active", "error", "delisted", "pending", "relisting")
     seen_platforms: dict[str, dict] = {}
     for l in listings_resp.data:
-        if l["status"] not in ("active", "error"):
+        if l["status"] not in _DELISTABLE_STATUSES:
             continue
         p = l["platform"]
         existing = seen_platforms.get(p)
