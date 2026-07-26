@@ -244,6 +244,15 @@
       return ["Elektronica en computers", "Electronics & computers"];
     }
 
+    // Jewellery / watches / bags — their own item type, so the leaf is exact and
+    // no title guessing is needed. Bags and suitcases have a separate Facebook
+    // leaf from jewellery, which is the only split that matters here.
+    if (cat.startsWith("sieraden")) {
+      if (/\b(damestassen|schoudertassen|rugtassen|reistassen|sporttassen|koffers)\b/.test(cat))
+        return ["Tassen, koffers en bagage", "Bags, luggage & suitcases", "Sieraden en accessoires"];
+      return ["Sieraden en accessoires", "Jewelry & accessories", "Jewellery & accessories"];
+    }
+
     // Accessories are NOT clothing on Facebook. A watch, belt, scarf or piece of
     // jewellery belongs under "Sieraden en accessoires"; bags have their own leaf.
     // The dashboard only offers one flat "Accessories" option per gender, so the
