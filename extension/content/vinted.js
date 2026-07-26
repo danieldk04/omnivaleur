@@ -968,8 +968,20 @@
     const inp = qs('input[data-testid="catalog-select-dropdown-input"]');
     if (!inp) return false;
 
-    const hints = (CAT_HINTS[gender ? `${gender} ${cat}` : cat] || CAT_HINTS[cat] || [])
+    let hints = (CAT_HINTS[gender ? `${gender} ${cat}` : cat] || CAT_HINTS[cat] || [])
       .map((h) => h.toLowerCase());
+
+    // The dashboard offers ONE flat "Accessories" option per gender, but Vinted
+    // splits accessories into separate leaves (Watches, Belts, Scarves, Hats,
+    // Jewellery, Bags, Wallets…). So the category alone can't say which one — the
+    // stock hints for "accessoires" are just ["bags","scarves","jewellery",
+    // "accessories"], which is why a watch landed in the wrong leaf or nowhere at
+    // all. Read the noun out of the item's own title and lead with that.
+    if (/accessoire|accessor/.test(cat)) {
+      const text = `${item.title || ""} ${item.description || ""}`.toLowerCase();
+      const specific = ACCESSORY_TERMS.find(([re]) => re.test(text));
+      if (specific) hints = [...specific[1], ...hints];
+    }
     // For relisted imports the category is captured straight from Vinted's own
     // breadcrumb (e.g. "Jumpers & sweaters"), which won't be in CAT_HINTS — use
     // that raw text as a hint so we can still filter the catalogue to it.
