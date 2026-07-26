@@ -398,7 +398,48 @@ function getMpSyiUrl(platform, item) {
     );
   }
 
-  return `${base}/${c.cat1}/${c.cat3}?bucketId=${c.bucketId}&title=`;
+  // Children's clothing: the L3 type is the size (see MP_BABY_SIZES). Read the
+  // size off the item; fall back to the bucket's "Overige" type when the item has
+  // no size or a non-numeric one (e.g. "4-5 jaar"), which is a real, valid
+  // category — never a wrong one.
+  let cat3 = c.cat3;
+  if (c.sizeMap) {
+    const resolved = mpKidsSizeCat3(item?.size, c.sizeMap);
+    if (resolved) cat3 = resolved;
+  }
+
+  return `${base}/${c.cat1}/${cat3}?bucketId=${c.bucketId}&title=`;
+}
+
+// Map a stored size onto a Marktplaats children's size type id.
+// Handles "104", "maat 104", "104/110" and "3-4 jaar" (years → cm, the standard
+// EU sizing: 92 = 2 yrs, then +6cm per year). Returns null when nothing matches,
+// so the caller can use the bucket's "Overige" type rather than guess.
+function mpKidsSizeCat3(size, sizeMap) {
+  const raw = String(size || "").toLowerCase().trim();
+  if (!raw) return null;
+
+  const known = Object.keys(sizeMap).map(Number).sort((a, b) => a - b);
+  const nearest = (cm) => {
+    // Marktplaats only has discrete sizes; snap to the nearest one, but never
+    // across a gap bigger than one step (so a 200cm "size" isn't forced to 176).
+    let best = null;
+    for (const k of known) {
+      if (best === null || Math.abs(k - cm) < Math.abs(best - cm)) best = k;
+    }
+    return best !== null && Math.abs(best - cm) <= 6 ? sizeMap[best] : null;
+  };
+
+  // "3 jaar" / "3-4 jaar" / "3y" → cm. Take the LOWER bound so a 3-4 lands on 98,
+  // matching how these garments are actually labelled.
+  const years = raw.match(/(\d{1,2})\s*(?:-\s*\d{1,2}\s*)?(?:jaar|jr|y|yrs|years)\b/);
+  if (years) return nearest(92 + (parseInt(years[1], 10) - 2) * 6);
+
+  // First number in the string: "104", "maat 104", "104/110", "110 cm".
+  const num = raw.match(/\d{2,3}/);
+  if (num) return nearest(parseInt(num[0], 10));
+
+  return null;
 }
 
 chrome.alarms.create("poll", { periodInMinutes: POLL_INTERVAL_SECONDS / 60 });
