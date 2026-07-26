@@ -124,6 +124,45 @@ const MP_CATEGORIES = {
   "unisex schoenen":        { cat1: 621,  cat3: 625,  bucketId: 164 },
   "unisex accessoires":     { cat1: 621,  cat3: 628,  bucketId: 162 },
 
+  // === SIERADEN, TASSEN EN UITERLIJK (cat1=1826) ===
+  // Non-clothing, same prefix scheme as "games "/"electronics ". Exists because a
+  // watch has no home in the clothing taxonomy: it could only be filed under an
+  // "accessoires" key, which maps to Kleding | Dames (cat1 621) — so every watch,
+  // ring and handbag landed in women's clothing accessories.
+  // IDs read straight from the live SYI category picker on marktplaats.nl
+  // (verified 2026-07, not guessed): cat1 1826, bucketId = the L2 subcategory,
+  // cat3 = the L3 "type". Confirmed loading as "Horloges | Dames" for 1826/16?bucketId=199.
+  // -- Horloges (bucketId 199)
+  "sieraden horloges dames":    { cat1: 1826, cat3: 16,   bucketId: 199 },
+  "sieraden horloges heren":    { cat1: 1826, cat3: 1831, bucketId: 199 },
+  "sieraden horloges kinderen": { cat1: 1826, cat3: 2797, bucketId: 199 },
+  "sieraden horloges antiek":   { cat1: 1826, cat3: 4,    bucketId: 199 },
+  "sieraden smartwatch":        { cat1: 1826, cat3: 3041, bucketId: 199 },
+  "sieraden sporthorloge":      { cat1: 1826, cat3: 3045, bucketId: 199 },
+  "sieraden activity tracker":  { cat1: 1826, cat3: 3042, bucketId: 199 },
+  // -- Sieraden (bucketId 200)
+  "sieraden kettingen":         { cat1: 1826, cat3: 18,   bucketId: 200 },
+  "sieraden kettinghangers":    { cat1: 1826, cat3: 2136, bucketId: 200 },
+  "sieraden armbanden":         { cat1: 1826, cat3: 1827, bucketId: 200 },
+  "sieraden ringen":            { cat1: 1826, cat3: 22,   bucketId: 200 },
+  "sieraden oorbellen":         { cat1: 1826, cat3: 19,   bucketId: 200 },
+  "sieraden bedels":            { cat1: 1826, cat3: 17,   bucketId: 200 },
+  "sieraden broches":           { cat1: 1826, cat3: 1829, bucketId: 200 },
+  "sieraden enkelbandjes":      { cat1: 1826, cat3: 2137, bucketId: 200 },
+  "sieraden kindersieraden":    { cat1: 1826, cat3: 2138, bucketId: 200 },
+  "sieraden antiek":            { cat1: 1826, cat3: 13,   bucketId: 200 },
+  // -- Tassen en Koffers (bucketId 201)
+  "sieraden damestassen":       { cat1: 1826, cat3: 626,  bucketId: 201 },
+  "sieraden schoudertassen":    { cat1: 1826, cat3: 1840, bucketId: 201 },
+  "sieraden rugtassen":         { cat1: 1826, cat3: 1838, bucketId: 201 },
+  "sieraden reistassen":        { cat1: 1826, cat3: 1837, bucketId: 201 },
+  "sieraden sporttassen":       { cat1: 1826, cat3: 3151, bucketId: 201 },
+  "sieraden koffers":           { cat1: 1826, cat3: 1348, bucketId: 201 },
+  // -- Accessoires (bucketId 197) en Zonnebrillen (bucketId 203)
+  "sieraden portemonnees":      { cat1: 1826, cat3: 1836, bucketId: 197 },
+  "sieraden zonnebril dames":   { cat1: 1826, cat3: 627,  bucketId: 203 },
+  "sieraden zonnebril heren":   { cat1: 1826, cat3: 645,  bucketId: 203 },
+
   // === GAMES (cat1=356 "Spelcomputers en Games") ===
   // Non-clothing. URL form is /plaats/{cat1}/{cat3}?bucketId={bucketId}, where
   // for this branch bucketId = the L2 platform subcategory and cat3 = the L3
