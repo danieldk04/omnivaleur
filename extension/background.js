@@ -855,55 +855,89 @@ async function bgDeleteMp2dh(job, serverUrl) {
   try {
     await waitForTabLoad(tabId);
     await sleep(3000); // let React fully render listings
+    await expandMp2dhOverview(tabId); // load ALL ads, not just the first 50
 
     // Find the listing's row and SELECT its checkbox. The "Mijn zoekertjes"
     // overview has NO per-card kebab/options menu — deletion is bulk-style:
     // tick the row's checkbox, then click the single red "Verwijder" button at
     // the top of the list, then confirm. (The old code hunted for an options
     // button that doesn't exist, clicked the last card button — "Omhoog
-    // bellen"/"Sneller verkopen" — and removed nothing.) Titles on the overview
-    // are prefixed with the SKU, e.g. "(1323) Grijze Suitsupply Cardigan …", so
-    // both sides are stripped of a leading "(digits)" before matching.
+    // bellen"/"Sneller verkopen" — and removed nothing.)
     const findResult = await execInTab(tabId, (rawTitle, listingId) => {
-      const strip = s => (s || "").replace(/^\s*\(\d+\)\s*/, "").replace(/\s+/g, " ").trim().toLowerCase();
-      const want = strip(rawTitle);
-      const shortWant = want.substring(0, 18);
-      if (!shortWant) return { found: false };
+      // How many ads the page actually rendered. This is what separates "this
+      // listing is genuinely gone" from "the page never loaded / we're logged
+      // out / the markup changed" — the two used to be indistinguishable, and
+      // the second was silently reported as a successful delete.
+      const rendered = new Set(
+        [...document.querySelectorAll('a[href*="/v/"], a[href*="/seller/view/"]')]
+          .map(a => ((a.getAttribute("href") || "").match(/(m\d{6,})/) || [])[1])
+          .filter(Boolean)
+      ).size;
 
-      // Locate the title element (leaf node) whose stripped text matches.
-      const leaves = [...document.querySelectorAll("a, h1, h2, h3, span, p, div")]
-        .filter(el => el.children.length === 0 && el.textContent.trim());
-      let titleEl = leaves.find(el => {
-        const t = strip(el.textContent);
-        return t && (t.startsWith(shortWant) || t.includes(shortWant));
-      });
-      if (!titleEl && listingId) {
-        titleEl = document.querySelector(`a[href*="${listingId}"]`);
-      }
-      if (!titleEl) return { found: false };
+      const rowFor = el => {
+        // Walk up until we reach an ancestor row that contains a checkbox.
+        let n = el;
+        for (let i = 0; i < 12 && n; i++) {
+          const cb = n.querySelector('input[type="checkbox"]');
+          if (cb) return cb;
+          n = n.parentElement;
+        }
+        return null;
+      };
 
-      // Walk up until we reach an ancestor row that contains a checkbox.
-      let row = titleEl, checkbox = null;
-      for (let i = 0; i < 12 && row; i++) {
-        checkbox = row.querySelector('input[type="checkbox"]');
-        if (checkbox) break;
-        row = row.parentElement;
+      // Anchor on the listing ID first. Every row's own links carry it
+      // (/v/kleding-heren/schoenen/m2423718603-1333-grijze-…), so it identifies
+      // exactly one ad — unlike the title text, which is translated per
+      // platform, SKU-prefixed and truncated on the page, and which matched on
+      // its first 18 characters only (two "Grijze Profuomo …" ads collide).
+      let checkbox = null;
+      if (listingId) {
+        for (const a of document.querySelectorAll(`a[href*="${listingId}"]`)) {
+          checkbox = rowFor(a);
+          if (checkbox) break;
+        }
       }
-      if (!checkbox) return { found: true, selected: false };
+
+      // Fallback: match on title text, for ads listed before an id was recorded.
+      // Titles on the overview are prefixed with the SKU, e.g. "(1323) Grijze
+      // Suitsupply Cardigan …", so both sides drop a leading "(digits)" first.
+      if (!checkbox) {
+        const strip = s => (s || "").replace(/^\s*\(\d+\)\s*/, "").replace(/\s+/g, " ").trim().toLowerCase();
+        const shortWant = strip(rawTitle).substring(0, 18);
+        if (shortWant) {
+          const titleEl = [...document.querySelectorAll("a, h1, h2, h3, span, p, div")]
+            .filter(el => el.children.length === 0 && el.textContent.trim())
+            .find(el => {
+              const t = strip(el.textContent);
+              return t && (t.startsWith(shortWant) || t.includes(shortWant));
+            });
+          if (titleEl) checkbox = rowFor(titleEl);
+        }
+      }
+
+      if (!checkbox) return { found: false, rendered };
       if (!checkbox.checked) {
         checkbox.click();
         // Some React lists ignore a bare .click() — nudge with events too.
         checkbox.dispatchEvent(new Event("input", { bubbles: true }));
         checkbox.dispatchEvent(new Event("change", { bubbles: true }));
       }
-      return { found: true, selected: !!checkbox.checked };
+      return { found: true, rendered, selected: !!checkbox.checked };
     }, [title, listingId]);
 
     if (!findResult?.found) {
-      // Not on the overview = already gone. For a delete/sold that IS the goal,
-      // so complete cleanly instead of erroring. This is what unsticks items the
-      // DB wrongly believes are still live: we confirm absence and move on.
-      console.log(`[Omnivaleur] bgDelete: "${title}" not on ${platform} overview — already gone, marking done`);
+      // An empty overview proves nothing — we can't tell "already sold/removed"
+      // from "not logged in" or "markup changed", and guessing "gone" here is
+      // what marked listings delisted in the dashboard while they stayed live.
+      if (!findResult?.rendered) {
+        throw new Error(
+          `Couldn't read your ${platform} listings overview — no ads rendered on ${overviewUrl}. ` +
+          `Make sure you're still logged in on ${platform}. Nothing was deleted.`
+        );
+      }
+      // Genuinely not among the ads that ARE listed = already gone. For a
+      // delete/sold that IS the goal, so complete cleanly instead of erroring.
+      console.log(`[Omnivaleur] bgDelete: "${title}" not among ${findResult.rendered} ${platform} ads — already gone, marking done`);
       await finaliseJob(serverUrl, job.id, "complete", { note: "already_absent" });
       return;
     }
