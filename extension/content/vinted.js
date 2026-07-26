@@ -346,6 +346,23 @@
     "electronics telefoon overige":              ["smartphones", "phones", "mobile phones"],
   };
 
+  // Accessory nouns → the Vinted leaves they belong to. Used only when the
+  // dashboard category is an "accessories" bucket (see fillCategoryVinted), where
+  // the category itself is too coarse to pick a leaf. Ordered most-specific first;
+  // the first regex that matches the title/description wins.
+  const ACCESSORY_TERMS = [
+    [/\b(horloge|horloges|watch|watches|smartwatch)\b/,            ["watches", "watch"]],
+    [/\b(zonnebril|zonnebrillen|sunglasses)\b/,                    ["sunglasses", "glasses"]],
+    [/\b(ketting|kettingen|armband|armbanden|ring|ringen|oorbel|oorbellen|sieraad|sieraden|jewellery|jewelry|necklace|bracelet|earrings)\b/,
+                                                                   ["jewellery", "jewelry"]],
+    [/\b(riem|riemen|belt|belts)\b/,                               ["belts", "belt"]],
+    [/\b(sjaal|sjaals|shawl|scarf|scarves)\b/,                     ["scarves", "scarf"]],
+    [/\b(muts|mutsen|pet|petten|cap|caps|hat|hats|beanie)\b/,      ["hats", "caps", "hats & caps"]],
+    [/\b(handschoen|handschoenen|gloves)\b/,                       ["gloves"]],
+    [/\b(portemonnee|portemonnees|wallet|wallets|purse)\b/,        ["wallets", "purses"]],
+    [/\b(tas|tassen|handtas|schoudertas|rugzak|bag|bags|backpack)\b/, ["bags", "handbags", "backpacks"]],
+  ];
+
   const { step, qs, sleep, waitForEl, fillInput, fillDescription, uploadPhotos, submitListing }
     = window.CL;
 
