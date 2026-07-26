@@ -217,24 +217,59 @@
     return String(Math.round(num));
   }
 
+  // Map the item to one of Facebook's SELECTABLE category leaves.
+  //
+  // VERIFIED live (NL account, 2026-07) by reading the opened dropdown: the list
+  // interleaves section HEADERS with leaves, and only leaves are clickable.
+  // Headers: "Kleding en accessoires", "Elektronica", "Amusement", "Familie",
+  // "Hobby's", "Advertenties". Leaves: "Dameskleding en -schoenen",
+  // "Herenkleding en -schoenen", "Sieraden en accessoires", "Tassen, koffers en
+  // bagage", "Videogames", "Elektronica en computers", "Mobiele telefoons",
+  // "Baby's en kinderen", "Speelgoed en spellen", "Sport en buitenleven",
+  // "Gezondheid en beauty", "Overig".
+  //
+  // "Kleding en accessoires" — a HEADER — used to be the fallback for every item
+  // that isn't clearly men's or women's. So every unisex item, every kids item and
+  // every accessory (a watch listed under "unisex accessoires", say) died here:
+  // the photos uploaded, the category could not be set, and the job stopped with
+  // nothing else filled in. That is the "it only fills the photos" report.
   function fbCategoryCandidates(item) {
     const g = (item.gender || "").toLowerCase();
     const cat = (item.category || "").toLowerCase();
+    const text = `${cat} ${item.title || ""}`.toLowerCase();
+
     // Non-clothing items carry a category prefix ("games ..." / "electronics ...",
-    // mirroring the backend _NON_CLOTHING_PREFIXES and the frontend games/electronics
-    // groups). They have no gender, so map them straight to Facebook's own top-level
-    // leaves BEFORE the clothing/gender logic — otherwise a game would fall through
-    // to "Kleding en accessoires" and get the wrong (clothing) attribute fields.
-    // VERIFIED live (NL account, 2026-07): both are directly selectable and mount a
-    // Beschrijving field just like the clothing leaves.
+    // mirroring the backend _NON_CLOTHING_PREFIXES and the frontend groups). They
+    // have no gender, so map them before the clothing/gender logic.
     if (cat.startsWith("games")) return ["Videogames", "Video games"];
-    if (cat.startsWith("electronics"))
-      return ["Elektronica en computers", "Electronics & computers", "Elektronica", "Electronics"];
+    if (cat.startsWith("electronics")) {
+      if (/telefoon|phone|iphone|samsung|huawei|nokia|motorola/.test(cat))
+        return ["Mobiele telefoons", "Mobile phones", "Elektronica en computers", "Electronics & computers"];
+      return ["Elektronica en computers", "Electronics & computers"];
+    }
+
+    // Accessories are NOT clothing on Facebook. A watch, belt, scarf or piece of
+    // jewellery belongs under "Sieraden en accessoires"; bags have their own leaf.
+    // The dashboard only offers one flat "Accessories" option per gender, so the
+    // item's own title is what separates a bag from a watch.
+    if (/accessoire|accessor/.test(cat)) {
+      if (/\b(tas|tassen|handtas|schoudertas|koffer|rugzak|bag|bags|backpack|luggage|suitcase)\b/.test(text))
+        return ["Tassen, koffers en bagage", "Bags, luggage & suitcases", "Sieraden en accessoires"];
+      return ["Sieraden en accessoires", "Jewelry & accessories", "Jewellery & accessories"];
+    }
+
+    if (/kinder|kids|baby|peuter|jongens|meisjes|tieners/.test(`${g} ${cat}`))
+      return ["Baby's en kinderen", "Baby & kids", "Baby & children"];
+
     const isMen = /heren|\bmen\b|man/.test(g) || /heren|\bmen\b/.test(cat);
     const isWomen = /dames|women|vrouw/.test(g) || /dames|women/.test(cat);
-    if (isMen) return ["Herenkleding en -schoenen", "Men’s clothing & shoes", "Kleding en accessoires"];
-    if (isWomen) return ["Dameskleding en -schoenen", "Women’s clothing & shoes", "Kleding en accessoires"];
-    return ["Kleding en accessoires", "Clothing & accessories"];
+    if (isMen) return ["Herenkleding en -schoenen", "Men’s clothing & shoes", "Men's clothing & shoes"];
+    if (isWomen) return ["Dameskleding en -schoenen", "Women’s clothing & shoes", "Women's clothing & shoes"];
+
+    // Unisex / unknown gender. Facebook has no unisex clothing leaf, so there is
+    // nothing more precise to pick — "Overig" is a real, selectable catch-all. A
+    // broad category beats a job that dies right after uploading the photos.
+    return ["Overig", "Other"];
   }
 
   async function fillForm(item) {
