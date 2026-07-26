@@ -202,10 +202,6 @@
     return true;
   }
 
-  // Map the item to Facebook's flat clothing categories (VERIFIED leaves:
-  // "Herenkleding en -schoenen" / "Dameskleding en -schoenen"), which are directly
-  // selectable. This is a clothing-first tool, so gender drives the pick; the
-  // generic "Kleding en accessoires" is the fallback when gender is unknown.
   // Format a price for FB's price input. VERIFIED live: FB Marketplace's price
   // field is INTEGER-ONLY — it rounds whatever you type (29,50 → €30, 19,95 → €20)
   // and, worse, reads a "." as a thousands separator ("29.99" → 2999). So we skip
