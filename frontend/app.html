@@ -4954,7 +4954,7 @@ const CATEGORIES = {
 // Non-clothing items are recognised purely by their category prefix (mirrors
 // backend crosslist.py _is_non_clothing), so no extra field has to be stored.
 // Each prefix maps to the matching item-type value in the form's type select.
-const NON_CLOTHING_PREFIXES = { 'games ': 'games', 'electronics ': 'electronics' };
+const NON_CLOTHING_PREFIXES = { 'games ': 'games', 'electronics ': 'electronics', 'sieraden ': 'sieraden' };
 function isNonClothingItem(item) {
   const cat = String(item?.category || '').trim().toLowerCase();
   return Object.keys(NON_CLOTHING_PREFIXES).some(p => cat.startsWith(p));
