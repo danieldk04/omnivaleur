@@ -875,10 +875,13 @@ async function bgDeleteMp2dh(job, serverUrl) {
       ).size;
 
       const rowFor = el => {
-        // Walk up until we reach an ancestor row that contains a checkbox.
+        // Walk up until we reach an ancestor row that holds the row's OWN
+        // selection checkbox. Every row also contains hidden feature checkboxes
+        // ("Bel omhoog" = input#up-call-select-<adId>), so match the selection
+        // one explicitly instead of taking whichever checkbox comes first.
         let n = el;
         for (let i = 0; i < 12 && n; i++) {
-          const cb = n.querySelector('input[type="checkbox"]');
+          const cb = n.querySelector('input.verkopen-select, input[data-testid="select-ad-checkbox"]');
           if (cb) return cb;
           n = n.parentElement;
         }
@@ -892,9 +895,14 @@ async function bgDeleteMp2dh(job, serverUrl) {
       // its first 18 characters only (two "Grijze Profuomo …" ads collide).
       let checkbox = null;
       if (listingId) {
-        for (const a of document.querySelectorAll(`a[href*="${listingId}"]`)) {
-          checkbox = rowFor(a);
-          if (checkbox) break;
+        // The selection checkbox carries the ad id itself (data-ad-id="m2423718603"),
+        // so go straight to it — no DOM walking, no ambiguity.
+        checkbox = document.querySelector(`input.verkopen-select[data-ad-id="${listingId}"]`);
+        if (!checkbox) {
+          for (const a of document.querySelectorAll(`a[href*="${listingId}"]`)) {
+            checkbox = rowFor(a);
+            if (checkbox) break;
+          }
         }
       }
 
