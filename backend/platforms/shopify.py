@@ -167,6 +167,10 @@ class ShopifyClient:
             r = await c.delete(f"{self.base}/products/{product_id}.json", headers=self.headers)
         if r.status_code in (200, 204):
             return True
+        if r.status_code == 404:
+            # Already gone. Delist means "make sure it isn't there" — so a product
+            # that no longer exists is a success, not an error to alarm the user with.
+            return True
         raise RuntimeError(
             f"Shopify refused to delete product {product_id} on {self.base}: "
             f"HTTP {r.status_code} {(r.text or '')[:200]}"
