@@ -179,7 +179,7 @@
       "region": "nl",
       "pillar": "B",
       "slug": "fashion-reselling-automation-platforms",
-      "status": "pending",
+      "status": "published",
       "priority": 22
     }
   ],
@@ -372,6 +372,15 @@
       "action": "created",
       "url_path": "/crosslisting/marktplaats-to-shopify-crosslisting",
       "published_at": "2026-07-25T09:31:13.248248+00:00"
+    },
+    {
+      "keyword": "fashion reselling automation platforms",
+      "slug": "fashion-reselling-automation-platforms",
+      "region": "nl",
+      "pillar": "B",
+      "action": "created",
+      "url_path": "/reseller-tools/fashion-reselling-automation-platforms",
+      "published_at": "2026-07-26T09:53:18.726813+00:00"
     }
   ]
 }
