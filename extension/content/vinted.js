@@ -344,6 +344,38 @@
     "electronics telefoon htc":                  ["htc", "smartphones", "phones", "mobile phones"],
     "electronics telefoon blackberry":           ["blackberry", "smartphones", "phones", "mobile phones"],
     "electronics telefoon overige":              ["smartphones", "phones", "mobile phones"],
+    // ── Sieraden, horloges en tassen ──────────────────────────────
+    // These arrive from the dedicated "Jewellery, Watches & Bags" item type, so
+    // the leaf is known exactly — no guessing from the title needed (that's what
+    // ACCESSORY_TERMS below is for, and only for the coarse clothing "accessoires"
+    // buckets). Vinted files these under Accessories per gender; the generic
+    // fallbacks at the end of each list let score() land on whichever the market has.
+    "sieraden horloges dames":    ["watches", "watch", "accessories"],
+    "sieraden horloges heren":    ["watches", "watch", "accessories"],
+    "sieraden horloges kinderen": ["watches", "watch", "accessories"],
+    "sieraden horloges antiek":   ["watches", "watch", "accessories"],
+    "sieraden smartwatch":        ["smartwatches", "watches", "watch"],
+    "sieraden sporthorloge":      ["watches", "watch", "accessories"],
+    "sieraden activity tracker":  ["smartwatches", "watches", "accessories"],
+    "sieraden kettingen":         ["necklaces", "jewellery", "jewelry"],
+    "sieraden kettinghangers":    ["necklaces", "pendants", "jewellery", "jewelry"],
+    "sieraden armbanden":         ["bracelets", "jewellery", "jewelry"],
+    "sieraden ringen":            ["rings", "jewellery", "jewelry"],
+    "sieraden oorbellen":         ["earrings", "jewellery", "jewelry"],
+    "sieraden bedels":            ["charms", "jewellery", "jewelry"],
+    "sieraden broches":           ["brooches", "jewellery", "jewelry"],
+    "sieraden enkelbandjes":      ["anklets", "bracelets", "jewellery", "jewelry"],
+    "sieraden kindersieraden":    ["jewellery", "jewelry", "accessories"],
+    "sieraden antiek":            ["jewellery", "jewelry", "accessories"],
+    "sieraden damestassen":       ["handbags", "bags", "shoulder bags"],
+    "sieraden schoudertassen":    ["shoulder bags", "handbags", "bags"],
+    "sieraden rugtassen":         ["backpacks", "bags"],
+    "sieraden reistassen":        ["travel bags", "weekend bags", "bags"],
+    "sieraden sporttassen":       ["sports bags", "gym bags", "bags"],
+    "sieraden koffers":           ["suitcases", "luggage", "travel bags", "bags"],
+    "sieraden portemonnees":      ["wallets", "purses", "accessories"],
+    "sieraden zonnebril dames":   ["sunglasses", "glasses", "accessories"],
+    "sieraden zonnebril heren":   ["sunglasses", "glasses", "accessories"],
   };
 
   // Accessory nouns → the Vinted leaves they belong to. Used only when the
