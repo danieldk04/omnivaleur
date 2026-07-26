@@ -696,6 +696,8 @@ async def delete_product(product_id: str) -> bool:
         )
     if resp.status_code in (200, 204):
         return True
+    if resp.status_code == 404:
+        return True  # already gone — that's the outcome delist wants
     raise RuntimeError(
         f"Shopify refused to delete product {product_id} on {settings.shopify_store}: "
         f"HTTP {resp.status_code} {(resp.text or '')[:200]}"
