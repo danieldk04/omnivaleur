@@ -127,6 +127,14 @@ def _english_type_from_category(category: str) -> str:
         return "Video Game"
     if "telefoon" in cat:
         return "Phone"
+    if cat.startswith("sieraden "):
+        # Jewellery/watches/bags. Matched before the word loop below because the
+        # generic loop would find nothing here and fall through to guessing the
+        # type from the title, which is far less reliable than the exact leaf.
+        leaf = cat[len("sieraden "):]
+        return _SIERADEN_EN_TYPE.get(leaf) or (
+            "Watch" if leaf.startswith("horloges") else "Jewellery"
+        )
     for word in reversed(cat.split()):
         if word in _NL_EN_TYPE:
             return _NL_EN_TYPE[word]
