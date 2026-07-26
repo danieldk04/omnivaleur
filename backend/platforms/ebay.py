@@ -791,6 +791,24 @@ _EBAY_CATEGORY_HINTS = {
     "electronics telefoon nokia": "nokia mobile phone", "electronics telefoon lg": "lg smartphone",
     "electronics telefoon motorola": "motorola smartphone", "electronics telefoon htc": "htc smartphone",
     "electronics telefoon blackberry": "blackberry smartphone", "electronics telefoon overige": "smartphone mobile phone",
+    # ── Jewellery, watches and bags. These used to be forced into an
+    # "accessoires" clothing key, whose hint was the useless word "accessories".
+    "sieraden horloges dames": "womens wristwatch watch",
+    "sieraden horloges heren": "mens wristwatch watch",
+    "sieraden horloges kinderen": "kids wristwatch watch",
+    "sieraden horloges antiek": "antique vintage wristwatch",
+    "sieraden smartwatch": "smartwatch", "sieraden sporthorloge": "sports watch",
+    "sieraden activity tracker": "fitness activity tracker",
+    "sieraden kettingen": "necklace", "sieraden kettinghangers": "pendant necklace",
+    "sieraden armbanden": "bracelet", "sieraden ringen": "ring",
+    "sieraden oorbellen": "earrings", "sieraden bedels": "charm",
+    "sieraden broches": "brooch", "sieraden enkelbandjes": "anklet",
+    "sieraden kindersieraden": "kids jewellery", "sieraden antiek": "antique vintage jewellery",
+    "sieraden damestassen": "womens handbag", "sieraden schoudertassen": "shoulder bag",
+    "sieraden rugtassen": "backpack rucksack", "sieraden reistassen": "travel holdall bag",
+    "sieraden sporttassen": "sports gym bag", "sieraden koffers": "suitcase luggage",
+    "sieraden portemonnees": "wallet purse",
+    "sieraden zonnebril dames": "womens sunglasses", "sieraden zonnebril heren": "mens sunglasses",
 }
 
 
