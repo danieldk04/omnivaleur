@@ -533,29 +533,18 @@ async def delist_all_platforms(item_id: str, user_id: str) -> list[dict]:
         # For Shopify listings without a platform_listing_id, look up by SKU first
         for listing in api_active:
             if listing["platform"] == "shopify" and not listing.get("platform_listing_id"):
+                sku = item.get("sku", "")
+                if not sku:
+                    logger.warning("Shopify listing %s has no product id and the item has no SKU — can't locate it", listing["id"])
+                    continue
                 try:
-                    from backend.platforms.shopify_importer import _get_token
-                    import httpx
-                    from backend.config import settings
-                    token = await _get_token()
-                    sku = item.get("sku", "")
-                    async with httpx.AsyncClient() as c:
-                        r = await c.get(
-                            f"https://{settings.shopify_store}/admin/api/2024-10/products.json",
-                            params={"limit": 50},
-                            headers={"X-Shopify-Access-Token": token},
-                        )
-                        products = r.json().get("products", [])
-                    match = next(
-                        (p for p in products
-                         if any(v.get("sku") == sku for v in p.get("variants", []))),
-                        None,
-                    )
-                    if match:
-                        pid = str(match["id"])
+                    pid = await _find_shopify_product_id_by_sku(sku)
+                    if pid:
                         listing["platform_listing_id"] = pid
                         db.table("listings").update({"platform_listing_id": pid}).eq("id", listing["id"]).execute()
                         logger.info(f"Resolved Shopify product by SKU {sku} → {pid}")
+                    else:
+                        logger.warning("Shopify SKU %s not found in the store — nothing to delete", sku)
                 except Exception as e:
                     logger.warning(f"Shopify SKU lookup failed: {e}")
 
