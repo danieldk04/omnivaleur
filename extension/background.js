@@ -106,16 +106,34 @@ const MP_CATEGORIES = {
   "heren laarzen":          { cat1: 1776, cat3: 642,  bucketId: 171 },
   "heren accessoires":      { cat1: 1776, cat3: 652,  bucketId: 169 },
 
-  // === KINDEREN (cat1=428 = Kinderkleding, bucketId=127) ===
-  "babykleding":            { cat1: 428,  cat3: 429,  bucketId: 127 },
-  "peuterkleding":          { cat1: 428,  cat3: 429,  bucketId: 127 },
-  "jongens kleding":        { cat1: 428,  cat3: 430,  bucketId: 127 },
-  "meisjes kleding":        { cat1: 428,  cat3: 431,  bucketId: 127 },
-  "tieners jongens":        { cat1: 428,  cat3: 430,  bucketId: 127 },
-  "tieners meisjes":        { cat1: 428,  cat3: 431,  bucketId: 127 },
-  "kinderen sportkleding":  { cat1: 428,  cat3: 429,  bucketId: 127 },
-  "kinderen schoenen":      { cat1: 428,  cat3: 432,  bucketId: 127 },
-  "kinderen accessoires":   { cat1: 428,  cat3: 429,  bucketId: 127 },
+  // === KINDEREN EN BABY'S (cat1=565) ===
+  // These were all pointing at cat1=428 with bucketId=127. 428 is "Diversen"
+  // (Feesten, Levensmiddelen, Zorg, …) — NOT Kinderkleding, and bucketId 127
+  // doesn't exist under it. Verified live 2026-07: /plaats/428/429?bucketId=127,
+  // /430 and /432 all return HTTP 400 ("deze pagina kan niet getoond worden"),
+  // and /431 ("meisjes kleding") silently resolved to
+  // Diversen > Modeltreinen > Brommobielen en Scootmobielen — a PAID category.
+  // So every children's listing either failed outright or was posted as a
+  // mobility scooter.
+  //
+  // The real tree is cat1=565 "Kinderen en Baby's", and Marktplaats files
+  // children's clothing by SIZE, not by boy/girl — the L3 "type" IS the size
+  // (Maat 50…Maat 176). Hence sizeMap below: cat3 is resolved from item.size at
+  // publish time (see mpCategoryUrl), with cat3 as the fallback when the item has
+  // no size or an unrecognised one.
+  // -- Babykleding (bucketId 150): maten 50-86
+  "babykleding":            { cat1: 565, bucketId: 150, cat3: 575, sizeMap: MP_BABY_SIZES },
+  // -- Kinderkleding (bucketId 153): maten 92-176
+  "peuterkleding":          { cat1: 565, bucketId: 153, cat3: 597, sizeMap: MP_KIDS_SIZES },
+  "jongens kleding":        { cat1: 565, bucketId: 153, cat3: 597, sizeMap: MP_KIDS_SIZES },
+  "meisjes kleding":        { cat1: 565, bucketId: 153, cat3: 597, sizeMap: MP_KIDS_SIZES },
+  "tieners jongens":        { cat1: 565, bucketId: 153, cat3: 597, sizeMap: MP_KIDS_SIZES },
+  "tieners meisjes":        { cat1: 565, bucketId: 153, cat3: 597, sizeMap: MP_KIDS_SIZES },
+  "kinderen sportkleding":  { cat1: 565, bucketId: 153, cat3: 597, sizeMap: MP_KIDS_SIZES },
+  // Schoenen en Sokken is its own type, so no size lookup.
+  "kinderen schoenen":      { cat1: 565, bucketId: 153, cat3: 598 },
+  // Mode-accessoires (bucketId 427) has exactly two types: baby and kind.
+  "kinderen accessoires":   { cat1: 565, bucketId: 427, cat3: 3136 },
 
   // === UNISEX (fallback naar dames) ===
   "unisex truien":          { cat1: 621,  cat3: 640,  bucketId: 162 },
