@@ -813,6 +813,27 @@ function waitForTabLoad(tabId, timeoutMs = 20000) {
   });
 }
 
+// The MP/2dehands seller overview renders only the FIRST 50 ads and hides the
+// rest behind a "Toon 50 volgende advertenties." button. Anything past #50 is
+// simply not in the DOM — and both the delete and the scan below read a missing
+// row as "this listing is already gone", so a delete silently completed while
+// the ad stayed live (verified live 2026-07: 129 ads on the account, 50
+// rendered). Click through until the button is gone so the whole shop is loaded.
+async function expandMp2dhOverview(tabId) {
+  const sleep = ms => new Promise(r => setTimeout(r, ms));
+  for (let i = 0; i < 40; i++) { // 40 x 50 = 2000 ads — far beyond any real shop
+    const clicked = await execInTab(tabId, () => {
+      const btn = [...document.querySelectorAll("button")]
+        .find(b => /toon\s+\d+\s+volgende/i.test(b.textContent || "") && !b.disabled);
+      if (!btn) return false;
+      btn.click();
+      return true;
+    });
+    if (!clicked) return;
+    await sleep(1200); // let the next batch render before looking again
+  }
+}
+
 async function bgDeleteMp2dh(job, serverUrl) {
   const sleep = ms => new Promise(r => setTimeout(r, ms));
   const platform = job.platform;
