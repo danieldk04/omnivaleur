@@ -681,13 +681,25 @@ async def create_product(item: dict) -> dict:
 
 
 async def delete_product(product_id: str) -> bool:
+    # Same reasoning as ShopifyClient.delete_product: a bare False upstream became
+    # "delete_listing returned False", which hid every real cause. Say what broke.
+    if not product_id:
+        raise RuntimeError(
+            "No Shopify product id on this listing, so there's nothing to delete. "
+            "Re-link the listing (paste its Shopify URL) and try again."
+        )
     token = await _get_token()
     async with httpx.AsyncClient() as client:
         resp = await client.delete(
             f"https://{settings.shopify_store}/admin/api/2024-10/products/{product_id}.json",
             headers={"X-Shopify-Access-Token": token},
         )
-    return resp.status_code in (200, 204)
+    if resp.status_code in (200, 204):
+        return True
+    raise RuntimeError(
+        f"Shopify refused to delete product {product_id} on {settings.shopify_store}: "
+        f"HTTP {resp.status_code} {(resp.text or '')[:200]}"
+    )
 
 
 _DESC_FIELDS = {
