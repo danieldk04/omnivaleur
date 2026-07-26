@@ -768,6 +768,42 @@ async def relist_expiring_marktplaats():
             logger.error(f"Failed to queue relist for listing {listing['id']}: {e}")
 
 
+async def _find_shopify_product_id_by_sku(sku: str) -> str | None:
+    """
+    Locate a Shopify product by variant SKU, walking every page of the catalog.
+
+    The previous version read products.json with limit=50 and gave up — on any
+    store with more than 50 products a listing whose product id we'd lost was
+    simply never found, so the delist reported "couldn't delete" (or nothing at
+    all) while the product stayed live in the shop. Shopify caps a page at 250
+    and hands out the next page via a cursor in the Link header.
+    """
+    import httpx
+    import re as _re
+    from backend.config import settings
+    from backend.platforms.shopify_importer import _get_token
+
+    token = await _get_token()
+    url = f"https://{settings.shopify_store}/admin/api/2024-10/products.json"
+    params: dict = {"limit": 250, "fields": "id,variants"}
+    headers = {"X-Shopify-Access-Token": token}
+
+    async with httpx.AsyncClient(timeout=20) as c:
+        for _ in range(40):  # 40 x 250 = 10k products — far beyond any real shop
+            r = await c.get(url, params=params, headers=headers)
+            r.raise_for_status()
+            for p in r.json().get("products", []):
+                if any(v.get("sku") == sku for v in p.get("variants", [])):
+                    return str(p["id"])
+            # Cursor pagination: Link: <https://…page_info=xyz>; rel="next"
+            link = r.headers.get("link") or r.headers.get("Link") or ""
+            nxt = _re.search(r'<([^>]+)>;\s*rel="next"', link)
+            if not nxt:
+                return None
+            url, params = nxt.group(1), {}
+    return None
+
+
 async def _delist_one(listing: dict):
     db = get_db()
     item_resp = db.table("items").select("user_id").eq("id", listing["item_id"]).single().execute()
