@@ -184,7 +184,20 @@
       if (!opt) await sleep(250);
     }
     if (!opt) return false;
-    opt.click();
+    // The matched text node is not the click target, and matching text alone is
+    // not proof we found an OPTION. Facebook's Categorie dropdown interleaves
+    // section HEADERS ("Kleding en accessoires", "Elektronica", "Amusement") with
+    // real leaves; headers are inert text while every leaf sits inside a
+    // role="button" (VERIFIED live 2026-07). Clicking a header did nothing yet
+    // this function returned true, so the form silently continued without a
+    // category. Require a real control and click THAT.
+    const target = opt.closest('[role="button"], [role="option"], [role="menuitem"], [role="menuitemradio"], [role="radio"]');
+    if (!target) {
+      console.warn("[Omnivaleur] FB: matched", JSON.stringify(opt.textContent?.trim()),
+        "but it is not a selectable option (section header?) — not clicking it.");
+      return false;
+    }
+    target.click();
     await sleep(500);
     return true;
   }
