@@ -3352,7 +3352,9 @@ function editItem(id) {
   document.getElementById('f-desc').value = item.description || '';
   document.getElementById('f-price').value = item.price;
   document.getElementById('f-compare').value = item.compare_at_price || '';
-  document.getElementById('f-purchase').value = item.purchase_price || '';
+  // != null, not `||` — a stored purchase price of 0 (free item) must show as "0",
+  // otherwise re-saving the form silently wipes it back to unknown.
+  document.getElementById('f-purchase').value = item.purchase_price != null ? item.purchase_price : '';
   document.getElementById('f-brand').value = item.brand || '';
   document.getElementById('f-size').value = item.size || '';
   document.getElementById('f-color').value = item.color || '';
