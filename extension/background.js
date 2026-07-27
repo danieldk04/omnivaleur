@@ -2074,54 +2074,91 @@ async function bgScanMp2dh(job, serverUrl) {
     // description block, so the import carries the full description and every
     // photo — not just the first one. Best-effort per listing: any failure just
     // leaves that candidate with the basic card data.
-    const urls = result.items.map(it => it.platform_listing_url).slice(0, 100);
-    const enrichments = await execInTab(tabId, async (urls) => {
-      const sleep = ms => new Promise(r => setTimeout(r, ms));
-      const out = {};
-      for (const url of urls) {
+    // One SHORT executeScript per listing, driven from here — never a single
+    // long one. An MV3 service worker awaiting one multi-minute call gets
+    // terminated by Chrome, which would kill the whole scan before it reports
+    // anything. (The old code did all of them in one call, capped at 100, so a
+    // bigger account was silently cut off AND at risk of being killed.)
+    const total = result.items.length;
+    let enriched = 0;
+    const startedAt = Date.now();
+    try {
+      for (let i = 0; i < result.items.length; i++) {
+        const it = result.items[i];
+        let e = null;
         try {
-          const res = await fetch(url, { headers: { Accept: "text/html" } });
-          if (!res.ok) continue;
-          const html = await res.text();
-          const doc = new DOMParser().parseFromString(html, "text/html");
-          let description = "", photos = [];
-          // JSON-LD Product — the most stable source for description + images.
-          for (const s of doc.querySelectorAll('script[type="application/ld+json"]')) {
-            try {
-              let data = JSON.parse(s.textContent);
-              const arr = Array.isArray(data) ? data : (data["@graph"] || [data]);
-              const prod = arr.find(x => x && /product/i.test(x["@type"] || ""));
-              if (prod) {
-                if (prod.description && !description) description = String(prod.description).trim();
-                const imgs = prod.image ? (Array.isArray(prod.image) ? prod.image : [prod.image]) : [];
-                for (const im of imgs) { const u = typeof im === "string" ? im : im?.url; if (u) photos.push(u); }
+          e = await execInTab(tabId, async (url) => {
+            const nap = ms => new Promise(r => setTimeout(r, ms));
+            for (let attempt = 0; attempt < 3; attempt++) {
+              try {
+                const res = await fetch(url, { headers: { Accept: "text/html" }, credentials: "include" });
+                if (!res.ok) {
+                  if (res.status !== 429 && res.status < 500) return null;
+                  await nap(800 * Math.pow(2, attempt));
+                  continue;
+                }
+                const html = await res.text();
+                const doc = new DOMParser().parseFromString(html, "text/html");
+                let description = "", photos = [];
+                // JSON-LD Product — the most stable source for description + images.
+                for (const s of doc.querySelectorAll('script[type="application/ld+json"]')) {
+                  try {
+                    const data = JSON.parse(s.textContent);
+                    const arr = Array.isArray(data) ? data : (data["@graph"] || [data]);
+                    const prod = arr.find(x => x && /product/i.test(x["@type"] || ""));
+                    if (prod) {
+                      if (prod.description && !description) description = String(prod.description).trim();
+                      const imgs = prod.image ? (Array.isArray(prod.image) ? prod.image : [prod.image]) : [];
+                      for (const im of imgs) { const u = typeof im === "string" ? im : im?.url; if (u) photos.push(u); }
+                    }
+                  } catch (e2) {}
+                }
+                // DOM fallback for the description if JSON-LD didn't carry it.
+                if (!description) {
+                  const el = doc.querySelector('[data-collapsable="description"], .Description-description, [class*="Description" i]');
+                  if (el && el.textContent.trim().length > 20) description = el.textContent.trim().slice(0, 4000);
+                }
+                return { description: description.slice(0, 4000), photo_urls: [...new Set(photos)] };
+              } catch (e3) {
+                await nap(500 * Math.pow(2, attempt));
               }
-            } catch (e) {}
-          }
-          // DOM fallback for the description if JSON-LD didn't carry it.
-          if (!description) {
-            const el = doc.querySelector('[data-collapsable="description"], .Description-description, [class*="Description" i]');
-            if (el && el.textContent.trim().length > 20) description = el.textContent.trim().slice(0, 4000);
-          }
-          out[url] = { description: description.slice(0, 4000), photo_urls: [...new Set(photos)] };
-        } catch (e) {}
-        await sleep(150);
-      }
-      return out;
-    }, [urls]);
+            }
+            return null;
+          }, [it.platform_listing_url]);
+        } catch (e4) { e = null; }
 
-    for (const it of result.items) {
-      const e = enrichments && enrichments[it.platform_listing_url];
-      if (!e) continue;
-      if (e.description) it.description = e.description;
-      if (e.photo_urls && e.photo_urls.length) {
-        it.photo_urls = e.photo_urls;
-        it.photo_url = it.photo_url || e.photo_urls[0];
+        if (e) {
+          enriched++;
+          if (e.description) it.description = e.description;
+          if (e.photo_urls && e.photo_urls.length) {
+            it.photo_urls = e.photo_urls;
+            it.photo_url = it.photo_url || e.photo_urls[0];
+          }
+        }
+        const perItem = ((Date.now() - startedAt) / 1000) / (i + 1);
+        await reportProgress(serverUrl, job.id, {
+          stage: "enriching",
+          message: `Fetching details ${i + 1}/${total}…`,
+          current: i + 1, total,
+          eta_seconds: Math.max(0, Math.round(perItem * (total - i - 1))),
+        });
+        await sleep(150); // gentle, and keeps the worker warm
       }
+    } catch (e) {
+      console.warn(`[Omnivaleur] ${platform} enrichment aborted, sending list data only:`, e);
     }
 
-    await finaliseJob(serverUrl, job.id, "complete", { listings: result.items });
-    console.log(`[Omnivaleur] ${platform} scan found ${result.items.length} listings (enriched ${Object.keys(enrichments || {}).length})`);
+    await reportProgress(serverUrl, job.id, {
+      stage: "saving", message: "Saving to your dashboard…", current: total, total,
+    });
+    await finaliseJob(serverUrl, job.id, "complete", {
+      listings: result.items,
+      scan_meta: result.meta || null,
+    });
+    console.log(
+      `[Omnivaleur] ${platform} scan: ${total} listings (enriched ${enriched}) ` +
+      `via ${result.meta?.source} complete=${result.meta?.complete} ${result.meta?.truncated_reason || ""}`
+    );
   } finally {
     setTimeout(() => chrome.tabs.remove(tabId).catch(() => {}), 2500);
   }
