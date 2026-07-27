@@ -2854,6 +2854,23 @@ function renderItemsPagination(totalPages, totalFiltered) {
   `;
 }
 
+// Actions that make sense for the tab you're looking at. The old row offered all
+// four everywhere, which meant "Delist" on something that was nowhere online and
+// "Publish" on something already sold.
+function itemActions(item) {
+  const t = esc(item.title);
+  const edit = `<button class="btn btn-sm btn-outline" onclick="editItem('${item.id}')" style="margin-left:4px">Edit</button>`;
+  if (itemsTab === 'sold' || itemsTab === 'archived') {
+    return `<button class="btn btn-sm btn-primary" onclick="openCrosslist('${item.id}')" title="Put this item back up for sale">Relist</button>${edit}`;
+  }
+  if (itemsTab === 'todo') {
+    return `<button class="btn btn-sm btn-primary" onclick="openCrosslist('${item.id}')">Publish</button>${edit}`;
+  }
+  return `<button class="btn btn-sm btn-primary" onclick="openCrosslist('${item.id}')" title="Publish to more platforms">Publish</button>${edit}
+    <button class="btn btn-sm btn-success" onclick="markSoldItem('${item.id}','${t}')" style="margin-left:4px" title="Mark sold — delists it everywhere else">Sold</button>
+    <button class="btn btn-sm btn-danger" onclick="delistItem('${item.id}','${t}')" style="margin-left:4px" title="Delist from all platforms">Delist</button>`;
+}
+
 function renderItemsTable(items) {
   let lastBucket = null;
   const rows = items.map(item => {
