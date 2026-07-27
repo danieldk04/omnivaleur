@@ -2559,6 +2559,10 @@ async function loadAll() {
   renderExtStatus();
   // Re-render items view if active
   if (document.getElementById('view-items').classList.contains('active')) applyFilters();
+  // …and analytics too. Without this, editing an item (e.g. filling in a missing
+  // purchase price) left the open Analytics view showing the old numbers until you
+  // navigated away and back — it looked like the save hadn't worked at all.
+  if (document.getElementById('view-analytics').classList.contains('active')) renderAnalytics();
   // Keep the Refresh nav badge in sync with any in-progress relists.
   loadRelistStatus();
 }
