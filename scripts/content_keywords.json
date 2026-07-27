@@ -181,6 +181,48 @@
       "slug": "fashion-reselling-automation-platforms",
       "status": "published",
       "priority": 22
+    },
+    {
+      "keyword": "2dehands to shopify crosslisting 2026",
+      "region": "nl",
+      "pillar": "A",
+      "slug": "2dehands-to-shopify-crosslisting-2026",
+      "status": "published",
+      "nl_slug": "2dehands-naar-shopify-crosslisting-2026",
+      "priority": 23
+    },
+    {
+      "keyword": "vinted to marktplaats crosslisting",
+      "region": "nl",
+      "pillar": "A",
+      "slug": "vinted-to-marktplaats-crosslisting",
+      "status": "pending",
+      "nl_slug": "vinted-naar-marktplaats-crosslisting",
+      "priority": 24
+    },
+    {
+      "keyword": "luxury handbag reselling automation",
+      "region": "nl",
+      "pillar": "B",
+      "slug": "luxury-handbag-reselling-automation",
+      "status": "pending",
+      "priority": 25
+    },
+    {
+      "keyword": "Omnivaleur vs List Perfectly comparison 2026",
+      "region": "nl",
+      "pillar": "C",
+      "slug": "omnivaleur-vs-list-perfectly-comparison-2026",
+      "status": "pending",
+      "priority": 26
+    },
+    {
+      "keyword": "etsy to vinted crosslisting automation",
+      "region": "nl",
+      "pillar": "A",
+      "slug": "etsy-to-vinted-crosslisting-automation",
+      "status": "pending",
+      "priority": 27
     }
   ],
   "published": [
@@ -381,6 +423,15 @@
       "action": "created",
       "url_path": "/reseller-tools/fashion-reselling-automation-platforms",
       "published_at": "2026-07-26T09:53:18.726813+00:00"
+    },
+    {
+      "keyword": "2dehands to shopify crosslisting 2026",
+      "slug": "2dehands-to-shopify-crosslisting-2026",
+      "region": "nl",
+      "pillar": "A",
+      "action": "created",
+      "url_path": "/crosslisting/2dehands-to-shopify-crosslisting-2026",
+      "published_at": "2026-07-27T11:13:08.020483+00:00"
     }
   ]
 }
