@@ -3756,7 +3756,7 @@ async function delistItem(itemId, title) {
   // 'delisted' is included on purpose: a delete that only looked like it worked
   // marked the row delisted while the listing stayed live, and hiding those rows
   // here meant the confirm dialog never even named the platform that was skipped.
-  const DELISTABLE = ['active', 'error', 'delisted', 'pending', 'relisting'];
+  const DELISTABLE = ['active', 'error', 'delisted', 'pending', 'relisting', 'hidden'];
   const delistable = state.listings.filter(l =>
     l.item_id === itemId && DELISTABLE.includes(l.status)
   );
