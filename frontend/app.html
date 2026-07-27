@@ -5539,6 +5539,254 @@ document.addEventListener('visibilitychange', () => {
   if (!document.hidden) { loadAll(); pollActivity(); loadExtensionStatus(); }
 });
 
+// ── Stale stock ───────────────────────────────────────────────────
+// Items that have been live for a long time without selling. The cut deepens the
+// longer something sits — deliberately a plain, visible ladder rather than a
+// clever model, so the number on screen is always explainable.
+let staleDays = 90;
+const STALE_LADDER = [[180, .20], [90, .15], [60, .10], [30, .05]];
+
+function stalePctFor(days) {
+  for (const [d, pct] of STALE_LADDER) if (days >= d) return pct;
+  return 0;
+}
+
+// Round down to the nearest …,99 — the price point everything on these
+// marketplaces sits at.
+function round99(v) {
+  return Math.max(0.99, Math.round(v) - 0.01);
+}
+
+// Earliest moment this item went live and stayed live, or null if it isn't live.
+function liveSince(itemId) {
+  let ms = null;
+  for (const l of state.listings) {
+    if (l.item_id !== itemId) continue;
+    if (l.status !== 'active' && l.status !== 'relisting') continue;
+    if (!l.listed_at) continue;
+    const v = new Date(l.listed_at).getTime();
+    if (ms === null || v < ms) ms = v;
+  }
+  return ms;
+}
+
+// Every live item with how long it's been sitting and what we'd suggest for it.
+function staleCandidates(minDays) {
+  const soldIds = new Set(state.listings.filter(l => l.status === 'sold').map(l => l.item_id));
+  const now = Date.now();
+  const out = [];
+  for (const item of state.items) {
+    if (soldIds.has(item.id)) continue;
+    const since = liveSince(item.id);
+    if (since === null) continue;
+    const days = Math.floor((now - since) / 86400e3);
+    if (days < minDays) continue;
+    const pct = stalePctFor(days);
+    const price = Number(item.price) || 0;
+    let suggested = pct ? round99(price * (1 - pct)) : null;
+    // Never suggest selling at a loss. A known purchase price is a hard floor;
+    // if the ladder would go under it we say so instead of quietly clamping.
+    let belowCost = false;
+    if (suggested !== null && item.purchase_price != null && suggested < item.purchase_price) {
+      belowCost = true;
+      suggested = null;
+    }
+    out.push({ item, days, since, pct, suggested, belowCost });
+  }
+  return out.sort((a, b) => b.days - a.days);
+}
+
+function setStaleDays(d) {
+  staleDays = d;
+  clearSelection();
+  renderStaleStock();
+}
+
+function renderStaleStock() {
+  document.querySelectorAll('#stale-tabs .an-period-tab').forEach(t =>
+    t.classList.toggle('active', parseInt(t.dataset.days) === staleDays));
+  const rows = staleCandidates(staleDays);
+  const body = document.getElementById('stale-body');
+  const totalTied = rows.reduce((s, r) => s + (Number(r.item.price) || 0), 0);
+  document.getElementById('stale-sub').textContent = rows.length
+    ? `${rows.length} item${rows.length === 1 ? '' : 's'} · €${totalTied.toFixed(2)} of stock tied up`
+    : '';
+
+  if (!rows.length) {
+    body.innerHTML = `<tr><td colspan="8"><div class="empty">
+      <h3>Nothing stale at ${staleDays}+ days</h3>
+      <p>Everything live is newer than that. Try a shorter period.</p></div></td></tr>`;
+    updateBulkBar();
+    return;
+  }
+
+  body.innerHTML = rows.map(({ item, days, since, pct, suggested, belowCost }) => {
+    const checked = selectedIds.has(item.id) ? 'checked' : '';
+    const price = Number(item.price) || 0;
+    const sugCell = suggested !== null
+      ? `<span style="color:#15803d;font-weight:700">€${suggested.toFixed(2)}</span>
+         <span style="color:var(--muted);font-size:11px"> −${(pct * 100).toFixed(0)}%</span>`
+      : belowCost
+        ? `<span style="color:#b45309;font-weight:600;font-size:11px" title="A further cut would go below what you paid (€${Number(item.purchase_price).toFixed(2)})">below cost</span>`
+        : '<span style="color:var(--muted)">—</span>';
+    const apply = suggested !== null
+      ? `<button class="btn btn-sm btn-primary" onclick="applySuggestedPrice('${item.id}',${suggested})">Apply €${suggested.toFixed(2)}</button>`
+      : '';
+    return `<tr class="${selectedIds.has(item.id) ? 'selected' : ''}" id="strow-${item.id}">
+      <td class="col-check"><input type="checkbox" class="row-check" ${checked} onchange="toggleRowSelect('${item.id}',this.checked)"></td>
+      <td><div class="item-info">
+        <div class="item-photo">${itemPhotoThumb(item)}</div>
+        <div><div class="item-title">${esc(item.title)}</div>
+        <div class="item-meta">${item.brand || '—'}${item.size ? ' · ' + item.size : ''}</div></div>
+      </div></td>
+      <td class="an-sales-num"><strong>€${price.toFixed(2)}</strong></td>
+      <td class="an-sales-num">${sugCell}</td>
+      <td class="hide-mobile" style="white-space:nowrap;color:var(--muted);font-size:12px">${fmtDate(new Date(since).toISOString())}</td>
+      <td class="an-sales-num" style="font-weight:700">${days}</td>
+      <td><div class="platform-badges">${renderListingBadges(item.id)}</div></td>
+      <td style="white-space:nowrap">${apply}
+        <button class="btn btn-sm btn-outline" onclick="editItem('${item.id}')" style="margin-left:4px">Edit</button></td>
+    </tr>`;
+  }).join('');
+  updateBulkBar();
+}
+
+function toggleStaleSelectAll(checked) {
+  document.querySelectorAll('#stale-body tr[id^="strow-"]').forEach(row => {
+    const id = row.id.replace('strow-', '');
+    const cb = row.querySelector('.row-check');
+    if (checked) { selectedIds.add(id); row.className = 'selected'; if (cb) cb.checked = true; }
+    else { selectedIds.delete(id); row.className = ''; if (cb) cb.checked = false; }
+  });
+  updateBulkBar();
+}
+
+async function applySuggestedPrice(itemId, price) {
+  const item = state.items.find(i => i.id === itemId);
+  if (!item) return;
+  setBusy(true, 'Updating price…');
+  try {
+    await patchItemPrice(itemId, price);
+    showToast(`Price updated to €${price.toFixed(2)}.`);
+    renderStaleStock();
+  } catch (e) {
+    alert('Could not update the price: ' + e.message);
+  } finally {
+    setBusy(false);
+  }
+}
+
+// Single place that writes a price, so the local state stays in step with the
+// server without a full reload after every row.
+async function patchItemPrice(itemId, price) {
+  const r = await apiFetch(`${API}/api/items/${itemId}`, {
+    method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ price }),
+  });
+  const data = await parseJsonSafe(r);
+  if (!r.ok) throw new Error(data.detail || 'Update failed');
+  const item = state.items.find(i => i.id === itemId);
+  if (item) item.price = price;
+  return data;
+}
+
+// ── Bulk price editing ────────────────────────────────────────────
+function openBulkPrice() {
+  const n = selectedIds.size;
+  if (!n) return;
+  document.getElementById('bulk-price-count').textContent = `${n} item${n !== 1 ? 's' : ''} selected`;
+  renderBulkPricePreview();
+  document.getElementById('modal-bulk-price').style.display = 'flex';
+}
+
+// What each selected item's price becomes. Returns [{item, from, to}] so the
+// preview and the apply step can never disagree.
+function bulkPricePlan() {
+  const mode = document.getElementById('bulk-price-mode').value;
+  const amount = parseFloat(String(document.getElementById('bulk-price-amount').value).replace(',', '.'));
+  const round = document.getElementById('bulk-price-round').checked;
+  const plan = [];
+  if (isNaN(amount) || amount < 0) return plan;
+  for (const id of selectedIds) {
+    const item = state.items.find(i => i.id === id);
+    if (!item) continue;
+    const from = Number(item.price) || 0;
+    let to;
+    if (mode === 'pct-down') to = from * (1 - amount / 100);
+    else if (mode === 'pct-up') to = from * (1 + amount / 100);
+    else if (mode === 'eur-down') to = from - amount;
+    else if (mode === 'eur-up') to = from + amount;
+    else to = amount;
+    if (round) to = round99(to);
+    to = Math.max(0.01, Math.round(to * 100) / 100);
+    plan.push({ item, from, to });
+  }
+  return plan;
+}
+
+function renderBulkPricePreview() {
+  const plan = bulkPricePlan();
+  const body = document.getElementById('bulk-price-preview');
+  let belowCost = 0;
+  body.innerHTML = plan.map(({ item, from, to }) => {
+    const cost = item.purchase_price;
+    const under = cost != null && to < cost;
+    if (under) belowCost++;
+    const marginCell = cost != null
+      ? `<span style="color:${to - cost >= 0 ? '#15803d' : '#dc2626'};font-weight:600">${to - cost >= 0 ? '+' : '−'}€${Math.abs(to - cost).toFixed(2)}</span>`
+      : '<span style="color:var(--muted)">—</span>';
+    return `<tr>
+      <td><span class="an-sales-title">${esc(item.title)}</span></td>
+      <td class="an-sales-num" style="color:var(--muted)">€${from.toFixed(2)}</td>
+      <td class="an-sales-num"><strong>€${to.toFixed(2)}</strong></td>
+      <td class="an-sales-num">${marginCell}</td>
+    </tr>`;
+  }).join('') || '<tr><td colspan="4" style="color:var(--muted);padding:12px">Enter an amount to see the result.</td></tr>';
+
+  const warn = document.getElementById('bulk-price-warn');
+  if (belowCost) {
+    warn.style.display = 'block';
+    warn.textContent = `${belowCost} item${belowCost === 1 ? '' : 's'} would end up below what you paid. That's allowed — just make sure it's deliberate.`;
+  } else {
+    warn.style.display = 'none';
+  }
+  document.getElementById('bulk-price-apply').disabled = !plan.length;
+}
+
+async function doBulkPrice() {
+  const plan = bulkPricePlan().filter(p => p.to !== p.from);
+  if (!plan.length) { closeModal('modal-bulk-price'); return; }
+  if (!confirm(`Change the price of ${plan.length} item${plan.length === 1 ? '' : 's'}?`)) return;
+  closeModal('modal-bulk-price');
+
+  // One request at a time on purpose: the backend serialises requests anyway, and
+  // a burst of parallel writes is what makes the whole site stall. Slower, but it
+  // finishes — and the progress text shows it's moving.
+  setBusy(true, `Updating prices… 0/${plan.length}`);
+  const failed = [];
+  let done = 0;
+  for (const { item, to } of plan) {
+    try {
+      await patchItemPrice(item.id, to);
+    } catch (e) {
+      failed.push(item.title);
+    }
+    done++;
+    const txt = document.getElementById('cl-busy-text');
+    if (txt) txt.textContent = `Updating prices… ${done}/${plan.length}`;
+  }
+  setBusy(false);
+
+  if (failed.length) {
+    alert(`${plan.length - failed.length} of ${plan.length} updated.\n\nFailed:\n• ${failed.slice(0, 8).join('\n• ')}`);
+  } else {
+    showToast(`${plan.length} price${plan.length === 1 ? '' : 's'} updated.`);
+  }
+  clearSelection();
+  if (document.getElementById('view-stale').classList.contains('active')) renderStaleStock();
+  else applyFilters(false);
+}
+
 // ── Analytics ─────────────────────────────────────────────────────
 let anPeriodDays = 90;
 let _anChartRevenue = null;
