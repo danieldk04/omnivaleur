@@ -358,6 +358,17 @@ def _is_empty(v) -> bool:
     return v is None or (isinstance(v, str) and not v.strip()) or (isinstance(v, list) and not v)
 
 
+def _listing_status_for(cand: dict) -> str:
+    """
+    What status the listing this import creates should start in.
+
+    A candidate the platform reports as hidden must NOT land as 'active': it
+    would sit in the dashboard as if it were for sale, and count as stale stock,
+    until the next scan happened to correct it. Anything else starts active.
+    """
+    return "hidden" if cand.get("is_hidden") else "active"
+
+
 def _backfill_item_from_candidate(db, item_id: str, cand: dict,
                                   inferred: dict | None = None) -> dict:
     """Fill ONLY the empty fields on an existing item from a freshly scanned
