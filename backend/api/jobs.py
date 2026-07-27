@@ -745,6 +745,74 @@ async def complete_job(job_id: str, body: dict, user_id: str = Depends(get_curre
     return {"ok": True}
 
 
+def _sync_vinted_hidden(db, job, scraped: list[dict]):
+    """
+    Mirror Vinted's `is_hidden` onto our listings.
+
+    A hidden listing still exists and is still yours, but nobody can see or buy
+    it — so it must not sit in the dashboard next to what's genuinely for sale
+    (and it must not be counted as stale stock, which measures how long
+    something has been ON SALE without selling).
+
+    Unlike the sale reconcile this is safe on a PARTIAL snapshot: it only ever
+    changes listings whose id we actually saw, so a truncated scan simply
+    updates fewer rows instead of drawing a wrong conclusion from absence.
+    Hidden is fully reversible — unhide on Vinted and the next scan flips it
+    straight back to active.
+    """
+    if not scraped:
+        return
+
+    hidden_ids, visible_ids = set(), set()
+    for r in scraped:
+        pid = r.get("platform_listing_id")
+        if pid is None or r.get("is_closed"):
+            continue
+        (hidden_ids if r.get("is_hidden") else visible_ids).add(str(pid))
+    if not hidden_ids and not visible_ids:
+        return
+
+    items = db.table("items").select("id").eq("user_id", job["user_id"]).execute().data or []
+    item_ids = [it["id"] for it in items]
+    if not item_ids:
+        return
+
+    rows = (
+        db.table("listings")
+        .select("id,platform_listing_id,status")
+        .eq("platform", "vinted")
+        .in_("item_id", item_ids)
+        .in_("status", ["active", "relisting", "hidden"])
+        .execute()
+        .data or []
+    )
+
+    to_hide, to_show = [], []
+    for l in rows:
+        pid = l.get("platform_listing_id")
+        if pid is None:
+            continue
+        pid = str(pid)
+        if pid in hidden_ids and l["status"] != "hidden":
+            to_hide.append(l["id"])
+        # Only un-hide on positive evidence that it's visible again.
+        elif pid in visible_ids and l["status"] == "hidden":
+            to_show.append(l["id"])
+
+    for ids, new_status in ((to_hide, "hidden"), (to_show, "active")):
+        if not ids:
+            continue
+        try:
+            db.table("listings").update({"status": new_status}).in_("id", ids).execute()
+        except Exception as e:
+            logger.warning(f"Vinted hidden sync ({new_status}) failed: {e}")
+    if to_hide or to_show:
+        logger.info(
+            "Vinted hidden sync for user %s: %d hidden, %d back to active",
+            job["user_id"], len(to_hide), len(to_show),
+        )
+
+
 async def _reconcile_vinted_sales(db, job, scraped: list[dict], scan_meta: dict | None = None):
     """
     Vinted has no webhook and (deliberately, after a past incident with a stale
