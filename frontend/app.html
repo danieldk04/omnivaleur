@@ -5686,9 +5686,32 @@ function renderStaleStock() {
     : '';
 
   if (!rows.length) {
-    body.innerHTML = `<tr><td colspan="8"><div class="empty">
-      <h3>Nothing stale at ${staleDays}+ days</h3>
-      <p>Everything live is newer than that. Try a shorter period.</p></div></td></tr>`;
+    // An empty screen must say what it looked at and why nothing came back —
+    // otherwise it's indistinguishable from something being broken.
+    const { liveCount, oldestDays, totalItems } = staleOverview();
+    let head, msg, action = '';
+    if (totalItems === 0) {
+      head = 'No items yet';
+      msg = 'Once you add items and publish them, anything that sits unsold too long shows up here.';
+    } else if (liveCount === 0) {
+      head = 'Nothing is live right now';
+      msg = `This screen only looks at items that are <b>currently for sale</b>. You have ${totalItems} item${totalItems === 1 ? '' : 's'}, but none of them are live on a platform at the moment, so there's nothing that could be sitting unsold.`;
+      action = `<button class="btn btn-sm btn-primary" onclick="showView('items');setItemsTab('todo')" style="margin-top:12px">See items to list</button>`;
+    } else if (oldestDays !== null && oldestDays < staleDays) {
+      head = `Nothing has been sitting ${staleDays}+ days`;
+      msg = `All ${liveCount} of your live item${liveCount === 1 ? '' : 's'} are selling faster than that — the one that's been up longest has been live for <b>${oldestDays} day${oldestDays === 1 ? '' : 's'}</b>. That's good news, not a problem.`;
+      const shorter = [30, 60, 90, 180].filter(d => d <= oldestDays && d !== staleDays).pop();
+      if (shorter) action = `<button class="btn btn-sm btn-outline" onclick="setStaleDays(${shorter})" style="margin-top:12px">Look at ${shorter}+ days instead</button>`;
+    } else {
+      head = `Nothing sitting ${staleDays}+ days`;
+      msg = `Checked all ${liveCount} live item${liveCount === 1 ? '' : 's'} — none have been up that long.`;
+    }
+    body.innerHTML = `<tr><td colspan="8"><div class="empty" style="max-width:520px;margin:0 auto">
+      <div class="empty-icon">🕐</div>
+      <h3>${head}</h3>
+      <p style="line-height:1.6">${msg}</p>
+      ${action}
+    </div></td></tr>`;
     updateBulkBar();
     return;
   }
