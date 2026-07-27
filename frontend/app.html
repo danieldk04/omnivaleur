@@ -2819,9 +2819,13 @@ function applyFilters(resetPage) {
   const start = (itemsCurrentPage - 1) * ITEMS_PAGE_SIZE;
   const pageItems = filtered.slice(start, start + ITEMS_PAGE_SIZE);
 
-  document.getElementById('filter-count').textContent = filtered.length === state.items.length
-    ? `${filtered.length} of ${state.items.length}`
-    : `${filtered.length} of ${state.items.length} (page ${itemsCurrentPage}/${totalPages})`;
+  // Count within the tab — "12 of 106" was confusing once the list is scoped.
+  const inTab = counts[itemsTab];
+  document.getElementById('filter-count').textContent = filtered.length === inTab
+    ? `${filtered.length} item${filtered.length === 1 ? '' : 's'}`
+    : `${filtered.length} of ${inTab} (page ${itemsCurrentPage}/${totalPages})`;
+  const heading = { live: 'Live items', todo: 'To list', sold: 'Sold items', archived: 'Archived items' }[itemsTab];
+  document.getElementById('items-heading').textContent = heading;
   renderItemsTable(pageItems);
   renderItemsPagination(totalPages, filtered.length);
 }
