@@ -1003,6 +1003,14 @@ input[type="checkbox"].row-check { width: 15px; height: 15px; cursor: pointer; a
         <h1>Stale stock</h1>
         <p>Items that have been live a long time without selling. Dropping the price is usually what gets them moving.</p>
       </div>
+      <!-- Stated up front, always visible: an empty screen here should never be
+           mistaken for a broken one. -->
+      <div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:10px;padding:12px 16px;margin-bottom:16px;font-size:12.5px;color:#1e40af;line-height:1.6">
+        <b>What this screen counts:</b> only items that are <b>live on at least one platform right now</b> and haven't sold,
+        measured from the day they went live. Items still to be listed, already sold, or archived don't appear here —
+        you'll find those under <a href="#" onclick="showView('items');return false" style="color:#1d4ed8;font-weight:600">Items</a>.
+        If this list is empty, nothing you have for sale has been sitting that long.
+      </div>
       <div class="card">
         <div class="card-header">
           <div>
