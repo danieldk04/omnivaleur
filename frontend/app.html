@@ -5348,11 +5348,19 @@ loadExtensionStatus();
 function pollWhenVisible(fn, ms) {
   return setInterval(() => { if (!document.hidden) fn(); }, ms);
 }
-setInterval(loadAll, 15000) && 0;              // replaced below — kept ids tidy
-setInterval(pollActivity, 4000) && 0;
-setInterval(loadBillingStatus, 60000);
-setInterval(loadNotifications, 60000);
-setInterval(loadExtensionStatus, 20000);
+pollWhenVisible(loadAll, 15000);
+pollWhenVisible(pollActivity, 4000);
+pollWhenVisible(loadBillingStatus, 60000);
+pollWhenVisible(loadNotifications, 60000);
+// The "computer online?" heartbeat — flips the indicator within ~20s of a
+// computer going on/offline.
+pollWhenVisible(loadExtensionStatus, 20000);
+
+// Coming back to the tab shouldn't mean staring at stale numbers for up to 15s,
+// so refresh straight away instead of waiting for the next tick.
+document.addEventListener('visibilitychange', () => {
+  if (!document.hidden) { loadAll(); pollActivity(); loadExtensionStatus(); }
+});
 
 // ── Analytics ─────────────────────────────────────────────────────
 let anPeriodDays = 90;
