@@ -1913,8 +1913,17 @@ async function bgScanVinted(job, serverUrl) {
     await reportProgress(serverUrl, job.id, {
       stage: "saving", message: "Saving to your dashboard…", current: total, total,
     });
-    await finaliseJob(serverUrl, job.id, "complete", { listings: result.items });
-    console.log(`[Omnivaleur] Vinted scan found ${result.items.length} listings (enriched ${enriched})`);
+    // scan_meta travels with the results: the server uses `complete` to decide
+    // whether this snapshot may be trusted to mark listings as sold.
+    await finaliseJob(serverUrl, job.id, "complete", {
+      listings: result.items,
+      scan_meta: result.meta || null,
+    });
+    console.log(
+      `[Omnivaleur] Vinted scan: ${result.items.length} listings ` +
+      `(${total} for sale, ${skipped} closed/draft, enriched ${enriched}) ` +
+      `complete=${result.meta?.complete} ${result.meta?.truncated_reason || ""}`
+    );
   } finally {
     setTimeout(() => chrome.tabs.remove(tabId).catch(() => {}), 2500);
   }
