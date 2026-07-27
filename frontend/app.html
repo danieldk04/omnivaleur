@@ -4047,16 +4047,17 @@ function pollScanProgress(platform, jobId) {
       const prog = job.result && job.result._progress;
 
       if (job.status === 'done' || job.status === 'error') {
-        clearInterval(importProgressTimer); importProgressTimer = null;
-        scanningPlatforms[platform] = false; renderImportScanButtons();
-        clearImportProgress();
-        if (job.status === 'error') {
-          const msg = (job.result && (job.result.error || job.result.message)) || 'The scan failed. Make sure you are logged into the platform in your browser and the extension is active.';
-          showToast('Scan failed: ' + msg);
-        } else {
-          showToast('Scan complete — review your imported listings below.');
-        }
-        loadImportCandidates(platform);
+        if (finish(() => {
+          scanningPlatforms[platform] = false; renderImportScanButtons();
+          clearImportProgress();
+          if (job.status === 'error') {
+            const msg = (job.result && (job.result.error || job.result.message)) || 'The scan failed. Make sure you are logged into the platform in your browser and the extension is active.';
+            showToast('Scan failed: ' + msg);
+          } else {
+            showToast('Scan complete — review your imported listings below.');
+          }
+          loadImportCandidates(platform);
+        })) return;
         return;
       }
 
