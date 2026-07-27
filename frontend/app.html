@@ -5610,6 +5610,15 @@ function staleCandidates(minDays) {
   return out.sort((a, b) => b.days - a.days);
 }
 
+// Sidebar badge — the count at the 90-day mark, which is the default view.
+function renderStaleBadge() {
+  const el = document.getElementById('nav-stale-badge');
+  if (!el) return;
+  const n = staleCandidates(90).length;
+  el.textContent = n;
+  el.style.display = n > 0 ? 'inline-flex' : 'none';
+}
+
 function setStaleDays(d) {
   staleDays = d;
   clearSelection();
