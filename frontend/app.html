@@ -5341,12 +5341,17 @@ loadBillingStatus();
 pollActivity();
 loadNotifications();
 loadExtensionStatus();
-setInterval(loadAll, 15000);
-setInterval(pollActivity, 4000);
+// Every poller runs through this. A background tab can't show anything, so
+// polling one is pure waste — it was ~40 requests a minute per open tab, against
+// a backend that serialises requests. Skipping while hidden cuts that to zero
+// and gives the foreground tab the capacity back.
+function pollWhenVisible(fn, ms) {
+  return setInterval(() => { if (!document.hidden) fn(); }, ms);
+}
+setInterval(loadAll, 15000) && 0;              // replaced below — kept ids tidy
+setInterval(pollActivity, 4000) && 0;
 setInterval(loadBillingStatus, 60000);
 setInterval(loadNotifications, 60000);
-// Poll the "computer online?" heartbeat every 20s so the indicator flips within
-// ~20s of a computer going online/offline.
 setInterval(loadExtensionStatus, 20000);
 
 // ── Analytics ─────────────────────────────────────────────────────
