@@ -194,6 +194,11 @@ ALTER TABLE import_candidates ADD COLUMN IF NOT EXISTS category TEXT;
 ALTER TABLE import_candidates ADD COLUMN IF NOT EXISTS gender VARCHAR(20);
 ALTER TABLE import_candidates ADD COLUMN IF NOT EXISTS color TEXT;
 ALTER TABLE import_candidates ADD COLUMN IF NOT EXISTS material TEXT;
+-- Hidden on the platform (Vinted is_hidden): the listing exists and is yours,
+-- but no buyer can see it. Carried through the import so the listing it creates
+-- starts as 'hidden' instead of 'active' — otherwise a hidden listing sits in
+-- the dashboard as if it were for sale until the next scan corrects it.
+ALTER TABLE import_candidates ADD COLUMN IF NOT EXISTS is_hidden BOOLEAN DEFAULT FALSE;
 
 -- Programmatic SEO/GEO content pages (comparison posts, niche pages).
 -- One row = one published URL. `intent_key` is the cannibalization guard:
