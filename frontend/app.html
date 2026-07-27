@@ -2365,13 +2365,21 @@ function showView(name) {
   document.querySelector('.nav-item[data-view="' + navName + '"]')?.classList.add('active');
   const titles = { dashboard: 'Dashboard', items: 'Items', analytics: 'Analytics', berichten: 'Messages', calculator: 'Margin calculator', refresh: 'Refresh', import: 'Import listings', stale: 'Stale stock', help: 'Help', platforms: 'Platforms', protections: 'Protections', prijs: 'Account' };
   document.getElementById('topbar-title').textContent = titles[name] || name;
-  if (name === 'berichten') { loadNotifications(); }
-  if (name === 'items') { clearSelection(); applyFilters(); }
-  if (name === 'analytics') { renderAnalytics(); }
-  if (name === 'platforms') { renderPlatforms(); }
-  if (name === 'refresh') { renderRefreshView(); loadRelistStatus(); }
-  if (name === 'import') { renderImportScanButtons(); loadImportCandidates(); }
-  if (name === 'stale') { clearSelection(); renderStaleStock(); }
+  // The view is already on screen at this point, so a failing renderer can only
+  // leave that one screen incomplete — never blank the app. Report it plainly
+  // instead of failing silently.
+  try {
+    if (name === 'berichten') { loadNotifications(); }
+    if (name === 'items') { clearSelection(); applyFilters(); }
+    if (name === 'analytics') { renderAnalytics(); }
+    if (name === 'platforms') { renderPlatforms(); }
+    if (name === 'refresh') { renderRefreshView(); loadRelistStatus(); }
+    if (name === 'import') { renderImportScanButtons(); loadImportCandidates(); }
+    if (name === 'stale') { clearSelection(); renderStaleStock(); }
+  } catch (e) {
+    console.error('showView(' + name + ') render failed:', e);
+    showToast('Something went wrong loading this screen — try refreshing the page.');
+  }
 }
 
 // ── Notifications (unread messages + open bids across platforms) ─────
