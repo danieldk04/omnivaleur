@@ -3003,6 +3003,16 @@ function itemActions(item) {
   if (itemsTab === 'sold' || itemsTab === 'archived') {
     return `<button class="btn btn-sm btn-primary" onclick="openCrosslist('${item.id}')" title="Put this item back up for sale">Relist</button>${edit}`;
   }
+  if (itemsTab === 'hidden') {
+    // Unhiding has to happen on the platform itself — we can't flip that flag
+    // from here, so point at the listing rather than offering a button that lies.
+    const url = (state.listings.find(l => l.item_id === item.id && l.status === 'hidden') || {}).platform_listing_url;
+    const open = url
+      ? `<a class="btn btn-sm btn-primary" href="${esc(url)}" target="_blank" rel="noopener" title="Unhide it on the platform — the next scan picks that up automatically">Open on platform</a>`
+      : '';
+    return `${open}${edit}
+      <button class="btn btn-sm btn-danger" onclick="delistItem('${item.id}','${t}')" style="margin-left:4px" title="Remove it from the platform for good">Delist</button>`;
+  }
   if (itemsTab === 'todo') {
     return `<button class="btn btn-sm btn-primary" onclick="openCrosslist('${item.id}')">Publish</button>${edit}`;
   }
