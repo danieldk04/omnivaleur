@@ -974,15 +974,23 @@ def _store_scan_results(db, job, scraped: list[dict]):
             "color": (row.get("color") or None),
             "material": (row.get("material") or None),
         }
-        try:
-            db.table("import_candidates").upsert(
-                {**base, **rich}, on_conflict="user_id,platform,platform_listing_id"
-            ).execute()
-        except Exception as e:
-            logger.warning(f"Scan store: rich upsert failed ({e}); falling back to base fields. Run the import_candidates ALTER migration.")
-            db.table("import_candidates").upsert(
-                base, on_conflict="user_id,platform,platform_listing_id"
-            ).execute()
+        # is_hidden is the newest optional column, so it gets its own tier: if only
+        # THAT one is missing we still want the description/brand/photos to land,
+        # instead of dropping every rich field over one absent column.
+        hidden = {"is_hidden": bool(row.get("is_hidden"))}
+        for attempt, payload in enumerate(({**base, **rich, **hidden}, {**base, **rich}, base)):
+            try:
+                db.table("import_candidates").upsert(
+                    payload, on_conflict="user_id,platform,platform_listing_id"
+                ).execute()
+                break
+            except Exception as e:
+                if attempt == 0:
+                    logger.warning(f"Scan store: is_hidden column missing ({e}); run the import_candidates ALTER migration.")
+                elif attempt == 1:
+                    logger.warning(f"Scan store: rich upsert failed ({e}); falling back to base fields. Run the import_candidates ALTER migration.")
+                else:
+                    logger.error(f"Scan store: base upsert failed for {platform_listing_id}: {e}")
 
 
 @router.post("/{job_id}/error")
