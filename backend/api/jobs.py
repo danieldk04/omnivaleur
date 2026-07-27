@@ -976,7 +976,8 @@ def _store_scan_results(db, job, scraped: list[dict]):
             "photo_url": photo_url,
             "suggested_item_id": best_id,
             "platform_listed_at": row.get("platform_listed_at"),
-            "status": "pending",
+            # Keep whatever we already decided; only genuinely new rows start pending.
+            "status": prior_status.get(str(platform_listing_id), "pending"),
         }
         # Full snapshot columns — only present once the schema migration has run.
         # If they don't exist yet, PostgREST rejects the whole upsert, so retry
