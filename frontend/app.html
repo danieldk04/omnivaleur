@@ -4837,13 +4837,23 @@ function showToast(msg) {
   if (!t) {
     t = document.createElement('div');
     t.id = 'cl-toast';
-    t.style.cssText = 'position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#1e293b;color:#fff;font-size:13px;font-weight:600;padding:11px 20px;border-radius:10px;z-index:9999;box-shadow:0 4px 20px rgba(0,0,0,.25);transition:opacity .3s;white-space:nowrap;max-width:90vw;text-align:center';
+    t.style.cssText = 'position:fixed;bottom:24px;left:50%;background:#1e293b;color:#fff;font-size:13px;font-weight:600;padding:11px 20px;border-radius:10px;z-index:9999;box-shadow:0 4px 20px rgba(0,0,0,.25);transition:opacity .22s ease,transform .22s cubic-bezier(.4,0,.2,1);white-space:nowrap;max-width:90vw;text-align:center;opacity:0;transform:translateX(-50%) translateY(10px);pointer-events:none';
     document.body.appendChild(t);
   }
   t.textContent = msg;
-  t.style.opacity = '1';
   clearTimeout(t._tid);
-  t._tid = setTimeout(() => { t.style.opacity = '0'; }, 4000);
+  // Slide up into place rather than blinking on — and re-animate on a repeat
+  // toast so a second message doesn't look like the first one never left.
+  t.style.transform = 'translateX(-50%) translateY(10px)';
+  t.style.opacity = '0';
+  requestAnimationFrame(() => {
+    t.style.opacity = '1';
+    t.style.transform = 'translateX(-50%) translateY(0)';
+  });
+  t._tid = setTimeout(() => {
+    t.style.opacity = '0';
+    t.style.transform = 'translateX(-50%) translateY(10px)';
+  }, 4000);
 }
 
 function renderPlatformCheckboxes(containerId, itemId) {
