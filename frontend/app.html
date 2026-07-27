@@ -2790,8 +2790,10 @@ function renderPlatformMatrix(itemId) {
   const itemListings = state.listings.filter(l => l.item_id === itemId);
   const pendingJobs  = state.jobs.filter(j => j.item_id === itemId && j.status === 'pending');
 
-  // Best status per platform (active > pending > error > delisted)
-  const STATUS_RANK = { active: 0, queued: 1, pending: 1, error: 2, delisted: 3 };
+  // Best status per platform (active > hidden > pending > error > delisted).
+  // 'hidden' ranks just under active: the listing is really there, it just isn't
+  // visible to buyers — which is worth showing, not hiding behind "not listed".
+  const STATUS_RANK = { active: 0, hidden: 0.5, queued: 1, pending: 1, error: 2, delisted: 3 };
   const byPlatform = {};
   for (const l of itemListings) {
     const cur = byPlatform[l.platform];
