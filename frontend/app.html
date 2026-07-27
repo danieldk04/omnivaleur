@@ -3384,6 +3384,16 @@ function editItem(id) {
   document.getElementById('modal-add').style.display = 'flex';
 }
 
+// Parse a numeric form field, keeping 0 as a real value. `parseFloat(x) || null`
+// collapses 0 to null, which is wrong for anything that can legitimately be zero
+// (a purchase price of €0 for a free item). Empty/invalid stays null.
+function numOrNull(raw) {
+  const s = String(raw ?? '').trim().replace(',', '.');
+  if (s === '') return null;
+  const n = parseFloat(s);
+  return isNaN(n) ? null : n;
+}
+
 async function saveItem() {
   if (_uploadsInFlight > 0) return alert('Photos are still uploading — please wait for them to finish before saving.');
   const id = document.getElementById('edit-id').value;
