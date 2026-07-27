@@ -658,7 +658,7 @@ async def handle_item_sold(item_id: str, sold_on_platform: str, sold_price: floa
         db.table("listings")
         .select("*")
         .eq("item_id", item_id)
-        .in_("status", ["active", "relisting", "error", "delisted"])
+        .in_("status", ["active", "relisting", "error", "delisted", "hidden"])
         .neq("platform", sold_on_platform)
         .execute()
     )
