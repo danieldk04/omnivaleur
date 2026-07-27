@@ -5678,7 +5678,7 @@ function renderAnalytics(force) {
       const { listing, item } = sale;
       const p = listing.platform;
       const soldDate = listing.sold_at
-        ? new Date(listing.sold_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: '2-digit' })
+        ? dtf({ day: 'numeric', month: 'short', year: '2-digit' }).format(new Date(listing.sold_at))
         : '—';
       const amount = saleAmt(sale);           // actual sold_price, or asking as estimate
       const estimate = isEstimate(sale);
