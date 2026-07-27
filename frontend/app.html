@@ -934,14 +934,19 @@ input[type="checkbox"].row-check { width: 15px; height: 15px; cursor: pointer; a
             </button>
           </div>
         </div>
+        <!-- Lifecycle tabs. These replace the old "All statuses" dropdown: an item
+             that's live, one still to be listed, one that sold and one that was
+             taken offline are four different jobs, and mixing them made the list
+             read as clutter. Sold/archived stay fully counted in Analytics — this
+             is purely how the inventory is presented. -->
+        <div class="items-tabs" id="items-tabs">
+          <button class="items-tab active" data-tab="live" onclick="setItemsTab('live')">Live <span class="items-tab-count" id="tabcount-live">0</span></button>
+          <button class="items-tab" data-tab="todo" onclick="setItemsTab('todo')">To list <span class="items-tab-count" id="tabcount-todo">0</span></button>
+          <button class="items-tab" data-tab="sold" onclick="setItemsTab('sold')">Sold <span class="items-tab-count" id="tabcount-sold">0</span></button>
+          <button class="items-tab" data-tab="archived" onclick="setItemsTab('archived')">Archived <span class="items-tab-count" id="tabcount-archived">0</span></button>
+        </div>
         <div class="filter-bar">
           <span class="filter-label">Filter</span>
-          <select id="filter-pub" onchange="applyFilters()">
-            <option value="all">All statuses</option>
-            <option value="no">Not published</option>
-            <option value="yes">Published</option>
-            <option value="delisted">Delisted</option>
-          </select>
           <select id="filter-platform" onchange="applyFilters()">
             <option value="all">All platforms</option>
             <option value="marktplaats">Marktplaats</option>
