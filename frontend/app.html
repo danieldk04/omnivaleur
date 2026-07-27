@@ -2862,21 +2862,31 @@ async function markPlatformListed(itemId, platform, label) {
 //   live     — at least one listing currently up for sale
 //   archived — was online, isn't now, didn't sell (the dead stock)
 //   todo     — never made it online: no listings, or only queued/failed ones
-const ITEMS_TABS = ['live', 'todo', 'sold', 'archived'];
+const ITEMS_TABS = ['live', 'todo', 'hidden', 'sold', 'archived'];
 function classifyItems() {
   const byItem = new Map();
   for (const l of state.listings) {
     let s = byItem.get(l.item_id);
-    if (!s) { s = { sold: false, live: false, off: false }; byItem.set(l.item_id, s); }
+    if (!s) { s = { sold: false, live: false, hidden: false, off: false }; byItem.set(l.item_id, s); }
     if (l.status === 'sold') s.sold = true;
     else if (l.status === 'active' || l.status === 'relisting') s.live = true;
+    // Hidden on the platform: still yours, still listed, but invisible to buyers.
+    else if (l.status === 'hidden') s.hidden = true;
     else if (l.status === 'delisted') s.off = true;
   }
   const tabOf = new Map();
-  const counts = { live: 0, todo: 0, sold: 0, archived: 0 };
+  const counts = { live: 0, todo: 0, hidden: 0, sold: 0, archived: 0 };
   for (const item of state.items) {
     const s = byItem.get(item.id);
-    const tab = !s ? 'todo' : s.sold ? 'sold' : s.live ? 'live' : s.off ? 'archived' : 'todo';
+    // Order matters: an item that's hidden on Vinted but live on Marktplaats is
+    // still genuinely for sale, so "live" wins. Only items with nowhere visible
+    // left land in Hidden.
+    const tab = !s ? 'todo'
+      : s.sold ? 'sold'
+      : s.live ? 'live'
+      : s.hidden ? 'hidden'
+      : s.off ? 'archived'
+      : 'todo';
     tabOf.set(item.id, tab);
     counts[tab]++;
   }
