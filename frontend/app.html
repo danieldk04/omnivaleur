@@ -5737,7 +5737,7 @@ function renderStaleStock() {
       </div></td>
       <td class="an-sales-num"><strong>€${price.toFixed(2)}</strong></td>
       <td class="an-sales-num">${sugCell}</td>
-      <td class="hide-mobile" style="white-space:nowrap;color:var(--muted);font-size:12px">${fmtDate(new Date(since).toISOString())}</td>
+      <td class="hide-mobile" style="white-space:nowrap;color:var(--muted);font-size:12px">${estimated ? '~' : ''}${fmtDate(new Date(since).toISOString())}${estimated ? ' <span title="This listing has no recorded go-live date (common for imported listings), so we count from when the item was created. The real figure may be lower." style="cursor:help">ⓘ</span>' : ''}</td>
       <td class="an-sales-num" style="font-weight:700">${days}</td>
       <td><div class="platform-badges">${renderListingBadges(item.id)}</div></td>
       <td style="white-space:nowrap">${apply}
