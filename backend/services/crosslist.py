@@ -446,7 +446,9 @@ async def delist_all_platforms(item_id: str, user_id: str) -> list[dict]:
     #
     # Deduplicate by platform — keep the one with a platform_listing_id if both
     # exist, otherwise any.
-    _DELISTABLE_STATUSES = ("active", "error", "delisted", "pending", "relisting")
+    # 'hidden' counts too: a listing hidden on Vinted still exists on the
+    # platform, so "delist" must actually remove it rather than skip it.
+    _DELISTABLE_STATUSES = ("active", "error", "delisted", "pending", "relisting", "hidden")
     seen_platforms: dict[str, dict] = {}
     for l in listings_resp.data:
         if l["status"] not in _DELISTABLE_STATUSES:
