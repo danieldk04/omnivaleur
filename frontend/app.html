@@ -4115,8 +4115,10 @@ function renderImportReview(candidates) {
   if (!candidates.length) { section.style.display = 'none'; return; }
   section.style.display = '';
 
-  const itemOptions = state.items.map(i => `<option value="${i.id}">${esc(i.title)}</option>`).join('');
-
+  // Each row used to embed a <select> containing EVERY item. At 367 candidates
+  // and ~100 items that is ~39,000 <option> nodes built on every render — enough
+  // to lock the tab up, especially when a runaway poller re-rendered it every
+  // 1.5s. Options are now filled in on first focus, per row.
   document.getElementById('import-review-body').innerHTML = candidates.map(c => {
     // Show what the scan actually captured, so it's obvious per row whether the
     // rich details (description, extra photos, colour, …) came through.
