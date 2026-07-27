@@ -2740,8 +2740,47 @@ async function markPlatformListed(itemId, platform, label) {
 }
 
 // ── Items view with filters ───────────────────────────────────────
+// Which lifecycle tab an item belongs to. Deliberately one tab per item — an item
+// is in exactly one state, so the counts add up to the catalogue total.
+//   sold     — sold somewhere; its selling days are over
+//   live     — at least one listing currently up for sale
+//   archived — was online, isn't now, didn't sell (the dead stock)
+//   todo     — never made it online: no listings, or only queued/failed ones
+const ITEMS_TABS = ['live', 'todo', 'sold', 'archived'];
+function classifyItems() {
+  const byItem = new Map();
+  for (const l of state.listings) {
+    let s = byItem.get(l.item_id);
+    if (!s) { s = { sold: false, live: false, off: false }; byItem.set(l.item_id, s); }
+    if (l.status === 'sold') s.sold = true;
+    else if (l.status === 'active' || l.status === 'relisting') s.live = true;
+    else if (l.status === 'delisted') s.off = true;
+  }
+  const tabOf = new Map();
+  const counts = { live: 0, todo: 0, sold: 0, archived: 0 };
+  for (const item of state.items) {
+    const s = byItem.get(item.id);
+    const tab = !s ? 'todo' : s.sold ? 'sold' : s.live ? 'live' : s.off ? 'archived' : 'todo';
+    tabOf.set(item.id, tab);
+    counts[tab]++;
+  }
+  return { tabOf, counts };
+}
+
+let itemsTab = 'live';
+function setItemsTab(tab) {
+  if (!ITEMS_TABS.includes(tab)) tab = 'live';
+  itemsTab = tab;
+  clearSelection();          // a selection from another tab would act on hidden rows
+  applyFilters();
+}
+
+// Kept for the dashboard's "View →" links, which predate the tabs.
 function setFilter(type, value) {
-  if (type === 'pub') document.getElementById('filter-pub').value = value;
+  if (type === 'pub') {
+    setItemsTab(value === 'no' ? 'todo' : value === 'delisted' ? 'archived' : 'live');
+    return;
+  }
   if (type === 'platform') document.getElementById('filter-platform').value = value;
   applyFilters();
 }
@@ -2751,26 +2790,19 @@ let itemsCurrentPage = 1;
 
 function applyFilters(resetPage) {
   if (resetPage !== false) itemsCurrentPage = 1;
-  const pubFilter = document.getElementById('filter-pub').value;
   const platformFilter = document.getElementById('filter-platform').value;
   const search = document.getElementById('filter-search').value.toLowerCase().trim();
 
-  const publishedItemIds = new Set(state.listings.filter(l => l.status === 'active').map(l => l.item_id));
-  // "Delisted" = has a removed listing and nothing live anywhere — dead stock that
-  // shouldn't clutter the active inventory view.
-  const delistedItemIds = new Set(
-    state.listings.filter(l => l.status === 'delisted' || l.status === 'sold').map(l => l.item_id)
-      .filter(id => !publishedItemIds.has(id))
-  );
+  const { tabOf, counts } = classifyItems();
+  for (const t of ITEMS_TABS) document.getElementById('tabcount-' + t).textContent = counts[t];
+  document.querySelectorAll('.items-tab').forEach(b => b.classList.toggle('active', b.dataset.tab === itemsTab));
+
   const platformItemIds = platformFilter !== 'all'
     ? new Set(state.listings.filter(l => l.platform === platformFilter && l.status === 'active').map(l => l.item_id))
     : null;
 
   const filtered = state.items.filter(item => {
-    if (pubFilter === 'yes' && !publishedItemIds.has(item.id)) return false;
-    // "Not published" excludes delisted items — those live under their own filter.
-    if (pubFilter === 'no' && (publishedItemIds.has(item.id) || delistedItemIds.has(item.id))) return false;
-    if (pubFilter === 'delisted' && !delistedItemIds.has(item.id)) return false;
+    if (tabOf.get(item.id) !== itemsTab) return false;
     if (platformItemIds && !platformItemIds.has(item.id)) return false;
     if (search && !item.title.toLowerCase().includes(search) && !(item.brand || '').toLowerCase().includes(search)) return false;
     return true;
