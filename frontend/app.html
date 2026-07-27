@@ -3016,8 +3016,11 @@ function renderItemsTable(items) {
 // ── Selection & Bulk actions ─────────────────────────────────────
 function toggleRowSelect(id, checked) {
   if (checked) selectedIds.add(id); else selectedIds.delete(id);
-  const row = document.getElementById('row-' + id);
-  if (row) row.className = checked ? 'selected' : '';
+  // The same row can be on screen in Items or in Stale stock — update whichever exists.
+  for (const prefix of ['row-', 'strow-']) {
+    const row = document.getElementById(prefix + id);
+    if (row) row.className = checked ? 'selected' : '';
+  }
   updateBulkBar();
 }
 
