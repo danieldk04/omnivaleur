@@ -3037,17 +3037,26 @@ function toggleSelectAll(checked) {
 
 function clearSelection() {
   selectedIds.clear();
-  document.getElementById('check-all').checked = false;
-  document.querySelectorAll('#items-body .row-check').forEach(cb => cb.checked = false);
-  document.querySelectorAll('#items-body tr.selected').forEach(r => r.classList.remove('selected'));
+  for (const id of ['check-all', 'stale-check-all']) {
+    const el = document.getElementById(id);
+    if (el) el.checked = false;
+  }
+  document.querySelectorAll('#items-body .row-check, #stale-body .row-check').forEach(cb => cb.checked = false);
+  document.querySelectorAll('#items-body tr.selected, #stale-body tr.selected').forEach(r => r.classList.remove('selected'));
   updateBulkBar();
 }
 
 function updateBulkBar() {
-  const bar = document.getElementById('bulk-bar');
   const n = selectedIds.size;
-  document.getElementById('bulk-count').textContent = n;
-  bar.classList.toggle('visible', n > 0);
+  // Both views have their own bar; keep them in step so a selection never looks
+  // lost when you switch between them.
+  for (const [barId, countId] of [['bulk-bar', 'bulk-count'], ['stale-bulk-bar', 'stale-bulk-count']]) {
+    const bar = document.getElementById(barId);
+    const count = document.getElementById(countId);
+    if (!bar || !count) continue;
+    count.textContent = n;
+    bar.classList.toggle('visible', n > 0);
+  }
 }
 
 function openBulkCrosslist() {
