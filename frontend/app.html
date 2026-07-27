@@ -5548,8 +5548,7 @@ function renderAnalytics(force) {
   const countData = chartBuckets.map(b => b.count);
 
   // Revenue vs Profit line chart
-  if (_anChartRevenue) _anChartRevenue.destroy();
-  _anChartRevenue = new Chart(document.getElementById('an-chart-revenue'), {
+  _anChartRevenue = anUpsertChart(_anChartRevenue, 'an-chart-revenue', {
     type: 'line',
     data: {
       labels,
