@@ -5564,10 +5564,12 @@ function renderAnalytics(force) {
     const d = new Date(); d.setDate(d.getDate() - i);
     buckets.push({ label: dtf({ day: 'numeric', month: 'short' }).format(d), date: d.toISOString().slice(0, 10), rev: 0, profit: 0, count: 0 });
   }
+  // Index by date — the previous linear find() per sale scanned up to 365 buckets.
+  const bucketByDate = new Map(buckets.map(b => [b.date, b]));
   for (const sale of sales) {
     const { listing, item } = sale;
     const day = listing.sold_at?.slice(0, 10);
-    const b = buckets.find(b => b.date === day);
+    const b = bucketByDate.get(day);
     if (b) {
       b.rev += saleAmt(sale);
       if (item.purchase_price != null) b.profit += saleAmt(sale) - (item.purchase_price || 0);
