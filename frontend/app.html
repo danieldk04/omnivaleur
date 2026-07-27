@@ -5366,7 +5366,10 @@ function anSignature() {
     `${x.item_id}|${x.platform}|${x.status}|${x.sold_at || ''}|${x.sold_price ?? ''}`).join(';');
   const i = state.items.map(x =>
     `${x.id}|${x.price}|${x.purchase_price ?? ''}|${x.title}|${(x.photo_urls || [])[0] || ''}`).join(';');
-  return `${anPeriodDays}#${l}#${i}`;
+  // The current date matters even when the data is untouched: the period filter
+  // and the daily chart buckets are both relative to "now", so a tab left open
+  // across midnight must re-render or it silently shows yesterday's window.
+  return `${new Date().toDateString()}#${anPeriodDays}#${l}#${i}`;
 }
 
 // Reuse an existing Chart instance instead of destroy()+new. Chart.js then
