@@ -5590,17 +5590,30 @@ function round99(v) {
   return Math.max(0.99, Math.round(v) - 0.01);
 }
 
-// Earliest moment this item went live and stayed live, or null if it isn't live.
-function liveSince(itemId) {
+// Earliest moment this item went live and stayed live.
+// Returns { ms, estimated } — or null when the item has no live listing at all.
+//
+// Not every listing carries a listed_at: imported ones often don't (that's the
+// "—" under First listed in Items). Skipping those made items that had genuinely
+// been sitting for months invisible here, which is the worst kind of bug for a
+// tool like this — silently incomplete. So fall back to when the item was
+// created and label that row as an estimate rather than dropping it.
+function liveSince(item) {
   let ms = null;
+  let live = false;
   for (const l of state.listings) {
-    if (l.item_id !== itemId) continue;
+    if (l.item_id !== item.id) continue;
     if (l.status !== 'active' && l.status !== 'relisting') continue;
+    live = true;
     if (!l.listed_at) continue;
     const v = new Date(l.listed_at).getTime();
     if (ms === null || v < ms) ms = v;
   }
-  return ms;
+  if (!live) return null;
+  if (ms !== null) return { ms, estimated: false };
+  const created = item.created_at ? new Date(item.created_at).getTime() : NaN;
+  if (isNaN(created)) return null;
+  return { ms: created, estimated: true };
 }
 
 // Every live item with how long it's been sitting and what we'd suggest for it.
@@ -5610,8 +5623,9 @@ function staleCandidates(minDays) {
   const out = [];
   for (const item of state.items) {
     if (soldIds.has(item.id)) continue;
-    const since = liveSince(item.id);
-    if (since === null) continue;
+    const ls = liveSince(item);
+    if (ls === null) continue;
+    const since = ls.ms;
     const days = Math.floor((now - since) / 86400e3);
     if (days < minDays) continue;
     const pct = stalePctFor(days);
