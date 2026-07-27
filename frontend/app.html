@@ -4074,12 +4074,14 @@ function pollScanProgress(platform, jobId) {
       // all for STALL_MS), or the absolute backstop is hit. Either way, show
       // whatever candidates already landed rather than spinning forever.
       if (now - lastAdvanceAt > STALL_MS || now - startedAt > ABSOLUTE_MAX_MS) {
-        clearInterval(importProgressTimer); importProgressTimer = null;
-        scanningPlatforms[platform] = false; renderImportScanButtons(); clearImportProgress();
-        showToast('Scan stopped responding — showing what was found so far. Make sure the Omnivaleur extension is running, then scan again.');
-        loadImportCandidates(platform);
+        finish(() => {
+          scanningPlatforms[platform] = false; renderImportScanButtons(); clearImportProgress();
+          showToast('Scan stopped responding — showing what was found so far. Make sure the Omnivaleur extension is running, then scan again.');
+          loadImportCandidates(platform);
+        });
       }
-    } catch (e) { /* transient poll error — keep trying */ }
+    } catch (e) { /* transient poll error — keep trying */
+    } finally { busy = false; }
   }, 1500);
 }
 
