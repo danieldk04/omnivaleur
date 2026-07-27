@@ -997,10 +997,58 @@ input[type="checkbox"].row-check { width: 15px; height: 15px; cursor: pointer; a
       </div>
     </div>
 
+    <!-- ── STALE STOCK VIEW ────────────────────────────────────────── -->
+    <div id="view-stale" class="view">
+      <div class="view-header">
+        <h1>Stale stock</h1>
+        <p>Items that have been live a long time without selling. Dropping the price is usually what gets them moving.</p>
+      </div>
+      <div class="card">
+        <div class="card-header">
+          <div>
+            <h2 id="stale-heading">Sitting unsold</h2>
+            <div class="card-header-sub" id="stale-sub"></div>
+          </div>
+          <div class="an-period-tabs" id="stale-tabs">
+            <button class="an-period-tab" data-days="30" onclick="setStaleDays(30)">30d+</button>
+            <button class="an-period-tab" data-days="60" onclick="setStaleDays(60)">60d+</button>
+            <button class="an-period-tab active" data-days="90" onclick="setStaleDays(90)">90d+</button>
+            <button class="an-period-tab" data-days="180" onclick="setStaleDays(180)">180d+</button>
+          </div>
+        </div>
+        <div class="bulk-bar" id="stale-bulk-bar">
+          <strong id="stale-bulk-count">0</strong> selected &nbsp;·
+          <button class="btn btn-sm btn-primary" onclick="openBulkPrice()">Change price…</button>
+          <button class="btn btn-sm btn-ghost" onclick="clearSelection()">Deselect</button>
+        </div>
+        <div class="table-wrap">
+          <table class="items-table">
+            <thead>
+              <tr>
+                <th class="col-check"><input type="checkbox" class="row-check" id="stale-check-all" onchange="toggleStaleSelectAll(this.checked)"></th>
+                <th>Item</th>
+                <th class="an-sales-num">Price</th>
+                <th class="an-sales-num">Suggested</th>
+                <th class="hide-mobile">Live since</th>
+                <th class="an-sales-num">Days</th>
+                <th>Platforms</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="stale-body"></tbody>
+          </table>
+        </div>
+        <div style="padding:14px 22px;font-size:12px;color:var(--muted);border-top:1px solid var(--border)">
+          Suggested price uses a simple ladder — the longer it sits, the deeper the cut:
+          <b>−10%</b> from 60 days, <b>−15%</b> from 90, <b>−20%</b> from 180, rounded to …,99.
+          It never suggests going below your purchase price; those rows are flagged instead.
+        </div>
+      </div>
+    </div>
+
     <!-- ── MARGIN CALCULATOR VIEW ──────────────────────────────────── -->
     <div id="view-calculator" class="view">
       <div class="view-header">
-        <a href="#" onclick="showView('items');return false" style="font-size:13px;color:var(--blue);font-weight:600;text-decoration:none">← Items</a>
         <h1>Margin calculator</h1>
         <p>Enter your purchase price and desired profit — we calculate the minimum selling price per platform including fees.</p>
       </div>
