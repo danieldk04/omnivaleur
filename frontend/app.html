@@ -4021,7 +4021,25 @@ function pollScanProgress(platform, jobId) {
   const startedAt = Date.now();
   let lastAdvanceAt = Date.now();
   let lastSig = '';
+  // setInterval does not wait for an async callback. On a busy backend a status
+  // request easily takes longer than the 1.5s tick, so several callbacks end up
+  // in flight at once — they ALL saw status 'done', so they all fired the toast
+  // and all kicked off another full re-render of the candidate list. That is
+  // what produced a stream of "Scan complete" toasts and froze the page.
+  // `busy` keeps one tick in flight at a time; `finished` makes the completion
+  // path run exactly once, whatever else is already queued.
+  let busy = false;
+  let finished = false;
+  const finish = (fn) => {
+    if (finished) return true;
+    finished = true;
+    if (importProgressTimer) { clearInterval(importProgressTimer); importProgressTimer = null; }
+    fn();
+    return false;
+  };
   importProgressTimer = setInterval(async () => {
+    if (busy || finished) return;
+    busy = true;
     try {
       const r = await apiFetch(`${API}/api/jobs/status/${jobId}`);
       if (!r.ok) return; // transient — the job may just not be readable this tick
