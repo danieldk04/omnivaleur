@@ -2258,7 +2258,7 @@ function showView(name) {
   // Nav-highlight via data-view (robuust: onafhankelijk van DOM-volgorde/aantal).
   const navName = NAV_PARENT[name] || name;
   document.querySelector('.nav-item[data-view="' + navName + '"]')?.classList.add('active');
-  const titles = { dashboard: 'Dashboard', items: 'Items', analytics: 'Analytics', berichten: 'Messages', calculator: 'Margin calculator', refresh: 'Refresh', import: 'Import listings', help: 'Help', platforms: 'Platforms', protections: 'Protections', prijs: 'Account' };
+  const titles = { dashboard: 'Dashboard', items: 'Items', analytics: 'Analytics', berichten: 'Messages', calculator: 'Margin calculator', refresh: 'Refresh', import: 'Import listings', stale: 'Stale stock', help: 'Help', platforms: 'Platforms', protections: 'Protections', prijs: 'Account' };
   document.getElementById('topbar-title').textContent = titles[name] || name;
   if (name === 'berichten') { loadNotifications(); }
   if (name === 'items') { clearSelection(); applyFilters(); }
@@ -2266,6 +2266,7 @@ function showView(name) {
   if (name === 'platforms') { renderPlatforms(); }
   if (name === 'refresh') { renderRefreshView(); loadRelistStatus(); }
   if (name === 'import') { renderImportScanButtons(); loadImportCandidates(); }
+  if (name === 'stale') { clearSelection(); renderStaleStock(); }
 }
 
 // ── Notifications (unread messages + open bids across platforms) ─────
