@@ -4135,7 +4135,7 @@ function renderImportReview(candidates) {
     return `
     <tr>
       <td><div class="item-info">
-        <div class="item-photo">${c.photo_url ? `<img src="${c.photo_url}" style="width:40px;height:40px;border-radius:6px;object-fit:cover">` : '👗'}</div>
+        <div class="item-photo">${c.photo_url ? `<img src="${c.photo_url}" loading="lazy" decoding="async" style="width:40px;height:40px;border-radius:6px;object-fit:cover">` : '👗'}</div>
         <div>
           <div class="item-title">${esc(c.title || 'Untitled')}</div>
           <div class="item-meta">${PLATFORM_LABELS[c.platform] || c.platform}${c.price ? ' · €' + c.price : ''}</div>
