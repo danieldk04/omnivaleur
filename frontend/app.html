@@ -4807,19 +4807,26 @@ function setBusy(on, msg) {
   if (!ov) {
     ov = document.createElement('div');
     ov.id = 'cl-busy-overlay';
-    ov.style.cssText = 'position:fixed;inset:0;z-index:10000;display:none;align-items:center;justify-content:center;background:rgba(15,23,42,.35)';
-    ov.innerHTML = '<div style="background:#fff;border-radius:12px;padding:20px 28px;display:flex;align-items:center;gap:12px;box-shadow:0 8px 30px rgba(0,0,0,.2);font-size:14px;font-weight:600;color:#1e293b"><span class="spinner"></span><span id="cl-busy-text">Working…</span></div>';
+    ov.style.cssText = 'position:fixed;inset:0;z-index:10000;display:none;opacity:0;align-items:center;justify-content:center;background:rgba(15,23,42,.35);transition:opacity .16s ease';
+    ov.innerHTML = '<div class="cl-busy-box" style="background:#fff;border-radius:12px;padding:20px 28px;display:flex;align-items:center;gap:12px;box-shadow:0 8px 30px rgba(0,0,0,.2);font-size:14px;font-weight:600;color:#1e293b"><span class="spinner"></span><span id="cl-busy-text">Working…</span></div>';
     document.body.appendChild(ov);
   }
   if (on) {
     _busyDepth++;
     document.getElementById('cl-busy-text').textContent = msg || 'Working…';
+    clearTimeout(ov._hideTid);
     ov.style.display = 'flex';
+    // Next frame, so the browser has a 0-opacity starting point to animate from —
+    // otherwise the overlay snaps in and every save looks like a jolt.
+    requestAnimationFrame(() => { ov.style.opacity = '1'; });
     document.querySelectorAll('button:not([disabled])').forEach(b => { b.dataset.clWasEnabled = '1'; b.disabled = true; });
   } else {
     _busyDepth = Math.max(0, _busyDepth - 1);
     if (_busyDepth === 0) {
-      ov.style.display = 'none';
+      ov.style.opacity = '0';
+      // Hide only once the fade has finished; re-showing within that window
+      // cancels it (see clearTimeout above), so rapid operations don't flash.
+      ov._hideTid = setTimeout(() => { if (_busyDepth === 0) ov.style.display = 'none'; }, 180);
       document.querySelectorAll('button[data-cl-was-enabled]').forEach(b => { b.disabled = false; delete b.dataset.clWasEnabled; });
     }
   }
