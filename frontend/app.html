@@ -2909,7 +2909,7 @@ function renderItemsTable(items) {
            <button class="btn btn-outline btn-sm" onclick="showView('import')">↓ Import existing listings</button>
          </div>
        </div></td></tr>`
-    : '<tr><td colspan="8"><div class="empty"><h3>No items match these filters</h3><p>Try adjusting the filters above.</p></div></td></tr>';
+    : `<tr><td colspan="8"><div class="empty"><h3>${EMPTY_TAB[itemsTab].h}</h3><p>${EMPTY_TAB[itemsTab].p}</p></div></td></tr>`;
   document.getElementById('items-body').innerHTML = rows || emptyHtml;
   updateBulkBar();
 }
