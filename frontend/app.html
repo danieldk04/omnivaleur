@@ -2814,6 +2814,9 @@ function renderPlatformMatrix(itemId) {
     let cls = 's-none', badge = '', tip = `${PLATFORM_LABELS[p]}: not listed`;
     if (l && l.status === 'active') {
       cls = 's-active'; badge = '✓'; tip = `${PLATFORM_LABELS[p]}: listed ✓`;
+    } else if (l && l.status === 'hidden') {
+      cls = 's-pending'; badge = '🙈';
+      tip = `${PLATFORM_LABELS[p]}: hidden on the platform — it exists, but buyers can't see it`;
     } else if (l && (l.status === 'pending' || l.status === 'queued')) {
       cls = 's-pending'; badge = '…'; tip = `${PLATFORM_LABELS[p]}: publishing… — leave the tab the extension opens alone`;
     } else if (l && l.status === 'error') {
