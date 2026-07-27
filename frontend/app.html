@@ -5716,7 +5716,7 @@ function renderStaleStock() {
     return;
   }
 
-  body.innerHTML = rows.map(({ item, days, since, pct, suggested, belowCost }) => {
+  body.innerHTML = rows.map(({ item, days, since, pct, suggested, belowCost, estimated }) => {
     const checked = selectedIds.has(item.id) ? 'checked' : '';
     const price = Number(item.price) || 0;
     const sugCell = suggested !== null
