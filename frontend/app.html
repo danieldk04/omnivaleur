@@ -5481,13 +5481,17 @@ function renderAnalytics(force) {
   // Gather sold listings within period
   const soldListings = state.listings.filter(l => l.status === 'sold' && anFilterDate(l.sold_at));
 
+  // One index for every item lookup below — the previous `state.items.find(...)`
+  // per sale made this quadratic in catalogue size.
+  const itemById = new Map(state.items.map(i => [i.id, i]));
+
   // Deduplicate: one sale per item (first sold listing per item_id)
   const seenItems = new Set();
   const sales = [];
   for (const l of soldListings.sort((a, b) => new Date(a.sold_at) - new Date(b.sold_at))) {
     if (!seenItems.has(l.item_id)) {
       seenItems.add(l.item_id);
-      const item = state.items.find(i => i.id === l.item_id);
+      const item = itemById.get(l.item_id);
       if (item) sales.push({ listing: l, item });
     }
   }
