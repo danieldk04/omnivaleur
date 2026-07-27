@@ -737,7 +737,9 @@ async def complete_job(job_id: str, body: dict, user_id: str = Depends(get_curre
     elif job["action"] == "scan":
         _store_scan_results(db, job, body.get("listings", []))
         if job["platform"] == "vinted":
-            await _reconcile_vinted_sales(db, job, body.get("listings", []))
+            await _reconcile_vinted_sales(
+                db, job, body.get("listings", []), body.get("scan_meta") or {}
+            )
 
     return {"ok": True}
 
