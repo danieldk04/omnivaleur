@@ -2854,6 +2854,15 @@ function renderItemsPagination(totalPages, totalFiltered) {
   `;
 }
 
+// An empty tab usually means good news ("nothing left to list"), not a dead end,
+// so say what the tab means rather than "no items match these filters".
+const EMPTY_TAB = {
+  live:     { h: 'Nothing live right now', p: 'Items you publish appear here. Check "To list" for anything waiting to go up.' },
+  todo:     { h: 'Everything is listed', p: 'No items are waiting to be published — nice.' },
+  sold:     { h: 'No sales here yet', p: 'Items marked sold land here, and count towards your Analytics.' },
+  archived: { h: 'Nothing archived', p: 'Items you delisted without selling end up here, ready to relist.' },
+};
+
 // Actions that make sense for the tab you're looking at. The old row offered all
 // four everywhere, which meant "Delist" on something that was nowhere online and
 // "Publish" on something already sold.
