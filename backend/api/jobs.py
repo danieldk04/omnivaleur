@@ -744,23 +744,55 @@ async def complete_job(job_id: str, body: dict, user_id: str = Depends(get_curre
     return {"ok": True}
 
 
-async def _reconcile_vinted_sales(db, job, scraped: list[dict]):
+async def _reconcile_vinted_sales(db, job, scraped: list[dict], scan_meta: dict | None = None):
     """
     Vinted has no webhook and (deliberately, after a past incident with a stale
     session) no server-side polling — so a Vinted sale is otherwise invisible
-    until the user notices it themselves. A wardrobe scan IS an authoritative
-    snapshot of everything still live on Vinted right now: if one of our
-    "active"/"relisting" Vinted listings isn't in that snapshot anymore, it was
-    sold, removed, or ended, and we treat it as sold so the item gets delisted
-    everywhere else automatically.
+    until the user notices it themselves. A COMPLETE wardrobe scan lets us spot
+    one: a listing Vinted marks `is_closed` has sold or ended, and one that has
+    vanished from the wardrobe entirely was deleted.
 
-    Only trust this when the scan actually returned data — an empty list here
-    almost always means the scrape failed/was cut short, not that everything
-    sold at once (see the page-1-failure/throw handling in bgScanVinted).
+    Two hard safety rules, both learned the hard way:
+
+    1. Only ever act on a COMPLETE snapshot. The scan used to read just the
+       newest 96 listings (Vinted caps per_page at 96, and the pager mistook
+       that short page for the last one). Every older listing therefore looked
+       "missing" and was marked sold — and handle_item_sold then delisted it
+       from every other platform. Absence is only meaningful if we truly saw
+       everything, so an incomplete scan reconciles nothing.
+
+    2. Absence is the weaker signal; `is_closed` is the real one. Sold listings
+       stay in the wardrobe, so the closed flag is what actually tells us.
+       Hidden listings are NOT sold — the seller just took them out of view —
+       so they're deliberately left alone.
     """
     if not scraped:
         return
-    scraped_ids = {str(r["platform_listing_id"]) for r in scraped if r.get("platform_listing_id")}
+
+    meta = scan_meta or {}
+    # No meta at all means an old extension build, whose snapshot we now know
+    # was truncated. Refuse rather than repeat the damage.
+    if not meta.get("complete"):
+        logger.warning(
+            "Vinted reconcile skipped for user %s — snapshot not complete (%s; %s of %s fetched). "
+            "Update the extension so sold-detection can run again.",
+            job["user_id"],
+            meta.get("truncated_reason") or "no scan_meta (old extension build)",
+            meta.get("fetched"), meta.get("total_entries"),
+        )
+        return
+
+    # Everything Vinted still knows about, and which of those are closed.
+    seen_ids: set[str] = set()
+    closed_ids: set[str] = set()
+    for r in scraped:
+        pid = r.get("platform_listing_id")
+        if pid is None:
+            continue
+        pid = str(pid)
+        seen_ids.add(pid)
+        if r.get("is_closed"):
+            closed_ids.add(pid)
 
     items = db.table("items").select("id").eq("user_id", job["user_id"]).execute().data or []
     item_ids = [it["id"] for it in items]
@@ -778,11 +810,16 @@ async def _reconcile_vinted_sales(db, job, scraped: list[dict]):
     )
     for l in active:
         pid = l.get("platform_listing_id")
-        if pid is not None and str(pid) not in scraped_ids:
-            try:
-                await handle_item_sold(l["item_id"], "vinted")
-            except Exception as e:
-                logger.warning(f"Vinted sale reconcile failed for item {l['item_id']}: {e}")
+        if pid is None:
+            continue
+        pid = str(pid)
+        sold = pid in closed_ids or pid not in seen_ids
+        if not sold:
+            continue
+        try:
+            await handle_item_sold(l["item_id"], "vinted")
+        except Exception as e:
+            logger.warning(f"Vinted sale reconcile failed for item {l['item_id']}: {e}")
 
 
 def _store_scan_results(db, job, scraped: list[dict]):
