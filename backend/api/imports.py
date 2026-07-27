@@ -542,7 +542,7 @@ async def link_candidate(candidate_id: str, body: dict, user_id: str = Depends(g
         db.table("listings").update({
             "platform_listing_id": cand["platform_listing_id"],
             "platform_listing_url": cand["platform_listing_url"],
-            "status": "active",
+            "status": _listing_status_for(cand),
             "listed_at": listed_at,
         }).eq("id", existing.data[0]["id"]).execute()
     else:
@@ -551,7 +551,7 @@ async def link_candidate(candidate_id: str, body: dict, user_id: str = Depends(g
             "platform": cand["platform"],
             "platform_listing_id": cand["platform_listing_id"],
             "platform_listing_url": cand["platform_listing_url"],
-            "status": "active",
+            "status": _listing_status_for(cand),
             "listed_at": listed_at,
         }).execute()
 
@@ -589,7 +589,7 @@ async def create_item_from_candidate(candidate_id: str, body: dict, user_id: str
         "platform": cand["platform"],
         "platform_listing_id": cand["platform_listing_id"],
         "platform_listing_url": cand["platform_listing_url"],
-        "status": "active",
+        "status": _listing_status_for(cand),
         "listed_at": listed_at,
     }).execute()
 
@@ -651,7 +651,7 @@ async def bulk_import_candidates(body: dict = None, user_id: str = Depends(get_c
                     db.table("listings").update({
                         "platform_listing_id": cand["platform_listing_id"],
                         "platform_listing_url": cand["platform_listing_url"],
-                        "status": "active",
+                        "status": _listing_status_for(cand),
                         "listed_at": listed_at,
                     }).eq("id", existing.data[0]["id"]).execute()
                 else:
@@ -660,7 +660,7 @@ async def bulk_import_candidates(body: dict = None, user_id: str = Depends(get_c
                         "platform": cand["platform"],
                         "platform_listing_id": cand["platform_listing_id"],
                         "platform_listing_url": cand["platform_listing_url"],
-                        "status": "active",
+                        "status": _listing_status_for(cand),
                         "listed_at": listed_at,
                     }).execute()
                 _backfill_item_from_candidate(db, match_id, cand, inferred=inferred_by_id.get(cand["id"]))
@@ -681,7 +681,7 @@ async def bulk_import_candidates(body: dict = None, user_id: str = Depends(get_c
                     "platform": cand["platform"],
                     "platform_listing_id": cand["platform_listing_id"],
                     "platform_listing_url": cand["platform_listing_url"],
-                    "status": "active",
+                    "status": _listing_status_for(cand),
                     "listed_at": listed_at,
                 }).execute()
 
