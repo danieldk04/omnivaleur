@@ -1707,9 +1707,25 @@ async function bgScanVinted(job, serverUrl) {
           color: it.color1 || it.color1_title || it.colour || "",
           platform_listing_url: it.url || `${location.origin}/items/${it.id}`,
           platform_listed_at: listedTs ? new Date(listedTs * 1000).toISOString() : null,
+          // Vinted's own state flags. Sold/ended listings STAY in the wardrobe
+          // as is_closed — they don't vanish — so these are what tells us a
+          // listing is really gone, instead of inferring it from absence.
+          is_closed: !!it.is_closed,
+          is_hidden: !!it.is_hidden,
+          is_draft: !!it.is_draft,
         };
       });
-      return { items };
+      return {
+        items,
+        // Everything the server needs to judge how much to trust this snapshot.
+        meta: {
+          complete: !truncatedReason,
+          truncated_reason: truncatedReason,
+          total_entries: totalEntries,
+          fetched: rawItems.length,
+          pages_read: pagesRead,
+        },
+      };
     }, [userId]);
 
     if (!result) throw new Error("Vinted scan returned nothing — page may not have loaded correctly.");
