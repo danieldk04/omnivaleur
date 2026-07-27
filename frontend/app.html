@@ -5638,9 +5638,26 @@ function staleCandidates(minDays) {
       belowCost = true;
       suggested = null;
     }
-    out.push({ item, days, since, pct, suggested, belowCost });
+    out.push({ item, days, since, pct, suggested, belowCost, estimated: ls.estimated });
   }
   return out.sort((a, b) => b.days - a.days);
+}
+
+// Everything the empty state needs to explain itself: how many items were even
+// eligible, and how close the closest one is to the threshold.
+function staleOverview() {
+  const soldIds = new Set(state.listings.filter(l => l.status === 'sold').map(l => l.item_id));
+  const now = Date.now();
+  let liveCount = 0, oldestDays = null;
+  for (const item of state.items) {
+    if (soldIds.has(item.id)) continue;
+    const ls = liveSince(item);
+    if (ls === null) continue;
+    liveCount++;
+    const days = Math.floor((now - ls.ms) / 86400e3);
+    if (oldestDays === null || days > oldestDays) oldestDays = days;
+  }
+  return { liveCount, oldestDays, totalItems: state.items.length };
 }
 
 // Sidebar badge — the count at the 90-day mark, which is the default view.
