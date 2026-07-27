@@ -5165,7 +5165,18 @@ function itemPhotoThumb(item){
   return `<img src="${item.photo_urls[0]}" style="width:40px;height:40px;border-radius:6px;object-fit:cover">${badge}`;
 }
 function conditionLabel(c){return{new_with_tags:'New with tags',new:'New',good:'Like new',fair:'Used',poor:'Damaged'}[c]||c||'—';}
-function fmtDate(d){if(!d)return'—';const dt=new Date(d);return dt.toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'});}
+// Date.toLocaleDateString() builds a fresh Intl formatter on every single call,
+// which is ~70x slower than reusing one. These run once per table row and once
+// per chart bucket, so at a few hundred rows date formatting alone was the
+// biggest cost in a render. Cache one formatter per option set.
+const _dtfCache = new Map();
+function dtf(opts) {
+  const key = JSON.stringify(opts);
+  let f = _dtfCache.get(key);
+  if (!f) { f = new Intl.DateTimeFormat('en-GB', opts); _dtfCache.set(key, f); }
+  return f;
+}
+function fmtDate(d){if(!d)return'—';return dtf({day:'2-digit',month:'short',year:'numeric'}).format(new Date(d));}
 function publishedAt(itemId){
   const listing=state.listings.filter(l=>l.item_id===itemId&&l.status==='active'&&l.listed_at).sort((a,b)=>new Date(a.listed_at)-new Date(b.listed_at))[0];
   return listing?fmtDate(listing.listed_at):null;
