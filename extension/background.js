@@ -1946,42 +1946,128 @@ async function bgScanMp2dh(job, serverUrl) {
     await waitForTabLoad(tabId);
     await sleep(3000); // let React fully render listings
 
-    const result = await execInTab(tabId, () => {
-      const cards = [...document.querySelectorAll("li, article")].filter(el => {
-        const link = el.querySelector('a[href*="/v/"]');
-        const priceText = el.textContent.match(/€\s?\d/);
-        return link && priceText;
-      });
+    const result = await execInTab(tabId, async () => {
+      const nap = ms => new Promise(r => setTimeout(r, ms));
+      const abs = u => !u ? null : (u.startsWith("http") ? u : `${location.origin}${u.startsWith("/") ? "" : "/"}${u}`);
 
-      const seen = new Set();
-      const items = [];
-      for (const card of cards) {
-        const link = card.querySelector('a[href*="/v/"]');
-        if (!link) continue;
-        const href = link.getAttribute("href") || "";
-        const idMatch = href.match(/(m\d{6,})/);
-        const id = idMatch ? idMatch[1] : href;
-        if (!id || seen.has(id)) continue;
-        seen.add(id);
+      // ── Primary: the page's own JSON API ──────────────────────────────
+      // The overview is React-rendered and only ever paints ~50 rows, so
+      // scraping the DOM could never see a bigger account (127 listings here).
+      // It feeds from /my-account/sell/api/listings, which returns
+      // { ads: [...], totalNumberOfResults: N } and pages via
+      // batchNumber (1-BASED — batch 0 and 1 both return the first page)
+      // and batchSize. Verified live: batchSize is honoured up to at least 200.
+      const API = "/my-account/sell/api/listings";
+      const BATCH = 100;
+      const MAX_BATCHES = 200;
+      const byId = new Map();
+      let totalExpected = null;
+      let truncatedReason = null;
 
-        const titleEl = [...card.querySelectorAll("*")].find(el =>
-          el.children.length === 0 && el.textContent.trim().length > 5 && el.textContent.trim().length < 120
-        );
-        const priceMatch = card.textContent.match(/€\s?([\d.,]+)/);
-        const img = card.querySelector("img");
-
-        items.push({
-          platform_listing_id: id,
-          title: (titleEl?.textContent || "").trim(),
-          price: priceMatch ? Number(priceMatch[1].replace(/\./g, "").replace(",", ".")) : null,
-          photo_url: img?.src || null,
-          platform_listing_url: href.startsWith("http") ? href : `https://www.${location.hostname}${href}`,
-        });
+      try {
+        for (let batch = 1; batch <= MAX_BATCHES; batch++) {
+          let res = null;
+          for (let attempt = 0; attempt < 3; attempt++) {
+            res = await fetch(`${API}?batchNumber=${batch}&batchSize=${BATCH}`, {
+              headers: { Accept: "application/json" }, credentials: "include",
+            });
+            if (res.ok) break;
+            if (res.status !== 429 && res.status < 500) break;
+            await nap(1000 * Math.pow(2, attempt));
+          }
+          if (!res || !res.ok) {
+            if (batch === 1) { truncatedReason = `API HTTP ${res ? res.status : "?"}`; break; }
+            truncatedReason = `batch ${batch} returned HTTP ${res.status}`;
+            break;
+          }
+          const data = await res.json();
+          if (data.totalNumberOfResults != null) totalExpected = data.totalNumberOfResults;
+          const ads = data.ads || [];
+          let added = 0;
+          for (const ad of ads) {
+            const id = ad.itemId;
+            if (!id || byId.has(id)) continue;
+            byId.set(id, {
+              platform_listing_id: String(id),
+              title: ad.title || "",
+              // priceCents is an integer in cents — /100, never parsed from text.
+              price: ad.priceCents != null ? Number(ad.priceCents) / 100 : null,
+              photo_url: abs(ad.primaryImageUrl),
+              platform_listing_url: abs(ad.vipUrl || ad.sVipUrl),
+              category_name: ad.categoryName || "",
+              is_reserved: !!ad.reserved,
+              status: ad.status || "",
+            });
+            added++;
+          }
+          if (!ads.length) break;                                   // ran off the end
+          if (totalExpected != null && byId.size >= totalExpected) break;  // got them all
+          if (!added) break;                                        // no new ids — stop rather than loop
+          if (batch === MAX_BATCHES) truncatedReason = `hit the ${MAX_BATCHES}-batch safety cap`;
+          await nap(250);
+        }
+      } catch (e) {
+        truncatedReason = `API error: ${String(e && e.message || e)}`;
       }
-      return { items };
+
+      // ── Fallback: read whatever the page rendered ─────────────────────
+      // Only if the API gave us nothing (different market, endpoint moved).
+      // NOTE the container is div.row.ad-listing — the old code looked for
+      // "li, article", which this page simply has none of, so it found zero.
+      let usedFallback = false;
+      if (!byId.size) {
+        usedFallback = true;
+        const rows = document.querySelectorAll("div.row.ad-listing");
+        const cards = rows.length ? [...rows] : [...document.querySelectorAll("li, article, div")].filter(el =>
+          el.querySelectorAll('a[href*="/v/"]').length === 1 && /€\s?\d/.test(el.textContent));
+        for (const card of cards) {
+          const link = card.querySelector('a[href*="/v/"]');
+          if (!link) continue;
+          const href = link.getAttribute("href") || "";
+          const id = (href.match(/(m\d{6,})/) || [])[1];
+          if (!id || byId.has(id)) continue;
+          const titleEl = [...card.querySelectorAll("*")].find(el =>
+            el.children.length === 0 && el.textContent.trim().length > 5 && el.textContent.trim().length < 120);
+          const priceMatch = card.textContent.match(/€\s?([\d.,]+)/);
+          const img = card.querySelector("img");
+          byId.set(id, {
+            platform_listing_id: id,
+            title: (titleEl?.textContent || "").trim(),
+            price: priceMatch ? Number(priceMatch[1].replace(/\./g, "").replace(",", ".")) : null,
+            photo_url: img?.src || null,
+            platform_listing_url: abs(href),
+          });
+        }
+        // The DOM only ever holds the rendered page, so this is never complete
+        // unless it happens to match the total the page advertises.
+        const shown = (document.body.innerText.match(/advertenties\s*\((\d+)\)/i) || [])[1];
+        if (shown != null) totalExpected = Number(shown);
+        if (!truncatedReason) truncatedReason = "read from the page instead of the API";
+      }
+
+      const items = [...byId.values()];
+      if (!truncatedReason && totalExpected != null && items.length < totalExpected) {
+        truncatedReason = `found ${items.length} of ${totalExpected} listings`;
+      }
+      return {
+        items,
+        meta: {
+          complete: !truncatedReason,
+          truncated_reason: truncatedReason,
+          total_entries: totalExpected,
+          fetched: items.length,
+          source: usedFallback ? "dom" : "api",
+        },
+      };
     });
 
     if (!result || !result.items) throw new Error("Could not read your listings overview — page structure may have changed.");
+    if (!result.items.length) throw new Error("No listings found on your overview — are you logged in on this account?");
+    await reportProgress(serverUrl, job.id, {
+      stage: "enriching",
+      message: `Found ${result.items.length} listings — fetching full details…`,
+      current: 0, total: result.items.length,
+    });
 
     // The overview cards only expose title/price/thumbnail. Enrich each listing
     // by fetching its own page (same-origin) and reading the JSON-LD Product +
