@@ -1742,9 +1742,16 @@ async function bgScanVinted(job, serverUrl) {
     // A quick call every ~200ms keeps the worker alive. The whole enrichment is
     // wrapped so ANY failure just ships the list-only data — the scan always
     // completes.
-    const total = result.items.length;
+    // Only enrich listings that are actually still for sale. Sold/ended ones are
+    // still in the wardrobe (is_closed) and are shipped to the server for the
+    // sale reconcile, but nobody is going to import them — fetching a detail
+    // page for each would triple the scan time for data no one reads.
+    const toEnrich = result.items.filter(it => !it.is_closed && !it.is_draft);
+    const total = toEnrich.length;
+    const skipped = result.items.length - total;
     await reportProgress(serverUrl, job.id, {
-      stage: "enriching", message: `Found ${total} listings — fetching full details…`,
+      stage: "enriching",
+      message: `Found ${result.items.length} listings (${total} still for sale) — fetching full details…`,
       current: 0, total,
     });
     let enriched = 0;
@@ -1753,7 +1760,7 @@ async function bgScanVinted(job, serverUrl) {
       const startedAt = Date.now();
       const noDesc = [];
       let idx = 0;
-      for (const it of result.items) {
+      for (const it of toEnrich) {
         let d = null;
         try {
           d = await execInTab(tabId, async (id) => {
