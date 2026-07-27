@@ -1611,13 +1611,23 @@ async function bgScanVinted(job, serverUrl) {
     await reportProgress(serverUrl, job.id, { stage: "listing", message: "Reading your listings…", current: 0, total: 0 });
     const result = await execInTab(tabId, async (userId) => {
       const nap = ms => new Promise(r => setTimeout(r, ms));
-      // Page through the WHOLE wardrobe — one page of 200 is not enough for a
-      // seller with a big closet, and stopping at page 1 silently drops the rest.
-      // Loop until a page comes back short (fewer than per_page) or empty; a hard
-      // page cap only guards against a pathological infinite loop.
-      const PER_PAGE = 200;
-      const MAX_PAGES = 50; // 10,000 listings — far beyond any real wardrobe
+      // Page through the WHOLE wardrobe.
+      //
+      // Vinted CAPS per_page at 96 and silently ignores anything larger. The old
+      // code asked for 200 and then stopped as soon as a page came back "short"
+      // (< 200) — which page 1 always is. So every scan read exactly the newest
+      // 96 listings and quietly dropped the rest; a 518-item wardrobe imported
+      // 96. Never infer the last page from the size we ASKED for: use the size
+      // the server actually used, plus its own pagination metadata.
+      const PER_PAGE = 96;          // Vinted's real maximum
+      const MAX_PAGES = 200;        // safety net only (≈19k listings)
       const rawItems = [];
+      const seenIds = new Set();    // newest_first can shift under us between pages
+      let totalEntries = null;      // what Vinted says the wardrobe holds
+      let totalPages = null;
+      let pagesRead = 0;
+      let truncatedReason = null;   // non-null ⇒ the snapshot is INCOMPLETE
+
       for (let page = 1; page <= MAX_PAGES; page++) {
         let res, data;
         // Retry each page a couple of times so one transient hiccup mid-paging
@@ -1631,20 +1641,43 @@ async function bgScanVinted(job, serverUrl) {
           await nap(1000 * Math.pow(2, attempt));
         }
         if (!res.ok) {
-          // First page failing is fatal; a later page failing after we already
-          // have items just ends paging with what we collected so far.
+          // First page failing is fatal; a later page failing means we have a
+          // PARTIAL wardrobe — record that, because a partial snapshot must
+          // never be treated as "everything that's still live".
           if (page === 1) return { error: `Vinted returned HTTP ${res.status} while listing your items (user id ${userId}, ${location.origin}).` };
+          truncatedReason = `page ${page} returned HTTP ${res.status}`;
           break;
         }
         data = await res.json();
         if (data.code && data.code !== 0) {
           if (page === 1) return { error: `Vinted API error: ${data.message_code || data.code}` };
+          truncatedReason = `page ${page} returned API code ${data.message_code || data.code}`;
           break;
         }
+        const pag = data.pagination || null;
+        if (pag) {
+          if (pag.total_entries != null) totalEntries = pag.total_entries;
+          if (pag.total_pages != null) totalPages = pag.total_pages;
+        }
         const pageItems = data.items || [];
-        rawItems.push(...pageItems);
-        if (pageItems.length < PER_PAGE) break; // last page reached
+        for (const it of pageItems) {
+          if (it && it.id != null && !seenIds.has(it.id)) { seenIds.add(it.id); rawItems.push(it); }
+        }
+        pagesRead = page;
+
+        if (!pageItems.length) break;                       // ran off the end
+        if (totalPages != null && page >= totalPages) break; // server says we're done
+        // No metadata to go on: fall back to the size the SERVER used for this
+        // page, not the size we requested.
+        if (totalPages == null && pageItems.length < (pag?.per_page || PER_PAGE)) break;
+        if (page === MAX_PAGES) truncatedReason = `hit the ${MAX_PAGES}-page safety cap`;
         await nap(300); // gentle pacing between pages
+      }
+
+      // Cross-check against Vinted's own count. If they disagree, the snapshot
+      // is not authoritative and the server must not use it to decide what sold.
+      if (!truncatedReason && totalEntries != null && rawItems.length < totalEntries) {
+        truncatedReason = `fetched ${rawItems.length} of ${totalEntries} listings`;
       }
 
       const items = rawItems.map(it => {
