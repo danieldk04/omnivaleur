@@ -5686,8 +5686,7 @@ function renderAnalytics(force) {
   const activeData = PLATFORMS.map(p => platformCounts[p].active);
   const inactiveData = PLATFORMS.map(p => platformCounts[p].inactive);
 
-  if (_anChartListingsPlatform) _anChartListingsPlatform.destroy();
-  _anChartListingsPlatform = new Chart(document.getElementById('an-chart-listings-platform'), {
+  _anChartListingsPlatform = anUpsertChart(_anChartListingsPlatform, 'an-chart-listings-platform', {
     type: 'bar',
     data: {
       labels: platLabels,
