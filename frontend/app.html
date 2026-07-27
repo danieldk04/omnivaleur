@@ -2691,6 +2691,8 @@ async function loadAll() {
   // purchase price) left the open Analytics view showing the old numbers until you
   // navigated away and back — it looked like the save hadn't worked at all.
   if (document.getElementById('view-analytics').classList.contains('active')) renderAnalytics();
+  if (document.getElementById('view-stale').classList.contains('active')) renderStaleStock();
+  renderStaleBadge();
   // Keep the Refresh nav badge in sync with any in-progress relists.
   loadRelistStatus();
 }
