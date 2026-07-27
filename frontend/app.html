@@ -3395,7 +3395,10 @@ async function saveItem() {
     bid_percentage: document.getElementById('f-bid-enabled').checked ? (parseInt(document.getElementById('f-bid-pct').value) || null) : null,
     price: parseFloat(document.getElementById('f-price').value) || 0,
     compare_at_price: parseFloat(document.getElementById('f-compare').value) || null,
-    purchase_price: parseFloat(document.getElementById('f-purchase').value) || null,
+    // NOT `|| null` — a free item has a purchase price of exactly 0, and `0 || null`
+    // is null. That silently threw the cost away, so the item kept showing
+    // "＋ Add cost" in the analytics and never counted towards profit.
+    purchase_price: numOrNull(document.getElementById('f-purchase').value),
     price_marktplaats: parseFloat(document.getElementById('f-price-mp').value) || null,
     price_2dehands: parseFloat(document.getElementById('f-price-2dh').value) || null,
     price_vinted: parseFloat(document.getElementById('f-price-vinted').value) || null,
