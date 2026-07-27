@@ -2098,27 +2098,35 @@ async function bgScanMp2dh(job, serverUrl) {
                   continue;
                 }
                 const html = await res.text();
-                const doc = new DOMParser().parseFromString(html, "text/html");
-                let description = "", photos = [];
-                // JSON-LD Product — the most stable source for description + images.
-                for (const s of doc.querySelectorAll('script[type="application/ld+json"]')) {
-                  try {
-                    const data = JSON.parse(s.textContent);
-                    const arr = Array.isArray(data) ? data : (data["@graph"] || [data]);
-                    const prod = arr.find(x => x && /product/i.test(x["@type"] || ""));
-                    if (prod) {
-                      if (prod.description && !description) description = String(prod.description).trim();
-                      const imgs = prod.image ? (Array.isArray(prod.image) ? prod.image : [prod.image]) : [];
-                      for (const im of imgs) { const u = typeof im === "string" ? im : im?.url; if (u) photos.push(u); }
-                    }
-                  } catch (e2) {}
+                const decode = s => { try { return JSON.parse('"' + s.replace(/"/g, '\\"') + '"'); } catch (e2) { return s; } };
+                const unesc = s => s.replace(/\\u002F/gi, "/").replace(/\\\//g, "/");
+
+                // The listing page is client-rendered: there is NO JSON-LD and no
+                // description element in the fetched HTML (the old code looked for
+                // both and always came back empty). The text IS there, inside the
+                // embedded __CONFIG__ state. Several "description" keys exist — UI
+                // chrome like menu entries and shipping options — so take the
+                // LONGEST, which is reliably the advert itself.
+                let description = "";
+                for (const m of html.matchAll(/"description"\s*:\s*"((?:[^"\\]|\\.)*)"/g)) {
+                  const v = decode(m[1]);
+                  if (v && v.length > description.length) description = v;
                 }
-                // DOM fallback for the description if JSON-LD didn't carry it.
-                if (!description) {
-                  const el = doc.querySelector('[data-collapsable="description"], .Description-description, [class*="Description" i]');
-                  if (el && el.textContent.trim().length > 20) description = el.textContent.trim().slice(0, 4000);
+
+                // Photos live in an "imageUrls" array as protocol-relative,
+                // /-escaped URLs with a "$_" size-rule placeholder.
+                const photos = [];
+                const im = html.match(/"imageUrls"\s*:\s*\[([^\]]*)\]/);
+                if (im) {
+                  for (const m of im[1].matchAll(/"((?:[^"\\]|\\.)*)"/g)) {
+                    let u = unesc(decode(m[1]));
+                    if (!u) continue;
+                    if (u.startsWith("//")) u = "https:" + u;
+                    u = u.replace(/\$_/, "85"); // large variant
+                    if (/^https?:\/\//.test(u)) photos.push(u);
+                  }
                 }
-                return { description: description.slice(0, 4000), photo_urls: [...new Set(photos)] };
+                return { description: description.trim().slice(0, 4000), photo_urls: [...new Set(photos)] };
               } catch (e3) {
                 await nap(500 * Math.pow(2, attempt));
               }
