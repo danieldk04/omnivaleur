@@ -2950,7 +2950,7 @@ function applyFilters(resetPage) {
   document.getElementById('filter-count').textContent = filtered.length === inTab
     ? `${filtered.length} item${filtered.length === 1 ? '' : 's'}`
     : `${filtered.length} of ${inTab} (page ${itemsCurrentPage}/${totalPages})`;
-  const heading = { live: 'Live items', todo: 'To list', sold: 'Sold items', archived: 'Archived items' }[itemsTab];
+  const heading = { live: 'Live items', todo: 'To list', hidden: 'Hidden on platform', sold: 'Sold items', archived: 'Archived items' }[itemsTab];
   document.getElementById('items-heading').textContent = heading;
   renderItemsTable(pageItems);
   renderItemsPagination(totalPages, filtered.length);
