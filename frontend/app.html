@@ -223,6 +223,12 @@ textarea { resize: vertical; min-height: 80px; }
    than a hard cut. Fires on class change only, so re-renders don't re-animate. */
 .view.active { display: block; animation: viewIn .22s cubic-bezier(.4,0,.2,1); }
 @keyframes viewIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+/* Respect the OS "reduce motion" setting — some people get motion sickness from
+   sliding UI, and it's a one-line opt-out. */
+@media (prefers-reduced-motion: reduce) {
+  .view.active { animation: none; }
+  * { animation-duration: .01ms !important; transition-duration: .01ms !important; }
+}
 
 /* ── Jobs / alert banners ───────────────────────────────────────── */
 .jobs-banner { background: #fffbeb; border: 1px solid #fcd34d; border-radius: var(--radius); padding: 12px 18px; margin-bottom: 20px; display: flex; align-items: center; justify-content: space-between; font-size: 13px; color: #92400e; }
