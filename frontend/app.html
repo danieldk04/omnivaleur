@@ -2809,7 +2809,10 @@ function applyFilters(resetPage) {
   });
 
   // Most-recently-handled items first, so the newest work is always on top.
-  filtered.sort((a, b) => lastHandledAt(b) - lastHandledAt(a));
+  // Precomputed: lastHandledAt() scans every listing, and calling it from inside a
+  // comparator made sorting cost items × listings on every keystroke in the search box.
+  const handledAt = new Map(filtered.map(i => [i.id, lastHandledAt(i)]));
+  filtered.sort((a, b) => handledAt.get(b.id) - handledAt.get(a.id));
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / ITEMS_PAGE_SIZE));
   if (itemsCurrentPage > totalPages) itemsCurrentPage = totalPages;
