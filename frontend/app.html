@@ -4157,12 +4157,17 @@ function renderImportReview(candidates) {
   `;
   }).join('');
 
-  candidates.forEach(c => {
-    if (c.suggested_item_id) {
-      const sel = document.getElementById(`import-match-${c.id}`);
-      if (sel) sel.value = c.suggested_item_id;
-    }
-  });
+}
+
+// Populate a row's item dropdown the first time it's touched. Keeps the initial
+// render cheap no matter how many candidates or items there are.
+function fillImportOptions(sel) {
+  if (sel.dataset.filled) return;
+  sel.dataset.filled = '1';
+  const keep = sel.value;
+  sel.innerHTML = '<option value="">— create new item —</option>' +
+    state.items.map(i => `<option value="${i.id}">${esc(i.title)}</option>`).join('');
+  if (keep) sel.value = keep;
 }
 
 async function applyImportCandidate(candidateId) {
