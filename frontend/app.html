@@ -5426,7 +5426,13 @@ function anFilterDate(dateStr) {
   return d >= cutoff;
 }
 
-function renderAnalytics() {
+function renderAnalytics(force) {
+  // Nothing changed since the last render (the common case on the background
+  // poll) — leave the DOM and the charts exactly as they are.
+  const sig = anSignature();
+  if (!force && sig === _anLastSig && _anChartRevenue) return;
+  _anLastSig = sig;
+
   // Gather sold listings within period
   const soldListings = state.listings.filter(l => l.status === 'sold' && anFilterDate(l.sold_at));
 
