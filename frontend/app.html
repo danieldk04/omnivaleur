@@ -5565,8 +5565,7 @@ function renderAnalytics(force) {
   });
 
   // Sales bar chart
-  if (_anChartSales) _anChartSales.destroy();
-  _anChartSales = new Chart(document.getElementById('an-chart-sales'), {
+  _anChartSales = anUpsertChart(_anChartSales, 'an-chart-sales', {
     type: 'bar',
     data: { labels, datasets: [{ label: 'Sales', data: countData, backgroundColor: '#2563eb', borderRadius: 4 }] },
     options: {
