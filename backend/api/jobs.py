@@ -912,6 +912,24 @@ def _store_scan_results(db, job, scraped: list[dict]):
             if pid is not None and l.get("item_id"):
                 listings_by_id[(l.get("platform"), str(pid))] = l["item_id"]
 
+    # What we already decided about each candidate. The upsert below refreshes the
+    # scraped snapshot, but it must NOT undo a decision: it used to write
+    # status='pending' unconditionally, so a re-scan resurrected every listing you
+    # had already imported, linked or ignored straight back into the review list.
+    prior_status = {}
+    prev = (
+        db.table("import_candidates")
+        .select("platform_listing_id,status")
+        .eq("user_id", job["user_id"])
+        .eq("platform", job["platform"])
+        .execute()
+        .data or []
+    )
+    for c in prev:
+        pid = c.get("platform_listing_id")
+        if pid is not None:
+            prior_status[str(pid)] = c.get("status") or "pending"
+
     for row in scraped:
         platform_listing_id = row.get("platform_listing_id")
         title = row.get("title") or ""
