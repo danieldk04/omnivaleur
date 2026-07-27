@@ -2827,7 +2827,8 @@ function renderPlatformMatrix(itemId) {
     // Manual override: if the dashboard didn't auto-detect a listing (not-listed or
     // errored) but the user knows it's actually live on the platform, let them click
     // the dot to mark it listed. Already-active dots aren't clickable (nothing to fix).
-    const canMark = !(l && l.status === 'active') && !(l && (l.status === 'pending' || l.status === 'queued'));
+    const canMark = !(l && l.status === 'active') && !(l && l.status === 'hidden')
+      && !(l && (l.status === 'pending' || l.status === 'queued'));
     const clickAttrs = canMark
       ? ` onclick="markPlatformListed('${itemId}','${p}','${PLATFORM_LABELS[p]}')" style="cursor:pointer"`
         + ` title="${PLATFORM_LABELS[p]}: not detected as listed — click to mark it listed manually"`
