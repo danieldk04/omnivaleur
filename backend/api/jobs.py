@@ -848,6 +848,12 @@ def _store_scan_results(db, job, scraped: list[dict]):
         title = row.get("title") or ""
         if not platform_listing_id:
             continue
+        # Sold/ended and draft listings ride along in the scan payload purely so
+        # the sale reconcile can see them — nobody wants to import them. Without
+        # this a full wardrobe scan would dump every listing ever sold into the
+        # import queue for manual review.
+        if row.get("is_closed") or row.get("is_draft"):
+            continue
         # Strongest signal: the exact same listing id already lives on an item.
         # Otherwise a UNIQUE exact title match. Fuzzy matching wrongly links items
         # differing only by size/colour/number (see imports._best_match), so a
