@@ -2345,9 +2345,21 @@ function calcMargin() {
 // deze map leeg — hij blijft staan voor toekomstige sub-views.
 const NAV_PARENT = {};
 function showView(name) {
+  // Find the target BEFORE hiding anything. Hiding first and then hitting a
+  // missing view threw, which left every view hidden and the whole app blank
+  // with no way back except a reload — that's exactly what a half-finished
+  // deploy (new nav item, old page body) did in production.
+  const target = document.getElementById('view-' + name);
+  if (!target) {
+    console.error('showView: no view called "' + name + '"');
+    showToast('That screen is still loading — reloading the app…');
+    // An outdated page is the realistic cause, so fetch a fresh one.
+    setTimeout(() => location.reload(), 1200);
+    return;
+  }
   document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
   document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
-  document.getElementById('view-' + name).classList.add('active');
+  target.classList.add('active');
   // Nav-highlight via data-view (robuust: onafhankelijk van DOM-volgorde/aantal).
   const navName = NAV_PARENT[name] || name;
   document.querySelector('.nav-item[data-view="' + navName + '"]')?.classList.add('active');
