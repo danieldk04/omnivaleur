@@ -5312,6 +5312,44 @@ let anPeriodDays = 90;
 let _anChartRevenue = null;
 let _anChartSales = null;
 let _anChartListingsPlatform = null;
+let _anLastSig = null;
+
+// A cheap fingerprint of everything the analytics view is derived from. The 15s
+// background poll calls renderAnalytics on every tick; without this the whole
+// view (three charts + the sales table) was torn down and rebuilt four times a
+// minute, which reads as flicker and eats a frame budget for nothing. Re-render
+// only when the numbers actually moved.
+function anSignature() {
+  const l = state.listings.map(x =>
+    `${x.item_id}|${x.platform}|${x.status}|${x.sold_at || ''}|${x.sold_price ?? ''}`).join(';');
+  const i = state.items.map(x =>
+    `${x.id}|${x.price}|${x.purchase_price ?? ''}|${x.title}|${(x.photo_urls || [])[0] || ''}`).join(';');
+  return `${anPeriodDays}#${l}#${i}`;
+}
+
+// Reuse an existing Chart instance instead of destroy()+new. Chart.js then
+// tweens from the old values to the new ones, so a changed number slides into
+// place rather than the canvas blanking and redrawing. Falls back to a fresh
+// chart the first time (or if the canvas was replaced).
+function anUpsertChart(chart, canvasId, config) {
+  const el = document.getElementById(canvasId);
+  if (!el) return chart;
+  if (chart && chart.canvas === el && chart.config.type === config.type) {
+    chart.data.labels = config.data.labels;
+    // Datasets keep their identity (same order, same meaning) — copy the values
+    // across so Chart.js animates rather than swapping the array wholesale.
+    config.data.datasets.forEach((ds, idx) => {
+      if (chart.data.datasets[idx]) Object.assign(chart.data.datasets[idx], ds);
+      else chart.data.datasets[idx] = ds;
+    });
+    chart.data.datasets.length = config.data.datasets.length;
+    chart.options = config.options;
+    chart.update();
+    return chart;
+  }
+  if (chart) chart.destroy();
+  return new Chart(el, config);
+}
 
 // Jump straight from a sale row into that item's editor with the purchase-price
 // field focused, so completing profit data is one click from the analytics.
