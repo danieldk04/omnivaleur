@@ -173,7 +173,20 @@ def _save_page_row(
     return {"success": True, "action": action, "url_path": url_path, "linked": linked_intents, "intent_key": intent_key}
 
 
-async def run_pipeline(keyword: str, region: str, pillar: str, slug: str, nl_slug: str | None = None) -> dict:
+async def run_pipeline(
+    keyword: str,
+    region: str,
+    pillar: str,
+    slug: str,
+    nl_slug: str | None = None,
+    refresh_context: dict | None = None,
+) -> dict:
+    """
+    `refresh_context` is alleen gezet wanneer de evaluator een bestaande, slecht
+    presterende pagina laat herschrijven (backend/content/evaluator.py). De slug
+    blijft dan gelijk, dus `_save_page_row` werkt de bestaande rij bij en de URL
+    verandert niet — er komt geen concurrerend duplicaat bij.
+    """
     db = get_db()
 
     logger.info(f"Research voor '{keyword}' ({region})")
