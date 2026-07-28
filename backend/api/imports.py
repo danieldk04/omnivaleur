@@ -413,8 +413,6 @@ def _backfill_patch(current: dict, cand: dict, inferred: dict | None = None) -> 
     for field in ("color", "gender", "category"):
         if field not in patch and _is_empty(current.get(field)) and inferred.get(field):
             patch[field] = inferred[field]
-    if patch:
-        db.table("items").update(patch).eq("id", item_id).execute()
     return patch
 
 
