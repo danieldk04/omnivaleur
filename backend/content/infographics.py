@@ -129,9 +129,14 @@ def _classify_cell(cell: str) -> str | None:
 
 def _svg_open(width: int, height: int, title: str, desc: str) -> str:
     return (
-        f'<svg viewBox="0 0 {width} {height}" width="100%" height="auto" '
+        # Geen width/height-ATTRIBUTEN: 'height="auto"' is geen geldige SVG-lengte,
+        # waardoor de browser terugvalt op 100% hoogte en er een enorm leeg vak
+        # boven de tekening ontstaat. Via CSS respecteert de browser wél de
+        # verhouding uit de viewBox.
+        f'<svg viewBox="0 0 {width} {height}" '
         f'xmlns="http://www.w3.org/2000/svg" role="img" '
-        f'aria-label="{_esc(title)}" style="max-width:{width}px;font-family:{FONT}">'
+        f'aria-label="{_esc(title)}" '
+        f'style="width:100%;height:auto;max-width:{width}px;font-family:{FONT}">'
         f"<title>{_esc(title)}</title><desc>{_esc(desc)}</desc>"
     )
 
@@ -178,7 +183,6 @@ def _range_infographic(headers: list[str], body: list[list[str]], language: str)
         ]
         for i, (label, (low, high)) in enumerate(usable):
             y = top + i * row_h
-            color = COLORS[i % len(COLORS)]
             x0 = bar_x + (low / max_value) * bar_w
             # Minimale zichtbare breedte: een exact getal (low == high) zou anders
             # een balk van 0px opleveren.
@@ -187,7 +191,7 @@ def _range_infographic(headers: list[str], body: list[list[str]], language: str)
             parts.append(
                 f'<text x="0" y="{y + 15}" font-size="14" fill="{INK}">{_esc(_truncate(label, 26))}</text>'
                 f'<rect x="{bar_x}" y="{y + 4}" width="{bar_w}" height="14" rx="7" fill="{TRACK}"/>'
-                f'<rect x="{x0:.1f}" y="{y + 4}" width="{w:.1f}" height="14" rx="4" fill="{color}"/>'
+                f'<rect x="{x0:.1f}" y="{y + 4}" width="{w:.1f}" height="14" rx="4" fill="{MEASURE}"/>'
                 f'<text x="{min(x0 + w + 8, width - 4):.1f}" y="{y + 15}" font-size="13" fill="{MUTED}">{_esc(value_label)}</text>'
             )
         parts.append("</svg>")
@@ -250,13 +254,12 @@ def _steps_infographic(items: list[str], language: str) -> str | None:
     ]
     for i, step in enumerate(steps):
         y = top + i * row_h
-        color = COLORS[i % len(COLORS)]
         # Verbindingslijn naar de volgende stap — maakt er een flow van in plaats
         # van een losse lijst met bolletjes.
         if i < len(steps) - 1:
             parts.append(f'<line x1="18" y1="{y + 36}" x2="18" y2="{y + row_h}" stroke="{BORDER}" stroke-width="2"/>')
         parts.append(
-            f'<circle cx="18" cy="{y + 18}" r="16" fill="{color}"/>'
+            f'<circle cx="18" cy="{y + 18}" r="16" fill="{MEASURE}"/>'
             f'<text x="18" y="{y + 23}" font-size="14" font-weight="700" fill="#ffffff" text-anchor="middle">{i + 1}</text>'
             f'<text x="48" y="{y + 23}" font-size="14" fill="{INK}">{_esc(step)}</text>'
         )
