@@ -369,18 +369,32 @@ def _listing_status_for(cand: dict) -> str:
     return "hidden" if cand.get("is_hidden") else "active"
 
 
+BACKFILL_FIELDS = "id,description,brand,size,color,material,condition,photo_urls,gender,category"
+
+
 def _backfill_item_from_candidate(db, item_id: str, cand: dict,
                                   inferred: dict | None = None) -> dict:
     """Fill ONLY the empty fields on an existing item from a freshly scanned
     candidate (description, colour, photos, …). Never overwrites data the user
     already has, so linking a rescanned listing enriches — never clobbers — the item.
     Returns the applied patch (empty if nothing to fill)."""
-    current = db.table("items").select(
-        "description,brand,size,color,material,condition,photo_urls"
-    ).eq("id", item_id).execute().data
+    current = db.table("items").select(BACKFILL_FIELDS).eq("id", item_id).execute().data
     if not current:
         return {}
-    current = current[0]
+    patch = _backfill_patch(current[0], cand, inferred)
+    if patch:
+        db.table("items").update(patch).eq("id", item_id).execute()
+    return patch
+
+
+def _backfill_patch(current: dict, cand: dict, inferred: dict | None = None) -> dict:
+    """
+    Work out what a scanned candidate would add to an item — pure, no database.
+
+    Split out so a scan can compute hundreds of these from ONE prefetched read
+    instead of a select per row; the scan-store used to do a query per candidate,
+    which is what made saving a big wardrobe take minutes.
+    """
     patch = {}
     for field in ("description", "brand", "size", "color", "material"):
         if _is_empty(current.get(field)) and not _is_empty(cand.get(field)):
