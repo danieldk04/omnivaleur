@@ -51,6 +51,20 @@ def start_scheduler():
         id="weekly_marketing_report",
         replace_existing=True,
     )
+    # Blog-evaluator — elke maandagochtend 07:00 (NL-tijd): beoordeelt alle
+    # gepubliceerde content_pages op Search Console-data en herschrijft de
+    # slechtst presterende pagina op dezelfde URL. Bewust vóór het wekelijkse
+    # rapport in de week, zodat een refresh nog een volle week kan meetellen.
+    _scheduler.add_job(
+        run_evaluation_cycle_sync,
+        "cron",
+        day_of_week="mon",
+        hour=7,
+        minute=0,
+        timezone="Europe/Amsterdam",
+        id="weekly_content_evaluation",
+        replace_existing=True,
+    )
     _scheduler.start()
     return _scheduler
 
