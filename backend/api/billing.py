@@ -66,7 +66,7 @@ async def billing_status(user=Depends(get_current_user_full)):
 
 
 @router.post("/checkout")
-async def create_checkout(user_id: str = Depends(get_current_user)):
+def create_checkout(user_id: str = Depends(get_current_user)):
     if not settings.stripe_secret_key or not settings.stripe_price_id:
         raise HTTPException(status_code=503, detail="Stripe niet geconfigureerd")
 
@@ -160,7 +160,7 @@ async def customer_portal(user_id: str = Depends(get_current_user)):
 
 
 @router.post("/admin/comp-account")
-async def comp_account(email: str, user=Depends(get_current_user_full)):
+def comp_account(email: str, user=Depends(get_current_user_full)):
     """Grants a free-forever account to the given email. Owner-only."""
     if not _is_owner_email(user.email):
         raise HTTPException(status_code=403, detail="Niet toegestaan")

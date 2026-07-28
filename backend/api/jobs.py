@@ -134,7 +134,7 @@ def _recover_stale_claims(db, user_id: str, platform: str, now_dt: datetime) -> 
 
 
 @router.get("/pending")
-async def get_pending_jobs(request: Request, platform: str = None, user_id: str = Depends(get_current_user)):
+def get_pending_jobs(request: Request, platform: str = None, user_id: str = Depends(get_current_user)):
     db = get_db()
     now_dt = datetime.now(timezone.utc)
     # A poll WITH a platform is a real extension dispatch poll (the dashboard
@@ -235,7 +235,7 @@ async def get_pending_jobs(request: Request, platform: str = None, user_id: str 
 
 
 @router.get("/extension-status")
-async def extension_status(user_id: str = Depends(get_current_user)):
+def extension_status(user_id: str = Depends(get_current_user)):
     """
     Is a computer with the extension online for this user? Powers the dashboard
     indicator so someone working from their phone knows whether their queued
@@ -275,7 +275,7 @@ async def extension_status(user_id: str = Depends(get_current_user)):
 
 
 @router.get("/relist-status")
-async def relist_status(user_id: str = Depends(get_current_user)):
+def relist_status(user_id: str = Depends(get_current_user)):
     """
     In-progress relists for the dashboard's Refresh view: any scheduled recreate
     ("create" job with a future/pending scheduled_for) plus the state of its
@@ -342,7 +342,7 @@ async def relist_status(user_id: str = Depends(get_current_user)):
 
 
 @router.get("/active")
-async def active_jobs(user_id: str = Depends(get_current_user)):
+def active_jobs(user_id: str = Depends(get_current_user)):
     """
     Everything the extension is either actively running or about to run, so the
     dashboard can warn the user to stay hands-off while it works.
@@ -429,7 +429,7 @@ async def active_jobs(user_id: str = Depends(get_current_user)):
 
 
 @router.post("/reschedule-now")
-async def reschedule_now(body: dict, user_id: str = Depends(get_current_user)):
+def reschedule_now(body: dict, user_id: str = Depends(get_current_user)):
     """
     Bring a scheduled relist recreate forward so it fires on the next poll —
     clears the jittered delay for a specific item's still-pending "create" job.
@@ -516,7 +516,7 @@ async def relist_retry(body: dict, user_id: str = Depends(get_current_user)):
 
 
 @router.post("/relist-cancel")
-async def relist_cancel(body: dict, user_id: str = Depends(get_current_user)):
+def relist_cancel(body: dict, user_id: str = Depends(get_current_user)):
     """
     Cancel a relist that's still mid-flight and put the listing back where it was.
 
@@ -605,7 +605,7 @@ async def relist_cancel(body: dict, user_id: str = Depends(get_current_user)):
 
 
 @router.post("/{job_id}/claim")
-async def claim_job(job_id: str, user_id: str = Depends(get_current_user)):
+def claim_job(job_id: str, user_id: str = Depends(get_current_user)):
     db = get_db()
     _record_extension_heartbeat(db, user_id)  # only the extension claims jobs
     result = db.table("jobs").update({
@@ -618,7 +618,7 @@ async def claim_job(job_id: str, user_id: str = Depends(get_current_user)):
 
 
 @router.post("/{job_id}/progress")
-async def report_job_progress(job_id: str, body: dict, user_id: str = Depends(get_current_user)):
+def report_job_progress(job_id: str, body: dict, user_id: str = Depends(get_current_user)):
     """
     Lightweight live-progress channel for long-running jobs (mainly scans). The
     extension posts a small {stage, message, current, total} object at each phase;
@@ -1013,7 +1013,7 @@ def _store_scan_results(db, job, scraped: list[dict]):
 
 
 @router.post("/{job_id}/error")
-async def fail_job(job_id: str, body: dict, user_id: str = Depends(get_current_user)):
+def fail_job(job_id: str, body: dict, user_id: str = Depends(get_current_user)):
     db = get_db()
     _record_extension_heartbeat(db, user_id)  # only the extension reports job errors
     job = db.table("jobs").select("item_id,platform,action,payload").eq("id", job_id).eq("user_id", user_id).single().execute().data
@@ -1047,7 +1047,7 @@ async def fail_job(job_id: str, body: dict, user_id: str = Depends(get_current_u
 
 
 @router.post("/{job_id}/cancel")
-async def cancel_job(job_id: str, user_id: str = Depends(get_current_user)):
+def cancel_job(job_id: str, user_id: str = Depends(get_current_user)):
     """
     User-triggered abort of a still-running/queued job. Used when a publish run got
     stuck — e.g. the extension picked a wrong category and the user touched the tab,
@@ -1089,7 +1089,7 @@ async def cancel_job(job_id: str, user_id: str = Depends(get_current_user)):
 
 
 @router.get("/status/{job_id}")
-async def get_job_status(job_id: str, user_id: str = Depends(get_current_user)):
+def get_job_status(job_id: str, user_id: str = Depends(get_current_user)):
     db = get_db()
     result = db.table("jobs").select("*").eq("id", job_id).eq("user_id", user_id).single().execute()
     if not result.data:

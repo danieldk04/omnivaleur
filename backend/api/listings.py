@@ -61,7 +61,7 @@ def _user_item_ids(db, user_id: str) -> list[str]:
 
 
 @router.get("/")
-async def list_all_listings(
+def list_all_listings(
     limit: int = 200,
     platform: str = None,
     status: str = None,
@@ -103,7 +103,7 @@ async def publish_listing(
 
 
 @router.get("/item/{item_id}")
-async def get_listings_for_item(item_id: str, user_id: str = Depends(get_current_user)):
+def get_listings_for_item(item_id: str, user_id: str = Depends(get_current_user)):
     db = get_db()
     item = db.table("items").select("id").eq("id", item_id).eq("user_id", user_id).execute()
     if not item.data:
@@ -113,7 +113,7 @@ async def get_listings_for_item(item_id: str, user_id: str = Depends(get_current
 
 
 @router.post("/mark-active")
-async def mark_listing_active(body: dict, user_id: str = Depends(get_current_user)):
+def mark_listing_active(body: dict, user_id: str = Depends(get_current_user)):
     item_id = body.get("item_id")
     platform = body.get("platform")
     if not item_id or not platform:
@@ -264,7 +264,7 @@ async def relist_ended_ebay(body: dict, user_id: str = Depends(get_current_user)
 
 
 @router.post("/sold")
-async def mark_sold(item_id: str, platform: str, background_tasks: BackgroundTasks, sold_price: float | None = None, dry_run: bool = False, user_id: str = Depends(get_current_user)):
+def mark_sold(item_id: str, platform: str, background_tasks: BackgroundTasks, sold_price: float | None = None, dry_run: bool = False, user_id: str = Depends(get_current_user)):
     db = get_db()
     item = db.table("items").select("id").eq("id", item_id).eq("user_id", user_id).execute()
     if not item.data:
@@ -292,7 +292,7 @@ async def mark_sold(item_id: str, platform: str, background_tasks: BackgroundTas
 
 
 @router.post("/sold-price")
-async def set_sold_price(body: dict, user_id: str = Depends(get_current_user)):
+def set_sold_price(body: dict, user_id: str = Depends(get_current_user)):
     """
     Set/correct the amount an already-sold listing actually went for. Used from
     the Analytics "Sales breakdown" so revenue/profit reflect the real sale
@@ -336,7 +336,7 @@ async def set_sold_price(body: dict, user_id: str = Depends(get_current_user)):
 
 
 @router.post("/not-sold")
-async def mark_not_sold(body: dict, user_id: str = Depends(get_current_user)):
+def mark_not_sold(body: dict, user_id: str = Depends(get_current_user)):
     """
     Undo a false "sold" — the Vinted wardrobe scan infers a sale when a listing
     disappears, which occasionally misfires (a temporary scrape gap, the item

@@ -93,7 +93,7 @@ async def ebay_callback(code: str, user_id: str = Depends(get_current_user)):
 
 
 @router.get("/ebay/ship-from")
-async def ebay_get_ship_from(user_id: str = Depends(get_current_user)):
+def ebay_get_ship_from(user_id: str = Depends(get_current_user)):
     """Return the user's saved eBay ship-from address (used for their merchant
     location so eBay can derive Item.Country). Empty dict if none saved yet."""
     db = get_db()
@@ -307,7 +307,7 @@ async def tweedehands_sync_chrome(body: dict, user_id: str = Depends(get_current
 
 
 @router.get("/status")
-async def platform_status(user_id: str = Depends(get_current_user)):
+def platform_status(user_id: str = Depends(get_current_user)):
     db = get_db()
     result = db.table("platform_credentials").select("platform").eq("user_id", user_id).execute()
     connected = [r["platform"] for r in result.data]
@@ -315,7 +315,7 @@ async def platform_status(user_id: str = Depends(get_current_user)):
 
 
 @router.delete("/{platform}/disconnect")
-async def disconnect_platform(platform: str, user_id: str = Depends(get_current_user)):
+def disconnect_platform(platform: str, user_id: str = Depends(get_current_user)):
     db = get_db()
     db.table("platform_credentials").delete().eq("user_id", user_id).eq("platform", platform).execute()
     return {"status": "disconnected", "platform": platform}

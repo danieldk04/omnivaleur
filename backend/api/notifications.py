@@ -26,7 +26,7 @@ DEFAULT_DEEP_LINKS = {
 
 
 @router.get("/")
-async def list_notifications(user_id: str = Depends(get_current_user)):
+def list_notifications(user_id: str = Depends(get_current_user)):
     """Current snapshot of unread messages / open bids per platform for this user."""
     db = get_db()
     rows = (
@@ -42,7 +42,7 @@ async def list_notifications(user_id: str = Depends(get_current_user)):
 
 
 @router.post("/report")
-async def report_notifications(
+def report_notifications(
     body: NotificationReport, user_id: str = Depends(get_current_user)
 ):
     """

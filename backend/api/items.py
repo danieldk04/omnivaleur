@@ -14,7 +14,7 @@ def _strip_missing(data: dict) -> dict:
 
 
 @router.post("/", response_model=dict)
-async def create_item(item: ItemCreate, user_id: str = Depends(get_current_user)):
+def create_item(item: ItemCreate, user_id: str = Depends(get_current_user)):
     db = get_db()
     data = item.model_dump()
     data["id"] = str(uuid.uuid4())
@@ -26,7 +26,7 @@ async def create_item(item: ItemCreate, user_id: str = Depends(get_current_user)
 
 
 @router.get("/", response_model=list)
-async def list_items(limit: int = 50, offset: int = 0, user_id: str = Depends(get_current_user)):
+def list_items(limit: int = 50, offset: int = 0, user_id: str = Depends(get_current_user)):
     db = get_db()
     result = (
         db.table("items")
@@ -39,7 +39,7 @@ async def list_items(limit: int = 50, offset: int = 0, user_id: str = Depends(ge
 
 
 @router.get("/{item_id}")
-async def get_item(item_id: str, user_id: str = Depends(get_current_user)):
+def get_item(item_id: str, user_id: str = Depends(get_current_user)):
     db = get_db()
     result = db.table("items").select("*").eq("id", item_id).eq("user_id", user_id).single().execute()
     if not result.data:
@@ -48,7 +48,7 @@ async def get_item(item_id: str, user_id: str = Depends(get_current_user)):
 
 
 @router.patch("/{item_id}")
-async def update_item(item_id: str, updates: dict, user_id: str = Depends(get_current_user)):
+def update_item(item_id: str, updates: dict, user_id: str = Depends(get_current_user)):
     db = get_db()
     result = (
         db.table("items")
@@ -63,7 +63,7 @@ async def update_item(item_id: str, updates: dict, user_id: str = Depends(get_cu
 
 
 @router.delete("/{item_id}")
-async def delete_item(item_id: str, user_id: str = Depends(get_current_user)):
+def delete_item(item_id: str, user_id: str = Depends(get_current_user)):
     db = get_db()
     # Verify ownership
     item = db.table("items").select("id").eq("id", item_id).eq("user_id", user_id).execute()
