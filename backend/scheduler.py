@@ -17,6 +17,7 @@ def start_scheduler():
 
     from backend.services.billing import expire_trials
     from backend.services.analytics_report import send_weekly_report
+    from backend.content.evaluator import run_evaluation_cycle_sync
 
     _scheduler = AsyncIOScheduler()
     _scheduler.add_job(
