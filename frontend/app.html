@@ -4069,7 +4069,10 @@ function pollScanProgress(platform, jobId) {
             const msg = (job.result && (job.result.error || job.result.message)) || 'The scan failed. Make sure you are logged into the platform in your browser and the extension is active.';
             showToast('Scan failed: ' + msg);
           } else {
-            showToast('Scan complete — review your imported listings below.');
+            // Deliberately not "review your listings below": a re-scan of a
+            // wardrobe you already imported has nothing left to review, and
+            // promising a list that isn't there reads as a broken scan.
+            showToast('Scan complete — see the summary below for what it found.');
           }
           loadImportCandidates(platform);
         })) return;
