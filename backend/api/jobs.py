@@ -936,6 +936,9 @@ def _store_scan_results(db, job, scraped: list[dict]):
         if pid is not None:
             prior_status[str(pid)] = c.get("status") or "pending"
 
+    rows = []          # candidate rows, upserted in bulk below
+    backfills = {}     # item_id -> merged patch, applied in bulk below
+
     for row in scraped:
         platform_listing_id = row.get("platform_listing_id")
         title = row.get("title") or ""
