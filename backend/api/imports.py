@@ -651,7 +651,9 @@ async def bulk_import_candidates(body: dict = None, user_id: str = Depends(get_c
         )),
     )) if candidates else {}
 
-    for cand in candidates:
+    def _process():
+      nonlocal linked, created, failed
+      for cand in candidates:
         try:
             listed_at = cand.get("platform_listed_at") or now
             match_id, _reason = _match_candidate(cand, items, listings_by_id)
