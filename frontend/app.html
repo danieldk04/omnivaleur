@@ -4125,6 +4125,9 @@ function renderImportReview(candidates) {
     const nPhotos = Array.isArray(c.photo_urls) ? c.photo_urls.length : (c.photo_url ? 1 : 0);
     const descLen = (c.description || '').trim().length;
     const chips = [
+      // Hidden first: it changes what importing this row means, so it must be the
+      // thing you notice, not a detail buried after the photo count.
+      c.is_hidden ? `<span style="background:#fef3c7;color:#92400e;font-weight:700;padding:1px 6px;border-radius:4px" title="This listing is hidden on the platform — buyers can't see it. Importing it is fine: it lands under the Hidden tab in Items, not between your live stock.">🙈 hidden</span>` : null,
       descLen ? `📝 desc` : `<span style="color:#dc2626">no desc</span>`,
       `🖼️ ${nPhotos} photo${nPhotos === 1 ? '' : 's'}`,
       c.brand ? `🏷️ ${esc(c.brand)}` : null,
