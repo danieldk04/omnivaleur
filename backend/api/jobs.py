@@ -963,7 +963,15 @@ def _store_scan_results(db, job, scraped: list[dict]):
         # colour, …) without the user having to re-import anything.
         if best_id:
             try:
-                _backfill_item_from_candidate(db, best_id, row)
+                current = items_by_id.get(best_id)
+                if current:
+                    patch = _backfill_patch(current, row)
+                    if patch:
+                        # Collect now, write later in one pass — and keep the local
+                        # copy in step so a second listing for the same item sees
+                        # the fields we're about to fill.
+                        backfills[best_id] = {**backfills.get(best_id, {}), **patch}
+                        current.update(patch)
             except Exception as e:
                 logger.warning(f"Scan store: item backfill failed for {platform_listing_id}: {e}")
 
