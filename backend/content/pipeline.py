@@ -196,7 +196,7 @@ async def run_pipeline(
     existing_for_prompt_rows = db.table("content_pages").select("title,language,pillar,slug").eq("status", "published").limit(50).execute().data or []
     existing_for_prompt = [{"title": p["title"], "url_path": _url_path(p.get("language", "en"), p["pillar"], p["slug"])} for p in existing_for_prompt_rows]
 
-    generated = generate_page_content(keyword, region, pillar, slug, research, existing_for_prompt)
+    generated = generate_page_content(keyword, region, pillar, slug, research, existing_for_prompt, refresh_context)
     if not generated:
         return {"success": False, "error": "content generation failed"}
     generated["body_html"] = inject_comparison_screenshots(generated["body_html"], pillar, keyword)
