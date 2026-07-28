@@ -196,7 +196,7 @@
       "region": "nl",
       "pillar": "A",
       "slug": "vinted-to-marktplaats-crosslisting",
-      "status": "pending",
+      "status": "published",
       "nl_slug": "vinted-naar-marktplaats-crosslisting",
       "priority": 24
     },
@@ -432,6 +432,15 @@
       "action": "created",
       "url_path": "/crosslisting/2dehands-to-shopify-crosslisting-2026",
       "published_at": "2026-07-27T11:13:08.020483+00:00"
+    },
+    {
+      "keyword": "vinted to marktplaats crosslisting",
+      "slug": "vinted-to-marktplaats-crosslisting",
+      "region": "nl",
+      "pillar": "A",
+      "action": "created",
+      "url_path": "/crosslisting/vinted-to-marktplaats-crosslisting",
+      "published_at": "2026-07-28T10:27:47.440985+00:00"
     }
   ]
 }
