@@ -293,39 +293,52 @@ def inject_infographics(body_html: str, language: str = "en") -> str:
         return body_html
 
     try:
-        soup = BeautifulSoup(body_html, "html.parser")
-        added = 0
+        # BeautifulSoup wordt hier alleen gebruikt om te BESLISSEN wat er getekend
+        # moet worden; de uiteindelijke HTML wordt met pure string-splicing
+        # opgebouwd uit het origineel. str(soup) zou namelijk de hele body
+        # herserialiseren — attributen herordenen, tags self-closing maken,
+        # entities herschrijven — en dat soort stille markup-herschrijving heeft
+        # in dit project al eens img-src'en beschadigd. Zo blijft elk byte dat we
+        # niet zelf toevoegen gegarandeerd exact zoals het was.
+        inserts: list[tuple[int, str]] = []
 
-        for table in soup.find_all("table"):
-            if added >= MAX_PER_PAGE:
+        for match in re.finditer(r"<table[\s>].*?</table>", body_html, re.S | re.I):
+            if len(inserts) >= MAX_PER_PAGE:
                 break
+            table = BeautifulSoup(match.group(0), "html.parser").find("table")
+            if not table:
+                continue
             headers, body = _parse_table(table)
             if not headers:
                 continue
             svg = _range_infographic(headers, body, language) or _matrix_infographic(headers, body, language)
             if svg:
-                table.insert_before(BeautifulSoup(svg, "html.parser"))
-                added += 1
+                inserts.append((match.start(), svg))
 
-        if added < MAX_PER_PAGE:
-            for ol in soup.find_all("ol"):
+        if len(inserts) < MAX_PER_PAGE:
+            for match in re.finditer(r"<ol[\s>].*?</ol>", body_html, re.S | re.I):
+                ol = BeautifulSoup(match.group(0), "html.parser").find("ol")
+                if not ol:
+                    continue
                 items = [_txt(li) for li in ol.find_all("li", recursive=False)]
                 svg = _steps_infographic(items, language)
                 if svg:
-                    ol.insert_before(BeautifulSoup(svg, "html.parser"))
-                    added += 1
+                    inserts.append((match.start(), svg))
                     break
 
-        # Niets toegevoegd → geef de ORIGINELE string terug, niet str(soup).
-        # BeautifulSoup herschrijft anders de hele HTML (quotes, self-closing tags,
-        # entities) zonder dat er iets inhoudelijks verandert; dat maakt een
-        # onnodige diff en is precies het soort stille markup-herschrijving dat
-        # eerder al eens img-src'en heeft beschadigd.
-        if not added:
+        if not inserts:
             return body_html
 
-        logger.info(f"{added} infographic(s) toegevoegd aan artikel")
-        return str(soup)
+        result = []
+        cursor = 0
+        for position, svg in sorted(inserts):
+            result.append(body_html[cursor:position])
+            result.append(svg)
+            cursor = position
+        result.append(body_html[cursor:])
+
+        logger.info(f"{len(inserts)} infographic(s) toegevoegd aan artikel")
+        return "".join(result)
     except Exception as e:
         logger.error(f"Infographic-generatie mislukt (artikel blijft ongewijzigd): {e}")
         return body_html
