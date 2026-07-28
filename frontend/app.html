@@ -4125,6 +4125,25 @@ function renderImportReview(candidates) {
   if (!candidates.length) { section.style.display = 'none'; return; }
   section.style.display = '';
 
+  // Hidden-on-platform summary + optional filter.
+  const nHidden = candidates.filter(c => c.is_hidden).length;
+  const bar = document.getElementById('import-hidden-bar');
+  const skipHidden = document.getElementById('import-hide-hidden')?.checked;
+  if (nHidden) {
+    bar.style.display = 'flex';
+    document.getElementById('import-hidden-note').innerHTML =
+      `<b>${nHidden}</b> of these ${candidates.length} ${nHidden === 1 ? 'is' : 'are'} <b>hidden</b> on the platform — buyers can't see them. ` +
+      `Importing them is fine: they land under the <b>Hidden</b> tab in Items, not between your live stock.`;
+  } else {
+    bar.style.display = 'none';
+  }
+  if (skipHidden) candidates = candidates.filter(c => !c.is_hidden);
+  if (!candidates.length) {
+    document.getElementById('import-review-body').innerHTML =
+      '<tr><td colspan="3" style="padding:16px;color:var(--muted)">Every remaining listing is hidden on the platform. Untick the box above to see them.</td></tr>';
+    return;
+  }
+
   // Each row used to embed a <select> containing EVERY item. At 367 candidates
   // and ~100 items that is ~39,000 <option> nodes built on every render — enough
   // to lock the tab up, especially when a runaway poller re-rendered it every
