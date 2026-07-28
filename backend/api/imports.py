@@ -709,10 +709,12 @@ async def bulk_import_candidates(body: dict = None, user_id: str = Depends(get_c
                 pass
             failed += 1
 
-    remaining_q = db.table("import_candidates").select("id", count="exact").eq("user_id", user_id).eq("status", "pending")
-    if platform:
-        remaining_q = remaining_q.eq("platform", platform)
-    remaining = remaining_q.execute().count or 0
+      remaining_q = db.table("import_candidates").select("id", count="exact").eq("user_id", user_id).eq("status", "pending")
+      if platform:
+          remaining_q = remaining_q.eq("platform", platform)
+      return remaining_q.execute().count or 0
+
+    remaining = await asyncio.to_thread(_process)
 
     return {"linked": linked, "created": created, "failed": failed, "remaining": remaining}
 
