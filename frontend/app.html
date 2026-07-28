@@ -4270,10 +4270,52 @@ async function bulkImportAllCandidates() {
     // Each request stays short, so a large import can never trip a gateway timeout (which
     // used to return an HTML error page → "Unexpected token '<'"). A safety cap on passes
     // guards against an unexpected non-decreasing `remaining`.
-    for (let pass = 0; pass < 1000; pass++) {
-      const r = await apiFetch(`${API}/api/imports/bulk-import`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ limit: 25 }) });
-      const data = await parseJsonSafe(r);
-      if (!r.ok) throw new Error(data.detail || 'Bulk import failed');
+    // A batch that times out used to abort the ENTIRE import and throw away the
+    // rest of the queue — which is what turned a busy moment on the server into
+    // "Bulk import error: 502" with hundreds of listings left unprocessed.
+    //
+    // Retrying is safe: every candidate is marked linked/imported individually as
+    // it's processed, so a repeat call simply picks up whatever is still pending —
+    // even when the timed-out request actually finished its work server-side.
+    // So: on a gateway-level failure, halve the batch and try again instead of
+    // giving up. Smaller batches mean shorter requests, which is exactly what a
+    // struggling backend needs.
+    const napMs = ms => new Promise(res => setTimeout(res, ms));
+    const RETRYABLE = /took too long|unexpected response|502|503|504|failed to fetch|networkerror|load failed/i;
+    let limit = 15;
+    let strikes = 0;
+
+    for (let pass = 0; pass < 2000; pass++) {
+      let data;
+      try {
+        const r = await apiFetch(`${API}/api/imports/bulk-import`, {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ limit }),
+        });
+        data = await parseJsonSafe(r);
+        if (!r.ok) {
+          const err = new Error(data.detail || `Bulk import failed (${r.status})`);
+          if ([502, 503, 504, 408, 429].includes(r.status)) err.retryable = true;
+          throw err;
+        }
+        strikes = 0;
+      } catch (e) {
+        if (!e.retryable && !RETRYABLE.test(e.message || '')) throw e;
+        strikes++;
+        if (limit > 1) {
+          limit = Math.max(1, Math.floor(limit / 2));
+        } else if (strikes >= 5) {
+          // Even one at a time keeps failing — the server is genuinely down.
+          throw new Error(
+            `The server kept timing out. ${totalLinked + totalCreated} listing(s) were imported before that; ` +
+            `the rest are still pending, so you can just run "Import all" again in a moment.`
+          );
+        }
+        setBusy(true, `Server is busy — retrying in smaller batches (${limit} at a time)… ${totalLinked + totalCreated} done so far`);
+        await napMs(Math.min(15000, 2000 * strikes));
+        continue; // same work, smaller bite
+      }
+
       totalLinked += data.linked || 0;
       totalCreated += data.created || 0;
       totalFailed += data.failed || 0;
