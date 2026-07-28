@@ -38,6 +38,38 @@ def send_email(subject: str, body: str, to: str | None = None) -> bool:
         return False
 
 
+def notify_content_evaluation(summary: dict, results: list[dict]) -> None:
+    """Wekelijkse samenvatting van de blog-evaluator: wat is herschreven en wat staat
+    er in de rij. Zelfde best-effort-contract als de rest van deze module."""
+    site_url = "https://omnivaleur.com"
+    counts: dict[str, int] = {}
+    for r in results:
+        counts[r["verdict"]] = counts.get(r["verdict"], 0) + 1
+
+    lines = [
+        f"{summary['evaluated']} gepubliceerde pagina's beoordeeld op Search Console-data.",
+        "",
+        "Verdeling: " + (", ".join(f"{v}: {n}" for v, n in sorted(counts.items())) or "geen"),
+        "",
+    ]
+
+    if summary["refreshed"]:
+        lines.append("HERSCHREVEN deze ronde:")
+        lines += [f"- {site_url}{r['url_path']} — {r['reason']}" for r in summary["refreshed"]]
+    else:
+        lines.append("Deze ronde is er niets herschreven.")
+
+    queue = [c for c in summary["candidates"] if c["intent_key"] not in {r["intent_key"] for r in summary["refreshed"]}]
+    if queue:
+        lines += ["", "In de wachtrij (hoogste prioriteit eerst):"]
+        lines += [
+            f"- {c['url_path']} — positie {c['position']:.1f}, {c['impressions']} impressies ({c['verdict']})"
+            for c in queue[:10]
+        ]
+
+    send_email(subject="[Omnivaleur blog] Wekelijkse content-evaluatie", body="\n".join(lines))
+
+
 def notify_published(keyword: str, url_path: str, action: str, schema_warnings: list[str] | None = None) -> None:
     site_url = "https://omnivaleur.com"
     lines = [
