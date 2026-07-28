@@ -899,7 +899,13 @@ def _store_scan_results(db, job, scraped: list[dict]):
     """
     if not scraped:
         return
-    items = db.table("items").select("id,title").eq("user_id", job["user_id"]).execute().data or []
+    from backend.api.imports import BACKFILL_FIELDS, _backfill_patch
+
+    # Read the items ONCE, with every field the backfill needs. This used to be a
+    # select per candidate inside the loop below, so a 500-listing wardrobe meant
+    # ~1000 round-trips and "Saving to your dashboard…" sat there for minutes.
+    items = db.table("items").select(BACKFILL_FIELDS + ",title").eq("user_id", job["user_id"]).execute().data or []
+    items_by_id = {it["id"]: it for it in items}
     # (platform, listing id) → item_id, so a re-scan of an already-known listing
     # links back to the exact same item. Scoped by the user's item ids because
     # the listings table has no user_id column.
