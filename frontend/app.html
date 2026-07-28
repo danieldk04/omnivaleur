@@ -1299,6 +1299,11 @@ input[type="checkbox"].row-check { width: 15px; height: 15px; cursor: pointer; a
 
       <div id="import-progress" style="display:none;margin-bottom:24px"></div>
 
+      <!-- Where everything a scan found actually ended up. The review table only
+           shows what still needs a decision, so without this a scan of listings
+           you already imported ends on an empty screen that looks broken. -->
+      <div id="import-summary" style="display:none;margin-bottom:20px"></div>
+
       <div id="import-review-section" style="display:none;margin-bottom:28px">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
           <h3 style="font-size:15px;margin:0">Review imports</h3>
