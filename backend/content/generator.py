@@ -239,6 +239,44 @@ PLATFORM_TOS_SOURCES = [
 ]
 
 
+def _refresh_block(refresh_context: dict | None) -> str:
+    """
+    Briefing voor een HERSCHRIJVING van een bestaande, ondermaats presterende
+    pagina (zie backend/content/evaluator.py). Leeg bij een gewone eerste
+    publicatie. De 'missed queries' zijn het sterkste signaal in het hele proces:
+    het is letterlijk waarop mensen zoeken als ze deze pagina te zien krijgen
+    zonder erop te klikken of zonder hem hoog te zien staan.
+    """
+    if not refresh_context:
+        return ""
+
+    queries = refresh_context.get("missed_queries") or []
+    queries_block = "\n".join(
+        f"- \"{q['query']}\" — {q['impressions']} impressions, {q['clicks']} clicks, avg position {q['position']:.1f}"
+        for q in queries
+    ) or "(no per-query data available)"
+
+    ctr_note = ""
+    if refresh_context.get("verdict") == "low_ctr":
+        ctr_note = (
+            "\nThis page ALREADY RANKS WELL — the problem is that nobody clicks it. Treat the TITLE and "
+            "META_DESCRIPTION as the main deliverable: make them concretely more compelling and specific "
+            f"(the current title is \"{refresh_context.get('current_title', '')}\", which is evidently not "
+            "earning clicks). Keep the body's factual substance, but sharpen it too."
+        )
+
+    return f"""
+THIS IS A REWRITE OF AN EXISTING PAGE THAT IS UNDERPERFORMING IN GOOGLE.
+Current performance: average position {refresh_context.get('position', 0):.1f}, {refresh_context.get('impressions', 0)} impressions, CTR {refresh_context.get('ctr', 0):.1%}.
+Diagnosis: {refresh_context.get('reason', '')}{ctr_note}
+
+REAL SEARCH QUERIES this page is already shown for but does NOT satisfy well enough — these are your highest-value targets. Answer each of these directly and explicitly somewhere in the article (as an <h2> question, an FAQ entry, or a clearly-labelled section), using the searcher's own phrasing:
+{queries_block}
+
+Write a genuinely BETTER article than whatever is currently there — deeper, more specific, more current. Do not merely reword it.
+"""
+
+
 def _build_prompt(
     keyword: str,
     region: str,
@@ -246,6 +284,7 @@ def _build_prompt(
     slug: str,
     research: dict,
     existing_pages: list[dict],
+    refresh_context: dict | None = None,
 ) -> str:
     language = "English"
 
