@@ -740,12 +740,16 @@ async def complete_job(job_id: str, body: dict, user_id: str = Depends(get_curre
         pass
 
     elif job["action"] == "scan":
-        _store_scan_results(db, job, body.get("listings", []))
+        # Saving a full wardrobe is the heaviest write this app does. The Supabase
+        # client is synchronous, so running it inline froze the entire server for
+        # as long as it took — which is exactly what left the extension stuck on
+        # "Saving to your dashboard…" while the gateway timed the request out.
+        import asyncio
+        listings = body.get("listings", [])
+        await asyncio.to_thread(_store_scan_results, db, job, listings)
         if job["platform"] == "vinted":
-            _sync_vinted_hidden(db, job, body.get("listings", []))
-            await _reconcile_vinted_sales(
-                db, job, body.get("listings", []), body.get("scan_meta") or {}
-            )
+            await asyncio.to_thread(_sync_vinted_hidden, db, job, listings)
+            await _reconcile_vinted_sales(db, job, listings, body.get("scan_meta") or {})
 
     return {"ok": True}
 
