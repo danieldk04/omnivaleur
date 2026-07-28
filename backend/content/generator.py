@@ -312,6 +312,7 @@ URL will be: /{region}/{"crosslisten" if pillar == "A" else "vergelijking" if pi
 {"""
 PILLAR C SPECIAL RULES (competitor comparison page): Be scrupulously honest and fair — this is a comparison, not an ad. Include a real Markdown comparison table (pricing, supported platforms, sync behavior, ease of use). Acknowledge at least one genuine strength of the competitor. Never fabricate a competitor feature, price or limitation you don't actually know — if unsure, describe it in general/neutral terms instead of inventing specifics. End with an honest verdict on who each tool is actually best for, not a blanket "Omnivaleur wins". Structure the body as AT LEAST 7 distinct <h2> sections (not counting the comparison table's own heading) so screenshots can be spread naturally through the article — e.g. platforms supported, pricing, ease of use/setup, sync & relist behavior, EU-specific handling (Marktplaats/2dehands/Vinted/euro pricing), support/reliability, and the final verdict. Aim for 2200-2800 words of visible text for this pillar specifically (longer than other pillars) — there is a real screenshot of Omnivaleur's own dashboard being inserted into this article, and the text needs enough depth to carry it.""" if pillar == "C" else ""}
 
+{_refresh_block(refresh_context)}
 COMPETITOR RESEARCH (top 3 organic results for this keyword, their heading structure):
 {competitors_summary}
 
