@@ -33,13 +33,15 @@ logger = logging.getLogger(__name__)
 # uit beeld.
 MAX_PER_PAGE = 2
 
-# Merkkleuren uit frontend/templates/_chrome_style.html. De mint (#34d399) is
-# bewust vervangen door een donkerder groen: de originele tint haalde de
-# contrast-eis tegen een witte achtergrond niet (1.87:1) en werd onleesbaar als
-# balkkleur. Deze drie zijn gevalideerd op kleurenblindheid-separatie én
-# contrast; elke balk krijgt daarbovenop een eigen tekstlabel, zodat kleur
-# nooit de enige drager van betekenis is.
-COLORS = ["#2563eb", "#059669", "#7c3aed"]
+# Merkblauw uit frontend/templates/_chrome_style.html, gevalideerd op contrast
+# tegen de witte artikelachtergrond.
+#
+# Bewust ÉÉN kleur voor alle balken/bolletjes, geen regenboog per rij: de rijen
+# zijn categorieën op de as (platformen, stappen), geen aparte datareeksen. Elke
+# rij een eigen kleur geven suggereert een betekenisverschil dat er niet is —
+# de kleur zou dan de volgorde coderen in plaats van de data. De merk-mint
+# (#34d399) is hier sowieso onbruikbaar: 1.87:1 contrast tegen wit.
+MEASURE = "#2563eb"
 INK = "#0f172a"
 MUTED = "#64748b"
 BORDER = "#e2e8f0"
