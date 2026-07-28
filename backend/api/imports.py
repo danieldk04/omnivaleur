@@ -581,7 +581,8 @@ def reopen_candidates(body: dict = None, user_id: str = Depends(get_current_user
         q = q.eq("platform", body["platform"])
     ids = [c["id"] for c in (q.execute().data or [])]
     for i in range(0, len(ids), 100):
-        db.table("import_candidates").update({"status": "pending"}).in_("id", ids[i:i + 100]).execute()
+        (db.table("import_candidates").update({"status": "pending"})
+           .eq("user_id", user_id).in_("id", ids[i:i + 100]).execute())
     return {"reopened": len(ids)}
 
 
