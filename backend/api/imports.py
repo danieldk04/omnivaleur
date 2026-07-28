@@ -652,67 +652,67 @@ async def bulk_import_candidates(body: dict = None, user_id: str = Depends(get_c
     )) if candidates else {}
 
     def _process():
-      nonlocal linked, created, failed
-      for cand in candidates:
-        try:
-            listed_at = cand.get("platform_listed_at") or now
-            match_id, _reason = _match_candidate(cand, items, listings_by_id)
-            if match_id:
-                existing = db.table("listings").select("id").eq("item_id", match_id).eq("platform", cand["platform"]).execute()
-                if existing.data:
-                    db.table("listings").update({
-                        "platform_listing_id": cand["platform_listing_id"],
-                        "platform_listing_url": cand["platform_listing_url"],
-                        "status": _listing_status_for(cand),
-                        "listed_at": listed_at,
-                    }).eq("id", existing.data[0]["id"]).execute()
+        nonlocal linked, created, failed
+        for cand in candidates:
+            try:
+                listed_at = cand.get("platform_listed_at") or now
+                match_id, _reason = _match_candidate(cand, items, listings_by_id)
+                if match_id:
+                    existing = db.table("listings").select("id").eq("item_id", match_id).eq("platform", cand["platform"]).execute()
+                    if existing.data:
+                        db.table("listings").update({
+                            "platform_listing_id": cand["platform_listing_id"],
+                            "platform_listing_url": cand["platform_listing_url"],
+                            "status": _listing_status_for(cand),
+                            "listed_at": listed_at,
+                        }).eq("id", existing.data[0]["id"]).execute()
+                    else:
+                        db.table("listings").insert({
+                            "item_id": match_id,
+                            "platform": cand["platform"],
+                            "platform_listing_id": cand["platform_listing_id"],
+                            "platform_listing_url": cand["platform_listing_url"],
+                            "status": _listing_status_for(cand),
+                            "listed_at": listed_at,
+                        }).execute()
+                    _backfill_item_from_candidate(db, match_id, cand, inferred=inferred_by_id.get(cand["id"]))
+                    db.table("import_candidates").update({"status": "linked"}).eq("id", cand["id"]).execute()
+                    linked += 1
                 else:
+                    item_data = _item_data_from_candidate(cand, inferred=inferred_by_id.get(cand["id"]))
+                    item = ItemCreate(**item_data)
+                    data = item.model_dump()
+                    data["id"] = str(uuid.uuid4())
+                    data["user_id"] = user_id
+                    if not data.get("sku"):
+                        data["sku"] = f"IMP-{data['id'][:8].upper()}"
+                    created_item = db.table("items").insert(data).execute().data[0]
+
                     db.table("listings").insert({
-                        "item_id": match_id,
+                        "item_id": created_item["id"],
                         "platform": cand["platform"],
                         "platform_listing_id": cand["platform_listing_id"],
                         "platform_listing_url": cand["platform_listing_url"],
                         "status": _listing_status_for(cand),
                         "listed_at": listed_at,
                     }).execute()
-                _backfill_item_from_candidate(db, match_id, cand, inferred=inferred_by_id.get(cand["id"]))
-                db.table("import_candidates").update({"status": "linked"}).eq("id", cand["id"]).execute()
-                linked += 1
-            else:
-                item_data = _item_data_from_candidate(cand, inferred=inferred_by_id.get(cand["id"]))
-                item = ItemCreate(**item_data)
-                data = item.model_dump()
-                data["id"] = str(uuid.uuid4())
-                data["user_id"] = user_id
-                if not data.get("sku"):
-                    data["sku"] = f"IMP-{data['id'][:8].upper()}"
-                created_item = db.table("items").insert(data).execute().data[0]
 
-                db.table("listings").insert({
-                    "item_id": created_item["id"],
-                    "platform": cand["platform"],
-                    "platform_listing_id": cand["platform_listing_id"],
-                    "platform_listing_url": cand["platform_listing_url"],
-                    "status": _listing_status_for(cand),
-                    "listed_at": listed_at,
-                }).execute()
-
-                db.table("import_candidates").update({"status": "imported"}).eq("id", cand["id"]).execute()
-                items.append({"id": created_item["id"], "title": created_item["title"]})
-                created += 1
-        except Exception:
-            # Mark it failed so it drops out of the pending set — otherwise the batched
-            # loop would re-fetch the same broken candidate every pass and never finish.
-            try:
-                db.table("import_candidates").update({"status": "failed"}).eq("id", cand["id"]).execute()
+                    db.table("import_candidates").update({"status": "imported"}).eq("id", cand["id"]).execute()
+                    items.append({"id": created_item["id"], "title": created_item["title"]})
+                    created += 1
             except Exception:
-                pass
-            failed += 1
+                # Mark it failed so it drops out of the pending set — otherwise the batched
+                # loop would re-fetch the same broken candidate every pass and never finish.
+                try:
+                    db.table("import_candidates").update({"status": "failed"}).eq("id", cand["id"]).execute()
+                except Exception:
+                    pass
+                failed += 1
 
-      remaining_q = db.table("import_candidates").select("id", count="exact").eq("user_id", user_id).eq("status", "pending")
-      if platform:
-          remaining_q = remaining_q.eq("platform", platform)
-      return remaining_q.execute().count or 0
+        remaining_q = db.table("import_candidates").select("id", count="exact").eq("user_id", user_id).eq("status", "pending")
+        if platform:
+            remaining_q = remaining_q.eq("platform", platform)
+        return remaining_q.execute().count or 0
 
     remaining = await asyncio.to_thread(_process)
 
