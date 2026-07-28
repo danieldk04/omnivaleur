@@ -19,6 +19,11 @@ router = APIRouter(prefix="/jobs", tags=["jobs"])
 STALE_CLAIM_MINUTES = 5
 MAX_RECLAIMS = 2
 
+# The optional import_candidates snapshot columns, dropped together if the
+# migration hasn't run (see _store_scan_results).
+RICH_KEYS = ("photo_urls", "description", "brand", "size", "condition",
+             "category", "gender", "color", "material", "is_hidden")
+
 # How recently the extension must have checked in for us to call a computer
 # "online". The extension's poll alarm is nominally 15s, but Chrome MV3 throttles
 # background alarms to ~30-60s in practice, so a tight window flipped to a false
