@@ -85,6 +85,16 @@ def _truncate(text: str, limit: int) -> str:
     return text if len(text) <= limit else text[: limit - 1].rstrip() + "…"
 
 
+def _caption_label(header: str) -> str:
+    """
+    Koptekst als bijschrift-fragment. Bewust NIET lowercase: kopteksten bevatten
+    merknamen ("Past op Vinted in 2026?") en die mag je niet naar "vinted"
+    verminken. Alleen afsluitende leestekens gaan eraf, zodat er geen "…in 2026?."
+    ontstaat.
+    """
+    return header.rstrip(" ?:.!")
+
+
 def _parse_table(table) -> tuple[list[str], list[list[str]]]:
     """Kopteksten + rijen als platte tekst. Lege of vormloze tabellen → ([], [])."""
     rows = table.find_all("tr")
@@ -165,7 +175,7 @@ def _range_infographic(headers: list[str], body: list[list[str]], language: str)
         if max_value <= 0:
             continue
 
-        label_w, bar_x, bar_w, row_h, top = 200, 210, 340, 40, 52
+        bar_x, bar_w, row_h, top = 210, 340, 40, 52
         width, height = 620, top + row_h * len(usable) + 16
         metric = _truncate(headers[col], 46)
 
@@ -195,7 +205,7 @@ def _range_infographic(headers: list[str], body: list[list[str]], language: str)
                 f'<text x="{min(x0 + w + 8, width - 4):.1f}" y="{y + 15}" font-size="13" fill="{MUTED}">{_esc(value_label)}</text>'
             )
         parts.append("</svg>")
-        caption = CAPTIONS["range"].get(language, CAPTIONS["range"]["en"]).format(label=metric.lower())
+        caption = CAPTIONS["range"].get(language, CAPTIONS["range"]["en"]).format(label=_caption_label(metric))
         return _figure("".join(parts), caption)
     return None
 
@@ -217,13 +227,13 @@ def _matrix_infographic(headers: list[str], body: list[list[str]], language: str
             f'<text x="0" y="20" font-size="15" font-weight="700" fill="{INK}">{_esc(metric)}</text>',
         ]
         marks = {
-            "yes": (GOOD, "M0 5 L4 9 L11 0", None),
-            "no": (BAD, "M0 0 L10 10 M10 0 L0 10", None),
-            "partial": (PARTIAL, "M0 5 L11 5", None),
+            "yes": (GOOD, "M0 5 L4 9 L11 0"),
+            "no": (BAD, "M0 0 L10 10 M10 0 L0 10"),
+            "partial": (PARTIAL, "M0 5 L11 5"),
         }
         for i, (label, verdict, raw) in enumerate(usable):
             y = top + i * row_h
-            color, path, _ = marks[verdict]
+            color, path = marks[verdict]
             parts.append(
                 f'<line x1="0" y1="{y - 6}" x2="{width}" y2="{y - 6}" stroke="{BORDER}" stroke-width="1"/>'
                 f'<text x="0" y="{y + 14}" font-size="14" fill="{INK}">{_esc(_truncate(label, 44))}</text>'
@@ -231,10 +241,10 @@ def _matrix_infographic(headers: list[str], body: list[list[str]], language: str
                 f'stroke-linecap="round" stroke-linejoin="round"><path d="{path}"/></g>'
                 # Het woord staat er altijd bij: kleur en vinkje mogen nooit de enige
                 # drager van de betekenis zijn (kleurenblindheid, printen).
-                f'<text x="428" y="{y + 14}" font-size="13" fill="{color}" font-weight="600">{_esc(_truncate(raw, 24))}</text>'
+                f'<text x="428" y="{y + 14}" font-size="13" fill="{color}" font-weight="600">{_esc(_truncate(raw, 30))}</text>'
             )
         parts.append("</svg>")
-        caption = CAPTIONS["matrix"].get(language, CAPTIONS["matrix"]["en"]).format(label=metric.lower())
+        caption = CAPTIONS["matrix"].get(language, CAPTIONS["matrix"]["en"]).format(label=_caption_label(metric))
         return _figure("".join(parts), caption)
     return None
 
@@ -276,6 +286,12 @@ def inject_infographics(body_html: str, language: str = "en") -> str:
     if not body_html:
         return body_html
 
+    # Idempotent: draait deze functie twee keer over dezelfde HTML (backfill na een
+    # eerdere backfill, of een refresh van een al verrijkt artikel), dan komt er
+    # geen tweede set infographics bij.
+    if 'class="infographic"' in body_html:
+        return body_html
+
     try:
         soup = BeautifulSoup(body_html, "html.parser")
         added = 0
@@ -300,8 +316,15 @@ def inject_infographics(body_html: str, language: str = "en") -> str:
                     added += 1
                     break
 
-        if added:
-            logger.info(f"{added} infographic(s) toegevoegd aan artikel")
+        # Niets toegevoegd → geef de ORIGINELE string terug, niet str(soup).
+        # BeautifulSoup herschrijft anders de hele HTML (quotes, self-closing tags,
+        # entities) zonder dat er iets inhoudelijks verandert; dat maakt een
+        # onnodige diff en is precies het soort stille markup-herschrijving dat
+        # eerder al eens img-src'en heeft beschadigd.
+        if not added:
+            return body_html
+
+        logger.info(f"{added} infographic(s) toegevoegd aan artikel")
         return str(soup)
     except Exception as e:
         logger.error(f"Infographic-generatie mislukt (artikel blijft ongewijzigd): {e}")
