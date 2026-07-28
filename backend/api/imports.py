@@ -530,6 +530,61 @@ def list_import_candidates(platform: str = None, status: str = "pending", user_i
     return candidates
 
 
+@router.get("/summary")
+def import_candidates_summary(user_id: str = Depends(get_current_user)):
+    """
+    What the last scan of each platform actually found, broken down by what has
+    already been decided about it.
+
+    The review list only shows PENDING candidates, and a re-scan deliberately
+    keeps the status of anything you already imported, linked or ignored. Put
+    together, that means a scan of a wardrobe you've fully imported before ends
+    with an empty review list — which looked exactly like "the scan found
+    nothing". This is what lets the UI say where those listings went instead.
+    """
+    db = get_db()
+    rows = (
+        db.table("import_candidates")
+        .select("platform,status")
+        .eq("user_id", user_id)
+        .limit(5000)
+        .execute()
+        .data or []
+    )
+    by_status: dict[str, int] = {}
+    by_platform: dict[str, dict[str, int]] = {}
+    for r in rows:
+        st = r.get("status") or "pending"
+        pf = r.get("platform") or "unknown"
+        by_status[st] = by_status.get(st, 0) + 1
+        by_platform.setdefault(pf, {})
+        by_platform[pf][st] = by_platform[pf].get(st, 0) + 1
+    return {"total": len(rows), "by_status": by_status, "by_platform": by_platform}
+
+
+# Only these may be put back on the review list. 'imported' and 'linked' are
+# deliberately NOT reopenable: those listings already exist as items, so
+# re-importing them would duplicate your stock.
+REOPENABLE = ("ignored", "failed")
+
+
+@router.post("/reopen")
+def reopen_candidates(body: dict = None, user_id: str = Depends(get_current_user)):
+    """Put ignored/failed candidates back on the review list."""
+    body = body or {}
+    statuses = [s for s in (body.get("statuses") or list(REOPENABLE)) if s in REOPENABLE]
+    if not statuses:
+        raise HTTPException(status_code=400, detail="Nothing reopenable requested")
+    db = get_db()
+    q = db.table("import_candidates").select("id").eq("user_id", user_id).in_("status", statuses)
+    if body.get("platform"):
+        q = q.eq("platform", body["platform"])
+    ids = [c["id"] for c in (q.execute().data or [])]
+    for i in range(0, len(ids), 100):
+        db.table("import_candidates").update({"status": "pending"}).in_("id", ids[i:i + 100]).execute()
+    return {"reopened": len(ids)}
+
+
 @router.post("/{candidate_id}/link")
 async def link_candidate(candidate_id: str, body: dict, user_id: str = Depends(get_current_user)):
     """Attach a scraped listing to an existing item — no new item, no guessed fields."""
