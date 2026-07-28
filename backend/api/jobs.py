@@ -1011,7 +1011,20 @@ def _store_scan_results(db, job, scraped: list[dict]):
         # THAT one is missing we still want the description/brand/photos to land,
         # instead of dropping every rich field over one absent column.
         hidden = {"is_hidden": bool(row.get("is_hidden"))}
-        for attempt, payload in enumerate(({**base, **rich, **hidden}, {**base, **rich}, base)):
+        rows.append({**base, **rich, **hidden})
+
+    # ── Write everything in as few round-trips as possible ────────────────
+    # PostgREST upserts a whole list in one request, so a 500-listing wardrobe
+    # costs a handful of calls instead of 500. Chunked so no single request grows
+    # large enough for the gateway to time out on.
+    CHUNK = 100
+    for i in range(0, len(rows), CHUNK):
+        chunk = rows[i:i + CHUNK]
+        # Optional columns may not exist yet on an un-migrated database. Drop the
+        # newest tier first, then the whole rich snapshot — never the base fields.
+        for attempt in range(3):
+            drop = () if attempt == 0 else (("is_hidden",) if attempt == 1 else RICH_KEYS)
+            payload = [{k: v for k, v in r.items() if k not in drop} for r in chunk]
             try:
                 db.table("import_candidates").upsert(
                     payload, on_conflict="user_id,platform,platform_listing_id"
@@ -1023,7 +1036,21 @@ def _store_scan_results(db, job, scraped: list[dict]):
                 elif attempt == 1:
                     logger.warning(f"Scan store: rich upsert failed ({e}); falling back to base fields. Run the import_candidates ALTER migration.")
                 else:
-                    logger.error(f"Scan store: base upsert failed for {platform_listing_id}: {e}")
+                    logger.error(f"Scan store: base upsert failed for {len(chunk)} rows: {e}")
+
+    # Item backfills: one update per item that actually gained something, rather
+    # than a select+update per scanned listing. On a re-scan most items are
+    # already complete, so this is usually a handful of writes.
+    for item_id, patch in backfills.items():
+        try:
+            db.table("items").update(patch).eq("id", item_id).execute()
+        except Exception as e:
+            logger.warning(f"Scan store: item backfill failed for {item_id}: {e}")
+
+    logger.info(
+        "Scan store for user %s: %d candidates upserted, %d items enriched",
+        job["user_id"], len(rows), len(backfills),
+    )
 
 
 @router.post("/{job_id}/error")
