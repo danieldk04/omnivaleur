@@ -393,13 +393,14 @@ def generate_page_content(
     slug: str,
     research: dict,
     existing_pages: list[dict],
+    refresh_context: dict | None = None,
 ) -> dict | None:
     if not settings.anthropic_api_key:
         logger.error("ANTHROPIC_API_KEY ontbreekt — kan geen content genereren")
         return None
 
     client = anthropic.Anthropic(api_key=settings.anthropic_api_key)
-    prompt = _build_prompt(keyword, region, pillar, slug, research, existing_pages)
+    prompt = _build_prompt(keyword, region, pillar, slug, research, existing_pages, refresh_context)
 
     try:
         message = client.messages.create(
