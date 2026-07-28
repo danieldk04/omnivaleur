@@ -239,6 +239,31 @@ ALTER TABLE content_pages ADD COLUMN IF NOT EXISTS language VARCHAR(5) DEFAULT '
 ALTER TABLE content_pages ADD COLUMN IF NOT EXISTS translation_of VARCHAR(200);
 CREATE INDEX IF NOT EXISTS idx_content_pages_translation_of ON content_pages(translation_of);
 
+-- Performance-historie per gepubliceerde contentpagina. De blog-evaluator
+-- (backend/content/evaluator.py) schrijft hier wekelijks één rij per pagina weg
+-- met de Search Console-cijfers van dat moment plus zijn oordeel, zodat je na een
+-- herschrijving kunt zien of de positie daadwerkelijk verbeterde. Append-only:
+-- nooit updaten, alleen nieuwe snapshots toevoegen.
+CREATE TABLE IF NOT EXISTS content_page_performance (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    page_id UUID NOT NULL REFERENCES content_pages(id) ON DELETE CASCADE,
+    intent_key VARCHAR(200) NOT NULL,
+    url_path TEXT NOT NULL,
+    clicks INT DEFAULT 0,
+    impressions INT DEFAULT 0,
+    ctr DOUBLE PRECISION DEFAULT 0,
+    position DOUBLE PRECISION DEFAULT 0,   -- gemiddelde GSC-positie over het venster
+    verdict VARCHAR(20) NOT NULL,          -- winning / striking / low_ctr / buried / no_data / too_young
+    reason TEXT,
+    measured_at TIMESTAMPTZ DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_content_page_performance_page ON content_page_performance(page_id, measured_at DESC);
+CREATE INDEX IF NOT EXISTS idx_content_page_performance_verdict ON content_page_performance(verdict);
+-- Consistent met de rest van het schema: toegang wordt door de backend afgedwongen,
+-- niet door RLS. Nieuwe Supabase-tabellen kunnen met RLS aan-maar-zonder-policy
+-- komen, wat álle writes stil blokkeert.
+ALTER TABLE content_page_performance DISABLE ROW LEVEL SECURITY;
+
 -- Aggregated activity notifications (unread messages + open bids/offers) that
 -- the desktop extension reads from the user's own logged-in platform sessions
 -- and reports here, so the dashboard can show "3 new offers on Marktplaats" in
