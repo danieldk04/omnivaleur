@@ -466,7 +466,7 @@ def _listings_by_platform_id(db, items: list[dict]) -> dict:
 
 
 @router.post("/scan/{platform}")
-async def start_scan(platform: str, user_id: str = Depends(get_current_user)):
+def start_scan(platform: str, user_id: str = Depends(get_current_user)):
     if platform not in SCANNABLE_PLATFORMS:
         raise HTTPException(status_code=400, detail=f"Scanning isn't available for {platform}")
     db = get_db()
@@ -499,7 +499,7 @@ async def start_scan(platform: str, user_id: str = Depends(get_current_user)):
 
 
 @router.get("/")
-async def list_import_candidates(platform: str = None, status: str = "pending", user_id: str = Depends(get_current_user)):
+def list_import_candidates(platform: str = None, status: str = "pending", user_id: str = Depends(get_current_user)):
     db = get_db()
     q = db.table("import_candidates").select("*").eq("user_id", user_id)
     if platform:
@@ -619,20 +619,30 @@ async def bulk_import_candidates(body: dict = None, user_id: str = Depends(get_c
         batch = 25
     batch = max(1, min(batch, 100))
 
-    q = db.table("import_candidates").select("*").eq("user_id", user_id).eq("status", "pending")
-    if platform:
-        q = q.eq("platform", platform)
-    candidates = q.limit(batch).execute().data or []
+    import asyncio
+
+    # The Supabase client is SYNCHRONOUS, and this endpoint is async — so every
+    # .execute() below ran directly on the event loop and froze the whole server
+    # for the duration. Importing a few hundred listings means hundreds of
+    # sequential round-trips, which is why the dashboard started returning 502/524
+    # to everyone (including this very import) while a bulk run was going.
+    # Everything that touches the database therefore runs in a worker thread.
+    def _read():
+        q = db.table("import_candidates").select("*").eq("user_id", user_id).eq("status", "pending")
+        if platform:
+            q = q.eq("platform", platform)
+        cands = q.limit(batch).execute().data or []
+        its = db.table("items").select("id,title").eq("user_id", user_id).execute().data or []
+        return cands, its, _listings_by_platform_id(db, its)
+
+    candidates, items, listings_by_id = await asyncio.to_thread(_read)
 
     linked, created, failed = 0, 0, 0
     now = datetime.now(timezone.utc).isoformat()
-    items = db.table("items").select("id,title").eq("user_id", user_id).execute().data or []
-    listings_by_id = _listings_by_platform_id(db, items)
 
     # Classify every candidate up front and in parallel — one sequential Haiku
     # call per candidate inside the loop would stall a bulk import of 50 items
     # for minutes. Each entry falls back to keywords on its own failure.
-    import asyncio
     inferred_by_id = dict(zip(
         (c["id"] for c in candidates),
         await asyncio.gather(*(
@@ -706,7 +716,7 @@ async def bulk_import_candidates(body: dict = None, user_id: str = Depends(get_c
 
 
 @router.post("/{candidate_id}/ignore")
-async def ignore_candidate(candidate_id: str, user_id: str = Depends(get_current_user)):
+def ignore_candidate(candidate_id: str, user_id: str = Depends(get_current_user)):
     db = get_db()
     db.table("import_candidates").update({"status": "ignored"}).eq("id", candidate_id).eq("user_id", user_id).execute()
     return {"ok": True}
