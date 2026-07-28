@@ -4100,8 +4100,88 @@ function pollScanProgress(platform, jobId) {
   }, 1500);
 }
 
+// ── What the scan found, and where it went ──────────────────────────────
+// The review table below deliberately only lists candidates that still need a
+// decision, and a re-scan keeps whatever you already decided. So scanning a
+// wardrobe you have already imported legitimately ends with an empty table —
+// which is indistinguishable from "the scan found nothing" unless we say so.
+const IMPORT_STATUS_LABELS = {
+  pending:  { label: 'waiting for you below',            color: '#2563eb' },
+  imported: { label: 'already imported as new items',    color: '#16a34a' },
+  linked:   { label: 'already linked to existing items', color: '#16a34a' },
+  ignored:  { label: 'you chose to ignore',              color: '#6b7280' },
+  failed:   { label: 'failed to import',                 color: '#dc2626' },
+};
+
+async function loadImportSummary() {
+  const box = document.getElementById('import-summary');
+  if (!box) return;
+  let s;
+  try {
+    const r = await apiFetch(`${API}/api/imports/summary`);
+    s = await parseJsonSafe(r);
+  } catch (e) {
+    // A summary is nice-to-have; never let it break the review screen.
+    console.error('Failed to load import summary', e);
+    box.style.display = 'none';
+    return;
+  }
+  if (!s || !s.total) { box.style.display = 'none'; return; }
+
+  const pending = s.by_status?.pending || 0;
+  const done = (s.by_status?.imported || 0) + (s.by_status?.linked || 0);
+  const reopenable = (s.by_status?.ignored || 0) + (s.by_status?.failed || 0);
+
+  const lines = Object.entries(s.by_status)
+    .sort((a, b) => b[1] - a[1])
+    .map(([st, n]) => {
+      const meta = IMPORT_STATUS_LABELS[st] || { label: st, color: '#6b7280' };
+      return `<li style="margin-bottom:3px"><b style="color:${meta.color}">${n}</b> ${meta.label}</li>`;
+    }).join('');
+
+  const platforms = Object.entries(s.by_platform || {})
+    .map(([p, counts]) => `${PLATFORM_LABELS[p] || p} (${Object.values(counts).reduce((a, b) => a + b, 0)})`)
+    .join(' · ');
+
+  // The whole point: when nothing is pending, say WHY the table is empty.
+  const headline = pending
+    ? `<b>${pending}</b> listing${pending === 1 ? '' : 's'} below still need${pending === 1 ? 's' : ''} a decision.`
+    : `<b>Nothing left to review.</b> Every listing the scan found has already been handled — the scan worked, there is just nothing new in it.`;
+
+  box.style.display = '';
+  box.innerHTML = `
+    <div style="background:var(--card,#fff);border:1px solid var(--border,#e5e7eb);border-radius:10px;padding:14px 16px">
+      <div style="font-weight:700;margin-bottom:4px">Last scan found ${s.total} listing${s.total === 1 ? '' : 's'}</div>
+      <div style="font-size:12.5px;color:var(--muted);margin-bottom:8px">${platforms}</div>
+      <div style="font-size:13px;margin-bottom:8px">${headline}</div>
+      <ul style="margin:0;padding-left:18px;font-size:12.5px;color:var(--muted);line-height:1.6">${lines}</ul>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px">
+        ${done ? `<button class="btn btn-sm btn-outline" onclick="showView('items');setItemsTab('live')">See them in Items</button>` : ''}
+        ${reopenable ? `<button class="btn btn-sm btn-outline" onclick="reopenImportCandidates()">Show the ${reopenable} ignored/failed one${reopenable === 1 ? '' : 's'} again</button>` : ''}
+      </div>
+    </div>`;
+}
+
+// Ignored and failed candidates can safely go back on the list — nothing was
+// created from them. Imported/linked ones cannot, or you'd duplicate your stock.
+async function reopenImportCandidates() {
+  setBusy(true, 'Putting them back on the list…');
+  try {
+    const r = await apiFetch(`${API}/api/imports/reopen`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ statuses: ['ignored', 'failed'] }),
+    });
+    const res = await parseJsonSafe(r);
+    showToast(`${res?.reopened || 0} listing(s) back on the review list.`);
+    await loadImportCandidates();
+  } catch (e) {
+    showToast('Could not reopen those listings: ' + e.message);
+  } finally { setBusy(false); }
+}
+
 async function loadImportCandidates(checkScanDonePlatform) {
   try {
+    loadImportSummary();
     const r = await apiFetch(`${API}/api/imports/?status=pending`);
     const candidates = await r.json();
     renderImportReview(candidates || []);
