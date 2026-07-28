@@ -1310,6 +1310,16 @@ input[type="checkbox"].row-check { width: 15px; height: 15px; cursor: pointer; a
           <span style="white-space:nowrap">≈ <b>Same title</b></span> = one existing item has an identical title.
           Everything else stays <span style="white-space:nowrap">✨ <b>New item</b></span> — near-matches that differ only by size, colour or number are deliberately <i>not</i> linked. You can always override the match per row before applying.
         </div>
+        <!-- Hidden listings are legitimate candidates, but importing one means
+             something different, so say how many there are and let them be put
+             aside instead of silently mixed in. -->
+        <div id="import-hidden-bar" style="display:none;align-items:center;gap:10px;background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:9px 13px;margin-bottom:10px;font-size:12.5px;color:#92400e">
+          <span id="import-hidden-note"></span>
+          <label style="display:flex;align-items:center;gap:6px;margin-left:auto;font-weight:600;white-space:nowrap;cursor:pointer">
+            <input type="checkbox" id="import-hide-hidden" onchange="loadImportCandidates()" style="width:auto">
+            Leave hidden ones out
+          </label>
+        </div>
         <table class="data-table">
           <thead>
             <tr>
