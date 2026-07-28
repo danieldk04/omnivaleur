@@ -346,7 +346,13 @@ async def run_evaluation_cycle(limit: int = 1, dry_run: bool = False) -> dict:
 
 
 def run_evaluation_cycle_sync() -> None:
-    """Sync-wrapper voor APScheduler (dat geen coroutine-functie kan plannen)."""
+    """
+    Sync-wrapper voor de scheduler. Bewust SYNC en niet als coroutine-job
+    geregistreerd: APScheduler draait een sync-job in een threadpool-worker, en
+    deze cyclus zit vol blokkerende Supabase-, GSC- en Anthropic-calls die de
+    event loop van de webserver anders minutenlang zouden vastzetten. In die
+    worker-thread draait geen loop, dus asyncio.run() is hier veilig.
+    """
     import asyncio
 
     asyncio.run(run_evaluation_cycle(limit=1))
