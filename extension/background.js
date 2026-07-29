@@ -988,7 +988,12 @@ function waitForTabLoad(tabId, timeoutMs = 20000) {
       // schreeuwt Chrome "Unchecked runtime.lastError: No tab with id" in de
       // console zodra het tabblad al weg is, wat als losse fout overkomt terwijl
       // het hier gewoon betekent dat we niets meer hoeven te wachten.
-      if (chrome.runtime.lastError) { resolve(); return; }
+      if (chrome.runtime.lastError) {
+        chrome.tabs.onUpdated.removeListener(fn);
+        clearTimeout(timer);
+        resolve();
+        return;
+      }
       if (t && t.status === "complete") {
         chrome.tabs.onUpdated.removeListener(fn);
         clearTimeout(timer);
