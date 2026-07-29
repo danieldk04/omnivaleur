@@ -288,7 +288,6 @@ def _handle_candidates(name: str) -> list[str]:
 
 
 def enrich(args) -> None:
-    token = _need("APIFY_TOKEN")
     if not SELLERS.exists():
         sys.exit("Nog geen sellers.json — draai eerst 'rank'")
 
