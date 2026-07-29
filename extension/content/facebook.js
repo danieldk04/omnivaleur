@@ -370,19 +370,6 @@
     return null;
   }
 
-  // Has Facebook shown a photo preview thumbnail yet? Picked files render as
-  // blob: <img>s — verified live. (We deliberately do NOT look at scontent URLs:
-  // FB's own profile/chrome images use those, so they'd give a false positive.)
-  async function waitForPhotoPreview(timeout) {
-    const deadline = Date.now() + (timeout || 6000);
-    while (Date.now() < deadline) {
-      const has = [...document.querySelectorAll("img")].some((i) => /^blob:/.test(i.src));
-      if (has) return true;
-      await sleep(300);
-    }
-    return false;
-  }
-
   // Click through FB's "Next" → "Publish" and capture the resulting item URL.
   async function publishAndCapture() {
     // VERIFIED live 2026-07: FB's Volgende/Next button has BOTH matching textContent
