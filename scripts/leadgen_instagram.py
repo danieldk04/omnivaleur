@@ -334,7 +334,10 @@ def bench(args) -> None:
             print(f"  ! bron faalde: {e}")
             found = []
 
-        enriched = [r for r in _enrich_rows(found, token)
+        # Eén verrijkingsronde, niet drie: een vergelijking hoeft niet compleet te
+        # zijn, alleen eerlijk. Elke bron krijgt dezelfde ene kans, en dat scheelt
+        # drie keer de tijd en de kosten van een productierun.
+        enriched = [r for r in _enrich_rows(found, token, attempts=1)
                     if r.get("enriched") and not r.get("private")] if found else []
         leads = _classify_rows(enriched, args.min_confidence, quiet=True) if enriched else []
         results.append({
