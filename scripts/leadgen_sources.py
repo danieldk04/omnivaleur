@@ -65,19 +65,25 @@ QUERIES = [
 # (#vinted, #marktplaats), het woord reseller zelf, of de productcategorie die
 # Omnivaleur goed aankan (kleding, schoenen, sneakers, games).
 HASHTAGS = [
-    # platform-signaal — sterkste indicatie van iemand die actief doorverkoopt
-    "vinted", "vintednederland", "vintedverkoper", "vintedshop",
-    "marktplaatsverkoper",
+    # platform-signaal — sterkste indicatie van iemand die actief doorverkoopt.
+    # #vintednederland is LIVE GEMETEN de beste: 12 unieke accounts uit 30 posts,
+    # allemaal echte resellers (Hot on Vinted, TO THE NEXT CLOSET, Goldkings.Vinted,
+    # CS Little Closet). Daarvan haalde de helft de classificatie.
+    "vintednederland", "vinted", "vintedshop", "marktplaatsverkoper",
     # commercieel zelfbeeld
-    "reseller", "resellernederland", "kledingreseller", "sneakerreseller",
+    "reseller", "resellernederland", "sneakerreseller",
     # verzendbare categorieën die Omnivaleur goed herkent
-    "vintagekleding", "prelovedfashion", "tweedehandskleding",
-    "sneakerbewerking", "vintageshopnl",
+    "vintagekleding", "prelovedfashion", "tweedehandskleding", "vintageshopnl",
 ]
 
-# Hashtags die aantoonbaar de verkeerde kant op trekken, bewaard zodat ze niet
-# per ongeluk terugkruipen: kringloopwinkel, kringloopgeluk, kringloopvondst,
-# brocante, vintagemeubels, secondhandnederland, tweedehandswinkel.
+# Afgevoerd op grond van live metingen — niet terugzetten zonder opnieuw te meten:
+#   kringloopwinkel, kringloopgeluk, kringloopvondst, brocante, vintagemeubels,
+#   secondhandnederland, tweedehandswinkel — leveren vrijwilligerswinkels en
+#   meubelverkopers: geen winstmotief, onverzendbaar, geen crosslist-probleem.
+#   vintedverkoper — 28 van de 30 posts kwamen van ÉÉN account. Een hashtag kan
+#     door één poster ondergesneeuwd worden; let daarom op "N nieuw uit 30 posts"
+#     in de uitvoer, niet op het aantal posts.
+#   kledingreseller — bestaat niet op Instagram (actor geeft een error-rij terug).
 
 CITIES = [
     "amsterdam", "rotterdam", "utrecht", "den haag", "eindhoven", "groningen",
