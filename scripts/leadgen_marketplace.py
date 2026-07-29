@@ -303,6 +303,7 @@ def enrich(args) -> None:
             print(f"  {h:32s} ← {s['sellerName']}")
         return
 
+    token = _need("APIFY_TOKEN")
     handles = list(candidates)
     found: dict[str, dict] = {}
     for i in range(0, len(handles), 50):
