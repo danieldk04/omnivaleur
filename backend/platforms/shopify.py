@@ -284,9 +284,10 @@ class ShopifyPlatform(PlatformBase):
     async def update_listing_price(self, platform_listing_id: str, price: float, credentials: dict) -> bool:
         shop, token = _shop_creds(credentials)
         if not shop or not token:
-            # Same single-store fallback the create/delete paths use.
-            shop = settings.shopify_shop_domain
-            token = settings.shopify_access_token
+            # Same single-store fallback the create/delete paths use: the globally
+            # configured store, whose token is fetched (and cached) on demand.
+            from backend.platforms.shopify_importer import _get_token
+            shop, token = settings.shopify_store, await _get_token()
         if not shop or not token:
             raise RuntimeError("No Shopify store connected")
         return await ShopifyClient(shop, token).update_price(platform_listing_id, price)
