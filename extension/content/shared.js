@@ -114,6 +114,8 @@ window.CL = (() => {
     document.querySelector(selector)?.scrollIntoView({ block: "center" });
     const ok = await runInMainWorld("FILL_DESC", { selector, text: value });
     if (!ok) throw new Error("Beschrijving kon niet in de editor worden gezet");
+    // Verlaat het veld: sommige formulieren nemen de tekst pas over bij blur.
+    await runInMainWorld("BLUR_DESC", { selector });
     return true;
   }
 
