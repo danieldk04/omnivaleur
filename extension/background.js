@@ -3040,16 +3040,17 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
       try {
         const resp = await fetch(msg.url);
         if (!resp.ok) { sendResponse({ ok: false, error: `HTTP ${resp.status}` }); return; }
-        const blob = await resp.blob();
+        const buf = new Uint8Array(await resp.arrayBuffer());
         // Blobs can't cross the message boundary — hand over a data: URL, which
-        // the content script turns straight back into a File.
-        const dataUrl = await new Promise((res, rej) => {
-          const fr = new FileReader();
-          fr.onload = () => res(fr.result);
-          fr.onerror = () => rej(fr.error);
-          fr.readAsDataURL(blob);
-        });
-        sendResponse({ ok: true, dataUrl });
+        // the content script turns straight back into a File. Encoded in chunks
+        // because String.fromCharCode(...buf) blows the argument limit on any
+        // real photo.
+        let bin = "";
+        for (let i = 0; i < buf.length; i += 0x8000) {
+          bin += String.fromCharCode.apply(null, buf.subarray(i, i + 0x8000));
+        }
+        const mime = resp.headers.get("content-type") || "image/jpeg";
+        sendResponse({ ok: true, dataUrl: `data:${mime};base64,${btoa(bin)}` });
       } catch (e) {
         console.error("[Omnivaleur] FETCH_PHOTO failed:", msg.url, e);
         sendResponse({ ok: false, error: String(e?.message || e) });
