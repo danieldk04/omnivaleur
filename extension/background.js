@@ -792,7 +792,18 @@ async function openWorkerTabInner(url, opts = {}) {
       }
       // active:true is scoped to THAT window, so it never steals focus from the
       // user's foreground window — and does not un-minimise it either.
-      return await chrome.tabs.create({ url, windowId: existing, active: true });
+      const tab = await chrome.tabs.create({ url, windowId: existing, active: true });
+      // Het vorige job-tabblad wordt pas 2 seconden NA afronding gesloten. Valt
+      // dat samen met het openen van het volgende, dan sluit Chrome het venster
+      // (laatste tabblad weg) en neemt het nieuwe tabblad meteen mee — het
+      // content-script sterft dan halverwege het invullen. Dat is precies waarom
+      // twee platforms achter elkaar misging en één platform alleen wel lukte.
+      // Controleer of het tabblad de tearing-down overleefde; anders een vers
+      // venster.
+      await new Promise(r => setTimeout(r, 150));
+      const alive = await chrome.tabs.get(tab.id).catch(() => null);
+      if (alive) return tab;
+      await chrome.storage.session.remove(WORKER_WIN_KEY).catch(() => {});
     } catch {
       await chrome.storage.session.remove(WORKER_WIN_KEY).catch(() => {});
     }
