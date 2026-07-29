@@ -641,6 +641,9 @@ window.CL = (() => {
            /^(plaats(en)?( je advertentie)?|upload|opslaan|publiceer(en)?|publish|save)$/i
              .test((b.textContent || "").trim()));
     if (!btn) throw new Error("Submit/Plaats-knop niet gevonden");
+    // Nogmaals het beschrijvingsveld verlaten: de laatste bewerking eraan kan
+    // van een herstelpoging hierboven komen, en dan staat de cursor er nog in.
+    if (_descriptionSelector) await runInMainWorld("BLUR_DESC", { selector: _descriptionSelector });
     btn.scrollIntoView({ block: "center" });
     await sleep(800); // Lexical commit is async — give it time before submit fires
     btn.click();
