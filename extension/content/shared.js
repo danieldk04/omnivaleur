@@ -427,10 +427,20 @@ window.CL = (() => {
   // permissions, so it succeeds where the page cannot. Try the page first (no
   // round-trip, no base64), fall back to the worker, and log why each failed.
   async function fetchFile(url, opts = {}) {
-    const name = url.split("/").pop()?.split("?")[0] || "photo.jpg";
+    // Always land on a .jpg name: photos imported from Vinted are .webp, and a
+    // File called "abc.webp" labelled image/jpeg is exactly the kind of mismatch
+    // an uploader rejects.
+    const base = (url.split("/").pop()?.split("?")[0] || "photo").replace(/\.[a-z0-9]+$/i, "");
+    const name = `${base || "photo"}.jpg`;
     const finish = async (blob) => {
-      const finalBlob = opts.jitter ? await jitterImage(blob) : blob;
-      return new File([finalBlob], name, { type: "image/jpeg" });
+      // Marktplaats accepts bmp/jpg/jpeg/png/heic — NOT webp (verified live on
+      // the SYI file input). Vinted serves every photo as webp, so an imported
+      // item's photos were rejected even when the download itself succeeded.
+      // Re-encode anything that isn't already JPEG.
+      let out = blob;
+      if (opts.jitter) out = await jitterImage(blob);
+      else if (!/jpe?g$/i.test(blob.type || "")) out = await toJpeg(blob);
+      return new File([out], name, { type: "image/jpeg" });
     };
     try {
       const resp = await fetch(url);
