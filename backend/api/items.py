@@ -2,7 +2,10 @@ from fastapi import APIRouter, HTTPException, Depends
 from backend.models import ItemCreate, ItemOut
 from backend.database import get_db
 from backend.api.deps import get_current_user
+import logging
 import uuid
+
+logger = logging.getLogger(__name__)
 
 _PENDING_COLUMNS = set()
 
