@@ -73,7 +73,7 @@
     await step("condition",    () => selectDropdown("Conditie", CONDITION_MAP[item.condition] || "Zo goed als nieuw"));
     await sleep(400); // let React re-render kenmerken after condition selection
     await step("size",         () => item.size && selectDropdown(["Maat", "Jeansmaat", "Maat (cm)", "Maat bovenstuk", "Maat onderstuk"], item.size));
-    await step("color",        () => item.color && selectDropdown("Kleur", item.color));
+    await step("color",        () => item.color && selectDropdown("Kleur", dutchColor(item.color)));
     await step("brand",        () => item.brand && fillBrand(item.brand));
     await step("manufacturer", () => fillManufacturer(item));
     await step("delivery",     () => { clickRadioByValue("Ophalen of Verzenden"); selectBundleFree(); });
