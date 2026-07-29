@@ -1,0 +1,106 @@
+"""
+Copy photos from a marketplace CDN into our own Supabase Storage.
+
+Imported listings used to keep the SOURCE url (e.g. images1.vinted.net). That
+broke publishing in two ways, both confirmed live:
+
+  * Vinted's CDN refuses a cross-origin fetch from marktplaats.nl, so the
+    extension — which downloads from the marketplace page's origin — could never
+    read those photos. The item published without a single image.
+  * Those urls are signed and can expire, so even a working item can silently
+    lose its photos later.
+
+Mirroring at import time removes both. The backend has no CORS to satisfy and
+the resulting url lives on our own public bucket, which every channel (and the
+extension) can read.
+
+Best-effort by design: a photo we can't copy keeps its original url, so an
+import never loses an image just because the mirror failed.
+"""
+from __future__ import annotations
+
+import asyncio
+import hashlib
+import logging
+import mimetypes
+
+from backend.services.image_upload import upload_image
+
+logger = logging.getLogger(__name__)
+
+MAX_BYTES = 15 * 1024 * 1024          # skip anything absurd; listing photos are ~1 MB
+MAX_CONCURRENCY = 5                    # polite to the source CDN, still quick
+REQUEST_TIMEOUT = 30.0
+
+# Hosts that already serve our own storage — mirroring those again would just
+# duplicate bytes on every re-import.
+_OWN_HOSTS = ("supabase.co", "supabase.in")
+
+_EXT_BY_TYPE = {
+    "image/jpeg": "jpg", "image/jpg": "jpg", "image/png": "png",
+    "image/webp": "webp", "image/gif": "gif", "image/heic": "heic",
+    "image/heif": "heif", "image/bmp": "bmp",
+}
+
+# Vinted (and most CDNs) reject requests without a normal browser fingerprint.
+_HEADERS = {
+    "User-Agent": ("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 "
+                   "(KHTML, like Gecko) Chrome/122.0 Safari/537.36"),
+    "Accept": "image/avif,image/webp,image/apng,image/*,*/*;q=0.8",
+}
+
+
+def is_mirrored(url: str) -> bool:
+    return isinstance(url, str) and any(h in url for h in _OWN_HOSTS)
+
+
+async def mirror_photos(urls: list[str] | None, user_id: str) -> list[str]:
+    """Copy every remote photo into our bucket. Returns the urls to store.
+
+    Order is preserved — the first photo is the listing's main image on several
+    platforms, so shuffling here would change how items look.
+    """
+    if not urls:
+        return []
+    urls = [u for u in urls if isinstance(u, str) and u.startswith(("http://", "https://"))]
+    if not urls:
+        return []
+
+    import httpx
+
+    sem = asyncio.Semaphore(MAX_CONCURRENCY)
+
+    async def one(client: "httpx.AsyncClient", url: str) -> str:
+        if is_mirrored(url):
+            return url
+        async with sem:
+            try:
+                resp = await client.get(url, headers=_HEADERS, follow_redirects=True)
+                if resp.status_code != 200:
+                    logger.warning("photo mirror: %s returned HTTP %s", url[:120], resp.status_code)
+                    return url
+                data = resp.content
+                if not data or len(data) > MAX_BYTES:
+                    logger.warning("photo mirror: %s has unusable size %s", url[:120], len(data or b""))
+                    return url
+
+                content_type = (resp.headers.get("content-type") or "").split(";")[0].strip().lower()
+                if not content_type.startswith("image/"):
+                    logger.warning("photo mirror: %s is not an image (%s)", url[:120], content_type)
+                    return url
+
+                ext = (_EXT_BY_TYPE.get(content_type)
+                       or (mimetypes.guess_extension(content_type) or ".jpg").lstrip("."))
+                # Content-addressed: re-importing the same listing, or two items
+                # sharing a photo, reuses one object instead of growing the bucket
+                # every time. Still namespaced per user, so nothing is shared
+                # across accounts.
+                digest = hashlib.sha256(data).hexdigest()[:32]
+                path = f"{user_id}/imported/{digest}.{ext}"
+                return await upload_image(data, path)
+            except Exception as e:  # noqa: BLE001 - keep the original url, never fail the import
+                logger.warning("photo mirror failed for %s: %s", url[:120], e)
+                return url
+
+    async with httpx.AsyncClient(timeout=REQUEST_TIMEOUT) as client:
+        return list(await asyncio.gather(*(one(client, u) for u in urls)))
