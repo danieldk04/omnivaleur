@@ -50,10 +50,10 @@ HASHTAG_ACTOR = "apify~instagram-hashtag-scraper"
 # "tweedehands kleding" noemt zit in NL/BE. Engelse termen als "thrift" halen de
 # halve wereld binnen.
 QUERIES = [
-    "vintage kleding", "tweedehands kleding", "kringloop", "kringloopwinkel",
-    "vintage winkel", "tweedehands winkel", "vintage shop nederland",
-    "thriftshop nl", "vintage meubels", "brocante", "curiosa",
-    "preloved kleding", "vintage sieraden", "retro winkel",
+    "vinted verkoper", "kleding reseller", "sneaker reseller",
+    "vintage kleding", "tweedehands kleding", "preloved kleding",
+    "vintage shop nederland", "kledingwebshop", "sneaker store",
+    "tweedehands games", "retro games winkel",
 ]
 
 # Gericht op RESELLERS, niet op kringloopwinkels. De eerste versie van deze lijst
