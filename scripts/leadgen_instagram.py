@@ -224,32 +224,60 @@ def enrich(args) -> None:
 
 
 PROMPT = """Je beoordeelt of een Instagram-account een goede lead is voor Omnivaleur,
-een tool waarmee tweedehands-verkopers hun advertenties in één keer op Marktplaats,
-2dehands, Vinted, eBay en Shopify zetten.
+een tool waarmee verkopers hun advertenties in één keer op Marktplaats, 2dehands,
+Vinted, eBay en Shopify zetten. De waarde zit in MEER en SNELLER verkopen.
 
-Een GOEDE lead verkoopt zelf structureel tweedehands, vintage of kringloopspullen:
-een winkel, een reseller, een thriftshop-account, een vintage-webshop.
-Een SLECHTE lead is een consument, een koper, een reviewer of haul-account, een
-influencer, een merk dat nieuw verkoopt, of een account dat alleen in het buitenland
-verkoopt en niets met Nederland of België te maken heeft.
+Een goede lead moet aan ALLE DRIE voldoen:
+ 1. COMMERCIEEL MOTIEF — verkoopt om geld te verdienen, niet als hobby of goed doel.
+    Signalen: inkoopt om door te verkopen, praat over voorraad/drops/restock/omzet,
+    heeft een webshop, verkoopt in volume, noemt verzendkosten of levertijden.
+ 2. VERZENDBARE SPULLEN — kleding, schoenen, sneakers, tassen, sieraden, horloges,
+    accessoires, games, consoles, elektronica, telefoons, boeken. Dus GEEN meubels,
+    kasten, banken, interieur of andere grote stukken die je niet in een doos doet.
+ 3. NL/BE — Nederlandstalig of aantoonbaar in Nederland of België actief.
+
+Wijs af (is_lead = false), ook al lijkt het op tweedehands:
+ * KRINGLOOPWINKELS, goede doelen, vrijwilligerswinkels (Dorcas, Vincentius, Rode
+   Kruis, Woord en Daad, kerkelijke winkels). Die verkopen niet om winst, werken met
+   vrijwilligers, verzenden meestal niet en hebben geen crosslist-probleem.
+ * Brocante-, antiek-, meubel- en interieurverkopers. Onverzendbaar, en het is voor
+   hen vaak liefhebberij in plaats van omzet.
+ * Consumenten, kopers, reviewers, haul-accounts, influencers zonder eigen voorraad.
+ * Merken die nieuw produceren en verkopen.
+ * Accounts die alleen buiten NL/BE actief zijn.
+
+De ideale lead is de serieuze reseller: iemand die op Vinted, Marktplaats of eBay
+verkoopt, kleding of sneakers doorverkoopt, of een tweedehands-webshop runt, en die
+zijn voorraad nu handmatig op meerdere plekken moet zetten.
 
 Account:
   @{handle} — {full_name}
   volgers: {followers}, posts: {posts}
   bio: {bio}
   website: {website}
-  categorie: {category}
+  categorie volgens Instagram: {category}
   e-mail: {email}
+  gevonden via: {hint}
   recente bijschriften: {captions}
 
 Antwoord met UITSLUITEND JSON:
 {{"is_lead": true/false,
   "confidence": 0-100,
+  "verkopertype": "reseller|webshop|winkel|kringloop|meubels|consument|influencer|merk|onduidelijk",
+  "verzendbaar": true/false,
+  "commercieel": true/false,
   "reden": "één zin, Nederlands",
   "verkoopt_vooral": "Kleding|Meubilair|Alles|Antieke vintage|Hoogwaardige vintage|Vintage jewelry|Vintage interieur|Sieraden|Knutselmaterialen",
   "verkoop_op": "Eigen website|Fysieke winkel|Marktplaats|Instagram|Vinted|Onbekend|Vinted en eigen website",
   "je_jullie": "Je|Jullie",
   "language": "NL|EN"}}"""
+
+# Typen die het model wel als "lead" kan markeren maar die je niet wilt benaderen.
+# Het oordeel van het model op de drie losse assen (type/verzendbaar/commercieel) is
+# betrouwbaarder dan zijn eigen is_lead-vlag, want dat laatste vat te veel samen —
+# de eerste ronde leverde kringloopwinkels op met is_lead=true en een keurige
+# onderbouwing erbij.
+REJECT_TYPES = {"kringloop", "meubels", "consument", "influencer", "merk"}
 
 
 def _classify_rows(rows: list[dict], min_confidence: int, quiet: bool = False) -> list[dict]:
