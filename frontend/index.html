@@ -4,12 +4,12 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Omnivaleur — One click, all European marketplaces</title>
-<meta name="description" content="Omnivaleur publishes your items to Marktplaats, 2dehands, Vinted, eBay and Shopify with one click. Import your existing listings, AI writes them from your photos, auto-relist every 27 days, profit analytics and one inbox for messages and bids. 7-day free trial.">
+<meta name="description" content="Omnivaleur publishes your items to Marktplaats, 2dehands, Vinted, eBay and Shopify with one click, each in the right language. Import your existing listings, auto-relist every 27 days, profit analytics and one inbox for messages and bids. 7-day free trial.">
 <link rel="canonical" href="https://omnivaleur.com/">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Omnivaleur">
 <meta property="og:title" content="Omnivaleur — One click, all European marketplaces">
-<meta property="og:description" content="List once, publish everywhere. Import your existing listings, sync across Marktplaats, 2dehands, Vinted, eBay and Shopify, and track real profit — with automatic relisting and AI-written listings.">
+<meta property="og:description" content="List once, publish everywhere. Import your existing listings, sync across Marktplaats, 2dehands, Vinted, eBay and Shopify, and track real profit — with automatic relisting and per-platform translation.">
 <meta property="og:url" content="https://omnivaleur.com/">
 <meta property="og:image" content="https://omnivaleur.com/logo.png">
 <meta name="twitter:card" content="summary_large_image">
@@ -32,11 +32,12 @@
   "name": "Omnivaleur",
   "applicationCategory": "BusinessApplication",
   "operatingSystem": "Web",
-  "description": "Cross-listing tool that publishes items to Marktplaats, 2dehands, Vinted, eBay and Shopify from one dashboard, with bulk import of existing listings, AI-generated listings from photos, automatic relisting, profit analytics, stale-stock repricing and a combined inbox for messages and bids.",
+  "description": "Cross-listing tool that publishes items to Marktplaats, 2dehands, Vinted, eBay and Shopify from one dashboard, with bulk import of existing listings, automatic per-platform translation, automatic relisting, profit analytics, stale-stock repricing and a combined inbox for messages and bids.",
   "featureList": [
     "Publish one item to Marktplaats, 2dehands, Vinted, eBay and Shopify at once",
-    "AI vision writes title, description, brand, size and condition from your photos",
-    "Import existing Vinted, Marktplaats and 2dehands listings in bulk",
+    "Automatic Dutch/English translation per platform, on every publish and relist",
+    "Import existing Vinted, Marktplaats and 2dehands listings in bulk, with automatic categorisation",
+    "A separate selling price per platform, per item",
     "Automatic relisting after 27 days and Vinted listing refresh",
     "Auto-delist on every other platform when an item sells",
     "Revenue, profit and margin analytics per platform",
@@ -168,6 +169,8 @@ nav { position: sticky; top: 0; z-index: 100; background: rgba(255,255,255,.95);
 .platform-logos { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; margin-top: 52px; }
 .platform-chip { background: var(--surface); border: 1px solid var(--border); border-radius: 100px; padding: 8px 18px; font-size: 13px; font-weight: 500; color: var(--muted); display: flex; align-items: center; gap: 7px; box-shadow: 0 1px 4px rgba(0,0,0,.05); }
 .platform-chip.soon { opacity: .55; border-style: dashed; }
+.platform-chip.beta { border-color: rgba(245,158,11,.45); }
+.beta-label { font-size: 10px; font-weight: 700; color: #b45309; background: rgba(245,158,11,.14); padding: 1px 6px; border-radius: 100px; letter-spacing: .03em; text-transform: uppercase; }
 .platform-logo { height: 16px; width: auto; max-width: 20px; object-fit: contain; display: block; }
 .soon-label { font-size: 10px; font-weight: 700; color: #d97706; background: rgba(245,158,11,.1); padding: 1px 6px; border-radius: 100px; letter-spacing: .03em; }
 
@@ -435,7 +438,7 @@ nav { position: sticky; top: 0; z-index: 100; background: rgba(255,255,255,.95);
 <section class="hero">
   <div class="hero-badge">⚡ Save hours every week</div>
   <h1>One item. <span class="grad-text">All European marketplaces.</span></h1>
-  <p>Stop copy-pasting. Omnivaleur lists your second-hand items on Marktplaats, 2dehands, Vinted, eBay and Shopify at once — imports what you already sell, writes the listing from your photos and pulls it all offline the moment something sells.</p>
+  <p>Stop copy-pasting. Omnivaleur lists your second-hand items on Marktplaats, 2dehands, Vinted, eBay and Shopify at once — imports what you already sell, translates each listing into the platform's own language, and pulls everything offline the moment one sells.</p>
   <div class="hero-cta">
     <a href="/register" class="btn btn-primary">Start 7-day free trial →</a>
     <a href="/login" class="btn btn-outline">Log in</a>
@@ -452,10 +455,10 @@ nav { position: sticky; top: 0; z-index: 100; background: rgba(255,255,255,.95);
     <div class="platform-chip"><img class="platform-logo" src="/assets/logos/vinted.png" alt="Vinted logo"> Vinted</div>
     <div class="platform-chip"><img class="platform-logo" src="/assets/logos/ebay.webp" alt="eBay logo"> eBay</div>
     <div class="platform-chip"><img class="platform-logo" src="/assets/logos/shopify.webp" alt="Shopify logo"> Shopify</div>
+    <div class="platform-chip beta"><img class="platform-logo" src="/assets/logos/facebook.svg" alt="Facebook Marketplace logo"> Facebook Marketplace <span class="beta-label">beta</span></div>
     <div class="platform-chip soon"><img class="platform-logo" src="/assets/logos/etsy.svg" alt="Etsy logo"> Etsy <span class="soon-label">coming soon</span></div>
     <div class="platform-chip soon"><img class="platform-logo" src="/assets/logos/kleinanzeigen.svg" alt="Kleinanzeigen logo"> Kleinanzeigen <span class="soon-label">coming soon</span></div>
     <div class="platform-chip soon"><img class="platform-logo" src="/assets/logos/wallapop.png" alt="Wallapop logo"> Wallapop <span class="soon-label">coming soon</span></div>
-    <div class="platform-chip soon"><img class="platform-logo" src="/assets/logos/facebook.svg" alt="Facebook Marketplace logo"> Facebook Marketplace <span class="soon-label">coming soon</span></div>
   </div>
 </section>
 
@@ -590,13 +593,13 @@ nav { position: sticky; top: 0; z-index: 100; background: rgba(255,255,255,.95);
         <!-- Import -->
         <div class="tour-panel" data-panel="import">
           <h3>Import listings</h3>
-          <p class="tour-lead">Already selling? Scan your existing Vinted, Marktplaats and 2dehands listings and pull them in — with brand, size, colour, condition and photos parsed out automatically.</p>
+          <p class="tour-lead">Already selling? Scan your existing Vinted, Marktplaats and 2dehands listings and pull them in — brand, size, colour, condition and photos are parsed out, and each item is sorted into the right category automatically.</p>
           <div class="tp-rows">
             <div class="tp-row"><div class="tp-thumb">🔍</div><div class="tp-row-main"><div class="tp-row-title">Scan finished — 84 listings found</div><div class="tp-row-sub">Vinted 41 · Marktplaats 29 · 2dehands 14</div></div><div class="tp-badges"><span class="tp-badge ok">Done</span></div></div>
             <div class="tp-row"><div class="tp-thumb">🔗</div><div class="tp-row-main"><div class="tp-row-title">62 matched to items you already have</div><div class="tp-row-sub">Linked, so they're never imported twice</div></div><div class="tp-badges"><span class="tp-badge info">Linked</span></div></div>
             <div class="tp-row"><div class="tp-thumb">✨</div><div class="tp-row-main"><div class="tp-row-title">22 new items ready to bulk-import</div><div class="tp-row-sub">Photos copied to our own storage first</div></div><div class="tp-badges"><span class="tp-badge warn">Review</span></div></div>
           </div>
-          <div class="tour-note">Imported photos are <b>mirrored into Omnivaleur's own storage</b>. Marketplace CDN links are signed and expire — a mirrored photo still publishes to the next platform months later.</div>
+          <div class="tour-note">Imported photos are <b>mirrored into Omnivaleur's own storage</b>. Marketplace CDN links are signed and expire — a mirrored photo still publishes to the next platform months later. Categorisation that isn't confident is flagged for you instead of guessed.</div>
         </div>
 
         <!-- Refresh -->
@@ -659,7 +662,9 @@ nav { position: sticky; top: 0; z-index: 100; background: rgba(255,255,255,.95);
             <div class="tp-row"><div class="tp-thumb">👗</div><div class="tp-row-main"><div class="tp-row-title">Vinted</div><div class="tp-row-sub">Via extension · publish, refresh, order sync</div></div><div class="tp-badges"><span class="tp-badge ok">Connected</span></div></div>
             <div class="tp-row"><div class="tp-thumb">🛒</div><div class="tp-row-main"><div class="tp-row-title">eBay</div><div class="tp-row-sub">Official API · OAuth, category suggestions, webhooks</div></div><div class="tp-badges"><span class="tp-badge ok">Connected</span></div></div>
             <div class="tp-row"><div class="tp-thumb">🏬</div><div class="tp-row-main"><div class="tp-row-title">Shopify</div><div class="tp-row-sub">Official API · product sync + paid-order webhook</div></div><div class="tp-badges"><span class="tp-badge info">Connect</span></div></div>
+            <div class="tp-row"><div class="tp-thumb">📘</div><div class="tp-row-main"><div class="tp-row-title">Facebook Marketplace</div><div class="tp-row-sub">Via extension · publishing works, but Facebook detects automation</div></div><div class="tp-badges"><span class="tp-badge warn">Beta — your own risk</span></div></div>
           </div>
+          <div class="tour-note" style="border-top-color:#fde68a;background:#fffbeb;border-radius:8px;padding:10px 12px;border-top:0;color:#92400e;margin-top:12px"><b>About that beta.</b> Facebook doesn't officially allow automated listing and actively looks for it. Publishing runs in your own logged-in Chrome, but there is a real chance Facebook flags or blocks your account — so use it deliberately, ideally on a separate account. The app tells you the same thing before you switch it on.</div>
           <div class="tour-note">Sell something anywhere and the sale flows back automatically — eBay and Shopify through webhooks, the extension platforms through polling — after which every other listing for that item comes down.</div>
         </div>
 
@@ -679,8 +684,8 @@ nav { position: sticky; top: 0; z-index: 100; background: rgba(255,255,255,.95);
     <div class="stat-label">Auto-relist before expiry</div>
   </div>
   <div class="stat-item">
-    <div class="stat-num">AI</div>
-    <div class="stat-label">Listing written from your photos</div>
+    <div class="stat-num">NL&nbsp;↔&nbsp;EN</div>
+    <div class="stat-label">Auto-translated per platform</div>
   </div>
   <div class="stat-item">
     <div class="stat-num" data-count="1">0</div>
@@ -741,9 +746,9 @@ nav { position: sticky; top: 0; z-index: 100; background: rgba(255,255,255,.95);
       <p>Upload your item once and choose which platforms to publish to. Omnivaleur posts it everywhere simultaneously.</p>
     </div>
     <div class="feature-card">
-      <div class="feature-icon">🤖</div>
-      <h3>AI listings from a photo</h3>
-      <p>Upload your photos and AI vision reads the label: brand, type, size, colour, material and condition — then writes a fitting title and description for each platform separately.</p>
+      <div class="feature-icon">🌐</div>
+      <h3>Every listing in the right language</h3>
+      <p>You write it once. Marktplaats and 2dehands get Dutch, Vinted, eBay and Shopify get English — translated automatically on every publish <em>and</em> every relist, with brand names left untouched.</p>
     </div>
     <div class="feature-card">
       <div class="feature-icon">⬇️</div>
@@ -908,7 +913,7 @@ nav { position: sticky; top: 0; z-index: 100; background: rgba(255,255,255,.95);
         <div class="step-num">1</div>
         <div class="step-text">
           <h3>Create an item</h3>
-          <p>Upload photos, fill in brand and size. The AI writes the description and suggests a price based on your purchase cost.</p>
+          <p>Upload photos, fill in brand, size and condition. The margin calculator turns your purchase price into a minimum selling price per platform, fees included.</p>
         </div>
       </div>
       <div class="step" data-step="2">
@@ -974,7 +979,7 @@ nav { position: sticky; top: 0; z-index: 100; background: rgba(255,255,255,.95);
       <ul style="list-style:none;padding:0;margin:0 0 32px;text-align:left;display:flex;flex-direction:column;gap:12px">
         <li style="display:flex;align-items:center;gap:12px;font-size:15px"><span style="color:#16a34a;font-weight:800;font-size:17px">✓</span> Unlimited crosslisting</li>
         <li style="display:flex;align-items:center;gap:12px;font-size:15px"><span style="color:#16a34a;font-weight:800;font-size:17px">✓</span> Marktplaats, 2dehands, Vinted, eBay &amp; Shopify</li>
-        <li style="display:flex;align-items:center;gap:12px;font-size:15px"><span style="color:#16a34a;font-weight:800;font-size:17px">✓</span> AI listings written from your photos</li>
+        <li style="display:flex;align-items:center;gap:12px;font-size:15px"><span style="color:#16a34a;font-weight:800;font-size:17px">✓</span> A separate selling price per platform, per item</li>
         <li style="display:flex;align-items:center;gap:12px;font-size:15px"><span style="color:#16a34a;font-weight:800;font-size:17px">✓</span> Import your existing listings in bulk</li>
         <li style="display:flex;align-items:center;gap:12px;font-size:15px"><span style="color:#16a34a;font-weight:800;font-size:17px">✓</span> Auto-delist when sold</li>
         <li style="display:flex;align-items:center;gap:12px;font-size:15px"><span style="color:#16a34a;font-weight:800;font-size:17px">✓</span> Auto-relist every 27 days + Vinted refresh</li>
