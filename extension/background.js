@@ -2954,21 +2954,6 @@ async function _mwFillDescription(selector, descText) {
     if (structureOk()) return true;
   } catch (_) {}
 
-  // ── Approach 4: ClipboardEvent paste ─────────────────────────────────────
-  // A real paste carries the newlines in text/plain, so editors that ignore
-  // every explicit break command usually still reproduce the paragraphs here.
-  try {
-    const dt = new DataTransfer();
-    dt.setData("text/plain", descText);
-    el.focus();
-    document.execCommand("selectAll", false, null);
-    el.dispatchEvent(new ClipboardEvent("paste", {
-      clipboardData: dt, bubbles: true, cancelable: true,
-    }));
-    await sleep(400);
-    if (structureOk()) return true;
-  } catch (_) {}
-
   // Every strategy failed to keep the paragraph structure. Text that landed at
   // all still beats an empty description, so report on content as a last resort.
   return lexHasText();
