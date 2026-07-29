@@ -188,9 +188,15 @@ def _enrich_rows(rows: list[dict], token: str, batch: int = 50) -> list[dict]:
                 "email": _clean(row.get("business_email")),
                 "category": _clean(row.get("category_name")),
                 "private": bool(row.get("is_private")),
-                "captions": [(p.get("caption") or "")[:240]
-                             for p in (row.get("latestPosts") or [])[:4]],
-            })
+                    "captions": [(p.get("caption") or "")[:240]
+                                 for p in (row.get("latestPosts") or [])[:4]],
+                })
+
+    missing = [r["handle"] for r in rows if not r.get("enriched")]
+    if missing:
+        print(f"  · {len(missing)} profielen bleven onbereikbaar: "
+              f"{', '.join(missing[:6])}{' …' if len(missing) > 6 else ''}")
+        print("    Die blijven in handles.json staan; een latere 'enrich' pakt ze op.")
     return rows
 
 
