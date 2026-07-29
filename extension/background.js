@@ -2774,8 +2774,12 @@ async function _mwReadNotifCounts(platform) {
 
 async function _mwFillDescription(selector, descText) {
   const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
-  const el = document.querySelector(selector);
-  if (!el) return false;
+  const found = document.querySelector(selector);
+  if (!found) return false;
+  // Wijst de selector naar een omhulsel in plaats van het bewerkbare veld zelf,
+  // dan gaan focus en execCommand naar het verkeerde element en landt er niets.
+  const el = found.isContentEditable ? found
+    : (found.querySelector('[contenteditable="true"]') || found);
 
   el.scrollIntoView({ block: "center" });
   el.focus();
