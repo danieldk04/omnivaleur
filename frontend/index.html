@@ -4,12 +4,12 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Omnivaleur — One click, all European marketplaces</title>
-<meta name="description" content="Omnivaleur publishes your items to Marktplaats, 2dehands, Vinted, eBay and Shopify with one click. Automatic relisting every 27 days, AI-written descriptions and a margin calculator. 7-day free trial.">
+<meta name="description" content="Omnivaleur publishes your items to Marktplaats, 2dehands, Vinted, eBay and Shopify with one click. Import your existing listings, AI writes them from your photos, auto-relist every 27 days, profit analytics and one inbox for messages and bids. 7-day free trial.">
 <link rel="canonical" href="https://omnivaleur.com/">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Omnivaleur">
 <meta property="og:title" content="Omnivaleur — One click, all European marketplaces">
-<meta property="og:description" content="List once, publish everywhere. Sync your listings across Marktplaats, 2dehands, Vinted, eBay and Shopify — with automatic relisting and AI descriptions.">
+<meta property="og:description" content="List once, publish everywhere. Import your existing listings, sync across Marktplaats, 2dehands, Vinted, eBay and Shopify, and track real profit — with automatic relisting and AI-written listings.">
 <meta property="og:url" content="https://omnivaleur.com/">
 <meta property="og:image" content="https://omnivaleur.com/logo.png">
 <meta name="twitter:card" content="summary_large_image">
@@ -32,7 +32,18 @@
   "name": "Omnivaleur",
   "applicationCategory": "BusinessApplication",
   "operatingSystem": "Web",
-  "description": "Cross-listing tool that publishes items to Marktplaats, 2dehands, Vinted, eBay and Shopify from one dashboard, with automatic relisting and AI-generated descriptions.",
+  "description": "Cross-listing tool that publishes items to Marktplaats, 2dehands, Vinted, eBay and Shopify from one dashboard, with bulk import of existing listings, AI-generated listings from photos, automatic relisting, profit analytics, stale-stock repricing and a combined inbox for messages and bids.",
+  "featureList": [
+    "Publish one item to Marktplaats, 2dehands, Vinted, eBay and Shopify at once",
+    "AI vision writes title, description, brand, size and condition from your photos",
+    "Import existing Vinted, Marktplaats and 2dehands listings in bulk",
+    "Automatic relisting after 27 days and Vinted listing refresh",
+    "Auto-delist on every other platform when an item sells",
+    "Revenue, profit and margin analytics per platform",
+    "Stale-stock repricing suggestions",
+    "Combined inbox for unread messages and open bids",
+    "Margin calculator including per-platform fees"
+  ],
   "offers": {
     "@type": "Offer",
     "price": "19.99",
@@ -286,6 +297,101 @@ nav { position: sticky; top: 0; z-index: 100; background: rgba(255,255,255,.95);
   .cta-block { padding: 60px 20px; }
   .footer-main { grid-template-columns: 1fr; }
 }
+
+/* ── PRODUCT TOUR (mirrors the real app's sidebar 1:1) ─────────────── */
+.tour { background: linear-gradient(180deg, #fff 0%, var(--bg) 100%); padding: 80px 40px; border-top: 1px solid var(--border); }
+.tour-inner { max-width: 1100px; margin: 0 auto; }
+.tour-grid { display: grid; grid-template-columns: 260px 1fr; gap: 32px; margin-top: 44px; align-items: start; }
+.tour-nav { display: flex; flex-direction: column; gap: 4px; position: sticky; top: 88px; }
+.tour-nav-label { font-size: 10.5px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); opacity: .7; margin: 14px 0 6px 12px; }
+.tour-nav-label:first-child { margin-top: 0; }
+.tour-item { display: flex; align-items: center; gap: 10px; padding: 10px 14px; border-radius: 10px; font-size: 13.5px; font-weight: 600; color: var(--muted); cursor: pointer; border: 1px solid transparent; background: transparent; text-align: left; width: 100%; position: relative; overflow: hidden; transition: color .25s, background .25s, border-color .25s, transform .25s; }
+.tour-item:hover { color: var(--text); background: rgba(37,99,235,.05); }
+.tour-item.active { color: var(--text); background: #fff; border-color: var(--border); box-shadow: 0 4px 18px rgba(15,23,42,.06); transform: translateX(2px); }
+.tour-item-icon { width: 26px; height: 26px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 13px; background: rgba(37,99,235,.08); flex-shrink: 0; transition: background .25s, transform .25s; }
+.tour-item.active .tour-item-icon { background: linear-gradient(135deg, rgba(37,99,235,.16), rgba(52,211,153,.16)); transform: scale(1.06); }
+.tour-item-bar { position: absolute; left: 0; bottom: 0; height: 2px; width: 100%; transform-origin: left; transform: scaleX(0); background: linear-gradient(90deg, var(--blue), var(--mint)); }
+.tour-item.active .tour-item-bar { animation: tourProgress var(--tour-dur, 5s) linear forwards; }
+.tour-paused .tour-item.active .tour-item-bar { animation-play-state: paused; }
+@keyframes tourProgress { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+
+.tour-stage { background: #fff; border: 1px solid var(--border); border-radius: 16px; box-shadow: 0 20px 50px -24px rgba(15,23,42,.28); overflow: hidden; min-height: 430px; position: relative; }
+.tour-stage-bar { display: flex; align-items: center; gap: 8px; padding: 12px 16px; border-bottom: 1px solid var(--border); background: #fbfdff; }
+.tour-stage-bar .browser-dot { width: 9px; height: 9px; }
+.tour-stage-crumb { font-size: 11.5px; font-weight: 600; color: var(--muted); margin-left: 6px; }
+.tour-panel { display: none; padding: 24px; }
+.tour-panel.active { display: block; }
+.tour-panel.active > * { animation: tourIn .5s cubic-bezier(.2,.7,.2,1) both; }
+.tour-panel.active > *:nth-child(2) { animation-delay: .06s; }
+.tour-panel.active > *:nth-child(3) { animation-delay: .12s; }
+.tour-panel.active > *:nth-child(4) { animation-delay: .18s; }
+@keyframes tourIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+.tour-panel h3 { font-size: 18px; font-weight: 800; letter-spacing: -.3px; margin-bottom: 6px; }
+.tour-panel .tour-lead { font-size: 13.5px; color: var(--muted); line-height: 1.65; margin-bottom: 18px; max-width: 620px; }
+.tour-note { font-size: 12px; color: var(--muted); line-height: 1.6; border-top: 1px solid var(--border); padding-top: 12px; margin-top: 16px; }
+.tour-note b { color: var(--text); }
+
+/* mini UI primitives used inside the panels */
+.tp-kpis { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+.tp-kpi { border: 1px solid var(--border); border-radius: 10px; padding: 12px 14px; background: #fff; }
+.tp-kpi-label { font-size: 10.5px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; color: var(--muted); }
+.tp-kpi-val { font-size: 20px; font-weight: 800; letter-spacing: -.5px; margin-top: 4px; }
+.tp-kpi-sub { font-size: 11px; color: #16a34a; font-weight: 600; margin-top: 2px; }
+.tp-rows { display: flex; flex-direction: column; gap: 8px; }
+.tp-row { display: flex; align-items: center; gap: 12px; border: 1px solid var(--border); border-radius: 10px; padding: 10px 12px; background: #fff; transition: border-color .25s, box-shadow .25s, transform .25s; }
+.tp-row:hover { border-color: rgba(37,99,235,.35); box-shadow: 0 6px 20px rgba(37,99,235,.08); transform: translateY(-1px); }
+.tp-thumb { width: 34px; height: 34px; border-radius: 8px; background: linear-gradient(135deg, #eff6ff, #ecfdf5); display: flex; align-items: center; justify-content: center; font-size: 16px; flex-shrink: 0; }
+.tp-row-main { flex: 1; min-width: 0; }
+.tp-row-title { font-size: 13px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tp-row-sub { font-size: 11.5px; color: var(--muted); margin-top: 2px; }
+.tp-badges { display: flex; gap: 5px; flex-wrap: wrap; justify-content: flex-end; }
+.tp-badge { font-size: 10.5px; font-weight: 700; padding: 3px 9px; border-radius: 999px; background: #f1f5f9; color: var(--muted); white-space: nowrap; }
+.tp-badge.ok { background: #dcfce7; color: #16a34a; }
+.tp-badge.warn { background: #fef3c7; color: #b45309; }
+.tp-badge.info { background: #dbeafe; color: #1d4ed8; }
+.tp-badge.mute { background: #f1f5f9; color: #94a3b8; }
+.tp-tabs { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 14px; }
+.tp-tab { font-size: 12px; font-weight: 700; padding: 6px 12px; border-radius: 999px; border: 1px solid var(--border); color: var(--muted); background: #fff; }
+.tp-tab.on { border-color: transparent; background: linear-gradient(135deg, var(--blue), var(--mint)); color: #fff; }
+.tp-tab span { opacity: .75; font-weight: 600; margin-left: 4px; }
+.tp-chart { display: flex; align-items: flex-end; gap: 10px; height: 130px; padding: 12px 4px 0; border-bottom: 1px solid var(--border); }
+.tp-bar { flex: 1; border-radius: 6px 6px 0 0; background: linear-gradient(180deg, var(--blue), var(--mint)); transform-origin: bottom; animation: tpGrow .7s cubic-bezier(.2,.7,.2,1) both; }
+.tp-bar:nth-child(2) { animation-delay: .05s; } .tp-bar:nth-child(3) { animation-delay: .1s; }
+.tp-bar:nth-child(4) { animation-delay: .15s; } .tp-bar:nth-child(5) { animation-delay: .2s; }
+.tp-bar:nth-child(6) { animation-delay: .25s; } .tp-bar:nth-child(7) { animation-delay: .3s; }
+@keyframes tpGrow { from { transform: scaleY(0); opacity: .4; } to { transform: scaleY(1); opacity: 1; } }
+.tp-legend { display: flex; gap: 16px; font-size: 11.5px; color: var(--muted); margin-top: 10px; }
+.tp-split { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.tp-panel { border: 1px solid var(--border); border-radius: 12px; padding: 14px; background: #fff; }
+.tp-panel-title { font-size: 12px; font-weight: 800; margin-bottom: 10px; }
+.tp-meter { height: 7px; border-radius: 999px; background: #eef2f7; overflow: hidden; margin: 6px 0 12px; }
+.tp-meter i { display: block; height: 100%; border-radius: 999px; background: linear-gradient(90deg, var(--blue), var(--mint)); transform-origin: left; animation: tpFill .8s cubic-bezier(.2,.7,.2,1) both; }
+@keyframes tpFill { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+.tp-line { display: flex; justify-content: space-between; font-size: 12px; padding: 5px 0; }
+.tp-line b { font-weight: 700; }
+.tp-total { display: flex; justify-content: space-between; font-size: 13px; font-weight: 800; border-top: 1px dashed var(--border); margin-top: 6px; padding-top: 10px; }
+@media (max-width: 860px) {
+  /* Sidebar becomes a horizontal, swipeable strip above the stage — the same
+     entries, just stacked the way the app's own mobile nav is. */
+  .tour-grid { grid-template-columns: 1fr; gap: 20px; }
+  .tour-nav { flex-direction: row; overflow-x: auto; gap: 8px; position: static; padding-bottom: 4px; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
+  .tour-nav::-webkit-scrollbar { display: none; }
+  .tour-nav-label { display: none; }
+  .tour-item { white-space: nowrap; flex: 0 0 auto; width: auto; border-color: var(--border); background: #fff; }
+  .tour-item.active { transform: none; }
+  .tour-stage { min-height: 0; }
+}
+@media (max-width: 720px) {
+  .tp-kpis { grid-template-columns: 1fr 1fr; }
+  .tp-split { grid-template-columns: 1fr; }
+  .tour { padding: 60px 20px; }
+  .tour-panel { padding: 18px; }
+  .tp-badges { justify-content: flex-start; }
+  .tp-row { flex-wrap: wrap; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .tour-panel.active > *, .tp-bar, .tp-meter i, .tour-item.active .tour-item-bar { animation: none !important; }
+}
 </style>
 <!-- Google tag (gtag.js) -->
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-VJ5BVD3GCH"></script>
@@ -309,6 +415,7 @@ nav { position: sticky; top: 0; z-index: 100; background: rgba(255,255,255,.95);
     <div class="nav-links">
       <a href="/marketplaces">Marketplaces</a>
       <a href="/blog">Blog</a>
+      <a href="#inside-the-app">Inside the app</a>
       <a href="#how-it-works">How it works</a>
       <a href="#pricing">Pricing</a>
     </div>
@@ -323,7 +430,7 @@ nav { position: sticky; top: 0; z-index: 100; background: rgba(255,255,255,.95);
 <section class="hero">
   <div class="hero-badge">⚡ Save hours every week</div>
   <h1>One item. <span class="grad-text">All European marketplaces.</span></h1>
-  <p>Stop copy-pasting. Omnivaleur automatically lists your second-hand items on Marktplaats, 2dehands, Vinted and more — in seconds.</p>
+  <p>Stop copy-pasting. Omnivaleur lists your second-hand items on Marktplaats, 2dehands, Vinted, eBay and Shopify at once — imports what you already sell, writes the listing from your photos and pulls it all offline the moment something sells.</p>
   <div class="hero-cta">
     <a href="/register" class="btn btn-primary">Start 7-day free trial →</a>
     <a href="/login" class="btn btn-outline">Log in</a>
@@ -378,23 +485,201 @@ nav { position: sticky; top: 0; z-index: 100; background: rgba(255,255,255,.95);
   </div>
 </div>
 
+<!-- PRODUCT TOUR — every screen below exists in the app today -->
+<section class="tour" id="inside-the-app">
+  <div class="tour-inner">
+    <div class="section-label">Inside the app</div>
+    <div class="section-title" style="max-width:640px">Every screen you get, exactly as it works today</div>
+    <div class="section-sub">This is the real sidebar of the Omnivaleur dashboard. Click through it — nothing here is a roadmap promise.</div>
+
+    <div class="tour-grid">
+      <div class="tour-nav" id="tour-nav">
+        <div class="tour-nav-label">Main</div>
+        <button class="tour-item active" data-tour="dashboard"><span class="tour-item-icon">🏠</span>Dashboard<span class="tour-item-bar"></span></button>
+        <button class="tour-item" data-tour="items"><span class="tour-item-icon">📦</span>Items<span class="tour-item-bar"></span></button>
+        <button class="tour-item" data-tour="analytics"><span class="tour-item-icon">📊</span>Analytics<span class="tour-item-bar"></span></button>
+        <button class="tour-item" data-tour="messages"><span class="tour-item-icon">💬</span>Messages<span class="tour-item-bar"></span></button>
+        <div class="tour-nav-label">Tools</div>
+        <button class="tour-item" data-tour="import"><span class="tour-item-icon">⬇️</span>Import listings<span class="tour-item-bar"></span></button>
+        <button class="tour-item" data-tour="refresh"><span class="tour-item-icon">🔄</span>Refresh<span class="tour-item-bar"></span></button>
+        <button class="tour-item" data-tour="stale"><span class="tour-item-icon">⏳</span>Stale stock<span class="tour-item-bar"></span></button>
+        <button class="tour-item" data-tour="calculator"><span class="tour-item-icon">💶</span>Margin calculator<span class="tour-item-bar"></span></button>
+        <div class="tour-nav-label">Account</div>
+        <button class="tour-item" data-tour="platforms"><span class="tour-item-icon">🔗</span>Platforms<span class="tour-item-bar"></span></button>
+      </div>
+
+      <div class="tour-stage">
+        <div class="tour-stage-bar">
+          <span class="browser-dot red"></span><span class="browser-dot yellow"></span><span class="browser-dot green"></span>
+          <span class="tour-stage-crumb" id="tour-crumb">omnivaleur.com/app · Dashboard</span>
+        </div>
+
+        <!-- Dashboard -->
+        <div class="tour-panel active" data-panel="dashboard">
+          <h3>Dashboard</h3>
+          <p class="tour-lead">Your stock and revenue at a glance, plus the live status of the browser extension that does the publishing for Marktplaats, 2dehands and Vinted.</p>
+          <div class="tp-kpis">
+            <div class="tp-kpi"><div class="tp-kpi-label">Live items</div><div class="tp-kpi-val">128</div><div class="tp-kpi-sub">on 4 platforms</div></div>
+            <div class="tp-kpi"><div class="tp-kpi-label">Sold (30d)</div><div class="tp-kpi-val">37</div><div class="tp-kpi-sub">+12%</div></div>
+            <div class="tp-kpi"><div class="tp-kpi-label">Revenue</div><div class="tp-kpi-val">€4.2k</div><div class="tp-kpi-sub">margin 41%</div></div>
+            <div class="tp-kpi"><div class="tp-kpi-label">To list</div><div class="tp-kpi-val">9</div><div class="tp-kpi-sub">queued</div></div>
+          </div>
+          <div class="tp-rows" style="margin-top:16px">
+            <div class="tp-row"><div class="tp-thumb">🧥</div><div class="tp-row-main"><div class="tp-row-title">Burberry wool coat — size 50</div><div class="tp-row-sub">Published to 3 platforms · 2 min ago</div></div><div class="tp-badges"><span class="tp-badge ok">Live</span></div></div>
+            <div class="tp-row"><div class="tp-thumb">👟</div><div class="tp-row-main"><div class="tp-row-title">Nike Air Max 90 — 43</div><div class="tp-row-sub">Sold on Vinted · other listings taken down automatically</div></div><div class="tp-badges"><span class="tp-badge info">Sold</span></div></div>
+            <div class="tp-row"><div class="tp-thumb">🧩</div><div class="tp-row-main"><div class="tp-row-title">Chrome extension</div><div class="tp-row-sub">Connected · last job finished 40 seconds ago</div></div><div class="tp-badges"><span class="tp-badge ok">Online</span></div></div>
+          </div>
+          <div class="tour-note">Recent items, the publish queue and an <b>extension connected</b> indicator sit on the same screen — if the extension is asleep, you see it here before a job silently fails.</div>
+        </div>
+
+        <!-- Items -->
+        <div class="tour-panel" data-panel="items">
+          <h3>Items</h3>
+          <p class="tour-lead">One inventory, split by lifecycle instead of one endless list. Select rows and publish, reprice, delist or delete them in bulk.</p>
+          <div class="tp-tabs">
+            <div class="tp-tab on">Live <span>128</span></div>
+            <div class="tp-tab">To list <span>9</span></div>
+            <div class="tp-tab">Hidden <span>4</span></div>
+            <div class="tp-tab">Sold <span>312</span></div>
+            <div class="tp-tab">Archived <span>27</span></div>
+          </div>
+          <div class="tp-rows">
+            <div class="tp-row"><div class="tp-thumb">🧥</div><div class="tp-row-main"><div class="tp-row-title">Burberry wool coat — size 50</div><div class="tp-row-sub">€189,00 · good · live 12 days</div></div><div class="tp-badges"><span class="tp-badge ok">Marktplaats</span><span class="tp-badge ok">2dehands</span><span class="tp-badge ok">Vinted</span></div></div>
+            <div class="tp-row"><div class="tp-thumb">👟</div><div class="tp-row-main"><div class="tp-row-title">Nike Air Max 90 — 43</div><div class="tp-row-sub">€74,99 · good · live 3 days</div></div><div class="tp-badges"><span class="tp-badge ok">Vinted</span><span class="tp-badge ok">eBay</span><span class="tp-badge mute">Shopify</span></div></div>
+            <div class="tp-row"><div class="tp-thumb">👜</div><div class="tp-row-main"><div class="tp-row-title">Longchamp Le Pliage</div><div class="tp-row-sub">€59,00 · fair · to list</div></div><div class="tp-badges"><span class="tp-badge info">Publish to…</span></div></div>
+          </div>
+          <div class="tour-note">Per-platform prices are stored per item, so the same coat can be €189 on Marktplaats and €199 on eBay — set once, published everywhere.</div>
+        </div>
+
+        <!-- Analytics -->
+        <div class="tour-panel" data-panel="analytics">
+          <h3>Analytics</h3>
+          <p class="tour-lead">Revenue, profit and margin over 7 / 30 / 90 / 365 days or all time — built from your real sale prices and purchase costs, not from list prices.</p>
+          <div class="tp-kpis" style="margin-bottom:16px">
+            <div class="tp-kpi"><div class="tp-kpi-label">Revenue</div><div class="tp-kpi-val">€4.238</div><div class="tp-kpi-sub">+12% vs prev.</div></div>
+            <div class="tp-kpi"><div class="tp-kpi-label">Profit</div><div class="tp-kpi-val">€1.736</div><div class="tp-kpi-sub">41% margin</div></div>
+            <div class="tp-kpi"><div class="tp-kpi-label">Sales</div><div class="tp-kpi-val">37</div><div class="tp-kpi-sub">+5</div></div>
+            <div class="tp-kpi"><div class="tp-kpi-label">Avg. profit</div><div class="tp-kpi-val">€46,92</div><div class="tp-kpi-sub">per order</div></div>
+          </div>
+          <div class="tp-chart">
+            <div class="tp-bar" style="height:46%"></div><div class="tp-bar" style="height:68%"></div><div class="tp-bar" style="height:38%"></div>
+            <div class="tp-bar" style="height:82%"></div><div class="tp-bar" style="height:59%"></div><div class="tp-bar" style="height:94%"></div>
+            <div class="tp-bar" style="height:71%"></div>
+          </div>
+          <div class="tp-legend"><span>● Revenue vs. profit per day</span><span>● Revenue per platform</span><span>● Active vs. inactive listings</span></div>
+          <div class="tour-note">Every sale is itemised in a breakdown table. Rows where the real sale price or purchase cost is still missing are flagged, so a number is never quietly guessed for you.</div>
+        </div>
+
+        <!-- Messages -->
+        <div class="tour-panel" data-panel="messages">
+          <h3>Messages &amp; bids</h3>
+          <p class="tour-lead">Marktplaats, 2dehands and Vinted have no seller API for messages — so the extension reads the unread badge from your own logged-in session and shows all of it in one place.</p>
+          <div class="tp-rows">
+            <div class="tp-row"><div class="tp-thumb">🇳🇱</div><div class="tp-row-main"><div class="tp-row-title">Marktplaats</div><div class="tp-row-sub">3 unread messages · 2 open bids</div></div><div class="tp-badges"><span class="tp-badge warn">5 waiting</span></div></div>
+            <div class="tp-row"><div class="tp-thumb">🇧🇪</div><div class="tp-row-main"><div class="tp-row-title">2dehands</div><div class="tp-row-sub">1 unread message</div></div><div class="tp-badges"><span class="tp-badge warn">1 waiting</span></div></div>
+            <div class="tp-row"><div class="tp-thumb">👗</div><div class="tp-row-main"><div class="tp-row-title">Vinted</div><div class="tp-row-sub">Inbox empty</div></div><div class="tp-badges"><span class="tp-badge ok">All clear</span></div></div>
+          </div>
+          <div class="tour-note"><b>Counts only.</b> Omnivaleur never stores or reads message contents — you get a number and a deep link, and you reply on the platform itself.</div>
+        </div>
+
+        <!-- Import -->
+        <div class="tour-panel" data-panel="import">
+          <h3>Import listings</h3>
+          <p class="tour-lead">Already selling? Scan your existing Vinted, Marktplaats and 2dehands listings and pull them in — with brand, size, colour, condition and photos parsed out automatically.</p>
+          <div class="tp-rows">
+            <div class="tp-row"><div class="tp-thumb">🔍</div><div class="tp-row-main"><div class="tp-row-title">Scan finished — 84 listings found</div><div class="tp-row-sub">Vinted 41 · Marktplaats 29 · 2dehands 14</div></div><div class="tp-badges"><span class="tp-badge ok">Done</span></div></div>
+            <div class="tp-row"><div class="tp-thumb">🔗</div><div class="tp-row-main"><div class="tp-row-title">62 matched to items you already have</div><div class="tp-row-sub">Linked, so they're never imported twice</div></div><div class="tp-badges"><span class="tp-badge info">Linked</span></div></div>
+            <div class="tp-row"><div class="tp-thumb">✨</div><div class="tp-row-main"><div class="tp-row-title">22 new items ready to bulk-import</div><div class="tp-row-sub">Photos copied to our own storage first</div></div><div class="tp-badges"><span class="tp-badge warn">Review</span></div></div>
+          </div>
+          <div class="tour-note">Imported photos are <b>mirrored into Omnivaleur's own storage</b>. Marketplace CDN links are signed and expire — a mirrored photo still publishes to the next platform months later.</div>
+        </div>
+
+        <!-- Refresh -->
+        <div class="tour-panel" data-panel="refresh">
+          <h3>Refresh &amp; auto-relist</h3>
+          <p class="tour-lead">Old listings sink in "newest first" sorting. Omnivaleur bumps them back up using each platform's own rules — and nothing else.</p>
+          <div class="tp-rows">
+            <div class="tp-row"><div class="tp-thumb">👗</div><div class="tp-row-main"><div class="tp-row-title">Vinted — photo shuffle</div><div class="tp-row-sub">Reorders photos except the main one. Price, title and description untouched.</div></div><div class="tp-badges"><span class="tp-badge ok">Available</span></div></div>
+            <div class="tp-row"><div class="tp-thumb">🔄</div><div class="tp-row-main"><div class="tp-row-title">Marktplaats &amp; 2dehands — relist</div><div class="tp-row-sub">Delete + re-create for a fresh timestamp, automatically after 27 days</div></div><div class="tp-badges"><span class="tp-badge ok">Every 6h</span></div></div>
+            <div class="tp-row"><div class="tp-thumb">🛒</div><div class="tp-row-main"><div class="tp-row-title">eBay — republish ended offers</div><div class="tp-row-sub">Via eBay's own relist flow. Live listings are never duplicated.</div></div><div class="tp-badges"><span class="tp-badge ok">Available</span></div></div>
+          </div>
+          <div class="tour-note">Deliberately rate-limited per listing and per day, with random delays between steps. Nothing here fakes engagement or hides from a platform's abuse detection.</div>
+        </div>
+
+        <!-- Stale -->
+        <div class="tour-panel" data-panel="stale">
+          <h3>Stale stock</h3>
+          <p class="tour-lead">Items that have been live for ages without selling, with a suggested price cut that gets deeper the longer they sit. Reprice a whole selection at once.</p>
+          <div class="tp-tabs"><div class="tp-tab">30d+</div><div class="tp-tab">60d+</div><div class="tp-tab on">90d+</div><div class="tp-tab">180d+</div></div>
+          <div class="tp-rows">
+            <div class="tp-row"><div class="tp-thumb">🧥</div><div class="tp-row-main"><div class="tp-row-title">Barbour quilted jacket — L</div><div class="tp-row-sub">€129,00 → suggested €109,99 · live 104 days</div></div><div class="tp-badges"><span class="tp-badge warn">−15%</span></div></div>
+            <div class="tp-row"><div class="tp-thumb">👞</div><div class="tp-row-main"><div class="tp-row-title">Church's loafers — 42</div><div class="tp-row-sub">€149,00 → suggested €119,99 · live 191 days</div></div><div class="tp-badges"><span class="tp-badge warn">−20%</span></div></div>
+            <div class="tp-row"><div class="tp-thumb">🧣</div><div class="tp-row-main"><div class="tp-row-title">Acne Studios scarf</div><div class="tp-row-sub">€79,00 · purchase price €72,00</div></div><div class="tp-badges"><span class="tp-badge info">Below cost — flagged</span></div></div>
+          </div>
+          <div class="tour-note">The ladder is <b>−5%</b> from 30 days, <b>−10%</b> from 60, <b>−15%</b> from 90, <b>−20%</b> from 180, rounded to …,99 — and it never suggests going below what you paid.</div>
+        </div>
+
+        <!-- Calculator -->
+        <div class="tour-panel" data-panel="calculator">
+          <h3>Margin calculator</h3>
+          <p class="tour-lead">Enter your purchase price and the profit you want. You get the minimum selling price per platform, fees included — before you list, not after you've been paid.</p>
+          <div class="tp-split">
+            <div class="tp-panel">
+              <div class="tp-panel-title">Your input</div>
+              <div class="tp-line"><span>Purchase price</span><b>€45,00</b></div>
+              <div class="tp-meter"><i style="width:45%"></i></div>
+              <div class="tp-line"><span>Desired profit</span><b>€40,00</b></div>
+              <div class="tp-meter"><i style="width:70%;animation-delay:.1s"></i></div>
+              <div class="tp-total"><span>Target</span><span>€85,00 net</span></div>
+            </div>
+            <div class="tp-panel">
+              <div class="tp-panel-title">Minimum price per platform</div>
+              <div class="tp-line"><span>Marktplaats</span><b>€85,00</b></div>
+              <div class="tp-line"><span>2dehands</span><b>€85,00</b></div>
+              <div class="tp-line"><span>Vinted</span><b>€85,00</b></div>
+              <div class="tp-line"><span>eBay</span><b>€94,90</b></div>
+              <div class="tp-line"><span>Shopify</span><b>€88,20</b></div>
+            </div>
+          </div>
+          <div class="tour-note">Each marketplace charges differently. The same €85 in your pocket needs a different sticker price on every one of them — the calculator does that arithmetic per platform.</div>
+        </div>
+
+        <!-- Platforms -->
+        <div class="tour-panel" data-panel="platforms">
+          <h3>Platforms</h3>
+          <p class="tour-lead">Connect once. eBay and Shopify use their official OAuth APIs; Marktplaats, 2dehands and Vinted run through the free Omnivaleur Chrome extension on your own logged-in session.</p>
+          <div class="tp-rows">
+            <div class="tp-row"><div class="tp-thumb">🇳🇱</div><div class="tp-row-main"><div class="tp-row-title">Marktplaats</div><div class="tp-row-sub">Via extension · publish, delete, auto-relist</div></div><div class="tp-badges"><span class="tp-badge ok">Connected</span></div></div>
+            <div class="tp-row"><div class="tp-thumb">🇧🇪</div><div class="tp-row-main"><div class="tp-row-title">2dehands</div><div class="tp-row-sub">Via extension · publish, delete, auto-relist</div></div><div class="tp-badges"><span class="tp-badge ok">Connected</span></div></div>
+            <div class="tp-row"><div class="tp-thumb">👗</div><div class="tp-row-main"><div class="tp-row-title">Vinted</div><div class="tp-row-sub">Via extension · publish, refresh, order sync</div></div><div class="tp-badges"><span class="tp-badge ok">Connected</span></div></div>
+            <div class="tp-row"><div class="tp-thumb">🛒</div><div class="tp-row-main"><div class="tp-row-title">eBay</div><div class="tp-row-sub">Official API · OAuth, category suggestions, webhooks</div></div><div class="tp-badges"><span class="tp-badge ok">Connected</span></div></div>
+            <div class="tp-row"><div class="tp-thumb">🏬</div><div class="tp-row-main"><div class="tp-row-title">Shopify</div><div class="tp-row-sub">Official API · product sync + paid-order webhook</div></div><div class="tp-badges"><span class="tp-badge info">Connect</span></div></div>
+          </div>
+          <div class="tour-note">Sell something anywhere and the sale flows back automatically — eBay and Shopify through webhooks, the extension platforms through polling — after which every other listing for that item comes down.</div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+</section>
+
 <!-- STATS -->
 <div class="stats-bar reveal-stagger reveal">
   <div class="stat-item">
-    <div class="stat-num" data-count="6" data-suffix="+">0</div>
-    <div class="stat-label">Platforms at once</div>
+    <div class="stat-num" data-count="5">0</div>
+    <div class="stat-label">Marketplaces live today</div>
   </div>
   <div class="stat-item">
-    <div class="stat-num" data-count="3" data-suffix="×">0</div>
-    <div class="stat-label">More reach per item</div>
-  </div>
-  <div class="stat-item">
-    <div class="stat-num" data-count="90" data-suffix="%">0</div>
-    <div class="stat-label">Less manual work</div>
+    <div class="stat-num" data-count="27" data-suffix="d">0</div>
+    <div class="stat-label">Auto-relist before expiry</div>
   </div>
   <div class="stat-item">
     <div class="stat-num">AI</div>
-    <div class="stat-label">Auto-generated descriptions</div>
+    <div class="stat-label">Listing written from your photos</div>
+  </div>
+  <div class="stat-item">
+    <div class="stat-num" data-count="1">0</div>
+    <div class="stat-label">Inbox for messages &amp; bids</div>
   </div>
 </div>
 
@@ -452,8 +737,28 @@ nav { position: sticky; top: 0; z-index: 100; background: rgba(255,255,255,.95);
     </div>
     <div class="feature-card">
       <div class="feature-icon">🤖</div>
-      <h3>AI descriptions</h3>
-      <p>Just upload a photo. Our AI recognises the item and automatically writes a professional title and description.</p>
+      <h3>AI listings from a photo</h3>
+      <p>Upload your photos and AI vision reads the label: brand, type, size, colour, material and condition — then writes a fitting title and description for each platform separately.</p>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">⬇️</div>
+      <h3>Import what you already sell</h3>
+      <p>Scan your existing Vinted, Marktplaats and 2dehands listings and import them in bulk. Duplicates are linked instead of re-created, and photos are copied into your own storage.</p>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">💬</div>
+      <h3>Messages &amp; bids in one place</h3>
+      <p>See where a buyer is waiting across all your marketplaces, with a deep link straight to the conversation. Counts only — we never read your messages.</p>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">⏳</div>
+      <h3>Stale stock, repriced</h3>
+      <p>Items sitting unsold for 30, 60, 90 or 180 days, each with a suggested price cut that never dips below your purchase price. Reprice a whole selection at once.</p>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">📈</div>
+      <h3>Real profit, not guesswork</h3>
+      <p>Revenue, profit and margin per period and per platform, built from actual sale prices and your purchase costs — with every sale itemised in a breakdown table.</p>
     </div>
     <div class="feature-card">
       <div class="feature-icon">💶</div>
@@ -468,12 +773,12 @@ nav { position: sticky; top: 0; z-index: 100; background: rgba(255,255,255,.95);
     <div class="feature-card">
       <div class="feature-icon">📊</div>
       <h3>Central dashboard</h3>
-      <p>View all your active listings, status per platform and total reach in one clear dashboard.</p>
+      <p>All your items in one inventory, split into live, to list, hidden, sold and archived — with bulk publish, reprice, delist and delete.</p>
     </div>
     <div class="feature-card">
       <div class="feature-icon">🛡️</div>
-      <h3>Safe &amp; smart</h3>
-      <p>Built-in pacing between uploads so your accounts never get flagged. Works within the rules of every platform.</p>
+      <h3>Within every platform's rules</h3>
+      <p>Refreshing and relisting are rate-limited on purpose and use each marketplace's own mechanisms. Nothing fakes engagement or evades a platform's checks.</p>
     </div>
   </div>
 </div>
@@ -558,6 +863,30 @@ nav { position: sticky; top: 0; z-index: 100; background: rgba(255,255,255,.95);
         <div style="font-size:12px;color:var(--muted);border-top:1px solid var(--border);padding-top:10px"><strong>Without this:</strong> description stays empty on publish.</div>
       </div>
 
+      <div class="protection-tile" style="background:#fff;border:1px solid var(--border);border-radius:14px;padding:24px">
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px">
+          <div style="width:40px;height:40px;border-radius:10px;background:#e0f2fe;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0">🖼️</div>
+          <div>
+            <div style="font-weight:700;font-size:15px">Photo mirroring on import</div>
+            <div style="display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:600;padding:2px 8px;border-radius:999px;background:#dcfce7;color:#16a34a;margin-top:3px">✓ Active — every import</div>
+          </div>
+        </div>
+        <div style="font-size:13px;color:var(--muted);line-height:1.6;margin-bottom:10px">Marketplace photo links are signed and expire, and one platform's CDN refuses to serve another's page. Omnivaleur copies every imported photo into its own storage first, so it stays publishable forever.</div>
+        <div style="font-size:12px;color:var(--muted);border-top:1px solid var(--border);padding-top:10px"><strong>Without this:</strong> imported items publish without a single image.</div>
+      </div>
+
+      <div class="protection-tile" style="background:#fff;border:1px solid var(--border);border-radius:14px;padding:24px">
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px">
+          <div style="width:40px;height:40px;border-radius:10px;background:#ffe4e6;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0">🐢</div>
+          <div>
+            <div style="font-weight:700;font-size:15px">Rate-limited refreshing</div>
+            <div style="display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:600;padding:2px 8px;border-radius:999px;background:#dcfce7;color:#16a34a;margin-top:3px">✓ Active — per listing &amp; per day</div>
+          </div>
+        </div>
+        <div style="font-size:13px;color:var(--muted);line-height:1.6;margin-bottom:10px">Refresh and relist actions are capped per listing and per day, with randomised delays between steps. Every strategy uses the platform's own mechanism — eBay's relist flow, Etsy's renewal, a plain delete-and-recreate elsewhere.</div>
+        <div style="font-size:12px;color:var(--muted);border-top:1px solid var(--border);padding-top:10px"><strong>Without this:</strong> bulk bumping looks like scripted spam.</div>
+      </div>
+
     </div>
   </div>
 </div>
@@ -639,16 +968,21 @@ nav { position: sticky; top: 0; z-index: 100; background: rgba(255,255,255,.95);
 
       <ul style="list-style:none;padding:0;margin:0 0 32px;text-align:left;display:flex;flex-direction:column;gap:12px">
         <li style="display:flex;align-items:center;gap:12px;font-size:15px"><span style="color:#16a34a;font-weight:800;font-size:17px">✓</span> Unlimited crosslisting</li>
-        <li style="display:flex;align-items:center;gap:12px;font-size:15px"><span style="color:#16a34a;font-weight:800;font-size:17px">✓</span> Marktplaats, 2dehands, Vinted &amp; Shopify</li>
-        <li style="display:flex;align-items:center;gap:12px;font-size:15px"><span style="color:#16a34a;font-weight:800;font-size:17px">✓</span> AI descriptions from photos</li>
+        <li style="display:flex;align-items:center;gap:12px;font-size:15px"><span style="color:#16a34a;font-weight:800;font-size:17px">✓</span> Marktplaats, 2dehands, Vinted, eBay &amp; Shopify</li>
+        <li style="display:flex;align-items:center;gap:12px;font-size:15px"><span style="color:#16a34a;font-weight:800;font-size:17px">✓</span> AI listings written from your photos</li>
+        <li style="display:flex;align-items:center;gap:12px;font-size:15px"><span style="color:#16a34a;font-weight:800;font-size:17px">✓</span> Import your existing listings in bulk</li>
         <li style="display:flex;align-items:center;gap:12px;font-size:15px"><span style="color:#16a34a;font-weight:800;font-size:17px">✓</span> Auto-delist when sold</li>
-        <li style="display:flex;align-items:center;gap:12px;font-size:15px"><span style="color:#16a34a;font-weight:800;font-size:17px">✓</span> Marktplaats auto-relist every 27 days</li>
-        <li style="display:flex;align-items:center;gap:12px;font-size:15px"><span style="color:#16a34a;font-weight:800;font-size:17px">✓</span> Sales dashboard &amp; profit tracking</li>
+        <li style="display:flex;align-items:center;gap:12px;font-size:15px"><span style="color:#16a34a;font-weight:800;font-size:17px">✓</span> Auto-relist every 27 days + Vinted refresh</li>
+        <li style="display:flex;align-items:center;gap:12px;font-size:15px"><span style="color:#16a34a;font-weight:800;font-size:17px">✓</span> Analytics, profit tracking &amp; margin calculator</li>
+        <li style="display:flex;align-items:center;gap:12px;font-size:15px"><span style="color:#16a34a;font-weight:800;font-size:17px">✓</span> Stale-stock repricing &amp; one inbox for messages and bids</li>
         <li style="display:flex;align-items:flex-start;gap:12px;font-size:15px;background:#eff6ff;border:1.5px solid #bfdbfe;border-radius:10px;padding:10px 14px;margin-top:4px"><span style="font-size:20px;flex-shrink:0">🇳🇱</span><span><strong style="color:#1d4ed8">Listings auto-translated to Dutch</strong> for Marktplaats &amp; 2dehands — native-looking listings without extra effort</span></li>
       </ul>
 
       <a href="/register" class="btn btn-primary" style="width:100%;justify-content:center;font-size:16px;padding:16px;border-radius:12px;box-shadow:0 4px 20px rgba(37,99,235,.3)">Start 7-day free trial →</a>
       <div style="font-size:12px;color:var(--muted);margin-top:12px">Then €19.99/month · Cancel anytime<br>Pay via iDEAL, Bancontact or credit card</div>
+      <div style="font-size:12px;color:var(--muted);line-height:1.6;margin-top:16px;border-top:1px solid var(--border);padding-top:14px;text-align:left">
+        <b style="color:var(--text)">How the connections work.</b> eBay and Shopify connect through their official APIs. Marktplaats, 2dehands and Vinted have no public seller API, so publishing there runs through the free Omnivaleur Chrome extension on your own logged-in session — which means those platforms need your desktop browser open. Everything else works from any device, phone included.
+      </div>
     </div>
   </div>
 </div>
@@ -674,7 +1008,8 @@ nav { position: sticky; top: 0; z-index: 100; background: rgba(255,255,255,.95);
     <div class="footer-col">
       <h4>Platform</h4>
       <ul>
-        <li><a href="/#how-it-works">Features</a></li>
+        <li><a href="/#inside-the-app">Inside the app</a></li>
+        <li><a href="/#how-it-works">How it works</a></li>
         <li><a href="/marketplaces">Marketplaces</a></li>
         <li><a href="/#pricing">Pricing</a></li>
         <li><a href="/login">Login</a></li>
@@ -830,6 +1165,63 @@ function animateCounts(scope) {
   window.addEventListener('scroll', onScroll, { passive: true });
   window.addEventListener('resize', onScroll);
   updateActiveStep();
+})();
+
+// Product tour: click a sidebar entry to swap the panel, and auto-advance while
+// the section is on screen. Autoplay pauses on hover/focus so a visitor reading
+// a panel never gets it yanked away mid-sentence.
+(function() {
+  const nav = document.getElementById('tour-nav');
+  const stage = document.querySelector('.tour-stage');
+  if (!nav || !stage) return;
+
+  const items = [...nav.querySelectorAll('.tour-item')];
+  const panels = [...stage.querySelectorAll('.tour-panel')];
+  const crumb = document.getElementById('tour-crumb');
+  const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const DURATION = 5200;
+  let index = 0, timer = null, visible = false, paused = false;
+
+  function show(i) {
+    index = (i + items.length) % items.length;
+    const key = items[index].dataset.tour;
+    items.forEach(el => el.classList.remove('active'));
+    // Re-add on the next frame so the progress-bar animation restarts even when
+    // the same entry is re-selected.
+    requestAnimationFrame(() => items[index].classList.add('active'));
+    panels.forEach(p => p.classList.toggle('active', p.dataset.panel === key));
+    // Label only — skip the icon and progress-bar spans so the emoji doesn't
+    // end up glued to the breadcrumb text.
+    const label = [...items[index].childNodes]
+      .filter(n => n.nodeType === Node.TEXT_NODE).map(n => n.textContent).join('').trim();
+    if (crumb) crumb.textContent = 'omnivaleur.com/app · ' + label;
+  }
+
+  function schedule() {
+    clearTimeout(timer);
+    if (reduced || !visible || paused) return;
+    timer = setTimeout(() => { show(index + 1); schedule(); }, DURATION);
+  }
+  function restart() { clearTimeout(timer); schedule(); }
+
+  items.forEach((el, i) => {
+    el.addEventListener('click', () => { show(i); restart(); });
+  });
+  ['mouseenter', 'focusin'].forEach(ev =>
+    stage.parentElement.addEventListener(ev, () => { paused = true; stage.parentElement.classList.add('tour-paused'); clearTimeout(timer); }));
+  ['mouseleave', 'focusout'].forEach(ev =>
+    stage.parentElement.addEventListener(ev, () => { paused = false; stage.parentElement.classList.remove('tour-paused'); schedule(); }));
+
+  if ('IntersectionObserver' in window) {
+    new IntersectionObserver((entries) => {
+      visible = entries[0].isIntersecting;
+      visible ? schedule() : clearTimeout(timer);
+    }, { threshold: 0.25 }).observe(stage);
+  } else {
+    visible = true;
+    schedule();
+  }
+  document.documentElement.style.setProperty('--tour-dur', DURATION + 'ms');
 })();
 
 // Handle Supabase auth redirects (email confirmation, password reset)
