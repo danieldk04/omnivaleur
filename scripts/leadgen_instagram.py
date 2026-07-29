@@ -144,7 +144,8 @@ def _existing_handles_or_empty() -> list[str]:
 # ------------------------------------------------------------------ enrich
 
 
-def _enrich_rows(rows: list[dict], token: str, batch: int = 50) -> list[dict]:
+def _enrich_rows(rows: list[dict], token: str, batch: int = 25,
+                 attempts: int = 3) -> list[dict]:
     """Handle → volledig profiel. Hashtag- en dork-bronnen leveren alleen een naam;
     zonder bio kan de classificatie een winkel niet van een koper onderscheiden.
 
