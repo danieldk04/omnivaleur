@@ -196,12 +196,22 @@ def _category_from_url(url: str) -> str:
 
 
 def _looks_like_shop(name: str) -> bool:
-    words = re.split(r"[\s._-]+", (name or "").lower())
+    """Een eerste versie hiervan liet "M." en "Larissa & Ton" door, op niet meer dan
+    'bevat een punt' en 'bestaat uit drie woorden'. Dat zijn particulieren die hun
+    kast leegruimen, precies het soort lead waar we vanaf willen. Nu is een expliciet
+    winkelwoord de enige echte ingang, en telt lengte alleen mee als er geen
+    persoonsnaam-patroon in zit."""
+    clean = (name or "").strip()
+    if len(clean) < 4:
+        return False
+    words = [w for w in re.split(r"[\s._&-]+", clean.lower()) if w]
     if any(w in SHOP_WORDS for w in words):
         return True
-    if len(words) >= 3:                       # "de tweede hand utrecht"
-        return True
-    return bool(re.search(r"\d|[_.]", name or ""))
+    # "Larissa & Ton" of "Jan de Vries": voornamen aan elkaar geplakt met een
+    # koppelwoord is een mens, geen merk.
+    if re.search(r"\s(&|en|de|van|der|den)\s", clean.lower()):
+        return False
+    return len(words) >= 3
 
 
 def rank(args) -> None:
