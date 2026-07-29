@@ -264,9 +264,11 @@ def rank(args) -> None:
     volume = sum(1 for s in sellers if s["listing_count"] >= args.min_listings)
     print(f"{len(sellers)} verkopers gezien")
     print(f"  {volume} met ≥{args.min_listings} advertenties")
-    print(f"  {len(qualified)} daarvan met een winkelachtige naam → {SELLERS}")
+    print(f"  {len(qualified)} daarvan winkelachtig of in meerdere categorieën → {SELLERS}")
     for s in qualified[:15]:
-        print(f"    {s['listing_count']:3d}x  {s['sellerName'][:38]:38s}  {s['location']}")
+        why = "winkelnaam" if s["shop_name"] else f"{len(s['categories'])} categorieën"
+        print(f"    {s['listing_count']:3d}x  {s['sellerName'][:32]:32s} "
+              f"{s['location'][:16]:16s} ({why})")
 
 
 # ---------------------------------------------------------------- enrich
