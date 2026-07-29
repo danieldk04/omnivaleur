@@ -102,15 +102,28 @@ window.CL = (() => {
   let _pendingDescription = null;
   let _descriptionSelector = null;
 
+  // THROWS on failure. "Geen advertentietekst ingevuld" is a platform-side
+  // rejection the user cannot act on; the causes below can be reported precisely.
   async function fillDescription(selectors, text) {
+    const value = (text || "").trim().slice(0, 2000);
+    if (!value) throw new Error("Item heeft geen beschrijving — vul die in de app in");
     const selector = selectors.find((s) => document.querySelector(s));
-    if (!selector) return false;
-    const value = (text || "").slice(0, 2000);
+    if (!selector) throw new Error("Beschrijvingsveld niet gevonden op de pagina (" + selectors.join(", ") + ")");
     _pendingDescription = value;
     _descriptionSelector = selector;
     document.querySelector(selector)?.scrollIntoView({ block: "center" });
     const ok = await runInMainWorld("FILL_DESC", { selector, text: value });
-    return !!ok;
+    if (!ok) throw new Error("Beschrijving kon niet in de editor worden gezet");
+    return true;
+  }
+
+  // Read back what the editor actually holds. The isolated world cannot see
+  // __lexicalEditor, but innerText reflects the rendered EditorState, which is
+  // enough to answer the only question that matters here: is it empty?
+  function descriptionIsEmpty() {
+    if (!_descriptionSelector) return false; // nothing was ever meant to be filled
+    const el = document.querySelector(_descriptionSelector);
+    return !el || (el.innerText || "").trim().length === 0;
   }
 
   // ---- find the control (input/select/button) that belongs to a field label ----
