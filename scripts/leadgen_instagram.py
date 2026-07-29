@@ -187,15 +187,18 @@ def _enrich_rows(rows: list[dict], token: str, batch: int = 50) -> list[dict]:
 
 def enrich(args) -> None:
     token = _need("APIFY_TOKEN")
-    rows = _load(HANDLES)
-    if not rows:
+    everything = _load(HANDLES)
+    if not everything:
         sys.exit("Nog geen handles.json — draai eerst 'discover'")
-    if args.limit:
-        rows = rows[: args.limit]
 
-    rows = _enrich_rows(rows, token)
-    ok = [r for r in rows if r.get("enriched") and not r.get("private")]
-    _save(HANDLES, _load(HANDLES) or rows)     # verrijking terug naar de bron
+    # _enrich_rows muteert de dicts, dus een slice verrijkt dezelfde objecten die in
+    # `everything` zitten. Daardoor kan --limit een deel doen zonder dat de rest van
+    # handles.json bij het opslaan verdwijnt, en is een tweede run een goedkope
+    # voortzetting in plaats van een herhaling.
+    _enrich_rows(everything[: args.limit] if args.limit else everything, token)
+
+    _save(HANDLES, everything)
+    ok = [r for r in everything if r.get("enriched") and not r.get("private")]
     _save(CANDIDATES, ok)
     print(f"\n{len(ok)} publieke profielen verrijkt → {CANDIDATES}")
 
