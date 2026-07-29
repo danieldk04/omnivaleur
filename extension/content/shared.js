@@ -313,6 +313,10 @@ window.CL = (() => {
     return document.querySelectorAll(PHOTO_THUMB_SELECTOR).length;
   }
 
+  // Set once photos were actually requested, so the pre-submit check only guards
+  // listings that are supposed to have images.
+  let _expectPhotos = false;
+
   // THROWS on failure — never returns quietly. Photos are mandatory on every
   // platform here, and a silent `return false` meant the form was submitted with
   // zero photos and the user got no explanation at all. The thrown message names
