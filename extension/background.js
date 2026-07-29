@@ -2943,6 +2943,24 @@ async function _mwFillDescription(selector, descText) {
   return lexHasText();
 }
 
+// Het formulier achter de editor pikt de tekst pas op als het veld verlaten
+// wordt. Wij vulden en klikten meteen op Plaatsen, waardoor 2dehands bleef
+// zeggen "Geen zoekertjestekst ingevuld" terwijl de tekst zichtbaar in de
+// editor stond. Marktplaats leest wél direct mee, dus daar viel het niet op.
+function _mwBlurDescription(selector) {
+  const found = document.querySelector(selector);
+  if (!found) return false;
+  const el = found.isContentEditable ? found
+    : (found.querySelector('[contenteditable="true"]') || found);
+  for (const type of ["input", "change"]) {
+    el.dispatchEvent(new Event(type, { bubbles: true }));
+  }
+  el.dispatchEvent(new FocusEvent("focusout", { bubbles: true }));
+  el.blur();
+  document.body.click();
+  return true;
+}
+
 async function _mwFillBrand(brand) {
   const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
