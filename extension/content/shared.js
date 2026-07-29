@@ -322,7 +322,6 @@ window.CL = (() => {
   // zero photos and the user got no explanation at all. The thrown message names
   // the actual cause (no field / nothing downloadable / platform rejected them).
   async function uploadPhotos(urls, opts = {}) {
-    _expectPhotos = true;
     // Prefer the real image picker: MP's page also carries an unrelated
     // input[name="file"], and a plain input[type=file] grab can land on that one.
     const fileInput = qs('input[type="file"][accept*="image"]')
