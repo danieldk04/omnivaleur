@@ -77,7 +77,7 @@
     await sleep(400); // let React re-render kenmerken after condition selection
     await step("package",      () => selectPackageSize());
     await step("size",         () => item.size && selectDropdown(["Maat", "Maat (cm)"], item.size));
-    await step("color",        () => item.color && selectDropdown("Kleur", item.color));
+    await step("color",        () => item.color && selectDropdown("Kleur", dutchColor(item.color)));
     await step("brand",        () => item.brand && fillBrand(item.brand));
     await step("manufacturer", () => fillManufacturer(item));
     await step("delivery",     () => { clickRadioByValue("Ophalen of Verzenden"); selectBundleFree(); });
