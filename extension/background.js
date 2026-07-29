@@ -2863,7 +2863,7 @@ async function _mwFillDescription(selector, descText) {
 
   // ── Approach 2: Lexical internal update API ───────────────────────────────
   // Directly writes into EditorState using Lexical's own update() mechanism.
-  const lex = el.__lexicalEditor;
+  const lex = findLexical();
   if (lex && typeof lex.update === "function") {
     const PClass = lex._nodes?.get("paragraph")?.klass;
     const TClass = lex._nodes?.get("text")?.klass;
