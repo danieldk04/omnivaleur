@@ -310,10 +310,16 @@ def _classify_rows(rows: list[dict], min_confidence: int, quiet: bool = False) -
             print(f"  ! @{row['handle']}: {e}")
             continue
 
-        keep = verdict.get("is_lead") and verdict.get("confidence", 0) >= min_confidence
+        vtype = (verdict.get("verkopertype") or "onduidelijk").lower()
+        keep = (verdict.get("is_lead")
+                and verdict.get("confidence", 0) >= min_confidence
+                and vtype not in REJECT_TYPES
+                and verdict.get("verzendbaar") is not False
+                and verdict.get("commercieel") is not False)
         if not quiet:
-            print(f"[{i}/{len(rows)}] {'✓' if keep else '·'} @{row['handle']:28s} "
-                  f"{verdict.get('reden', '')[:60]}")
+            why = vtype if not keep else ""
+            print(f"[{i}/{len(rows)}] {'✓' if keep else '·'} @{row['handle']:26s} "
+                  f"{why:12s} {verdict.get('reden', '')[:52]}")
         if keep:
             leads.append({
                 **{k: row.get(k) for k in
