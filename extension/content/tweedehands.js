@@ -82,6 +82,10 @@
     await step("manufacturer", () => fillManufacturer(item));
     await step("delivery",     () => { clickRadioByValue("Ophalen of Verzenden"); selectBundleFree(); });
     await step("bidding",      () => item.bid_percentage && fillBidding(item.price, item.bid_percentage));
+
+    // Zelfde controle als op Marktplaats: 2dehands draait hetzelfde formulier,
+    // maar plaatste tot nu toe zonder terug te lezen — dus met stille gaten.
+    verifyMpGroupFields(item);
   }
 
   function titleInput() {
