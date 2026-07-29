@@ -13,14 +13,23 @@ WAT WEL WERKT — alles live getest (2026-07), niet aangenomen
   * Marktplaats als bron: scrape werkt, maar er is GEEN brug naar Instagram.
     Handles raden gaf 4 treffers op 13 gokken en de enige echte match was een
     verzamelaar uit Tokio; 0 van 53 advertentieteksten noemde een @handle.
-  * Instagram-hashtags: BESTE BRON. 30 posts op #tweedehandskleding gaven 22 unieke
-    Nederlandse winkels. Zie leadgen_sources.py voor de cijfers per methode.
+  * Instagram-hashtags: BESTE BRON. Zie leadgen_sources.py voor de cijfers per bron.
+
+WIE WE ZOEKEN — en wie NIET
+Serieuze resellers: mensen die op Vinted, Marktplaats of eBay verkopen om geld te
+verdienen, met verzendbare spullen (kleding, schoenen, sneakers, tassen, sieraden,
+games, elektronica) in categorieën die Omnivaleur goed herkent.
+Uitdrukkelijk NIET: kringloopwinkels en goede doelen (vrijwilligers, geen winstmotief,
+verzenden niet) en meubel-/brocante-/interieurverkopers (onverzendbaar, vaak hobby).
+Een eerdere versie zocht op #kringloopwinkel en #vintagemeubels en leverde precies
+die twee groepen — hoge precisie op de verkeerde doelgroep.
 
 DE TRECHTER
   discover  handles verzamelen uit vier bronnen (zie leadgen_sources.py)
   enrich    bio, volgers en website erbij halen — de bron levert alleen een handle
-  classify  Haiku beoordeelt: verkoper of consument/reviewer? + Notion-veldwaardes
+  classify  Haiku beoordeelt op winstmotief, verzendbaarheid en NL/BE
   push      als lead in de Notion-Leadlist zetten, status "Reach out"
+  run       alle vier bovenstaande in één commando
 
 Elke stap schrijft naar scripts/output/leads/ en leest de vorige van schijf, zodat je
 een dure stap nooit twee keer draait en tussendoor met de hand kunt controleren.
@@ -52,6 +61,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
+from scripts import leadgen_notion as notion  # noqa: E402
 from scripts import leadgen_sources as src  # noqa: E402
 
 OUT = Path(__file__).parent / "output" / "leads"
@@ -61,11 +71,6 @@ LEADS = OUT / "leads.json"
 BENCH = OUT / "bench.json"
 
 PROFILE_ACTOR = "figue~instagram-profile-scraper"
-
-NOTION_DB = "399b0954-fb72-8053-a8fc-fa7c21616371"
-NOTION_API = "https://api.notion.com/v1"
-NOTION_VERSION = "2022-06-28"
-
 
 def _need(var: str) -> str:
     val = os.environ.get(var, "")
@@ -137,7 +142,7 @@ def _existing_handles_or_empty() -> list[str]:
     if not token:
         return []
     try:
-        return [u.rstrip("/").rsplit("/", 1)[-1] for u in _existing_urls(token)]
+        return [u.rstrip("/").rsplit("/", 1)[-1] for u in notion.existing_urls(token)]
     except Exception:  # noqa: BLE001 — dedupe is een optimalisatie, geen vereiste
         return []
 
@@ -396,41 +401,6 @@ def bench(args) -> None:
 # --------------------------------------------------------------------- push
 
 
-def _notion(method: str, path: str, token: str, body: dict | None = None) -> dict:
-    import httpx
-
-    r = httpx.request(
-        method, f"{NOTION_API}{path}",
-        headers={
-            "Authorization": f"Bearer {token}",
-            "Notion-Version": NOTION_VERSION,
-            "Content-Type": "application/json",
-        },
-        json=body, timeout=30.0,
-    )
-    r.raise_for_status()
-    return r.json()
-
-
-def _existing_urls(token: str) -> set[str]:
-    """Wat al in de Leadlist staat, ook handmatig toegevoegd. Zonder deze check
-    krijgt iemand bij een tweede run een tweede DM."""
-    urls: set[str] = set()
-    cursor = None
-    while True:
-        body: dict = {"page_size": 100}
-        if cursor:
-            body["start_cursor"] = cursor
-        data = _notion("POST", f"/databases/{NOTION_DB}/query", token, body)
-        for page in data.get("results", []):
-            url = (page.get("properties", {}).get("URL") or {}).get("url")
-            if url:
-                urls.add(url.rstrip("/").lower())
-        if not data.get("has_more"):
-            return urls
-        cursor = data["next_cursor"]
-
-
 def push(args) -> None:
     leads = _load(LEADS)
     if not leads:
@@ -439,46 +409,12 @@ def push(args) -> None:
     if args.dry_run:
         print(f"{len(leads)} leads klaar (dry-run, er wordt niets weggeschreven):\n")
         for l in leads:
-            print(f"  @{l['handle']:28s} {l.get('followers') or 0:>7} volgers  "
-                  f"{l.get('method', ''):8s} {l.get('verkoopt_vooral', '')}")
+            print(f"  @{l['handle']:26s} {l.get('followers') or 0:>7} volgers  "
+                  f"{l.get('verkopertype', ''):10s} {l.get('verkoopt_vooral', '')}")
             print(f"     {l.get('reden', '')}")
         return
 
-    token = _need("NOTION_TOKEN")
-    seen = _existing_urls(token)
-    print(f"{len(seen)} bestaande leads in Notion, die sla ik over")
-
-    created = skipped = 0
-    for l in leads:
-        if l["ig_url"].rstrip("/").lower() in seen:
-            skipped += 1
-            continue
-        notes = " · ".join(x for x in [
-            f"{l.get('followers') or 0} volgers",
-            f"gevonden via {l.get('source') or l.get('method')}",
-            l.get("website"), l.get("email"), l.get("reden"),
-        ] if x)
-        props = {
-            "Name": {"title": [{"text": {"content": l.get("full_name") or l["handle"]}}]},
-            "URL": {"url": l["ig_url"]},
-            "Platform": {"select": {"name": "IG"}},
-            "Language": {"select": {"name": l.get("language", "NL")}},
-            "Status": {"status": {"name": "Reach out"}},
-            "Je/Jullie": {"select": {"name": l.get("je_jullie", "Je")}},
-            "Notes (Optional)": {"rich_text": [{"text": {"content": notes[:1900]}}]},
-        }
-        for key, prop in (("verkoopt_vooral", "Verkoopt vooral..."),
-                          ("verkoop_op", "Verkoop op...")):
-            if l.get(key):
-                props[prop] = {"select": {"name": l[key]}}
-        try:
-            _notion("POST", "/pages", token,
-                    {"parent": {"database_id": NOTION_DB}, "properties": props})
-            created += 1
-            print(f"  + @{l['handle']}")
-        except Exception as e:  # noqa: BLE001
-            print(f"  ! @{l['handle']}: {e}")
-
+    created, skipped = notion.push_leads(leads, _need("NOTION_TOKEN"))
     print(f"\n{created} leads toegevoegd, {skipped} bestonden al.")
     print("De AI-autofill in Notion schrijft de outreach-tekst zelf. "
           "Versturen doe je met de hand — zie de kop van dit bestand.")
