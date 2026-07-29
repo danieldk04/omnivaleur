@@ -412,10 +412,10 @@ window.CL = (() => {
     // wait for ONE thumbnail was both too short and too weak a check.
     const deadline = Date.now() + 45000;
     while (Date.now() < deadline) {
-      if (countPhotoThumbs() > before) break;
+      if (countPhotoThumbs(thumbSel) > before) break;
       await sleep(500);
     }
-    if (countPhotoThumbs() <= before) {
+    if (countPhotoThumbs(thumbSel) <= before) {
       throw new Error(`${files.length} foto('s) aangeboden maar het platform toonde er geen enkele`);
     }
     // Only arm the pre-submit photo guard once thumbnails were actually observed
