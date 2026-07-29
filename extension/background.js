@@ -984,6 +984,11 @@ function waitForTabLoad(tabId, timeoutMs = 20000) {
     chrome.tabs.onUpdated.addListener(fn);
     // Also check if already complete
     chrome.tabs.get(tabId, t => {
+      // lastError MOET gelezen worden, ook als we niets met de fout doen: anders
+      // schreeuwt Chrome "Unchecked runtime.lastError: No tab with id" in de
+      // console zodra het tabblad al weg is, wat als losse fout overkomt terwijl
+      // het hier gewoon betekent dat we niets meer hoeven te wachten.
+      if (chrome.runtime.lastError) { resolve(); return; }
       if (t && t.status === "complete") {
         chrome.tabs.onUpdated.removeListener(fn);
         clearTimeout(timer);
