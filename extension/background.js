@@ -798,10 +798,13 @@ async function openWorkerTabInner(url, opts = {}) {
     }
   }
   try {
+    // Chrome rejects state:"minimized" combined with an explicit size (and, on
+    // some versions, with focused), so the minimised window is created bare and
+    // degrades to a normal unfocused window rather than failing the whole job.
     const w = opts.silent
-      // Chrome rejects state:"minimized" combined with an explicit size, so the
-      // minimised window is created bare.
       ? await chrome.windows.create({ url, focused: false, state: "minimized" })
+          .catch(() => chrome.windows.create({ url, state: "minimized" }))
+          .catch(() => chrome.windows.create({ url, focused: false, ...WORKER_WIN_SIZE }))
       : await chrome.windows.create({ url, focused: false, ...WORKER_WIN_SIZE });
     if (!w || !w.tabs || !w.tabs[0]) throw new Error("no tab in new window");
     await setWorkerWindowId(w.id);
@@ -1244,7 +1247,7 @@ async function resolveVintedIdByTitle(title) {
   const sleep = ms => new Promise(r => setTimeout(r, ms));
   const tabId = await new Promise((res, rej) =>
     openWorkerTab("https://www.vinted.nl/", t =>
-      t ? res(t.id) : rej(new Error("could not open worker tab"))
+      t ? res(t.id) : rej(new Error("could not open worker tab")), { silent: true }
     )
   );
   try {
@@ -1625,7 +1628,7 @@ async function bgScanVinted(job, serverUrl) {
   const sleep = ms => new Promise(r => setTimeout(r, ms));
   const tabId = await new Promise((res, rej) =>
     openWorkerTab("https://www.vinted.nl/", t =>
-      t ? res(t.id) : rej(new Error("could not open worker tab"))
+      t ? res(t.id) : rej(new Error("could not open worker tab")), { silent: true }
     )
   );
   try {
@@ -2005,7 +2008,7 @@ async function bgScanMp2dh(job, serverUrl) {
 
   const tabId = await new Promise((res, rej) =>
     openWorkerTab(overviewUrl, t =>
-      t ? res(t.id) : rej(new Error("could not open worker tab"))
+      t ? res(t.id) : rej(new Error("could not open worker tab")), { silent: true }
     )
   );
 
@@ -2486,7 +2489,7 @@ function scrapeMarktplaatsAds(url, platform) {
         chrome.tabs.remove(tabId).catch(() => {});
         resolve([]);
       }, 30000);
-    });
+    }, { silent: true });
   });
 }
 
@@ -2598,7 +2601,7 @@ function scrapeVintedOrders(url) {
         chrome.tabs.remove(tabId).catch(() => {});
         resolve([]);
       }, 30000);
-    });
+    }, { silent: true });
   });
 }
 
@@ -2689,7 +2692,7 @@ function scrapeNotificationCounts(url, platform) {
 
       chrome.tabs.onUpdated.addListener(onUpdated);
       setTimeout(() => finish(null), 30000); // hard timeout
-    });
+    }, { silent: true });
   });
 }
 
