@@ -362,8 +362,14 @@ window.CL = (() => {
     '[data-testid*="image"] img',
   ].join(", ");
 
-  function countPhotoThumbs() {
-    return document.querySelectorAll(PHOTO_THUMB_SELECTOR).length;
+  // Platforms may override the proof-of-upload selector. Facebook needs this:
+  // its create form renders ZERO <img> elements until a photo lands, and then
+  // shows scontent.fbcdn.net images — never a blob:. Verified live 2026-07-29 on
+  // the real form. With only the list above, uploadPhotos waited the full 45s on
+  // Facebook, threw, and fillForm died before typing a single field — which is
+  // exactly the "nothing gets filled in" report.
+  function countPhotoThumbs(selector) {
+    return document.querySelectorAll(selector || PHOTO_THUMB_SELECTOR).length;
   }
 
   // Set once photos were actually requested, so the pre-submit check only guards
