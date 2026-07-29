@@ -64,8 +64,12 @@
     await waitForEl('input[name="title_nl-NL"]', 20000);
     await step("title",        () => fillInputHuman(qs('input[name="title_nl-NL"]'), smartTrunc(item.title || "", 60)));
     await step("price",        () => { const el = qs('input[name="price.value"]'); return fillInputHuman(el, el?.type === "number" ? String(item.price || "") : String(item.price || "").replace(".", ",")); });
-    await step("description",  () => fillDescription(['[data-testid="text-editor-input_nl-NL"]'], item.description));
-    await step("photos",       () => item.photo_urls?.length && uploadPhotos(item.photo_urls.slice(0, 20)));
+    // NOT wrapped in step(): description and photos are mandatory on Marktplaats,
+    // and step() swallows the error — which is how listings ended up submitted
+    // with an empty advertentietekst and no photos, with nothing to explain it.
+    // Let these throw so the job reports the real cause and keeps the tab open.
+    await fillDescription(['[data-testid="text-editor-input_nl-NL"]'], item.description);
+    if (item.photo_urls?.length) await uploadPhotos(item.photo_urls.slice(0, 20));
     await step("condition",    () => selectDropdown("Conditie", CONDITION_MAP[item.condition] || "Zo goed als nieuw"));
     await sleep(400); // let React re-render kenmerken after condition selection
     await step("size",         () => item.size && selectDropdown(["Maat", "Jeansmaat", "Maat (cm)", "Maat bovenstuk", "Maat onderstuk"], item.size));
