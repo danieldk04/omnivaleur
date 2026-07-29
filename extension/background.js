@@ -3126,6 +3126,19 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     return true;
   }
 
+  if (msg.type === "BLUR_DESC") {
+    chrome.scripting.executeScript({
+      target: { tabId: sender.tab.id },
+      world: "MAIN",
+      func: _mwBlurDescription,
+      args: [msg.selector],
+    }, (results) => {
+      if (chrome.runtime.lastError) sendResponse(false);
+      else sendResponse(results?.[0]?.result ?? false);
+    });
+    return true;
+  }
+
   if (msg.type === "FILL_BRAND") {
     console.log("[Omnivaleur] FILL_BRAND received, brand:", msg.brand);
     chrome.scripting.executeScript({
