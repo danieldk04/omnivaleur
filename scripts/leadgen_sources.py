@@ -67,7 +67,11 @@ CITIES = [
     "tilburg", "breda", "nijmegen", "haarlem", "arnhem", "almere",
     "antwerpen", "gent",
 ]
-LOCAL_TERMS = ["vintage winkel", "kringloop", "tweedehands kleding"]
+# Bewust ÉÉN woord per term, want de stad komt er nog achteraan. Live gemeten:
+# "kringloop rotterdam" gaf 5 echte Rotterdamse kringloopwinkels, terwijl
+# "vintage winkel utrecht" er 0 gaf — Instagram's profielzoek valt om bij drie
+# woorden. Twee woorden is hier het plafond.
+LOCAL_TERMS = ["kringloop", "vintage", "tweedehands"]
 
 # Instagram-paden die geen account zijn. Zonder deze lijst haalt de dork-regex
 # "instagram.com/p/CxYz" binnen als handle "p".
