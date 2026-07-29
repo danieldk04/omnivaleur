@@ -460,6 +460,26 @@ window.CL = (() => {
     }
   }
 
+  // Re-encode any image the browser can decode (webp, png, heic-as-decoded) into
+  // a plain JPEG, without touching its dimensions. Falls back to the original
+  // blob if decoding fails — a possibly-rejected upload still beats no upload.
+  function toJpeg(blob) {
+    return new Promise((resolve) => {
+      const img = new Image();
+      const url = URL.createObjectURL(blob);
+      img.onload = () => {
+        URL.revokeObjectURL(url);
+        const canvas = document.createElement("canvas");
+        canvas.width = img.naturalWidth;
+        canvas.height = img.naturalHeight;
+        canvas.getContext("2d").drawImage(img, 0, 0);
+        canvas.toBlob((b) => resolve(b || blob), "image/jpeg", 0.92);
+      };
+      img.onerror = () => { URL.revokeObjectURL(url); resolve(blob); };
+      img.src = url;
+    });
+  }
+
   // Apply random 1-3px crop per side + a sub-perceptual brightness/contrast/
   // saturation nudge + canvas re-render (strips EXIF), then re-encode at a
   // slightly randomised JPEG quality. Changes both the byte hash AND the
