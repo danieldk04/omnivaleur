@@ -175,16 +175,26 @@ def from_hashtag(hashtags: list[str] | None = None, per_tag: int = 40,
     out: list[dict] = []
     seen: set[str] = set()
     for tag in (hashtags or HASHTAGS):
-        rows = _run(HASHTAG_ACTOR, {"hashtag": tag, "max_items": per_tag}, token)
+        rows = _run(HASHTAG_ACTOR, {
+            "hashtags": [tag], "resultsType": "posts", "resultsLimit": per_tag,
+        }, token)
         new = 0
         for row in rows:
+            # Sommige actors melden een quotum-overschrijding als gewone datarij in
+            # plaats van als HTTP-fout. Stil nul posts teruggeven zou hier lijken op
+            # "hashtag levert niets op", wat iets heel anders is.
+            if row.get("error"):
+                print(f"    ! {tag}: {row.get('message') or row['error']}")
+                break
             author = row.get("author") or {}
             if author.get("is_private"):
                 continue
-            rec = _rec(author.get("username"), "hashtag", f"#{tag}",
-                       full_name=author.get("full_name"),
+            rec = _rec(row.get("ownerUsername") or author.get("username"),
+                       "hashtag", f"#{tag}",
+                       full_name=row.get("ownerFullName") or author.get("full_name"),
                        followers=author.get("follower_count"),
-                       hint=row.get("caption") or "")
+                       hint=" ".join(x for x in (row.get("locationName"),
+                                                 row.get("caption")) if x))
             if rec and rec["handle"] not in seen:
                 seen.add(rec["handle"])
                 out.append(rec)
