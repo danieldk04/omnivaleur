@@ -281,6 +281,16 @@ class ShopifyPlatform(PlatformBase):
             return await delete_product(platform_listing_id)
         return await ShopifyClient(shop, token).delete_product(platform_listing_id)
 
+    async def update_listing_price(self, platform_listing_id: str, price: float, credentials: dict) -> bool:
+        shop, token = _shop_creds(credentials)
+        if not shop or not token:
+            # Same single-store fallback the create/delete paths use.
+            shop = settings.shopify_shop_domain
+            token = settings.shopify_access_token
+        if not shop or not token:
+            raise RuntimeError("No Shopify store connected")
+        return await ShopifyClient(shop, token).update_price(platform_listing_id, price)
+
     async def refresh_credentials(self, credentials: dict) -> dict:
         return credentials  # Shopify offline access tokens don't expire
 
