@@ -250,9 +250,13 @@ def rank(args) -> None:
             "shop_name": _looks_like_shop(s["sellerName"]),
         })
 
+    # Een winkelnaam is het sterkste signaal, maar niet het enige: wie in meerdere
+    # categorieën tegelijk adverteert ruimt geen kast op, die verkoopt door. Zonder
+    # die tweede ingang mis je elke reseller die gewoon zijn eigen naam gebruikt.
     qualified = [s for s in sellers
-                 if s["listing_count"] >= args.min_listings and s["shop_name"]]
-    qualified.sort(key=lambda s: s["listing_count"], reverse=True)
+                 if s["listing_count"] >= args.min_listings
+                 and (s["shop_name"] or len(s["categories"]) >= 2)]
+    qualified.sort(key=lambda s: (s["listing_count"], len(s["categories"])), reverse=True)
 
     OUT.mkdir(parents=True, exist_ok=True)
     SELLERS.write_text(json.dumps(qualified, indent=2, ensure_ascii=False))
