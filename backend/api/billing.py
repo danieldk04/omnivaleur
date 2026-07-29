@@ -31,6 +31,10 @@ def _get_or_create_subscription(user_id: str) -> dict:
         }).execute()
         return new_sub.data[0]
     except Exception:
+        # Niet stil wegslikken: precies deze except verborg maandenlang dat RLS
+        # alle inserts weigerde. De gebruiker zag een keurige proefperiode, maar
+        # er stond niets in de database en expire_trials zag hem dus nooit.
+        logger.exception(f"Kon geen abonnementsrij aanmaken voor {user_id}")
         return {"user_id": user_id, "status": "trialing", "plan": "pro", "trial_ends_at": trial_ends_at}
 
 
