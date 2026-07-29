@@ -2925,36 +2925,7 @@ async function _mwFillDescription(selector, descText) {
     }
   } catch (_) {}
 
-  // ── Approach 2: Lexical internal update API ───────────────────────────────
-  // Directly writes into EditorState using Lexical's own update() mechanism.
-  const lex = findLexical();
-  if (lex && typeof lex.update === "function") {
-    const PClass = lex._nodes?.get("paragraph")?.klass;
-    const TClass = lex._nodes?.get("text")?.klass;
-    if (PClass && TClass) {
-      try {
-        await new Promise((resolve) => {
-          lex.update(() => {
-            const root = lex._editorState?._nodeMap?.get("root");
-            if (!root) return;
-            // Clear existing content
-            let c = root.getFirstChild?.();
-            while (c) { const n = c.getNextSibling?.(); try { c.remove?.(); } catch (_) {} c = n; }
-            for (const line of _lines) {
-              const p = new PClass();
-              if (line.length > 0) p.append(new TClass(line));
-              root.append(p);
-            }
-          }, { discrete: true, onUpdate: resolve });
-          setTimeout(resolve, 600);
-        });
-        await sleep(200);
-        if (structureOk()) return true;
-      } catch (_) {}
-    }
-  }
-
-  // ── Approach 3: line-by-line insertText beforeinput ──────────────────────
+  // ── Aanpak 4: line-by-line insertText beforeinput ────────────────────────
   // Synthetic InputEvent with insertText — Lexical handles this type correctly
   // because 'data' is a plain string property (unlike dataTransfer which Chrome
   // always nulls out on synthetic events).
