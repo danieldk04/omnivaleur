@@ -250,7 +250,11 @@ window.CL = (() => {
         t.scrollIntoView({ block: "center" });
         await sleep(80);
         t.click();
-        const opt = await waitForOption(value, 3500);
+        let opt = null;
+        for (const v of valueVariants(value)) {
+          opt = await waitForOption(v, opt === null ? 3500 : 800);
+          if (opt) break;
+        }
         if (opt) {
           opt.click();
           await sleep(400);
