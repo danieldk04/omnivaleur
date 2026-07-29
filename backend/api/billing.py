@@ -1,6 +1,7 @@
 """
 Stripe billing endpoints — subscription management for Omnivaleur Pro.
 """
+import logging
 import stripe
 from fastapi import APIRouter, HTTPException, Depends, Request, Header
 from backend.database import get_db
