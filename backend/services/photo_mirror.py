@@ -80,7 +80,7 @@ async def mirror_photos(urls: list[str] | None, user_id: str, _sem=None) -> list
 
     import httpx
 
-    sem = asyncio.Semaphore(MAX_CONCURRENCY)
+    sem = _sem or asyncio.Semaphore(MAX_CONCURRENCY)
 
     async def one(client: "httpx.AsyncClient", url: str) -> str:
         if is_mirrored(url):
