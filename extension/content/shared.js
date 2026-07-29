@@ -280,7 +280,27 @@ window.CL = (() => {
     }
 
     _pendingBrand = brand;
-    return runInMainWorld("FILL_BRAND", { brand });
+    const ok = await runInMainWorld("FILL_BRAND", { brand });
+    // Never continue while the picker is still up. ReactModal makes the rest of
+    // the form inert, so every field after Merk would be filled into a page that
+    // ignores the events — which is exactly how manufacturer, delivery and the
+    // bid price all ended up empty with no error to show for it.
+    await waitForNoModal(6000);
+    return ok;
+  }
+
+  function anyModalOpen() {
+    const m = document.querySelector(".ReactModal__Content") || document.querySelector('[role="dialog"]');
+    return !!(m && m.offsetParent !== null);
+  }
+
+  async function waitForNoModal(timeout = 6000) {
+    const deadline = Date.now() + timeout;
+    while (Date.now() < deadline) {
+      if (!anyModalOpen()) return true;
+      await sleep(250);
+    }
+    return false;
   }
 
   function fillManufacturer(item) {
