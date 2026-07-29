@@ -29,7 +29,7 @@ from backend.services.image_upload import upload_image
 logger = logging.getLogger(__name__)
 
 MAX_BYTES = 15 * 1024 * 1024          # skip anything absurd; listing photos are ~1 MB
-MAX_CONCURRENCY = 5                    # polite to the source CDN, still quick
+MAX_CONCURRENCY = 3                    # polite to the source CDN, still quick
 REQUEST_TIMEOUT = 30.0
 
 # Hosts that already serve our own storage — mirroring those again would just
