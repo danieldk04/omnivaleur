@@ -208,6 +208,35 @@ window.CL = (() => {
   // read "Maat 36 (S)" — the whole composite string was compared as one token,
   // so every option scored 0 and the size was left on "Kies...". Offer the
   // composite first (an exact hit still wins), then each part on its own.
+  // Onze kleurwoordenschat is Engels (Vinted's eigen labels), maar de Kleur-lijst
+  // op Marktplaats/2dehands is Nederlands. Zonder deze vertaling matchte "blue"
+  // op geen enkele optie: op Marktplaats blokkeerde dat de hele plaatsing, op
+  // 2dehands ging de advertentie zonder kleur de deur uit. Meerdere Engelse
+  // tinten vallen bewust samen op één Nederlandse optie — die lijst is korter.
+  const COLOUR_NL = {
+    black: "Zwart", grey: "Grijs", gray: "Grijs",
+    "light grey": "Grijs", "light gray": "Grijs",
+    "dark grey": "Grijs", "dark gray": "Grijs",
+    silver: "Grijs", white: "Wit", "off white": "Wit", cream: "Wit",
+    ecru: "Wit", beige: "Beige", camel: "Beige", tan: "Beige",
+    taupe: "Beige", apricot: "Oranje", orange: "Oranje",
+    coral: "Rood", red: "Rood", burgundy: "Bordeaux", maroon: "Bordeaux",
+    wine: "Bordeaux", pink: "Roze", rose: "Roze", purple: "Paars",
+    lilac: "Paars", lavender: "Paars", blue: "Blauw", "light blue": "Blauw",
+    "dark blue": "Blauw", navy: "Blauw", "royal blue": "Blauw",
+    turquoise: "Blauw", teal: "Blauw", mint: "Groen", green: "Groen",
+    "light green": "Groen", "dark green": "Groen", olive: "Groen",
+    khaki: "Groen", brown: "Bruin", cognac: "Bruin", mustard: "Geel",
+    yellow: "Geel", gold: "Goud", multi: "Multicolour", clear: "Wit",
+  };
+
+  // Geeft de Nederlandse kleurnaam terug, of de originele waarde als we hem niet
+  // kennen — een onbekende kleur mag nooit een lege waarde worden.
+  function dutchColor(value) {
+    const raw = String(value || "").trim();
+    return COLOUR_NL[raw.toLowerCase()] || raw;
+  }
+
   function valueVariants(value) {
     const raw = String(value).trim();
     const out = [raw];
