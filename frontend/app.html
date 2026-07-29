@@ -6005,8 +6005,6 @@ async function applySuggestedPrice(itemId, price) {
 // Platforms without edit automation (Marktplaats, 2dehands, Facebook) are named
 // explicitly — the user has to change those by hand, and silence would read as
 // "done everywhere".
-const PLATFORM_LABELS = { marktplaats: 'Marktplaats', '2dehands': '2dehands', vinted: 'Vinted',
-                          ebay: 'eBay', shopify: 'Shopify', facebook: 'Facebook' };
 function summarisePriceSync(results) {
   if (!Array.isArray(results) || !results.length) return 'not live anywhere, so nothing to sync.';
   const label = r => PLATFORM_LABELS[r.platform] || r.platform;
@@ -6111,9 +6109,16 @@ async function doBulkPrice() {
   setBusy(true, `Updating prices… 0/${plan.length}`);
   const failed = [];
   let done = 0;
+  const syncTally = {};
   for (const { item, to } of plan) {
     try {
-      await patchItemPrice(item.id, to);
+      const res = await patchItemPrice(item.id, to);
+      // Roll the per-item channel results up, so a bulk reprice can't hide the
+      // fact that a channel refused (or has no automation at all).
+      for (const r of (res && res.price_sync) || []) {
+        const key = `${r.status}:${r.platform || ''}`;
+        syncTally[key] = (syncTally[key] || 0) + 1;
+      }
     } catch (e) {
       failed.push(item.title);
     }
@@ -6126,7 +6131,10 @@ async function doBulkPrice() {
   if (failed.length) {
     alert(`${plan.length - failed.length} of ${plan.length} updated.\n\nFailed:\n• ${failed.slice(0, 8).join('\n• ')}`);
   } else {
-    showToast(`${plan.length} price${plan.length === 1 ? '' : 's'} updated.`);
+    const chan = Object.entries(syncTally)
+      .map(([k, n]) => { const [status, p] = k.split(':');
+        return `${PLATFORM_LABELS[p] || p} ${status === 'updated' ? 'updated' : status === 'queued' ? 'queued' : status === 'unsupported' ? 'by hand' : 'FAILED'} (${n})`; });
+    showToast(`${plan.length} price${plan.length === 1 ? '' : 's'} updated${chan.length ? ' — ' + chan.join(', ') : ''}.`);
   }
   clearSelection();
   if (document.getElementById('view-stale').classList.contains('active')) renderStaleStock();
