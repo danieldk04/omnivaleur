@@ -130,5 +130,9 @@ async def mirror_photos(urls: list[str] | None, user_id: str, _sem=None) -> list
                 logger.warning("photo mirror failed for %s: %s", url[:120], e)
                 return url
 
-    async with httpx.AsyncClient(timeout=REQUEST_TIMEOUT) as client:
+    # Cap the connection pool as well as the semaphore: httpx otherwise opens a
+    # fresh connection per request, which is what exhausted local sockets on a
+    # multi-photo item.
+    limits = httpx.Limits(max_connections=MAX_CONCURRENCY, max_keepalive_connections=MAX_CONCURRENCY)
+    async with httpx.AsyncClient(timeout=REQUEST_TIMEOUT, limits=limits) as client:
         return list(await asyncio.gather(*(one(client, u) for u in urls)))
