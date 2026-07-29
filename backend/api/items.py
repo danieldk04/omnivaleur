@@ -48,18 +48,50 @@ def get_item(item_id: str, user_id: str = Depends(get_current_user)):
 
 
 @router.patch("/{item_id}")
-def update_item(item_id: str, updates: dict, user_id: str = Depends(get_current_user)):
+async def update_item(item_id: str, updates: dict, user_id: str = Depends(get_current_user)):
     db = get_db()
+    clean = _strip_missing(updates)
+
+    # A price change has to reach the marketplaces, not just this row. Without
+    # this the dashboard showed the new price while every channel kept selling
+    # at the old one — which made the whole Stale stock "Apply" flow pointless.
+    prior = None
+    price_fields = {"price", "price_marktplaats", "price_2dehands",
+                    "price_vinted", "price_ebay", "price_shopify"}
+    if price_fields & set(clean):
+        prior = db.table("items").select("*").eq("id", item_id).eq("user_id", user_id).execute().data
+        prior = prior[0] if prior else None
+
     result = (
         db.table("items")
-        .update(_strip_missing(updates))
+        .update(clean)
         .eq("id", item_id)
         .eq("user_id", user_id)
         .execute()
     )
     if not result.data:
         raise HTTPException(status_code=404, detail="Item not found")
-    return result.data[0]
+    item = result.data[0]
+
+    def _changed(field: str) -> bool:
+        if field not in clean or prior is None:
+            return False
+        try:
+            return float(prior.get(field) or 0) != float(clean.get(field) or 0)
+        except (TypeError, ValueError):
+            return prior.get(field) != clean.get(field)
+
+    if prior is not None and any(_changed(f) for f in price_fields):
+        from backend.services.crosslist import sync_price_to_platforms
+        # Best-effort: a marketplace that refuses the new price must not fail the
+        # save itself, so the outcome is reported alongside the item instead.
+        try:
+            item["price_sync"] = await sync_price_to_platforms(item_id, user_id)
+        except Exception as e:  # noqa: BLE001 - never break the save
+            logger.exception("Price sync raised for item %s", item_id)
+            item["price_sync"] = [{"status": "error", "error": str(e)}]
+
+    return item
 
 
 @router.delete("/{item_id}")
