@@ -386,8 +386,13 @@ nav { position: sticky; top: 0; z-index: 100; background: rgba(255,255,255,.95);
   .tp-split { grid-template-columns: 1fr; }
   .tour { padding: 60px 20px; }
   .tour-panel { padding: 18px; }
-  .tp-badges { justify-content: flex-start; }
-  .tp-row { flex-wrap: wrap; }
+  /* Badges get their own full-width line under the text. Left on the same row
+     they squeeze the title column to a few characters, which turned "Burberry
+     wool coat" into "B.." and broke the subtitle one word per line. */
+  .tp-row { flex-wrap: wrap; row-gap: 8px; }
+  .tp-row-main { flex: 1 1 0; }
+  .tp-row-title { white-space: normal; }
+  .tp-badges { flex: 1 0 100%; justify-content: flex-start; }
 }
 @media (prefers-reduced-motion: reduce) {
   .tour-panel.active > *, .tp-bar, .tp-meter i, .tour-item.active .tour-item-bar { animation: none !important; }
