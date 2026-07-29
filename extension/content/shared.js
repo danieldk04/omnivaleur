@@ -366,7 +366,7 @@ window.CL = (() => {
       console.warn("Omnivaleur photo fetch (page) failed, retrying via background:", url, e);
     }
     try {
-      const res = await runInMainWorld("FETCH_PHOTO", { url });
+      const res = await runInMainWorld("FETCH_PHOTO", { url }, 45000);
       if (!res || !res.ok || !res.dataUrl) throw new Error(res?.error || "background fetch failed");
       const blob = await (await fetch(res.dataUrl)).blob();
       return await finish(blob);
