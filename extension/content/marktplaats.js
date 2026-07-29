@@ -78,6 +78,43 @@
     await step("manufacturer", () => fillManufacturer(item));
     await step("delivery",     () => { clickRadioByValue("Ophalen of Verzenden"); selectBundleFree(); });
     await step("bidding",      () => item.bid_percentage && fillBidding(item.price, item.bid_percentage));
+
+    // Read the form back. Every step above is wrapped in step(), which swallows
+    // failures by design so one missing attribute can't abort the rest — but that
+    // also meant a listing could go out with no size, no brand, no manufacturer
+    // details and no minimum bid, and nothing anywhere said so. Verify what we
+    // actually asked for and report the gaps.
+    const missing = verifyMarktplaatsFields(item);
+    if (missing.length) {
+      throw new Error(
+        `Deze velden zijn niet ingevuld op het formulier: ${missing.join(", ")}. ` +
+        `De advertentie is NIET geplaatst — vul ze zelf aan en klik op Plaatsen.`
+      );
+    }
+  }
+
+  // Checks the fields we tried to set, against the real names on the live SYI
+  // form. A field the item has no value for is not checked — only broken fills
+  // are reported, never a gap the item itself has.
+  function verifyMarktplaatsFields(item) {
+    const missing = [];
+    const emptySelect = (name) => {
+      const el = qs(`select[name="${name}"]`);
+      return el && !el.value; // present on this category but still on "Kies..."
+    };
+    const emptyInput = (name) => {
+      const el = qs(`input[name="${name}"]`);
+      return el && !(el.value || "").trim();
+    };
+
+    if (item.size && emptySelect("singleSelectAttribute[size]")) missing.push("maat");
+    if (item.color && emptySelect("singleSelectAttribute[color]")) missing.push("kleur");
+    if (emptySelect("singleSelectAttribute[condition]")) missing.push("conditie");
+    if (item.brand && emptyInput("textAttribute[clothingBrand]")) missing.push("merk");
+    if (emptyInput("textAttribute[manufacturerTradename]")) missing.push("handelsnaam fabrikant");
+    if (emptyInput("textAttribute[manufacturerEmail]")) missing.push("e-mailadres fabrikant");
+    if (item.bid_percentage && emptyInput("price.minimumBidPrice")) missing.push("bieden vanaf");
+    return missing;
   }
 
   // Ask the background for THIS tab's own job (keyed by tab id), so two tabs can
