@@ -4,7 +4,8 @@
   const CONDITION_MAP = { new_with_tags: "Nieuw", new: "Nieuw", good: "Zo goed als nieuw", fair: "Gedragen", poor: "Beschadigd" };
   const { step, qs, sleep, waitForEl, fillInput, fillInputHuman, fillDescription, selectDropdown,
           fillBrand, fillManufacturer, selectBundleFree, uploadPhotos, submitListing,
-          clickRadioByValue, smartTrunc, fillBidding, dutchColor } = window.CL;
+          clickRadioByValue, smartTrunc, fillBidding, dutchColor,
+          verifyMpGroupFields } = window.CL;
 
   const job = await getJob();
   if (!job) return;
