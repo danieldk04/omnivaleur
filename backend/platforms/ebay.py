@@ -349,6 +349,39 @@ class EbayPlatform(PlatformBase):
             )
             return resp.status_code in (200, 204)
 
+    async def update_listing_price(self, offer_id: str, price: float, credentials: dict,
+                                   sku: str = "") -> bool:
+        """Reprice a LIVE offer. bulkUpdatePriceQuantity is the only Inventory-API
+        call that changes the price of a published offer without republishing it:
+        a plain PUT /offer/{id} demands the complete offer payload and would wipe
+        anything not resent. eBay keys the request on SKU with the offers nested
+        under it, so both ids are needed."""
+        if not offer_id:
+            raise RuntimeError("No eBay offer id on this listing")
+        credentials = await self._ensure_fresh_token(credentials)
+        payload = {"requests": [{
+            "sku": sku,
+            "offers": [{
+                "offerId": offer_id,
+                "price": {"value": f"{float(price):.2f}", "currency": "EUR"},
+            }],
+        }]}
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            resp = await client.post(
+                f"{INVENTORY_API}/bulk_update_price_quantity",
+                json=payload,
+                headers=self._auth_headers(credentials, write=True),
+            )
+        _raise_with_ebay_error(resp, "updating price")
+        # A 200 can still carry per-offer failures in the response body — eBay
+        # reports those instead of a non-2xx status, so treating HTTP 200 as
+        # success would silently leave the old price live.
+        for res in (resp.json().get("responses") or []):
+            if int(res.get("statusCode") or 200) >= 400:
+                errors = "; ".join(e.get("message", "") for e in (res.get("errors") or []))
+                raise RuntimeError(f"eBay rejected the price update: {errors or res}")
+        return True
+
     async def resolve_offer_by_sku(self, sku: str, credentials: dict) -> dict | None:
         """
         Best-effort lookup of an existing offer by its SKU, for delisting a listing
