@@ -476,14 +476,21 @@ window.CL = (() => {
     //  - Marktplaats/2dehands: [data-testid="place-listing-submit-button"] wrapper.
     //  - Vinted (/items/new and /edit): [data-testid="upload-form-save-button"]
     //    ("Upload" / "Save"). Must NOT grab upload-form-save-draft-button ("Save draft").
+    // place-listing-submit-button is the <button> ITSELF on the current
+    // Marktplaats form (verified live) — it used to be a wrapper. Handle both,
+    // otherwise this silently fell through to the generic fallbacks below.
     const submitContainer = qs('[data-testid="place-listing-submit-button"]');
-    const btn = submitContainer?.querySelector("button")
+    const btn = (submitContainer?.tagName === "BUTTON" ? submitContainer : null)
+      || submitContainer?.querySelector("button")
       || qs('[data-testid="upload-form-save-button"]')
       || qs('button[type="submit"]')
       || [...document.querySelectorAll("button")].find((b) =>
            b.offsetParent !== null &&
            b.dataset.testid !== "upload-form-save-draft-button" &&
-           /^(plaats(en)?|upload|opslaan|publiceer(en)?|publish|save)$/i.test((b.textContent || "").trim()));
+           // The live label is "Plaats je advertentie", which the old
+           // anchored one-word pattern could never match.
+           /^(plaats(en)?( je advertentie)?|upload|opslaan|publiceer(en)?|publish|save)$/i
+             .test((b.textContent || "").trim()));
     if (!btn) throw new Error("Submit/Plaats-knop niet gevonden");
     btn.scrollIntoView({ block: "center" });
     await sleep(800); // Lexical commit is async — give it time before submit fires
