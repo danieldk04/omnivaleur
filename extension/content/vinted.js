@@ -481,7 +481,9 @@
     // The actual, price-safe refresh: re-order the uploaded photos. This is the
     // only edit we make, and we verify it truly changed the on-page order — if
     // it didn't, we throw rather than save-and-report-success on a no-op.
-    const reordered = await reorderPhotosVinted();
+    // A price update is exempt: the price IS the change, so demanding a photo
+    // shuffle on top would fail every item with fewer than three photos.
+    const reordered = item._price_update ? true : await reorderPhotosVinted();
     if (!reordered) {
       throw new Error("Vinted refresh: couldn't re-order the photos while keeping the first one fixed. This needs at least 3 photos, and Vinted must accept the drag. Nothing was changed — use refresh 2 (relist) instead.");
     }
