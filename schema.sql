@@ -92,6 +92,12 @@ CREATE TABLE IF NOT EXISTS subscriptions (
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+-- Deze tabel is destijds via de Supabase-UI gemaakt en had daardoor RLS aan
+-- zonder policy: alle inserts werden stil geweigerd, waardoor er maandenlang
+-- geen enkele proefperiode werd vastgelegd (en dus ook nooit verliep). De
+-- backend praat met de service key en gaat niet door RLS.
+ALTER TABLE subscriptions DISABLE ROW LEVEL SECURITY;
+
 -- eBay support: items need a numeric eBay category ID to publish (eBay's
 -- Inventory API requires a leaf category, unlike Marktplaats/Vinted's free-form
 -- categories); listings need the offerId separately from the public listingId
