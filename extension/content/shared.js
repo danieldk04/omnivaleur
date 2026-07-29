@@ -358,6 +358,10 @@ window.CL = (() => {
     if (countPhotoThumbs() <= before) {
       throw new Error(`${files.length} foto('s) aangeboden maar het platform toonde er geen enkele`);
     }
+    // Only arm the pre-submit photo guard once thumbnails were actually observed
+    // here. If a platform's thumbnails don't match PHOTO_THUMB_SELECTOR at all we
+    // must not block a submit that would otherwise have succeeded.
+    _expectPhotos = true;
     // Give the remaining uploads time to finish before anything clicks submit.
     await sleep(1500);
     return true;
