@@ -2972,12 +2972,44 @@ async function _mwFillBrand(brand) {
     pill.scrollIntoView({ block: "nearest" });
     pill.click();
     await sleep(400);
-    return (trigger.value || "").trim().length > 0;
+    if ((trigger.value || "").trim().length > 0) {
+      await _mwCloseBrandModal();
+      return true;
+    }
   }
 
-  // Nothing matched — close the modal so it doesn't block the rest of the form
-  document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+  // Nothing matched (or the click didn't commit). Closing the modal is NOT
+  // optional: ReactModal marks the rest of the page inert while it's open, so a
+  // modal left behind silently swallowed every field after Merk — manufacturer,
+  // delivery and the bid price all stayed empty with no error anywhere. A bare
+  // Escape on `document` is not enough; ReactModal listens on its own node.
+  await _mwCloseBrandModal();
   return false;
+}
+
+// Close whatever brand/attribute modal is open, hardest-first, and confirm it
+// actually went away.
+async function _mwCloseBrandModal() {
+  const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+  const getModal = () =>
+    document.querySelector(".ReactModal__Content") || document.querySelector('[role="dialog"]');
+
+  for (let attempt = 0; attempt < 3; attempt++) {
+    const modal = getModal();
+    if (!modal) return true;
+    const closeBtn = [...modal.querySelectorAll("button")].find((b) => {
+      const label = (b.getAttribute("aria-label") || "").toLowerCase();
+      return b.offsetParent !== null && (label.includes("close") || label.includes("sluit"));
+    });
+    if (closeBtn) closeBtn.click();
+    else {
+      modal.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+      document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+      document.querySelector(".ReactModal__Overlay")?.click();
+    }
+    await sleep(400);
+  }
+  return !getModal();
 }
 
 // Content scripts call this when done
