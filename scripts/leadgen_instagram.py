@@ -7,37 +7,38 @@ Zoeken op hashtags (#vinted, #tweedehands) levert vooral kopers, reviewers,
 haul-accounts en buitenlandse verkopers. Die hashtag zegt "ik heb iets met
 tweedehands", niet "ik verkoop serieus en heb last van crosslisten".
 
-WAT WEL WERKT — en wat ik eerst heb geprobeerd (2026-07, alles live getest)
-  * Vinted als bron: ONBRUIKBAAR. Zit achter Cloudflare en weigert datacenter-IP's;
-    drie verschillende Apify Vinted-actors gaven allemaal nul resultaten.
-  * Marktplaats als bron: de scrape werkt prima, maar er is GEEN brug naar Instagram.
-    Handles raden uit de winkelnaam gaf 4 treffers op 13 gokken, en de enige echte
-    match was een verzamelaar uit Tokio. Advertentieteksten noemen ook niets:
-    0 van 53 beschrijvingen bevatte een @handle of instagram-link.
-  * Instagram keyword-discovery met Nederlandse zoektermen: WERKT. Levert direct
-    tweedehandskleding.nl, kringloopenclave, thriftshopnl — precies de doelgroep.
+WAT WEL WERKT — alles live getest (2026-07), niet aangenomen
+  * Vinted als bron: ONBRUIKBAAR. Cloudflare weigert datacenter-IP's; drie
+    verschillende Apify Vinted-actors gaven allemaal nul resultaten.
+  * Marktplaats als bron: scrape werkt, maar er is GEEN brug naar Instagram.
+    Handles raden gaf 4 treffers op 13 gokken en de enige echte match was een
+    verzamelaar uit Tokio; 0 van 53 advertentieteksten noemde een @handle.
+  * Instagram-hashtags: BESTE BRON. 30 posts op #tweedehandskleding gaven 22 unieke
+    Nederlandse winkels. Zie leadgen_sources.py voor de cijfers per methode.
 
-Vandaar deze trechter:
-  discover  Instagram-accounts vinden op Nederlandse zoektermen (Apify)
+DE TRECHTER
+  discover  handles verzamelen uit vier bronnen (zie leadgen_sources.py)
+  enrich    bio, volgers en website erbij halen — de bron levert alleen een handle
   classify  Haiku beoordeelt: verkoper of consument/reviewer? + Notion-veldwaardes
   push      als lead in de Notion-Leadlist zetten, status "Reach out"
 
-Elke stap schrijft naar scripts/output/leads/ en leest de vorige van schijf, zodat
-je een dure stap nooit twee keer draait en tussendoor met de hand kunt controleren.
+Elke stap schrijft naar scripts/output/leads/ en leest de vorige van schijf, zodat je
+een dure stap nooit twee keer draait en tussendoor met de hand kunt controleren.
+'discover' stapelt: elke run voegt toe aan wat er al ligt in plaats van te overschrijven.
 
 DIT SCRIPT VERSTUURT NIETS. De officiële Instagram-API staat koude DM's niet toe
 (alleen antwoorden binnen 24 uur nadat iemand jou schrijft), en tools die het toch
 doen worden gedetecteerd — met je eigen merkaccount als inzet. Alles tot en met de
 kant-en-klare tekst is geautomatiseerd, op de verzendknop na.
 
-LET OP: keyword-discovery is op een gratis Apify-account gelimiteerd tot 5
-kandidaten per run. Voor serieuze volumes is een betaald Apify-plan nodig.
-
 Gebruik:
     export APIFY_TOKEN=... NOTION_TOKEN=...
-    python3 scripts/leadgen_instagram.py discover --max 40
+    python3 scripts/leadgen_instagram.py discover --method hashtag
+    python3 scripts/leadgen_instagram.py enrich
     python3 scripts/leadgen_instagram.py classify
     python3 scripts/leadgen_instagram.py push --dry-run
+
+    python3 scripts/leadgen_instagram.py bench      # welke bron levert het meest op
 """
 from __future__ import annotations
 
@@ -50,26 +51,19 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
+from scripts import leadgen_sources as src  # noqa: E402
+
 OUT = Path(__file__).parent / "output" / "leads"
+HANDLES = OUT / "handles.json"
 CANDIDATES = OUT / "candidates.json"
 LEADS = OUT / "leads.json"
+BENCH = OUT / "bench.json"
 
-APIFY_SYNC = "https://api.apify.com/v2/acts/{actor}/run-sync-get-dataset-items"
-IG_DISCOVERY = "afanasenko~instagram-profile-scraper"
+PROFILE_ACTOR = "figue~instagram-profile-scraper"
 
 NOTION_DB = "399b0954-fb72-8053-a8fc-fa7c21616371"
 NOTION_API = "https://api.notion.com/v1"
 NOTION_VERSION = "2022-06-28"
-
-# Nederlandstalige zoektermen zijn zelf al het landfilter: wie zijn winkel
-# "kringloop" of "tweedehands kleding" noemt zit in NL/BE. Engelse termen als
-# "thrift" halen de halve wereld binnen en horen hier dus niet los in thuis.
-QUERIES = [
-    "vintage kleding", "tweedehands kleding", "kringloop", "kringloopwinkel",
-    "vintage winkel", "tweedehands winkel", "vintage shop nederland",
-    "thriftshop nl", "vintage meubels", "brocante", "curiosa",
-    "preloved kleding", "vintage sieraden", "retro winkel",
-]
 
 
 def _need(var: str) -> str:
@@ -79,46 +73,62 @@ def _need(var: str) -> str:
     return val
 
 
+def _clean(v) -> str:
+    """Actors schrijven letterlijk "N/A" in lege velden; dat is voor een prompt
+    misleidender dan gewoon niets."""
+    return "" if v in (None, "N/A", "", "null") else str(v)
+
+
+def _load(path: Path) -> list[dict]:
+    return json.loads(path.read_text()) if path.exists() else []
+
+
+def _save(path: Path, rows: list) -> None:
+    OUT.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(rows, indent=2, ensure_ascii=False))
+
+
 # ---------------------------------------------------------------- discover
 
 
+def _collect(method: str, args, token: str, exclude: list[str]) -> list[dict]:
+    if method == "dork":
+        return src.from_dork(pages=args.pages)
+    if method == "hashtag":
+        return src.from_hashtag(args.hashtags, per_tag=args.per_tag, token=token)
+    if method == "keyword":
+        return src.from_keyword(args.queries, max_count=args.max, token=token,
+                                exclude=exclude)
+    if method == "local":
+        return src.from_local(args.cities, max_per_run=5, token=token, exclude=exclude)
+    sys.exit(f"Onbekende methode: {method}")
+
+
 def discover(args) -> None:
-    token = _need("APIFY_TOKEN")
-    import httpx
+    methods = list(src.SOURCES) if args.method == "all" else [args.method]
+    # 'dork' is de enige bron zonder Apify; alleen daarvoor mag de token ontbreken.
+    token = "" if methods == ["dork"] else _need("APIFY_TOKEN")
 
-    payload = {
-        "operationMode": "keywordDiscovery",
-        "searchQueries": args.queries or QUERIES,
-        "maxCountDiscovery": args.max,
-        "maxSearchPagesPerQuery": 3,
-        "extractEmail": True,
-        # Kandidaten die al in Notion staan worden hier al weggegooid vóórdat ze
-        # geanalyseerd (en dus betaald) worden.
-        "excludeAccounts": _existing_handles_or_empty(),
-        "clearSavedData": True,
-    }
-    print(f"{len(payload['searchQueries'])} zoektermen, max {args.max} kandidaten…")
+    existing = _load(HANDLES)
+    seen = {r["handle"] for r in existing}
+    exclude = _existing_handles_or_empty() + sorted(seen)
+    print(f"{len(existing)} handles al verzameld, {len(exclude)} uitgesloten\n")
 
-    r = httpx.post(APIFY_SYNC.format(actor=IG_DISCOVERY),
-                   params={"token": token}, json=payload, timeout=900.0)
-    if r.status_code >= 400:
-        sys.exit(f"Apify gaf HTTP {r.status_code}: {r.text[:300]}")
-    rows = r.json() or []
+    added = 0
+    for method in methods:
+        print(f"[{method}]")
+        for rec in _collect(method, args, token, exclude):
+            if rec["handle"] in seen:
+                continue
+            seen.add(rec["handle"])
+            existing.append(rec)
+            added += 1
+        print()
 
-    OUT.mkdir(parents=True, exist_ok=True)
-    CANDIDATES.write_text(json.dumps(rows, indent=2, ensure_ascii=False))
-    print(f"\n{len(rows)} kandidaten → {CANDIDATES}")
-    for row in rows[:20]:
-        print(f"  {_handle(row):28s} {row.get('Followers Count', 0):>7} volgers  "
-              f"{(row.get('Full Name') or '')[:34]}")
-    if len(rows) <= 5:
-        print("\nLET OP: 5 of minder resultaten wijst op de gratis-plan-limiet "
-              "van Apify (5 kandidaten per run bij keyword-discovery).")
-
-
-def _handle(row: dict) -> str:
-    """De actor geeft een profiel-URL terug, niet de losse handle."""
-    return (row.get("Account") or "").rstrip("/").rsplit("/", 1)[-1].lower()
+    _save(HANDLES, existing)
+    print(f"{added} nieuwe handles ({len(existing)} totaal) → {HANDLES}")
+    for rec in existing[-15:]:
+        print(f"  @{rec['handle']:30s} {rec['method']:8s} {rec['full_name'][:34]}")
 
 
 def _existing_handles_or_empty() -> list[str]:
@@ -129,6 +139,65 @@ def _existing_handles_or_empty() -> list[str]:
         return [u.rstrip("/").rsplit("/", 1)[-1] for u in _existing_urls(token)]
     except Exception:  # noqa: BLE001 — dedupe is een optimalisatie, geen vereiste
         return []
+
+
+# ------------------------------------------------------------------ enrich
+
+
+def _enrich_rows(rows: list[dict], token: str, batch: int = 50) -> list[dict]:
+    """Handle → volledig profiel. Hashtag- en dork-bronnen leveren alleen een naam;
+    zonder bio kan de classificatie een winkel niet van een koper onderscheiden.
+
+    Dit is óók waar de gratis-plan-limiet omzeild wordt: die zit op de discovery-
+    actor, niet op de profiel-actor. Hier betaal je ~$0,001 per profiel, ongelimiteerd.
+    """
+    todo = [r for r in rows if not r.get("enriched")]
+    if not todo:
+        return rows
+    by_handle = {r["handle"]: r for r in rows}
+
+    for i in range(0, len(todo), batch):
+        chunk = todo[i: i + batch]
+        print(f"  profielen {i + 1}-{i + len(chunk)} van {len(todo)}…", flush=True)
+        got = src._run(PROFILE_ACTOR,
+                       {"profiles": [r["handle"] for r in chunk],
+                        "includeRecentPosts": True}, token)
+        for row in got:
+            handle = (row.get("username") or "").lower()
+            target = by_handle.get(handle)
+            # De actor zet een 'error'-veld bij een profiel dat hij niet kon ophalen;
+            # dat is geen profiel en mag de classificatie niet in.
+            if not target or row.get("error"):
+                continue
+            target.update({
+                "enriched": True,
+                "full_name": _clean(row.get("full_name")) or target.get("full_name", ""),
+                "followers": row.get("followersCount") or target.get("followers") or 0,
+                "posts": row.get("postsCount") or 0,
+                "bio": _clean(row.get("biography")),
+                "website": _clean(row.get("external_url")),
+                "email": _clean(row.get("business_email")),
+                "category": _clean(row.get("category_name")),
+                "private": bool(row.get("is_private")),
+                "captions": [(p.get("caption") or "")[:240]
+                             for p in (row.get("latestPosts") or [])[:4]],
+            })
+    return rows
+
+
+def enrich(args) -> None:
+    token = _need("APIFY_TOKEN")
+    rows = _load(HANDLES)
+    if not rows:
+        sys.exit("Nog geen handles.json — draai eerst 'discover'")
+    if args.limit:
+        rows = rows[: args.limit]
+
+    rows = _enrich_rows(rows, token)
+    ok = [r for r in rows if r.get("enriched") and not r.get("private")]
+    _save(HANDLES, _load(HANDLES) or rows)     # verrijking terug naar de bron
+    _save(CANDIDATES, ok)
+    print(f"\n{len(ok)} publieke profielen verrijkt → {CANDIDATES}")
 
 
 # ---------------------------------------------------------------- classify
@@ -148,9 +217,10 @@ Account:
   @{handle} — {full_name}
   volgers: {followers}, posts: {posts}
   bio: {bio}
-  website: {url}
+  website: {website}
   categorie: {category}
   e-mail: {email}
+  recente bijschriften: {captions}
 
 Antwoord met UITSLUITEND JSON:
 {{"is_lead": true/false,
@@ -162,30 +232,23 @@ Antwoord met UITSLUITEND JSON:
   "language": "NL|EN"}}"""
 
 
-def classify(args) -> None:
-    if not CANDIDATES.exists():
-        sys.exit("Nog geen candidates.json — draai eerst 'discover'")
-
+def _classify_rows(rows: list[dict], min_confidence: int, quiet: bool = False) -> list[dict]:
     import anthropic
     from backend.config import settings
 
     client = anthropic.Anthropic(api_key=settings.anthropic_api_key)
-    rows = json.loads(CANDIDATES.read_text())
     leads = []
-
     for i, row in enumerate(rows, 1):
-        handle = _handle(row)
-        if not handle:
-            continue
         prompt = PROMPT.format(
-            handle=handle,
-            full_name=row.get("Full Name") or "(leeg)",
-            followers=row.get("Followers Count") or 0,
-            posts=row.get("Total Posts") or 0,
-            bio=row.get("Biography") or "(leeg)",
-            url=_clean(row.get("External URL")),
-            category=_clean(row.get("Category")),
-            email=_clean(row.get("Email")),
+            handle=row["handle"],
+            full_name=row.get("full_name") or "(leeg)",
+            followers=row.get("followers") or 0,
+            posts=row.get("posts") or 0,
+            bio=row.get("bio") or "(leeg)",
+            website=row.get("website") or "(geen)",
+            category=row.get("category") or "(geen)",
+            email=row.get("email") or "(geen)",
+            captions=" | ".join(row.get("captions") or []) or "(geen)",
         )
         try:
             resp = client.messages.create(
@@ -193,39 +256,86 @@ def classify(args) -> None:
                 max_tokens=400,
                 messages=[{"role": "user", "content": prompt}],
             )
-            verdict = json.loads(
-                re.search(r"\{.*\}", resp.content[0].text, re.S).group(0))
+            verdict = json.loads(re.search(r"\{.*\}", resp.content[0].text, re.S).group(0))
         except Exception as e:  # noqa: BLE001
-            print(f"  ! @{handle}: {e}")
+            print(f"  ! @{row['handle']}: {e}")
             continue
 
-        keep = verdict.get("is_lead") and verdict.get("confidence", 0) >= args.min_confidence
-        print(f"[{i}/{len(rows)}] {'✓' if keep else '·'} @{handle:28s} "
-              f"{verdict.get('reden', '')[:62]}")
+        keep = verdict.get("is_lead") and verdict.get("confidence", 0) >= min_confidence
+        if not quiet:
+            print(f"[{i}/{len(rows)}] {'✓' if keep else '·'} @{row['handle']:28s} "
+                  f"{verdict.get('reden', '')[:60]}")
         if keep:
             leads.append({
-                "handle": handle,
-                "ig_url": f"https://www.instagram.com/{handle}/",
-                "full_name": row.get("Full Name") or "",
-                "followers": row.get("Followers Count") or 0,
-                "bio": row.get("Biography") or "",
-                "email": _clean(row.get("Email")),
-                "website": _clean(row.get("External URL")),
+                **{k: row.get(k) for k in
+                   ("handle", "method", "source", "full_name", "followers",
+                    "bio", "email", "website")},
+                "ig_url": f"https://www.instagram.com/{row['handle']}/",
                 **verdict,
             })
+    return leads
 
-    OUT.mkdir(parents=True, exist_ok=True)
-    LEADS.write_text(json.dumps(leads, indent=2, ensure_ascii=False))
+
+def classify(args) -> None:
+    rows = _load(CANDIDATES)
+    if not rows:
+        sys.exit("Nog geen candidates.json — draai eerst 'enrich'")
+    leads = _classify_rows(rows, args.min_confidence)
+    _save(LEADS, leads)
     print(f"\n{len(leads)} van {len(rows)} accounts gekwalificeerd → {LEADS}")
 
 
-def _clean(v) -> str:
-    """De actor schrijft letterlijk "N/A" in lege velden; dat is voor een prompt
-    misleidender dan gewoon niets."""
-    return "" if v in (None, "N/A", "") else str(v)
+# ------------------------------------------------------------------- bench
 
 
-# ---------------------------------------------------------------- push
+def bench(args) -> None:
+    """Draai alle vier de bronnen apart en vergelijk de opbrengst.
+
+    Meet wat er telt: niet hoeveel handles een bron oplevert, maar hoeveel daarvan
+    de classificatie overleven. Een bron die 100 kopers aandraagt is slechter dan
+    een die 12 winkels vindt.
+    """
+    token = _need("APIFY_TOKEN")
+    results = []
+
+    for method in ("hashtag", "local", "keyword", "dork"):
+        if args.only and method not in args.only:
+            continue
+        print(f"\n{'=' * 62}\n[{method}]\n{'=' * 62}")
+        budget = argparse.Namespace(
+            pages=1, per_tag=args.per_tag, max=args.max, queries=None,
+            hashtags=src.HASHTAGS[: args.n], cities=src.CITIES[: args.n],
+        )
+        try:
+            found = _collect(method, budget, token, [])
+        except SystemExit:
+            raise
+        except Exception as e:  # noqa: BLE001
+            print(f"  ! bron faalde: {e}")
+            found = []
+
+        enriched = [r for r in _enrich_rows(found, token)
+                    if r.get("enriched") and not r.get("private")] if found else []
+        leads = _classify_rows(enriched, args.min_confidence, quiet=True) if enriched else []
+        results.append({
+            "methode": method,
+            "handles": len(found),
+            "profielen": len(enriched),
+            "leads": len(leads),
+            "precisie": round(100 * len(leads) / len(enriched)) if enriched else 0,
+            "voorbeelden": [l["handle"] for l in leads[:5]],
+        })
+
+    _save(BENCH, results)
+    print(f"\n\n{'methode':10s} {'handles':>8s} {'profielen':>10s} {'leads':>6s} {'precisie':>9s}")
+    print("-" * 48)
+    for r in sorted(results, key=lambda r: r["leads"], reverse=True):
+        print(f"{r['methode']:10s} {r['handles']:>8d} {r['profielen']:>10d} "
+              f"{r['leads']:>6d} {r['precisie']:>8d}%")
+    print(f"\nDetails → {BENCH}")
+
+
+# --------------------------------------------------------------------- push
 
 
 def _notion(method: str, path: str, token: str, body: dict | None = None) -> dict:
@@ -264,15 +374,15 @@ def _existing_urls(token: str) -> set[str]:
 
 
 def push(args) -> None:
-    if not LEADS.exists():
+    leads = _load(LEADS)
+    if not leads:
         sys.exit("Nog geen leads.json — draai eerst 'classify'")
 
-    leads = json.loads(LEADS.read_text())
     if args.dry_run:
         print(f"{len(leads)} leads klaar (dry-run, er wordt niets weggeschreven):\n")
         for l in leads:
-            print(f"  @{l['handle']:28s} {l['followers']:>7} volgers  "
-                  f"{l.get('verkoopt_vooral', '')}")
+            print(f"  @{l['handle']:28s} {l.get('followers') or 0:>7} volgers  "
+                  f"{l.get('method', ''):8s} {l.get('verkoopt_vooral', '')}")
             print(f"     {l.get('reden', '')}")
         return
 
@@ -286,13 +396,12 @@ def push(args) -> None:
             skipped += 1
             continue
         notes = " · ".join(x for x in [
-            f"{l['followers']} volgers",
-            l.get("website"),
-            l.get("email"),
-            l.get("reden"),
+            f"{l.get('followers') or 0} volgers",
+            f"gevonden via {l.get('source') or l.get('method')}",
+            l.get("website"), l.get("email"), l.get("reden"),
         ] if x)
         props = {
-            "Name": {"title": [{"text": {"content": l["full_name"] or l["handle"]}}]},
+            "Name": {"title": [{"text": {"content": l.get("full_name") or l["handle"]}}]},
             "URL": {"url": l["ig_url"]},
             "Platform": {"select": {"name": "IG"}},
             "Language": {"select": {"name": l.get("language", "NL")}},
@@ -322,14 +431,32 @@ def main() -> None:
         description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     sub = ap.add_subparsers(dest="cmd", required=True)
 
-    d = sub.add_parser("discover", help="Instagram-accounts zoeken op NL-termen")
-    d.add_argument("--max", type=int, default=40, help="kostenplafond in kandidaten")
-    d.add_argument("--queries", nargs="*", help="eigen zoektermen i.p.v. de standaardlijst")
+    d = sub.add_parser("discover", help="handles verzamelen uit een of alle bronnen")
+    d.add_argument("--method", default="hashtag",
+                   choices=[*src.SOURCES, "all"])
+    d.add_argument("--max", type=int, default=40, help="keyword: kostenplafond")
+    d.add_argument("--per-tag", type=int, default=40, help="hashtag: posts per tag")
+    d.add_argument("--pages", type=int, default=2, help="dork: zoekpagina's per term")
+    d.add_argument("--queries", nargs="*", help="keyword: eigen zoektermen")
+    d.add_argument("--hashtags", nargs="*", help="hashtag: eigen tags")
+    d.add_argument("--cities", nargs="*", help="local: eigen steden")
     d.set_defaults(func=discover)
+
+    e = sub.add_parser("enrich", help="bio/volgers/website bij de handles zoeken")
+    e.add_argument("--limit", type=int, default=0)
+    e.set_defaults(func=enrich)
 
     c = sub.add_parser("classify", help="Haiku beoordeelt verkoper vs consument")
     c.add_argument("--min-confidence", type=int, default=60)
     c.set_defaults(func=classify)
+
+    b = sub.add_parser("bench", help="vergelijk de opbrengst van de vier bronnen")
+    b.add_argument("--n", type=int, default=3, help="hashtags/steden per methode")
+    b.add_argument("--per-tag", type=int, default=30)
+    b.add_argument("--max", type=int, default=10)
+    b.add_argument("--min-confidence", type=int, default=60)
+    b.add_argument("--only", nargs="*", help="alleen deze methoden")
+    b.set_defaults(func=bench)
 
     p = sub.add_parser("push", help="naar de Notion-Leadlist")
     p.add_argument("--dry-run", action="store_true")
