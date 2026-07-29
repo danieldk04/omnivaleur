@@ -279,28 +279,98 @@ window.CL = (() => {
     return false;
   }
 
+  // Thumbnails the marketplaces render once an upload actually landed. Verified
+  // live on the Marktplaats SYI form: a successful upload swaps the local blob
+  // for an images.marktplaats.com URL, so seeing one of these is real proof the
+  // photo reached the platform — not just proof that we set input.files.
+  const PHOTO_THUMB_SELECTOR = [
+    'img[src*="images.marktplaats.com"]',
+    'img[src*="images.2dehands.be"]',
+    'img[src*="vinted.net"]',
+    'img[src^="blob:"]',
+    '[class*="hz-Listing"] img',
+    '[class*="thumbnail"] img',
+    '[data-testid*="image"] img',
+  ].join(", ");
+
+  function countPhotoThumbs() {
+    return document.querySelectorAll(PHOTO_THUMB_SELECTOR).length;
+  }
+
+  // THROWS on failure — never returns quietly. Photos are mandatory on every
+  // platform here, and a silent `return false` meant the form was submitted with
+  // zero photos and the user got no explanation at all. The thrown message names
+  // the actual cause (no field / nothing downloadable / platform rejected them).
   async function uploadPhotos(urls, opts = {}) {
-    const fileInput = qs('input[type="file"]');
-    if (!fileInput) return false;
-    const files = (await Promise.all(urls.map((u) => fetchFile(u, opts)))).filter(Boolean);
-    if (!files.length) return false;
+    // Prefer the real image picker: MP's page also carries an unrelated
+    // input[name="file"], and a plain input[type=file] grab can land on that one.
+    const fileInput = qs('input[type="file"][accept*="image"]')
+      || qs('input[type="file"]#imageUploader-hiddenInput')
+      || qs('input[type="file"]');
+    if (!fileInput) throw new Error("Fotoveld niet gevonden op de pagina");
+
+    const before = countPhotoThumbs();
+    const files = [];
+    const failures = [];
+    for (const u of urls) {
+      const f = await fetchFile(u, opts);
+      if (f) files.push(f); else failures.push(u);
+    }
+    if (!files.length) {
+      throw new Error(
+        `Geen van de ${urls.length} foto('s) kon worden gedownload — ` +
+        `eerste URL: ${(failures[0] || "").slice(0, 120)}`
+      );
+    }
+
     const dt = new DataTransfer();
     files.forEach((f) => dt.items.add(f));
     fileInput.files = dt.files;
     fileInput.dispatchEvent(new Event("change", { bubbles: true }));
-    await waitForEl('[class*="hz-Listing"] img, [class*="photo"] img, [class*="thumbnail"] img, [data-testid*="image"] img', 8000)
-      .catch(() => sleep(1500));
+
+    // Uploading N photos to the platform's CDN takes real time — the old 8s
+    // wait for ONE thumbnail was both too short and too weak a check.
+    const deadline = Date.now() + 45000;
+    while (Date.now() < deadline) {
+      if (countPhotoThumbs() > before) break;
+      await sleep(500);
+    }
+    if (countPhotoThumbs() <= before) {
+      throw new Error(`${files.length} foto('s) aangeboden maar het platform toonde er geen enkele`);
+    }
+    // Give the remaining uploads time to finish before anything clicks submit.
+    await sleep(1500);
     return true;
   }
 
+  // Two-stage fetch. A content script's fetch carries the PAGE's origin
+  // (marktplaats.nl) and is therefore subject to that origin's CORS — a photo
+  // host that doesn't allow it fails here for reasons the page can never fix.
+  // The service worker fetches under the extension's own origin with its host
+  // permissions, so it succeeds where the page cannot. Try the page first (no
+  // round-trip, no base64), fall back to the worker, and log why each failed.
   async function fetchFile(url, opts = {}) {
-    try {
-      const resp = await fetch(url);
-      const blob = await resp.blob();
-      const name = url.split("/").pop()?.split("?")[0] || "photo.jpg";
+    const name = url.split("/").pop()?.split("?")[0] || "photo.jpg";
+    const finish = async (blob) => {
       const finalBlob = opts.jitter ? await jitterImage(blob) : blob;
       return new File([finalBlob], name, { type: "image/jpeg" });
-    } catch (e) { console.warn("Omnivaleur photo fetch failed", url, e); return null; }
+    };
+    try {
+      const resp = await fetch(url);
+      if (!resp.ok) throw new Error("HTTP " + resp.status);
+      return await finish(await resp.blob());
+    } catch (e) {
+      console.warn("Omnivaleur photo fetch (page) failed, retrying via background:", url, e);
+    }
+    try {
+      const res = await runInMainWorld("FETCH_PHOTO", { url });
+      if (!res || !res.ok || !res.dataUrl) throw new Error(res?.error || "background fetch failed");
+      const blob = await (await fetch(res.dataUrl)).blob();
+      return await finish(blob);
+    } catch (e) {
+      console.warn("Omnivaleur photo fetch (background) failed:", url, e);
+      return null;
+    }
   }
 
   // Apply random 1-3px crop per side + a sub-perceptual brightness/contrast/
