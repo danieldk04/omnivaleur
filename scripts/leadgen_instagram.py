@@ -151,25 +151,34 @@ def _enrich_rows(rows: list[dict], token: str, batch: int = 50) -> list[dict]:
     Dit is óók waar de gratis-plan-limiet omzeild wordt: die zit op de discovery-
     actor, niet op de profiel-actor. Hier betaal je ~$0,001 per profiel, ongelimiteerd.
     """
-    todo = [r for r in rows if not r.get("enriched")]
-    if not todo:
-        return rows
     by_handle = {r["handle"]: r for r in rows}
 
-    for i in range(0, len(todo), batch):
-        chunk = todo[i: i + batch]
-        print(f"  profielen {i + 1}-{i + len(chunk)} van {len(todo)}…", flush=True)
-        got = src._run(PROFILE_ACTOR,
-                       {"profiles": [r["handle"] for r in chunk],
-                        "includeRecentPosts": True}, token)
-        for row in got:
-            handle = (row.get("username") or "").lower()
-            target = by_handle.get(handle)
-            # De actor zet een 'error'-veld bij een profiel dat hij niet kon ophalen;
-            # dat is geen profiel en mag de classificatie niet in.
-            if not target or row.get("error"):
-                continue
-            target.update({
+    # Instagram knijpt deze actor af bij grote batches: van veertig profielen in één
+    # keer kwamen er twaalf terug, met "Could not retrieve profile data" voor de rest.
+    # Dat is tijdelijk, geen bestaand-of-niet. Zonder deze herhaalronde gooi je dus
+    # tweederde van je leads weg omdat Instagram het even te druk had.
+    for attempt in range(1, attempts + 1):
+        todo = [r for r in rows if not r.get("enriched")]
+        if not todo:
+            break
+        if attempt > 1:
+            print(f"  ronde {attempt}: {len(todo)} profielen opnieuw proberen")
+            time.sleep(5 * attempt)
+
+        for i in range(0, len(todo), batch):
+            chunk = todo[i: i + batch]
+            print(f"  profielen {i + 1}-{i + len(chunk)} van {len(todo)}…", flush=True)
+            got = src._run(PROFILE_ACTOR,
+                           {"profiles": [r["handle"] for r in chunk],
+                            "includeRecentPosts": True}, token)
+            for row in got:
+                handle = (row.get("username") or "").lower()
+                target = by_handle.get(handle)
+                # Een 'error'-rij is geen profiel; die laten we onverrijkt zodat de
+                # volgende ronde hem opnieuw oppakt.
+                if not target or row.get("error"):
+                    continue
+                target.update({
                 "enriched": True,
                 "full_name": _clean(row.get("full_name")) or target.get("full_name", ""),
                 "followers": row.get("followersCount") or target.get("followers") or 0,
