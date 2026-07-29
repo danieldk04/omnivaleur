@@ -3030,6 +3030,34 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     return true;
   }
 
+  // Photo download of last resort. A content script's fetch carries the PAGE's
+  // origin (marktplaats.nl), so a photo host that doesn't allow that origin fails
+  // in the page no matter what — and the photo silently never made it onto the
+  // listing. The service worker fetches under the extension's own origin, which
+  // is not bound by the marketplace's CORS relationship with the photo host.
+  if (msg.type === "FETCH_PHOTO") {
+    (async () => {
+      try {
+        const resp = await fetch(msg.url);
+        if (!resp.ok) { sendResponse({ ok: false, error: `HTTP ${resp.status}` }); return; }
+        const blob = await resp.blob();
+        // Blobs can't cross the message boundary — hand over a data: URL, which
+        // the content script turns straight back into a File.
+        const dataUrl = await new Promise((res, rej) => {
+          const fr = new FileReader();
+          fr.onload = () => res(fr.result);
+          fr.onerror = () => rej(fr.error);
+          fr.readAsDataURL(blob);
+        });
+        sendResponse({ ok: true, dataUrl });
+      } catch (e) {
+        console.error("[Omnivaleur] FETCH_PHOTO failed:", msg.url, e);
+        sendResponse({ ok: false, error: String(e?.message || e) });
+      }
+    })();
+    return true;
+  }
+
   if (msg.type === "JOB_DONE") {
     const { platform, jobId, serverUrl, result } = msg;
     // Clean up and close regardless of whether the completion landed on the
