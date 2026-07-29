@@ -89,6 +89,15 @@ def create_checkout(user_id: str = Depends(get_current_user)):
         customer_id = customer.id
         db.table("subscriptions").update({"stripe_customer_id": customer_id}).eq("user_id", user_id).execute()
 
+    # De proefperiode loopt al vanaf de eerste login; hier nog eens 7 dagen
+    # meegeven zou hem verdubbelen voor wie halverwege upgradet. Stripe wil een
+    # trial_end van minimaal 48 uur vooruit — zit iemand daaronder, dan start
+    # het abonnement meteen.
+    subscription_data = {"metadata": {"user_id": user_id}}
+    trial_end = _trial_end_ts(sub.get("trial_ends_at"))
+    if trial_end:
+        subscription_data["trial_end"] = trial_end
+
     session = stripe.checkout.Session.create(
         customer=customer_id,
         payment_method_types=["card", "ideal", "bancontact"],
@@ -96,10 +105,7 @@ def create_checkout(user_id: str = Depends(get_current_user)):
         mode="subscription",
         success_url=f"{settings.app_url}/app.html?billing=success",
         cancel_url=f"{settings.app_url}/app.html?billing=cancel",
-        subscription_data={
-            "trial_period_days": 7,
-            "metadata": {"user_id": user_id},
-        },
+        subscription_data=subscription_data,
         metadata={"user_id": user_id},
     )
     return {"url": session.url}
