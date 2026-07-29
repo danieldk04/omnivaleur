@@ -5988,8 +5988,11 @@ async function applySuggestedPrice(itemId, price) {
   if (!item) return;
   setBusy(true, 'Updating price…');
   try {
-    await patchItemPrice(itemId, price);
-    showToast(`Price updated to €${price.toFixed(2)}.`);
+    const res = await patchItemPrice(itemId, price);
+    // Say what actually happened on the CHANNELS. "Price updated" used to mean
+    // nothing but "our database changed", while every marketplace kept the old
+    // price — the one outcome that makes this whole screen pointless.
+    showToast(`€${price.toFixed(2)} — ${summarisePriceSync(res && res.price_sync)}`);
     renderStaleStock();
   } catch (e) {
     alert('Could not update the price: ' + e.message);
