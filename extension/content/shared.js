@@ -237,6 +237,41 @@ window.CL = (() => {
     return COLOUR_NL[raw.toLowerCase()] || raw;
   }
 
+  // Leest het formulier terug na het invullen. Elke stap hierboven zit in step(),
+  // dat fouten met opzet opslokt zodat één ontbrekend kenmerk de rest niet
+  // afbreekt — maar daardoor kon een advertentie zonder maat, merk of
+  // fabrikantgegevens de deur uit zonder dat iets dat meldde.
+  //
+  // Marktplaats en 2dehands draaien hetzelfde plaatsingsformulier, dus dezelfde
+  // veldnamen. Een veld dat op deze categorie niet bestaat levert null op en
+  // wordt overgeslagen: er wordt nooit iets gemeld wat het item zelf niet heeft.
+  function verifyMpGroupFields(item) {
+    const missing = [];
+    const emptySelect = (name) => {
+      const el = qs(`select[name="${name}"]`);
+      return el && !el.value; // staat op deze categorie, maar nog op "Kies..."
+    };
+    const emptyInput = (name) => {
+      const el = qs(`input[name="${name}"]`);
+      return el && !(el.value || "").trim();
+    };
+
+    if (item.size && emptySelect("singleSelectAttribute[size]")) missing.push("maat");
+    if (item.color && emptySelect("singleSelectAttribute[color]")) missing.push("kleur");
+    if (emptySelect("singleSelectAttribute[condition]")) missing.push("conditie");
+    if (item.brand && emptyInput("textAttribute[clothingBrand]")) missing.push("merk");
+    if (emptyInput("textAttribute[manufacturerTradename]")) missing.push("handelsnaam fabrikant");
+    if (emptyInput("textAttribute[manufacturerEmail]")) missing.push("e-mailadres fabrikant");
+    if (item.bid_percentage && emptyInput("price.minimumBidPrice")) missing.push("bieden vanaf");
+
+    if (missing.length) {
+      throw new Error(
+        `Deze velden zijn niet ingevuld op het formulier: ${missing.join(", ")}. ` +
+        `De advertentie is NIET geplaatst — vul ze zelf aan en klik op Plaatsen.`
+      );
+    }
+  }
+
   function valueVariants(value) {
     const raw = String(value).trim();
     const out = [raw];
