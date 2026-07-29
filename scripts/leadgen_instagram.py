@@ -297,6 +297,7 @@ def _classify_rows(rows: list[dict], min_confidence: int, quiet: bool = False) -
             category=row.get("category") or "(geen)",
             email=row.get("email") or "(geen)",
             captions=" | ".join(row.get("captions") or []) or "(geen)",
+            hint=row.get("hint") or row.get("source") or "(onbekend)",
         )
         try:
             resp = client.messages.create(
