@@ -641,6 +641,12 @@ async def create_item_from_candidate(candidate_id: str, body: dict, user_id: str
 
     item_data = _item_data_from_candidate(cand, body, inferred=await _infer_attributes_smart(
         cand.get("title"), cand.get("description"), cand.get("brand")))
+    # Copy the photos into our own bucket before the item exists. A listing
+    # imported from Vinted keeps CDN urls that the extension physically cannot
+    # download from a Marktplaats page (their CDN blocks that origin), so an
+    # item stored with source urls could never be published with its photos.
+    from backend.services.photo_mirror import mirror_photos
+    item_data["photo_urls"] = await mirror_photos(item_data.get("photo_urls"), user_id)
     item = ItemCreate(**item_data)
     data = item.model_dump()
     data["id"] = str(uuid.uuid4())
