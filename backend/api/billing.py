@@ -8,6 +8,8 @@ from backend.database import get_db
 from backend.api.deps import get_current_user, get_current_user_full
 from backend.config import settings
 
+logger = logging.getLogger(__name__)
+
 router = APIRouter(prefix="/api/billing", tags=["billing"])
 
 stripe.api_key = settings.stripe_secret_key
