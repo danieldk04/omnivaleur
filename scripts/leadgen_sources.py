@@ -40,7 +40,11 @@ import time
 APIFY_SYNC = "https://api.apify.com/v2/acts/{actor}/run-sync-get-dataset-items"
 
 KEYWORD_ACTOR = "afanasenko~instagram-profile-scraper"
-HASHTAG_ACTOR = "coderx~instagram-hashtag-scraper"
+# Bewust de OFFICIËLE Apify-actor. coderx/instagram-hashtag-scraper is goedkoper
+# ($0,0015 vs $0,0026 per post) en gaf net zulke goede resultaten, maar knijpt een
+# gratis account af tot één run per dag — en dat blijkt pas uit een 'error'-rij in
+# de dataset, niet uit een foutcode. Deze heeft dat plafond niet.
+HASHTAG_ACTOR = "apify~instagram-hashtag-scraper"
 
 # Nederlandstalige termen zijn zelf het landfilter: wie zijn winkel "kringloop" of
 # "tweedehands kleding" noemt zit in NL/BE. Engelse termen als "thrift" halen de
