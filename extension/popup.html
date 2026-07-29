@@ -152,21 +152,21 @@
 
       <hr class="divider">
 
-      <label class="info-row" style="cursor:pointer;align-items:flex-start;gap:8px">
-        <input type="checkbox" id="calmModeToggle" style="margin-top:3px">
-        <span>
-          <strong>Calm mode (Pro-safe tempo)</strong><br>
-          <span style="font-size:11px;color:#64748b">Spaces out publishes (3–8 min apart) and checks for sold items hourly instead of every 10 min — a lighter, more human footprint that's less likely to trip a platform's "commercial activity" review.</span>
+      <!-- ONE setting. This shipped twice (an English and a Dutch copy), sharing
+           the same id — so it read as two separate options and only the first
+           checkbox was ever reachable via getElementById. -->
+      <label class="setting" for="calmModeToggle">
+        <span class="setting-head">
+          <span class="setting-title">Calm mode</span>
+          <span class="switch">
+            <input type="checkbox" id="calmModeToggle">
+            <span class="slider"></span>
+          </span>
         </span>
-      </label>
-
-      <hr class="divider">
-
-      <label class="info-row" style="cursor:pointer;align-items:flex-start;gap:8px">
-        <input type="checkbox" id="calmModeToggle" style="margin-top:3px">
-        <span>
-          <strong>Calm mode (Pro-safe tempo)</strong><br>
-          <span style="font-size:11px;color:#64748b">Spreidt publicaties (3–8 min uit elkaar) en checkt elk uur op verkocht i.p.v. elke 10 min — een lichtere, menselijkere voetafdruk die minder snel een "commercial activity"-review triggert.</span>
+        <span class="setting-desc">
+          Spaces publishes 3–8 minutes apart and checks for sold items hourly
+          instead of every 10 minutes — a lighter footprint that's less likely to
+          trigger a platform's "commercial activity" review.
         </span>
       </label>
 
