@@ -761,19 +761,35 @@ chrome.windows.onRemoved.addListener((winId) => {
 // and the rest reuse it.
 let _workerWindowChain = Promise.resolve();
 
-function openWorkerTab(url, callback) {
+// opts.silent → run MINIMISED, fully out of sight.
+//
+// Only safe for the recurring housekeeping scans (sold-check, notifications,
+// Vinted wardrobe), because a minimised window's tabs count as hidden and Chrome
+// then clamps their timers to >=1s (and to 1/min past five minutes). Those scans
+// do their real work in one page-side fetch to the site's own JSON API, so slower
+// timers cost nothing. The publish/delete flows are the opposite — long chains of
+// short waits while filling a form — so they run in a normal (still unfocused)
+// window, and un-minimise it if a scan left it minimised. Jobs are dispatched
+// strictly one at a time, so the two modes can never fight over the window.
+function openWorkerTab(url, callback, opts = {}) {
   _workerWindowChain = _workerWindowChain
-    .then(() => openWorkerTabInner(url))
+    .then(() => openWorkerTabInner(url, opts))
     .then(
       tab => callback(tab),
       err => { console.error("[Omnivaleur] openWorkerTab failed:", err); callback(null); }
     );
 }
 
-async function openWorkerTabInner(url) {
+async function openWorkerTabInner(url, opts = {}) {
+  const wantState = opts.silent ? "minimized" : "normal";
   const existing = await getWorkerWindowId();
   if (existing != null) {
     try {
+      const win = await chrome.windows.get(existing);
+      if (win.state !== wantState) {
+        // focused:false keeps this from ever pulling the user out of their work.
+        await chrome.windows.update(existing, { state: wantState, focused: false }).catch(() => {});
+      }
       // active:true is scoped to THAT window, so it never steals focus from the
       // user's foreground window — and does not un-minimise it either.
       return await chrome.tabs.create({ url, windowId: existing, active: true });
@@ -782,7 +798,11 @@ async function openWorkerTabInner(url) {
     }
   }
   try {
-    const w = await chrome.windows.create({ url, focused: false, ...WORKER_WIN_SIZE });
+    const w = opts.silent
+      // Chrome rejects state:"minimized" combined with an explicit size, so the
+      // minimised window is created bare.
+      ? await chrome.windows.create({ url, focused: false, state: "minimized" })
+      : await chrome.windows.create({ url, focused: false, ...WORKER_WIN_SIZE });
     if (!w || !w.tabs || !w.tabs[0]) throw new Error("no tab in new window");
     await setWorkerWindowId(w.id);
     return w.tabs[0];
