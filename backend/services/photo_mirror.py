@@ -100,7 +100,9 @@ async def mirror_photos(urls: list[str] | None, user_id: str, _sem=None) -> list
                 await asyncio.sleep(0.5 * (attempt + 1))
         raise last
 
-    async def one(client: "httpx.AsyncClient", url: str) -> str:
+    async def one(client: "httpx.AsyncClient", url) -> str:
+        if not isinstance(url, str) or not url.startswith(("http://", "https://")):
+            return url
         if is_mirrored(url):
             return url
         async with sem:
