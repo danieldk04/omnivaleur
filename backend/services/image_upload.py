@@ -21,12 +21,32 @@ def upload_image_sync(file_bytes: bytes, filename: str) -> str:
     db = get_db()
 
     with _UPLOAD_LOCK:
-        db.storage.from_(BUCKET).upload(
-            path=filename,
-            file=file_bytes,
-            file_options={"upsert": "true"},
-        )
+        try:
+            db.storage.from_(BUCKET).upload(
+                path=filename,
+                file=file_bytes,
+                file_options={"upsert": "true"},
+            )
+        except Exception:
+            # The upsert flag is not honoured by every storage backend/key: writing
+            # to a path that already exists comes back as "new row violates
+            # row-level security policy", which reads like an auth problem but is
+            # really a duplicate. The mirror addresses objects by the SHA-256 of
+            # their bytes, so an object already sitting at this path IS this
+            # image — re-uploading it would be a no-op anyway. Confirm it's there
+            # and use it; only a genuinely missing object is an error.
+            if not _object_exists(filename):
+                raise
         return db.storage.from_(BUCKET).get_public_url(filename)
+
+
+def _object_exists(filename: str) -> bool:
+    try:
+        folder, _, name = filename.rpartition("/")
+        listing = get_db().storage.from_(BUCKET).list(path=folder) or []
+        return any(entry.get("name") == name for entry in listing)
+    except Exception:
+        return False
 
 
 async def upload_image(file_bytes: bytes, filename: str) -> str:
