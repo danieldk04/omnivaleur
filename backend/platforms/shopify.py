@@ -152,6 +152,34 @@ class ShopifyClient:
 
         return product
 
+    async def update_price(self, product_id: str, price: float) -> bool:
+        """Write a new price onto the product's variant. Shopify prices live on the
+        VARIANT, not the product, so the variant id has to be read back first —
+        PUTting a price onto /products/{id}.json without one is silently ignored."""
+        import httpx
+        if not product_id:
+            raise RuntimeError("No Shopify product id on this listing")
+        async with httpx.AsyncClient(timeout=httpx.Timeout(30.0, connect=10.0)) as c:
+            r = await c.get(f"{self.base}/products/{product_id}.json", headers=self.headers)
+            if r.status_code == 404:
+                raise RuntimeError(f"Shopify product {product_id} no longer exists")
+            r.raise_for_status()
+            variants = (r.json().get("product") or {}).get("variants") or []
+            if not variants:
+                raise RuntimeError(f"Shopify product {product_id} has no variant to price")
+            variant_id = variants[0]["id"]
+            u = await c.put(
+                f"{self.base}/variants/{variant_id}.json",
+                json={"variant": {"id": variant_id, "price": f"{float(price):.2f}"}},
+                headers=self.headers,
+            )
+        if not u.is_success:
+            raise RuntimeError(
+                f"Shopify refused the price update on variant {variant_id}: "
+                f"HTTP {u.status_code} {(u.text or '')[:200]}"
+            )
+        return True
+
     async def delete_product(self, product_id: str) -> bool:
         import httpx
         # Returning a bare False here surfaced upstream as "delete_listing returned
