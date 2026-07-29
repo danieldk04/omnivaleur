@@ -123,7 +123,14 @@ window.CL = (() => {
   function descriptionIsEmpty() {
     if (!_descriptionSelector) return false; // nothing was ever meant to be filled
     const el = document.querySelector(_descriptionSelector);
-    return !el || (el.innerText || "").trim().length === 0;
+    if (!el) return true;
+    // Vinted's description is a real <textarea>: its innerText is the ORIGINAL
+    // markup, not what the user typed, so reading innerText there would call a
+    // perfectly filled field empty and block the submit.
+    if (el instanceof HTMLTextAreaElement || el instanceof HTMLInputElement) {
+      return (el.value || "").trim().length === 0;
+    }
+    return (el.innerText || "").trim().length === 0;
   }
 
   // ---- find the control (input/select/button) that belongs to a field label ----
