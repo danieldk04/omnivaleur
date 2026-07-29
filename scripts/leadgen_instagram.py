@@ -42,10 +42,8 @@ kant-en-klare tekst is geautomatiseerd, op de verzendknop na.
 
 Gebruik:
     export APIFY_TOKEN=... NOTION_TOKEN=...
-    python3 scripts/leadgen_instagram.py discover --method hashtag
-    python3 scripts/leadgen_instagram.py enrich
-    python3 scripts/leadgen_instagram.py classify
-    python3 scripts/leadgen_instagram.py push --dry-run
+    python3 scripts/leadgen_instagram.py run                 # alles in één keer
+    python3 scripts/leadgen_instagram.py run --dry-run       # idem, zonder Notion
 
     python3 scripts/leadgen_instagram.py bench      # welke bron levert het meest op
 """
