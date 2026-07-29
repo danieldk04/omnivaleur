@@ -6001,6 +6001,27 @@ async function applySuggestedPrice(itemId, price) {
   }
 }
 
+// Turn the server's per-platform sync result into one honest line.
+// Platforms without edit automation (Marktplaats, 2dehands, Facebook) are named
+// explicitly — the user has to change those by hand, and silence would read as
+// "done everywhere".
+const PLATFORM_LABELS = { marktplaats: 'Marktplaats', '2dehands': '2dehands', vinted: 'Vinted',
+                          ebay: 'eBay', shopify: 'Shopify', facebook: 'Facebook' };
+function summarisePriceSync(results) {
+  if (!Array.isArray(results) || !results.length) return 'not live anywhere, so nothing to sync.';
+  const label = r => PLATFORM_LABELS[r.platform] || r.platform;
+  const parts = [];
+  const updated = results.filter(r => r.status === 'updated').map(label);
+  const queued = results.filter(r => r.status === 'queued').map(label);
+  const manual = results.filter(r => r.status === 'unsupported').map(label);
+  const failed = results.filter(r => r.status === 'error').map(label);
+  if (updated.length) parts.push(`updated on ${updated.join(', ')}`);
+  if (queued.length) parts.push(`queued for ${queued.join(', ')}`);
+  if (manual.length) parts.push(`change by hand on ${manual.join(', ')}`);
+  if (failed.length) parts.push(`FAILED on ${failed.join(', ')}`);
+  return parts.join(' · ') + '.';
+}
+
 // Single place that writes a price, so the local state stays in step with the
 // server without a full reload after every row.
 async function patchItemPrice(itemId, price) {
