@@ -82,12 +82,28 @@ async def mirror_photos(urls: list[str] | None, user_id: str, _sem=None) -> list
 
     sem = _sem or asyncio.Semaphore(MAX_CONCURRENCY)
 
+    async def fetch_with_retry(client: "httpx.AsyncClient", url: str):
+        """Transient network failures are the norm here, not the exception.
+        Downloading a whole wardrobe hit '[Errno 35] Resource temporarily
+        unavailable' on every photo of a 9-photo item while single-photo items
+        sailed through — a local socket/DNS hiccup under concurrency, not the CDN
+        refusing us. Without a retry those photos were written off as permanently
+        unreachable and the item kept its dead urls."""
+        last = None
+        for attempt in range(3):
+            try:
+                return await client.get(url, headers=_HEADERS, follow_redirects=True)
+            except Exception as e:  # noqa: BLE001
+                last = e
+                await asyncio.sleep(0.5 * (attempt + 1))
+        raise last
+
     async def one(client: "httpx.AsyncClient", url: str) -> str:
         if is_mirrored(url):
             return url
         async with sem:
             try:
-                resp = await client.get(url, headers=_HEADERS, follow_redirects=True)
+                resp = await fetch_with_retry(client, url)
                 if resp.status_code != 200:
                     logger.warning("photo mirror: %s returned HTTP %s", url[:120], resp.status_code)
                     return url
