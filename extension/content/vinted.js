@@ -453,11 +453,23 @@
     const priceEl = qs('input[data-testid="price-input--input"]');
     if (!priceEl) throw new Error("Vinted edit: price field not found on the edit page");
 
-    // Do NOT change a valid price the seller already has on Vinted. Only fill the
-    // price when the page shows €0/blank (typical for imported items), using the
-    // dashboard price, so the save isn't blocked by Vinted's ">= 1.0" rule.
+    // A price-sync job is the one case where changing the price IS the point:
+    // the dashboard just repriced this item and the whole job exists to carry
+    // that to Vinted. Every other refresh keeps the seller's price untouched.
     const pageNow = _num(priceEl.value);
-    if (!(isFinite(pageNow) && pageNow >= 1)) {
+    if (item._price_update) {
+      const target = Number(item.price);
+      if (!(isFinite(target) && target >= 1)) {
+        throw new Error("Vinted price update: the new price must be €1.00 or more.");
+      }
+      if (Math.abs(pageNow - target) >= 0.01) {
+        const ok = await fillPriceVinted(target);
+        if (!ok) throw new Error("Vinted price update: the price field wouldn't accept the new price.");
+      }
+    } else if (!(isFinite(pageNow) && pageNow >= 1)) {
+      // Only fill the price when the page shows €0/blank (typical for imported
+      // items), using the dashboard price, so the save isn't blocked by
+      // Vinted's ">= 1.0" rule.
       const target = Number(item.price);
       if (!(isFinite(target) && target >= 1)) {
         throw new Error("Vinted refresh aborted: the listing shows €0 and there's no dashboard price to fall back on. Set a price on the item first.");
