@@ -2471,8 +2471,9 @@ let _billingStatus = null;
 async function loadBillingStatus() {
   try {
     const res = await apiFetch(`${API}/api/billing/status`);
-    if (!res.ok) { renderBilling(null); return; }
-    _billingStatus = await res.json();
+    // null = fail open: geen status is geen reden om iemand buiten te sluiten,
+    // maar de banner moet dan wél mee opgeruimd worden.
+    _billingStatus = res.ok ? await res.json() : null;
   } catch (e) {
     _billingStatus = null;
   }
