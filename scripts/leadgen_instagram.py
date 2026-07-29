@@ -484,6 +484,35 @@ def push(args) -> None:
           "Versturen doe je met de hand — zie de kop van dit bestand.")
 
 
+def run(args) -> None:
+    """De hele trechter in één commando: zoeken, verrijken, beoordelen, wegschrijven.
+
+    Elke stap schrijft nog steeds naar schijf, dus als er halverwege iets omvalt kun
+    je met het losse subcommando verder waar het misging in plaats van opnieuw te
+    betalen voor wat al gelukt was.
+    """
+    _need("APIFY_TOKEN")
+    if not args.dry_run:
+        _need("NOTION_TOKEN")   # liever nu falen dan na alle Apify-kosten
+
+    print("── 1/4 zoeken ─────────────────────────────────────────────")
+    discover(args)
+    print("\n── 2/4 profielen ophalen ──────────────────────────────────")
+    enrich(args)
+    print("\n── 3/4 beoordelen ─────────────────────────────────────────")
+    classify(args)
+    print("\n── 4/4 naar Notion ────────────────────────────────────────")
+    push(args)
+
+    leads = _load(LEADS)
+    if leads:
+        per_type: dict[str, int] = {}
+        for l in leads:
+            per_type[l.get("verkopertype", "?")] = per_type.get(l.get("verkopertype", "?"), 0) + 1
+        print("\nSoort leads: " + ", ".join(f"{k} {v}" for k, v in sorted(
+            per_type.items(), key=lambda kv: -kv[1])))
+
+
 def main() -> None:
     ap = argparse.ArgumentParser(
         description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
