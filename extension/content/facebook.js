@@ -22,6 +22,20 @@
   };
   const { qs, sleep, waitForEl, uploadPhotos, smartTrunc } = window.CL;
 
+  // Proof that a photo actually reached Facebook. VERIFIED live 2026-07-29 on the
+  // real create form: the page carries ZERO <img> elements until a file is picked,
+  // and the moment one is, Facebook uploads it to its own CDN and renders
+  // scontent-*.fbcdn.net images with alt="Advertentiefoto"/"Productfoto".
+  // There is NO blob: preview — the earlier note claiming one no longer holds.
+  // Because the baseline is zero, matching fbcdn here is safe even though
+  // Facebook's own chrome uses the same host: uploadPhotos compares before/after,
+  // so only a genuine increase counts.
+  const FB_PHOTO_THUMBS = [
+    'img[alt="Advertentiefoto"]', 'img[alt="Productfoto"]',
+    'img[alt="Listing photo"]', 'img[alt="Product photo"]',
+    'img[src*="fbcdn.net"]', 'img[src^="blob:"]',
+  ].join(", ");
+
   const job = await getJob();
   if (!job) return;
   const { id: jobId, serverUrl, payload: item } = job;
