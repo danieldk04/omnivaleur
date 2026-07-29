@@ -388,7 +388,8 @@ window.CL = (() => {
       || qs('input[type="file"]');
     if (!fileInput) throw new Error("Fotoveld niet gevonden op de pagina");
 
-    const before = countPhotoThumbs();
+    const thumbSel = opts.thumbSelector;
+    const before = countPhotoThumbs(thumbSel);
     const files = [];
     const failures = [];
     for (const u of urls) {
