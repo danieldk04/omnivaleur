@@ -725,6 +725,19 @@ async def bulk_import_candidates(body: dict = None, user_id: str = Depends(get_c
         )),
     )) if candidates else {}
 
+    # Mirror every candidate's photos into our own bucket BEFORE the (synchronous)
+    # processing loop, which runs in a worker thread and can't await. Writing the
+    # result back onto the candidate means both paths below — creating a new item
+    # and backfilling an existing one — store our urls instead of the source CDN's.
+    if candidates:
+        from backend.services.photo_mirror import mirror_photos_bulk
+        mirrored = await mirror_photos_bulk(
+            [_photos_from_candidate(c) for c in candidates], user_id
+        )
+        for cand, photos in zip(candidates, mirrored):
+            if photos:
+                cand["photo_urls"] = photos
+
     def _process():
         nonlocal linked, created, failed
         for cand in candidates:
