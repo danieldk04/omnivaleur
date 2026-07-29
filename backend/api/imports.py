@@ -600,7 +600,13 @@ async def link_candidate(candidate_id: str, body: dict, user_id: str = Depends(g
     if not item.data:
         raise HTTPException(status_code=404, detail="Item not found")
 
-    # Backfill any empty item fields from the freshly scanned candidate.
+    # Backfill any empty item fields from the freshly scanned candidate. Photos
+    # first, so a link-to-existing-item stores our own urls too (same reason as
+    # the create path).
+    from backend.services.photo_mirror import mirror_photos
+    _mirrored = await mirror_photos(_photos_from_candidate(cand), user_id)
+    if _mirrored:
+        cand["photo_urls"] = _mirrored
     _backfill_item_from_candidate(db, item_id, cand, inferred=await _infer_attributes_smart(
         cand.get("title"), cand.get("description"), cand.get("brand")))
 
