@@ -248,6 +248,22 @@ async def stripe_webhook(request: Request, stripe_signature: str = Header(None))
     return {"ok": True}
 
 
+def _trial_end_ts(trial_ends_at: str | None) -> int | None:
+    """Resterende proeftijd als unix-timestamp, of None als die te kort is."""
+    if not trial_ends_at:
+        return None
+    from datetime import datetime, timedelta, timezone
+    try:
+        ends = datetime.fromisoformat(trial_ends_at.replace("Z", "+00:00"))
+    except ValueError:
+        return None
+    if ends.tzinfo is None:
+        ends = ends.replace(tzinfo=timezone.utc)
+    if ends < datetime.now(timezone.utc) + timedelta(hours=48):
+        return None
+    return int(ends.timestamp())
+
+
 def _ts(unix_ts: int) -> str:
     from datetime import datetime, timezone
     return datetime.fromtimestamp(unix_ts, tz=timezone.utc).isoformat()
