@@ -2781,10 +2781,27 @@ async function _mwFillDescription(selector, descText) {
   el.focus();
   await sleep(150);
 
+  // Lexical hangt __lexicalEditor niet altijd op het element dat we selecteren.
+  // Op 2dehands zit hij op een ouder of een kind, waardoor we hem niet vonden en
+  // terugvielen op textContent — die "ja, er staat tekst" zei terwijl de editor
+  // zelf leeg was. Het zoekertje ging dan de deur uit en 2dehands weigerde met
+  // "Geen zoekertjestekst ingevuld", met een zichtbaar gevulde beschrijving.
+  function findLexical() {
+    for (let n = el; n; n = n.parentElement) {
+      if (n.__lexicalEditor) return n.__lexicalEditor;
+    }
+    for (const n of el.querySelectorAll("*")) {
+      if (n.__lexicalEditor) return n.__lexicalEditor;
+    }
+    return null;
+  }
+
   // Verify via Lexical EditorState, not DOM textContent.
   // DOM can have stale content from earlier fills; EditorState is what validation reads.
   function lexHasText() {
-    const lex = el.__lexicalEditor;
+    const lex = findLexical();
+    // Geen Lexical gevonden? Dan is dit geen Lexical-editor en is de DOM wél de
+    // waarheid. Alleen dán mag textContent tellen.
     if (!lex) return el.textContent.trim().length > 0;
     try {
       for (const [, node] of (lex._editorState?._nodeMap || new Map())) {
