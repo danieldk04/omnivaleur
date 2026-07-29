@@ -69,8 +69,9 @@
     await waitForEl('input[name="title_nl-BE"], input[name="title_nl-NL"]', 20000);
     await step("title",        () => fillInputHuman(titleInput(), smartTrunc(item.title || "", 60)));
     await step("price",        () => { const el = qs('input[name="price.value"]'); return fillInputHuman(el, el?.type === "number" ? String(item.price || "") : String(item.price || "").replace(".", ",")); });
-    await step("description",  () => fillDescription(['[data-testid="text-editor-input_nl-BE"]', '[data-testid="text-editor-input_nl-NL"]'], sanitize2dh(item.description)));
-    await step("photos",       () => item.photo_urls?.length && uploadPhotos(item.photo_urls.slice(0, 20)));
+    // Mandatory fields — deliberately NOT inside step(), see marktplaats.js.
+    await fillDescription(['[data-testid="text-editor-input_nl-BE"]', '[data-testid="text-editor-input_nl-NL"]'], sanitize2dh(item.description));
+    if (item.photo_urls?.length) await uploadPhotos(item.photo_urls.slice(0, 20));
     await step("condition",    () => selectDropdown("Conditie", CONDITION_MAP[item.condition] || "Zo goed als nieuw"));
     await sleep(400); // let React re-render kenmerken after condition selection
     await step("package",      () => selectPackageSize());
