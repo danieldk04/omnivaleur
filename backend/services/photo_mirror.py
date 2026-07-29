@@ -74,9 +74,11 @@ async def mirror_photos(urls: list[str] | None, user_id: str, _sem=None) -> list
     """
     if not urls:
         return []
-    urls = [u for u in urls if isinstance(u, str) and u.startswith(("http://", "https://"))]
-    if not urls:
-        return []
+    # Anything that isn't a downloadable http(s) url is passed through UNCHANGED
+    # rather than filtered out. Dropping it would shorten the list and silently
+    # delete a photo from the item — the one thing this function must never do.
+    if not any(isinstance(u, str) and u.startswith(("http://", "https://")) for u in urls):
+        return list(urls)
 
     import httpx
 
