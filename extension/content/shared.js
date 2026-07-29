@@ -79,12 +79,15 @@ window.CL = (() => {
   // Content scripts run in an isolated JS world where page properties like __lexicalEditor
   // are invisible. chrome.scripting.executeScript (called from background) runs in the
   // page's main world and bypasses the page's CSP. We message the background to do it.
-  function runInMainWorld(type, data) {
+  // Also used for plain background round-trips (e.g. FETCH_PHOTO), which need a
+  // longer budget than a DOM call — a multi-MB photo over a slow line easily
+  // outlasts 8s, and timing out here silently dropped the photo.
+  function runInMainWorld(type, data, timeoutMs = 8000) {
     return new Promise((resolve) => {
       const timer = setTimeout(() => {
         console.error("[Omnivaleur] runInMainWorld timeout:", type);
         resolve(false);
-      }, 8000);
+      }, timeoutMs);
       chrome.runtime.sendMessage({ type, ...data }, (result) => {
         clearTimeout(timer);
         if (chrome.runtime.lastError) {
