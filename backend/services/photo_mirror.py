@@ -54,7 +54,19 @@ def is_mirrored(url: str) -> bool:
     return isinstance(url, str) and any(h in url for h in _OWN_HOSTS)
 
 
-async def mirror_photos(urls: list[str] | None, user_id: str) -> list[str]:
+async def mirror_photos_bulk(url_lists: list[list[str] | None], user_id: str) -> list[list[str]]:
+    """Mirror several listings' photos at once, sharing ONE concurrency budget.
+
+    Calling mirror_photos per candidate in a gather would multiply the limit by
+    the batch size — 25 candidates would hammer the source CDN with 125 parallel
+    downloads and invite rate limiting.
+    """
+    import asyncio as _asyncio
+    sem = _asyncio.Semaphore(MAX_CONCURRENCY)
+    return list(await _asyncio.gather(*(mirror_photos(u, user_id, _sem=sem) for u in url_lists)))
+
+
+async def mirror_photos(urls: list[str] | None, user_id: str, _sem=None) -> list[str]:
     """Copy every remote photo into our bucket. Returns the urls to store.
 
     Order is preserved — the first photo is the listing's main image on several
