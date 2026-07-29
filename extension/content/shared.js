@@ -291,7 +291,11 @@ window.CL = (() => {
 
   function anyModalOpen() {
     const m = document.querySelector(".ReactModal__Content") || document.querySelector('[role="dialog"]');
-    return !!(m && m.offsetParent !== null);
+    // NOT offsetParent: the brand modal is position:fixed, and a fixed element
+    // always reports offsetParent === null — so an offsetParent check called the
+    // open modal "closed" and walked straight into the inert form behind it.
+    // Verified live on the Marktplaats brand picker.
+    return !!(m && m.getClientRects().length > 0);
   }
 
   async function waitForNoModal(timeout = 6000) {
@@ -577,63 +581,48 @@ window.CL = (() => {
   }
 
   // Enable "Bieden vanaf" and fill the minimum bid as a percentage of the asking price.
+  //
+  // Rewritten against the live Marktplaats form. The old version hunted for a
+  // radio whose value was "BIDDING_FROM"/"BIDDING" and, failing that, clicked
+  // any element whose text read "bieden" — neither exists here, and the blind
+  // text click could just as easily hit the switch and turn bidding OFF.
+  // What the page actually has (verified live):
+  //   • select#Dropdown-prijstype  — price TYPE, must stay FIXED (Vraagprijs);
+  //     FAST_BID would turn the ad into a bidding-only listing.
+  //   • input#syi-bidding-switch-input — "Bieden toestaan", on by default.
+  //   • input[name="price.minimumBidPrice"] — the "Bieden vanaf" amount, a TEXT
+  //     field, so the value needs a comma decimal separator.
   async function fillBidding(price, percentage) {
     const minBid = Math.round(price * percentage / 100 * 100) / 100;
 
-    // Step 1: activate bidding mode — try radio values first, then label clicks
-    const bidValues = ["BIDDING_FROM", "BIDDING", "BID_FROM", "bieden", "bid"];
-    let activated = false;
-    for (const val of bidValues) {
-      const r = [...document.querySelectorAll('input[type="radio"], input[type="checkbox"]')]
-        .find(el => el.value?.toLowerCase() === val.toLowerCase());
-      if (r) { r.click(); activated = true; break; }
+    const sw = qs('input#syi-bidding-switch-input')
+      || qs('#syi-bidding-switch input[type="checkbox"]');
+    if (sw && !sw.checked) {
+      sw.click();
+      await sleep(400);
     }
-
-    if (!activated) {
-      // Try clicking any element whose text matches "bieden" pricing options
-      const clickTargets = [...document.querySelectorAll(
-        'label, [role="radio"], [role="button"], button, span, div[tabindex]'
-      )].filter(el => {
-        const txt = el.textContent.trim().toLowerCase();
-        return (txt === "bieden" || txt === "bieden vanaf" || txt === "bieden of kopen") && txt.length < 30;
-      });
-      for (const t of clickTargets) { t.click(); activated = true; break; }
-    }
-
-    if (!activated) {
-      // Last resort: use selectDropdown with common label names for the pricing type
-      await selectDropdown(["Prijstype", "Type", "Biedmogelijkheid"], "Bieden");
-    }
-
-    // Wait for React to reveal the minimum bid input after toggle activation
-    // Poll up to 3s for the field to appear (it only exists after toggle is ON)
-    const BID_SELECTORS = [
-      'input[name="price.minimumBidPrice"]',
-      'input[name="minimalBid"]',
-      'input[name="minimumBid"]',
-      'input[name="bid.value"]',
-      'input[name="bid.minimumBid"]',
-      'input[name="lowestBid"]',
-      'input[placeholder*="minimumbod"]',
-      'input[placeholder*="minimale"]',
-      'input[placeholder*="bod"]',
-    ].join(", ");
 
     let bidInput = null;
     for (let i = 0; i < 15; i++) {
-      await sleep(200);
-      bidInput = qs(BID_SELECTORS)
+      bidInput = qs('input[name="price.minimumBidPrice"]')
+        || qs('input#price\\.minimumBidPrice')
         || findFieldByLabel("Bieden vanaf")
         || findFieldByLabel("Minimumbod");
-      if (bidInput) break;
+      if (bidInput && bidInput.tagName === "INPUT") break;
+      await sleep(200);
+    }
+    if (!bidInput || bidInput.tagName !== "INPUT") {
+      throw new Error("Bieden vanaf: het bedragveld verscheen niet op het formulier");
     }
 
-    if (bidInput && bidInput.tagName === "INPUT") {
-      const val = bidInput.type === "number"
-        ? String(minBid)
-        : String(minBid).replace(".", ",");
-      fillInput(bidInput, val);
+    const val = bidInput.type === "number" ? String(minBid) : String(minBid.toFixed(2)).replace(".", ",");
+    await fillInputHuman(bidInput, val);
+    await sleep(300);
+    // Verify rather than assume: React can reset a value it didn't like.
+    if (!(bidInput.value || "").trim()) {
+      throw new Error("Bieden vanaf: het bedrag werd door de pagina teruggezet");
     }
+    return true;
   }
 
   // Truncate to maxLen chars without cutting mid-word. Trims at last space before limit.
