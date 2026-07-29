@@ -718,32 +718,79 @@ async function pollJobs() {
 // stays visible and Chrome doesn't throttle its form-filling timers the way it
 // would a truly hidden background tab. Closing the window just makes the next job
 // open a fresh one.
-let _workerWindowId = null;
+//
+// The window id MUST live in chrome.storage.session, not in a module variable.
+// An MV3 service worker is evicted after ~30s idle, and every automation trigger
+// here (15s job poll, 10-min sold-check, 15-min notification scan, hourly Vinted
+// scan) wakes a FRESH worker with all module state reset. With the id in memory
+// each of those woke up believing no worker window existed and created another
+// one — which is why users ended up with a pile of Marktplaats/2dehands/Vinted
+// windows. storage.session survives worker eviction (and is cleared on browser
+// restart, exactly the lifetime we want), so all scans now share one window.
+const WORKER_WIN_KEY = "workerWindowId";
+// Small and out of the way: the user minimises it once and it STAYS minimised,
+// because we never focus it and never call windows.update on it.
+const WORKER_WIN_SIZE = { width: 1000, height: 800 };
+
+async function getWorkerWindowId() {
+  try {
+    const { [WORKER_WIN_KEY]: id } = await chrome.storage.session.get(WORKER_WIN_KEY);
+    if (id == null) return null;
+    // Verify it still exists — the user may have closed it while the worker slept.
+    await chrome.windows.get(id);
+    return id;
+  } catch {
+    return null;
+  }
+}
+
+function setWorkerWindowId(id) {
+  return chrome.storage.session.set({ [WORKER_WIN_KEY]: id }).catch(() => {});
+}
 
 chrome.windows.onRemoved.addListener((winId) => {
-  if (winId === _workerWindowId) _workerWindowId = null;
+  chrome.storage.session.get(WORKER_WIN_KEY).then(({ [WORKER_WIN_KEY]: id }) => {
+    if (id === winId) chrome.storage.session.remove(WORKER_WIN_KEY);
+  }).catch(() => {});
 });
 
-function openWorkerTab(url, callback) {
-  const makeWindow = () =>
-    chrome.windows.create({ url, focused: false }, (w) => {
-      if (chrome.runtime.lastError || !w || !w.tabs || !w.tabs[0]) {
-        // Window creation blocked (rare) — fall back to a plain background tab so
-        // the job still runs rather than failing outright.
-        chrome.tabs.create({ url, active: false }, callback);
-        return;
-      }
-      _workerWindowId = w.id;
-      callback(w.tabs[0]);
-    });
+// Two triggers can fire in the same worker (e.g. sold-check and notif-scan land
+// together, each opening a tab per platform). Without this chain they would all
+// see "no window yet" and race to create one — the same multi-window bug, only
+// within a single wake-up. Serialising means the first call creates the window
+// and the rest reuse it.
+let _workerWindowChain = Promise.resolve();
 
-  if (_workerWindowId == null) { makeWindow(); return; }
-  // Reuse the existing worker window. active:true is scoped to THAT window, so it
-  // never steals focus from the user's foreground window.
-  chrome.tabs.create({ url, windowId: _workerWindowId, active: true }, (tab) => {
-    if (chrome.runtime.lastError || !tab) { _workerWindowId = null; makeWindow(); return; }
-    callback(tab);
-  });
+function openWorkerTab(url, callback) {
+  _workerWindowChain = _workerWindowChain
+    .then(() => openWorkerTabInner(url))
+    .then(
+      tab => callback(tab),
+      err => { console.error("[Omnivaleur] openWorkerTab failed:", err); callback(null); }
+    );
+}
+
+async function openWorkerTabInner(url) {
+  const existing = await getWorkerWindowId();
+  if (existing != null) {
+    try {
+      // active:true is scoped to THAT window, so it never steals focus from the
+      // user's foreground window — and does not un-minimise it either.
+      return await chrome.tabs.create({ url, windowId: existing, active: true });
+    } catch {
+      await chrome.storage.session.remove(WORKER_WIN_KEY).catch(() => {});
+    }
+  }
+  try {
+    const w = await chrome.windows.create({ url, focused: false, ...WORKER_WIN_SIZE });
+    if (!w || !w.tabs || !w.tabs[0]) throw new Error("no tab in new window");
+    await setWorkerWindowId(w.id);
+    return w.tabs[0];
+  } catch {
+    // Window creation blocked (rare) — fall back to a plain background tab so
+    // the job still runs rather than failing outright.
+    return await chrome.tabs.create({ url, active: false });
+  }
 }
 
 async function processJob(job, serverUrl) {
