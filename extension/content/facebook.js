@@ -295,20 +295,15 @@
     // Photos first — FB's create form opens straight on the photo step.
     await waitForEl('input[type="file"]', 20000);
     if (item.photo_urls?.length) {
-      await uploadPhotos(item.photo_urls.slice(0, 20));
-      // FB renders a blob:/scontent preview thumbnail once it accepts the files.
-      // If none shows up the upload silently failed (usually a cross-origin fetch
-      // block on the image host) — fail loudly rather than publish without photos.
-      const ok = await waitForPhotoPreview(6000);
-      if (!ok) throw new Error(
-        "Photos could not be added to Facebook (the image files were rejected or " +
-        "blocked). Nothing was published. Try again, or add the photos by hand.");
-      // uploadPhotos (shared.js) silently drops any photo whose fetch failed
-      // (e.g. a source host blocking cross-origin fetches, seen live with a
-      // Vinted CDN URL) and only returns a bare true/false for "at least one
-      // made it". Log the actual count so a partial upload is diagnosable
-      // instead of just noticing "one photo is missing" after the fact.
-      const uploaded = [...document.querySelectorAll("img")].filter((i) => /^blob:/.test(i.src)).length;
+      // uploadPhotos already waits for — and throws on the absence of — a real
+      // thumbnail, but it defaults to the Marktplaats/Vinted selectors, which match
+      // nothing on Facebook. Hand it Facebook's own proof instead.
+      await uploadPhotos(item.photo_urls.slice(0, 20), { thumbSelector: FB_PHOTO_THUMBS });
+      // uploadPhotos silently drops any photo whose fetch failed (e.g. a host
+      // blocking cross-origin fetches) and only reports "at least one made it".
+      // Log the real count so a partial upload is diagnosable instead of only
+      // being noticed as a missing photo after publishing.
+      const uploaded = document.querySelectorAll(FB_PHOTO_THUMBS).length;
       if (uploaded < item.photo_urls.length) {
         console.warn(`[Omnivaleur] Only ${uploaded}/${item.photo_urls.length} photos made it into the Facebook form — see the fetch warning(s) above for which one(s) failed.`);
       }
