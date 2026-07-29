@@ -2903,6 +2903,30 @@ async function _mwFillDescription(selector, descText) {
 
 async function _mwFillBrand(brand) {
   const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+  // Defined INSIDE this function on purpose: chrome.scripting.executeScript
+  // serialises `func` on its own, so anything it calls must live in the same
+  // function body — a top-level helper would be undefined in the page.
+  async function _mwCloseBrandModal() {
+    const getModal = () =>
+      document.querySelector(".ReactModal__Content") || document.querySelector('[role="dialog"]');
+    for (let attempt = 0; attempt < 3; attempt++) {
+      const modal = getModal();
+      if (!modal) return true;
+      const closeBtn = [...modal.querySelectorAll("button")].find((b) => {
+        const label = (b.getAttribute("aria-label") || "").toLowerCase();
+        return b.offsetParent !== null && (label.includes("close") || label.includes("sluit"));
+      });
+      if (closeBtn) closeBtn.click();
+      else {
+        modal.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+        document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+        document.querySelector(".ReactModal__Overlay")?.click();
+      }
+      await sleep(400);
+    }
+    return !getModal();
+  }
   const brandLower = brand.toLowerCase().trim();
 
   // The "Merk" field is an input that does NOT accept typed text (React resets its
@@ -2987,30 +3011,6 @@ async function _mwFillBrand(brand) {
   return false;
 }
 
-// Close whatever brand/attribute modal is open, hardest-first, and confirm it
-// actually went away.
-async function _mwCloseBrandModal() {
-  const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
-  const getModal = () =>
-    document.querySelector(".ReactModal__Content") || document.querySelector('[role="dialog"]');
-
-  for (let attempt = 0; attempt < 3; attempt++) {
-    const modal = getModal();
-    if (!modal) return true;
-    const closeBtn = [...modal.querySelectorAll("button")].find((b) => {
-      const label = (b.getAttribute("aria-label") || "").toLowerCase();
-      return b.offsetParent !== null && (label.includes("close") || label.includes("sluit"));
-    });
-    if (closeBtn) closeBtn.click();
-    else {
-      modal.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
-      document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
-      document.querySelector(".ReactModal__Overlay")?.click();
-    }
-    await sleep(400);
-  }
-  return !getModal();
-}
 
 // Content scripts call this when done
 
