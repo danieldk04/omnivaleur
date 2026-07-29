@@ -856,6 +856,137 @@ async def _delist_one(listing: dict):
         raise
 
 
+# ── Price propagation ──────────────────────────────────────────────────────
+# Changing a price used to write nothing but the items row, so every "Apply"
+# in Stale stock and every bulk reprice was invisible to buyers: the dashboard
+# said €19.99 while all six channels kept showing the old price. Anything that
+# writes a price now goes through here.
+
+# Platforms whose price we can actually change today.
+#   ebay/shopify — direct API call.
+#   vinted       — queued as an extension edit job.
+# Marktplaats, 2dehands and Facebook have no edit automation at all yet, so
+# they are reported as "unsupported" rather than silently skipped.
+_PRICE_SYNC_API = {"ebay", "shopify"}
+_PRICE_SYNC_EXTENSION = {"vinted"}
+
+
+async def sync_price_to_platforms(item_id: str, user_id: str) -> list[dict]:
+    """Push the item's current price to every platform it is live on.
+
+    Returns one result per live listing: status is 'updated', 'queued',
+    'unsupported' or 'error'. Never raises — a failing channel must not undo
+    the price change or block the others.
+    """
+    db = get_db()
+    item = db.table("items").select("*").eq("id", item_id).eq("user_id", user_id).single().execute().data
+    if not item:
+        return []
+
+    listings = (
+        db.table("listings").select("*")
+        .eq("item_id", item_id)
+        .in_("status", ["active", "hidden"])
+        .execute().data or []
+    )
+    if not listings:
+        return []
+
+    def _price_for(platform: str) -> float | None:
+        # Mirror _pick() in publish_to_platforms: a per-platform price override
+        # wins over the base price, so syncing never overwrites a price the user
+        # deliberately set for one channel.
+        field = _PLATFORM_PRICE_FIELD_GLOBAL.get(platform)
+        raw = item.get(field) if field else None
+        if raw in (None, ""):
+            raw = item.get("price")
+        try:
+            return float(raw)
+        except (TypeError, ValueError):
+            return None
+
+    results: list[dict] = []
+    api_listings = [l for l in listings if l["platform"] in _PRICE_SYNC_API]
+    creds_by_platform: dict[str, dict] = {}
+    if api_listings:
+        creds_resp = (
+            db.table("platform_credentials").select("*")
+            .eq("user_id", user_id)
+            .in_("platform", sorted({l["platform"] for l in api_listings}))
+            .execute()
+        )
+        creds_by_platform = {c["platform"]: c for c in (creds_resp.data or [])}
+
+    for listing in listings:
+        platform = listing["platform"]
+        price = _price_for(platform)
+        if price is None:
+            results.append({"platform": platform, "status": "error", "error": "No usable price on this item"})
+            continue
+
+        if platform in _PRICE_SYNC_EXTENSION:
+            # The extension owns Vinted's edit page. _price_update tells the
+            # content script this refresh is specifically about the price —
+            # a plain content_refresh deliberately leaves the price alone.
+            db.table("jobs").insert({
+                "user_id": user_id,
+                "item_id": item_id,
+                "platform": platform,
+                "action": "content_refresh",
+                "status": "pending",
+                "payload": {
+                    **item,
+                    "price": price,
+                    "platform_listing_id": listing.get("platform_listing_id"),
+                    "platform_listing_url": listing.get("platform_listing_url"),
+                    "_price_update": True,
+                },
+            }).execute()
+            results.append({"platform": platform, "status": "queued",
+                            "message": "Price edit queued — Chrome extension will apply it"})
+            continue
+
+        if platform not in _PRICE_SYNC_API:
+            results.append({
+                "platform": platform, "status": "unsupported",
+                "message": f"{platform} has no price-edit automation yet — change it there by hand",
+            })
+            continue
+
+        try:
+            plat = get_platform(platform)
+            if platform == "ebay":
+                await plat.update_listing_price(
+                    listing.get("platform_offer_id") or "", price,
+                    creds_by_platform.get(platform, {}), sku=item.get("sku") or item["id"],
+                )
+            else:
+                await plat.update_listing_price(
+                    listing.get("platform_listing_id") or "", price,
+                    creds_by_platform.get(platform, {}),
+                )
+            _log_event(listing["id"], "price_updated", {"price": price})
+            results.append({"platform": platform, "status": "updated", "price": price})
+        except Exception as e:
+            msg = str(e) or f"{type(e).__name__}: {e!r}"
+            logger.error("Price sync failed on %s for item %s: %s", platform, item_id, msg)
+            _log_event(listing["id"], "error", {"error": f"price sync: {msg}"})
+            results.append({"platform": platform, "status": "error", "error": msg})
+
+    return results
+
+
+# Same mapping publish_to_platforms uses; module-level so the price sync can't
+# drift away from what publishing actually sends.
+_PLATFORM_PRICE_FIELD_GLOBAL = {
+    "marktplaats": "price_marktplaats",
+    "2dehands": "price_2dehands",
+    "vinted": "price_vinted",
+    "ebay": "price_ebay",
+    "shopify": "price_shopify",
+}
+
+
 def _log_event(listing_id: str, event_type: str, payload: dict):
     db = get_db()
     db.table("sync_events").insert({
