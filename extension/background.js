@@ -2834,7 +2834,67 @@ async function _mwFillDescription(selector, descText) {
     return got >= _wantLines;
   }
 
-  // ── Approach 1: execCommand (most reliable) ───────────────────────────────
+  // Zet de cursor IN het veld. Zonder eigen selectie doet execCommand op
+  // 2dehands helemaal niets (live gemeten: leeg veld, lege editorstaat) en werkt
+  // ook "selectAll" + "delete" niet — tekst stapelde zich dan op in plaats van
+  // vervangen te worden.
+  function placeCaret(collapse) {
+    el.focus();
+    const r = document.createRange();
+    r.selectNodeContents(el);
+    if (collapse) r.collapse(false);
+    const s = getSelection();
+    s.removeAllRanges();
+    s.addRange(r);
+  }
+
+  // ── Aanpak 1: Lexical's eigen update-API ──────────────────────────────────
+  // Live gemeten op 2dehands: dit is de enige manier die het veld schoon
+  // leegmaakt én echte alinea's oplevert in de editorstaat waar de site zijn
+  // validatie op baseert. execCommand stond hier eerst voorop en liet daar zowel
+  // een lege editorstaat ("Geen zoekertjestekst ingevuld") als aan elkaar
+  // geplakte zinnen achter.
+  {
+    const lexApi = findLexical();
+    const PClass = lexApi?._nodes?.get("paragraph")?.klass;
+    const TClass = lexApi?._nodes?.get("text")?.klass;
+    if (lexApi && typeof lexApi.update === "function" && PClass && TClass) {
+      try {
+        await new Promise((resolve) => {
+          lexApi.update(() => {
+            const root = lexApi._editorState?._nodeMap?.get("root");
+            if (!root) return;
+            let c = root.getFirstChild?.();
+            while (c) { const n = c.getNextSibling?.(); try { c.remove?.(); } catch (_) {} c = n; }
+            for (const line of _lines) {
+              const p = new PClass();
+              if (line.length > 0) p.append(new TClass(line));
+              root.append(p);
+            }
+          }, { discrete: true, onUpdate: resolve });
+          setTimeout(resolve, 800);
+        });
+        await sleep(250);
+        if (structureOk()) return true;
+      } catch (_) {}
+    }
+  }
+
+  // ── Aanpak 2: ClipboardEvent paste ────────────────────────────────────────
+  // Een echte plakactie draagt de regeleindes mee in text/plain. Live gemeten
+  // als enige execCommand-vrije route die alinea's overhoudt.
+  try {
+    const dt = new DataTransfer();
+    dt.setData("text/plain", descText);
+    placeCaret(false); // hele inhoud geselecteerd: de plak vervangt hem
+    el.dispatchEvent(new ClipboardEvent("paste", {
+      clipboardData: dt, bubbles: true, cancelable: true,
+    }));
+    await sleep(400);
+    if (structureOk()) return true;
+  } catch (_) {}
+
+  // ── Aanpak 3: execCommand ─────────────────────────────────────────────────
   // execCommand fires a REAL native beforeinput event that Chrome and Lexical
   // both handle natively. InputEvent.dataTransfer is always null for synthetic
   // events in Chrome — execCommand bypasses that problem entirely.
@@ -2852,9 +2912,9 @@ async function _mwFillDescription(selector, descText) {
       () => document.execCommand("insertHTML", false, "<br>"),
     ];
     for (const insertBreak of breakStrategies) {
-      el.focus();
-      document.execCommand("selectAll", false, null);
+      placeCaret(false);
       document.execCommand("delete", false, null);
+      placeCaret(true);
       for (let i = 0; i < _lines.length; i++) {
         if (i > 0) { try { insertBreak(); } catch (_) {} }
         if (_lines[i].length > 0) document.execCommand("insertText", false, _lines[i]);
