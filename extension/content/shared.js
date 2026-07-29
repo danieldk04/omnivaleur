@@ -203,6 +203,23 @@ window.CL = (() => {
   }
 
   // Robust dropdown/select selection. Handles native <select> and custom dropdowns.
+  // Values the dashboard stores as a multi-region size ("S / 36 / 8",
+  // "XL / 42 / 14") matched NOTHING in Marktplaats's size list, whose options
+  // read "Maat 36 (S)" — the whole composite string was compared as one token,
+  // so every option scored 0 and the size was left on "Kies...". Offer the
+  // composite first (an exact hit still wins), then each part on its own.
+  function valueVariants(value) {
+    const raw = String(value).trim();
+    const out = [raw];
+    if (raw.includes("/")) {
+      for (const part of raw.split("/")) {
+        const p = part.trim();
+        if (p && !out.includes(p)) out.push(p);
+      }
+    }
+    return out;
+  }
+
   async function selectDropdown(labels, value) {
     if (!value) return false;
     const labelArr = Array.isArray(labels) ? labels : [labels];
@@ -212,8 +229,9 @@ window.CL = (() => {
 
       // Native <select>: set value directly — no clicking/waiting needed
       if (trigger.tagName === "SELECT") {
-        const ok = fillNativeSelect(trigger, value);
-        if (ok) return true;
+        for (const v of valueVariants(value)) {
+          if (fillNativeSelect(trigger, v)) return true;
+        }
         continue;
       }
 
