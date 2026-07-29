@@ -549,6 +549,20 @@ def main() -> None:
     p.add_argument("--dry-run", action="store_true")
     p.set_defaults(func=push)
 
+    r = sub.add_parser("run", help="ALLES in één keer: zoeken → verrijken → beoordelen → Notion")
+    r.add_argument("--method", default="hashtag", choices=[*src.SOURCES, "all"])
+    r.add_argument("--per-tag", type=int, default=40)
+    r.add_argument("--max", type=int, default=40)
+    r.add_argument("--pages", type=int, default=2)
+    r.add_argument("--queries", nargs="*")
+    r.add_argument("--hashtags", nargs="*")
+    r.add_argument("--cities", nargs="*")
+    r.add_argument("--limit", type=int, default=0)
+    r.add_argument("--min-confidence", type=int, default=60)
+    r.add_argument("--dry-run", action="store_true",
+                   help="alles draaien maar niets naar Notion schrijven")
+    r.set_defaults(func=run)
+
     args = ap.parse_args()
     args.func(args)
 
