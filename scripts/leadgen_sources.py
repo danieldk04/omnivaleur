@@ -56,11 +56,28 @@ QUERIES = [
     "preloved kleding", "vintage sieraden", "retro winkel",
 ]
 
+# Gericht op RESELLERS, niet op kringloopwinkels. De eerste versie van deze lijst
+# stond vol #kringloopwinkel/#brocante/#vintagemeubels en leverde precies wat je
+# zou verwachten: vrijwilligerswinkels met antieke kasten. Die verkopen niet om
+# geld te verdienen, verzenden niet, en hebben geen crosslist-probleem.
+#
+# Wat een serieuze reseller wél gebruikt: het platform waar hij op verkoopt
+# (#vinted, #marktplaats), het woord reseller zelf, of de productcategorie die
+# Omnivaleur goed aankan (kleding, schoenen, sneakers, games).
 HASHTAGS = [
-    "tweedehandskleding", "kringloopwinkel", "vintagekleding", "kringloopgeluk",
-    "vintagenederland", "tweedehandswinkel", "kringloopvondst", "tweedehandsmode",
-    "vintagewinkel", "brocante", "vintagemeubels", "secondhandnederland",
+    # platform-signaal — sterkste indicatie van iemand die actief doorverkoopt
+    "vinted", "vintednederland", "vintedverkoper", "vintedshop",
+    "marktplaatsverkoper",
+    # commercieel zelfbeeld
+    "reseller", "resellernederland", "kledingreseller", "sneakerreseller",
+    # verzendbare categorieën die Omnivaleur goed herkent
+    "vintagekleding", "prelovedfashion", "tweedehandskleding",
+    "sneakerbewerking", "vintageshopnl",
 ]
+
+# Hashtags die aantoonbaar de verkeerde kant op trekken, bewaard zodat ze niet
+# per ongeluk terugkruipen: kringloopwinkel, kringloopgeluk, kringloopvondst,
+# brocante, vintagemeubels, secondhandnederland, tweedehandswinkel.
 
 CITIES = [
     "amsterdam", "rotterdam", "utrecht", "den haag", "eindhoven", "groningen",
