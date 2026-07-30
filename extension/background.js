@@ -3001,6 +3001,10 @@ function _mwFocusDescriptionEnd(selector) {
 // ongewijzigd blijft maar het formulier hem alsnog registreert.
 async function typeRealKeystroke(tabId, selector) {
   const target = { tabId };
+  // Alleen op een gewone webpagina, en nooit fataal: als dit niet lukt gaat het
+  // plaatsen gewoon door met de tekst die er al staat.
+  const tab = await chrome.tabs.get(tabId).catch(() => null);
+  if (!tab || !/^https?:/.test(tab.url || "")) return false;
   try {
     await new Promise((resolve, reject) => {
       chrome.debugger.attach(target, "1.3", () =>
