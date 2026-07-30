@@ -296,25 +296,30 @@ window.CL = (() => {
   // kiezen van de conditie. Velden die daarvóór gezet zijn, springen dan terug op
   // "Kies...". Daarom vullen we aan het eind nog één keer alles bij wat leeg is
   // gebleven, vlak voordat we controleren.
-  async function repairMpGroupFields(item, conditionValue) {
-    const selects = [
-      ["singleSelectAttribute[condition]", conditionValue],
+  async function repairMpGroupFields(item) {
+    const condEl = qs('select[name="singleSelectAttribute[condition]"]');
+    if (condEl && !condEl.value) { await selectCondition(item.condition); await sleep(300); }
+
+    const intendedEl = qs('select[name="singleSelectAttribute[intendedFor]"]');
+    if (intendedEl && !intendedEl.value) { selectIntendedFor(item); await sleep(300); }
+
+    for (const [name, value] of [
       ["singleSelectAttribute[size]", item.size],
       ["singleSelectAttribute[color]", dutchColor(item.color)],
-    ];
-    for (const [name, value] of selects) {
+    ]) {
       if (!value) continue;
       const el = qs(`select[name="${name}"]`);
-      if (el && !el.value) {
-        fillNativeSelect(el, value);
-        await sleep(300);
-      }
+      if (el && !el.value) { fillNativeSelect(el, value); await sleep(300); }
     }
-    // Het merkveld heet per categorie anders (clothingBrand, brand_mens_clothing, …).
+
+    // Het merkveld heet per categorie anders (clothingBrand, brand_mens_clothing,
+    // brand_kids_clothing, …). Bij een gewoon tekstveld typen we er rechtstreeks
+    // in; de modal-route is alleen nodig voor de categorieën met een keuzelijst.
     const brandInput = brandField();
     if (item.brand && brandInput && !(brandInput.value || "").trim()) {
-      await fillBrand(item.brand);
+      fillInputHuman(brandInput, item.brand);
       await sleep(300);
+      if (!(brandInput.value || "").trim()) { await fillBrand(item.brand); await sleep(300); }
     }
   }
 
