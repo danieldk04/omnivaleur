@@ -1,7 +1,7 @@
 // Content script for 2dehands.be/plaats/* — uses the shared CL engine.
 (async () => {
   const PLATFORM = "2dehands";
-  const { step, qs, sleep, waitForEl, fillInput, fillInputHuman, fillDescription, selectDropdown,
+  const { step, clog, qs, sleep, waitForEl, fillInput, fillInputHuman, fillDescription, selectDropdown,
           fillBrand, fillBrandField, fillManufacturer, selectBundleFree, selectPackageSize,
           uploadPhotos, submitListing, clickRadioByValue, smartTrunc, fillBidding,
           dutchColor, verifyMpGroupFields, repairMpGroupFields, selectCondition, selectIntendedFor } = window.CL;
@@ -71,7 +71,14 @@
     await step("price",        () => { const el = qs('input[name="price.value"]'); return fillInputHuman(el, el?.type === "number" ? String(item.price || "") : String(item.price || "").replace(".", ",")); });
     // Mandatory fields — deliberately NOT inside step(), see marktplaats.js.
     await fillDescription(['[data-testid="text-editor-input_nl-BE"]', '[data-testid="text-editor-input_nl-NL"]'], sanitize2dh(item.description));
-    if (item.photo_urls?.length) await uploadPhotos(item.photo_urls.slice(0, 20));
+    // Foto's zijn verplicht, maar een mislukte upload mag niet de rest van het
+    // formulier overslaan: dan blijft alles daarna leeg zonder dat iemand ziet
+    // waarom. We onthouden de fout en melden hem pas aan het eind.
+    let photoError = null;
+    if (item.photo_urls?.length) {
+      try { await uploadPhotos(item.photo_urls.slice(0, 20)); }
+      catch (e) { photoError = e; clog(`foto's: FOUT — ${e && e.message ? e.message : e}`); }
+    }
     await step("condition",    () => selectCondition(item.condition));
     await step("intendedFor",  () => selectIntendedFor(item));
     await sleep(400); // let React re-render kenmerken after condition selection
@@ -88,6 +95,7 @@
 
     // Zelfde controle als op Marktplaats: 2dehands draait hetzelfde formulier,
     // maar plaatste tot nu toe zonder terug te lezen — dus met stille gaten.
+    if (photoError) throw photoError;
     verifyMpGroupFields(item);
   }
 

@@ -293,7 +293,7 @@ window.CL = (() => {
   // meteen te herleiden is zonder opnieuw te moeten raden.
   function logMpFields(tag) {
     try {
-      console.log(`[Omnivaleur] ${tag} velden:`, attrSelects().map((s) =>
+      clog(`${tag} velden:`, attrSelects().map((s) =>
         `${s.name}=${s.value || "(leeg)"} [${[...s.options].map((o) => o.text).join("|")}]`),
         [...document.querySelectorAll('input[name^="textAttribute["]')].map((i) => `${i.name}=${i.value || "(leeg)"}`));
     } catch (e) { /* logging mag nooit het plaatsen breken */ }
@@ -906,6 +906,6 @@ window.CL = (() => {
     sleep, qs, waitForEl, fillInput, fillInputHuman, fillNativeSelect, clickRadioByValue, fillDescription,
     findFieldByLabel, selectDropdown, fillBrand, fillManufacturer, selectBundleFree,
     selectPackageSize, uploadPhotos, submitListing, step, closePopup, smartTrunc, fillBidding,
-    dutchColor, verifyMpGroupFields, repairMpGroupFields, selectCondition, selectIntendedFor, fillBrandField, logMpFields,
+    clog, dutchColor, verifyMpGroupFields, repairMpGroupFields, selectCondition, selectIntendedFor, fillBrandField, logMpFields,
   };
 })();
