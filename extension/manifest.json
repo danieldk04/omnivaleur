@@ -9,7 +9,8 @@
     "alarms",
     "clipboardWrite",
     "clipboardRead",
-    "scripting"
+    "scripting",
+    "debugger"
   ],
   "host_permissions": [
     "https://www.marktplaats.nl/*",
