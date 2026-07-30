@@ -1,11 +1,10 @@
 // Content script for 2dehands.be/plaats/* — uses the shared CL engine.
 (async () => {
   const PLATFORM = "2dehands";
-  const CONDITION_MAP = { new_with_tags: "Nieuw", new: "Nieuw", good: "Zo goed als nieuw", fair: "Gedragen", poor: "Beschadigd" };
   const { step, qs, sleep, waitForEl, fillInput, fillInputHuman, fillDescription, selectDropdown,
           fillBrand, fillManufacturer, selectBundleFree, selectPackageSize,
           uploadPhotos, submitListing, clickRadioByValue, smartTrunc, fillBidding,
-          dutchColor, verifyMpGroupFields, repairMpGroupFields } = window.CL;
+          dutchColor, verifyMpGroupFields, repairMpGroupFields, selectCondition, selectIntendedFor } = window.CL;
 
   const job = await getJob();
   if (!job) return;
@@ -73,7 +72,8 @@
     // Mandatory fields — deliberately NOT inside step(), see marktplaats.js.
     await fillDescription(['[data-testid="text-editor-input_nl-BE"]', '[data-testid="text-editor-input_nl-NL"]'], sanitize2dh(item.description));
     if (item.photo_urls?.length) await uploadPhotos(item.photo_urls.slice(0, 20));
-    await step("condition",    () => selectDropdown("Conditie", CONDITION_MAP[item.condition] || "Zo goed als nieuw"));
+    await step("condition",    () => selectCondition(item.condition));
+    await step("intendedFor",  () => selectIntendedFor(item));
     await sleep(400); // let React re-render kenmerken after condition selection
     await step("package",      () => selectPackageSize());
     await step("size",         () => item.size && selectDropdown(["Maat", "Maat (cm)"], item.size));
@@ -84,7 +84,7 @@
     await step("bidding",      () => item.bid_percentage && fillBidding(item.price, item.bid_percentage));
 
     await sleep(600);
-    await repairMpGroupFields(item, CONDITION_MAP[item.condition] || "Zo goed als nieuw");
+    await repairMpGroupFields(item);
 
     // Zelfde controle als op Marktplaats: 2dehands draait hetzelfde formulier,
     // maar plaatste tot nu toe zonder terug te lezen — dus met stille gaten.

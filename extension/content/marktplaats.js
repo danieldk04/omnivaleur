@@ -1,11 +1,10 @@
 // Content script for marktplaats.nl/plaats/* — uses the shared CL engine.
 (async () => {
   const PLATFORM = "marktplaats";
-  const CONDITION_MAP = { new_with_tags: "Nieuw", new: "Nieuw", good: "Zo goed als nieuw", fair: "Gedragen", poor: "Beschadigd" };
   const { step, qs, sleep, waitForEl, fillInput, fillInputHuman, fillDescription, selectDropdown,
           fillBrand, fillManufacturer, selectBundleFree, uploadPhotos, submitListing,
           clickRadioByValue, smartTrunc, fillBidding, dutchColor,
-          verifyMpGroupFields, repairMpGroupFields } = window.CL;
+          verifyMpGroupFields, repairMpGroupFields, selectCondition, selectIntendedFor } = window.CL;
 
   const job = await getJob();
   if (!job) return;
@@ -71,7 +70,8 @@
     // Let these throw so the job reports the real cause and keeps the tab open.
     await fillDescription(['[data-testid="text-editor-input_nl-NL"]'], item.description);
     if (item.photo_urls?.length) await uploadPhotos(item.photo_urls.slice(0, 20));
-    await step("condition",    () => selectDropdown("Conditie", CONDITION_MAP[item.condition] || "Zo goed als nieuw"));
+    await step("condition",    () => selectCondition(item.condition));
+    await step("intendedFor",  () => selectIntendedFor(item));
     await sleep(400); // let React re-render kenmerken after condition selection
     await step("size",         () => item.size && selectDropdown(["Maat", "Jeansmaat", "Maat (cm)", "Maat bovenstuk", "Maat onderstuk"], item.size));
     await step("color",        () => item.color && selectDropdown("Kleur", dutchColor(item.color)));
@@ -81,7 +81,7 @@
     await step("bidding",      () => item.bid_percentage && fillBidding(item.price, item.bid_percentage));
 
     await sleep(600);
-    await repairMpGroupFields(item, CONDITION_MAP[item.condition] || "Zo goed als nieuw");
+    await repairMpGroupFields(item);
 
     // Lees het formulier terug voor we plaatsen — zie verifyMpGroupFields.
     verifyMpGroupFields(item);
