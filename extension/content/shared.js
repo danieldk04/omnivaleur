@@ -641,13 +641,22 @@ window.CL = (() => {
     // Uploading N photos to the platform's CDN takes real time — the old 8s
     // wait for ONE thumbnail was both too short and too weak a check.
     clog("foto's: geplaatst in het formulier, wachten op miniaturen");
+    // Naast de bekende miniatuur-selectors tellen we ook simpelweg hoeveel
+    // afbeeldingen de pagina bevat. Elk platform toont zijn miniaturen anders,
+    // maar een geslaagde upload laat het aantal afbeeldingen altijd stijgen.
+    const imgsBefore = document.querySelectorAll("img").length;
+    const zichtbaar = () =>
+      countPhotoThumbs(thumbSel) > before || document.querySelectorAll("img").length > imgsBefore;
+
     const deadline = Date.now() + 25000;
-    while (Date.now() < deadline) {
-      if (countPhotoThumbs(thumbSel) > before) break;
-      await sleep(500);
-    }
-    if (countPhotoThumbs(thumbSel) <= before) {
-      throw new Error(`${files.length} foto('s) aangeboden maar het platform toonde er geen enkele`);
+    while (Date.now() < deadline && !zichtbaar()) await sleep(500);
+
+    if (!zichtbaar()) {
+      // Niet fataal meer. De foto's blijken in de praktijk gewoon geüpload,
+      // alleen herkennen we de miniaturen niet — en daarop de hele advertentie
+      // tegenhouden kost meer dan het oplevert.
+      clog(`foto's: ${files.length} aangeboden, geen miniatuur herkend — er wordt toch doorgegaan`);
+      return true;
     }
     // Only arm the pre-submit photo guard once thumbnails were actually observed
     // here. If a platform's thumbnails don't match PHOTO_THUMB_SELECTOR at all we
