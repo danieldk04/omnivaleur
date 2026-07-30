@@ -361,7 +361,16 @@ window.CL = (() => {
   // "Kies...". Daarom vullen we aan het eind nog één keer alles bij wat leeg is
   // gebleven, vlak voordat we controleren.
   async function repairMpGroupFields(item) {
-    logMpFields("voor reparatie");
+    // Twee rondes: de kenmerken verschijnen soms pas nadat de foto's klaar zijn,
+    // en het kiezen van de conditie bouwt het blok nóg een keer opnieuw op.
+    for (let ronde = 1; ronde <= 2; ronde++) {
+      await repairOnce(item, ronde);
+      await sleep(800);
+    }
+  }
+
+  async function repairOnce(item, ronde) {
+    logMpFields(`ronde ${ronde} — voor reparatie`);
 
     const condEl = conditionSelect();
     if (condEl && !condEl.value) { await selectCondition(item.condition); await sleep(300); }
