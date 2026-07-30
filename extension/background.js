@@ -3011,7 +3011,7 @@ async function typeRealKeystroke(tabId, selector) {
         chrome.runtime.lastError ? reject(new Error(chrome.runtime.lastError.message)) : resolve());
     });
   } catch (e) {
-    console.error("[Omnivaleur] debugger attach mislukt:", e.message);
+    console.warn("[Omnivaleur] echte toetsaanslag overgeslagen:", e.message);
     return false;
   }
   try {
