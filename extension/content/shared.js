@@ -320,7 +320,7 @@ window.CL = (() => {
   // We leiden het af uit de tekst en vallen anders terug op neutraal.
   function selectIntendedFor(item) {
     const el = intendedForSelect();
-    if (!el) return false;
+    if (!el) return true; // deze categorie kent het veld niet — niets te doen
     const hay = `${item.title || ""} ${item.category || ""} ${item.description || ""}`.toLowerCase();
     const boy = /jongen|boys?\b|garçon/.test(hay);
     const girl = /meisje|girls?\b|fille/.test(hay);
