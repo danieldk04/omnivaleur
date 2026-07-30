@@ -268,7 +268,8 @@ window.CL = (() => {
         await sleep(300);
       }
     }
-    const brandInput = qs('input[name="textAttribute[clothingBrand]"]');
+    // Het merkveld heet per categorie anders (clothingBrand, brand_mens_clothing, …).
+    const brandInput = brandField();
     if (item.brand && brandInput && !(brandInput.value || "").trim()) {
       await fillBrand(item.brand);
       await sleep(300);
