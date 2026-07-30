@@ -598,10 +598,15 @@ window.CL = (() => {
     const before = countPhotoThumbs(thumbSel);
     const files = [];
     const failures = [];
+    clog(`foto's: ${urls.length} ophalen`);
     for (const u of urls) {
-      const f = await fetchFile(u, opts);
+      // Zonder tijdslimiet kan één foto die nooit antwoordt het hele formulier
+      // laten hangen: alles ná de foto's — conditie, maat, kleur, merk — werd
+      // dan nooit meer ingevuld, zonder enige melding.
+      const f = await Promise.race([fetchFile(u, opts), sleep(20000).then(() => null)]);
       if (f) files.push(f); else failures.push(u);
     }
+    clog(`foto's: ${files.length} van ${urls.length} opgehaald`);
     if (!files.length) {
       throw new Error(
         `Geen van de ${urls.length} foto('s) kon worden gedownload — ` +
