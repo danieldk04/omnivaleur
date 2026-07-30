@@ -3199,6 +3199,14 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     return true;
   }
 
+  // Het formulier praat mee in dit log: de console van de tab zelf is weg zodra
+  // de tab dichtgaat, deze niet.
+  if (msg.type === "LOG") {
+    console.log(`[Omnivaleur][formulier] ${msg.text}`);
+    sendResponse(true);
+    return true;
+  }
+
   if (msg.type === "TYPE_DESC") {
     typeRealKeystroke(sender.tab.id, msg.selector).then(sendResponse);
     return true;
