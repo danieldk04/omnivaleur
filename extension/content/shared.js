@@ -769,8 +769,12 @@ window.CL = (() => {
     }
 
     // Description LAST — fills Lexical EditorState after all React re-renders are done.
+    // Let op: na élke hervulling moet de echte toetsaanslag opnieuw. Zonder dat
+    // gooit deze laatste hervulling precies weg wat het formulier nodig had om
+    // de tekst te acccepteren — en blijft "Geen zoekertjestekst ingevuld" staan.
     if (_pendingDescription && _descriptionSelector) {
       await runInMainWorld("FILL_DESC", { selector: _descriptionSelector, text: _pendingDescription });
+      await runInMainWorld("TYPE_DESC", { selector: _descriptionSelector });
     }
 
     // PRE-FLIGHT. Submitting a form we already know is incomplete only produces
@@ -781,6 +785,7 @@ window.CL = (() => {
     if (descriptionIsEmpty()) {
       await sleep(500);
       await runInMainWorld("FILL_DESC", { selector: _descriptionSelector, text: _pendingDescription });
+      await runInMainWorld("TYPE_DESC", { selector: _descriptionSelector });
       await sleep(800);
       if (descriptionIsEmpty()) {
         throw new Error(
@@ -816,12 +821,14 @@ window.CL = (() => {
            /^(plaats(en)?( je advertentie)?|upload|opslaan|publiceer(en)?|publish|save)$/i
              .test((b.textContent || "").trim()));
     if (!btn) throw new Error("Submit/Plaats-knop niet gevonden");
+    clog(`plaatsen: knop gevonden ("${(btn.textContent || "").trim()}")`);
     // Nogmaals het beschrijvingsveld verlaten: de laatste bewerking eraan kan
     // van een herstelpoging hierboven komen, en dan staat de cursor er nog in.
     if (_descriptionSelector) await runInMainWorld("BLUR_DESC", { selector: _descriptionSelector });
     btn.scrollIntoView({ block: "center" });
     await sleep(800); // Lexical commit is async — give it time before submit fires
     btn.click();
+    clog("plaatsen: op de knop geklikt, wachten op de advertentie");
 
     const id = await waitForListingUrl(idFromUrl, 20000).catch(() => null);
     if (id) return id;
@@ -829,6 +836,7 @@ window.CL = (() => {
     const errs = [...document.querySelectorAll('[class*="error"], [class*="Error"], [role="alert"], [aria-invalid="true"]')]
       .map((el) => el.textContent.trim()).filter((t) => t.length > 0 && t.length < 200);
     const uniq = [...new Set(errs)];
+    clog(`plaatsen: mislukt — ${uniq.join(" | ") || "geen foutmelding op de pagina"}`);
     throw new Error(`Niet geplaatst — vul de rode velden aan en klik zelf op Plaatsen. ${uniq.join(" | ")}`.trim());
   }
 
