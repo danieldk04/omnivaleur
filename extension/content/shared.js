@@ -390,7 +390,7 @@ window.CL = (() => {
       await sleep(300);
     }
 
-    logMpFields("na reparatie");
+    logMpFields(`ronde ${ronde} — na reparatie`);
   }
 
   function verifyMpGroupFields(item) {
