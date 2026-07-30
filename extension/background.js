@@ -2999,6 +2999,29 @@ function _mwFocusDescriptionEnd(selector) {
 // toetsaanslag komt. Via de debugger-API kunnen we die wél sturen — we typen een
 // spatie en halen die meteen met een echte Backspace weer weg, zodat de tekst
 // ongewijzigd blijft maar het formulier hem alsnog registreert.
+// Terugvaloptie zonder debugger. execCommand levert wél door de browser zelf
+// opgewekte invoergebeurtenissen op — precies wat het formulier wil zien.
+function _mwTypeViaExecCommand(selector) {
+  const found = document.querySelector(selector);
+  if (!found) return false;
+  const el = found.isContentEditable ? found
+    : (found.querySelector('[contenteditable="true"]') || found);
+  el.focus();
+  const range = document.createRange();
+  range.selectNodeContents(el);
+  range.collapse(false);
+  const sel = window.getSelection();
+  sel.removeAllRanges();
+  sel.addRange(range);
+  try {
+    document.execCommand("insertText", false, " ");
+    document.execCommand("delete");
+    return true;
+  } catch (e) {
+    return false;
+  }
+}
+
 async function typeRealKeystroke(tabId, selector) {
   // Alleen op een gewone webpagina, en nooit fataal: als dit niet lukt gaat het
   // plaatsen gewoon door met de tekst die er al staat.
