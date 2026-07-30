@@ -262,13 +262,53 @@ window.CL = (() => {
     poor:          ["Beschadigd", "Gebruikt", "Gedragen"],
   };
 
+  // Veldnamen verschillen per categorie (condition, clothingCondition,
+  // condition_kids_clothing, …). Daarom zoeken we het veld op wát erin staat:
+  // de keuzelijst die deze woorden aanbiedt, is per definitie de juiste.
+  function attrSelects() {
+    return [...document.querySelectorAll('select[name^="singleSelectAttribute["]')];
+  }
+
+  function selectByOptions(words) {
+    const want = words.map((w) => w.toLowerCase());
+    return attrSelects().find((el) => {
+      const texts = [...el.options].map((o) => o.text.trim().toLowerCase());
+      return want.some((w) => texts.includes(w));
+    }) || null;
+  }
+
+  function conditionSelect() {
+    const byLabel = findFieldByLabel("Conditie");
+    if (byLabel?.tagName === "SELECT") return byLabel;
+    return selectByOptions(["nieuw", "zo goed als nieuw", "gebruikt", "gedragen"]);
+  }
+
+  function intendedForSelect() {
+    const byLabel = findFieldByLabel("Bestemd voor");
+    if (byLabel?.tagName === "SELECT") return byLabel;
+    return selectByOptions(["jongen", "meisje", "jongen of meisje"]);
+  }
+
+  // Wat er op deze categorie staat, in het log — zodat een leeg kenmerk
+  // meteen te herleiden is zonder opnieuw te moeten raden.
+  function logMpFields(tag) {
+    try {
+      console.log(`[Omnivaleur] ${tag} velden:`, attrSelects().map((s) =>
+        `${s.name}=${s.value || "(leeg)"} [${[...s.options].map((o) => o.text).join("|")}]`),
+        [...document.querySelectorAll('input[name^="textAttribute["]')].map((i) => `${i.name}=${i.value || "(leeg)"}`));
+    } catch (e) { /* logging mag nooit het plaatsen breken */ }
+  }
+
   async function selectCondition(condition) {
     const list = CONDITION_CANDIDATES[condition] || CONDITION_CANDIDATES.good;
-    const el = qs('select[name="singleSelectAttribute[condition]"]');
+    const el = conditionSelect();
     if (el) {
       const texts = [...el.options].map((o) => o.text.trim().toLowerCase());
       const hit = list.find((c) => texts.includes(c.toLowerCase()));
-      return hit ? fillNativeSelect(el, hit) : false;
+      if (hit) return fillNativeSelect(el, hit);
+      // Onbekende lijst: pak gewoon de eerste echte optie, beter dan leeg laten.
+      const first = [...el.options].find((o) => o.value !== "" && !o.disabled);
+      return first ? fillNativeSelect(el, first.text) : false;
     }
     for (const c of list) {
       if (await selectDropdown("Conditie", c)) return true;
@@ -279,7 +319,7 @@ window.CL = (() => {
   // "Bestemd voor" bij kinderkleding — verplicht, maar Vinted levert het niet.
   // We leiden het af uit de tekst en vallen anders terug op neutraal.
   function selectIntendedFor(item) {
-    const el = qs('select[name="singleSelectAttribute[intendedFor]"]');
+    const el = intendedForSelect();
     if (!el) return false;
     const hay = `${item.title || ""} ${item.category || ""} ${item.description || ""}`.toLowerCase();
     const boy = /jongen|boys?\b|garçon/.test(hay);
