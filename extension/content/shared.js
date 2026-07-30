@@ -389,12 +389,19 @@ window.CL = (() => {
       return el && !(el.value || "").trim();
     };
 
-    if (item.size && emptySelect("singleSelectAttribute[size]")) missing.push("maat");
-    if (item.color && emptySelect("singleSelectAttribute[color]")) missing.push("kleur");
-    if (emptySelect("singleSelectAttribute[condition]")) missing.push("conditie");
-    if (emptySelect("singleSelectAttribute[intendedFor]")) missing.push("bestemd voor");
+    const emptyLabel = (label) => {
+      const el = findFieldByLabel(label);
+      return el?.tagName === "SELECT" && !el.value;
+    };
+
+    if (item.size && emptyLabel("Maat")) missing.push("maat");
+    if (item.color && emptyLabel("Kleur")) missing.push("kleur");
+    const condEl = conditionSelect();
+    if (condEl && !condEl.value) missing.push("conditie");
+    const intendedEl = intendedForSelect();
+    if (intendedEl && !intendedEl.value) missing.push("bestemd voor");
     const bf = brandField();
-    if (item.brand && bf && !(bf.value || "").trim()) missing.push("merk");
+    if (item.brand && bf && !fieldFilled(bf)) missing.push("merk");
     if (emptyInput("textAttribute[manufacturerTradename]")) missing.push("handelsnaam fabrikant");
     if (emptyInput("textAttribute[manufacturerEmail]")) missing.push("e-mailadres fabrikant");
     if (item.bid_percentage && emptyInput("price.minimumBidPrice")) missing.push("bieden vanaf");
