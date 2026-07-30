@@ -83,6 +83,9 @@
     await step("delivery",     () => { clickRadioByValue("Ophalen of Verzenden"); selectBundleFree(); });
     await step("bidding",      () => item.bid_percentage && fillBidding(item.price, item.bid_percentage));
 
+    await sleep(600);
+    await repairMpGroupFields(item, CONDITION_MAP[item.condition] || "Zo goed als nieuw");
+
     // Zelfde controle als op Marktplaats: 2dehands draait hetzelfde formulier,
     // maar plaatste tot nu toe zonder terug te lezen — dus met stille gaten.
     verifyMpGroupFields(item);

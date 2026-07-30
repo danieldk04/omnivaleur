@@ -5,7 +5,7 @@
   const { step, qs, sleep, waitForEl, fillInput, fillInputHuman, fillDescription, selectDropdown,
           fillBrand, fillManufacturer, selectBundleFree, uploadPhotos, submitListing,
           clickRadioByValue, smartTrunc, fillBidding, dutchColor,
-          verifyMpGroupFields } = window.CL;
+          verifyMpGroupFields, repairMpGroupFields } = window.CL;
 
   const job = await getJob();
   if (!job) return;
@@ -79,6 +79,9 @@
     await step("manufacturer", () => fillManufacturer(item));
     await step("delivery",     () => { clickRadioByValue("Ophalen of Verzenden"); selectBundleFree(); });
     await step("bidding",      () => item.bid_percentage && fillBidding(item.price, item.bid_percentage));
+
+    await sleep(600);
+    await repairMpGroupFields(item, CONDITION_MAP[item.condition] || "Zo goed als nieuw");
 
     // Lees het formulier terug voor we plaatsen — zie verifyMpGroupFields.
     verifyMpGroupFields(item);
