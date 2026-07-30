@@ -330,11 +330,14 @@ window.CL = (() => {
 
   // Merk is per categorie een tekstveld óf een keuzelijst, met steeds een andere
   // naam (clothingBrand, brand_mens_clothing, brand_kids_clothing, …).
+  // Let op: dit veld heeft vaak géén name-attribuut, alleen een id — zoeken op
+  // naam levert dan niets op. Het label wijst er wel altijd naar.
   function brandField() {
     const byLabel = findFieldByLabel("Merk");
     if (byLabel && (byLabel.tagName === "SELECT" || byLabel.tagName === "INPUT")) return byLabel;
-    return qs('input[name*="rand"][name^="textAttribute["]')
-        || qs('select[name*="rand"][name^="singleSelectAttribute["]');
+    return qs('[id*="rand"][id^="textAttribute["]')
+        || qs('[data-testid^="attribute-autocomplete-brand"]')
+        || qs('[id*="rand"][id^="singleSelectAttribute["]');
   }
 
   function fieldFilled(el) {
