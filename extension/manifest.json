@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Omnivaleur",
-  "version": "1.0.156",
+  "version": "1.0.157",
   "description": "Omnivaleur — publiceer je items automatisch op Marktplaats, 2dehands, Vinted en meer",
   "permissions": [
     "storage",
@@ -9,8 +9,7 @@
     "alarms",
     "clipboardWrite",
     "clipboardRead",
-    "scripting",
-    "debugger"
+    "scripting"
   ],
   "host_permissions": [
     "https://www.marktplaats.nl/*",

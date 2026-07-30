@@ -117,8 +117,6 @@ window.CL = (() => {
     // Het formulier valideert op een verborgen veld, niet op de zichtbare
     // editor. Zonder dit blijft "Geen zoekertjestekst ingevuld" staan.
     await runInMainWorld("FILL_HIDDEN_DESC", { text: value });
-    // Eén echte toetsaanslag, voor formulieren die dat wél nodig hebben.
-    await runInMainWorld("TYPE_DESC", { selector });
     // Verlaat het veld: sommige formulieren nemen de tekst pas over bij blur.
     await runInMainWorld("BLUR_DESC", { selector });
     // Het verborgen veld overleeft een herteken-ronde niet altijd; nog één keer.
@@ -786,7 +784,6 @@ window.CL = (() => {
     // de tekst te acccepteren — en blijft "Geen zoekertjestekst ingevuld" staan.
     if (_pendingDescription && _descriptionSelector) {
       await runInMainWorld("FILL_DESC", { selector: _descriptionSelector, text: _pendingDescription });
-      await runInMainWorld("TYPE_DESC", { selector: _descriptionSelector });
       await runInMainWorld("FILL_HIDDEN_DESC", { text: _pendingDescription });
     }
 
@@ -798,7 +795,6 @@ window.CL = (() => {
     if (descriptionIsEmpty()) {
       await sleep(500);
       await runInMainWorld("FILL_DESC", { selector: _descriptionSelector, text: _pendingDescription });
-      await runInMainWorld("TYPE_DESC", { selector: _descriptionSelector });
       await sleep(800);
       if (descriptionIsEmpty()) {
         clog("plaatsen: geweigerd — de editor bleef leeg");

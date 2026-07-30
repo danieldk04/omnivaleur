@@ -3003,105 +3003,6 @@ function _mwBlurDescription(selector) {
   return true;
 }
 
-// Zet de cursor achter de laatste letter van de beschrijving. Nodig voordat we
-// een échte toetsaanslag sturen: zonder cursor komt die ergens anders terecht.
-function _mwFocusDescriptionEnd(selector) {
-  const found = document.querySelector(selector);
-  if (!found) return false;
-  const el = found.isContentEditable ? found
-    : (found.querySelector('[contenteditable="true"]') || found);
-  el.focus();
-  const range = document.createRange();
-  range.selectNodeContents(el);
-  range.collapse(false);
-  const sel = window.getSelection();
-  sel.removeAllRanges();
-  sel.addRange(range);
-  return true;
-}
-
-// 2dehands negeert nagebootste invoer: de tekst staat wél in de editor, maar het
-// formulier blijft "Geen zoekertjestekst ingevuld" melden tot er één echte
-// toetsaanslag komt. Via de debugger-API kunnen we die wél sturen — we typen een
-// spatie en halen die meteen met een echte Backspace weer weg, zodat de tekst
-// ongewijzigd blijft maar het formulier hem alsnog registreert.
-// Terugvaloptie zonder debugger. execCommand levert wél door de browser zelf
-// opgewekte invoergebeurtenissen op — precies wat het formulier wil zien.
-function _mwTypeViaExecCommand(selector) {
-  const found = document.querySelector(selector);
-  if (!found) return false;
-  const el = found.isContentEditable ? found
-    : (found.querySelector('[contenteditable="true"]') || found);
-  el.focus();
-  const range = document.createRange();
-  range.selectNodeContents(el);
-  range.collapse(false);
-  const sel = window.getSelection();
-  sel.removeAllRanges();
-  sel.addRange(range);
-  try {
-    document.execCommand("insertText", false, " ");
-    document.execCommand("delete");
-    return true;
-  } catch (e) {
-    return false;
-  }
-}
-
-async function typeRealKeystroke(tabId, selector) {
-  // Alleen op een gewone webpagina, en nooit fataal: als dit niet lukt gaat het
-  // plaatsen gewoon door met de tekst die er al staat.
-  const tab = await chrome.tabs.get(tabId).catch(() => null);
-  if (!tab || !/^https?:/.test(tab.url || "")) return false;
-
-  // Aanhaken op tabId alleen faalt op sommige machines met "Cannot access a
-  // chrome-extension:// URL of different extension": Chrome kiest dan het
-  // verkeerde doel. Het doel expliciet opzoeken en op zijn eigen id aanhaken
-  // omzeilt dat. Lukt ook dat niet, dan doet de pagina het zelf via execCommand.
-  const targets = await new Promise((r) => chrome.debugger.getTargets((t) => r(t || [])));
-  const pageTarget = targets.find((t) => t.tabId === tabId && t.type === "page");
-  const kandidaten = pageTarget ? [{ targetId: pageTarget.id }, { tabId }] : [{ tabId }];
-
-  let target = null;
-  for (const kandidaat of kandidaten) {
-    try {
-      await new Promise((resolve, reject) => {
-        chrome.debugger.attach(kandidaat, "1.3", () =>
-          chrome.runtime.lastError ? reject(new Error(chrome.runtime.lastError.message)) : resolve());
-      });
-      target = kandidaat;
-      break;
-    } catch (e) {
-      console.warn("[Omnivaleur] aanhaken mislukt:", JSON.stringify(kandidaat), e.message);
-    }
-  }
-  if (!target) {
-    console.warn("[Omnivaleur] echte toetsaanslag via de pagina zelf");
-    const res = await chrome.scripting.executeScript({
-      target: { tabId }, world: "MAIN", func: _mwTypeViaExecCommand, args: [selector],
-    }).catch(() => null);
-    return res?.[0]?.result ?? false;
-  }
-  try {
-    await chrome.scripting.executeScript({
-      target: { tabId }, world: "MAIN", func: _mwFocusDescriptionEnd, args: [selector],
-    });
-    await chrome.debugger.sendCommand(target, "Input.insertText", { text: " " });
-    for (const type of ["rawKeyDown", "keyUp"]) {
-      await chrome.debugger.sendCommand(target, "Input.dispatchKeyEvent", {
-        type, key: "Backspace", code: "Backspace",
-        windowsVirtualKeyCode: 8, nativeVirtualKeyCode: 8,
-      });
-    }
-    return true;
-  } catch (e) {
-    console.error("[Omnivaleur] echte toetsaanslag mislukt:", e.message);
-    return false;
-  } finally {
-    chrome.debugger.detach(target).catch(() => {});
-  }
-}
-
 async function _mwFillBrand(brand) {
   const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
@@ -3295,11 +3196,6 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
       if (chrome.runtime.lastError) sendResponse(null);
       else sendResponse(results?.[0]?.result ?? null);
     });
-    return true;
-  }
-
-  if (msg.type === "TYPE_DESC") {
-    typeRealKeystroke(sender.tab.id, msg.selector).then(sendResponse);
     return true;
   }
 
