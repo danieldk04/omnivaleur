@@ -621,6 +621,7 @@ window.CL = (() => {
 
     // Uploading N photos to the platform's CDN takes real time — the old 8s
     // wait for ONE thumbnail was both too short and too weak a check.
+    clog("foto's: geplaatst in het formulier, wachten op miniaturen");
     const deadline = Date.now() + 45000;
     while (Date.now() < deadline) {
       if (countPhotoThumbs(thumbSel) > before) break;
@@ -632,6 +633,7 @@ window.CL = (() => {
     // Only arm the pre-submit photo guard once thumbnails were actually observed
     // here. If a platform's thumbnails don't match PHOTO_THUMB_SELECTOR at all we
     // must not block a submit that would otherwise have succeeded.
+    clog("foto's: miniaturen zichtbaar");
     _expectPhotos = true;
     // Give the remaining uploads time to finish before anything clicks submit.
     await sleep(1500);

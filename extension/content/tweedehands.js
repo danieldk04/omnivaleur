@@ -76,7 +76,15 @@
     // waarom. We onthouden de fout en melden hem pas aan het eind.
     let photoError = null;
     if (item.photo_urls?.length) {
-      try { await uploadPhotos(item.photo_urls.slice(0, 20)); }
+      // Harde bovengrens: als het uploaden om welke reden dan ook blijft hangen,
+      // gaan we door met de rest van het formulier in plaats van stil te blijven staan.
+      try {
+        const done = await Promise.race([
+          uploadPhotos(item.photo_urls.slice(0, 20)).then(() => "ok"),
+          sleep(120000).then(() => "timeout"),
+        ]);
+        if (done === "timeout") throw new Error("Foto's uploaden duurde te lang");
+      }
       catch (e) { photoError = e; clog(`foto's: FOUT — ${e && e.message ? e.message : e}`); }
     }
     await step("condition",    () => selectCondition(item.condition));
