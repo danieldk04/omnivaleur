@@ -5,7 +5,7 @@
   const { step, qs, sleep, waitForEl, fillInput, fillInputHuman, fillDescription, selectDropdown,
           fillBrand, fillManufacturer, selectBundleFree, selectPackageSize,
           uploadPhotos, submitListing, clickRadioByValue, smartTrunc, fillBidding,
-          dutchColor, verifyMpGroupFields } = window.CL;
+          dutchColor, verifyMpGroupFields, repairMpGroupFields } = window.CL;
 
   const job = await getJob();
   if (!job) return;
