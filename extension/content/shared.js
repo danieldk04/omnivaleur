@@ -290,7 +290,8 @@ window.CL = (() => {
     if (item.size && emptySelect("singleSelectAttribute[size]")) missing.push("maat");
     if (item.color && emptySelect("singleSelectAttribute[color]")) missing.push("kleur");
     if (emptySelect("singleSelectAttribute[condition]")) missing.push("conditie");
-    if (item.brand && emptyInput("textAttribute[clothingBrand]")) missing.push("merk");
+    const bf = brandField();
+    if (item.brand && bf && !(bf.value || "").trim()) missing.push("merk");
     if (emptyInput("textAttribute[manufacturerTradename]")) missing.push("handelsnaam fabrikant");
     if (emptyInput("textAttribute[manufacturerEmail]")) missing.push("e-mailadres fabrikant");
     if (item.bid_percentage && emptyInput("price.minimumBidPrice")) missing.push("bieden vanaf");
