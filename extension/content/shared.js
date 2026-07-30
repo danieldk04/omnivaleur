@@ -250,6 +250,10 @@ window.CL = (() => {
   // Marktplaats en 2dehands draaien hetzelfde plaatsingsformulier, dus dezelfde
   // veldnamen. Een veld dat op deze categorie niet bestaat levert null op en
   // wordt overgeslagen: er wordt nooit iets gemeld wat het item zelf niet heeft.
+  function brandField() {
+    return qs('input[name^="textAttribute[brand"]') || qs('input[name="textAttribute[clothingBrand]"]');
+  }
+
   // Het formulier bouwt zichzelf opnieuw op na het uploaden van foto's en na het
   // kiezen van de conditie. Velden die daarvóór gezet zijn, springen dan terug op
   // "Kies...". Daarom vullen we aan het eind nog één keer alles bij wat leeg is
