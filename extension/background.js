@@ -2977,6 +2977,59 @@ function _mwBlurDescription(selector) {
   return true;
 }
 
+// Zet de cursor achter de laatste letter van de beschrijving. Nodig voordat we
+// een échte toetsaanslag sturen: zonder cursor komt die ergens anders terecht.
+function _mwFocusDescriptionEnd(selector) {
+  const found = document.querySelector(selector);
+  if (!found) return false;
+  const el = found.isContentEditable ? found
+    : (found.querySelector('[contenteditable="true"]') || found);
+  el.focus();
+  const range = document.createRange();
+  range.selectNodeContents(el);
+  range.collapse(false);
+  const sel = window.getSelection();
+  sel.removeAllRanges();
+  sel.addRange(range);
+  return true;
+}
+
+// 2dehands negeert nagebootste invoer: de tekst staat wél in de editor, maar het
+// formulier blijft "Geen zoekertjestekst ingevuld" melden tot er één echte
+// toetsaanslag komt. Via de debugger-API kunnen we die wél sturen — we typen een
+// spatie en halen die meteen met een echte Backspace weer weg, zodat de tekst
+// ongewijzigd blijft maar het formulier hem alsnog registreert.
+async function typeRealKeystroke(tabId, selector) {
+  const target = { tabId };
+  try {
+    await new Promise((resolve, reject) => {
+      chrome.debugger.attach(target, "1.3", () =>
+        chrome.runtime.lastError ? reject(new Error(chrome.runtime.lastError.message)) : resolve());
+    });
+  } catch (e) {
+    console.error("[Omnivaleur] debugger attach mislukt:", e.message);
+    return false;
+  }
+  try {
+    await chrome.scripting.executeScript({
+      target: { tabId }, world: "MAIN", func: _mwFocusDescriptionEnd, args: [selector],
+    });
+    await chrome.debugger.sendCommand(target, "Input.insertText", { text: " " });
+    for (const type of ["rawKeyDown", "keyUp"]) {
+      await chrome.debugger.sendCommand(target, "Input.dispatchKeyEvent", {
+        type, key: "Backspace", code: "Backspace",
+        windowsVirtualKeyCode: 8, nativeVirtualKeyCode: 8,
+      });
+    }
+    return true;
+  } catch (e) {
+    console.error("[Omnivaleur] echte toetsaanslag mislukt:", e.message);
+    return false;
+  } finally {
+    chrome.debugger.detach(target).catch(() => {});
+  }
+}
+
 async function _mwFillBrand(brand) {
   const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
