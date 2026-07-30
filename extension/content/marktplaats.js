@@ -2,7 +2,7 @@
 (async () => {
   const PLATFORM = "marktplaats";
   const { step, qs, sleep, waitForEl, fillInput, fillInputHuman, fillDescription, selectDropdown,
-          fillBrand, fillManufacturer, selectBundleFree, uploadPhotos, submitListing,
+          fillBrand, fillBrandField, fillManufacturer, selectBundleFree, uploadPhotos, submitListing,
           clickRadioByValue, smartTrunc, fillBidding, dutchColor,
           verifyMpGroupFields, repairMpGroupFields, selectCondition, selectIntendedFor } = window.CL;
 
@@ -75,7 +75,7 @@
     await sleep(400); // let React re-render kenmerken after condition selection
     await step("size",         () => item.size && selectDropdown(["Maat", "Jeansmaat", "Maat (cm)", "Maat bovenstuk", "Maat onderstuk"], item.size));
     await step("color",        () => item.color && selectDropdown("Kleur", dutchColor(item.color)));
-    await step("brand",        () => item.brand && fillBrand(item.brand));
+    await step("brand",        () => item.brand && fillBrandField(item.brand));
     await step("manufacturer", () => fillManufacturer(item));
     await step("delivery",     () => { clickRadioByValue("Ophalen of Verzenden"); selectBundleFree(); });
     await step("bidding",      () => item.bid_percentage && fillBidding(item.price, item.bid_percentage));
