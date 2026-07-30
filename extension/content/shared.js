@@ -348,9 +348,12 @@ window.CL = (() => {
     const el = brandField();
     if (!el || !brand) return false;
     if (el.tagName === "SELECT") return fillNativeSelect(el, brand);
+    // Het merkveld is een autocomplete: gewoon tekst erin zetten wordt door de
+    // pagina teruggedraaid. De beproefde route loopt via de main world.
+    await fillBrand(brand);
+    if (fieldFilled(brandField())) return true;
     await fillInputHuman(el, brand);
-    if (fieldFilled(el)) return true;
-    return fillBrand(brand); // categorieën met een merk-pop-up
+    return fieldFilled(brandField());
   }
 
   // Het formulier bouwt zichzelf opnieuw op na het uploaden van foto's en na het
