@@ -822,8 +822,21 @@ window.CL = (() => {
   }
 
   // run a named step so a single failure never aborts the whole flow
+  // Schrijf mee in de console van de service worker — dat is het log dat we
+  // daadwerkelijk kunnen inzien. De console van het formulier zelf verdwijnt
+  // zodra de tab dichtgaat, dus daar hebben we niets aan bij een storing.
+  function clog(...args) {
+    console.log("[Omnivaleur]", ...args);
+    try { chrome.runtime.sendMessage({ type: "LOG", text: args.map(String).join(" ") }); } catch (e) {}
+  }
+
   async function step(name, fn) {
-    try { await fn(); } catch (e) { console.warn(`Omnivaleur step "${name}" failed:`, e); }
+    try {
+      const ok = await fn();
+      clog(`stap ${name}: ${ok === false ? "NIET gelukt" : "ok"}`);
+    } catch (e) {
+      clog(`stap ${name}: FOUT — ${e && e.message ? e.message : e}`);
+    }
   }
 
   // Enable "Bieden vanaf" and fill the minimum bid as a percentage of the asking price.
