@@ -887,7 +887,7 @@ async function processJob(job, serverUrl) {
     return;
   }
 
-  console.log(`[Omnivaleur] Opening tab for ${job.platform} job ${job.id}: ${url}`);
+  console.log(`[Omnivaleur v${chrome.runtime.getManifest().version}] Opening tab for ${job.platform} job ${job.id}: ${url}`);
   openWorkerTab(url, (tab) => {
     if (!tab) {
       reportError(job.id, serverUrl, "tabs.create failed: could not open a tab");
