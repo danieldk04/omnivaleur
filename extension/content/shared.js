@@ -328,8 +328,26 @@ window.CL = (() => {
     return fillNativeSelect(el, want);
   }
 
+  // Merk is per categorie een tekstveld óf een keuzelijst, met steeds een andere
+  // naam (clothingBrand, brand_mens_clothing, brand_kids_clothing, …).
   function brandField() {
-    return qs('input[name^="textAttribute[brand"]') || qs('input[name="textAttribute[clothingBrand]"]');
+    const byLabel = findFieldByLabel("Merk");
+    if (byLabel && (byLabel.tagName === "SELECT" || byLabel.tagName === "INPUT")) return byLabel;
+    return qs('input[name*="rand"][name^="textAttribute["]')
+        || qs('select[name*="rand"][name^="singleSelectAttribute["]');
+  }
+
+  function fieldFilled(el) {
+    return !!el && !!(el.value || "").trim();
+  }
+
+  async function fillBrandField(brand) {
+    const el = brandField();
+    if (!el || !brand) return false;
+    if (el.tagName === "SELECT") return fillNativeSelect(el, brand);
+    await fillInputHuman(el, brand);
+    if (fieldFilled(el)) return true;
+    return fillBrand(brand); // categorieën met een merk-pop-up
   }
 
   // Het formulier bouwt zichzelf opnieuw op na het uploaden van foto's en na het
