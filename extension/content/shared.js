@@ -581,6 +581,10 @@ window.CL = (() => {
     '[class*="hz-Listing"] img',
     '[class*="thumbnail"] img',
     '[data-testid*="image"] img',
+    '[class*="ImageUploader"] img',
+    '[class*="imageUploader"] img',
+    '[data-testid*="upload"] img',
+    '[class*="Carousel"] img',
   ].join(", ");
 
   // Platforms may override the proof-of-upload selector. Facebook needs this:
@@ -637,7 +641,7 @@ window.CL = (() => {
     // Uploading N photos to the platform's CDN takes real time — the old 8s
     // wait for ONE thumbnail was both too short and too weak a check.
     clog("foto's: geplaatst in het formulier, wachten op miniaturen");
-    const deadline = Date.now() + 45000;
+    const deadline = Date.now() + 25000;
     while (Date.now() < deadline) {
       if (countPhotoThumbs(thumbSel) > before) break;
       await sleep(500);
