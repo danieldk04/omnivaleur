@@ -213,7 +213,7 @@
       "region": "nl",
       "pillar": "C",
       "slug": "omnivaleur-vs-list-perfectly-comparison-2026",
-      "status": "pending",
+      "status": "published",
       "priority": 26
     },
     {
@@ -450,6 +450,15 @@
       "action": "created",
       "url_path": "/reseller-tools/luxury-handbag-reselling-automation",
       "published_at": "2026-07-29T10:33:39.813525+00:00"
+    },
+    {
+      "keyword": "Omnivaleur vs List Perfectly comparison 2026",
+      "slug": "omnivaleur-vs-list-perfectly-comparison-2026",
+      "region": "nl",
+      "pillar": "C",
+      "action": "created",
+      "url_path": "/vs/omnivaleur-vs-list-perfectly-comparison-2026",
+      "published_at": "2026-07-30T10:16:56.269448+00:00"
     }
   ]
 }
