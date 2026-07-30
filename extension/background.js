@@ -3195,6 +3195,11 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     return true;
   }
 
+  if (msg.type === "TYPE_DESC") {
+    typeRealKeystroke(sender.tab.id, msg.selector).then(sendResponse);
+    return true;
+  }
+
   if (msg.type === "BLUR_DESC") {
     chrome.scripting.executeScript({
       target: { tabId: sender.tab.id },
