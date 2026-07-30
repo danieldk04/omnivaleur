@@ -3000,19 +3000,38 @@ function _mwFocusDescriptionEnd(selector) {
 // spatie en halen die meteen met een echte Backspace weer weg, zodat de tekst
 // ongewijzigd blijft maar het formulier hem alsnog registreert.
 async function typeRealKeystroke(tabId, selector) {
-  const target = { tabId };
   // Alleen op een gewone webpagina, en nooit fataal: als dit niet lukt gaat het
   // plaatsen gewoon door met de tekst die er al staat.
   const tab = await chrome.tabs.get(tabId).catch(() => null);
   if (!tab || !/^https?:/.test(tab.url || "")) return false;
-  try {
-    await new Promise((resolve, reject) => {
-      chrome.debugger.attach(target, "1.3", () =>
-        chrome.runtime.lastError ? reject(new Error(chrome.runtime.lastError.message)) : resolve());
-    });
-  } catch (e) {
-    console.warn("[Omnivaleur] echte toetsaanslag overgeslagen:", e.message);
-    return false;
+
+  // Aanhaken op tabId alleen faalt op sommige machines met "Cannot access a
+  // chrome-extension:// URL of different extension": Chrome kiest dan het
+  // verkeerde doel. Het doel expliciet opzoeken en op zijn eigen id aanhaken
+  // omzeilt dat. Lukt ook dat niet, dan doet de pagina het zelf via execCommand.
+  const targets = await new Promise((r) => chrome.debugger.getTargets((t) => r(t || [])));
+  const pageTarget = targets.find((t) => t.tabId === tabId && t.type === "page");
+  const kandidaten = pageTarget ? [{ targetId: pageTarget.id }, { tabId }] : [{ tabId }];
+
+  let target = null;
+  for (const kandidaat of kandidaten) {
+    try {
+      await new Promise((resolve, reject) => {
+        chrome.debugger.attach(kandidaat, "1.3", () =>
+          chrome.runtime.lastError ? reject(new Error(chrome.runtime.lastError.message)) : resolve());
+      });
+      target = kandidaat;
+      break;
+    } catch (e) {
+      console.warn("[Omnivaleur] aanhaken mislukt:", JSON.stringify(kandidaat), e.message);
+    }
+  }
+  if (!target) {
+    console.warn("[Omnivaleur] echte toetsaanslag via de pagina zelf");
+    const res = await chrome.scripting.executeScript({
+      target: { tabId }, world: "MAIN", func: _mwTypeViaExecCommand, args: [selector],
+    }).catch(() => null);
+    return res?.[0]?.result ?? false;
   }
   try {
     await chrome.scripting.executeScript({
