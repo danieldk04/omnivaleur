@@ -781,6 +781,6 @@ window.CL = (() => {
     sleep, qs, waitForEl, fillInput, fillInputHuman, fillNativeSelect, clickRadioByValue, fillDescription,
     findFieldByLabel, selectDropdown, fillBrand, fillManufacturer, selectBundleFree,
     selectPackageSize, uploadPhotos, submitListing, step, closePopup, smartTrunc, fillBidding,
-    dutchColor, verifyMpGroupFields,
+    dutchColor, verifyMpGroupFields, repairMpGroupFields,
   };
 })();
