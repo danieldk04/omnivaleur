@@ -250,6 +250,31 @@ window.CL = (() => {
   // Marktplaats en 2dehands draaien hetzelfde plaatsingsformulier, dus dezelfde
   // veldnamen. Een veld dat op deze categorie niet bestaat levert null op en
   // wordt overgeslagen: er wordt nooit iets gemeld wat het item zelf niet heeft.
+  // Het formulier bouwt zichzelf opnieuw op na het uploaden van foto's en na het
+  // kiezen van de conditie. Velden die daarvóór gezet zijn, springen dan terug op
+  // "Kies...". Daarom vullen we aan het eind nog één keer alles bij wat leeg is
+  // gebleven, vlak voordat we controleren.
+  async function repairMpGroupFields(item, conditionValue) {
+    const selects = [
+      ["singleSelectAttribute[condition]", conditionValue],
+      ["singleSelectAttribute[size]", item.size],
+      ["singleSelectAttribute[color]", dutchColor(item.color)],
+    ];
+    for (const [name, value] of selects) {
+      if (!value) continue;
+      const el = qs(`select[name="${name}"]`);
+      if (el && !el.value) {
+        fillNativeSelect(el, value);
+        await sleep(300);
+      }
+    }
+    const brandInput = qs('input[name="textAttribute[clothingBrand]"]');
+    if (item.brand && brandInput && !(brandInput.value || "").trim()) {
+      await fillBrand(item.brand);
+      await sleep(300);
+    }
+  }
+
   function verifyMpGroupFields(item) {
     const missing = [];
     const emptySelect = (name) => {
