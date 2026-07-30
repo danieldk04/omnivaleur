@@ -250,6 +250,44 @@ window.CL = (() => {
   // Marktplaats en 2dehands draaien hetzelfde plaatsingsformulier, dus dezelfde
   // veldnamen. Een veld dat op deze categorie niet bestaat levert null op en
   // wordt overgeslagen: er wordt nooit iets gemeld wat het item zelf niet heeft.
+  // Elke 2dehands/Marktplaats-categorie heeft zijn eigen conditielijst: kleding
+  // kent "Gedragen", kinderkleding alleen "Gebruikt". Eén vaste waarde vindt dus
+  // in de helft van de categorieën niets. We proberen ze op volgorde van
+  // nauwkeurigheid en pakken de eerste die daadwerkelijk bestaat.
+  const CONDITION_CANDIDATES = {
+    new_with_tags: ["Nieuw met etiket", "Nieuw", "Zo goed als nieuw"],
+    new:           ["Nieuw", "Nieuw met etiket", "Zo goed als nieuw"],
+    good:          ["Zo goed als nieuw", "Gebruikt", "Gedragen"],
+    fair:          ["Gedragen", "Gebruikt", "Zo goed als nieuw"],
+    poor:          ["Beschadigd", "Gebruikt", "Gedragen"],
+  };
+
+  async function selectCondition(condition) {
+    const list = CONDITION_CANDIDATES[condition] || CONDITION_CANDIDATES.good;
+    const el = qs('select[name="singleSelectAttribute[condition]"]');
+    if (el) {
+      const texts = [...el.options].map((o) => o.text.trim().toLowerCase());
+      const hit = list.find((c) => texts.includes(c.toLowerCase()));
+      return hit ? fillNativeSelect(el, hit) : false;
+    }
+    for (const c of list) {
+      if (await selectDropdown("Conditie", c)) return true;
+    }
+    return false;
+  }
+
+  // "Bestemd voor" bij kinderkleding — verplicht, maar Vinted levert het niet.
+  // We leiden het af uit de tekst en vallen anders terug op neutraal.
+  function selectIntendedFor(item) {
+    const el = qs('select[name="singleSelectAttribute[intendedFor]"]');
+    if (!el) return false;
+    const hay = `${item.title || ""} ${item.category || ""} ${item.description || ""}`.toLowerCase();
+    const boy = /jongen|boys?\b|garçon/.test(hay);
+    const girl = /meisje|girls?\b|fille/.test(hay);
+    const want = boy && !girl ? "Jongen" : girl && !boy ? "Meisje" : "Jongen of Meisje";
+    return fillNativeSelect(el, want);
+  }
+
   function brandField() {
     return qs('input[name^="textAttribute[brand"]') || qs('input[name="textAttribute[clothingBrand]"]');
   }
