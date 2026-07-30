@@ -114,6 +114,9 @@ window.CL = (() => {
     document.querySelector(selector)?.scrollIntoView({ block: "center" });
     const ok = await runInMainWorld("FILL_DESC", { selector, text: value });
     if (!ok) throw new Error("Beschrijving kon niet in de editor worden gezet");
+    // Eén echte toetsaanslag: 2dehands accepteert de tekst pas als er ook
+    // fysieke invoer langskomt. Zonder dit blijft het formulier leeg denken.
+    await runInMainWorld("TYPE_DESC", { selector });
     // Verlaat het veld: sommige formulieren nemen de tekst pas over bij blur.
     await runInMainWorld("BLUR_DESC", { selector });
     return true;
