@@ -5196,7 +5196,19 @@ function openCrosslist(itemId) {
   const item = state.items.find(i => i.id === itemId);
   document.getElementById('crosslist-item-name').textContent = item?.title || itemId;
   renderPlatformCheckboxes('crosslist-platform-checkboxes', itemId);
+  // Zet de knop terug op zijn beginstand: het venster wordt hergebruikt, dus
+  // zonder dit blijft "Adding to queue…" van de vorige keer staan en is de knop
+  // nog uitgeschakeld — tot een harde herlaadbeurt.
+  resetCrosslistButton();
   document.getElementById('modal-crosslist').style.display = 'flex';
+}
+
+function resetCrosslistButton() {
+  const btn = document.querySelector('#modal-crosslist .btn-primary');
+  if (!btn) return;
+  btn.disabled = false;
+  delete btn.dataset.clWasEnabled;
+  btn.textContent = 'Publish';
 }
 
 async function doCrosslist() {
@@ -5226,11 +5238,10 @@ async function doCrosslist() {
     }
     await loadAll();
   } catch(e) {
-    btn.disabled = false;
-    btn.textContent = 'Publish';
     alert(e.message);
   } finally {
     setBusy(false);
+    resetCrosslistButton();
   }
 }
 
