@@ -114,12 +114,24 @@ window.CL = (() => {
     document.querySelector(selector)?.scrollIntoView({ block: "center" });
     const ok = await runInMainWorld("FILL_DESC", { selector, text: value });
     if (!ok) throw new Error("Beschrijving kon niet in de editor worden gezet");
-    // Eén echte toetsaanslag: 2dehands accepteert de tekst pas als er ook
-    // fysieke invoer langskomt. Zonder dit blijft het formulier leeg denken.
+    // Het formulier valideert op een verborgen veld, niet op de zichtbare
+    // editor. Zonder dit blijft "Geen zoekertjestekst ingevuld" staan.
+    await runInMainWorld("FILL_HIDDEN_DESC", { text: value });
+    // Eén echte toetsaanslag, voor formulieren die dat wél nodig hebben.
     await runInMainWorld("TYPE_DESC", { selector });
     // Verlaat het veld: sommige formulieren nemen de tekst pas over bij blur.
     await runInMainWorld("BLUR_DESC", { selector });
+    // Het verborgen veld overleeft een herteken-ronde niet altijd; nog één keer.
+    await runInMainWorld("FILL_HIDDEN_DESC", { text: value });
     return true;
+  }
+
+  // Het formulier beschouwt de beschrijving als leeg zolang dit verborgen veld
+  // leeg is — ongeacht wat er zichtbaar staat.
+  async function hiddenDescriptionOk() {
+    const waarde = await runInMainWorld("READ_HIDDEN_DESC", {});
+    if (waarde === null || waarde === false) return true; // dit platform heeft het veld niet
+    return String(waarde).trim().length > 0;
   }
 
   // Read back what the editor actually holds. The isolated world cannot see
@@ -775,6 +787,7 @@ window.CL = (() => {
     if (_pendingDescription && _descriptionSelector) {
       await runInMainWorld("FILL_DESC", { selector: _descriptionSelector, text: _pendingDescription });
       await runInMainWorld("TYPE_DESC", { selector: _descriptionSelector });
+      await runInMainWorld("FILL_HIDDEN_DESC", { text: _pendingDescription });
     }
 
     // PRE-FLIGHT. Submitting a form we already know is incomplete only produces
@@ -788,13 +801,19 @@ window.CL = (() => {
       await runInMainWorld("TYPE_DESC", { selector: _descriptionSelector });
       await sleep(800);
       if (descriptionIsEmpty()) {
+        clog("plaatsen: geweigerd — de editor bleef leeg");
         throw new Error(
           "Beschrijving bleef leeg in de editor — niet geplaatst. " +
           "Plak de tekst zelf in het advertentietekst-veld en klik op Plaatsen."
         );
       }
     }
-    if (_expectPhotos && countPhotoThumbs() === 0) {
+    // Het formulier houdt de geüploade foto's bij in een verborgen veld. Dat is
+    // een hardere waarheid dan miniaturen tellen, die per categorie anders heten.
+    const fotoIds = qs('input[name="images.ids"]');
+    const fotosVolgensFormulier = fotoIds ? (fotoIds.value || "").trim().length > 0 : null;
+    if (_expectPhotos && fotosVolgensFormulier === false && countPhotoThumbs() === 0) {
+      clog("plaatsen: geweigerd — geen foto zichtbaar op het formulier");
       throw new Error(
         "Geen enkele foto is geüpload — niet geplaatst. " +
         "Voeg de foto's zelf toe en klik op Plaatsen."
@@ -820,6 +839,16 @@ window.CL = (() => {
            // anchored one-word pattern could never match.
            /^(plaats(en)?( je advertentie)?|upload|opslaan|publiceer(en)?|publish|save)$/i
              .test((b.textContent || "").trim()));
+    // Laatste zekerheid vlak voor de klik: het veld waar het formulier op
+    // valideert moet gevuld zijn, anders weigert het zonder bruikbare melding.
+    if (_pendingDescription) {
+      if (!(await hiddenDescriptionOk())) {
+        await runInMainWorld("FILL_HIDDEN_DESC", { text: _pendingDescription });
+        await sleep(400);
+      }
+      clog(`plaatsen: verborgen beschrijvingsveld ${(await hiddenDescriptionOk()) ? "gevuld" : "LEEG"}`);
+    }
+
     if (!btn) throw new Error("Submit/Plaats-knop niet gevonden");
     clog(`plaatsen: knop gevonden ("${(btn.textContent || "").trim()}")`);
     // Nogmaals het beschrijvingsveld verlaten: de laatste bewerking eraan kan

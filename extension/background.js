@@ -2772,6 +2772,32 @@ async function _mwReadNotifCounts(platform) {
 
 // ---- Main-world helpers (injected via chrome.scripting, bypasses page CSP) ----
 
+// Het formulier valideert NIET op de zichtbare editor maar op een verborgen
+// veld (description_nl-BE / description_nl-NL). Live gemeten: de Lexical-editor
+// vullen laat dat veld leeg achter, en dan blijft "Geen zoekertjestekst
+// ingevuld" staan hoeveel tekst er ook zichtbaar is. Dit veld staat onder
+// React-beheer, dus zetten via de eigen setter plus een input-gebeurtenis —
+// precies zoals React zelf een toetsaanslag verwerkt.
+function _mwFillHiddenDescription(descText) {
+  const veld = document.querySelector('input[name^="description_nl-"], textarea[name^="description_nl-"]')
+    || document.querySelector('input[name="description"], textarea[name="description"]');
+  if (!veld) return false;
+  const proto = veld instanceof HTMLTextAreaElement
+    ? window.HTMLTextAreaElement.prototype : window.HTMLInputElement.prototype;
+  const setter = Object.getOwnPropertyDescriptor(proto, "value").set;
+  setter.call(veld, descText);
+  veld.dispatchEvent(new Event("input", { bubbles: true }));
+  veld.dispatchEvent(new Event("change", { bubbles: true }));
+  return (veld.value || "").trim().length > 0;
+}
+
+// Leest terug wat het formulier zélf als beschrijving beschouwt.
+function _mwHiddenDescriptionValue() {
+  const veld = document.querySelector('input[name^="description_nl-"], textarea[name^="description_nl-"]')
+    || document.querySelector('input[name="description"], textarea[name="description"]');
+  return veld ? (veld.value || "") : null;
+}
+
 async function _mwFillDescription(selector, descText) {
   const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
   const found = document.querySelector(selector);
@@ -3246,6 +3272,29 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   if (msg.type === "LOG") {
     console.log(`[Omnivaleur][formulier] ${msg.text}`);
     sendResponse(true);
+    return true;
+  }
+
+  // Vult het verborgen veld waar de validatie op afgaat.
+  if (msg.type === "FILL_HIDDEN_DESC") {
+    chrome.scripting.executeScript({
+      target: { tabId: sender.tab.id }, world: "MAIN",
+      func: _mwFillHiddenDescription, args: [msg.text],
+    }, (results) => {
+      if (chrome.runtime.lastError) sendResponse(false);
+      else sendResponse(results?.[0]?.result ?? false);
+    });
+    return true;
+  }
+
+  if (msg.type === "READ_HIDDEN_DESC") {
+    chrome.scripting.executeScript({
+      target: { tabId: sender.tab.id }, world: "MAIN",
+      func: _mwHiddenDescriptionValue, args: [],
+    }, (results) => {
+      if (chrome.runtime.lastError) sendResponse(null);
+      else sendResponse(results?.[0]?.result ?? null);
+    });
     return true;
   }
 
