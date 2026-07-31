@@ -224,7 +224,7 @@ def generate_hero(slug: str, title: str, pillar: str, keyword: str = "", force: 
             draw.text((margin, HEIGHT - 88), footer, font=font_meta, fill=(255, 255, 255, 232))
 
         dest.parent.mkdir(parents=True, exist_ok=True)
-        img.save(dest, "PNG", optimize=True)
+        img.save(dest, "JPEG", quality=88, optimize=True, progressive=True)
         logger.info("Hero gegenereerd voor %s (%d kB)", slug, dest.stat().st_size // 1000)
         return hero_url(slug)
     except Exception as e:
