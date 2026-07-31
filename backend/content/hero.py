@@ -155,7 +155,8 @@ def generate_hero(slug: str, title: str, pillar: str, keyword: str = "", force: 
         from PIL import Image, ImageDraw, ImageFilter
 
         seed = _slug_seed(slug)
-        start, end = PALETTES[seed % len(PALETTES)]
+        family = PALETTES.get(pillar, PALETTES["B"])
+        start, end = family[seed % len(family)]
         img = _gradient((WIDTH, HEIGHT), start, end, angle_down=bool((seed >> 3) & 1))
         draw = ImageDraw.Draw(img, "RGBA")
 
