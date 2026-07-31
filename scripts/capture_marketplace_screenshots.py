@@ -84,17 +84,24 @@ BLOCK_PHRASES = [
 
 def _dismiss_overlays(page) -> list[str]:
     """Klikt alles weg wat over de interface heen ligt. Geeft terug wat er is
-    geklikt, zodat je in de output ziet of er iets is gebeurd."""
+    geklikt, zodat je in de output ziet of er iets is gebeurd.
+
+    Kijkt ook IN iframes: Marktplaats en 2dehands laden hun cookiedialoog in een
+    aparte frame, dus een selector op de hoofdpagina vindt daar niets en de muur
+    bleef over de hele screenshot heen staan."""
     clicked = []
-    for selector in DISMISS_SELECTORS:
-        try:
-            element = page.locator(selector).first
-            if element.is_visible(timeout=1200):
-                element.click(timeout=2500)
-                clicked.append(selector)
-                page.wait_for_timeout(700)
-        except Exception:
-            continue
+    # Hoofdpagina eerst, daarna elke frame — de dialoog zit in één van de twee.
+    contexts = [page] + [f for f in page.frames if f != page.main_frame]
+    for context in contexts:
+        for selector in DISMISS_SELECTORS:
+            try:
+                element = context.locator(selector).first
+                if element.is_visible(timeout=800):
+                    element.click(timeout=2500)
+                    clicked.append(selector)
+                    page.wait_for_timeout(700)
+            except Exception:
+                continue
     # Laatste redmiddel: Escape sluit de meeste modals ook.
     page.keyboard.press("Escape")
     page.wait_for_timeout(400)
