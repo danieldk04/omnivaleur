@@ -49,38 +49,6 @@ def needs_dutch_translation(keyword: str, region: str) -> bool:
     return True
 
 
-# Real, manually-captured Omnivaleur screenshots (from the seeded demo account) —
-# never AI-generated, per the "no auto-generated blog images" rule. Re-capture and
-# swap these paths whenever the dashboard UI changes meaningfully. Ordered — this is
-# also the order they get inserted into an article in.
-CROSSLIST_SCREENSHOTS = [
-    {
-        "src": "/assets/comparisons/dashboard-overview.png",
-        "alt": "Omnivaleur dashboard showing items cross-listed across Marktplaats, 2dehands, Vinted, eBay and Shopify",
-        "caption": "The Omnivaleur dashboard: 15 items live across 5 platforms at once, with a per-platform breakdown of how many listings are active on Marktplaats, 2dehands, Vinted, eBay and Shopify — from a real trial account, not a mockup.",
-    },
-    {
-        "src": "/assets/comparisons/items-crosslisted.png",
-        "alt": "Omnivaleur items list with per-platform status and missing-data warnings before publishing",
-        "caption": "Every item shows its status per platform. Omnivaleur flags \"Missing data for 2 platforms\" before you publish, instead of letting a half-empty listing go live and get rejected or shadow-suppressed by the marketplace.",
-    },
-    {
-        "src": "/assets/comparisons/new-item-form.png",
-        "alt": "Omnivaleur new item form with fields that map directly to Marktplaats, 2dehands, Vinted, eBay and Shopify",
-        "caption": "One intake form covers every platform's required fields (brand, size, condition, eBay category, material) — fill it in once, publish everywhere it applies, no separate re-entry per marketplace.",
-    },
-    {
-        "src": "/assets/comparisons/refresh-vinted.png",
-        "alt": "Omnivaleur Vinted refresh tool showing daily quota and an explicit risk disclosure",
-        "caption": "The Vinted refresh tool caps itself at 8 free refreshes/day and states outright that it can't guarantee a platform won't flag an account — an explicit risk disclosure most competitors don't show.",
-    },
-    {
-        "src": "/assets/comparisons/analytics-overview.png",
-        "alt": "Omnivaleur analytics dashboard with revenue, profit and sales broken down per platform",
-        "caption": "Built-in analytics break revenue and profit down per platform (Shopify, eBay, Vinted) without needing to export anything to a spreadsheet first.",
-    },
-]
-
 # Publicly-hosted marketing screenshots competitors show on their own sites —
 # hotlinked (never re-hosted) so there's no copyright/storage question, standard
 # practice for honest comparison content. Verify these URLs still resolve
