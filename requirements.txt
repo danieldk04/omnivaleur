@@ -24,3 +24,7 @@ google-api-python-client==2.149.0
 google-auth==2.35.0
 google-ads==26.0.0
 google-analytics-data==0.18.12
+# Tekent de hero-/deelafbeelding per artikel (backend/content/hero.py). Wordt
+# lazy geïmporteerd, dus zonder Pillow publiceert een artikel gewoon zonder
+# hero in plaats van te crashen — maar dan mist het wel zijn og:image.
+pillow==11.0.0
