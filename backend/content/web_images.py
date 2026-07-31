@@ -95,10 +95,23 @@ def _exists_on_disk(src: str) -> bool:
     return (FRONTEND_DIR / src.lstrip("/")).is_file()
 
 
+def _dimensions(src: str) -> tuple[int, int] | None:
+    """Afmetingen uit het .json-zijbestand naast de screenshot, voor width/height
+    op de <img> — zonder die twee springt de tekst omlaag zodra het beeld inlaadt."""
+    meta_path = (FRONTEND_DIR / src.lstrip("/")).with_suffix(".json")
+    if not meta_path.is_file():
+        return None
+    try:
+        meta = json.loads(meta_path.read_text())
+        return int(meta["width"]), int(meta["height"])
+    except Exception:
+        return None
+
+
 def platforms_in(text: str) -> list[dict]:
     """
     Platforms die in de tekst voorkomen, in volgorde van eerste vermelding,
-    zonder dubbelen en alleen als het logobestand echt op schijf staat.
+    zonder dubbelen en alleen als het screenshotbestand echt op schijf staat.
     """
     lower = text.lower()
     found = []
@@ -110,71 +123,72 @@ def platforms_in(text: str) -> list[dict]:
         if pos != -1 and _exists_on_disk(p["src"]):
             found.append((pos, p))
         elif pos != -1:
-            logger.warning(f"Platform-logo ontbreekt op schijf, overslaan: {p['src']}")
+            logger.warning(f"Platform-screenshot ontbreekt op schijf, overslaan: {p['src']}")
     found.sort(key=lambda pair: pair[0])
     return [p for _, p in found]
+
+
+def topic_platforms(keyword: str, title: str, body_html: str = "") -> list[dict]:
+    """
+    De platforms waar het artikel ECHT over gaat.
+
+    Waarom dit niet meer de hele body afzoekt: dat deed het wél, en daardoor
+    kreeg het artikel "Vinted naar eBay" een Marktplaats-screenshot én een
+    Shopify-screenshot — puur omdat die woorden in een interne link onderaan
+    stonden. Volslagen irrelevant beeld bij de tekst.
+
+    Nu telt alleen het keyword en de titel; komt daar niets uit (bv. een
+    niche-artikel als "sneaker reselling automation" dat geen platformnaam in de
+    titel heeft), dan vallen we terug op de H2-koppen. De body zelf nooit.
+    """
+    primary = platforms_in(f"{keyword} {title}")
+    if primary:
+        return primary
+
+    headings = " ".join(re.findall(r"<h2[^>]*>(.*?)</h2>", body_html, re.S | re.I))
+    return platforms_in(re.sub(r"<[^>]+>", " ", headings))
 
 
 def _screenshot_figure_html(p: dict, language: str) -> str:
     alt = p["alt_nl"] if language == "nl" else p["alt_en"]
     caption = p["cap_nl"] if language == "nl" else p["cap_en"]
-    # Full-width screenshot, identiek gestyled aan CROSSLIST_SCREENSHOTS in
-    # generator.py zodat platform-screenshots en eigen dashboard-screenshots er
-    # in één artikel consistent uitzien.
+    dims = _dimensions(p["src"])
+    size_attrs = f' width="{dims[0]}" height="{dims[1]}"' if dims else ""
+    # Zelfde styling als de app-screenshots (dashboard_images.py), zodat beide
+    # soorten beeld er in één artikel consistent uitzien.
     return (
-        f'<figure style="margin:24px 0"><img src="{p["src"]}" alt="{alt}" '
-        f'loading="lazy" style="width:100%;border-radius:10px;border:1px solid #e2e8f0">'
+        f'<figure class="platform-shot" style="margin:24px 0"><img src="{p["src"]}" alt="{alt}"'
+        f'{size_attrs} loading="lazy" decoding="async" '
+        f'style="width:100%;height:auto;border-radius:10px;border:1px solid #e2e8f0">'
         f'<figcaption style="font-size:13px;color:#64748b;margin-top:8px;'
         f'text-align:center">{caption}</figcaption></figure>'
     )
 
 
-def _h2_positions(body_html: str) -> list[int]:
-    return [m.start() for m in re.finditer(r"<h2", body_html)]
-
-
-# Verwijdert eerder-geïnjecteerde platform-figuren (elke <figure> die naar
-# /assets/platforms/ verwijst). Nodig bij een re-backfill: als de screenshots
-# vervangen worden of het figuur-formaat wijzigt, moeten de oude eruit vóórdat
-# de nieuwe erin gaan — anders blijven gebroken/verouderde beelden staan.
-_PLATFORM_FIGURE_RE = re.compile(r"<figure\b[^>]*>(?:(?!</figure>).)*?/assets/platforms/(?:(?!</figure>).)*?</figure>", re.DOTALL)
-
-
 def strip_platform_images(body_html: str) -> str:
-    return _PLATFORM_FIGURE_RE.sub("", body_html)
+    """Verwijdert eerder ingevoegde platform-figuren. Nodig bij een backfill:
+    de oude (irrelevante, ongecomprimeerde .jpg) beelden moeten eruit vóór de
+    nieuwe erin, anders stapelen ze op."""
+    return strip_figures(body_html, "/assets/platforms/")
 
 
-def inject_platform_images(body_html: str, keyword: str, language: str = "en", max_images: int = 4) -> str:
+def inject_platform_images(
+    body_html: str,
+    keyword: str,
+    language: str = "en",
+    max_images: int = 3,
+    title: str = "",
+) -> str:
     """
-    Verspreidt de logo's van de genoemde platforms over de H2-secties van een
-    artikel (één beeld ongeveer per sectie), zodat blogs die over andere
-    platforms gaan er ook echt beelden van dat platform bij krijgen.
-
-    - Zoekt platforms in zowel het keyword als de body.
-    - Slaat de eerste H2 over (intro opent niet op een beeld).
-    - Injecteert NIET als de body al platform-logo's bevat (idempotent — veilig
-      om nog eens over bestaande pagina's te draaien bij een backfill).
+    Verspreidt screenshots van de platforms waar het artikel over gaat over de
+    H2-secties. Idempotent: staat er al zo'n beeld in, dan gebeurt er niets
+    (veilig om nog eens over bestaande pagina's te draaien).
     """
-    if "/assets/platforms/" in body_html:
-        return body_html  # al voorzien, niet dubbel injecteren
+    if contains_figures(body_html, "/assets/platforms/"):
+        return body_html
 
-    detected = platforms_in(keyword + " " + body_html)[:max_images]
+    detected = topic_platforms(keyword, title, body_html)[:max_images]
     if not detected:
         return body_html
 
-    figures = [_screenshot_figure_html(p, language) for p in detected]
-
-    positions = _h2_positions(body_html)
-    usable = positions[1:]  # eerste H2 overslaan
-
-    if not usable:
-        # Geen sectiestructuur — plak het eerste logo bovenaan de body.
-        return figures[0] + body_html
-
-    step = max(len(usable) // max(len(figures), 1), 1)
-    slots = usable[::step][: len(figures)]
-    # Van achteren naar voren invoegen zodat eerdere offsets geldig blijven.
-    for pos, fig in sorted(zip(slots, figures), key=lambda pair: pair[0], reverse=True):
-        body_html = body_html[:pos] + fig + body_html[pos:]
-
-    return body_html
+    return spread_figures(body_html, [_screenshot_figure_html(p, language) for p in detected])
