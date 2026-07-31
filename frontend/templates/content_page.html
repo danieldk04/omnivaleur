@@ -45,13 +45,30 @@
   table{width:100%;border-collapse:collapse;margin:20px 0}
   th,td{border:1px solid var(--border);padding:8px 12px;text-align:left}
   th{background:#f8fafc}
-  .featured-image-wrap{width:100%;aspect-ratio:16/9;border-radius:12px;margin:24px 0;overflow:hidden;position:relative;background:linear-gradient(135deg,var(--blue) 0%,var(--mint) 100%);display:flex;align-items:center;justify-content:center}
-  .featured-image-wrap::after{content:"";position:absolute;inset:0;background:radial-gradient(circle at 26% 20%,rgba(255,255,255,.22),transparent 56%)}
-  .featured-hero{position:relative;z-index:1;text-align:center;padding:0 28px}
-  .featured-hero .fh-logo{display:block;font-size:56px;line-height:1;color:#fff;font-weight:700;margin-bottom:16px}
-  .featured-hero .fh-cat{color:#fff;font-size:14px;font-weight:800;letter-spacing:.12em;text-transform:uppercase}
-  .featured-hero .fh-rule{width:44px;height:3px;border-radius:2px;background:rgba(255,255,255,.75);margin:14px auto 0}
+  /* Hero: een echt beeld per artikel (backend/content/hero.py). De aspect-ratio
+     staat vast op 1200/630 zodat de pagina niet verspringt terwijl hij laadt. */
+  .featured-hero-img{width:100%;aspect-ratio:1200/630;height:auto;border-radius:12px;margin:24px 0;display:block;background:#eef2ff}
   .faq-item{margin-bottom:20px}
+
+  .article-meta{display:flex;flex-wrap:wrap;gap:8px 16px;align-items:center;font-size:13px;color:var(--muted);margin:0 0 4px}
+  .article-meta time{font-variant-numeric:tabular-nums}
+
+  .toc{border:1px solid var(--border);border-radius:12px;padding:18px 22px;margin:28px 0;background:#f8fafc}
+  .toc-label{font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin:0 0 10px}
+  .toc ol{margin:0;padding-left:20px}
+  .toc li{margin-bottom:6px;font-size:15px}
+  .toc a{color:var(--blue-dark);text-decoration:none}
+  .toc a:hover{text-decoration:underline}
+  /* Zorgt dat een aangeklikte kop niet onder de sticky nav verdwijnt. */
+  h2[id]{scroll-margin-top:80px}
+
+  .related{margin-top:44px;border-top:1px solid var(--border);padding-top:28px}
+  .related h2{margin-top:0;font-size:1.25rem}
+  .related-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;margin-top:16px}
+  .related-card{border:1px solid var(--border);border-radius:12px;overflow:hidden;text-decoration:none;color:inherit;background:#fff;transition:box-shadow .15s}
+  .related-card:hover{box-shadow:0 4px 14px rgba(15,23,42,.08)}
+  .related-card img{width:100%;aspect-ratio:1200/630;height:auto;object-fit:cover;display:block;background:#eef2ff}
+  .related-card span{display:block;padding:12px 14px;font-size:14px;font-weight:600;line-height:1.4}
 
   .takeaways{background:var(--purple-bg);border:1px solid #d8b4fe;border-radius:12px;padding:20px 24px;margin:28px 0}
   .takeaways-label{color:var(--purple-dark);font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;margin:0 0 12px}
