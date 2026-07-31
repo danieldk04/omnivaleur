@@ -50,10 +50,11 @@ def replenish_queue(data: dict) -> None:
     from backend.content.keyword_planner import suggest_keywords
 
     all_keywords = [i["keyword"] for i in data["queue"]] + [p["keyword"] for p in data["published"]]
+    all_slugs = [i["slug"] for i in data["queue"]] + [p["slug"] for p in data["published"]]
     next_priority = max([i.get("priority", 0) for i in data["queue"]], default=0) + 1
 
     print("  Wachtrij leeg — nieuwe keywords laten voorstellen...")
-    new_items = suggest_keywords(all_keywords)
+    new_items = suggest_keywords(all_keywords, all_slugs)
     for i, item in enumerate(new_items):
         item["priority"] = next_priority + i
         data["queue"].append(item)
