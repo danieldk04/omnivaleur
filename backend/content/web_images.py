@@ -34,7 +34,7 @@ FRONTEND_DIR = Path(__file__).resolve().parent.parent.parent / "frontend"
 PLATFORMS = [
     {
         "key": "marktplaats",
-        "src": "/assets/platforms/marktplaats.jpg",
+        "src": "/assets/platforms/marktplaats.webp",
         "name": "Marktplaats",
         "aliases": ["marktplaats"],
         "alt_en": "Screenshot of the Marktplaats marketplace interface",
@@ -44,7 +44,7 @@ PLATFORMS = [
     },
     {
         "key": "2dehands",
-        "src": "/assets/platforms/2dehands.jpg",
+        "src": "/assets/platforms/2dehands.webp",
         "name": "2dehands",
         "aliases": ["2dehands", "2ehands", "tweedehands.be"],
         "alt_en": "Screenshot of the 2dehands marketplace interface",
@@ -54,7 +54,7 @@ PLATFORMS = [
     },
     {
         "key": "vinted",
-        "src": "/assets/platforms/vinted.jpg",
+        "src": "/assets/platforms/vinted.webp",
         "name": "Vinted",
         "aliases": ["vinted"],
         "alt_en": "Screenshot of the Vinted catalog interface with filters",
@@ -64,7 +64,7 @@ PLATFORMS = [
     },
     {
         "key": "ebay",
-        "src": "/assets/platforms/ebay.jpg",
+        "src": "/assets/platforms/ebay.webp",
         "name": "eBay",
         "aliases": ["ebay", "e-bay"],
         "alt_en": "Screenshot of the eBay marketplace homepage",
@@ -80,7 +80,7 @@ PLATFORMS = [
     # frontend/assets/platforms/etsy.jpg en zet dit blok terug.
     {
         "key": "shopify",
-        "src": "/assets/platforms/shopify.jpg",
+        "src": "/assets/platforms/shopify.webp",
         "name": "Shopify",
         "aliases": ["shopify"],
         "alt_en": "Screenshot of the Shopify website",
