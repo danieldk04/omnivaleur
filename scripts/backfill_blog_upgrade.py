@@ -90,6 +90,9 @@ def upgrade_row(db, row: dict, all_rows: list[dict]) -> dict | None:
     body = strip_platform_images(cleaned["body_html"])
     body = strip_figures(body, "/assets/comparisons/")
     body = strip_figures(body, "/assets/dashboard/")
+    # Ook de concurrent-screenshots: die worden bij het opnieuw injecteren
+    # meegenomen, dus zonder deze regel kwam er bij elke run een extra set bij.
+    body = strip_figures(body, 'class="competitor-shot"')
 
     body = inject_article_screenshots(body, pillar, keyword, cleaned["h1"], slug, language=language)
     body = inject_platform_images(body, keyword, language=language, title=cleaned["h1"])
