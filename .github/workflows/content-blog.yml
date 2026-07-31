@@ -27,6 +27,13 @@ jobs:
       - name: Install dependencies
         run: pip install -r requirements-content.txt
 
+      # backend/content/hero.py tekent de hero-afbeelding met een TrueType-font.
+      # ubuntu-latest heeft DejaVu meestal al, maar expliciet installeren is
+      # goedkoop en voorkomt dat een runner-image-wijziging stilletjes elk nieuw
+      # artikel zonder hero laat publiceren.
+      - name: Install fonts for hero image generation
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq fonts-dejavu-core
+
       - name: Run content pipeline
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
