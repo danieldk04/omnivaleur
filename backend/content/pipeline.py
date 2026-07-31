@@ -204,7 +204,11 @@ def _save_page_row(
     url_path = _url_path(language, pillar, slug)
     submit_url(url_path)
 
-    return {"success": True, "action": action, "url_path": url_path, "linked": linked_intents, "intent_key": intent_key}
+    # `row` meegeven zodat de kwaliteitscontrole de pagina toetst zoals hij
+    # daadwerkelijk is opgeslagen — mét interne links en hero. Die twee worden
+    # hier pas toegevoegd, dus toetsen op het ruwe generatorresultaat zou altijd
+    # onterecht "geen hero" en "te weinig interne links" melden.
+    return {"success": True, "action": action, "url_path": url_path, "linked": linked_intents, "intent_key": intent_key, "row": row}
 
 
 async def run_pipeline(
