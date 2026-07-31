@@ -1,9 +1,63 @@
+# Omnivaleur — robots.txt
+#
+# LET OP: Cloudflare kan een eigen "Managed robots.txt" / AI-crawlerblok VÓÓR dit
+# bestand plakken. Zolang dat aanstaat, zijn de Allow-regels hieronder machteloos:
+# Cloudflare's eigen groepen voor GPTBot/ClaudeBot/Google-Extended/CCBot komen
+# eerst en zetten Disallow: /. Uitzetten kan alleen in het Cloudflare-dashboard
+# (zone omnivaleur.com → AI Crawl Control / Manage robots.txt). Controleer na een
+# wijziging altijd de LIVE output: curl -s https://omnivaleur.com/robots.txt
+#
+# Waarom AI-crawlers hier bewust welkom zijn: de blogs zijn geschreven om
+# geciteerd te worden in ChatGPT, Perplexity, Claude en Google AI Overviews
+# (quick-answer blok, FAQ-schema, key takeaways). Die bots buitensluiten haalt
+# de hele opzet van de contentstrategie onderuit.
+
+Content-Signal: search=yes, ai-input=yes, ai-train=yes
+
 User-agent: *
 Allow: /
 Disallow: /app.html
 Disallow: /demo-dashboard.html
 Disallow: /ebay-callback.html
+Disallow: /shopify-callback.html
 Disallow: /forgot-password.html
 Disallow: /reset-password.html
+
+# AI-antwoordmachines en hun crawlers — expliciet toegestaan.
+User-agent: GPTBot
+Allow: /
+
+User-agent: OAI-SearchBot
+Allow: /
+
+User-agent: ChatGPT-User
+Allow: /
+
+User-agent: ClaudeBot
+Allow: /
+
+User-agent: Claude-SearchBot
+Allow: /
+
+User-agent: Claude-User
+Allow: /
+
+User-agent: PerplexityBot
+Allow: /
+
+User-agent: Perplexity-User
+Allow: /
+
+User-agent: Google-Extended
+Allow: /
+
+User-agent: Applebot-Extended
+Allow: /
+
+User-agent: CCBot
+Allow: /
+
+User-agent: meta-externalagent
+Allow: /
 
 Sitemap: https://omnivaleur.com/sitemap.xml
