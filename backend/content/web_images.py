@@ -55,16 +55,15 @@ PLATFORMS = [
         "cap_en": "2dehands — the Belgian sister site of Marktplaats, with the same listing layout.",
         "cap_nl": "2dehands — de Belgische zustersite van Marktplaats, met dezelfde advertentie-indeling.",
     },
-    {
-        "key": "vinted",
-        "src": "/assets/platforms/vinted.webp",
-        "name": "Vinted",
-        "aliases": ["vinted"],
-        "alt_en": "Screenshot of the Vinted catalog interface with filters",
-        "alt_nl": "Screenshot van de Vinted-catalogus met filters",
-        "cap_en": "The Vinted catalog — category filters (size, brand, condition) that map to the fields you fill per listing.",
-        "cap_nl": "De Vinted-catalogus — filters op maat, merk en staat, die aansluiten op de velden die je per advertentie invult.",
-    },
+    # Vinted staat er bewust NIET bij. Twee redenen, allebei hard:
+    #   1. Het beeld dat hier maandenlang stond, was geen catalogus maar Vinted's
+    #      "Where do you live?"-landenkiezer over de hele pagina heen — dat stond
+    #      dus in élk artikel dat Vinted noemde.
+    #   2. Vinted serveert een botcontrole ("Verifieer dat u een mens bent") aan
+    #      geautomatiseerde browsers. Dat is een bewuste maatregel van hun kant en
+    #      die omzeilen we niet.
+    # Artikelen over Vinted verliezen hier weinig mee: de eigen app-screenshots
+    # (dashboard_images.py) tonen Vinted-listings gewoon in de interface.
     {
         "key": "ebay",
         "src": "/assets/platforms/ebay.webp",
