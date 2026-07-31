@@ -76,8 +76,12 @@ SHOTS = [
         "topics": ["import", "bulk", "migrate", "move", "switch", "existing", "transfer", "start"],
         "alt_en": "Omnivaleur bulk import screen pulling in existing listings from a marketplace",
         "alt_nl": "Omnivaleur bulk-importscherm dat bestaande advertenties van een marktplaats ophaalt",
-        "cap_en": "Existing listings come in through bulk import, so switching platforms doesn't mean retyping an entire inventory by hand.",
-        "cap_nl": "Bestaande advertenties komen binnen via bulk-import, zodat overstappen niet betekent dat je je hele voorraad opnieuw moet intypen.",
+        # Bijschrift zegt er eerlijk bij dat alleen Vinted-import nu werkt: het
+        # scherm zelf toont "Coming soon" bij de andere marktplaatsen, en een
+        # bijschrift dat meer belooft dan de screenshot laat zien is precies het
+        # soort detail waar een lezer een tool op afrekent.
+        "cap_en": "Bulk import scans a marketplace's own \"my listings\" page and turns what it finds into items. Vinted import is live today; the other marketplaces are still in progress.",
+        "cap_nl": "Bulk-import scant de eigen \"mijn advertenties\"-pagina van een marktplaats en maakt er items van. Vinted-import werkt nu; de andere marktplaatsen zijn nog in aanbouw.",
     },
     {
         "src": "/assets/dashboard/refresh-tool.webp",
@@ -156,11 +160,17 @@ def relevant_shots(keyword: str, title: str, slug: str, body_html: str = "") -> 
 
     # Slug bepaalt de rotatie: hetzelfde artikel krijgt altijd dezelfde reeks,
     # twee verschillende artikelen over hetzelfde onderwerp niet.
-    if matched:
-        offset = int(hashlib.sha256(slug.encode()).hexdigest()[:8], 16) % len(matched)
-        matched = matched[offset:] + matched[:offset]
+    #
+    # De generieke shot(s) draaien MEE in de rotatie in plaats van altijd
+    # vooraan te staan. Stonden ze vast op plek één, dan opende de helft van de
+    # artikelen alsnog op precies hetzelfde dashboardbeeld — hetzelfde probleem
+    # in het klein als waar deze module voor gebouwd is.
+    pool = matched + generic
+    if pool:
+        offset = int(hashlib.sha256(slug.encode()).hexdigest()[:8], 16) % len(pool)
+        pool = pool[offset:] + pool[:offset]
 
-    return (generic + matched)[:MAX_PER_ARTICLE]
+    return pool[:MAX_PER_ARTICLE]
 
 
 def figure_html(shot: dict, language: str = "en") -> str:
