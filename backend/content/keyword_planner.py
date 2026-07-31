@@ -120,6 +120,8 @@ def suggest_keywords(existing_keywords: list[str], existing_slugs: list[str] | N
         logger.error(f"Keyword-suggestie mislukt: {e}")
         return []
 
+    known_slugs = list(existing_slugs or []) + [_slugify(k) for k in existing_keywords]
+
     queue_items = []
     for idea in ideas:
         keyword = idea.get("keyword", "").strip()
@@ -129,6 +131,10 @@ def suggest_keywords(existing_keywords: list[str], existing_slugs: list[str] | N
             logger.info(f"Keyword overgeslagen (te weinig zoekvolume): {keyword}")
             continue
         slug = _slugify(keyword)
+        if _is_duplicate_intent(slug, known_slugs):
+            logger.info(f"Keyword overgeslagen (bestaande pagina beantwoordt dezelfde vraag): {keyword}")
+            continue
+        known_slugs.append(slug)
         item = {
             "keyword": keyword,
             "region": "nl",
