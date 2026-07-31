@@ -129,6 +129,10 @@ def _save_page_row(
             featured_image_url = f"{SITE_URL}{hero}"
 
     now_iso = datetime.now(timezone.utc).isoformat()
+    # datePublished mag bij een herschrijving NIET meeschuiven: dat maakt van elk
+    # ververst artikel een "nieuw" artikel, en Google ziet dan een pagina die
+    # steeds opnieuw zogenaamd net gepubliceerd is. Alleen dateModified beweegt.
+    published_iso = (existing_row[0].get("published_at") if existing_row else None) or now_iso
     canonical = f"{SITE_URL}{_url_path(language, pillar, slug)}"
     article_json_ld = {
         "@context": "https://schema.org",
@@ -136,11 +140,22 @@ def _save_page_row(
         "headline": generated["h1"],
         "description": generated["meta_description"],
         "image": featured_image_url or f"{SITE_URL}/logo.png",
-        "author": {"@type": "Person", "name": "Daniel"},
-        "publisher": {"@type": "Organization", "name": "Omnivaleur", "url": SITE_URL},
+        "author": {
+            "@type": "Person",
+            "name": "Daniel de Koning",
+            "jobTitle": "Founder, Omnivaleur",
+            "url": f"{SITE_URL}/about",
+            "knowsAbout": ["cross-listing", "reselling", "Marktplaats", "Vinted", "eBay", "Etsy", "Shopify"],
+        },
+        "publisher": {
+            "@type": "Organization",
+            "name": "Omnivaleur",
+            "url": SITE_URL,
+            "logo": {"@type": "ImageObject", "url": f"{SITE_URL}/logo.png"},
+        },
         "mainEntityOfPage": {"@type": "WebPage", "@id": canonical},
         "inLanguage": language,
-        "datePublished": now_iso,
+        "datePublished": published_iso,
         "dateModified": now_iso,
     }
 
