@@ -221,7 +221,7 @@
       "region": "nl",
       "pillar": "A",
       "slug": "etsy-to-vinted-crosslisting-automation",
-      "status": "pending",
+      "status": "published",
       "priority": 27
     }
   ],
@@ -459,6 +459,15 @@
       "action": "created",
       "url_path": "/vs/omnivaleur-vs-list-perfectly-comparison-2026",
       "published_at": "2026-07-30T10:16:56.269448+00:00"
+    },
+    {
+      "keyword": "etsy to vinted crosslisting automation",
+      "slug": "etsy-to-vinted-crosslisting-automation",
+      "region": "nl",
+      "pillar": "A",
+      "action": "created",
+      "url_path": "/crosslisting/etsy-to-vinted-crosslisting-automation",
+      "published_at": "2026-07-31T10:31:19.690305+00:00"
     }
   ]
 }
