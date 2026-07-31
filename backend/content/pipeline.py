@@ -219,9 +219,14 @@ async def run_pipeline(
         logger.info(f"NL-vertaling genereren voor '{keyword}'")
         translated = translate_to_dutch(generated)
         if translated:
-            translated["body_html"] = inject_platform_images(translated["body_html"], keyword, language="nl")
-            translated["body_html"] = inject_infographics(translated["body_html"], language="nl")
             db_nl_slug = f"{nl_slug or slug}-nl"
+            translated["body_html"] = inject_article_screenshots(
+                translated["body_html"], pillar, keyword, translated["h1"], db_nl_slug, language="nl"
+            )
+            translated["body_html"] = inject_platform_images(
+                translated["body_html"], keyword, language="nl", title=translated["h1"]
+            )
+            translated["body_html"] = inject_infographics(translated["body_html"], language="nl")
             nl_result = _save_page_row(
                 db, region=region, pillar=pillar, slug=db_nl_slug, keyword=keyword,
                 language="nl", translation_of=result["intent_key"], generated=translated, research=None,
