@@ -29,6 +29,7 @@ Gebruik:
 """
 from __future__ import annotations
 
+import re
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
@@ -36,6 +37,10 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 SITE_URL = "https://omnivaleur.com"
+
+
+def _word_count(body_html: str) -> int:
+    return len(re.findall(r"\S+", re.sub(r"<[^>]+>", " ", body_html or "")))
 
 
 def _link_candidates(db, rows: list[dict], self_intent_key: str, language: str) -> list[dict]:
