@@ -602,4 +602,49 @@ def translate_to_dutch(generated: dict) -> dict | None:
     if not parsed["body_html"] or not parsed["h1"]:
         logger.error("Kon vertaalde body/H1 niet parsen")
         return None
+
+    # De vertaalstap liet de FAQ regelmatig vallen: zeven Nederlandse pagina's
+    # stonden live zónder FAQ, en dus zonder FAQPage-schema — precies het blok
+    # waar AI-zoekmachines uit citeren. Ontbreekt hij of klopt het aantal niet,
+    # dan vragen we alleen de FAQ opnieuw op. Dat is een kleine, goedkope call.
+    source_faq = generated.get("faq") or []
+    if source_faq and len(parsed["faq"]) != len(source_faq):
+        logger.warning(
+            f"Vertaalde FAQ onvolledig ({len(parsed['faq'])}/{len(source_faq)}) — apart opnieuw vertalen"
+        )
+        retried = _translate_faq(client, source_faq)
+        if retried:
+            parsed["faq"] = retried
+
     return clean_generated(parsed)
+
+
+def _translate_faq(client, faq: list[dict]) -> list[dict] | None:
+    """Vertaalt alleen het FAQ-blok. Losse call, zodat een mislukte FAQ-vertaling
+    nooit de rest van het artikel meesleept."""
+    source = "\n".join(f"Q: {f['question']}\nA: {f['answer']}" for f in faq)
+    prompt = (
+        "Translate these FAQ questions and answers into natural, fluent Dutch (Netherlands) "
+        "for Omnivaleur, a cross-listing SaaS. Keep every URL, number and platform/brand name "
+        "unchanged. Translate the verb \"cross-list\"/\"cross-listing\" to \"crosslisten\"/"
+        "\"crosslisting\", NEVER to the brand name \"Omnivaleur\".\n\n"
+        f"Return EXACTLY {len(faq)} pairs, nothing else, in this format:\n"
+        "Q: [question]\nA: [answer]\n\n"
+        f"SOURCE:\n{source}\n"
+    )
+    try:
+        message = client.messages.create(
+            model=TRANSLATE_MODEL, max_tokens=3000, messages=[{"role": "user", "content": prompt}]
+        )
+    except Exception as e:
+        logger.error(f"Losse FAQ-vertaling mislukt: {e}")
+        return None
+
+    raw = _extract_text(message)
+    items = []
+    for block in re.split(r"\n(?=Q:)", raw):
+        qm = re.search(r"Q:\s*(.+)", block)
+        am = re.search(r"A:\s*(.+)", block, re.DOTALL)
+        if qm and am:
+            items.append({"question": qm.group(1).strip(), "answer": am.group(1).strip()})
+    return items or None
