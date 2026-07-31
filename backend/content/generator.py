@@ -363,6 +363,7 @@ HARD STYLE RULES:
 - Concrete data: use real numbers, comparison tables in Markdown where useful, bold **key terms**.
 - Mention the year {CURRENT_YEAR} naturally at least once (platform rules/limits change yearly).
 - Never write a generic intro paragraph before answering the core question — the core answer must be fully delivered within the first 100 words (quick answer + opening line combined).
+- LENGTH IS A HARD REQUIREMENT, not a suggestion. The body must contain AT LEAST 1400 words of visible text (excluding the quick answer, takeaways and FAQ). Articles below that consistently lose to competitors on this keyword. Reach it with substance, never with padding: more concrete platform rules, more worked examples with real numbers, more edge cases resellers actually hit. Count as you go, and if a section feels thin, add the specific detail a beginner would ask about next.
 - Reminder: every single field below (including TITLE and H1) must be written in {language}, never Dutch, even though the keyword you were given is Dutch.
 
 OUTPUT FORMAT — return EXACTLY this structure, nothing else, no markdown code fences:
