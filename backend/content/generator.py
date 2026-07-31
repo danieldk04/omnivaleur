@@ -202,7 +202,11 @@ def _relevant_sources(keyword: str, pillar: str, limit: int = 8) -> list[dict]:
     matched = [s for s in AUTHORITY_SOURCES if (s.get("match") or s.get("requires")) and applies(s)]
 
     if any(word in haystack for word in ("rule", "policy", "ban", "safe", "legal", "terms", "allowed", "risk", "compliance")):
-        matched += [s for s in PLATFORM_TOS_SOURCES if any(m in haystack for m in s["topic"].lower().split())]
+        # Alleen de ToS van platforms die in het keyword staan. Het eerste woord
+        # van `topic` is steeds de platformnaam ("Vinted ToS", "eBay listing
+        # rules"); matchen op de rest van die woorden haalde eerder eBay-bronnen
+        # in een Marktplaats-artikel, puur omdat "rules" overeenkwam.
+        matched += [s for s in PLATFORM_TOS_SOURCES if s["topic"].split()[0].lower() in haystack]
 
     # Dubbele URLs eruit, volgorde behouden.
     seen, ordered = set(), []
