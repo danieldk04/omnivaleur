@@ -13,6 +13,9 @@ from pathlib import Path
 import anthropic
 
 from backend.config import settings
+from backend.content.dashboard_images import figure_html as dashboard_figure_html
+from backend.content.dashboard_images import relevant_shots
+from backend.content.figures import contains_figures, spread_figures
 
 logger = logging.getLogger(__name__)
 
