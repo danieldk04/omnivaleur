@@ -19,9 +19,12 @@ dezelfde bestandsnaam. Voorbeeld om er één te hergenereren:
     https://s0.wp.com/mshots/v1/<url-encoded platform-url>?w=1280&h=800
 (poll tot je een echte JPEG/PNG krijgt i.p.v. de 'generating'-placeholder).
 """
+import json
 import logging
 import re
 from pathlib import Path
+
+from backend.content.figures import contains_figures, spread_figures, strip_figures
 
 logger = logging.getLogger(__name__)
 
