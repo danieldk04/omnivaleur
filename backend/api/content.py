@@ -319,11 +319,12 @@ async def comparison_page_lang(request: Request, language: str, slug: str):
     return _render_page(request, language, "C", slug)
 
 
-def _reading_minutes(body_html: str) -> int:
-    import re as _re
+def word_count(body_html: str) -> int:
+    return len(_re.findall(r"\S+", _re.sub(r"<[^>]+>", " ", body_html or "")))
 
-    words = len(_re.findall(r"\S+", _re.sub(r"<[^>]+>", " ", body_html or "")))
-    return max(1, round(words / 200))
+
+def _reading_minutes(words: int) -> int:
+    return max(1, round((words or 0) / 200))
 
 
 def _render_blog_index(request: Request, canonical: str) -> HTMLResponse:
