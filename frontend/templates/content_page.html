@@ -190,9 +190,26 @@
     {% for item in page.faq %}
     <div class="faq-item">
       <h3>{{ item.question }}</h3>
-      <p>{{ item.answer_html | safe }}</p>
+      {# div i.p.v. p: FAQ-antwoorden bevatten soms meerdere alinea's of een
+         lijst, en die mogen niet in een <p> staan — de browser breekt dat op en
+         de opmaak valt uit elkaar. #}
+      <div>{{ item.answer_html | safe }}</div>
     </div>
     {% endfor %}
+    {% endif %}
+
+    {% if related_pages %}
+    <section class="related">
+      <h2>{{ 'Verder lezen' if page.language == 'nl' else 'Keep reading' }}</h2>
+      <div class="related-grid">
+        {% for r in related_pages %}
+        <a class="related-card" href="{{ r.url_path }}">
+          {% if r.featured_image_url %}<img src="{{ r.featured_image_url }}" alt="" width="1200" height="630" loading="lazy" decoding="async">{% endif %}
+          <span>{{ r.h1 }}</span>
+        </a>
+        {% endfor %}
+      </div>
+    </section>
     {% endif %}
 
     {% if page.language == 'nl' %}
