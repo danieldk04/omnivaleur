@@ -113,12 +113,87 @@ def _language_switch(page: dict) -> dict | None:
     return None
 
 
+def _table_of_contents(body_html: str) -> list[dict]:
+    """
+    Bouwt een inhoudsopgave uit de H2's, en geeft de body terug met id's erop.
+    Twee redenen: lezers kunnen springen naar wat ze zoeken (scheelt bounces op
+    artikelen van 2000 woorden), en Google gebruikt zulke ankers voor sitelinks
+    onder het zoekresultaat.
+    """
+    items = []
+    for match in _re.finditer(r"<h2[^>]*>(.*?)</h2>", body_html or "", _re.S | _re.I):
+        text = _HTML_TAG_RE.sub("", match.group(1)).strip()
+        if not text:
+            continue
+        anchor = _re.sub(r"[^a-z0-9]+", "-", text.lower()).strip("-")[:60]
+        if anchor and anchor not in {i["anchor"] for i in items}:
+            items.append({"anchor": anchor, "text": text})
+    return items
+
+
+def _body_with_anchors(body_html: str, toc: list[dict]) -> str:
+    """Zet id="…" op de H2's die in de inhoudsopgave staan, in dezelfde volgorde.
+    Bewust string-splicing i.p.v. een HTML-parser — herserialiseren van de body
+    heeft in dit project al eens img-src'en beschadigd."""
+    if not toc:
+        return body_html
+
+    result, cursor, index = [], 0, 0
+    for match in _re.finditer(r"<h2([^>]*)>(.*?)</h2>", body_html, _re.S | _re.I):
+        if index >= len(toc):
+            break
+        text = _HTML_TAG_RE.sub("", match.group(2)).strip()
+        if text != toc[index]["text"]:
+            continue
+        attrs = match.group(1)
+        if "id=" in attrs:
+            index += 1
+            continue
+        result.append(body_html[cursor:match.start()])
+        result.append(f'<h2 id="{toc[index]["anchor"]}"{attrs}>{match.group(2)}</h2>')
+        cursor = match.end()
+        index += 1
+    result.append(body_html[cursor:])
+    return "".join(result)
+
+
+def _related_pages(page: dict, limit: int = 3) -> list[dict]:
+    """
+    Drie verwante artikelen voor onderaan de pagina. Eerst uit dezelfde pillar
+    (die gaan over hetzelfde type vraag), aangevuld met andere. Zonder zo'n blok
+    hing elk artikel aan alleen zijn inline links, en dat is te dun om pagina's
+    elkaar te laten versterken.
+    """
+    db = get_db()
+    language = page.get("language", "en")
+    rows = (
+        db.table("content_pages")
+        .select("pillar,slug,title,h1,language,primary_keyword,featured_image_url")
+        .eq("status", "published")
+        .eq("language", language)
+        .neq("slug", page["slug"])
+        .limit(60)
+        .execute()
+        .data
+        or []
+    )
+    same_pillar = [r for r in rows if r["pillar"] == page["pillar"]]
+    other = [r for r in rows if r["pillar"] != page["pillar"]]
+    picked = (same_pillar + other)[:limit]
+    for r in picked:
+        r["url_path"] = _url_path(r.get("language", "en"), r["pillar"], r["slug"])
+    return picked
+
+
 def _render_page(request: Request, language: str, pillar: str, slug: str) -> HTMLResponse:
     page = _get_page(language, pillar, slug)
     if not page:
         raise HTTPException(status_code=404, detail="Page not found")
 
     canonical = f"{SITE_URL}{_url_path(language, pillar, slug)}"
+
+    toc = _table_of_contents(page.get("body_html"))
+    page["body_html"] = _body_with_anchors(page.get("body_html") or "", toc)
 
     # Pre-render FAQ answers so embedded/authority links show as real anchors
     # instead of escaped raw tags, and keep a tag-free version for JSON-LD.
