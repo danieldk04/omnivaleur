@@ -187,7 +187,7 @@ def _range_infographic(headers: list[str], body: list[list[str]], language: str)
             _svg_open(
                 width,
                 height,
-                f"{metric} per platform",
+                metric,
                 "; ".join(
                     f"{label}: {rng[0]:g}" + (f"–{rng[1]:g}" if rng[0] != rng[1] else "")
                     for label, rng in usable
