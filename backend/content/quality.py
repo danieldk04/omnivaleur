@@ -37,8 +37,10 @@ QUICK_ANSWER_RANGE = (35, 75)   # woorden — kort genoeg om letterlijk geciteer
 
 # Merknaam mag nooit als werkwoord. Zelfde patroon als in generator.py, hier als
 # controle achteraf zodat een handmatige bewerking het ook niet stiekem invoert.
+# Alleen woorden die er een handeling van maken — "the Omnivaleur item list" is
+# een zelfstandig naamwoord en moet geen alarm geven.
 _BRAND_AS_VERB = re.compile(
-    r"\bOmnivaleur\b(?=\s+(?:from|to|your|their|our|it|items?|listings?|stock|inventory|between|across)\b)",
+    r"\bOmnivaleur\b(?=\s+(?:from|to|your|their|our|it|between|across|everything|anything)\b)",
     re.IGNORECASE,
 )
 _MD_LEFTOVER = re.compile(r"\*\*\S|\S\*\*")
