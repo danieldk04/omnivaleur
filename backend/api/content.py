@@ -292,6 +292,12 @@ async def niche_page_lang(request: Request, language: str, slug: str):
 _COMPARISON_SLUG_REDIRECTS = {
     "crosslisteu-vs-vendoo": "omnivaleur-vs-vendoo",
     "crosslisteu-vs-list-perfectly": "omnivaleur-vs-list-perfectly",
+    # Kannibalisatie opgeruimd: de keyword-planner stelde "Omnivaleur vs List
+    # Perfectly comparison 2026" voor terwijl "crosslist eu vs list perfectly" al
+    # gepubliceerd was. Twee pagina's om exact dezelfde zoekopdracht laten
+    # vechten kost ze allebei posities. De oudste, schoonste URL blijft; de
+    # jongere duplicaat wijst er permanent naartoe.
+    "omnivaleur-vs-list-perfectly-comparison-2026": "omnivaleur-vs-list-perfectly",
 }
 
 
