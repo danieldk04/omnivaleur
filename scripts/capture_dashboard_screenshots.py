@@ -138,6 +138,8 @@ def capture(keys: list[str], base: str) -> int:
                 page.wait_for_timeout(shot["wait"])
                 if shot["view"] == "platforms":
                     _mark_platforms_connected(page)
+                if shot["view"] == "analytics":
+                    _widen_analytics_range(page)
                 page.evaluate("window.scrollTo(0,0)")
                 png = page.screenshot(
                     clip={"x": 0, "y": 0, "width": VIEWPORT["width"], "height": shot["height"]}
