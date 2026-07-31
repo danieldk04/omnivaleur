@@ -42,6 +42,18 @@ jobs:
           DRY_RUN: ${{ github.event.inputs.dry_run == 'true' && '1' || '' }}
         run: python3 scripts/generate_content.py ${{ github.event.inputs.all == 'true' && '--all' || '' }}
 
+      # De publicatienorm staat in backend/content/quality.py en wordt bij elke
+      # publicatie toegepast — maar een norm die niemand nameet zakt vanzelf weg.
+      # Dit zet na elke run op een rij hoeveel artikelen 'm halen, zodat een
+      # terugval binnen een dag zichtbaar is in de Actions-log. Bewust zonder
+      # --strict: een artikel dat op één punt zakt mag de cron niet laten omvallen.
+      - name: Check blog quality standard
+        if: always()
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
+        run: python3 scripts/check_blog_quality.py
+
       - name: Commit updated keyword queue and generated hero images
         run: |
           git config user.name "content-bot"
