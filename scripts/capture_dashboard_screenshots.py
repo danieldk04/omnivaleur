@@ -101,6 +101,22 @@ def _mark_platforms_connected(page) -> None:
     page.wait_for_timeout(300)
 
 
+def _widen_analytics_range(page) -> None:
+    """
+    Zet de analytics op 'All' i.p.v. de standaard 90 dagen. Het demo-account heeft
+    verkopen over ~8 maanden; op 90 dagen zie je daar maar een klein deel van en
+    oogt de grafiek leeg, terwijl juist de trendlijn het punt van de screenshot is.
+    """
+    page.evaluate(
+        """() => {
+            const btn = [...document.querySelectorAll('button')]
+              .find(b => b.textContent.trim() === 'All');
+            if (btn) btn.click();
+        }"""
+    )
+    page.wait_for_timeout(1400)  # Chart.js-animatie laten uitlopen
+
+
 def _optimise(raw_png: bytes, dest: Path) -> dict:
     from io import BytesIO
 
