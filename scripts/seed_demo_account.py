@@ -164,10 +164,12 @@ def seed(db, user_id: str):
         }
         db.table("items").insert(item_row).execute()
 
-        # Cross-list to 2-4 platforms per item.
-        n_platforms = random.randint(2, 4)
+        # Cross-list to 3-5 platforms per item: de kern van het product is "overal
+        # tegelijk", dus een demo waarin items op 2 platforms staan onderverkoopt
+        # precies wat de screenshots moeten laten zien.
+        n_platforms = random.randint(3, 5)
         chosen = random.sample(PLATFORMS, n_platforms)
-        is_sold = idx % 4 == 0  # ~25% sold, so revenue/analytics charts have data
+        is_sold = idx % 3 == 0  # ~33% verkocht — genoeg omzetdata voor de grafieken
         sold_platform = random.choice(chosen) if is_sold else None
 
         for platform in chosen:
@@ -182,6 +184,10 @@ def seed(db, user_id: str):
                 "status": "sold" if sold else "active",
                 "listed_at": listed_at.isoformat(),
                 "sold_at": (listed_at + timedelta(days=random.randint(1, 21))).isoformat() if sold else None,
+                # Echte verkoopprijs, niet de vraagprijs: analytics rekent hiermee
+                # (zie backend/api/listings.py set_sold_price). Items gaan zelden
+                # voor de volle vraagprijs weg — 82-100% is realistisch.
+                "sold_price": round(it["price"] * random.uniform(0.82, 1.0), 2) if sold else None,
                 "last_checked": now.isoformat(),
                 "last_refreshed_at": (now - timedelta(days=random.randint(1, 10))).isoformat() if random.random() > 0.5 else None,
                 "refresh_count": random.randint(0, 3),
