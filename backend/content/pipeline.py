@@ -155,6 +155,11 @@ def _save_page_row(
         },
         "mainEntityOfPage": {"@type": "WebPage", "@id": canonical},
         "inLanguage": language,
+        # wordCount is een echte schema.org-eigenschap (signaal van diepgang), en
+        # tegelijk de reden dat de blog-index de body_html niet meer hoeft op te
+        # halen om de leestijd te tonen — dat scheelde 0,57 MB Supabase-verkeer
+        # per bezoek aan /blog.
+        "wordCount": _word_count(generated["body_html"]),
         "datePublished": published_iso,
         "dateModified": now_iso,
     }
