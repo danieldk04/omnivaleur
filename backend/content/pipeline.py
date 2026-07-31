@@ -19,10 +19,6 @@ from backend.content.linking import apply_internal_links
 from backend.content.research import research_competitors
 from backend.content.schema_validate import validate_page
 from backend.database import get_db
-
-
-def _word_count(body_html: str) -> int:
-    return len(re.findall(r"\S+", re.sub(r"<[^>]+>", " ", body_html or "")))
 from backend.services.email import notify_published
 from backend.services.indexnow import submit_url
 from backend.services.search_console import get_top_pages
@@ -30,6 +26,10 @@ from backend.services.search_console import get_top_pages
 logger = logging.getLogger(__name__)
 
 SITE_URL = "https://omnivaleur.com"
+
+
+def _word_count(body_html: str) -> int:
+    return len(re.findall(r"\S+", re.sub(r"<[^>]+>", " ", body_html or "")))
 
 # Altijd-beschikbare interne linkkandidaten, ook als er nog geen andere
 # content_pages bestaan — zo heeft zelfs de allereerste pagina al zinvolle
