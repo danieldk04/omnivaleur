@@ -91,14 +91,10 @@ SHOTS = [
         "cap_en": "The refresh tool caps itself per day and states plainly that no tool can guarantee a marketplace won't flag an account — a disclosure most competitors leave out.",
         "cap_nl": "De verversingstool begrenst zichzelf per dag en zegt er ronduit bij dat geen enkele tool kan garanderen dat een marktplaats een account niet markeert — een melding die de meeste concurrenten weglaten.",
     },
-    {
-        "src": "/assets/dashboard/price-advice.webp",
-        "topics": ["price", "pricing", "worth", "value", "compare", "competitor", "market", "demand"],
-        "alt_en": "Omnivaleur price advice screen comparing what similar items sell for",
-        "alt_nl": "Omnivaleur-prijsadviesscherm dat vergelijkt waarvoor soortgelijke items weggaan",
-        "cap_en": "Price advice compares an item against what comparable stock actually sold for, instead of guessing from the original retail price.",
-        "cap_nl": "Het prijsadvies vergelijkt een item met waarvoor vergelijkbare voorraad écht is verkocht, in plaats van te gokken op de oorspronkelijke winkelprijs.",
-    },
+    # Het prijsadvies-scherm staat hier bewust NIET in: showView('prijs') valt in
+    # de huidige app terug op het Account-scherm, dus de vastgelegde screenshot
+    # toonde een abonnementenpagina onder een bijschrift over prijsadvies. Zet 'm
+    # terug zodra die view zelfstandig rendert (zie capture_dashboard_screenshots.py).
     {
         "src": "/assets/dashboard/stale-listings.webp",
         "topics": ["stale", "old", "unsold", "slow", "sitting", "dead", "clear", "inventory", "stock", "aging"],
