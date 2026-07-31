@@ -78,12 +78,18 @@
   <div class="post-list">
     {% for p in pages %}
     <article class="post-row" data-pillar="{{ p.pillar }}">
+      {% if p.featured_image_url %}
+      <a class="post-thumb" href="{{ p.url_path }}" aria-hidden="true" tabindex="-1">
+        <img src="{{ p.featured_image_url }}" alt="" width="1200" height="630" loading="lazy" decoding="async">
+      </a>
+      {% else %}
       <div class="post-thumb">
         <div class="thumb-inner">
           <span class="thumb-logo">∞</span>
-          <span class="thumb-cat">{{ {'A': 'Platform comparison', 'B': 'Reseller guide', 'C': 'Vs. competitor'}.get(p.pillar, 'Reseller guide') }}</span>
+          <span class="thumb-cat">{{ {'A': 'Platform guide', 'B': 'Reseller guide', 'C': 'Honest comparison'}.get(p.pillar, 'Reseller guide') }}</span>
         </div>
       </div>
+      {% endif %}
       <div class="post-body">
         <h2><a href="{{ p.url_path }}">{{ p.h1 }}</a></h2>
         <div class="post-meta">
