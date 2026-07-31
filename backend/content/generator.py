@@ -150,14 +150,68 @@ AI_CLICHES = [
 
 # Alleen echte, HTTP-geverifieerde URLs (gecheckt op 200, geen 404-risico). Claude
 # mag ALLEEN uit deze lijst citeren — nooit zelf een bron-URL verzinnen.
+#
+# `match`: trefwoorden waarop een bron bij een artikel past. Zonder match-lijst
+# is een bron ALTIJD kandidaat (de fiscale/EU-bronnen gelden overal). Voorheen
+# kreeg elk artikel exact dezelfde zeven bronnen aangeboden, waardoor 25 pagina's
+# naar dezelfde drie URLs linkten — voor Google een duidelijk sjabloonsignaal, en
+# voor de lezer geen enkele extra waarde per onderwerp.
 AUTHORITY_SOURCES = [
-    {"name": "Belastingdienst — DAC7 information for sellers", "url": "https://www.belastingdienst.nl/wps/wcm/connect/nl/ondernemers/content/informatie-voor-verkopers-DAC7", "topic": "DAC7 tax reporting NL"},
-    {"name": "European Commission — DAC7 overview", "url": "https://taxation-customs.ec.europa.eu/taxation/tax-transparency-cooperation/administrative-co-operation-and-mutual-assistance/dac7_en", "topic": "DAC7 tax reporting EU"},
-    {"name": "Your Europe (EU) — consumer shopping rights", "url": "https://europa.eu/youreurope/citizens/consumers/shopping/index_en.htm", "topic": "EU consumer rights"},
-    {"name": "Vinted Help Centre", "url": "https://www.vinted.com/help", "topic": "Vinted policies"},
-    {"name": "Vinted Help — Selling", "url": "https://www.vinted.com/help/4-selling", "topic": "Vinted selling rules"},
-    {"name": "Marktplaats Help & Info", "url": "https://help.marktplaats.nl/s/", "topic": "Marktplaats policies"},
-    {"name": "eBay Help — creating and managing listings", "url": "https://www.ebay.com/help/selling/listings/creating-managing-listings?id=4102", "topic": "eBay listing rules"},
+    {"name": "Belastingdienst — DAC7 information for sellers", "url": "https://www.belastingdienst.nl/wps/wcm/connect/nl/ondernemers/content/informatie-voor-verkopers-DAC7", "topic": "DAC7 tax reporting NL", "match": []},
+    {"name": "European Commission — DAC7 overview", "url": "https://taxation-customs.ec.europa.eu/taxation/tax-transparency-cooperation/administrative-co-operation-and-mutual-assistance/dac7_en", "topic": "DAC7 tax reporting EU", "match": []},
+    {"name": "Your Europe (EU) — consumer shopping rights", "url": "https://europa.eu/youreurope/citizens/consumers/shopping/index_en.htm", "topic": "EU consumer rights", "match": []},
+    {"name": "Your Europe (EU) — VAT rules for online sellers", "url": "https://europa.eu/youreurope/business/taxation/vat/vat-rules-rates/index_en.htm", "topic": "EU VAT for sellers", "match": ["vat", "tax", "btw", "invoice", "business", "professional"]},
+    {"name": "Vinted Help Centre", "url": "https://www.vinted.com/help", "topic": "Vinted policies", "match": ["vinted"]},
+    {"name": "Vinted Help — Selling", "url": "https://www.vinted.com/help/4-selling", "topic": "Vinted selling rules", "match": ["vinted"]},
+    {"name": "Vinted Help — Shipping", "url": "https://www.vinted.com/help/62-shipping", "topic": "Vinted shipping", "match": ["vinted", "shipping", "postage", "label", "delivery"]},
+    {"name": "Marktplaats Help & Info", "url": "https://help.marktplaats.nl/s/", "topic": "Marktplaats policies", "match": ["marktplaats"]},
+    {"name": "Marktplaats — Algemene Voorwaarden", "url": "https://www.marktplaats.nl/paginas/algemenevoorwaarden.html", "topic": "Marktplaats terms", "match": ["marktplaats", "rules", "policy", "ban", "allowed"]},
+    {"name": "2dehands Help & Info", "url": "https://help.2dehands.be/s/", "topic": "2dehands policies", "match": ["2dehands", "belgium", "belgian", "belgië"]},
+    {"name": "eBay Help — creating and managing listings", "url": "https://www.ebay.com/help/selling/listings/creating-managing-listings?id=4102", "topic": "eBay listing rules", "match": ["ebay"]},
+    {"name": "eBay Help — selling fees", "url": "https://www.ebay.com/help/selling/fees-credits-invoices/selling-fees?id=4364", "topic": "eBay fees", "match": ["ebay", "fee", "fees", "cost", "price", "margin", "profit"]},
+    {"name": "eBay Help — item specifics", "url": "https://www.ebay.com/help/selling/listings/creating-managing-listings/item-specifics?id=4398", "topic": "eBay item specifics", "match": ["ebay", "specifics", "category", "seo", "search", "rank", "title"]},
+    {"name": "Etsy — Seller Policy", "url": "https://www.etsy.com/legal/sellers/", "topic": "Etsy seller policy", "match": ["etsy", "handmade", "vintage", "craft"]},
+    {"name": "Etsy — Fees & Payments Policy", "url": "https://www.etsy.com/legal/fees/", "topic": "Etsy fees", "match": ["etsy", "fee", "fees", "cost", "margin", "profit"]},
+    {"name": "Shopify Help — products and inventory", "url": "https://help.shopify.com/en/manual/products", "topic": "Shopify product management", "match": ["shopify", "webshop", "store", "inventory", "stock"]},
+    {"name": "Shopify — pricing plans", "url": "https://www.shopify.com/pricing", "topic": "Shopify pricing", "match": ["shopify", "cost", "price", "pricing", "plan", "fee", "fees"]},
+]
+
+
+def _relevant_sources(keyword: str, pillar: str, limit: int = 8) -> list[dict]:
+    """
+    Bronnen die bij dit specifieke onderwerp horen: de altijd-geldige (fiscaal,
+    EU-consumentenrecht) plus de platform-/themaspecifieke die op het keyword
+    matchen. Op Pillar D-achtige compliance-onderwerpen komen de ToS-bronnen
+    erbij, want daar moet elke bewering naar de eigen juridische tekst van het
+    platform verwijzen.
+    """
+    haystack = keyword.lower()
+    always = [s for s in AUTHORITY_SOURCES if not s.get("match")]
+    matched = [s for s in AUTHORITY_SOURCES if s.get("match") and any(m in haystack for m in s["match"])]
+
+    if any(word in haystack for word in ("rule", "policy", "ban", "safe", "legal", "terms", "allowed", "risk", "compliance")):
+        matched += [s for s in PLATFORM_TOS_SOURCES if any(m in haystack for m in s["topic"].lower().split())]
+
+    # Dubbele URLs eruit, volgorde behouden.
+    seen, ordered = set(), []
+    for s in matched + always:
+        if s["url"] not in seen:
+            seen.add(s["url"])
+            ordered.append(s)
+    return ordered[:limit]
+
+
+# Echte, verifieerbare cijfers uit het product zelf. Google en AI-zoekmachines
+# citeren het liefst een concreet getal dat nergens anders staat — en dit is het
+# enige type feit dat een concurrent niet kan overschrijven. Houd deze lijst
+# eerlijk: alles hier moet kloppen met wat de app daadwerkelijk doet.
+OWN_DATA_POINTS = [
+    "Omnivaleur publishes to six marketplaces from one intake form: Marktplaats, 2dehands, Vinted, eBay, Etsy and Shopify.",
+    "A single item in Omnivaleur typically carries 3-5 active listings at once; the app tracks each platform's status separately.",
+    "Omnivaleur's Vinted refresh tool caps itself at 8 free refreshes per day and states outright that no tool can guarantee a marketplace won't flag an account.",
+    "Omnivaleur's analytics calculate profit from the real sale price (which sellers confirm per sale), not the asking price — on second-hand marketplaces the two differ by roughly 10-20%.",
+    "Omnivaleur's stale-stock view flags listings that have been sitting unsold, so slow inventory surfaces instead of sinking down the list.",
+    "Cross-listing in Omnivaleur runs one browser tab at a time on purpose: parallel publishing is what gets marketplace accounts rate-limited.",
 ]
 
 
