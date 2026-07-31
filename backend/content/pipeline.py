@@ -200,8 +200,12 @@ async def run_pipeline(
     generated = generate_page_content(keyword, region, pillar, slug, research, existing_for_prompt, refresh_context)
     if not generated:
         return {"success": False, "error": "content generation failed"}
-    generated["body_html"] = inject_comparison_screenshots(generated["body_html"], pillar, keyword)
-    generated["body_html"] = inject_platform_images(generated["body_html"], keyword, language="en")
+    generated["body_html"] = inject_article_screenshots(
+        generated["body_html"], pillar, keyword, generated["h1"], slug, language="en"
+    )
+    generated["body_html"] = inject_platform_images(
+        generated["body_html"], keyword, language="en", title=generated["h1"]
+    )
     generated["body_html"] = inject_infographics(generated["body_html"], language="en")
 
     schema_warnings = validate_page(generated)
