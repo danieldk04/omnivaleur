@@ -119,6 +119,15 @@ def _save_page_row(
     existing_row = db.table("content_pages").select("id,featured_image_url").eq("intent_key", intent_key).execute().data
     featured_image_url = existing_row[0].get("featured_image_url") if existing_row else None
 
+    # Elke pagina krijgt een eigen hero-/deelafbeelding. Voorheen had 24 van de 25
+    # pagina's helemaal geen og:image (leeg blok bij delen) en toonde de pagina
+    # zelf bij iedereen hetzelfde kleurvlak. Een handmatig gezette afbeelding via
+    # /api/content/set-image blijft leidend — die overschrijven we nooit.
+    if not featured_image_url or "/assets/blog/hero/" in (featured_image_url or ""):
+        hero = generate_hero(slug, generated["h1"], pillar, keyword)
+        if hero:
+            featured_image_url = f"{SITE_URL}{hero}"
+
     now_iso = datetime.now(timezone.utc).isoformat()
     canonical = f"{SITE_URL}{_url_path(language, pillar, slug)}"
     article_json_ld = {
