@@ -245,12 +245,15 @@ async def run_pipeline(
     )
     generated["body_html"] = inject_infographics(generated["body_html"], language="en")
 
-    schema_warnings = validate_page(generated)
-
     result = _save_page_row(
         db, region=region, pillar=pillar, slug=slug, keyword=keyword,
         language="en", translation_of=None, generated=generated, research=research,
     )
+
+    # Toetsen ná het opslaan, tegen de rij zoals hij live gaat staan.
+    schema_warnings = validate_page(result.get("row") or generated)
+    if schema_warnings:
+        logger.warning(f"Publicatienorm niet volledig gehaald voor '{keyword}': {'; '.join(schema_warnings)}")
 
     if needs_dutch_translation(keyword, region):
         logger.info(f"NL-vertaling genereren voor '{keyword}'")
