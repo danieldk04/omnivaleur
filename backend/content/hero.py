@@ -59,14 +59,17 @@ PILLAR_LABELS = {
 
 # Merkkleuren uit frontend/templates/_chrome_style.html. De hero varieert binnen
 # deze familie — nooit erbuiten, anders herkent niemand het als Omnivaleur.
-# Vier paren, gekozen op slug-hash: genoeg variatie om 25+ artikelen visueel uit
-# elkaar te houden, weinig genoeg om één huisstijl te blijven.
-PALETTES = [
-    ((37, 99, 235), (52, 211, 153)),    # merkblauw → mint
-    ((30, 64, 175), (56, 189, 248)),    # diepblauw → hemelsblauw
-    ((67, 56, 202), (139, 92, 246)),    # indigo → paars
-    ((15, 118, 110), (52, 211, 153)),   # teal → mint
-]
+#
+# Kleur per PILLAR, niet puur op hash: platform-guides zijn blauw, reseller-guides
+# groen/teal, vergelijkingen indigo. Zo ziet een terugkerende lezer aan de kleur
+# meteen wat voor artikel het is — en binnen elke pillar zorgt de slug-hash nog
+# voor twee varianten, zodat twee artikelen naast elkaar in de bloglijst niet
+# identiek ogen.
+PALETTES = {
+    "A": [((37, 99, 235), (56, 189, 248)), ((30, 64, 175), (37, 99, 235))],     # blauw
+    "B": [((15, 118, 110), (52, 211, 153)), ((5, 150, 105), (110, 231, 183))],  # teal/mint
+    "C": [((67, 56, 202), (139, 92, 246)), ((79, 70, 229), (167, 139, 250))],   # indigo/paars
+}
 
 PLATFORM_WORDS = ["Marktplaats", "2dehands", "Vinted", "eBay", "Etsy", "Shopify"]
 
