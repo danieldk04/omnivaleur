@@ -128,14 +128,31 @@
     </div>
     {% endif %}
     <h1>{{ page.h1 }}</h1>
-    <div class="featured-image-wrap">
-      <div class="featured-hero">
-        <span class="fh-logo">∞</span>
-        <span class="fh-cat">{{ {'A': 'Platform comparison', 'B': 'Reseller guide', 'C': 'Vs. competitor'}.get(page.pillar, 'Reseller guide') }}</span>
-        <div class="fh-rule"></div>
-      </div>
-    </div>
+
+    <p class="article-meta">
+      <span>{{ {'A': 'Platform guide', 'B': 'Reseller guide', 'C': 'Honest comparison'}.get(page.pillar, 'Reseller guide') }}</span>
+      {% if published_at %}<span>·</span>
+      <time datetime="{{ published_at }}">{{ 'Gepubliceerd' if page.language == 'nl' else 'Published' }} {{ published_at }}</time>{% endif %}
+      {% if modified_at and modified_at != published_at %}<span>·</span>
+      <time datetime="{{ modified_at }}">{{ 'bijgewerkt' if page.language == 'nl' else 'updated' }} {{ modified_at }}</time>{% endif %}
+    </p>
+
+    {% if page.featured_image_url %}
+    <img class="featured-hero-img" src="{{ page.featured_image_url }}" alt="{{ page.h1 }}" width="1200" height="630" fetchpriority="high" decoding="async">
+    {% endif %}
+
     <blockquote>{{ page.quick_answer }}</blockquote>
+
+    {% if toc|length >= 3 %}
+    <nav class="toc" aria-label="{{ 'Inhoudsopgave' if page.language == 'nl' else 'Table of contents' }}">
+      <p class="toc-label">{{ 'In dit artikel' if page.language == 'nl' else 'In this article' }}</p>
+      <ol>
+        {% for item in toc %}
+        <li><a href="#{{ item.anchor }}">{{ item.text }}</a></li>
+        {% endfor %}
+      </ol>
+    </nav>
+    {% endif %}
 
     {% if page.takeaways %}
     <div class="takeaways">
