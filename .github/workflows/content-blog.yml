@@ -42,13 +42,16 @@ jobs:
           DRY_RUN: ${{ github.event.inputs.dry_run == 'true' && '1' || '' }}
         run: python3 scripts/generate_content.py ${{ github.event.inputs.all == 'true' && '--all' || '' }}
 
-      - name: Commit updated keyword queue
+      - name: Commit updated keyword queue and generated hero images
         run: |
           git config user.name "content-bot"
           git config user.email "content-bot@users.noreply.github.com"
-          git add scripts/content_keywords.json
+          # De hero-afbeelding van een nieuw artikel wordt tijdens deze run op
+          # schijf gezet. Zonder dit `git add` gooit de `git checkout -- .`
+          # hieronder hem weg en verwijst het verse artikel naar een 404.
+          git add scripts/content_keywords.json frontend/assets/blog/hero
           git diff --staged --quiet && exit 0
-          git commit -m "auto: update content keyword queue"
+          git commit -m "auto: update content keyword queue + hero images"
           # Anything else left dirty by the pipeline run (caches, logs) would block
           # the rebase below — it's not meant to be committed here, so drop it.
           git checkout -- . 2>/dev/null || true
