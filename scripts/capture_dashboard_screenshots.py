@@ -48,10 +48,13 @@ SHOTS = [
     {"key": "platforms-connected", "view": "platforms", "height": 760, "wait": 600},
     {"key": "analytics-revenue", "view": "analytics", "height": 900, "wait": 1600},
     {"key": "margin-calculator", "view": "calculator", "height": 700, "wait": 500},
-    {"key": "bulk-import", "view": "import", "height": 700, "wait": 700},
+    {"key": "bulk-import", "view": "import", "height": 620, "wait": 700},
     {"key": "refresh-tool", "view": "refresh", "height": 760, "wait": 700},
-    {"key": "price-advice", "view": "prijs", "height": 700, "wait": 700},
     {"key": "stale-listings", "view": "stale", "height": 760, "wait": 700},
+    # 'prijs' staat er bewust NIET bij: showView('prijs') valt in de huidige app
+    # terug op het Account-scherm, en dat leverde een screenshot op met het
+    # bijschrift "prijsadvies" onder een abonnementenpagina. Zet 'm pas terug als
+    # die view echt zelfstandig rendert.
 ]
 
 
