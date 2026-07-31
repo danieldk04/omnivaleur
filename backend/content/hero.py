@@ -129,12 +129,15 @@ def _platforms_in(text: str) -> list[str]:
     return [p for p in PLATFORM_WORDS if p.lower() in lower]
 
 
+# JPEG, geen PNG: een verloop met tekst wordt als PNG ~130 kB en als JPEG ~45 kB
+# bij visueel gelijk resultaat. WebP zou nóg kleiner zijn, maar niet elk platform
+# dat og:image uitleest ondersteunt het — en dit beeld moet het overal doen.
 def hero_url(slug: str) -> str:
-    return f"{HERO_URL_PREFIX}/{slug}.png"
+    return f"{HERO_URL_PREFIX}/{slug}.jpg"
 
 
 def hero_path(slug: str) -> Path:
-    return HERO_DIR / f"{slug}.png"
+    return HERO_DIR / f"{slug}.jpg"
 
 
 def generate_hero(slug: str, title: str, pillar: str, keyword: str = "", force: bool = False) -> str | None:
