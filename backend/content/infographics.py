@@ -58,13 +58,17 @@ NO_WORDS = {"nee", "no", "non", "niet", "geen", "none", "unsupported"}
 PARTIAL_WORDS = {"deels", "partly", "partial", "beperkt", "limited", "soms", "sometimes", "gedeeltelijk"}
 
 CAPTIONS = {
+    # Bewust ZONDER "per platform": het label is de kolomkop uit de tabel, en die
+    # is lang niet altijd een meeteenheid. Op een fee-vergelijking heet de kolom
+    # gewoon "eBay (2026)", en dan kwam er "Visual summary — eBay (2026) per
+    # platform" te staan. Onzin. De neutrale formulering klopt in beide gevallen.
     "range": {
-        "en": "Visual summary of the table below — {label} per platform.",
-        "nl": "Visuele samenvatting van de tabel hieronder — {label} per platform.",
+        "en": "Visual summary of the table below: {label}.",
+        "nl": "Visuele samenvatting van de tabel hieronder: {label}.",
     },
     "matrix": {
-        "en": "Visual summary of the table below — {label}.",
-        "nl": "Visuele samenvatting van de tabel hieronder — {label}.",
+        "en": "Visual summary of the table below: {label}.",
+        "nl": "Visuele samenvatting van de tabel hieronder: {label}.",
     },
     "steps": {
         "en": "The steps below at a glance.",
