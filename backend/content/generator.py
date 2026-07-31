@@ -187,8 +187,19 @@ def _relevant_sources(keyword: str, pillar: str, limit: int = 8) -> list[dict]:
     platform verwijzen.
     """
     haystack = keyword.lower()
-    always = [s for s in AUTHORITY_SOURCES if not s.get("match")]
-    matched = [s for s in AUTHORITY_SOURCES if s.get("match") and any(m in haystack for m in s["match"])]
+
+    def applies(source: dict) -> bool:
+        # `requires` is de platformnaam die er ECHT in moet staan. Zonder die
+        # harde eis lekte "eBay — selling fees" een Etsy-artikel binnen omdat het
+        # woord "fee" toevallig matchte.
+        if source.get("requires") and source["requires"] not in haystack:
+            return False
+        if source.get("match"):
+            return any(m in haystack for m in source["match"])
+        return bool(source.get("requires"))
+
+    always = [s for s in AUTHORITY_SOURCES if not s.get("match") and not s.get("requires")]
+    matched = [s for s in AUTHORITY_SOURCES if (s.get("match") or s.get("requires")) and applies(s)]
 
     if any(word in haystack for word in ("rule", "policy", "ban", "safe", "legal", "terms", "allowed", "risk", "compliance")):
         matched += [s for s in PLATFORM_TOS_SOURCES if any(m in haystack for m in s["topic"].lower().split())]
