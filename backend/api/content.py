@@ -332,10 +332,23 @@ def _render_blog_index(request: Request, canonical: str) -> HTMLResponse:
     # translation is reachable via the language toggle on its English page,
     # never as its own index card (that would look like duplicate content).
     db = get_db()
-    rows = db.table("content_pages").select("*").eq("status", "published").is_("translation_of", "null").order("published_at", desc=True).execute().data or []
+    # Bewust GEEN select("*"): dat haalde van elke pagina de volledige body_html
+    # op — 0,57 MB per bezoek aan deze pagina, terwijl er alleen een titel, datum
+    # en samenvatting van getoond wordt. Het aantal woorden (voor de leestijd)
+    # staat in article_json_ld als `wordCount`, dat is een paar honderd bytes.
+    rows = (
+        db.table("content_pages")
+        .select("pillar,slug,language,title,h1,meta_description,published_at,featured_image_url,article_json_ld")
+        .eq("status", "published")
+        .is_("translation_of", "null")
+        .order("published_at", desc=True)
+        .execute()
+        .data
+        or []
+    )
     for r in rows:
         r["url_path"] = _url_path(r.get("language", "en"), r["pillar"], r["slug"])
-        r["reading_minutes"] = _reading_minutes(r.get("body_html"))
+        r["reading_minutes"] = _reading_minutes((r.get("article_json_ld") or {}).get("wordCount"))
 
     item_list_json_ld = {
         "@context": "https://schema.org",
