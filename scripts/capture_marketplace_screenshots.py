@@ -110,7 +110,15 @@ def _dismiss_overlays(page) -> list[str]:
 
 def _looks_blocked(page) -> str | None:
     """Grove check op een block-/consent-pagina i.p.v. de echte interface."""
-    text = (page.evaluate("document.body.innerText") or "")[:4000].lower()
+    # Ook de frames meenemen: een cookiemuur in een iframe staat niet in
+    # document.body.innerText van de hoofdpagina, en werd daardoor niet gezien.
+    chunks = []
+    for frame in [page.main_frame] + [f for f in page.frames if f != page.main_frame]:
+        try:
+            chunks.append(frame.evaluate("document.body ? document.body.innerText : ''") or "")
+        except Exception:
+            continue
+    text = " ".join(chunks)[:8000].lower()
     for phrase in BLOCK_PHRASES:
         if phrase in text:
             return phrase
