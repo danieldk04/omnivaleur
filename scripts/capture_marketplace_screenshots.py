@@ -58,6 +58,27 @@ DISMISS_SELECTORS = [
     "button:has-text('Weigeren')",
     "button:has-text('Reject all')",
     "button:has-text('Alleen noodzakelijke')",
+    # Marktplaats/2dehands zetten de weiger-optie als LINK onderin de dialoog,
+    # niet als knop — zonder deze regel bleef de cookiemuur over de hele
+    # interface staan en was de screenshot onbruikbaar.
+    "a:has-text('Doorgaan zonder te accepteren')",
+    "a:has-text('Verdergaan zonder te accepteren')",
+    "a:has-text('Continue without accepting')",
+]
+
+# Tekst die verraadt dat we een block-/consent-/botmuur hebben vastgelegd i.p.v.
+# de echte interface. In beide talen: de NL-variant ontbrak, waardoor een
+# Vinted-botcontrole ("Verifieer dat u een mens bent") als geslaagd werd gemeld.
+BLOCK_PHRASES = [
+    "where do you live",
+    "waar woon je",
+    "access is temporarily restricted",
+    "verify you are human",
+    "verifieer dat u een mens bent",
+    "please wait",
+    "even geduld",
+    "enable javascript and cookies",
+    "mogen we cookies gebruiken",
 ]
 
 
