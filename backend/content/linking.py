@@ -64,10 +64,15 @@ def repair_anchors_in_tags(body_html: str) -> str:
             return result
 
 
-def apply_internal_links(body_html: str, candidates: list[dict], self_intent_key: str, min_links: int = 2) -> tuple[str, list[str]]:
+def apply_internal_links(body_html: str, candidates: list[dict], self_intent_key: str, min_links: int = 5) -> tuple[str, list[str]]:
     """
     `candidates`: [{intent_key, title, url_path, link_terms: [str, ...]}, ...] — other
     published pages to link to. Returns (updated_body, list of intent_keys actually linked).
+
+    Standaard 5 in plaats van 2: met twee links per artikel bleef het interne
+    linkweb zo dun dat pagina's elkaar nauwelijks omhoog trokken. De kandidaten
+    komen al gesorteerd op echte Search Console-clicks binnen (zie pipeline.py),
+    dus de sterkste pagina's worden als eerste gelinkt.
     """
     body = body_html
     linked: list[str] = []
