@@ -422,24 +422,37 @@ def strip_markdown_leftovers(html: str) -> str:
 # "Omnivaleur from Vinted to eBay in 2026…" — kromme zin, direct zichtbaar in
 # Google, en dat kost kliks. Dit is de vangnet-controle achteraf: het model mag
 # het fout doen, de pagina niet.
+#
+# Bewust GEEN "items/listings/stock/inventory" in deze lijst: "the Omnivaleur
+# item list" en "your Omnivaleur listings" zijn gewoon zelfstandige
+# naamwoorden. Die erbij nemen leverde vals alarm op onze eigen alt-teksten op.
+# Alleen woorden die er een handeling van maken.
 _BRAND_AS_VERB = re.compile(
-    r"\bOmnivaleur\b(?=\s+(?:from|to|your|their|our|it|items?|listings?|stock|inventory|between|across|everything|anything)\b)",
+    r"\bOmnivaleur\b(?=\s+(?:from|to|your|their|our|it|between|across|everything|anything)\b)",
     re.IGNORECASE,
 )
 
 
 def fix_brand_as_verb(text: str) -> str:
     """Vervangt de merknaam waar hij als werkwoord gebruikt wordt door 'Cross-list'.
-    Behoudt hoofdletter aan het begin van een zin."""
+    Behoudt hoofdletter aan het begin van een zin.
+
+    Raakt alleen zichtbare tekst aan, nooit tag-markup: de alt-teksten van onze
+    eigen screenshots beginnen met "Omnivaleur …", en zonder deze afscherming
+    zou een tweede backfill-run die attributen herschrijven — precies het soort
+    stille markup-beschadiging dat hier eerder img-src'en heeft gesloopt."""
     if not text or "omnivaleur" not in text.lower():
         return text
 
-    def replace(m: re.Match) -> str:
-        start = m.start()
-        at_sentence_start = start == 0 or text[:start].rstrip().endswith((".", "!", "?", ":"))
-        return "Cross-list" if at_sentence_start else "cross-list"
+    def convert(chunk: str) -> str:
+        def replace(m: re.Match) -> str:
+            before = chunk[: m.start()].rstrip()
+            at_sentence_start = not before or before.endswith((".", "!", "?", ":"))
+            return "Cross-list" if at_sentence_start else "cross-list"
 
-    return _BRAND_AS_VERB.sub(replace, text)
+        return _BRAND_AS_VERB.sub(replace, chunk)
+
+    return _outside_tags(text, convert)
 
 
 def clean_generated(parsed: dict) -> dict:
