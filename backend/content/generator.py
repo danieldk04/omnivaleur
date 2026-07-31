@@ -295,7 +295,15 @@ def _build_prompt(
         for p in existing_pages
     ) or "(no other pages published yet)"
 
-    sources_block = "\n".join(f'- {s["name"]} ({s["topic"]}): {s["url"]}' for s in AUTHORITY_SOURCES)
+    sources_block = "\n".join(
+        f'- {s["name"]} ({s["topic"]}): {s["url"]}' for s in _relevant_sources(keyword, pillar)
+    )
+
+    # Twee eigen datapunten per artikel, gekozen op slug zodat niet elk artikel
+    # dezelfde twee herhaalt maar één artikel bij hergeneratie wel stabiel blijft.
+    seed = int(hashlib.sha256(slug.encode()).hexdigest()[:8], 16)
+    own_data = [OWN_DATA_POINTS[(seed + i) % len(OWN_DATA_POINTS)] for i in range(2)]
+    own_data_block = "\n".join(f"- {d}" for d in own_data)
 
     return f"""You are an experienced European reseller and full-stack SEO/GEO expert writing for Omnivaleur, a SaaS that automatically cross-lists items across Marktplaats, 2dehands, Vinted, eBay, Etsy and Shopify. You write like a reseller helping a colleague, not a marketing department.
 
