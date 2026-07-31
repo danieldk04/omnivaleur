@@ -53,7 +53,10 @@
   .article-meta{display:flex;flex-wrap:wrap;gap:8px 16px;align-items:center;font-size:13px;color:var(--muted);margin:0 0 4px}
   .article-meta time{font-variant-numeric:tabular-nums}
 
-  .toc{border:1px solid var(--border);border-radius:12px;padding:18px 22px;margin:28px 0;background:#f8fafc}
+  /* display/position expliciet terugzetten: _chrome_style.html style't élke <nav>
+     als de sticky flex-sitebalk, en die regel sloopte de inhoudsopgave (de lijst
+     liep buiten het kader door). */
+  .toc{display:block;position:static;border:1px solid var(--border);border-radius:12px;padding:18px 22px;margin:28px 0;background:#f8fafc}
   .toc-label{font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin:0 0 10px}
   .toc ol{margin:0;padding-left:20px}
   .toc li{margin-bottom:6px;font-size:15px}
