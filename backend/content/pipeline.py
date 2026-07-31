@@ -144,7 +144,7 @@ def _save_page_row(
             "@type": "Person",
             "name": "Daniel de Koning",
             "jobTitle": "Founder, Omnivaleur",
-            "url": f"{SITE_URL}/about",
+            "url": SITE_URL,
             "knowsAbout": ["cross-listing", "reselling", "Marktplaats", "Vinted", "eBay", "Etsy", "Shopify"],
         },
         "publisher": {
