@@ -47,7 +47,10 @@
   .post-meta{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--muted)}
   .post-meta img{width:24px;height:24px;border-radius:50%;object-fit:cover}
   .post-excerpt{color:var(--muted);font-size:14px;line-height:1.6;margin:0}
-  .post-cta{align-self:flex-start;margin-top:4px}
+  /* margin-top:auto duwt de knop naar de onderkant, zodat alle knoppen in een
+     rij op dezelfde hoogte staan ook als de ene samenvatting langer is dan de
+     andere. */
+  .post-cta{align-self:flex-start;margin-top:auto;padding-top:6px}
 
   .cat-filters{display:flex;flex-wrap:wrap;justify-content:center;gap:8px;margin-bottom:36px}
   .cat-chip{border:1.5px solid var(--border);background:#fff;color:var(--muted);font-size:13px;font-weight:600;padding:7px 16px;border-radius:100px;cursor:pointer}
