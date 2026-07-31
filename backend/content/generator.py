@@ -324,7 +324,7 @@ COMPETITOR RESEARCH (top 3 organic results for this keyword, their heading struc
 Already-covered subtopics across those top 3 (do not just repeat these — find the content gap, i.e. what {CURRENT_YEAR} platform rules, limits, updates or reseller pain points they are missing):
 {research.get('covered_subtopics') or '(none found)'}
 
-EXISTING Omnivaleur PAGES (weave in 2 contextual internal links where genuinely relevant, using these exact URLs, natural anchor text):
+EXISTING Omnivaleur PAGES (weave in 4-6 contextual internal links where genuinely relevant, using these exact URLs, natural descriptive anchor text — never "click here" or a bare URL). Spread them across different sections rather than clustering them in one paragraph:
 {internal_links_block}
 
 AUTHORITY SOURCES — cite 3-4 of these inline as clickable links where relevant to back up claims (fees, tax rules, platform policies). ONLY use these exact URLs verbatim, never invent or guess a URL yourself. Prefer the platform-specific ones over the generic ones where the topic allows it:
