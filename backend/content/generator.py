@@ -117,8 +117,13 @@ def inject_article_screenshots(
     beeld, en krijgt geen twee artikelen dezelfde reeks.
     """
     # Idempotent voor backfills: staat er al beeld van ons of van de concurrent
-    # in, dan raken we het artikel niet aan.
-    if contains_figures(body_html, "/assets/dashboard/") or contains_figures(body_html, 'class="competitor-shot"'):
+    # in, dan raken we het artikel niet aan. De concurrent-check kijkt naar de
+    # beeld-URL zelf, niet naar de CSS-klasse: figuren die vóór deze wijziging
+    # zijn geplaatst hebben die klasse nog niet, en werden daardoor bij elke
+    # backfill-run opnieuw toegevoegd.
+    if contains_figures(body_html, "/assets/dashboard/") or any(
+        contains_figures(body_html, img["src"]) for shots in COMPETITOR_SCREENSHOTS.values() for img in shots
+    ):
         return body_html
 
     our_figures = [
