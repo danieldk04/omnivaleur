@@ -37,6 +37,34 @@ def _slugify(text: str) -> str:
     return re.sub(r"-+", "-", text).strip("-")
 
 
+# Woorden die niets aan de zoekintentie toevoegen maar wél een tweede URL
+# opleveren voor dezelfde vraag. "omnivaleur-vs-list-perfectly" en
+# "omnivaleur-vs-list-perfectly-comparison-2026" gingen zo allebei live en
+# vochten om exact dezelfde zoekopdracht.
+_FILLER_SLUG_WORDS = {
+    "comparison", "compare", "vergelijking", "guide", "gids", "review",
+    "crosslisting", "crosslisten", "cross", "listing", "automation", "tool",
+    "tools", "platforms", "platform", "best", "beste", "full", "complete",
+    "2024", "2025", "2026", "2027",
+}
+
+
+def _intent_fingerprint(slug: str) -> str:
+    """
+    De betekenisdragende kern van een slug, als vergelijkingssleutel. Twee slugs
+    met dezelfde vingerafdruk beantwoorden dezelfde vraag en mogen niet allebei
+    bestaan — welke van de twee formuleringen het model toevallig koos, maakt
+    voor de zoeker niets uit.
+    """
+    words = sorted(w for w in slug.split("-") if w and w not in _FILLER_SLUG_WORDS)
+    return "-".join(words)
+
+
+def _is_duplicate_intent(slug: str, existing_slugs: list[str]) -> bool:
+    fingerprint = _intent_fingerprint(slug)
+    return any(fingerprint == _intent_fingerprint(s) for s in existing_slugs)
+
+
 def _performance_block() -> str:
     """Real GSC performance data on already-published pages, if configured — biases new
     suggestions toward pillars/topics that are actually getting impressions/clicks
