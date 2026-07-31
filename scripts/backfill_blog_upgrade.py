@@ -163,9 +163,13 @@ def upgrade_row(db, row: dict, all_rows: list[dict]) -> dict | None:
     }
 
     # Alleen echt gewijzigde velden terugsturen; article_json_ld verandert altijd
-    # (dateModified), dus die telt niet mee als "er is iets gebeurd".
+    # (dateModified), dus die telt op zichzelf niet als "er is iets gebeurd" —
+    # behalve wanneer er een inhoudelijk veld in ontbreekt of niet klopt, zoals
+    # wordCount (dat de blog-index gebruikt om de leestijd te tonen zonder de
+    # hele body op te halen).
     meaningful = {k: v for k, v in changes.items() if k != "article_json_ld" and v != row.get(k)}
-    if not meaningful:
+    stale_schema = (row.get("article_json_ld") or {}).get("wordCount") != article_json_ld["wordCount"]
+    if not meaningful and not stale_schema:
         return None
     return changes
 
