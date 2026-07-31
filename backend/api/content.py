@@ -218,6 +218,28 @@ def _render_page(request: Request, language: str, pillar: str, slug: str) -> HTM
     if language_switch:
         hreflang_variants.append({"region": language_switch["language"], "url": f"{SITE_URL}{language_switch['url']}"})
 
+    # x-default hoort naar de ENGELSE versie te wijzen, altijd. Voorheen zette
+    # elke taalversie zichzelf als x-default, dus de NL- en de EN-pagina claimden
+    # allebei de standaardversie te zijn — een tegenstrijdig signaal waar Google
+    # er willekeurig één van kiest.
+    if page.get("translation_of") and language_switch:
+        x_default = f"{SITE_URL}{language_switch['url']}"
+    else:
+        x_default = canonical
+
+    breadcrumb_json_ld = {
+        "@context": "https://schema.org",
+        "@type": "BreadcrumbList",
+        "itemListElement": [
+            {"@type": "ListItem", "position": 1, "name": "Home", "item": SITE_URL},
+            {"@type": "ListItem", "position": 2, "name": "Blog", "item": f"{SITE_URL}/blog"},
+            {"@type": "ListItem", "position": 3, "name": page["h1"], "item": canonical},
+        ],
+    }
+
+    article_json_ld = page.get("article_json_ld") or {}
+    og_image = page.get("featured_image_url") or article_json_ld.get("image") or f"{SITE_URL}/logo.png"
+
     return templates.TemplateResponse(
         request,
         "content_page.html",
@@ -225,10 +247,17 @@ def _render_page(request: Request, language: str, pillar: str, slug: str) -> HTM
             "page": page,
             "canonical": canonical,
             "hreflang_variants": hreflang_variants,
+            "x_default": x_default,
             "faq_json_ld": faq_json_ld,
             "software_json_ld": page.get("software_application_json_ld") or {},
-            "article_json_ld": page.get("article_json_ld") or {},
+            "article_json_ld": article_json_ld,
+            "breadcrumb_json_ld": breadcrumb_json_ld,
             "language_switch": language_switch,
+            "toc": toc,
+            "related_pages": _related_pages(page),
+            "og_image": og_image,
+            "published_at": (article_json_ld.get("datePublished") or page.get("published_at") or "")[:10],
+            "modified_at": (article_json_ld.get("dateModified") or page.get("updated_at") or "")[:10],
         },
     )
 
