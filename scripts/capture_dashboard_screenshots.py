@@ -120,6 +120,28 @@ def _widen_analytics_range(page) -> None:
     page.wait_for_timeout(1400)  # Chart.js-animatie laten uitlopen
 
 
+def _fill_calculator(page) -> None:
+    """
+    Vult de margecalculator zodat de screenshot de UITKOMST toont (minimale
+    verkoopprijs per platform) in plaats van een leeg formulier met "Fill in both
+    fields to see results" — dat laatste laat precies niet zien wat de tool doet.
+    """
+    page.evaluate(
+        """() => {
+            const set = (el, v) => {
+              if (!el) return;
+              el.value = v;
+              el.dispatchEvent(new Event('input', {bubbles: true}));
+              el.dispatchEvent(new Event('change', {bubbles: true}));
+            };
+            const inputs = [...document.querySelectorAll('input')];
+            set(inputs.find(i => (i.placeholder || '').includes('0.00')), '18');
+            set(inputs.find(i => (i.placeholder || '').includes('10.00')), '22');
+        }"""
+    )
+    page.wait_for_timeout(600)
+
+
 def _optimise(raw_png: bytes, dest: Path) -> dict:
     from io import BytesIO
 
