@@ -159,6 +159,8 @@ def capture(keys: list[str], base: str) -> int:
                     _mark_platforms_connected(page)
                 if shot["view"] == "analytics":
                     _widen_analytics_range(page)
+                if shot["view"] == "calculator":
+                    _fill_calculator(page)
                 page.evaluate("window.scrollTo(0,0)")
                 png = page.screenshot(
                     clip={"x": 0, "y": 0, "width": VIEWPORT["width"], "height": shot["height"]}
