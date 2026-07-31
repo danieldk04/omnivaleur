@@ -116,7 +116,7 @@ def _save_page_row(
     candidates += STATIC_LINK_CANDIDATES
     body_with_links, linked_intents = apply_internal_links(generated["body_html"], candidates, intent_key)
 
-    existing_row = db.table("content_pages").select("id,featured_image_url").eq("intent_key", intent_key).execute().data
+    existing_row = db.table("content_pages").select("id,featured_image_url,published_at").eq("intent_key", intent_key).execute().data
     featured_image_url = existing_row[0].get("featured_image_url") if existing_row else None
 
     # Elke pagina krijgt een eigen hero-/deelafbeelding. Voorheen had 24 van de 25
