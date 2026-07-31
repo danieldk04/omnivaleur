@@ -294,6 +294,81 @@ A: [answer]
 """
 
 
+# Markdown die het model in de HTML-body laat staan. De prompt vraagt om HTML én
+# om "bold **key terms**" — die twee vechten met elkaar, en op de live pagina
+# stonden daardoor letterlijke sterretjes in de lopende tekst
+# ("Vinted made its name on **zero seller fees**"). Dit ruimt het op na afloop
+# i.p.v. te hopen dat het model het niet doet.
+_MD_BOLD = re.compile(r"\*\*(?!\s)([^*\n]{1,200}?)(?<!\s)\*\*")
+_MD_ITALIC = re.compile(r"(?<![\w*])\*(?!\s)([^*\n]{1,200}?)(?<!\s)\*(?![\w*])")
+_TAG_SPAN = re.compile(r"<[^>]+>")
+
+
+def _outside_tags(html: str, transform) -> str:
+    """Past `transform` alleen toe op tekst BUITEN tag-markup. Zonder deze splitsing
+    zou een sterretje in een attribuutwaarde de tag kunnen breken."""
+    parts = []
+    cursor = 0
+    for m in _TAG_SPAN.finditer(html):
+        parts.append(transform(html[cursor:m.start()]))
+        parts.append(m.group(0))
+        cursor = m.end()
+    parts.append(transform(html[cursor:]))
+    return "".join(parts)
+
+
+def strip_markdown_leftovers(html: str) -> str:
+    """Zet achtergebleven markdown-nadruk om naar echte HTML-tags."""
+    if not html or "*" not in html:
+        return html
+
+    def convert(text: str) -> str:
+        text = _MD_BOLD.sub(r"<strong>\1</strong>", text)
+        return _MD_ITALIC.sub(r"<em>\1</em>", text)
+
+    return _outside_tags(html, convert)
+
+
+# "Omnivaleur" is een merknaam, nooit een werkwoord. De prompt zegt dat expliciet,
+# maar op de live site stond alsnog een meta-description die begon met
+# "Omnivaleur from Vinted to eBay in 2026…" — kromme zin, direct zichtbaar in
+# Google, en dat kost kliks. Dit is de vangnet-controle achteraf: het model mag
+# het fout doen, de pagina niet.
+_BRAND_AS_VERB = re.compile(
+    r"\bOmnivaleur\b(?=\s+(?:from|to|your|their|our|it|items?|listings?|stock|inventory|between|across|everything|anything)\b)",
+    re.IGNORECASE,
+)
+
+
+def fix_brand_as_verb(text: str) -> str:
+    """Vervangt de merknaam waar hij als werkwoord gebruikt wordt door 'Cross-list'.
+    Behoudt hoofdletter aan het begin van een zin."""
+    if not text or "omnivaleur" not in text.lower():
+        return text
+
+    def replace(m: re.Match) -> str:
+        start = m.start()
+        at_sentence_start = start == 0 or text[:start].rstrip().endswith((".", "!", "?", ":"))
+        return "Cross-list" if at_sentence_start else "cross-list"
+
+    return _BRAND_AS_VERB.sub(replace, text)
+
+
+def clean_generated(parsed: dict) -> dict:
+    """Alle naverwerking die op elk gegenereerd én elk vertaald artikel moet
+    draaien, op één plek zodat de twee paden niet uit elkaar lopen."""
+    for field in ("title", "meta_description", "h1", "quick_answer"):
+        parsed[field] = fix_brand_as_verb(strip_markdown_leftovers(parsed.get(field, "")))
+    parsed["takeaways"] = [
+        fix_brand_as_verb(strip_markdown_leftovers(t)) for t in (parsed.get("takeaways") or [])
+    ]
+    parsed["body_html"] = fix_brand_as_verb(strip_markdown_leftovers(parsed.get("body_html", "")))
+    for item in parsed.get("faq") or []:
+        item["question"] = fix_brand_as_verb(strip_markdown_leftovers(item.get("question", "")))
+        item["answer"] = fix_brand_as_verb(strip_markdown_leftovers(item.get("answer", "")))
+    return parsed
+
+
 def _parse_output(raw: str) -> dict:
     text = raw.strip()
 
