@@ -22,7 +22,10 @@
   .post-list{display:flex;flex-direction:column;gap:20px}
   .post-row{display:grid;grid-template-columns:220px 1fr;gap:24px;border:1px solid var(--border);border-radius:16px;overflow:hidden;background:#fff}
   .post-thumb{background:linear-gradient(135deg,var(--blue) 0%,var(--mint) 100%);display:flex;align-items:center;justify-content:center;min-height:160px;position:relative;overflow:hidden}
-  .post-thumb::after{content:"";position:absolute;inset:0;background:radial-gradient(circle at 28% 22%,rgba(255,255,255,.22),transparent 58%)}
+  /* Alleen het lege kleurvlak krijgt de lichtglans — over een echte hero heen
+     zou die het beeld vertroebelen. */
+  .post-thumb:not(:has(img))::after{content:"";position:absolute;inset:0;background:radial-gradient(circle at 28% 22%,rgba(255,255,255,.22),transparent 58%)}
+  .post-thumb img{width:100%;height:100%;object-fit:cover;display:block}
   .post-thumb .thumb-inner{position:relative;z-index:1;text-align:center;padding:0 16px}
   .post-thumb .thumb-logo{display:block;font-size:34px;line-height:1;color:#fff;font-weight:700;margin-bottom:10px}
   .post-thumb .thumb-cat{color:#fff;font-size:11.5px;font-weight:800;letter-spacing:.09em;text-transform:uppercase}
