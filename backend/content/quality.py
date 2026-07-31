@@ -109,9 +109,11 @@ def check_article(page: dict) -> list[str]:
     if not page.get("h1"):
         problems.append("H1 ontbreekt")
 
-    # Tekstuele fouten die eerder live hebben gestaan.
+    # Tekstuele fouten die eerder live hebben gestaan. Alleen op de ZICHTBARE
+    # tekst: alt-teksten van onze eigen screenshots beginnen met "Omnivaleur …"
+    # en dat is correct Engels, geen werkwoordgebruik.
     joined = " ".join(
-        [title, meta, page.get("h1") or "", page.get("quick_answer") or "", body]
+        [title, meta, page.get("h1") or "", page.get("quick_answer") or "", _text(body)]
         + list(page.get("takeaways") or [])
     )
     if _MD_LEFTOVER.search(joined):
