@@ -138,7 +138,7 @@ def upgrade_row(db, row: dict, all_rows: list[dict]) -> dict | None:
         "inLanguage": language,
         # wordCount: schema.org-signaal van diepgang, én de reden dat de
         # blog-index de body_html niet meer hoeft op te halen voor de leestijd.
-        "wordCount": len(__import__("re").findall(r"\S+", __import__("re").sub(r"<[^>]+>", " ", body))),
+        "wordCount": _word_count(body),
         # datePublished behouden: een herschrijving is geen nieuwe publicatie.
         "datePublished": article_json_ld.get("datePublished") or row.get("published_at") or now_iso,
         "dateModified": now_iso,
