@@ -30,6 +30,10 @@
      doormidden ("Handbag Reselling …tion: Cross-List De…"). Volledig tonen is
      hier belangrijker dan het vlak helemaal vullen. */
   .post-thumb img{width:100%;height:auto;max-height:100%;object-fit:contain;display:block}
+  /* Neutrale achtergrond zodra er een hero in zit: het blauw-groene verloop
+     eronder botste met de eigen kleur van elke hero. Het lege kleurvlak (kaarten
+     zonder hero) houdt het verloop wél. */
+  .post-thumb:has(img){background:#f1f5f9}
   .post-thumb .thumb-inner{position:relative;z-index:1;text-align:center;padding:0 16px}
   .post-thumb .thumb-logo{display:block;font-size:34px;line-height:1;color:#fff;font-weight:700;margin-bottom:10px}
   .post-thumb .thumb-cat{color:#fff;font-size:11.5px;font-weight:800;letter-spacing:.09em;text-transform:uppercase}
