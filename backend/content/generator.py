@@ -116,8 +116,10 @@ def inject_article_screenshots(
     dezelfde vijf beelden in dezelfde volgorde neerzette. Nu krijgt elk artikel
     beeld, en krijgt geen twee artikelen dezelfde reeks.
     """
-    if contains_figures(body_html, "/assets/dashboard/"):
-        return body_html  # al voorzien — idempotent voor backfills
+    # Idempotent voor backfills: staat er al beeld van ons of van de concurrent
+    # in, dan raken we het artikel niet aan.
+    if contains_figures(body_html, "/assets/dashboard/") or contains_figures(body_html, 'class="competitor-shot"'):
+        return body_html
 
     our_figures = [
         dashboard_figure_html(shot, language)
