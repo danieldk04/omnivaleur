@@ -25,7 +25,11 @@
   /* Alleen het lege kleurvlak krijgt de lichtglans — over een echte hero heen
      zou die het beeld vertroebelen. */
   .post-thumb:not(:has(img))::after{content:"";position:absolute;inset:0;background:radial-gradient(circle at 28% 22%,rgba(255,255,255,.22),transparent 58%)}
-  .post-thumb img{width:100%;height:100%;object-fit:cover;display:block}
+  /* contain, geen cover: de hero is een ontworpen beeld met de artikeltitel
+     erin. Bijsnijden op een smalle kaart hakte die titel middenin een woord
+     doormidden ("Handbag Reselling …tion: Cross-List De…"). Volledig tonen is
+     hier belangrijker dan het vlak helemaal vullen. */
+  .post-thumb img{width:100%;height:auto;max-height:100%;object-fit:contain;display:block}
   .post-thumb .thumb-inner{position:relative;z-index:1;text-align:center;padding:0 16px}
   .post-thumb .thumb-logo{display:block;font-size:34px;line-height:1;color:#fff;font-weight:700;margin-bottom:10px}
   .post-thumb .thumb-cat{color:#fff;font-size:11.5px;font-weight:800;letter-spacing:.09em;text-transform:uppercase}
