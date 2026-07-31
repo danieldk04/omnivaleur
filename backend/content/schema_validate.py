@@ -30,13 +30,15 @@ def validate_faq_json_ld(faq_items: list[dict]) -> list[str]:
 
 
 def validate_page(generated: dict) -> list[str]:
-    """Voert alle checks uit op een net gegenereerde pagina (voor het opslaan)."""
-    warnings = []
-    if not generated.get("title") or len(generated["title"]) > 60:
-        warnings.append("Meta title ontbreekt of is langer dan 60 tekens")
-    if not generated.get("meta_description") or len(generated["meta_description"]) > 160:
-        warnings.append("Meta description ontbreekt of is langer dan 160 tekens")
-    if not generated.get("h1"):
-        warnings.append("H1 ontbreekt")
+    """
+    Voert alle checks uit op een net gegenereerde pagina (voor het opslaan):
+    de schema.org-eisen hierboven plus de volledige publicatienorm uit
+    backend/content/quality.py (lengte, koppen, interne links, bronnen, beeld,
+    citeerbaar antwoordblok). Zo wordt elk nieuw artikel aan dezelfde lat
+    gehouden als de set die er nu staat.
+    """
+    from backend.content.quality import check_article
+
+    warnings = list(check_article(generated))
     warnings.extend(validate_faq_json_ld(generated.get("faq") or []))
     return warnings
