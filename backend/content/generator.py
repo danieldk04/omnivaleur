@@ -501,4 +501,4 @@ def translate_to_dutch(generated: dict) -> dict | None:
     if not parsed["body_html"] or not parsed["h1"]:
         logger.error("Kon vertaalde body/H1 niet parsen")
         return None
-    return parsed
+    return clean_generated(parsed)
