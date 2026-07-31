@@ -103,7 +103,7 @@ Return ONLY a JSON array, no prose, no markdown fences, in this exact shape:
 """
 
 
-def suggest_keywords(existing_keywords: list[str]) -> list[dict]:
+def suggest_keywords(existing_keywords: list[str], existing_slugs: list[str] | None = None) -> list[dict]:
     if not settings.anthropic_api_key:
         logger.error("ANTHROPIC_API_KEY ontbreekt — kan geen keywords voorstellen")
         return []
