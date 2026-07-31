@@ -6,6 +6,7 @@ de body), maar met de GEO/AEO-structuur uit de Omnivaleur briefing:
 quick-answer blockquote, H2's als vragen, key takeaways, FAQ- en
 Article-schema, en verplichte citaten naar echte (niet-hallucinerende) bronnen.
 """
+import hashlib
 import logging
 import re
 from pathlib import Path
