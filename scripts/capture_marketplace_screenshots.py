@@ -104,8 +104,7 @@ def _dismiss_overlays(page) -> list[str]:
 def _looks_blocked(page) -> str | None:
     """Grove check op een block-/consent-pagina i.p.v. de echte interface."""
     text = (page.evaluate("document.body.innerText") or "")[:4000].lower()
-    for phrase in ("where do you live", "access is temporarily restricted", "verify you are human",
-                   "enable javascript and cookies", "waar woon je"):
+    for phrase in BLOCK_PHRASES:
         if phrase in text:
             return phrase
     return None
