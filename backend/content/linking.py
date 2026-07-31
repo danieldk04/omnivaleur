@@ -80,7 +80,12 @@ def apply_internal_links(body_html: str, candidates: list[dict], self_intent_key
     # Al aanwezige interne links meetellen. Zonder deze telling voegt elke
     # herhaalde run (backfill, evaluator-refresh) er opnieuw `min_links` bij,
     # tot een artikel bezaaid is met links naar zichzelf-achtige pagina's.
-    existing = len({m for m in re.findall(r'href="(/[^"#][^"]*)"', body)})
+    # Zowel relatieve (/crosslisting/…) als absolute (https://omnivaleur.com/…)
+    # interne links tellen: het model schrijft ze absoluut, deze engine relatief.
+    # Alleen op de relatieve vorm tellen liet de teller elke run opnieuw bij nul
+    # beginnen, waardoor er telkens vijf links bij kwamen.
+    hrefs = re.findall(r'href="(?:https?://(?:www\.)?omnivaleur\.com)?(/[^"#][^"]*)"', body)
+    existing = len(set(hrefs))
     budget = max(min_links, 2) - existing
 
     for cand in candidates:
