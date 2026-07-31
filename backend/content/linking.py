@@ -77,8 +77,14 @@ def apply_internal_links(body_html: str, candidates: list[dict], self_intent_key
     body = body_html
     linked: list[str] = []
 
+    # Al aanwezige interne links meetellen. Zonder deze telling voegt elke
+    # herhaalde run (backfill, evaluator-refresh) er opnieuw `min_links` bij,
+    # tot een artikel bezaaid is met links naar zichzelf-achtige pagina's.
+    existing = len({m for m in re.findall(r'href="(/[^"#][^"]*)"', body)})
+    budget = max(min_links, 2) - existing
+
     for cand in candidates:
-        if len(linked) >= max(min_links, 2):
+        if len(linked) >= budget:
             break
         if cand["intent_key"] == self_intent_key:
             continue
