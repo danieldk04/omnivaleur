@@ -439,7 +439,7 @@ def generate_page_content(
     if not parsed["body_html"] or not parsed["h1"]:
         logger.error(f"Kon body/H1 niet parsen uit Claude-output voor '{keyword}'")
         return None
-    return parsed
+    return clean_generated(parsed)
 
 
 def _build_translation_prompt(generated: dict) -> str:
