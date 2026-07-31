@@ -11,7 +11,8 @@ import logging
 import re
 from datetime import datetime, timezone
 
-from backend.content.generator import generate_page_content, needs_dutch_translation, translate_to_dutch, inject_comparison_screenshots
+from backend.content.generator import generate_page_content, needs_dutch_translation, translate_to_dutch, inject_article_screenshots
+from backend.content.hero import generate_hero
 from backend.content.web_images import inject_platform_images
 from backend.content.infographics import inject_infographics
 from backend.content.linking import apply_internal_links
