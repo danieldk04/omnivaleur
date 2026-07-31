@@ -1,11 +1,12 @@
 # Omnivaleur — robots.txt
 #
-# LET OP: Cloudflare kan een eigen "Managed robots.txt" / AI-crawlerblok VÓÓR dit
-# bestand plakken. Zolang dat aanstaat, zijn de Allow-regels hieronder machteloos:
-# Cloudflare's eigen groepen voor GPTBot/ClaudeBot/Google-Extended/CCBot komen
-# eerst en zetten Disallow: /. Uitzetten kan alleen in het Cloudflare-dashboard
-# (zone omnivaleur.com → AI Crawl Control / Manage robots.txt). Controleer na een
-# wijziging altijd de LIVE output: curl -s https://omnivaleur.com/robots.txt
+# LET OP: Cloudflare kán een eigen "Managed robots.txt" / AI-crawlerblok VÓÓR dit
+# bestand plakken. Stond tot 31-07-2026 aan en zette GPTBot, ClaudeBot,
+# Google-Extended en CCBot op Disallow: / — de Allow-regels hieronder waren dan
+# machteloos, want Cloudflare's groepen komen eerst en zijn specifieker.
+# Inmiddels uitgezet in het Cloudflare-dashboard (zone omnivaleur.com →
+# AI Crawl Control / Manage robots.txt). Gaat het ooit weer mis: controleer de
+# LIVE output, niet dit bestand — curl -s https://omnivaleur.com/robots.txt
 #
 # Waarom AI-crawlers hier bewust welkom zijn: de blogs zijn geschreven om
 # geciteerd te worden in ChatGPT, Perplexity, Claude en Google AI Overviews
