@@ -86,86 +86,58 @@ def _competitor_key_in(keyword: str) -> str | None:
     return None
 
 
-def _local_screenshots_on_disk() -> list[dict]:
-    """
-    Filters CROSSLIST_SCREENSHOTS down to entries whose file actually exists in
-    frontend/assets/comparisons right now. A screenshot that got renamed, moved
-    or deleted (without this dict being updated in the same commit) would
-    otherwise silently ship as a broken <img> on every future article — this
-    is the guard against that, checked fresh on every generation instead of
-    trusting the dict blindly.
-    """
-    on_disk = []
-    for shot in CROSSLIST_SCREENSHOTS:
-        local_path = FRONTEND_DIR / shot["src"].lstrip("/")
-        if local_path.is_file():
-            on_disk.append(shot)
-        else:
-            logger.warning(f"Comparison screenshot missing on disk, skipping: {local_path}")
-    return on_disk
-
-
-def _figure_html(img: dict) -> str:
+def _competitor_figure_html(img: dict) -> str:
     return (
-        f'<figure style="margin:24px 0"><img src="{img["src"]}" alt="{img["alt"]}" '
-        f'loading="lazy" style="width:100%;border-radius:10px;border:1px solid #e2e8f0">'
+        f'<figure class="competitor-shot" style="margin:24px 0"><img src="{img["src"]}" alt="{img["alt"]}" '
+        f'loading="lazy" decoding="async" style="width:100%;height:auto;border-radius:10px;border:1px solid #e2e8f0">'
         f'<figcaption style="font-size:13px;color:#64748b;margin-top:8px;text-align:center">{img["caption"]}</figcaption></figure>'
     )
 
 
-def _h2_positions(body_html: str) -> list[int]:
-    return [m.start() for m in re.finditer(r"<h2", body_html)]
-
-
-def inject_comparison_screenshots(body_html: str, pillar: str, keyword: str) -> str:
+def inject_article_screenshots(
+    body_html: str,
+    pillar: str,
+    keyword: str,
+    title: str,
+    slug: str,
+    language: str = "en",
+) -> str:
     """
-    Pillar C only: spreads real Omnivaleur screenshots and the named competitor's
-    own public marketing screenshots across the article — one image roughly every
-    other H2 section, alternating "our real UI" / "their real UI" — instead of a
-    single image pair. Falls back to anchoring on <table> if the article has fewer
-    H2's than images. No-ops entirely if there's no <table> (Pillar C prompt always
-    includes one) or no matching competitor screenshots on file.
+    Zet echte app-screenshots in het artikel: die van Omnivaleur zelf (relevant
+    voor het onderwerp, per slug geroteerd — zie dashboard_images.py) en, alleen
+    op vergelijkingspagina's, de eigen publieke marketing-screenshots van de
+    genoemde concurrent ertussen.
+
+    Dit verving een oudere versie die ALLEEN op Pillar C draaide en daar altijd
+    dezelfde vijf beelden in dezelfde volgorde neerzette. Nu krijgt elk artikel
+    beeld, en krijgt geen twee artikelen dezelfde reeks.
     """
-    if pillar != "C" or "<table" not in body_html:
-        return body_html
+    if contains_figures(body_html, "/assets/dashboard/"):
+        return body_html  # al voorzien — idempotent voor backfills
 
-    competitor_key = _competitor_key_in(keyword)
-    competitor_shots = COMPETITOR_SCREENSHOTS.get(competitor_key, []) if competitor_key else []
-    our_shots = _local_screenshots_on_disk()
+    our_figures = [
+        dashboard_figure_html(shot, language)
+        for shot in relevant_shots(keyword, title, slug, body_html)
+    ]
 
-    # Interleave: our shot, their shot, our shot, their shot, ... capped at what we have.
-    figures = []
-    for i in range(max(len(our_shots), len(competitor_shots))):
-        if i < len(our_shots):
-            figures.append(_figure_html(our_shots[i]))
-        if i < len(competitor_shots):
-            figures.append(_figure_html(competitor_shots[i]))
+    competitor_figures: list[str] = []
+    if pillar == "C":
+        competitor_key = _competitor_key_in(keyword)
+        competitor_figures = [
+            _competitor_figure_html(img)
+            for img in (COMPETITOR_SCREENSHOTS.get(competitor_key, []) if competitor_key else [])
+        ]
 
-    positions = _h2_positions(body_html)
-    # Skip the very first H2 (intro section shouldn't open on an image) and space
-    # the rest out evenly across the remaining sections.
-    usable_positions = positions[1:]
+    # Om en om "onze UI" / "hun UI": op een vergelijkingspagina is dat precies de
+    # vergelijking die de lezer wil zien.
+    figures: list[str] = []
+    for i in range(max(len(our_figures), len(competitor_figures))):
+        if i < len(our_figures):
+            figures.append(our_figures[i])
+        if i < len(competitor_figures):
+            figures.append(competitor_figures[i])
 
-    if len(usable_positions) < 2:
-        # Not enough structure to interleave — fall back to sandwiching the table.
-        table_start = body_html.find("<table")
-        if figures:
-            body_html = body_html[:table_start] + figures[0] + body_html[table_start:]
-        if len(figures) > 1:
-            table_end = body_html.find("</table>")
-            if table_end != -1:
-                insert_at = table_end + len("</table>")
-                body_html = body_html[:insert_at] + figures[1] + body_html[insert_at:]
-        return body_html
-
-    # Spread figures across usable H2 positions, inserting from the end so earlier
-    # offsets stay valid as the string grows.
-    step = max(len(usable_positions) // max(len(figures), 1), 1)
-    slots = usable_positions[::step][: len(figures)]
-    for pos, fig in sorted(zip(slots, figures), key=lambda pair: pair[0], reverse=True):
-        body_html = body_html[:pos] + fig + body_html[pos:]
-
-    return body_html
+    return spread_figures(body_html, figures)
 
 
 AI_CLICHES = [
