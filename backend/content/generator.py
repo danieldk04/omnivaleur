@@ -327,8 +327,11 @@ Already-covered subtopics across those top 3 (do not just repeat these — find 
 EXISTING Omnivaleur PAGES (weave in 2 contextual internal links where genuinely relevant, using these exact URLs, natural anchor text):
 {internal_links_block}
 
-AUTHORITY SOURCES — cite 2-3 of these inline as clickable links where relevant to back up claims (tax rules, platform policies). ONLY use these exact URLs verbatim, never invent or guess a URL yourself:
+AUTHORITY SOURCES — cite 3-4 of these inline as clickable links where relevant to back up claims (fees, tax rules, platform policies). ONLY use these exact URLs verbatim, never invent or guess a URL yourself. Prefer the platform-specific ones over the generic ones where the topic allows it:
 {sources_block}
+
+FIRST-PARTY DATA — weave BOTH of these facts into the article naturally, in your own words, at the point where they actually help the reader. These are the only numbers on the page that no competing article can copy, and they are what AI search engines quote, so make them concrete and easy to lift:
+{own_data_block}
 
 HARD STYLE RULES:
 - Forbidden AI-cliché phrases (do NOT use, in {language} or English): {', '.join(AI_CLICHES)}, and never repeat the question back in the intro.
