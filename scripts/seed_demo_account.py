@@ -133,8 +133,15 @@ def seed(db, user_id: str):
     if old_items:
         db.table("items").delete().eq("user_id", user_id).execute()
 
+    # Vaste seed: een re-seed levert exact dezelfde spreiding op, zodat de
+    # dashboard-screenshots in de blogs niet bij elke herhaling andere cijfers
+    # tonen (dat zou artikelen onderling laten tegenspreken).
+    random.seed(20260731)
+
     for idx, it in enumerate(ITEMS):
-        created_at = now - timedelta(days=random.randint(5, 90))
+        # Gespreid over ~8 maanden i.p.v. 3, zodat de analytics-grafieken een
+        # echte trendlijn tonen in plaats van drie punten.
+        created_at = now - timedelta(days=random.randint(5, 240))
         item_row = {
             "id": str(uuid.uuid4()),
             "user_id": user_id,
