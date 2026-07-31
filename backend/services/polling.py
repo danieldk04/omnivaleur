@@ -20,12 +20,26 @@ async def poll_platform_statuses():
     """
     Check all active listings on polled platforms for status changes.
     Triggers auto-delist if a sold item is detected.
+
+    Draait elke `polling_interval` seconden, dus alles wat hier per listing aan
+    database-verkeer gebeurt, gebeurt honderden keren per dag. Daarom in drie
+    gebundelde queries in plaats van twee losse queries pér listing:
+
+      1. de actieve listings (alleen de kolommen die we echt gebruiken),
+      2. in één keer welk item bij welke gebruiker hoort,
+      3. in één keer alle platformkoppelingen.
+
+    Listings van gebruikers zonder koppeling voor dat platform worden
+    overgeslagen. `get_listing_status` vraagt bij Marktplaats/2dehands een
+    verkoper-pagina op die alleen mét de cookies van die verkoper klopt — zonder
+    koppeling levert die call dus geen bruikbare uitkomst op, alleen verkeer.
+    Dat scheelt ook de honderden nep-listings van het demo-account.
     """
     db = get_db()
 
     listings = (
         db.table("listings")
-        .select("*")
+        .select("id,item_id,platform,platform_listing_id,not_found_count")
         .eq("status", "active")
         .in_("platform", list(POLL_PLATFORMS))
         .execute()
@@ -34,30 +48,43 @@ async def poll_platform_statuses():
     if not listings.data:
         return
 
-    logger.info(f"Polling {len(listings.data)} active listings")
+    item_ids = list({row["item_id"] for row in listings.data})
+    owners = {
+        row["id"]: row["user_id"]
+        for row in (db.table("items").select("id,user_id").in_("id", item_ids).execute().data or [])
+    }
 
-    for listing in listings.data:
-        await _check_one(listing)
-
-
-async def _check_one(listing: dict):
-    db = get_db()
-    platform_name = listing["platform"]
-
-    item_resp = db.table("items").select("user_id").eq("id", listing["item_id"]).single().execute()
-    if not item_resp.data:
-        logger.warning(f"Item {listing['item_id']} not found — skipping poll")
-        return
-    user_id = item_resp.data["user_id"]
-
-    creds_resp = (
+    credentials_by_key: dict[tuple[str, str], dict] = {}
+    for row in (
         db.table("platform_credentials")
         .select("*")
-        .eq("user_id", user_id)
-        .eq("platform", platform_name)
+        .in_("platform", list(POLL_PLATFORMS))
         .execute()
+        .data
+        or []
+    ):
+        credentials_by_key[(row["user_id"], row["platform"])] = row
+
+    pollable = [
+        (row, credentials_by_key[(owners[row["item_id"]], row["platform"])])
+        for row in listings.data
+        if owners.get(row["item_id"])
+        and (owners[row["item_id"]], row["platform"]) in credentials_by_key
+    ]
+
+    skipped = len(listings.data) - len(pollable)
+    logger.info(
+        f"Polling {len(pollable)} active listings"
+        + (f" ({skipped} skipped — no platform connection for the owner)" if skipped else "")
     )
-    credentials = creds_resp.data[0] if creds_resp.data else {}
+
+    for listing, credentials in pollable:
+        await _check_one(listing, credentials)
+
+
+async def _check_one(listing: dict, credentials: dict):
+    db = get_db()
+    platform_name = listing["platform"]
 
     try:
         platform = get_platform(platform_name)
