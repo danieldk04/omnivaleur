@@ -13,3 +13,5 @@ python-dotenv==1.0.1
 google-api-python-client==2.149.0
 google-auth==2.35.0
 google-ads==26.0.0
+# Tekent de hero-/deelafbeelding per artikel (backend/content/hero.py).
+pillow==11.0.0
