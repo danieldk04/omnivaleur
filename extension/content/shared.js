@@ -121,6 +121,10 @@ window.CL = (() => {
     await runInMainWorld("BLUR_DESC", { selector });
     // Het verborgen veld overleeft een herteken-ronde niet altijd; nog één keer.
     await runInMainWorld("FILL_HIDDEN_DESC", { text: value });
+    // En daarna blijft een bewaker het terugzetten zolang het formulier open
+    // staat. Alles tussen hier en de Plaatsen-knop (foto's, kenmerken, het
+    // merk-venster) kan het veld namelijk opnieuw leeggooien.
+    await runInMainWorld("ENFORCE_DESC", { text: value, durationMs: 300000 });
     return true;
   }
 
