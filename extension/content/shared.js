@@ -783,31 +783,12 @@ window.CL = (() => {
     }
 
     // Description LAST — fills Lexical EditorState after all React re-renders are done.
-    // Let op: na élke hervulling moet de echte toetsaanslag opnieuw. Zonder dat
-    // gooit deze laatste hervulling precies weg wat het formulier nodig had om
-    // de tekst te acccepteren — en blijft "Geen zoekertjestekst ingevuld" staan.
-    if (_pendingDescription && _descriptionSelector) {
-      await runInMainWorld("FILL_DESC", { selector: _descriptionSelector, text: _pendingDescription });
-      await runInMainWorld("FILL_HIDDEN_DESC", { text: _pendingDescription });
-    }
-
-    // PRE-FLIGHT. Submitting a form we already know is incomplete only produces
-    // the platform's own useless "Geen advertentietekst ingevuld" — and, worse,
-    // it happened silently because every fill ran inside step() which swallows
-    // errors. Verify the two mandatory fields here, retry the description once,
-    // and refuse to submit with a message that names what is missing.
-    if (descriptionIsEmpty()) {
-      await sleep(500);
-      await runInMainWorld("FILL_DESC", { selector: _descriptionSelector, text: _pendingDescription });
-      await sleep(800);
-      if (descriptionIsEmpty()) {
-        clog("plaatsen: geweigerd — de editor bleef leeg");
-        throw new Error(
-          "Beschrijving bleef leeg in de editor — niet geplaatst. " +
-          "Plak de tekst zelf in het advertentietekst-veld en klik op Plaatsen."
-        );
-      }
-    }
+    // PRE-FLIGHT. Een formulier plaatsen waarvan we al weten dat het incompleet
+    // is levert alleen het nutteloze "Geen zoekertjestekst ingevuld" op. Hier
+    // wordt de beschrijving daarom net zolang opnieuw gezet tot zowel de
+    // zichtbare editor als het veld waar het formulier écht op valideert gevuld
+    // is — en anders weigeren we te plaatsen, met een melding die zegt wat er is.
+    if (_pendingDescription && _descriptionSelector) await ensureDescriptionReady();
     // Het formulier houdt de geüploade foto's bij in een verborgen veld. Dat is
     // een hardere waarheid dan miniaturen tellen, die per categorie anders heten.
     const fotoIds = qs('input[name="images.ids"]');
