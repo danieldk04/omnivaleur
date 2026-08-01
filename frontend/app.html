@@ -3777,10 +3777,11 @@ async function saveItem() {
   try {
     let itemId = id;
     if (id) {
-      await apiFetch(`${API}/api/items/${id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) });
+      const res = await apiFetchRetry(`${API}/api/items/${id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) });
+      await requireOk(res, 'Saving failed');
     } else {
-      const res = await apiFetch(`${API}/api/items/`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) });
-      const created = await res.json();
+      const res = await apiFetchRetry(`${API}/api/items/`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) });
+      const created = await requireOk(res, 'Creating the item failed');
       itemId = created.id;
       const selected = [...document.querySelectorAll('#platform-checkboxes input:checked')].map(c => c.value);
       if (selected.length && itemId) {
