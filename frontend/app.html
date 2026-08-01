@@ -2227,6 +2227,40 @@ async function parseJsonSafe(r) {
   }
 }
 
+// Turn a response into its JSON body, or into an error that says what the server
+// actually complained about. Blindly calling r.json() on an error response is
+// what produced "Unexpected token 'I', "Internal S"… is not valid JSON" — a
+// message that hides both the cause and the fact that nothing was saved.
+async function requireOk(r, whatFailed) {
+  const body = await parseJsonSafe(r).catch((e) => { throw new Error(`${whatFailed}: ${e.message}`); });
+  if (!r.ok) {
+    const detail = typeof body?.detail === 'string' ? body.detail
+      : Array.isArray(body?.detail) ? body.detail.map(d => d.msg || d).join(', ')
+      : body?.message || `server error ${r.status}`;
+    throw new Error(`${whatFailed}: ${detail}`);
+  }
+  return body;
+}
+
+// The backend restarts on every deploy, which takes a handful of seconds. A save
+// that lands in that window used to fail outright and the filled-in form was
+// lost. Retry a server-side failure a couple of times before giving up; only for
+// requests that are safe to repeat (a failed save wrote nothing).
+async function apiFetchRetry(url, opts = {}, tries = 3) {
+  let last;
+  for (let i = 0; i < tries; i++) {
+    try {
+      last = await apiFetch(url, opts);
+      if (last.status < 500) return last;
+    } catch (e) {
+      last = null;                       // network dropped — same treatment
+      if (i === tries - 1) throw e;
+    }
+    if (i < tries - 1) await new Promise(r => setTimeout(r, 1500 * (i + 1)));
+  }
+  return last;
+}
+
 // Etsy is not built yet (shown as "Coming soon" on the Platforms page only) — it
 // must never appear as a publishable target in item rows, the crosslist picker,
 // analytics or the calculator, so it's deliberately left out of this list.
