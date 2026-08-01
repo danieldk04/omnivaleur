@@ -4340,10 +4340,7 @@ function openImportCreate(candidateId) {
   document.getElementById('f-brand').value = c.brand || '';
   document.getElementById('f-color').value = c.color || '';
   document.getElementById('f-material').value = c.material || '';
-  if (c.size) {
-    const sizeSel = document.getElementById('f-size');
-    if ([...sizeSel.options].some(o => o.value === c.size)) sizeSel.value = c.size;
-  }
+  if (c.size) setSizeValue(c.size);
   if (c.condition) {
     const condSel = document.getElementById('f-condition');
     if ([...condSel.options].some(o => o.value === c.condition)) condSel.value = c.condition;
