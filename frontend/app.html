@@ -3792,7 +3792,7 @@ async function saveItem() {
           price_shopify: data.price_shopify,
         }),
       });
-      if (!r.ok) throw new Error((await r.json()).detail || 'Import failed');
+      await requireOk(r, 'Import failed');
       importCreateCandidateId = null;
       closeModal('modal-add');
       await loadAll();
