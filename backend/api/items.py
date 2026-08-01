@@ -76,13 +76,17 @@ async def update_item(item_id: str, updates: dict, user_id: str = Depends(get_cu
         prior = db.table("items").select("*").eq("id", item_id).eq("user_id", user_id).execute().data
         prior = prior[0] if prior else None
 
-    result = (
-        db.table("items")
-        .update(clean)
-        .eq("id", item_id)
-        .eq("user_id", user_id)
-        .execute()
-    )
+    try:
+        result = (
+            db.table("items")
+            .update(clean)
+            .eq("id", item_id)
+            .eq("user_id", user_id)
+            .execute()
+        )
+    except Exception as e:
+        logger.exception("Item update failed for %s", item_id)
+        raise HTTPException(status_code=502, detail=f"Database refused the change: {e}")
     if not result.data:
         raise HTTPException(status_code=404, detail="Item not found")
     item = result.data[0]
