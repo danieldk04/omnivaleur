@@ -223,6 +223,40 @@
       "slug": "etsy-to-vinted-crosslisting-automation",
       "status": "published",
       "priority": 27
+    },
+    {
+      "keyword": "2dehands to etsy crosslisting",
+      "region": "nl",
+      "pillar": "A",
+      "slug": "2dehands-to-etsy-crosslisting",
+      "status": "published",
+      "nl_slug": "2dehands-naar-etsy-crosslisting",
+      "priority": 28
+    },
+    {
+      "keyword": "vintage toy reselling automation",
+      "region": "nl",
+      "pillar": "B",
+      "slug": "vintage-toy-reselling-automation",
+      "status": "pending",
+      "priority": 29
+    },
+    {
+      "keyword": "marktplaats to ebay crosslisting 2026",
+      "region": "nl",
+      "pillar": "A",
+      "slug": "marktplaats-to-ebay-crosslisting-2026",
+      "status": "pending",
+      "nl_slug": "marktplaats-naar-ebay-crosslisting-2026",
+      "priority": 30
+    },
+    {
+      "keyword": "gaming equipment reselling automation",
+      "region": "nl",
+      "pillar": "B",
+      "slug": "gaming-equipment-reselling-automation",
+      "status": "pending",
+      "priority": 31
     }
   ],
   "published": [
@@ -468,6 +502,15 @@
       "action": "created",
       "url_path": "/crosslisting/etsy-to-vinted-crosslisting-automation",
       "published_at": "2026-07-31T10:31:19.690305+00:00"
+    },
+    {
+      "keyword": "2dehands to etsy crosslisting",
+      "slug": "2dehands-to-etsy-crosslisting",
+      "region": "nl",
+      "pillar": "A",
+      "action": "created",
+      "url_path": "/crosslisting/2dehands-to-etsy-crosslisting",
+      "published_at": "2026-08-01T09:52:56.721005+00:00"
     }
   ]
 }
