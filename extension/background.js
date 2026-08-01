@@ -2778,24 +2778,61 @@ async function _mwReadNotifCounts(platform) {
 // ingevuld" staan hoeveel tekst er ook zichtbaar is. Dit veld staat onder
 // React-beheer, dus zetten via de eigen setter plus een input-gebeurtenis —
 // precies zoals React zelf een toetsaanslag verwerkt.
-function _mwFillHiddenDescription(descText) {
-  const veld = document.querySelector('input[name^="description_nl-"], textarea[name^="description_nl-"]')
-    || document.querySelector('input[name="description"], textarea[name="description"]');
-  if (!veld) return false;
+// Er staat niet altijd één zo'n veld op het formulier: op 2dehands komen
+// description_nl-BE en description_nl-NL naast elkaar voor, en welke van de twee
+// de validatie leest verschilt per categorie. Alleen de eerste vullen liet de
+// andere leeg — precies het willekeurige "geen zoekertjestekst ingevuld".
+// Daarom vullen we ze allemaal.
+function _mwHiddenDescriptionFields() {
+  const velden = [...document.querySelectorAll(
+    'input[name^="description_nl-"], textarea[name^="description_nl-"], ' +
+    'input[name="description"], textarea[name="description"]'
+  )];
+  return velden.filter((v) => !v.disabled);
+}
+
+function _mwSetHiddenField(veld, descText) {
   const proto = veld instanceof HTMLTextAreaElement
     ? window.HTMLTextAreaElement.prototype : window.HTMLInputElement.prototype;
   const setter = Object.getOwnPropertyDescriptor(proto, "value").set;
   setter.call(veld, descText);
   veld.dispatchEvent(new Event("input", { bubbles: true }));
   veld.dispatchEvent(new Event("change", { bubbles: true }));
-  return (veld.value || "").trim().length > 0;
 }
 
-// Leest terug wat het formulier zélf als beschrijving beschouwt.
+function _mwFillHiddenDescription(descText) {
+  const velden = _mwHiddenDescriptionFields();
+  if (!velden.length) return false;
+  velden.forEach((v) => _mwSetHiddenField(v, descText));
+  return velden.every((v) => (v.value || "").trim().length > 0);
+}
+
+// Leest terug wat het formulier zélf als beschrijving beschouwt. Eén leeg veld
+// is genoeg om afgekeurd te worden, dus dan melden we leeg.
 function _mwHiddenDescriptionValue() {
-  const veld = document.querySelector('input[name^="description_nl-"], textarea[name^="description_nl-"]')
-    || document.querySelector('input[name="description"], textarea[name="description"]');
-  return veld ? (veld.value || "") : null;
+  const velden = _mwHiddenDescriptionFields();
+  if (!velden.length) return null;
+  if (velden.some((v) => (v.value || "").trim().length === 0)) return "";
+  return velden[0].value || "";
+}
+
+// Het verborgen veld leeggooien gebeurt niet één keer maar telkens opnieuw: elke
+// hertekening van het formulier (foto klaar, kenmerk gekozen, merk-venster
+// dicht) kan het wissen. Eenmalig vullen is daarom altijd een gok geweest —
+// vandaar dat het "heel random" misging. Deze bewaker zet het veld terug zodra
+// het leeg raakt, tot vlak na het plaatsen.
+function _mwEnforceDescription(descText, durationMs) {
+  try { clearInterval(window.__ovDescKeeper); } catch (_) {}
+  const einde = Date.now() + (durationMs || 240000);
+  const herstel = () => {
+    if (Date.now() > einde) { clearInterval(window.__ovDescKeeper); return; }
+    for (const veld of _mwHiddenDescriptionFields()) {
+      if ((veld.value || "").trim().length === 0) _mwSetHiddenField(veld, descText);
+    }
+  };
+  herstel();
+  window.__ovDescKeeper = setInterval(herstel, 250);
+  return true;
 }
 
 async function _mwFillDescription(selector, descText) {
