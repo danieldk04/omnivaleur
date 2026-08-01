@@ -2251,7 +2251,10 @@ async function apiFetchRetry(url, opts = {}, tries = 3) {
   for (let i = 0; i < tries; i++) {
     try {
       last = await apiFetch(url, opts);
-      if (last.status < 500) return last;
+      // Only gateway-level failures are retried: they mean the request never
+      // reached a running app, so repeating it cannot create a second item. A
+      // plain 500 is NOT retried — the app did run and may have written a row.
+      if (![502, 503, 504].includes(last.status)) return last;
     } catch (e) {
       last = null;                       // network dropped — same treatment
       if (i === tries - 1) throw e;
