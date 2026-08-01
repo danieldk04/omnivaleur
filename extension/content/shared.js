@@ -774,6 +774,36 @@ window.CL = (() => {
     });
   }
 
+  // Zorgt dat de beschrijving er staat waar het formulier hem leest, en geeft
+  // pas op na een paar echte pogingen. De volgorde is met opzet:
+  // vullen → veld verlaten → dán het verborgen veld zetten. Andersom wist het
+  // verlaten van het veld net weer wat we er zojuist in hadden gezet.
+  async function ensureDescriptionReady() {
+    for (let poging = 1; poging <= 5; poging++) {
+      if (descriptionIsEmpty()) {
+        await runInMainWorld("FILL_DESC", { selector: _descriptionSelector, text: _pendingDescription });
+        await sleep(400);
+      }
+      await runInMainWorld("BLUR_DESC", { selector: _descriptionSelector });
+      await sleep(250);
+      await runInMainWorld("FILL_HIDDEN_DESC", { text: _pendingDescription });
+      await runInMainWorld("ENFORCE_DESC", { text: _pendingDescription, durationMs: 120000 });
+      await sleep(250);
+
+      const zichtbaarLeeg = descriptionIsEmpty();
+      const verborgenOk = await hiddenDescriptionOk();
+      if (!zichtbaarLeeg && verborgenOk) return true;
+      clog(`beschrijving poging ${poging}: editor ${zichtbaarLeeg ? "LEEG" : "ok"}, ` +
+           `verborgen veld ${verborgenOk ? "ok" : "LEEG"}`);
+      await sleep(600);
+    }
+    clog("plaatsen: geweigerd — de beschrijving bleef leeg");
+    throw new Error(
+      "Beschrijving bleef leeg op het formulier — niet geplaatst. " +
+      "Plak de tekst zelf in het advertentietekst-veld en klik op Plaatsen."
+    );
+  }
+
   async function submitListing(idFromUrl) {
     // Brand FIRST — closing the brand modal triggers a React re-render that resets
     // the Lexical EditorState. Description must be filled AFTER brand to survive.
