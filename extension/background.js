@@ -2783,51 +2783,57 @@ async function _mwReadNotifCounts(platform) {
 // de validatie leest verschilt per categorie. Alleen de eerste vullen liet de
 // andere leeg — precies het willekeurige "geen zoekertjestekst ingevuld".
 // Daarom vullen we ze allemaal.
-function _mwHiddenDescriptionFields() {
-  const velden = [...document.querySelectorAll(
-    'input[name^="description_nl-"], textarea[name^="description_nl-"], ' +
-    'input[name="description"], textarea[name="description"]'
-  )];
-  return velden.filter((v) => !v.disabled);
-}
-
-function _mwSetHiddenField(veld, descText) {
-  const proto = veld instanceof HTMLTextAreaElement
-    ? window.HTMLTextAreaElement.prototype : window.HTMLInputElement.prototype;
-  const setter = Object.getOwnPropertyDescriptor(proto, "value").set;
-  setter.call(veld, descText);
-  veld.dispatchEvent(new Event("input", { bubbles: true }));
-  veld.dispatchEvent(new Event("change", { bubbles: true }));
-}
-
+//
+// Let op: chrome.scripting.executeScript injecteert alléén de functie zelf —
+// hulpfuncties uit dit bestand bestaan niet in de pagina. Alles staat daarom
+// opzettelijk binnenin.
 function _mwFillHiddenDescription(descText) {
-  const velden = _mwHiddenDescriptionFields();
+  const SEL = 'input[name^="description_nl-"], textarea[name^="description_nl-"], '
+            + 'input[name="description"], textarea[name="description"]';
+  const velden = [...document.querySelectorAll(SEL)].filter((v) => !v.disabled);
   if (!velden.length) return false;
-  velden.forEach((v) => _mwSetHiddenField(v, descText));
+  const zet = (veld) => {
+    const proto = veld instanceof HTMLTextAreaElement
+      ? window.HTMLTextAreaElement.prototype : window.HTMLInputElement.prototype;
+    Object.getOwnPropertyDescriptor(proto, "value").set.call(veld, descText);
+    veld.dispatchEvent(new Event("input", { bubbles: true }));
+    veld.dispatchEvent(new Event("change", { bubbles: true }));
+  };
+  velden.forEach(zet);
   return velden.every((v) => (v.value || "").trim().length > 0);
 }
 
 // Leest terug wat het formulier zélf als beschrijving beschouwt. Eén leeg veld
 // is genoeg om afgekeurd te worden, dus dan melden we leeg.
 function _mwHiddenDescriptionValue() {
-  const velden = _mwHiddenDescriptionFields();
+  const SEL = 'input[name^="description_nl-"], textarea[name^="description_nl-"], '
+            + 'input[name="description"], textarea[name="description"]';
+  const velden = [...document.querySelectorAll(SEL)].filter((v) => !v.disabled);
   if (!velden.length) return null;
   if (velden.some((v) => (v.value || "").trim().length === 0)) return "";
   return velden[0].value || "";
 }
 
-// Het verborgen veld leeggooien gebeurt niet één keer maar telkens opnieuw: elke
+// Het verborgen veld raakt niet één keer leeg maar telkens opnieuw: elke
 // hertekening van het formulier (foto klaar, kenmerk gekozen, merk-venster
-// dicht) kan het wissen. Eenmalig vullen is daarom altijd een gok geweest —
-// vandaar dat het "heel random" misging. Deze bewaker zet het veld terug zodra
-// het leeg raakt, tot vlak na het plaatsen.
+// dicht, veld verlaten) kan het wissen. Eenmalig vullen was daarom altijd een
+// gok — vandaar dat het "heel random" misging. Deze bewaker zet het veld terug
+// zodra het leeg raakt, tot en met het plaatsen. Hij schrijft uitsluitend als
+// het veld leeg is, dus tekst die het formulier er zelf in zet blijft staan.
 function _mwEnforceDescription(descText, durationMs) {
+  const SEL = 'input[name^="description_nl-"], textarea[name^="description_nl-"], '
+            + 'input[name="description"], textarea[name="description"]';
   try { clearInterval(window.__ovDescKeeper); } catch (_) {}
-  const einde = Date.now() + (durationMs || 240000);
+  const einde = Date.now() + (durationMs || 300000);
   const herstel = () => {
-    if (Date.now() > einde) { clearInterval(window.__ovDescKeeper); return; }
-    for (const veld of _mwHiddenDescriptionFields()) {
-      if ((veld.value || "").trim().length === 0) _mwSetHiddenField(veld, descText);
+    if (Date.now() > einde) { try { clearInterval(window.__ovDescKeeper); } catch (_) {} return; }
+    for (const veld of document.querySelectorAll(SEL)) {
+      if (veld.disabled || (veld.value || "").trim().length > 0) continue;
+      const proto = veld instanceof HTMLTextAreaElement
+        ? window.HTMLTextAreaElement.prototype : window.HTMLInputElement.prototype;
+      Object.getOwnPropertyDescriptor(proto, "value").set.call(veld, descText);
+      veld.dispatchEvent(new Event("input", { bubbles: true }));
+      veld.dispatchEvent(new Event("change", { bubbles: true }));
     }
   };
   herstel();
