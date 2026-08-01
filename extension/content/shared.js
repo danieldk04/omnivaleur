@@ -820,23 +820,17 @@ window.CL = (() => {
            // anchored one-word pattern could never match.
            /^(plaats(en)?( je advertentie)?|upload|opslaan|publiceer(en)?|publish|save)$/i
              .test((b.textContent || "").trim()));
-    // Laatste zekerheid vlak voor de klik: het veld waar het formulier op
-    // valideert moet gevuld zijn, anders weigert het zonder bruikbare melding.
-    if (_pendingDescription) {
-      if (!(await hiddenDescriptionOk())) {
-        await runInMainWorld("FILL_HIDDEN_DESC", { text: _pendingDescription });
-        await sleep(400);
-      }
-      clog(`plaatsen: verborgen beschrijvingsveld ${(await hiddenDescriptionOk()) ? "gevuld" : "LEEG"}`);
-    }
-
     if (!btn) throw new Error("Submit/Plaats-knop niet gevonden");
     clog(`plaatsen: knop gevonden ("${(btn.textContent || "").trim()}")`);
-    // Nogmaals het beschrijvingsveld verlaten: de laatste bewerking eraan kan
-    // van een herstelpoging hierboven komen, en dan staat de cursor er nog in.
-    if (_descriptionSelector) await runInMainWorld("BLUR_DESC", { selector: _descriptionSelector });
     btn.scrollIntoView({ block: "center" });
     await sleep(800); // Lexical commit is async — give it time before submit fires
+
+    // Allerlaatste controle, ná alle blur- en herteken-rondes: dit is het moment
+    // waarop het formulier de beschrijving beoordeelt. Was dit vroeger alleen
+    // een logregel, waarna er tóch geklikt werd — precies de willekeurige
+    // afkeuring die de gebruiker zag.
+    if (_pendingDescription && _descriptionSelector) await ensureDescriptionReady();
+
     btn.click();
     clog("plaatsen: op de knop geklikt, wachten op de advertentie");
 
