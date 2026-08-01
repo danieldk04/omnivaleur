@@ -3231,6 +3231,18 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     return true;
   }
 
+  // Houdt het verborgen beschrijvingsveld gevuld zolang het formulier openstaat.
+  if (msg.type === "ENFORCE_DESC") {
+    chrome.scripting.executeScript({
+      target: { tabId: sender.tab.id }, world: "MAIN",
+      func: _mwEnforceDescription, args: [msg.text, msg.durationMs || 300000],
+    }, (results) => {
+      if (chrome.runtime.lastError) sendResponse(false);
+      else sendResponse(results?.[0]?.result ?? false);
+    });
+    return true;
+  }
+
   if (msg.type === "READ_HIDDEN_DESC") {
     chrome.scripting.executeScript({
       target: { tabId: sender.tab.id }, world: "MAIN",
