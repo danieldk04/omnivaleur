@@ -3599,6 +3599,28 @@ function updateConditionHint() {
   if (hint) hint.textContent = CONDITION_HINTS[val] || '';
 }
 
+// The size list can never cover every brand's labelling. A stored size that
+// isn't in it used to leave the field blank, so re-saving the item silently
+// wiped the size. Keep the value by adding it to the list on the spot.
+function setSizeValue(value) {
+  const sel = document.getElementById('f-size');
+  if (!sel) return;
+  const size = (value || '').trim();
+  if (size && ![...sel.options].some(o => o.value === size)) {
+    let group = sel.querySelector('optgroup[label="Other"]');
+    if (!group) {
+      group = document.createElement('optgroup');
+      group.label = 'Other';
+      sel.appendChild(group);
+    }
+    const opt = document.createElement('option');
+    opt.value = size;
+    opt.textContent = size;
+    group.appendChild(opt);
+  }
+  sel.value = size;
+}
+
 function openAddItem() {
   importCreateCandidateId = null;
   document.getElementById('modal-title').textContent = 'New item';
