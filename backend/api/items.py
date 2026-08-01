@@ -24,7 +24,18 @@ def create_item(item: ItemCreate, user_id: str = Depends(get_current_user)):
     data["user_id"] = user_id
     if not data.get("sku"):
         data["sku"] = f"REV-{data['id'][:8].upper()}"
-    result = db.table("items").insert(_strip_missing(data)).execute()
+    # An unhandled exception here reaches the browser as the bare text "Internal
+    # Server Error", which the dashboard then fails to parse as JSON — so the
+    # user saw a cryptic parser message and we saw nothing at all. Log the real
+    # database complaint and hand back something readable.
+    try:
+        result = db.table("items").insert(_strip_missing(data)).execute()
+    except Exception as e:
+        logger.exception("Item insert failed for user %s", user_id)
+        raise HTTPException(status_code=502, detail=f"Database refused the item: {e}")
+    if not result.data:
+        logger.error("Item insert returned no row for user %s", user_id)
+        raise HTTPException(status_code=502, detail="The item was not stored — please try again.")
     return result.data[0]
 
 
