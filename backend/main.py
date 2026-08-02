@@ -15,6 +15,15 @@ FRONTEND = Path(__file__).parent.parent / "frontend"
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    # Elk geauthenticeerd verzoek doet zijn inlogcontrole via asyncio.to_thread.
+    # Die gebruikt standaard maar (aantal cpu's + 4) threads, en op een kleine
+    # container zijn dat er een handvol. Zaten die vol met trage Supabase-
+    # aanroepen, dan bleef een verzoek wachten vóórdat het de route bereikte —
+    # de gateway gaf dan 502 terwijl de server zelf "gezond" leek. Ruim genoeg
+    # threads dus: ze staan toch bijna altijd te wachten op het netwerk.
+    asyncio.get_running_loop().set_default_executor(
+        ThreadPoolExecutor(max_workers=48, thread_name_prefix="supabase")
+    )
     start_scheduler()
     yield
     stop_scheduler()
