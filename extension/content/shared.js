@@ -824,6 +824,18 @@ window.CL = (() => {
            `verborgen veld ${verborgenOk ? "ok" : "LEEG"}`);
       await sleep(600);
     }
+
+    // Staat de tekst zichtbaar in de editor, dan weigeren we NIET meer te
+    // plaatsen. Dat oordeel kwam van onze eigen inschatting van een verborgen
+    // veld, en die zat er soms naast — dan blokkeerden we een advertentie die
+    // prima had gekund. Plaatsen mag het nu proberen; klaagt het formulier
+    // daarna alsnog, dan typt submitListing een echte spatie en klikt opnieuw.
+    if (!descriptionIsEmpty()) {
+      clog("beschrijving: tekst staat zichtbaar in de editor — toch plaatsen, " +
+           "met herstel-na-klik als het formulier alsnog klaagt");
+      return true;
+    }
+
     clog("plaatsen: geweigerd — de beschrijving bleef leeg");
     throw new Error(
       "Beschrijving bleef leeg op het formulier — niet geplaatst. " +
