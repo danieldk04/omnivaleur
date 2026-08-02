@@ -16,6 +16,15 @@ _DUTCH_PLATFORMS: set[str] = {"marktplaats", "2dehands"}
 logger = logging.getLogger(__name__)
 
 
+# De Supabase-client is synchroon: elke .execute() legt de héle server stil tot
+# het antwoord binnen is. Publiceren doet er een handvol per platform, boven op
+# de vertalingen en de Shopify-upload. Zolang één verkoper op "Opslaan" wachtte,
+# stond iedereen anders dus ook te wachten — en gaf de gateway 502. Alleen
+# .execute() doet netwerkwerk; de rest van de keten bouwt enkel de query op.
+async def _exec(query):
+    return await asyncio.to_thread(query.execute)
+
+
 async def _translate_with_claude(text: str, target_lang: str, brand: str | None = None) -> str:
     """Translate text using Claude. Preserves brand names, formatting and paragraph structure."""
     if not text or not text.strip():
