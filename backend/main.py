@@ -66,7 +66,7 @@ app.add_middleware(
 # inhoud, geen tokens, geen id's — plus hoe druk de server het heeft. Zo is
 # achteraf te zien of een verzoek de server überhaupt bereikte en waar de tijd
 # bleef.
-_RECENT: deque = deque(maxlen=100)
+from backend.diag import RECENT as _RECENT, ERRORS as _ERRORS  # noqa: E402
 
 
 def _route_of(path: str) -> str:
