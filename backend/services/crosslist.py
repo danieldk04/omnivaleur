@@ -394,11 +394,11 @@ async def _publish_one(item: dict, platform_name: str, credentials: dict, user_i
     except Exception as e:
         msg = str(e) or f"{type(e).__name__}: {e!r}"
         logger.error(f"Failed to list on {platform_name}: {msg}")
-        db.table("listings").update({
+        await _exec(db.table("listings").update({
             "status": "error",
             "error_message": msg,
-        }).eq("id", listing_id).execute()
-        _log_event(listing_id, "error", {"error": msg})
+        }).eq("id", listing_id))
+        await asyncio.to_thread(_log_event, listing_id, "error", {"error": msg})
         return {"listing_id": listing_id, "platform": platform_name, "status": "error", "error": msg}
 
 
