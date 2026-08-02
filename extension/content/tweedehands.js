@@ -70,7 +70,8 @@
     await step("title",        () => fillInputHuman(titleInput(), smartTrunc(item.title || "", 60)));
     await step("price",        () => { const el = qs('input[name="price.value"]'); return fillInputHuman(el, el?.type === "number" ? String(item.price || "") : String(item.price || "").replace(".", ",")); });
     // Mandatory fields — deliberately NOT inside step(), see marktplaats.js.
-    await fillDescription(['[data-testid="text-editor-input_nl-BE"]', '[data-testid="text-editor-input_nl-NL"]'], sanitize2dh(item.description));
+    // nudge: ook 2dehands rekent de tekst pas mee na een echte toetsaanslag.
+    await fillDescription(['[data-testid="text-editor-input_nl-BE"]', '[data-testid="text-editor-input_nl-NL"]'], sanitize2dh(item.description), { nudge: true });
     // Foto's zijn verplicht, maar een mislukte upload mag niet de rest van het
     // formulier overslaan: dan blijft alles daarna leeg zonder dat iemand ziet
     // waarom. We onthouden de fout en melden hem pas aan het eind.
