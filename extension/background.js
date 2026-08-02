@@ -3344,6 +3344,18 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     return true;
   }
 
+  // Leest terug wat er echt op het formulier staat — zie _mwDescribeDescriptionFields.
+  if (msg.type === "DESCRIBE_DESC") {
+    chrome.scripting.executeScript({
+      target: { tabId: sender.tab.id }, world: "MAIN",
+      func: _mwDescribeDescriptionFields, args: [],
+    }, (results) => {
+      if (chrome.runtime.lastError) sendResponse("(niet leesbaar)");
+      else sendResponse(results?.[0]?.result ?? "(leeg)");
+    });
+    return true;
+  }
+
   // Typt één echte spatie in de editor — zie _mwNudgeDescription.
   if (msg.type === "NUDGE_DESC") {
     chrome.scripting.executeScript({
