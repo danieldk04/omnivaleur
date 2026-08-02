@@ -7,12 +7,8 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 from contextlib import asynccontextmanager
 from concurrent.futures import ThreadPoolExecutor
-from collections import deque
-from datetime import datetime, timezone
 from pathlib import Path
 import asyncio
-import threading
-import time
 from backend.api import items, listings, platforms, webhooks, jobs, uploads, shopify, auth, billing, imports, content, notifications
 from backend.scheduler import start_scheduler, stop_scheduler
 
@@ -57,67 +53,6 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
-
-# ── Tijdelijk meetpunt ───────────────────────────────────────────────────────
-# Storingen op de server zijn tot nu toe onzichtbaar: de logs zijn niet van
-# buitenaf te lezen, dus bij een 502 was er niets om op af te gaan. Dit houdt de
-# laatste honderd verzoeken bij — alleen methode, route, status en duur, geen
-# inhoud, geen tokens, geen id's — plus hoe druk de server het heeft. Zo is
-# achteraf te zien of een verzoek de server überhaupt bereikte en waar de tijd
-# bleef.
-from backend.diag import RECENT as _RECENT, ERRORS as _ERRORS  # noqa: E402
-
-
-def _route_of(path: str) -> str:
-    """Route zonder id's, zodat hier geen gegevens van gebruikers in belanden."""
-    delen = [d for d in path.split("/") if d]
-    schoon = ["{id}" if (len(d) > 20 or d.isdigit()) else d for d in delen]
-    return "/" + "/".join(schoon)
-
-
-@app.middleware("http")
-async def _trace_requests(request, call_next):
-    entry = {
-        "op": datetime.now(timezone.utc).strftime("%H:%M:%S"),
-        "methode": request.method,
-        "route": _route_of(request.url.path),
-        "status": "BEZIG",
-        "ms": None,
-    }
-    _RECENT.append(entry)
-    start = time.monotonic()
-    try:
-        response = await call_next(request)
-        entry["status"] = response.status_code
-        return response
-    except Exception as e:  # noqa: BLE001 - alleen vastleggen, dan doorgooien
-        entry["status"] = "CRASH"
-        entry["fout"] = f"{type(e).__name__}: {e}"[:300]
-        raise
-    finally:
-        entry["ms"] = round((time.monotonic() - start) * 1000)
-
-
-@app.get("/__diag/recent")
-async def _diag_recent():
-    # Loop-vertraging: hoe lang een taakje dat direct aan de beurt zou moeten
-    # zijn, moet wachten. Alles boven een paar honderd ms betekent dat de server
-    # geblokkeerd wordt door werk dat niet op de gedeelde lijn thuishoort.
-    t = time.monotonic()
-    await asyncio.sleep(0)
-    lag_ms = round((time.monotonic() - t) * 1000, 1)
-    loop = asyncio.get_running_loop()
-    ex = getattr(loop, "_default_executor", None)
-    return {
-        "loop_vertraging_ms": lag_ms,
-        "threads_actief": threading.active_count(),
-        "thread_namen": sorted({t.name.split("_")[0] for t in threading.enumerate()}),
-        "executor_max": getattr(ex, "_max_workers", None),
-        "database_fouten": list(_ERRORS),
-        "openstaand": [e for e in _RECENT if e["status"] == "BEZIG"],
-        "laatste": list(_RECENT)[-40:],
-    }
 
 
 app.include_router(items.router, prefix="/api")

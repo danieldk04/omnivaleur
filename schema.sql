@@ -303,3 +303,15 @@ ALTER TABLE platform_notifications DISABLE ROW LEVEL SECURITY;
 -- Shopify products never got a compare-at price. Manual step required: run
 -- this ALTER on Supabase (it isn't executed automatically by deploys).
 ALTER TABLE items ADD COLUMN IF NOT EXISTS compare_at_price NUMERIC(10,2);
+
+-- SKU's zijn per verkoper uniek, niet over alle accounts heen. De oorspronkelijke
+-- kolomdefinitie (sku VARCHAR(50) UNIQUE) legde één nummerreeks op aan iedereen:
+-- gebruikte verkoper A nummer 1323, dan kon verkoper B dat nooit meer gebruiken.
+-- Met één verkoper viel dat niet op; bij meer accounts blokkeren ze elkaar.
+-- Handmatige stap: draai dit in de Supabase SQL-editor (deploys voeren het niet
+-- uit). Vooraf gecontroleerd op 460 items / 10 accounts: geen enkele SKU wordt nu
+-- door twee accounts gebruikt, dus dit kan zonder gegevensverlies.
+BEGIN;
+ALTER TABLE items DROP CONSTRAINT IF EXISTS items_sku_key;
+ALTER TABLE items ADD CONSTRAINT items_user_sku_key UNIQUE (user_id, sku);
+COMMIT;
