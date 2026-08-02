@@ -56,7 +56,10 @@ def execute_with_retry(query, pogingen: int = 3, dubbel_is_ok: bool = False):
         try:
             return query.execute()
         except Exception as e:  # noqa: BLE001 - alleen verbindingsfouten herhalen
-            if dubbel_is_ok and "23505" in str(e):
+            # Alleen ná een herhaling: een dubbele sleutel bij de éérste poging
+            # is een echte fout en mag niet als "gelukt" worden weggemoffeld —
+            # dan zou de app doen alsof er een item is dat er niet is.
+            if dubbel_is_ok and poging > 0 and "23505" in str(e):
                 logger.warning("Rij stond er al na een herhaalde poging — behandeld als gelukt")
                 return None
             if not _is_herstelbaar(e) or poging == pogingen - 1:
