@@ -2801,7 +2801,11 @@ function _mwFillHiddenDescription(descText) {
   const _bruikbaar = (v) => {
     if (v.disabled || v.readOnly) return false;
     const t = (v.type || "text").toLowerCase();
-    return v instanceof HTMLTextAreaElement || t === "text" || t === "hidden";
+    if (!(v instanceof HTMLTextAreaElement || t === "text" || t === "hidden")) return false;
+    // "description" moet een heel woord zijn. Zo vangen we description_nl-BE,
+    // description_fr-BE en listing.description, maar schrijven we nooit per
+    // ongeluk in een veld als descriptionType of descriptionCount.
+    return /(^|[^a-z])description([^a-z]|$)/i.test(v.name || v.id || "");
   };
   const velden = [...document.querySelectorAll(SEL)].filter(_bruikbaar);
   if (!velden.length) return false;
@@ -2832,7 +2836,11 @@ function _mwHiddenDescriptionValue() {
   const _bruikbaar = (v) => {
     if (v.disabled || v.readOnly) return false;
     const t = (v.type || "text").toLowerCase();
-    return v instanceof HTMLTextAreaElement || t === "text" || t === "hidden";
+    if (!(v instanceof HTMLTextAreaElement || t === "text" || t === "hidden")) return false;
+    // "description" moet een heel woord zijn. Zo vangen we description_nl-BE,
+    // description_fr-BE en listing.description, maar schrijven we nooit per
+    // ongeluk in een veld als descriptionType of descriptionCount.
+    return /(^|[^a-z])description([^a-z]|$)/i.test(v.name || v.id || "");
   };
   const velden = [...document.querySelectorAll(SEL)].filter(_bruikbaar);
   if (!velden.length) return null;
@@ -2877,7 +2885,11 @@ function _mwEnforceDescription(descText, durationMs) {
   const _bruikbaar = (v) => {
     if (v.disabled || v.readOnly) return false;
     const t = (v.type || "text").toLowerCase();
-    return v instanceof HTMLTextAreaElement || t === "text" || t === "hidden";
+    if (!(v instanceof HTMLTextAreaElement || t === "text" || t === "hidden")) return false;
+    // "description" moet een heel woord zijn. Zo vangen we description_nl-BE,
+    // description_fr-BE en listing.description, maar schrijven we nooit per
+    // ongeluk in een veld als descriptionType of descriptionCount.
+    return /(^|[^a-z])description([^a-z]|$)/i.test(v.name || v.id || "");
   };
   try { clearInterval(window.__ovDescKeeper); } catch (_) {}
   const einde = Date.now() + (durationMs || 300000);
