@@ -108,13 +108,15 @@ window.CL = (() => {
 
   // THROWS on failure. "Geen advertentietekst ingevuld" is a platform-side
   // rejection the user cannot act on; the causes below can be reported precisely.
-  async function fillDescription(selectors, text) {
+  async function fillDescription(selectors, text, opties) {
     const value = (text || "").trim().slice(0, 2000);
     if (!value) throw new Error("Item heeft geen beschrijving — vul die in de app in");
     const selector = selectors.find((s) => document.querySelector(s));
     if (!selector) throw new Error("Beschrijvingsveld niet gevonden op de pagina (" + selectors.join(", ") + ")");
     _pendingDescription = value;
     _descriptionSelector = selector;
+    _descriptionNudge = !!(opties && opties.nudge);
+    _nudgeGedaan = false;
     document.querySelector(selector)?.scrollIntoView({ block: "center" });
     const ok = await runInMainWorld("FILL_DESC", { selector, text: value });
     if (!ok) throw new Error("Beschrijving kon niet in de editor worden gezet");
