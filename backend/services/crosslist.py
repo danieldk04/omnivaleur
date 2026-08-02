@@ -25,6 +25,21 @@ async def _exec(query):
     return await asyncio.to_thread(query.execute)
 
 
+# Eén gedeelde client in plaats van een nieuwe per vertaling: die zette elke keer
+# een verse beveiligde verbinding op (vier keer per publicatie). Hergebruik scheelt
+# die opzet-tijd. De client is draadveilig, dus to_thread mag hem delen.
+_CLAUDE_CLIENT = None
+
+
+def _claude_client():
+    global _CLAUDE_CLIENT
+    if _CLAUDE_CLIENT is None:
+        import anthropic as _anthropic
+        from backend.config import settings as _settings
+        _CLAUDE_CLIENT = _anthropic.Anthropic(api_key=_settings.anthropic_api_key)
+    return _CLAUDE_CLIENT
+
+
 async def _translate_with_claude(text: str, target_lang: str, brand: str | None = None) -> str:
     """Translate text using Claude. Preserves brand names, formatting and paragraph structure."""
     if not text or not text.strip():
