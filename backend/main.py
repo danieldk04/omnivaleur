@@ -114,6 +114,7 @@ async def _diag_recent():
         "threads_actief": threading.active_count(),
         "thread_namen": sorted({t.name.split("_")[0] for t in threading.enumerate()}),
         "executor_max": getattr(ex, "_max_workers", None),
+        "database_fouten": list(_ERRORS),
         "openstaand": [e for e in _RECENT if e["status"] == "BEZIG"],
         "laatste": list(_RECENT)[-40:],
     }
