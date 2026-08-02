@@ -3827,8 +3827,19 @@ async function saveItem() {
         // seconden. Bleef het scherm "Saving item…" tonen, dan leek een geslaagde
         // opslag een vastloper.
         const namen = selected.map(p => PLATFORM_LABELS[p] || p).join(', ');
-        setBusy(true, `Item saved — publishing to ${namen}. Translating and uploading photos can take up to a minute…`);
-        await apiFetch(`${API}/api/items/${itemId}/crosslist`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ platforms: selected }) });
+        setBusy(true, `Item saved — publishing to ${namen}…`);
+        startBusyProgress([
+          { na: 0,  tekst: `Item saved ✓ — translating for ${namen}…` },
+          { na: 8,  tekst: 'Still translating — this is the slow part…' },
+          { na: 20, tekst: 'Sending your photos to the marketplaces…' },
+          { na: 45, tekst: 'Almost there — finishing the listings…' },
+          { na: 90, tekst: 'Taking longer than usual, but still running…' },
+        ]);
+        try {
+          await apiFetch(`${API}/api/items/${itemId}/crosslist`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ platforms: selected }) });
+        } finally {
+          stopBusyProgress();
+        }
       }
     }
     closeModal('modal-add');
