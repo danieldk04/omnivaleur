@@ -184,7 +184,7 @@ def delete_item(item_id: str, user_id: str = Depends(get_current_user)):
 @router.post("/{item_id}/delist")
 async def delist_item(item_id: str, user_id: str = Depends(get_current_user)):
     db = get_db()
-    item = db.table("items").select("id").eq("id", item_id).eq("user_id", user_id).execute()
+    item = await _exec(db.table("items").select("id").eq("id", item_id).eq("user_id", user_id))
     if not item.data:
         raise HTTPException(status_code=404, detail="Item not found")
     from backend.services.crosslist import delist_all_platforms
