@@ -333,23 +333,23 @@ async def publish_to_platforms(item_id: str, platforms: list[str], user_id: str)
     for platform in ext_platforms:
         payload = dict(_pick(platform))
         # Create pending listing record first so failed jobs are visible in dashboard
-        existing_listing = db.table("listings").select("id").eq("item_id", item_id).eq("platform", platform).execute()
+        existing_listing = await _exec(db.table("listings").select("id").eq("item_id", item_id).eq("platform", platform))
         if not existing_listing.data:
-            db.table("listings").insert({
+            await _exec(db.table("listings").insert({
                 "item_id": item_id,
                 "platform": platform,
                 "status": "pending",
-            }).execute()
+            }))
         else:
-            db.table("listings").update({"status": "pending", "error_message": None}).eq("item_id", item_id).eq("platform", platform).execute()
-        job = db.table("jobs").insert({
+            await _exec(db.table("listings").update({"status": "pending", "error_message": None}).eq("item_id", item_id).eq("platform", platform))
+        job = (await _exec(db.table("jobs").insert({
             "user_id": user_id,
             "item_id": item_id,
             "platform": platform,
             "action": "create",
             "status": "pending",
             "payload": payload,
-        }).execute().data[0]
+        }))).data[0]
         results.append({
             "platform": platform,
             "status": "queued",
