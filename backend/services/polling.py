@@ -2,12 +2,23 @@
 Polling service for platforms without webhooks (Marktplaats, 2dehands).
 Runs on a configurable interval via APScheduler.
 """
+import asyncio
 import logging
 from backend.database import get_db
 from backend.platforms import get_platform
 from backend.services.crosslist import handle_item_sold
 
 logger = logging.getLogger(__name__)
+
+
+# De Supabase-client is synchroon: elke .execute() blokkeert de héle server tot
+# het antwoord binnen is. Deze taak draait elke vijf minuten en doet één tot twee
+# van die aanroepen per actieve advertentie, dus bij honderden advertenties stond
+# alles minutenlang stil — en kreeg wie op dat moment iets opsloeg een 502 van de
+# gateway. Alleen .execute() doet netwerkwerk; de rest van de keten bouwt enkel de
+# query op. Daarom draait uitsluitend die stap in een aparte thread.
+async def _exec(query):
+    return await asyncio.to_thread(query.execute)
 
 # Vinted excluded: polling relies on a separate backend-bootstrapped session (distinct
 # from the browser-extension session used for scan/publish) that requires storing the
