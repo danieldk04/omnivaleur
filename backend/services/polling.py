@@ -103,9 +103,9 @@ async def _check_one(listing: dict, credentials: dict):
         )
 
         from datetime import datetime, timezone
-        db.table("listings").update({
+        await _exec(db.table("listings").update({
             "last_checked": datetime.now(timezone.utc).isoformat()
-        }).eq("id", listing["id"]).execute()
+        }).eq("id", listing["id"]))
 
         if status == "sold":
             logger.info(f"Item {listing['item_id']} sold on {platform_name} — triggering delist")
