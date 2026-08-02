@@ -56,6 +56,12 @@ def _raise_if_duplicate_sku(db, exc: Exception, sku: str | None, user_id: str) -
     )
 
 
+# De Supabase-client is synchroon. In een `async def`-route legt elke aanroep de
+# hele server stil; in een gewone `def`-route niet, want die draait al apart.
+async def _exec(query):
+    return await asyncio.to_thread(query.execute)
+
+
 @router.post("/", response_model=dict)
 def create_item(item: ItemCreate, user_id: str = Depends(get_current_user)):
     db = get_db()
