@@ -5362,7 +5362,7 @@ function startBusyProgress(fases) {
     const fase = [...fases].reverse().find(f => sec >= f.na) || fases[0];
     const tekst = document.getElementById('cl-busy-text');
     if (tekst && fase) tekst.textContent = fase.tekst;
-    setBusySub(`${sec} sec — laat dit scherm openstaan. Verversen of sluiten breekt het publiceren af.`);
+    setBusySub(`${sec}s — keep this window open. Refreshing or closing it will interrupt publishing.`);
   };
   tik();
   _busyProgressTimer = setInterval(tik, 1000);
