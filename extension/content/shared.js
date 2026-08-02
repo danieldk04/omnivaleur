@@ -101,6 +101,10 @@ window.CL = (() => {
   // ---- Lexical / contenteditable description ----
   let _pendingDescription = null;
   let _descriptionSelector = null;
+  // Alleen Marktplaats heeft de "echte toetsaanslag"-duw nodig; 2dehands werkt
+  // zonder en dat laten we met rust.
+  let _descriptionNudge = false;
+  let _nudgeGedaan = false;
 
   // THROWS on failure. "Geen advertentietekst ingevuld" is a platform-side
   // rejection the user cannot act on; the causes below can be reported precisely.
