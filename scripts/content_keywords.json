@@ -238,7 +238,7 @@
       "region": "nl",
       "pillar": "B",
       "slug": "vintage-toy-reselling-automation",
-      "status": "pending",
+      "status": "published",
       "priority": 29
     },
     {
@@ -511,6 +511,15 @@
       "action": "created",
       "url_path": "/crosslisting/2dehands-to-etsy-crosslisting",
       "published_at": "2026-08-01T09:52:56.721005+00:00"
+    },
+    {
+      "keyword": "vintage toy reselling automation",
+      "slug": "vintage-toy-reselling-automation",
+      "region": "nl",
+      "pillar": "B",
+      "action": "created",
+      "url_path": "/reseller-tools/vintage-toy-reselling-automation",
+      "published_at": "2026-08-02T09:52:15.951861+00:00"
     }
   ]
 }
