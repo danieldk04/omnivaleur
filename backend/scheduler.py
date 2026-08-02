@@ -24,9 +24,24 @@ def _off_the_request_loop(coro_fn):
     502 van de gateway — elke vijf minuten opnieuw, en dus schijnbaar
     willekeurig. In een eigen thread blokkeren ze alleen zichzelf.
     """
+    Bewust een eigen thread en niet asyncio.to_thread: die deelt zijn threads
+    met de inlogcontrole die op élk verzoek draait. Een taak die minuten duurt
+    hield zo'n plek al die tijd bezet, waardoor inloggen ging staan wachten en
+    de gateway alsnog 502 gaf — dezelfde storing, alleen verplaatst.
+    """
     @functools.wraps(coro_fn)
     async def runner():
-        await asyncio.to_thread(lambda: asyncio.run(coro_fn()))
+        klaar = asyncio.get_running_loop().create_future()
+
+        def werk():
+            try:
+                asyncio.run(coro_fn())
+                klaar.get_loop().call_soon_threadsafe(klaar.set_result, None)
+            except BaseException as e:  # noqa: BLE001 - doorgeven aan APScheduler
+                klaar.get_loop().call_soon_threadsafe(klaar.set_exception, e)
+
+        threading.Thread(target=werk, name=f"job-{coro_fn.__name__}", daemon=True).start()
+        await klaar
     return runner
 
 
