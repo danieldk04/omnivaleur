@@ -30,9 +30,7 @@ async def _translate_with_claude(text: str, target_lang: str, brand: str | None 
     if not text or not text.strip():
         return text
     try:
-        import anthropic as _anthropic
-        from backend.config import settings as _settings
-        _client = _anthropic.Anthropic(api_key=_settings.anthropic_api_key)
+        _client = _claude_client()
 
         lang_name = "Dutch" if target_lang == "nl" else "English"
         brand_note = f' The word "{brand}" is a brand name — never translate it, keep it exactly as-is.' if brand else ""
