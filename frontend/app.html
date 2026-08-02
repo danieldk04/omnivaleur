@@ -5390,6 +5390,8 @@ function _bevestigVerlaten(e) { e.preventDefault(); e.returnValue = ''; return '
 function stopBusyProgress() {
   if (_busyProgressTimer) { clearInterval(_busyProgressTimer); _busyProgressTimer = null; }
   window.removeEventListener('beforeunload', _bevestigVerlaten);
+  const knop = document.getElementById('cl-busy-esc');
+  if (knop) { knop.style.display = 'none'; knop.onclick = null; }
   setBusySub('');
 }
 
