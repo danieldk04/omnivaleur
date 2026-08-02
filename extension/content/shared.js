@@ -798,7 +798,19 @@ window.CL = (() => {
 
       const zichtbaarLeeg = descriptionIsEmpty();
       const verborgenOk = await hiddenDescriptionOk();
-      if (!zichtbaarLeeg && verborgenOk) return true;
+      if (!zichtbaarLeeg && verborgenOk) {
+        // Laatste stap vlak vóór Plaatsen: één echte spatie typen. Marktplaats
+        // rekende de tekst pas mee ná een toetsaanslag — zonder dit bleef
+        // "Geen advertentietekst ingevuld" staan met de tekst gewoon in beeld.
+        // Eén keer, anders stapelen de spaties zich op bij een herhaalde poging.
+        if (_descriptionNudge && !_nudgeGedaan) {
+          _nudgeGedaan = true;
+          const geduwd = await runInMainWorld("NUDGE_DESC", { selector: _descriptionSelector });
+          clog(`beschrijving: spatie-duw ${geduwd ? "gelukt" : "MISLUKT"}`);
+          await sleep(250);
+        }
+        return true;
+      }
       clog(`beschrijving poging ${poging}: editor ${zichtbaarLeeg ? "LEEG" : "ok"}, ` +
            `verborgen veld ${verborgenOk ? "ok" : "LEEG"}`);
       await sleep(600);
