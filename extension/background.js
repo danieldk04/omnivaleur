@@ -2788,9 +2788,22 @@ async function _mwReadNotifCounts(platform) {
 // hulpfuncties uit dit bestand bestaan niet in de pagina. Alles staat daarom
 // opzettelijk binnenin.
 function _mwFillHiddenDescription(descText) {
-  const SEL = 'input[name^="description_nl-"], textarea[name^="description_nl-"], '
-            + 'input[name="description"], textarea[name="description"]';
-  const velden = [...document.querySelectorAll(SEL)].filter((v) => !v.disabled);
+  // Breed op naam zoeken. De oude, strakke lijst eiste letterlijk
+  // "description_nl-…" of "description". Heette het veld op dit formulier iets
+  // anders (description_fr-BE, listing.description, Description), dan vonden we
+  // NIETS — en dan meldde de controle "prima, dit platform heeft dat veld niet"
+  // terwijl er in werkelijkheid nooit iets was ingevuld. Precies zo kon 2dehands
+  // blijven zeggen "Geen zoekertjestekst ingevuld".
+  const SEL = 'input[name*="escription" i], textarea[name*="escription" i], '
+            + 'input[id*="escription" i], textarea[id*="escription" i]';
+  // Alleen echte tekstvelden. De brede naamzoektocht hierboven mag nooit een
+  // keuzerondje, een aantal of een knop met de advertentietekst volschrijven.
+  const _bruikbaar = (v) => {
+    if (v.disabled || v.readOnly) return false;
+    const t = (v.type || "text").toLowerCase();
+    return v instanceof HTMLTextAreaElement || t === "text" || t === "hidden";
+  };
+  const velden = [...document.querySelectorAll(SEL)].filter(_bruikbaar);
   if (!velden.length) return false;
   const zet = (veld) => {
     const proto = veld instanceof HTMLTextAreaElement
@@ -2806,12 +2819,42 @@ function _mwFillHiddenDescription(descText) {
 // Leest terug wat het formulier zélf als beschrijving beschouwt. Eén leeg veld
 // is genoeg om afgekeurd te worden, dus dan melden we leeg.
 function _mwHiddenDescriptionValue() {
-  const SEL = 'input[name^="description_nl-"], textarea[name^="description_nl-"], '
-            + 'input[name="description"], textarea[name="description"]';
-  const velden = [...document.querySelectorAll(SEL)].filter((v) => !v.disabled);
+  // Breed op naam zoeken. De oude, strakke lijst eiste letterlijk
+  // "description_nl-…" of "description". Heette het veld op dit formulier iets
+  // anders (description_fr-BE, listing.description, Description), dan vonden we
+  // NIETS — en dan meldde de controle "prima, dit platform heeft dat veld niet"
+  // terwijl er in werkelijkheid nooit iets was ingevuld. Precies zo kon 2dehands
+  // blijven zeggen "Geen zoekertjestekst ingevuld".
+  const SEL = 'input[name*="escription" i], textarea[name*="escription" i], '
+            + 'input[id*="escription" i], textarea[id*="escription" i]';
+  // Alleen echte tekstvelden. De brede naamzoektocht hierboven mag nooit een
+  // keuzerondje, een aantal of een knop met de advertentietekst volschrijven.
+  const _bruikbaar = (v) => {
+    if (v.disabled || v.readOnly) return false;
+    const t = (v.type || "text").toLowerCase();
+    return v instanceof HTMLTextAreaElement || t === "text" || t === "hidden";
+  };
+  const velden = [...document.querySelectorAll(SEL)].filter(_bruikbaar);
   if (!velden.length) return null;
   if (velden.some((v) => (v.value || "").trim().length === 0)) return "";
   return velden[0].value || "";
+}
+
+// Vertelt wat er op DIT formulier daadwerkelijk staat. Zonder dit blijft elke
+// afkeuring giswerk: we weten dan niet of het veld ontbreekt, leeg is, of anders
+// heet. De uitkomst gaat mee in de foutmelding, zodat die in het dashboard staat
+// in plaats van in een console die niemand opent.
+function _mwDescribeDescriptionFields() {
+  const SEL = 'input[name*="escription" i], textarea[name*="escription" i], '
+            + 'input[id*="escription" i], textarea[id*="escription" i]';
+  const velden = [...document.querySelectorAll(SEL)].map((v) => {
+    const naam = v.name || v.id || "(naamloos)";
+    const t = (v.type || "text").toLowerCase();
+    return `${naam}[${t}]=${(v.value || "").trim().length}`;
+  });
+  const editors = [...document.querySelectorAll('[contenteditable="true"]')]
+    .map((e) => (e.innerText || "").trim().length);
+  return `velden: ${velden.join(", ") || "GEEN"} | editors: ${editors.join(", ") || "GEEN"}`;
 }
 
 // Het verborgen veld raakt niet één keer leeg maar telkens opnieuw: elke
@@ -2821,14 +2864,27 @@ function _mwHiddenDescriptionValue() {
 // zodra het leeg raakt, tot en met het plaatsen. Hij schrijft uitsluitend als
 // het veld leeg is, dus tekst die het formulier er zelf in zet blijft staan.
 function _mwEnforceDescription(descText, durationMs) {
-  const SEL = 'input[name^="description_nl-"], textarea[name^="description_nl-"], '
-            + 'input[name="description"], textarea[name="description"]';
+  // Breed op naam zoeken. De oude, strakke lijst eiste letterlijk
+  // "description_nl-…" of "description". Heette het veld op dit formulier iets
+  // anders (description_fr-BE, listing.description, Description), dan vonden we
+  // NIETS — en dan meldde de controle "prima, dit platform heeft dat veld niet"
+  // terwijl er in werkelijkheid nooit iets was ingevuld. Precies zo kon 2dehands
+  // blijven zeggen "Geen zoekertjestekst ingevuld".
+  const SEL = 'input[name*="escription" i], textarea[name*="escription" i], '
+            + 'input[id*="escription" i], textarea[id*="escription" i]';
+  // Alleen echte tekstvelden. De brede naamzoektocht hierboven mag nooit een
+  // keuzerondje, een aantal of een knop met de advertentietekst volschrijven.
+  const _bruikbaar = (v) => {
+    if (v.disabled || v.readOnly) return false;
+    const t = (v.type || "text").toLowerCase();
+    return v instanceof HTMLTextAreaElement || t === "text" || t === "hidden";
+  };
   try { clearInterval(window.__ovDescKeeper); } catch (_) {}
   const einde = Date.now() + (durationMs || 300000);
   const herstel = () => {
     if (Date.now() > einde) { try { clearInterval(window.__ovDescKeeper); } catch (_) {} return; }
     for (const veld of document.querySelectorAll(SEL)) {
-      if (veld.disabled || (veld.value || "").trim().length > 0) continue;
+      if (!_bruikbaar(veld) || (veld.value || "").trim().length > 0) continue;
       const proto = veld instanceof HTMLTextAreaElement
         ? window.HTMLTextAreaElement.prototype : window.HTMLInputElement.prototype;
       Object.getOwnPropertyDescriptor(proto, "value").set.call(veld, descText);
