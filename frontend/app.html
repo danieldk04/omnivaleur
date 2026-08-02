@@ -5366,10 +5366,16 @@ function startBusyProgress(fases) {
   };
   tik();
   _busyProgressTimer = setInterval(tik, 1000);
+  // Verversen tijdens het publiceren laat het item half geplaatst achter. De
+  // browser vraagt nu eerst na — dat is de enige manier om dat tegen te houden.
+  window.addEventListener('beforeunload', _bevestigVerlaten);
 }
+
+function _bevestigVerlaten(e) { e.preventDefault(); e.returnValue = ''; return ''; }
 
 function stopBusyProgress() {
   if (_busyProgressTimer) { clearInterval(_busyProgressTimer); _busyProgressTimer = null; }
+  window.removeEventListener('beforeunload', _bevestigVerlaten);
   setBusySub('');
 }
 
