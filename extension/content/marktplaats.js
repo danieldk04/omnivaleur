@@ -68,7 +68,8 @@
     // and step() swallows the error — which is how listings ended up submitted
     // with an empty advertentietekst and no photos, with nothing to explain it.
     // Let these throw so the job reports the real cause and keeps the tab open.
-    await fillDescription(['[data-testid="text-editor-input_nl-NL"]'], item.description);
+    // nudge: Marktplaats accepteert de tekst pas na een echte toetsaanslag.
+    await fillDescription(['[data-testid="text-editor-input_nl-NL"]'], item.description, { nudge: true });
     // Foto's zijn verplicht, maar een mislukte upload mag niet de rest van het
     // formulier overslaan: dan blijft alles daarna leeg zonder dat iemand ziet
     // waarom. We onthouden de fout en melden hem pas aan het eind.
