@@ -24,18 +24,25 @@ def create_item(item: ItemCreate, user_id: str = Depends(get_current_user)):
     data["user_id"] = user_id
     if not data.get("sku"):
         data["sku"] = f"REV-{data['id'][:8].upper()}"
-    # An unhandled exception here reaches the browser as the bare text "Internal
-    # Server Error", which the dashboard then fails to parse as JSON — so the
-    # user saw a cryptic parser message and we saw nothing at all. Log the real
-    # database complaint and hand back something readable.
+    # Geen 502 of 503 als foutcode: Cloudflare vervangt die antwoorden door zijn
+    # eigen foutpagina, waardoor de echte reden de browser nooit bereikte en de
+    # gebruiker "de server duurde te lang" te zien kreeg bij een fout die in
+    # 0,4 seconde optrad. 500 komt wél ongewijzigd door.
     try:
-        result = db.table("items").insert(_strip_missing(data)).execute()
+        result = execute_with_retry(
+            db.table("items").insert(_strip_missing(data)), dubbel_is_ok=True
+        )
     except Exception as e:
         logger.exception("Item insert failed for user %s", user_id)
-        raise HTTPException(status_code=502, detail=f"Database refused the item: {e}")
+        record_error("items.insert", e)
+        raise HTTPException(status_code=500, detail=f"Opslaan mislukt: {e}")
+    # None = de rij stond er al na een herhaalde poging (zie execute_with_retry).
+    if result is None:
+        return {**data, "id": data["id"]}
     if not result.data:
         logger.error("Item insert returned no row for user %s", user_id)
-        raise HTTPException(status_code=502, detail="The item was not stored — please try again.")
+        record_error("items.insert", RuntimeError("insert gaf geen rij terug"))
+        raise HTTPException(status_code=500, detail="Het item is niet opgeslagen — probeer het nog eens.")
     return result.data[0]
 
 
