@@ -134,6 +134,15 @@ window.CL = (() => {
     return true;
   }
 
+  // De klacht die Marktplaats ("Geen advertentietekst ingevuld") en 2dehands
+  // ("Geen zoekertjestekst ingevuld") tonen zodra ze de beschrijving als leeg
+  // beschouwen. Dit is de enige harde waarheid die we hebben: het oordeel van
+  // het formulier zelf, in plaats van onze eigen inschatting vooraf.
+  function beschrijvingKlachtOpPagina() {
+    return /geen\s+(advertentietekst|zoekertjestekst)\s+ingevuld/i
+      .test(document.body.innerText || "");
+  }
+
   // Het formulier beschouwt de beschrijving als leeg zolang dit verborgen veld
   // leeg is — ongeacht wat er zichtbaar staat.
   async function hiddenDescriptionOk() {
