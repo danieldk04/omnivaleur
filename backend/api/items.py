@@ -125,15 +125,16 @@ async def update_item(item_id: str, updates: dict, user_id: str = Depends(get_cu
     price_fields = {"price", "price_marktplaats", "price_2dehands",
                     "price_vinted", "price_ebay", "price_shopify"}
     if price_fields & set(clean):
-        prior = db.table("items").select("*").eq("id", item_id).eq("user_id", user_id).execute().data
+        prior = (await _exec(db.table("items").select("*").eq("id", item_id).eq("user_id", user_id))).data
         prior = prior[0] if prior else None
 
     try:
-        result = execute_with_retry(
+        result = await asyncio.to_thread(
+            execute_with_retry,
             db.table("items")
             .update(clean)
             .eq("id", item_id)
-            .eq("user_id", user_id)
+            .eq("user_id", user_id),
         )
     except Exception as e:
         _raise_if_duplicate_sku(db, e, clean.get("sku"), user_id)
