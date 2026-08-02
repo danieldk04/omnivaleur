@@ -913,17 +913,32 @@ window.CL = (() => {
     // de tekst gewoon in beeld. Nu lezen we die melding en doen we precies wat de
     // gebruiker met de hand deed: één echte spatie typen en opnieuw plaatsen.
     if (_pendingDescription && _descriptionSelector) {
-      for (let herstel = 1; herstel <= 2; herstel++) {
+      for (let herstel = 1; herstel <= 3; herstel++) {
         if (!beschrijvingKlachtOpPagina()) break;
-        clog(`plaatsen: formulier meldt lege beschrijving — spatie typen (herstelpoging ${herstel})`);
+        const staat = await runInMainWorld("DESCRIBE_DESC", {});
+        clog(`plaatsen: formulier meldt lege beschrijving (herstelpoging ${herstel}) — ${staat}`);
+
+        // Beide kanten opnieuw aanpakken: het verborgen veld waar de validatie op
+        // leest, én een echte toetsaanslag in de zichtbare editor. Welke van de
+        // twee het formulier gelooft verschilt per platform, dus doen we allebei.
+        await runInMainWorld("FILL_HIDDEN_DESC", { text: _pendingDescription });
         const geduwd = await runInMainWorld("NUDGE_DESC", { selector: _descriptionSelector });
-        await sleep(700);
+        await sleep(500 + herstel * 700);
+
         const klachtWeg = !beschrijvingKlachtOpPagina();
         clog(`herstel ${herstel}: spatie ${geduwd ? "getypt" : "MISLUKT"}, melding ${klachtWeg ? "weg" : "staat er nog"}`);
-        if (!geduwd) break; // typen lukt niet → nog eens klikken heeft geen zin
         btn.click();
         const id2 = await waitForListingUrl(idFromUrl, 20000).catch(() => null);
         if (id2) { clog(`plaatsen: alsnog gelukt na herstelpoging ${herstel}`); return id2; }
+      }
+      if (beschrijvingKlachtOpPagina()) {
+        // De melding in het dashboard vertelt nu zelf wat het formulier had —
+        // anders is elke volgende ronde weer gissen.
+        const staat = await runInMainWorld("DESCRIBE_DESC", {});
+        throw new Error(
+          `Het formulier bleef de beschrijving als leeg zien, ook na opnieuw invullen. ` +
+          `Wat er op het formulier stond — ${staat}`
+        );
       }
     }
 
