@@ -5,6 +5,7 @@ Started automatically when the FastAPI app boots.
 from __future__ import annotations
 import asyncio
 import functools
+import threading
 from typing import Optional
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from backend.config import settings
@@ -23,7 +24,7 @@ def _off_the_request_loop(coro_fn):
     de hele server stil en kreeg iedereen die op dat moment iets opsloeg een
     502 van de gateway — elke vijf minuten opnieuw, en dus schijnbaar
     willekeurig. In een eigen thread blokkeren ze alleen zichzelf.
-    """
+
     Bewust een eigen thread en niet asyncio.to_thread: die deelt zijn threads
     met de inlogcontrole die op élk verzoek draait. Een taak die minuten duurt
     hield zo'n plek al die tijd bezet, waardoor inloggen ging staan wachten en
