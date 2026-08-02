@@ -3288,6 +3288,18 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     return true;
   }
 
+  // Typt één echte spatie in de editor — zie _mwNudgeDescription.
+  if (msg.type === "NUDGE_DESC") {
+    chrome.scripting.executeScript({
+      target: { tabId: sender.tab.id }, world: "MAIN",
+      func: _mwNudgeDescription, args: [msg.selector],
+    }, (results) => {
+      if (chrome.runtime.lastError) sendResponse(false);
+      else sendResponse(results?.[0]?.result ?? false);
+    });
+    return true;
+  }
+
   if (msg.type === "BLUR_DESC") {
     chrome.scripting.executeScript({
       target: { tabId: sender.tab.id },
