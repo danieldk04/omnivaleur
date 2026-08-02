@@ -886,6 +886,26 @@ window.CL = (() => {
     const id = await waitForListingUrl(idFromUrl, 20000).catch(() => null);
     if (id) return id;
 
+    // Het formulier zegt zélf wat er mis is. Tot nu toe voorspelden we vooraf of
+    // de beschrijving zou meetellen — een gok die er soms naast zat, waarna er
+    // tóch geklikt werd en de gebruiker "Geen advertentietekst ingevuld" zag met
+    // de tekst gewoon in beeld. Nu lezen we die melding en doen we precies wat de
+    // gebruiker met de hand deed: één echte spatie typen en opnieuw plaatsen.
+    if (_pendingDescription && _descriptionSelector) {
+      for (let herstel = 1; herstel <= 2; herstel++) {
+        if (!beschrijvingKlachtOpPagina()) break;
+        clog(`plaatsen: formulier meldt lege beschrijving — spatie typen (herstelpoging ${herstel})`);
+        const geduwd = await runInMainWorld("NUDGE_DESC", { selector: _descriptionSelector });
+        await sleep(700);
+        const klachtWeg = !beschrijvingKlachtOpPagina();
+        clog(`herstel ${herstel}: spatie ${geduwd ? "getypt" : "MISLUKT"}, melding ${klachtWeg ? "weg" : "staat er nog"}`);
+        if (!geduwd) break; // typen lukt niet → nog eens klikken heeft geen zin
+        btn.click();
+        const id2 = await waitForListingUrl(idFromUrl, 20000).catch(() => null);
+        if (id2) { clog(`plaatsen: alsnog gelukt na herstelpoging ${herstel}`); return id2; }
+      }
+    }
+
     const errs = [...document.querySelectorAll('[class*="error"], [class*="Error"], [role="alert"], [aria-invalid="true"]')]
       .map((el) => el.textContent.trim()).filter((t) => t.length > 0 && t.length < 200);
     const uniq = [...new Set(errs)];
