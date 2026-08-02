@@ -132,6 +132,7 @@ async def update_item(item_id: str, updates: dict, user_id: str = Depends(get_cu
             .eq("user_id", user_id)
         )
     except Exception as e:
+        _raise_if_duplicate_sku(db, e, clean.get("sku"), user_id)
         logger.exception("Item update failed for %s", item_id)
         record_error("items.update", e)
         raise HTTPException(status_code=500, detail=f"Wijziging niet opgeslagen: {e}")
