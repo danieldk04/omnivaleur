@@ -2841,6 +2841,40 @@ function _mwEnforceDescription(descText, durationMs) {
   return true;
 }
 
+// Marktplaats beschouwde de advertentietekst als leeg terwijl hij zichtbaar in de
+// editor stond — en één zelf getypte spatie liet de melding meteen verdwijnen.
+// Dat is het bewijs dat het formulier niet naar de inhoud kijkt maar naar een
+// échte toetsaanslag: pas dan merkt het formulier het veld als "aangeraakt" aan
+// en loopt zijn eigen controle opnieuw. Alles wat wij tot nu toe deden zet de
+// tekst neer zonder ooit zo'n aanslag te veroorzaken.
+//
+// execCommand("insertText") is de enige manier om dat vanuit een script wél te
+// doen: Chrome vuurt daarbij dezelfde native beforeinput/input af als een echte
+// toets. We typen precies wat de gebruiker met de hand deed — één spatie aan het
+// eind — en laten hem staan, want juist dat bleek te werken.
+function _mwNudgeDescription(selector) {
+  const found = document.querySelector(selector);
+  if (!found) return false;
+  const el = found.isContentEditable ? found
+    : (found.querySelector('[contenteditable="true"]') || found);
+  const voor = (el.innerText || el.value || "").length;
+  el.scrollIntoView({ block: "center" });
+  el.focus();
+  try {
+    // Cursor helemaal achteraan, anders landt de spatie middenin de tekst.
+    const r = document.createRange();
+    r.selectNodeContents(el);
+    r.collapse(false);
+    const s = getSelection();
+    s.removeAllRanges();
+    s.addRange(r);
+  } catch (_) {}
+  let ok = false;
+  try { ok = document.execCommand("insertText", false, " "); } catch (_) {}
+  const na = (el.innerText || el.value || "").length;
+  return ok && na > voor;
+}
+
 async function _mwFillDescription(selector, descText) {
   const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
   const found = document.querySelector(selector);
