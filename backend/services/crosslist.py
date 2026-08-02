@@ -386,9 +386,9 @@ async def _publish_one(item: dict, platform_name: str, credentials: dict, user_i
         }
         if "platform_offer_id" in result:
             listing_update["platform_offer_id"] = result["platform_offer_id"]
-        db.table("listings").update(listing_update).eq("id", listing_id).execute()
+        await _exec(db.table("listings").update(listing_update).eq("id", listing_id))
 
-        _log_event(listing_id, "listed", result)
+        await asyncio.to_thread(_log_event, listing_id, "listed", result)
         return {"listing_id": listing_id, "platform": platform_name, "status": "active", **result}
 
     except Exception as e:
