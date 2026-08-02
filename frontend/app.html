@@ -5336,12 +5336,15 @@ function setBusy(on, msg) {
     ov = document.createElement('div');
     ov.id = 'cl-busy-overlay';
     ov.style.cssText = 'position:fixed;inset:0;z-index:10000;display:none;opacity:0;align-items:center;justify-content:center;background:rgba(15,23,42,.35);transition:opacity .16s ease';
-    ov.innerHTML = '<div class="cl-busy-box" style="background:#fff;border-radius:12px;padding:20px 28px;display:flex;align-items:center;gap:12px;box-shadow:0 8px 30px rgba(0,0,0,.2);font-size:14px;font-weight:600;color:#1e293b"><span class="spinner"></span><span id="cl-busy-text">Working…</span></div>';
+    ov.innerHTML = '<div class="cl-busy-box" style="background:#fff;border-radius:12px;padding:20px 28px;display:flex;align-items:center;gap:12px;box-shadow:0 8px 30px rgba(0,0,0,.2);font-size:14px;font-weight:600;color:#1e293b;max-width:min(420px,86vw)"><span class="spinner"></span><span style="display:flex;flex-direction:column;gap:4px"><span id="cl-busy-text">Working…</span><span id="cl-busy-sub" style="font-size:12px;font-weight:500;color:#64748b;display:none"></span></span></div>';
     document.body.appendChild(ov);
   }
   if (on) {
     _busyDepth++;
     document.getElementById('cl-busy-text').textContent = msg || 'Working…';
+    // Een nieuwe melding hoort bij een nieuwe stap: laat de oude ondertitel niet
+    // staan, anders telt er een teller door die nergens meer bij hoort.
+    if (!_busyProgressTimer) setBusySub('');
     clearTimeout(ov._hideTid);
     ov.style.display = 'flex';
     // Next frame, so the browser has a 0-opacity starting point to animate from —
