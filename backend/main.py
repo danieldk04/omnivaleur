@@ -6,7 +6,9 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 from contextlib import asynccontextmanager
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
+import asyncio
 from backend.api import items, listings, platforms, webhooks, jobs, uploads, shopify, auth, billing, imports, content, notifications
 from backend.scheduler import start_scheduler, stop_scheduler
 
