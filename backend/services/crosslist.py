@@ -73,7 +73,14 @@ async def _translate_with_claude(text: str, target_lang: str, brand: str | None 
             " Return only the translated text, nothing else.\n\n"
             f"<text>{marked_text}</text>"
         )
-        response = _client.messages.create(
+        # De Anthropic-client is synchroon. Zonder to_thread stond dit `await`-loze
+        # netwerkgesprek middenin een async-functie, waardoor de vier vertalingen
+        # (titel+tekst, Engels+Nederlands) NIET naast elkaar liepen maar netjes op
+        # elkaar wachtten — en de rest van de server ondertussen ook stilstond.
+        # Met to_thread vertalen ze echt tegelijk: de wachttijd is die van één
+        # vertaling in plaats van de som van vier.
+        response = await asyncio.to_thread(
+            _client.messages.create,
             model="claude-haiku-4-5-20251001",
             max_tokens=1024,
             messages=[{"role": "user", "content": prompt}],
