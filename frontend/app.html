@@ -5354,15 +5354,29 @@ function setBusySub(tekst) {
 // spinner is dan niet te onderscheiden van een vastloper, en verversen breekt de
 // publicatie halverwege af. Daarom loopt er een teller mee en verandert de tekst
 // per fase, zodat zichtbaar is dat er nog iets gebeurt.
-function startBusyProgress(fases) {
+// `opties.onEscape` is verplicht bij lange acties: zonder uitweg sluit dit
+// wachtscherm de gebruiker op als de server niet antwoordt — precies wat er
+// gebeurde bij "Almost there — finishing the listings…". De knop verschijnt na
+// `escapeNa` seconden en na `autoNa` seconden laat het scherm zichzelf los.
+function startBusyProgress(fases, opties) {
   stopBusyProgress();
+  const o = opties || {};
   const start = Date.now();
+  const knop = document.getElementById('cl-busy-esc');
+  if (knop && o.onEscape) {
+    knop.textContent = o.escapeLabel || 'Continue in the background';
+    knop.onclick = () => { stopBusyProgress(); o.onEscape('knop'); };
+  }
   const tik = () => {
     const sec = Math.round((Date.now() - start) / 1000);
     const fase = [...fases].reverse().find(f => sec >= f.na) || fases[0];
     const tekst = document.getElementById('cl-busy-text');
     if (tekst && fase) tekst.textContent = fase.tekst;
     setBusySub(`${sec}s — keep this window open. Refreshing or closing it will interrupt publishing.`);
+    if (knop && o.onEscape && sec >= (o.escapeNa ?? 20) && knop.style.display === 'none') {
+      knop.style.display = 'inline-block';
+    }
+    if (o.onEscape && o.autoNa && sec >= o.autoNa) { stopBusyProgress(); o.onEscape('timeout'); }
   };
   tik();
   _busyProgressTimer = setInterval(tik, 1000);
