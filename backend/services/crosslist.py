@@ -237,7 +237,7 @@ async def publish_to_platforms(item_id: str, platforms: list[str], user_id: str)
     missing data a platform needs — never silently ships a half-empty listing.
     """
     db = get_db()
-    item_resp = db.table("items").select("*").eq("id", item_id).single().execute()
+    item_resp = await _exec(db.table("items").select("*").eq("id", item_id).single())
     item = item_resp.data
 
     # Etsy isn't built yet (shown only as "Coming soon"). Refuse it explicitly so a
