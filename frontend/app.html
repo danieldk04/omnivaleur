@@ -3828,18 +3828,38 @@ async function saveItem() {
         // opslag een vastloper.
         const namen = selected.map(p => PLATFORM_LABELS[p] || p).join(', ');
         setBusy(true, `Item saved — publishing to ${namen}…`);
+
+        // Het item IS opgeslagen en het publiceren draait op de server; of dit
+        // scherm nog staat te wachten verandert daar niets aan. Blijven wachten
+        // op een antwoord dat niet komt sloot de gebruiker eerder volledig op —
+        // alle knoppen uit, geen weg terug. Vandaar deze uitweg, met de eerlijke
+        // mededeling dat het publiceren gewoon doorgaat.
+        let losgelaten = false;
+        const losmaken = () => {
+          if (losgelaten) return;
+          losgelaten = true;
+          setBusy(false);
+          closeModal('modal-add');
+          showToast('Still publishing in the background — the item appears in the list on its own.');
+          loadAll().catch(() => {});
+        };
         startBusyProgress([
           { na: 0,  tekst: `Item saved ✓ — translating for ${namen}…` },
           { na: 8,  tekst: 'Still translating — this is the slow part…' },
           { na: 20, tekst: 'Sending your photos to the marketplaces…' },
           { na: 45, tekst: 'Almost there — finishing the listings…' },
           { na: 90, tekst: 'Taking longer than usual, but still running…' },
-        ]);
+        ], { onEscape: losmaken, escapeNa: 15, autoNa: 150, escapeLabel: 'Continue in the background' });
+
         try {
           await apiFetch(`${API}/api/items/${itemId}/crosslist`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ platforms: selected }) });
+        } catch (e) {
+          if (!losgelaten) throw e;
         } finally {
           stopBusyProgress();
         }
+        // Het scherm is al opgeruimd door `losmaken` — niet nog eens.
+        if (losgelaten) { btn.disabled = false; return; }
       }
     }
     closeModal('modal-add');
