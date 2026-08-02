@@ -5330,6 +5330,38 @@ function formatMissingFieldsError(data) {
 // an action is in flight, so users can't fire off more actions (e.g. double-publish,
 // re-click bulk import) before the first one has actually finished.
 let _busyDepth = 0;
+let _busyProgressTimer = null;
+
+function setBusySub(tekst) {
+  const el = document.getElementById('cl-busy-sub');
+  if (!el) return;
+  el.textContent = tekst || '';
+  el.style.display = tekst ? 'block' : 'none';
+}
+
+// Publiceren duurt echt lang (vertalen + foto's naar Shopify). Een stilstaande
+// spinner is dan niet te onderscheiden van een vastloper, en verversen breekt de
+// publicatie halverwege af. Daarom loopt er een teller mee en verandert de tekst
+// per fase, zodat zichtbaar is dat er nog iets gebeurt.
+function startBusyProgress(fases) {
+  stopBusyProgress();
+  const start = Date.now();
+  const tik = () => {
+    const sec = Math.round((Date.now() - start) / 1000);
+    const fase = [...fases].reverse().find(f => sec >= f.na) || fases[0];
+    const tekst = document.getElementById('cl-busy-text');
+    if (tekst && fase) tekst.textContent = fase.tekst;
+    setBusySub(`${sec} sec — laat dit scherm openstaan. Verversen of sluiten breekt het publiceren af.`);
+  };
+  tik();
+  _busyProgressTimer = setInterval(tik, 1000);
+}
+
+function stopBusyProgress() {
+  if (_busyProgressTimer) { clearInterval(_busyProgressTimer); _busyProgressTimer = null; }
+  setBusySub('');
+}
+
 function setBusy(on, msg) {
   let ov = document.getElementById('cl-busy-overlay');
   if (!ov) {
