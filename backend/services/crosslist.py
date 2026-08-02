@@ -316,12 +316,11 @@ async def publish_to_platforms(item_id: str, platforms: list[str], user_id: str)
 
     # API platforms: run concurrently server-side
     if api_platforms:
-        creds_resp = (
+        creds_resp = await _exec(
             db.table("platform_credentials")
             .select("*")
             .eq("user_id", user_id)
             .in_("platform", api_platforms)
-            .execute()
         )
         creds_by_platform = {c["platform"]: c for c in creds_resp.data}
         tasks = [
