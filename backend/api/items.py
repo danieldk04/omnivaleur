@@ -1,7 +1,8 @@
 from fastapi import APIRouter, HTTPException, Depends
 from backend.models import ItemCreate, ItemOut
-from backend.database import get_db
+from backend.database import get_db, execute_with_retry
 from backend.api.deps import get_current_user
+from backend.diag import record_error
 import logging
 import uuid
 
