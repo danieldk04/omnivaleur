@@ -17,6 +17,45 @@ def _strip_missing(data: dict) -> dict:
     return {k: v for k, v in data.items() if k not in _PENDING_COLUMNS}
 
 
+def _raise_if_duplicate_sku(db, exc: Exception, sku: str | None, user_id: str) -> None:
+    """
+    Een SKU die al bestaat is geen storing maar een gewone vergissing: het item
+    staat er al. De databasemelding daarover ("duplicate key value violates
+    unique constraint") zegt de verkoper niets, dus die vertalen we naar het
+    enige dat telt — welk item de SKU al gebruikt.
+    """
+    tekst = str(exc)
+    if "23505" not in tekst or "sku" not in tekst.lower():
+        return
+    bestaand = None
+    try:
+        rijen = (
+            db.table("items")
+            .select("id,title,created_at")
+            .eq("sku", sku)
+            .eq("user_id", user_id)
+            .limit(1)
+            .execute()
+            .data
+        )
+        bestaand = rijen[0] if rijen else None
+    except Exception:  # noqa: BLE001 - de melding mag hier niet op stuklopen
+        pass
+    if bestaand:
+        raise HTTPException(
+            status_code=409,
+            detail=(
+                f"SKU '{sku}' is already used by an item you have: "
+                f"\"{bestaand['title']}\". Open that item to edit it, "
+                f"or give this one a different SKU."
+            ),
+        )
+    raise HTTPException(
+        status_code=409,
+        detail=f"SKU '{sku}' is already in use. Give this item a different SKU.",
+    )
+
+
 @router.post("/", response_model=dict)
 def create_item(item: ItemCreate, user_id: str = Depends(get_current_user)):
     db = get_db()
