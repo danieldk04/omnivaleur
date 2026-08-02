@@ -119,14 +119,14 @@ async def _check_one(listing: dict, credentials: dict):
             not_found_count = (listing.get("not_found_count") or 0) + 1
             if not_found_count >= 2:
                 logger.warning(f"Listing {listing['id']} not found on {platform_name} for {not_found_count} consecutive polls — marking delisted")
-                db.table("listings").update({"status": "delisted", "not_found_count": not_found_count}).eq("id", listing["id"]).execute()
+                await _exec(db.table("listings").update({"status": "delisted", "not_found_count": not_found_count}).eq("id", listing["id"]))
             else:
                 logger.warning(f"Listing {listing['id']} not found on {platform_name} (1st time) — waiting for confirmation before delisting")
-                db.table("listings").update({"not_found_count": not_found_count}).eq("id", listing["id"]).execute()
+                await _exec(db.table("listings").update({"not_found_count": not_found_count}).eq("id", listing["id"]))
 
         elif status in ("active", "sold"):
             if listing.get("not_found_count"):
-                db.table("listings").update({"not_found_count": 0}).eq("id", listing["id"]).execute()
+                await _exec(db.table("listings").update({"not_found_count": 0}).eq("id", listing["id"]))
 
     except Exception as e:
         logger.error(f"Poll failed for listing {listing['id']}: {e}")
