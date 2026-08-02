@@ -34,6 +34,7 @@ def create_item(item: ItemCreate, user_id: str = Depends(get_current_user)):
             db.table("items").insert(_strip_missing(data)), dubbel_is_ok=True
         )
     except Exception as e:
+        _raise_if_duplicate_sku(db, e, data.get("sku"), user_id)
         logger.exception("Item insert failed for user %s", user_id)
         record_error("items.insert", e)
         raise HTTPException(status_code=500, detail=f"Opslaan mislukt: {e}")
