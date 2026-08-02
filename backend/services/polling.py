@@ -48,12 +48,11 @@ async def poll_platform_statuses():
     """
     db = get_db()
 
-    listings = (
+    listings = await _exec(
         db.table("listings")
         .select("id,item_id,platform,platform_listing_id,not_found_count")
         .eq("status", "active")
         .in_("platform", list(POLL_PLATFORMS))
-        .execute()
     )
 
     if not listings.data:
@@ -62,16 +61,16 @@ async def poll_platform_statuses():
     item_ids = list({row["item_id"] for row in listings.data})
     owners = {
         row["id"]: row["user_id"]
-        for row in (db.table("items").select("id,user_id").in_("id", item_ids).execute().data or [])
+        for row in ((await _exec(db.table("items").select("id,user_id").in_("id", item_ids))).data or [])
     }
 
     credentials_by_key: dict[tuple[str, str], dict] = {}
     for row in (
-        db.table("platform_credentials")
-        .select("*")
-        .in_("platform", list(POLL_PLATFORMS))
-        .execute()
-        .data
+        (await _exec(
+            db.table("platform_credentials")
+            .select("*")
+            .in_("platform", list(POLL_PLATFORMS))
+        )).data
         or []
     ):
         credentials_by_key[(row["user_id"], row["platform"])] = row
