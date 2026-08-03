@@ -868,6 +868,9 @@ async function openWorkerTabInner(url, opts = {}) {
       : await chrome.windows.create({ url, focused: false, ...WORKER_WIN_SIZE });
     if (!w || !w.tabs || !w.tabs[0]) throw new Error("no tab in new window");
     await setWorkerWindowId(w.id);
+    // Anker erbij: vanaf nu blijft dit ene venster bestaan in plaats van bij
+    // elke klus opnieuw op te poppen.
+    await ensureKeeperTab(w.id);
     return w.tabs[0];
   } catch {
     // Window creation blocked (rare) — fall back to a plain background tab so
