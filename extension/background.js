@@ -840,6 +840,7 @@ async function openWorkerTabInner(url, opts = {}) {
       }
       // active:true is scoped to THAT window, so it never steals focus from the
       // user's foreground window — and does not un-minimise it either.
+      await ensureKeeperTab(existing);
       const tab = await chrome.tabs.create({ url, windowId: existing, active: true });
       // Het vorige job-tabblad wordt pas 2 seconden NA afronding gesloten. Valt
       // dat samen met het openen van het volgende, dan sluit Chrome het venster
