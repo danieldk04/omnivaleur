@@ -246,7 +246,7 @@
       "region": "nl",
       "pillar": "A",
       "slug": "marktplaats-to-ebay-crosslisting-2026",
-      "status": "pending",
+      "status": "published",
       "nl_slug": "marktplaats-naar-ebay-crosslisting-2026",
       "priority": 30
     },
@@ -520,6 +520,15 @@
       "action": "created",
       "url_path": "/reseller-tools/vintage-toy-reselling-automation",
       "published_at": "2026-08-02T09:52:15.951861+00:00"
+    },
+    {
+      "keyword": "marktplaats to ebay crosslisting 2026",
+      "slug": "marktplaats-to-ebay-crosslisting-2026",
+      "region": "nl",
+      "pillar": "A",
+      "action": "created",
+      "url_path": "/crosslisting/marktplaats-to-ebay-crosslisting-2026",
+      "published_at": "2026-08-03T11:16:12.310429+00:00"
     }
   ]
 }
