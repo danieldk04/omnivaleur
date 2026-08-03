@@ -748,6 +748,54 @@ function setWorkerWindowId(id) {
   return chrome.storage.session.set({ [WORKER_WIN_KEY]: id }).catch(() => {});
 }
 
+// Eén vast, leeg "anker"-tabblad in het werkvenster.
+//
+// Zonder dit tabblad verdween het hele venster zodra het laatste job-tabblad
+// dichtging, en werd er bij de volgende klus (of bij de volgende controle op
+// verkopen/berichten, elke 10 tot 15 minuten) opnieuw een venster geopend. Dat
+// is wat de gebruiker als "steeds weer die tabbladen" ziet. Met het anker
+// blijft er precies één venster bestaan zolang de browser open is: het wordt
+// hooguit uit- en weer ingeklapt.
+//
+// Meegenomen effect: het venster kan nu niet meer halverwege een klus
+// omvallen doordat het vorige tabblad net iets te laat dichtging.
+const KEEPER_URL = "about:blank";
+
+async function ensureKeeperTab(winId) {
+  try {
+    const tabs = await chrome.tabs.query({ windowId: winId });
+    if (tabs.some(t => t.pinned && (t.url === KEEPER_URL || t.pendingUrl === KEEPER_URL))) return;
+    await chrome.tabs.create({ url: KEEPER_URL, windowId: winId, pinned: true, active: false });
+  } catch (_) { /* venster net weg — volgende klus maakt een nieuw venster */ }
+}
+
+// Klapt het werkvenster vanzelf weer in zodra er geen klus meer in draait, zodat
+// het na het plaatsen niet over het werk van de gebruiker blijft staan.
+let _minimiseTimer = null;
+
+function scheduleWorkerWindowMinimise() {
+  if (_minimiseTimer) clearTimeout(_minimiseTimer);
+  _minimiseTimer = setTimeout(async () => {
+    _minimiseTimer = null;
+    try {
+      const id = await getWorkerWindowId();
+      if (id == null) return;
+      const tabs = await chrome.tabs.query({ windowId: id });
+      // Alleen als er echt niets meer draait: alleen het anker-tabblad over.
+      if (tabs.some(t => !t.pinned || t.url !== KEEPER_URL)) return;
+      const win = await chrome.windows.get(id);
+      if (win.state === "minimized") return;
+      await chrome.windows.update(id, { state: "minimized" }).catch(() => {});
+    } catch (_) { /* niets aan de hand */ }
+  }, 4000);
+}
+
+chrome.tabs.onRemoved.addListener((_tabId, info) => {
+  getWorkerWindowId().then((id) => {
+    if (id != null && id === info.windowId && !info.isWindowClosing) scheduleWorkerWindowMinimise();
+  }).catch(() => {});
+});
+
 chrome.windows.onRemoved.addListener((winId) => {
   chrome.storage.session.get(WORKER_WIN_KEY).then(({ [WORKER_WIN_KEY]: id }) => {
     if (id === winId) chrome.storage.session.remove(WORKER_WIN_KEY);
