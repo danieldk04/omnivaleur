@@ -14,14 +14,45 @@ from backend.config import settings
 logger = logging.getLogger(__name__)
 
 
+def _send_via_resend(subject: str, body: str, recipient: str, reply_to: str | None) -> None:
+    """Versturen over https, de enige poort die Railway wél doorlaat."""
+    import httpx
+
+    sender = settings.resend_from or settings.smtp_from_email
+    payload = {
+        "from": sender,
+        "to": [recipient],
+        "subject": subject,
+        "text": body,
+    }
+    if reply_to:
+        payload["reply_to"] = reply_to
+
+    r = httpx.post(
+        "https://api.resend.com/emails",
+        headers={"Authorization": f"Bearer {settings.resend_api_key}"},
+        json=payload,
+        timeout=20,
+    )
+    if r.status_code >= 300:
+        raise RuntimeError(f"Resend weigerde de mail ({r.status_code}): {r.text[:300]}")
+
+
 def _is_configured() -> bool:
-    return bool(settings.smtp_host and settings.smtp_user and settings.smtp_password and settings.smtp_from_email)
+    return bool(settings.resend_api_key) or bool(settings.smtp_host and settings.smtp_user and settings.smtp_password and settings.smtp_from_email)
 
 
 def send_email_checked(subject: str, body: str, to: str | None = None, reply_to: str | None = None) -> None:
     """Zelfde als send_email, maar laat de fout staan. Gebruikt door de testknop,
     zodat op het scherm komt te staan wát de mailserver precies weigerde in
     plaats van alleen 'het lukte niet'."""
+    recipient_pre = to or settings.owner_email
+    if settings.resend_api_key:
+        if not (settings.resend_from or settings.smtp_from_email):
+            raise RuntimeError("RESEND_FROM ontbreekt op Railway (het afzenderadres)")
+        _send_via_resend(subject, body, recipient_pre, reply_to)
+        return
+
     missing = [n for n, v in (
         ("SMTP_HOST", settings.smtp_host),
         ("SMTP_USER", settings.smtp_user),

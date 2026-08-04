@@ -93,6 +93,13 @@ class Settings(BaseSettings):
     google_ads_refresh_token: str = ""
     google_ads_login_customer_id: str = ""
 
+    # E-mail via de HTTP-API van Resend. Railway blokkeert uitgaand SMTP-verkeer
+    # (poort 465 en 587 lopen dood in een time-out), dus dit is de weg waarlangs
+    # mail het platform überhaupt kan verlaten. Staat de sleutel ingevuld, dan
+    # wordt die gebruikt; anders valt alles terug op SMTP.
+    resend_api_key: str = ""
+    resend_from: str = ""
+
     # Best-effort post-publish notification email (non-blocking — publish never waits on this).
     smtp_host: str = ""
     smtp_port: int = 587

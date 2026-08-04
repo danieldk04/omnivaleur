@@ -232,7 +232,10 @@ def test_reminder_mail(user=Depends(get_current_user_full)):
         logger.exception("Testmail mislukt")
         raise HTTPException(
             status_code=503,
-            detail=f"Versturen mislukt via {settings.smtp_host}:{settings.smtp_port} als {settings.smtp_user} — {type(e).__name__}: {e}",
+            detail=(
+                f"Versturen mislukt via {'Resend' if settings.resend_api_key else f'{settings.smtp_host}:{settings.smtp_port} als {settings.smtp_user}'}"
+                f" — {type(e).__name__}: {e}"
+            ),
         )
     return {"ok": True, "sent_to": user.email}
 
