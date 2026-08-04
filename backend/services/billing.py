@@ -56,6 +56,91 @@ async def expire_trials():
         _cache.pop(sub["user_id"], None)
 
 
+def trial_reminder_email(days_left: int, grace_days: int = GRACE_DAYS) -> tuple[str, str]:
+    """Subject + body of the reminder. Kept apart from the sending so the wording
+    can be changed (and previewed) without touching the scheduling."""
+    day_word = "day" if days_left == 1 else "days"
+    subject = f"Your Omnivaleur trial ends in {days_left} {day_word}"
+    body = f"""Hi,
+
+Your free Omnivaleur trial ends in {days_left} {day_word}.
+
+After that you get {grace_days} more days to decide. Once those are up, your
+account is locked: crosslisting stops, your listings stay where they are, and
+nothing new goes out until you activate Pro.
+
+Activating takes a minute and keeps everything exactly as it is —
+your items, your connected platforms and your history all stay put.
+
+Activate Pro: {settings.app_url}/app.html?view=prijs
+€19.99 per month, cancel any time.
+
+If you have run into anything that did not work the way you expected,
+reply to this mail — we would rather fix it than lose you.
+
+— Omnivaleur
+"""
+    return subject, body
+
+
+async def send_trial_reminders():
+    """
+    Runs daily. Mails every trialing user whose trial ends in REMINDER_DAYS_BEFORE
+    days. The sent date is written back to the row, so a restart or a second run
+    on the same day cannot mail anyone twice.
+    """
+    from backend.services.email import send_email
+
+    db = get_db()
+    now = datetime.now(timezone.utc)
+    window_start = now + timedelta(days=REMINDER_DAYS_BEFORE - 1)
+    window_end = now + timedelta(days=REMINDER_DAYS_BEFORE)
+
+    try:
+        result = (
+            db.table("subscriptions")
+            .select("id, user_id, trial_ends_at, trial_reminder_sent_at")
+            .eq("status", "trialing")
+            .gte("trial_ends_at", window_start.isoformat())
+            .lt("trial_ends_at", window_end.isoformat())
+            .is_("trial_reminder_sent_at", "null")
+            .execute()
+        )
+    except Exception:
+        # The column has to be added to Supabase by hand. Without it there is no
+        # way to remember who was already mailed, and mailing daily would be
+        # worse than not mailing at all — so this stays off until the column exists.
+        logger.exception(
+            "Herinneringsmails overgeslagen: kolom trial_reminder_sent_at ontbreekt nog in Supabase"
+        )
+        return
+
+    if not result.data:
+        return
+
+    logger.info(f"Trial reminder: {len(result.data)} gebruiker(s)")
+    for sub in result.data:
+        try:
+            user = db.auth.admin.get_user_by_id(sub["user_id"])
+            email = user.user.email if user and user.user else None
+        except Exception:
+            logger.exception(f"Geen e-mailadres gevonden voor {sub['user_id']}")
+            continue
+        if not email:
+            continue
+
+        ends = _parse_ts(sub.get("trial_ends_at"))
+        days_left = max(1, int(-(-((ends - now).total_seconds()) // 86400))) if ends else REMINDER_DAYS_BEFORE
+        subject, body = trial_reminder_email(days_left)
+        if not send_email(subject=subject, body=body, to=email):
+            # Not marked as sent, so tomorrow's run tries again.
+            continue
+        db.table("subscriptions").update(
+            {"trial_reminder_sent_at": now.isoformat()}
+        ).eq("id", sub["id"]).execute()
+        logger.info(f"Trial reminder verstuurd naar {email}")
+
+
 def invalidate_access_cache(user_id: str | None = None) -> None:
     """Drop the cached subscription so a payment takes effect immediately."""
     if user_id:
