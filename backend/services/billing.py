@@ -93,7 +93,11 @@ async def send_trial_reminders():
 
     db = get_db()
     now = datetime.now(timezone.utc)
-    window_start = now + timedelta(days=REMINDER_DAYS_BEFORE - 1)
+    # Everyone whose trial still runs but ends within two days, and who has not
+    # been mailed yet. Deliberately not a one-day slice: someone who signed up
+    # 30 hours before the end would otherwise fall between two daily runs and
+    # never hear from us. The sent-marker keeps it to one mail per person.
+    window_start = now
     window_end = now + timedelta(days=REMINDER_DAYS_BEFORE)
 
     try:
