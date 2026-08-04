@@ -60,25 +60,41 @@ def trial_reminder_email(days_left: int, grace_days: int = GRACE_DAYS) -> tuple[
     """Subject + body of the reminder. Kept apart from the sending so the wording
     can be changed (and previewed) without touching the scheduling."""
     day_word = "day" if days_left == 1 else "days"
-    subject = f"Your Omnivaleur trial ends in {days_left} {day_word}"
-    body = f"""Hi,
+    subject = f"Quick heads up: Your Omnivaleur trial ends in {days_left} {day_word}"
+    grace_word = "day" if grace_days == 1 else "days"
+    body = f"""Hi there,
 
-Your free Omnivaleur trial ends in {days_left} {day_word}.
+Daniel here, founder of Omnivaleur.
 
-After that you get {grace_days} more days to decide. Once those are up, your
-account is locked: crosslisting stops, your listings stay where they are, and
-nothing new goes out until you activate Pro.
+I noticed your free trial is coming to an end in just {days_left} {day_word}. I wanted to
+reach out personally to make sure everything has been running smoothly for you
+so far.
 
-Activating takes a minute and keeps everything exactly as it is —
-your items, your connected platforms and your history all stay put.
+Here is what happens next:
 
-Activate Pro: {settings.app_url}/app.html?view=prijs
-€19.99 per month, cancel any time.
+  * Next {days_left} {day_word}: Your trial remains fully active.
 
-If you have run into anything that did not work the way you expected,
-reply to this mail — we would rather fix it than lose you.
+  * After that: You will get a {grace_days}-day grace period to make your decision.
 
-— Omnivaleur
+  * Once those {grace_days} {grace_word} are up: Your account will be locked. Your active
+    cross-listings will stay untouched on your platforms, but cross-listing
+    functions and new outgoing listings will pause until you upgrade.
+
+Upgrading takes less than a minute. Your items, connected channels, and history
+will stay completely intact so you can keep going without missing a beat.
+
+Activate Pro here: {settings.app_url} (€19.99/month, cancel anytime)
+
+If you hit any snags, have questions, or feel something is missing for your
+workflow, please email me directly at {settings.smtp_from_email or "info@revaleur.com"}
+or simply reply to this message. I read every email and I am always happy to
+help you get the most out of Omnivaleur.
+
+Best regards,
+
+Daniel
+Founder, Omnivaleur
+{settings.smtp_from_email or "info@revaleur.com"}
 """
     return subject, body
 

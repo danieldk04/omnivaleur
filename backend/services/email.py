@@ -22,7 +22,8 @@ def send_email(subject: str, body: str, to: str | None = None) -> bool:
         return False
 
     recipient = to or settings.owner_email
-    msg = MIMEText(body)
+    # utf-8: zonder deze charset weigert Python elke tekst met een euroteken erin.
+    msg = MIMEText(body, "plain", "utf-8")
     msg["Subject"] = subject
     msg["From"] = settings.smtp_from_email
     msg["To"] = recipient
