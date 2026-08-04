@@ -56,6 +56,7 @@ async def billing_status(user=Depends(get_current_user_full)):
             "access_allowed": True,
             "grace_ends_at": None,
             "grace_days_left": None,
+            "is_owner": True,
         }
     try:
         sub = _get_or_create_subscription(user_id)

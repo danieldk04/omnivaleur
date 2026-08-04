@@ -16,7 +16,7 @@ def _is_configured() -> bool:
     return bool(settings.smtp_host and settings.smtp_user and settings.smtp_password and settings.smtp_from_email)
 
 
-def send_email(subject: str, body: str, to: str | None = None) -> bool:
+def send_email(subject: str, body: str, to: str | None = None, reply_to: str | None = None) -> bool:
     if not _is_configured():
         logger.info(f"SMTP niet geconfigureerd — melding overgeslagen: {subject}")
         return False
@@ -27,6 +27,10 @@ def send_email(subject: str, body: str, to: str | None = None) -> bool:
     msg["Subject"] = subject
     msg["From"] = settings.smtp_from_email
     msg["To"] = recipient
+    if reply_to:
+        # De mail vertrekt vanaf de mailbox die toevallig is ingesteld; antwoorden
+        # moeten bij het adres in de handtekening uitkomen.
+        msg["Reply-To"] = reply_to
 
     try:
         with smtplib.SMTP(settings.smtp_host, settings.smtp_port, timeout=15) as server:

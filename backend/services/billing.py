@@ -17,6 +17,11 @@ GRACE_DAYS = 2
 # How long before the trial ends the reminder mail goes out.
 REMINDER_DAYS_BEFORE = 2
 
+# The address in the mail's signature. Deliberately not the SMTP login: which
+# mailbox actually sends the mail is a technical detail, this is what customers
+# are asked to write back to.
+CONTACT_EMAIL = "info@omnivaleur.com"
+
 # Statuses that mean "paid and current" — no grace maths needed.
 _ALLOWED = {"active", "trialing"}
 
@@ -86,7 +91,7 @@ will stay completely intact so you can keep going without missing a beat.
 Activate Pro here: {settings.app_url} (€19.99/month, cancel anytime)
 
 If you hit any snags, have questions, or feel something is missing for your
-workflow, please email me directly at {settings.smtp_from_email or "info@revaleur.com"}
+workflow, please email me directly at {CONTACT_EMAIL}
 or simply reply to this message. I read every email and I am always happy to
 help you get the most out of Omnivaleur.
 
@@ -94,7 +99,7 @@ Best regards,
 
 Daniel
 Founder, Omnivaleur
-{settings.smtp_from_email or "info@revaleur.com"}
+{CONTACT_EMAIL}
 """
     return subject, body
 
@@ -152,7 +157,7 @@ async def send_trial_reminders():
         ends = _parse_ts(sub.get("trial_ends_at"))
         days_left = max(1, int(-(-((ends - now).total_seconds()) // 86400))) if ends else REMINDER_DAYS_BEFORE
         subject, body = trial_reminder_email(days_left)
-        if not send_email(subject=subject, body=body, to=email):
+        if not send_email(subject=subject, body=body, to=email, reply_to=CONTACT_EMAIL):
             # Not marked as sent, so tomorrow's run tries again.
             continue
         db.table("subscriptions").update(

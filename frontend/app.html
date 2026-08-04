@@ -1360,6 +1360,15 @@ input[type="checkbox"].row-check { width: 15px; height: 15px; cursor: pointer; a
           </div>
         </div>
 
+        <!-- Owner-only: verstuurt de proefherinnering naar het eigen adres -->
+        <div class="card" id="owner-tools" style="display:none">
+          <div class="card-header"><h2>Owner tools</h2></div>
+          <div style="padding:16px 22px;display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+            <button onclick="sendTestReminderMail(this)" class="btn" style="min-width:200px;justify-content:center">Send test reminder mail</button>
+            <span style="font-size:12px;color:var(--muted)" id="owner-test-mail-result">Sends the trial reminder to your own address. Customers are not touched.</span>
+          </div>
+        </div>
+
         <!-- Subscription card — content swapped by renderBilling() -->
         <div class="card">
           <div class="card-header"><h2>Subscription</h2></div>
@@ -2557,6 +2566,9 @@ function renderBilling(data) {
     return;
   }
 
+  const ownerTools = document.getElementById('owner-tools');
+  if (ownerTools) ownerTools.style.display = data.is_owner ? 'block' : 'none';
+
   const { status, trial_ends_at, current_period_end } = data;
   // The server decides access; the panel only reflects it. graceLeft > 0 means
   // the trial or payment lapsed but the account still works for a few days.
@@ -2618,6 +2630,20 @@ function renderBilling(data) {
       showPaywall('Your free trial has ended and your account is now locked. Activate Pro to continue using Omnivaleur.', 'Activate Pro →');
     }
   }
+}
+
+async function sendTestReminderMail(btn) {
+  const out = document.getElementById('owner-test-mail-result');
+  btn.disabled = true; btn.textContent = 'Sending…';
+  try {
+    const res = await apiFetch(`${API}/api/billing/admin/test-reminder-mail`, { method: 'POST' });
+    const data = await parseJsonSafe(res);
+    out.textContent = res.ok ? `Sent to ${data.sent_to} — check your inbox (and spam).` : (data.detail || 'Sending failed.');
+    out.style.color = res.ok ? '#15803d' : '#b91c1c';
+  } catch (e) {
+    out.textContent = e.message; out.style.color = '#b91c1c';
+  }
+  btn.disabled = false; btn.textContent = 'Send test reminder mail';
 }
 
 function renderTrialBanner(data) {
