@@ -51,7 +51,7 @@ def start_scheduler():
     from backend.services.polling import poll_platform_statuses
     from backend.services.crosslist import relist_expiring_marktplaats
 
-    from backend.services.billing import expire_trials
+    from backend.services.billing import expire_trials, send_trial_reminders
     from backend.services.analytics_report import send_weekly_report
     from backend.content.evaluator import run_evaluation_cycle_sync
 
@@ -75,6 +75,18 @@ def start_scheduler():
         "interval",
         hours=1,
         id="expire_trials",
+        replace_existing=True,
+    )
+    # Herinneringsmail twee dagen voor het einde van de proefperiode — dagelijks
+    # om 09:00 (NL-tijd), zodat de mail op een normaal moment binnenkomt en niet
+    # midden in de nacht.
+    _scheduler.add_job(
+        _off_the_request_loop(send_trial_reminders),
+        "cron",
+        hour=9,
+        minute=0,
+        timezone="Europe/Amsterdam",
+        id="trial_reminders",
         replace_existing=True,
     )
     # Wekelijks marketingrapport — elke zondagochtend 08:00 (NL-tijd) per e-mail.

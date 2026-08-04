@@ -98,6 +98,11 @@ CREATE TABLE IF NOT EXISTS subscriptions (
 -- backend praat met de service key en gaat niet door RLS.
 ALTER TABLE subscriptions DISABLE ROW LEVEL SECURITY;
 
+-- Wanneer de herinneringsmail ("je proef eindigt over 2 dagen") is verstuurd.
+-- Zonder deze kolom stuurt de dagelijkse taak niets: hij zou dan niet kunnen
+-- onthouden wie hij al gemaild heeft en iedereen elke dag opnieuw mailen.
+ALTER TABLE subscriptions ADD COLUMN IF NOT EXISTS trial_reminder_sent_at TIMESTAMPTZ;
+
 -- eBay support: items need a numeric eBay category ID to publish (eBay's
 -- Inventory API requires a leaf category, unlike Marktplaats/Vinted's free-form
 -- categories); listings need the offerId separately from the public listingId
