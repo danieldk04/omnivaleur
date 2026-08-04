@@ -12,7 +12,10 @@ logger = logging.getLogger(__name__)
 
 # Days of continued access after a trial ends or a payment fails. Long enough to
 # fix a card or think it over, short enough that it isn't a free plan.
-GRACE_DAYS = 3
+GRACE_DAYS = 2
+
+# How long before the trial ends the reminder mail goes out.
+REMINDER_DAYS_BEFORE = 2
 
 # Statuses that mean "paid and current" — no grace maths needed.
 _ALLOWED = {"active", "trialing"}
