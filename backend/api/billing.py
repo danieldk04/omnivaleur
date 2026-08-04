@@ -211,6 +211,24 @@ def comp_account(email: str, user=Depends(get_current_user_full)):
     return {"ok": True, "user_id": target.id, "email": target.email}
 
 
+@router.post("/admin/test-reminder-mail")
+def test_reminder_mail(user=Depends(get_current_user_full)):
+    """Stuurt de herinneringsmail naar de eigenaar zelf, zodat de tekst en de
+    mailinstellingen te controleren zijn zonder op de dagelijkse taak te wachten.
+    Raakt geen enkele klantrij aan."""
+    if not _is_owner_email(user.email):
+        raise HTTPException(status_code=403, detail="Niet toegestaan")
+
+    from backend.services.billing import CONTACT_EMAIL, trial_reminder_email
+    from backend.services.email import send_email
+
+    subject, body = trial_reminder_email(2)
+    ok = send_email(subject=f"[TEST] {subject}", body=body, to=user.email, reply_to=CONTACT_EMAIL)
+    if not ok:
+        raise HTTPException(status_code=503, detail="Mail kon niet verstuurd worden — controleer de SMTP-instellingen op Railway")
+    return {"ok": True, "sent_to": user.email}
+
+
 @router.post("/webhook")
 async def stripe_webhook(request: Request, stripe_signature: str = Header(None)):
     if not settings.stripe_webhook_secret:
