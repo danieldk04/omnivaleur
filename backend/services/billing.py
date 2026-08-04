@@ -128,33 +128,32 @@ def final_warning_email(days_left: int) -> tuple[str, str]:
     voordat het account op slot gaat."""
     when = _in_phrase(days_left)
     subject = f"Last call: Your Omnivaleur account locks {when}"
-    body = f"""Hi there,
+    body = f"""Hi,
 
-Daniel again, founder of Omnivaleur.
+Daniel here again from Omnivaleur.
 
-Your free trial has ended and your grace period runs out {when}. This is the
-last message you will get from me about it.
+Quick heads-up: your grace period ends {when}, and this is the last email I will
+send you about it. Once the clock runs out, your account will lock and automatic
+cross-listing will stop.
 
-What happens when it runs out:
+A quick reminder of what happens:
 
-  * Cross-listing stops. No new listings go out, and the extension stops
-    picking up work.
+  * No new listings: The extension pauses and no new items go out.
 
-  * Your listings stay live. Everything you already published on Vinted,
-    Marktplaats, eBay and the rest stays exactly where it is. Nothing gets
-    removed and nothing gets deleted.
+  * Your items stay live: Everything on Vinted, Marktplaats, eBay, and your
+    other channels stays published. Nothing gets deleted.
 
-  * Your account stays intact. Your items, connected channels and history are
-    kept, so activating Pro later picks up exactly where you left off.
+  * Your setup is safe: Your history, items, and connected accounts stay intact
+    for whenever you are ready to return.
 
-If Omnivaleur is saving you time, activating takes less than a minute and
-everything keeps running without interruption.
+If Omnivaleur is saving you time and keeping your store organized, you can keep
+everything running without a break.
 
-Activate Pro here: {settings.app_url} (€19.99/month, cancel anytime)
+Keep Pro active: {settings.app_url} (€19.99/month, cancel anytime)
 
-And if you decided it is not for you, I would genuinely like to know why. One
-line is enough — reply to this message or write to me at {CONTACT_EMAIL}.
-It is the fastest way for me to make this better.
+If you have decided to pass, I would genuinely appreciate knowing why. A single
+sentence in reply to this mail or sent to {CONTACT_EMAIL} helps me make the
+platform better.
 
 Best regards,
 
