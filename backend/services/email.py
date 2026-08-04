@@ -33,8 +33,16 @@ def send_email(subject: str, body: str, to: str | None = None, reply_to: str | N
         msg["Reply-To"] = reply_to
 
     try:
-        with smtplib.SMTP(settings.smtp_host, settings.smtp_port, timeout=15) as server:
+        # Poort 465 is versleuteld vanaf de eerste byte (o.a. Hostinger); 587
+        # begint onversleuteld en schakelt over met STARTTLS (o.a. Gmail). Op de
+        # verkeerde manier verbinden loopt vast op een time-out i.p.v. een
+        # duidelijke fout, dus wordt hier op de poort gekozen.
+        if int(settings.smtp_port) == 465:
+            server = smtplib.SMTP_SSL(settings.smtp_host, settings.smtp_port, timeout=15)
+        else:
+            server = smtplib.SMTP(settings.smtp_host, settings.smtp_port, timeout=15)
             server.starttls()
+        with server:
             server.login(settings.smtp_user, settings.smtp_password)
             server.sendmail(settings.smtp_from_email, [recipient], msg.as_string())
         return True
