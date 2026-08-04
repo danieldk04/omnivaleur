@@ -30,3 +30,25 @@ async def get_current_user_full(authorization: str = Header(...)):
         raise
     except Exception:
         raise HTTPException(status_code=401, detail="Sessie verlopen")
+
+
+async def require_active_subscription(authorization: str = Header(...)) -> str:
+    """
+    Gate for everything that creates value: crosslisting, publishing and the
+    extension's job queue. Until now the paywall was a panel in the browser, so
+    an expired account could keep working simply by not looking at it.
+
+    Returns the user id, or raises 402 with a message the app shows verbatim.
+    """
+    from backend.services.billing import check_access
+
+    user = await get_current_user_full(authorization)
+    verdict = await check_access(user.id, user.email)
+    if verdict["allowed"]:
+        return user.id
+
+    if verdict["reason"] == "past_due":
+        detail = "Your subscription is on hold because a payment failed. Update your payment details to restore access."
+    else:
+        detail = "Your free trial has ended. Activate Pro to continue crosslisting."
+    raise HTTPException(status_code=402, detail=detail)
