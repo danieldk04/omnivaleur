@@ -1,11 +1,28 @@
 """
-Billing service — background jobs for subscription lifecycle.
+Billing service — background jobs and access control for subscription lifecycle.
 """
+import asyncio
 import logging
-from datetime import datetime, timezone
+import time
+from datetime import datetime, timedelta, timezone
 from backend.database import get_db
+from backend.config import settings
 
 logger = logging.getLogger(__name__)
+
+# Days of continued access after a trial ends or a payment fails. Long enough to
+# fix a card or think it over, short enough that it isn't a free plan.
+GRACE_DAYS = 3
+
+# Statuses that mean "paid and current" — no grace maths needed.
+_ALLOWED = {"active", "trialing"}
+
+# The access check runs on every crosslist and on the extension's job polling
+# (every few seconds per user), so the subscription row is cached briefly rather
+# than re-read from Supabase each time. The cache is dropped the moment Stripe
+# reports a change (see invalidate_access_cache).
+_CACHE_TTL = 60
+_cache: dict[str, tuple[float, dict]] = {}
 
 
 async def expire_trials():
