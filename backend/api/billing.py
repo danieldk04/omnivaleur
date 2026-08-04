@@ -213,17 +213,17 @@ def comp_account(email: str, user=Depends(get_current_user_full)):
 
 
 @router.post("/admin/test-reminder-mail")
-def test_reminder_mail(user=Depends(get_current_user_full)):
+def test_reminder_mail(kind: str = "reminder", user=Depends(get_current_user_full)):
     """Stuurt de herinneringsmail naar de eigenaar zelf, zodat de tekst en de
     mailinstellingen te controleren zijn zonder op de dagelijkse taak te wachten.
     Raakt geen enkele klantrij aan."""
     if not _is_owner_email(user.email):
         raise HTTPException(status_code=403, detail="Niet toegestaan")
 
-    from backend.services.billing import CONTACT_EMAIL, trial_reminder_email
+    from backend.services.billing import CONTACT_EMAIL, final_warning_email, trial_reminder_email
     from backend.services.email import send_email_checked
 
-    subject, body = trial_reminder_email(2)
+    subject, body = final_warning_email(1) if kind == "final" else trial_reminder_email(2)
     try:
         send_email_checked(f"[TEST] {subject}", body, to=user.email, reply_to=CONTACT_EMAIL)
     except Exception as e:
