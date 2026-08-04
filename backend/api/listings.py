@@ -6,7 +6,7 @@ from backend.services.relist import (
     refresh_listing, refresh_stale_listings, renew_etsy_listing, relist_ended_ebay_listing,
     RefreshError, REFRESH_CAPABLE_PLATFORMS,
 )
-from backend.api.deps import get_current_user
+from backend.api.deps import get_current_user, require_active_subscription
 from datetime import datetime, timezone
 import re
 import logging
@@ -93,7 +93,7 @@ def list_all_listings(
 async def publish_listing(
     body: ListingCreate,
     background_tasks: BackgroundTasks,
-    user_id: str = Depends(get_current_user),
+    user_id: str = Depends(require_active_subscription),
 ):
     try:
         results = await publish_to_platforms(body.item_id, body.platforms, user_id)
@@ -180,7 +180,7 @@ def mark_listing_active(body: dict, user_id: str = Depends(get_current_user)):
 
 
 @router.post("/refresh")
-async def refresh_one_listing(body: dict, user_id: str = Depends(get_current_user)):
+async def refresh_one_listing(body: dict, user_id: str = Depends(require_active_subscription)):
     """
     Refresh a single listing. body: {item_id, platform, strategy: "content"|"relist", new_price?: number}
     "content" = safe in-place edit (price/photo-order nudge).
@@ -212,7 +212,7 @@ async def refresh_one_listing(body: dict, user_id: str = Depends(get_current_use
 
 
 @router.post("/refresh-stale")
-async def refresh_stale(body: dict, user_id: str = Depends(get_current_user)):
+async def refresh_stale(body: dict, user_id: str = Depends(require_active_subscription)):
     """
     Bulk-refresh the oldest eligible listings on one platform.
     body: {platform, older_than_days?: 30, limit?: 5}
@@ -232,7 +232,7 @@ async def refresh_stale(body: dict, user_id: str = Depends(get_current_user)):
 
 
 @router.post("/renew-etsy")
-async def renew_etsy(body: dict, user_id: str = Depends(get_current_user)):
+async def renew_etsy(body: dict, user_id: str = Depends(require_active_subscription)):
     """
     Etsy's official renewal action — charges the normal Etsy listing fee.
     Not part of the shared refresh quota (real money, user-initiated per click).
@@ -248,7 +248,7 @@ async def renew_etsy(body: dict, user_id: str = Depends(get_current_user)):
 
 
 @router.post("/relist-ended-ebay")
-async def relist_ended_ebay(body: dict, user_id: str = Depends(get_current_user)):
+async def relist_ended_ebay(body: dict, user_id: str = Depends(require_active_subscription)):
     """
     Republish an ENDED eBay listing via eBay's own relist mechanism.
     Refuses to run on a still-active listing (eBay duplicate-listing policy).

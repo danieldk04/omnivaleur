@@ -1,6 +1,6 @@
 from fastapi import APIRouter, HTTPException, Depends
 from backend.database import get_db
-from backend.api.deps import get_current_user
+from backend.api.deps import get_current_user, require_active_subscription
 from backend.models import ItemCreate
 from datetime import datetime, timezone
 import json
@@ -478,7 +478,7 @@ def _listings_by_platform_id(db, items: list[dict]) -> dict:
 
 
 @router.post("/scan/{platform}")
-def start_scan(platform: str, user_id: str = Depends(get_current_user)):
+def start_scan(platform: str, user_id: str = Depends(require_active_subscription)):
     if platform not in SCANNABLE_PLATFORMS:
         raise HTTPException(status_code=400, detail=f"Scanning isn't available for {platform}")
     db = get_db()
@@ -634,7 +634,7 @@ async def link_candidate(candidate_id: str, body: dict, user_id: str = Depends(g
 
 
 @router.post("/{candidate_id}/create-item")
-async def create_item_from_candidate(candidate_id: str, body: dict, user_id: str = Depends(get_current_user)):
+async def create_item_from_candidate(candidate_id: str, body: dict, user_id: str = Depends(require_active_subscription)):
     """
     Create a new item from a scraped listing. `body` carries the fields scraping
     can't see (purchase_price, brand, size, condition, category, color, material, ...)
@@ -678,7 +678,7 @@ async def create_item_from_candidate(candidate_id: str, body: dict, user_id: str
 
 
 @router.post("/bulk-import")
-async def bulk_import_candidates(body: dict = None, user_id: str = Depends(get_current_user)):
+async def bulk_import_candidates(body: dict = None, user_id: str = Depends(require_active_subscription)):
     """
     Process every pending import candidate in one go: candidates with a high-confidence
     suggested_item_id get linked to that item, everything else becomes a new item

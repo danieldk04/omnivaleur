@@ -1,6 +1,6 @@
 from fastapi import APIRouter, HTTPException, Depends, Request
 from backend.database import get_db
-from backend.api.deps import get_current_user
+from backend.api.deps import get_current_user, require_active_subscription
 from backend.api.imports import _backfill_item_from_candidate
 from backend.services.crosslist import handle_item_sold
 from datetime import datetime, timezone, timedelta
@@ -139,7 +139,7 @@ def _recover_stale_claims(db, user_id: str, platform: str, now_dt: datetime) -> 
 
 
 @router.get("/pending")
-def get_pending_jobs(request: Request, platform: str = None, user_id: str = Depends(get_current_user)):
+def get_pending_jobs(request: Request, platform: str = None, user_id: str = Depends(require_active_subscription)):
     db = get_db()
     now_dt = datetime.now(timezone.utc)
     # A poll WITH a platform is a real extension dispatch poll (the dashboard
@@ -434,7 +434,7 @@ def active_jobs(user_id: str = Depends(get_current_user)):
 
 
 @router.post("/reschedule-now")
-def reschedule_now(body: dict, user_id: str = Depends(get_current_user)):
+def reschedule_now(body: dict, user_id: str = Depends(require_active_subscription)):
     """
     Bring a scheduled relist recreate forward so it fires on the next poll —
     clears the jittered delay for a specific item's still-pending "create" job.
@@ -466,7 +466,7 @@ def reschedule_now(body: dict, user_id: str = Depends(get_current_user)):
 
 
 @router.post("/relist-retry")
-async def relist_retry(body: dict, user_id: str = Depends(get_current_user)):
+async def relist_retry(body: dict, user_id: str = Depends(require_active_subscription)):
     """
     Retry a relist that failed at the delist step. The old listing is still live
     on the platform (a failed delist removes nothing), so retrying is safe and is

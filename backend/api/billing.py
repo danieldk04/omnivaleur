@@ -7,6 +7,11 @@ from fastapi import APIRouter, HTTPException, Depends, Request, Header
 from backend.database import get_db
 from backend.api.deps import get_current_user, get_current_user_full
 from backend.config import settings
+from backend.services.billing import (
+    evaluate_access,
+    invalidate_access_cache,
+    is_owner_email as _is_owner_email,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -38,14 +43,6 @@ def _get_or_create_subscription(user_id: str) -> dict:
         return {"user_id": user_id, "status": "trialing", "plan": "pro", "trial_ends_at": trial_ends_at}
 
 
-from backend.services.billing import (
-    check_access,
-    evaluate_access,
-    invalidate_access_cache,
-    is_owner_email as _is_owner_email,
-)
-
-
 @router.get("/status")
 async def billing_status(user=Depends(get_current_user_full)):
     user_id = user.id
@@ -56,6 +53,9 @@ async def billing_status(user=Depends(get_current_user_full)):
             "trial_ends_at": None,
             "current_period_end": None,
             "stripe_subscription_id": None,
+            "access_allowed": True,
+            "grace_ends_at": None,
+            "grace_days_left": None,
         }
     try:
         sub = _get_or_create_subscription(user_id)
@@ -76,7 +76,8 @@ async def billing_status(user=Depends(get_current_user_full)):
         import logging
         logging.getLogger(__name__).error(f"billing_status error for {user_id}: {e}")
         # Return trialing so the user isn't blocked if DB lookup fails
-        return {"status": "trialing", "plan": "pro", "trial_ends_at": None, "current_period_end": None}
+        return {"status": "trialing", "plan": "pro", "trial_ends_at": None, "current_period_end": None,
+                "access_allowed": True, "grace_ends_at": None, "grace_days_left": None}
 
 
 @router.post("/checkout")

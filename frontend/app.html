@@ -2201,11 +2201,16 @@ async function triggerPwaInstall() {
   document.querySelectorAll('.pwa-install-btn').forEach(b => { b.style.display = 'none'; });
 }
 
-function apiFetch(url, opts = {}) {
-  return fetch(url, {
+async function apiFetch(url, opts = {}) {
+  const res = await fetch(url, {
     ...opts,
     headers: { 'Authorization': `Bearer ${TOKEN}`, ...(opts.headers || {}) },
   });
+  // 402 = the server refused because the subscription lapsed. The billing panel
+  // is no longer the thing that blocks people, so it must also be told when the
+  // server says no — otherwise the app would silently fail half its buttons.
+  if (res.status === 402) loadBillingStatus();
+  return res;
 }
 
 // Safely turn a response into JSON. When something in front of the app (proxy, gateway
@@ -2553,6 +2558,10 @@ function renderBilling(data) {
   }
 
   const { status, trial_ends_at, current_period_end } = data;
+  // The server decides access; the panel only reflects it. graceLeft > 0 means
+  // the trial or payment lapsed but the account still works for a few days.
+  const graceLeft  = data.grace_days_left;
+  const graceBlock = data.access_allowed === false;
 
   if (status === 'active') {
     hidePaywall();
@@ -2567,10 +2576,16 @@ function renderBilling(data) {
     loadInvoices();
 
   } else if (status === 'past_due') {
-    hidePaywall();
+    if (graceBlock) {
+      showPaywall('Your payment failed and the grace period has ended. Update your payment details to restore access.', 'Update payment →');
+    } else {
+      hidePaywall();
+    }
     upgradeCard.style.display = 'none';
     activeCard.style.display  = 'block';
-    document.getElementById('billing-active-detail').textContent = 'Payment required to keep access';
+    document.getElementById('billing-active-detail').textContent = graceLeft > 0
+      ? `Payment failed — your account is locked in ${graceLeft} day${graceLeft !== 1 ? 's' : ''}`
+      : 'Payment required to restore access';
     document.getElementById('billing-next-date').textContent = '—';
     document.getElementById('billing-status-badge').textContent = 'Payment failed';
     document.getElementById('billing-status-badge').className = 'status-pill past_due';
@@ -2588,15 +2603,20 @@ function renderBilling(data) {
     document.getElementById('nav-prijs-label').textContent = 'Account';
 
   } else {
-    // trial_expired / canceled / unknown — block access
+    // trial_expired / canceled / unknown — grace period, then hard block
     upgradeCard.style.display = 'block';
     activeCard.style.display  = 'none';
     const note = document.getElementById('pricing-trial-note');
-    if (note) note.textContent = 'Your trial has ended — activate Pro to continue';
-    const btn = document.getElementById('btn-checkout');
+    const btn  = document.getElementById('btn-checkout');
     if (btn) btn.textContent = 'Activate Pro →';
     document.getElementById('nav-prijs-label').textContent = 'Account';
-    showPaywall('Your free trial has ended. Activate Pro to continue using Omnivaleur.', 'Activate Pro →');
+    if (!graceBlock && graceLeft > 0) {
+      if (note) note.textContent = `Your trial has ended — ${graceLeft} day${graceLeft !== 1 ? 's' : ''} of access left before your account is locked`;
+      hidePaywall();
+    } else {
+      if (note) note.textContent = 'Your account is locked — activate Pro to continue';
+      showPaywall('Your free trial has ended and your account is now locked. Activate Pro to continue using Omnivaleur.', 'Activate Pro →');
+    }
   }
 }
 
@@ -2629,13 +2649,17 @@ function renderTrialBanner(data) {
       </button>`;
 
   } else if (status === 'trial_expired' || status === 'canceled') {
+    const left = data.grace_days_left;
+    const locked = data.access_allowed === false;
     banner.style.cssText = 'display:flex;background:#fef2f2;border:1px solid #fca5a5;border-radius:8px;padding:12px 18px;margin-bottom:20px;align-items:center;justify-content:space-between;gap:12px';
     banner.innerHTML = `
       <div style="display:flex;align-items:center;gap:10px">
         <span style="font-size:18px">⚠️</span>
         <div>
-          <div style="font-weight:600;font-size:13px;color:#991b1b">Your free trial has expired</div>
-          <div style="font-size:12px;color:#b91c1c;margin-top:1px">Crosslisting is paused — activate Pro to continue</div>
+          <div style="font-weight:600;font-size:13px;color:#991b1b">${locked ? 'Your account is locked' : 'Your free trial has expired'}</div>
+          <div style="font-size:12px;color:#b91c1c;margin-top:1px">${locked
+            ? 'Crosslisting has stopped — activate Pro to restore access'
+            : `Crosslisting stops in ${left} day${left !== 1 ? 's' : ''} — activate Pro to keep it running`}</div>
         </div>
       </div>
       <button onclick="showView('prijs')" style="white-space:nowrap;flex-shrink:0;padding:8px 16px;background:#dc2626;color:#fff;border:none;border-radius:7px;font-size:12px;font-weight:700;cursor:pointer">
@@ -2649,7 +2673,9 @@ function renderTrialBanner(data) {
         <span style="font-size:18px">💳</span>
         <div>
           <div style="font-weight:600;font-size:13px;color:#991b1b">Payment failed</div>
-          <div style="font-size:12px;color:#b91c1c;margin-top:1px">Update your payment details to keep access</div>
+          <div style="font-size:12px;color:#b91c1c;margin-top:1px">${data.access_allowed === false
+            ? 'Your account is locked — update your payment details to restore access'
+            : `Your account is locked in ${data.grace_days_left} day${data.grace_days_left !== 1 ? 's' : ''} — update your payment details`}</div>
         </div>
       </div>
       <button onclick="openPortal()" style="white-space:nowrap;flex-shrink:0;padding:8px 16px;background:#dc2626;color:#fff;border:none;border-radius:7px;font-size:12px;font-weight:700;cursor:pointer">

@@ -1,5 +1,5 @@
 import asyncio
-from fastapi import Header, HTTPException
+from fastapi import Depends, Header, HTTPException
 from backend.database import get_db
 
 
@@ -42,7 +42,6 @@ async def require_active_subscription(user=Depends(get_current_user_full)) -> st
     """
     from backend.services.billing import check_access
 
-    user = await get_current_user_full(authorization)
     verdict = await check_access(user.id, user.email)
     if verdict["allowed"]:
         return user.id

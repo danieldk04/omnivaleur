@@ -1,7 +1,7 @@
 from fastapi import APIRouter, HTTPException, Depends
 from backend.models import ItemCreate, ItemOut
 from backend.database import get_db, execute_with_retry
-from backend.api.deps import get_current_user
+from backend.api.deps import get_current_user, require_active_subscription
 import asyncio
 import logging
 import uuid
@@ -193,7 +193,7 @@ async def delist_item(item_id: str, user_id: str = Depends(get_current_user)):
 
 
 @router.post("/{item_id}/crosslist")
-async def crosslist_item(item_id: str, body: dict, user_id: str = Depends(get_current_user)):
+async def crosslist_item(item_id: str, body: dict, user_id: str = Depends(require_active_subscription)):
     db = get_db()
     item = await _exec(db.table("items").select("id").eq("id", item_id).eq("user_id", user_id))
     if not item.data:
