@@ -61,23 +61,42 @@ async def expire_trials():
         _cache.pop(sub["user_id"], None)
 
 
+def _in_phrase(days_left: int) -> str:
+    """'today' / 'tomorrow' / 'in 2 days' — een mail die "in 1 day" zegt terwijl
+    de proef diezelfde middag afloopt, leest als een fout."""
+    if days_left <= 0:
+        return "today"
+    if days_left == 1:
+        return "tomorrow"
+    return f"in {days_left} days"
+
+
+def _days_until(moment, now) -> int:
+    """Aantal kalenderdagen tot dat moment. Vandaag = 0, morgen = 1.
+
+    Bewust op de kalender en niet op 24-uursblokken: een proef die vanmiddag om
+    drie uur afloopt is 'today', niet 'in 1 day'.
+    """
+    if not moment:
+        return 0
+    return max(0, (moment.date() - now.date()).days)
+
+
 def trial_reminder_email(days_left: int, grace_days: int = GRACE_DAYS) -> tuple[str, str]:
-    """Subject + body of the reminder. Kept apart from the sending so the wording
-    can be changed (and previewed) without touching the scheduling."""
-    day_word = "day" if days_left == 1 else "days"
-    subject = f"Quick heads up: Your Omnivaleur trial ends in {days_left} {day_word}"
+    """Eerste herinnering: twee dagen voor het einde van de proefperiode."""
+    when = _in_phrase(days_left)
+    subject = f"Quick heads up: Your Omnivaleur trial ends {when}"
     grace_word = "day" if grace_days == 1 else "days"
     body = f"""Hi there,
 
 Daniel here, founder of Omnivaleur.
 
-I noticed your free trial is coming to an end in just {days_left} {day_word}. I wanted to
-reach out personally to make sure everything has been running smoothly for you
-so far.
+I noticed your free trial is coming to an end {when}. I wanted to reach out
+personally to make sure everything has been running smoothly for you so far.
 
 Here is what happens next:
 
-  * Next {days_left} {day_word}: Your trial remains fully active.
+  * Until then: Your trial remains fully active.
 
   * After that: You will get a {grace_days}-day grace period to make your decision.
 
@@ -104,47 +123,56 @@ Founder, Omnivaleur
     return subject, body
 
 
-async def send_trial_reminders():
-    """
-    Runs daily. Mails every trialing user whose trial ends in REMINDER_DAYS_BEFORE
-    days. The sent date is written back to the row, so a restart or a second run
-    on the same day cannot mail anyone twice.
-    """
+def final_warning_email(days_left: int) -> tuple[str, str]:
+    """Tweede en laatste herinnering: de laatste dag van de bedenktijd, vlak
+    voordat het account op slot gaat."""
+    when = _in_phrase(days_left)
+    subject = f"Last call: Your Omnivaleur account locks {when}"
+    body = f"""Hi there,
+
+Daniel again, founder of Omnivaleur.
+
+Your free trial has ended and your grace period runs out {when}. This is the
+last message you will get from me about it.
+
+What happens when it runs out:
+
+  * Cross-listing stops. No new listings go out, and the extension stops
+    picking up work.
+
+  * Your listings stay live. Everything you already published on Vinted,
+    Marktplaats, eBay and the rest stays exactly where it is. Nothing gets
+    removed and nothing gets deleted.
+
+  * Your account stays intact. Your items, connected channels and history are
+    kept, so activating Pro later picks up exactly where you left off.
+
+If Omnivaleur is saving you time, activating takes less than a minute and
+everything keeps running without interruption.
+
+Activate Pro here: {settings.app_url} (€19.99/month, cancel anytime)
+
+And if you decided it is not for you, I would genuinely like to know why. One
+line is enough — reply to this message or write to me at {CONTACT_EMAIL}.
+It is the fastest way for me to make this better.
+
+Best regards,
+
+Daniel
+Founder, Omnivaleur
+{CONTACT_EMAIL}
+"""
+    return subject, body
+
+
+def _mail_batch(rows: list[dict], marker_column: str, build_mail, moment_key) -> None:
+    """Stuurt één mail per rij en zet daarna het vinkje. Mislukt het versturen,
+    dan blijft het vinkje leeg en probeert de taak het morgen opnieuw."""
     from backend.services.email import send_email
 
     db = get_db()
     now = datetime.now(timezone.utc)
-    # Everyone whose trial still runs but ends within two days, and who has not
-    # been mailed yet. Deliberately not a one-day slice: someone who signed up
-    # 30 hours before the end would otherwise fall between two daily runs and
-    # never hear from us. The sent-marker keeps it to one mail per person.
-    window_start = now
-    window_end = now + timedelta(days=REMINDER_DAYS_BEFORE)
-
-    try:
-        result = (
-            db.table("subscriptions")
-            .select("id, user_id, trial_ends_at, trial_reminder_sent_at")
-            .eq("status", "trialing")
-            .gte("trial_ends_at", window_start.isoformat())
-            .lt("trial_ends_at", window_end.isoformat())
-            .is_("trial_reminder_sent_at", "null")
-            .execute()
-        )
-    except Exception:
-        # The column has to be added to Supabase by hand. Without it there is no
-        # way to remember who was already mailed, and mailing daily would be
-        # worse than not mailing at all — so this stays off until the column exists.
-        logger.exception(
-            "Herinneringsmails overgeslagen: kolom trial_reminder_sent_at ontbreekt nog in Supabase"
-        )
-        return
-
-    if not result.data:
-        return
-
-    logger.info(f"Trial reminder: {len(result.data)} gebruiker(s)")
-    for sub in result.data:
+    for sub in rows:
         try:
             user = db.auth.admin.get_user_by_id(sub["user_id"])
             email = user.user.email if user and user.user else None
@@ -154,16 +182,71 @@ async def send_trial_reminders():
         if not email:
             continue
 
-        ends = _parse_ts(sub.get("trial_ends_at"))
-        days_left = max(1, int(-(-((ends - now).total_seconds()) // 86400))) if ends else REMINDER_DAYS_BEFORE
-        subject, body = trial_reminder_email(days_left)
+        subject, body = build_mail(_days_until(moment_key(sub), now))
         if not send_email(subject=subject, body=body, to=email, reply_to=CONTACT_EMAIL):
-            # Not marked as sent, so tomorrow's run tries again.
             continue
-        db.table("subscriptions").update(
-            {"trial_reminder_sent_at": now.isoformat()}
-        ).eq("id", sub["id"]).execute()
-        logger.info(f"Trial reminder verstuurd naar {email}")
+        db.table("subscriptions").update({marker_column: now.isoformat()}).eq("id", sub["id"]).execute()
+        logger.info(f"{marker_column} verstuurd naar {email}")
+
+
+def _select_or_warn(query_fn, column: str):
+    """De markeerkolommen worden met de hand in Supabase gezet. Ontbreekt er een,
+    dan zou de taak niet kunnen onthouden wie hij al gemaild heeft en zou hij
+    iedereen dagelijks opnieuw mailen — dus stopt hij dan liever."""
+    try:
+        return query_fn().data
+    except Exception:
+        logger.exception(f"Mails overgeslagen: kolom {column} ontbreekt nog in Supabase")
+        return None
+
+
+async def send_trial_reminders():
+    """
+    Draait dagelijks. Twee mails, allebei precies één keer per gebruiker:
+
+    1. De proef loopt nog en eindigt binnen twee dagen.
+    2. De proef is voorbij en de laatste dag bedenktijd is aangebroken.
+    """
+    db = get_db()
+    now = datetime.now(timezone.utc)
+
+    # 1 — proef eindigt binnen twee dagen. Bewust geen schijfje van één dag:
+    # wie zich 30 uur voor het einde aanmeldt zou anders tussen twee dagelijkse
+    # runs door vallen en nooit iets horen.
+    rows = _select_or_warn(
+        lambda: db.table("subscriptions")
+        .select("id, user_id, trial_ends_at")
+        .eq("status", "trialing")
+        .gte("trial_ends_at", now.isoformat())
+        .lt("trial_ends_at", (now + timedelta(days=REMINDER_DAYS_BEFORE)).isoformat())
+        .is_("trial_reminder_sent_at", "null")
+        .execute(),
+        "trial_reminder_sent_at",
+    )
+    if rows:
+        logger.info(f"Trial reminder: {len(rows)} gebruiker(s)")
+        _mail_batch(rows, "trial_reminder_sent_at", trial_reminder_email,
+                    lambda sub: _parse_ts(sub.get("trial_ends_at")))
+
+    # 2 — laatste dag van de bedenktijd: de proef is voorbij en het slot valt
+    # binnen 24 uur. Wie inmiddels betaalt heeft geen status trial_expired meer
+    # en krijgt deze mail dus niet.
+    lock_within_a_day = now + timedelta(days=1)
+    rows = _select_or_warn(
+        lambda: db.table("subscriptions")
+        .select("id, user_id, trial_ends_at")
+        .eq("status", "trial_expired")
+        .gte("trial_ends_at", (now - timedelta(days=GRACE_DAYS)).isoformat())
+        .lt("trial_ends_at", (lock_within_a_day - timedelta(days=GRACE_DAYS)).isoformat())
+        .is_("final_reminder_sent_at", "null")
+        .execute(),
+        "final_reminder_sent_at",
+    )
+    if rows:
+        logger.info(f"Final warning: {len(rows)} gebruiker(s)")
+        _mail_batch(rows, "final_reminder_sent_at", final_warning_email,
+                    lambda sub: (_parse_ts(sub.get("trial_ends_at")) + timedelta(days=GRACE_DAYS))
+                    if _parse_ts(sub.get("trial_ends_at")) else None)
 
 
 def invalidate_access_cache(user_id: str | None = None) -> None:
