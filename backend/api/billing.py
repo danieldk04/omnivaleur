@@ -38,11 +38,12 @@ def _get_or_create_subscription(user_id: str) -> dict:
         return {"user_id": user_id, "status": "trialing", "plan": "pro", "trial_ends_at": trial_ends_at}
 
 
-def _is_owner_email(email: str | None) -> bool:
-    if not email or not settings.owner_email:
-        return False
-    owner_emails = {e.strip().lower() for e in settings.owner_email.split(",") if e.strip()}
-    return email.lower() in owner_emails
+from backend.services.billing import (
+    check_access,
+    evaluate_access,
+    invalidate_access_cache,
+    is_owner_email as _is_owner_email,
+)
 
 
 @router.get("/status")
@@ -58,12 +59,18 @@ async def billing_status(user=Depends(get_current_user_full)):
         }
     try:
         sub = _get_or_create_subscription(user_id)
+        access = evaluate_access(sub)
         return {
             "status": sub["status"],
             "plan": sub.get("plan", "pro"),
             "trial_ends_at": sub.get("trial_ends_at"),
             "current_period_end": sub.get("current_period_end"),
             "stripe_subscription_id": sub.get("stripe_subscription_id"),
+            # The app shows a countdown instead of a flat "expired": access is
+            # still on for a few days, and saying so is what creates the urgency.
+            "access_allowed": access["allowed"],
+            "grace_ends_at": access["grace_ends_at"],
+            "grace_days_left": access["grace_days_left"],
         }
     except Exception as e:
         import logging
@@ -198,6 +205,7 @@ def comp_account(email: str, user=Depends(get_current_user_full)):
         "status": "active",
         "plan": "pro",
     }).eq("user_id", target.id).execute()
+    invalidate_access_cache(target.id)
 
     return {"ok": True, "user_id": target.id, "email": target.email}
 
@@ -227,7 +235,9 @@ async def stripe_webhook(request: Request, stripe_signature: str = Header(None))
                 "stripe_subscription_id": stripe_sub_id,
                 "status": stripe_sub["status"],
                 "current_period_end": _ts(stripe_sub["current_period_end"]),
+                "updated_at": _now(),
             }).eq("user_id", user_id).execute()
+            invalidate_access_cache(user_id)
 
     elif event["type"] in ("customer.subscription.updated", "customer.subscription.deleted"):
         stripe_sub = event["data"]["object"]
@@ -237,13 +247,22 @@ async def stripe_webhook(request: Request, stripe_signature: str = Header(None))
             db.table("subscriptions").update({
                 "status": stripe_sub["status"],
                 "current_period_end": _ts(stripe_sub["current_period_end"]),
+                "updated_at": _now(),
             }).eq("stripe_subscription_id", stripe_sub_id).execute()
+            invalidate_access_cache(result.data[0]["user_id"])
 
     elif event["type"] == "invoice.payment_failed":
         invoice = event["data"]["object"]
         stripe_sub_id = invoice.get("subscription")
         if stripe_sub_id:
-            db.table("subscriptions").update({"status": "past_due"}).eq("stripe_subscription_id", stripe_sub_id).execute()
+            # updated_at is the start of the grace period, so it must be stamped
+            # here — otherwise a failed payment would inherit an old date and the
+            # grace days would already be used up.
+            db.table("subscriptions").update({
+                "status": "past_due",
+                "updated_at": _now(),
+            }).eq("stripe_subscription_id", stripe_sub_id).execute()
+            invalidate_access_cache()
 
     return {"ok": True}
 
@@ -262,6 +281,11 @@ def _trial_end_ts(trial_ends_at: str | None) -> int | None:
     if ends < datetime.now(timezone.utc) + timedelta(hours=48):
         return None
     return int(ends.timestamp())
+
+
+def _now() -> str:
+    from datetime import datetime, timezone
+    return datetime.now(timezone.utc).isoformat()
 
 
 def _ts(unix_ts: int) -> str:
