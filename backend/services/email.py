@@ -40,18 +40,68 @@ def send_email_checked(subject: str, body: str, to: str | None = None, reply_to:
         # moeten bij het adres in de handtekening uitkomen.
         msg["Reply-To"] = reply_to
 
-    # Poort 465 is versleuteld vanaf de eerste byte (o.a. Hostinger); 587 begint
-    # onversleuteld en schakelt over met STARTTLS (o.a. Gmail). Op de verkeerde
-    # manier verbinden loopt vast op een time-out i.p.v. een duidelijke fout,
-    # dus wordt hier op de poort gekozen.
-    if int(settings.smtp_port) == 465:
-        server = smtplib.SMTP_SSL(settings.smtp_host, settings.smtp_port, timeout=20)
-    else:
-        server = smtplib.SMTP(settings.smtp_host, settings.smtp_port, timeout=20)
-        server.starttls()
-    with server:
-        server.login(settings.smtp_user, settings.smtp_password)
-        server.sendmail(settings.smtp_from_email, [recipient], msg.as_string())
+    ports = [int(settings.smtp_port)]
+    # Wordt de ingestelde poort niet geaccepteerd, dan is de andere gangbare
+    # poort het proberen waard: veel mailservers luisteren op allebei, en welke
+    # van de twee het hostingplatform doorlaat is niet te voorspellen.
+    for alt in (465, 587):
+        if alt not in ports:
+            ports.append(alt)
+
+    last_error: Exception | None = None
+    for port in ports:
+        try:
+            _deliver(port, recipient, msg)
+            if port != int(settings.smtp_port):
+                logger.warning(f"SMTP: poort {settings.smtp_port} werkte niet, verstuurd via {port}")
+            return
+        except (OSError, smtplib.SMTPConnectError, smtplib.SMTPServerDisconnected) as e:
+            # Verbindingsprobleem: andere poort proberen heeft zin.
+            last_error = e
+            continue
+        except Exception:
+            # Afgewezen wachtwoord of geweigerde afzender: dan helpt een andere
+            # poort niet, en moet de echte melding meteen naar boven.
+            raise
+    raise last_error  # type: ignore[misc]
+
+
+def _deliver(port: int, recipient: str, msg) -> None:
+    """Eén verzendpoging op één poort.
+
+    Poort 465 is versleuteld vanaf de eerste byte (o.a. Hostinger); 587 begint
+    onversleuteld en schakelt over met STARTTLS (o.a. Gmail).
+
+    De verbinding wordt bewust over IPv4 gelegd. Railway-containers hebben wel
+    een IPv6-adres maar geen route naar buiten over IPv6; Python koos dat adres
+    als eerste en gaf dan "Network is unreachable" — een fout die eruitziet als
+    een geblokkeerde poort maar het niet is.
+    """
+    host = settings.smtp_host
+    with _ipv4_only():
+        if port == 465:
+            server = smtplib.SMTP_SSL(host, port, timeout=20)
+        else:
+            server = smtplib.SMTP(host, port, timeout=20)
+            server.starttls()
+        with server:
+            server.login(settings.smtp_user, settings.smtp_password)
+            server.sendmail(settings.smtp_from_email, [recipient], msg.as_string())
+
+
+@contextmanager
+def _ipv4_only():
+    """Laat naamopzoekingen tijdelijk alleen IPv4-adressen teruggeven."""
+    original = socket.getaddrinfo
+
+    def ipv4(host, port, family=0, *args, **kwargs):
+        return original(host, port, socket.AF_INET, *args, **kwargs)
+
+    socket.getaddrinfo = ipv4
+    try:
+        yield
+    finally:
+        socket.getaddrinfo = original
 
 
 def send_email(subject: str, body: str, to: str | None = None, reply_to: str | None = None) -> bool:
