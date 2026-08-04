@@ -255,7 +255,7 @@
       "region": "nl",
       "pillar": "B",
       "slug": "gaming-equipment-reselling-automation",
-      "status": "pending",
+      "status": "published",
       "priority": 31
     }
   ],
@@ -529,6 +529,15 @@
       "action": "created",
       "url_path": "/crosslisting/marktplaats-to-ebay-crosslisting-2026",
       "published_at": "2026-08-03T11:16:12.310429+00:00"
+    },
+    {
+      "keyword": "gaming equipment reselling automation",
+      "slug": "gaming-equipment-reselling-automation",
+      "region": "nl",
+      "pillar": "B",
+      "action": "created",
+      "url_path": "/reseller-tools/gaming-equipment-reselling-automation",
+      "published_at": "2026-08-04T10:31:03.922538+00:00"
     }
   ]
 }
