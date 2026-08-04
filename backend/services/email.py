@@ -5,6 +5,8 @@ fout hier wordt gelogd en verder genegeerd i.p.v. gepropageerd.
 """
 import logging
 import smtplib
+import socket
+from contextlib import contextmanager
 from email.mime.text import MIMEText
 
 from backend.config import settings
