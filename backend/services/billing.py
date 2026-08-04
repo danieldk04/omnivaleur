@@ -17,10 +17,10 @@ GRACE_DAYS = 2
 # How long before the trial ends the reminder mail goes out.
 REMINDER_DAYS_BEFORE = 2
 
-# The address in the mail's signature. Deliberately not the SMTP login: which
-# mailbox actually sends the mail is a technical detail, this is what customers
-# are asked to write back to.
-CONTACT_EMAIL = "info@omnivaleur.com"
+# Het adres in de handtekening en in Reply-To: hier komen antwoorden binnen.
+# Bewust niet de afzender: uitgaand heet alles Omnivaleur, maar de postbus die
+# gelezen wordt is een andere.
+CONTACT_EMAIL = settings.reply_to_email
 
 # Statuses that mean "paid and current" — no grace maths needed.
 _ALLOWED = {"active", "trialing"}

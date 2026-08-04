@@ -99,6 +99,9 @@ class Settings(BaseSettings):
     # wordt die gebruikt; anders valt alles terug op SMTP.
     resend_api_key: str = ""
     resend_from: str = ""
+    # Waar antwoorden van klanten binnenkomen. Uitgaand heet alles Omnivaleur,
+    # maar de postbus die Daniel daadwerkelijk leest is een andere.
+    reply_to_email: str = "info@revaleur.com"
 
     # Best-effort post-publish notification email (non-blocking — publish never waits on this).
     smtp_host: str = ""
