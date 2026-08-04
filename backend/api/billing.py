@@ -221,12 +221,19 @@ def test_reminder_mail(user=Depends(get_current_user_full)):
         raise HTTPException(status_code=403, detail="Niet toegestaan")
 
     from backend.services.billing import CONTACT_EMAIL, trial_reminder_email
-    from backend.services.email import send_email
+    from backend.services.email import send_email_checked
 
     subject, body = trial_reminder_email(2)
-    ok = send_email(subject=f"[TEST] {subject}", body=body, to=user.email, reply_to=CONTACT_EMAIL)
-    if not ok:
-        raise HTTPException(status_code=503, detail="Mail kon niet verstuurd worden — controleer de SMTP-instellingen op Railway")
+    try:
+        send_email_checked(f"[TEST] {subject}", body, to=user.email, reply_to=CONTACT_EMAIL)
+    except Exception as e:
+        # De letterlijke melding van de mailserver: die zegt of het aan het
+        # wachtwoord, de poort of de afzender ligt. "Het lukte niet" zei niets.
+        logger.exception("Testmail mislukt")
+        raise HTTPException(
+            status_code=503,
+            detail=f"Versturen mislukt via {settings.smtp_host}:{settings.smtp_port} als {settings.smtp_user} — {type(e).__name__}: {e}",
+        )
     return {"ok": True, "sent_to": user.email}
 
 

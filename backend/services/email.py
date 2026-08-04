@@ -16,10 +16,18 @@ def _is_configured() -> bool:
     return bool(settings.smtp_host and settings.smtp_user and settings.smtp_password and settings.smtp_from_email)
 
 
-def send_email(subject: str, body: str, to: str | None = None, reply_to: str | None = None) -> bool:
-    if not _is_configured():
-        logger.info(f"SMTP niet geconfigureerd — melding overgeslagen: {subject}")
-        return False
+def send_email_checked(subject: str, body: str, to: str | None = None, reply_to: str | None = None) -> None:
+    """Zelfde als send_email, maar laat de fout staan. Gebruikt door de testknop,
+    zodat op het scherm komt te staan wát de mailserver precies weigerde in
+    plaats van alleen 'het lukte niet'."""
+    missing = [n for n, v in (
+        ("SMTP_HOST", settings.smtp_host),
+        ("SMTP_USER", settings.smtp_user),
+        ("SMTP_PASSWORD", settings.smtp_password),
+        ("SMTP_FROM_EMAIL", settings.smtp_from_email),
+    ) if not v]
+    if missing:
+        raise RuntimeError("Deze instellingen ontbreken op Railway: " + ", ".join(missing))
 
     recipient = to or settings.owner_email
     # utf-8: zonder deze charset weigert Python elke tekst met een euroteken erin.
@@ -32,19 +40,25 @@ def send_email(subject: str, body: str, to: str | None = None, reply_to: str | N
         # moeten bij het adres in de handtekening uitkomen.
         msg["Reply-To"] = reply_to
 
+    # Poort 465 is versleuteld vanaf de eerste byte (o.a. Hostinger); 587 begint
+    # onversleuteld en schakelt over met STARTTLS (o.a. Gmail). Op de verkeerde
+    # manier verbinden loopt vast op een time-out i.p.v. een duidelijke fout,
+    # dus wordt hier op de poort gekozen.
+    if int(settings.smtp_port) == 465:
+        server = smtplib.SMTP_SSL(settings.smtp_host, settings.smtp_port, timeout=20)
+    else:
+        server = smtplib.SMTP(settings.smtp_host, settings.smtp_port, timeout=20)
+        server.starttls()
+    with server:
+        server.login(settings.smtp_user, settings.smtp_password)
+        server.sendmail(settings.smtp_from_email, [recipient], msg.as_string())
+
+
+def send_email(subject: str, body: str, to: str | None = None, reply_to: str | None = None) -> bool:
+    """Best-effort: een mislukte mail mag nooit een publicatie of een geplande
+    taak omvergooien, dus hier wordt de fout gelogd en verder genegeerd."""
     try:
-        # Poort 465 is versleuteld vanaf de eerste byte (o.a. Hostinger); 587
-        # begint onversleuteld en schakelt over met STARTTLS (o.a. Gmail). Op de
-        # verkeerde manier verbinden loopt vast op een time-out i.p.v. een
-        # duidelijke fout, dus wordt hier op de poort gekozen.
-        if int(settings.smtp_port) == 465:
-            server = smtplib.SMTP_SSL(settings.smtp_host, settings.smtp_port, timeout=15)
-        else:
-            server = smtplib.SMTP(settings.smtp_host, settings.smtp_port, timeout=15)
-            server.starttls()
-        with server:
-            server.login(settings.smtp_user, settings.smtp_password)
-            server.sendmail(settings.smtp_from_email, [recipient], msg.as_string())
+        send_email_checked(subject, body, to=to, reply_to=reply_to)
         return True
     except Exception as e:
         logger.error(f"E-mailmelding mislukt ({subject}): {e}")
