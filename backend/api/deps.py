@@ -32,7 +32,7 @@ async def get_current_user_full(authorization: str = Header(...)):
         raise HTTPException(status_code=401, detail="Sessie verlopen")
 
 
-async def require_active_subscription(authorization: str = Header(...)) -> str:
+async def require_active_subscription(user=Depends(get_current_user_full)) -> str:
     """
     Gate for everything that creates value: crosslisting, publishing and the
     extension's job queue. Until now the paywall was a panel in the browser, so
