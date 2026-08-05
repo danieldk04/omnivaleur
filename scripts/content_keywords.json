@@ -257,6 +257,30 @@
       "slug": "gaming-equipment-reselling-automation",
       "status": "published",
       "priority": 31
+    },
+    {
+      "keyword": "shopify to vinted crosslisting",
+      "region": "nl",
+      "pillar": "A",
+      "slug": "shopify-to-vinted-crosslisting",
+      "status": "published",
+      "priority": 32
+    },
+    {
+      "keyword": "vinyl record reselling automation",
+      "region": "nl",
+      "pillar": "B",
+      "slug": "vinyl-record-reselling-automation",
+      "status": "pending",
+      "priority": 33
+    },
+    {
+      "keyword": "streetwear reselling automation",
+      "region": "nl",
+      "pillar": "B",
+      "slug": "streetwear-reselling-automation",
+      "status": "pending",
+      "priority": 34
     }
   ],
   "published": [
@@ -538,6 +562,15 @@
       "action": "created",
       "url_path": "/reseller-tools/gaming-equipment-reselling-automation",
       "published_at": "2026-08-04T10:31:03.922538+00:00"
+    },
+    {
+      "keyword": "shopify to vinted crosslisting",
+      "slug": "shopify-to-vinted-crosslisting",
+      "region": "nl",
+      "pillar": "A",
+      "action": "created",
+      "url_path": "/crosslisting/shopify-to-vinted-crosslisting",
+      "published_at": "2026-08-05T10:29:47.204611+00:00"
     }
   ]
 }
