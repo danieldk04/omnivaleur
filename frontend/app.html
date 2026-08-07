@@ -3665,14 +3665,27 @@ function populateEbayCategorySelect(suggestions, keepId) {
   ph.textContent = '— select eBay category —';
   sel.appendChild(ph);
   let matched = false;
-  suggestions.forEach((s, i) => {
+  // Plausibele suggesties eerst, en alleen díe mag automatisch gekozen worden.
+  // Voorheen won simpelweg de bovenste van eBay, ook als dat modelautootjes
+  // waren bij een overhemd — en omdat er niets aan te zien was, ging die onzin
+  // gewoon mee de advertentie in. Onbruikbare suggesties blijven staan (eBay
+  // heeft soms gelijk waar wij het niet verwachten), maar herkenbaar en nooit
+  // voorgeselecteerd.
+  const geordend = [
+    ...suggestions.filter(s => ebaySuggestionPlausible(s.name)),
+    ...suggestions.filter(s => !ebaySuggestionPlausible(s.name)),
+  ];
+  const eersteIsPlausibel = geordend.length && ebaySuggestionPlausible(geordend[0].name);
+  geordend.forEach((s, i) => {
     const opt = document.createElement('option');
+    const past = ebaySuggestionPlausible(s.name);
     opt.value = s.category_id;
-    opt.textContent = `${s.name} (${s.category_id})`;
+    opt.textContent = `${past ? '' : '⚠️ '}${s.name} (${s.category_id})`;
     if (keepId && s.category_id === keepId) { opt.selected = true; matched = true; }
-    else if (!keepId && i === 0) { opt.selected = true; }
+    else if (!keepId && i === 0 && eersteIsPlausibel) { opt.selected = true; }
     sel.appendChild(opt);
   });
+  if (!keepId && !eersteIsPlausibel) ph.selected = true;
   // Preserve a previously-saved id that isn't among the fresh suggestions.
   if (keepId && !matched) {
     const opt = document.createElement('option');
