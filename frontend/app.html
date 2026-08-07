@@ -2998,27 +2998,44 @@ async function markPlatformListed(itemId, platform, label) {
 //   archived — was online, isn't now, didn't sell (the dead stock)
 //   todo     — never made it online: no listings, or only queued/failed ones
 const ITEMS_TABS = ['live', 'todo', 'hidden', 'sold', 'archived'];
+// Items that have a publish in flight (you just pressed List): a listing that's
+// pending/queued/claimed, or a create job still waiting for the extension. Kept
+// as a module-level set so renderItemsTable can badge those rows "Publishing…".
+let publishingItemIds = new Set();
 function classifyItems() {
   const byItem = new Map();
   for (const l of state.listings) {
     let s = byItem.get(l.item_id);
-    if (!s) { s = { sold: false, live: false, hidden: false, off: false }; byItem.set(l.item_id, s); }
+    if (!s) { s = { sold: false, live: false, hidden: false, off: false, publishing: false }; byItem.set(l.item_id, s); }
     if (l.status === 'sold') s.sold = true;
     else if (l.status === 'active' || l.status === 'relisting') s.live = true;
     // Hidden on the platform: still yours, still listed, but invisible to buyers.
     else if (l.status === 'hidden') s.hidden = true;
+    else if (l.status === 'pending' || l.status === 'queued' || l.status === 'claimed') s.publishing = true;
     else if (l.status === 'delisted') s.off = true;
+  }
+  // A queued create job also means "publishing", even before the listing row flips.
+  for (const j of (state.jobs || [])) {
+    if (j.item_id && (j.action === 'create' || !j.action) && ['pending', 'queued', 'claimed'].includes(j.status)) {
+      let s = byItem.get(j.item_id);
+      if (!s) { s = { sold: false, live: false, hidden: false, off: false, publishing: false }; byItem.set(j.item_id, s); }
+      s.publishing = true;
+    }
   }
   const tabOf = new Map();
   const counts = { live: 0, todo: 0, hidden: 0, sold: 0, archived: 0 };
+  publishingItemIds = new Set();
   for (const item of state.items) {
     const s = byItem.get(item.id);
+    if (s && s.publishing && !s.sold) publishingItemIds.add(item.id);
     // Order matters: an item that's hidden on Vinted but live on Marktplaats is
-    // still genuinely for sale, so "live" wins. Only items with nowhere visible
-    // left land in Hidden.
+    // still genuinely for sale, so "live" wins. A publish in flight shows under
+    // Live (where you expect your just-listed item) with a "Publishing…" badge,
+    // instead of silently sitting in "To list" looking like nothing happened.
     const tab = !s ? 'todo'
       : s.sold ? 'sold'
       : s.live ? 'live'
+      : s.publishing ? 'live'
       : s.hidden ? 'hidden'
       : s.off ? 'archived'
       : 'todo';
