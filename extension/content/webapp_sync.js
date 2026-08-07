@@ -59,6 +59,15 @@
     const d = event.data;
     if (!d || d.source !== PAGE) return;
     if (d.type === "EXT_PING") announce();
+    // "Er staat werk klaar." Zonder dit wachtte de extensie tot haar eigen ronde
+    // (die Chrome niet vaker dan elke halve minuut laat lopen) voordat ze ook
+    // maar keek — pure stiltetijd na elke publicatie. Het token gaat mee, want
+    // een net gewekte service worker kan een verlopen sessie hebben.
+    if (d.type === "EXT_POLL_NOW") {
+      syncToken()
+        .then(() => chrome.runtime.sendMessage({ type: "POLL_NOW" }, () => chrome.runtime.lastError))
+        .catch(() => { /* extensie herlaadt — de gewone ronde pakt het op */ });
+    }
   });
 
   announce();
