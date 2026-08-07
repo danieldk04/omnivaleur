@@ -5495,6 +5495,20 @@ function setBusy(on, msg) {
   if (on) {
     _busyDepth++;
     document.getElementById('cl-busy-text').textContent = msg || 'Working…';
+    // Noodrem. Het wachtscherm zet ALLE knoppen uit, dus als het door welke fout
+    // dan ook blijft staan, kan de gebruiker helemaal niets meer — verversen is
+    // dan de enige uitweg. Na 20 seconden zonder eigen voortgangsteller (die
+    // heeft zijn eigen, nettere uitweg) verschijnt daarom een knop die het
+    // scherm hoe dan ook loslaat.
+    clearTimeout(_busyEscTid);
+    _busyEscTid = setTimeout(() => {
+      if (_busyDepth === 0 || _busyProgressTimer) return;
+      const knop = document.getElementById('cl-busy-esc');
+      if (!knop) return;
+      knop.textContent = 'Close and continue';
+      knop.style.display = 'inline-block';
+      knop.onclick = () => { _busyDepth = 0; setBusy(false); };
+    }, 20000);
     // Een nieuwe melding hoort bij een nieuwe stap: laat de oude ondertitel niet
     // staan, anders telt er een teller door die nergens meer bij hoort.
     if (!_busyProgressTimer) setBusySub('');
