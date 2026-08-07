@@ -5535,7 +5535,12 @@ function publishFailureMessage(res, data, rawText) {
   if (res && res.status === 402) return reden || 'Your subscription no longer allows publishing.';
   if (res && res.status === 401) return 'Your session expired — sign in again and retry.';
   if (res && (res.status === 502 || res.status === 503 || res.status === 504)) {
-    return `The server was unreachable (${res.status}). Nothing was published — try again in a moment.`;
+    // Nooit beweren dat er niets gebeurd is: bij een 502 is het verzoek vaak wél
+    // aangekomen en ging alleen het antwoord verloren. Opnieuw proberen is veilig
+    // — de server weigert een tweede opdracht voor hetzelfde item — maar de
+    // gebruiker hoort te weten dat het misschien al loopt.
+    return `The server didn't answer in time (${res.status}). This usually means it was busy or restarting. `
+         + `Your item may already be on its way — refresh the page and check before you try again.`;
   }
   const status = res ? ` (HTTP ${res.status})` : '';
   return reden ? `Publishing failed${status}: ${reden}` : `Publishing failed${status} — the server gave no reason. Please try again; if it keeps happening, send this code to support.`;
