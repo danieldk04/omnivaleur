@@ -3282,7 +3282,14 @@ async function doBulkCrosslist() {
       (data.results || []).filter(r => r.status === 'error')
         .forEach(r => apiErrors.add(`${PLATFORM_LABELS[r.platform] || r.platform}: ${r.error || 'failed'}`));
       done++;
-    } catch { errors++; }
+    } catch (e) {
+      errors++;
+      // De reden werd hier weggegooid: je zag alleen "3 error(s)" en nooit
+      // waaróm. Verzamel de verschillende oorzaken zodat ze straks op het scherm
+      // komen, met de naam van het item erbij.
+      const title = state.items.find(i => i.id === id)?.title || id;
+      apiErrors.add(`${title}: ${e.message}`);
+    }
     document.getElementById('cl-busy-text').textContent = `Publishing ${done + errors} / ${ids.length}…`;
   }
   setBusy(false);
