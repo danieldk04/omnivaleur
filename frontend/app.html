@@ -3673,12 +3673,22 @@ function ebaySuggestionPlausible(name) {
   return hints.some(h => lower.includes(h));
 }
 
-// Woorden waaraan je in een eBay-pad ziet voor wie het bedoeld is.
-const EBAY_GENDER_WORDS = {
-  heren:     ['men:', "men's", 'mens ', 'heren'],
-  dames:     ['women:', "women's", 'womens ', 'dames'],
-  kinderen:  ['kids', 'boys', 'girls', 'baby', 'kinderen', 'jongens', 'meisjes'],
-};
+// Woorden waaraan je in een eBay-pad ziet voor wie het bedoeld is. Volgorde
+// telt: "women" bevat letterlijk "men", dus dames en kinderen gaan eerst.
+const EBAY_GENDER_WORDS = [
+  ['kinderen', ['kids', 'boys', 'girls', 'baby', 'kinderen', 'jongens', 'meisjes']],
+  ['dames',    ['women', 'dames']],
+  ['heren',    ['men', 'heren']],
+];
+
+// Voor wie is dit pad bedoeld? '' als er niets over te zeggen valt.
+function ebayPathGender(name) {
+  const lower = String(name || '').toLowerCase();
+  for (const [gender, woorden] of EBAY_GENDER_WORDS) {
+    if (woorden.some(w => new RegExp(`\\b${w}`).test(lower))) return gender;
+  }
+  return '';
+}
 
 // 0 = past en is voor de juiste doelgroep, 1 = past maar hoort bij een andere
 // doelgroep (een herenoverhemd hoort niet onder "Women: clothing"), 2 = past niet.
