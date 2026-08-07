@@ -55,9 +55,19 @@ def _parse_listing_id(platform: str, url: str) -> str | None:
 
 
 def _user_item_ids(db, user_id: str) -> list[str]:
-    """Return all item IDs belonging to this user."""
-    rows = db.table("items").select("id").eq("user_id", user_id).execute()
-    return [r["id"] for r in (rows.data or [])]
+    """Return all item IDs belonging to this user. Paged: a plain select is
+    silently cut off at the database's row limit, and every id that fell off the
+    end took its listings with it."""
+    ids: list[str] = []
+    page_size, offset = 500, 0
+    while True:
+        rows = (db.table("items").select("id").eq("user_id", user_id)
+                .order("id").range(offset, offset + page_size - 1).execute().data or [])
+        ids.extend(r["id"] for r in rows)
+        if len(rows) < page_size:
+            break
+        offset += page_size
+    return ids
 
 
 @router.get("/")
