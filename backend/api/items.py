@@ -98,6 +98,14 @@ def list_items(limit: int = 50, offset: int = 0, user_id: str = Depends(get_curr
         db.table("items")
         .select("*")
         .eq("user_id", user_id)
+        # Without an explicit order the database is free to return rows in any
+        # order it likes, and it does not have to pick the same order twice. The
+        # dashboard reads the catalogue page by page, so an unstable order made
+        # rows show up on two pages or on none at all — which is why a
+        # just-created item could be missing from the list entirely. id breaks
+        # ties so the order is total, not just mostly-sorted.
+        .order("created_at", desc=True)
+        .order("id")
         .range(offset, offset + limit - 1)
         .execute()
     )
