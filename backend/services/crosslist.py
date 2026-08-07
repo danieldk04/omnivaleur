@@ -402,9 +402,23 @@ async def publish_to_platforms(item_id: str, platforms: list[str], user_id: str)
 
 async def _publish_one(item: dict, platform_name: str, credentials: dict, user_id: str) -> dict:
     db = get_db()
-    existing = await _exec(db.table("listings").select("id").eq("item_id", item["id"]).eq("platform", platform_name))
+    existing = await _exec(db.table("listings").select("id,status,platform_listing_id,platform_listing_url")
+                           .eq("item_id", item["id"]).eq("platform", platform_name))
     if existing.data:
         listing_id = existing.data[0]["id"]
+        # Staat het er al op? Dan niet nóg een keer aanmaken. create_listing maakt
+        # elke keer een nieuw product aan, dus een herhaalde poging (na een
+        # time-out bijvoorbeeld) liet er twee achter waarvan het dashboard er
+        # maar één kende — de eerste bleef onzichtbaar te koop staan.
+        if existing.data[0].get("status") == "active" and existing.data[0].get("platform_listing_id"):
+            return {
+                "listing_id": listing_id,
+                "platform": platform_name,
+                "status": "active",
+                "platform_listing_id": existing.data[0].get("platform_listing_id"),
+                "platform_listing_url": existing.data[0].get("platform_listing_url"),
+                "message": "Already live here — not published a second time",
+            }
         await _exec(db.table("listings").update({"status": "pending", "error_message": None}).eq("id", listing_id))
     else:
         insert = await _exec(db.table("listings").insert({
