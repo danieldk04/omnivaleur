@@ -718,6 +718,7 @@ async function pollJobsEenRonde() {
       if (!res.ok) continue;
       const jobs = await res.json();
       for (const job of jobs) {
+        verzet = true;
         try {
           await processJob(job, serverUrl);
         } catch (e) {
