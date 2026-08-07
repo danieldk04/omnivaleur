@@ -984,6 +984,12 @@ _EBAY_SEGMENT_NL_EN = {
     "meisjes": "Girls",
     "baby": "Baby",
     "unisex": "Unisex",
+    "miniatuurvoertuigen": "Miniature vehicles",
+    "auto's en vrachtwagens": "Cars & trucks",
+    "fictie": "Fiction",
+    "non-fictie": "Non-fiction",
+    "tijdschriften": "Magazines",
+    "strips": "Comics",
 }
 
 # Segments the LLM translated earlier in this process, so the same breadcrumb
