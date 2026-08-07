@@ -3711,11 +3711,11 @@ function populateEbayCategorySelect(suggestions, keepId) {
   // gewoon mee de advertentie in. Onbruikbare suggesties blijven staan (eBay
   // heeft soms gelijk waar wij het niet verwachten), maar herkenbaar en nooit
   // voorgeselecteerd.
-  const geordend = [
-    ...suggestions.filter(s => ebaySuggestionPlausible(s.name)),
-    ...suggestions.filter(s => !ebaySuggestionPlausible(s.name)),
-  ];
-  const eersteIsPlausibel = geordend.length && ebaySuggestionPlausible(geordend[0].name);
+  const geordend = suggestions
+    .map((s, i) => ({ s, i, rang: ebaySuggestionRank(s.name) }))
+    .sort((a, b) => a.rang - b.rang || a.i - b.i)
+    .map(x => x.s);
+  const eersteIsPlausibel = geordend.length && ebaySuggestionRank(geordend[0].name) === 0;
   geordend.forEach((s, i) => {
     const opt = document.createElement('option');
     const past = ebaySuggestionPlausible(s.name);
