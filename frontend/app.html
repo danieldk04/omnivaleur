@@ -5424,6 +5424,20 @@ function setBusySub(tekst) {
   el.style.display = tekst ? 'block' : 'none';
 }
 
+// Alleen de tekst in het wachtscherm bijwerken — ZONDER de teller op te hogen.
+//
+// Dit bestaat omdat `setBusy(true, ...)` als voortgangsmelding gebruiken het
+// wachtscherm permanent liet hangen: elke aanroep telde als een nieuwe
+// bezig-actie, terwijl er maar één `setBusy(false)` tegenover stond. Een bulk
+// import die dertig keer zijn stand meldde, stond dus dertig niveaus diep en
+// ging daarna nooit meer weg — het scherm bleef staan terwijl alles al klaar
+// was, met alle knoppen uit. Gebruik binnen een lopende actie altijd deze
+// functie, nooit setBusy(true).
+function setBusyText(msg) {
+  const el = document.getElementById('cl-busy-text');
+  if (el) el.textContent = msg || 'Working…';
+}
+
 // Publiceren duurt echt lang (vertalen + foto's naar Shopify). Een stilstaande
 // spinner is dan niet te onderscheiden van een vastloper, en verversen breekt de
 // publicatie halverwege af. Daarom loopt er een teller mee en verandert de tekst
