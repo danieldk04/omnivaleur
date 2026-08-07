@@ -39,7 +39,7 @@ from __future__ import annotations
 import logging
 import random
 from datetime import datetime, timezone, timedelta
-from backend.database import get_db
+from backend.database import get_db, fetch_all
 from backend.platforms import get_platform
 
 logger = logging.getLogger(__name__)
@@ -348,7 +348,8 @@ async def refresh_stale_listings(user_id: str, platform: str, older_than_days: i
     cutoff = (datetime.now(timezone.utc) - timedelta(days=older_than_days)).isoformat()
     cooldown_cutoff = (datetime.now(timezone.utc) - timedelta(days=MIN_COOLDOWN_DAYS)).isoformat()
 
-    item_ids = [r["id"] for r in db.table("items").select("id").eq("user_id", user_id).execute().data]
+    item_ids = [r["id"] for r in fetch_all(
+        lambda: db.table("items").select("id").eq("user_id", user_id))]
     if not item_ids:
         return []
 

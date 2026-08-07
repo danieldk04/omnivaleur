@@ -1,5 +1,5 @@
 from fastapi import APIRouter, HTTPException, Depends, Request
-from backend.database import get_db
+from backend.database import get_db, fetch_all
 from backend.api.deps import get_current_user, require_active_subscription
 from backend.api.imports import _backfill_item_from_candidate
 from backend.services.crosslist import handle_item_sold
@@ -781,8 +781,8 @@ def _sync_vinted_hidden(db, job, scraped: list[dict]):
     if not hidden_ids and not visible_ids:
         return
 
-    items = db.table("items").select("id").eq("user_id", job["user_id"]).execute().data or []
-    item_ids = [it["id"] for it in items]
+    item_ids = [it["id"] for it in fetch_all(
+        lambda: db.table("items").select("id").eq("user_id", job["user_id"]))]
     if not item_ids:
         return
 
@@ -872,8 +872,8 @@ async def _reconcile_vinted_sales(db, job, scraped: list[dict], scan_meta: dict 
         if r.get("is_closed"):
             closed_ids.add(pid)
 
-    items = db.table("items").select("id").eq("user_id", job["user_id"]).execute().data or []
-    item_ids = [it["id"] for it in items]
+    item_ids = [it["id"] for it in fetch_all(
+        lambda: db.table("items").select("id").eq("user_id", job["user_id"]))]
     if not item_ids:
         return
 
@@ -913,7 +913,7 @@ def _store_scan_results(db, job, scraped: list[dict]):
     # Read the items ONCE, with every field the backfill needs. This used to be a
     # select per candidate inside the loop below, so a 500-listing wardrobe meant
     # ~1000 round-trips and "Saving to your dashboard…" sat there for minutes.
-    items = db.table("items").select(BACKFILL_FIELDS + ",title").eq("user_id", job["user_id"]).execute().data or []
+    items = fetch_all(lambda: db.table("items").select(BACKFILL_FIELDS + ",title").eq("user_id", job["user_id"]))
     items_by_id = {it["id"]: it for it in items}
     # (platform, listing id) → item_id, so a re-scan of an already-known listing
     # links back to the exact same item. Scoped by the user's item ids because

@@ -1,5 +1,5 @@
 from fastapi import APIRouter, HTTPException, Depends
-from backend.database import get_db
+from backend.database import get_db, fetch_all
 from backend.api.deps import get_current_user, require_active_subscription
 from backend.models import ItemCreate
 from datetime import datetime, timezone
@@ -537,7 +537,11 @@ def _listings_by_platform_id(db, items: list[dict]) -> dict:
     item_ids = [it["id"] for it in items]
     if not item_ids:
         return {}
-    rows = db.table("listings").select("item_id,platform,platform_listing_id").in_("item_id", item_ids).execute().data or []
+    rows = []
+    for i in range(0, len(item_ids), 200):
+        brok = item_ids[i:i + 200]
+        rows.extend(fetch_all(lambda b=brok: db.table("listings")
+                              .select("item_id,platform,platform_listing_id").in_("item_id", b)))
     out = {}
     for l in rows:
         pid = l.get("platform_listing_id")
@@ -590,7 +594,7 @@ def list_import_candidates(platform: str = None, status: str = "pending", user_i
     result = q.order("created_at", desc=True).limit(500).execute()
     candidates = result.data or []
     if candidates:
-        items = db.table("items").select("id,title").eq("user_id", user_id).execute().data or []
+        items = fetch_all(lambda: db.table("items").select("id,title").eq("user_id", user_id))
         listings_by_id = _listings_by_platform_id(db, items)
         for c in candidates:
             item_id, reason = _match_candidate(c, items, listings_by_id)
@@ -781,7 +785,7 @@ async def bulk_import_candidates(body: dict = None, user_id: str = Depends(requi
         if platform:
             q = q.eq("platform", platform)
         cands = q.limit(batch).execute().data or []
-        its = db.table("items").select("id,title").eq("user_id", user_id).execute().data or []
+        its = fetch_all(lambda: db.table("items").select("id,title").eq("user_id", user_id))
         return cands, its, _listings_by_platform_id(db, its)
 
     candidates, items, listings_by_id = await asyncio.to_thread(_read)
