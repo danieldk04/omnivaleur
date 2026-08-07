@@ -79,26 +79,18 @@ def list_all_listings(
     # saw those listings — items that were live on a platform showed up under
     # "To list". A stable order is required, otherwise paging can repeat or skip
     # rows.
+    def bouw(chunk):
+        q = db.table("listings").select("*").in_("item_id", chunk)
+        if platform:
+            q = q.eq("platform", platform)
+        if status:
+            q = q.eq("status", status)
+        return q
+
     listings: list[dict] = []
-    seen: set = set()
     for chunk_start in range(0, len(item_ids), 200):
         chunk = item_ids[chunk_start:chunk_start + 200]
-        page_size, offset = 500, 0
-        while True:
-            q = db.table("listings").select("*").in_("item_id", chunk)
-            if platform:
-                q = q.eq("platform", platform)
-            if status:
-                q = q.eq("status", status)
-            page = (q.order("item_id").order("id")
-                     .range(offset, offset + page_size - 1).execute().data or [])
-            for row in page:
-                if row.get("id") not in seen:
-                    seen.add(row.get("id"))
-                    listings.append(row)
-            if len(page) < page_size:
-                break
-            offset += page_size
+        listings.extend(fetch_all(lambda c=chunk: bouw(c)))
     # Attach each listing's item title so the extension can title-match sold ads
     # for listings that have no platform_listing_id (hand-marked / unconfirmed).
     ids = list({l["item_id"] for l in listings if l.get("item_id")})
