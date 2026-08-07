@@ -3973,7 +3973,7 @@ async function delistItem(itemId, title) {
         }
       }
       if (!linkedAny) break; // nothing new linked → stop
-      setBusy(true, `Delisting "${title}"…`);
+      setBusyText(`Delisting "${title}"…`);
       data = await runDelist(itemId); // re-trigger delist for now-linked platforms
       // only keep platforms that still need a link AND we haven't already retried
       needsLink = (data.results || []).filter(r => r.status === 'needs_link' && !retried.has(r.platform));
