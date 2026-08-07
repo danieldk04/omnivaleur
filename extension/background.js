@@ -27,100 +27,107 @@ const MP_KIDS_SIZES = {   // Kinderen en Baby's > Kinderkleding (bucketId 153)
 // Verified Marktplaats SYI category IDs (from actual URLs)
 // Dames: cat1=621, bucketId=162 | Heren: cat1=1776, bucketId=169
 const MP_CATEGORIES = {
-  // === DAMES (verified) ===
-  "jeans":                  { cat1: 621,  cat3: 636,  bucketId: 162 },
+  // === KLEDING | DAMES (cat1 621) ===
+  // Alle cat3-waarden hieronder zijn de echte Marktplaats-type-ID's, opgehaald
+  // uit de categorieboom van Marktplaats zelf (searchCategoryOptions onder
+  // l1CategoryId=621), niet gegokt. Waar eerder geen exacte match bestond stond
+  // een noodgreep die inhoudelijk fout was: rokken, broeken en shorts gingen
+  // allemaal als Spijkerbroeken en Jeans de deur uit, sportkleding als
+  // Winterjas, en t-shirts als Blouse.
+  // bucketId 162 = de groep "Kleding", 164 = "Schoenen en Sokken".
+  "jeans":                  { cat1: 621,  cat3: 636,  bucketId: 162 },  // Spijkerbroeken en Jeans
   "spijkerbroeken":         { cat1: 621,  cat3: 636,  bucketId: 162 },
-  "truien / vesten":        { cat1: 621,  cat3: 640,  bucketId: 162 },
-  "truien":                 { cat1: 621,  cat3: 640,  bucketId: 162 },
-  "vesten":                 { cat1: 621,  cat3: 640,  bucketId: 162 },
-  "blouses":                { cat1: 621,  cat3: 628,  bucketId: 162 },
-  "blouses en tunieken":    { cat1: 621,  cat3: 628,  bucketId: 162 },
-  "jurken":                 { cat1: 621,  cat3: 631,  bucketId: 162 },
-  "jassen":                 { cat1: 621,  cat3: 2784, bucketId: 162 },
-  "jassen | winter":        { cat1: 621,  cat3: 2784, bucketId: 162 },
-  // Dames — fallback to Blouses for tops/polo/shirts
-  "t-shirts":               { cat1: 621,  cat3: 628,  bucketId: 162 },
-  "tops":                   { cat1: 621,  cat3: 628,  bucketId: 162 },
-  "polo's":                 { cat1: 621,  cat3: 628,  bucketId: 162 },
-  "polo":                   { cat1: 621,  cat3: 628,  bucketId: 162 },
-  // Dames — fallback to Jeans for broeken/rokken
-  "rokken":                 { cat1: 621,  cat3: 636,  bucketId: 162 },
-  "broeken":                { cat1: 621,  cat3: 636,  bucketId: 162 },
-  "shorts":                 { cat1: 621,  cat3: 636,  bucketId: 162 },
-  "leggings":               { cat1: 621,  cat3: 636,  bucketId: 162 },
-  // Dames — fallback to Jassen for sportkleding/overige
-  "sportkleding":           { cat1: 621,  cat3: 2784, bucketId: 162 },
-  "ondergoed":              { cat1: 621,  cat3: 631,  bucketId: 162 },
-  "badkleding":             { cat1: 621,  cat3: 631,  bucketId: 162 },
-  // Dames schoenen (verified)
-  "schoenen dames":         { cat1: 621,  cat3: 625,  bucketId: 164 },
-  "schoenen":               { cat1: 621,  cat3: 625,  bucketId: 164 },
-
-  // === HEREN (verified) ===
-  "heren jeans":            { cat1: 1776, cat3: 1497, bucketId: 169 },
-  "heren spijkerbroeken":   { cat1: 1776, cat3: 1497, bucketId: 169 },
-  "heren truien / vesten":  { cat1: 1776, cat3: 652,  bucketId: 169 },
-  "heren truien":           { cat1: 1776, cat3: 652,  bucketId: 169 },
-  "heren vesten":           { cat1: 1776, cat3: 652,  bucketId: 169 },
-  "heren jassen":           { cat1: 1776, cat3: 2788, bucketId: 169 },
-  "heren jassen | winter":  { cat1: 1776, cat3: 2788, bucketId: 169 },
-  // Heren — fallback to Truien for tops/polo/shirts
-  "heren t-shirts / polo":  { cat1: 1776, cat3: 652,  bucketId: 169 },
-  "heren t-shirts":         { cat1: 1776, cat3: 652,  bucketId: 169 },
-  "heren polo's":           { cat1: 1776, cat3: 652,  bucketId: 169 },
-  "heren polo":             { cat1: 1776, cat3: 652,  bucketId: 169 },
-  "heren overhemden":       { cat1: 1776, cat3: 652,  bucketId: 169 },
-  // Heren — fallback to Jeans for broeken/shorts
-  "heren broeken":          { cat1: 1776, cat3: 1497, bucketId: 169 },
-  "heren shorts":           { cat1: 1776, cat3: 1497, bucketId: 169 },
-  "heren pakken":           { cat1: 1776, cat3: 2788, bucketId: 169 },
-  "heren sportkleding":     { cat1: 1776, cat3: 652,  bucketId: 169 },
-  "heren ondergoed":        { cat1: 1776, cat3: 1497, bucketId: 169 },
-  // Heren schoenen (verified)
-  "heren schoenen":         { cat1: 1776, cat3: 642,  bucketId: 171 },
-
-  // === NIEUWE DAMES categorieën ===
-  "broeken":                { cat1: 621,  cat3: 636,  bucketId: 162 },
-  "shorts":                 { cat1: 621,  cat3: 636,  bucketId: 162 },
-  "rokken":                 { cat1: 621,  cat3: 636,  bucketId: 162 },
+  "broeken":                { cat1: 621,  cat3: 629,  bucketId: 162 },  // Broeken en Pantalons
+  "shorts":                 { cat1: 621,  cat3: 629,  bucketId: 162 },
+  "leggings":               { cat1: 621,  cat3: 629,  bucketId: 162 },
+  "rokken":                 { cat1: 621,  cat3: 635,  bucketId: 162 },  // Rokken
+  "jurken":                 { cat1: 621,  cat3: 631,  bucketId: 162 },  // Jurken
   "jurken casual":          { cat1: 621,  cat3: 631,  bucketId: 162 },
   "jurken feest":           { cat1: 621,  cat3: 631,  bucketId: 162 },
-  "tops":                   { cat1: 621,  cat3: 628,  bucketId: 162 },
-  "truien":                 { cat1: 621,  cat3: 640,  bucketId: 162 },
+  "blouses":                { cat1: 621,  cat3: 628,  bucketId: 162 },  // Blouses en Tunieken
+  "blouses en tunieken":    { cat1: 621,  cat3: 628,  bucketId: 162 },
+  "t-shirts":               { cat1: 621,  cat3: 637,  bucketId: 162 },  // T-shirts
+  "tops":                   { cat1: 621,  cat3: 638,  bucketId: 162 },  // Tops
+  "polo's":                 { cat1: 621,  cat3: 638,  bucketId: 162 },  // Dames kennen geen Polo's-type
+  "polo":                   { cat1: 621,  cat3: 638,  bucketId: 162 },
+  "truien":                 { cat1: 621,  cat3: 640,  bucketId: 162 },  // Truien en Vesten
+  "truien / vesten":        { cat1: 621,  cat3: 640,  bucketId: 162 },
+  "vesten":                 { cat1: 621,  cat3: 640,  bucketId: 162 },
   "hoodies":                { cat1: 621,  cat3: 640,  bucketId: 162 },
-  "jassen":                 { cat1: 621,  cat3: 2784, bucketId: 162 },
-  "sport bh":               { cat1: 621,  cat3: 2784, bucketId: 162 },
-  "sportleggings":          { cat1: 621,  cat3: 636,  bucketId: 162 },
-  "sportbroeken":           { cat1: 621,  cat3: 2784, bucketId: 162 },
-  "sportjassen":            { cat1: 621,  cat3: 2784, bucketId: 162 },
-  "yoga kleding":           { cat1: 621,  cat3: 2784, bucketId: 162 },
-  "hardloopkleding":        { cat1: 621,  cat3: 2784, bucketId: 162 },
-  "gymkleding":             { cat1: 621,  cat3: 2784, bucketId: 162 },
+  "unisex truien":          { cat1: 621,  cat3: 640,  bucketId: 162 },
+  "jassen":                 { cat1: 621,  cat3: 2784, bucketId: 162 },  // Jassen | Winter
+  "jassen | winter":        { cat1: 621,  cat3: 2784, bucketId: 162 },
+  "unisex jassen":          { cat1: 621,  cat3: 2784, bucketId: 162 },
+  // Sportkleding heeft een eigen type (798). Alles wat sport is hoort daar, niet
+  // bij de winterjassen waar het eerder belandde.
+  "sportkleding":           { cat1: 621,  cat3: 798,  bucketId: 162 },
+  "sportbroeken":           { cat1: 621,  cat3: 798,  bucketId: 162 },
+  "sportleggings":          { cat1: 621,  cat3: 798,  bucketId: 162 },
+  "sport bh":               { cat1: 621,  cat3: 798,  bucketId: 162 },
+  "sportjassen":            { cat1: 621,  cat3: 798,  bucketId: 162 },
+  "yoga kleding":           { cat1: 621,  cat3: 798,  bucketId: 162 },
+  "hardloopkleding":        { cat1: 621,  cat3: 798,  bucketId: 162 },
+  "gymkleding":             { cat1: 621,  cat3: 798,  bucketId: 162 },
+  "unisex sportkleding":    { cat1: 621,  cat3: 798,  bucketId: 162 },
+  // Badmode en ondergoed hebben op Marktplaats hun eigen groep náást "Kleding",
+  // en die groeps-id (bucketId) is niet uit de openbare boom te lezen. Tot die
+  // geverifieerd is blijven deze staan waar ze stonden; fout, maar wél een
+  // categorie die het formulier accepteert. Zie het openstaande punt hierover.
   "zwemkleding":            { cat1: 621,  cat3: 631,  bucketId: 162 },
+  "badkleding":             { cat1: 621,  cat3: 631,  bucketId: 162 },
   "ondergoed":              { cat1: 621,  cat3: 631,  bucketId: 162 },
+  "accessoires dames":      { cat1: 621,  cat3: 628,  bucketId: 162 },
+  "unisex accessoires":     { cat1: 621,  cat3: 628,  bucketId: 162 },
+  // Schoenen: één type (625) voor alle soorten, Marktplaats splitst niet verder.
+  "schoenen":               { cat1: 621,  cat3: 625,  bucketId: 164 },
+  "schoenen dames":         { cat1: 621,  cat3: 625,  bucketId: 164 },
   "sneakers dames":         { cat1: 621,  cat3: 625,  bucketId: 164 },
   "hakken":                 { cat1: 621,  cat3: 625,  bucketId: 164 },
   "laarzen dames":          { cat1: 621,  cat3: 625,  bucketId: 164 },
   "sandalen":               { cat1: 621,  cat3: 625,  bucketId: 164 },
-  "accessoires dames":      { cat1: 621,  cat3: 628,  bucketId: 162 },
+  "unisex schoenen":        { cat1: 621,  cat3: 625,  bucketId: 164 },
 
-  // === NIEUWE HEREN categorieën ===
-  "heren chinos":           { cat1: 1776, cat3: 1497, bucketId: 169 },
-  "heren t-shirts":         { cat1: 1776, cat3: 652,  bucketId: 169 },
+  // === KLEDING | HEREN (cat1 1776) ===
+  // Idem: echte type-ID's uit de boom onder l1CategoryId=1776. Overhemden,
+  // Polo's, T-shirts, Sportkleding, Broeken en Kostuums bestaan allemaal als
+  // eigen type — ze werden alleen niet gebruikt, waardoor elk overhemd als
+  // "Truien en Vesten" en elke chino als "Spijkerbroeken en Jeans" werd geplaatst.
+  // bucketId 169 = groep "Kleding", 171 = "Schoenen en Sokken".
+  "heren jeans":            { cat1: 1776, cat3: 1497, bucketId: 169 },  // Spijkerbroeken en Jeans
+  "heren spijkerbroeken":   { cat1: 1776, cat3: 1497, bucketId: 169 },
+  "heren broeken":          { cat1: 1776, cat3: 646,  bucketId: 169 },  // Broeken en Pantalons
+  "heren chinos":           { cat1: 1776, cat3: 646,  bucketId: 169 },
+  "heren shorts":           { cat1: 1776, cat3: 646,  bucketId: 169 },
+  "heren overhemden":       { cat1: 1776, cat3: 649,  bucketId: 169 },  // Overhemden
+  "heren polo's":           { cat1: 1776, cat3: 2790, bucketId: 169 },  // Polo's
+  "heren polo":             { cat1: 1776, cat3: 2790, bucketId: 169 },
+  "heren t-shirts":         { cat1: 1776, cat3: 651,  bucketId: 169 },  // T-shirts
+  "heren t-shirts / polo":  { cat1: 1776, cat3: 651,  bucketId: 169 },
+  "heren truien":           { cat1: 1776, cat3: 652,  bucketId: 169 },  // Truien en Vesten
+  "heren truien / vesten":  { cat1: 1776, cat3: 652,  bucketId: 169 },
+  "heren vesten":           { cat1: 1776, cat3: 652,  bucketId: 169 },
   "heren hoodies":          { cat1: 1776, cat3: 652,  bucketId: 169 },
-  "heren sport tops":       { cat1: 1776, cat3: 652,  bucketId: 169 },
-  "heren sportbroeken":     { cat1: 1776, cat3: 1497, bucketId: 169 },
-  "heren sportjassen":      { cat1: 1776, cat3: 2788, bucketId: 169 },
-  "heren hardloopkleding":  { cat1: 1776, cat3: 652,  bucketId: 169 },
-  "heren gymkleding":       { cat1: 1776, cat3: 652,  bucketId: 169 },
-  "heren voetbalkleding":   { cat1: 1776, cat3: 652,  bucketId: 169 },
-  "heren wielrenkleding":   { cat1: 1776, cat3: 652,  bucketId: 169 },
+  "heren jassen":           { cat1: 1776, cat3: 2788, bucketId: 169 },  // Jassen | Winter
+  "heren jassen | winter":  { cat1: 1776, cat3: 2788, bucketId: 169 },
+  "heren pakken":           { cat1: 1776, cat3: 648,  bucketId: 169 },  // Kostuums en Colberts
+  "heren sportkleding":     { cat1: 1776, cat3: 1779, bucketId: 169 },  // Sportkleding
+  "heren sportbroeken":     { cat1: 1776, cat3: 1779, bucketId: 169 },
+  "heren sportjassen":      { cat1: 1776, cat3: 1779, bucketId: 169 },
+  "heren sport tops":       { cat1: 1776, cat3: 1779, bucketId: 169 },
+  "heren hardloopkleding":  { cat1: 1776, cat3: 1779, bucketId: 169 },
+  "heren gymkleding":       { cat1: 1776, cat3: 1779, bucketId: 169 },
+  "heren voetbalkleding":   { cat1: 1776, cat3: 1779, bucketId: 169 },
+  "heren wielrenkleding":   { cat1: 1776, cat3: 1779, bucketId: 169 },
+  // Zie de opmerking bij dames: badmode, ondergoed en accessoires zitten in een
+  // andere groep, waarvan de id nog niet geverifieerd is.
   "heren zwembroeken":      { cat1: 1776, cat3: 1497, bucketId: 169 },
   "heren ondergoed":        { cat1: 1776, cat3: 1497, bucketId: 169 },
+  "heren accessoires":      { cat1: 1776, cat3: 652,  bucketId: 169 },
+  // Schoenen: één type (642) voor alle soorten.
+  "heren schoenen":         { cat1: 1776, cat3: 642,  bucketId: 171 },
   "heren sneakers":         { cat1: 1776, cat3: 642,  bucketId: 171 },
   "heren formele schoenen": { cat1: 1776, cat3: 642,  bucketId: 171 },
   "heren laarzen":          { cat1: 1776, cat3: 642,  bucketId: 171 },
-  "heren accessoires":      { cat1: 1776, cat3: 652,  bucketId: 169 },
 
   // === KINDEREN EN BABY'S (cat1=565) ===
   // These were all pointing at cat1=428 with bucketId=127. 428 is "Diversen"
@@ -150,13 +157,6 @@ const MP_CATEGORIES = {
   "kinderen schoenen":      { cat1: 565, bucketId: 153, cat3: 598 },
   // Mode-accessoires (bucketId 427) has exactly two types: baby and kind.
   "kinderen accessoires":   { cat1: 565, bucketId: 427, cat3: 3136 },
-
-  // === UNISEX (fallback naar dames) ===
-  "unisex truien":          { cat1: 621,  cat3: 640,  bucketId: 162 },
-  "unisex jassen":          { cat1: 621,  cat3: 2784, bucketId: 162 },
-  "unisex sportkleding":    { cat1: 621,  cat3: 2784, bucketId: 162 },
-  "unisex schoenen":        { cat1: 621,  cat3: 625,  bucketId: 164 },
-  "unisex accessoires":     { cat1: 621,  cat3: 628,  bucketId: 162 },
 
   // === SIERADEN, TASSEN EN UITERLIJK (cat1=1826) ===
   // Non-clothing, same prefix scheme as "games "/"electronics ". Exists because a
