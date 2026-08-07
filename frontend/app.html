@@ -3881,7 +3881,7 @@ async function saveItem() {
         // seconden. Bleef het scherm "Saving item…" tonen, dan leek een geslaagde
         // opslag een vastloper.
         const namen = selected.map(p => PLATFORM_LABELS[p] || p).join(', ');
-        setBusy(true, `Item saved — publishing to ${namen}…`);
+        setBusyText(`Item saved — publishing to ${namen}…`);
 
         // Het item IS opgeslagen en het publiceren draait op de server; of dit
         // scherm nog staat te wachten verandert daar niets aan. Blijven wachten
