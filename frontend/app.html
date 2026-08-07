@@ -2821,8 +2821,10 @@ async function fetchAllItems() {
     const page = await apiFetch(`${API}/api/items/?limit=${pageSize}&offset=${offset}`).then(r => r.json());
     if (!Array.isArray(page) || !page.length) break;
     all = all.concat(page);
-    if (page.length < pageSize) break;
-    offset += pageSize;
+    // Tel door met wat we echt kregen, niet met wat we vroegen: geeft de server
+    // een kortere pagina, dan stopte "korter dus klaar" halverwege de catalogus.
+    offset += page.length;
+    if (all.length > 20000) break;   // noodrem tegen een eindeloze lus
   }
   return all;
 }
