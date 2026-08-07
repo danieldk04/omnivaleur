@@ -3266,14 +3266,16 @@ async function doBulkCrosslist() {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ platforms: selected }),
       });
-      const data = await res.json().catch(() => ({}));
+      const rawText = await res.text();
+      let data = {};
+      try { data = rawText ? JSON.parse(rawText) : {}; } catch { data = {}; }
       if (!res.ok) {
         const missingMsg = formatMissingFieldsError(data);
         if (missingMsg) {
           const title = state.items.find(i => i.id === id)?.title || id;
           blockedItems.push(`${title} — ${Object.entries(data.detail.missing_fields).map(([p, f]) => `${PLATFORM_LABELS[p] || p}: ${f.join(', ')}`).join('; ')}`);
         }
-        throw new Error(missingMsg || data.detail || 'Publish failed');
+        throw new Error(publishFailureMessage(res, data, rawText));
       }
       // res.ok doesn't mean every platform succeeded — API platforms report
       // per-platform errors in results.
