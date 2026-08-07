@@ -368,12 +368,12 @@ def _is_footwear_text(title: str | None, description: str | None) -> bool:
     boots" must not turn the jacket into footwear — so the description only
     counts when the title says nothing about the garment at all."""
     t = (title or "").lower()
-    if any(re.search(r"\b" + w + r"s?\b", t) for w in _FOOTWEAR_WORDS):
+    if any(re.search(r"\b" + w + r"(?:s|en)?\b", t) for w in _FOOTWEAR_WORDS):
         return True
     if t.strip():
         return False
     d = (description or "").lower()
-    return any(re.search(r"\b" + w + r"s?\b", d) for w in _FOOTWEAR_WORDS)
+    return any(re.search(r"\b" + w + r"(?:s|en)?\b", d) for w in _FOOTWEAR_WORDS)
 
 
 def _item_data_from_candidate(cand: dict, body: dict | None = None,
