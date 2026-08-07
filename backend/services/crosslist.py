@@ -362,19 +362,39 @@ async def publish_to_platforms(item_id: str, platforms: list[str], user_id: str)
             }))
         else:
             await _exec(db.table("listings").update({"status": "pending", "error_message": None}).eq("item_id", item_id).eq("platform", platform))
-        job = (await _exec(db.table("jobs").insert({
-            "user_id": user_id,
-            "item_id": item_id,
-            "platform": platform,
-            "action": "create",
-            "status": "pending",
-            "payload": payload,
-        }))).data[0]
+        # Is er al een openstaande publicatieopdracht voor dit item op dit
+        # platform? Dan die bijwerken in plaats van een tweede aanmaken. Zonder
+        # deze stap leverde één keer opnieuw proberen na een time-out (het
+        # verzoek kwam wél aan, alleen het antwoord ging verloren) twee
+        # opdrachten op — en dus twee advertenties.
+        open_job = (await _exec(
+            db.table("jobs").select("id")
+            .eq("user_id", user_id).eq("item_id", item_id)
+            .eq("platform", platform).eq("action", "create")
+            .in_("status", ["pending", "claimed"])
+            .limit(1)
+        )).data
+        if open_job:
+            job_id = open_job[0]["id"]
+            await _exec(db.table("jobs").update({"payload": payload}).eq("id", job_id))
+            hergebruikt = True
+        else:
+            job_id = (await _exec(db.table("jobs").insert({
+                "user_id": user_id,
+                "item_id": item_id,
+                "platform": platform,
+                "action": "create",
+                "status": "pending",
+                "payload": payload,
+            }))).data[0]["id"]
+            hergebruikt = False
         results.append({
             "platform": platform,
             "status": "queued",
-            "job_id": job["id"],
-            "message": "Job queued — Chrome extension will process this",
+            "job_id": job_id,
+            "message": ("Already queued — the extension is still working on it"
+                        if hergebruikt else
+                        "Job queued — Chrome extension will process this"),
         })
 
     return results
