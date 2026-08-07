@@ -886,18 +886,38 @@ async def _reconcile_vinted_sales(db, job, scraped: list[dict], scan_meta: dict 
         .execute()
         .data or []
     )
+    # Two very different signals, handled differently on purpose:
+    #   is_closed  → Vinted's own "sold/ended" flag. On Vinted a listing doesn't
+    #                expire on its own, so closed ≈ sold → book it as a sale.
+    #   vanished   → gone from a COMPLETE wardrobe with no sold flag. Could be sold
+    #                then removed, but could equally be manually deleted/expired.
+    #                We do NOT fabricate a sale from absence (that would inflate
+    #                revenue and cross-delist live listings). Instead we just take
+    #                it off "Live" → 'delisted', so it lands in Archived for the
+    #                user to confirm and mark sold themselves if it really sold.
+    newly_sold, set_aside = 0, 0
     for l in active:
         pid = l.get("platform_listing_id")
         if pid is None:
             continue
         pid = str(pid)
-        sold = pid in closed_ids or pid not in seen_ids
-        if not sold:
-            continue
-        try:
-            await handle_item_sold(l["item_id"], "vinted")
-        except Exception as e:
-            logger.warning(f"Vinted sale reconcile failed for item {l['item_id']}: {e}")
+        if pid in closed_ids:
+            try:
+                await handle_item_sold(l["item_id"], "vinted")
+                newly_sold += 1
+            except Exception as e:
+                logger.warning(f"Vinted sale reconcile failed for item {l['item_id']}: {e}")
+        elif pid not in seen_ids:
+            try:
+                db.table("listings").update({"status": "delisted"}) \
+                    .eq("item_id", l["item_id"]).eq("platform", "vinted").execute()
+                set_aside += 1
+            except Exception as e:
+                logger.warning(f"Vinted reconcile: could not archive vanished listing {l['item_id']}: {e}")
+    logger.info(
+        "[sold] Vinted reconcile for user %s: %d marked sold (is_closed), %d vanished → archived for review",
+        job["user_id"], newly_sold, set_aside,
+    )
 
 
 def _store_scan_results(db, job, scraped: list[dict]):
