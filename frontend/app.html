@@ -3673,6 +3673,30 @@ function ebaySuggestionPlausible(name) {
   return hints.some(h => lower.includes(h));
 }
 
+// Woorden waaraan je in een eBay-pad ziet voor wie het bedoeld is.
+const EBAY_GENDER_WORDS = {
+  heren:     ['men:', "men's", 'mens ', 'heren'],
+  dames:     ['women:', "women's", 'womens ', 'dames'],
+  kinderen:  ['kids', 'boys', 'girls', 'baby', 'kinderen', 'jongens', 'meisjes'],
+};
+
+// 0 = past en is voor de juiste doelgroep, 1 = past maar hoort bij een andere
+// doelgroep (een herenoverhemd hoort niet onder "Women: clothing"), 2 = past niet.
+// Zonder deze tussenstap stond een damescategorie even hoog als de juiste
+// herencategorie en kon die zelfs voorgeselecteerd worden.
+function ebaySuggestionRank(name) {
+  if (!ebaySuggestionPlausible(name)) return 2;
+  const gender = (document.getElementById('f-gender')?.value || '').trim().toLowerCase();
+  const eigen = EBAY_GENDER_WORDS[gender];
+  if (!eigen) return 0;                    // geen doelgroep ingevuld: niets te wegen
+  const lower = ` ${String(name || '').toLowerCase()} `;
+  if (eigen.some(w => lower.includes(w))) return 0;
+  const anders = Object.entries(EBAY_GENDER_WORDS)
+    .filter(([k]) => k !== gender)
+    .some(([, ws]) => ws.some(w => lower.includes(w)));
+  return anders ? 1 : 0;                   // neutraal pad blijft gewoon bruikbaar
+}
+
 function populateEbayCategorySelect(suggestions, keepId) {
   const sel = document.getElementById('f-ebay-category');
   sel.innerHTML = '';
