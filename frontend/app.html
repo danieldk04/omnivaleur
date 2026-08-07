@@ -3284,6 +3284,7 @@ async function doBulkCrosslist() {
     document.getElementById('cl-busy-text').textContent = `Publishing ${done + errors} / ${ids.length}…`;
   }
   setBusy(false);
+  nudgeExtension();
   showToast(`${done} item${done !== 1 ? 's' : ''} queued for publishing${errors ? `, ${errors} error(s)` : ''}.`);
   if (blockedItems.length) {
     alert(`${blockedItems.length} item(s) couldn't be published — missing data:\n\n${blockedItems.join('\n')}\n\nFill these in first, then try again.`);
