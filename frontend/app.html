@@ -3927,6 +3927,7 @@ async function saveItem() {
 
         try {
           await apiFetch(`${API}/api/items/${itemId}/crosslist`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ platforms: selected }) });
+          nudgeExtension();
         } catch (e) {
           if (!losgelaten) throw e;
         } finally {
