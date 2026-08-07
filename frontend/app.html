@@ -3638,6 +3638,25 @@ async function loadEbayCategorySuggestions(title, keepId) {
   }
 }
 
+// Waar een suggestie voor dit soort item thuishoort in eBay's boom. eBay's
+// matcher slaat bij een korte titel volledig de plank mis — een overhemd kwam
+// terug als "Toys and games > Miniature vehicles > Cars and trucks" — en die
+// bovenste suggestie werd stilzwijgend voorgeselecteerd en meegepubliceerd.
+// Namen kunnen Engels of Nederlands zijn, vandaar beide.
+const EBAY_PATH_HINTS = {
+  clothing:    ['clothing', 'kleding', 'shoes', 'schoenen', 'accessories', 'accessoires', 'sportswear', 'sportkleding'],
+  games:       ['games', 'game', 'console', 'consoles', 'video', 'spellen', 'computer'],
+  electronics: ['electronics', 'elektronica', 'computer', 'audio', 'phone', 'telefoon', 'tv', 'camera', 'foto'],
+  sieraden:    ['jewellery', 'jewelry', 'sieraden', 'watch', 'watches', 'horloge', 'horloges', 'bags', 'tassen', 'sunglasses', 'zonnebril'],
+};
+
+function ebaySuggestionPlausible(name) {
+  const hints = EBAY_PATH_HINTS[currentItemType()];
+  if (!hints) return true;                 // onbekend type: niets af te keuren
+  const lower = String(name || '').toLowerCase();
+  return hints.some(h => lower.includes(h));
+}
+
 function populateEbayCategorySelect(suggestions, keepId) {
   const sel = document.getElementById('f-ebay-category');
   sel.innerHTML = '';
