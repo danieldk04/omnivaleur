@@ -4564,7 +4564,7 @@ async function bulkImportAllCandidates() {
       totalFailed += data.failed || 0;
       const remaining = data.remaining || 0;
       if (remaining <= 0) break;
-      setBusy(true, `Importing… ${totalLinked + totalCreated} done, ${remaining} to go — please wait…`);
+      setBusyText(`Importing… ${totalLinked + totalCreated} done, ${remaining} to go — please wait…`);
       // Nothing moved this pass (all remaining are un-processable) — stop to avoid a loop.
       if ((data.linked || 0) + (data.created || 0) + (data.failed || 0) === 0) break;
     }
