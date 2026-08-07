@@ -1,6 +1,6 @@
 from fastapi import APIRouter, HTTPException, BackgroundTasks, Depends
 from backend.models import ListingCreate
-from backend.database import get_db
+from backend.database import get_db, fetch_all
 from backend.services.crosslist import publish_to_platforms, handle_item_sold, CrosslistValidationError
 from backend.services.relist import (
     refresh_listing, refresh_stale_listings, renew_etsy_listing, relist_ended_ebay_listing,
@@ -58,16 +58,8 @@ def _user_item_ids(db, user_id: str) -> list[str]:
     """Return all item IDs belonging to this user. Paged: a plain select is
     silently cut off at the database's row limit, and every id that fell off the
     end took its listings with it."""
-    ids: list[str] = []
-    page_size, offset = 500, 0
-    while True:
-        rows = (db.table("items").select("id").eq("user_id", user_id)
-                .order("id").range(offset, offset + page_size - 1).execute().data or [])
-        ids.extend(r["id"] for r in rows)
-        if len(rows) < page_size:
-            break
-        offset += page_size
-    return ids
+    return [r["id"] for r in fetch_all(
+        lambda: db.table("items").select("id").eq("user_id", user_id))]
 
 
 @router.get("/")
@@ -111,7 +103,10 @@ def list_all_listings(
     # for listings that have no platform_listing_id (hand-marked / unconfirmed).
     ids = list({l["item_id"] for l in listings if l.get("item_id")})
     if ids:
-        items = db.table("items").select("id,title").in_("id", ids).execute().data or []
+        items = []
+        for i in range(0, len(ids), 200):
+            brok = ids[i:i + 200]
+            items.extend(fetch_all(lambda b=brok: db.table("items").select("id,title").in_("id", b)))
         titles = {it["id"]: it.get("title") for it in items}
         for l in listings:
             l["title"] = titles.get(l.get("item_id"))
