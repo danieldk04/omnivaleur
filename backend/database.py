@@ -80,7 +80,7 @@ def fetch_all(build_query, order_by: str = "id", page_size: int = 500) -> list[d
     over; alles daarboven verdween stilzwijgend. In het dashboard betekende dat
     dat items die wél online stonden onder "To list" belandden. `build_query`
     maakt telkens een verse query (Supabase-builders zijn niet herbruikbaar).
-    """
+
     Er wordt geteld met het aantal rijen dat we écht terugkregen, niet met de
     grootte die we vroegen: de server mag een pagina korter maken dan gevraagd,
     en dan zou "korter dus klaar" halverwege stoppen.
