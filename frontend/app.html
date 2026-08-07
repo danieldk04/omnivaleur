@@ -5407,8 +5407,9 @@ async function doCrosslist() {
       const lines = errored.map(r => `• ${PLATFORM_LABELS[r.platform] || r.platform}: ${r.error || 'failed'}`).join('\n');
       alert((ok.length ? `Queued: ${ok.join(', ')}.\n\n` : '') + `Could not publish:\n${lines}`);
     } else {
-      showToast(`Queued for ${selected.map(p => PLATFORM_LABELS[p]).join(', ')} — extension will publish within 15 seconds`);
+      showToast(`Queued for ${selected.map(p => PLATFORM_LABELS[p]).join(', ')} — the extension starts right away`);
     }
+    nudgeExtension();
     await loadAll();
   } catch(e) {
     alert(e.message);
