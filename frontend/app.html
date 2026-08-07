@@ -5416,6 +5416,7 @@ function formatMissingFieldsError(data) {
 // re-click bulk import) before the first one has actually finished.
 let _busyDepth = 0;
 let _busyProgressTimer = null;
+let _busyEscTid = null;
 
 function setBusySub(tekst) {
   const el = document.getElementById('cl-busy-sub');
