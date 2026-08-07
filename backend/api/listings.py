@@ -71,13 +71,32 @@ def list_all_listings(
     item_ids = _user_item_ids(db, user_id)
     if not item_ids:
         return []
-    q = db.table("listings").select("*").in_("item_id", item_ids)
-    if platform:
-        q = q.eq("platform", platform)
-    if status:
-        q = q.eq("status", status)
-    result = q.limit(2000).execute()
-    listings = result.data or []
+    # Fetch every listing, in chunks and pages. The old single call asked for
+    # 2000 rows in one go: PostgREST caps a response at its own max-rows limit
+    # and says nothing about it, so past that point the dashboard simply never
+    # saw those listings — items that were live on a platform showed up under
+    # "To list". A stable order is required, otherwise paging can repeat or skip
+    # rows.
+    listings: list[dict] = []
+    seen: set = set()
+    for chunk_start in range(0, len(item_ids), 200):
+        chunk = item_ids[chunk_start:chunk_start + 200]
+        page_size, offset = 500, 0
+        while True:
+            q = db.table("listings").select("*").in_("item_id", chunk)
+            if platform:
+                q = q.eq("platform", platform)
+            if status:
+                q = q.eq("status", status)
+            page = (q.order("item_id").order("id")
+                     .range(offset, offset + page_size - 1).execute().data or [])
+            for row in page:
+                if row.get("id") not in seen:
+                    seen.add(row.get("id"))
+                    listings.append(row)
+            if len(page) < page_size:
+                break
+            offset += page_size
     # Attach each listing's item title so the extension can title-match sold ads
     # for listings that have no platform_listing_id (hand-marked / unconfirmed).
     ids = list({l["item_id"] for l in listings if l.get("item_id")})
