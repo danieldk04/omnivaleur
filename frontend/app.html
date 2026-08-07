@@ -3697,14 +3697,9 @@ function ebayPathGender(name) {
 function ebaySuggestionRank(name) {
   if (!ebaySuggestionPlausible(name)) return 2;
   const gender = (document.getElementById('f-gender')?.value || '').trim().toLowerCase();
-  const eigen = EBAY_GENDER_WORDS[gender];
-  if (!eigen) return 0;                    // geen doelgroep ingevuld: niets te wegen
-  const lower = ` ${String(name || '').toLowerCase()} `;
-  if (eigen.some(w => lower.includes(w))) return 0;
-  const anders = Object.entries(EBAY_GENDER_WORDS)
-    .filter(([k]) => k !== gender)
-    .some(([, ws]) => ws.some(w => lower.includes(w)));
-  return anders ? 1 : 0;                   // neutraal pad blijft gewoon bruikbaar
+  if (!EBAY_GENDER_WORDS.some(([k]) => k === gender)) return 0;  // geen doelgroep: niets te wegen
+  const pad = ebayPathGender(name);
+  return (pad && pad !== gender) ? 1 : 0;  // neutraal pad blijft gewoon bruikbaar
 }
 
 function populateEbayCategorySelect(suggestions, keepId) {
