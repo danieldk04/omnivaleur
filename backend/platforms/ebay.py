@@ -991,20 +991,33 @@ _EBAY_SEGMENT_NL_EN = {
 _ebay_segment_learned: dict[str, str] = {}
 
 
+def _lookup_segment(segment: str) -> str | None:
+    """English name for one breadcrumb segment, or None if we don't know it yet."""
+    key = segment.strip().lower()
+    return _EBAY_SEGMENT_NL_EN.get(key) or _ebay_segment_learned.get(key)
+
+
+def _split_path(name: str) -> list[str]:
+    return [p.strip() for p in str(name or "").split(">")]
+
+
 def _translate_segments_static(name: str) -> str:
-    """Translate a ' > '-joined breadcrumb using the static segment map. Segments
-    not in the map are left as-is (the LLM fallback can pick them up)."""
-    parts = [p.strip() for p in name.split(">")]
-    return " > ".join(_EBAY_SEGMENT_NL_EN.get(p.lower(), p) for p in parts)
+    """Translate a ' > '-joined breadcrumb with what we already know. Unknown
+    segments are left as-is; _unknown_segments() picks them up for the LLM."""
+    return " > ".join(_lookup_segment(p) or p for p in _split_path(name))
 
 
-def _looks_dutch(name: str) -> bool:
-    """True if any segment still contains a known Dutch word after static pass."""
-    lowered = name.lower()
-    return any(w in lowered for w in (
-        "kleding", "heren", "dames", "kinderen", "accessoires", "en vesten",
-        "jassen", "broeken", "schoenen", "tassen", "boeken", "speelgoed",
-    ))
+def _unknown_segments(results: list[dict]) -> list[str]:
+    """Segments we have no English name for. The old code instead guessed with a
+    hardcoded list of Dutch words, which silently let anything outside that list
+    through untranslated ("Hemden > Kostuumhemden", "Voetbal", "Verzamelingen").
+    Not knowing a segment is the only reliable signal, so that is what we use."""
+    unknown: list[str] = []
+    for r in results:
+        for p in _split_path(r["name"]):
+            if p and _lookup_segment(p) is None and p not in unknown:
+                unknown.append(p)
+    return unknown
 
 
 async def _translate_category_names(results: list[dict]) -> list[dict]:
@@ -1014,40 +1027,39 @@ async def _translate_category_names(results: list[dict]) -> list[dict]:
     first (deterministic, offline), LLM only for segments it didn't cover."""
     if not results:
         return results
-    # Deterministic pass — guarantees English for the common clothing tree even
-    # with no LLM key configured.
+    unknown = _unknown_segments(results)
+    if unknown and settings.anthropic_api_key:
+        try:
+            import anthropic
+            client = anthropic.Anthropic(api_key=settings.anthropic_api_key)
+            numbered = "\n".join(f"{i}: {s}" for i, s in enumerate(unknown))
+            response = client.messages.create(
+                model="claude-haiku-4-5-20251001",
+                max_tokens=1024,
+                messages=[{"role": "user", "content": (
+                    "These are single segments of Dutch eBay category names. "
+                    "Give the English name for each one. Keep the same numbering, "
+                    "one line per segment, format 'number: English name'. "
+                    "If a segment is already English or is a brand name, repeat it unchanged. "
+                    "Return only those lines, nothing else.\n\n" + numbered
+                )}],
+            )
+            text = response.content[0].text.strip()
+            for line in text.splitlines():
+                if ":" not in line:
+                    continue
+                idx_str, translated = line.split(":", 1)
+                try:
+                    idx = int(idx_str.strip())
+                except ValueError:
+                    continue
+                translated = translated.strip()
+                if 0 <= idx < len(unknown) and translated:
+                    _ebay_segment_learned[unknown[idx].lower()] = translated
+        except Exception as e:
+            logger.warning(f"eBay category name translation failed: {e}")
     for r in results:
         r["name"] = _translate_segments_static(r["name"])
-    # Only the leftovers (unknown segments still looking Dutch) need the LLM.
-    remaining = [r for r in results if _looks_dutch(r["name"])]
-    if not remaining or not settings.anthropic_api_key:
-        return results
-    try:
-        import anthropic
-        client = anthropic.Anthropic(api_key=settings.anthropic_api_key)
-        numbered = "\n".join(f"{i}: {r['name']}" for i, r in enumerate(remaining))
-        response = client.messages.create(
-            model="claude-haiku-4-5-20251001",
-            max_tokens=1024,
-            messages=[{"role": "user", "content": (
-                "Translate each eBay category breadcrumb path below to English. "
-                "Keep the same numbering and the same '>' separators, translate every segment. "
-                "Return only the translated lines, nothing else.\n\n" + numbered
-            )}],
-        )
-        text = response.content[0].text.strip()
-        for line in text.splitlines():
-            if ":" not in line:
-                continue
-            idx_str, translated = line.split(":", 1)
-            try:
-                idx = int(idx_str.strip())
-            except ValueError:
-                continue
-            if 0 <= idx < len(remaining):
-                remaining[idx]["name"] = translated.strip()
-    except Exception as e:
-        logger.warning(f"eBay category name translation failed: {e}")
     return results
 
 
