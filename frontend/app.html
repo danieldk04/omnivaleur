@@ -2145,6 +2145,20 @@ function pingExtension() {
   }, 2500);
 }
 
+// Porren: "er staat werk klaar, ga nu kijken".
+//
+// De extensie keek uit zichzelf maar één keer per halve minuut of er iets te
+// doen was (korter kan Chrome niet), dus na elke publicatie zat er nog tot een
+// halve minuut niets-doen vóór het echte werk begon — bij drie platforms liep
+// dat op tot minuten waarin er ogenschijnlijk niets gebeurde. Dit bericht laat
+// de extensie meteen kijken. Mislukt het (niet geïnstalleerd, net herladen),
+// dan gebeurt er niets bijzonders: de gewone ronde pakt het alsnog op.
+function nudgeExtension() {
+  try {
+    window.postMessage({ source: EXT_PAGE_SOURCE, type: 'EXT_POLL_NOW' }, window.location.origin);
+  } catch (_) { /* geen extensie — de gewone ronde pakt het op */ }
+}
+
 function dismissExtOverlay() {
   localStorage.setItem('cl_ext_ok', '1');
   document.getElementById('ext-overlay').style.display = 'none';
