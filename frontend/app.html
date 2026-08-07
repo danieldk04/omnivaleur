@@ -4554,7 +4554,7 @@ async function bulkImportAllCandidates() {
             `the rest are still pending, so you can just run "Import all" again in a moment.`
           );
         }
-        setBusy(true, `Server is busy — retrying in smaller batches (${limit} at a time)… ${totalLinked + totalCreated} done so far`);
+        setBusyText(`Server is busy — retrying in smaller batches (${limit} at a time)… ${totalLinked + totalCreated} done so far`);
         await napMs(Math.min(15000, 2000 * strikes));
         continue; // same work, smaller bite
       }
