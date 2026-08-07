@@ -309,7 +309,65 @@ async def _infer_attributes_smart(title: str | None, description: str | None,
     if not smart:
         return keyword_out
     # Claude wins on gender/category; keep the keyword colour.
-    return {**keyword_out, **smart}
+    merged = {**keyword_out, **smart}
+
+    # …except when it contradicts a word that leaves no room for interpretation.
+    # A pair of "White Puma Shoes" came back as sportbroeken (athletic shorts),
+    # because the brand was treated as a stronger signal than the noun in the
+    # title. Marktplaats then filed a shoe under Jeans. The text says "shoes";
+    # no brand changes that, so the keyword rule wins here.
+    if _is_footwear_text(title, description):
+        if not _is_footwear_category(merged.get("category")):
+            kw = keyword_out.get("category")
+            logger.warning(
+                "Category override: text says footwear but classifier picked "
+                f"{merged.get('category')!r}; using {kw or 'no category'} instead."
+            )
+            # No trustworthy footwear key (unknown gender) → leave it empty rather
+            # than keep a wrong one. The user is asked, instead of silently
+            # publishing a shoe as a pair of jeans.
+            merged["category"] = kw if _is_footwear_category(kw) else None
+            if merged["category"] is None:
+                merged.pop("category")
+    elif _is_footwear_category(merged.get("category")) and keyword_out.get("category"):
+        # The mirror image: footwear picked with nothing in the text supporting it.
+        merged["category"] = keyword_out["category"]
+
+    return merged
+
+
+# Category keys that ARE footwear, across every gender branch of _TAXONOMY.
+_FOOTWEAR_CATEGORIES = {
+    "sneakers dames", "schoenen dames", "hakken", "laarzen dames", "sandalen",
+    "heren sneakers", "heren schoenen", "heren formele schoenen", "heren laarzen",
+    "kinderen schoenen", "unisex schoenen",
+}
+
+# Words that can only mean footwear. Deliberately excludes ambiguous ones like
+# "pump" (also a machine) and "slipper" (also a garment in Dutch listings).
+_FOOTWEAR_WORDS = (
+    "shoe", "sneaker", "trainer", "boot", "loafer", "brogue", "derby", "heel",
+    "sandal", "espadrille", "moccasin", "schoen", "laars", "laarzen", "sandaal",
+    "instapper", "veterschoen", "gympen", "hakschoen",
+)
+
+
+def _is_footwear_category(category: str | None) -> bool:
+    return (category or "").strip().lower() in _FOOTWEAR_CATEGORIES
+
+
+def _is_footwear_text(title: str | None, description: str | None) -> bool:
+    """True when the listing text names footwear. The title carries far more
+    weight than the description — a jacket description mentioning "matching
+    boots" must not turn the jacket into footwear — so the description only
+    counts when the title says nothing about the garment at all."""
+    t = (title or "").lower()
+    if any(re.search(r"\b" + w + r"s?\b", t) for w in _FOOTWEAR_WORDS):
+        return True
+    if t.strip():
+        return False
+    d = (description or "").lower()
+    return any(re.search(r"\b" + w + r"s?\b", d) for w in _FOOTWEAR_WORDS)
 
 
 def _item_data_from_candidate(cand: dict, body: dict | None = None,
