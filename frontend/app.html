@@ -3897,13 +3897,18 @@ async function saveItem() {
           showToast('Still publishing in the background — the item appears in the list on its own.');
           loadAll().catch(() => {});
         };
+        // Publiceren duurt minuten: vertalen, foto's versturen, en daarna doet de
+        // extensie het echte plaatsen in een eigen tabblad. Daar hoefde de
+        // gebruiker nooit op te wachten — het scherm stond hem alleen maar in de
+        // weg, tot anderhalve minuut lang, met alle knoppen uit. De balk bovenaan
+        // toont vanaf hier precies waar de extensie mee bezig is, dus dit scherm
+        // laat na 8 seconden vanzelf los. Die paar seconden zijn er alleen om een
+        // directe weigering van de server (ontbrekende velden) nog als melding te
+        // kunnen tonen in plaats van als stille mislukking.
         startBusyProgress([
-          { na: 0,  tekst: `Item saved ✓ — translating for ${namen}…` },
-          { na: 8,  tekst: 'Still translating — this is the slow part…' },
-          { na: 20, tekst: 'Sending your photos to the marketplaces…' },
-          { na: 45, tekst: 'Almost there — finishing the listings…' },
-          { na: 90, tekst: 'Taking longer than usual, but still running…' },
-        ], { onEscape: losmaken, escapeNa: 15, autoNa: 150, escapeLabel: 'Continue in the background' });
+          { na: 0, tekst: `Item saved ✓ — starting publication to ${namen}…` },
+          { na: 4, tekst: 'Handing over to the extension — you can carry on…' },
+        ], { onEscape: losmaken, escapeNa: 2, autoNa: 8, escapeLabel: 'Continue in the background' });
 
         try {
           await apiFetch(`${API}/api/items/${itemId}/crosslist`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ platforms: selected }) });
