@@ -5524,6 +5524,7 @@ function setBusy(on, msg) {
   } else {
     _busyDepth = Math.max(0, _busyDepth - 1);
     if (_busyDepth === 0) {
+      clearTimeout(_busyEscTid);
       stopBusyProgress();
       ov.style.opacity = '0';
       // Hide only once the fade has finished; re-showing within that window
