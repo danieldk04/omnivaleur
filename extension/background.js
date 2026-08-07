@@ -1,5 +1,9 @@
 importScripts("analytics.js");
 
+// Terugvalklok. Chrome staat geen kortere wekker toe dan een halve minuut, dus
+// deze 15 wordt in de praktijk 30 — daarom is dit alleen het vangnet. Het echte
+// startsein komt van het dashboard (POLL_NOW), meteen nadat er werk is
+// klaargezet, en van de ronde zelf zolang die werk blijft vinden.
 const POLL_INTERVAL_SECONDS = 15;
 
 // Platforms this extension handles (API platforms like eBay/Etsy are server-side)
