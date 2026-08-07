@@ -741,6 +741,7 @@ async function pollJobsEenRonde() {
       console.error(`Omnivaleur poll error (${platform}):`, e);
     }
   }
+  return verzet;
 }
 
 // ── Dedicated worker window ────────────────────────────────────────────────
