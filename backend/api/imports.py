@@ -345,10 +345,16 @@ _FOOTWEAR_CATEGORIES = {
 
 # Words that can only mean footwear. Deliberately excludes ambiguous ones like
 # "pump" (also a machine) and "slipper" (also a garment in Dutch listings).
+# Dutch plurals are spelled out: the -s/-en suffix in the pattern below does not
+# cover them all ("laars" → "laarzen"), and it was exactly the Dutch spelling
+# that slipped through — a listing titled "Witte Puma schoenen" stayed filed as
+# athletic shorts while the English "White Puma Shoes" was caught.
 _FOOTWEAR_WORDS = (
     "shoe", "sneaker", "trainer", "boot", "loafer", "brogue", "derby", "heel",
-    "sandal", "espadrille", "moccasin", "schoen", "laars", "laarzen", "sandaal",
-    "instapper", "veterschoen", "gympen", "hakschoen",
+    "sandal", "espadrille", "moccasin",
+    "schoen", "schoenen", "laars", "laarzen", "sandaal", "sandalen",
+    "instapper", "instappers", "veterschoen", "veterschoenen",
+    "gymp", "gympen", "hakschoen", "hakschoenen", "pumps", "hakken",
 )
 
 
