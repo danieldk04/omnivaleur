@@ -5466,7 +5466,7 @@ function startBusyProgress(fases, opties) {
     const fase = [...fases].reverse().find(f => sec >= f.na) || fases[0];
     const tekst = document.getElementById('cl-busy-text');
     if (tekst && fase) tekst.textContent = fase.tekst;
-    setBusySub(`${sec}s — keep this window open. Refreshing or closing it will interrupt publishing.`);
+    setBusySub(`${sec}s — this closes by itself; publishing then continues in the background.`);
     if (knop && o.onEscape && sec >= (o.escapeNa ?? 20) && knop.style.display === 'none') {
       knop.style.display = 'inline-block';
     }
