@@ -1749,30 +1749,45 @@ async function bgScanVinted(job, serverUrl) {
     await sleep(2500);
 
     await reportProgress(serverUrl, job.id, { stage: "account", message: "Finding your Vinted account…", current: 0, total: 0 });
-    // The account/avatar menu only exposes your numeric member id (/member/{id})
-    // once its dropdown is opened — nothing on the page reveals it beforehand.
-    await execInTab(tabId, () => {
-      document.querySelector('#user-menu-button, [data-testid="user-menu-button"]')?.click();
-    });
-    await sleep(600);
-
     // Find the numeric member id AND the real country origin (Vinted links to
     // your home country domain, e.g. vinted.nl, even from the .com entry page —
     // the items API only exists on that same origin, not on vinted.com).
-    const idInfo = await execInTab(tabId, () => {
-      let userId = null, origin = null;
-      const links = [...document.querySelectorAll('a[href*="/member/"]')];
-      for (const link of links) {
-        const href = link.getAttribute("href") || "";
-        const m = href.match(/\/member\/(\d+)(?:[/?]|$)/);
-        if (m) {
-          userId = m[1];
-          try { origin = new URL(href, location.href).origin; } catch (e) { origin = location.origin; }
-          break;
+    //
+    // The member id used to be scraped from a /member/{id} link that only appears
+    // after the avatar dropdown opens — a single 600ms wait that missed often
+    // (this was the "Could not find member id" error that silently killed
+    // sold-detection). Now we retry with growing waits and several sources:
+    // open the menu, read anchor links, and — as a fallback — dig the id out of
+    // the page's embedded JSON (Vinted ships it in the bootstrap data), which
+    // doesn't depend on the dropdown rendering in time.
+    let idInfo = { userId: null, origin: null };
+    for (let attempt = 0; attempt < 4 && !idInfo.userId; attempt++) {
+      await execInTab(tabId, () => {
+        document.querySelector('#user-menu-button, [data-testid="user-menu-button"], header [aria-haspopup="true"]')?.click();
+      });
+      await sleep(500 + attempt * 700); // 500 / 1200 / 1900 / 2600ms
+      idInfo = await execInTab(tabId, () => {
+        // 1) The /member/{id} link (present once the dropdown is open).
+        for (const link of document.querySelectorAll('a[href*="/member/"]')) {
+          const href = link.getAttribute("href") || "";
+          const m = href.match(/\/member\/(\d+)(?:[/?]|$)/);
+          if (m) {
+            let origin;
+            try { origin = new URL(href, location.href).origin; } catch (e) { origin = location.origin; }
+            return { userId: m[1], origin };
+          }
         }
-      }
-      return { userId, origin };
-    });
+        // 2) Fallback: Vinted embeds the logged-in user's id in the page's
+        //    bootstrap JSON — independent of any dropdown rendering.
+        const html = document.documentElement.innerHTML;
+        let m = html.match(/"user"\s*:\s*\{[^}]*?"id"\s*:\s*(\d+)/)
+             || html.match(/"user_id"\s*:\s*(\d+)/)
+             || html.match(/\\?"current_user_id\\?"\s*:\s*(\d+)/)
+             || html.match(/\/member\/(\d+)/);
+        if (m) return { userId: m[1], origin: location.origin };
+        return { userId: null, origin: null };
+      });
+    }
 
     if (!idInfo?.userId) throw new Error("Could not find your logged-in Vinted account (member id) — make sure you're logged into Vinted in this browser tab.");
 
