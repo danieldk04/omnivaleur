@@ -3630,9 +3630,16 @@ async function loadEbayCategorySuggestions(title, keepId) {
     // eBay returns no confidence score, so a single suggestion is not the same
     // as a good one — the old wording ("top match preselected") sounded certain
     // while proposing nonsense. Say plainly that it's a suggestion to check.
-    status.textContent = (suggestions && suggestions.length)
-      ? `${suggestions.length} suggestion${suggestions.length === 1 ? '' : 's'} from eBay — please check it matches the item.`
-      : 'No matches — choose "Enter category ID manually…".';
+    const bruikbaar = (suggestions || []).filter(s => ebaySuggestionPlausible(s.name)).length;
+    if (!suggestions || !suggestions.length) {
+      status.textContent = 'No matches — choose "Enter category ID manually…".';
+    } else if (!bruikbaar) {
+      // Niets voorgeselecteerd, en zeg waaróm — anders lijkt een leeg veld een
+      // storing terwijl eBay gewoon niets zinnigs terugstuurde.
+      status.textContent = `eBay returned ${suggestions.length} suggestion${suggestions.length === 1 ? '' : 's'}, none of which look like this item (marked ⚠️). Fill in gender and category above for a better match, or enter an ID manually.`;
+    } else {
+      status.textContent = `${bruikbaar} suggestion${bruikbaar === 1 ? '' : 's'} from eBay — please check it matches the item.`;
+    }
   } catch (e) {
     if (seq === _ebayCatSeq) status.textContent = 'Category lookup failed: ' + e.message;
   }
