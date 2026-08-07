@@ -70,3 +70,28 @@ def execute_with_retry(query, pogingen: int = 3, dubbel_is_ok: bool = False):
             logger.warning("Databaseverbinding viel weg (%s) — poging %d opnieuw", type(e).__name__, poging + 2)
             time.sleep(0.25 * (poging + 1))
     raise laatste  # type: ignore[misc]
+
+
+def fetch_all(build_query, order_by: str = "id", page_size: int = 500) -> list[dict]:
+    """
+    Haal álle rijen op die bij een query horen, pagina voor pagina.
+
+    Een gewone select geeft er hooguit een paar honderd terug en zegt er niets
+    over; alles daarboven verdween stilzwijgend. In het dashboard betekende dat
+    dat items die wél online stonden onder "To list" belandden. `build_query`
+    maakt telkens een verse query (Supabase-builders zijn niet herbruikbaar).
+    """
+    Er wordt geteld met het aantal rijen dat we écht terugkregen, niet met de
+    grootte die we vroegen: de server mag een pagina korter maken dan gevraagd,
+    en dan zou "korter dus klaar" halverwege stoppen.
+    """
+    rijen: list[dict] = []
+    offset = 0
+    while True:
+        pagina = (build_query().order(order_by)
+                  .range(offset, offset + page_size - 1).execute().data or [])
+        if not pagina:
+            break
+        rijen.extend(pagina)
+        offset += len(pagina)
+    return rijen
