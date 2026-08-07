@@ -2812,8 +2812,8 @@ async function refreshDashboard(btn) {
   btn.disabled = false;
 }
 
-// Backend paginates /api/items/ (default 50/page) — keep fetching pages until
-// a page comes back short, so the dashboard always has the user's full item set.
+// Backend paginates /api/items/ — keep fetching pages until one comes back
+// empty, so the dashboard always has the user's full item set.
 async function fetchAllItems() {
   const pageSize = 200;
   let offset = 0, all = [];
