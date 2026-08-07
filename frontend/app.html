@@ -5441,8 +5441,12 @@ async function doCrosslist() {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ platforms: selected }),
     });
-    const data = await res.json().catch(() => ({}));
-    if (!res.ok) throw new Error(formatMissingFieldsError(data) || data.detail || 'Publish failed');
+    // Lees de body als tekst en probeer daarna pas JSON: een gateway-storing
+    // stuurt een HTML-pagina, en die werd hiervoor stilzwijgend weggegooid.
+    const rawText = await res.text();
+    let data = {};
+    try { data = rawText ? JSON.parse(rawText) : {}; } catch { data = {}; }
+    if (!res.ok) throw new Error(publishFailureMessage(res, data, rawText));
     closeModal('modal-crosslist');
     // API platforms (eBay/Shopify) publish server-side and can fail immediately —
     // surface those instead of always claiming success.
