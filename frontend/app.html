@@ -3179,7 +3179,10 @@ function renderItemsTable(items) {
     const checked = selectedIds.has(item.id) ? 'checked' : '';
     const rowClass = selectedIds.has(item.id) ? 'selected' : '';
     const pubDate = publishedAt(item.id);
-    const missingBadge = smartMissingBadge(item);
+    const publishingPill = publishingItemIds.has(item.id)
+      ? ` <span class="badge pending" title="This item is being published right now — the extension is putting it online on each selected platform. It stays here and turns fully live once every platform is done.">⏳ Publishing…</span>`
+      : '';
+    const missingBadge = publishingItemIds.has(item.id) ? '' : smartMissingBadge(item);
     // Subtle time-section subheader between contiguous groups (list is sorted
     // most-recently-handled first, so buckets stay contiguous).
     const bucket = handledBucket(lastHandledAt(item));
