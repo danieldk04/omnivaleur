@@ -257,8 +257,15 @@ async def publish_to_platforms(item_id: str, platforms: list[str], user_id: str)
     missing data a platform needs — never silently ships a half-empty listing.
     """
     db = get_db()
-    item_resp = await _exec(db.table("items").select("*").eq("id", item_id).single())
-    item = item_resp.data
+    # Op naam van de eigenaar opvragen. Zonder die voorwaarde kon /listings/publish
+    # met een willekeurig item-id andermans item publiceren, op jouw gekoppelde
+    # accounts.
+    item_resp = await _exec(
+        db.table("items").select("*").eq("id", item_id).eq("user_id", user_id).limit(1)
+    )
+    item = (item_resp.data or [None])[0]
+    if not item:
+        raise CrosslistValidationError({"item": ["This item does not exist (or is not yours)."]})
 
     # Etsy isn't built yet (shown only as "Coming soon"). Refuse it explicitly so a
     # stray request can never half-publish or fall through to the extension path.
@@ -708,6 +715,19 @@ async def handle_item_sold(item_id: str, sold_on_platform: str, sold_price: floa
             _write_sold()
         else:
             raise
+
+    # Verkocht betekent: nergens meer plaatsen. Stond er nog een publicatie in de
+    # wachtrij (bijvoorbeeld omdat de browser toen dicht stond), dan zette de
+    # extensie het item ná de verkoop alsnog online — en die verse advertentie
+    # kreeg geen verwijderopdracht, want die was al langs geweest.
+    try:
+        db.table("jobs").update({
+            "status": "cancelled",
+            "result": {"cancelled": "item sold elsewhere"},
+        }).eq("item_id", item_id).eq("action", "create") \
+          .in_("status", ["pending", "claimed"]).execute()
+    except Exception as e:  # noqa: BLE001 - een verkoop mag hier nooit op stuklopen
+        logger.warning("[sold] could not cancel queued publish jobs for %s: %s", item_id, e)
 
     # Find other listings to delist. We include 'delisted' and 'error' — NOT just
     # 'active' — on purpose: a broken earlier delete could have flipped the DB to
