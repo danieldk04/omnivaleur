@@ -3327,6 +3327,16 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     return true;
   }
 
+  // Het dashboard heeft zojuist werk klaargezet — nu kijken in plaats van tot de
+  // volgende ronde wachten. Dat scheelt per klus tot een halve minuut waarin er
+  // zichtbaar niets gebeurde. Loopt er al een klus, dan verandert dit niets: de
+  // server geeft niets vrij zolang er iets geclaimd is.
+  if (msg.type === "POLL_NOW") {
+    pollJobs();
+    sendResponse({ ok: true });
+    return true;
+  }
+
   // Lets the dashboard show what's actually wrong (not installed vs. signed out)
   // instead of assuming everything is fine. Deliberately reports only whether a
   // token exists and which account it belongs to — never the token itself.
