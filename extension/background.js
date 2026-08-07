@@ -673,7 +673,40 @@ async function reportProgress(serverUrl, jobId, progress) {
   } catch (e) { /* progress is best-effort */ }
 }
 
+// De klussen lopen bewust één voor één (één tabblad tegelijk — twee tegelijk
+// haalde de gegevens van twee advertenties door elkaar). Maar zodra er één klaar
+// was, wachtte de volgende tot de eerstvolgende ronde: bij drie platforms waren
+// dat drie stiltes van maximaal een halve minuut bovenop het echte werk. Daarom
+// gaat er direct nóg een ronde overheen zolang er in de vorige ronde werk is
+// verzet. De klussen blijven strikt achter elkaar lopen; alleen het wachten
+// ertussen is weg.
+//
+// `_pollLoopt` voorkomt dat het dashboard-porren en de klok tegelijk gaan
+// pollen — twee rondes door elkaar zouden dezelfde klus twee keer kunnen
+// oppakken. Wie tegen een lopende ronde aanloopt, vraagt gewoon om nog een ronde
+// erna.
+let _pollLoopt = false;
+let _pollNogmaals = false;
+
 async function pollJobs() {
+  if (_pollLoopt) { _pollNogmaals = true; return; }
+  _pollLoopt = true;
+  try {
+    // Bovengrens puur als noodrem: blijft de server werk aanbieden dat nooit
+    // afrondt, dan valt hij terug op de gewone klok in plaats van rond te tollen.
+    for (let ronde = 0; ronde < 25; ronde++) {
+      _pollNogmaals = false;
+      const verzet = await pollJobsEenRonde();
+      if (!verzet && !_pollNogmaals) break;
+    }
+  } finally {
+    _pollLoopt = false;
+  }
+}
+
+// Eén ronde langs alle platforms. Geeft terug of er werk is verzet.
+async function pollJobsEenRonde() {
+  let verzet = false;
   const serverUrl = await getServerUrl();
   // Deliver any completions a previous run couldn't confirm BEFORE asking for
   // pending work — otherwise the backend hands us back a job we already did.
