@@ -5467,6 +5467,36 @@ async function doCrosslist() {
 // Turns the backend's {missing_fields: {platform: [field, ...]}} 422 body into a
 // clear "here's exactly what to fill in" message — crosslisting is blocked until
 // this data exists, rather than silently publishing a half-empty listing.
+// Wat er ECHT misging bij een mislukte publicatie.
+//
+// Er stond overal `data.detail || 'Publish failed'`. Zodra de server iets
+// terugstuurde dat geen `detail` had — een tijdelijke storing die een HTML-pagina
+// oplevert, een fout diep in het publiceren, een lege 500 — bleef er letterlijk
+// "Publish failed" over: geen reden, geen platform, niets om mee verder te
+// kunnen. Deze functie zegt altijd minstens wát de server antwoordde.
+function publishFailureMessage(res, data, rawText) {
+  const missing = formatMissingFieldsError(data);
+  if (missing) return missing;
+
+  const d = data && data.detail;
+  let reden = '';
+  if (typeof d === 'string' && d.trim()) reden = d.trim();
+  else if (Array.isArray(d) && d.length) {
+    // FastAPI-validatiefouten: een lijst objecten. Zonder deze tak toonde het
+    // scherm "[object Object]".
+    reden = d.map(x => (x && (x.msg || x.detail)) || JSON.stringify(x)).join('; ');
+  } else if (d && typeof d === 'object') reden = JSON.stringify(d);
+  else if (rawText && rawText.trim() && !/^\s*</.test(rawText)) reden = rawText.trim().slice(0, 300);
+
+  if (res && res.status === 402) return reden || 'Your subscription no longer allows publishing.';
+  if (res && res.status === 401) return 'Your session expired — sign in again and retry.';
+  if (res && (res.status === 502 || res.status === 503 || res.status === 504)) {
+    return `The server was unreachable (${res.status}). Nothing was published — try again in a moment.`;
+  }
+  const status = res ? ` (HTTP ${res.status})` : '';
+  return reden ? `Publishing failed${status}: ${reden}` : `Publishing failed${status} — the server gave no reason. Please try again; if it keeps happening, send this code to support.`;
+}
+
 function formatMissingFieldsError(data) {
   const missing = data && data.detail && data.detail.missing_fields;
   if (!missing) return null;
