@@ -71,7 +71,21 @@ app.include_router(content.router)
 
 @app.get("/health")
 async def health():
-    return {"status": "ok", "service": "omnivaleur"}
+    # Alleen ja/nee per instelling, nooit de waarde zelf. Dagen zoekwerk gingen op
+    # aan gokken of een sleutel wel bij de live server aankwam.
+    from backend.config import settings as _s
+    return {
+        "status": "ok",
+        "service": "omnivaleur",
+        "config": {
+            "stripe_secret_key": bool(_s.stripe_secret_key),
+            "stripe_price_id": bool(_s.stripe_price_id),
+            "stripe_webhook_secret": bool(_s.stripe_webhook_secret),
+            "supabase_key": bool(_s.supabase_key),
+            "anthropic_api_key": bool(_s.anthropic_api_key),
+            "owner_email": _s.owner_email,
+        },
+    }
 
 
 @app.get("/privacy")
