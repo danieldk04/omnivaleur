@@ -2735,13 +2735,16 @@ async function startCheckout() {
   btns.forEach(b => { b.textContent = 'Loading…'; b.disabled = true; });
   try {
     const res = await apiFetch(`${API}/api/billing/checkout`, { method: 'POST' });
-    const data = await res.json();
+    // Rauwe tekst lezen: bij een gateway-fout komt er HTML terug en klapte
+    // res.json() eruit, waarna de melding alleen nog "kan geen verbinding maken"
+    // zei — precies de informatie die je niet nodig hebt.
+    const raw = await res.text();
+    let data = {};
+    try { data = raw ? JSON.parse(raw) : {}; } catch {}
     if (data.url) { window.location.href = data.url; return; }
-    // De echte reden erbij: een kale "probeer opnieuw" kostte dagen zoeken toen
-    // de server allang precies vertelde wat er misging.
-    alert(data.detail ? `Could not start checkout: ${data.detail}` : 'Could not start checkout. Please try again.');
+    alert(`Could not start checkout (${res.status}): ${data.detail || raw.slice(0, 300) || 'no response body'}`);
   } catch (e) {
-    alert('Error connecting to payment provider.');
+    alert(`Error connecting to payment provider: ${e.message}`);
   }
   btns.forEach(b => { b.textContent = 'Start 7-day free trial →'; b.disabled = false; });
 }
