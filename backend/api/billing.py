@@ -24,7 +24,11 @@ stripe.api_key = settings.stripe_secret_key
 # kale 502-pagina in plaats van een uitleg. Nu geven we binnen 20 seconden op.
 stripe.max_network_retries = 0
 try:
-    stripe.default_http_client = stripe.http_client.new_default_http_client(timeout=20)
+    try:
+        from stripe import http_client as _stripe_http  # stripe 10.x
+    except ImportError:
+        from stripe import _http_client as _stripe_http  # stripe 12.x+
+    stripe.default_http_client = _stripe_http.new_default_http_client(timeout=20)
 except Exception:  # pragma: no cover - afhankelijk van de stripe-versie
     logger.warning("Kon geen timeout op de Stripe-client zetten")
 
