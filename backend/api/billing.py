@@ -107,16 +107,24 @@ def create_checkout(user_id: str = Depends(get_current_user)):
     if trial_end:
         subscription_data["trial_end"] = trial_end
 
-    session = stripe.checkout.Session.create(
-        customer=customer_id,
-        payment_method_types=["card", "ideal", "bancontact"],
-        line_items=[{"price": settings.stripe_price_id, "quantity": 1}],
-        mode="subscription",
-        success_url=f"{settings.app_url}/app.html?billing=success",
-        cancel_url=f"{settings.app_url}/app.html?billing=cancel",
-        subscription_data=subscription_data,
-        metadata={"user_id": user_id},
-    )
+    # Geen expliciete payment_method_types: iDEAL en Bancontact zijn in
+    # mode=subscription alleen toegestaan als sepa_debit in het Stripe-dashboard
+    # aan staat, en zolang dat niet zo is weigerde Stripe ELKE checkout — niemand
+    # kon dus betalen. Stripe kiest nu automatisch de methodes die op het account
+    # actief zijn; zet je SEPA Direct Debit aan, dan verschijnt iDEAL er zelf bij.
+    try:
+        session = stripe.checkout.Session.create(
+            customer=customer_id,
+            line_items=[{"price": settings.stripe_price_id, "quantity": 1}],
+            mode="subscription",
+            success_url=f"{settings.app_url}/app.html?billing=success",
+            cancel_url=f"{settings.app_url}/app.html?billing=cancel",
+            subscription_data=subscription_data,
+            metadata={"user_id": user_id},
+        )
+    except stripe.error.StripeError as e:
+        logger.exception(f"Stripe weigerde de checkout voor {user_id}")
+        raise HTTPException(status_code=502, detail=f"Stripe: {e.user_message or str(e)}")
     return {"url": session.url}
 
 
