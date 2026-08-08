@@ -281,6 +281,22 @@
       "slug": "streetwear-reselling-automation",
       "status": "published",
       "priority": 34
+    },
+    {
+      "keyword": "sports equipment reselling automation",
+      "region": "nl",
+      "pillar": "B",
+      "slug": "sports-equipment-reselling-automation",
+      "status": "published",
+      "priority": 35
+    },
+    {
+      "keyword": "home decor reselling automation",
+      "region": "nl",
+      "pillar": "B",
+      "slug": "home-decor-reselling-automation",
+      "status": "pending",
+      "priority": 36
     }
   ],
   "published": [
@@ -589,6 +605,15 @@
       "action": "created",
       "url_path": "/reseller-tools/streetwear-reselling-automation",
       "published_at": "2026-08-07T08:50:02.906909+00:00"
+    },
+    {
+      "keyword": "sports equipment reselling automation",
+      "slug": "sports-equipment-reselling-automation",
+      "region": "nl",
+      "pillar": "B",
+      "action": "created",
+      "url_path": "/reseller-tools/sports-equipment-reselling-automation",
+      "published_at": "2026-08-08T08:31:40.736326+00:00"
     }
   ]
 }
