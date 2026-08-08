@@ -82,21 +82,31 @@ async def billing_status(user=Depends(get_current_user_full)):
 
 
 @router.post("/checkout")
-def create_checkout(user_id: str = Depends(get_current_user)):
+def create_checkout(user=Depends(get_current_user_full)):
     if not settings.stripe_secret_key or not settings.stripe_price_id:
         raise HTTPException(status_code=503, detail="Stripe niet geconfigureerd")
 
+    user_id = user.id
     db = get_db()
     sub = _get_or_create_subscription(user_id)
 
     # Get or create Stripe customer
     customer_id = sub.get("stripe_customer_id")
     if not customer_id:
-        user_resp = get_db().auth.admin.get_user_by_id(user_id)
-        email = user_resp.user.email if user_resp.user else None
+        # Het e-mailadres komt uit het al gevalideerde token. De vorige versie
+        # vroeg het op via auth.admin.get_user_by_id, en die admin-route weigert
+        # ("User not allowed") zodra de server met een gewone sleutel praat in
+        # plaats van de service-role sleutel. Gevolg: iedere eerste betaalpoging
+        # klapte er hier op stuk, nog voordat Stripe in zicht kwam.
+        email = getattr(user, "email", None)
         customer = stripe.Customer.create(email=email, metadata={"user_id": user_id})
         customer_id = customer.id
-        db.table("subscriptions").update({"stripe_customer_id": customer_id}).eq("user_id", user_id).execute()
+        try:
+            db.table("subscriptions").update({"stripe_customer_id": customer_id}).eq("user_id", user_id).execute()
+        except Exception:
+            # Opslaan mislukt (bv. RLS) mag het afrekenen niet tegenhouden; de
+            # webhook koppelt de klant later alsnog aan de gebruiker.
+            logger.exception(f"Kon stripe_customer_id niet opslaan voor {user_id}")
 
     # De proefperiode loopt al vanaf de eerste login; hier nog eens 7 dagen
     # meegeven zou hem verdubbelen voor wie halverwege upgradet. Stripe wil een
