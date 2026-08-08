@@ -132,9 +132,12 @@ def create_checkout(user=Depends(get_current_user_full)):
             subscription_data=subscription_data,
             metadata={"user_id": user_id},
         )
-    except stripe.error.StripeError as e:
-        logger.exception(f"Stripe weigerde de checkout voor {user_id}")
-        raise HTTPException(status_code=502, detail=f"Stripe: {e.user_message or str(e)}")
+    except Exception as e:
+        # Elke fout, niet alleen die van Stripe: een onverwachte crash gaf een
+        # kale 500 waar de app niets zinnigs over kon zeggen.
+        logger.exception(f"Checkout mislukt voor {user_id}")
+        detail = getattr(e, "user_message", None) or f"{type(e).__name__}: {e}"
+        raise HTTPException(status_code=502, detail=detail)
     return {"url": session.url}
 
 
