@@ -18,6 +18,15 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/billing", tags=["billing"])
 
 stripe.api_key = settings.stripe_secret_key
+# Zonder eigen limiet wacht stripe-python tot 80 seconden per poging en probeert
+# het daarna nóg eens. Dat is langer dan de proxy vóór de app accepteert, dus een
+# trage of geblokkeerde verbinding naar Stripe kwam bij de gebruiker aan als een
+# kale 502-pagina in plaats van een uitleg. Nu geven we binnen 20 seconden op.
+stripe.max_network_retries = 0
+try:
+    stripe.default_http_client = stripe.http_client.new_default_http_client(timeout=20)
+except Exception:  # pragma: no cover - afhankelijk van de stripe-versie
+    logger.warning("Kon geen timeout op de Stripe-client zetten")
 
 
 def _get_or_create_subscription(user_id: str) -> dict:
