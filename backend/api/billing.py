@@ -91,8 +91,9 @@ def create_checkout(user=Depends(get_current_user_full)):
     sub = _get_or_create_subscription(user_id)
 
     # Get or create Stripe customer
-    customer_id = sub.get("stripe_customer_id")
-    if not customer_id:
+    try:
+      customer_id = sub.get("stripe_customer_id")
+      if not customer_id:
         # Het e-mailadres komt uit het al gevalideerde token. De vorige versie
         # vroeg het op via auth.admin.get_user_by_id, en die admin-route weigert
         # ("User not allowed") zodra de server met een gewone sleutel praat in
