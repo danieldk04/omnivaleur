@@ -2737,7 +2737,9 @@ async function startCheckout() {
     const res = await apiFetch(`${API}/api/billing/checkout`, { method: 'POST' });
     const data = await res.json();
     if (data.url) { window.location.href = data.url; return; }
-    alert('Could not start checkout. Please try again.');
+    // De echte reden erbij: een kale "probeer opnieuw" kostte dagen zoeken toen
+    // de server allang precies vertelde wat er misging.
+    alert(data.detail ? `Could not start checkout: ${data.detail}` : 'Could not start checkout. Please try again.');
   } catch (e) {
     alert('Error connecting to payment provider.');
   }
