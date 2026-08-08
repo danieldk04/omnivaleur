@@ -113,6 +113,17 @@ def create_checkout(user=Depends(get_current_user_full)):
     # kon dus betalen. Stripe kiest nu automatisch de methodes die op het account
     # actief zijn; zet je SEPA Direct Debit aan, dan verschijnt iDEAL er zelf bij.
     try:
+        if not customer_id:
+            email = getattr(user, "email", None)
+            customer = stripe.Customer.create(email=email, metadata={"user_id": user_id})
+            customer_id = customer.id
+            try:
+                db.table("subscriptions").update({"stripe_customer_id": customer_id}).eq("user_id", user_id).execute()
+            except Exception:
+                # Opslaan mislukt (bv. RLS) mag het afrekenen niet tegenhouden; de
+                # webhook koppelt de klant later alsnog aan de gebruiker.
+                logger.exception(f"Kon stripe_customer_id niet opslaan voor {user_id}")
+
         session = stripe.checkout.Session.create(
             customer=customer_id,
             line_items=[{"price": settings.stripe_price_id, "quantity": 1}],
