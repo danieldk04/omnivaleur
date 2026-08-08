@@ -151,7 +151,9 @@ def create_checkout(user=Depends(get_current_user_full)):
         # kale 500 waar de app niets zinnigs over kon zeggen.
         logger.exception(f"Checkout mislukt voor {user_id}")
         detail = getattr(e, "user_message", None) or f"{type(e).__name__}: {e}"
-        raise HTTPException(status_code=502, detail=detail)
+        # Bewust geen 502: Cloudflare vervangt de inhoud van een 502 door zijn
+        # eigen storingspagina, waardoor de gebruiker de uitleg nooit zag.
+        raise HTTPException(status_code=400, detail=detail)
     return {"url": session.url}
 
 
