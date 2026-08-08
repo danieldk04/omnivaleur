@@ -48,6 +48,8 @@ async def require_active_subscription(user=Depends(get_current_user_full)) -> st
 
     if verdict["reason"] == "past_due":
         detail = "Your subscription is on hold because a payment failed. Update your payment details to restore access."
+    elif verdict["reason"] in ("active_zonder_betaling", "period_ended"):
+        detail = "We could not find an active payment for your account. Activate Pro to continue crosslisting."
     else:
         detail = "Your free trial has ended. Activate Pro to continue crosslisting."
     raise HTTPException(status_code=402, detail=detail)
