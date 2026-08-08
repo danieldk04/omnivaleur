@@ -302,6 +302,20 @@ def evaluate_access(sub: dict | None) -> dict:
     now = datetime.now(timezone.utc)
 
     if status == "active":
+        # "active" zonder Stripe-abonnement is geen betaling maar een handmatig
+        # gezette rij: die gaf gratis toegang die nooit verliep. Alleen de webhook
+        # zet deze status, en die vult altijd stripe_subscription_id.
+        if not sub.get("stripe_subscription_id"):
+            return {"allowed": False, "reason": "active_zonder_betaling",
+                    "grace_ends_at": None, "grace_days_left": 0}
+        # Blijft een verlenging uit (bijvoorbeeld doordat webhooks niet aankomen),
+        # dan verloopt de toegang na de bedenktijd in plaats van eeuwig door te lopen.
+        period_end = _parse_ts(sub.get("current_period_end"))
+        if period_end:
+            grace_ends = period_end + timedelta(days=GRACE_DAYS)
+            if now >= grace_ends:
+                return {"allowed": False, "reason": "period_ended",
+                        "grace_ends_at": grace_ends.isoformat(), "grace_days_left": 0}
         return {"allowed": True, "reason": "active", "grace_ends_at": None, "grace_days_left": None}
 
     if status == "trialing":
