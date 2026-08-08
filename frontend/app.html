@@ -2590,7 +2590,20 @@ function renderBilling(data) {
   const graceLeft  = data.grace_days_left;
   const graceBlock = data.access_allowed === false;
 
-  if (status === 'active') {
+  if (status === 'active' && graceBlock) {
+    // De server zegt "actief" maar weigert toegang: er hangt geen geldige
+    // betaling aan deze rij. Zonder deze tak zag zo'n account een groen
+    // "Active"-kaartje terwijl elke knop in de app een 402 opleverde.
+    upgradeCard.style.display = 'block';
+    activeCard.style.display  = 'none';
+    const btn = document.getElementById('btn-checkout');
+    if (btn) btn.textContent = 'Activate Pro →';
+    const note = document.getElementById('pricing-trial-note');
+    if (note) note.textContent = 'Your account is locked — activate Pro to continue';
+    document.getElementById('nav-prijs-label').textContent = 'Account ⚠';
+    showPaywall('We could not find an active payment for your account. Activate Pro to continue using Omnivaleur.', 'Activate Pro →');
+
+  } else if (status === 'active') {
     hidePaywall();
     upgradeCard.style.display = 'none';
     activeCard.style.display  = 'block';
