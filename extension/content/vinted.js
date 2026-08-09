@@ -1278,6 +1278,14 @@
   // retrying the whole open+pick cycle before giving up.
   function parseColours(item) {
     let raw = item.color ?? item.colour ?? item.colours ?? item.colors ?? "";
+    // Vangnet: staat er geen kleur bij het item, haal hem dan uit de titel
+    // ("Black MyProtein Shorts"). Zonder dit sloeg de kleurstap meteen over en
+    // bleef "Fill in colour to continue" staan.
+    if (!String(raw).trim()) {
+      const words = String(item.title || "").toLowerCase().split(/[^a-z]+/).filter(Boolean);
+      const hit = words.find(w => COLOUR_MAP[w]);
+      if (hit) raw = COLOUR_MAP[hit];
+    }
     const list = Array.isArray(raw) ? raw : String(raw).split(/[,/;&]|\s+en\s+|\s+and\s+/i);
     const out = [];
     for (const s of list) {
