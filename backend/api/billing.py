@@ -33,6 +33,35 @@ except Exception:  # pragma: no cover - afhankelijk van de stripe-versie
     logger.warning("Kon geen timeout op de Stripe-client zetten")
 
 
+# De excuus-actie na de betaalstoring. De code hoeft niemand te typen: de app
+# past hem zelf toe zolang hij in Stripe actief en niet verlopen is. Loopt hij af,
+# dan verdwijnt de korting van de betaalpagina en uit de app zonder dat er iets
+# aangepast hoeft te worden.
+PROMO_CODE = "OMNIVALEUR25"
+
+
+def find_active_promo() -> dict | None:
+    """De actieve actiecode uit Stripe, of None. Nooit hard falen: een storing bij
+    het ophalen van een korting mag het afrekenen niet blokkeren."""
+    if not settings.stripe_secret_key:
+        return None
+    try:
+        codes = stripe.PromotionCode.list(code=PROMO_CODE, active=True, limit=1)
+    except Exception:
+        logger.exception("Kon de actiecode niet ophalen")
+        return None
+    if not codes.data:
+        return None
+    promo = codes.data[0]
+    coupon = promo.get("coupon") or {}
+    return {
+        "id": promo["id"],
+        "code": promo["code"],
+        "percent_off": coupon.get("percent_off"),
+        "expires_at": promo.get("expires_at"),
+    }
+
+
 def _get_or_create_subscription(user_id: str) -> dict:
     db = get_db()
     result = db.table("subscriptions").select("*").eq("user_id", user_id).execute()
