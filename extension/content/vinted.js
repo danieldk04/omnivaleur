@@ -1507,20 +1507,30 @@
     if (isSize) {
       // filter-grid__option (singular) = individual option DIV; filter-grid__options (plural) = container UL.
       // Use :not to exclude the container so we only get clickable leaf options.
-      const opts = [...document.querySelectorAll('div[class*="filter-grid__option"]:not([class*="filter-grid__options"])')]
-        .filter(e => e.offsetParent);
-      // Normalise: strip "EU ", "eu " prefix so "EU 42" → "42"
+      // The dropdown flavour of the size field renders its options as ordinary
+      // Cell titles instead, so search both shapes before giving up.
+      const opts = [
+        ...document.querySelectorAll('div[class*="filter-grid__option"]:not([class*="filter-grid__options"])'),
+        ...document.querySelectorAll('[class*="web_ui__Cell__title"]'),
+      ].filter(e => e.offsetParent);
+      // Normalise: strip "EU ", "eu " prefix so "EU 42" → "42". Vinted also shows
+      // combined labels ("M / 38 / 10"), so compare against each slash-part too.
       const normSize = lv.replace(/^eu\s*/i, "").trim();
+      const parts = (el) => (el.textContent || "").toLowerCase()
+        .split("/").map(s => s.replace(/^eu\s*/i, "").trim()).filter(Boolean);
       const match =
-        opts.find(e => e.textContent?.trim().toLowerCase() === normSize) ||
-        opts.find(e => e.textContent?.trim().toLowerCase() === lv) ||
-        opts.find(e => e.textContent?.trim().toLowerCase().startsWith(normSize));
+        opts.find(e => parts(e).includes(normSize)) ||
+        opts.find(e => parts(e).includes(lv)) ||
+        opts.find(e => (e.textContent || "").trim().toLowerCase().startsWith(normSize));
       if (!match) {
-        console.warn("[Omnivaleur] Vinted size option not found:", value, "| available:", opts.slice(0,10).map(e=>e.textContent.trim()));
-        document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+        console.warn("[Omnivaleur] Vinted size option not found:", value, "| available:", opts.slice(0,15).map(e=>e.textContent.trim()));
+        // Deliberately NO Escape here: it used to close whatever panel was open
+        // and left the form in a state where the colour step failed as well.
         return false;
       }
-      realClickEl(match);
+      const cellInput = (match.closest('[class*="web_ui__Cell__cell"]') || match)
+        .querySelector('input[type="radio"], input[type="checkbox"]');
+      if (cellInput) cellInput.click(); else realClickEl(match);
       await sleep(500);
       return true;
     }
