@@ -1549,11 +1549,38 @@
         // Combined labels ("M / 38 / 10") — compare each part.
         match = opts.find(e => label(e).split("/").map(x => x.trim()).some(x => wants.has(x)));
       }
+      if (!match && /^\d+$/.test(norm)) {
+        // Shirt collar sizes read "18 in | 44 cm" — the number IS our size, just
+        // dressed up. Prefer this over the letter fallback below: it is the exact
+        // size, not an approximation.
+        const cm = new RegExp("(^|[^\\d])" + norm + "\\s*cm\\b");
+        match = opts.find(e => cm.test(label(e)));
+        if (match) console.log("[Omnivaleur] Vinted size", value, "→", label(match));
+      }
+      if (!match && /^\d+$/.test(norm)) {
+        // Numbered sizes that this category simply doesn't offer. Men's tops on
+        // Vinted only list letters (XS…8XL), so a shirt labelled 44 had no
+        // option to click at all. Translate collar/suit sizes to their letter
+        // equivalent — but only as a last resort, after every literal match
+        // failed, so a category that DOES have numbers keeps using them.
+        const NUM_TO_LETTER = {
+          36: "xs", 37: "s", 38: "s", 39: "m", 40: "m", 41: "l", 42: "l",
+          43: "xl", 44: "xl", 45: "xxl", 46: "xxl",
+          48: "s", 50: "m", 52: "l", 54: "xl", 56: "xxl", 58: "xxxl",
+        };
+        const letter = NUM_TO_LETTER[parseInt(norm, 10)];
+        if (letter) {
+          match = opts.find(e => label(e) === letter);
+          if (match) console.log("[Omnivaleur] Vinted size", value, "→", letter, "(category has letter sizes only)");
+        }
+      }
       if (!match) {
         console.warn("[Omnivaleur] Vinted size option not found:", value,
                      "| wanted:", [...wants], "| available:", opts.map(label).slice(0, 25));
-        // Deliberately NO Escape here: it used to close whatever panel was open
-        // and left the form in a state where the colour step failed as well.
+        // Leave nothing open behind us: a size panel that stays up covers the
+        // colour field, and then the colour click lands on the panel instead.
+        const outside = qs('input[data-testid="title--input"]');
+        if (outside) { realClickEl(outside); await sleep(400); }
         return false;
       }
       match.scrollIntoView({ block: "center" });
