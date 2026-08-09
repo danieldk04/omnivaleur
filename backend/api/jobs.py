@@ -1256,6 +1256,9 @@ def cancel_job(job_id: str, user_id: str = Depends(get_current_user)):
             "status": "error",
             "error_message": "Publishing was cancelled — the item is not listed. Publish again, or mark it listed if it did go live.",
         }).eq("item_id", job["item_id"]).eq("platform", job["platform"]).eq("status", "pending").execute()
+        # Vaak maakt de gebruiker de advertentie na een afbreking zelf af. Een
+        # scan erachteraan zorgt dat het dashboard dat vanzelf oppikt.
+        _queue_scan(db, user_id, job["platform"])
     return {"ok": True, "status": "cancelled"}
 
 
