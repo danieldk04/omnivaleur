@@ -1098,6 +1098,36 @@ def _store_scan_results(db, job, scraped: list[dict]):
         except Exception as e:
             logger.warning(f"Scan store: item backfill failed for {item_id}: {e}")
 
+    # Live-koppelingen: markeer items die we zojuist op het platform zagen als
+    # daadwerkelijk online. Een 'sold' rij blijft met rust — die is bewust zo
+    # gezet en mag niet terug naar actief.
+    platform = job["platform"]
+    for item_id, link in live_links.items():
+        existing = listing_by_item.get((item_id, platform))
+        try:
+            if existing:
+                if existing.get("status") == "sold":
+                    continue
+                if (existing.get("status") == "active"
+                        and str(existing.get("platform_listing_id") or "") == link["platform_listing_id"]):
+                    continue
+                db.table("listings").update({
+                    "status": "active",
+                    "error_message": None,
+                    "platform_listing_id": link["platform_listing_id"],
+                    "platform_listing_url": link["platform_listing_url"],
+                }).eq("id", existing["id"]).execute()
+            else:
+                db.table("listings").insert({
+                    "item_id": item_id,
+                    "platform": platform,
+                    "status": "active",
+                    "platform_listing_id": link["platform_listing_id"],
+                    "platform_listing_url": link["platform_listing_url"],
+                }).execute()
+        except Exception as e:
+            logger.warning(f"Scan store: live link failed for {item_id}/{platform}: {e}")
+
     logger.info(
         "Scan store for user %s: %d candidates upserted, %d items enriched",
         job["user_id"], len(rows), len(backfills),
