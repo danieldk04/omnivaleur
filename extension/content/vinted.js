@@ -891,8 +891,9 @@
   // Has Vinted accepted a size? Its size trigger is a readonly input whose value
   // holds the chosen size ("M"), empty as long as the field is untouched.
   function sizeIsFilledVinted() {
-    const el = [...document.querySelectorAll('input[data-testid*="size"][data-testid$="-input"]')]
-      .find(e => e.offsetParent);
+    const el = document.querySelector('input[data-testid="category-size-single-grid-input"]')
+      || [...document.querySelectorAll('input[data-testid^="category-size"][data-testid$="-input"]')]
+        .find(e => e.offsetParent);
     return !!(el && (el.value || "").trim());
   }
 
@@ -1298,136 +1299,98 @@
     return out;
   }
 
-  // Resolve the COLOUR dropdown's own panel container, or null when it isn't open.
-  // Every Vinted dropdown renders the same `web_ui__Cell__title` rows, so the old
-  // document-wide queries happily matched the still-open size/brand/material list:
-  // fillColourVinted concluded the colour panel was already open, never clicked its
-  // trigger, then searched that other list for the colour — which is exactly why the
-  // colour silently stayed empty while "Fill in colour to continue" kept showing.
-  function colourPanelRoot(trigger) {
-    const byTestId = document.querySelector('[data-testid="color-select-dropdown"]');
-    if (byTestId && byTestId.querySelector('[class*="web_ui__Cell__title"]')) return byTestId;
-    let node = trigger?.parentElement;
-    for (let i = 0; i < 4 && node; i++) {
-      if (node.querySelector('[class*="web_ui__Cell__title"]')) {
-        // Reject an ancestor wide enough to also contain a DIFFERENT dropdown —
-        // those rows belong to that one, not to us.
-        const foreign = node.querySelector(
-          'input[data-testid$="-select-dropdown-input"]:not([data-testid="color-select-dropdown-input"])');
-        return foreign ? null : node;
-      }
-      node = node.parentElement;
-    }
-    return null;
-  }
-
-  // How many colour checkboxes are ticked, counted INSIDE the colour panel only.
-  function checkedColourCount(root) {
-    const scope = root || document;
-    const titles = [...scope.querySelectorAll('[class*="web_ui__Cell__title"]')];
-    let n = 0;
-    for (const t of titles) {
-      const cell = t.closest('[class*="web_ui__Cell__cell"]') || t.parentElement;
-      const cb = cell?.querySelector?.('input[type="checkbox"]');
-      if (cb && cb.checked) n++;
-    }
-    return n;
-  }
-
-  // Tick a single colour in the currently-open colour panel. Returns true only if
-  // its checkbox ends up checked.
-  async function pickColourInOpenPanel(colour, root) {
-    const w = colour.toLowerCase().trim();
-    const scope = root || document;
-    let titleEls = [];
-    for (let i = 0; i < 20 && !titleEls.length; i++) {
-      // No offsetParent filter — long colour lists scroll, so options can be
-      // rendered but outside the viewport (this was a key cause of misses).
-      titleEls = [...scope.querySelectorAll('[class*="web_ui__Cell__title"]')];
-      if (!titleEls.length) await sleep(100);
-    }
-    if (!titleEls.length) return false;
-
-    // exact → startsWith → includes → reverse-includes (e.g. value "light grey" vs
-    // an option that's just "Grey") → base-colour fallback (strip light/dark modifier).
-    let best = titleEls.find((e) => e.textContent.trim().toLowerCase() === w)
-      || titleEls.find((e) => e.textContent.trim().toLowerCase().startsWith(w))
-      || titleEls.find((e) => e.textContent.trim().toLowerCase().includes(w))
-      || titleEls.find((e) => w.includes(e.textContent.trim().toLowerCase()) && e.textContent.trim().length > 2);
-    if (!best) {
-      const base = w.replace(/^(licht|donker|light|dark)\s*/i, "").trim();
-      if (base && base !== w) {
-        best = titleEls.find((e) => e.textContent.trim().toLowerCase() === base)
-          || titleEls.find((e) => e.textContent.trim().toLowerCase().includes(base));
+  // ---- Dropdown opener, verified against the live Vinted form ----
+  // Two things were breaking every size/colour attempt:
+  //  1. clicking a trigger that is scrolled out of view does nothing at all, and
+  //  2. the panels no longer render `web_ui__Cell` rows with checkboxes.
+  // So: always scroll the trigger into view first, then poll until the panel's
+  // own options actually exist, retrying the click a few times.
+  async function openDropdownVinted(trigger, isOpen, tries = 4) {
+    if (!trigger) return false;
+    for (let attempt = 0; attempt < tries; attempt++) {
+      if (isOpen()) return true;
+      trigger.scrollIntoView({ block: "center" });
+      await sleep(250);
+      realClickEl(trigger);
+      for (let i = 0; i < 12; i++) {
+        await sleep(200);
+        if (isOpen()) return true;
       }
     }
-    if (!best) {
-      console.warn("[Omnivaleur] Vinted colour not found in panel:", colour);
-      return false;
-    }
+    return isOpen();
+  }
 
-    best.scrollIntoView({ block: "nearest" });
-    await sleep(150);
-    const before = checkedColourCount(root);
-    const cell = best.closest('[class*="web_ui__Cell__cell"]') || best.parentElement || best;
-    const cb = cell.querySelector('input[type="checkbox"]');
-    if (cb && cb.checked) return true; // already selected
+  // ---- COLOUR ----
+  // The colour picker is a grid of swatches: every option is a
+  // [data-testid^="filter-grid-option-"] wrapper holding a [data-testid^="color_code_"]
+  // bubble plus the colour's name as text. The chosen colour(s) land in the
+  // trigger input's value ("Black"), which is what we verify against.
+  const COLOUR_TRIGGER_SEL = 'input[data-testid="color-select-dropdown-input"]';
 
-    // Try, in order: the checkbox input, the <label for>, then the row itself.
-    // Accept as soon as the checkbox is checked OR the panel's ticked count rose.
-    if (cb) { cb.click(); await sleep(250); if (cb.checked || checkedColourCount(root) > before) return true; }
-    const label = cb?.id ? document.querySelector(`label[for="${cb.id}"]`) : null;
-    if (label) { realClickEl(label); await sleep(250); if ((cb && cb.checked) || checkedColourCount(root) > before) return true; }
-    realClickEl(cell);
-    await sleep(250);
-    return (cb ? cb.checked : false) || checkedColourCount(root) > before;
+  function colourOptionEls() {
+    const scope = document.querySelector('[data-testid="color-select-dropdown-content"]') || document;
+    return [...scope.querySelectorAll('[data-testid^="filter-grid-option-"]')]
+      .filter((el) => el.querySelector('[data-testid^="color_code_"]'));
+  }
+
+  function colourOptionLabel(el) {
+    const code = el.querySelector('[data-testid^="color_code_"]')?.dataset.testid || "";
+    return {
+      text: (el.textContent || "").trim().toLowerCase(),
+      code: code.replace("color_code_", "").replace(/-/g, " ").toLowerCase(),
+    };
+  }
+
+  function findColourOption(want) {
+    const w = want.toLowerCase().trim();
+    const opts = colourOptionEls().map((el) => ({ el, ...colourOptionLabel(el) }));
+    if (!opts.length) return null;
+    const base = w.replace(/^(licht|donker|light|dark)\s*/i, "").trim();
+    return (
+      opts.find((o) => o.text === w || o.code === w) ||
+      opts.find((o) => o.text.startsWith(w) || o.code.startsWith(w)) ||
+      opts.find((o) => o.text.includes(w) || o.code.includes(w)) ||
+      (base && base !== w
+        ? opts.find((o) => o.text === base || o.code === base) ||
+          opts.find((o) => o.text.includes(base) || o.code.includes(base))
+        : null) ||
+      null
+    )?.el || null;
   }
 
   async function fillColourVinted(item) {
     const colours = parseColours(item);
-    if (!colours.length) return false;
+    if (!colours.length) { console.warn("[Omnivaleur] Vinted: no colour on item"); return false; }
 
-    const triggerSel = 'input[data-testid="color-select-dropdown-input"]';
     let trigger = null;
     for (let i = 0; i < 12 && !trigger; i++) {
-      const el = qs(triggerSel);
+      const el = qs(COLOUR_TRIGGER_SEL);
       if (el && el.offsetParent) { trigger = el; break; }
       await sleep(250);
     }
     if (!trigger) { console.warn("[Omnivaleur] Vinted colour trigger not found"); return false; }
 
-    // Up to 2 attempts at the full open+pick cycle, verifying a checkbox sticks.
-    for (let attempt = 0; attempt < 2; attempt++) {
-      let root = colourPanelRoot(trigger);
-      if (!root) {
-        // The size/brand/condition panel that ran just before us may still be
-        // open; dismiss it first so its rows can't be mistaken for ours.
-        document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
-        await sleep(200);
-        trigger.scrollIntoView({ block: "center" });
-        realClickEl(trigger);
-        await sleep(700);
-        root = colourPanelRoot(trigger);
-      }
-      if (!root) {
+    const isOpen = () => colourOptionEls().length > 0;
+    for (let attempt = 0; attempt < 3; attempt++) {
+      if ((trigger.value || "").trim()) return true;   // already set
+      if (!(await openDropdownVinted(trigger, isOpen))) {
         console.warn("[Omnivaleur] Vinted colour panel didn't open (attempt " + (attempt + 1) + ")");
-        await sleep(400);
         continue;
       }
-      let picked = 0;
       for (const colour of colours) {
-        if (await pickColourInOpenPanel(colour, root)) picked++;
-        await sleep(200);
+        const opt = findColourOption(colour);
+        if (!opt) { console.warn("[Omnivaleur] Vinted colour not in list:", colour); continue; }
+        opt.scrollIntoView({ block: "center" });
+        await sleep(150);
+        realClickEl(opt);
+        await sleep(400);
       }
-      const ticked = checkedColourCount(root);
-      if (picked > 0 || ticked > 0) {
-        console.log("[Omnivaleur] Vinted colour set:", colours.join(", "), `(${Math.max(picked, ticked)} ticked)`);
+      if ((trigger.value || "").trim()) {
+        console.log("[Omnivaleur] Vinted colour set:", trigger.value);
         return true;
       }
-      // Nothing stuck — close and retry once.
       console.warn("[Omnivaleur] Vinted colour didn't commit, retrying:", colours.join(", "));
-      realClickEl(trigger);
-      await sleep(500);
+      await sleep(400);
     }
     return false;
   }
@@ -1526,8 +1489,11 @@
         fillInput(brandSearch, value);
         await sleep(1000);
       }
-    } else {
-      // All other fields: click trigger to open panel.
+    } else if (!isSize) {
+      // All other fields: click trigger to open panel. Scroll it into view
+      // first — a click on an off-screen trigger does nothing on Vinted.
+      triggerEl.scrollIntoView({ block: "center" });
+      await sleep(250);
       realClickEl(triggerEl);
       await sleep(900);
     }
@@ -1535,34 +1501,59 @@
     const lv = value.toLowerCase();
 
     if (isSize) {
-      // filter-grid__option (singular) = individual option DIV; filter-grid__options (plural) = container UL.
-      // Use :not to exclude the container so we only get clickable leaf options.
-      // The dropdown flavour of the size field renders its options as ordinary
-      // Cell titles instead, so search both shapes before giving up.
-      const opts = [
-        ...document.querySelectorAll('div[class*="filter-grid__option"]:not([class*="filter-grid__options"])'),
-        ...document.querySelectorAll('[class*="web_ui__Cell__title"]'),
-      ].filter(e => e.offsetParent);
-      // Normalise: strip "EU ", "eu " prefix so "EU 42" → "42". Vinted also shows
-      // combined labels ("M / 38 / 10"), so compare against each slash-part too.
-      const normSize = lv.replace(/^eu\s*/i, "").trim();
-      const parts = (el) => (el.textContent || "").toLowerCase()
-        .split("/").map(s => s.replace(/^eu\s*/i, "").trim()).filter(Boolean);
-      const match =
-        opts.find(e => parts(e).includes(normSize)) ||
-        opts.find(e => parts(e).includes(lv)) ||
-        opts.find(e => (e.textContent || "").trim().toLowerCase().startsWith(normSize));
+      // Verified against the live form: size options are
+      // [data-testid="size-group-<n>-grid-option-<id>"] inside
+      // [data-testid="category-size-single-grid-content"]. The old
+      // `filter-grid__option` class no longer exists, which is why every size
+      // attempt silently failed. Scope to the size panel so we can never click
+      // a package-size or colour tile by accident.
+      const sizeOptEls = () => {
+        const scope = document.querySelector('[data-testid="category-size-single-grid-content"]');
+        return scope
+          ? [...scope.querySelectorAll('[data-testid*="-grid-option-"]')]
+          : [...document.querySelectorAll('[data-testid^="size-group-"][data-testid*="-grid-option-"]')];
+      };
+      if (!(await openDropdownVinted(triggerEl, () => sizeOptEls().length > 0))) {
+        console.warn("[Omnivaleur] Vinted size panel didn't open");
+        return false;
+      }
+      const opts = sizeOptEls();
+      // Everything this size could reasonably be called on Vinted: as given,
+      // without an "EU " prefix, the word form ("large" → "L"), and the waist
+      // form ("44" → "W44") that trousers/shorts use.
+      const SIZE_WORDS = {
+        "extra small": "xs", "x-small": "xs", "xsmall": "xs",
+        "small": "s", "medium": "m", "large": "l",
+        "extra large": "xl", "x-large": "xl", "xlarge": "xl",
+        "extra extra large": "xxl", "one size": "one size", "onesize": "one size",
+      };
+      const norm = lv.replace(/^eu\s*/i, "").replace(/\s+/g, " ").trim();
+      const wants = new Set([lv, norm]);
+      if (SIZE_WORDS[norm]) wants.add(SIZE_WORDS[norm]);
+      for (const [word, abbr] of Object.entries(SIZE_WORDS)) if (abbr === norm) wants.add(word);
+      if (/^\d+$/.test(norm)) { wants.add("w" + norm); wants.add(norm + " "); }
+      if (/^w\d+$/.test(norm)) wants.add(norm.slice(1));
+
+      const label = (e) => (e.textContent || "").trim().toLowerCase();
+      let match = opts.find(e => wants.has(label(e)));
       if (!match) {
-        console.warn("[Omnivaleur] Vinted size option not found:", value, "| available:", opts.slice(0,15).map(e=>e.textContent.trim()));
+        // Combined labels ("M / 38 / 10") — compare each part.
+        match = opts.find(e => label(e).split("/").map(x => x.trim()).some(x => wants.has(x)));
+      }
+      if (!match) {
+        console.warn("[Omnivaleur] Vinted size option not found:", value,
+                     "| wanted:", [...wants], "| available:", opts.map(label).slice(0, 25));
         // Deliberately NO Escape here: it used to close whatever panel was open
         // and left the form in a state where the colour step failed as well.
         return false;
       }
-      const cellInput = (match.closest('[class*="web_ui__Cell__cell"]') || match)
-        .querySelector('input[type="radio"], input[type="checkbox"]');
-      if (cellInput) cellInput.click(); else realClickEl(match);
-      await sleep(500);
-      return true;
+      match.scrollIntoView({ block: "center" });
+      await sleep(150);
+      realClickEl(match);
+      await sleep(600);
+      const ok = !!(triggerEl.value || "").trim();
+      if (!ok) console.warn("[Omnivaleur] Vinted size click didn't stick:", value);
+      return ok;
     }
 
     // Condition / colour / material / brand: options in web_ui__Cell__title.
