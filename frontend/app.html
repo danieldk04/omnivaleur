@@ -2720,23 +2720,30 @@ function promoLine(promo) {
   return `${Math.round(promo.percent_off)}% off your first month: €${promoPrice(promo)} instead of €19.99${left}`;
 }
 
-function renderPromo(promo) {
-  const box = document.getElementById('billing-promo');
+// Dezelfde vulling voor het vak op de accountpagina en het vak in het slotvenster:
+// twee plekken, één tekst, dus ze kunnen niet anders gaan beweren.
+function fillPromoBox(boxId, promo) {
+  const box = document.getElementById(boxId);
   if (!box) return;
-  if (!promo || !promo.percent_off) { box.style.display = 'none'; return; }
-
   const hours = promoHours(promo);
   if (hours === null) { box.style.display = 'none'; return; }
 
   box.style.display = 'block';
-  document.getElementById('billing-promo-title').textContent =
+  document.getElementById(`${boxId}-title`).textContent =
     `${Math.round(promo.percent_off)}% off your first month`;
   const ends = hours === Infinity ? ''
     : hours < 48 ? ` Ends in ${hours} hour${hours !== 1 ? 's' : ''}.`
     : ` Ends in ${Math.floor(hours / 24)} days.`;
-  document.getElementById('billing-promo-detail').textContent =
+  document.getElementById(`${boxId}-detail`).textContent =
     `Sorry about the checkout problem. Your first month is €${promoPrice(promo)} instead of €19.99, `
     + `applied automatically at checkout, no code needed. After that it is €19.99 per month.${ends}`;
+}
+
+let lastPromo = null;
+
+function renderPromo(promo) {
+  lastPromo = promo;
+  fillPromoBox('billing-promo', promo);
 }
 
 async function announcement(btn, dryRun) {
