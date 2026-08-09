@@ -930,7 +930,8 @@
     // Always open the material trigger to commit the colour selection.
     await sleep(200);
     const matTriggerEl = qs('input[data-testid="category-material-multi-list-input"]');
-    if (matTriggerEl) { realClickEl(matTriggerEl); await sleep(700); }
+    // Scroll first: a click on an off-screen trigger is ignored by Vinted.
+    if (matTriggerEl) { matTriggerEl.scrollIntoView({ block: "center" }); await sleep(250); realClickEl(matTriggerEl); await sleep(700); }
     if (item.material) {
       await step("material", () => fillMaterialFromOpenPanel(item.material));
     }
@@ -1467,7 +1468,7 @@
       // meant the whole size step silently gave up on those categories — and a
       // failed size step used to leave a panel open that then broke colour too.
       if (!triggerEl && isSize) {
-        triggerEl = [...document.querySelectorAll('input[data-testid*="size"][data-testid$="-input"]')]
+        triggerEl = [...document.querySelectorAll('input[data-testid^="category-size"][data-testid$="-input"]')]
           .find(el => el.offsetParent) || null;
       }
       if (!triggerEl) await sleep(250);
