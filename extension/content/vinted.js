@@ -888,6 +888,14 @@
     }
   }
 
+  // Has Vinted accepted a size? Its size trigger is a readonly input whose value
+  // holds the chosen size ("M"), empty as long as the field is untouched.
+  function sizeIsFilledVinted() {
+    const el = [...document.querySelectorAll('input[data-testid*="size"][data-testid$="-input"]')]
+      .find(e => e.offsetParent);
+    return !!(el && (el.value || "").trim());
+  }
+
   async function fillForm(item) {
     await waitForEl('input[data-testid="title--input"]', 20000);
     await step("title",       () => fillInput(qs('input[data-testid="title--input"]'), (item.title || "").slice(0, 100)));
