@@ -1373,6 +1373,9 @@ input[type="checkbox"].row-check { width: 15px; height: 15px; cursor: pointer; a
             <button onclick="announcement(this, false)" class="btn" style="min-width:200px;justify-content:center;background:#dc2626;color:#fff;border-color:#dc2626">Announcement: SEND for real</button>
             <span style="font-size:12px;color:var(--muted)" id="owner-announcement-result">"Checkout is fixed" mail to every user without a paid subscription. Preview first.</span>
           </div>
+          <div style="padding:0 22px 18px">
+            <textarea id="owner-announcement-emails" rows="4" placeholder="Paste recipient addresses here (comma, semicolon, space or newline separated). Leave empty to let the server build the list itself." style="width:100%;font-size:12px;font-family:inherit;padding:10px 12px;border:1px solid #e0e7ff;border-radius:8px;resize:vertical"></textarea>
+          </div>
         </div>
 
         <!-- Subscription card — content swapped by renderBilling() -->
