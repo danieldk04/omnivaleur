@@ -27,7 +27,7 @@ It's fixed. I traced it, repaired it, and paid for a subscription myself from st
 
 Thank you to everyone who took the time to tell me something was wrong. One message did more for this product than a week of my own testing. I'd rather hear an uncomfortable truth today than a polite silence for a month.
 
-There is also something waiting for you in the app as an apology. Open your account page and you will see it. It is only there for the next 48 hours.
+As an apology, your first month is 25 percent off: 14,99 euro instead of 19,99 euro, and 19,99 euro per month after that. You do not have to type a code. Open the Account page in the app and it is already applied when you activate Pro. It stands for the next 48 hours.
 
 If anything still goes wrong, anything at all, reply to this email. It comes straight to me.
 
