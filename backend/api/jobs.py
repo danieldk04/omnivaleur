@@ -1017,6 +1017,10 @@ def _store_scan_results(db, job, scraped: list[dict]):
             want = " ".join(title.lower().split())
             title_matches = [it["id"] for it in items if " ".join((it.get("title") or "").lower().split()) == want and want]
             best_id = title_matches[0] if len(title_matches) == 1 else None
+        if not best_id:
+            # Laatste, even harde sleutel: exact de titel die wij zelf in het
+            # formulier hebben gezet voor dit platform.
+            best_id = job_titles.get(" ".join(title.lower().split())) or None
 
         # Dit item staat aantoonbaar live op dit platform (we hebben zijn kaartje
         # net gezien). Zet dat vast in `listings`, zodat een handmatig geplaatste
