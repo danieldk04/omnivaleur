@@ -240,9 +240,13 @@ def comp_account(email: str, user=Depends(get_current_user_full)):
         raise HTTPException(status_code=404, detail="Geen account gevonden met dit e-mailadres — laat de gebruiker eerst registreren")
 
     _get_or_create_subscription(target.id)
+    # Bewust 'trialing' met een datum ver vooruit in plaats van 'active': status
+    # 'active' zonder Stripe-abonnement wordt sinds de dichtgezette gratis-toegang
+    # juist geweigerd, en dan gaf deze knop het tegenovergestelde van wat hij belooft.
     db.table("subscriptions").update({
-        "status": "active",
+        "status": "trialing",
         "plan": "pro",
+        "trial_ends_at": "2099-01-01T00:00:00+00:00",
     }).eq("user_id", target.id).execute()
     invalidate_access_cache(target.id)
 
