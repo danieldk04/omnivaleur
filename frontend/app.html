@@ -2579,6 +2579,7 @@ function renderBilling(data) {
   function showPaywall(msg, cta) {
     document.getElementById('paywall-msg').textContent = msg;
     document.getElementById('paywall-cta').textContent = cta;
+    fillPromoBox('paywall-promo', lastPromo);
     paywall.style.display = 'flex';
   }
   function hidePaywall() { paywall.style.display = 'none'; }
