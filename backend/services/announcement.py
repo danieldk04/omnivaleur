@@ -12,7 +12,10 @@ from backend.database import get_db
 
 logger = logging.getLogger(__name__)
 
-SUBJECT = "Checkout is fixed, and a thank you (25% off) / Betalen werkt weer, met 25% korting"
+# Geen kortingspercentage en geen euroteken in de onderwerpregel: dat is precies
+# waar Gmail op sorteert, en dan belandt de mail in het tabblad Promoties in plaats
+# van in de inbox. Het aanbod staat in de mail zelf, onderaan.
+SUBJECT = "About the checkout problem, from Daniel / Over het betaalprobleem"
 
 BODY = """Hi,
 
