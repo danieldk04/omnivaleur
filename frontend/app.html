@@ -2691,6 +2691,28 @@ async function sendTestReminderMail(btn, kind) {
 // De actiekorting staat in de app en niet in een mail: een mail met een
 // kortingscode erin belandt bij Gmail in spam. De code hoeft niemand te typen,
 // de server past hem bij het afrekenen zelf toe.
+// Eén plek waar de kortingstekst vandaan komt, zodat de banner, de betaalkaart en
+// de mail nooit iets anders beweren dan Stripe daadwerkelijk rekent.
+function promoHours(promo) {
+  if (!promo || !promo.percent_off) return null;
+  if (!promo.expires_at) return Infinity;
+  const hours = Math.floor((promo.expires_at * 1000 - Date.now()) / 3600000);
+  return hours > 0 ? hours : null;
+}
+
+function promoPrice(promo) {
+  return (19.99 * (1 - promo.percent_off / 100)).toFixed(2).replace('.', ',');
+}
+
+function promoLine(promo) {
+  const hours = promoHours(promo);
+  if (hours === null) return '';
+  const left = hours === Infinity ? ''
+    : hours < 48 ? ` · ${hours}h left`
+    : ` · ${Math.floor(hours / 24)} days left`;
+  return `${Math.round(promo.percent_off)}% off your first month: €${promoPrice(promo)} instead of €19.99${left}`;
+}
+
 function renderPromo(promo) {
   const box = document.getElementById('billing-promo');
   if (!box) return;
