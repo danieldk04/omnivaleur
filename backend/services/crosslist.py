@@ -282,6 +282,11 @@ async def publish_to_platforms(item_id: str, platforms: list[str], user_id: str)
     ]
     platforms = [p for p in platforms if p not in NOT_YET_AVAILABLE]
 
+    # Vul lege kleur/gender/categorie alsnog uit de titel voordat we valideren.
+    # Zonder deze stap stond de kolom leeg, sloeg de extensie het veld over en
+    # moest de gebruiker kleur en maat zelf in het Vinted-formulier typen.
+    item = _fill_inferred_gaps(db, item)
+
     missing = _missing_fields_per_platform(item, platforms)
     if missing:
         raise CrosslistValidationError(missing)
