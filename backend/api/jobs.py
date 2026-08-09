@@ -1159,6 +1159,25 @@ def _store_scan_results(db, job, scraped: list[dict]):
     )
 
 
+def _queue_scan(db, user_id: str, platform: str):
+    """Zet een scan-opdracht klaar (tenzij er al één wacht). Nooit fataal."""
+    from backend.api.imports import SCANNABLE_PLATFORMS
+    if platform not in SCANNABLE_PLATFORMS:
+        return
+    try:
+        existing = (db.table("jobs").select("id")
+                    .eq("user_id", user_id).eq("platform", platform).eq("action", "scan")
+                    .in_("status", ["pending", "claimed"]).limit(1).execute().data)
+        if existing:
+            return
+        db.table("jobs").insert({
+            "user_id": user_id, "item_id": None, "platform": platform,
+            "action": "scan", "status": "pending", "payload": {},
+        }).execute()
+    except Exception as e:
+        logger.warning(f"Could not queue follow-up scan for {platform}: {e}")
+
+
 @router.post("/{job_id}/error")
 def fail_job(job_id: str, body: dict, user_id: str = Depends(get_current_user)):
     db = get_db()
