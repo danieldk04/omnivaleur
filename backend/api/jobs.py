@@ -996,6 +996,17 @@ def _store_scan_results(db, job, scraped: list[dict]):
             title_matches = [it["id"] for it in items if " ".join((it.get("title") or "").lower().split()) == want and want]
             best_id = title_matches[0] if len(title_matches) == 1 else None
 
+        # Dit item staat aantoonbaar live op dit platform (we hebben zijn kaartje
+        # net gezien). Zet dat vast in `listings`, zodat een handmatig geplaatste
+        # advertentie in het dashboard ook als "online" telt — voorheen bleef die
+        # onbekend en bood de app hem gewoon opnieuw aan om te publiceren.
+        if best_id:
+            live_links[best_id] = {
+                "platform_listing_id": str(platform_listing_id),
+                "platform_listing_url": row.get("platform_listing_url"),
+                "platform_listed_at": row.get("platform_listed_at"),
+            }
+
         # If this scanned listing already belongs to an item, push the freshly
         # scraped rich data straight into that item's empty fields. This is what
         # makes a re-scan actually enrich already-imported items (description,
