@@ -19,6 +19,11 @@ def _send_via_resend(subject: str, body: str, recipient: str, reply_to: str | No
     import httpx
 
     sender = settings.resend_from or settings.smtp_from_email
+    # Een kale afzender zonder naam leest als een mailinglijst en helpt Gmail bij
+    # het besluit om de mail in Promoties te leggen. Een persoonsnaam ervoor
+    # scheelt daar merkbaar in, en klopt ook: deze mails komen van Daniel.
+    if sender and "<" not in sender and settings.email_from_name:
+        sender = f"{settings.email_from_name} <{sender}>"
     payload = {
         "from": sender,
         "to": [recipient],
