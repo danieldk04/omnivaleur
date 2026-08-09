@@ -52,8 +52,20 @@ def find_active_promo() -> dict | None:
         return None
     if not codes.data:
         return None
-    promo = codes.data[0]
-    coupon = promo.get("coupon") or {}
+    # Twee vormen mogelijk: oudere API-versies zetten de coupon uitgeklapt onder
+    # "coupon", nieuwere alleen het nummer onder "promotion". Beide moeten werken,
+    # want Stripe verhoogt die versie zonder dat wij iets aanpassen.
+    import json
+
+    promo = json.loads(str(codes.data[0]))
+    coupon = promo.get("coupon")
+    if not isinstance(coupon, dict):
+        coupon_id = (promo.get("promotion") or {}).get("coupon") or coupon
+        try:
+            coupon = json.loads(str(stripe.Coupon.retrieve(coupon_id))) if coupon_id else {}
+        except Exception:
+            logger.exception("Kon de coupon achter de actiecode niet ophalen")
+            return None
     return {
         "id": promo["id"],
         "code": promo["code"],
