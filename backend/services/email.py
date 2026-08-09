@@ -33,6 +33,16 @@ def _send_via_resend(subject: str, body: str, recipient: str, reply_to: str | No
     if reply_to:
         payload["reply_to"] = reply_to
 
+    # Gmail verwacht sinds 2024 van elke afzender die meer dan een handvol mails
+    # stuurt een afmeldmogelijkheid in de kop van het bericht. Ontbreekt die, dan
+    # gaat de mail eerder naar spam, ook als hij verder niets fout doet.
+    unsubscribe = reply_to or settings.reply_to_email
+    if unsubscribe:
+        payload["headers"] = {
+            "List-Unsubscribe": f"<mailto:{unsubscribe}?subject=unsubscribe>",
+            "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
+        }
+
     r = httpx.post(
         "https://api.resend.com/emails",
         headers={"Authorization": f"Bearer {settings.resend_api_key}"},
