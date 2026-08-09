@@ -199,6 +199,11 @@ _PLATFORM_REQUIRED = {
     # content script types it into Facebook's category picker. Brand/size/colour
     # are optional on Marketplace, so we don't demand them for the happy path.
     "facebook": ["category"],
+    # Vinted's create form blocks on "Fill in colour/size to continue" — without
+    # these the extension leaves the form half-filled and the user has to finish
+    # it by hand. Demand them up front instead (colour is auto-inferred from the
+    # title first, so this rarely trips).
+    "vinted": ["category", "gender", "size", "color"],
 }
 # Non-clothing items (games, consoles, ...) live in a different Marktplaats
 # category tree that has no gender/maat/kleur attributes, so demanding those
