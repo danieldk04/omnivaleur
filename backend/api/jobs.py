@@ -974,6 +974,7 @@ def _store_scan_results(db, job, scraped: list[dict]):
 
     rows = []          # candidate rows, upserted in bulk below
     backfills = {}     # item_id -> merged patch, applied in bulk below
+    live_links = {}    # item_id -> listing data we saw live on this platform
 
     for row in scraped:
         platform_listing_id = row.get("platform_listing_id")
