@@ -257,22 +257,37 @@ def comp_account(email: str, user=Depends(get_current_user_full)):
 
 
 @router.post("/admin/announcement")
-def send_announcement(dry_run: bool = True, user=Depends(get_current_user_full)):
+def send_announcement(dry_run: bool = True, emails: str = "", user=Depends(get_current_user_full)):
     """De eenmalige 'afrekenen werkt weer'-mail. Standaard een proefronde die
     alleen vertelt wie hem zou krijgen; pas met dry_run=false gaat hij echt weg.
-    Eigenaar-only."""
+    Eigenaar-only.
+
+    `emails` is een handmatige lijst adressen. Nodig omdat de server met de
+    publieke Supabase-sleutel praat en de gebruikerslijst dus niet mag opvragen
+    ("User not allowed"). Blijft het veld leeg, dan probeert hij het alsnog zelf."""
     if not _is_owner_email(user.email):
         raise HTTPException(status_code=403, detail="Niet toegestaan")
 
-    from backend.services.announcement import BODY, SUBJECT, collect_recipients
+    from backend.services.announcement import BODY, SUBJECT, collect_recipients, parse_email_list
     from backend.services.billing import CONTACT_EMAIL
     from backend.services.email import send_email_checked
 
-    try:
-        recipients = collect_recipients()
-    except Exception as e:
-        logger.exception("Kon de ontvangerslijst niet ophalen")
-        raise HTTPException(status_code=503, detail=f"Ontvangers ophalen mislukt: {type(e).__name__}: {e}")
+    if emails.strip():
+        recipients = parse_email_list(emails)
+        if not recipients:
+            raise HTTPException(status_code=400, detail="Geen geldig e-mailadres in de lijst gevonden")
+    else:
+        try:
+            recipients = collect_recipients()
+        except Exception as e:
+            logger.exception("Kon de ontvangerslijst niet ophalen")
+            raise HTTPException(
+                status_code=503,
+                detail=(
+                    f"Ontvangers ophalen mislukt: {type(e).__name__}: {e}. "
+                    "Plak de adressen zelf, of zet de service-role sleutel van Supabase op Railway."
+                ),
+            )
 
     if dry_run:
         return {"dry_run": True, "count": len(recipients), "recipients": recipients}
