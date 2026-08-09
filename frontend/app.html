@@ -3803,9 +3803,28 @@ function renderExtStatus() {
     label.textContent = 'Extension not signed in';
   } else if (extState.status === 'checking') {
     label.textContent = 'Checking extension…';
+  } else if (extVersionIsOld()) {
+    // Zonder dit kon een oude extensie stilletjes blijven draaien terwijl de
+    // fout allang verholpen was — en leek het alsof de fix niet werkte.
+    dot.classList.add('ext-dot-warn');
+    label.textContent = `Extension v${extState.version} — update needed`;
   } else {
-    label.textContent = pending > 0 ? `${pending} job(s) pending` : 'Extension active';
+    label.textContent = pending > 0 ? `${pending} job(s) pending` : `Extension active (v${extState.version})`;
   }
+}
+
+// De laagste extensieversie die met de huidige site meekan. Verhoog dit bij
+// elke uitgerolde extensie-fix waarvan de gebruiker moet merken dat hij hem mist.
+const EXT_MIN_VERSION = '1.0.169';
+function extVersionIsOld() {
+  if (extState.status !== 'ready' || !extState.version) return false;
+  const a = String(extState.version).split('.').map(Number);
+  const b = EXT_MIN_VERSION.split('.').map(Number);
+  for (let i = 0; i < Math.max(a.length, b.length); i++) {
+    const x = a[i] || 0, y = b[i] || 0;
+    if (x !== y) return x < y;
+  }
+  return false;
 }
 
 // ── Add / Edit Item ──────────────────────────────────────────────
