@@ -397,7 +397,24 @@ async def publish_to_platforms(item_id: str, platforms: list[str], user_id: str)
     for platform in ext_platforms:
         payload = dict(_pick(platform))
         # Create pending listing record first so failed jobs are visible in dashboard
-        existing_listing = await _exec(db.table("listings").select("id").eq("item_id", item_id).eq("platform", platform))
+        existing_listing = await _exec(
+            db.table("listings").select("id,status,platform_listing_id,platform_listing_url")
+            .eq("item_id", item_id).eq("platform", platform)
+        )
+        # Staat het er al op? Dan geen tweede advertentie aanmaken. De API-kant
+        # had deze bescherming al (_publish_one); de extensieplatforms niet, dus
+        # een tweede keer publiceren zette hetzelfde item nog eens op Vinted.
+        row = (existing_listing.data or [None])[0]
+        if row and row.get("status") == "active" and row.get("platform_listing_id"):
+            results.append({
+                "platform": platform,
+                "status": "active",
+                "listing_id": row["id"],
+                "platform_listing_id": row.get("platform_listing_id"),
+                "platform_listing_url": row.get("platform_listing_url"),
+                "message": "Already live here — not published a second time",
+            })
+            continue
         if not existing_listing.data:
             await _exec(db.table("listings").insert({
                 "item_id": item_id,
