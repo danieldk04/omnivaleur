@@ -44,7 +44,7 @@ Het is opgelost. Ik heb het opgespoord, gerepareerd en zelf een abonnement van b
 
 Dank aan iedereen die de moeite nam om te melden dat er iets niet klopte. Een bericht heeft meer voor dit product gedaan dan een week testen van mijzelf. Ik hoor liever vandaag een ongemakkelijke waarheid dan een maand vriendelijke stilte.
 
-Als excuus: 25% korting op je eerste maand met de code OMNIVALEUR25, als je binnen 48 uur activeert. Je vult hem in bij het afrekenen, in het veld "Kortingscode toevoegen". Daarmee betaal je EUR 14,99 voor de eerste maand.
+Er staat ook iets voor je klaar in de app als excuus. Open je accountpagina, dan zie je het. Het staat er alleen de komende 48 uur.
 
 Gaat er nog iets mis, wat dan ook, antwoord dan op deze mail. Die komt rechtstreeks bij mij.
 
