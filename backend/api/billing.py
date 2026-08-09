@@ -145,6 +145,9 @@ def create_checkout(user=Depends(get_current_user_full)):
             cancel_url=f"{settings.app_url}/app.html?billing=cancel",
             subscription_data=subscription_data,
             metadata={"user_id": user_id},
+            # Zonder dit vakje kan een kortingscode nergens ingevuld worden en is
+            # elke actie die je per mail aankondigt onbruikbaar.
+            allow_promotion_codes=True,
         )
     except Exception as e:
         # Elke fout, niet alleen die van Stripe: een onverwachte crash gaf een
