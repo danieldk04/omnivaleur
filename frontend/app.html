@@ -2680,6 +2680,31 @@ async function sendTestReminderMail(btn, kind) {
   btn.disabled = false; btn.textContent = label;
 }
 
+async function announcement(btn, dryRun) {
+  const out = document.getElementById('owner-announcement-result');
+  if (!dryRun && !confirm('This sends the announcement to every user without a paid subscription. There is no undo. Continue?')) return;
+  const label = btn.textContent;
+  btn.disabled = true; btn.textContent = dryRun ? 'Checking…' : 'Sending…';
+  try {
+    const res = await apiFetch(`${API}/api/billing/admin/announcement?dry_run=${dryRun}`, { method: 'POST' });
+    const data = await parseJsonSafe(res);
+    if (!res.ok) {
+      out.textContent = data.detail || 'Failed.';
+      out.style.color = '#b91c1c';
+    } else if (dryRun) {
+      out.textContent = `${data.count} recipient(s): ${data.recipients.join(', ')}`;
+      out.style.color = '#334155';
+    } else {
+      const bad = (data.failed || []).length;
+      out.textContent = `Sent to ${data.sent}${bad ? `, failed for ${bad}: ${data.failed.map(f => f.email + ' (' + f.error + ')').join('; ')}` : ''}`;
+      out.style.color = bad ? '#b45309' : '#15803d';
+    }
+  } catch (e) {
+    out.textContent = e.message; out.style.color = '#b91c1c';
+  }
+  btn.disabled = false; btn.textContent = label;
+}
+
 function renderTrialBanner(data) {
   const banner = document.getElementById('trial-banner');
   if (!banner) return;
