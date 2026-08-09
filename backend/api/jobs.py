@@ -954,6 +954,27 @@ def _store_scan_results(db, job, scraped: list[dict]):
             if l.get("item_id"):
                 listing_by_item[(l["item_id"], l.get("platform"))] = l
 
+    # De titel die de extensie daadwerkelijk in het formulier zette (uit de
+    # publicatie-opdracht). Die staat op het platform, terwijl de itemtitel in
+    # het dashboard anders kan zijn (vertaald of ingekort) — daarom herkende hij
+    # zelf afgemaakte advertenties niet.
+    job_titles = {}
+    try:
+        jrows = fetch_all(lambda: db.table("jobs")
+                          .select("item_id,payload")
+                          .eq("user_id", job["user_id"])
+                          .eq("platform", job["platform"])
+                          .eq("action", "create"))
+        for j in jrows:
+            t = ((j.get("payload") or {}).get("title") or "").strip().lower()
+            t = " ".join(t.split())
+            if t and j.get("item_id"):
+                # Bij twijfel (twee items met dezelfde formuliertitel) liever geen
+                # koppeling dan de verkeerde.
+                job_titles[t] = None if t in job_titles and job_titles[t] != j["item_id"] else j["item_id"]
+    except Exception as e:
+        logger.warning(f"Scan store: could not read create-job titles: {e}")
+
     # What we already decided about each candidate. The upsert below refreshes the
     # scraped snapshot, but it must NOT undo a decision: it used to write
     # status='pending' unconditionally, so a re-scan resurrected every listing you
