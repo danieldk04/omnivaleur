@@ -49,6 +49,25 @@ Daniel van Omnivaleur
 """
 
 
+def parse_email_list(raw: str) -> list[str]:
+    """Adressen uit een geplakte lijst halen: komma's, puntkomma's, spaties en
+    regeleindes door elkaar, en dubbele adressen eruit. Alles zonder @ valt af,
+    zodat een meegeplakte kolomkop of datum geen mailpoging wordt."""
+    import re
+
+    seen: set[str] = set()
+    out: list[str] = []
+    for part in re.split(r"[\s,;]+", raw):
+        email = part.strip().strip('"\'<>()').lower()
+        if "@" not in email or "." not in email.split("@")[-1]:
+            continue
+        if email in seen:
+            continue
+        seen.add(email)
+        out.append(email)
+    return out
+
+
 def collect_recipients() -> list[str]:
     """Iedereen zonder betalend abonnement. Wie al betaalt heeft een
     stripe_subscription_id en hoort deze mail niet te krijgen: die leest dan een
