@@ -2688,6 +2688,28 @@ async function sendTestReminderMail(btn, kind) {
   btn.disabled = false; btn.textContent = label;
 }
 
+// De actiekorting staat in de app en niet in een mail: een mail met een
+// kortingscode erin belandt bij Gmail in spam. De code hoeft niemand te typen,
+// de server past hem bij het afrekenen zelf toe.
+function renderPromo(promo) {
+  const box = document.getElementById('billing-promo');
+  if (!box) return;
+  if (!promo || !promo.percent_off) { box.style.display = 'none'; return; }
+
+  const hoursLeft = promo.expires_at ? Math.floor((promo.expires_at * 1000 - Date.now()) / 3600000) : null;
+  if (hoursLeft !== null && hoursLeft <= 0) { box.style.display = 'none'; return; }
+
+  box.style.display = 'block';
+  document.getElementById('billing-promo-title').textContent =
+    `${Math.round(promo.percent_off)}% off your first month`;
+  const price = (19.99 * (1 - promo.percent_off / 100)).toFixed(2).replace('.', ',');
+  const window_ = hoursLeft === null ? ''
+    : hoursLeft < 48 ? ` Ends in ${hoursLeft} hour${hoursLeft !== 1 ? 's' : ''}.`
+    : ` Ends in ${Math.floor(hoursLeft / 24)} days.`;
+  document.getElementById('billing-promo-detail').textContent =
+    `Sorry about the checkout problem. Your first month is €${price} instead of €19.99, applied automatically.${window_}`;
+}
+
 async function announcement(btn, dryRun) {
   const out = document.getElementById('owner-announcement-result');
   // De server mag de gebruikerslijst niet opvragen met de publieke sleutel, dus
