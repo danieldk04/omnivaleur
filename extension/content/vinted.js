@@ -420,6 +420,19 @@
       send("JOB_DONE", {});
     } else {
       await fillForm(item);
+      // Controleer de velden waar Vinted op blokkeert vóór we opsturen. Bleef er
+      // iets leeg, dan stoppen we met een melding die zegt wát er ontbrak en met
+      // welke waarde het niet lukte — een stille mislukking kostte alleen maar
+      // tijd, want het formulier ging tóch niet door de validatie.
+      const gaps = [];
+      const sizeEl = qs('input[data-testid="category-size-single-grid-input"]');
+      const colEl = qs('input[data-testid="color-select-dropdown-input"]');
+      if (sizeEl && !(sizeEl.value || "").trim()) gaps.push(`maat (${item.size || "leeg"})`);
+      if (colEl && !(colEl.value || "").trim()) gaps.push(`kleur (${item.color || "leeg"})`);
+      if (gaps.length) {
+        throw new Error("Vinted kon deze velden niet invullen: " + gaps.join(", ") +
+                        ". Vul ze zelf aan in het geopende tabblad en klik op Uploaden.");
+      }
       let id;
       try {
         id = await submitListing(/\/items\/(\d+)/);
@@ -876,6 +889,21 @@
     if (!confirmBtn) throw new Error("Confirm-delete button not found on Vinted for ID " + listingId + " — deletion was not confirmed");
     confirmBtn.click();
     await sleep(1500);
+  }
+
+  // Sommige tegels (kleur) reageren pas nadat de muis er echt overheen is
+  // bewogen: React zet zijn klik-handler pas bij hover. Een kale click-reeks
+  // wordt dan genegeerd — precies het gedrag waarbij de kleur leeg bleef.
+  function humanClickEl(el) {
+    if (!el) return;
+    const r = el.getBoundingClientRect();
+    const o = { bubbles: true, cancelable: true, view: window,
+      clientX: r.left + r.width / 2, clientY: r.top + r.height / 2 };
+    el.dispatchEvent(new PointerEvent("pointerover", o));
+    el.dispatchEvent(new MouseEvent("mouseover", o));
+    el.dispatchEvent(new PointerEvent("pointermove", o));
+    el.dispatchEvent(new MouseEvent("mousemove", o));
+    realClickEl(el);
   }
 
   function realClickEl(el) {
@@ -1390,9 +1418,18 @@
         const opt = findColourOption(colour);
         if (!opt) { console.warn("[Omnivaleur] Vinted colour not in list:", colour); continue; }
         opt.scrollIntoView({ block: "center" });
-        await sleep(150);
-        realClickEl(opt);
-        await sleep(400);
+        await sleep(250);
+        humanClickEl(opt);
+        await sleep(500);
+        if (!(trigger.value || "").trim()) {
+          // Niets gebeurd: klik het kleurbolletje zelf, dan het label.
+          const bubble = opt.querySelector('[data-testid^="color_code_"]');
+          if (bubble) { humanClickEl(bubble); await sleep(500); }
+        }
+        if (!(trigger.value || "").trim()) {
+          const inner = opt.querySelector('[class*="color-select-item"]') || opt.firstElementChild;
+          if (inner) { humanClickEl(inner); await sleep(500); }
+        }
       }
       if ((trigger.value || "").trim()) {
         console.log("[Omnivaleur] Vinted colour set:", trigger.value);

@@ -74,9 +74,13 @@ async def health():
     # Alleen ja/nee per instelling, nooit de waarde zelf. Dagen zoekwerk gingen op
     # aan gokken of een sleutel wel bij de live server aankwam.
     from backend.config import settings as _s
+    import os
     return {
         "status": "ok",
         "service": "omnivaleur",
+        # Welke versie draait er nu écht? Zonder dit was er geen manier om te
+        # zien of een net gepushte fix al live stond.
+        "commit": (os.getenv("RAILWAY_GIT_COMMIT_SHA") or "unknown")[:8],
         "config": {
             "stripe_secret_key": bool(_s.stripe_secret_key),
             "stripe_price_id": bool(_s.stripe_price_id),

@@ -3815,7 +3815,7 @@ function renderExtStatus() {
 
 // De laagste extensieversie die met de huidige site meekan. Verhoog dit bij
 // elke uitgerolde extensie-fix waarvan de gebruiker moet merken dat hij hem mist.
-const EXT_MIN_VERSION = '1.0.169';
+const EXT_MIN_VERSION = '1.0.170';
 function extVersionIsOld() {
   if (extState.status !== 'ready' || !extState.version) return false;
   const a = String(extState.version).split('.').map(Number);
