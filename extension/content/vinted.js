@@ -1469,6 +1469,14 @@
           if (el && el.offsetParent) { triggerEl = el; break; }
         }
       }
+      // Size renders as a grid for some categories and as a plain dropdown/list
+      // for others ("Select a size" with a chevron). Hard-coding the grid testid
+      // meant the whole size step silently gave up on those categories — and a
+      // failed size step used to leave a panel open that then broke colour too.
+      if (!triggerEl && isSize) {
+        triggerEl = [...document.querySelectorAll('input[data-testid*="size"][data-testid$="-input"]')]
+          .find(el => el.offsetParent) || null;
+      }
       if (!triggerEl) await sleep(250);
     }
     if (!triggerEl) {
