@@ -220,6 +220,33 @@ def _is_non_clothing(item: dict) -> bool:
     return cat.startswith(_NON_CLOTHING_PREFIXES)
 
 
+async def _fill_inferred_gaps(db, item: dict) -> dict:
+    """Fill empty colour/gender/category from the listing text, and persist it.
+
+    Only fills fields that are actually empty, and the inference is conservative
+    (see api/imports._infer_attributes), so a wrong guess is never written over
+    real data. Failure here is never fatal — worst case the field stays empty
+    and validation tells the user to fill it in.
+    """
+    try:
+        from backend.api.imports import _infer_attributes
+        inferred = _infer_attributes(item.get("title"), item.get("description"))
+    except Exception as e:
+        logger.warning(f"Attribute inference failed for item {item.get('id')}: {e}")
+        return item
+    patch = {
+        k: v for k, v in inferred.items()
+        if k in ("color", "gender", "category") and v and not (item.get(k) or "").strip()
+    }
+    if not patch:
+        return item
+    try:
+        await _exec(db.table("items").update(patch).eq("id", item["id"]))
+    except Exception as e:
+        logger.warning(f"Could not persist inferred attributes for {item.get('id')}: {e}")
+    return {**item, **patch}
+
+
 class CrosslistValidationError(Exception):
     """Raised when an item is missing data a platform needs — caller should
     show `missing` to the user and require them to fill it in rather than
