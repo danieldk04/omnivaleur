@@ -199,7 +199,18 @@ def create_checkout(user=Depends(get_current_user_full)):
             session_args["discounts"] = [{"promotion_code": promo["id"]}]
         else:
             session_args["allow_promotion_codes"] = True
-        session = stripe.checkout.Session.create(**session_args)
+        try:
+            session = stripe.checkout.Session.create(**session_args)
+        except Exception:
+            if "discounts" not in session_args:
+                raise
+            # De korting mag nooit de reden zijn dat iemand niet kan betalen. Raakt
+            # de actie onderweg op of verloopt hij tussen twee kliks, dan gaat het
+            # afrekenen door zonder korting in plaats van te weigeren.
+            logger.exception("Afrekenen met korting mislukt, opnieuw zonder korting")
+            session_args.pop("discounts")
+            session_args["allow_promotion_codes"] = True
+            session = stripe.checkout.Session.create(**session_args)
     except Exception as e:
         # Elke fout, niet alleen die van Stripe: een onverwachte crash gaf een
         # kale 500 waar de app niets zinnigs over kon zeggen.
