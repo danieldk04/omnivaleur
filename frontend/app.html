@@ -2601,6 +2601,7 @@ function renderBilling(data) {
   // the trial or payment lapsed but the account still works for a few days.
   const graceLeft  = data.grace_days_left;
   const graceBlock = data.access_allowed === false;
+  renderPromo(data.promo);
 
   if (status === 'active' && graceBlock) {
     // De server zegt "actief" maar weigert toegang: er hangt geen geldige
