@@ -256,6 +256,40 @@ def comp_account(email: str, user=Depends(get_current_user_full)):
     return {"ok": True, "user_id": target.id, "email": target.email}
 
 
+@router.post("/admin/announcement")
+def send_announcement(dry_run: bool = True, user=Depends(get_current_user_full)):
+    """De eenmalige 'afrekenen werkt weer'-mail. Standaard een proefronde die
+    alleen vertelt wie hem zou krijgen; pas met dry_run=false gaat hij echt weg.
+    Eigenaar-only."""
+    if not _is_owner_email(user.email):
+        raise HTTPException(status_code=403, detail="Niet toegestaan")
+
+    from backend.services.announcement import BODY, SUBJECT, collect_recipients
+    from backend.services.billing import CONTACT_EMAIL
+    from backend.services.email import send_email_checked
+
+    try:
+        recipients = collect_recipients()
+    except Exception as e:
+        logger.exception("Kon de ontvangerslijst niet ophalen")
+        raise HTTPException(status_code=503, detail=f"Ontvangers ophalen mislukt: {type(e).__name__}: {e}")
+
+    if dry_run:
+        return {"dry_run": True, "count": len(recipients), "recipients": recipients}
+
+    sent, failed = [], []
+    for email in recipients:
+        try:
+            send_email_checked(SUBJECT, BODY, to=email, reply_to=CONTACT_EMAIL)
+            sent.append(email)
+        except Exception as e:
+            # Eén geweigerd adres mag de rest van de verzending niet stoppen.
+            logger.exception(f"Aankondiging mislukt voor {email}")
+            failed.append({"email": email, "error": f"{type(e).__name__}: {e}"})
+    logger.info(f"Aankondiging verstuurd naar {len(sent)}, mislukt {len(failed)}")
+    return {"dry_run": False, "sent": len(sent), "failed": failed, "recipients": sent}
+
+
 @router.post("/admin/test-reminder-mail")
 def test_reminder_mail(kind: str = "reminder", user=Depends(get_current_user_full)):
     """Stuurt de herinneringsmail naar de eigenaar zelf, zodat de tekst en de
