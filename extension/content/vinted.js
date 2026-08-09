@@ -427,8 +427,16 @@
       const gaps = [];
       const sizeEl = qs('input[data-testid="category-size-single-grid-input"]');
       const colEl = qs('input[data-testid="color-select-dropdown-input"]');
+      const descEl = qs('textarea[data-testid="description--input"]');
+      if (descEl && !(descEl.value || "").trim()) gaps.push("beschrijving");
       if (sizeEl && !(sizeEl.value || "").trim()) gaps.push(`maat (${item.size || "leeg"})`);
-      if (colEl && !(colEl.value || "").trim()) gaps.push(`kleur (${item.color || "leeg"})`);
+      if (colEl && !(colEl.value || "").trim()) {
+        // Neem meteen mee wat we op dat moment ZAGEN, anders is de melding niet
+        // te herleiden zonder de gebruiker om een schermafbeelding te vragen.
+        const opts = colourOptionEls();
+        gaps.push(`kleur (${item.color || "leeg"}; ${opts.length} opties zichtbaar` +
+                  (opts.length ? `, bv. ${opts.slice(0, 3).map(e => e.textContent.trim()).join("/")}` : "") + ")");
+      }
       if (gaps.length) {
         throw new Error("Vinted kon deze velden niet invullen: " + gaps.join(", ") +
                         ". Vul ze zelf aan in het geopende tabblad en klik op Uploaden.");
@@ -989,6 +997,47 @@
     if (titleEl && titleEl.value !== wantTitle) {
       fillInput(titleEl, wantTitle);
     }
+
+    await repairEmptyFieldsVinted(item, wantTitle);
+  }
+
+  // Eindcontrole met herstel.
+  //
+  // Vinted tekent het formulier opnieuw zodra de categorie of een kenmerk
+  // verandert, en gooit daarbij velden leeg die we al hadden gevuld — daardoor
+  // kwamen beschrijving en kleur soms leeg door terwijl de stap zelf "ok"
+  // meldde. In plaats van te raden wélke stap dat was, meten we aan het einde
+  // gewoon na wat er écht in het formulier staat en vullen we opnieuw aan.
+  async function repairEmptyFieldsVinted(item, wantTitle) {
+    for (let round = 0; round < 3; round++) {
+      const titleEl = qs('input[data-testid="title--input"]');
+      const descEl  = qs('textarea[data-testid="description--input"]');
+      const priceEl = qs('input[data-testid="price-input--input"]');
+      const sizeEl  = qs('input[data-testid="category-size-single-grid-input"]');
+      const colEl   = qs('input[data-testid="color-select-dropdown-input"]');
+
+      const missing = [];
+      if (titleEl && titleEl.value !== wantTitle) missing.push("title");
+      if (descEl && !(descEl.value || "").trim() && item.description) missing.push("description");
+      if (priceEl && !(_num(priceEl.value) >= 1)) missing.push("price");
+      if (sizeEl && !(sizeEl.value || "").trim() && item.size) missing.push("size");
+      if (colEl && !(colEl.value || "").trim()) missing.push("colour");
+      if (!missing.length) return true;
+
+      console.warn("[Omnivaleur] Vinted eindcontrole ronde " + (round + 1) + ", nog leeg:", missing.join(", "));
+      for (const field of missing) {
+        if (field === "title") fillInput(titleEl, wantTitle);
+        if (field === "description") {
+          await step("description (herstel)", () =>
+            fillDescription(['textarea[data-testid="description--input"]'], item.description));
+        }
+        if (field === "price") await step("price (herstel)", () => fillPriceVinted(item.price));
+        if (field === "size") await step("size (herstel)", () => fillAttributeVinted(["size"], String(item.size)));
+        if (field === "colour") await step("colour (herstel)", () => fillColourVinted(item));
+        await sleep(400);
+      }
+    }
+    return false;
   }
 
   // Parse a displayed price ("€12,50", "12.50", "") to a Number (NaN if none).
