@@ -900,7 +900,21 @@
     await sleep(500); // category drives which attribute fields (size/brand/condition) render
     await step("price",       () => fillPriceVinted(item.price));
     await step("condition",   () => fillAttributeVinted(["condition", "status"], CONDITION_MAP[(item.condition || "").toLowerCase()] || CONDITION_MAP["good"]));
-    await step("size",        () => item.size && fillAttributeVinted(["size"], String(item.size)));
+    // Size: the field only renders once the category is settled, and which shape
+    // it takes (grid or dropdown) depends on that category — so one attempt was
+    // regularly too early and the listing came out with "Fill in size to continue".
+    await step("size", async () => {
+      if (!item.size) return false;
+      for (let attempt = 0; attempt < 3; attempt++) {
+        if (sizeIsFilledVinted()) return true;
+        await fillAttributeVinted(["size"], String(item.size));
+        await sleep(500);
+        if (sizeIsFilledVinted()) return true;
+        await sleep(800); // give the category-driven field time to (re)render
+      }
+      console.warn("[Omnivaleur] Vinted size still empty after retries:", item.size);
+      return false;
+    });
     await step("brand",       () => item.brand && fillAttributeVinted(["brand"], item.brand));
     await step("colour",      () => fillColourVinted(item));
     // Colour accordion only commits when another attribute trigger is realClicked.
