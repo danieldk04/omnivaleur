@@ -1180,6 +1180,11 @@ def fail_job(job_id: str, body: dict, user_id: str = Depends(get_current_user)):
             "status": "error",
             "error_message": body.get("error", "Extension reported failure"),
         }).eq("item_id", job["item_id"]).eq("platform", job["platform"]).eq("status", "pending").execute()
+        # Een mislukte publicatie betekent vaak dat de gebruiker het formulier
+        # zelf heeft afgemaakt. Plan meteen een scan in, zodat de app binnen
+        # enkele minuten zelf ziet dat de advertentie tóch online staat in
+        # plaats van te wachten op de volgende ronde.
+        _queue_scan(db, user_id, job["platform"])
     elif job and job["action"] == "delete":
         # A failed delist means NOTHING was removed — the listing is still live on
         # the platform. Setting it to "error" hid it from the dashboard's active
