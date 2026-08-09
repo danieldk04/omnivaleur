@@ -166,7 +166,7 @@ def create_checkout(user=Depends(get_current_user_full)):
                 # webhook koppelt de klant later alsnog aan de gebruiker.
                 logger.exception(f"Kon stripe_customer_id niet opslaan voor {user_id}")
 
-        session = stripe.checkout.Session.create(
+        session_args = dict(
             customer=customer_id,
             line_items=[{"price": settings.stripe_price_id, "quantity": 1}],
             mode="subscription",
@@ -174,10 +174,17 @@ def create_checkout(user=Depends(get_current_user_full)):
             cancel_url=f"{settings.app_url}/app.html?billing=cancel",
             subscription_data=subscription_data,
             metadata={"user_id": user_id},
-            # Zonder dit vakje kan een kortingscode nergens ingevuld worden en is
-            # elke actie die je per mail aankondigt onbruikbaar.
-            allow_promotion_codes=True,
         )
+        promo = find_active_promo()
+        if promo:
+            # Korting meteen toepassen in plaats van hem laten typen: elke letter
+            # die iemand moet overtypen is een reden om af te haken. Stripe staat
+            # een vast kortingsveld en een invulvakje niet samen toe, dus de keuze
+            # valt op de variant zonder handwerk.
+            session_args["discounts"] = [{"promotion_code": promo["id"]}]
+        else:
+            session_args["allow_promotion_codes"] = True
+        session = stripe.checkout.Session.create(**session_args)
     except Exception as e:
         # Elke fout, niet alleen die van Stripe: een onverwachte crash gaf een
         # kale 500 waar de app niets zinnigs over kon zeggen.
