@@ -1374,6 +1374,14 @@
     const isOpen = () => colourOptionEls().length > 0;
     for (let attempt = 0; attempt < 3; attempt++) {
       if ((trigger.value || "").trim()) return true;   // already set
+      // The brand/size panel that ran just before us can still be open. While it
+      // is, our first click merely dismisses it and never reaches the colour
+      // trigger — which is exactly how colour kept ending up empty while every
+      // other field was filled. Dismiss it ourselves first, every attempt.
+      if (!isOpen()) {
+        const outside = qs('input[data-testid="title--input"]');
+        if (outside) { realClickEl(outside); await sleep(500); }
+      }
       if (!(await openDropdownVinted(trigger, isOpen))) {
         console.warn("[Omnivaleur] Vinted colour panel didn't open (attempt " + (attempt + 1) + ")");
         continue;
