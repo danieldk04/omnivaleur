@@ -2682,11 +2682,16 @@ async function sendTestReminderMail(btn, kind) {
 
 async function announcement(btn, dryRun) {
   const out = document.getElementById('owner-announcement-result');
-  if (!dryRun && !confirm('This sends the announcement to every user without a paid subscription. There is no undo. Continue?')) return;
+  // De server mag de gebruikerslijst niet opvragen met de publieke sleutel, dus
+  // kan de lijst hier geplakt worden. Leeg laten = de server mag het zelf proberen.
+  const list = document.getElementById('owner-announcement-emails');
+  const emails = list ? list.value.trim() : '';
+  const count = emails ? (emails.match(/@/g) || []).length : 0;
+  if (!dryRun && !confirm(`This sends the announcement to ${count ? count + ' pasted address(es)' : 'every user without a paid subscription'}. There is no undo. Continue?`)) return;
   const label = btn.textContent;
   btn.disabled = true; btn.textContent = dryRun ? 'Checking…' : 'Sending…';
   try {
-    const res = await apiFetch(`${API}/api/billing/admin/announcement?dry_run=${dryRun}`, { method: 'POST' });
+    const res = await apiFetch(`${API}/api/billing/admin/announcement?dry_run=${dryRun}&emails=${encodeURIComponent(emails)}`, { method: 'POST' });
     const data = await parseJsonSafe(res);
     if (!res.ok) {
       out.textContent = data.detail || 'Failed.';
