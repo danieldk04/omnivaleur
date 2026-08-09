@@ -940,12 +940,19 @@ def _store_scan_results(db, job, scraped: list[dict]):
     # the listings table has no user_id column.
     item_ids = [it["id"] for it in items]
     listings_by_id = {}
+    # (item_id, platform) → de bestaande listing-rij, zodat we hieronder kunnen
+    # zien of het dashboard al wéét dat dit item op dit platform staat.
+    listing_by_item = {}
     if item_ids:
-        lrows = db.table("listings").select("item_id,platform,platform_listing_id").in_("item_id", item_ids).execute().data or []
+        lrows = fetch_all(lambda: db.table("listings")
+                          .select("id,item_id,platform,status,platform_listing_id")
+                          .in_("item_id", item_ids))
         for l in lrows:
             pid = l.get("platform_listing_id")
             if pid is not None and l.get("item_id"):
                 listings_by_id[(l.get("platform"), str(pid))] = l["item_id"]
+            if l.get("item_id"):
+                listing_by_item[(l["item_id"], l.get("platform"))] = l
 
     # What we already decided about each candidate. The upsert below refreshes the
     # scraped snapshot, but it must NOT undo a decision: it used to write
