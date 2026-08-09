@@ -102,6 +102,8 @@ class Settings(BaseSettings):
     # Waar antwoorden van klanten binnenkomen. Uitgaand heet alles Omnivaleur,
     # maar de postbus die Daniel daadwerkelijk leest is een andere.
     reply_to_email: str = "info@revaleur.com"
+    # Naam voor de afzender als het ingestelde adres er zelf geen heeft.
+    email_from_name: str = "Daniel from Omnivaleur"
 
     # Best-effort post-publish notification email (non-blocking — publish never waits on this).
     smtp_host: str = ""
