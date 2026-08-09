@@ -2777,9 +2777,9 @@ function renderTrialBanner(data) {
         <span style="font-size:18px">⚠️</span>
         <div>
           <div style="font-weight:600;font-size:13px;color:#991b1b">${locked ? 'Your account is locked' : 'Your free trial has expired'}</div>
-          <div style="font-size:12px;color:#b91c1c;margin-top:1px">${locked
-            ? 'Crosslisting has stopped — activate Pro to restore access'
-            : `Crosslisting stops in ${left} day${left !== 1 ? 's' : ''} — activate Pro to keep it running`}</div>
+          <div style="font-size:12px;color:#b91c1c;margin-top:1px">${promoLine(data.promo) || (locked
+            ? 'Crosslisting has stopped, activate Pro to restore access'
+            : `Crosslisting stops in ${left} day${left !== 1 ? 's' : ''}, activate Pro to keep it running`)}</div>
         </div>
       </div>
       <button onclick="showView('prijs')" style="white-space:nowrap;flex-shrink:0;padding:8px 16px;background:#dc2626;color:#fff;border:none;border-radius:7px;font-size:12px;font-weight:700;cursor:pointer">
