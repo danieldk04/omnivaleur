@@ -287,7 +287,7 @@ def from_keyword(queries: list[str] | None = None, max_count: int = 40,
 
 def from_local(cities: list[str] | None = None, terms: list[str] | None = None,
                max_per_run: int = 5, token: str = "",
-               exclude: list[str] | None = None, delay: float = 2.0) -> list[dict]:
+               exclude: list[str] | None = None) -> list[dict]:
     """Dezelfde keyword-discovery, maar opgeknipt in losse runs per stad.
 
     De gratis-limiet is een plafond PER RUN, niet per dag. Veertien steden x vijf
