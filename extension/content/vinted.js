@@ -1405,18 +1405,80 @@
   // trigger input's value ("Black"), which is what we verify against.
   const COLOUR_TRIGGER_SEL = 'input[data-testid="color-select-dropdown-input"]';
 
+  // De triggers van de ANDERE kenmerken. Een zoekgebied dat er één van bevat is
+  // te ruim: dan zouden we een tegel uit het maat- of materiaalpaneel kunnen
+  // aanklikken in plaats van een kleur.
+  const OTHER_TRIGGER_SEL = 'input[data-testid="category-material-multi-list-input"],'
+    + 'input[data-testid="category-condition-single-list-input"],'
+    + 'input[data-testid="brand-select-dropdown-input"],'
+    + 'input[data-testid^="category-size"]';
+
+  // Waar de kleuropties kunnen staan: eerst de eigen paneelcontainer, anders de
+  // dichtstbijzijnde voorouders van het kleurveld zelf (Vinted klapt het paneel
+  // soms als accordeon ín het veld open, buiten die container om).
+  function colourScopes() {
+    const out = [];
+    const content = document.querySelector('[data-testid="color-select-dropdown-content"]');
+    if (content) out.push(content);
+    const trigger = document.querySelector(COLOUR_TRIGGER_SEL);
+    let n = trigger ? trigger.parentElement : null;
+    for (let i = 0; n && i < 6; i++, n = n.parentElement) {
+      if (n.querySelector(OTHER_TRIGGER_SEL)) break; // vanaf hier te ruim
+      out.push(n);
+    }
+    return out;
+  }
+
+  // Vinted tekent de kleurkiezer in twee vormen: een raster met kleurbolletjes
+  // ([data-testid^="filter-grid-option-"]) én — sinds kort, per categorie — een
+  // lijst met web_ui__Cell-rijen en aanvinkvakjes. De oude code kende alleen het
+  // raster, zag dus nul opties, concludeerde "paneel ging niet open" en liet de
+  // kleur elke keer leeg. Nu herkennen we beide vormen.
   function colourOptionEls() {
-    const scope = document.querySelector('[data-testid="color-select-dropdown-content"]') || document;
-    return [...scope.querySelectorAll('[data-testid^="filter-grid-option-"]')]
+    for (const scope of colourScopes()) {
+      const grid = [...scope.querySelectorAll('[data-testid^="filter-grid-option-"]')]
+        .filter((el) => el.querySelector('[data-testid^="color_code_"]'));
+      if (grid.length) return grid;
+      const cells = [...scope.querySelectorAll('[class*="web_ui__Cell__cell"]')]
+        .filter((el) => el.querySelector('[class*="web_ui__Cell__title"]'));
+      if (cells.length) return cells;
+    }
+    // Laatste vangnet: kleurbolletjes waar dan ook — die horen altijd bij kleur.
+    return [...document.querySelectorAll('[data-testid^="filter-grid-option-"]')]
       .filter((el) => el.querySelector('[data-testid^="color_code_"]'));
   }
 
   function colourOptionLabel(el) {
     const code = el.querySelector('[data-testid^="color_code_"]')?.dataset.testid || "";
+    const title = el.querySelector('[class*="web_ui__Cell__title"]');
     return {
-      text: (el.textContent || "").trim().toLowerCase(),
+      text: ((title ? title.textContent : el.textContent) || "").trim().toLowerCase(),
       code: code.replace("color_code_", "").replace(/-/g, " ").toLowerCase(),
     };
+  }
+
+  // Heeft een optie zijn eigen vinkje aangezet? Bij de lijstvorm blijft de
+  // trigger-waarde soms leeg tot het paneel dichtgaat; het vinkje is dan het
+  // enige bewijs dat de klik is aangekomen.
+  function colourOptionChecked(el) {
+    const box = el && el.querySelector('input[type="checkbox"], input[type="radio"]');
+    return !!(box && box.checked);
+  }
+
+  // Klik de optie zoals Vinted het verwacht: het aanvinkvakje zelf gaat vóór de
+  // omhullende rij (een klik op de div bereikt Reacts handler niet), daarna het
+  // kleurbolletje en als laatste de rij.
+  async function clickColourOption(opt, isSet) {
+    const box = opt.querySelector('input[type="checkbox"], input[type="radio"]');
+    if (box) { box.click(); await sleep(400); if (isSet()) return true; }
+    humanClickEl(opt); await sleep(400); if (isSet()) return true;
+    const bubble = opt.querySelector('[data-testid^="color_code_"]');
+    if (bubble) { humanClickEl(bubble); await sleep(400); if (isSet()) return true; }
+    const inner = opt.querySelector('[class*="color-select-item"]')
+      || opt.querySelector('[class*="web_ui__Cell__title"]')
+      || opt.firstElementChild;
+    if (inner) { humanClickEl(inner); await sleep(400); }
+    return isSet();
   }
 
   function findColourOption(want) {
