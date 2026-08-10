@@ -226,7 +226,49 @@ def _profile(client: httpx.Client, sid: int) -> tuple[dict | None, bool]:
         "postcode": plaats and plaats.group(1),
         "plaats": plaats and plaats.group(2).strip(),
         "over_ons": over,
-    }
+    }, False
+
+
+JUNK_MAIL = re.compile(r"\.(png|jpe?g|webp|gif|svg)$|^[a-f0-9]{16,}@|sentry|example\.",
+                       re.I)
+CONTACT_PATHS = ("", "/contact", "/contact/", "/pages/contact", "/contact-us",
+                 "/over-ons", "/algemene-voorwaarden")
+
+
+def _site_email(client: httpx.Client, link: str) -> tuple[str, str]:
+    """(e-mailadres, domein) van de eigen webshop.
+
+    Ruim de helft van de zakelijke verkopers vult in het Marktplaats-profiel geen
+    e-mailadres in, maar heeft wel een webshop met een contactpagina. Live getest:
+    verkopers zonder adres in hun profiel leverden alsnog info@... op hun eigen site.
+    """
+    if not link:
+        return "", ""
+    try:
+        r = client.get(link, timeout=15.0)
+    except Exception:  # noqa: BLE001
+        return "", ""
+    base = str(r.url).split("/")
+    if len(base) < 3:
+        return "", ""
+    domain = f"{base[0]}//{base[2]}"
+    for path in CONTACT_PATHS:
+        try:
+            page = r if path == "" else client.get(domain + path, timeout=15.0)
+            if page.status_code != 200:
+                continue
+        except Exception:  # noqa: BLE001
+            continue
+        found = [e.lower() for e in
+                 re.findall(r"[\w.+-]+@[\w.-]+\.\w{2,}", page.text)
+                 if not JUNK_MAIL.search(e)]
+        if found:
+            # Voorkeur voor een adres op het eigen domein: een gmail in de
+            # broncode is vaker die van de webbouwer dan van de verkoper.
+            host = domain.split("//")[-1].replace("www.", "")
+            own = [e for e in found if host in e]
+            return (own or found)[0], domain
+    return "", domain
 
 
 def _ad_count(client: httpx.Client, sid: int) -> int:
