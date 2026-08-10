@@ -297,6 +297,22 @@
       "slug": "home-decor-reselling-automation",
       "status": "published",
       "priority": 36
+    },
+    {
+      "keyword": "vintage watch reselling automation",
+      "region": "nl",
+      "pillar": "B",
+      "slug": "vintage-watch-reselling-automation",
+      "status": "published",
+      "priority": 37
+    },
+    {
+      "keyword": "mobile phone reselling automation",
+      "region": "nl",
+      "pillar": "B",
+      "slug": "mobile-phone-reselling-automation",
+      "status": "pending",
+      "priority": 38
     }
   ],
   "published": [
@@ -623,6 +639,15 @@
       "action": "created",
       "url_path": "/reseller-tools/home-decor-reselling-automation",
       "published_at": "2026-08-09T08:34:13.130575+00:00"
+    },
+    {
+      "keyword": "vintage watch reselling automation",
+      "slug": "vintage-watch-reselling-automation",
+      "region": "nl",
+      "pillar": "B",
+      "action": "created",
+      "url_path": "/reseller-tools/vintage-watch-reselling-automation",
+      "published_at": "2026-08-10T09:11:12.079722+00:00"
     }
   ]
 }
