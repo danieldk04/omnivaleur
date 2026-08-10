@@ -3062,6 +3062,56 @@ async function _mwFillDescription(selector, descText) {
   el.focus();
   await sleep(150);
 
+  // Een écht <textarea>/<input> (Vinted) is geen rich-text editor. Alle routes
+  // hieronder meten of het gelukt is via innerText/textContent — en dat geeft bij
+  // een textarea de ORIGINELE opmaak terug, niet de getypte waarde. Daardoor zag
+  // elke poging "leeg", vielen we door tot de laatste return en meldde de
+  // beschrijvingstap "kon niet in de editor worden gezet" terwijl het veld gewoon
+  // te vullen is. Vandaar: form-velden krijgen hun eigen, korte route.
+  if (el instanceof HTMLTextAreaElement || el instanceof HTMLInputElement) {
+    const want = descText;
+    const proto = el instanceof HTMLTextAreaElement
+      ? window.HTMLTextAreaElement.prototype : window.HTMLInputElement.prototype;
+    const setter = Object.getOwnPropertyDescriptor(proto, "value").set;
+    const gevuld = () => (el.value || "").trim() === want.trim();
+
+    // 1. React's eigen value-setter + input/change: dit is de manier waarop een
+    //    React-gecontroleerd veld een externe waarde accepteert.
+    try {
+      setter.call(el, want);
+      el.dispatchEvent(new Event("input", { bubbles: true }));
+      el.dispatchEvent(new Event("change", { bubbles: true }));
+      await sleep(150);
+      if (gevuld()) return true;
+    } catch (_) {}
+
+    // 2. Echt "typen": selecteer alles en laat Chrome zelf de native
+    //    beforeinput/input afvuren. Velden die stap 1 terugdraaien nemen dit wel.
+    try {
+      el.focus();
+      el.select?.();
+      document.execCommand("insertText", false, want);
+      await sleep(200);
+      if (gevuld()) return true;
+    } catch (_) {}
+
+    // 3. Plakken, met een echte DataTransfer.
+    try {
+      el.focus();
+      el.select?.();
+      const dt = new DataTransfer();
+      dt.setData("text/plain", want);
+      el.dispatchEvent(new ClipboardEvent("paste", {
+        clipboardData: dt, bubbles: true, cancelable: true,
+      }));
+      await sleep(250);
+      if (gevuld()) return true;
+    } catch (_) {}
+
+    // Iets is beter dan niets: alleen als er écht tekst staat melden we succes.
+    return (el.value || "").trim().length > 0;
+  }
+
   // Lexical hangt __lexicalEditor niet altijd op het element dat we selecteren.
   // Op 2dehands zit hij op een ouder of een kind, waardoor we hem niet vonden en
   // terugvielen op textContent — die "ja, er staat tekst" zei terwijl de editor
