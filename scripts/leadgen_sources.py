@@ -8,14 +8,15 @@ en dat is precies het gat waar deze module doorheen kruipt.
 
 WAT ER LIVE UIT KWAM (2026-07, allemaal echt gedraaid, niet aangenomen):
 
-  hashtag  WINNAAR. 30 posts op #tweedehandskleding gaven 22 unieke auteurs, vrijwel
-           allemaal exact de doelgroep (Kringloopwinkel La Vida, Ratjetoe Leiden,
-           Vintique, Appel & Ei Enschede, Vincentshop Tilburg). Geen 5-limiet, ~$0,05
-           per hashtag. Volgersaantal komt niet mee — vandaar de losse enrich-stap.
+  local    WINNAAR (herzien 2026-08). 19% van de beoordeelde profielen wordt een lead,
+           en het is de enige bron die bij élke run nieuwe accounts oplevert: de
+           gratis-limiet geldt PER RUN, dus veertien steden x drie termen geven
+           veertien x drie x vijf kandidaten in plaats van vijf.
 
-  local    Betrouwbare vermenigvuldiger. De limiet geldt PER RUN, dus tien losse runs
-           met stadsspecifieke termen geven 10 x 5 in plaats van 5. Trager en per
-           lead iets duurder, maar het werkt en de leads zijn geografisch gespreid.
+  hashtag  Goed voor de start, daarna leeg. 6% leads, en een hashtagpagina geeft maar
+           ~27 posts terug — hoe hoog je --per-tag ook zet. Na twee runs op dezelfde
+           tags kwamen er nog twee nieuwe handles bij. Volgersaantal komt niet mee
+           — vandaar de losse enrich-stap.
 
   dork     Gratis, maar mager. DuckDuckGo geeft ~2 handles per zoekterm en blokkeert
            na ongeveer zes queries met HTTP 202. Bing gaf 0 (JS-gerenderde HTML).
