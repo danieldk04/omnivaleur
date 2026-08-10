@@ -1755,27 +1755,26 @@
     const isBrand = keys.includes("brand");
     const isSize  = keys.includes("size");
 
-    // Poll up to 3 s for the trigger input to render.
-    let triggerEl = null;
-    const tDeadline = Date.now() + 3000;
-    while (!triggerEl && Date.now() < tDeadline) {
+    // Wacht tot het veld getekend is — op de verandering, niet op de klok.
+    const zoekTrigger = () => {
       for (const key of keys) {
         const testId = ATTR_FIELD_MAP[key];
-        if (testId) {
-          const el = document.querySelector(`input[data-testid="${testId}"]`);
-          if (el && el.offsetParent) { triggerEl = el; break; }
-        }
+        if (!testId) continue;
+        const el = document.querySelector(`input[data-testid="${testId}"]`);
+        if (el && el.offsetParent) return el;
       }
       // Size renders as a grid for some categories and as a plain dropdown/list
       // for others ("Select a size" with a chevron). Hard-coding the grid testid
       // meant the whole size step silently gave up on those categories — and a
       // failed size step used to leave a panel open that then broke colour too.
-      if (!triggerEl && isSize) {
-        triggerEl = [...document.querySelectorAll('input[data-testid^="category-size"][data-testid$="-input"]')]
+      if (isSize) {
+        return [...document.querySelectorAll('input[data-testid^="category-size"][data-testid$="-input"]')]
           .find(el => el.offsetParent) || null;
       }
-      if (!triggerEl) await sleep(250);
-    }
+      return null;
+    };
+    await waitUntil(() => !!zoekTrigger(), 3000);
+    const triggerEl = zoekTrigger();
     if (!triggerEl) {
       console.warn("[Omnivaleur] Vinted attr not found:", fieldKeys);
       return false;
