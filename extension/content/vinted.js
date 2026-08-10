@@ -1782,23 +1782,30 @@
 
     if (isBrand) {
       // Brand panel is a toggle: only click trigger if search input is NOT visible.
-      const bs = document.querySelector('input[data-testid="brand-search--input"]');
-      if (!bs || !bs.offsetParent) {
+      const zoekveld = () => {
+        const el = document.querySelector('input[data-testid="brand-search--input"]');
+        return el && el.offsetParent ? el : null;
+      };
+      if (!zoekveld()) {
         realClickEl(triggerEl);
-        await sleep(900);
+        await waitUntil(() => !!zoekveld(), 2500);
       }
-      const brandSearch = document.querySelector('input[data-testid="brand-search--input"]');
-      if (brandSearch && brandSearch.offsetParent) {
+      const brandSearch = zoekveld();
+      if (brandSearch) {
         fillInput(brandSearch, value);
-        await sleep(1000);
+        await waitUntil(
+          () => [...document.querySelectorAll('[class*="web_ui__Cell__title"]')]
+            .some((e) => e.textContent.toLowerCase().includes(value.toLowerCase())),
+          2500);
       }
     } else if (!isSize) {
       // All other fields: click trigger to open panel. Scroll it into view
       // first — a click on an off-screen trigger does nothing on Vinted.
       triggerEl.scrollIntoView({ block: "center" });
-      await sleep(250);
       realClickEl(triggerEl);
-      await sleep(900);
+      await waitUntil(
+        () => [...document.querySelectorAll('[class*="web_ui__Cell__title"]')].some((e) => e.offsetParent),
+        2500);
     }
 
     const lv = value.toLowerCase();
