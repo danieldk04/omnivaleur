@@ -2406,9 +2406,21 @@ chrome.tabs.onUpdated.addListener(async (tabId, changeInfo) => {
   // item always redirects to its slugged canonical url (/items/{id}-{slug}), so
   // require that hyphen-slug shape: it never matches /items/new, /items/{id}/edit
   // or a bare draft /items/{id}, only the real post-publish page.
+  //
+  // Die strenge eis geldt alleen zolang de extensie zélf nog bezig is. Zodra een
+  // job aan de gebruiker is teruggegeven (awaitingManualFinish), vult niemand
+  // meer automatisch iets in, en dan is er geen draft-url meer die per ongeluk
+  // kan matchen. Vinted landt na een handmatige "Upload" lang niet altijd op de
+  // slug-url — vaak op een kale /items/{id} — en dan bleef de advertentie in het
+  // dashboard staan als mislukt terwijl hij gewoon online stond. Daarom in die
+  // situatie ook de kale vorm accepteren, maar nooit /items/new of .../edit.
   let m;
   if (meta.platform === "vinted") {
     m = url.match(/\/items\/(\d+)-[a-z0-9]/i);
+    if (!m && meta.awaitingManualFinish) {
+      m = url.match(/\/items\/(\d+)(?:[/?#]|$)/);
+      if (m && /\/items\/\d+\/(edit|new)\b/i.test(url)) m = null;
+    }
   } else {
     m = url.match(/\/seller\/view\/(m\d+)/) ||
          url.match(/\/v\/[^/]+\/(m\d+)/) ||
