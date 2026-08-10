@@ -1585,8 +1585,9 @@
     // we leggen vast wat er vóór de klik al aan keuzerijen op de pagina staat en
     // beschouwen alles wat daarna verschijnt als het kleurpaneel. Dat werkt bij
     // elke vorm en kan nooit een rij uit een ander (al open) paneel raken.
-    let voorafBekend = new Set();
-    const nieuweOpties = () => anyOptionEls().filter((el) => !voorafBekend.has(el));
+    let voorafBekend = null; // null = er is nog geen momentopname gemaakt
+    const nieuweOpties = () =>
+      voorafBekend ? anyOptionEls().filter((el) => !voorafBekend.has(el)) : [];
     const kleurOpties = () => {
       const nieuw = nieuweOpties();
       // Staan er kleurbolletjes tussen, dan zijn díé het kleurpaneel — de rest is
@@ -1594,15 +1595,24 @@
       const metBolletje = nieuw.filter((el) => el.querySelector('[data-testid^="color_code_"]'));
       if (metBolletje.length) return metBolletje;
       if (nieuw.length) return nieuw;
-      return colourOptionEls(); // paneel stond al open toen we begonnen
+      // Vangnet alleen binnen de eigen container van het kleurveld. Ruimer zoeken
+      // mag hier niet: dan tellen rijen van andere kenmerken mee.
+      const eigen = document.querySelector('[data-testid="color-select-dropdown-content"]');
+      return eigen ? colourOptionEls() : [];
     };
     const isOpen = () => kleurOpties().length > 0;
-    // Gezet = de trigger toont een waarde óf er staat ergens een vinkje aan.
-    const isSet = () => !!(trigger.value || "").trim()
-      || kleurOpties().some(colourOptionChecked);
+
+    // Het kleurVELD toont de gekozen kleur — dit is het enige oordeel dat telt
+    // zolang er geen kleurpaneel open staat.
+    const alGezet = () => !!(trigger.value || "").trim();
+    // Tijdens het kiezen telt daarnaast een vinkje in een net verschenen
+    // kleurrij. Let op: alléén in rijen die ná onze momentopname verschenen —
+    // anders zag hij het al aangevinkte rondje van "Staat" (Very good) aan voor
+    // een gekozen kleur en meldde de stap "gelukt" zonder ook maar iets te doen.
+    const isSet = () => alGezet() || kleurOpties().some(colourOptionChecked);
 
     for (let attempt = 0; attempt < 3; attempt++) {
-      if (isSet()) return true;   // already set
+      if (alGezet()) return true;   // already set
       // The brand/size panel that ran just before us can still be open. While it
       // is, our first click merely dismisses it and never reaches the colour
       // trigger — which is exactly how colour kept ending up empty while every
