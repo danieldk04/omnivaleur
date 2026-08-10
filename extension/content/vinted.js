@@ -1428,8 +1428,8 @@
       ]) {
         if (!alt || alt === trigger) continue;
         humanClickEl(alt);
-        for (let i = 0; i < 6; i++) {
-          await sleep(200);
+        for (let i = 0; i < 4; i++) {
+          await sleep(150);
           if (isOpen()) return true;
         }
       }
