@@ -64,22 +64,32 @@ QUERIES = [
 # Wat een serieuze reseller wél gebruikt: het platform waar hij op verkoopt
 # (#vinted, #marktplaats), het woord reseller zelf, of de productcategorie die
 # Omnivaleur goed aankan (kleding, schoenen, sneakers, games).
+#
+# Deze lijst is GESNOEID op gemeten rendement (2026-08, 167 beoordeelde profielen).
+# Wat overblijft, met leads per beoordeeld profiel:
+#   vintednederland 38%  marktplaatsverkoper 33%  sneakerreseller 22%
+#   vintagekleding  20%  vintageshopnl       20%  vintedshop      11%
+# Wat eraf ging staat onderaan. Ruwe opbrengst zegt niets: #vinted was met 27
+# profielen de grootste leverancier van de hele run en gaf nul leads.
 HASHTAGS = [
     # platform-signaal — sterkste indicatie van iemand die actief doorverkoopt.
-    # #vintednederland is LIVE GEMETEN de beste: 12 unieke accounts uit 30 posts,
-    # allemaal echte resellers (Hot on Vinted, TO THE NEXT CLOSET, Goldkings.Vinted,
-    # CS Little Closet). Daarvan haalde de helft de classificatie.
-    "vintednederland", "vinted", "vintedshop", "marktplaatsverkoper",
+    "vintednederland", "vintedshop", "marktplaatsverkoper",
     # commercieel zelfbeeld
-    "reseller", "resellernederland", "sneakerreseller",
+    "sneakerreseller",
     # verzendbare categorieën die Omnivaleur goed herkent
-    "vintagekleding", "prelovedfashion", "tweedehandskleding", "vintageshopnl",
+    "vintagekleding", "vintageshopnl",
 ]
 
 # Afgevoerd op grond van live metingen — niet terugzetten zonder opnieuw te meten:
 #   kringloopwinkel, kringloopgeluk, kringloopvondst, brocante, vintagemeubels,
 #   secondhandnederland, tweedehandswinkel — leveren vrijwilligerswinkels en
 #   meubelverkopers: geen winstmotief, onverzendbaar, geen crosslist-probleem.
+#   vinted (0 leads uit 27 profielen), reseller (0 uit 20), prelovedfashion (0 uit 4)
+#     — te Engels en te wereldwijd. De afwijzingen kwamen uit de VS, Italië, Pakistan,
+#     het VK en Duitsland. Het Nederlandse woord in de tag ís het landfilter.
+#   tweedehandskleding — 0 leads uit 14 profielen, en tegelijk de grootste bron van
+#     onbereikbare handles. Levert kringloop en particuliere opruimers.
+#   resellernederland — bestaat niet op Instagram (actor geeft "no_items").
 #   vintedverkoper — 28 van de 30 posts kwamen van ÉÉN account. Een hashtag kan
 #     door één poster ondergesneeuwd worden; let daarom op "N nieuw uit 30 posts"
 #     in de uitvoer, niet op het aantal posts.
