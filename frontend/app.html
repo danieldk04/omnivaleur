@@ -2734,11 +2734,11 @@ function fillPromoBox(boxId, promo) {
   const ends = hours === Infinity ? ''
     : hours < 48 ? ` Ends in ${hours} hour${hours !== 1 ? 's' : ''}.`
     : ` Ends in ${Math.floor(hours / 24)} days.`;
+  // De laatste zin verwijst subtiel naar de mail: wie hem las herkent het, en wie
+  // hem niet zag weet nu dat er een mail is en gaat kijken.
   document.getElementById(`${boxId}-detail`).textContent =
     `Sorry about the checkout problem. Your first month is €${promoPrice(promo)} instead of €19.99, `
     + `applied automatically at checkout, no code needed. After that it is €19.99 per month.${ends} `
-    // Terugverwijzing naar de mail, subtiel: wie hem las herkent het, wie hem niet
-    // zag weet nu waar de rest van het verhaal staat en gaat kijken.
     + `Full story in my email to you.`;
 }
 
