@@ -190,15 +190,19 @@ def _text(html: str) -> str:
     return re.sub(r"\s+", " ", re.sub(r"<[^>]+>", " ", t))
 
 
-def _profile(client: httpx.Client, sid: int) -> dict | None:
-    """Bedrijfsprofiel. Geeft None als de verkoper particulier is — dat profiel
-    bestaat dan simpelweg niet, en dat is meteen de zakelijk-toets."""
+def _profile(client: httpx.Client, sid: int) -> tuple[dict | None, bool]:
+    """Bedrijfsprofiel ophalen. Geeft (gegevens, nog_eens_proberen) terug.
+
+    Het verschil is belangrijk: een pagina die netjes laadt maar geen KvK of
+    telefoon toont, gaat dat morgen ook niet doen — die verkoper vult het gewoon
+    niet in. Alleen een netwerkfout of een serverfout is het opnieuw proberen waard.
+    """
     try:
         r = client.get(PROFILE.format(sid=sid))
     except Exception:  # noqa: BLE001
-        return None
+        return None, True
     if r.status_code != 200:
-        return None
+        return None, r.status_code >= 500
     t = _text(r.text)
     kvk = re.search(r"KVK[- ]?nummer\s*:?\s*(\d{6,10})", t, re.I)
     btw = re.search(r"BTW[- ]?nummer\s*:?\s*([A-Z]{2}[\dA-Z]{9,14})", t, re.I)
