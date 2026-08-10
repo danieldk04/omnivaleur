@@ -4,6 +4,43 @@ window.CL = (() => {
   const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
   const qs = (sel) => document.querySelector(sel);
 
+  // Wachten op een verandering in het formulier, in plaats van klokjes.
+  //
+  // Chrome zet in een tabblad dat niet zichtbaar is ELKE korte wachttijd op een
+  // hele seconde. Onze zoekertjes worden ingevuld in een venster op de
+  // achtergrond, dus daar gold dat altijd: een pauze van 150 ms kostte een
+  // seconde, en de honderden kleine pauzes in één formulier tikten samen op tot
+  // minuten. Het formulier stond dan keurig ingevuld op het scherm terwijl de
+  // tijd voor het plaatsen allang op was.
+  //
+  // Een MutationObserver wordt niet vertraagd: die meldt zich zodra de pagina
+  // echt verandert. Vandaar dat elke "wacht tot dit waar is" hier langsgaat en
+  // de klok alleen nog de uiterste grens bewaakt.
+  function waitUntil(voorwaarde, timeoutMs = 4000) {
+    return new Promise((resolve) => {
+      let klaar = false;
+      const check = () => { try { return !!voorwaarde(); } catch (_) { return false; } };
+      if (check()) return resolve(true);
+      const stop = (v) => {
+        if (klaar) return;
+        klaar = true;
+        obs.disconnect();
+        clearInterval(tik);
+        clearTimeout(limiet);
+        resolve(v);
+      };
+      const obs = new MutationObserver(() => { if (check()) stop(true); });
+      obs.observe(document.documentElement, {
+        childList: true, subtree: true, attributes: true, characterData: true,
+      });
+      // Vangnet voor veranderingen zonder DOM-mutatie (bv. een waarde die het
+      // formulier zelf zet). Eén seconde is precies wat een verborgen tabblad
+      // toestaat, dus dit kost niets extra.
+      const tik = setInterval(() => { if (check()) stop(true); }, 1000);
+      const limiet = setTimeout(() => stop(check()), timeoutMs);
+    });
+  }
+
   function escapeRegex(s) { return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"); }
 
   function waitForEl(sel, timeout = 10000) {
