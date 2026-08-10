@@ -1511,8 +1511,12 @@
     if (!trigger) { console.warn("[Omnivaleur] Vinted colour trigger not found"); return false; }
 
     const isOpen = () => colourOptionEls().length > 0;
+    // Gezet = de trigger toont een waarde óf er staat ergens een vinkje aan.
+    const isSet = () => !!(trigger.value || "").trim()
+      || colourOptionEls().some(colourOptionChecked);
+
     for (let attempt = 0; attempt < 3; attempt++) {
-      if ((trigger.value || "").trim()) return true;   // already set
+      if (isSet()) return true;   // already set
       // The brand/size panel that ran just before us can still be open. While it
       // is, our first click merely dismisses it and never reaches the colour
       // trigger — which is exactly how colour kept ending up empty while every
@@ -1527,29 +1531,29 @@
       }
       for (const colour of colours) {
         const opt = findColourOption(colour);
-        if (!opt) { console.warn("[Omnivaleur] Vinted colour not in list:", colour); continue; }
+        if (!opt) {
+          console.warn("[Omnivaleur] Vinted colour not in list:", colour,
+                       "| beschikbaar:", colourOptionEls().map((e) => colourOptionLabel(e).text).slice(0, 30));
+          continue;
+        }
         opt.scrollIntoView({ block: "center" });
         await sleep(250);
-        humanClickEl(opt);
-        await sleep(500);
-        if (!(trigger.value || "").trim()) {
-          // Niets gebeurd: klik het kleurbolletje zelf, dan het label.
-          const bubble = opt.querySelector('[data-testid^="color_code_"]');
-          if (bubble) { humanClickEl(bubble); await sleep(500); }
-        }
-        if (!(trigger.value || "").trim()) {
-          const inner = opt.querySelector('[class*="color-select-item"]') || opt.firstElementChild;
-          if (inner) { humanClickEl(inner); await sleep(500); }
-        }
+        await clickColourOption(opt, isSet);
       }
-      if ((trigger.value || "").trim()) {
-        console.log("[Omnivaleur] Vinted colour set:", trigger.value);
+      if (isSet()) {
+        console.log("[Omnivaleur] Vinted colour set:", trigger.value || "(vinkje staat aan)");
         return true;
       }
       console.warn("[Omnivaleur] Vinted colour didn't commit, retrying:", colours.join(", "));
       await sleep(400);
     }
-    return false;
+
+    // Alles op deze route mislukt: probeer nog de generieke kenmerk-invuller,
+    // die de lijstvorm langs een andere weg aanklikt. Beter één extra poging dan
+    // een zoekertje dat blijft hangen op "Fill in colour to continue".
+    console.warn("[Omnivaleur] Vinted colour: laatste poging via generieke invuller");
+    const viaAttr = await fillAttributeVinted(["colour"], colours[0]);
+    return viaAttr && isSet();
   }
 
   async function fillMaterialFromOpenPanel(value) {
