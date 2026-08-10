@@ -64,6 +64,9 @@ def find_active_promo() -> dict | None:
         logger.exception("Kon de actiecode niet ophalen")
         return None
     if not codes.data:
+        # Ook "er is geen actie" is het onthouden waard: anders vraagt de app het
+        # na de actie bij elke verversing opnieuw aan Stripe.
+        _promo_cache = (_time.monotonic() + _PROMO_CACHE_TTL, None)
         return None
     # Twee vormen mogelijk: oudere API-versies zetten de coupon uitgeklapt onder
     # "coupon", nieuwere alleen het nummer onder "promotion". Beide moeten werken,
