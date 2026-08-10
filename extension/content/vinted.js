@@ -1062,7 +1062,12 @@
         }
         if (field === "price") await step("price (herstel)", () => fillPriceVinted(item.price));
         if (field === "size") await step("size (herstel)", () => fillAttributeVinted(["size"], String(item.size)));
-        if (field === "colour") await step("colour (herstel)", () => fillColourVinted(item));
+        // Kleur maar één keer opnieuw proberen. Lukt het dan niet, dan lukt het
+        // in ronde drie ook niet en kost het alleen de tijd die we nodig hebben
+        // om te plaatsen.
+        if (field === "colour" && kleurHersteld++ === 0) {
+          await step("colour (herstel)", () => fillColourVinted(item));
+        }
         await sleep(400);
       }
     }
