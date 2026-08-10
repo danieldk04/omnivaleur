@@ -8,6 +8,13 @@
       "port": 3000
     },
     {
+      "name": "vinted-mock",
+      "runtimeExecutable": "python3",
+      "runtimeArgs": ["-m", "http.server", "3311", "--directory",
+        "/private/tmp/claude-501/-Users-Danie-Documents-omnivaleur/ca47f661-a8e2-4ee0-a3ee-1bcd39162ba0/scratchpad/vinted-mock"],
+      "port": 3311
+    },
+    {
       "name": "backend",
       "runtimeExecutable": "uvicorn",
       "runtimeArgs": ["backend.main:app", "--host", "0.0.0.0", "--port", "8001"],
