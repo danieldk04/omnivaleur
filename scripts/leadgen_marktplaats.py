@@ -163,7 +163,11 @@ def discover(args) -> None:
                         row["ads_seen"] = row.get("ads_seen", 0) + 1
                         continue
                     row = {"seller_id": sid, "name": s.get("sellerName") or "",
-                           "method": "marktplaats", "source": src, "ads_seen": 1}
+                           "method": "marktplaats", "source": src, "ads_seen": 1,
+                           # Doorklik-link van Marktplaats naar de eigen webshop.
+                           # Bewaren loont: bij verkopers zonder e-mail in hun
+                           # profiel staat het adres wél op hun contactpagina.
+                           "site_link": s.get("sellerWebsiteUrl") or ""}
                     by_id[sid] = row
                     existing.append(row)
                     added += 1
