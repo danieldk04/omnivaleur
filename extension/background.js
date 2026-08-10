@@ -1017,6 +1017,22 @@ function armJobWatchdog(tabId) {
   chrome.alarms.create(`${JOB_WATCHDOG_PREFIX}${tabId}`, { delayInMinutes: JOB_TAB_TIMEOUT_MIN });
 }
 
+// Hoe lang een opdracht in totaal mag doen over zijn tab. Ruim onder de vijf
+// minuten waarop de server een niet-afgemelde opdracht terugneemt.
+const JOB_MAX_LIFETIME_MS = 4.5 * 60 * 1000;
+
+// Teken van leven vanuit de tab: bewaker opnieuw opspannen, tenzij de opdracht
+// al te lang loopt of al aan de gebruiker is teruggegeven.
+function keepJobAlive(tabId) {
+  if (tabId == null) return;
+  chrome.storage.local.get(`jobtab_${tabId}`, (s) => {
+    const meta = s[`jobtab_${tabId}`];
+    if (!meta || meta.awaitingManualFinish) return;
+    if (meta.startedAt && Date.now() - meta.startedAt > JOB_MAX_LIFETIME_MS) return;
+    armJobWatchdog(tabId);
+  });
+}
+
 function clearJobWatchdog(tabId) {
   if (tabId == null) return;
   chrome.alarms.clear(`${JOB_WATCHDOG_PREFIX}${tabId}`);
