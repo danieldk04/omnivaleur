@@ -1416,15 +1416,8 @@
   // [data-testid^="filter-grid-option-"] wrapper holding a [data-testid^="color_code_"]
   // bubble plus the colour's name as text. The chosen colour(s) land in the
   // trigger input's value ("Black"), which is what we verify against.
-  const COLOUR_TRIGGER_SEL = 'input[data-testid="color-select-dropdown-input"]';
-
-  // De triggers van de ANDERE kenmerken. Een zoekgebied dat er één van bevat is
-  // te ruim: dan zouden we een tegel uit het maat- of materiaalpaneel kunnen
-  // aanklikken in plaats van een kleur.
-  const OTHER_TRIGGER_SEL = 'input[data-testid="category-material-multi-list-input"],'
-    + 'input[data-testid="category-condition-single-list-input"],'
-    + 'input[data-testid="brand-select-dropdown-input"],'
-    + 'input[data-testid^="category-size"]';
+  // (COLOUR_TRIGGER_SEL en OTHER_TRIGGER_SEL staan bovenaan dit bestand — zie de
+  // toelichting daar over declaraties die te laat bestaan.)
 
   // Waar de kleuropties kunnen staan: eerst de eigen paneelcontainer, anders de
   // dichtstbijzijnde voorouders van het kleurveld zelf (Vinted klapt het paneel
