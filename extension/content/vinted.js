@@ -1607,35 +1607,60 @@
       // verschijnt hoort bij de kleur.
       voorafBekend = new Set(anyOptionEls());
       if (!(await openDropdownVinted(trigger, isOpen))) {
-        console.warn("[Omnivaleur] Vinted colour panel didn't open (attempt " + (attempt + 1) + ")");
+        kleurDiagnose = "het kleurveld ging niet open (poging " + (attempt + 1) + ")";
+        clog("Vinted kleur: " + kleurDiagnose);
         continue;
       }
+      const zichtbaar = kleurOpties().map((e) => colourOptionLabel(e).text).filter(Boolean);
+      clog(`Vinted kleur: paneel open, ${zichtbaar.length} opties, bv. ${zichtbaar.slice(0, 8).join(" / ")}`);
+
+      let geklikt = false;
       for (const colour of colours) {
         const opts = kleurOpties();
         const opt = findColourOption(colour, opts);
         if (!opt) {
-          console.warn("[Omnivaleur] Vinted colour not in list:", colour,
-                       "| beschikbaar:", opts.map((e) => colourOptionLabel(e).text).slice(0, 40));
+          kleurDiagnose = `"${colour}" stond niet in de lijst van ${opts.length} kleuren `
+            + `(${opts.map((e) => colourOptionLabel(e).text).filter(Boolean).slice(0, 15).join(", ")})`;
+          clog("Vinted kleur: " + kleurDiagnose);
           continue;
         }
         opt.scrollIntoView({ block: "center" });
         await sleep(250);
-        await clickColourOption(opt, isSet);
+        if (await clickColourOption(opt, isSet)) geklikt = true;
       }
-      if (isSet()) {
-        console.log("[Omnivaleur] Vinted colour set:", trigger.value || "(vinkje staat aan)");
+
+      // Het kleurveld toont zijn waarde bij sommige vormen pas als het paneel
+      // dicht is. Sluiten en dán pas oordelen — anders concluderen we onterecht
+      // dat het misging en gaan we opnieuw klikken (wat de kleur weer uitzet).
+      if (outside) { realClickEl(outside); await sleep(700); }
+      if ((trigger.value || "").trim()) {
+        clog("Vinted kleur: gezet op " + trigger.value);
         return true;
       }
-      console.warn("[Omnivaleur] Vinted colour didn't commit, retrying:", colours.join(", "));
+      if (geklikt && isSet()) {
+        clog("Vinted kleur: aangevinkt (veld toont de waarde nog niet)");
+        return true;
+      }
+      kleurDiagnose = geklikt
+        ? "de kleur werd wel aangeklikt maar Vinted nam hem niet over"
+        : "geen enkele kleurtegel reageerde op een klik";
+      clog("Vinted kleur: " + kleurDiagnose + " — nog een poging");
       await sleep(400);
     }
 
     // Alles op deze route mislukt: probeer nog de generieke kenmerk-invuller,
     // die de lijstvorm langs een andere weg aanklikt. Beter één extra poging dan
     // een zoekertje dat blijft hangen op "Fill in colour to continue".
-    console.warn("[Omnivaleur] Vinted colour: laatste poging via generieke invuller");
-    const viaAttr = await fillAttributeVinted(["colour"], colours[0]);
-    return viaAttr && isSet();
+    clog("Vinted kleur: laatste poging via de generieke invuller");
+    await fillAttributeVinted(["colour"], colours[0]);
+    await sleep(500);
+    const outsideEl = qs('input[data-testid="title--input"]');
+    if (outsideEl) { realClickEl(outsideEl); await sleep(700); }
+    if ((trigger.value || "").trim()) {
+      clog("Vinted kleur: alsnog gezet op " + trigger.value);
+      return true;
+    }
+    return false;
   }
 
   async function fillMaterialFromOpenPanel(value) {
