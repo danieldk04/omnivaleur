@@ -1520,10 +1520,27 @@
     }
     if (!trigger) { console.warn("[Omnivaleur] Vinted colour trigger not found"); return false; }
 
-    const isOpen = () => colourOptionEls().length > 0;
+    // Waar Vinted de kleurlijst neerzet verschilt per categorie én per versie:
+    // soms in een eigen container, soms als accordeon in het veld, soms — zoals
+    // bij materiaal — in een zwevend paneel dat helemaal onderaan de pagina
+    // hangt. Elke selector die we vooraf verzinnen is dus een gok, en juist die
+    // gok liet de kleur telkens leeg.
+    //
+    // Daarom kijken we niet meer WAAR de opties staan, maar WELKE erbij komen:
+    // we leggen vast wat er vóór de klik al aan keuzerijen op de pagina staat en
+    // beschouwen alles wat daarna verschijnt als het kleurpaneel. Dat werkt bij
+    // elke vorm en kan nooit een rij uit een ander (al open) paneel raken.
+    let voorafBekend = new Set();
+    const nieuweOpties = () => anyOptionEls().filter((el) => !voorafBekend.has(el));
+    const kleurOpties = () => {
+      const nieuw = nieuweOpties();
+      if (nieuw.length) return nieuw;
+      return colourOptionEls(); // paneel stond al open toen we begonnen
+    };
+    const isOpen = () => kleurOpties().length > 0;
     // Gezet = de trigger toont een waarde óf er staat ergens een vinkje aan.
     const isSet = () => !!(trigger.value || "").trim()
-      || colourOptionEls().some(colourOptionChecked);
+      || kleurOpties().some(colourOptionChecked);
 
     for (let attempt = 0; attempt < 3; attempt++) {
       if (isSet()) return true;   // already set
@@ -1531,19 +1548,21 @@
       // is, our first click merely dismisses it and never reaches the colour
       // trigger — which is exactly how colour kept ending up empty while every
       // other field was filled. Dismiss it ourselves first, every attempt.
-      if (!isOpen()) {
-        const outside = qs('input[data-testid="title--input"]');
-        if (outside) { realClickEl(outside); await sleep(500); }
-      }
+      const outside = qs('input[data-testid="title--input"]');
+      if (outside) { realClickEl(outside); await sleep(600); }
+      // Momentopname NA het sluiten van andere panelen: alles wat hierna
+      // verschijnt hoort bij de kleur.
+      voorafBekend = new Set(anyOptionEls());
       if (!(await openDropdownVinted(trigger, isOpen))) {
         console.warn("[Omnivaleur] Vinted colour panel didn't open (attempt " + (attempt + 1) + ")");
         continue;
       }
       for (const colour of colours) {
-        const opt = findColourOption(colour);
+        const opts = kleurOpties();
+        const opt = findColourOption(colour, opts);
         if (!opt) {
           console.warn("[Omnivaleur] Vinted colour not in list:", colour,
-                       "| beschikbaar:", colourOptionEls().map((e) => colourOptionLabel(e).text).slice(0, 30));
+                       "| beschikbaar:", opts.map((e) => colourOptionLabel(e).text).slice(0, 40));
           continue;
         }
         opt.scrollIntoView({ block: "center" });
