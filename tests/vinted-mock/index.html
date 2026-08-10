@@ -1,0 +1,94 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Vinted form replica — Omnivaleur test harness</title>
+<style>
+  body { font: 14px/1.5 system-ui; margin: 0; padding: 20px 40px; }
+  .row { display: flex; border-bottom: 1px solid #eee; padding: 14px 0; align-items: flex-start; }
+  .row > label { width: 240px; font-weight: 600; }
+  .field { flex: 1; position: relative; }
+  input[readonly] { background: #fff; cursor: pointer; }
+  input, textarea { width: 90%; padding: 6px; border: 0; border-bottom: 1px solid #ccc; font: inherit; }
+  .panel { position: absolute; z-index: 10; background: #fff; border: 1px solid #ddd;
+           box-shadow: 0 6px 20px rgba(0,0,0,.15); width: 460px; max-height: 300px; overflow: auto; }
+  .web_ui__Cell__cell { display: flex; justify-content: space-between; padding: 12px;
+                        border-bottom: 1px solid #f0f0f0; cursor: pointer; }
+  .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; padding: 12px; }
+  .tile { text-align: center; cursor: pointer; padding: 6px; border-radius: 8px; }
+  .tile .bubble { width: 44px; height: 44px; border-radius: 50%; margin: 0 auto 6px;
+                  border: 1px solid #ccc; }
+  .tile[aria-checked="true"] { outline: 2px solid #007782; }
+  #log { position: fixed; right: 0; top: 0; width: 34vw; height: 100vh; overflow: auto;
+         background: #111; color: #ddd; font: 11px/1.4 ui-monospace, monospace; padding: 8px; }
+  #verdict { font: 13px/1.5 ui-monospace, monospace; white-space: pre; background: #f6f8fa;
+             padding: 12px; border-radius: 6px; margin-top: 20px; }
+  main { width: 62vw; }
+</style>
+
+<main>
+<h2>Replica of the Vinted “List an item” form</h2>
+
+<div class="row"><label>Title</label><div class="field">
+  <input data-testid="title--input" placeholder="Title">
+</div></div>
+
+<div class="row"><label>Description</label><div class="field">
+  <textarea data-testid="description--input" rows="4" placeholder="Tell buyers more about it"></textarea>
+</div></div>
+
+<div class="row"><label>Photos</label><div class="field">
+  <input type="file" accept="image/*" multiple id="photos">
+  <div id="thumbs"></div>
+</div></div>
+
+<div class="row"><label>Category</label><div class="field">
+  <input data-testid="catalog-select-dropdown-input" placeholder="Search for a category">
+  <div class="panel" id="catalog-panel" hidden></div>
+</div></div>
+
+<div class="row"><label>Price</label><div class="field">
+  <input data-testid="price-input--input" placeholder="0,00">
+</div></div>
+
+<div class="row"><label>Condition</label><div class="field">
+  <input data-testid="category-condition-single-list-input" readonly placeholder="Select condition">
+  <div class="panel" id="condition-panel" hidden></div>
+</div></div>
+
+<div class="row"><label>Size</label><div class="field">
+  <input data-testid="category-size-single-grid-input" readonly placeholder="Select size">
+  <div class="panel" data-testid="category-size-single-grid-content" id="size-panel" hidden></div>
+</div></div>
+
+<div class="row"><label>Brand</label><div class="field">
+  <input data-testid="brand-select-dropdown-input" readonly placeholder="Select brand">
+  <div class="panel" id="brand-panel" hidden>
+    <input data-testid="brand-search--input" placeholder="Search brand">
+    <div id="brand-list"></div>
+  </div>
+</div></div>
+
+<div class="row"><label>Colours</label><div class="field">
+  <input data-testid="color-select-dropdown-input" readonly placeholder="Select up to 2 colours">
+  <div class="panel" data-testid="color-select-dropdown-content" id="colour-panel" hidden></div>
+</div></div>
+
+<div class="row"><label>Material</label><div class="field">
+  <input data-testid="category-material-multi-list-input" readonly placeholder="Select material">
+  <div class="panel" id="material-panel" hidden></div>
+</div></div>
+
+<div class="row"><label></label><div class="field">
+  <button data-testid="upload-form-save-draft-button">Save draft</button>
+  <button data-testid="upload-form-save-button">Upload</button>
+</div></div>
+
+<div id="verdict">waiting…</div>
+</main>
+<div id="log"></div>
+
+<script src="./mock-widgets.js"></script>
+<script src="./mw-functions.js"></script>
+<script src="./chrome-shim.js"></script>
+<script src="./shared.js"></script>
+<script src="./vinted.js"></script>
+<script src="./verdict.js"></script>
