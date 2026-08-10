@@ -240,6 +240,12 @@ def enrich(args) -> None:
     if not everything:
         sys.exit("Nog geen handles.json — draai eerst 'discover'")
 
+    if getattr(args, "retry_dead", False):
+        revived = [r for r in everything if r.pop("dead", None)]
+        for row in revived:
+            row["fails"] = 0
+        print(f"  {len(revived)} eerder opgegeven handles krijgen een nieuwe kans")
+
     # _enrich_rows muteert de dicts, dus een slice verrijkt dezelfde objecten die in
     # `everything` zitten. Daardoor kan --limit een deel doen zonder dat de rest van
     # handles.json bij het opslaan verdwijnt, en is een tweede run een goedkope
