@@ -15,26 +15,9 @@ logger = logging.getLogger(__name__)
 # Geen kortingspercentage en geen euroteken in de onderwerpregel: dat is precies
 # waar Gmail op sorteert, en dan belandt de mail in het tabblad Promoties in plaats
 # van in de inbox. Het aanbod staat in de mail zelf, onderaan.
-SUBJECT = "About the checkout problem, from Daniel / Over het betaalprobleem"
+SUBJECT = "Over het betaalprobleem, van Daniel / About the checkout problem"
 
-BODY = """Hi,
-
-I'm Daniel, the person behind Omnivaleur. I'm writing this myself, so forgive the directness.
-
-Over the past weeks, activating a paid subscription simply did not work. Not for you, not for anyone. It looked like your phone, your bank or your card, it was none of those. It was my side, and it was broken from the very first day the button existed.
-
-It's fixed. I traced it, repaired it, and paid for a subscription myself from start to finish to make sure. If your free trial has ended, you can activate Pro right now, on your phone or your computer, with iDEAL or a credit card. It works the way it always should have.
-
-Thank you to everyone who took the time to tell me something was wrong. One message did more for this product than a week of my own testing. I'd rather hear an uncomfortable truth today than a polite silence for a month.
-
-As an apology, your first month is 25 percent off: 14,99 euro instead of 19,99 euro, and 19,99 euro per month after that. You do not have to type a code. Open the Account page in the app and it is already applied when you activate Pro. It stands for the next 48 hours.
-
-If anything still goes wrong, anything at all, reply to this email. It comes straight to me.
-
-Daniel from Omnivaleur
-
-
-Hoi,
+BODY = """Hoi,
 
 Ik ben Daniel, de man achter Omnivaleur. Ik schrijf dit zelf, dus vergeef me de directheid.
 
@@ -49,6 +32,26 @@ Als excuus krijg je 25 procent korting op je eerste maand: 14,99 euro in plaats 
 Gaat er nog iets mis, wat dan ook, antwoord dan op deze mail. Die komt rechtstreeks bij mij.
 
 Daniel van Omnivaleur
+
+
+==========================================
+
+
+Hi,
+
+I'm Daniel, the person behind Omnivaleur. I'm writing this myself, so forgive the directness.
+
+Over the past weeks, activating a paid subscription simply did not work. Not for you, not for anyone. It looked like your phone, your bank or your card, it was none of those. It was my side, and it was broken from the very first day the button existed.
+
+It's fixed. I traced it, repaired it, and paid for a subscription myself from start to finish to make sure. If your free trial has ended, you can activate Pro right now, on your phone or your computer, with iDEAL or a credit card. It works the way it always should have.
+
+Thank you to everyone who took the time to tell me something was wrong. One message did more for this product than a week of my own testing. I'd rather hear an uncomfortable truth today than a polite silence for a month.
+
+As an apology, your first month is 25 percent off: 14,99 euro instead of 19,99 euro, and 19,99 euro per month after that. You do not have to type a code. Open the Account page in the app and it is already applied when you activate Pro. It stands for the next 48 hours.
+
+If anything still goes wrong, anything at all, reply to this email. It comes straight to me.
+
+Daniel from Omnivaleur
 """
 
 
