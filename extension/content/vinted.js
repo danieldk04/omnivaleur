@@ -1389,10 +1389,26 @@
       if (isOpen()) return true;
       trigger.scrollIntoView({ block: "center" });
       await sleep(250);
-      realClickEl(trigger);
+      humanClickEl(trigger);
       for (let i = 0; i < 12; i++) {
         await sleep(200);
         if (isOpen()) return true;
+      }
+      // Het veld zelf reageert niet altijd: bij sommige velden zit de
+      // klikafhandeling op de rij eromheen of op het pijltje ernaast. Pas
+      // proberen als de directe klik niets deed, zodat we niets kapotmaken bij
+      // velden waar hij wél werkt.
+      for (const alt of [
+        trigger.parentElement,
+        trigger.closest('[class*="web_ui__Cell__cell"]'),
+        trigger.parentElement?.querySelector('svg, [class*="chevron"], [class*="Chevron"], button'),
+      ]) {
+        if (!alt || alt === trigger) continue;
+        humanClickEl(alt);
+        for (let i = 0; i < 6; i++) {
+          await sleep(200);
+          if (isOpen()) return true;
+        }
       }
     }
     return isOpen();
