@@ -1616,7 +1616,7 @@
     // een gekozen kleur en meldde de stap "gelukt" zonder ook maar iets te doen.
     const isSet = () => alGezet() || kleurOpties().some(colourOptionChecked);
 
-    for (let attempt = 0; attempt < 3; attempt++) {
+    for (let attempt = 0; attempt < 2; attempt++) {
       if (alGezet()) return true;   // already set
       // The brand/size panel that ran just before us can still be open. While it
       // is, our first click merely dismisses it and never reaches the colour
