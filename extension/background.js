@@ -3495,8 +3495,16 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
 
   // Het formulier praat mee in dit log: de console van de tab zelf is weg zodra
   // de tab dichtgaat, deze niet.
+  //
+  // Elke logregel is meteen een teken van leven. De bewaker sloeg namelijk toe
+  // terwijl het formulier gewoon nog aan het werk was: het invullen kostte net
+  // te lang, de opdracht werd afgebroken vlak vóór het plaatsen en het zoekertje
+  // bleef ingevuld-maar-ongeplaatst staan. Zolang er gewerkt wordt schuiven we
+  // de bewaker dus op — maar nooit voorbij de grens waarop de server de opdracht
+  // zelf terugneemt, want dan zou hij een tweede keer uitgezet worden.
   if (msg.type === "LOG") {
     console.log(`[Omnivaleur][formulier] ${msg.text}`);
+    keepJobAlive(sender.tab?.id);
     sendResponse(true);
     return true;
   }
