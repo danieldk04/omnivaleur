@@ -1578,12 +1578,14 @@
     }
     clog("Vinted kleur: gezocht wordt " + colours.join(" + "));
 
-    let trigger = null;
-    for (let i = 0; i < 12 && !trigger; i++) {
+    await waitUntil(() => {
       const el = qs(COLOUR_TRIGGER_SEL);
-      if (el && el.offsetParent) { trigger = el; break; }
-      await sleep(250);
-    }
+      return el && el.offsetParent;
+    }, 3000);
+    const trigger = (() => {
+      const el = qs(COLOUR_TRIGGER_SEL);
+      return el && el.offsetParent ? el : null;
+    })();
     if (!trigger) {
       kleurDiagnose = "het kleurveld stond niet op de pagina";
       clog("Vinted kleur: " + kleurDiagnose);
