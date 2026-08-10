@@ -145,8 +145,10 @@ async def billing_status(user=Depends(get_current_user_full)):
             "grace_ends_at": access["grace_ends_at"],
             "grace_days_left": access["grace_days_left"],
             # De actiekorting hoort in de app te staan, niet in een mail: een mail
-            # met een kortingscode erin belandt bij Gmail in spam.
-            "promo": find_active_promo(),
+            # met een kortingscode erin belandt bij Gmail in spam. Via een aparte
+            # draad, want de Stripe-client wacht blokkerend op antwoord en zou
+            # anders de hele app laten stilstaan zolang die aanroep loopt.
+            "promo": await asyncio.to_thread(find_active_promo),
         }
     except Exception as e:
         import logging
