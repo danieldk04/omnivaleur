@@ -110,7 +110,8 @@ def _collect(method: str, args, token: str, exclude: list[str]) -> list[dict]:
 
 
 def discover(args) -> None:
-    methods = list(src.SOURCES) if args.method == "all" else [args.method]
+    chosen = args.method if isinstance(args.method, list) else [args.method]
+    methods = list(src.SOURCES) if "all" in chosen else chosen
     # 'dork' is de enige bron zonder Apify; alleen daarvoor mag de token ontbreken.
     token = "" if methods == ["dork"] else _need("APIFY_TOKEN")
 
