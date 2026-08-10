@@ -395,7 +395,7 @@
     [/\b(tas|tassen|handtas|schoudertas|rugzak|bag|bags|backpack)\b/, ["bags", "handbags", "backpacks"]],
   ];
 
-  const { step, qs, sleep, waitForEl, fillInput, fillDescription, uploadPhotos, submitListing, clog }
+  const { step, qs, sleep, waitUntil, waitForEl, fillInput, fillDescription, uploadPhotos, submitListing, clog }
     = window.CL;
 
   // ⚠ ALLE const/let van dit bestand horen hierboven de `await` hieronder te
