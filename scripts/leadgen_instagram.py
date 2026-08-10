@@ -318,47 +318,80 @@ Antwoord met UITSLUITEND JSON:
 REJECT_TYPES = {"kringloop", "meubels", "consument", "influencer", "merk"}
 
 
-def _classify_rows(rows: list[dict], min_confidence: int, quiet: bool = False) -> list[dict]:
-    import anthropic
-    from backend.config import settings
-
-    client = anthropic.Anthropic(api_key=settings.anthropic_api_key)
-    leads = []
-    for i, row in enumerate(rows, 1):
-        prompt = PROMPT.format(
-            handle=row["handle"],
-            full_name=row.get("full_name") or "(leeg)",
-            followers=row.get("followers") or 0,
-            posts=row.get("posts") or 0,
-            bio=row.get("bio") or "(leeg)",
-            website=row.get("website") or "(geen)",
-            category=row.get("category") or "(geen)",
-            email=row.get("email") or "(geen)",
-            captions=" | ".join(row.get("captions") or []) or "(geen)",
-            hint=row.get("hint") or row.get("source") or "(onbekend)",
+def _judge(client, row: dict) -> dict | None:
+    prompt = PROMPT.format(
+        handle=row["handle"],
+        full_name=row.get("full_name") or "(leeg)",
+        followers=row.get("followers") or 0,
+        posts=row.get("posts") or 0,
+        bio=row.get("bio") or "(leeg)",
+        website=row.get("website") or "(geen)",
+        category=row.get("category") or "(geen)",
+        email=row.get("email") or "(geen)",
+        captions=" | ".join(row.get("captions") or []) or "(geen)",
+        hint=row.get("hint") or row.get("source") or "(onbekend)",
+    )
+    try:
+        resp = client.messages.create(
+            model="claude-haiku-4-5-20251001",
+            max_tokens=400,
+            messages=[{"role": "user", "content": prompt}],
         )
-        try:
-            resp = client.messages.create(
-                model="claude-haiku-4-5-20251001",
-                max_tokens=400,
-                messages=[{"role": "user", "content": prompt}],
-            )
-            verdict = json.loads(re.search(r"\{.*\}", resp.content[0].text, re.S).group(0))
-        except Exception as e:  # noqa: BLE001
-            print(f"  ! @{row['handle']}: {e}")
-            continue
+        return json.loads(re.search(r"\{.*\}", resp.content[0].text, re.S).group(0))
+    except Exception as e:  # noqa: BLE001
+        print(f"  ! @{row['handle']}: {e}")
+        return None
 
-        vtype = (verdict.get("verkopertype") or "onduidelijk").lower()
-        keep = (verdict.get("is_lead")
+
+def _keep(verdict: dict, min_confidence: int) -> bool:
+    vtype = (verdict.get("verkopertype") or "onduidelijk").lower()
+    return bool(verdict.get("is_lead")
                 and verdict.get("confidence", 0) >= min_confidence
                 and vtype not in REJECT_TYPES
                 and verdict.get("verzendbaar") is not False
                 and verdict.get("commercieel") is not False)
-        if not quiet:
-            why = vtype if not keep else ""
-            print(f"[{i}/{len(rows)}] {'✓' if keep else '·'} @{row['handle']:26s} "
-                  f"{why:12s} {verdict.get('reden', '')[:52]}")
-        if keep:
+
+
+def _classify_rows(rows: list[dict], min_confidence: int, quiet: bool = False,
+                   workers: int = 8) -> list[dict]:
+    """Beoordeel elke rij en geef de gekwalificeerde leads terug.
+
+    Het oordeel wordt op de rij zelf bewaard onder "verdict". Een account dat al een
+    keer beoordeeld is, wordt niet opnieuw aan het model voorgelegd — de bio van
+    gisteren levert vandaag hetzelfde antwoord, en een tweede run betaalde eerder
+    voor honderdvijftig herhalingen om er tien nieuwe bij te vinden.
+    """
+    import anthropic
+    from backend.config import settings
+
+    client = anthropic.Anthropic(api_key=settings.anthropic_api_key)
+    todo = [r for r in rows if not r.get("verdict")]
+    cached = len(rows) - len(todo)
+    if cached and not quiet:
+        print(f"  {cached} accounts waren al beoordeeld, die sla ik over")
+
+    if todo:
+        done = 0
+        with ThreadPoolExecutor(max_workers=workers) as pool:
+            futures = {pool.submit(_judge, client, row): row for row in todo}
+            for future in as_completed(futures):
+                row = futures[future]
+                verdict = future.result()
+                done += 1
+                if not verdict:
+                    continue
+                row["verdict"] = verdict
+                if not quiet:
+                    keep = _keep(verdict, min_confidence)
+                    why = "" if keep else (verdict.get("verkopertype") or "?").lower()
+                    print(f"[{done}/{len(todo)}] {'✓' if keep else '·'} "
+                          f"@{row['handle']:26s} {why:12s} "
+                          f"{verdict.get('reden', '')[:52]}", flush=True)
+
+    leads = []
+    for row in rows:
+        verdict = row.get("verdict")
+        if verdict and _keep(verdict, min_confidence):
             leads.append({
                 **{k: row.get(k) for k in
                    ("handle", "method", "source", "full_name", "followers",
@@ -370,10 +403,16 @@ def _classify_rows(rows: list[dict], min_confidence: int, quiet: bool = False) -
 
 
 def classify(args) -> None:
-    rows = _load(CANDIDATES)
+    # Bewust handles.json en niet candidates.json: de oordelen worden op de rij
+    # bewaard, en alleen handles.json overleeft een volgende 'enrich'.
+    everything = _load(HANDLES)
+    rows = [r for r in everything if r.get("enriched") and not r.get("private")]
     if not rows:
-        sys.exit("Nog geen candidates.json — draai eerst 'enrich'")
+        sys.exit("Nog geen verrijkte profielen — draai eerst 'enrich'")
+
     leads = _classify_rows(rows, args.min_confidence)
+    _save(HANDLES, everything)
+    _save(CANDIDATES, rows)
     _save(LEADS, leads)
     print(f"\n{len(leads)} van {len(rows)} accounts gekwalificeerd → {LEADS}")
 
