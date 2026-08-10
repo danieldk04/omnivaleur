@@ -30,9 +30,10 @@ TWEE VALKUILEN
 DE TRECHTER — zelfde vorm als leadgen_instagram.py
   discover  verkopers met zakelijk signaal uit de categorie-sweep
   enrich    bedrijfsprofiel erbij: KvK, telefoon, e-mail, adres, over-ons, aantal advertenties
+  crosslist verkoopt hij al op meer plekken? eigen webshop, webshopsysteem, bol.com
   classify  Haiku beoordeelt op tweedehands, verzendbaar, winstmotief en NL/BE
   push      naar dezelfde Notion-Leadlist, met Platform "MP"
-  run       alle vier achter elkaar
+  run       alle vijf achter elkaar
 
 Gebruik:
     export NOTION_TOKEN=...
@@ -386,6 +387,9 @@ SHOP_SYSTEMS = {
     "Mijnwebwinkel": r"mijnwebwinkel|myonlinestore",
 }
 BOL_SEARCH = "https://www.bol.com/nl/nl/s/"
+# Een doorklik-link die niet doorklikt blijft op Marktplaats staan. Dat als "eigen
+# website" tellen maakt van elke verkoper een crosslister.
+NIET_EIGEN = ("marktplaats.nl", "2dehands.be", "2ememain.be", "admarkt.")
 
 
 def _norm(s: str) -> str:
@@ -395,7 +399,7 @@ def _norm(s: str) -> str:
 def _site_of(row: dict) -> str:
     """De eigen webshop. Staat er geen domein bij, dan is het e-maildomein het
     volgende beste bewijs — info@camera-point.nl betekent camera-point.nl."""
-    if row.get("website"):
+    if row.get("website") and not any(x in row["website"] for x in NIET_EIGEN):
         return row["website"]
     domain = (row.get("email") or "").split("@")[-1].lower()
     if domain and "." in domain and domain not in FREE_MAIL:
@@ -430,7 +434,7 @@ def _crosslist_one(client: httpx.Client, row: dict) -> dict:
                     html += r.text
             except Exception:  # noqa: BLE001
                 pass
-        if html:
+        if html and not any(x in site for x in NIET_EIGEN):
             row["site"] = site
             kanalen.append("Eigen website")
             row["shopsysteem"] = ", ".join(
@@ -513,6 +517,7 @@ Verkoper:
   gevonden in rubriek: {source}
   plaats: {plaats}
   e-mail: {email} · telefoon: {tel} · KvK: {kvk}
+  verkoopkanalen: {kanalen} · webshopsysteem: {shopsysteem}
   over ons: {over_ons}
 
 Antwoord met UITSLUITEND JSON:
@@ -544,6 +549,8 @@ def _fill(row: dict) -> str:
         email=row.get("email") or "(geen)",
         tel=row.get("tel") or "(geen)",
         kvk=row.get("kvk") or "(geen)",
+        kanalen=", ".join(row.get("kanalen") or ["Marktplaats"]),
+        shopsysteem=row.get("shopsysteem") or "(geen gevonden)",
         over_ons=row.get("over_ons") or "(leeg)",
     )
 
@@ -576,7 +583,8 @@ def classify(args) -> None:
     leads = ig._classify_rows(
         rows, args.min_confidence, fill=_fill, keep=_keep, label="name",
         carry=("seller_id", "name", "handelsnaam", "method", "source", "ads",
-               "email", "tel", "kvk", "plaats", "website"),
+               "email", "tel", "kvk", "plaats", "website", "site", "kanalen",
+               "shopsysteem", "crosslist"),
         url=lambda r: r.get("url") or PROFILE.format(sid=r["seller_id"]))
     for lead in leads:
         lead["platform"] = "MP"
@@ -607,21 +615,25 @@ def push(args) -> None:
             print(f"     {lead.get('reden', '')}")
         return
 
-    created, skipped = notion.push_leads(leads, ig._need("NOTION_TOKEN"))
-    print(f"\n{created} leads toegevoegd, {skipped} bestonden al.")
+    created, skipped = notion.push_leads(leads, ig._need("NOTION_TOKEN"),
+                                         update=args.update)
+    print(f"\n{created} leads toegevoegd, {skipped} "
+          f"{'bijgewerkt' if args.update else 'bestonden al'}.")
 
 
 def run(args) -> None:
     if not args.dry_run:
         ig._need("NOTION_TOKEN")
 
-    print("── 1/4 zoeken ─────────────────────────────────────────────")
+    print("── 1/5 zoeken ─────────────────────────────────────────────")
     discover(args)
-    print("\n── 2/4 bedrijfsprofielen ──────────────────────────────────")
+    print("\n── 2/5 bedrijfsprofielen ──────────────────────────────────")
     enrich(args)
-    print("\n── 3/4 beoordelen ─────────────────────────────────────────")
+    print("\n── 3/5 verkoopkanalen ─────────────────────────────────────")
+    crosslist(args)
+    print("\n── 4/5 beoordelen ─────────────────────────────────────────")
     classify(args)
-    print("\n── 4/4 naar Notion ────────────────────────────────────────")
+    print("\n── 5/5 naar Notion ────────────────────────────────────────")
     push(args)
 
 
@@ -650,6 +662,8 @@ def main() -> None:
                            help="alleen verkopers met een e-mailadres beoordelen")
         if psh:
             p.add_argument("--dry-run", action="store_true")
+            p.add_argument("--update", action="store_true",
+                           help="bestaande rijen bijwerken in plaats van overslaan")
         p.add_argument("--workers", type=int, default=8)
 
     d = sub.add_parser("discover", help="zakelijke verkopers uit de rubrieken halen")
@@ -659,6 +673,11 @@ def main() -> None:
     e = sub.add_parser("enrich", help="bedrijfsprofiel: KvK, telefoon, e-mail")
     common(e, enr=True)
     e.set_defaults(func=enrich)
+
+    x = sub.add_parser("crosslist",
+                       help="checkt eigen webshop, webshopsysteem en bol.com")
+    common(x, cls=True)
+    x.set_defaults(func=crosslist)
 
     c = sub.add_parser("classify", help="Haiku beoordeelt handelaar vs de rest")
     common(c, cls=True)

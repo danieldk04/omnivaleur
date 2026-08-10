@@ -32,10 +32,10 @@ def call(method: str, path: str, token: str, body: dict | None = None) -> dict:
     return r.json()
 
 
-def existing_urls(token: str) -> set[str]:
-    """Wat al in de Leadlist staat, ook handmatig toegevoegd. Zonder deze check
-    krijgt iemand bij een tweede run een tweede DM."""
-    urls: set[str] = set()
+def existing_pages(token: str) -> dict[str, str]:
+    """URL → pagina-id van alles wat al in de Leadlist staat, ook handmatig
+    toegevoegd. Zonder deze check krijgt iemand bij een tweede run een tweede DM."""
+    pages: dict[str, str] = {}
     cursor = None
     while True:
         body: dict = {"page_size": 100}
@@ -45,10 +45,14 @@ def existing_urls(token: str) -> set[str]:
         for page in data.get("results", []):
             url = (page.get("properties", {}).get("URL") or {}).get("url")
             if url:
-                urls.add(url.rstrip("/").lower())
+                pages[url.rstrip("/").lower()] = page["id"]
         if not data.get("has_more"):
-            return urls
+            return pages
         cursor = data["next_cursor"]
+
+
+def existing_urls(token: str) -> set[str]:
+    return set(existing_pages(token))
 
 
 # De namen hieronder zijn overgenomen uit de LIVE database (2026-08-10). Notion
@@ -80,7 +84,9 @@ def _properties(lead: dict) -> dict:
         f"{lead['ads']} advertenties" if lead.get("ads") else "",
         lead.get("verkopertype"),
         f"gevonden via {lead.get('source') or lead.get('method')}",
-        lead.get("website"), lead.get("email"), lead.get("tel"),
+        ("verkoopt op " + ", ".join(lead["kanalen"])) if lead.get("kanalen") else "",
+        (lead.get("shopsysteem") or "") and f"webshop op {lead['shopsysteem']}",
+        lead.get("site") or lead.get("website"), lead.get("email"), lead.get("tel"),
         f"KvK {lead['kvk']}" if lead.get("kvk") else "",
         lead.get("reden"),
     ] if x)
@@ -102,6 +108,12 @@ def _properties(lead: dict) -> dict:
             val = _multi(prop, lead[key])
             if val:
                 props[prop] = val
+    # Gemeten kanalen gaan vóór het vermoeden van het model: "Eigen website" komt
+    # hier uit een webshop die echt is opgehaald, niet uit een gok op een bio.
+    if lead.get("kanalen"):
+        val = _multi("Verkoopt op", ", ".join(lead["kanalen"]))
+        if val:
+            props["Verkoopt op"] = val
     return props
 
 
@@ -111,14 +123,30 @@ def _label(lead: dict) -> str:
     return f"@{handle}" if handle else (lead.get("full_name") or lead.get("name") or "?")
 
 
-def push_leads(leads: list[dict], token: str) -> tuple[int, int]:
-    """Maak een Notion-pagina per lead. Geeft (aangemaakt, overgeslagen) terug."""
-    seen = existing_urls(token)
-    print(f"{len(seen)} bestaande leads in Notion, die sla ik over")
+def push_leads(leads: list[dict], token: str,
+               update: bool = False) -> tuple[int, int]:
+    """Maak een Notion-pagina per lead. Geeft (aangemaakt, overgeslagen) terug.
+
+    Met update=True worden bestaande rijen bijgewerkt in plaats van overgeslagen.
+    Dat overschrijft de door de pijplijn zelf geschreven velden — handig als er
+    nieuwe informatie bij komt, maar zet het niet standaard aan: wat Daniel met de
+    hand in een rij heeft gezet mag niet zomaar verdwijnen."""
+    seen = existing_pages(token)
+    print(f"{len(seen)} bestaande leads in Notion, "
+          f"{'die werk ik bij' if update else 'die sla ik over'}")
 
     created = skipped = 0
     for lead in leads:
-        if lead["ig_url"].rstrip("/").lower() in seen:
+        page_id = seen.get(lead["ig_url"].rstrip("/").lower())
+        if page_id and update:
+            try:
+                call("PATCH", f"/pages/{page_id}", token,
+                     {"properties": _properties(lead)})
+                skipped += 1
+            except Exception as e:  # noqa: BLE001
+                print(f"  ! {_label(lead)}: {e}")
+            continue
+        if page_id:
             skipped += 1
             continue
         try:
