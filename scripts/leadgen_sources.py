@@ -210,12 +210,17 @@ def from_hashtag(hashtags: list[str] | None = None, per_tag: int = 40,
     koper is. De hashtagkeuze doet dus het meeste werk — kies woorden die een
     verkoper gebruikt en een koper niet.
     """
+    tags = list(hashtags or HASHTAGS)
+    # Elke tag is een losse actor-run die vooral staat te wachten; ze tegelijk starten
+    # kost hetzelfde en scheelt de optelsom van alle wachttijden.
+    with ThreadPoolExecutor(max_workers=6) as pool:
+        results = list(pool.map(lambda tag: _run(HASHTAG_ACTOR, {
+            "hashtags": [tag], "resultsType": "posts", "resultsLimit": per_tag,
+        }, token), tags))
+
     out: list[dict] = []
     seen: set[str] = set()
-    for tag in (hashtags or HASHTAGS):
-        rows = _run(HASHTAG_ACTOR, {
-            "hashtags": [tag], "resultsType": "posts", "resultsLimit": per_tag,
-        }, token)
+    for tag, rows in zip(tags, results):
         new = 0
         for row in rows:
             # Sommige actors melden een quotum-overschrijding als gewone datarij in
