@@ -456,9 +456,7 @@
       if (colEl && !(colEl.value || "").trim()) {
         // Neem meteen mee wat we op dat moment ZAGEN, anders is de melding niet
         // te herleiden zonder de gebruiker om een schermafbeelding te vragen.
-        const opts = colourOptionEls();
-        gaps.push(`kleur (${item.color || "leeg"}; ${opts.length} opties zichtbaar` +
-                  (opts.length ? `, bv. ${opts.slice(0, 3).map(e => e.textContent.trim()).join("/")}` : "") + ")");
+        gaps.push(`kleur (${item.color || "leeg"} — ${kleurDiagnose})`);
       }
       if (gaps.length) {
         throw new Error("Vinted kon deze velden niet invullen: " + gaps.join(", ") +
