@@ -1635,7 +1635,7 @@
       // trigger — which is exactly how colour kept ending up empty while every
       // other field was filled. Dismiss it ourselves first, every attempt.
       const outside = qs('input[data-testid="title--input"]');
-      if (outside) { realClickEl(outside); await sleep(600); }
+      if (outside) { realClickEl(outside); await sleep(400); }
       // Momentopname NA het sluiten van andere panelen: alles wat hierna
       // verschijnt hoort bij de kleur.
       voorafBekend = new Set(anyOptionEls());
