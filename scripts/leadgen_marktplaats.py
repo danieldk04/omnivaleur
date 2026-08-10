@@ -283,16 +283,35 @@ def _ad_count(client: httpx.Client, sid: int) -> int:
 
 
 def _enrich_one(client: httpx.Client, row: dict) -> dict:
-    prof = _profile(client, row["seller_id"])
-    if not prof:
-        row["fails"] = row.get("fails", 0) + 1
-        if row["fails"] >= MAX_FAILS:
-            row["dead"] = True
+    prof, retry = _profile(client, row["seller_id"])
+    if prof:
+        row.update(prof)
+
+    if not row.get("email"):
+        mail, domain = _site_email(client, row.get("site_link", ""))
+        if domain:
+            row["website"] = domain
+        if mail:
+            row["email"] = mail
+            row["email_bron"] = "webshop"
+    # De doorklik-link is anderhalve kilobyte per verkoper en heeft na dit moment
+    # geen waarde meer; het domein zelf wel.
+    row.pop("site_link", None)
+
+    if prof or row.get("email"):
+        row["ads"] = _ad_count(client, row["seller_id"])
+        row["url"] = PROFILE.format(sid=row["seller_id"])
+        row["enriched"] = True
         return row
-    row.update(prof)
-    row["ads"] = _ad_count(client, row["seller_id"])
-    row["url"] = PROFILE.format(sid=row["seller_id"])
-    row["enriched"] = True
+
+    if not retry:
+        # Profielpagina laadde prima maar bevat geen bedrijfsgegevens, en er is
+        # ook geen webshop met een adres. Morgen opnieuw kijken helpt niet.
+        row["dead"] = True
+        return row
+    row["fails"] = row.get("fails", 0) + 1
+    if row["fails"] >= MAX_FAILS:
+        row["dead"] = True
     return row
 
 
