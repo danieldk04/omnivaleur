@@ -105,6 +105,12 @@ def _properties(lead: dict) -> dict:
     return props
 
 
+def _label(lead: dict) -> str:
+    """Instagram-leads hebben een handle, Marktplaats-leads een handelsnaam."""
+    handle = lead.get("handle")
+    return f"@{handle}" if handle else (lead.get("full_name") or lead.get("name") or "?")
+
+
 def push_leads(leads: list[dict], token: str) -> tuple[int, int]:
     """Maak een Notion-pagina per lead. Geeft (aangemaakt, overgeslagen) terug."""
     seen = existing_urls(token)
@@ -119,7 +125,7 @@ def push_leads(leads: list[dict], token: str) -> tuple[int, int]:
             call("POST", "/pages", token,
                  {"parent": {"database_id": NOTION_DB}, "properties": _properties(lead)})
             created += 1
-            print(f"  + @{lead['handle']}")
+            print(f"  + {_label(lead)}")
         except Exception as e:  # noqa: BLE001 — één afgekeurde lead mag de rest niet stoppen
-            print(f"  ! @{lead['handle']}: {e}")
+            print(f"  ! {_label(lead)}: {e}")
     return created, skipped

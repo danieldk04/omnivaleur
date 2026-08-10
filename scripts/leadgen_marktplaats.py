@@ -233,6 +233,9 @@ JUNK_MAIL = re.compile(r"\.(png|jpe?g|webp|gif|svg)$|^[a-f0-9]{16,}@|sentry|exam
                        re.I)
 CONTACT_PATHS = ("", "/contact", "/contact/", "/pages/contact", "/contact-us",
                  "/over-ons", "/algemene-voorwaarden")
+FREE_MAIL = {"gmail.com", "hotmail.com", "hotmail.nl", "outlook.com", "outlook.nl",
+             "live.nl", "ziggo.nl", "kpnmail.nl", "home.nl", "telfort.nl",
+             "yahoo.com", "icloud.com", "planet.nl", "xs4all.nl", "upcmail.nl"}
 
 
 def _site_email(client: httpx.Client, link: str) -> tuple[str, str]:
@@ -400,8 +403,11 @@ Antwoord met UITSLUITEND JSON:
   "je_jullie": "Je|Jullie",
   "language": "NL|EN"}}"""
 
+# "veilinghuis" staat niet in de lijst die de prompt aanbiedt, maar het model
+# verzint hem toch voor Catawiki-achtigen. Onbekende typen wegfilteren kan niet —
+# "onduidelijk" is soms een prima lead — dus deze er met naam bij.
 REJECT_TYPES = {"verhuur", "diensten", "voertuigen", "meubels", "kringloop",
-                "fabrikant", "particulier"}
+                "fabrikant", "particulier", "veilinghuis", "veiling"}
 
 
 def _fill(row: dict) -> str:

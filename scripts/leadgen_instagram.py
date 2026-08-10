@@ -335,8 +335,8 @@ Antwoord met UITSLUITEND JSON:
 REJECT_TYPES = {"kringloop", "meubels", "consument", "influencer", "merk"}
 
 
-def _judge(client, row: dict) -> dict | None:
-    prompt = PROMPT.format(
+def _fill(row: dict) -> str:
+    return PROMPT.format(
         handle=row["handle"],
         full_name=row.get("full_name") or "(leeg)",
         followers=row.get("followers") or 0,
@@ -348,6 +348,10 @@ def _judge(client, row: dict) -> dict | None:
         captions=" | ".join(row.get("captions") or []) or "(geen)",
         hint=row.get("hint") or row.get("source") or "(onbekend)",
     )
+
+
+def _judge(client, row: dict, fill=None) -> dict | None:
+    prompt = (fill or _fill)(row)
     try:
         resp = client.messages.create(
             model="claude-haiku-4-5-20251001",
@@ -356,7 +360,7 @@ def _judge(client, row: dict) -> dict | None:
         )
         return json.loads(re.search(r"\{.*\}", resp.content[0].text, re.S).group(0))
     except Exception as e:  # noqa: BLE001
-        print(f"  ! @{row['handle']}: {e}")
+        print(f"  ! {row.get('handle') or row.get('name')}: {e}")
         return None
 
 
@@ -370,7 +374,10 @@ def _keep(verdict: dict, min_confidence: int) -> bool:
 
 
 def _classify_rows(rows: list[dict], min_confidence: int, quiet: bool = False,
-                   workers: int = 8) -> list[dict]:
+                   workers: int = 8, fill=None, keep=None, label="handle",
+                   carry=("handle", "method", "source", "full_name", "followers",
+                          "bio", "email", "website"),
+                   url=lambda r: f"https://www.instagram.com/{r['handle']}/") -> list[dict]:
     """Beoordeel elke rij en geef de gekwalificeerde leads terug.
 
     Het oordeel wordt op de rij zelf bewaard onder "verdict". Een account dat al een
@@ -381,6 +388,7 @@ def _classify_rows(rows: list[dict], min_confidence: int, quiet: bool = False,
     import anthropic
     from backend.config import settings
 
+    keep = keep or _keep
     client = anthropic.Anthropic(api_key=settings.anthropic_api_key)
     todo = [r for r in rows if not r.get("verdict")]
     cached = len(rows) - len(todo)
@@ -390,7 +398,7 @@ def _classify_rows(rows: list[dict], min_confidence: int, quiet: bool = False,
     if todo:
         done = 0
         with ThreadPoolExecutor(max_workers=workers) as pool:
-            futures = {pool.submit(_judge, client, row): row for row in todo}
+            futures = {pool.submit(_judge, client, row, fill): row for row in todo}
             for future in as_completed(futures):
                 row = futures[future]
                 verdict = future.result()
@@ -399,21 +407,19 @@ def _classify_rows(rows: list[dict], min_confidence: int, quiet: bool = False,
                     continue
                 row["verdict"] = verdict
                 if not quiet:
-                    keep = _keep(verdict, min_confidence)
-                    why = "" if keep else (verdict.get("verkopertype") or "?").lower()
-                    print(f"[{done}/{len(todo)}] {'✓' if keep else '·'} "
-                          f"@{row['handle']:26s} {why:12s} "
+                    ok = keep(verdict, min_confidence)
+                    why = "" if ok else (verdict.get("verkopertype") or "?").lower()
+                    print(f"[{done}/{len(todo)}] {'✓' if ok else '·'} "
+                          f"{str(row.get(label))[:26]:26s} {why:12s} "
                           f"{verdict.get('reden', '')[:52]}", flush=True)
 
     leads = []
     for row in rows:
         verdict = row.get("verdict")
-        if verdict and _keep(verdict, min_confidence):
+        if verdict and keep(verdict, min_confidence):
             leads.append({
-                **{k: row.get(k) for k in
-                   ("handle", "method", "source", "full_name", "followers",
-                    "bio", "email", "website")},
-                "ig_url": f"https://www.instagram.com/{row['handle']}/",
+                **{k: row.get(k) for k in carry},
+                "ig_url": url(row),
                 **verdict,
             })
     return leads
