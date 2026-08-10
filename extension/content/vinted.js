@@ -1477,23 +1477,42 @@
   // trigger-waarde soms leeg tot het paneel dichtgaat; het vinkje is dan het
   // enige bewijs dat de klik is aangekomen.
   function colourOptionChecked(el) {
-    const box = el && el.querySelector('input[type="checkbox"], input[type="radio"]');
-    return !!(box && box.checked);
+    if (!el) return false;
+    const box = el.querySelector('input[type="checkbox"], input[type="radio"]');
+    if (box && box.checked) return true;
+    if (el.getAttribute?.("aria-checked") === "true") return true;
+    if (el.getAttribute?.("aria-selected") === "true") return true;
+    return !!el.querySelector('[aria-checked="true"], [aria-selected="true"]');
   }
 
-  // Klik de optie zoals Vinted het verwacht: het aanvinkvakje zelf gaat vóór de
-  // omhullende rij (een klik op de div bereikt Reacts handler niet), daarna het
-  // kleurbolletje en als laatste de rij.
+  // Eén klik, en dan STOPPEN zodra er iets gebeurt.
+  //
+  // Dit was de eigenlijke oorzaak dat de kleur leeg bleef. De oude versie klikte
+  // net zo lang door tot het kleurveld een waarde toonde — maar bij een
+  // kleurtegel vult Vinted dat veld pas als het paneel dichtgaat. De eerste klik
+  // vinkte de kleur dus gewoon aan, wij zagen "nog leeg", klikten nóg een keer,
+  // en zetten hem daarmee weer uít. Even vaak aan als uit = leeg.
+  //
+  // Daarom kijken we nu of de tegel zélf reageert: verandert er iets in die tegel
+  // (vinkje, aria-status, een klasse, een vinkicoon), dan is de klik aangekomen
+  // en houden we onmiddellijk op met klikken.
   async function clickColourOption(opt, isSet) {
-    const box = opt.querySelector('input[type="checkbox"], input[type="radio"]');
-    if (box) { box.click(); await sleep(400); if (isSet()) return true; }
-    humanClickEl(opt); await sleep(400); if (isSet()) return true;
-    const bubble = opt.querySelector('[data-testid^="color_code_"]');
-    if (bubble) { humanClickEl(bubble); await sleep(400); if (isSet()) return true; }
-    const inner = opt.querySelector('[class*="color-select-item"]')
-      || opt.querySelector('[class*="web_ui__Cell__title"]')
-      || opt.firstElementChild;
-    if (inner) { humanClickEl(inner); await sleep(400); }
+    const targets = [
+      opt.querySelector('input[type="checkbox"], input[type="radio"]'),
+      opt,
+      opt.querySelector('[data-testid^="color_code_"]'),
+      opt.querySelector('[class*="color-select-item"]')
+        || opt.querySelector('[class*="web_ui__Cell__title"]')
+        || opt.firstElementChild,
+    ].filter((el, i, arr) => el && arr.indexOf(el) === i);
+
+    for (const t of targets) {
+      const voor = opt.outerHTML;
+      if (t.tagName === "INPUT") t.click(); else humanClickEl(t);
+      await sleep(450);
+      // De tegel is van uiterlijk of status veranderd → de klik is aangekomen.
+      if (opt.outerHTML !== voor || colourOptionChecked(opt) || isSet()) return true;
+    }
     return isSet();
   }
 
