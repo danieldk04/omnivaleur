@@ -990,7 +990,9 @@ async function processJob(job, serverUrl) {
     // overwrote the first tab's job data, so two listings published with each
     // other's photos, prices, titles and descriptions. Per-tab keying makes that
     // impossible even if two tabs ever run at once.
-    chrome.storage.local.set({ [`jobtab_${tab.id}`]: { ...job, jobId: job.id, serverUrl } });
+    chrome.storage.local.set({
+      [`jobtab_${tab.id}`]: { ...job, jobId: job.id, serverUrl, startedAt: Date.now() },
+    });
     armJobWatchdog(tab.id);
   });
 }
