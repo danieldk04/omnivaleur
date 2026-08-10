@@ -39,12 +39,25 @@ except Exception:  # pragma: no cover - afhankelijk van de stripe-versie
 # aangepast hoeft te worden.
 PROMO_CODE = "OMNIVALEUR25"
 
+# De actie verandert vrijwel nooit, maar de statuscontrole draait bij elke
+# schermverversing. Zonder deze kortstondige onthouding zou elke gebruiker elke
+# keer een aanroep naar Stripe uitlokken, en dat is precies het soort wachten dat
+# de hele app eerder liet vastlopen.
+_PROMO_CACHE_TTL = 300
+_promo_cache: tuple[float, dict | None] | None = None
+
 
 def find_active_promo() -> dict | None:
     """De actieve actiecode uit Stripe, of None. Nooit hard falen: een storing bij
     het ophalen van een korting mag het afrekenen niet blokkeren."""
+    global _promo_cache
+
     if not settings.stripe_secret_key:
         return None
+    import time as _time
+
+    if _promo_cache and _promo_cache[0] > _time.monotonic():
+        return _promo_cache[1]
     try:
         codes = stripe.PromotionCode.list(code=PROMO_CODE, active=True, limit=1)
     except Exception:
