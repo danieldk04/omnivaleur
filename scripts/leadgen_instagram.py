@@ -149,8 +149,16 @@ def _existing_handles_or_empty() -> list[str]:
 # ------------------------------------------------------------------ enrich
 
 
+# Na zoveel mislukte rondes (opgeteld over álle runs, niet per run) houdt een handle
+# op een kandidaat te zijn. Live gemeten: een handle die drie rondes "Could not
+# retrieve profile data" geeft, geeft dat ook in een batch van vijf en ook een dag
+# later — het account is hernoemd, verwijderd of geblokkeerd. Zonder deze grens
+# betaalt en wacht elke volgende run opnieuw voor dezelfde lijst lijken.
+MAX_FAILS = 3
+
+
 def _enrich_rows(rows: list[dict], token: str, batch: int = 25,
-                 attempts: int = 3) -> list[dict]:
+                 attempts: int = 2, workers: int = 4) -> list[dict]:
     """Handle → volledig profiel. Hashtag- en dork-bronnen leveren alleen een naam;
     zonder bio kan de classificatie een winkel niet van een koper onderscheiden.
 
