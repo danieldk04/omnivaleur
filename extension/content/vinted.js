@@ -1026,8 +1026,19 @@
   // kwamen beschrijving en kleur soms leeg door terwijl de stap zelf "ok"
   // meldde. In plaats van te raden wélke stap dat was, meten we aan het einde
   // gewoon na wat er écht in het formulier staat en vullen we opnieuw aan.
+  //
+  // Deze ronde heeft een tijdslot. Elk herstel is zelf al een reeks pogingen, en
+  // drie rondes van alles konden samen de hele beschikbare tijd opsouperen —
+  // dan stond het formulier keurig gevuld op het scherm maar werd er nooit meer
+  // geplaatst. Vullen wat kan, en op tijd doorgaan naar Plaatsen.
   async function repairEmptyFieldsVinted(item, wantTitle) {
+    const deadline = Date.now() + 45000;
+    let kleurHersteld = 0;
     for (let round = 0; round < 3; round++) {
+      if (Date.now() > deadline) {
+        clog("eindcontrole: tijd op, door naar plaatsen");
+        return false;
+      }
       const titleEl = qs('input[data-testid="title--input"]');
       const descEl  = qs('textarea[data-testid="description--input"]');
       const priceEl = qs('input[data-testid="price-input--input"]');
