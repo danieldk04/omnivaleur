@@ -1,0 +1,471 @@
+#!/usr/bin/env python3
+"""
+Leadgen voor Omnivaleur uit Marktplaats — verreweg de grootste bron.
+
+WAAROM DEZE BRON BESTAAT
+Instagram leverde live gemeten 411 handles, 194 profielen, 15 leads en NUL
+e-mailadressen; er is daar alleen handmatig DM'en. Marktplaats gaf in vier minuten
+scrapen 263.000 advertenties, 88.000 verkopers, 978 zakelijke verkopers en ruim
+350 directe e-mailadressen. Dat is geen verbetering maar een andere orde van grootte.
+
+DE DRIE DINGEN DIE DIT MOGELIJK MAKEN (alle drie live getest, 2026-08-10)
+  1. De interne zoek-API van Marktplaats geeft 100 advertenties per verzoek als JSON:
+     /lrp/api/search?l1CategoryId=..&l2CategoryId=..&limit=100&offset=..
+     Dat is drie keer zoveel als een HTML-pagina en er is geen sleutel voor nodig.
+  2. Elke advertentie draagt al een ZAKELIJK-SIGNAAL mee (showWebsiteUrl / isVerified).
+     Met dat vlaggetje is 72% van de verkopers echt zakelijk, zonder is dat 3%.
+     Dat filter kost geen enkel extra verzoek en scheelt een factor 25 aan werk.
+  3. Van zakelijke verkopers staat het bedrijfsprofiel open: KvK bij 100%, telefoon
+     bij 94%, e-mailadres bij 37%, plus handelsnaam, adres en een "over ons"-tekst.
+     Particulieren hebben geen bedrijfsprofiel — dat het bestaat IS de zakelijk-toets.
+
+TWEE VALKUILEN
+  * De API stopt na 50 pagina's (5.000 advertenties) per categorie. Daarom sweept
+    'discover' per SUBcategorie: elke subcategorie heeft zijn eigen plafond. Live
+    gemeten leverde de subcategorie-ronde 451 nieuwe verkopers op 497 gevonden.
+  * Categorie-ID's mag je niet gokken. 1032 lijkt kleding maar is Huizen en Kamers;
+    een hele meting ging daardoor de eerste keer over verhuurbedrijven. De ID's
+    hieronder komen uit `searchCategory` in de HTML van /l/{slug}/ en zijn nagelopen.
+
+DE TRECHTER — zelfde vorm als leadgen_instagram.py
+  discover  verkopers met zakelijk signaal uit de categorie-sweep
+  enrich    bedrijfsprofiel erbij: KvK, telefoon, e-mail, adres, over-ons, aantal advertenties
+  classify  Haiku beoordeelt op tweedehands, verzendbaar, winstmotief en NL/BE
+  push      naar dezelfde Notion-Leadlist, met Platform "MP"
+  run       alle vier achter elkaar
+
+Gebruik:
+    export NOTION_TOKEN=...
+    python3 scripts/leadgen_marktplaats.py run --dry-run
+    python3 scripts/leadgen_marktplaats.py run
+"""
+from __future__ import annotations
+
+import argparse
+import json
+import re
+import sys
+import time
+from concurrent.futures import ThreadPoolExecutor, as_completed
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).parent.parent))
+
+import httpx  # noqa: E402
+
+from scripts import leadgen_instagram as ig  # noqa: E402
+from scripts import leadgen_notion as notion  # noqa: E402
+
+OUT = Path(__file__).parent / "output" / "leads"
+SELLERS = OUT / "mp_sellers.json"
+MP_LEADS = OUT / "mp_leads.json"
+
+API = "https://www.marktplaats.nl/lrp/api/search"
+PROFILE = "https://www.marktplaats.nl/smb-profile/profile/{sid}"
+SELLER_PAGE = "https://www.marktplaats.nl/u/x/{sid}/"
+UA = ("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 "
+      "(KHTML, like Gecko) Chrome/122.0 Safari/537.36")
+
+# Alleen rubrieken met VERZENDBARE spullen. Huis-en-inrichting (1,6 miljoen
+# advertenties) en antiek staan er bewust niet bij: banken en kasten gaan niet in
+# een doos, en dat is precies de groep die de classificatie toch weer wegfiltert.
+CATEGORIES = {
+    "kleding-dames": 621,
+    "kleding-heren": 1776,
+    "sieraden-tassen-en-uiterlijk": 1826,
+    "spelcomputers-en-games": 356,
+    "audio-tv-en-foto": 31,
+    "telecommunicatie": 820,
+    "computers-en-software": 322,
+    "sport-en-fitness": 784,
+    "muziek-en-instrumenten": 728,
+    "verzamelen": 895,
+    "boeken": 201,
+}
+
+PAGE = 100
+API_CAP = 5000          # 50 pagina's; daarboven geeft de API lege lijsten terug
+MAX_FAILS = 3
+
+
+def _client() -> httpx.Client:
+    return httpx.Client(headers={"User-Agent": UA}, timeout=30.0,
+                        follow_redirects=True)
+
+
+def _load(path: Path) -> list[dict]:
+    return json.loads(path.read_text()) if path.exists() else []
+
+
+def _save(path: Path, rows: list) -> None:
+    OUT.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(rows, indent=2, ensure_ascii=False))
+
+
+# ---------------------------------------------------------------- discover
+
+
+def _search(client: httpx.Client, l1: int, l2: int | None, offset: int) -> list[dict]:
+    params = {"l1CategoryId": l1, "limit": PAGE, "offset": offset}
+    if l2:
+        params["l2CategoryId"] = l2
+    try:
+        r = client.get(API, params=params)
+        if r.status_code != 200:
+            return []
+        return r.json().get("listings") or []
+    except Exception:  # noqa: BLE001 — één lege pagina mag de sweep niet stoppen
+        return []
+
+
+def _subcategories(client: httpx.Client, l1: int) -> list[tuple[int, str]]:
+    try:
+        d = client.get(API, params={"l1CategoryId": l1, "limit": 1}).json()
+    except Exception:  # noqa: BLE001
+        return []
+    return [(o["id"], o.get("name") or "") for o in (d.get("searchCategoryOptions") or [])
+            if o.get("id") and o["id"] != l1]
+
+
+def discover(args) -> None:
+    existing = _load(SELLERS)
+    by_id = {r["seller_id"]: r for r in existing}
+    print(f"{len(existing)} verkopers al verzameld\n")
+
+    jobs: list[tuple[int, int | None, int, str]] = []
+    with _client() as client:
+        for slug, l1 in CATEGORIES.items():
+            if args.categories and slug not in args.categories:
+                continue
+            jobs += [(l1, None, off, slug) for off in range(0, API_CAP, PAGE)]
+            for l2, name in _subcategories(client, l1):
+                jobs += [(l1, l2, off, f"{slug}/{name}")
+                         for off in range(0, min(args.depth, API_CAP), PAGE)]
+        print(f"{len(jobs)} verzoeken over "
+              f"{len(args.categories or CATEGORIES)} rubrieken…")
+
+        seen_ads = added = 0
+        with ThreadPoolExecutor(max_workers=args.workers) as pool:
+            futures = {pool.submit(_search, client, l1, l2, off): src
+                       for l1, l2, off, src in jobs}
+            for i, future in enumerate(as_completed(futures), 1):
+                src = futures[future]
+                for listing in future.result():
+                    seen_ads += 1
+                    s = listing.get("sellerInformation") or {}
+                    sid = s.get("sellerId")
+                    # Het gratis zakelijk-filter. Zonder deze regel verrijk je
+                    # 25 particulieren voor elke handelaar.
+                    if not sid or not (s.get("showWebsiteUrl") or s.get("isVerified")):
+                        continue
+                    row = by_id.get(sid)
+                    if row:
+                        row["ads_seen"] = row.get("ads_seen", 0) + 1
+                        continue
+                    row = {"seller_id": sid, "name": s.get("sellerName") or "",
+                           "method": "marktplaats", "source": src, "ads_seen": 1}
+                    by_id[sid] = row
+                    existing.append(row)
+                    added += 1
+                if i % 200 == 0:
+                    print(f"  {i}/{len(jobs)} verzoeken, {seen_ads:,} advertenties, "
+                          f"{added} nieuwe verkopers", flush=True)
+
+    _save(SELLERS, existing)
+    print(f"\n{seen_ads:,} advertenties bekeken → {added} nieuwe zakelijke verkopers "
+          f"({len(existing)} totaal) → {SELLERS}")
+    for row in existing[-12:]:
+        print(f"  {row['name'][:34]:36s} {row['source']}")
+
+
+# ------------------------------------------------------------------ enrich
+
+
+def _text(html: str) -> str:
+    t = re.sub(r"<script.*?</script>", " ", html, flags=re.S)
+    return re.sub(r"\s+", " ", re.sub(r"<[^>]+>", " ", t))
+
+
+def _profile(client: httpx.Client, sid: int) -> dict | None:
+    """Bedrijfsprofiel. Geeft None als de verkoper particulier is — dat profiel
+    bestaat dan simpelweg niet, en dat is meteen de zakelijk-toets."""
+    try:
+        r = client.get(PROFILE.format(sid=sid))
+    except Exception:  # noqa: BLE001
+        return None
+    if r.status_code != 200:
+        return None
+    t = _text(r.text)
+    kvk = re.search(r"KVK[- ]?nummer\s*:?\s*(\d{6,10})", t, re.I)
+    btw = re.search(r"BTW[- ]?nummer\s*:?\s*([A-Z]{2}[\dA-Z]{9,14})", t, re.I)
+    tel = re.search(r"(\+31\s?\d[\d\s\-]{7,12})", t)
+    mail = re.search(r"[\w.+-]+@[\w.-]+\.\w{2,}", t)
+    plaats = re.search(r"(\d{4}\s?[A-Z]{2})\s+([A-Za-zÀ-ſ' \-]{2,30})", t)
+    if not (kvk or btw or tel):
+        return None
+    over = ""
+    m = re.search(r"Over ons\s+Alle advertenties\s+Over ons\s+(.*?)"
+                  r"(?:Vertel anderen|Contactgegevens|Bedrijfsinformatie)", t)
+    if m:
+        over = m.group(1).strip()[:900]
+    naam = re.search(r"Handelsnaam\s+(.+?)\s+(?:BTW|KVK)", t)
+    return {
+        "kvk": kvk and kvk.group(1),
+        "btw": btw and btw.group(1),
+        "tel": tel and tel.group(1).strip(),
+        "email": mail and mail.group(0).lower(),
+        "handelsnaam": naam and naam.group(1).strip(),
+        "postcode": plaats and plaats.group(1),
+        "plaats": plaats and plaats.group(2).strip(),
+        "over_ons": over,
+    }
+
+
+def _ad_count(client: httpx.Client, sid: int) -> int:
+    """Het aantal actieve advertenties is het scherpste koopsignaal dat er is:
+    crosslist-pijn schaalt recht evenredig met voorraad."""
+    try:
+        r = client.get(SELLER_PAGE.format(sid=sid))
+        m = re.search(r'"totalResultCount":(\d+)', r.text)
+        return int(m.group(1)) if m else 0
+    except Exception:  # noqa: BLE001
+        return 0
+
+
+def _enrich_one(client: httpx.Client, row: dict) -> dict:
+    prof = _profile(client, row["seller_id"])
+    if not prof:
+        row["fails"] = row.get("fails", 0) + 1
+        if row["fails"] >= MAX_FAILS:
+            row["dead"] = True
+        return row
+    row.update(prof)
+    row["ads"] = _ad_count(client, row["seller_id"])
+    row["url"] = PROFILE.format(sid=row["seller_id"])
+    row["enriched"] = True
+    return row
+
+
+def enrich(args) -> None:
+    rows = _load(SELLERS)
+    if not rows:
+        sys.exit("Nog geen mp_sellers.json — draai eerst 'discover'")
+
+    todo = [r for r in rows if not r.get("enriched") and not r.get("dead")]
+    if args.limit:
+        todo = todo[: args.limit]
+    print(f"{len(todo)} verkopers ophalen…")
+
+    with _client() as client:
+        done = 0
+        with ThreadPoolExecutor(max_workers=args.workers) as pool:
+            futures = [pool.submit(_enrich_one, client, row) for row in todo]
+            for future in as_completed(futures):
+                future.result()
+                done += 1
+                if done % 100 == 0:
+                    print(f"  {done}/{len(todo)}", flush=True)
+
+    _save(SELLERS, rows)
+    ok = [r for r in rows if r.get("enriched")]
+    met_mail = [r for r in ok if r.get("email")]
+    dood = [r for r in rows if r.get("dead")]
+    print(f"\n{len(ok)} zakelijke profielen ({len(met_mail)} met e-mailadres, "
+          f"{100 * len(met_mail) // max(1, len(ok))}%)")
+    print(f"{len(dood)} verkopers bleken toch particulier of onbereikbaar")
+
+
+# ---------------------------------------------------------------- classify
+
+
+PROMPT = """Je beoordeelt of een Marktplaats-verkoper een goede lead is voor
+Omnivaleur, een tool waarmee verkopers hun advertenties in één keer op Marktplaats,
+2dehands, Vinted, eBay en Shopify zetten. De waarde zit in MEER en SNELLER verkopen,
+en die waarde is het grootst bij iemand met veel voorraad die nu alles handmatig op
+elke site apart moet zetten.
+
+Een goede lead moet aan ALLE DRIE voldoen:
+ 1. HANDEL IN VERZENDBARE SPULLEN — kleding, schoenen, sneakers, tassen, sieraden,
+    horloges, accessoires, games, consoles, elektronica, telefoons, computers,
+    boeken, verzamelobjecten, muziekinstrumenten (klein). Dus GEEN meubels, keukens,
+    banken, auto's, aanhangers, machines of andere dingen die niet in een doos gaan.
+ 2. VOORRAAD EN WINSTMOTIEF — een handelaar, niet iemand die één keer zijn zolder
+    opruimt. Meerdere advertenties, een handelsnaam, een winkel of webshop.
+ 3. NL/BE — Nederlandstalig bedrijf.
+
+Wijs af (is_lead = false):
+ * Verhuur, opslag, garageboxen, vakantiehuizen, diensten, cursussen, advies.
+ * Auto's, motoren, aanhangers, caravans, machines, bouwmaterialen.
+ * Meubel-, keuken-, interieur- en brocantehandel: onverzendbaar.
+ * Marktplaats-partners en veilinghuizen (Catawiki en dergelijke).
+ * Grote ketens en fabrikanten die uitsluitend nieuwe eigen producten verkopen.
+ * Kringloopwinkels en goede doelen: geen winstmotief, verzenden meestal niet.
+
+De ideale lead is de handelaar in tweedehands of restpartijen: iemand met tientallen
+advertenties in kleding, sneakers, games of elektronica die ook op Vinted of eBay
+zou kunnen staan maar daar nu de tijd niet voor heeft.
+
+Verkoper:
+  {naam} (handelsnaam: {handelsnaam})
+  actieve advertenties op Marktplaats: {ads}
+  gevonden in rubriek: {source}
+  plaats: {plaats}
+  e-mail: {email} · telefoon: {tel} · KvK: {kvk}
+  over ons: {over_ons}
+
+Antwoord met UITSLUITEND JSON:
+{{"is_lead": true/false,
+  "confidence": 0-100,
+  "verkopertype": "handelaar|webshop|winkel|verhuur|diensten|voertuigen|meubels|kringloop|fabrikant|particulier|onduidelijk",
+  "verzendbaar": true/false,
+  "commercieel": true/false,
+  "reden": "één zin, Nederlands",
+  "verkoopt_vooral": "Kleding|Meubilair|Alles|Antieke vintage|Hoogwaardige vintage|Vintage interieur|Sieraden|Knutselmaterialen",
+  "verkoop_op": "Marktplaats|Eigen website|Fysieke winkel|Onbekend",
+  "je_jullie": "Je|Jullie",
+  "language": "NL|EN"}}"""
+
+REJECT_TYPES = {"verhuur", "diensten", "voertuigen", "meubels", "kringloop",
+                "fabrikant", "particulier"}
+
+
+def _fill(row: dict) -> str:
+    return PROMPT.format(
+        naam=row.get("name") or "(leeg)",
+        handelsnaam=row.get("handelsnaam") or "(onbekend)",
+        ads=row.get("ads") or row.get("ads_seen") or 0,
+        source=row.get("source") or "(onbekend)",
+        plaats=row.get("plaats") or "(onbekend)",
+        email=row.get("email") or "(geen)",
+        tel=row.get("tel") or "(geen)",
+        kvk=row.get("kvk") or "(geen)",
+        over_ons=row.get("over_ons") or "(leeg)",
+    )
+
+
+def _keep(verdict: dict, min_confidence: int) -> bool:
+    vtype = (verdict.get("verkopertype") or "onduidelijk").lower()
+    return bool(verdict.get("is_lead")
+                and verdict.get("confidence", 0) >= min_confidence
+                and vtype not in REJECT_TYPES
+                and verdict.get("verzendbaar") is not False
+                and verdict.get("commercieel") is not False)
+
+
+def classify(args) -> None:
+    everything = _load(SELLERS)
+    rows = [r for r in everything if r.get("enriched")]
+    if args.min_ads:
+        rows = [r for r in rows if (r.get("ads") or 0) >= args.min_ads]
+    if args.only_email:
+        rows = [r for r in rows if r.get("email")]
+    if not rows:
+        sys.exit("Nog geen verrijkte verkopers — draai eerst 'enrich'")
+
+    print(f"{len(rows)} verkopers beoordelen "
+          f"(vanaf {args.min_ads} advertenties"
+          f"{', alleen met e-mail' if args.only_email else ''})")
+    # Dezelfde beoordelaar als de Instagram-trechter, met een eigen prompt: het
+    # cachen, het parallel draaien en de drie-assen-toets zijn identiek en hoeven
+    # niet twee keer te bestaan.
+    leads = ig._classify_rows(
+        rows, args.min_confidence, fill=_fill, keep=_keep, label="name",
+        carry=("seller_id", "name", "handelsnaam", "method", "source", "ads",
+               "email", "tel", "kvk", "plaats", "website"),
+        url=lambda r: r.get("url") or PROFILE.format(sid=r["seller_id"]))
+    for lead in leads:
+        lead["platform"] = "MP"
+        lead["full_name"] = lead.get("handelsnaam") or lead.get("name")
+
+    _save(SELLERS, everything)
+    _save(MP_LEADS, leads)
+    print(f"\n{len(leads)} van {len(rows)} verkopers gekwalificeerd → {MP_LEADS}")
+
+
+# -------------------------------------------------------------------- push
+
+
+def push(args) -> None:
+    leads = _load(MP_LEADS)
+    if not leads:
+        sys.exit("Nog geen mp_leads.json — draai eerst 'classify'")
+    met_mail = [l for l in leads if l.get("email")]
+
+    if args.dry_run:
+        print(f"{len(leads)} leads klaar, {len(met_mail)} met e-mailadres "
+              f"(dry-run, er wordt niets weggeschreven):\n")
+        for lead in sorted(leads, key=lambda l: -(l.get("ads") or 0))[:40]:
+            print(f"  {(lead.get('handelsnaam') or lead['name'])[:32]:34s} "
+                  f"{lead.get('ads') or 0:>5} adv  "
+                  f"{lead.get('email') or lead.get('tel') or '-':32s} "
+                  f"{lead.get('verkopertype', '')}")
+            print(f"     {lead.get('reden', '')}")
+        return
+
+    created, skipped = notion.push_leads(leads, ig._need("NOTION_TOKEN"))
+    print(f"\n{created} leads toegevoegd, {skipped} bestonden al.")
+
+
+def run(args) -> None:
+    if not args.dry_run:
+        ig._need("NOTION_TOKEN")
+
+    print("── 1/4 zoeken ─────────────────────────────────────────────")
+    discover(args)
+    print("\n── 2/4 bedrijfsprofielen ──────────────────────────────────")
+    enrich(args)
+    print("\n── 3/4 beoordelen ─────────────────────────────────────────")
+    classify(args)
+    print("\n── 4/4 naar Notion ────────────────────────────────────────")
+    push(args)
+
+
+def main() -> None:
+    ap = argparse.ArgumentParser(
+        description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    sub = ap.add_subparsers(dest="cmd", required=True)
+
+    def common(p, *, disc=False, enr=False, cls=False, psh=False):
+        if disc:
+            p.add_argument("--categories", nargs="*", choices=list(CATEGORIES),
+                           help="alleen deze rubrieken")
+            p.add_argument("--depth", type=int, default=2000,
+                           help="advertenties per subcategorie (max 5000)")
+        if enr:
+            p.add_argument("--limit", type=int, default=0)
+        if cls:
+            p.add_argument("--min-confidence", type=int, default=60)
+            p.add_argument("--min-ads", type=int, default=3,
+                           help="verkopers met minder advertenties overslaan")
+            p.add_argument("--only-email", action="store_true",
+                           help="alleen verkopers met een e-mailadres beoordelen")
+        if psh:
+            p.add_argument("--dry-run", action="store_true")
+        p.add_argument("--workers", type=int, default=8)
+
+    d = sub.add_parser("discover", help="zakelijke verkopers uit de rubrieken halen")
+    common(d, disc=True)
+    d.set_defaults(func=discover)
+
+    e = sub.add_parser("enrich", help="bedrijfsprofiel: KvK, telefoon, e-mail")
+    common(e, enr=True)
+    e.set_defaults(func=enrich)
+
+    c = sub.add_parser("classify", help="Haiku beoordeelt handelaar vs de rest")
+    common(c, cls=True)
+    c.set_defaults(func=classify)
+
+    p = sub.add_parser("push", help="naar de Notion-Leadlist")
+    common(p, psh=True)
+    p.set_defaults(func=push)
+
+    r = sub.add_parser("run", help="ALLES in één keer")
+    common(r, disc=True, enr=True, cls=True, psh=True)
+    r.set_defaults(func=run)
+
+    args = ap.parse_args()
+    args.func(args)
+
+
+if __name__ == "__main__":
+    main()
