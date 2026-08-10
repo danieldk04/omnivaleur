@@ -1534,6 +1534,10 @@
     const nieuweOpties = () => anyOptionEls().filter((el) => !voorafBekend.has(el));
     const kleurOpties = () => {
       const nieuw = nieuweOpties();
+      // Staan er kleurbolletjes tussen, dan zijn díé het kleurpaneel — de rest is
+      // een ander paneel dat toevallig opnieuw getekend werd.
+      const metBolletje = nieuw.filter((el) => el.querySelector('[data-testid^="color_code_"]'));
+      if (metBolletje.length) return metBolletje;
       if (nieuw.length) return nieuw;
       return colourOptionEls(); // paneel stond al open toen we begonnen
     };
