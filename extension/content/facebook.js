@@ -68,6 +68,11 @@
     return;
   }
 
+  // Moet BOVEN de `try` staan: dit bestand is één async functie, dus alles wat
+  // eronder staat bestaat nog niet zolang de opdracht loopt — een functie die het
+  // dan gebruikt valt hard om. Zo ging de kleur op Vinted ook mis.
+  const normApos = (s) => s.replace(/[‘’ʼ]/g, "'");
+
   try {
     if (job.action === "delete") {
       await deleteListingFb(item);
