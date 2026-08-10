@@ -395,8 +395,31 @@
     [/\b(tas|tassen|handtas|schoudertas|rugzak|bag|bags|backpack)\b/, ["bags", "handbags", "backpacks"]],
   ];
 
-  const { step, qs, sleep, waitForEl, fillInput, fillDescription, uploadPhotos, submitListing }
+  const { step, qs, sleep, waitForEl, fillInput, fillDescription, uploadPhotos, submitListing, clog }
     = window.CL;
+
+  // ⚠ ALLE const/let van dit bestand horen hierboven de `await` hieronder te
+  // staan. Dit bestand is één grote async functie: zodra hij bij `await getJob()`
+  // wacht, is de rest van de regels nog niet uitgevoerd. Een const die verderop
+  // staat bestaat op dat moment dus nog NIET, en elke functie die hem gebruikt
+  // stopt met een harde fout op het moment dat hij aangeroepen wordt.
+  //
+  // Precies dat gebeurde bij de kleur: de kleurstap viel meteen om op zijn eigen
+  // veldnaam en heeft nooit ook maar één klik gedaan — vandaar dat geen enkele
+  // verbetering aan het aanklikken verschil maakte. Zet nieuwe waarden hier.
+  const COLOUR_TRIGGER_SEL = 'input[data-testid="color-select-dropdown-input"]';
+  const OTHER_TRIGGER_SEL = 'input[data-testid="category-material-multi-list-input"],'
+    + 'input[data-testid="category-condition-single-list-input"],'
+    + 'input[data-testid="brand-select-dropdown-input"],'
+    + 'input[data-testid^="category-size"]';
+  // Matching these by a loose "delete" substring would delete a photo instead of
+  // the listing — verified live 2026-07. Always exclude them.
+  const isPhotoDeleteTestid = (tid) => /media-select|grid-delete-button|image-wrapper/i.test(tid || "");
+  const WARDROBE_PER_PAGE = 96;   // ask big; Vinted may return fewer per page
+  const WARDROBE_MAX_PAGES = 60;  // ~5.7k listings — far beyond any real wardrobe
+  // Wat er bij de kleurstap gebeurde, in gewone taal — belandt in het logboek én
+  // in de foutmelding op het dashboard.
+  let kleurDiagnose = "kleurstap is niet gedraaid";
 
   const job = await getJob();
   if (!job) return;
