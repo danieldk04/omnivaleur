@@ -539,6 +539,8 @@ def main() -> None:
 
     e = sub.add_parser("enrich", help="bio/volgers/website bij de handles zoeken")
     e.add_argument("--limit", type=int, default=0)
+    e.add_argument("--retry-dead", action="store_true",
+                   help="eerder opgegeven handles tóch nog een keer proberen")
     e.set_defaults(func=enrich)
 
     c = sub.add_parser("classify", help="Haiku beoordeelt verkoper vs consument")
