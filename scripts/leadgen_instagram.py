@@ -71,6 +71,14 @@ BENCH = OUT / "bench.json"
 
 PROFILE_ACTOR = "figue~instagram-profile-scraper"
 
+# Beide standaard aan, want ze vullen elkaar aan en de derde en vierde bron doen dat
+# niet. Gemeten over 194 beoordeelde profielen (2026-08): 'local' haalt 19% leads en
+# levert élke run nieuwe handles, 'hashtag' haalt 6% en is na een paar runs leeg —
+# een hashtagpagina geeft maar ~27 posts terug, hoe hoog je --per-tag ook zet.
+# 'dork' wordt na zes zoekopdrachten geblokkeerd en 'keyword' geeft er vijf per run.
+DEFAULT_METHODS = ["hashtag", "local"]
+
+
 def _need(var: str) -> str:
     val = os.environ.get(var, "")
     if not val:
@@ -528,7 +536,7 @@ def main() -> None:
     sub = ap.add_subparsers(dest="cmd", required=True)
 
     d = sub.add_parser("discover", help="handles verzamelen uit een of alle bronnen")
-    d.add_argument("--method", default="hashtag",
+    d.add_argument("--method", nargs="+", default=DEFAULT_METHODS,
                    choices=[*src.SOURCES, "all"])
     d.add_argument("--max", type=int, default=40, help="keyword: kostenplafond")
     d.add_argument("--per-tag", type=int, default=40, help="hashtag: posts per tag")
@@ -561,7 +569,8 @@ def main() -> None:
     p.set_defaults(func=push)
 
     r = sub.add_parser("run", help="ALLES in één keer: zoeken → verrijken → beoordelen → Notion")
-    r.add_argument("--method", default="hashtag", choices=[*src.SOURCES, "all"])
+    r.add_argument("--method", nargs="+", default=DEFAULT_METHODS,
+                   choices=[*src.SOURCES, "all"])
     r.add_argument("--per-tag", type=int, default=40)
     r.add_argument("--max", type=int, default=40)
     r.add_argument("--pages", type=int, default=2)
