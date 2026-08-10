@@ -82,12 +82,14 @@ def find_active_promo() -> dict | None:
         except Exception:
             logger.exception("Kon de coupon achter de actiecode niet ophalen")
             return None
-    return {
+    result = {
         "id": promo["id"],
         "code": promo["code"],
         "percent_off": coupon.get("percent_off"),
         "expires_at": promo.get("expires_at"),
     }
+    _promo_cache = (_time.monotonic() + _PROMO_CACHE_TTL, result)
+    return result
 
 
 def _get_or_create_subscription(user_id: str) -> dict:
