@@ -210,7 +210,7 @@ def _profile(client: httpx.Client, sid: int) -> tuple[dict | None, bool]:
     mail = re.search(r"[\w.+-]+@[\w.-]+\.\w{2,}", t)
     plaats = re.search(r"(\d{4}\s?[A-Z]{2})\s+([A-Za-zÀ-ſ' \-]{2,30})", t)
     if not (kvk or btw or tel):
-        return None
+        return None, False
     over = ""
     m = re.search(r"Over ons\s+Alle advertenties\s+Over ons\s+(.*?)"
                   r"(?:Vertel anderen|Contactgegevens|Bedrijfsinformatie)", t)
