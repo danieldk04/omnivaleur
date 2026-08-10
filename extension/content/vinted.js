@@ -710,8 +710,6 @@
   // even though they were live — verified live 2026-07 on item 8557510561.
   // Only "walked every page without a hit" may return false; any page that
   // fails to load returns null (unknown), never false.
-  const WARDROBE_PER_PAGE = 96;   // ask big; Vinted may return fewer per page
-  const WARDROBE_MAX_PAGES = 60;  // ~5.7k listings — far beyond any real wardrobe
 
   async function isInWardrobe(userId, listingId) {
     const want = String(listingId);
