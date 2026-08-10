@@ -353,6 +353,130 @@ def enrich(args) -> None:
     print(f"{len(dood)} verkopers bleken toch particulier of onbereikbaar")
 
 
+# -------------------------------------------------------------- crosslist
+
+
+# Draait de vraag om die er echt toe doet: verkoopt deze handelaar al op meer dan
+# één plek? Zo ja, dan doet hij nu handmatig precies wat Omnivaleur automatiseert.
+#
+# WAT WEL EN NIET TE METEN VALT (live getest 2026-08-10):
+#   eigen webshop  WERKT. Te herleiden uit de doorklik-link van Marktplaats of
+#                  anders uit het e-maildomein. Bij 258 van 381 leads te vinden.
+#                  Webshop + Marktplaats is per definitie al crosslisten.
+#   webshopsysteem WERKT. Shopify, WooCommerce, Lightspeed, Magento en CCVshop zijn
+#                  aan hun eigen bestanden te herkennen. Bij tweederde van de
+#                  bereikbare sites raak. Shopify is extra interessant: daar heeft
+#                  Omnivaleur een koppeling voor.
+#   bol.com        WERKT. Zoeken op handelsnaam en de exacte naam terugvinden in
+#                  "Verkoop door ...". Ongeveer 1 op de 10 leads.
+#   eBay           WERKT NIET. Winkeladressen op eBay zijn niet uit een handelsnaam
+#                  af te leiden; 40 pogingen gaven 40 keer een lege winkelpagina.
+#   Vinted         WERKT NIET. Cloudflare weigert alles wat geen browser is.
+#   2dehands       WERKT NIET. Draait op dezelfde techniek maar heeft eigen
+#                  verkoper-nummers; hetzelfde nummer levert daar nul advertenties.
+#   Facebook/Instagram-links op de site zijn bewust NIET meegeteld: bijna iedereen
+#   heeft die, dus ze zeggen niets over crosslisten.
+
+SHOP_SYSTEMS = {
+    "Shopify": r"cdn\.shopify|shopify\.com",
+    "WooCommerce": r"woocommerce|wp-content",
+    "Lightspeed": r"lightspeed|seoshop",
+    "Magento": r"magento",
+    "CCVshop": r"ccvshop",
+    "Mijnwebwinkel": r"mijnwebwinkel|myonlinestore",
+}
+BOL_SEARCH = "https://www.bol.com/nl/nl/s/"
+
+
+def _norm(s: str) -> str:
+    return re.sub(r"[^a-z0-9]", "", (s or "").lower())
+
+
+def _site_of(row: dict) -> str:
+    """De eigen webshop. Staat er geen domein bij, dan is het e-maildomein het
+    volgende beste bewijs — info@camera-point.nl betekent camera-point.nl."""
+    if row.get("website"):
+        return row["website"]
+    domain = (row.get("email") or "").split("@")[-1].lower()
+    if domain and "." in domain and domain not in FREE_MAIL:
+        return f"https://{domain}"
+    return ""
+
+
+def _on_bol(client: httpx.Client, naam: str) -> bool:
+    """Een zoekopdracht op bol geeft ALTIJD verkopers terug, ook bij onzin. Alleen
+    een exacte naammatch in "Verkoop door ..." telt daarom als bewijs."""
+    if len(_norm(naam)) < 4:
+        return False
+    try:
+        html = client.get(BOL_SEARCH, params={"searchtext": naam}).text
+    except Exception:  # noqa: BLE001
+        return False
+    return any(_norm(h) == _norm(naam)
+               for h in re.findall(r"Verkoop door ([^<\"]{2,40})", html))
+
+
+def _crosslist_one(client: httpx.Client, row: dict) -> dict:
+    site = _site_of(row)
+    kanalen = ["Marktplaats"]
+    row["shopsysteem"] = ""
+
+    if site:
+        html = ""
+        for path in ("", "/contact"):
+            try:
+                r = client.get(site + path, timeout=15.0)
+                if r.status_code == 200:
+                    html += r.text
+            except Exception:  # noqa: BLE001
+                pass
+        if html:
+            row["site"] = site
+            kanalen.append("Eigen website")
+            row["shopsysteem"] = ", ".join(
+                naam for naam, rx in SHOP_SYSTEMS.items() if re.search(rx, html, re.I))
+
+    if _on_bol(client, row.get("handelsnaam") or row.get("name") or ""):
+        kanalen.append("bol.com")
+
+    row["kanalen"] = kanalen
+    row["crosslist"] = len(kanalen) > 1
+    row["crosslist_gecheckt"] = True
+    return row
+
+
+def crosslist(args) -> None:
+    rows = _load(SELLERS)
+    todo = [r for r in rows if r.get("enriched") and not r.get("crosslist_gecheckt")]
+    if args.min_ads:
+        todo = [r for r in todo if (r.get("ads") or 0) >= args.min_ads]
+    if not todo:
+        print("Alle verkopers zijn al gecontroleerd.")
+    else:
+        print(f"{len(todo)} verkopers controleren op meerdere verkoopkanalen…")
+        with _client() as client:
+            done = 0
+            with ThreadPoolExecutor(max_workers=args.workers) as pool:
+                futures = [pool.submit(_crosslist_one, client, r) for r in todo]
+                for future in as_completed(futures):
+                    future.result()
+                    done += 1
+                    if done % 100 == 0:
+                        print(f"  {done}/{len(todo)}", flush=True)
+        _save(SELLERS, rows)
+
+    checked = [r for r in rows if r.get("crosslist_gecheckt")]
+    cross = [r for r in checked if r.get("crosslist")]
+    shop = [r for r in checked if r.get("shopsysteem")]
+    print(f"\n{len(cross)} van {len(checked)} verkopen op meer dan één kanaal "
+          f"({100 * len(cross) // max(1, len(checked))}%)")
+    print(f"{len(shop)} hebben een herkenbaar webshopsysteem: " + ", ".join(
+        f"{naam} {sum(1 for r in shop if naam in r['shopsysteem'])}"
+        for naam in SHOP_SYSTEMS))
+    print(f"{sum(1 for r in checked if 'bol.com' in (r.get('kanalen') or []))} "
+          f"verkopen ook op bol.com")
+
+
 # ---------------------------------------------------------------- classify
 
 
