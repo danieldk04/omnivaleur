@@ -299,10 +299,17 @@ def from_local(cities: list[str] | None = None, terms: list[str] | None = None,
     seen: set[str] = set()
     exclude = list(exclude or [])
     combos = [(c, t) for c in (cities or CITIES) for t in (terms or LOCAL_TERMS)]
+    queries = [f"{term} {city}" for city, term in combos]
 
-    for city, term in combos:
-        query = f"{term} {city}"
-        rows = _from_keyword_run([query], max_per_run, token, exclude, query)
+    # Vier runs tegelijk. Eerder liepen ze één voor één met een pauze ertussen, wat bij
+    # veertien steden ruim een kwartier stilstaan was. De prijs is dat we binnen deze
+    # reeks niet meer per run kunnen uitsluiten wat een vorige run vond; dat kost af en
+    # toe een dubbele kandidaat van $0,001, en dat is de tijdwinst dubbel en dwars waard.
+    with ThreadPoolExecutor(max_workers=4) as pool:
+        results = list(pool.map(
+            lambda q: _from_keyword_run([q], max_per_run, token, exclude, q), queries))
+
+    for query, rows in zip(queries, results):
         new = 0
         for rec in rows:
             if rec["handle"] in seen:
@@ -311,10 +318,7 @@ def from_local(cities: list[str] | None = None, terms: list[str] | None = None,
             rec["method"] = "local"
             out.append(rec)
             new += 1
-        # Binnen dezelfde reeks niet twee keer hetzelfde account betalen.
-        exclude.extend(r["handle"] for r in rows)
         print(f"    {new:3d} nieuw  {query}")
-        time.sleep(delay)
     return out
 
 
