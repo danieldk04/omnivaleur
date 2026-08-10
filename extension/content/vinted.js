@@ -1401,15 +1401,20 @@
   //  2. the panels no longer render `web_ui__Cell` rows with checkboxes.
   // So: always scroll the trigger into view first, then poll until the panel's
   // own options actually exist, retrying the click a few times.
-  async function openDropdownVinted(trigger, isOpen, tries = 4) {
+  //
+  // Let op de tijd: de hele opdracht heeft een paar minuten, en dit is een lus
+  // in een lus. Te ruim wachten hier betekende dat het formulier wel netjes
+  // gevuld werd maar de tijd op was vóór het plaatsen — het zoekertje bleef dan
+  // ingevuld en ongeplaatst staan. Vandaar korte, harde grenzen.
+  async function openDropdownVinted(trigger, isOpen, tries = 2) {
     if (!trigger) return false;
     for (let attempt = 0; attempt < tries; attempt++) {
       if (isOpen()) return true;
       trigger.scrollIntoView({ block: "center" });
-      await sleep(250);
+      await sleep(200);
       humanClickEl(trigger);
-      for (let i = 0; i < 12; i++) {
-        await sleep(200);
+      for (let i = 0; i < 8; i++) {
+        await sleep(150);
         if (isOpen()) return true;
       }
       // Het veld zelf reageert niet altijd: bij sommige velden zit de
