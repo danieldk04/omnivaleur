@@ -516,7 +516,11 @@ def main() -> None:
             p.add_argument("--limit", type=int, default=0)
         if cls:
             p.add_argument("--min-confidence", type=int, default=60)
-            p.add_argument("--min-ads", type=int, default=3,
+            # 20 advertenties is de ondergrens waaronder crosslisten geen probleem
+            # is: met vijf advertenties zet je ze desnoods met de hand over. Op 3
+            # kwamen er buurtwinkels en eenmansacties binnen die niets aan de tool
+            # hebben. Verlaag dit alleen als de lijst opdroogt.
+            p.add_argument("--min-ads", type=int, default=20,
                            help="verkopers met minder advertenties overslaan")
             p.add_argument("--only-email", action="store_true",
                            help="alleen verkopers met een e-mailadres beoordelen")
