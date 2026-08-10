@@ -1533,10 +1533,11 @@
 
     for (const t of targets) {
       const voor = opt.outerHTML;
+      const gereageerd = () =>
+        !opt.isConnected || opt.outerHTML !== voor || colourOptionChecked(opt) || isSet();
       if (t.tagName === "INPUT") t.click(); else humanClickEl(t);
-      await sleep(450);
       // De tegel is van uiterlijk of status veranderd → de klik is aangekomen.
-      if (opt.outerHTML !== voor || colourOptionChecked(opt) || isSet()) return true;
+      if (await waitUntil(gereageerd, 1500)) return true;
     }
     return isSet();
   }
