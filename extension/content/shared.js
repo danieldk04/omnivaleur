@@ -1092,7 +1092,7 @@ window.CL = (() => {
   }
 
   return {
-    sleep, qs, waitForEl, fillInput, fillInputHuman, fillNativeSelect, clickRadioByValue, fillDescription,
+    sleep, waitUntil, qs, waitForEl, fillInput, fillInputHuman, fillNativeSelect, clickRadioByValue, fillDescription,
     findFieldByLabel, selectDropdown, fillBrand, fillManufacturer, selectBundleFree,
     selectPackageSize, uploadPhotos, submitListing, step, closePopup, smartTrunc, fillBidding,
     clog, dutchColor, verifyMpGroupFields, repairMpGroupFields, selectCondition, selectIntendedFor, fillBrandField, logMpFields,
