@@ -1665,7 +1665,10 @@
       // Het kleurveld toont zijn waarde bij sommige vormen pas als het paneel
       // dicht is. Sluiten en dán pas oordelen — anders concluderen we onterecht
       // dat het misging en gaan we opnieuw klikken (wat de kleur weer uitzet).
-      if (outside) { realClickEl(outside); await sleep(700); }
+      if (outside) {
+        realClickEl(outside);
+        await waitUntil(() => alGezet() || !isOpen(), 2000);
+      }
       if ((trigger.value || "").trim()) {
         clog("Vinted kleur: gezet op " + trigger.value);
         return true;
