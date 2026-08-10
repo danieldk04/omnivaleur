@@ -643,7 +643,6 @@
   // edit page: media-select-grid-delete-button-N), NOT the delete-listing button.
   // Matching these by a loose "delete" substring would delete a photo instead of
   // the listing — verified live 2026-07. Always exclude them.
-  const isPhotoDeleteTestid = (tid) => /media-select|grid-delete-button|image-wrapper/i.test(tid || "");
 
   // Find the seller's "Delete listing" control on the current item page. The real
   // control has the exact testid "item-delete-button" (verified live 2026-07) and
