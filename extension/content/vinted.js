@@ -1481,9 +1481,19 @@
     return isSet();
   }
 
-  function findColourOption(want) {
+  // Elk element dat op DIT moment een aanklikbare keuze-optie is, ongeacht welk
+  // paneel erbij hoort. Alleen bruikbaar in combinatie met een momentopname van
+  // vóór het openklikken — zie fillColourVinted.
+  function anyOptionEls() {
+    return [
+      ...document.querySelectorAll('[data-testid^="filter-grid-option-"]'),
+      ...document.querySelectorAll('[class*="web_ui__Cell__cell"]'),
+    ];
+  }
+
+  function findColourOption(want, optionEls) {
     const w = want.toLowerCase().trim();
-    const opts = colourOptionEls().map((el) => ({ el, ...colourOptionLabel(el) }));
+    const opts = (optionEls || colourOptionEls()).map((el) => ({ el, ...colourOptionLabel(el) }));
     if (!opts.length) return null;
     const base = w.replace(/^(licht|donker|light|dark)\s*/i, "").trim();
     return (
