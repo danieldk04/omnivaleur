@@ -1427,12 +1427,8 @@
     for (let attempt = 0; attempt < tries; attempt++) {
       if (isOpen()) return true;
       trigger.scrollIntoView({ block: "center" });
-      await sleep(200);
       humanClickEl(trigger);
-      for (let i = 0; i < 8; i++) {
-        await sleep(150);
-        if (isOpen()) return true;
-      }
+      if (await waitUntil(isOpen, 2500)) return true;
       // Het veld zelf reageert niet altijd: bij sommige velden zit de
       // klikafhandeling op de rij eromheen of op het pijltje ernaast. Pas
       // proberen als de directe klik niets deed, zodat we niets kapotmaken bij
@@ -1444,10 +1440,7 @@
       ]) {
         if (!alt || alt === trigger) continue;
         humanClickEl(alt);
-        for (let i = 0; i < 4; i++) {
-          await sleep(150);
-          if (isOpen()) return true;
-        }
+        if (await waitUntil(isOpen, 1200)) return true;
       }
     }
     return isOpen();
