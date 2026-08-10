@@ -10,8 +10,7 @@
     {
       "name": "vinted-mock",
       "runtimeExecutable": "python3",
-      "runtimeArgs": ["-m", "http.server", "3311", "--directory",
-        "/private/tmp/claude-501/-Users-Danie-Documents-omnivaleur/ca47f661-a8e2-4ee0-a3ee-1bcd39162ba0/scratchpad/vinted-mock"],
+      "runtimeArgs": ["-m", "http.server", "3311", "--directory", "tests/vinted-mock"],
       "port": 3311
     },
     {
