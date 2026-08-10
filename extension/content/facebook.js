@@ -159,7 +159,6 @@
   // failed on that one character, so Men's/Women's clothing could never be
   // selected on an English-language account. Normalizing both sides makes the
   // match immune to whichever variant Facebook (or this file) happens to use.
-  const normApos = (s) => s.replace(/[‘’ʼ]/g, "'");
 
   async function selectCombo(labelRe, candidates) {
     const wants = (Array.isArray(candidates) ? candidates : [candidates])
