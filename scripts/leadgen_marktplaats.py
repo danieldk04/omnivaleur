@@ -263,11 +263,17 @@ def _site_email(client: httpx.Client, link: str) -> tuple[str, str]:
                  re.findall(r"[\w.+-]+@[\w.-]+\.\w{2,}", page.text)
                  if not JUNK_MAIL.search(e)]
         if found:
-            # Voorkeur voor een adres op het eigen domein: een gmail in de
-            # broncode is vaker die van de webbouwer dan van de verkoper.
+            # Een adres op het eigen domein is van de verkoper. Een vreemd adres
+            # in de broncode is dat meestal niet: de eerste versie stuurde
+            # "donate@opencart.com" mee als contactadres van een kledinghandelaar.
+            # Alleen een gewone provider (gmail, ziggo) is nog geloofwaardig.
             host = domain.split("//")[-1].replace("www.", "")
             own = [e for e in found if host in e]
-            return (own or found)[0], domain
+            if own:
+                return own[0], domain
+            vrij = [e for e in found if e.split("@")[-1] in FREE_MAIL]
+            if vrij:
+                return vrij[0], domain
     return "", domain
 
 
