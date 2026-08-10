@@ -13,7 +13,15 @@ WAT WEL WERKT — alles live getest (2026-07), niet aangenomen
   * Marktplaats als bron: scrape werkt, maar er is GEEN brug naar Instagram.
     Handles raden gaf 4 treffers op 13 gokken en de enige echte match was een
     verzamelaar uit Tokio; 0 van 53 advertentieteksten noemde een @handle.
-  * Instagram-hashtags: BESTE BRON. Zie leadgen_sources.py voor de cijfers per bron.
+  * Instagram: de enige werkende bron. 'local' (stadszoekopdrachten) haalt de hoogste
+    precisie en blijft nieuwe accounts leveren; 'hashtag' is sneller uitgeput.
+    Zie leadgen_sources.py voor de cijfers per bron.
+
+WAT ER ÉÉN KEER MISGING EN NIET MEER MAG
+Een run duurde drie kwartier en leverde niets nieuws op. Drie oorzaken, alle drie
+verholpen: 198 verwijderde accounts werden elke run opnieuw opgevraagd (nu na drie
+mislukte rondes definitief 'dead'), elk profiel werd elke run opnieuw door het model
+beoordeeld (nu wordt het oordeel bewaard), en alles liep één voor één (nu parallel).
 
 WIE WE ZOEKEN — en wie NIET
 Serieuze resellers: mensen die op Vinted, Marktplaats of eBay verkopen om geld te
