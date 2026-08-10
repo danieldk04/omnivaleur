@@ -1533,11 +1533,6 @@
     )?.el || null;
   }
 
-  // Wat er bij de kleurstap gebeurde, in gewone taal. Belandt in het achtergrond-
-  // logboek én in de foutmelding op het dashboard, zodat een mislukte kleur na te
-  // lezen is zonder de console van het tabblad open te hoeven hebben.
-  let kleurDiagnose = "kleurstap is niet gedraaid";
-
   async function fillColourVinted(item) {
     const colours = parseColours(item);
     if (!colours.length) {
