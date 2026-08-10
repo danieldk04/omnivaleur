@@ -2736,7 +2736,10 @@ function fillPromoBox(boxId, promo) {
     : ` Ends in ${Math.floor(hours / 24)} days.`;
   document.getElementById(`${boxId}-detail`).textContent =
     `Sorry about the checkout problem. Your first month is €${promoPrice(promo)} instead of €19.99, `
-    + `applied automatically at checkout, no code needed. After that it is €19.99 per month.${ends}`;
+    + `applied automatically at checkout, no code needed. After that it is €19.99 per month.${ends} `
+    // Terugverwijzing naar de mail, subtiel: wie hem las herkent het, wie hem niet
+    // zag weet nu waar de rest van het verhaal staat en gaat kijken.
+    + `Full story in my email to you.`;
 }
 
 let lastPromo = null;
