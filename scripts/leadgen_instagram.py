@@ -169,48 +169,68 @@ def _enrich_rows(rows: list[dict], token: str, batch: int = 25,
 
     # Instagram knijpt deze actor af bij grote batches: van veertig profielen in één
     # keer kwamen er twaalf terug, met "Could not retrieve profile data" voor de rest.
-    # Dat is tijdelijk, geen bestaand-of-niet. Zonder deze herhaalronde gooi je dus
-    # tweederde van je leads weg omdat Instagram het even te druk had.
+    # Dat is deels tijdelijk — vandaar één herhaalronde. Een derde ronde is gemeten en
+    # leverde één profiel op 198 pogingen op: dat is de wachttijd niet waard.
     for attempt in range(1, attempts + 1):
-        todo = [r for r in rows if not r.get("enriched")]
+        todo = [r for r in rows if not r.get("enriched") and not r.get("dead")]
         if not todo:
             break
         if attempt > 1:
             print(f"  ronde {attempt}: {len(todo)} profielen opnieuw proberen")
-            time.sleep(5 * attempt)
+            time.sleep(5)
 
-        for i in range(0, len(todo), batch):
-            chunk = todo[i: i + batch]
-            print(f"  profielen {i + 1}-{i + len(chunk)} van {len(todo)}…", flush=True)
-            got = src._run(PROFILE_ACTOR,
-                           {"profiles": [r["handle"] for r in chunk],
-                            "includeRecentPosts": True}, token)
-            for row in got:
-                handle = (row.get("username") or "").lower()
-                target = by_handle.get(handle)
-                # Een 'error'-rij is geen profiel; die laten we onverrijkt zodat de
-                # volgende ronde hem opnieuw oppakt.
-                if not target or row.get("error"):
-                    continue
-                target.update({
-                "enriched": True,
-                "full_name": _clean(row.get("full_name")) or target.get("full_name", ""),
-                "followers": row.get("followersCount") or target.get("followers") or 0,
-                "posts": row.get("postsCount") or 0,
-                "bio": _clean(row.get("biography")),
-                "website": _clean(row.get("external_url")),
-                "email": _clean(row.get("business_email")),
-                "category": _clean(row.get("category_name")),
-                "private": bool(row.get("is_private")),
-                    "captions": [(p.get("caption") or "")[:240]
-                                 for p in (row.get("latestPosts") or [])[:4]],
-                })
+        chunks = [todo[i: i + batch] for i in range(0, len(todo), batch)]
+        done = 0
+        # Deze actor-runs zijn wachten, geen rekenen: vier tegelijk scheelt ruwweg
+        # vier keer de doorlooptijd en kost geen cent extra.
+        with ThreadPoolExecutor(max_workers=workers) as pool:
+            futures = [pool.submit(src._run, PROFILE_ACTOR,
+                                   {"profiles": [r["handle"] for r in chunk],
+                                    "includeRecentPosts": True}, token)
+                       for chunk in chunks]
+            for future in as_completed(futures):
+                got = future.result()
+                done += 1
+                print(f"  batch {done}/{len(chunks)} klaar — {len(got)} rijen terug",
+                      flush=True)
+                for row in got:
+                    handle = (row.get("username") or "").lower()
+                    target = by_handle.get(handle)
+                    # Een 'error'-rij is geen profiel; die laten we onverrijkt zodat
+                    # de volgende ronde hem opnieuw oppakt.
+                    if not target or row.get("error"):
+                        continue
+                    target.update({
+                        "enriched": True,
+                        "full_name": _clean(row.get("full_name")) or target.get("full_name", ""),
+                        "followers": row.get("followersCount") or target.get("followers") or 0,
+                        "posts": row.get("postsCount") or 0,
+                        "bio": _clean(row.get("biography")),
+                        "website": _clean(row.get("external_url")),
+                        "email": _clean(row.get("business_email")),
+                        "category": _clean(row.get("category_name")),
+                        "private": bool(row.get("is_private")),
+                        "captions": [(p.get("caption") or "")[:240]
+                                     for p in (row.get("latestPosts") or [])[:4]],
+                    })
 
-    missing = [r["handle"] for r in rows if not r.get("enriched")]
+        for row in todo:
+            if row.get("enriched"):
+                continue
+            row["fails"] = row.get("fails", 0) + 1
+            if row["fails"] >= MAX_FAILS:
+                row["dead"] = True
+
+    missing = [r for r in rows if not r.get("enriched") and not r.get("dead")]
+    buried = [r for r in rows if r.get("dead")]
     if missing:
-        print(f"  · {len(missing)} profielen bleven onbereikbaar: "
-              f"{', '.join(missing[:6])}{' …' if len(missing) > 6 else ''}")
-        print("    Die blijven in handles.json staan; een latere 'enrich' pakt ze op.")
+        print(f"  · {len(missing)} nu onbereikbaar, volgende run opnieuw: "
+              f"{', '.join(r['handle'] for r in missing[:6])}"
+              f"{' …' if len(missing) > 6 else ''}")
+    if buried:
+        print(f"  · {len(buried)} handles definitief opgegeven na {MAX_FAILS} rondes "
+              f"(hernoemd, verwijderd of geblokkeerd).")
+        print("    'enrich --retry-dead' probeert ze alsnog nog een keer.")
     return rows
 
 
