@@ -44,6 +44,7 @@ import re
 import smtplib
 import ssl
 import sys
+import textwrap
 import time
 from datetime import date, datetime, timedelta
 from email.message import EmailMessage
@@ -114,6 +115,16 @@ def _leads() -> list[dict]:
 # ------------------------------------------------------------------ teksten
 
 
+def _bedrijfsnaam(lead: dict) -> str:
+    """De handelsnaam uit het KvK-veld is het netst, maar niet iedereen vult die in;
+    de verkopersnaam op Marktplaats is dan het volgende beste. Nooit het e-mailadres
+    in een aanhef gebruiken — "Hoi info@" leest als een rondzendbrief."""
+    for sleutel in ("handelsnaam", "full_name", "name"):
+        if lead.get(sleutel):
+            return str(lead[sleutel])
+    return lead["email"].split("@")[-1].split(".")[0].title()
+
+
 def _aanhef(lead: dict) -> str:
     return "Hoi" if (lead.get("je_jullie") or "Je") == "Je" else "Hallo"
 
@@ -181,17 +192,25 @@ BEURTEN = [
 
 
 def _tekst(lead: dict, sjabloon: str) -> str:
-    naam = lead.get("handelsnaam") or lead.get("full_name") or lead.get("name") or ""
+    naam = _bedrijfsnaam(lead)
     return sjabloon.format(
         aanhef=_aanhef(lead),
         naam=naam.split()[0] if naam and len(naam.split()) == 1 else naam,
         haakje=_haakje(lead),
         bedrijf=BEDRIJF,
         site=SITE,
-        ondertekening=ONDERTEKENING.format(naam=AFZENDER_NAAM, bedrijf=BEDRIJF,
-                                           site=SITE, adres=BEDRIJF_ADRES,
-                                           kvk=BEDRIJF_KVK),
+        ondertekening="\x00" + ONDERTEKENING.format(
+            naam=AFZENDER_NAAM, bedrijf=BEDRIJF, site=SITE,
+            adres=BEDRIJF_ADRES, kvk=BEDRIJF_KVK),
     )
+
+
+def _netjes(tekst: str) -> str:
+    """Alinea's op 78 tekens afbreken. De ondertekening (na \x00) blijft zoals hij
+    is: daar zijn de regelafbrekingen betekenisvol."""
+    body, _, staart = tekst.partition("\x00")
+    alineas = [textwrap.fill(a.strip(), 78) for a in body.split("\n\n") if a.strip()]
+    return "\n\n".join(alineas) + "\n\n" + staart
 
 
 # --------------------------------------------------------------------- plan
@@ -244,7 +263,7 @@ def plan(args) -> None:
     rij = _wachtrij(state, budget)
     print(f"Verzenddag {_dagnummer(state)}, budget {budget} mails vandaag.\n")
     for lead, n, waarom in rij:
-        print(f"  {BEURTEN[n][0]}  {(lead.get('handelsnaam') or lead['email'])[:32]:34s} "
+        print(f"  {BEURTEN[n][0]}  {_bedrijfsnaam(lead)[:32]:34s} "
               f"{lead.get('ads') or 0:>7} adv  {waarom}")
     print(f"\n{len(rij)} mails klaar om te versturen.")
 
@@ -252,16 +271,15 @@ def plan(args) -> None:
 # --------------------------------------------------------------------- send
 
 
-def _controleer_afzender() -> None:
+def _controleer_afzender(met_verbinding: bool = True) -> str:
     if "VUL IN" in BEDRIJF_ADRES or "VUL IN" in BEDRIJF_KVK:
         sys.exit("Vul eerst BEDRIJF_ADRES en BEDRIJF_KVK in bovenaan dit bestand.\n"
                  "Zakelijke mail moet herleidbaar zijn naar een echt bedrijf; zonder\n"
                  "die gegevens mag het niet en gaat het bovendien de spam in.")
-    host = _need("MAIL_HOST")
     if "omnivaleur.com" in os.environ.get("MAIL_USER", ""):
         sys.exit("MAIL_USER staat op omnivaleur.com. Dat is je productdomein — daar\n"
                  "gaan je klant- en factuurmails vandaan. Gebruik het aparte domein.")
-    return host
+    return _need("MAIL_HOST") if met_verbinding else ""
 
 
 def _bericht(lead: dict, n: int, van: str) -> EmailMessage:
@@ -273,13 +291,14 @@ def _bericht(lead: dict, n: int, van: str) -> EmailMessage:
     # Zonder deze kop ziet een mailprogramma geen nette afmeldweg en telt het
     # eerder als spam. Met een mailto hoef je er geen webpagina voor te bouwen.
     msg["List-Unsubscribe"] = f"<mailto:{van}?subject=stop>"
-    msg.set_content(_tekst(lead, sjabloon))
+    msg.set_content(_netjes(_tekst(lead, sjabloon)))
     return msg
 
 
 def send(args) -> None:
-    host = _controleer_afzender()
-    gebruiker, wachtwoord = _need("MAIL_USER"), _need("MAIL_PASS")
+    host = _controleer_afzender(met_verbinding=not args.dry_run)
+    gebruiker = (os.environ.get("MAIL_USER") or "jij@omnivaleur.nl") if args.dry_run \
+        else _need("MAIL_USER")
     state = _state()
     budget = _dagbudget(state, args.per_dag)
     rij = _wachtrij(state, budget)
@@ -292,7 +311,7 @@ def send(args) -> None:
     if args.dry_run:
         lead, n, _ = rij[0]
         print(f"Voorbeeld — {BEURTEN[n][1]}\naan: {lead['email']}\n")
-        print(_tekst(lead, BEURTEN[n][2]))
+        print(_netjes(_tekst(lead, BEURTEN[n][2])))
         print("\n" + "-" * 60)
         for lead, n, waarom in rij:
             print(f"  {BEURTEN[n][0]}  {lead['email']:38s} {waarom}")
@@ -300,7 +319,7 @@ def send(args) -> None:
 
     verstuurd = 0
     with smtplib.SMTP_SSL(host, 465, context=ssl.create_default_context()) as smtp:
-        smtp.login(gebruiker, wachtwoord)
+        smtp.login(gebruiker, _need("MAIL_PASS"))
         for i, (lead, n, _) in enumerate(rij):
             sleutel = lead["email"].lower()
             try:
