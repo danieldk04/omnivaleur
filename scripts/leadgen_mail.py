@@ -154,6 +154,13 @@ def _rond(n: int) -> str:
     return f"zo'n {n // 10 * 10}"
 
 
+RUBRIEKEN = {
+    "kleding", "sieraden", "elektronica", "games", "boeken", "speelgoed",
+    "muziekinstrumenten", "schoenen", "tassen", "meubels", "gereedschap",
+    "vintage kleding", "kinderkleding", "sportartikelen", "knutselmaterialen",
+}
+
+
 def _haakje(lead: dict) -> str:
     """De openingszin die deze mail over déze handelaar laat gaan. Zonder zoiets
     is het een rondzendbrief en dat ziet iedereen. We gebruiken wat we van hem
