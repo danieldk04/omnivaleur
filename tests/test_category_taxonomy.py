@@ -90,17 +90,17 @@ def test_every_category_gets_an_english_shopify_type(all_keys):
     assert not missing, f"geen Engels producttype voor: {missing}"
 
 
-@pytest.mark.parametrize("title,gender,expected", [
-    ("B'Twin Cycling Suit", "heren", "heren wielrenkleding"),
-    ("Rapha wielrenshirt", "heren", "heren wielrenkleding"),
-    ("Nike trainingspak", "dames", "trainingspakken"),
-    ("Salomon skibroek", "heren", "heren skikleding"),
-    ("Ajax voetbalshirt", "kinderen", "kinderen sportkleding"),
-    ("Speedo zwembroek", "heren", "heren zwembroeken"),
-    ("Levi's 501 jeans", "heren", "heren jeans"),
+@pytest.mark.parametrize("title,expected", [
+    ("B'Twin Cycling Suit - Men XL", "heren wielrenkleding"),
+    ("Rapha wielrenshirt heren", "heren wielrenkleding"),
+    ("Nike trainingspak dames", "trainingspakken"),
+    ("Salomon skibroek heren", "heren skikleding"),
+    ("Ajax voetbalshirt kinderen", "kinderen sportkleding"),
+    ("Speedo zwembroek men", "heren zwembroeken"),
+    ("Levi's 501 jeans men", "heren jeans"),
 ])
-def test_sport_items_are_recognised(title, gender, expected):
+def test_sport_items_are_recognised(title, expected):
     from backend.api.imports import _infer_attributes
 
-    got = _infer_attributes({"title": title, "description": ""}, gender_hint=gender)
+    got = _infer_attributes(title, "")
     assert got.get("category") == expected
