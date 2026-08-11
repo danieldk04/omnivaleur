@@ -117,6 +117,9 @@ _TAXONOMY = {
         "sportleggings", "sportbroeken", "zwemkleding", "ondergoed",
         "sneakers dames", "schoenen dames", "hakken", "laarzen dames",
         "sandalen", "accessoires dames",
+        "sport tops", "sportjassen", "trainingspakken", "hardloopkleding",
+        "wielrenkleding", "voetbalkleding", "yogakleding", "gymkleding",
+        "skikleding", "sportkleding",
     ],
     "heren": [
         "heren jeans", "heren chinos", "heren shorts", "heren t-shirts",
@@ -124,15 +127,21 @@ _TAXONOMY = {
         "heren jassen", "heren pakken", "heren sportbroeken", "heren sneakers",
         "heren schoenen", "heren formele schoenen", "heren laarzen",
         "heren accessoires",
+        "heren sport tops", "heren sportjassen", "heren trainingspakken",
+        "heren hardloopkleding", "heren wielrenkleding", "heren voetbalkleding",
+        "heren gymkleding", "heren skikleding", "heren sportkleding",
+        "heren zwembroeken", "heren ondergoed",
     ],
     "kinderen": [
         "babykleding", "peuterkleding", "jongens kleding", "meisjes kleding",
         "tieners jongens", "tieners meisjes", "kinderen sportkleding",
-        "kinderen schoenen",
+        "kinderen schoenen", "kinderen wielrenkleding", "kinderen voetbalkleding",
+        "kinderen zwemkleding", "kinderen accessoires",
     ],
     "unisex": [
         "unisex truien", "unisex jassen", "unisex sportkleding",
         "unisex schoenen", "unisex accessoires",
+        "unisex wielrenkleding", "unisex trainingspakken", "unisex hardloopkleding",
     ],
 }
 _ALL_CATEGORIES = {c for cats in _TAXONOMY.values() for c in cats}
