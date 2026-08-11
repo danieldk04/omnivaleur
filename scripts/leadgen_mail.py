@@ -165,7 +165,10 @@ def _haakje(lead: dict) -> str:
         "http://", "").replace("www.", "").rstrip("/")
     shop = lead.get("shopsysteem")
 
-    wat = f"veel {rubriek}" if rubriek else "veel"
+    # De classificatie zet hier soms "Alles" of "Antieke vintage" neer. Alleen een
+    # rubriek die als los zelfstandig naamwoord in een zin past mag erin; de rest
+    # wordt "van alles", want een rare zin valt meer op dan een vage zin.
+    wat = f"veel {rubriek}" if rubriek in RUBRIEKEN else "van alles"
     if ads >= 100:
         zin = (f"Zag dat {v['jij']} {wat} {v['jij_verkoopt'].split()[-1]} op "
                f"Marktplaats, {_rond(ads)} advertenties inmiddels. Nice.")
