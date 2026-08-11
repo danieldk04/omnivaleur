@@ -796,6 +796,17 @@ async def handle_item_sold(item_id: str, sold_on_platform: str, sold_price: floa
     except Exception as e:  # noqa: BLE001 - een verkoop mag hier nooit op stuklopen
         logger.warning("[sold] could not cancel queued publish jobs for %s: %s", item_id, e)
 
+    # Hetzelfde voor een verwijderopdracht die nog klaarstond vóór hét platform
+    # waar hij nu blijkt te zijn verkocht: die advertentie hoort te blijven staan.
+    try:
+        db.table("jobs").update({
+            "status": "cancelled",
+            "result": {"cancelled": "sold on this platform"},
+        }).eq("item_id", item_id).eq("platform", sold_on_platform).eq("action", "delete") \
+          .in_("status", ["pending", "claimed"]).execute()
+    except Exception as e:  # noqa: BLE001
+        logger.warning("[sold] could not cancel queued delete jobs for %s: %s", item_id, e)
+
     # Find other listings to delist. We include 'delisted' and 'error' — NOT just
     # 'active' — on purpose: a broken earlier delete could have flipped the DB to
     # 'delisted' while the listing is in fact still LIVE on the platform (the
