@@ -2667,7 +2667,7 @@ async function checkSoldListings() {
         if (!isSold && !listing.platform_listing_id && listingSku) {
           const needle = `(${String(listingSku).trim().toLowerCase()})`;
           isSold = soldTitles.some(st => st.startsWith(needle));
-          if (isSold) console.log(`[Omnivaleur][sold] ${platform}: matched sold ad by SKU ${listing.sku} for "${listing.title}" (no platform id)`);
+          if (isSold) console.log(`[Omnivaleur][sold] ${platform}: matched sold ad by SKU ${listingSku} for "${listing.title}" (no platform id)`);
         }
         if (!isSold && !listing.platform_listing_id && listing.title) {
           const lt = listing.title.toLowerCase().trim();
