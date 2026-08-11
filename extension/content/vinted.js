@@ -1504,6 +1504,18 @@
       const wilSport = hints.includes("activewear");
       if (wilSport && !sportTak) s -= 3;
       if (!wilSport && sportTak) s -= 6;
+      // Vinted splitst veel categorieën verder uit naar een eigenschap:
+      // "Ripped jeans", "Puffer jackets", "Checked shirts". Bij gelijke score won
+      // zo'n blad het van de gewone categorie (kortste tekst), en dan stond een
+      // doodgewone spijkerbroek te koop als kapotte spijkerbroek. Zo'n bijvoeglijk
+      // blad mag alleen winnen als het artikel dat woord zélf noemt.
+      const KWALIFICATIES = /\b(ripped|skinny|bootcut|flared|straight|mom|dad|boyfriend|cargo|puffer|parka|trench|bomber|windbreaker|raincoat|down|fur|faux|leather|denim|checked|striped|print|plain|graphic|floral|sleeveless|cropped|oversized|knitted|quilted|hooded)\b/g;
+      for (const woord of (blad.match(KWALIFICATIES) || [])) {
+        if (!itemText.includes(woord) && !hints.some((h) => h.includes(woord))) s -= 4;
+      }
+      // Het neutrale verzamelblad ("Other jeans") is bij twijfel juist goed:
+      // het is de categorie zonder aanname over model of stof.
+      if (/^other\b/.test(blad)) s += 1;
       // Explicitly favour the plain footwear buckets for ordinary shoes.
       if (/\b(sneakers|trainers)\b/.test(t)) s += 2;
       const isMenRow = /\bmen\b/.test(t) && !/women/.test(t);
