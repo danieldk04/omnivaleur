@@ -1375,22 +1375,24 @@ async function bgDeleteMp2dh(job, serverUrl) {
     // would read as "successfully deleted" and report a false success.
     await expandMp2dhOverview(tabId);
 
-    const stillPresent = await execInTab(tabId, (rawTitle, listingId) => {
+    const stillPresent = await execInTab(tabId, (rawTitle, listingId, wantSku) => {
       const strip = s => (s || "").replace(/^\s*\(\d+\)\s*/, "").replace(/\s+/g, " ").trim().toLowerCase();
-      const want = strip(rawTitle);
-      const shortWant = want.substring(0, 18);
-      if (!shortWant) return false;
       const leaves = [...document.querySelectorAll("a, h1, h2, h3, span, p, div")]
         .filter(el => el.children.length === 0 && el.textContent.trim());
-      let titleEl = leaves.find(el => {
+      // Dezelfde drie sleutels als bij het zoeken, zodat "weg" ook echt weg
+      // betekent en niet "onder een net iets andere titel niet teruggevonden".
+      if (listingId && document.querySelector(`a[href*="${listingId}"]`)) return true;
+      if (wantSku) {
+        const needle = `(${String(wantSku).trim().toLowerCase()})`;
+        if (leaves.some(e => e.textContent.replace(/\s+/g, " ").trim().toLowerCase().startsWith(needle))) return true;
+      }
+      const shortWant = strip(rawTitle).substring(0, 18);
+      if (!shortWant) return false;
+      return leaves.some(el => {
         const t = strip(el.textContent);
         return t && (t.startsWith(shortWant) || t.includes(shortWant));
       });
-      if (!titleEl && listingId) {
-        titleEl = document.querySelector(`a[href*="${listingId}"]`);
-      }
-      return !!titleEl;
-    }, [title, listingId]);
+    }, [title, listingId, sku]);
 
     if (stillPresent) throw new Error(`Listing "${title}" still visible on ${overviewUrl} after confirming delete — removal was not verified`);
 
