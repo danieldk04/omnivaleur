@@ -1256,9 +1256,7 @@ async function bgDeleteMp2dh(job, serverUrl) {
       // "verkocht"/"gereserveerd" is telt, zodat knoppen als "Verkocht? Meld
       // het" nooit voor een valse verkoop kunnen zorgen.
       let soldOnPlatform = false;
-      let row = checkbox;
-      for (let i = 0; i < 12 && row.parentElement; i++) row = row.parentElement;
-      const rowScope = checkbox.closest('article, li, tr') || row;
+      const rowScope = checkbox.closest('article, li, tr') || checkbox.parentElement;
       if (rowScope) {
         soldOnPlatform = [...rowScope.querySelectorAll("span, div, p, strong, b, em")]
           .filter(el => el.children.length === 0)
