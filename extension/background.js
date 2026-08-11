@@ -127,6 +127,8 @@ const MP_CATEGORIES = {
   "heren gymkleding":       { cat1: 1776, cat3: 1779, bucketId: 169 },
   "heren voetbalkleding":   { cat1: 1776, cat3: 1779, bucketId: 169 },
   "heren wielrenkleding":   { cat1: 1776, cat3: 1779, bucketId: 169 },
+  "heren trainingspakken":  { cat1: 1776, cat3: 1779, bucketId: 169 },
+  "heren skikleding":       { cat1: 1776, cat3: 1779, bucketId: 169 },
   // Zie de opmerking bij dames: badmode, ondergoed en accessoires zitten in een
   // andere groep, waarvan de id nog niet geverifieerd is.
   "heren zwembroeken":      { cat1: 1776, cat3: 1497, bucketId: 169 },
