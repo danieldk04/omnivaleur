@@ -4198,13 +4198,21 @@ async function delistItem(itemId, title) {
   // marked the row delisted while the listing stayed live, and hiding those rows
   // here meant the confirm dialog never even named the platform that was skipped.
   const DELISTABLE = ['active', 'error', 'delisted', 'pending', 'relisting', 'hidden'];
+  // A platform this item already SOLD on is left alone by the backend — deleting
+  // a sold ad is wrong, so say so up front instead of implying it'll be removed.
+  const soldPlatforms = new Set(
+    state.listings.filter(l => l.item_id === itemId && l.status === 'sold').map(l => l.platform)
+  );
   const delistable = state.listings.filter(l =>
-    l.item_id === itemId && DELISTABLE.includes(l.status)
+    l.item_id === itemId && DELISTABLE.includes(l.status) && !soldPlatforms.has(l.platform)
   );
   const activePlatforms = [...new Set(delistable.map(l => PLATFORM_LABELS[l.platform] || l.platform))];
+  const soldLine = soldPlatforms.size
+    ? `\n\nAlready sold on ${[...soldPlatforms].map(p => PLATFORM_LABELS[p] || p).join(', ')} — left untouched.`
+    : '';
   const msg = activePlatforms.length
-    ? `Delist "${title}" from: ${activePlatforms.join(', ')}?`
-    : `"${title}" has no active listings. Continue anyway?`;
+    ? `Delist "${title}" from: ${activePlatforms.join(', ')}?${soldLine}`
+    : `"${title}" has no active listings.${soldLine}\n\nContinue anyway?`;
   if (!confirm(msg)) return;
 
   setBusy(true, `Delisting "${title}"…`);
