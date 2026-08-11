@@ -139,7 +139,7 @@ async def _translate_with_claude(text: str, target_lang: str, brand: str | None 
             max_tokens=1024,
             messages=[{"role": "user", "content": prompt}],
         )
-        result = response.content[0].text.strip()
+        result = _strip_text_tags(response.content[0].text)
         if not result:
             return text
         if has_breaks:
