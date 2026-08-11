@@ -1174,7 +1174,7 @@ async function bgDeleteMp2dh(job, serverUrl) {
     // the top of the list, then confirm. (The old code hunted for an options
     // button that doesn't exist, clicked the last card button — "Omhoog
     // bellen"/"Sneller verkopen" — and removed nothing.)
-    const findResult = await execInTab(tabId, (rawTitle, listingId) => {
+    const findResult = await execInTab(tabId, (rawTitle, listingId, wantSku) => {
       // How many ads the page actually rendered. This is what separates "this
       // listing is genuinely gone" from "the page never loaded / we're logged
       // out / the markup changed" — the two used to be indistinguishable, and
