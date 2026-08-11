@@ -4259,6 +4259,7 @@ async function delistItem(itemId, title) {
     if (byStatus.queued)     summary.push(`⏳ Queued (extension will handle): ${byStatus.queued.join(', ')}`);
     if (byStatus.error)      summary.push(`✗ Error: ${byStatus.error.join(', ')}`);
     if (byStatus.needs_link) summary.push(`🔗 Still listed (couldn't link): ${byStatus.needs_link.join(', ')}`);
+    if (byStatus.already_sold) summary.push(`💰 Already sold — left alone: ${byStatus.already_sold.join(', ')}`);
     alert(summary.join('\n') || 'Done.');
     if (byStatus.queued) nudgeExtension();
     await loadAll();
