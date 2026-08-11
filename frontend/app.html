@@ -3078,11 +3078,18 @@ function renderPlatformMatrix(itemId) {
     // Manual override: if the dashboard didn't auto-detect a listing (not-listed or
     // errored) but the user knows it's actually live on the platform, let them click
     // the dot to mark it listed. Already-active dots aren't clickable (nothing to fix).
-    const canMark = !(l && l.status === 'active') && !(l && l.status === 'hidden')
-      && !(l && (l.status === 'pending' || l.status === 'queued'));
+    //
+    // De oranje "publishing…" stip is bewust óók klikbaar. Loopt een publicatie
+    // vast (tabblad gesloten, Chrome afgesloten, formulier veranderd) terwijl de
+    // advertentie er in werkelijkheid gewoon op staat, dan stond het item hier
+    // eindeloos oranje en was er geen enkele manier om dat recht te zetten. Eén
+    // klik zet hem op listed én sluit de vastgelopen opdracht af, zodat de
+    // wachtrij weer loopt.
+    const canMark = !(l && l.status === 'active') && !(l && l.status === 'hidden');
+    const isBusy = !!(l && (l.status === 'pending' || l.status === 'queued'));
     const clickAttrs = canMark
-      ? ` onclick="markPlatformListed('${itemId}','${p}','${PLATFORM_LABELS[p]}')" style="cursor:pointer"`
-        + ` title="${PLATFORM_LABELS[p]}: not detected as listed — click to mark it listed manually"`
+      ? ` onclick="markPlatformListed('${itemId}','${p}','${PLATFORM_LABELS[p]}',${isBusy})" style="cursor:pointer"`
+        + ` title="${isBusy ? tip + ' — click if it is already live, to mark it listed and clear this' : PLATFORM_LABELS[p] + ': not detected as listed — click to mark it listed manually'}"`
       : ` title="${tip}"`;
     return `<div class="pm-dot"${clickAttrs}>
       <div class="pm-dot-icon ${cls}">${icon}${badgeEl}</div>
