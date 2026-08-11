@@ -5,7 +5,7 @@ Handles: publish to multiple platforms, auto-delist on sale.
 from __future__ import annotations
 import asyncio
 import logging
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from backend.database import get_db
 from backend.platforms import get_platform
 
@@ -14,6 +14,22 @@ _ENGLISH_PLATFORMS = {"vinted", "shopify", "ebay", "etsy"}
 _DUTCH_PLATFORMS: set[str] = {"marktplaats", "2dehands"}
 
 logger = logging.getLogger(__name__)
+
+# Hoe lang een geclaimde publicatieopdracht zonder teken van leven nog als "echt
+# bezig" telt. Klikt de gebruiker binnen die tijd nóg eens op publiceren, dan is
+# de extensie waarschijnlijk gewoon aan het werk; daarna niet meer.
+STALE_CLAIM_SECONDS = 60
+
+
+def _parse_iso(ts):
+    """Tijdstempel uit de database naar datetime (altijd met tijdzone), of None."""
+    if not ts:
+        return None
+    try:
+        dt = datetime.fromisoformat(str(ts).replace("Z", "+00:00"))
+    except (ValueError, TypeError):
+        return None
+    return dt.replace(tzinfo=timezone.utc) if dt.tzinfo is None else dt
 
 
 # De Supabase-client is synchroon: elke .execute() legt de héle server stil tot
