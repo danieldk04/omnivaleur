@@ -1373,7 +1373,7 @@ async function bgDeleteMp2dh(job, serverUrl) {
 // member id, page the whole wardrobe and match the title with a resilient
 // first-N-chars startsWith/includes compare (titles may be truncated/decorated).
 // Returns { id, origin } or { id: null }.
-async function resolveVintedIdByTitle(title) {
+async function resolveVintedIdByTitle(title, sku) {
   const sleep = ms => new Promise(r => setTimeout(r, ms));
   const tabId = await new Promise((res, rej) =>
     openWorkerTab("https://www.vinted.nl/", t =>
