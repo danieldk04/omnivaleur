@@ -483,17 +483,20 @@ async def reconcile_vinted_orders(body: dict, user_id: str = Depends(get_current
         if not isinstance(o, dict) or not o.get("sold"):
             continue
         sku = str(o.get("sku") or "").strip()
-        if not sku:
-            continue
         price = _parse_sku_price(o.get("price"))
 
-        # Exact + UNIQUE match only. len != 1 → ambiguous/unknown → skip.
-        items = db.table("items").select("id").eq("user_id", user_id).eq("sku", sku).execute().data or []
-        if len(items) != 1:
-            unmatched_skus.append(sku)
+        item_id = None
+        if sku:
+            # Exact + UNIQUE match only. len != 1 → ambiguous/unknown → skip.
+            items = db.table("items").select("id").eq("user_id", user_id).eq("sku", sku).execute().data or []
+            if len(items) == 1:
+                item_id = items[0]["id"]
+        if not item_id:
+            item_id = _match_by_text(o.get("text") or "")
+        if not item_id:
+            unmatched_skus.append(sku or (str(o.get("text") or "")[:60]))
             continue
         matched += 1
-        item_id = items[0]["id"]
 
         vinted_rows = (
             db.table("listings").select("id,status,sold_price")
