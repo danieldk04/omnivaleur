@@ -249,6 +249,9 @@
     "tieners jongens":        ["boys", "teens", "teenage"],
     "tieners meisjes":        ["girls", "teens", "teenage"],
     "kinderen sportkleding":  ["kids sport", "children activewear"],
+    "kinderen wielrenkleding":["cycling", "kids sport", "sports"],
+    "kinderen voetbalkleding":["football", "kids sport", "sports"],
+    "kinderen zwemkleding":   ["swimwear", "kids swimwear", "swimsuits"],
     "kinderen schoenen":      ["kids shoes", "children shoes", "boys shoes", "girls shoes"],
     "kinderen accessoires":   ["kids accessories", "children accessories"],
     // ── Unisex ─────────────────────────────────────────────────────
