@@ -1430,7 +1430,11 @@
           .filter((w) => w.length > 3 && !["jeans", "shirts", "jackets", "coats"].includes(w));
         return woorden.length && woorden.some((w) => tekst.includes(w));
       });
-      const neutraal = opties.find((e) => /^other\b/i.test(titel(e)));
+      // Zegt het artikel niets over model of pasvorm, kies dan het meest
+      // neutrale blad. Zonder deze regel viel de keuze op de éérste optie, en
+      // dat is bij spijkerbroeken "Ripped jeans" — dan staat een gave broek te
+      // koop als kapotte broek. Live nagelopen op vinted.nl.
+      const neutraal = opties.find((e) => /^(other|straight|regular|classic|basic)\b/i.test(titel(e)));
       const keuze = genoemd || neutraal || opties[0];
       clog(`Vinted-categorie: extra niveau → "${titel(keuze)}"`);
       realClickEl(keuze);
