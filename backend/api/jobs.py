@@ -980,8 +980,9 @@ async def _reconcile_vinted_sales(db, job, scraped: list[dict], scan_meta: dict 
             except Exception as e:
                 logger.warning(f"Vinted reconcile: could not archive vanished listing {l['item_id']}: {e}")
     logger.info(
-        "[sold] Vinted reconcile for user %s: %d marked sold (is_closed), %d vanished → archived for review",
-        job["user_id"], newly_sold, set_aside,
+        "[sold] Vinted reconcile for user %s: %d marked sold (is_closed, of which %d matched by SKU/title), "
+        "%d vanished → archived for review",
+        job["user_id"], newly_sold, matched_without_id, set_aside,
     )
 
 
