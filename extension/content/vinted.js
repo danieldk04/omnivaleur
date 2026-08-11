@@ -1081,6 +1081,43 @@
     return isFinite(n) ? n : NaN;
   }
 
+  // De rode melding onder het prijsveld ("Price must be greater than or equal to
+  // 1.0"). Vinted zet die NIET altijd meteen neer: hij kan een halve seconde na
+  // het verlaten van het veld verschijnen, en soms pas als het formulier het veld
+  // als "aangeraakt" beschouwt. Daarom kijken we ook echt rond het prijsveld zelf
+  // (via aria-describedby en de omliggende blokjes) en niet alleen ergens op de
+  // pagina — anders werd de melding gemist en dacht de extensie dat de prijs
+  // netjes stond, terwijl Vinted hem weigerde.
+  const PRICE_ERR_RE = /price must|must be greater|greater than or equal|at least|minimaal|moet (groter|ten minste)|ongeldig|invalid/i;
+  function priceErrorVinted() {
+    const el = qs('input[data-testid="price-input--input"]');
+    const zichtbaar = (e) => e && e.offsetParent !== null && (e.textContent || "").trim();
+    const kandidaten = [];
+    if (el) {
+      for (const id of (el.getAttribute("aria-describedby") || "").split(/\s+/).filter(Boolean)) {
+        const e = document.getElementById(id);
+        if (e) kandidaten.push(e);
+      }
+      let n = el.parentElement;
+      for (let i = 0; i < 4 && n; i++, n = n.parentElement) kandidaten.push(...n.querySelectorAll("*"));
+    }
+    kandidaten.push(...document.querySelectorAll('[class*="validation"], [class*="Validation"], [role="alert"], [class*="error" i]'));
+    const hit = kandidaten.find(e => zichtbaar(e) && PRICE_ERR_RE.test(e.textContent));
+    return hit ? hit.textContent.trim().slice(0, 140) : null;
+  }
+
+  // Wacht kort af of die melding alsnog opduikt. Zonder deze pauze keurde de
+  // extensie een prijs goed die Vinted een tel later afwees.
+  async function priceErrorAfterSettle(ms = 1200) {
+    const tot = Date.now() + ms;
+    do {
+      const err = priceErrorVinted();
+      if (err) return err;
+      await sleep(200);
+    } while (Date.now() < tot);
+    return null;
+  }
+
   // ---- PRICE: Vinted expects a plain number with a DOT (or no decimals). ----
   // Vinted's price field is a masked/React-controlled input, so a bare
   // native-setter + "input" event often gets discarded and the field stays €0.
@@ -1106,6 +1143,13 @@
     const variants = nlFirst ? [comma, fixed] : [fixed, comma];
     for (const out of variants) {
       if (await _typePriceVariant(el, out, num)) return true;
+    }
+    // Derde poging: teken voor teken typen, met echte toetsaanslagen. Een
+    // gemaskeerd invoerveld negeert soms een waarde die er in één keer in wordt
+    // gezet (het veld toont dan €39.99 terwijl het formulier "moet ≥ 1,0" blijft
+    // roepen), maar volgt losse aanslagen wél.
+    for (const out of variants) {
+      if (await _typePriceVariant(el, out, num, { perChar: true })) return true;
     }
     return false;
   }
