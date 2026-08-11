@@ -139,7 +139,7 @@ def _jij(lead: dict) -> dict[str, str]:
                     jij_verkoopt="je verkoopt", jij_hebt="je hebt",
                     jij_verdubbelt="verdubbelt", ziet_jij="je ziet")
     return dict(jij="jullie", jij_nadruk="jullie", jou="jullie", jouw="jullie",
-                jij_kunt="Jullie kunnen", zit_je="zijn jullie", jij_ziet="Jullie zien",
+                jij_kunt="Jullie kunnen", zit_je="zitten jullie", jij_ziet="Jullie zien",
                 jij_verkoopt="jullie verkopen", jij_hebt="jullie hebben",
                 jij_verdubbelt="verdubbelen", ziet_jij="jullie zien")
 
