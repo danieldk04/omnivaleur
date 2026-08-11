@@ -1551,6 +1551,13 @@ async function bgDeleteVinted(job, serverUrl) {
     if (!before?.userId) throw new Error(`Could not determine your Vinted member id on the item page — make sure you're logged into this Vinted account.`);
     if (before.present === null) throw new Error(`Could not read your Vinted wardrobe to verify item ${listingId} — aborting to avoid an unverified delete.`);
     if (before.present === false) throw new Error(`Vinted item ${listingId} is not in your wardrobe — it may already be gone or belong to a different account; nothing to delete.`);
+    if (before.closed) {
+      // Verkocht (of beëindigd) op Vinted zelf: weghalen is fout — de verkoop
+      // hoort erbij. Melden, dan boekt de server hem als verkocht.
+      console.log(`[Omnivaleur] bgDeleteVinted: item ${listingId} is closed (sold/ended) on Vinted — reporting the sale instead of deleting`);
+      await finaliseJob(serverUrl, job.id, "complete", { sold_on_platform: true, note: "vinted_is_closed" });
+      return;
+    }
 
     // 1b) Snapshot the FULL live listing BEFORE deleting. Imported items carry
     //     almost no data in the dashboard, so we recover everything (all photos,
