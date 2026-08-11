@@ -1148,7 +1148,9 @@ async function bgDeleteMp2dh(job, serverUrl) {
   const sleep = ms => new Promise(r => setTimeout(r, ms));
   const platform = job.platform;
   const payload = job.payload || {};
-  const title = (payload.title || "").substring(0, 35);
+  // De VOLLEDIGE titel — hij werd hier op 35 tekens afgekapt, en dan kan een
+  // 1-op-1 vergelijking met de titel op de pagina per definitie nooit kloppen.
+  const title = (payload.title || "").trim();
   const listingId = payload.platform_listing_id || "";
   // Het nummer waarmee elke advertentie begint: uit het SKU-veld, of anders uit
   // de "(1337)"-prefix die de verkoper zelf in de titel zet.
@@ -1431,7 +1433,7 @@ async function bgDeleteMp2dh(job, serverUrl) {
 
     const stillPresent = await execInTab(tabId, (rawTitle, listingId, wantSku) => {
       const norm = s => (s || "")
-        .normalize("NFKD").replace(/[̀-ͯ]/g, "")
+        .normalize("NFKD").replace(/[\u0300-\u036f]/g, "")
         .toLowerCase()
         .replace(/^\s*\([^)]{1,24}\)\s*/, "")
         .replace(/[^a-z0-9]+/g, " ")
