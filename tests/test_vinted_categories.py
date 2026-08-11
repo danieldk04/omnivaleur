@@ -1,0 +1,143 @@
+"""Vastgelegd op de échte formulieren van Vinted en Marktplaats (11 aug 2026).
+
+Alles hieronder is live nagelopen in een ingelogde sessie, niet bedacht. Wijzigt
+een platform zijn categorieboom, dan hoort deze test te vallen — dat is precies
+het signaal dat er opnieuw gekeken moet worden.
+
+Wat er live is vastgesteld en hier wordt afgedekt:
+  1. Vinted zet ALLE sportkleding onder "Activewear". Zoeken op "cycling" levert
+     alleen schoenen en fietsONDERDELEN op ("Sports > Cycling").
+  2. Het zichtbare categorieveld is niet het zoekveld; de lijst heeft een eigen
+     zoekvak ("Find a category"). Typen in het bovenste veld deed niets.
+  3. In de zoekresultaten plakken naam en kruimelpad aan elkaar
+     ("jerseysWomen"), waardoor de man/vrouw-weging stilletjes wegviel.
+  4. Bij spijkerbroeken bestaat geen neutrale optie; zonder regel werd het
+     "Ripped jeans" — een gave broek te koop als kapotte broek.
+  5. Marktplaats vraagt bij sportkleding om een "Type" (o.a. "Hardlopen of
+     Fietsen"); dat veld werd nooit ingevuld.
+"""
+import re
+from pathlib import Path
+
+import pytest
+
+ROOT = Path(__file__).resolve().parents[1]
+VINTED = (ROOT / "extension/content/vinted.js").read_text(encoding="utf-8")
+MP = (ROOT / "extension/content/marktplaats.js").read_text(encoding="utf-8")
+TWEEDEHANDS = (ROOT / "extension/content/tweedehands.js").read_text(encoding="utf-8")
+
+# De bladeren zoals ze op vinted.nl in de kiezer staan.
+VINTED_ACTIVEWEAR_LEAVES = {
+    "Outerwear", "Tracksuits", "Trousers", "Shorts", "Tops & t-shirts",
+    "Team shirts & jerseys", "Pullovers & sweaters", "Sports accessories",
+    "Other activewear", "Dresses", "Skirts", "Hoodies & sweatshirts", "Sports bras",
+}
+VINTED_MENS_CLOTHING = {
+    "Jeans", "Outerwear", "Tops & t-shirts", "Suits & blazers", "Jumpers & sweaters",
+    "Trousers", "Shorts", "Socks & underwear", "Sleepwear", "Swimwear", "Activewear",
+    "Costumes & special outfits", "Other clothing",
+}
+VINTED_WOMENS_CLOTHING = VINTED_MENS_CLOTHING | {
+    "Dresses", "Skirts", "Trousers & leggings", "Shorts & cropped trousers",
+    "Jumpsuits & playsuits", "Lingerie & nightwear", "Maternity clothes", "Skorts",
+}
+
+
+def _paths() -> dict:
+    """De V_KLEDING-tabel uit vinted.js, per gender."""
+    blok = VINTED.split("const V_KLEDING = {")[1].split("\n  };")[0]
+    uit = {}
+    for tak in ("heren", "dames"):
+        deel = blok.split(f"{tak}: {{")[1].split("},")[0]
+        uit[tak] = {
+            m.group(1): re.findall(r'"([^"]+)"', m.group(2))
+            for m in re.finditer(r'"([^"]+)":\s*\[([^\]]+)\]', deel)
+        }
+    return uit
+
+
+@pytest.fixture(scope="module")
+def paden():
+    return _paths()
+
+
+def test_sportcategorieen_gaan_naar_activewear(paden):
+    sport = ["wielrenkleding", "voetbalkleding", "trainingspakken", "hardloopkleding",
+             "skikleding", "gymkleding", "sportkleding", "sportbroeken", "sport tops"]
+    for tak in ("heren", "dames"):
+        for cat in sport:
+            pad = paden[tak].get(cat)
+            if pad is None:
+                continue
+            assert pad[0] == "Activewear", f"{tak} {cat} hoort onder Activewear, staat op {pad}"
+
+
+def test_elk_pad_bestaat_echt_op_vinted(paden):
+    for tak, geldig in (("heren", VINTED_MENS_CLOTHING), ("dames", VINTED_WOMENS_CLOTHING)):
+        for cat, pad in paden[tak].items():
+            assert pad[0] in geldig, f"{tak} {cat}: '{pad[0]}' bestaat niet onder {tak} > Clothing"
+            if len(pad) > 1:
+                assert pad[0] == "Activewear", f"{tak} {cat}: alleen Activewear heeft subbladeren in onze tabel"
+                assert pad[1] in VINTED_ACTIVEWEAR_LEAVES, f"{tak} {cat}: '{pad[1]}' bestaat niet onder Activewear"
+
+
+def test_wielrenkleding_is_geen_fietsonderdeel(paden):
+    """Zoeken op "cycling" geeft op Vinted schoenen en fietsen — nooit kleding."""
+    for tak in ("heren", "dames"):
+        assert paden[tak]["wielrenkleding"] == ["Activewear", "Team shirts & jerseys"]
+    hints = VINTED.split("const CAT_HINTS = {")[1].split("\n  };")[0]
+    for regel in hints.splitlines():
+        if "wielrenkleding" in regel or "skikleding" in regel or "voetbalkleding" in regel:
+            assert "cycling" not in regel and '"bike"' not in regel, f"fietsonderdeel-hint blijft staan: {regel.strip()}"
+
+
+def test_kleding_wordt_uitgesloten_van_schoenen_en_sportmateriaal():
+    assert "isClothingCat" in VINTED
+    blok = VINTED.split("if (isClothingCat) {")[1].split("}")[0]
+    assert "shoes?" in blok and "sports" in blok
+
+
+def test_er_wordt_in_het_echte_zoekvak_getypt():
+    assert "find a category" in VINTED.lower()
+    assert "const searchBox = ()" in VINTED
+    typeblok = VINTED.split("const typeSearch = (value) => {")[1].split("};")[0]
+    assert "searchBox()" in typeblok, "typeSearch moet het zoekvak in de lijst gebruiken, niet het bovenste veld"
+
+
+def test_naam_en_kruimelpad_worden_gescheiden():
+    """Anders matcht \\bwomen\\b niet in 'jerseysWomen' en valt de genderweging weg."""
+    assert "const rowText = (row) =>" in VINTED
+    blok = VINTED.split("const rowText = (row) =>")[1][:600]
+    assert "Cell__title" in blok and "Cell__body" in blok
+    assert "([a-z0-9&\\]])([A-Z])" in blok
+
+
+def test_geen_kapotte_spijkerbroek_bij_twijfel():
+    blok = VINTED.split("const neutraal = opties.find")[1][:200]
+    for woord in ("other", "straight", "regular", "classic", "basic"):
+        assert woord in blok, f"neutrale terugval mist '{woord}'"
+
+
+@pytest.mark.parametrize("bron", [MP, TWEEDEHANDS])
+def test_sporttype_wordt_ingevuld(bron):
+    assert "function mpSportType(item)" in bron
+    assert 'selectDropdown("Type", mpSportType(item))' in bron
+    # De exacte optienamen zoals Marktplaats ze toont.
+    for optie in ("Hardlopen of Fietsen", "Voetbal", "Fitness of Aerobics", "Yoga",
+                  "Wandelen of Outdoor", "Overige typen", "Algemeen"):
+        assert optie in bron, f"optie '{optie}' ontbreekt"
+
+
+def test_foutmelding_aan_de_gebruiker_is_engels():
+    """Het dashboard is Engels; een half-Nederlandse melding leest als een storing."""
+    blok = VINTED.split("if (gaps.length) {")[1].split("}")[0]
+    assert "Vinted wouldn't accept these fields" in blok
+    for nl in ("kon deze velden niet", "Vul ze zelf aan", "beschrijving", "kleur ("):
+        assert nl not in blok, f"Nederlandse tekst in de gebruikersmelding: {nl}"
+
+
+def test_dashboard_toont_publicatiefout_zonder_hover():
+    app = (ROOT / "frontend/app.html").read_text(encoding="utf-8")
+    assert "function publishErrorBadge(item)" in app
+    assert "function showPublishError(itemId)" in app
+    assert "${errorBadge}" in app, "de foutbalk moet ook echt in de rij gerenderd worden"
