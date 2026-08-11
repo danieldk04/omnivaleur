@@ -690,6 +690,21 @@ async def complete_job(job_id: str, body: dict, user_id: str = Depends(get_curre
             }).eq("item_id", job["item_id"]).eq("platform", job["platform"]).execute()
 
     elif job["action"] == "delete":
+        # De extensie kan tijdens het verwijderen ontdekken dat de advertentie op
+        # DIT platform verkocht is (Vinted: is_closed; MP/2dehands: een
+        # "Verkocht"-label op de rij). Dan is verwijderen precies het verkeerde:
+        # we boeken de verkoop, waardoor het item uit "live" verdwijnt en juist de
+        # ándere platforms worden opgeruimd.
+        if body.get("sold_on_platform"):
+            from backend.services.crosslist import handle_item_sold
+            logger.info("[sold] delete job %s reported a sale on %s — booking it instead of deleting",
+                        job_id, job["platform"])
+            try:
+                await handle_item_sold(job["item_id"], job["platform"], body.get("sold_price"))
+            except Exception as e:  # noqa: BLE001
+                logger.warning("[sold] booking sale from delete job %s failed: %s", job_id, e)
+            return {"ok": True, "status": "sold_on_platform"}
+
         db.table("listings").update({"status": "delisted"}).eq("item_id", job["item_id"]).eq("platform", job["platform"]).execute()
 
         # If this delete is the first half of a relist, the extension may have
