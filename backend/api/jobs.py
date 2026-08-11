@@ -6,6 +6,7 @@ from backend.services.crosslist import handle_item_sold
 from datetime import datetime, timezone, timedelta
 import logging
 import re
+import unicodedata
 
 logger = logging.getLogger(__name__)
 

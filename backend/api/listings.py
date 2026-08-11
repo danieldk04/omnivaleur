@@ -9,6 +9,7 @@ from backend.services.relist import (
 from backend.api.deps import get_current_user, require_active_subscription
 from datetime import datetime, timezone
 import re
+import unicodedata
 import logging
 
 logger = logging.getLogger("omnivaleur.sold")
