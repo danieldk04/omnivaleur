@@ -1586,6 +1586,12 @@ async function bgDeleteVinted(job, serverUrl) {
     if (!title) throw new Error("Vinted delete: no platform_listing_id and no title in payload");
     const vintedSku = payload.sku || (/^\s*\(([^)]{1,24})\)/.exec(title) || [])[1] || "";
     const resolved = await resolveVintedIdByTitle(title, vintedSku);
+    if (resolved?.ambiguous) {
+      throw new Error(
+        `Je hebt meerdere Vinted-advertenties met de titel "${title}". Om te voorkomen dat de ` +
+        `verkeerde wordt verwijderd is er niets gedaan — koppel de juiste advertentie via zijn link.`
+      );
+    }
     if (!resolved?.id) {
       throw new Error(`Could not locate "${title}" on Vinted to delist it. Open the listing on Vinted and use "mark as published" (paste its link) so it can be delisted.`);
     }
