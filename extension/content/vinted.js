@@ -258,6 +258,9 @@
     "unisex truien":       ["jumpers", "hoodies", "sweaters"],
     "unisex jassen":       ["jackets", "coats"],
     "unisex sportkleding": ["activewear", "sports"],
+    "unisex wielrenkleding": ["cycling", "bike", "sports"],
+    "unisex trainingspakken": ["tracksuits", "sports sets", "activewear"],
+    "unisex hardloopkleding": ["running", "sports", "activewear"],
     "unisex schoenen":     ["sneakers", "shoes", "trainers"],
     "unisex accessoires":  ["accessories", "scarves", "hats"],
     // ── English dashboard category keys (the dashboard UI is English, so item.category
