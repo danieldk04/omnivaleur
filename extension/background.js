@@ -68,7 +68,16 @@ const MP_CATEGORIES = {
   "yoga kleding":           { cat1: 621,  cat3: 798,  bucketId: 162 },
   "hardloopkleding":        { cat1: 621,  cat3: 798,  bucketId: 162 },
   "gymkleding":             { cat1: 621,  cat3: 798,  bucketId: 162 },
+  "yogakleding":            { cat1: 621,  cat3: 798,  bucketId: 162 },
+  "sport tops":             { cat1: 621,  cat3: 798,  bucketId: 162 },
+  "trainingspakken":        { cat1: 621,  cat3: 798,  bucketId: 162 },
+  "wielrenkleding":         { cat1: 621,  cat3: 798,  bucketId: 162 },
+  "voetbalkleding":         { cat1: 621,  cat3: 798,  bucketId: 162 },
+  "skikleding":             { cat1: 621,  cat3: 798,  bucketId: 162 },
   "unisex sportkleding":    { cat1: 621,  cat3: 798,  bucketId: 162 },
+  "unisex wielrenkleding":  { cat1: 621,  cat3: 798,  bucketId: 162 },
+  "unisex trainingspakken": { cat1: 621,  cat3: 798,  bucketId: 162 },
+  "unisex hardloopkleding": { cat1: 621,  cat3: 798,  bucketId: 162 },
   // Badmode en ondergoed hebben op Marktplaats hun eigen groep náást "Kleding",
   // en die groeps-id (bucketId) is niet uit de openbare boom te lezen. Tot die
   // geverifieerd is blijven deze staan waar ze stonden; fout, maar wél een
