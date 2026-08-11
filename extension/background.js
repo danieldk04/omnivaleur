@@ -3328,6 +3328,51 @@ function _mwNudgeDescription(selector) {
   return ok && na > voor;
 }
 
+// Prijs zetten in de ECHTE paginacontext (MAIN world).
+//
+// Vinted's prijsveld is een React-veld met een masker. Een content script leeft
+// in een eigen wereld en kan React's `_valueTracker` op dat veld niet zien; die
+// tracker onthoudt de laatst bekende waarde en zorgt dat React een input-signaal
+// negeert als hij denkt dat er niets veranderd is. Gevolg: het veld tóónde
+// €14.99, maar het formulier hield vast aan zijn lege interne waarde en bleef
+// "Price must be greater than or equal to 1.0" roepen — precies de melding die
+// het plaatsen blokkeerde. Hier zetten we de waarde vanuit de pagina zelf, met
+// de tracker gereset, zodat React de nieuwe prijs echt overneemt.
+async function _mwSetVintedPrice(selector, values) {
+  const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+  const el = document.querySelector(selector);
+  if (!el) return { ok: false, reason: "field-not-found" };
+  const setter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, "value").set;
+  const num = (v) => {
+    const n = parseFloat(String(v ?? "").replace(/[^\d.,]/g, "").replace(",", "."));
+    return isFinite(n) ? n : NaN;
+  };
+  const want = num(values[0]);
+
+  const zet = async (out) => {
+    el.scrollIntoView({ block: "center" });
+    el.focus();
+    // Leegmaken mét trackerreset, anders ziet React het legen niet.
+    try { el._valueTracker && el._valueTracker.setValue("x"); } catch (_) {}
+    setter.call(el, "");
+    el.dispatchEvent(new Event("input", { bubbles: true }));
+    await sleep(60);
+    try { el._valueTracker && el._valueTracker.setValue(""); } catch (_) {}
+    setter.call(el, out);
+    el.dispatchEvent(new Event("input", { bubbles: true }));
+    el.dispatchEvent(new Event("change", { bubbles: true }));
+    await sleep(200);
+    el.dispatchEvent(new Event("blur", { bubbles: true }));
+    await sleep(300);
+    return Math.abs((num(el.value) || -1) - want) < 0.01 && el.getAttribute("aria-invalid") !== "true";
+  };
+
+  for (const out of values) {
+    if (await zet(out)) return { ok: true, used: out, value: el.value };
+  }
+  return { ok: false, reason: "rejected", value: el.value };
+}
+
 async function _mwFillDescription(selector, descText) {
   const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
   const found = document.querySelector(selector);
