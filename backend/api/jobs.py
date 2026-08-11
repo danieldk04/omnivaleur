@@ -948,9 +948,12 @@ async def _reconcile_vinted_sales(db, job, scraped: list[dict], scan_meta: dict 
             # anders op de exacte titel. Alleen een POSITIEF "gesloten" kaartje
             # telt — afwezigheid blijft betekenisloos, precies zoals hieronder.
             item = items_by_id.get(l["item_id"]) or {}
-            sku = str(item.get("sku") or "").strip().lower()
             title = _norm_title(item.get("title"))
-            hit = (closed_id_by_sku.get(sku) if sku else None) or \
+            # Twee bronnen voor het nummer: het SKU-veld én de "(1337)"-prefix die
+            # de verkoper zelf in de titel zet. Vaak is maar één van beide gevuld.
+            keys = [k for k in (str(item.get("sku") or "").strip().lower(),
+                                _sku_of(item.get("title"))) if k]
+            hit = next((closed_id_by_sku[k] for k in keys if k in closed_id_by_sku), None) or \
                   (closed_id_by_title.get(title) if title else None)
             if not hit:
                 continue
