@@ -5,6 +5,7 @@ Handles: publish to multiple platforms, auto-delist on sale.
 from __future__ import annotations
 import asyncio
 import logging
+import re
 from datetime import datetime, timedelta, timezone
 from backend.database import get_db
 from backend.platforms import get_platform
