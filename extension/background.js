@@ -1150,7 +1150,9 @@ async function bgDeleteMp2dh(job, serverUrl) {
   const payload = job.payload || {};
   const title = (payload.title || "").substring(0, 35);
   const listingId = payload.platform_listing_id || "";
-  const sku = String(payload.sku || "").trim();
+  // Het nummer waarmee elke advertentie begint: uit het SKU-veld, of anders uit
+  // de "(1337)"-prefix die de verkoper zelf in de titel zet.
+  const sku = String(payload.sku || (/^\s*\(([^)]{1,24})\)/.exec(payload.title || "") || [])[1] || "").trim();
 
   // Navigate directly to the seller's listings overview
   const overviewUrl = platform === "marktplaats"
