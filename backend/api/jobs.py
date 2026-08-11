@@ -1045,6 +1045,11 @@ def _store_scan_results(db, job, scraped: list[dict]):
     # ~1000 round-trips and "Saving to your dashboard…" sat there for minutes.
     items = fetch_all(lambda: db.table("items").select(BACKFILL_FIELDS + ",title").eq("user_id", job["user_id"]))
     items_by_id = {it["id"]: it for it in items}
+    # Extra koppelsleutels: het SKU-nummer vooraan de titel en de titel zonder
+    # leestekens/accenten. Die overleven een vertaling of een kleine handmatige
+    # aanpassing op het platform, waar een exacte titelvergelijking op stukliep.
+    _sku_index = _unique_index((_scan_sku(it.get("title")), it["id"]) for it in items)
+    _norm_title_index = _unique_index((_scan_norm_title(it.get("title")), it["id"]) for it in items)
     # (platform, listing id) → item_id, so a re-scan of an already-known listing
     # links back to the exact same item. Scoped by the user's item ids because
     # the listings table has no user_id column.
