@@ -72,6 +72,9 @@ def _scan_norm_title(t: str) -> str:
     t = unicodedata.normalize("NFKD", t or "")
     t = "".join(c for c in t if not unicodedata.combining(c)).lower()
     t = re.sub(r"^\s*\([^)]{1,24}\)\s*", "", t)
+    # Apostrofs verdwijnen in plaats van spatie te worden: "B'TWIN" en "BTWIN"
+    # zijn hetzelfde merk, en platforms schrijven dat door elkaar.
+    t = t.replace("'", "").replace("’", "")
     return " ".join(re.sub(r"[^a-z0-9]+", " ", t).split())
 
 
@@ -1043,12 +1046,15 @@ def _store_scan_results(db, job, scraped: list[dict]):
     # Read the items ONCE, with every field the backfill needs. This used to be a
     # select per candidate inside the loop below, so a 500-listing wardrobe meant
     # ~1000 round-trips and "Saving to your dashboard…" sat there for minutes.
-    items = fetch_all(lambda: db.table("items").select(BACKFILL_FIELDS + ",title").eq("user_id", job["user_id"]))
+    items = fetch_all(lambda: db.table("items").select(BACKFILL_FIELDS + ",title,sku").eq("user_id", job["user_id"]))
     items_by_id = {it["id"]: it for it in items}
     # Extra koppelsleutels: het SKU-nummer vooraan de titel en de titel zonder
     # leestekens/accenten. Die overleven een vertaling of een kleine handmatige
     # aanpassing op het platform, waar een exacte titelvergelijking op stukliep.
-    _sku_index = _unique_index((_scan_sku(it.get("title")), it["id"]) for it in items)
+    _sku_index = _unique_index(
+        [(_scan_sku(it.get("title")), it["id"]) for it in items]
+        + [(str(it.get("sku") or "").strip().lower(), it["id"]) for it in items]
+    )
     _norm_title_index = _unique_index((_scan_norm_title(it.get("title")), it["id"]) for it in items)
     # (platform, listing id) → item_id, so a re-scan of an already-known listing
     # links back to the exact same item. Scoped by the user's item ids because
