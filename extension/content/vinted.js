@@ -1386,9 +1386,25 @@
     const collectChoices = () => {
       const out = [];
       const seen = new Set();
+      // De naam van de categorie en het kruimelpad zitten in twee losse blokjes
+      // die in de platte tekst aan elkaar plakken: "Team shirts & jerseysWomen >
+      // Clothing > Activewear". Daardoor herkende \bwomen\b het woord "Women"
+      // niet (het zit vast aan "jerseys"), viel de hele man/vrouw-weging weg en
+      // kon een herenartikel zomaar in de damescategorie belanden. We zetten er
+      // dus een scheiding tussen. Live vastgesteld op vinted.nl.
+      const rowText = (row) => {
+        const titel = row.querySelector?.('[class*="Cell__title"]')?.textContent || "";
+        const pad = row.querySelector?.('[class*="Cell__body"]')?.textContent || "";
+        const ruw = (titel && pad) ? `${titel} | ${pad}` : (row.textContent || "");
+        return ruw
+          .replace(/([a-z0-9&\]])([A-Z])/g, "$1 $2")  // "jerseysWomen" → "jerseys Women"
+          .replace(/\s+/g, " ")
+          .trim()
+          .toLowerCase();
+      };
       const push = (radio, row) => {
         if (!row || seen.has(row) || !visible(row)) return;
-        const text = (row.textContent || "").toLowerCase();
+        const text = rowText(row);
         if (text.length <= 2 || text.length > 200) return;
         seen.add(row);
         out.push({ radio, row, text });
