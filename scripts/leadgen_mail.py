@@ -297,9 +297,15 @@ def _netjes(tekst: str) -> str:
 
 
 def _dagnummer(state: dict) -> int:
-    """De hoeveelste verzenddag dit is. Bepaalt hoeveel mails eruit mogen."""
-    dagen = {v["laatste"][:10] for v in state.values() if v.get("laatste")}
-    return len(dagen) + 1
+    """De hoeveelste verzenddag dit is. Bepaalt hoeveel mails eruit mogen.
+
+    Is er vandaag al gemaild, dan is vandaag die dag zelf en niet de volgende —
+    anders klimt het budget binnen één dag mee met het opbouwschema en gaan er
+    meer mails uit dan de bedoeling was."""
+    dagen = {v["op"][:10] for st in state.values()
+             for v in st.get("verstuurd", [])}
+    vandaag = date.today().isoformat()
+    return len(dagen) if vandaag in dagen else len(dagen) + 1
 
 
 def _dagbudget(state: dict, override: int) -> int:
