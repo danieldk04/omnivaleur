@@ -1048,7 +1048,10 @@
       const missing = [];
       if (titleEl && titleEl.value !== wantTitle) missing.push("title");
       if (descEl && !(descEl.value || "").trim() && item.description) missing.push("description");
-      if (priceEl && !(_num(priceEl.value) >= 1)) missing.push("price");
+      // Ook een prijs die er wél staat maar die Vinted afkeurt telt als "leeg" —
+      // dat is precies het geval waarin het veld €39.99 toonde en het formulier
+      // toch bleef klagen dat de prijs minstens 1,0 moet zijn.
+      if (priceEl && (!(_num(priceEl.value) >= 1) || priceErrorVinted())) missing.push("price");
       if (sizeEl && !(sizeEl.value || "").trim() && item.size) missing.push("size");
       if (colEl && !(colEl.value || "").trim()) missing.push("colour");
       if (!missing.length) return true;
