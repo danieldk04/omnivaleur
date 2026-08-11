@@ -134,12 +134,14 @@ def _jij(lead: dict) -> dict[str, str]:
     zet dat in `je_jullie`; alle voornaamwoorden in de mail komen hiervandaan,
     zodat er nooit "jullie ziet" of "je kunnen" uit rolt."""
     if (lead.get("je_jullie") or "Je") == "Je":
-        return dict(jij="je", jou="je", jouw="je", jij_kunt="Je kunt",
-                    zit_je="zit je", jij_ziet="je ziet", jij_verkoopt="je verkoopt",
-                    jullie_hebben="je hebt")
-    return dict(jij="jullie", jou="jullie", jouw="jullie", jij_kunt="Jullie kunnen",
-                zit_je="zitten jullie", jij_ziet="jullie zien",
-                jij_verkoopt="jullie verkopen", jullie_hebben="jullie hebben")
+        return dict(jij="je", jij_nadruk="jij", jou="je", jouw="je",
+                    jij_kunt="Je kunt", zit_je="zit je", jij_ziet="Je ziet",
+                    jij_verkoopt="je verkoopt", jij_hebt="je hebt",
+                    jij_verdubbelt="verdubbelt", ziet_jij="je ziet")
+    return dict(jij="jullie", jij_nadruk="jullie", jou="jullie", jouw="jullie",
+                jij_kunt="Jullie kunnen", zit_je="zijn jullie", jij_ziet="Jullie zien",
+                jij_verkoopt="jullie verkopen", jij_hebt="jullie hebben",
+                jij_verdubbelt="verdubbelen", ziet_jij="jullie zien")
 
 
 def _rond(n: int) -> str:
