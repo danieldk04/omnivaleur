@@ -197,7 +197,27 @@ def mark_listing_active(body: dict, user_id: str = Depends(get_current_user)):
         .eq("item_id", item_id).eq("platform", platform)
         .limit(1).execute().data
     )
-    return {"ok": True, "listing": (row[0] if row else None)}
+    listing = row[0] if row else None
+
+    # Handmatig op "listed" zetten zonder link is precies waar het later misgaat:
+    # zonder advertentie-id weet het dashboard niet wélke advertentie van dit item
+    # is, dus kan hij hem bij verkoop niet automatisch van de andere platforms
+    # halen. Daarom zetten we meteen een scan klaar: de extensie loopt de eigen
+    # advertenties op dat platform langs en koppelt het juiste id/URL alsnog aan
+    # dit item (op titel, of op de titel die wij zelf in het formulier zetten).
+    linked = bool((listing or {}).get("platform_listing_id"))
+    scan_queued = False
+    if not linked:
+        try:
+            from backend.api.jobs import _queue_scan
+            from backend.api.imports import SCANNABLE_PLATFORMS
+            if platform in SCANNABLE_PLATFORMS:
+                _queue_scan(db, user_id, platform)
+                scan_queued = True
+        except Exception as e:  # nooit fataal — de markering zelf is al gelukt
+            logger.warning(f"mark-active: could not queue linking scan for {platform}: {e}")
+
+    return {"ok": True, "listing": listing, "linked": linked, "scan_queued": scan_queued}
 
 
 @router.post("/refresh")
