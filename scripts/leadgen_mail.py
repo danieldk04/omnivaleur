@@ -237,6 +237,7 @@ def _tekst(lead: dict, sjabloon: str) -> str:
         haakje=_haakje(lead),
         bedrijf=BEDRIJF,
         site=SITE,
+        **_jij(lead),
         ondertekening="\x00" + ONDERTEKENING.format(
             naam=AFZENDER_NAAM, bedrijf=BEDRIJF, site=SITE,
             adres=BEDRIJF_ADRES, kvk=BEDRIJF_KVK),
