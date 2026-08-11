@@ -225,7 +225,7 @@ ONDERTEKENING = """Groet,
 {bedrijf} · {site}
 
 {bedrijf} · {adres} · KvK {kvk}
-Liever geen mail meer? Antwoord met "stop" en ik haal jullie uit de lijst."""
+Liever geen mail meer? Antwoord met "stop" en ik haal {jou} uit de lijst."""
 
 BEURTEN = [
     ("mail1", "Vraagje over je Marktplaats-aanbod", MAIL1),
