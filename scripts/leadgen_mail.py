@@ -223,8 +223,8 @@ ONDERTEKENING = """Groet,
 Liever geen mail meer? Antwoord met "stop" en ik haal jullie uit de lijst."""
 
 BEURTEN = [
-    ("mail1", "Jullie voorraad op meer plekken, zonder dubbel werk", MAIL1),
-    ("mail2", "Re: jullie voorraad op meer plekken", MAIL2),
+    ("mail1", "Vraagje over je Marktplaats-aanbod", MAIL1),
+    ("mail2", "Re: vraagje over je Marktplaats-aanbod", MAIL2),
     ("mail3", "Laatste bericht", MAIL3),
 ]
 
