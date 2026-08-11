@@ -572,9 +572,15 @@ async def delist_all_platforms(item_id: str, user_id: str) -> list[dict]:
     # 'hidden' counts too: a listing hidden on Vinted still exists on the
     # platform, so "delist" must actually remove it rather than skip it.
     _DELISTABLE_STATUSES = ("active", "error", "delisted", "pending", "relisting", "hidden")
+    # A platform where this item already SOLD is off limits, whatever other rows
+    # exist for it. Deleting a sold ad is pointless (the buyer's transaction lives
+    # on it), it fails half the time, and it made the app open a Vinted tab for
+    # something the seller had already sold there. One sold row therefore blocks
+    # the whole platform, not just its own row.
+    sold_platforms = {l["platform"] for l in listings_resp.data if l["status"] == "sold"}
     seen_platforms: dict[str, dict] = {}
     for l in listings_resp.data:
-        if l["status"] not in _DELISTABLE_STATUSES:
+        if l["status"] not in _DELISTABLE_STATUSES or l["platform"] in sold_platforms:
             continue
         p = l["platform"]
         existing = seen_platforms.get(p)
@@ -582,8 +588,14 @@ async def delist_all_platforms(item_id: str, user_id: str) -> list[dict]:
             seen_platforms[p] = l
     active_listings = list(seen_platforms.values())
 
+    skipped_sold = [
+        {"platform": p, "status": "already_sold",
+         "message": "Sold on this platform — left alone on purpose."}
+        for p in sorted(sold_platforms)
+    ]
+
     if not active_listings:
-        return [{"status": "nothing_to_delist", "message": "No active listings found"}]
+        return skipped_sold or [{"status": "nothing_to_delist", "message": "No active listings found"}]
 
     item_resp = db.table("items").select("*").eq("id", item_id).single().execute()
     item = item_resp.data
