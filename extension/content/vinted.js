@@ -1167,28 +1167,49 @@
   // Type one formatted value into the masked price input and verify it holds the
   // intended number with no visible "must be ≥" / invalid error. Returns true only
   // then — leaving whichever separator worked in the field.
-  async function _typePriceVariant(el, out, num) {
+  async function _typePriceVariant(el, out, num, opts = {}) {
     const setter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, "value").set;
-    el.focus();
-    el.dispatchEvent(new Event("focus", { bubbles: true }));
-    try { el.select(); } catch (e) {}
-    // Clear first so we don't append to an existing value.
-    try { setter.call(el, ""); } catch (e) { el.value = ""; }
-    el.dispatchEvent(new InputEvent("input", { bubbles: true, inputType: "deleteContentBackward" }));
-    // Programmatic set + input/change.
-    try { setter.call(el, out); } catch (e) { el.value = out; }
-    el.dispatchEvent(new InputEvent("input", { bubbles: true, inputType: "insertText", data: out }));
-    el.dispatchEvent(new Event("change", { bubbles: true }));
-    await sleep(120);
-
-    // If the masked input rejected the programmatic value, retry via real typing.
-    if (Math.abs((_num(el.value) || -1) - num) >= 0.01) {
+    const clear = () => {
       el.focus();
       try { el.select(); } catch (e) {}
-      try { document.execCommand("selectAll", false, null); } catch (e) {}
-      try { document.execCommand("insertText", false, out); } catch (e) {}
+      try { setter.call(el, ""); } catch (e) { el.value = ""; }
+      el.dispatchEvent(new InputEvent("input", { bubbles: true, inputType: "deleteContentBackward" }));
+    };
+
+    el.dispatchEvent(new Event("focus", { bubbles: true }));
+    clear();
+
+    if (opts.perChar) {
+      // Zo dicht mogelijk bij echt typen: per teken keydown → invoer → keyup.
+      for (const ch of out) {
+        el.dispatchEvent(new KeyboardEvent("keydown", { key: ch, bubbles: true }));
+        let typed = false;
+        try { typed = document.execCommand("insertText", false, ch); } catch (e) { typed = false; }
+        if (!typed) {
+          try { setter.call(el, (el.value || "") + ch); } catch (e) { el.value = (el.value || "") + ch; }
+          el.dispatchEvent(new InputEvent("input", { bubbles: true, inputType: "insertText", data: ch }));
+        }
+        el.dispatchEvent(new KeyboardEvent("keyup", { key: ch, bubbles: true }));
+        await sleep(60);
+      }
       el.dispatchEvent(new Event("change", { bubbles: true }));
       await sleep(120);
+    } else {
+      // Programmatic set + input/change.
+      try { setter.call(el, out); } catch (e) { el.value = out; }
+      el.dispatchEvent(new InputEvent("input", { bubbles: true, inputType: "insertText", data: out }));
+      el.dispatchEvent(new Event("change", { bubbles: true }));
+      await sleep(120);
+
+      // If the masked input rejected the programmatic value, retry via real typing.
+      if (Math.abs((_num(el.value) || -1) - num) >= 0.01) {
+        el.focus();
+        try { el.select(); } catch (e) {}
+        try { document.execCommand("selectAll", false, null); } catch (e) {}
+        try { document.execCommand("insertText", false, out); } catch (e) {}
+        el.dispatchEvent(new Event("change", { bubbles: true }));
+        await sleep(120);
+      }
     }
     el.dispatchEvent(new Event("blur", { bubbles: true }));
     await sleep(150);
@@ -1197,10 +1218,15 @@
     const got = _num(el.value);
     if (!isFinite(got) || Math.abs(got - num) >= 0.01) return false;
     if (el.getAttribute("aria-invalid") === "true") return false;
-    // Mirror the refresh-path error detection for a visible "≥ 1.0" message.
-    const errText = [...document.querySelectorAll('[class*="validation"], [class*="Validation"], [role="alert"], [class*="error" i]')]
-      .find((e) => e.offsetParent !== null && /price must|greater than|at least|minimaal|moet (groter|ten minste)|ongeldig|invalid/i.test(e.textContent || ""));
-    return !errText;
+    // En pas goedkeuren als de rode melding ook na een korte pauze wegblijft:
+    // Vinted zet hem soms een halve seconde later neer, en dan stond hij er nog
+    // gewoon op het moment van plaatsen.
+    const err = await priceErrorAfterSettle(900);
+    if (err) {
+      clog(`prijs "${out}" werd geweigerd door Vinted: ${err}`);
+      return false;
+    }
+    return true;
   }
 
   // ---- CATEGORY: prefer Vinted's own "Suggested" options, then verify the match. ----
