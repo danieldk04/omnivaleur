@@ -1228,7 +1228,7 @@ async function bgDeleteMp2dh(job, serverUrl) {
       // 18 tekens met "bevat" — die vond óf niets (de titel op de pagina is
       // vertaald) óf de verkeerde advertentie.
       const norm = s => (s || "")
-        .normalize("NFKD").replace(/[̀-ͯ]/g, "")
+        .normalize("NFKD").replace(/[\u0300-\u036f]/g, "")
         .toLowerCase()
         .replace(/^\s*\([^)]{1,24}\)\s*/, "")
         .replace(/[^a-z0-9]+/g, " ")
@@ -1301,6 +1301,15 @@ async function bgDeleteMp2dh(job, serverUrl) {
         throw new Error(
           `Couldn't read your ${platform} listings overview — no ads rendered on ${overviewUrl}. ` +
           `Make sure you're still logged in on ${platform}. Nothing was deleted.`
+        );
+      }
+      if (findResult.ambiguous) {
+        // Twee advertenties met exact dezelfde titel: gokken zou de verkeerde
+        // verwijderen. Liever eerlijk stoppen.
+        throw new Error(
+          `Er staan meerdere ${platform}-advertenties met de titel "${title}". ` +
+          `Om te voorkomen dat de verkeerde wordt verwijderd is er niets gedaan — ` +
+          `verwijder deze handmatig, of koppel de juiste advertentie via zijn link.`
         );
       }
       // Niet gevonden tussen de advertenties die wél renderden. Dat betekende
