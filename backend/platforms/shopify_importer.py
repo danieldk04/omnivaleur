@@ -100,6 +100,11 @@ _NL_EN_TYPE = {
     "zwemkleding": "Swimwear", "ondergoed": "Underwear", "bh": "Sports Bra",
     "sneakers": "Sneakers", "schoenen": "Shoes", "hakken": "Heels",
     "laarzen": "Boots", "sandalen": "Sandals", "accessoires": "Accessories",
+    "sportjassen": "Sports Jacket", "trainingspakken": "Tracksuit",
+    "hardloopkleding": "Running Wear", "wielrenkleding": "Cycling Wear",
+    "voetbalkleding": "Football Kit", "yogakleding": "Yoga Wear",
+    "gymkleding": "Gym Wear", "skikleding": "Ski Wear",
+    "zwembroeken": "Swim Shorts",
     "sportkleding": "Sportswear", "babykleding": "Baby Clothing",
     "peuterkleding": "Toddler Clothing", "kleding": "Clothing",
 }
