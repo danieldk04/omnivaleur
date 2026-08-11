@@ -12,9 +12,8 @@ NOOIT VANAF HET PRODUCTDOMEIN
 Verstuur dit niet vanaf omnivaleur.com. Daar draait de app op, daar komen de
 eBay-webhooks binnen en daarvandaan gaan de wachtwoord- en factuurmails via Resend.
 Resend verbiedt koude acquisitie bovendien met zoveel woorden en sluit accounts
-zonder waarschuwing — dan ligt het product plat. Daarvoor is op 11-08-2026
-omnivaleur.nl ingericht met een eigen Zoho-postbus (daniel@omnivaleur.nl), met
-eigen MX, SPF, DKIM en DMARC. Het productdomein is daarbij niet aangeraakt.
+zonder waarschuwing — dan ligt het product plat. Gebruik een apart domein met een
+eigen postbus (Zoho Mail Lite, ~€11 per jaar).
 
 WAT DIT WEL EN NIET DOET
   wel   opbouwen in tempo, per lead personaliseren, twee opvolgmails, stoppen zodra
@@ -24,9 +23,8 @@ WAT DIT WEL EN NIET DOET
         tempo hieronder ís de opwarming.
 
 Gebruik:
-    export MAIL_HOST=smtp.zoho.eu IMAP_HOST=imap.zoho.eu
-    export MAIL_USER=daniel@omnivaleur.nl
-    export MAIL_PASS=<app-wachtwoord uit accounts.zoho.eu, niet je inlogwachtwoord>
+    export MAIL_HOST=smtp.zoho.eu MAIL_USER=daniel@... MAIL_PASS=...
+    export IMAP_HOST=imap.zoho.eu
 
     python3 scripts/leadgen_mail.py plan                  # wie is vandaag aan de beurt
     python3 scripts/leadgen_mail.py send --dry-run        # tonen, niet versturen
@@ -67,8 +65,8 @@ STATE = OUT / "mail_state.json"
 # nog een placeholder staat.
 AFZENDER_NAAM = "Daniel de Koning"
 BEDRIJF = "Omnivaleur"
-BEDRIJF_ADRES = "VUL IN: straat, postcode, plaats"
-BEDRIJF_KVK = "VUL IN: KvK-nummer"
+BEDRIJF_ADRES = "Kleine Melanen 5, 4614RG, Bergen op Zoom"
+BEDRIJF_KVK = "86792423"
 SITE = "https://omnivaleur.com"
 # ---------------------------------------------------------------------------
 
@@ -128,43 +126,81 @@ def _bedrijfsnaam(lead: dict) -> str:
 
 
 def _aanhef(lead: dict) -> str:
-    return "Hoi" if (lead.get("je_jullie") or "Je") == "Je" else "Hallo"
+    return "Hi"
+
+
+def _jij(lead: dict) -> dict[str, str]:
+    """Eenmansbedrijf tutoyeren, een team met meer mensen niet. De classificatie
+    zet dat in `je_jullie`; alle voornaamwoorden in de mail komen hiervandaan,
+    zodat er nooit "jullie ziet" of "je kunnen" uit rolt."""
+    if (lead.get("je_jullie") or "Je") == "Je":
+        return dict(jij="je", jou="je", jouw="je", jij_kunt="Je kunt",
+                    zit_je="zit je", jij_ziet="je ziet", jij_verkoopt="je verkoopt",
+                    jullie_hebben="je hebt")
+    return dict(jij="jullie", jou="jullie", jouw="jullie", jij_kunt="Jullie kunnen",
+                zit_je="zitten jullie", jij_ziet="jullie zien",
+                jij_verkoopt="jullie verkopen", jullie_hebben="jullie hebben")
+
+
+def _rond(n: int) -> str:
+    """"14.431 advertenties" leest als een uitdraai uit een database, en dat is het
+    ook. Afronden leest als iemand die even gekeken heeft."""
+    if n >= 10000:
+        return f"ruim {n // 1000}.000"
+    if n >= 1000:
+        return f"ruim {n // 100 * 100:,}".replace(",", ".")
+    return f"zo'n {n // 10 * 10}"
 
 
 def _haakje(lead: dict) -> str:
-    """De zin die deze mail over déze handelaar laat gaan. Zonder zoiets is het
-    een rondzendbrief en dat ziet iedereen."""
+    """De openingszin die deze mail over déze handelaar laat gaan. Zonder zoiets
+    is het een rondzendbrief en dat ziet iedereen. We gebruiken wat we van hem
+    weten: rubriek, aantal advertenties, eigen webshop en webshopsysteem."""
+    v = _jij(lead)
     ads = lead.get("ads") or 0
-    site = (lead.get("site") or "").replace("https://", "").replace("www.", "")
-    if site and ads:
-        return (f"Ik zag dat jullie {ads:,} advertenties op Marktplaats hebben staan "
-                f"én een eigen webshop op {site}.".replace(",", "."))
-    if ads:
-        return f"Ik zag dat jullie {ads:,} advertenties op Marktplaats hebben staan.".replace(",", ".")
-    if site:
-        return f"Ik zag jullie webshop op {site} en jullie advertenties op Marktplaats."
-    return "Ik kwam jullie advertenties op Marktplaats tegen."
+    rubriek = (lead.get("verkoopt_vooral") or "").strip().lower()
+    site = (lead.get("site") or "").replace("https://", "").replace(
+        "http://", "").replace("www.", "").rstrip("/")
+    shop = lead.get("shopsysteem")
+
+    wat = f"veel {rubriek}" if rubriek else "veel"
+    if ads >= 100:
+        zin = (f"Zag dat {v['jij']} {wat} verkoopt op Marktplaats, "
+               f"{_rond(ads)} advertenties inmiddels. Nice.")
+    else:
+        zin = f"Zag dat {v['jij']} {wat} verkoopt op Marktplaats, nice."
+
+    if site and shop:
+        zin += f" En {v['jouw']} eigen shop op {site} draait op {shop}, zie ik."
+    elif site:
+        zin += f" En {v['jij']} hebt daarnaast een eigen shop op {site}."
+    return zin
 
 
 MAIL1 = """{aanhef} {naam},
 
-{haakje} Dan kost het overzetten naar Vinted, eBay of jullie eigen shop
-waarschijnlijk meer tijd dan het opleveren waard is.
+{haakje}
 
-Daar heb ik iets voor gebouwd: {bedrijf} zet een advertentie in één keer op
-Marktplaats, 2dehands, Vinted, eBay en Shopify, inclusief foto's en prijs.
+Ik help met {bedrijf} verkopers zoals {jij} om {jouw} aanbod automatisch door te
+plaatsen naar alle relevante marketplaces, zodat {jij} direct {jouw} bereik
+verdubbelt zonder extra werk. Zelf draai ik 700+ reviews met Revaleur en help ik
+hier al 38 resellers mee.
 
-Zou ik jullie in twee minuten mogen laten zien hoe dat er voor jullie voorraad
-uitziet?
+{jij_kunt} het 7 dagen gratis uitproberen. Bespaart het {jou} niet meteen uren
+werk per week, dan {zit_je} nergens aan vast.
+
+Zal ik {jou} een video van 1 minuut sturen waarin {jij_ziet} hoe makkelijk het
+werkt?
 
 {ondertekening}"""
 
 MAIL2 = """{aanhef} {naam},
 
-Korte vraag naar aanleiding van mijn vorige mail: hoeveel tijd zijn jullie nu per
+Korte vraag naar aanleiding van mijn vorige mail: hoeveel tijd {zit_je} nu per
 week kwijt aan het overzetten van advertenties naar andere platforms?
 
-Als het antwoord "te veel" is, laat ik graag zien wat {bedrijf} daarvan overneemt.
+Is het antwoord "te veel", dan stuur ik {jou} alsnog graag die video van een
+minuut. {jij_ziet} in één oogopslag wat {bedrijf} daarvan overneemt.
 
 {ondertekening}"""
 
@@ -172,8 +208,8 @@ MAIL3 = """{aanhef} {naam},
 
 Laatste bericht van mijn kant, ik laat het verder rusten.
 
-Mocht het later toch spelen dat jullie voorraad op meer plekken moet staan zonder
-dat het dubbel werk wordt: {site}. Eén mailtje en ik denk mee.
+Mocht het later toch gaan spelen dat {jouw} voorraad op meer plekken moet staan
+zonder dat het dubbel werk wordt: {site}. Eén mailtje en ik denk mee.
 
 Succes met de zaak.
 
