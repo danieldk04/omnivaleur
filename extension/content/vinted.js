@@ -1441,6 +1441,14 @@
       "golf", "cycling", "skate", "boxing", "wrestling", "climbing"];
     const itemText = `${item.title || ""} ${item.description || ""}`.toLowerCase();
 
+    // Gaat het om een kledingstuk? Alleen dan gelden de uitsluitingen hieronder.
+    // Schoen-, sieraden-, games- en elektronicacategorieën moeten juist wél in
+    // hun eigen tak terechtkomen.
+    const isClothingCat = !!cat
+      && !/schoen|sneaker|laarzen|hakken|sandalen|boots|shoes|trainers/.test(cat)
+      && !/^(games|electronics|sieraden)\b/.test(cat)
+      && !/accessoire|accessor/.test(cat);
+
     // Does the listing (title/description) OR the dashboard category actually name
     // this sport? Only then is a niche sport-shoe category the right pick.
     const hintText = hints.join(" ");
