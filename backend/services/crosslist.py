@@ -21,6 +21,24 @@ logger = logging.getLogger(__name__)
 STALE_CLAIM_SECONDS = 60
 
 
+def _strip_text_tags(result: str) -> str:
+    """
+    Haal de <text>-omhulling weg die het model soms meeteruggeeft.
+
+    De vertaalopdracht zet de brontekst tussen <text>…</text>. Het model kopieert
+    die tags af en toe mee, en dan stond er letterlijk "<text>B'TWIN short-sleeve
+    cycling set …</text>" in de advertentie op Vinted. Alleen de buitenste
+    omhulling weghalen — tekens < en > midden in een beschrijving (maten,
+    pijltjes) blijven staan.
+    """
+    s = (result or "").strip()
+    if not s:
+        return ""
+    s = re.sub(r"^<\s*text\s*>", "", s, flags=re.I).strip()
+    s = re.sub(r"<\s*/\s*text\s*>\s*$", "", s, flags=re.I).strip()
+    return s
+
+
 def _republish_job_update(open_job: dict, payload: dict, now: datetime | None = None) -> dict:
     """
     Wat er met een al openstaande publicatieopdracht moet gebeuren als de
