@@ -1172,6 +1172,35 @@
     if (!el) return false;
     const num = _num(price);
     if (!isFinite(num) || num < 1) return false;
+
+    const fixed = num.toFixed(2);
+    const comma = fixed.replace(".", ",");
+    const nlFirst = _vintedLocaleIsComma(el);
+    const variants = Number.isInteger(num)
+      ? [String(num)]
+      : (nlFirst ? [comma, fixed] : [fixed, comma]);
+
+    // Eerst de enige route die het formulier écht binnenkomt: zetten vanuit de
+    // pagina zelf, met React's waarde-tracker gereset. Vanuit dit script (een
+    // aparte wereld) is die tracker onzichtbaar, en dan toont het veld wel de
+    // prijs maar houdt Vinted vast aan zijn lege interne waarde — de melding
+    // "Price must be greater than or equal to 1.0" bij een ingevulde €14,99.
+    try {
+      const res = await new Promise((resolve) => {
+        chrome.runtime.sendMessage(
+          { type: "SET_PRICE_MAIN", selector: 'input[data-testid="price-input--input"]', values: variants },
+          (r) => resolve(r || null),
+        );
+      });
+      if (res && res.ok && !(await priceErrorAfterSettle(700))) {
+        clog(`prijs gezet via de pagina zelf: ${res.used}`);
+        return true;
+      }
+      if (res && !res.ok) clog(`prijs via de pagina zelf lukte niet (${res.reason || "?"}) — nu de gewone route`);
+    } catch (e) {
+      clog(`prijs via de pagina zelf niet beschikbaar: ${e?.message || e}`);
+    }
+
     // Integers need no separator; only the fractional variants differ by locale.
     if (Number.isInteger(num)) return await _typePriceVariant(el, String(num), num);
 
@@ -1179,10 +1208,6 @@
     // makes the mask drop the fraction → the field reads as invalid ("≥ 1.0").
     // Prefer the variant matching the detected locale, then try the other. We
     // VERIFY each attempt sticks (value + no validation error) before accepting.
-    const fixed = num.toFixed(2);
-    const comma = fixed.replace(".", ",");
-    const nlFirst = _vintedLocaleIsComma(el);
-    const variants = nlFirst ? [comma, fixed] : [fixed, comma];
     for (const out of variants) {
       if (await _typePriceVariant(el, out, num)) return true;
     }
