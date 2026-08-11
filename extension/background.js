@@ -1222,34 +1222,52 @@ async function bgDeleteMp2dh(job, serverUrl) {
       const leaves = () => [...document.querySelectorAll("a, h1, h2, h3, span, p, div")]
         .filter(el => el.children.length === 0 && el.textContent.trim());
 
-      // Tweede harde sleutel: de SKU-prefix "(1337)" waarmee élke door deze app
-      // geplaatste advertentie begint. Exact en uniek — dus vóór de losse
-      // titelvergelijking, die op de eerste 18 tekens matchte en daardoor de
-      // verkeerde advertentie kon aanvinken (of geen enkele, want de titel op de
-      // pagina is vertaald en afgekapt).
+      // Zonder advertentienummer: 1-op-1 op de titel. Hoofdletters, accenten,
+      // leestekens, dubbele spaties en een eventuele "(1337)"-prefix doen niet
+      // mee; de rest moet exact kloppen. De oude vergelijking keek naar de eerste
+      // 18 tekens met "bevat" — die vond óf niets (de titel op de pagina is
+      // vertaald) óf de verkeerde advertentie.
+      const norm = s => (s || "")
+        .normalize("NFKD").replace(/[̀-ͯ]/g, "")
+        .toLowerCase()
+        .replace(/^\s*\([^)]{1,24}\)\s*/, "")
+        .replace(/[^a-z0-9]+/g, " ")
+        .trim();
+      const want = norm(rawTitle);
       let matchedBy = listingId && checkbox ? "id" : null;
+      let ambiguous = false;
+
       if (!checkbox && wantSku) {
         const needle = `(${String(wantSku).trim().toLowerCase()})`;
-        const el = leaves().find(e =>
+        const hits = leaves().filter(e =>
           e.textContent.replace(/\s+/g, " ").trim().toLowerCase().startsWith(needle));
-        if (el) { checkbox = rowFor(el); if (checkbox) matchedBy = "sku"; }
+        const boxes = [...new Set(hits.map(rowFor).filter(Boolean))];
+        if (boxes.length === 1) { checkbox = boxes[0]; matchedBy = "sku"; }
+        else if (boxes.length > 1) ambiguous = true;
       }
 
-      // Fallback: match on title text, for ads listed before an id was recorded.
-      // Titles on the overview are prefixed with the SKU, e.g. "(1323) Grijze
-      // Suitsupply Cardigan …", so both sides drop a leading "(digits)" first.
-      const strip = s => (s || "").replace(/^\s*\(\d+\)\s*/, "").replace(/\s+/g, " ").trim().toLowerCase();
-      if (!checkbox) {
-        const shortWant = strip(rawTitle).substring(0, 18);
-        if (shortWant) {
-          const titleEl = leaves().find(el => {
-            const t = strip(el.textContent);
-            return t && (t.startsWith(shortWant) || t.includes(shortWant));
-          });
-          if (titleEl) { checkbox = rowFor(titleEl); if (checkbox) matchedBy = "title"; }
-        }
+      if (!checkbox && !ambiguous && want) {
+        const boxes = [...new Set(
+          leaves().filter(el => norm(el.textContent) === want).map(rowFor).filter(Boolean)
+        )];
+        if (boxes.length === 1) { checkbox = boxes[0]; matchedBy = "title"; }
+        else if (boxes.length > 1) ambiguous = true;
       }
 
+      // Laatste kans: de pagina kapt lange titels af met "…". Dan telt een begin
+      // dat exact op onze titel past, mits het er maar één is.
+      if (!checkbox && !ambiguous && want.length >= 12) {
+        const boxes = [...new Set(
+          leaves()
+            .map(el => ({ el, t: norm(el.textContent) }))
+            .filter(x => x.t.length >= 12 && want.startsWith(x.t))
+            .map(x => rowFor(x.el)).filter(Boolean)
+        )];
+        if (boxes.length === 1) { checkbox = boxes[0]; matchedBy = "title-truncated"; }
+        else if (boxes.length > 1) ambiguous = true;
+      }
+
+      if (ambiguous && !checkbox) return { found: false, ambiguous: true, rendered };
       if (!checkbox) return { found: false, rendered };
 
       // Draagt juist DEZE rij een verkocht-label? Dan is verwijderen het
@@ -1494,7 +1512,7 @@ async function resolveVintedIdByTitle(title, sku) {
       // (Vroeger werd op de eerste 20 tekens vergeleken met "bevat", waardoor
       // twee "Beige Profuomo …"-advertenties door elkaar liepen.)
       const norm = s => (s || "")
-        .normalize("NFKD").replace(/[̀-ͯ]/g, "")
+        .normalize("NFKD").replace(/[\u0300-\u036f]/g, "")
         .toLowerCase()
         .replace(/^\s*\([^)]{1,24}\)\s*/, "")
         .replace(/[^a-z0-9]+/g, " ")
