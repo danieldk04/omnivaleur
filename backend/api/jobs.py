@@ -939,10 +939,31 @@ async def _reconcile_vinted_sales(db, job, scraped: list[dict], scan_meta: dict 
     #                revenue and cross-delist live listings). Instead we just take
     #                it off "Live" → 'delisted', so it lands in Archived for the
     #                user to confirm and mark sold themselves if it really sold.
-    newly_sold, set_aside = 0, 0
+    newly_sold, set_aside, matched_without_id = 0, 0, 0
     for l in active:
         pid = l.get("platform_listing_id")
         if pid is None:
+            # Geen Vinted-nummer bekend: match op de SKU-prefix van de titel, en
+            # anders op de exacte titel. Alleen een POSITIEF "gesloten" kaartje
+            # telt — afwezigheid blijft betekenisloos, precies zoals hieronder.
+            item = items_by_id.get(l["item_id"]) or {}
+            sku = str(item.get("sku") or "").strip().lower()
+            title = _norm_title(item.get("title"))
+            hit = (closed_id_by_sku.get(sku) if sku else None) or \
+                  (closed_id_by_title.get(title) if title else None)
+            if not hit:
+                continue
+            matched_without_id += 1
+            # Meteen het nummer vastleggen, zodat de volgende ronde gewoon op id matcht.
+            try:
+                db.table("listings").update({"platform_listing_id": hit}).eq("id", l["id"]).execute()
+            except Exception as e:  # noqa: BLE001
+                logger.warning("Vinted reconcile: could not backfill listing id for %s: %s", l["item_id"], e)
+            try:
+                await handle_item_sold(l["item_id"], "vinted")
+                newly_sold += 1
+            except Exception as e:
+                logger.warning(f"Vinted sale reconcile failed for item {l['item_id']}: {e}")
             continue
         pid = str(pid)
         if pid in closed_ids:
