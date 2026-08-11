@@ -164,6 +164,9 @@ const MP_CATEGORIES = {
   "tieners jongens":        { cat1: 565, bucketId: 153, cat3: 597, sizeMap: MP_KIDS_SIZES },
   "tieners meisjes":        { cat1: 565, bucketId: 153, cat3: 597, sizeMap: MP_KIDS_SIZES },
   "kinderen sportkleding":  { cat1: 565, bucketId: 153, cat3: 597, sizeMap: MP_KIDS_SIZES },
+  "kinderen wielrenkleding":{ cat1: 565, bucketId: 153, cat3: 597, sizeMap: MP_KIDS_SIZES },
+  "kinderen voetbalkleding":{ cat1: 565, bucketId: 153, cat3: 597, sizeMap: MP_KIDS_SIZES },
+  "kinderen zwemkleding":   { cat1: 565, bucketId: 153, cat3: 597, sizeMap: MP_KIDS_SIZES },
   // Schoenen en Sokken is its own type, so no size lookup.
   "kinderen schoenen":      { cat1: 565, bucketId: 153, cat3: 598 },
   // Mode-accessoires (bucketId 427) has exactly two types: baby and kind.
