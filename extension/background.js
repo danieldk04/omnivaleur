@@ -3803,6 +3803,25 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     return true;
   }
 
+  // Prijs zetten vanuit de pagina zelf (zie _mwSetVintedPrice).
+  if (msg.type === "SET_PRICE_MAIN") {
+    chrome.scripting.executeScript({
+      target: { tabId: sender.tab.id },
+      world: "MAIN",
+      func: _mwSetVintedPrice,
+      args: [msg.selector, msg.values],
+    }, (results) => {
+      if (chrome.runtime.lastError) {
+        console.error("[Omnivaleur] SET_PRICE_MAIN failed:", chrome.runtime.lastError.message);
+        sendResponse({ ok: false, reason: chrome.runtime.lastError.message });
+      } else {
+        console.log("[Omnivaleur] SET_PRICE_MAIN result:", results?.[0]?.result);
+        sendResponse(results?.[0]?.result ?? { ok: false, reason: "no-result" });
+      }
+    });
+    return true;
+  }
+
   // Het formulier praat mee in dit log: de console van de tab zelf is weg zodra
   // de tab dichtgaat, deze niet.
   //
