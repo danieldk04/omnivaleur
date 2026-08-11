@@ -12,8 +12,9 @@ NOOIT VANAF HET PRODUCTDOMEIN
 Verstuur dit niet vanaf omnivaleur.com. Daar draait de app op, daar komen de
 eBay-webhooks binnen en daarvandaan gaan de wachtwoord- en factuurmails via Resend.
 Resend verbiedt koude acquisitie bovendien met zoveel woorden en sluit accounts
-zonder waarschuwing — dan ligt het product plat. Gebruik een apart domein met een
-eigen postbus (Zoho Mail Lite, ~€11 per jaar).
+zonder waarschuwing — dan ligt het product plat. Daarvoor is op 11-08-2026
+omnivaleur.nl ingericht met een eigen Zoho-postbus (daniel@omnivaleur.nl), met
+eigen MX, SPF, DKIM en DMARC. Het productdomein is daarbij niet aangeraakt.
 
 WAT DIT WEL EN NIET DOET
   wel   opbouwen in tempo, per lead personaliseren, twee opvolgmails, stoppen zodra
@@ -23,8 +24,9 @@ WAT DIT WEL EN NIET DOET
         tempo hieronder ís de opwarming.
 
 Gebruik:
-    export MAIL_HOST=smtp.zoho.eu MAIL_USER=daniel@... MAIL_PASS=...
-    export IMAP_HOST=imap.zoho.eu
+    export MAIL_HOST=smtp.zoho.eu IMAP_HOST=imap.zoho.eu
+    export MAIL_USER=daniel@omnivaleur.nl
+    export MAIL_PASS=<app-wachtwoord uit accounts.zoho.eu, niet je inlogwachtwoord>
 
     python3 scripts/leadgen_mail.py plan                  # wie is vandaag aan de beurt
     python3 scripts/leadgen_mail.py send --dry-run        # tonen, niet versturen
