@@ -237,7 +237,8 @@ Ik ga {jou} niet langer lastigvallen, dit is mijn laatste mailtje.
 
 {mocht_jij} ooit denken "ik ben te veel tijd kwijt aan het overzetten van mijn
 advertenties", dan {weet_jij} me te vinden: {site}. Stuur gerust een berichtje,
-ook als {jij_wil} even sparren over waar {jij} nog meer zou kunnen verkopen.
+ook als het alleen is om even te sparren over waar {jouw} spullen nog meer
+zouden kunnen staan.
 
 Succes met de zaak, en veel verkoop!
 
@@ -360,8 +361,79 @@ def _controleer_afzender(met_verbinding: bool = True) -> str:
     return _need("MAIL_HOST") if met_verbinding else ""
 
 
+# ------------------------------------------------------------------- Notion
+
+
+class Notion:
+    """Houdt in de Leadlist bij wat er is verstuurd en wat er terugkwam.
+
+    Werkt alleen als NOTION_TOKEN in de omgeving staat; zonder token doet dit
+    niets en gaat het verzenden gewoon door. Mail versturen mag nooit stukgaan
+    omdat een administratie niet bereikbaar is.
+
+    Elke gebeurtenis komt als regel onder aan de leadpagina te staan. Dat kan niet
+    breken door een hernoemde kolom, en jij ziet in Notion de hele geschiedenis
+    onder elkaar. Daarnaast worden Fase en Status bijgewerkt voor zover die
+    kolommen en keuzes echt bestaan.
+    """
+
+    FASE = {1: "2. Benaderd", 2: "2. Benaderd", 3: "2. Benaderd"}
+
+    def __init__(self) -> None:
+        self.token = os.environ.get("NOTION_TOKEN", "")
+        self.paginas: dict[str, str] = {}
+        self.props: dict = {}
+        self.gemist: set[str] = set()
+        self.klaar = False
+
+    def _start(self) -> bool:
+        if self.klaar:
+            return bool(self.token)
+        self.klaar = True
+        if not self.token:
+            print("  (geen NOTION_TOKEN — niets bijgehouden in Notion)")
+            return False
+        try:
+            import leadgen_notion as notion
+            self.paginas = notion.existing_pages(self.token)
+            self.props = notion.schema(self.token)
+        except Exception as e:  # noqa: BLE001
+            print(f"  (Notion niet bereikbaar: {e})")
+            self.token = ""
+            return False
+        return True
+
+    def noteer(self, lead: dict, regel: str, fase: str | None = None,
+               status: str | None = None) -> None:
+        if not self._start():
+            return
+        url = (lead.get("ig_url") or "").rstrip("/").lower()
+        pagina = self.paginas.get(url)
+        if not pagina:
+            return
+        import leadgen_notion as notion
+        vandaag = date.today().isoformat()
+        try:
+            notion.append_log(pagina, self.token,
+                              f"{date.today().strftime('%d-%m-%Y')} — {regel}")
+            wensen: dict = {"Laatste contact": ("date", vandaag)}
+            if fase:
+                wensen["Fase"] = ("select", fase)
+            if status:
+                wensen["Status"] = ("status", status)
+            self.gemist |= set(notion.set_props(pagina, self.token, wensen, self.props))
+        except Exception as e:  # noqa: BLE001
+            print(f"  (Notion: {lead.get('email')} niet bijgewerkt: {e})")
+
+    def afsluiten(self) -> None:
+        if self.gemist:
+            print("\nNotion: deze kolommen of keuzes bestaan niet in de Leadlist en\n"
+                  "zijn overgeslagen — " + ", ".join(sorted(self.gemist)) + ".\n"
+                  "De regels onder aan elke leadpagina zijn wel gewoon geschreven.")
+
+
 def _bericht(lead: dict, n: int, van: str) -> EmailMessage:
-    onderwerp, sjabloon = BEURTEN[n][1], BEURTEN[n][2]
+    onderwerp, sjabloon = _onderwerp(lead, n), BEURTEN[n][2]
     msg = EmailMessage()
     msg["From"] = f"{AFZENDER_NAAM} <{van}>"
     msg["To"] = lead["email"]
@@ -388,7 +460,7 @@ def send(args) -> None:
           f"{' (dry-run)' if args.dry_run else ''}.\n")
     if args.dry_run:
         lead, n, _ = rij[0]
-        print(f"Voorbeeld — {BEURTEN[n][1]}\naan: {lead['email']}\n")
+        print(f"Voorbeeld — {_onderwerp(lead, n)}\naan: {lead['email']}\n")
         print(_netjes(_tekst(lead, BEURTEN[n][2])))
         print("\n" + "-" * 60)
         for lead, n, waarom in rij:
@@ -396,6 +468,7 @@ def send(args) -> None:
         return
 
     verstuurd = 0
+    boek = Notion()
     with smtplib.SMTP_SSL(host, 465, context=ssl.create_default_context()) as smtp:
         smtp.login(gebruiker, _need("MAIL_PASS"))
         for i, (lead, n, _) in enumerate(rij):
@@ -412,10 +485,14 @@ def send(args) -> None:
             st["laatste"] = datetime.now().isoformat(timespec="seconds")
             _save_state(state)          # na elke mail, zodat een crash niets dubbel doet
             verstuurd += 1
+            boek.noteer(lead, f"{BEURTEN[n][0]} verstuurd naar {lead['email']} "
+                              f"— onderwerp: {_onderwerp(lead, n)}",
+                        fase="2. Benaderd", status="Contacted")
             print(f"  → {BEURTEN[n][0]} {lead['email']}", flush=True)
             if i < len(rij) - 1:
                 time.sleep(random.uniform(*PAUZE))
 
+    boek.afsluiten()
     print(f"\n{verstuurd} mails verstuurd. Morgen weer — draai 'check' voor antwoorden.")
 
 
@@ -432,6 +509,8 @@ def check(args) -> None:
 
     sinds = (date.today() - timedelta(days=args.dagen)).strftime("%d-%b-%Y")
     nieuw = afgemeld = bounces = 0
+    boek = Notion()
+    per_adres = {l["email"].lower(): l for l in _leads()}
     with imaplib.IMAP4_SSL(host, 993) as imap:
         imap.login(gebruiker, _need("MAIL_PASS"))
         imap.select("INBOX")
@@ -448,19 +527,31 @@ def check(args) -> None:
                     if st and not st.get("bounce"):
                         st["bounce"] = True
                         bounces += 1
+                        if per_adres.get(adres.lower()):
+                            boek.noteer(per_adres[adres.lower()],
+                                        "mail kwam niet aan (bounce) — adres klopt niet",
+                                        fase="X. Afgevallen", status="Not interested")
                 continue
 
             st = state.get(afzender)
             if not st:
                 continue
+            lead = per_adres.get(afzender)
             if not st.get("beantwoord"):
                 st["beantwoord"] = datetime.now().isoformat(timespec="seconds")
                 nieuw += 1
+                if lead:
+                    boek.noteer(lead, "heeft geantwoord op de mail",
+                                fase="3. In gesprek", status="Replied")
             if AFMELD_WOORDEN.search(body[:400]) and not st.get("afgemeld"):
                 st["afgemeld"] = True
                 afgemeld += 1
+                if lead:
+                    boek.noteer(lead, "heeft zich afgemeld — niet meer mailen",
+                                fase="X. Afgevallen", status="Not interested")
 
     _save_state(state)
+    boek.afsluiten()
     print(f"{nieuw} nieuwe antwoorden, {afgemeld} afmeldingen, {bounces} bounces.")
     if nieuw:
         print("\nWie heeft geantwoord:")

@@ -157,3 +157,59 @@ def push_leads(leads: list[dict], token: str,
         except Exception as e:  # noqa: BLE001 — één afgekeurde lead mag de rest niet stoppen
             print(f"  ! {_label(lead)}: {e}")
     return created, skipped
+
+
+# --------------------------------------------------- bijhouden van de outreach
+# Notion weigert een hele update zodra er één kolomnaam of één keuze-optie in
+# staat die niet bestaat. Voor het loggen van verstuurde mails is dat te fragiel:
+# dan mist er stilzwijgend een halve verzendgeschiedenis omdat iemand een kolom
+# hernoemd heeft. Daarom hier twee lagen:
+#   1. een regel onder aan de leadpagina — blokken hebben geen kolomnamen en
+#      kunnen dus nooit stukgaan. Dit is de echte administratie.
+#   2. best-effort bijwerken van kolommen die aantoonbaar bestaan (fase, datum,
+#      teller). Wat niet bestaat wordt overgeslagen en gemeld, niet gegooid.
+
+
+def schema(token: str) -> dict:
+    """De live kolommen van de Leadlist, met hun type en keuze-opties."""
+    return call("GET", f"/databases/{NOTION_DB}", token).get("properties", {})
+
+
+def append_log(page_id: str, token: str, regel: str) -> None:
+    call("PATCH", f"/blocks/{page_id}/children", token, {"children": [{
+        "object": "block", "type": "paragraph",
+        "paragraph": {"rich_text": [{"text": {"content": regel[:1900]}}]},
+    }]})
+
+
+def _bestaat(props: dict, naam: str, soort: str, waarde) -> dict | None:
+    veld = props.get(naam)
+    if not veld or veld["type"] != soort:
+        return None
+    if soort in ("select", "status"):
+        opties = {o["name"] for o in veld[soort].get("options", [])}
+        return {soort: {"name": waarde}} if waarde in opties else None
+    if soort == "date":
+        return {"date": {"start": waarde}}
+    if soort == "number":
+        return {"number": waarde}
+    if soort == "rich_text":
+        return {"rich_text": [{"text": {"content": str(waarde)[:1900]}}]}
+    if soort == "checkbox":
+        return {"checkbox": bool(waarde)}
+    return None
+
+
+def set_props(page_id: str, token: str, wensen: dict, props: dict) -> list[str]:
+    """Zet alleen wat bestaat. Geeft terug wat is overgeslagen, zodat de aanroeper
+    dat kan melden in plaats van het stil te laten verdwijnen."""
+    schrijven, overgeslagen = {}, []
+    for naam, (soort, waarde) in wensen.items():
+        val = _bestaat(props, naam, soort, waarde)
+        if val is None:
+            overgeslagen.append(naam)
+        else:
+            schrijven[naam] = val
+    if schrijven:
+        call("PATCH", f"/pages/{page_id}", token, {"properties": schrijven})
+    return overgeslagen
