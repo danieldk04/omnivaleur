@@ -91,17 +91,21 @@ def list_all_listings(
     for chunk_start in range(0, len(item_ids), 200):
         chunk = item_ids[chunk_start:chunk_start + 200]
         listings.extend(fetch_all(lambda c=chunk: bouw(c)))
-    # Attach each listing's item title so the extension can title-match sold ads
+    # Attach each listing's item title AND sku so the extension can match sold ads
     # for listings that have no platform_listing_id (hand-marked / unconfirmed).
+    # De SKU is de betrouwbaarste sleutel: elke door ons geplaatste advertentie
+    # begint met "(SKU)", terwijl de titel op het platform vertaald en afgekapt is.
     ids = list({l["item_id"] for l in listings if l.get("item_id")})
     if ids:
         items = []
         for i in range(0, len(ids), 200):
             brok = ids[i:i + 200]
-            items.extend(fetch_all(lambda b=brok: db.table("items").select("id,title").in_("id", b)))
-        titles = {it["id"]: it.get("title") for it in items}
+            items.extend(fetch_all(lambda b=brok: db.table("items").select("id,title,sku").in_("id", b)))
+        by_id = {it["id"]: it for it in items}
         for l in listings:
-            l["title"] = titles.get(l.get("item_id"))
+            it = by_id.get(l.get("item_id")) or {}
+            l["title"] = it.get("title")
+            l["sku"] = it.get("sku")
     return listings
 
 
