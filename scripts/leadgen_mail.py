@@ -89,6 +89,22 @@ AFMELD_WOORDEN = re.compile(
     r"\b(stop|afmelden|uitschrijven|unsubscribe|geen interesse|niet meer mailen)\b",
     re.I)
 BOUNCE_AFZENDERS = re.compile(r"mailer-daemon|postmaster|no-?reply", re.I)
+# Een automatisch antwoord is geen antwoord. Zou je het wel zo tellen, dan valt
+# iemand die "ik ben op vakantie" terugstuurt uit de opvolging en hoor je nooit
+# meer iets van hem.
+AUTO_ONDERWERP = re.compile(
+    r"^(automatisch antwoord|auto(matic)? reply|out of office|afwezig"
+    r"|ontvangstbevestiging|bedankt voor je (bericht|mail))", re.I)
+# Niet elke ontvangstbevestiging verraadt zich in de onderwerpregel: BoekenBalie
+# stuurde er een terug onder ons eigen onderwerp. Deze zinnen in de aanhef zijn
+# het tweede vangnet.
+AUTO_TEKST = re.compile(
+    r"(bedankt voor (je|jouw|uw) (e-?mail|bericht)"
+    r"|in goede orde ontvangen"
+    r"|we (hebben|nemen) .{0,40}(ontvangen|contact met je op) binnen"
+    r"|reageren wij op dit moment"
+    r"|binnen \d+ (werk)?dagen (beantwoord|contact)"
+    r"|dit is een automatisch)", re.I)
 
 
 def _need(var: str) -> str:
@@ -587,6 +603,15 @@ def _check_inbox(state: dict, boek: "Notion", dagen: int) -> tuple[int, int, int
             st = state.get(afzender)
             if not st:
                 continue
+            kop = str(msg.get("Subject", ""))
+            automatisch = (AUTO_ONDERWERP.match(kop.replace("Re:", "").strip())
+                           or msg.get("Auto-Submitted", "").lower().startswith("auto")
+                           or msg.get("X-Autoreply") or msg.get("X-Autorespond")
+                           or AUTO_TEKST.search(body[:400]))
+            if automatisch:
+                st["auto_antwoord"] = True
+                continue
+
             lead = per_adres.get(afzender)
             if not st.get("beantwoord"):
                 st["beantwoord"] = datetime.now().isoformat(timespec="seconds")
