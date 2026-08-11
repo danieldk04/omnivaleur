@@ -2725,9 +2725,11 @@ async function checkSoldListings() {
           if (isSold) console.log(`[Omnivaleur][sold] ${platform}: matched sold ad by SKU ${listingSku} for "${listing.title}" (no platform id)`);
         }
         if (!isSold && !listing.platform_listing_id && listing.title) {
-          const lt = listing.title.toLowerCase().trim();
-          const key = lt.substring(0, 20);
-          isSold = key.length >= 8 && soldTitles.some(st => st.startsWith(key) || st.includes(key));
+          // 1-op-1 op de titel, en alleen als die titel bij precies één verkochte
+          // advertentie hoort. (Vroeger: eerste 20 tekens met "bevat" — dat kon
+          // het verkeerde item als verkocht boeken.)
+          const key = normTitle(listing.title);
+          isSold = !!key && soldTitleCount.get(key) === 1;
           if (isSold) console.log(`[Omnivaleur][sold] ${platform}: matched sold ad by TITLE for "${listing.title}" (no platform id)`);
         }
         if (isSold) {
