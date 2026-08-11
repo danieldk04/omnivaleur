@@ -1418,13 +1418,23 @@ async function resolveVintedIdByTitle(title, sku) {
       await sleep(1500);
     }
 
-    const found = await execInTab(tabId, async (userId, wantTitle) => {
+    const found = await execInTab(tabId, async (userId, wantTitle, wantSku) => {
       const norm = s => (s || "").toLowerCase().replace(/\s+/g, " ").trim();
       const want = norm(wantTitle);
       const short = want.substring(0, 20);
+      // De SKU-prefix "(1337)" staat in élke titel die deze app op Vinted zet en
+      // is uniek — dat is een harde match, in tegenstelling tot de eerste 20
+      // tekens van een titel (twee "Beige Profuomo …" advertenties botsen).
+      const sku = String(wantSku || "").trim().toLowerCase();
+      const skuOf = t => {
+        const m = /^\s*\(([^)]{1,24})\)/.exec(t || "");
+        return m ? m[1].trim().toLowerCase() : "";
+      };
       const matches = t => {
         const c = norm(t);
-        if (!c || !short) return false;
+        if (!c) return false;
+        if (sku && skuOf(t) === sku) return true;
+        if (!short) return false;
         return c.startsWith(short) || c.includes(short) || want.includes(c.substring(0, 20));
       };
       try {
@@ -1434,8 +1444,11 @@ async function resolveVintedIdByTitle(title, sku) {
           const data = await res.json();
           if (data.code && data.code !== 0) return null;
           const items = data.items || [];
-          const hit = items.find(it => matches(it.title));
-          if (hit) return String(hit.id);
+          // SKU-treffers gaan voor: een losse titelmatch mag nooit een exacte
+          // SKU-match op dezelfde pagina overrulen.
+          const hit = (sku && items.find(it => skuOf(it.title) === sku))
+            || items.find(it => matches(it.title));
+          if (hit) return { id: String(hit.id), closed: !!hit.is_closed };
           const pg = data.pagination || {};
           if (items.length === 0) return null;
           if (pg.total_pages && page >= pg.total_pages) return null;
@@ -1443,9 +1456,9 @@ async function resolveVintedIdByTitle(title, sku) {
         }
         return null;
       } catch (e) { return null; }
-    }, [idInfo.userId, title]);
+    }, [idInfo.userId, title, sku || ""]);
 
-    return { id: found || null, origin: idInfo.origin };
+    return { id: found?.id || null, closed: !!found?.closed, origin: idInfo.origin };
   } finally {
     setTimeout(() => chrome.tabs.remove(tabId).catch(() => {}), 2500);
   }
