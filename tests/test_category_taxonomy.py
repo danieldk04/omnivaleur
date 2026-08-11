@@ -95,7 +95,8 @@ def test_every_category_gets_an_english_shopify_type(all_keys):
     ("Rapha wielrenshirt heren", "heren wielrenkleding"),
     ("Nike trainingspak dames", "trainingspakken"),
     ("Salomon skibroek heren", "heren skikleding"),
-    ("Ajax voetbalshirt kinderen", "kinderen sportkleding"),
+    ("Ajax voetbalshirt kinderen", "kinderen voetbalkleding"),
+    ("Nike sportshirt kinderen", "kinderen sportkleding"),
     ("Speedo zwembroek men", "heren zwembroeken"),
     ("Levi's 501 jeans men", "heren jeans"),
 ])
