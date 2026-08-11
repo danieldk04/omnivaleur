@@ -2627,7 +2627,10 @@ async function checkSoldListings() {
         continue;
       }
       const allListings = await resp.json();
-      const active = allListings.filter(l => l.platform === platform && l.status === "active");
+      // Ook 'hidden' en 'relisting': ook zo'n advertentie kan gewoon verkocht
+      // zijn, en die verkoop werd tot nu toe nooit opgemerkt.
+      const active = allListings.filter(l =>
+        l.platform === platform && ["active", "hidden", "relisting"].includes(l.status));
       const withId = active.filter(l => l.platform_listing_id);
       const withoutId = active.filter(l => !l.platform_listing_id);
       console.log(`[Omnivaleur][sold] ${platform}: ${active.length} active listings (${withId.length} with a platform id, ${withoutId.length} without an id → matched by title)`);
