@@ -424,23 +424,53 @@ async def reconcile_vinted_orders(body: dict, user_id: str = Depends(get_current
     inferring a sale from a listing disappearing off the wardrobe: Vinted itself
     says the order sold, and the row carries the amount actually received.
 
-    Each order carries the item's SKU (the "(1234)" prefix the app embeds in every
-    Vinted title), the price paid, and whether it's a genuine sale (`sold: true`)
-    or a cancelled/refunded order (`sold: false`, ignored).
+    Each order carries the price paid, whether it's a genuine sale (`sold: true`)
+    or a cancelled/refunded order (`sold: false`, ignored), and one of two keys:
+    the item's SKU (the "(1234)" prefix some sellers put in their titles), or the
+    order row's visible text.
 
-    Safety: we only act on an EXACT, UNIQUE SKU match scoped to the caller's own
-    items — an ambiguous or unknown SKU is skipped, never guessed, so a bad scrape
-    can't mark the wrong item sold (and trigger its cross-platform delist).
+    Safety: we only act on an EXACT, UNIQUE match scoped to the caller's own items
+    — either the SKU, or the item's full title appearing verbatim in the order row.
+    Anything ambiguous or unknown is skipped, never guessed, so a bad scrape can't
+    mark the wrong item sold (and trigger its cross-platform delist).
     Already-sold items are only touched to backfill a missing sold_price, so this
     endpoint can run every few minutes without re-queuing delist jobs.
 
-    Body: {orders: [{sku, price, sold}]}
+    Body: {orders: [{sku?, text?, price, sold}]}
     """
     orders = body.get("orders")
     if not isinstance(orders, list):
         raise HTTPException(status_code=400, detail="orders must be a list")
 
     db = get_db()
+    # Titelsleutel voor verkopers zonder nummer in de titel: de volledige,
+    # genormaliseerde itemtitel moet lettterlijk in de orderregel voorkomen, en
+    # maar bij één item passen. Korte titels (< 12 tekens) tellen niet mee — die
+    # zouden te makkelijk toevallig ergens in staan.
+    def _norm(t: str) -> str:
+        t = unicodedata.normalize("NFKD", t or "")
+        t = "".join(c for c in t if not unicodedata.combining(c)).lower()
+        t = re.sub(r"^\s*\([^)]{1,24}\)\s*", "", t)
+        return " ".join(re.sub(r"[^a-z0-9]+", " ", t).split())
+
+    own_items = fetch_all(
+        lambda: db.table("items").select("id,title").eq("user_id", user_id))
+    title_keys: list[tuple[str, str]] = []
+    counts: dict[str, int] = {}
+    for it in own_items:
+        key = _norm(it.get("title"))
+        if len(key) >= 12:
+            title_keys.append((key, it["id"]))
+            counts[key] = counts.get(key, 0) + 1
+    title_keys = [(k, i) for k, i in title_keys if counts[k] == 1]
+
+    def _match_by_text(text: str) -> str | None:
+        hay = _norm(text)
+        if not hay:
+            return None
+        hits = {item_id for key, item_id in title_keys if key in hay}
+        return hits.pop() if len(hits) == 1 else None
+
     marked_sold = 0
     price_backfilled = 0
     matched = 0
