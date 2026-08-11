@@ -451,6 +451,8 @@
       const sizeEl = qs('input[data-testid="category-size-single-grid-input"]');
       const colEl = qs('input[data-testid="color-select-dropdown-input"]');
       const descEl = qs('textarea[data-testid="description--input"]');
+      const prijsFout = priceErrorVinted();
+      if (prijsFout) gaps.push(`prijs (${item.price} — Vinted zegt: ${prijsFout})`);
       if (descEl && !(descEl.value || "").trim()) gaps.push("beschrijving");
       if (sizeEl && !(sizeEl.value || "").trim()) gaps.push(`maat (${item.size || "leeg"})`);
       if (colEl && !(colEl.value || "").trim()) {
