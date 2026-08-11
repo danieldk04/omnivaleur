@@ -1314,6 +1314,138 @@
   }
 
   // ---- CATEGORY: prefer Vinted's own "Suggested" options, then verify the match. ----
+  // ---- Vinted's eigen categorieboom, letterlijk ----------------------------
+  // Deze paden zijn afgelopen in de echte kiezer op vinted.nl (augustus 2026).
+  // Het laatste stukje van het pad hoeft geen eindpunt te zijn: staan er nog
+  // subcategorieën onder (Jeans → Ripped/Skinny/Slim fit/Straight fit), dan
+  // kiest de wandelaar hieronder er zelf een op basis van de artikeltekst.
+  const V_KLEDING = {
+    // sleutel zonder gender → pad ONDER "<Gender> > Clothing"
+    heren: {
+      "jeans": ["Jeans"],
+      "chinos": ["Trousers"], "broeken": ["Trousers"],
+      "shorts": ["Shorts"],
+      "t-shirts": ["Tops & t-shirts", "T-shirts"],
+      "polo's": ["Tops & t-shirts", "Polo shirts"],
+      "overhemden": ["Tops & t-shirts", "Shirts"],
+      "truien": ["Jumpers & sweaters"],
+      "hoodies": ["Jumpers & sweaters"],
+      "jassen": ["Outerwear"],
+      "pakken": ["Suits & blazers"],
+      "zwembroeken": ["Swimwear"],
+      "ondergoed": ["Socks & underwear"],
+      "sport tops": ["Activewear", "Tops & t-shirts"],
+      "sportbroeken": ["Activewear", "Shorts"],
+      "sportjassen": ["Activewear", "Outerwear"],
+      "trainingspakken": ["Activewear", "Tracksuits"],
+      "hardloopkleding": ["Activewear", "Tops & t-shirts"],
+      "wielrenkleding": ["Activewear", "Team shirts & jerseys"],
+      "voetbalkleding": ["Activewear", "Team shirts & jerseys"],
+      "gymkleding": ["Activewear", "Tops & t-shirts"],
+      "skikleding": ["Activewear", "Outerwear"],
+      "sportkleding": ["Activewear", "Other activewear"],
+    },
+    dames: {
+      "jeans": ["Jeans"],
+      "broeken": ["Trousers & leggings"],
+      "shorts": ["Shorts & cropped trousers"],
+      "rokken": ["Skirts"],
+      "jurken casual": ["Dresses"], "jurken feest": ["Dresses"],
+      "blouses": ["Tops & t-shirts"], "tops": ["Tops & t-shirts"],
+      "truien": ["Jumpers & sweaters"], "hoodies": ["Jumpers & sweaters"],
+      "jassen": ["Outerwear"],
+      "zwemkleding": ["Swimwear"],
+      "ondergoed": ["Lingerie & nightwear"],
+      "sport bh": ["Activewear", "Sports bras"],
+      "sportleggings": ["Activewear", "Trousers"],
+      "sportbroeken": ["Activewear", "Shorts"],
+      "sport tops": ["Activewear", "Tops & t-shirts"],
+      "sportjassen": ["Activewear", "Outerwear"],
+      "trainingspakken": ["Activewear", "Tracksuits"],
+      "hardloopkleding": ["Activewear", "Tops & t-shirts"],
+      "wielrenkleding": ["Activewear", "Team shirts & jerseys"],
+      "voetbalkleding": ["Activewear", "Team shirts & jerseys"],
+      "yogakleding": ["Activewear", "Trousers"],
+      "gymkleding": ["Activewear", "Tops & t-shirts"],
+      "skikleding": ["Activewear", "Outerwear"],
+      "sportkleding": ["Activewear", "Other activewear"],
+    },
+  };
+
+  function vintedPathFor(cat, gender) {
+    const isHeren = gender === "heren" || gender === "men";
+    const isDames = gender === "dames" || gender === "women";
+    if (!isHeren && !isDames) return null;   // kinderen/unisex: via zoeken
+    const tak = isHeren ? "heren" : "dames";
+    // "heren wielrenkleding" → "wielrenkleding"
+    const kaal = cat.replace(/^(heren|dames)\s+/, "");
+    const rest = V_KLEDING[tak][kaal];
+    if (!rest) return null;
+    return [isHeren ? "Men" : "Women", "Clothing", ...rest];
+  }
+
+  // Loopt het pad af in Vinted's kiezer. Stopt zodra de lijst dichtklapt en het
+  // veld een waarde heeft — dat is Vinted's eigen signaal dat de categorie
+  // gekozen is. Zijn er onderweg nog subcategorieën, dan kiest hij het blad dat
+  // in de titel/beschrijving voorkomt, anders het neutrale "Other …", anders de
+  // eerste. Zo wordt er nooit een eigenschap verzonnen die er niet is.
+  async function walkVintedCategoryPath(item, cat, gender) {
+    const pad = vintedPathFor(cat, gender);
+    if (!pad) return false;
+    const inp = qs('input[data-testid="catalog-select-dropdown-input"]');
+    if (!inp) return false;
+    const cellen = () => [...document.querySelectorAll('[class*="Cell__clickable"]')]
+      .filter((e) => e.offsetParent !== null);
+    const titel = (e) =>
+      (e.querySelector('[class*="Cell__title"]')?.textContent || e.textContent || "").trim();
+    const klik = async (label) => {
+      const c = cellen().find((e) => titel(e).toLowerCase() === label.toLowerCase());
+      if (!c) return false;
+      realClickEl(c);
+      await sleep(1100);
+      return true;
+    };
+
+    if (!cellen().length) {
+      inp.scrollIntoView({ block: "center" });
+      await sleep(200);
+      realClickEl(inp);
+      await sleep(1200);
+    }
+    if (!cellen().length) return false;
+
+    for (const stap of pad) {
+      if (!(await klik(stap))) {
+        clog(`Vinted-categorie: stap "${stap}" niet gevonden — terug naar zoeken`);
+        return false;
+      }
+    }
+
+    // Nog dieper? Dan zelf een verstandig blad kiezen (max 3 niveaus).
+    const tekst = `${item.title || ""} ${item.description || ""}`.toLowerCase();
+    for (let i = 0; i < 3 && cellen().length; i++) {
+      const opties = cellen();
+      const genoemd = opties.find((e) => {
+        const woorden = titel(e).toLowerCase().replace(/&/g, " ").split(/\s+/)
+          .filter((w) => w.length > 3 && !["jeans", "shirts", "jackets", "coats"].includes(w));
+        return woorden.length && woorden.some((w) => tekst.includes(w));
+      });
+      const neutraal = opties.find((e) => /^other\b/i.test(titel(e)));
+      const keuze = genoemd || neutraal || opties[0];
+      clog(`Vinted-categorie: extra niveau → "${titel(keuze)}"`);
+      realClickEl(keuze);
+      await sleep(1100);
+    }
+
+    const gekozen = (inp.value || "").trim();
+    if (gekozen) {
+      clog(`Vinted-categorie via de boom: ${pad.join(" > ")} → "${gekozen}"`);
+      return true;
+    }
+    clog("Vinted-categorie: boom afgelopen maar niets vastgelegd — terug naar zoeken");
+    return false;
+  }
+
   async function fillCategoryVinted(item) {
     const cat = (item.category || "").toLowerCase().trim();
     const gender = (item.gender || "").toLowerCase().trim(); // "heren"/"dames" if present
