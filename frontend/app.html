@@ -5078,7 +5078,13 @@ function renderRelistInProgress() {
             ? ``
             : !deleteDone
               ? `<button class="btn btn-sm" style="margin-top:10px;background:transparent;color:var(--muted);border:1px solid var(--border,#e2e8f0);width:100%" onclick="cancelRelist('${r.item_id}','${r.platform}',this)">✕ Cancel relist &amp; keep the current listing</button>`
-              : `<button class="btn btn-sm" style="margin-top:10px;background:var(--blue,#2563eb);color:#fff;border:none;width:100%" onclick="publishRelistNow('${r.item_id}','${r.platform}',this)">↑ Publish the new listing now</button>`
+              // Once the old listing is gone there are exactly two real
+              // situations: the recreate still has to run, or the user got
+              // impatient and published it by hand. Without the second button
+              // that case had no way out at all — the card sat on "Publishing
+              // now…" forever and the queued job would have posted a duplicate.
+              : `<button class="btn btn-sm" style="margin-top:10px;background:var(--blue,#2563eb);color:#fff;border:none;width:100%" onclick="publishRelistNow('${r.item_id}','${r.platform}',this)">↑ Publish the new listing now</button>
+                 <button class="btn btn-sm" style="margin-top:7px;background:transparent;color:var(--muted);border:1px solid var(--border,#e2e8f0);width:100%" onclick="relistPublishedByHand('${r.item_id}','${r.platform}',this)" title="Stops the queued republish so you don't end up with two listings">✓ I already published it myself</button>`
         }`;
 
     return `<div class="rl-card">
