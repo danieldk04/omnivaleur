@@ -57,6 +57,7 @@ OUT = Path(__file__).parent / "output" / "leads"
 MP_LEADS = OUT / "mp_leads.json"
 IG_LEADS = OUT / "leads.json"
 STATE = OUT / "mail_state.json"
+PLAN = OUT / "mail_plan.json"
 
 # ---------------------------------------------------------------------------
 # VUL DIT IN VOORDAT JE VERSTUURT.
@@ -72,10 +73,17 @@ SITE = "https://omnivaleur.com"
 
 # Opbouwschema: het aantal mails per dag, geteld vanaf je eerste verzenddag. Een
 # nieuw domein dat op dag één honderd mails uitstuurt is een nieuw domein dat op
-# dag twee op een zwarte lijst staat.
-RAMP = [(1, 5), (4, 10), (8, 15), (12, 25)]
+# dag twee op een zwarte lijst staat. Daniel wil naar 15 per dag; deze trap komt
+# daar in drie dagen, wat voor een vers domein nog te verdedigen is.
+#
+# VENSTER en SPREIDING horen bij de autonome stand (`tick`): de mails van een dag
+# krijgen willekeurige tijdstippen binnen kantoortijd, in plaats van vijftien
+# stuks achter elkaar om negen uur 's ochtends.
+RAMP = [(1, 5), (2, 10), (3, 15)]
 FOLLOWUP_DAGEN = (5, 12)      # opvolgmail 1 en 2, in dagen na de vorige mail
 PAUZE = (40, 110)             # seconden tussen twee mails, willekeurig
+VENSTER = (8, 45), (20, 30)   # vroegste en laatste verzendtijd op een dag
+MIN_GAT = 9                   # minuten die minimaal tussen twee tijdstippen zitten
 
 AFMELD_WOORDEN = re.compile(
     r"\b(stop|afmelden|uitschrijven|unsubscribe|geen interesse|niet meer mailen)\b",
@@ -360,23 +368,31 @@ def _controleer_afzender(met_verbinding: bool = True) -> str:
 class Notion:
     """Houdt in de Leadlist bij wat er is verstuurd en wat er terugkwam.
 
-    Werkt alleen als NOTION_TOKEN in de omgeving staat; zonder token doet dit
-    niets en gaat het verzenden gewoon door. Mail versturen mag nooit stukgaan
-    omdat een administratie niet bereikbaar is.
+    Twee lagen, omdat Notion een hele update weigert zodra er één kolomnaam of
+    keuze in staat die niet bestaat:
+      1. een regel onder aan de leadpagina, met datum. Blokken hebben geen
+         kolomnamen en kunnen dus nooit breken. Dit is de echte administratie.
+      2. de kolommen Fase, Status, Eerste contact, Volgende actie op en
+         Follow-ups verstuurd, voor zover die aantoonbaar bestaan.
 
-    Elke gebeurtenis komt als regel onder aan de leadpagina te staan. Dat kan niet
-    breken door een hernoemde kolom, en jij ziet in Notion de hele geschiedenis
-    onder elkaar. Daarnaast worden Fase en Status bijgewerkt voor zover die
-    kolommen en keuzes echt bestaan.
+    De keuzes hieronder zijn overgenomen uit de LIVE database (2026-08-11). Zonder
+    NOTION_TOKEN doet dit niets en gaat het verzenden gewoon door: mail versturen
+    mag nooit stukgaan omdat een administratie niet bereikbaar is.
     """
 
-    FASE = {1: "2. Benaderd", 2: "2. Benaderd", 3: "2. Benaderd"}
+    # per beurt: (fase, status, aantal follow-ups verstuurd)
+    NA_MAIL = {
+        0: ("2. Benaderd", "Reached Out", 0),
+        1: ("T2. Tekst follow-up 1", "Reached Out", 1),
+        2: ("T3. Tekst follow-up 2 (laatste)", "Reached Out", 2),
+    }
 
     def __init__(self) -> None:
         self.token = os.environ.get("NOTION_TOKEN", "")
         self.paginas: dict[str, str] = {}
         self.props: dict = {}
         self.gemist: set[str] = set()
+        self.zonder_pagina = 0
         self.klaar = False
 
     def _start(self) -> bool:
@@ -396,29 +412,52 @@ class Notion:
             return False
         return True
 
-    def noteer(self, lead: dict, regel: str, fase: str | None = None,
-               status: str | None = None) -> None:
+    def _schrijf(self, lead: dict, regel: str, wensen: dict) -> None:
         if not self._start():
             return
-        url = (lead.get("ig_url") or "").rstrip("/").lower()
-        pagina = self.paginas.get(url)
+        pagina = self.paginas.get((lead.get("ig_url") or "").rstrip("/").lower())
         if not pagina:
+            self.zonder_pagina += 1
             return
         import leadgen_notion as notion
-        vandaag = date.today().isoformat()
         try:
             notion.append_log(pagina, self.token,
-                              f"{date.today().strftime('%d-%m-%Y')} — {regel}")
-            wensen: dict = {"Laatste contact": ("date", vandaag)}
-            if fase:
-                wensen["Fase"] = ("select", fase)
-            if status:
-                wensen["Status"] = ("status", status)
+                              f"{datetime.now().strftime('%d-%m-%Y %H:%M')} — {regel}")
             self.gemist |= set(notion.set_props(pagina, self.token, wensen, self.props))
         except Exception as e:  # noqa: BLE001
             print(f"  (Notion: {lead.get('email')} niet bijgewerkt: {e})")
 
+    def verstuurd(self, lead: dict, n: int, onderwerp: str) -> None:
+        fase, status, gedaan = self.NA_MAIL[n]
+        wensen = {"Fase": ("select", fase), "Status": ("status", status),
+                  "Follow-ups verstuurd": ("number", gedaan)}
+        if n == 0:
+            wensen["Eerste contact"] = ("date", date.today().isoformat())
+        if n < len(FOLLOWUP_DAGEN):
+            volgende = date.today() + timedelta(days=FOLLOWUP_DAGEN[n])
+            wensen["Volgende actie op"] = ("date", volgende.isoformat())
+        self._schrijf(lead, f"mail {n + 1} verstuurd naar {lead['email']} — "
+                            f"onderwerp: {onderwerp}", wensen)
+
+    def geantwoord(self, lead: dict) -> None:
+        self._schrijf(lead, "heeft geantwoord op de mail",
+                      {"Fase": ("select", "4. Gereageerd"),
+                       "Status": ("status", "Interesse"),
+                       "Volgende actie op": ("date", date.today().isoformat())})
+
+    def afgemeld(self, lead: dict) -> None:
+        self._schrijf(lead, "heeft zich afgemeld — niet meer mailen",
+                      {"Fase": ("select", "Geen interesse"),
+                       "Afgesloten reden": ("select", "Niet geinteresseerd")})
+
+    def gebounced(self, lead: dict) -> None:
+        self._schrijf(lead, "mail kwam niet aan (bounce) — adres klopt niet",
+                      {"Fase": ("select", "Doodgelopen")})
+
     def afsluiten(self) -> None:
+        if self.zonder_pagina:
+            print(f"  ({self.zonder_pagina} leads staan nog niet in de Leadlist — "
+                  f"draai leadgen_marktplaats.py push)")
         if self.gemist:
             print("\nNotion: deze kolommen of keuzes bestaan niet in de Leadlist en\n"
                   "zijn overgeslagen — " + ", ".join(sorted(self.gemist)) + ".\n"
@@ -460,8 +499,17 @@ def send(args) -> None:
             print(f"  {BEURTEN[n][0]}  {lead['email']:38s} {waarom}")
         return
 
-    verstuurd = 0
     boek = Notion()
+    verstuurd = _verstuur(rij, gebruiker, host, state, boek)
+    boek.afsluiten()
+    print(f"\n{verstuurd} mails verstuurd. Morgen weer — draai 'check' voor antwoorden.")
+
+
+def _verstuur(rij: list, gebruiker: str, host: str, state: dict,
+              boek: "Notion") -> int:
+    """Het eigenlijke verzenden. Zowel `send` als de autonome `tick` lopen hier
+    doorheen, zodat er maar één plek is waar de administratie wordt bijgewerkt."""
+    verstuurd = 0
     with smtplib.SMTP_SSL(host, 465, context=ssl.create_default_context()) as smtp:
         smtp.login(gebruiker, _need("MAIL_PASS"))
         for i, (lead, n, _) in enumerate(rij):
@@ -478,31 +526,37 @@ def send(args) -> None:
             st["laatste"] = datetime.now().isoformat(timespec="seconds")
             _save_state(state)          # na elke mail, zodat een crash niets dubbel doet
             verstuurd += 1
-            boek.noteer(lead, f"{BEURTEN[n][0]} verstuurd naar {lead['email']} "
-                              f"— onderwerp: {_onderwerp(lead, n)}",
-                        fase="2. Benaderd", status="Contacted")
+            boek.verstuurd(lead, n, _onderwerp(lead, n))
             print(f"  → {BEURTEN[n][0]} {lead['email']}", flush=True)
             if i < len(rij) - 1:
                 time.sleep(random.uniform(*PAUZE))
-
-    boek.afsluiten()
-    print(f"\n{verstuurd} mails verstuurd. Morgen weer — draai 'check' voor antwoorden.")
+    return verstuurd
 
 
 # -------------------------------------------------------------------- check
 
 
 def check(args) -> None:
-    """Antwoorden, afmeldingen en bounces ophalen. Wie antwoordt krijgt geen
-    opvolgmail meer; dat is het verschil tussen opvolgen en zeuren."""
-    host, gebruiker = _need("IMAP_HOST"), _need("MAIL_USER")
     state = _state()
     if not state:
         sys.exit("Nog niets verstuurd.")
-
-    sinds = (date.today() - timedelta(days=args.dagen)).strftime("%d-%b-%Y")
-    nieuw = afgemeld = bounces = 0
     boek = Notion()
+    nieuw, afgemeld, bounces = _check_inbox(state, boek, args.dagen)
+    boek.afsluiten()
+    print(f"{nieuw} nieuwe antwoorden, {afgemeld} afmeldingen, {bounces} bounces.")
+    if nieuw:
+        print("\nWie heeft geantwoord:")
+        for adres, st in state.items():
+            if st.get("beantwoord", "").startswith(date.today().isoformat()):
+                print(f"  {st.get('bedrijf') or adres} — {adres}")
+
+
+def _check_inbox(state: dict, boek: "Notion", dagen: int) -> tuple[int, int, int]:
+    """Antwoorden, afmeldingen en bounces ophalen. Wie antwoordt krijgt geen
+    opvolgmail meer; dat is het verschil tussen opvolgen en zeuren."""
+    host, gebruiker = _need("IMAP_HOST"), _need("MAIL_USER")
+    sinds = (date.today() - timedelta(days=dagen)).strftime("%d-%b-%Y")
+    nieuw = afgemeld = bounces = 0
     per_adres = {l["email"].lower(): l for l in _leads()}
     with imaplib.IMAP4_SSL(host, 993) as imap:
         imap.login(gebruiker, _need("MAIL_PASS"))
@@ -521,9 +575,7 @@ def check(args) -> None:
                         st["bounce"] = True
                         bounces += 1
                         if per_adres.get(adres.lower()):
-                            boek.noteer(per_adres[adres.lower()],
-                                        "mail kwam niet aan (bounce) — adres klopt niet",
-                                        fase="X. Afgevallen", status="Not interested")
+                            boek.gebounced(per_adres[adres.lower()])
                 continue
 
             st = state.get(afzender)
@@ -534,23 +586,15 @@ def check(args) -> None:
                 st["beantwoord"] = datetime.now().isoformat(timespec="seconds")
                 nieuw += 1
                 if lead:
-                    boek.noteer(lead, "heeft geantwoord op de mail",
-                                fase="3. In gesprek", status="Replied")
+                    boek.geantwoord(lead)
             if AFMELD_WOORDEN.search(body[:400]) and not st.get("afgemeld"):
                 st["afgemeld"] = True
                 afgemeld += 1
                 if lead:
-                    boek.noteer(lead, "heeft zich afgemeld — niet meer mailen",
-                                fase="X. Afgevallen", status="Not interested")
+                    boek.afgemeld(lead)
 
     _save_state(state)
-    boek.afsluiten()
-    print(f"{nieuw} nieuwe antwoorden, {afgemeld} afmeldingen, {bounces} bounces.")
-    if nieuw:
-        print("\nWie heeft geantwoord:")
-        for adres, st in state.items():
-            if st.get("beantwoord", "").startswith(date.today().isoformat()):
-                print(f"  {st.get('bedrijf') or adres} — {adres}")
+    return nieuw, afgemeld, bounces
 
 
 def _platte_tekst(msg) -> str:
@@ -560,6 +604,91 @@ def _platte_tekst(msg) -> str:
         if deel.get_content_type() == "text/plain":
             return deel.get_payload(decode=True).decode(errors="ignore")
     return ""
+
+
+# --------------------------------------------------------------------- tick
+
+
+def _tijdstippen(n: int) -> list[str]:
+    """n willekeurige verzendmomenten binnen kantoortijd, met minstens MIN_GAT
+    minuten ertussen. Vijftien mails achter elkaar om negen uur 's ochtends is
+    het patroon van een mailing; verspreid over de dag is het patroon van iemand
+    die tussen het werk door mailt."""
+    (h1, m1), (h2, m2) = VENSTER
+    vroeg, laat = h1 * 60 + m1, h2 * 60 + m2
+    gekozen: list[int] = []
+    for _ in range(4000):
+        if len(gekozen) >= n:
+            break
+        kandidaat = random.randint(vroeg, laat)
+        if all(abs(kandidaat - t) >= MIN_GAT for t in gekozen):
+            gekozen.append(kandidaat)
+    return [f"{t // 60:02d}:{t % 60:02d}" for t in sorted(gekozen)]
+
+
+def _dagplan(state: dict, override: int) -> dict:
+    """Het rooster van vandaag. Wordt één keer per dag gemaakt en daarna alleen
+    nog afgevinkt, zodat een herstart niet ineens alles opnieuw inplant."""
+    plan = json.loads(PLAN.read_text()) if PLAN.exists() else {}
+    vandaag = date.today().isoformat()
+    if plan.get("dag") != vandaag:
+        # Wat er vandaag al met de hand is verstuurd telt mee voor het dagbudget.
+        al_gedaan = sum(1 for st in state.values()
+                        for v in st.get("verstuurd", []) if v["op"][:10] == vandaag)
+        budget = max(0, _dagbudget(state, override) - al_gedaan)
+        plan = {"dag": vandaag, "tijden": _tijdstippen(budget), "gedaan": 0,
+                "al_met_de_hand": al_gedaan, "gecheckt": False}
+        _save_plan(plan)
+    return plan
+
+
+def _save_plan(plan: dict) -> None:
+    OUT.mkdir(parents=True, exist_ok=True)
+    PLAN.write_text(json.dumps(plan, indent=2, ensure_ascii=False))
+
+
+def tick(args) -> None:
+    """Eén beurt van de autonome stand. Bedoeld om elke tien minuten te draaien;
+    hij bepaalt zelf of er nu iets moet en zwijgt als er niets te doen is.
+
+    Alle beslissingen staan op schijf, niet in het geheugen: valt de Mac uit of
+    slaapt hij een uur, dan pakt de volgende beurt het rooster gewoon weer op en
+    gaat er niets dubbel de deur uit."""
+    host = _controleer_afzender()
+    gebruiker = _need("MAIL_USER")
+    state = _state()
+    plan = _dagplan(state, args.per_dag)
+    nu = datetime.now().strftime("%H:%M")
+
+    verlopen = sum(1 for t in plan["tijden"] if t <= nu)
+    te_doen = min(verlopen - plan["gedaan"], args.max_per_beurt)
+    boek = Notion()
+
+    if te_doen > 0:
+        rij = _wachtrij(state, te_doen)
+        if rij:
+            print(f"{datetime.now():%d-%m %H:%M} — {len(rij)} mail(s) aan de beurt "
+                  f"(rooster vandaag: {len(plan['tijden'])} stuks)")
+            gedaan = _verstuur(rij, gebruiker, host, state, boek)
+            plan["gedaan"] += gedaan
+            _save_plan(plan)
+        else:
+            plan["gedaan"] = verlopen      # niemand beschikbaar: slot laten vervallen
+            _save_plan(plan)
+
+    # Eén keer per dag de inbox nakijken, 's middags. Wie geantwoord heeft valt
+    # daarmee uit de opvolging voordat de volgende mail wordt ingepland.
+    if not plan.get("gecheckt") and nu >= "13:00" and state:
+        try:
+            nieuw, afgemeld, bounces = _check_inbox(state, boek, dagen=4)
+            print(f"{datetime.now():%d-%m %H:%M} — inbox: {nieuw} antwoorden, "
+                  f"{afgemeld} afmeldingen, {bounces} bounces")
+        except Exception as e:  # noqa: BLE001 — een dichte inbox stopt het mailen niet
+            print(f"  (inbox niet gelezen: {e})")
+        plan["gecheckt"] = True
+        _save_plan(plan)
+
+    boek.afsluiten()
 
 
 # ------------------------------------------------------------------- status
@@ -600,6 +729,13 @@ def main() -> None:
     c = sub.add_parser("check", help="antwoorden, afmeldingen en bounces ophalen")
     c.add_argument("--dagen", type=int, default=30)
     c.set_defaults(func=check)
+
+    t = sub.add_parser("tick", help="autonome beurt; elke tien minuten draaien")
+    t.add_argument("--per-dag", type=int, default=0,
+                   help="afwijken van het opbouwschema")
+    t.add_argument("--max-per-beurt", type=int, default=3,
+                   help="hoeveel mails er in één beurt maximaal uit mogen")
+    t.set_defaults(func=tick)
 
     args = ap.parse_args()
     args.func(args)
