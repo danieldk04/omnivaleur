@@ -1283,9 +1283,34 @@ async function bgDeleteMp2dh(job, serverUrl) {
           `Make sure you're still logged in on ${platform}. Nothing was deleted.`
         );
       }
-      // Genuinely not among the ads that ARE listed = already gone. For a
-      // delete/sold that IS the goal, so complete cleanly instead of erroring.
-      console.log(`[Omnivaleur] bgDelete: "${title}" not among ${findResult.rendered} ${platform} ads — already gone, marking done`);
+      // Niet gevonden tussen de advertenties die wél renderden. Dat betekende
+      // tot nu toe meteen "hij is al weg" — en dus meldde het dashboard hem als
+      // verwijderd terwijl hij gewoon nog online stond (bijvoorbeeld omdat de
+      // advertentie onder een ander tabblad/filter van het overzicht valt).
+      // Daarom eerst de advertentiepagina zelf opvragen: geeft die nog een
+      // levende advertentie, dan is dit een echte fout, geen succes.
+      const adUrl = payload.platform_listing_url
+        || (listingId ? `${new URL(overviewUrl).origin}/v/a/${listingId}` : "");
+      if (adUrl) {
+        const live = await execInTab(tabId, async (u) => {
+          try {
+            const r = await fetch(u, { credentials: "include", redirect: "follow" });
+            if (r.status === 404 || r.status === 410) return false;
+            if (!r.ok) return null; // niets bewezen
+            const html = (await r.text()).toLowerCase();
+            if (/niet meer beschikbaar|is verwijderd|verlopen advertentie|not available|no longer available/.test(html)) return false;
+            return true;
+          } catch (e) { return null; }
+        }, [adUrl]).catch(() => null);
+        if (live === true) {
+          throw new Error(
+            `"${title}" is niet te vinden in je ${platform}-overzicht, maar de advertentie staat nog wél online ` +
+            `(${adUrl}). Er is niets verwijderd — verwijder hem handmatig of controleer of je op het juiste account bent ingelogd.`
+          );
+        }
+      }
+      // Echt nergens meer te vinden = doel bereikt.
+      console.log(`[Omnivaleur] bgDelete: "${title}" not among ${findResult.rendered} ${platform} ads and not live on its own URL — already gone, marking done`);
       await finaliseJob(serverUrl, job.id, "complete", { note: "already_absent" });
       return;
     }
