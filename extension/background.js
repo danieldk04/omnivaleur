@@ -2552,9 +2552,29 @@ async function bgScanMp2dh(job, serverUrl) {
 // Closing a job tab means that job's meta is dead. Without this, jobtab_ keys
 // pile up forever — and because Chrome reuses tab ids after a restart, a brand
 // new tab could inherit a stale entry and complete the wrong job.
+//
+// Sluit de gebruiker (of Chrome) dat tabblad terwijl de opdracht nog loopt, dan
+// meldde niemand dat af: de opdracht bleef server-side "claimed" staan, en omdat
+// er bewust maar één opdracht tegelijk draait lag ALLES stil tot de server hem na
+// vijf minuten opruimde. Vandaar dat het dashboard "publishing…" bleef tonen en
+// opnieuw crosslisten niets deed. Nu melden we het sluiten meteen, zodat de
+// wachtrij binnen seconden weer loopt en de gebruiker ziet wat er gebeurde.
 chrome.tabs.onRemoved.addListener((tabId) => {
-  chrome.storage.local.remove(`jobtab_${tabId}`);
-  clearJobWatchdog(tabId);
+  const key = `jobtab_${tabId}`;
+  chrome.storage.local.get(key, (s) => {
+    const meta = s[key];
+    chrome.storage.local.remove(key);
+    clearJobWatchdog(tabId);
+    // awaitingManualFinish = al als fout gemeld en bewust opengelaten voor een
+    // handmatige afronding; die opdracht nog eens afmelden heeft geen zin.
+    if (!meta || !meta.jobId || meta.awaitingManualFinish) return;
+    console.warn(`[Omnivaleur] Tab ${tabId} closed while job ${meta.jobId} (${meta.platform}) was running — reporting it so the queue keeps moving.`);
+    finaliseJob(meta.serverUrl, meta.jobId, "error", {
+      error: `The tab this ${meta.platform} job was working in was closed before it finished. `
+        + `Nothing was published (or it wasn't confirmed) — check the platform, then publish again, `
+        + `or click the platform icon in the dashboard to mark it as listed.`,
+    }).catch(() => {});
+  });
 });
 
 // ── Auto-detect manual publish ─────────────────────────────────────────────
