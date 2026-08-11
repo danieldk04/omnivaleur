@@ -186,6 +186,13 @@ def discover(args) -> None:
 # ------------------------------------------------------------------ enrich
 
 
+def _plaatsnaam(ruw: str) -> str:
+    """Plaatsnamen zijn hooguit drie woorden ("Wijk bij Duurstede"); wat daarna
+    komt is opmaak van de pagina. Losse letters zijn een afgekapt volgend woord."""
+    woorden = [w for w in ruw.split() if len(w) > 1 or w.isdigit()]
+    return " ".join(woorden[:3]).strip(" -")
+
+
 def _text(html: str) -> str:
     t = re.sub(r"<script.*?</script>", " ", html, flags=re.S)
     return re.sub(r"\s+", " ", re.sub(r"<[^>]+>", " ", t))
@@ -209,7 +216,12 @@ def _profile(client: httpx.Client, sid: int) -> tuple[dict | None, bool]:
     btw = re.search(r"BTW[- ]?nummer\s*:?\s*([A-Z]{2}[\dA-Z]{9,14})", t, re.I)
     tel = re.search(r"(\+31\s?\d[\d\s\-]{7,12})", t)
     mail = re.search(r"[\w.+-]+@[\w.-]+\.\w{2,}", t)
-    plaats = re.search(r"(\d{4}\s?[A-Z]{2})\s+([A-Za-zÀ-ſ' \-]{2,30})", t)
+    # Achter de plaatsnaam komt op de profielpagina meteen de openingstijden, en
+    # een gulzige regex maakte daar "Rotterdam Vandaag open van" van.
+    plaats = re.search(r"(\d{4}\s?[A-Z]{2})\s+([A-Za-zÀ-ſ'\- ]{2,30}?)"
+                       r"(?=\s+(?:Vandaag|Maandag|Dinsdag|Woensdag|Donderdag|Vrijdag|"
+                       r"Zaterdag|Zondag|Bekijk|Bedrijfsinformatie|Contactgegevens|"
+                       r"Vertel|Gesloten|Open|De verkoper|Deze verkoper)|\s*$)", t)
     if not (kvk or btw or tel):
         return None, False
     over = ""
@@ -225,7 +237,7 @@ def _profile(client: httpx.Client, sid: int) -> tuple[dict | None, bool]:
         "email": mail and mail.group(0).lower(),
         "handelsnaam": naam and naam.group(1).strip(),
         "postcode": plaats and plaats.group(1),
-        "plaats": plaats and plaats.group(2).strip(),
+        "plaats": plaats and _plaatsnaam(plaats.group(2)),
         "over_ons": over,
     }, False
 
@@ -621,6 +633,46 @@ def push(args) -> None:
           f"{'bijgewerkt' if args.update else 'bestonden al'}.")
 
 
+def export(args) -> None:
+    """CSV voor een mailtool. Elke kolom is er om een zin mee te kunnen schrijven
+    die alleen op déze handelaar slaat — een generieke mail is bij koude acquisitie
+    het verschil tussen lezen en weggooien."""
+    import csv
+
+    leads = [l for l in _load(MP_LEADS) if l.get("email")]
+    if not leads:
+        sys.exit("Nog geen leads met e-mailadres — draai eerst 'classify'")
+    leads.sort(key=lambda l: -(l.get("ads") or 0))
+
+    velden = ["email", "bedrijf", "advertenties", "webshop", "webshopsysteem",
+              "verkoopt_op", "verkoopt", "plaats", "telefoon", "kvk",
+              "marktplaats_profiel", "rubriek", "aanhef", "reden"]
+    doel = OUT / "mp_export.csv"
+    with doel.open("w", newline="", encoding="utf-8-sig") as fh:
+        w = csv.DictWriter(fh, fieldnames=velden)
+        w.writeheader()
+        for l in leads:
+            w.writerow({
+                "email": l["email"],
+                "bedrijf": l.get("handelsnaam") or l.get("name") or "",
+                "advertenties": l.get("ads") or "",
+                "webshop": l.get("site") or "",
+                "webshopsysteem": l.get("shopsysteem") or "",
+                "verkoopt_op": ", ".join(l.get("kanalen") or ["Marktplaats"]),
+                "verkoopt": l.get("verkoopt_vooral") or "",
+                "plaats": l.get("plaats") or "",
+                "telefoon": l.get("tel") or "",
+                "kvk": l.get("kvk") or "",
+                "marktplaats_profiel": l.get("ig_url") or "",
+                "rubriek": l.get("source") or "",
+                "aanhef": l.get("je_jullie") or "Je",
+                "reden": l.get("reden") or "",
+            })
+    print(f"{len(leads)} leads → {doel}")
+    print(f"  met webshop: {sum(1 for l in leads if l.get('site'))}")
+    print(f"  met webshopsysteem: {sum(1 for l in leads if l.get('shopsysteem'))}")
+
+
 def run(args) -> None:
     if not args.dry_run:
         ig._need("NOTION_TOKEN")
@@ -686,6 +738,10 @@ def main() -> None:
     p = sub.add_parser("push", help="naar de Notion-Leadlist")
     common(p, psh=True)
     p.set_defaults(func=push)
+
+    ex = sub.add_parser("export", help="CSV voor je mailtool")
+    common(ex)
+    ex.set_defaults(func=export)
 
     r = sub.add_parser("run", help="ALLES in één keer")
     common(r, disc=True, enr=True, cls=True, psh=True)
