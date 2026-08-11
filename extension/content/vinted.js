@@ -1450,6 +1450,16 @@
     // Returns -Infinity to HARD-exclude a row (niche sport shoe on a plain sneaker).
     const score = (c) => {
       const t = c.text;
+      // Kleding hoort nooit bij schoenen of bij sportMATERIAAL. Vinted zet onder
+      // "Sports" de spullen (fietsen, ski's, ballen) en heeft daarnaast losse
+      // schoenbladen als "Cycling shoes". Een wielrenshirt scoorde daar juist
+      // hoog op, omdat het woord "cycling" klopte — en belandde dus bij de
+      // fietsonderdelen in plaats van bij de kleding. Live gezien op vinted.nl.
+      if (isClothingCat) {
+        if (/\bshoes?\b|\bboots\b|\btrainers\b|\bsneakers\b/.test(t)) return -Infinity;
+        if (/(^|[\s>›])sports\s*[>›]/.test(t)) return -Infinity;
+        if (/\bequipment\b|\bhelmets?\b|\bbikes?\b|\bballs?\b|\baccessories\b.*\bsports\b/.test(t)) return -Infinity;
+      }
       // Hard exclude a niche sport-shoe suggestion unless the sport is actually named.
       // A -4 penalty wasn't enough: on ties or weak hints "Tennis shoes" could still
       // surface. A normal sneaker must NEVER land in Tennis/Football/Running shoes.
