@@ -1150,6 +1150,7 @@ async function bgDeleteMp2dh(job, serverUrl) {
   const payload = job.payload || {};
   const title = (payload.title || "").substring(0, 35);
   const listingId = payload.platform_listing_id || "";
+  const sku = String(payload.sku || "").trim();
 
   // Navigate directly to the seller's listings overview
   const overviewUrl = platform === "marktplaats"
