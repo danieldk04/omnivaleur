@@ -2927,7 +2927,7 @@ function scrapeVintedOrders(url) {
             chrome.tabs.remove(tabId).catch(() => {});
             const out = results?.[0]?.result || { orders: [], selectorHits: {}, rowCandidates: 0 };
             const orders = out.orders || [];
-            console.log(`[Omnivaleur][sold] Vinted: selector hits`, out.selectorHits, `→ ${out.rowCandidates} candidate row(s), ${orders.length} with a (SKU) (sold: ${orders.filter(o => o.sold).length})`);
+            console.log(`[Omnivaleur][sold] Vinted: selector hits`, out.selectorHits, `→ ${out.rowCandidates} candidate row(s), ${orders.length} order row(s) (${orders.filter(o => o.sku).length} with a (SKU), sold: ${orders.filter(o => o.sold).length})`);
             resolve(orders);
           });
         }, 2500);
