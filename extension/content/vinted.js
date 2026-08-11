@@ -771,7 +771,7 @@
   // recover its real id. Returns {id} or null if it truly never appeared.
   // `excludeId` is the old (deleted) listing id on a relist, so we never mistake
   // it for the new one.
-  async function resolveCreatedVintedItem(item, excludeId, timeoutMs) {
+  async function resolveCreatedVintedItem(item, excludeId, timeoutMs, opts = {}) {
     const norm = (s) => String(s || "").toLowerCase().replace(/[^a-z0-9]/g, "");
     const target = norm(item.title);
     if (!target) return null;
