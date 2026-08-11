@@ -1107,6 +1107,14 @@ def _store_scan_results(db, job, scraped: list[dict]):
             # Laatste, even harde sleutel: exact de titel die wij zelf in het
             # formulier hebben gezet voor dit platform.
             best_id = job_titles.get(" ".join(title.lower().split())) or None
+        if not best_id:
+            # Twee even harde, maar veel robuustere sleutels. Zonder deze bleef
+            # een advertentie die de gebruiker zélf plaatste (of die op het
+            # platform in het Nederlands staat terwijl het dashboard Engels is)
+            # ongekoppeld — en dan kan hij bij verkoop nergens automatisch
+            # weggehaald worden. Dubbel voorkomende sleutels tellen niet mee, dus
+            # liever geen koppeling dan de verkeerde.
+            best_id = _sku_index.get(_scan_sku(title)) or _norm_title_index.get(_scan_norm_title(title))
 
         # Dit item staat aantoonbaar live op dit platform (we hebben zijn kaartje
         # net gezien). Zet dat vast in `listings`, zodat een handmatig geplaatste
