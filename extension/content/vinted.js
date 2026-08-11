@@ -181,87 +181,104 @@
   // Dutch → English category hints. Vinted's UI is English; we use these terms to
   // match against the "Suggested" options Vinted generates from the title/description.
   const CAT_HINTS = {
+    // Deze termen zijn de ECHTE bladnamen uit Vinted's eigen categoriekiezer
+    // (live nagelopen op vinted.nl, augustus 2026), niet zelfbedachte woorden.
+    // Dat is het verschil tussen een wielrenshirt bij "Activewear > Team shirts
+    // & jerseys" en bij "Sports > Cycling" — dat laatste is fietsMATERIAAL.
+    // Sportkleding zit bij Vinted ALTIJD onder "Activewear"; daarom staat die
+    // term overal voorop: elke passende hint telt apart mee in de score, dus
+    // "activewear" + "shorts" wint van een gewone broek-categorie.
+    //
+    // Heren > Clothing:  Jeans · Outerwear · Tops & t-shirts · Suits & blazers ·
+    //   Jumpers & sweaters · Trousers · Shorts · Socks & underwear · Sleepwear ·
+    //   Swimwear · Activewear · Other clothing
+    // Activewear (heren): Outerwear · Tracksuits · Trousers · Shorts ·
+    //   Tops & t-shirts · Team shirts & jerseys · Pullovers & sweaters ·
+    //   Sports accessories · Other activewear
+    // Activewear (dames): idem + Dresses · Skirts · Hoodies & sweatshirts · Sports bras
     // ── Dames ──────────────────────────────────────────────────────
     "jeans":              ["jeans"],
-    "broeken":            ["trousers", "pants", "chinos"],
-    "shorts":             ["shorts"],
-    "rokken":             ["skirts", "mini skirts", "midi skirts", "maxi skirts"],
-    "jurken casual":      ["dresses", "casual dresses", "day dresses"],
-    "jurken feest":       ["dresses", "evening dresses", "party dresses"],
-    "blouses":            ["blouses", "tunics", "shirts"],
-    "tops":               ["tops", "t-shirts"],
-    "truien":             ["jumpers", "sweaters", "cardigans", "knitwear"],
-    "hoodies":            ["hoodies", "sweatshirts"],
-    "jassen":             ["coats", "jackets"],
-    "sport bh":           ["sports bras", "sport tops"],
-    "sportleggings":      ["leggings", "sports leggings"],
-    "sportbroeken":       ["sports shorts", "sports trousers"],
-    "sportjassen":        ["sports jackets", "windbreakers", "running jackets"],
-    "yoga kleding":       ["yoga", "activewear", "leggings"],
-    "hardloopkleding":    ["running", "running tops", "sports", "activewear"],
-    "gymkleding":         ["activewear", "gym", "sports tops"],
-    "yogakleding":        ["yoga", "activewear", "leggings"],
-    "sport tops":         ["sports tops", "sports t-shirts", "activewear", "tops"],
-    "trainingspakken":    ["tracksuits", "tracksuit", "sports sets", "activewear"],
-    "wielrenkleding":     ["cycling", "cycling jerseys", "bike", "sports"],
-    "voetbalkleding":     ["football", "jerseys", "sports"],
-    "skikleding":         ["ski", "snowboard", "ski jackets", "winter sports"],
-    "zwemkleding":        ["swimwear", "bikinis", "swimsuits"],
-    "ondergoed":          ["underwear", "lingerie"],
+    "broeken":            ["trousers & leggings", "trousers"],
+    "shorts":             ["shorts & cropped trousers", "shorts"],
+    "rokken":             ["skirts"],
+    "jurken casual":      ["dresses"],
+    "jurken feest":       ["dresses"],
+    "blouses":            ["tops & t-shirts", "blouses", "shirts"],
+    "tops":               ["tops & t-shirts"],
+    "truien":             ["jumpers & sweaters", "cardigans"],
+    "hoodies":            ["hoodies & sweatshirts", "jumpers & sweaters"],
+    "jassen":             ["outerwear", "coats", "jackets"],
+    "sport bh":           ["activewear", "sports bras"],
+    "sportleggings":      ["activewear", "trousers"],
+    "sportbroeken":       ["activewear", "shorts"],
+    "sport tops":         ["activewear", "tops & t-shirts"],
+    "sportjassen":        ["activewear", "outerwear"],
+    "trainingspakken":    ["activewear", "tracksuits"],
+    "hardloopkleding":    ["activewear", "tops & t-shirts", "shorts"],
+    "wielrenkleding":     ["activewear", "team shirts & jerseys", "other activewear"],
+    "voetbalkleding":     ["activewear", "team shirts & jerseys"],
+    "yogakleding":        ["activewear", "trousers", "other activewear"],
+    "yoga kleding":       ["activewear", "trousers", "other activewear"],
+    "gymkleding":         ["activewear", "tops & t-shirts", "other activewear"],
+    "skikleding":         ["activewear", "outerwear", "other activewear"],
+    "sportkleding":       ["activewear", "other activewear"],
+    "zwemkleding":        ["swimwear"],
+    "ondergoed":          ["lingerie & nightwear", "socks & underwear"],
     "sneakers dames":     ["sneakers", "trainers", "sports shoes"],
     "schoenen dames":     ["shoes", "loafers", "flats", "boat shoes"],
     "hakken":             ["heels", "pumps", "high heels"],
     "laarzen dames":      ["boots", "ankle boots", "knee-high boots"],
     "sandalen":           ["sandals", "flip flops", "slippers"],
-    "accessoires dames":  ["bags", "scarves", "jewellery", "accessories"],
+    "accessoires dames":  ["accessories", "bags", "scarves", "jewellery"],
     // ── Heren ──────────────────────────────────────────────────────
     "heren jeans":            ["jeans"],
-    "heren chinos":           ["chinos", "trousers", "pants"],
+    "heren chinos":           ["trousers", "chinos"],
     "heren shorts":           ["shorts"],
-    "heren t-shirts":         ["t-shirts"],
-    "heren polo's":           ["polo shirts", "polos"],
-    "heren overhemden":       ["shirts"],
-    "heren truien":           ["jumpers", "sweaters", "knitwear", "cardigans"],
-    "heren hoodies":          ["hoodies", "sweatshirts"],
-    "heren jassen":           ["coats", "jackets", "winter coats"],
-    "heren pakken":           ["suits", "blazers"],
-    "heren sport tops":       ["t-shirts", "sports tops", "activewear"],
-    "heren sportbroeken":     ["sports trousers", "joggers", "tracksuit bottoms"],
-    "heren sportjassen":      ["sports jackets", "tracksuits", "windbreakers"],
-    "heren hardloopkleding":  ["running", "running tops", "sports"],
-    "heren gymkleding":       ["activewear", "gym", "sports"],
-    "heren voetbalkleding":   ["football", "sports", "jerseys"],
-    "heren wielrenkleding":   ["cycling", "cycling jerseys", "bike", "sports"],
-    "heren trainingspakken":  ["tracksuits", "tracksuit", "sports sets", "activewear"],
-    "heren skikleding":       ["ski", "snowboard", "ski jackets", "winter sports"],
-    "heren zwembroeken":      ["swim shorts", "swimwear"],
-    "heren ondergoed":        ["underwear", "socks"],
+    "heren t-shirts":         ["tops & t-shirts", "t-shirts"],
+    "heren polo's":           ["tops & t-shirts", "polo shirts"],
+    "heren overhemden":       ["tops & t-shirts", "shirts"],
+    "heren truien":           ["jumpers & sweaters"],
+    "heren hoodies":          ["jumpers & sweaters", "hoodies & sweatshirts"],
+    "heren jassen":           ["outerwear", "coats", "jackets"],
+    "heren pakken":           ["suits & blazers"],
+    "heren sport tops":       ["activewear", "tops & t-shirts"],
+    "heren sportbroeken":     ["activewear", "shorts", "trousers"],
+    "heren sportjassen":      ["activewear", "outerwear"],
+    "heren trainingspakken":  ["activewear", "tracksuits"],
+    "heren hardloopkleding":  ["activewear", "tops & t-shirts", "shorts"],
+    "heren wielrenkleding":   ["activewear", "team shirts & jerseys", "other activewear"],
+    "heren voetbalkleding":   ["activewear", "team shirts & jerseys"],
+    "heren gymkleding":       ["activewear", "tops & t-shirts", "other activewear"],
+    "heren skikleding":       ["activewear", "outerwear", "other activewear"],
+    "heren sportkleding":     ["activewear", "other activewear"],
+    "heren zwembroeken":      ["swimwear"],
+    "heren ondergoed":        ["socks & underwear"],
     "heren sneakers":         ["sneakers", "trainers", "sports shoes"],
     "heren schoenen":         ["shoes", "loafers", "boat shoes"],
-    "heren formele schoenen": ["dress shoes", "oxford shoes", "formal shoes"],
+    "heren formele schoenen": ["formal shoes", "dress shoes", "oxford shoes"],
     "heren laarzen":          ["boots", "ankle boots"],
-    "heren accessoires":      ["belts", "scarves", "hats", "accessories"],
+    "heren accessoires":      ["accessories", "belts", "scarves", "hats"],
     // ── Kinderen ───────────────────────────────────────────────────
     "babykleding":            ["baby", "baby clothing", "newborn"],
     "peuterkleding":          ["toddler", "kids clothing"],
-    "jongens kleding":        ["boys", "kids clothing", "boys clothes"],
-    "meisjes kleding":        ["girls", "kids clothing", "girls clothes"],
-    "tieners jongens":        ["boys", "teens", "teenage"],
-    "tieners meisjes":        ["girls", "teens", "teenage"],
-    "kinderen sportkleding":  ["kids sport", "children activewear"],
-    "kinderen wielrenkleding":["cycling", "kids sport", "sports"],
-    "kinderen voetbalkleding":["football", "kids sport", "sports"],
-    "kinderen zwemkleding":   ["swimwear", "kids swimwear", "swimsuits"],
-    "kinderen schoenen":      ["kids shoes", "children shoes", "boys shoes", "girls shoes"],
-    "kinderen accessoires":   ["kids accessories", "children accessories"],
+    "jongens kleding":        ["boys clothing"],
+    "meisjes kleding":        ["girls clothing"],
+    "tieners jongens":        ["boys clothing"],
+    "tieners meisjes":        ["girls clothing"],
+    "kinderen sportkleding":  ["activewear", "other activewear"],
+    "kinderen wielrenkleding":["activewear", "team shirts & jerseys", "other activewear"],
+    "kinderen voetbalkleding":["activewear", "team shirts & jerseys"],
+    "kinderen zwemkleding":   ["swimwear"],
+    "kinderen schoenen":      ["shoes", "kids shoes"],
+    "kinderen accessoires":   ["accessories"],
     // ── Unisex ─────────────────────────────────────────────────────
-    "unisex truien":       ["jumpers", "hoodies", "sweaters"],
-    "unisex jassen":       ["jackets", "coats"],
-    "unisex sportkleding": ["activewear", "sports"],
-    "unisex wielrenkleding": ["cycling", "bike", "sports"],
-    "unisex trainingspakken": ["tracksuits", "sports sets", "activewear"],
-    "unisex hardloopkleding": ["running", "sports", "activewear"],
-    "unisex schoenen":     ["sneakers", "shoes", "trainers"],
+    "unisex truien":       ["jumpers & sweaters", "hoodies & sweatshirts"],
+    "unisex jassen":       ["outerwear", "jackets", "coats"],
+    "unisex sportkleding": ["activewear", "other activewear"],
+    "unisex wielrenkleding": ["activewear", "team shirts & jerseys", "other activewear"],
+    "unisex trainingspakken": ["activewear", "tracksuits"],
+    "unisex hardloopkleding": ["activewear", "tops & t-shirts", "shorts"],
+    "unisex schoenen":     ["shoes", "sneakers", "trainers"],
     "unisex accessoires":  ["accessories", "scarves", "hats"],
     // ── English dashboard category keys (the dashboard UI is English, so item.category
     //    arrives as e.g. "shoes"/"trainers", not the Dutch keys above). Sneakers/
@@ -1335,14 +1352,30 @@
     // can read them — fatal for every non-suggested category (games, electronics,
     // any leaf that needs searching). Here we set the value + fire input/keyup and
     // KEEP focus so the result list stays open.
+    //
+    // LET OP: het veld dat je ziet staan ("Select a category") is NIET het
+    // zoekveld. Zodra de lijst opengaat verschijnt daarbinnen een eigen zoekvak
+    // ("Find a category"), en alleen dáármee filtert Vinted zijn categorieboom.
+    // Al het getypte in het bovenste veld werd domweg genegeerd: de lijst bleef
+    // op "Women / Men / Kids / …" staan. Daardoor kon de extensie in de praktijk
+    // alleen kiezen uit wat Vinted zelf toevallig voorstelde, en viel elke
+    // categorie die je moet zóéken buiten de boot. Live nagelopen op vinted.nl.
+    const searchBox = () => {
+      const inputs = [...document.querySelectorAll('input[type="text"], input:not([type])')]
+        .filter((e) => e.offsetParent !== null && e !== inp);
+      return inputs.find((e) => /find a category|zoek een categorie|categorie/i.test(e.placeholder || ""))
+        || inputs.find((e) => /InputBar/.test(e.className || ""))
+        || inp;  // terugval: beter iets typen dan niets
+    };
     const typeSearch = (value) => {
       const setter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, "value").set;
-      inp.focus();
-      try { setter.call(inp, ""); } catch (_) { inp.value = ""; }
-      inp.dispatchEvent(new Event("input", { bubbles: true }));
-      try { setter.call(inp, value); } catch (_) { inp.value = value; }
-      inp.dispatchEvent(new Event("input", { bubbles: true }));
-      inp.dispatchEvent(new KeyboardEvent("keyup", { bubbles: true, key: value.slice(-1) }));
+      const box = searchBox();
+      box.focus();
+      try { setter.call(box, ""); } catch (_) { box.value = ""; }
+      box.dispatchEvent(new Event("input", { bubbles: true }));
+      try { setter.call(box, value); } catch (_) { box.value = value; }
+      box.dispatchEvent(new Event("input", { bubbles: true }));
+      box.dispatchEvent(new KeyboardEvent("keyup", { bubbles: true, key: value.slice(-1) }));
     };
 
     // Collect the suggested option rows. Vinted hides the native radio (custom-styled),
