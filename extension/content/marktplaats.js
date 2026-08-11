@@ -60,6 +60,26 @@
     if (confirmBtn) { confirmBtn.click(); await sleep(1000); }
   }
 
+  // Marktplaats vraagt bij sportkleding om een "Type", en de keuzelijst verschilt
+  // per geslacht. Live afgelezen op het plaatsformulier (aug. 2026):
+  //   heren: Algemeen · Fitness · Hardlopen of Fietsen · Racketsport · Vechtsport ·
+  //          Voetbal · Wandelen of Outdoor · Overige typen
+  //   dames: Fitness of Aerobics · Hardlopen of Fietsen · Racketsport · Yoga ·
+  //          Overige typen
+  // Zonder dit veld staat elk sportartikel zonder type in de zoekfilters, en
+  // filtert een koper op "Hardlopen of Fietsen" de advertentie dus gewoon weg.
+  function mpSportType(item) {
+    const cat = String(item?.category || "").toLowerCase();
+    const dames = !/^heren\b/.test(cat) && String(item?.gender || "").toLowerCase() === "dames";
+    if (/wielren|hardloop/.test(cat)) return "Hardlopen of Fietsen";
+    if (/voetbal/.test(cat)) return dames ? "Overige typen" : "Voetbal";
+    if (/gym/.test(cat)) return dames ? "Fitness of Aerobics" : "Fitness";
+    if (/yoga/.test(cat)) return dames ? "Yoga" : "Algemeen";
+    if (/ski/.test(cat)) return dames ? "Overige typen" : "Wandelen of Outdoor";
+    if (/sport|trainingspak/.test(cat)) return dames ? "Overige typen" : "Algemeen";
+    return null;
+  }
+
   async function fillForm(item) {
     await waitForEl('input[name="title_nl-NL"]', 20000);
     await step("title",        () => fillInputHuman(qs('input[name="title_nl-NL"]'), smartTrunc(item.title || "", 60)));
