@@ -923,6 +923,11 @@ async def _reconcile_vinted_sales(db, job, scraped: list[dict], scan_meta: dict 
         lambda: db.table("items").select("id,sku,title").eq("user_id", job["user_id"]))
     item_ids = [it["id"] for it in items_rows]
     items_by_id = {it["id"]: it for it in items_rows}
+    own_title_counts: dict[str, int] = {}
+    for it in items_rows:
+        key = _norm_title(it.get("title"))
+        if key:
+            own_title_counts[key] = own_title_counts.get(key, 0) + 1
     if not item_ids:
         return
 
