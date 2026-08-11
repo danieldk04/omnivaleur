@@ -1289,16 +1289,26 @@ async function bgDeleteMp2dh(job, serverUrl) {
       await finaliseJob(serverUrl, job.id, "complete", { note: "already_absent" });
       return;
     }
+    if (findResult.soldOnPlatform) {
+      console.log(`[Omnivaleur] bgDelete: "${title}" carries a sold label on ${platform} — reporting the sale instead of deleting`);
+      await finaliseJob(serverUrl, job.id, "complete", { sold_on_platform: true, note: "sold_label_on_overview" });
+      return;
+    }
     if (!findResult.selected) {
       throw new Error(`Found "${title}" but couldn't tick its checkbox to delete it.`);
     }
+    console.log(`[Omnivaleur] bgDelete: matched "${title}" on ${platform} by ${findResult.matchedBy || "unknown"}`);
 
     await sleep(600);
 
     // Click the top "Verwijder" (trash) button — now enabled by the selection.
+    // The label carries a count once something is selected ("Verwijder (1)"), so
+    // an exact-text match found nothing and the delete silently never started.
     const clickedDelete = await execInTab(tabId, () => {
-      const el = [...document.querySelectorAll("button, a")]
-        .find(e => /^\s*(🗑\s*)?verwijder(en)?\s*$/i.test(e.textContent.trim()) && !e.disabled);
+      const el = [...document.querySelectorAll('button, a, [role="button"]')]
+        .find(e => /^\s*(🗑\s*)?verwijder(en)?\b/i.test((e.textContent || "").trim())
+          && !e.disabled && e.getAttribute("aria-disabled") !== "true"
+          && e.getClientRects().length > 0);
       if (el) { el.click(); return true; }
       return false;
     });
