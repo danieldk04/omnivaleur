@@ -2689,7 +2689,21 @@ async function checkSoldListings() {
       const ads = await scrapeMarktplaatsAds(soldUrl, platform);
       const soldAds = ads.filter(a => a.sold);
       const soldIds = new Set(soldAds.map(a => a.id).filter(Boolean));
-      // Normalised sold-ad titles for title-based matching (listings without an id).
+      // Titels van verkochte advertenties, genormaliseerd voor een 1-op-1
+      // vergelijking (voor advertenties zonder opgeslagen nummer). Komt een titel
+      // twee keer voor, dan is hij als sleutel onbruikbaar — dan liever niets
+      // boeken dan het verkeerde item verkocht melden.
+      const normTitle = s => (s || "")
+        .normalize("NFKD").replace(/[̀-ͯ]/g, "")
+        .toLowerCase()
+        .replace(/^\s*\([^)]{1,24}\)\s*/, "")
+        .replace(/[^a-z0-9]+/g, " ")
+        .trim();
+      const soldTitleCount = new Map();
+      for (const a of soldAds) {
+        const t = normTitle(a.title);
+        if (t) soldTitleCount.set(t, (soldTitleCount.get(t) || 0) + 1);
+      }
       const soldTitles = soldAds.map(a => (a.title || "").toLowerCase().trim()).filter(Boolean);
       console.log(`[Omnivaleur][sold] ${platform}: ${ads.length} ad cards scraped, ${soldAds.length} carry a sold/reserved label`);
       if (!soldAds.length) continue;
