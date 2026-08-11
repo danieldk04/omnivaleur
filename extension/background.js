@@ -1534,7 +1534,11 @@ async function bgDeleteVinted(job, serverUrl) {
           const data = await res.json();
           if (data.code && data.code !== 0) return { userId, present: null };
           const items = data.items || [];
-          if (items.some(it => String(it.id) === String(lid))) return { userId, present: true };
+          const mine = items.find(it => String(it.id) === String(lid));
+          // is_closed = Vinted's own "sold or ended" flag. A sold listing stays
+          // in the wardrobe, so this is the only way to tell it apart from one
+          // that's still for sale — and it must never be deleted.
+          if (mine) return { userId, present: true, closed: !!mine.is_closed };
           const pg = data.pagination || {};
           if (items.length === 0) return { userId, present: false };
           if (pg.total_pages && page >= pg.total_pages) return { userId, present: false };
