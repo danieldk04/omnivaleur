@@ -1217,32 +1217,63 @@ async function bgDeleteMp2dh(job, serverUrl) {
         }
       }
 
+      const leaves = () => [...document.querySelectorAll("a, h1, h2, h3, span, p, div")]
+        .filter(el => el.children.length === 0 && el.textContent.trim());
+
+      // Tweede harde sleutel: de SKU-prefix "(1337)" waarmee élke door deze app
+      // geplaatste advertentie begint. Exact en uniek — dus vóór de losse
+      // titelvergelijking, die op de eerste 18 tekens matchte en daardoor de
+      // verkeerde advertentie kon aanvinken (of geen enkele, want de titel op de
+      // pagina is vertaald en afgekapt).
+      let matchedBy = listingId && checkbox ? "id" : null;
+      if (!checkbox && wantSku) {
+        const needle = `(${String(wantSku).trim().toLowerCase()})`;
+        const el = leaves().find(e =>
+          e.textContent.replace(/\s+/g, " ").trim().toLowerCase().startsWith(needle));
+        if (el) { checkbox = rowFor(el); if (checkbox) matchedBy = "sku"; }
+      }
+
       // Fallback: match on title text, for ads listed before an id was recorded.
       // Titles on the overview are prefixed with the SKU, e.g. "(1323) Grijze
       // Suitsupply Cardigan …", so both sides drop a leading "(digits)" first.
+      const strip = s => (s || "").replace(/^\s*\(\d+\)\s*/, "").replace(/\s+/g, " ").trim().toLowerCase();
       if (!checkbox) {
-        const strip = s => (s || "").replace(/^\s*\(\d+\)\s*/, "").replace(/\s+/g, " ").trim().toLowerCase();
         const shortWant = strip(rawTitle).substring(0, 18);
         if (shortWant) {
-          const titleEl = [...document.querySelectorAll("a, h1, h2, h3, span, p, div")]
-            .filter(el => el.children.length === 0 && el.textContent.trim())
-            .find(el => {
-              const t = strip(el.textContent);
-              return t && (t.startsWith(shortWant) || t.includes(shortWant));
-            });
-          if (titleEl) checkbox = rowFor(titleEl);
+          const titleEl = leaves().find(el => {
+            const t = strip(el.textContent);
+            return t && (t.startsWith(shortWant) || t.includes(shortWant));
+          });
+          if (titleEl) { checkbox = rowFor(titleEl); if (checkbox) matchedBy = "title"; }
         }
       }
 
       if (!checkbox) return { found: false, rendered };
+
+      // Draagt juist DEZE rij een verkocht-label? Dan is verwijderen het
+      // verkeerde antwoord: de advertentie is via dit platform verkocht en dat
+      // moet geboekt worden. Bewust streng: alleen een los labeltje dat exact
+      // "verkocht"/"gereserveerd" is telt, zodat knoppen als "Verkocht? Meld
+      // het" nooit voor een valse verkoop kunnen zorgen.
+      let soldOnPlatform = false;
+      let row = checkbox;
+      for (let i = 0; i < 12 && row.parentElement; i++) row = row.parentElement;
+      const rowScope = checkbox.closest('article, li, tr') || row;
+      if (rowScope) {
+        soldOnPlatform = [...rowScope.querySelectorAll("span, div, p, strong, b, em")]
+          .filter(el => el.children.length === 0)
+          .some(el => /^(verkocht|gereserveerd|sold|reserved)$/i.test(el.textContent.replace(/\s+/g, " ").trim()));
+      }
+      if (soldOnPlatform) return { found: true, rendered, matchedBy, soldOnPlatform: true };
+
       if (!checkbox.checked) {
         checkbox.click();
         // Some React lists ignore a bare .click() — nudge with events too.
         checkbox.dispatchEvent(new Event("input", { bubbles: true }));
         checkbox.dispatchEvent(new Event("change", { bubbles: true }));
       }
-      return { found: true, rendered, selected: !!checkbox.checked };
-    }, [title, listingId]);
+      return { found: true, rendered, matchedBy, selected: !!checkbox.checked };
+    }, [title, listingId, sku]);
 
     if (!findResult?.found) {
       // An empty overview proves nothing — we can't tell "already sold/removed"
