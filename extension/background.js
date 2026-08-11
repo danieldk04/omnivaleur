@@ -1488,24 +1488,26 @@ async function resolveVintedIdByTitle(title, sku) {
     }
 
     const found = await execInTab(tabId, async (userId, wantTitle, wantSku) => {
-      const norm = s => (s || "").toLowerCase().replace(/\s+/g, " ").trim();
+      // 1-op-1 op de titel: hoofdletters, accenten, leestekens, dubbele spaties
+      // en een eventuele "(1337)"-prefix doen niet mee, de rest moet exact gelijk
+      // zijn. Dat werkt ook voor verkopers die geen nummer in hun titel zetten.
+      // (Vroeger werd op de eerste 20 tekens vergeleken met "bevat", waardoor
+      // twee "Beige Profuomo …"-advertenties door elkaar liepen.)
+      const norm = s => (s || "")
+        .normalize("NFKD").replace(/[̀-ͯ]/g, "")
+        .toLowerCase()
+        .replace(/^\s*\([^)]{1,24}\)\s*/, "")
+        .replace(/[^a-z0-9]+/g, " ")
+        .trim();
       const want = norm(wantTitle);
-      const short = want.substring(0, 20);
-      // De SKU-prefix "(1337)" staat in élke titel die deze app op Vinted zet en
-      // is uniek — dat is een harde match, in tegenstelling tot de eerste 20
-      // tekens van een titel (twee "Beige Profuomo …" advertenties botsen).
       const sku = String(wantSku || "").trim().toLowerCase();
       const skuOf = t => {
         const m = /^\s*\(([^)]{1,24})\)/.exec(t || "");
         return m ? m[1].trim().toLowerCase() : "";
       };
-      const matches = t => {
-        const c = norm(t);
-        if (!c) return false;
-        if (sku && skuOf(t) === sku) return true;
-        if (!short) return false;
-        return c.startsWith(short) || c.includes(short) || want.includes(c.substring(0, 20));
-      };
+      // Alles verzamelen en pas aan het eind beslissen: twee advertenties met
+      // dezelfde titel betekent geen match, geen gok.
+      const byTitle = [], bySku = [];
       try {
         for (let page = 1; page <= 60; page++) {
           const res = await fetch(`/api/v2/wardrobe/${userId}/items?order=newest_first&page=${page}&per_page=96`, { headers: { Accept: "application/json" } });
@@ -1513,20 +1515,25 @@ async function resolveVintedIdByTitle(title, sku) {
           const data = await res.json();
           if (data.code && data.code !== 0) return null;
           const items = data.items || [];
-          // SKU-treffers gaan voor: een losse titelmatch mag nooit een exacte
-          // SKU-match op dezelfde pagina overrulen.
-          const hit = (sku && items.find(it => skuOf(it.title) === sku))
-            || items.find(it => matches(it.title));
-          if (hit) return { id: String(hit.id), closed: !!hit.is_closed };
+          for (const it of items) {
+            const entry = { id: String(it.id), closed: !!it.is_closed };
+            if (want && norm(it.title) === want) byTitle.push(entry);
+            if (sku && skuOf(it.title) === sku) bySku.push(entry);
+          }
           const pg = data.pagination || {};
-          if (items.length === 0) return null;
-          if (pg.total_pages && page >= pg.total_pages) return null;
-          if (!pg.total_pages && items.length < 96) return null;
+          if (items.length === 0) break;
+          if (pg.total_pages && page >= pg.total_pages) break;
+          if (!pg.total_pages && items.length < 96) break;
         }
+        // Het nummer wint als het er is (exacter dan een titel), daarna de titel.
+        if (bySku.length === 1) return bySku[0];
+        if (byTitle.length === 1) return byTitle[0];
+        if (bySku.length > 1 || byTitle.length > 1) return { ambiguous: true };
         return null;
       } catch (e) { return null; }
     }, [idInfo.userId, title, sku || ""]);
 
+    if (found?.ambiguous) return { id: null, ambiguous: true, origin: idInfo.origin };
     return { id: found?.id || null, closed: !!found?.closed, origin: idInfo.origin };
   } finally {
     setTimeout(() => chrome.tabs.remove(tabId).catch(() => {}), 2500);
