@@ -881,20 +881,32 @@ async def _reconcile_vinted_sales(db, job, scraped: list[dict], scan_meta: dict 
     closed_ids: set[str] = set()
     # Een advertentie zonder opgeslagen Vinted-nummer was tot nu toe onzichtbaar
     # voor deze controle: geen nummer = geen match = verkoop gemist, en het item
-    # bleef bij "live" staan (en werd later alsnog "verwijderd" op Vinted). Elke
-    # titel die wij op Vinted zetten begint met "(SKU)", dus die prefix is een
-    # exacte, unieke tweede sleutel.
-    closed_skus: set[str] = set()
-    closed_titles: set[str] = set()
-    closed_id_by_sku: dict[str, str] = {}
-    closed_id_by_title: dict[str, str] = {}
-
-    def _norm_title(t: str) -> str:
-        return " ".join((t or "").lower().split())
+    # bleef bij "live" staan (en werd later alsnog "verwijderd" op Vinted).
+    # Daarom twee vervangende sleutels, allebei alleen geldig als ze binnen de
+    # garderobe naar precies één advertentie wijzen:
+    #   1. de titel, 1-op-1 vergeleken na normalisatie (accenten, leestekens,
+    #      hoofdletters en een eventuele "(1337)"-prefix doen niet mee);
+    #   2. dat nummer tussen haakjes, als de verkoper dat gebruikt.
+    # Dubbele titels of dubbele nummers worden bewust weggegooid: liever geen
+    # match dan het verkeerde item als verkocht boeken.
+    closed_id_by_sku: dict[str, str | None] = {}
+    closed_id_by_title: dict[str, str | None] = {}
 
     def _sku_of(t: str) -> str:
         m = re.match(r"^\s*\(([^)]{1,24})\)", t or "")
         return m.group(1).strip().lower() if m else ""
+
+    def _norm_title(t: str) -> str:
+        t = unicodedata.normalize("NFKD", t or "")
+        t = "".join(c for c in t if not unicodedata.combining(c)).lower()
+        t = re.sub(r"^\s*\([^)]{1,24}\)\s*", "", t)     # SKU-prefix telt niet mee
+        return " ".join(re.sub(r"[^a-z0-9]+", " ", t).split())
+
+    def _register(index: dict, key: str, pid: str) -> None:
+        if not key:
+            return
+        # None = dubbel gezien, dus onbruikbaar als sleutel.
+        index[key] = pid if key not in index else (pid if index[key] == pid else None)
 
     for r in scraped:
         pid = r.get("platform_listing_id")
@@ -904,14 +916,8 @@ async def _reconcile_vinted_sales(db, job, scraped: list[dict], scan_meta: dict 
         seen_ids.add(pid)
         if r.get("is_closed"):
             closed_ids.add(pid)
-            title = _norm_title(r.get("title"))
-            sku = _sku_of(r.get("title"))
-            if title:
-                closed_titles.add(title)
-                closed_id_by_title.setdefault(title, pid)
-            if sku:
-                closed_skus.add(sku)
-                closed_id_by_sku.setdefault(sku, pid)
+            _register(closed_id_by_title, _norm_title(r.get("title")), pid)
+            _register(closed_id_by_sku, _sku_of(r.get("title")), pid)
 
     items_rows = fetch_all(
         lambda: db.table("items").select("id,sku,title").eq("user_id", job["user_id"]))
