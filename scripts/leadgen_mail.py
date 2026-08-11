@@ -215,7 +215,7 @@ Succes met de zaak.
 
 {ondertekening}"""
 
-ONDERTEKENING = """Met vriendelijke groet,
+ONDERTEKENING = """Groet,
 {naam}
 {bedrijf} · {site}
 
