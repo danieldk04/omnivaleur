@@ -1239,6 +1239,30 @@ def _store_scan_results(db, job, scraped: list[dict]):
         except Exception as e:
             logger.warning(f"Scan store: live link failed for {item_id}/{platform}: {e}")
 
+        # We hebben deze advertentie zojuist LIVE gezien. Staat er dan nog een
+        # plaatsingsopdracht te wachten (bijvoorbeeld een republicatie die bleef
+        # hangen en die de verkoper daarom zelf heeft afgemaakt), dan moet die
+        # weg: anders komt er straks alsnog een tweede advertentie bij, en blijft
+        # het kaartje "Publishing now…" eeuwig staan.
+        try:
+            done = (
+                db.table("jobs").update({
+                    "status": "done",
+                    "done_at": datetime.now(timezone.utc).isoformat(),
+                    "result": {"note": "already live on the platform (seen by scan)",
+                               "platform_listing_id": link["platform_listing_id"],
+                               "platform_listing_url": link["platform_listing_url"]},
+                })
+                .eq("user_id", job["user_id"]).eq("item_id", item_id).eq("platform", platform)
+                .eq("action", "create").in_("status", ["pending", "claimed"])
+                .execute().data
+            )
+            if done:
+                logger.info("Scan store: closed %d queued publish job(s) for %s/%s — it's already live",
+                            len(done), item_id, platform)
+        except Exception as e:
+            logger.warning(f"Scan store: could not close queued create for {item_id}/{platform}: {e}")
+
     logger.info(
         "Scan store for user %s: %d candidates upserted, %d items enriched",
         job["user_id"], len(rows), len(backfills),
