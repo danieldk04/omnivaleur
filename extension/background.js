@@ -1430,21 +1430,26 @@ async function bgDeleteMp2dh(job, serverUrl) {
     await expandMp2dhOverview(tabId);
 
     const stillPresent = await execInTab(tabId, (rawTitle, listingId, wantSku) => {
-      const strip = s => (s || "").replace(/^\s*\(\d+\)\s*/, "").replace(/\s+/g, " ").trim().toLowerCase();
+      const norm = s => (s || "")
+        .normalize("NFKD").replace(/[̀-ͯ]/g, "")
+        .toLowerCase()
+        .replace(/^\s*\([^)]{1,24}\)\s*/, "")
+        .replace(/[^a-z0-9]+/g, " ")
+        .trim();
       const leaves = [...document.querySelectorAll("a, h1, h2, h3, span, p, div")]
         .filter(el => el.children.length === 0 && el.textContent.trim());
-      // Dezelfde drie sleutels als bij het zoeken, zodat "weg" ook echt weg
-      // betekent en niet "onder een net iets andere titel niet teruggevonden".
+      // Dezelfde sleutels als bij het zoeken, zodat "weg" ook echt weg betekent
+      // en niet "onder een net iets andere titel niet teruggevonden".
       if (listingId && document.querySelector(`a[href*="${listingId}"]`)) return true;
       if (wantSku) {
         const needle = `(${String(wantSku).trim().toLowerCase()})`;
         if (leaves.some(e => e.textContent.replace(/\s+/g, " ").trim().toLowerCase().startsWith(needle))) return true;
       }
-      const shortWant = strip(rawTitle).substring(0, 18);
-      if (!shortWant) return false;
+      const want = norm(rawTitle);
+      if (!want) return false;
       return leaves.some(el => {
-        const t = strip(el.textContent);
-        return t && (t.startsWith(shortWant) || t.includes(shortWant));
+        const t = norm(el.textContent);
+        return t && (t === want || (t.length >= 12 && want.startsWith(t)));
       });
     }, [title, listingId, sku]);
 
