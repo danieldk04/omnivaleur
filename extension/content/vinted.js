@@ -499,17 +499,20 @@
       const colEl = qs('input[data-testid="color-select-dropdown-input"]');
       const descEl = qs('textarea[data-testid="description--input"]');
       const prijsFout = priceErrorVinted();
-      if (prijsFout) gaps.push(`prijs (${item.price} — Vinted zegt: ${prijsFout})`);
-      if (descEl && !(descEl.value || "").trim()) gaps.push("beschrijving");
-      if (sizeEl && !(sizeEl.value || "").trim()) gaps.push(`maat (${item.size || "leeg"})`);
+      // De melding gaat één op één naar het dashboard, en dat is Engels. Half
+      // Nederlands, half Engels leest als een storing in plaats van als uitleg.
+      if (prijsFout) gaps.push(`price (${item.price} — Vinted says: ${prijsFout})`);
+      if (descEl && !(descEl.value || "").trim()) gaps.push("description");
+      if (sizeEl && !(sizeEl.value || "").trim()) gaps.push(`size (${item.size || "empty"})`);
       if (colEl && !(colEl.value || "").trim()) {
         // Neem meteen mee wat we op dat moment ZAGEN, anders is de melding niet
         // te herleiden zonder de gebruiker om een schermafbeelding te vragen.
-        gaps.push(`kleur (${item.color || "leeg"} — ${kleurDiagnose})`);
+        gaps.push(`colour (${item.color || "empty"} — ${kleurDiagnose})`);
       }
       if (gaps.length) {
-        throw new Error("Vinted kon deze velden niet invullen: " + gaps.join(", ") +
-                        ". Vul ze zelf aan in het geopende tabblad en klik op Uploaden.");
+        throw new Error("Vinted wouldn't accept these fields: " + gaps.join(", ") +
+                        ". The tab is left open — fill them in yourself and click Upload, " +
+                        "and this listing is marked as published automatically.");
       }
       let id;
       try {

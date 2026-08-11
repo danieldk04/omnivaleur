@@ -37,6 +37,8 @@ VINTED_MENS_CLOTHING = {
     "Trousers", "Shorts", "Socks & underwear", "Sleepwear", "Swimwear", "Activewear",
     "Costumes & special outfits", "Other clothing",
 }
+# Live gezien onder Men/Women > Clothing > Tops & t-shirts.
+VINTED_TOPS_LEAVES = {"Shirts", "T-shirts", "Vests & sleeveless t-shirts", "Polo shirts"}
 VINTED_WOMENS_CLOTHING = VINTED_MENS_CLOTHING | {
     "Dresses", "Skirts", "Trousers & leggings", "Shorts & cropped trousers",
     "Jumpsuits & playsuits", "Lingerie & nightwear", "Maternity clothes", "Skorts",
@@ -77,8 +79,12 @@ def test_elk_pad_bestaat_echt_op_vinted(paden):
         for cat, pad in paden[tak].items():
             assert pad[0] in geldig, f"{tak} {cat}: '{pad[0]}' bestaat niet onder {tak} > Clothing"
             if len(pad) > 1:
-                assert pad[0] == "Activewear", f"{tak} {cat}: alleen Activewear heeft subbladeren in onze tabel"
-                assert pad[1] in VINTED_ACTIVEWEAR_LEAVES, f"{tak} {cat}: '{pad[1]}' bestaat niet onder Activewear"
+                toegestaan = {
+                    "Activewear": VINTED_ACTIVEWEAR_LEAVES,
+                    "Tops & t-shirts": VINTED_TOPS_LEAVES,
+                }.get(pad[0])
+                assert toegestaan, f"{tak} {cat}: '{pad[0]}' heeft in onze tabel geen bekende subbladeren"
+                assert pad[1] in toegestaan, f"{tak} {cat}: '{pad[1]}' bestaat niet onder {pad[0]}"
 
 
 def test_wielrenkleding_is_geen_fietsonderdeel(paden):
