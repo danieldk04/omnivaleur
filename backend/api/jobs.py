@@ -61,6 +61,30 @@ def _record_extension_heartbeat(db, user_id: str, user_agent: str | None = None)
         pass
 
 
+def _scan_sku(t: str) -> str:
+    """Het voorloopnummer uit een titel: "(1327) Navy Suit…" → "1327"."""
+    m = re.match(r"^\s*\(([^)]{1,24})\)", t or "")
+    return m.group(1).strip().lower() if m else ""
+
+
+def _scan_norm_title(t: str) -> str:
+    """Titel zonder accenten, leestekens, SKU-prefix en dubbele spaties."""
+    t = unicodedata.normalize("NFKD", t or "")
+    t = "".join(c for c in t if not unicodedata.combining(c)).lower()
+    t = re.sub(r"^\s*\([^)]{1,24}\)\s*", "", t)
+    return " ".join(re.sub(r"[^a-z0-9]+", " ", t).split())
+
+
+def _unique_index(pairs) -> dict:
+    """key → id, maar alleen als die sleutel bij precies één id hoort."""
+    out: dict = {}
+    for key, value in pairs:
+        if not key:
+            continue
+        out[key] = value if key not in out else (value if out[key] == value else None)
+    return {k: v for k, v in out.items() if v}
+
+
 def _parse_ts(ts):
     if not ts:
         return None
