@@ -65,6 +65,20 @@
     );
   }
 
+  // 2dehands gebruikt dezelfde categorieboom als Marktplaats en vraagt bij
+  // sportkleding ook om een "Type". Zie de toelichting in marktplaats.js.
+  function mpSportType(item) {
+    const cat = String(item?.category || "").toLowerCase();
+    const dames = !/^heren\b/.test(cat) && String(item?.gender || "").toLowerCase() === "dames";
+    if (/wielren|hardloop/.test(cat)) return "Hardlopen of Fietsen";
+    if (/voetbal/.test(cat)) return dames ? "Overige typen" : "Voetbal";
+    if (/gym/.test(cat)) return dames ? "Fitness of Aerobics" : "Fitness";
+    if (/yoga/.test(cat)) return dames ? "Yoga" : "Algemeen";
+    if (/ski/.test(cat)) return dames ? "Overige typen" : "Wandelen of Outdoor";
+    if (/sport|trainingspak/.test(cat)) return dames ? "Overige typen" : "Algemeen";
+    return null;
+  }
+
   async function fillForm(item) {
     await waitForEl('input[name="title_nl-BE"], input[name="title_nl-NL"]', 20000);
     await step("title",        () => fillInputHuman(titleInput(), smartTrunc(item.title || "", 60)));
@@ -92,6 +106,7 @@
     await step("intendedFor",  () => selectIntendedFor(item));
     await sleep(400); // let React re-render kenmerken after condition selection
     await step("package",      () => selectPackageSize());
+    await step("sporttype",    () => mpSportType(item) && selectDropdown("Type", mpSportType(item)));
     await step("size",         () => item.size && selectDropdown(["Maat", "Maat (cm)"], item.size));
     await step("color",        () => item.color && selectDropdown("Kleur", dutchColor(item.color)));
     await step("brand",        () => item.brand && fillBrandField(item.brand));
