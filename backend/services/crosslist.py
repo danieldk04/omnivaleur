@@ -823,12 +823,13 @@ async def handle_item_sold(item_id: str, sold_on_platform: str, sold_price: floa
     ]
 
     logger.info(
-        "[sold] item_id=%s sold_on=%s → %d other listing(s) to delist: %s",
-        item_id, sold_on_platform, len(other.data or []),
-        [(l["platform"], l["status"]) for l in (other.data or [])],
+        "[sold] item_id=%s sold_on=%s → %d other listing(s) to delist: %s (sold platforms left alone: %s)",
+        item_id, sold_on_platform, len(other_rows),
+        [(l["platform"], l["status"]) for l in other_rows],
+        sorted(sold_platforms),
     )
 
-    if not other.data:
+    if not other_rows:
         logger.info("[sold] item_id=%s: NOTHING to delist (no other listing rows found)", item_id)
         return
 
