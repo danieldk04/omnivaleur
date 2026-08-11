@@ -816,11 +816,11 @@ async def handle_item_sold(item_id: str, sold_on_platform: str, sold_price: floa
     sold_platforms = {
         l["platform"] for l in (all_rows.data or []) if l["status"] == "sold"
     } | {sold_on_platform}
-    other = type("Resp", (), {"data": [
+    other_rows = [
         l for l in (all_rows.data or [])
         if l["platform"] not in sold_platforms
         and l["status"] in ("active", "relisting", "error", "delisted", "hidden")
-    ]})()
+    ]
 
     logger.info(
         "[sold] item_id=%s sold_on=%s → %d other listing(s) to delist: %s",
