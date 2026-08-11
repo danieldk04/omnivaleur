@@ -21,6 +21,31 @@ logger = logging.getLogger(__name__)
 STALE_CLAIM_SECONDS = 60
 
 
+def _republish_job_update(open_job: dict, payload: dict, now: datetime | None = None) -> dict:
+    """
+    Wat er met een al openstaande publicatieopdracht moet gebeuren als de
+    gebruiker nóg eens op publiceren drukt.
+
+    Een opdracht die "claimed" staat maar al een tijd niets van zich laat horen,
+    hoort bij een tabblad dat weg is (gesloten, gecrasht, Chrome afgesloten).
+    Die overnemen zonder hem los te maken betekende dat opnieuw crosslisten
+    precies niets deed: de extensie krijgt alleen "pending" werk, dus bleef het
+    item eindeloos "publishing…" staan tot de opruiming na vijf minuten. Klikt de
+    gebruiker zelf opnieuw op publiceren, dan is dat het duidelijkste signaal dat
+    de vorige poging dood is — dus zetten we hem terug op de wachtrij. Is de claim
+    nog vers, dan is de extensie gewoon bezig en laten we hem met rust.
+    """
+    update: dict = {"payload": payload}
+    if (open_job or {}).get("status") != "claimed":
+        return update
+    claimed_at = _parse_iso(open_job.get("claimed_at"))
+    now = now or datetime.now(timezone.utc)
+    if claimed_at is None or (now - claimed_at) > timedelta(seconds=STALE_CLAIM_SECONDS):
+        update["status"] = "pending"
+        update["claimed_at"] = None
+    return update
+
+
 def _parse_iso(ts):
     """Tijdstempel uit de database naar datetime (altijd met tijdzone), of None."""
     if not ts:
