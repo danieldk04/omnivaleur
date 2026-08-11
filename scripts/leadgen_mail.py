@@ -69,17 +69,21 @@ BEDRIJF = "Omnivaleur"
 BEDRIJF_ADRES = "Kleine Melanen 5, 4614RG, Bergen op Zoom"
 BEDRIJF_KVK = "86792423"
 SITE = "https://omnivaleur.com"
+# Waar Daniel een seintje krijgt zodra iemand écht antwoordt. Automatische
+# ontvangstbevestigingen tellen niet mee, anders is het geen seintje meer maar ruis.
+ALARM_NAAR = ["danieldekoning66@gmail.com", "info@revaleur.com"]
 # ---------------------------------------------------------------------------
 
 # Opbouwschema: het aantal mails per dag, geteld vanaf je eerste verzenddag. Een
 # nieuw domein dat op dag één honderd mails uitstuurt is een nieuw domein dat op
-# dag twee op een zwarte lijst staat. Daniel wil naar 15 per dag; deze trap komt
-# daar in drie dagen, wat voor een vers domein nog te verdedigen is.
+# dag twee op een zwarte lijst staat. Daniel wil vanaf dag twee 15 per dag en
+# daarna verder opbouwen: 25 vanaf dag 6, 40 vanaf dag 11. Hoger heeft geen zin
+# zolang de lijst ~320 adressen telt; die is dan in twee weken op.
 #
 # VENSTER en SPREIDING horen bij de autonome stand (`tick`): de mails van een dag
 # krijgen willekeurige tijdstippen binnen kantoortijd, in plaats van vijftien
 # stuks achter elkaar om negen uur 's ochtends.
-RAMP = [(1, 5), (2, 10), (3, 15)]
+RAMP = [(1, 5), (2, 15), (6, 25), (11, 40)]
 FOLLOWUP_DAGEN = (5, 12)      # opvolgmail 1 en 2, in dagen na de vorige mail
 PAUZE = (40, 110)             # seconden tussen twee mails, willekeurig
 VENSTER = (8, 45), (20, 30)   # vroegste en laatste verzendtijd op een dag
@@ -618,6 +622,7 @@ def _check_inbox(state: dict, boek: "Notion", dagen: int) -> tuple[int, int, int
                 nieuw += 1
                 if lead:
                     boek.geantwoord(lead)
+                    _alarm(lead, kop, body)
             if AFMELD_WOORDEN.search(body[:400]) and not st.get("afgemeld"):
                 st["afgemeld"] = True
                 afgemeld += 1
@@ -626,6 +631,38 @@ def _check_inbox(state: dict, boek: "Notion", dagen: int) -> tuple[int, int, int
 
     _save_state(state)
     return nieuw, afgemeld, bounces
+
+
+def _alarm(lead: dict, onderwerp: str, body: str) -> None:
+    """Een seintje naar Daniel zelf. De machine draait onbewaakt; zonder dit zou
+    hij elke dag in de postbus moeten kijken of er toevallig iemand geantwoord
+    heeft, en dat is precies wat hij niet wil."""
+    host, van = os.environ.get("MAIL_HOST"), os.environ.get("MAIL_USER")
+    wachtwoord = os.environ.get("MAIL_PASS")
+    if not (host and van and wachtwoord and ALARM_NAAR):
+        return
+    naam = _bedrijfsnaam(lead)
+    msg = EmailMessage()
+    msg["From"] = f"Leadmachine <{van}>"
+    msg["To"] = ", ".join(ALARM_NAAR)
+    msg["Subject"] = f"Reactie van {naam}"
+    msg.set_content(
+        f"{naam} heeft geantwoord op je koude mail.\n\n"
+        f"Van:       {lead['email']}\n"
+        f"Onderwerp: {onderwerp}\n"
+        f"Bedrijf:   {lead.get('ads') or '?'} advertenties"
+        f"{', webshop ' + lead['site'] if lead.get('site') else ''}\n"
+        f"Notion:    {lead.get('ig_url')}\n\n"
+        f"--- begin van het bericht ---\n{body[:1200].strip()}\n"
+        f"--- einde ---\n\n"
+        f"Antwoord vanuit {van}. Deze lead krijgt geen opvolgmails meer.\n")
+    try:
+        with smtplib.SMTP_SSL(host, 465, context=ssl.create_default_context()) as smtp:
+            smtp.login(van, wachtwoord)
+            smtp.send_message(msg)
+        print(f"  ↳ seintje gestuurd naar {', '.join(ALARM_NAAR)}")
+    except Exception as e:  # noqa: BLE001 — een mislukt seintje mag niets blokkeren
+        print(f"  (seintje niet verstuurd: {e})")
 
 
 def _platte_tekst(msg) -> str:
