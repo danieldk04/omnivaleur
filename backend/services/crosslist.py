@@ -429,7 +429,7 @@ async def publish_to_platforms(item_id: str, platforms: list[str], user_id: str)
         # verzoek kwam wél aan, alleen het antwoord ging verloren) twee
         # opdrachten op — en dus twee advertenties.
         open_job = (await _exec(
-            db.table("jobs").select("id")
+            db.table("jobs").select("id,status,claimed_at")
             .eq("user_id", user_id).eq("item_id", item_id)
             .eq("platform", platform).eq("action", "create")
             .in_("status", ["pending", "claimed"])
@@ -437,7 +437,23 @@ async def publish_to_platforms(item_id: str, platforms: list[str], user_id: str)
         )).data
         if open_job:
             job_id = open_job[0]["id"]
-            await _exec(db.table("jobs").update({"payload": payload}).eq("id", job_id))
+            update = {"payload": payload}
+            # Een opdracht die "claimed" staat maar al een tijd niets van zich
+            # laat horen, hoort bij een tabblad dat weg is (gesloten, gecrasht,
+            # Chrome afgesloten). Die overnemen zonder hem los te maken betekende
+            # dat opnieuw crosslisten precies niets deed: de extensie krijgt
+            # alleen "pending" werk, dus bleef het item eindeloos "publishing…"
+            # staan tot de opruiming na vijf minuten. Klikt de gebruiker zelf
+            # opnieuw op publiceren, dan is dat het duidelijkste signaal dat de
+            # vorige poging dood is — dus zetten we hem terug op de wachtrij.
+            if open_job[0].get("status") == "claimed":
+                claimed_at = _parse_iso(open_job[0].get("claimed_at"))
+                if claimed_at is None or (
+                    datetime.now(timezone.utc) - claimed_at
+                ) > timedelta(seconds=STALE_CLAIM_SECONDS):
+                    update["status"] = "pending"
+                    update["claimed_at"] = None
+            await _exec(db.table("jobs").update(update).eq("id", job_id))
             hergebruikt = True
         else:
             job_id = (await _exec(db.table("jobs").insert({
