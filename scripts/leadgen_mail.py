@@ -184,15 +184,15 @@ MAIL1 = """{aanhef} {naam},
 
 {haakje}
 
-Ik help met {bedrijf} verkopers zoals {jij} om {jouw} aanbod automatisch door te
-plaatsen naar alle relevante marketplaces, zodat {jij} direct {jouw} bereik
-verdubbelt zonder extra werk. Zelf draai ik 700+ reviews met Revaleur en help ik
-hier al 38 resellers mee.
+Ik help met {bedrijf} verkopers zoals {jij_nadruk} om {jouw} aanbod automatisch
+door te plaatsen naar alle relevante marketplaces, zodat {jij} direct {jouw}
+bereik {jij_verdubbelt} zonder extra werk. Zelf draai ik 700+ reviews met
+Revaleur en help ik hier al 38 resellers mee.
 
 {jij_kunt} het 7 dagen gratis uitproberen. Bespaart het {jou} niet meteen uren
 werk per week, dan {zit_je} nergens aan vast.
 
-Zal ik {jou} een video van 1 minuut sturen waarin {jij_ziet} hoe makkelijk het
+Zal ik {jou} een video van 1 minuut sturen waarin {ziet_jij} hoe makkelijk het
 werkt?
 
 {ondertekening}"""
