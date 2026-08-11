@@ -878,6 +878,23 @@ async def _reconcile_vinted_sales(db, job, scraped: list[dict], scan_meta: dict 
     # Everything Vinted still knows about, and which of those are closed.
     seen_ids: set[str] = set()
     closed_ids: set[str] = set()
+    # Een advertentie zonder opgeslagen Vinted-nummer was tot nu toe onzichtbaar
+    # voor deze controle: geen nummer = geen match = verkoop gemist, en het item
+    # bleef bij "live" staan (en werd later alsnog "verwijderd" op Vinted). Elke
+    # titel die wij op Vinted zetten begint met "(SKU)", dus die prefix is een
+    # exacte, unieke tweede sleutel.
+    closed_skus: set[str] = set()
+    closed_titles: set[str] = set()
+    closed_id_by_sku: dict[str, str] = {}
+    closed_id_by_title: dict[str, str] = {}
+
+    def _norm_title(t: str) -> str:
+        return " ".join((t or "").lower().split())
+
+    def _sku_of(t: str) -> str:
+        m = re.match(r"^\s*\(([^)]{1,24})\)", t or "")
+        return m.group(1).strip().lower() if m else ""
+
     for r in scraped:
         pid = r.get("platform_listing_id")
         if pid is None:
@@ -886,18 +903,30 @@ async def _reconcile_vinted_sales(db, job, scraped: list[dict], scan_meta: dict 
         seen_ids.add(pid)
         if r.get("is_closed"):
             closed_ids.add(pid)
+            title = _norm_title(r.get("title"))
+            sku = _sku_of(r.get("title"))
+            if title:
+                closed_titles.add(title)
+                closed_id_by_title.setdefault(title, pid)
+            if sku:
+                closed_skus.add(sku)
+                closed_id_by_sku.setdefault(sku, pid)
 
-    item_ids = [it["id"] for it in fetch_all(
-        lambda: db.table("items").select("id").eq("user_id", job["user_id"]))]
+    items_rows = fetch_all(
+        lambda: db.table("items").select("id,sku,title").eq("user_id", job["user_id"]))
+    item_ids = [it["id"] for it in items_rows]
+    items_by_id = {it["id"]: it for it in items_rows}
     if not item_ids:
         return
 
     active = (
         db.table("listings")
-        .select("item_id,platform_listing_id")
+        .select("id,item_id,platform_listing_id")
         .eq("platform", "vinted")
         .in_("item_id", item_ids)
-        .in_("status", ["active", "relisting"])
+        # 'hidden' hoort erbij: een verborgen advertentie kan gewoon verkocht zijn
+        # (Vinted zet hem dan op closed), en die verkoop werd anders nooit gezien.
+        .in_("status", ["active", "relisting", "hidden"])
         .execute()
         .data or []
     )
