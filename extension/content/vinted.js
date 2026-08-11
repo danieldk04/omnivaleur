@@ -794,8 +794,15 @@
           // the one we just created (a relist posts exactly one new item).
           const hit = items.find((it) => {
             if (String(it.id) === String(excludeId)) return false;
+            // Verkochte, beëindigde en concept-advertenties tellen niet mee: die
+            // staan wel in de garderobe maar zijn niet "het item staat online".
+            if (it.is_closed || it.is_draft) return false;
             const t = norm(it.title);
-            return t && (t.includes(target) || target.includes(t));
+            if (!t) return false;
+            // exact: alleen een volledig gelijke titel telt. Gebruikt door de
+            // controle vooraf, waar een losse gelijkenis het verkeerde item aan
+            // de advertentie zou kunnen koppelen.
+            return opts.exact ? t === target : (t.includes(target) || target.includes(t));
           });
           if (hit) return { id: String(hit.id), processing: !!hit.is_processing };
         }
