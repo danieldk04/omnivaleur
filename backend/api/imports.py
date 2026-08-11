@@ -311,7 +311,16 @@ def _infer_attributes(title: str | None, description: str | None = None) -> dict
         # is simply "jongens kleding". Shoes/sportswear are the only garment splits.
         if any(_garment_in(k) for k in ("shoe", "sneaker", "boot", "trainer")):
             out["category"] = "kinderen schoenen"
-        elif any(_garment_in(k) for k in ("sport", "legging", "trainingspak")):
+        elif any(_garment_in(k) for k in ("cycling", "wielren", "wielrenshirt", "fietsshirt")):
+            out["category"] = "kinderen wielrenkleding"
+        elif any(_garment_in(k) for k in ("football", "voetbal", "voetbalshirt",
+                                          "voetbaltenue", "soccer")):
+            out["category"] = "kinderen voetbalkleding"
+        elif any(_garment_in(k) for k in ("swimwear", "swimsuit", "zwempak", "zwembroek",
+                                          "badpak", "bikini")):
+            out["category"] = "kinderen zwemkleding"
+        elif any(_garment_in(k) for k in ("sport", "sportshirt", "sportbroek", "legging",
+                                          "trainingspak", "tracksuit", "activewear")):
             out["category"] = "kinderen sportkleding"
         elif any(_word_in(w, text) for w in ("boys", "boy", "jongens", "jongen")):
             out["category"] = "jongens kleding"
