@@ -197,9 +197,11 @@ def _haakje(lead: dict) -> str:
     return zin
 
 
-# Mail 1 draagt bewust geen adresblok en geen afmeldregel: Daniel wil dat de
-# eerste mail leest als een berichtje van een mens, niet als een mailing. Het
-# staat wel in mail 2 en 3, en in de List-Unsubscribe-header van elke mail.
+# Geen adresblok en geen afmeldregel onder de mails: Daniel wil dat ze lezen als
+# een berichtje van een mens, niet als een mailing. Zijn beslissing, en hij weet
+# dat het wettelijk anders hoort. De afmeldweg zit nu alleen nog in de
+# List-Unsubscribe-header van elke mail — onzichtbaar voor de ontvanger, maar
+# mailprogramma's tonen er hun eigen "afmelden"-knop mee.
 MAIL1 = """{aanhef} {naam},
 
 {haakje}
@@ -229,7 +231,7 @@ ik spreek is dat een avond of twee.
 Als {jij_wil} stuur ik dat filmpje van een minuut, dan {zie_jij} zelf of het wat
 scheelt. Geen verplichtingen, gewoon even kijken.
 
-{ondertekening}{voetregel}"""
+{ondertekening}"""
 
 MAIL3 = """{aanhef} {naam},
 
@@ -242,18 +244,11 @@ zouden kunnen staan.
 
 Succes met de zaak, en veel verkoop!
 
-{ondertekening}{voetregel}"""
+{ondertekening}"""
 
 ONDERTEKENING = """Groetjes,
 Daniel"""
 
-# Adres, KvK en afmeldregel. Wettelijk hoort dit onder elke zakelijke mail; Daniel
-# houdt het bewust uit mail 1 om die persoonlijk te laten lezen.
-VOETREGEL = """
-
---
-Liever geen mail meer? Antwoord met "stop", dan hoor je niets meer van me.
-{bedrijf} · {adres} · KvK {kvk} · {site}"""
 
 
 BEURTEN = [
@@ -273,8 +268,6 @@ def _tekst(lead: dict, sjabloon: str) -> str:
         site=SITE.replace("https://", ""),
         **_jij(lead),
         ondertekening="\x00" + ONDERTEKENING,
-        voetregel=VOETREGEL.format(bedrijf=BEDRIJF, adres=BEDRIJF_ADRES,
-                                   kvk=BEDRIJF_KVK, site=SITE.replace("https://", "")),
     )
 
 
