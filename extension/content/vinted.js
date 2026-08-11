@@ -1320,6 +1320,13 @@
     const inp = qs('input[data-testid="catalog-select-dropdown-input"]');
     if (!inp) return false;
 
+    // Eerst het zekere pad: klik Vinted's eigen categorieboom af. Zoeken +
+    // punten toekennen blijft daarna als terugval bestaan, maar is een loterij —
+    // op de zoekresultaten voor "jeans" bestaat namelijk geen gewone "Jeans",
+    // alleen "Ripped/Skinny/Slim fit/Straight fit", en dan won de kortste naam.
+    // Zo stond een doodgewone spijkerbroek te koop als kapotte spijkerbroek.
+    if (await walkVintedCategoryPath(item, cat, gender)) return true;
+
     let hints = (CAT_HINTS[gender ? `${gender} ${cat}` : cat] || CAT_HINTS[cat] || [])
       .map((h) => h.toLowerCase());
 
