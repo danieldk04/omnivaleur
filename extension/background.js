@@ -2694,7 +2694,7 @@ async function checkSoldListings() {
       // twee keer voor, dan is hij als sleutel onbruikbaar — dan liever niets
       // boeken dan het verkeerde item verkocht melden.
       const normTitle = s => (s || "")
-        .normalize("NFKD").replace(/[̀-ͯ]/g, "")
+        .normalize("NFKD").replace(/[\u0300-\u036f]/g, "")
         .toLowerCase()
         .replace(/^\s*\([^)]{1,24}\)\s*/, "")
         .replace(/[^a-z0-9]+/g, " ")
@@ -2897,16 +2897,26 @@ function scrapeVintedOrders(url) {
               anchors.forEach(el => {
                 const row = el.closest('div, li, article') || el;
                 const text = (row.innerText || el.innerText || "").replace(/\s+/g, " ").trim();
+                if (!text) return;
                 const skuM = text.match(/\((\d{3,6})\)/);
-                if (!skuM) return;
-                const sku = skuM[1];
+                // Zonder "(1234)" in de tekst was deze rij tot nu toe waardeloos:
+                // verkopers die geen nummer in hun titel zetten hadden hier dus
+                // nooit iets aan. Nu gaat de hele rijtekst mee en zoekt de server
+                // er de bijbehorende titel bij (alleen als die uniek is).
                 const priceM = text.match(/€\s?(\d+(?:[.,]\d{2})?)/);
                 const cancelled = /cancel|refund|geannuleerd|terugbetaal|retour/i.test(text);
-                const prev = rows[sku];
                 const sold = !cancelled;
-                // Keep the sold entry (with price) over a cancelled one for the same SKU.
+                const key = skuM ? `sku:${skuM[1]}` : `txt:${text.slice(0, 160)}`;
+                const entry = {
+                  sku: skuM ? skuM[1] : null,
+                  text: text.slice(0, 300),
+                  price: priceM ? priceM[1] : null,
+                  sold,
+                };
+                const prev = rows[key];
+                // Keep the sold entry (with price) over a cancelled one for the same row.
                 if (!prev || (sold && !prev.sold)) {
-                  rows[sku] = { sku, price: priceM ? priceM[1] : null, sold };
+                  rows[key] = entry;
                 } else if (sold && prev.sold && !prev.price && priceM) {
                   prev.price = priceM[1];
                 }
