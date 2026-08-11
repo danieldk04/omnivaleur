@@ -803,14 +803,24 @@ async def handle_item_sold(item_id: str, sold_on_platform: str, sold_price: floa
     # this is gone everywhere", so we re-attempt removal on any listing that isn't
     # already the sold one. The extension verifies presence first and treats an
     # absent listing as success, so re-checking a genuinely-gone one is harmless.
-    other = (
+    all_rows = (
         db.table("listings")
         .select("*")
         .eq("item_id", item_id)
-        .in_("status", ["active", "relisting", "error", "delisted", "hidden"])
-        .neq("platform", sold_on_platform)
         .execute()
     )
+    # Never touch a platform this item already sold on — not the one we just
+    # booked, and not one that sold earlier. A second sale record on another
+    # channel (a manual "Sold" after an auto-detected one) used to send a delete
+    # job to the platform where the buyer's order lives.
+    sold_platforms = {
+        l["platform"] for l in (all_rows.data or []) if l["status"] == "sold"
+    } | {sold_on_platform}
+    other = type("Resp", (), {"data": [
+        l for l in (all_rows.data or [])
+        if l["platform"] not in sold_platforms
+        and l["status"] in ("active", "relisting", "error", "delisted", "hidden")
+    ]})()
 
     logger.info(
         "[sold] item_id=%s sold_on=%s → %d other listing(s) to delist: %s",
