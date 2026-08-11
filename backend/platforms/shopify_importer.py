@@ -107,6 +107,7 @@ _NL_EN_TYPE = {
     "zwembroeken": "Swim Shorts",
     "sportkleding": "Sportswear", "babykleding": "Baby Clothing",
     "peuterkleding": "Toddler Clothing", "kleding": "Clothing",
+    "jongens": "Boys Clothing", "meisjes": "Girls Clothing",
 }
 
 # The "sieraden ..." leaves (jewellery, watches, bags — see the frontend
