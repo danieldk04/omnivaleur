@@ -2662,8 +2662,10 @@ async function checkSoldListings() {
         // Zonder platform-id: eerst de SKU-prefix "(1337)" waarmee elke door deze
         // app geplaatste advertentie begint — exact en uniek. Pas daarna de
         // titelvergelijking, die op vertaalde of afgekapte titels kan missen.
-        if (!isSold && !listing.platform_listing_id && listing.sku) {
-          const needle = `(${String(listing.sku).trim().toLowerCase()})`;
+        const listingSku = listing.sku
+          || (/^\s*\(([^)]{1,24})\)/.exec(listing.title || "") || [])[1] || "";
+        if (!isSold && !listing.platform_listing_id && listingSku) {
+          const needle = `(${String(listingSku).trim().toLowerCase()})`;
           isSold = soldTitles.some(st => st.startsWith(needle));
           if (isSold) console.log(`[Omnivaleur][sold] ${platform}: matched sold ad by SKU ${listing.sku} for "${listing.title}" (no platform id)`);
         }
