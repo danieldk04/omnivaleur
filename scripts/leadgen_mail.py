@@ -205,8 +205,7 @@ week kwijt aan het overzetten van advertenties naar andere platforms?
 Is het antwoord "te veel", dan stuur ik {jou} alsnog graag die video van een
 minuut. {jij_ziet} in één oogopslag wat {bedrijf} daarvan overneemt.
 
-{jij_kunt} het daarna 7 dagen gratis proberen, zonder dat {jij} ergens aan
-vastzit.
+{jij_kunt} het daarna 7 dagen gratis proberen, zonder verplichtingen.
 
 {ondertekening}"""
 
