@@ -2653,6 +2653,14 @@ async function checkSoldListings() {
         // an id — by a resilient title match against a POSITIVELY sold ad. We
         // NEVER infer a sale from absence; only a positive sold label acts.
         let isSold = listing.platform_listing_id && soldIds.has(listing.platform_listing_id);
+        // Zonder platform-id: eerst de SKU-prefix "(1337)" waarmee elke door deze
+        // app geplaatste advertentie begint — exact en uniek. Pas daarna de
+        // titelvergelijking, die op vertaalde of afgekapte titels kan missen.
+        if (!isSold && !listing.platform_listing_id && listing.sku) {
+          const needle = `(${String(listing.sku).trim().toLowerCase()})`;
+          isSold = soldTitles.some(st => st.startsWith(needle));
+          if (isSold) console.log(`[Omnivaleur][sold] ${platform}: matched sold ad by SKU ${listing.sku} for "${listing.title}" (no platform id)`);
+        }
         if (!isSold && !listing.platform_listing_id && listing.title) {
           const lt = listing.title.toLowerCase().trim();
           const key = lt.substring(0, 20);
