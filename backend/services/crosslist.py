@@ -840,7 +840,7 @@ async def handle_item_sold(item_id: str, sold_on_platform: str, sold_price: floa
     # 'delisted' row from earlier attempts — we only need one delete job).
     seen_plat = set()
     api_listings = []
-    for listing in other.data:
+    for listing in other_rows:
         plat = listing["platform"]
         if plat in seen_plat:
             continue
