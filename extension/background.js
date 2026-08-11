@@ -2621,7 +2621,7 @@ async function checkSoldListings() {
     try {
       // Fetch active listings for this platform from backend
       const authHeaders = await getAuthHeaders();
-      const resp = await fetch(`${serverUrl}/api/listings/?platform=${platform}&status=active`, { headers: authHeaders }).catch(() => null);
+      const resp = await fetch(`${serverUrl}/api/listings/?platform=${platform}`, { headers: authHeaders }).catch(() => null);
       if (!resp?.ok) {
         console.warn(`[Omnivaleur][sold] ${platform}: could not fetch active listings (HTTP ${resp?.status || "no response"}) — skipping`);
         continue;
