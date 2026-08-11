@@ -89,6 +89,7 @@
     await step("condition",    () => selectCondition(item.condition));
     await step("intendedFor",  () => selectIntendedFor(item));
     await sleep(400); // let React re-render kenmerken after condition selection
+    await step("sporttype",    () => mpSportType(item) && selectDropdown("Type", mpSportType(item)));
     await step("size",         () => item.size && selectDropdown(["Maat", "Jeansmaat", "Maat (cm)", "Maat bovenstuk", "Maat onderstuk"], item.size));
     await step("color",        () => item.color && selectDropdown("Kleur", dutchColor(item.color)));
     await step("brand",        () => item.brand && fillBrandField(item.brand));
