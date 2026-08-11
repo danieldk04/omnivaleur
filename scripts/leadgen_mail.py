@@ -131,17 +131,18 @@ def _aanhef(lead: dict) -> str:
 
 def _jij(lead: dict) -> dict[str, str]:
     """Eenmansbedrijf tutoyeren, een team met meer mensen niet. De classificatie
-    zet dat in `je_jullie`; alle voornaamwoorden in de mail komen hiervandaan,
-    zodat er nooit "jullie ziet" of "je kunnen" uit rolt."""
+    zet dat in `je_jullie`; alle voornaamwoorden en werkwoordsvormen in de mail
+    komen hiervandaan, zodat er nooit "jullie ziet" of "je kunnen" uit rolt."""
     if (lead.get("je_jullie") or "Je") == "Je":
         return dict(jij="je", jij_nadruk="jij", jou="je", jouw="je",
-                    jij_kunt="Je kunt", zit_je="zit je", jij_ziet="Je ziet",
-                    jij_verkoopt="je verkoopt", jij_hebt="je hebt",
-                    jij_verdubbelt="verdubbelt", ziet_jij="je ziet")
+                    ziet_jij="je ziet", zie_jij="zie je", ben_je="ben je",
+                    zet_werkwoord="zet", jij_stopt="stop je", jij_wil="je wil",
+                    weet_jij="weet je", mocht_jij="Mocht je", zou_jij="zou je")
     return dict(jij="jullie", jij_nadruk="jullie", jou="jullie", jouw="jullie",
-                jij_kunt="Jullie kunnen", zit_je="zitten jullie", jij_ziet="Jullie zien",
-                jij_verkoopt="jullie verkopen", jij_hebt="jullie hebben",
-                jij_verdubbelt="verdubbelen", ziet_jij="jullie zien")
+                ziet_jij="jullie zien", zie_jij="zien jullie", ben_je="zijn jullie",
+                zet_werkwoord="zetten", jij_stopt="stoppen jullie",
+                jij_wil="jullie willen", weet_jij="weten jullie",
+                mocht_jij="Mochten jullie", zou_jij="zouden jullie")
 
 
 def _rond(n: int) -> str:
@@ -162,9 +163,13 @@ RUBRIEKEN = {
 
 
 def _haakje(lead: dict) -> str:
-    """De openingszin die deze mail over déze handelaar laat gaan. Zonder zoiets
+    """De openingszin die deze mail over deze handelaar laat gaan. Zonder zoiets
     is het een rondzendbrief en dat ziet iedereen. We gebruiken wat we van hem
-    weten: rubriek, aantal advertenties, eigen webshop en webshopsysteem."""
+    weten: rubriek, aantal advertenties, eigen webshop en webshopsysteem.
+
+    De toon is met opzet terloops. "Zag je advertenties voorbijkomen" leest als
+    iemand die toevallig keek; "Ik constateerde dat u 5.005 advertenties heeft"
+    leest als software, en dat is precies wat het is."""
     v = _jij(lead)
     ads = lead.get("ads") or 0
     rubriek = (lead.get("verkoopt_vooral") or "").strip().lower()
@@ -174,72 +179,85 @@ def _haakje(lead: dict) -> str:
 
     # De classificatie zet hier soms "Alles" of "Antieke vintage" neer. Alleen een
     # rubriek die als los zelfstandig naamwoord in een zin past mag erin; de rest
-    # wordt "van alles", want een rare zin valt meer op dan een vage zin.
-    wat = f"veel {rubriek}" if rubriek in RUBRIEKEN else "van alles"
-    if ads >= 100:
-        zin = (f"Zag dat {v['jij']} {wat} {v['jij_verkoopt'].split()[-1]} op "
-               f"Marktplaats, {_rond(ads)} advertenties inmiddels. Nice.")
+    # wordt weggelaten, want een rare zin valt meer op dan een vage zin.
+    zin = f"Zag {v['jouw']} advertenties op Marktplaats voorbijkomen"
+    if ads >= 100 and rubriek in RUBRIEKEN:
+        zin += f", {_rond(ads)} stuks in {rubriek}."
+    elif ads >= 100:
+        zin += f", {_rond(ads)} stuks inmiddels."
     else:
-        zin = (f"Zag dat {v['jij']} {wat} "
-               f"{v['jij_verkoopt'].split()[-1]} op Marktplaats, nice.")
+        zin += "."
 
     if site and shop:
-        zin += f" En {v['jouw']} eigen shop op {site} draait op {shop}, zie ik."
+        zin += f" En dan ook nog een eigen shop op {site}, op {shop}. Netjes."
     elif site:
-        zin += f" En {v['jij']} {v['jij_hebt'].split()[-1]} daarnaast een eigen shop op {site}."
+        zin += f" En dan ook nog een eigen shop op {site}. Netjes."
+    else:
+        zin += " Netjes."
     return zin
 
 
+# Mail 1 draagt bewust geen adresblok en geen afmeldregel: Daniel wil dat de
+# eerste mail leest als een berichtje van een mens, niet als een mailing. Het
+# staat wel in mail 2 en 3, en in de List-Unsubscribe-header van elke mail.
 MAIL1 = """{aanhef} {naam},
 
 {haakje}
 
-Ik help met {bedrijf} verkopers zoals {jij_nadruk} om {jouw} aanbod automatisch
-door te plaatsen naar alle relevante marketplaces, zodat {jij} direct {jouw}
-bereik {jij_verdubbelt} zonder extra werk. Zelf draai ik 700+ reviews met
-Revaleur en help ik hier al 38 resellers mee.
+Even kort: ik heb {bedrijf} gebouwd, waarmee {jij} alles in een keer op
+alle marketplaces {zet_werkwoord} in plaats van het handmatig over te tikken.
+Zelf verkoop ik ook tweedehands, 700+ reviews met Revaleur, dus ik weet precies
+hoeveel tijd dat kost. Inmiddels gebruiken 38 andere resellers het.
 
-{jij_kunt} het 7 dagen gratis uitproberen. Bespaart het {jou} niet meteen uren
-werk per week, dan {zit_je} nergens aan vast.
+De eerste 7 dagen zijn gratis, en als het {jou} geen tijd bespaart {jij_stopt}
+gewoon weer.
 
-Zal ik {jou} een video van 1 minuut sturen waarin {ziet_jij} hoe makkelijk het
-werkt?
+Zal ik {jou} een filmpje van een minuutje sturen? Dan {zie_jij} zo of het wat
+voor {jou} is.
 
 {ondertekening}"""
 
 MAIL2 = """{aanhef} {naam},
 
-Korte vraag naar aanleiding van mijn vorige mail: hoeveel tijd {zit_je} nu per
-week kwijt aan het overzetten van advertenties naar andere platforms?
+Nog even over mijn mailtje van vorige week, geen idee of het bij {jou} langs is
+gekomen.
 
-Is het antwoord "te veel", dan stuur ik {jou} alsnog graag die video van een
-minuut. {jij_ziet} in één oogopslag wat {bedrijf} daarvan overneemt.
+Waar ik eigenlijk benieuwd naar ben: hoeveel tijd {ben_je} per week kwijt aan het
+overzetten van {jouw} spullen naar andere platforms? Bij de meeste verkopers die
+ik spreek is dat een avond of twee.
 
-{jij_kunt} het daarna 7 dagen gratis proberen, zonder verplichtingen.
+Als {jij_wil} stuur ik dat filmpje van een minuut, dan {zie_jij} zelf of het wat
+scheelt. Geen verplichtingen, gewoon even kijken.
 
-{ondertekening}"""
+{ondertekening}{voetregel}"""
 
 MAIL3 = """{aanhef} {naam},
 
-Laatste bericht van mijn kant, ik laat het verder rusten.
+Ik ga {jou} niet langer lastigvallen, dit is mijn laatste mailtje.
 
-Mocht het later toch gaan spelen dat {jouw} voorraad op meer plekken moet staan
-zonder dat het dubbel werk wordt: {site}. Eén mailtje en ik denk mee.
+{mocht_jij} ooit denken "ik ben te veel tijd kwijt aan het overzetten van mijn
+advertenties", dan {weet_jij} me te vinden: {site}. Stuur gerust een berichtje,
+ook als {jij_wil} even sparren over waar {jij} nog meer zou kunnen verkopen.
 
-Succes met de zaak.
+Succes met de zaak, en veel verkoop!
 
-{ondertekening}"""
+{ondertekening}{voetregel}"""
 
-ONDERTEKENING = """Groet,
-{naam}
-{bedrijf} · {site}
+ONDERTEKENING = """Groetjes,
+Daniel"""
 
-{bedrijf} · {adres} · KvK {kvk}
-Liever geen mail meer? Antwoord met "stop" en ik haal {jou} uit de lijst."""
+# Adres, KvK en afmeldregel. Wettelijk hoort dit onder elke zakelijke mail; Daniel
+# houdt het bewust uit mail 1 om die persoonlijk te laten lezen.
+VOETREGEL = """
+
+--
+Liever geen mail meer? Antwoord met "stop", dan hoor je niets meer van me.
+{bedrijf} · {adres} · KvK {kvk} · {site}"""
+
 
 BEURTEN = [
-    ("mail1", "Vraagje over je Marktplaats-aanbod", MAIL1),
-    ("mail2", "Re: vraagje over je Marktplaats-aanbod", MAIL2),
+    ("mail1", "Vraagje over {jouw} Marktplaats-aanbod", MAIL1),
+    ("mail2", "Re: vraagje over {jouw} Marktplaats-aanbod", MAIL2),
     ("mail3", "Laatste bericht", MAIL3),
 ]
 
@@ -251,12 +269,18 @@ def _tekst(lead: dict, sjabloon: str) -> str:
         naam=naam.split()[0] if naam and len(naam.split()) == 1 else naam,
         haakje=_haakje(lead),
         bedrijf=BEDRIJF,
-        site=SITE,
+        site=SITE.replace("https://", ""),
         **_jij(lead),
-        ondertekening="\x00" + ONDERTEKENING.format(
-            naam=AFZENDER_NAAM, bedrijf=BEDRIJF, site=SITE,
-            adres=BEDRIJF_ADRES, kvk=BEDRIJF_KVK, jou=_jij(lead)["jou"]),
+        ondertekening="\x00" + ONDERTEKENING,
+        voetregel=VOETREGEL.format(bedrijf=BEDRIJF, adres=BEDRIJF_ADRES,
+                                   kvk=BEDRIJF_KVK, site=SITE.replace("https://", "")),
     )
+
+
+def _onderwerp(lead: dict, n: int) -> str:
+    """Ook de onderwerpregel volgt je/jullie — anders staat er "je aanbod" boven
+    een mail die verder de hele tijd "jullie" zegt."""
+    return BEURTEN[n][1].format(**_jij(lead))
 
 
 def _netjes(tekst: str) -> str:
