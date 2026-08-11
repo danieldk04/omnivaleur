@@ -1474,9 +1474,16 @@ async function bgDeleteVinted(job, serverUrl) {
   if (!listingId) {
     const title = (payload.title || "").trim();
     if (!title) throw new Error("Vinted delete: no platform_listing_id and no title in payload");
-    const resolved = await resolveVintedIdByTitle(title);
+    const resolved = await resolveVintedIdByTitle(title, payload.sku);
     if (!resolved?.id) {
       throw new Error(`Could not locate "${title}" on Vinted to delist it. Open the listing on Vinted and use "mark as published" (paste its link) so it can be delisted.`);
+    }
+    // Al verkocht op Vinted: niet verwijderen, maar de verkoop melden. De server
+    // boekt hem dan als verkocht en ruimt juist de ándere platforms op.
+    if (resolved.closed) {
+      console.log(`[Omnivaleur] bgDeleteVinted: "${title}" is closed (sold/ended) on Vinted — reporting the sale instead of deleting`);
+      await finaliseJob(serverUrl, job.id, "complete", { sold_on_platform: true, note: "vinted_is_closed" });
+      return;
     }
     listingId = resolved.id;
     resolvedOrigin = resolved.origin || "";
