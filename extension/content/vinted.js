@@ -1489,7 +1489,21 @@
       // surface. A normal sneaker must NEVER land in Tennis/Football/Running shoes.
       for (const n of NICHE_SHOE) if (t.includes(n) && !sportNamed(n)) return -Infinity;
       let s = 0;
-      for (const h of hints) if (t.includes(h)) s += 3;
+      // De naam van de categorie zelf weegt zwaarder dan het pad ernaartoe.
+      // Anders telde een woord dubbel — één keer als bladnaam en één keer in het
+      // kruimelpad — en won "Activewear > Tops & t-shirts" van het gewone
+      // "Tops & t-shirts > T-shirts" voor een doodgewoon T-shirt.
+      const [blad, pad] = t.includes(" | ") ? t.split(" | ") : [t, ""];
+      for (const h of hints) {
+        if (blad.includes(h)) s += 3;
+        else if (pad.includes(h)) s += 2;
+      }
+      // Sportkleding zit bij Vinted in een eigen tak ("Activewear"). Hoort het
+      // artikel daar niet, dan mag het daar ook niet belanden — en andersom.
+      const sportTak = /\bactivewear\b/.test(t);
+      const wilSport = hints.includes("activewear");
+      if (wilSport && !sportTak) s -= 3;
+      if (!wilSport && sportTak) s -= 6;
       // Explicitly favour the plain footwear buckets for ordinary shoes.
       if (/\b(sneakers|trainers)\b/.test(t)) s += 2;
       const isMenRow = /\bmen\b/.test(t) && !/women/.test(t);
