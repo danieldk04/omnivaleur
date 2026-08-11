@@ -3103,8 +3103,13 @@ function renderPlatformMatrix(itemId) {
 // Manual "mark as listed" — for the rare case the extension published a listing but
 // couldn't auto-confirm it (e.g. Vinted's post-upload review delayed the redirect).
 // Marks the listing active and settles any stuck publish job so the busy banner clears.
-async function markPlatformListed(itemId, platform, label) {
-  if (!confirm(`Mark this item as listed on ${label}?\n\nOnly do this if it's actually live on ${label} — this tells the dashboard the listing exists.`)) return;
+async function markPlatformListed(itemId, platform, label, isBusy = false) {
+  const msg = isBusy
+    ? `This ${label} publish is still marked as running.\n\nMark it as listed anyway?\n\n`
+      + `Only do this if the listing is actually live on ${label} — it also cancels the stuck publish job, `
+      + `so the extension stops waiting and the queue starts moving again.`
+    : `Mark this item as listed on ${label}?\n\nOnly do this if it's actually live on ${label} — this tells the dashboard the listing exists.`;
+  if (!confirm(msg)) return;
   try {
     const r = await apiFetch(`${API}/api/listings/mark-active`, {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
