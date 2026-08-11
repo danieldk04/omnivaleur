@@ -167,15 +167,16 @@ def _haakje(lead: dict) -> str:
 
     wat = f"veel {rubriek}" if rubriek else "veel"
     if ads >= 100:
-        zin = (f"Zag dat {v['jij']} {wat} verkoopt op Marktplaats, "
-               f"{_rond(ads)} advertenties inmiddels. Nice.")
+        zin = (f"Zag dat {v['jij']} {wat} {v['jij_verkoopt'].split()[-1]} op "
+               f"Marktplaats, {_rond(ads)} advertenties inmiddels. Nice.")
     else:
-        zin = f"Zag dat {v['jij']} {wat} verkoopt op Marktplaats, nice."
+        zin = (f"Zag dat {v['jij']} {wat} "
+               f"{v['jij_verkoopt'].split()[-1]} op Marktplaats, nice.")
 
     if site and shop:
         zin += f" En {v['jouw']} eigen shop op {site} draait op {shop}, zie ik."
     elif site:
-        zin += f" En {v['jij']} hebt daarnaast een eigen shop op {site}."
+        zin += f" En {v['jij']} {v['jij_hebt'].split()[-1]} daarnaast een eigen shop op {site}."
     return zin
 
 
