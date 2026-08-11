@@ -706,10 +706,38 @@ async function reportProgress(serverUrl, jobId, progress) {
 let _pollLoopt = false;
 let _pollNogmaals = false;
 
+// Tabbladen die er niet meer zijn, maar wél nog een lopende opdracht in de
+// administratie hebben staan. Bij netjes sluiten vangt tabs.onRemoved dat af,
+// maar bij een crash van Chrome of een herstart van de extensie draait die
+// listener niet — en dan blijft de opdracht "bezig" en ligt de wachtrij stil.
+// Deze controle draait vóór elke pollronde en meldt zulke wezen alsnog af.
+async function reconcileOrphanJobTabs() {
+  let all;
+  try {
+    all = await chrome.storage.local.get(null);
+  } catch { return; }
+  for (const [key, meta] of Object.entries(all)) {
+    if (!key.startsWith("jobtab_") || !meta || !meta.jobId) continue;
+    if (meta.awaitingManualFinish) continue;  // bewust opengelaten voor de gebruiker
+    const tabId = Number(key.slice("jobtab_".length));
+    let leeft = true;
+    try { await chrome.tabs.get(tabId); } catch { leeft = false; }
+    if (leeft) continue;
+    console.warn(`[Omnivaleur] Job ${meta.jobId} (${meta.platform}) has no tab any more — reporting it so the queue keeps moving.`);
+    await chrome.storage.local.remove(key);
+    clearJobWatchdog(tabId);
+    await finaliseJob(meta.serverUrl, meta.jobId, "error", {
+      error: `The tab this ${meta.platform} job was working in disappeared (closed, or Chrome restarted) before it finished. `
+        + `Check the platform, then publish again — or click the platform icon in the dashboard to mark it as listed.`,
+    }).catch(() => {});
+  }
+}
+
 async function pollJobs() {
   if (_pollLoopt) { _pollNogmaals = true; return; }
   _pollLoopt = true;
   try {
+    await reconcileOrphanJobTabs();
     // Bovengrens puur als noodrem: blijft de server werk aanbieden dat nooit
     // afrondt, dan valt hij terug op de gewone klok in plaats van rond te tollen.
     for (let ronde = 0; ronde < 25; ronde++) {
