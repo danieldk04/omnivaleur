@@ -442,6 +442,22 @@
       await refreshListingVinted(item);
       send("JOB_DONE", {});
     } else {
+      // Staat dit item al online? Dat gebeurt als de verkoper hem zelf heeft
+      // geplaatst nadat de automatische poging bleef hangen. Dan niet nóg een
+      // keer plaatsen (dubbele advertentie), maar de bestaande koppelen en de
+      // opdracht netjes afsluiten — daarmee verdwijnt ook het "Publishing now…"
+      // kaartje dat anders eeuwig bleef staan.
+      const already = await resolveCreatedVintedItem(item, item.platform_listing_id, 2500, { exact: true })
+        .catch(() => null);
+      if (already) {
+        console.log(`[Omnivaleur] Vinted create: "${item.title}" staat al online (${already.id}) — koppelen in plaats van opnieuw plaatsen`);
+        send("JOB_DONE", {
+          platform_listing_id: already.id,
+          platform_listing_url: `${location.origin}/items/${already.id}`,
+          note: "already_published_manually",
+        });
+        return;
+      }
       await fillForm(item);
       // Controleer de velden waar Vinted op blokkeert vóór we opsturen. Bleef er
       // iets leeg, dan stoppen we met een melding die zegt wát er ontbrak en met
