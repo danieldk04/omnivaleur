@@ -5,6 +5,7 @@ from backend.api.imports import _backfill_item_from_candidate
 from backend.services.crosslist import handle_item_sold
 from datetime import datetime, timezone, timedelta
 import logging
+import re
 
 logger = logging.getLogger(__name__)
 
