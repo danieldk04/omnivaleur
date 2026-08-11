@@ -435,8 +435,15 @@ async def publish_to_platforms(item_id: str, platforms: list[str], user_id: str)
             base = {**base, "title": manual_title}
         price_field = _PLATFORM_PRICE_FIELD.get(platform)
         if price_field and base.get(price_field):
-            return {**base, "price": base[price_field]}
-        return base
+            base = {**base, "price": base[price_field]}
+        # Laatste zeef vlak voor publicatie: nooit een <text>-omhulling in de
+        # advertentie. De vertaling haalt hem er al af, maar deze regel geldt voor
+        # élk pad hierheen (ook een item dat de tags al opgeslagen had staan).
+        return {
+            **base,
+            "title": _strip_text_tags(base.get("title") or ""),
+            "description": _strip_text_tags(base.get("description") or ""),
+        }
 
     # API platforms: run concurrently server-side
     if api_platforms:
