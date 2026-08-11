@@ -5499,6 +5499,38 @@ async function publishRelistNow(itemId, platform, btn) {
   }
 }
 
+// De verkoper heeft de nieuwe advertentie zelf geplaatst omdat de automatische
+// poging bleef hangen. Dan moet de wachtende opdracht wég (anders komt er straks
+// een tweede advertentie bij) en moet het item weer als "online" tellen.
+async function relistPublishedByHand(itemId, platform, btn) {
+  const label = PLATFORM_LABELS[platform] || platform;
+  const url = prompt(
+    `You published "${label}" yourself — good.\n\n` +
+    `Paste the new listing's URL so it can be linked (delisting and sold-detection need it).\n` +
+    `Leave empty if you don't have it at hand.`
+  );
+  if (url === null) return; // geannuleerd
+  if (btn) { btn.disabled = true; btn.textContent = 'Saving…'; }
+  try {
+    const r = await apiFetch(`${API}/api/listings/mark-active`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        item_id: itemId, platform,
+        ...(url.trim() ? { platform_listing_url: url.trim() } : {}),
+      }),
+    });
+    const data = await parseJsonSafe(r);
+    if (!r.ok) throw new Error(data.detail || 'Could not save');
+    showToast(`Marked as live on ${label} — the queued republish is cancelled.`);
+    await loadRelistStatus();
+    await loadAll();
+    if (document.getElementById('view-refresh')?.classList.contains('active')) renderRefreshView();
+  } catch (e) {
+    alert('Could not close this relist: ' + e.message);
+    if (btn) { btn.disabled = false; btn.textContent = '✓ I already published it myself'; }
+  }
+}
+
 async function refreshStaleListings(platform) {
   const label = PLATFORM_LABELS[platform] || platform;
   if (!confirm(`Refresh your oldest active ${label} listings (30+ days old)? This queues a legitimate delete+recreate for up to 5 items, rate-limited and delayed to avoid a scripted pattern.`)) return;
