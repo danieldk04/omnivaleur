@@ -2361,6 +2361,53 @@ function missingFieldsAllPlatforms(item) {
 //  - description missing but still on the platform → warn (a re-scan can fetch it)
 //  - only Marktplaats/2dehands extras missing     → gentle "add details" nudge
 // Returns '' when the item is fully publish-ready.
+// Een mislukte publicatie was alleen te zien als een klein rood bolletje met een
+// tooltip. Je moest dus met de muis op een icoontje van 20 pixels gaan staan om
+// te ontdekken dát er iets fout ging, laat staan wát. Deze balk zegt het gewoon,
+// en je kunt er meteen iets mee.
+function publishErrorBadge(item) {
+  const failed = state.listings.filter(l => l.item_id === item.id && l.status === 'error');
+  if (!failed.length) return '';
+  const namen = failed.map(l => PLATFORM_LABELS[l.platform] || l.platform).join(', ');
+  const eerste = failed.find(l => l.error_message)?.error_message || 'No reason recorded.';
+  const kort = eerste.length > 70 ? eerste.slice(0, 70) + '…' : eerste;
+  return `<div class="missing-data-badge" style="background:rgba(220,38,38,.1);color:#b91c1c;border-color:#dc262633;cursor:pointer"
+    onclick="event.stopPropagation();showPublishError('${item.id}')"
+    title="${esc(eerste)}">⚠ ${esc(namen)} failed — ${esc(kort)}</div>`;
+}
+
+function showPublishError(itemId) {
+  const item = state.items.find(i => i.id === itemId);
+  const failed = state.listings.filter(l => l.item_id === itemId && l.status === 'error');
+  if (!failed.length) return;
+  const blokken = failed.map(l => `
+    <div style="border:1px solid var(--border);border-radius:8px;padding:10px 12px;margin-bottom:8px">
+      <div style="font-weight:700;margin-bottom:4px">${PLATFORM_ICONS[l.platform] || ''} ${esc(PLATFORM_LABELS[l.platform] || l.platform)}</div>
+      <div style="font-size:13px;color:var(--muted);white-space:pre-wrap">${esc(l.error_message || 'No reason recorded.')}</div>
+      <div style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap">
+        <button class="btn btn-sm btn-outline" onclick="document.getElementById('modal-publish-error').remove();markPlatformListed('${itemId}','${l.platform}','${esc(PLATFORM_LABELS[l.platform] || l.platform)}')">It is online — mark as listed</button>
+      </div>
+    </div>`).join('');
+  const html = `
+    <div class="modal-overlay" id="modal-publish-error" style="display:flex" onclick="if(event.target===this)this.remove()">
+      <div class="modal" style="max-width:520px">
+        <div class="modal-header">
+          <h3>Why this didn't publish</h3>
+          <button class="close-btn" onclick="document.getElementById('modal-publish-error').remove()">×</button>
+        </div>
+        <div class="modal-body">
+          <p style="margin-bottom:12px;color:var(--muted);font-size:13px">${esc(item?.title || '')}</p>
+          ${blokken}
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-outline" onclick="document.getElementById('modal-publish-error').remove()">Close</button>
+          <button class="btn btn-primary" onclick="document.getElementById('modal-publish-error').remove();openCrosslist('${itemId}')">Try publishing again</button>
+        </div>
+      </div>
+    </div>`;
+  document.body.insertAdjacentHTML('beforeend', html);
+}
+
 function smartMissingBadge(item) {
   const missingByPlatform = missingFieldsAllPlatforms(item);
   if (!Object.keys(missingByPlatform).length) return '';
