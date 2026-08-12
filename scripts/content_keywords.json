@@ -311,7 +311,7 @@
       "region": "nl",
       "pillar": "B",
       "slug": "mobile-phone-reselling-automation",
-      "status": "pending",
+      "status": "published",
       "priority": 38
     }
   ],
@@ -648,6 +648,15 @@
       "action": "created",
       "url_path": "/reseller-tools/vintage-watch-reselling-automation",
       "published_at": "2026-08-10T09:11:12.079722+00:00"
+    },
+    {
+      "keyword": "mobile phone reselling automation",
+      "slug": "mobile-phone-reselling-automation",
+      "region": "nl",
+      "pillar": "B",
+      "action": "updated",
+      "url_path": "/reseller-tools/mobile-phone-reselling-automation",
+      "published_at": "2026-08-12T09:06:22.822942+00:00"
     }
   ]
 }
