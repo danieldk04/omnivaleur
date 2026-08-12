@@ -470,6 +470,18 @@ chrome.alarms.onAlarm.addListener((alarm) => {
 chrome.runtime.onInstalled.addListener(pollJobs);
 chrome.runtime.onStartup.addListener(pollJobs);
 
+// Meteen bij het opstarten of bijwerken: restanten van eerdere versies opruimen.
+// Dat zijn de lege vensters die zich onderin de balk opstapelden.
+chrome.runtime.onInstalled.addListener(() => { opruimenBijStart(); });
+chrome.runtime.onStartup.addListener(() => { opruimenBijStart(); });
+
+async function opruimenBijStart() {
+  try {
+    const houden = await vindEnOpruimenWerkvensters();
+    if (houden != null) await setWorkerWindowId(houden);
+  } catch (_) { /* niet erg — de eerstvolgende klus ruimt ook op */ }
+}
+
 chrome.runtime.onInstalled.addListener((details) => {
   gaEvent(details.reason === "install" ? "extension_installed" : "extension_updated", {
     version: chrome.runtime.getManifest().version,
@@ -861,7 +873,15 @@ function setWorkerWindowId(id) {
 //
 // Meegenomen effect: het venster kan nu niet meer halverwege een klus
 // omvallen doordat het vorige tabblad net iets te laat dichtging.
-const KEEPER_URL = "about:blank";
+// Het anker is een eigen paginaatje van de extensie in plaats van een lege
+// pagina. Daarmee is het venster ONMISKENBAAR van ons: we kunnen het altijd
+// terugvinden, ook nadat de extensie is bijgewerkt of opnieuw is gestart.
+//
+// Dat was precies het lek. Het venster-nummer werd alleen in het werkgeheugen
+// van de extensie bewaard, en dat wordt bij elke update gewist. Het oude venster
+// bleef dan gewoon staan terwijl de extensie dacht dat ze er geen had — en maakte
+// er een nieuwe bij. Na een dag bijwerken stonden er zeven, acht vensters.
+const KEEPER_URL = chrome.runtime.getURL("keeper.html");
 
 async function ensureKeeperTab(winId) {
   try {
@@ -869,6 +889,50 @@ async function ensureKeeperTab(winId) {
     if (tabs.some(t => t.pinned && (t.url === KEEPER_URL || t.pendingUrl === KEEPER_URL))) return;
     await chrome.tabs.create({ url: KEEPER_URL, windowId: winId, pinned: true, active: false });
   } catch (_) { /* venster net weg — volgende klus maakt een nieuw venster */ }
+}
+
+// Zoek ons werkvenster terug aan het anker-tabblad, zonder op het geheugen te
+// vertrouwen. Staan er meerdere (restanten van eerdere versies), dan houden we er
+// één over en ruimen we de rest op — maar alleen als daar niets anders in staat
+// dan het anker zelf, zodat er nooit werk van de gebruiker verloren gaat.
+async function vindEnOpruimenWerkvensters() {
+  let ankers = [];
+  try { ankers = await chrome.tabs.query({ url: KEEPER_URL }); } catch (_) { return null; }
+  // Vensters van vóór deze versie hadden een gewone lege pagina als anker. Die
+  // staan nu verweesd op de balk; ze horen ook opgeruimd te worden. Alleen als
+  // ALLES in dat venster leeg is — dan kan het niets van de gebruiker zijn.
+  let oud = [];
+  try {
+    const blanco = await chrome.tabs.query({ url: "about:blank" });
+    for (const winId of [...new Set(blanco.map(t => t.windowId))]) {
+      const tabs = await chrome.tabs.query({ windowId: winId }).catch(() => []);
+      if (tabs.length && tabs.every(t => t.url === "about:blank" || !t.url)) oud.push(winId);
+    }
+  } catch (_) { /* niet erg */ }
+  for (const winId of oud) {
+    console.log(`[Omnivaleur] leeg werkvenster van een vorige versie (${winId}) opgeruimd`);
+    await chrome.windows.remove(winId).catch(() => {});
+  }
+  if (!ankers.length) return null;
+  const vensters = [...new Set(ankers.map(t => t.windowId))];
+  if (vensters.length === 1) return vensters[0];
+
+  // Voorkeur voor het venster waar op dit moment nog werk in staat.
+  let houden = vensters[0];
+  for (const winId of vensters) {
+    const tabs = await chrome.tabs.query({ windowId: winId }).catch(() => []);
+    if (tabs.some(t => t.url !== KEEPER_URL && !t.pinned)) { houden = winId; break; }
+  }
+  for (const winId of vensters) {
+    if (winId === houden) continue;
+    const tabs = await chrome.tabs.query({ windowId: winId }).catch(() => []);
+    const alleenAnker = tabs.length > 0 && tabs.every(t => t.url === KEEPER_URL || t.pendingUrl === KEEPER_URL);
+    if (alleenAnker) {
+      console.log(`[Omnivaleur] leeg werkvenster ${winId} opgeruimd (er was er al één)`);
+      await chrome.windows.remove(winId).catch(() => {});
+    }
+  }
+  return houden;
 }
 
 // Klapt het werkvenster vanzelf weer in zodra er geen klus meer in draait, zodat
@@ -932,7 +996,13 @@ function openWorkerTab(url, callback, opts = {}) {
 
 async function openWorkerTabInner(url, opts = {}) {
   const wantState = opts.silent ? "minimized" : "normal";
-  const existing = await getWorkerWindowId();
+  let existing = await getWorkerWindowId();
+  if (existing == null) {
+    // Geen nummer in het geheugen (bijvoorbeeld na een update): kijk of ons
+    // venster er nog staat vóór we er een nieuwe bij maken.
+    existing = await vindEnOpruimenWerkvensters();
+    if (existing != null) await setWorkerWindowId(existing);
+  }
   if (existing != null) {
     try {
       const win = await chrome.windows.get(existing);
