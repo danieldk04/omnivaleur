@@ -204,6 +204,35 @@ window.CL = (() => {
     return (el.innerText || "").trim().length === 0;
   }
 
+  // Laatste controle vlak vóór het plaatsen: staat de advertentietekst er nog?
+  //
+  // De tekst wordt vroeg in het formulier gezet, maar daarna gebeurt er nog van
+  // alles: foto's uploaden (tot twee minuten), kenmerken kiezen, het merkvenster.
+  // Elke herteken-ronde kan de editor opnieuw opbouwen, en dan is de tekst weg.
+  // Niemand keek daar nog naar — de bewaker hield alleen het VERBORGEN veld in de
+  // gaten, en dat blijkt niet te zijn waar Marktplaats op controleert (live
+  // gemeten: dat veld blijft leeg, ook als een mens zelf typt). Zo ging een
+  // advertentie zonder tekst de deur uit en kwam "Geen advertentietekst
+  // ingevuld" terug. Nu vullen we hem in dat geval gewoon opnieuw.
+  async function ensureDescriptionStillFilled() {
+    if (!_pendingDescription || !_descriptionSelector) return true;
+    if (!descriptionIsEmpty()) return true;
+    console.warn("[Omnivaleur] beschrijving was leeggeraakt — opnieuw invullen vlak voor het plaatsen");
+    document.querySelector(_descriptionSelector)?.scrollIntoView({ block: "center" });
+    const ok = await runInMainWorld("FILL_DESC", {
+      selector: _descriptionSelector, text: _pendingDescription,
+    });
+    await runInMainWorld("FILL_HIDDEN_DESC", { text: _pendingDescription });
+    if (!ok || descriptionIsEmpty()) {
+      throw new Error(
+        "The description kept disappearing from the form right before publishing, " +
+        "so this listing was not submitted (it would have gone out empty). " +
+        "The tab is left open — paste the text yourself and click place, or try again."
+      );
+    }
+    return true;
+  }
+
   // ---- find the control (input/select/button) that belongs to a field label ----
   function findFieldByLabel(labelText) {
     const want = labelText.toLowerCase();
