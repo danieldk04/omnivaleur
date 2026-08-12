@@ -147,3 +147,24 @@ def test_dashboard_toont_publicatiefout_zonder_hover():
     assert "function publishErrorBadge(item)" in app
     assert "function showPublishError(itemId)" in app
     assert "${errorBadge}" in app, "de foutbalk moet ook echt in de rij gerenderd worden"
+
+
+def test_geen_hulpwaarden_na_de_hoofdstroom():
+    """Een const die ná `await getJob()` staat, bestaat tijdens het invullen nog niet.
+
+    Dat is geen theorie: het kostte eerst de kleurstap, daarna de categoriekeuze
+    (V_KLEDING) en de prijscontrole (PRICE_ERR_RE), telkens met een harde fout
+    midden in het publiceren. Alles wat de invulstappen gebruiken hoort dus bóven
+    die regel te staan.
+    """
+    regels = VINTED.split("\n")
+    na_job = next(i for i, r in enumerate(regels) if "const job = await getJob();" in r)
+    # Alles tot en met de `try {` draait nog vóór er iets ingevuld wordt; wat
+    # daarna komt, bestaat tijdens het invullen nog niet.
+    start = next(i for i, r in enumerate(regels[na_job:], na_job) if r.rstrip() == "  try {")
+    laat = [
+        (i + 1, r.strip())
+        for i, r in enumerate(regels[start:], start)
+        if re.match(r"  (const|let) [A-Za-z_$][\w$]*\s*=", r)
+    ]
+    assert not laat, "hulpwaarden staan na de hoofdstroom en bestaan dan nog niet: " + str(laat[:5])

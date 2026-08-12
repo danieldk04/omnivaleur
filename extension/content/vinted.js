@@ -452,6 +452,80 @@
   // in de foutmelding op het dashboard.
   let kleurDiagnose = "kleurstap is niet gedraaid";
 
+  // LET OP — deze twee blokken staan hier bewust, vóór `await getJob()`.
+  // Een const wordt pas aangemaakt op het moment dat de uitvoering die regel
+  // bereikt. Alles hieronder wordt pas ná de hele publicatie uitgevoerd, dus een
+  // hulpwaarde die daar staat bestaat tijdens het invullen nog niet — en dan valt
+  // de stap die hem gebruikt om met een harde fout. Zo koos Vinted geen enkele
+  // categorie meer (de tabel bestond nog niet) en eindigde de opdracht met
+  // "Cannot access 'PRICE_ERR_RE' before initialization".
+  // ---- Vinted's eigen categorieboom, letterlijk ----------------------------
+  // Deze paden zijn afgelopen in de echte kiezer op vinted.nl (augustus 2026).
+  // Het laatste stukje van het pad hoeft geen eindpunt te zijn: staan er nog
+  // subcategorieën onder (Jeans → Ripped/Skinny/Slim fit/Straight fit), dan
+  // kiest de wandelaar hieronder er zelf een op basis van de artikeltekst.
+  const V_KLEDING = {
+    // sleutel zonder gender → pad ONDER "<Gender> > Clothing"
+    heren: {
+      "jeans": ["Jeans"],
+      "chinos": ["Trousers"], "broeken": ["Trousers"],
+      "shorts": ["Shorts"],
+      "t-shirts": ["Tops & t-shirts", "T-shirts"],
+      "polo's": ["Tops & t-shirts", "Polo shirts"],
+      "overhemden": ["Tops & t-shirts", "Shirts"],
+      "truien": ["Jumpers & sweaters"],
+      "hoodies": ["Jumpers & sweaters"],
+      "jassen": ["Outerwear"],
+      "pakken": ["Suits & blazers"],
+      "zwembroeken": ["Swimwear"],
+      "ondergoed": ["Socks & underwear"],
+      "sport tops": ["Activewear", "Tops & t-shirts"],
+      "sportbroeken": ["Activewear", "Shorts"],
+      "sportjassen": ["Activewear", "Outerwear"],
+      "trainingspakken": ["Activewear", "Tracksuits"],
+      "hardloopkleding": ["Activewear", "Tops & t-shirts"],
+      "wielrenkleding": ["Activewear", "Team shirts & jerseys"],
+      "voetbalkleding": ["Activewear", "Team shirts & jerseys"],
+      "gymkleding": ["Activewear", "Tops & t-shirts"],
+      "skikleding": ["Activewear", "Outerwear"],
+      "sportkleding": ["Activewear", "Other activewear"],
+    },
+    dames: {
+      "jeans": ["Jeans"],
+      "broeken": ["Trousers & leggings"],
+      "shorts": ["Shorts & cropped trousers"],
+      "rokken": ["Skirts"],
+      "jurken casual": ["Dresses"], "jurken feest": ["Dresses"],
+      "blouses": ["Tops & t-shirts"], "tops": ["Tops & t-shirts"],
+      "truien": ["Jumpers & sweaters"], "hoodies": ["Jumpers & sweaters"],
+      "jassen": ["Outerwear"],
+      "zwemkleding": ["Swimwear"],
+      "ondergoed": ["Lingerie & nightwear"],
+      "sport bh": ["Activewear", "Sports bras"],
+      "sportleggings": ["Activewear", "Trousers"],
+      "sportbroeken": ["Activewear", "Shorts"],
+      "sport tops": ["Activewear", "Tops & t-shirts"],
+      "sportjassen": ["Activewear", "Outerwear"],
+      "trainingspakken": ["Activewear", "Tracksuits"],
+      "hardloopkleding": ["Activewear", "Tops & t-shirts"],
+      "wielrenkleding": ["Activewear", "Team shirts & jerseys"],
+      "voetbalkleding": ["Activewear", "Team shirts & jerseys"],
+      "yogakleding": ["Activewear", "Trousers"],
+      "gymkleding": ["Activewear", "Tops & t-shirts"],
+      "skikleding": ["Activewear", "Outerwear"],
+      "sportkleding": ["Activewear", "Other activewear"],
+    },
+  };
+
+  // De rode melding onder het prijsveld ("Price must be greater than or equal to
+  // 1.0"). Vinted zet die NIET altijd meteen neer: hij kan een halve seconde na
+  // het verlaten van het veld verschijnen, en soms pas als het formulier het veld
+  // als "aangeraakt" beschouwt. Daarom kijken we ook echt rond het prijsveld zelf
+  // (via aria-describedby en de omliggende blokjes) en niet alleen ergens op de
+  // pagina — anders werd de melding gemist en dacht de extensie dat de prijs
+  // netjes stond, terwijl Vinted hem weigerde.
+  const PRICE_ERR_RE = /price must|must be greater|greater than or equal|at least|minimaal|moet (groter|ten minste)|ongeldig|invalid/i;
+
   const job = await getJob();
   if (!job) return;
   const { id: jobId, serverUrl, payload: item } = job;
@@ -1143,14 +1217,6 @@
     return isFinite(n) ? n : NaN;
   }
 
-  // De rode melding onder het prijsveld ("Price must be greater than or equal to
-  // 1.0"). Vinted zet die NIET altijd meteen neer: hij kan een halve seconde na
-  // het verlaten van het veld verschijnen, en soms pas als het formulier het veld
-  // als "aangeraakt" beschouwt. Daarom kijken we ook echt rond het prijsveld zelf
-  // (via aria-describedby en de omliggende blokjes) en niet alleen ergens op de
-  // pagina — anders werd de melding gemist en dacht de extensie dat de prijs
-  // netjes stond, terwijl Vinted hem weigerde.
-  const PRICE_ERR_RE = /price must|must be greater|greater than or equal|at least|minimaal|moet (groter|ten minste)|ongeldig|invalid/i;
   function priceErrorVinted() {
     const el = qs('input[data-testid="price-input--input"]');
     const zichtbaar = (e) => e && e.offsetParent !== null && (e.textContent || "").trim();
@@ -1317,63 +1383,6 @@
   }
 
   // ---- CATEGORY: prefer Vinted's own "Suggested" options, then verify the match. ----
-  // ---- Vinted's eigen categorieboom, letterlijk ----------------------------
-  // Deze paden zijn afgelopen in de echte kiezer op vinted.nl (augustus 2026).
-  // Het laatste stukje van het pad hoeft geen eindpunt te zijn: staan er nog
-  // subcategorieën onder (Jeans → Ripped/Skinny/Slim fit/Straight fit), dan
-  // kiest de wandelaar hieronder er zelf een op basis van de artikeltekst.
-  const V_KLEDING = {
-    // sleutel zonder gender → pad ONDER "<Gender> > Clothing"
-    heren: {
-      "jeans": ["Jeans"],
-      "chinos": ["Trousers"], "broeken": ["Trousers"],
-      "shorts": ["Shorts"],
-      "t-shirts": ["Tops & t-shirts", "T-shirts"],
-      "polo's": ["Tops & t-shirts", "Polo shirts"],
-      "overhemden": ["Tops & t-shirts", "Shirts"],
-      "truien": ["Jumpers & sweaters"],
-      "hoodies": ["Jumpers & sweaters"],
-      "jassen": ["Outerwear"],
-      "pakken": ["Suits & blazers"],
-      "zwembroeken": ["Swimwear"],
-      "ondergoed": ["Socks & underwear"],
-      "sport tops": ["Activewear", "Tops & t-shirts"],
-      "sportbroeken": ["Activewear", "Shorts"],
-      "sportjassen": ["Activewear", "Outerwear"],
-      "trainingspakken": ["Activewear", "Tracksuits"],
-      "hardloopkleding": ["Activewear", "Tops & t-shirts"],
-      "wielrenkleding": ["Activewear", "Team shirts & jerseys"],
-      "voetbalkleding": ["Activewear", "Team shirts & jerseys"],
-      "gymkleding": ["Activewear", "Tops & t-shirts"],
-      "skikleding": ["Activewear", "Outerwear"],
-      "sportkleding": ["Activewear", "Other activewear"],
-    },
-    dames: {
-      "jeans": ["Jeans"],
-      "broeken": ["Trousers & leggings"],
-      "shorts": ["Shorts & cropped trousers"],
-      "rokken": ["Skirts"],
-      "jurken casual": ["Dresses"], "jurken feest": ["Dresses"],
-      "blouses": ["Tops & t-shirts"], "tops": ["Tops & t-shirts"],
-      "truien": ["Jumpers & sweaters"], "hoodies": ["Jumpers & sweaters"],
-      "jassen": ["Outerwear"],
-      "zwemkleding": ["Swimwear"],
-      "ondergoed": ["Lingerie & nightwear"],
-      "sport bh": ["Activewear", "Sports bras"],
-      "sportleggings": ["Activewear", "Trousers"],
-      "sportbroeken": ["Activewear", "Shorts"],
-      "sport tops": ["Activewear", "Tops & t-shirts"],
-      "sportjassen": ["Activewear", "Outerwear"],
-      "trainingspakken": ["Activewear", "Tracksuits"],
-      "hardloopkleding": ["Activewear", "Tops & t-shirts"],
-      "wielrenkleding": ["Activewear", "Team shirts & jerseys"],
-      "voetbalkleding": ["Activewear", "Team shirts & jerseys"],
-      "yogakleding": ["Activewear", "Trousers"],
-      "gymkleding": ["Activewear", "Tops & t-shirts"],
-      "skikleding": ["Activewear", "Outerwear"],
-      "sportkleding": ["Activewear", "Other activewear"],
-    },
-  };
 
   function vintedPathFor(cat, gender) {
     const isHeren = gender === "heren" || gender === "men";

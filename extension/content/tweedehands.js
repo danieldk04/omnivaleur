@@ -4,7 +4,7 @@
   const { step, clog, qs, sleep, waitForEl, fillInput, fillInputHuman, fillDescription, selectDropdown,
           fillBrand, fillBrandField, fillManufacturer, selectBundleFree, selectPackageSize,
           uploadPhotos, submitListing, clickRadioByValue, smartTrunc, fillBidding,
-          dutchColor, verifyMpGroupFields, repairMpGroupFields, selectCondition, selectIntendedFor } = window.CL;
+          dutchColor, ensureDescriptionStillFilled, verifyMpGroupFields, repairMpGroupFields, selectCondition, selectIntendedFor } = window.CL;
 
   const job = await getJob();
   if (!job) return;
@@ -120,6 +120,10 @@
     // Zelfde controle als op Marktplaats: 2dehands draait hetzelfde formulier,
     // maar plaatste tot nu toe zonder terug te lezen — dus met stille gaten.
     if (photoError) throw photoError;
+    // De advertentietekst is als eerste ingevuld, maar daarna zijn er foto's
+    // geüpload en kenmerken gekozen — elke herteken-ronde kan de editor
+    // opnieuw opbouwen en de tekst wissen. Hier kijken we of hij er nog staat.
+    await ensureDescriptionStillFilled();
     verifyMpGroupFields(item);
   }
 

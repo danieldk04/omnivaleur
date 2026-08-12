@@ -872,8 +872,16 @@ window.CL = (() => {
       await sleep(250);
 
       const zichtbaarLeeg = descriptionIsEmpty();
+      // Het verborgen veld is BEWUST geen voorwaarde meer. Live gemeten op
+      // marktplaats.nl (aug. 2026): dat veld blijft leeg — ook als een mens de
+      // tekst zelf intypt — en tóch keurt het formulier de advertentie goed. Het
+      // wordt pas bij het plaatsen door de site zelf gevuld. Er op wachten
+      // betekende dus vijf zinloze pogingen van een halve seconde bij ELKE
+      // advertentie, en een melding dat de beschrijving leeg was terwijl hij er
+      // gewoon stond. De editor is de waarheid; het verborgen veld vullen we
+      // alleen nog "voor het geval dat".
       const verborgenOk = await hiddenDescriptionOk();
-      if (!zichtbaarLeeg && verborgenOk) {
+      if (!zichtbaarLeeg) {
         // Laatste stap vlak vóór Plaatsen: één echte spatie typen. Marktplaats
         // rekende de tekst pas mee ná een toetsaanslag — zonder dit bleef
         // "Geen advertentietekst ingevuld" staan met de tekst gewoon in beeld.
@@ -1124,6 +1132,6 @@ window.CL = (() => {
     sleep, waitUntil, qs, waitForEl, fillInput, fillInputHuman, fillNativeSelect, clickRadioByValue, fillDescription,
     findFieldByLabel, selectDropdown, fillBrand, fillManufacturer, selectBundleFree,
     selectPackageSize, uploadPhotos, submitListing, step, closePopup, smartTrunc, fillBidding,
-    clog, dutchColor, verifyMpGroupFields, repairMpGroupFields, selectCondition, selectIntendedFor, fillBrandField, logMpFields,
+    clog, dutchColor, verifyMpGroupFields, repairMpGroupFields, ensureDescriptionStillFilled, selectCondition, selectIntendedFor, fillBrandField, logMpFields,
   };
 })();

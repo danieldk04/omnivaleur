@@ -4,7 +4,7 @@
   const { step, clog, qs, sleep, waitForEl, fillInput, fillInputHuman, fillDescription, selectDropdown,
           fillBrand, fillBrandField, fillManufacturer, selectBundleFree, uploadPhotos, submitListing,
           clickRadioByValue, smartTrunc, fillBidding, dutchColor,
-          verifyMpGroupFields, repairMpGroupFields, selectCondition, selectIntendedFor } = window.CL;
+          ensureDescriptionStillFilled, verifyMpGroupFields, repairMpGroupFields, selectCondition, selectIntendedFor } = window.CL;
 
   const job = await getJob();
   if (!job) return;
@@ -122,6 +122,10 @@
 
     // Lees het formulier terug voor we plaatsen — zie verifyMpGroupFields.
     if (photoError) throw photoError;
+    // De advertentietekst is als eerste ingevuld, maar daarna zijn er foto's
+    // geüpload en kenmerken gekozen — elke herteken-ronde kan de editor
+    // opnieuw opbouwen en de tekst wissen. Hier kijken we of hij er nog staat.
+    await ensureDescriptionStillFilled();
     verifyMpGroupFields(item);
   }
 
