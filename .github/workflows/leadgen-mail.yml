@@ -1,0 +1,46 @@
+« De koude-mailmachine, draaiend bij GitHub in plaats van op Daniels Mac.
+
+  Waarom hier: op de Mac stopt alles zodra hij dichtklapt. GitHub Actions draait
+  altijd, kost bij een publieke repo niets, en mag wél uitgaande mail versturen
+  (Railway mag dat niet).
+
+  De leadlijst en de administratie staan NIET in deze repo — die is publiek. Ze
+  staan in Supabase, tabel leadgen_opslag. Wachtwoorden staan in de Secrets van
+  de repo (Settings → Secrets and variables → Actions).
+
+  Elke halve beurt kijkt het script zelf of er iemand aan de beurt is; meestal
+  doet hij niets en is de beurt binnen twintig seconden klaar. »
+
+name: Leadmachine
+
+on:
+  schedule:
+    # Elke 30 minuten tussen 08:00 en 21:30 Nederlandse tijd (UTC+2).
+    - cron: "*/30 6-19 * * *"
+  workflow_dispatch:      # met de hand kunnen starten vanaf github.com
+
+concurrency:
+  # Nooit twee beurten tegelijk: dan zou dezelfde lead twee mails krijgen.
+  group: leadmachine
+  cancel-in-progress: false
+
+jobs:
+  tick:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      TZ: Europe/Amsterdam       # zonder dit rekent de server in UTC en loopt het rooster twee uur voor
+      MAIL_HOST: smtp.zoho.eu
+      IMAP_HOST: imap.zoho.eu
+      MAIL_USER: daniel@omnivaleur.nl
+      MAIL_PASS: ${{ secrets.MAIL_PASS }}
+      NOTION_TOKEN: ${{ secrets.NOTION_TOKEN }}
+      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+      SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install --quiet httpx
+      - run: python scripts/leadgen_mail.py tick
