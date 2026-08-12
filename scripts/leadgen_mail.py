@@ -131,9 +131,20 @@ def _save_state(state: dict) -> None:
     STATE.write_text(json.dumps(state, indent=2, ensure_ascii=False))
 
 
+ONZIN_ADRES = re.compile(r"^[^@]{0,1}@|^[-._+]+@")
+
+
+def _bruikbaar(adres: str) -> bool:
+    """Uit een webshop komt af en toe een adres als "-@mail.nl" mee. Dat is geen
+    ontvanger maar een bounce, en bounces zijn precies wat een jong domein de das
+    omdoet. Eén tekentje voor de apenstaart is nooit een echt adres."""
+    return bool(adres) and "@" in adres and not ONZIN_ADRES.match(adres)
+
+
 def _leads() -> list[dict]:
     """Marktplaats-leads eerst; die hebben een e-mailadres en de meeste voorraad."""
-    alles = [l for l in _load(MP_LEADS) + _load(IG_LEADS) if l.get("email")]
+    alles = [l for l in _load(MP_LEADS) + _load(IG_LEADS)
+             if _bruikbaar(l.get("email") or "")]
     uniek: dict[str, dict] = {}
     for lead in alles:
         uniek.setdefault(lead["email"].lower(), lead)
