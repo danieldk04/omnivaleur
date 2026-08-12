@@ -147,16 +147,16 @@ window.CL = (() => {
   // rejection the user cannot act on; the causes below can be reported precisely.
   async function fillDescription(selectors, text, opties) {
     const value = (text || "").trim().slice(0, 2000);
-    if (!value) throw new Error("Item heeft geen beschrijving — vul die in de app in");
+    if (!value) throw new Error("This item has no description — add one in Omnivaleur and publish again");
     const selector = selectors.find((s) => document.querySelector(s));
-    if (!selector) throw new Error("Beschrijvingsveld niet gevonden op de pagina (" + selectors.join(", ") + ")");
+    if (!selector) throw new Error("The description field could not be found on the page (" + selectors.join(", ") + ")");
     _pendingDescription = value;
     _descriptionSelector = selector;
     _descriptionNudge = !!(opties && opties.nudge);
     _nudgeGedaan = false;
     document.querySelector(selector)?.scrollIntoView({ block: "center" });
     const ok = await runInMainWorld("FILL_DESC", { selector, text: value });
-    if (!ok) throw new Error("Beschrijving kon niet in de editor worden gezet");
+    if (!ok) throw new Error("The description could not be placed into the editor");
     // Het formulier valideert op een verborgen veld, niet op de zichtbare
     // editor. Zonder dit blijft "Geen zoekertjestekst ingevuld" staan.
     await runInMainWorld("FILL_HIDDEN_DESC", { text: value });
@@ -504,22 +504,22 @@ window.CL = (() => {
       return el?.tagName === "SELECT" && !el.value;
     };
 
-    if (item.size && emptyLabel("Maat")) missing.push("maat");
-    if (item.color && emptyLabel("Kleur")) missing.push("kleur");
+    if (item.size && emptyLabel("Maat")) missing.push("size");
+    if (item.color && emptyLabel("Kleur")) missing.push("colour");
     const condEl = conditionSelect();
-    if (condEl && !condEl.value) missing.push("conditie");
+    if (condEl && !condEl.value) missing.push("condition");
     const intendedEl = intendedForSelect();
-    if (intendedEl && !intendedEl.value) missing.push("bestemd voor");
+    if (intendedEl && !intendedEl.value) missing.push("intended for");
     const bf = brandField();
-    if (item.brand && bf && !fieldFilled(bf)) missing.push("merk");
-    if (emptyInput("textAttribute[manufacturerTradename]")) missing.push("handelsnaam fabrikant");
-    if (emptyInput("textAttribute[manufacturerEmail]")) missing.push("e-mailadres fabrikant");
-    if (item.bid_percentage && emptyInput("price.minimumBidPrice")) missing.push("bieden vanaf");
+    if (item.brand && bf && !fieldFilled(bf)) missing.push("brand");
+    if (emptyInput("textAttribute[manufacturerTradename]")) missing.push("manufacturer trade name");
+    if (emptyInput("textAttribute[manufacturerEmail]")) missing.push("manufacturer e-mail");
+    if (item.bid_percentage && emptyInput("price.minimumBidPrice")) missing.push("minimum bid");
 
     if (missing.length) {
       throw new Error(
-        `Deze velden zijn niet ingevuld op het formulier: ${missing.join(", ")}. ` +
-        `De advertentie is NIET geplaatst — vul ze zelf aan en klik op Plaatsen.`
+        `These fields were left empty on the form: ${missing.join(", ")}. ` +
+        `The listing was NOT published — fill them in yourself and click publish.`
       );
     }
   }
@@ -706,7 +706,7 @@ window.CL = (() => {
     const fileInput = qs('input[type="file"][accept*="image"]')
       || qs('input[type="file"]#imageUploader-hiddenInput')
       || qs('input[type="file"]');
-    if (!fileInput) throw new Error("Fotoveld niet gevonden op de pagina");
+    if (!fileInput) throw new Error("The photo upload field could not be found on the page");
 
     const thumbSel = opts.thumbSelector;
     const before = countPhotoThumbs(thumbSel);
@@ -723,8 +723,8 @@ window.CL = (() => {
     clog(`foto's: ${files.length} van ${urls.length} opgehaald`);
     if (!files.length) {
       throw new Error(
-        `Geen van de ${urls.length} foto('s) kon worden gedownload — ` +
-        `eerste URL: ${(failures[0] || "").slice(0, 120)}`
+        `None of the ${urls.length} photo(s) could be downloaded — ` +
+        `first URL: ${(failures[0] || "").slice(0, 120)}`
       );
     }
 
@@ -912,8 +912,8 @@ window.CL = (() => {
 
     clog("plaatsen: geweigerd — de beschrijving bleef leeg");
     throw new Error(
-      "Beschrijving bleef leeg op het formulier — niet geplaatst. " +
-      "Plak de tekst zelf in het advertentietekst-veld en klik op Plaatsen."
+      "The description stayed empty on the form, so nothing was published. " +
+      "Paste the text into the description field yourself and click publish."
     );
   }
 
@@ -940,8 +940,8 @@ window.CL = (() => {
     if (_expectPhotos && fotosVolgensFormulier === false && countPhotoThumbs() === 0) {
       clog("plaatsen: geweigerd — geen foto zichtbaar op het formulier");
       throw new Error(
-        "Geen enkele foto is geüpload — niet geplaatst. " +
-        "Voeg de foto's zelf toe en klik op Plaatsen."
+        "Not a single photo was uploaded, so nothing was published. " +
+        "Add the photos yourself and click publish."
       );
     }
 
@@ -964,7 +964,7 @@ window.CL = (() => {
            // anchored one-word pattern could never match.
            /^(plaats(en)?( je advertentie)?|upload|opslaan|publiceer(en)?|publish|save)$/i
              .test((b.textContent || "").trim()));
-    if (!btn) throw new Error("Submit/Plaats-knop niet gevonden");
+    if (!btn) throw new Error("The publish button could not be found on the page");
     clog(`plaatsen: knop gevonden ("${(btn.textContent || "").trim()}")`);
     btn.scrollIntoView({ block: "center" });
     await sleep(800); // Lexical commit is async — give it time before submit fires
@@ -975,6 +975,15 @@ window.CL = (() => {
     // afkeuring die de gebruiker zag.
     if (_pendingDescription && _descriptionSelector) await ensureDescriptionReady();
 
+    // Vanaf hier is er geklikt: alles wat daarna in de adresbalk verschijnt is
+    // een ECHTE, geplaatste advertentie. Dat moet de achtergrond weten, want
+    // Vinted gooit bij het plaatsen de pagina om en dan sterft dit script
+    // middenin — de melding "hij staat online" komt dan nooit aan. De
+    // achtergrond kijkt zelf mee naar het adres, maar accepteerde alleen het
+    // nette adres mét naam erin (/items/123-grijze-short). Vinted landt lang
+    // niet altijd op die vorm, en dan bleef het artikel eindeloos op
+    // "Publishing…" staan terwijl hij gewoon online stond.
+    try { chrome.runtime.sendMessage({ type: "SUBMIT_CLICKED" }, () => chrome.runtime.lastError); } catch (_) {}
     btn.click();
     clog("plaatsen: op de knop geklikt, wachten op de advertentie");
 
@@ -1010,8 +1019,8 @@ window.CL = (() => {
         // anders is elke volgende ronde weer gissen.
         const staat = await runInMainWorld("DESCRIBE_DESC", {});
         throw new Error(
-          `Het formulier bleef de beschrijving als leeg zien, ook na opnieuw invullen. ` +
-          `Wat er op het formulier stond — ${staat}`
+          `The form kept treating the description as empty, even after re-filling it. ` +
+          `What the form actually held — ${staat}`
         );
       }
     }
@@ -1020,7 +1029,7 @@ window.CL = (() => {
       .map((el) => el.textContent.trim()).filter((t) => t.length > 0 && t.length < 200);
     const uniq = [...new Set(errs)];
     clog(`plaatsen: mislukt — ${uniq.join(" | ") || "geen foutmelding op de pagina"}`);
-    throw new Error(`Niet geplaatst — vul de rode velden aan en klik zelf op Plaatsen. ${uniq.join(" | ")}`.trim());
+    throw new Error(`Not published — complete the fields marked in red and click publish yourself. ${uniq.join(" | ")}`.trim());
   }
 
   async function waitForListingUrl(extraMatcher, timeout) {
@@ -1030,7 +1039,7 @@ window.CL = (() => {
 
       // Detect logout/session expiry redirect — throw so tab stays open for user
       if (/\/(login|inloggen|signin|account\/login)/i.test(href)) {
-        throw new Error("Uitgelogd tijdens publiceren — log opnieuw in en klik zelf op Plaatsen");
+        throw new Error("You were logged out while publishing — sign in again and click publish yourself");
       }
 
       const m = href.match(/\/seller\/view\/(m\d+)/) || href.match(/\/(m\d{8,})/) || (extraMatcher && href.match(extraMatcher));
@@ -1097,7 +1106,7 @@ window.CL = (() => {
       await sleep(200);
     }
     if (!bidInput || bidInput.tagName !== "INPUT") {
-      throw new Error("Bieden vanaf: het bedragveld verscheen niet op het formulier");
+      throw new Error("Minimum bid: the amount field never appeared on the form");
     }
 
     const val = bidInput.type === "number" ? String(minBid) : String(minBid.toFixed(2)).replace(".", ",");
@@ -1105,7 +1114,7 @@ window.CL = (() => {
     await sleep(300);
     // Verify rather than assume: React can reset a value it didn't like.
     if (!(bidInput.value || "").trim()) {
-      throw new Error("Bieden vanaf: het bedrag werd door de pagina teruggezet");
+      throw new Error("Minimum bid: the page reset the amount");
     }
     return true;
   }

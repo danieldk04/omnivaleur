@@ -450,7 +450,7 @@
   const WARDROBE_MAX_PAGES = 60;  // ~5.7k listings — far beyond any real wardrobe
   // Wat er bij de kleurstap gebeurde, in gewone taal — belandt in het logboek én
   // in de foutmelding op het dashboard.
-  let kleurDiagnose = "kleurstap is niet gedraaid";
+  let kleurDiagnose = "the colour step never ran";
 
   // LET OP — deze twee blokken staan hier bewust, vóór `await getJob()`.
   // Een const wordt pas aangemaakt op het moment dat de uitvoering die regel
@@ -1957,7 +1957,7 @@
   async function fillColourVinted(item) {
     const colours = parseColours(item);
     if (!colours.length) {
-      kleurDiagnose = "geen kleur bekend bij dit item en niets bruikbaars in de titel";
+      kleurDiagnose = "no colour on this item and nothing usable in the title";
       clog("Vinted kleur: " + kleurDiagnose);
       return false;
     }
@@ -1972,7 +1972,7 @@
       return el && el.offsetParent ? el : null;
     })();
     if (!trigger) {
-      kleurDiagnose = "het kleurveld stond niet op de pagina";
+      kleurDiagnose = "the colour field was not on the page";
       clog("Vinted kleur: " + kleurDiagnose);
       return false;
     }
@@ -2025,7 +2025,7 @@
       // verschijnt hoort bij de kleur.
       voorafBekend = new Set(anyOptionEls());
       if (!(await openDropdownVinted(trigger, isOpen))) {
-        kleurDiagnose = "het kleurveld ging niet open (poging " + (attempt + 1) + ")";
+        kleurDiagnose = "the colour field would not open (attempt " + (attempt + 1) + ")";
         clog("Vinted kleur: " + kleurDiagnose);
         continue;
       }
@@ -2037,7 +2037,7 @@
         const opts = kleurOpties();
         const opt = findColourOption(colour, opts);
         if (!opt) {
-          kleurDiagnose = `"${colour}" stond niet in de lijst van ${opts.length} kleuren `
+          kleurDiagnose = `"${colour}" was not in Vinted's list of ${opts.length} colours `
             + `(${opts.map((e) => colourOptionLabel(e).text).filter(Boolean).slice(0, 15).join(", ")})`;
           clog("Vinted kleur: " + kleurDiagnose);
           continue;
@@ -2063,8 +2063,8 @@
         return true;
       }
       kleurDiagnose = geklikt
-        ? "de kleur werd wel aangeklikt maar Vinted nam hem niet over"
-        : "geen enkele kleurtegel reageerde op een klik";
+        ? "the colour was clicked but Vinted did not take it"
+        : "none of the colour tiles responded to a click";
       clog("Vinted kleur: " + kleurDiagnose + " — nog een poging");
       await sleep(400);
     }

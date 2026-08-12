@@ -1080,6 +1080,42 @@ function clearJobWatchdog(tabId) {
   chrome.alarms.clear(`${JOB_WATCHDOG_PREFIX}${tabId}`);
 }
 
+// Staat deze advertentie inmiddels gewoon op Vinted?
+//
+// De bevestiging "hij staat online" komt normaal uit het tabblad zelf, maar
+// Vinted gooit bij het plaatsen de pagina om — en dan is het script dat de
+// melding moest sturen al weg. Daarom kijkt de achtergrond hier zelf in de
+// garderobe van de gebruiker, met dezelfde inlog als de browser. Vinden we de
+// titel terug, dan is de advertentie geplaatst en melden we hem gewoon af, in
+// plaats van een fout te tonen bij iets dat gelukt is.
+async function bgVindVintedAdvertentie(item) {
+  const titel = String(item?.title || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+  if (!titel) return null;
+  const origins = [item?._create_origin, "https://www.vinted.nl", "https://www.vinted.be",
+                   "https://www.vinted.com"].filter(Boolean);
+  for (const origin of [...new Set(origins)]) {
+    try {
+      const me = await fetch(`${origin}/api/v2/users/current`, {
+        headers: { Accept: "application/json" }, credentials: "include",
+      });
+      if (!me.ok) continue;
+      const userId = (await me.json())?.user?.id;
+      if (!userId) continue;
+      const res = await fetch(
+        `${origin}/api/v2/wardrobe/${userId}/items?order=newest_first&page=1&per_page=50`,
+        { headers: { Accept: "application/json" }, credentials: "include" });
+      if (!res.ok) continue;
+      const items = (await res.json())?.items || [];
+      const hit = items.find((it) => {
+        if (it.is_closed || it.is_draft) return false;
+        return String(it.title || "").toLowerCase().replace(/[^a-z0-9]/g, "") === titel;
+      });
+      if (hit) return { id: String(hit.id), url: hit.url || `${origin}/items/${hit.id}` };
+    } catch (_) { /* volgende domein */ }
+  }
+  return null;
+}
+
 async function fireJobWatchdog(tabId) {
   const key = `jobtab_${tabId}`;
   const stored = await chrome.storage.local.get(key);
@@ -1090,6 +1126,20 @@ async function fireJobWatchdog(tabId) {
   // again would close the very tab they're still typing in.
   if (meta.awaitingManualFinish) return;
   console.warn(`[Omnivaleur] Watchdog: job ${meta.jobId} (${meta.platform}) on tab ${tabId} did not finish in time — force-failing.`);
+  // Eerst kijken of het misschien gewoon gelukt is. Niets is verwarrender dan een
+  // rode melding bij een advertentie die gewoon online staat.
+  if (meta.platform === "vinted" && (meta.action || "create") === "create") {
+    const gevonden = await bgVindVintedAdvertentie(meta.payload || meta).catch(() => null);
+    if (gevonden) {
+      console.log(`[Omnivaleur] Watchdog: "${(meta.payload || meta).title}" staat wél op Vinted (${gevonden.id}) — als geplaatst afgemeld.`);
+      await finaliseJob(meta.serverUrl, meta.jobId, "complete", {
+        platform_listing_id: gevonden.id, platform_listing_url: gevonden.url,
+      }).catch(() => {});
+      await chrome.storage.local.remove(key);
+      chrome.tabs.remove(tabId).catch(() => {});
+      return;
+    }
+  }
   try {
     await reportError(meta.jobId, meta.serverUrl,
       `Extension timed out waiting for this ${meta.platform} job to finish (no response after ${JOB_TAB_TIMEOUT_MIN} minutes). ` +
@@ -1351,9 +1401,9 @@ async function bgDeleteMp2dh(job, serverUrl) {
         // Twee advertenties met exact dezelfde titel: gokken zou de verkeerde
         // verwijderen. Liever eerlijk stoppen.
         throw new Error(
-          `Er staan meerdere ${platform}-advertenties met de titel "${title}". ` +
-          `Om te voorkomen dat de verkeerde wordt verwijderd is er niets gedaan — ` +
-          `verwijder deze handmatig, of koppel de juiste advertentie via zijn link.`
+          `There are several ${platform} listings with the title "${title}". ` +
+          `Nothing was removed, to avoid deleting the wrong one — ` +
+          `delete it by hand, or link the right listing via its URL.`
         );
       }
       // Niet gevonden tussen de advertenties die wél renderden. Dat betekende
@@ -1377,8 +1427,8 @@ async function bgDeleteMp2dh(job, serverUrl) {
         }, [adUrl]).catch(() => null);
         if (live === true) {
           throw new Error(
-            `"${title}" is niet te vinden in je ${platform}-overzicht, maar de advertentie staat nog wél online ` +
-            `(${adUrl}). Er is niets verwijderd — verwijder hem handmatig of controleer of je op het juiste account bent ingelogd.`
+            `"${title}" cannot be found in your ${platform} listings overview, but the listing is still online ` +
+            `(${adUrl}). Nothing was removed — delete it by hand, or check that you are signed in to the right account.`
           );
         }
       }
@@ -1630,8 +1680,8 @@ async function bgDeleteVinted(job, serverUrl) {
     const resolved = await resolveVintedIdByTitle(title, vintedSku);
     if (resolved?.ambiguous) {
       throw new Error(
-        `Je hebt meerdere Vinted-advertenties met de titel "${title}". Om te voorkomen dat de ` +
-        `verkeerde wordt verwijderd is er niets gedaan — koppel de juiste advertentie via zijn link.`
+        `You have several Vinted listings with the title "${title}". Nothing was removed, ` +
+        `to avoid deleting the wrong one — link the right listing via its URL.`
       );
     }
     if (!resolved?.id) {
@@ -2596,14 +2646,32 @@ chrome.tabs.onRemoved.addListener((tabId) => {
     // awaitingManualFinish = al als fout gemeld en bewust opengelaten voor een
     // handmatige afronding; die opdracht nog eens afmelden heeft geen zin.
     if (!meta || !meta.jobId || meta.awaitingManualFinish) return;
-    console.warn(`[Omnivaleur] Tab ${tabId} closed while job ${meta.jobId} (${meta.platform}) was running — reporting it so the queue keeps moving.`);
-    finaliseJob(meta.serverUrl, meta.jobId, "error", {
+    console.warn(`[Omnivaleur] Tab ${tabId} closed while job ${meta.jobId} (${meta.platform}) was running — checking the platform before reporting.`);
+    // Sloot het tabblad omdat Vinted na het plaatsen doornavigeerde? Kijk dan
+    // eerst of de advertentie er gewoon staat, vóór we een fout melden.
+    (async () => {
+      if (meta.platform === "vinted" && (meta.action || "create") === "create") {
+        const gevonden = await bgVindVintedAdvertentie(meta.payload || meta).catch(() => null);
+        if (gevonden) {
+          console.log(`[Omnivaleur] Tabblad weg, maar de advertentie staat op Vinted (${gevonden.id}) — als geplaatst afgemeld.`);
+          await finaliseJob(meta.serverUrl, meta.jobId, "complete", {
+            platform_listing_id: gevonden.id, platform_listing_url: gevonden.url,
+          }).catch(() => {});
+          return;
+        }
+      }
+      await meldTabblad(meta);
+    })();
+  });
+});
+
+function meldTabblad(meta) {
+    return finaliseJob(meta.serverUrl, meta.jobId, "error", {
       error: `The tab this ${meta.platform} job was working in was closed before it finished. `
         + `Nothing was published (or it wasn't confirmed) — check the platform, then publish again, `
         + `or click the platform icon in the dashboard to mark it as listed.`,
     }).catch(() => {});
-  });
-});
+}
 
 // ── Auto-detect manual publish ─────────────────────────────────────────────
 // When the user manually clicks "Plaatsen" after an error, the tab URL changes
@@ -2645,7 +2713,7 @@ chrome.tabs.onUpdated.addListener(async (tabId, changeInfo) => {
   let m;
   if (meta.platform === "vinted") {
     m = url.match(/\/items\/(\d+)-[a-z0-9]/i);
-    if (!m && meta.awaitingManualFinish) {
+    if (!m && (meta.awaitingManualFinish || meta.submitClicked)) {
       m = url.match(/\/items\/(\d+)(?:[/?#]|$)/);
       if (m && /\/items\/\d+\/(edit|new)\b/i.test(url)) m = null;
     }
@@ -3781,6 +3849,19 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   if (msg.type === "GET_JOB") {
     const key = `jobtab_${sender.tab?.id}`;
     chrome.storage.local.get(key, (s) => sendResponse({ job: s[key] || null }));
+    return true;
+  }
+
+  // "Er is op Plaatsen/Upload geklikt." Vanaf dat moment is elk advertentie-adres
+  // in dit tabblad een echte, geplaatste advertentie — ook zonder de nette naam
+  // in de URL. Zie de toelichting bij de klik zelf in shared.js.
+  if (msg.type === "SUBMIT_CLICKED") {
+    const key = `jobtab_${sender.tab?.id}`;
+    chrome.storage.local.get(key, (s) => {
+      const meta = s[key];
+      if (meta) chrome.storage.local.set({ [key]: { ...meta, submitClicked: true } });
+      sendResponse(true);
+    });
     return true;
   }
 

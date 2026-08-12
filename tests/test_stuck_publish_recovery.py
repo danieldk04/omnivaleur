@@ -72,3 +72,31 @@ def test_busy_platform_dot_can_be_marked_listed(needle):
     assert needle in src
     block = src.split("const canMark =")[1][:400]
     assert not re.search(r"canMark[^\n]*'pending'", block), "pending mag niet meer uitgesloten zijn"
+
+
+def test_vinted_publicatie_wordt_ook_zonder_nette_url_herkend():
+    """Na de klik op Upload is elk /items/{id} een echte, geplaatste advertentie.
+
+    Vinted gooit bij het plaatsen de pagina om, waardoor het script in het tabblad
+    sterft vóór het "hij staat online" kan melden. De achtergrond kijkt zelf mee
+    naar het adres, maar accepteerde alleen de nette vorm met naam erin
+    (/items/123-grijze-short). Vinted landt lang niet altijd op die vorm — en dan
+    bleef het artikel op "Publishing…" staan terwijl het gewoon online stond.
+    """
+    src = _background_js()
+    assert "meta.awaitingManualFinish || meta.submitClicked" in src
+    assert 'msg.type === "SUBMIT_CLICKED"' in src
+    gedeeld = (ROOT / "extension/content/shared.js").read_text(encoding="utf-8")
+    klik = gedeeld.split("btn.click();")[0][-800:]
+    assert '"SUBMIT_CLICKED"' in klik, "het signaal moet vóór de klik verstuurd worden"
+
+
+def test_vinted_wordt_bij_twijfel_op_het_platform_zelf_nagekeken():
+    """Geen rode melding bij een advertentie die gewoon online staat."""
+    src = _background_js()
+    assert "async function bgVindVintedAdvertentie(item)" in src
+    # zowel bij een vastgelopen opdracht als bij een verdwenen tabblad
+    assert src.count("bgVindVintedAdvertentie(meta.payload || meta)") >= 2
+    zoek = src.split("async function bgVindVintedAdvertentie(item)")[1][:1200]
+    assert "is_closed || it.is_draft" in zoek, "verkochte of concept-advertenties tellen niet"
+    assert 'credentials: "include"' in zoek, "zonder inlog geeft Vinted niets terug"

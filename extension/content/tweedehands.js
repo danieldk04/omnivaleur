@@ -47,7 +47,7 @@
       }
     }
 
-    if (!deleteEl) throw new Error("Verwijder button not found on listing " + listingId);
+    if (!deleteEl) throw new Error("The delete button could not be found on listing " + listingId);
     deleteEl.click();
     await sleep(800);
 
@@ -98,7 +98,7 @@
           uploadPhotos(item.photo_urls.slice(0, 20)).then(() => "ok"),
           sleep(120000).then(() => "timeout"),
         ]);
-        if (done === "timeout") throw new Error("Foto's uploaden duurde te lang");
+        if (done === "timeout") throw new Error("Uploading the photos took too long");
       }
       catch (e) { photoError = e; clog(`foto's: FOUT — ${e && e.message ? e.message : e}`); }
     }
