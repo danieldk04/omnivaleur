@@ -100,3 +100,31 @@ def test_vinted_wordt_bij_twijfel_op_het_platform_zelf_nagekeken():
     zoek = src.split("async function bgVindVintedAdvertentie(item)")[1][:1200]
     assert "is_closed || it.is_draft" in zoek, "verkochte of concept-advertenties tellen niet"
     assert 'credentials: "include"' in zoek, "zonder inlog geeft Vinted niets terug"
+
+
+def test_een_scan_blokkeert_publiceren_niet():
+    """Een scan leest alleen; publiceren hoeft daar nooit op te wachten.
+
+    Dit was de klacht "vinted opent niet eens": de uurlijkse controle van je
+    garderobe had de wachtrij bezet, dus een publicatie waar net op geklikt was
+    kreeg geen tabblad en bleef oranje staan.
+    """
+    jobs = (ROOT / "backend/api/jobs.py").read_text(encoding="utf-8")
+    poort = jobs.split("is_extension_dispatch = platform is not None")[1].split("# Jobs with a future")[0]
+    assert 'c.get("action") not in SCHRIJVEND' in poort, "alleen schrijvende opdrachten mogen blokkeren"
+    assert 'SCHRIJVEND = ("create", "delete", "content_refresh")' in jobs
+    # en publiceren gaat vóór een scan die toevallig eerder in de rij stond
+    assert 'ready.sort(key=lambda j: 0 if j.get("action") in SCHRIJVEND else 1)' in jobs
+
+    bg = _background_js()
+    ronde = bg.split("async function pollJobsEenRonde()")[1].split("\n}")[0]
+    assert '_lopendeScans' in ronde, "een scan moet losgekoppeld meelopen"
+    assert 'if (job.action === "scan")' in ronde
+
+
+def test_scanbanner_schrikt_de_gebruiker_niet_af():
+    app = (ROOT / "frontend/app.html").read_text(encoding="utf-8")
+    assert "const alleenLezen = working.length > 0 && working.every(j => j.action === 'scan')" in app
+    blok = app.split("if (nWorking > 0 && alleenLezen) {")[1][:400]
+    assert "only reads your listings" in blok
+    assert "leave it alone" not in blok

@@ -194,15 +194,26 @@ def get_pending_jobs(request: Request, platform: str = None, user_id: str = Depe
     # extension exactly ONE job at a time and refuse to dispatch anything while a
     # job is genuinely in flight (a fresh claim). The dashboard (which calls
     # /pending WITHOUT a platform, just to count the queue) is never throttled.
+    #
+    # NUANCE: alleen SCHRIJVENDE opdrachten blokkeren elkaar. Een scan ("reading
+    # your listings") leest alleen en loopt door de hele garderobe — dat duurt
+    # minuten. Zolang die als blokkade telde, kon je op publiceren drukken en
+    # gebeurde er simpelweg niets: geen tabblad, geen melding, alleen een oranje
+    # stip. Precies wat een gebruiker als "hij doet het niet" ervaart. Een scan
+    # tegelijk met één publicatie kan geen kwaad: elk tabblad heeft zijn eigen
+    # opdracht (jobtab_<tabId>), dus ze kunnen elkaars gegevens niet overschrijven.
+    SCHRIJVEND = ("create", "delete", "content_refresh")
     is_extension_dispatch = platform is not None
     if is_extension_dispatch:
         for c in (
-            db.table("jobs").select("claimed_at")
+            db.table("jobs").select("claimed_at,action")
             .eq("user_id", user_id).eq("status", "claimed").execute().data
         ):
+            if c.get("action") not in SCHRIJVEND:
+                continue  # een lopende scan houdt niemand tegen
             ct = _parse_ts(c.get("claimed_at"))
             if ct and ct >= now_dt - timedelta(minutes=STALE_CLAIM_MINUTES):
-                return []  # something is running right now — never open a 2nd tab
+                return []  # er wordt nu echt gepubliceerd — nooit een 2e tabblad
 
     # Jobs with a future scheduled_for (used to jitter relist recreates) aren't due yet.
     due = [j for j in result.data if not j.get("scheduled_for") or j["scheduled_for"] <= now]
@@ -263,6 +274,13 @@ def get_pending_jobs(request: Request, platform: str = None, user_id: str = Depe
             current = db.table("items").select("price").eq("id", j["item_id"]).execute().data
             if current and current[0].get("price") not in (None, ""):
                 j["payload"]["price"] = current[0]["price"]
+
+    # Wie het eerst geholpen wordt: de gebruiker. Een scan die toevallig eerder in
+    # de wachtrij kwam (bijvoorbeeld de uurlijkse controle) ging vóór een publicatie
+    # waar iemand net op geklikt heeft — en dan lijkt de knop kapot. Publiceren en
+    # verwijderen gaan nu altijd voor; scans vullen de rustige momenten op.
+    if is_extension_dispatch:
+        ready.sort(key=lambda j: 0 if j.get("action") in SCHRIJVEND else 1)
 
     # Extension: exactly one job at a time. Dashboard: the whole queue, to count.
     return ready[:1] if is_extension_dispatch else ready
@@ -920,15 +938,11 @@ async def _reconcile_vinted_sales(db, job, scraped: list[dict], scan_meta: dict 
     closed_id_by_sku: dict[str, str | None] = {}
     closed_id_by_title: dict[str, str | None] = {}
 
-    def _sku_of(t: str) -> str:
-        m = re.match(r"^\s*\(([^)]{1,24})\)", t or "")
-        return m.group(1).strip().lower() if m else ""
-
-    def _norm_title(t: str) -> str:
-        t = unicodedata.normalize("NFKD", t or "")
-        t = "".join(c for c in t if not unicodedata.combining(c)).lower()
-        t = re.sub(r"^\s*\([^)]{1,24}\)\s*", "", t)     # SKU-prefix telt niet mee
-        return " ".join(re.sub(r"[^a-z0-9]+", " ", t).split())
+    # Dezelfde sleutels als waarmee de scan advertenties aan items koppelt — één
+    # definitie, zodat "verkocht herkennen" en "advertentie koppelen" nooit uit
+    # elkaar lopen.
+    _sku_of = _scan_sku
+    _norm_title = _scan_norm_title
 
     def _register(index: dict, key: str, pid: str) -> None:
         if not key:

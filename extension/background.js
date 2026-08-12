@@ -705,6 +705,9 @@ async function reportProgress(serverUrl, jobId, progress) {
 // erna.
 let _pollLoopt = false;
 let _pollNogmaals = false;
+// Welke platforms op dit moment een scan draaien. Zonder deze rem zou elke
+// pollronde er nóg één starten, want een scan blokkeert de wachtrij niet meer.
+const _lopendeScans = new Set();
 
 // Tabbladen die er niet meer zijn, maar wél nog een lopende opdracht in de
 // administratie hebben staan. Bij netjes sluiten vangt tabs.onRemoved dat af,
@@ -764,6 +767,24 @@ async function pollJobsEenRonde() {
       if (!res.ok) continue;
       const jobs = await res.json();
       for (const job of jobs) {
+        // Een scan leest je hele garderobe uit en duurt minuten. Zolang de ronde
+        // dáárop stond te wachten, werd er in die tijd niets gepubliceerd: je
+        // klikte op publiceren en er ging niet eens een tabblad open. Een scan
+        // loopt nu naast de rest door — hij schrijft niets, en elk tabblad heeft
+        // zijn eigen opdracht, dus ze kunnen elkaar niet in de weg zitten.
+        if (job.action === "scan") {
+          // Hooguit één scan tegelijk, ongeacht het platform: meer tabbladen
+          // tegelijk maakt Chrome alleen maar trager.
+          if (_lopendeScans.size > 0) continue;
+          _lopendeScans.add(job.platform);
+          processJob(job, serverUrl)
+            .catch((e) => {
+              console.error(`Omnivaleur scan ${job.id} (${job.platform}) threw:`, e);
+              return reportError(job.id, serverUrl, `Extension error: ${e?.message || e}`).catch(() => {});
+            })
+            .finally(() => _lopendeScans.delete(job.platform));
+          continue;
+        }
         verzet = true;
         try {
           await processJob(job, serverUrl);

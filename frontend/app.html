@@ -6399,7 +6399,18 @@ function renderActivityBar() {
   const text = document.getElementById('ext-activity-text');
   const icon = document.getElementById('ext-activity-icon');
 
-  if (nWorking > 0) {
+  // Een scan LEEST alleen je advertenties. Die mag rustig doorlopen terwijl je
+  // verder werkt, en publiceren hoeft er niet op te wachten. De strenge
+  // "raak niets aan"-waarschuwing hoort daar dus niet bij: die liet mensen
+  // onnodig wachten en leek te zeggen dat de app vastzat.
+  const alleenLezen = working.length > 0 && working.every(j => j.action === 'scan');
+  if (nWorking > 0 && alleenLezen) {
+    bar.className = 'activity-bar queued';
+    icon.textContent = '🔍';
+    title.textContent = `Checking your listings in the background (${describeJobs(working)})`;
+    text.innerHTML = 'This only reads your listings to keep the dashboard in sync. '
+      + 'You can keep working — publishing does not have to wait for it.';
+  } else if (nWorking > 0) {
     // A tab is open and the extension is acting in it RIGHT NOW.
     bar.className = 'activity-bar working';
     icon.textContent = '⚠️';
