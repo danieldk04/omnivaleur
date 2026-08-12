@@ -1,15 +1,15 @@
-« De koude-mailmachine, draaiend bij GitHub in plaats van op Daniels Mac.
-
-  Waarom hier: op de Mac stopt alles zodra hij dichtklapt. GitHub Actions draait
-  altijd, kost bij een publieke repo niets, en mag wél uitgaande mail versturen
-  (Railway mag dat niet).
-
-  De leadlijst en de administratie staan NIET in deze repo — die is publiek. Ze
-  staan in Supabase, tabel leadgen_opslag. Wachtwoorden staan in de Secrets van
-  de repo (Settings → Secrets and variables → Actions).
-
-  Elke halve beurt kijkt het script zelf of er iemand aan de beurt is; meestal
-  doet hij niets en is de beurt binnen twintig seconden klaar. »
+# De koude-mailmachine, draaiend bij GitHub in plaats van op Daniels Mac.
+#
+# Waarom hier: op de Mac stopt alles zodra hij dichtklapt. GitHub Actions draait
+# altijd, kost bij een publieke repo niets, en mag wel uitgaande mail versturen
+# (Railway mag dat niet).
+#
+# De leadlijst en de administratie staan NIET in deze repo — die is publiek. Ze
+# staan in Supabase, tabel leadgen_opslag. Wachtwoorden staan in de Secrets van
+# de repo (Settings → Secrets and variables → Actions).
+#
+# Elke beurt kijkt het script zelf of er iemand aan de beurt is; meestal doet hij
+# niets en is de beurt binnen twintig seconden klaar.
 
 name: Leadmachine
 

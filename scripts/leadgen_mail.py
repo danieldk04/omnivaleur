@@ -118,15 +118,69 @@ def _need(var: str) -> str:
     return val
 
 
+# ---------------------------------------------------------------- opslag
+# De machine moet ook draaien als Daniels Mac uit staat. Dan draait hij in de
+# cloud (GitHub Actions) en is er geen schijf die iets onthoudt tussen twee
+# beurten. Staan SUPABASE_URL en SUPABASE_KEY in de omgeving, dan gaan de
+# leadlijst, de administratie en het dagrooster naar Supabase in plaats van naar
+# bestanden. Zonder die twee blijft alles precies werken zoals het lokaal deed.
+#
+# De leadlijst hoort NIET in de git-repo: die is publiek, en het zijn de
+# e-mailadressen van 300 bedrijven.
+TABEL = "leadgen_opslag"
+
+
+def _supabase() -> tuple[str, str] | None:
+    url, sleutel = os.environ.get("SUPABASE_URL"), os.environ.get("SUPABASE_KEY")
+    return (url.rstrip("/"), sleutel) if url and sleutel else None
+
+
+def _db_lees(naam: str, standaard):
+    verbinding = _supabase()
+    if not verbinding:
+        return None
+    import httpx
+    url, sleutel = verbinding
+    r = httpx.get(f"{url}/rest/v1/{TABEL}", params={"naam": f"eq.{naam}",
+                                                    "select": "inhoud"},
+                  headers={"apikey": sleutel, "Authorization": f"Bearer {sleutel}"},
+                  timeout=30.0)
+    r.raise_for_status()
+    rijen = r.json()
+    return rijen[0]["inhoud"] if rijen else standaard
+
+
+def _db_schrijf(naam: str, inhoud) -> bool:
+    verbinding = _supabase()
+    if not verbinding:
+        return False
+    import httpx
+    url, sleutel = verbinding
+    r = httpx.post(f"{url}/rest/v1/{TABEL}",
+                   params={"on_conflict": "naam"},
+                   headers={"apikey": sleutel, "Authorization": f"Bearer {sleutel}",
+                            "Content-Type": "application/json",
+                            "Prefer": "resolution=merge-duplicates"},
+                   json={"naam": naam, "inhoud": inhoud}, timeout=30.0)
+    r.raise_for_status()
+    return True
+
+
 def _load(path: Path) -> list[dict]:
+    if _supabase():
+        return _db_lees(path.stem, []) or []
     return json.loads(path.read_text()) if path.exists() else []
 
 
 def _state() -> dict:
+    if _supabase():
+        return _db_lees("mail_state", {}) or {}
     return json.loads(STATE.read_text()) if STATE.exists() else {}
 
 
 def _save_state(state: dict) -> None:
+    if _db_schrijf("mail_state", state):
+        return
     OUT.mkdir(parents=True, exist_ok=True)
     STATE.write_text(json.dumps(state, indent=2, ensure_ascii=False))
 
@@ -708,7 +762,8 @@ def _tijdstippen(n: int) -> list[str]:
 def _dagplan(state: dict, override: int) -> dict:
     """Het rooster van vandaag. Wordt één keer per dag gemaakt en daarna alleen
     nog afgevinkt, zodat een herstart niet ineens alles opnieuw inplant."""
-    plan = json.loads(PLAN.read_text()) if PLAN.exists() else {}
+    plan = (_db_lees("mail_plan", {}) if _supabase()
+            else (json.loads(PLAN.read_text()) if PLAN.exists() else {})) or {}
     vandaag = date.today().isoformat()
     if plan.get("dag") != vandaag:
         # Wat er vandaag al met de hand is verstuurd telt mee voor het dagbudget.
@@ -738,6 +793,8 @@ def _gemiste_dagen(vorige: str | None) -> list[str]:
 
 
 def _save_plan(plan: dict) -> None:
+    if _db_schrijf("mail_plan", plan):
+        return
     OUT.mkdir(parents=True, exist_ok=True)
     PLAN.write_text(json.dumps(plan, indent=2, ensure_ascii=False))
 
@@ -853,6 +910,24 @@ def _dagbericht(state: dict, plan: dict) -> None:
         print(f"  (dagbericht niet verstuurd: {e})")
 
 
+def overzetten(args) -> None:
+    """Alles wat nu op de Mac staat naar Supabase tillen, zodat de machine ook
+    zonder die Mac verder kan. Draai dit één keer bij de overstap, en opnieuw
+    zodra er nieuwe leads bij komen."""
+    if not _supabase():
+        sys.exit("Zet SUPABASE_URL en SUPABASE_KEY in je omgeving.")
+    for pad, naam in ((MP_LEADS, "mp_leads"), (IG_LEADS, "leads"),
+                      (STATE, "mail_state"), (PLAN, "mail_plan")):
+        if not pad.exists():
+            print(f"  {naam}: niets te doen")
+            continue
+        inhoud = json.loads(pad.read_text())
+        _db_schrijf(naam, inhoud)
+        aantal = len(inhoud) if isinstance(inhoud, (list, dict)) else 1
+        print(f"  {naam}: {aantal} regels overgezet")
+    print("Klaar. De machine kan nu ook zonder je Mac draaien.")
+
+
 # ------------------------------------------------------------------- status
 
 
@@ -898,6 +973,10 @@ def main() -> None:
     t.add_argument("--max-per-beurt", type=int, default=3,
                    help="hoeveel mails er in één beurt maximaal uit mogen")
     t.set_defaults(func=tick)
+
+    u = sub.add_parser("overzetten",
+                       help="leadlijst en administratie naar Supabase zetten")
+    u.set_defaults(func=overzetten)
 
     r = sub.add_parser("dagbericht", help="het avondbericht nu versturen (test)")
     r.set_defaults(func=lambda a: _dagbericht(_state(), _dagplan(_state(), 0)))
