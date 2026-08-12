@@ -715,10 +715,26 @@ def _dagplan(state: dict, override: int) -> dict:
         al_gedaan = sum(1 for st in state.values()
                         for v in st.get("verstuurd", []) if v["op"][:10] == vandaag)
         budget = max(0, _dagbudget(state, override) - al_gedaan)
+        # Stond de machine een hele dag stil, dan is dat hier te zien: het vorige
+        # rooster is dan ouder dan gisteren. Dat gat gaat mee in het dagbericht,
+        # want een stille storing merk je anders pas als je het je afvraagt.
+        gemist = _gemiste_dagen(plan.get("dag"))
         plan = {"dag": vandaag, "tijden": _tijdstippen(budget), "gedaan": 0,
-                "al_met_de_hand": al_gedaan, "gecheckt": False}
+                "al_met_de_hand": al_gedaan, "gecheckt": False,
+                "gerapporteerd": False, "gemist": gemist, "fouten": []}
         _save_plan(plan)
     return plan
+
+
+def _gemiste_dagen(vorige: str | None) -> list[str]:
+    if not vorige:
+        return []
+    dag = date.fromisoformat(vorige) + timedelta(days=1)
+    gaten = []
+    while dag < date.today():
+        gaten.append(dag.isoformat())
+        dag += timedelta(days=1)
+    return gaten
 
 
 def _save_plan(plan: dict) -> None:
@@ -764,10 +780,77 @@ def tick(args) -> None:
                   f"{afgemeld} afmeldingen, {bounces} bounces")
         except Exception as e:  # noqa: BLE001 — een dichte inbox stopt het mailen niet
             print(f"  (inbox niet gelezen: {e})")
+            plan.setdefault("fouten", []).append(f"inbox niet gelezen: {e}")
         plan["gecheckt"] = True
         _save_plan(plan)
 
+    # Aan het eind van de dag één berichtje: wat er is gebeurd, of er iets mis
+    # ging, en of de machine tussendoor stil heeft gestaan. Zolang dit elke avond
+    # binnenkomt weet Daniel dat de machine leeft; blijft het uit, dan is dát het
+    # signaal. Volledig sluitend is het niet — staat de Mac uit, dan draait er
+    # niets en komt er ook geen bericht. Het gat wordt dan de volgende dag gemeld.
+    if not plan.get("gerapporteerd") and nu >= "20:45":
+        _dagbericht(state, plan)
+        plan["gerapporteerd"] = True
+        _save_plan(plan)
+
     boek.afsluiten()
+
+
+def _dagbericht(state: dict, plan: dict) -> None:
+    """Het avondbericht aan Daniel."""
+    vandaag = date.today().isoformat()
+    vandaag_uit = sum(1 for st in state.values()
+                      for v in st.get("verstuurd", []) if v["op"][:10] == vandaag)
+    gepland = len(plan.get("tijden", [])) + plan.get("al_met_de_hand", 0)
+    totaal = sum(len(st.get("verstuurd", [])) for st in state.values())
+    benaderd = len(state)
+    antwoorden = sum(1 for st in state.values() if st.get("beantwoord"))
+    auto = sum(1 for st in state.values() if st.get("auto_antwoord"))
+    afgemeld = sum(1 for st in state.values() if st.get("afgemeld"))
+    bounces = sum(1 for st in state.values() if st.get("bounce"))
+    resterend = len([l for l in _leads() if l["email"].lower() not in state])
+
+    goed = vandaag_uit >= gepland and not plan.get("gemist") and not plan.get("fouten")
+    kop = "Leadmachine: alles goed" if goed else "Leadmachine: LET OP"
+
+    regels = [
+        f"Vandaag verstuurd:   {vandaag_uit} van {gepland} gepland",
+        f"Totaal verstuurd:    {totaal} mails naar {benaderd} bedrijven",
+        f"Echte reacties:      {antwoorden}",
+        f"Automatische reacties: {auto}",
+        f"Afmeldingen:         {afgemeld}",
+        f"Bounces:             {bounces}",
+        f"Nog in de wachtrij:  {resterend} leads",
+    ]
+    if plan.get("gemist"):
+        regels += ["", "LET OP — de machine heeft stilgestaan op: "
+                       + ", ".join(plan["gemist"])]
+    if plan.get("fouten"):
+        regels += ["", "Fouten vandaag:"] + [f"  {f}" for f in plan["fouten"][:10]]
+    if vandaag_uit < gepland:
+        regels += ["", f"Er zijn {gepland - vandaag_uit} mails niet verstuurd. "
+                       "Meestal betekent dat dat de Mac uit stond of sliep."]
+    if bounces > max(3, totaal // 10):
+        regels += ["", "Veel bounces. Dat is slecht voor je domein — laat de lijst "
+                       "nakijken voordat je verder mailt."]
+
+    host, van = os.environ.get("MAIL_HOST"), os.environ.get("MAIL_USER")
+    wachtwoord = os.environ.get("MAIL_PASS")
+    if not (host and van and wachtwoord and ALARM_NAAR):
+        return
+    msg = EmailMessage()
+    msg["From"] = f"Leadmachine <{van}>"
+    msg["To"] = ", ".join(ALARM_NAAR)
+    msg["Subject"] = f"{kop} — {date.today().strftime('%d-%m-%Y')}"
+    msg.set_content("\n".join(regels) + "\n")
+    try:
+        with smtplib.SMTP_SSL(host, 465, context=ssl.create_default_context()) as smtp:
+            smtp.login(van, wachtwoord)
+            smtp.send_message(msg)
+        print(f"{datetime.now():%d-%m %H:%M} — dagbericht verstuurd")
+    except Exception as e:  # noqa: BLE001
+        print(f"  (dagbericht niet verstuurd: {e})")
 
 
 # ------------------------------------------------------------------- status
@@ -815,6 +898,9 @@ def main() -> None:
     t.add_argument("--max-per-beurt", type=int, default=3,
                    help="hoeveel mails er in één beurt maximaal uit mogen")
     t.set_defaults(func=tick)
+
+    r = sub.add_parser("dagbericht", help="het avondbericht nu versturen (test)")
+    r.set_defaults(func=lambda a: _dagbericht(_state(), _dagplan(_state(), 0)))
 
     args = ap.parse_args()
     args.func(args)

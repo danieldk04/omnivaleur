@@ -40,5 +40,40 @@ if [[ -z "$MAIL_PASS" ]]; then
   exit 1
 fi
 
-/Library/Frameworks/Python.framework/Versions/3.13/bin/python3 \
-  leadgen_mail.py tick "$@" || echo "$(date '+%d-%m %H:%M') — tick mislukt"
+TELLER=~/Library/Application\ Support/omnivaleur/mislukt.txt
+
+if /Library/Frameworks/Python.framework/Versions/3.13/bin/python3 leadgen_mail.py tick "$@"; then
+  rm -f $TELLER
+else
+  echo "$(date '+%d-%m %H:%M') — tick mislukt"
+  # Drie keer achter elkaar mis betekent dat het niet vanzelf overgaat. Dan moet
+  # Daniel het weten, en wel via een weg die niets van het script nodig heeft —
+  # want het script is juist wat kapot is. Dit gebeurde op 11-08: 21 uur stil
+  # zonder één signaal.
+  N=$(( $(cat $TELLER 2>/dev/null || echo 0) + 1 ))
+  echo $N > $TELLER
+  if [[ $N -eq 3 ]]; then
+    /usr/bin/python3 - "$MAIL_USER" "$MAIL_PASS" <<'PYEOF'
+import smtplib, ssl, sys, socket
+from datetime import datetime
+from email.message import EmailMessage
+van, pw = sys.argv[1], sys.argv[2]
+msg = EmailMessage()
+msg["From"] = f"Leadmachine <{van}>"
+msg["To"] = "danieldekoning66@gmail.com, info@revaleur.com"
+msg["Subject"] = "Leadmachine LIGT STIL"
+msg.set_content(
+    f"De koude-mailmachine is drie keer achter elkaar gecrasht en verstuurt niets meer.\n"
+    f"Tijd: {datetime.now():%d-%m-%Y %H:%M} op {socket.gethostname()}\n\n"
+    f"Het logboek staat in:\n"
+    f"  ~/Library/Application Support/omnivaleur/tick.log\n\n"
+    f"Laat Claude ernaar kijken.\n")
+try:
+    with smtplib.SMTP_SSL("smtp.zoho.eu", 465, context=ssl.create_default_context()) as s:
+        s.login(van, pw); s.send_message(msg)
+    print("noodsignaal verstuurd")
+except Exception as e:
+    print("noodsignaal MISLUKT:", e)
+PYEOF
+  fi
+fi
