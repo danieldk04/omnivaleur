@@ -4847,9 +4847,9 @@ function openImportCreate(candidateId) {
 }
 
 async function bulkImportAllCandidates() {
-  if (!confirm('Import all pending candidates now? Matches get linked to the existing item; the rest become new items.')) return;
+  if (!confirm('Import all pending candidates now? Matches get linked to the existing item; the rest become new items.\n\nAnything that looks like a duplicate of an item you imported from another channel is left for you to check by hand.')) return;
   setBusy(true, 'Importing all pending candidates — this can take a while, please wait…');
-  let totalLinked = 0, totalCreated = 0, totalFailed = 0;
+  let totalLinked = 0, totalCreated = 0, totalFailed = 0, totalParked = 0, offset = 0;
   try {
     // Import in small batches, looping until the server reports nothing pending remains.
     // Each request stays short, so a large import can never trip a gateway timeout (which
