@@ -164,6 +164,53 @@ Founder, Omnivaleur
     return subject, body
 
 
+def locked_email(days_left: int = 0) -> tuple[str, str]:
+    """Derde en laatste mail: het slot is dicht.
+
+    Tot nu toe stopte de communicatie vlak vóór het slot. Wie er daarna tegenaan
+    liep, kreeg alleen nog een foutmelding in de app — en een actieve gebruiker
+    verdween zo geruisloos, zonder ooit iets van zich te laten horen. Dat is
+    precies hoe we een klant kwijtraakten die het product gewoon gebruikte.
+    """
+    subject = "Your Omnivaleur account is now paused"
+    body = f"""Hi,
+
+Daniel here from Omnivaleur.
+
+Your trial and grace period have both ended, so your account is paused as of
+today. I did not want that to happen quietly, so here is exactly where you stand.
+
+What this means right now:
+
+  * Your listings are untouched. Everything you published on Vinted,
+    Marktplaats, 2dehands, eBay and your other channels is still live and still
+    yours. Nothing was removed.
+
+  * Cross-listing is paused. The extension will not send out new listings until
+    the account is active again.
+
+  * Nothing is lost. Your items, photos, connected accounts and history are all
+    still there, exactly as you left them. Turning Pro back on picks up where
+    you stopped.
+
+Pick up where you left off: {settings.app_url} (€19.99/month, cancel anytime)
+
+And if you are not coming back, would you tell me why? One sentence is enough,
+and it is genuinely the most useful thing you can send me. Maybe something was
+broken, maybe a channel you needed was missing, maybe it just was not for you —
+I would rather know than guess.
+
+Reply to this email or write to {CONTACT_EMAIL}. It comes straight to me.
+
+Best regards,
+
+Daniel
+Founder, Omnivaleur
+{CONTACT_EMAIL}
+"""
+    return subject, body
+
+
 def _mail_batch(rows: list[dict], marker_column: str, build_mail, moment_key) -> None:
     """Stuurt één mail per rij en zet daarna het vinkje. Mislukt het versturen,
     dan blijft het vinkje leeg en probeert de taak het morgen opnieuw."""
