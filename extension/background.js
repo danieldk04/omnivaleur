@@ -2475,6 +2475,27 @@ async function bgScanVinted(job, serverUrl) {
   }
 }
 
+// Why a Marktplaats/2dehands scan came back with nothing.
+//
+// The old message ("are you logged in on this account?") was a guess, and it
+// sent a business seller looking for a login problem he didn't have: a Pro /
+// zakelijk account manages its adverts in the separate Admarkt console, so the
+// personal "my listings" overview this scan reads is genuinely empty for him.
+// Say which of the three it is, because the fix is different every time.
+function mpEmptyScanReason(meta, platform) {
+  const site = platform === "marktplaats" ? "Marktplaats" : "2dehands";
+  if (meta.api_status === 401 || meta.api_status === 403 || meta.signed_in === false) {
+    return `You don't appear to be signed in to ${site} in this browser. Open ${site}, sign in, and run the scan again.`;
+  }
+  if (meta.pro_hint) {
+    return `Signed in fine, but this ${site} account has no adverts on the personal "my listings" page. ` +
+      `Business (Pro/zakelijk) accounts keep their adverts in the separate Admarkt seller console, which Omnivaleur ` +
+      `can't read yet — importing only works for a private ${site} account for now.`;
+  }
+  return `Signed in fine, but ${site} shows no adverts on your "my listings" page. If you do have adverts running, ` +
+    `they may be under a different account or in the business (Pro) seller console, which Omnivaleur can't read yet.`;
+}
+
 async function bgScanMp2dh(job, serverUrl) {
   const sleep = ms => new Promise(r => setTimeout(r, ms));
   const platform = job.platform;
