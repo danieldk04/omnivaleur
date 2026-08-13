@@ -4933,9 +4933,9 @@ async function bulkImportAllCandidates() {
     } else if (imported === 0 && totalFailed > 0) {
       alert(`❌ Import failed — ${totalFailed} listing(s) could not be imported.`);
     } else if (totalFailed > 0) {
-      alert(`⚠️ Import partly succeeded: ${detail}\n\nThe failed ones stay out of your items — you can rescan and retry them.`);
+      alert(`⚠️ Import partly succeeded: ${detail}\n\nThe failed ones stay out of your items — you can rescan and retry them.${parkedNote}`);
     } else {
-      alert(`✅ Import successful: ${detail}`);
+      alert(`✅ Import successful: ${detail}${parkedNote}`);
     }
   } catch (e) {
     // Even on error, refresh so any items already imported before the failure show up.
