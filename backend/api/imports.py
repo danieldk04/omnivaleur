@@ -976,7 +976,13 @@ async def create_item_from_candidate(candidate_id: str, body: dict, user_id: str
 async def bulk_import_candidates(body: dict = None, user_id: str = Depends(require_active_subscription)):
     """
     Process every pending import candidate in one go: candidates with a high-confidence
-    suggested_item_id get linked to that item, everything else becomes a new item
+    suggested_item_id get linked to that item, everything else becomes a new item.
+
+    One exception: a candidate that looks like the same physical object as an item
+    already imported from ANOTHER channel is left alone (still `pending`) and
+    reported as `parked`. Auto-merging could destroy an item, auto-creating would
+    silently duplicate it — so those few rows go back to the seller to confirm.
+    The caller walks past them with the returned `next_offset`.
     (title/price/photo straight from the scrape, condition defaults to 'good' since
     scraping can't see purchase price/brand/size — those stay editable on the item after).
     """
