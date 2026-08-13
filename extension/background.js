@@ -4285,7 +4285,15 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
 
 async function reportError(jobId, serverUrl, error) {
   gaEvent("job_error", {});
+  // Zet de extensieversie in ÉLKE foutmelding, niet alleen bij een onbekende
+  // categorie. Een keer draaide er stilletjes een oudere versie terug en toen
+  // leek een allang opgeloste fout weer terug te zijn — we hebben een ronde
+  // verloren aan het uitzoeken welke versie er nu eigenlijk draaide.
+  let tekst = String(error && error.message ? error.message : error);
+  if (!/\[extensie /.test(tekst)) {
+    try { tekst += ` [extensie ${chrome.runtime.getManifest().version}]`; } catch (_) {}
+  }
   // Same reliability need as /complete: a dropped error report leaves the job
   // claimed until the stale-claim sweep guesses at what happened.
-  await finaliseJob(serverUrl, jobId, "error", { error });
+  await finaliseJob(serverUrl, jobId, "error", { error: tekst });
 }
