@@ -2494,7 +2494,14 @@ async function bgScanMp2dh(job, serverUrl) {
 
     const result = await execInTab(tabId, async () => {
       const nap = ms => new Promise(r => setTimeout(r, ms));
-      const abs = u => !u ? null : (u.startsWith("http") ? u : `${location.origin}${u.startsWith("/") ? "" : "/"}${u}`);
+      // Marktplaats returns its image urls PROTOCOL-relative ("//images.markt…").
+      // Treating those as a site-relative path produced
+      // "https://www.marktplaats.nl//images.marktplaats.com/…" — a 404, so every
+      // imported thumbnail was blank.
+      const abs = u => !u ? null
+        : u.startsWith("http") ? u
+        : u.startsWith("//") ? `https:${u}`
+        : `${location.origin}${u.startsWith("/") ? "" : "/"}${u}`;
 
       // ── Primary: the page's own JSON API ──────────────────────────────
       // The overview is React-rendered and only ever paints ~50 rows, so
