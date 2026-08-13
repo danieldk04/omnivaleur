@@ -4702,6 +4702,7 @@ async function loadImportCandidates(checkScanDonePlatform) {
 function matchBadge(reason) {
   if (reason === 'same_listing') return `<span class="badge active" title="This exact listing (same platform ID) already exists on this item — a certain match.">🔗 Same listing</span>`;
   if (reason === 'same_title') return `<span class="badge" style="background:#eff6ff;color:#2563eb" title="One existing item has an identical title.">≈ Same title</span>`;
+  if (reason === 'likely_same') return `<span class="badge" style="background:#fef3c7;color:#92400e;font-weight:700" title="This looks like the same object as an item you already imported from another channel, written in another language. Check it: link it to that item, or set the dropdown back to “create new item”.">⚠️ Possibly a duplicate</span>`;
   return `<span class="badge" style="background:#f0fdf4;color:#16a34a" title="No confident match — this becomes a new item.">✨ New item</span>`;
 }
 
