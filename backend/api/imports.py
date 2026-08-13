@@ -1016,11 +1016,21 @@ async def bulk_import_candidates(body: dict = None, user_id: str = Depends(requi
         q = db.table("import_candidates").select("*").eq("user_id", user_id).eq("status", "pending")
         if platform:
             q = q.eq("platform", platform)
-        cands = q.limit(batch).execute().data or []
-        its = fetch_all(lambda: db.table("items").select("id,title").eq("user_id", user_id))
-        return cands, its, _listings_by_platform_id(db, its)
+        cands = q.order("created_at").range(offset, offset + batch - 1).execute().data or []
+        its = fetch_all(lambda: db.table("items").select("id,title,price,brand").eq("user_id", user_id))
+        by_id, by_platform = _listing_index(db, its)
+        return cands, its, by_id, by_platform
 
-    candidates, items, listings_by_id = await asyncio.to_thread(_read)
+    candidates, items, listings_by_id, platforms_by_item = await asyncio.to_thread(_read)
+
+    # Work out up front which rows must NOT be processed automatically, and drop
+    # them from this pass entirely.
+    unmatched = [c for c in candidates
+                 if not _match_candidate(c, items, listings_by_id)[0]]
+    twins = await _find_twins(unmatched, items, platforms_by_item)
+    parked = len(twins)
+    if twins:
+        candidates = [c for c in candidates if c["id"] not in twins]
 
     linked, created, failed = 0, 0, 0
     now = datetime.now(timezone.utc).isoformat()
