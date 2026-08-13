@@ -2612,6 +2612,12 @@ async function bgScanMp2dh(job, serverUrl) {
           total_entries: totalExpected,
           fetched: items.length,
           source: usedFallback ? "dom" : "api",
+          api_status: apiStatus,
+          // A Pro/zakelijk seller manages ads in the separate Admarkt console,
+          // so this personal overview is genuinely empty for them. Recognising
+          // that here is what lets us say so instead of "are you logged in?".
+          signed_in: /uitloggen|log ?uit|mijn marktplaats|my account/i.test(document.body.innerText || ""),
+          pro_hint: /\bpro\b|admarkt|zakelijk|verkopersdashboard/i.test(document.body.innerText || ""),
         },
       };
     });
