@@ -175,10 +175,19 @@ def _mail_batch(rows: list[dict], marker_column: str, build_mail, moment_key) ->
         try:
             user = db.auth.admin.get_user_by_id(sub["user_id"])
             email = user.user.email if user and user.user else None
-        except Exception:
-            logger.exception(f"Geen e-mailadres gevonden voor {sub['user_id']}")
+        except Exception as e:
+            # Dit was een stille `continue`, en daardoor is er in 27 abonnementen
+            # nooit één herinnering verstuurd zonder dat iemand het merkte: het
+            # opzoeken van een e-mailadres mag alleen met de service_role-sleutel,
+            # en met de anon-sleutel geeft Supabase hier "User not allowed".
+            # Zie /health → supabase_key_role.
+            logger.error(
+                f"HERINNERING NIET VERSTUURD aan {sub['user_id']}: e-mailadres niet op te "
+                f"vragen ({e}). Draait de server op de anon-sleutel in plaats van service_role?"
+            )
             continue
         if not email:
+            logger.error(f"HERINNERING NIET VERSTUURD: gebruiker {sub['user_id']} heeft geen e-mailadres")
             continue
 
         subject, body = build_mail(_days_until(moment_key(sub), now))
