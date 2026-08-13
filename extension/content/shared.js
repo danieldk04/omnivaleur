@@ -411,16 +411,62 @@ window.CL = (() => {
     return false;
   }
 
-  // "Bestemd voor" bij kinderkleding — verplicht, maar Vinted levert het niet.
-  // We leiden het af uit de tekst en vallen anders terug op neutraal.
+  // Welk instrument iets bij hoort, voor het "Bestemd voor"-veld in de
+  // muziekcategorieën. Sleutel = een woord uit de titel of onze eigen categorie,
+  // waarde = de optie zoals Marktplaats hem letterlijk spelt. Langste sleutels
+  // eerst, zodat "basgitaar" wint van "gitaar".
+  const MUZIEK_BESTEMD_VOOR = [
+    ["elektrische basgitaar", "Elektrische basgitaar"],
+    ["akoestische basgitaar", "Akoestische basgitaar"],
+    ["elektrische gitaar", "Elektrische gitaar"], ["gitaren elektrisch", "Elektrische gitaar"],
+    ["akoestische gitaar", "Akoestische gitaar"], ["gitaren akoestisch", "Akoestische gitaar"],
+    ["basgitaar", "Elektrische basgitaar"], ["gitaren bas", "Elektrische basgitaar"],
+    ["dwarsfluit", "Dwarsfluit of Piccolo"], ["piccolo", "Dwarsfluit of Piccolo"],
+    ["mondharmonica", "Mondharmonica"], ["klavecimbel", "Klavecimbel"],
+    ["altviool", "Viool of Altviool"], ["contrabas", "Contrabas"],
+    ["blokfluit", "Blokfluit"], ["accordeon", "Accordeon"], ["banjo", "Banjo"],
+    ["mandoline", "Mandoline"], ["draaiorgel", "Draaiorgel"],
+    ["drumcomputer", "Drumcomputer"], ["klarinet", "Klarinet"],
+    ["saxofoon", "Saxofoon"], ["trombone", "Trombone"], ["trompet", "Trompet"],
+    ["tuba", "Tuba"], ["hobo", "Hobo"], ["hoorn", "Hoorn"], ["cello", "Cello"],
+    ["viool", "Viool of Altviool"], ["piano", "Piano"], ["orgel", "Orgel"],
+    ["synthesizer", "Keyboard of Synthesizer"], ["keyboard", "Keyboard of Synthesizer"],
+    ["percussie", "Drums of Percussie"], ["drumstel", "Drums of Percussie"],
+    ["drums", "Drums of Percussie"], ["slagwerk", "Drums of Percussie"],
+    ["gitaar", "Akoestische gitaar"],
+  ];
+
+  // "Bestemd voor" heeft per categorie een heel andere betekenis: bij
+  // kinderkleding is het jongen/meisje, bij muziek is het WELK INSTRUMENT. Vullen
+  // met "Jongen of Meisje" op een muziekformulier laat het veld leeg staan, en
+  // dan weigert verifyMpGroupFields terecht te plaatsen. Daarom kijken we naar
+  // de opties die er écht staan in plaats van naar de categorie te gokken.
   function selectIntendedFor(item) {
     const el = intendedForSelect();
     if (!el) return true; // deze categorie kent het veld niet — niets te doen
+    const opties = [...el.options].map((o) => o.text.trim());
     const hay = `${item.title || ""} ${item.category || ""} ${item.description || ""}`.toLowerCase();
-    const boy = /jongen|boys?\b|garçon/.test(hay);
-    const girl = /meisje|girls?\b|fille/.test(hay);
-    const want = boy && !girl ? "Jongen" : girl && !boy ? "Meisje" : "Jongen of Meisje";
-    return fillNativeSelect(el, want);
+
+    if (opties.some((o) => /^Jongen|^Meisje/.test(o))) {
+      const boy = /jongen|boys?\b|garçon/.test(hay);
+      const girl = /meisje|girls?\b|fille/.test(hay);
+      const want = boy && !girl ? "Jongen" : girl && !boy ? "Meisje" : "Jongen of Meisje";
+      return fillNativeSelect(el, want);
+    }
+
+    // Instrumentenlijst: neem het eerste instrument dat in de tekst voorkomt en
+    // dat deze lijst ook echt kent. Vinden we niets, dan "Overige instrumenten" —
+    // een bestaande, eerlijke keuze, nooit een verkeerd instrument.
+    const heeft = (naam) => opties.find((o) => o.toLowerCase() === naam.toLowerCase());
+    for (const [woord, optie] of MUZIEK_BESTEMD_VOOR) {
+      if (hay.includes(woord) && heeft(optie)) return fillNativeSelect(el, heeft(optie));
+    }
+    const rest = heeft("Overige instrumenten");
+    if (rest) return fillNativeSelect(el, rest);
+
+    // Onbekende lijst in een categorie die we nog niet kennen: liever leeg laten
+    // en de gebruiker laten kiezen dan een willekeurige optie aanvinken.
+    return false;
   }
 
   // Merk is per categorie een tekstveld óf een keuzelijst, met steeds een andere
