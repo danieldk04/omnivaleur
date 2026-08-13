@@ -1124,7 +1124,13 @@ async def bulk_import_candidates(body: dict = None, user_id: str = Depends(requi
 
     remaining = await asyncio.to_thread(_process)
 
-    return {"linked": linked, "created": created, "failed": failed, "remaining": remaining}
+    # Parked rows stay pending, so the next pass must start past them or it would
+    # fetch the same rows forever and never reach the rest of the queue.
+    return {
+        "linked": linked, "created": created, "failed": failed,
+        "parked": parked, "remaining": max(0, remaining - parked),
+        "next_offset": offset + parked,
+    }
 
 
 @router.post("/{candidate_id}/ignore")
