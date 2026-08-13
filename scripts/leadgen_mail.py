@@ -102,13 +102,19 @@ AUTO_ONDERWERP = re.compile(
 # Niet elke ontvangstbevestiging verraadt zich in de onderwerpregel: BoekenBalie
 # stuurde er een terug onder ons eigen onderwerp. Deze zinnen in de aanhef zijn
 # het tweede vangnet.
+# Let op: "bedankt voor je e-mail" staat hier BEWUST NIET in. Alfons van CD Dealer
+# begon zijn echte antwoord met "Bedankt voor je berichtje" en vroeg vervolgens om
+# de video en de prijzen — die werd zo als automaat weggezet en is een dag blijven
+# liggen. Een automaat verraadt zich aan wat hij bélooft (een termijn, "in goede
+# orde ontvangen"), niet aan een bedankje. Liever een automaat te veel doorlaten
+# dan één warme reactie missen.
 AUTO_TEKST = re.compile(
-    r"(bedankt voor (je|jouw|uw) (e-?mail|bericht)"
-    r"|in goede orde ontvangen"
+    r"(in goede orde ontvangen"
     r"|we (hebben|nemen) .{0,40}(ontvangen|contact met je op) binnen"
     r"|reageren wij op dit moment"
-    r"|binnen \d+ (werk)?dagen (beantwoord|contact)"
-    r"|dit is een automatisch)", re.I)
+    r"|binnen \d+ (werk)?dagen (beantwoord|contact|reactie)"
+    r"|dit is een automatisch"
+    r"|\bout of office\b|\bafwezigheidsmelding\b)", re.I)
 
 
 def _need(var: str) -> str:
@@ -828,9 +834,11 @@ def tick(args) -> None:
             plan["gedaan"] = verlopen      # niemand beschikbaar: slot laten vervallen
             _save_plan(plan)
 
-    # Eén keer per dag de inbox nakijken, 's middags. Wie geantwoord heeft valt
-    # daarmee uit de opvolging voordat de volgende mail wordt ingepland.
-    if not plan.get("gecheckt") and nu >= "13:00" and state:
+    # Elke beurt de inbox nakijken. Dit stond eerst op één keer per dag om 13:00,
+    # maar dan blijft een reactie van 's avonds een etmaal liggen — en juist bij
+    # een warme reactie telt elk uur. Zo valt iemand die antwoordt ook meteen uit
+    # de opvolging in plaats van pas de volgende dag.
+    if state:
         try:
             nieuw, afgemeld, bounces = _check_inbox(state, boek, dagen=4)
             print(f"{datetime.now():%d-%m %H:%M} — inbox: {nieuw} antwoorden, "
@@ -838,8 +846,9 @@ def tick(args) -> None:
         except Exception as e:  # noqa: BLE001 — een dichte inbox stopt het mailen niet
             print(f"  (inbox niet gelezen: {e})")
             plan.setdefault("fouten", []).append(f"inbox niet gelezen: {e}")
-        plan["gecheckt"] = True
-        _save_plan(plan)
+        if not plan.get("gecheckt"):
+            plan["gecheckt"] = True
+            _save_plan(plan)
 
     # Aan het eind van de dag één berichtje: wat er is gebeurd, of er iets mis
     # ging, en of de machine tussendoor stil heeft gestaan. Zolang dit elke avond
