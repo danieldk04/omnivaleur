@@ -313,6 +313,22 @@
       "slug": "mobile-phone-reselling-automation",
       "status": "published",
       "priority": 38
+    },
+    {
+      "keyword": "designer clothing reselling automation",
+      "region": "nl",
+      "pillar": "B",
+      "slug": "designer-clothing-reselling-automation",
+      "status": "published",
+      "priority": 39
+    },
+    {
+      "keyword": "vintage camera reselling automation",
+      "region": "nl",
+      "pillar": "B",
+      "slug": "vintage-camera-reselling-automation",
+      "status": "pending",
+      "priority": 40
     }
   ],
   "published": [
@@ -657,6 +673,15 @@
       "action": "updated",
       "url_path": "/reseller-tools/mobile-phone-reselling-automation",
       "published_at": "2026-08-12T09:06:22.822942+00:00"
+    },
+    {
+      "keyword": "designer clothing reselling automation",
+      "slug": "designer-clothing-reselling-automation",
+      "region": "nl",
+      "pillar": "B",
+      "action": "created",
+      "url_path": "/reseller-tools/designer-clothing-reselling-automation",
+      "published_at": "2026-08-13T09:07:06.932683+00:00"
     }
   ]
 }
