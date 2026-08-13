@@ -2577,13 +2577,19 @@ function mpEmptyScanReason(meta, platform) {
   if (meta.api_status === 401 || meta.api_status === 403 || meta.signed_in === false) {
     return `You don't appear to be signed in to ${site} in this browser. Open ${site}, sign in, and run the scan again.`;
   }
-  if (meta.pro_hint) {
-    return `Signed in fine, but this ${site} account has no adverts on the personal "my listings" page. ` +
-      `Business (Pro/zakelijk) accounts keep their adverts in the separate Admarkt seller console, which Omnivaleur ` +
-      `can't read yet — importing only works for a private ${site} account for now.`;
-  }
-  return `Signed in fine, but ${site} shows no adverts on your "my listings" page. If you do have adverts running, ` +
-    `they may be under a different account or in the business (Pro) seller console, which Omnivaleur can't read yet.`;
+  // Wél ingelogd, maar het persoonlijke overzicht is leeg. Dat betekent bijna
+  // nooit "je hebt geen advertenties": een zakelijke verkoper beheert zijn
+  // advertenties in Admarkt, het betaalde platform van Marktplaats, en die staan
+  // simpelweg niet op deze pagina. Gemeten geval: een verkoper met 5.529 live
+  // advertenties kreeg hier tweemaal nul terug.
+  //
+  // We noemen dat nu altijd, in plaats van het uit de paginatekst te raden —
+  // die gok gaf een verkeerd antwoord en kostte een ronde. Voor iemand die
+  // écht niets te koop heeft is deze tekst nog steeds waar.
+  return `Signed in fine, but ${site} shows no adverts on your personal "my listings" page. ` +
+    `If you do have adverts running, they are almost certainly managed through Admarkt — ` +
+    `${site}' separate platform for business sellers — which Omnivaleur cannot read yet. ` +
+    `Importing works for a private ${site} account for now.`;
 }
 
 async function bgScanMp2dh(job, serverUrl) {
@@ -2724,11 +2730,10 @@ async function bgScanMp2dh(job, serverUrl) {
           fetched: items.length,
           source: usedFallback ? "dom" : "api",
           api_status: apiStatus,
-          // A Pro/zakelijk seller manages ads in the separate Admarkt console,
-          // so this personal overview is genuinely empty for them. Recognising
-          // that here is what lets us say so instead of "are you logged in?".
+          // Alleen of we überhaupt ingelogd zijn. Of dit een zakelijk account
+          // is, valt hier niet betrouwbaar aan de paginatekst af te lezen — dat
+          // is geprobeerd en het gaf een verkeerd antwoord.
           signed_in: /uitloggen|log ?uit|mijn marktplaats|my account/i.test(document.body.innerText || ""),
-          pro_hint: /\bpro\b|admarkt|zakelijk|verkopersdashboard/i.test(document.body.innerText || ""),
         },
       };
     });
