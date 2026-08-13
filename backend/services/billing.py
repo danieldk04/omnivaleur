@@ -307,11 +307,19 @@ async def send_trial_reminders():
     # en daarna hoorde niemand meer iets: een actieve gebruiker werd stilletjes
     # buitengesloten en meldde zich nooit. Eén mail, één keer, zonder deadline
     # erin — hij mag ook gewoon vertellen waarom hij stopt.
+    #
+    # Bewust alleen sloten van de afgelopen LOCK_NOTICE_MAX_AGE_DAYS dagen. Zonder
+    # die ondergrens zou de eerste run ineens iedereen aanschrijven die ooit is
+    # verlopen — een mailronde naar oud-klanten die niemand heeft besteld, en die
+    # bij spamfilters hard aankomt. Wie eerder is buitengesloten mail je liever
+    # bewust, met een tekst die daarbij past.
+    lock_moment = now - timedelta(days=GRACE_DAYS)
     rows = _select_or_warn(
         lambda: db.table("subscriptions")
         .select("id, user_id, trial_ends_at")
         .eq("status", "trial_expired")
-        .lt("trial_ends_at", (now - timedelta(days=GRACE_DAYS)).isoformat())
+        .lt("trial_ends_at", lock_moment.isoformat())
+        .gte("trial_ends_at", (lock_moment - timedelta(days=LOCK_NOTICE_MAX_AGE_DAYS)).isoformat())
         .is_("locked_notice_sent_at", "null")
         .execute(),
         "locked_notice_sent_at",
