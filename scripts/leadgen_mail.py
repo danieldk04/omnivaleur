@@ -72,6 +72,10 @@ SITE = "https://omnivaleur.com"
 # Waar Daniel een seintje krijgt zodra iemand écht antwoordt. Automatische
 # ontvangstbevestigingen tellen niet mee, anders is het geen seintje meer maar ruis.
 ALARM_NAAR = ["danieldekoning66@gmail.com", "info@revaleur.com"]
+# Van elk seintje komt ook een kopie in deze Zoho-map. Daniels postvak IN moet
+# alleen échte reacties van handelaren bevatten; berichten van de machine zelf
+# horen daar niet tussen te staan.
+ALARM_MAP = "Reactie-Notificaties"
 # ---------------------------------------------------------------------------
 
 # Opbouwschema: het aantal mails per dag, geteld vanaf je eerste verzenddag. Een
@@ -732,8 +736,25 @@ def _alarm(lead: dict, onderwerp: str, body: str) -> None:
             smtp.login(van, wachtwoord)
             smtp.send_message(msg)
         print(f"  ↳ seintje gestuurd naar {', '.join(ALARM_NAAR)}")
+        _archiveer(msg)
     except Exception as e:  # noqa: BLE001 — een mislukt seintje mag niets blokkeren
         print(f"  (seintje niet verstuurd: {e})")
+
+
+def _archiveer(msg: EmailMessage) -> None:
+    """Kopie in de Zoho-map leggen, gelezen gemarkeerd. Dit gebeurt via IMAP en
+    niet met een Zoho-filterregel, zodat het meeverhuist met het script en niet
+    stilletjes kapot kan gaan als iemand in de instellingen iets omzet."""
+    host, gebruiker = os.environ.get("IMAP_HOST"), os.environ.get("MAIL_USER")
+    wachtwoord = os.environ.get("MAIL_PASS")
+    if not (host and gebruiker and wachtwoord):
+        return
+    try:
+        with imaplib.IMAP4_SSL(host, 993) as imap:
+            imap.login(gebruiker, wachtwoord)
+            imap.append(f'"{ALARM_MAP}"', "\\Seen", None, msg.as_bytes())
+    except Exception as e:  # noqa: BLE001 — archiveren mag nooit iets blokkeren
+        print(f"  (kopie niet in {ALARM_MAP} gezet: {e})")
 
 
 def _platte_tekst(msg) -> str:
@@ -915,6 +936,7 @@ def _dagbericht(state: dict, plan: dict) -> None:
             smtp.login(van, wachtwoord)
             smtp.send_message(msg)
         print(f"{datetime.now():%d-%m %H:%M} — dagbericht verstuurd")
+        _archiveer(msg)
     except Exception as e:  # noqa: BLE001
         print(f"  (dagbericht niet verstuurd: {e})")
 
