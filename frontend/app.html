@@ -4904,11 +4904,16 @@ async function bulkImportAllCandidates() {
       totalLinked += data.linked || 0;
       totalCreated += data.created || 0;
       totalFailed += data.failed || 0;
-      const remaining = data.remaining || 0;
+      totalParked += data.parked || 0;
+      // Rows parked for manual review stay pending on the server, so the next pass
+      // must start past them — otherwise the same rows come back every time.
+      offset = data.next_offset != null ? data.next_offset : offset;
+      // …and they must not count towards "to go", or the loop would never finish.
+      const remaining = Math.max(0, (data.remaining || 0) - totalParked);
       if (remaining <= 0) break;
       setBusyText(`Importing… ${totalLinked + totalCreated} done, ${remaining} to go — please wait…`);
       // Nothing moved this pass (all remaining are un-processable) — stop to avoid a loop.
-      if ((data.linked || 0) + (data.created || 0) + (data.failed || 0) === 0) break;
+      if ((data.linked || 0) + (data.created || 0) + (data.failed || 0) + (data.parked || 0) === 0) break;
     }
     await loadAll();
     await loadImportCandidates();
