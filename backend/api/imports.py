@@ -630,15 +630,20 @@ _TWIN_MAX_ITEMS = 250     # never build a prompt bigger than this
 _TWIN_PRICE_FACTOR = 2.5  # a twin priced 2.5x apart is not the same object
 
 
-def _twin_pool(cands: list[dict], items: list[dict], platforms_by_item: dict) -> list[dict]:
-    """The items a candidate could plausibly be a translated twin of."""
-    cand_platforms = {c.get("platform") for c in cands}
+def _twin_pool(platform: str, items: list[dict], platforms_by_item: dict) -> list[dict]:
+    """
+    The items a candidate from `platform` could plausibly be a translated twin of.
+
+    Scoped to ONE platform on purpose: with a mixed set of candidates the union of
+    their platforms excluded every item that was on any of them, which emptied the
+    pool completely and quietly switched duplicate detection off.
+    """
     pool = []
     for it in items:
         on = platforms_by_item.get(it["id"]) or set()
         if not on:
             continue                       # never published anywhere — nothing to be a twin of
-        if on & cand_platforms:
+        if platform in on:
             continue                       # already on this channel; not a cross-channel twin
         pool.append(it)
     return pool[:_TWIN_MAX_ITEMS]
