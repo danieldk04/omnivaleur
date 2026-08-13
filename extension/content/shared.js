@@ -1062,18 +1062,21 @@ window.CL = (() => {
       }
       if (beschrijvingKlachtOpPagina()) {
         // De melding in het dashboard vertelt nu zelf wat het formulier had —
-        // anders is elke volgende ronde weer gissen.
+        // anders is elke volgende ronde weer gissen. ÉN alle andere klachten die
+        // op de pagina staan: één keer bleek de tekst gewoon gevuld (123 tekens
+        // aan beide kanten) terwijl deze melding er nog stond, en toen wees hij
+        // ons de verkeerde kant op omdat het echte bezwaar ergens anders zat.
         const staat = await runInMainWorld("DESCRIBE_DESC", {});
+        const rest = formulierklachten().filter((t) => !/advertentietekst|zoekertjestekst/i.test(t));
         throw new Error(
           `The form kept treating the description as empty, even after re-filling it. ` +
-          `What the form actually held — ${staat}`
+          `What the form actually held — ${staat}` +
+          (rest.length ? ` | Other complaints on the page: ${rest.join(" | ")}` : ` | No other complaints on the page.`)
         );
       }
     }
 
-    const errs = [...document.querySelectorAll('[class*="error"], [class*="Error"], [role="alert"], [aria-invalid="true"]')]
-      .map((el) => el.textContent.trim()).filter((t) => t.length > 0 && t.length < 200);
-    const uniq = [...new Set(errs)];
+    const uniq = formulierklachten();
     clog(`plaatsen: mislukt — ${uniq.join(" | ") || "geen foutmelding op de pagina"}`);
     throw new Error(`Not published — complete the fields marked in red and click publish yourself. ${uniq.join(" | ")}`.trim());
   }
