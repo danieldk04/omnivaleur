@@ -656,12 +656,105 @@ def _price(v) -> float | None:
         return None
 
 
-def _twin_plausible(cand: dict, item: dict) -> bool:
-    """Cheap sanity check on top of the model's answer — prices must be in the same league."""
+# Colour words that mean the same thing across the two languages. Everything not
+# listed here canonicalises to itself, so an unknown colour simply never matches
+# a different one. Built from _COLORS above, which already covers NL inflections.
+_COLOR_CANON = {
+    "zwart": "black", "zwarte": "black", "black": "black",
+    "wit": "white", "witte": "white", "white": "white",
+    "gebroken wit": "offwhite", "off white": "offwhite", "ecru": "offwhite", "crème": "cream",
+    "creme": "cream", "cream": "cream",
+    "grijs": "grey", "grijze": "grey", "grey": "grey", "gray": "grey",
+    "lichtgrijs": "lightgrey", "lichtgrijze": "lightgrey", "light grey": "lightgrey",
+    "donkergrijs": "darkgrey", "donkergrijze": "darkgrey", "dark grey": "darkgrey",
+    "blauw": "blue", "blauwe": "blue", "blue": "blue", "royal blue": "blue",
+    "lichtblauw": "lightblue", "lichtblauwe": "lightblue", "light blue": "lightblue",
+    "donkerblauw": "navy", "donkerblauwe": "navy", "dark blue": "navy",
+    "marine": "navy", "marineblauw": "navy", "marineblauwe": "navy", "navy": "navy",
+    "rood": "red", "rode": "red", "red": "red",
+    "bordeaux": "burgundy", "burgundy": "burgundy", "maroon": "burgundy", "wine": "burgundy",
+    "groen": "green", "groene": "green", "green": "green",
+    "lichtgroen": "lightgreen", "lichtgroene": "lightgreen", "light green": "lightgreen",
+    "donkergroen": "darkgreen", "donkergroene": "darkgreen", "dark green": "darkgreen",
+    "olijfgroen": "olive", "olijfgroene": "olive", "olive": "olive", "kaki": "khaki", "khaki": "khaki",
+    "bruin": "brown", "bruine": "brown", "brown": "brown", "cognac": "cognac", "camel": "camel",
+    "taupe": "taupe", "beige": "beige", "tan": "beige",
+    "geel": "yellow", "gele": "yellow", "yellow": "yellow", "mustard": "mustard",
+    "oranje": "orange", "orange": "orange",
+    "roze": "pink", "pink": "pink", "zalm": "salmon",
+    "paars": "purple", "paarse": "purple", "purple": "purple",
+    "lila": "lilac", "lilac": "lilac", "lavender": "lilac",
+    "zilver": "silver", "zilveren": "silver", "silver": "silver",
+    "goud": "gold", "gouden": "gold", "gold": "gold",
+    "mint": "mint", "teal": "teal", "turquoise": "turquoise", "multi": "multi",
+}
+
+_SIZE_WORDS = {
+    "small": "S", "medium": "M", "large": "L",
+    "extra small": "XS", "extra large": "XL",
+}
+_SIZE_TOKEN = re.compile(r"^(xxxs|xxs|xs|s|m|l|xl|xxl|xxxl|w\d{2}|\d{2})$", re.I)
+
+
+def _canon_colors(text: str | None) -> set:
+    """Every colour named in a title, in one language-neutral vocabulary."""
+    s = f" {' '.join((text or '').lower().split())} "
+    found = set()
+    for word in sorted(_COLOR_CANON, key=len, reverse=True):
+        if f" {word} " in s or f" {word}e " in s:
+            found.add(_COLOR_CANON[word])
+    return found
+
+
+def _sizes(text: str | None) -> set:
+    """Size labels in a title — 'Heren XXL', 'Men XXL', "Men's Medium", 'W36', 'maat 42'."""
+    s = " ".join((text or "").lower().split())
+    out = set()
+    for word, canon in _SIZE_WORDS.items():
+        if re.search(rf"\b{re.escape(word)}\b", s):
+            out.add(canon)
+    for tok in re.split(r"[^a-z0-9]+", s):
+        if not tok or not _SIZE_TOKEN.match(tok):
+            continue
+        if tok.isdigit() and not (28 <= int(tok) <= 52):
+            continue      # a number that is not a plausible clothing/shoe size
+        out.add(tok.upper())
+    return out
+
+
+def _brands(text: str | None, known: set) -> set:
+    """Which of the seller's own brand names appear in a title."""
+    s = " ".join((text or "").lower().split())
+    return {b for b in known if b and re.search(rf"\b{re.escape(b)}\b", s)}
+
+
+def _twin_plausible(cand: dict, item: dict, known_brands: set) -> str | None:
+    """
+    Hard checks the language model cannot talk its way past. Returns the reason
+    for rejection, or None when the pair survives.
+
+    Measured on real inventory: the model on its own paired grey with blue,
+    Profuomo with Suitsupply and an M with an XL. Colour, size and brand are
+    right there in the title, so they get decided by rules, not by judgement.
+    """
     a, b = _price(cand.get("price")), _price(item.get("price"))
-    if a is None or b is None or a <= 0 or b <= 0:
-        return True                        # no price to judge on; leave it to the seller
-    return max(a, b) / min(a, b) <= _TWIN_PRICE_FACTOR
+    if a and b and a > 0 and b > 0 and max(a, b) / min(a, b) > _TWIN_PRICE_FACTOR:
+        return "price"
+
+    ca, cb = _canon_colors(cand.get("title")), _canon_colors(item.get("title"))
+    if ca and cb and not (ca & cb):
+        return "colour"
+
+    sa, sb = _sizes(cand.get("title")), _sizes(item.get("title"))
+    if sa and sb and not (sa & sb):
+        return "size"
+
+    ba = _brands(cand.get("title"), known_brands) | ({(cand.get("brand") or "").lower()} - {""})
+    bb = _brands(item.get("title"), known_brands) | ({(item.get("brand") or "").lower()} - {""})
+    if ba and bb and not (ba & bb):
+        return "brand"
+
+    return None
 
 
 async def _find_twins(cands: list[dict], items: list[dict], platforms_by_item: dict) -> dict:
