@@ -1013,9 +1013,20 @@ async def bulk_import_candidates(body: dict = None, user_id: str = Depends(requi
     # to everyone (including this very import) while a bulk run was going.
     # Everything that touches the database therefore runs in a worker thread.
     def _read():
+        # One channel per pass. A seller who scanned Vinted AND Marktplaats before
+        # importing has both sets pending, and neither exists as an item yet — so a
+        # mixed batch could create the same object twice before duplicate detection
+        # ever had something to compare against. Finishing one channel first means
+        # the second channel is always matched against real inventory.
+        chosen = platform
+        if not chosen:
+            first = (db.table("import_candidates").select("platform")
+                     .eq("user_id", user_id).eq("status", "pending")
+                     .order("created_at").limit(1).execute().data or [])
+            chosen = first[0]["platform"] if first else None
         q = db.table("import_candidates").select("*").eq("user_id", user_id).eq("status", "pending")
-        if platform:
-            q = q.eq("platform", platform)
+        if chosen:
+            q = q.eq("platform", chosen)
         cands = q.order("created_at").range(offset, offset + batch - 1).execute().data or []
         its = fetch_all(lambda: db.table("items").select("id,title,price,brand").eq("user_id", user_id))
         by_id, by_platform = _listing_index(db, its)
