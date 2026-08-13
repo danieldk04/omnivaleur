@@ -48,6 +48,14 @@ _INTERNAL_LINK = re.compile(r'href="(?:https?://(?:www\.)?omnivaleur\.com)?(/[^"
 _EXTERNAL_LINK = re.compile(r'href="https?://(?!(?:www\.)?omnivaleur\.com)([^/"]+)')
 
 
+# Een compleet artikel eindigt op een afgesloten blok. Loopt het af midden in een
+# zin, dan is het model gestopt voordat hij klaar was.
+_SLUIT_NETJES = re.compile(
+    r"(</p>|</ul>|</ol>|</h[1-6]>|</table>|</div>|</blockquote>|</figure>)\s*$", re.I)
+MIN_FAQ_ANTWOORD = 40      # tekens; "It" en "Het" stonden er echt
+MIN_TAKEAWAY_TEKENS = 25
+
+
 def _text(html: str) -> str:
     stripped = re.sub(r"<(script|style|svg)\b.*?</\1>", " ", html or "", flags=re.S | re.I)
     return re.sub(r"<[^>]+>", " ", stripped)
@@ -116,6 +124,23 @@ def check_article(page: dict) -> list[str]:
         [title, meta, page.get("h1") or "", page.get("quick_answer") or "", _text(body)]
         + list(page.get("takeaways") or [])
     )
+    # Afgekapte tekst. Dit is geen smaakkwestie maar kapotte content: eind 2026
+    # stonden er vijf artikelen live die middenin een zin ophielden omdat het
+    # model tegen zijn tokenlimiet aanliep. Deze drie signalen vingen ze alle vijf.
+    if body.strip() and not _SLUIT_NETJES.search(body.strip()):
+        problems.append("AFGEKAPT: de tekst eindigt niet op een afgesloten alinea of kop")
+    if body.count("<p>") != body.count("</p>"):
+        problems.append(
+            f"AFGEKAPT: {body.count('<p>')} keer <p> tegen {body.count('</p>')} keer </p>")
+    for f in page.get("faq") or []:
+        if len((f.get("answer") or "").strip()) < MIN_FAQ_ANTWOORD:
+            problems.append(
+                f"AFGEKAPT: FAQ-antwoord op '{(f.get('question') or '?')[:40]}' is "
+                f"maar {len((f.get('answer') or '').strip())} tekens")
+    for t in page.get("takeaways") or []:
+        if len(str(t).strip()) < MIN_TAKEAWAY_TEKENS:
+            problems.append(f"AFGEKAPT: key takeaway '{str(t)[:40]}' is te kort")
+
     if _MD_LEFTOVER.search(joined):
         problems.append("markdown-restanten (**vet**) staan als letterlijke tekens in de tekst")
     if _BRAND_AS_VERB.search(joined):

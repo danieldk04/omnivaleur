@@ -28,6 +28,26 @@ CURRENT_YEAR = 2026
 FRONTEND_DIR = Path(__file__).resolve().parent.parent.parent / "frontend"
 
 
+# Ruim boven wat een artikel nodig heeft (de langste die er staat is ~4.500
+# tokens). Op 8.000 werd een artikel af en toe middenin een zin afgekapt en ging
+# hij zo de lucht in — zie _volledig() hieronder.
+MAX_TOKENS = 16000
+
+
+def _afgekapt(message, wat: str) -> bool:
+    """Claude vertelt zelf of hij tegen de limiet aanliep. Zo ja, dan is wat er
+    staat een halve tekst en mag hij niet gepubliceerd worden."""
+    reden = getattr(message, "stop_reason", None)
+    if reden == "max_tokens":
+        logger.error(
+            f"{wat}: Claude liep tegen de tokenlimiet ({MAX_TOKENS}) en is "
+            f"middenin gestopt. Niets opgeslagen — liever geen artikel dan een "
+            f"half artikel."
+        )
+        return True
+    return False
+
+
 def _extract_text(message) -> str:
     """Join all text blocks from a Claude response.
 
@@ -525,11 +545,14 @@ def generate_page_content(
     try:
         message = client.messages.create(
             model=GEN_MODEL,
-            max_tokens=8000,
+            max_tokens=MAX_TOKENS,
             messages=[{"role": "user", "content": prompt}],
         )
     except Exception as e:
         logger.error(f"Claude API fout voor keyword '{keyword}': {e}")
+        return None
+
+    if _afgekapt(message, f"artikel '{keyword}'"):
         return None
 
     raw = _extract_text(message)
@@ -587,11 +610,14 @@ def translate_to_dutch(generated: dict) -> dict | None:
     try:
         message = client.messages.create(
             model=TRANSLATE_MODEL,
-            max_tokens=8000,
+            max_tokens=MAX_TOKENS,
             messages=[{"role": "user", "content": prompt}],
         )
     except Exception as e:
         logger.error(f"Claude vertaal-fout: {e}")
+        return None
+
+    if _afgekapt(message, "NL-vertaling"):
         return None
 
     raw = _extract_text(message)
@@ -635,10 +661,14 @@ def _translate_faq(client, faq: list[dict]) -> list[dict] | None:
     )
     try:
         message = client.messages.create(
-            model=TRANSLATE_MODEL, max_tokens=3000, messages=[{"role": "user", "content": prompt}]
+            model=TRANSLATE_MODEL, max_tokens=MAX_TOKENS,
+            messages=[{"role": "user", "content": prompt}]
         )
     except Exception as e:
         logger.error(f"Losse FAQ-vertaling mislukt: {e}")
+        return None
+
+    if _afgekapt(message, "losse FAQ-vertaling"):
         return None
 
     raw = _extract_text(message)

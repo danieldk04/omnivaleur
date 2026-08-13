@@ -28,6 +28,18 @@ logger = logging.getLogger(__name__)
 SITE_URL = "https://omnivaleur.com"
 
 
+def _afgekapt(generated: dict) -> list[str]:
+    """De publicatienorm meldt van alles, maar afgekapte tekst is geen nalatigheid
+    maar kapotte content: die mag nooit live. Daarom hier apart en blokkerend,
+    terwijl de overige normpunten waarschuwingen blijven.
+
+    Aanleiding: vijf artikelen stonden live die middenin een zin ophielden en één
+    FAQ-antwoord bestond uit het woord "It"."""
+    from backend.content.quality import check_article
+
+    return [p for p in check_article(generated) if p.startswith("AFGEKAPT")]
+
+
 def _word_count(body_html: str) -> int:
     return len(re.findall(r"\S+", re.sub(r"<[^>]+>", " ", body_html or "")))
 
@@ -237,6 +249,10 @@ async def run_pipeline(
     generated = generate_page_content(keyword, region, pillar, slug, research, existing_for_prompt, refresh_context)
     if not generated:
         return {"success": False, "error": "content generation failed"}
+    kapot = _afgekapt(generated)
+    if kapot:
+        logger.error(f"'{keyword}' is afgekapt en wordt NIET gepubliceerd: {'; '.join(kapot)}")
+        return {"success": False, "error": f"afgekapte tekst: {'; '.join(kapot)}"}
     generated["body_html"] = inject_article_screenshots(
         generated["body_html"], pillar, keyword, generated["h1"], slug, language="en"
     )
@@ -258,6 +274,10 @@ async def run_pipeline(
     if needs_dutch_translation(keyword, region):
         logger.info(f"NL-vertaling genereren voor '{keyword}'")
         translated = translate_to_dutch(generated)
+        if translated and _afgekapt(translated):
+            logger.error(f"NL-vertaling van '{keyword}' is afgekapt — niet opgeslagen, "
+                         f"de Engelse pagina blijft zonder companion")
+            translated = None
         if translated:
             db_nl_slug = f"{nl_slug or slug}-nl"
             translated["body_html"] = inject_article_screenshots(
