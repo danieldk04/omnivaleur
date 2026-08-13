@@ -89,6 +89,39 @@ def _truncate(text: str, limit: int) -> str:
     return text if len(text) <= limit else text[: limit - 1].rstrip() + "…"
 
 
+# SVG breekt tekst niet zelf af. Vroeger knipten we daarom af op een vast aantal
+# tekens, met "…" tot gevolg — 108 regels over 33 pagina's eindigden halverwege een
+# woord. Nu breken we netjes af over meerdere regels, en tekenen we een infographic
+# liever niet dan hem verminkt te tonen.
+def _wrap(text: str, limit: int, max_regels: int) -> list[str] | None:
+    """De tekst over hooguit `max_regels` regels verdelen. None = past niet."""
+    regels, huidig = [], ""
+    for woord in (text or "").split():
+        kandidaat = f"{huidig} {woord}".strip()
+        if len(kandidaat) <= limit or not huidig:
+            huidig = kandidaat
+        else:
+            regels.append(huidig)
+            huidig = woord
+            if len(regels) >= max_regels:
+                return None
+    if huidig:
+        regels.append(huidig)
+    return regels if regels and len(regels) <= max_regels else None
+
+
+def _regels(x: int, y: int, regels: list[str], size: int, fill: str,
+            gewicht: str = "", regelhoogte: int = 17, anchor: str = "") -> str:
+    """Meerdere regels binnen één <text>, met tspans die telkens op dezelfde x
+    beginnen. Zo blijft de tekst selecteerbaar en leesbaar voor schermlezers."""
+    extra = f' font-weight="{gewicht}"' if gewicht else ""
+    extra += f' text-anchor="{anchor}"' if anchor else ""
+    inhoud = "".join(
+        f'<tspan x="{x}" dy="{0 if i == 0 else regelhoogte}">{_esc(r)}</tspan>'
+        for i, r in enumerate(regels))
+    return f'<text x="{x}" y="{y}" font-size="{size}" fill="{fill}"{extra}>{inhoud}</text>"'.rstrip('"')
+
+
 def _caption_label(header: str) -> str:
     """
     Koptekst als bijschrift-fragment. Bewust NIET lowercase: kopteksten bevatten
@@ -179,9 +212,16 @@ def _range_infographic(headers: list[str], body: list[list[str]], language: str)
         if max_value <= 0:
             continue
 
-        bar_x, bar_w, row_h, top = 210, 340, 40, 52
+        kop = _wrap(headers[col], 46, 2)
+        labels = [_wrap(label, 26, 3) for label, _ in usable]
+        if kop is None or any(l is None for l in labels):
+            continue                      # past niet: dan liever de volgende kolom
+        metric = " ".join(kop)
+
+        bar_x, bar_w = 210, 340
+        row_h = 40 + 18 * (max(len(l) for l in labels) - 1)
+        top = 36 + 18 * len(kop)
         width, height = 620, top + row_h * len(usable) + 16
-        metric = _truncate(headers[col], 46)
 
         parts = [
             _svg_open(
@@ -193,7 +233,7 @@ def _range_infographic(headers: list[str], body: list[list[str]], language: str)
                     for label, rng in usable
                 ),
             ),
-            f'<text x="0" y="20" font-size="15" font-weight="700" fill="{INK}">{_esc(metric)}</text>',
+            _regels(0, 20, kop, 15, INK, gewicht="700"),
         ]
         for i, (label, (low, high)) in enumerate(usable):
             y = top + i * row_h
@@ -203,8 +243,8 @@ def _range_infographic(headers: list[str], body: list[list[str]], language: str)
             w = max((high - low) / max_value * bar_w, 6)
             value_label = f"{low:g}–{high:g}" if low != high else f"{low:g}"
             parts.append(
-                f'<text x="0" y="{y + 15}" font-size="14" fill="{INK}">{_esc(_truncate(label, 26))}</text>'
-                f'<rect x="{bar_x}" y="{y + 4}" width="{bar_w}" height="14" rx="7" fill="{TRACK}"/>'
+                _regels(0, y + 15, labels[i], 14, INK)
+                + f'<rect x="{bar_x}" y="{y + 4}" width="{bar_w}" height="14" rx="7" fill="{TRACK}"/>'
                 f'<rect x="{x0:.1f}" y="{y + 4}" width="{w:.1f}" height="14" rx="4" fill="{MEASURE}"/>'
                 f'<text x="{min(x0 + w + 8, width - 4):.1f}" y="{y + 15}" font-size="13" fill="{MUTED}">{_esc(value_label)}</text>'
             )
@@ -222,13 +262,20 @@ def _matrix_infographic(headers: list[str], body: list[list[str]], language: str
         if len(usable) < 3 or len({p[1] for p in usable}) < 2:
             continue
 
-        row_h, top = 34, 52
+        kop = _wrap(headers[col], 60, 2)
+        labels = [_wrap(label, 44, 3) for label, _, _ in usable]
+        waarden = [_wrap(raw, 30, 2) for _, _, raw in usable]
+        if kop is None or any(l is None for l in labels) or any(w is None for w in waarden):
+            continue
+        metric = " ".join(kop)
+
+        row_h = 34 + 18 * (max(len(l) for l in labels) - 1)
+        top = 36 + 18 * len(kop)
         width, height = 620, top + row_h * len(usable) + 12
-        metric = _truncate(headers[col], 60)
 
         parts = [
             _svg_open(width, height, metric, "; ".join(f"{label}: {raw}" for label, _, raw in usable)),
-            f'<text x="0" y="20" font-size="15" font-weight="700" fill="{INK}">{_esc(metric)}</text>',
+            _regels(0, 20, kop, 15, INK, gewicht="700"),
         ]
         marks = {
             "yes": (GOOD, "M0 5 L4 9 L11 0"),
@@ -240,12 +287,12 @@ def _matrix_infographic(headers: list[str], body: list[list[str]], language: str
             color, path = marks[verdict]
             parts.append(
                 f'<line x1="0" y1="{y - 6}" x2="{width}" y2="{y - 6}" stroke="{BORDER}" stroke-width="1"/>'
-                f'<text x="0" y="{y + 14}" font-size="14" fill="{INK}">{_esc(_truncate(label, 44))}</text>'
-                f'<g transform="translate(400,{y + 4})" stroke="{color}" stroke-width="2.5" fill="none" '
+                + _regels(0, y + 14, labels[i], 14, INK)
+                + f'<g transform="translate(400,{y + 4})" stroke="{color}" stroke-width="2.5" fill="none" '
                 f'stroke-linecap="round" stroke-linejoin="round"><path d="{path}"/></g>'
                 # Het woord staat er altijd bij: kleur en vinkje mogen nooit de enige
                 # drager van de betekenis zijn (kleurenblindheid, printen).
-                f'<text x="428" y="{y + 14}" font-size="13" fill="{color}" font-weight="600">{_esc(_truncate(raw, 30))}</text>'
+                + _regels(428, y + 14, waarden[i], 13, color, gewicht="600")
             )
         parts.append("</svg>")
         caption = CAPTIONS["matrix"].get(language, CAPTIONS["matrix"]["en"]).format(label=_caption_label(metric))
@@ -257,11 +304,18 @@ def _steps_infographic(items: list[str], language: str) -> str | None:
     """Genummerde stappenflow. Alleen bij 3-6 stappen die kort genoeg zijn om te tonen."""
     if not 3 <= len(items) <= 6:
         return None
-    steps = [_truncate(re.split(r"(?<=[.!?])\s", s)[0], 68) for s in items]
-    if any(len(s) < 4 for s in steps):
+    zinnen = [re.split(r"(?<=[.!?])\s", s)[0] for s in items]
+    if any(len(z) < 4 for z in zinnen):
+        return None
+    # Drie regels is het maximum: daarboven is het geen stappenflow meer maar een
+    # lap tekst met een bolletje ervoor, en dan kun je beter de lijst zelf tonen.
+    gewikkeld = [_wrap(z, 62, 3) for z in zinnen]
+    if any(g is None for g in gewikkeld):
         return None
 
-    row_h, top = 56, 16
+    regel_max = max(len(g) for g in gewikkeld)
+    row_h, top = 40 + 18 * regel_max, 16
+    steps = [" ".join(g) for g in gewikkeld]
     width, height = 620, top + row_h * len(steps)
     parts = [
         _svg_open(width, height, "Stappenoverzicht" if language == "nl" else "Step overview", " → ".join(steps)),
@@ -275,7 +329,7 @@ def _steps_infographic(items: list[str], language: str) -> str | None:
         parts.append(
             f'<circle cx="18" cy="{y + 18}" r="16" fill="{MEASURE}"/>'
             f'<text x="18" y="{y + 23}" font-size="14" font-weight="700" fill="#ffffff" text-anchor="middle">{i + 1}</text>'
-            f'<text x="48" y="{y + 23}" font-size="14" fill="{INK}">{_esc(step)}</text>'
+            + _regels(48, y + 23, gewikkeld[i], 14, INK)
         )
     parts.append("</svg>")
     return _figure("".join(parts), CAPTIONS["steps"].get(language, CAPTIONS["steps"]["en"]))

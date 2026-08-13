@@ -316,11 +316,50 @@ def _heeft_u_vorm(pagina: dict) -> bool:
     return bool(U_VORM.search(alles))
 
 
+# ------------------------------------------------------- infographics opnieuw
+# De infographics zijn SVG en SVG breekt tekst niet zelf af. Daarom werd lange
+# tekst afgekapt met "…" — 108 regels over 33 pagina's. infographics.py breekt nu
+# netjes af; deze stap tekent de bestaande pagina's opnieuw met dezelfde bron.
+
+FIGUUR = re.compile(r'<figure class="infographic".*?</figure>\s*', re.S)
+
+
+def herteken_infographics(pagina: dict, doen: bool) -> list[str]:
+    from backend.content.infographics import inject_infographics
+
+    body = pagina.get("body_html") or ""
+    oud = len(FIGUUR.findall(body))
+    afgekapt = sum(1 for f in FIGUUR.findall(body)
+                   for t in re.findall(r"<text[^>]*>(.*?)</text>", f, re.S)
+                   if t.rstrip().endswith("…"))
+    if not afgekapt:
+        return []
+    if not doen:
+        return [f"zou {oud} infographics opnieuw tekenen ({afgekapt} afgekapte regels)"]
+
+    kaal = FIGUUR.sub("", body)
+    nieuw = inject_infographics(kaal, pagina.get("language") or "en")
+    aantal = len(FIGUUR.findall(nieuw))
+    over = sum(1 for f in FIGUUR.findall(nieuw)
+               for t in re.findall(r"<text[^>]*>(.*?)</text>", f, re.S)
+               if t.rstrip().endswith("…"))
+    if over:
+        return [f"!! OVERGESLAGEN: er blijven {over} afgekapte regels over"]
+    _bewaar(pagina["slug"], {"body_html": nieuw})
+    verdwenen = oud - aantal
+    melding = f"{aantal} infographics opnieuw getekend, 0 afgekapte regels"
+    if verdwenen:
+        melding += f" ({verdwenen} vervallen: tekst paste er niet in)"
+    return [melding]
+
+
 def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--repareer", action="store_true",
                     help="ook echt herstellen; zonder deze vlag wordt alleen getoond")
+    ap.add_argument("--infographics", action="store_true",
+                    help="infographics met afgekapte tekst opnieuw tekenen")
     ap.add_argument("--u-vorm", action="store_true",
                     help="ook 'u' omzetten naar 'je' op Nederlandse pagina's")
     args = ap.parse_args()
@@ -334,6 +373,18 @@ def main() -> None:
         print(f"— {pagina['slug']} [{pagina.get('language')}]")
         for regel in repareer(pagina, args.repareer):
             print(f"    {regel}")
+
+    if args.infographics:
+        print()
+        raakt = 0
+        for pagina in paginas:
+            regels = herteken_infographics(pagina, args.repareer)
+            if regels:
+                raakt += 1
+                print(f"— {pagina['slug']}")
+                for regel in regels:
+                    print(f"    {regel}")
+        print(f"{raakt} pagina's met afgekapte infographic-tekst.")
 
     if args.u_vorm:
         met_u = [p for p in paginas if _heeft_u_vorm(p)]
