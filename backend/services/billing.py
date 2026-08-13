@@ -17,6 +17,12 @@ GRACE_DAYS = 2
 # How long before the trial ends the reminder mail goes out.
 REMINDER_DAYS_BEFORE = 2
 
+# Hoe ver terug de "je account staat op pauze"-mail nog verstuurd wordt. Houdt de
+# eerste run klein: alleen wie net is buitengesloten, niet iedereen uit het
+# verleden. Wil je die oude groep alsnog benaderen, doe dat dan bewust en met een
+# eigen tekst.
+LOCK_NOTICE_MAX_AGE_DAYS = 5
+
 # Het adres in de handtekening en in Reply-To: hier komen antwoorden binnen.
 # Bewust niet de afzender: uitgaand heet alles Omnivaleur, maar de postbus die
 # gelezen wordt is een andere.
