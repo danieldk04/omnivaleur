@@ -303,6 +303,24 @@ async def send_trial_reminders():
                     lambda sub: (_parse_ts(sub.get("trial_ends_at")) + timedelta(days=GRACE_DAYS))
                     if _parse_ts(sub.get("trial_ends_at")) else None)
 
+    # 3 — het slot is dicht. Hiervoor stopte de communicatie vlák voor het slot,
+    # en daarna hoorde niemand meer iets: een actieve gebruiker werd stilletjes
+    # buitengesloten en meldde zich nooit. Eén mail, één keer, zonder deadline
+    # erin — hij mag ook gewoon vertellen waarom hij stopt.
+    rows = _select_or_warn(
+        lambda: db.table("subscriptions")
+        .select("id, user_id, trial_ends_at")
+        .eq("status", "trial_expired")
+        .lt("trial_ends_at", (now - timedelta(days=GRACE_DAYS)).isoformat())
+        .is_("locked_notice_sent_at", "null")
+        .execute(),
+        "locked_notice_sent_at",
+    )
+    if rows:
+        logger.info(f"Lock notice: {len(rows)} gebruiker(s)")
+        _mail_batch(rows, "locked_notice_sent_at", lambda _days: locked_email(),
+                    lambda sub: _parse_ts(sub.get("trial_ends_at")))
+
 
 def invalidate_access_cache(user_id: str | None = None) -> None:
     """Drop the cached subscription so a payment takes effect immediately."""
