@@ -175,6 +175,18 @@ window.CL = (() => {
   // ("Geen zoekertjestekst ingevuld") tonen zodra ze de beschrijving als leeg
   // beschouwen. Dit is de enige harde waarheid die we hebben: het oordeel van
   // het formulier zelf, in plaats van onze eigen inschatting vooraf.
+  // Marktplaats/2dehands keuren een prijs met ÉÉN decimaal af met "Ongeldige
+  // prijs.": "9,5" en "25,0" mogen niet, "9,50", "25" en "25,00" wel. Een prijs
+  // als 9.5 werd letterlijk "9,5" en de advertentie ging dus nooit online — bij
+  // kleding viel dat niet op omdat die bijna altijd op ,99 of rond eindigt.
+  // Altijd twee decimalen is de vorm die in alle gevallen wordt geaccepteerd.
+  function mpPrijs(waarde, el) {
+    const n = Number(waarde);
+    if (!isFinite(n) || n <= 0) return "";
+    if (el && el.type === "number") return String(n);
+    return n.toFixed(2).replace(".", ",");
+  }
+
   // Alles wat het formulier zelf zichtbaar als bezwaar toont. Eén lijst, zodat
   // elke mislukte publicatie dezelfde volledige uitleg meekrijgt.
   function formulierklachten() {
