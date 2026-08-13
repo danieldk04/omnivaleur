@@ -76,6 +76,13 @@ ALARM_NAAR = ["danieldekoning66@gmail.com", "info@revaleur.com"]
 # alleen échte reacties van handelaren bevatten; berichten van de machine zelf
 # horen daar niet tussen te staan.
 ALARM_MAP = "Reactie-Notificaties"
+# Indeling van het postvak. Bewust maar drie mappen: alles wat in POSTVAK IN
+# blijft staan is een echte reactie waar Daniel nog iets mee moet. Meer mappen
+# betekent meer plekken om iets over het hoofd te zien.
+MAP_AUTOMATISCH = "Automatisch"   # ontvangstbevestigingen, bounces, systeemmail
+MAP_BEANTWOORD = "Beantwoord"     # reacties waar Daniel al op heeft geantwoord
+SYSTEEM_AFZENDER = re.compile(
+    r"@(zoho\.(eu|com)|google\.com)$|dmarc|mailer-daemon|postmaster|no-?reply", re.I)
 # ---------------------------------------------------------------------------
 
 # Opbouwschema: het aantal mails per dag, geteld vanaf je eerste verzenddag. Een
@@ -757,6 +764,93 @@ def _archiveer(msg: EmailMessage) -> None:
         print(f"  (kopie niet in {ALARM_MAP} gezet: {e})")
 
 
+def _opruimen(state: dict) -> None:
+    """Het postvak op orde houden, elke beurt opnieuw.
+
+    De regel is simpel: in POSTVAK IN blijft alleen staan wat nog een antwoord van
+    Daniel nodig heeft. Ontvangstbevestigingen, bounces en systeemmail gaan naar
+    Automatisch; wie hij al beantwoord heeft gaat naar Beantwoord. Er wordt nooit
+    iets weggegooid, alleen verplaatst."""
+    host, gebruiker = os.environ.get("IMAP_HOST"), os.environ.get("MAIL_USER")
+    wachtwoord = os.environ.get("MAIL_PASS")
+    if not (host and gebruiker and wachtwoord):
+        return
+    verplaatst = {MAP_AUTOMATISCH: 0, MAP_BEANTWOORD: 0}
+    try:
+        with imaplib.IMAP4_SSL(host, 993) as imap:
+            imap.login(gebruiker, wachtwoord)
+            bestaand = {r.decode().split(' "/" ')[-1].strip('"')
+                        for r in (imap.list()[1] or [])}
+            for map_ in (MAP_AUTOMATISCH, MAP_BEANTWOORD, ALARM_MAP):
+                if map_ not in bestaand:
+                    try:
+                        imap.create(f'"{map_}"')
+                    except imaplib.IMAP4.error:
+                        pass          # bestond toch al
+
+            beantwoord_na = _antwoorden_van_daniel(imap, gebruiker)
+
+            # Op UID werken, niet op volgnummer: zodra je een bericht als
+            # verwijderd markeert schuiven de volgnummers op en wijst het
+            # volgende nummer naar niets meer.
+            imap.select("INBOX")
+            _, data = imap.uid("search", None, "ALL")
+            for uid in (data[0] or b"").split():
+                _, ruw = imap.uid("fetch", uid, "(RFC822)")
+                if not ruw or not ruw[0]:
+                    continue
+                msg = email.message_from_bytes(ruw[0][1])
+                afzender = parseaddr(msg.get("From", ""))[1].lower()
+                doel = _waar_hoort_dit(msg, afzender, state, beantwoord_na)
+                if not doel:
+                    continue
+                imap.uid("copy", uid, f'"{doel}"')
+                imap.uid("store", uid, "+FLAGS", "(\\Deleted)")
+                verplaatst[doel] += 1
+            imap.expunge()
+    except Exception as e:  # noqa: BLE001 — opruimen mag nooit het mailen stoppen
+        print(f"  (postvak niet opgeruimd: {e})")
+        return
+    if any(verplaatst.values()):
+        print(f"  postvak opgeruimd: {verplaatst[MAP_AUTOMATISCH]} naar "
+              f"{MAP_AUTOMATISCH}, {verplaatst[MAP_BEANTWOORD]} naar {MAP_BEANTWOORD}")
+
+
+def _antwoorden_van_daniel(imap, gebruiker: str) -> dict[str, str]:
+    """Per adres de datum van Daniels laatste bericht eraan. Alleen berichten die
+    hij zelf heeft getypt tellen: de koude mails komen uit dit script en die staan
+    in de administratie, dus daaraan mag je niet zien dat er 'geantwoord' is."""
+    laatste: dict[str, str] = {}
+    imap.select('"Verzonden"')
+    _, data = imap.search(None, "ALL")
+    for num in data[0].split():
+        _, ruw = imap.fetch(num, "(BODY.PEEK[HEADER])")
+        msg = email.message_from_bytes(ruw[0][1])
+        ontvanger = parseaddr(msg.get("To", ""))[1].lower()
+        onderwerp = str(msg.get("Subject", ""))
+        # Alleen echte reacties: die beginnen met Re:. De koude mails niet.
+        if ontvanger and onderwerp.lower().startswith("re:"):
+            datum = msg.get("Date", "")
+            if datum > laatste.get(ontvanger, ""):
+                laatste[ontvanger] = datum
+    return laatste
+
+
+def _waar_hoort_dit(msg, afzender: str, state: dict,
+                    beantwoord_na: dict[str, str]) -> str | None:
+    onderwerp = str(msg.get("Subject", ""))
+    if SYSTEEM_AFZENDER.search(afzender) or BOUNCE_AFZENDERS.search(afzender):
+        return MAP_AUTOMATISCH
+    st = state.get(afzender)
+    if st and st.get("auto_antwoord") and not st.get("beantwoord"):
+        return MAP_AUTOMATISCH
+    if AUTO_ONDERWERP.match(onderwerp.replace("Re:", "").strip()):
+        return MAP_AUTOMATISCH
+    if afzender in beantwoord_na:
+        return MAP_BEANTWOORD
+    return None            # echte reactie, nog niet beantwoord: laat staan
+
+
 def _platte_tekst(msg) -> str:
     if not msg.is_multipart():
         return msg.get_payload(decode=True).decode(errors="ignore")
@@ -870,6 +964,7 @@ def tick(args) -> None:
         if not plan.get("gecheckt"):
             plan["gecheckt"] = True
             _save_plan(plan)
+        _opruimen(state)
 
     # Aan het eind van de dag één berichtje: wat er is gebeurd, of er iets mis
     # ging, en of de machine tussendoor stil heeft gestaan. Zolang dit elke avond
