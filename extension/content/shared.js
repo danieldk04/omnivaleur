@@ -175,6 +175,17 @@ window.CL = (() => {
   // ("Geen zoekertjestekst ingevuld") tonen zodra ze de beschrijving als leeg
   // beschouwen. Dit is de enige harde waarheid die we hebben: het oordeel van
   // het formulier zelf, in plaats van onze eigen inschatting vooraf.
+  // Alles wat het formulier zelf zichtbaar als bezwaar toont. Eén lijst, zodat
+  // elke mislukte publicatie dezelfde volledige uitleg meekrijgt.
+  function formulierklachten() {
+    const els = [...document.querySelectorAll(
+      '[class*="error"], [class*="Error"], [role="alert"], [aria-invalid="true"]'
+    )];
+    const teksten = els.map((el) => (el.textContent || "").replace(/\s+/g, " ").trim())
+                       .filter((t) => t.length > 0 && t.length < 200);
+    return [...new Set(teksten)];
+  }
+
   function beschrijvingKlachtOpPagina() {
     return /geen\s+(advertentietekst|zoekertjestekst)\s+ingevuld/i
       .test(document.body.innerText || "");
