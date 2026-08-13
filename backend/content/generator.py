@@ -573,6 +573,8 @@ def _build_translation_prompt(generated: dict) -> str:
 
     return f"""Translate the following English article into natural, fluent Dutch (Netherlands) for Omnivaleur, a cross-listing SaaS. Keep the exact same meaning, tone (helpful reseller talking to a colleague) and HTML structure — do not add or remove headings, links or paragraphs, just translate the text inside them. Keep all <a href="..."> URLs and platform/brand names (Marktplaats, Vinted, eBay, etc.) unchanged. Keep numbers, prices and the year 2026 unchanged. Translate the verb "cross-list"/"cross-listing" to the Dutch verb "crosslisten"/"crosslisting" — NEVER to the brand name "Omnivaleur" ("Omnivaleur" is a product name, never a verb).
 
+ADDRESS THE READER AS "je" — ALWAYS. Use je/jij/jouw/jou and the matching verb forms ("je kunt", "kun je", "je hebt", "heb je", "jouw voorraad"). NEVER use the formal "u", "uw" or "uzelf", not even once, not in headings, not in questions. Omnivaleur talks to resellers like a colleague, not like a bank.
+
 OUTPUT FORMAT — return EXACTLY this structure, nothing else, no markdown code fences:
 
 TITLE: [Dutch translation, max 60 characters]

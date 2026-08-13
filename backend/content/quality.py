@@ -52,6 +52,7 @@ _EXTERNAL_LINK = re.compile(r'href="https?://(?!(?:www\.)?omnivaleur\.com)([^/"]
 # zin, dan is het model gestopt voordat hij klaar was.
 _SLUIT_NETJES = re.compile(
     r"(</p>|</ul>|</ol>|</h[1-6]>|</table>|</div>|</blockquote>|</figure>)\s*$", re.I)
+_U_VORM = re.compile(r"\b(u|uw|uzelf)\b")
 MIN_FAQ_ANTWOORD = 40      # tekens; "It" en "Het" stonden er echt
 MIN_TAKEAWAY_TEKENS = 25
 
@@ -140,6 +141,14 @@ def check_article(page: dict) -> list[str]:
     for t in page.get("takeaways") or []:
         if len(str(t).strip()) < MIN_TAKEAWAY_TEKENS:
             problems.append(f"AFGEKAPT: key takeaway '{str(t)[:40]}' is te kort")
+
+    # Omnivaleur tutoyeert. "U" is één keer via een vertaling binnengeslopen en
+    # stond op zes pagina's; het leest als een bank in plaats van als een collega.
+    if (page.get("language") or "").lower() == "nl":
+        u_vormen = _U_VORM.findall(joined)
+        if u_vormen:
+            problems.append(
+                f"spreekt de lezer {len(u_vormen)}x met 'u' aan — Omnivaleur zegt altijd 'je'")
 
     if _MD_LEFTOVER.search(joined):
         problems.append("markdown-restanten (**vet**) staan als letterlijke tekens in de tekst")

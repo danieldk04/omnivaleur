@@ -168,11 +168,161 @@ def repareer(pagina: dict, doen: bool) -> list[str]:
     return gedaan
 
 
+# ---------------------------------------------------------------- u → je
+# Omnivaleur tutoyeert. Via de NL-vertaling is "u" op zes pagina's binnengekomen.
+# Zoeken-en-vervangen kan hier niet: bij "u" hoort een andere werkwoordsvorm
+# ("kunt u" → "kun je", "u heeft" → "je hebt"), dus dit moet door het model.
+
+U_VORM = re.compile(r"\b(u|uw|uzelf)\b")
+
+
+def _tel_opmaak(html: str) -> tuple[int, int, int]:
+    """Afbeeldingen, links en alinea's tellen. Na het omzetten moeten dat er
+    precies evenveel zijn — anders heeft het model meer gedaan dan gevraagd en
+    gooien we het resultaat weg."""
+    return (len(re.findall(r"<img\b", html, re.I)),
+            len(re.findall(r"<a\s", html, re.I)),
+            len(re.findall(r"<p>", html, re.I)))
+
+
+def _naar_je(tekst: str, is_html: bool = False) -> str:
+    """Losse tekst (titel, takeaway, FAQ) omzetten."""
+    return _vraag_om_je_vorm([tekst])[0]
+
+
+BLOK = re.compile(r"(<(p|li|h[1-6]|blockquote|td|figcaption)\b[^>]*>)(.*?)(</\2>)",
+                  re.I | re.S)
+
+
+def _vraag_om_je_vorm(stukken: list[str]) -> list[str]:
+    """Meerdere korte stukjes tekst in één keer omzetten. Genummerd heen en terug,
+    zodat je kunt controleren dat je evenveel terugkrijgt als je verstuurde."""
+    genummerd = "\n".join(f"[{i}] {t}" for i, t in enumerate(stukken))
+    prompt = f"""Rewrite each numbered Dutch fragment so it addresses the reader informally with "je" instead of the formal "u".
+
+Change ONLY the second-person forms and the verb conjugations that depend on them:
+  "u kunt" -> "je kunt", "kunt u" -> "kun je", "u heeft" -> "je hebt",
+  "heeft u" -> "heb je", "uw" -> "je" or "jouw", "uzelf" -> "jezelf",
+  "u bent" -> "je bent", "bent u" -> "ben je", "u wilt" -> "je wilt".
+
+Change NOTHING else: no rephrasing, no improving, no shortening, no translating. Leave HTML tags, attributes, URLs, numbers and brand names exactly as they are. If a fragment contains no formal form, return it unchanged.
+
+Return EXACTLY {len(stukken)} lines, each starting with its own [number] marker and nothing else — no preamble, no code fences, no blank lines between them.
+
+{genummerd}"""
+    uit = _claude(prompt, max_tokens=16000)
+    uit = re.sub(r"^```[a-z]*\n?|```$", "", uit).strip()
+    terug = {}
+    for regel in re.split(r"\n(?=\[\d+\])", uit):
+        m = re.match(r"\[(\d+)\]\s?(.*)", regel, re.S)
+        if m:
+            terug[int(m.group(1))] = m.group(2).strip()
+    if len(terug) != len(stukken):
+        raise RuntimeError(f"{len(terug)} stukken terug op {len(stukken)} verstuurd")
+    return [terug[i] for i in range(len(stukken))]
+
+
+def _body_naar_je(body: str) -> str:
+    """Alleen de alinea's aanpakken waar echt "u" in staat, en de nieuwe tekst er
+    met string-splicing weer in zetten. De rest van de HTML wordt niet aangeraakt,
+    dus afbeeldingen, links en opmaak kunnen niet sneuvelen."""
+    treffers = [m for m in BLOK.finditer(body) if U_VORM.search(re.sub(r"<[^>]+>", " ", m.group(3)))]
+    if not treffers:
+        return body
+    nieuw = []
+    # Eén alinea per keer. Grotere porties liepen zelf tegen de tokenlimiet aan —
+    # het model moet immers alles wat het krijgt ook weer uitschrijven.
+    for i in range(0, len(treffers), 3):
+        groep = treffers[i:i + 3]
+        nieuw += _vraag_om_je_vorm([m.group(3) for m in groep])
+
+    # Per alinea controleren. Wat het model heeft laten staan proberen we nog één
+    # keer alleen; wat dán nog niet klopt laten we onaangeroerd staan in plaats van
+    # de hele pagina te laten mislukken. Half omgezet is beter dan niet omgezet.
+    for i, (m, vervanging) in enumerate(zip(treffers, nieuw)):
+        if U_VORM.search(re.sub(r"<[^>]+>", " ", vervanging)):
+            nieuw[i] = _vraag_om_je_vorm([m.group(3)])[0]
+
+    uit, vorig, overgeslagen = [], 0, 0
+    for m, vervanging in zip(treffers, nieuw):
+        if U_VORM.search(re.sub(r"<[^>]+>", " ", vervanging)):
+            overgeslagen += 1
+            continue                              # laat deze alinea staan zoals hij was
+        uit.append(body[vorig:m.start(3)])
+        uit.append(vervanging)
+        vorig = m.end(3)
+    uit.append(body[vorig:])
+    if overgeslagen:
+        print(f"      ({overgeslagen} alinea's bleven staan — het model kreeg ze niet omgezet)")
+    return "".join(uit)
+
+
+def repareer_u_vorm(pagina: dict, doen: bool) -> list[str]:
+    velden, gedaan = {}, []
+    for veld in ("title", "meta_description", "h1", "quick_answer", "body_html"):
+        waarde = pagina.get(veld) or ""
+        if not U_VORM.search(re.sub(r"<[^>]+>", " ", waarde)):
+            continue
+        if not doen:
+            gedaan.append(f"zou {veld} omzetten ({len(U_VORM.findall(waarde))}x)")
+            continue
+        nieuw = _body_naar_je(waarde) if veld == "body_html" else _naar_je(waarde)
+        if veld == "body_html" and _tel_opmaak(waarde) != _tel_opmaak(nieuw):
+            gedaan.append(f"!! {veld} OVERGESLAGEN: opmaak veranderde "
+                          f"{_tel_opmaak(waarde)} -> {_tel_opmaak(nieuw)}")
+            continue
+        if veld != "body_html" and U_VORM.search(re.sub(r"<[^>]+>", " ", nieuw)):
+            gedaan.append(f"!! {veld} OVERGESLAGEN: er staat nog steeds 'u' in")
+            continue
+        velden[veld] = nieuw
+        gedaan.append(f"{veld} omgezet naar je-vorm")
+
+    # Takeaways en FAQ per stukje tekst omzetten, niet als één brok JSON: één
+    # aanhalingsteken verkeerd en je hebt geen lijst meer.
+    takeaways = list(pagina.get("takeaways") or [])
+    if any(U_VORM.search(str(t)) for t in takeaways):
+        if not doen:
+            gedaan.append("zou takeaways omzetten")
+        else:
+            velden["takeaways"] = _vraag_om_je_vorm([str(t) for t in takeaways])
+            gedaan.append("takeaways omgezet naar je-vorm")
+
+    faq = [dict(f) for f in (pagina.get("faq") or [])]
+    plekken = [(i, sleutel) for i, f in enumerate(faq) for sleutel in ("question", "answer")
+               if U_VORM.search(f.get(sleutel) or "")]
+    if plekken:
+        if not doen:
+            gedaan.append(f"zou {len(plekken)} FAQ-teksten omzetten")
+        else:
+            omgezet = _vraag_om_je_vorm([faq[i][k] for i, k in plekken])
+            for (i, k), tekst in zip(plekken, omgezet):
+                faq[i][k] = tekst
+            velden["faq"] = faq
+            gedaan.append(f"{len(plekken)} FAQ-teksten omgezet naar je-vorm")
+
+    if doen and velden:
+        _bewaar(pagina["slug"], velden)
+    return gedaan
+
+
+def _heeft_u_vorm(pagina: dict) -> bool:
+    if (pagina.get("language") or "").lower() != "nl":
+        return False
+    alles = " ".join([
+        pagina.get(k) or "" for k in ("title", "meta_description", "h1", "quick_answer")
+    ] + [re.sub(r"<[^>]+>", " ", pagina.get("body_html") or ""),
+         json.dumps(pagina.get("takeaways") or [], ensure_ascii=False),
+         json.dumps(pagina.get("faq") or [], ensure_ascii=False)])
+    return bool(U_VORM.search(alles))
+
+
 def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--repareer", action="store_true",
                     help="ook echt herstellen; zonder deze vlag wordt alleen getoond")
+    ap.add_argument("--u-vorm", action="store_true",
+                    help="ook 'u' omzetten naar 'je' op Nederlandse pagina's")
     args = ap.parse_args()
 
     paginas = _paginas()
@@ -184,6 +334,14 @@ def main() -> None:
         print(f"— {pagina['slug']} [{pagina.get('language')}]")
         for regel in repareer(pagina, args.repareer):
             print(f"    {regel}")
+
+    if args.u_vorm:
+        met_u = [p for p in paginas if _heeft_u_vorm(p)]
+        print(f"\n{len(met_u)} Nederlandse pagina's spreken de lezer met 'u' aan.\n")
+        for pagina in met_u:
+            print(f"— {pagina['slug']}")
+            for regel in repareer_u_vorm(pagina, args.repareer):
+                print(f"    {regel}")
 
     if not args.repareer:
         print("\nNiets gewijzigd. Draai opnieuw met --repareer om te herstellen.")
