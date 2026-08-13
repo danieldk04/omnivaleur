@@ -980,8 +980,6 @@ async def bulk_import_candidates(body: dict = None, user_id: str = Depends(requi
     reported as `parked`. Auto-merging could destroy an item, auto-creating would
     silently duplicate it — so those few rows go back to the seller to confirm.
     The caller walks past them with the returned `next_offset`.
-    (title/price/photo straight from the scrape, condition defaults to 'good' since
-    scraping can't see purchase price/brand/size — those stay editable on the item after).
     """
     db = get_db()
     body = body or {}
