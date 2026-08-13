@@ -4785,7 +4785,13 @@ function fillImportOptions(sel) {
   if (sel.dataset.filled) return;
   sel.dataset.filled = '1';
   const keep = sel.value;
+  // A "possibly a duplicate" suggestion is deliberately NOT preselected — but it
+  // must stay one click away, at the top, or the seller would have to hunt for it
+  // in a list of hundreds of items.
+  const sug = sel.dataset.suggested;
+  const sugItem = sug ? state.items.find(i => i.id === sug) : null;
   sel.innerHTML = '<option value="">— create new item —</option>' +
+    (sugItem ? `<option value="${sugItem.id}">⚠️ same as: ${esc(sugItem.title)}</option>` : '') +
     state.items.map(i => `<option value="${i.id}">${esc(i.title)}</option>`).join('');
   if (keep) sel.value = keep;
 }
