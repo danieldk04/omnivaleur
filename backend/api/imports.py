@@ -796,7 +796,7 @@ def start_scan(platform: str, user_id: str = Depends(require_active_subscription
 
 
 @router.get("/")
-def list_import_candidates(platform: str = None, status: str = "pending", user_id: str = Depends(get_current_user)):
+async def list_import_candidates(platform: str = None, status: str = "pending", user_id: str = Depends(get_current_user)):
     db = get_db()
     q = db.table("import_candidates").select("*").eq("user_id", user_id)
     if platform:
@@ -806,12 +806,22 @@ def list_import_candidates(platform: str = None, status: str = "pending", user_i
     result = q.order("created_at", desc=True).limit(500).execute()
     candidates = result.data or []
     if candidates:
-        items = fetch_all(lambda: db.table("items").select("id,title").eq("user_id", user_id))
-        listings_by_id = _listings_by_platform_id(db, items)
+        items = fetch_all(lambda: db.table("items").select("id,title,price,brand").eq("user_id", user_id))
+        listings_by_id, platforms_by_item = _listing_index(db, items)
+        unmatched = []
         for c in candidates:
             item_id, reason = _match_candidate(c, items, listings_by_id)
             c["suggested_item_id"] = item_id
             c["match_reason"] = reason
+            if not item_id:
+                unmatched.append(c)
+        # Anything the certain rules couldn't place: check whether it is the same
+        # object under another language, already imported from another channel.
+        for cand_id, item_id in (await _find_twins(unmatched, items, platforms_by_item)).items():
+            for c in candidates:
+                if c["id"] == cand_id:
+                    c["suggested_item_id"] = item_id
+                    c["match_reason"] = "likely_same"
     return candidates
 
 
