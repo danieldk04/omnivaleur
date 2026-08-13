@@ -580,25 +580,186 @@ def _match_candidate(cand: dict, items: list[dict], listings_by_id: dict) -> tup
     return None, None
 
 
-def _listings_by_platform_id(db, items: list[dict]) -> dict:
+def _listing_index(db, items: list[dict]) -> tuple[dict, dict]:
     """
-    Map (platform, platform_listing_id) → item_id for the user's known listings.
+    Read the user's listings once and return two views of them:
+      * (platform, platform_listing_id) → item_id  — for the certain re-import match
+      * item_id → {platforms}                      — which channels an item is already on
     Scoped via the user's item ids (the listings table has no user_id column).
     """
     item_ids = [it["id"] for it in items]
     if not item_ids:
-        return {}
+        return {}, {}
     rows = []
     for i in range(0, len(item_ids), 200):
         brok = item_ids[i:i + 200]
         rows.extend(fetch_all(lambda b=brok: db.table("listings")
                               .select("item_id,platform,platform_listing_id").in_("item_id", b)))
-    out = {}
+    by_listing_id, platforms = {}, {}
     for l in rows:
+        item_id, plat = l.get("item_id"), l.get("platform")
+        if not item_id:
+            continue
+        if plat:
+            platforms.setdefault(item_id, set()).add(plat)
         pid = l.get("platform_listing_id")
-        if pid is not None and l.get("item_id"):
-            out[(l.get("platform"), str(pid))] = l["item_id"]
-    return out
+        if pid is not None:
+            by_listing_id[(plat, str(pid))] = item_id
+    return by_listing_id, platforms
+
+
+def _listings_by_platform_id(db, items: list[dict]) -> dict:
+    """Backwards-compatible view of _listing_index for callers that only need the id map."""
+    return _listing_index(db, items)[0]
+
+
+# ── Cross-platform duplicate detection ────────────────────────────────────
+#
+# The exact-title match above cannot see that "Blauwe Nike hoodie maat M" on
+# Marktplaats and "Blue Nike hoodie size M" on Vinted are one and the same
+# jumper. A seller who imports from BOTH platforms would end up with the item
+# twice — and cross-listing one of those copies would post a genuine duplicate
+# advert on a channel where the item is already for sale.
+#
+# So we look for translated twins, with two hard rules:
+#   1. It NEVER links automatically. Merging two different items is much harder
+#      to undo than leaving a duplicate, so the seller always confirms.
+#   2. It only ever compares a candidate against items that are already listed
+#      on a DIFFERENT channel and NOT on the candidate's own channel — the only
+#      situation in which a translated twin can exist at all.
+# Costs nothing for the common case: a seller who only imports from one
+# platform has no cross-platform items, so the model is never called.
+
+_TWIN_BATCH = 40          # candidates per model call
+_TWIN_MAX_ITEMS = 250     # never build a prompt bigger than this
+_TWIN_PRICE_FACTOR = 2.5  # a twin priced 2.5x apart is not the same object
+
+
+def _twin_pool(cands: list[dict], items: list[dict], platforms_by_item: dict) -> list[dict]:
+    """The items a candidate could plausibly be a translated twin of."""
+    cand_platforms = {c.get("platform") for c in cands}
+    pool = []
+    for it in items:
+        on = platforms_by_item.get(it["id"]) or set()
+        if not on:
+            continue                       # never published anywhere — nothing to be a twin of
+        if on & cand_platforms:
+            continue                       # already on this channel; not a cross-channel twin
+        pool.append(it)
+    return pool[:_TWIN_MAX_ITEMS]
+
+
+def _price(v) -> float | None:
+    try:
+        return float(v) if v is not None else None
+    except (TypeError, ValueError):
+        return None
+
+
+def _twin_plausible(cand: dict, item: dict) -> bool:
+    """Cheap sanity check on top of the model's answer — prices must be in the same league."""
+    a, b = _price(cand.get("price")), _price(item.get("price"))
+    if a is None or b is None or a <= 0 or b <= 0:
+        return True                        # no price to judge on; leave it to the seller
+    return max(a, b) / min(a, b) <= _TWIN_PRICE_FACTOR
+
+
+async def _find_twins(cands: list[dict], items: list[dict], platforms_by_item: dict) -> dict:
+    """
+    candidate_id → item_id for listings that look like the same physical object
+    already in the inventory under another language. Empty dict on any failure:
+    a missing suggestion just means one extra row to review, never a wrong merge.
+    """
+    if not cands:
+        return {}
+    pool = _twin_pool(cands, items, platforms_by_item)
+    if not pool:
+        return {}
+    try:
+        import anthropic as _anthropic
+        import asyncio as _asyncio
+        from backend.config import settings as _settings
+        client = _anthropic.Anthropic(api_key=_settings.anthropic_api_key, timeout=30.0)
+    except Exception as e:
+        logger.warning(f"Twin detection unavailable: {e}")
+        return {}
+
+    item_lines = "\n".join(
+        f"[{i}] {(it.get('title') or '').strip()[:120]}"
+        f"{' — ' + it['brand'] if it.get('brand') else ''}"
+        f"{' — €' + str(it['price']) if it.get('price') is not None else ''}"
+        for i, it in enumerate(pool)
+    )
+
+    async def _chunk(batch: list[dict]) -> dict:
+        cand_lines = "\n".join(
+            f"({j}) {(c.get('title') or '').strip()[:120]}"
+            f"{' — ' + c['brand'] if c.get('brand') else ''}"
+            f"{' — €' + str(c['price']) if c.get('price') is not None else ''}"
+            for j, c in enumerate(batch)
+        )
+        prompt = (
+            "A second-hand seller lists the same physical object on several marketplaces,"
+            " often in different languages (Dutch on Marktplaats/2dehands, English on Vinted).\n\n"
+            "ITEMS ALREADY IN THE INVENTORY:\n"
+            f"{item_lines}\n\n"
+            "NEWLY SCANNED LISTINGS:\n"
+            f"{cand_lines}\n\n"
+            "For each newly scanned listing, decide whether it is the SAME PHYSICAL OBJECT"
+            " as one of the inventory items, allowing for translation between Dutch and English.\n"
+            "Rules:\n"
+            "- Only answer when you are certain. Brand, model, size and colour must all match.\n"
+            "- Two similar garments that differ in size, colour or model are DIFFERENT objects.\n"
+            "- A seller with several of the same product is normal; if you cannot tell which"
+            " one it is, leave it out.\n"
+            "- Leave out anything you are unsure about. An omission is harmless; a wrong"
+            " pairing destroys the seller's inventory.\n\n"
+            'Respond with ONLY a JSON array, e.g. [{"listing":0,"item":3}] — [] if none match.'
+        )
+        try:
+            resp = await _asyncio.to_thread(
+                client.messages.create,
+                model="claude-haiku-4-5-20251001",
+                max_tokens=1000,
+                messages=[{"role": "user", "content": prompt}],
+            )
+            raw = resp.content[0].text.strip()
+            m = re.search(r"\[.*\]", raw, re.S)
+            if not m:
+                return {}
+            pairs = json.loads(m.group(0))
+        except Exception as e:
+            logger.warning(f"Twin detection call failed: {e}")
+            return {}
+
+        out = {}
+        seen_items = set()
+        for p in pairs if isinstance(pairs, list) else []:
+            try:
+                j, i = int(p["listing"]), int(p["item"])
+            except (TypeError, ValueError, KeyError):
+                continue
+            if not (0 <= j < len(batch) and 0 <= i < len(pool)):
+                continue
+            if i in seen_items:
+                continue   # two candidates claiming one item — can't tell them apart, drop both
+            if not _twin_plausible(batch[j], pool[i]):
+                continue
+            seen_items.add(i)
+            out[batch[j]["id"]] = pool[i]["id"]
+        return out
+
+    chunks = [cands[i:i + _TWIN_BATCH] for i in range(0, len(cands), _TWIN_BATCH)]
+    results = await _asyncio_gather_safe(chunks, _chunk)
+    merged = {}
+    for r in results:
+        merged.update(r)
+    return merged
+
+
+async def _asyncio_gather_safe(chunks, fn):
+    import asyncio as _asyncio
+    return await _asyncio.gather(*(fn(c) for c in chunks))
 
 
 @router.post("/scan/{platform}")
