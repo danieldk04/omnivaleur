@@ -672,7 +672,21 @@ async def _find_twins(cands: list[dict], items: list[dict], platforms_by_item: d
     """
     if not cands:
         return {}
-    pool = _twin_pool(cands, items, platforms_by_item)
+    # One platform at a time: the pool of possible twins is different for each.
+    by_platform: dict[str, list[dict]] = {}
+    for c in cands:
+        by_platform.setdefault(c.get("platform"), []).append(c)
+    if len(by_platform) > 1:
+        import asyncio as _a
+        results = await _a.gather(*(
+            _find_twins(group, items, platforms_by_item) for group in by_platform.values()
+        ))
+        merged = {}
+        for r in results:
+            merged.update(r)
+        return merged
+
+    pool = _twin_pool(cands[0].get("platform"), items, platforms_by_item)
     if not pool:
         return {}
     try:
