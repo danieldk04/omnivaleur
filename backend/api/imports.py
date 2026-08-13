@@ -1140,7 +1140,7 @@ async def bulk_import_candidates(body: dict = None, user_id: str = Depends(requi
     # fetch the same rows forever and never reach the rest of the queue.
     return {
         "linked": linked, "created": created, "failed": failed,
-        "parked": parked, "remaining": max(0, remaining - parked),
+        "parked": parked, "remaining": remaining,   # remaining still counts parked rows
         "next_offset": offset + parked,
     }
 
