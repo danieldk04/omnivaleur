@@ -256,7 +256,11 @@ async def _classify_with_claude(title: str | None, description: str | None,
             "- Athletic shorts belong in a sportbroeken category, NOT shorts or jeans.\n"
             "- If gender is not stated or implied, use unisex where a sensible unisex\n"
             "  category exists; otherwise pick the most likely gender.\n"
-            "- Set confidence low if you are guessing about what the garment is.\n\n"
+            "- Set confidence low if you are guessing about what the garment is.\n"
+            '- The "muziek" branch is ONLY for musical instruments, their parts and their\n'
+            "  accessories (a guitar, a plectrum, a case, a cable). A band T-shirt, a\n"
+            "  festival hoodie or anything else you wear is clothing, never muziek.\n"
+            '  When you pick a "muziek" category, gender must be "muziek" too.\n\n'
             'Respond with ONLY JSON: {"gender":"...","category":"...","confidence":"high|medium|low"}'
         )
         # client.messages.create is a *blocking* sync call. Run it in a worker
