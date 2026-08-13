@@ -608,11 +608,6 @@ def _listing_index(db, items: list[dict]) -> tuple[dict, dict]:
     return by_listing_id, platforms
 
 
-def _listings_by_platform_id(db, items: list[dict]) -> dict:
-    """Backwards-compatible view of _listing_index for callers that only need the id map."""
-    return _listing_index(db, items)[0]
-
-
 # ── Cross-platform duplicate detection ────────────────────────────────────
 #
 # The exact-title match above cannot see that "Blauwe Nike hoodie maat M" on
