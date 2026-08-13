@@ -2529,6 +2529,7 @@ async function bgScanMp2dh(job, serverUrl) {
             if (res.status !== 429 && res.status < 500) break;
             await nap(1000 * Math.pow(2, attempt));
           }
+          if (res) apiStatus = res.status;
           if (!res || !res.ok) {
             if (batch === 1) { truncatedReason = `API HTTP ${res ? res.status : "?"}`; break; }
             truncatedReason = `batch ${batch} returned HTTP ${res.status}`;
