@@ -1047,6 +1047,29 @@ async def _reconcile_vinted_sales(db, job, scraped: list[dict], scan_meta: dict 
     )
 
 
+def _fix_photo_url(u):
+    """
+    Repair a scraped image url that lost its protocol.
+
+    Marktplaats' own overview API returns protocol-relative urls ("//images.
+    marktplaats.com/…"). The extension turned those into
+    "https://www.marktplaats.nl//images.marktplaats.com/…" — a 404, so every
+    imported thumbnail was blank and the photo copy silently produced nothing.
+    Cheap to repair here, and it fixes the rows already stored as well.
+    """
+    if not isinstance(u, str):
+        return None
+    s = u.strip()
+    if not s:
+        return None
+    m = re.search(r"^https?://[^/]+//(.+)$", s)
+    if m and "." in m.group(1).split("/")[0]:
+        return "https://" + m.group(1)
+    if s.startswith("//"):
+        return "https:" + s
+    return s
+
+
 def _store_scan_results(db, job, scraped: list[dict]):
     """
     Persist scraped "my listings" cards as import_candidates for manual review.
