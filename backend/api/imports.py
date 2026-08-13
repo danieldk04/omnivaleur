@@ -176,6 +176,36 @@ _TAXONOMY = {
         "unisex schoenen", "unisex accessoires",
         "unisex wielrenkleding", "unisex trainingspakken", "unisex hardloopkleding",
     ],
+    # Niet-kleding: Muziek en Instrumenten. Zelfde sleutels als in
+    # MP_CATEGORIES in extension/background.js — het "muziek "-voorvoegsel houdt
+    # ze uit de buurt van de kledingtakken. Geslacht speelt hier geen rol.
+    "muziek": [
+        "muziek accordeons", "muziek behuizingen en koffers",
+        "muziek blaasinstrumenten blokfluiten", "muziek blaasinstrumenten didgeridoos",
+        "muziek blaasinstrumenten dwarsfluiten en piccolo's",
+        "muziek blaasinstrumenten hobo's", "muziek blaasinstrumenten hoorns",
+        "muziek blaasinstrumenten klarinetten", "muziek blaasinstrumenten mondharmonica's",
+        "muziek blaasinstrumenten overige", "muziek blaasinstrumenten saxofoons",
+        "muziek blaasinstrumenten trombones", "muziek blaasinstrumenten trompetten",
+        "muziek blaasinstrumenten tuba's", "muziek bladmuziek",
+        "muziek dj-sets en draaitafels", "muziek draaiorgels", "muziek drumcomputers",
+        "muziek drumstellen en slagwerk", "muziek effecten",
+        "muziek instrumenten onderdelen", "muziek instrumenten toebehoren",
+        "muziek kabels en stekkers", "muziek keyboards", "muziek licht en laser",
+        "muziek mengpanelen", "muziek microfoons", "muziek midi-apparatuur",
+        "muziek orgels", "muziek orkestbanden", "muziek overige muziek en instrumenten",
+        "muziek percussie", "muziek piano's", "muziek samplers",
+        "muziek snaarinstrumenten banjo's", "muziek snaarinstrumenten gitaren akoestisch",
+        "muziek snaarinstrumenten gitaren bas",
+        "muziek snaarinstrumenten gitaren elektrisch", "muziek snaarinstrumenten harpen",
+        "muziek snaarinstrumenten klavecimbels", "muziek snaarinstrumenten mandolines",
+        "muziek snaarinstrumenten overige", "muziek soundmodules", "muziek standaards",
+        "muziek strijkinstrumenten cello's", "muziek strijkinstrumenten contrabassen",
+        "muziek strijkinstrumenten overige",
+        "muziek strijkinstrumenten violen en altviolen", "muziek synthesizers",
+        "muziek theaterbelichting", "muziek versterkers bas en gitaar",
+        "muziek versterkers keyboard, monitor en pa",
+    ],
 }
 _ALL_CATEGORIES = {c for cats in _TAXONOMY.values() for c in cats}
 
@@ -208,7 +238,8 @@ async def _classify_with_claude(title: str | None, description: str | None,
             f"  {g}: {', '.join(cats)}" for g, cats in _TAXONOMY.items()
         )
         prompt = (
-            "You categorise second-hand clothing listings for a Dutch marketplace.\n\n"
+            "You categorise second-hand listings for a Dutch marketplace. Almost all of"
+            " them are clothing; a minority are musical instruments and their accessories.\n\n"
             f"Brand: {brand or 'unknown'}\n"
             f"Title: {title or ''}\n"
             f"Description: {(description or '')[:1500]}\n\n"
