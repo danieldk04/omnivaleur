@@ -86,6 +86,12 @@ async def health():
             "stripe_price_id": bool(_s.stripe_price_id),
             "stripe_webhook_secret": bool(_s.stripe_webhook_secret),
             "supabase_key": bool(_s.supabase_key),
+            # Niet óf de sleutel er is, maar wélke. Met een anon-sleutel werkt
+            # bijna alles gewoon (RLS staat uit op de meeste tabellen), maar het
+            # opzoeken van een e-mailadres mag niet — en dan verdwijnen alle
+            # herinneringsmails geruisloos. Dat is precies wat er gebeurd is.
+            # De rol staat onversleuteld in de sleutel zelf; dit lekt niets.
+            "supabase_key_role": _supabase_key_role(),
             "anthropic_api_key": bool(_s.anthropic_api_key),
             "owner_email": _s.owner_email,
         },
