@@ -850,7 +850,12 @@ async def _find_twins(cands: list[dict], items: list[dict], platforms_by_item: d
                 continue
             if i in seen_items:
                 continue   # two candidates claiming one item — can't tell them apart, drop both
-            if not _twin_plausible(batch[j], pool[i]):
+            reject = _twin_plausible(batch[j], pool[i], known_brands)
+            if reject:
+                logger.info(
+                    "Twin rejected on %s: %r vs %r",
+                    reject, (batch[j].get("title") or "")[:60], (pool[i].get("title") or "")[:60],
+                )
                 continue
             seen_items.add(i)
             out[batch[j]["id"]] = pool[i]["id"]
