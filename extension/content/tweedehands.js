@@ -4,7 +4,7 @@
   const { step, clog, qs, sleep, waitForEl, fillInput, fillInputHuman, fillDescription, selectDropdown,
           fillBrand, fillBrandField, fillManufacturer, selectBundleFree, selectPackageSize,
           uploadPhotos, submitListing, clickRadioByValue, smartTrunc, fillBidding,
-          dutchColor, ensureDescriptionStillFilled, verifyMpGroupFields, repairMpGroupFields, selectCondition, selectIntendedFor } = window.CL;
+          dutchColor, ensureDescriptionStillFilled, verifyMpGroupFields, repairMpGroupFields, selectCondition, selectIntendedFor, mpPrijs } = window.CL;
 
   const job = await getJob();
   if (!job) return;
@@ -82,7 +82,7 @@
   async function fillForm(item) {
     await waitForEl('input[name="title_nl-BE"], input[name="title_nl-NL"]', 20000);
     await step("title",        () => fillInputHuman(titleInput(), smartTrunc(item.title || "", 60)));
-    await step("price",        () => { const el = qs('input[name="price.value"]'); return fillInputHuman(el, el?.type === "number" ? String(item.price || "") : String(item.price || "").replace(".", ",")); });
+    await step("price",        () => { const el = qs('input[name="price.value"]'); return fillInputHuman(el, mpPrijs(item.price, el)); });
     // Mandatory fields — deliberately NOT inside step(), see marktplaats.js.
     // nudge: ook 2dehands rekent de tekst pas mee na een echte toetsaanslag.
     await fillDescription(['[data-testid="text-editor-input_nl-BE"]', '[data-testid="text-editor-input_nl-NL"]'], sanitize2dh(item.description), { nudge: true });

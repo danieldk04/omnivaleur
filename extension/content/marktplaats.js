@@ -4,7 +4,7 @@
   const { step, clog, qs, sleep, waitForEl, fillInput, fillInputHuman, fillDescription, selectDropdown,
           fillBrand, fillBrandField, fillManufacturer, selectBundleFree, uploadPhotos, submitListing,
           clickRadioByValue, smartTrunc, fillBidding, dutchColor,
-          ensureDescriptionStillFilled, verifyMpGroupFields, repairMpGroupFields, selectCondition, selectIntendedFor } = window.CL;
+          ensureDescriptionStillFilled, verifyMpGroupFields, repairMpGroupFields, selectCondition, selectIntendedFor, mpPrijs } = window.CL;
 
   const job = await getJob();
   if (!job) return;
@@ -83,7 +83,7 @@
   async function fillForm(item) {
     await waitForEl('input[name="title_nl-NL"]', 20000);
     await step("title",        () => fillInputHuman(qs('input[name="title_nl-NL"]'), smartTrunc(item.title || "", 60)));
-    await step("price",        () => { const el = qs('input[name="price.value"]'); return fillInputHuman(el, el?.type === "number" ? String(item.price || "") : String(item.price || "").replace(".", ",")); });
+    await step("price",        () => { const el = qs('input[name="price.value"]'); return fillInputHuman(el, mpPrijs(item.price, el)); });
     // NOT wrapped in step(): description and photos are mandatory on Marktplaats,
     // and step() swallows the error — which is how listings ended up submitted
     // with an empty advertentietekst and no photos, with nothing to explain it.
