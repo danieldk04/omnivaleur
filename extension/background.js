@@ -2516,6 +2516,7 @@ async function bgScanMp2dh(job, serverUrl) {
       const byId = new Map();
       let totalExpected = null;
       let truncatedReason = null;
+      let apiStatus = null;      // the HTTP status the overview API actually gave us
 
       try {
         for (let batch = 1; batch <= MAX_BATCHES; batch++) {
