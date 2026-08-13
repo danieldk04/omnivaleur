@@ -419,7 +419,12 @@ function getEditUrl(platform, payload) {
 // instruction rather than retried.
 class CategoryUnresolvedError extends Error {
   constructor(message) {
-    super(message);
+    // Zet de extensieversie in de melding. Zonder dat is een categorie die de
+    // server wél kent en de extensie niet, niet te onderscheiden van een oude
+    // extensie die nog draait — en dat kostte precies één misdiagnose.
+    let v = "";
+    try { v = ` [extensie ${chrome.runtime.getManifest().version}]`; } catch (_) {}
+    super(message + v);
     this.name = "CategoryUnresolvedError";
     this.needsUserInput = true;
   }
