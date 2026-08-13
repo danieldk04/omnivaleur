@@ -999,6 +999,10 @@ async def bulk_import_candidates(body: dict = None, user_id: str = Depends(requi
     except (TypeError, ValueError):
         batch = 25
     batch = max(1, min(batch, 100))
+    try:
+        offset = max(0, int(body.get("offset") or 0))
+    except (TypeError, ValueError):
+        offset = 0
 
     import asyncio
 
