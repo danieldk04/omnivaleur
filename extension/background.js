@@ -1573,28 +1573,43 @@ async function bgDeleteMp2dh(job, serverUrl) {
       // advertentie onder een ander tabblad/filter van het overzicht valt).
       // Daarom eerst de advertentiepagina zelf opvragen: geeft die nog een
       // levende advertentie, dan is dit een echte fout, geen succes.
-      const adUrl = payload.platform_listing_url
-        || (listingId ? `${new URL(overviewUrl).origin}/v/a/${listingId}` : "");
-      if (adUrl) {
-        const live = await execInTab(tabId, async (u) => {
-          try {
-            const r = await fetch(u, { credentials: "include", redirect: "follow" });
-            if (r.status === 404 || r.status === 410) return false;
-            if (!r.ok) return null; // niets bewezen
-            const html = (await r.text()).toLowerCase();
-            if (/niet meer beschikbaar|is verwijderd|verlopen advertentie|not available|no longer available/.test(html)) return false;
-            return true;
-          } catch (e) { return null; }
-        }, [adUrl]).catch(() => null);
-        if (live === true) {
-          throw new Error(
-            `"${title}" cannot be found in your ${platform} listings overview, but the listing is still online ` +
-            `(${adUrl}). Nothing was removed — delete it by hand, or check that you are signed in to the right account.`
-          );
-        }
+      // De verkoperspagina is de enige vorm die op een id alléén betrouwbaar
+      // antwoordt. /v/listing/{id} en /v/a/{id} geven ALTIJD 404 — ook voor een
+      // advertentie die gewoon online staat — en precies dat las deze controle
+      // als bewijs dat hij weg was. Resultaat: het dashboard zette hem op
+      // "verwijderd" terwijl hij bij Marktplaats nog gewoon te koop stond.
+      const origin = new URL(overviewUrl).origin;
+      const opgeslagen = payload.platform_listing_url || "";
+      const adUrl = listingId ? `${origin}/seller/view/${listingId}`
+                  : (/\/v\//.test(opgeslagen) ? opgeslagen : "");
+      const live = adUrl ? await execInTab(tabId, async (u) => {
+        try {
+          const r = await fetch(u, { credentials: "include", redirect: "follow" });
+          if (r.status === 404 || r.status === 410) return false;
+          if (!r.ok) return null; // niets bewezen
+          const html = (await r.text()).toLowerCase();
+          if (/niet meer beschikbaar|is verwijderd|verlopen advertentie|not available|no longer available/.test(html)) return false;
+          return true;
+        } catch (e) { return null; }
+      }, [adUrl]).catch(() => null) : null;
+
+      if (live === true) {
+        throw new Error(
+          `"${title}" cannot be found in your ${platform} listings overview, but the listing is still online ` +
+          `(${adUrl}). Nothing was removed — delete it by hand, or check that you are signed in to the right account.`
+        );
       }
-      // Echt nergens meer te vinden = doel bereikt.
-      console.log(`[Omnivaleur] bgDelete: "${title}" not among ${findResult.rendered} ${platform} ads and not live on its own URL — already gone, marking done`);
+      if (live !== false) {
+        // Onbewezen is géén succes. "Waarschijnlijk weg" melden als verwijderd is
+        // de gevaarlijkste uitkomst van de drie: de verkoper denkt dat hij eraf
+        // staat, en hij staat er nog.
+        throw new Error(
+          `"${title}" cannot be found in your ${platform} listings overview, and we could not verify ` +
+          `whether it is still online. Nothing was removed — check it by hand on ${platform}.`
+        );
+      }
+      // Aantoonbaar weg = doel bereikt.
+      console.log(`[Omnivaleur] bgDelete: "${title}" not among ${findResult.rendered} ${platform} ads and confirmed gone — marking done`);
       await finaliseJob(serverUrl, job.id, "complete", { note: "already_absent" });
       return;
     }
