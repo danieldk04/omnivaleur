@@ -69,6 +69,25 @@ app.include_router(billing.router)
 app.include_router(content.router)
 
 
+def _supabase_key_role() -> str:
+    """De rol uit de Supabase-sleutel ('anon' of 'service_role'), of 'onbekend'.
+
+    Een JWT draagt zijn claims onversleuteld mee; alleen de handtekening is
+    geheim. We lezen dus niets gevoeligs — maar het verschil bepaalt wel of de
+    server e-mailadressen mag opzoeken, en dus of de proefherinneringen überhaupt
+    verstuurd kunnen worden.
+    """
+    import base64
+    import json as _json
+    from backend.config import settings as _s
+    try:
+        payload = _s.supabase_key.split(".")[1]
+        payload += "=" * (-len(payload) % 4)
+        return _json.loads(base64.urlsafe_b64decode(payload)).get("role") or "onbekend"
+    except Exception:
+        return "onbekend"
+
+
 @app.get("/health")
 async def health():
     # Alleen ja/nee per instelling, nooit de waarde zelf. Dagen zoekwerk gingen op
