@@ -295,6 +295,67 @@ const MP_CATEGORIES = {
   "electronics telefoon htc":          { cat1: 820, cat3: 1685, bucketId: 225 },
   "electronics telefoon blackberry":   { cat1: 820, cat3: 1954, bucketId: 225 },
   "electronics telefoon overige":      { cat1: 820, cat3: 837,  bucketId: 225 },
+
+  // === MUZIEK EN INSTRUMENTEN (cat1 728) ===
+  // Herkenbaar aan het "muziek "-voorvoegsel, net als de electronics-tak.
+  // LET OP: deze tak is maar TWEE niveaus diep, kleding is er drie. Daarom
+  // staat hier geen bucketId: /plaats/728/{cat3} is de juiste vorm en met een
+  // bucketId erbij antwoordt Marktplaats met HTTP 400. Alle 52 ids zijn op
+  // 13-08-2026 in een ingelogde browser nagelopen tegen de categorienaam die
+  // Marktplaats zelf rendert — niet tegen een HTTP-status. 2dehands gebruikt
+  // exact dezelfde ids.
+  "muziek accordeons":                                  { cat1: 728, cat3: 729 },   // Accordeons
+  "muziek behuizingen en koffers":                      { cat1: 728, cat3: 730 },   // Behuizingen en Koffers
+  "muziek blaasinstrumenten blokfluiten":               { cat1: 728, cat3: 1713 },   // Blaasinstrumenten | Blokfluiten
+  "muziek blaasinstrumenten didgeridoos":               { cat1: 728, cat3: 2885 },   // Blaasinstrumenten | Didgeridoos
+  "muziek blaasinstrumenten dwarsfluiten en piccolo's": { cat1: 728, cat3: 743 },   // Blaasinstrumenten | Dwarsfluiten en Piccolo's
+  "muziek blaasinstrumenten hobo's":                    { cat1: 728, cat3: 1764 },   // Blaasinstrumenten | Hobo's
+  "muziek blaasinstrumenten hoorns":                    { cat1: 728, cat3: 1765 },   // Blaasinstrumenten | Hoorns
+  "muziek blaasinstrumenten klarinetten":               { cat1: 728, cat3: 771 },   // Blaasinstrumenten | Klarinetten
+  "muziek blaasinstrumenten mondharmonica's":           { cat1: 728, cat3: 1714 },   // Blaasinstrumenten | Mondharmonica's
+  "muziek blaasinstrumenten overige":                   { cat1: 728, cat3: 763 },   // Blaasinstrumenten | Overige
+  "muziek blaasinstrumenten saxofoons":                 { cat1: 728, cat3: 1766 },   // Blaasinstrumenten | Saxofoons
+  "muziek blaasinstrumenten trombones":                 { cat1: 728, cat3: 1767 },   // Blaasinstrumenten | Trombones
+  "muziek blaasinstrumenten trompetten":                { cat1: 728, cat3: 779 },   // Blaasinstrumenten | Trompetten
+  "muziek blaasinstrumenten tuba's":                    { cat1: 728, cat3: 1768 },   // Blaasinstrumenten | Tuba's
+  "muziek bladmuziek":                                  { cat1: 728, cat3: 731 },   // Bladmuziek
+  "muziek dj-sets en draaitafels":                      { cat1: 728, cat3: 738 },   // Dj-sets en Draaitafels
+  "muziek draaiorgels":                                 { cat1: 728, cat3: 1769 },   // Draaiorgels
+  "muziek drumcomputers":                               { cat1: 728, cat3: 1402 },   // Drumcomputers
+  "muziek drumstellen en slagwerk":                     { cat1: 728, cat3: 742 },   // Drumstellen en Slagwerk
+  "muziek effecten":                                    { cat1: 728, cat3: 744 },   // Effecten
+  "muziek instrumenten onderdelen":                     { cat1: 728, cat3: 1716 },   // Instrumenten | Onderdelen
+  "muziek instrumenten toebehoren":                     { cat1: 728, cat3: 1717 },   // Instrumenten | Toebehoren
+  "muziek kabels en stekkers":                          { cat1: 728, cat3: 2135 },   // Kabels en Stekkers
+  "muziek keyboards":                                   { cat1: 728, cat3: 751 },   // Keyboards
+  "muziek licht en laser":                              { cat1: 728, cat3: 754 },   // Licht en Laser
+  "muziek mengpanelen":                                 { cat1: 728, cat3: 756 },   // Mengpanelen
+  "muziek microfoons":                                  { cat1: 728, cat3: 757 },   // Microfoons
+  "muziek midi-apparatuur":                             { cat1: 728, cat3: 758 },   // Midi-apparatuur
+  "muziek orgels":                                      { cat1: 728, cat3: 761 },   // Orgels
+  "muziek orkestbanden":                                { cat1: 728, cat3: 762 },   // Orkestbanden
+  "muziek overige muziek en instrumenten":              { cat1: 728, cat3: 764 },   // Overige Muziek en Instrumenten
+  "muziek percussie":                                   { cat1: 728, cat3: 739 },   // Percussie
+  "muziek piano's":                                     { cat1: 728, cat3: 765 },   // Piano's
+  "muziek samplers":                                    { cat1: 728, cat3: 770 },   // Samplers
+  "muziek snaarinstrumenten banjo's":                   { cat1: 728, cat3: 1770 },   // Snaarinstrumenten | Banjo's
+  "muziek snaarinstrumenten gitaren akoestisch":        { cat1: 728, cat3: 746 },   // Snaarinstrumenten | Gitaren | Akoestisch
+  "muziek snaarinstrumenten gitaren bas":               { cat1: 728, cat3: 747 },   // Snaarinstrumenten | Gitaren | Bas
+  "muziek snaarinstrumenten gitaren elektrisch":        { cat1: 728, cat3: 748 },   // Snaarinstrumenten | Gitaren | Elektrisch
+  "muziek snaarinstrumenten harpen":                    { cat1: 728, cat3: 2886 },   // Snaarinstrumenten | Harpen
+  "muziek snaarinstrumenten klavecimbels":              { cat1: 728, cat3: 1771 },   // Snaarinstrumenten | Klavecimbels
+  "muziek snaarinstrumenten mandolines":                { cat1: 728, cat3: 1772 },   // Snaarinstrumenten | Mandolines
+  "muziek snaarinstrumenten overige":                   { cat1: 728, cat3: 1370 },   // Snaarinstrumenten | Overige
+  "muziek soundmodules":                                { cat1: 728, cat3: 772 },   // Soundmodules
+  "muziek standaards":                                  { cat1: 728, cat3: 774 },   // Standaards
+  "muziek strijkinstrumenten cello's":                  { cat1: 728, cat3: 1773 },   // Strijkinstrumenten | Cello's
+  "muziek strijkinstrumenten contrabassen":             { cat1: 728, cat3: 1774 },   // Strijkinstrumenten | Contrabassen
+  "muziek strijkinstrumenten overige":                  { cat1: 728, cat3: 1775 },   // Strijkinstrumenten | Overige
+  "muziek strijkinstrumenten violen en altviolen":      { cat1: 728, cat3: 1371 },   // Strijkinstrumenten | Violen en Altviolen
+  "muziek synthesizers":                                { cat1: 728, cat3: 777 },   // Synthesizers
+  "muziek theaterbelichting":                           { cat1: 728, cat3: 2631 },   // Theaterbelichting
+  "muziek versterkers bas en gitaar":                   { cat1: 728, cat3: 745 },   // Versterkers | Bas en Gitaar
+  "muziek versterkers keyboard, monitor en pa":         { cat1: 728, cat3: 768 },   // Versterkers | Keyboard, Monitor en PA
 };
 // NOTE: there is deliberately no catch-all default category. There used to be
 // one (dames jeans), and it meant any item whose category didn't resolve got
@@ -426,7 +487,11 @@ function getMpSyiUrl(platform, item) {
     if (resolved) cat3 = resolved;
   }
 
-  return `${base}/${c.cat1}/${cat3}?bucketId=${c.bucketId}&title=`;
+  // A three-level branch (all clothing) needs its bucketId; a two-level branch
+  // (music) has none, and sending one anyway makes Marktplaats answer HTTP 400.
+  return c.bucketId == null
+    ? `${base}/${c.cat1}/${cat3}?title=`
+    : `${base}/${c.cat1}/${cat3}?bucketId=${c.bucketId}&title=`;
 }
 
 // Map a stored size onto a Marktplaats children's size type id.
