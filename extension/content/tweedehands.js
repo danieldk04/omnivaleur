@@ -17,7 +17,14 @@
     } else {
       await fillForm(item);
       const id = await submitListing(/2dehands\.be\/v\/[^/]+\/(m\d+)/);
-      send("JOB_DONE", { platform_listing_id: id, platform_listing_url: `https://www.2dehands.be/v/listing/${id}` });
+      // Marktplaats/2dehands hebben GEEN werkende /v/listing/{id}-vorm: die geeft
+      // 404, ook voor een advertentie die gewoon online staat. Een verzonnen link
+      // is niet alleen een dode knop in het dashboard — de verwijderroute
+      // gebruikte hem om te controleren of iets nog leeft, kreeg 404, en
+      // concludeerde "al weg" terwijl de advertentie er nog stond. Neem daarom de
+      // echte pagina waar we na het plaatsen op belanden.
+      const echteUrl = /\/v\//.test(location.href) ? location.href.split("?")[0] : `https://www.2dehands.be/seller/view/${id}`;
+      send("JOB_DONE", { platform_listing_id: id, platform_listing_url: echteUrl });
     }
   } catch (e) {
     send("JOB_ERROR", null, String(e)); // tab stays open

@@ -365,13 +365,18 @@ const MP_CATEGORIES = {
 // the job with an actionable message instead (see getMpSyiUrl).
 
 function getDeleteUrl(platform, payload) {
+  // /v/listing/{id} bestaat NIET bij Marktplaats/2dehands — die geeft altijd
+  // 404, ook voor een levende advertentie. De verwijderklus opende dus een
+  // foutpagina, vond daar geen Verwijder-knop en moest terugvallen op zoeken in
+  // het overzicht. /seller/view/{id} is de pagina die het wél doet, met de knop
+  // erop.
   if (platform === "marktplaats") {
-    if (payload?.platform_listing_id) return `https://www.marktplaats.nl/v/listing/${payload.platform_listing_id}`;
+    if (payload?.platform_listing_id) return `https://www.marktplaats.nl/seller/view/${payload.platform_listing_id}`;
     if (payload?.platform_listing_url) return payload.platform_listing_url;
     return "https://www.marktplaats.nl";
   }
   if (platform === "2dehands") {
-    if (payload?.platform_listing_id) return `https://www.2dehands.be/v/listing/${payload.platform_listing_id}`;
+    if (payload?.platform_listing_id) return `https://www.2dehands.be/seller/view/${payload.platform_listing_id}`;
     if (payload?.platform_listing_url) return payload.platform_listing_url;
     return "https://www.2dehands.be";
   }
@@ -2944,10 +2949,14 @@ chrome.tabs.onUpdated.addListener(async (tabId, changeInfo) => {
   clearJobWatchdog(tabId);
   chrome.storage.local.remove([key, `job_${meta.platform}`]);
 
+  // Zelfde reden als in getDeleteUrl: /v/listing/{id} is een dode link. Liever
+  // de echte pagina waar we na het plaatsen op staan; kunnen we die niet lezen,
+  // dan de verkoperspagina, want die werkt altijd.
+  const gelandeUrl = /\/v\//.test(url) ? url.split("?")[0] : null;
   const listingUrl = meta.platform === "marktplaats"
-    ? `https://www.marktplaats.nl/v/listing/${listingId}`
+    ? (gelandeUrl || `https://www.marktplaats.nl/seller/view/${listingId}`)
     : meta.platform === "2dehands"
-    ? `https://www.2dehands.be/v/listing/${listingId}`
+    ? (gelandeUrl || `https://www.2dehands.be/seller/view/${listingId}`)
     : meta.platform === "vinted"
     ? `${new URL(url).origin}/items/${listingId}`
     : null;
