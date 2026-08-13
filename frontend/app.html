@@ -4766,7 +4766,7 @@ function renderImportReview(candidates) {
         <div style="margin-bottom:4px">${matchBadge(c.match_reason)}</div>
         <select id="import-match-${c.id}" onfocus="fillImportOptions(this)" onmousedown="fillImportOptions(this)">
           <option value="">— create new item —</option>
-          ${c.suggested_item_id ? `<option value="${c.suggested_item_id}" selected>${esc((state.items.find(i => i.id === c.suggested_item_id) || {}).title || 'suggested match')}</option>` : ''}
+          ${c.suggested_item_id ? `<option value="${c.suggested_item_id}"${c.match_reason === 'likely_same' ? '' : ' selected'}>${c.match_reason === 'likely_same' ? '⚠️ same as: ' : ''}${esc((state.items.find(i => i.id === c.suggested_item_id) || {}).title || 'suggested match')}</option>` : ''}
         </select>
       </td>
       <td style="white-space:nowrap">
