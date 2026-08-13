@@ -4875,7 +4875,7 @@ async function bulkImportAllCandidates() {
       try {
         const r = await apiFetch(`${API}/api/imports/bulk-import`, {
           method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ limit }),
+          body: JSON.stringify({ limit, offset }),
         });
         data = await parseJsonSafe(r);
         if (!r.ok) {
