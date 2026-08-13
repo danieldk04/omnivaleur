@@ -791,6 +791,12 @@ async def _find_twins(cands: list[dict], items: list[dict], platforms_by_item: d
         logger.warning(f"Twin detection unavailable: {e}")
         return {}
 
+    # The seller's own brand vocabulary, so a brand can be spotted in a title even
+    # when the scan didn't record one for that row.
+    known_brands = {(it.get("brand") or "").strip().lower() for it in items}
+    known_brands |= {(c.get("brand") or "").strip().lower() for c in cands}
+    known_brands.discard("")
+
     item_lines = "\n".join(
         f"[{i}] {(it.get('title') or '').strip()[:120]}"
         f"{' — ' + it['brand'] if it.get('brand') else ''}"
