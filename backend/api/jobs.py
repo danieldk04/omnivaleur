@@ -1196,8 +1196,10 @@ def _store_scan_results(db, job, scraped: list[dict]):
 
         # `photo_urls` (the full ordered list) is the source of truth; keep the
         # single `photo_url` populated too for the old thumbnail/UI path.
-        photo_urls = row.get("photo_urls") or ([row["photo_url"]] if row.get("photo_url") else [])
-        photo_url = row.get("photo_url") or (photo_urls[0] if photo_urls else None)
+        photo_urls = [u for u in (_fix_photo_url(u) for u in (row.get("photo_urls") or [])) if u]
+        if not photo_urls and row.get("photo_url"):
+            photo_urls = [u for u in [_fix_photo_url(row["photo_url"])] if u]
+        photo_url = _fix_photo_url(row.get("photo_url")) or (photo_urls[0] if photo_urls else None)
 
         base = {
             "user_id": job["user_id"],
