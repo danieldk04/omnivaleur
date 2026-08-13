@@ -1,6 +1,6 @@
 {
  "_bron": "marktplaats.nl CategoryTreeFacet, geoogst 2026-08-13",
- "_let_op": "L2-ids. De muziekboom is 2 niveaus diep (L1 728 -> L2), kleding is er 3. De SYI-url-vorm voor een 2-niveau-boom is NOG NIET geverifieerd tegen de kruimelpadbalk — doe dat voordat dit in MP_CATEGORIES wordt gezet.",
+ "_let_op": "GEVERIFIEERD 13-08-2026 in een ingelogde browser, tegen de door Marktplaats zelf gerenderde categorienaam (l1Name/categoryFullName), niet tegen een HTTP-status. Alle 52 ids kwamen goed uit; 2dehands.be gebruikt exact dezelfde ids.",
  "l1": {
   "id": 728,
   "label": "Muziek en Instrumenten"
@@ -58,5 +58,7 @@
   "1764": "Blaasinstrumenten | Hobo's",
   "1771": "Snaarinstrumenten | Klavecimbels",
   "762": "Orkestbanden"
- }
+ },
+ "_syi_url": "https://www.marktplaats.nl/plaats/728/{id}  — LET OP: ZONDER bucketId. Kleding is 3 niveaus diep en heeft /plaats/{L1}/{L3}?bucketId={L2}; deze boom is 2 niveaus diep en een bucketId geeft daar HTTP 400.",
+ "_nog_te_doen": "Het invulscript van het advertentieformulier is op kleding gebouwd (maat, geslacht, merk, kleur). Of dat op een muziekformulier goed gaat is NIET getest."
 }
