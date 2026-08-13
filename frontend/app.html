@@ -4414,7 +4414,7 @@ async function markSoldItem(itemId, title) {
 }
 
 // ── Import existing listings (scan platform → review → link/create) ──────
-const IMPORT_SCANNABLE = { vinted: true, marktplaats: false, '2dehands': false, ebay: false, etsy: false, shopify: false };
+const IMPORT_SCANNABLE = { vinted: true, marktplaats: true, '2dehands': true, ebay: false, etsy: false, shopify: false };
 const scanningPlatforms = {}; // platform -> true while a scan is queued/running in the background
 let importCandidatesById = {}; // id -> candidate, so the item modal can prefill from a scan
 let importCreateCandidateId = null; // set while the item modal is creating an item from an import
