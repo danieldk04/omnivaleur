@@ -23,15 +23,31 @@ logger = logging.getLogger(__name__)
 # Article generation uses Sonnet (strong SEO quality at ~1/5 the cost of Opus);
 # translation is mechanical HTML-preserving work, so Haiku handles it far cheaper.
 GEN_MODEL = "claude-sonnet-5"
-TRANSLATE_MODEL = "claude-haiku-4-5-20251001"
+# Vertalen ging op Haiku: sneller en goedkoper, maar het leverde "lesenswaardig"
+# (Duits), "hoger-eindige" en onvertaald "throttled" op in gepubliceerde artikelen.
+# Bij een handvol artikelen per week weegt dat prijsverschil niet op tegen tekst
+# die je aan klanten laat lezen.
+TRANSLATE_MODEL = "claude-sonnet-5"
 CURRENT_YEAR = 2026
 FRONTEND_DIR = Path(__file__).resolve().parent.parent.parent / "frontend"
 
 
-# Ruim boven wat een artikel nodig heeft (de langste die er staat is ~4.500
-# tokens). Op 8.000 werd een artikel af en toe middenin een zin afgekapt en ging
-# hij zo de lucht in — zie _volledig() hieronder.
-MAX_TOKENS = 16000
+# Ruim boven wat een artikel nodig heeft. Op 8.000 werd een artikel af en toe
+# middenin een zin afgekapt en ging het zo de lucht in; op 16.000 liep de
+# NL-vertaling van het langste artikel er alsnog tegenaan, want die moet het hele
+# artikel opnieuw uitschrijven en Nederlands is langer dan Engels.
+MAX_TOKENS = 24000
+
+
+def _vraag(client, model: str, prompt: str, max_tokens: int = None):
+    """Eén vraag aan Claude, altijd streamend. Zonder streamen weigert de SDK
+    aanvragen die lang kunnen duren, en dat zijn precies de lange artikelen."""
+    with client.messages.stream(
+        model=model,
+        max_tokens=max_tokens or MAX_TOKENS,
+        messages=[{"role": "user", "content": prompt}],
+    ) as stroom:
+        return stroom.get_final_message()
 
 
 def _afgekapt(message, wat: str) -> bool:
@@ -543,11 +559,7 @@ def generate_page_content(
     prompt = _build_prompt(keyword, region, pillar, slug, research, existing_pages, refresh_context)
 
     try:
-        message = client.messages.create(
-            model=GEN_MODEL,
-            max_tokens=MAX_TOKENS,
-            messages=[{"role": "user", "content": prompt}],
-        )
+        message = _vraag(client, GEN_MODEL, prompt)
     except Exception as e:
         logger.error(f"Claude API fout voor keyword '{keyword}': {e}")
         return None
@@ -610,11 +622,7 @@ def translate_to_dutch(generated: dict) -> dict | None:
     prompt = _build_translation_prompt(generated)
 
     try:
-        message = client.messages.create(
-            model=TRANSLATE_MODEL,
-            max_tokens=MAX_TOKENS,
-            messages=[{"role": "user", "content": prompt}],
-        )
+        message = _vraag(client, TRANSLATE_MODEL, prompt)
     except Exception as e:
         logger.error(f"Claude vertaal-fout: {e}")
         return None
@@ -662,10 +670,7 @@ def _translate_faq(client, faq: list[dict]) -> list[dict] | None:
         f"SOURCE:\n{source}\n"
     )
     try:
-        message = client.messages.create(
-            model=TRANSLATE_MODEL, max_tokens=MAX_TOKENS,
-            messages=[{"role": "user", "content": prompt}]
-        )
+        message = _vraag(client, TRANSLATE_MODEL, prompt)
     except Exception as e:
         logger.error(f"Losse FAQ-vertaling mislukt: {e}")
         return None
