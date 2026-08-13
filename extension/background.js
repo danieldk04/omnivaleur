@@ -2623,7 +2623,7 @@ async function bgScanMp2dh(job, serverUrl) {
     });
 
     if (!result || !result.items) throw new Error("Could not read your listings overview — page structure may have changed.");
-    if (!result.items.length) throw new Error("No listings found on your overview — are you logged in on this account?");
+    if (!result.items.length) throw new Error(mpEmptyScanReason(result.meta || {}, platform));
     await reportProgress(serverUrl, job.id, {
       stage: "enriching",
       message: `Found ${result.items.length} listings — fetching full details…`,
