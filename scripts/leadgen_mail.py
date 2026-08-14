@@ -753,6 +753,13 @@ def _check_inbox(state: dict, boek: "Notion", dagen: int) -> tuple[int, int, int
                 afgemeld += 1
                 if lead:
                     boek.afgemeld(lead)
+            elif AFWIJZING.search(body[:400]) and not st.get("afgewezen"):
+                # Wel netjes geantwoord, maar het is nee. Geen afmelding — hij mag
+                # over een half jaar best weer benaderd worden — maar in de lijst
+                # hoort dit niet naast de warme reacties te staan.
+                st["afgewezen"] = True
+                if lead:
+                    boek.afgewezen(lead)
 
     _save_state(state)
     return nieuw, afgemeld, bounces
