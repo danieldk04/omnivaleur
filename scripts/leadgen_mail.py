@@ -591,10 +591,12 @@ class Notion:
                        "Volgende actie op": ("date", None)})
 
     def met_de_hand(self, lead: dict, datum: str) -> None:
-        """Daniel heeft deze zelf gemaild, buiten de machine om. Vastleggen zodat
-        de lijst één waarheid houdt en er nooit een koude mail achteraan gaat."""
-        self._schrijf(lead, f"door Daniel zelf gemaild op {datum} — "
-                            f"buiten de machine om, geen automatische mail meer",
+        """Al gemaild vanaf dit adres, maar niet volgens de administratie: Daniel
+        deed het zelf, of het was een oudere ronde waarvan de administratie weg is.
+        Beide gevallen betekenen hetzelfde — deze persoon is al benaderd en krijgt
+        geen tweede koude mail."""
+        self._schrijf(lead, f"al benaderd op {datum} buiten de machine om — "
+                            f"geen automatische mail meer",
                       {"Fase": ("select", "2. Benaderd"),
                        "Status": ("status", "Reached Out"),
                        "Eerste contact": ("date", datum)})
