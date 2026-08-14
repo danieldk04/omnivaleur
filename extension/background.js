@@ -3675,15 +3675,20 @@ async function _mwSetVintedPrice(selector, values) {
     el.dispatchEvent(new Event("change", { bubbles: true }));
     await sleep(200);
     el.dispatchEvent(new Event("blur", { bubbles: true }));
-    // Ruim de tijd geven om alsnog te klagen: te vroeg kijken is precies hoe een
-    // afgekeurde prijs er goed uitzag.
-    for (let i = 0; i < 6; i++) {
+    // Even de tijd geven om alsnog te klagen — te vroeg kijken is precies hoe een
+    // afgekeurde prijs er goed uitzag. Maar een klacht telt ALLEEN als de waarde
+    // zelf ook niet klopt: gemeten op het echte formulier blijft die melding soms
+    // staan terwijl het veld en React allebei netjes 9.99 bevatten, en dan zou
+    // afkeuren een prima prijs weggooien.
+    let klaagt = false;
+    for (let i = 0; i < 5; i++) {
       await sleep(200);
-      if (klacht()) return false;
+      if (klacht()) { klaagt = true; break; }
     }
-    return Math.abs((num(el.value) || -1) - want) < 0.01
-        && el.getAttribute("aria-invalid") !== "true"
-        && !klacht();
+    const waardeKlopt = Math.abs((num(el.value) || -1) - want) < 0.01;
+    if (!waardeKlopt) return false;
+    if (klaagt && el.getAttribute("aria-invalid") === "true") return false;
+    return true;
   };
 
   // Alle schrijfwijzen proberen en de eerste houden waar Vinted NIET over klaagt.
