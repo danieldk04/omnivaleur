@@ -95,7 +95,11 @@ SYSTEEM_AFZENDER = re.compile(
 # krijgen willekeurige tijdstippen binnen kantoortijd, in plaats van vijftien
 # stuks achter elkaar om negen uur 's ochtends.
 RAMP = [(1, 5), (2, 15), (6, 25), (11, 40)]
-FOLLOWUP_DAGEN = (5, 12)      # opvolgmail 1 en 2, in dagen na de vorige mail
+FOLLOWUP_DAGEN = (2, 4)       # opvolgmail 1 en 2, in dagen na de vorige mail
+# Hoeveel dagen na de laatste opvolgmail een lead als doodgelopen geldt. Daarna
+# schuift hij in Notion naar de eindfase, zodat de lijst laat zien wie er nog
+# leeft in plaats van alleen wie ooit gemaild is.
+STIL_NA_DAGEN = 10
 PAUZE = (40, 110)             # seconden tussen twee mails, willekeurig
 VENSTER = (8, 45), (20, 30)   # vroegste en laatste verzendtijd op een dag
 MIN_GAT = 9                   # minuten die minimaal tussen twee tijdstippen zitten
