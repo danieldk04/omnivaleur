@@ -327,7 +327,7 @@
       "region": "nl",
       "pillar": "B",
       "slug": "vintage-camera-reselling-automation",
-      "status": "pending",
+      "status": "published",
       "priority": 40
     }
   ],
@@ -682,6 +682,15 @@
       "action": "created",
       "url_path": "/reseller-tools/designer-clothing-reselling-automation",
       "published_at": "2026-08-13T09:07:06.932683+00:00"
+    },
+    {
+      "keyword": "vintage camera reselling automation",
+      "slug": "vintage-camera-reselling-automation",
+      "region": "nl",
+      "pillar": "B",
+      "action": "created",
+      "url_path": "/reseller-tools/vintage-camera-reselling-automation",
+      "published_at": "2026-08-14T09:02:34.058731+00:00"
     }
   ]
 }
