@@ -765,6 +765,84 @@ def _check_inbox(state: dict, boek: "Notion", dagen: int) -> tuple[int, int, int
     return nieuw, afgemeld, bounces
 
 
+def _afsluiten_stille_leads(state: dict, boek: "Notion") -> int:
+    """Wie alle mails heeft gehad en daarna STIL_NA_DAGEN niets liet horen, gaat
+    naar de eindfase. Zonder dit blijft iedereen eeuwig op 'Benaderd' staan en
+    zegt de lijst niets meer over wie er nog leeft."""
+    per_adres = {l["email"].lower(): l for l in _leads()}
+    gesloten = 0
+    for adres, st in state.items():
+        if st.get("afgesloten") or st.get("beantwoord") or st.get("afgemeld") \
+                or st.get("bounce") or st.get("afgewezen"):
+            continue
+        if len(st.get("verstuurd", [])) < len(BEURTEN):
+            continue
+        stil = datetime.now() - datetime.fromisoformat(st["laatste"])
+        if stil < timedelta(days=STIL_NA_DAGEN):
+            continue
+        st["afgesloten"] = datetime.now().isoformat(timespec="seconds")
+        gesloten += 1
+        if per_adres.get(adres):
+            boek.doodgelopen(per_adres[adres])
+    if gesloten:
+        _save_state(state)
+    return gesloten
+
+
+def _eigen_mail_meenemen(state: dict, boek: "Notion") -> int:
+    """Wat Daniel zelf verstuurt telt mee.
+
+    Hij mailt leads ook buiten de machine om. Wist de machine dat niet, dan kon
+    diezelfde persoon er later alsnog een koude mail achteraan krijgen — met een
+    aanhef alsof ze elkaar nog nooit gesproken hadden. Daarom leest deze de map
+    Verzonden en zet elk adres uit de leadlijst dat hij zelf heeft aangeschreven
+    in de administratie, als 'met de hand'.
+
+    Alleen nieuwe mails tellen (geen 'Re:'): een antwoord op een lopend gesprek
+    zegt niets over wie er koud benaderd is, en de mails van de machine zelf staan
+    al in de administratie."""
+    host, gebruiker = os.environ.get("IMAP_HOST"), os.environ.get("MAIL_USER")
+    wachtwoord = os.environ.get("MAIL_PASS")
+    if not (host and gebruiker and wachtwoord):
+        return 0
+    per_adres = {l["email"].lower(): l for l in _leads()}
+    nieuw = 0
+    with imaplib.IMAP4_SSL(host, 993) as imap:
+        imap.login(gebruiker, wachtwoord)
+        imap.select('"Verzonden"')
+        _, data = imap.search(None, "ALL")
+        for num in (data[0] or b"").split():
+            _, ruw = imap.fetch(num, "(BODY.PEEK[HEADER])")
+            if not ruw or not ruw[0]:
+                continue
+            msg = email.message_from_bytes(ruw[0][1])
+            ontvanger = parseaddr(msg.get("To", ""))[1].lower()
+            onderwerp = str(msg.get("Subject", ""))
+            if not ontvanger or onderwerp.lower().startswith("re:"):
+                continue
+            if ontvanger in state or ontvanger not in per_adres:
+                continue
+            # Een van onze eigen sjabloononderwerpen betekent dat de machine dit
+            # verstuurde en de administratie kwijt is, niet dat Daniel het typte.
+            # Ook dan geldt: niet nog eens mailen.
+            try:
+                wanneer = parsedate_to_datetime(msg.get("Date", ""))
+                op = wanneer.replace(tzinfo=None).isoformat(timespec="seconds")
+            except Exception:  # noqa: BLE001 — een rare datum mag dit niet stoppen
+                op = datetime.now().isoformat(timespec="seconds")
+            state[ontvanger] = {
+                "verstuurd": [{"beurt": "met de hand", "op": op}],
+                "bedrijf": per_adres[ontvanger].get("bedrijf"),
+                "laatste": op,
+                "met_de_hand": True,
+            }
+            nieuw += 1
+            boek.met_de_hand(per_adres[ontvanger], op[:10])
+    if nieuw:
+        _save_state(state)
+    return nieuw
+
+
 def _alarm(lead: dict, onderwerp: str, body: str) -> None:
     """Een seintje naar Daniel zelf. De machine draait onbewaakt; zonder dit zou
     hij elke dag in de postbus moeten kijken of er toevallig iemand geantwoord
