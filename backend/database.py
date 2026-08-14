@@ -9,13 +9,52 @@ from backend.config import settings
 logger = logging.getLogger(__name__)
 
 _client: Optional[Client] = None
+_admin_client: Optional[Client] = None
+_auth_client: Optional[Client] = None
 
 
 def get_db() -> Client:
+    """De gewone verbinding: gegevens lezen en schrijven."""
     global _client
     if _client is None:
         _client = create_client(settings.supabase_url, settings.supabase_key)
     return _client
+
+
+def get_admin_db() -> Client:
+    """
+    Een APARTE verbinding, uitsluitend voor `auth.admin.*`.
+
+    Waarom apart: een Supabase-client onthoudt de laatste sessie. Zodra er ergens
+    `sign_in_with_password` of `set_session` op een client gebeurt, stuurt diezelfde
+    client daarna het tóken van die gebruiker mee in plaats van de servicesleutel —
+    en dan antwoordt Supabase op elke beheerdersactie met "User not allowed".
+
+    Dat is precies wat er gebeurde. Alles liep over één gedeelde verbinding, dus
+    één inlog verderop maakte het opzoeken van e-mailadressen kapot. Gevolg:
+    27 abonnementen, 22 verlopen proefperiodes, nul verstuurde herinneringen, en
+    "e-mailadres wijzigen" dat nooit gewerkt heeft (die logt zichzélf in vlak
+    voor de beheerdersactie).
+
+    Op deze verbinding wordt daarom nooit ingelogd. Niet hergebruiken voor iets
+    anders.
+    """
+    global _admin_client
+    if _admin_client is None:
+        _admin_client = create_client(settings.supabase_url, settings.supabase_key)
+    return _admin_client
+
+
+def get_auth_db() -> Client:
+    """
+    Een aparte verbinding voor alles wat mét een gebruikerssessie werkt:
+    registreren, inloggen, wachtwoord zetten. Die mág vervuild raken — daar is hij
+    voor. Zo blijven de gegevens- en beheerdersverbinding schoon.
+    """
+    global _auth_client
+    if _auth_client is None:
+        _auth_client = create_client(settings.supabase_url, settings.supabase_key)
+    return _auth_client
 
 
 # Supabase houdt verbindingen open om ze te hergebruiken. Sluit de andere kant
