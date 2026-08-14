@@ -162,7 +162,7 @@ async def billing_status(user=Depends(get_current_user_full)):
 @router.post("/checkout")
 def create_checkout(user=Depends(get_current_user_full)):
     if not settings.stripe_secret_key or not settings.stripe_price_id:
-        raise HTTPException(status_code=503, detail="Stripe niet geconfigureerd")
+        raise HTTPException(status_code=503, detail="Stripe is not configured")
 
     user_id = user.id
     db = get_db()
@@ -290,12 +290,12 @@ async def list_invoices(user_id: str = Depends(get_current_user)):
 @router.post("/portal")
 async def customer_portal(user_id: str = Depends(get_current_user)):
     if not settings.stripe_secret_key:
-        raise HTTPException(status_code=503, detail="Stripe niet geconfigureerd")
+        raise HTTPException(status_code=503, detail="Stripe is not configured")
 
     sub = _get_or_create_subscription(user_id)
     customer_id = sub.get("stripe_customer_id")
     if not customer_id:
-        raise HTTPException(status_code=400, detail="Geen actief abonnement gevonden")
+        raise HTTPException(status_code=400, detail="No active subscription found")
 
     session = stripe.billing_portal.Session.create(
         customer=customer_id,
@@ -308,7 +308,7 @@ async def customer_portal(user_id: str = Depends(get_current_user)):
 def comp_account(email: str, user=Depends(get_current_user_full)):
     """Grants a free-forever account to the given email. Owner-only."""
     if not _is_owner_email(user.email):
-        raise HTTPException(status_code=403, detail="Niet toegestaan")
+        raise HTTPException(status_code=403, detail="Not allowed")
 
     db = get_db()
     target = None
@@ -323,7 +323,7 @@ def comp_account(email: str, user=Depends(get_current_user_full)):
         page += 1
 
     if not target:
-        raise HTTPException(status_code=404, detail="Geen account gevonden met dit e-mailadres — laat de gebruiker eerst registreren")
+        raise HTTPException(status_code=404, detail="No account found with that email address — ask them to sign up first")
 
     _get_or_create_subscription(target.id)
     # Bewust 'trialing' met een datum ver vooruit in plaats van 'active': status
@@ -349,7 +349,7 @@ def send_announcement(dry_run: bool = True, emails: str = "", user=Depends(get_c
     publieke Supabase-sleutel praat en de gebruikerslijst dus niet mag opvragen
     ("User not allowed"). Blijft het veld leeg, dan probeert hij het alsnog zelf."""
     if not _is_owner_email(user.email):
-        raise HTTPException(status_code=403, detail="Niet toegestaan")
+        raise HTTPException(status_code=403, detail="Not allowed")
 
     from backend.services.announcement import BODY, SUBJECT, collect_recipients, parse_email_list
     from backend.services.billing import CONTACT_EMAIL
@@ -358,7 +358,7 @@ def send_announcement(dry_run: bool = True, emails: str = "", user=Depends(get_c
     if emails.strip():
         recipients = parse_email_list(emails)
         if not recipients:
-            raise HTTPException(status_code=400, detail="Geen geldig e-mailadres in de lijst gevonden")
+            raise HTTPException(status_code=400, detail="No valid email address in that list")
     else:
         try:
             recipients = collect_recipients()
@@ -394,7 +394,7 @@ def test_reminder_mail(kind: str = "reminder", user=Depends(get_current_user_ful
     mailinstellingen te controleren zijn zonder op de dagelijkse taak te wachten.
     Raakt geen enkele klantrij aan."""
     if not _is_owner_email(user.email):
-        raise HTTPException(status_code=403, detail="Niet toegestaan")
+        raise HTTPException(status_code=403, detail="Not allowed")
 
     from backend.services.billing import (
         CONTACT_EMAIL, final_warning_email, locked_email, trial_reminder_email,
@@ -434,7 +434,7 @@ def reminder_dryrun(user=Depends(get_current_user_full)):
     per ongeluk een klant te mailen.
     """
     if not _is_owner_email(user.email):
-        raise HTTPException(status_code=403, detail="Niet toegestaan")
+        raise HTTPException(status_code=403, detail="Not allowed")
 
     from datetime import datetime, timedelta, timezone
     from backend.services.billing import GRACE_DAYS, LOCK_NOTICE_MAX_AGE_DAYS, REMINDER_DAYS_BEFORE
@@ -453,21 +453,21 @@ def reminder_dryrun(user=Depends(get_current_user_full)):
         except Exception as e:
             tekst = str(e)
             if "42703" in tekst or "does not exist" in tekst.lower():
-                return {"fout": f"kolom {kolom} bestaat nog niet in Supabase — draai de ALTER TABLE"}
-            return {"fout": f"tijdelijke fout bij het opvragen ({type(e).__name__}) — probeer het zo nog eens"}
+                return {"error": f"column {kolom} does not exist yet in Supabase — run the ALTER TABLE"}
+            return {"error": f"temporary lookup failure ({type(e).__name__}) — try again in a moment"}
 
     groepen = {
-        "1_proef_loopt_af": _rows(lambda: db.table("subscriptions")
+        "trial_ending": _rows(lambda: db.table("subscriptions")
             .select("user_id, trial_ends_at").eq("status", "trialing")
             .gte("trial_ends_at", now.isoformat())
             .lt("trial_ends_at", (now + timedelta(days=REMINDER_DAYS_BEFORE)).isoformat())
             .is_("trial_reminder_sent_at", "null"), "trial_reminder_sent_at"),
-        "2_laatste_oproep": _rows(lambda: db.table("subscriptions")
+        "last_call": _rows(lambda: db.table("subscriptions")
             .select("user_id, trial_ends_at").eq("status", "trial_expired")
             .gte("trial_ends_at", (now - timedelta(days=GRACE_DAYS)).isoformat())
             .lt("trial_ends_at", (now + timedelta(days=1) - timedelta(days=GRACE_DAYS)).isoformat())
             .is_("final_reminder_sent_at", "null"), "final_reminder_sent_at"),
-        "3_account_op_pauze": _rows(lambda: db.table("subscriptions")
+        "account_paused": _rows(lambda: db.table("subscriptions")
             .select("user_id, trial_ends_at").eq("status", "trial_expired")
             .lt("trial_ends_at", lock_moment.isoformat())
             .gte("trial_ends_at", (lock_moment - timedelta(days=LOCK_NOTICE_MAX_AGE_DAYS)).isoformat())
@@ -484,17 +484,17 @@ def reminder_dryrun(user=Depends(get_current_user_full)):
             try:
                 gevonden = get_admin_db().auth.admin.get_user_by_id(r["user_id"])
                 adres = gevonden.user.email if gevonden and gevonden.user else None
-                wie.append({"adres": adres or "GEEN ADRES", "proef_eindigde": (r.get("trial_ends_at") or "")[:10]})
+                wie.append({"email": adres or "NO EMAIL ON ACCOUNT", "trial_ended": (r.get("trial_ends_at") or "")[:10]})
             except Exception as e:
-                wie.append({"adres": f"OPZOEKEN MISLUKT: {e}", "proef_eindigde": (r.get("trial_ends_at") or "")[:10]})
-        uit[naam] = {"aantal": len(rijen), "ontvangers": wie}
-    return {"verstuurt_niets": True, "groepen": uit}
+                wie.append({"email": f"LOOKUP FAILED: {e}", "trial_ended": (r.get("trial_ends_at") or "")[:10]})
+        uit[naam] = {"count": len(rijen), "recipients": wie}
+    return {"sends_nothing": True, "groups": uit}
 
 
 @router.post("/webhook")
 async def stripe_webhook(request: Request, stripe_signature: str = Header(None)):
     if not settings.stripe_webhook_secret:
-        raise HTTPException(status_code=503, detail="Webhook secret niet geconfigureerd")
+        raise HTTPException(status_code=503, detail="Webhook secret is not configured")
 
     payload = await request.body()
     try:

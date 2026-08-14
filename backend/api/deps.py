@@ -11,7 +11,7 @@ async def get_current_user(authorization: str = Header(...)) -> str:
 async def get_current_user_full(authorization: str = Header(...)):
     token = authorization.removeprefix("Bearer ").strip()
     if not token:
-        raise HTTPException(status_code=401, detail="Niet ingelogd")
+        raise HTTPException(status_code=401, detail="Not signed in")
     try:
         # supabase-py's client is synchronous (blocking httpx.Client underneath).
         # Uvicorn runs a single worker/event loop here, so calling it directly

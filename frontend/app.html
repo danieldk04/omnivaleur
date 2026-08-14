@@ -2758,11 +2758,11 @@ async function reminderDryRun(btn) {
     const res = await apiFetch(`${API}/api/billing/admin/reminder-dryrun`, { method: 'POST' });
     const data = await parseJsonSafe(res);
     if (!res.ok) throw new Error(data.detail || 'Check failed.');
-    const namen = { '1_proef_loopt_af': 'Trial ending', '2_laatste_oproep': 'Last call', '3_account_op_pauze': 'Account paused' };
-    const regels = Object.entries(data.groepen || {}).map(([k, v]) => {
-      if (v && v.fout) return `${namen[k] || k}: ⚠️ ${v.fout}`;
-      const wie = (v.ontvangers || []).map(o => o.adres).join(', ') || '—';
-      return `${namen[k] || k}: ${v.aantal} → ${wie}`;
+    const namen = { trial_ending: 'Trial ending', last_call: 'Last call', account_paused: 'Account paused' };
+    const regels = Object.entries(data.groups || {}).map(([k, v]) => {
+      if (v && v.error) return `${namen[k] || k}: ⚠️ ${v.error}`;
+      const wie = (v.recipients || []).map(o => o.email).join(', ') || '—';
+      return `${namen[k] || k}: ${v.count} → ${wie}`;
     });
     out.innerHTML = regels.map(esc).join('<br>');
     out.style.color = 'var(--text)';

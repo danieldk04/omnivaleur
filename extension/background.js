@@ -3643,6 +3643,24 @@ async function _mwSetVintedPrice(selector, values) {
   };
   const want = num(values[0]);
 
+  // Vinted zet zijn klacht ("Price must be greater than or equal to 1.0") pas
+  // een halve seconde ná het verlaten van het veld neer, en zet géén
+  // aria-invalid. Wie alleen naar de waarde kijkt, keurt dus een prijs goed die
+  // Vinted een tel later weigert — precies waarom een ingevulde €14,99 tóch niet
+  // gepubliceerd kon worden. Daarom lezen we hier de melding zelf, in dezelfde
+  // wereld als het formulier.
+  const FOUT = /price must|must be greater|greater than or equal|at least|minimaal|moet (groter|ten minste)|ongeldig|invalid/i;
+  const klacht = () => {
+    const kandidaten = [];
+    for (const id of (el.getAttribute("aria-describedby") || "").split(/\s+/).filter(Boolean)) {
+      const e = document.getElementById(id);
+      if (e) kandidaten.push(e);
+    }
+    let n = el.parentElement;
+    for (let i = 0; i < 4 && n; i++, n = n.parentElement) kandidaten.push(...n.querySelectorAll("*"));
+    return kandidaten.some((e) => e && e.offsetParent !== null && FOUT.test((e.textContent || "").trim()));
+  };
+
   const zet = async (out) => {
     el.scrollIntoView({ block: "center" });
     el.focus();
@@ -3657,10 +3675,20 @@ async function _mwSetVintedPrice(selector, values) {
     el.dispatchEvent(new Event("change", { bubbles: true }));
     await sleep(200);
     el.dispatchEvent(new Event("blur", { bubbles: true }));
-    await sleep(300);
-    return Math.abs((num(el.value) || -1) - want) < 0.01 && el.getAttribute("aria-invalid") !== "true";
+    // Ruim de tijd geven om alsnog te klagen: te vroeg kijken is precies hoe een
+    // afgekeurde prijs er goed uitzag.
+    for (let i = 0; i < 6; i++) {
+      await sleep(200);
+      if (klacht()) return false;
+    }
+    return Math.abs((num(el.value) || -1) - want) < 0.01
+        && el.getAttribute("aria-invalid") !== "true"
+        && !klacht();
   };
 
+  // Alle schrijfwijzen proberen en de eerste houden waar Vinted NIET over klaagt.
+  // Welke dat is verschilt per taalinstelling van het account, en dat viel niet
+  // betrouwbaar aan de pagina af te lezen — dus laten we het formulier het zeggen.
   for (const out of values) {
     if (await zet(out)) return { ok: true, used: out, value: el.value };
   }

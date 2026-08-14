@@ -1261,9 +1261,12 @@
 
     const fixed = num.toFixed(2);
     const comma = fixed.replace(".", ",");
+    // Beide schrijfwijzen meesturen; de volgorde is nog steeds een gok op basis
+    // van de taal, maar welke Vinted écht accepteert wordt nu bepaald door of
+    // hij erover klaagt — niet door onze gok.
     const nlFirst = _vintedLocaleIsComma(el);
     const variants = Number.isInteger(num)
-      ? [String(num)]
+      ? [String(num), num.toFixed(2).replace(".", ","), num.toFixed(2)]
       : (nlFirst ? [comma, fixed] : [fixed, comma]);
 
     // Eerst de enige route die het formulier écht binnenkomt: zetten vanuit de
@@ -1278,7 +1281,10 @@
           (r) => resolve(r || null),
         );
       });
-      if (res && res.ok && !(await priceErrorAfterSettle(700))) {
+      // De hoofdwereld heeft zelf al op de klacht gewacht; hier nog een korte
+      // tweede blik, want de melding kan ook buiten het blokje rond het veld
+      // opduiken.
+      if (res && res.ok && !(await priceErrorAfterSettle(1500))) {
         clog(`prijs gezet via de pagina zelf: ${res.used}`);
         return true;
       }

@@ -81,13 +81,13 @@ def create_item(item: ItemCreate, user_id: str = Depends(get_current_user)):
     except Exception as e:
         _raise_if_duplicate_sku(db, e, data.get("sku"), user_id)
         logger.exception("Item insert failed for user %s", user_id)
-        raise HTTPException(status_code=500, detail=f"Opslaan mislukt: {e}")
+        raise HTTPException(status_code=500, detail=f"Could not save: {e}")
     # None = de rij stond er al na een herhaalde poging (zie execute_with_retry).
     if result is None:
         return {**data, "id": data["id"]}
     if not result.data:
         logger.error("Item insert returned no row for user %s", user_id)
-        raise HTTPException(status_code=500, detail="Het item is niet opgeslagen — probeer het nog eens.")
+        raise HTTPException(status_code=500, detail="The item was not saved — please try again.")
     return result.data[0]
 
 
@@ -147,7 +147,7 @@ async def update_item(item_id: str, updates: dict, user_id: str = Depends(get_cu
     except Exception as e:
         _raise_if_duplicate_sku(db, e, clean.get("sku"), user_id)
         logger.exception("Item update failed for %s", item_id)
-        raise HTTPException(status_code=500, detail=f"Wijziging niet opgeslagen: {e}")
+        raise HTTPException(status_code=500, detail=f"Change was not saved: {e}")
     if not result.data:
         raise HTTPException(status_code=404, detail="Item not found")
     item = result.data[0]
