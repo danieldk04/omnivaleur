@@ -1139,6 +1139,9 @@ def _dagbericht(state: dict, plan: dict) -> None:
     auto = sum(1 for st in state.values() if st.get("auto_antwoord"))
     afgemeld = sum(1 for st in state.values() if st.get("afgemeld"))
     bounces = sum(1 for st in state.values() if st.get("bounce"))
+    afgewezen = sum(1 for st in state.values() if st.get("afgewezen"))
+    afgesloten = sum(1 for st in state.values() if st.get("afgesloten"))
+    handmatig = sum(1 for st in state.values() if st.get("met_de_hand"))
     resterend = len([l for l in _leads() if l["email"].lower() not in state])
 
     goed = vandaag_uit >= gepland and not plan.get("gemist") and not plan.get("fouten")
