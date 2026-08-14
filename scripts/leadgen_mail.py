@@ -1095,6 +1095,10 @@ def tick(args) -> None:
         if not plan.get("gecheckt"):
             plan["gecheckt"] = True
             _save_plan(plan)
+        gesloten = _afsluiten_stille_leads(state, boek)
+        if gesloten:
+            print(f"{datetime.now():%d-%m %H:%M} — {gesloten} lead(s) afgesloten: "
+                  f"geen reactie na alle opvolgmails")
         _opruimen(state)
 
     # Aan het eind van de dag één berichtje: wat er is gebeurd, of er iets mis
