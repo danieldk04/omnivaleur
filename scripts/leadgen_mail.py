@@ -436,7 +436,10 @@ def _beurt(lead: dict, st: dict | None) -> tuple[int, str] | None:
     """Welke mail is deze lead toe? None = niets doen."""
     if not st:
         return 0, "eerste mail"
-    if st.get("beantwoord") or st.get("afgemeld") or st.get("bounce"):
+    # Wie zelf met de hand is gemaild krijgt nooit een sjabloonmail erachteraan:
+    # dat gesprek is van Daniel, niet van de machine.
+    if (st.get("beantwoord") or st.get("afgemeld") or st.get("bounce")
+            or st.get("afgewezen") or st.get("met_de_hand")):
         return None
     verstuurd = len(st.get("verstuurd", []))
     if verstuurd >= len(BEURTEN):
