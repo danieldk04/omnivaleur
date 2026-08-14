@@ -107,6 +107,17 @@ MIN_GAT = 9                   # minuten die minimaal tussen twee tijdstippen zit
 AFMELD_WOORDEN = re.compile(
     r"\b(stop|afmelden|uitschrijven|unsubscribe|geen interesse|niet meer mailen)\b",
     re.I)
+# Een nette afwijzing is geen afmelding. "Wij gebruiken al iets" of "hier doen we
+# niets mee" is een antwoord, en zonder dit onderscheid landde zo iemand in Notion
+# op Interesse — precies naast de mensen die wél wilden. Alleen op de eerste
+# regels toegepast, want verderop in een citaat staat onze eigen mail.
+AFWIJZING = re.compile(
+    r"(geen (interesse|behoefte|belangstelling)"
+    r"|niet ge(i|ï)nteresseerd"
+    r"|we (gebruiken|hebben) al (een|iets|zo'?n)"
+    r"|(hier|daar) doen we (niets|niks) mee"
+    r"|(is|lijkt) (het |ons )?niet(s)? (voor ons|wat wij zoeken|interessant)"
+    r"|no,? thank(s| you)|not interested|we're all set)", re.I)
 BOUNCE_AFZENDERS = re.compile(r"mailer-daemon|postmaster|no-?reply", re.I)
 # Een automatisch antwoord is geen antwoord. Zou je het wel zo tellen, dan valt
 # iemand die "ik ben op vakantie" terugstuurt uit de opvolging en hoor je nooit
