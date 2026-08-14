@@ -253,11 +253,23 @@ def _mail_batch(rows: list[dict], marker_column: str, build_mail, moment_key) ->
 def _select_or_warn(query_fn, column: str):
     """De markeerkolommen worden met de hand in Supabase gezet. Ontbreekt er een,
     dan zou de taak niet kunnen onthouden wie hij al gemaild heeft en zou hij
-    iedereen dagelijks opnieuw mailen — dus stopt hij dan liever."""
+    iedereen dagelijks opnieuw mailen — dus stopt hij dan liever.
+
+    Een wegvallende verbinding is iets heel anders: die ging hier ook als
+    "kolom ontbreekt" het logboek in, terwijl er niets mis was en de hele
+    mailgroep die dag stilletjes werd overgeslagen. Nu eerst opnieuw proberen,
+    en daarna eerlijk benoemen wat het wél was.
+    """
+    from backend.database import execute_with_retry
+
     try:
-        return query_fn().data
-    except Exception:
-        logger.exception(f"Mails overgeslagen: kolom {column} ontbreekt nog in Supabase")
+        return execute_with_retry(query_fn()).data
+    except Exception as e:
+        tekst = str(e)
+        if "42703" in tekst or "does not exist" in tekst.lower():
+            logger.error(f"Mails overgeslagen: kolom {column} ontbreekt nog in Supabase")
+        else:
+            logger.exception(f"Mails overgeslagen: opvragen mislukt ({type(e).__name__}) — kolom {column}")
         return None
 
 
@@ -280,8 +292,7 @@ async def send_trial_reminders():
         .eq("status", "trialing")
         .gte("trial_ends_at", now.isoformat())
         .lt("trial_ends_at", (now + timedelta(days=REMINDER_DAYS_BEFORE)).isoformat())
-        .is_("trial_reminder_sent_at", "null")
-        .execute(),
+        .is_("trial_reminder_sent_at", "null"),
         "trial_reminder_sent_at",
     )
     if rows:
@@ -299,8 +310,7 @@ async def send_trial_reminders():
         .eq("status", "trial_expired")
         .gte("trial_ends_at", (now - timedelta(days=GRACE_DAYS)).isoformat())
         .lt("trial_ends_at", (lock_within_a_day - timedelta(days=GRACE_DAYS)).isoformat())
-        .is_("final_reminder_sent_at", "null")
-        .execute(),
+        .is_("final_reminder_sent_at", "null"),
         "final_reminder_sent_at",
     )
     if rows:
@@ -326,8 +336,7 @@ async def send_trial_reminders():
         .eq("status", "trial_expired")
         .lt("trial_ends_at", lock_moment.isoformat())
         .gte("trial_ends_at", (lock_moment - timedelta(days=LOCK_NOTICE_MAX_AGE_DAYS)).isoformat())
-        .is_("locked_notice_sent_at", "null")
-        .execute(),
+        .is_("locked_notice_sent_at", "null"),
         "locked_notice_sent_at",
     )
     if rows:

@@ -5,7 +5,7 @@ import asyncio
 import logging
 import stripe
 from fastapi import APIRouter, HTTPException, Depends, Request, Header
-from backend.database import get_admin_db, get_db
+from backend.database import get_admin_db, get_db, execute_with_retry
 from backend.api.deps import get_current_user, get_current_user_full
 from backend.config import settings
 from backend.services.billing import (
@@ -444,27 +444,34 @@ def reminder_dryrun(user=Depends(get_current_user_full)):
     lock_moment = now - timedelta(days=GRACE_DAYS)
 
     def _rows(bouw, kolom):
+        # Twee heel verschillende fouten, en die moeten niet op één hoop.
+        # Een ontbrekende kolom is werk voor jou (een ALTER draaien); een
+        # weggevallen verbinding is ruis die vanzelf overgaat. De eerste versie
+        # noemde álles "kolom ontbreekt" en wees zo de verkeerde kant op.
         try:
-            return bouw().data or []
+            return execute_with_retry(bouw()).data or []
         except Exception as e:
-            return {"fout": f"kolom {kolom} ontbreekt of query mislukt: {e}"}
+            tekst = str(e)
+            if "42703" in tekst or "does not exist" in tekst.lower():
+                return {"fout": f"kolom {kolom} bestaat nog niet in Supabase — draai de ALTER TABLE"}
+            return {"fout": f"tijdelijke fout bij het opvragen ({type(e).__name__}) — probeer het zo nog eens"}
 
     groepen = {
         "1_proef_loopt_af": _rows(lambda: db.table("subscriptions")
             .select("user_id, trial_ends_at").eq("status", "trialing")
             .gte("trial_ends_at", now.isoformat())
             .lt("trial_ends_at", (now + timedelta(days=REMINDER_DAYS_BEFORE)).isoformat())
-            .is_("trial_reminder_sent_at", "null").execute(), "trial_reminder_sent_at"),
+            .is_("trial_reminder_sent_at", "null"), "trial_reminder_sent_at"),
         "2_laatste_oproep": _rows(lambda: db.table("subscriptions")
             .select("user_id, trial_ends_at").eq("status", "trial_expired")
             .gte("trial_ends_at", (now - timedelta(days=GRACE_DAYS)).isoformat())
             .lt("trial_ends_at", (now + timedelta(days=1) - timedelta(days=GRACE_DAYS)).isoformat())
-            .is_("final_reminder_sent_at", "null").execute(), "final_reminder_sent_at"),
+            .is_("final_reminder_sent_at", "null"), "final_reminder_sent_at"),
         "3_account_op_pauze": _rows(lambda: db.table("subscriptions")
             .select("user_id, trial_ends_at").eq("status", "trial_expired")
             .lt("trial_ends_at", lock_moment.isoformat())
             .gte("trial_ends_at", (lock_moment - timedelta(days=LOCK_NOTICE_MAX_AGE_DAYS)).isoformat())
-            .is_("locked_notice_sent_at", "null").execute(), "locked_notice_sent_at"),
+            .is_("locked_notice_sent_at", "null"), "locked_notice_sent_at"),
     }
 
     uit = {}
