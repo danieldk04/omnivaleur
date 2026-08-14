@@ -568,6 +568,34 @@ class Notion:
                        "Status": ("status", "Interesse"),
                        "Volgende actie op": ("date", date.today().isoformat())})
 
+    def afgewezen(self, lead: dict) -> None:
+        """Een nee. Wel gereageerd, dus geen doodgelopen spoor — maar ook geen
+        interesse, en dat moet je in de lijst kunnen zien zonder elke mail te
+        openen. Status blijft met opzet ongemoeid: er is geen 'nee'-status in de
+        database, en een verkeerde is erger dan geen."""
+        self._schrijf(lead, "heeft geantwoord: geen interesse",
+                      {"Fase": ("select", "Geen interesse"),
+                       "Afgesloten reden": ("select", "Niet geinteresseerd"),
+                       "Volgende actie op": ("date", None)})
+
+    def doodgelopen(self, lead: dict) -> None:
+        """Alle mails eruit, nooit iets teruggehoord. Dit is het eindpunt van de
+        automatische kant; wat hier belandt is klaar voor de machine."""
+        self._schrijf(lead, f"geen reactie na alle opvolgmails "
+                            f"({STIL_NA_DAGEN} dagen stil) — afgesloten",
+                      {"Fase": ("select", "Doodgelopen"),
+                       "Afgesloten reden": ("select", "Geen reactie na follow-ups"),
+                       "Volgende actie op": ("date", None)})
+
+    def met_de_hand(self, lead: dict, datum: str) -> None:
+        """Daniel heeft deze zelf gemaild, buiten de machine om. Vastleggen zodat
+        de lijst één waarheid houdt en er nooit een koude mail achteraan gaat."""
+        self._schrijf(lead, f"door Daniel zelf gemaild op {datum} — "
+                            f"buiten de machine om, geen automatische mail meer",
+                      {"Fase": ("select", "2. Benaderd"),
+                       "Status": ("status", "Reached Out"),
+                       "Eerste contact": ("date", datum)})
+
     def afgemeld(self, lead: dict) -> None:
         self._schrijf(lead, "heeft zich afgemeld — niet meer mailen",
                       {"Fase": ("select", "Geen interesse"),
