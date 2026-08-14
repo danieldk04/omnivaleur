@@ -396,10 +396,17 @@ def test_reminder_mail(kind: str = "reminder", user=Depends(get_current_user_ful
     if not _is_owner_email(user.email):
         raise HTTPException(status_code=403, detail="Niet toegestaan")
 
-    from backend.services.billing import CONTACT_EMAIL, final_warning_email, trial_reminder_email
+    from backend.services.billing import (
+        CONTACT_EMAIL, final_warning_email, locked_email, trial_reminder_email,
+    )
     from backend.services.email import send_email_checked
 
-    subject, body = final_warning_email(1) if kind == "final" else trial_reminder_email(2)
+    if kind == "final":
+        subject, body = final_warning_email(1)
+    elif kind == "locked":
+        subject, body = locked_email()
+    else:
+        subject, body = trial_reminder_email(2)
     try:
         send_email_checked(f"[TEST] {subject}", body, to=user.email, reply_to=CONTACT_EMAIL)
     except Exception as e:
@@ -414,6 +421,67 @@ def test_reminder_mail(kind: str = "reminder", user=Depends(get_current_user_ful
             ),
         )
     return {"ok": True, "sent_to": user.email}
+
+
+@router.post("/admin/reminder-dryrun")
+def reminder_dryrun(user=Depends(get_current_user_full)):
+    """Wie zou er nu een proefmail krijgen, en lukt het opzoeken van hun adres?
+
+    Verstuurt NIETS en verandert NIETS. Bestaat omdat de mails maandenlang
+    geruisloos niet aankwamen: het opzoeken van een e-mailadres mag alleen met de
+    service_role-sleutel, en die fout werd weggeslikt. Met deze controle zie je
+    dat in één keer, zonder te wachten op de dagelijkse taak van 09:00 en zonder
+    per ongeluk een klant te mailen.
+    """
+    if not _is_owner_email(user.email):
+        raise HTTPException(status_code=403, detail="Niet toegestaan")
+
+    from datetime import datetime, timedelta, timezone
+    from backend.services.billing import GRACE_DAYS, LOCK_NOTICE_MAX_AGE_DAYS, REMINDER_DAYS_BEFORE
+
+    db = get_db()
+    now = datetime.now(timezone.utc)
+    lock_moment = now - timedelta(days=GRACE_DAYS)
+
+    def _rows(bouw, kolom):
+        try:
+            return bouw().data or []
+        except Exception as e:
+            return {"fout": f"kolom {kolom} ontbreekt of query mislukt: {e}"}
+
+    groepen = {
+        "1_proef_loopt_af": _rows(lambda: db.table("subscriptions")
+            .select("user_id, trial_ends_at").eq("status", "trialing")
+            .gte("trial_ends_at", now.isoformat())
+            .lt("trial_ends_at", (now + timedelta(days=REMINDER_DAYS_BEFORE)).isoformat())
+            .is_("trial_reminder_sent_at", "null").execute(), "trial_reminder_sent_at"),
+        "2_laatste_oproep": _rows(lambda: db.table("subscriptions")
+            .select("user_id, trial_ends_at").eq("status", "trial_expired")
+            .gte("trial_ends_at", (now - timedelta(days=GRACE_DAYS)).isoformat())
+            .lt("trial_ends_at", (now + timedelta(days=1) - timedelta(days=GRACE_DAYS)).isoformat())
+            .is_("final_reminder_sent_at", "null").execute(), "final_reminder_sent_at"),
+        "3_account_op_pauze": _rows(lambda: db.table("subscriptions")
+            .select("user_id, trial_ends_at").eq("status", "trial_expired")
+            .lt("trial_ends_at", lock_moment.isoformat())
+            .gte("trial_ends_at", (lock_moment - timedelta(days=LOCK_NOTICE_MAX_AGE_DAYS)).isoformat())
+            .is_("locked_notice_sent_at", "null").execute(), "locked_notice_sent_at"),
+    }
+
+    uit = {}
+    for naam, rijen in groepen.items():
+        if isinstance(rijen, dict):
+            uit[naam] = rijen
+            continue
+        wie = []
+        for r in rijen:
+            try:
+                gevonden = db.auth.admin.get_user_by_id(r["user_id"])
+                adres = gevonden.user.email if gevonden and gevonden.user else None
+                wie.append({"adres": adres or "GEEN ADRES", "proef_eindigde": (r.get("trial_ends_at") or "")[:10]})
+            except Exception as e:
+                wie.append({"adres": f"OPZOEKEN MISLUKT: {e}", "proef_eindigde": (r.get("trial_ends_at") or "")[:10]})
+        uit[naam] = {"aantal": len(rijen), "ontvangers": wie}
+    return {"verstuurt_niets": True, "groepen": uit}
 
 
 @router.post("/webhook")
