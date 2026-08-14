@@ -445,22 +445,17 @@ async def publish_to_platforms(item_id: str, platforms: list[str], user_id: str)
             "description": _strip_text_tags(base.get("description") or ""),
         }
 
-    # API platforms: run concurrently server-side
-    if api_platforms:
-        creds_resp = await _exec(
-            db.table("platform_credentials")
-            .select("*")
-            .eq("user_id", user_id)
-            .in_("platform", api_platforms)
-        )
-        creds_by_platform = {c["platform"]: c for c in creds_resp.data}
-        tasks = [
-            _publish_one(_pick(p), p, creds_by_platform.get(p, {}), user_id)
-            for p in api_platforms
-        ]
-        results += await asyncio.gather(*tasks, return_exceptions=False)
-
-    # Extension platforms: enqueue jobs
+    # Eerst de extensieplatforms in de wachtrij, dán de API-platforms.
+    #
+    # Andersom kostte het een keer een halve publicatie: Shopify was traag (het
+    # aanmaken van een product wordt gevolgd door foto's, voorraad, collectie en
+    # kanalen), de gateway hakte het verzoek af, en daardoor kwamen Marktplaats,
+    # 2dehands en Vinted NOOIT in de wachtrij. Het item bleef eindeloos op
+    # "Publishing…" staan terwijl er op die kanalen niets was gebeurd.
+    #
+    # De wachtrij vullen is alleen een paar databaseregels wegschrijven, dus dat
+    # is altijd binnen een oogwenk klaar. Wat daarna misgaat kan de extensie niet
+    # meer treffen.
     for platform in ext_platforms:
         payload = dict(_pick(platform))
         # Create pending listing record first so failed jobs are visible in dashboard
@@ -526,6 +521,22 @@ async def publish_to_platforms(item_id: str, platforms: list[str], user_id: str)
                         "Job queued — Chrome extension will process this"),
         })
 
+
+    # API platforms: run concurrently server-side
+    if api_platforms:
+        creds_resp = await _exec(
+            db.table("platform_credentials")
+            .select("*")
+            .eq("user_id", user_id)
+            .in_("platform", api_platforms)
+        )
+        creds_by_platform = {c["platform"]: c for c in creds_resp.data}
+        tasks = [
+            _publish_one(_pick(p), p, creds_by_platform.get(p, {}), user_id)
+            for p in api_platforms
+        ]
+        results += await asyncio.gather(*tasks, return_exceptions=False)
+
     return results
 
 
@@ -559,7 +570,28 @@ async def _publish_one(item: dict, platform_name: str, credentials: dict, user_i
 
     try:
         platform = get_platform(platform_name)
-        result = await platform.create_listing(item, credentials)
+
+        # Leg vast dát de advertentie bestaat op het moment dat het platform hem
+        # bevestigt, niet pas als álle nabewerking klaar is. Shopify doet daarna
+        # nog foto's, voorraad, collectie en verkoopkanalen; wordt het verzoek in
+        # die seconden afgekapt, dan stond het product wél online terwijl het
+        # dashboard eindeloos "Publishing…" bleef tonen.
+        async def _leg_vast(vroeg: dict):
+            await _exec(db.table("listings").update({
+                "platform_listing_id": vroeg.get("platform_listing_id"),
+                "platform_listing_url": vroeg.get("platform_listing_url"),
+                "status": "active",
+                "listed_at": datetime.now(timezone.utc).isoformat(),
+            }).eq("id", listing_id))
+            logger.info(f"{platform_name}: listing {listing_id} meteen vastgelegd als actief")
+
+        # Bewust NIET meesmokkelen in de inloggegevens: die worden bij sommige
+        # platforms met een ververst token teruggeschreven naar de database, en
+        # dan zou er een functie in dat veld belanden.
+        if platform_name == "shopify":
+            result = await platform.create_listing(item, credentials, on_created=_leg_vast)
+        else:
+            result = await platform.create_listing(item, credentials)
 
         listing_update = {
             "platform_listing_id": result["platform_listing_id"],

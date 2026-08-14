@@ -91,14 +91,35 @@ class ShopifyClient:
             "Content-Type": "application/json",
         }
 
-    async def get_products(self, limit: int = 250) -> list[dict]:
+    async def get_products(self, limit: int = 250, fields: str | None = None) -> list[dict]:
+        """Producten ophalen. `fields` beperkt wat Shopify terugstuurt.
+
+        Zonder tijdslimiet gold hier de standaard van vijf seconden, en een
+        volledige lijst van 250 producten (met alle foto's en varianten erin)
+        haalt dat niet — dan viel dit met een time-out om terwijl er niets mis
+        was. Nu een ruime limiet, en de mogelijkheid om alleen te vragen wat je
+        nodig hebt.
+        """
         import httpx
-        async with httpx.AsyncClient() as c:
-            r = await c.get(f"{self.base}/products.json?limit={limit}", headers=self.headers)
+        url = f"{self.base}/products.json?limit={limit}"
+        if fields:
+            url += f"&fields={fields}"
+        async with httpx.AsyncClient(timeout=httpx.Timeout(60.0, connect=10.0)) as c:
+            r = await c.get(url, headers=self.headers)
             r.raise_for_status()
             return r.json().get("products", [])
 
-    async def create_product(self, item: dict) -> dict:
+    async def create_product(self, item: dict, on_created=None) -> dict:
+        """`on_created` wordt aangeroepen zodra Shopify het product bevestigt.
+
+        Waarom dat nodig is: ná het aanmaken volgen nog vijf stappen (foto's,
+        voorraad, collectie, categorie, verkoopkanalen). Die kosten seconden, en
+        als de gateway het verzoek in die tijd afkapt is het product wél online
+        maar weet ons dashboard van niets — dan blijft het item eindeloos op
+        "Publishing…" staan terwijl het op Shopify gewoon te koop staat. Precies
+        dat is een keer gebeurd. Door het id meteen door te geven is dat venster
+        weg: wat daarna nog misgaat, kost hooguit een foto of een collectie.
+        """
         import httpx
         from backend.platforms.shopify_importer import (
             _product_type_from_item, _public_photo_urls, assign_best_collection,
@@ -144,6 +165,12 @@ class ShopifyClient:
                 "Shopify(client) create_product: product %s created with %d/%d image(s) attached via src",
                 pid, len(product.get("images") or []), len(photo_urls),
             )
+            # Eerst vastleggen dát het bestaat, dan pas afmaken.
+            if on_created:
+                try:
+                    await on_created(product)
+                except Exception:
+                    logger.exception("Shopify: vastleggen van het nieuwe product-id mislukte")
             await _attach_missing_images(self.base, self.headers, pid, photo_urls, product)
             await _ensure_stock_of_one(self.base, self.headers, product)
             await assign_best_collection(self.base, self.headers, item, pid)
@@ -227,6 +254,22 @@ def _shop_creds(credentials: dict) -> tuple[Optional[str], Optional[str]]:
     return extra.get("shop_domain"), credentials.get("access_token") if credentials else None
 
 
+def _maak_vastleggen(shop: str, callback):
+    """Verpakt de callback van de aanroeper zodat de platformlaag zelf niets van
+    de database hoeft te weten — hij geeft alleen id en url door."""
+    if not callback:
+        return None
+
+    async def _vastleggen(product: dict):
+        pid = str(product.get("id"))
+        await callback({
+            "platform_listing_id": pid,
+            "platform_listing_url": f"https://{shop}/products/{product.get('handle', pid)}",
+        })
+
+    return _vastleggen
+
+
 class ShopifyPlatform(PlatformBase):
     platform_name = "shopify"
 
@@ -262,13 +305,15 @@ class ShopifyPlatform(PlatformBase):
             "extra_data": {"shop_domain": shop, "scope": data.get("scope", "")},
         }
 
-    async def create_listing(self, item: dict, credentials: dict) -> dict:
+    async def create_listing(self, item: dict, credentials: dict, on_created=None) -> dict:
         shop, token = _shop_creds(credentials)
         if not shop or not token:
             # No per-user store connected yet — fall back to the single globally
             # configured store (existing behaviour for the account this was built for).
             return await create_product(item)
-        product = await ShopifyClient(shop, token).create_product(item)
+        product = await ShopifyClient(shop, token).create_product(
+            item, on_created=_maak_vastleggen(shop, on_created),
+        )
         product_id = str(product["id"])
         return {
             "platform_listing_id": product_id,
