@@ -7,7 +7,9 @@ import asyncio
 import logging
 import re
 from datetime import datetime, timedelta, timezone
-from backend.database import get_db
+import uuid
+
+from backend.database import execute_with_retry, get_db
 from backend.platforms import get_platform
 
 _ENGLISH_PLATFORMS = {"vinted", "shopify", "ebay", "etsy"}
@@ -81,8 +83,14 @@ def _parse_iso(ts):
 # de vertalingen en de Shopify-upload. Zolang één verkoper op "Opslaan" wachtte,
 # stond iedereen anders dus ook te wachten — en gaf de gateway 502. Alleen
 # .execute() doet netwerkwerk; de rest van de keten bouwt enkel de query op.
-async def _exec(query):
-    return await asyncio.to_thread(query.execute)
+async def _exec(query, dubbel_is_ok: bool = False):
+    """Voer een query uit, en probeer opnieuw als de verbinding wegviel.
+
+    Zonder die herhaling brak één weggevallen verbinding de héle publicatie af:
+    Marktplaats en 2dehands stonden er al op, Vinted kwam niet eens in de
+    wachtrij, en de gebruiker kreeg alleen "HTTP 500". Precies dat is gebeurd.
+    """
+    return await asyncio.to_thread(execute_with_retry, query, 3, dubbel_is_ok)
 
 
 # Eén gedeelde client in plaats van een nieuwe per vertaling: die zette elke keer
@@ -457,69 +465,88 @@ async def publish_to_platforms(item_id: str, platforms: list[str], user_id: str)
     # is altijd binnen een oogwenk klaar. Wat daarna misgaat kan de extensie niet
     # meer treffen.
     for platform in ext_platforms:
-        payload = dict(_pick(platform))
-        # Create pending listing record first so failed jobs are visible in dashboard
-        existing_listing = await _exec(
-            db.table("listings").select("id,status,platform_listing_id,platform_listing_url")
-            .eq("item_id", item_id).eq("platform", platform)
-        )
-        # Staat het er al op? Dan geen tweede advertentie aanmaken. De API-kant
-        # had deze bescherming al (_publish_one); de extensieplatforms niet, dus
-        # een tweede keer publiceren zette hetzelfde item nog eens op Vinted.
-        row = (existing_listing.data or [None])[0]
-        if row and row.get("status") == "active" and row.get("platform_listing_id"):
+        # Elk kanaal apart afgeschermd. Ging er onderweg iets mis — een
+        # weggevallen databaseverbinding bijvoorbeeld — dan brak dat de héle
+        # publicatie af met "HTTP 500": Marktplaats en 2dehands stonden er al
+        # op, Vinted kwam niet eens in de wachtrij, en de gebruiker zag alleen
+        # een serverfout zonder te weten wat er wél gelukt was. Nu meldt het
+        # ene kanaal zijn eigen fout en gaan de andere gewoon door.
+        try:
+            payload = dict(_pick(platform))
+            # Create pending listing record first so failed jobs are visible in dashboard
+            existing_listing = await _exec(
+                db.table("listings").select("id,status,platform_listing_id,platform_listing_url")
+                .eq("item_id", item_id).eq("platform", platform)
+            )
+            # Staat het er al op? Dan geen tweede advertentie aanmaken. De API-kant
+            # had deze bescherming al (_publish_one); de extensieplatforms niet, dus
+            # een tweede keer publiceren zette hetzelfde item nog eens op Vinted.
+            row = (existing_listing.data or [None])[0]
+            if row and row.get("status") == "active" and row.get("platform_listing_id"):
+                results.append({
+                    "platform": platform,
+                    "status": "active",
+                    "listing_id": row["id"],
+                    "platform_listing_id": row.get("platform_listing_id"),
+                    "platform_listing_url": row.get("platform_listing_url"),
+                    "message": "Already live here — not published a second time",
+                })
+                continue
+            if not existing_listing.data:
+                await _exec(db.table("listings").insert({
+                    "item_id": item_id,
+                    "platform": platform,
+                    "status": "pending",
+                }))
+            else:
+                await _exec(db.table("listings").update({"status": "pending", "error_message": None}).eq("item_id", item_id).eq("platform", platform))
+            # Is er al een openstaande publicatieopdracht voor dit item op dit
+            # platform? Dan die bijwerken in plaats van een tweede aanmaken. Zonder
+            # deze stap leverde één keer opnieuw proberen na een time-out (het
+            # verzoek kwam wél aan, alleen het antwoord ging verloren) twee
+            # opdrachten op — en dus twee advertenties.
+            open_job = (await _exec(
+                db.table("jobs").select("id,status,claimed_at")
+                .eq("user_id", user_id).eq("item_id", item_id)
+                .eq("platform", platform).eq("action", "create")
+                .in_("status", ["pending", "claimed"])
+                .limit(1)
+            )).data
+            if open_job:
+                job_id = open_job[0]["id"]
+                update = _republish_job_update(open_job[0], payload)
+                await _exec(db.table("jobs").update(update).eq("id", job_id))
+                hergebruikt = True
+            else:
+                # Het id zelf bepalen: dan is een herhaalde poging na een
+                # weggevallen verbinding herkenbaar als "stond er al" in plaats van
+                # een tweede opdracht — en dus een tweede advertentie.
+                job_id = str(uuid.uuid4())
+                await _exec(db.table("jobs").insert({
+                    "id": job_id,
+                    "user_id": user_id,
+                    "item_id": item_id,
+                    "platform": platform,
+                    "action": "create",
+                    "status": "pending",
+                    "payload": payload,
+                }), dubbel_is_ok=True)
+                hergebruikt = False
             results.append({
                 "platform": platform,
-                "status": "active",
-                "listing_id": row["id"],
-                "platform_listing_id": row.get("platform_listing_id"),
-                "platform_listing_url": row.get("platform_listing_url"),
-                "message": "Already live here — not published a second time",
+                "status": "queued",
+                "job_id": job_id,
+                "message": ("Already queued — the extension is still working on it"
+                            if hergebruikt else
+                            "Job queued — Chrome extension will process this"),
             })
-            continue
-        if not existing_listing.data:
-            await _exec(db.table("listings").insert({
-                "item_id": item_id,
+        except Exception as e:
+            logger.exception(f"Publiceren naar {platform} mislukte")
+            results.append({
                 "platform": platform,
-                "status": "pending",
-            }))
-        else:
-            await _exec(db.table("listings").update({"status": "pending", "error_message": None}).eq("item_id", item_id).eq("platform", platform))
-        # Is er al een openstaande publicatieopdracht voor dit item op dit
-        # platform? Dan die bijwerken in plaats van een tweede aanmaken. Zonder
-        # deze stap leverde één keer opnieuw proberen na een time-out (het
-        # verzoek kwam wél aan, alleen het antwoord ging verloren) twee
-        # opdrachten op — en dus twee advertenties.
-        open_job = (await _exec(
-            db.table("jobs").select("id,status,claimed_at")
-            .eq("user_id", user_id).eq("item_id", item_id)
-            .eq("platform", platform).eq("action", "create")
-            .in_("status", ["pending", "claimed"])
-            .limit(1)
-        )).data
-        if open_job:
-            job_id = open_job[0]["id"]
-            update = _republish_job_update(open_job[0], payload)
-            await _exec(db.table("jobs").update(update).eq("id", job_id))
-            hergebruikt = True
-        else:
-            job_id = (await _exec(db.table("jobs").insert({
-                "user_id": user_id,
-                "item_id": item_id,
-                "platform": platform,
-                "action": "create",
-                "status": "pending",
-                "payload": payload,
-            }))).data[0]["id"]
-            hergebruikt = False
-        results.append({
-            "platform": platform,
-            "status": "queued",
-            "job_id": job_id,
-            "message": ("Already queued — the extension is still working on it"
-                        if hergebruikt else
-                        "Job queued — Chrome extension will process this"),
-        })
+                "status": "error",
+                "error": f"Could not queue this listing ({type(e).__name__}). Nothing was published here — try again.",
+            })
 
 
     # API platforms: run concurrently server-side
