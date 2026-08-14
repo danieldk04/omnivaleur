@@ -1068,6 +1068,19 @@ def tick(args) -> None:
     te_doen = min(verlopen - plan["gedaan"], args.max_per_beurt)
     boek = Notion()
 
+    # Eerst kijken wat Daniel zelf heeft verstuurd, pas daarna mailen. Andersom
+    # zou de machine iemand koud kunnen aanschrijven die hij een uur eerder al
+    # persoonlijk had gemaild.
+    if te_doen > 0:
+        try:
+            eigen = _eigen_mail_meenemen(state, boek)
+            if eigen:
+                print(f"{datetime.now():%d-%m %H:%M} — {eigen} lead(s) die je zelf "
+                      f"al gemaild hebt overgenomen; die krijgen niets van de machine")
+        except Exception as e:  # noqa: BLE001 — dichte inbox stopt het mailen niet
+            print(f"  (verzonden map niet gelezen: {e})")
+            plan.setdefault("fouten", []).append(f"verzonden map niet gelezen: {e}")
+
     if te_doen > 0:
         rij = _wachtrij(state, te_doen)
         if rij:
