@@ -1152,8 +1152,11 @@ def _dagbericht(state: dict, plan: dict) -> None:
         f"Totaal verstuurd:    {totaal} mails naar {benaderd} bedrijven",
         f"Echte reacties:      {antwoorden}",
         f"Automatische reacties: {auto}",
+        f"Geen interesse:      {afgewezen}",
         f"Afmeldingen:         {afgemeld}",
         f"Bounces:             {bounces}",
+        f"Doodgelopen:         {afgesloten} (alles verstuurd, nooit iets gehoord)",
+        f"Zelf gemaild:        {handmatig} (door jou, buiten de machine om)",
         f"Nog in de wachtrij:  {resterend} leads",
     ]
     if plan.get("gemist"):
