@@ -48,7 +48,7 @@ import textwrap
 import time
 from datetime import date, datetime, timedelta
 from email.message import EmailMessage
-from email.utils import parseaddr
+from email.utils import parseaddr, parsedate_to_datetime
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
