@@ -190,7 +190,10 @@ def _bestaat(props: dict, naam: str, soort: str, waarde) -> dict | None:
         opties = {o["name"] for o in veld[soort].get("options", [])}
         return {soort: {"name": waarde}} if waarde in opties else None
     if soort == "date":
-        return {"date": {"start": waarde}}
+        # Leegmaken is iets anders dan overslaan: een afgesloten lead hoort geen
+        # "Volgende actie op" meer te hebben, anders blijft hij in de takenlijst
+        # staan. Notion wil daarvoor date: null, niet start: null.
+        return {"date": None if waarde is None else {"start": waarde}}
     if soort == "number":
         return {"number": waarde}
     if soort == "rich_text":
