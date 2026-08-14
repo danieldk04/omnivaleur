@@ -5,7 +5,7 @@ import asyncio
 import logging
 import stripe
 from fastapi import APIRouter, HTTPException, Depends, Request, Header
-from backend.database import get_db
+from backend.database import get_admin_db, get_db
 from backend.api.deps import get_current_user, get_current_user_full
 from backend.config import settings
 from backend.services.billing import (
@@ -314,7 +314,7 @@ def comp_account(email: str, user=Depends(get_current_user_full)):
     target = None
     page = 1
     while True:
-        result = db.auth.admin.list_users(page=page, per_page=200)
+        result = get_admin_db().auth.admin.list_users(page=page, per_page=200)
         if not result:
             break
         target = next((u for u in result if u.email and u.email.lower() == email.lower()), None)
@@ -475,7 +475,7 @@ def reminder_dryrun(user=Depends(get_current_user_full)):
         wie = []
         for r in rijen:
             try:
-                gevonden = db.auth.admin.get_user_by_id(r["user_id"])
+                gevonden = get_admin_db().auth.admin.get_user_by_id(r["user_id"])
                 adres = gevonden.user.email if gevonden and gevonden.user else None
                 wie.append({"adres": adres or "GEEN ADRES", "proef_eindigde": (r.get("trial_ends_at") or "")[:10]})
             except Exception as e:

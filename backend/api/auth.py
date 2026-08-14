@@ -2,7 +2,7 @@ import asyncio
 import re
 from fastapi import APIRouter, HTTPException, Header, Depends
 from pydantic import BaseModel
-from backend.database import get_db
+from backend.database import get_admin_db, get_auth_db, get_db
 from backend.api.deps import get_current_user_full
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
@@ -19,7 +19,7 @@ class AuthRequest(BaseModel):
 async def register(body: AuthRequest):
     db = get_db()
     try:
-        res = db.auth.sign_up({
+        res = get_auth_db().auth.sign_up({
             "email": body.email,
             "password": body.password,
             "options": {"email_redirect_to": "https://omnivaleur.com/"},
@@ -39,7 +39,7 @@ class ResetRequest(BaseModel):
 async def forgot_password(body: ResetRequest):
     db = get_db()
     try:
-        db.auth.reset_password_for_email(
+        get_auth_db().auth.reset_password_for_email(
             body.email,
             options={"redirect_to": "https://omnivaleur.com/reset-password.html"}
         )
@@ -54,7 +54,7 @@ async def resend_confirmation(body: ResetRequest):
     an unregistered/already-confirmed address can't be probed."""
     db = get_db()
     try:
-        db.auth.resend({
+        get_auth_db().auth.resend({
             "type": "signup",
             "email": body.email,
             "options": {"email_redirect_to": "https://omnivaleur.com/"},
@@ -79,8 +79,9 @@ async def reset_password(body: PasswordUpdate, authorization: str = Header(...))
         # gotrue's set_session raises if the refresh token is empty, so pass the
         # real one from the recovery link hash. It travels alongside the access
         # token in the redirect fragment.
-        db.auth.set_session(token, body.refresh_token)
-        db.auth.update_user({"password": body.password})
+        auth_db = get_auth_db()
+        auth_db.auth.set_session(token, body.refresh_token)
+        auth_db.auth.update_user({"password": body.password})
         return {"ok": True, "message": "Password updated."}
     except Exception:
         raise HTTPException(status_code=400, detail="Password update failed. The link may have expired.")
@@ -96,7 +97,7 @@ async def login(body: AuthRequest):
         # anonymous visitor hits made it especially visible as a hang/empty
         # response under load).
         res = await asyncio.to_thread(
-            db.auth.sign_in_with_password,
+            get_auth_db().auth.sign_in_with_password,
             {"email": body.email, "password": body.password},
         )
         if res.user is None:
@@ -133,7 +134,9 @@ async def refresh(body: RefreshRequest):
         raise HTTPException(status_code=401, detail="Sessie verlopen")
     db = get_db()
     try:
-        res = await asyncio.to_thread(db.auth.refresh_session, body.refresh_token)
+        # Ook dit zet een sessie op de client waarop het gebeurt — dus op de
+        # auth-verbinding, niet op de gedeelde.
+        res = await asyncio.to_thread(get_auth_db().auth.refresh_session, body.refresh_token)
         if not res.session:
             raise HTTPException(status_code=401, detail="Sessie verlopen")
         return {
@@ -167,7 +170,7 @@ async def change_email(body: ChangeEmailRequest, user=Depends(get_current_user_f
     db = get_db()
     # Verify the current password against the account's current email.
     try:
-        res = db.auth.sign_in_with_password({"email": user.email, "password": body.password})
+        res = get_auth_db().auth.sign_in_with_password({"email": user.email, "password": body.password})
         if res.user is None:
             raise HTTPException(status_code=401, detail="Wrong password")
     except HTTPException:
@@ -176,7 +179,11 @@ async def change_email(body: ChangeEmailRequest, user=Depends(get_current_user_f
         raise HTTPException(status_code=401, detail="Wrong password")
 
     try:
-        db.auth.admin.update_user_by_id(user.id, {"email": new_email, "email_confirm": True})
+        # Bewust get_admin_db(): een regel hierboven loggen we de gebruiker in om
+        # zijn wachtwoord te controleren, en dat maakt de client waarop dat gebeurt
+        # tot díé gebruiker. Op dezelfde client zou deze beheerdersactie dus altijd
+        # "User not allowed" geven — daarom heeft e-mail wijzigen nooit gewerkt.
+        get_admin_db().auth.admin.update_user_by_id(user.id, {"email": new_email, "email_confirm": True})
     except Exception as e:
         msg = str(e).lower()
         if "already" in msg or "registered" in msg or "exists" in msg:
@@ -206,7 +213,7 @@ async def change_email(body: ChangeEmailRequest, user=Depends(get_current_user_f
     db = get_db()
     # Verify the current password against the account's current email.
     try:
-        res = db.auth.sign_in_with_password({"email": user.email, "password": body.password})
+        res = get_auth_db().auth.sign_in_with_password({"email": user.email, "password": body.password})
         if res.user is None:
             raise HTTPException(status_code=401, detail="Wrong password")
     except HTTPException:
@@ -215,7 +222,11 @@ async def change_email(body: ChangeEmailRequest, user=Depends(get_current_user_f
         raise HTTPException(status_code=401, detail="Wrong password")
 
     try:
-        db.auth.admin.update_user_by_id(user.id, {"email": new_email, "email_confirm": True})
+        # Bewust get_admin_db(): een regel hierboven loggen we de gebruiker in om
+        # zijn wachtwoord te controleren, en dat maakt de client waarop dat gebeurt
+        # tot díé gebruiker. Op dezelfde client zou deze beheerdersactie dus altijd
+        # "User not allowed" geven — daarom heeft e-mail wijzigen nooit gewerkt.
+        get_admin_db().auth.admin.update_user_by_id(user.id, {"email": new_email, "email_confirm": True})
     except Exception as e:
         msg = str(e).lower()
         if "already" in msg or "registered" in msg or "exists" in msg:

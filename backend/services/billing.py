@@ -5,7 +5,7 @@ import asyncio
 import logging
 import time
 from datetime import datetime, timedelta, timezone
-from backend.database import get_db
+from backend.database import get_admin_db, get_db
 from backend.config import settings
 
 logger = logging.getLogger(__name__)
@@ -226,7 +226,7 @@ def _mail_batch(rows: list[dict], marker_column: str, build_mail, moment_key) ->
     now = datetime.now(timezone.utc)
     for sub in rows:
         try:
-            user = db.auth.admin.get_user_by_id(sub["user_id"])
+            user = get_admin_db().auth.admin.get_user_by_id(sub["user_id"])
             email = user.user.email if user and user.user else None
         except Exception as e:
             # Dit was een stille `continue`, en daardoor is er in 27 abonnementen

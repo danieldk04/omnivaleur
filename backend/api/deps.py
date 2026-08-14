@@ -1,6 +1,6 @@
 import asyncio
 from fastapi import Depends, Header, HTTPException
-from backend.database import get_db
+from backend.database import get_auth_db, get_db
 
 
 async def get_current_user(authorization: str = Header(...)) -> str:
@@ -22,7 +22,7 @@ async def get_current_user_full(authorization: str = Header(...)):
         # occasionally a request got its connection cut mid-response. This
         # dependency runs on nearly every authenticated request, so offloading
         # it to a thread removes the single biggest source of that contention.
-        res = await asyncio.to_thread(get_db().auth.get_user, token)
+        res = await asyncio.to_thread(get_auth_db().auth.get_user, token)
         if not res.user:
             raise HTTPException(status_code=401, detail="Sessie verlopen")
         return res.user

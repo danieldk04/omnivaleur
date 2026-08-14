@@ -8,7 +8,7 @@ opsomming van losse regels.
 """
 import logging
 
-from backend.database import get_db
+from backend.database import get_admin_db, get_db
 
 logger = logging.getLogger(__name__)
 
@@ -90,7 +90,7 @@ def collect_recipients() -> list[str]:
     seen: set[str] = set()
     page = 1
     while True:
-        users = db.auth.admin.list_users(page=page, per_page=200)
+        users = get_admin_db().auth.admin.list_users(page=page, per_page=200)
         if not users:
             break
         for u in users:

@@ -226,14 +226,14 @@ def _blog_categories(seo: dict) -> list[dict]:
 # Signups
 # ---------------------------------------------------------------------------
 def _signups_section(win: dict) -> dict:
-    from backend.database import get_db
+    from backend.database import get_admin_db, get_db
 
     this_s, this_e = win["this"]
     prev_s, _ = win["prev"]
     try:
         db = get_db()
         # Supabase auth admin: haal recente gebruikers en tel per venster.
-        users = db.auth.admin.list_users()
+        users = get_admin_db().auth.admin.list_users()
         rows = users if isinstance(users, list) else getattr(users, "users", []) or []
         this_n = prev_n = 0
         for u in rows:
