@@ -120,8 +120,11 @@ MIN_GAT = 9                   # minuten die minimaal tussen twee tijdstippen zit
 # (zie AFWIJZING) en een afmelding is een afmelding. Beide stoppen het mailen,
 # dus dit kan niemand extra post opleveren.
 AFMELD_WOORDEN = re.compile(
-    r"\b(stop|afmelden|uitschrijven|unsubscribe|niet meer mailen)\b",
-    re.I)
+    r"\b(stop|afmelden|uitschrijven|unsubscribe|opt.?out"
+    # "niet meer mailen" ving "niet meer TE mailen" niet, en zo schreef iemand het
+    # nu juist. Een gemiste afmelding is de duurste fout die hier bestaat.
+    r"|niet meer (te )?(mail|benader|schrijf|contacteer|lastigval)\w*"
+    r"|verwijder(en)? (mij|me|ons)|haal (mij|me|ons) van)\b", re.I)
 # Een nette afwijzing is geen afmelding. "Wij gebruiken al iets" of "hier doen we
 # niets mee" is een antwoord, en zonder dit onderscheid landde zo iemand in Notion
 # op Interesse — precies naast de mensen die wél wilden. Alleen op de eerste
