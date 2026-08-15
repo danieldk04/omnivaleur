@@ -61,6 +61,25 @@ REFRESH_CAPABLE_PLATFORMS = set(PLATFORM_STRATEGIES.keys())
 # behavior indistinguishable from a normal seller tidying up their shop.
 MIN_COOLDOWN_DAYS = 14          # can't refresh the same listing more than 1x/14d
 MAX_REFRESHES_PER_USER_PER_DAY = 8
+
+# Marktplaats is strenger dan Vinted, en het verschil is principieel: op Vinted
+# is "bump" een functie van het platform zelf, op Marktplaats kost bovenaan komen
+# geld. Weghalen en opnieuw plaatsen is daar dus niet gewoon opruimen maar het
+# omzeilen van een betaalde dienst — precies waar Marktplaats op let. Daarom een
+# eigen, ruimere afkoeltijd per kanaal in plaats van één getal voor alles.
+#
+# Bijkomend: Marktplaats-advertenties worden na 27 dagen sowieso al automatisch
+# opnieuw geplaatst (relist_expiring_marktplaats). Een handmatige verversing komt
+# daar bovenop, dus 21 dagen zorgt dat die twee elkaar niet opstapelen.
+COOLDOWN_DAYS_PER_PLATFORM = {
+    "marktplaats": 21,
+    "2dehands": 21,
+}
+MAX_MP_REFRESHES_PER_USER_PER_DAY = 3
+
+
+def _cooldown_days(platform: str) -> int:
+    return COOLDOWN_DAYS_PER_PLATFORM.get(platform, MIN_COOLDOWN_DAYS)
 RELIST_DELAY_MIN_MINUTES = 45   # recreate happens 45min-4h after delete
 RELIST_DELAY_MAX_MINUTES = 240
 CONTENT_PRICE_JITTER_PCT = 0.02  # +/-2% nudge, rounded to a sane price
