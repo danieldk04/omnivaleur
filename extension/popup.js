@@ -64,17 +64,44 @@ async function toonAdmarkt() {
   catch (_) { admarktToggle.checked = false; }
 }
 
+// Deze pagina dient twee doelen: het uitklapvenster onder het icoontje, en
+// dezelfde pagina in een echt tabblad (?tab=1).
+//
+// WAAROM DAT NODIG IS. Chrome sluit het uitklapvenster op het moment dat hij
+// een toestemmingsvraag toont. Daarmee verdwijnt ook de code die op het antwoord
+// wacht, en als je het venster daarna opnieuw opent staat de schakelaar
+// onveranderd uit. Voor de gebruiker ziet dat eruit alsof de schakelaar
+// klemzit — precies wat er gebeurde. In een gewoon tabblad speelt dat niet.
+const inTabblad = new URLSearchParams(location.search).get("tab") === "1";
+const admarktUitleg = document.getElementById("admarktUitleg");
+
+if (inTabblad && admarktUitleg) admarktUitleg.style.display = "block";
+
 admarktToggle.addEventListener("change", async () => {
   const aan = admarktToggle.checked;
-  try {
-    // request() moet in dezelfde tel als de klik gebeuren; er mag hier niets
-    // aan await-en voorafgaan. Weigert de gebruiker, dan zetten we hem terug.
-    const gelukt = aan ? await chrome.permissions.request(ADMARKT)
-                       : await chrome.permissions.remove(ADMARKT);
-    if (!gelukt) admarktToggle.checked = !aan;
-  } catch (_) {
-    admarktToggle.checked = !aan;
+
+  // Uitzetten mag overal: dat vraagt Chrome niets en sluit dus niets.
+  if (!aan) {
+    try { await chrome.permissions.remove(ADMARKT); } catch (_) {}
+    return toonAdmarkt();
   }
+
+  // Aanzetten vanuit het uitklapvenster: eerst gewoon proberen. Lukt het (sommige
+  // Chrome-versies laten het toe), dan is de gebruiker in één klik klaar.
+  try {
+    if (await chrome.permissions.request(ADMARKT)) return toonAdmarkt();
+  } catch (_) {}
+
+  if (!inTabblad) {
+    // Niet gelukt en we zitten in het venstertje: dezelfde pagina in een tabblad
+    // openen, waar de vraag wél blijft staan.
+    admarktToggle.checked = false;
+    chrome.tabs.create({ url: chrome.runtime.getURL("popup.html?tab=1") });
+    window.close();
+    return;
+  }
+
+  admarktToggle.checked = false;
   toonAdmarkt();
 });
 
