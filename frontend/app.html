@@ -5321,14 +5321,21 @@ function renderRefreshView() {
       .localeCompare(state.items.find(i => i.id === b.item_id)?.title || ''));
 
   // Classify each listing so the status filter chips work.
-  const vintedStatus = {}; // item_id -> 'never' | 'cooldown' | 'ready' | 'inprogress'
+  // OP ITEM ÉN KANAAL, niet op item alleen: hetzelfde item staat vaak zowel op
+  // Vinted als op Marktplaats. Op item-id alleen overschreef het ene kanaal de
+  // status van het andere, en dan stond een advertentie op "ready" terwijl hij
+  // in werkelijkheid nog in afkoeling zat.
+  const vintedStatus = {}; // item|platform -> 'never' | 'cooldown' | 'ready' | 'inprogress'
   vinted.forEach(l => {
-    if (relistMap[relistKey(l.item_id, l.platform)]) { vintedStatus[l.item_id] = 'inprogress'; return; }
-    if (!l.last_refreshed_at) { vintedStatus[l.item_id] = 'never'; return; }
+    const k = relistKey(l.item_id, l.platform);
+    if (relistMap[k]) { vintedStatus[k] = 'inprogress'; return; }
+    if (!l.last_refreshed_at) { vintedStatus[k] = 'never'; return; }
     const elapsedDays = Math.floor((now - new Date(l.last_refreshed_at).getTime()) / 86400000);
-    vintedStatus[l.item_id] = elapsedDays < REFRESH_COOLDOWN_DAYS ? 'cooldown' : 'ready';
+    vintedStatus[k] = elapsedDays < cooldownDays(l.platform) ? 'cooldown' : 'ready';
   });
-  if (refreshStatusFilter) vinted = vinted.filter(l => vintedStatus[l.item_id] === refreshStatusFilter);
+  if (refreshStatusFilter) {
+    vinted = vinted.filter(l => vintedStatus[relistKey(l.item_id, l.platform)] === refreshStatusFilter);
+  }
 
   const vintedRows = vinted.map(l => {
     const item = state.items.find(i => i.id === l.item_id);
