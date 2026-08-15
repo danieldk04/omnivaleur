@@ -113,7 +113,15 @@ PAUZE = (40, 110)             # seconden tussen twee mails, willekeurig
 VENSTER = (8, 45), (20, 30)   # vroegste en laatste verzendtijd op een dag
 MIN_GAT = 9                   # minuten die minimaal tussen twee tijdstippen zitten
 
-// placeholder
+# Alleen een écht verzoek om van de lijst af te gaan. "Geen interesse" stond hier
+# ook in, en dat brak de indeling: iemand die schreef "wij gebruiken al Channable,
+# dus geen interesse" werd geboekt als afmelding, waardoor het belangrijkste deel
+# van dat antwoord — dát ze al crosslisten — verloren ging. Een nee is nu een nee
+# (zie AFWIJZING) en een afmelding is een afmelding. Beide stoppen het mailen,
+# dus dit kan niemand extra post opleveren.
+AFMELD_WOORDEN = re.compile(
+    r"\b(stop|afmelden|uitschrijven|unsubscribe|niet meer mailen)\b",
+    re.I)
 # Een nette afwijzing is geen afmelding. "Wij gebruiken al iets" of "hier doen we
 # niets mee" is een antwoord, en zonder dit onderscheid landde zo iemand in Notion
 # op Interesse — precies naast de mensen die wél wilden. Alleen op de eerste
