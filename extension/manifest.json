@@ -26,6 +26,16 @@
     "https://omnivaleur.com/*",
     "https://www.google-analytics.com/*"
   ],
+  "//optional_host_permissions": [
+    "Admarkt is de zakelijke kant van Marktplaats, met een eigen inlog en een",
+    "eigen advertentiepagina. Alleen zakelijke verkopers hebben die nodig.",
+    "BEWUST optioneel en niet bij host_permissions: een update die een nieuwe",
+    "vaste toestemming toevoegt zet Chrome de extensie bij IEDEREEN stil tot hij",
+    "die accepteert. Zo raakt alleen wie hem aanzet in de popup het aan."
+  ],
+  "optional_host_permissions": [
+    "https://admarkt.marktplaats.nl/*"
+  ],
   "background": {
     "service_worker": "background.js"
   },
