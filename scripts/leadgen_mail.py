@@ -797,18 +797,42 @@ def _check_inbox(state: dict, boek: "Notion", dagen: int) -> tuple[int, int, int
                 continue
 
             lead = per_adres.get(afzender)
+            # Wat voor antwoord is dit? De vololgorde is niet willekeurig: een
+            # afmelding is het zwaarst, daarna "we gebruiken al iets" (dat vaak
+            # óók een afwijzende zin bevat, en dan is de tool het echte nieuws),
+            # dan een gewone nee. Blijft er niets over, dan is het warm.
+            kort = body[:400]
+            if AFMELD_WOORDEN.search(kort):
+                soort = "afmelding"
+            elif CONCURRENT.search(kort):
+                soort = "concurrent"
+            elif AFWIJZING.search(kort):
+                soort = "afwijzing"
+            else:
+                soort = "warm"
+
             if not st.get("beantwoord"):
                 st["beantwoord"] = datetime.now().isoformat(timespec="seconds")
+                st["soort"] = soort
                 nieuw += 1
                 if lead:
-                    boek.geantwoord(lead)
+                    boek.geantwoord(lead, soort)
+                # Alleen bij een warm antwoord een seintje. Voor "we gebruiken al
+                # Channable" hoeft Daniel niet uit zijn werk gehaald te worden;
+                # dat staat morgen gewoon in het dagbericht.
+                if lead and soort in ("warm", "onbekend"):
                     _alarm(lead, kop, body)
-            if AFMELD_WOORDEN.search(body[:400]) and not st.get("afgemeld"):
+
+            if soort == "afmelding" and not st.get("afgemeld"):
                 st["afgemeld"] = True
                 afgemeld += 1
                 if lead:
                     boek.afgemeld(lead)
-            elif AFWIJZING.search(body[:400]) and not st.get("afgewezen"):
+            elif soort == "concurrent" and not st.get("concurrent"):
+                st["concurrent"] = True
+                if lead:
+                    boek.gebruikt_concurrent(lead)
+            elif soort == "afwijzing" and not st.get("afgewezen"):
                 # Wel netjes geantwoord, maar het is nee. Geen afmelding — hij mag
                 # over een half jaar best weer benaderd worden — maar in de lijst
                 # hoort dit niet naast de warme reacties te staan.
