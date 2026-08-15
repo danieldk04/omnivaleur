@@ -106,6 +106,9 @@ FOLLOWUP_DAGEN = (2, 4)       # opvolgmail 1 en 2, in dagen na de vorige mail
 # schuift hij in Notion naar de eindfase, zodat de lijst laat zien wie er nog
 # leeft in plaats van alleen wie ooit gemaild is.
 STIL_NA_DAGEN = 10
+# De fase voor "crosslist al, maar met een concurrent". Moet exact zo in de
+# Leadlist bestaan, anders wordt de kolom stil overgeslagen.
+FASE_CONCURRENT = "Gebruikt concurrent"
 PAUZE = (40, 110)             # seconden tussen twee mails, willekeurig
 VENSTER = (8, 45), (20, 30)   # vroegste en laatste verzendtijd op een dag
 MIN_GAT = 9                   # minuten die minimaal tussen twee tijdstippen zitten
