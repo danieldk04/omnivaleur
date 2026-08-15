@@ -5295,17 +5295,19 @@ function renderRefreshView() {
 
   const searchTerm = (document.getElementById('refresh-search')?.value || '').trim().toLowerCase();
 
-  // This tab is Vinted-only. Any live Vinted listing (incl. ones stuck in
-  // "error" that still have a platform_listing_id), plus any Vinted listing
-  // whose relist is mid-flight (status has flipped to delisted but the recreate
-  // is still pending — it must not vanish from the table).
+  // Every listing on a channel that supports refresh (see PLATFORM_STRATEGIES in
+  // backend/services/relist.py): live ones, ones stuck in "error" that still have
+  // a platform_listing_id, plus any whose relist is mid-flight (status has
+  // flipped to delisted but the recreate is still pending — it must not vanish
+  // from the table).
   let vinted = state.listings.filter(l =>
-    l.platform === 'vinted' && (
+    REFRESH_PLATFORMS.includes(l.platform) && (
       l.status === 'active' ||
       (l.status === 'error' && l.platform_listing_id) ||
       !!relistMap[relistKey(l.item_id, l.platform)]
     )
   );
+  if (refreshPlatformFilter) vinted = vinted.filter(l => l.platform === refreshPlatformFilter);
   vinted = vinted.slice().sort((a, b) =>
     (state.items.find(i => i.id === a.item_id)?.title || '')
       .localeCompare(state.items.find(i => i.id === b.item_id)?.title || ''));
