@@ -389,7 +389,8 @@ async def refresh_stale_listings(user_id: str, platform: str, older_than_days: i
     """
     db = get_db()
     cutoff = (datetime.now(timezone.utc) - timedelta(days=older_than_days)).isoformat()
-    cooldown_cutoff = (datetime.now(timezone.utc) - timedelta(days=MIN_COOLDOWN_DAYS)).isoformat()
+    cooldown_cutoff = (datetime.now(timezone.utc)
+                       - timedelta(days=_cooldown_days(platform))).isoformat()
 
     item_ids = [r["id"] for r in fetch_all(
         lambda: db.table("items").select("id").eq("user_id", user_id))]
