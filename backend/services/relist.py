@@ -89,7 +89,7 @@ class RefreshError(Exception):
     pass
 
 
-def _check_and_increment_quota(db, user_id: str) -> None:
+def _check_and_increment_quota(db, user_id: str, platform: str | None = None) -> None:
     today = datetime.now(timezone.utc).date().isoformat()
     row = db.table("refresh_quota").select("count").eq("user_id", user_id).eq("day", today).execute()
     count = row.data[0]["count"] if row.data else 0
@@ -99,6 +99,29 @@ def _check_and_increment_quota(db, user_id: str) -> None:
             "This cap is intentional — it keeps refresh activity looking like normal "
             "shop upkeep instead of a bulk/bot pattern."
         )
+
+    # Bovenop de dagteller een strengere sublimiet voor Marktplaats/2dehands.
+    # Acht keer opnieuw plaatsen op één dag is op Vinted onopvallend en op
+    # Marktplaats een patroon. Geteld uit de banen zelf, zodat hier geen tweede
+    # teller bijgehouden hoeft te worden die uit de pas kan gaan lopen.
+    if platform in COOLDOWN_DAYS_PER_PLATFORM:
+        vandaag = datetime.now(timezone.utc).date().isoformat()
+        mp_vandaag = (
+            db.table("jobs")
+            .select("id", count="exact")
+            .eq("user_id", user_id)
+            .eq("platform", platform)
+            .eq("action", "delete")
+            .gte("created_at", vandaag)
+            .execute()
+        )
+        if (mp_vandaag.count or 0) >= MAX_MP_REFRESHES_PER_USER_PER_DAY:
+            raise RefreshError(
+                f"Daily {platform} refresh limit reached "
+                f"({MAX_MP_REFRESHES_PER_USER_PER_DAY}/day). Marktplaats charges for "
+                "bumping a listing, so removing and reposting is exactly the pattern "
+                "it watches for. Keeping this low is what keeps your account safe."
+            )
     if row.data:
         db.table("refresh_quota").update({"count": count + 1}).eq("user_id", user_id).eq("day", today).execute()
     else:
