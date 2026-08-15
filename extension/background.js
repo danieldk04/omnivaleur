@@ -2941,7 +2941,10 @@ async function bgScanMp2dh(job, serverUrl) {
       result.meta = { ...result.meta, ...via.meta, source: "admarkt" };
     }
 
-    if (!result.items.length) throw new Error(mpEmptyScanReason(result.meta || {}, platform));
+    if (!result.items.length) {
+      throw new Error(mpEmptyScanReason(
+        { ...(result.meta || {}), admarkt_toegestaan: await admarktToegestaan() }, platform));
+    }
     await reportProgress(serverUrl, job.id, {
       stage: "enriching",
       message: `Found ${result.items.length} listings — fetching full details…`,
