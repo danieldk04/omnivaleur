@@ -120,10 +120,27 @@ AFMELD_WOORDEN = re.compile(
 AFWIJZING = re.compile(
     r"(geen (interesse|behoefte|belangstelling)"
     r"|niet ge(i|ï)nteresseerd"
-    r"|we (gebruiken|hebben) al (een|iets|zo'?n)"
     r"|(hier|daar) doen we (niets|niks) mee"
     r"|(is|lijkt) (het |ons )?niet(s)? (voor ons|wat wij zoeken|interessant)"
     r"|no,? thank(s| you)|not interested|we're all set)", re.I)
+
+# "We gebruiken al Channable" is géén nee. Het is de beste soort nee die er is:
+# deze handelaar crosslist al, ziet er de waarde van in en betaalt er al voor.
+# Hij zit alleen vast aan iemand anders. Zet je hem bij "geen interesse", dan
+# verdwijnt precies de groep die het makkelijkst klant wordt zodra die tool te
+# duur of te omslachtig wordt. Daarom een eigen fase, apart te filteren.
+#
+# De namen hieronder zijn de tools die deze doelgroep echt gebruikt; de losse
+# zinnen vangen de rest. Blijft het bij een vage "we hebben al iets", dan telt
+# dat ook hier — dat is nog steeds "bezet", niet "niet geïnteresseerd".
+CONCURRENT = re.compile(
+    r"\b(channable|lengow|channelengine|effectconnect|productflow|shoppingfeed"
+    r"|shopping ?feed|goedgepickt|itsperfect|picqer|storekeeper|admarkt)\b"
+    r"|we (gebruiken|hebben|werken met) al (een|iets|zo'?n|de|het)"
+    r"|(gebruiken|hebben) hier al een (tool|systeem|programma|koppeling)"
+    r"|(zit|zitten) al bij (een|een andere)"
+    r"|we (already )?(use|have) (a|another)"
+    r"|already using", re.I)
 BOUNCE_AFZENDERS = re.compile(r"mailer-daemon|postmaster|no-?reply", re.I)
 # Een automatisch antwoord is geen antwoord. Zou je het wel zo tellen, dan valt
 # iemand die "ik ben op vakantie" terugstuurt uit de opvolging en hoor je nooit
