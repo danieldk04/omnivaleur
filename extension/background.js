@@ -2918,6 +2918,22 @@ async function bgScanMp2dh(job, serverUrl) {
     });
 
     if (!result || !result.items) throw new Error("Could not read your listings overview — page structure may have changed.");
+
+    // Niets op het persoonlijke overzicht, maar wel ingelogd? Dan is dit vrijwel
+    // zeker een zakelijk account en staan de advertenties in Admarkt. Daar nog
+    // één keer kijken voordat we melden dat er niets is.
+    if (!result.items.length && platform === "marktplaats"
+        && result.meta && result.meta.signed_in !== false && await admarktToegestaan()) {
+      await reportProgress(serverUrl, job.id, {
+        stage: "scanning",
+        message: "Nothing on your personal overview — checking Admarkt…",
+        current: 0, total: 0,
+      });
+      const via = await bgScanAdmarkt(job, serverUrl);
+      result.items = via.items;
+      result.meta = { ...result.meta, ...via.meta, source: "admarkt" };
+    }
+
     if (!result.items.length) throw new Error(mpEmptyScanReason(result.meta || {}, platform));
     await reportProgress(serverUrl, job.id, {
       stage: "enriching",
