@@ -1228,6 +1228,8 @@ def _dagbericht(state: dict, plan: dict) -> None:
         f"Totaal verstuurd:    {totaal} mails naar {benaderd} bedrijven",
         f"Echte reacties:      {antwoorden}",
         f"Automatische reacties: {auto}",
+        f"Warme reacties:      {sum(1 for st in state.values() if st.get('soort') == 'warm')}",
+        f"Gebruikt concurrent: {sum(1 for st in state.values() if st.get('concurrent'))}",
         f"Geen interesse:      {afgewezen}",
         f"Afmeldingen:         {afgemeld}",
         f"Bounces:             {bounces}",
