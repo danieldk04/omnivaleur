@@ -94,7 +94,13 @@ SYSTEEM_AFZENDER = re.compile(
 # VENSTER en SPREIDING horen bij de autonome stand (`tick`): de mails van een dag
 # krijgen willekeurige tijdstippen binnen kantoortijd, in plaats van vijftien
 # stuks achter elkaar om negen uur 's ochtends.
-RAMP = [(1, 5), (2, 15), (6, 25), (11, 40)]
+RAMP = [(1, 5), (2, 15), (6, 25), (11, 30)]
+# Hoeveel van het dagbudget gereserveerd blijft voor NIEUWE eerste mails.
+# Opvolgmails gaan voor, en met het ritme van 2 en 4 dagen komen die in golven —
+# op 15-08 waren 12 van de 15 mails opvolging en werd er die dag vrijwel niemand
+# nieuw aangeschreven. Zonder deze reservering staat het aanboren van nieuwe
+# leads stil zodra er een golf loopt.
+NIEUW_AANDEEL = 0.4
 FOLLOWUP_DAGEN = (2, 4)       # opvolgmail 1 en 2, in dagen na de vorige mail
 # Hoeveel dagen na de laatste opvolgmail een lead als doodgelopen geldt. Daarna
 # schuift hij in Notion naar de eindfase, zodat de lijst laat zien wie er nog
