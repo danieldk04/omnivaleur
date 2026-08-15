@@ -459,13 +459,22 @@ def _beurt(lead: dict, st: dict | None) -> tuple[int, str] | None:
 
 def _wachtrij(state: dict, budget: int) -> list[tuple[dict, int, str]]:
     # Opvolgmails gaan vóór nieuwe eerste mails: een gesprek dat loopt is meer
-    # waard dan een gesprek dat nog moet beginnen.
-    rij = []
+    # waard dan een gesprek dat nog moet beginnen. Maar niet ten koste van álles
+    # — zie NIEUW_AANDEEL: er blijft altijd ruimte voor nieuwe leads, anders
+    # droogt de bovenkant van de trechter op zodra er een opvolggolf loopt.
+    opvolg, nieuw = [], []
     for lead in _leads():
         beurt = _beurt(lead, state.get(lead["email"].lower()))
-        if beurt:
-            rij.append((lead, beurt[0], beurt[1]))
-    rij.sort(key=lambda r: (r[1] == 0, -(r[0].get("ads") or 0)))
+        if not beurt:
+            continue
+        (nieuw if beurt[0] == 0 else opvolg).append((lead, beurt[0], beurt[1]))
+
+    # Grootste handelaren eerst: die hebben het meeste aan crosslisten.
+    for lijst in (opvolg, nieuw):
+        lijst.sort(key=lambda r: -(r[0].get("ads") or 0))
+
+    gereserveerd = min(len(nieuw), int(budget * NIEUW_AANDEEL + 0.5))
+    rij = opvolg[:budget - gereserveerd] + nieuw[:budget - len(opvolg[:budget - gereserveerd])]
     return rij[:budget]
 
 
