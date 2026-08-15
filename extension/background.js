@@ -2586,6 +2586,13 @@ function mpEmptyScanReason(meta, platform) {
   // We noemen dat nu altijd, in plaats van het uit de paginatekst te raden —
   // die gok gaf een verkeerd antwoord en kostte een ronde. Voor iemand die
   // écht niets te koop heeft is deze tekst nog steeds waar.
+  if (platform === "marktplaats" && !meta.admarkt_toegestaan) {
+    return `Signed in fine, but ${site} shows no adverts on your personal "my listings" page. ` +
+      `That is what a business account looks like: your adverts live in Admarkt, ` +
+      `Marktplaats' separate platform for business sellers. Omnivaleur can read those too, ` +
+      `but only once you allow it: click the Omnivaleur icon in your browser toolbar and ` +
+      `switch on "Business account (Admarkt)", then run the scan again.`;
+  }
   return `Signed in fine, but ${site} shows no adverts on your personal "my listings" page. ` +
     `If you do have adverts running, they are almost certainly managed through Admarkt — ` +
     `${site}' separate platform for business sellers — which Omnivaleur cannot read yet. ` +
