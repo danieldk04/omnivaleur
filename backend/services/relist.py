@@ -129,14 +129,15 @@ def rollback_refresh(rollback: dict, user_id: str) -> None:
             db.table("refresh_quota").update({"count": new_count}).eq("user_id", user_id).eq("day", day).execute()
 
 
-def _check_cooldown(listing: dict) -> None:
+def _check_cooldown(listing: dict, platform: str | None = None) -> None:
     last = listing.get("last_refreshed_at")
     if not last:
         return
+    dagen = _cooldown_days(platform or listing.get("platform") or "")
     last_dt = datetime.fromisoformat(last.replace("Z", "+00:00"))
     elapsed = datetime.now(timezone.utc) - last_dt
-    if elapsed < timedelta(days=MIN_COOLDOWN_DAYS):
-        remaining = timedelta(days=MIN_COOLDOWN_DAYS) - elapsed
+    if elapsed < timedelta(days=dagen):
+        remaining = timedelta(days=dagen) - elapsed
         raise RefreshError(
             f"This listing was refreshed {elapsed.days}d ago. "
             f"Wait {remaining.days}d more — refreshing too often is what gets accounts flagged."
