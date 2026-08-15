@@ -597,11 +597,26 @@ class Notion:
         self._schrijf(lead, f"mail {n + 1} verstuurd naar {lead['email']} — "
                             f"onderwerp: {onderwerp}", wensen)
 
-    def geantwoord(self, lead: dict) -> None:
-        self._schrijf(lead, "heeft geantwoord op de mail",
-                      {"Fase": ("select", "4. Gereageerd"),
-                       "Status": ("status", "Interesse"),
-                       "Volgende actie op": ("date", date.today().isoformat())})
+    def geantwoord(self, lead: dict, soort: str = "onbekend") -> None:
+        """Iemand heeft geantwoord. Dat is een FEIT en gaat altijd naar Fase
+        '4. Gereageerd'. Of het ook interesse is, is een OORDEEL — en dat mag je
+        niet automatisch aannemen: "we gebruiken al Channable" is een antwoord
+        maar geen interesse, en die landde eerder gewoon tussen de warme leads.
+        Status Interesse zetten we daarom alleen als er niets op tegenspreekt."""
+        wensen = {"Fase": ("select", "4. Gereageerd"),
+                  "Volgende actie op": ("date", date.today().isoformat())}
+        if soort == "warm":
+            wensen["Status"] = ("status", "Interesse")
+        self._schrijf(lead, "heeft geantwoord op de mail", wensen)
+
+    def gebruikt_concurrent(self, lead: dict) -> None:
+        """Crosslist al, maar met iemand anders. Bewaren als eigen groep: dit is
+        geen nee maar een bezet ja, en de meest kansrijke lijst die je hebt zodra
+        die andere tool tegenvalt."""
+        self._schrijf(lead, "gebruikt al een andere tool — bezet, geen nee",
+                      {"Fase": ("select", FASE_CONCURRENT),
+                       "Afgesloten reden": ("select", "Gebruikt al een tool"),
+                       "Volgende actie op": ("date", None)})
 
     def afgewezen(self, lead: dict) -> None:
         """Een nee. Wel gereageerd, dus geen doodgelopen spoor — maar ook geen
