@@ -113,9 +113,7 @@ PAUZE = (40, 110)             # seconden tussen twee mails, willekeurig
 VENSTER = (8, 45), (20, 30)   # vroegste en laatste verzendtijd op een dag
 MIN_GAT = 9                   # minuten die minimaal tussen twee tijdstippen zitten
 
-AFMELD_WOORDEN = re.compile(
-    r"\b(stop|afmelden|uitschrijven|unsubscribe|geen interesse|niet meer mailen)\b",
-    re.I)
+// placeholder
 # Een nette afwijzing is geen afmelding. "Wij gebruiken al iets" of "hier doen we
 # niets mee" is een antwoord, en zonder dit onderscheid landde zo iemand in Notion
 # op Interesse — precies naast de mensen die wél wilden. Alleen op de eerste
