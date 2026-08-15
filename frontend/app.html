@@ -4997,6 +4997,14 @@ async function ignoreImportCandidate(candidateId) {
 // ── Refresh (bump old listings) ────────────────────────────────────
 const REFRESH_COOLDOWN_DAYS = 14;
 const REFRESH_DAILY_CAP = 8;
+// Kanalen die verversen ondersteunen, en hun eigen afkoeltijd. Moet gelijk
+// blijven aan COOLDOWN_DAYS_PER_PLATFORM in backend/services/relist.py —
+// Marktplaats vraagt geld voor bovenaan komen, dus opnieuw plaatsen is daar
+// gevoeliger dan op Vinted en de rem staat er strakker.
+const REFRESH_PLATFORMS = ['vinted', 'marktplaats', '2dehands'];
+const REFRESH_COOLDOWN_BY_PLATFORM = { marktplaats: 21, '2dehands': 21 };
+const cooldownDays = p => REFRESH_COOLDOWN_BY_PLATFORM[p] || REFRESH_COOLDOWN_DAYS;
+const PLATFORM_LABEL = { vinted: 'Vinted', marktplaats: 'Marktplaats', '2dehands': '2dehands' };
 const REFRESH_PLATFORM_STRATEGIES = {
   vinted: ['content', 'relist'],
   marktplaats: ['relist'],
