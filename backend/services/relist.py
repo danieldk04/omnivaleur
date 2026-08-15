@@ -211,8 +211,8 @@ async def refresh_listing(item_id: str, platform: str, user_id: str, strategy: s
     if platform not in REFRESH_CAPABLE_PLATFORMS:
         raise RefreshError(f"Refresh isn't available for {platform} yet")
 
-    _check_cooldown(listing)
-    _check_and_increment_quota(db, user_id)
+    _check_cooldown(listing, platform)
+    _check_and_increment_quota(db, user_id, platform)
 
     now = datetime.now(timezone.utc)
     # Captured before we mutate the listing, so a failed job can be rolled back
