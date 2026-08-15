@@ -53,4 +53,30 @@ document.getElementById("logoutBtn").addEventListener("click", async () => {
   checkLoginState();
 });
 
+// Toestemming voor Admarkt. De schakelaar toont de ECHTE stand (wat Chrome
+// zegt), niet een eigen instelling — anders staat hij aan terwijl de toestemming
+// er niet is en snapt niemand waarom de scan nog steeds niets vindt.
+const ADMARKT = { origins: ["https://admarkt.marktplaats.nl/*"] };
+const admarktToggle = document.getElementById("admarktToggle");
+
+async function toonAdmarkt() {
+  try { admarktToggle.checked = await chrome.permissions.contains(ADMARKT); }
+  catch (_) { admarktToggle.checked = false; }
+}
+
+admarktToggle.addEventListener("change", async () => {
+  const aan = admarktToggle.checked;
+  try {
+    // request() moet in dezelfde tel als de klik gebeuren; er mag hier niets
+    // aan await-en voorafgaan. Weigert de gebruiker, dan zetten we hem terug.
+    const gelukt = aan ? await chrome.permissions.request(ADMARKT)
+                       : await chrome.permissions.remove(ADMARKT);
+    if (!gelukt) admarktToggle.checked = !aan;
+  } catch (_) {
+    admarktToggle.checked = !aan;
+  }
+  toonAdmarkt();
+});
+
+toonAdmarkt();
 checkLoginState();
