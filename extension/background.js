@@ -1153,7 +1153,7 @@ async function processJob(job, serverUrl) {
     try {
       await bgDeleteVinted(job, serverUrl);
     } catch (e) {
-      await reportError(job.id, serverUrl, String(e));
+      await reportError(job.id, serverUrl, e);
     }
     return;
   }
@@ -1164,7 +1164,9 @@ async function processJob(job, serverUrl) {
       if (job.platform === "vinted") await bgScanVinted(job, serverUrl);
       else await bgScanMp2dh(job, serverUrl);
     } catch (e) {
-      await reportError(job.id, serverUrl, String(e));
+      // Geef de fout zelf door, niet String(e): dat maakte er "Error: ..." van,
+      // en die tekst kwam in het dashboard terecht als "Scan failed: Error: ...".
+      await reportError(job.id, serverUrl, e);
     }
     return;
   }
@@ -2586,10 +2588,19 @@ function mpEmptyScanReason(meta, platform) {
   // We noemen dat nu altijd, in plaats van het uit de paginatekst te raden —
   // die gok gaf een verkeerd antwoord en kostte een ronde. Voor iemand die
   // écht niets te koop heeft is deze tekst nog steeds waar.
+  // De harde cijfers erbij. Zonder die tail is "nul advertenties" niet te
+  // onderscheiden van "de pagina gaf een fout", en kostte elke melding een
+  // e-mailronde heen en weer om te achterhalen wat er nou precies terugkwam.
+  const diag = [
+    meta.api_status != null ? `api ${meta.api_status}` : null,
+    meta.total_entries != null ? `total ${meta.total_entries}` : null,
+    meta.source ? `via ${meta.source}` : null,
+  ].filter(Boolean).join(", ");
   return `Signed in fine, but ${site} shows no adverts on your personal "my listings" page. ` +
     `If you do have adverts running, they are almost certainly managed through Admarkt — ` +
     `${site}' separate platform for business sellers — which Omnivaleur cannot read yet. ` +
-    `Importing works for a private ${site} account for now.`;
+    `Importing works for a private ${site} account for now.` +
+    (diag ? ` [${diag}]` : "");
 }
 
 async function bgScanMp2dh(job, serverUrl) {

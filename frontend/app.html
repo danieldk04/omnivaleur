@@ -1301,9 +1301,21 @@ input[type="checkbox"].row-check { width: 15px; height: 15px; cursor: pointer; a
         <p>Already selling somewhere directly (not via Omnivaleur)? A scan reads your own "my listings" page and lists what it finds below. Each one then becomes an <b>item</b> in your dashboard — either linked to an item you already have, or created as a new item (the create step opens the same form as "New item", pre-filled with everything the scan captured). Nothing happens automatically; you confirm each row. Vinted, Marktplaats and 2dehands can be scanned; the other platforms are still in progress. Scanning more than one channel is fine: a listing that looks like something you already imported elsewhere — the same jumper in Dutch on Marktplaats and in English on Vinted — is flagged for you instead of quietly becoming a second item.</p>
       </div>
 
+      <!-- Een oude extensie geeft oude foutmeldingen. Dat is hier het duurst:
+           een verkoper kreeg een melding die allang uit de code weg is en ging
+           daardoor een inlogprobleem zoeken dat hij niet had. Zeg het dus vóór
+           de scanknoppen, niet alleen in het kleine statuslampje bovenin. -->
+      <div id="import-ext-outdated" style="display:none;background:#fffbeb;border:1px solid #fcd34d;border-radius:9px;padding:11px 14px;margin-bottom:18px;font-size:12.5px;color:#92400e;line-height:1.55"></div>
+
       <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px;margin-bottom:24px" id="import-scan-grid"></div>
 
       <div id="import-progress" style="display:none;margin-bottom:24px"></div>
+
+      <!-- Een mislukte scan stond in een toast: één regel, geen regelafbreking,
+           en na een paar seconden weg. Een gebruiker die hem wilde doorsturen
+           kwam met de schermafdruk te laat. Daarom blijft de fout hier staan,
+           mét versie en een kopieerknop, tot de volgende scan. -->
+      <div id="import-error" style="display:none;margin-bottom:24px"></div>
 
       <!-- Where everything a scan found actually ended up. The review table only
            shows what still needs a decision, so without this a scan of listings
@@ -4014,11 +4026,22 @@ function renderExtStatus() {
   } else {
     label.textContent = pending > 0 ? `${pending} job(s) pending` : `Extension active (v${extState.version})`;
   }
+  // Het antwoord van de extensie komt meestal ná het opbouwen van het
+  // importscherm — zonder dit blijft de waarschuwing daar leeg staan.
+  if (typeof renderImportExtNotice === 'function') renderImportExtNotice();
+  if (typeof renderScanError === 'function') renderScanError();
 }
 
 // De laagste extensieversie die met de huidige site meekan. Verhoog dit bij
 // elke uitgerolde extensie-fix waarvan de gebruiker moet merken dat hij hem mist.
-const EXT_MIN_VERSION = '1.0.171';
+//
+// Op 1.0.198: een lege Marktplaats-scan noemt sindsdien Admarkt in plaats van
+// "ben je wel ingelogd?" te raden, en élke foutmelding draagt sinds die ronde de
+// extensieversie bij zich. Dit stond nog op 1.0.171, dus een gebruiker op een
+// oudere versie kreeg gewoon "Extension active" te zien terwijl hij de
+// weggehaalde, verkeerde melding voor zich had — en die melding was op geen
+// enkele manier te herkennen als afkomstig van een oude installatie.
+const EXT_MIN_VERSION = '1.0.198';
 function extVersionIsOld() {
   if (extState.status !== 'ready' || !extState.version) return false;
   const a = String(extState.version).split('.').map(Number);
@@ -4469,7 +4492,69 @@ function renderImportScanButtons() {
     </div>`;
   }).join('');
   document.getElementById('import-scan-grid').innerHTML = html;
+  renderImportExtNotice();
 }
+
+// De waarschuwing boven de scanknoppen. Draait ook los, want het antwoord van de
+// extensie (EXT_HELLO) komt vaak pas ná het opbouwen van dit scherm binnen.
+function renderImportExtNotice() {
+  const box = document.getElementById('import-ext-outdated');
+  if (!box) return;
+  if (!extVersionIsOld()) { box.style.display = 'none'; box.innerHTML = ''; return; }
+  box.style.display = 'block';
+  box.innerHTML = `⚠️ <b>Your Omnivaleur extension is out of date (v${esc(extState.version)}, current is v${esc(EXT_MIN_VERSION)} or newer).</b>
+    Scan results and error messages from an old version can be wrong — including one that blamed being logged out for something else entirely.
+    Chrome usually updates extensions on its own within a few hours; to do it now, open <code>chrome://extensions</code>, switch on <b>Developer mode</b> and press <b>Update</b>. Then scan again.`;
+}
+
+// De laatste mislukte scan, per platform, zodat hij blijft staan tot de gebruiker
+// hem zelf wegklikt of opnieuw scant.
+let lastScanError = null;
+
+function renderScanError() {
+  const box = document.getElementById('import-error');
+  if (!box) return;
+  if (!lastScanError) { box.style.display = 'none'; box.innerHTML = ''; return; }
+  const { platform, message, at } = lastScanError;
+  const stale = extVersionIsOld()
+    ? `<div style="margin-top:8px">This scan ran on extension <b>v${esc(extState.version)}</b>, which is out of date — update it and scan again before acting on the message above.</div>`
+    : '';
+  box.style.display = 'block';
+  box.innerHTML = `<div class="card" style="padding:14px 16px;border:1px solid #fca5a5;background:#fef2f2">
+      <div style="display:flex;align-items:flex-start;gap:10px">
+        <div style="flex:1;min-width:0">
+          <div style="font-weight:700;font-size:13.5px;color:#b91c1c;margin-bottom:6px">${esc(PLATFORM_LABELS[platform] || platform)} scan failed</div>
+          <div style="font-size:12.5px;color:#7f1d1d;line-height:1.6;white-space:pre-wrap;word-break:break-word">${esc(message)}</div>
+          ${stale}
+          <div style="font-size:11px;color:#9f1239;margin-top:8px">${esc(new Date(at).toLocaleString())}</div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:6px;flex-shrink:0">
+          <button class="btn btn-sm btn-outline" onclick="copyScanError()">Copy</button>
+          <button class="btn btn-sm btn-outline" onclick="dismissScanError()">Dismiss</button>
+        </div>
+      </div>
+    </div>`;
+}
+
+function scanErrorText() {
+  if (!lastScanError) return '';
+  return `Omnivaleur ${lastScanError.platform} scan failed\n${new Date(lastScanError.at).toISOString()}\n`
+    + `extension: v${extState.version || 'unknown'}\n\n${lastScanError.message}`;
+}
+
+function copyScanError() {
+  const text = scanErrorText();
+  // Zonder de fallback kopieert een pagina zonder clipboard-permissie niets én
+  // zegt dat ook niet — dan denkt de gebruiker dat het gelukt is.
+  const done = () => showToast('Error message copied — you can paste it into an email.');
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(text).then(done).catch(() => window.prompt('Copy this:', text));
+  } else {
+    window.prompt('Copy this:', text);
+  }
+}
+
+function dismissScanError() { lastScanError = null; renderScanError(); }
 
 let importProgressTimer = null;
 
@@ -4534,6 +4619,9 @@ async function scanPlatform(platform) {
     const r = await apiFetch(`${API}/api/imports/scan/${platform}`, { method: 'POST' });
     const data = await r.json();
     if (!r.ok) throw new Error(data.detail || 'Scan failed');
+    // Een nieuwe scan hoort niet onder de fout van de vorige te beginnen.
+    lastScanError = null;
+    renderScanError();
     scanningPlatforms[platform] = true;
     renderImportScanButtons();
     renderImportProgress(platform, { stage: 'queued' });
@@ -4596,7 +4684,9 @@ function pollScanProgress(platform, jobId) {
           clearImportProgress();
           if (job.status === 'error') {
             const msg = (job.result && (job.result.error || job.result.message)) || 'The scan failed. Make sure you are logged into the platform in your browser and the extension is active.';
-            showToast('Scan failed: ' + msg);
+            lastScanError = { platform, message: msg, at: Date.now() };
+            renderScanError();
+            showToast('Scan failed — see the message on this page.');
           } else {
             // Deliberately not "review your listings below": a re-scan of a
             // wardrobe you already imported has nothing left to review, and
@@ -4623,7 +4713,13 @@ function pollScanProgress(platform, jobId) {
       if (now - lastAdvanceAt > STALL_MS || now - startedAt > ABSOLUTE_MAX_MS) {
         finish(() => {
           scanningPlatforms[platform] = false; renderImportScanButtons(); clearImportProgress();
-          showToast('Scan stopped responding — showing what was found so far. Make sure the Omnivaleur extension is running, then scan again.');
+          lastScanError = {
+            platform, at: Date.now(),
+            message: 'The scan stopped responding — the extension went silent before it finished. '
+              + 'What it had already found is shown below. Make sure Chrome is open with the Omnivaleur extension running, then scan again.',
+          };
+          renderScanError();
+          showToast('Scan stopped responding — see the message on this page.');
           loadImportCandidates(platform);
         });
       }
