@@ -1202,7 +1202,7 @@ input[type="checkbox"].row-check { width: 15px; height: 15px; cursor: pointer; a
     <div id="view-refresh" class="view">
       <div class="view-header">
         <h1>Refresh <span style="color:var(--muted);font-weight:600;font-size:0.65em">(Vinted only)</span></h1>
-        <p>Bump old Vinted listings that sank in the "Newest" sort. Rate-limited on purpose: 1x per listing per 14 days, max 8 free refreshes/day/account. Nothing here fakes engagement, and nothing is guaranteed to change ranking. eBay relist-ended lives under <a href="#" onclick="showView('items');return false" style="color:var(--blue)">Items</a> for now — more platforms will get their own tab here as refresh support expands.</p>
+        <p>Bump old listings that sank in the "Newest" sort, on Vinted, Marktplaats and 2dehands. Rate-limited on purpose: on Vinted 1x per listing per 14 days and 8 refreshes/day; on <b>Marktplaats and 2dehands 1x per 21 days and only 3/day</b>, because Marktplaats charges for bumping a listing and therefore watches remove-and-repost far more closely than Vinted does. Nothing here fakes engagement, and nothing is guaranteed to change ranking. eBay relist-ended lives under <a href="#" onclick="showView('items');return false" style="color:var(--blue)">Items</a> for now — more platforms will get their own tab here as refresh support expands.</p>
       </div>
 
       <!-- A relist's recreate only fires while a computer with the extension is
@@ -1228,7 +1228,7 @@ input[type="checkbox"].row-check { width: 15px; height: 15px; cursor: pointer; a
 
       <!-- Refresh sub-tabs: Vinted table + dedicated relist tracker -->
       <div style="display:flex;gap:6px;margin:16px 0 14px;border-bottom:1px solid var(--border)">
-        <button id="refresh-tab-btn-listings" class="refresh-subtab active" onclick="switchRefreshTab('listings')">Vinted listings</button>
+        <button id="refresh-tab-btn-listings" class="refresh-subtab active" onclick="switchRefreshTab('listings')">Listings</button>
         <button id="refresh-tab-btn-inprogress" class="refresh-subtab" onclick="switchRefreshTab('inprogress')">Relists in progress<span id="refresh-tab-badge" style="display:none"></span></button>
       </div>
 
@@ -1276,12 +1276,21 @@ input[type="checkbox"].row-check { width: 15px; height: 15px; cursor: pointer; a
           <button class="refresh-status-chip" data-status="cooldown" onclick="setRefreshStatusFilter('cooldown')">On cooldown</button>
           <button class="refresh-status-chip" data-status="ready" onclick="setRefreshStatusFilter('ready')">Ready to refresh</button>
         </div>
+        <!-- Kanaalfilter. Met twee kanalen in dezelfde tabel wil je kunnen zeggen
+             "laat me alleen Marktplaats zien" zonder te zoeken op titel. -->
+        <div style="display:flex;gap:6px;flex-wrap:wrap">
+          <button class="refresh-status-chip active" data-plat="" onclick="setRefreshPlatformFilter('')">All channels</button>
+          <button class="refresh-status-chip" data-plat="vinted" onclick="setRefreshPlatformFilter('vinted')">Vinted</button>
+          <button class="refresh-status-chip" data-plat="marktplaats" onclick="setRefreshPlatformFilter('marktplaats')">Marktplaats</button>
+          <button class="refresh-status-chip" data-plat="2dehands" onclick="setRefreshPlatformFilter('2dehands')">2dehands</button>
+        </div>
       </div>
 
       <table class="rf-table">
         <thead>
           <tr>
             <th>Item</th>
+            <th>Channel</th>
             <th>Refresh status</th>
             <th>Last refresh &amp; mode</th>
             <th style="text-align:right">Action</th>
@@ -5065,6 +5074,7 @@ function updateRelistNavBadge() {
 // live yet) — so a deleted-but-not-yet-recreated listing is never a mystery.
 let refreshActiveTab = 'listings';
 let refreshStatusFilter = '';
+let refreshPlatformFilter = '';
 function switchRefreshTab(tab) {
   refreshActiveTab = tab;
   document.getElementById('refresh-tab-btn-listings').classList.toggle('active', tab === 'listings');
@@ -5074,10 +5084,19 @@ function switchRefreshTab(tab) {
   if (tab === 'inprogress') renderRelistInProgress();
 }
 
-// Filters the Vinted table by refresh status: never refreshed / on cooldown / ready.
+// Filters the table by refresh status: never refreshed / on cooldown / ready.
+// LET OP de selector: sinds er ook kanaalknopjes zijn met dezelfde opmaak zou
+// een kale .refresh-status-chip ook die aanpassen, en dan doofde het actieve
+// kanaalknopje zodra je op een statusfilter klikte.
+function setRefreshPlatformFilter(plat) {
+  refreshPlatformFilter = plat;
+  document.querySelectorAll('.refresh-status-chip[data-plat]').forEach(b => b.classList.toggle('active', b.dataset.plat === plat));
+  renderRefreshView();
+}
+
 function setRefreshStatusFilter(status) {
   refreshStatusFilter = status;
-  document.querySelectorAll('.refresh-status-chip').forEach(b => b.classList.toggle('active', b.dataset.status === status));
+  document.querySelectorAll('.refresh-status-chip[data-status]').forEach(b => b.classList.toggle('active', b.dataset.status === status));
   renderRefreshView();
 }
 
@@ -5362,14 +5381,15 @@ function renderRefreshView() {
       // and a retry is safe. Surface it right here so it's not stuck silently.
       statusCell = `<span class="rf-pill rf-pill-never" style="color:var(--red,#dc2626);background:rgba(220,38,38,.08)">⚠ Relist failed — still live</span>`;
       actionCell = `<button class="btn btn-sm btn-primary" style="background:var(--red,#dc2626)" onclick="retryRelist('${l.item_id}','${l.platform}',this)">↻ Retry relist</button>`;
-    } else if (vintedStatus[l.item_id] === 'cooldown') {
+    } else if (vintedStatus[relistKey(l.item_id, l.platform)] === 'cooldown') {
       const elapsedDays = Math.floor((now - new Date(l.last_refreshed_at).getTime()) / 86400000);
-      const daysLeft = REFRESH_COOLDOWN_DAYS - elapsedDays;
-      const pct = Math.min(100, Math.round(elapsedDays / REFRESH_COOLDOWN_DAYS * 100));
+      const totaal = cooldownDays(l.platform);
+      const daysLeft = totaal - elapsedDays;
+      const pct = Math.min(100, Math.round(elapsedDays / totaal * 100));
       statusCell = `<span class="rf-pill rf-pill-cooldown">🕒 On cooldown · ${daysLeft}d left</span>
         <div class="rf-cooldown-bar"><div class="rf-cooldown-fill" style="width:${pct}%"></div></div>`;
       actionCell = `<button class="btn btn-sm btn-outline" disabled title="Refreshable again in ${daysLeft} day(s)">Refresh</button>`;
-    } else if (vintedStatus[l.item_id] === 'ready') {
+    } else if (vintedStatus[relistKey(l.item_id, l.platform)] === 'ready') {
       statusCell = `<span class="rf-pill rf-pill-ready">✓ Ready to refresh</span>`;
       actionCell = `<button class="btn btn-sm btn-primary" onclick="refreshItem('${item.id}','${esc(item.title)}','${l.platform}')">Refresh</button>`;
     } else {
@@ -5382,6 +5402,7 @@ function renderRefreshView() {
         <div class="item-photo">${itemPhotoThumb(item)}</div>
         <div><div class="item-title">${esc(item.title)}</div><div class="item-meta">${item.brand || ''}${item.size ? ' · ' + item.size : ''}</div></div>
       </div></td>
+      <td><span class="rf-pill">${PLATFORM_LABEL[l.platform] || l.platform}</span></td>
       <td>${statusCell}</td>
       <td>${rfLastRefreshCell(l)}</td>
       <td style="text-align:right;white-space:nowrap">${actionCell}</td>
@@ -5389,10 +5410,10 @@ function renderRefreshView() {
   }).join('');
 
   document.getElementById('refresh-body').innerHTML = vintedRows ||
-    `<tr><td colspan="4"><div class="empty"><h3>Nothing to refresh</h3><p>${
-      refreshStatusFilter || searchTerm
-        ? 'No Vinted listings match this filter — clear it to see everything.'
-        : 'Publish an item to Vinted first, then bump it back to the top from here.'
+    `<tr><td colspan="5"><div class="empty"><h3>Nothing to refresh</h3><p>${
+      refreshStatusFilter || refreshPlatformFilter || searchTerm
+        ? 'No listings match this filter — clear it to see everything.'
+        : 'Publish an item to Vinted or Marktplaats first, then bump it back to the top from here.'
     }</p></div></td></tr>`;
 }
 
