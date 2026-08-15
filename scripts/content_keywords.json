@@ -329,6 +329,22 @@
       "slug": "vintage-camera-reselling-automation",
       "status": "published",
       "priority": 40
+    },
+    {
+      "keyword": "jewelry reselling automation",
+      "region": "nl",
+      "pillar": "B",
+      "slug": "jewelry-reselling-automation",
+      "status": "published",
+      "priority": 41
+    },
+    {
+      "keyword": "tool and equipment reselling automation",
+      "region": "nl",
+      "pillar": "B",
+      "slug": "tool-and-equipment-reselling-automation",
+      "status": "pending",
+      "priority": 42
     }
   ],
   "published": [
@@ -691,6 +707,15 @@
       "action": "created",
       "url_path": "/reseller-tools/vintage-camera-reselling-automation",
       "published_at": "2026-08-14T09:02:34.058731+00:00"
+    },
+    {
+      "keyword": "jewelry reselling automation",
+      "slug": "jewelry-reselling-automation",
+      "region": "nl",
+      "pillar": "B",
+      "action": "created",
+      "url_path": "/reseller-tools/jewelry-reselling-automation",
+      "published_at": "2026-08-15T08:19:51.314912+00:00"
     }
   ]
 }
