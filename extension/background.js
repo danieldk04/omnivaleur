@@ -2592,6 +2592,185 @@ function mpEmptyScanReason(meta, platform) {
     `Importing works for a private ${site} account for now.`;
 }
 
+// ── Admarkt ────────────────────────────────────────────────────────────────
+// De zakelijke kant van Marktplaats. Een verkoper met een zakelijk account
+// beheert zijn advertenties op admarkt.marktplaats.nl en zijn persoonlijke
+// "Mijn advertenties"-pagina is dan leeg — gemeten geval: 5.540 advertenties in
+// Admarkt tegenover nul in het gewone overzicht.
+//
+// WAAROM WE HET ADRES NIET INTIKKEN. Ik heb geen zakelijk account en kan die
+// pagina dus niet zelf bekijken; een geraden API-adres was een gok geweest die
+// bij de eerste de beste wijziging omvalt. In plaats daarvan laat deze code de
+// pagina gewoon zichzelf laden en kijkt daarna in `performance` welke verzoeken
+// hij daarbij heeft gedaan. Dat is geen gok maar een waarneming: we halen
+// precies dezelfde gegevens op als de pagina zelf. Wat hij gebruikt heeft komt
+// mee terug in `meta`, zodat we het daarna hard kunnen vastleggen.
+const ADMARKT_ORIGIN = "https://admarkt.marktplaats.nl";
+const ADMARKT_URL = `${ADMARKT_ORIGIN}/advertisements?dateOption=last-365-days`;
+
+async function admarktToegestaan() {
+  try {
+    return await chrome.permissions.contains({ origins: [`${ADMARKT_ORIGIN}/*`] });
+  } catch (_) { return false; }
+}
+
+async function bgScanAdmarkt(job, serverUrl) {
+  const sleep = ms => new Promise(r => setTimeout(r, ms));
+
+  const tabId = await new Promise((res, rej) =>
+    openWorkerTab(ADMARKT_URL, t =>
+      t ? res(t.id) : rej(new Error("could not open worker tab")), { silent: true }
+    )
+  );
+
+  try {
+    await waitForTabLoad(tabId);
+    await sleep(6000);   // Admarkt rendert traag; de lijst komt na de pagina
+
+    const result = await execInTab(tabId, async () => {
+      const nap = ms => new Promise(r => setTimeout(r, ms));
+      const abs = u => !u ? null
+        : u.startsWith("http") ? u
+        : u.startsWith("//") ? `https:${u}`
+        : `${location.origin}${u.startsWith("/") ? "" : "/"}${u}`;
+
+      // Herkennen of een object een advertentie is. Niet op vaste veldnamen —
+      // die ken ik niet — maar op vorm: iets met een id en iets met een titel.
+      const SLEUTEL_ID = /^(id|adid|advertisementid|itemid|vendorid)$/i;
+      const SLEUTEL_TITEL = /^(title|titel|name|headline|adtitle)$/i;
+      const SLEUTEL_FOTO = /(image|photo|thumb|picture)/i;
+      const SLEUTEL_URL = /(vipurl|svipurl|url|link|permalink)$/i;
+      const SLEUTEL_PRIJS = /price/i;
+
+      const veld = (obj, patroon) => {
+        for (const k of Object.keys(obj)) {
+          if (patroon.test(k) && obj[k] != null && typeof obj[k] !== "object") return obj[k];
+        }
+        return null;
+      };
+      const isAdvertentie = o => o && typeof o === "object" && !Array.isArray(o)
+        && veld(o, SLEUTEL_ID) != null && typeof veld(o, SLEUTEL_TITEL) === "string";
+
+      // Diepste array in een JSON-antwoord die eruitziet als een lijst advertenties.
+      const vindLijst = (data, diepte = 0) => {
+        if (!data || diepte > 5) return null;
+        if (Array.isArray(data)) return data.filter(isAdvertentie).length >= 2 ? data : null;
+        if (typeof data !== "object") return null;
+        for (const k of Object.keys(data)) {
+          const gevonden = vindLijst(data[k], diepte + 1);
+          if (gevonden) return gevonden;
+        }
+        return null;
+      };
+
+      // Welke verzoeken heeft de pagina zelf gedaan? Alleen eigen domein, alleen
+      // data-achtige verzoeken — geen plaatjes, stijlbladen of scripts.
+      const kandidaten = performance.getEntriesByType("resource")
+        .filter(e => (e.initiatorType === "xmlhttprequest" || e.initiatorType === "fetch"))
+        .map(e => e.name)
+        .filter(u => u.startsWith(location.origin))
+        .filter(u => !/\.(js|css|png|jpe?g|gif|svg|woff2?|ico)(\?|$)/i.test(u));
+
+      const geprobeerd = [];
+      let ruw = null, bron = null, totaal = null;
+
+      for (const url of [...new Set(kandidaten)]) {
+        try {
+          const res = await fetch(url, { headers: { Accept: "application/json" },
+                                         credentials: "include" });
+          geprobeerd.push(`${url.replace(location.origin, "")} → ${res.status}`);
+          if (!res.ok) continue;
+          const type = res.headers.get("content-type") || "";
+          if (!/json/i.test(type)) continue;
+          const data = await res.json();
+          const lijst = vindLijst(data);
+          if (lijst && lijst.length) {
+            ruw = lijst; bron = url;
+            for (const k of Object.keys(data || {})) {
+              if (/total|count|results/i.test(k) && typeof data[k] === "number") totaal = data[k];
+            }
+            break;
+          }
+        } catch (e) {
+          geprobeerd.push(`${url.replace(location.origin, "")} → ${String(e && e.message || e)}`);
+        }
+      }
+
+      const items = [];
+      if (ruw) {
+        for (const ad of ruw) {
+          if (!isAdvertentie(ad)) continue;
+          const id = String(veld(ad, SLEUTEL_ID));
+          const prijs = veld(ad, SLEUTEL_PRIJS);
+          items.push({
+            platform_listing_id: id,
+            title: String(veld(ad, SLEUTEL_TITEL) || ""),
+            // Admarkt rekent in centen waar Marktplaats dat ook doet; een getal
+            // boven de duizend is vrijwel zeker centen. Liever geen prijs dan een
+            // prijs die honderd keer te hoog is — de verrijkingsstap haalt de
+            // echte prijs alsnog van de advertentiepagina zelf.
+            price: typeof prijs === "number" && prijs < 1000 ? prijs : null,
+            photo_url: abs(veld(ad, SLEUTEL_FOTO)),
+            platform_listing_url: abs(veld(ad, SLEUTEL_URL)),
+            category_name: "",
+            status: "",
+          });
+        }
+      }
+
+      // Terugval: lezen wat er op het scherm staat. Levert minder, maar bewijst
+      // wel dat we op de goede pagina zitten.
+      let viaScherm = false;
+      if (!items.length) {
+        viaScherm = true;
+        for (const rij of document.querySelectorAll("tr, div[role='row']")) {
+          const link = rij.querySelector("a[href]");
+          if (!link) continue;
+          const titel = (link.textContent || "").trim();
+          if (titel.length < 4) continue;
+          const href = link.getAttribute("href") || "";
+          const id = (href.match(/(\d{6,})/) || [])[1];
+          if (!id || items.some(i => i.platform_listing_id === id)) continue;
+          const img = rij.querySelector("img");
+          items.push({
+            platform_listing_id: id, title: titel, price: null,
+            photo_url: img ? abs(img.getAttribute("src")) : null,
+            platform_listing_url: abs(href), category_name: "", status: "",
+          });
+        }
+      }
+
+      return {
+        items,
+        meta: {
+          bron: bron ? bron.replace(location.origin, "") : null,
+          totaal, via_scherm: viaScherm,
+          // Waar we gekeken hebben en wat dat opleverde. Dit is het enige wat een
+          // mislukte poging bruikbaar maakt in plaats van alleen teleurstellend.
+          geprobeerd: geprobeerd.slice(0, 25),
+          velden: ruw && ruw[0] ? Object.keys(ruw[0]).slice(0, 40) : null,
+          ingelogd: !/inloggen|log ?in|sign ?in/i.test(
+            (document.querySelector("h1, main")?.innerText || "").slice(0, 200)),
+          pagina_titel: (document.title || "").slice(0, 120),
+        },
+      };
+    });
+
+    console.log("[Omnivaleur] Admarkt:", JSON.stringify(result?.meta || {}));
+
+    if (!result || !result.items || !result.items.length) {
+      const m = (result && result.meta) || {};
+      throw new Error(
+        `Admarkt gave no adverts. page="${m.pagina_titel || "?"}" ` +
+        `signedIn=${m.ingelogd} tried=[${(m.geprobeerd || []).join(" | ") || "nothing"}]`
+      );
+    }
+    return result;
+  } finally {
+    setTimeout(() => chrome.tabs.remove(tabId).catch(() => {}), 2500);
+  }
+}
+
 async function bgScanMp2dh(job, serverUrl) {
   const sleep = ms => new Promise(r => setTimeout(r, ms));
   const platform = job.platform;
