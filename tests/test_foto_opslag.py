@@ -98,6 +98,68 @@ def test_alleen_onze_eigen_objecten_worden_herkend(url, verwacht):
     assert storage_path_from_url(url) == verwacht
 
 
+R2_URL = "https://img.omnivaleur.com/"
+
+
+@pytest.fixture
+def r2_aan(monkeypatch):
+    """Doet alsof R2 ingesteld is, zonder ooit een verbinding te maken."""
+    from backend.services import r2_storage
+    monkeypatch.setattr(r2_storage, "is_configured", lambda: True)
+    monkeypatch.setattr(r2_storage, "public_base", lambda: "https://img.omnivaleur.com")
+    return r2_storage
+
+
+def test_zonder_r2_verandert_er_niets():
+    """De terugweg: geen sleutels betekent dat alles op Supabase blijft draaien."""
+    from backend.services import r2_storage
+    from backend.services.image_upload import locate_object
+    assert r2_storage.is_configured() is False
+    assert r2_storage.path_from_url(R2_URL + "u1/aaa.jpg") is None
+    assert locate_object(BUCKET_URL + "u1/aaa.jpg") == ("supabase", "u1/aaa.jpg")
+
+
+def test_beide_opslagplekken_worden_herkend(r2_aan):
+    from backend.services.image_upload import locate_object
+    assert locate_object(R2_URL + "u1/aaa.jpg") == ("r2", "u1/aaa.jpg")
+    assert locate_object(BUCKET_URL + "u1/aaa.jpg") == ("supabase", "u1/aaa.jpg")
+    assert locate_object("https://images1.vinted.net/foto.jpg") is None
+    assert locate_object(R2_URL + "../geheim") is None
+
+
+def test_een_foto_op_r2_wordt_niet_opnieuw_gekopieerd(r2_aan):
+    """Anders zou elke herimport dezelfde foto nog een keer binnenhalen."""
+    from backend.services.photo_mirror import is_mirrored
+    assert is_mirrored(R2_URL + "u1/aaa.jpg") is True
+    assert is_mirrored(BUCKET_URL + "u1/aaa.jpg") is True
+    assert is_mirrored("https://images1.vinted.net/foto.jpg") is False
+
+
+def test_upload_valt_terug_op_supabase_als_r2_stuk_is(r2_aan, monkeypatch):
+    """Een storing bij R2 mag nooit een foto kosten."""
+    from backend.services import r2_storage
+    import backend.services.image_upload as iu
+
+    def _kapot(*a, **kw):
+        raise RuntimeError("R2 onbereikbaar")
+
+    monkeypatch.setattr(r2_storage, "upload", _kapot)
+    gebruikt = {}
+
+    class _Opslag:
+        def from_(self, bucket):
+            gebruikt["bucket"] = bucket
+            return self
+        def upload(self, **kw):
+            return None
+        def get_public_url(self, naam):
+            return BUCKET_URL + naam
+
+    monkeypatch.setattr(iu, "get_db", lambda: type("D", (), {"storage": _Opslag()})())
+    assert iu.upload_image_sync(b"bytes", "u1/aaa.jpg") == BUCKET_URL + "u1/aaa.jpg"
+    assert gebruikt["bucket"] == "photos"
+
+
 class _Res:
     def __init__(self, data): self.data = data
 
