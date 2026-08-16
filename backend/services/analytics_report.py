@@ -480,11 +480,13 @@ def _actions(report: dict) -> list[str]:
     bijna = [p for p in (seo.get("top_pages") or [])
              if 8 <= p["position"] <= 20 and p["impressions"] >= 10]
     if bijna and len(out) < 3:
+        # Late import: analytics_email leunt op dit bestand, andersom mag het
+        # alleen op het moment zelf.
+        from backend.services.analytics_email import _paginanaam
         p = max(bijna, key=lambda x: x["impressions"])
-        slug = p["url"].replace(SITE_URL, "") or "/"
         out.append(
-            f"{slug} staat op plek {p['position']} — net buiten beeld. Dit artikel bijwerken "
-            f"tilt hem waarschijnlijk de eerste pagina op."
+            f"“{_paginanaam(p['url'])}” staat op plek {round(p['position'])} — net buiten beeld. "
+            f"Dit artikel bijwerken tilt hem waarschijnlijk de eerste pagina op."
         )
 
     return out[:3]
