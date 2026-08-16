@@ -214,23 +214,23 @@ def _release_photos(db, user_id: str, photo_urls: list) -> None:
         # byte-identical across versions of the Supabase client — older ones
         # append a bare "?" — so matching on the raw string would call a photo
         # unused while another item is still showing it.
-        in_use: set[str] = set()
+        in_use: set[tuple[str, str]] = set()
         for row in (db.table("items").select("photo_urls")
                       .eq("user_id", user_id).execute().data or []):
             for u in (row.get("photo_urls") or []):
-                p = storage_path_from_url(u)
-                if p:
-                    in_use.add(p)
+                ref = locate_object(u)
+                if ref:
+                    in_use.add(ref)
         for row in (db.table("import_candidates").select("photo_url,photo_urls")
                       .eq("user_id", user_id).execute().data or []):
             for u in [row.get("photo_url"), *(row.get("photo_urls") or [])]:
-                p = storage_path_from_url(u)
-                if p:
-                    in_use.add(p)
+                ref = locate_object(u)
+                if ref:
+                    in_use.add(ref)
 
         orphaned = sorted(candidates - in_use)
         if orphaned:
-            delete_images_sync(orphaned)
+            delete_objects(orphaned)
     except Exception:  # noqa: BLE001 - the item is already gone; this is bookkeeping
         logger.warning("photo cleanup skipped for user %s", user_id, exc_info=True)
 
