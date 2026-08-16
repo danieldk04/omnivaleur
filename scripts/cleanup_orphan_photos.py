@@ -80,6 +80,16 @@ def collect_referenced_paths(db, marker: str) -> tuple[set, int]:
         for u in (row.get("photo_urls") or []):
             add(u)
 
+    # A queued publish carries its own copy of the photo urls. Delete those
+    # objects and the job publishes an item without a single image — exactly the
+    # failure this whole system exists to prevent. Anything not finished or
+    # cancelled counts as live, including errored jobs: those get retried.
+    for row in _paged(lambda: db.table("jobs").select("status,payload")):
+        if row.get("status") in ("done", "cancelled"):
+            continue
+        for url in re.findall(r'https?://[^\s"\'\\,\]}]+', str(row.get("payload") or "")):
+            add(url.rstrip("',\"" ))
+
     return referenced, items_with_photos
 
 
