@@ -418,7 +418,9 @@ def build_report(today: date | None = None, include_social: bool = False) -> dic
     # On-platform post-prestaties (Apify) — traag, dus alleen bij de zondagse mail en
     # bij de handmatige dashboard-knop. Anders alleen de koppelstatus doorgeven.
     if include_social:
-        social_content = social_scrape.weekly(*win["this"], prev=win["prev"])
+        # Vier weken: verder terug reikt de scrape (de laatste 25 posts) meestal niet.
+        social_content = social_scrape.weekly(*win["this"], prev=win["prev"],
+                                              weken=_week_bounds(win, 4))
         patterns = patterns + social_scrape.patterns(social_content)
     else:
         social_content = {"connected": social_scrape.is_configured(), "deferred": True}
