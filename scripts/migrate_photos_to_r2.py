@@ -192,7 +192,8 @@ def main():
                     try:
                         # Vanaf hier wijst de rij naar R2. Tot deze regel is er
                         # aan het item zelf niets veranderd.
-                        db.table(tabel).update({kolom: nieuw}).eq("id", rij["id"]).execute()
+                        waarde = nieuw[0] if enkel else nieuw
+                        db.table(tabel).update({kolom: waarde}).eq("id", rij["id"]).execute()
                         rijen_bij += 1
                     except Exception as e:  # noqa: BLE001
                         mislukt += 1
