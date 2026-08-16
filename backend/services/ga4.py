@@ -127,6 +127,20 @@ def channels(start: str, end: str) -> list[dict]:
     return sorted(rows, key=lambda r: r.get("sessions", 0), reverse=True)
 
 
+def sessions_by_day(start: str, end: str) -> dict[str, int]:
+    """Sessies per dag als {'YYYY-MM-DD': n} — de bron voor de weektrend.
+
+    GA4 geeft de datum terug als '20260815'; die wordt hier meteen omgezet naar
+    de ISO-vorm die de rest van het rapport gebruikt.
+    """
+    out: dict[str, int] = {}
+    for r in _run(dimensions=["date"], metrics=["sessions"], start=start, end=end, limit=400):
+        d = str(r.get("date") or "")
+        if len(d) == 8 and d.isdigit():
+            out[f"{d[:4]}-{d[4:6]}-{d[6:]}"] = r.get("sessions", 0)
+    return out
+
+
 def top_landing_pages(start: str, end: str, limit: int = 15) -> list[dict]:
     """Best presterende landingspagina's op sessies — 'welke blogposts trekken bezoek'."""
     rows = _run(
