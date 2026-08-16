@@ -206,21 +206,29 @@ def _release_photos(db, user_id: str, photo_urls: list) -> None:
     from backend.services.image_upload import delete_images_sync, storage_path_from_url
 
     try:
-        orphaned = []
-        for url in photo_urls:
-            path = storage_path_from_url(url)
-            if not path:
-                continue  # not ours (marketplace CDN url) — nothing to delete
-            still_used = (
-                (db.table("items").select("id").eq("user_id", user_id)
-                   .contains("photo_urls", [url]).limit(1).execute().data)
-                or (db.table("import_candidates").select("id").eq("user_id", user_id)
-                      .eq("photo_url", url).limit(1).execute().data)
-                or (db.table("import_candidates").select("id").eq("user_id", user_id)
-                      .contains("photo_urls", [url]).limit(1).execute().data)
-            )
-            if not still_used:
-                orphaned.append(path)
+        candidates = {p for p in (storage_path_from_url(u) for u in photo_urls) if p}
+        if not candidates:
+            return  # nothing of ours to clean up (marketplace CDN urls)
+
+        # Compare on PATH, never on the url string. The stored urls are not
+        # byte-identical across versions of the Supabase client — older ones
+        # append a bare "?" — so matching on the raw string would call a photo
+        # unused while another item is still showing it.
+        in_use: set[str] = set()
+        for row in (db.table("items").select("photo_urls")
+                      .eq("user_id", user_id).execute().data or []):
+            for u in (row.get("photo_urls") or []):
+                p = storage_path_from_url(u)
+                if p:
+                    in_use.add(p)
+        for row in (db.table("import_candidates").select("photo_url,photo_urls")
+                      .eq("user_id", user_id).execute().data or []):
+            for u in [row.get("photo_url"), *(row.get("photo_urls") or [])]:
+                p = storage_path_from_url(u)
+                if p:
+                    in_use.add(p)
+
+        orphaned = sorted(candidates - in_use)
         if orphaned:
             delete_images_sync(orphaned)
     except Exception:  # noqa: BLE001 - the item is already gone; this is bookkeeping
