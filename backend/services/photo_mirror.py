@@ -24,6 +24,7 @@ import hashlib
 import logging
 import mimetypes
 
+from backend.services.image_optimize import optimize_image
 from backend.services.image_upload import upload_image
 
 logger = logging.getLogger(__name__)
