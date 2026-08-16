@@ -52,7 +52,12 @@ _HEADERS = {
 
 
 def is_mirrored(url: str) -> bool:
-    return isinstance(url, str) and any(h in url for h in _OWN_HOSTS)
+    if not isinstance(url, str):
+        return False
+    from backend.services import r2_storage
+    if r2_storage.is_configured() and url.startswith(r2_storage.public_base() + "/"):
+        return True
+    return any(h in url for h in _OWN_HOSTS)
 
 
 async def mirror_photos_bulk(url_lists: list[list[str] | None], user_id: str) -> list[list[str]]:
