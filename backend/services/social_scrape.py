@@ -254,7 +254,8 @@ _ADAPTERS = {
 # ---------------------------------------------------------------------------
 # Publieke API
 # ---------------------------------------------------------------------------
-def weekly(this_start: str, this_end: str, limit_per_platform: int = 25) -> dict:
+def weekly(this_start: str, this_end: str, limit_per_platform: int = 25,
+           prev: tuple[str, str] | None = None) -> dict:
     """
     Scrapt alle geconfigureerde platforms (parallel), filtert op de posts van deze
     week (this_start..this_end, ISO 'YYYY-MM-DD'), en bouwt de social-contentsectie:
