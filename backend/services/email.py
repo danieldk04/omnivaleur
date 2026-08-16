@@ -7,6 +7,7 @@ import logging
 import smtplib
 import socket
 from contextlib import contextmanager
+from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 
 from backend.config import settings
@@ -171,11 +172,12 @@ def _ipv4_only():
         socket.getaddrinfo = original
 
 
-def send_email(subject: str, body: str, to: str | None = None, reply_to: str | None = None) -> bool:
+def send_email(subject: str, body: str, to: str | None = None, reply_to: str | None = None,
+               html: str | None = None) -> bool:
     """Best-effort: een mislukte mail mag nooit een publicatie of een geplande
     taak omvergooien, dus hier wordt de fout gelogd en verder genegeerd."""
     try:
-        send_email_checked(subject, body, to=to, reply_to=reply_to)
+        send_email_checked(subject, body, to=to, reply_to=reply_to, html=html)
         return True
     except Exception as e:
         logger.error(f"E-mailmelding mislukt ({subject}): {e}")
