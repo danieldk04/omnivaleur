@@ -492,9 +492,11 @@ async def analytics_social(token: str | None = None):
 async def analytics_send_report_now(token: str | None = None):
     """Handmatig het wekelijkse rapport nu opbouwen + mailen (om te testen)."""
     _require_dashboard_token(token)
-    from backend.services.analytics_report import build_report, render_email
+    from backend.services.analytics_report import build_report
+    from backend.services.analytics_email import render
     from backend.services.email import send_email
-    report = build_report()
-    subject, body = render_email(report)
-    sent = send_email(subject, body)
-    return {"ok": True, "emailed": sent, "patterns": report["patterns"]}
+    # Mét social: anders test je een andere mail dan er zondag verstuurd wordt.
+    report = build_report(include_social=True)
+    subject, body, html = render(report)
+    sent = send_email(subject, body, html=html)
+    return {"ok": True, "emailed": sent, "actions": report["actions"]}
