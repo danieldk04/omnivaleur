@@ -193,7 +193,7 @@ def test_gedeelde_foto_blijft_staan(gewist):
     db = _DB(items=[{"photo_urls": [BUCKET_URL + "u1/imported/aaa.jpg?"]}], kandidaten=[])
     _release_photos(db, "u1", [BUCKET_URL + "u1/imported/aaa.jpg",
                                BUCKET_URL + "u1/imported/bbb.jpg"])
-    assert gewist == ["u1/imported/bbb.jpg"]
+    assert gewist == [("supabase", "u1/imported/bbb.jpg")]
 
 
 def test_foto_van_een_importkandidaat_blijft_staan(gewist):
