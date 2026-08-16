@@ -225,31 +225,37 @@ def _blog_categories(seo: dict) -> list[dict]:
 # ---------------------------------------------------------------------------
 # Signups
 # ---------------------------------------------------------------------------
-def _signups_section(win: dict) -> dict:
-    from backend.database import get_admin_db, get_db
+def _signup_dates() -> list[str] | None:
+    """Aanmelddatums ('YYYY-MM-DD') van alle accounts, of None als het niet lukte.
 
-    this_s, this_e = win["this"]
-    prev_s, _ = win["prev"]
+    None en [] zijn met opzet verschillend: geen toegang tot de gebruikerslijst
+    mag nooit als 'nul aanmeldingen' in het rapport belanden.
+    """
+    from backend.database import get_admin_db
+
     try:
-        db = get_db()
-        # Supabase auth admin: haal recente gebruikers en tel per venster.
         users = get_admin_db().auth.admin.list_users()
         rows = users if isinstance(users, list) else getattr(users, "users", []) or []
-        this_n = prev_n = 0
+        out = []
         for u in rows:
             created = getattr(u, "created_at", None) or (u.get("created_at") if isinstance(u, dict) else None)
-            if not created:
-                continue
-            d = str(created)[:10]
-            if this_s <= d <= this_e:
-                this_n += 1
-            elif prev_s <= d < this_s:
-                prev_n += 1
-        return {"available": True, "this_week": this_n, "prev_week": prev_n,
-                "delta": _pct_delta(this_n, prev_n)}
+            if created:
+                out.append(str(created)[:10])
+        return out
     except Exception as e:
         logger.info(f"Signup-telling niet beschikbaar (best effort): {e}")
+        return None
+
+
+def _signups_section(win: dict, dates: list[str] | None = None) -> dict:
+    this_s, this_e = win["this"]
+    prev_s, _ = win["prev"]
+    if dates is None:
         return {"available": False}
+    this_n = sum(1 for d in dates if this_s <= d <= this_e)
+    prev_n = sum(1 for d in dates if prev_s <= d < this_s)
+    return {"available": True, "this_week": this_n, "prev_week": prev_n,
+            "delta": _pct_delta(this_n, prev_n)}
 
 
 # ---------------------------------------------------------------------------
