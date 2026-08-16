@@ -23,6 +23,9 @@ async def upload_photo(file: UploadFile = File(...), user_id: str = Depends(get_
         raise HTTPException(status_code=400, detail="File too large (max 25 MB)")
 
     ext = (file.filename or "photo.jpg").rsplit(".", 1)[-1].lower()
+    # Phone photos are routinely 4000 px / several MB. Shrink before storing —
+    # falls back to the original bytes if it can't do better.
+    data, ext = optimize_image(data, ext)
     filename = f"{user_id}/{uuid.uuid4()}.{ext}"
 
     try:
