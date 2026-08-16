@@ -25,6 +25,7 @@ Usage:
     python3 scripts/cleanup_orphan_photos.py --min-age-days 30
 """
 import argparse
+import re
 import sys
 import uuid as _uuid
 from datetime import datetime, timedelta, timezone
