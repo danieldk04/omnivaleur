@@ -436,7 +436,8 @@ def render_text(report: dict) -> str:
     if posts:
         r += ["", "Beste posts van de week:"]
         r += [f"  • [{p['platform']}] {(p['text'] or '').strip()[:60]} — "
-              f"{nl_getal(p['views'])} weergaven, {p['engagement']} reacties"
+              f"{nl_getal(p['views'])} weergaven, {p['engagement']} "
+              f"reactie{'s' if p['engagement'] != 1 else ''}"
               for p in posts]
 
     paginas = [p for p in (seo.get("top_pages") or []) if p["clicks"]][:5]
