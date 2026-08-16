@@ -14,7 +14,8 @@ from backend.config import settings
 logger = logging.getLogger(__name__)
 
 
-def _send_via_resend(subject: str, body: str, recipient: str, reply_to: str | None) -> None:
+def _send_via_resend(subject: str, body: str, recipient: str, reply_to: str | None,
+                     html: str | None = None) -> None:
     """Versturen over https, de enige poort die Railway wél doorlaat."""
     import httpx
 
