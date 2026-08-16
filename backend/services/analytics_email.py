@@ -254,8 +254,8 @@ def _platform_tabel(platforms: list[dict]) -> str:
               f'style="font-size:14px;"><tr style="background:{VLAK};">{koppen}</tr>'
             + "".join(regels) + "</table>"
             + f'<div style="font-size:11px;color:{GRIJS_LICHT};padding-top:8px;">'
-              f'Reacties = likes, opmerkingen, shares en bewaringen samen; het percentage '
-              f'is hun aandeel in het bereik.</div>')
+              f'De staafjes zijn de laatste vier weken bereik, op dezelfde schaal. '
+              f'Reacties = likes, opmerkingen, shares en bewaringen samen.</div>')
 
 
 def _beste_posts(sc: dict, aantal: int = 5) -> str:
