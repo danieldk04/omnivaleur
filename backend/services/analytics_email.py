@@ -175,13 +175,14 @@ def _mini_trend(p: dict, top: int) -> str:
                 f'<tr><td style="background:{"#f1f5f9" if not p["views"] else BLAUW};height:6px;'
                 f'border-radius:3px;font-size:0;line-height:0;">&nbsp;</td></tr></table>')
 
+    eigen_top = max([w["views"] for w in trend if w["measured"]] or [0]) or 1
     cellen = []
     for i, w in enumerate(trend):
         laatste = i == len(trend) - 1
         if not w["measured"]:
             hoogte, kleur = 2, LIJN
         else:
-            hoogte = max(2, round((w["views"] / top) * 18)) if w["views"] else 2
+            hoogte = max(2, round((w["views"] / eigen_top) * 18)) if w["views"] else 2
             kleur = BLAUW if laatste else BLAUW_LICHT
         cellen.append(
             f'<td width="25%" style="padding:0 1px;vertical-align:bottom;">'
@@ -255,7 +256,7 @@ def _platform_tabel(platforms: list[dict]) -> str:
               f'style="font-size:14px;"><tr style="background:{VLAK};">{koppen}</tr>'
             + "".join(regels) + "</table>"
             + f'<div style="font-size:11px;color:{GRIJS_LICHT};padding-top:8px;">'
-              f'De staafjes zijn de laatste vier weken bereik, op dezelfde schaal. '
+              f'De staafjes zijn de laatste vier weken bereik van dát kanaal — ze tonen de richting, niet de omvang. '
               f'Reacties = likes, opmerkingen, shares en bewaringen samen.</div>')
 
 
