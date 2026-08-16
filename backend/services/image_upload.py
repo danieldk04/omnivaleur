@@ -18,6 +18,19 @@ _UPLOAD_LOCK = threading.Lock()
 
 def upload_image_sync(file_bytes: bytes, filename: str) -> str:
     """Blocking upload. Only call this off the event loop (see upload_image)."""
+    from backend.services import r2_storage
+
+    # R2 is the destination once it is configured; without credentials this is
+    # skipped entirely and everything behaves exactly as it did on Supabase.
+    # An R2 failure also falls back rather than losing the photo.
+    if r2_storage.is_configured():
+        try:
+            return r2_storage.upload(file_bytes, filename)
+        except Exception as e:  # noqa: BLE001
+            import logging
+            logging.getLogger(__name__).warning(
+                "R2 upload failed for %s (%s) — falling back to Supabase Storage", filename, e)
+
     db = get_db()
 
     with _UPLOAD_LOCK:
