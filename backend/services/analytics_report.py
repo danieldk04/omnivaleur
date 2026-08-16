@@ -606,9 +606,10 @@ def send_weekly_report() -> None:
     """Scheduler-entrypoint: bouw + mail het rapport. Non-blocking, logt fouten."""
     try:
         report = build_report(include_social=True)
-        subject, body = render_email(report)
+        from backend.services.analytics_email import render
+        subject, body, html = render(report)
         from backend.services.email import send_email
-        send_email(subject, body)
+        send_email(subject, body, html=html)
         logger.info("Wekelijks marketingrapport verzonden.")
     except Exception as e:
         logger.error(f"Wekelijks marketingrapport mislukt: {e}")
