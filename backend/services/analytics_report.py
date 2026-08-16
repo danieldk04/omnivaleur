@@ -444,9 +444,8 @@ def _actions(report: dict) -> list[str]:
     views = sum(p["views"] for p in (sc.get("per_platform") or []))
     if views >= 100 and not soc.get("has_utm_data"):
         out.append(
-            f"Zet een link met telcode onder je posts. Van {views:,.0f} weergaven zie je nu "
+            f"Zet een link met telcode onder je posts. Van {nl_getal(views)} weergaven zie je nu "
             f"niet één keer terug of iemand de site bereikt — dat is het grootste gat in je meting."
-            .replace(",", ".")
         )
 
     stil = [p for p in (sc.get("per_platform") or []) if p["posts_count"] and not p["views"]]
