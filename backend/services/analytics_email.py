@@ -187,6 +187,10 @@ def _platform_tabel(platforms: list[dict]) -> str:
             staat = f'<span style="color:{GRIJS_LICHT};">niet opgehaald</span>'
         elif not p["posts_count"]:
             staat = f'<span style="color:{GRIJS_LICHT};">niets gepost</span>'
+        elif not p.get("reach_reported", True):
+            # Geen cijfer ≠ geen bereik. Een 0 hier zou hem een kanaal laten
+            # opgeven op grond van iets wat nooit gemeten is.
+            staat = f'<span style="color:{GRIJS_LICHT};font-weight:600;">niet gemeten</span>'
         else:
             staat = nl_getal(p["views"])
         verschil = ""
