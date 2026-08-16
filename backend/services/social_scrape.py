@@ -297,9 +297,25 @@ def weekly(this_start: str, this_end: str, limit_per_platform: int = 25,
     per_platform.sort(key=lambda x: (x["views"], x["engagement"]), reverse=True)
     top_posts = sorted(week_posts, key=lambda p: (p["views"], p["engagement"]), reverse=True)
 
+    # Vorige week uit dezelfde opgehaalde posts: de actors leveren de laatste N
+    # posts van het profiel, dus die week zit er al bij. Een tweede scrape zou
+    # alleen maar tijd kosten. Ligt de vorige week buiten wat is opgehaald, dan
+    # blijft dit 0 en toont het rapport geen verandering — beter dan een verzonnen
+    # daling.
+    prev_views = prev_posts = 0
+    if prev:
+        p_start, p_end = prev
+        for posts in results.values():
+            for p in posts:
+                if p["date"] and p_start <= p["date"] <= p_end:
+                    prev_views += p["views"]
+                    prev_posts += 1
+
     return {
         "connected": True,
         "period": [this_start, this_end],
+        "prev_views": prev_views,
+        "prev_posts": prev_posts,
         "per_platform": per_platform,
         "top_posts": top_posts[:15],
         "by_content": _group_by_content(week_posts),
