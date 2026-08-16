@@ -145,10 +145,18 @@ def main():
     referenced, items_with_photos = collect_referenced_paths(db, marker)
     print(f"  {items_with_photos} items with photos, {len(referenced)} referenced objects")
 
-    if items_with_photos == 0 or not referenced:
-        print("\nABORT: the database returned no photos at all. That is almost certainly a\n"
-              "failed or unauthorised read, not an empty account. Nothing was deleted.")
+    # The guard is about a FAILED read looking like "everything is orphaned".
+    # Reading items that have photos proves the query worked. Zero of those urls
+    # pointing at Supabase is a different thing entirely — it is what a finished
+    # migration to R2 looks like, and then the whole bucket is genuinely stale.
+    if items_with_photos == 0:
+        print("\nABORT: the database returned no items with photos at all. That is almost\n"
+              "certainly a failed or unauthorised read, not an empty account.\n"
+              "Nothing was deleted.")
         return 1
+    if not referenced:
+        print("  none of them still point at Supabase — the migration to R2 is complete,\n"
+              "  so everything left in this bucket is a leftover")
 
     print(f"Listing bucket '{BUCKET}'… (this takes a moment)")
     files = list_bucket(db.storage.from_(BUCKET))
