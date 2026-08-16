@@ -403,10 +403,18 @@ def render_text(report: dict) -> str:
         r.append(f"Aanmeldingen: {sg['this_week']} (vorige week {sg['prev_week']})")
     if seo.get("connected"):
         r.append(f"Bezoekers via Google: {seo['total_clicks']} | vertoond: {seo['total_impressions']}")
-    if per_platform:
-        r.append("Weergaven op je posts: "
-                 + nl_getal(sum(p["views"] for p in per_platform))
-                 + " (" + ", ".join(f"{p['platform']} {nl_getal(p['views'])}" for p in per_platform) + ")")
+    alle = sc.get("per_platform") or []
+    if alle:
+        r += ["", f"Weergaven op je posts: {nl_getal(sum(p['views'] for p in alle))}"]
+        for p in alle:
+            if p.get("fetched") is None:
+                staat = "niet opgehaald"
+            elif not p["posts_count"]:
+                staat = "niets gepost"
+            else:
+                staat = (f"{nl_getal(p['views'])} weergaven, {p['posts_count']} posts, "
+                         f"{p['engagement']} reacties ({p['engagement_rate']}%)")
+            r.append(f"  • {p['platform']}: {staat}")
 
     if report.get("actions"):
         r += ["", "Wat ik deze week zou doen:"]
