@@ -242,6 +242,11 @@ def _fetch_threads(handle: str, limit: int) -> list[dict]:
     return out
 
 
+# Pinterest telt geen weergaven — het platform publiceert dat cijfer niet. Een 0
+# in die kolom is dus geen tegenvallende week maar een ontbrekende meting, en het
+# rapport moet dat verschil laten zien.
+_GEEN_BEREIKCIJFER = {"Pinterest"}
+
 _ADAPTERS = {
     "TikTok": (_fetch_tiktok, lambda: settings.social_tiktok),
     "Instagram": (_fetch_instagram, lambda: settings.social_instagram),
@@ -307,6 +312,7 @@ def weekly(this_start: str, this_end: str, limit_per_platform: int = 25,
             "prev_posts": len(vorige),
             # None = de scrape lukte niet. 0 = wel gelukt, niets gepost.
             "fetched": None if posts is None else len(posts),
+            "reach_reported": platform not in _GEEN_BEREIKCIJFER,
         })
         week_posts.extend(wk)
 
