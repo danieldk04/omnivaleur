@@ -63,15 +63,20 @@ def _is_configured() -> bool:
     return bool(settings.resend_api_key) or bool(settings.smtp_host and settings.smtp_user and settings.smtp_password and settings.smtp_from_email)
 
 
-def send_email_checked(subject: str, body: str, to: str | None = None, reply_to: str | None = None) -> None:
+def send_email_checked(subject: str, body: str, to: str | None = None, reply_to: str | None = None,
+                       html: str | None = None) -> None:
     """Zelfde als send_email, maar laat de fout staan. Gebruikt door de testknop,
     zodat op het scherm komt te staan wát de mailserver precies weigerde in
-    plaats van alleen 'het lukte niet'."""
+    plaats van alleen 'het lukte niet'.
+
+    `html` is optioneel: is het gevuld, dan gaat de mail als tekst+opmaak de deur
+    uit en kiest het mailprogramma zelf. `body` blijft dus altijd verplicht en
+    moet op zichzelf leesbaar zijn."""
     recipient_pre = to or settings.owner_email
     if settings.resend_api_key:
         if not (settings.resend_from or settings.smtp_from_email):
             raise RuntimeError("RESEND_FROM ontbreekt op Railway (het afzenderadres)")
-        _send_via_resend(subject, body, recipient_pre, reply_to)
+        _send_via_resend(subject, body, recipient_pre, reply_to, html=html)
         return
 
     missing = [n for n, v in (
