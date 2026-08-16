@@ -420,6 +420,9 @@ def render_text(report: dict) -> str:
                 staat = "niet opgehaald"
             elif not p["posts_count"]:
                 staat = "niets gepost"
+            elif not p.get("reach_reported", True):
+                staat = (f"bereik niet gemeten, {p['posts_count']} posts, "
+                         f"{p['engagement']} reacties")
             else:
                 staat = (f"{nl_getal(p['views'])} weergaven, {p['posts_count']} posts, "
                          f"{p['engagement']} reacties ({p['engagement_rate']}%)")
