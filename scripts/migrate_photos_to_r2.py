@@ -142,13 +142,13 @@ def main():
         gelezen = bespaard = 0
         verhuisd = rijen_bij = mislukt = 0
 
-        for tabel, kolom, rij in werk:
+        for tabel, kolom, rij, enkel in werk:
             if gelezen >= budget:
                 print(f"\nBudget van {args.budget_mb} MB op — hier gestopt. "
                       f"Draai het morgen opnieuw om verder te gaan.")
                 break
 
-            oud = list(rij[kolom])
+            oud = [rij[kolom]] if enkel else list(rij[kolom])
             nieuw = list(oud)
             veranderd = False
 
