@@ -276,8 +276,9 @@ def render_html(report: dict) -> str:
     sg = report.get("signups") or {}
     sc = report.get("social_content") or {}
     trend = report.get("trend") or []
-    per_platform = [p for p in (sc.get("per_platform") or []) if p["posts_count"]]
-    views = sum(p["views"] for p in per_platform)
+    alle_platforms = sc.get("per_platform") or []
+    per_platform = [p for p in alle_platforms if p["posts_count"]]
+    views = sum(p["views"] for p in alle_platforms)
 
     delen = []
 
