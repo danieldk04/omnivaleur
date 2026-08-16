@@ -159,6 +159,38 @@ def _balken(trend: list[dict]) -> str:
     )
 
 
+def _mini_trend(p: dict, top: int) -> str:
+    """Vier weekjes bereik als vier staafjes onder de kanaalnaam.
+
+    Alle kanalen delen dezelfde schaal (het drukste kanaal is de volle hoogte),
+    anders lijkt een kanaal met 16 weergaven net zo groot als een met 4.686.
+    Weken van vóór de opgehaalde posts blijven een streepje: onbekend, niet nul.
+    """
+    trend = p.get("trend") or []
+    if not trend:
+        # Geen historie: dan maar de gewone verhoudingsbalk.
+        aandeel = max(3, round(p["views"] / top * 100)) if p["views"] else 100
+        return (f'<table width="{aandeel}%" cellpadding="0" cellspacing="0" role="presentation">'
+                f'<tr><td style="background:{"#f1f5f9" if not p["views"] else BLAUW};height:6px;'
+                f'border-radius:3px;font-size:0;line-height:0;">&nbsp;</td></tr></table>')
+
+    cellen = []
+    for i, w in enumerate(trend):
+        laatste = i == len(trend) - 1
+        if not w["measured"]:
+            hoogte, kleur = 2, LIJN
+        else:
+            hoogte = max(2, round((w["views"] / top) * 18)) if w["views"] else 2
+            kleur = BLAUW if laatste else BLAUW_LICHT
+        cellen.append(
+            f'<td width="25%" style="padding:0 1px;vertical-align:bottom;">'
+            f'<div style="height:{hoogte}px;background:{kleur};border-radius:2px 2px 0 0;'
+            f'font-size:0;line-height:0;">&nbsp;</div></td>')
+    return ('<table width="46" cellpadding="0" cellspacing="0" role="presentation" '
+            'style="height:20px;"><tr style="vertical-align:bottom;">' + "".join(cellen)
+            + "</tr></table>")
+
+
 def _platform_tabel(platforms: list[dict]) -> str:
     """Elk platform op één regel: bereik, verandering, aantal posts en de
     verhouding reacties/bereik. Ook de platforms die niets deden staan erin —
