@@ -508,7 +508,8 @@ def _store_snapshot(report: dict) -> None:
 
 
 def render_email(report: dict) -> tuple[str, str]:
-    """Geeft (subject, plaintext body) voor de wekelijkse e-mail."""
+    """Oude, platte opmaak. Blijft staan als terugvaloptie; de mail die verstuurd
+    wordt komt uit backend/services/analytics_email.py."""
     this_s, this_e = report["period"]["this"]
     lines = [
         f"Omnivaleur — wekelijks marketingrapport",
