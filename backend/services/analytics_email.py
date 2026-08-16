@@ -276,37 +276,12 @@ def render_html(report: dict) -> str:
               f'style="font-size:14px;"><tr style="background:{VLAK};">{koppen}</tr>'
             + "".join(regels) + "</table>", padding="0 24px 18px 24px"))
 
-    # Posts per platform
-    if per_platform:
-        top = max(p["views"] for p in per_platform) or 1
-        regels = []
-        for p in per_platform:
-            aandeel = max(2, round(p["views"] / top * 100)) if p["views"] else 100
-            balk = (f'<table width="{aandeel}%" cellpadding="0" cellspacing="0" role="presentation">'
-                    f'<tr><td style="background:{BLAUW if p["views"] else "#f1f5f9"};height:10px;'
-                    f'border-radius:5px;font-size:0;line-height:0;">&nbsp;</td></tr></table>')
-            kleur = INKT if p["views"] else GRIJS_LICHT
-            regels.append(
-                f'<tr><td style="padding:6px 0;color:{kleur};width:90px;font-weight:600;">'
-                f'{p["platform"]}</td>'
-                f'<td style="padding:6px 0;">{balk}</td>'
-                f'<td style="padding:6px 0 6px 10px;text-align:right;font-weight:800;color:{kleur};'
-                f'width:110px;">{nl_getal(p["views"])}'
-                f'<span style="color:{GRIJS_LICHT};font-weight:600;"> · {p["posts_count"]} posts</span>'
-                f'</td></tr>')
-        beste = ""
-        if sc.get("by_content"):
-            g = sc["by_content"][0]
-            if g["total_views"]:
-                titel = (g["text"][:70] + "…") if len(g["text"]) > 70 else g["text"]
-                beste = (f'<div style="font-size:13px;color:{GRIJS};padding-top:14px;">'
-                         f'<b style="color:{INKT};">Beste post:</b> “{titel}” — '
-                         f'<b style="color:{INKT};">{nl_getal(g["total_views"])}</b> weergaven.</div>')
-        delen.append(_rij(
-            _kopje("Je posts")
-            + '<table width="100%" cellpadding="0" cellspacing="0" role="presentation" '
-              'style="font-size:13px;">' + "".join(regels) + "</table>" + beste,
-            padding="0 24px 20px 24px"))
+    # Social: elk platform apart, ook de stille — juist die zeggen iets.
+    if alle_platforms:
+        delen.append(_rij(_platform_tabel(alle_platforms), padding="0 24px 18px 24px"))
+        posts_blok = _beste_posts(sc)
+        if posts_blok:
+            delen.append(_rij(posts_blok, padding="0 24px 20px 24px"))
 
     # Knop + voet
     delen.append(
