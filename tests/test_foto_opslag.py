@@ -180,7 +180,7 @@ class _DB:
 def gewist(monkeypatch):
     verzameld = []
     import backend.services.image_upload as iu
-    monkeypatch.setattr(iu, "delete_images_sync", lambda paden: verzameld.extend(paden))
+    monkeypatch.setattr(iu, "delete_objects", lambda refs: verzameld.extend(refs))
     return verzameld
 
 
