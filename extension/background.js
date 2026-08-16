@@ -2644,8 +2644,51 @@ async function admarktToegestaan() {
   } catch (_) { return false; }
 }
 
+// De meekijker moet vóór de pagina-code draaien, en dat kan alleen met een
+// aangemeld script — executeScript komt altijd te laat, want dan heeft de app
+// haar gegevens al binnen. Aanmelden kan pas als de toestemming er is, dus dit
+// gebeurt bij het opstarten en meteen nadat de gebruiker de schakelaar omzet.
+const ADMARKT_SCRIPT_ID = "omnivaleur-admarkt";
+
+async function zorgVoorAdmarktMeekijker() {
+  if (!await admarktToegestaan()) return false;
+  try {
+    const al = await chrome.scripting.getRegisteredContentScripts({ ids: [ADMARKT_SCRIPT_ID] });
+    if (al && al.length) return true;
+  } catch (_) {}
+  try {
+    await chrome.scripting.registerContentScripts([{
+      id: ADMARKT_SCRIPT_ID,
+      matches: [`${ADMARKT_ORIGIN}/*`],
+      js: ["content/admarkt_sniffer.js"],
+      runAt: "document_start",
+      world: "MAIN",
+      persistAcrossSessions: true,
+    }]);
+    return true;
+  } catch (e) {
+    console.warn("[Omnivaleur] Admarkt-meekijker niet aangemeld:", e);
+    return false;
+  }
+}
+
+chrome.runtime.onStartup.addListener(() => { zorgVoorAdmarktMeekijker(); });
+chrome.runtime.onInstalled.addListener(() => { zorgVoorAdmarktMeekijker(); });
+// De schakelaar in de popup vraagt de toestemming; dit vangt het moment daarna.
+if (chrome.permissions && chrome.permissions.onAdded) {
+  chrome.permissions.onAdded.addListener(() => { zorgVoorAdmarktMeekijker(); });
+}
+if (chrome.permissions && chrome.permissions.onRemoved) {
+  chrome.permissions.onRemoved.addListener(async () => {
+    try { await chrome.scripting.unregisterContentScripts({ ids: [ADMARKT_SCRIPT_ID] }); } catch (_) {}
+  });
+}
+
 async function bgScanAdmarkt(job, serverUrl) {
   const sleep = ms => new Promise(r => setTimeout(r, ms));
+  // Zeker weten dat de meekijker klaarstaat vóór het tabblad opengaat; anders
+  // heeft de pagina haar gegevens al binnen tegen de tijd dat wij kijken.
+  await zorgVoorAdmarktMeekijker();
 
   const tabId = await new Promise((res, rej) =>
     openWorkerTab(admarktUrl(), t =>
@@ -2726,25 +2769,55 @@ async function bgScanAdmarkt(job, serverUrl) {
       const geprobeerd = [];
       let ruw = null, bron = null, totaal = null;
 
-      for (const url of [...new Set(kandidaten)]) {
-        try {
-          const res = await fetch(url, { headers: { Accept: "application/json" },
-                                         credentials: "include" });
-          geprobeerd.push(`${url.replace(location.origin, "")} → ${res.status}`);
-          if (!res.ok) continue;
-          const type = res.headers.get("content-type") || "";
-          if (!/json/i.test(type)) continue;
-          const data = await res.json();
+      const pakTotaal = (data) => {
+        for (const k of Object.keys(data || {})) {
+          if (/total|count|results/i.test(k) && typeof data[k] === "number") totaal = data[k];
+        }
+      };
+
+      // ── 1. Meelezen met wat de pagina zélf heeft opgehaald ───────────────
+      // Dit is de betrouwbare weg: methode, adres en sleutels kloppen per
+      // definitie. Wachten tot er iets binnen is, want de lijst komt na de
+      // pagina.
+      const vangst = () => (window.__omnivaleurVangst || []);
+      for (let i = 0; i < 25 && !ruw; i++) {
+        for (const v of vangst()) {
+          let data = null;
+          try { data = JSON.parse(v.tekst); } catch (_) { continue; }
           const lijst = vindLijst(data);
           if (lijst && lijst.length) {
-            ruw = lijst; bron = url;
-            for (const k of Object.keys(data || {})) {
-              if (/total|count|results/i.test(k) && typeof data[k] === "number") totaal = data[k];
-            }
+            ruw = lijst;
+            bron = `${v.methode} ${v.url}`;
+            pakTotaal(data);
             break;
           }
-        } catch (e) {
-          geprobeerd.push(`${url.replace(location.origin, "")} → ${String(e && e.message || e)}`);
+        }
+        if (!ruw) await nap(1000);
+      }
+      geprobeerd.push(`meegelezen: ${vangst().length} json-antwoorden`);
+
+      // ── 2. Terugval: de adressen die de pagina gebruikte zelf opvragen ────
+      // Alleen zinnig voor gewone GET-verzoeken. LET OP: elk onbekend adres op
+      // deze site geeft HTTP 200 mét de gewone pagina terug in plaats van een
+      // 404 — daarom is de controle op json geen nettigheid maar de enige manier
+      // om te zien dat er niets is.
+      if (!ruw) {
+        for (const url of [...new Set(kandidaten)]) {
+          try {
+            const res = await fetch(url, { headers: { Accept: "application/json" },
+                                           credentials: "include" });
+            const type = res.headers.get("content-type") || "";
+            geprobeerd.push(`${url.replace(location.origin, "")} → ${res.status} ${type.split(";")[0]}`);
+            if (!res.ok || !/json/i.test(type)) continue;
+            const data = await res.json();
+            const lijst = vindLijst(data);
+            if (lijst && lijst.length) {
+              ruw = lijst; bron = url; pakTotaal(data);
+              break;
+            }
+          } catch (e) {
+            geprobeerd.push(`${url.replace(location.origin, "")} → ${String(e && e.message || e)}`);
+          }
         }
       }
 
@@ -2809,6 +2882,7 @@ async function bgScanAdmarkt(job, serverUrl) {
           ingelogd: !/inloggen|log ?in|sign ?in/i.test(
             (document.querySelector("h1, main")?.innerText || "").slice(0, 200)),
           pagina_titel: (document.title || "").slice(0, 120),
+          meekijker: !!window.__omnivaleurVangst,
         },
       };
     }, [ADMARKT_MAX]);
