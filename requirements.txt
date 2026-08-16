@@ -12,6 +12,8 @@ playwright-stealth==1.0.6
 curl-cffi==0.7.3
 anthropic==0.34.2
 cloudinary==1.40.0
+# Cloudflare R2 spreekt het S3-protocol; hiermee gaan de advertentiefoto's erin.
+boto3==1.35.36
 apscheduler==3.10.4
 python-jose[cryptography]==3.3.0
 passlib[bcrypt]==1.7.4
