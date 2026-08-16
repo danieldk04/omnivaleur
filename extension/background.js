@@ -2701,188 +2701,98 @@ async function bgScanAdmarkt(job, serverUrl) {
     await sleep(6000);   // Admarkt rendert traag; de lijst komt na de pagina
 
     const result = await execInTab(tabId, async (MAX) => {
-      const nap = ms => new Promise(r => setTimeout(r, ms));
-      // Een advertentiepad is RELATIEF op deze pagina, maar de advertentie zelf
-      // woont op www.marktplaats.nl — niet op admarkt. Zou je dat tegen
-      // location.origin afzetten, dan krijg je admarkt.marktplaats.nl/v/m123:
-      // een adres dat niet bestaat, waardoor de verrijking van elke advertentie
-      // stilzwijgend niets oplevert en de import zonder prijs en omschrijving
-      // binnenkomt. Advertentiepaden gaan daarom expliciet naar www.
-      const ADV_PAD = /^\/(v|a)\//i;
-      const abs = u => !u ? null
-        : u.startsWith("http") ? u
-        : u.startsWith("//") ? `https:${u}`
-        : ADV_PAD.test(u) ? `https://www.marktplaats.nl${u}`
-        : `${location.origin}${u.startsWith("/") ? "" : "/"}${u}`;
-
-      // Herkennen of een object een advertentie is. Niet op vaste veldnamen —
-      // die ken ik niet — maar op vorm: iets met een id en iets met een titel.
-      const SLEUTEL_ID = /^(id|adid|advertisementid|itemid|vendorid)$/i;
-      const SLEUTEL_TITEL = /^(title|titel|name|headline|adtitle)$/i;
-      const SLEUTEL_FOTO = /(image|photo|thumb|picture)/i;
-      // LET OP de uitsluiting. Zonder die eerste test matchte "imageUrl" ook op
-      // /url$/i, en dan werd de fóto van de advertentie haar adres — waarna de
-      // verrijking een plaatje ophaalde in plaats van een advertentiepagina.
-      const SLEUTEL_URL = /(vipurl|svipurl|url|link|permalink)$/i;
-      const GEEN_URL = /(image|photo|thumb|picture|icon|avatar|logo)/i;
-      const SLEUTEL_PRIJS = /price/i;
-
-      const veld = (obj, patroon, verboden) => {
-        for (const k of Object.keys(obj)) {
-          if (verboden && verboden.test(k)) continue;
-          if (patroon.test(k) && obj[k] != null && typeof obj[k] !== "object") return obj[k];
+      // Admarkt praat tRPC: /api/trpc/<procedure>?batch=1&input=<json>, GET, op
+      // de sessiecookie van de ingelogde verkoper. Waargenomen en uitgeprobeerd
+      // op een echt zakelijk account (16-08-2026), niet geraden — raden kan hier
+      // ook niet: élk onbekend PAD geeft HTTP 200 met de gewone pagina terug.
+      // Een onbekende PROCEDURE geeft wél netjes 404, en dat is precies hoe
+      // ad.getAds gevonden is.
+      const roep = async (procedure, invoer) => {
+        const url = `/api/trpc/${procedure}?batch=1&input=`
+          + encodeURIComponent(JSON.stringify({ "0": invoer }));
+        const res = await fetch(url, { headers: { Accept: "application/json" },
+                                       credentials: "include" });
+        const type = res.headers.get("content-type") || "";
+        if (!res.ok || !/json/i.test(type)) {
+          throw new Error(`${procedure} → HTTP ${res.status} ${type.split(";")[0]}`);
         }
-        return null;
-      };
-      const isAdvertentie = o => o && typeof o === "object" && !Array.isArray(o)
-        && veld(o, SLEUTEL_ID) != null && typeof veld(o, SLEUTEL_TITEL) === "string";
-
-      // Diepste array in een JSON-antwoord die eruitziet als een lijst advertenties.
-      const vindLijst = (data, diepte = 0) => {
-        if (!data || diepte > 5) return null;
-        if (Array.isArray(data)) return data.filter(isAdvertentie).length >= 2 ? data : null;
-        if (typeof data !== "object") return null;
-        for (const k of Object.keys(data)) {
-          const gevonden = vindLijst(data[k], diepte + 1);
-          if (gevonden) return gevonden;
+        const body = await res.json();
+        if (body && body[0] && body[0].error) {
+          throw new Error(`${procedure} → ${String(body[0].error.message).slice(0, 200)}`);
         }
-        return null;
+        return body[0].result.data;
       };
 
-      // Welke verzoeken heeft de pagina zelf gedaan? Alleen eigen domein, alleen
-      // data-achtige verzoeken — geen plaatjes, stijlbladen of scripts.
-      // Wachten tot de pagina daadwerkelijk gegevens heeft opgehaald. Een vaste
-      // pauze is hier een gok: bij een trage verbinding is 6 seconden te kort en
-      // dan lijkt het alsof er niets te vinden is. Kijk dus tot ze er zijn.
-      const dataVerzoeken = () => performance.getEntriesByType("resource")
-        .filter(e => (e.initiatorType === "xmlhttprequest" || e.initiatorType === "fetch"))
-        .map(e => e.name)
-        .filter(u => u.startsWith(location.origin))
-        .filter(u => !/\.(js|css|png|jpe?g|gif|svg|woff2?|ico)(\?|$)/i.test(u));
-
-      let kandidaten = dataVerzoeken();
-      for (let i = 0; i < 20 && !kandidaten.length; i++) {
-        await nap(1000);
-        kandidaten = dataVerzoeken();
-      }
-
-      const geprobeerd = [];
-      let ruw = null, bron = null, totaal = null;
-
-      const pakTotaal = (data) => {
-        for (const k of Object.keys(data || {})) {
-          if (/total|count|results/i.test(k) && typeof data[k] === "number") totaal = data[k];
-        }
-      };
-
-      // ── 1. Meelezen met wat de pagina zélf heeft opgehaald ───────────────
-      // Dit is de betrouwbare weg: methode, adres en sleutels kloppen per
-      // definitie. Wachten tot er iets binnen is, want de lijst komt na de
-      // pagina.
-      const vangst = () => (window.__omnivaleurVangst || []);
-      for (let i = 0; i < 25 && !ruw; i++) {
-        for (const v of vangst()) {
-          let data = null;
-          try { data = JSON.parse(v.tekst); } catch (_) { continue; }
-          const lijst = vindLijst(data);
-          if (lijst && lijst.length) {
-            ruw = lijst;
-            bron = `${v.methode} ${v.url}`;
-            pakTotaal(data);
-            break;
-          }
-        }
-        if (!ruw) await nap(1000);
-      }
-      geprobeerd.push(`meegelezen: ${vangst().length} json-antwoorden`);
-
-      // ── 2. Terugval: de adressen die de pagina gebruikte zelf opvragen ────
-      // Alleen zinnig voor gewone GET-verzoeken. LET OP: elk onbekend adres op
-      // deze site geeft HTTP 200 mét de gewone pagina terug in plaats van een
-      // 404 — daarom is de controle op json geen nettigheid maar de enige manier
-      // om te zien dat er niets is.
-      if (!ruw) {
-        for (const url of [...new Set(kandidaten)]) {
-          try {
-            const res = await fetch(url, { headers: { Accept: "application/json" },
-                                           credentials: "include" });
-            const type = res.headers.get("content-type") || "";
-            geprobeerd.push(`${url.replace(location.origin, "")} → ${res.status} ${type.split(";")[0]}`);
-            if (!res.ok || !/json/i.test(type)) continue;
-            const data = await res.json();
-            const lijst = vindLijst(data);
-            if (lijst && lijst.length) {
-              ruw = lijst; bron = url; pakTotaal(data);
-              break;
-            }
-          } catch (e) {
-            geprobeerd.push(`${url.replace(location.origin, "")} → ${String(e && e.message || e)}`);
-          }
-        }
-      }
-
+      const stappen = [];
       const items = [];
-      if (ruw) {
-        for (const ad of ruw) {
-          if (!isAdvertentie(ad)) continue;
-          const id = String(veld(ad, SLEUTEL_ID));
-          const prijs = veld(ad, SLEUTEL_PRIJS);
-          items.push({
-            platform_listing_id: id,
-            title: String(veld(ad, SLEUTEL_TITEL) || ""),
-            // Admarkt rekent in centen waar Marktplaats dat ook doet; een getal
-            // boven de duizend is vrijwel zeker centen. Liever geen prijs dan een
-            // prijs die honderd keer te hoog is — de verrijkingsstap haalt de
-            // echte prijs alsnog van de advertentiepagina zelf.
-            price: typeof prijs === "number" && prijs < 1000 ? prijs : null,
-            photo_url: abs(veld(ad, SLEUTEL_FOTO)),
-            platform_listing_url: abs(veld(ad, SLEUTEL_URL, GEEN_URL)),
-            category_name: "",
-            status: "",
-          });
-        }
-      }
+      let totaal = 0;
 
-      // Terugval: lezen wat er op het scherm staat. Levert minder, maar bewijst
-      // wel dat we op de goede pagina zitten.
-      let viaScherm = false;
-      if (!items.length) {
-        viaScherm = true;
-        for (const rij of document.querySelectorAll("tr, div[role='row']")) {
-          const link = rij.querySelector("a[href]");
-          if (!link) continue;
-          const titel = (link.textContent || "").trim();
-          if (titel.length < 4) continue;
-          const href = link.getAttribute("href") || "";
-          const id = (href.match(/(\d{6,})/) || [])[1];
-          if (!id || items.some(i => i.platform_listing_id === id)) continue;
-          const img = rij.querySelector("img");
-          items.push({
-            platform_listing_id: id, title: titel, price: null,
-            photo_url: img ? abs(img.getAttribute("src")) : null,
-            platform_listing_url: abs(href), category_name: "", status: "",
-          });
-        }
-      }
+      // Advertenties hangen altijd onder een campagne; er is er minstens één,
+      // ook bij wie er nooit een heeft aangemaakt ("Campagne zonder titel").
+      const campagnes = (await roep("campaign.getAllCampaigns", {})).campaigns || [];
+      stappen.push(`campagnes: ${campagnes.length}`);
 
-      // Meer dan de eerste lading laten we bewust liggen: uren wachten op een
-      // scan die niets terugmeldt voelt als stuk, ook als hij het niet is.
-      const gevonden = items.length;
-      const rest = Math.max(0, (totaal || gevonden) - MAX);
+      for (const c of campagnes) {
+        let token = null;
+        for (let pagina = 0; pagina < 40; pagina++) {
+          const invoer = { campaignId: c.id };
+          if (token) invoer.pageToken = token;
+          const data = await roep("ad.getAds", invoer);
+          const ads = data.ads || [];
+          if (typeof data.count === "number") totaal += data.count;
+
+          for (const ad of ads) {
+            // Alleen wat live staat; gepauzeerd of verwijderd hoort niet als
+            // bestaande advertentie geïmporteerd te worden.
+            if (ad.status && ad.status !== "ACTIVE") continue;
+            const fotos = (ad.images || [])
+              .filter(i => i && i.status !== "ERROR")
+              .map(i => {
+                const l = i.links || {};
+                const beste = l["1024x1024"] || l["726x726"] || l["498x498"] || i.src;
+                return !beste ? null
+                  : beste.startsWith("//") ? `https:${beste}` : beste;
+              })
+              .filter(Boolean);
+
+            items.push({
+              platform_listing_id: String(ad.id),
+              title: ad.title || "",
+              // Admarkt kent GEEN prijs en GEEN omschrijving: het zijn advertenties
+              // die naar de eigen webwinkel van de verkoper wijzen, niet naar een
+              // Marktplaats-advertentie. Hier iets verzinnen zou erger zijn dan
+              // leeg laten — de verkoper vult dit zelf aan bij het bevestigen.
+              price: null,
+              photo_url: fotos[0] || null,
+              photo_urls: fotos,
+              category_name: "",
+              category_id: ad.categoryId != null ? String(ad.categoryId) : "",
+              status: ad.status || "",
+              // Bewust GEEN platform_listing_url: het enige adres dat Admarkt
+              // geeft is de webwinkel van de verkoper. Dat als advertentielink
+              // opslaan zou later een verkeerde pagina openen of verwijderen.
+            });
+            if (items.length >= MAX) break;
+          }
+
+          stappen.push(`campagne ${c.id} pagina ${pagina + 1}: ${ads.length} adv`);
+          token = data.nextPageToken || null;
+          if (!token || !ads.length || items.length >= MAX) break;
+          await new Promise(r => setTimeout(r, 200));
+        }
+        if (items.length >= MAX) break;
+      }
 
       return {
-        items: items.slice(0, MAX),
+        items,
         meta: {
-          bron: bron ? bron.replace(location.origin, "") : null,
-          totaal, gevonden, rest, via_scherm: viaScherm,
-          // Waar we gekeken hebben en wat dat opleverde. Dit is het enige wat een
-          // mislukte poging bruikbaar maakt in plaats van alleen teleurstellend.
-          geprobeerd: geprobeerd.slice(0, 25),
-          velden: ruw && ruw[0] ? Object.keys(ruw[0]).slice(0, 40) : null,
-          ingelogd: !/inloggen|log ?in|sign ?in/i.test(
-            (document.querySelector("h1, main")?.innerText || "").slice(0, 200)),
+          bron: "trpc ad.getAds",
+          totaal,
+          gevonden: items.length,
+          rest: Math.max(0, totaal - items.length),
+          stappen: stappen.slice(0, 25),
+          zonder_prijs: items.length,
           pagina_titel: (document.title || "").slice(0, 120),
-          meekijker: !!window.__omnivaleurVangst,
         },
       };
     }, [ADMARKT_MAX]);
@@ -2892,8 +2802,8 @@ async function bgScanAdmarkt(job, serverUrl) {
     if (!result || !result.items || !result.items.length) {
       const m = (result && result.meta) || {};
       throw new Error(
-        `Admarkt gave no adverts. page="${m.pagina_titel || "?"}" ` +
-        `signedIn=${m.ingelogd} tried=[${(m.geprobeerd || []).join(" | ") || "nothing"}]`
+        `Admarkt returned no live adverts. page="${m.pagina_titel || "?"}" ` +
+        `steps=[${(m.stappen || []).join(" | ") || "none"}]`
       );
     }
     return result;
