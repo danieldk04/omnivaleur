@@ -420,6 +420,13 @@ def render_text(report: dict) -> str:
         r += ["", "Wat ik deze week zou doen:"]
         r += [f"  {i}. {a}" for i, a in enumerate(report["actions"], 1)]
 
+    posts = [p for p in (sc.get("top_posts") or []) if p.get("views") or p.get("engagement")][:5]
+    if posts:
+        r += ["", "Beste posts van de week:"]
+        r += [f"  • [{p['platform']}] {(p['text'] or '').strip()[:60]} — "
+              f"{nl_getal(p['views'])} weergaven, {p['engagement']} reacties"
+              for p in posts]
+
     paginas = [p for p in (seo.get("top_pages") or []) if p["clicks"]][:5]
     if paginas:
         r += ["", "Best bezochte pagina's:"]
