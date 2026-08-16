@@ -201,8 +201,13 @@ def _platform_tabel(platforms: list[dict]) -> str:
                             f'color:{GROEN if d > 0 else ROOD};">'
                             f'{"▲" if d > 0 else "▼"} {nl_getal(abs(d))}</div>')
 
-        reacties = (f'{p["engagement"]}<span style="color:{GRIJS_LICHT};font-weight:600;">'
-                    f' · {p["engagement_rate"]}%</span>') if p["views"] else "—"
+        if p["views"]:
+            reacties = (f'{p["engagement"]}<span style="color:{GRIJS_LICHT};font-weight:600;">'
+                        f' · {p["engagement_rate"]}%</span>')
+        elif p["engagement"]:
+            reacties = str(p["engagement"])
+        else:
+            reacties = "—"
 
         regels.append(
             f'<tr>'
