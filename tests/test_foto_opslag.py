@@ -110,10 +110,19 @@ def r2_aan(monkeypatch):
     return r2_storage
 
 
-def test_zonder_r2_verandert_er_niets():
-    """De terugweg: geen sleutels betekent dat alles op Supabase blijft draaien."""
+def test_zonder_r2_verandert_er_niets(monkeypatch):
+    """De terugweg: geen sleutels betekent dat alles op Supabase blijft draaien.
+
+    De instellingen worden hier expres leeggemaakt in plaats van te vertrouwen
+    op wat er toevallig in .env staat — anders zegt deze test op de ene machine
+    iets anders dan op de andere."""
+    from backend.config import settings
     from backend.services import r2_storage
     from backend.services.image_upload import locate_object
+
+    monkeypatch.setattr(settings, "r2_account_id", "")
+    monkeypatch.setattr(settings, "r2_access_key_id", "")
+    monkeypatch.setattr(settings, "r2_secret_access_key", "")
     assert r2_storage.is_configured() is False
     assert r2_storage.path_from_url(R2_URL + "u1/aaa.jpg") is None
     assert locate_object(BUCKET_URL + "u1/aaa.jpg") == ("supabase", "u1/aaa.jpg")
