@@ -177,16 +177,54 @@ async def update_item(item_id: str, updates: dict, user_id: str = Depends(get_cu
 def delete_item(item_id: str, user_id: str = Depends(get_current_user)):
     db = get_db()
     # Verify ownership
-    item = db.table("items").select("id").eq("id", item_id).eq("user_id", user_id).execute()
+    item = db.table("items").select("id,photo_urls").eq("id", item_id).eq("user_id", user_id).execute()
     if not item.data:
         raise HTTPException(status_code=404, detail="Item not found")
+    photo_urls = list(item.data[0].get("photo_urls") or [])
     listing_ids = [l["id"] for l in (db.table("listings").select("id").eq("item_id", item_id).execute().data or [])]
     for lid in listing_ids:
         db.table("sync_events").delete().eq("listing_id", lid).execute()
     db.table("listings").delete().eq("item_id", item_id).execute()
     db.table("jobs").delete().eq("item_id", item_id).execute()
     db.table("items").delete().eq("id", item_id).execute()
+    _release_photos(db, user_id, photo_urls)
     return {"deleted": item_id}
+
+
+def _release_photos(db, user_id: str, photo_urls: list) -> None:
+    """Delete the item's photos from storage — but ONLY the truly unused ones.
+
+    Photos are stored content-addressed, so two items with the same picture
+    share one object, and an import candidate can point at it too. Deleting on
+    sight would blank out a photo on an item the user still has. Every url is
+    therefore checked against everything that could still reference it, and
+    anything we cannot prove is orphaned is left in the bucket.
+
+    Never raises: a failed cleanup costs storage, a failed delete costs the user
+    their item.
+    """
+    from backend.services.image_upload import delete_images_sync, storage_path_from_url
+
+    try:
+        orphaned = []
+        for url in photo_urls:
+            path = storage_path_from_url(url)
+            if not path:
+                continue  # not ours (marketplace CDN url) — nothing to delete
+            still_used = (
+                (db.table("items").select("id").eq("user_id", user_id)
+                   .contains("photo_urls", [url]).limit(1).execute().data)
+                or (db.table("import_candidates").select("id").eq("user_id", user_id)
+                      .eq("photo_url", url).limit(1).execute().data)
+                or (db.table("import_candidates").select("id").eq("user_id", user_id)
+                      .contains("photo_urls", [url]).limit(1).execute().data)
+            )
+            if not still_used:
+                orphaned.append(path)
+        if orphaned:
+            delete_images_sync(orphaned)
+    except Exception:  # noqa: BLE001 - the item is already gone; this is bookkeeping
+        logger.warning("photo cleanup skipped for user %s", user_id, exc_info=True)
 
 
 @router.post("/{item_id}/delist")
