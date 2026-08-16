@@ -41,6 +41,18 @@ class Settings(BaseSettings):
     anthropic_api_key: str = ""
     google_api_key: str = ""  # Gemini image-gen voor content_pages featured images
 
+    # Cloudflare R2 — de opslag voor advertentiefoto's. Supabase Storage gaf
+    # 1 GB en rekende ook nog verkeer; R2 geeft 10 GB en verkeer is gratis.
+    # Zijn deze leeg, dan valt alles automatisch terug op Supabase Storage,
+    # precies zoals het daarvoor werkte. Dat is de terugweg als R2 hapert.
+    r2_account_id: str = ""
+    r2_access_key_id: str = ""
+    r2_secret_access_key: str = ""
+    r2_bucket: str = "omnivaleur-photos"
+    # Eigen domein, nooit het r2.dev-adres: dat knijpt Cloudflare af en het mag
+    # niet in productie gebruikt worden.
+    r2_public_base_url: str = "https://img.omnivaleur.com"
+
     cloudinary_cloud_name: str = ""
     cloudinary_api_key: str = ""
     cloudinary_api_secret: str = ""
