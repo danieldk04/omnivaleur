@@ -44,6 +44,17 @@ def _periode(this_s: str, this_e: str) -> str:
     return f"{_datum(this_s)} t/m {_datum(this_e)}"
 
 
+# Merknamen schrijven zichzelf niet goed vanuit een url-slug.
+_MERKEN = {"ebay": "eBay", "2dehands": "2dehands", "marktplaats": "Marktplaats",
+           "vinted": "Vinted", "etsy": "Etsy", "shopify": "Shopify",
+           "oneshop": "OneShop", "vendoo": "Vendoo", "crosslist": "Crosslist",
+           "omnivaleur": "Omnivaleur", "facebook": "Facebook"}
+
+
+def _woorden(tekst: str) -> str:
+    return " ".join(_MERKEN.get(w, w) for w in tekst.split())
+
+
 def _paginanaam(url: str) -> str:
     """Leesbare naam voor een pagina — een kaal pad zegt hem niets."""
     p = (url or "").replace(SITE_URL, "").split("?")[0].rstrip("/")
@@ -56,9 +67,10 @@ def _paginanaam(url: str) -> str:
         return "Blog-overzicht"
     staart = p.rsplit("/", 1)[-1].replace("-", " ")
     if "/vergelijking/" in p or p.startswith("/vs/"):
-        return "Vergelijking: " + staart.replace("omnivaleur vs ", "")
+        return "Vergelijking " + _woorden(staart.replace("omnivaleur vs ", "met "))
     if "/crosslisting/" in p or "/crosslisten/" in p:
-        return staart.replace(" to ", " → ") + " (gids)"
+        return _woorden(staart.replace(" to ", " → ")) + " (gids)"
+    staart = _woorden(staart)
     return staart[:1].upper() + staart[1:]
 
 
