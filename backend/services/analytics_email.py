@@ -159,6 +159,92 @@ def _balken(trend: list[dict]) -> str:
     )
 
 
+def _platform_tabel(platforms: list[dict]) -> str:
+    """Elk platform op één regel: bereik, verandering, aantal posts en de
+    verhouding reacties/bereik. Ook de platforms die niets deden staan erin —
+    'Instagram staat er niet in' mag nooit betekenen dat de meting stukliep."""
+    top = max([p["views"] for p in platforms] or [0]) or 1
+
+    koppen = "".join(
+        f'<td style="padding:8px 10px;color:{GRIJS};font-size:11px;font-weight:700;'
+        f'text-transform:uppercase;{stijl}">{tekst}</td>'
+        for tekst, stijl in (("Platform", "border-radius:6px 0 0 6px;"),
+                             ("Bereik", "text-align:right;"),
+                             ("Posts", "text-align:right;"),
+                             ("Reacties", "text-align:right;border-radius:0 6px 6px 0;")))
+
+    regels = []
+    for i, p in enumerate(platforms):
+        rand = "" if i == len(platforms) - 1 else "border-bottom:1px solid #f1f5f9;"
+        stil = not p["views"]
+        kleur = GRIJS_LICHT if stil else INKT
+        aandeel = max(3, round(p["views"] / top * 100)) if p["views"] else 100
+        balk = (f'<table width="{aandeel}%" cellpadding="0" cellspacing="0" role="presentation">'
+                f'<tr><td style="background:{"#f1f5f9" if stil else BLAUW};height:6px;'
+                f'border-radius:3px;font-size:0;line-height:0;">&nbsp;</td></tr></table>')
+
+        if p.get("fetched") is None:
+            staat = f'<span style="color:{GRIJS_LICHT};">niet opgehaald</span>'
+        elif not p["posts_count"]:
+            staat = f'<span style="color:{GRIJS_LICHT};">niets gepost</span>'
+        else:
+            staat = nl_getal(p["views"])
+        verschil = ""
+        if p["views"] and p.get("prev_views"):
+            d = p["views"] - p["prev_views"]
+            if d:
+                verschil = (f'<div style="font-size:11px;font-weight:700;'
+                            f'color:{GROEN if d > 0 else ROOD};">'
+                            f'{"▲" if d > 0 else "▼"} {nl_getal(abs(d))}</div>')
+
+        reacties = (f'{p["engagement"]}<span style="color:{GRIJS_LICHT};font-weight:600;">'
+                    f' · {p["engagement_rate"]}%</span>') if p["views"] else "—"
+
+        regels.append(
+            f'<tr>'
+            f'<td style="padding:10px 10px 10px 10px;{rand}color:{kleur};font-weight:600;width:96px;">'
+            f'{p["platform"]}<div style="padding-top:5px;">{balk}</div></td>'
+            f'<td style="padding:10px;{rand}text-align:right;font-weight:800;color:{kleur};">'
+            f'{staat}{verschil}</td>'
+            f'<td style="padding:10px;{rand}text-align:right;color:{GRIJS};font-weight:700;">'
+            f'{p["posts_count"]}</td>'
+            f'<td style="padding:10px;{rand}text-align:right;color:{GRIJS};font-weight:700;">'
+            f'{reacties}</td></tr>')
+
+    return (_kopje("Per kanaal")
+            + f'<table width="100%" cellpadding="0" cellspacing="0" role="presentation" '
+              f'style="font-size:14px;"><tr style="background:{VLAK};">{koppen}</tr>'
+            + "".join(regels) + "</table>"
+            + f'<div style="font-size:11px;color:{GRIJS_LICHT};padding-top:8px;">'
+              f'Reacties = likes, opmerkingen, shares en bewaringen samen; het percentage '
+              f'is hun aandeel in het bereik.</div>')
+
+
+def _beste_posts(sc: dict, aantal: int = 5) -> str:
+    """De losse posts van de week, op bereik. Met link, zodat hij er meteen heen kan."""
+    posts = [p for p in (sc.get("top_posts") or []) if p.get("views") or p.get("engagement")]
+    if not posts:
+        return ""
+    regels = []
+    for i, p in enumerate(posts[:aantal]):
+        rand = "" if i == len(posts[:aantal]) - 1 else "border-bottom:1px solid #f1f5f9;"
+        titel = (p["text"] or "").strip().replace("\n", " ")
+        titel = (titel[:64] + "…") if len(titel) > 64 else (titel or "(zonder tekst)")
+        naam = (f'<a href="{p["url"]}" style="color:{INKT};text-decoration:none;">{titel}</a>'
+                if p.get("url") else titel)
+        regels.append(
+            f'<tr><td style="padding:9px 0;{rand}font-size:13px;color:{INKT};">'
+            f'{naam}<div style="font-size:11px;color:{GRIJS_LICHT};padding-top:3px;">'
+            f'{p["platform"]} · {_datum(p["date"]) if p.get("date") else ""}</div></td>'
+            f'<td style="padding:9px 0 9px 10px;{rand}text-align:right;white-space:nowrap;">'
+            f'<span style="font-size:14px;font-weight:800;color:{INKT};">{nl_getal(p["views"])}</span>'
+            f'<div style="font-size:11px;color:{GRIJS_LICHT};">{p["engagement"]} reacties</div>'
+            f'</td></tr>')
+    return (_kopje("Beste posts van de week")
+            + '<table width="100%" cellpadding="0" cellspacing="0" role="presentation">'
+            + "".join(regels) + "</table>")
+
+
 def _samenvatting(report: dict) -> str:
     """Eén zin die de week samenvat, in gevolgen."""
     seo = report.get("seo") or {}
