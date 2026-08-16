@@ -2612,8 +2612,31 @@ function mpEmptyScanReason(meta, platform) {
 // hij daarbij heeft gedaan. Dat is geen gok maar een waarneming: we halen
 // precies dezelfde gegevens op als de pagina zelf. Wat hij gebruikt heeft komt
 // mee terug in `meta`, zodat we het daarna hard kunnen vastleggen.
+// `optional_host_permissions` in het manifest staat er om twee redenen, en beide
+// zijn belangrijk genoeg om hier vast te leggen (in het manifest zelf kan geen
+// commentaar staan — een zelfverzonnen "//"-sleutel is een onbekende sleutel en
+// dat is precies het soort ding waar een winkelcontrole op afknapt):
+//   1. Een update die een nieuwe VASTE host-toestemming toevoegt, zet Chrome bij
+//      iedere bestaande gebruiker de extensie stil tot hij hem accepteert.
+//   2. Alleen zakelijke verkopers hebben Admarkt nodig.
 const ADMARKT_ORIGIN = "https://admarkt.marktplaats.nl";
-const ADMARKT_URL = `${ADMARKT_ORIGIN}/advertisements?dateOption=last-365-days`;
+// Exact de vorm die een zakelijk account zelf gebruikt (waargenomen bij Egbert
+// Brouwer, 15-08-2026). De datumgrenzen staan er BEWUST in: zonder start- en
+// einddatum weet ik niet welke standaardperiode de pagina kiest, en een lijst
+// die stilletjes maar één maand beslaat lijkt op "bijna niks gevonden".
+function admarktUrl() {
+  const eind = new Date();
+  const start = new Date(eind.getTime() - 365 * 86400000);
+  const d = x => x.toISOString().slice(0, 10);
+  return `${ADMARKT_ORIGIN}/advertisements?startDate=${d(start)}&endDate=${d(eind)}`
+       + `&dateOption=last-365-days`;
+}
+
+// Hoeveel advertenties we in één keer meenemen. Egbert heeft er 5.540; die stuk
+// voor stuk ophalen duurt uren en levert bij een eerste kennismaking vooral een
+// scan op die "hangt". Liever een eerste lading die klopt, met een eerlijke
+// melding hoeveel er nog wachten.
+const ADMARKT_MAX = 250;
 
 async function admarktToegestaan() {
   try {
