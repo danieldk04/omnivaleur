@@ -273,24 +273,40 @@ def weekly(this_start: str, this_end: str, limit_per_platform: int = 25,
         return platform, fetch(handles[platform], limit_per_platform)
 
     with ThreadPoolExecutor(max_workers=len(handles) or 1) as ex:
-        futures = [ex.submit(_job, p) for p in handles]
+        futures = {ex.submit(_job, p): p for p in handles}
         for f in as_completed(futures):
             try:
                 platform, posts = f.result()
                 results[platform] = posts
             except Exception as e:
-                errors.append(str(e))
+                # Mét platformnaam: een scrape die stukloopt liet het platform
+                # eerder gewoon uit het rapport verdwijnen, wat niet te
+                # onderscheiden was van 'niets gepost'.
+                errors.append(f"{futures[f]}: {e}")
+
+    p_start, p_end = prev if prev else ("", "")
 
     # Alleen posts binnen het weekvenster (op datum).
     week_posts: list[dict] = []
     per_platform: list[dict] = []
-    for platform, posts in results.items():
-        wk = [p for p in posts if p["date"] and this_start <= p["date"] <= this_end]
+    for platform in handles:
+        posts = results.get(platform)
+        wk = [p for p in (posts or []) if p["date"] and this_start <= p["date"] <= this_end]
+        vorige = [p for p in (posts or []) if prev and p["date"] and p_start <= p["date"] <= p_end]
+        views = sum(p["views"] for p in wk)
+        engagement = sum(p["engagement"] for p in wk)
         per_platform.append({
             "platform": platform,
             "posts_count": len(wk),
-            "views": sum(p["views"] for p in wk),
-            "engagement": sum(p["engagement"] for p in wk),
+            "views": views,
+            "engagement": engagement,
+            # Verhouding tussen reacties en bereik: het enige getal waarmee een
+            # klein platform zich met een groot kan meten.
+            "engagement_rate": round(engagement / views * 100, 1) if views else 0.0,
+            "prev_views": sum(p["views"] for p in vorige),
+            "prev_posts": len(vorige),
+            # None = de scrape lukte niet. 0 = wel gelukt, niets gepost.
+            "fetched": None if posts is None else len(posts),
         })
         week_posts.extend(wk)
 
