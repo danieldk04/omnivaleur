@@ -122,12 +122,18 @@ def main():
                 (lambda: db.table(tabel).select(f"id,user_id,{kolom}").eq("user_id", args.user))
             return [r for r in _paged(q) if r.get(kolom)]
 
-        werk = [("items", "photo_urls", r) for r in rijen("items", "photo_urls")]
-        werk += [("import_candidates", "photo_urls", r)
+        # (tabel, kolom, rij, is_enkel) — import_candidates.photo_url is één url
+        # in plaats van een lijst, en moet ook weer als één url terug.
+        werk = [("items", "photo_urls", r, False) for r in rijen("items", "photo_urls")]
+        werk += [("import_candidates", "photo_urls", r, False)
                  for r in rijen("import_candidates", "photo_urls")]
+        werk += [("import_candidates", "photo_url", r, True)
+                 for r in rijen("import_candidates", "photo_url")]
 
         te_doen = sum(
-            1 for _, kolom, r in werk for u in (r[kolom] or []) if storage_path_from_url(u)
+            1 for _, kolom, r, enkel in werk
+            for u in ([r[kolom]] if enkel else (r[kolom] or []))
+            if storage_path_from_url(u)
         )
         print(f"{te_doen} foto's staan nog op Supabase, verdeeld over {len(werk)} rijen")
         print(f"Budget deze ronde: {args.budget_mb} MB"
