@@ -203,10 +203,10 @@ def _release_photos(db, user_id: str, photo_urls: list) -> None:
     Never raises: a failed cleanup costs storage, a failed delete costs the user
     their item.
     """
-    from backend.services.image_upload import delete_images_sync, storage_path_from_url
+    from backend.services.image_upload import delete_objects, locate_object
 
     try:
-        candidates = {p for p in (storage_path_from_url(u) for u in photo_urls) if p}
+        candidates = {ref for ref in (locate_object(u) for u in photo_urls) if ref}
         if not candidates:
             return  # nothing of ours to clean up (marketplace CDN urls)
 
