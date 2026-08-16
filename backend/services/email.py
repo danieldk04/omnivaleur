@@ -31,6 +31,11 @@ def _send_via_resend(subject: str, body: str, recipient: str, reply_to: str | No
         "subject": subject,
         "text": body,
     }
+    # De platte tekst blijft altijd meegaan: mailprogramma's die geen opmaak
+    # tonen (of hem uitzetten) vallen daarop terug, en spamfilters rekenen een
+    # html-only mail aan.
+    if html:
+        payload["html"] = html
     if reply_to:
         payload["reply_to"] = reply_to
 
