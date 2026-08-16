@@ -90,7 +90,15 @@ def send_email_checked(subject: str, body: str, to: str | None = None, reply_to:
 
     recipient = to or settings.owner_email
     # utf-8: zonder deze charset weigert Python elke tekst met een euroteken erin.
-    msg = MIMEText(body, "plain", "utf-8")
+    if html:
+        # 'alternative' met tekst eerst: het mailprogramma toont de laatste versie
+        # die het aankan, dus de opmaak wint waar dat kan en de tekst blijft over
+        # waar dat niet kan.
+        msg = MIMEMultipart("alternative")
+        msg.attach(MIMEText(body, "plain", "utf-8"))
+        msg.attach(MIMEText(html, "html", "utf-8"))
+    else:
+        msg = MIMEText(body, "plain", "utf-8")
     msg["Subject"] = subject
     msg["From"] = settings.smtp_from_email
     msg["To"] = recipient
