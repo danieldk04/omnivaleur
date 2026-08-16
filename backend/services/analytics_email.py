@@ -247,7 +247,8 @@ def _beste_posts(sc: dict, aantal: int = 5) -> str:
             f'{p["platform"]} · {_datum(p["date"]) if p.get("date") else ""}</div></td>'
             f'<td style="padding:9px 0 9px 10px;{rand}text-align:right;white-space:nowrap;">'
             f'<span style="font-size:14px;font-weight:800;color:{INKT};">{nl_getal(p["views"])}</span>'
-            f'<div style="font-size:11px;color:{GRIJS_LICHT};">{p["engagement"]} reacties</div>'
+            f'<div style="font-size:11px;color:{GRIJS_LICHT};">{p["engagement"]} '
+            f'reactie{"s" if p["engagement"] != 1 else ""}</div>'
             f'</td></tr>')
     return (_kopje("Beste posts van de week")
             + '<table width="100%" cellpadding="0" cellspacing="0" role="presentation">'
