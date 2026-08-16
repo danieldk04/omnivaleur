@@ -535,6 +535,66 @@ function mpKidsSizeCat3(size, sizeMap) {
   return null;
 }
 
+// ── Calm mode ──────────────────────────────────────────────────────────────
+// Wat een geautomatiseerd account verraadt is RITME, niet aantal. Twintig
+// advertenties die in twee minuten achter elkaar verschijnen zien er anders uit
+// dan twintig advertenties verspreid over een middag — terwijl het eindresultaat
+// hetzelfde is. Calm mode koopt die rust: publicaties komen 3 tot 8 minuten uit
+// elkaar (willekeurig, want een vaste tussenpoos is óók een patroon) en de
+// verkocht-controle gaat van elke tien minuten naar één keer per uur.
+//
+// Alleen SCHRIJVENDE opdrachten worden vertraagd. Een scan leest alleen en is
+// niet zichtbaar voor het platform; die tegenhouden zou de gebruiker laten
+// wachten zonder dat het iets veiliger maakt.
+const CALM_MIN_MS = 3 * 60 * 1000;
+const CALM_MAX_MS = 8 * 60 * 1000;
+const CALM_SLEUTEL = "calmVolgendeNa";
+const SCHRIJVENDE_ACTIES = new Set(["create", "delete", "content_refresh"]);
+
+async function calmAan() {
+  try {
+    const s = await chrome.storage.sync.get("calmMode");
+    return !!s.calmMode;
+  } catch (_) { return false; }
+}
+
+// Mag er nu een schrijvende opdracht draaien? In de opslag, niet in het geheugen:
+// een service worker wordt door Chrome doodgemaakt zodra hij even niets doet, en
+// dan zou de wachttijd elke keer opnieuw op nul beginnen.
+async function calmMagNu() {
+  if (!await calmAan()) return true;
+  try {
+    const s = await chrome.storage.local.get(CALM_SLEUTEL);
+    const na = s[CALM_SLEUTEL] || 0;
+    return Date.now() >= na;
+  } catch (_) { return true; }
+}
+
+async function calmVolgendeInplannen() {
+  if (!await calmAan()) return;
+  const wacht = CALM_MIN_MS + Math.floor(Math.random() * (CALM_MAX_MS - CALM_MIN_MS));
+  try {
+    await chrome.storage.local.set({ [CALM_SLEUTEL]: Date.now() + wacht });
+    console.log(`[Omnivaleur] Calm mode: volgende publicatie over ${Math.round(wacht / 60000)} min`);
+  } catch (_) {}
+}
+
+// De verkocht-controle draait op een alarm, en dat moet opnieuw gezet worden
+// zodra de schakelaar omgaat — een alarm verandert niet vanzelf van tempo.
+async function calmAlarmBijwerken() {
+  const minuten = await calmAan() ? 60 : 10;
+  try { await chrome.alarms.create("sold-check", { periodInMinutes: minuten }); } catch (_) {}
+}
+
+chrome.storage.onChanged.addListener((wijzigingen, gebied) => {
+  if (gebied === "sync" && wijzigingen.calmMode) {
+    calmAlarmBijwerken();
+    // Uitzetten mag meteen effect hebben: geen reden iemand te laten wachten op
+    // een rem die hij zojuist heeft losgelaten.
+    if (!wijzigingen.calmMode.newValue) chrome.storage.local.remove(CALM_SLEUTEL);
+  }
+});
+
 chrome.alarms.create("poll", { periodInMinutes: POLL_INTERVAL_SECONDS / 60 });
 
 chrome.alarms.onAlarm.addListener((alarm) => {
@@ -872,9 +932,15 @@ async function pollJobsEenRonde() {
             .finally(() => _lopendeScans.delete(job.platform));
           continue;
         }
+        // Calm mode: de opdracht blijft gewoon klaarstaan, hij begint alleen
+        // later. Niets gaat verloren; de gebruiker ziet hem in het dashboard
+        // in de wachtrij staan.
+        if (SCHRIJVENDE_ACTIES.has(job.action) && !(await calmMagNu())) continue;
+
         verzet = true;
         try {
           await processJob(job, serverUrl);
+          if (SCHRIJVENDE_ACTIES.has(job.action)) await calmVolgendeInplannen();
         } catch (e) {
           // Last line of defence. processJob claims the job BEFORE doing any
           // work, and the backend refuses to dispatch anything at all while a
@@ -3252,6 +3318,10 @@ chrome.tabs.onUpdated.addListener(async (tabId, changeInfo) => {
 // ── Autonomous sold detection + cross-platform delist ─────────────────────
 // Every poll cycle also checks for sold items and triggers auto-delist.
 chrome.alarms.create("sold-check", { periodInMinutes: 10 });
+// En meteen op de juiste stand zetten als Calm mode aan staat.
+calmAlarmBijwerken();
+chrome.runtime.onStartup.addListener(() => { calmAlarmBijwerken(); });
+chrome.runtime.onInstalled.addListener(() => { calmAlarmBijwerken(); });
 chrome.alarms.onAlarm.addListener((alarm) => {
   if (alarm.name === "sold-check") { checkSoldListings(); checkVintedOrders(); }
 });
