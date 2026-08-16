@@ -162,8 +162,9 @@ def _balken(trend: list[dict]) -> str:
 def _mini_trend(p: dict, top: int) -> str:
     """Vier weekjes bereik als vier staafjes onder de kanaalnaam.
 
-    Alle kanalen delen dezelfde schaal (het drukste kanaal is de volle hoogte),
-    anders lijkt een kanaal met 16 weergaven net zo groot als een met 4.686.
+    Elk kanaal heeft zijn eigen schaal. Op één gedeelde schaal is alles naast
+    YouTube een streepje, terwijl deze staafjes juist één vraag beantwoorden:
+    gaat dit kanaal omhoog of omlaag? Hoe groot het is staat er in cijfers naast.
     Weken van vóór de opgehaalde posts blijven een streepje: onbekend, niet nul.
     """
     trend = p.get("trend") or []
