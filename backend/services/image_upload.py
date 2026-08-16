@@ -49,6 +49,46 @@ def _object_exists(filename: str) -> bool:
         return False
 
 
+_PUBLIC_MARKER = f"/storage/v1/object/public/{BUCKET}/"
+
+
+def storage_path_from_url(url: str) -> str | None:
+    """Turn a public bucket url back into its object path, or None.
+
+    Anything that is not unmistakably one of OUR objects returns None — a
+    marketplace CDN url, a signed url, a malformed string. Callers use this to
+    decide what to delete, so "not sure" must always mean "leave it alone".
+    """
+    if not isinstance(url, str) or _PUBLIC_MARKER not in url:
+        return None
+    path = url.split(_PUBLIC_MARKER, 1)[1].split("?", 1)[0].split("#", 1)[0]
+    path = path.strip("/")
+    # Traversal or an empty tail would address something we never wrote.
+    if not path or ".." in path:
+        return None
+    return path
+
+
+def delete_images_sync(paths: list[str]) -> int:
+    """Remove objects from the bucket. Returns how many were accepted.
+
+    Best-effort by design: storage may refuse the delete (the production key is
+    the anon key, which RLS can block). A failure is logged and swallowed —
+    nothing that calls this may break because a cleanup didn't happen.
+    """
+    paths = [p for p in paths if p]
+    if not paths:
+        return 0
+    try:
+        with _UPLOAD_LOCK:
+            get_db().storage.from_(BUCKET).remove(paths)
+        return len(paths)
+    except Exception as e:  # noqa: BLE001
+        import logging
+        logging.getLogger(__name__).warning("storage delete failed for %s object(s): %s", len(paths), e)
+        return 0
+
+
 async def upload_image(file_bytes: bytes, filename: str) -> str:
     """Upload raw bytes to Supabase Storage. Returns the public URL.
 
