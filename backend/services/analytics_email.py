@@ -178,10 +178,7 @@ def _platform_tabel(platforms: list[dict]) -> str:
         rand = "" if i == len(platforms) - 1 else "border-bottom:1px solid #f1f5f9;"
         stil = not p["views"]
         kleur = GRIJS_LICHT if stil else INKT
-        aandeel = max(3, round(p["views"] / top * 100)) if p["views"] else 100
-        balk = (f'<table width="{aandeel}%" cellpadding="0" cellspacing="0" role="presentation">'
-                f'<tr><td style="background:{"#f1f5f9" if stil else BLAUW};height:6px;'
-                f'border-radius:3px;font-size:0;line-height:0;">&nbsp;</td></tr></table>')
+        balk = _mini_trend(p, top)
 
         if p.get("fetched") is None:
             staat = f'<span style="color:{GRIJS_LICHT};">niet opgehaald</span>'
