@@ -343,7 +343,7 @@
       "region": "nl",
       "pillar": "B",
       "slug": "tool-and-equipment-reselling-automation",
-      "status": "pending",
+      "status": "published",
       "priority": 42
     }
   ],
@@ -716,6 +716,15 @@
       "action": "created",
       "url_path": "/reseller-tools/jewelry-reselling-automation",
       "published_at": "2026-08-15T08:19:51.314912+00:00"
+    },
+    {
+      "keyword": "tool and equipment reselling automation",
+      "slug": "tool-and-equipment-reselling-automation",
+      "region": "nl",
+      "pillar": "B",
+      "action": "created",
+      "url_path": "/reseller-tools/tool-and-equipment-reselling-automation",
+      "published_at": "2026-08-16T08:21:02.271796+00:00"
     }
   ]
 }
