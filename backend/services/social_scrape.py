@@ -314,6 +314,7 @@ def weekly(this_start: str, this_end: str, limit_per_platform: int = 25,
             # None = de scrape lukte niet. 0 = wel gelukt, niets gepost.
             "fetched": None if posts is None else len(posts),
             "reach_reported": platform not in _GEEN_BEREIKCIJFER,
+            "trend": _platform_trend(posts, weken),
         })
         week_posts.extend(wk)
 
