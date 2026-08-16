@@ -2648,7 +2648,7 @@ async function bgScanAdmarkt(job, serverUrl) {
   const sleep = ms => new Promise(r => setTimeout(r, ms));
 
   const tabId = await new Promise((res, rej) =>
-    openWorkerTab(ADMARKT_URL, t =>
+    openWorkerTab(admarktUrl(), t =>
       t ? res(t.id) : rej(new Error("could not open worker tab")), { silent: true }
     )
   );
@@ -2657,11 +2657,19 @@ async function bgScanAdmarkt(job, serverUrl) {
     await waitForTabLoad(tabId);
     await sleep(6000);   // Admarkt rendert traag; de lijst komt na de pagina
 
-    const result = await execInTab(tabId, async () => {
+    const result = await execInTab(tabId, async (MAX) => {
       const nap = ms => new Promise(r => setTimeout(r, ms));
+      // Een advertentiepad is RELATIEF op deze pagina, maar de advertentie zelf
+      // woont op www.marktplaats.nl — niet op admarkt. Zou je dat tegen
+      // location.origin afzetten, dan krijg je admarkt.marktplaats.nl/v/m123:
+      // een adres dat niet bestaat, waardoor de verrijking van elke advertentie
+      // stilzwijgend niets oplevert en de import zonder prijs en omschrijving
+      // binnenkomt. Advertentiepaden gaan daarom expliciet naar www.
+      const ADV_PAD = /^\/(v|a)\//i;
       const abs = u => !u ? null
         : u.startsWith("http") ? u
         : u.startsWith("//") ? `https:${u}`
+        : ADV_PAD.test(u) ? `https://www.marktplaats.nl${u}`
         : `${location.origin}${u.startsWith("/") ? "" : "/"}${u}`;
 
       // Herkennen of een object een advertentie is. Niet op vaste veldnamen —
@@ -2669,11 +2677,16 @@ async function bgScanAdmarkt(job, serverUrl) {
       const SLEUTEL_ID = /^(id|adid|advertisementid|itemid|vendorid)$/i;
       const SLEUTEL_TITEL = /^(title|titel|name|headline|adtitle)$/i;
       const SLEUTEL_FOTO = /(image|photo|thumb|picture)/i;
+      // LET OP de uitsluiting. Zonder die eerste test matchte "imageUrl" ook op
+      // /url$/i, en dan werd de fóto van de advertentie haar adres — waarna de
+      // verrijking een plaatje ophaalde in plaats van een advertentiepagina.
       const SLEUTEL_URL = /(vipurl|svipurl|url|link|permalink)$/i;
+      const GEEN_URL = /(image|photo|thumb|picture|icon|avatar|logo)/i;
       const SLEUTEL_PRIJS = /price/i;
 
-      const veld = (obj, patroon) => {
+      const veld = (obj, patroon, verboden) => {
         for (const k of Object.keys(obj)) {
+          if (verboden && verboden.test(k)) continue;
           if (patroon.test(k) && obj[k] != null && typeof obj[k] !== "object") return obj[k];
         }
         return null;
@@ -2695,11 +2708,20 @@ async function bgScanAdmarkt(job, serverUrl) {
 
       // Welke verzoeken heeft de pagina zelf gedaan? Alleen eigen domein, alleen
       // data-achtige verzoeken — geen plaatjes, stijlbladen of scripts.
-      const kandidaten = performance.getEntriesByType("resource")
+      // Wachten tot de pagina daadwerkelijk gegevens heeft opgehaald. Een vaste
+      // pauze is hier een gok: bij een trage verbinding is 6 seconden te kort en
+      // dan lijkt het alsof er niets te vinden is. Kijk dus tot ze er zijn.
+      const dataVerzoeken = () => performance.getEntriesByType("resource")
         .filter(e => (e.initiatorType === "xmlhttprequest" || e.initiatorType === "fetch"))
         .map(e => e.name)
         .filter(u => u.startsWith(location.origin))
         .filter(u => !/\.(js|css|png|jpe?g|gif|svg|woff2?|ico)(\?|$)/i.test(u));
+
+      let kandidaten = dataVerzoeken();
+      for (let i = 0; i < 20 && !kandidaten.length; i++) {
+        await nap(1000);
+        kandidaten = dataVerzoeken();
+      }
 
       const geprobeerd = [];
       let ruw = null, bron = null, totaal = null;
@@ -2741,7 +2763,7 @@ async function bgScanAdmarkt(job, serverUrl) {
             // echte prijs alsnog van de advertentiepagina zelf.
             price: typeof prijs === "number" && prijs < 1000 ? prijs : null,
             photo_url: abs(veld(ad, SLEUTEL_FOTO)),
-            platform_listing_url: abs(veld(ad, SLEUTEL_URL)),
+            platform_listing_url: abs(veld(ad, SLEUTEL_URL, GEEN_URL)),
             category_name: "",
             status: "",
           });
@@ -2770,11 +2792,16 @@ async function bgScanAdmarkt(job, serverUrl) {
         }
       }
 
+      // Meer dan de eerste lading laten we bewust liggen: uren wachten op een
+      // scan die niets terugmeldt voelt als stuk, ook als hij het niet is.
+      const gevonden = items.length;
+      const rest = Math.max(0, (totaal || gevonden) - MAX);
+
       return {
-        items,
+        items: items.slice(0, MAX),
         meta: {
           bron: bron ? bron.replace(location.origin, "") : null,
-          totaal, via_scherm: viaScherm,
+          totaal, gevonden, rest, via_scherm: viaScherm,
           // Waar we gekeken hebben en wat dat opleverde. Dit is het enige wat een
           // mislukte poging bruikbaar maakt in plaats van alleen teleurstellend.
           geprobeerd: geprobeerd.slice(0, 25),
@@ -2784,7 +2811,7 @@ async function bgScanAdmarkt(job, serverUrl) {
           pagina_titel: (document.title || "").slice(0, 120),
         },
       };
-    });
+    }, [ADMARKT_MAX]);
 
     console.log("[Omnivaleur] Admarkt:", JSON.stringify(result?.meta || {}));
 
@@ -2981,10 +3008,31 @@ async function bgScanMp2dh(job, serverUrl) {
       throw new Error(mpEmptyScanReason(
         { ...(result.meta || {}), admarkt_toegestaan: await admarktToegestaan() }, platform));
     }
+    // De verrijking hieronder haalt elke advertentiepagina op VANUIT dit tabblad,
+    // en dat tabblad staat op www.marktplaats.nl. Voor een advertentie waarvan de
+    // link op een ander domein staat (admarkt.marktplaats.nl) is dat een
+    // cross-origin verzoek: die wordt geweigerd en levert stilzwijgend niets op.
+    // Bij een Admarkt-scan zou daardoor ELKE advertentie zonder prijs en zonder
+    // omschrijving binnenkomen — een import die er compleet uitziet maar leeg is.
+    // Dat is erger dan een eerlijke melding, dus we controleren het vooraf.
+    const tabOrigin = platform === "marktplaats"
+      ? "https://www.marktplaats.nl" : "https://www.2dehands.be";
+    const teVerrijken = result.items.filter(it => {
+      if (!it.platform_listing_url) return false;
+      try { return new URL(it.platform_listing_url).origin === tabOrigin; }
+      catch (_) { return false; }
+    });
+    const buitenBereik = result.items.length - teVerrijken.length;
+    if (buitenBereik) {
+      console.warn(`[Omnivaleur] ${buitenBereik}/${result.items.length} listings sit on `
+        + `another domain than ${tabOrigin} — cannot fetch their details from here.`);
+      result.meta = { ...(result.meta || {}), enrichment_skipped: buitenBereik };
+    }
+
     await reportProgress(serverUrl, job.id, {
       stage: "enriching",
       message: `Found ${result.items.length} listings — fetching full details…`,
-      current: 0, total: result.items.length,
+      current: 0, total: teVerrijken.length,
     });
 
     // The overview cards only expose title/price/thumbnail. Enrich each listing
@@ -2997,12 +3045,12 @@ async function bgScanMp2dh(job, serverUrl) {
     // terminated by Chrome, which would kill the whole scan before it reports
     // anything. (The old code did all of them in one call, capped at 100, so a
     // bigger account was silently cut off AND at risk of being killed.)
-    const total = result.items.length;
+    const total = teVerrijken.length;
     let enriched = 0;
     const startedAt = Date.now();
     try {
-      for (let i = 0; i < result.items.length; i++) {
-        const it = result.items[i];
+      for (let i = 0; i < teVerrijken.length; i++) {
+        const it = teVerrijken[i];
         let e = null;
         try {
           e = await execInTab(tabId, async (url) => {

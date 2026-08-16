@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Omnivaleur",
-  "version": "1.0.203",
+  "version": "1.0.204",
   "description": "Omnivaleur — publiceer je items automatisch op Marktplaats, 2dehands, Vinted en meer",
   "permissions": [
     "storage",
@@ -25,13 +25,6 @@
     "https://*.supabase.co/*",
     "https://omnivaleur.com/*",
     "https://www.google-analytics.com/*"
-  ],
-  "//optional_host_permissions": [
-    "Admarkt is de zakelijke kant van Marktplaats, met een eigen inlog en een",
-    "eigen advertentiepagina. Alleen zakelijke verkopers hebben die nodig.",
-    "BEWUST optioneel en niet bij host_permissions: een update die een nieuwe",
-    "vaste toestemming toevoegt zet Chrome de extensie bij IEDEREEN stil tot hij",
-    "die accepteert. Zo raakt alleen wie hem aanzet in de popup het aan."
   ],
   "optional_host_permissions": [
     "https://admarkt.marktplaats.nl/*"
