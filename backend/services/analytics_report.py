@@ -106,6 +106,7 @@ def _seo_section(win: dict) -> dict:
         "connected": gsc.is_configured(),
         "has_data": bool(pages_now or pages_prev),
         "total_clicks": tot_now,
+        "total_clicks_prev": tot_prev,
         "total_clicks_delta": _pct_delta(tot_now, tot_prev),
         "total_impressions": imp_now,
         "top_pages": top_pages[:10],
