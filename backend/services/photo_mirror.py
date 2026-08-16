@@ -112,7 +112,7 @@ async def mirror_photos(urls: list[str] | None, user_id: str, _sem=None) -> list
                 if resp.status_code != 200:
                     logger.warning("photo mirror: %s returned HTTP %s", url[:120], resp.status_code)
                     return url
-                data = resp.content
+                data = source_bytes = resp.content
                 if not data or len(data) > MAX_BYTES:
                     logger.warning("photo mirror: %s has unusable size %s", url[:120], len(data or b""))
                     return url
