@@ -196,6 +196,15 @@ def test_gedeelde_foto_blijft_staan(gewist):
     assert gewist == [("supabase", "u1/imported/bbb.jpg")]
 
 
+def test_tijdens_de_verhuizing_staan_beide_soorten_urls_door_elkaar(gewist, r2_aan):
+    """Halverwege de migratie wijst een item deels naar R2 en deels naar
+    Supabase. Elke foto moet op zijn eigen opslag worden opgeruimd."""
+    from backend.api.items import _release_photos
+    db = _DB(items=[], kandidaten=[])
+    _release_photos(db, "u1", [R2_URL + "u1/aaa.jpg", BUCKET_URL + "u1/bbb.jpg"])
+    assert sorted(gewist) == [("r2", "u1/aaa.jpg"), ("supabase", "u1/bbb.jpg")]
+
+
 def test_foto_van_een_importkandidaat_blijft_staan(gewist):
     from backend.api.items import _release_photos
     db = _DB(items=[], kandidaten=[{"photo_url": BUCKET_URL + "u1/aaa.jpg", "photo_urls": None}])
