@@ -457,14 +457,19 @@ def _actions(report: dict) -> list[str]:
             f"niet één keer terug of iemand de site bereikt — dat is het grootste gat in je meting."
         )
 
-    stil = [p for p in (sc.get("per_platform") or []) if p["posts_count"] and not p["views"]]
+    # Alleen platforms die hun bereik óók echt rapporteren: Pinterest publiceert
+    # geen weergaven, dus een 0 daar is een ontbrekende meting en geen reden om
+    # met dat kanaal te stoppen.
+    stil = [p for p in (sc.get("per_platform") or [])
+            if p["posts_count"] and not p["views"] and p.get("reach_reported", True)]
     if stil and views:
+        beste = max((sc.get("per_platform") or []), key=lambda p: p["views"], default={})
         namen = " en ".join(p["platform"] for p in stil[:2])
         n = sum(p["posts_count"] for p in stil[:2])
         out.append(
-            f"{namen} leverde{'n' if len(stil[:2]) > 1 else ''} {n} posts en 0 weergaven op. "
-            f"Even alleen op {(sc.get('per_platform') or [{}])[0].get('platform', 'je beste kanaal')} "
-            f"inzetten kost je niets en levert meer op."
+            f"{namen} leverde{'n' if len(stil[:2]) > 1 else ''} {n} posts op zonder één "
+            f"weergave. Even alleen op {beste.get('platform', 'je beste kanaal')} inzetten "
+            f"kost je niets en levert meer op."
         )
 
     kans = [c for c in (report.get("categories") or []) if c["impressions"] >= 20 and c["ctr"] < 2.0]
