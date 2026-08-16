@@ -53,6 +53,28 @@ document.getElementById("logoutBtn").addEventListener("click", async () => {
   checkLoginState();
 });
 
+// Calm mode. Deze schakelaar schoof jarenlang heen en weer zonder dat er ook maar
+// iets achter zat: er was geen enkele regel code die hem uitlas of opsloeg. De
+// gebruiker dacht rustiger te publiceren en deed dat niet.
+const calmToggle = document.getElementById("calmModeToggle");
+
+async function toonCalm() {
+  try {
+    const s = await chrome.storage.sync.get("calmMode");
+    calmToggle.checked = !!s.calmMode;
+  } catch (_) { calmToggle.checked = false; }
+}
+
+calmToggle.addEventListener("change", async () => {
+  try {
+    await chrome.storage.sync.set({ calmMode: calmToggle.checked });
+  } catch (_) {
+    calmToggle.checked = !calmToggle.checked;   // niet opgeslagen = niet aan
+  }
+});
+
+toonCalm();
+
 // Toestemming voor Admarkt. De schakelaar toont de ECHTE stand (wat Chrome
 // zegt), niet een eigen instelling — anders staat hij aan terwijl de toestemming
 // er niet is en snapt niemand waarom de scan nog steeds niets vindt.
