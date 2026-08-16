@@ -119,10 +119,18 @@ def delete_images_sync(paths: list[str]) -> int:
     paths = [p for p in paths if p]
     if not paths:
         return 0
+    import logging
     try:
         with _UPLOAD_LOCK:
-            get_db().storage.from_(BUCKET).remove(paths)
-        return len(paths)
+            verwijderd = get_db().storage.from_(BUCKET).remove(paths) or []
+        # Storage raises nothing when row-level security refuses a delete — it
+        # answers 200 with an empty list. Without this check a cleanup silently
+        # does nothing and the bucket keeps growing while the logs stay clean.
+        if len(verwijderd) != len(paths):
+            logging.getLogger(__name__).warning(
+                "storage delete removed %s of %s object(s) without an error — "
+                "usually means the key may not delete", len(verwijderd), len(paths))
+        return len(verwijderd)
     except Exception as e:  # noqa: BLE001
         import logging
         logging.getLogger(__name__).warning("storage delete failed for %s object(s): %s", len(paths), e)
