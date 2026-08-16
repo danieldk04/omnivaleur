@@ -47,6 +47,14 @@ def _windows(today: date | None = None) -> dict:
     }
 
 
+def nl_getal(n) -> str:
+    """1234 → '1.234'. Duizendtallen zonder scheidingsteken lezen als een storing."""
+    try:
+        return f"{int(round(float(n))):,}".replace(",", ".")
+    except (TypeError, ValueError):
+        return str(n)
+
+
 def _pct_delta(now: float, before: float) -> float | None:
     if before == 0:
         return None if now == 0 else 100.0
