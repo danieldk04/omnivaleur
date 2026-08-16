@@ -82,6 +82,33 @@ def storage_path_from_url(url: str) -> str | None:
     return path
 
 
+def locate_object(url: str) -> tuple[str, str] | None:
+    """Find which storage a photo url lives on: ("r2"|"supabase", path), or None.
+
+    During and after the migration both kinds of url exist side by side, so
+    anything that wants to delete a photo has to ask this first.
+    """
+    from backend.services import r2_storage
+
+    path = r2_storage.path_from_url(url)
+    if path:
+        return ("r2", path)
+    path = storage_path_from_url(url)
+    if path:
+        return ("supabase", path)
+    return None
+
+
+def delete_objects(refs: list[tuple[str, str]]) -> int:
+    """Delete located objects on whichever storage they live on."""
+    from backend.services import r2_storage
+
+    r2_paths = [p for backend, p in refs if backend == "r2"]
+    sb_paths = [p for backend, p in refs if backend == "supabase"]
+    return (r2_storage.delete(r2_paths) if r2_paths else 0) + \
+           (delete_images_sync(sb_paths) if sb_paths else 0)
+
+
 def delete_images_sync(paths: list[str]) -> int:
     """Remove objects from the bucket. Returns how many were accepted.
 
