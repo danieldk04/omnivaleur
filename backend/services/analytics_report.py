@@ -409,7 +409,7 @@ def build_report(today: date | None = None, include_social: bool = False) -> dic
     # On-platform post-prestaties (Apify) — traag, dus alleen bij de zondagse mail en
     # bij de handmatige dashboard-knop. Anders alleen de koppelstatus doorgeven.
     if include_social:
-        social_content = social_scrape.weekly(*win["this"])
+        social_content = social_scrape.weekly(*win["this"], prev=win["prev"])
         patterns = patterns + social_scrape.patterns(social_content)
     else:
         social_content = {"connected": social_scrape.is_configured(), "deferred": True}
@@ -422,10 +422,64 @@ def build_report(today: date | None = None, include_social: bool = False) -> dic
         "social_content": social_content,
         "categories": categories,
         "signups": signups,
+        "trend": trend,
         "patterns": patterns,
     }
+    report["actions"] = _actions(report)
     _store_snapshot(report)
     return report
+
+
+# ---------------------------------------------------------------------------
+# Acties: hooguit drie dingen die deze week de moeite waard zijn
+# ---------------------------------------------------------------------------
+def _actions(report: dict) -> list[str]:
+    """Concreet en aflopend op waarde. Liever niets dan een open deur, dus als er
+    geen aanleiding is blijft deze lijst leeg en verdwijnt het blok uit de mail."""
+    out: list[str] = []
+    sc = report.get("social_content") or {}
+    soc = report.get("social") or {}
+    seo = report.get("seo") or {}
+
+    views = sum(p["views"] for p in (sc.get("per_platform") or []))
+    if views >= 100 and not soc.get("has_utm_data"):
+        out.append(
+            f"Zet een link met telcode onder je posts. Van {views:,.0f} weergaven zie je nu "
+            f"niet één keer terug of iemand de site bereikt — dat is het grootste gat in je meting."
+            .replace(",", ".")
+        )
+
+    stil = [p for p in (sc.get("per_platform") or []) if p["posts_count"] and not p["views"]]
+    if stil and views:
+        namen = " en ".join(p["platform"] for p in stil[:2])
+        n = sum(p["posts_count"] for p in stil[:2])
+        out.append(
+            f"{namen} leverde{'n' if len(stil[:2]) > 1 else ''} {n} posts en 0 weergaven op. "
+            f"Even alleen op {(sc.get('per_platform') or [{}])[0].get('platform', 'je beste kanaal')} "
+            f"inzetten kost je niets en levert meer op."
+        )
+
+    kans = [c for c in (report.get("categories") or []) if c["impressions"] >= 20 and c["ctr"] < 2.0]
+    if kans:
+        o = max(kans, key=lambda c: c["impressions"])
+        out.append(
+            f"“{o['category']}” wordt {o['impressions']} keer getoond en {o['clicks']} keer "
+            f"aangeklikt. Andere titels zijn hier de goedkoopste winst."
+        )
+
+    # Pagina's net onder de eerste pagina van Google: daar ligt de meeste winst
+    # per uur werk, want ze zijn al bijna zichtbaar.
+    bijna = [p for p in (seo.get("top_pages") or [])
+             if 8 <= p["position"] <= 20 and p["impressions"] >= 10]
+    if bijna and len(out) < 3:
+        p = max(bijna, key=lambda x: x["impressions"])
+        slug = p["url"].replace(SITE_URL, "") or "/"
+        out.append(
+            f"{slug} staat op plek {p['position']} — net buiten beeld. Dit artikel bijwerken "
+            f"tilt hem waarschijnlijk de eerste pagina op."
+        )
+
+    return out[:3]
 
 
 def _store_snapshot(report: dict) -> None:
