@@ -259,6 +259,26 @@ _ADAPTERS = {
 # ---------------------------------------------------------------------------
 # Publieke API
 # ---------------------------------------------------------------------------
+def _platform_trend(posts: list[dict] | None, weken: list[tuple[str, str]] | None) -> list[dict]:
+    """Bereik per week voor één platform, uit dezelfde opgehaalde posts.
+
+    Er wordt een vast aantal posts opgehaald (de laatste 25), dus verder terug dan
+    de oudste opgehaalde post is er niets bekend. Zo'n week krijgt measured=False:
+    hem als 0 tekenen zou een daling suggereren die nooit gemeten is.
+    """
+    if not weken or not posts:
+        return []
+    datums = [p["date"] for p in posts if p["date"]]
+    oudste = min(datums) if datums else ""
+    out = []
+    for start, end in weken:
+        out.append({
+            "views": sum(p["views"] for p in posts if p["date"] and start <= p["date"] <= end),
+            "measured": bool(oudste and end >= oudste),
+        })
+    return out
+
+
 def weekly(this_start: str, this_end: str, limit_per_platform: int = 25,
            prev: tuple[str, str] | None = None,
            weken: list[tuple[str, str]] | None = None) -> dict:
