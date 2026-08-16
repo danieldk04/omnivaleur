@@ -401,7 +401,9 @@ def build_report(today: date | None = None, include_social: bool = False) -> dic
     channels = _channels_section(win)
     social = _social_section(win)
     categories = _blog_categories(seo)
-    signups = _signups_section(win)
+    signup_dates = _signup_dates()
+    signups = _signups_section(win, signup_dates)
+    trend = _trend(win, signup_dates)
     patterns = _patterns(seo, channels, signups, social, categories)
 
     # On-platform post-prestaties (Apify) — traag, dus alleen bij de zondagse mail en
