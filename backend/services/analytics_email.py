@@ -353,7 +353,8 @@ def render_text(report: dict) -> str:
     paginas = [p for p in (seo.get("top_pages") or []) if p["clicks"]][:5]
     if paginas:
         r += ["", "Best bezochte pagina's:"]
-        r += [f"  • {_paginanaam(p['url'])} — {p['clicks']} bezoekers, plek {round(p['position'])}"
+        r += [f"  • {_paginanaam(p['url'])} — {p['clicks']} "
+              f"bezoeker{'s' if p['clicks'] != 1 else ''}, plek {round(p['position'])}"
               for p in paginas]
 
     r += ["", f"Alle cijfers: {SITE_URL}/analytics",
