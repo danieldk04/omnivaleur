@@ -130,6 +130,9 @@ def main():
     ap.add_argument("--apply", action="store_true", help="actually delete (default: report only)")
     ap.add_argument("--min-age-days", type=int, default=7,
                     help="never touch objects younger than this (default 7)")
+    ap.add_argument("--include-root", action="store_true",
+                    help="also clean unreferenced objects lying loose in the bucket root "
+                         "(uploads from before photos were stored per user)")
     args = ap.parse_args()
 
     from backend.database import get_db
