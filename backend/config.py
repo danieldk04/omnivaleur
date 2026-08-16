@@ -10,6 +10,11 @@ class Settings(BaseSettings):
 
     supabase_url: str = ""
     supabase_key: str = ""
+    # Alleen voor onderhoudsscripts. Verwijderen uit Storage mag niet met de
+    # anon-sleutel: Supabase antwoordt dan 200 met een lege lijst in plaats van
+    # een fout, dus zonder deze sleutel lijkt opruimen te lukken terwijl er niets
+    # gebeurt. Leeg laten is prima; dan valt alles terug op supabase_key.
+    supabase_service_key: str = ""
 
     marktplaats_client_id: str = ""
     marktplaats_client_secret: str = ""
