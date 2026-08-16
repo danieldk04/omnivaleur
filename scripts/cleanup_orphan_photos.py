@@ -146,10 +146,17 @@ def main():
                          "(uploads from before photos were stored per user)")
     args = ap.parse_args()
 
+    from backend.config import settings
     from backend.database import get_db
     from backend.services.image_upload import BUCKET
 
     db = get_db()
+    if args.apply and settings.supabase_service_key:
+        # Een eigen verbinding met de servicesleutel: verwijderen uit Storage
+        # mag niet met de anon-sleutel, en de gedeelde verbinding blijft zo
+        # ongemoeid.
+        from supabase import create_client
+        db = create_client(settings.supabase_url, settings.supabase_service_key)
     marker = f"/storage/v1/object/public/{BUCKET}/"
 
     print("Reading the database…")
