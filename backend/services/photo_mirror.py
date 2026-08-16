@@ -123,11 +123,17 @@ async def mirror_photos(urls: list[str] | None, user_id: str, _sem=None) -> list
 
                 ext = (_EXT_BY_TYPE.get(content_type)
                        or (mimetypes.guess_extension(content_type) or ".jpg").lstrip("."))
+                # Store a sane size instead of whatever the CDN happened to
+                # serve. Returns the original bytes if it can't do better, so a
+                # photo is never lost here.
+                data, ext = optimize_image(data, ext)
                 # Content-addressed: re-importing the same listing, or two items
                 # sharing a photo, reuses one object instead of growing the bucket
                 # every time. Still namespaced per user, so nothing is shared
-                # across accounts.
-                digest = hashlib.sha256(data).hexdigest()[:32]
+                # across accounts. The digest stays over the SOURCE bytes, so
+                # re-importing the same listing keeps landing on the same path
+                # even if the optimiser changes.
+                digest = hashlib.sha256(source_bytes).hexdigest()[:32]
                 path = f"{user_id}/imported/{digest}.{ext}"
                 return await upload_image(data, path)
             except Exception as e:  # noqa: BLE001 - keep the original url, never fail the import
