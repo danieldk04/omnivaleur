@@ -88,6 +88,15 @@ def _supabase_key_role() -> str:
         return "onbekend"
 
 
+def _r2_configured() -> bool:
+    """Pakt de server de R2-instellingen op? Nooit de sleutels zelf tonen."""
+    try:
+        from backend.services import r2_storage
+        return r2_storage.is_configured()
+    except Exception:
+        return False
+
+
 @app.get("/health")
 async def health():
     # Alleen ja/nee per instelling, nooit de waarde zelf. Dagen zoekwerk gingen op
