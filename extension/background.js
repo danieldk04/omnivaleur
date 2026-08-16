@@ -2926,22 +2926,35 @@ async function bgScanMp2dh(job, serverUrl) {
 
     if (!result || !result.items) throw new Error("Could not read your listings overview — page structure may have changed.");
 
-    // Niets op het persoonlijke overzicht, maar wel ingelogd? Dan is dit vrijwel
-    // zeker een zakelijk account en staan de advertenties in Admarkt. Daar nog
-    // één keer kijken voordat we melden dat er niets is.
-    if (!result.items.length && platform === "marktplaats"
-        && result.meta && result.meta.signed_in !== false && await admarktToegestaan()) {
+    // Niets op het persoonlijke overzicht? Dan kijken we in Admarkt.
+    //
+    // HIER STOND EERST "en wel ingelogd", en dat maakte deze hele stap
+    // onbereikbaar voor precies de mensen voor wie hij gebouwd is. Admarkt heeft
+    // een ÉÉGEN inlog: een zakelijke verkoper kan prima in Admarkt zitten en
+    // tegelijk uitgelogd zijn op www.marktplaats.nl. Die kreeg dan "je bent niet
+    // ingelogd" te zien terwijl er niets mis was met zijn inlog — Egbert
+    // Brouwer, 16-08-2026. Of we op www ingelogd zijn zegt niets over Admarkt,
+    // dus dat mag deze stap niet tegenhouden.
+    let admarktFout = null;
+    if (!result.items.length && platform === "marktplaats" && await admarktToegestaan()) {
       await reportProgress(serverUrl, job.id, {
         stage: "scanning",
         message: "Nothing on your personal overview — checking Admarkt…",
         current: 0, total: 0,
       });
-      const via = await bgScanAdmarkt(job, serverUrl);
-      result.items = via.items;
-      result.meta = { ...result.meta, ...via.meta, source: "admarkt" };
+      try {
+        const via = await bgScanAdmarkt(job, serverUrl);
+        result.items = via.items;
+        result.meta = { ...result.meta, ...via.meta, source: "admarkt" };
+      } catch (e) {
+        // Admarkt zelf gaf niets. Die melding is specifieker dan "geen
+        // advertenties gevonden", dus die willen we terugzien.
+        admarktFout = String(e && e.message ? e.message : e);
+      }
     }
 
     if (!result.items.length) {
+      if (admarktFout) throw new Error(`Admarkt: ${admarktFout}`);
       throw new Error(mpEmptyScanReason(
         { ...(result.meta || {}), admarkt_toegestaan: await admarktToegestaan() }, platform));
     }
