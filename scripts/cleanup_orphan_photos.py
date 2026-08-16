@@ -160,9 +160,16 @@ def main():
     for f in files:
         if f["path"] in referenced:
             continue
-        if not _is_user_folder(f["path"].split("/", 1)[0]):
-            skipped_shape += 1
-            continue
+        top = f["path"].split("/", 1)[0]
+        if not _is_user_folder(top):
+            # Loose objects in the bucket root are the old upload scheme: a bare
+            # {uuid}.jpg. They are only touched on request, and only when the
+            # name is a plain uuid image — never a folder like content/ or a
+            # stray file we did not write.
+            root_object = "/" not in f["path"] and _is_user_folder(top.rsplit(".", 1)[0])
+            if not (args.include_root and root_object):
+                skipped_shape += 1
+                continue
         if not _older_than(f["created_at"], cutoff):
             too_new += 1
             continue
