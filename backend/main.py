@@ -112,6 +112,10 @@ async def health():
             # De rol staat onversleuteld in de sleutel zelf; dit lekt niets.
             "supabase_key_role": _supabase_key_role(),
             "anthropic_api_key": bool(_s.anthropic_api_key),
+            # Staat dit op false, dan schrijft de server nieuwe foto's nog steeds
+            # naar Supabase Storage en loopt die bucket dus gewoon weer vol. Dat
+            # is van buitenaf verder niet te zien, vandaar hier.
+            "r2_photo_storage": _r2_configured(),
             "owner_email": _s.owner_email,
         },
     }
