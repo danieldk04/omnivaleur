@@ -259,6 +259,57 @@ def _signups_section(win: dict, dates: list[str] | None = None) -> dict:
 
 
 # ---------------------------------------------------------------------------
+# Trend over acht weken
+# ---------------------------------------------------------------------------
+WEEKS_BACK = 8
+
+
+def _week_bounds(win: dict, weeks: int = WEEKS_BACK) -> list[tuple[str, str]]:
+    """De laatste N weekvensters, oudste eerst, eindigend op 'deze week'."""
+    this_start = date.fromisoformat(win["this"][0])
+    out = []
+    for i in range(weeks - 1, -1, -1):
+        s = this_start - timedelta(days=7 * i)
+        out.append((s.isoformat(), (s + timedelta(days=6)).isoformat()))
+    return out
+
+
+def _trend(win: dict, signup_dates: list[str] | None, weeks: int = WEEKS_BACK) -> list[dict]:
+    """Week-voor-week verloop van de kerncijfers.
+
+    Hiervoor is geen eigen opslag nodig: Search Console en GA4 leveren met
+    terugwerkende kracht, dus de historie staat er vanaf de eerste verzending
+    meteen in. Per bron één query over het hele bereik, daarna in weken verdeeld.
+    """
+    bounds = _week_bounds(win, weeks)
+    span_start, span_end = bounds[0][0], bounds[-1][1]
+
+    clicks_per_day: dict[str, int] = {}
+    for r in gsc.query_window(["date"], span_start, span_end, row_limit=500):
+        clicks_per_day[r["keys"][0]] = round(r["clicks"])
+    # Vóór de eerste gemeten dag bestond de meting nog niet. Die weken als '0'
+    # tekenen suggereert een daling die er nooit was, dus ze blijven leeg.
+    first_measured = min(clicks_per_day) if clicks_per_day else None
+
+    sessions_per_day = ga4.sessions_by_day(span_start, span_end) if ga4.is_configured() else {}
+
+    out = []
+    for start, end in bounds:
+        days = [d for d in clicks_per_day if start <= d <= end]
+        out.append({
+            "start": start,
+            "end": end,
+            "label": f"{int(start[8:10])}/{int(start[5:7])}",
+            "measured": bool(first_measured and end >= first_measured),
+            "clicks": sum(clicks_per_day[d] for d in days),
+            "sessions": sum(v for d, v in sessions_per_day.items() if start <= d <= end),
+            "signups": (sum(1 for d in signup_dates if start <= d <= end)
+                        if signup_dates is not None else None),
+        })
+    return out
+
+
+# ---------------------------------------------------------------------------
 # Patroonherkenning
 # ---------------------------------------------------------------------------
 def _patterns(seo: dict, channels: dict, signups: dict, social: dict, categories: list[dict]) -> list[str]:
