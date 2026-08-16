@@ -205,10 +205,8 @@ def render_html(report: dict) -> str:
         tegels.append(_tegel("Aanmeldingen", nl_getal(sg["this_week"]),
                              _verschil(sg["this_week"], sg["prev_week"])))
     if seo.get("connected"):
-        vorige = seo["total_clicks"] - sum(
-            p["clicks"] - p.get("clicks_prev", 0) for p in seo.get("top_pages", []))
         tegels.append(_tegel("Bezoekers", nl_getal(seo["total_clicks"]),
-                             _verschil(seo["total_clicks"], vorige)))
+                             _verschil(seo["total_clicks"], seo.get("total_clicks_prev"))))
         tegels.append(_tegel("Vertoond", nl_getal(seo["total_impressions"]),
                              f'<div style="font-size:12px;color:{GRIJS_LICHT};font-weight:600;">'
                              f'in Google</div>'))
