@@ -220,15 +220,24 @@ def main():
     for i in range(0, len(orphans), DELETE_BATCH):
         batch = [f["path"] for f in orphans[i:i + DELETE_BATCH]]
         try:
-            storage.remove(batch)
-            done += len(batch)
-            print(f"  {done}/{len(orphans)}")
+            verwijderd = storage.remove(batch) or []
         except Exception as e:  # noqa: BLE001
             print(f"  ! batch failed ({e}) — stopping here, {done} removed so far")
-            print("    If this says 'row-level security', the key in .env is the anon key;")
-            print("    run again with SUPABASE_KEY set to the service_role key.")
             return 1
-    print(f"\nDone. {orphan_bytes / 1e9:.2f} GB freed.")
+        # Storage does NOT raise when row-level security refuses the delete: it
+        # answers 200 with an empty list. Counting the request as a success is
+        # how this script once reported "3.04 GB freed" while every single file
+        # was still there. Only objects it hands back were actually removed.
+        if len(verwijderd) != len(batch):
+            print(f"  ! storage removed {len(verwijderd)} of {len(batch)} objects and did "
+                  f"not say why — stopping, {done} removed so far.")
+            print("    Vrijwel altijd de sleutel: verwijderen mag niet met de anon-sleutel.")
+            print("    Zet SUPABASE_SERVICE_KEY in .env (Supabase > Project Settings >")
+            print("    API > service_role) en draai dit opnieuw.")
+            return 1
+        done += len(verwijderd)
+        print(f"  {done}/{len(orphans)}")
+    print(f"\nDone. {done} objects removed, {orphan_bytes / 1e9:.2f} GB freed.")
     return 0
 
 
