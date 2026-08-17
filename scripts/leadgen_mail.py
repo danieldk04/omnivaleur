@@ -1054,6 +1054,16 @@ def _jouw_antwoorden_verwerken(state: dict, boek: "Notion") -> int:
             continue                       # al verwerkt
         st["daniel_antwoordde"] = datum
         bijgewerkt += 1
+        # Wat stuurde hij écht? Naast mijn voorstel leggen, zodat het verschil
+        # zichtbaar wordt in plaats van te verdampen.
+        try:
+            with imaplib.IMAP4_SSL(host, 993) as im2:
+                im2.login(gebruiker, wachtwoord)
+                echt = _verzonden_tekst(im2, adres)
+            if echt and _leer_van_verzonden(adres, echt):
+                print(f"  ✎ je hebt mijn concept voor {adres} aangepast — vastgelegd")
+        except Exception as e:  # noqa: BLE001
+            print(f"  (leren mislukt voor {adres}: {e})")
         if per_adres.get(adres):
             boek.bal_bij_hen(per_adres[adres])
     if bijgewerkt:
@@ -1261,6 +1271,65 @@ def _concept_tekst(lead: dict, body: str, soort: str = "warm") -> str:
     return "\n".join(regels)
 
 
+# ── Leren van wat Daniel er zelf van maakt ────────────────────────────────
+# De sjablonen hierboven zijn mijn beste gok. Wat er écht de deur uit gaat is wat
+# Daniel ervan maakt, en dáár zit de kennis. Deze twee functies leggen het
+# verschil vast: het voorstel, en wat hij uiteindelijk verstuurde. Niemand
+# verandert daar automatisch een sjabloon op — dat zou stilletjes de verkeerde
+# les kunnen leren — maar het staat klaar om na te lezen en bewust te verwerken.
+_LEERLOG_MAX = 30
+
+
+def _onthoud_concept(adres: str, tekst: str) -> None:
+    log = _db_lees("leerlog", None)
+    if log is None:
+        log = _lees_leerlog_lokaal()
+    log = [x for x in log if x.get("adres") != adres][-_LEERLOG_MAX:]
+    log.append({"adres": adres, "op": datetime.now().isoformat(timespec="seconds"),
+                "voorstel": tekst[:4000], "verstuurd": None})
+    _schrijf_leerlog(log)
+
+
+def _leer_van_verzonden(adres: str, verstuurd: str) -> bool:
+    """Legt naast het voorstel wat er werkelijk is verstuurd."""
+    log = _db_lees("leerlog", None)
+    if log is None:
+        log = _lees_leerlog_lokaal()
+    for x in log:
+        if x.get("adres") == adres and not x.get("verstuurd"):
+            x["verstuurd"] = verstuurd[:4000]
+            x["aangepast"] = _kern(x.get("voorstel", "")) != _kern(verstuurd)
+            _schrijf_leerlog(log)
+            return bool(x["aangepast"])
+    return False
+
+
+def _kern(t: str) -> str:
+    """Alleen de eigen tekst, zonder citaat en zonder witruimteverschillen —
+    anders telt elke ingesprongen regel al als een aanpassing."""
+    t = re.split(r"\n\s*(?:Op .{0,60}schreef|Van:|-----Oorspronkelijk)", t)[0]
+    return re.sub(r"\s+", " ", t).strip().lower()
+
+
+LEERLOG = OUT / "leerlog.json"
+
+
+def _lees_leerlog_lokaal() -> list:
+    try:
+        return json.loads(LEERLOG.read_text()) if LEERLOG.exists() else []
+    except Exception:  # noqa: BLE001
+        return []
+
+
+def _schrijf_leerlog(log: list) -> None:
+    if _db_schrijf("leerlog", log):
+        return
+    try:
+        LEERLOG.write_text(json.dumps(log, indent=2, ensure_ascii=False))
+    except Exception as e:  # noqa: BLE001 — leren mag nooit het mailen stoppen
+        print(f"  (leerlog niet bewaard: {e})")
+
+
 def _citaat(inkomend, body: str) -> str:
     """Het bericht waarop geantwoord wordt, als citaat eronder."""
     if not body:
@@ -1312,6 +1381,9 @@ def _zet_concept_klaar(lead: dict, inkomend, body: str, soort: str = "warm") -> 
             map_ = CONCEPTMAP if CONCEPTMAP in bestaand else "Drafts"
             im.append(f'"{map_}"', "\\Draft", None, msg.as_bytes())
         print(f"  ✎ concept klaargezet voor {lead['email']}")
+        # De voorgestelde tekst bewaren. Zonder dit valt later niet te zien wát
+        # Daniel eraan veranderd heeft, en dan leert dit systeem nooit iets.
+        _onthoud_concept(lead["email"].lower(), msg.get_content())
         return True
     except Exception as e:  # noqa: BLE001 — geen concept is vervelend, niet fataal
         print(f"  (concept niet klaargezet: {e})")
@@ -1417,6 +1489,23 @@ def _opruimen(state: dict) -> None:
     if any(verplaatst.values()):
         print(f"  postvak opgeruimd: {verplaatst[MAP_AUTOMATISCH]} naar "
               f"{MAP_AUTOMATISCH}, {verplaatst[MAP_BEANTWOORD]} naar {MAP_BEANTWOORD}")
+
+
+def _verzonden_tekst(imap, adres: str) -> str | None:
+    """De laatste mail die Daniel zelf naar dit adres stuurde, als platte tekst."""
+    try:
+        imap.select('"Verzonden"', readonly=True)
+        _, d = imap.search(None, f'(TO "{adres}")')
+        nums = (d[0] or b"").split()
+        if not nums:
+            return None
+        _, ruw = imap.fetch(nums[-1], "(RFC822)")
+        if not ruw or not ruw[0]:
+            return None
+        msg = email.message_from_bytes(ruw[0][1])
+        return _platte_tekst(msg)
+    except Exception:  # noqa: BLE001 — leren mag nooit iets breken
+        return None
 
 
 def _antwoorden_van_daniel(imap, gebruiker: str) -> dict[str, str]:
@@ -1619,6 +1708,25 @@ def tick(args) -> None:
     boek.afsluiten()
 
 
+def toon_leerlog() -> None:
+    """`python3 leadgen_mail.py leren` — wat heeft Daniel aan mijn voorstellen
+    veranderd? Dit is het materiaal om de sjablonen bewust bij te stellen."""
+    log = _db_lees("leerlog", None)
+    if log is None:
+        log = _lees_leerlog_lokaal()
+    aangepast = [x for x in log if x.get("aangepast")]
+    print(f"{len(log)} voorstellen bewaard, {len(aangepast)} daarvan aangepast\n")
+    for x in aangepast[-10:]:
+        print("═" * 72)
+        print(f"{x['adres']}   {x['op'][:16]}")
+        print("--- mijn voorstel " + "-" * 54)
+        print(_kern(x.get("voorstel", ""))[:900])
+        print("--- wat jij stuurde " + "-" * 52)
+        print(_kern(x.get("verstuurd", ""))[:900])
+    if not aangepast:
+        print("Nog niets aangepast — of er is nog geen concept verstuurd.")
+
+
 def _dagbericht(state: dict, plan: dict) -> None:
     """Het avondbericht aan Daniel."""
     vandaag = date.today().isoformat()
@@ -1754,6 +1862,10 @@ def main() -> None:
 
     r = sub.add_parser("dagbericht", help="het avondbericht nu versturen (test)")
     r.set_defaults(func=lambda a: _dagbericht(_state(), _dagplan(_state(), 0)))
+
+    ll = sub.add_parser("leren",
+                        help="wat heb jij aan mijn conceptantwoorden veranderd?")
+    ll.set_defaults(func=lambda a: toon_leerlog())
 
     args = ap.parse_args()
     args.func(args)
