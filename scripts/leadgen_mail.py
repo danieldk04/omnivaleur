@@ -1261,6 +1261,26 @@ def _concept_tekst(lead: dict, body: str, soort: str = "warm") -> str:
     return "\n".join(regels)
 
 
+def _citaat(inkomend, body: str) -> str:
+    """Het bericht waarop geantwoord wordt, als citaat eronder."""
+    if not body:
+        return ""
+    wie = ""
+    datum = ""
+    if inkomend is not None:
+        wie = parseaddr(inkomend.get("From", ""))[1]
+        try:
+            datum = parsedate_to_datetime(inkomend.get("Date", "")).strftime("%d-%m-%Y om %H:%M")
+        except Exception:  # noqa: BLE001 — een rare datum mag het citaat niet slopen
+            datum = ""
+    kop = f"Op {datum} schreef {wie}:" if datum and wie else f"{wie or 'Zij'} schreef:"
+    # Alleen het nieuwe deel citeren; de rest is onze eigen mail die er al onder
+    # hing en dat wordt anders een sneeuwbal van citaten in citaten.
+    schoon = re.split(r"\n\s*(?:Van:|-----Oorspronkelijk|Op .{0,60}schreef)", body)[0]
+    regels = [r for r in schoon.strip().splitlines()][:25]
+    return "\n\n" + kop + "\n" + "\n".join("> " + r for r in regels) + "\n"
+
+
 def _zet_concept_klaar(lead: dict, inkomend, body: str, soort: str = "warm") -> bool:
     """Legt het voorstel als concept in Daniels postbus, in dezelfde draad."""
     host, van = os.environ.get("IMAP_HOST"), os.environ.get("MAIL_USER")
@@ -1279,7 +1299,11 @@ def _zet_concept_klaar(lead: dict, inkomend, body: str, soort: str = "warm") -> 
     if inkomend is not None and inkomend.get("Message-ID"):
         msg["In-Reply-To"] = inkomend["Message-ID"]
         msg["References"] = inkomend.get("References", "") + " " + inkomend["Message-ID"]
-    msg.set_content(_concept_tekst(lead, body, soort))
+    # Het oorspronkelijke bericht eronder citeren. Zonder dit ziet een concept
+    # eruit als een losse nieuwe mail: je leest je eigen antwoord zonder te zien
+    # waar het op slaat, en je moet de draad erbij zoeken om te kunnen beoordelen
+    # of het klopt. Precies zoals elk mailprogramma het zelf doet.
+    msg.set_content(_concept_tekst(lead, body, soort) + _citaat(inkomend, body))
     try:
         with imaplib.IMAP4_SSL(host, 993) as im:
             im.login(van, wachtwoord)
