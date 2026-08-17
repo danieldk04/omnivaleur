@@ -955,7 +955,9 @@ def _check_inbox(state: dict, boek: "Notion", dagen: int) -> tuple[int, int, int
             # afmelding is het zwaarst, daarna "we gebruiken al iets" (dat vaak
             # óók een afwijzende zin bevat, en dan is de tool het echte nieuws),
             # dan een gewone nee. Blijft er niets over, dan is het warm.
-            kort = body[:400]
+            # Indelen op wat ZIJ schreef, niet op het citaat van onze eigen mail
+            # eronder — zie _eigen_tekst.
+            kort = _eigen_tekst(body)[:600] or body[:400]
             if AFMELD_WOORDEN.search(kort):
                 soort = "afmelding"
             elif CONCURRENT.search(kort):
@@ -1215,6 +1217,34 @@ def _afsluitmails(state: dict, boek: "Notion") -> int:
 # Bewust een concept en geen verzonden mail: dit is zijn gesprek, niet dat van de
 # machine. Een verkeerd geraden antwoord dat al de deur uit is, kun je niet meer
 # terughalen.
+
+def _eigen_tekst(body: str) -> str:
+    """Alleen wat DEZE persoon zelf schreef, zonder het citaat eronder.
+
+    Dit is geen nettigheid maar een noodzaak. BoekenSchaap antwoordde onder het
+    citaat: "geen interesse, je denkt toch niet dat ik dagelijks 1400 boeken
+    handmatig op MP zet?" — maar de eerste 400 tekens van haar mail waren ONZE
+    eigen verkooptekst, netjes ingesprongen met ">". Daarop indelen leverde
+    "warm" op en er ging een concept met de video naar iemand die net nee had
+    gezegd. Wat er in een citaat staat is per definitie niet wat zij vindt.
+
+    Ook bottom-posting moet werken: haar zin stond ONDER het citaat, dus je kunt
+    niet simpelweg alles na de scheidingsregel weggooien."""
+    regels = []
+    for r in (body or "").splitlines():
+        kaal = r.strip()
+        if kaal.startswith(">"):
+            continue
+        # De inleidende regel van een citaat ("X schreef op ...:", "Van: ...").
+        if re.match(r"^\s*(Van|From|Verzonden|Sent|Aan|To|Onderwerp|Subject|Datum|Date)\s*:", r):
+            continue
+        if re.match(r"^\s*-{2,}\s*(Oorspronkelijk|Original)", r, re.I):
+            continue
+        if re.search(r"schreef (op .{0,30})?:$|wrote:$", kaal, re.I):
+            continue
+        regels.append(r)
+    return "\n".join(regels).strip()
+
 
 def _wat_vraagt_hij(body: str) -> set[str]:
     """Welke van de drie standaardvragen zitten in dit antwoord?"""
