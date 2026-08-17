@@ -72,6 +72,13 @@ SITE = "https://omnivaleur.com"
 # Waar Daniel een seintje krijgt zodra iemand écht antwoordt. Automatische
 # ontvangstbevestigingen tellen niet mee, anders is het geen seintje meer maar ruis.
 ALARM_NAAR = ["danieldekoning66@gmail.com", "info@revaleur.com"]
+# De demo van één minuut. Staat hier één keer, zodat er nooit een oude link in
+# een concept belandt.
+VIDEO = "https://youtube.com/shorts/ymDeS37aBW4"
+PRIJS = "€19,99 per maand"
+PLATFORMS = "Marktplaats, 2dehands, Vinted, eBay en Shopify. Etsy komt eraan"
+# Waar een klaargezet antwoord terechtkomt. Zoho noemt zijn conceptenmap zo.
+CONCEPTMAP = "Concept"
 # Van elk seintje komt ook een kopie in deze Zoho-map. Daniels postvak IN moet
 # alleen échte reacties van handelaren bevatten; berichten van de machine zelf
 # horen daar niet tussen te staan.
@@ -109,6 +116,10 @@ STIL_NA_DAGEN = 10
 # De fase voor "crosslist al, maar met een concurrent". Moet exact zo in de
 # Leadlist bestaan, anders wordt de kolom stil overgeslagen.
 FASE_CONCURRENT = "Gebruikt concurrent"
+# De twee fases die samen Daniels werkvoorraad vormen. Alles wat hierbuiten
+# valt is administratie; deze twee zijn de enige lijsten die hij hoeft te openen.
+FASE_AAN_ZET = "⚡ Jij bent aan zet"
+FASE_BAL_BIJ_HEN = "⏳ Bal bij hen"
 PAUZE = (40, 110)             # seconden tussen twee mails, willekeurig
 VENSTER = (8, 45), (20, 30)   # vroegste en laatste verzendtijd op een dag
 MIN_GAT = 9                   # minuten die minimaal tussen twee tijdstippen zitten
@@ -136,7 +147,10 @@ MIN_GAT = 9                   # minuten die minimaal tussen twee tijdstippen zit
 #
 # Meerdere varianten, willekeurig gekozen: twee handelaren die elkaar spreken
 # horen niet exact dezelfde zin te hebben gekregen.
-AFSLUIT_UIT = False          # noodrem: op True zet het hele afsluiten stil
+# UIT op Daniels verzoek (17-08-2026): hij ziet elke reactie zelf al op zijn
+# telefoon en wil niet dat er per ongeluk twee bedankjes uitgaan — het zijne en
+# dat van de machine. De teksten blijven staan; op False gaat het weer aan.
+AFSLUIT_UIT = True
 
 AFSLUIT_VERTRAGING = (20, 90)          # minuten
 
@@ -686,6 +700,22 @@ class Notion:
             wensen["Status"] = ("status", "Interesse")
         self._schrijf(lead, "heeft geantwoord op de mail", wensen)
 
+    def wacht_op_daniel(self, lead: dict) -> None:
+        """Warme reactie: de bal ligt bij Daniel. Dit is de enige lijst die hij
+        elke dag hoeft te openen, dus die moet kloppen."""
+        self._schrijf(lead, "warme reactie — concept klaargezet in je postbus",
+                      {"Fase": ("select", FASE_AAN_ZET),
+                       "Status": ("status", "Interesse"),
+                       "Volgende actie op": ("date", date.today().isoformat())})
+
+    def bal_bij_hen(self, lead: dict, dagen: int = 4) -> None:
+        """Daniel heeft geantwoord; nu is het aan hen. Zonder deze stap bleef een
+        lead op 'jij bent aan zet' staan nadat hij allang gereageerd had."""
+        self._schrijf(lead, "jij hebt geantwoord — bal ligt bij hen",
+                      {"Fase": ("select", FASE_BAL_BIJ_HEN),
+                       "Volgende actie op": ("date",
+                                             (date.today() + timedelta(days=dagen)).isoformat())})
+
     def afgesloten_bericht(self, lead: dict, soort: str) -> None:
         """Vastleggen dat er een afsluitend berichtje uit is. Zonder deze regel
         lijkt het in Notion alsof er nooit op hun antwoord gereageerd is, en dan
@@ -941,11 +971,14 @@ def _check_inbox(state: dict, boek: "Notion", dagen: int) -> tuple[int, int, int
                 nieuw += 1
                 if lead:
                     boek.geantwoord(lead, soort)
-                # Alleen bij een warm antwoord een seintje. Voor "we gebruiken al
-                # Channable" hoeft Daniel niet uit zijn werk gehaald te worden;
-                # dat staat morgen gewoon in het dagbericht.
+                # Bij een warm antwoord: geen alarmmail meer, maar een CONCEPT in
+                # zijn eigen postbus. Daniel ziet de reactie toch al op zijn
+                # telefoon; een seintje erbovenop is ruis die hem juist opjaagt.
+                # Wat hem rust geeft is dat het antwoord al klaarstaat.
                 if lead and soort in ("warm", "onbekend"):
-                    _alarm(lead, kop, body)
+                    if _zet_concept_klaar(lead, msg, body):
+                        st["concept_klaar"] = datetime.now().isoformat(timespec="seconds")
+                    boek.wacht_op_daniel(lead)
 
             # Een afsluitmailtje inplannen — niet nu versturen. Zie
             # AFSLUIT_* hierboven voor waarom er tijd tussen moet zitten.
@@ -976,6 +1009,43 @@ def _check_inbox(state: dict, boek: "Notion", dagen: int) -> tuple[int, int, int
 
     _save_state(state)
     return nieuw, afgemeld, bounces
+
+
+def _jouw_antwoorden_verwerken(state: dict, boek: "Notion") -> int:
+    """Leest wat Daniel zélf heeft teruggeschreven en zet die leads op 'bal bij hen'.
+
+    Zonder dit blijft een lead op "jij bent aan zet" staan nadat hij allang
+    geantwoord heeft, en dan klopt precies de lijst niet die hij elke dag opent —
+    waarmee de hele indeling waardeloos wordt. Hij antwoordt vaak vanaf zijn
+    telefoon, buiten de machine om, dus de postbus is hier de enige waarheid."""
+    host, gebruiker = os.environ.get("IMAP_HOST"), os.environ.get("MAIL_USER")
+    wachtwoord = os.environ.get("MAIL_PASS")
+    if not (host and gebruiker and wachtwoord):
+        return 0
+    per_adres = {l["email"].lower(): l for l in _leads()}
+    bijgewerkt = 0
+    with imaplib.IMAP4_SSL(host, 993) as imap:
+        imap.login(gebruiker, wachtwoord)
+        beantwoord_na = _antwoorden_van_daniel(imap, gebruiker)
+    for adres, datum in beantwoord_na.items():
+        st = state.get(adres)
+        if not st:
+            # Ook hier: hij kan vanaf een ander adres geantwoord hebben.
+            adres2 = _zelfde_bedrijf(adres, state)
+            if not adres2:
+                continue
+            adres, st = adres2, state[adres2]
+        if not st.get("beantwoord"):
+            continue                       # geen gesprek, dus niets om bij te werken
+        if st.get("daniel_antwoordde") == datum:
+            continue                       # al verwerkt
+        st["daniel_antwoordde"] = datum
+        bijgewerkt += 1
+        if per_adres.get(adres):
+            boek.bal_bij_hen(per_adres[adres])
+    if bijgewerkt:
+        _save_state(state)
+    return bijgewerkt
 
 
 def _afsluiten_stille_leads(state: dict, boek: "Notion") -> int:
@@ -1108,6 +1178,97 @@ def _afsluitmails(state: dict, boek: "Notion") -> int:
             _save_state(state)
             time.sleep(random.uniform(*PAUZE))
     return verstuurd
+
+
+# ── Klaargezet antwoord op een warme reactie ──────────────────────────────
+# Daniel schiet in de startblokken zodra er "interesse" binnenkomt en wordt daar
+# onrustig van: hij denkt dat hij nú moet reageren. Dat hoeft niet — bij koude
+# mail wint niemand een klant met vijf minuten sneller zijn. Wat wél helpt is dat
+# het antwoord al klaarstaat, zodat reageren dertig seconden kost in plaats van
+# een half uur nadenken. Daarom zet de machine een CONCEPT klaar in zijn eigen
+# postbus, in zijn eigen toon, met de video erin. Hij leest het, past aan wat hij
+# wil, en drukt op verzenden.
+#
+# Bewust een concept en geen verzonden mail: dit is zijn gesprek, niet dat van de
+# machine. Een verkeerd geraden antwoord dat al de deur uit is, kun je niet meer
+# terughalen.
+
+def _wat_vraagt_hij(body: str) -> set[str]:
+    """Welke van de drie standaardvragen zitten in dit antwoord?"""
+    t = body.lower()
+    uit = set()
+    if re.search(r"\b(video|filmpje|demo|laten zien|zien wat)\b", t):
+        uit.add("video")
+    if re.search(r"\b(prijs|prijzen|kost|kosten|tarief|per maand|abonnement)\b", t):
+        uit.add("prijs")
+    # \b(platform)\b vond "platformen" en "marketplaces" niet — de meervouden die
+    # mensen juist schrijven. Vandaar \w* achter de stam.
+    if re.search(r"\b(platform\w*|marketplace\w*|kanal\w*|welke sites|waar allemaal"
+                 r"|welke marktplaatsen|ondersteun\w*)", t):
+        uit.add("platforms")
+    return uit
+
+
+def _concept_tekst(lead: dict, body: str) -> str:
+    """Het voorstel-antwoord. Kort, in Daniels toon: geen verkooppraat, concreet,
+    en altijd eindigen met een lage drempel."""
+    vraagt = _wat_vraagt_hij(body)
+    jij = "jullie" if str(lead.get("je_jullie", "")).lower().startswith("jul") else "je"
+    regels = ["Hi,", "", "Dank voor je reactie!"]
+
+    if "video" in vraagt or not vraagt:
+        regels += ["", f"Bij deze de video van een minuutje: {VIDEO}"]
+
+    if "platforms" in vraagt:
+        regels += ["", f"Qua platformen: {PLATFORMS}. Je zet een item één keer klaar "
+                       "en kiest per stuk waar het heen gaat."]
+    if "prijs" in vraagt:
+        regels += ["", f"De kosten zijn {PRIJS}, en de eerste 7 dagen zijn gratis. "
+                       f"Geen opzegtermijn — bespaart het {jij} geen tijd, dan stop "
+                       f"je gewoon weer."]
+
+    ads = lead.get("ads")
+    if isinstance(ads, int) and ads > 300:
+        regels += ["", f"Met {ads:,}".replace(",", ".") + " advertenties is de importfunctie "
+                       "waarschijnlijk het startpunt: die leest je bestaande "
+                       "Marktplaats-aanbod in, zodat je niets hoeft over te tikken."]
+
+    regels += ["", "Laat maar weten wat je ervan vindt, of als je ergens tegenaan loopt.",
+               "", ONDERTEKENING]
+    return "\n".join(regels)
+
+
+def _zet_concept_klaar(lead: dict, inkomend, body: str) -> bool:
+    """Legt het voorstel als concept in Daniels postbus, in dezelfde draad."""
+    host, van = os.environ.get("IMAP_HOST"), os.environ.get("MAIL_USER")
+    wachtwoord = os.environ.get("MAIL_PASS")
+    if not (host and van and wachtwoord):
+        return False
+    msg = EmailMessage()
+    msg["From"] = f"{AFZENDER_NAAM} <{van}>"
+    msg["To"] = lead["email"]
+    onderwerp = str(inkomend.get("Subject", "")) if inkomend is not None else ""
+    if not onderwerp.lower().startswith("re:"):
+        onderwerp = "Re: " + (onderwerp or _onderwerp(lead, 0))
+    msg["Subject"] = onderwerp
+    # In dezelfde draad blijven, zodat het antwoord in zijn mailprogramma onder
+    # het bericht hangt waar het bij hoort.
+    if inkomend is not None and inkomend.get("Message-ID"):
+        msg["In-Reply-To"] = inkomend["Message-ID"]
+        msg["References"] = inkomend.get("References", "") + " " + inkomend["Message-ID"]
+    msg.set_content(_concept_tekst(lead, body))
+    try:
+        with imaplib.IMAP4_SSL(host, 993) as im:
+            im.login(van, wachtwoord)
+            bestaand = {r.decode().split(' "/" ')[-1].strip('"')
+                        for r in (im.list()[1] or [])}
+            map_ = CONCEPTMAP if CONCEPTMAP in bestaand else "Drafts"
+            im.append(f'"{map_}"', "\\Draft", None, msg.as_bytes())
+        print(f"  ✎ concept klaargezet voor {lead['email']}")
+        return True
+    except Exception as e:  # noqa: BLE001 — geen concept is vervelend, niet fataal
+        print(f"  (concept niet klaargezet: {e})")
+        return False
 
 
 def _alarm(lead: dict, onderwerp: str, body: str) -> None:
@@ -1383,6 +1544,14 @@ def tick(args) -> None:
         except Exception as e:  # noqa: BLE001 — dit mag de ronde niet stoppen
             print(f"  (afsluitmail niet verstuurd: {e})")
             plan.setdefault("fouten", []).append(f"afsluitmail: {e}")
+
+        try:
+            eigen = _jouw_antwoorden_verwerken(state, boek)
+            if eigen:
+                print(f"{datetime.now():%d-%m %H:%M} — {eigen} lead(s) waar jij op "
+                      f"hebt geantwoord → bal bij hen")
+        except Exception as e:  # noqa: BLE001 — mag de ronde niet stoppen
+            print(f"  (jouw antwoorden niet gelezen: {e})")
 
         gesloten = _afsluiten_stille_leads(state, boek)
         if gesloten:
