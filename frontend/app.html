@@ -979,6 +979,7 @@ input[type="checkbox"].row-check { width: 15px; height: 15px; cursor: pointer; a
           <strong id="bulk-count">0</strong> selected &nbsp;·
           <button class="btn btn-sm btn-success" onclick="openBulkCrosslist()">Publish to…</button>
           <button class="btn btn-sm btn-outline" onclick="openBulkPrice()">Change price…</button>
+          <button class="btn btn-sm btn-outline" onclick="doBulkCondition()">Change condition…</button>
           <button class="btn btn-sm btn-warning" onclick="bulkDelist()">Delist all</button>
           <button class="btn btn-sm btn-danger" onclick="bulkDelete()">Delete</button>
           <button class="btn btn-sm btn-ghost" onclick="clearSelection()">Deselect</button>
@@ -7013,6 +7014,53 @@ function renderBulkPricePreview() {
     warn.style.display = 'none';
   }
   document.getElementById('bulk-price-apply').disabled = !plan.length;
+}
+
+// De staat van een hele selectie in één keer zetten. Bestond niet, terwijl een
+// import zonder staat (Marktplaats/Admarkt levert er geen) honderden items op
+// dezelfde verkeerde waarde zet. Zonder dit was de enige uitweg 240 keer
+// bewerken openen.
+async function doBulkCondition() {
+  const ids = [...selectedIds];
+  if (!ids.length) return;
+  const keuzes = [
+    ['new_with_tags', 'New with tags'], ['new', 'New (without tags)'],
+    ['good', 'Like new'], ['fair', 'Used'], ['poor', 'Damaged'],
+  ];
+  const vraag = 'Set the condition for ' + ids.length + ' item' + (ids.length === 1 ? '' : 's') +
+    ' to:\n\n' + keuzes.map((k, i) => `${i + 1}. ${k[1]}`).join('\n') + '\n\nType a number (1-5):';
+  const antwoord = prompt(vraag, '2');
+  const idx = parseInt(antwoord, 10) - 1;
+  if (!(idx >= 0 && idx < keuzes.length)) return;
+  const [waarde, label] = keuzes[idx];
+  if (!confirm(`Set ${ids.length} item${ids.length === 1 ? '' : 's'} to "${label}"?`)) return;
+
+  // Eén verzoek tegelijk — een stortvloed parallelle schrijfacties is precies
+  // wat de hele site laat vastlopen (zie doBulkPrice).
+  setBusy(true, `Updating condition… 0/${ids.length}`);
+  const mislukt = [];
+  let klaar = 0;
+  for (const id of ids) {
+    try {
+      const res = await apiFetchRetry(`${API}/api/items/${id}`, {
+        method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ condition: waarde }),
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const item = state.items.find(i => i.id === id);
+      if (item) item.condition = waarde;
+    } catch (e) {
+      mislukt.push(id);
+    }
+    klaar++;
+    setBusyText(`Updating condition… ${klaar}/${ids.length}`);
+  }
+  setBusy(false);
+  clearSelection();
+  applyFilters(false);
+  alert(mislukt.length
+    ? `${ids.length - mislukt.length} updated, ${mislukt.length} failed — try those again.`
+    : `✅ ${ids.length} item${ids.length === 1 ? '' : 's'} set to "${label}".`);
 }
 
 async function doBulkPrice() {
