@@ -4583,6 +4583,13 @@ function renderImportProgress(platform, prog) {
       </div>
       ${prog?.debug ? `<div style="margin-top:6px;font-size:11px;color:var(--muted);font-family:monospace">${esc(prog.debug)}</div>` : ''}
     </div>`;
+  // De eerder gekozen staat terugzetten; hij hoort niet elke keer op standaard
+  // te springen als je in porties importeert.
+  try {
+    const bewaard = localStorage.getItem('importCondition');
+    const sel = document.getElementById('import-condition');
+    if (bewaard && sel) sel.value = bewaard;
+  } catch (_) {}
 }
 
 function clearImportProgress() {
@@ -4763,6 +4770,21 @@ async function loadImportSummary() {
           One click brings all ${pending} in at once — you do <b>not</b> have to go
           through them row by row. Use the Apply / Ignore buttons below only for
           the odd listing you want to treat differently, or to skip one entirely.
+        </div>
+        <!-- Eén staat voor de hele lading. Marktplaats/Admarkt levert geen staat
+             mee, waardoor alles op "Like new" belandde; wie uitsluitend nieuwe
+             spullen verkoopt moest dat honderden keren corrigeren. -->
+        <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:10px">
+          <label style="font-size:12.5px;color:var(--muted)" for="import-condition">
+            Condition for listings that don't carry one:
+          </label>
+          <select id="import-condition" style="max-width:200px">
+            <option value="new_with_tags">New with tags</option>
+            <option value="new">New (without tags)</option>
+            <option value="good" selected>Like new</option>
+            <option value="fair">Used</option>
+            <option value="poor">Damaged</option>
+          </select>
         </div>
         <button class="btn btn-primary" onclick="bulkImportAllCandidates()">Import all ${pending} → Items</button>
       </div>` : ''}
@@ -4961,6 +4983,15 @@ function openImportCreate(candidateId) {
   document.getElementById('save-btn').textContent = 'Create item';
 }
 
+// De gekozen staat onthouden, zodat hij bij een volgende lading blijft staan —
+// wie nieuwe spullen verkoopt, verkoopt die volgende week ook.
+function importCondition() {
+  const el = document.getElementById('import-condition');
+  const v = el ? el.value : localStorage.getItem('importCondition');
+  if (v) { try { localStorage.setItem('importCondition', v); } catch (_) {} }
+  return v || 'good';
+}
+
 async function bulkImportAllCandidates() {
   if (!confirm('Import all pending candidates now? Matches get linked to the existing item; the rest become new items.\n\nAnything that looks like a duplicate of an item you imported from another channel is left for you to check by hand.')) return;
   setBusy(true, 'Importing all pending candidates — this can take a while, please wait…');
@@ -4990,7 +5021,7 @@ async function bulkImportAllCandidates() {
       try {
         const r = await apiFetch(`${API}/api/imports/bulk-import`, {
           method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ limit, offset }),
+          body: JSON.stringify({ limit, offset, default_condition: importCondition() }),
         });
         data = await parseJsonSafe(r);
         if (!r.ok) {

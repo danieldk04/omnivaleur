@@ -490,7 +490,15 @@ def _item_data_from_candidate(cand: dict, body: dict | None = None,
         "purchase_price": body.get("purchase_price"),
         "brand": pick("brand"),
         "size": pick("size"),
-        "condition": body.get("condition") or _map_condition(cand.get("condition")),
+        # De staat komt van drie kanten, in deze volgorde: wat de gebruiker in het
+        # formulier typte, wat het platform meegaf, en anders de standaard voor
+        # deze hele lading. Die laatste bestaat omdat Admarkt geen staat meelevert
+        # en alles dan op "Like new" belandde — een handelaar die uitsluitend
+        # nieuwe spullen verkoopt moest dat 240 keer met de hand corrigeren.
+        "condition": (body.get("condition")
+                      or _map_condition(cand.get("condition"))
+                      if cand.get("condition") else
+                      (body.get("condition") or body.get("_default_condition") or "good")),
         "category": pick("category") or inferred.get("category"),
         "gender": pick("gender") or inferred.get("gender"),
         "color": pick("color") or inferred.get("color"),
@@ -1142,6 +1150,11 @@ async def bulk_import_candidates(body: dict = None, user_id: str = Depends(requi
     db = get_db()
     body = body or {}
     platform = body.get("platform")
+    # Eén staat voor de hele lading. Alleen gebruikt waar het platform zelf niets
+    # meegaf; wat wél bekend is blijft leidend.
+    standaard_staat = body.get("default_condition")
+    if standaard_staat not in ("new_with_tags", "new", "good", "fair", "poor"):
+        standaard_staat = None
 
     # Process in bounded batches so a single request can never run long enough for the
     # reverse proxy / gateway to time out and hand the browser an HTML error page (which
@@ -1252,7 +1265,11 @@ async def bulk_import_candidates(body: dict = None, user_id: str = Depends(requi
                     db.table("import_candidates").update({"status": "linked"}).eq("id", cand["id"]).execute()
                     linked += 1
                 else:
-                    item_data = _item_data_from_candidate(cand, inferred=inferred_by_id.get(cand["id"]))
+                    item_data = _item_data_from_candidate(
+                        cand,
+                        {"_default_condition": standaard_staat} if standaard_staat else None,
+                        inferred=inferred_by_id.get(cand["id"]),
+                    )
                     item = ItemCreate(**item_data)
                     data = item.model_dump()
                     data["id"] = str(uuid.uuid4())
