@@ -1485,9 +1485,8 @@ def _ruim_concepten_op() -> int:
          beantwoord waren, waardoor het leek alsof er werk lag dat er niet was.
 
     De regel is daarom niet "is het concept ouder dan de laatste mail", maar het
-    enige dat echt telt: **ligt er nog een bericht van hen waar jij niet op hebt
-    gereageerd?** Zo niet, dan is het concept overbodig — ongeacht wanneer het
-    gemaakt is."""
+    enige dat echt telt: is er NA het klaarzetten een mail naar dat adres gegaan?
+    Zo ja, dan is dit voorstel verstuurd of ingehaald en mag het weg."""
     host, gebruiker = os.environ.get("IMAP_HOST"), os.environ.get("MAIL_USER")
     wachtwoord = os.environ.get("MAIL_PASS")
     if not (host and gebruiker and wachtwoord):
