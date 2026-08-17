@@ -3031,7 +3031,15 @@ async function fetchAllItems() {
   const pageSize = 200;
   let offset = 0, all = [];
   while (true) {
-    const page = await apiFetch(`${API}/api/items/?limit=${pageSize}&offset=${offset}`).then(r => r.json());
+    // parseJsonSafe, niet r.json(): valt de server even weg, dan komt er een
+    // HTML-foutpagina terug en gooide r.json() een onbegrijpelijke fout. Die
+    // werd hierboven opgevangen door allSettled, waarna de catalogus leeg bleef
+    // en het scherm "No items yet" toonde — niet te onderscheiden van een lege
+    // account. Egbert Brouwer zag zo zijn 240 zojuist geïmporteerde items
+    // verdwijnen (16-08-2026). Een fout hoort een fout te heten.
+    const res = await apiFetch(`${API}/api/items/?limit=${pageSize}&offset=${offset}`);
+    const page = await parseJsonSafe(res);
+    if (!res.ok) throw new Error(page?.detail || `Could not load your items (${res.status})`);
     if (!Array.isArray(page) || !page.length) break;
     all = all.concat(page);
     // Tel door met wat we echt kregen, niet met wat we vroegen: geeft de server
@@ -3049,6 +3057,11 @@ async function loadAll() {
     apiFetch(`${API}/api/jobs/pending`).then(r => r.json()),
     apiFetch(`${API}/api/platforms/status`).then(r => r.json()),
   ]);
+  // Onthouden DAT het misging. Zonder dit is "niet kunnen laden" op het scherm
+  // hetzelfde als "je hebt niets", en dat is precies het verkeerde antwoord voor
+  // iemand die net 240 items heeft geïmporteerd.
+  state.itemsLoadError = itemsRes.status === 'rejected'
+    ? (itemsRes.reason?.message || 'Could not load your items') : null;
   if (itemsRes.status === 'fulfilled') state.items = Array.isArray(itemsRes.value) ? itemsRes.value : [];
   if (listingsRes.status === 'fulfilled') state.listings = Array.isArray(listingsRes.value) ? listingsRes.value : [];
   if (jobsRes.status === 'fulfilled') state.jobs = Array.isArray(jobsRes.value) ? jobsRes.value : [];
@@ -3440,7 +3453,16 @@ function renderItemsTable(items) {
       <td style="white-space:nowrap">${itemActions(item)}</td>
     </tr>`;
   }).join('');
-  const emptyHtml = state.items.length === 0
+  const emptyHtml = state.itemsLoadError
+    ? `<tr><td colspan="8"><div class="empty">
+         <h3 style="color:var(--red,#dc2626)">Could not load your items</h3>
+         <p>Your items are still there — this screen just could not fetch them
+            (${esc(state.itemsLoadError)}). This is usually a hiccup that a retry fixes.</p>
+         <div style="display:flex;gap:8px;justify-content:center;margin-top:12px">
+           <button class="btn btn-primary btn-sm" onclick="loadAll()">Try again</button>
+         </div>
+       </div></td></tr>`
+    : state.items.length === 0
     ? `<tr><td colspan="8"><div class="empty">
          <h3>No items yet</h3>
          <p>Add your first item by hand, or import listings you already have on a platform.</p>
