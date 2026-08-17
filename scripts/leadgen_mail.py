@@ -1523,7 +1523,6 @@ def _ruim_concepten_op() -> int:
                 return uit
 
             verstuurd = _tijden(["Verzonden"], "To")
-            ontvangen = _tijden(["INBOX", "Beantwoord", "Afval"], "From")
 
             imap.select(f'"{map_}"')
             _, d = imap.uid("search", None, "ALL")
@@ -1552,15 +1551,38 @@ def _ruim_concepten_op() -> int:
                 adres = parseaddr(msg.get("To", "")) [1].lower()
                 if not adres:
                     continue
+                # Wanneer is dit concept neergelegd? Eigen Date-kop als die er is,
+                # anders wat de server noteerde. Alles in seconden sinds 1970:
+                # koppen dragen een tijdzone, INTERNALDATE komt lokaal terug, en
+                # die twee naïef vergelijken gaf eerder een verschil van twee uur.
+                gemaakt = None
+                try:
+                    gemaakt = parsedate_to_datetime(msg.get("Date", "")).timestamp()
+                except Exception:  # noqa: BLE001
+                    pass
+                if gemaakt is None:
+                    _, meta = imap.uid("fetch", uid, "(INTERNALDATE)")
+                    intern = imaplib.Internaldate2tuple(meta[0] if meta and meta[0] else b"")
+                    gemaakt = time.mktime(intern) if intern else None
+                if gemaakt is None:
+                    continue
                 if uid in dubbel:
                     imap.uid("store", uid, "+FLAGS", "(\\Deleted)")
                     weg += 1
                     continue
-                hun = ontvangen.get(adres)
+                # ALLEEN weggooien als er ná het concept een mail is uitgegaan.
+                #
+                # Eerst stond hier "hebben wij na hun laatste bericht geantwoord",
+                # en dat was fout: een concept dat ik bewust later klaarzet als
+                # vervolg op een gesprek dat allang beantwoord is, werd dan binnen
+                # een half uur opgeruimd. Dat gebeurde ook — een vervolgmail
+                # verdween terwijl Daniel hem zat te lezen.
+                #
+                # Wat telt is niet of het gesprek "open" staat, maar of dit
+                # voorstel nog ergens toe dient. Is er na het klaarzetten iets
+                # naar dat adres gegaan, dan is het verstuurd of ingehaald.
                 ons = verstuurd.get(adres)
-                # Niets van hen, of wij hebben na hun laatste bericht geantwoord:
-                # er ligt niets meer open, dus dit concept hoort weg.
-                if hun is None or (ons is not None and ons > hun):
+                if ons is not None and ons > gemaakt:
                     # Zoho wil de vlag tussen haakjes; zonder geeft hij BAD.
                     imap.uid("store", uid, "+FLAGS", "(\\Deleted)")
                     weg += 1
