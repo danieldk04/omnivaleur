@@ -255,7 +255,12 @@ NOT_YET_AVAILABLE = {"etsy"}
 # Required on every platform — an empty description or zero photos means the
 # extension has nothing to type/upload, so the listing goes out looking broken
 # rather than just "safely bare".
-_UNIVERSAL_REQUIRED = ["description", "photo_urls"]
+# Prijs hoort hier bij, en ontbrak. Een item zonder prijs (of met 0) kon daardoor
+# gewoon gepubliceerd worden en ging voor niets online. Dat is geen theoretisch
+# risico: een Admarkt-import levert nooit een prijs mee, en er stonden 240 items
+# op 0 klaar om te publiceren. `not value` vangt 0, None en "" allemaal, dus
+# hieronder is geen extra controle nodig.
+_UNIVERSAL_REQUIRED = ["price", "description", "photo_urls"]
 # Marktplaats/2dehands render category-specific attribute dropdowns (maat,
 # merk, kleur...) and pick the category itself from `category`/`gender` — those
 # are the fields that silently produced a wrong-category, everything-empty

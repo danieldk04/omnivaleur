@@ -2340,7 +2340,11 @@ const API_PLATFORMS_FE = new Set(['ebay', 'shopify']);
 // Mirrors backend/services/crosslist.py's _UNIVERSAL_REQUIRED / _PLATFORM_REQUIRED —
 // lets the dashboard warn about missing data before a publish attempt even fires,
 // instead of only finding out after a blocked 422.
-const CROSSLIST_UNIVERSAL_REQUIRED = ['description', 'photo_urls'];
+// Prijs hoort hier bij. Hij ontbrak, waardoor een item zonder prijs geen enkele
+// waarschuwing gaf en gewoon te publiceren was — met €0 als vraagprijs. Bij een
+// Admarkt-import (die nooit een prijs meelevert) zou dat een hele voorraad
+// gratis online zetten. Gemeten: 240 items op €0 stonden zo klaar om te gaan.
+const CROSSLIST_UNIVERSAL_REQUIRED = ['price', 'description', 'photo_urls'];
 const CROSSLIST_PLATFORM_REQUIRED = {
   marktplaats: ['category', 'gender', 'brand', 'size', 'color'],
   '2dehands': ['category', 'gender', 'brand', 'size', 'color'],
@@ -2350,7 +2354,21 @@ const CROSSLIST_PLATFORM_REQUIRED = {
 };
 // Platforms that are still beta/best-effort — shown with a risk warning in the UI.
 const BETA_PLATFORMS = new Set(['facebook']);
-const CROSSLIST_FIELD_LABELS = { description: 'description', photo_urls: 'photos', category: 'category', gender: 'gender', brand: 'brand', size: 'size', color: 'color' };
+const CROSSLIST_FIELD_LABELS = { description: 'description', photo_urls: 'photos', category: 'category', gender: 'gender', brand: 'brand', size: 'size', color: 'color', price: 'price' };
+
+// Hoe een prijs in een lijst getoond wordt. Eén plek, want dit stond op drie
+// plekken als `€${item.price}` en dat leverde "€0" op voor alles wat nog geen
+// prijs heeft — 240 items uit een Admarkt-import, waar Marktplaats simpelweg
+// geen prijs bij levert. "€0,00" leest als een besluit; leeg leest als werk dat
+// nog moet gebeuren, en dat laatste is de waarheid. In de database blijft de
+// waarde staan zoals hij is; dit gaat alleen over wat je ziet.
+function priceCell(item) {
+  const p = Number(item?.price);
+  if (!Number.isFinite(p) || p <= 0) {
+    return `<span style="color:var(--muted);font-style:italic" title="No price yet — add one before publishing">— no price</span>`;
+  }
+  return `<strong>€${item.price}</strong>`;
+}
 
 // Non-clothing items (games) have no gender/size/kleur attributes on Marktplaats,
 // so only the category is platform-required for them — mirrors backend
@@ -2433,10 +2451,16 @@ function smartMissingBadge(item) {
 
   const noDesc = !String(item.description || '').trim();
   const noPhotos = !(item.photo_urls && item.photo_urls.length);
+  // Prijs telt als ontbrekend zodra hij 0, leeg of onzin is — precies wat
+  // priceCell hierboven ook leeg toont, zodat scherm en waarschuwing hetzelfde
+  // zeggen. Dit moet een EIGEN melding zijn: zonder prijs kan geen enkel kanaal,
+  // en de verzamelmelding hieronder zou er "voeg prijs toe voor Marktplaats &
+  // 2dehands" van maken — wat suggereert dat de rest wél zou werken.
+  const geenPrijs = !(Number(item.price) > 0);
   // Fields that only block Marktplaats/2dehands (easily filled via Edit).
   const detailSet = new Set();
   for (const [p, fields] of Object.entries(missingByPlatform)) {
-    if (p === 'marktplaats' || p === '2dehands') fields.forEach(f => { if (f !== 'description' && f !== 'photos') detailSet.add(f); });
+    if (p === 'marktplaats' || p === '2dehands') fields.forEach(f => { if (f !== 'description' && f !== 'photos' && f !== 'price') detailSet.add(f); });
   }
   const details = [...detailSet];
 
@@ -2450,6 +2474,8 @@ function smartMissingBadge(item) {
 
   // Photos genuinely missing is the most blocking — surface it first.
   if (noPhotos) return chip('#fef2f2', '#dc2626', '⚠', 'No photos — add at least one', fullTip);
+
+  if (geenPrijs) return chip('#fef2f2', '#dc2626', '⚠', 'No price yet — needed on every platform', fullTip);
 
   if (noDesc) {
     if (sourceDelisted)
@@ -3128,7 +3154,7 @@ function renderDashboard() {
       <div><div class="item-title">${esc(item.title)}</div>
       <div class="item-meta">${item.brand || ''}${item.size ? ' · ' + item.size : ''}</div></div>
     </div></td>
-    <td><strong>€${item.price}</strong></td>
+    <td>${priceCell(item)}</td>
     <td><div class="platform-badges">${renderListingBadges(item.id)}</div></td>
     <td>
       <button class="btn btn-sm btn-primary" onclick="openCrosslist('${item.id}')">Publish</button>
@@ -3445,7 +3471,7 @@ function renderItemsTable(items) {
         <div class="item-photo">${itemPhotoThumb(item)}</div>
         <div><div class="item-title">${esc(item.title)}${(item.sku || '').startsWith('IMP-') ? ` <span class="badge" style="background:#eef2ff;color:#4f46e5;font-size:10px;vertical-align:middle" title="Created by importing an existing platform listing">↓ Imported</span>` : ''}${publishingPill}</div><div class="item-meta">${item.brand || '—'}${item.size ? ' · ' + item.size : ''}</div>${errorBadge}${missingBadge}</div>
       </div></td>
-      <td><strong>€${item.price}</strong></td>
+      <td>${priceCell(item)}</td>
       <td class="hide-mobile">${conditionLabel(item.condition)}</td>
       <td class="hide-mobile" style="white-space:nowrap;color:var(--muted);font-size:12px">${fmtDate(item.created_at)}</td>
       <td class="hide-mobile" style="white-space:nowrap;font-size:12px">${pubDate ? `<span style="color:var(--green)">${pubDate}</span>` : '<span style="color:var(--muted)">—</span>'}</td>
