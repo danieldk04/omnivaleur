@@ -48,7 +48,7 @@ import textwrap
 import time
 from datetime import date, datetime, timedelta
 from email.message import EmailMessage
-from email.utils import parseaddr, parsedate_to_datetime
+from email.utils import formatdate, make_msgid, parseaddr, parsedate_to_datetime
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
@@ -1372,6 +1372,11 @@ def _zet_concept_klaar(lead: dict, inkomend, body: str, soort: str = "warm") -> 
     # eruit als een losse nieuwe mail: je leest je eigen antwoord zonder te zien
     # waar het op slaat, en je moet de draad erbij zoeken om te kunnen beoordelen
     # of het klopt. Precies zoals elk mailprogramma het zelf doet.
+    # Datum en eigen kenmerk horen erbij. Zonder Date-kop is het bericht formeel
+    # onvolledig; Zoho weet dan niet goed raad met het concept en laat hem na het
+    # verzenden gewoon staan. Zeven blijven hangen op 17-08-2026 waren hierdoor.
+    msg["Date"] = formatdate(localtime=True)
+    msg["Message-ID"] = make_msgid(domain=(os.environ.get("MAIL_USER", "@x").split("@")[-1]))
     msg.set_content(_concept_tekst(lead, body, soort) + _citaat(inkomend, body))
     try:
         with imaplib.IMAP4_SSL(host, 993) as im:
@@ -1437,6 +1442,103 @@ def _archiveer(msg: EmailMessage) -> None:
             imap.append(f'"{ALARM_MAP}"', "\\Seen", None, msg.as_bytes())
     except Exception as e:  # noqa: BLE001 — archiveren mag nooit iets blokkeren
         print(f"  (kopie niet in {ALARM_MAP} gezet: {e})")
+
+
+def _ruim_concepten_op() -> int:
+    """Weggooien wat niet meer nodig is.
+
+    Twee dingen gingen hier mis, allebei zichtbaar op 17-08-2026:
+      1. Een concept dat via IMAP is neergelegd hoort niet bij Zoho's eigen
+         conceptenadministratie. Druk je op verzenden, dan gaat de mail wél weg
+         maar blijft het concept staan.
+      2. Erger: er werden concepten neergelegd voor gesprekken die allang
+         beantwoord waren, waardoor het leek alsof er werk lag dat er niet was.
+
+    De regel is daarom niet "is het concept ouder dan de laatste mail", maar het
+    enige dat echt telt: **ligt er nog een bericht van hen waar jij niet op hebt
+    gereageerd?** Zo niet, dan is het concept overbodig — ongeacht wanneer het
+    gemaakt is."""
+    host, gebruiker = os.environ.get("IMAP_HOST"), os.environ.get("MAIL_USER")
+    wachtwoord = os.environ.get("MAIL_PASS")
+    if not (host and gebruiker and wachtwoord):
+        return 0
+    weg = 0
+    try:
+        with imaplib.IMAP4_SSL(host, 993) as imap:
+            imap.login(gebruiker, wachtwoord)
+            bestaand = {r.decode().split(' "/" ')[-1].strip('"')
+                        for r in (imap.list()[1] or [])}
+            map_ = CONCEPTMAP if CONCEPTMAP in bestaand else "Drafts"
+
+            def _tijden(mappen, veld):
+                """Laatste tijdstip per adres, in seconden sinds 1970 — koppen
+                dragen een tijdzone, dus nooit naïef vergelijken."""
+                uit: dict[str, float] = {}
+                for m_ in mappen:
+                    if imap.select(f'"{m_}"', readonly=True)[0] != "OK":
+                        continue
+                    _, d = imap.search(None, "ALL")
+                    for num in (d[0] or b"").split():
+                        _, ruw = imap.fetch(num, "(BODY.PEEK[HEADER])")
+                        if not ruw or not ruw[0]:
+                            continue
+                        msg = email.message_from_bytes(ruw[0][1])
+                        adres = parseaddr(msg.get(veld, ""))[1].lower()
+                        try:
+                            ts = parsedate_to_datetime(msg.get("Date", "")).timestamp()
+                        except Exception:  # noqa: BLE001
+                            continue
+                        if adres and (adres not in uit or ts > uit[adres]):
+                            uit[adres] = ts
+                return uit
+
+            verstuurd = _tijden(["Verzonden"], "To")
+            ontvangen = _tijden(["INBOX", "Beantwoord", "Afval"], "From")
+
+            imap.select(f'"{map_}"')
+            _, d = imap.uid("search", None, "ALL")
+            uids = (d[0] or b"").split()
+            # Per adres hoort er hooguit één concept te liggen. Bij het opnieuw
+            # klaarzetten kon er een tweede bijkomen, en twee voorstellen voor
+            # dezelfde persoon is geen keuze maar verwarring.
+            gezien: dict[str, bytes] = {}
+            dubbel: set[bytes] = set()
+            for uid in uids:
+                _, r = imap.uid("fetch", uid, "(BODY.PEEK[HEADER])")
+                if not r or not r[0]:
+                    continue
+                a = parseaddr(email.message_from_bytes(r[0][1]).get("To", ""))[1].lower()
+                if not a:
+                    continue
+                if a in gezien:
+                    dubbel.add(gezien[a])       # de oudere gaat weg
+                gezien[a] = uid
+
+            for uid in uids:
+                _, ruw = imap.uid("fetch", uid, "(BODY.PEEK[HEADER])")
+                if not ruw or not ruw[0]:
+                    continue
+                msg = email.message_from_bytes(ruw[0][1])
+                adres = parseaddr(msg.get("To", "")) [1].lower()
+                if not adres:
+                    continue
+                if uid in dubbel:
+                    imap.uid("store", uid, "+FLAGS", "(\\Deleted)")
+                    weg += 1
+                    continue
+                hun = ontvangen.get(adres)
+                ons = verstuurd.get(adres)
+                # Niets van hen, of wij hebben na hun laatste bericht geantwoord:
+                # er ligt niets meer open, dus dit concept hoort weg.
+                if hun is None or (ons is not None and ons > hun):
+                    # Zoho wil de vlag tussen haakjes; zonder geeft hij BAD.
+                    imap.uid("store", uid, "+FLAGS", "(\\Deleted)")
+                    weg += 1
+            if weg:
+                imap.expunge()
+    except Exception as e:  # noqa: BLE001 — opruimen mag nooit het mailen stoppen
+        print(f"  (concepten niet opgeruimd: {e})")
+    return weg
 
 
 def _opruimen(state: dict) -> None:
@@ -1688,6 +1790,10 @@ def tick(args) -> None:
                       f"hebt geantwoord → bal bij hen")
         except Exception as e:  # noqa: BLE001 — mag de ronde niet stoppen
             print(f"  (jouw antwoorden niet gelezen: {e})")
+
+        opgeruimd = _ruim_concepten_op()
+        if opgeruimd:
+            print(f"{datetime.now():%d-%m %H:%M} — {opgeruimd} verstuurd concept opgeruimd")
 
         gesloten = _afsluiten_stille_leads(state, boek)
         if gesloten:
