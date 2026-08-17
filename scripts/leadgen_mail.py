@@ -119,6 +119,58 @@ MIN_GAT = 9                   # minuten die minimaal tussen twee tijdstippen zit
 # van dat antwoord — dát ze al crosslisten — verloren ging. Een nee is nu een nee
 # (zie AFWIJZING) en een afmelding is een afmelding. Beide stoppen het mailen,
 # dus dit kan niemand extra post opleveren.
+# ── Afsluitmailtjes ────────────────────────────────────────────────────────
+# Iemand die de moeite neemt om te antwoorden verdient een antwoord terug, ook —
+# júist — als het een nee is. Twee zinnen, geen verkooppoging, deur open laten.
+# Dat is gewoon fatsoen, en het is bovendien het enige moment waarop je iemand
+# een goed gevoel kunt geven over een mail die hij niet gevraagd had.
+#
+# VIER REGELS, en alle vier hebben een reden:
+#  1. NOOIT naar iemand die zich afmeldt. Die vroeg om stilte; nog een mailtje is
+#     precies wat hij níét wilde, en wettelijk het enige dat echt niet mag.
+#  2. NOOIT naar een automatisch antwoord. Dan mail je met een robot.
+#  3. Hooguit één keer per bedrijf, ooit.
+#  4. NIET meteen. Binnen tien seconden terugschrijven is het duidelijkste teken
+#     dat er geen mens meezit. Twintig tot negentig minuten leest als "ik zag je
+#     mailtje en heb er even op gereageerd".
+#
+# Meerdere varianten, willekeurig gekozen: twee handelaren die elkaar spreken
+# horen niet exact dezelfde zin te hebben gekregen.
+AFSLUIT_UIT = False          # noodrem: op True zet het hele afsluiten stil
+
+AFSLUIT_VERTRAGING = (20, 90)          # minuten
+
+AFSLUIT_CONCURRENT = [
+    """Bedankt voor de snelle reactie! Helder dat het doorzetten naar Marktplaats
+al goed geregeld is.
+
+Mocht {je} in de toekomst willen uitbreiden naar Vinted of eBay, dan weet {je} me
+te vinden. Succes met de verkoop!""",
+    """Dank voor het laten weten, en fijn dat het al draait.
+
+Als er ooit een platform bijkomt waar {je} nog niet op zit, hoor ik het graag.
+Verder veel succes met de winkel!""",
+    """Helder, dank {je} wel. Dan laat ik {je} met rust.
+
+Loopt {je} ooit tegen een platform aan waar het overzetten wél handwerk is, stuur
+dan gerust een berichtje. Succes!""",
+]
+
+AFSLUIT_AFWIJZING = [
+    """Bedankt voor het eerlijke antwoord, daar heb ik meer aan dan aan stilte.
+
+Ik laat {je} verder met rust. Mocht het ooit veranderen, dan weet {je} me te
+vinden. Succes met de verkoop!""",
+    """Duidelijk, dank {je} wel voor de moeite van het reageren.
+
+Dan haal ik {je} van mijn lijstje. Veel succes met de winkel!""",
+    """Helder, en bedankt voor je reactie.
+
+Ik val {je} niet verder lastig. Verandert het ooit, dan hoor ik het graag —
+succes ondertussen!""",
+]
+
+
 AFMELD_WOORDEN = re.compile(
     r"\b(stop|afmelden|uitschrijven|unsubscribe|opt.?out"
     # "niet meer mailen" ving "niet meer TE mailen" niet, en zo schreef iemand het
@@ -146,13 +198,26 @@ AFWIJZING = re.compile(
 # zinnen vangen de rest. Blijft het bij een vage "we hebben al iets", dan telt
 # dat ook hier — dat is nog steeds "bezet", niet "niet geïnteresseerd".
 CONCURRENT = re.compile(
-    r"\b(channable|lengow|channelengine|effectconnect|productflow|shoppingfeed"
-    r"|shopping ?feed|goedgepickt|itsperfect|picqer|storekeeper|admarkt)\b"
+    # Namen van de tools die deze doelgroep echt gebruikt.
+    r"\b(channable|channabel|lengow|channelengine|effectconnect|productflow"
+    r"|shoppingfeed|shopping ?feed|goedgepickt|itsperfect|picqer|storekeeper"
+    r"|admarkt|mijnwebwinkel|lightspeed|ccvshop)\b"
     r"|we (gebruiken|hebben|werken met) al (een|iets|zo'?n|de|het)"
     r"|(gebruiken|hebben) hier al een (tool|systeem|programma|koppeling)"
     r"|(zit|zitten) al bij (een|een andere)"
-    r"|we (already )?(use|have) (a|another)"
-    r"|already using", re.I)
+    r"|we (already )?(use|have) (a|another)|already using"
+    # ── En dit is hoe verkopers het in de praktijk opschrijven ──────────────
+    # Vrijwel niemand noemt zijn tool bij naam; ze zeggen "het gaat al vanzelf".
+    # Deze drie echte antwoorden werden gemist en belandden als "warm" in de
+    # lijst: "Alles wordt al automatisch op marktplaats geplaats" (let op de
+    # typefout), "heb een programma dat al mijn advertenties automatisch
+    # doorplaatst" en "al onze artikelen gaan al automatisch naar mp toe".
+    r"|\bautomatisch\b.{0,60}\b(geplaats|doorplaats|doorgeplaats|gezet|verstuur|naar)"
+    r"|\b(gaat|gaan|wordt|worden|loopt|lopen)\b.{0,30}\bal (automatisch|vanzelf)"
+    r"|\bal (automatisch|vanzelf|geautomatiseerd)\b"
+    r"|\b(heb|hebben|via|met) (een|mijn|onze|ons) (eigen )?(programma|feed|koppeling|script|systeem)"
+    r"|\beigen (feed|koppeling|systeem|programma)\b"
+    r"|\bfeed\b.{0,30}\b(naar|richting)\b", re.I)
 BOUNCE_AFZENDERS = re.compile(r"mailer-daemon|postmaster|no-?reply", re.I)
 # Een automatisch antwoord is geen antwoord. Zou je het wel zo tellen, dan valt
 # iemand die "ik ben op vakantie" terugstuurt uit de opvolging en hoor je nooit
@@ -621,6 +686,13 @@ class Notion:
             wensen["Status"] = ("status", "Interesse")
         self._schrijf(lead, "heeft geantwoord op de mail", wensen)
 
+    def afgesloten_bericht(self, lead: dict, soort: str) -> None:
+        """Vastleggen dat er een afsluitend berichtje uit is. Zonder deze regel
+        lijkt het in Notion alsof er nooit op hun antwoord gereageerd is, en dan
+        gaat Daniel het alsnog met de hand doen — dubbelop."""
+        wat = "gebruikt al iets" if soort == "concurrent" else "geen interesse"
+        self._schrijf(lead, f"afsluitend bedankje gestuurd ({wat}) — niets meer te doen", {})
+
     def gebruikt_concurrent(self, lead: dict) -> None:
         """Crosslist al, maar met iemand anders. Bewaren als eigen groep: dit is
         geen nee maar een bezet ja, en de meest kansrijke lijst die je hebt zodra
@@ -875,6 +947,16 @@ def _check_inbox(state: dict, boek: "Notion", dagen: int) -> tuple[int, int, int
                 if lead and soort in ("warm", "onbekend"):
                     _alarm(lead, kop, body)
 
+            # Een afsluitmailtje inplannen — niet nu versturen. Zie
+            # AFSLUIT_* hierboven voor waarom er tijd tussen moet zitten.
+            if (soort in ("concurrent", "afwijzing") and not AFSLUIT_UIT
+                    and not st.get("afsluit_gepland") and not st.get("afgemeld")
+                    and not st.get("auto_antwoord")):
+                wacht = random.randint(*AFSLUIT_VERTRAGING)
+                st["afsluit_gepland"] = soort
+                st["afsluit_na"] = (datetime.now()
+                                    + timedelta(minutes=wacht)).isoformat(timespec="seconds")
+
             if soort == "afmelding" and not st.get("afgemeld"):
                 st["afgemeld"] = True
                 afgemeld += 1
@@ -972,6 +1054,60 @@ def _eigen_mail_meenemen(state: dict, boek: "Notion") -> int:
     if nieuw:
         _save_state(state)
     return nieuw
+
+
+def _afsluitmails(state: dict, boek: "Notion") -> int:
+    """Verstuurt de ingeplande afsluitmailtjes waarvan de tijd om is.
+
+    Aparte stap, en niet direct bij het lezen van de inbox: dan zou het antwoord
+    binnen seconden terugkomen en dat leest als een automaat. Hier gaat het langs
+    zodra de wachttijd voorbij is — meestal een uurtje later."""
+    if AFSLUIT_UIT:
+        return 0
+    nu = datetime.now()
+    klaar = [(a, st) for a, st in state.items()
+             if st.get("afsluit_na") and not st.get("afsluit_verstuurd")
+             and not st.get("afgemeld")
+             and datetime.fromisoformat(st["afsluit_na"]) <= nu]
+    if not klaar:
+        return 0
+
+    host, gebruiker = os.environ.get("MAIL_HOST"), os.environ.get("MAIL_USER")
+    wachtwoord = os.environ.get("MAIL_PASS")
+    if not (host and gebruiker and wachtwoord):
+        return 0
+
+    per_adres = {l["email"].lower(): l for l in _leads()}
+    verstuurd = 0
+    with smtplib.SMTP_SSL(host, 465, context=ssl.create_default_context()) as smtp:
+        smtp.login(gebruiker, wachtwoord)
+        for adres, st in klaar:
+            lead = per_adres.get(adres) or {"email": adres, "je_jullie": "Je"}
+            soort = st.get("afsluit_gepland")
+            teksten = AFSLUIT_CONCURRENT if soort == "concurrent" else AFSLUIT_AFWIJZING
+            je = "jullie" if str(lead.get("je_jullie", "")).lower().startswith("jul") else "je"
+            body = random.choice(teksten).format(je=je)
+
+            msg = EmailMessage()
+            msg["From"] = f"{AFZENDER_NAAM} <{gebruiker}>"
+            msg["To"] = adres
+            # In dezelfde draad blijven: een los onderwerp zou een nieuw gesprek
+            # beginnen terwijl dit juist een afsluiting is.
+            msg["Subject"] = "Re: " + _onderwerp(lead, 0)
+            msg.set_content(f"{body}\n\n{ONDERTEKENING}\n")
+            try:
+                smtp.send_message(msg)
+            except Exception as e:  # noqa: BLE001 — één weigering stopt de rest niet
+                print(f"  ! afsluitmail {adres}: {e}")
+                continue
+            st["afsluit_verstuurd"] = nu.isoformat(timespec="seconds")
+            verstuurd += 1
+            print(f"  ↩ afsluitmail ({soort}) naar {adres}", flush=True)
+            if per_adres.get(adres):
+                boek.afgesloten_bericht(per_adres[adres], soort)
+            _save_state(state)
+            time.sleep(random.uniform(*PAUZE))
+    return verstuurd
 
 
 def _alarm(lead: dict, onderwerp: str, body: str) -> None:
@@ -1240,6 +1376,14 @@ def tick(args) -> None:
         if not plan.get("gecheckt"):
             plan["gecheckt"] = True
             _save_plan(plan)
+        try:
+            afsluit = _afsluitmails(state, boek)
+            if afsluit:
+                print(f"{datetime.now():%d-%m %H:%M} — {afsluit} afsluitmail(s) verstuurd")
+        except Exception as e:  # noqa: BLE001 — dit mag de ronde niet stoppen
+            print(f"  (afsluitmail niet verstuurd: {e})")
+            plan.setdefault("fouten", []).append(f"afsluitmail: {e}")
+
         gesloten = _afsluiten_stille_leads(state, boek)
         if gesloten:
             print(f"{datetime.now():%d-%m %H:%M} — {gesloten} lead(s) afgesloten: "
