@@ -766,6 +766,39 @@ def check(args) -> None:
                 print(f"  {st.get('bedrijf') or adres} — {adres}")
 
 
+def _zelfde_bedrijf(afzender: str, state: dict) -> str | None:
+    """Het adres uit de administratie dat bij deze afzender hoort, op domein.
+
+    Alleen bij precies één treffer. Twee mensen bij hetzelfde bedrijf die allebei
+    zijn aangeschreven mag je niet op de gok aan elkaar knopen: dan zou het
+    antwoord van de een de opvolging van de ander stilzetten."""
+    domein = afzender.split("@")[-1].lower()
+    if not domein or "." not in domein:
+        return None
+
+    def stam(d: str) -> str:
+        # Alleen de naam zelf: geen subdomein, geen extensie, geen streepjes.
+        # "info@mail.afstandsbediening-online.nl" → "afstandsbedieningonline".
+        kern = ".".join(d.split(".")[-2:]).rsplit(".", 1)[0]
+        return re.sub(r"[^a-z0-9]", "", kern)
+
+    mij = stam(domein)
+    if len(mij) < 8:                 # "shop", "abc" — te kort om iets te bewijzen
+        return None
+
+    kandidaten = []
+    for adres in state:
+        ander = stam(adres.split("@")[-1].lower())
+        if len(ander) < 8:
+            continue
+        # Gelijk, of de een is het begin van de ander: afstandsbediening ↔
+        # afstandsbedieningonline. Verderop in de naam laten we los, want dan
+        # gaat het al snel over toevallige woorddelen.
+        if mij == ander or mij.startswith(ander) or ander.startswith(mij):
+            kandidaten.append(adres)
+    return kandidaten[0] if len(kandidaten) == 1 else None
+
+
 def _check_inbox(state: dict, boek: "Notion", dagen: int) -> tuple[int, int, int]:
     """Antwoorden, afmeldingen en bounces ophalen. Wie antwoordt krijgt geen
     opvolgmail meer; dat is het verschil tussen opvolgen en zeuren."""
@@ -794,6 +827,16 @@ def _check_inbox(state: dict, boek: "Notion", dagen: int) -> tuple[int, int, int
                 continue
 
             st = state.get(afzender)
+            if not st:
+                # Antwoorden komen lang niet altijd terug van het adres waar wij
+                # naartoe schreven. A. Dinkelaar kreeg mail op
+                # info@afstandsbediening-online.nl en antwoordde vanaf
+                # info@afstandsbediening.nl — voor de machine een wildvreemde, dus
+                # zijn "nee dank je, het is al geautomatiseerd" werd niet gezien
+                # én de opvolgmails liepen gewoon door. Zelfde huis, ander adres:
+                # koppel op domein zodra dat maar één kandidaat oplevert.
+                afzender = _zelfde_bedrijf(afzender, state) or afzender
+                st = state.get(afzender)
             if not st:
                 continue
             kop = str(msg.get("Subject", ""))
@@ -1184,7 +1227,11 @@ def tick(args) -> None:
     # de opvolging in plaats van pas de volgende dag.
     if state:
         try:
-            nieuw, afgemeld, bounces = _check_inbox(state, boek, dagen=4)
+            # Veertien dagen terugkijken, niet vier. Elk antwoord wordt maar één keer
+            # verwerkt (de administratie onthoudt dat), dus verder terugkijken kost
+            # niets en vangt wél de antwoorden op die binnenkwamen terwijl de machine
+            # stilstond of terwijl er nog geen indeling in nee/concurrent bestond.
+            nieuw, afgemeld, bounces = _check_inbox(state, boek, dagen=14)
             print(f"{datetime.now():%d-%m %H:%M} — inbox: {nieuw} antwoorden, "
                   f"{afgemeld} afmeldingen, {bounces} bounces")
         except Exception as e:  # noqa: BLE001 — een dichte inbox stopt het mailen niet
