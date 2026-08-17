@@ -979,6 +979,12 @@ def _check_inbox(state: dict, boek: "Notion", dagen: int) -> tuple[int, int, int
                     if _zet_concept_klaar(lead, msg, body):
                         st["concept_klaar"] = datetime.now().isoformat(timespec="seconds")
                     boek.wacht_op_daniel(lead)
+                # Ook bij een nee: een afsluitend bedankje staat klaar, maar gaat
+                # alleen weg als Daniel er zelf op drukt. Zo kan er nooit een
+                # tweede bedankje uit naast het zijne.
+                elif lead and soort in ("concurrent", "afwijzing"):
+                    if _zet_concept_klaar(lead, msg, body, soort):
+                        st["concept_klaar"] = datetime.now().isoformat(timespec="seconds")
 
             # Een afsluitmailtje inplannen — niet nu versturen. Zie
             # AFSLUIT_* hierboven voor waarom er tijd tussen moet zitten.
@@ -1216,9 +1222,19 @@ def _wat_vraagt_hij(body: str) -> set[str]:
     return uit
 
 
-def _concept_tekst(lead: dict, body: str) -> str:
+def _concept_tekst(lead: dict, body: str, soort: str = "warm") -> str:
     """Het voorstel-antwoord. Kort, in Daniels toon: geen verkooppraat, concreet,
-    en altijd eindigen met een lage drempel."""
+    en altijd eindigen met een lage drempel.
+
+    Ook bij een NEE staat er een concept klaar. Niets gaat vanzelf de deur uit —
+    dat was juist de wens — maar als Daniel iemand netjes wil afsluiten, moet dat
+    één tik zijn en geen schrijfklus. Hij beslist zelf of hij hem verstuurt."""
+    if soort in ("concurrent", "afwijzing"):
+        jij = "jullie" if str(lead.get("je_jullie", "")).lower().startswith("jul") else "je"
+        teksten = AFSLUIT_CONCURRENT if soort == "concurrent" else AFSLUIT_AFWIJZING
+        return "\n".join(["Hi,", "",
+                          random.choice(teksten).format(je=jij), "", ONDERTEKENING])
+
     vraagt = _wat_vraagt_hij(body)
     jij = "jullie" if str(lead.get("je_jullie", "")).lower().startswith("jul") else "je"
     regels = ["Hi,", "", "Dank voor je reactie!"]
@@ -1245,7 +1261,7 @@ def _concept_tekst(lead: dict, body: str) -> str:
     return "\n".join(regels)
 
 
-def _zet_concept_klaar(lead: dict, inkomend, body: str) -> bool:
+def _zet_concept_klaar(lead: dict, inkomend, body: str, soort: str = "warm") -> bool:
     """Legt het voorstel als concept in Daniels postbus, in dezelfde draad."""
     host, van = os.environ.get("IMAP_HOST"), os.environ.get("MAIL_USER")
     wachtwoord = os.environ.get("MAIL_PASS")
@@ -1263,7 +1279,7 @@ def _zet_concept_klaar(lead: dict, inkomend, body: str) -> bool:
     if inkomend is not None and inkomend.get("Message-ID"):
         msg["In-Reply-To"] = inkomend["Message-ID"]
         msg["References"] = inkomend.get("References", "") + " " + inkomend["Message-ID"]
-    msg.set_content(_concept_tekst(lead, body))
+    msg.set_content(_concept_tekst(lead, body, soort))
     try:
         with imaplib.IMAP4_SSL(host, 993) as im:
             im.login(van, wachtwoord)
