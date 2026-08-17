@@ -3159,17 +3159,37 @@ async function bgScanMp2dh(job, serverUrl) {
             it.photo_url = it.photo_url || e.photo_urls[0];
           }
         }
-        const perItem = ((Date.now() - startedAt) / 1000) / (i + 1);
-        await reportProgress(serverUrl, job.id, {
-          stage: "enriching",
-          message: `Fetching details ${i + 1}/${total}…`,
-          current: i + 1, total,
-          eta_seconds: Math.max(0, Math.round(perItem * (total - i - 1))),
-        });
+        // Voortgang melden is versiering, geen werk. Toch stond deze aanroep
+        // KAAL in de lus: één mislukte melding — een hik op de server, een 500
+        // — vloog naar de vangst hieronder en gooide de verrijking van ALLE
+        // resterende advertenties weg. De scan meldde zich daarna gewoon als
+        // geslaagd. Bij een verkoper met 1.245 advertenties kwamen zo de laatste
+        // 304 binnen met één foto en zonder tekst, zonder dat iemand iets zag.
+        //
+        // En niet meer bij elke advertentie: dat waren 1.245 schrijfacties naar
+        // de server voor een voortgangsbalk. Elke tiende is genoeg, en dat is
+        // meteen tien keer minder kans dat het misgaat.
+        if (i % 10 === 0 || i === teVerrijken.length - 1) {
+          const perItem = ((Date.now() - startedAt) / 1000) / (i + 1);
+          try {
+            await reportProgress(serverUrl, job.id, {
+              stage: "enriching",
+              message: `Fetching details ${i + 1}/${total}…`,
+              current: i + 1, total,
+              eta_seconds: Math.max(0, Math.round(perItem * (total - i - 1))),
+            });
+          } catch (e3) {
+            console.warn("[Omnivaleur] voortgang niet gemeld (gaat gewoon door):", e3);
+          }
+        }
         await sleep(150); // gentle, and keeps the worker warm
       }
     } catch (e) {
-      console.warn(`[Omnivaleur] ${platform} enrichment aborted, sending list data only:`, e);
+      // Komt er hier tóch iets doorheen, leg dan vast hoe ver we kwamen. Anders
+      // ziet een halve oogst er precies zo uit als een hele.
+      console.warn(`[Omnivaleur] ${platform} enrichment aborted at ${enriched}/${total}:`, e);
+      result.meta = { ...(result.meta || {}), enrichment_aborted_at: enriched,
+                      enrichment_error: String(e && e.message || e).slice(0, 200) };
     }
 
     await reportProgress(serverUrl, job.id, {
