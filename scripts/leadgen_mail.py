@@ -1205,6 +1205,118 @@ def _afsluitmails(state: dict, boek: "Notion") -> int:
     return verstuurd
 
 
+# ── Warme leads die stil vallen ───────────────────────────────────────────
+# Het duurste gat dat er was. Zodra iemand antwoordt stopt de opvolging — dat is
+# juist, want je wilt niet dat een sjabloon door een lopend gesprek heen fietst.
+# Maar daarmee viel ook de groep stil die het meest waard is: wie om de video
+# vroeg, hem kreeg, en daarna niets meer liet horen. Die kreeg NIETS. Terwijl een
+# koude lead er drie mails achteraan krijgt.
+#
+# Dus: is er na jouw antwoord een aantal dagen niets teruggekomen, dan staat er
+# een opvolging klaar. Niet versturen — dat blijft jouw beslissing — maar wel
+# geschreven, zodat het een tik is in plaats van een schrijfklus.
+#
+# Twee beurten en dan stoppen. Wie na twee zetjes niets zegt, zegt daarmee genoeg.
+WARM_OPVOLG_DAGEN = (3, 7)
+REGISTREREN = "https://omnivaleur.com/register"
+
+WARM_OPVOLG = [
+    """Hi,
+
+Even een kort berichtje: heb je nog naar de video kunnen kijken?
+
+Ik ben vooral benieuwd of het aansluit bij hoe jij het nu doet, en of er iets is
+wat je mist. Vragen mag ook gewoon, daar word ik alleen maar beter van.
+
+{ondertekening}""",
+    """Hi,
+
+Laatste berichtje van mij hierover, ik val je verder niet lastig.
+
+Mocht je het gewoon willen proberen: je kunt zelf een account aanmaken op
+{link} en de eerste 7 dagen zijn gratis. Geen opzegtermijn, dus als het je niets
+oplevert stop je weer.
+
+En loop je ergens tegenaan, stuur me dan een berichtje. Ik help je er persoonlijk
+doorheen.
+
+{ondertekening}""",
+]
+
+
+def _warme_opvolging(state: dict, boek: "Notion") -> int:
+    """Zet een opvolging klaar voor warme leads die stil zijn gevallen.
+
+    De tijden komen uit de postbus zelf, niet uit de administratie: Daniel
+    antwoordt vaak vanaf zijn telefoon buiten de machine om, en dan klopt alleen
+    wat er werkelijk verstuurd en ontvangen is."""
+    host, gebruiker = os.environ.get("IMAP_HOST"), os.environ.get("MAIL_USER")
+    wachtwoord = os.environ.get("MAIL_PASS")
+    if not (host and gebruiker and wachtwoord):
+        return 0
+    per_adres = {l["email"].lower(): l for l in _leads()}
+    nu = datetime.now()
+    klaar = 0
+    try:
+        with imaplib.IMAP4_SSL(host, 993) as imap:
+            imap.login(gebruiker, wachtwoord)
+
+            def _laatst(mappen, veld):
+                uit: dict[str, float] = {}
+                for m_ in mappen:
+                    if imap.select(f'"{m_}"', readonly=True)[0] != "OK":
+                        continue
+                    _, d = imap.search(None, "ALL")
+                    for num in (d[0] or b"").split():
+                        _, ruw = imap.fetch(num, "(BODY.PEEK[HEADER])")
+                        if not ruw or not ruw[0]:
+                            continue
+                        msg = email.message_from_bytes(ruw[0][1])
+                        a = parseaddr(msg.get(veld, ""))[1].lower()
+                        try:
+                            ts = parsedate_to_datetime(msg.get("Date", "")).timestamp()
+                        except Exception:  # noqa: BLE001
+                            continue
+                        if a and (a not in uit or ts > uit[a]):
+                            uit[a] = ts
+                return uit
+
+            verstuurd = _laatst(["Verzonden"], "To")
+            ontvangen = _laatst(["INBOX", "Beantwoord", "Afval"], "From")
+
+            for adres, st in list(state.items()):
+                # Alleen warme gesprekken. Een nee of een concurrent laat je met rust.
+                if st.get("soort") not in ("warm", "onbekend"):
+                    continue
+                if st.get("afgemeld") or st.get("afgewezen") or st.get("concurrent"):
+                    continue
+                ons, hun = verstuurd.get(adres), ontvangen.get(adres)
+                if ons is None or hun is None or hun > ons:
+                    continue                       # bal ligt bij ons, niet bij hen
+                beurt = int(st.get("warm_opvolg", 0))
+                if beurt >= len(WARM_OPVOLG_DAGEN):
+                    continue                       # twee zetjes gehad, klaar
+                stil = (nu.timestamp() - ons) / 86400
+                if stil < WARM_OPVOLG_DAGEN[beurt]:
+                    continue
+
+                lead = per_adres.get(adres) or {"email": adres, "je_jullie": "Je"}
+                lead = {**lead, "email": adres}
+                tekst = WARM_OPVOLG[beurt].format(link=REGISTREREN,
+                                                  ondertekening=ONDERTEKENING)
+                if _zet_concept_klaar(lead, None, "", "warm", eigen_tekst=tekst):
+                    st["warm_opvolg"] = beurt + 1
+                    st["warm_opvolg_op"] = nu.isoformat(timespec="seconds")
+                    klaar += 1
+                    if per_adres.get(adres):
+                        boek.wacht_op_daniel(per_adres[adres])
+    except Exception as e:  # noqa: BLE001 — mag de ronde nooit stoppen
+        print(f"  (warme opvolging niet gelukt: {e})")
+    if klaar:
+        _save_state(state)
+    return klaar
+
+
 # ── Klaargezet antwoord op een warme reactie ──────────────────────────────
 # Daniel schiet in de startblokken zodra er "interesse" binnenkomt en wordt daar
 # onrustig van: hij denkt dat hij nú moet reageren. Dat hoeft niet — bij koude
@@ -1380,7 +1492,8 @@ def _citaat(inkomend, body: str) -> str:
     return "\n\n" + kop + "\n" + "\n".join("> " + r for r in regels) + "\n"
 
 
-def _zet_concept_klaar(lead: dict, inkomend, body: str, soort: str = "warm") -> bool:
+def _zet_concept_klaar(lead: dict, inkomend, body: str, soort: str = "warm",
+                       eigen_tekst: str | None = None) -> bool:
     """Legt het voorstel als concept in Daniels postbus, in dezelfde draad."""
     host, van = os.environ.get("IMAP_HOST"), os.environ.get("MAIL_USER")
     wachtwoord = os.environ.get("MAIL_PASS")
@@ -1390,6 +1503,8 @@ def _zet_concept_klaar(lead: dict, inkomend, body: str, soort: str = "warm") -> 
     msg["From"] = f"{AFZENDER_NAAM} <{van}>"
     msg["To"] = lead["email"]
     onderwerp = str(inkomend.get("Subject", "")) if inkomend is not None else ""
+    if not onderwerp:
+        onderwerp = _onderwerp(lead, 0)
     if not onderwerp.lower().startswith("re:"):
         onderwerp = "Re: " + (onderwerp or _onderwerp(lead, 0))
     msg["Subject"] = onderwerp
@@ -1407,7 +1522,8 @@ def _zet_concept_klaar(lead: dict, inkomend, body: str, soort: str = "warm") -> 
     # verzenden gewoon staan. Zeven blijven hangen op 17-08-2026 waren hierdoor.
     msg["Date"] = formatdate(localtime=True)
     msg["Message-ID"] = make_msgid(domain=(os.environ.get("MAIL_USER", "@x").split("@")[-1]))
-    msg.set_content(_concept_tekst(lead, body, soort) + _citaat(inkomend, body))
+    kern = eigen_tekst if eigen_tekst is not None else _concept_tekst(lead, body, soort)
+    msg.set_content(kern + _citaat(inkomend, body))
     try:
         with imaplib.IMAP4_SSL(host, 993) as im:
             im.login(van, wachtwoord)
@@ -1841,6 +1957,14 @@ def tick(args) -> None:
                       f"hebt geantwoord → bal bij hen")
         except Exception as e:  # noqa: BLE001 — mag de ronde niet stoppen
             print(f"  (jouw antwoorden niet gelezen: {e})")
+
+        try:
+            warm = _warme_opvolging(state, boek)
+            if warm:
+                print(f"{datetime.now():%d-%m %H:%M} — {warm} warme lead(s) stilgevallen "
+                      f"→ opvolging klaargezet in je concepten")
+        except Exception as e:  # noqa: BLE001
+            print(f"  (warme opvolging mislukt: {e})")
 
         opgeruimd = _ruim_concepten_op()
         if opgeruimd:
