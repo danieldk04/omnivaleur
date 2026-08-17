@@ -1730,6 +1730,7 @@ input[type="checkbox"].row-check { width: 15px; height: 15px; cursor: pointer; a
           <option value="games">Games &amp; Consoles</option>
           <option value="electronics">Electronics &amp; Gadgets</option>
           <option value="sieraden">Jewellery, Watches &amp; Bags</option>
+          <option value="muziek">Music &amp; Instruments</option>
         </select>
       </div>
 
@@ -6179,6 +6180,29 @@ function renderPlatformCheckboxes(containerId, itemId) {
 
 // ── Category options per gender ───────────────────────────────────
 const CATEGORIES = {
+  // Marktplaats' muziekboom, gelijk aan _TAXONOMY['muziek'] in
+  // backend/api/imports.py en MP_CATEGORIES in de extensie. Ontbrak hier,
+  // waardoor een muziekitem terugviel op kleding — zie NON_CLOTHING_PREFIXES.
+  muziek: [
+    ["muziek accordeons","Accordeons"],["muziek behuizingen en koffers","Cases & Bags"],["muziek blaasinstrumenten blokfluiten","Wind — blokfluiten"],
+    ["muziek blaasinstrumenten didgeridoos","Wind — didgeridoos"],["muziek blaasinstrumenten dwarsfluiten en piccolo's","Wind — dwarsfluiten en piccolo's"],["muziek blaasinstrumenten hobo's","Wind — hobo's"],
+    ["muziek blaasinstrumenten hoorns","Wind — hoorns"],["muziek blaasinstrumenten klarinetten","Wind — klarinetten"],["muziek blaasinstrumenten mondharmonica's","Wind — mondharmonica's"],
+    ["muziek blaasinstrumenten overige","Wind — overige"],["muziek blaasinstrumenten saxofoons","Wind — saxofoons"],["muziek blaasinstrumenten trombones","Wind — trombones"],
+    ["muziek blaasinstrumenten trompetten","Wind — trompetten"],["muziek blaasinstrumenten tuba's","Wind — tuba's"],["muziek bladmuziek","Sheet Music"],
+    ["muziek dj-sets en draaitafels","Dj-sets en draaitafels"],["muziek draaiorgels","Draaiorgels"],["muziek drumcomputers","Drumcomputers"],
+    ["muziek drumstellen en slagwerk","Drumstellen en slagwerk"],["muziek effecten","Effecten"],["muziek instrumenten onderdelen","Instrumenten onderdelen"],
+    ["muziek instrumenten toebehoren","Accessories & Parts"],["muziek kabels en stekkers","Kabels en stekkers"],["muziek keyboards","Keyboards"],
+    ["muziek licht en laser","Licht en laser"],["muziek mengpanelen","Mengpanelen"],["muziek microfoons","Microphones"],
+    ["muziek midi-apparatuur","Midi-apparatuur"],["muziek orgels","Orgels"],["muziek orkestbanden","Orkestbanden"],
+    ["muziek overige muziek en instrumenten","Overige muziek en instrumenten"],["muziek percussie","Percussie"],["muziek piano's","Piano's"],
+    ["muziek samplers","Samplers"],["muziek snaarinstrumenten banjo's","Strings — banjo's"],["muziek snaarinstrumenten gitaren akoestisch","Acoustic Guitars"],
+    ["muziek snaarinstrumenten gitaren bas","Strings — gitaren bas"],["muziek snaarinstrumenten gitaren elektrisch","Electric Guitars"],["muziek snaarinstrumenten harpen","Strings — harpen"],
+    ["muziek snaarinstrumenten klavecimbels","Strings — klavecimbels"],["muziek snaarinstrumenten mandolines","Strings — mandolines"],["muziek snaarinstrumenten overige","Strings — overige"],
+    ["muziek soundmodules","Soundmodules"],["muziek standaards","Standaards"],["muziek strijkinstrumenten cello's","Strijkinstrumenten cello's"],
+    ["muziek strijkinstrumenten contrabassen","Strijkinstrumenten contrabassen"],["muziek strijkinstrumenten overige","Strijkinstrumenten overige"],["muziek strijkinstrumenten violen en altviolen","Strijkinstrumenten violen en altviolen"],
+    ["muziek synthesizers","Synthesizers"],["muziek theaterbelichting","Theaterbelichting"],["muziek versterkers bas en gitaar","Versterkers bas en gitaar"],
+    ["muziek versterkers keyboard, monitor en pa","Versterkers keyboard, monitor en pa"],
+  ],
   dames: [
     ["jeans","Jeans / Denim"],["broeken","Trousers / Chinos"],["shorts","Shorts"],
     ["rokken","Skirts"],["jurken casual","Casual Dresses"],["jurken feest","Party Dresses"],
@@ -6292,7 +6316,7 @@ const CATEGORIES = {
 // Non-clothing items are recognised purely by their category prefix (mirrors
 // backend crosslist.py _is_non_clothing), so no extra field has to be stored.
 // Each prefix maps to the matching item-type value in the form's type select.
-const NON_CLOTHING_PREFIXES = { 'games ': 'games', 'electronics ': 'electronics', 'sieraden ': 'sieraden' };
+const NON_CLOTHING_PREFIXES = { 'games ': 'games', 'electronics ': 'electronics', 'sieraden ': 'sieraden', 'muziek ': 'muziek' };
 function isNonClothingItem(item) {
   const cat = String(item?.category || '').trim().toLowerCase();
   return Object.keys(NON_CLOTHING_PREFIXES).some(p => cat.startsWith(p));
