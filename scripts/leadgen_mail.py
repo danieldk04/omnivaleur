@@ -1037,6 +1037,13 @@ def _jouw_antwoorden_verwerken(state: dict, boek: "Notion") -> int:
             adres, st = adres2, state[adres2]
         if not st.get("beantwoord"):
             continue                       # geen gesprek, dus niets om bij te werken
+        # Een beleefd bedankje aan iemand die net "wij gebruiken al Channable"
+        # schreef, betekent niet dat we op hem wachten. Zonder deze regel zette
+        # deze stap vijf afgesloten leads terug op "bal bij hen" en was de lijst
+        # meteen weer onbetrouwbaar — precies wat hij moest oplossen.
+        if st.get("concurrent") or st.get("afgewezen") or st.get("afgemeld"):
+            st["daniel_antwoordde"] = datum      # wel vastleggen, niets omzetten
+            continue
         if st.get("daniel_antwoordde") == datum:
             continue                       # al verwerkt
         st["daniel_antwoordde"] = datum
