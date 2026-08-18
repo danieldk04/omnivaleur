@@ -942,11 +942,24 @@ def _check_inbox(state: dict, boek: "Notion", dagen: int) -> tuple[int, int, int
     laatst_verstuurd = _laatst_verstuurd_per_adres()
     with imaplib.IMAP4_SSL(host, 993) as imap:
         imap.login(gebruiker, _need("MAIL_PASS"))
-        imap.select("INBOX")
-        _, data = imap.search(None, f'(SINCE {sinds})')
-        for num in data[0].split():
-            _, ruw = imap.fetch(num, "(RFC822)")
-            msg = email.message_from_bytes(ruw[0][1])
+        # Ook in Beantwoord kijken. Daar is in het verleden mail beland die nooit
+        # beantwoord was (zie _waar_hoort_dit); zonder deze map zou die voorgoed
+        # onzichtbaar blijven voor de machine.
+        berichten = []
+        for map_ in ("INBOX", MAP_BEANTWOORD):
+            try:
+                if imap.select(f'"{map_}"')[0] != "OK":
+                    continue
+                _, data = imap.search(None, f'(SINCE {sinds})')
+            except Exception:  # noqa: BLE001
+                continue
+            for num in (data[0] or b"").split():
+                _, ruw = imap.fetch(num, "(RFC822)")
+                if ruw and ruw[0]:
+                    berichten.append(ruw[0][1])
+
+        for _ruw in berichten:
+            msg = email.message_from_bytes(_ruw)
             afzender = parseaddr(msg.get("From", ""))[1].lower()
             body = _platte_tekst(msg)
 
@@ -1552,14 +1565,20 @@ def _zet_concept_klaar(lead: dict, inkomend, body: str, soort: str = "warm",
     onderwerp = str(inkomend.get("Subject", "")) if inkomend is not None else ""
     if not onderwerp:
         onderwerp = _onderwerp(lead, 0)
+    onderwerp = re.sub(r"\s+", " ", onderwerp).strip()
     if not onderwerp.lower().startswith("re:"):
         onderwerp = "Re: " + (onderwerp or _onderwerp(lead, 0))
     msg["Subject"] = onderwerp
     # In dezelfde draad blijven, zodat het antwoord in zijn mailprogramma onder
     # het bericht hangt waar het bij hoort.
-    if inkomend is not None and inkomend.get("Message-ID"):
-        msg["In-Reply-To"] = inkomend["Message-ID"]
-        msg["References"] = inkomend.get("References", "") + " " + inkomend["Message-ID"]
+    # Koppen mogen geen regeleindes bevatten. Een lange References-kop komt
+    # gevouwen over meerdere regels binnen, en die er zo weer in zetten laat het
+    # opstellen klappen — met als gevolg geen enkel concept.
+    plat = lambda v: re.sub(r"\s+", " ", str(v or "")).strip()
+    if inkomend is not None and plat(inkomend.get("Message-ID")):
+        mid = plat(inkomend.get("Message-ID"))
+        msg["In-Reply-To"] = mid
+        msg["References"] = (plat(inkomend.get("References")) + " " + mid).strip()
     # Het oorspronkelijke bericht eronder citeren. Zonder dit ziet een concept
     # eruit als een losse nieuwe mail: je leest je eigen antwoord zonder te zien
     # waar het op slaat, en je moet de draad erbij zoeken om te kunnen beoordelen
@@ -1824,11 +1843,17 @@ def _verzonden_tekst(imap, adres: str) -> str | None:
         return None
 
 
-def _antwoorden_van_daniel(imap, gebruiker: str) -> dict[str, str]:
-    """Per adres de datum van Daniels laatste bericht eraan. Alleen berichten die
-    hij zelf heeft getypt tellen: de koude mails komen uit dit script en die staan
-    in de administratie, dus daaraan mag je niet zien dat er 'geantwoord' is."""
-    laatste: dict[str, str] = {}
+def _antwoorden_van_daniel(imap, gebruiker: str) -> dict[str, float]:
+    """Per adres het TIJDSTIP van Daniels laatste eigen antwoord, in seconden
+    sinds 1970.
+
+    Alleen berichten die hij zelf heeft getypt tellen: de koude mails komen uit
+    dit script en die staan al in de administratie.
+
+    Let op de vergelijking. Hier stonden eerst de ruwe datumkoppen, vergeleken
+    met > op tekst — "Mon, 17 Aug" is alfabetisch groter dan "Tue, 18 Aug", dus
+    dat gaf regelmatig de verkeerde als laatste."""
+    laatste: dict[str, float] = {}
     imap.select('"Verzonden"')
     _, data = imap.search(None, "ALL")
     for num in data[0].split():
@@ -1838,14 +1863,17 @@ def _antwoorden_van_daniel(imap, gebruiker: str) -> dict[str, str]:
         onderwerp = str(msg.get("Subject", ""))
         # Alleen echte reacties: die beginnen met Re:. De koude mails niet.
         if ontvanger and onderwerp.lower().startswith("re:"):
-            datum = msg.get("Date", "")
-            if datum > laatste.get(ontvanger, ""):
-                laatste[ontvanger] = datum
+            try:
+                ts = parsedate_to_datetime(msg.get("Date", "")).timestamp()
+            except Exception:  # noqa: BLE001
+                continue
+            if ts > laatste.get(ontvanger, 0):
+                laatste[ontvanger] = ts
     return laatste
 
 
 def _waar_hoort_dit(msg, afzender: str, state: dict,
-                    beantwoord_na: dict[str, str]) -> str | None:
+                    beantwoord_na: dict[str, float]) -> str | None:
     onderwerp = str(msg.get("Subject", ""))
     if SYSTEEM_AFZENDER.search(afzender) or BOUNCE_AFZENDERS.search(afzender):
         return MAP_AUTOMATISCH
@@ -1854,9 +1882,23 @@ def _waar_hoort_dit(msg, afzender: str, state: dict,
         return MAP_AUTOMATISCH
     if AUTO_ONDERWERP.match(onderwerp.replace("Re:", "").strip()):
         return MAP_AUTOMATISCH
-    if afzender in beantwoord_na:
+    # Beantwoord = Daniel heeft ná DIT bericht geantwoord. Niet: hij heeft ooit
+    # in deze draad geantwoord.
+    #
+    # Dat verschil kostte bijna een klant. Zilverwebsite stuurde 's ochtends twee
+    # nieuwe vragen; omdat Daniel de dag ervoor in dezelfde draad had geantwoord,
+    # werden ze binnen een half uur naar Beantwoord verplaatst. Ze verdwenen dus
+    # uit zijn postvak IN én uit het zicht van deze machine, en er kwam geen
+    # concept. Een bericht dat nieuwer is dan jouw laatste antwoord wacht per
+    # definitie nog op je.
+    try:
+        binnen = parsedate_to_datetime(msg.get("Date", "")).timestamp()
+    except Exception:  # noqa: BLE001 — geen leesbare datum: laat staan, veiliger
+        return None
+    beantwoord_op = beantwoord_na.get(afzender)
+    if beantwoord_op and beantwoord_op > binnen:
         return MAP_BEANTWOORD
-    return None            # echte reactie, nog niet beantwoord: laat staan
+    return None            # nog onbeantwoord: laat staan waar Daniel het ziet
 
 
 def _platte_tekst(msg) -> str:
