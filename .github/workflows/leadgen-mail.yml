@@ -50,8 +50,14 @@ jobs:
       # nieuwe reacties liggen. Een cron die je niet in de hand hebt, moet je niet
       # je enige hartslag maken. Slaat GitHub een beurt over, dan zijn er binnen
       # deze beurt nog steeds drie momenten geweest waarop de postbus is gelezen.
+      # Let op de vorm van de pauze. Dit stond er als
+      #   [ $i -lt 3 ] && sleep 420
+      # en die test geeft bij de LAATSTE ronde netjes "onwaar" terug — wat in bash
+      # exitcode 1 is. Omdat het de laatste opdracht van de stap is, viel de hele
+      # beurt daarop om, elke halve beurt van 18-08-2026, terwijl het mailwerk zelf
+      # gewoon gelukt was. Een if-blok geeft die 1 niet door.
       - run: |
           for i in 1 2 3; do
             python scripts/leadgen_mail.py tick || true
-            [ $i -lt 3 ] && sleep 420
+            if [ "$i" -lt 3 ]; then sleep 420; fi
           done

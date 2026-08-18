@@ -906,30 +906,11 @@ def _zelfde_bedrijf(afzender: str, state: dict) -> str | None:
 
 def _laatst_verstuurd_per_adres() -> dict[str, float]:
     """Per ontvanger het tijdstip van onze laatste mail, in seconden sinds 1970."""
-    host, gebruiker = os.environ.get("IMAP_HOST"), os.environ.get("MAIL_USER")
-    wachtwoord = os.environ.get("MAIL_PASS")
     uit: dict[str, float] = {}
-    if not (host and gebruiker and wachtwoord):
-        return uit
-    try:
-        with imaplib.IMAP4_SSL(host, 993) as imap:
-            imap.login(gebruiker, wachtwoord)
-            imap.select('"Verzonden"', readonly=True)
-            _, d = imap.search(None, "ALL")
-            for num in (d[0] or b"").split():
-                _, ruw = imap.fetch(num, "(BODY.PEEK[HEADER])")
-                if not ruw or not ruw[0]:
-                    continue
-                msg = email.message_from_bytes(ruw[0][1])
-                adres = parseaddr(msg.get("To", ""))[1].lower()
-                try:
-                    ts = parsedate_to_datetime(msg.get("Date", "")).timestamp()
-                except Exception:  # noqa: BLE001
-                    continue
-                if adres and (adres not in uit or ts > uit[adres]):
-                    uit[adres] = ts
-    except Exception as e:  # noqa: BLE001
-        print(f"  (verzonden map niet gelezen: {e})")
+    for mail in _verzonden_lezen():
+        adres, ts = mail["adres"], mail["op"]
+        if adres and (adres not in uit or ts > uit[adres]):
+            uit[adres] = ts
     return uit
 
 
@@ -957,24 +938,22 @@ def _beantwoorde_berichten() -> set[str]:
     Concepten tellen mee. Een concept dat al klaarligt is een antwoord dat nog
     verstuurd moet worden, geen reden om er nog een naast te leggen.
     """
+    uit: set[str] = set()
+    for mail in _verzonden_lezen():
+        uit |= mail["verwijst"]
     host, gebruiker = os.environ.get("IMAP_HOST"), os.environ.get("MAIL_USER")
     wachtwoord = os.environ.get("MAIL_PASS")
-    uit: set[str] = set()
     if not (host and gebruiker and wachtwoord):
         return uit
-    plat = lambda v: re.sub(r"\s+", " ", str(v or "")).strip()
     try:
         with imaplib.IMAP4_SSL(host, 993) as imap:
             imap.login(gebruiker, wachtwoord)
             bestaand = {r.decode().split(' "/" ')[-1].strip('"')
                         for r in (imap.list()[1] or [])}
-            for map_ in ("Verzonden", CONCEPTMAP, "Drafts"):
+            for map_ in (CONCEPTMAP, "Drafts"):
                 if map_ not in bestaand:
                     continue
-                try:
-                    imap.select(f'"{map_}"', readonly=True)
-                except imaplib.IMAP4.error:
-                    continue
+                imap.select(f'"{map_}"', readonly=True)
                 _, d = imap.search(None, "ALL")
                 for num in (d[0] or b"").split():
                     _, ruw = imap.fetch(num, "(BODY.PEEK[HEADER])")
@@ -984,13 +963,12 @@ def _beantwoorde_berichten() -> set[str]:
                     for veld in ("In-Reply-To", "References"):
                         # Zoho verstuurt deze koppen gecodeerd terug
                         # ("=?utf-8?q?=3CAM9PR03...=3E?="). Ongedecodeerd
-                        # vergelijken vindt nooit iets, en dan lijkt elk
-                        # beantwoord bericht nog open te staan.
-                        for mid in plat(_leesbaar(kop.get(veld))).split():
+                        # vergelijken vindt nooit iets.
+                        for mid in _leesbaar(kop.get(veld)).split():
                             if mid.startswith("<"):
                                 uit.add(mid)
     except Exception as e:  # noqa: BLE001
-        print(f"  (beantwoorde berichten niet gelezen: {e})")
+        print(f"  (concepten niet gelezen: {e})")
     return uit
 
 
@@ -1545,6 +1523,70 @@ def _concept_tekst(lead: dict, body: str, soort: str = "warm") -> str:
     return "\n".join(regels)
 
 
+# ── De verzonden map: één keer lezen, drie keer gebruiken ─────────────────
+#
+# Het toonprofiel, de dubbelcontrole en de vraag "is dit al beantwoord" keken
+# alle drie zelf in Verzonden, elk met een eigen verbinding en eigen fetches. Bij
+# 190 mails duurde één beurt daardoor elf minuten, tegen een limiet van dertig.
+# Eén lezing per beurt is genoeg: binnen die paar minuten verandert er niets.
+VERZONDEN_DAGEN = 21          # verder terug hoeft geen van de drie te kijken
+_verzonden_kas: list | None = None
+
+
+def _verzonden_lezen() -> list[dict]:
+    """Alle recente verzonden mail, één keer opgehaald per beurt."""
+    global _verzonden_kas
+    if _verzonden_kas is not None:
+        return _verzonden_kas
+    host, gebruiker = os.environ.get("IMAP_HOST"), os.environ.get("MAIL_USER")
+    wachtwoord = os.environ.get("MAIL_PASS")
+    if not (host and gebruiker and wachtwoord):
+        return []
+    uit: list[dict] = []
+    sinds = (datetime.now() - timedelta(days=VERZONDEN_DAGEN)).strftime("%d-%b-%Y")
+    try:
+        with imaplib.IMAP4_SSL(host, 993) as imap:
+            imap.login(gebruiker, wachtwoord)
+            imap.select('"Verzonden"', readonly=True)
+            _, d = imap.search(None, f'(SINCE {sinds})')
+            nummers = (d[0] or b"").split()
+            for num in nummers:
+                _, ruw = imap.fetch(num, "(RFC822)")
+                if not ruw or not ruw[0]:
+                    continue
+                msg = email.message_from_bytes(ruw[0][1])
+                tekst = ""
+                for deel in msg.walk():
+                    if deel.get_content_type() == "text/plain":
+                        try:
+                            tekst = deel.get_payload(decode=True).decode(
+                                deel.get_content_charset() or "utf-8", "replace")
+                        except Exception:  # noqa: BLE001
+                            tekst = ""
+                        break
+                try:
+                    ts = parsedate_to_datetime(msg.get("Date", "")).timestamp()
+                except Exception:  # noqa: BLE001
+                    ts = 0.0
+                verwijzingen = set()
+                for veld in ("In-Reply-To", "References"):
+                    for mid in _leesbaar(msg.get(veld)).split():
+                        if mid.startswith("<"):
+                            verwijzingen.add(mid)
+                uit.append({
+                    "naar": _leesbaar(msg.get("To", "")).lower(),
+                    "adres": parseaddr(msg.get("To", ""))[1].lower(),
+                    "op": ts,
+                    "eigen": _kern_tekst(tekst),
+                    "verwijst": verwijzingen,
+                })
+    except Exception as e:  # noqa: BLE001
+        print(f"  (verzonden map niet gelezen: {e})")
+        return []
+    _verzonden_kas = uit
+    return uit
+
+
 # ── Toonprofiel: leren van ALLES wat Daniel zelf verstuurt ────────────────
 #
 # Niet met een taalmodel maar met tellen. Een model dat "de toon nabootst" is niet
@@ -1566,53 +1608,27 @@ def _toonprofiel(ververs: bool = False) -> dict:
     global _toon_kas
     if _toon_kas is not None and not ververs:
         return _toon_kas
-    host, gebruiker = os.environ.get("IMAP_HOST"), os.environ.get("MAIL_USER")
-    wachtwoord = os.environ.get("MAIL_PASS")
     profiel = {"afsluiting": None, "woorden_p50": None, "gelezen": 0,
                "jullie_aandeel": 0.0}
-    if not (host and gebruiker and wachtwoord):
-        return profiel
     afsluitingen: collections.Counter = collections.Counter()
     lengtes: list[int] = []
     jullie = 0
-    try:
-        with imaplib.IMAP4_SSL(host, 993) as imap:
-            imap.login(gebruiker, wachtwoord)
-            imap.select('"Verzonden"', readonly=True)
-            _, d = imap.search(None, "ALL")
-            nummers = (d[0] or b"").split()[-TOONPROFIEL_MAX:]
-            for num in nummers:
-                _, ruw = imap.fetch(num, "(RFC822)")
-                if not ruw or not ruw[0]:
-                    continue
-                msg = email.message_from_bytes(ruw[0][1])
-                tekst = ""
-                for deel in msg.walk():
-                    if deel.get_content_type() == "text/plain":
-                        try:
-                            tekst = deel.get_payload(decode=True).decode(
-                                deel.get_content_charset() or "utf-8", "replace")
-                        except Exception:  # noqa: BLE001
-                            tekst = ""
-                        break
-                eigen = _kern_tekst(tekst)
-                if not eigen:
-                    continue
-                profiel["gelezen"] += 1
-                lengtes.append(len(eigen.split()))
-                if re.search(r"\b(jullie|jullie\w*)\b", eigen.lower()):
-                    jullie += 1
-                # De afsluiting is de laatste niet-lege regel vóór zijn naam.
-                regels = [r.strip() for r in eigen.splitlines() if r.strip()]
-                for i, r in enumerate(regels):
-                    if r.lower().rstrip(",.") in ("daniel", "daniel de koning") and i:
-                        groet = regels[i - 1].strip().rstrip(",")
-                        if 0 < len(groet) <= 30:
-                            afsluitingen[groet] += 1
-                        break
-    except Exception as e:  # noqa: BLE001 — leren mag het mailen nooit stoppen
-        print(f"  (toonprofiel niet gelezen: {e})")
-        return profiel
+    for mail in _verzonden_lezen():
+        eigen = mail.get("eigen") or ""
+        if not eigen:
+            continue
+        profiel["gelezen"] += 1
+        lengtes.append(len(eigen.split()))
+        if "jullie" in eigen.lower():
+            jullie += 1
+        # De afsluiting is de laatste niet-lege regel vóór zijn naam.
+        regels = [r.strip() for r in eigen.splitlines() if r.strip()]
+        for i, r in enumerate(regels):
+            if r.lower().rstrip(",.") in ("daniel", "daniel de koning") and i:
+                groet = regels[i - 1].strip().rstrip(",")
+                if 0 < len(groet) <= 30:
+                    afsluitingen[groet] += 1
+                break
     if afsluitingen:
         profiel["afsluiting"] = afsluitingen.most_common(1)[0][0]
     if lengtes:
@@ -1755,64 +1771,23 @@ def _lijkt_op_recent_verstuurd(adres: str, kern: str) -> bool:
     """
     if not adres or not kern:
         return False
-    host, gebruiker = os.environ.get("IMAP_HOST"), os.environ.get("MAIL_USER")
-    wachtwoord = os.environ.get("MAIL_PASS")
-    if not (host and gebruiker and wachtwoord):
-        return False
     mijn = _kern(kern)
     if not mijn:
         return False
-    stam = adres.split("@")[-1].split(".")[0].lower().replace("-online", "")
-    grens = datetime.now() - timedelta(days=DUBBEL_DAGEN)
-    # Twee pogingen. Een wegvallende IMAP-verbinding laat deze controle
-    # doorlaten, en dat is precies het moment waarop er een dubbele mail
-    # doorheen glipt. Gemeten: 1 van de 6 controles viel om op een socket-fout.
-    for poging in range(2):
-        uitkomst = _dubbel_ronde(adres, stam, mijn, grens)
-        if uitkomst is not None:
-            return uitkomst
-        time.sleep(2)
-    return False
-
-
-def _dubbel_ronde(adres: str, stam: str, mijn: str, grens) -> bool | None:
-    """Eén controleronde. None betekent: niet kunnen kijken, probeer opnieuw."""
-    host, gebruiker = os.environ.get("IMAP_HOST"), os.environ.get("MAIL_USER")
-    wachtwoord = os.environ.get("MAIL_PASS")
-    try:
-        with imaplib.IMAP4_SSL(host, 993) as imap:
-            imap.login(gebruiker, wachtwoord)
-            imap.select('"Verzonden"', readonly=True)
-            sinds = grens.strftime("%d-%b-%Y")
-            _, d = imap.search(None, f'(SINCE {sinds})')
-            for num in (d[0] or b"").split():
-                _, ruw = imap.fetch(num, "(RFC822)")
-                if not ruw or not ruw[0]:
-                    continue
-                msg = email.message_from_bytes(ruw[0][1])
-                naar = _leesbaar(msg.get("To", "")).lower()
-                # Ook een ander adres van hetzelfde bedrijf telt mee: mensen
-                # antwoorden vanaf info@bedrijf.nl terwijl wij naar
-                # info@bedrijf-online.nl mailden.
-                if adres.lower() not in naar and not (stam and stam in naar):
-                    continue
-                tekst = ""
-                for deel in msg.walk():
-                    if deel.get_content_type() == "text/plain":
-                        try:
-                            tekst = deel.get_payload(decode=True).decode(
-                                deel.get_content_charset() or "utf-8", "replace")
-                        except Exception:  # noqa: BLE001
-                            tekst = ""
-                        break
-                eerder = _kern(_kern_tekst(tekst))
-                if not eerder:
-                    continue
-                if _overlap(mijn, eerder) >= DUBBEL_GRENS:
-                    return True
-    except Exception as e:  # noqa: BLE001
-        print(f"  (dubbelcontrole mislukt: {e})")
-        return None
+    adres = adres.lower()
+    stam = adres.split("@")[-1].split(".")[0].replace("-online", "")
+    grens = (datetime.now() - timedelta(days=DUBBEL_DAGEN)).timestamp()
+    for mail in _verzonden_lezen():
+        if mail["op"] < grens:
+            continue
+        naar = mail["naar"]
+        # Ook een ander adres van hetzelfde bedrijf telt mee: mensen antwoorden
+        # vanaf info@bedrijf.nl terwijl wij naar info@bedrijf-online.nl mailden.
+        if adres not in naar and not (stam and stam in naar):
+            continue
+        eerder = _kern(mail.get("eigen") or "")
+        if eerder and _overlap(mijn, eerder) >= DUBBEL_GRENS:
+            return True
     return False
 
 
