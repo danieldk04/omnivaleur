@@ -2178,6 +2178,7 @@ def _opruimen(state: dict) -> None:
                         pass          # bestond toch al
 
             beantwoord_na = _antwoorden_van_daniel(imap, gebruiker)
+            terug = 0
 
             # Op UID werken, niet op volgnummer: zodra je een bericht als
             # verwijderd markeert schuiven de volgnummers op en wijst het
@@ -2197,12 +2198,46 @@ def _opruimen(state: dict) -> None:
                 imap.uid("store", uid, "+FLAGS", "(\\Deleted)")
                 verplaatst[doel] += 1
             imap.expunge()
+
+            # EN WEER TERUG. Het opbergen werkte maar één kant op: een bericht dat
+            # ooit ten onrechte in Beantwoord belandde, bleef daar voorgoed staan
+            # en was daarmee uit Daniels postvak IN verdwenen. Gemeten geval
+            # 18-08-2026: Egberts vraag van 23:19 stond in Beantwoord terwijl er
+            # nooit een antwoord op was gegaan.
+            #
+            # De regel is dezelfde als hierboven, alleen omgekeerd: schreven zij
+            # het laatst, dan hoort het bericht in het postvak IN te staan, waar
+            # Daniel het ziet.
+            imap.select(f'"{MAP_BEANTWOORD}"')
+            _, data = imap.uid("search", None, "ALL")
+            for uid in (data[0] or b"").split():
+                _, ruw = imap.uid("fetch", uid, "(RFC822)")
+                if not ruw or not ruw[0]:
+                    continue
+                msg = email.message_from_bytes(ruw[0][1])
+                afzender = parseaddr(msg.get("From", ""))[1].lower()
+                if not afzender or SYSTEEM_AFZENDER.search(afzender):
+                    continue
+                try:
+                    binnen = parsedate_to_datetime(msg.get("Date", "")).timestamp()
+                except Exception:  # noqa: BLE001
+                    continue
+                beantwoord_op = beantwoord_na.get(afzender)
+                if beantwoord_op and beantwoord_op > binnen:
+                    continue                      # terecht beantwoord, laat staan
+                if _wij_spraken_het_laatst(afzender, binnen, beantwoord_na):
+                    continue                      # ander adres, zelfde bedrijf
+                imap.uid("copy", uid, "INBOX")
+                imap.uid("store", uid, "+FLAGS", "(\\Deleted)")
+                terug += 1
+            imap.expunge()
     except Exception as e:  # noqa: BLE001 — opruimen mag nooit het mailen stoppen
         print(f"  (postvak niet opgeruimd: {e})")
         return
-    if any(verplaatst.values()):
+    if any(verplaatst.values()) or terug:
         print(f"  postvak opgeruimd: {verplaatst[MAP_AUTOMATISCH]} naar "
-              f"{MAP_AUTOMATISCH}, {verplaatst[MAP_BEANTWOORD]} naar {MAP_BEANTWOORD}")
+              f"{MAP_AUTOMATISCH}, {verplaatst[MAP_BEANTWOORD]} naar "
+              f"{MAP_BEANTWOORD}, {terug} terug naar postvak IN")
 
 
 def _verzonden_tekst(imap, adres: str) -> str | None:
