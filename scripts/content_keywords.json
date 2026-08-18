@@ -345,6 +345,14 @@
       "slug": "tool-and-equipment-reselling-automation",
       "status": "published",
       "priority": 42
+    },
+    {
+      "keyword": "vintage clothing reselling automation platforms",
+      "region": "nl",
+      "pillar": "B",
+      "slug": "vintage-clothing-reselling-automation-platforms",
+      "status": "published",
+      "priority": 43
     }
   ],
   "published": [
@@ -725,6 +733,15 @@
       "action": "created",
       "url_path": "/reseller-tools/tool-and-equipment-reselling-automation",
       "published_at": "2026-08-16T08:21:02.271796+00:00"
+    },
+    {
+      "keyword": "vintage clothing reselling automation platforms",
+      "slug": "vintage-clothing-reselling-automation-platforms",
+      "region": "nl",
+      "pillar": "B",
+      "action": "created",
+      "url_path": "/reseller-tools/vintage-clothing-reselling-automation-platforms",
+      "published_at": "2026-08-18T08:29:24.798171+00:00"
     }
   ]
 }
