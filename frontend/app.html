@@ -973,6 +973,8 @@ input[type="checkbox"].row-check { width: 15px; height: 15px; cursor: pointer; a
           </select>
           <input type="text" id="filter-search" placeholder="Search by title or brand…" oninput="applyFilters()" style="min-width:200px">
           <span class="filter-spacer"></span>
+          <button class="btn btn-sm btn-outline" id="mp-fill-btn" style="display:none" onclick="fillFromMarktplaats()"
+                  title="Fetch the price and description from your own public Marktplaats adverts">Fill from Marktplaats</button>
           <span id="filter-count" style="font-size:12px;color:var(--muted);font-weight:500"></span>
         </div>
         <div class="bulk-bar" id="bulk-bar">
@@ -3376,6 +3378,16 @@ function applyFilters(resetPage) {
   document.getElementById('filter-count').textContent = filtered.length === inTab
     ? `${filtered.length} item${filtered.length === 1 ? '' : 's'}`
     : `${filtered.length} of ${inTab} (page ${itemsCurrentPage}/${totalPages})`;
+  // De knop hoort alleen te bestaan als er echt iets te halen valt. Een knop die
+  // altijd staat te wachten op een probleem dat de meeste verkopers niet hebben,
+  // is voor hen alleen maar ruis.
+  const teVullen = (state.items || []).filter(
+    i => !i.price || !String(i.description || '').trim()).length;
+  const mpKnop = document.getElementById('mp-fill-btn');
+  if (mpKnop) {
+    mpKnop.style.display = teVullen ? '' : 'none';
+    mpKnop.textContent = `Fill ${teVullen} from Marktplaats`;
+  }
   const heading = { live: 'Live items', todo: 'To list', hidden: 'Hidden on platform', sold: 'Sold items', archived: 'Archived items' }[itemsTab];
   document.getElementById('items-heading').textContent = heading;
   renderItemsTable(pageItems);
@@ -7049,6 +7061,48 @@ function renderBulkPricePreview() {
 // import zonder staat (Marktplaats/Admarkt levert er geen) honderden items op
 // dezelfde verkeerde waarde zet. Zonder dit was de enige uitweg 240 keer
 // bewerken openen.
+async function fillFromMarktplaats() {
+  const open = (state.items || []).filter(
+    i => !i.price || !String(i.description || '').trim()).length;
+  if (!open) return;
+  if (!confirm(
+    `Fetch the price and description for ${open} item${open === 1 ? '' : 's'} ` +
+    `from your own Marktplaats adverts?\n\n` +
+    `Anything you already filled in stays as it is. This can take a few minutes.`)) return;
+
+  // In ladingen, niet in één keer: bij duizenden items duurt één verzoek langer
+  // dan de verbinding openblijft, en dan ziet de verkoper een foutmelding
+  // terwijl er niets mis is.
+  setBusy(true, 'Looking up your Marktplaats adverts…');
+  let prijzen = 0, teksten = 0, gedaan = 0, reden = '';
+  try {
+    for (let ronde = 0; ronde < 60; ronde++) {
+      const res = await apiFetchRetry(`${API}/api/items/fill-from-marktplaats?limit=150`,
+                                      { method: 'POST' });
+      const data = await parseJsonSafe(res);
+      if (!res.ok) throw new Error((data && data.detail) || `HTTP ${res.status}`);
+      prijzen += data.prijs || 0;
+      teksten += data.omschrijving || 0;
+      gedaan += data.gevonden || 0;
+      reden = data.reden || '';
+      setBusyText(`Fetched ${teksten} description${teksten === 1 ? '' : 's'} and ${prijzen} price${prijzen === 1 ? '' : 's'}…`);
+      // Klaar zodra er niets meer open staat, of zodra een ronde niets meer
+      // oplevert: doorgaan zou dan alleen dezelfde items opnieuw langslopen.
+      if (!data.te_doen || (!data.prijs && !data.omschrijving)) break;
+    }
+    await fetchAllItems();
+    applyFilters(false);
+  } catch (e) {
+    setBusy(false);
+    alert(`Could not fetch from Marktplaats: ${e.message}`);
+    return;
+  }
+  setBusy(false);
+  alert(gedaan
+    ? `Done. Filled in ${teksten} description${teksten === 1 ? '' : 's'} and ${prijzen} price${prijzen === 1 ? '' : 's'}.`
+    : `Nothing found. ${reden || 'Your adverts could not be matched on Marktplaats — are they still online under the same titles?'}`);
+}
+
 async function doBulkCondition() {
   const ids = [...selectedIds];
   if (!ids.length) return;

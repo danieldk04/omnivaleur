@@ -112,6 +112,33 @@ def list_items(limit: int = 50, offset: int = 0, user_id: str = Depends(get_curr
     return result.data
 
 
+@router.post("/fill-from-marktplaats")
+async def fill_from_marktplaats(limit: int = 150,
+                                user_id: str = Depends(get_current_user)):
+    """Prijs en omschrijving ophalen bij de eigen Marktplaats-advertenties.
+
+    Voor zakelijke verkopers (Admarkt) levert de import geen prijs en geen tekst;
+    die staan alleen op de openbare advertentie. Deze knop haalt ze daar op voor
+    items die ze missen. Bestaande waarden blijven altijd staan.
+
+    Werkt per lading van hooguit `limit` items. Bij duizenden advertenties duurt
+    het ophalen langer dan de gateway een verbinding openhoudt, en dan krijgt de
+    verkoper een foutpagina te zien terwijl het werk gewoon doorliep. Het scherm
+    roept dit dus net zo vaak aan tot er niets meer te doen is.
+    """
+    from backend.services.mp_enrich import verrijk
+
+    db = get_db()
+    try:
+        # De aanroepen naar Marktplaats zijn traag; buiten de request-lus houden
+        # zodat de rest van het dashboard ondertussen blijft reageren.
+        uit = await verrijk(db, user_id, schrijf=True, maximaal=max(1, min(limit, 400)))
+    except Exception as e:  # noqa: BLE001
+        logger.exception("fill-from-marktplaats mislukt voor %s", user_id)
+        raise HTTPException(status_code=502, detail=f"Marktplaats lookup failed: {e}")
+    return uit
+
+
 @router.get("/{item_id}")
 def get_item(item_id: str, user_id: str = Depends(get_current_user)):
     db = get_db()
