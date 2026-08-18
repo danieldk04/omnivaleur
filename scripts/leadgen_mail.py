@@ -901,6 +901,35 @@ def _zelfde_bedrijf(afzender: str, state: dict) -> str | None:
     return kandidaten[0] if len(kandidaten) == 1 else None
 
 
+def _laatst_verstuurd_per_adres() -> dict[str, float]:
+    """Per ontvanger het tijdstip van onze laatste mail, in seconden sinds 1970."""
+    host, gebruiker = os.environ.get("IMAP_HOST"), os.environ.get("MAIL_USER")
+    wachtwoord = os.environ.get("MAIL_PASS")
+    uit: dict[str, float] = {}
+    if not (host and gebruiker and wachtwoord):
+        return uit
+    try:
+        with imaplib.IMAP4_SSL(host, 993) as imap:
+            imap.login(gebruiker, wachtwoord)
+            imap.select('"Verzonden"', readonly=True)
+            _, d = imap.search(None, "ALL")
+            for num in (d[0] or b"").split():
+                _, ruw = imap.fetch(num, "(BODY.PEEK[HEADER])")
+                if not ruw or not ruw[0]:
+                    continue
+                msg = email.message_from_bytes(ruw[0][1])
+                adres = parseaddr(msg.get("To", ""))[1].lower()
+                try:
+                    ts = parsedate_to_datetime(msg.get("Date", "")).timestamp()
+                except Exception:  # noqa: BLE001
+                    continue
+                if adres and (adres not in uit or ts > uit[adres]):
+                    uit[adres] = ts
+    except Exception as e:  # noqa: BLE001
+        print(f"  (verzonden map niet gelezen: {e})")
+    return uit
+
+
 def _check_inbox(state: dict, boek: "Notion", dagen: int) -> tuple[int, int, int]:
     """Antwoorden, afmeldingen en bounces ophalen. Wie antwoordt krijgt geen
     opvolgmail meer; dat is het verschil tussen opvolgen en zeuren."""
@@ -908,6 +937,9 @@ def _check_inbox(state: dict, boek: "Notion", dagen: int) -> tuple[int, int, int
     sinds = (date.today() - timedelta(days=dagen)).strftime("%d-%b-%Y")
     nieuw = afgemeld = bounces = 0
     per_adres = {l["email"].lower(): l for l in _leads()}
+    # Wanneer schreven wij voor het laatst naar elk adres? Nodig om te zien of een
+    # binnengekomen bericht nog een antwoord verdient of allang is afgehandeld.
+    laatst_verstuurd = _laatst_verstuurd_per_adres()
     with imaplib.IMAP4_SSL(host, 993) as imap:
         imap.login(gebruiker, _need("MAIL_PASS"))
         imap.select("INBOX")
@@ -973,20 +1005,35 @@ def _check_inbox(state: dict, boek: "Notion", dagen: int) -> tuple[int, int, int
                 nieuw += 1
                 if lead:
                     boek.geantwoord(lead, soort)
-                # Bij een warm antwoord: geen alarmmail meer, maar een CONCEPT in
-                # zijn eigen postbus. Daniel ziet de reactie toch al op zijn
-                # telefoon; een seintje erbovenop is ruis die hem juist opjaagt.
-                # Wat hem rust geeft is dat het antwoord al klaarstaat.
-                if lead and soort in ("warm", "onbekend"):
-                    if _zet_concept_klaar(lead, msg, body):
-                        st["concept_klaar"] = datetime.now().isoformat(timespec="seconds")
+
+            # ── Een concept voor ELK nieuw bericht, niet alleen het eerste ──
+            #
+            # Dit blok zat eerst binnen "if not beantwoord", en daarmee kreeg
+            # alleen de allereerste reactie een concept. Precies de gesprekken die
+            # ertoe doen — iemand die doorvraagt, twijfelt, een probleem meldt —
+            # kregen dus niets, terwijl een eenmalige "geen interesse" wel netjes
+            # werd voorbereid. Gemeten op 18-08-2026: zes onbeantwoorde berichten
+            # in de postbus, nul concepten.
+            #
+            # Twee grenzen. Nooit iets voor wie zich afmeldde. En niets als Daniel
+            # ná dit bericht al heeft geantwoord: dan is het gesprek verder en zou
+            # een concept een gepasseerd station zijn.
+            try:
+                binnen_op = parsedate_to_datetime(msg.get("Date", "")).timestamp()
+            except Exception:  # noqa: BLE001
+                binnen_op = None
+
+            al_gedaan = float(st.get("laatste_inkomend") or 0)
+            beantwoord_door_daniel = laatst_verstuurd.get(afzender)
+            if (lead and binnen_op and soort != "afmelding"
+                    and binnen_op > al_gedaan
+                    and not (beantwoord_door_daniel and beantwoord_door_daniel > binnen_op)):
+                if _zet_concept_klaar(lead, msg, body,
+                                      soort if soort in ("concurrent", "afwijzing") else "warm"):
+                    st["laatste_inkomend"] = binnen_op
+                    st["concept_klaar"] = datetime.now().isoformat(timespec="seconds")
+                if soort in ("warm", "onbekend"):
                     boek.wacht_op_daniel(lead)
-                # Ook bij een nee: een afsluitend bedankje staat klaar, maar gaat
-                # alleen weg als Daniel er zelf op drukt. Zo kan er nooit een
-                # tweede bedankje uit naast het zijne.
-                elif lead and soort in ("concurrent", "afwijzing"):
-                    if _zet_concept_klaar(lead, msg, body, soort):
-                        st["concept_klaar"] = datetime.now().isoformat(timespec="seconds")
 
             # Een afsluitmailtje inplannen — niet nu versturen. Zie
             # AFSLUIT_* hierboven voor waarom er tijd tussen moet zitten.
