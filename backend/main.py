@@ -1,10 +1,12 @@
 import logging
 logging.basicConfig(level=logging.INFO, format="%(levelname)s %(name)s: %(message)s")
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, RedirectResponse
+from fastapi.exception_handlers import http_exception_handler
+from starlette.exceptions import HTTPException as StarletteHTTPException
 from contextlib import asynccontextmanager
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
@@ -53,6 +55,24 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+@app.middleware("http")
+async def canonical_host(request: Request, call_next):
+    """www.omnivaleur.com hoort door te sturen naar omnivaleur.com.
+
+    Zonder deze redirect serveerde de www-variant gewoon de hele site met status
+    200. De canonical-tag ving dat grotendeels op, maar Search Console telt het
+    als een tweede property: bezoekers en zoekwoorden worden dan over twee
+    domeinen verdeeld en linkwaarde lekt weg.
+    """
+    host = (request.headers.get("host") or "").split(":")[0].lower()
+    if host == "www.omnivaleur.com":
+        # Scheme hard op https: achter de proxy komt het verzoek als http binnen,
+        # dus zonder dit stuurde de redirect naar http:// en volgde er een tweede hop.
+        target = request.url.replace(netloc="omnivaleur.com", scheme="https")
+        return RedirectResponse(str(target), status_code=301)
+    return await call_next(request)
 
 
 app.include_router(items.router, prefix="/api")
@@ -168,6 +188,24 @@ async def app_page():
 @app.get("/marketplaces")
 async def marketplaces_page():
     return FileResponse(FRONTEND / "marketplaces.html")
+
+
+@app.exception_handler(StarletteHTTPException)
+async def not_found_page(request: Request, exc: StarletteHTTPException):
+    """Een dode link gaf kale JSON te zien: {"detail":"Not Found"}.
+
+    De statuscode klopte, dus indexering ging goed, maar de bezoeker kreeg geen
+    enkele weg terug de site op. API-verzoeken houden hun JSON — alleen wie een
+    pagina opvraagt krijgt de echte 404-pagina.
+    """
+    wants_html = "text/html" in (request.headers.get("accept") or "")
+    is_api = request.url.path.startswith("/api") or request.url.path == "/health"
+    if exc.status_code == 404 and wants_html and not is_api:
+        # Bewust niet "404.html": StaticFiles(html=True) serveert een bestand met
+        # díe naam automatisch bij élke misser, ook op /api — dan kregen de app en
+        # de extensie HTML terug waar ze JSON verwachten.
+        return FileResponse(FRONTEND / "not-found.html", status_code=404)
+    return await http_exception_handler(request, exc)
 
 
 # Serve frontend static assets (CSS, images, JS) — must come last

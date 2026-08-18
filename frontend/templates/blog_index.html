@@ -1,14 +1,18 @@
 <!DOCTYPE html>
-<html lang="{{ region.split('-')[0] }}">
+<html lang="{{ language }}">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Blog — Omnivaleur</title>
+<title>{{ copy.title }}</title>
 <link rel="icon" type="image/png" href="/logo.png">
-<meta name="description" content="Guides on cross-listing across Marktplaats, 2dehands, Vinted, eBay, Etsy and Shopify.">
+<meta name="description" content="{{ copy.meta }}">
 <link rel="canonical" href="{{ canonical }}">
-<meta property="og:title" content="Blog — Omnivaleur">
-<meta property="og:description" content="Guides on cross-listing across Marktplaats, 2dehands, Vinted, eBay, Etsy and Shopify.">
+{% for v in hreflang_variants %}
+<link rel="alternate" hreflang="{{ v.region }}" href="{{ v.url }}">
+{% endfor %}
+<link rel="alternate" hreflang="x-default" href="{{ x_default }}">
+<meta property="og:title" content="{{ copy.title }}">
+<meta property="og:description" content="{{ copy.meta }}">
 <meta property="og:type" content="website">
 <meta property="og:url" content="{{ canonical }}">
 <script type="application/ld+json">{{ item_list_json_ld | tojson }}</script>
@@ -58,6 +62,9 @@
   .cat-chip.active{background:linear-gradient(135deg,var(--blue),var(--mint));color:#fff;border-color:transparent}
 
   .empty-state{text-align:center;color:var(--muted);padding:60px 20px}
+  .lang-switch{text-align:center;margin-bottom:26px}
+  .lang-switch a{display:inline-flex;align-items:center;gap:6px;font-size:13px;font-weight:600;color:var(--blue-dark);background:#eff6ff;padding:6px 12px;border-radius:100px;text-decoration:none}
+  .lang-switch a:hover{background:#dbeafe}
 
   @media(max-width:640px){
     .post-list{grid-template-columns:1fr}
@@ -80,15 +87,19 @@
 
 <main>
   <div class="page-head">
-    <h1>Cross-listing guides</h1>
-    <p class="subtitle">Platform comparisons, DAC7 rules and reselling tips — updated for 2026.</p>
+    <h1>{{ copy.h1 }}</h1>
+    <p class="subtitle">{{ copy.subtitle }}</p>
   </div>
 
+  {% if language_switch %}
+  <div class="lang-switch"><a href="{{ language_switch.url }}" hreflang="{{ language_switch.language }}">{{ copy.switch }}</a></div>
+  {% endif %}
+
   <div class="cat-filters" role="tablist" aria-label="Filter guides by category">
-    <button type="button" class="cat-chip active" data-filter="all">All guides</button>
-    <button type="button" class="cat-chip" data-filter="A">Platform comparisons</button>
-    <button type="button" class="cat-chip" data-filter="B">Reseller guides</button>
-    <button type="button" class="cat-chip" data-filter="C">Vs. competitors</button>
+    <button type="button" class="cat-chip active" data-filter="all">{{ copy.filters.all }}</button>
+    <button type="button" class="cat-chip" data-filter="A">{{ copy.filters.A }}</button>
+    <button type="button" class="cat-chip" data-filter="B">{{ copy.filters.B }}</button>
+    <button type="button" class="cat-chip" data-filter="C">{{ copy.filters.C }}</button>
   </div>
 
   <div class="post-list">
@@ -112,19 +123,19 @@
           <img src="/assets/blog/author-daniel.webp" alt="Daniel">
           <span>Daniel</span><span>·</span>
           <span>{{ p.published_at[:10] if p.published_at else '' }}</span><span>·</span>
-          <span>{{ p.reading_minutes }} min read</span>
+          <span>{{ p.reading_minutes }} {{ copy.read_time }}</span>
         </div>
         <p class="post-excerpt">{{ p.meta_description }}</p>
-        <a class="post-cta btn btn-outline" href="{{ p.url_path }}">Read article</a>
+        <a class="post-cta btn btn-outline" href="{{ p.url_path }}">{{ copy.read }}</a>
       </div>
     </article>
     {% endfor %}
   </div>
 
   {% if not pages %}
-  <p class="empty-state">No guides published yet for this region.</p>
+  <p class="empty-state">{{ copy.empty }}</p>
   {% endif %}
-  <p class="empty-state" id="no-match-state" hidden>No guides in this category yet.</p>
+  <p class="empty-state" id="no-match-state" hidden>{{ copy.no_match }}</p>
 </main>
 
 {% include "_footer.html" %}

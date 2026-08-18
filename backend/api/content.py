@@ -227,12 +227,17 @@ def _render_page(request: Request, language: str, pillar: str, slug: str) -> HTM
     else:
         x_default = canonical
 
+    # Het kruimelpad hoort naar de index in dezelfde taal te wijzen: een
+    # Nederlands artikel dat "Blog" naar de Engelse index laat wijzen stuurt de
+    # lezer (en Google) de verkeerde taal in.
+    blog_index_path = BLOG_INDEX_PATHS.get(page.get("language", "en"), "/blog")
+
     breadcrumb_json_ld = {
         "@context": "https://schema.org",
         "@type": "BreadcrumbList",
         "itemListElement": [
             {"@type": "ListItem", "position": 1, "name": "Home", "item": SITE_URL},
-            {"@type": "ListItem", "position": 2, "name": "Blog", "item": f"{SITE_URL}/blog"},
+            {"@type": "ListItem", "position": 2, "name": "Blog", "item": f"{SITE_URL}{blog_index_path}"},
             {"@type": "ListItem", "position": 3, "name": page["h1"], "item": canonical},
         ],
     }
@@ -246,6 +251,7 @@ def _render_page(request: Request, language: str, pillar: str, slug: str) -> HTM
         {
             "page": page,
             "canonical": canonical,
+            "blog_index_path": blog_index_path,
             "hreflang_variants": hreflang_variants,
             "x_default": x_default,
             "faq_json_ld": faq_json_ld,
@@ -327,29 +333,61 @@ def _reading_minutes(words: int) -> int:
     return max(1, round((words or 0) / 200))
 
 
-def _render_blog_index(request: Request, canonical: str) -> HTMLResponse:
-    # The blog index only ever lists primary (English) articles — a Dutch
-    # translation is reachable via the language toggle on its English page,
-    # never as its own index card (that would look like duplicate content).
+BLOG_INDEX_COPY = {
+    "en": {
+        "title": "Blog — Omnivaleur",
+        "meta": "Guides on cross-listing across Marktplaats, 2dehands, Vinted, eBay, Etsy and Shopify.",
+        "h1": "Cross-listing guides",
+        "subtitle": "Platform comparisons, DAC7 rules and reselling tips — updated for 2026.",
+        "filters": {"all": "All guides", "A": "Platform comparisons", "B": "Reseller guides", "C": "Vs. competitors"},
+        "read": "Read article",
+        "read_time": "min read",
+        "empty": "No guides published yet.",
+        "no_match": "No guides in this category yet.",
+        "switch": "Lees deze gidsen in het Nederlands",
+    },
+    "nl": {
+        "title": "Blog — Omnivaleur",
+        "meta": "Gidsen over crosslisten naar Marktplaats, 2dehands, Vinted, eBay, Etsy en Shopify.",
+        "h1": "Crosslist-gidsen",
+        "subtitle": "Platformvergelijkingen, DAC7-regels en verkooptips — bijgewerkt voor 2026.",
+        "filters": {"all": "Alle gidsen", "A": "Platformvergelijkingen", "B": "Verkopersgidsen", "C": "Vs. concurrenten"},
+        "read": "Lees het artikel",
+        "read_time": "min lezen",
+        "empty": "Nog geen gidsen gepubliceerd.",
+        "no_match": "Nog geen gidsen in deze categorie.",
+        "switch": "Read these guides in English",
+    },
+}
+
+# Elke taal heeft zijn eigen indexpagina. Zonder de Nederlandse index stonden de
+# 40+ vertaalde artikelen wel in de sitemap, maar linkte geen enkele pagina op de
+# site ernaartoe — verweesde pagina's, die Google structureel lager zet.
+BLOG_INDEX_PATHS = {"en": "/blog", "nl": "/nl/blog"}
+
+
+def _render_blog_index(request: Request, language: str = "en") -> HTMLResponse:
     db = get_db()
     # Bewust GEEN select("*"): dat haalde van elke pagina de volledige body_html
     # op — 0,57 MB per bezoek aan deze pagina, terwijl er alleen een titel, datum
     # en samenvatting van getoond wordt. Het aantal woorden (voor de leestijd)
     # staat in article_json_ld als `wordCount`, dat is een paar honderd bytes.
-    rows = (
+    query = (
         db.table("content_pages")
         .select("pillar,slug,language,title,h1,meta_description,published_at,featured_image_url,article_json_ld")
         .eq("status", "published")
-        .is_("translation_of", "null")
-        .order("published_at", desc=True)
-        .execute()
-        .data
-        or []
+        .eq("language", language)
     )
+    if language == "en":
+        # Engelse rijen zijn altijd de bron, nooit een vertaling.
+        query = query.is_("translation_of", "null")
+    rows = query.order("published_at", desc=True).execute().data or []
+
     for r in rows:
         r["url_path"] = _url_path(r.get("language", "en"), r["pillar"], r["slug"])
         r["reading_minutes"] = _reading_minutes((r.get("article_json_ld") or {}).get("wordCount"))
 
+    canonical = f"{SITE_URL}{BLOG_INDEX_PATHS[language]}"
     item_list_json_ld = {
         "@context": "https://schema.org",
         "@type": "ItemList",
@@ -358,22 +396,44 @@ def _render_blog_index(request: Request, canonical: str) -> HTMLResponse:
             for i, r in enumerate(rows)
         ],
     }
+    hreflang_variants = [{"region": lang, "url": f"{SITE_URL}{path}"} for lang, path in BLOG_INDEX_PATHS.items()]
+    other = "nl" if language == "en" else "en"
 
     return templates.TemplateResponse(
         request,
         "blog_index.html",
-        {"pages": rows, "region": "nl", "canonical": canonical, "item_list_json_ld": item_list_json_ld},
+        {
+            "pages": rows,
+            "region": language,
+            "blog_index_path": BLOG_INDEX_PATHS[language],
+            "language": language,
+            "canonical": canonical,
+            "hreflang_variants": hreflang_variants,
+            # x-default wijst altijd naar de Engelse index, net als bij de artikelen.
+            "x_default": f"{SITE_URL}{BLOG_INDEX_PATHS['en']}",
+            "language_switch": {"language": other, "url": BLOG_INDEX_PATHS[other]},
+            "copy": BLOG_INDEX_COPY[language],
+            "item_list_json_ld": item_list_json_ld,
+        },
     )
 
 
 @router.get("/blog", response_class=HTMLResponse)
 async def blog_index_default(request: Request):
-    return _render_blog_index(request, f"{SITE_URL}/blog")
+    return _render_blog_index(request, "en")
+
+
+@router.get("/{language}/blog", response_class=HTMLResponse)
+async def blog_index_lang(request: Request, language: str):
+    if language not in BLOG_INDEX_PATHS or language == "en":
+        raise HTTPException(status_code=404, detail="Page not found")
+    return _render_blog_index(request, language)
 
 
 STATIC_SITEMAP_URLS = [
     ("/", "weekly", "1.0"),
     ("/blog", "daily", "0.9"),
+    ("/nl/blog", "daily", "0.8"),
     ("/marketplaces", "monthly", "0.8"),
     ("/register", "monthly", "0.9"),
     ("/privacy", "yearly", "0.3"),
