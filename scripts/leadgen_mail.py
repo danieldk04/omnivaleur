@@ -972,6 +972,27 @@ def _beantwoorde_berichten() -> set[str]:
     return uit
 
 
+def _wij_spraken_het_laatst(afzender: str, binnen_op: float | None,
+                            laatst_verstuurd: dict[str, float]) -> bool:
+    """Hebben wij ná dit bericht al iets naar deze persoon gestuurd?
+
+    Kijkt niet alleen naar het exacte adres maar ook naar de bedrijfsnaam in het
+    domein: iemand mailt vanaf info@bedrijf.nl terwijl wij naar
+    info@bedrijf-online.nl schreven, en op adres alleen zie je dat niet.
+    """
+    if not afzender or not binnen_op:
+        return False
+    stam = afzender.split("@")[-1].split(".")[0].lower().replace("-online", "")
+    for adres, wanneer in laatst_verstuurd.items():
+        if wanneer <= binnen_op:
+            continue
+        if adres == afzender:
+            return True
+        if stam and len(stam) >= 5 and stam in adres.split("@")[-1]:
+            return True
+    return False
+
+
 def _check_inbox(state: dict, boek: "Notion", dagen: int) -> tuple[int, int, int]:
     """Antwoorden, afmeldingen en bounces ophalen. Wie antwoordt krijgt geen
     opvolgmail meer; dat is het verschil tussen opvolgen en zeuren."""
@@ -1001,10 +1022,32 @@ def _check_inbox(state: dict, boek: "Notion", dagen: int) -> tuple[int, int, int
                 if ruw and ruw[0]:
                     berichten.append(ruw[0][1])
 
+        # ÉÉN CONCEPT PER PERSOON, EN ALLEEN OP HET LAATSTE BERICHT.
+        #
+        # Deze lus liep over élk bericht van de afgelopen twee weken en legde er
+        # een concept bij als het nog niet was afgedekt. Bij iemand die drie keer
+        # had geschreven kwamen er dus drie concepten. Gemeten op 18-08-2026:
+        # drie voor lamargames, drie voor usedcdnl, twee voor Otte, in één beurt.
+        # Een gesprek beantwoord je op het laatste bericht, niet op alle drie.
+        ontleed = []
         for _ruw in berichten:
-            msg = email.message_from_bytes(_ruw)
+            m = email.message_from_bytes(_ruw)
+            try:
+                _ts = parsedate_to_datetime(m.get("Date", "")).timestamp()
+            except Exception:  # noqa: BLE001
+                _ts = 0.0
+            ontleed.append((_ts, m))
+        ontleed.sort(key=lambda x: x[0])
+        nieuwste: dict[str, float] = {}
+        for _ts, m in ontleed:
+            _van = parseaddr(m.get("From", ""))[1].lower()
+            if _van:
+                nieuwste[_van] = max(nieuwste.get(_van, 0.0), _ts)
+
+        for _ts, msg in ontleed:
             afzender = parseaddr(msg.get("From", ""))[1].lower()
             body = _platte_tekst(msg)
+            is_laatste = _ts >= nieuwste.get(afzender, 0.0)
 
             if BOUNCE_AFZENDERS.search(afzender):
                 for adres in re.findall(r"[\w.+-]+@[\w.-]+\.\w{2,}", body):
@@ -1088,7 +1131,23 @@ def _check_inbox(state: dict, boek: "Notion", dagen: int) -> tuple[int, int, int
             # het opbergen van het bericht horen ook dan gewoon door te gaan.
             eigen_id = re.sub(r"\s+", " ", str(msg.get("Message-ID") or "")).strip()
             al_gedekt = bool(eigen_id and eigen_id in al_beantwoord)
+
+            # WIE SPRAK HET LAATST. Dit is de regel die er echt toe doet.
+            #
+            # De draadcontrole hierboven kijkt naar In-Reply-To en References, en
+            # die zijn niet te vertrouwen: van Daniels 217 verstuurde mails dragen
+            # er 174 helemaal geen draadkoppen, omdat hij vanuit de webmail
+            # antwoordt. Op 18-08-2026 leverde dat negen concepten op voor mensen
+            # die hij de dag ervoor al had beantwoord.
+            #
+            # Wat wél altijd klopt: heeft hij ná hun laatste bericht iets naar hen
+            # gestuurd, dan ligt de bal bij hen en hoeft er niets klaar te liggen.
+            # Vergelijken gebeurt op adres én op bedrijfsnaam, want mensen
+            # antwoorden vanaf een ander adres dan waar wij naartoe schreven.
+            wij_aan_zet = _wij_spraken_het_laatst(afzender, binnen_op, laatst_verstuurd)
+
             if (lead and binnen_op and soort != "afmelding" and not al_gedekt
+                    and is_laatste and not wij_aan_zet
                     and binnen_op > al_gedaan
                     and not (beantwoord_door_daniel and beantwoord_door_daniel > binnen_op)):
                 if _zet_concept_klaar(lead, msg, body,
