@@ -58,12 +58,11 @@ _CONDITION_MAP = {
     "poor": "Beschadigd",
 }
 
-# EU-required manufacturer fields — use Revaleur as responsible party
-_DEFAULT_MANUFACTURER = {
-    "name": "Revaleur",
-    "address": "4614RG Bergenop Zoom, Nederland",
-    "email": "info@revaleur.com",
-}
+# De EU verplicht bij veel categorieen een "verantwoordelijke partij". Dat hoort
+# de verkoper zelf te zijn, niet Omnivaleur. Hier stond Revaleur als standaard,
+# waardoor elke klant publiceerde met andermans bedrijfsnaam als aansprakelijke.
+# Leeg laten is de enige eerlijke standaard; wat de verkoper zelf opgeeft wint.
+_DEFAULT_MANUFACTURER: dict[str, str] = {}
 
 
 class MarktplaatsPlatform(PlatformBase):
@@ -230,9 +229,9 @@ class MarktplaatsPlatform(PlatformBase):
             # Manufacturer fields (appear in some browser contexts — fill if present)
             mf = item.get("manufacturer") or _DEFAULT_MANUFACTURER
             for name, val in [
-                ("textAttribute[manufacturerTradename]", mf.get("name", _DEFAULT_MANUFACTURER["name"])),
-                ("textAttribute[manufacturerAddress]", mf.get("address", _DEFAULT_MANUFACTURER["address"])),
-                ("textAttribute[manufacturerEmail]", mf.get("email", _DEFAULT_MANUFACTURER["email"])),
+                ("textAttribute[manufacturerTradename]", mf.get("name") or ""),
+                ("textAttribute[manufacturerAddress]", mf.get("address") or ""),
+                ("textAttribute[manufacturerEmail]", mf.get("email") or ""),
             ]:
                 try:
                     el = page.locator(f'input[name="{name}"]').first

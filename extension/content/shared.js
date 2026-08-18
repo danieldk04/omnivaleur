@@ -692,13 +692,27 @@ window.CL = (() => {
     return false;
   }
 
+  // De EU verplicht bij veel categorieen een "verantwoordelijke partij": wie is
+  // aansprakelijk voor dit product. Dat hoort de verkoper zelf te zijn.
+  //
+  // Hier stond Revaleur als standaardwaarde, en omdat een item die velden helemaal
+  // niet heeft werd die standaard ALTIJD gebruikt. Elke klant plaatste zijn
+  // advertenties dus met Daniels bedrijfsnaam en mailadres als aansprakelijke
+  // partij. Gemeld door Jaap van Zilverwebsite op 18-08-2026: "hij vult een
+  // emailadres van Revaleur in + handelsnaam is Revaleur".
+  //
+  // Nu vullen we alleen wat de verkoper zelf heeft opgegeven. Staat er niets, dan
+  // laten we het veld met rust: Marktplaats vult die velden voor een zakelijk
+  // account meestal zelf voor, en anders vraagt het formulier erom. Een leeg veld
+  // is vervelend; een verkeerde aansprakelijke is een juridisch probleem.
   function fillManufacturer(item) {
     const fields = [
-      ["textAttribute[manufacturerTradename]", item.manufacturer_name || "Revaleur"],
-      ["textAttribute[manufacturerAddress]", item.manufacturer_address || " "],
-      ["textAttribute[manufacturerEmail]", item.manufacturer_email || "info@revaleur.com"],
+      ["textAttribute[manufacturerTradename]", item.manufacturer_name],
+      ["textAttribute[manufacturerAddress]", item.manufacturer_address],
+      ["textAttribute[manufacturerEmail]", item.manufacturer_email],
     ];
     for (const [name, val] of fields) {
+      if (!val || !String(val).trim()) continue;
       const el = qs(`input[name="${name}"]`);
       if (el) { el.scrollIntoView({ block: "center" }); fillInput(el, val); }
     }
