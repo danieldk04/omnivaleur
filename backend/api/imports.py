@@ -179,6 +179,89 @@ _TAXONOMY = {
     # Niet-kleding: Muziek en Instrumenten. Zelfde sleutels als in
     # MP_CATEGORIES in extension/background.js — het "muziek "-voorvoegsel houdt
     # ze uit de buurt van de kledingtakken. Geslacht speelt hier geen rol.
+    # Antiek en Kunst. Marktplaats' op een na grootste boom en volledig
+    # ontbrekend: een zilverhandelaar met 1.200 advertenties kreeg voor 97 van
+    # zijn 130 items GEEN categorie, waarna het dashboard om maat en merk vroeg
+    # en een gembercouvert onder sieraden belandde. Twee niveaus, net als muziek.
+    # Sieraden, tassen, horloges en zonnebrillen. Stond wél in het dashboard en
+    # in de extensie, maar niet in deze lijst — waardoor het model een ring of
+    # armband nooit als sieraad kón indelen en die in "unisex accessoires"
+    # belandden. Gelijk aan CATEGORIES.sieraden in frontend/app.html.
+    "sieraden": [
+        "sieraden horloges dames",
+        "sieraden horloges heren",
+        "sieraden horloges kinderen",
+        "sieraden horloges antiek",
+        "sieraden smartwatch",
+        "sieraden sporthorloge",
+        "sieraden activity tracker",
+        "sieraden kettingen",
+        "sieraden kettinghangers",
+        "sieraden armbanden",
+        "sieraden ringen",
+        "sieraden oorbellen",
+        "sieraden bedels",
+        "sieraden broches",
+        "sieraden enkelbandjes",
+        "sieraden kindersieraden",
+        "sieraden antiek",
+        "sieraden damestassen",
+        "sieraden schoudertassen",
+        "sieraden rugtassen",
+        "sieraden reistassen",
+        "sieraden sporttassen",
+        "sieraden koffers",
+        "sieraden portemonnees",
+        "sieraden zonnebril dames",
+        "sieraden zonnebril heren",
+    ],
+    "antiek": [
+        "antiek curiosa en brocante",
+        "antiek glas en kristal",
+        "kunst schilderijen klassiek",
+        "antiek vazen",
+        "antiek keramiek en aardewerk",
+        "antiek overige antiek",
+        "antiek woonaccessoires",
+        "antiek porselein",
+        "antiek servies los",
+        "kunst beelden en houtsnijwerken",
+        "antiek meubels stoelen en banken",
+        "antiek lampen",
+        "kunst schilderijen modern",
+        "antiek wandborden en tegels",
+        "kunst etsen en gravures",
+        "antiek koper en brons",
+        "antiek bestek",
+        "antiek boeken en bijbels",
+        "antiek klokken",
+        "antiek meubels kasten",
+        "antiek speelgoed",
+        "kunst niet westerse kunst",
+        "antiek schalen",
+        "antiek meubels tafels",
+        "antiek gereedschap en instrumenten",
+        "kunst schilderijen abstract",
+        "antiek religie",
+        "kunst designobjecten",
+        "antiek emaille",
+        "antiek goud en zilver",
+        "kunst litho s en zeefdrukken",
+        "kunst tekeningen en foto s",
+        "antiek keukenbenodigdheden",
+        "antiek servies compleet",
+        "antiek kandelaars",
+        "antiek spiegels",
+        "antiek tin",
+        "antiek kleden en textiel",
+        "kunst overige kunst",
+        "antiek kantoor en zakelijk",
+        "antiek schoolplaten",
+        "antiek kleding en accessoires",
+        "antiek naaimachines",
+        "antiek tv s en audio",
+        "antiek meubels bedden",
+    ],
     "muziek": [
         "muziek accordeons", "muziek behuizingen en koffers",
         "muziek blaasinstrumenten blokfluiten", "muziek blaasinstrumenten didgeridoos",
@@ -238,8 +321,9 @@ async def _classify_with_claude(title: str | None, description: str | None,
             f"  {g}: {', '.join(cats)}" for g, cats in _TAXONOMY.items()
         )
         prompt = (
-            "You categorise second-hand listings for a Dutch marketplace. Almost all of"
-            " them are clothing; a minority are musical instruments and their accessories.\n\n"
+            "You categorise second-hand listings for a Dutch marketplace. Most are"
+            " clothing; a minority are musical instruments and their accessories, or"
+            " antiques, art and collectables.\n\n"
             f"Brand: {brand or 'unknown'}\n"
             f"Title: {title or ''}\n"
             f"Description: {(description or '')[:1500]}\n\n"
@@ -260,7 +344,19 @@ async def _classify_with_claude(title: str | None, description: str | None,
             '- The "muziek" branch is ONLY for musical instruments, their parts and their\n'
             "  accessories (a guitar, a plectrum, a case, a cable). A band T-shirt, a\n"
             "  festival hoodie or anything else you wear is clothing, never muziek.\n"
-            '  When you pick a "muziek" category, gender must be "muziek" too.\n\n'
+            '  When you pick a "muziek" category, gender must be "muziek" too.\n'
+            '- The "antiek" branch is for antiques, art and collectables: silverware,\n'
+            "  cutlery, porcelain, vases, paintings, clocks, brocante, decorative objects.\n"
+            "  DECIDE ON WHAT IT IS, NOT WHAT IT IS MADE OF. Anything a person WEARS is\n"
+            '  jewellery and belongs in the "sieraden" branch, however old or silver:\n'
+            "  a ring, a bracelet, a necklace, earrings, a brooch, a watch. Anything you\n"
+            "  put on a table, a wall or a shelf is antiek: a serving spoon, a ginger jar\n"
+            "  spoon, a candlestick, a vase, a plate. Modern mass-produced homeware is\n"
+            "  NOT antiek.\n"
+            '  When you pick an "antiek" category, gender must be "antiek" too.\n'
+            '- The "sieraden" branch covers jewellery, watches, bags, suitcases, wallets\n'
+            "  and sunglasses. Pick it for anything worn or carried as an accessory.\n"
+            '  When you pick a "sieraden" category, gender must be "sieraden" too.\n\n'
             'Respond with ONLY JSON: {"gender":"...","category":"...","confidence":"high|medium|low"}'
         )
         # client.messages.create is a *blocking* sync call. Run it in a worker

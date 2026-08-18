@@ -284,7 +284,8 @@ _PLATFORM_REQUIRED = {
 # are recognised by their category prefix (mirrors the "games ..." keys in the
 # extension's MP_CATEGORIES and the frontend CATEGORIES.games group). For them
 # only the category itself is platform-required.
-_NON_CLOTHING_PREFIXES = ("games ", "electronics ", "sieraden ", "muziek ")
+_NON_CLOTHING_PREFIXES = ("games ", "electronics ", "sieraden ", "muziek ",
+                          "antiek ", "kunst ")
 _NON_CLOTHING_PLATFORM_REQUIRED = ["category"]
 
 

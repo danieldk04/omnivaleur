@@ -304,6 +304,55 @@ const MP_CATEGORIES = {
   // 13-08-2026 in een ingelogde browser nagelopen tegen de categorienaam die
   // Marktplaats zelf rendert — niet tegen een HTTP-status. 2dehands gebruikt
   // exact dezelfde ids.
+  // Antiek en Kunst: twee niveaus, geen bucketId (net als muziek). Geverifieerd
+  // in een ingelogde browser op 18-08-2026 — /plaats/1/2614 toont
+  // "Antiek en Kunst > Goud en Zilver", /plaats/1/2 toont "Bestek".
+  "antiek curiosa en brocante": { cat1: 1, cat3: 15 },
+  "antiek glas en kristal": { cat1: 1, cat3: 1648 },
+  "kunst schilderijen klassiek": { cat1: 1, cat3: 25 },
+  "antiek vazen": { cat1: 1, cat3: 14 },
+  "antiek keramiek en aardewerk": { cat1: 1, cat3: 1502 },
+  "antiek overige antiek": { cat1: 1, cat3: 9 },
+  "antiek woonaccessoires": { cat1: 1, cat3: 1500 },
+  "antiek porselein": { cat1: 1, cat3: 10 },
+  "antiek servies los": { cat1: 1, cat3: 12 },
+  "kunst beelden en houtsnijwerken": { cat1: 1, cat3: 23 },
+  "antiek meubels stoelen en banken": { cat1: 1, cat3: 1505 },
+  "antiek lampen": { cat1: 1, cat3: 7 },
+  "kunst schilderijen modern": { cat1: 1, cat3: 1845 },
+  "antiek wandborden en tegels": { cat1: 1, cat3: 1104 },
+  "kunst etsen en gravures": { cat1: 1, cat3: 1105 },
+  "antiek koper en brons": { cat1: 1, cat3: 1647 },
+  "antiek bestek": { cat1: 1, cat3: 2 },
+  "antiek boeken en bijbels": { cat1: 1, cat3: 3 },
+  "antiek klokken": { cat1: 1, cat3: 6 },
+  "antiek meubels kasten": { cat1: 1, cat3: 5 },
+  "antiek speelgoed": { cat1: 1, cat3: 1507 },
+  "kunst niet westerse kunst": { cat1: 1, cat3: 1844 },
+  "antiek schalen": { cat1: 1, cat3: 1103 },
+  "antiek meubels tafels": { cat1: 1, cat3: 1506 },
+  "antiek gereedschap en instrumenten": { cat1: 1, cat3: 1501 },
+  "kunst schilderijen abstract": { cat1: 1, cat3: 1846 },
+  "antiek religie": { cat1: 1, cat3: 1102 },
+  "kunst designobjecten": { cat1: 1, cat3: 1508 },
+  "antiek emaille": { cat1: 1, cat3: 1100 },
+  "antiek goud en zilver": { cat1: 1, cat3: 2614 },
+  "kunst litho s en zeefdrukken": { cat1: 1, cat3: 27 },
+  "kunst tekeningen en foto s": { cat1: 1, cat3: 26 },
+  "antiek keukenbenodigdheden": { cat1: 1, cat3: 1842 },
+  "antiek servies compleet": { cat1: 1, cat3: 1843 },
+  "antiek kandelaars": { cat1: 1, cat3: 2661 },
+  "antiek spiegels": { cat1: 1, cat3: 2663 },
+  "antiek tin": { cat1: 1, cat3: 2664 },
+  "antiek kleden en textiel": { cat1: 1, cat3: 2118 },
+  "kunst overige kunst": { cat1: 1, cat3: 24 },
+  "antiek kantoor en zakelijk": { cat1: 1, cat3: 1841 },
+  "antiek schoolplaten": { cat1: 1, cat3: 2662 },
+  "antiek kleding en accessoires": { cat1: 1, cat3: 1503 },
+  "antiek naaimachines": { cat1: 1, cat3: 1101 },
+  "antiek tv s en audio": { cat1: 1, cat3: 11 },
+  "antiek meubels bedden": { cat1: 1, cat3: 1504 },
+
   "muziek accordeons":                                  { cat1: 728, cat3: 729 },   // Accordeons
   "muziek behuizingen en koffers":                      { cat1: 728, cat3: 730 },   // Behuizingen en Koffers
   "muziek blaasinstrumenten blokfluiten":               { cat1: 728, cat3: 1713 },   // Blaasinstrumenten | Blokfluiten

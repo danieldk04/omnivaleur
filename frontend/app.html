@@ -1732,6 +1732,7 @@ input[type="checkbox"].row-check { width: 15px; height: 15px; cursor: pointer; a
           <option value="electronics">Electronics &amp; Gadgets</option>
           <option value="sieraden">Jewellery, Watches &amp; Bags</option>
           <option value="muziek">Music &amp; Instruments</option>
+          <option value="antiek">Antiques, Art &amp; Collectables</option>
         </select>
       </div>
 
@@ -6212,6 +6213,34 @@ function renderPlatformCheckboxes(containerId, itemId) {
 
 // ── Category options per gender ───────────────────────────────────
 const CATEGORIES = {
+  // Marktplaats' boom Antiek en Kunst, gelijk aan _TAXONOMY['antiek'] in
+  // backend/api/imports.py. Twee niveaus, geen bucketId — geverifieerd in een
+  // ingelogde browser: /plaats/1/2614 toont 'Antiek en Kunst > Goud en Zilver'.
+  antiek: [
+    ["antiek curiosa en brocante","Curios & Brocante"],["antiek glas en kristal","Glass & Crystal"],
+    ["kunst schilderijen klassiek","Paintings (Classic)"],["antiek vazen","Vases"],
+    ["antiek keramiek en aardewerk","Ceramics & Pottery"],["antiek overige antiek","Other Antiques"],
+    ["antiek woonaccessoires","Home Accessories"],["antiek porselein","Porcelain"],
+    ["antiek servies los","Tableware (single pieces)"],["kunst beelden en houtsnijwerken","Sculptures & Carvings"],
+    ["antiek meubels stoelen en banken","Chairs & Sofas"],["antiek lampen","Lamps"],
+    ["kunst schilderijen modern","Paintings (Modern)"],["antiek wandborden en tegels","Wall Plates & Tiles"],
+    ["kunst etsen en gravures","Etchings & Engravings"],["antiek koper en brons","Copper & Bronze"],
+    ["antiek bestek","Cutlery"],["antiek boeken en bijbels","Books & Bibles"],
+    ["antiek klokken","Clocks"],["antiek meubels kasten","Cabinets"],
+    ["antiek speelgoed","Toys"],["kunst niet westerse kunst","Non-Western Art"],
+    ["antiek schalen","Bowls & Dishes"],["antiek meubels tafels","Tables"],
+    ["antiek gereedschap en instrumenten","Tools & Instruments"],["kunst schilderijen abstract","Paintings (Abstract)"],
+    ["antiek religie","Religious"],["kunst designobjecten","Design Objects"],
+    ["antiek emaille","Enamel"],["antiek goud en zilver","Gold & Silver"],
+    ["kunst litho s en zeefdrukken","Lithographs & Screenprints"],["kunst tekeningen en foto s","Drawings & Photos"],
+    ["antiek keukenbenodigdheden","Kitchenware"],["antiek servies compleet","Tableware (full sets)"],
+    ["antiek kandelaars","Candlesticks"],["antiek spiegels","Mirrors"],
+    ["antiek tin","Pewter"],["antiek kleden en textiel","Rugs & Textiles"],
+    ["kunst overige kunst","Other Art"],["antiek kantoor en zakelijk","Office & Business"],
+    ["antiek schoolplaten","School Charts"],["antiek kleding en accessoires","Clothing & Accessories"],
+    ["antiek naaimachines","Sewing Machines"],["antiek tv s en audio","TV & Audio"],
+    ["antiek meubels bedden","Beds"],
+  ],
   // Marktplaats' muziekboom, gelijk aan _TAXONOMY['muziek'] in
   // backend/api/imports.py en MP_CATEGORIES in de extensie. Ontbrak hier,
   // waardoor een muziekitem terugviel op kleding — zie NON_CLOTHING_PREFIXES.
@@ -6348,7 +6377,7 @@ const CATEGORIES = {
 // Non-clothing items are recognised purely by their category prefix (mirrors
 // backend crosslist.py _is_non_clothing), so no extra field has to be stored.
 // Each prefix maps to the matching item-type value in the form's type select.
-const NON_CLOTHING_PREFIXES = { 'games ': 'games', 'electronics ': 'electronics', 'sieraden ': 'sieraden', 'muziek ': 'muziek' };
+const NON_CLOTHING_PREFIXES = { 'games ': 'games', 'electronics ': 'electronics', 'sieraden ': 'sieraden', 'muziek ': 'muziek', 'antiek ': 'antiek', 'kunst ': 'antiek' };
 function isNonClothingItem(item) {
   const cat = String(item?.category || '').trim().toLowerCase();
   return Object.keys(NON_CLOTHING_PREFIXES).some(p => cat.startsWith(p));
