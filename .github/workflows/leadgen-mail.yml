@@ -27,7 +27,7 @@ concurrency:
 jobs:
   tick:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 30
     env:
       TZ: Europe/Amsterdam       # zonder dit rekent de server in UTC en loopt het rooster twee uur voor
       MAIL_HOST: smtp.zoho.eu
@@ -43,4 +43,15 @@ jobs:
         with:
           python-version: "3.12"
       - run: pip install --quiet httpx
-      - run: python scripts/leadgen_mail.py tick
+      # Drie controles per beurt, zeven minuten uit elkaar.
+      #
+      # GitHub belooft geen stipte kloktijden: normaal draait dit 25 keer per dag,
+      # maar op 18-08-2026 ging er tussen 08:20 en 09:10 geen enkele ronde en bleven
+      # nieuwe reacties liggen. Een cron die je niet in de hand hebt, moet je niet
+      # je enige hartslag maken. Slaat GitHub een beurt over, dan zijn er binnen
+      # deze beurt nog steeds drie momenten geweest waarop de postbus is gelezen.
+      - run: |
+          for i in 1 2 3; do
+            python scripts/leadgen_mail.py tick || true
+            [ $i -lt 3 ] && sleep 420
+          done
