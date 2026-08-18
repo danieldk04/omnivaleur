@@ -37,6 +37,8 @@ from __future__ import annotations
 import argparse
 import email
 import imaplib
+import collections
+import difflib
 import json
 import os
 import random
@@ -1515,7 +1517,7 @@ def _concept_tekst(lead: dict, body: str, soort: str = "warm") -> str:
         jij = "jullie" if str(lead.get("je_jullie", "")).lower().startswith("jul") else "je"
         teksten = AFSLUIT_CONCURRENT if soort == "concurrent" else AFSLUIT_AFWIJZING
         return "\n".join(["Hi,", "",
-                          random.choice(teksten).format(je=jij), "", ONDERTEKENING])
+                          random.choice(teksten).format(je=jij), "", _ondertekening()])
 
     vraagt = _wat_vraagt_hij(body)
     jij = "jullie" if str(lead.get("je_jullie", "")).lower().startswith("jul") else "je"
@@ -1539,8 +1541,102 @@ def _concept_tekst(lead: dict, body: str, soort: str = "warm") -> str:
                        "Marktplaats-aanbod in, zodat je niets hoeft over te tikken."]
 
     regels += ["", "Laat maar weten wat je ervan vindt, of als je ergens tegenaan loopt.",
-               "", ONDERTEKENING]
+               "", _ondertekening()]
     return "\n".join(regels)
+
+
+# ── Toonprofiel: leren van ALLES wat Daniel zelf verstuurt ────────────────
+#
+# Niet met een taalmodel maar met tellen. Een model dat "de toon nabootst" is niet
+# na te rekenen en verandert stilletjes van mening; tellen is hard. We meten aan
+# zijn eigen verstuurde mails hoe hij daadwerkelijk schrijft, en dat sturen we
+# terug in de concepten. Meet je niets, dan blijven de sjablonen zoals ze zijn —
+# een leeg profiel mag nooit tot een raar concept leiden.
+TOONPROFIEL_MAX = 400        # hoeveel verstuurde mails we hoogstens doorlezen
+_toon_kas: dict | None = None
+
+
+def _toonprofiel(ververs: bool = False) -> dict:
+    """Hoe schrijft Daniel zelf? Gemeten aan zijn verzonden map.
+
+    Levert alleen dingen op die je kunt natellen: welke afsluiting hij het meest
+    gebruikt, hoe lang zijn mails zijn, en of hij je of jullie zegt. Precies die
+    drie waren de terugkerende correcties op mijn concepten.
+    """
+    global _toon_kas
+    if _toon_kas is not None and not ververs:
+        return _toon_kas
+    host, gebruiker = os.environ.get("IMAP_HOST"), os.environ.get("MAIL_USER")
+    wachtwoord = os.environ.get("MAIL_PASS")
+    profiel = {"afsluiting": None, "woorden_p50": None, "gelezen": 0,
+               "jullie_aandeel": 0.0}
+    if not (host and gebruiker and wachtwoord):
+        return profiel
+    afsluitingen: collections.Counter = collections.Counter()
+    lengtes: list[int] = []
+    jullie = 0
+    try:
+        with imaplib.IMAP4_SSL(host, 993) as imap:
+            imap.login(gebruiker, wachtwoord)
+            imap.select('"Verzonden"', readonly=True)
+            _, d = imap.search(None, "ALL")
+            nummers = (d[0] or b"").split()[-TOONPROFIEL_MAX:]
+            for num in nummers:
+                _, ruw = imap.fetch(num, "(RFC822)")
+                if not ruw or not ruw[0]:
+                    continue
+                msg = email.message_from_bytes(ruw[0][1])
+                tekst = ""
+                for deel in msg.walk():
+                    if deel.get_content_type() == "text/plain":
+                        try:
+                            tekst = deel.get_payload(decode=True).decode(
+                                deel.get_content_charset() or "utf-8", "replace")
+                        except Exception:  # noqa: BLE001
+                            tekst = ""
+                        break
+                eigen = _kern_tekst(tekst)
+                if not eigen:
+                    continue
+                profiel["gelezen"] += 1
+                lengtes.append(len(eigen.split()))
+                if re.search(r"\b(jullie|jullie\w*)\b", eigen.lower()):
+                    jullie += 1
+                # De afsluiting is de laatste niet-lege regel vóór zijn naam.
+                regels = [r.strip() for r in eigen.splitlines() if r.strip()]
+                for i, r in enumerate(regels):
+                    if r.lower().rstrip(",.") in ("daniel", "daniel de koning") and i:
+                        groet = regels[i - 1].strip().rstrip(",")
+                        if 0 < len(groet) <= 30:
+                            afsluitingen[groet] += 1
+                        break
+    except Exception as e:  # noqa: BLE001 — leren mag het mailen nooit stoppen
+        print(f"  (toonprofiel niet gelezen: {e})")
+        return profiel
+    if afsluitingen:
+        profiel["afsluiting"] = afsluitingen.most_common(1)[0][0]
+    if lengtes:
+        lengtes.sort()
+        profiel["woorden_p50"] = lengtes[len(lengtes) // 2]
+    if profiel["gelezen"]:
+        profiel["jullie_aandeel"] = round(jullie / profiel["gelezen"], 2)
+    _toon_kas = profiel
+    return profiel
+
+
+def _kern_tekst(t: str) -> str:
+    """De eigen tekst van een mail: zonder citaat en zonder handtekeningblok."""
+    if not t:
+        return ""
+    t = re.split(r"\n\s*(?:Op .{0,80}schreef|Van:\s|-----Oorspronkelijk|________)", t)[0]
+    regels = [r for r in t.splitlines() if not r.lstrip().startswith(">")]
+    return "\n".join(regels).strip()
+
+
+def _ondertekening() -> str:
+    """Zijn eigen afsluiting, als die te meten valt. Anders de standaard."""
+    groet = (_toonprofiel() or {}).get("afsluiting")
+    return f"{groet},\nDaniel" if groet else ONDERTEKENING
 
 
 # ── Leren van wat Daniel er zelf van maakt ────────────────────────────────
@@ -1622,6 +1718,104 @@ def _citaat(inkomend, body: str) -> str:
     return "\n\n" + kop + "\n" + "\n".join("> " + r for r in regels) + "\n"
 
 
+# Hoeveel dagen terug we kijken en vanaf welke gelijkenis we het dubbel noemen.
+# 0.80 is streng genoeg om varianten van dezelfde standaardtekst te vangen, en
+# ruim genoeg om een echt nieuw antwoord door te laten.
+DUBBEL_DAGEN = 5
+DUBBEL_GRENS = 0.80
+
+
+def _overlap(a: str, b: str) -> float:
+    """Hoeveel van de KORTSTE tekst komt letterlijk in de andere voor.
+
+    Bewust geen gewone gelijkenis: die rekent lengteverschil mee, en dan scoort
+    een kort standaardantwoord binnen een langere mail maar 25% terwijl het er
+    woord voor woord in staat. Gemeten geval Cecile, 18-08-2026. Wat we willen
+    weten is niet of twee mails even lang zijn, maar of we hetzelfde al eens
+    hebben gezegd.
+    """
+    a, b = a[:2000], b[:2000]
+    if not a or not b:
+        return 0.0
+    kort = min(len(a), len(b))
+    if kort < 60:            # te weinig tekst om iets zinnigs over te zeggen
+        return 0.0
+    zelfde = sum(blok.size for blok in
+                 difflib.SequenceMatcher(None, a, b).get_matching_blocks())
+    return zelfde / kort
+
+
+def _lijkt_op_recent_verstuurd(adres: str, kern: str) -> bool:
+    """Is er de afgelopen dagen al iets bijna gelijks naar deze persoon gegaan?
+
+    Vergelijkt alleen de eigen tekst, zonder citaat en zonder handtekening: twee
+    verschillende antwoorden onder hetzelfde citaat lijken anders altijd op
+    elkaar. Bij twijfel laten we het concept staan — een gemist concept ziet
+    Daniel meteen, een dubbele mail ziet de klant.
+    """
+    if not adres or not kern:
+        return False
+    host, gebruiker = os.environ.get("IMAP_HOST"), os.environ.get("MAIL_USER")
+    wachtwoord = os.environ.get("MAIL_PASS")
+    if not (host and gebruiker and wachtwoord):
+        return False
+    mijn = _kern(kern)
+    if not mijn:
+        return False
+    stam = adres.split("@")[-1].split(".")[0].lower().replace("-online", "")
+    grens = datetime.now() - timedelta(days=DUBBEL_DAGEN)
+    # Twee pogingen. Een wegvallende IMAP-verbinding laat deze controle
+    # doorlaten, en dat is precies het moment waarop er een dubbele mail
+    # doorheen glipt. Gemeten: 1 van de 6 controles viel om op een socket-fout.
+    for poging in range(2):
+        uitkomst = _dubbel_ronde(adres, stam, mijn, grens)
+        if uitkomst is not None:
+            return uitkomst
+        time.sleep(2)
+    return False
+
+
+def _dubbel_ronde(adres: str, stam: str, mijn: str, grens) -> bool | None:
+    """Eén controleronde. None betekent: niet kunnen kijken, probeer opnieuw."""
+    host, gebruiker = os.environ.get("IMAP_HOST"), os.environ.get("MAIL_USER")
+    wachtwoord = os.environ.get("MAIL_PASS")
+    try:
+        with imaplib.IMAP4_SSL(host, 993) as imap:
+            imap.login(gebruiker, wachtwoord)
+            imap.select('"Verzonden"', readonly=True)
+            sinds = grens.strftime("%d-%b-%Y")
+            _, d = imap.search(None, f'(SINCE {sinds})')
+            for num in (d[0] or b"").split():
+                _, ruw = imap.fetch(num, "(RFC822)")
+                if not ruw or not ruw[0]:
+                    continue
+                msg = email.message_from_bytes(ruw[0][1])
+                naar = _leesbaar(msg.get("To", "")).lower()
+                # Ook een ander adres van hetzelfde bedrijf telt mee: mensen
+                # antwoorden vanaf info@bedrijf.nl terwijl wij naar
+                # info@bedrijf-online.nl mailden.
+                if adres.lower() not in naar and not (stam and stam in naar):
+                    continue
+                tekst = ""
+                for deel in msg.walk():
+                    if deel.get_content_type() == "text/plain":
+                        try:
+                            tekst = deel.get_payload(decode=True).decode(
+                                deel.get_content_charset() or "utf-8", "replace")
+                        except Exception:  # noqa: BLE001
+                            tekst = ""
+                        break
+                eerder = _kern(_kern_tekst(tekst))
+                if not eerder:
+                    continue
+                if _overlap(mijn, eerder) >= DUBBEL_GRENS:
+                    return True
+    except Exception as e:  # noqa: BLE001
+        print(f"  (dubbelcontrole mislukt: {e})")
+        return None
+    return False
+
+
 def _zet_concept_klaar(lead: dict, inkomend, body: str, soort: str = "warm",
                        eigen_tekst: str | None = None) -> bool:
     """Legt het voorstel als concept in Daniels postbus, in dezelfde draad."""
@@ -1659,6 +1853,19 @@ def _zet_concept_klaar(lead: dict, inkomend, body: str, soort: str = "warm",
     msg["Date"] = formatdate(localtime=True)
     msg["Message-ID"] = make_msgid(domain=(os.environ.get("MAIL_USER", "@x").split("@")[-1]))
     kern = eigen_tekst if eigen_tekst is not None else _concept_tekst(lead, body, soort)
+
+    # LAATSTE SLOT TEGEN DUBBELE MAIL.
+    # Alle concepten komen hier langs, dus dit is de enige plek waar één controle
+    # alles afdekt. De draadcontrole eerder vangt "dit bericht is al beantwoord";
+    # dit vangt het geval daarnaast: een ander bericht, maar een antwoord dat
+    # vrijwel woordelijk gelijk is aan wat er net al uitging. Gemeten op
+    # 18-08-2026: om 09:08 ging "Dank voor je reactie!" de deur uit en om 10:35
+    # lag er een bijna identiek concept klaar voor dezelfde persoon.
+    if _lijkt_op_recent_verstuurd(lead.get("email", ""), kern):
+        print(f"  ⊘ concept overgeslagen voor {lead.get('email')}: "
+              f"vrijwel gelijk aan wat er net al verstuurd is")
+        return False
+
     msg.set_content(kern + _citaat(inkomend, body))
     try:
         with imaplib.IMAP4_SSL(host, 993) as im:
@@ -1724,6 +1931,74 @@ def _archiveer(msg: EmailMessage) -> None:
             imap.append(f'"{ALARM_MAP}"', "\\Seen", None, msg.as_bytes())
     except Exception as e:  # noqa: BLE001 — archiveren mag nooit iets blokkeren
         print(f"  (kopie niet in {ALARM_MAP} gezet: {e})")
+
+
+# Wanneer Daniel gestoord mag worden. Onder deze grens is een wachtend concept
+# gewoon werk dat er ligt; erboven wordt het een stapel die hij niet meer
+# overziet, en dan is stilzwijgen erger dan een mailtje. Hooguit één keer per dag,
+# anders wordt het signaal zelf de ruis.
+STAPEL_GRENS = 5
+
+
+def _stapel_melden(plan: dict) -> None:
+    """Eén bericht als er te veel concepten liggen te wachten."""
+    aantal, namen = _concepten_tellen()
+    if aantal < STAPEL_GRENS:
+        plan.pop("stapel_gemeld", None)
+        return
+    vandaag = datetime.now().strftime("%Y-%m-%d")
+    if plan.get("stapel_gemeld") == vandaag:
+        return
+    host, van = os.environ.get("MAIL_HOST"), os.environ.get("MAIL_USER")
+    wachtwoord = os.environ.get("MAIL_PASS")
+    if not (host and van and wachtwoord):
+        return
+    bericht = EmailMessage()
+    bericht["From"] = f"Leadmachine <{van}>"
+    bericht["To"] = "danieldekoning66@gmail.com"
+    bericht["Subject"] = f"{aantal} conceptmails wachten op je"
+    bericht["Date"] = formatdate(localtime=True)
+    bericht.set_content(
+        f"Er liggen {aantal} concepten klaar in je postbus:\n\n"
+        + "\n".join(f"  - {n}" for n in namen[:15])
+        + "\n\nAllemaal antwoorden op mensen die iets van je willen. "
+          "Lezen, aanpassen waar nodig, versturen.\n")
+    try:
+        with smtplib.SMTP_SSL(host, 465, context=ssl.create_default_context()) as srv:
+            srv.login(van, wachtwoord)
+            srv.send_message(bericht)
+        plan["stapel_gemeld"] = vandaag
+        _save_plan(plan)
+        print(f"{datetime.now():%d-%m %H:%M} — {aantal} wachtende concepten gemeld")
+    except Exception as e:  # noqa: BLE001
+        print(f"  (stapelmelding niet verstuurd: {e})")
+
+
+def _concepten_tellen() -> tuple[int, list[str]]:
+    """Hoeveel concepten liggen er, en voor wie."""
+    host, gebruiker = os.environ.get("IMAP_HOST"), os.environ.get("MAIL_USER")
+    wachtwoord = os.environ.get("MAIL_PASS")
+    if not (host and gebruiker and wachtwoord):
+        return 0, []
+    namen: list[str] = []
+    try:
+        with imaplib.IMAP4_SSL(host, 993) as imap:
+            imap.login(gebruiker, wachtwoord)
+            bestaand = {r.decode().split(' "/" ')[-1].strip('"')
+                        for r in (imap.list()[1] or [])}
+            map_ = CONCEPTMAP if CONCEPTMAP in bestaand else "Drafts"
+            imap.select(f'"{map_}"', readonly=True)
+            _, d = imap.search(None, "ALL")
+            for num in (d[0] or b"").split():
+                _, ruw = imap.fetch(num, "(BODY.PEEK[HEADER])")
+                if not ruw or not ruw[0]:
+                    continue
+                kop = email.message_from_bytes(ruw[0][1])
+                namen.append(_leesbaar(kop.get("To", "")) or "?")
+    except Exception as e:  # noqa: BLE001
+        print(f"  (concepten niet geteld: {e})")
+        return 0, []
+    return len(namen), namen
 
 
 def _ruim_concepten_op() -> int:
@@ -2124,6 +2399,11 @@ def tick(args) -> None:
                       f"→ opvolging klaargezet in je concepten")
         except Exception as e:  # noqa: BLE001
             print(f"  (warme opvolging mislukt: {e})")
+
+        try:
+            _stapel_melden(plan)
+        except Exception as e:  # noqa: BLE001
+            print(f"  (stapelmelding mislukt: {e})")
 
         opgeruimd = _ruim_concepten_op()
         if opgeruimd:
