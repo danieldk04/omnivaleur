@@ -47,6 +47,7 @@ import sys
 import textwrap
 import time
 from datetime import date, datetime, timedelta
+from email.header import decode_header, make_header
 from email.message import EmailMessage
 from email.utils import formatdate, make_msgid, parseaddr, parsedate_to_datetime
 from pathlib import Path
@@ -930,6 +931,67 @@ def _laatst_verstuurd_per_adres() -> dict[str, float]:
     return uit
 
 
+def _leesbaar(waarde) -> str:
+    """Een mailkop terugbrengen tot gewone tekst, ook als hij gecodeerd is."""
+    if not waarde:
+        return ""
+    try:
+        return str(make_header(decode_header(str(waarde))))
+    except Exception:  # noqa: BLE001
+        return str(waarde)
+
+
+def _beantwoorde_berichten() -> set[str]:
+    """Message-ID's van binnengekomen mails waar al een antwoord op is gegaan.
+
+    Waarom niet op e-mailadres: gemeten geval afstandsbediening (18-08-2026).
+    De koude mail ging naar info@afstandsbediening-online.nl, hun antwoord kwam
+    van info@afstandsbediening.nl, en Daniel antwoordde op dát adres. Op adres
+    vergeleken leek het bericht dus onbeantwoord en werd er een tweede keer een
+    concept voor opgesteld. Het gesprek is de enige betrouwbare sleutel: elk
+    antwoord draagt In-Reply-To en References van het bericht waarop het slaat,
+    ongeacht welk adres iemand gebruikt.
+
+    Concepten tellen mee. Een concept dat al klaarligt is een antwoord dat nog
+    verstuurd moet worden, geen reden om er nog een naast te leggen.
+    """
+    host, gebruiker = os.environ.get("IMAP_HOST"), os.environ.get("MAIL_USER")
+    wachtwoord = os.environ.get("MAIL_PASS")
+    uit: set[str] = set()
+    if not (host and gebruiker and wachtwoord):
+        return uit
+    plat = lambda v: re.sub(r"\s+", " ", str(v or "")).strip()
+    try:
+        with imaplib.IMAP4_SSL(host, 993) as imap:
+            imap.login(gebruiker, wachtwoord)
+            bestaand = {r.decode().split(' "/" ')[-1].strip('"')
+                        for r in (imap.list()[1] or [])}
+            for map_ in ("Verzonden", CONCEPTMAP, "Drafts"):
+                if map_ not in bestaand:
+                    continue
+                try:
+                    imap.select(f'"{map_}"', readonly=True)
+                except imaplib.IMAP4.error:
+                    continue
+                _, d = imap.search(None, "ALL")
+                for num in (d[0] or b"").split():
+                    _, ruw = imap.fetch(num, "(BODY.PEEK[HEADER])")
+                    if not ruw or not ruw[0]:
+                        continue
+                    kop = email.message_from_bytes(ruw[0][1])
+                    for veld in ("In-Reply-To", "References"):
+                        # Zoho verstuurt deze koppen gecodeerd terug
+                        # ("=?utf-8?q?=3CAM9PR03...=3E?="). Ongedecodeerd
+                        # vergelijken vindt nooit iets, en dan lijkt elk
+                        # beantwoord bericht nog open te staan.
+                        for mid in plat(_leesbaar(kop.get(veld))).split():
+                            if mid.startswith("<"):
+                                uit.add(mid)
+    except Exception as e:  # noqa: BLE001
+        print(f"  (beantwoorde berichten niet gelezen: {e})")
+    return uit
+
+
 def _check_inbox(state: dict, boek: "Notion", dagen: int) -> tuple[int, int, int]:
     """Antwoorden, afmeldingen en bounces ophalen. Wie antwoordt krijgt geen
     opvolgmail meer; dat is het verschil tussen opvolgen en zeuren."""
@@ -940,6 +1002,7 @@ def _check_inbox(state: dict, boek: "Notion", dagen: int) -> tuple[int, int, int
     # Wanneer schreven wij voor het laatst naar elk adres? Nodig om te zien of een
     # binnengekomen bericht nog een antwoord verdient of allang is afgehandeld.
     laatst_verstuurd = _laatst_verstuurd_per_adres()
+    al_beantwoord = _beantwoorde_berichten()
     with imaplib.IMAP4_SSL(host, 993) as imap:
         imap.login(gebruiker, _need("MAIL_PASS"))
         # Ook in Beantwoord kijken. Daar is in het verleden mail beland die nooit
@@ -1038,7 +1101,14 @@ def _check_inbox(state: dict, boek: "Notion", dagen: int) -> tuple[int, int, int
 
             al_gedaan = float(st.get("laatste_inkomend") or 0)
             beantwoord_door_daniel = laatst_verstuurd.get(afzender)
-            if (lead and binnen_op and soort != "afmelding"
+            # Ligt er al een antwoord of een concept voor precies dit bericht,
+            # dan zijn we klaar. Dit is de enige controle die ook standhoudt als
+            # iemand vanaf een ander adres schrijft dan waar wij naartoe mailden.
+            # Alleen het CONCEPT overslaan, niet de rest: de status in Notion en
+            # het opbergen van het bericht horen ook dan gewoon door te gaan.
+            eigen_id = re.sub(r"\s+", " ", str(msg.get("Message-ID") or "")).strip()
+            al_gedekt = bool(eigen_id and eigen_id in al_beantwoord)
+            if (lead and binnen_op and soort != "afmelding" and not al_gedekt
                     and binnen_op > al_gedaan
                     and not (beantwoord_door_daniel and beantwoord_door_daniel > binnen_op)):
                 if _zet_concept_klaar(lead, msg, body,
