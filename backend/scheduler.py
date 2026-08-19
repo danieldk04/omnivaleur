@@ -54,6 +54,7 @@ def start_scheduler():
     from backend.services.billing import expire_trials, send_trial_reminders
     from backend.services.analytics_report import send_weekly_report
     from backend.content.evaluator import run_evaluation_cycle_sync
+    from backend.content.pipeline import translate_missing_pages
 
     _scheduler = AsyncIOScheduler()
     _scheduler.add_job(
@@ -112,6 +113,24 @@ def start_scheduler():
         minute=0,
         timezone="Europe/Amsterdam",
         id="weekly_content_evaluation",
+        replace_existing=True,
+    )
+    # NL-inhaalronde — dagelijks 11:00 (NL-tijd), ruim ná de publicatie van het
+    # artikel van die dag. Elke Engelse pagina hoort een Nederlandse tweeling te
+    # hebben; mislukte de vertaling bij het publiceren, dan bleef dat gat vroeger
+    # voorgoed staan. Drie per ronde, zodat de Claude-kosten voorspelbaar blijven.
+    # translate_missing_pages is synchroon (Supabase + Claude); _off_the_request_loop
+    # verwacht een coroutine, vandaar dit dunne omhulsel.
+    async def nl_backfill():
+        translate_missing_pages(limit=3)
+
+    _scheduler.add_job(
+        _off_the_request_loop(nl_backfill),
+        "cron",
+        hour=11,
+        minute=0,
+        timezone="Europe/Amsterdam",
+        id="daily_nl_backfill",
         replace_existing=True,
     )
     _scheduler.start()

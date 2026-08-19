@@ -272,30 +272,15 @@ async def run_pipeline(
         logger.warning(f"Publicatienorm niet volledig gehaald voor '{keyword}': {'; '.join(schema_warnings)}")
 
     if needs_dutch_translation(keyword, region):
-        logger.info(f"NL-vertaling genereren voor '{keyword}'")
-        translated = translate_to_dutch(generated)
-        if translated and _afgekapt(translated):
-            logger.error(f"NL-vertaling van '{keyword}' is afgekapt — niet opgeslagen, "
-                         f"de Engelse pagina blijft zonder companion")
-            translated = None
-        if translated:
-            db_nl_slug = f"{nl_slug or slug}-nl"
-            translated["body_html"] = inject_article_screenshots(
-                translated["body_html"], pillar, keyword, translated["h1"], db_nl_slug, language="nl"
-            )
-            translated["body_html"] = inject_platform_images(
-                translated["body_html"], keyword, language="nl", title=translated["h1"]
-            )
-            translated["body_html"] = inject_infographics(translated["body_html"], language="nl")
-            nl_result = _save_page_row(
-                db, region=region, pillar=pillar, slug=db_nl_slug, keyword=keyword,
-                language="nl", translation_of=result["intent_key"], generated=translated, research=None,
-            )
+        nl_path = publish_dutch_companion(
+            db, region=region, pillar=pillar, keyword=keyword,
+            db_nl_slug=f"{nl_slug or slug}-nl", source=generated,
+            source_intent_key=result["intent_key"], inject_media=True,
+        )
+        if nl_path:
             # No reverse pointer needed on the English row — content.py looks up the
             # NL companion by querying translation_of = <this row's intent_key>.
-            result["nl_translation"] = nl_result["url_path"]
-        else:
-            logger.warning(f"NL-vertaling mislukt voor '{keyword}' — Engelse pagina blijft zonder companion")
+            result["nl_translation"] = nl_path
 
     try:
         notify_published(keyword, result["url_path"], result["action"], schema_warnings)
@@ -303,3 +288,111 @@ async def run_pipeline(
         logger.error(f"Publicatie-melding mislukt (niet-blokkerend): {e}")
 
     return result
+
+
+def publish_dutch_companion(
+    db,
+    *,
+    region: str,
+    pillar: str,
+    keyword: str,
+    db_nl_slug: str,
+    source: dict,
+    source_intent_key: str,
+    inject_media: bool,
+) -> str | None:
+    """Vertaalt één Engels artikel naar het Nederlands en publiceert het.
+
+    Twee pogingen: de vertaling faalde in de praktijk vooral doordat het antwoord
+    halverwege afbrak, en dat is bij een tweede poging meestal over. Lukt het dan
+    nog niet, dan pakt de dagelijkse inhaalronde (`translate_missing_pages`) het
+    artikel later alsnog op — vroeger bleef het voorgoed zonder NL-versie.
+
+    `inject_media` staat alleen aan bij een vers gegenereerd artikel; bij de
+    inhaalronde zitten de beelden al in de opgeslagen tekst en zou opnieuw
+    injecteren ze dubbel zetten.
+    """
+    translated = None
+    for poging in (1, 2):
+        kandidaat = translate_to_dutch(source)
+        if kandidaat and _afgekapt(kandidaat):
+            logger.error(f"NL-vertaling van '{keyword}' is afgekapt (poging {poging})")
+            kandidaat = None
+        if kandidaat:
+            translated = kandidaat
+            break
+
+    if not translated:
+        logger.warning(f"NL-vertaling mislukt voor '{keyword}' — Engelse pagina blijft voorlopig zonder companion")
+        return None
+
+    if inject_media:
+        translated["body_html"] = inject_article_screenshots(
+            translated["body_html"], pillar, keyword, translated["h1"], db_nl_slug, language="nl"
+        )
+        translated["body_html"] = inject_platform_images(
+            translated["body_html"], keyword, language="nl", title=translated["h1"]
+        )
+        translated["body_html"] = inject_infographics(translated["body_html"], language="nl")
+
+    nl_result = _save_page_row(
+        db, region=region, pillar=pillar, slug=db_nl_slug, keyword=keyword,
+        language="nl", translation_of=source_intent_key, generated=translated, research=None,
+    )
+    return nl_result["url_path"]
+
+
+def translate_missing_pages(limit: int = 3) -> dict:
+    """Inhaalronde: Engelse artikelen zonder Nederlandse tweeling alsnog vertalen.
+
+    Elke mislukte vertaling liet tot nu toe een gat achter dat nooit meer werd
+    gedicht. Deze ronde loopt dagelijks en pakt de oudste gaten eerst; `limit`
+    houdt het aantal Claude-aanroepen per ronde in de hand.
+    """
+    db = get_db()
+    rows = (
+        db.table("content_pages")
+        .select("*")
+        .eq("status", "published")
+        .eq("language", "en")
+        .is_("translation_of", "null")
+        .order("published_at", desc=False)
+        .execute()
+        .data
+        or []
+    )
+    vertaald = (
+        db.table("content_pages")
+        .select("translation_of")
+        .eq("status", "published")
+        .eq("language", "nl")
+        .execute()
+        .data
+        or []
+    )
+    heeft_nl = {r["translation_of"] for r in vertaald if r.get("translation_of")}
+
+    ontbreekt = [r for r in rows if f'{r["region"]}:{r["pillar"]}:{r["slug"]}' not in heeft_nl]
+    logger.info(f"NL-inhaalronde: {len(ontbreekt)} Engelse pagina's zonder vertaling")
+
+    gedaan: list[str] = []
+    for row in ontbreekt[:limit]:
+        intent_key = f'{row["region"]}:{row["pillar"]}:{row["slug"]}'
+        try:
+            path = publish_dutch_companion(
+                db,
+                region=row["region"],
+                pillar=row["pillar"],
+                keyword=row.get("primary_keyword") or row["slug"],
+                db_nl_slug=f'{row["slug"]}-nl',
+                source=row,
+                source_intent_key=intent_key,
+                inject_media=False,
+            )
+        except Exception as e:
+            logger.error(f"NL-inhaalronde mislukt voor {intent_key}: {e}")
+            continue
+        if path:
+            gedaan.append(path)
+
+    return {"ontbrak": len(ontbreekt), "vertaald": gedaan}
