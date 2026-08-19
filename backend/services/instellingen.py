@@ -31,7 +31,15 @@ RELIST_DAGEN_STANDAARD = 27
 RELIST_DAGEN_MIN = 7
 RELIST_DAGEN_MAX = 85
 
-STANDAARD = {"relist_dagen": RELIST_DAGEN_STANDAARD}
+# Welke categoriegroepen deze verkoper op Vinted wil hebben. Leeg = alles wat
+# Vinted zelf toestaat. Dit is een VOORKEUR, geen platformregel: Jaap
+# Zilverwebsite wil er alleen sieraden op, maar zijn buurman mag daar prima
+# elektronica verkopen. Die twee dingen moeten uit elkaar blijven, anders staat
+# de voorkeur van de een als verbod in de weg bij de ander.
+VINTED_GROEPEN_GELDIG = ("dames", "heren", "kinderen", "unisex", "sieraden",
+                         "antiek", "kunst", "muziek", "games", "electronics")
+
+STANDAARD = {"relist_dagen": RELIST_DAGEN_STANDAARD, "vinted_groepen": []}
 
 
 def _schoon(rauw: dict | None) -> dict:
@@ -43,6 +51,14 @@ def _schoon(rauw: dict | None) -> dict:
     except (TypeError, ValueError):
         dagen = RELIST_DAGEN_STANDAARD
     uit["relist_dagen"] = max(RELIST_DAGEN_MIN, min(dagen, RELIST_DAGEN_MAX))
+    # Alleen groepen die echt bestaan. Een typefout of een verzonnen naam zou
+    # anders stilzwijgend álles blokkeren — de instelling zou dan precies het
+    # tegenovergestelde doen van wat er staat.
+    groepen = rauw.get("vinted_groepen")
+    if isinstance(groepen, list):
+        uit["vinted_groepen"] = [g for g in
+                                 dict.fromkeys(str(x).strip().lower() for x in groepen)
+                                 if g in VINTED_GROEPEN_GELDIG]
     return uit
 
 

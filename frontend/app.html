@@ -971,7 +971,7 @@ input[type="checkbox"].row-check { width: 15px; height: 15px; cursor: pointer; a
             <option value="ebay">eBay</option>
             <option value="shopify">Shopify</option>
           </select>
-          <select id="filter-vinted" onchange="applyFilters()" title="Vinted is a fashion marketplace — antiques, art, music, games and electronics have no category there">
+          <select id="filter-vinted" onchange="applyFilters()" title="Hides items Vinted refuses (coins, banknotes, stamps, archaeological items) or that your own Vinted setting leaves out">
             <option value="all">Vinted: all</option>
             <option value="ja">Vinted: can be listed</option>
             <option value="nee">Vinted: cannot</option>
@@ -1113,6 +1113,18 @@ input[type="checkbox"].row-check { width: 15px; height: 15px; cursor: pointer; a
         <p>Connect the marketplaces you want to publish to. Marktplaats, 2dehands and Vinted connect automatically via the Chrome extension — eBay and Shopify connect via their official API.</p>
       </div>
       <div id="platforms-body" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:12px;max-width:900px"></div>
+
+      <div style="max-width:900px;margin-top:24px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:18px 20px">
+        <div style="font-weight:800;font-size:15px;margin-bottom:4px">What may go on Vinted</div>
+        <p style="font-size:13px;color:var(--muted);line-height:1.6;margin:0 0 14px">
+          Vinted itself bans coins, banknotes, stamps, securities and archaeological items — those are always refused,
+          whatever you tick here. Everything else is your own choice. Tick nothing to allow all your categories;
+          tick only the ones you actually want listed there.
+        </p>
+        <div id="vinted-groepen" style="display:flex;flex-wrap:wrap;gap:8px 16px;margin-bottom:14px"></div>
+        <button class="btn btn-primary btn-sm" onclick="saveVintedGroepen()">Save</button>
+        <span id="vinted-groepen-status" style="font-size:12px;color:var(--muted);margin-left:10px"></span>
+      </div>
     </div>
 
     <div id="view-protections" class="view">
@@ -2548,7 +2560,7 @@ const PLATFORM_ICONS = new Proxy({}, { get: (_, key) => platIcon(key) });
 // dat onderscheid was "nog niet geladen" niet te onderscheiden van "niets staat
 // online", en dan schoof de hele catalogus naar "To list".
 let state = { items: [], listings: [], jobs: [], connected: [], crosslistItemId: null,
-              listingsLoaded: false, listingsLoadError: null };
+              listingsLoaded: false, listingsLoadError: null, settings: {} };
 let selectedIds = new Set();
 
 // ── Marge calculator ────────────────────────────────────────────
@@ -2612,13 +2624,49 @@ function showView(name) {
     if (name === 'berichten') { loadNotifications(); }
     if (name === 'items') { clearSelection(); applyFilters(); }
     if (name === 'analytics') { renderAnalytics(); }
-    if (name === 'platforms') { renderPlatforms(); }
+    if (name === 'platforms') { renderPlatforms(); renderVintedGroepen(); }
     if (name === 'refresh') { renderRefreshView(); loadRelistStatus(); loadRelistDagen(); }
     if (name === 'import') { renderImportScanButtons(); loadImportCandidates(); }
     if (name === 'stale') { clearSelection(); renderStaleStock(); }
   } catch (e) {
     console.error('showView(' + name + ') render failed:', e);
     showToast('Something went wrong loading this screen — try refreshing the page.');
+  }
+}
+
+// ── Vinted: welke categorieen wil je er zelf op ──────────────────
+function renderVintedGroepen() {
+  const wrap = document.getElementById('vinted-groepen');
+  if (!wrap) return;
+  const gekozen = new Set((state.settings && state.settings.vinted_groepen) || []);
+  wrap.innerHTML = VINTED_GROEPEN.map(g => `
+    <label style="display:inline-flex;align-items:center;gap:6px;font-size:13px;font-weight:600;cursor:pointer">
+      <input type="checkbox" value="${g}" ${gekozen.has(g) ? 'checked' : ''}>
+      ${esc(VINTED_GROEP_LABELS[g] || g)}
+    </label>`).join('');
+}
+
+async function saveVintedGroepen() {
+  const gekozen = [...document.querySelectorAll('#vinted-groepen input:checked')].map(c => c.value);
+  const status = document.getElementById('vinted-groepen-status');
+  status.textContent = 'Saving…';
+  try {
+    const r = await apiFetch(`${API}/api/items/settings`, {
+      method: 'PUT', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ vinted_groepen: gekozen }),
+    });
+    const data = await parseJsonSafe(r);
+    if (!r.ok) throw new Error(data?.detail || 'Could not save');
+    // Tonen wat er ECHT is opgeslagen, niet wat er is aangeklikt. Een groep die
+    // de server niet kent valt weg, en dat hoor je te zien.
+    state.settings = { ...state.settings, ...data };
+    renderVintedGroepen();
+    status.textContent = gekozen.length
+      ? 'Saved — only these go on Vinted from now on.'
+      : 'Saved — all your categories may go on Vinted.';
+    applyFilters(false);
+  } catch (e) {
+    status.textContent = 'Could not save: ' + e.message;
   }
 }
 
@@ -3116,11 +3164,12 @@ async function fetchAllItems() {
 }
 
 async function loadAll() {
-  const [itemsRes, listingsRes, jobsRes, platformsRes] = await Promise.allSettled([
+  const [itemsRes, listingsRes, jobsRes, platformsRes, settingsRes] = await Promise.allSettled([
     fetchAllItems(),
     apiFetch(`${API}/api/listings/`).then(parseJsonSafe),
     apiFetch(`${API}/api/jobs/pending`).then(parseJsonSafe),
     apiFetch(`${API}/api/platforms/status`).then(parseJsonSafe),
+    apiFetch(`${API}/api/items/settings`).then(parseJsonSafe),
   ]);
   // Onthouden DAT het misging. Zonder dit is "niet kunnen laden" op het scherm
   // hetzelfde als "je hebt niets", en dat is precies het verkeerde antwoord voor
@@ -3143,6 +3192,12 @@ async function loadAll() {
   }
   if (jobsRes.status === 'fulfilled') state.jobs = Array.isArray(jobsRes.value) ? jobsRes.value : [];
   if (platformsRes.status === 'fulfilled') state.connected = platformsRes.value.connected || [];
+  // De eigen voorkeur moet binnen zijn vóór er iets wordt ingedeeld, anders
+  // oordeelt het scherm even met een lege instelling en ziet hij artikelen die
+  // hij juist heeft uitgezet gewoon als publiceerbaar staan.
+  if (settingsRes.status === 'fulfilled' && settingsRes.value && typeof settingsRes.value === 'object') {
+    state.settings = settingsRes.value;
+  }
   renderDashboard();
   renderExtStatus();
   // Re-render items view if active
@@ -3718,8 +3773,8 @@ async function doBulkCrosslist() {
     const regels = [...overgeslagen.entries()]
       .map(([p, n]) => `• ${n} item${n !== 1 ? 's' : ''} skipped for ${PLATFORM_LABELS[p] || p}`);
     alert(`Some items were left off a platform they can't be listed on:\n\n${regels.join('\n')}\n\n`
-      + `Vinted is a fashion marketplace — antiques, art, music, games and electronics have no category there. `
-      + `Everything else went through as normal.`);
+      + `Either Vinted bans them (coins, banknotes, stamps, securities, archaeological items), `
+      + `or your own Vinted setting under Platforms leaves that category out. Everything else went through as normal.`);
   }
   if (blockedItems.length) {
     alert(`${blockedItems.length} item(s) couldn't be published — missing data:\n\n${blockedItems.join('\n')}\n\nFill these in first, then try again.`);
@@ -6312,37 +6367,51 @@ function showToast(msg) {
 }
 
 // ── Wat kan er op welk platform ──────────────────────────────────
-// Spiegel van backend/services/platformregels.py. Die backend is de baas: hij
-// weigert het écht. Dit hier is er zodat je het ziet vóórdat je publiceert in
-// plaats van erna, en zodat je niet 300 artikelen aanvinkt die toch afvallen.
+// Spiegel van backend/services/platformregels.py. Die backend is de baas: die
+// weigert het écht. Dit hier bestaat zodat je het ziet vóór je publiceert.
 //
-// Twee soorten uitkomst, en het verschil is met opzet:
-//  - 'blokkade': Vinted heeft geen categorie voor antiek, kunst, muziek, games
-//    of elektronica. Zo'n artikel kán daar niet staan. Dat vinkje gaat uit.
-//  - 'twijfel': tafelzilver of edelmetaal als belegging. Dat hangt af van de
-//    regels van het platform en die kunnen wij niet met zekerheid nalezen, dus
-//    dat wordt een waarschuwing die je kunt negeren — nooit een weigering.
-const VINTED_GROEPEN_NIET = {
-  'antiek ': 'antiques & curios', 'kunst ': 'art', 'muziek ': 'music & records',
-  'games ': 'games & consoles', 'electronics ': 'electronics',
-};
-const BELEGGING_RE = /\b(munt(en|stuk)?|baar|baren|bullion|troy\s*ounce|penning(en)?|beleggings(goud|zilver)|edelsteen|edelstenen|losse\s*diamant)\b/i;
-const TAFELZILVER_RE = /\b(bestek(cassette)?|couvert|servies|theepot|koffiekan|dienblad|kandelaar(s)?|kandelaber|schaal|schotel|suikerpot|melkkan|tafelzilver|zilverwerk|bonbonniere|sigarenkoker)\b/i;
+// Twee losse vragen, en ze moeten gescheiden blijven:
+//  1. Wat verbiedt Vinted? Woordelijk van vinted.nl/help/5: archeologische
+//     voorwerpen, cultuurgoederen en cultureel erfgoed, "inclusief postzegels,
+//     munten, bankbiljetten en aandeelbewijzen". Dat wordt geweigerd.
+//  2. Wat wil DEZE verkoper er niet op hebben? Dat is zijn eigen instelling.
+//
+// Hier stond eerder een blokkade op elektronica, muziek en games. Dat was fout:
+// Vinted verkoopt ook Home, Elektronica, Boeken & multimedia, Hobby's &
+// verzamelen en Sport (vinted.nl/help/1573). Een verzonnen verbod is net zo
+// schadelijk als een gemist verbod — je kunt er zelf niets tegen beginnen.
+const VINTED_VERBODEN_RE = /\b(munt|munten|muntstuk|muntenverzameling|zilverm[ui]nt\w*|goudm[ui]nt\w*|bankbiljet\w*|biljetten|postzegel\w*|aandeelbewijs|aandeelbewijzen|effecten|archeologisch\w*|opgraving\w*|romeinse?\s+(munt|vondst)|gouden\s*tientje|zilveren\s*dukaat|dukaat|rijksdaalder|gulden\s*munt)\b/i;
+const VINTED_TWIJFEL = [
+  [/\b((zilver|goud|platina)ba(a|e)r\w*|baar|baren|bullion|troy\s*ounce|beleggings(goud|zilver)|edelsteen|edelstenen|losse\s*diamant)\b/i,
+   'Looks like bullion or a loose stone rather than something to wear or use — check Vinted allows it'],
+  [/\b(ivoor|ivoren|bont(jas|kraag)?|nertsbont|vossenbont|reptielenhuid|krokodillenleer|schildpad)\b/i,
+   'Looks like an animal product (ivory, fur, reptile skin) — Vinted does not allow these'],
+];
+const VINTED_GROEPEN = ['dames','heren','kinderen','unisex','sieraden','antiek','kunst','muziek','games','electronics'];
+const VINTED_GROEP_LABELS = { dames:"Women's", heren:"Men's", kinderen:"Kids", unisex:'Unisex',
+  sieraden:'Jewellery, watches & bags', antiek:'Antiques', kunst:'Art', muziek:'Music',
+  games:'Games', electronics:'Electronics' };
+
+function itemGroep(item) {
+  const cat = String(item?.category || '').trim().toLowerCase();
+  return VINTED_GROEPEN.find(g => cat.startsWith(g + ' ')) || '';
+}
 
 function platformOordeel(item, platform) {
   if (platform !== 'vinted' || !item) return { oordeel: 'ok', reden: '' };
-  const cat = String(item.category || '').trim().toLowerCase();
   const tekst = `${item.title || ''} ${item.description || ''}`;
-  for (const [prefix, naam] of Object.entries(VINTED_GROEPEN_NIET)) {
-    if (cat.startsWith(prefix)) {
-      return { oordeel: 'blokkade', reden: `Vinted is a fashion marketplace and has no category for ${naam}` };
+  if (VINTED_VERBODEN_RE.test(tekst)) {
+    return { oordeel: 'blokkade', reden: 'Vinted bans coins, banknotes, stamps, securities and archaeological items' };
+  }
+  const voorkeur = (state.settings && state.settings.vinted_groepen) || [];
+  if (voorkeur.length) {
+    const groep = itemGroep(item);
+    if (groep && !voorkeur.includes(groep)) {
+      return { oordeel: 'blokkade', reden: `Your own setting only allows ${voorkeur.map(g => VINTED_GROEP_LABELS[g] || g).join(', ')} on Vinted` };
     }
   }
-  if (TAFELZILVER_RE.test(tekst)) {
-    return { oordeel: 'twijfel', reden: 'Looks like tableware rather than something to wear — check this belongs on Vinted' };
-  }
-  if (BELEGGING_RE.test(tekst)) {
-    return { oordeel: 'twijfel', reden: 'Looks like bullion or a loose stone rather than jewellery — check Vinted allows it' };
+  for (const [re_, reden] of VINTED_TWIJFEL) {
+    if (re_.test(tekst)) return { oordeel: 'twijfel', reden };
   }
   return { oordeel: 'ok', reden: '' };
 }

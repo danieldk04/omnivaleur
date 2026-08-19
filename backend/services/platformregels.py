@@ -1,123 +1,124 @@
 """
 Wat mag er op welk platform.
 
-WAAROM DIT BESTAAT
-Jaap Zilverwebsite verkoopt zilverwerk, antiek en sieraden door elkaar. Op
-Vinted is alleen dat laatste bruikbaar: Vinted is een modeplatform en heeft
-domweg geen plek voor een zilveren bestekcassette of een schilderij. Zonder een
-rem hierop is een misklik in een bulkselectie genoeg om honderden zoekertjes te
-proberen te plaatsen die daar niet thuishoren — dat is niet alleen zinloos werk,
-het is ook precies het gedrag waar een platform accounts op sluit.
+TWEE VERSCHILLENDE VRAGEN, EN DIE MOETEN GESCHEIDEN BLIJVEN
+1. Wat verbiedt het platform? Dat is niet onderhandelbaar en wordt geweigerd.
+2. Wat wil deze verkoper daar zelf niet plaatsen? Dat is een voorkeur, staat in
+   zijn eigen instellingen, en hij kan hem elk moment omzetten.
 
-TWEE SOORTEN OORDEEL, EN HET VERSCHIL IS BELANGRIJK
-- "blokkade": we weten het zeker, omdat het niet over beleid gaat maar over
-  structuur. Vinted heeft geen categorie voor antiek, kunst, muziek, games of
-  elektronica. Zo'n artikel kán daar niet staan; het formulier heeft er geen
-  plek voor. Dat weigeren we.
-- "twijfel": we vermoeden iets, maar het hangt af van de regels van het platform
-  en die kunnen wij niet met zekerheid nalezen. Edelmetaal is het geval dat
-  Daniel noemde: een zilveren ring is een sieraad, maar een zilverbaar of een
-  zilveren munt is een belegging, en daar is Vinted niet voor. Dat wordt een
-  waarschuwing, NOOIT een weigering.
+Die twee door elkaar halen is precies de fout die hier eerst in zat. Vinted werd
+behandeld als een puur modeplatform en daarmee werden elektronica, muziek en
+games geweigerd. Dat is onjuist: Vinted verkoopt sinds de uitbreiding ook Home,
+Elektronica, Boeken & multimedia, Hobby's & verzamelen en Sport — nagelezen op
+hun eigen categoriepagina (vinted.nl/help/1573). Een verzonnen verbod is net zo
+schadelijk als een gemist verbod: het houdt iemand tegen bij iets dat gewoon mag,
+en daar kan hij zelf niets tegen beginnen.
 
-Dat onderscheid is het hele punt. Een verkeerde blokkade houdt iemand tegen bij
-iets dat gewoon mag, en dat is erger dan een gemiste waarschuwing: hij kan de
-waarschuwing negeren, een blokkade niet.
+WAT VINTED WEL LETTERLIJK VERBIEDT
+Van vinted.nl/help/5 ("Artikelen die niet zijn toegestaan"), woordelijk:
+"Alle voorwerpen die worden beschouwd als archeologische voorwerpen,
+cultuurgoederen of cultureel erfgoed, inclusief postzegels, munten, bankbiljetten
+en aandeelbewijzen."
+Dat is de harde lijst hieronder. Alles wat daar niet in staat wordt hooguit een
+waarschuwing, nooit een weigering.
 """
 from __future__ import annotations
 
 import re
 
-# Categoriegroepen die op Vinted bestaan. Vinted is een modeplatform: kleding,
-# schoenen, tassen, accessoires, sieraden en horloges. De groep "sieraden" in
-# onze eigen boom bevat naast sieraden ook tassen, portemonnees en zonnebrillen
-# — allemaal mode, dus die hoort er in zijn geheel bij.
-_VINTED_GROEPEN_OK = ("dames ", "heren ", "kinderen ", "unisex ", "sieraden ")
-
-# Categoriegroepen die Vinted niet kent. Dit is geen beleidsoordeel maar de
-# indeling van hun eigen catalogus.
-_VINTED_GROEPEN_NIET = {
-    "antiek ": "antiek en curiosa",
-    "kunst ": "kunst",
-    "muziek ": "muziek en platen",
-    "games ": "games en consoles",
-    "electronics ": "elektronica",
-}
-
-# Edelmetaal als bélegging in plaats van als sieraad. Munten, baren, penningen
-# en losse edelstenen. Bewust smal gehouden: "zilveren ring" mag hier niet in
-# lopen, want dat is precies wat wél gewoon op Vinted kan.
-_BELEGGING_RE = re.compile(
-    r"\b(munt(en|stuk)?|baar|baren|bullion|troy\s*ounce|ounce\s*zilver|"
-    r"gouden\s*tientje|zilveren\s*dukaat|penning(en)?|"
-    r"beleggings(goud|zilver)|edelsteen|edelstenen|losse\s*diamant)\b",
-    re.I,
-)
-
-# Zilverwerk voor op tafel of in de kast: geen mode, ook niet als het van zilver
-# is. Dit is de hoofdmoot van Jaaps voorraad en de reden dat hij het vroeg.
-_TAFELZILVER_RE = re.compile(
-    r"\b(bestek(cassette)?|couvert|servies|theepot|koffiekan|dienblad|"
-    r"kandelaar(s)?|kandelaber|schaal|schotel|suikerpot|melkkan|"
-    r"tafelzilver|zilverwerk|beker(s)?|bonbonniere|sigarenkoker)\b",
-    re.I,
-)
-
 OK = "ok"
 TWIJFEL = "twijfel"
 BLOKKADE = "blokkade"
+
+# Letterlijk door Vinted verboden. Munten, bankbiljetten, postzegels,
+# aandeelbewijzen en archeologische vondsten.
+#
+# "munt" staat er met woordgrenzen en zonder losse samenstellingen: een
+# muntstuk is verboden, maar een muntgroene jurk niet, en "gemunt" al helemaal
+# niet. Dezelfde soort fout als "aangeboden" die eerder biedingen verzon.
+_VERBODEN_RE = re.compile(
+    r"\b(munt|munten|muntstuk|muntenverzameling|zilverm[ui]nt\w*|goudm[ui]nt\w*|"
+    r"bankbiljet\w*|biljetten|postzegel\w*|aandeelbewijs|aandeelbewijzen|effecten|"
+    r"archeologisch\w*|opgraving\w*|romeinse?\s+(munt|vondst)|"
+    r"gouden\s*tientje|zilveren\s*dukaat|dukaat|rijksdaalder|gulden\s*munt)\b",
+    re.I,
+)
+_VERBODEN_REDEN = (
+    "Vinted verbiedt munten, bankbiljetten, postzegels, aandeelbewijzen en "
+    "archeologische voorwerpen. Dit artikel lijkt daaronder te vallen."
+)
+
+# Niet letterlijk in de lijst die wij konden nalezen, maar wel het gebied waar
+# het misgaat. Waarschuwen, niet weigeren — wij hebben hierover niet het laatste
+# woord en de verkoper kent zijn eigen voorraad beter.
+_TWIJFEL_PATRONEN = [
+    (re.compile(r"\b((zilver|goud|platina)ba(a|e)r\w*|baar|baren|bullion|troy\s*ounce|beleggings(goud|zilver)|"
+                r"edelsteen|edelstenen|losse\s*diamant)\b", re.I),
+     "Dit lijkt edelmetaal of een losse steen als belegging in plaats van een "
+     "sieraad of gebruiksvoorwerp. Controleer of Vinted dit toestaat."),
+    (re.compile(r"\b(ivoor|ivoren|bont(jas|kraag)?|nertsbont|vossenbont|"
+                r"reptielenhuid|krokodillenleer|schildpad)\b", re.I),
+     "Dit lijkt een dierlijk product (ivoor, bont, reptielenhuid). Vinted staat "
+     "die niet toe en er gelden vaak ook wettelijke regels."),
+]
+
+# De categoriegroepen uit onze eigen boom, zoals ze in het scherm heten.
+GROEPEN = ("dames", "heren", "kinderen", "unisex", "sieraden",
+           "antiek", "kunst", "muziek", "games", "electronics")
+
+
+def _groep(item: dict) -> str:
+    cat = str(item.get("category") or "").strip().lower()
+    for g in GROEPEN:
+        if cat.startswith(g + " "):
+            return g
+    return ""
 
 
 def _tekst(item: dict) -> str:
     return f"{item.get('title') or ''} {item.get('description') or ''}"
 
 
-def beoordeel(item: dict, platform: str) -> tuple[str, str]:
-    """Geeft (oordeel, reden). De reden is de tekst die de verkoper te zien
-    krijgt, dus die zegt wát er aan de hand is en niet welke regel er afging."""
+def beoordeel(item: dict, platform: str, voorkeur: list[str] | None = None) -> tuple[str, str]:
+    """(oordeel, reden) voor dit artikel op dit platform.
+
+    `voorkeur` is de eigen keuze van de verkoper: de categoriegroepen die hij op
+    Vinted wil hebben. Leeg of None betekent "alles wat mag". Een artikel dat
+    buiten zijn voorkeur valt wordt geweigerd met een reden die duidelijk zegt
+    dat het zíjn instelling is en niet die van Vinted — anders gaat hij zoeken
+    naar een fout die er niet is.
+    """
     if platform != "vinted":
         return OK, ""
 
-    categorie = str(item.get("category") or "").strip().lower()
     tekst = _tekst(item)
 
-    for prefix, naam in _VINTED_GROEPEN_NIET.items():
-        if categorie.startswith(prefix):
+    if _VERBODEN_RE.search(tekst):
+        return BLOKKADE, _VERBODEN_REDEN
+
+    if voorkeur:
+        groep = _groep(item)
+        # Geen categorie ingevuld? Dan niets beweren. Blokkeren op onwetendheid
+        # is het slechtste van twee werelden.
+        if groep and groep not in voorkeur:
             return BLOKKADE, (
-                f"Vinted is een modeplatform en heeft geen categorie voor {naam}. "
-                f"Dit artikel is daar niet te plaatsen."
+                f"Je eigen instelling laat op Vinted alleen "
+                f"{', '.join(voorkeur)} toe. Dit artikel valt onder {groep}. "
+                f"Aan te passen bij Platforms."
             )
 
-    if _TAFELZILVER_RE.search(tekst):
-        return TWIJFEL, (
-            "Dit lijkt tafelzilver of servies in plaats van iets om te dragen. "
-            "Vinted is een modeplatform; controleer of dit er thuishoort."
-        )
-
-    if _BELEGGING_RE.search(tekst):
-        return TWIJFEL, (
-            "Dit lijkt edelmetaal als belegging (munt, baar of losse steen) in "
-            "plaats van een sieraad. Vinted staat dat niet overal toe — "
-            "controleer dit er even zelf op."
-        )
-
-    # Geen categorie ingevuld: niets beweren. Een leeg veld is geen bewijs dat
-    # het artikel ergens niet hoort, en blokkeren op onwetendheid is het
-    # slechtste van twee werelden.
-    if not categorie:
-        return OK, ""
-
-    if categorie.startswith(_VINTED_GROEPEN_OK):
-        return OK, ""
+    for patroon, reden in _TWIJFEL_PATRONEN:
+        if patroon.search(tekst):
+            return TWIJFEL, reden
 
     return OK, ""
 
 
-def geblokkeerde_platforms(item: dict, platforms: list[str]) -> dict[str, str]:
-    """De platforms uit `platforms` waar dit artikel niet op kan, met reden."""
+def geblokkeerde_platforms(item: dict, platforms: list[str],
+                           voorkeur: list[str] | None = None) -> dict[str, str]:
     uit = {}
     for p in platforms:
-        oordeel, reden = beoordeel(item, p)
+        oordeel, reden = beoordeel(item, p, voorkeur)
         if oordeel == BLOKKADE:
             uit[p] = reden
     return uit

@@ -312,7 +312,9 @@ async def crosslist_item(item_id: str, body: dict, user_id: str = Depends(requir
     # ingang: een vinkje dat per ongeluk aanstaat mag geen honderd zoekertjes
     # opleveren die het platform toch niet accepteert.
     from backend.services.platformregels import geblokkeerde_platforms
-    geblokkeerd = geblokkeerde_platforms(item.data[0], platforms)
+    from backend.services.instellingen import lees as lees_instellingen
+    voorkeur = lees_instellingen(user_id).get("vinted_groepen") or []
+    geblokkeerd = geblokkeerde_platforms(item.data[0], platforms, voorkeur)
     platforms = [p for p in platforms if p not in geblokkeerd]
     if not platforms:
         raise HTTPException(status_code=422, detail={"blocked_platforms": geblokkeerd})
