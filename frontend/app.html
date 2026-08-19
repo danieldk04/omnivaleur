@@ -971,6 +971,11 @@ input[type="checkbox"].row-check { width: 15px; height: 15px; cursor: pointer; a
             <option value="ebay">eBay</option>
             <option value="shopify">Shopify</option>
           </select>
+          <select id="filter-vinted" onchange="applyFilters()" title="Vinted is a fashion marketplace — antiques, art, music, games and electronics have no category there">
+            <option value="all">Vinted: all</option>
+            <option value="ja">Vinted: can be listed</option>
+            <option value="nee">Vinted: cannot</option>
+          </select>
           <input type="text" id="filter-search" placeholder="Search by title or brand…" oninput="applyFilters()" style="min-width:200px">
           <span class="filter-spacer"></span>
           <button class="btn btn-sm btn-outline" id="mp-fill-btn" style="display:none" onclick="fillFromMarktplaats()"
@@ -3397,6 +3402,10 @@ let itemsCurrentPage = 1;
 function applyFilters(resetPage) {
   if (resetPage !== false) itemsCurrentPage = 1;
   const platformFilter = document.getElementById('filter-platform').value;
+  // Op welke artikelen Vinted überhaupt van toepassing is. Met 1.200 artikelen
+  // waarvan het merendeel antiek is, is dit het verschil tussen "de sieraden
+  // eruit vissen" en "de sieraden eruit vissen met de hand".
+  const vintedFilter = (document.getElementById('filter-vinted') || {}).value || 'all';
   const search = document.getElementById('filter-search').value.toLowerCase().trim();
 
   const { tabOf, counts } = classifyItems();
@@ -3411,6 +3420,10 @@ function applyFilters(resetPage) {
     if (tabOf.get(item.id) !== itemsTab) return false;
     if (platformItemIds && !platformItemIds.has(item.id)) return false;
     if (search && !item.title.toLowerCase().includes(search) && !(item.brand || '').toLowerCase().includes(search)) return false;
+    if (vintedFilter !== 'all') {
+      const kan = platformOordeel(item, 'vinted').oordeel !== 'blokkade';
+      if (vintedFilter === 'ja' ? !kan : kan) return false;
+    }
     return true;
   });
 
@@ -3647,13 +3660,27 @@ async function doBulkCrosslist() {
   closeModal('modal-bulk-crosslist');
   setBusy(true, `Publishing 0 / ${ids.length}…`);
   let done = 0, errors = 0;
+  // Per artikel de platforms weglaten waar het niet kan bestaan. Dit is het
+  // geval waar de rem echt voor bedoeld is: 300 artikelen aanvinken en Vinted
+  // erbij, terwijl tweederde daarvan antiek is. De server weigert ze ook, maar
+  // dan waren het 300 mislukte pogingen en een berg rode meldingen.
+  const overgeslagen = new Map();   // platform → aantal artikelen
   const blockedItems = [];
   const apiErrors = new Set();   // distinct server-side (eBay/Shopify) failures
   for (const id of ids) {
     try {
+      const item = state.items.find(i => i.id === id);
+      const bruikbaar = selected.filter(p => {
+        if (platformOordeel(item, p).oordeel !== 'blokkade') return true;
+        overgeslagen.set(p, (overgeslagen.get(p) || 0) + 1);
+        return false;
+      });
+      // Elk gekozen platform valt af voor dit artikel: niets te doen, en zeker
+      // geen foutmelding — er is niets misgegaan, het hoort daar gewoon niet.
+      if (!bruikbaar.length) continue;
       const res = await apiFetch(`${API}/api/items/${id}/crosslist`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ platforms: selected }),
+        body: JSON.stringify({ platforms: bruikbaar }),
       });
       const rawText = await res.text();
       let data = {};
@@ -3684,6 +3711,16 @@ async function doBulkCrosslist() {
   setBusy(false);
   nudgeExtension();
   showToast(`${done} item${done !== 1 ? 's' : ''} queued for publishing${errors ? `, ${errors} error(s)` : ''}.`);
+  // Wat er is overgeslagen hoort hij te weten. Stil weglaten is net zo
+  // verwarrend als het toch proberen: dan telt hij 300 aangevinkte artikelen en
+  // ziet er 90 verschijnen, zonder te weten waar de rest bleef.
+  if (overgeslagen.size) {
+    const regels = [...overgeslagen.entries()]
+      .map(([p, n]) => `• ${n} item${n !== 1 ? 's' : ''} skipped for ${PLATFORM_LABELS[p] || p}`);
+    alert(`Some items were left off a platform they can't be listed on:\n\n${regels.join('\n')}\n\n`
+      + `Vinted is a fashion marketplace — antiques, art, music, games and electronics have no category there. `
+      + `Everything else went through as normal.`);
+  }
   if (blockedItems.length) {
     alert(`${blockedItems.length} item(s) couldn't be published — missing data:\n\n${blockedItems.join('\n')}\n\nFill these in first, then try again.`);
   }
@@ -6274,6 +6311,42 @@ function showToast(msg) {
   }, 4000);
 }
 
+// ── Wat kan er op welk platform ──────────────────────────────────
+// Spiegel van backend/services/platformregels.py. Die backend is de baas: hij
+// weigert het écht. Dit hier is er zodat je het ziet vóórdat je publiceert in
+// plaats van erna, en zodat je niet 300 artikelen aanvinkt die toch afvallen.
+//
+// Twee soorten uitkomst, en het verschil is met opzet:
+//  - 'blokkade': Vinted heeft geen categorie voor antiek, kunst, muziek, games
+//    of elektronica. Zo'n artikel kán daar niet staan. Dat vinkje gaat uit.
+//  - 'twijfel': tafelzilver of edelmetaal als belegging. Dat hangt af van de
+//    regels van het platform en die kunnen wij niet met zekerheid nalezen, dus
+//    dat wordt een waarschuwing die je kunt negeren — nooit een weigering.
+const VINTED_GROEPEN_NIET = {
+  'antiek ': 'antiques & curios', 'kunst ': 'art', 'muziek ': 'music & records',
+  'games ': 'games & consoles', 'electronics ': 'electronics',
+};
+const BELEGGING_RE = /\b(munt(en|stuk)?|baar|baren|bullion|troy\s*ounce|penning(en)?|beleggings(goud|zilver)|edelsteen|edelstenen|losse\s*diamant)\b/i;
+const TAFELZILVER_RE = /\b(bestek(cassette)?|couvert|servies|theepot|koffiekan|dienblad|kandelaar(s)?|kandelaber|schaal|schotel|suikerpot|melkkan|tafelzilver|zilverwerk|bonbonniere|sigarenkoker)\b/i;
+
+function platformOordeel(item, platform) {
+  if (platform !== 'vinted' || !item) return { oordeel: 'ok', reden: '' };
+  const cat = String(item.category || '').trim().toLowerCase();
+  const tekst = `${item.title || ''} ${item.description || ''}`;
+  for (const [prefix, naam] of Object.entries(VINTED_GROEPEN_NIET)) {
+    if (cat.startsWith(prefix)) {
+      return { oordeel: 'blokkade', reden: `Vinted is a fashion marketplace and has no category for ${naam}` };
+    }
+  }
+  if (TAFELZILVER_RE.test(tekst)) {
+    return { oordeel: 'twijfel', reden: 'Looks like tableware rather than something to wear — check this belongs on Vinted' };
+  }
+  if (BELEGGING_RE.test(tekst)) {
+    return { oordeel: 'twijfel', reden: 'Looks like bullion or a loose stone rather than jewellery — check Vinted allows it' };
+  }
+  return { oordeel: 'ok', reden: '' };
+}
+
 function renderPlatformCheckboxes(containerId, itemId) {
   const activePlatforms = itemId
     ? new Set(state.listings.filter(l => l.item_id === itemId && l.status === 'active').map(l => l.platform))
@@ -6297,6 +6370,14 @@ function renderPlatformCheckboxes(containerId, itemId) {
         <span class="pm-cb-missing" style="cursor:pointer" onclick="event.preventDefault();closeModal('modal-crosslist');closeModal('modal-bulk-crosslist');showView('platforms')">Not connected — set up →</span>
       </label>`;
     }
+    const oordeel = item ? platformOordeel(item, p) : { oordeel: 'ok', reden: '' };
+    if (oordeel.oordeel === 'blokkade') {
+      return `<label class="platform-checkbox platform-checkbox-disabled" title="${esc(oordeel.reden)}">
+        <input type="checkbox" value="${p}" disabled>
+        <span>${PLATFORM_ICONS[p]} ${label}</span>
+        <span class="pm-cb-missing">Not possible here — ${esc(oordeel.reden)}</span>
+      </label>`;
+    }
     const missing = item ? missingFieldsForPlatform(item, p) : [];
     if (missing.length) {
       return `<label class="platform-checkbox platform-checkbox-disabled" title="Missing: ${esc(missing.join(', '))}">
@@ -6305,20 +6386,18 @@ function renderPlatformCheckboxes(containerId, itemId) {
         <span class="pm-cb-missing">Missing: ${esc(missing.join(', '))}</span>
       </label>`;
     }
-    // Vinted is een mode-platform. Antiek zilver, muziekinstrumenten, games en
-    // elektronica horen daar niet en gaan er niet lopen. Dat vooraf zeggen is
-    // eerlijker dan iemand zijn hele voorraad laten publiceren en hem daarna met
-    // foutmeldingen of stille nulverkopen laten zitten. Sieraden mogen wel:
-    // die verkopen op Vinted prima.
-    const vintedMismatch = p === 'vinted' && item && isNonClothingItem(item)
-      && !String(item.category || '').toLowerCase().startsWith('sieraden ');
-    if (vintedMismatch) {
-      const soort = NON_CLOTHING_PREFIXES[Object.keys(NON_CLOTHING_PREFIXES)
-        .find(k => String(item.category || '').toLowerCase().startsWith(k))] || 'this';
-      return `<label class="platform-checkbox" title="Vinted is a fashion marketplace — ${esc(soort)} rarely sells there">
+    // Twijfelgeval: wél aan te vinken, met de reden erbij. Dit verving een
+    // eerdere, zachtere waarschuwing voor antiek/muziek/games/elektronica —
+    // die gevallen worden hierboven nu hard geweigerd, want die kúnnen daar
+    // niet staan. Wat hier overblijft is het echte grijze gebied: tafelzilver
+    // en edelmetaal als belegging. Dat is een oordeel over de regels van het
+    // platform, en daarover hebben wij het laatste woord niet — dus mag hij
+    // eroverheen.
+    if (oordeel.oordeel === 'twijfel') {
+      return `<label class="platform-checkbox" title="${esc(oordeel.reden)}">
         <input type="checkbox" value="${p}">
         <span>${PLATFORM_ICONS[p]} ${label}</span>
-        <span class="pm-cb-missing" style="color:#92400e">Fashion only — ${esc(soort)} rarely sells here</span>
+        <span class="pm-cb-missing" style="color:#92400e">Check first — ${esc(oordeel.reden)}</span>
       </label>`;
     }
     const betaTag = BETA_PLATFORMS.has(p)

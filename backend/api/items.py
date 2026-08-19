@@ -300,15 +300,25 @@ async def delist_item(item_id: str, user_id: str = Depends(get_current_user)):
 @router.post("/{item_id}/crosslist")
 async def crosslist_item(item_id: str, body: dict, user_id: str = Depends(require_active_subscription)):
     db = get_db()
-    item = await _exec(db.table("items").select("id").eq("id", item_id).eq("user_id", user_id))
+    item = await _exec(db.table("items").select("*").eq("id", item_id).eq("user_id", user_id))
     if not item.data:
         raise HTTPException(status_code=404, detail="Item not found")
     platforms = body.get("platforms", [])
     if not platforms:
         raise HTTPException(status_code=400, detail="No platforms specified")
+
+    # Artikelen weigeren die op dit platform niet kunnen bestaan. Dit staat hier
+    # en niet alleen in het scherm, want een bulkactie loopt langs dezelfde
+    # ingang: een vinkje dat per ongeluk aanstaat mag geen honderd zoekertjes
+    # opleveren die het platform toch niet accepteert.
+    from backend.services.platformregels import geblokkeerde_platforms
+    geblokkeerd = geblokkeerde_platforms(item.data[0], platforms)
+    platforms = [p for p in platforms if p not in geblokkeerd]
+    if not platforms:
+        raise HTTPException(status_code=422, detail={"blocked_platforms": geblokkeerd})
     from backend.services.crosslist import publish_to_platforms, CrosslistValidationError
     try:
         results = await publish_to_platforms(item_id, platforms, user_id)
     except CrosslistValidationError as e:
         raise HTTPException(status_code=422, detail={"missing_fields": e.missing})
-    return {"item_id": item_id, "results": results}
+    return {"item_id": item_id, "results": results, "blocked_platforms": geblokkeerd}
