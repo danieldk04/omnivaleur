@@ -85,6 +85,96 @@ RELIST_DELAY_MAX_MINUTES = 240
 CONTENT_PRICE_JITTER_PCT = 0.02  # +/-2% nudge, rounded to a sane price
 
 
+# Hoe lang werk mag blijven hangen voordat we ingrijpen. Een baan wacht normaal
+# hooguit uren: hij loopt zodra de computer met de extensie aan staat. Drie dagen
+# is dus geen drukte meer maar een storing.
+VASTGELOPEN_NA_DAGEN = 3
+
+
+async def herstel_vastgelopen_werk() -> dict:
+    """Advertenties die halverwege een herplaatsing bleven steken weer vlot trekken.
+
+    Waarom dit nodig is. Een herplaatsing bestaat uit twee stappen: eerst weg bij
+    het platform, daarna opnieuw plaatsen. Tussen die twee stappen staat de
+    advertentie op 'relisting'. Blijft de tweede stap liggen — de computer stond
+    uit, de baan liep vast, de verkoper sloot de browser — dan blijft hij daar
+    staan. Voor de verkoper betekent dat: zijn advertentie is weg bij Marktplaats
+    en komt niet terug, en niets in het scherm vertelt hem dat.
+
+    Gemeten op 18-08-2026: 53 advertenties stonden op 'relisting', waarvan 17
+    zonder enige openstaande opdracht om ze terug te zetten. Die waren dus
+    definitief verdwenen zonder dat iemand het wist.
+
+    Deze opruimer doet twee dingen, en geen van beide raadt iets:
+      1. Staat een advertentie op 'relisting' zonder openstaande plaatsingsbaan,
+         dan zetten we die baan alsnog klaar.
+      2. Staat een baan langer dan drie dagen te wachten, dan zetten we hem op
+         fout met een leesbare uitleg, zodat hij in het dashboard zichtbaar wordt
+         in plaats van eeuwig stil te blijven staan.
+    """
+    db = get_db()
+    grens = (datetime.now(timezone.utc) - timedelta(days=VASTGELOPEN_NA_DAGEN)).isoformat()
+    hersteld, gemeld = 0, 0
+
+    try:
+        vast = (db.table("listings").select("id,item_id,platform")
+                .eq("status", "relisting").limit(1000).execute().data or [])
+    except Exception as e:  # noqa: BLE001
+        logger.warning("herstel: kon vastgelopen advertenties niet lezen: %s", e)
+        return {"hersteld": 0, "gemeld": 0}
+
+    for rij in vast:
+        try:
+            lopend = (db.table("jobs").select("id")
+                      .eq("item_id", rij["item_id"]).eq("platform", rij["platform"])
+                      .eq("action", "create").in_("status", ["pending", "claimed", "running"])
+                      .limit(1).execute().data or [])
+            if lopend:
+                continue          # er komt nog werk aan, afblijven
+            item = (db.table("items").select("*").eq("id", rij["item_id"])
+                    .single().execute().data)
+            if not item:
+                continue
+            db.table("jobs").insert({
+                "user_id": item["user_id"],
+                "item_id": rij["item_id"],
+                "platform": rij["platform"],
+                "action": "create",
+                "status": "pending",
+                "payload": item,
+            }).execute()
+            hersteld += 1
+        except Exception as e:  # noqa: BLE001
+            logger.warning("herstel: kon %s niet vlot trekken: %s", rij["id"], e)
+
+    # Werk dat al dagen stilstaat hoort zichtbaar te worden.
+    try:
+        oud = (db.table("jobs").select("id")
+               .in_("status", ["pending", "claimed"])
+               .lt("created_at", grens).limit(500).execute().data or [])
+        # De banen die we hierboven zojuist zelf hebben ingepland zijn van
+        # vandaag en vallen dus per definitie buiten deze grens.
+        for baan in oud:
+            # De reden hoort in 'result'. De tabel heeft geen 'error'-kolom, en
+            # daarop schrijven laat deze hele opruimronde stilletjes mislukken.
+            db.table("jobs").update({
+                "status": "error",
+                "done_at": datetime.now(timezone.utc).isoformat(),
+                "result": {"error": (
+                    f"Deze opdracht stond meer dan {VASTGELOPEN_NA_DAGEN} dagen te "
+                    "wachten en is niet uitgevoerd. Zet je computer met de "
+                    "Omnivaleur-extensie aan en probeer het opnieuw.")},
+            }).eq("id", baan["id"]).execute()
+            gemeld += 1
+    except Exception as e:  # noqa: BLE001
+        logger.warning("herstel: kon oude banen niet melden: %s", e)
+
+    if hersteld or gemeld:
+        logger.info("herstel: %d advertentie(s) opnieuw ingepland, %d vastgelopen baan/banen gemeld",
+                    hersteld, gemeld)
+    return {"hersteld": hersteld, "gemeld": gemeld}
+
+
 class RefreshError(Exception):
     pass
 

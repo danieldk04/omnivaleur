@@ -132,8 +132,8 @@ def delete_images_sync(paths: list[str]) -> int:
                 "usually means the key may not delete", len(verwijderd), len(paths))
         return len(verwijderd)
     except Exception as e:  # noqa: BLE001
-        import logging
-        logging.getLogger(__name__).warning("storage delete failed for %s object(s): %s", len(paths), e)
+        logging.getLogger(__name__).warning(
+            "storage delete failed for %s object(s): %s", len(paths), e)
         return 0
 
 

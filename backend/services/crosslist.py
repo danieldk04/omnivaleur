@@ -1041,6 +1041,57 @@ def _enqueue_extension_delete(db, user_id: str, item_id: str, listing: dict, ite
 # Marktplaats free listings expire silently after 28 days.
 # We relist 1 day early to avoid gaps in visibility.
 _MARKTPLAATS_EXPIRY_DAYS = 27
+# Zie relist_expiring_marktplaats: nooit een hele voorraad op een dag, maar wel
+# genoeg om een grote voorraad bij te houden.
+_AUTO_RELIST_DOELCYCLUS = 20
+_AUTO_RELIST_MIN_PER_DAY = 25
+# Bovengrens. Bij calm mode zit er 3 tot 8 minuten tussen elke actie, dus 100
+# stuks is al gauw een dag waarop de computer aan moet blijven. Wie boven de
+# 2.000 advertenties komt haalt de cyclus daarmee niet meer helemaal; dat is een
+# echte grens van deze aanpak en geen stille afronding.
+_AUTO_RELIST_MAX_PER_DAY = 100
+
+
+def _dagelijkse_relist_grens(db, user_id: str) -> int:
+    """Hoeveel advertenties deze verkoper vandaag hoogstens opnieuw geplaatst krijgt.
+
+    Een vaste grens is altijd fout. Te laag en de advertenties van een grote
+    verkoper verlopen voordat we erbij zijn — Marktplaats gooit ze na 30 dagen
+    weg en wij herplaatsen op 27, dus er is weinig speling. Te hoog en een kleine
+    verkoper krijgt alsnog zijn hele voorraad op een dag.
+
+    Uitgangspunt: verdeel de voorraad gelijkmatig over de cyclus. Wie 1.200
+    advertenties heeft komt dan op ongeveer 45 per dag — precies het tempo dat
+    deze verkopers nu met de hand aanhouden (Jaap noemde 20 tot 30 per dag). Dat
+    is geen bulkgedrag maar het gewone onderhoud van een grote winkel.
+    """
+    import math
+
+    try:
+        ids = []
+        stap = 1000
+        for offset in range(0, 20000, stap):
+            rij = (db.table("items").select("id").eq("user_id", user_id)
+                   .range(offset, offset + stap - 1).execute().data or [])
+            ids += [r["id"] for r in rij]
+            if len(rij) < stap:
+                break
+        actief = 0
+        for i in range(0, len(ids), 100):
+            actief += (db.table("listings").select("id", count="exact")
+                       .eq("platform", "marktplaats").eq("status", "active")
+                       .in_("item_id", ids[i:i + 100]).execute().count or 0)
+    except Exception as e:  # noqa: BLE001 — bij twijfel het veilige minimum
+        logger.warning("relist cap: kon voorraad niet tellen voor %s: %s", user_id, e)
+        return _AUTO_RELIST_MIN_PER_DAY
+
+    # Delen door 20 en niet door 27. Marktplaats gooit een advertentie na 30
+    # dagen weg; herplaatsen we op 27, dan is er maar drie dagen speling. Rekenen
+    # we de voorraad uit over 20 dagen, dan is de hele voorraad rond ruim voordat
+    # de eerste zou verlopen, ook als er een dag uitvalt doordat de computer uit
+    # stond.
+    per_dag = math.ceil(actief / _AUTO_RELIST_DOELCYCLUS) if actief else 0
+    return max(_AUTO_RELIST_MIN_PER_DAY, min(per_dag, _AUTO_RELIST_MAX_PER_DAY))
 
 
 async def relist_expiring_marktplaats():
@@ -1059,13 +1110,43 @@ async def relist_expiring_marktplaats():
         .eq("platform", "marktplaats")
         .eq("status", "active")
         .lt("listed_at", cutoff)
+        # Oudste eerst. Wie het langst wacht is het dichtst bij de 30 dagen
+        # waarop Marktplaats de advertentie zelf weggooit, dus die heeft voorrang.
+        .order("listed_at")
         .execute()
     )
 
     if not listings_resp.data:
         return
 
-    logger.info(f"Auto-relisting {len(listings_resp.data)} expiring Marktplaats listings")
+    # NOOIT ALLES OP EEN DAG.
+    #
+    # Dit zette een baan klaar voor elke advertentie die ouder was dan 27 dagen,
+    # zonder limiet en zonder spreiding. Gemeten geval 18-08-2026: een verkoper
+    # importeerde 619 advertenties op twee dagen, dus op 13 en 14 september zouden
+    # er 125 en 494 tegelijk verwijderd en opnieuw geplaatst worden. Op een
+    # account waar hij drie jaar aan gebouwd heeft.
+    #
+    # Dat is precies het patroon waar Marktplaats op let, en het is ook nog eens
+    # in tegenspraak met de handmatige verversknop, die bewust op 3 per dag staat.
+    # Hier hoort dezelfde terughoudendheid.
+    #
+    # De grens ligt hoger dan bij handmatig verversen, en met opzet: dit is geen
+    # extra oppepper maar het redden van een advertentie die anders vanzelf
+    # verdwijnt. Zie _dagelijkse_relist_grens voor hoe hij meeschaalt.
+    vandaag = datetime.now(timezone.utc).date().isoformat()
+    per_verkoper: dict[str, int] = {}
+    for row in (db.table("jobs")
+                .select("user_id")
+                .eq("platform", "marktplaats")
+                .eq("action", "create")
+                .gte("created_at", vandaag)
+                .execute().data or []):
+        per_verkoper[row["user_id"]] = per_verkoper.get(row["user_id"], 0) + 1
+    grens_per_verkoper: dict[str, int] = {}
+
+    logger.info("Auto-relist: %s expiring Marktplaats listings, spread per seller",
+                len(listings_resp.data))
 
     for listing in listings_resp.data:
         try:
@@ -1073,6 +1154,16 @@ async def relist_expiring_marktplaats():
             if not item_resp.data:
                 continue
             item = item_resp.data
+
+            eigenaar = item["user_id"]
+            if eigenaar not in grens_per_verkoper:
+                grens_per_verkoper[eigenaar] = _dagelijkse_relist_grens(db, eigenaar)
+            if per_verkoper.get(eigenaar, 0) >= grens_per_verkoper[eigenaar]:
+                # Morgen weer. De advertentie blijft op 'active' staan, dus hij
+                # komt de volgende ronde vanzelf opnieuw langs — en omdat we op
+                # listed_at sorteren staat hij dan vooraan.
+                continue
+            per_verkoper[eigenaar] = per_verkoper.get(eigenaar, 0) + 1
 
             db.table("listings").update({"status": "relisting"}).eq("id", listing["id"]).execute()
 

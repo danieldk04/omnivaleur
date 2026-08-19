@@ -718,6 +718,39 @@ window.CL = (() => {
     }
   }
 
+  // De verzendwijze die de verkoper in de extensie heeft ingesteld. Dit stond
+  // hard op "Ophalen of Verzenden": prima voor wie kleding verkoopt en laat
+  // ophalen, fout voor wie alleen verzendt. Gemeten geval: een verkoper van
+  // antiek zilver verzendt uitsluitend en moest dit bij elke advertentie
+  // terugzetten.
+  //
+  // De waarden zijn de labels zoals Marktplaats en 2dehands ze zelf op de
+  // keuzerondjes zetten; de terugval is de oude vaste keuze, zodat een lege of
+  // onleesbare instelling nooit tot een advertentie zonder verzendwijze leidt.
+  const LEVERING_LABELS = {
+    beide: "Ophalen of Verzenden",
+    verzenden: "Verzenden",
+    ophalen: "Ophalen",
+  };
+
+  async function gekozenLevering() {
+    try {
+      const s = await chrome.storage.sync.get("deliveryMode");
+      return LEVERING_LABELS[s.deliveryMode] || LEVERING_LABELS.beide;
+    } catch (_) {
+      return LEVERING_LABELS.beide;
+    }
+  }
+
+  // Kiest de ingestelde verzendwijze, en valt terug op "Ophalen of Verzenden"
+  // als dit formulier die optie niet aanbiedt — niet elke categorie heeft alle
+  // drie de keuzes.
+  async function selectDelivery() {
+    const gewenst = await gekozenLevering();
+    if (clickRadioByValue(gewenst)) return true;
+    return clickRadioByValue(LEVERING_LABELS.beide);
+  }
+
   function selectBundleFree() {
     const bundleEl = qs('[data-testid="bundle-option-FREE"] input');
     if (bundleEl) { bundleEl.click(); return; }
@@ -1226,6 +1259,7 @@ window.CL = (() => {
   return {
     sleep, waitUntil, qs, waitForEl, fillInput, fillInputHuman, fillNativeSelect, clickRadioByValue, fillDescription,
     findFieldByLabel, selectDropdown, fillBrand, fillManufacturer, selectBundleFree,
+    selectDelivery, gekozenLevering,
     selectPackageSize, uploadPhotos, submitListing, step, closePopup, smartTrunc, fillBidding,
     clog, dutchColor, verifyMpGroupFields, repairMpGroupFields, ensureDescriptionStillFilled, selectCondition, selectIntendedFor, fillBrandField, logMpFields, mpPrijs,
   };

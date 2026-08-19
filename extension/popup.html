@@ -172,6 +172,27 @@
 
       <hr class="divider">
 
+      <!-- Verzendwijze. Dit stond hard in de code op "Ophalen of Verzenden",
+           wat voor de meeste verkopers klopt maar niet voor allemaal: een
+           verkoper van antiek zilver verzendt alleen en moest dat bij elke
+           advertentie met de hand terugzetten. -->
+      <label class="setting" for="deliverySelect">
+        <span class="setting-head">
+          <span class="setting-title">Delivery on Marktplaats &amp; 2dehands</span>
+          <select id="deliverySelect" style="font-size:12px;padding:4px 6px;border-radius:6px">
+            <option value="beide">Pick-up or shipping</option>
+            <option value="verzenden">Shipping only</option>
+            <option value="ophalen">Pick-up only</option>
+          </select>
+        </span>
+        <span class="setting-desc">
+          What gets selected on every new listing. Change it per listing on the
+          platform itself if one item is different.
+        </span>
+      </label>
+
+      <hr class="divider">
+
       <!-- Alleen zakelijke Marktplaats-verkopers hebben dit nodig. Het staat hier
            als schakelaar en niet als vaste toestemming in het manifest, omdat
            Chrome bij een nieuwe vaste toestemming de extensie bij ELKE gebruiker

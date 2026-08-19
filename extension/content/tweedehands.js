@@ -2,7 +2,7 @@
 (async () => {
   const PLATFORM = "2dehands";
   const { step, clog, qs, sleep, waitForEl, fillInput, fillInputHuman, fillDescription, selectDropdown,
-          fillBrand, fillBrandField, fillManufacturer, selectBundleFree, selectPackageSize,
+          fillBrand, fillBrandField, fillManufacturer, selectBundleFree, selectDelivery, selectPackageSize,
           uploadPhotos, submitListing, clickRadioByValue, smartTrunc, fillBidding,
           dutchColor, ensureDescriptionStillFilled, verifyMpGroupFields, repairMpGroupFields, selectCondition, selectIntendedFor, mpPrijs } = window.CL;
 
@@ -118,7 +118,7 @@
     await step("color",        () => item.color && selectDropdown("Kleur", dutchColor(item.color)));
     await step("brand",        () => item.brand && fillBrandField(item.brand));
     await step("manufacturer", () => fillManufacturer(item));
-    await step("delivery",     () => { clickRadioByValue("Ophalen of Verzenden"); selectBundleFree(); });
+    await step("delivery",     async () => { await selectDelivery(); selectBundleFree(); });
     await step("bidding",      () => item.bid_percentage && fillBidding(item.price, item.bid_percentage));
 
     await sleep(600);

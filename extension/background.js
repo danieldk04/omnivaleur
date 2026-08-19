@@ -1536,7 +1536,7 @@ async function bgDeleteMp2dh(job, serverUrl) {
 
   const tabId = await new Promise((res, rej) =>
     openWorkerTab(overviewUrl, t =>
-      t ? res(t.id) : rej(new Error("could not open worker tab"))
+      t ? res(t.id) : rej(new Error("could not open worker tab")), { silent: true }
     )
   );
 
@@ -1998,7 +1998,7 @@ async function bgDeleteVinted(job, serverUrl) {
 
   const tabId = await new Promise((res, rej) =>
     openWorkerTab(url, t =>
-      t ? res(t.id) : rej(new Error("could not open worker tab"))
+      t ? res(t.id) : rej(new Error("could not open worker tab")), { silent: true }
     )
   );
 
@@ -3851,7 +3851,13 @@ async function _mwReadNotifCounts(platform) {
   }
   // On MP/2dehands a bid shows up literally as "bod" in the preview; the strict
   // word match avoids counting ordinary item prices as offers (verified).
-  const MP_OFFER_RE = /\bbod\b|geboden|bieding/i;
+  // Woordgrenzen aan BEIDE kanten. Zonder de grens ervoor matchte "geboden"
+  // binnen "aangeboden" en "bieding" binnen "aanbieding" — twee woorden die in
+  // vrijwel elke advertentietekst staan. Gemeten geval 18-08-2026: een verkoper
+  // met bieden UIT zag vijf biedingen op zijn dashboard staan die niet bestonden.
+  // Verzonnen getallen zijn erger dan geen getallen: ze maken alle andere
+  // cijfers verdacht.
+  const MP_OFFER_RE = /\bbod\b|\bgeboden\b|\bbieding\b|\bbiedingen\b/i;
   let messages = 0;
   let offers = 0;
   rows.forEach((r) => {

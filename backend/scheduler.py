@@ -50,6 +50,7 @@ def start_scheduler():
     global _scheduler
     from backend.services.polling import poll_platform_statuses
     from backend.services.crosslist import relist_expiring_marktplaats
+    from backend.services.relist import herstel_vastgelopen_werk
 
     from backend.services.billing import expire_trials, send_trial_reminders
     from backend.services.analytics_report import send_weekly_report
@@ -69,6 +70,16 @@ def start_scheduler():
         "interval",
         hours=6,
         id="relist_marktplaats",
+        replace_existing=True,
+    )
+    # Werk dat halverwege bleef steken weer vlot trekken. Elke zes uur is vaak
+    # genoeg: een advertentie die tussen verwijderen en terugplaatsen hangt is
+    # weg bij het platform, dus dat mag geen dagen duren.
+    _scheduler.add_job(
+        _off_the_request_loop(herstel_vastgelopen_werk),
+        "interval",
+        hours=6,
+        id="herstel_vastgelopen_werk",
         replace_existing=True,
     )
     _scheduler.add_job(

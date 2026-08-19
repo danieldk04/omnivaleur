@@ -65,6 +65,24 @@ async function toonCalm() {
   } catch (_) { calmToggle.checked = false; }
 }
 
+// Verzendwijze. Bewust in storage.sync naast calmMode: het is een voorkeur van
+// de verkoper, geen eigenschap van een los item, en hij hoort mee te reizen naar
+// zijn andere computer.
+const deliverySelect = document.getElementById("deliverySelect");
+if (deliverySelect) {
+  (async () => {
+    try {
+      const s = await chrome.storage.sync.get("deliveryMode");
+      deliverySelect.value = s.deliveryMode || "beide";
+    } catch (_) { deliverySelect.value = "beide"; }
+  })();
+  deliverySelect.addEventListener("change", async () => {
+    try {
+      await chrome.storage.sync.set({ deliveryMode: deliverySelect.value });
+    } catch (_) { /* niet opgeslagen = onveranderd */ }
+  });
+}
+
 calmToggle.addEventListener("change", async () => {
   try {
     await chrome.storage.sync.set({ calmMode: calmToggle.checked });

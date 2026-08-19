@@ -2015,7 +2015,7 @@ input[type="checkbox"].row-check { width: 15px; height: 15px; cursor: pointer; a
         <div style="display:flex;gap:10px;align-items:flex-start;background:rgba(37,99,235,.06);border:1px solid rgba(37,99,235,.2);border-radius:10px;padding:12px 14px;margin:8px 0 12px">
           <span style="font-size:15px">💡</span>
           <div style="font-size:12.5px;color:var(--muted);line-height:1.6">
-            <strong style="color:var(--text,#111)">Lowering the price 10-15% on a relist noticeably improves your odds of a sale</strong> — a fresh listing date already brings new eyes, and a slightly better price converts more of them into buyers.
+            <span id="refresh-price-advice">A fresh listing date already brings new eyes. If an item has been sitting a while, a slightly lower price converts more of those views into buyers — but that is your call, not ours.</span>
           </div>
         </div>
         <div style="display:flex;gap:8px;align-items:center;margin-bottom:10px">
@@ -2025,9 +2025,9 @@ input[type="checkbox"].row-check { width: 15px; height: 15px; cursor: pointer; a
           <span id="refresh-modal-price-delta" style="font-size:12px;font-weight:700"></span>
         </div>
         <div style="display:flex;gap:6px;flex-wrap:wrap">
-          <button type="button" class="btn btn-sm btn-outline" onclick="applyRefreshPriceSuggestion(0)">Keep price</button>
+          <button type="button" class="btn btn-sm btn-primary" onclick="applyRefreshPriceSuggestion(0)">Keep price</button>
           <button type="button" class="btn btn-sm btn-outline" onclick="applyRefreshPriceSuggestion(0.10)">-10%</button>
-          <button type="button" class="btn btn-sm btn-primary" onclick="applyRefreshPriceSuggestion(0.125)">-12.5% (recommended)</button>
+          <button type="button" class="btn btn-sm btn-outline" onclick="applyRefreshPriceSuggestion(0.125)">-12.5%</button>
           <button type="button" class="btn btn-sm btn-outline" onclick="applyRefreshPriceSuggestion(0.15)">-15%</button>
         </div>
       </div>
@@ -5575,7 +5575,15 @@ function onRefreshStrategyChange() {
   const strategy = refreshModalState.strategies.length > 1
     ? document.querySelector('input[name="refresh-strategy"]:checked').value
     : refreshModalState.strategies[0];
-  document.getElementById('refresh-modal-price-group').style.display = strategy === 'relist' ? 'block' : 'none';
+  // Prijsverlaging is een kledingadvies. Bij antiek, zilver, sieraden en
+  // verzamelobjecten klopt het gewoon niet: die voorraad wordt met de jaren meer
+  // waard in plaats van minder. Een verkoper van antiek zilver kreeg bij elke
+  // verversing "verlaag je prijs" te zien en moest dat elke keer wegklikken.
+  // Waar het advies niet opgaat, hoort het scherm er niet te staan.
+  const stukje = (state.items || []).find(i => i.id === refreshModalState.itemId);
+  const prijsAdviesPast = !(stukje && isNonClothingItem(stukje));
+  document.getElementById('refresh-modal-price-group').style.display =
+    (strategy === 'relist' && prijsAdviesPast) ? 'block' : 'none';
   document.getElementById('refresh-modal-login-warn').style.display = strategy === 'relist' ? 'block' : 'none';
 }
 
@@ -6211,6 +6219,22 @@ function renderPlatformCheckboxes(containerId, itemId) {
         <input type="checkbox" value="${p}" disabled>
         <span>${PLATFORM_ICONS[p]} ${label}</span>
         <span class="pm-cb-missing">Missing: ${esc(missing.join(', '))}</span>
+      </label>`;
+    }
+    // Vinted is een mode-platform. Antiek zilver, muziekinstrumenten, games en
+    // elektronica horen daar niet en gaan er niet lopen. Dat vooraf zeggen is
+    // eerlijker dan iemand zijn hele voorraad laten publiceren en hem daarna met
+    // foutmeldingen of stille nulverkopen laten zitten. Sieraden mogen wel:
+    // die verkopen op Vinted prima.
+    const vintedMismatch = p === 'vinted' && item && isNonClothingItem(item)
+      && !String(item.category || '').toLowerCase().startsWith('sieraden ');
+    if (vintedMismatch) {
+      const soort = NON_CLOTHING_PREFIXES[Object.keys(NON_CLOTHING_PREFIXES)
+        .find(k => String(item.category || '').toLowerCase().startsWith(k))] || 'this';
+      return `<label class="platform-checkbox" title="Vinted is a fashion marketplace — ${esc(soort)} rarely sells there">
+        <input type="checkbox" value="${p}">
+        <span>${PLATFORM_ICONS[p]} ${label}</span>
+        <span class="pm-cb-missing" style="color:#92400e">Fashion only — ${esc(soort)} rarely sells here</span>
       </label>`;
     }
     const betaTag = BETA_PLATFORMS.has(p)
