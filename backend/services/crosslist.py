@@ -1103,7 +1103,19 @@ async def relist_expiring_marktplaats():
     from datetime import datetime, timezone, timedelta
     db = get_db()
 
-    cutoff = (datetime.now(timezone.utc) - timedelta(days=_MARKTPLAATS_EXPIRY_DAYS)).isoformat()
+    # Elke verkoper stelt zelf in na hoeveel dagen een advertentie opnieuw
+    # geplaatst wordt. Hier wordt met de RUIMSTE instelling opgehaald — anders
+    # zou wie op 7 dagen staat pas na 27 dagen aan de beurt komen — en verderop
+    # per advertentie tegen de eigen instelling van de eigenaar gelegd.
+    from backend.services.instellingen import (RELIST_DAGEN_MIN,
+                                               RELIST_DAGEN_STANDAARD,
+                                               alle_relist_dagen)
+    dagen_per_verkoper = alle_relist_dagen()
+    ruimste = min([RELIST_DAGEN_STANDAARD, *dagen_per_verkoper.values()] or
+                  [RELIST_DAGEN_STANDAARD])
+    ruimste = max(RELIST_DAGEN_MIN, ruimste)
+    nu = datetime.now(timezone.utc)
+    cutoff = (nu - timedelta(days=ruimste)).isoformat()
     listings_resp = (
         db.table("listings")
         .select("*")
@@ -1156,6 +1168,21 @@ async def relist_expiring_marktplaats():
             item = item_resp.data
 
             eigenaar = item["user_id"]
+
+            # Is deze advertentie voor DEZE verkoper al oud genoeg? De query
+            # hierboven haalde ruim op; dit is de eigen instelling.
+            eigen_dagen = dagen_per_verkoper.get(eigenaar, _MARKTPLAATS_EXPIRY_DAYS)
+            geplaatst = listing.get("listed_at")
+            if geplaatst:
+                try:
+                    toen = datetime.fromisoformat(str(geplaatst).replace("Z", "+00:00"))
+                    if toen.tzinfo is None:
+                        toen = toen.replace(tzinfo=timezone.utc)
+                    if (nu - toen).days < eigen_dagen:
+                        continue
+                except ValueError:
+                    pass          # onleesbare datum: laat de ruime query beslissen
+
             if eigenaar not in grens_per_verkoper:
                 grens_per_verkoper[eigenaar] = _dagelijkse_relist_grens(db, eigenaar)
             if per_verkoper.get(eigenaar, 0) >= grens_per_verkoper[eigenaar]:

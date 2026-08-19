@@ -112,6 +112,30 @@ def list_items(limit: int = 50, offset: int = 0, user_id: str = Depends(get_curr
     return result.data
 
 
+@router.get("/settings")
+def read_settings(user_id: str = Depends(get_current_user)):
+    """De persoonlijke instellingen van deze verkoper."""
+    from backend.services.instellingen import (RELIST_DAGEN_MAX, RELIST_DAGEN_MIN,
+                                               lees)
+    return {**lees(user_id), "relist_dagen_min": RELIST_DAGEN_MIN,
+            "relist_dagen_max": RELIST_DAGEN_MAX}
+
+
+@router.put("/settings")
+def write_settings(body: dict, user_id: str = Depends(get_current_user)):
+    """Instellingen opslaan. Geeft terug wat er echt is bewaard, want een waarde
+    buiten bereik wordt bijgesteld en dat hoort het scherm te laten zien."""
+    from backend.services.instellingen import (RELIST_DAGEN_MAX, RELIST_DAGEN_MIN,
+                                               schrijf)
+    try:
+        bewaard = schrijf(user_id, body or {})
+    except Exception as e:  # noqa: BLE001
+        logger.exception("instellingen opslaan mislukt voor %s", user_id)
+        raise HTTPException(status_code=500, detail=f"Could not save settings: {e}")
+    return {**bewaard, "relist_dagen_min": RELIST_DAGEN_MIN,
+            "relist_dagen_max": RELIST_DAGEN_MAX}
+
+
 @router.post("/fill-from-marktplaats")
 async def fill_from_marktplaats(limit: int = 150,
                                 user_id: str = Depends(get_current_user)):

@@ -1175,6 +1175,17 @@ let _workerWindowChain = Promise.resolve();
 // short waits while filling a form — so they run in a normal (still unfocused)
 // window, and un-minimise it if a scan left it minimised. Jobs are dispatched
 // strictly one at a time, so the two modes can never fight over the window.
+// Automatische achtergrondscans openen hun venster ALTIJD geminimaliseerd.
+//
+// De verkoop-controle en het tellen van berichten draaien uit zichzelf, elk uur,
+// zonder dat de verkoper er iets voor doet. Die openden een gewoon venster, en
+// dat is precies wat een verkoper beschreef: "als ik internet open, dan flitst
+// die drie of vier keer weg en dan opent hij tweedehands.be, en dan kom ik er
+// niet meer tussen". Werk dat jij niet gevraagd hebt mag je scherm niet afpakken.
+function openStilWerkTabblad(url, callback) {
+  return openWorkerTab(url, callback, { silent: true });
+}
+
 function openWorkerTab(url, callback, opts = {}) {
   _workerWindowChain = _workerWindowChain
     .then(() => openWorkerTabInner(url, opts))
@@ -3528,7 +3539,7 @@ async function checkSoldListings() {
 // The title lets us match sold ads to listings that have no platform id.
 function scrapeMarktplaatsAds(url, platform) {
   return new Promise((resolve) => {
-    openWorkerTab(url, (tab) => {
+    openStilWerkTabblad(url, (tab) => {
       if (!tab) { resolve([]); return; }
       const tabId = tab.id;
 
@@ -3633,7 +3644,7 @@ async function checkVintedOrders() {
 
 function scrapeVintedOrders(url) {
   return new Promise((resolve) => {
-    openWorkerTab(url, (tab) => {
+    openStilWerkTabblad(url, (tab) => {
       if (!tab) { resolve([]); return; }
       const tabId = tab.id;
 
@@ -3775,7 +3786,7 @@ async function scanNotifications() {
 // wrong number.
 function scrapeNotificationCounts(url, platform) {
   return new Promise((resolve) => {
-    openWorkerTab(url, (tab) => {
+    openStilWerkTabblad(url, (tab) => {
       if (!tab) { resolve(null); return; }
       const tabId = tab.id;
       let settled = false;
