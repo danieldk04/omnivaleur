@@ -592,6 +592,10 @@
       try {
         id = await submitListing(/\/items\/(\d+)/);
       } catch (submitErr) {
+        // Een blokkade (adres / telefoon) betekent dat er niets geplaatst IS.
+        // De garderobe afzoeken kost dan anderhalve minuut om te bevestigen wat
+        // we al weten, en houdt ondertussen de hele wachtrij bezet.
+        if (submitErr && submitErr.blokkade) throw submitErr;
         // Vinted's post-upload "check in progress" review can delay the
         // /items/{id} redirect past submitListing's wait, so a timeout here does
         // NOT mean the listing failed. Confirm via the wardrobe before giving up:

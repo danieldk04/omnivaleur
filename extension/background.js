@@ -3909,7 +3909,6 @@ const NOTIF_SCAN_MINUTES = 15;
 const NOTIF_SOURCES = {
   marktplaats: "https://www.marktplaats.nl/messages",
   "2dehands": "https://www.2dehands.be/messages",
-  vinted: "https://www.vinted.nl/inbox",
 };
 
 chrome.alarms.create("notif-scan", { periodInMinutes: NOTIF_SCAN_MINUTES });
@@ -3924,24 +3923,82 @@ async function scanNotifications() {
   const headers = await getAuthHeaders();
   if (!headers.Authorization) return; // not logged into the extension yet
 
+  const melden = async (platform, counts, deepLink) => {
+    if (!counts) return; // niet ingelogd / niet gelezen — vorige stand laten staan
+    await fetch(`${serverUrl}/api/notifications/report`, {
+      method: "POST",
+      headers,
+      body: JSON.stringify({
+        platform,
+        messages: counts.messages,
+        offers: counts.offers,
+        deep_link: deepLink,
+      }),
+    }).catch((e) => console.error(`[Omnivaleur] notif report failed (${platform}):`, e));
+  };
+
+  // Vinted heeft er geen tabblad voor nodig: de inbox is een gewone JSON-oproep
+  // met dezelfde inlog als de browser. Dat scheelt niet alleen een tabblad elk
+  // kwartier — het lost ook een echte fout op. De scan opende altijd vinted.nl,
+  // terwijl een Belgische verkoper op vinted.be zit. Daar was hij niet ingelogd,
+  // dus kwam er nooit een getal binnen en bleef "Berichten" leeg terwijl er wél
+  // berichten stonden.
+  try {
+    const v = await bgVintedInbox();
+    if (v) await melden("vinted", v.counts, `${v.origin}/inbox`);
+  } catch (e) {
+    console.error("[Omnivaleur] notif-scan error (vinted):", e);
+  }
+
   for (const [platform, url] of Object.entries(NOTIF_SOURCES)) {
     try {
       const counts = await scrapeNotificationCounts(url, platform);
-      if (!counts) continue; // not logged in / page didn't load — leave prior snapshot
-      await fetch(`${serverUrl}/api/notifications/report`, {
-        method: "POST",
-        headers,
-        body: JSON.stringify({
-          platform,
-          messages: counts.messages,
-          offers: counts.offers,
-          deep_link: url,
-        }),
-      }).catch((e) => console.error(`[Omnivaleur] notif report failed (${platform}):`, e));
+      await melden(platform, counts, url);
     } catch (e) {
       console.error(`[Omnivaleur] notif-scan error (${platform}):`, e);
     }
   }
+}
+
+// Leest de Vinted-inbox rechtstreeks, op het domein waar deze verkoper echt is
+// ingelogd. Geeft null als we nergens een geldige sessie vinden — dan blijft de
+// vorige stand staan in plaats van dat er een nul wordt gemeld.
+async function bgVintedInbox() {
+  for (const origin of ["https://www.vinted.nl", "https://www.vinted.be", "https://www.vinted.com",
+                        "https://www.vinted.de", "https://www.vinted.fr"]) {
+    try {
+      const me = await fetch(`${origin}/api/v2/users/current`, {
+        headers: { Accept: "application/json" }, credentials: "include",
+      });
+      if (!me.ok) continue;
+      const r = await fetch(`${origin}/api/v2/inbox?page=1&per_page=50`, {
+        headers: { Accept: "application/json" }, credentials: "include",
+      });
+      if (!r.ok) continue;
+      const j = await r.json();
+      const convos = Array.isArray(j.conversations) ? j.conversations : [];
+      const ongelezen = convos.filter((c) => c && c.unread);
+      return {
+        origin,
+        counts: { messages: ongelezen.length, offers: ongelezen.filter(vintedLijktBod).length },
+      };
+    } catch (_) { /* volgend domein proberen */ }
+  }
+  return null;
+}
+
+// Wat telt als een bod op Vinted.
+//
+// Dit stond eerder op /would you (sell|take)|sell (it|this)|prijsvoorstel|€\s?\d/ —
+// en dat laatste stuk sloeg aan op ELK bedrag. De omschrijving van een gesprek
+// op Vinted is de titel plus de prijs van het artikel, dus vrijwel elk ongelezen
+// gesprek werd als bod geteld. Zelfde soort fout als "aangeboden" op
+// Marktplaats: verzonnen getallen maken alle andere cijfers verdacht. Alleen
+// nog echte bod-bewoordingen. Liever een bod missen dan er een verzinnen — het
+// aantal berichten klopt hoe dan ook, en daar klikt hij toch op door.
+const VINTED_BOD_RE = /\bbod\b|\bbieding\b|prijsvoorstel|\bofferte\b|\boffer\b|would you (sell|take)|make an offer|\bproposition\b/i;
+function vintedLijktBod(c) {
+  return VINTED_BOD_RE.test(String((c && c.description) || ""));
 }
 
 // Opens the messages page in a background tab and reads counts from the DOM.
@@ -3991,30 +4048,6 @@ function scrapeNotificationCounts(url, platform) {
 // we never overwrite the stored snapshot with a bogus 0. Async: Vinted is read
 // from its own JSON API (runs in the vinted.nl context, so cookies are sent).
 async function _mwReadNotifCounts(platform) {
-  if (platform === "vinted") {
-    // Vinted offers arrive as a message whose text is a price question or a
-    // bare amount ("€25.00"). Marktplaats prices everything, so this pattern is
-    // Vinted-only — on MP it would match every item price (verified).
-    const OFFER_RE = /would you (sell|take)|sell (it|this)|prijsvoorstel|€\s?\d/i;
-    // Vinted's inbox API returns each conversation with an `unread` flag. Far
-    // more reliable than scraping the SPA. Unread threads sort to the top, so
-    // page 1 (50 rows) captures the actionable ones.
-    try {
-      const r = await fetch("/api/v2/inbox?page=1&per_page=50", {
-        headers: { Accept: "application/json" },
-        credentials: "include",
-      });
-      if (!r.ok) return null; // 401 = not logged into Vinted → don't report
-      const j = await r.json();
-      const convos = Array.isArray(j.conversations) ? j.conversations : [];
-      const unread = convos.filter((c) => c && c.unread);
-      const offers = unread.filter((c) => OFFER_RE.test(c.description || "")).length;
-      return { messages: unread.length, offers };
-    } catch (_) {
-      return null;
-    }
-  }
-
   // Marktplaats / 2dehands share one codebase (hashed CSS-module class names).
   // A conversation row is `ConversationItem-module-root-*`; an UNREAD row shows
   // its latest-message preview in the strong/bold body style; a bid surfaces as
@@ -4037,8 +4070,14 @@ async function _mwReadNotifCounts(platform) {
   const MP_OFFER_RE = /\bbod\b|\bgeboden\b|\bbieding\b|\bbiedingen\b/i;
   let messages = 0;
   let offers = 0;
+  // Een bod telt alleen mee als het gesprek ONGELEZEN is. Eerder werd elke rij
+  // geteld, ook gesprekken van maanden geleden die allang afgehandeld waren.
+  // Daardoor stonden er structureel meer "biedingen" dan "berichten" op het
+  // dashboard — een getal waar niets meer achter zat om te doen.
   rows.forEach((r) => {
-    if (r.querySelector('[class*="u-textStyleBodySmallStrong"]')) messages++;
+    const ongelezen = !!r.querySelector('[class*="u-textStyleBodySmallStrong"]');
+    if (!ongelezen) return;
+    messages++;
     if (MP_OFFER_RE.test(r.textContent || "")) offers++;
   });
   return { messages, offers };

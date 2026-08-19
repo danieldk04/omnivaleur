@@ -198,6 +198,45 @@ window.CL = (() => {
     return [...new Set(teksten)];
   }
 
+  // Een venster dat het plaatsen BLOKKEERT en dat alleen de verkoper zelf kan
+  // wegwerken: Vinted vraagt bij het eerste zoekertje (en na een adreswijziging)
+  // "Waar woon je?" en soms om een telefoonbevestiging, in een modaal venster
+  // bovenop het formulier.
+  //
+  // Waarom dit apart wordt herkend: het adresvenster verandert de adresbalk niet
+  // en zet geen rode foutmelding op het formulier. De wachtlus liep dus 20
+  // seconden leeg, daarna nog drie herstelrondes voor de beschrijving en tot
+  // slot anderhalve minuut zoeken in de garderobe — ruim twee minuten, waarna de
+  // gebruiker "Not published — complete the fields marked in red" te zien kreeg
+  // terwijl er geen enkel rood veld was. Precies de melding die je nergens heen
+  // stuurt.
+  //
+  // Het adres wordt NOOIT automatisch ingevuld. Het is een woonadres; dat raden
+  // of ergens vandaan halen is niets voor een machine. Het tabblad blijft open,
+  // de verkoper vult het één keer in en klikt zelf op Uploaden — die klik wordt
+  // al opgepikt en het zoekertje wordt vanzelf afgemeld.
+  const BLOKKADE_PATRONEN = [
+    { naam: "adres",    re: /waar woon je|where do you live|où habites-tu|voeg (je|uw) adres|add your address|bezorgadres|verzendadres|shipping address|home address|straatnaam|postcode en plaats/i },
+    { naam: "telefoon", re: /verifieer je telefoonnummer|verify your phone|telefoonnummer bevestigen|confirm your phone number/i },
+  ];
+
+  // Alleen binnen een écht zichtbaar dialoogvenster kijken. Zoeken in de hele
+  // pagina zou op woorden als "postcode" in een voettekst kunnen aanslaan, en
+  // een verzonnen blokkade is erger dan geen blokkade: dan stopt het plaatsen
+  // van elk zoekertje.
+  function plaatsBlokkade() {
+    const vensters = [...document.querySelectorAll(
+      '[role="dialog"], [role="alertdialog"], [data-testid*="modal" i], [class*="Modal" i]'
+    )].filter((el) => el.offsetParent !== null && (el.textContent || "").trim().length > 10);
+    for (const venster of vensters) {
+      const tekst = (venster.textContent || "").replace(/\s+/g, " ");
+      for (const p of BLOKKADE_PATRONEN) {
+        if (p.re.test(tekst)) return { naam: p.naam, tekst: tekst.trim().slice(0, 160) };
+      }
+    }
+    return null;
+  }
+
   function beschrijvingKlachtOpPagina() {
     return /geen\s+(advertentietekst|zoekertjestekst)\s+ingevuld/i
       .test(document.body.innerText || "");
@@ -1103,7 +1142,41 @@ window.CL = (() => {
     btn.click();
     clog("plaatsen: op de knop geklikt, wachten op de advertentie");
 
-    const id = await waitForListingUrl(idFromUrl, 20000).catch(() => null);
+    // Wachten op het zoekertje, maar tegelijk kijken of er een venster bovenop
+    // is gekomen dat alleen de verkoper zelf kan wegwerken (adres, telefoon).
+    // Zonder deze wedloop bleef het plaatsen ruim twee minuten hangen en kwam er
+    // een melding uit die naar rode velden verwees die er niet waren.
+    const blokkadeWacht = (async () => {
+      const einde = Date.now() + 20000;
+      while (Date.now() < einde) {
+        const b = plaatsBlokkade();
+        if (b) return b;
+        await sleep(500);
+      }
+      return null;
+    })();
+    const id = await Promise.race([
+      waitForListingUrl(idFromUrl, 20000).catch(() => null),
+      blokkadeWacht.then((b) => (b ? { _blokkade: b } : null)),
+    ]);
+    if (id && id._blokkade) {
+      const b = id._blokkade;
+      clog(`plaatsen: geblokkeerd door Vinted (${b.naam}) — teruggegeven aan de gebruiker`);
+      const fout = new Error(
+        (b.naam === "adres"
+          ? "Vinted first wants your address before it will publish anything (\"Where do you live?\"). "
+          : "Vinted first wants you to confirm your phone number before it will publish anything. ") +
+        "We never fill that in for you. The tab is left open with everything else already filled in: " +
+        "complete this one screen and click Upload — the listing is then marked as published automatically, " +
+        "and every following listing goes through without this step. " +
+        `Vinted says: \u201c${b.tekst}\u201d`
+      );
+      // Merkteken voor de opdracht zelf: bij een blokkade heeft doorzoeken van de
+      // garderobe geen zin — er is niets geplaatst. Zonder dit merkteken kostte
+      // die zoektocht nog eens anderhalve minuut voor niets.
+      fout.blokkade = b.naam;
+      throw fout;
+    }
     if (id) return id;
 
     // Het formulier zegt zélf wat er mis is. Tot nu toe voorspelden we vooraf of
@@ -1261,6 +1334,6 @@ window.CL = (() => {
     findFieldByLabel, selectDropdown, fillBrand, fillManufacturer, selectBundleFree,
     selectDelivery, gekozenLevering,
     selectPackageSize, uploadPhotos, submitListing, step, closePopup, smartTrunc, fillBidding,
-    clog, dutchColor, verifyMpGroupFields, repairMpGroupFields, ensureDescriptionStillFilled, selectCondition, selectIntendedFor, fillBrandField, logMpFields, mpPrijs,
+    clog, plaatsBlokkade, dutchColor, verifyMpGroupFields, repairMpGroupFields, ensureDescriptionStillFilled, selectCondition, selectIntendedFor, fillBrandField, logMpFields, mpPrijs,
   };
 })();
