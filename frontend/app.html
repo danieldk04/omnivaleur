@@ -984,8 +984,25 @@ input[type="checkbox"].row-check { width: 15px; height: 15px; cursor: pointer; a
             <option value="ja">Vinted: can be listed</option>
             <option value="nee">Vinted: cannot</option>
           </select>
-          <input type="text" id="filter-search" placeholder="Search by title or brand…" oninput="applyFilters()" style="min-width:200px">
+          <select id="filter-category" onchange="applyFilters()" title="Only items in this category"></select>
+          <select id="filter-brand" onchange="applyFilters()" title="Only items of this brand"></select>
+          <select id="filter-todo" onchange="applyFilters()" title="Items still missing something you need before you can publish them">
+            <option value="all">Complete or not</option>
+            <option value="price">Missing price</option>
+            <option value="description">Missing description</option>
+            <option value="photo">Missing photos</option>
+            <option value="incomplete">Missing anything</option>
+          </select>
+          <select id="filter-sort" onchange="applyFilters()" title="Order of the list">
+            <option value="recent">Newest handled first</option>
+            <option value="oldest">Oldest handled first</option>
+            <option value="title">Title A–Z</option>
+            <option value="price-desc">Price: high to low</option>
+            <option value="price-asc">Price: low to high</option>
+          </select>
+          <input type="text" id="filter-search" placeholder="Search title, brand or description…" oninput="applyFilters()" style="min-width:200px">
           <span class="filter-spacer"></span>
+          <button class="btn btn-sm btn-ghost" id="filter-reset" style="display:none" onclick="resetFilters()">Clear filters</button>
           <button class="btn btn-sm btn-outline" id="mp-fill-btn" style="display:none" onclick="fillFromMarktplaats()"
                   title="Fetch the price and description from your own public Marktplaats adverts">Fill from Marktplaats</button>
           <span id="filter-count" style="font-size:12px;color:var(--muted);font-weight:500"></span>
@@ -2285,7 +2302,7 @@ document.addEventListener('visibilitychange', () => {
 setTimeout(pingExtension, 400);
 
 const API = window.location.hostname === 'localhost' ? 'http://localhost:8001' : '';
-const TOKEN = sessionStorage.getItem('cl_token') || '';
+let TOKEN = sessionStorage.getItem('cl_token') || '';
 
 // PWA: register the service worker so the dashboard can be installed to the
 // phone's homescreen and open like a native app. Only on https/localhost.
@@ -2315,11 +2332,51 @@ async function triggerPwaInstall() {
   document.querySelectorAll('.pwa-install-btn').forEach(b => { b.style.display = 'none'; });
 }
 
-async function apiFetch(url, opts = {}) {
+// Het inlogbewijs van Supabase verloopt na ongeveer een uur. Wie het dashboard
+// langer openhield, kreeg daarna bij elke opslagpoging "Sessie verlopen" — in het
+// Nederlands, in een Engels scherm, zonder iets te kunnen doen behalve verversen.
+// De vernieuwsleutel lag al klaar sinds het inloggen; die wordt nu gebruikt.
+let _tokenVernieuwing = null;
+
+async function vernieuwToken() {
+  const sleutel = sessionStorage.getItem('cl_refresh') || '';
+  if (!sleutel) return false;
+  // Eén keer tegelijk: tien gelijktijdige verzoeken die alle tien vernieuwen,
+  // maken van elkaars verse sleutel een ongeldige.
+  if (!_tokenVernieuwing) {
+    _tokenVernieuwing = (async () => {
+      try {
+        const r = await fetch(`${API}/api/auth/refresh`, {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ refresh_token: sleutel }),
+        });
+        if (!r.ok) return false;
+        const d = await r.json();
+        if (!d.access_token) return false;
+        TOKEN = d.access_token;
+        sessionStorage.setItem('cl_token', d.access_token);
+        if (d.refresh_token) sessionStorage.setItem('cl_refresh', d.refresh_token);
+        return true;
+      } catch { return false; }
+      finally { setTimeout(() => { _tokenVernieuwing = null; }, 0); }
+    })();
+  }
+  return _tokenVernieuwing;
+}
+
+async function apiFetch(url, opts = {}, _tweedePoging = false) {
   const res = await fetch(url, {
     ...opts,
     headers: { 'Authorization': `Bearer ${TOKEN}`, ...(opts.headers || {}) },
   });
+  // 401 = het inlogbewijs is verlopen. Eén keer vernieuwen en het verzoek
+  // overdoen; lukt dat niet, dan is er echt opnieuw inloggen nodig.
+  if (res.status === 401 && !_tweedePoging) {
+    if (await vernieuwToken()) return apiFetch(url, opts, true);
+    sessionStorage.removeItem('cl_token');
+    sessionStorage.removeItem('cl_refresh');
+    location.href = 'login.html?verlopen=1';
+  }
   // 402 = the server refused because the subscription lapsed. The billing panel
   // is no longer the thing that blocks people, so it must also be told when the
   // server says no — otherwise the app would silently fail half its buttons.
@@ -3490,6 +3547,15 @@ function applyFilters(resetPage) {
   // eruit vissen" en "de sieraden eruit vissen met de hand".
   const vintedFilter = (document.getElementById('filter-vinted') || {}).value || 'all';
   const search = document.getElementById('filter-search').value.toLowerCase().trim();
+  // Met duizenden artikelen is een lijst geen lijst meer. Deze vier keuzes zijn
+  // waar verkopers echt op zoeken: waar hoort het bij, van wie is het, wat is er
+  // nog niet af, en in welke volgorde wil ik het zien.
+  const waarde = id => (document.getElementById(id) || {}).value || 'all';
+  vulKeuzelijsten();
+  const catFilter = waarde('filter-category');
+  const brandFilter = waarde('filter-brand');
+  const todoFilter = waarde('filter-todo');
+  const sortBy = waarde('filter-sort') === 'all' ? 'recent' : waarde('filter-sort');
 
   const { tabOf, counts } = classifyItems();
   for (const t of ITEMS_TABS) document.getElementById('tabcount-' + t).textContent = counts[t];
@@ -3502,7 +3568,20 @@ function applyFilters(resetPage) {
   const filtered = state.items.filter(item => {
     if (tabOf.get(item.id) !== itemsTab) return false;
     if (platformItemIds && !platformItemIds.has(item.id)) return false;
-    if (search && !item.title.toLowerCase().includes(search) && !(item.brand || '').toLowerCase().includes(search)) return false;
+    if (search) {
+      const hooi = `${item.title || ''} ${item.brand || ''} ${item.description || ''}`.toLowerCase();
+      if (!hooi.includes(search)) return false;
+    }
+    if (catFilter !== 'all' && String(item.category || '') !== catFilter) return false;
+    if (brandFilter !== 'all' && String(item.brand || '').trim() !== brandFilter) return false;
+    if (todoFilter !== 'all') {
+      const geenPrijs = !item.price;
+      const geenTekst = !String(item.description || '').trim();
+      const geenFoto = !((item.photo_urls || []).length);
+      const mist = { price: geenPrijs, description: geenTekst, photo: geenFoto,
+                     incomplete: geenPrijs || geenTekst || geenFoto }[todoFilter];
+      if (!mist) return false;
+    }
     if (vintedFilter !== 'all') {
       const kan = platformOordeel(item, 'vinted').oordeel !== 'blokkade';
       if (vintedFilter === 'ja' ? !kan : kan) return false;
@@ -3514,7 +3593,17 @@ function applyFilters(resetPage) {
   // Precomputed: lastHandledAt() scans every listing, and calling it from inside a
   // comparator made sorting cost items × listings on every keystroke in the search box.
   const handledAt = new Map(filtered.map(i => [i.id, lastHandledAt(i)]));
-  filtered.sort((a, b) => handledAt.get(b.id) - handledAt.get(a.id));
+  const prijs = i => (typeof i.price === 'number' ? i.price : parseFloat(i.price) || 0);
+  const sorteer = {
+    recent: (a, b) => handledAt.get(b.id) - handledAt.get(a.id),
+    oldest: (a, b) => handledAt.get(a.id) - handledAt.get(b.id),
+    title: (a, b) => String(a.title || '').localeCompare(String(b.title || '')),
+    'price-desc': (a, b) => prijs(b) - prijs(a),
+    'price-asc': (a, b) => prijs(a) - prijs(b),
+  }[sortBy] || ((a, b) => handledAt.get(b.id) - handledAt.get(a.id));
+  filtered.sort(sorteer);
+  // De datumkopjes in de tabel kloppen alleen als de lijst op tijd staat.
+  itemsGroepeerOpDatum = (sortBy === 'recent' || sortBy === 'oldest');
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / ITEMS_PAGE_SIZE));
   if (itemsCurrentPage > totalPages) itemsCurrentPage = totalPages;
@@ -3536,10 +3625,52 @@ function applyFilters(resetPage) {
     mpKnop.style.display = teVullen ? '' : 'none';
     mpKnop.textContent = `Fill ${teVullen} from Marktplaats`;
   }
+  const actief = [platformFilter, vintedFilter, catFilter, brandFilter, todoFilter]
+    .some(v => v && v !== 'all') || !!search || sortBy !== 'recent';
+  const resetKnop = document.getElementById('filter-reset');
+  if (resetKnop) resetKnop.style.display = actief ? '' : 'none';
   const heading = { live: 'Live items', todo: 'To list', hidden: 'Hidden on platform', sold: 'Sold items', archived: 'Archived items' }[itemsTab];
   document.getElementById('items-heading').textContent = heading;
   renderItemsTable(pageItems);
   renderItemsPagination(totalPages, filtered.length);
+}
+
+// Categorieen en merken komen uit de artikelen zelf. Een vaste lijst zou bij de
+// een half leeg zijn en bij de ander net het merk missen waar hij op zoekt.
+let itemsGroepeerOpDatum = true;
+let _keuzelijstStempel = '';
+
+function vulKeuzelijsten() {
+  const items = state.items || [];
+  const stempel = items.length + '|' + items.map(i => i.id).slice(-1);
+  const cats = [...new Set(items.map(i => String(i.category || '').trim()).filter(Boolean))].sort();
+  const merken = [...new Set(items.map(i => String(i.brand || '').trim()).filter(Boolean))].sort();
+  const nieuw = stempel + '|' + cats.length + '|' + merken.length;
+  if (nieuw === _keuzelijstStempel) return;
+  _keuzelijstStempel = nieuw;
+  const vul = (id, kop, waarden) => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    const gekozen = el.value;
+    el.innerHTML = `<option value="all">${kop}</option>` +
+      waarden.map(v => `<option value="${esc(v)}">${esc(v)}</option>`).join('');
+    el.value = waarden.includes(gekozen) ? gekozen : 'all';
+    el.style.display = waarden.length ? '' : 'none';
+  };
+  vul('filter-category', 'All categories', cats);
+  vul('filter-brand', 'All brands', merken);
+}
+
+function resetFilters() {
+  for (const [id, v] of [['filter-platform', 'all'], ['filter-vinted', 'all'],
+                         ['filter-category', 'all'], ['filter-brand', 'all'],
+                         ['filter-todo', 'all'], ['filter-sort', 'recent']]) {
+    const el = document.getElementById(id);
+    if (el) el.value = v;
+  }
+  const zoek = document.getElementById('filter-search');
+  if (zoek) zoek.value = '';
+  applyFilters();
 }
 
 function goToItemsPage(page) {
@@ -3628,9 +3759,9 @@ function renderItemsTable(items) {
     const errorBadge = publishingItemIds.has(item.id) ? '' : publishErrorBadge(item);
     // Subtle time-section subheader between contiguous groups (list is sorted
     // most-recently-handled first, so buckets stay contiguous).
-    const bucket = handledBucket(lastHandledAt(item));
+    const bucket = itemsGroepeerOpDatum ? handledBucket(lastHandledAt(item)) : '';
     let header = '';
-    if (bucket !== lastBucket) {
+    if (bucket && bucket !== lastBucket) {
       lastBucket = bucket;
       header = `<tr class="items-section-row"><td colspan="8" class="items-section-label">${bucket}</td></tr>`;
     }

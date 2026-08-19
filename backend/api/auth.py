@@ -131,14 +131,14 @@ async def refresh(body: RefreshRequest):
     server rather than shipping it into the extension.
     """
     if not (body.refresh_token or "").strip():
-        raise HTTPException(status_code=401, detail="Sessie verlopen")
+        raise HTTPException(status_code=401, detail="Your session expired — please sign in again")
     db = get_db()
     try:
         # Ook dit zet een sessie op de client waarop het gebeurt — dus op de
         # auth-verbinding, niet op de gedeelde.
         res = await asyncio.to_thread(get_auth_db().auth.refresh_session, body.refresh_token)
         if not res.session:
-            raise HTTPException(status_code=401, detail="Sessie verlopen")
+            raise HTTPException(status_code=401, detail="Your session expired — please sign in again")
         return {
             "ok": True,
             "access_token": res.session.access_token,
@@ -147,7 +147,7 @@ async def refresh(body: RefreshRequest):
     except HTTPException:
         raise
     except Exception:
-        raise HTTPException(status_code=401, detail="Sessie verlopen")
+        raise HTTPException(status_code=401, detail="Your session expired — please sign in again")
 
 
 class ChangeEmailRequest(BaseModel):

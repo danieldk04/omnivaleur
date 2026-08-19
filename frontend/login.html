@@ -85,6 +85,13 @@ if (_q.get('confirmed') === '1') {
 if (_q.get('link_error') === '1') {
   document.getElementById('linkexpired').style.display = 'block';
 }
+// Teruggestuurd omdat de sessie niet meer te vernieuwen was. Zonder uitleg lijkt
+// dat op willekeurig uitloggen.
+if (_q.get('verlopen') === '1') {
+  const el = document.getElementById('error');
+  el.textContent = 'Your session expired. Please sign in again — nothing was lost.';
+  el.style.display = 'block';
+}
 
 async function doLogin(e) {
   e.preventDefault();

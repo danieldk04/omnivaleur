@@ -24,12 +24,12 @@ async def get_current_user_full(authorization: str = Header(...)):
         # it to a thread removes the single biggest source of that contention.
         res = await asyncio.to_thread(get_auth_db().auth.get_user, token)
         if not res.user:
-            raise HTTPException(status_code=401, detail="Sessie verlopen")
+            raise HTTPException(status_code=401, detail="Your session expired — please sign in again")
         return res.user
     except HTTPException:
         raise
     except Exception:
-        raise HTTPException(status_code=401, detail="Sessie verlopen")
+        raise HTTPException(status_code=401, detail="Your session expired — please sign in again")
 
 
 async def require_active_subscription(user=Depends(get_current_user_full)) -> str:
