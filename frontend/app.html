@@ -3640,6 +3640,29 @@ function applyFilters(resetPage) {
 let itemsGroepeerOpDatum = true;
 let _keuzelijstStempel = '';
 
+// De opgeslagen categorie is een interne, Nederlandse code ("heren t-shirts").
+// Die hoort nergens in beeld te komen: het scherm is Engels en zo'n code zegt de
+// verkoper niets. CATEGORIES kent van elke code de nette naam.
+const CATEGORIE_GROEP_LABEL = { antiek: 'Antiques & Art', muziek: 'Music', dames: "Women's",
+  heren: "Men's", kinderen: 'Kids', unisex: 'Unisex', games: 'Games',
+  electronics: 'Electronics', sieraden: 'Jewellery' };
+let _categorieNamen = null;
+
+function categorieNaam(code) {
+  if (!_categorieNamen) {
+    _categorieNamen = new Map();
+    for (const [groep, lijst] of Object.entries(CATEGORIES || {})) {
+      for (const [val, label] of lijst) {
+        _categorieNamen.set(val, `${CATEGORIE_GROEP_LABEL[groep] || groep} · ${label}`);
+      }
+    }
+  }
+  const c = String(code || '').trim();
+  // Onbekende code (oude import, handmatig ingevuld): dan maar netjes met
+  // hoofdletter, in plaats van hem weglaten en het artikel onvindbaar maken.
+  return _categorieNamen.get(c) || (c ? c.charAt(0).toUpperCase() + c.slice(1) : '');
+}
+
 function vulKeuzelijsten() {
   const items = state.items || [];
   const stempel = items.length + '|' + items.map(i => i.id).slice(-1);
@@ -3648,16 +3671,18 @@ function vulKeuzelijsten() {
   const nieuw = stempel + '|' + cats.length + '|' + merken.length;
   if (nieuw === _keuzelijstStempel) return;
   _keuzelijstStempel = nieuw;
-  const vul = (id, kop, waarden) => {
+  const vul = (id, kop, waarden, naam) => {
     const el = document.getElementById(id);
     if (!el) return;
     const gekozen = el.value;
+    const opties = waarden.map(v => [v, naam ? naam(v) : v])
+                          .sort((a, b) => a[1].localeCompare(b[1]));
     el.innerHTML = `<option value="all">${kop}</option>` +
-      waarden.map(v => `<option value="${esc(v)}">${esc(v)}</option>`).join('');
+      opties.map(([v, t]) => `<option value="${esc(v)}">${esc(t)}</option>`).join('');
     el.value = waarden.includes(gekozen) ? gekozen : 'all';
     el.style.display = waarden.length ? '' : 'none';
   };
-  vul('filter-category', 'All categories', cats);
+  vul('filter-category', 'All categories', cats, categorieNaam);
   vul('filter-brand', 'All brands', merken);
 }
 
@@ -6672,24 +6697,24 @@ const CATEGORIES = {
   // backend/api/imports.py en MP_CATEGORIES in de extensie. Ontbrak hier,
   // waardoor een muziekitem terugviel op kleding — zie NON_CLOTHING_PREFIXES.
   muziek: [
-    ["muziek accordeons","Accordeons"],["muziek behuizingen en koffers","Cases & Bags"],["muziek blaasinstrumenten blokfluiten","Wind — blokfluiten"],
-    ["muziek blaasinstrumenten didgeridoos","Wind — didgeridoos"],["muziek blaasinstrumenten dwarsfluiten en piccolo's","Wind — dwarsfluiten en piccolo's"],["muziek blaasinstrumenten hobo's","Wind — hobo's"],
-    ["muziek blaasinstrumenten hoorns","Wind — hoorns"],["muziek blaasinstrumenten klarinetten","Wind — klarinetten"],["muziek blaasinstrumenten mondharmonica's","Wind — mondharmonica's"],
-    ["muziek blaasinstrumenten overige","Wind — overige"],["muziek blaasinstrumenten saxofoons","Wind — saxofoons"],["muziek blaasinstrumenten trombones","Wind — trombones"],
-    ["muziek blaasinstrumenten trompetten","Wind — trompetten"],["muziek blaasinstrumenten tuba's","Wind — tuba's"],["muziek bladmuziek","Sheet Music"],
-    ["muziek dj-sets en draaitafels","Dj-sets en draaitafels"],["muziek draaiorgels","Draaiorgels"],["muziek drumcomputers","Drumcomputers"],
-    ["muziek drumstellen en slagwerk","Drumstellen en slagwerk"],["muziek effecten","Effecten"],["muziek instrumenten onderdelen","Instrumenten onderdelen"],
-    ["muziek instrumenten toebehoren","Accessories & Parts"],["muziek kabels en stekkers","Kabels en stekkers"],["muziek keyboards","Keyboards"],
-    ["muziek licht en laser","Licht en laser"],["muziek mengpanelen","Mengpanelen"],["muziek microfoons","Microphones"],
-    ["muziek midi-apparatuur","Midi-apparatuur"],["muziek orgels","Orgels"],["muziek orkestbanden","Orkestbanden"],
-    ["muziek overige muziek en instrumenten","Overige muziek en instrumenten"],["muziek percussie","Percussie"],["muziek piano's","Piano's"],
-    ["muziek samplers","Samplers"],["muziek snaarinstrumenten banjo's","Strings — banjo's"],["muziek snaarinstrumenten gitaren akoestisch","Acoustic Guitars"],
-    ["muziek snaarinstrumenten gitaren bas","Strings — gitaren bas"],["muziek snaarinstrumenten gitaren elektrisch","Electric Guitars"],["muziek snaarinstrumenten harpen","Strings — harpen"],
-    ["muziek snaarinstrumenten klavecimbels","Strings — klavecimbels"],["muziek snaarinstrumenten mandolines","Strings — mandolines"],["muziek snaarinstrumenten overige","Strings — overige"],
-    ["muziek soundmodules","Soundmodules"],["muziek standaards","Standaards"],["muziek strijkinstrumenten cello's","Strijkinstrumenten cello's"],
-    ["muziek strijkinstrumenten contrabassen","Strijkinstrumenten contrabassen"],["muziek strijkinstrumenten overige","Strijkinstrumenten overige"],["muziek strijkinstrumenten violen en altviolen","Strijkinstrumenten violen en altviolen"],
-    ["muziek synthesizers","Synthesizers"],["muziek theaterbelichting","Theaterbelichting"],["muziek versterkers bas en gitaar","Versterkers bas en gitaar"],
-    ["muziek versterkers keyboard, monitor en pa","Versterkers keyboard, monitor en pa"],
+    ["muziek accordeons","Accordions"],["muziek behuizingen en koffers","Cases & Bags"],["muziek blaasinstrumenten blokfluiten","Wind — Recorders"],
+    ["muziek blaasinstrumenten didgeridoos","Wind — Didgeridoos"],["muziek blaasinstrumenten dwarsfluiten en piccolo's","Wind — Flutes & Piccolos"],["muziek blaasinstrumenten hobo's","Wind — Oboes"],
+    ["muziek blaasinstrumenten hoorns","Wind — Horns"],["muziek blaasinstrumenten klarinetten","Wind — Clarinets"],["muziek blaasinstrumenten mondharmonica's","Wind — Harmonicas"],
+    ["muziek blaasinstrumenten overige","Wind — Other"],["muziek blaasinstrumenten saxofoons","Wind — Saxophones"],["muziek blaasinstrumenten trombones","Wind — Trombones"],
+    ["muziek blaasinstrumenten trompetten","Wind — Trumpets"],["muziek blaasinstrumenten tuba's","Wind — Tubas"],["muziek bladmuziek","Sheet Music"],
+    ["muziek dj-sets en draaitafels","DJ Sets & Turntables"],["muziek draaiorgels","Street Organs"],["muziek drumcomputers","Drum Machines"],
+    ["muziek drumstellen en slagwerk","Drum Kits & Percussion"],["muziek effecten","Effects Pedals"],["muziek instrumenten onderdelen","Instrument Parts"],
+    ["muziek instrumenten toebehoren","Accessories & Parts"],["muziek kabels en stekkers","Cables & Plugs"],["muziek keyboards","Keyboards"],
+    ["muziek licht en laser","Lighting & Lasers"],["muziek mengpanelen","Mixing Desks"],["muziek microfoons","Microphones"],
+    ["muziek midi-apparatuur","MIDI Equipment"],["muziek orgels","Organs"],["muziek orkestbanden","Backing Tracks"],
+    ["muziek overige muziek en instrumenten","Other Music & Instruments"],["muziek percussie","Percussion"],["muziek piano's","Pianos"],
+    ["muziek samplers","Samplers"],["muziek snaarinstrumenten banjo's","Strings — Banjos"],["muziek snaarinstrumenten gitaren akoestisch","Acoustic Guitars"],
+    ["muziek snaarinstrumenten gitaren bas","Bass Guitars"],["muziek snaarinstrumenten gitaren elektrisch","Electric Guitars"],["muziek snaarinstrumenten harpen","Strings — Harps"],
+    ["muziek snaarinstrumenten klavecimbels","Strings — Harpsichords"],["muziek snaarinstrumenten mandolines","Strings — Mandolins"],["muziek snaarinstrumenten overige","Strings — Other"],
+    ["muziek soundmodules","Sound Modules"],["muziek standaards","Stands"],["muziek strijkinstrumenten cello's","Bowed — Cellos"],
+    ["muziek strijkinstrumenten contrabassen","Bowed — Double Basses"],["muziek strijkinstrumenten overige","Bowed — Other"],["muziek strijkinstrumenten violen en altviolen","Bowed — Violins & Violas"],
+    ["muziek synthesizers","Synthesizers"],["muziek theaterbelichting","Stage Lighting"],["muziek versterkers bas en gitaar","Amps — Bass & Guitar"],
+    ["muziek versterkers keyboard, monitor en pa","Amps — Keyboard, Monitor & PA"],
   ],
   dames: [
     ["jeans","Jeans / Denim"],["broeken","Trousers / Chinos"],["shorts","Shorts"],
