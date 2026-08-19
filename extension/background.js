@@ -1528,6 +1528,76 @@ async function expandMp2dhOverview(tabId) {
   }
 }
 
+// Een advertentie verwijderen vanaf haar EIGEN pagina (/seller/view/{id}).
+//
+// Nodig voor verkopers van wie de advertenties niet op de gewone "Mijn
+// advertenties"-pagina staan — zakelijke accounts bijvoorbeeld. Die pagina
+// vinden we op advertentienummer, dus hier is geen titelvergelijking nodig en
+// kan er per definitie geen verkeerde advertentie geraakt worden.
+//
+// Geeft true terug als er aantoonbaar iets is verwijderd. Bij twijfel false:
+// "waarschijnlijk weg" melden als succes is de gevaarlijkste uitkomst, want dan
+// wordt er een tweede advertentie naast de eerste geplaatst.
+async function verwijderViaAdvertentiepagina(tabId, adUrl, platform) {
+  const sleep = ms => new Promise(r => setTimeout(r, ms));
+  try {
+    await chrome.tabs.update(tabId, { url: adUrl });
+    await waitForTabLoad(tabId);
+    await sleep(2500);
+
+    const geklikt = await execInTab(tabId, async () => {
+      const zichtbaar = el => el && el.offsetParent !== null && !el.disabled;
+      const tekst = el => (el.textContent || "").replace(/\s+/g, " ").trim();
+      // Alleen een knop die letterlijk verwijderen zegt. "Verkocht", "Bewerken"
+      // en "Omhoog bellen" staan er vlak naast en mogen nooit geraakt worden.
+      const WEG = /^(verwijder(en)?|advertentie verwijderen|delete|remove)( \(\d+\))?$/i;
+      const knoppen = [...document.querySelectorAll('button, a[role="button"], [role="button"]')];
+      const knop = knoppen.filter(zichtbaar).find(b => WEG.test(tekst(b)));
+      if (!knop) return { ok: false, gezien: knoppen.filter(zichtbaar).map(tekst).slice(0, 12) };
+      knop.click();
+      return { ok: true };
+    });
+    if (!geklikt || !geklikt.ok) {
+      console.log("[Omnivaleur] geen verwijderknop op de advertentiepagina:", geklikt && geklikt.gezien);
+      return false;
+    }
+
+    // Bevestigen. Marktplaats vraagt het in een venstertje na; welke tekst er op
+    // de knop staat verschilt, dus alle gangbare vormen.
+    await sleep(1200);
+    await execInTab(tabId, async () => {
+      const zichtbaar = el => el && el.offsetParent !== null && !el.disabled;
+      const tekst = el => (el.textContent || "").replace(/\s+/g, " ").trim();
+      const JA = /^(verwijder(en)?|ja,? verwijder(en)?|bevestig(en)?|yes,? delete|delete|confirm)$/i;
+      const knop = [...document.querySelectorAll('button, [role="button"]')]
+        .filter(zichtbaar).find(b => JA.test(tekst(b)));
+      if (knop) knop.click();
+      return true;
+    });
+    await sleep(2500);
+
+    // Nakijken, niet aannemen. Pas als de advertentie aantoonbaar weg is melden
+    // we succes.
+    for (let poging = 0; poging < 3; poging++) {
+      const weg = await execInTab(tabId, async (u) => {
+        try {
+          const r = await fetch(u, { credentials: "include", redirect: "follow" });
+          if (r.status === 404 || r.status === 410) return true;
+          if (!r.ok) return null;
+          const html = (await r.text()).toLowerCase();
+          return /niet meer beschikbaar|is verwijderd|verlopen advertentie|no longer available/.test(html);
+        } catch (e) { return null; }
+      }, [adUrl]).catch(() => null);
+      if (weg === true) return true;
+      await sleep(2000);
+    }
+    return false;
+  } catch (e) {
+    console.error("[Omnivaleur] verwijderen via advertentiepagina mislukt:", e);
+    return false;
+  }
+}
+
 async function bgDeleteMp2dh(job, serverUrl) {
   const sleep = ms => new Promise(r => setTimeout(r, ms));
   const platform = job.platform;
@@ -1725,9 +1795,28 @@ async function bgDeleteMp2dh(job, serverUrl) {
       }, [adUrl]).catch(() => null) : null;
 
       if (live === true) {
+        // NIET IN HET OVERZICHT, MAAR WEL ONLINE: VERWIJDER HEM DAN OP ZIJN
+        // EIGEN PAGINA.
+        //
+        // Dit gaf tot nu toe een foutmelding en verder niets, en daarmee stond
+        // de hele herplaatsing stil: de verwijderstap faalde, dus de opnieuw-
+        // plaatsen-stap werd overgeslagen ("de oude staat nog live, een nieuwe
+        // zou dubbelen"). Gemeten bij een verkoper met een zakelijk account:
+        // zijn 1.221 advertenties staan gewoon online, maar niet op de gewone
+        // "Mijn advertenties"-pagina, waardoor elke herplaatsing hierop strandde.
+        //
+        // De advertentiepagina zelf heeft wél een verwijderknop, en die pagina
+        // vinden we op nummer — dus zonder titelvergelijking en zonder overzicht.
+        console.log(`[Omnivaleur] bgDelete: "${title}" niet in het overzicht maar wel online — via ${adUrl}`);
+        const gelukt = await verwijderViaAdvertentiepagina(tabId, adUrl, platform);
+        if (gelukt) {
+          await finaliseJob(serverUrl, job.id, "complete", { note: "deleted_via_ad_page" });
+          return;
+        }
         throw new Error(
-          `"${title}" cannot be found in your ${platform} listings overview, but the listing is still online ` +
-          `(${adUrl}). Nothing was removed — delete it by hand, or check that you are signed in to the right account.`
+          `"${title}" cannot be found in your ${platform} listings overview, and the delete button on its ` +
+          `own page (${adUrl}) could not be used either. Nothing was removed — delete it by hand, or check ` +
+          `that you are signed in to the right account.`
         );
       }
       if (live !== false) {
@@ -3491,6 +3580,40 @@ async function checkSoldListings() {
       }
       const soldTitles = soldAds.map(a => (a.title || "").toLowerCase().trim()).filter(Boolean);
       console.log(`[Omnivaleur][sold] ${platform}: ${ads.length} ad cards scraped, ${soldAds.length} carry a sold/reserved label`);
+
+      // ADVERTENTIES DIE HELEMAAL NIET IN HET OVERZICHT STAAN.
+      //
+      // Bij een zakelijk account staan de advertenties niet op de gewone "Mijn
+      // advertenties"-pagina. Gemeten bij een verkoper met 1.221 advertenties:
+      // geen enkele stond in dat overzicht, dus werd er ook nooit een verkoop
+      // opgemerkt en bleef het item op alle andere kanalen gewoon te koop staan.
+      //
+      // Voor die advertenties kijken we op hun eigen pagina. Alleen een expliciet
+      // "verkocht" of "gereserveerd" telt; enkel verdwenen zijn telt niet, want
+      // dat betekent op Marktplaats ook "verlopen" en dan zou een nog levend item
+      // overal worden weggehaald.
+      const gezien = new Set(ads.map(a => a.id).filter(Boolean));
+      const gemist = withId.filter(l => !gezien.has(l.platform_listing_id));
+      if (gemist.length) {
+        console.log(`[Omnivaleur][sold] ${platform}: ${gemist.length} advertentie(s) niet in het overzicht — eigen pagina nakijken`);
+        // Niet het hele bestand per beurt: dat zijn duizenden aanvragen. Een
+        // vaste hap per ronde houdt het rustig en komt vanzelf overal langs.
+        const teBevestigen = [];
+        for (const l of gemist.slice(0, 40)) {
+          if (await lijktVerkochtOpEigenPagina(platform, l.platform_listing_id)) {
+            teBevestigen.push({ item_id: l.item_id, platform,
+                                platform_listing_id: l.platform_listing_id,
+                                title: l.title });
+          }
+        }
+        if (teBevestigen.length) {
+          // Melden, niet afmelden. De verkoper bevestigt het zelf in het
+          // dashboard; pas dan gaat het item van de andere kanalen af.
+          console.log(`[Omnivaleur][sold] ${platform}: ${teBevestigen.length} advertentie(s) lijken verkocht — ter bevestiging doorgegeven`);
+          await meldMogelijkeVerkopen(serverUrl, teBevestigen);
+        }
+      }
+
       if (!soldAds.length) continue;
 
       let triggered = 0;
@@ -3537,6 +3660,49 @@ async function checkSoldListings() {
 // Scrape each ad card on the Marktplaats/2dehands "my ads" overview and report
 // whether it carries an explicit SOLD/RESERVED label. Returns [{id, title, sold}].
 // The title lets us match sold ads to listings that have no platform id.
+// Staat DEZE advertentie als verkocht of gereserveerd op haar eigen pagina?
+//
+// Voor verkopers van wie de advertenties niet in het gewone overzicht staan —
+// zakelijke accounts. Alleen de pagina ophalen, geen tabblad en geen klikken.
+//
+// BEWUST GEEN AUTOMATISCHE AFMELDING OP DEZE UITKOMST.
+// Een verkeerde "verkocht" haalt het item van alle andere kanalen af, en dat is
+// onherstelbaar werk voor de verkoper. De opmaak van een verkochte advertentie
+// op deze pagina is niet nagekeken: zonder ingelogde zakelijke sessie geeft hij
+// 401, dus er is geen enkel echt voorbeeld om tegen te toetsen. Tot dat er is
+// wordt de uitkomst alleen gemeld, zodat de verkoper het zelf bevestigt.
+// Raden op een pagina die je nooit gezien hebt is precies hoe je iemands
+// voorraad sloopt.
+async function meldMogelijkeVerkopen(serverUrl, regels) {
+  try {
+    const headers = await getAuthHeaders();
+    if (!headers.Authorization) return;
+    await fetch(`${serverUrl}/api/listings/possibly-sold`, {
+      method: "POST",
+      headers: { ...headers, "Content-Type": "application/json" },
+      body: JSON.stringify({ listings: regels }),
+    });
+  } catch (e) {
+    console.warn("[Omnivaleur][sold] mogelijke verkopen niet doorgegeven:", e);
+  }
+}
+
+async function lijktVerkochtOpEigenPagina(platform, advertentieId) {
+  if (!advertentieId) return false;
+  const basis = platform === "marktplaats" ? "https://www.marktplaats.nl" : "https://www.2dehands.be";
+  try {
+    const r = await fetch(`${basis}/seller/view/${advertentieId}`, {
+      credentials: "include", redirect: "follow",
+    });
+    if (!r.ok) return false;                       // 404 = weg, niet aantoonbaar verkocht
+    const html = (await r.text()).toLowerCase();
+    return /(^|[^a-z])(verkocht|gereserveerd)([^a-z]|$)/.test(html)
+        && !/verkochte\s+artikelen|verkocht\?|meld het/.test(html);
+  } catch (e) {
+    return false;                                  // niets bewezen is geen verkoop
+  }
+}
+
 function scrapeMarktplaatsAds(url, platform) {
   return new Promise((resolve) => {
     openStilWerkTabblad(url, (tab) => {

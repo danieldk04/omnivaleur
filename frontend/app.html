@@ -3302,8 +3302,13 @@ function classifyItems() {
   const byItem = new Map();
   for (const l of state.listings) {
     let s = byItem.get(l.item_id);
-    if (!s) { s = { sold: false, live: false, hidden: false, off: false, publishing: false }; byItem.set(l.item_id, s); }
+    if (!s) { s = { sold: false, live: false, hidden: false, off: false, publishing: false, mogelijkVerkocht: false }; byItem.set(l.item_id, s); }
     if (l.status === 'sold') s.sold = true;
+    // "Mogelijk verkocht": de advertentie is niet meer op het platform te vinden
+    // en lijkt verkocht, maar dat is niet bewezen. Bewust nog als LIVE tellen —
+    // een status die hier nergens in valt laat het item uit alle tabbladen
+    // verdwijnen, en dan is de verkoper zijn item kwijt in plaats van gewaarschuwd.
+    else if (l.status === 'sold_unconfirmed') { s.live = true; s.mogelijkVerkocht = true; }
     else if (l.status === 'active' || l.status === 'relisting') s.live = true;
     // Hidden on the platform: still yours, still listed, but invisible to buyers.
     else if (l.status === 'hidden') s.hidden = true;
@@ -3489,6 +3494,12 @@ function renderItemsTable(items) {
       ? ` <span class="badge pending" title="This item is being published right now — the extension is putting it online on each selected platform. It stays here and turns fully live once every platform is done.">⏳ Publishing…</span>`
       : '';
     const missingBadge = publishingItemIds.has(item.id) ? '' : smartMissingBadge(item);
+    // Mogelijk verkocht: gezien op het platform, maar niet bewezen. Het item
+    // blijft gewoon staan — de verkoper beslist, wij raden.
+    const soldMaybe = (state.listings || []).some(
+      l => l.item_id === item.id && l.status === 'sold_unconfirmed')
+      ? ` <span class="badge warning" title="This listing looks sold on the platform, but we could not confirm it. Nothing was removed anywhere. Open the item and mark it sold if that's right.">❔ Sold?</span>`
+      : '';
     // Een mislukte publicatie krijgt voorrang op de "ontbrekende velden"-tip:
     // er is iets échts misgegaan, en dat hoort zichtbaar te zijn zonder hover.
     const errorBadge = publishingItemIds.has(item.id) ? '' : publishErrorBadge(item);
@@ -3504,7 +3515,7 @@ function renderItemsTable(items) {
       <td class="col-check"><input type="checkbox" class="row-check" ${checked} onchange="toggleRowSelect('${item.id}',this.checked)"></td>
       <td><div class="item-info">
         <div class="item-photo">${itemPhotoThumb(item)}</div>
-        <div><div class="item-title">${esc(item.title)}${(item.sku || '').startsWith('IMP-') ? ` <span class="badge" style="background:#eef2ff;color:#4f46e5;font-size:10px;vertical-align:middle" title="Created by importing an existing platform listing">↓ Imported</span>` : ''}${publishingPill}</div><div class="item-meta">${item.brand || '—'}${item.size ? ' · ' + item.size : ''}</div>${errorBadge}${missingBadge}</div>
+        <div><div class="item-title">${esc(item.title)}${(item.sku || '').startsWith('IMP-') ? ` <span class="badge" style="background:#eef2ff;color:#4f46e5;font-size:10px;vertical-align:middle" title="Created by importing an existing platform listing">↓ Imported</span>` : ''}${publishingPill}${soldMaybe}</div><div class="item-meta">${item.brand || '—'}${item.size ? ' · ' + item.size : ''}</div>${errorBadge}${missingBadge}</div>
       </div></td>
       <td>${priceCell(item)}</td>
       <td class="hide-mobile">${conditionLabel(item.condition)}</td>

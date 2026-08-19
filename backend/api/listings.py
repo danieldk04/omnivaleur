@@ -304,6 +304,38 @@ async def relist_ended_ebay(body: dict, user_id: str = Depends(require_active_su
         raise HTTPException(status_code=400, detail=str(e))
 
 
+@router.post("/possibly-sold")
+def possibly_sold(body: dict, user_id: str = Depends(get_current_user)):
+    """Advertenties die verkocht LIJKEN, ter bevestiging door de verkoper.
+
+    Waarom niet meteen afmelden: dit signaal komt van een advertentiepagina
+    waarvan de opmaak bij een verkocht exemplaar nooit is nagekeken — zonder
+    ingelogde zakelijke sessie geeft die pagina 401. Een verkeerde "verkocht"
+    haalt het item van alle andere kanalen af, en dat is onherstelbaar werk.
+    Daarom wordt het gemarkeerd en beslist de verkoper.
+    """
+    db = get_db()
+    regels = (body or {}).get("listings") or []
+    gemarkeerd = 0
+    for r in regels[:200]:
+        item_id = r.get("item_id")
+        platform = r.get("platform")
+        if not item_id or not platform:
+            continue
+        # Alleen eigen items, en alleen advertenties die nu nog als levend gelden.
+        eigen = (db.table("items").select("id").eq("id", item_id)
+                 .eq("user_id", user_id).limit(1).execute().data or [])
+        if not eigen:
+            continue
+        db.table("listings").update({"status": "sold_unconfirmed"}) \
+            .eq("item_id", item_id).eq("platform", platform) \
+            .in_("status", ["active", "hidden", "relisting"]).execute()
+        gemarkeerd += 1
+    logger.info("[sold] %s advertentie(s) als mogelijk verkocht gemarkeerd voor %s",
+                gemarkeerd, user_id)
+    return {"marked": gemarkeerd}
+
+
 @router.post("/sold")
 def mark_sold(item_id: str, platform: str, background_tasks: BackgroundTasks, sold_price: float | None = None, dry_run: bool = False, user_id: str = Depends(get_current_user)):
     db = get_db()
