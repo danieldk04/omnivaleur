@@ -5026,8 +5026,10 @@ async function bulkImportAllCandidates() {
     // giving up. Smaller batches mean shorter requests, which is exactly what a
     // struggling backend needs.
     const napMs = ms => new Promise(res => setTimeout(res, ms));
-    const RETRYABLE = /took too long|unexpected response|502|503|504|failed to fetch|networkerror|load failed/i;
-    let limit = 15;
+    const RETRYABLE = /took too long|unexpected response|server error|500|502|503|504|failed to fetch|networkerror|load failed/i;
+    // Tien per keer in plaats van vijftien: een lading van vijftien duurde op
+    // de server tien seconden of meer, en dat is precies waar hij op omvalt.
+    let limit = 10;
     let strikes = 0;
 
     for (let pass = 0; pass < 2000; pass++) {
@@ -5040,7 +5042,20 @@ async function bulkImportAllCandidates() {
         data = await parseJsonSafe(r);
         if (!r.ok) {
           const err = new Error(data.detail || `Bulk import failed (${r.status})`);
-          if ([502, 503, 504, 408, 429].includes(r.status)) err.retryable = true;
+          // 500 hoort hier ook bij, en dat ontbrak.
+          //
+          // Een 500 is een server die het even niet trekt: bij een import van
+          // honderden advertenties staat er per lading een reeks database- en
+          // AI-aanroepen open, en dan valt hij om. Precies zoals bij 502 is het
+          // juiste antwoord kleiner happen en opnieuw proberen, niet stoppen.
+          // Omdat elke kandidaat los wordt afgevinkt is opnieuw proberen veilig:
+          // wat al binnen is blijft binnen.
+          //
+          // Gemeten geval 19-08-2026: een verkoper kreeg tien keer achter elkaar
+          // "Bulk import error: Server error (500)" en kwam geen stap verder,
+          // terwijl dezelfde 530 advertenties er in kleinere ladingen zonder een
+          // enkele fout in gingen.
+          if ([500, 502, 503, 504, 408, 429].includes(r.status)) err.retryable = true;
           throw err;
         }
         strikes = 0;
