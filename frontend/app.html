@@ -194,6 +194,14 @@ label { display: block; font-size: 11px; font-weight: 700; color: var(--muted); 
 input, textarea, select { width: 100%; padding: 9px 13px; border: 1.5px solid var(--border); border-radius: var(--radius-sm); font-size: 13px; color: var(--text); background: var(--surface); outline: none; transition: border-color .15s, box-shadow .15s; font-family: inherit; }
 input:focus, textarea:focus, select:focus { border-color: var(--blue); box-shadow: 0 0 0 3px rgba(37,99,235,.1); }
 textarea { resize: vertical; min-height: 80px; }
+
+/* ── Vinted-groepen: keuzevakjes die niet erven van de formulier-CSS ── */
+.vg-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 8px; margin-bottom: 14px; }
+.vg-chip { display: flex; align-items: center; gap: 9px; padding: 9px 12px; border: 1.5px solid var(--border); border-radius: var(--radius-sm); background: var(--surface); cursor: pointer; font-size: 13px; font-weight: 600; color: var(--text); text-transform: none; letter-spacing: 0; margin: 0; line-height: 1.3; transition: border-color .12s, background .12s; }
+.vg-chip:hover { border-color: var(--blue); }
+.vg-chip input { width: 16px; height: 16px; flex: 0 0 16px; margin: 0; padding: 0; accent-color: var(--blue); cursor: pointer; }
+.vg-chip.on { border-color: var(--blue); background: rgba(37,99,235,.06); }
+.vg-actions { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
 .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
 .platform-checkboxes { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 6px; }
 .platform-checkbox { display: flex; align-items: center; gap: 8px; padding: 9px 13px; border: 1.5px solid var(--border); border-radius: 8px; cursor: pointer; transition: all .15s; }
@@ -1121,9 +1129,12 @@ input[type="checkbox"].row-check { width: 15px; height: 15px; cursor: pointer; a
           whatever you tick here. Everything else is your own choice. Tick nothing to allow all your categories;
           tick only the ones you actually want listed there.
         </p>
-        <div id="vinted-groepen" style="display:flex;flex-wrap:wrap;gap:8px 16px;margin-bottom:14px"></div>
-        <button class="btn btn-primary btn-sm" onclick="saveVintedGroepen()">Save</button>
-        <span id="vinted-groepen-status" style="font-size:12px;color:var(--muted);margin-left:10px"></span>
+        <div id="vinted-groepen" class="vg-grid"></div>
+        <div class="vg-actions">
+          <button class="btn btn-primary btn-sm" onclick="saveVintedGroepen()">Save</button>
+          <button class="btn btn-sm btn-outline" onclick="clearVintedGroepen()">Allow everything</button>
+          <span id="vinted-groepen-status" style="font-size:12px;color:var(--muted)"></span>
+        </div>
       </div>
     </div>
 
@@ -2640,10 +2651,26 @@ function renderVintedGroepen() {
   if (!wrap) return;
   const gekozen = new Set((state.settings && state.settings.vinted_groepen) || []);
   wrap.innerHTML = VINTED_GROEPEN.map(g => `
-    <label style="display:inline-flex;align-items:center;gap:6px;font-size:13px;font-weight:600;cursor:pointer">
-      <input type="checkbox" value="${g}" ${gekozen.has(g) ? 'checked' : ''}>
-      ${esc(VINTED_GROEP_LABELS[g] || g)}
+    <label class="vg-chip${gekozen.has(g) ? ' on' : ''}">
+      <input type="checkbox" value="${g}" ${gekozen.has(g) ? 'checked' : ''}
+             onchange="this.closest('.vg-chip').classList.toggle('on', this.checked)">
+      <span>${esc(VINTED_GROEP_LABELS[g] || g)}</span>
     </label>`).join('');
+  const status = document.getElementById('vinted-groepen-status');
+  if (status && !status.dataset.touched) {
+    status.textContent = gekozen.size
+      ? `Only ${[...gekozen].map(g => VINTED_GROEP_LABELS[g] || g).join(', ')} go on Vinted.`
+      : 'Nothing ticked — all your categories may go on Vinted.';
+  }
+}
+
+// Alles weer toestaan is een eigen knop: leeg opslaan via de vinkjes voelt als
+// "niets toestaan", terwijl het precies het omgekeerde betekent.
+async function clearVintedGroepen() {
+  document.querySelectorAll('#vinted-groepen input:checked').forEach(c => {
+    c.checked = false; c.closest('.vg-chip').classList.remove('on');
+  });
+  await saveVintedGroepen();
 }
 
 async function saveVintedGroepen() {
@@ -2661,6 +2688,7 @@ async function saveVintedGroepen() {
     // de server niet kent valt weg, en dat hoor je te zien.
     state.settings = { ...state.settings, ...data };
     renderVintedGroepen();
+    status.dataset.touched = '1';
     status.textContent = gekozen.length
       ? 'Saved — only these go on Vinted from now on.'
       : 'Saved — all your categories may go on Vinted.';
