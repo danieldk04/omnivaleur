@@ -2539,7 +2539,11 @@ function platIcon(key, size) {
 }
 const PLATFORM_ICONS = new Proxy({}, { get: (_, key) => platIcon(key) });
 
-let state = { items: [], listings: [], jobs: [], connected: [], crosslistItemId: null };
+// listingsLoaded blijft false tot er ECHT een advertentielijst binnen is. Zonder
+// dat onderscheid was "nog niet geladen" niet te onderscheiden van "niets staat
+// online", en dan schoof de hele catalogus naar "To list".
+let state = { items: [], listings: [], jobs: [], connected: [], crosslistItemId: null,
+              listingsLoaded: false, listingsLoadError: null };
 let selectedIds = new Set();
 
 // ── Marge calculator ────────────────────────────────────────────
@@ -3109,9 +3113,9 @@ async function fetchAllItems() {
 async function loadAll() {
   const [itemsRes, listingsRes, jobsRes, platformsRes] = await Promise.allSettled([
     fetchAllItems(),
-    apiFetch(`${API}/api/listings/`).then(r => r.json()),
-    apiFetch(`${API}/api/jobs/pending`).then(r => r.json()),
-    apiFetch(`${API}/api/platforms/status`).then(r => r.json()),
+    apiFetch(`${API}/api/listings/`).then(parseJsonSafe),
+    apiFetch(`${API}/api/jobs/pending`).then(parseJsonSafe),
+    apiFetch(`${API}/api/platforms/status`).then(parseJsonSafe),
   ]);
   // Onthouden DAT het misging. Zonder dit is "niet kunnen laden" op het scherm
   // hetzelfde als "je hebt niets", en dat is precies het verkeerde antwoord voor
@@ -3119,7 +3123,19 @@ async function loadAll() {
   state.itemsLoadError = itemsRes.status === 'rejected'
     ? (itemsRes.reason?.message || 'Could not load your items') : null;
   if (itemsRes.status === 'fulfilled') state.items = Array.isArray(itemsRes.value) ? itemsRes.value : [];
-  if (listingsRes.status === 'fulfilled') state.listings = Array.isArray(listingsRes.value) ? listingsRes.value : [];
+  // Welke advertenties er online staan is de ENIGE bron voor het tabblad waar
+  // een item onder valt. Kwam die lijst niet binnen, dan weten we dat niet — en
+  // dan mag het scherm niet doen alsof er niets online staat. Dat gebeurde wel:
+  // bij een hapering sprong de hele catalogus naar "To list", en pas bij de
+  // volgende geslaagde ronde kwam alles vanzelf terug onder "Live". Voor wie
+  // ondertussen keek waren zijn advertenties zoek.
+  if (listingsRes.status === 'fulfilled' && Array.isArray(listingsRes.value)) {
+    state.listings = listingsRes.value;
+    state.listingsLoaded = true;
+    state.listingsLoadError = null;
+  } else {
+    state.listingsLoadError = listingsRes.reason?.message || 'Could not load your listings';
+  }
   if (jobsRes.status === 'fulfilled') state.jobs = Array.isArray(jobsRes.value) ? jobsRes.value : [];
   if (platformsRes.status === 'fulfilled') state.connected = platformsRes.value.connected || [];
   renderDashboard();
@@ -3304,6 +3320,12 @@ const ITEMS_TABS = ['live', 'todo', 'hidden', 'sold', 'archived'];
 // as a module-level set so renderItemsTable can badge those rows "Publishing…".
 let publishingItemIds = new Set();
 function classifyItems() {
+  // Nog nooit een advertentielijst binnengehad? Dan is er niets te classificeren.
+  // Alles zou anders onder "To list" belanden — een bewering die we niet kunnen
+  // waarmaken. Liever lege tabbladen met een duidelijke melding erboven.
+  if (!state.listingsLoaded) {
+    return { tabOf: new Map(), counts: { live: 0, todo: 0, hidden: 0, sold: 0, archived: 0 }, onbekend: true };
+  }
   const byItem = new Map();
   for (const l of state.listings) {
     let s = byItem.get(l.item_id);
@@ -3530,7 +3552,18 @@ function renderItemsTable(items) {
       <td style="white-space:nowrap">${itemActions(item)}</td>
     </tr>`;
   }).join('');
-  const emptyHtml = state.itemsLoadError
+  const emptyHtml = (!state.listingsLoaded || state.listingsLoadError)
+    ? `<tr><td colspan="8"><div class="empty">
+         <h3>${state.listingsLoaded ? 'Your listings may be out of date' : 'Loading your listings…'}</h3>
+         <p>${state.listingsLoaded
+              ? 'Your items are all still there — this screen just could not fetch which of them are online right now, so the tabs are not filled in.'
+              : 'Nothing is missing — we are still fetching which of your items are online. The tabs fill in as soon as that arrives.'}
+            ${state.listingsLoadError ? `(${esc(state.listingsLoadError)})` : ''}</p>
+         <div style="display:flex;gap:8px;justify-content:center;margin-top:12px">
+           <button class="btn btn-primary btn-sm" onclick="loadAll()">Try again</button>
+         </div>
+       </div></td></tr>`
+    : state.itemsLoadError
     ? `<tr><td colspan="8"><div class="empty">
          <h3 style="color:var(--red,#dc2626)">Could not load your items</h3>
          <p>Your items are still there — this screen just could not fetch them
