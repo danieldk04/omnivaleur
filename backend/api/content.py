@@ -561,8 +561,43 @@ async def analytics_diagnostics(token: str | None = None):
                         date_ranges=[DateRange(start_date=dag(7), end_date=dag(1))],
                     ))
                     ga4_uit["rauw"] = [r.metric_values[0].value for r in antwoord.rows] or "geen rijen"
+                    # Nul sessies kan twee dingen zijn: een stille website, of
+                    # de verkeerde property. Een ruim venster maakt dat verschil
+                    # zichtbaar zonder te hoeven gokken.
+                    lang = client.run_report(RunReportRequest(
+                        property=f"properties/{settings.ga4_property_id}",
+                        metrics=[Metric(name="sessions")],
+                        date_ranges=[DateRange(start_date=dag(365), end_date=dag(0))],
+                    ))
+                    ga4_uit["sessies_365d"] = (
+                        int(lang.rows[0].metric_values[0].value) if lang.rows else 0)
             except Exception as e:  # noqa: BLE001
                 ga4_uit["rauw"] = f"{type(e).__name__}: {e}"[:400]
+            # Welke properties horen er eigenlijk bij deze koppeling? Via de kale
+            # REST-API, zodat hier geen extra pakket voor nodig is.
+            try:
+                import httpx as _httpx
+                cid, csec = ga4._oauth_client()
+                bewijs = _httpx.post("https://oauth2.googleapis.com/token", data={
+                    "client_id": cid, "client_secret": csec,
+                    "refresh_token": settings.ga4_refresh_token,
+                    "grant_type": "refresh_token"}, timeout=20).json()
+                sleutel = bewijs.get("access_token")
+                if not sleutel:
+                    ga4_uit["properties"] = f"geen toegangstoken: {bewijs}"
+                else:
+                    r = _httpx.get(
+                        "https://analyticsadmin.googleapis.com/v1beta/accountSummaries",
+                        headers={"Authorization": f"Bearer {sleutel}"}, timeout=20)
+                    if r.status_code >= 300:
+                        ga4_uit["properties"] = f"fout {r.status_code}: {r.text[:200]}"
+                    else:
+                        ga4_uit["properties"] = [
+                            {"property": p.get("property"), "titel": p.get("displayName")}
+                            for a in (r.json().get("accountSummaries") or [])
+                            for p in (a.get("propertySummaries") or [])][:20]
+            except Exception as e:  # noqa: BLE001
+                ga4_uit["properties"] = f"{type(e).__name__}: {e}"[:300]
         except Exception as e:  # noqa: BLE001
             ga4_uit["fout"] = f"{type(e).__name__}: {e}"
 
