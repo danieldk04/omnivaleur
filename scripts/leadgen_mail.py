@@ -106,13 +106,20 @@ SYSTEEM_AFZENDER = re.compile(
 # VENSTER en SPREIDING horen bij de autonome stand (`tick`): de mails van een dag
 # krijgen willekeurige tijdstippen binnen kantoortijd, in plaats van vijftien
 # stuks achter elkaar om negen uur 's ochtends.
-RAMP = [(1, 5), (2, 15), (6, 25), (11, 30)]
+RAMP = [(1, 5), (2, 15), (6, 25), (11, 30), (14, 40), (18, 50)]
+# Hoeveel er per dag bíj mag komen ten opzichte van de drukste van de afgelopen
+# drie dagen. Zonder deze rem springt het budget bij elke verhoging van RAMP
+# meteen naar het nieuwe maximum — en een domein dat gisteren 30 mails stuurde en
+# vandaag 50, ziet er voor een spamfilter uit als een gekaapt account. Met deze
+# stap groeit het in een paar dagen naar de nieuwe stand. Drie dagen kijken en
+# niet één, zodat een dag storing het tempo niet terugzet naar bijna niets.
+OPBOUW_STAP = 10
 # Hoeveel van het dagbudget gereserveerd blijft voor NIEUWE eerste mails.
 # Opvolgmails gaan voor, en met het ritme van 2 en 4 dagen komen die in golven —
 # op 15-08 waren 12 van de 15 mails opvolging en werd er die dag vrijwel niemand
 # nieuw aangeschreven. Zonder deze reservering staat het aanboren van nieuwe
 # leads stil zodra er een golf loopt.
-NIEUW_AANDEEL = 0.4
+NIEUW_AANDEEL = 0.6
 FOLLOWUP_DAGEN = (2, 4)       # opvolgmail 1 en 2, in dagen na de vorige mail
 # Hoeveel dagen na de laatste opvolgmail een lead als doodgelopen geldt. Daarna
 # schuift hij in Notion naar de eindfase, zodat de lijst laat zien wie er nog
@@ -126,8 +133,12 @@ FASE_CONCURRENT = "Gebruikt concurrent"
 FASE_AAN_ZET = "⚡ Jij bent aan zet"
 FASE_BAL_BIJ_HEN = "⏳ Bal bij hen"
 PAUZE = (40, 110)             # seconden tussen twee mails, willekeurig
-VENSTER = (8, 45), (20, 30)   # vroegste en laatste verzendtijd op een dag
-MIN_GAT = 9                   # minuten die minimaal tussen twee tijdstippen zitten
+# Ruimer venster dan kantoortijd: dit zijn verkopers, geen kantoren. Die lezen
+# hun mail 's ochtends vroeg en 's avonds. Een breder venster is bovendien de
+# enige manier om meer mails per dag te versturen zónder dat ze dichter op
+# elkaar komen te staan — en het ritme verraadt een machine, niet het aantal.
+VENSTER = (7, 45), (21, 30)   # vroegste en laatste verzendtijd op een dag
+MIN_GAT = 6                   # minuten die minimaal tussen twee tijdstippen zitten
 
 # Alleen een écht verzoek om van de lijst af te gaan. "Geen interesse" stond hier
 # ook in, en dat brak de indeling: iemand die schreef "wij gebruiken al Channable,
@@ -553,11 +564,23 @@ def _dagnummer(state: dict) -> int:
     return len(dagen) if vandaag in dagen else len(dagen) + 1
 
 
+def _verstuurd_op(state: dict, dag: date) -> int:
+    """Hoeveel mails er die dag echt de deur uit zijn gegaan."""
+    stempel = dag.isoformat()
+    return sum(1 for st in state.values()
+               for v in st.get("verstuurd", []) if str(v.get("op", ""))[:10] == stempel)
+
+
 def _dagbudget(state: dict, override: int) -> int:
     if override:
         return override
     dag = _dagnummer(state)
-    return max(n for vanaf, n in RAMP if dag >= vanaf)
+    doel = max(n for vanaf, n in RAMP if dag >= vanaf)
+    # Nooit in één klap omhoog: hooguit OPBOUW_STAP meer dan de drukste van de
+    # afgelopen drie dagen. Zie de toelichting bij OPBOUW_STAP.
+    recent = max((_verstuurd_op(state, date.today() - timedelta(days=n))
+                  for n in (1, 2, 3)), default=0)
+    return doel if not recent else min(doel, recent + OPBOUW_STAP)
 
 
 def _beurt(lead: dict, st: dict | None) -> tuple[int, str] | None:
@@ -2984,7 +3007,7 @@ def main() -> None:
     t = sub.add_parser("tick", help="autonome beurt; elke tien minuten draaien")
     t.add_argument("--per-dag", type=int, default=0,
                    help="afwijken van het opbouwschema")
-    t.add_argument("--max-per-beurt", type=int, default=3,
+    t.add_argument("--max-per-beurt", type=int, default=4,
                    help="hoeveel mails er in één beurt maximaal uit mogen")
     t.set_defaults(func=tick)
 
