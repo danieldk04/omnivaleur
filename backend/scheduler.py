@@ -159,12 +159,26 @@ def start_scheduler():
     # dat zo is.
     if str(getattr(settings, "leadgen_tick", "") or "").strip() in ("1", "true", "True"):
         async def leadgen_beurt():
+            import os
             import subprocess
             import sys
             from pathlib import Path
             script = Path(__file__).resolve().parent.parent / "scripts" / "leadgen_mail.py"
+            omgeving = {**os.environ}
+            # Resend is op de server de enige weg naar buiten; het script kiest
+            # daarop. Zonder deze regel zou hij SMTP proberen en dat blokkeert
+            # Railway, waarna er stilletjes niets verstuurd wordt.
+            if settings.resend_api_key:
+                omgeving["RESEND_API_KEY"] = settings.resend_api_key
+            if settings.anthropic_api_key:
+                omgeving["ANTHROPIC_API_KEY"] = settings.anthropic_api_key
+            if settings.supabase_url:
+                omgeving["SUPABASE_URL"] = settings.supabase_url
+            if settings.supabase_key:
+                omgeving["SUPABASE_KEY"] = settings.supabase_key
             r = subprocess.run([sys.executable, str(script), "tick"],
-                               capture_output=True, text=True, timeout=1500)
+                               capture_output=True, text=True, timeout=1500,
+                               env=omgeving)
             uit = (r.stdout or "").strip()
             if uit:
                 logger.info("leadgen tick:\n%s", uit[-2000:])
