@@ -1050,6 +1050,9 @@ _AUTO_RELIST_MIN_PER_DAY = 25
 # 2.000 advertenties komt haalt de cyclus daarmee niet meer helemaal; dat is een
 # echte grens van deze aanpak en geen stille afronding.
 _AUTO_RELIST_MAX_PER_DAY = 100
+# Hoeveel dagen ná zijn eigen termijn een advertentie nog automatisch wordt
+# opgepakt. Daarbuiten is het geen verversing meer maar een inhaalslag.
+_INHAAL_MARGE_DAGEN = 14
 
 
 def _dagelijkse_relist_grens(db, user_id: str) -> int:
@@ -1257,6 +1260,32 @@ async def relist_expiring_marktplaats():
                         continue
                 except ValueError:
                     pass          # onleesbare datum: laat de ruime query beslissen
+
+            # NIET ALSNOG EEN HALF JAAR INHALEN.
+            #
+            # Zodra de echte Marktplaats-datum bekend is, blijkt een geïmporteerde
+            # voorraad vaak in één klap "te oud". Gemeten 20-08-2026 bij Jaap:
+            # 959 van zijn 1.222 advertenties zijn 25 dagen of ouder, waarvan er
+            # 236 al 45 tot 60 dagen online staan — en die staan er dus gewoon
+            # nog, ze verlopen kennelijk niet op het schema dat wij aannemen.
+            # Zonder deze rem zou Omnivaleur er vanaf morgen 62 per dag gaan
+            # verwijderen en opnieuw plaatsen, vijftien dagen lang, met alle
+            # reacties en vragen die eraan hangen. Dat is geen redding meer maar
+            # een ingreep waar de verkoper zelf over hoort te beslissen.
+            #
+            # Automatisch herplaatsen doet dus alleen wat het belooft: een
+            # advertentie oppakken die NET aan zijn eind is. Wat allang over de
+            # datum is en toch nog leeft, blijft staan en is met de hand te
+            # verversen vanaf de pagina Refresh.
+            if geplaatst:
+                try:
+                    toen = datetime.fromisoformat(str(geplaatst).replace("Z", "+00:00"))
+                    if toen.tzinfo is None:
+                        toen = toen.replace(tzinfo=timezone.utc)
+                    if (nu - toen).days > eigen_dagen + _INHAAL_MARGE_DAGEN:
+                        continue
+                except ValueError:
+                    pass
 
             if eigenaar not in grens_per_verkoper:
                 grens_per_verkoper[eigenaar] = _dagelijkse_relist_grens(db, eigenaar)
