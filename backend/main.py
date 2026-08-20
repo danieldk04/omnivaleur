@@ -12,7 +12,7 @@ from contextlib import asynccontextmanager
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 import asyncio
-from backend.api import items, listings, platforms, webhooks, jobs, uploads, shopify, auth, billing, imports, content, notifications
+from backend.api import items, listings, platforms, webhooks, jobs, uploads, shopify, auth, billing, imports, content, notifications, beheer
 from backend.scheduler import start_scheduler, stop_scheduler
 
 FRONTEND = Path(__file__).parent.parent / "frontend"
@@ -88,6 +88,7 @@ app.include_router(notifications.router, prefix="/api")
 app.include_router(auth.router)
 app.include_router(billing.router)
 app.include_router(content.router)
+app.include_router(beheer.router)
 
 
 def _supabase_key_role() -> str:
@@ -216,6 +217,14 @@ async def reset_password_page():
 @app.get("/app")
 async def app_page():
     return FileResponse(FRONTEND / "app.html")
+
+
+@app.get("/beheer")
+async def beheer_page():
+    """Het beheerscherm. Bewust een eigen adres en niet een tabblad in de app:
+    het staat vol klantgegevens en hoort niet in hetzelfde scherm te zitten dat
+    ook gewone gebruikers openen."""
+    return FileResponse(FRONTEND / "beheer.html")
 
 
 @app.get("/marketplaces")

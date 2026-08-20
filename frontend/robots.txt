@@ -18,6 +18,8 @@ Content-Signal: search=yes, ai-input=yes, ai-train=yes
 User-agent: *
 Allow: /
 Disallow: /app.html
+Disallow: /beheer
+Disallow: /beheer.html
 Disallow: /demo-dashboard.html
 Disallow: /ebay-callback.html
 Disallow: /shopify-callback.html
