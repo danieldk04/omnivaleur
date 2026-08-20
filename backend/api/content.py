@@ -530,7 +530,38 @@ async def analytics_diagnostics(token: str | None = None):
     _require_dashboard_token(token)
     from backend.services import search_console as gsc
     from backend.services import ga4
-    return {"gsc": gsc.diagnostics(), "ga4_configured": ga4.is_configured()}
+    from datetime import date, timedelta
+    dag = lambda n: (date.today() - timedelta(days=n)).isoformat()
+
+    # Niet alleen "is hij gekoppeld", maar ook "wat komt er dan uit". Een lege
+    # grafiek op het beheerscherm kan twee dingen betekenen — geen verkeer, of
+    # een geweigerde metriek — en dat verschil was van buitenaf niet te zien.
+    ga4_uit: dict = {"configured": ga4.is_configured()}
+    if ga4.is_configured():
+        ga4_uit["property"] = settings.ga4_property_id
+        try:
+            ga4_uit["totals_7d"] = ga4.totals(dag(7), dag(1))
+            ga4_uit["sessies_zonder_conversies"] = ga4._run(
+                dimensions=[], metrics=["sessions"], start=dag(7), end=dag(1), limit=1)
+            ga4_uit["dagen"] = len(ga4.sessions_by_day(dag(29), dag(0)))
+        except Exception as e:  # noqa: BLE001
+            ga4_uit["fout"] = f"{type(e).__name__}: {e}"
+
+    gsc_uit = gsc.diagnostics()
+    try:
+        for naam, (a, b) in {"laatste_7": (dag(10), dag(3)),
+                             "laatste_30": (dag(33), dag(3))}.items():
+            rijen = gsc.query_window(["query"], a, b, row_limit=500)
+            gsc_uit[naam] = {
+                "venster": [a, b],
+                "klikken": sum(r.get("clicks", 0) for r in rijen),
+                "vertoningen": sum(r.get("impressions", 0) for r in rijen),
+                "termen": len(rijen),
+            }
+    except Exception as e:  # noqa: BLE001
+        gsc_uit["venster_fout"] = f"{type(e).__name__}: {e}"
+
+    return {"gsc": gsc_uit, "ga4": ga4_uit, "ga4_configured": ga4.is_configured()}
 
 
 @router.get("/api/analytics/social")
