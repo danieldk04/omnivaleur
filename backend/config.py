@@ -114,6 +114,8 @@ class Settings(BaseSettings):
     # (poort 465 en 587 lopen dood in een time-out), dus dit is de weg waarlangs
     # mail het platform überhaupt kan verlaten. Staat de sleutel ingevuld, dan
     # wordt die gebruikt; anders valt alles terug op SMTP.
+    # Zet op "1" op precies EEN plek: de server of de Mac, nooit allebei.
+    leadgen_tick: str = ""
     resend_api_key: str = ""
     resend_from: str = ""
     # Waar antwoorden van klanten binnenkomen. Uitgaand heet alles Omnivaleur,

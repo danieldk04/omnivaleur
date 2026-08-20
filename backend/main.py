@@ -1,4 +1,5 @@
 import logging
+import os
 logging.basicConfig(level=logging.INFO, format="%(levelname)s %(name)s: %(message)s")
 
 from fastapi import FastAPI, Request
@@ -145,6 +146,13 @@ async def health():
             # naar Supabase Storage en loopt die bucket dus gewoon weer vol. Dat
             # is van buitenaf verder niet te zien, vandaar hier.
             "r2_photo_storage": _r2_configured(),
+            # De koude-mailmachine. Draait alleen als leadgen_tick aan staat, en
+            # kan alleen versturen als Resend er is (Railway blokkeert SMTP) en
+            # alleen concepten klaarzetten als de postbus-gegevens er zijn.
+            # Zonder deze regels moest je raden waarom er niets gebeurde.
+            "leadgen_tick": bool(str(_s.leadgen_tick or "").strip() in ("1", "true", "True")),
+            "leadgen_resend": bool(_s.resend_api_key),
+            "leadgen_mailbox": bool(os.environ.get("MAIL_USER") and os.environ.get("MAIL_PASS")),
             "owner_email": _s.owner_email,
         },
     }

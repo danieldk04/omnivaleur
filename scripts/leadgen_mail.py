@@ -46,6 +46,7 @@ import re
 import smtplib
 import ssl
 import sys
+import contextlib
 import textwrap
 import time
 from datetime import date, datetime, timedelta
@@ -560,6 +561,11 @@ def _dagbudget(state: dict, override: int) -> int:
 
 def _beurt(lead: dict, st: dict | None) -> tuple[int, str] | None:
     """Welke mail is deze lead toe? None = niets doen."""
+    # Een klant krijgt NOOIT koude mail of een opvolger. Hij heeft al een account;
+    # "zal ik je een filmpje sturen" is dan gênant, en een afscheidsmail ronduit
+    # schadelijk. Zie is_klant.
+    if is_klant(lead.get("email", "")):
+        return None
     if not st:
         return 0, "eerste mail"
     # Wie zelf met de hand is gemaild krijgt nooit een sjabloonmail erachteraan:
@@ -834,17 +840,57 @@ def send(args) -> None:
     print(f"\n{verstuurd} mails verstuurd. Morgen weer — draai 'check' voor antwoorden.")
 
 
+# ── Versturen zonder SMTP ─────────────────────────────────────────────────
+#
+# Op Daniels Mac gaat mail gewoon over SMTP naar Zoho. Op de server (Railway)
+# kan dat niet: die blokkeert de mailpoorten, dus daar gaat alles over https via
+# Resend. Zelfde bericht, andere weg naar buiten. Staat er een RESEND_API_KEY in
+# de omgeving, dan is dat het teken dat we op de server draaien.
+def _resend_actief() -> bool:
+    return bool(os.environ.get("RESEND_API_KEY", "").strip())
+
+
+def _resend_stuur(msg: EmailMessage) -> None:
+    import httpx
+    lading = {
+        "from": msg["From"],
+        "to": [msg["To"]],
+        "subject": msg["Subject"],
+        "text": msg.get_content(),
+    }
+    koppen = {k: msg[k] for k in ("List-Unsubscribe", "In-Reply-To", "References")
+              if msg[k]}
+    if koppen:
+        lading["headers"] = koppen
+    r = httpx.post("https://api.resend.com/emails",
+                   headers={"Authorization": f"Bearer {os.environ['RESEND_API_KEY'].strip()}"},
+                   json=lading, timeout=25.0)
+    if r.status_code >= 300:
+        raise RuntimeError(f"Resend weigerde de mail ({r.status_code}): {r.text[:200]}")
+
+
+@contextlib.contextmanager
+def _postbode(gebruiker: str, host: str):
+    """Levert één functie op die een bericht de deur uit doet, langs welke weg dan
+    ook. Zo hoeft de verzendlus niets te weten van SMTP of Resend."""
+    if _resend_actief():
+        yield _resend_stuur
+        return
+    with smtplib.SMTP_SSL(host, 465, context=ssl.create_default_context()) as smtp:
+        smtp.login(gebruiker, _need("MAIL_PASS"))
+        yield smtp.send_message
+
+
 def _verstuur(rij: list, gebruiker: str, host: str, state: dict,
               boek: "Notion") -> int:
     """Het eigenlijke verzenden. Zowel `send` als de autonome `tick` lopen hier
     doorheen, zodat er maar één plek is waar de administratie wordt bijgewerkt."""
     verstuurd = 0
-    with smtplib.SMTP_SSL(host, 465, context=ssl.create_default_context()) as smtp:
-        smtp.login(gebruiker, _need("MAIL_PASS"))
+    with _postbode(gebruiker, host) as stuur:
         for i, (lead, n, _) in enumerate(rij):
             sleutel = lead["email"].lower()
             try:
-                smtp.send_message(_bericht(lead, n, gebruiker))
+                stuur(_bericht(lead, n, gebruiker))
             except Exception as e:  # noqa: BLE001 — één weigering stopt de rest niet
                 print(f"  ! {lead['email']}: {e}")
                 continue
@@ -1352,9 +1398,11 @@ def _afsluitmails(state: dict, boek: "Notion") -> int:
 
     per_adres = {l["email"].lower(): l for l in _leads()}
     verstuurd = 0
-    with smtplib.SMTP_SSL(host, 465, context=ssl.create_default_context()) as smtp:
-        smtp.login(gebruiker, wachtwoord)
+    with _postbode(gebruiker, host) as stuur:
         for adres, st in klaar:
+            if is_klant(adres):
+                st.pop("afsluit_gepland", None)
+                continue
             lead = per_adres.get(adres) or {"email": adres, "je_jullie": "Je"}
             soort = st.get("afsluit_gepland")
             teksten = AFSLUIT_CONCURRENT if soort == "concurrent" else AFSLUIT_AFWIJZING
@@ -1369,7 +1417,7 @@ def _afsluitmails(state: dict, boek: "Notion") -> int:
             msg["Subject"] = "Re: " + _onderwerp(lead, 0)
             msg.set_content(f"{body}\n\n{ONDERTEKENING}\n")
             try:
-                smtp.send_message(msg)
+                stuur(msg)
             except Exception as e:  # noqa: BLE001 — één weigering stopt de rest niet
                 print(f"  ! afsluitmail {adres}: {e}")
                 continue
@@ -1552,6 +1600,53 @@ def _wat_vraagt_hij(body: str) -> set[str]:
     return uit
 
 
+# ── Klant of lead? ────────────────────────────────────────────────────────
+#
+# Dit onderscheid ontbrak volledig, en dat liep helemaal fout af. Jaap van
+# Zilverwebsite is al dagen KLANT. Hij vroeg op 20-08-2026 of het herplaatsen
+# meteen kon beginnen bij zijn oudste advertenties, omdat er honderd op het punt
+# staan te verdwijnen. De machine zag alleen een adres uit haar leadlijst, en
+# stuurde "veel succes met de winkel" — een afscheidsmail aan een betalende
+# klant met een dringende vraag.
+#
+# Wie een account heeft is geen prospect. Voor hem gaat het nooit meer over
+# verkopen: hij krijgt hulp, of hij krijgt niets tot Daniel er zelf naar kijkt.
+_klanten_kas: set | None = None
+
+
+def _klanten() -> set:
+    """Alle e-mailadressen met een Omnivaleur-account."""
+    global _klanten_kas
+    if _klanten_kas is not None:
+        return _klanten_kas
+    _klanten_kas = set()
+    verbinding = _supabase()
+    if not verbinding:
+        return _klanten_kas
+    url, sleutel = verbinding
+    try:
+        import httpx
+        for bladzijde in range(1, 12):
+            r = httpx.get(f"{url}/auth/v1/admin/users",
+                          params={"page": bladzijde, "per_page": 200},
+                          headers={"apikey": sleutel, "Authorization": f"Bearer {sleutel}"},
+                          timeout=25.0)
+            r.raise_for_status()
+            rij = r.json().get("users", [])
+            for u in rij:
+                if u.get("email"):
+                    _klanten_kas.add(u["email"].strip().lower())
+            if len(rij) < 200:
+                break
+    except Exception as e:  # noqa: BLE001 — bij twijfel liever niemand mailen dan de verkeerde
+        print(f"  (klantenlijst niet gelezen: {e})")
+    return _klanten_kas
+
+
+def is_klant(adres: str) -> bool:
+    return (adres or "").strip().lower() in _klanten()
+
+
 # ── Het slimme antwoord ───────────────────────────────────────────────────
 #
 # De sjablonen hieronder waren een keurige eerste stap en een structurele
@@ -1590,8 +1685,9 @@ Harde regels:
   niet aan. Erken zijn punt in zijn eigen woorden, laat de deur open en houd het
   kort. Geen video, geen prijs en geen importverhaal als hij daar niet om vroeg.
 - Eindig met exact het afsluitblok dat je meekrijgt, letterlijk overgenomen.
-- Geen onderwerpregel, geen aanhef verzinnen als je zijn naam niet weet: begin dan
-  met "Hi,".
+- Begin ALTIJD met een aanhefregel, gevolgd door een lege regel. Weet je zijn
+  voornaam uit zijn ondertekening, gebruik die ("Hi Jaap,"); anders "Hi,".
+  Geen onderwerpregel.
 - Alleen de brieftekst teruggeven, niets eromheen.
 
 Feiten die kloppen:
@@ -1608,7 +1704,25 @@ Feiten die kloppen:
 """
 
 
-def _slim_concept(lead: dict, body: str, draad: str, afsluiting: str) -> str | None:
+_KLANT_REGELS = """
+
+LET OP: DIT IS EEN BESTAANDE KLANT, GEEN PROSPECT.
+- Hij betaalt al. Verkoop hem niets, stuur geen video, noem geen prijs en geen
+  proefperiode, en wens hem geen succes met zijn winkel alsof het gesprek klaar is.
+- Hij kent Omnivaleur beter dan een nieuwe gebruiker. Leg geen basisdingen uit.
+- Behandel zijn bericht als een vraag van een klant aan zijn leverancier: neem hem
+  serieus, geef per vraag antwoord, en zeg eerlijk wat je niet weet.
+- JIJ BENT DANIEL. Schrijf in de ik-vorm en praat nooit over "Daniel" alsof dat
+  iemand anders is; je ondertekent zelf met zijn naam.
+- Weet je iets niet zeker (hoe iets precies werkt, of iets gebouwd kan worden, iets
+  over geld), schrijf dan kort dat je het vandaag nakijkt en erop terugkomt. Verzin
+  nooit een toezegging over wat er gebouwd wordt of wanneer.
+- Nooit afsluiten alsof het contact eindigt. Het contact loopt door.
+"""
+
+
+def _slim_concept(lead: dict, body: str, draad: str, afsluiting: str,
+                  klant: bool = False) -> str | None:
     """Laat een taalmodel het antwoord schrijven. None = niet gelukt."""
     sleutel = os.environ.get("ANTHROPIC_API_KEY", "").strip()
     if not sleutel:
@@ -1641,7 +1755,8 @@ def _slim_concept(lead: dict, body: str, draad: str, afsluiting: str) -> str | N
             # precies de standaardmail die Frank de Veer als antwoord kreeg op een
             # bericht waarin hij zei het niet nodig te hebben.
             max_tokens=2000,
-            system=_SCHRIJF_REGELS.format(prijs=PRIJS, platforms=PLATFORMS, video=VIDEO),
+            system=(_SCHRIJF_REGELS.format(prijs=PRIJS, platforms=PLATFORMS, video=VIDEO)
+                + (_KLANT_REGELS if klant else "")),
             messages=[{"role": "user", "content": prompt}],
         )
         tekst = "".join(b.text for b in antwoord.content if getattr(b, "type", "") == "text").strip()
@@ -1667,7 +1782,8 @@ def _concept_tekst(lead: dict, body: str, soort: str = "warm") -> str:
     Ook bij een NEE staat er een concept klaar. Niets gaat vanzelf de deur uit —
     dat was juist de wens — maar als Daniel iemand netjes wil afsluiten, moet dat
     één tik zijn en geen schrijfklus. Hij beslist zelf of hij hem verstuurt."""
-    if soort in ("concurrent", "afwijzing"):
+    klant = is_klant(lead.get("email", ""))
+    if soort in ("concurrent", "afwijzing") and not klant:
         jij = "jullie" if str(lead.get("je_jullie", "")).lower().startswith("jul") else "je"
         teksten = AFSLUIT_CONCURRENT if soort == "concurrent" else AFSLUIT_AFWIJZING
         return "\n".join(["Hi,", "",
@@ -1679,9 +1795,15 @@ def _concept_tekst(lead: dict, body: str, soort: str = "warm") -> str:
         draad = _verzonden_tekst_uit_kas(lead.get("email", "")) or ""
     except Exception:  # noqa: BLE001
         draad = ""
-    slim = _slim_concept(lead, body, draad, _ondertekening())
+    slim = _slim_concept(lead, body, draad, _ondertekening(), klant=klant)
     if slim:
         return slim
+
+    # Voor een klant is er geen vangnet: een sjabloon met video en prijs is voor
+    # hem altijd fout. Lukt het echte antwoord niet, dan komt er GEEN concept en
+    # blijft zijn bericht gewoon in het postvak staan, waar Daniel het ziet.
+    if klant:
+        return ""
 
     vraagt = _wat_vraagt_hij(body)
     jij = "jullie" if str(lead.get("je_jullie", "")).lower().startswith("jul") else "je"
@@ -2028,6 +2150,12 @@ def _zet_concept_klaar(lead: dict, inkomend, body: str, soort: str = "warm",
     msg["Date"] = formatdate(localtime=True)
     msg["Message-ID"] = make_msgid(domain=(os.environ.get("MAIL_USER", "@x").split("@")[-1]))
     kern = eigen_tekst if eigen_tekst is not None else _concept_tekst(lead, body, soort)
+    # Bewust leeg gelaten (zie _concept_tekst voor klanten): dan liever geen
+    # concept dan een verkeerd concept.
+    if not (kern or "").strip():
+        print(f"  ⊘ geen concept voor {lead.get('email')}: "
+              f"klant met een vraag die ik niet zelf mag beantwoorden")
+        return False
 
     # LAATSTE SLOT TEGEN DUBBELE MAIL.
     # Alle concepten komen hier langs, dus dit is de enige plek waar één controle
@@ -2083,9 +2211,8 @@ def _alarm(lead: dict, onderwerp: str, body: str) -> None:
         f"--- einde ---\n\n"
         f"Antwoord vanuit {van}. Deze lead krijgt geen opvolgmails meer.\n")
     try:
-        with smtplib.SMTP_SSL(host, 465, context=ssl.create_default_context()) as smtp:
-            smtp.login(van, wachtwoord)
-            smtp.send_message(msg)
+        with _postbode(van, host) as stuur:
+            stuur(msg)
         print(f"  ↳ seintje gestuurd naar {', '.join(ALARM_NAAR)}")
         _archiveer(msg)
     except Exception as e:  # noqa: BLE001 — een mislukt seintje mag niets blokkeren
@@ -2139,9 +2266,8 @@ def _stapel_melden(plan: dict) -> None:
         + "\n\nAllemaal antwoorden op mensen die iets van je willen. "
           "Lezen, aanpassen waar nodig, versturen.\n")
     try:
-        with smtplib.SMTP_SSL(host, 465, context=ssl.create_default_context()) as srv:
-            srv.login(van, wachtwoord)
-            srv.send_message(bericht)
+        with _postbode(van, host) as stuur:
+            stuur(bericht)
         plan["stapel_gemeld"] = vandaag
         _save_plan(plan)
         print(f"{datetime.now():%d-%m %H:%M} — {aantal} wachtende concepten gemeld")
@@ -2713,9 +2839,8 @@ def _dagbericht(state: dict, plan: dict) -> None:
     msg["Subject"] = f"{kop} — {date.today().strftime('%d-%m-%Y')}"
     msg.set_content("\n".join(regels) + "\n")
     try:
-        with smtplib.SMTP_SSL(host, 465, context=ssl.create_default_context()) as smtp:
-            smtp.login(van, wachtwoord)
-            smtp.send_message(msg)
+        with _postbode(van, host) as stuur:
+            stuur(msg)
         print(f"{datetime.now():%d-%m %H:%M} — dagbericht verstuurd")
         _archiveer(msg)
     except Exception as e:  # noqa: BLE001

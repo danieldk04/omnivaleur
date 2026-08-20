@@ -4,12 +4,14 @@ Started automatically when the FastAPI app boots.
 """
 from __future__ import annotations
 import asyncio
+import logging
 import functools
 import threading
 from typing import Optional
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from backend.config import settings
 
+logger = logging.getLogger(__name__)
 _scheduler: Optional[AsyncIOScheduler] = None
 
 
@@ -144,6 +146,42 @@ def start_scheduler():
         id="daily_nl_backfill",
         replace_existing=True,
     )
+    # ── De koude-mailmachine ──────────────────────────────────────────────
+    #
+    # Draaide tot 20-08-2026 op Daniels eigen Mac, via een LaunchAgent. Dat werkt
+    # alleen zolang die Mac aan staat en wakker is; klapt hij zijn laptop dicht,
+    # dan ligt de opvolging stil en blijven antwoorden onbeantwoord. Hier draait
+    # hij dag en nacht.
+    #
+    # HIJ MAG NOOIT OP TWEE PLEKKEN TEGELIJK DRAAIEN: dan krijgt dezelfde
+    # ontvanger twee keer dezelfde mail. Daarom staat hij uit tenzij LEADGEN_TICK
+    # expliciet aan staat, en hoort de LaunchAgent op de Mac uit te staan zodra
+    # dat zo is.
+    if str(getattr(settings, "leadgen_tick", "") or "").strip() in ("1", "true", "True"):
+        async def leadgen_beurt():
+            import subprocess
+            import sys
+            from pathlib import Path
+            script = Path(__file__).resolve().parent.parent / "scripts" / "leadgen_mail.py"
+            r = subprocess.run([sys.executable, str(script), "tick"],
+                               capture_output=True, text=True, timeout=1500)
+            uit = (r.stdout or "").strip()
+            if uit:
+                logger.info("leadgen tick:\n%s", uit[-2000:])
+            if r.returncode != 0:
+                logger.warning("leadgen tick eindigde met %s: %s",
+                               r.returncode, (r.stderr or "")[-500:])
+
+        _scheduler.add_job(
+            _off_the_request_loop(leadgen_beurt),
+            "interval",
+            minutes=10,
+            id="leadgen_tick",
+            replace_existing=True,
+            max_instances=1,
+            coalesce=True,
+        )
+
     _scheduler.start()
     return _scheduler
 
