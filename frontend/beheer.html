@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Beheer — Omnivaleur</title>
+<style>
+:root {
+  --bg: #0b1020; --kaart: #141a2e; --rand: #232b45; --tekst: #e7ecf7;
+  --zacht: #9aa6c2; --blauw: #4d8bff; --groen: #34d399; --geel: #fbbf24;
+  --rood: #f87171;
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0; background: var(--bg); color: var(--tekst);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  font-size: 14px; line-height: 1.5;
+}
+header {
+  position: sticky; top: 0; z-index: 5; background: rgba(11,16,32,.92);
+  backdrop-filter: blur(8px); border-bottom: 1px solid var(--rand);
+  padding: 14px 24px; display: flex; align-items: center; gap: 16px; flex-wrap: wrap;
+}
+header h1 { font-size: 16px; margin: 0; font-weight: 800; letter-spacing: -.2px; }
+.stip { width: 8px; height: 8px; border-radius: 50%; background: var(--groen); display: inline-block; }
+.stip.uit { background: var(--rood); }
+.vers { color: var(--zacht); font-size: 12px; margin-left: auto; }
+main { padding: 22px 24px 60px; max-width: 1500px; margin: 0 auto; }
+h2 { font-size: 13px; text-transform: uppercase; letter-spacing: .8px; color: var(--zacht);
+     margin: 30px 0 12px; font-weight: 700; }
+h2:first-child { margin-top: 0; }
+.raster { display: grid; gap: 14px; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); }
+.kaart { background: var(--kaart); border: 1px solid var(--rand); border-radius: 14px; padding: 16px 18px; }
+.kaart .label { color: var(--zacht); font-size: 12px; font-weight: 600; }
+.kaart .cijfer { font-size: 30px; font-weight: 800; letter-spacing: -1px; margin-top: 4px; }
+.kaart .bij { font-size: 12px; color: var(--zacht); margin-top: 2px; }
+.op { color: var(--groen); } .af { color: var(--rood); } .let { color: var(--geel); }
+table { width: 100%; border-collapse: collapse; font-size: 13px; }
+th { text-align: left; color: var(--zacht); font-weight: 600; font-size: 11px;
+     text-transform: uppercase; letter-spacing: .5px; padding: 8px 10px; border-bottom: 1px solid var(--rand); }
+td { padding: 9px 10px; border-bottom: 1px solid rgba(35,43,69,.6); white-space: nowrap; }
+tr:last-child td { border-bottom: 0; }
+.num { text-align: right; font-variant-numeric: tabular-nums; }
+.merk { display: inline-block; padding: 2px 9px; border-radius: 999px; font-size: 11px; font-weight: 700; }
+.m-active { background: rgba(52,211,153,.15); color: var(--groen); }
+.m-trialing { background: rgba(77,139,255,.15); color: var(--blauw); }
+.m-past_due { background: rgba(251,191,36,.15); color: var(--geel); }
+.m-canceled, .m-onbekend { background: rgba(154,166,194,.15); color: var(--zacht); }
+.breed { overflow-x: auto; background: var(--kaart); border: 1px solid var(--rand); border-radius: 14px; padding: 6px 8px; }
+.staafjes { display: flex; align-items: flex-end; gap: 3px; height: 70px; margin-top: 12px; }
+.staaf { flex: 1; background: var(--blauw); border-radius: 3px 3px 0 0; min-height: 2px; opacity: .85; }
+.leeg { color: var(--zacht); padding: 14px 4px; font-size: 13px; }
+button {
+  background: var(--blauw); color: #fff; border: 0; border-radius: 9px;
+  padding: 8px 14px; font-size: 13px; font-weight: 700; cursor: pointer;
+}
+button.stil { background: transparent; border: 1px solid var(--rand); color: var(--zacht); }
+#inlog { max-width: 340px; margin: 90px auto; }
+#inlog input { width: 100%; padding: 11px 13px; margin-bottom: 10px; border-radius: 9px;
+  border: 1px solid var(--rand); background: #0e1428; color: var(--tekst); font-size: 14px; }
+.fout { color: var(--rood); font-size: 13px; margin-top: 10px; }
+.twee { display: grid; gap: 14px; grid-template-columns: repeat(auto-fit, minmax(420px, 1fr)); }
+</style>
+</head>
+<body>
+
+<div id="inlog" style="display:none">
+  <h1 style="font-size:20px;margin:0 0 4px">Beheer</h1>
+  <p style="color:var(--zacht);margin:0 0 18px;font-size:13px">Alleen voor de eigenaar.</p>
+  <input id="in-email" type="email" placeholder="E-mailadres" autocomplete="username">
+  <input id="in-wachtwoord" type="password" placeholder="Wachtwoord" autocomplete="current-password">
+  <button onclick="inloggen()" style="width:100%">Inloggen</button>
+  <div id="in-fout" class="fout"></div>
+</div>
+
+<div id="scherm" style="display:none">
+<header>
+  <span class="stip" id="stip"></span>
+  <h1>Omnivaleur — beheer</h1>
+  <button class="stil" onclick="haalSocial(true)">Social verversen</button>
+  <button class="stil" onclick="uitloggen()">Uitloggen</button>
+  <span class="vers" id="vers">laden…</span>
+</header>
+
+<main>
+  <h2>Geld</h2>
+  <div class="raster" id="geld"></div>
+
+  <h2>Klanten</h2>
+  <div class="raster" id="klanten-cijfers"></div>
+  <div class="breed" style="margin-top:14px"><table id="klanten-tabel"></table></div>
+
+  <h2>Website</h2>
+  <div class="raster" id="web-cijfers"></div>
+  <div class="twee" style="margin-top:14px">
+    <div class="kaart"><div class="label">Bezoekers per dag (30 dagen)</div><div class="staafjes" id="web-grafiek"></div></div>
+    <div class="kaart"><div class="label">Verkeer per kanaal</div><table id="web-kanalen"></table></div>
+  </div>
+  <div class="twee" style="margin-top:14px">
+    <div class="kaart"><div class="label">Best scorende zoektermen</div><table id="web-termen"></table></div>
+    <div class="kaart"><div class="label">Best scorende pagina's</div><table id="web-paginas"></table></div>
+  </div>
+
+  <h2>Social</h2>
+  <div class="twee">
+    <div class="kaart"><div class="label">Bezoekers via social (7 dagen)</div><table id="social-verkeer"></table></div>
+    <div class="kaart"><div class="label">Berichten en bereik</div><div id="social-posts"></div></div>
+  </div>
+
+  <h2>Koude mail</h2>
+  <div class="raster" id="mail-cijfers"></div>
+  <div class="kaart" style="margin-top:14px"><div class="label">Verstuurd per dag (14 dagen)</div><div class="staafjes" id="mail-grafiek"></div></div>
+
+  <h2>Werkt alles nog</h2>
+  <div class="raster" id="techniek"></div>
+</main>
+</div>
+
+<script>
+const API = location.hostname === 'localhost' ? 'http://localhost:8001' : '';
+// Bewust localStorage en niet sessionStorage: dit scherm hoort dagenlang open te
+// kunnen staan op een tweede monitor. sessionStorage is per tabblad en gooit je
+// er bij elke nieuwe tab weer uit.
+let TOKEN = localStorage.getItem('ov_beheer_token') || '';
+let VERVERS = localStorage.getItem('ov_beheer_refresh') || '';
+
+const getal = (n) => Number(n || 0).toLocaleString('nl-NL');
+const euro = (n) => '€ ' + Number(n || 0).toLocaleString('nl-NL', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const kort = (v) => {
+  if (!v) return '—';
+  const d = new Date(v);
+  if (isNaN(d)) return '—';
+  return d.toLocaleDateString('nl-NL', { day: '2-digit', month: 'short' });
+};
+const geleden = (v) => {
+  if (!v) return '—';
+  const min = Math.floor((Date.now() - new Date(v)) / 60000);
+  if (isNaN(min)) return '—';
+  if (min < 60) return min + ' min';
+  if (min < 1440) return Math.floor(min / 60) + ' uur';
+  return Math.floor(min / 1440) + ' dgn';
+};
+const veilig = (s) => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+
+function kaart(label, cijfer, bij, kleur) {
+  return `<div class="kaart"><div class="label">${veilig(label)}</div>
+    <div class="cijfer ${kleur || ''}">${cijfer}</div>
+    <div class="bij">${bij ? veilig(bij) : ''}</div></div>`;
+}
+
+function verschil(nu, eerder) {
+  if (!eerder) return '';
+  const pct = Math.round(100 * (nu - eerder) / eerder);
+  return (pct >= 0 ? '+' : '') + pct + '% t.o.v. vorige periode';
+}
+
+function staafjes(elId, rijen) {
+  const el = document.getElementById(elId);
+  if (!rijen || !rijen.length) { el.innerHTML = '<div class="leeg">Geen gegevens.</div>'; return; }
+  const top = Math.max(...rijen.map(r => r.aantal), 1);
+  el.innerHTML = rijen.map(r =>
+    `<div class="staaf" style="height:${Math.max(2, Math.round(100 * r.aantal / top))}%" title="${veilig(r.dag)}: ${getal(r.aantal)}"></div>`
+  ).join('');
+}
+
+function tabel(elId, kolommen, rijen, cel) {
+  const el = document.getElementById(elId);
+  if (!rijen || !rijen.length) { el.innerHTML = `<tr><td class="leeg">Geen gegevens.</td></tr>`; return; }
+  el.innerHTML = `<thead><tr>${kolommen.map((k, i) => `<th class="${i ? 'num' : ''}">${veilig(k)}</th>`).join('')}</tr></thead>
+    <tbody>${rijen.map(cel).join('')}</tbody>`;
+}
+
+async function vraag(pad) {
+  const r = await fetch(API + pad, { headers: { Authorization: 'Bearer ' + TOKEN } });
+  if (r.status === 401 && await vernieuw()) return vraag(pad);
+  if (r.status === 401 || r.status === 403) { uitloggen(); throw new Error('niet ingelogd'); }
+  if (!r.ok) throw new Error('server ' + r.status);
+  return r.json();
+}
+
+async function vernieuw() {
+  if (!VERVERS) return false;
+  try {
+    const r = await fetch(API + '/api/auth/refresh', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ refresh_token: VERVERS }),
+    });
+    if (!r.ok) return false;
+    const d = await r.json();
+    if (!d.access_token) return false;
+    TOKEN = d.access_token; localStorage.setItem('ov_beheer_token', TOKEN);
+    if (d.refresh_token) { VERVERS = d.refresh_token; localStorage.setItem('ov_beheer_refresh', VERVERS); }
+    return true;
+  } catch { return false; }
+}
+
+async function inloggen() {
+  const fout = document.getElementById('in-fout');
+  fout.textContent = '';
+  try {
+    const r = await fetch(API + '/api/auth/login', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        email: document.getElementById('in-email').value.trim(),
+        password: document.getElementById('in-wachtwoord').value,
+      }),
+    });
+    const d = await r.json();
+    if (!r.ok || !d.access_token) { fout.textContent = d.detail || 'Inloggen mislukt.'; return; }
+    TOKEN = d.access_token; VERVERS = d.refresh_token || '';
+    localStorage.setItem('ov_beheer_token', TOKEN);
+    localStorage.setItem('ov_beheer_refresh', VERVERS);
+    start();
+  } catch (e) { fout.textContent = 'Inloggen mislukt: ' + e.message; }
+}
+
+function uitloggen() {
+  localStorage.removeItem('ov_beheer_token');
+  localStorage.removeItem('ov_beheer_refresh');
+  TOKEN = ''; VERVERS = '';
+  document.getElementById('scherm').style.display = 'none';
+  document.getElementById('inlog').style.display = 'block';
+}
+
+// ---------------------------------------------------------------- tekenen
+function toonKern(d) {
+  const g = d.geld || {};
+  document.getElementById('geld').innerHTML = g.gekoppeld
+    ? kaart('Omzet per maand', euro(g.mrr), `${getal(g.betalend)} betalende abonnementen`, 'op')
+      + kaart('In proef', getal(g.proef), 'nog niet betalend', 'let')
+      + kaart('Opgezegd deze maand', getal(g.opgezegd_deze_maand), '', g.opgezegd_deze_maand ? 'af' : '')
+      + kaart('Openstaande facturen', getal(g.open_facturen), euro(g.open_bedrag) + ' niet geïnd',
+              g.open_facturen ? 'let' : '')
+    : `<div class="kaart"><div class="label">Geld</div><div class="bij">${veilig(g.reden || 'Niet gekoppeld')}</div></div>`;
+
+  const k = d.klanten || {};
+  document.getElementById('klanten-cijfers').innerHTML =
+      kaart('Accounts', getal(k.totaal), `${getal(k.accounts_zonder_abo)} zonder abonnementsrij`)
+    + kaart('Nieuw deze week', getal(k.nieuw_7d), '')
+    + kaart('Actief deze week', getal(k.actief_7d), 'heeft echt iets gepubliceerd', k.actief_7d ? 'op' : 'af')
+    + kaart('Extensie online', getal(k.extensies_online), 'nu aan het werk');
+
+  tabel('klanten-tabel',
+    ['Klant', 'Status', 'Proef', 'Artikelen', 'Live', 'Verkocht 7d', 'Laatst actief', 'Laatste login'],
+    k.klanten || [],
+    (r) => `<tr>
+      <td>${veilig(r.email)}${r.extensie_online ? ' <span class="stip" title="extensie online"></span>' : ''}</td>
+      <td><span class="merk m-${veilig(r.status)}">${veilig(r.status)}</span></td>
+      <td class="num">${r.dagen_over == null ? '—' : (r.dagen_over + ' dgn')}</td>
+      <td class="num">${getal(r.artikelen)}</td>
+      <td class="num">${getal(r.live)}</td>
+      <td class="num">${getal(r.verkocht_7d)}</td>
+      <td class="num">${geleden(r.laatst_actief)}</td>
+      <td class="num">${geleden(r.laatste_login)}</td>
+    </tr>`);
+
+  const m = d.mail || {};
+  document.getElementById('mail-cijfers').innerHTML = m.gekoppeld
+    ? kaart('Benaderd', getal(m.benaderd), `${getal(m.verstuurd)} mails verstuurd`)
+      + kaart('Antwoorden', getal(m.antwoorden), m.antwoordpercentage + '% van de benaderde', 'op')
+      + kaart('Afgemeld', getal(m.afgemeld), '')
+      + kaart('Bounces', getal(m.bounces), '', m.bounces ? 'let' : '')
+    : `<div class="kaart"><div class="label">Koude mail</div><div class="bij">${veilig(m.reden || 'Niet gekoppeld')}</div></div>`;
+  staafjes('mail-grafiek', m.per_dag);
+
+  const t = d.techniek || {};
+  document.getElementById('techniek').innerHTML =
+      kaart('Mislukte taken (24u)', getal(t.banen_mislukt_24u), '', t.banen_mislukt_24u ? 'af' : 'op')
+    + kaart('Taken in de wachtrij', getal(t.banen_wachtend), '')
+    + kaart('Klaar (24u)', getal(t.banen_klaar_24u), '')
+    + kaart('Advertenties live', getal(t.advertenties_live), `${getal(t.advertenties_fout)} met een fout`)
+    + kaart('Verkocht deze week', getal(t.verkocht_7d), '', 'op')
+    + kaart('Import open', getal(t.importkandidaten_open), 'nog niet overgezet');
+
+  document.getElementById('vers').textContent = 'bijgewerkt ' + new Date().toLocaleTimeString('nl-NL');
+  document.getElementById('stip').classList.remove('uit');
+}
+
+function toonWebsite(d) {
+  const a = d.analytics || {}, z = d.zoekverkeer || {};
+  let cijfers = '';
+  cijfers += a.gekoppeld
+    ? kaart('Bezoeken (7 dagen)', getal(a.bezoeken_7d), verschil(a.bezoeken_7d, a.bezoeken_vorige_7d),
+            a.bezoeken_7d >= a.bezoeken_vorige_7d ? 'op' : 'af')
+      + kaart('Bezoekers', getal(a.gebruikers_7d), `${getal(a.nieuw_7d)} voor het eerst`)
+    : `<div class="kaart"><div class="label">Analytics</div><div class="bij">${veilig(a.reden || '')}</div></div>`;
+  cijfers += z.gekoppeld
+    ? kaart('Klikken uit Google', getal(z.klikken), verschil(z.klikken, z.klikken_vorige),
+            z.klikken >= z.klikken_vorige ? 'op' : 'af')
+      + kaart('Vertoningen', getal(z.vertoningen), verschil(z.vertoningen, z.vertoningen_vorige))
+    : `<div class="kaart"><div class="label">Search Console</div><div class="bij">${veilig(z.reden || '')}</div></div>`;
+  document.getElementById('web-cijfers').innerHTML = cijfers;
+
+  staafjes('web-grafiek', a.per_dag);
+  tabel('web-kanalen', ['Kanaal', 'Bezoeken'], a.kanalen || [],
+    (r) => `<tr><td>${veilig(r.sessionDefaultChannelGroup || r.channel || r.naam || '—')}</td>
+      <td class="num">${getal(r.sessions || r.bezoeken)}</td></tr>`);
+  tabel('web-termen', ['Zoekterm', 'Klikken', 'Positie'], z.zoektermen || [],
+    (r) => `<tr><td>${veilig(r.term)}</td><td class="num">${getal(r.klikken)}</td>
+      <td class="num">${r.positie}</td></tr>`);
+  tabel('web-paginas', ['Pagina', 'Klikken'], z.paginas || [],
+    (r) => `<tr><td>${veilig((r.pagina || '').replace(/^https?:\/\/[^/]+/, ''))}</td>
+      <td class="num">${getal(r.klikken)}</td></tr>`);
+  tabel('social-verkeer', ['Platform', 'Bezoeken'], (a.social || []),
+    (r) => `<tr><td>${veilig(r.platform)}</td><td class="num">${getal(r.bezoeken)}</td></tr>`);
+}
+
+function toonSocial(d) {
+  const el = document.getElementById('social-posts');
+  if (!d || d.gekoppeld === false || d.connected === false) {
+    el.innerHTML = `<div class="leeg">${veilig(d && (d.reden || d.error) || 'Nog niet opgehaald — druk op “Social verversen”.')}</div>`;
+    return;
+  }
+  const posts = (d.top_posts || d.posts || []).slice(0, 8);
+  if (!posts.length) { el.innerHTML = '<div class="leeg">Geen berichten in de afgelopen week.</div>'; return; }
+  el.innerHTML = `<table><thead><tr><th>Bericht</th><th class="num">Weergaven</th><th class="num">Likes</th></tr></thead>
+    <tbody>${posts.map(p => `<tr>
+      <td>${veilig((p.platform || '') + ' · ' + String(p.text || '').slice(0, 48))}</td>
+      <td class="num">${getal(p.views)}</td><td class="num">${getal(p.likes)}</td></tr>`).join('')}</tbody></table>`;
+}
+
+// ---------------------------------------------------------------- ophalen
+async function haalKern() {
+  try { toonKern(await vraag('/api/beheer/kern')); }
+  catch (e) { document.getElementById('stip').classList.add('uit');
+              document.getElementById('vers').textContent = 'niet bijgewerkt: ' + e.message; }
+}
+async function haalWebsite() {
+  try { toonWebsite(await vraag('/api/beheer/website')); } catch (e) { /* blok blijft leeg */ }
+}
+async function haalSocial(ververs) {
+  const el = document.getElementById('social-posts');
+  if (ververs) el.innerHTML = '<div class="leeg">Ophalen… dit duurt een halve minuut.</div>';
+  try { toonSocial(await vraag('/api/beheer/social' + (ververs ? '?ververs=true' : ''))); }
+  catch (e) { el.innerHTML = '<div class="leeg">Ophalen mislukt.</div>'; }
+}
+
+function start() {
+  document.getElementById('inlog').style.display = 'none';
+  document.getElementById('scherm').style.display = 'block';
+  haalKern(); haalWebsite(); haalSocial(false);
+  // Elke minuut de snelle cijfers, elk kwartier de Google-cijfers. Die laatste
+  // hebben server-side toch tien minuten cache en dagquota.
+  setInterval(haalKern, 60000);
+  setInterval(haalWebsite, 900000);
+}
+
+document.getElementById('in-wachtwoord').addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') inloggen();
+});
+
+if (TOKEN) start(); else document.getElementById('inlog').style.display = 'block';
+</script>
+</body>
+</html>
