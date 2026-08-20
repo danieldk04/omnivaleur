@@ -1282,6 +1282,7 @@ input[type="checkbox"].row-check { width: 15px; height: 15px; cursor: pointer; a
         <div>
           <div class="protections-summary-title" id="refresh-quota-title">Refresh quota: loading…</div>
           <div class="protections-summary-sub">Resets daily. Kept low so refresh activity looks like normal shop upkeep, not a script.</div>
+          <div class="protections-summary-sub" id="auto-relist-line" style="margin-top:6px"></div>
         </div>
       </div>
 
@@ -5789,6 +5790,30 @@ function renderRefreshView() {
   }).length;
   document.getElementById('refresh-quota-title').textContent =
     `Refresh quota: ${Math.min(usedToday, REFRESH_DAILY_CAP)} / ${REFRESH_DAILY_CAP} used today`;
+
+  // Automatisch herplaatsen is onzichtbaar tot het gebeurt, en dat leidde tot de
+  // vraag "er is nog geen enkele advertentie ververst, klopt dit?". Meestal
+  // klopt het: geïmporteerde advertenties tellen vanaf de dag van importeren,
+  // dus de eerste ronde is pas over weken. Dat hoort hier gewoon te staan.
+  const relistDagen = (state.settings && state.settings.relist_dagen) || 27;
+  const mpActief = (state.listings || []).filter(
+    l => (l.platform === 'marktplaats' || l.platform === '2dehands')
+      && l.status === 'active' && l.listed_at);
+  const lijn = document.getElementById('auto-relist-line');
+  if (lijn) {
+    if (!mpActief.length) {
+      lijn.textContent = '';
+    } else {
+      const oudste = mpActief.reduce((a, b) =>
+        new Date(a.listed_at) < new Date(b.listed_at) ? a : b);
+      const beurt = new Date(new Date(oudste.listed_at).getTime() + relistDagen * 864e5);
+      const dagen = Math.ceil((beurt - now) / 864e5);
+      const datum = beurt.toLocaleDateString(undefined, { day: 'numeric', month: 'long' });
+      lijn.textContent = dagen > 0
+        ? `Automatic relisting: your setting is ${relistDagen} days, counted from the day a listing was published or imported. The first ones are due on ${datum} (in ${dagen} day${dagen === 1 ? '' : 's'}) — nothing runs before then.`
+        : `Automatic relisting: your setting is ${relistDagen} days. ${mpActief.filter(l => (now - new Date(l.listed_at)) / 864e5 >= relistDagen).length} listing(s) are due and are being handled a batch a day.`;
+    }
+  }
 
   renderRelistInProgress();
   ensureRelistTicker();

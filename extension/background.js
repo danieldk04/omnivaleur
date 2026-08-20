@@ -1186,6 +1186,63 @@ function openStilWerkTabblad(url, callback) {
   return openWorkerTab(url, callback, { silent: true });
 }
 
+// STIL WERK OPENT NOOIT MEER EEN EIGEN VENSTER.
+//
+// Een geminimaliseerd venster is niet onzichtbaar. Chrome tekent het eerst en
+// klapt het daarna in, en op een Mac zie je dat als een flits. Eén keer is
+// vervelend, elk kwartier is onwerkbaar — gemeten klacht: "mijn scherm flitst
+// nog steeds 4 a 5 keer weg, om de ca. 15 minuten". Bovendien sluit de verkoper
+// dat venstertje, waarna de volgende ronde er weer een maakt: een flits die
+// zichzelf in stand houdt.
+//
+// Een achtergrond-tabblad in het venster waar hij tóch al werkt flitst niet, pakt
+// de aandacht niet en verdwijnt weer zodra de scan klaar is. Alleen als er geen
+// enkel gewoon venster is (Chrome draait dan op de achtergrond) valt het terug
+// op het oude gedrag.
+async function openAchtergrondTabblad(url) {
+  try {
+    const vensters = await chrome.windows.getAll({ windowTypes: ["normal"] });
+    const bruikbaar = vensters.find(w => w.state !== "minimized") || vensters[0];
+    if (bruikbaar) {
+      return await chrome.tabs.create({ url, windowId: bruikbaar.id, active: false });
+    }
+  } catch (_) { /* val terug op het werkvenster */ }
+  return null;
+}
+
+// Achtergrondwerk hoort te wachten tot de verkoper even niet aan het werk is.
+// Er is geen enkele reden om precies tijdens het typen een tabblad te openen:
+// deze scans hebben nergens haast mee. Na drie overgeslagen rondes gaat het toch
+// door, anders zouden de cijfers bij iemand die de hele dag doorwerkt nooit meer
+// bijwerken.
+const DRUK_SLEUTEL = "scanUitgesteld";
+const MAX_UITGESTELD = 3;
+
+async function magStilScannenNu() {
+  let staat = "idle";
+  try { staat = await chrome.idle.queryState(60); } catch (_) { return true; }
+  if (staat !== "active") {
+    await chrome.storage.session.set({ [DRUK_SLEUTEL]: 0 }).catch(() => {});
+    return true;
+  }
+  const { [DRUK_SLEUTEL]: n = 0 } = await chrome.storage.session.get(DRUK_SLEUTEL).catch(() => ({}));
+  if (n >= MAX_UITGESTELD) {
+    await chrome.storage.session.set({ [DRUK_SLEUTEL]: 0 }).catch(() => {});
+    return true;
+  }
+  await chrome.storage.session.set({ [DRUK_SLEUTEL]: n + 1 }).catch(() => {});
+  return false;
+}
+
+// Eerst een achtergrond-tabblad in een bestaand venster; lukt dat niet, dan pas
+// het oude, geminimaliseerde werkvenster.
+function stilTabblad(url, callback) {
+  openAchtergrondTabblad(url).then((tab) => {
+    if (tab) { callback(tab); return; }
+    openStilWerkTabblad(url, callback);
+  }).catch(() => openStilWerkTabblad(url, callback));
+}
+
 function openWorkerTab(url, callback, opts = {}) {
   _workerWindowChain = _workerWindowChain
     .then(() => openWorkerTabInner(url, opts))
@@ -3492,7 +3549,10 @@ calmAlarmBijwerken();
 chrome.runtime.onStartup.addListener(() => { calmAlarmBijwerken(); });
 chrome.runtime.onInstalled.addListener(() => { calmAlarmBijwerken(); });
 chrome.alarms.onAlarm.addListener((alarm) => {
-  if (alarm.name === "sold-check") { checkSoldListings(); checkVintedOrders(); }
+  if (alarm.name === "sold-check") {
+    // Niet tijdens het werken van de verkoper — zie magStilScannenNu.
+    magStilScannenNu().then((mag) => { if (mag) { checkSoldListings(); checkVintedOrders(); } });
+  }
 });
 
 // Vinted has no webhook and no server-side polling (a stale session once let
@@ -3705,7 +3765,7 @@ async function lijktVerkochtOpEigenPagina(platform, advertentieId) {
 
 function scrapeMarktplaatsAds(url, platform) {
   return new Promise((resolve) => {
-    openStilWerkTabblad(url, (tab) => {
+    stilTabblad(url, (tab) => {
       if (!tab) { resolve([]); return; }
       const tabId = tab.id;
 
@@ -3768,7 +3828,7 @@ function scrapeMarktplaatsAds(url, platform) {
         chrome.tabs.remove(tabId).catch(() => {});
         resolve([]);
       }, 30000);
-    }, { silent: true });
+    });
   });
 }
 
@@ -3810,7 +3870,7 @@ async function checkVintedOrders() {
 
 function scrapeVintedOrders(url) {
   return new Promise((resolve) => {
-    openStilWerkTabblad(url, (tab) => {
+    stilTabblad(url, (tab) => {
       if (!tab) { resolve([]); return; }
       const tabId = tab.id;
 
@@ -3890,7 +3950,7 @@ function scrapeVintedOrders(url) {
         chrome.tabs.remove(tabId).catch(() => {});
         resolve([]);
       }, 30000);
-    }, { silent: true });
+    });
   });
 }
 
@@ -3901,7 +3961,7 @@ function scrapeVintedOrders(url) {
 // bid indicators from the DOM, and report the counts to the backend so the
 // dashboard can surface "3 new offers on Marktplaats" in one place. We never
 // read message CONTENTS — only counts. Reply/accept still happens on-platform.
-const NOTIF_SCAN_MINUTES = 15;
+const NOTIF_SCAN_MINUTES = 30;
 
 // Where to open the messages/bids view per platform, and the deep link we hand
 // the dashboard so the user can jump straight there. (Vinted's inbox lives at
@@ -3913,7 +3973,7 @@ const NOTIF_SOURCES = {
 
 chrome.alarms.create("notif-scan", { periodInMinutes: NOTIF_SCAN_MINUTES });
 chrome.alarms.onAlarm.addListener((alarm) => {
-  if (alarm.name === "notif-scan") scanNotifications();
+  if (alarm.name === "notif-scan") magStilScannenNu().then((mag) => { if (mag) scanNotifications(); });
 });
 chrome.runtime.onInstalled.addListener(scanNotifications);
 chrome.runtime.onStartup.addListener(scanNotifications);
@@ -4009,7 +4069,7 @@ function vintedLijktBod(c) {
 // wrong number.
 function scrapeNotificationCounts(url, platform) {
   return new Promise((resolve) => {
-    openStilWerkTabblad(url, (tab) => {
+    stilTabblad(url, (tab) => {
       if (!tab) { resolve(null); return; }
       const tabId = tab.id;
       let settled = false;
@@ -4038,7 +4098,7 @@ function scrapeNotificationCounts(url, platform) {
 
       chrome.tabs.onUpdated.addListener(onUpdated);
       setTimeout(() => finish(null), 30000); // hard timeout
-    }, { silent: true });
+    });
   });
 }
 

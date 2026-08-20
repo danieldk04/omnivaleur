@@ -218,6 +218,13 @@ window.CL = (() => {
   const BLOKKADE_PATRONEN = [
     { naam: "adres",    re: /waar woon je|where do you live|où habites-tu|voeg (je|uw) adres|add your address|bezorgadres|verzendadres|shipping address|home address|straatnaam|postcode en plaats/i },
     { naam: "telefoon", re: /verifieer je telefoonnummer|verify your phone|telefoonnummer bevestigen|confirm your phone number/i },
+    // Zakelijke verkopers op Vinted (Pro) moeten hun bedrijf laten verifieren
+    // voordat er ook maar iets geplaatst mag worden. Zonder deze herkenning
+    // strandde elke poging op een algemene mislukking, en zag de verkoper zes
+    // advertenties die "niet lukten" zonder te weten waarom. Gemeten geval
+    // 20-08-2026: zes Vinted-publicaties, geen enkele geplaatst, account nog in
+    // verificatie.
+    { naam: "verificatie", re: /verifieer je (account|bedrijf)|verify your (account|business)|bedrijfsverificatie|business verification|identiteitsverificatie|verify your identity|nog niet geverifieerd|not yet verified|upload je (kvk|uittreksel|documenten)|pro.?account.*verificatie/i },
   ];
 
   // Alleen binnen een écht zichtbaar dialoogvenster kijken. Zoeken in de hele
@@ -1165,10 +1172,14 @@ window.CL = (() => {
       const fout = new Error(
         (b.naam === "adres"
           ? "Vinted first wants your address before it will publish anything (\"Where do you live?\"). "
+          : b.naam === "verificatie"
+          ? "Vinted has not verified your account yet, and will not publish anything until it has. For a business account a Chamber of Commerce extract showing your trading name is normally enough — articles of association are not required for a VOF or sole trader. "
           : "Vinted first wants you to confirm your phone number before it will publish anything. ") +
-        "We never fill that in for you. The tab is left open with everything else already filled in: " +
-        "complete this one screen and click Upload — the listing is then marked as published automatically, " +
-        "and every following listing goes through without this step. " +
+        (b.naam === "verificatie"
+          ? "Nothing was published, and nothing was lost — your items stay ready here. Publishing to Vinted works as soon as Vinted approves your account. "
+          : "We never fill that in for you. The tab is left open with everything else already filled in: " +
+            "complete this one screen and click Upload — the listing is then marked as published automatically, " +
+            "and every following listing goes through without this step. ") +
         `Vinted says: \u201c${b.tekst}\u201d`
       );
       // Merkteken voor de opdracht zelf: bij een blokkade heeft doorzoeken van de
