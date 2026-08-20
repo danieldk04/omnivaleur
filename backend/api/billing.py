@@ -491,6 +491,79 @@ def reminder_dryrun(user=Depends(get_current_user_full)):
     return {"sends_nothing": True, "groups": uit}
 
 
+@router.get("/admin/klanten")
+def admin_klanten(user=Depends(get_current_user_full)):
+    """Eén overzicht van waar iedere gebruiker staat: betalend, in proef, of
+    verlopen. Bestaat omdat dit anders alleen in Supabase te zien is, en daar
+    staan alleen gebruikers-ID's zonder e-mailadres."""
+    if not _is_owner_email(user.email):
+        raise HTTPException(status_code=403, detail="Not allowed")
+
+    from datetime import datetime, timezone
+
+    rijen = execute_with_retry(
+        get_db().table("subscriptions").select(
+            "user_id, status, plan, trial_ends_at, current_period_end, stripe_subscription_id"
+        )
+    ).data or []
+
+    # Eén keer alle accounts ophalen in plaats van per rij: bij dertig klanten is
+    # dat het verschil tussen één verzoek en dertig.
+    adressen: dict[str, dict] = {}
+    page = 1
+    while True:
+        try:
+            gevonden = get_admin_db().auth.admin.list_users(page=page, per_page=200)
+        except Exception as e:
+            logger.warning("Klantenoverzicht kon adressen niet ophalen: %s", e)
+            break
+        if not gevonden:
+            break
+        for u in gevonden:
+            adressen[u.id] = {
+                "email": u.email,
+                "last_sign_in_at": str(u.last_sign_in_at) if u.last_sign_in_at else None,
+            }
+        if len(gevonden) < 200:
+            break
+        page += 1
+
+    nu = datetime.now(timezone.utc)
+
+    def _dagen(waarde):
+        if not waarde:
+            return None
+        try:
+            moment = datetime.fromisoformat(str(waarde).replace("Z", "+00:00"))
+        except ValueError:
+            return None
+        if moment.tzinfo is None:
+            moment = moment.replace(tzinfo=timezone.utc)
+        return (moment.date() - nu.date()).days
+
+    uit = []
+    for r in rijen:
+        info = adressen.get(r["user_id"], {})
+        uit.append({
+            "email": info.get("email") or "(adres onbekend)",
+            "status": r.get("status"),
+            "paying": bool(r.get("stripe_subscription_id")),
+            "trial_ends_at": (r.get("trial_ends_at") or "")[:10],
+            "days_left": _dagen(r.get("trial_ends_at")),
+            "renews_at": (r.get("current_period_end") or "")[:10],
+            "last_sign_in": (info.get("last_sign_in_at") or "")[:10],
+        })
+
+    volgorde = {"active": 0, "trialing": 1, "past_due": 2}
+    uit.sort(key=lambda x: (volgorde.get(x["status"], 9), -(x["days_left"] if x["days_left"] is not None else -999)))
+
+    telling: dict[str, int] = {}
+    for x in uit:
+        telling[x["status"]] = telling.get(x["status"], 0) + 1
+
+    return {"totals": telling, "customers": uit}
+
+
 @router.post("/webhook")
 async def stripe_webhook(request: Request, stripe_signature: str = Header(None)):
     if not settings.stripe_webhook_secret:

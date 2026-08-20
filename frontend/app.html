@@ -1462,6 +1462,13 @@ input[type="checkbox"].row-check { width: 15px; height: 15px; cursor: pointer; a
             <button onclick="sendTestReminderMail(this, 'locked')" class="btn" style="min-width:200px;justify-content:center">Test mail 3: account paused</button>
             <span style="font-size:12px;color:var(--muted)" id="owner-test-mail-result">Sends the trial reminder to your own address. Customers are not touched.</span>
           </div>
+          <div style="padding:0 22px 16px">
+            <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+              <button onclick="laadKlanten(this)" class="btn" style="min-width:200px;justify-content:center">Where is everyone?</button>
+              <span style="font-size:12px;color:var(--muted)" id="owner-klanten-status">Every account: paying, on trial, or expired.</span>
+            </div>
+            <div id="owner-klanten" style="margin-top:12px;overflow-x:auto"></div>
+          </div>
           <div style="padding:0 22px 16px;display:flex;align-items:center;gap:12px;flex-wrap:wrap">
             <button onclick="reminderDryRun(this)" class="btn" style="min-width:200px;justify-content:center">Who would get a trial mail?</button>
             <span style="font-size:12px;color:var(--muted)" id="owner-dryrun-result">Shows who is queued for each of the three mails, and whether their address can be looked up. Sends nothing.</span>
@@ -2960,6 +2967,46 @@ async function sendTestReminderMail(btn, kind) {
     out.style.color = res.ok ? '#15803d' : '#b91c1c';
   } catch (e) {
     out.textContent = e.message; out.style.color = '#b91c1c';
+  }
+  btn.disabled = false; btn.textContent = label;
+}
+
+// Waar staat iedereen? Eén tabel met alle accounts. Bestaat omdat dit anders
+// alleen in Supabase te zien is, en daar staan alleen gebruikers-ID's.
+async function laadKlanten(btn) {
+  const status = document.getElementById('owner-klanten-status');
+  const doel = document.getElementById('owner-klanten');
+  const label = btn.textContent;
+  btn.disabled = true; btn.textContent = 'Loading\u2026';
+  try {
+    const res = await apiFetch(`${API}/api/billing/admin/klanten`);
+    const data = await parseJsonSafe(res);
+    if (!res.ok) throw new Error(data.detail || 'Could not load.');
+    const t = data.totals || {};
+    status.textContent = `${(data.customers || []).length} accounts \u2014 `
+      + `${t.active || 0} paying, ${t.trialing || 0} on trial, ${t.trial_expired || 0} expired`;
+    status.style.color = 'var(--muted)';
+    const kleur = { active: '#15803d', trialing: '#1d4ed8', past_due: '#b45309' };
+    const naam = { active: 'Paying', trialing: 'On trial', trial_expired: 'Expired', past_due: 'Payment failed', canceled: 'Canceled' };
+    const rijen = (data.customers || []).map(c => {
+      const d = c.days_left;
+      let wanneer = '\u2014';
+      if (c.status === 'trialing' && d !== null) wanneer = d <= 0 ? 'ends today' : `${d} day${d === 1 ? '' : 's'} left`;
+      else if (c.status === 'active') wanneer = c.renews_at ? `renews ${c.renews_at}` : 'active';
+      else if (d !== null) wanneer = `ended ${c.trial_ends_at}`;
+      return `<tr>
+        <td style="padding:6px 10px;border-bottom:1px solid var(--border)">${esc(c.email)}</td>
+        <td style="padding:6px 10px;border-bottom:1px solid var(--border);font-weight:700;color:${kleur[c.status] || 'var(--muted)'}">${esc(naam[c.status] || c.status)}</td>
+        <td style="padding:6px 10px;border-bottom:1px solid var(--border)">${esc(wanneer)}</td>
+        <td style="padding:6px 10px;border-bottom:1px solid var(--border);color:var(--muted)">${esc(c.last_sign_in || 'never')}</td>
+      </tr>`;
+    }).join('');
+    doel.innerHTML = `<table style="width:100%;border-collapse:collapse;font-size:12.5px">
+      <tr style="text-align:left;color:var(--muted);font-size:11px">
+        <th style="padding:6px 10px">Account</th><th style="padding:6px 10px">Status</th>
+        <th style="padding:6px 10px">Trial / renewal</th><th style="padding:6px 10px">Last sign-in</th></tr>${rijen}</table>`;
+  } catch (e) {
+    status.textContent = e.message; status.style.color = '#b91c1c';
   }
   btn.disabled = false; btn.textContent = label;
 }
