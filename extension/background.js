@@ -3074,7 +3074,10 @@ async function bgScanAdmarkt(job, serverUrl) {
           if (token) invoer.pageToken = token;
           const data = await roep("ad.getAds", invoer);
           const ads = data.ads || [];
-          if (typeof data.count === "number") totaal += data.count;
+          // Alleen op de EERSTE pagina meetellen. data.count is het totaal van
+          // de hele campagne, niet van deze pagina — bij elke volgende pagina
+          // er nog eens bij optellen maakte van 5.534 advertenties er 16.602.
+          if (pagina === 0 && typeof data.count === "number") totaal += data.count;
 
           for (const ad of ads) {
             // Alleen wat live staat; gepauzeerd of verwijderd hoort niet als
