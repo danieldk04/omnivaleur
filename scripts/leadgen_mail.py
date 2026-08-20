@@ -43,6 +43,7 @@ import json
 import os
 import random
 import re
+from html import unescape
 import smtplib
 import ssl
 import sys
@@ -2623,13 +2624,45 @@ def _waar_hoort_dit(msg, afzender: str, state: dict,
     return None            # nog onbeantwoord: laat staan waar Daniel het ziet
 
 
+def _ontHtml(rauw: str) -> str:
+    """HTML naar leesbare tekst. Nodig omdat lang niet elke mail een platte
+    versie meestuurt: zonder dit belandde de kale opmaakcode ("<div dir=auto>")
+    als citaat onder het concept, en dat leest als een kapotte mail."""
+    t = re.sub(r"(?is)<(script|style)[^>]*>.*?</\1>", " ", rauw)
+    t = re.sub(r"(?i)<br\s*/?>", "\n", t)
+    t = re.sub(r"(?i)</(p|div|tr|li|h[1-6]|blockquote)\s*>", "\n", t)
+    t = re.sub(r"(?s)<[^>]+>", "", t)
+    t = unescape(t)
+    t = t.replace("\xa0", " ")
+    t = re.sub(r"[ \t]+", " ", t)
+    t = re.sub(r"\n\s*\n\s*\n+", "\n\n", t)
+    return "\n".join(r.rstrip() for r in t.splitlines()).strip()
+
+
+def _deel_tekst(deel) -> str:
+    try:
+        return deel.get_payload(decode=True).decode(
+            deel.get_content_charset() or "utf-8", "replace")
+    except Exception:  # noqa: BLE001
+        return ""
+
+
 def _platte_tekst(msg) -> str:
     if not msg.is_multipart():
-        return msg.get_payload(decode=True).decode(errors="ignore")
+        rauw = _deel_tekst(msg)
+        return _ontHtml(rauw) if msg.get_content_type() == "text/html" else rauw
+    html = ""
     for deel in msg.walk():
-        if deel.get_content_type() == "text/plain":
-            return deel.get_payload(decode=True).decode(errors="ignore")
-    return ""
+        if deel.get_content_maintype() == "multipart":
+            continue
+        soort = deel.get_content_type()
+        if soort == "text/plain":
+            tekst = _deel_tekst(deel)
+            if tekst.strip():
+                return tekst
+        elif soort == "text/html" and not html:
+            html = _deel_tekst(deel)
+    return _ontHtml(html) if html else ""
 
 
 # --------------------------------------------------------------------- tick
