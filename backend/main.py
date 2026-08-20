@@ -158,6 +158,31 @@ async def health():
     }
 
 
+@app.get("/health/resend")
+def health_resend():
+    """Welke domeinen mag Resend versturen?
+
+    De koude mail gaat vanaf daniel@omnivaleur.nl. Staat dat domein niet als
+    geverifieerd in Resend, dan weigert Resend elke mail en verstuurt de machine
+    stilletjes niets. Dat was van buitenaf niet te zien; nu wel. Geeft alleen
+    domeinnamen terug — die staan toch al in DNS, er lekt hier niets.
+    """
+    import httpx
+    from backend.config import settings as _s
+    if not _s.resend_api_key:
+        return {"resend": "geen sleutel"}
+    try:
+        r = httpx.get("https://api.resend.com/domains",
+                      headers={"Authorization": f"Bearer {_s.resend_api_key}"},
+                      timeout=15)
+        if r.status_code >= 300:
+            return {"resend": f"fout {r.status_code}"}
+        return {"domeinen": [{"naam": d.get("name"), "status": d.get("status")}
+                             for d in (r.json().get("data") or [])]}
+    except Exception as e:  # noqa: BLE001
+        return {"resend": f"niet bereikbaar: {e}"}
+
+
 @app.get("/privacy")
 async def privacy():
     return FileResponse(FRONTEND / "privacy.html")
