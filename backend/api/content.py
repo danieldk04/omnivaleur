@@ -525,7 +525,7 @@ async def analytics_dashboard(request: Request, token: str | None = None):
 
 
 @router.get("/api/analytics/diag")
-async def analytics_diagnostics(token: str | None = None):
+async def analytics_diagnostics(token: str | None = None, property: str | None = None):
     """Definitieve koppelingscheck (auth vs geen-data) voor GSC + GA4."""
     _require_dashboard_token(token)
     from backend.services import search_console as gsc
@@ -538,7 +538,12 @@ async def analytics_diagnostics(token: str | None = None):
     # een geweigerde metriek — en dat verschil was van buitenaf niet te zien.
     ga4_uit: dict = {"configured": ga4.is_configured()}
     if ga4.is_configured():
-        ga4_uit["property"] = settings.ga4_property_id
+        # Met ?property=... is een andere property te bekijken zonder de server
+        # om te zetten. Nodig om vóór een verhuizing te zien of daar wél cijfers
+        # in zitten, in plaats van te wisselen en te hopen. Bewust alleen binnen
+        # dit verzoek: settings aanpassen zou de hele draaiende server omzetten.
+        prop = property or settings.ga4_property_id
+        ga4_uit["property"] = prop
         try:
             ga4_uit["totals_7d"] = ga4.totals(dag(7), dag(1))
             ga4_uit["sessies_zonder_conversies"] = ga4._run(
@@ -556,7 +561,7 @@ async def analytics_diagnostics(token: str | None = None):
                     ga4_uit["rauw"] = "client kon niet worden opgebouwd"
                 else:
                     antwoord = client.run_report(RunReportRequest(
-                        property=f"properties/{settings.ga4_property_id}",
+                        property=f"properties/{prop}",
                         metrics=[Metric(name="sessions")],
                         date_ranges=[DateRange(start_date=dag(7), end_date=dag(1))],
                     ))
@@ -565,7 +570,7 @@ async def analytics_diagnostics(token: str | None = None):
                     # de verkeerde property. Een ruim venster maakt dat verschil
                     # zichtbaar zonder te hoeven gokken.
                     lang = client.run_report(RunReportRequest(
-                        property=f"properties/{settings.ga4_property_id}",
+                        property=f"properties/{prop}",
                         metrics=[Metric(name="sessions")],
                         date_ranges=[DateRange(start_date=dag(365), end_date=dag(0))],
                     ))
