@@ -544,6 +544,25 @@ async def analytics_diagnostics(token: str | None = None):
             ga4_uit["sessies_zonder_conversies"] = ga4._run(
                 dimensions=[], metrics=["sessions"], start=dag(7), end=dag(1), limit=1)
             ga4_uit["dagen"] = len(ga4.sessions_by_day(dag(29), dag(0)))
+            # Rechtstreeks, zonder de zachte val van _run: die vangt elke fout af
+            # en geeft een lege lijst terug, waardoor "geen toegang" er precies
+            # zo uitziet als "geen bezoekers".
+            try:
+                from google.analytics.data_v1beta.types import (
+                    DateRange, Metric, RunReportRequest,
+                )
+                client = ga4._get_client()
+                if client is None:
+                    ga4_uit["rauw"] = "client kon niet worden opgebouwd"
+                else:
+                    antwoord = client.run_report(RunReportRequest(
+                        property=f"properties/{settings.ga4_property_id}",
+                        metrics=[Metric(name="sessions")],
+                        date_ranges=[DateRange(start_date=dag(7), end_date=dag(1))],
+                    ))
+                    ga4_uit["rauw"] = [r.metric_values[0].value for r in antwoord.rows] or "geen rijen"
+            except Exception as e:  # noqa: BLE001
+                ga4_uit["rauw"] = f"{type(e).__name__}: {e}"[:400]
         except Exception as e:  # noqa: BLE001
             ga4_uit["fout"] = f"{type(e).__name__}: {e}"
 
