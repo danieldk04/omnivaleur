@@ -29,6 +29,16 @@ export IMAP_HOST=imap.zoho.eu
 export MAIL_USER=daniel@omnivaleur.nl
 export MAIL_PASS="$(security find-generic-password -a daniel@omnivaleur.nl -s omnivaleur-leadgen-mail -w 2>/dev/null)"
 export NOTION_TOKEN="$(security find-generic-password -a notion -s omnivaleur-notion-token -w 2>/dev/null)"
+# Zonder deze sleutel schrijft de machine sjabloonantwoorden in plaats van echte.
+export ANTHROPIC_API_KEY="$(security find-generic-password -a anthropic -s omnivaleur-anthropic-key -w 2>/dev/null)"
+# ZONDER DEZE TWEE WERKT DE MACHINE UIT EEN VEROUDERD LOKAAL BESTANDJE.
+# De stand van zaken (wie is gemaild, wie heeft geantwoord) staat in Supabase.
+# Ontbreken deze regels, dan valt leadgen_mail.py terug op output/leads/mail_state.json
+# — en dat bestand bleef op zes leads steken terwijl er in de database honderden
+# stonden. Gevolg: elk antwoord van iemand die niet toevallig in die zes zat werd
+# genegeerd, en er kwam dus geen concept.
+export SUPABASE_URL=https://bgpeoaavbiaurpvybcqe.supabase.co
+export SUPABASE_KEY="$(security find-generic-password -a supabase-service -s omnivaleur-supabase-service -w 2>/dev/null)"
 
 # Logboek kort houden: hooguit de laatste duizend regels.
 if [[ -f $LOG && $(wc -l < $LOG) -gt 1000 ]]; then

@@ -520,10 +520,19 @@ def _onderwerp(lead: dict, n: int) -> str:
 
 
 def _netjes(tekst: str) -> str:
-    """Alinea's op 78 tekens afbreken. De ondertekening (na \x00) blijft zoals hij
-    is: daar zijn de regelafbrekingen betekenisvol."""
+    """Alinea's als ÉÉN regel, en het mailprogramma breekt zelf af.
+
+    Eerder braken we hier zelf af op 78 tekens. In een schrijfmachinevenster ziet
+    dat er netjes uit; in Gmail op een breed scherm krijg je een kolom van een
+    centimeter of acht met dubbel zoveel regels als nodig, en dat leest als een
+    telegram. Wie het bericht op zijn telefoon opent zag de afbrekingen zelfs
+    midden in een zin terug. Een mailprogramma weet zelf hoe breed het scherm is;
+    wij niet.
+
+    De ondertekening (na \x00) blijft zoals hij is: daar zijn de regelafbrekingen
+    wél betekenisvol."""
     body, _, staart = tekst.partition("\x00")
-    alineas = [textwrap.fill(a.strip(), 78) for a in body.split("\n\n") if a.strip()]
+    alineas = [" ".join(a.split()) for a in body.split("\n\n") if a.strip()]
     return "\n\n".join(alineas) + "\n\n" + staart
 
 
@@ -1543,6 +1552,114 @@ def _wat_vraagt_hij(body: str) -> set[str]:
     return uit
 
 
+# ── Het slimme antwoord ───────────────────────────────────────────────────
+#
+# De sjablonen hieronder waren een keurige eerste stap en een structurele
+# teleurstelling. Ze kunnen precies drie vragen herkennen (video, prijs,
+# platforms) en beantwoorden alles wat daarbuiten valt met "Dank voor je
+# reactie!" plus de video. Gemeten geval 19-08-2026: Egbert schreef een
+# technische mail over een knop die hij niet kon vinden, over filteren met 5.000
+# artikelen en over een afspraak zonder abonnementskosten — en kreeg als concept
+# de standaard prijsmail. Dat concept was onbruikbaar, dus schreef Daniel hem
+# alsnog zelf. Precies het werk dat deze machine hoorde over te nemen.
+#
+# Daarom schrijft een taalmodel het voorstel, met de hele draad erbij. Lukt dat
+# niet (geen sleutel, geen krediet, storing), dan valt hij terug op de sjablonen:
+# een middelmatig concept is nog altijd beter dan geen concept.
+_SCHRIJF_REGELS = """Je schrijft een conceptantwoord dat Daniel de Koning zelf
+verstuurt vanuit zijn eigen postbus. Het is een concept: hij leest het na.
+
+Wie hij is: Daniel verkoopt zelf tweedehands (Revaleur, 700+ reviews) en bouwde
+Omnivaleur, waarmee verkopers hun items in een keer op meerdere marktplaatsen
+zetten in plaats van alles over te tikken.
+
+Harde regels:
+- Nederlands, gewone spreektaal, kort. Geen verkooppraat, geen superlatieven.
+- Geen opmaak: geen sterretjes, geen kopjes, geen opsommingstekens.
+- Schrijf elke alinea als EEN doorlopende regel. Breek zelf niets af halverwege
+  een zin; het mailprogramma van de ontvanger doet dat. Hooguit vier alinea's, en
+  precies een lege regel ertussen. Geen alinea's van een enkele zin achter elkaar.
+- Beantwoord ELKE vraag die hij stelt, in zijn eigen volgorde. Sla er geen over.
+- Verzin nooit een functie, prijs, datum of toezegging. Weet je iets niet, schrijf
+  dan dat Daniel het nakijkt. Liever een open punt dan een verzonnen antwoord.
+- Beloof geen kortingen, gratis maanden of afspraken over geld. Gaat het daarover,
+  schrijf dan dat Daniel daar zelf op terugkomt.
+- Begin niet met "Dank voor je reactie" als hij een concrete vraag stelt: begin bij
+  zijn vraag.
+- Zegt hij dat het voor hem niet nodig is, of dat hij het al anders doet: dring dan
+  niet aan. Erken zijn punt in zijn eigen woorden, laat de deur open en houd het
+  kort. Geen video, geen prijs en geen importverhaal als hij daar niet om vroeg.
+- Eindig met exact het afsluitblok dat je meekrijgt, letterlijk overgenomen.
+- Geen onderwerpregel, geen aanhef verzinnen als je zijn naam niet weet: begin dan
+  met "Hi,".
+- Alleen de brieftekst teruggeven, niets eromheen.
+
+Feiten die kloppen:
+- Prijs: {prijs}. Eerste 7 dagen gratis, geen opzegtermijn.
+- Kanalen: {platforms}. bol.com hoort daar NIET bij en staat ook niet gepland.
+- Demovideo van een minuut: {video}
+- Publiceren gaat via een Chrome-extensie in de eigen browser van de verkoper, in
+  zijn eigen ingelogde account. Het zijn gewone, gratis Marktplaats-advertenties;
+  Marktplaats Pro of Admarkt is niet nodig.
+- Bestaand aanbod op Marktplaats kan geimporteerd worden, dus niets overtikken.
+- Advertenties worden automatisch opnieuw geplaatst voordat ze verlopen, en wat
+  ergens verkocht is wordt op de andere kanalen automatisch weggehaald.
+- Etsy is nog niet klaar. Facebook Marketplace is beta en op eigen risico.
+"""
+
+
+def _slim_concept(lead: dict, body: str, draad: str, afsluiting: str) -> str | None:
+    """Laat een taalmodel het antwoord schrijven. None = niet gelukt."""
+    sleutel = os.environ.get("ANTHROPIC_API_KEY", "").strip()
+    if not sleutel:
+        return None
+    try:
+        import anthropic
+    except ImportError:
+        return None
+    eigen = _eigen_tekst(body).strip()
+    if not eigen:
+        return None
+    ads = lead.get("ads")
+    over_hem = "\n".join(filter(None, [
+        f"Bedrijf: {_bedrijfsnaam(lead)}" if _bedrijfsnaam(lead) else "",
+        f"Aantal advertenties op Marktplaats: {ads}" if isinstance(ads, int) else "",
+        f"Aanspreekvorm: {'jullie' if str(lead.get('je_jullie','')).lower().startswith('jul') else 'je'}",
+    ]))
+    prompt = (
+        f"Dit schreef hij zojuist:\n\n{eigen[:4000]}\n\n"
+        + (f"Eerder in deze draad, van Daniel:\n\n{draad[:4000]}\n\n" if draad else "")
+        + (f"Wat we van hem weten:\n{over_hem}\n\n" if over_hem else "")
+        + f"Sluit af met exact dit blok:\n{afsluiting}\n\nSchrijf het antwoord."
+    )
+    try:
+        client = anthropic.Anthropic(api_key=sleutel)
+        antwoord = client.messages.create(
+            model="claude-sonnet-5",
+            # Ruim genoeg. Op 900 raakte het budget bij een langere mail op vóór er
+            # ook maar één zin antwoord stond, en viel hij terug op het sjabloon —
+            # precies de standaardmail die Frank de Veer als antwoord kreeg op een
+            # bericht waarin hij zei het niet nodig te hebben.
+            max_tokens=2000,
+            system=_SCHRIJF_REGELS.format(prijs=PRIJS, platforms=PLATFORMS, video=VIDEO),
+            messages=[{"role": "user", "content": prompt}],
+        )
+        tekst = "".join(b.text for b in antwoord.content if getattr(b, "type", "") == "text").strip()
+    except Exception as e:  # noqa: BLE001 — geen concept is vervelend, geen ramp
+        print(f"  (slim concept mislukt, val terug op sjabloon: {e})")
+        return None
+    # Een leeg of belachelijk kort antwoord is geen antwoord.
+    if len(tekst.split()) < 15:
+        print(f"  (slim concept te kort: {len(tekst.split())} woorden, "
+              f"stop={getattr(antwoord, 'stop_reason', '?')})")
+        return None
+    # Opmaak die er niet hoort te staan alsnog weghalen: het model houdt zich
+    # meestal aan de regel, en "meestal" is hier niet genoeg.
+    tekst = re.sub(r"\*\*(.+?)\*\*", r"\1", tekst)
+    tekst = re.sub(r"^\s*[-•]\s+", "", tekst, flags=re.M)
+    return tekst.strip()
+
+
 def _concept_tekst(lead: dict, body: str, soort: str = "warm") -> str:
     """Het voorstel-antwoord. Kort, in Daniels toon: geen verkooppraat, concreet,
     en altijd eindigen met een lage drempel.
@@ -1555,6 +1672,16 @@ def _concept_tekst(lead: dict, body: str, soort: str = "warm") -> str:
         teksten = AFSLUIT_CONCURRENT if soort == "concurrent" else AFSLUIT_AFWIJZING
         return "\n".join(["Hi,", "",
                           random.choice(teksten).format(je=jij), "", _ondertekening()])
+
+    # Eerst het echte antwoord proberen. De sjablonen hieronder zijn het vangnet.
+    draad = ""
+    try:
+        draad = _verzonden_tekst_uit_kas(lead.get("email", "")) or ""
+    except Exception:  # noqa: BLE001
+        draad = ""
+    slim = _slim_concept(lead, body, draad, _ondertekening())
+    if slim:
+        return slim
 
     vraagt = _wat_vraagt_hij(body)
     jij = "jullie" if str(lead.get("je_jullie", "")).lower().startswith("jul") else "je"
@@ -1644,6 +1771,20 @@ def _verzonden_lezen() -> list[dict]:
         return []
     _verzonden_kas = uit
     return uit
+
+
+def _verzonden_tekst_uit_kas(adres: str, hoeveel: int = 3) -> str:
+    """Wat Daniel eerder in deze draad schreef, uit de kas die er toch al is.
+
+    Zonder deze draad schrijft het model een antwoord alsof het gesprek vandaag
+    begint — en herhaalt het wat er twee mails geleden al is uitgelegd."""
+    adres = (adres or "").lower().strip()
+    if not adres:
+        return ""
+    eerder = sorted((m for m in _verzonden_lezen()
+                     if m.get("adres") == adres and m.get("eigen")),
+                    key=lambda m: m.get("op", 0))[-hoeveel:]
+    return "\n\n---\n\n".join(m["eigen"] for m in eerder)
 
 
 # ── Toonprofiel: leren van ALLES wat Daniel zelf verstuurt ────────────────
