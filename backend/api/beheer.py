@@ -155,10 +155,8 @@ def _geld() -> dict:
                         mrr_cent += maandbedrag
                 elif status == "trialing":
                     proef += 1
-                geannuleerd = _tijd(
-                    datetime.fromtimestamp(sub["canceled_at"], timezone.utc).isoformat()
-                    if sub.get("canceled_at") else None)
-                if geannuleerd and geannuleerd >= maand_start:
+                if sub.get("canceled_at") and datetime.fromtimestamp(
+                        sub["canceled_at"], timezone.utc) >= maand_start:
                     opzeggingen += 1
             if not blok.get("has_more"):
                 break
