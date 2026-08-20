@@ -41,6 +41,26 @@ def list_notifications(user_id: str = Depends(get_current_user)):
     return {"total": total, "platforms": rows}
 
 
+@router.post("/seen")
+def mark_seen(platform: str = "", user_id: str = Depends(get_current_user)):
+    """Zet de teller voor een platform op nul zodra de verkoper er zelf heen gaat.
+
+    De extensie leest de ongelezen-teller maar elke tien minuten, en alleen als
+    de computer even niets doet. Zonder dit bleef het bolletje daarna nog lang
+    staan terwijl het bericht allang gelezen was.
+    """
+    db = get_db()
+    q = db.table("platform_notifications").update({
+        "messages": 0,
+        "offers": 0,
+        "updated_at": datetime.now(timezone.utc).isoformat(),
+    }).eq("user_id", user_id)
+    if platform:
+        q = q.eq("platform", platform)
+    q.execute()
+    return {"ok": True, "platform": platform or "all"}
+
+
 @router.post("/report")
 def report_notifications(
     body: NotificationReport, user_id: str = Depends(get_current_user)

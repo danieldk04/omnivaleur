@@ -747,6 +747,29 @@ def _listing_index(db, items: list[dict]) -> tuple[dict, dict]:
     return by_listing_id, platforms
 
 
+def _tweede_advertentie(db, item_id: str, platform: str, listing_id) -> bool:
+    """Staat er voor dit item al een ANDERE advertentie op ditzelfde platform?
+
+    Een verkoper kan hetzelfde artikel meerdere keren los te koop zetten — tien
+    identieke blikjes plectrums zijn tien advertenties, geen één. De titelmatch
+    hierboven ziet dat verschil niet, en de koppeling overschreef dan het
+    advertentienummer van de vorige. Gevolg: negen advertenties die het dashboard
+    niet meer kende en dus ook niet kon verwijderen als er één verkocht was.
+    """
+    if not item_id or listing_id is None:
+        return False
+    try:
+        rijen = (db.table("listings").select("platform_listing_id")
+                 .eq("item_id", item_id).eq("platform", platform).execute().data or [])
+    except Exception:
+        return False
+    return any(
+        (r.get("platform_listing_id") is not None
+         and str(r["platform_listing_id"]) != str(listing_id))
+        for r in rijen
+    )
+
+
 # ── Cross-platform duplicate detection ────────────────────────────────────
 #
 # The exact-title match above cannot see that "Blauwe Nike hoodie maat M" on
@@ -1338,7 +1361,12 @@ async def bulk_import_candidates(body: dict = None, user_id: str = Depends(requi
         for cand in candidates:
             try:
                 listed_at = cand.get("platform_listed_at") or now
-                match_id, _reason = _match_candidate(cand, items, listings_by_id)
+                match_id, reden = _match_candidate(cand, items, listings_by_id)
+                # Alleen een titelmatch kan hiernaast zitten; hetzelfde
+                # advertentienummer is per definitie dezelfde advertentie.
+                if match_id and reden == "same_title" and _tweede_advertentie(
+                        db, match_id, cand["platform"], cand.get("platform_listing_id")):
+                    match_id = None
                 if match_id:
                     existing = db.table("listings").select("id").eq("item_id", match_id).eq("platform", cand["platform"]).execute()
                     if existing.data:

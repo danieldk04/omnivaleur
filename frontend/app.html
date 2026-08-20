@@ -2781,6 +2781,16 @@ async function loadNotifications() {
   }
 }
 
+// Je gaat nu zelf kijken, dus het bolletje mag meteen weg. De extensie leest de
+// echte stand pas bij de volgende ronde, en tot die tijd stond hier een getal van
+// berichten die allang gelezen waren.
+async function markeerGelezen(platform) {
+  try {
+    await apiFetch(`${API}/api/notifications/seen?platform=${encodeURIComponent(platform)}`, { method: 'POST' });
+  } catch (e) { /* niet erg: de volgende ronde corrigeert het vanzelf */ }
+  loadNotifications();
+}
+
 function updateNotifBadge(total) {
   const badge = document.getElementById('nav-notif-badge');
   if (!badge) return;
@@ -2825,7 +2835,7 @@ function renderNotifications(data) {
     return `<div class="stat" style="display:flex;flex-direction:column;gap:10px">
       <div style="display:flex;align-items:center;gap:8px;font-weight:800;font-size:15px"><span style="font-size:18px">${icon}</span>${label}</div>
       <div style="display:flex;flex-direction:column;gap:6px;font-size:13px;font-weight:600;color:var(--text)">${parts.join('')}</div>
-      <a href="${link}" target="_blank" rel="noopener" class="btn btn-primary btn-sm" style="margin-top:2px;justify-content:center">Open on ${label} →</a>
+      <a href="${link}" target="_blank" rel="noopener" onclick="markeerGelezen('${p.platform}')" class="btn btn-primary btn-sm" style="margin-top:2px;justify-content:center">Open on ${label} →</a>
       ${when ? `<div style="font-size:11px;color:${stale ? 'var(--amber, #b45309)' : 'var(--muted)'}">${stale ? '⚠ Possibly out of date — last read ' : 'Updated: '}${when}${stale ? '. Start your computer with the Omnivaleur extension to refresh.' : ''}</div>` : ''}
     </div>`;
   }).join('');

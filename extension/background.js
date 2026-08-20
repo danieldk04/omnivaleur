@@ -4021,7 +4021,7 @@ function scrapeVintedOrders(url) {
 // bid indicators from the DOM, and report the counts to the backend so the
 // dashboard can surface "3 new offers on Marktplaats" in one place. We never
 // read message CONTENTS — only counts. Reply/accept still happens on-platform.
-const NOTIF_SCAN_MINUTES = 30;
+const NOTIF_SCAN_MINUTES = 10;
 
 // Where to open the messages/bids view per platform, and the deep link we hand
 // the dashboard so the user can jump straight there. (Vinted's inbox lives at

@@ -1304,6 +1304,13 @@ def _store_scan_results(db, job, scraped: list[dict]):
                 if (existing.get("status") == "active"
                         and str(existing.get("platform_listing_id") or "") == link["platform_listing_id"]):
                     continue
+                # Staat er al een ander advertentienummer op dit item, dan is dit
+                # een TWEEDE advertentie van hetzelfde artikel (tien identieke
+                # blikjes = tien advertenties). Overschrijven maakte de vorige
+                # onvindbaar, en dan kan die bij verkoop nergens weg.
+                huidig = str(existing.get("platform_listing_id") or "")
+                if huidig and huidig != link["platform_listing_id"]:
+                    continue
                 db.table("listings").update({
                     "status": "active",
                     "error_message": None,
