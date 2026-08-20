@@ -1264,6 +1264,10 @@ input[type="checkbox"].row-check { width: 15px; height: 15px; cursor: pointer; a
           The clock starts when a listing enters Omnivaleur, not when you first put it on Marktplaats.
           Relists are spread across days so a big catalogue never goes out in one burst.
         </div>
+        <label class="vg-chip" style="max-width:420px;margin-bottom:12px">
+          <input type="checkbox" id="auto-relist-aan" onchange="saveAutoRelist()">
+          <span>Relist my Marktplaats listings automatically</span>
+        </label>
         <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
           <label for="relist-dagen" style="font-size:13px">Relist after</label>
           <input type="number" id="relist-dagen" min="7" max="85" step="1" style="max-width:90px">
@@ -5801,7 +5805,9 @@ function renderRefreshView() {
       && l.status === 'active' && l.listed_at);
   const lijn = document.getElementById('auto-relist-line');
   if (lijn) {
-    if (!mpActief.length) {
+    if (state.settings && state.settings.auto_relist === false) {
+      lijn.textContent = 'Automatic relisting is switched off — nothing is taken down or reposted unless you do it here yourself.';
+    } else if (!mpActief.length) {
       lijn.textContent = '';
     } else {
       const oudste = mpActief.reduce((a, b) =>
@@ -7534,10 +7540,42 @@ async function loadRelistDagen() {
     const data = await parseJsonSafe(r);
     if (!r.ok) return;
     veld.value = data.relist_dagen;
+    const schakel = document.getElementById('auto-relist-aan');
+    if (schakel) {
+      schakel.checked = data.auto_relist !== false;
+      schakel.closest('.vg-chip').classList.toggle('on', schakel.checked);
+    }
+    state.settings = { ...state.settings, ...data };
     if (data.relist_dagen_min != null) veld.min = data.relist_dagen_min;
     if (data.relist_dagen_max != null) veld.max = data.relist_dagen_max;
   } catch (e) {
     // Een instelling die niet laadt mag de pagina niet blokkeren.
+  }
+}
+
+// Aan of uit hoort meteen te gelden. Een schakelaar die pas werkt na Opslaan is
+// precies het soort ding waarvan je later denkt dat je hem hebt omgezet.
+async function saveAutoRelist() {
+  const schakel = document.getElementById('auto-relist-aan');
+  const melding = document.getElementById('relist-dagen-status');
+  if (!schakel) return;
+  schakel.closest('.vg-chip').classList.toggle('on', schakel.checked);
+  melding.textContent = 'Saving…';
+  try {
+    const r = await apiFetchRetry(`${API}/api/items/settings`, {
+      method: 'PUT', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ auto_relist: schakel.checked }),
+    });
+    const data = await parseJsonSafe(r);
+    if (!r.ok) throw new Error(data.detail || `HTTP ${r.status}`);
+    state.settings = { ...state.settings, ...data };
+    schakel.checked = data.auto_relist !== false;
+    schakel.closest('.vg-chip').classList.toggle('on', schakel.checked);
+    melding.textContent = schakel.checked
+      ? 'Saved — Omnivaleur relists your Marktplaats listings for you.'
+      : 'Saved — nothing is relisted automatically any more. You stay in control from Refresh.';
+  } catch (e) {
+    melding.textContent = `Could not save: ${e.message}`;
   }
 }
 

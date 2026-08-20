@@ -652,7 +652,7 @@ chrome.alarms.onAlarm.addListener((alarm) => {
 
 // Also poll immediately on install/startup
 chrome.runtime.onInstalled.addListener(pollJobs);
-chrome.runtime.onStartup.addListener(pollJobs);
+
 
 // Meteen bij het opstarten of bijwerken: restanten van eerdere versies opruimen.
 // Dat zijn de lege vensters die zich onderin de balk opstapelden.
@@ -1215,6 +1215,64 @@ async function openAchtergrondTabblad(url) {
 // deze scans hebben nergens haast mee. Na drie overgeslagen rondes gaat het toch
 // door, anders zouden de cijfers bij iemand die de hele dag doorwerkt nooit meer
 // bijwerken.
+// RUSTIG OPSTARTEN.
+//
+// Bij het starten van Chrome vuurde alles tegelijk: de verkoopcontrole, het
+// tellen van berichten, de garderobescan en de wachtrij met publicaties. Vier
+// dingen die alle vier een tabblad willen, binnen een paar seconden. Dat is wat
+// je ziet als "meerdere vensters tegelijk" zodra je je profiel opent, en het is
+// ook precies het moment waarop de verkoper zijn browser wil gebruiken.
+// Niets hiervan heeft haast; alles wordt uitgesmeerd over de eerste minuten.
+const STARTTIJD_SLEUTEL = "browserStartOp";
+
+async function markeerStart() {
+  await chrome.storage.session.set({ [STARTTIJD_SLEUTEL]: Date.now() }).catch(() => {});
+}
+chrome.runtime.onStartup.addListener(() => { markeerStart().then(planStartWerk); });
+chrome.runtime.onInstalled.addListener(() => { markeerStart().then(planStartWerk); });
+
+// Hoe lang geleden Chrome startte. Onbekend (bijvoorbeeld na het herladen van
+// de service worker) telt als "lang geleden": dan houden we niets tegen.
+async function msSindsStart() {
+  try {
+    const { [STARTTIJD_SLEUTEL]: t } = await chrome.storage.session.get(STARTTIJD_SLEUTEL);
+    return t ? Date.now() - t : Infinity;
+  } catch { return Infinity; }
+}
+
+// Wachten doen we met een wekker, niet met setTimeout: een service worker in
+// Manifest V3 wordt na een halve minuut stilte afgeschoten, dus een pauze van
+// vijf minuten met setTimeout haalt het eind nooit.
+const START_WEKKERS = {
+  "start-sold": 3,
+  "start-notif": 5,
+  "start-vinted": 7,
+};
+
+function planStartWerk() {
+  for (const [naam, minuten] of Object.entries(START_WEKKERS)) {
+    chrome.alarms.create(naam, { delayInMinutes: minuten });
+  }
+}
+
+// Draait dit werk te kort na het opstarten? Dan slaan we deze ronde over; de
+// wekker hierboven pakt het straks alsnog op.
+async function teVroegNaStart(minuten) {
+  return (await msSindsStart()) < minuten * 60000;
+}
+
+chrome.alarms.onAlarm.addListener((alarm) => {
+  switch (alarm.name) {
+    case "start-sold":
+      magStilScannenNu().then((mag) => { if (mag) { checkSoldListings(); checkVintedOrders(); } });
+      break;
+    case "start-notif":
+      magStilScannenNu().then((mag) => { if (mag) scanNotifications(); });
+      break;
+    case "start-vinted": triggerVintedAutoScan(); break;
+  }
+});
+
 const DRUK_SLEUTEL = "scanUitgesteld";
 const MAX_UITGESTELD = 3;
 
@@ -3550,8 +3608,10 @@ chrome.runtime.onStartup.addListener(() => { calmAlarmBijwerken(); });
 chrome.runtime.onInstalled.addListener(() => { calmAlarmBijwerken(); });
 chrome.alarms.onAlarm.addListener((alarm) => {
   if (alarm.name === "sold-check") {
-    // Niet tijdens het werken van de verkoper — zie magStilScannenNu.
-    magStilScannenNu().then((mag) => { if (mag) { checkSoldListings(); checkVintedOrders(); } });
+    // Niet vlak na het opstarten (dan doet de wekker start-sold het) en niet
+    // tijdens het werken van de verkoper — zie magStilScannenNu.
+    teVroegNaStart(3).then((vroeg) => (vroeg ? false : magStilScannenNu()))
+      .then((mag) => { if (mag) { checkSoldListings(); checkVintedOrders(); } });
   }
 });
 
@@ -3568,11 +3628,11 @@ chrome.alarms.create("vinted-auto-scan", { periodInMinutes: 60 });
 chrome.alarms.onAlarm.addListener((alarm) => {
   if (alarm.name === "vinted-auto-scan") triggerVintedAutoScan();
 });
-chrome.runtime.onInstalled.addListener(triggerVintedAutoScan);
-chrome.runtime.onStartup.addListener(triggerVintedAutoScan);
+
+
 // Alarms only fire after their first period, so kick a sold-check once on
 // startup too (delayed a little so auth/session is ready).
-function kickSoldCheck() { setTimeout(() => { checkSoldListings(); checkVintedOrders(); }, 8000); }
+function kickSoldCheck() { /* zie START_WEKKERS: gebeurt via de wekker start-sold */ }
 chrome.runtime.onInstalled.addListener(kickSoldCheck);
 chrome.runtime.onStartup.addListener(kickSoldCheck);
 
@@ -3973,10 +4033,13 @@ const NOTIF_SOURCES = {
 
 chrome.alarms.create("notif-scan", { periodInMinutes: NOTIF_SCAN_MINUTES });
 chrome.alarms.onAlarm.addListener((alarm) => {
-  if (alarm.name === "notif-scan") magStilScannenNu().then((mag) => { if (mag) scanNotifications(); });
+  if (alarm.name === "notif-scan") {
+    teVroegNaStart(5).then((vroeg) => vroeg ? false : magStilScannenNu())
+      .then((mag) => { if (mag) scanNotifications(); });
+  }
 });
-chrome.runtime.onInstalled.addListener(scanNotifications);
-chrome.runtime.onStartup.addListener(scanNotifications);
+
+
 
 async function scanNotifications() {
   const serverUrl = await getServerUrl();

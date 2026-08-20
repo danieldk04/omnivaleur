@@ -1111,6 +1111,14 @@ async def relist_expiring_marktplaats():
                                                RELIST_DAGEN_STANDAARD,
                                                alle_relist_dagen)
     dagen_per_verkoper = alle_relist_dagen()
+    from backend.services.instellingen import lees as _lees_instellingen
+    _auto_aan: dict[str, bool] = {}
+
+    def auto_relist_aan(uid: str) -> bool:
+        if uid not in _auto_aan:
+            _auto_aan[uid] = bool(_lees_instellingen(uid).get("auto_relist", True))
+        return _auto_aan[uid]
+
     ruimste = min([RELIST_DAGEN_STANDAARD, *dagen_per_verkoper.values()] or
                   [RELIST_DAGEN_STANDAARD])
     ruimste = max(RELIST_DAGEN_MIN, ruimste)
@@ -1168,6 +1176,11 @@ async def relist_expiring_marktplaats():
             item = item_resp.data
 
             eigenaar = item["user_id"]
+
+            # Uitgezet door de verkoper zelf: dan gebeurt er niets, ook niet
+            # stilletjes. De advertentie blijft gewoon op 'active' staan.
+            if not auto_relist_aan(eigenaar):
+                continue
 
             # Is deze advertentie voor DEZE verkoper al oud genoeg? De query
             # hierboven haalde ruim op; dit is de eigen instelling.

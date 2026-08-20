@@ -39,7 +39,8 @@ RELIST_DAGEN_MAX = 85
 VINTED_GROEPEN_GELDIG = ("dames", "heren", "kinderen", "unisex", "sieraden",
                          "antiek", "kunst", "muziek", "games", "electronics")
 
-STANDAARD = {"relist_dagen": RELIST_DAGEN_STANDAARD, "vinted_groepen": []}
+STANDAARD = {"relist_dagen": RELIST_DAGEN_STANDAARD, "vinted_groepen": [],
+             "auto_relist": True}
 
 
 def _schoon(rauw: dict | None) -> dict:
@@ -54,6 +55,11 @@ def _schoon(rauw: dict | None) -> dict:
     # Alleen groepen die echt bestaan. Een typefout of een verzonnen naam zou
     # anders stilzwijgend álles blokkeren — de instelling zou dan precies het
     # tegenovergestelde doen van wat er staat.
+    # Automatisch herplaatsen kan uit. Niet iedereen wil dat zijn advertenties
+    # buiten hem om verdwijnen en terugkomen: "hij begint ineens random dingen te
+    # listen op marktplaats" is een terechte klacht als je die knop niet hebt.
+    if "auto_relist" in rauw:
+        uit["auto_relist"] = bool(rauw.get("auto_relist"))
     groepen = rauw.get("vinted_groepen")
     if isinstance(groepen, list):
         uit["vinted_groepen"] = [g for g in
