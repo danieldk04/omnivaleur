@@ -18,49 +18,61 @@ body {
   font-size: 14px; line-height: 1.5;
 }
 header {
-  position: sticky; top: 0; z-index: 5; background: rgba(11,16,32,.92);
+  position: sticky; top: 0; z-index: 5; background: rgba(11,16,32,.94);
   backdrop-filter: blur(8px); border-bottom: 1px solid var(--rand);
-  padding: 14px 24px; display: flex; align-items: center; gap: 16px; flex-wrap: wrap;
+  padding: 12px 24px 0; display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
 }
-header h1 { font-size: 16px; margin: 0; font-weight: 800; letter-spacing: -.2px; }
-.stip { width: 8px; height: 8px; border-radius: 50%; background: var(--groen); display: inline-block; }
+header h1 { font-size: 16px; margin: 0 0 12px; font-weight: 800; letter-spacing: -.2px; }
+.stip { width: 8px; height: 8px; border-radius: 50%; background: var(--groen);
+        display: inline-block; margin-bottom: 12px; }
 .stip.uit { background: var(--rood); }
-.vers { color: var(--zacht); font-size: 12px; margin-left: auto; }
-main { padding: 22px 24px 60px; max-width: 1500px; margin: 0 auto; }
-h2 { font-size: 13px; text-transform: uppercase; letter-spacing: .8px; color: var(--zacht);
-     margin: 30px 0 12px; font-weight: 700; }
+.vers { color: var(--zacht); font-size: 12px; margin-left: auto; margin-bottom: 12px; }
+nav { display: flex; gap: 4px; width: 100%; }
+nav button {
+  background: none; border: 0; border-bottom: 2px solid transparent; color: var(--zacht);
+  padding: 9px 15px; font-size: 13.5px; font-weight: 700; cursor: pointer; border-radius: 0;
+}
+nav button.aan { color: var(--tekst); border-bottom-color: var(--blauw); }
+main { padding: 24px; max-width: 1500px; margin: 0 auto; }
+section[hidden] { display: none; }
+h2 { font-size: 12px; text-transform: uppercase; letter-spacing: .8px; color: var(--zacht);
+     margin: 28px 0 12px; font-weight: 700; }
 h2:first-child { margin-top: 0; }
 .raster { display: grid; gap: 14px; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); }
+.twee { display: grid; gap: 14px; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); }
 .kaart { background: var(--kaart); border: 1px solid var(--rand); border-radius: 14px; padding: 16px 18px; }
 .kaart .label { color: var(--zacht); font-size: 12px; font-weight: 600; }
 .kaart .cijfer { font-size: 30px; font-weight: 800; letter-spacing: -1px; margin-top: 4px; }
 .kaart .bij { font-size: 12px; color: var(--zacht); margin-top: 2px; }
+.uitleg { color: var(--zacht); font-size: 12px; margin: -4px 0 10px; }
 .op { color: var(--groen); } .af { color: var(--rood); } .let { color: var(--geel); }
 table { width: 100%; border-collapse: collapse; font-size: 13px; }
 th { text-align: left; color: var(--zacht); font-weight: 600; font-size: 11px;
      text-transform: uppercase; letter-spacing: .5px; padding: 8px 10px; border-bottom: 1px solid var(--rand); }
-td { padding: 9px 10px; border-bottom: 1px solid rgba(35,43,69,.6); white-space: nowrap; }
+td { padding: 9px 10px; border-bottom: 1px solid rgba(35,43,69,.6); }
 tr:last-child td { border-bottom: 0; }
-.num { text-align: right; font-variant-numeric: tabular-nums; }
+.num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .merk { display: inline-block; padding: 2px 9px; border-radius: 999px; font-size: 11px; font-weight: 700; }
 .m-active { background: rgba(52,211,153,.15); color: var(--groen); }
 .m-trialing { background: rgba(77,139,255,.15); color: var(--blauw); }
 .m-past_due { background: rgba(251,191,36,.15); color: var(--geel); }
-.m-canceled, .m-onbekend { background: rgba(154,166,194,.15); color: var(--zacht); }
+.m-canceled, .m-onbekend, .m-trial_expired { background: rgba(154,166,194,.15); color: var(--zacht); }
 .breed { overflow-x: auto; background: var(--kaart); border: 1px solid var(--rand); border-radius: 14px; padding: 6px 8px; }
-.staafjes { display: flex; align-items: flex-end; gap: 3px; height: 70px; margin-top: 12px; }
-.staaf { flex: 1; background: var(--blauw); border-radius: 3px 3px 0 0; min-height: 2px; opacity: .85; }
+.staafjes { display: flex; align-items: flex-end; gap: 4px; height: 90px; margin-top: 12px; }
+.kolom { flex: 1; display: flex; flex-direction: column; justify-content: flex-end; align-items: center; gap: 5px; }
+.staaf { width: 100%; background: var(--blauw); border-radius: 3px 3px 0 0; min-height: 2px; opacity: .9; }
+.kolom span { font-size: 10px; color: var(--zacht); }
 .leeg { color: var(--zacht); padding: 14px 4px; font-size: 13px; }
-button {
-  background: var(--blauw); color: #fff; border: 0; border-radius: 9px;
-  padding: 8px 14px; font-size: 13px; font-weight: 700; cursor: pointer;
-}
+button.knop { background: var(--blauw); color: #fff; border: 0; border-radius: 9px;
+  padding: 7px 13px; font-size: 12.5px; font-weight: 700; cursor: pointer; margin-bottom: 12px; }
 button.stil { background: transparent; border: 1px solid var(--rand); color: var(--zacht); }
 #inlog { max-width: 340px; margin: 90px auto; }
 #inlog input { width: 100%; padding: 11px 13px; margin-bottom: 10px; border-radius: 9px;
   border: 1px solid var(--rand); background: #0e1428; color: var(--tekst); font-size: 14px; }
 .fout { color: var(--rood); font-size: 13px; margin-top: 10px; }
-.twee { display: grid; gap: 14px; grid-template-columns: repeat(auto-fit, minmax(420px, 1fr)); }
+.attentie { background: rgba(251,191,36,.09); border: 1px solid rgba(251,191,36,.35);
+  border-radius: 12px; padding: 12px 16px; margin-bottom: 14px; font-size: 13px; }
+.attentie b { color: var(--geel); }
 </style>
 </head>
 <body>
@@ -70,7 +82,7 @@ button.stil { background: transparent; border: 1px solid var(--rand); color: var
   <p style="color:var(--zacht);margin:0 0 18px;font-size:13px">Alleen voor de eigenaar.</p>
   <input id="in-email" type="email" placeholder="E-mailadres" autocomplete="username">
   <input id="in-wachtwoord" type="password" placeholder="Wachtwoord" autocomplete="current-password">
-  <button onclick="inloggen()" style="width:100%">Inloggen</button>
+  <button class="knop" onclick="inloggen()" style="width:100%">Inloggen</button>
   <div id="in-fout" class="fout"></div>
 </div>
 
@@ -78,42 +90,123 @@ button.stil { background: transparent; border: 1px solid var(--rand); color: var
 <header>
   <span class="stip" id="stip"></span>
   <h1>Omnivaleur — beheer</h1>
-  <button class="stil" onclick="haalSocial(true)">Social verversen</button>
-  <button class="stil" onclick="uitloggen()">Uitloggen</button>
+  <button class="knop stil" onclick="uitloggen()">Uitloggen</button>
   <span class="vers" id="vers">laden…</span>
+  <nav id="tabs">
+    <button data-tab="overzicht" class="aan">Overzicht</button>
+    <button data-tab="klanten">Klanten</button>
+    <button data-tab="website">Website</button>
+    <button data-tab="marketing">Marketing</button>
+    <button data-tab="systeem">Systeem</button>
+  </nav>
 </header>
 
 <main>
-  <h2>Geld</h2>
-  <div class="raster" id="geld"></div>
+  <!-- ─────────────────────────────── OVERZICHT -->
+  <section id="tab-overzicht">
+    <div id="attenties"></div>
 
-  <h2>Klanten</h2>
-  <div class="raster" id="klanten-cijfers"></div>
-  <div class="breed" style="margin-top:14px"><table id="klanten-tabel"></table></div>
+    <h2>Waar het bedrijf staat</h2>
+    <div class="raster" id="ov-cijfers"></div>
 
-  <h2>Website</h2>
-  <div class="raster" id="web-cijfers"></div>
-  <div class="twee" style="margin-top:14px">
-    <div class="kaart"><div class="label">Bezoekers per dag (30 dagen)</div><div class="staafjes" id="web-grafiek"></div></div>
-    <div class="kaart"><div class="label">Verkeer per kanaal</div><table id="web-kanalen"></table></div>
-  </div>
-  <div class="twee" style="margin-top:14px">
-    <div class="kaart"><div class="label">Best scorende zoektermen</div><table id="web-termen"></table></div>
-    <div class="kaart"><div class="label">Best scorende pagina's</div><table id="web-paginas"></table></div>
-  </div>
+    <h2>Gaat het de goede kant op</h2>
+    <div class="twee">
+      <div class="kaart"><div class="label">Omzet per maand</div>
+        <div class="uitleg">Wat er echt binnenkwam, uit de betaalde facturen.</div>
+        <div class="staafjes" id="gr-omzet"></div></div>
+      <div class="kaart"><div class="label">Nieuwe accounts per week</div>
+        <div class="uitleg">De laatste kolom is deze week.</div>
+        <div class="staafjes" id="gr-aanmeldingen"></div></div>
+    </div>
+    <div class="twee" style="margin-top:14px">
+      <div class="kaart"><div class="label">Advertenties online gezet per week</div>
+        <div class="uitleg">Hoeveel je klanten de app echt gebruiken.</div>
+        <div class="staafjes" id="gr-advertenties"></div></div>
+      <div class="kaart"><div class="label">Verkopen per week</div>
+        <div class="uitleg">Wat je klanten via de app verkopen.</div>
+        <div class="staafjes" id="gr-verkopen"></div></div>
+    </div>
 
-  <h2>Social</h2>
-  <div class="twee">
-    <div class="kaart"><div class="label">Bezoekers via social (7 dagen)</div><table id="social-verkeer"></table></div>
-    <div class="kaart"><div class="label">Berichten en bereik</div><div id="social-posts"></div></div>
-  </div>
+    <h2>Van bezoeker tot klant</h2>
+    <div class="raster" id="ov-trechter"></div>
+  </section>
 
-  <h2>Koude mail</h2>
-  <div class="raster" id="mail-cijfers"></div>
-  <div class="kaart" style="margin-top:14px"><div class="label">Verstuurd per dag (14 dagen)</div><div class="staafjes" id="mail-grafiek"></div></div>
+  <!-- ─────────────────────────────── KLANTEN -->
+  <section id="tab-klanten" hidden>
+    <div class="raster" id="klanten-cijfers"></div>
+    <h2>Iedereen</h2>
+    <div class="breed"><table id="klanten-tabel"></table></div>
+  </section>
 
-  <h2>Werkt alles nog</h2>
-  <div class="raster" id="techniek"></div>
+  <!-- ─────────────────────────────── WEBSITE -->
+  <section id="tab-website" hidden>
+    <div class="raster" id="web-cijfers"></div>
+
+    <h2>Verkeer</h2>
+    <div class="twee">
+      <div class="kaart"><div class="label">Bezoekers per dag (30 dagen)</div>
+        <div class="staafjes" id="web-grafiek"></div></div>
+      <div class="kaart"><div class="label">Waar bezoekers vandaan komen</div>
+        <table id="web-kanalen"></table></div>
+    </div>
+
+    <h2>Wat je hiermee kunt doen</h2>
+    <div class="twee">
+      <div class="kaart"><div class="label">Bijna op pagina 1</div>
+        <div class="uitleg">Je staat op plek 5 tot 20 en er wordt op gezocht. Eén betere pagina en je staat erin.</div>
+        <table id="web-kansen"></table></div>
+      <div class="kaart"><div class="label">Wel getoond, niet aangeklikt</div>
+        <div class="uitleg">Google laat je zien, niemand klikt. Dat is je titel en omschrijving, niet je positie.</div>
+        <table id="web-onbenut"></table></div>
+    </div>
+    <div class="twee" style="margin-top:14px">
+      <div class="kaart"><div class="label">Stijgers</div>
+        <div class="uitleg">Meer getoond dan de week ervoor.</div>
+        <table id="web-stijgers"></table></div>
+      <div class="kaart"><div class="label">Dalers</div>
+        <div class="uitleg">Minder getoond dan de week ervoor.</div>
+        <table id="web-dalers"></table></div>
+    </div>
+
+    <h2>Voortgang in Google</h2>
+    <div class="twee">
+      <div class="kaart"><div class="label">Vertoningen per week (8 weken)</div>
+        <div class="staafjes" id="web-weken"></div></div>
+      <div class="kaart"><div class="label">Best scorende pagina's</div>
+        <table id="web-paginas"></table></div>
+    </div>
+    <div class="twee" style="margin-top:14px">
+      <div class="kaart"><div class="label">Best scorende zoektermen</div><table id="web-termen"></table></div>
+      <div class="kaart"><div class="label">Waar bezoekers binnenkomen</div>
+        <div class="uitleg">De pagina waarop ze je site betreden.</div>
+        <table id="web-landing"></table></div>
+    </div>
+  </section>
+
+  <!-- ─────────────────────────────── MARKETING -->
+  <section id="tab-marketing" hidden>
+    <h2>Koude mail</h2>
+    <div class="raster" id="mail-cijfers"></div>
+    <div class="kaart" style="margin-top:14px"><div class="label">Verstuurd per dag (14 dagen)</div>
+      <div class="staafjes" id="mail-grafiek"></div></div>
+
+    <h2>Social</h2>
+    <div class="twee">
+      <div class="kaart"><div class="label">Bezoekers via social (7 dagen)</div>
+        <div class="uitleg">Uit Analytics — gratis, en het enige wat telt: wie er doorklikt.</div>
+        <table id="social-verkeer"></table></div>
+      <div class="kaart">
+        <div class="label">Berichten en bereik</div>
+        <div class="uitleg">Haalt Apify aan en kost tegoed. Alleen op verzoek.</div>
+        <button class="knop stil" onclick="haalSocial(true)">Ophalen</button>
+        <div id="social-posts"></div></div>
+    </div>
+  </section>
+
+  <!-- ─────────────────────────────── SYSTEEM -->
+  <section id="tab-systeem" hidden>
+    <div class="raster" id="techniek"></div>
+  </section>
 </main>
 </div>
 
@@ -124,15 +217,10 @@ const API = location.hostname === 'localhost' ? 'http://localhost:8001' : '';
 // er bij elke nieuwe tab weer uit.
 let TOKEN = localStorage.getItem('ov_beheer_token') || '';
 let VERVERS = localStorage.getItem('ov_beheer_refresh') || '';
+let LAATSTE = { kern: null, web: null, groei: null };
 
 const getal = (n) => Number(n || 0).toLocaleString('nl-NL');
 const euro = (n) => '€ ' + Number(n || 0).toLocaleString('nl-NL', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-const kort = (v) => {
-  if (!v) return '—';
-  const d = new Date(v);
-  if (isNaN(d)) return '—';
-  return d.toLocaleDateString('nl-NL', { day: '2-digit', month: 'short' });
-};
 const geleden = (v) => {
   if (!v) return '—';
   const min = Math.floor((Date.now() - new Date(v)) / 60000);
@@ -142,6 +230,7 @@ const geleden = (v) => {
   return Math.floor(min / 1440) + ' dgn';
 };
 const veilig = (s) => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const el = (id) => document.getElementById(id);
 
 function kaart(label, cijfer, bij, kleur) {
   return `<div class="kaart"><div class="label">${veilig(label)}</div>
@@ -155,22 +244,29 @@ function verschil(nu, eerder) {
   return (pct >= 0 ? '+' : '') + pct + '% t.o.v. vorige periode';
 }
 
-function staafjes(elId, rijen) {
-  const el = document.getElementById(elId);
-  if (!rijen || !rijen.length) { el.innerHTML = '<div class="leeg">Geen gegevens.</div>'; return; }
-  const top = Math.max(...rijen.map(r => r.aantal), 1);
-  el.innerHTML = rijen.map(r =>
-    `<div class="staaf" style="height:${Math.max(2, Math.round(100 * r.aantal / top))}%" title="${veilig(r.dag)}: ${getal(r.aantal)}"></div>`
-  ).join('');
+function staafjes(id, rijen, labelVeld, waardeVeld, opmaak) {
+  const doel = el(id);
+  if (!doel) return;
+  if (!rijen || !rijen.length) { doel.innerHTML = '<div class="leeg">Geen gegevens.</div>'; return; }
+  const top = Math.max(...rijen.map(r => Number(r[waardeVeld]) || 0), 1);
+  doel.innerHTML = rijen.map(r => {
+    const w = Number(r[waardeVeld]) || 0;
+    const tekst = opmaak ? opmaak(w) : getal(w);
+    return `<div class="kolom" title="${veilig(r[labelVeld])}: ${tekst}">
+      <div class="staaf" style="height:${Math.max(2, Math.round(88 * w / top))}px"></div>
+      <span>${veilig(String(r[labelVeld] || '').slice(-5))}</span></div>`;
+  }).join('');
 }
 
-function tabel(elId, kolommen, rijen, cel) {
-  const el = document.getElementById(elId);
-  if (!rijen || !rijen.length) { el.innerHTML = `<tr><td class="leeg">Geen gegevens.</td></tr>`; return; }
-  el.innerHTML = `<thead><tr>${kolommen.map((k, i) => `<th class="${i ? 'num' : ''}">${veilig(k)}</th>`).join('')}</tr></thead>
+function tabel(id, kolommen, rijen, cel) {
+  const doel = el(id);
+  if (!doel) return;
+  if (!rijen || !rijen.length) { doel.innerHTML = `<tr><td class="leeg">Geen gegevens.</td></tr>`; return; }
+  doel.innerHTML = `<thead><tr>${kolommen.map((k, i) => `<th class="${i ? 'num' : ''}">${veilig(k)}</th>`).join('')}</tr></thead>
     <tbody>${rijen.map(cel).join('')}</tbody>`;
 }
 
+// ---------------------------------------------------------------- verbinding
 async function vraag(pad) {
   const r = await fetch(API + pad, { headers: { Authorization: 'Bearer ' + TOKEN } });
   if (r.status === 401 && await vernieuw()) return vraag(pad);
@@ -196,14 +292,14 @@ async function vernieuw() {
 }
 
 async function inloggen() {
-  const fout = document.getElementById('in-fout');
+  const fout = el('in-fout');
   fout.textContent = '';
   try {
     const r = await fetch(API + '/api/auth/login', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        email: document.getElementById('in-email').value.trim(),
-        password: document.getElementById('in-wachtwoord').value,
+        email: el('in-email').value.trim(),
+        password: el('in-wachtwoord').value,
       }),
     });
     const d = await r.json();
@@ -219,23 +315,34 @@ function uitloggen() {
   localStorage.removeItem('ov_beheer_token');
   localStorage.removeItem('ov_beheer_refresh');
   TOKEN = ''; VERVERS = '';
-  document.getElementById('scherm').style.display = 'none';
-  document.getElementById('inlog').style.display = 'block';
+  el('scherm').style.display = 'none';
+  el('inlog').style.display = 'block';
 }
 
 // ---------------------------------------------------------------- tekenen
 function toonKern(d) {
-  const g = d.geld || {};
-  document.getElementById('geld').innerHTML = g.gekoppeld
+  LAATSTE.kern = d;
+  const g = d.geld || {}, k = d.klanten || {}, t = d.techniek || {}, m = d.mail || {};
+
+  el('ov-cijfers').innerHTML = (g.gekoppeld
     ? kaart('Omzet per maand', euro(g.mrr), `${getal(g.betalend)} betalende abonnementen`, 'op')
       + kaart('In proef', getal(g.proef), 'nog niet betalend', 'let')
-      + kaart('Opgezegd deze maand', getal(g.opgezegd_deze_maand), '', g.opgezegd_deze_maand ? 'af' : '')
-      + kaart('Openstaande facturen', getal(g.open_facturen), euro(g.open_bedrag) + ' niet geïnd',
-              g.open_facturen ? 'let' : '')
-    : `<div class="kaart"><div class="label">Geld</div><div class="bij">${veilig(g.reden || 'Niet gekoppeld')}</div></div>`;
+    : `<div class="kaart"><div class="label">Geld</div><div class="bij">${veilig(g.reden || '')}</div></div>`)
+    + kaart('Accounts', getal(k.totaal), `${getal(k.nieuw_7d)} nieuw deze week`)
+    + kaart('Actief deze week', getal(k.actief_7d), 'heeft echt gepubliceerd', k.actief_7d ? 'op' : 'af');
 
-  const k = d.klanten || {};
-  document.getElementById('klanten-cijfers').innerHTML =
+  // Wat vraagt om actie? Alleen tonen als er echt iets is — een balk die er
+  // altijd staat wordt niet meer gelezen.
+  const punten = [];
+  if (t.banen_mislukt_24u) punten.push(`<b>${getal(t.banen_mislukt_24u)} mislukte taken</b> in de afgelopen 24 uur.`);
+  if (g.open_facturen) punten.push(`<b>${getal(g.open_facturen)} openstaande factuur</b> (${euro(g.open_bedrag)}) niet geïnd.`);
+  const bijnaOp = (k.klanten || []).filter(r => r.dagen_over != null && r.dagen_over <= 2 && r.dagen_over >= 0);
+  if (bijnaOp.length) punten.push(`<b>${bijnaOp.length} proefperiode(s)</b> lopen binnen 2 dagen af: ${bijnaOp.map(r => veilig(r.email)).join(', ')}.`);
+  if (m.gekoppeld === false && m.reden) punten.push(`Koude mail: ${veilig(m.reden)}`);
+  el('attenties').innerHTML = punten.length
+    ? `<div class="attentie">${punten.map(p => '• ' + p).join('<br>')}</div>` : '';
+
+  el('klanten-cijfers').innerHTML =
       kaart('Accounts', getal(k.totaal), `${getal(k.accounts_zonder_abo)} zonder abonnementsrij`)
     + kaart('Nieuw deze week', getal(k.nieuw_7d), '')
     + kaart('Actief deze week', getal(k.actief_7d), 'heeft echt iets gepubliceerd', k.actief_7d ? 'op' : 'af')
@@ -245,7 +352,7 @@ function toonKern(d) {
     ['Klant', 'Status', 'Proef', 'Artikelen', 'Live', 'Verkocht 7d', 'Laatst actief', 'Laatste login'],
     k.klanten || [],
     (r) => `<tr>
-      <td>${veilig(r.email)}${r.extensie_online ? ' <span class="stip" title="extensie online"></span>' : ''}</td>
+      <td>${veilig(r.email)}${r.extensie_online ? ' <span class="stip" style="margin:0" title="extensie online"></span>' : ''}</td>
       <td><span class="merk m-${veilig(r.status)}">${veilig(r.status)}</span></td>
       <td class="num">${r.dagen_over == null ? '—' : (r.dagen_over + ' dgn')}</td>
       <td class="num">${getal(r.artikelen)}</td>
@@ -255,66 +362,110 @@ function toonKern(d) {
       <td class="num">${geleden(r.laatste_login)}</td>
     </tr>`);
 
-  const m = d.mail || {};
-  document.getElementById('mail-cijfers').innerHTML = m.gekoppeld
+  el('mail-cijfers').innerHTML = m.gekoppeld
     ? kaart('Benaderd', getal(m.benaderd), `${getal(m.verstuurd)} mails verstuurd`)
       + kaart('Antwoorden', getal(m.antwoorden), m.antwoordpercentage + '% van de benaderde', 'op')
       + kaart('Afgemeld', getal(m.afgemeld), '')
       + kaart('Bounces', getal(m.bounces), '', m.bounces ? 'let' : '')
     : `<div class="kaart"><div class="label">Koude mail</div><div class="bij">${veilig(m.reden || 'Niet gekoppeld')}</div></div>`;
-  staafjes('mail-grafiek', m.per_dag);
+  staafjes('mail-grafiek', m.per_dag, 'dag', 'aantal');
 
-  const t = d.techniek || {};
-  document.getElementById('techniek').innerHTML =
+  el('techniek').innerHTML =
       kaart('Mislukte taken (24u)', getal(t.banen_mislukt_24u), '', t.banen_mislukt_24u ? 'af' : 'op')
     + kaart('Taken in de wachtrij', getal(t.banen_wachtend), '')
     + kaart('Klaar (24u)', getal(t.banen_klaar_24u), '')
     + kaart('Advertenties live', getal(t.advertenties_live), `${getal(t.advertenties_fout)} met een fout`)
     + kaart('Verkocht deze week', getal(t.verkocht_7d), '', 'op')
-    + kaart('Import open', getal(t.importkandidaten_open), 'nog niet overgezet');
+    + kaart('Import open', getal(t.importkandidaten_open), 'nog niet overgezet')
+    + kaart('Extensie online', getal(k.extensies_online), 'nu aan het werk');
 
-  document.getElementById('vers').textContent = 'bijgewerkt ' + new Date().toLocaleTimeString('nl-NL');
-  document.getElementById('stip').classList.remove('uit');
+  tekenTrechter();
+  el('vers').textContent = 'bijgewerkt ' + new Date().toLocaleTimeString('nl-NL');
+  el('stip').classList.remove('uit');
+}
+
+function toonGroei(d) {
+  LAATSTE.groei = d;
+  staafjes('gr-omzet', d.omzet_per_maand, 'maand', 'bedrag', (v) => euro(v));
+  staafjes('gr-aanmeldingen', d.aanmeldingen_per_week, 'week', 'aantal');
+  staafjes('gr-advertenties', d.advertenties_per_week, 'week', 'aantal');
+  staafjes('gr-verkopen', d.verkopen_per_week, 'week', 'aantal');
+  tekenTrechter();
+}
+
+// De trechter combineert drie bronnen, dus hij wordt pas getekend als ze er zijn.
+function tekenTrechter() {
+  const a = (LAATSTE.web && LAATSTE.web.analytics) || {};
+  const k = (LAATSTE.kern && LAATSTE.kern.klanten) || {};
+  const g = (LAATSTE.kern && LAATSTE.kern.geld) || {};
+  const gr = LAATSTE.groei || {};
+  const aanmeldingen = (gr.aanmeldingen_per_week || []).slice(-1)[0];
+  const nieuw = aanmeldingen ? aanmeldingen.aantal : (k.nieuw_7d || 0);
+  const bezoeken = a.bezoeken_7d || 0;
+  const pct = (deel, geheel) => geheel ? Math.round(1000 * deel / geheel) / 10 + '%' : '—';
+  el('ov-trechter').innerHTML =
+      kaart('Bezoekers (7 dagen)', getal(bezoeken), a.gekoppeld ? '' : (a.reden || ''))
+    + kaart('Nieuwe accounts', getal(nieuw), pct(nieuw, bezoeken) + ' van de bezoekers')
+    + kaart('Betalend', getal(g.betalend || 0), `${getal(g.proef || 0)} nog in proef`)
+    + kaart('Actief', getal(k.actief_7d || 0), pct(k.actief_7d || 0, k.totaal || 0) + ' van alle accounts');
 }
 
 function toonWebsite(d) {
+  LAATSTE.web = d;
   const a = d.analytics || {}, z = d.zoekverkeer || {};
-  let cijfers = '';
-  cijfers += a.gekoppeld
+  el('web-cijfers').innerHTML = (a.gekoppeld
     ? kaart('Bezoeken (7 dagen)', getal(a.bezoeken_7d), verschil(a.bezoeken_7d, a.bezoeken_vorige_7d),
             a.bezoeken_7d >= a.bezoeken_vorige_7d ? 'op' : 'af')
       + kaart('Bezoekers', getal(a.gebruikers_7d), `${getal(a.nieuw_7d)} voor het eerst`)
-    : `<div class="kaart"><div class="label">Analytics</div><div class="bij">${veilig(a.reden || '')}</div></div>`;
-  cijfers += z.gekoppeld
+    : `<div class="kaart"><div class="label">Analytics</div><div class="bij">${veilig(a.reden || '')}</div></div>`)
+    + (z.gekoppeld
     ? kaart('Klikken uit Google', getal(z.klikken), verschil(z.klikken, z.klikken_vorige),
             z.klikken >= z.klikken_vorige ? 'op' : 'af')
       + kaart('Vertoningen', getal(z.vertoningen), verschil(z.vertoningen, z.vertoningen_vorige))
-    : `<div class="kaart"><div class="label">Search Console</div><div class="bij">${veilig(z.reden || '')}</div></div>`;
-  document.getElementById('web-cijfers').innerHTML = cijfers;
+    : `<div class="kaart"><div class="label">Search Console</div><div class="bij">${veilig(z.reden || '')}</div></div>`);
 
-  staafjes('web-grafiek', a.per_dag);
-  tabel('web-kanalen', ['Kanaal', 'Bezoeken'], a.kanalen || [],
-    (r) => `<tr><td>${veilig(r.sessionDefaultChannelGroup || r.channel || r.naam || '—')}</td>
-      <td class="num">${getal(r.sessions || r.bezoeken)}</td></tr>`);
-  tabel('web-termen', ['Zoekterm', 'Klikken', 'Positie'], z.zoektermen || [],
-    (r) => `<tr><td>${veilig(r.term)}</td><td class="num">${getal(r.klikken)}</td>
+  staafjes('web-grafiek', a.per_dag, 'dag', 'aantal');
+  staafjes('web-weken', z.weken, 'week', 'vertoningen');
+
+  tabel('web-kanalen', ['Kanaal', 'Bezoeken', 'Bezoekers'], a.kanalen || [],
+    (r) => `<tr><td>${veilig(r.sessionDefaultChannelGroup || '—')}</td>
+      <td class="num">${getal(r.sessions)}</td><td class="num">${getal(r.activeUsers)}</td></tr>`);
+  tabel('web-kansen', ['Zoekterm', 'Getoond', 'Positie'], z.kansen || [],
+    (r) => `<tr><td>${veilig(r.term)}</td><td class="num">${getal(r.vertoningen)}</td>
       <td class="num">${r.positie}</td></tr>`);
-  tabel('web-paginas', ['Pagina', 'Klikken'], z.paginas || [],
-    (r) => `<tr><td>${veilig((r.pagina || '').replace(/^https?:\/\/[^/]+/, ''))}</td>
-      <td class="num">${getal(r.klikken)}</td></tr>`);
-  tabel('social-verkeer', ['Platform', 'Bezoeken'], (a.social || []),
+  tabel('web-onbenut', ['Zoekterm', 'Getoond', 'Positie'], z.onbenut || [],
+    (r) => `<tr><td>${veilig(r.term)}</td><td class="num">${getal(r.vertoningen)}</td>
+      <td class="num">${r.positie}</td></tr>`);
+  tabel('web-stijgers', ['Zoekterm', 'Getoond', 'Verschil'], z.stijgers || [],
+    (r) => `<tr><td>${veilig(r.term)}${r.nieuw ? ' <span class="merk m-trialing">nieuw</span>' : ''}</td>
+      <td class="num">${getal(r.vertoningen)}</td><td class="num op">+${getal(r.verschil)}</td></tr>`);
+  tabel('web-dalers', ['Zoekterm', 'Getoond', 'Verschil'], z.dalers || [],
+    (r) => `<tr><td>${veilig(r.term)}</td><td class="num">${getal(r.vertoningen)}</td>
+      <td class="num af">${getal(r.verschil)}</td></tr>`);
+  tabel('web-termen', ['Zoekterm', 'Klikken', 'Getoond', 'Positie'], z.zoektermen || [],
+    (r) => `<tr><td>${veilig(r.term)}</td><td class="num">${getal(r.klikken)}</td>
+      <td class="num">${getal(r.vertoningen)}</td><td class="num">${r.positie}</td></tr>`);
+  tabel('web-paginas', ['Pagina', 'Klikken', 'Getoond'], z.paginas || [],
+    (r) => `<tr><td>${veilig((r.pagina || '').replace(/^https?:\/\/[^/]+/, '') || '/')}</td>
+      <td class="num">${getal(r.klikken)}</td><td class="num">${getal(r.vertoningen)}</td></tr>`);
+  tabel('web-landing', ['Pagina', 'Bezoeken'], a.landingspaginas || [],
+    (r) => `<tr><td>${veilig(r.landingPagePlusQueryString || '—')}</td>
+      <td class="num">${getal(r.sessions)}</td></tr>`);
+  tabel('social-verkeer', ['Platform', 'Bezoeken'], a.social || [],
     (r) => `<tr><td>${veilig(r.platform)}</td><td class="num">${getal(r.bezoeken)}</td></tr>`);
+
+  tekenTrechter();
 }
 
 function toonSocial(d) {
-  const el = document.getElementById('social-posts');
+  const doel = el('social-posts');
   if (!d || d.gekoppeld === false || d.connected === false) {
-    el.innerHTML = `<div class="leeg">${veilig(d && (d.reden || d.error) || 'Nog niet opgehaald — druk op “Social verversen”.')}</div>`;
+    doel.innerHTML = `<div class="leeg">${veilig((d && (d.reden || d.error)) || 'Nog niet opgehaald.')}</div>`;
     return;
   }
-  const posts = (d.top_posts || d.posts || []).slice(0, 8);
-  if (!posts.length) { el.innerHTML = '<div class="leeg">Geen berichten in de afgelopen week.</div>'; return; }
-  el.innerHTML = `<table><thead><tr><th>Bericht</th><th class="num">Weergaven</th><th class="num">Likes</th></tr></thead>
+  const posts = (d.top_posts || []).slice(0, 8);
+  if (!posts.length) { doel.innerHTML = '<div class="leeg">Geen berichten in de afgelopen week.</div>'; return; }
+  doel.innerHTML = `<table><thead><tr><th>Bericht</th><th class="num">Weergaven</th><th class="num">Likes</th></tr></thead>
     <tbody>${posts.map(p => `<tr>
       <td>${veilig((p.platform || '') + ' · ' + String(p.text || '').slice(0, 48))}</td>
       <td class="num">${getal(p.views)}</td><td class="num">${getal(p.likes)}</td></tr>`).join('')}</tbody></table>`;
@@ -323,34 +474,45 @@ function toonSocial(d) {
 // ---------------------------------------------------------------- ophalen
 async function haalKern() {
   try { toonKern(await vraag('/api/beheer/kern')); }
-  catch (e) { document.getElementById('stip').classList.add('uit');
-              document.getElementById('vers').textContent = 'niet bijgewerkt: ' + e.message; }
+  catch (e) { el('stip').classList.add('uit');
+              el('vers').textContent = 'niet bijgewerkt: ' + e.message; }
 }
-async function haalWebsite() {
-  try { toonWebsite(await vraag('/api/beheer/website')); } catch (e) { /* blok blijft leeg */ }
-}
+async function haalGroei() { try { toonGroei(await vraag('/api/beheer/groei')); } catch (e) {} }
+async function haalWebsite() { try { toonWebsite(await vraag('/api/beheer/website')); } catch (e) {} }
 async function haalSocial(ververs) {
-  const el = document.getElementById('social-posts');
-  if (ververs) el.innerHTML = '<div class="leeg">Ophalen… dit duurt een halve minuut.</div>';
+  const doel = el('social-posts');
+  if (ververs) doel.innerHTML = '<div class="leeg">Ophalen… dit duurt een halve minuut.</div>';
   try { toonSocial(await vraag('/api/beheer/social' + (ververs ? '?ververs=true' : ''))); }
-  catch (e) { el.innerHTML = '<div class="leeg">Ophalen mislukt.</div>'; }
+  catch (e) { doel.innerHTML = '<div class="leeg">Ophalen mislukt.</div>'; }
 }
 
+document.getElementById('tabs').addEventListener('click', (e) => {
+  const knop = e.target.closest('button[data-tab]');
+  if (!knop) return;
+  for (const b of document.querySelectorAll('#tabs button')) b.classList.toggle('aan', b === knop);
+  for (const s of document.querySelectorAll('main section')) s.hidden = s.id !== 'tab-' + knop.dataset.tab;
+  localStorage.setItem('ov_beheer_tab', knop.dataset.tab);
+});
+
 function start() {
-  document.getElementById('inlog').style.display = 'none';
-  document.getElementById('scherm').style.display = 'block';
-  haalKern(); haalWebsite(); haalSocial(false);
+  el('inlog').style.display = 'none';
+  el('scherm').style.display = 'block';
+  const bewaard = localStorage.getItem('ov_beheer_tab');
+  if (bewaard) {
+    const knop = document.querySelector(`#tabs button[data-tab="${bewaard}"]`);
+    if (knop) knop.click();
+  }
+  haalKern(); haalGroei(); haalWebsite(); haalSocial(false);
   // Elke minuut de snelle cijfers, elk kwartier de Google-cijfers. Die laatste
   // hebben server-side toch tien minuten cache en dagquota.
   setInterval(haalKern, 60000);
+  setInterval(haalGroei, 300000);
   setInterval(haalWebsite, 900000);
 }
 
-document.getElementById('in-wachtwoord').addEventListener('keydown', (e) => {
-  if (e.key === 'Enter') inloggen();
-});
+el('in-wachtwoord').addEventListener('keydown', (e) => { if (e.key === 'Enter') inloggen(); });
 
-if (TOKEN) start(); else document.getElementById('inlog').style.display = 'block';
+if (TOKEN) start(); else el('inlog').style.display = 'block';
 </script>
 </body>
 </html>
