@@ -354,6 +354,118 @@ def _mail() -> dict:
 
 
 # ---------------------------------------------------------------------------
+# Zoekverkeer: van cijfers naar iets om te doen
+#
+# Klikken en vertoningen vertellen je hoe het ging, niet wat je moet doen. Deze
+# drie lijsten doen dat wel:
+#   kansen   — je staat net naast de eerste pagina (positie 5 t/m 20) en er wordt
+#              wél op gezocht. Eén betere pagina en je staat erin.
+#   onbenut  — Google toont je vaak, niemand klikt. Dat is een titel- en
+#              omschrijvingsprobleem, geen rankingprobleem.
+#   stijgers/dalers — waar beweegt het, zodat je niet elke week hetzelfde
+#              rijtje leest zonder te zien wat er veranderd is.
+# ---------------------------------------------------------------------------
+def _gsc_kansen(rijen: list[dict], limiet: int = 12) -> list[dict]:
+    uit = [
+        {"term": r["keys"][0], "vertoningen": r.get("impressions", 0),
+         "klikken": r.get("clicks", 0), "positie": round(r.get("position", 0), 1)}
+        for r in rijen
+        if 5 <= r.get("position", 0) <= 20 and r.get("impressions", 0) >= 3
+    ]
+    return sorted(uit, key=lambda r: -r["vertoningen"])[:limiet]
+
+
+def _gsc_onbenut(rijen: list[dict], limiet: int = 10) -> list[dict]:
+    uit = [
+        {"term": r["keys"][0], "vertoningen": r.get("impressions", 0),
+         "positie": round(r.get("position", 0), 1)}
+        for r in rijen
+        if r.get("clicks", 0) == 0 and r.get("impressions", 0) >= 5 and r.get("position", 0) <= 30
+    ]
+    return sorted(uit, key=lambda r: -r["vertoningen"])[:limiet]
+
+
+def _gsc_verschil(nu: list[dict], eerder: list[dict], omhoog: bool, limiet: int = 8) -> list[dict]:
+    was = {r["keys"][0]: r for r in eerder}
+    uit = []
+    for r in nu:
+        term = r["keys"][0]
+        oud = was.get(term)
+        verschil = r.get("impressions", 0) - (oud.get("impressions", 0) if oud else 0)
+        if r.get("impressions", 0) < 3 and abs(verschil) < 3:
+            continue
+        uit.append({"term": term, "vertoningen": r.get("impressions", 0),
+                    "verschil": verschil, "nieuw": oud is None})
+    uit = [r for r in uit if (r["verschil"] > 0) == omhoog and r["verschil"] != 0]
+    return sorted(uit, key=lambda r: -r["verschil"] if omhoog else r["verschil"])[:limiet]
+
+
+def _gsc_weken(gsc, aantal: int = 8) -> list[dict]:
+    """Klikken en vertoningen per week. Dit is het enige echte voortgangscijfer
+    voor SEO: één week zegt niets, acht weken naast elkaar wel."""
+    uit = []
+    for i in range(aantal, 0, -1):
+        start, eind = _dag(3 + i * 7), _dag(3 + (i - 1) * 7 + 1)
+        try:
+            rijen = gsc.query_window(["date"], start, eind, row_limit=10)
+        except Exception:
+            rijen = []
+        uit.append({
+            "week": start,
+            "klikken": sum(r.get("clicks", 0) for r in rijen),
+            "vertoningen": sum(r.get("impressions", 0) for r in rijen),
+        })
+    return uit
+
+
+# ---------------------------------------------------------------------------
+# Groei: gaat het de goede kant op?
+# ---------------------------------------------------------------------------
+def _omzet_per_maand(maanden: int = 6) -> list[dict]:
+    """Wat is er echt binnengekomen per maand, uit de betaalde facturen van
+    Stripe. Niet de huidige omzet doorgerekend, maar wat er stond."""
+    if not settings.stripe_secret_key:
+        return []
+    vanaf = int((_nu() - timedelta(days=31 * maanden)).timestamp())
+    per_maand: dict[str, float] = {}
+    starting_after = None
+    try:
+        for _ in range(10):
+            params = {"status": "paid", "limit": 100, "created[gte]": vanaf}
+            if starting_after:
+                params["starting_after"] = starting_after
+            blok = _stripe_get("invoices", params)
+            rijen = blok.get("data") or []
+            for f in rijen:
+                betaald = f.get("status_transitions", {}).get("paid_at") or f.get("created")
+                if not betaald:
+                    continue
+                maand = datetime.fromtimestamp(betaald, timezone.utc).strftime("%Y-%m")
+                per_maand[maand] = per_maand.get(maand, 0) + (f.get("amount_paid") or 0) / 100
+            if not blok.get("has_more"):
+                break
+            starting_after = rijen[-1]["id"] if rijen else None
+    except Exception as e:
+        logger.warning("Omzetgeschiedenis mislukt: %s", e)
+        return []
+    return [{"maand": m, "bedrag": round(b, 2)} for m, b in sorted(per_maand.items())]
+
+
+def _per_week(rijen: list[dict], veld: str, weken: int = 8) -> list[dict]:
+    """Tel rijen per week op basis van een datumveld. Weken lopen terug vanaf nu,
+    zodat 'deze week' altijd de laatste kolom is."""
+    emmers = {i: 0 for i in range(weken)}
+    for r in rijen:
+        dt = _tijd(r.get(veld))
+        if not dt:
+            continue
+        weg = (_nu() - dt).days // 7
+        if 0 <= weg < weken:
+            emmers[weg] += 1
+    return [{"week": f"-{i}w", "aantal": emmers[i]} for i in range(weken - 1, -1, -1)]
+
+
+# ---------------------------------------------------------------------------
 # Endpoints
 # ---------------------------------------------------------------------------
 @router.get("/kern")
@@ -368,6 +480,44 @@ def kern(user=Depends(get_current_user_full)):
         "techniek": _techniek(),
         "mail": _mail(),
     }
+
+
+@router.get("/groei")
+def groei(user=Depends(get_current_user_full)):
+    """Gaat het de goede kant op? Eén week zegt niets; dit zet acht weken en zes
+    maanden naast elkaar. Vijf minuten cache — dit verandert niet per minuut."""
+    _eigenaar(user)
+    klaar = _uit_cache("groei", 300)
+    if klaar:
+        return klaar
+
+    db = get_db()
+    try:
+        abos = execute_with_retry(db.table("subscriptions")
+                                  .select("created_at, status")
+                                  .gte("created_at", _iso(70))).data or []
+    except Exception as e:
+        logger.warning("Aanmeldingen per week mislukt: %s", e)
+        abos = []
+    try:
+        nieuwe_advertenties = execute_with_retry(
+            db.table("listings").select("created_at").gte("created_at", _iso(70))).data or []
+    except Exception:
+        nieuwe_advertenties = []
+    try:
+        verkopen = execute_with_retry(
+            db.table("listings").select("sold_at").gte("sold_at", _iso(70))).data or []
+    except Exception:
+        verkopen = []
+
+    uit = {
+        "tijd": _nu().isoformat(),
+        "aanmeldingen_per_week": _per_week(abos, "created_at"),
+        "advertenties_per_week": _per_week(nieuwe_advertenties, "created_at"),
+        "verkopen_per_week": _per_week(verkopen, "sold_at"),
+        "omzet_per_maand": _omzet_per_maand(),
+    }
+    return _in_cache("groei", uit)
 
 
 @router.get("/website")
@@ -450,6 +600,11 @@ def website(user=Depends(get_current_user_full)):
                      "vertoningen": r.get("impressions", 0)}
                     for r in sorted(paginas, key=lambda r: -r.get("clicks", 0))[:10]
                 ],
+                "weken": _gsc_weken(gsc),
+                "kansen": _gsc_kansen(nu_rijen),
+                "onbenut": _gsc_onbenut(nu_rijen),
+                "stijgers": _gsc_verschil(nu_rijen, eerder_rijen, omhoog=True),
+                "dalers": _gsc_verschil(nu_rijen, eerder_rijen, omhoog=False),
             }
         except Exception as e:
             logger.warning("Search Console-blok mislukt: %s", e)
