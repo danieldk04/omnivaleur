@@ -353,6 +353,22 @@
       "slug": "vintage-clothing-reselling-automation-platforms",
       "status": "published",
       "priority": 43
+    },
+    {
+      "keyword": "vintage books reselling automation",
+      "region": "nl",
+      "pillar": "B",
+      "slug": "vintage-books-reselling-automation",
+      "status": "published",
+      "priority": 44
+    },
+    {
+      "keyword": "board games and tabletop reselling automation",
+      "region": "nl",
+      "pillar": "B",
+      "slug": "board-games-and-tabletop-reselling-automation",
+      "status": "pending",
+      "priority": 45
     }
   ],
   "published": [
@@ -742,6 +758,15 @@
       "action": "created",
       "url_path": "/reseller-tools/vintage-clothing-reselling-automation-platforms",
       "published_at": "2026-08-18T08:29:24.798171+00:00"
+    },
+    {
+      "keyword": "vintage books reselling automation",
+      "slug": "vintage-books-reselling-automation",
+      "region": "nl",
+      "pillar": "B",
+      "action": "created",
+      "url_path": "/reseller-tools/vintage-books-reselling-automation",
+      "published_at": "2026-08-20T08:35:38.386533+00:00"
     }
   ]
 }
