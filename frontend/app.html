@@ -5800,15 +5800,22 @@ function renderRefreshView() {
   // klopt het: geïmporteerde advertenties tellen vanaf de dag van importeren,
   // dus de eerste ronde is pas over weken. Dat hoort hier gewoon te staan.
   const relistDagen = (state.settings && state.settings.relist_dagen) || 27;
-  const mpActief = (state.listings || []).filter(
+  const mpAlles = (state.listings || []).filter(
     l => (l.platform === 'marktplaats' || l.platform === '2dehands')
       && l.status === 'active' && l.listed_at);
+  // Zonder advertentie-adres kan de oude advertentie niet weg, en dan zou
+  // herplaatsen een tweede dezelfde advertentie opleveren. Die slaat de server
+  // over, dus ze horen ook niet mee te tellen in wat hier beloofd wordt.
+  const mpActief = mpAlles.filter(l => (l.platform_listing_url || '').trim());
+  const zonderAdres = mpAlles.length - mpActief.length;
   const lijn = document.getElementById('auto-relist-line');
   if (lijn) {
     if (state.settings && state.settings.auto_relist === false) {
       lijn.textContent = 'Automatic relisting is switched off — nothing is taken down or reposted unless you do it here yourself.';
     } else if (!mpActief.length) {
-      lijn.textContent = '';
+      lijn.textContent = zonderAdres
+        ? `Automatic relisting does not apply to your ${zonderAdres} Admarkt listing${zonderAdres === 1 ? '' : 's'}: they carry no advert link, so the old one cannot be removed and a relist would create a duplicate. Admarkt campaigns do not expire after 30 days either, so they do not need it.`
+        : '';
     } else {
       const oudste = mpActief.reduce((a, b) =>
         new Date(a.listed_at) < new Date(b.listed_at) ? a : b);

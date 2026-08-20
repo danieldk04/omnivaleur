@@ -1177,6 +1177,19 @@ async def relist_expiring_marktplaats():
 
             eigenaar = item["user_id"]
 
+            # Advertenties uit Admarkt (zakelijk Marktplaats) hebben geen eigen
+            # advertentie-adres: het enige adres dat Admarkt teruggeeft is de
+            # webwinkel van de verkoper. Zonder dat adres kunnen we de oude niet
+            # weghalen — en een Admarkt-campagne verloopt ook niet vanzelf na 30
+            # dagen. Een "herplaatsing" zou daar dus geen verversing zijn maar een
+            # tweede, gelijke advertentie naast de eerste. Precies waar
+            # Marktplaats accounts voor blokkeert. Overslaan dus.
+            if not (listing.get("platform_listing_url") or "").strip():
+                logger.info("Auto-relist overgeslagen voor listing %s: geen advertentie-adres "
+                            "(Admarkt-import verloopt niet en kan niet worden vervangen)",
+                            listing["id"])
+                continue
+
             # Uitgezet door de verkoper zelf: dan gebeurt er niets, ook niet
             # stilletjes. De advertentie blijft gewoon op 'active' staan.
             if not auto_relist_aan(eigenaar):
