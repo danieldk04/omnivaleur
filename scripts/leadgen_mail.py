@@ -850,6 +850,47 @@ def _resend_actief() -> bool:
     return bool(os.environ.get("RESEND_API_KEY", "").strip())
 
 
+_resend_domein_ok: bool | None = None
+
+
+def resend_mag_versturen() -> bool:
+    """Accepteert Resend ons afzenderdomein?
+
+    Zo niet, dan weigert hij ELKE mail. Zonder deze controle probeert de machine
+    elke tien minuten opnieuw te versturen, mislukt alles, en is van buitenaf niet
+    te zien waarom er niets gebeurt. Gemeten 20-08-2026: in Resend stond alleen
+    omnivaleur.com geverifieerd, terwijl de koude mail van omnivaleur.nl komt —
+    bewust een ander domein, zodat koude mail nooit de reputatie van het
+    productdomein kan beschadigen.
+    """
+    global _resend_domein_ok
+    if _resend_domein_ok is not None:
+        return _resend_domein_ok
+    if not _resend_actief():
+        _resend_domein_ok = True          # SMTP: niets te controleren
+        return True
+    domein = (os.environ.get("MAIL_USER", "").split("@")[-1] or "").lower()
+    try:
+        import httpx
+        r = httpx.get("https://api.resend.com/domains",
+                      headers={"Authorization": f"Bearer {os.environ['RESEND_API_KEY'].strip()}"},
+                      timeout=15.0)
+        r.raise_for_status()
+        goed = {d.get("name", "").lower() for d in (r.json().get("data") or [])
+                if d.get("status") == "verified"}
+    except Exception as e:  # noqa: BLE001 — bij twijfel niet mailen
+        print(f"  (Resend-domeinen niet gelezen: {e})")
+        _resend_domein_ok = False
+        return False
+    _resend_domein_ok = domein in goed
+    if not _resend_domein_ok:
+        print(f"  ⚠ Resend kent {domein} niet als geverifieerd domein "
+              f"(wel: {', '.join(sorted(goed)) or 'geen'}). Er wordt niets verstuurd "
+              f"tot dat domein is toegevoegd; antwoorden lezen en concepten "
+              f"klaarzetten gaat gewoon door.")
+    return _resend_domein_ok
+
+
 def _resend_stuur(msg: EmailMessage) -> None:
     import httpx
     lading = {
@@ -2680,6 +2721,9 @@ def tick(args) -> None:
         except Exception as e:  # noqa: BLE001 — dichte inbox stopt het mailen niet
             print(f"  (verzonden map niet gelezen: {e})")
             plan.setdefault("fouten", []).append(f"verzonden map niet gelezen: {e}")
+
+    if te_doen > 0 and not resend_mag_versturen():
+        te_doen = 0                       # lezen en concepten schrijven mag wel
 
     if te_doen > 0:
         rij = _wachtrij(state, te_doen)
