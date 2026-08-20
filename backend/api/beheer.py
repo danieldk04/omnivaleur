@@ -384,8 +384,12 @@ def website(user=Depends(get_current_user_full)):
 
     uit: dict = {"tijd": _nu().isoformat()}
 
-    if not ga4.is_configured():
-        uit["analytics"] = {"gekoppeld": False, "reden": "Analytics niet gekoppeld"}
+    proef = ga4.probe(_dag(7), _dag(1))
+    if not proef.get("ok"):
+        # Bewust niet stilzwijgend nul tonen. Een dashboard dat "0 bezoekers"
+        # zegt terwijl de koppeling stuk is, is erger dan een leeg blok: je gaat
+        # aan je website sleutelen om een probleem dat er niet is.
+        uit["analytics"] = {"gekoppeld": False, "reden": proef.get("reden")}
     else:
         try:
             nu_start, nu_eind = _dag(7), _dag(1)
