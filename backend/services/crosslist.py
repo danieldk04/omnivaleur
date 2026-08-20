@@ -1094,6 +1094,54 @@ def _dagelijkse_relist_grens(db, user_id: str) -> int:
     return max(_AUTO_RELIST_MIN_PER_DAY, min(per_dag, _AUTO_RELIST_MAX_PER_DAY))
 
 
+async def _echte_datums_ophalen(db) -> None:
+    """Geïmporteerde advertenties op hun echte Marktplaats-datum zetten.
+
+    Bij het importeren zetten we listed_at op vandaag, want de datum stond er niet
+    bij. Voor het herplaatsen is dat de verkeerde klok: Marktplaats rekent vanaf de
+    dag dat de advertentie er echt op kwam en gooit hem na dertig dagen weg. Wie
+    zijn voorraad importeert ziet er bij ons dus splinternieuw uit terwijl de helft
+    bijna verloopt — en die advertenties zijn weg voordat wij ze oppakken.
+
+    Draait elke ronde opnieuw en overschrijft steeds met dezelfde waarde: het is
+    een correctie, geen eenmalige migratie, dus er valt niets stuk als hij een keer
+    niet lukt. Marktplaats weet het beter dan wij, altijd.
+    """
+    try:
+        from backend.services.mp_datums import corrigeer_listed_at
+    except Exception as e:  # noqa: BLE001 — nooit de hele ronde laten vallen
+        logger.warning("echte datums overgeslagen: %s", e)
+        return
+    try:
+        rijen = (db.table("listings")
+                 .select("id,item_id,platform_listing_id")
+                 .eq("platform", "marktplaats").eq("status", "active")
+                 .limit(4000).execute().data or [])
+    except Exception as e:  # noqa: BLE001
+        logger.warning("echte datums: advertenties niet gelezen: %s", e)
+        return
+    if not rijen:
+        return
+    per_verkoper: dict[str, list[dict]] = {}
+    for r in rijen:
+        try:
+            item = (db.table("items").select("user_id,title")
+                    .eq("id", r["item_id"]).single().execute().data or {})
+        except Exception:  # noqa: BLE001
+            continue
+        if item.get("user_id"):
+            per_verkoper.setdefault(item["user_id"], []).append(
+                {**r, "titel": item.get("title") or ""})
+    for user_id, lijst in per_verkoper.items():
+        titels = [x["titel"] for x in lijst if x["titel"]][:8]
+        nummers = {str(x.get("platform_listing_id") or "").strip()
+                   for x in lijst if x.get("platform_listing_id")}
+        try:
+            await corrigeer_listed_at(db, user_id, titels, nummers)
+        except Exception as e:  # noqa: BLE001
+            logger.warning("echte datums voor %s mislukt: %s", user_id, e)
+
+
 async def relist_expiring_marktplaats():
     """
     Queue a new 'create' job for every Marktplaats listing that has been
@@ -1111,6 +1159,7 @@ async def relist_expiring_marktplaats():
                                                RELIST_DAGEN_STANDAARD,
                                                alle_relist_dagen)
     dagen_per_verkoper = alle_relist_dagen()
+    await _echte_datums_ophalen(db)
     from backend.services.instellingen import lees as _lees_instellingen
     _auto_aan: dict[str, bool] = {}
 
