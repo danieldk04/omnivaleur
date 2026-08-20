@@ -67,6 +67,42 @@ def _get_client():
         return None
 
 
+def probe(start: str, end: str) -> dict:
+    """Werkt de koppeling, en zo nee: waarom niet?
+
+    _run vangt elke fout af en geeft een lege lijst terug. Handig voor een
+    rapport dat door moet draaien, maar op een dashboard betekent het dat
+    "geen toegang" er precies zo uitziet als "geen bezoekers" — nul. Dit
+    doet één kale sessie-telling en geeft de echte melding terug.
+    """
+    if not is_configured():
+        return {"ok": False, "reden": "Analytics niet gekoppeld"}
+    try:
+        from google.analytics.data_v1beta.types import DateRange, Metric, RunReportRequest
+
+        client = _get_client()
+        if client is None:
+            return {"ok": False, "reden": "Analytics-verbinding kon niet worden opgebouwd"}
+        antwoord = client.run_report(RunReportRequest(
+            property=_property(),
+            metrics=[Metric(name="sessions")],
+            date_ranges=[DateRange(start_date=start, end_date=end)],
+        ))
+        sessies = int(antwoord.rows[0].metric_values[0].value) if antwoord.rows else 0
+        return {"ok": True, "sessies": sessies}
+    except Exception as e:
+        melding = str(e)
+        if "SERVICE_DISABLED" in melding or "has not been used in project" in melding:
+            kort = ("De Google Analytics Data API staat uit in je Google Cloud-project. "
+                    "Zet hem aan, daarna vult dit blok zichzelf.")
+        elif "PermissionDenied" in type(e).__name__ or "403" in melding:
+            kort = "Geen toegang tot deze Analytics-property met de huidige koppeling."
+        else:
+            kort = f"Analytics gaf een fout: {type(e).__name__}"
+        logger.warning("GA4-probe mislukt: %s", melding[:300])
+        return {"ok": False, "reden": kort}
+
+
 def _property() -> str:
     return f"properties/{settings.ga4_property_id}"
 
