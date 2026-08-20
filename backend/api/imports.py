@@ -1063,6 +1063,20 @@ def start_scan(platform: str, user_id: str = Depends(require_active_subscription
     )
     if existing:
         return {"job_id": existing[0]["id"]}
+    # Een zakelijk Marktplaats-account (Admarkt) kan tienduizenden advertenties
+    # hebben. Die passen niet in één ronde, dus elke scan pakt de volgende lading
+    # op. Zonder dit begon iedere scan weer bij advertentie 1 en leverde hij niets
+    # nieuws op — de scan meldde "klaar" terwijl er niets bijkwam.
+    payload: dict = {}
+    if platform == "marktplaats":
+        try:
+            al_bekend = (db.table("import_candidates").select("id", count="exact")
+                         .eq("user_id", user_id).eq("platform", platform)
+                         .execute().count or 0)
+            payload["scan_offset"] = al_bekend
+        except Exception as e:
+            logger.warning("Kon scanpositie niet bepalen voor %s: %s", user_id, e)
+
     job = db.table("jobs").insert({
         "id": str(uuid.uuid4()),
         "user_id": user_id,
@@ -1070,7 +1084,7 @@ def start_scan(platform: str, user_id: str = Depends(require_active_subscription
         "platform": platform,
         "action": "scan",
         "status": "pending",
-        "payload": {},
+        "payload": payload,
     }).execute()
     return {"job_id": job.data[0]["id"]}
 

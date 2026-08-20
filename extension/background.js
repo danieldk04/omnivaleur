@@ -2962,11 +2962,11 @@ function admarktUrl() {
        + `&dateOption=last-365-days`;
 }
 
-// Hoeveel advertenties we in één keer meenemen. Egbert heeft er 5.540; die stuk
-// voor stuk ophalen duurt uren en levert bij een eerste kennismaking vooral een
-// scan op die "hangt". Liever een eerste lading die klopt, met een eerlijke
-// melding hoeveel er nog wachten.
-const ADMARKT_MAX = 250;
+// Hoeveel advertenties we in één keer meenemen. Een zakelijk account kan er
+// tienduizenden hebben; alles in één ronde ophalen levert een scan op die lijkt
+// te hangen. Elke volgende scan begint waar de vorige ophield (zie scan_offset),
+// dus dit is een lading per keer en niet een plafond.
+const ADMARKT_MAX = 2000;
 
 async function admarktToegestaan() {
   try {
@@ -3030,7 +3030,11 @@ async function bgScanAdmarkt(job, serverUrl) {
     await waitForTabLoad(tabId);
     await sleep(6000);   // Admarkt rendert traag; de lijst komt na de pagina
 
-    const result = await execInTab(tabId, async (MAX) => {
+    // Waar de vorige scan ophield. Zonder dit begon elke scan weer bij
+    // advertentie 1 en kwam er niets nieuws bij, terwijl hij wel "klaar" meldde.
+    const OVERSLAAN = Math.max(0, Number((job.payload || {}).scan_offset) || 0);
+
+    const result = await execInTab(tabId, async (MAX, OVERSLAAN) => {
       // Admarkt praat tRPC: /api/trpc/<procedure>?batch=1&input=<json>, GET, op
       // de sessiecookie van de ingelogde verkoper. Waargenomen en uitgeprobeerd
       // op een echt zakelijk account (16-08-2026), niet geraden — raden kan hier
@@ -3056,6 +3060,7 @@ async function bgScanAdmarkt(job, serverUrl) {
       const stappen = [];
       const items = [];
       let totaal = 0;
+      let gezien = 0;   // hoeveel live advertenties we al voorbij hebben laten gaan
 
       // Advertenties hangen altijd onder een campagne; er is er minstens één,
       // ook bij wie er nooit een heeft aangemaakt ("Campagne zonder titel").
@@ -3064,7 +3069,7 @@ async function bgScanAdmarkt(job, serverUrl) {
 
       for (const c of campagnes) {
         let token = null;
-        for (let pagina = 0; pagina < 40; pagina++) {
+        for (let pagina = 0; pagina < 250; pagina++) {
           const invoer = { campaignId: c.id };
           if (token) invoer.pageToken = token;
           const data = await roep("ad.getAds", invoer);
@@ -3075,6 +3080,10 @@ async function bgScanAdmarkt(job, serverUrl) {
             // Alleen wat live staat; gepauzeerd of verwijderd hoort niet als
             // bestaande advertentie geïmporteerd te worden.
             if (ad.status && ad.status !== "ACTIVE") continue;
+            // Alles wat een eerdere scan al heeft opgehaald overslaan, zodat deze
+            // ronde echt de vólgende lading oplevert.
+            gezien++;
+            if (gezien <= OVERSLAAN) continue;
             const fotos = (ad.images || [])
               .filter(i => i && i.status !== "ERROR")
               .map(i => {
@@ -3119,18 +3128,22 @@ async function bgScanAdmarkt(job, serverUrl) {
           bron: "trpc ad.getAds",
           totaal,
           gevonden: items.length,
-          rest: Math.max(0, totaal - items.length),
+          overgeslagen: OVERSLAAN,
+          rest: Math.max(0, totaal - gezien),
           stappen: stappen.slice(0, 25),
           zonder_prijs: items.length,
           pagina_titel: (document.title || "").slice(0, 120),
         },
       };
-    }, [ADMARKT_MAX]);
+    }, [ADMARKT_MAX, OVERSLAAN]);
 
     console.log("[Omnivaleur] Admarkt:", JSON.stringify(result?.meta || {}));
 
     if (!result || !result.items || !result.items.length) {
       const m = (result && result.meta) || {};
+      // Niets nieuws terwijl we al een deel binnen hadden: dan zijn we gewoon
+      // aan het eind. Dat is klaar, geen fout.
+      if (OVERSLAAN > 0 && m.totaal) return { items: [], meta: { ...m, klaar: true } };
       throw new Error(
         `Admarkt returned no live adverts. page="${m.pagina_titel || "?"}" ` +
         `steps=[${(m.stappen || []).join(" | ") || "none"}]`

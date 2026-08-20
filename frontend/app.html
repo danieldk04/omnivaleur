@@ -5092,7 +5092,16 @@ function pollScanProgress(platform, jobId) {
             // Deliberately not "review your listings below": a re-scan of a
             // wardrobe you already imported has nothing left to review, and
             // promising a list that isn't there reads as a broken scan.
-            showToast('Scan complete — see the summary below for what it found.');
+            // Een zakelijk account met tienduizenden advertenties komt er niet
+            // in één ronde door. Dan moet er staan hoeveel er nog wachten, want
+            // een kale "klaar" bij 250 van de 16.000 leest als een kapotte scan.
+            const meta = (job.result && job.result.scan_meta) || {};
+            const rest = Number(meta.rest) || 0;
+            if (rest > 0) {
+              showToast(`Fetched ${meta.gevonden || 0} adverts. ${rest.toLocaleString('en-GB')} still to go — import these first, then scan again for the next batch.`);
+            } else {
+              showToast('Scan complete — see the summary below for what it found.');
+            }
           }
           loadImportCandidates(platform);
         })) return;
