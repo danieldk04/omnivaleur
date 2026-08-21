@@ -9,7 +9,7 @@ import re
 from datetime import datetime, timedelta, timezone
 import uuid
 
-from backend.database import execute_with_retry, get_db
+from backend.database import execute_with_retry, get_db, naast_de_lus
 from backend.platforms import get_platform
 
 _ENGLISH_PLATFORMS = {"vinted", "shopify", "ebay", "etsy"}
@@ -703,7 +703,7 @@ async def delist_all_platforms(item_id: str, user_id: str) -> list[dict]:
     """Delist an item from every platform it is currently active on."""
     db = get_db()
     listings_resp = (
-        db.table("listings").select("*").eq("item_id", item_id).execute()
+        (await naast_de_lus(lambda: db.table("listings").select("*").eq("item_id", item_id).execute()))
     )
     # Which rows count as "might still be live on the platform".
     #
@@ -751,7 +751,7 @@ async def delist_all_platforms(item_id: str, user_id: str) -> list[dict]:
     if not active_listings:
         return skipped_sold or [{"status": "nothing_to_delist", "message": "No active listings found"}]
 
-    item_resp = db.table("items").select("*").eq("id", item_id).single().execute()
+    item_resp = (await naast_de_lus(lambda: db.table("items").select("*").eq("id", item_id).single().execute()))
     item = item_resp.data
 
     results = []
@@ -772,14 +772,14 @@ async def delist_all_platforms(item_id: str, user_id: str) -> list[dict]:
             "platform_listing_id": listing["platform_listing_id"],
             "platform_listing_url": listing["platform_listing_url"],
         }
-        job = db.table("jobs").insert({
+        job = (await naast_de_lus(lambda: db.table("jobs").insert({
             "user_id": user_id,
             "item_id": item_id,
             "platform": listing["platform"],
             "action": "delete",
             "status": "pending",
             "payload": payload,
-        }).execute().data[0]
+        }).execute())).data[0]
         results.append({
             "platform": listing["platform"],
             "status": "queued",
@@ -805,8 +805,8 @@ async def delist_all_platforms(item_id: str, user_id: str) -> list[dict]:
                 sku = item.get("sku", "")
                 try:
                     creds = (
-                        db.table("platform_credentials").select("*")
-                        .eq("user_id", user_id).eq("platform", "ebay").execute().data
+                        (await naast_de_lus(lambda: db.table("platform_credentials").select("*")
+                        .eq("user_id", user_id).eq("platform", "ebay").execute())).data
                     )
                     if creds and sku:
                         ebay = get_platform("ebay")
@@ -822,7 +822,7 @@ async def delist_all_platforms(item_id: str, user_id: str) -> list[dict]:
                         upd = {"platform_offer_id": resolved["platform_offer_id"]}
                         if resolved.get("platform_listing_id"):
                             upd["platform_listing_id"] = resolved["platform_listing_id"]
-                        db.table("listings").update(upd).eq("id", listing["id"]).execute()
+                        (await naast_de_lus(lambda: db.table("listings").update(upd).eq("id", listing["id"]).execute()))
                     except Exception as e:
                         logger.warning(f"Persisting resolved eBay ids failed: {e}")
                     logger.info(f"Resolved eBay offer by SKU {sku} → {resolved['platform_offer_id']}")
@@ -848,7 +848,7 @@ async def delist_all_platforms(item_id: str, user_id: str) -> list[dict]:
                     pid = await _find_shopify_product_id_by_sku(sku)
                     if pid:
                         listing["platform_listing_id"] = pid
-                        db.table("listings").update({"platform_listing_id": pid}).eq("id", listing["id"]).execute()
+                        (await naast_de_lus(lambda: db.table("listings").update({"platform_listing_id": pid}).eq("id", listing["id"]).execute()))
                         logger.info(f"Resolved Shopify product by SKU {sku} → {pid}")
                     else:
                         logger.warning("Shopify SKU %s not found in the store — nothing to delete", sku)
@@ -942,22 +942,22 @@ async def handle_item_sold(item_id: str, sold_on_platform: str, sold_price: floa
     # extensie het item ná de verkoop alsnog online — en die verse advertentie
     # kreeg geen verwijderopdracht, want die was al langs geweest.
     try:
-        db.table("jobs").update({
+        (await naast_de_lus(lambda: db.table("jobs").update({
             "status": "cancelled",
             "result": {"cancelled": "item sold elsewhere"},
         }).eq("item_id", item_id).eq("action", "create") \
-          .in_("status", ["pending", "claimed"]).execute()
+          .in_("status", ["pending", "claimed"]).execute()))
     except Exception as e:  # noqa: BLE001 - een verkoop mag hier nooit op stuklopen
         logger.warning("[sold] could not cancel queued publish jobs for %s: %s", item_id, e)
 
     # Hetzelfde voor een verwijderopdracht die nog klaarstond vóór hét platform
     # waar hij nu blijkt te zijn verkocht: die advertentie hoort te blijven staan.
     try:
-        db.table("jobs").update({
+        (await naast_de_lus(lambda: db.table("jobs").update({
             "status": "cancelled",
             "result": {"cancelled": "sold on this platform"},
         }).eq("item_id", item_id).eq("platform", sold_on_platform).eq("action", "delete") \
-          .in_("status", ["pending", "claimed"]).execute()
+          .in_("status", ["pending", "claimed"]).execute()))
     except Exception as e:  # noqa: BLE001
         logger.warning("[sold] could not cancel queued delete jobs for %s: %s", item_id, e)
 
@@ -969,10 +969,10 @@ async def handle_item_sold(item_id: str, sold_on_platform: str, sold_price: floa
     # already the sold one. The extension verifies presence first and treats an
     # absent listing as success, so re-checking a genuinely-gone one is harmless.
     all_rows = (
-        db.table("listings")
+        (await naast_de_lus(lambda: db.table("listings")
         .select("*")
         .eq("item_id", item_id)
-        .execute()
+        .execute()))
     )
     # Never touch a platform this item already sold on — not the one we just
     # booked, and not one that sold earlier. A second sale record on another
@@ -998,7 +998,7 @@ async def handle_item_sold(item_id: str, sold_on_platform: str, sold_price: floa
         logger.info("[sold] item_id=%s: NOTHING to delist (no other listing rows found)", item_id)
         return
 
-    item_row = db.table("items").select("*").eq("id", item_id).single().execute().data
+    item_row = (await naast_de_lus(lambda: db.table("items").select("*").eq("id", item_id).single().execute())).data
     user_id = (item_row or {}).get("user_id")
 
     # Dedup to one delete per platform (a platform can have both an 'error' and a
@@ -1137,10 +1137,10 @@ async def _echte_datums_ophalen(db) -> None:
         logger.warning("echte datums overgeslagen: %s", e)
         return
     try:
-        rijen = (db.table("listings")
+        rijen = ((await naast_de_lus(lambda: db.table("listings")
                  .select("id,item_id,platform_listing_id")
                  .eq("platform", "marktplaats").eq("status", "active")
-                 .limit(4000).execute().data or [])
+                 .limit(4000).execute())).data or [])
     except Exception as e:  # noqa: BLE001
         logger.warning("echte datums: advertenties niet gelezen: %s", e)
         return
@@ -1149,8 +1149,8 @@ async def _echte_datums_ophalen(db) -> None:
     per_verkoper: dict[str, list[dict]] = {}
     for r in rijen:
         try:
-            item = (db.table("items").select("user_id,title")
-                    .eq("id", r["item_id"]).single().execute().data or {})
+            item = ((await naast_de_lus(lambda: db.table("items").select("user_id,title")
+                    .eq("id", r["item_id"]).single().execute())).data or {})
         except Exception:  # noqa: BLE001
             continue
         if item.get("user_id"):
@@ -1198,7 +1198,7 @@ async def relist_expiring_marktplaats():
     nu = datetime.now(timezone.utc)
     cutoff = (nu - timedelta(days=ruimste)).isoformat()
     listings_resp = (
-        db.table("listings")
+        (await naast_de_lus(lambda: db.table("listings")
         .select("*")
         .eq("platform", "marktplaats")
         .eq("status", "active")
@@ -1206,7 +1206,7 @@ async def relist_expiring_marktplaats():
         # Oudste eerst. Wie het langst wacht is het dichtst bij de 30 dagen
         # waarop Marktplaats de advertentie zelf weggooit, dus die heeft voorrang.
         .order("listed_at")
-        .execute()
+        .execute()))
     )
 
     if not listings_resp.data:
@@ -1229,12 +1229,12 @@ async def relist_expiring_marktplaats():
     # verdwijnt. Zie _dagelijkse_relist_grens voor hoe hij meeschaalt.
     vandaag = datetime.now(timezone.utc).date().isoformat()
     per_verkoper: dict[str, int] = {}
-    for row in (db.table("jobs")
+    for row in ((await naast_de_lus(lambda: db.table("jobs")
                 .select("user_id")
                 .eq("platform", "marktplaats")
                 .eq("action", "create")
                 .gte("created_at", vandaag)
-                .execute().data or []):
+                .execute())).data or []):
         per_verkoper[row["user_id"]] = per_verkoper.get(row["user_id"], 0) + 1
     grens_per_verkoper: dict[str, int] = {}
 
@@ -1243,7 +1243,7 @@ async def relist_expiring_marktplaats():
 
     for listing in listings_resp.data:
         try:
-            item_resp = db.table("items").select("*").eq("id", listing["item_id"]).single().execute()
+            item_resp = (await naast_de_lus(lambda: db.table("items").select("*").eq("id", listing["item_id"]).single().execute()))
             if not item_resp.data:
                 continue
             item = item_resp.data
@@ -1401,14 +1401,14 @@ async def _find_shopify_product_id_by_sku(sku: str) -> str | None:
 
 async def _delist_one(listing: dict):
     db = get_db()
-    item_resp = db.table("items").select("user_id").eq("id", listing["item_id"]).single().execute()
+    item_resp = (await naast_de_lus(lambda: db.table("items").select("user_id").eq("id", listing["item_id"]).single().execute()))
     item_user_id = item_resp.data["user_id"] if item_resp.data else None
     creds_resp = (
-        db.table("platform_credentials")
+        (await naast_de_lus(lambda: db.table("platform_credentials")
         .select("*")
         .eq("user_id", item_user_id)
         .eq("platform", listing["platform"])
-        .execute()
+        .execute()))
     )
     credentials = creds_resp.data[0] if creds_resp.data else {}
 
@@ -1423,9 +1423,9 @@ async def _delist_one(listing: dict):
         deleted = await platform.delete_listing(delete_id, credentials)
         if deleted is False:
             raise RuntimeError(f"delete_listing returned False for {listing['platform']} listing {listing['platform_listing_id']}")
-        db.table("listings").update({
+        (await naast_de_lus(lambda: db.table("listings").update({
             "status": "delisted",
-        }).eq("id", listing["id"]).execute()
+        }).eq("id", listing["id"]).execute()))
         _log_event(listing["id"], "delisted", {})
     except Exception as e:
         logger.error(f"Delist failed for {listing['id']}: {e}")
@@ -1456,15 +1456,15 @@ async def sync_price_to_platforms(item_id: str, user_id: str) -> list[dict]:
     the price change or block the others.
     """
     db = get_db()
-    item = db.table("items").select("*").eq("id", item_id).eq("user_id", user_id).single().execute().data
+    item = (await naast_de_lus(lambda: db.table("items").select("*").eq("id", item_id).eq("user_id", user_id).single().execute())).data
     if not item:
         return []
 
     listings = (
-        db.table("listings").select("*")
+        (await naast_de_lus(lambda: db.table("listings").select("*")
         .eq("item_id", item_id)
         .in_("status", ["active", "hidden"])
-        .execute().data or []
+        .execute())).data or []
     )
     if not listings:
         return []
@@ -1487,10 +1487,10 @@ async def sync_price_to_platforms(item_id: str, user_id: str) -> list[dict]:
     creds_by_platform: dict[str, dict] = {}
     if api_listings:
         creds_resp = (
-            db.table("platform_credentials").select("*")
+            (await naast_de_lus(lambda: db.table("platform_credentials").select("*")
             .eq("user_id", user_id)
             .in_("platform", sorted({l["platform"] for l in api_listings}))
-            .execute()
+            .execute()))
         )
         creds_by_platform = {c["platform"]: c for c in (creds_resp.data or [])}
 
@@ -1505,7 +1505,7 @@ async def sync_price_to_platforms(item_id: str, user_id: str) -> list[dict]:
             # The extension owns Vinted's edit page. _price_update tells the
             # content script this refresh is specifically about the price —
             # a plain content_refresh deliberately leaves the price alone.
-            db.table("jobs").insert({
+            (await naast_de_lus(lambda: db.table("jobs").insert({
                 "user_id": user_id,
                 "item_id": item_id,
                 "platform": platform,
@@ -1518,7 +1518,7 @@ async def sync_price_to_platforms(item_id: str, user_id: str) -> list[dict]:
                     "platform_listing_url": listing.get("platform_listing_url"),
                     "_price_update": True,
                 },
-            }).execute()
+            }).execute()))
             results.append({"platform": platform, "status": "queued",
                             "message": "Price edit queued — Chrome extension will apply it"})
             continue

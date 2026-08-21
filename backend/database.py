@@ -134,3 +134,18 @@ def fetch_all(build_query, order_by: str = "id", page_size: int = 500) -> list[d
         rijen.extend(pagina)
         offset += len(pagina)
     return rijen
+
+
+async def naast_de_lus(aanroep):
+    """Draai één synchrone database-aanroep in een aparte werkdraad.
+
+    De Supabase-client is synchroon. In een `async def` liep elke `.execute()`
+    dus rechtstreeks op de lus die de hele server bedient: zolang die aanroep
+    duurde, stond álles stil — voor iedere klant tegelijk. Bij een verkoper met
+    duizenden advertenties zijn dat seconden per verzoek, en precies daar
+    kwamen de 500-fouten vandaan die een import lieten vastlopen.
+
+    Gebruik: `rij = (await naast_de_lus(lambda: db.table("x").select("*").execute())).data`
+    """
+    import asyncio
+    return await asyncio.to_thread(aanroep)

@@ -2,7 +2,7 @@
 Platform auth endpoints — login endpoints for all platforms.
 """
 from fastapi import APIRouter, HTTPException, Depends, Request
-from backend.database import get_db
+from backend.database import get_db, naast_de_lus
 from backend.platforms.marktplaats import MarktplaatsPlatform, TweedehandsPlatform
 from backend.platforms.ebay import EbayPlatform
 from backend.platforms.shopify import ShopifyPlatform, is_valid_shop_domain, verify_install_hmac
@@ -116,8 +116,8 @@ async def ebay_set_ship_from(body: dict, user_id: str = Depends(get_current_user
         raise HTTPException(status_code=400, detail="Postcode is required")
     db = get_db()
     creds = (
-        db.table("platform_credentials")
-        .select("*").eq("user_id", user_id).eq("platform", "ebay").execute()
+        (await naast_de_lus(lambda: db.table("platform_credentials")
+        .select("*").eq("user_id", user_id).eq("platform", "ebay").execute()))
     )
     if not creds.data:
         raise HTTPException(status_code=404, detail="Connect eBay first")
@@ -128,8 +128,8 @@ async def ebay_set_ship_from(body: dict, user_id: str = Depends(get_current_user
         "city": (body.get("city") or "").strip(),
         "country": (body.get("country") or "NL").strip().upper(),
     }
-    db.table("platform_credentials").update({"extra_data": extra}).eq(
-        "user_id", user_id).eq("platform", "ebay").execute()
+    (await naast_de_lus(lambda: db.table("platform_credentials").update({"extra_data": extra}).eq(
+        "user_id", user_id).eq("platform", "ebay").execute()))
     # Push to eBay so the location reflects the new address right away.
     try:
         await EbayPlatform().upsert_location({**row, "extra_data": extra})
@@ -194,7 +194,7 @@ async def marktplaats_debug(user_id: str = Depends(get_current_user)):
     """Navigate SYI form with stored session and capture the submit API call."""
     from playwright.async_api import async_playwright
     db = get_db()
-    creds = db.table("platform_credentials").select("*").eq("user_id", user_id).eq("platform", "marktplaats").single().execute()
+    creds = (await naast_de_lus(lambda: db.table("platform_credentials").select("*").eq("user_id", user_id).eq("platform", "marktplaats").single().execute()))
     if not creds.data:
         return {"error": "not connected"}
     extra = creds.data.get("extra_data") or {}

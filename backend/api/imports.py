@@ -1,5 +1,5 @@
 from fastapi import APIRouter, HTTPException, Depends
-from backend.database import get_db, fetch_all
+from backend.database import get_db, fetch_all, naast_de_lus
 from backend.api.deps import get_current_user, require_active_subscription
 from backend.models import ItemCreate
 from datetime import datetime, timezone
@@ -1269,10 +1269,10 @@ async def link_candidate(candidate_id: str, body: dict, user_id: str = Depends(g
     if not item_id:
         raise HTTPException(status_code=400, detail="item_id required")
     db = get_db()
-    cand = db.table("import_candidates").select("*").eq("id", candidate_id).eq("user_id", user_id).single().execute().data
+    cand = (await naast_de_lus(lambda: db.table("import_candidates").select("*").eq("id", candidate_id).eq("user_id", user_id).single().execute())).data
     if not cand:
         raise HTTPException(status_code=404, detail="Import candidate not found")
-    item = db.table("items").select("id").eq("id", item_id).eq("user_id", user_id).execute()
+    item = (await naast_de_lus(lambda: db.table("items").select("id").eq("id", item_id).eq("user_id", user_id).execute()))
     if not item.data:
         raise HTTPException(status_code=404, detail="Item not found")
 
@@ -1286,26 +1286,26 @@ async def link_candidate(candidate_id: str, body: dict, user_id: str = Depends(g
     _backfill_item_from_candidate(db, item_id, cand, inferred=await _infer_attributes_smart(
         cand.get("title"), cand.get("description"), cand.get("brand")))
 
-    existing = db.table("listings").select("id").eq("item_id", item_id).eq("platform", cand["platform"]).execute()
+    existing = (await naast_de_lus(lambda: db.table("listings").select("id").eq("item_id", item_id).eq("platform", cand["platform"]).execute()))
     listed_at = cand.get("platform_listed_at") or datetime.now(timezone.utc).isoformat()
     if existing.data:
-        db.table("listings").update({
+        (await naast_de_lus(lambda: db.table("listings").update({
             "platform_listing_id": cand["platform_listing_id"],
             "platform_listing_url": cand["platform_listing_url"],
             "status": _listing_status_for(cand),
             "listed_at": listed_at,
-        }).eq("id", existing.data[0]["id"]).execute()
+        }).eq("id", existing.data[0]["id"]).execute()))
     else:
-        db.table("listings").insert({
+        (await naast_de_lus(lambda: db.table("listings").insert({
             "item_id": item_id,
             "platform": cand["platform"],
             "platform_listing_id": cand["platform_listing_id"],
             "platform_listing_url": cand["platform_listing_url"],
             "status": _listing_status_for(cand),
             "listed_at": listed_at,
-        }).execute()
+        }).execute()))
 
-    db.table("import_candidates").update({"status": "linked"}).eq("id", candidate_id).execute()
+    (await naast_de_lus(lambda: db.table("import_candidates").update({"status": "linked"}).eq("id", candidate_id).execute()))
     return {"ok": True}
 
 
@@ -1317,7 +1317,7 @@ async def create_item_from_candidate(candidate_id: str, body: dict, user_id: str
     plus optional overrides for title/price/photo_urls that were pre-filled from the scrape.
     """
     db = get_db()
-    cand = db.table("import_candidates").select("*").eq("id", candidate_id).eq("user_id", user_id).single().execute().data
+    cand = (await naast_de_lus(lambda: db.table("import_candidates").select("*").eq("id", candidate_id).eq("user_id", user_id).single().execute())).data
     if not cand:
         raise HTTPException(status_code=404, detail="Import candidate not found")
 
@@ -1337,19 +1337,19 @@ async def create_item_from_candidate(candidate_id: str, body: dict, user_id: str
     # unconditionally, so a SKU typed in the import form was always discarded.
     if not data.get("sku"):
         data["sku"] = f"IMP-{data['id'][:8].upper()}"
-    created = db.table("items").insert(data).execute().data[0]
+    created = (await naast_de_lus(lambda: db.table("items").insert(data).execute())).data[0]
 
     listed_at = cand.get("platform_listed_at") or datetime.now(timezone.utc).isoformat()
-    db.table("listings").insert({
+    (await naast_de_lus(lambda: db.table("listings").insert({
         "item_id": created["id"],
         "platform": cand["platform"],
         "platform_listing_id": cand["platform_listing_id"],
         "platform_listing_url": cand["platform_listing_url"],
         "status": _listing_status_for(cand),
         "listed_at": listed_at,
-    }).execute()
+    }).execute()))
 
-    db.table("import_candidates").update({"status": "imported"}).eq("id", candidate_id).execute()
+    (await naast_de_lus(lambda: db.table("import_candidates").update({"status": "imported"}).eq("id", candidate_id).execute()))
     return {"item": created}
 
 

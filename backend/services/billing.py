@@ -5,7 +5,7 @@ import asyncio
 import logging
 import time
 from datetime import datetime, timedelta, timezone
-from backend.database import get_admin_db, get_db
+from backend.database import get_admin_db, get_db, naast_de_lus
 from backend.config import settings
 
 logger = logging.getLogger(__name__)
@@ -47,22 +47,22 @@ async def expire_trials():
     db = get_db()
     now = datetime.now(timezone.utc).isoformat()
     result = (
-        db.table("subscriptions")
+        (await naast_de_lus(lambda: db.table("subscriptions")
         .select("id, user_id, trial_ends_at")
         .eq("status", "trialing")
         .lt("trial_ends_at", now)
         .is_("stripe_subscription_id", "null")
-        .execute()
+        .execute()))
     )
     if not result.data:
         return
 
     logger.info(f"Expiring {len(result.data)} trial(s)")
     for sub in result.data:
-        db.table("subscriptions").update({
+        (await naast_de_lus(lambda: db.table("subscriptions").update({
             "status": "trial_expired",
             "updated_at": now,
-        }).eq("id", sub["id"]).execute()
+        }).eq("id", sub["id"]).execute()))
         logger.info(f"Trial expired for user {sub['user_id']}")
         _cache.pop(sub["user_id"], None)
 

@@ -18,7 +18,7 @@ from backend.content.infographics import inject_infographics
 from backend.content.linking import apply_internal_links
 from backend.content.research import research_competitors
 from backend.content.schema_validate import validate_page
-from backend.database import get_db
+from backend.database import get_db, naast_de_lus
 from backend.services.email import notify_published
 from backend.services.indexnow import submit_url
 from backend.services.search_console import get_top_pages
@@ -243,7 +243,7 @@ async def run_pipeline(
     research = research_competitors(keyword, region)
 
     logger.info(f"Content genereren (Engels) voor '{keyword}'")
-    existing_for_prompt_rows = db.table("content_pages").select("title,language,pillar,slug").eq("status", "published").limit(50).execute().data or []
+    existing_for_prompt_rows = (await naast_de_lus(lambda: db.table("content_pages").select("title,language,pillar,slug").eq("status", "published").limit(50).execute())).data or []
     existing_for_prompt = [{"title": p["title"], "url_path": _url_path(p.get("language", "en"), p["pillar"], p["slug"])} for p in existing_for_prompt_rows]
 
     generated = generate_page_content(keyword, region, pillar, slug, research, existing_for_prompt, refresh_context)

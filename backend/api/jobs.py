@@ -1,5 +1,5 @@
 from fastapi import APIRouter, HTTPException, Depends, Request
-from backend.database import get_db, fetch_all
+from backend.database import get_db, fetch_all, naast_de_lus
 from backend.api.deps import get_current_user, require_active_subscription
 from backend.api.imports import _backfill_item_from_candidate
 from backend.services.crosslist import handle_item_sold
@@ -534,30 +534,30 @@ async def relist_retry(body: dict, user_id: str = Depends(require_active_subscri
     # Cancel any outstanding jobs from the failed relist so nothing fires twice.
     # Only pending/claimed/error jobs — never a job that already completed ("done").
     stale = (
-        db.table("jobs")
+        (await naast_de_lus(lambda: db.table("jobs")
         .select("id")
         .eq("user_id", user_id)
         .eq("item_id", item_id)
         .eq("platform", platform)
         .in_("action", ["delete", "create"])
         .in_("status", ["pending", "claimed", "error"])
-        .execute()
+        .execute()))
         .data
         or []
     )
     for j in stale:
-        db.table("jobs").update({
+        (await naast_de_lus(lambda: db.table("jobs").update({
             "status": "cancelled",
             "done_at": datetime.now(timezone.utc).isoformat(),
-        }).eq("id", j["id"]).execute()
+        }).eq("id", j["id"]).execute()))
 
     # Reset the listing to a clean active state before re-queuing. The failed
     # delist left it live, so "active" is correct; clearing error_message stops
     # the failed-relist banner from lingering after a successful retry.
-    db.table("listings").update({
+    (await naast_de_lus(lambda: db.table("listings").update({
         "status": "active",
         "error_message": None,
-    }).eq("item_id", item_id).eq("platform", platform).execute()
+    }).eq("item_id", item_id).eq("platform", platform).execute()))
 
     from backend.services.relist import refresh_listing, RefreshError
     try:
@@ -690,7 +690,7 @@ def report_job_progress(job_id: str, body: dict, user_id: str = Depends(get_curr
 async def complete_job(job_id: str, body: dict, user_id: str = Depends(get_current_user)):
     db = get_db()
     _record_extension_heartbeat(db, user_id)  # only the extension completes jobs
-    job = db.table("jobs").select("*").eq("id", job_id).eq("user_id", user_id).single().execute().data
+    job = (await naast_de_lus(lambda: db.table("jobs").select("*").eq("id", job_id).eq("user_id", user_id).single().execute())).data
     if not job:
         raise HTTPException(status_code=404, detail="Job not found")
 
@@ -699,17 +699,17 @@ async def complete_job(job_id: str, body: dict, user_id: str = Depends(get_curre
     if job["status"] == "cancelled":
         return {"ok": True, "status": "cancelled"}
 
-    db.table("jobs").update({
+    (await naast_de_lus(lambda: db.table("jobs").update({
         "status": "done",
         "result": body,
         "done_at": datetime.now(timezone.utc).isoformat(),
-    }).eq("id", job_id).execute()
+    }).eq("id", job_id).execute()))
 
     if job["action"] == "create":
         if body.get("platform_listing_id"):
-            existing = db.table("listings").select("id").eq("item_id", job["item_id"]).eq("platform", job["platform"]).execute()
+            existing = (await naast_de_lus(lambda: db.table("listings").select("id").eq("item_id", job["item_id"]).eq("platform", job["platform"]).execute()))
             if existing.data:
-                db.table("listings").update({
+                (await naast_de_lus(lambda: db.table("listings").update({
                     "platform_listing_id": body["platform_listing_id"],
                     "platform_listing_url": body.get("platform_listing_url"),
                     "status": "active",
@@ -720,21 +720,21 @@ async def complete_job(job_id: str, body: dict, user_id: str = Depends(get_curre
                     # broken at the same time.
                     "error_message": None,
                     "listed_at": datetime.now(timezone.utc).isoformat(),
-                }).eq("item_id", job["item_id"]).eq("platform", job["platform"]).execute()
+                }).eq("item_id", job["item_id"]).eq("platform", job["platform"]).execute()))
             else:
-                db.table("listings").insert({
+                (await naast_de_lus(lambda: db.table("listings").insert({
                     "item_id": job["item_id"],
                     "platform": job["platform"],
                     "platform_listing_id": body["platform_listing_id"],
                     "platform_listing_url": body.get("platform_listing_url"),
                     "status": "active",
                     "listed_at": datetime.now(timezone.utc).isoformat(),
-                }).execute()
+                }).execute()))
         else:
-            db.table("listings").update({
+            (await naast_de_lus(lambda: db.table("listings").update({
                 "status": "error",
                 "error_message": "Extension completed job but returned no platform_listing_id",
-            }).eq("item_id", job["item_id"]).eq("platform", job["platform"]).execute()
+            }).eq("item_id", job["item_id"]).eq("platform", job["platform"]).execute()))
 
     elif job["action"] == "delete":
         # De extensie kan tijdens het verwijderen ontdekken dat de advertentie op
@@ -752,7 +752,7 @@ async def complete_job(job_id: str, body: dict, user_id: str = Depends(get_curre
                 logger.warning("[sold] booking sale from delete job %s failed: %s", job_id, e)
             return {"ok": True, "status": "sold_on_platform"}
 
-        db.table("listings").update({"status": "delisted"}).eq("item_id", job["item_id"]).eq("platform", job["platform"]).execute()
+        (await naast_de_lus(lambda: db.table("listings").update({"status": "delisted"}).eq("item_id", job["item_id"]).eq("platform", job["platform"]).execute()))
 
         # If this delete is the first half of a relist, the extension may have
         # snapshotted the full live listing before removing it (imported items
@@ -763,7 +763,7 @@ async def complete_job(job_id: str, body: dict, user_id: str = Depends(get_curre
         captured = body.get("captured_listing") or {}
         if captured:
             paired = (
-                db.table("jobs")
+                (await naast_de_lus(lambda: db.table("jobs")
                 .select("id,payload")
                 .eq("user_id", user_id)
                 .eq("item_id", job["item_id"])
@@ -773,7 +773,7 @@ async def complete_job(job_id: str, body: dict, user_id: str = Depends(get_curre
                 .gte("created_at", job["created_at"])
                 .order("created_at")
                 .limit(1)
-                .execute()
+                .execute()))
                 .data
             )
             if paired:
@@ -795,7 +795,7 @@ async def complete_job(job_id: str, body: dict, user_id: str = Depends(get_curre
                         payload["price"] = float(cap_price)
                     except (TypeError, ValueError):
                         pass
-                db.table("jobs").update({"payload": payload}).eq("id", paired[0]["id"]).execute()
+                (await naast_de_lus(lambda: db.table("jobs").update({"payload": payload}).eq("id", paired[0]["id"]).execute()))
 
     elif job["action"] == "content_refresh":
         # Listing stays active — this is an in-place edit, not a new listing.
@@ -974,14 +974,14 @@ async def _reconcile_vinted_sales(db, job, scraped: list[dict], scan_meta: dict 
         return
 
     active = (
-        db.table("listings")
+        (await naast_de_lus(lambda: db.table("listings")
         .select("id,item_id,platform_listing_id")
         .eq("platform", "vinted")
         .in_("item_id", item_ids)
         # 'hidden' hoort erbij: een verborgen advertentie kan gewoon verkocht zijn
         # (Vinted zet hem dan op closed), en die verkoop werd anders nooit gezien.
         .in_("status", ["active", "relisting", "hidden"])
-        .execute()
+        .execute()))
         .data or []
     )
     # Two very different signals, handled differently on purpose:
@@ -1017,7 +1017,7 @@ async def _reconcile_vinted_sales(db, job, scraped: list[dict], scan_meta: dict 
             matched_without_id += 1
             # Meteen het nummer vastleggen, zodat de volgende ronde gewoon op id matcht.
             try:
-                db.table("listings").update({"platform_listing_id": hit}).eq("id", l["id"]).execute()
+                (await naast_de_lus(lambda: db.table("listings").update({"platform_listing_id": hit}).eq("id", l["id"]).execute()))
             except Exception as e:  # noqa: BLE001
                 logger.warning("Vinted reconcile: could not backfill listing id for %s: %s", l["item_id"], e)
             try:
@@ -1035,8 +1035,8 @@ async def _reconcile_vinted_sales(db, job, scraped: list[dict], scan_meta: dict 
                 logger.warning(f"Vinted sale reconcile failed for item {l['item_id']}: {e}")
         elif pid not in seen_ids:
             try:
-                db.table("listings").update({"status": "delisted"}) \
-                    .eq("item_id", l["item_id"]).eq("platform", "vinted").execute()
+                (await naast_de_lus(lambda: db.table("listings").update({"status": "delisted"}) \
+                    .eq("item_id", l["item_id"]).eq("platform", "vinted").execute()))
                 set_aside += 1
             except Exception as e:
                 logger.warning(f"Vinted reconcile: could not archive vanished listing {l['item_id']}: {e}")

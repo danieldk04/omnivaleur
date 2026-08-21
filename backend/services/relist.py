@@ -39,7 +39,7 @@ from __future__ import annotations
 import logging
 import random
 from datetime import datetime, timezone, timedelta
-from backend.database import get_db, fetch_all
+from backend.database import get_db, fetch_all, naast_de_lus
 from backend.platforms import get_platform
 
 logger = logging.getLogger(__name__)
@@ -130,54 +130,54 @@ async def herstel_vastgelopen_werk() -> dict:
     hersteld, gemeld = 0, 0
 
     try:
-        vast = (db.table("listings").select("id,item_id,platform")
-                .eq("status", "relisting").limit(1000).execute().data or [])
+        vast = ((await naast_de_lus(lambda: db.table("listings").select("id,item_id,platform")
+                .eq("status", "relisting").limit(1000).execute())).data or [])
     except Exception as e:  # noqa: BLE001
         logger.warning("herstel: kon vastgelopen advertenties niet lezen: %s", e)
         return {"hersteld": 0, "gemeld": 0}
 
     for rij in vast:
         try:
-            lopend = (db.table("jobs").select("id")
+            lopend = ((await naast_de_lus(lambda: db.table("jobs").select("id")
                       .eq("item_id", rij["item_id"]).eq("platform", rij["platform"])
                       .eq("action", "create").in_("status", ["pending", "claimed", "running"])
-                      .limit(1).execute().data or [])
+                      .limit(1).execute())).data or [])
             if lopend:
                 continue          # er komt nog werk aan, afblijven
-            item = (db.table("items").select("*").eq("id", rij["item_id"])
-                    .single().execute().data)
+            item = ((await naast_de_lus(lambda: db.table("items").select("*").eq("id", rij["item_id"])
+                    .single().execute())).data)
             if not item:
                 continue
-            db.table("jobs").insert({
+            (await naast_de_lus(lambda: db.table("jobs").insert({
                 "user_id": item["user_id"],
                 "item_id": rij["item_id"],
                 "platform": rij["platform"],
                 "action": "create",
                 "status": "pending",
                 "payload": _met_fabrikant(item, rij["platform"], item["user_id"]),
-            }).execute()
+            }).execute()))
             hersteld += 1
         except Exception as e:  # noqa: BLE001
             logger.warning("herstel: kon %s niet vlot trekken: %s", rij["id"], e)
 
     # Werk dat al dagen stilstaat hoort zichtbaar te worden.
     try:
-        oud = (db.table("jobs").select("id")
+        oud = ((await naast_de_lus(lambda: db.table("jobs").select("id")
                .in_("status", ["pending", "claimed"])
-               .lt("created_at", grens).limit(500).execute().data or [])
+               .lt("created_at", grens).limit(500).execute())).data or [])
         # De banen die we hierboven zojuist zelf hebben ingepland zijn van
         # vandaag en vallen dus per definitie buiten deze grens.
         for baan in oud:
             # De reden hoort in 'result'. De tabel heeft geen 'error'-kolom, en
             # daarop schrijven laat deze hele opruimronde stilletjes mislukken.
-            db.table("jobs").update({
+            (await naast_de_lus(lambda: db.table("jobs").update({
                 "status": "error",
                 "done_at": datetime.now(timezone.utc).isoformat(),
                 "result": {"error": (
                     f"Deze opdracht stond meer dan {VASTGELOPEN_NA_DAGEN} dagen te "
                     "wachten en is niet uitgevoerd. Zet je computer met de "
                     "Omnivaleur-extensie aan en probeer het opnieuw.")},
-            }).eq("id", baan["id"]).execute()
+            }).eq("id", baan["id"]).execute()))
             gemeld += 1
     except Exception as e:  # noqa: BLE001
         logger.warning("herstel: kon oude banen niet melden: %s", e)
@@ -319,18 +319,18 @@ async def refresh_listing(item_id: str, platform: str, user_id: str, strategy: s
 
     db = get_db()
 
-    item_resp = db.table("items").select("*").eq("id", item_id).eq("user_id", user_id).execute()
+    item_resp = (await naast_de_lus(lambda: db.table("items").select("*").eq("id", item_id).eq("user_id", user_id).execute()))
     if not item_resp.data:
         raise RefreshError("Item not found")
     item = item_resp.data[0]
 
     listing_resp = (
-        db.table("listings")
+        (await naast_de_lus(lambda: db.table("listings")
         .select("*")
         .eq("item_id", item_id)
         .eq("platform", platform)
         .eq("status", "active")
-        .execute()
+        .execute()))
     )
     if not listing_resp.data:
         raise RefreshError("No active listing on this platform")
@@ -376,14 +376,14 @@ async def refresh_listing(item_id: str, platform: str, user_id: str, strategy: s
             "photo_urls": _shuffled_photos(item.get("photo_urls") or []),
             "_refresh_rollback": rollback,
         }
-        job = db.table("jobs").insert({
+        job = (await naast_de_lus(lambda: db.table("jobs").insert({
             "user_id": user_id,
             "item_id": item_id,
             "platform": platform,
             "action": "content_refresh",
             "status": "pending",
             "payload": payload,
-        }).execute().data[0]
+        }).execute())).data[0]
 
         _update_listing_refresh_state(db, listing["id"], {
             "last_refreshed_at": now.isoformat(),
@@ -408,14 +408,14 @@ async def refresh_listing(item_id: str, platform: str, user_id: str, strategy: s
         # skipped in /jobs/pending), so undo the cooldown/quota here too.
         "_refresh_rollback": rollback,
     }
-    db.table("jobs").insert({
+    (await naast_de_lus(lambda: db.table("jobs").insert({
         "user_id": user_id,
         "item_id": item_id,
         "platform": platform,
         "action": "delete",
         "status": "pending",
         "payload": delete_payload,
-    }).execute()
+    }).execute()))
 
     delay_minutes = random.randint(RELIST_DELAY_MIN_MINUTES, RELIST_DELAY_MAX_MINUTES)
     scheduled_for = (now + timedelta(minutes=delay_minutes)).isoformat()
@@ -424,7 +424,7 @@ async def refresh_listing(item_id: str, platform: str, user_id: str, strategy: s
         if new_price <= 0:
             raise RefreshError("Price must be greater than 0")
         relist_price = round(new_price, 2)
-        db.table("items").update({"price": relist_price}).eq("id", item_id).execute()
+        (await naast_de_lus(lambda: db.table("items").update({"price": relist_price}).eq("id", item_id).execute()))
     else:
         # Slight variation so the new listing isn't byte-identical to the old one —
         # legitimate reasons (price update, reordered photos), not spoofing.
@@ -466,7 +466,7 @@ async def refresh_listing(item_id: str, platform: str, user_id: str, strategy: s
                 create_payload["_create_origin"] = f"{p.scheme}://{p.netloc}"
         except Exception:
             pass
-    db.table("jobs").insert({
+    (await naast_de_lus(lambda: db.table("jobs").insert({
         "user_id": user_id,
         "item_id": item_id,
         "platform": platform,
@@ -474,7 +474,7 @@ async def refresh_listing(item_id: str, platform: str, user_id: str, strategy: s
         "status": "pending",
         "payload": create_payload,
         "scheduled_for": scheduled_for,
-    }).execute()
+    }).execute()))
 
     _update_listing_refresh_state(db, listing["id"], {
         "status": "relisting",
@@ -527,7 +527,7 @@ async def refresh_stale_listings(user_id: str, platform: str, older_than_days: i
         .limit(limit)
     )
     candidates = [
-        l for l in q.execute().data
+        l for l in (await naast_de_lus(lambda: q.execute())).data
         if not l.get("last_refreshed_at") or l["last_refreshed_at"] < cooldown_cutoff
     ]
 
@@ -551,17 +551,17 @@ async def renew_etsy_listing(item_id: str, user_id: str) -> dict:
     clicking Renew on etsy.com.
     """
     db = get_db()
-    item_resp = db.table("items").select("*").eq("id", item_id).eq("user_id", user_id).execute()
+    item_resp = (await naast_de_lus(lambda: db.table("items").select("*").eq("id", item_id).eq("user_id", user_id).execute()))
     if not item_resp.data:
         raise RefreshError("Item not found")
 
     listing_resp = (
-        db.table("listings")
+        (await naast_de_lus(lambda: db.table("listings")
         .select("*")
         .eq("item_id", item_id)
         .eq("platform", "etsy")
         .in_("status", ["active", "sold", "error"])
-        .execute()
+        .execute()))
     )
     if not listing_resp.data:
         raise RefreshError("No Etsy listing found for this item")
@@ -570,11 +570,11 @@ async def renew_etsy_listing(item_id: str, user_id: str) -> dict:
         raise RefreshError("This Etsy listing has no known listing ID")
 
     creds_resp = (
-        db.table("platform_credentials")
+        (await naast_de_lus(lambda: db.table("platform_credentials")
         .select("*")
         .eq("user_id", user_id)
         .eq("platform", "etsy")
-        .execute()
+        .execute()))
     )
     if not creds_resp.data:
         raise RefreshError("Etsy isn't connected")
@@ -584,11 +584,11 @@ async def renew_etsy_listing(item_id: str, user_id: str) -> dict:
     result = await platform.renew_listing(listing["platform_listing_id"], credentials)
 
     now = datetime.now(timezone.utc).isoformat()
-    db.table("listings").update({
+    (await naast_de_lus(lambda: db.table("listings").update({
         "status": "active",
         "last_refreshed_at": now,
         "refresh_count": (listing.get("refresh_count") or 0) + 1,
-    }).eq("id", listing["id"]).execute()
+    }).eq("id", listing["id"]).execute()))
 
     return {"strategy": "renew", "status": "renewed", "etsy_state": result.get("state")}
 
@@ -601,16 +601,16 @@ async def relist_ended_ebay_listing(item_id: str, user_id: str) -> dict:
     already ended (sold, withdrawn, or expired).
     """
     db = get_db()
-    item_resp = db.table("items").select("*").eq("id", item_id).eq("user_id", user_id).execute()
+    item_resp = (await naast_de_lus(lambda: db.table("items").select("*").eq("id", item_id).eq("user_id", user_id).execute()))
     if not item_resp.data:
         raise RefreshError("Item not found")
 
     listing_resp = (
-        db.table("listings")
+        (await naast_de_lus(lambda: db.table("listings")
         .select("*")
         .eq("item_id", item_id)
         .eq("platform", "ebay")
-        .execute()
+        .execute()))
     )
     if not listing_resp.data:
         raise RefreshError("No eBay listing found for this item")
@@ -620,11 +620,11 @@ async def relist_ended_ebay_listing(item_id: str, user_id: str) -> dict:
         raise RefreshError("This eBay listing has no known offer ID")
 
     creds_resp = (
-        db.table("platform_credentials")
+        (await naast_de_lus(lambda: db.table("platform_credentials")
         .select("*")
         .eq("user_id", user_id)
         .eq("platform", "ebay")
-        .execute()
+        .execute()))
     )
     if not creds_resp.data:
         raise RefreshError("eBay isn't connected")
@@ -637,13 +637,13 @@ async def relist_ended_ebay_listing(item_id: str, user_id: str) -> dict:
         raise RefreshError(str(e))
 
     now = datetime.now(timezone.utc).isoformat()
-    db.table("listings").update({
+    (await naast_de_lus(lambda: db.table("listings").update({
         "status": "active",
         "platform_listing_id": result["platform_listing_id"],
         "platform_listing_url": result["platform_listing_url"],
         "listed_at": now,
         "last_refreshed_at": now,
         "refresh_count": (listing.get("refresh_count") or 0) + 1,
-    }).eq("id", listing["id"]).execute()
+    }).eq("id", listing["id"]).execute()))
 
     return {"strategy": "relist_ended", "status": "relisted", **result}

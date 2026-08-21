@@ -1,6 +1,6 @@
 from fastapi import APIRouter, HTTPException, BackgroundTasks, Depends
 from backend.models import ListingCreate
-from backend.database import get_db, fetch_all
+from backend.database import get_db, fetch_all, naast_de_lus
 from backend.services.crosslist import publish_to_platforms, handle_item_sold, CrosslistValidationError
 from backend.services.relist import (
     refresh_listing, refresh_stale_listings, renew_etsy_listing, relist_ended_ebay_listing,
@@ -541,7 +541,7 @@ async def reconcile_vinted_orders(body: dict, user_id: str = Depends(get_current
         item_id = None
         if sku:
             # Exact + UNIQUE match only. len != 1 → ambiguous/unknown → skip.
-            items = db.table("items").select("id").eq("user_id", user_id).eq("sku", sku).execute().data or []
+            items = (await naast_de_lus(lambda: db.table("items").select("id").eq("user_id", user_id).eq("sku", sku).execute())).data or []
             if len(items) == 1:
                 item_id = items[0]["id"]
         if not item_id:
@@ -552,8 +552,8 @@ async def reconcile_vinted_orders(body: dict, user_id: str = Depends(get_current
         matched += 1
 
         vinted_rows = (
-            db.table("listings").select("id,status,sold_price")
-            .eq("item_id", item_id).eq("platform", "vinted").execute().data or []
+            (await naast_de_lus(lambda: db.table("listings").select("id,status,sold_price")
+            .eq("item_id", item_id).eq("platform", "vinted").execute())).data or []
         )
         sold_row = next((l for l in vinted_rows if l["status"] == "sold"), None)
 
@@ -561,7 +561,7 @@ async def reconcile_vinted_orders(body: dict, user_id: str = Depends(get_current
             # Already recorded — just fill in the real price if we didn't have it.
             if price is not None and sold_row.get("sold_price") in (None, 0):
                 try:
-                    db.table("listings").update({"sold_price": price}).eq("id", sold_row["id"]).execute()
+                    (await naast_de_lus(lambda: db.table("listings").update({"sold_price": price}).eq("id", sold_row["id"]).execute()))
                     price_backfilled += 1
                 except Exception:
                     pass
@@ -570,9 +570,9 @@ async def reconcile_vinted_orders(body: dict, user_id: str = Depends(get_current
         # New sale. Ensure a Vinted listing row exists so it shows in analytics,
         # then run the canonical sold flow (records price + delists other platforms).
         if not vinted_rows:
-            db.table("listings").insert({
+            (await naast_de_lus(lambda: db.table("listings").insert({
                 "item_id": item_id, "platform": "vinted", "status": "active",
-            }).execute()
+            }).execute()))
         try:
             await handle_item_sold(item_id, "vinted", price)
             marked_sold += 1

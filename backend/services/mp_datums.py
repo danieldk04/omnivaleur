@@ -26,6 +26,7 @@ from datetime import date, datetime, timedelta, timezone
 import httpx
 
 from backend.services.mp_enrich import PAGINA, MAX_PAGINAS, ZOEK, _json, zoek_verkoper_id
+from backend.database import naast_de_lus
 
 logger = logging.getLogger(__name__)
 
@@ -120,8 +121,8 @@ async def corrigeer_listed_at(db, user_id: str, titels: list[str],
             continue
         wanneer = datetime(d.year, d.month, d.day, 12, 0, tzinfo=timezone.utc).isoformat()
         try:
-            db.table("listings").update({"listed_at": wanneer}).eq(
-                "platform", "marktplaats").eq("platform_listing_id", nummer).execute()
+            (await naast_de_lus(lambda: db.table("listings").update({"listed_at": wanneer}).eq(
+                "platform", "marktplaats").eq("platform_listing_id", nummer).execute()))
             bijgesteld += 1
         except Exception as e:  # noqa: BLE001 — één advertentie mag de rest niet stoppen
             logger.warning("mp_datums: %s niet bijgesteld: %s", nummer, e)

@@ -5,7 +5,7 @@ import asyncio
 import logging
 import stripe
 from fastapi import APIRouter, HTTPException, Depends, Request, Header
-from backend.database import get_admin_db, get_db, execute_with_retry
+from backend.database import get_admin_db, get_db, execute_with_retry, naast_de_lus
 from backend.api.deps import get_current_user, get_current_user_full
 from backend.config import settings
 from backend.services.billing import (
@@ -584,25 +584,25 @@ async def stripe_webhook(request: Request, stripe_signature: str = Header(None))
         customer_id = session.get("customer")
         if user_id and stripe_sub_id:
             stripe_sub = stripe.Subscription.retrieve(stripe_sub_id)
-            db.table("subscriptions").update({
+            (await naast_de_lus(lambda: db.table("subscriptions").update({
                 "stripe_customer_id": customer_id,
                 "stripe_subscription_id": stripe_sub_id,
                 "status": stripe_sub["status"],
                 "current_period_end": _ts(stripe_sub["current_period_end"]),
                 "updated_at": _now(),
-            }).eq("user_id", user_id).execute()
+            }).eq("user_id", user_id).execute()))
             invalidate_access_cache(user_id)
 
     elif event["type"] in ("customer.subscription.updated", "customer.subscription.deleted"):
         stripe_sub = event["data"]["object"]
         stripe_sub_id = stripe_sub["id"]
-        result = db.table("subscriptions").select("user_id").eq("stripe_subscription_id", stripe_sub_id).execute()
+        result = (await naast_de_lus(lambda: db.table("subscriptions").select("user_id").eq("stripe_subscription_id", stripe_sub_id).execute()))
         if result.data:
-            db.table("subscriptions").update({
+            (await naast_de_lus(lambda: db.table("subscriptions").update({
                 "status": stripe_sub["status"],
                 "current_period_end": _ts(stripe_sub["current_period_end"]),
                 "updated_at": _now(),
-            }).eq("stripe_subscription_id", stripe_sub_id).execute()
+            }).eq("stripe_subscription_id", stripe_sub_id).execute()))
             invalidate_access_cache(result.data[0]["user_id"])
 
     elif event["type"] == "invoice.payment_failed":
@@ -612,10 +612,10 @@ async def stripe_webhook(request: Request, stripe_signature: str = Header(None))
             # updated_at is the start of the grace period, so it must be stamped
             # here — otherwise a failed payment would inherit an old date and the
             # grace days would already be used up.
-            db.table("subscriptions").update({
+            (await naast_de_lus(lambda: db.table("subscriptions").update({
                 "status": "past_due",
                 "updated_at": _now(),
-            }).eq("stripe_subscription_id", stripe_sub_id).execute()
+            }).eq("stripe_subscription_id", stripe_sub_id).execute()))
             invalidate_access_cache()
 
     return {"ok": True}

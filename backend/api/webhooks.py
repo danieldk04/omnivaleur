@@ -6,7 +6,7 @@ eBay: item sold notification.
 import hashlib
 from fastapi import APIRouter, Request, HTTPException
 from backend.services.crosslist import handle_item_sold
-from backend.database import get_db
+from backend.database import get_db, naast_de_lus
 from backend.config import settings
 
 router = APIRouter(prefix="/webhooks", tags=["webhooks"])
@@ -65,7 +65,7 @@ async def ebay_webhook(request: Request):
 
     if listing_id:
         db = get_db()
-        listing = db.table("listings").select("item_id").eq("platform_listing_id", str(listing_id)).eq("platform", "ebay").execute()
+        listing = (await naast_de_lus(lambda: db.table("listings").select("item_id").eq("platform_listing_id", str(listing_id)).eq("platform", "ebay").execute()))
         if listing.data:
             await handle_item_sold(listing.data[0]["item_id"], "ebay", sold_price=_ebay_sale_price(item_data))
 
@@ -95,7 +95,7 @@ async def shopify_order_paid(request: Request):
 
     db = get_db()
     for sku in skus:
-        item = db.table("items").select("id").eq("sku", sku).execute()
+        item = (await naast_de_lus(lambda: db.table("items").select("id").eq("sku", sku).execute()))
         if item.data:
             await handle_item_sold(item.data[0]["id"], "shopify", sold_price=sku_prices.get(sku))
 
@@ -114,7 +114,7 @@ async def marktplaats_webhook(request: Request):
 
     if event in ("sold", "closed") and ad_id:
         db = get_db()
-        listing = db.table("listings").select("item_id,platform").eq("platform_listing_id", ad_id).in_("platform", ["marktplaats", "2dehands"]).execute()
+        listing = (await naast_de_lus(lambda: db.table("listings").select("item_id,platform").eq("platform_listing_id", ad_id).in_("platform", ["marktplaats", "2dehands"]).execute()))
         if listing.data:
             await handle_item_sold(listing.data[0]["item_id"], listing.data[0]["platform"])
 

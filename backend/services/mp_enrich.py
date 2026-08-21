@@ -30,6 +30,7 @@ import re
 import unicodedata
 
 import httpx
+from backend.database import naast_de_lus
 
 logger = logging.getLogger(__name__)
 
@@ -234,8 +235,8 @@ async def verrijk(db, user_id: str, schrijf: bool = True,
             except Exception:  # noqa: BLE001
                 pass
 
-    rijen = (db.table("items").select("id,title,price,description")
-             .eq("user_id", user_id).limit(10000).execute().data or [])
+    rijen = ((await naast_de_lus(lambda: db.table("items").select("id,title,price,description")
+             .eq("user_id", user_id).limit(10000).execute())).data or [])
     open_ = [r for r in rijen
              if not str(r.get("description") or "").strip() or not r.get("price")]
     if maximaal:
@@ -320,7 +321,7 @@ async def verrijk(db, user_id: str, schrijf: bool = True,
                 uit["omschrijving"] += 1
             if schrijf:
                 try:
-                    db.table("items").update(patch).eq("id", item["id"]).execute()
+                    (await naast_de_lus(lambda: db.table("items").update(patch).eq("id", item["id"]).execute()))
                 except Exception as e:  # noqa: BLE001
                     logger.warning("mp_enrich: opslaan mislukt voor %s: %s", item["id"], e)
     return uit
