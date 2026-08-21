@@ -1253,6 +1253,43 @@ input[type="checkbox"].row-check { width: 15px; height: 15px; cursor: pointer; a
         <p>Bump old listings that sank in the "Newest" sort, on Vinted, Marktplaats and 2dehands. Rate-limited on purpose: on Vinted 1x per listing per 14 days and 8 refreshes/day; on <b>Marktplaats and 2dehands 1x per 21 days and only 3/day</b>, because Marktplaats charges for bumping a listing and therefore watches remove-and-repost far more closely than Vinted does. Nothing here fakes engagement, and nothing is guaranteed to change ranking. eBay relist-ended lives under <a href="#" onclick="showView('items');return false" style="color:var(--blue)">Items</a> for now — more platforms will get their own tab here as refresh support expands.</p>
       </div>
 
+      <!-- De EU-verplichte verantwoordelijke partij. Marktplaats markeert deze
+           drie velden als verplicht; zonder waarde blijft het plaatsformulier
+           staan met drie rode vakken. Bewust hier en niet per artikel: het is
+           één keer invullen, en het is een gegeven van de verkoper. Nooit iets
+           voor ons om te raden — hier stond ooit een vaste waarde en toen
+           publiceerde iedereen met andermans bedrijfsnaam. -->
+      <div id="fabrikant-kaart" style="background:var(--card,#fff);border:1px solid var(--border,#e5e7eb);border-radius:12px;padding:16px 18px;margin-bottom:16px">
+        <div style="font-weight:700;margin-bottom:4px">Responsible party (required by Marktplaats)</div>
+        <div style="font-size:12.5px;color:var(--muted);line-height:1.6;margin-bottom:12px">
+          EU product-safety rules make these three fields mandatory on Marktplaats and 2dehands.
+          Fill them in once and every listing carries them. For second-hand goods you sell yourself,
+          this is normally your own business name, postal address and email address.
+          <b>Without them Marktplaats refuses to publish</b>, so we won't start a listing that would get stuck.
+        </div>
+        <div id="fabrikant-waarschuwing" style="display:none;font-size:12.5px;font-weight:600;color:#b45309;background:rgba(180,83,9,.1);border-radius:8px;padding:9px 12px;margin-bottom:12px">
+          Not filled in yet — publishing to Marktplaats and 2dehands is paused until you do.
+        </div>
+        <div style="display:grid;gap:10px;max-width:520px">
+          <div>
+            <label for="fabrikant-naam" style="font-size:13px;font-weight:600">Trade name</label>
+            <input type="text" id="fabrikant-naam" maxlength="255" placeholder="Your business or own name" style="width:100%">
+          </div>
+          <div>
+            <label for="fabrikant-adres" style="font-size:13px;font-weight:600">Postal address</label>
+            <input type="text" id="fabrikant-adres" maxlength="255" placeholder="Street 1, 1234 AB City, Netherlands" style="width:100%">
+          </div>
+          <div>
+            <label for="fabrikant-email" style="font-size:13px;font-weight:600">Email address</label>
+            <input type="email" id="fabrikant-email" maxlength="255" placeholder="you@yourshop.nl" style="width:100%">
+          </div>
+        </div>
+        <div style="display:flex;gap:10px;align-items:center;margin-top:12px">
+          <button class="btn btn-sm btn-primary" onclick="saveFabrikant()">Save</button>
+          <span id="fabrikant-status" style="font-size:12px;color:var(--muted)"></span>
+        </div>
+      </div>
+
       <!-- Automatisch herplaatsen: het ritme is een keuze van de verkoper.
            Hoe vaak Marktplaats een advertentie weggooit verschilt per account en
            per categorie, en alleen de verkoper weet wat bij zijn aanbod past. -->
@@ -6501,10 +6538,22 @@ function publishFailureMessage(res, data, rawText) {
 function formatMissingFieldsError(data) {
   const missing = data && data.detail && data.detail.missing_fields;
   if (!missing) return null;
-  const lines = Object.entries(missing).map(([platform, fields]) =>
-    `${PLATFORM_LABELS[platform] || platform}: ${fields.join(', ')}`
-  );
-  return `Can't publish yet — this item is missing:\n\n${lines.join('\n')}\n\nFill these in on the item first, then try again.`;
+  // manufacturer_details hoort niet bij het artikel maar bij de verkoper, en
+  // staat dus op een ander scherm. Wie hem in het artikelformulier zoekt, zoekt
+  // zich suf — vandaar een eigen zin met de weg ernaartoe.
+  const fabrikantMist = Object.values(missing)
+    .some(f => Array.isArray(f) && f.includes('manufacturer_details'));
+  const lines = Object.entries(missing).map(([platform, fields]) => {
+    const zonder = (fields || []).filter(f => f !== 'manufacturer_details');
+    return zonder.length ? `${PLATFORM_LABELS[platform] || platform}: ${zonder.join(', ')}` : null;
+  }).filter(Boolean);
+  const staart = fabrikantMist
+    ? `Marktplaats and 2dehands require a responsible party: trade name, postal address and email address.\n`
+      + `Fill it in once under Protections → "Responsible party" and every listing carries it.`
+    : '';
+  if (!lines.length) return `Can't publish yet.\n\n${staart}`;
+  return `Can't publish yet — this item is missing:\n\n${lines.join('\n')}\n\n`
+       + (staart ? staart + '\n\n' : '') + `Fill these in on the item first, then try again.`;
 }
 
 // Global busy lock — blocks the whole dashboard (overlay + disabled buttons) while
@@ -7665,10 +7714,56 @@ async function loadRelistDagen() {
       schakel.closest('.vg-chip').classList.toggle('on', schakel.checked);
     }
     state.settings = { ...state.settings, ...data };
+    toonFabrikant(data);
     if (data.relist_dagen_min != null) veld.min = data.relist_dagen_min;
     if (data.relist_dagen_max != null) veld.max = data.relist_dagen_max;
   } catch (e) {
     // Een instelling die niet laadt mag de pagina niet blokkeren.
+  }
+}
+
+// De verantwoordelijke partij. Drie velden, één keer invullen — zie de
+// toelichting bij de kaart in het scherm.
+function toonFabrikant(data) {
+  const velden = { 'fabrikant-naam': 'fabrikant_naam', 'fabrikant-adres': 'fabrikant_adres',
+                   'fabrikant-email': 'fabrikant_email' };
+  let leeg = false;
+  for (const [id, sleutel] of Object.entries(velden)) {
+    const el = document.getElementById(id);
+    if (!el) continue;
+    el.value = data[sleutel] || '';
+    if (!el.value.trim()) leeg = true;
+  }
+  const waarschuwing = document.getElementById('fabrikant-waarschuwing');
+  if (waarschuwing) waarschuwing.style.display = leeg ? 'block' : 'none';
+}
+
+async function saveFabrikant() {
+  const melding = document.getElementById('fabrikant-status');
+  const body = {
+    fabrikant_naam: document.getElementById('fabrikant-naam').value.trim(),
+    fabrikant_adres: document.getElementById('fabrikant-adres').value.trim(),
+    fabrikant_email: document.getElementById('fabrikant-email').value.trim(),
+  };
+  // Half invullen helpt niemand: Marktplaats eist alle drie, dus een gedeeltelijke
+  // opslag zou de publicatie evengoed blokkeren — met een groen vinkje erbij.
+  if (!body.fabrikant_naam || !body.fabrikant_adres || !body.fabrikant_email) {
+    melding.textContent = 'Fill in all three — Marktplaats requires every one of them.';
+    return;
+  }
+  melding.textContent = 'Saving…';
+  try {
+    const r = await apiFetchRetry(`${API}/api/items/settings`, {
+      method: 'PUT', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+    const data = await parseJsonSafe(r);
+    if (!r.ok) throw new Error(data.detail || `HTTP ${r.status}`);
+    state.settings = { ...state.settings, ...data };
+    toonFabrikant(data);
+    melding.textContent = 'Saved — every new listing carries these details.';
+  } catch (e) {
+    melding.textContent = `Could not save: ${e.message}`;
   }
 }
 

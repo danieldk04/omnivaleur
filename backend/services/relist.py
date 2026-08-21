@@ -44,6 +44,18 @@ from backend.platforms import get_platform
 
 logger = logging.getLogger(__name__)
 
+def _met_fabrikant(payload: dict, platform: str, user_id: str) -> dict:
+    """Marktplaats en 2dehands eisen de EU-verantwoordelijke partij. Die hoort bij
+    de verkoper, niet bij het artikel, dus hij wordt er hier bij gezet."""
+    if platform not in ("marktplaats", "2dehands"):
+        return payload
+    try:
+        from backend.services.instellingen import fabrikant
+        return {**payload, **fabrikant(user_id)}
+    except Exception:  # noqa: BLE001 — liever plaatsen zonder dan niet plaatsen
+        return payload
+
+
 # Extension-driven platforms: relist reuses their existing, already-working
 # create/delete job flow. No new browser automation is introduced here.
 EXTENSION_RELIST_PLATFORMS = {"vinted", "marktplaats", "2dehands"}
@@ -141,7 +153,7 @@ async def herstel_vastgelopen_werk() -> dict:
                 "platform": rij["platform"],
                 "action": "create",
                 "status": "pending",
-                "payload": item,
+                "payload": _met_fabrikant(item, rij["platform"], item["user_id"]),
             }).execute()
             hersteld += 1
         except Exception as e:  # noqa: BLE001
@@ -429,6 +441,12 @@ async def refresh_listing(item_id: str, platform: str, user_id: str, strategy: s
     # the wrong catalog — the same domain trap that broke delete. Carry the real
     # origin (recovered from the old listing URL) so the extension opens
     # {origin}/items/new instead of a hardcoded vinted.com.
+    # Ook bij automatisch herplaatsen vraagt Marktplaats om de verantwoordelijke
+    # partij. Zonder deze regel staat de nachtelijke ronde stil op drie rode
+    # velden in een tabblad dat niemand ziet.
+    if platform in ("marktplaats", "2dehands"):
+        from backend.services.instellingen import fabrikant as _fabrikant
+        create_payload.update(_fabrikant(user_id))
     if platform == "vinted" and listing.get("platform_listing_url"):
         try:
             from urllib.parse import urlparse

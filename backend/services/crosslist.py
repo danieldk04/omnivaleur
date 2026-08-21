@@ -389,6 +389,17 @@ async def publish_to_platforms(item_id: str, platforms: list[str], user_id: str)
     item = await _fill_inferred_gaps(db, item)
 
     missing = _missing_fields_per_platform(item, platforms)
+    # De EU-verplichte "verantwoordelijke partij" hoort bij de verkoper, niet bij
+    # het artikel: hij staat één keer in zijn instellingen. Ontbreekt hij, dan
+    # markeert Marktplaats de drie velden rood en gebeurt er verder niets — een
+    # publicatie die stilstaat op een scherm dat de gebruiker niet ziet. Hier
+    # gevangen, zodat hij een zin te lezen krijgt in plaats van een dood tabblad.
+    from backend.services.instellingen import fabrikant as _fabrikant
+    fab = _fabrikant(user_id)
+    if not all(fab.values()):
+        for platform in ("marktplaats", "2dehands"):
+            if platform in platforms:
+                missing.setdefault(platform, []).append("manufacturer_details")
     if missing:
         raise CrosslistValidationError(missing)
 
@@ -479,6 +490,10 @@ async def publish_to_platforms(item_id: str, platforms: list[str], user_id: str)
         # ene kanaal zijn eigen fout en gaan de andere gewoon door.
         try:
             payload = dict(_pick(platform))
+            # Marktplaats en 2dehands vragen om de verantwoordelijke partij; de
+            # extensie vult die drie velden in als ze in de opdracht staan.
+            if platform in ("marktplaats", "2dehands"):
+                payload.update(fab)
             # Create pending listing record first so failed jobs are visible in dashboard
             existing_listing = await _exec(
                 db.table("listings").select("id,status,platform_listing_id,platform_listing_url")

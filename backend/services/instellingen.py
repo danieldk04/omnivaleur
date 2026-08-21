@@ -39,8 +39,20 @@ RELIST_DAGEN_MAX = 85
 VINTED_GROEPEN_GELDIG = ("dames", "heren", "kinderen", "unisex", "sieraden",
                          "antiek", "kunst", "muziek", "games", "electronics")
 
+# De EU verplicht sinds de GPSR bij vrijwel elke advertentie een
+# "verantwoordelijke partij": naam, postadres en e-mailadres van de fabrikant of
+# van de EU-gemachtigde. Marktplaats markeert die drie velden inmiddels als
+# verplicht, en zonder ingevulde waarde weigert het formulier te plaatsen.
+#
+# Dit hoort NIET geraden te worden. Hier stond ooit Revaleur als vaste waarde,
+# waardoor elke klant publiceerde met andermans bedrijfsnaam als aansprakelijke
+# partij — juridisch onjuist en niet iets waar een verkoper om heeft gevraagd.
+# De verkoper vult het één keer zelf in en het gaat daarna overal mee.
+FABRIKANT_VELDEN = ("fabrikant_naam", "fabrikant_adres", "fabrikant_email")
+
 STANDAARD = {"relist_dagen": RELIST_DAGEN_STANDAARD, "vinted_groepen": [],
-             "auto_relist": True}
+             "auto_relist": True,
+             "fabrikant_naam": "", "fabrikant_adres": "", "fabrikant_email": ""}
 
 
 def _schoon(rauw: dict | None) -> dict:
@@ -60,6 +72,11 @@ def _schoon(rauw: dict | None) -> dict:
     # listen op marktplaats" is een terechte klacht als je die knop niet hebt.
     if "auto_relist" in rauw:
         uit["auto_relist"] = bool(rauw.get("auto_relist"))
+    # Marktplaats kapt deze velden zelf af op 255 tekens; langer opslaan zou
+    # betekenen dat het scherm iets anders toont dan wat er geplaatst wordt.
+    for veld in FABRIKANT_VELDEN:
+        if veld in rauw:
+            uit[veld] = str(rauw.get(veld) or "").strip()[:255]
     groepen = rauw.get("vinted_groepen")
     if isinstance(groepen, list):
         uit["vinted_groepen"] = [g for g in
@@ -105,3 +122,20 @@ def alle_relist_dagen() -> dict[str, int]:
     except Exception as e:  # noqa: BLE001
         logger.warning("instellingen niet gelezen: %s", e)
     return uit
+
+
+def fabrikant(user_id: str) -> dict:
+    """De verantwoordelijke partij van deze verkoper, of een leeg blok.
+
+    Apart van `lees` omdat de publicatiekant hier maar drie velden van nodig
+    heeft en die één op één de namen van het Marktplaats-formulier volgen."""
+    s = lees(user_id)
+    return {
+        "manufacturer_name": s.get("fabrikant_naam") or "",
+        "manufacturer_address": s.get("fabrikant_adres") or "",
+        "manufacturer_email": s.get("fabrikant_email") or "",
+    }
+
+
+def fabrikant_compleet(user_id: str) -> bool:
+    return all(fabrikant(user_id).values())
