@@ -246,6 +246,21 @@ def _onderwerpen(rijen: list[dict]) -> str:
         f'{r["med_eng"]}%</span></span>' for r in rijen) + "</div>"
 
 
+def _hashtags(rijen: list[dict]) -> str:
+    if not rijen:
+        return '<p class="lead">Te weinig video&rsquo;s per hashtag om iets te zeggen.</p>'
+    r = ['<div class="tabelbox"><table><thead><tr><th>Hashtag</th>'
+         '<th class="num">n</th><th class="num">Eng.%</th>'
+         '<th class="num">vs. gemiddeld</th><th class="num">Med. views</th>'
+         '</tr></thead><tbody>']
+    for h in rijen:
+        r.append(f'<tr><td>#{_esc(h["tag"])}</td><td class="num">{h["aantal"]}</td>'
+                 f'<td class="num">{h["med_eng"]}</td>'
+                 f'<td class="num">{_lift(h["lift"])}</td>'
+                 f'<td class="num">{_n(h["med_views"])}</td></tr>')
+    return "".join(r) + "</tbody></table></div>"
+
+
 def _sounds(rijen: list[dict]) -> str:
     if not rijen:
         return '<p class="lead">Geen sound die door meerdere makers gebruikt wordt.</p>'
@@ -267,7 +282,12 @@ def _videokaart(v: dict) -> str:
              if v.get("beeld_data") else '<div class="leeg">geen beeld</div>')
     basis = "eigen normaal" if v["basis_herkomst"] == "eigen" else "niche-normaal"
     viraal = f'<span title="viraliteitsscore">V {v["viraal"]}</span>' if v["viraal"] else ""
-    return (f'<a class="vid" href="{v["url"]}" target="_blank" rel="noopener">'
+    verval = 999999 if v["leeftijd_dagen"] is None else v["leeftijd_dagen"]
+    return (f'<a class="vid" href="{v["url"]}" target="_blank" rel="noopener"'
+            f' data-platform="{v["platform"]}" data-niche="{v["niche"]}"'
+            f' data-taal="{v["taal"]}" data-views="{v["views"]}"'
+            f' data-uitschieter="{v["uitschieter"]}" data-eng="{v["eng_ratio"]}"'
+            f' data-viraal="{v["viraal"] or 0}" data-vers="{-verval}">'
             f'<figure>{beeld}<span class="badge" title="keer boven {basis}">'
             f'{v["uitschieter"]}&times;</span>'
             f'<span class="plat">{v["platform"]}</span></figure>'
@@ -280,15 +300,13 @@ def _videokaart(v: dict) -> str:
 SCRIPT = """
 <script>
 (function(){
-  const per = document.querySelectorAll('[data-periode]');
+  // Eén actieve periode tegelijk. De filters werken alleen op het raster dat je
+  // op dat moment ziet — anders telt de teller video's mee die verborgen zijn
+  // en klopt het getal nooit met wat er op je scherm staat.
+  let actief = '7d';
+  const blokken = document.querySelectorAll('[data-periode]');
   const tabs = document.querySelectorAll('.tabs button');
-  function toon(p){
-    per.forEach(el => el.classList.toggle('verborgen', el.dataset.periode !== p));
-    tabs.forEach(b => b.setAttribute('aria-selected', String(b.dataset.p === p)));
-    filter();
-  }
-  tabs.forEach(b => b.addEventListener('click', () => toon(b.dataset.p)));
-
+  const telling = document.querySelector('.telling');
   const f = {
     platform: document.getElementById('f-platform'),
     niche: document.getElementById('f-niche'),
@@ -296,27 +314,37 @@ SCRIPT = """
     minviews: document.getElementById('f-minviews'),
     sort: document.getElementById('f-sort'),
   };
+
   function filter(){
-    document.querySelectorAll('.videos:not(.verborgen), [data-periode]:not(.verborgen) .videos')
-      .forEach(grid => {
-        const kaarten = Array.from(grid.querySelectorAll('.vid'));
-        let zichtbaar = 0;
-        kaarten.forEach(k => {
-          const d = k.dataset;
-          const ok = (f.platform.value === '*' || d.platform === f.platform.value)
-                  && (f.niche.value === '*' || d.niche === f.niche.value)
-                  && (f.taal.value === '*' || d.taal === f.taal.value)
-                  && (Number(d.views) >= Number(f.minviews.value || 0));
-          k.classList.toggle('verborgen', !ok);
-          if (ok) zichtbaar++;
-        });
-        const s = f.sort.value;
-        kaarten.sort((a,b) => Number(b.dataset[s]) - Number(a.dataset[s]))
-               .forEach(k => grid.appendChild(k));
-        const teller = grid.parentElement.querySelector('.telling');
-        if (teller) teller.textContent = zichtbaar + ' van ' + kaarten.length + " video's";
-      });
+    const grid = document.querySelector('[data-periode="' + actief + '"] .videos');
+    if (!grid) return;
+    const kaarten = Array.from(grid.querySelectorAll('.vid'));
+    let zichtbaar = 0;
+    for (const k of kaarten){
+      const d = k.dataset;
+      const ok = (f.platform.value === '*' || d.platform === f.platform.value)
+              && (f.niche.value === '*' || d.niche === f.niche.value)
+              && (f.taal.value === '*' || d.taal === f.taal.value)
+              && (Number(d.views) >= Number(f.minviews.value || 0));
+      k.classList.toggle('verborgen', !ok);
+      if (ok) zichtbaar++;
+    }
+    const s = f.sort.value;
+    kaarten.sort((a,b) => Number(b.dataset[s]) - Number(a.dataset[s]))
+           .forEach(k => grid.appendChild(k));
+    telling.textContent = zichtbaar === kaarten.length
+      ? zichtbaar + " video's"
+      : zichtbaar + ' van ' + kaarten.length + " video's";
   }
+
+  function toon(p){
+    actief = p;
+    blokken.forEach(el => el.classList.toggle('verborgen', el.dataset.periode !== p));
+    tabs.forEach(b => b.setAttribute('aria-selected', String(b.dataset.p === p)));
+    filter();
+  }
+
+  tabs.forEach(b => b.addEventListener('click', () => toon(b.dataset.p)));
   Object.values(f).forEach(el => {
     el.addEventListener('change', filter);
     el.addEventListener('input', filter);
@@ -396,6 +424,13 @@ def bouw(data: dict, pad: Path) -> Path:
                     'staan dan in de rest. Het percentage is hoeveel van de video&rsquo;s '
                     'met dit woord in de bovenste helft zitten.</p></div>'
                     + _onderwerpen(d["onderwerpen"]) + '</section>')
+        blok.append('<section><div class="sectiekop">'
+                    '<p class="eyebrow">Hashtags</p><h2>Welk label hangt samen met '
+                    'betere cijfers?</h2>'
+                    '<p class="lead">Let op de richting: een hashtag veroorzaakt geen '
+                    'views, hij markeert een sóórt video. Lees dit als &ldquo;dit type '
+                    'content loont&rdquo;, niet als knop.</p></div>'
+                    + _hashtags(d.get("hashtags") or []) + '</section>')
         blok.append('<section><div class="sectiekop">'
                     '<p class="eyebrow">Vorm</p><h2>Lengte, tekst en hashtags</h2></div>'
                     '<div class="raster">'

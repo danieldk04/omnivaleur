@@ -48,7 +48,8 @@ UA = ("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 "
 NICHES: dict[str, dict] = {
     "resellers": {
         "titel": "Reselling — mensen die zelf tweedehands verkopen",
-        "tiktok_nl": ["vinted", "vintednederland", "vintedtips", "tweedehands", "marktplaats"],
+        "tiktok_nl": ["vinted", "vintednederland", "vintedtips", "tweedehands",
+                      "marktplaats", "vintedverkopen", "tweedehandsverkopen"],
         "tiktok_en": ["reseller", "ebayreseller", "depopseller", "poshmarkreseller",
                       "vintedseller", "resellercommunity"],
         "youtube": ["vinted verkopen tips", "reseller tips 2026",
@@ -56,13 +57,14 @@ NICHES: dict[str, dict] = {
     },
     "thrifting": {
         "titel": "Tweedehands mode & thrifting",
-        "tiktok_nl": ["tweedehandskleding", "kringloop", "vintagekleding"],
+        "tiktok_nl": ["tweedehandskleding", "kringloop", "vintagekleding",
+                      "kringloopwinkel", "thriftnederland"],
         "tiktok_en": ["thrifthaul", "thrifting", "vintagefashion", "thriftwithme"],
         "youtube": ["thrift haul 2026", "kringloop haul", "vintage fashion finds"],
     },
     "tools": {
         "titel": "Tools & software voor verkopers",
-        "tiktok_nl": ["crosslisten"],
+        "tiktok_nl": ["crosslisten", "verkooptips"],
         "tiktok_en": ["crosslisting", "crosslistingapp", "resellersoftware"],
         "youtube": ["crosslisting app review", "list perfectly vs vendoo"],
     },
@@ -136,6 +138,13 @@ def _tiktok_norm(it: dict, niche: str, taal: str, tag: str) -> dict | None:
         "saves": _int(s.get("collectCount")),
         "duur": _int((it.get("video") or {}).get("duration")),
         "sound": (muziek.get("title") or "")[:120],
+        "sound_id": str(muziek.get("id") or ""),
+        # Het staande beeldje van de video. We slaan de URL op, niet het plaatje:
+        # TikToks CDN-links verlopen na een paar dagen, dus wie ze later wil
+        # tonen moet ze meteen ophalen (zie haal_beeldjes).
+        "beeld": ((it.get("video") or {}).get("cover")
+                  or (it.get("video") or {}).get("originCover") or ""),
+        "hashtags": re.findall(r"#(\w+)", it.get("desc") or "")[:12],
     }
 
 
@@ -282,7 +291,10 @@ def _yt_zoek(query: str, niche: str, max_items: int = 20) -> list[dict]:
                     "datum": "",  # alleen 'x weken geleden' — te grof om op te rekenen
                     "views": views,
                     "likes": 0, "comments": 0, "shares": 0, "saves": 0,
-                    "duur": 0, "sound": "",
+                    "duur": 0, "sound": "", "sound_id": "",
+                    "beeld": (((vr.get("thumbnail") or {}).get("thumbnails") or [{}])[-1]
+                              .get("url", "")),
+                    "hashtags": re.findall(r"#(\w+)", titel)[:12],
                 })
             for v in node.values():
                 loop(v)

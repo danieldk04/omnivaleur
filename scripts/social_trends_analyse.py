@@ -188,11 +188,17 @@ def onderwerp_analyse(videos: list[dict], top_n: int = 18) -> list[dict]:
     boven = [v for v in videos if v["eng_ratio"] >= grens]
     onder = [v for v in videos if v["eng_ratio"] < grens]
 
+    def woorden_van(v) -> set[str]:
+        # Hashtags eruit knippen vóór het tellen. Anders bestaat deze lijst
+        # vrijwel volledig uit hashtags — die zijn geen onderwerp maar een label,
+        # en ze worden hieronder apart geanalyseerd.
+        kaal = re.sub(r"#\w+", " ", (v.get("tekst") or "").lower())
+        return set(re.findall(r"[a-zA-ZÀ-ÿ]{3,}", kaal)) - STOP
+
     def tel(groep):
         c = Counter()
         for v in groep:
-            woorden = set(re.findall(r"[a-zA-ZÀ-ÿ]{3,}", (v.get("tekst") or "").lower()))
-            for w in woorden - STOP:
+            for w in woorden_van(v):
                 c[w] += 1
         return c
 
@@ -205,8 +211,12 @@ def onderwerp_analyse(videos: list[dict], top_n: int = 18) -> list[dict]:
         aandeel = n / totaal
         if aandeel <= 0.55:
             continue
-        hits = [v for v in boven
-                if re.search(rf"\b{re.escape(w)}\b", (v.get("tekst") or "").lower())]
+        # Dezelfde woordsplitsing als hierboven gebruiken, niet een losse
+        # regex-zoektocht: die miste woorden met accenten en telde er andere
+        # dubbel, waardoor deze lijst leeg kon uitkomen.
+        hits = [v for v in boven if w in woorden_van(v)]
+        if not hits:
+            continue
         uit.append({
             "woord": w, "aantal": totaal, "aandeel_boven": round(aandeel * 100),
             "med_eng": round(statistics.median([v["eng_ratio"] for v in hits]), 2),
@@ -214,6 +224,37 @@ def onderwerp_analyse(videos: list[dict], top_n: int = 18) -> list[dict]:
         })
     uit.sort(key=lambda r: (-r["aandeel_boven"], -r["aantal"]))
     return uit[:top_n]
+
+
+def hashtag_analyse(videos: list[dict], minimum: int = 10) -> list[dict]:
+    """
+    Welke hashtag hangt samen met betere cijfers?
+
+    Let op de richting: dit zegt niet dat de hashtag de views veroorzaakt. Een
+    hashtag markeert een sóórt video, en dat soort presteert beter of slechter.
+    Zo moet je het ook lezen — als aanwijzing welk type content loont, niet als
+    knop die je kunt indrukken.
+    """
+    per: dict[str, list[dict]] = defaultdict(list)
+    for v in videos:
+        for h in set(t.lower() for t in (v.get("hashtags") or [])):
+            per[h].append(v)
+    if not videos:
+        return []
+    alle_eng = statistics.median([v["eng_ratio"] for v in videos])
+    uit = []
+    for tag, groep in per.items():
+        if len(groep) < minimum or tag in STOP:
+            continue
+        med = statistics.median([v["eng_ratio"] for v in groep])
+        uit.append({
+            "tag": tag, "aantal": len(groep),
+            "med_eng": round(med, 2),
+            "lift": round((med / alle_eng - 1) * 100) if alle_eng else 0,
+            "med_views": int(statistics.median([v["views"] for v in groep])),
+        })
+    uit.sort(key=lambda r: -r["lift"])
+    return uit[:16]
 
 
 def _bucket_analyse(videos, sleutel, grenzen, labels) -> list[dict]:
@@ -299,6 +340,7 @@ def analyseer(videos: list[dict]) -> dict:
             "top": beste_videos(deel, 60),
             "hooks": hook_analyse(deel),
             "onderwerpen": onderwerp_analyse(deel),
+            "hashtags": hashtag_analyse(deel),
             "vorm": vorm_analyse(deel),
             "sounds": sound_analyse(deel),
         }
