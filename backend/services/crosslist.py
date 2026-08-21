@@ -1317,16 +1317,30 @@ async def relist_expiring_marktplaats():
                 continue
             per_verkoper[eigenaar] = per_verkoper.get(eigenaar, 0) + 1
 
-            db.table("listings").update({"status": "relisting"}).eq("id", listing["id"]).execute()
-
-            db.table("jobs").insert({
-                "user_id": item["user_id"],
-                "item_id": listing["item_id"],
-                "platform": "marktplaats",
-                "action": "create",
-                "status": "pending",
-                "payload": item,
-            }).execute()
+            # EERST WEG, DAN OPNIEUW. Hier stond alleen de "create" — op de
+            # aanname dat Marktplaats de oude advertentie na 30 dagen zelf al
+            # had weggegooid. Die aanname is aantoonbaar onjuist: bij Jaap
+            # stonden advertenties van 45 tot 60 dagen oud gewoon nog online.
+            # Gevolg: elke automatische herplaatsing zette er een tweede naast.
+            # Gemeten op 21-08-2026: 61 nieuwe advertenties, nul verwijderingen,
+            # en zijn account groeide van 1.220 naar ongeveer 1.300 — precies het
+            # dubbel-plaatsen waar Marktplaats accounts voor blokkeert.
+            #
+            # refresh_listing doet het wél goed: het zet een verwijderopdracht
+            # klaar en plant de nieuwe plaatsing erachteraan, en /jobs/pending
+            # laat die tweede stap alleen door als de eerste écht gelukt is.
+            from backend.services.relist import refresh_listing, RefreshError
+            try:
+                await refresh_listing(listing["item_id"], "marktplaats",
+                                      item["user_id"], "relist",
+                                      eigen_quotum=True)
+            except RefreshError as e:
+                # Dagquotum vol of nog in afkoeling: morgen weer. De advertentie
+                # blijft op 'active' staan en komt vanzelf opnieuw langs.
+                logger.info("Auto-relist overgeslagen voor listing %s: %s",
+                            listing["id"], e)
+                per_verkoper[eigenaar] = max(0, per_verkoper.get(eigenaar, 1) - 1)
+                continue
 
             logger.info(f"Queued relist job for item {listing['item_id']} (listing {listing['id']})")
         except Exception as e:

@@ -79,6 +79,28 @@ def _tekst(item: dict) -> str:
     return f"{item.get('title') or ''} {item.get('description') or ''}"
 
 
+# Een rij losse woorden gescheiden door komma's is geen beschrijving van dit
+# artikel maar een zoekwoordenstaart. Jaap zet onder elke advertentie dezelfde
+# opsomming van zijn hele assortiment ("...schorteslot, historiepenning, munt,
+# munten, vaasje, beker..."), en daardoor stond in élk van zijn 1.200 artikelen
+# het woord "munt". Vinted weigerde ze dus allemaal, terwijl het zilveren
+# kettingen zijn.
+#
+# Vier of meer stukjes van hooguit drie woorden op een rij: dat is een opsomming,
+# geen zin. Die knippen we eruit voordat we oordelen. Een gewone zin waarin het
+# woord toevallig voorkomt ("gemaakt van een oude munt uit 1920") blijft staan en
+# wordt dus nog steeds gewogen.
+_TREFWOORDSTAART_RE = re.compile(
+    r"(?:[^\W\d_][\w'’\-]*(?:\s+[\w'’\-]+){0,2}\s*,\s*){3,}"
+    r"[^\W\d_][\w'’\-]*(?:\s+[\w'’\-]+){0,2}",
+    re.U,
+)
+
+
+def _zonder_trefwoorden(tekst: str) -> str:
+    return _TREFWOORDSTAART_RE.sub(" ", tekst)
+
+
 def beoordeel(item: dict, platform: str, voorkeur: list[str] | None = None) -> tuple[str, str]:
     """(oordeel, reden) voor dit artikel op dit platform.
 
@@ -92,8 +114,13 @@ def beoordeel(item: dict, platform: str, voorkeur: list[str] | None = None) -> t
         return OK, ""
 
     tekst = _tekst(item)
-
-    if _VERBODEN_RE.search(tekst):
+    titel = str(item.get("title") or "")
+    # Waar de verbodsbepaling op telt is WAT HET ARTIKEL IS, en dat staat in de
+    # titel. Een woord dat alleen ergens onder in de beschrijving voorbijkomt —
+    # in een zoekwoordenstaart, of in een zin als "past mooi bij een muntketting"
+    # — maakt van een ketting geen munt. Vandaar: hard weigeren op de titel, en
+    # op de beschrijving alleen nadat de trefwoordenstaart eruit is.
+    if _VERBODEN_RE.search(titel) or _VERBODEN_RE.search(_zonder_trefwoorden(tekst)):
         return BLOKKADE, _VERBODEN_REDEN
 
     if voorkeur:

@@ -298,7 +298,9 @@ def _update_listing_refresh_state(db, listing_id: str, fields: dict) -> None:
             raise
 
 
-async def refresh_listing(item_id: str, platform: str, user_id: str, strategy: str, new_price: float | None = None) -> dict:
+async def refresh_listing(item_id: str, platform: str, user_id: str, strategy: str,
+                          new_price: float | None = None,
+                          eigen_quotum: bool = False) -> dict:
     """
     Queue a refresh for one listing.
     strategy: "content" (safe edit-in-place, Vinted only) or
@@ -338,7 +340,14 @@ async def refresh_listing(item_id: str, platform: str, user_id: str, strategy: s
         raise RefreshError(f"Refresh isn't available for {platform} yet")
 
     _check_cooldown(listing, platform)
-    _check_and_increment_quota(db, user_id, platform)
+    # `eigen_quotum` betekent: de aanroeper bewaakt zelf hoeveel er per dag mag.
+    # Dat is het automatisch herplaatsen, dat zijn eigen, veel ruimere grens per
+    # verkoper hanteert (~voorraad gedeeld door de cyclus). Het dagquotum
+    # hieronder is de rem op de HANDMATIGE verversknop en staat op 3 per dag voor
+    # Marktplaats; zou het automatische pad daar ook doorheen moeten, dan zou dat
+    # stilzwijgend terugvallen van tientallen naar drie advertenties per dag.
+    if not eigen_quotum:
+        _check_and_increment_quota(db, user_id, platform)
 
     now = datetime.now(timezone.utc)
     # Captured before we mutate the listing, so a failed job can be rolled back

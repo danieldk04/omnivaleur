@@ -6764,10 +6764,22 @@ function itemGroep(item) {
   return VINTED_GROEPEN.find(g => cat.startsWith(g + ' ')) || '';
 }
 
+// Een rij losse woorden gescheiden door komma's is geen beschrijving van dit
+// artikel maar een zoekwoordenstaart. Eén verkoper zet onder elke advertentie
+// dezelfde opsomming van zijn hele assortiment; het woord "munt" stond daardoor
+// in al zijn 1.200 artikelen en Vinted weigerde ze allemaal, terwijl het
+// zilveren kettingen zijn. Vier of meer stukjes van hooguit drie woorden op een
+// rij is een opsomming, geen zin — die knippen we eruit voordat we oordelen.
+// Spiegelt _TREFWOORDSTAART_RE in backend/services/platformregels.py.
+const TREFWOORDSTAART_RE = /(?:[^\W\d_][\w'’-]*(?:\s+[\w'’-]+){0,2}\s*,\s*){3,}[^\W\d_][\w'’-]*(?:\s+[\w'’-]+){0,2}/gu;
+
 function platformOordeel(item, platform) {
   if (platform !== 'vinted' || !item) return { oordeel: 'ok', reden: '' };
   const tekst = `${item.title || ''} ${item.description || ''}`;
-  if (VINTED_VERBODEN_RE.test(tekst)) {
+  // Wat het artikel ís staat in de titel; die telt altijd. De beschrijving telt
+  // pas mee nadat de zoekwoordenstaart eruit is.
+  const teBeoordelen = `${item.title || ''} ${String(item.description || '').replace(TREFWOORDSTAART_RE, ' ')}`;
+  if (VINTED_VERBODEN_RE.test(item.title || '') || VINTED_VERBODEN_RE.test(teBeoordelen)) {
     return { oordeel: 'blokkade', reden: 'Vinted bans coins, banknotes, stamps, securities and archaeological items' };
   }
   const voorkeur = (state.settings && state.settings.vinted_groepen) || [];
