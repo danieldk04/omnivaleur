@@ -4379,6 +4379,10 @@ async function typEchteToets(tabId, tekst) {
     return `niet gekoppeld: ${e.message}`;
   }
   try {
+    // Chrome schuift de pagina omlaag zodra hij de gele "wordt opgespoord"-balk
+    // toont. Meten we de plek van het veld daarvóór, dan klikken we ernaast en
+    // komt de toetsaanslag nergens terecht. Even wachten dus.
+    await new Promise((r) => setTimeout(r, 700));
     // Eerst een echte klik in het veld: zonder cursor in de editor komt een
     // toetsaanslag nergens terecht. De plek komt uit de pagina zelf.
     const [{ result }] = await chrome.scripting.executeScript({
@@ -4400,10 +4404,15 @@ async function typEchteToets(tabId, tekst) {
       });
     }
     // Eén spatie, echt getypt. Meer is niet nodig: het formulier neemt hierna
-    // de hele tekst over die er al stond.
-    await stuur("Input.dispatchKeyEvent", { type: "keyDown", key: " ", code: "Space", text: " ", windowsVirtualKeyCode: 32 });
-    await stuur("Input.dispatchKeyEvent", { type: "keyUp", key: " ", code: "Space", windowsVirtualKeyCode: 32 });
-    return "getypt";
+    // de hele tekst over die er al stond. Drie vormen achter elkaar, want welke
+    // een site accepteert verschilt: rawKeyDown+char is hoe Chrome zelf een
+    // tekstaanslag doorgeeft, insertText is de kortste weg.
+    await stuur("Input.dispatchKeyEvent", { type: "rawKeyDown", key: " ", code: "Space", windowsVirtualKeyCode: 32, nativeVirtualKeyCode: 32 });
+    await stuur("Input.dispatchKeyEvent", { type: "char", key: " ", text: " ", unmodifiedText: " " });
+    await stuur("Input.dispatchKeyEvent", { type: "keyUp", key: " ", code: "Space", windowsVirtualKeyCode: 32, nativeVirtualKeyCode: 32 });
+    await new Promise((r) => setTimeout(r, 250));
+    await stuur("Input.insertText", { text: " " });
+    return `getypt op ${result.x},${result.y}`;
   } catch (e) {
     return `mislukt: ${e.message}`;
   } finally {

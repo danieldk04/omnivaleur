@@ -1220,6 +1220,7 @@ window.CL = (() => {
     // de tekst gewoon in beeld. Nu lezen we die melding en doen we precies wat de
     // gebruiker met de hand deed: één echte spatie typen en opnieuw plaatsen.
     if (_pendingDescription && _descriptionSelector) {
+      let laatsteToets = "niet geprobeerd";
       for (let herstel = 1; herstel <= 3; herstel++) {
         if (!beschrijvingKlachtOpPagina()) break;
         const staat = await runInMainWorld("DESCRIBE_DESC", {});
@@ -1241,6 +1242,7 @@ window.CL = (() => {
             try { chrome.runtime.sendMessage({ type: "TYPE_ECHT", text: " " }, (r) => res(r || "geen antwoord")); }
             catch (_) { res("niet bereikbaar"); }
           });
+          laatsteToets = echt;
           clog(`herstel ${herstel}: echte toets — ${echt}`);
         }
         await sleep(500 + herstel * 700);
@@ -1268,6 +1270,7 @@ window.CL = (() => {
           `The form kept treating the description as empty, even after re-filling it. ` +
           (magTypen ? "" : "Marktplaats only accepts this text after a real keystroke — "
             + "switch on \"Let Omnivaleur type like a keyboard\" in the extension menu and try again. ") +
+          `Real keystroke: ${laatsteToets}. ` +
           `What the form actually held — ${staat}` +
           (rest.length ? ` | Other complaints on the page: ${rest.join(" | ")}` : ` | No other complaints on the page.`)
         );
