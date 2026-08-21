@@ -1262,6 +1262,18 @@ window.CL = (() => {
         // ons de verkeerde kant op omdat het echte bezwaar ergens anders zat.
         const staat = await runInMainWorld("DESCRIBE_DESC", {});
         const rest = formulierklachten().filter((t) => !/advertentietekst|zoekertjestekst/i.test(t));
+        // WIE ZIT ER NOG MEER IN DIT TABBLAD?
+        //
+        // Chrome laat ons niet aan de toetsen komen zodra er een stukje van een
+        // ándere extensie in de pagina hangt. Dat is van buitenaf niet te zien,
+        // dus vragen we het de pagina zelf: welke ingesloten kaders komen van
+        // een extensie, en van welke. Zonder deze regel blijft het gissen welke
+        // extensie in de weg zit.
+        const vreemdeKaders = [...document.querySelectorAll("iframe, embed, object")]
+          .map((f) => f.src || f.data || "")
+          .filter((u) => u.startsWith("chrome-extension://"))
+          .map((u) => u.slice(19, 51))
+          .filter((id, i, a) => a.indexOf(id) === i);
         const magTypen = await new Promise((res) => {
           try { chrome.runtime.sendMessage({ type: "HEEFT_DEBUGGER" }, (r) => res(!!r)); }
           catch (_) { res(false); }
@@ -1271,6 +1283,9 @@ window.CL = (() => {
           (magTypen ? "" : "Marktplaats only accepts this text after a real keystroke — "
             + "switch on \"Let Omnivaleur type like a keyboard\" in the extension menu and try again. ") +
           `Real keystroke: ${laatsteToets}. ` +
+          (vreemdeKaders.length
+            ? `Other extensions inside this tab: ${vreemdeKaders.join(", ")}. `
+            : "No other extension frames in this tab. ") +
           `What the form actually held — ${staat}` +
           (rest.length ? ` | Other complaints on the page: ${rest.join(" | ")}` : ` | No other complaints on the page.`)
         );
