@@ -5553,8 +5553,14 @@ async function bulkImportAllCandidates() {
     const RETRYABLE = /took too long|unexpected response|server error|500|502|503|504|failed to fetch|networkerror|load failed/i;
     // Tien per keer in plaats van vijftien: een lading van vijftien duurde op
     // de server tien seconden of meer, en dat is precies waar hij op omvalt.
-    let limit = 10;
+    const START_LIMIET = 10;
+    let limit = START_LIMIET;
     let strikes = 0;
+    // Hoeveel ladingen er achter elkaar goed gingen. Zonder dit bleef de lading
+    // voor altijd klein na één slecht moment: hij halveerde 10 -> 5 -> 2 -> 1 en
+    // ging nooit meer omhoog, dus een import van duizend advertenties kroop de
+    // rest van de avond door op één per aanroep.
+    let goed = 0;
 
     for (let pass = 0; pass < 2000; pass++) {
       let data;
@@ -5583,9 +5589,15 @@ async function bulkImportAllCandidates() {
           throw err;
         }
         strikes = 0;
+        // Weer op gang: stap voor stap terug naar de normale ladinggrootte.
+        if (limit < START_LIMIET && ++goed >= 3) {
+          limit = Math.min(START_LIMIET, limit * 2);
+          goed = 0;
+        }
       } catch (e) {
         if (!e.retryable && !RETRYABLE.test(e.message || '')) throw e;
         strikes++;
+        goed = 0;
         if (limit > 1) {
           limit = Math.max(1, Math.floor(limit / 2));
         } else if (strikes >= 5) {

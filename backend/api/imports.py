@@ -1444,7 +1444,18 @@ async def bulk_import_candidates(body: dict = None, user_id: str = Depends(requi
 
     def _process():
         nonlocal linked, created, failed
+        # Harde tijdgrens. Elke kandidaat kost hier een handvol losse
+        # database-aanroepen, en bij een verkoper met duizenden advertenties
+        # tikt dat op tot voorbij de tijd die de gateway een verzoek gunt — dan
+        # kreeg de browser een foutpagina in plaats van antwoord, halveerde de
+        # lading en kroop de import door op één advertentie per aanroep.
+        # Wat niet meer past blijft gewoon 'pending' en gaat mee met de
+        # volgende ronde; er gaat niets verloren.
+        import time as _time
+        deadline = _time.monotonic() + 20
         for cand in candidates:
+            if _time.monotonic() > deadline:
+                break
             try:
                 listed_at = cand.get("platform_listed_at") or now
                 match_id, reden = _match_candidate(cand, items, listings_by_id)
