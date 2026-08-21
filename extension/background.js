@@ -4369,14 +4369,42 @@ async function typEchteToets(tabId, tekst) {
       chrome.runtime.lastError ? rej(new Error(chrome.runtime.lastError.message)) : res(r);
     });
   });
+  // Waar koppelen we eigenlijk aan? Een verkeerd tabblad geeft een melding die
+  // nergens op slaat ("Cannot access a chrome-extension:// URL of different
+  // extension") en dan zoek je in de verkeerde hoek. Eerst kijken wat het ís.
+  const tab = await chrome.tabs.get(tabId).catch(() => null);
+  const adres = (tab && tab.url) || "";
+  if (!/^https?:/i.test(adres)) {
+    return `verkeerd tabblad (${adres ? adres.slice(0, 60) : "geen adres"})`;
+  }
+  const koppel = (waar) => new Promise((res, rej) => chrome.debugger.attach(waar, "1.3", () => {
+    chrome.runtime.lastError ? rej(new Error(chrome.runtime.lastError.message)) : res();
+  }));
   try {
-    await new Promise((res, rej) => chrome.debugger.attach(doel, "1.3", () => {
-      chrome.runtime.lastError ? rej(new Error(chrome.runtime.lastError.message)) : res();
-    }));
-  } catch (e) {
-    // Al gekoppeld (een ander tabblad van ons, of de DevTools staan open):
-    // niet fataal, gewoon melden.
-    return `niet gekoppeld: ${e.message}`;
+    await koppel(doel);
+  } catch (eerste) {
+    // Tweede weg: koppelen op het doel-ID in plaats van op het tabblad-nummer.
+    // Chrome geeft bij een tabblad soms een melding over een extensie-adres die
+    // niets met dit tabblad te maken heeft; via het doel-ID speelt dat niet.
+    try {
+      const doelen = await new Promise((r) => chrome.debugger.getTargets(r));
+      const t = (doelen || []).find((d) => d.tabId === tabId && d.type === "page");
+      if (!t) throw eerste;
+      await koppel({ targetId: t.id });
+      doel.targetId = t.id;
+      delete doel.tabId;
+    } catch (e) {
+    // Zit er al een ander opsporingsprogramma op dit tabblad — de DevTools van
+    // de verkoper, of een andere extensie die hetzelfde doet — dan weigert
+    // Chrome een tweede. Melden mét het adres, anders is het niet te plaatsen.
+    let bezet = "";
+    try {
+      const doelen = await new Promise((r) => chrome.debugger.getTargets(r));
+      const t = (doelen || []).find((d) => d.tabId === tabId);
+      if (t && t.attached) bezet = " (er zit al een opsporingsprogramma op dit tabblad)";
+    } catch (_) {}
+      return `niet gekoppeld: ${eerste.message} / ${e.message}${bezet} — tab ${adres.slice(0, 50)}`;
+    }
   }
   try {
     // Chrome schuift de pagina omlaag zodra hij de gele "wordt opgespoord"-balk
