@@ -1230,10 +1230,24 @@ window.CL = (() => {
         // twee het formulier gelooft verschilt per platform, dus doen we allebei.
         await runInMainWorld("FILL_HIDDEN_DESC", { text: _pendingDescription });
         const geduwd = await runInMainWorld("NUDGE_DESC", { selector: _descriptionSelector });
+        // De nagemaakte spatie hierboven verandert de staat van het Marktplaats-
+        // formulier aantoonbaar NIET (zie typEchteToets in background.js). Blijft
+        // de klacht staan, dan proberen we een echte toetsaanslag; die werkt wel,
+        // maar vraagt eenmalig toestemming van de gebruiker.
+        let echt = "niet geprobeerd";
+        await sleep(400);
+        if (beschrijvingKlachtOpPagina()) {
+          echt = await new Promise((res) => {
+            try { chrome.runtime.sendMessage({ type: "TYPE_ECHT", text: " " }, (r) => res(r || "geen antwoord")); }
+            catch (_) { res("niet bereikbaar"); }
+          });
+          clog(`herstel ${herstel}: echte toets — ${echt}`);
+        }
         await sleep(500 + herstel * 700);
 
         const klachtWeg = !beschrijvingKlachtOpPagina();
-        clog(`herstel ${herstel}: spatie ${geduwd ? "getypt" : "MISLUKT"}, melding ${klachtWeg ? "weg" : "staat er nog"}`);
+        clog(`herstel ${herstel}: spatie ${geduwd ? "getypt" : "MISLUKT"}, echte toets ${echt}, `
+           + `melding ${klachtWeg ? "weg" : "staat er nog"}`);
         btn.click();
         const id2 = await waitForListingUrl(idFromUrl, 20000).catch(() => null);
         if (id2) { clog(`plaatsen: alsnog gelukt na herstelpoging ${herstel}`); return id2; }
@@ -1246,8 +1260,14 @@ window.CL = (() => {
         // ons de verkeerde kant op omdat het echte bezwaar ergens anders zat.
         const staat = await runInMainWorld("DESCRIBE_DESC", {});
         const rest = formulierklachten().filter((t) => !/advertentietekst|zoekertjestekst/i.test(t));
+        const magTypen = await new Promise((res) => {
+          try { chrome.runtime.sendMessage({ type: "HEEFT_DEBUGGER" }, (r) => res(!!r)); }
+          catch (_) { res(false); }
+        });
         throw new Error(
           `The form kept treating the description as empty, even after re-filling it. ` +
+          (magTypen ? "" : "Marktplaats only accepts this text after a real keystroke — "
+            + "switch on \"Let Omnivaleur type like a keyboard\" in the extension menu and try again. ") +
           `What the form actually held — ${staat}` +
           (rest.length ? ` | Other complaints on the page: ${rest.join(" | ")}` : ` | No other complaints on the page.`)
         );

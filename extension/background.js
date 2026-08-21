@@ -4325,6 +4325,87 @@ function _mwFillHiddenDescription(descText) {
   return velden.every((v) => (v.value || "").trim().length > 0);
 }
 
+
+// ── ECHT TYPEN, ALS LAATSTE REDMIDDEL ─────────────────────────────────────
+//
+// WAAROM DIT BESTAAT — live gemeten op het Marktplaats-plaatsformulier
+// (21-08-2026, ingelogd account, categorie sieraden):
+//   * de tekst staat zichtbaar in de editor en óók in Lexical's eigen
+//     editorstaat, en tóch meldt het formulier "Geen advertentietekst
+//     ingevuld";
+//   * het verborgen veld description_nl-NL wordt door React bestuurd en heeft
+//     geen onChange — wat wij erin zetten wordt bij de volgende hertekening
+//     gewoon overschreven;
+//   * execCommand, een nagemaakte beforeinput/input, een nagemaakt plakken en
+//     blur() veranderen de staat van het formulier NIET;
+//   * één echte toetsaanslag in het veld werkt wel, en neemt dan meteen alles
+//     mee wat er al stond. Precies wat de verkoper doet als hij een spatie
+//     typt en de melding ziet verdwijnen.
+//
+// Het verschil is `isTrusted`: alles wat een script zelf afvuurt draagt dat
+// stempel niet, en Marktplaats kijkt ernaar. De énige manier om vanuit een
+// extensie een echte toetsaanslag te maken is de debugger-API van Chrome.
+// Daarom staat die permissie NIET standaard aan: hij wordt pas gevraagd als
+// het formulier daadwerkelijk blijft klagen, en hij wordt meteen na gebruik
+// weer losgelaten.
+async function heeftDebugger() {
+  try {
+    return await chrome.permissions.contains({ permissions: ["debugger"] });
+  } catch (_) {
+    return false;
+  }
+}
+
+async function typEchteToets(tabId, tekst) {
+  if (!(await heeftDebugger())) return "geen-toestemming";
+  const doel = { tabId };
+  const stuur = (methode, params) => new Promise((res, rej) => {
+    chrome.debugger.sendCommand(doel, methode, params, (r) => {
+      chrome.runtime.lastError ? rej(new Error(chrome.runtime.lastError.message)) : res(r);
+    });
+  });
+  try {
+    await new Promise((res, rej) => chrome.debugger.attach(doel, "1.3", () => {
+      chrome.runtime.lastError ? rej(new Error(chrome.runtime.lastError.message)) : res();
+    }));
+  } catch (e) {
+    // Al gekoppeld (een ander tabblad van ons, of de DevTools staan open):
+    // niet fataal, gewoon melden.
+    return `niet gekoppeld: ${e.message}`;
+  }
+  try {
+    // Eerst een echte klik in het veld: zonder cursor in de editor komt een
+    // toetsaanslag nergens terecht. De plek komt uit de pagina zelf.
+    const [{ result }] = await chrome.scripting.executeScript({
+      target: { tabId }, world: "MAIN",
+      func: (sel) => {
+        const el = document.querySelector(sel);
+        if (!el) return null;
+        const e = el.isContentEditable ? el : (el.querySelector('[contenteditable="true"]') || el);
+        e.scrollIntoView({ block: "center" });
+        const r = e.getBoundingClientRect();
+        return { x: Math.round(r.left + Math.min(r.width - 8, 40)), y: Math.round(r.top + r.height - 12) };
+      },
+      args: ['[data-testid="text-editor-input_nl-NL"], [data-testid="text-editor-input_nl-BE"], [contenteditable="true"]'],
+    });
+    if (!result) return "veld niet gevonden";
+    for (const type of ["mousePressed", "mouseReleased"]) {
+      await stuur("Input.dispatchMouseEvent", {
+        type, x: result.x, y: result.y, button: "left", clickCount: 1,
+      });
+    }
+    // Eén spatie, echt getypt. Meer is niet nodig: het formulier neemt hierna
+    // de hele tekst over die er al stond.
+    await stuur("Input.dispatchKeyEvent", { type: "keyDown", key: " ", code: "Space", text: " ", windowsVirtualKeyCode: 32 });
+    await stuur("Input.dispatchKeyEvent", { type: "keyUp", key: " ", code: "Space", windowsVirtualKeyCode: 32 });
+    return "getypt";
+  } catch (e) {
+    return `mislukt: ${e.message}`;
+  } finally {
+    try { chrome.debugger.detach(doel); } catch (_) {}
+  }
+}
+
 // Leest terug wat het formulier zélf als beschrijving beschouwt. Eén leeg veld
 // is genoeg om afgekeurd te worden, dus dan melden we leeg.
 function _mwHiddenDescriptionValue() {
@@ -5025,6 +5106,18 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
       if (chrome.runtime.lastError) sendResponse(false);
       else sendResponse(results?.[0]?.result ?? false);
     });
+    return true;
+  }
+
+  // Laatste redmiddel: een echte toetsaanslag via de debugger-API.
+  if (msg.type === "TYPE_ECHT") {
+    typEchteToets(sender.tab.id, msg.text || " ").then((uitkomst) => sendResponse(uitkomst));
+    return true;
+  }
+
+  // Heeft de gebruiker het echte-toetsenbord-recht al gegeven?
+  if (msg.type === "HEEFT_DEBUGGER") {
+    heeftDebugger().then((ja) => sendResponse(ja));
     return true;
   }
 

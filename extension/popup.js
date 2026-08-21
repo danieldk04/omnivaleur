@@ -147,3 +147,37 @@ admarktToggle.addEventListener("change", async () => {
 
 toonAdmarkt();
 checkLoginState();
+
+
+// Toestemming om echt te typen. Zelfde afhandeling als bij Admarkt hierboven:
+// Chrome sluit het uitklapvenster zodra hij de vraag toont, dus vanuit het
+// venstertje openen we dezelfde pagina in een tabblad.
+const TOETS = { permissions: ["debugger"] };
+const toetsToggle = document.getElementById("toetsToggle");
+
+async function toonToets() {
+  if (!toetsToggle) return;
+  try { toetsToggle.checked = await chrome.permissions.contains(TOETS); }
+  catch (_) { toetsToggle.checked = false; }
+}
+
+if (toetsToggle) {
+  toetsToggle.addEventListener("change", async () => {
+    if (!toetsToggle.checked) {
+      try { await chrome.permissions.remove(TOETS); } catch (_) {}
+      return toonToets();
+    }
+    try {
+      if (await chrome.permissions.request(TOETS)) return toonToets();
+    } catch (_) {}
+    if (!inTabblad) {
+      toetsToggle.checked = false;
+      chrome.tabs.create({ url: chrome.runtime.getURL("popup.html?tab=1") });
+      window.close();
+      return;
+    }
+    toetsToggle.checked = false;
+    toonToets();
+  });
+  toonToets();
+}
