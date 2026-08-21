@@ -6,6 +6,19 @@
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; width: 300px; background: #f8fafc; }
 
+    /* Dezelfde pagina, maar dan in een echt tabblad (?tab=1). Dat gebeurt zodra
+       je een schakelaar omzet die toestemming vraagt: Chrome sluit het
+       uitklapvenster op het moment dat hij die vraag toont, en dan is er niets
+       meer dat op het antwoord wacht. In een tabblad speelt dat niet.
+       Zonder deze regels bleef het een kolom van 300 pixels tegen de linkerrand
+       van een leeg scherm geplakt — het zag er stuk uit terwijl er niets stuk
+       was. */
+    body.als-pagina { width: auto; min-height: 100vh; background: #eef2f7;
+                      display: flex; align-items: flex-start; justify-content: center; padding: 48px 16px; }
+    body.als-pagina .kader { width: 340px; background: #f8fafc; border-radius: 14px;
+                             overflow: hidden; box-shadow: 0 10px 40px rgba(15,23,42,.12); }
+    body.als-pagina .header { border-radius: 0; }
+
     .header {
       background: linear-gradient(135deg, #2563eb, #34d399);
       padding: 16px 20px;
@@ -99,6 +112,7 @@
   </style>
 </head>
 <body>
+<div class="kader">
 
   <div class="header">
     <div class="header-logo">🔀</div>
@@ -176,20 +190,21 @@
            wat voor de meeste verkopers klopt maar niet voor allemaal: een
            verkoper van antiek zilver verzendt alleen en moest dat bij elke
            advertentie met de hand terugzetten. -->
-      <label class="setting" for="deliverySelect">
+      <!-- De keuze zelf staat sinds augustus 2026 in de app, onder Preferences,
+           en gaat vanaf daar mee in elke opdracht. Twee plekken voor dezelfde
+           instelling is vragen om de verkeerde: hier bleef "Pick-up or shipping"
+           staan terwijl in de app allang "Shipping only" was gekozen. Deze
+           schakelaar is er daarom uit; alleen de wegwijzer bleef. -->
+      <div class="setting">
         <span class="setting-head">
-          <span class="setting-title">Delivery on Marktplaats &amp; 2dehands</span>
-          <select id="deliverySelect" style="font-size:12px;padding:4px 6px;border-radius:6px">
-            <option value="beide">Pick-up or shipping</option>
-            <option value="verzenden">Shipping only</option>
-            <option value="ophalen">Pick-up only</option>
-          </select>
+          <span class="setting-title">Delivery &amp; parcel size</span>
         </span>
         <span class="setting-desc">
-          What gets selected on every new listing. Change it per listing on the
-          platform itself if one item is different.
+          Set once in the app under <strong>Preferences</strong>, together with your
+          responsible party and relist rhythm. It applies to every listing we publish.
+          <a href="https://omnivaleur.com/app" target="_blank" style="color:#2563eb;font-weight:700">Open Preferences →</a>
         </span>
-      </label>
+      </div>
 
       <hr class="divider">
 
@@ -246,6 +261,7 @@
 
   </div>
 
+</div>
   <script src="analytics.js"></script>
   <script src="popup.js"></script>
 </body>

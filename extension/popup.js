@@ -115,6 +115,7 @@ async function toonAdmarkt() {
 const inTabblad = new URLSearchParams(location.search).get("tab") === "1";
 const admarktUitleg = document.getElementById("admarktUitleg");
 
+if (inTabblad) document.body.classList.add("als-pagina");
 if (inTabblad && admarktUitleg) admarktUitleg.style.display = "block";
 
 admarktToggle.addEventListener("change", async () => {
