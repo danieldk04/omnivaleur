@@ -405,6 +405,59 @@ const MP_CATEGORIES = {
   "muziek theaterbelichting":                           { cat1: 728, cat3: 2631 },   // Theaterbelichting
   "muziek versterkers bas en gitaar":                   { cat1: 728, cat3: 745 },   // Versterkers | Bas en Gitaar
   "muziek versterkers keyboard, monitor en pa":         { cat1: 728, cat3: 768 },   // Versterkers | Keyboard, Monitor en PA
+
+  // ── HUIS, TUIN EN KERST ────────────────────────────────────────────────
+  // Herkenbaar aan het "wonen "-voorvoegsel. Drie takken van Marktplaats onder
+  // één noemer: Tuin en Terras (1847), Huis en Inrichting (504) en Kerst, dat
+  // bij Marktplaats onder Diversen (428) hangt en niet bij wonen.
+  //
+  // Alle 40 ids zijn op 21-08-2026 opgehaald uit de categorieboom van
+  // Marktplaats zelf (searchCategoryOptions per l1CategoryId) en stuk voor stuk
+  // vergeleken met de naam die Marktplaats teruggeeft — niet geraden en niet op
+  // een HTTP-status afgegaan, want een fout pad geeft daar gewoon 200.
+  //
+  // Twee niveaus, dus GEEN bucketId (zoals muziek en antiek). Met een bucketId
+  // erbij antwoordt /plaats/{cat1}/{cat3} met HTTP 400.
+  "wonen tuinmeubel accessoires":                { cat1: 1847, cat3: 1864 },   // Tuinmeubel-accessoires
+  "wonen parasols":                              { cat1: 1847, cat3: 3009 },   // Parasols
+  "wonen tuinstoelen":                           { cat1: 1847, cat3: 3001 },   // Tuinstoelen
+  "wonen tuintafels":                            { cat1: 1847, cat3: 3002 },   // Tuintafels
+  "wonen tuinsets en loungesets":                { cat1: 1847, cat3: 278 },   // Tuinsets en Loungesets
+  "wonen tuinbanken":                            { cat1: 1847, cat3: 3004 },   // Tuinbanken
+  "wonen ligbedden":                             { cat1: 1847, cat3: 3005 },   // Ligbedden
+  "wonen bloembakken en plantenbakken":          { cat1: 1847, cat3: 1852 },   // Bloembakken en Plantenbakken
+  "wonen bloempotten":                           { cat1: 1847, cat3: 1442 },   // Bloempotten
+  "wonen buitenverlichting":                     { cat1: 1847, cat3: 281 },   // Buitenverlichting
+  "wonen vuurkorven":                            { cat1: 1847, cat3: 2964 },   // Vuurkorven
+  "wonen terrasverwarmers":                      { cat1: 1847, cat3: 2811 },   // Terrasverwarmers
+  "wonen partytenten":                           { cat1: 1847, cat3: 1858 },   // Partytenten
+  "wonen overkappingen":                         { cat1: 1847, cat3: 2901 },   // Overkappingen
+  "wonen schaduwdoeken":                         { cat1: 1847, cat3: 3008 },   // Schaduwdoeken
+  "wonen zonneschermen":                         { cat1: 1847, cat3: 288 },   // Zonneschermen
+  "wonen hangmatten":                            { cat1: 1847, cat3: 3006 },   // Hangmatten
+  "wonen picknicktafels":                        { cat1: 1847, cat3: 3003 },   // Picknicktafels
+  "wonen gordijnen en lamellen":                 { cat1: 504, cat3: 512 },   // Gordijnen en Lamellen
+  "wonen barkrukken":                            { cat1: 504, cat3: 2128 },   // Barkrukken
+  "wonen stoelen":                               { cat1: 504, cat3: 530 },   // Stoelen
+  "wonen krukjes":                               { cat1: 504, cat3: 3203 },   // Krukjes
+  "wonen fauteuils":                             { cat1: 504, cat3: 1940 },   // Fauteuils
+  "wonen eettafels":                             { cat1: 504, cat3: 1949 },   // Eettafels
+  "wonen salontafels":                           { cat1: 504, cat3: 527 },   // Salontafels
+  "wonen bijzettafels":                          { cat1: 504, cat3: 2758 },   // Bijzettafels
+  "wonen tapijten en kleden":                    { cat1: 504, cat3: 533 },   // Tapijten en Kleden
+  "wonen kussens":                               { cat1: 504, cat3: 2768 },   // Kussens
+  "wonen plaids en woondekens":                  { cat1: 504, cat3: 2870 },   // Plaids en Woondekens
+  "wonen vazen":                                 { cat1: 504, cat3: 1516 },   // Vazen
+  "wonen spiegels":                              { cat1: 504, cat3: 529 },   // Spiegels
+  "wonen wanddecoraties":                        { cat1: 504, cat3: 2875 },   // Wanddecoraties
+  "wonen kunstplanten":                          { cat1: 504, cat3: 3121 },   // Kunstplanten en Kunstbloemen
+  "wonen tafellampen":                           { cat1: 504, cat3: 1260 },   // Tafellampen
+  "wonen vloerlampen":                           { cat1: 504, cat3: 1259 },   // Vloerlampen
+  "wonen hanglampen":                            { cat1: 504, cat3: 1258 },   // Hanglampen
+  "wonen kandelaars en kaarsen":                 { cat1: 504, cat3: 1510 },   // Kandelaars en Kaarsen
+  "wonen tafelkleden":                           { cat1: 504, cat3: 3120 },   // Tafelkleden
+  "wonen overige huis en inrichting":            { cat1: 504, cat3: 526 },   // Overige Huis en Inrichting
+  "wonen kerst":                                 { cat1: 428, cat3: 436 },   // Kerst
 };
 // NOTE: there is deliberately no catch-all default category. There used to be
 // one (dames jeans), and it meant any item whose category didn't resolve got

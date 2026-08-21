@@ -64,7 +64,7 @@ _TWIJFEL_PATRONEN = [
 
 # De categoriegroepen uit onze eigen boom, zoals ze in het scherm heten.
 GROEPEN = ("dames", "heren", "kinderen", "unisex", "sieraden",
-           "antiek", "kunst", "muziek", "games", "electronics")
+           "antiek", "kunst", "muziek", "games", "electronics", "wonen")
 
 
 def _groep(item: dict) -> str:

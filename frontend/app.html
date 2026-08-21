@@ -1812,6 +1812,7 @@ input[type="checkbox"].row-check { width: 15px; height: 15px; cursor: pointer; a
           <option value="sieraden">Jewellery, Watches &amp; Bags</option>
           <option value="muziek">Music &amp; Instruments</option>
           <option value="antiek">Antiques, Art &amp; Collectables</option>
+          <option value="wonen">Home, Garden &amp; Christmas</option>
         </select>
       </div>
 
@@ -3707,7 +3708,7 @@ let _keuzelijstStempel = '';
 // verkoper niets. CATEGORIES kent van elke code de nette naam.
 const CATEGORIE_GROEP_LABEL = { antiek: 'Antiques & Art', muziek: 'Music', dames: "Women's",
   heren: "Men's", kinderen: 'Kids', unisex: 'Unisex', games: 'Games',
-  electronics: 'Electronics', sieraden: 'Jewellery' };
+  electronics: 'Electronics', sieraden: 'Jewellery', wonen: 'Home & Garden' };
 let _categorieNamen = null;
 
 function categorieNaam(code) {
@@ -6769,6 +6770,51 @@ function renderPlatformCheckboxes(containerId, itemId) {
 
 // ── Category options per gender ───────────────────────────────────
 const CATEGORIES = {
+  // Huis, tuin en kerst. Dezelfde sleutels als de "wonen "-tak in
+  // MP_CATEGORIES (extensie) en _TAXONOMY (backend); die drie moeten
+  // woordelijk gelijk blijven, anders valt een artikel tussen wal en schip.
+  wonen: [
+    ["wonen tuinmeubel accessoires","Garden Furniture Accessories"],
+    ["wonen parasols","Parasols"],
+    ["wonen tuinstoelen","Garden Chairs"],
+    ["wonen tuintafels","Garden Tables"],
+    ["wonen tuinsets en loungesets","Garden & Lounge Sets"],
+    ["wonen tuinbanken","Garden Benches"],
+    ["wonen ligbedden","Sun Loungers"],
+    ["wonen bloembakken en plantenbakken","Planters"],
+    ["wonen bloempotten","Flower Pots"],
+    ["wonen buitenverlichting","Outdoor Lighting"],
+    ["wonen vuurkorven","Fire Pits"],
+    ["wonen terrasverwarmers","Patio Heaters"],
+    ["wonen partytenten","Party Tents"],
+    ["wonen overkappingen","Canopies"],
+    ["wonen schaduwdoeken","Shade Sails"],
+    ["wonen zonneschermen","Awnings"],
+    ["wonen hangmatten","Hammocks"],
+    ["wonen picknicktafels","Picnic Tables"],
+    ["wonen gordijnen en lamellen","Curtains & Blinds"],
+    ["wonen barkrukken","Bar Stools"],
+    ["wonen stoelen","Chairs"],
+    ["wonen krukjes","Stools"],
+    ["wonen fauteuils","Armchairs"],
+    ["wonen eettafels","Dining Tables"],
+    ["wonen salontafels","Coffee Tables"],
+    ["wonen bijzettafels","Side Tables"],
+    ["wonen tapijten en kleden","Rugs & Carpets"],
+    ["wonen kussens","Cushions"],
+    ["wonen plaids en woondekens","Throws & Blankets"],
+    ["wonen vazen","Vases"],
+    ["wonen spiegels","Mirrors"],
+    ["wonen wanddecoraties","Wall Decor"],
+    ["wonen kunstplanten","Artificial Plants"],
+    ["wonen tafellampen","Table Lamps"],
+    ["wonen vloerlampen","Floor Lamps"],
+    ["wonen hanglampen","Pendant Lights"],
+    ["wonen kandelaars en kaarsen","Candlesticks & Candles"],
+    ["wonen tafelkleden","Tablecloths"],
+    ["wonen overige huis en inrichting","Other Home & Interior"],
+    ["wonen kerst","Christmas"],
+  ],
   // Marktplaats' boom Antiek en Kunst, gelijk aan _TAXONOMY['antiek'] in
   // backend/api/imports.py. Twee niveaus, geen bucketId — geverifieerd in een
   // ingelogde browser: /plaats/1/2614 toont 'Antiek en Kunst > Goud en Zilver'.
@@ -6933,7 +6979,7 @@ const CATEGORIES = {
 // Non-clothing items are recognised purely by their category prefix (mirrors
 // backend crosslist.py _is_non_clothing), so no extra field has to be stored.
 // Each prefix maps to the matching item-type value in the form's type select.
-const NON_CLOTHING_PREFIXES = { 'games ': 'games', 'electronics ': 'electronics', 'sieraden ': 'sieraden', 'muziek ': 'muziek', 'antiek ': 'antiek', 'kunst ': 'antiek' };
+const NON_CLOTHING_PREFIXES = { 'games ': 'games', 'electronics ': 'electronics', 'sieraden ': 'sieraden', 'muziek ': 'muziek', 'antiek ': 'antiek', 'kunst ': 'antiek', 'wonen ': 'wonen' };
 function isNonClothingItem(item) {
   const cat = String(item?.category || '').trim().toLowerCase();
   return Object.keys(NON_CLOTHING_PREFIXES).some(p => cat.startsWith(p));

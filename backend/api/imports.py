@@ -215,6 +215,51 @@ _TAXONOMY = {
         "sieraden zonnebril dames",
         "sieraden zonnebril heren",
     ],
+    # Huis, tuin en kerst. Drie takken van Marktplaats onder één noemer,
+    # want voor de verkoper is het één soort voorraad. Kerst hangt bij
+    # Marktplaats onder Diversen, niet onder wonen.
+    "wonen": [
+        "wonen tuinmeubel accessoires",
+        "wonen parasols",
+        "wonen tuinstoelen",
+        "wonen tuintafels",
+        "wonen tuinsets en loungesets",
+        "wonen tuinbanken",
+        "wonen ligbedden",
+        "wonen bloembakken en plantenbakken",
+        "wonen bloempotten",
+        "wonen buitenverlichting",
+        "wonen vuurkorven",
+        "wonen terrasverwarmers",
+        "wonen partytenten",
+        "wonen overkappingen",
+        "wonen schaduwdoeken",
+        "wonen zonneschermen",
+        "wonen hangmatten",
+        "wonen picknicktafels",
+        "wonen gordijnen en lamellen",
+        "wonen barkrukken",
+        "wonen stoelen",
+        "wonen krukjes",
+        "wonen fauteuils",
+        "wonen eettafels",
+        "wonen salontafels",
+        "wonen bijzettafels",
+        "wonen tapijten en kleden",
+        "wonen kussens",
+        "wonen plaids en woondekens",
+        "wonen vazen",
+        "wonen spiegels",
+        "wonen wanddecoraties",
+        "wonen kunstplanten",
+        "wonen tafellampen",
+        "wonen vloerlampen",
+        "wonen hanglampen",
+        "wonen kandelaars en kaarsen",
+        "wonen tafelkleden",
+        "wonen overige huis en inrichting",
+        "wonen kerst",
+    ],
     "antiek": [
         "antiek curiosa en brocante",
         "antiek glas en kristal",
@@ -354,6 +399,12 @@ async def _classify_with_claude(title: str | None, description: str | None,
             "  spoon, a candlestick, a vase, a plate. Modern mass-produced homeware is\n"
             "  NOT antiek.\n"
             '  When you pick an "antiek" category, gender must be "antiek" too.\n'
+            '- The "wonen" branch is home, garden and Christmas: chairs, bar stools,\n'
+            "  armchairs, garden sets, tables, curtains, rugs, cushions, lamps,\n"
+            "  mirrors, planters, parasols, terrace heaters and Christmas\n"
+            "  decorations. This is ordinary modern homeware — genuinely old or\n"
+            '  collectable pieces belong in "antiek" instead.\n'
+            '  When you pick a "wonen" category, gender must be "wonen" too.\n'
             '- The "sieraden" branch covers jewellery, watches, bags, suitcases, wallets\n'
             "  and sunglasses. Pick it for anything worn or carried as an accessory.\n"
             '  When you pick a "sieraden" category, gender must be "sieraden" too.\n\n'
