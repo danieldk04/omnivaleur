@@ -37,10 +37,20 @@ def verify_install_hmac(params: dict) -> bool:
 
 
 def verify_webhook(raw_body: bytes, hmac_header: str) -> bool:
-    """Verify Shopify webhook signature."""
-    if not SHOPIFY_WEBHOOK_SECRET:
-        return True  # Skip verification in dev
-    digest = hmac.new(SHOPIFY_WEBHOOK_SECRET.encode(), raw_body, hashlib.sha256).digest()
+    """Verify Shopify webhook signature.
+
+    Webhooks declared through the app's own version config (as ours are —
+    the mandatory GDPR ones and orders/paid) are signed with the app's API
+    secret, not a separate webhook secret. SHOPIFY_WEBHOOK_SECRET is only
+    for a webhook subscription created by hand with its own signing key;
+    fall back to the app secret since that covers every webhook we actually
+    register. Silently accepting unsigned calls (returning True) would let
+    anyone hit these endpoints and trigger customer-data actions.
+    """
+    secret = SHOPIFY_WEBHOOK_SECRET or settings.shopify_client_secret
+    if not secret:
+        return False
+    digest = hmac.new(secret.encode(), raw_body, hashlib.sha256).digest()
     import base64
     expected = base64.b64encode(digest).decode()
     return hmac.compare_digest(expected, hmac_header or "")
