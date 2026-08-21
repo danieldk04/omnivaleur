@@ -4348,11 +4348,16 @@ function _mwFillHiddenDescription(descText) {
 // Daarom staat die permissie NIET standaard aan: hij wordt pas gevraagd als
 // het formulier daadwerkelijk blijft klagen, en hij wordt meteen na gebruik
 // weer losgelaten.
+// Chrome staat "debugger" NIET toe als optionele permissie: chrome.permissions
+// .request() doet er domweg niets mee en de schakelaar in het menu bleef dus
+// dood. Hij staat daarom in de vaste permissies, en de schakelaar hieronder is
+// een gewone voorkeur: staat hij uit, dan raken we de debugger niet aan.
 async function heeftDebugger() {
   try {
-    return await chrome.permissions.contains({ permissions: ["debugger"] });
+    const s = await chrome.storage.sync.get("magTypen");
+    return s.magTypen !== false;   // standaard aan: zonder dit plaatst Marktplaats niet
   } catch (_) {
-    return false;
+    return true;
   }
 }
 
