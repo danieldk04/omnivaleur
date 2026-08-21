@@ -1163,17 +1163,32 @@ def start_scan(platform: str, user_id: str = Depends(require_active_subscription
 
 @router.get("/")
 async def list_import_candidates(platform: str = None, status: str = "pending", user_id: str = Depends(get_current_user)):
+    import asyncio
+
     db = get_db()
-    q = db.table("import_candidates").select("*").eq("user_id", user_id)
-    if platform:
-        q = q.eq("platform", platform)
-    if status:
-        q = q.eq("status", status)
-    result = q.order("created_at", desc=True).limit(500).execute()
-    candidates = result.data or []
+
+    # De Supabase-client is SYNCHROON en deze functie is async: elke .execute()
+    # hieronder liep dus rechtstreeks op de lus die de hele server bedient. Bij
+    # een verkoper met duizenden advertenties kost dit blok een paar seconden —
+    # en al die tijd stond ALLES stil, voor iedereen, inclusief de import die op
+    # dat moment bezig was. Precies daar kwamen de 500'en vandaan die de lading
+    # lieten halveren. Alles wat de database raakt gaat daarom naar een aparte
+    # werkdraad.
+    def _lees():
+        q = db.table("import_candidates").select("*").eq("user_id", user_id)
+        if platform:
+            q = q.eq("platform", platform)
+        if status:
+            q = q.eq("status", status)
+        cands = q.order("created_at", desc=True).limit(500).execute().data or []
+        if not cands:
+            return cands, [], {}, {}
+        its = fetch_all(lambda: db.table("items").select("id,title,price,brand").eq("user_id", user_id))
+        by_id, by_item = _listing_index(db, its)
+        return cands, its, by_id, by_item
+
+    candidates, items, listings_by_id, platforms_by_item = await asyncio.to_thread(_lees)
     if candidates:
-        items = fetch_all(lambda: db.table("items").select("id,title,price,brand").eq("user_id", user_id))
-        listings_by_id, platforms_by_item = _listing_index(db, items)
         unmatched = []
         for c in candidates:
             item_id, reason = _match_candidate(c, items, listings_by_id)
