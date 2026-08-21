@@ -1406,6 +1406,74 @@
     return [isHeren ? "Men" : "Women", "Clothing", ...rest];
   }
 
+  // Welk blad hoort bij dit artikel?
+  //
+  // WAAROM DIT ZO MOET. De vorige versie keek of een woord uit de optienaam
+  // lettterlijk in de titel stond. Vinted spelt zijn bladen in het MEERVOUD
+  // ("Cardigans", "Checked shirts"), en een titel zegt "Cardigan" — dus die
+  // vergelijking mislukte altijd en er werd steevast "Other …" gekozen. Gemeten
+  // op drie echte advertenties: een cardigan, een zip-vest en een geruit
+  // overhemd belandden alle drie bij "Other". Dat kost vindbaarheid: kopers
+  // filteren op deze bladen.
+  //
+  // Nu: enkelvoud tegen enkelvoud, plus een handjevol woorden die zo
+  // vanzelfsprekend zijn dat ze voorrang krijgen.
+  const BLAD_VOORKEUR = [
+    [/\bcardigan/i,                         /cardigan/i],
+    [/\bzip[- ]?(through|up|vest|hoodie)/i, /zip[- ]?through/i],
+    [/\bhoodie/i,                           /^hoodies/i],
+    [/\bsweatshirt/i,                       /sweatshirt/i],
+    [/\bgeruit|\bchecked|\bplaid|\btartan/i, /check/i],
+    [/\bgestreept|\bstriped/i,              /stripe/i],
+    [/\bdenim(?!\s*jeans)/i,                /denim/i],
+    [/\bflanel|\bflannel/i,                 /flannel/i],
+    [/\blinnen|\blinen/i,                   /linen/i],
+    [/\boxford/i,                           /oxford/i],
+    [/\bpolo\b/i,                           /polo/i],
+    [/\bv[- ]?hals|\bv[- ]?neck/i,          /v[- ]?neck/i],
+    [/\bronde hals|\bcrew ?neck/i,          /crew ?neck/i],
+    [/\bcoltrui|\bturtleneck|\brollkragen/i, /turtleneck|roll ?neck/i],
+    [/\bgilet|\bbodywarmer|\bvest\b/i,      /gilet|waistcoat|body ?warmer/i],
+    [/\btrenchcoat/i,                       /trench/i],
+    [/\bparka/i,                            /parka/i],
+    [/\bbomber/i,                           /bomber/i],
+    [/\bblazer|\bcolbert/i,                 /blazer/i],
+  ];
+
+  // "cardigans" → "cardigan", "shirts" → "shirt". Alleen de kale meervouds-s:
+  // slimmer worden helpt hier niet en levert alleen misverstanden op.
+  const enkelvoud = (w) => (w.length > 4 && /s$/.test(w) && !/ss$/.test(w) ? w.slice(0, -1) : w);
+
+  function kiesBlad(namen, tekst) {
+    // 1. Een voorkeurswoord in de tekst dat één op één bij een blad hoort.
+    for (const [inTekst, inNaam] of BLAD_VOORKEUR) {
+      if (!inTekst.test(tekst)) continue;
+      const i = namen.findIndex((n) => inNaam.test(n));
+      if (i >= 0) return i;
+    }
+    // 2. Anders: het blad waarvan de meeste eigen woorden in de tekst staan.
+    //    Woorden die in élk blad terugkomen ("shirts" onder Shirts) zeggen
+    //    niets en tellen daarom niet mee.
+    const alleWoorden = namen.map((n) =>
+      n.toLowerCase().replace(/&/g, " ").split(/[^a-z0-9-]+/).filter((w) => w.length > 3).map(enkelvoud));
+    const telling = {};
+    for (const ws of alleWoorden) for (const w of new Set(ws)) telling[w] = (telling[w] || 0) + 1;
+    const woordenTekst = new Set(tekst.replace(/&/g, " ").split(/[^a-z0-9-]+/).map(enkelvoud));
+    let beste = -1, besteScore = 0;
+    alleWoorden.forEach((ws, i) => {
+      if (/^other\b/i.test(namen[i])) return;
+      const score = ws.filter((w) => telling[w] === 1 && woordenTekst.has(w)).length;
+      if (score > besteScore) { besteScore = score; beste = i; }
+    });
+    if (beste >= 0) return beste;
+    // 3. Zegt het artikel niets over model of pasvorm, kies dan het meest
+    //    neutrale blad. Zonder deze regel viel de keuze op de éérste optie, en
+    //    dat is bij spijkerbroeken "Ripped jeans" — dan staat een gave broek te
+    //    koop als kapotte broek. Live nagelopen op vinted.nl.
+    const n = namen.findIndex((t) => /^(other|straight|regular|classic|basic)\b/i.test(t));
+    return n >= 0 ? n : (namen.length ? 0 : null);
+  }
+
   // Loopt het pad af in Vinted's kiezer. Stopt zodra de lijst dichtklapt en het
   // veld een waarde heeft — dat is Vinted's eigen signaal dat de categorie
   // gekozen is. Zijn er onderweg nog subcategorieën, dan kiest hij het blad dat
@@ -1447,17 +1515,8 @@
     const tekst = `${item.title || ""} ${item.description || ""}`.toLowerCase();
     for (let i = 0; i < 3 && cellen().length; i++) {
       const opties = cellen();
-      const genoemd = opties.find((e) => {
-        const woorden = titel(e).toLowerCase().replace(/&/g, " ").split(/\s+/)
-          .filter((w) => w.length > 3 && !["jeans", "shirts", "jackets", "coats"].includes(w));
-        return woorden.length && woorden.some((w) => tekst.includes(w));
-      });
-      // Zegt het artikel niets over model of pasvorm, kies dan het meest
-      // neutrale blad. Zonder deze regel viel de keuze op de éérste optie, en
-      // dat is bij spijkerbroeken "Ripped jeans" — dan staat een gave broek te
-      // koop als kapotte broek. Live nagelopen op vinted.nl.
-      const neutraal = opties.find((e) => /^(other|straight|regular|classic|basic)\b/i.test(titel(e)));
-      const keuze = genoemd || neutraal || opties[0];
+      const keuze = kiesBlad(opties.map(titel), tekst) != null
+        ? opties[kiesBlad(opties.map(titel), tekst)] : opties[0];
       clog(`Vinted-categorie: extra niveau → "${titel(keuze)}"`);
       realClickEl(keuze);
       await sleep(1100);
