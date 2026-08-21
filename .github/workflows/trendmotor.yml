@@ -44,13 +44,20 @@ jobs:
 
       - name: Benodigdheden
         run: |
-          pip install --quiet playwright httpx pillow
+          pip install --quiet playwright httpx pillow anthropic
           python -m playwright install --with-deps chromium
 
-      - name: Meten en versturen
-        run: |
-          python3 scripts/social_trends_rapport.py \
-            --alleen-uur 8 ${{ github.event_name == 'workflow_dispatch' && '--droog' || '' }}
+      # Op het rooster: alleen doorgaan als het in Nederland echt 08:xx is, en
+      # dan ook echt versturen. Met de hand gestart: geen klokcontrole (anders
+      # kun je nooit testen) en niet versturen, zodat een test nooit per ongeluk
+      # een halve mail de deur uit doet.
+      - name: Meten en versturen (rooster)
+        if: github.event_name == 'schedule'
+        run: python3 scripts/social_trends_rapport.py --alleen-uur 8
+
+      - name: Proefronde zonder versturen (met de hand gestart)
+        if: github.event_name == 'workflow_dispatch'
+        run: python3 scripts/social_trends_rapport.py --droog
 
       # De meting van deze week bewaren. Dat is niet alleen archief: de laag van
       # 90 dagen wordt pas betrouwbaar als er weken achter elkaar gemeten is, en

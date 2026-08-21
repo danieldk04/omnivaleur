@@ -47,7 +47,7 @@ from social_trends_discover import (  # noqa: E402
 UITVOER = Path(__file__).parent / "output"
 ONTVANGER = "daniel@omnivaleur.nl"
 NOTION_OUDER = "3c3b0954-fb72-81e1-983a-c36ff2959359"  # pagina "Trendmotor"
-MODEL = "claude-sonnet-5"
+MODEL = "claude-opus-5"
 
 
 # ── Meten ───────────────────────────────────────────────────────────────────
@@ -131,33 +131,43 @@ DATA:
 
 
 def schrijf_opdrachten(data: dict, sleutel: str) -> list[dict]:
-    import httpx
+    """
+    Vijf opdrachten laten schrijven, en meteen controleren of ze op iets slaan.
+
+    Bewust met streaming: dit antwoord is lang, en een gewone aanroep loopt dan
+    tegen de leestijd van de verbinding aan. Dat gebeurde ook echt — de aanroep
+    liep tien minuten en gaf toen een time-out, waarna het rapport stilletjes
+    zonder opdrachten uitging. Streamen houdt de verbinding levend.
+    """
+    import anthropic
 
     geldige_urls = {v["url"] for p in PERIODES for v in data[p]["top"]}
+    client = anthropic.Anthropic(api_key=sleutel)
     try:
-        r = httpx.post(
-            "https://api.anthropic.com/v1/messages",
-            headers={"x-api-key": sleutel, "anthropic-version": "2023-06-01",
-                     "content-type": "application/json"},
-            json={"model": MODEL, "max_tokens": 3000,
-                  "messages": [{"role": "user",
-                                "content": PROMPT + _feiten(data)}]},
-            timeout=180.0)
-        r.raise_for_status()
-        tekst = "".join(b.get("text", "") for b in r.json().get("content", []))
+        with client.messages.stream(
+            model=MODEL,
+            max_tokens=8000,
+            messages=[{"role": "user", "content": PROMPT + _feiten(data)}],
+        ) as stroom:
+            antwoord = stroom.get_final_message()
+        tekst = "".join(b.text for b in antwoord.content if b.type == "text")
     except Exception as e:
         print(f"! opdrachten schrijven mislukt: {type(e).__name__}: {e}", file=sys.stderr)
         return []
 
     m = re.search(r"\{.*\}", tekst, re.S)
     if not m:
+        print(f"! geen JSON in het antwoord ({len(tekst)} tekens)", file=sys.stderr)
         return []
     try:
         rauw = json.loads(m.group(0)).get("opdrachten", [])
-    except json.JSONDecodeError:
+    except json.JSONDecodeError as e:
+        print(f"! JSON onleesbaar: {e}", file=sys.stderr)
         return []
 
-    # De controle waar het om draait: een opdracht zonder bestaande bron bestaat niet.
+    # De controle waar het om draait: een opdracht zonder bestaande bron bestaat
+    # niet. Zo kan er nooit een voorbeeld in de mail staan dat er goed uitziet
+    # maar dat niemand ooit heeft gemaakt.
     goed = []
     for o in rauw:
         if o.get("bron") in geldige_urls:
@@ -231,16 +241,20 @@ def mail_html(data: dict, opdrachten: list[dict], dashboard_url: str) -> str:
                     or "nog te weinig data"}. Dat is de stabiele laag &mdash;
       wat daar staat is geen weekpiek.</td></tr>
   <tr><td style="border-top:1px solid #D2DAD9;padding:20px 0 0">
-      <a href="{dashboard_url}" style="display:inline-block;background:#151B1B;
-      color:#F8FAFA;font:500 14px/1 Georgia,serif;padding:12px 20px;
-      text-decoration:none">Open het dashboard met alle video&rsquo;s</a></td></tr>
+      {'<a href="' + dashboard_url + '" style="display:inline-block;background:#151B1B;'
+       'color:#F8FAFA;font:500 14px/1 Georgia,serif;padding:12px 20px;'
+       'text-decoration:none">Open het dashboard met alle video&rsquo;s</a>'
+       if dashboard_url else
+       '<div style="font:400 15px/1.5 Georgia,serif;color:#151B1B">Het volledige '
+       'dashboard met alle video&rsquo;s, beeld en filters zit als bijlage bij '
+       'deze mail.</div>'}</td></tr>
   <tr><td style="font:400 13px/1.5 Georgia,serif;color:#5A6867;padding:18px 0 0">
       Elke opdracht hierboven is gekoppeld aan een video die echt bestaat en echt
       zo presteerde. Kon een opdracht dat niet, dan staat hij er niet in.</td></tr>
 </table></td></tr></table></body></html>"""
 
 
-def verstuur(html: str, onderwerp: str) -> bool:
+def verstuur(html: str, onderwerp: str, bijlage: Path | None = None) -> bool:
     host = os.environ.get("MAIL_HOST")
     van = os.environ.get("MAIL_USER")
     wachtwoord = os.environ.get("MAIL_PASS")
@@ -255,6 +269,12 @@ def verstuur(html: str, onderwerp: str) -> bool:
     bericht.set_content("Dit bericht is in HTML. Open het in een mailprogramma "
                         "dat HTML toont.")
     bericht.add_alternative(html, subtype="html")
+    # Het dashboard gaat als bijlage mee. Anders zou de mail moeten linken naar
+    # een pagina die iemand met de hand opnieuw publiceert, en dan is de motor
+    # niet autonoom maar afhankelijk van een handeling die niemand doet.
+    if bijlage and bijlage.exists():
+        bericht.add_attachment(bijlage.read_bytes(), maintype="text", subtype="html",
+                               filename=f"trenddashboard-{datetime.now():%Y-%m-%d}.html")
     with smtplib.SMTP_SSL(host, 465, context=ssl.create_default_context()) as smtp:
         smtp.login(van, wachtwoord)
         smtp.send_message(bericht)
@@ -354,7 +374,8 @@ def main() -> int:
     opdrachten = schrijf_opdrachten(data, sleutel) if sleutel else []
     print(f"opdrachten die de broncontrole haalden: {len(opdrachten)}")
 
-    dash_url = os.environ.get("DASHBOARD_URL", "https://claude.ai/code/artifacts")
+    # Zonder ingestelde webversie wijst de knop naar de bijlage; die zit er altijd bij.
+    dash_url = os.environ.get("DASHBOARD_URL", "")
     html = mail_html(data, opdrachten, dash_url)
     (UITVOER / "laatste-mail.html").write_text(html, encoding="utf-8")
 
@@ -366,7 +387,7 @@ def main() -> int:
     if notion_url:
         print(f"Notion: {notion_url}")
     verstuurd = verstuur(html, f"Trendmotor — wat je deze week zou moeten maken "
-                               f"({datetime.now():%d-%m})")
+                               f"({datetime.now():%d-%m})", bijlage=dash)
     print("mail verstuurd" if verstuurd else "mail NIET verstuurd")
     return 0 if verstuurd else 1
 
