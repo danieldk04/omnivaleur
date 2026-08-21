@@ -485,6 +485,17 @@ window.CL = (() => {
 
   // Wat er op deze categorie staat, in het log — zodat een leeg kenmerk
   // meteen te herleiden is zonder opnieuw te moeten raden.
+  // Alleen de kern: welke keuzevelden staan er, en wat is er gekozen. Bedoeld
+  // voor de foutmelding — zonder dit is "hij plaatst niet en er staat niets
+  // rood" niet op te lossen, want juist een leeg verplicht veld blijft stil.
+  function keuzeveldenKort() {
+    try {
+      return attrSelects()
+        .map((el) => `${el.name.replace(/^singleSelectAttribute\[|\]$/g, "")}=${el.value || "LEEG"}`)
+        .join(", ");
+    } catch (_) { return "niet te lezen"; }
+  }
+
   function logMpFields(tag) {
     try {
       clog(`${tag} velden:`, attrSelects().map((s) =>
@@ -1435,7 +1446,8 @@ window.CL = (() => {
       `Not published — complete the fields marked in red and click publish yourself. `
       + (uniq.length ? `${uniq.join(" | ")} ` : "")
       + (rood.length ? `| Fields marked invalid: ${rood.join(", ")} ` : "| No field is marked invalid. ")
-      + `| Real click: ${_laatsteEchteKlik} | Still on ${waar}, ${knopStand} | Page says: ${zichtbaar}`
+      + `| Real click: ${_laatsteEchteKlik} | Still on ${waar}, ${knopStand} `
+      + `| Attribute fields: ${keuzeveldenKort()} | Page says: ${zichtbaar}`
     );
   }
 
@@ -1547,7 +1559,7 @@ window.CL = (() => {
   return {
     sleep, waitUntil, qs, waitForEl, fillInput, fillInputHuman, fillNativeSelect, clickRadioByValue, fillDescription,
     findFieldByLabel, selectDropdown, fillBrand, fillManufacturer, selectBundleFree,
-    selectDelivery, gekozenLevering, selectPakketWaarde, vulHalswijdte,
+    selectDelivery, gekozenLevering, selectPakketWaarde, vulHalswijdte, keuzeveldenKort,
     selectPackageSize, uploadPhotos, submitListing, step, closePopup, smartTrunc, fillBidding,
     clog, plaatsBlokkade, dutchColor, verifyMpGroupFields, repairMpGroupFields, ensureDescriptionStillFilled, selectCondition, selectIntendedFor, fillBrandField, logMpFields, mpPrijs,
   };
