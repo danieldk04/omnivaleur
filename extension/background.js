@@ -1252,12 +1252,24 @@ function openStilWerkTabblad(url, callback) {
 // de aandacht niet en verdwijnt weer zodra de scan klaar is. Alleen als er geen
 // enkel gewoon venster is (Chrome draait dan op de achtergrond) valt het terug
 // op het oude gedrag.
+
+// Een werk-tabblad openen dat we mógen aansturen.
+//
+// Eerst leeg openen, dan koppelen, dan pas navigeren. Andersom is te laat:
+// zodra Marktplaats geladen is weigert Chrome de koppeling (zie koppelVroeg).
+async function maakWerkTabblad(opties, url) {
+  const tab = await chrome.tabs.create({ ...opties, url: "about:blank" });
+  await koppelVroeg(tab.id);
+  await chrome.tabs.update(tab.id, { url });
+  return tab;
+}
+
 async function openAchtergrondTabblad(url) {
   try {
     const vensters = await chrome.windows.getAll({ windowTypes: ["normal"] });
     const bruikbaar = vensters.find(w => w.state !== "minimized") || vensters[0];
     if (bruikbaar) {
-      return await chrome.tabs.create({ url, windowId: bruikbaar.id, active: false });
+      return await maakWerkTabblad({ windowId: bruikbaar.id, active: false }, url);
     }
   } catch (_) { /* val terug op het werkvenster */ }
   return null;
@@ -1354,6 +1366,44 @@ function stilTabblad(url, callback) {
   }).catch(() => openStilWerkTabblad(url, callback));
 }
 
+
+// Tabbladen waar we al aan gekoppeld zijn (zie koppelVroeg).
+const _vroegGekoppeld = new Set();
+
+// KOPPELEN TERWIJL HET TABBLAD NOG LEEG IS.
+//
+// Chrome weigert een debugger-koppeling zodra er ergens in het tabblad een
+// stukje van een ándere extensie zit: "Cannot access a chrome-extension:// URL
+// of different extension". Op een volle Marktplaats-pagina met advertenties en
+// meeleesextensies is dat kennelijk het geval — gemeten op 21-08-2026, twee
+// koppelwegen, allebei geweigerd, op een doodgewone marktplaats.nl-pagina.
+//
+// Een leeg tabblad (about:blank) mag Chrome wél, en de koppeling blijft daarna
+// gewoon staan als het tabblad naar Marktplaats navigeert. Dus koppelen we
+// meteen bij het openen, vóór er iets geladen is.
+async function koppelVroeg(tabId) {
+  try {
+    if (_vroegGekoppeld.has(tabId)) return true;
+    if (!(await heeftDebugger())) return false;
+    await new Promise((res, rej) => chrome.debugger.attach({ tabId }, "1.3", () => {
+      chrome.runtime.lastError ? rej(new Error(chrome.runtime.lastError.message)) : res();
+    }));
+    _vroegGekoppeld.add(tabId);
+    return true;
+  } catch (e) {
+    console.warn("[Omnivaleur] vroeg koppelen mislukt:", e.message);
+    return false;
+  }
+}
+
+function ontkoppelVroeg(tabId) {
+  if (!_vroegGekoppeld.has(tabId)) return;
+  _vroegGekoppeld.delete(tabId);
+  try { chrome.debugger.detach({ tabId }); } catch (_) {}
+}
+
+chrome.tabs.onRemoved.addListener((tabId) => _vroegGekoppeld.delete(tabId));
+
 function openWorkerTab(url, callback, opts = {}) {
   _workerWindowChain = _workerWindowChain
     .then(() => openWorkerTabInner(url, opts))
@@ -1382,7 +1432,7 @@ async function openWorkerTabInner(url, opts = {}) {
       // active:true is scoped to THAT window, so it never steals focus from the
       // user's foreground window — and does not un-minimise it either.
       await ensureKeeperTab(existing);
-      const tab = await chrome.tabs.create({ url, windowId: existing, active: true });
+      const tab = await maakWerkTabblad({ windowId: existing, active: true }, url);
       // Het vorige job-tabblad wordt pas 2 seconden NA afronding gesloten. Valt
       // dat samen met het openen van het volgende, dan sluit Chrome het venster
       // (laatste tabblad weg) en neemt het nieuwe tabblad meteen mee — het
@@ -1402,21 +1452,26 @@ async function openWorkerTabInner(url, opts = {}) {
     // Chrome rejects state:"minimized" combined with an explicit size (and, on
     // some versions, with focused), so the minimised window is created bare and
     // degrades to a normal unfocused window rather than failing the whole job.
+    // Leeg openen en pas daarna navigeren: alleen op een leeg tabblad laat
+    // Chrome ons aan de toetsen komen (zie koppelVroeg).
+    const leeg = "about:blank";
     const w = opts.silent
-      ? await chrome.windows.create({ url, focused: false, state: "minimized" })
-          .catch(() => chrome.windows.create({ url, state: "minimized" }))
-          .catch(() => chrome.windows.create({ url, focused: false, ...WORKER_WIN_SIZE }))
-      : await chrome.windows.create({ url, focused: false, ...WORKER_WIN_SIZE });
+      ? await chrome.windows.create({ url: leeg, focused: false, state: "minimized" })
+          .catch(() => chrome.windows.create({ url: leeg, state: "minimized" }))
+          .catch(() => chrome.windows.create({ url: leeg, focused: false, ...WORKER_WIN_SIZE }))
+      : await chrome.windows.create({ url: leeg, focused: false, ...WORKER_WIN_SIZE });
     if (!w || !w.tabs || !w.tabs[0]) throw new Error("no tab in new window");
     await setWorkerWindowId(w.id);
     // Anker erbij: vanaf nu blijft dit ene venster bestaan in plaats van bij
     // elke klus opnieuw op te poppen.
     await ensureKeeperTab(w.id);
+    await koppelVroeg(w.tabs[0].id);
+    await chrome.tabs.update(w.tabs[0].id, { url });
     return w.tabs[0];
   } catch {
     // Window creation blocked (rare) — fall back to a plain background tab so
     // the job still runs rather than failing outright.
-    return await chrome.tabs.create({ url, active: false });
+    return await maakWerkTabblad({ active: false }, url);
   }
 }
 
@@ -4380,8 +4435,11 @@ async function typEchteToets(tabId, tekst) {
   const koppel = (waar) => new Promise((res, rej) => chrome.debugger.attach(waar, "1.3", () => {
     chrome.runtime.lastError ? rej(new Error(chrome.runtime.lastError.message)) : res();
   }));
+  // Al gekoppeld bij het openen van het tabblad? Dan hoeft het niet nog eens —
+  // en dat is precies de koppeling die wél lukt.
+  const alGekoppeld = _vroegGekoppeld.has(tabId);
   try {
-    await koppel(doel);
+    if (!alGekoppeld) await koppel(doel);
   } catch (eerste) {
     // Tweede weg: koppelen op het doel-ID in plaats van op het tabblad-nummer.
     // Chrome geeft bij een tabblad soms een melding over een extensie-adres die
@@ -4444,7 +4502,9 @@ async function typEchteToets(tabId, tekst) {
   } catch (e) {
     return `mislukt: ${e.message}`;
   } finally {
-    try { chrome.debugger.detach(doel); } catch (_) {}
+    // De koppeling van bij het openen laten we staan; die is voor het hele
+    // tabblad en wordt opgeruimd als het tabblad sluit.
+    if (!alGekoppeld) { try { chrome.debugger.detach(doel); } catch (_) {} }
   }
 }
 
