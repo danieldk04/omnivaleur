@@ -119,3 +119,58 @@ async def marktplaats_webhook(request: Request):
             await handle_item_sold(listing.data[0]["item_id"], listing.data[0]["platform"])
 
     return {"status": "ok"}
+
+
+@router.post("/shopify/customers/data_request")
+async def shopify_customers_data_request(request: Request):
+    """
+    Mandatory GDPR webhook: a shop owner's customer asked what data the app
+    holds on them. We never receive or store Shopify customer data — only
+    the shop's own products/inventory — so there is nothing to return.
+    """
+    raw = await request.body()
+    if not verify_webhook(raw, request.headers.get("X-Shopify-Hmac-Sha256", "")):
+        raise HTTPException(status_code=401, detail="Invalid webhook signature")
+    return {"status": "ok"}
+
+
+@router.post("/shopify/customers/redact")
+async def shopify_customers_redact(request: Request):
+    """
+    Mandatory GDPR webhook: erase a specific customer's data. Same as
+    data_request — this app never stores Shopify customer data, so there
+    is nothing to erase.
+    """
+    raw = await request.body()
+    if not verify_webhook(raw, request.headers.get("X-Shopify-Hmac-Sha256", "")):
+        raise HTTPException(status_code=401, detail="Invalid webhook signature")
+    return {"status": "ok"}
+
+
+@router.post("/shopify/shop/redact")
+async def shopify_shop_redact(request: Request):
+    """
+    Mandatory GDPR webhook, sent 48h after a shop uninstalls the app: erase
+    everything tied to that shop. We drop the stored access token so it can
+    no longer be used, matching what Shopify expects on redaction.
+    """
+    raw = await request.body()
+    if not verify_webhook(raw, request.headers.get("X-Shopify-Hmac-Sha256", "")):
+        raise HTTPException(status_code=401, detail="Invalid webhook signature")
+
+    import json
+    payload = json.loads(raw)
+    shop_domain = payload.get("shop_domain")
+    if shop_domain:
+        db = get_db()
+        rows = (await naast_de_lus(
+            lambda: db.table("platform_credentials").select("id,extra_data")
+            .eq("platform", "shopify").execute()
+        )).data or []
+        for row in rows:
+            if (row.get("extra_data") or {}).get("shop_domain") == shop_domain:
+                await naast_de_lus(
+                    lambda: db.table("platform_credentials").delete().eq("id", row["id"]).execute()
+                )
+
+    return {"status": "ok"}
