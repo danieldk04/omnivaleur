@@ -1324,12 +1324,25 @@ window.CL = (() => {
 
     const uniq = formulierklachten();
     const rood = roodGemarkeerdeVelden();
+    // WAT STAAT ER OP HET SCHERM OP HET MOMENT VAN MISLUKKEN?
+    //
+    // Geen rood veld, geen klacht, en tóch geen advertentie: dan is de vraag
+    // niet "wat mist er" maar "waar zijn we beland". Een extra stap voor
+    // zakelijke verkopers, een venster over het formulier heen, een knop die
+    // ineens uitstaat — dat zie je alleen aan de pagina zelf. Alleen het adres
+    // en de eerste regels tekst; nooit iets uit de invoervelden.
+    const waar = location.pathname + location.search.slice(0, 40);
+    const zichtbaar = (document.body.innerText || "").replace(/\s+/g, " ").trim().slice(0, 220);
+    const knopStand = btn
+      ? `knop "${(btn.textContent || "").trim().slice(0, 30)}"${btn.disabled ? " (uitgeschakeld)" : ""}`
+      : "knop weg";
     clog(`plaatsen: mislukt — ${uniq.join(" | ") || "geen foutmelding op de pagina"}`
        + (rood.length ? ` | rode velden: ${rood.join(", ")}` : ""));
     throw new Error(
       `Not published — complete the fields marked in red and click publish yourself. `
       + (uniq.length ? `${uniq.join(" | ")} ` : "")
-      + (rood.length ? `| Fields marked invalid: ${rood.join(", ")}` : "| No field is marked invalid — the publish button may not have responded.")
+      + (rood.length ? `| Fields marked invalid: ${rood.join(", ")} ` : "| No field is marked invalid. ")
+      + `| Still on ${waar}, ${knopStand} | Page says: ${zichtbaar}`
     );
   }
 
