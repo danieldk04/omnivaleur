@@ -31,6 +31,7 @@ import json
 import re
 import statistics
 import sys
+import urllib.parse
 import urllib.request
 from datetime import datetime, timezone
 from pathlib import Path
@@ -155,29 +156,52 @@ async def verzamel_tiktok(scrolls: int, hashtag_limiet: int | None) -> list[dict
 
     resultaat: list[dict] = []
     gezien: set[str] = set()
-    async with async_playwright() as p:
-        browser = await p.chromium.launch(
-            headless=True, args=["--disable-blink-features=AutomationControlled"])
-        ctx = await browser.new_context(
-            locale="nl-NL", user_agent=UA, viewport={"width": 1400, "height": 900})
-        page = await ctx.new_page()
-        if stealth_async:
-            try:
-                await stealth_async(page)
-            except Exception as e:
-                print(f"! stealth overgeslagen: {e}", file=sys.stderr)
+    leeg_op_rij = 0
 
+    # Elke hashtag krijgt een verse sessie. Hergebruikten we één browser, dan
+    # leverde alleen de eerste hashtag data op en kwam al het volgende leeg terug:
+    # TikTok telt de verzoeken per sessie en zet je daarna op stil. Een nieuwe
+    # context per hashtag, met een pauze ertussen, blijft binnen wat een normale
+    # bezoeker doet. Het kost ~25 seconden per hashtag; dat is de prijs van gratis.
+    async with async_playwright() as p:
         for i, (niche, taal, tag) in enumerate(opdrachten, 1):
-            print(f"  [{i}/{len(opdrachten)}] TikTok #{tag} ({niche}/{taal}) …", flush=True)
-            for it in await _tiktok_tag(page, tag, scrolls):
-                vid = str(it.get("id") or "")
-                if not vid or vid in gezien:
-                    continue
-                gezien.add(vid)
-                rij = _tiktok_norm(it, niche, taal, tag)
-                if rij:
-                    resultaat.append(rij)
-        await browser.close()
+            print(f"  [{i}/{len(opdrachten)}] TikTok #{tag} ({niche}/{taal}) …",
+                  end="", flush=True)
+            nieuw_aantal = 0
+            browser = await p.chromium.launch(
+                headless=True, args=["--disable-blink-features=AutomationControlled"])
+            try:
+                ctx = await browser.new_context(
+                    locale="nl-NL", user_agent=UA,
+                    viewport={"width": 1400, "height": 900})
+                page = await ctx.new_page()
+                if stealth_async:
+                    try:
+                        await stealth_async(page)
+                    except Exception:
+                        pass
+                for it in await _tiktok_tag(page, tag, scrolls):
+                    vid = str(it.get("id") or "")
+                    if not vid or vid in gezien:
+                        continue
+                    gezien.add(vid)
+                    rij = _tiktok_norm(it, niche, taal, tag)
+                    if rij:
+                        resultaat.append(rij)
+                        nieuw_aantal += 1
+                print(f" {nieuw_aantal} video's", flush=True)
+            finally:
+                await browser.close()
+
+            # Blijft het drie hashtags achter elkaar leeg, dan is niet de hashtag
+            # het probleem maar wij: doorgaan levert alleen meer stilte op.
+            leeg_op_rij = leeg_op_rij + 1 if nieuw_aantal == 0 else 0
+            if leeg_op_rij >= 3:
+                print("  ! drie lege hashtags op rij — TikTok houdt de boot af, "
+                      "ronde afgebroken", file=sys.stderr)
+                break
+            if i < len(opdrachten):
+                await asyncio.sleep(8)
     return resultaat
 
 
@@ -249,7 +273,7 @@ def _yt_zoek(query: str, niche: str, max_items: int = 20) -> list[dict]:
                     "gevonden_via": query,
                     "handle": (kanaal.get("navigationEndpoint", {})
                                .get("browseEndpoint", {})
-                               .get("canonicalBaseUrl", "") or "").lstrip("/"),
+                               .get("canonicalBaseUrl", "") or "").lstrip("/@"),
                     "naam": kanaal.get("text", ""),
                     "volgers": 0,  # staat niet in de zoekpagina
                     "video_id": vr.get("videoId", ""),
@@ -271,7 +295,6 @@ def _yt_zoek(query: str, niche: str, max_items: int = 20) -> list[dict]:
 
 
 def verzamel_youtube(query_limiet: int | None) -> list[dict]:
-    import urllib.parse  # noqa: F401  (gebruikt in _yt_zoek via globals)
     uit: list[dict] = []
     for niche, cfg in NICHES.items():
         for q in cfg.get("youtube", [])[:query_limiet]:
@@ -351,15 +374,195 @@ def bundel_per_creator(videos: list[dict]) -> list[dict]:
             "top_url": beste["url"],
             "top_tekst": beste["tekst"][:140],
             # Rangschikking: niche-bewijs weegt het zwaarst, dan betrokkenheid,
-            # dan pas bereik. De logaritme houdt grote accounts binnen de perken.
+            # dan pas bereik. De macht < 1 houdt grote accounts binnen de perken.
+            #
+            # YouTube krijgt een eigen formule: de zoekpagina geeft geen likes of
+            # reacties, alleen views. Zou YouTube in dezelfde formule meedoen, dan
+            # scoort elke YouTuber 0 op betrokkenheid en verdwijnt hij onderaan —
+            # niet omdat hij slecht is, maar omdat wij het niet kunnen meten.
+            #
+            # Het aantal hits weegt zwaar: één video die toevallig #thrifting
+            # gebruikte zegt niets, vijftien video's over meerdere zoektermen
+            # zeggen dat dit account écht in de niche zit. De engagement-ratio is
+            # afgetopt op 25%, want daarboven gaat het bijna altijd om een kleine
+            # video waarbij de ratio wiskundig opblaast in plaats van iets te
+            # bewijzen.
             "score": round(
-                len(vs) * 10
-                + med_ratio * 3
-                + (med_views ** 0.35) / 5, 1),
+                len(vs) * 25 + min(med_ratio, 25) * 2 + (med_views ** 0.35) / 5, 1)
+            if c["platform"] != "YouTube" else
+            round(len(vs) * 25 + (med_views ** 0.35), 1),
         })
-    uit.sort(key=lambda c: c["score"], reverse=True)
+    # Per platform sorteren en pas daarna samenvoegen, zodat platforms met minder
+    # meetbare velden niet stelselmatig onderaan belanden.
+    uit.sort(key=lambda c: (c["platform"], -c["score"]))
     return uit
 
+
+
+# ── Goedkeurpagina ──────────────────────────────────────────────────────────
+# De verkenningsronde levert honderden accounts op, maar de meeste zijn ruis:
+# één video die toevallig een hashtag gebruikte. Deze pagina toont alleen wat
+# minstens twee keer opdook, met het bewijs erbij, zodat goedkeuren neerkomt op
+# wegstrepen wat niet klopt in plaats van alles nalopen.
+_KOP = """<title>Creatorlijst Omnivaleur</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=Newsreader:opsz,wght@6..72,400;6..72,600&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+:root{
+  --papier:#EEF1F1; --kaart:#F8FAFA; --rand:#D2DAD9;
+  --inkt:#151B1B; --zacht:#5A6867; --accent:#0E6F6B; --accent-zacht:#DCEAE8;
+  --waarschuwing:#A8441C;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --papier:#0D1212; --kaart:#151D1D; --rand:#293636;
+    --inkt:#E9EFEE; --zacht:#93A3A1; --accent:#5FD3C8; --accent-zacht:#16302E;
+    --waarschuwing:#E08A5F;
+  }
+}
+:root[data-theme="dark"]{
+  --papier:#0D1212; --kaart:#151D1D; --rand:#293636;
+  --inkt:#E9EFEE; --zacht:#93A3A1; --accent:#5FD3C8; --accent-zacht:#16302E;
+  --waarschuwing:#E08A5F;
+}
+*{box-sizing:border-box}
+body{background:var(--papier);color:var(--inkt);
+  font-family:"Newsreader",Georgia,serif;font-size:17px;line-height:1.6;
+  margin:0;padding:clamp(20px,4vw,56px)}
+.wrap{max-width:1080px;margin:0 auto;display:flex;flex-direction:column;gap:40px}
+h1,h2,h3{font-family:"Bricolage Grotesque",system-ui,sans-serif;
+  text-wrap:balance;margin:0;line-height:1.15;font-weight:700}
+h1{font-size:clamp(30px,4.4vw,46px);letter-spacing:-.02em}
+h2{font-size:22px;letter-spacing:-.01em}
+.lead{max-width:62ch;color:var(--zacht);margin:0}
+.eyebrow{font-family:"JetBrains Mono",ui-monospace,monospace;font-size:11px;
+  letter-spacing:.16em;text-transform:uppercase;color:var(--accent);margin:0}
+header{display:flex;flex-direction:column;gap:12px;
+  border-bottom:2px solid var(--inkt);padding-bottom:24px}
+.cijfers{display:flex;flex-wrap:wrap;gap:28px;margin-top:6px}
+.cijfer{display:flex;flex-direction:column;gap:2px}
+.cijfer b{font-family:"JetBrains Mono",monospace;font-size:26px;font-weight:600;
+  font-variant-numeric:tabular-nums}
+.cijfer span{font-size:12px;color:var(--zacht);text-transform:uppercase;
+  letter-spacing:.09em;font-family:"Bricolage Grotesque",sans-serif}
+section{display:flex;flex-direction:column;gap:16px}
+.sectiekop{display:flex;flex-direction:column;gap:4px}
+.tabelbox{overflow-x:auto;border:1px solid var(--rand);border-radius:3px;
+  background:var(--kaart)}
+table{border-collapse:collapse;width:100%;min-width:720px;font-size:15px}
+th{font-family:"Bricolage Grotesque",sans-serif;font-size:11px;font-weight:500;
+  text-transform:uppercase;letter-spacing:.09em;color:var(--zacht);
+  text-align:left;padding:11px 14px;border-bottom:1px solid var(--rand);
+  white-space:nowrap}
+td{padding:12px 14px;border-bottom:1px solid var(--rand);vertical-align:top}
+tr:last-child td{border-bottom:none}
+td.num,th.num{text-align:right;font-family:"JetBrains Mono",monospace;
+  font-variant-numeric:tabular-nums;font-size:14px;white-space:nowrap}
+.handle{font-family:"JetBrains Mono",monospace;font-size:14px;font-weight:600}
+.handle a{color:var(--inkt);text-decoration:none;
+  border-bottom:1px solid var(--accent)}
+.handle a:hover,.handle a:focus-visible{color:var(--accent)}
+.naam{display:block;font-size:13px;color:var(--zacht);margin-top:2px;
+  max-width:34ch}
+.hits{display:inline-flex;align-items:center;justify-content:center;
+  min-width:30px;padding:2px 7px;border-radius:2px;background:var(--accent-zacht);
+  color:var(--accent);font-family:"JetBrains Mono",monospace;font-weight:600;
+  font-size:13px}
+.vlag{font-family:"Bricolage Grotesque",sans-serif;font-size:11px;
+  letter-spacing:.08em;text-transform:uppercase;color:var(--zacht)}
+.bewijs{font-size:13px;color:var(--zacht);max-width:40ch}
+.bewijs a{color:var(--accent)}
+.let{border-left:3px solid var(--waarschuwing);padding:2px 0 2px 16px;
+  color:var(--zacht);max-width:62ch}
+footer{border-top:1px solid var(--rand);padding-top:20px;font-size:14px;
+  color:var(--zacht);max-width:62ch}
+a:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+"""
+
+
+def _rij(c: dict) -> str:
+    naam = (c["naam"] or "").replace("<", "&lt;")
+    tekst = (c["top_tekst"] or "").replace("<", "&lt;")[:90]
+    volgers = f"{c['volgers']:,}".replace(",", ".") if c["volgers"] else "—"
+    views = f"{c['mediaan_views']:,}".replace(",", ".")
+    bron = ", ".join(c["bronnen"][:3])
+    return f"""<tr>
+  <td><span class="hits">{c['aantal_hits']}</span></td>
+  <td class="handle"><a href="{c['top_url']}" target="_blank" rel="noopener">@{c['handle']}</a>
+      <span class="naam">{naam}</span></td>
+  <td class="vlag">{c['taal']}</td>
+  <td class="num">{volgers}</td>
+  <td class="num">{views}</td>
+  <td class="num">{c['mediaan_engagement_pct'] or '—'}</td>
+  <td class="bewijs">{bron}<br>&ldquo;{tekst}&rdquo;</td>
+</tr>"""
+
+
+def _tabel(rijen: list[dict]) -> str:
+    if not rijen:
+        return '<p class="lead">Niets gevonden in deze hoek.</p>'
+    return ('<div class="tabelbox"><table><thead><tr>'
+            '<th>Hits</th><th>Account</th><th>Taal</th>'
+            '<th class="num">Volgers</th><th class="num">Med. views</th>'
+            '<th class="num">Eng. %</th><th>Bewijs</th>'
+            '</tr></thead><tbody>'
+            + "".join(_rij(c) for c in rijen)
+            + "</tbody></table></div>")
+
+
+def schrijf_pagina(data: dict, pad: Path) -> Path:
+    creators = data["creators"]
+    kern = [c for c in creators if c["aantal_hits"] >= 2]
+    kern.sort(key=lambda c: -c["score"])
+    ruis = len(creators) - len(kern)
+
+    delen = [_KOP, '<div class="wrap"><header>',
+             '<p class="eyebrow">Verkenningsronde &middot; '
+             + datetime.now().strftime("%d-%m-%Y") + '</p>',
+             '<h1>Wie volgen we structureel?</h1>',
+             '<p class="lead">Uit ' + f"{data['aantal_videos']:,}".replace(",", ".")
+             + " gescande video's kwamen "
+             + f"{data['aantal_creators']:,}".replace(",", ".")
+             + " accounts. Hieronder staan alleen de "
+             + str(len(kern)) + " die <strong>minstens twee keer</strong> opdoken "
+             "onder verschillende zoektermen — dat is het bewijs dat ze in de niche "
+             "zitten en er niet per ongeluk in vielen. Streep weg wat niet klopt; "
+             "wat blijft staan wordt de vaste kern.</p>",
+             '<div class="cijfers">'
+             f'<div class="cijfer"><b>{data["aantal_videos"]:,}</b><span>video&rsquo;s gemeten</span></div>'
+             f'<div class="cijfer"><b>{len(kern)}</b><span>kandidaten</span></div>'
+             f'<div class="cijfer"><b>{ruis}</b><span>eenmalig, weggelaten</span></div>'
+             '</div>'.replace(",", "."),
+             '</header>']
+
+    for niche, cfg in NICHES.items():
+        rijen = [c for c in kern if c["niche"] == niche]
+        delen.append('<section><div class="sectiekop">'
+                     f'<p class="eyebrow">{len(rijen)} accounts</p>'
+                     f'<h2>{cfg["titel"]}</h2></div>'
+                     + _tabel(rijen) + '</section>')
+
+    delen.append(
+        '<section><h2>Wat hier nog niet in staat</h2>'
+        '<p class="let">Instagram ontbreekt. Hashtagpagina&rsquo;s zijn daar alleen na '
+        'inloggen te zien, dus dat loopt via Apify — en die gratis maandlimiet is '
+        'op. Zodra die reset komt Instagram erbij.</p>'
+        '<p class="let">De engagement-kolom is bij YouTube leeg. De zoekpagina geeft '
+        'daar alleen views, geen likes of reacties. YouTube wordt daarom apart '
+        'gerangschikt en niet tegen TikTok afgezet.</p></section>')
+
+    delen.append('<footer>Alle cijfers zijn rechtstreeks van het platform '
+                 'afgelezen op ' + datetime.now().strftime("%d-%m-%Y om %H:%M")
+                 + '. Niets is geschat. &ldquo;Hits&rdquo; is het aantal keer dat '
+                 'dit account opdook onder onze zoektermen; &ldquo;med. views&rdquo; '
+                 'is de mediaan, niet het gemiddelde, zodat één uitschieter het '
+                 'beeld niet vertekent.</footer></div>')
+
+    pad.write_text("\n".join(delen), encoding="utf-8")
+    return pad
 
 def main() -> int:
     ap = argparse.ArgumentParser()
@@ -367,7 +570,18 @@ def main() -> int:
                     help="kleine testronde: 1 hashtag en 1 zoekterm per hoek")
     ap.add_argument("--geen-youtube", action="store_true")
     ap.add_argument("--geen-tiktok", action="store_true")
+    ap.add_argument("--pagina", metavar="JSON",
+                    help="maak alleen de goedkeurpagina uit een eerdere ronde")
     args = ap.parse_args()
+
+    if args.pagina:
+        bron = Path(args.pagina)
+        data = json.loads(bron.read_text(encoding="utf-8"))
+        data["creators"] = bundel_per_creator(data["videos"])
+        data["aantal_creators"] = len(data["creators"])
+        uit = schrijf_pagina(data, bron.with_suffix(".html"))
+        print(f"goedkeurpagina → {uit}")
+        return 0
 
     limiet = 1 if args.snel else None
     scrolls = 1 if args.snel else 3
@@ -392,15 +606,19 @@ def main() -> int:
         "videos": videos,
     }, ensure_ascii=False, indent=2), encoding="utf-8")
 
+    schrijf_pagina({"aantal_videos": len(videos), "aantal_creators": len(creators),
+                    "creators": creators}, pad.with_suffix(".html"))
     print(f"\n{len(videos)} video's, {len(creators)} creators → {pad}")
-    print(f"\n{'#':>3} {'platform':9} {'handle':26} {'views':>9} {'eng%':>6} {'hits':>4}  niche")
-    for i, c in enumerate(creators[:40], 1):
-        print(f"{i:>3} {c['platform']:9} @{c['handle'][:25]:25} "
-              f"{c['mediaan_views']:>9,} {c['mediaan_engagement_pct']:>6} "
-              f"{c['aantal_hits']:>4}  {c['niche']}")
+    print(f"goedkeurpagina → {pad.with_suffix('.html')}")
+    for platform in sorted({c["platform"] for c in creators}):
+        rij = [c for c in creators if c["platform"] == platform][:25]
+        print(f"\n── {platform} — top {len(rij)} ──")
+        print(f"{'#':>3} {'handle':26} {'views':>10} {'eng%':>6} {'hits':>4}  niche")
+        for i, c in enumerate(rij, 1):
+            print(f"{i:>3} @{c['handle'][:25]:25} {c['mediaan_views']:>10,} "
+                  f"{c['mediaan_engagement_pct']:>6} {c['aantal_hits']:>4}  {c['niche']}")
     return 0
 
 
 if __name__ == "__main__":
-    import urllib.parse  # noodzakelijk voor _yt_zoek
     sys.exit(main())

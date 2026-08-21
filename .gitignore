@@ -5,3 +5,7 @@ __pycache__/
 backend.log
 dist/
 scripts/output/leads/
+
+# Ruwe uitkomsten van de trendverkenning — data, geen code
+scripts/output/trends-verkenning-*.json
+scripts/output/trends-verkenning-*.html
