@@ -4508,6 +4508,48 @@ async function typEchteToets(tabId, tekst) {
   }
 }
 
+
+// ECHT KLIKKEN, met dezelfde koppeling als het echte typen.
+//
+// Marktplaats negeert een klik die van een script komt, net zoals het een
+// getypte letter negeert. Gemeten 21-08-2026: formulier volledig ingevuld, geen
+// enkel veld rood, knop "Plaats je advertentie" gewoon aanwezig en niet
+// uitgeschakeld — en na onze klik gebeurde er niets. Met een echte muisklik op
+// dezelfde plek wél.
+async function klikEcht(tabId, selector) {
+  if (!(await heeftDebugger())) return "geen-toestemming";
+  const doel = _vroegGekoppeld.has(tabId) ? { tabId } : null;
+  if (!doel) return "niet gekoppeld";
+  const stuur = (methode, params) => new Promise((res, rej) => {
+    chrome.debugger.sendCommand(doel, methode, params, (r) => {
+      chrome.runtime.lastError ? rej(new Error(chrome.runtime.lastError.message)) : res(r);
+    });
+  });
+  try {
+    const [{ result }] = await chrome.scripting.executeScript({
+      target: { tabId }, world: "MAIN",
+      func: (sel) => {
+        const el = document.querySelector(sel);
+        if (!el) return null;
+        const knop = el.tagName === "BUTTON" ? el : (el.querySelector("button") || el);
+        knop.scrollIntoView({ block: "center" });
+        const r = knop.getBoundingClientRect();
+        if (!r.width || !r.height) return null;
+        return { x: Math.round(r.left + r.width / 2), y: Math.round(r.top + r.height / 2) };
+      },
+      args: [selector],
+    });
+    if (!result) return "knop niet gevonden";
+    await new Promise((r) => setTimeout(r, 300));
+    await stuur("Input.dispatchMouseEvent", { type: "mouseMoved", x: result.x, y: result.y });
+    await stuur("Input.dispatchMouseEvent", { type: "mousePressed", x: result.x, y: result.y, button: "left", clickCount: 1 });
+    await stuur("Input.dispatchMouseEvent", { type: "mouseReleased", x: result.x, y: result.y, button: "left", clickCount: 1 });
+    return `geklikt op ${result.x},${result.y}`;
+  } catch (e) {
+    return `mislukt: ${e.message}`;
+  }
+}
+
 // Leest terug wat het formulier zélf als beschrijving beschouwt. Eén leeg veld
 // is genoeg om afgekeurd te worden, dus dan melden we leeg.
 function _mwHiddenDescriptionValue() {
@@ -5212,6 +5254,11 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   }
 
   // Laatste redmiddel: een echte toetsaanslag via de debugger-API.
+  if (msg.type === "KLIK_ECHT") {
+    klikEcht(sender.tab.id, msg.selector).then((uit) => sendResponse(uit));
+    return true;
+  }
+
   if (msg.type === "TYPE_ECHT") {
     typEchteToets(sender.tab.id, msg.text || " ").then((uitkomst) => sendResponse(uitkomst));
     return true;

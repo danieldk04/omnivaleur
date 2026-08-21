@@ -1133,6 +1133,8 @@ window.CL = (() => {
     );
   }
 
+  let _laatsteEchteKlik = "niet nodig";
+
   async function submitListing(idFromUrl) {
     // Brand FIRST — closing the brand modal triggers a React re-render that resets
     // the Lexical EditorState. Description must be filled AFTER brand to survive.
@@ -1216,10 +1218,31 @@ window.CL = (() => {
       }
       return null;
     })();
-    const id = await Promise.race([
+    let id = await Promise.race([
       waitForListingUrl(idFromUrl, 20000).catch(() => null),
       blokkadeWacht.then((b) => (b ? { _blokkade: b } : null)),
     ]);
+
+    // Onze klik genegeerd? Marktplaats doet met de plaatsknop hetzelfde als met
+    // het tekstveld: alleen een échte muisklik telt. Gemeten: formulier compleet,
+    // geen rood veld, knop aanwezig en niet uitgeschakeld, en na btn.click()
+    // gebeurde er niets. Daarom hier nog één keer, maar dan echt.
+    //
+    // Alleen als we nog steeds op het plaatsformulier staan. Werkte de eerste
+    // klik tóch, dan is de pagina veranderd en zou een tweede klik een tweede
+    // advertentie kunnen opleveren — precies wat er nooit mag gebeuren.
+    if (!id && /\/(plaats|syi)\b/.test(location.pathname) && document.contains(btn)) {
+      const echteKlik = await new Promise((res) => {
+        try {
+          chrome.runtime.sendMessage(
+            { type: "KLIK_ECHT", selector: '[data-testid="place-listing-submit-button"]' },
+            (r) => res(r || "geen antwoord"));
+        } catch (_) { res("niet bereikbaar"); }
+      });
+      clog(`plaatsen: echte klik — ${echteKlik}`);
+      _laatsteEchteKlik = echteKlik;
+      id = await waitForListingUrl(idFromUrl, 25000).catch(() => null);
+    }
     if (id && id._blokkade) {
       const b = id._blokkade;
       clog(`plaatsen: geblokkeerd door Vinted (${b.naam}) — teruggegeven aan de gebruiker`);
@@ -1342,7 +1365,7 @@ window.CL = (() => {
       `Not published — complete the fields marked in red and click publish yourself. `
       + (uniq.length ? `${uniq.join(" | ")} ` : "")
       + (rood.length ? `| Fields marked invalid: ${rood.join(", ")} ` : "| No field is marked invalid. ")
-      + `| Still on ${waar}, ${knopStand} | Page says: ${zichtbaar}`
+      + `| Real click: ${_laatsteEchteKlik} | Still on ${waar}, ${knopStand} | Page says: ${zichtbaar}`
     );
   }
 
