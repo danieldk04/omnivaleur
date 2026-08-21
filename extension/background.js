@@ -4535,16 +4535,31 @@ async function klikEcht(tabId, selector) {
         knop.scrollIntoView({ block: "center" });
         const r = knop.getBoundingClientRect();
         if (!r.width || !r.height) return null;
-        return { x: Math.round(r.left + r.width / 2), y: Math.round(r.top + r.height / 2) };
+        const x = Math.round(r.left + r.width / 2), y = Math.round(r.top + r.height / 2);
+        // Wat zit er op die plek? Een klik op de juiste coördinaten is nog geen
+        // klik op de juiste knop: een balk onderaan of een reclamelaag ligt er
+        // zo overheen, en dan klikken we op niets. Zonder deze controle blijft
+        // "geklikt, maar er gebeurde niets" onverklaarbaar.
+        const opDiePlek = document.elementFromPoint(x, y);
+        const raakt = opDiePlek && (opDiePlek === knop || knop.contains(opDiePlek) || opDiePlek.contains(knop));
+        return {
+          x, y, raakt,
+          binnenBeeld: y > 0 && y < innerHeight && x > 0 && x < innerWidth,
+          hoogte: innerHeight, breedte: innerWidth,
+          erop: opDiePlek ? (opDiePlek.tagName + "." + String(opDiePlek.className || "").split(" ")[0]).slice(0, 40) : "niets",
+        };
       },
       args: [selector],
     });
     if (!result) return "knop niet gevonden";
+    if (!result.binnenBeeld) {
+      return `knop buiten beeld (${result.x},${result.y} in venster ${result.breedte}x${result.hoogte})`;
+    }
     await new Promise((r) => setTimeout(r, 300));
-    await stuur("Input.dispatchMouseEvent", { type: "mouseMoved", x: result.x, y: result.y });
-    await stuur("Input.dispatchMouseEvent", { type: "mousePressed", x: result.x, y: result.y, button: "left", clickCount: 1 });
-    await stuur("Input.dispatchMouseEvent", { type: "mouseReleased", x: result.x, y: result.y, button: "left", clickCount: 1 });
-    return `geklikt op ${result.x},${result.y}`;
+    await stuur("Input.dispatchMouseEvent", { type: "mouseMoved", x: result.x, y: result.y, buttons: 0 });
+    await stuur("Input.dispatchMouseEvent", { type: "mousePressed", x: result.x, y: result.y, button: "left", buttons: 1, clickCount: 1 });
+    await stuur("Input.dispatchMouseEvent", { type: "mouseReleased", x: result.x, y: result.y, button: "left", buttons: 0, clickCount: 1 });
+    return `geklikt op ${result.x},${result.y} (venster ${result.breedte}x${result.hoogte}, daar ligt ${result.erop}${result.raakt ? " = de knop" : " — NIET de knop"})`;
   } catch (e) {
     return `mislukt: ${e.message}`;
   }
