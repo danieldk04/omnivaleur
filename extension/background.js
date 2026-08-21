@@ -817,6 +817,19 @@ async function refreshAccessToken() {
       });
       if (!res.ok) {
         console.warn(`[Omnivaleur] token refresh failed HTTP ${res.status}`);
+        // 401 = dit inlogbewijs is definitief ongeldig; opnieuw proberen heeft
+        // geen zin. Het bewijs moet dan weg, anders blijft het menu vrolijk
+        // "Extension active" melden terwijl er niets meer gebeurt. Gemeten geval
+        // (21-08-2026): de extensie stond groen, meldde zich al een uur niet meer
+        // bij de server en liet elke opdracht liggen — van buitenaf niet te zien.
+        if (res.status === 401 || res.status === 403) {
+          await new Promise((r) => chrome.storage.sync.remove(["authToken", "refreshToken"], r));
+          try {
+            await chrome.action.setBadgeText({ text: "!" });
+            await chrome.action.setBadgeBackgroundColor({ color: "#dc2626" });
+            await chrome.action.setTitle({ title: "Omnivaleur — sign in again to keep publishing" });
+          } catch (_) {}
+        }
         return null;
       }
       const data = await res.json();
@@ -824,6 +837,7 @@ async function refreshAccessToken() {
       const patch = { authToken: data.access_token };
       if (data.refresh_token) patch.refreshToken = data.refresh_token; // rotation
       await new Promise((r) => chrome.storage.sync.set(patch, r));
+      try { await chrome.action.setBadgeText({ text: "" }); } catch (_) {}
       console.log("[Omnivaleur] access token refreshed");
       return data.access_token;
     } catch (e) {

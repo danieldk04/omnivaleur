@@ -3,8 +3,11 @@ const SERVER_URL = "https://omnivaleur.com";
 if (typeof gaEvent === "function") gaEvent("popup_opened", {});
 
 async function checkLoginState() {
-  const { authToken, userEmail } = await chrome.storage.sync.get(["authToken", "userEmail"]);
-  if (authToken) {
+  // Ook het vernieuwbewijs meewegen: zonder dat kan de extensie na een uur geen
+  // vers inlogbewijs meer halen en ligt hij stil, terwijl dit scherm "actief"
+  // bleef melden. Precies zo stond hij een uur lang groen zonder iets te doen.
+  const { authToken, refreshToken, userEmail } = await chrome.storage.sync.get(["authToken", "refreshToken", "userEmail"]);
+  if (authToken && refreshToken) {
     document.getElementById("loggedOut").style.display = "none";
     document.getElementById("loggedIn").style.display = "flex";
     document.getElementById("userInfo").textContent = userEmail || "";
