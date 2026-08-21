@@ -154,6 +154,12 @@ async def health():
             "leadgen_tick": bool(str(_s.leadgen_tick or "").strip() in ("1", "true", "True")),
             "leadgen_resend": bool(_s.resend_api_key),
             "leadgen_mailbox": bool(os.environ.get("MAIL_USER") and os.environ.get("MAIL_PASS")),
+            # Shopify koppelen faalde bij een klant met "deze installatielink kan
+            # niet worden gebruikt". Zonder deze regels was niet te zien of de
+            # sleutels er überhaupt zijn, of dat het aan de app-instelling bij
+            # Shopify zelf ligt.
+            "shopify_client_id": bool(_s.shopify_client_id),
+            "shopify_client_secret": bool(_s.shopify_client_secret),
             "owner_email": _s.owner_email,
         },
     }
