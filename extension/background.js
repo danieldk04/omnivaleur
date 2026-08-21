@@ -4532,6 +4532,24 @@ async function typEchteToets(tabId, tekst) {
 // dezelfde plek wél.
 async function klikEcht(tabId, selector) {
   if (!(await heeftDebugger())) return "geen-toestemming";
+  // HET VENSTER MOET ZICHTBAAR ZIJN.
+  //
+  // Het werkvenster staat geminimaliseerd, zodat de verkoper er geen last van
+  // heeft. Een pagina in zo'n venster is voor de browser "verborgen"
+  // (document.hidden), en dat is precies het soort ding waar een formulier op
+  // kan besluiten dat er geen echte gebruiker aan het werk is. Typen kwam er wél
+  // doorheen, de plaatsknop niet — dus dit moet uitgesloten worden. Even
+  // terugzetten, klikken, en daarna weer weg: de verkoper ziet hooguit een flits.
+  let hersteld = null;
+  try {
+    const tab = await chrome.tabs.get(tabId);
+    const win = await chrome.windows.get(tab.windowId);
+    if (win.state === "minimized") {
+      hersteld = { id: win.id, state: win.state };
+      await chrome.windows.update(win.id, { state: "normal", focused: false });
+      await new Promise((r) => setTimeout(r, 600));
+    }
+  } catch (_) {}
   const doel = _vroegGekoppeld.has(tabId) ? { tabId } : null;
   if (!doel) return "niet gekoppeld";
   const stuur = (methode, params) => new Promise((res, rej) => {
@@ -4561,6 +4579,7 @@ async function klikEcht(tabId, selector) {
           binnenBeeld: y > 0 && y < innerHeight && x > 0 && x < innerWidth,
           hoogte: innerHeight, breedte: innerWidth,
           erop: opDiePlek ? (opDiePlek.tagName + "." + String(opDiePlek.className || "").split(" ")[0]).slice(0, 40) : "niets",
+          zichtbaar: document.visibilityState + (document.hasFocus() ? "+focus" : "-focus"),
         };
       },
       args: [selector],
@@ -4573,9 +4592,18 @@ async function klikEcht(tabId, selector) {
     await stuur("Input.dispatchMouseEvent", { type: "mouseMoved", x: result.x, y: result.y, buttons: 0 });
     await stuur("Input.dispatchMouseEvent", { type: "mousePressed", x: result.x, y: result.y, button: "left", buttons: 1, clickCount: 1 });
     await stuur("Input.dispatchMouseEvent", { type: "mouseReleased", x: result.x, y: result.y, button: "left", buttons: 0, clickCount: 1 });
-    return `geklikt op ${result.x},${result.y} (venster ${result.breedte}x${result.hoogte}, daar ligt ${result.erop}${result.raakt ? " = de knop" : " — NIET de knop"})`;
+    return `geklikt op ${result.x},${result.y} (venster ${result.breedte}x${result.hoogte}`
+         + `, zichtbaarheid ${result.zichtbaar}${hersteld ? ", venster teruggezet" : ""}`
+         + `, daar ligt ${result.erop}${result.raakt ? " = de knop" : " — NIET de knop"})`;
   } catch (e) {
     return `mislukt: ${e.message}`;
+  } finally {
+    // Het venster weer wegzetten zoals het stond.
+    if (hersteld) {
+      setTimeout(() => {
+        chrome.windows.update(hersteld.id, { state: "minimized" }).catch(() => {});
+      }, 25000);
+    }
   }
 }
 
