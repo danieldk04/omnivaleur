@@ -118,7 +118,7 @@
     await step("color",        () => item.color && selectDropdown("Kleur", dutchColor(item.color)));
     await step("brand",        () => item.brand && fillBrandField(item.brand));
     await step("manufacturer", () => fillManufacturer(item));
-    await step("delivery",     async () => { await selectDelivery(); selectBundleFree(); });
+    await step("delivery",     async () => { await selectDelivery(item); selectBundleFree(); });
     await step("bidding",      () => item.bid_percentage && fillBidding(item.price, item.bid_percentage));
 
     await sleep(600);

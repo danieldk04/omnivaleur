@@ -50,9 +50,23 @@ VINTED_GROEPEN_GELDIG = ("dames", "heren", "kinderen", "unisex", "sieraden",
 # De verkoper vult het één keer zelf in en het gaat daarna overal mee.
 FABRIKANT_VELDEN = ("fabrikant_naam", "fabrikant_adres", "fabrikant_email")
 
+# Hoe deze verkoper levert. Stond alleen in de extensie-instellingen, waar
+# vrijwel niemand komt: Jaap verzendt uitsluitend, en kreeg bij elke advertentie
+# "Ophalen of Verzenden" — een belofte die hij niet kan waarmaken. Hoort bij het
+# account, dus hier, en gaat mee in elke opdracht.
+LEVERING_GELDIG = ("beide", "verzenden", "ophalen")
+
+# Pakketgrootte op prijs. Marktplaats kent XS (brievenbuspakje), S, M en L
+# (groot pakket). Onder de grens het kleine, daarboven het grote; 0 = laat
+# Marktplaats het zelf bepalen. Bewust een grens in euro's en geen slimmigheid
+# met afmetingen: de verkoper weet zelf welke waarde hij niet in een
+# brievenbuspakje wil hebben, wij kunnen dat niet zien aan een foto.
+PAKKET_GRENS_MAX = 5000
+
 STANDAARD = {"relist_dagen": RELIST_DAGEN_STANDAARD, "vinted_groepen": [],
              "auto_relist": True,
-             "fabrikant_naam": "", "fabrikant_adres": "", "fabrikant_email": ""}
+             "fabrikant_naam": "", "fabrikant_adres": "", "fabrikant_email": "",
+             "levering": "beide", "pakket_grens": 0}
 
 
 def _schoon(rauw: dict | None) -> dict:
@@ -77,6 +91,15 @@ def _schoon(rauw: dict | None) -> dict:
     for veld in FABRIKANT_VELDEN:
         if veld in rauw:
             uit[veld] = str(rauw.get(veld) or "").strip()[:255]
+    lev = str(rauw.get("levering") or "").strip().lower()
+    if lev in LEVERING_GELDIG:
+        uit["levering"] = lev
+    if "pakket_grens" in rauw:
+        try:
+            uit["pakket_grens"] = max(0, min(int(float(rauw.get("pakket_grens") or 0)),
+                                             PAKKET_GRENS_MAX))
+        except (TypeError, ValueError):
+            uit["pakket_grens"] = 0
     groepen = rauw.get("vinted_groepen")
     if isinstance(groepen, list):
         uit["vinted_groepen"] = [g for g in
@@ -139,3 +162,27 @@ def fabrikant(user_id: str) -> dict:
 
 def fabrikant_compleet(user_id: str) -> bool:
     return all(fabrikant(user_id).values())
+
+
+# De radiowaarden zoals Marktplaats ze zelf op het formulier zet, live afgelezen
+# op 21-08-2026: XS = Brievenbuspakje (0-2kg), S = Klein (0-3kg),
+# M = Gemiddeld (0-10kg), L = Groot pakket (10-23kg).
+PAKKET_KLEIN = "XS"
+PAKKET_GROOT = "L"
+
+
+def verzendkeuzes(user_id: str, prijs) -> dict:
+    """Levering en pakketgrootte voor één advertentie.
+
+    De pakketgrootte hangt van de prijs af: onder de door de verkoper ingestelde
+    grens past het in een brievenbuspakje, daarboven wil hij het als groot pakket
+    verzekerd versturen. Staat de grens op 0, dan bemoeien we ons er niet mee."""
+    s = lees(user_id)
+    uit = {"levering": s.get("levering") or "beide"}
+    grens = int(s.get("pakket_grens") or 0)
+    if grens:
+        try:
+            uit["pakket"] = PAKKET_KLEIN if float(prijs or 0) < grens else PAKKET_GROOT
+        except (TypeError, ValueError):
+            pass
+    return uit

@@ -2,7 +2,7 @@
 (async () => {
   const PLATFORM = "marktplaats";
   const { step, clog, qs, sleep, waitForEl, fillInput, fillInputHuman, fillDescription, selectDropdown,
-          fillBrand, fillBrandField, fillManufacturer, selectBundleFree, selectDelivery, uploadPhotos, submitListing,
+          fillBrand, fillBrandField, fillManufacturer, selectBundleFree, selectDelivery, selectPakketWaarde, uploadPhotos, submitListing,
           clickRadioByValue, smartTrunc, fillBidding, dutchColor,
           ensureDescriptionStillFilled, verifyMpGroupFields, repairMpGroupFields, selectCondition, selectIntendedFor, mpPrijs } = window.CL;
 
@@ -121,7 +121,12 @@
     await step("color",        () => item.color && selectDropdown("Kleur", dutchColor(item.color)));
     await step("brand",        () => item.brand && fillBrandField(item.brand));
     await step("manufacturer", () => fillManufacturer(item));
-    await step("delivery",     async () => { await selectDelivery(); selectBundleFree(); });
+    await step("delivery",     async () => { await selectDelivery(item); selectBundleFree(); });
+    // Pakketgrootte hoorde hier helemaal niet: alleen 2dehands koos er een, dus
+    // op Marktplaats bleef het leeg en moest de verkoper het per advertentie
+    // zelf aanklikken. item.pakket komt uit zijn eigen instelling (onder de
+    // prijsgrens brievenbuspakje, daarboven groot pakket).
+    await step("package",      () => item.pakket && selectPakketWaarde(item.pakket));
     await step("bidding",      () => item.bid_percentage && fillBidding(item.price, item.bid_percentage));
 
     await sleep(600);

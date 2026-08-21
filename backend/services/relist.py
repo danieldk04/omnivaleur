@@ -50,8 +50,9 @@ def _met_fabrikant(payload: dict, platform: str, user_id: str) -> dict:
     if platform not in ("marktplaats", "2dehands"):
         return payload
     try:
-        from backend.services.instellingen import fabrikant
-        return {**payload, **fabrikant(user_id)}
+        from backend.services.instellingen import fabrikant, verzendkeuzes
+        return {**payload, **fabrikant(user_id),
+                **verzendkeuzes(user_id, payload.get("price"))}
     except Exception:  # noqa: BLE001 — liever plaatsen zonder dan niet plaatsen
         return payload
 
@@ -445,8 +446,9 @@ async def refresh_listing(item_id: str, platform: str, user_id: str, strategy: s
     # partij. Zonder deze regel staat de nachtelijke ronde stil op drie rode
     # velden in een tabblad dat niemand ziet.
     if platform in ("marktplaats", "2dehands"):
-        from backend.services.instellingen import fabrikant as _fabrikant
+        from backend.services.instellingen import fabrikant as _fabrikant, verzendkeuzes
         create_payload.update(_fabrikant(user_id))
+        create_payload.update(verzendkeuzes(user_id, create_payload.get("price")))
     if platform == "vinted" and listing.get("platform_listing_url"):
         try:
             from urllib.parse import urlparse

@@ -791,10 +791,34 @@ window.CL = (() => {
   // Kiest de ingestelde verzendwijze, en valt terug op "Ophalen of Verzenden"
   // als dit formulier die optie niet aanbiedt — niet elke categorie heeft alle
   // drie de keuzes.
-  async function selectDelivery() {
-    const gewenst = await gekozenLevering();
+  // De keuze uit het account (meegestuurd in de opdracht) gaat vóór de oude
+  // schakelaar in de extensie-instellingen. Die laatste zit verstopt achter een
+  // rechtermuisknop en werd door vrijwel niemand gevonden, waardoor iemand die
+  // uitsluitend verzendt bij elke advertentie "Ophalen of Verzenden" kreeg.
+  async function selectDelivery(item) {
+    const uitOpdracht = LEVERING_LABELS[(item && item.levering) || ""];
+    const gewenst = uitOpdracht || (await gekozenLevering());
     if (clickRadioByValue(gewenst)) return true;
     return clickRadioByValue(LEVERING_LABELS.beide);
+  }
+
+  // Pakketgrootte op Marktplaats. De keuzerondjes hebben echte waarden
+  // (XS = brievenbuspakje, S = klein, M = gemiddeld, L = groot pakket), live
+  // afgelezen op het formulier. Op waarde klikken is veel steviger dan op de
+  // labeltekst zoeken: die tekst verandert met elke campagne van Marktplaats.
+  async function selectPakketWaarde(waarde) {
+    if (!waarde) return false;
+    for (let i = 0; i < 20; i++) {
+      const radio = qs(`input[type="radio"][name="packageSize"][value="${waarde}"]`);
+      if (radio) {
+        radio.click();
+        (radio.closest("label") || radio).click();
+        await sleep(150);
+        return true;
+      }
+      await sleep(150);
+    }
+    return false;
   }
 
   function selectBundleFree() {
@@ -1343,7 +1367,7 @@ window.CL = (() => {
   return {
     sleep, waitUntil, qs, waitForEl, fillInput, fillInputHuman, fillNativeSelect, clickRadioByValue, fillDescription,
     findFieldByLabel, selectDropdown, fillBrand, fillManufacturer, selectBundleFree,
-    selectDelivery, gekozenLevering,
+    selectDelivery, gekozenLevering, selectPakketWaarde,
     selectPackageSize, uploadPhotos, submitListing, step, closePopup, smartTrunc, fillBidding,
     clog, plaatsBlokkade, dutchColor, verifyMpGroupFields, repairMpGroupFields, ensureDescriptionStillFilled, selectCondition, selectIntendedFor, fillBrandField, logMpFields, mpPrijs,
   };

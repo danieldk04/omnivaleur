@@ -494,6 +494,12 @@ async def publish_to_platforms(item_id: str, platforms: list[str], user_id: str)
             # extensie vult die drie velden in als ze in de opdracht staan.
             if platform in ("marktplaats", "2dehands"):
                 payload.update(fab)
+                # Levering en pakketgrootte horen bij de verkoper, niet bij het
+                # artikel. Zonder deze regel kreeg iemand die uitsluitend
+                # verzendt bij elke advertentie "Ophalen of Verzenden" — een
+                # belofte die hij niet kan waarmaken.
+                from backend.services.instellingen import verzendkeuzes
+                payload.update(verzendkeuzes(user_id, payload.get("price")))
             # Create pending listing record first so failed jobs are visible in dashboard
             existing_listing = await _exec(
                 db.table("listings").select("id,status,platform_listing_id,platform_listing_url")
