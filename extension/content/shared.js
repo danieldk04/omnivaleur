@@ -189,13 +189,43 @@ window.CL = (() => {
 
   // Alles wat het formulier zelf zichtbaar als bezwaar toont. Eén lijst, zodat
   // elke mislukte publicatie dezelfde volledige uitleg meekrijgt.
+  // "52 of 60 characters used" is geen klacht maar een tellertje onder een
+  // tekstveld. Die stonden wél in de foutmelding en het échte rode veld niet,
+  // waardoor er vijf regels ruis terugkwamen en nul bruikbare informatie —
+  // gemeten op een mislukte publicatie 21-08-2026.
+  const _TELLER_RE = /^\d+\s*(of|van)\s*\d+\s*(characters|tekens)/i;
+
   function formulierklachten() {
     const els = [...document.querySelectorAll(
       '[class*="error"], [class*="Error"], [role="alert"], [aria-invalid="true"]'
     )];
     const teksten = els.map((el) => (el.textContent || "").replace(/\s+/g, " ").trim())
-                       .filter((t) => t.length > 0 && t.length < 200);
+                       .filter((t) => t.length > 0 && t.length < 200 && !_TELLER_RE.test(t));
     return [...new Set(teksten)];
+  }
+
+  // WELK VELD IS ROOD?
+  //
+  // De klachtenlezer hierboven pakt de tekst van foutmeldingen op, maar niet
+  // ieder formulier zet er een tekst bij: Marktplaats kleurt soms alleen het
+  // kader rood. Dan meldde de extensie "vul de rode velden in" zonder te kunnen
+  // zeggen wélke — en daar kan niemand iets mee, ook ik niet.
+  //
+  // Deze leest de velden zelf: wat is ongeldig, hoe heet het, en wat staat
+  // erin. Alleen naam en lengte, nooit de inhoud zelf.
+  function roodGemarkeerdeVelden() {
+    const uit = [];
+    for (const el of document.querySelectorAll("input, textarea, select, [contenteditable='true']")) {
+      const ongeldig = el.getAttribute("aria-invalid") === "true"
+        || /error|invalid/i.test(el.className || "")
+        || /error|invalid/i.test((el.closest("[class]") || {}).className || "");
+      if (!ongeldig) continue;
+      const naam = el.name || el.id || el.getAttribute("data-testid") || el.tagName.toLowerCase();
+      const waarde = (el.value != null ? String(el.value) : (el.innerText || ""));
+      uit.push(`${naam}=${waarde.trim() ? waarde.trim().length + " tekens" : "LEEG"}`);
+      if (uit.length >= 8) break;
+    }
+    return uit;
   }
 
   // Een venster dat het plaatsen BLOKKEERT en dat alleen de verkoper zelf kan
@@ -1293,8 +1323,14 @@ window.CL = (() => {
     }
 
     const uniq = formulierklachten();
-    clog(`plaatsen: mislukt — ${uniq.join(" | ") || "geen foutmelding op de pagina"}`);
-    throw new Error(`Not published — complete the fields marked in red and click publish yourself. ${uniq.join(" | ")}`.trim());
+    const rood = roodGemarkeerdeVelden();
+    clog(`plaatsen: mislukt — ${uniq.join(" | ") || "geen foutmelding op de pagina"}`
+       + (rood.length ? ` | rode velden: ${rood.join(", ")}` : ""));
+    throw new Error(
+      `Not published — complete the fields marked in red and click publish yourself. `
+      + (uniq.length ? `${uniq.join(" | ")} ` : "")
+      + (rood.length ? `| Fields marked invalid: ${rood.join(", ")}` : "| No field is marked invalid — the publish button may not have responded.")
+    );
   }
 
   async function waitForListingUrl(extraMatcher, timeout) {
