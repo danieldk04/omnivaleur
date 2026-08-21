@@ -1292,7 +1292,9 @@ window.CL = (() => {
         await sleep(400);
         if (beschrijvingKlachtOpPagina()) {
           echt = await new Promise((res) => {
-            try { chrome.runtime.sendMessage({ type: "TYPE_ECHT", text: " " }, (r) => res(r || "geen antwoord")); }
+            // De hele beschrijving, niet één spatie: het formulier telt alleen
+            // mee wat er echt getypt is (zie typEchteToets in background.js).
+            try { chrome.runtime.sendMessage({ type: "TYPE_ECHT", text: _pendingDescription || " " }, (r) => res(r || "geen antwoord")); }
             catch (_) { res("niet bereikbaar"); }
           });
           laatsteToets = echt;
