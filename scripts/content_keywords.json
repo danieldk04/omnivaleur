@@ -367,7 +367,7 @@
       "region": "nl",
       "pillar": "B",
       "slug": "board-games-and-tabletop-reselling-automation",
-      "status": "pending",
+      "status": "published",
       "priority": 45
     }
   ],
@@ -767,6 +767,15 @@
       "action": "created",
       "url_path": "/reseller-tools/vintage-books-reselling-automation",
       "published_at": "2026-08-20T08:35:38.386533+00:00"
+    },
+    {
+      "keyword": "board games and tabletop reselling automation",
+      "slug": "board-games-and-tabletop-reselling-automation",
+      "region": "nl",
+      "pillar": "B",
+      "action": "created",
+      "url_path": "/reseller-tools/board-games-and-tabletop-reselling-automation",
+      "published_at": "2026-08-21T08:31:56.497700+00:00"
     }
   ]
 }
