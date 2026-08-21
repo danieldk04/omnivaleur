@@ -2,7 +2,7 @@
 (async () => {
   const PLATFORM = "marktplaats";
   const { step, clog, qs, sleep, waitForEl, fillInput, fillInputHuman, fillDescription, selectDropdown,
-          fillBrand, fillBrandField, fillManufacturer, selectBundleFree, selectDelivery, selectPakketWaarde, vulHalswijdte, uploadPhotos, submitListing,
+          fillBrand, fillBrandField, fillManufacturer, selectBundleFree, selectDelivery, selectPakketWaarde, typBeschrijvingEcht, vulHalswijdte, uploadPhotos, submitListing,
           clickRadioByValue, smartTrunc, fillBidding, dutchColor,
           ensureDescriptionStillFilled, verifyMpGroupFields, repairMpGroupFields, selectCondition, selectIntendedFor, mpPrijs } = window.CL;
 
@@ -97,6 +97,9 @@
     // Let these throw so the job reports the real cause and keeps the tab open.
     // nudge: Marktplaats accepteert de tekst pas na een echte toetsaanslag.
     await fillDescription(['[data-testid="text-editor-input_nl-NL"]'], item.description, { nudge: true });
+    // Nu pas echt typen: alleen dan telt de tekst mee bij het plaatsen.
+    await step("echte tekst", () => typBeschrijvingEcht(item.description));
+
     // Foto's zijn verplicht, maar een mislukte upload mag niet de rest van het
     // formulier overslaan: dan blijft alles daarna leeg zonder dat iemand ziet
     // waarom. We onthouden de fout en melden hem pas aan het eind.

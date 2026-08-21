@@ -2,7 +2,7 @@
 (async () => {
   const PLATFORM = "2dehands";
   const { step, clog, qs, sleep, waitForEl, fillInput, fillInputHuman, fillDescription, selectDropdown,
-          fillBrand, fillBrandField, fillManufacturer, selectBundleFree, selectDelivery, selectPackageSize,
+          fillBrand, fillBrandField, fillManufacturer, selectBundleFree, selectDelivery, selectPackageSize, typBeschrijvingEcht,
           uploadPhotos, submitListing, clickRadioByValue, smartTrunc, fillBidding,
           dutchColor, ensureDescriptionStillFilled, verifyMpGroupFields, repairMpGroupFields, selectCondition, selectIntendedFor, mpPrijs } = window.CL;
 
@@ -93,6 +93,8 @@
     // Mandatory fields — deliberately NOT inside step(), see marktplaats.js.
     // nudge: ook 2dehands rekent de tekst pas mee na een echte toetsaanslag.
     await fillDescription(['[data-testid="text-editor-input_nl-BE"]', '[data-testid="text-editor-input_nl-NL"]'], sanitize2dh(item.description), { nudge: true });
+    // Nu pas echt typen: alleen wat er echt getypt is telt mee bij het plaatsen.
+    await step("echte tekst", () => typBeschrijvingEcht(sanitize2dh(item.description)));
     // Foto's zijn verplicht, maar een mislukte upload mag niet de rest van het
     // formulier overslaan: dan blijft alles daarna leeg zonder dat iemand ziet
     // waarom. We onthouden de fout en melden hem pas aan het eind.

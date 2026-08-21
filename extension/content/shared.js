@@ -742,6 +742,34 @@ window.CL = (() => {
     return ok;
   }
 
+  // DE BESCHRIJVING ECHT TYPEN.
+  //
+  // Dit is geen noodgreep meer maar de gewone weg op Marktplaats en 2dehands.
+  // Bewezen op 21-08-2026 op een echt formulier: tekst die wij in het veld
+  // zetten komt wél in de DOM (449 tekens) maar niet in de staat waarop het
+  // formulier zijn oordeel baseert (0 tekens). De plaatsknop doet dan niets —
+  // geen klacht, geen rood veld, geen enkel verzoek naar de server. Dezelfde
+  // advertentie mét echt getypte tekst (158 tekens in beide) stond meteen online.
+  //
+  // Daarom typen we hem hier na het invullen alsnog, en controleren we het:
+  // blijft de staat leeg, dan weten we dat vóór het plaatsen in plaats van erna.
+  async function typBeschrijvingEcht(tekst) {
+    if (!tekst) return "geen tekst";
+    const uitkomst = await new Promise((res) => {
+      try { chrome.runtime.sendMessage({ type: "TYPE_ECHT", text: tekst }, (r) => res(r || "geen antwoord")); }
+      catch (_) { res("niet bereikbaar"); }
+    });
+    const lengte = await new Promise((res) => {
+      try { chrome.runtime.sendMessage({ type: "ECHTE_DESC_LENGTE" }, (r) => res(typeof r === "number" ? r : -1)); }
+      catch (_) { res(-1); }
+    });
+    clog(`beschrijving echt getypt: ${uitkomst} — formulier houdt nu ${lengte} tekens vast`);
+    _echteBeschrijvingLengte = lengte;
+    return uitkomst;
+  }
+
+  let _echteBeschrijvingLengte = -1;
+
   async function selectDropdown(labels, value) {
     if (!value) return false;
     const labelArr = Array.isArray(labels) ? labels : [labels];
@@ -1447,7 +1475,7 @@ window.CL = (() => {
       + (uniq.length ? `${uniq.join(" | ")} ` : "")
       + (rood.length ? `| Fields marked invalid: ${rood.join(", ")} ` : "| No field is marked invalid. ")
       + `| Real click: ${_laatsteEchteKlik} | Still on ${waar}, ${knopStand} `
-      + `| Attribute fields: ${keuzeveldenKort()} | Page says: ${zichtbaar}`
+      + `| Attribute fields: ${keuzeveldenKort()} | Form's own description length: ${_echteBeschrijvingLengte} | Page says: ${zichtbaar}`
     );
   }
 
@@ -1559,7 +1587,7 @@ window.CL = (() => {
   return {
     sleep, waitUntil, qs, waitForEl, fillInput, fillInputHuman, fillNativeSelect, clickRadioByValue, fillDescription,
     findFieldByLabel, selectDropdown, fillBrand, fillManufacturer, selectBundleFree,
-    selectDelivery, gekozenLevering, selectPakketWaarde, vulHalswijdte, keuzeveldenKort,
+    selectDelivery, gekozenLevering, selectPakketWaarde, vulHalswijdte, keuzeveldenKort, typBeschrijvingEcht,
     selectPackageSize, uploadPhotos, submitListing, step, closePopup, smartTrunc, fillBidding,
     clog, plaatsBlokkade, dutchColor, verifyMpGroupFields, repairMpGroupFields, ensureDescriptionStillFilled, selectCondition, selectIntendedFor, fillBrandField, logMpFields, mpPrijs,
   };

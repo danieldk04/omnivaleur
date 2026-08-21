@@ -4607,6 +4607,22 @@ async function klikEcht(tabId, selector) {
   }
 }
 
+
+// WAT MARKTPLAATS ZÉLF ALS BESCHRIJVING HEEFT.
+//
+// Het verborgen veld description_nl-NL heeft twee waarden: die in de DOM (wat
+// wij erin zetten) en die in de eigen staat van de pagina (wat React vasthoudt).
+// Alleen die tweede telt bij het plaatsen. Live gemeten op 21-08-2026: tekst
+// erin zetten geeft DOM 449 en staat 0 — en dan doet de plaatsknop niets, zonder
+// klacht en zonder rood veld. Echt typen geeft beide 158, en dan plaatst hij.
+function _mwEchteBeschrijvingLengte() {
+  const el = document.querySelector('input[name*="escription" i], textarea[name*="escription" i]');
+  if (!el) return -1;
+  const sleutel = Object.keys(el).find((k) => k.startsWith("__reactProps"));
+  const staat = sleutel ? (el[sleutel] || {}).value : null;
+  return typeof staat === "string" ? staat.length : -1;
+}
+
 // Leest terug wat het formulier zélf als beschrijving beschouwt. Eén leeg veld
 // is genoeg om afgekeurd te worden, dus dan melden we leeg.
 function _mwHiddenDescriptionValue() {
@@ -5311,6 +5327,16 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   }
 
   // Laatste redmiddel: een echte toetsaanslag via de debugger-API.
+  if (msg.type === "ECHTE_DESC_LENGTE") {
+    chrome.scripting.executeScript({
+      target: { tabId: sender.tab.id }, world: "MAIN", func: _mwEchteBeschrijvingLengte,
+    }, (r) => {
+      if (chrome.runtime.lastError) sendResponse(-1);
+      else sendResponse(r?.[0]?.result ?? -1);
+    });
+    return true;
+  }
+
   if (msg.type === "KLIK_ECHT") {
     klikEcht(sender.tab.id, msg.selector).then((uit) => sendResponse(uit));
     return true;
