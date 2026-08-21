@@ -1294,17 +1294,33 @@ async def relist_expiring_marktplaats():
             # reacties en vragen die eraan hangen. Dat is geen redding meer maar
             # een ingreep waar de verkoper zelf over hoort te beslissen.
             #
-            # Automatisch herplaatsen doet dus alleen wat het belooft: een
-            # advertentie oppakken die NET aan zijn eind is. Wat allang over de
-            # datum is en toch nog leeft, blijft staan en is met de hand te
-            # verversen vanaf de pagina Refresh.
+            # Automatisch herplaatsen pakt de oudste eerst, en niet meer dan de
+            # dagelijkse grens per verkoper. Zo wordt een geïmporteerde voorraad
+            # in de loop van weken bijgewerkt in plaats van in één dag — zonder
+            # dat de oudste, die het eerst verdwijnt, wordt overgeslagen.
             if geplaatst:
                 try:
                     toen = datetime.fromisoformat(str(geplaatst).replace("Z", "+00:00"))
                     if toen.tzinfo is None:
                         toen = toen.replace(tzinfo=timezone.utc)
-                    if (nu - toen).days > eigen_dagen + _INHAAL_MARGE_DAGEN:
-                        continue
+                    # HIER STOND EEN REM DIE PRECIES DE VERKEERDE OVERSLOEG.
+                    #
+                    # Alles ouder dan de eigen termijn plus veertien dagen werd
+                    # overgeslagen, om te voorkomen dat een pas geïmporteerde
+                    # voorraad in één klap "te oud" zou zijn. Het gevolg was het
+                    # tegenovergestelde van de bedoeling: juist de advertenties
+                    # die het dichtst bij verwijdering staan bleven liggen.
+                    # Gemeten bij Jaap (21-08-2026): de ronde verversde
+                    # advertenties van 17 juli, terwijl die van 14 mei — de
+                    # oudste, en dus de eerste die Marktplaats weggooit — er nooit
+                    # doorheen kwamen.
+                    #
+                    # De rem is niet nodig: de dagelijkse grens per verkoper
+                    # (_dagelijkse_relist_grens) spreidt het al, en de rij staat
+                    # op oudste eerst. Zonder deze uitzondering komt de oudste dus
+                    # gewoon als eerste aan de beurt — precies wat een verkoper
+                    # verwacht en wat zijn advertenties redt.
+                    pass
                 except ValueError:
                     pass
 

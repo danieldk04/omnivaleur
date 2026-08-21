@@ -3155,8 +3155,14 @@ async function bgScanAdmarkt(job, serverUrl) {
     // Waar de vorige scan ophield. Zonder dit begon elke scan weer bij
     // advertentie 1 en kwam er niets nieuws bij, terwijl hij wel "klaar" meldde.
     const OVERSLAAN = Math.max(0, Number((job.payload || {}).scan_offset) || 0);
+    // De nummers die de server al kent. Betrouwbaarder dan tellen: Admarkt geeft
+    // zijn advertenties niet elke keer in dezelfde volgorde terug, dus "sla de
+    // eerste 250 over" leverde drie scans lang exact dezelfde 250 op.
+    const BEKEND = Array.isArray((job.payload || {}).bekende_ids)
+      ? (job.payload || {}).bekende_ids.map(String) : [];
 
-    const result = await execInTab(tabId, async (MAX, OVERSLAAN) => {
+    const result = await execInTab(tabId, async (MAX, OVERSLAAN, BEKEND) => {
+      const alBekend = new Set(BEKEND || []);
       // Admarkt praat tRPC: /api/trpc/<procedure>?batch=1&input=<json>, GET, op
       // de sessiecookie van de ingelogde verkoper. Waargenomen en uitgeprobeerd
       // op een echt zakelijk account (16-08-2026), niet geraden — raden kan hier
@@ -3208,7 +3214,14 @@ async function bgScanAdmarkt(job, serverUrl) {
             // Alles wat een eerdere scan al heeft opgehaald overslaan, zodat deze
             // ronde echt de vólgende lading oplevert.
             gezien++;
-            if (gezien <= OVERSLAAN) continue;
+            // Kennen we hem al? Dan overslaan, waar hij ook in de rij stond.
+            // Alleen als de server geen lijst meestuurde vallen we terug op de
+            // oude telling (oudere server, of de lijst kon niet opgehaald worden).
+            if (alBekend.size) {
+              if (alBekend.has(String(ad.id))) continue;
+            } else if (gezien <= OVERSLAAN) {
+              continue;
+            }
             const fotos = (ad.images || [])
               .filter(i => i && i.status !== "ERROR")
               .map(i => {
@@ -3253,14 +3266,14 @@ async function bgScanAdmarkt(job, serverUrl) {
           bron: "trpc ad.getAds",
           totaal,
           gevonden: items.length,
-          overgeslagen: OVERSLAAN,
-          rest: Math.max(0, totaal - gezien),
+          overgeslagen: alBekend.size || OVERSLAAN,
+          rest: Math.max(0, totaal - (alBekend.size || 0) - items.length),
           stappen: stappen.slice(0, 25),
           zonder_prijs: items.length,
           pagina_titel: (document.title || "").slice(0, 120),
         },
       };
-    }, [ADMARKT_MAX, OVERSLAAN]);
+    }, [ADMARKT_MAX, OVERSLAAN, BEKEND]);
 
     console.log("[Omnivaleur] Admarkt:", JSON.stringify(result?.meta || {}));
 
@@ -3268,7 +3281,7 @@ async function bgScanAdmarkt(job, serverUrl) {
       const m = (result && result.meta) || {};
       // Niets nieuws terwijl we al een deel binnen hadden: dan zijn we gewoon
       // aan het eind. Dat is klaar, geen fout.
-      if (OVERSLAAN > 0 && m.totaal) return { items: [], meta: { ...m, klaar: true } };
+      if ((OVERSLAAN > 0 || BEKEND.length) && m.totaal) return { items: [], meta: { ...m, klaar: true } };
       throw new Error(
         `Admarkt returned no live adverts. page="${m.pagina_titel || "?"}" ` +
         `steps=[${(m.stappen || []).join(" | ") || "none"}]`

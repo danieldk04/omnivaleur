@@ -1120,11 +1120,32 @@ def start_scan(platform: str, user_id: str = Depends(require_active_subscription
     # nieuws op — de scan meldde "klaar" terwijl er niets bijkwam.
     payload: dict = {}
     if platform == "marktplaats":
+        # WAT WE AL HEBBEN, MEE NAAR DE EXTENSIE.
+        #
+        # Hier stond een teller: "sla de eerste N advertenties over". Dat werkt
+        # alleen als Admarkt zijn advertenties élke keer in dezelfde volgorde
+        # teruggeeft, en dat doet hij niet. Gemeten bij een verkoper met 5.534
+        # advertenties: drie scans achter elkaar, elke keer dezelfde 250 en nul
+        # nieuwe kandidaten — terwijl het scherm netjes "klaar" meldde.
+        #
+        # Nu sturen we de nummers mee die we al kennen. De extensie slaat die
+        # over, ongeacht de volgorde waarin ze langskomen. Elke ronde levert dan
+        # gegarandeerd nieuwe advertenties op, tot ze op zijn.
         try:
-            al_bekend = (db.table("import_candidates").select("id", count="exact")
-                         .eq("user_id", user_id).eq("platform", platform)
-                         .execute().count or 0)
-            payload["scan_offset"] = al_bekend
+            bekend: list[str] = []
+            stap = 1000
+            for offset in range(0, 40000, stap):
+                rij = (db.table("import_candidates").select("platform_listing_id")
+                       .eq("user_id", user_id).eq("platform", platform)
+                       .range(offset, offset + stap - 1).execute().data or [])
+                bekend += [str(r["platform_listing_id"]) for r in rij
+                           if r.get("platform_listing_id") is not None]
+                if len(rij) < stap:
+                    break
+            payload["bekende_ids"] = bekend
+            # De oude teller blijft meegaan voor wie nog een oudere extensie
+            # draait; die kan met bekende_ids niets.
+            payload["scan_offset"] = len(bekend)
         except Exception as e:
             logger.warning("Kon scanpositie niet bepalen voor %s: %s", user_id, e)
 
