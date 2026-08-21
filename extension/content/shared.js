@@ -1223,6 +1223,7 @@ window.CL = (() => {
   }
 
   let _laatsteEchteKlik = "niet nodig";
+  let _laatsteGratisKlik = "niet nodig";
 
   async function submitListing(idFromUrl) {
     // Brand FIRST — closing the brand modal triggers a React re-render that resets
@@ -1290,6 +1291,24 @@ window.CL = (() => {
     // nette adres mét naam erin (/items/123-grijze-short). Vinted landt lang
     // niet altijd op die vorm, en dan bleef het artikel eindeloos op
     // "Publishing…" staan terwijl hij gewoon online stond.
+    // DE GRATIS-KEUZE OOK ECHT AANKLIKKEN.
+    //
+    // "Hoe wil je adverteren?" (Gratis / Plus / Premium) is verplicht, en geldt
+    // net als de beschrijving: onze eigen klik zet het bolletje wel aan in de
+    // pagina, maar niet in de staat waarop het formulier zijn oordeel baseert.
+    // Zonder die keuze doet de plaatsknop niets, zonder klacht en zonder rood
+    // veld. Nog een keer echt klikken kan geen kwaad: het is dezelfde keuze.
+    const gratisGekozen = await new Promise((res) => {
+      try {
+        chrome.runtime.sendMessage(
+          { type: "KLIK_ECHT", selector: '[data-testid="bundle-option-FREE"]' },
+          (r) => res(r || "geen antwoord"));
+      } catch (_) { res("niet bereikbaar"); }
+    });
+    clog(`gratis-keuze: ${gratisGekozen}`);
+    _laatsteGratisKlik = gratisGekozen;
+    await sleep(400);
+
     try { chrome.runtime.sendMessage({ type: "SUBMIT_CLICKED" }, () => chrome.runtime.lastError); } catch (_) {}
     btn.click();
     clog("plaatsen: op de knop geklikt, wachten op de advertentie");
@@ -1475,7 +1494,8 @@ window.CL = (() => {
       + (uniq.length ? `${uniq.join(" | ")} ` : "")
       + (rood.length ? `| Fields marked invalid: ${rood.join(", ")} ` : "| No field is marked invalid. ")
       + `| Real click: ${_laatsteEchteKlik} | Still on ${waar}, ${knopStand} `
-      + `| Attribute fields: ${keuzeveldenKort()} | Form's own description length: ${_echteBeschrijvingLengte} | Page says: ${zichtbaar}`
+      + `| Attribute fields: ${keuzeveldenKort()} | Form's own description length: ${_echteBeschrijvingLengte} `
+      + `| Free option: ${_laatsteGratisKlik} | Price field: ${(qs('input[name="price.value"]') || {}).value || "LEEG"} | Page says: ${zichtbaar}`
     );
   }
 
