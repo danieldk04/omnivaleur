@@ -681,6 +681,56 @@ window.CL = (() => {
     return out;
   }
 
+  // MAATVELDEN DIE NIET OP TEKST MATCHEN.
+  //
+  // Marktplaats zet bij overhemden geen maat maar een halswijdte-groep:
+  // "Halswijdte 38 (S) of kleiner", "Halswijdte 39/40 (M)", "41/42 (L)",
+  // "43/44 (XL)", "Overige halswijdtes". Onze maat is "16 in | 40 cm" of "39",
+  // en die tekst komt in geen van die opties voor — dus bleef het veld leeg.
+  //
+  // Waarom dat erger is dan het lijkt: het veld is verplicht. Marktplaats zet er
+  // geen zichtbare klacht bij en markeert het niet rood, maar de plaatsknop doet
+  // dan gewoon niets. Gemeten 21-08-2026: formulier compleet, geen enkele
+  // melding, echte muisklik aantoonbaar op de knop — en geen advertentie.
+  //
+  // Werkt op getallen, niet op tekst: haal het getal uit de maat, reken inches
+  // om naar centimeters, en kies de groep waar dat getal in valt.
+  function _maatGetal(maat) {
+    const t = String(maat || "").toLowerCase();
+    // Centimeters eerst: staat er "16 in | 40 cm", dan is 40 wat de verkoper
+    // bedoelt. Omrekenen van inches geeft 40,6 en dus 41 — één groep te hoog.
+    const cm = t.match(/(\d{2})\s*cm/);
+    if (cm) return parseInt(cm[1], 10);
+    const inch = t.match(/(\d{2}(?:[.,]5)?)\s*(?:in\b|inch|")/);
+    if (inch) return Math.round(parseFloat(inch[1].replace(",", ".")) * 2.54);
+    const kaal = t.match(/\b(3[5-9]|4[0-9])\b/);
+    return kaal ? parseInt(kaal[1], 10) : null;
+  }
+
+  async function vulHalswijdte(item) {
+    const select = attrSelects().find((el) =>
+      [...el.options].some((o) => /halswijdte/i.test(o.text)));
+    if (!select) return false;
+    if (select.value && select.value !== "") return true;   // al gevuld
+    const n = _maatGetal(item && item.size);
+    const opties = [...select.options].map((o) => o.text.trim());
+    const kies = (test) => opties.find((t) => test.test(t));
+    let wil = null;
+    if (n != null) {
+      if (n <= 38) wil = kies(/38.*kleiner|38\s*\(S\)/i);
+      else if (n <= 40) wil = kies(/39\s*\/\s*40/);
+      else if (n <= 42) wil = kies(/41\s*\/\s*42/);
+      else if (n <= 44) wil = kies(/43\s*\/\s*44/);
+    }
+    // Geen bruikbare maat? Dan "Overige", want leeg laten betekent hier: de
+    // advertentie gaat er niet op. Een eerlijke "overige" is beter dan niets.
+    if (!wil) wil = kies(/overige/i);
+    if (!wil) return false;
+    const ok = fillNativeSelect(select, wil);
+    clog(`halswijdte: maat "${item && item.size}" → ${n ?? "onbekend"} → "${wil}" ${ok ? "gezet" : "MISLUKT"}`);
+    return ok;
+  }
+
   async function selectDropdown(labels, value) {
     if (!value) return false;
     const labelArr = Array.isArray(labels) ? labels : [labels];
@@ -1497,7 +1547,7 @@ window.CL = (() => {
   return {
     sleep, waitUntil, qs, waitForEl, fillInput, fillInputHuman, fillNativeSelect, clickRadioByValue, fillDescription,
     findFieldByLabel, selectDropdown, fillBrand, fillManufacturer, selectBundleFree,
-    selectDelivery, gekozenLevering, selectPakketWaarde,
+    selectDelivery, gekozenLevering, selectPakketWaarde, vulHalswijdte,
     selectPackageSize, uploadPhotos, submitListing, step, closePopup, smartTrunc, fillBidding,
     clog, plaatsBlokkade, dutchColor, verifyMpGroupFields, repairMpGroupFields, ensureDescriptionStillFilled, selectCondition, selectIntendedFor, fillBrandField, logMpFields, mpPrijs,
   };

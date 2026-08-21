@@ -2,7 +2,7 @@
 (async () => {
   const PLATFORM = "marktplaats";
   const { step, clog, qs, sleep, waitForEl, fillInput, fillInputHuman, fillDescription, selectDropdown,
-          fillBrand, fillBrandField, fillManufacturer, selectBundleFree, selectDelivery, selectPakketWaarde, uploadPhotos, submitListing,
+          fillBrand, fillBrandField, fillManufacturer, selectBundleFree, selectDelivery, selectPakketWaarde, vulHalswijdte, uploadPhotos, submitListing,
           clickRadioByValue, smartTrunc, fillBidding, dutchColor,
           ensureDescriptionStillFilled, verifyMpGroupFields, repairMpGroupFields, selectCondition, selectIntendedFor, mpPrijs } = window.CL;
 
@@ -118,6 +118,8 @@
     await sleep(400); // let React re-render kenmerken after condition selection
     await step("sporttype",    () => mpSportType(item) && selectDropdown("Type", mpSportType(item)));
     await step("size",         () => item.size && selectDropdown(["Maat", "Jeansmaat", "Maat (cm)", "Maat bovenstuk", "Maat onderstuk"], item.size));
+    // Halswijdte werkt op getallen in plaats van op tekst; zie vulHalswijdte.
+    await step("halswijdte",   () => vulHalswijdte(item));
     await step("color",        () => item.color && selectDropdown("Kleur", dutchColor(item.color)));
     await step("brand",        () => item.brand && fillBrandField(item.brand));
     await step("manufacturer", () => fillManufacturer(item));
