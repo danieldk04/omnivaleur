@@ -1,0 +1,65 @@
+# De trendmotor: elke dinsdagochtend meten wat er in de niche werkt en Daniel
+# vertellen wat hij moet maken.
+#
+# Waarom hier en niet op Railway: de meting heeft een echte browser nodig, want
+# TikTok geeft zijn cijfers alleen aan een browser prijs. Railway draait op
+# Nixpacks zonder Chromium; daar een browser in bouwen zet de bouw van de live
+# website op het spel voor een taak die er niets mee te maken heeft. Hier staat
+# de browser standaard klaar en raakt een mislukte meting de site niet.
+#
+# De dubbele cron is geen fout. GitHub roostert alleen in UTC en Nederland
+# schuift twee keer per jaar een uur op. Beide beurten starten, maar het script
+# controleert zelf de Nederlandse klok en stopt meteen als het niet 08:xx is.
+# Zo klopt de tijd het hele jaar zonder dat iemand het rooster hoeft te verzetten.
+
+name: Trendmotor
+
+on:
+  schedule:
+    - cron: "30 6 * * 2"    # dinsdag 08:30 Nederlandse zomertijd
+    - cron: "30 7 * * 2"    # dinsdag 08:30 Nederlandse wintertijd
+  workflow_dispatch:        # met de hand starten vanaf github.com
+
+concurrency:
+  group: trendmotor
+  cancel-in-progress: false
+
+jobs:
+  meten:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      TZ: Europe/Amsterdam
+      MAIL_HOST: smtp.zoho.eu
+      MAIL_USER: daniel@omnivaleur.nl
+      MAIL_PASS: ${{ secrets.MAIL_PASS }}
+      NOTION_TOKEN: ${{ secrets.NOTION_TOKEN }}
+      ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Benodigdheden
+        run: |
+          pip install --quiet playwright httpx pillow
+          python -m playwright install --with-deps chromium
+
+      - name: Meten en versturen
+        run: |
+          python3 scripts/social_trends_rapport.py \
+            --alleen-uur 8 ${{ github.event_name == 'workflow_dispatch' && '--droog' || '' }}
+
+      # De meting van deze week bewaren. Dat is niet alleen archief: de laag van
+      # 90 dagen wordt pas betrouwbaar als er weken achter elkaar gemeten is, en
+      # zonder dit zou elke ronde weer bij nul beginnen.
+      - name: Meting bewaren
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: meting-${{ github.run_number }}
+          path: scripts/output/trends-*.json
+          retention-days: 90
+          if-no-files-found: ignore
