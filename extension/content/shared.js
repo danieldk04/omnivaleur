@@ -1292,9 +1292,12 @@ window.CL = (() => {
         await sleep(400);
         if (beschrijvingKlachtOpPagina()) {
           echt = await new Promise((res) => {
-            // De hele beschrijving, niet één spatie: het formulier telt alleen
-            // mee wat er echt getypt is (zie typEchteToets in background.js).
-            try { chrome.runtime.sendMessage({ type: "TYPE_ECHT", text: _pendingDescription || " " }, (r) => res(r || "geen antwoord")); }
+            // Eerste poging: één echte spatie. Dat bleek in de praktijk genoeg
+            // om de klacht te laten verdwijnen. Helpt het niet, dan typt de
+            // volgende ronde de hele tekst opnieuw — het formulier telt namelijk
+            // alleen mee wat er echt getypt is (zie typEchteToets).
+            const teTypen = herstel === 1 ? " " : (_pendingDescription || " ");
+            try { chrome.runtime.sendMessage({ type: "TYPE_ECHT", text: teTypen }, (r) => res(r || "geen antwoord")); }
             catch (_) { res("niet bereikbaar"); }
           });
           laatsteToets = echt;
@@ -1305,8 +1308,23 @@ window.CL = (() => {
         const klachtWeg = !beschrijvingKlachtOpPagina();
         clog(`herstel ${herstel}: spatie ${geduwd ? "getypt" : "MISLUKT"}, echte toets ${echt}, `
            + `melding ${klachtWeg ? "weg" : "staat er nog"}`);
+        // Hier stond alleen btn.click(). Gemeten 21-08-2026: na herstelronde 1
+        // was de klacht wég — en toch gebeurde er niets, want Marktplaats
+        // negeert een klik die van een script komt. De echte klik landde in
+        // dezelfde ronde aantoonbaar op de knop. Dus hier ook echt klikken.
         btn.click();
-        const id2 = await waitForListingUrl(idFromUrl, 20000).catch(() => null);
+        let id2 = await waitForListingUrl(idFromUrl, 8000).catch(() => null);
+        if (!id2 && /\/(plaats|syi)\b/.test(location.pathname) && document.contains(btn)) {
+          _laatsteEchteKlik = await new Promise((res) => {
+            try {
+              chrome.runtime.sendMessage(
+                { type: "KLIK_ECHT", selector: '[data-testid="place-listing-submit-button"]' },
+                (r) => res(r || "geen antwoord"));
+            } catch (_) { res("niet bereikbaar"); }
+          });
+          clog(`herstel ${herstel}: echte klik — ${_laatsteEchteKlik}`);
+          id2 = await waitForListingUrl(idFromUrl, 20000).catch(() => null);
+        }
         if (id2) { clog(`plaatsen: alsnog gelukt na herstelpoging ${herstel}`); return id2; }
       }
       if (beschrijvingKlachtOpPagina()) {
