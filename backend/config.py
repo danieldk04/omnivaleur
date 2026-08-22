@@ -26,7 +26,7 @@ class Settings(BaseSettings):
     # write_inventory/read_locations back the stock-of-1 correction: without them a
     # product whose inventory_quantity the create call ignored stays at 0 and shows
     # as sold out. Already-connected stores keep their old scopes until they reconnect.
-    shopify_scopes: str = "read_products,write_products,write_inventory,read_locations,read_publications,write_publications"
+    shopify_scopes: str = "read_products,write_products,write_inventory,read_locations,read_publications,write_publications,read_orders"
     shopify_redirect_uri: str = "https://omnivaleur.com/shopify-callback.html"
 
     ebay_app_id: str = ""
