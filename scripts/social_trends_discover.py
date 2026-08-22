@@ -373,7 +373,15 @@ def _yt_zoek(query: str, niche: str, max_items: int = 20) -> list[dict]:
                     "video_id": vr.get("videoId", ""),
                     "url": f"https://www.youtube.com/watch?v={vr.get('videoId','')}",
                     "tekst": titel[:300],
-                    "datum": "",  # alleen 'x weken geleden' — te grof om op te rekenen
+                    "datum": _yt_geleden(
+                        (vr.get("publishedTimeText") or {}).get("simpleText") or ""),
+                    # De zoekpagina zegt "3 weken geleden", niet "17 maart". Dat is
+                    # grof, maar het alternatief is geen datum, en zonder datum telt
+                    # een video in geen enkel tijdvenster mee — dan staat YouTube er
+                    # wel maar doet het nergens aan mee. We zetten er een vlag bij,
+                    # zodat de 7-dagenlaag deze video's kan overslaan: "1 week
+                    # geleden" kan alles tussen 7 en 13 dagen zijn.
+                    "datum_geschat": True,
                     "views": views,
                     "likes": 0, "comments": 0, "shares": 0, "saves": 0,
                     "duur": 0, "sound": "", "sound_id": "",
@@ -425,10 +433,25 @@ def _yt_via_api(rijen: list[dict], sleutel: str) -> int:
             rij["likes"] = _int(st.get("likeCount"))
             rij["comments"] = _int(st.get("commentCount"))
             rij["datum"] = (sn.get("publishedAt") or "")[:10]
+            rij["datum_geschat"] = False
             rij["duur"] = _iso_duur((item.get("contentDetails") or {}).get("duration", ""))
             rij["hashtags"] = re.findall(r"#(\w+)", (sn.get("description") or ""))[:12]
             raak += 1
     return raak
+
+
+def _yt_geleden(tekst: str) -> str:
+    """"3 weken geleden" omrekenen naar een datum. Nederlands en Engels."""
+    m = re.search(r"(\d+)\s*(seconde|minu|uur|hour|minute|second|dag|day|week|"
+                  r"maand|month|jaar|year)", tekst.lower())
+    if not m:
+        return ""
+    aantal, eenheid = int(m.group(1)), m.group(2)
+    dagen = {"seconde": 0, "second": 0, "minu": 0, "minute": 0, "uur": 0, "hour": 0,
+             "dag": 1, "day": 1, "week": 7, "maand": 30, "month": 30,
+             "jaar": 365, "year": 365}[eenheid] * aantal
+    from datetime import timedelta
+    return (datetime.now(timezone.utc) - timedelta(days=dagen)).strftime("%Y-%m-%d")
 
 
 def _iso_duur(v: str) -> int:
@@ -436,35 +459,6 @@ def _iso_duur(v: str) -> int:
     if not m:
         return 0
     return int(m.group(1) or 0) * 60 + int(m.group(2) or 0)
-
-
-# Vanaf een datacenter (zoals GitHub) zet YouTube eerst een cookiemuur voor de
-# videopagina: je krijgt netjes een 200 terug, maar het is de toestemmingspagina
-# en niet de video. Dat was precies waarom de eerste ronde 0 van de 48 video's
-# van een datum voorzag. Deze cookies zijn de standaard "ik heb gekozen"-waarden
-# die de browser zelf ook zet; ermee krijg je de echte pagina.
-_YT_COOKIES = "CONSENT=YES+cb.20210328-17-p0.nl+FX+117; SOCS=CAISEwgDEgk0ODE3Nzk3MjQaAm5sIAEaBgiA_LyaBg"
-
-
-def _yt_via_pagina(rij: dict) -> bool:
-    try:
-        req = urllib.request.Request(rij["url"], headers={
-            "User-Agent": UA, "Accept-Language": "nl-NL,nl;q=0.9,en;q=0.8",
-            "Cookie": _YT_COOKIES})
-        html = urllib.request.urlopen(req, timeout=30).read().decode("utf-8", "replace")
-    except Exception as e:
-        rij["_yt_fout"] = type(e).__name__
-        return False
-    datum = re.search(r'"uploadDate":"(\d{4}-\d{2}-\d{2})', html)
-    duur = re.search(r'"lengthSeconds":"(\d+)"', html)
-    views = re.search(r'"viewCount":"(\d+)"', html)
-    if datum:
-        rij["datum"] = datum.group(1)
-    if duur:
-        rij["duur"] = int(duur.group(1))
-    if views:
-        rij["views"] = int(views.group(1)) or rij["views"]
-    return bool(datum)
 
 
 def verrijk_youtube(rijen: list[dict]) -> None:
@@ -478,108 +472,13 @@ def verrijk_youtube(rijen: list[dict]) -> None:
               f"(met likes en reacties)", flush=True)
         if raak:
             return
-    from concurrent.futures import ThreadPoolExecutor
-    with ThreadPoolExecutor(max_workers=8) as pool:
-        raak = sum(pool.map(_yt_via_pagina, rijen))
-    print(f"  YouTube verrijkt via de videopagina: {raak}/{len(rijen)} "
-          f"(datum en duur, geen likes — zet YT_API_KEY voor volledige cijfers)",
-          flush=True)
-    if raak == 0 and rijen:
-        # Zonder datum telt een video in geen enkel tijdvenster mee; hij staat er
-        # dan wel, maar doet nergens aan mee. Dat moet luid zijn, niet stil.
-        fouten = {r.get("_yt_fout", "lege pagina") for r in rijen}
-        print(f"  ! GEEN ENKELE YouTube-datum gevonden ({', '.join(sorted(fouten))}). "
-              f"YouTube telt deze ronde dus in geen enkel tijdvenster mee. "
-              f"Zet YT_API_KEY als secret om dit definitief op te lossen.",
-              file=sys.stderr)
-    for r in rijen:
-        r.pop("_yt_fout", None)
-
-
-# ── Instagram ───────────────────────────────────────────────────────────────
-# Instagram is het enige platform dat niet gratis kan. Hashtagpagina's zitten
-# sinds 2024 achter de inlog, en inloggen met een echt account om te schrapen is
-# precies waar accounts voor geblokkeerd worden — dat risico is het niet waard.
-# Daarom loopt Instagram via Apify, dat de rekening en het risico overneemt.
-#
-# Bewust zuinig ingesteld: een klein aantal posts per hashtag, en alleen de
-# hashtags die er in de meting toe doen. Zonder token slaat dit stil over, dan
-# is het rapport gewoon een rapport zonder Instagram in plaats van een fout.
-IG_ACTOR = "apify~instagram-hashtag-scraper"
-IG_PER_HASHTAG = 30
-
-
-def _ig_norm(post: dict, niche: str, taal: str, tag: str) -> dict | None:
-    handle = post.get("ownerUsername") or ""
-    if not handle:
-        return None
-    views = _int(post.get("videoPlayCount") or post.get("videoViewCount"))
-    tekst = (post.get("caption") or "")[:300]
-    return {
-        "platform": "Instagram",
-        "niche": niche, "taal": taal, "gevonden_via": f"#{tag}",
-        "handle": handle, "naam": post.get("ownerFullName") or "",
-        "volgers": 0,
-        "video_id": str(post.get("id") or post.get("shortCode") or ""),
-        "url": post.get("url") or f"https://www.instagram.com/p/{post.get('shortCode','')}/",
-        "tekst": tekst,
-        "datum": (post.get("timestamp") or "")[:10],
-        "views": views,
-        "likes": _int(post.get("likesCount")),
-        "comments": _int(post.get("commentsCount")),
-        # Instagram geeft delen en bewaren niet vrij. Nul invullen zou suggereren
-        # dat het gemeten is en nul was; het is niet gemeten. De viraliteitsscore
-        # slaat Instagram daarom over, net als YouTube zonder likes.
-        "shares": 0, "saves": 0,
-        "duur": _int(post.get("videoDuration")),
-        "sound": "", "sound_id": "",
-        "beeld": post.get("displayUrl") or "",
-        "hashtags": re.findall(r"#(\w+)", tekst)[:12],
-    }
-
-
-def verzamel_instagram(hashtag_limiet: int | None) -> list[dict]:
-    token = os.environ.get("APIFY_TOKEN", "").strip()
-    if not token:
-        print("  Instagram overgeslagen: geen APIFY_TOKEN "
-              "(hashtagpagina's zijn niet zonder inlog te lezen)", flush=True)
-        return []
-
-    opdrachten = []
-    for niche, cfg in NICHES.items():
-        for taal, sleutel in (("nl", "instagram_nl"), ("en", "instagram_en")):
-            for tag in cfg.get(sleutel, [])[:hashtag_limiet]:
-                opdrachten.append((niche, taal, tag))
-    if not opdrachten:
-        return []
-
-    uit: list[dict] = []
-    gezien: set[str] = set()
-    for niche, taal, tag in opdrachten:
-        print(f"  Instagram #{tag} ({niche}/{taal}) …", end="", flush=True)
-        try:
-            verzoek = urllib.request.Request(
-                f"https://api.apify.com/v2/acts/{IG_ACTOR}/run-sync-get-dataset-items"
-                f"?token={token}&format=json&timeout=180",
-                data=json.dumps({"hashtags": [tag],
-                                 "resultsLimit": IG_PER_HASHTAG}).encode(),
-                headers={"Content-Type": "application/json"})
-            posts = json.loads(urllib.request.urlopen(verzoek, timeout=200).read())
-        except Exception as e:
-            # Meestal: het maandtegoed is op. Dat is geen storing om te herstellen,
-            # dat is een rekening. De rest van de meting gaat gewoon door.
-            print(f" mislukt ({type(e).__name__})", flush=True)
-            continue
-        nieuw = 0
-        for post in posts if isinstance(posts, list) else []:
-            rij = _ig_norm(post, niche, taal, tag)
-            if not rij or not rij["video_id"] or rij["video_id"] in gezien:
-                continue
-            gezien.add(rij["video_id"])
-            uit.append(rij)
-            nieuw += 1
-        print(f" {nieuw} posts", flush=True)
-    return uit
+    zonder = [r for r in rijen if not r.get("datum")]
+    print(f"  YouTube: {len(rijen) - len(zonder)}/{len(rijen)} video's met een "
+          f"geschatte datum uit de zoekpagina (geen likes). Zet YT_API_KEY als "
+          f"secret voor exacte datums, likes en reacties.", flush=True)
+    if zonder:
+        print(f"  ! {len(zonder)} YouTube-video's zonder datum — die tellen in geen "
+              f"enkel tijdvenster mee", file=sys.stderr)
 
 
 def verzamel_youtube(query_limiet: int | None) -> list[dict]:

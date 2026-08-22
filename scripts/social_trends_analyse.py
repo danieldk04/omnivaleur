@@ -167,10 +167,23 @@ def verrijk(videos: list[dict], nu: datetime | None = None) -> list[dict]:
 
 
 def in_periode(videos: list[dict], dagen: int) -> list[dict]:
-    """Video's van de laatste N dagen. Zonder datum tellen ze nergens in mee —
-    liever een lege periode dan een periode die stiekem oude video's bevat."""
-    return [v for v in videos
-            if v["leeftijd_dagen"] is not None and v["leeftijd_dagen"] <= dagen]
+    """
+    Video's van de laatste N dagen. Zonder datum tellen ze nergens in mee —
+    liever een lege periode dan een periode die stiekem oude video's bevat.
+
+    YouTube geeft alleen "3 weken geleden" en geen echte datum (tenzij er een
+    API-sleutel is). Voor 30 en 90 dagen is dat nauwkeurig genoeg, voor 7 dagen
+    niet: "1 week geleden" kan alles tussen 7 en 13 dagen zijn, en dan zou de
+    weeklaag stilletjes oudere video's bevatten. Daar houden we ze dus buiten.
+    """
+    uit = []
+    for v in videos:
+        if v["leeftijd_dagen"] is None or v["leeftijd_dagen"] > dagen:
+            continue
+        if dagen <= 7 and v.get("datum_geschat"):
+            continue
+        uit.append(v)
+    return uit
 
 
 # ── Patroonanalyse ──────────────────────────────────────────────────────────
