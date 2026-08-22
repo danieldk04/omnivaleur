@@ -232,12 +232,15 @@ async def _haal_ondertitels(ctx, rijen: list[dict]) -> int:
 
 async def verzamel_tiktok(scrolls: int, hashtag_limiet: int | None) -> list[dict]:
     from playwright.async_api import async_playwright
+    # playwright-stealth is optioneel. Het staat er niet en het hoeft ook niet:
+    # wat TikTok tevreden houdt is de vlag --disable-blink-features hieronder,
+    # plus een verse sessie per hashtag. De oude waarschuwing hier beweerde dat
+    # het zonder stealth mis zou gaan, en dat klopte niet — dat is elke ronde
+    # een loos alarm in de logs.
     try:
         from playwright_stealth import stealth_async
     except ImportError:
         stealth_async = None
-        print("! playwright-stealth ontbreekt — TikTok geeft dan lege antwoorden",
-              file=sys.stderr)
 
     opdrachten: list[tuple[str, str, str]] = []  # (niche, taal, hashtag)
     for niche, cfg in NICHES.items():
