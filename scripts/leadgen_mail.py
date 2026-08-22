@@ -78,8 +78,9 @@ SITE = "https://omnivaleur.com"
 # ontvangstbevestigingen tellen niet mee, anders is het geen seintje meer maar ruis.
 ALARM_NAAR = ["danieldekoning66@gmail.com", "info@revaleur.com"]
 # De demo van één minuut. Staat hier één keer, zodat er nooit een oude link in
-# een concept belandt.
-VIDEO = "https://youtube.com/shorts/ymDeS37aBW4"
+# een concept belandt. Wijst naar de leadpagina (met UTM's en founder-story),
+# niet meer naar de kale YouTube-link.
+VIDEO = "https://omnivaleur.com/mp-video"
 PRIJS = "€19,99 per maand"
 PLATFORMS = "Marktplaats, 2dehands, Vinted, eBay en Shopify. Etsy komt eraan"
 # Waar een klaargezet antwoord terechtkomt. Zoho noemt zijn conceptenmap zo.
