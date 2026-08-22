@@ -182,13 +182,19 @@ input[type=range]::-moz-range-thumb { width: 22px; height: 22px; border-radius: 
 .tab { padding: 10px 22px; border-radius: 100px; font-size: 14px; font-weight: 650; color: var(--muted); background: #fff; border: 1px solid var(--border); cursor: pointer; transition: all .18s; font-family: inherit; }
 .tab:hover { color: var(--text); border-color: #cbd5e1; }
 .tab.active { color: #fff; background: linear-gradient(135deg, var(--blue), var(--mint)); border-color: transparent; box-shadow: 0 6px 18px -5px rgba(37,99,235,.5); }
-.shot-frame { background: #1e293b; border-radius: 16px; padding: 12px 12px 0; box-shadow: var(--shadow-lg); max-width: 980px; margin: 0 auto; }
+.shot-frame { position: relative; background: #1e293b; border-radius: 16px; padding: 12px 12px 0; box-shadow: var(--shadow-lg); max-width: 1160px; margin: 0 auto; }
 .shot-bar { display: flex; align-items: center; gap: 7px; padding: 3px 4px 12px; }
 .shot-dot { width: 11px; height: 11px; border-radius: 50%; }
 .shot-dot.r { background: #f87171; } .shot-dot.y { background: #fbbf24; } .shot-dot.g { background: #4ade80; }
 .shot-url { flex: 1; margin-left: 10px; background: rgba(255,255,255,.09); border-radius: 6px; padding: 5px 12px; font-size: 11.5px; color: rgba(255,255,255,.5); text-align: center; }
-.shot-body { border-radius: 9px 9px 0 0; overflow: hidden; background: var(--bg); aspect-ratio: 1.85; }
-.shot-body img { width: 100%; height: 100%; object-fit: cover; object-position: top center; }
+.shot-body { border-radius: 9px 9px 0 0; overflow: hidden; background: var(--bg); }
+.shot-body img { width: 100%; height: auto; }
+/* uitvergrote uitsnede over het scherm heen */
+.zoom-call { position: absolute; right: -18px; bottom: 26px; width: 250px; background: #fff; border-radius: 16px; padding: 12px; box-shadow: 0 26px 60px -14px rgba(15,23,42,.5); border: 1px solid rgba(255,255,255,.6); }
+.zoom-call img { width: 100%; border-radius: 9px; }
+.zoom-call figcaption { font-size: 12px; font-weight: 650; color: var(--text); text-align: center; margin-top: 10px; line-height: 1.4; }
+.zoom-call figcaption span { display: block; color: var(--muted); font-weight: 500; font-size: 11.5px; margin-top: 2px; }
+@media (max-width: 1080px) { .zoom-call { display: none; } }
 .shot-panel { display: none; }
 .shot-panel.active { display: block; animation: fadeIn .35s ease; }
 @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
