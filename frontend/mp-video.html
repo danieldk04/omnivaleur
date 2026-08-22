@@ -101,10 +101,11 @@ h1 { font-size: clamp(34px, 4.6vw, 54px); font-weight: 900; letter-spacing: -1.6
   .hero-cta-row, .hero-proof { justify-content: center; }
   .float-tag.t1 { margin-right: -14px; } .float-tag.t2 { margin-left: -12px; } .float-tag.t3 { margin-right: -10px; }
 }
-@media (max-width: 420px) {
-  .phone { width: 244px; }
-  .float-tag { font-size: 11px; padding: 6px 11px; }
-  .float-tag.t1 { margin-right: -4px; } .float-tag.t2 { margin-left: -4px; } .float-tag.t3 { margin-right: -2px; }
+@media (max-width: 620px) {
+  /* Op smalle schermen vallen de zwevende labels buiten beeld; de platformbalk
+     direct onder de hero vertelt hetzelfde verhaal. */
+  .float-tag { display: none; }
+  .phone { width: min(268px, 76vw); }
 }
 
 /* ── Platform rail ── */
