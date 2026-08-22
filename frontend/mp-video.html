@@ -19,16 +19,21 @@
 :root {
   --blue: #2563eb; --mint: #34d399; --bg: #f0f9ff;
   --surface: #fff; --border: #e2e8f0; --text: #0f172a; --muted: #64748b;
+  --ink: #0b1220; --ink-soft: #16233b;
   --radius: 10px;
+  --shadow-sm: 0 1px 3px rgba(15,23,42,.06), 0 1px 2px rgba(15,23,42,.04);
+  --shadow-md: 0 12px 32px -10px rgba(15,23,42,.16);
+  --shadow-lg: 0 30px 70px -18px rgba(15,23,42,.32), 0 10px 30px -12px rgba(15,23,42,.18);
+  --maxw: 1120px;
 }
-html { scroll-behavior: smooth; }
-body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: var(--surface); color: var(--text); line-height: 1.5; }
+html { scroll-behavior: smooth; -webkit-text-size-adjust: 100%; }
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: var(--surface); color: var(--text); line-height: 1.55; -webkit-font-smoothing: antialiased; overflow-x: hidden; }
 a { color: inherit; }
-img { max-width: 100%; }
-.grad { background: linear-gradient(135deg, var(--blue) 0%, var(--mint) 100%); }
+img { max-width: 100%; display: block; }
 .grad-text { background: linear-gradient(135deg, var(--blue), var(--mint)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+.wrap { max-width: var(--maxw); margin: 0 auto; padding: 0 24px; }
 
-/* --- Site nav (identiek aan de rest van omnivaleur.com) --- */
+/* ── Site nav (identiek aan de rest van omnivaleur.com) ── */
 nav { position: sticky; top: 0; z-index: 100; background: rgba(255,255,255,.95); backdrop-filter: blur(12px); border-bottom: 1px solid var(--border); padding: 0 24px; height: 64px; display: flex; align-items: center; justify-content: space-between; gap: 16px; }
 .nav-logo { display: flex; align-items: center; gap: 10px; font-size: 17px; font-weight: 800; letter-spacing: -.4px; text-decoration: none; color: var(--text); }
 .nav-logo img { height: 32px; width: auto; }
@@ -36,7 +41,7 @@ nav { position: sticky; top: 0; z-index: 100; background: rgba(255,255,255,.95);
 .nav-links a { font-size: 14px; font-weight: 500; color: var(--muted); transition: color .15s; text-decoration: none; }
 .nav-links a:hover, .nav-links a.active { color: var(--text); }
 .nav-actions { display: flex; gap: 10px; align-items: center; flex-shrink: 0; }
-.btn { display: inline-flex; align-items: center; gap: 6px; padding: 9px 20px; border-radius: 100px; font-size: 14px; font-weight: 600; cursor: pointer; border: none; transition: all .2s; white-space: nowrap; }
+.btn { display: inline-flex; align-items: center; gap: 6px; padding: 9px 20px; border-radius: 100px; font-size: 14px; font-weight: 600; cursor: pointer; border: none; transition: all .2s; white-space: nowrap; text-decoration: none; }
 .btn-outline { background: transparent; border: 1.5px solid var(--border); color: var(--text); }
 .btn-outline:hover { border-color: var(--blue); color: var(--blue); }
 .btn-primary { background: linear-gradient(135deg, var(--blue), var(--mint)); color: #fff; box-shadow: 0 2px 12px rgba(37,99,235,.25); }
@@ -48,7 +53,7 @@ nav { position: sticky; top: 0; z-index: 100; background: rgba(255,255,255,.95);
 .nav-toggle-cb:checked ~ .nav-hamburger span:nth-child(2) { opacity: 0; }
 .nav-toggle-cb:checked ~ .nav-hamburger span:nth-child(3) { transform: translateY(-7px) rotate(-45deg); }
 .nav-panel { display: contents; }
-@media (max-width: 700px) {
+@media (max-width: 760px) {
   .nav-hamburger { display: flex; }
   .nav-panel { display: none; position: absolute; top: 64px; left: 0; right: 0; flex-direction: column; background: rgba(255,255,255,.98); backdrop-filter: blur(12px); border-bottom: 1px solid var(--border); box-shadow: 0 8px 24px rgba(15,23,42,.08); }
   .nav-toggle-cb:checked ~ .nav-panel { display: flex; }
@@ -59,100 +64,220 @@ nav { position: sticky; top: 0; z-index: 100; background: rgba(255,255,255,.95);
   .nav-actions .btn { width: 100%; justify-content: center; }
 }
 
-.hero { padding: 56px 24px 20px; text-align: center; background: linear-gradient(180deg, #f0f9ff 0%, #fff 100%); }
-.hero-badge { display: inline-flex; align-items: center; gap: 6px; background: linear-gradient(135deg, rgba(37,99,235,.1), rgba(52,211,153,.1)); border: 1px solid rgba(37,99,235,.2); border-radius: 100px; padding: 6px 16px; font-size: 13px; font-weight: 600; color: var(--blue); margin-bottom: 22px; }
-h1 { font-size: 34px; font-weight: 900; letter-spacing: -1px; max-width: 640px; margin: 0 auto 14px; }
-.hero p.sub { font-size: 17px; color: var(--muted); max-width: 520px; margin: 0 auto 36px; }
+/* ── Hero ── */
+.hero { position: relative; padding: 72px 0 84px; background: linear-gradient(180deg, #f0f9ff 0%, #fff 100%); overflow: hidden; }
+.hero::before { content: ''; position: absolute; top: -280px; left: 50%; transform: translateX(-50%); width: 1100px; height: 900px; background: radial-gradient(closest-side, rgba(37,99,235,.13), transparent 72%), radial-gradient(closest-side, rgba(52,211,153,.12), transparent 70%); background-position: 30% 40%, 72% 30%; background-repeat: no-repeat; background-size: 60% 70%, 55% 65%; pointer-events: none; }
+.hero-grid { position: relative; display: grid; grid-template-columns: 1.05fr .95fr; gap: 56px; align-items: center; }
+.eyebrow { display: inline-flex; align-items: center; gap: 8px; background: rgba(255,255,255,.85); border: 1px solid rgba(37,99,235,.22); border-radius: 100px; padding: 7px 16px 7px 8px; font-size: 13px; font-weight: 650; color: var(--blue); margin-bottom: 24px; box-shadow: var(--shadow-sm); }
+.eyebrow .dot { width: 20px; height: 20px; border-radius: 50%; background: linear-gradient(135deg, var(--blue), var(--mint)); color: #fff; display: grid; place-items: center; font-size: 10px; }
+h1 { font-size: clamp(34px, 4.6vw, 54px); font-weight: 900; letter-spacing: -1.6px; line-height: 1.06; margin-bottom: 20px; }
+.hero-sub { font-size: 18px; color: var(--muted); max-width: 500px; margin-bottom: 32px; }
+.hero-sub strong { color: var(--text); font-weight: 650; }
+.hero-cta-row { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
+.cta-primary { display: inline-flex; align-items: center; gap: 9px; padding: 16px 32px; background: linear-gradient(135deg, var(--blue), var(--mint)); color: #fff; border: none; border-radius: 100px; font-size: 16px; font-weight: 700; cursor: pointer; text-decoration: none; box-shadow: 0 6px 24px -4px rgba(37,99,235,.45); transition: transform .2s, box-shadow .2s; }
+.cta-primary:hover { box-shadow: 0 10px 32px -4px rgba(37,99,235,.55); transform: translateY(-2px); }
+.cta-sub { font-size: 13px; color: var(--muted); }
+.cta-sub b { color: var(--text); }
+.hero-proof { display: flex; gap: 26px; margin-top: 36px; padding-top: 28px; border-top: 1px solid var(--border); flex-wrap: wrap; }
+.proof { }
+.proof-n { font-size: 21px; font-weight: 850; letter-spacing: -.5px; }
+.proof-l { font-size: 12.5px; color: var(--muted); }
 
-.video-wrap { max-width: 340px; margin: 0 auto 40px; }
-.video-frame { position: relative; width: 100%; aspect-ratio: 9/16; background: #111827; border-radius: 22px; overflow: hidden; box-shadow: 0 30px 70px -15px rgba(15,23,42,.35), 0 10px 30px -10px rgba(15,23,42,.2); }
-.video-frame iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; }
+/* Phone-mockup video */
+.hero-visual { display: flex; justify-content: center; position: relative; }
+.phone { position: relative; width: 292px; background: #0b1220; border-radius: 40px; padding: 11px; box-shadow: var(--shadow-lg), 0 0 0 1px rgba(15,23,42,.06); }
+.phone::after { content: ''; position: absolute; top: 11px; left: 50%; transform: translateX(-50%); width: 86px; height: 22px; background: #0b1220; border-radius: 0 0 14px 14px; z-index: 3; }
+.phone-screen { position: relative; border-radius: 30px; overflow: hidden; background: #000; aspect-ratio: 9/16; }
+.phone-screen iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; }
+.float-tag { position: absolute; background: #fff; border: 1px solid var(--border); border-radius: 100px; padding: 9px 15px; font-size: 12.5px; font-weight: 700; box-shadow: var(--shadow-md); display: flex; align-items: center; gap: 7px; white-space: nowrap; z-index: 4; }
+.float-tag img { height: 15px; width: auto; max-width: 18px; object-fit: contain; }
+.float-tag.t1 { top: 15%; left: -46px; }
+.float-tag.t2 { top: 47%; right: -42px; }
+.float-tag.t3 { bottom: 13%; left: -38px; }
+.tick { width: 17px; height: 17px; border-radius: 50%; background: var(--mint); color: #fff; display: grid; place-items: center; font-size: 10px; font-weight: 900; }
+@media (max-width: 980px) {
+  .hero-grid { grid-template-columns: 1fr; gap: 44px; text-align: center; }
+  .hero-sub { margin-left: auto; margin-right: auto; }
+  .hero-cta-row, .hero-proof { justify-content: center; }
+  .float-tag.t1 { left: -20px; } .float-tag.t2 { right: -16px; } .float-tag.t3 { left: -14px; }
+}
+@media (max-width: 420px) {
+  .phone { width: 250px; }
+  .float-tag { font-size: 11.5px; padding: 7px 12px; }
+  .float-tag.t1 { left: -12px; } .float-tag.t2 { right: -8px; } .float-tag.t3 { left: -8px; }
+}
 
-.cta-primary { display: inline-flex; align-items: center; gap: 8px; padding: 15px 32px; background: linear-gradient(135deg, var(--blue), var(--mint)); color: #fff; border: none; border-radius: 100px; font-size: 16px; font-weight: 700; cursor: pointer; text-decoration: none; box-shadow: 0 4px 20px rgba(37,99,235,.3); transition: all .2s; }
-.cta-primary:hover { box-shadow: 0 6px 26px rgba(37,99,235,.45); transform: translateY(-1px); }
-.cta-note { font-size: 13px; color: var(--muted); margin-top: 12px; }
+/* ── Platform rail ── */
+.rail { border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); background: #fff; padding: 22px 0; }
+.rail-inner { display: flex; align-items: center; justify-content: center; gap: 12px; flex-wrap: wrap; }
+.rail-label { font-size: 12px; font-weight: 700; letter-spacing: .07em; text-transform: uppercase; color: var(--muted); margin-right: 8px; }
+.chip { background: #fff; border: 1px solid var(--border); border-radius: 100px; padding: 8px 17px; font-size: 13.5px; font-weight: 600; color: var(--text); display: flex; align-items: center; gap: 8px; box-shadow: var(--shadow-sm); }
+.chip img { height: 16px; width: auto; max-width: 20px; object-fit: contain; }
+.chip.soon { color: var(--muted); border-style: dashed; }
+.chip .soon-l { font-size: 10px; font-weight: 800; color: #b45309; background: rgba(245,158,11,.14); padding: 2px 7px; border-radius: 100px; text-transform: uppercase; letter-spacing: .03em; }
 
-section { padding: 56px 24px; max-width: 1000px; margin: 0 auto; }
-.section-label { font-size: 12px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--blue); margin-bottom: 10px; text-align: center; }
-h2 { font-size: 26px; font-weight: 800; letter-spacing: -.5px; text-align: center; margin-bottom: 36px; }
+/* ── Sections ── */
+section { padding: 84px 0; }
+.section-head { text-align: center; max-width: 640px; margin: 0 auto 48px; }
+.section-label { font-size: 12px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; color: var(--blue); margin-bottom: 12px; }
+h2 { font-size: clamp(26px, 3.2vw, 36px); font-weight: 850; letter-spacing: -1px; line-height: 1.15; margin-bottom: 14px; }
+.section-sub { font-size: 16.5px; color: var(--muted); }
 
-.benefits { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 20px; }
-.benefit { background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius); padding: 22px; }
-.benefit .icon { font-size: 22px; margin-bottom: 10px; }
-.benefit h3 { font-size: 15px; font-weight: 700; margin-bottom: 6px; }
-.benefit p { font-size: 13.5px; color: var(--muted); }
+/* ── Vergelijking ── */
+.compare { display: grid; grid-template-columns: 1fr auto 1fr; gap: 0; align-items: stretch; max-width: 900px; margin: 0 auto; }
+.compare-col { border: 1px solid var(--border); padding: 30px 28px; }
+.compare-col.before { border-radius: 16px 0 0 16px; background: #fefafa; border-color: #fbdada; }
+.compare-col.after { border-radius: 0 16px 16px 0; background: linear-gradient(180deg, #f2fbf7, #f0f9ff); border-color: rgba(52,211,153,.45); box-shadow: 0 20px 50px -22px rgba(37,99,235,.28); }
+.compare-mid { display: grid; place-items: center; padding: 0 4px; }
+.compare-arrow { width: 46px; height: 46px; border-radius: 50%; background: linear-gradient(135deg, var(--blue), var(--mint)); color: #fff; display: grid; place-items: center; font-size: 19px; font-weight: 800; box-shadow: 0 8px 22px -6px rgba(37,99,235,.5); }
+.compare-tag { font-size: 11.5px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; margin-bottom: 16px; display: inline-block; padding: 4px 11px; border-radius: 100px; }
+.before .compare-tag { color: #b91c1c; background: rgba(220,38,38,.09); }
+.after .compare-tag { color: #047857; background: rgba(16,185,129,.13); }
+.compare-list { list-style: none; display: grid; gap: 13px; }
+.compare-list li { font-size: 14.5px; display: flex; gap: 11px; align-items: flex-start; line-height: 1.45; }
+.compare-list .mark { flex-shrink: 0; width: 20px; height: 20px; border-radius: 50%; display: grid; place-items: center; font-size: 11px; font-weight: 900; margin-top: 1px; }
+.before .mark { background: rgba(220,38,38,.11); color: #b91c1c; }
+.before li { color: #7f1d1d; }
+.after .mark { background: var(--mint); color: #fff; }
+.after li { color: #0f172a; }
+@media (max-width: 800px) {
+  .compare { grid-template-columns: 1fr; }
+  .compare-col.before { border-radius: 16px 16px 0 0; }
+  .compare-col.after { border-radius: 0 0 16px 16px; }
+  .compare-mid { padding: 0; margin: -23px 0; z-index: 2; }
+  .compare-arrow { transform: rotate(90deg); }
+}
 
-.platform-logos { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; margin-top: 8px; }
-.platform-chip { background: var(--surface); border: 1px solid var(--border); border-radius: 100px; padding: 8px 18px; font-size: 13px; font-weight: 500; color: var(--muted); display: flex; align-items: center; gap: 7px; box-shadow: 0 1px 4px rgba(0,0,0,.05); }
-.platform-logo { height: 16px; width: auto; max-width: 20px; object-fit: contain; display: block; }
+/* ── Calculator ── */
+.calc-section { background: var(--ink); color: #fff; position: relative; overflow: hidden; }
+.calc-section::before { content: ''; position: absolute; inset: 0; background: radial-gradient(closest-side, rgba(37,99,235,.3), transparent 70%), radial-gradient(closest-side, rgba(52,211,153,.22), transparent 70%); background-position: 14% 12%, 88% 88%; background-repeat: no-repeat; background-size: 52% 82%, 48% 78%; pointer-events: none; }
+.calc-section .wrap { position: relative; }
+.calc-section .section-label { color: var(--mint); }
+.calc-section h2 { color: #fff; }
+.calc-section .section-sub { color: rgba(255,255,255,.66); }
+.calc { display: grid; grid-template-columns: 1fr 1fr; gap: 0; max-width: 900px; margin: 0 auto; background: rgba(255,255,255,.055); border: 1px solid rgba(255,255,255,.13); border-radius: 20px; overflow: hidden; backdrop-filter: blur(6px); }
+.calc-controls { padding: 34px 34px 30px; border-right: 1px solid rgba(255,255,255,.11); }
+.calc-field + .calc-field { margin-top: 28px; }
+.calc-label { font-size: 13.5px; font-weight: 650; color: rgba(255,255,255,.78); display: flex; justify-content: space-between; align-items: baseline; gap: 12px; margin-bottom: 14px; }
+.calc-val { font-size: 19px; font-weight: 850; color: #fff; letter-spacing: -.3px; }
+input[type=range] { -webkit-appearance: none; appearance: none; width: 100%; height: 6px; border-radius: 100px; background: rgba(255,255,255,.16); outline: none; cursor: pointer; }
+input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 22px; height: 22px; border-radius: 50%; background: #fff; border: 4px solid var(--mint); cursor: pointer; box-shadow: 0 3px 10px rgba(0,0,0,.35); }
+input[type=range]::-moz-range-thumb { width: 22px; height: 22px; border-radius: 50%; background: #fff; border: 4px solid var(--mint); cursor: pointer; box-shadow: 0 3px 10px rgba(0,0,0,.35); }
+.calc-hint { font-size: 12px; color: rgba(255,255,255,.42); margin-top: 26px; line-height: 1.5; }
+.calc-out { padding: 34px; display: flex; flex-direction: column; justify-content: center; gap: 22px; background: rgba(255,255,255,.035); }
+.calc-big { }
+.calc-big-n { font-size: clamp(42px, 6vw, 62px); font-weight: 900; letter-spacing: -2.4px; line-height: 1; background: linear-gradient(135deg, #fff, var(--mint)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+.calc-big-l { font-size: 14px; color: rgba(255,255,255,.72); margin-top: 8px; font-weight: 600; }
+.calc-row { display: flex; gap: 12px; }
+.calc-mini { flex: 1; background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.1); border-radius: 12px; padding: 14px 16px; }
+.calc-mini-n { font-size: 19px; font-weight: 850; letter-spacing: -.5px; }
+.calc-mini-l { font-size: 11.5px; color: rgba(255,255,255,.55); margin-top: 3px; }
+@media (max-width: 760px) {
+  .calc { grid-template-columns: 1fr; }
+  .calc-controls { border-right: none; border-bottom: 1px solid rgba(255,255,255,.11); }
+}
 
-/* --- Inside the app / screenshots --- */
-.app-shots { display: grid; grid-template-columns: 1fr; gap: 28px; }
-.app-shot { }
-.app-shot-frame { background: #1e293b; border-radius: 14px; padding: 10px 10px 0; box-shadow: 0 30px 70px -15px rgba(15,23,42,.3), 0 10px 30px -10px rgba(15,23,42,.18); }
-.app-shot-dots { display: flex; gap: 6px; padding: 4px 6px 10px; }
-.app-shot-dot { width: 10px; height: 10px; border-radius: 50%; }
-.app-shot-dot.red { background: #f87171; } .app-shot-dot.yellow { background: #fbbf24; } .app-shot-dot.green { background: #4ade80; }
-.app-shot-body { border-radius: 8px 8px 0 0; overflow: hidden; max-height: 420px; }
-.app-shot-body img { width: 100%; display: block; object-fit: cover; object-position: top; }
-.app-shot-caption { text-align: center; font-size: 13.5px; color: var(--muted); margin-top: 14px; font-weight: 500; }
+/* ── Dashboard tabs ── */
+.tabs { display: flex; justify-content: center; gap: 8px; margin-bottom: 30px; flex-wrap: wrap; }
+.tab { padding: 10px 22px; border-radius: 100px; font-size: 14px; font-weight: 650; color: var(--muted); background: #fff; border: 1px solid var(--border); cursor: pointer; transition: all .18s; font-family: inherit; }
+.tab:hover { color: var(--text); border-color: #cbd5e1; }
+.tab.active { color: #fff; background: linear-gradient(135deg, var(--blue), var(--mint)); border-color: transparent; box-shadow: 0 6px 18px -5px rgba(37,99,235,.5); }
+.shot-frame { background: #1e293b; border-radius: 16px; padding: 12px 12px 0; box-shadow: var(--shadow-lg); max-width: 980px; margin: 0 auto; }
+.shot-bar { display: flex; align-items: center; gap: 7px; padding: 3px 4px 12px; }
+.shot-dot { width: 11px; height: 11px; border-radius: 50%; }
+.shot-dot.r { background: #f87171; } .shot-dot.y { background: #fbbf24; } .shot-dot.g { background: #4ade80; }
+.shot-url { flex: 1; margin-left: 10px; background: rgba(255,255,255,.09); border-radius: 6px; padding: 5px 12px; font-size: 11.5px; color: rgba(255,255,255,.5); text-align: center; }
+.shot-body { border-radius: 9px 9px 0 0; overflow: hidden; background: var(--bg); aspect-ratio: 1.85; }
+.shot-body img { width: 100%; height: 100%; object-fit: cover; object-position: top center; }
+.shot-panel { display: none; }
+.shot-panel.active { display: block; animation: fadeIn .35s ease; }
+@keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+.shot-caption { text-align: center; font-size: 14px; color: var(--muted); margin-top: 20px; max-width: 520px; margin-left: auto; margin-right: auto; }
+.shot-caption b { color: var(--text); }
 
-.steps { counter-reset: step; display: grid; gap: 18px; max-width: 560px; margin: 0 auto; }
-.step { display: flex; gap: 16px; align-items: flex-start; }
-.step-num { flex-shrink: 0; width: 30px; height: 30px; border-radius: 50%; background: linear-gradient(135deg, var(--blue), var(--mint)); color: #fff; font-size: 14px; font-weight: 800; display: flex; align-items: center; justify-content: center; }
-.step h3 { font-size: 15px; font-weight: 700; margin-bottom: 3px; }
-.step p { font-size: 13.5px; color: var(--muted); }
+/* ── Steps ── */
+.steps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 22px; max-width: 920px; margin: 0 auto; position: relative; }
+.steps::before { content: ''; position: absolute; top: 27px; left: 15%; right: 15%; height: 2px; background: linear-gradient(90deg, rgba(37,99,235,.28), rgba(52,211,153,.28)); z-index: 0; }
+.step { position: relative; z-index: 1; text-align: center; }
+.step-num { width: 54px; height: 54px; margin: 0 auto 18px; border-radius: 50%; background: #fff; border: 2px solid var(--border); color: var(--blue); font-size: 19px; font-weight: 900; display: grid; place-items: center; box-shadow: var(--shadow-sm); }
+.step h3 { font-size: 16px; font-weight: 750; margin-bottom: 7px; }
+.step p { font-size: 14px; color: var(--muted); }
+@media (max-width: 720px) { .steps { grid-template-columns: 1fr; gap: 30px; } .steps::before { display: none; } }
 
-.nl-note { background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius); padding: 18px 20px; max-width: 560px; margin: 0 auto; font-size: 13.5px; color: var(--muted); text-align: center; }
-.nl-note strong { color: var(--text); }
+/* ── NL-notitie ── */
+.nl-note { display: flex; gap: 16px; align-items: flex-start; background: linear-gradient(135deg, #f0f9ff, #f2fbf7); border: 1px solid var(--border); border-radius: 16px; padding: 24px 26px; max-width: 720px; margin: 0 auto; }
+.nl-flag { flex-shrink: 0; width: 42px; height: 42px; border-radius: 12px; background: #fff; border: 1px solid var(--border); display: grid; place-items: center; font-size: 20px; box-shadow: var(--shadow-sm); }
+.nl-note h3 { font-size: 15.5px; font-weight: 750; margin-bottom: 6px; }
+.nl-note p { font-size: 14px; color: var(--muted); }
 
-/* --- Founder --- */
-.founder { display: grid; grid-template-columns: 200px 1fr; gap: 40px; align-items: center; background: var(--bg); border: 1px solid var(--border); border-radius: 20px; padding: 40px; }
-.founder-photo { width: 180px; height: 180px; border-radius: 50%; object-fit: cover; box-shadow: 0 10px 30px -8px rgba(15,23,42,.25); border: 4px solid #fff; }
-.founder-name { font-size: 20px; font-weight: 800; margin-bottom: 2px; }
-.founder-role { font-size: 13.5px; color: var(--blue); font-weight: 600; margin-bottom: 16px; }
-.founder-text p { font-size: 14.5px; color: var(--muted); margin-bottom: 12px; }
+/* ── Founder ── */
+.founder-section { background: var(--bg); }
+.founder { display: grid; grid-template-columns: 300px 1fr; gap: 56px; align-items: start; max-width: 940px; margin: 0 auto; }
+.founder-media { position: relative; }
+.founder-photo { width: 260px; height: 260px; border-radius: 50%; object-fit: cover; box-shadow: 0 26px 60px -18px rgba(15,23,42,.4); border: 6px solid #fff; }
+.founder-media::before { content: ''; position: absolute; top: -14px; left: -14px; width: 288px; height: 288px; border-radius: 50%; border: 2px dashed rgba(37,99,235,.25); pointer-events: none; }
+.founder-sig { margin-top: 24px; padding-left: 4px; }
+.founder-name { font-size: 21px; font-weight: 850; letter-spacing: -.5px; }
+.founder-role { font-size: 13.5px; color: var(--blue); font-weight: 650; margin-top: 2px; }
+.founder-quote { font-size: 20px; font-weight: 700; line-height: 1.42; letter-spacing: -.4px; margin-bottom: 24px; padding-left: 20px; border-left: 3px solid var(--mint); }
+.founder-text p { font-size: 15.5px; color: var(--muted); margin-bottom: 16px; }
 .founder-text p:last-child { margin-bottom: 0; }
-.founder-text strong { color: var(--text); }
-.founder-badges { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 18px; }
-.founder-badge { font-size: 12px; font-weight: 700; color: var(--text); background: #fff; border: 1px solid var(--border); padding: 6px 14px; border-radius: 100px; display: flex; align-items: center; gap: 6px; }
-@media (max-width: 700px) {
-  .founder { grid-template-columns: 1fr; text-align: center; padding: 32px 24px; }
-  .founder-photo { margin: 0 auto; }
+.founder-text strong { color: var(--text); font-weight: 650; }
+.founder-badges { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 26px; }
+.founder-badge { font-size: 12.5px; font-weight: 700; color: var(--text); background: #fff; border: 1px solid var(--border); padding: 8px 15px; border-radius: 100px; display: flex; align-items: center; gap: 7px; box-shadow: var(--shadow-sm); }
+@media (max-width: 860px) {
+  .founder { grid-template-columns: 1fr; gap: 34px; justify-items: center; text-align: center; }
+  .founder-media::before { display: none; }
+  .founder-quote { padding-left: 0; border-left: none; border-top: 3px solid var(--mint); padding-top: 18px; }
   .founder-badges { justify-content: center; }
+  .founder-sig { padding-left: 0; }
 }
 
-.faq { max-width: 700px; margin: 0 auto; display: grid; gap: 10px; }
-.faq-item { border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; background: var(--surface); }
-.faq-q { padding: 16px 20px; font-size: 14.5px; font-weight: 700; cursor: pointer; display: flex; justify-content: space-between; align-items: center; gap: 12px; }
-.faq-q::after { content: '+'; font-size: 20px; color: var(--blue); font-weight: 400; transition: transform .2s; flex-shrink: 0; }
-.faq-item.open .faq-q::after { transform: rotate(45deg); }
-.faq-a { max-height: 0; overflow: hidden; transition: max-height .25s ease; }
-.faq-item.open .faq-a { max-height: 300px; }
-.faq-a p { padding: 0 20px 18px; font-size: 13.5px; color: var(--muted); }
+/* ── FAQ ── */
+.faq { max-width: 760px; margin: 0 auto; display: grid; gap: 12px; }
+.faq-item { border: 1px solid var(--border); border-radius: 14px; background: #fff; transition: border-color .2s, box-shadow .2s; overflow: hidden; }
+.faq-item.open { border-color: rgba(37,99,235,.4); box-shadow: 0 10px 30px -14px rgba(37,99,235,.3); }
+.faq-q { width: 100%; text-align: left; padding: 19px 22px; font-size: 15.5px; font-weight: 700; cursor: pointer; display: flex; justify-content: space-between; align-items: center; gap: 14px; background: none; border: none; font-family: inherit; color: inherit; }
+.faq-icon { flex-shrink: 0; width: 26px; height: 26px; border-radius: 50%; background: var(--bg); color: var(--blue); display: grid; place-items: center; font-size: 17px; font-weight: 500; transition: transform .25s, background .2s; }
+.faq-item.open .faq-icon { transform: rotate(45deg); background: linear-gradient(135deg, var(--blue), var(--mint)); color: #fff; }
+.faq-a { max-height: 0; overflow: hidden; transition: max-height .3s ease; }
+.faq-item.open .faq-a { max-height: 340px; }
+.faq-a p { padding: 0 22px 20px; font-size: 14.5px; color: var(--muted); }
+.faq-a a { color: var(--blue); font-weight: 650; }
 
-.trust-strip { display: inline-flex; align-items: center; gap: 12px; margin: 26px auto 0; padding: 9px 20px 9px 9px; background: #fff; border: 1px solid var(--border); border-radius: 100px; box-shadow: 0 2px 8px rgba(15,23,42,.05); }
-.trust-strip img { width: 34px; height: 34px; border-radius: 9px; object-fit: cover; flex-shrink: 0; display: block; }
-.trust-strip-text { font-size: 13px; color: var(--muted); text-align: left; }
-.trust-strip-text strong { color: #111; font-weight: 700; }
+/* ── Final CTA ── */
+.final { background: linear-gradient(135deg, var(--blue), var(--mint)); text-align: center; padding: 88px 24px; position: relative; overflow: hidden; }
+.final::before { content: ''; position: absolute; inset: 0; background: radial-gradient(closest-side, rgba(255,255,255,.22), transparent 70%); background-position: 50% 0; background-repeat: no-repeat; background-size: 70% 100%; }
+.final > * { position: relative; }
+.final h2 { color: #fff; margin-bottom: 14px; }
+.final p { color: rgba(255,255,255,.92); max-width: 500px; margin: 0 auto 32px; font-size: 16.5px; }
+.final .cta-primary { background: #fff; color: var(--blue); box-shadow: 0 10px 30px -6px rgba(0,0,0,.28); }
+.final .cta-primary:hover { box-shadow: 0 14px 38px -6px rgba(0,0,0,.36); }
+.trust-strip { display: inline-flex; align-items: center; gap: 13px; margin-top: 34px; padding: 10px 22px 10px 10px; background: rgba(255,255,255,.96); border-radius: 100px; box-shadow: 0 8px 24px -8px rgba(0,0,0,.3); }
+.trust-strip img { width: 38px; height: 38px; border-radius: 10px; object-fit: cover; flex-shrink: 0; }
+.trust-text { font-size: 13px; color: var(--muted); text-align: left; }
+.trust-text strong { color: #111; font-weight: 750; display: block; }
 
-.final-cta { background: linear-gradient(135deg, var(--blue), var(--mint)); text-align: center; padding: 64px 24px; }
-.final-cta h2 { color: #fff; margin-bottom: 12px; }
-.final-cta p { color: rgba(255,255,255,.9); max-width: 480px; margin: 0 auto 30px; font-size: 15.5px; }
-.final-cta .cta-primary { background: #fff; color: var(--blue); box-shadow: 0 4px 20px rgba(0,0,0,.15); }
-.final-cta .cta-primary:hover { box-shadow: 0 6px 26px rgba(0,0,0,.2); }
+footer { padding: 34px 24px; text-align: center; font-size: 12.5px; color: var(--muted); border-top: 1px solid var(--border); }
+footer a { color: var(--blue); font-weight: 650; text-decoration: none; }
 
-footer { padding: 28px 24px; text-align: center; font-size: 12.5px; color: var(--muted); border-top: 1px solid var(--border); }
-footer a { color: var(--blue); font-weight: 600; text-decoration: none; }
+/* ── Sticky mobiele CTA ── */
+.sticky-cta { position: fixed; left: 0; right: 0; bottom: 0; z-index: 90; background: rgba(255,255,255,.97); backdrop-filter: blur(12px); border-top: 1px solid var(--border); padding: 12px 16px calc(12px + env(safe-area-inset-bottom)); display: none; align-items: center; gap: 12px; transform: translateY(110%); transition: transform .3s ease; box-shadow: 0 -6px 24px rgba(15,23,42,.09); }
+.sticky-cta.show { transform: none; }
+.sticky-cta .cta-primary { flex: 1; justify-content: center; padding: 13px 20px; font-size: 15px; }
+.sticky-note { font-size: 11.5px; color: var(--muted); line-height: 1.3; flex-shrink: 0; max-width: 96px; }
+@media (max-width: 760px) { .sticky-cta { display: flex; } body { padding-bottom: 4px; } }
 
-@media (min-width: 860px) {
-  .app-shots { grid-template-columns: 1.1fr .9fr; align-items: start; }
+/* ── Scroll reveal ── */
+.reveal { opacity: 0; transform: translateY(22px); transition: opacity .6s cubic-bezier(.22,.7,.3,1), transform .6s cubic-bezier(.22,.7,.3,1); }
+.reveal.in { opacity: 1; transform: none; }
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  .reveal { opacity: 1; transform: none; transition: none; }
+  .shot-panel.active { animation: none; }
+  .cta-primary:hover, .btn-primary:hover { transform: none; }
 }
-@media (max-width: 600px) {
-  h1 { font-size: 27px; }
-  .hero { padding: 40px 16px 10px; }
-  section { padding: 40px 16px; }
-}
+@media (max-width: 600px) { section { padding: 60px 0; } .wrap { padding: 0 18px; } }
 </style>
 <!-- Google tag (gtag.js) -->
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-VJ5BVD3GCH"></script>
@@ -187,162 +312,286 @@ footer a { color: var(--blue); font-weight: 600; text-decoration: none; }
   </div>
 </nav>
 
+<!-- HERO -->
 <div class="hero">
-  <div class="hero-badge">🎥 Video van 1 minuut</div>
-  <h1>Jouw Marktplaats-aanbod, <span class="grad-text">overal tegelijk</span></h1>
-  <p class="sub">Je zet een advertentie één keer klaar. Omnivaleur plaatst 'm automatisch ook op 2dehands, Vinted, eBay en Shopify.</p>
+  <div class="wrap hero-grid">
+    <div>
+      <div class="eyebrow"><span class="dot">▶</span> Video van 1 minuut</div>
+      <h1>Jouw Marktplaats&#8209;aanbod,<br><span class="grad-text">overal tegelijk.</span></h1>
+      <p class="hero-sub">Je zet een advertentie <strong>één keer</strong> klaar. Omnivaleur plaatst 'm ook op 2dehands, Vinted, eBay en Shopify — en haalt 'm overal weg zodra hij verkocht is.</p>
+      <div class="hero-cta-row">
+        <a href="/register?utm_source=email&utm_medium=cold_email&utm_campaign=marktplaats_video&utm_content=hero_cta" class="cta-primary" onclick="gtag('event','cta_click',{cta_location:'hero'})">
+          Start gratis, 7 dagen →
+        </a>
+        <span class="cta-sub"><b>Geen creditcard nodig</b><br>Stop wanneer je wilt</span>
+      </div>
+      <div class="hero-proof">
+        <div class="proof"><div class="proof-n">38+</div><div class="proof-l">resellers gebruiken het</div></div>
+        <div class="proof"><div class="proof-n">5</div><div class="proof-l">platforms, Etsy volgt</div></div>
+        <div class="proof"><div class="proof-n">700+</div><div class="proof-l">reviews van de maker zelf</div></div>
+      </div>
+    </div>
 
-  <div class="video-wrap">
-    <div class="video-frame">
-      <iframe src="https://www.youtube.com/embed/ymDeS37aBW4?rel=0" title="Omnivaleur — Marktplaats-aanbod overal tegelijk" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen loading="lazy"></iframe>
+    <div class="hero-visual">
+      <div class="phone">
+        <div class="phone-screen">
+          <iframe src="https://www.youtube.com/embed/ymDeS37aBW4?rel=0&playsinline=1" title="Omnivaleur — Marktplaats-aanbod overal tegelijk" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen loading="lazy"></iframe>
+        </div>
+        <div class="float-tag t1"><img src="/assets/logos/marktplaats.png" alt=""> Marktplaats <span class="tick">✓</span></div>
+        <div class="float-tag t2"><img src="/assets/logos/vinted.png" alt=""> Vinted <span class="tick">✓</span></div>
+        <div class="float-tag t3"><img src="/assets/logos/ebay.webp" alt=""> eBay <span class="tick">✓</span></div>
+      </div>
     </div>
   </div>
-
-  <a href="/register?utm_source=email&utm_medium=cold_email&utm_campaign=marktplaats_video&utm_content=hero_cta" class="cta-primary" id="cta-hero" onclick="gtag('event','cta_click',{cta_location:'hero'})">
-    Start gratis, 7 dagen →
-  </a>
-  <p class="cta-note">Geen creditcard nodig · stop wanneer je wilt</p>
 </div>
 
-<section>
-  <div class="section-label">Waarom Omnivaleur</div>
-  <h2>Wat je ermee wint</h2>
-  <div class="benefits">
-    <div class="benefit">
-      <div class="icon">⏱️</div>
-      <h3>Geen dubbel werk meer</h3>
-      <p>Foto's, titel en beschrijving één keer invoeren. Niet nog eens overtypen voor elk platform.</p>
-    </div>
-    <div class="benefit">
-      <div class="icon">📦</div>
-      <h3>Je bestaande advertenties importeren</h3>
-      <p>Omnivaleur leest je Marktplaats-aanbod in, zodat je niet bij nul hoeft te beginnen.</p>
-    </div>
-    <div class="benefit">
-      <div class="icon">🌍</div>
-      <h3>Meer platforms, meer kopers</h3>
-      <p>Marktplaats, 2dehands, Vinted, eBay en Shopify — je kiest per item waar het heen gaat.</p>
-    </div>
-    <div class="benefit">
-      <div class="icon">✅</div>
-      <h3>Automatisch bijhouden wat verkocht is</h3>
-      <p>Verkocht op één platform? Dan wordt de advertentie overal netjes verwijderd.</p>
-    </div>
+<!-- PLATFORM RAIL -->
+<div class="rail">
+  <div class="wrap rail-inner">
+    <span class="rail-label">Publiceert naar</span>
+    <span class="chip"><img src="/assets/logos/marktplaats.png" alt=""> Marktplaats</span>
+    <span class="chip"><img src="/assets/logos/2dehands.png" alt=""> 2dehands</span>
+    <span class="chip"><img src="/assets/logos/vinted.png" alt=""> Vinted</span>
+    <span class="chip"><img src="/assets/logos/ebay.webp" alt=""> eBay</span>
+    <span class="chip"><img src="/assets/logos/shopify.webp" alt=""> Shopify</span>
+    <span class="chip soon"><img src="/assets/logos/etsy.svg" alt=""> Etsy <span class="soon-l">Binnenkort</span></span>
   </div>
-  <div class="platform-logos">
-    <div class="platform-chip"><img class="platform-logo" src="/assets/logos/marktplaats.png" alt="Marktplaats"> Marktplaats</div>
-    <div class="platform-chip"><img class="platform-logo" src="/assets/logos/2dehands.png" alt="2dehands"> 2dehands</div>
-    <div class="platform-chip"><img class="platform-logo" src="/assets/logos/vinted.png" alt="Vinted"> Vinted</div>
-    <div class="platform-chip"><img class="platform-logo" src="/assets/logos/ebay.webp" alt="eBay"> eBay</div>
-    <div class="platform-chip"><img class="platform-logo" src="/assets/logos/shopify.webp" alt="Shopify"> Shopify</div>
-  </div>
-</section>
+</div>
 
+<!-- VERGELIJKING -->
 <section>
-  <div class="section-label">Live uit het dashboard</div>
-  <h2>Dit is wat je te zien krijgt</h2>
-  <div class="app-shots">
-    <div class="app-shot">
-      <div class="app-shot-frame">
-        <div class="app-shot-dots"><span class="app-shot-dot red"></span><span class="app-shot-dot yellow"></span><span class="app-shot-dot green"></span></div>
-        <div class="app-shot-body"><img src="/assets/leadpage/dashboard-items.jpg" alt="Overzicht van advertenties in het Omnivaleur-dashboard, met status per platform"></div>
+  <div class="wrap">
+    <div class="section-head reveal">
+      <div class="section-label">Het verschil</div>
+      <h2>Hetzelfde item. Twee heel andere avonden.</h2>
+      <p class="section-sub">Zo ziet één advertentie op vijf platforms eruit — met en zonder Omnivaleur.</p>
+    </div>
+    <div class="compare reveal">
+      <div class="compare-col before">
+        <span class="compare-tag">Handmatig</span>
+        <ul class="compare-list">
+          <li><span class="mark">✕</span> Dezelfde foto's vijf keer uploaden</li>
+          <li><span class="mark">✕</span> Titel en beschrijving vijf keer overtypen</li>
+          <li><span class="mark">✕</span> Per platform opnieuw de juiste categorie zoeken</li>
+          <li><span class="mark">✕</span> Zelf onthouden waar iets al verkocht is</li>
+          <li><span class="mark">✕</span> Een vergeten advertentie = een verkoop die niet klopt</li>
+        </ul>
       </div>
-      <p class="app-shot-caption">Al je advertenties in één lijst, met status per platform</p>
-    </div>
-    <div class="app-shot">
-      <div class="app-shot-frame">
-        <div class="app-shot-dots"><span class="app-shot-dot red"></span><span class="app-shot-dot yellow"></span><span class="app-shot-dot green"></span></div>
-        <div class="app-shot-body"><img src="/assets/leadpage/dashboard-analytics.jpg" alt="Analytics-scherm van Omnivaleur met omzet, winst en verkopen per platform"></div>
-      </div>
-      <p class="app-shot-caption">Omzet en winst per platform, in één oogopslag</p>
-    </div>
-  </div>
-</section>
-
-<section style="background: var(--bg); border-radius: 24px;">
-  <div class="section-label">Zo werkt het</div>
-  <h2>In drie stappen live</h2>
-  <div class="steps">
-    <div class="step">
-      <div class="step-num">1</div>
-      <div><h3>Je account koppelen</h3><p>Je maakt gratis een account aan en verbindt Marktplaats en de andere platforms die je gebruikt.</p></div>
-    </div>
-    <div class="step">
-      <div class="step-num">2</div>
-      <div><h3>Aanbod importeren of toevoegen</h3><p>Bestaande advertenties worden ingelezen, of je zet nieuwe items klaar in Omnivaleur.</p></div>
-    </div>
-    <div class="step">
-      <div class="step-num">3</div>
-      <div><h3>Kiezen waar het heen gaat</h3><p>Per item bepaal je op welke platforms het verschijnt. Omnivaleur doet de rest.</p></div>
-    </div>
-  </div>
-</section>
-
-<section>
-  <div class="nl-note">
-    <strong>Let op:</strong> deze pagina en het contact met ons verlopen in het Nederlands, maar het dashboard van Omnivaleur is momenteel volledig in het Engels. Een Nederlandse versie van het dashboard staat gepland. Twijfel je daardoor? Stel gerust je vraag, we denken graag mee.
-  </div>
-</section>
-
-<section>
-  <div class="section-label">Wie erachter zit</div>
-  <h2>Waarom ik Omnivaleur ben begonnen</h2>
-  <div class="founder">
-    <img src="/assets/founder-daniel.jpg" alt="Daniel de Koning, oprichter van Omnivaleur" class="founder-photo">
-    <div>
-      <div class="founder-name">Daniel de Koning</div>
-      <div class="founder-role">Oprichter van Omnivaleur & Revaleur</div>
-      <div class="founder-text">
-        <p>Ik kom uit de IT en ben zelf al jaren actief tweedehandsverkoper met <strong>Revaleur — 700+ reviews</strong>. Elk item ging handmatig op meerdere platforms: dezelfde foto's uploaden, dezelfde tekst overtypen, en bijhouden waar iets al verkocht was zodat het nergens dubbel bleef staan.</p>
-        <p>Dat kostte me structureel uren per week, en het was foutgevoelig: een keer vergeten een advertentie ergens te verwijderen betekende een verkoop die niet meer klopte. Als IT'er loste ik dat op de enige logische manier op — door het te automatiseren.</p>
-        <p>Zo ontstond Omnivaleur: je zet een item één keer klaar, en het verschijnt overal waar jij het wilt. Inmiddels gebruiken tientallen andere resellers het dagelijks om dezelfde tijd te besparen die ik kwijt was.</p>
-      </div>
-      <div class="founder-badges">
-        <span class="founder-badge">💻 IT-achtergrond</span>
-        <span class="founder-badge">🛍️ 700+ reviews via Revaleur</span>
-        <span class="founder-badge">🇳🇱 Persoonlijk contact, geen supportbot</span>
+      <div class="compare-mid"><div class="compare-arrow">→</div></div>
+      <div class="compare-col after">
+        <span class="compare-tag">Met Omnivaleur</span>
+        <ul class="compare-list">
+          <li><span class="mark">✓</span> Foto's en tekst één keer invoeren</li>
+          <li><span class="mark">✓</span> Je bestaande Marktplaats-aanbod wordt ingelezen</li>
+          <li><span class="mark">✓</span> Categorie wordt per platform automatisch gekozen</li>
+          <li><span class="mark">✓</span> Verkocht op één plek? Dan overal weg</li>
+          <li><span class="mark">✓</span> Je ziet per item precies waar hij live staat</li>
+        </ul>
       </div>
     </div>
   </div>
 </section>
 
-<section>
-  <div class="section-label">Veelgestelde vragen</div>
-  <h2>Nog vragen?</h2>
-  <div class="faq">
-    <div class="faq-item">
-      <div class="faq-q">Is de proefperiode echt gratis, zonder creditcard?</div>
-      <div class="faq-a"><p>Ja. Je krijgt 7 dagen volledig gratis toegang, zonder betaalgegevens in te voeren. Bevalt het niet, dan stop je gewoon.</p></div>
+<!-- CALCULATOR -->
+<section class="calc-section">
+  <div class="wrap">
+    <div class="section-head reveal">
+      <div class="section-label">Reken het zelf uit</div>
+      <h2>Hoeveel tijd kost het je nu?</h2>
+      <p class="section-sub">Schuif naar jouw situatie en zie wat je per week overhoudt.</p>
     </div>
-    <div class="faq-item">
-      <div class="faq-q">Moet ik al mijn advertenties overtypen?</div>
-      <div class="faq-a"><p>Nee. Omnivaleur kan je bestaande Marktplaats-aanbod importeren, zodat je meteen verder kunt in plaats van opnieuw te beginnen.</p></div>
-    </div>
-    <div class="faq-item">
-      <div class="faq-q">Is het dashboard echt alleen in het Engels?</div>
-      <div class="faq-a"><p>Op dit moment wel, ja. We werken aan een Nederlandse versie. Ons contact met jou — via mail, telefoon of hier — blijft gewoon Nederlands.</p></div>
-    </div>
-    <div class="faq-item">
-      <div class="faq-q">Op welke platforms kan ik publiceren?</div>
-      <div class="faq-a"><p>Marktplaats, 2dehands, Vinted, eBay en Shopify. Etsy komt binnenkort bij. Je kiest zelf per advertentie welke platforms je gebruikt.</p></div>
-    </div>
-    <div class="faq-item">
-      <div class="faq-q">Ik heb nog een vraag die hier niet bij staat.</div>
-      <div class="faq-a"><p>Stuur gerust een mail naar <a href="mailto:daniel@omnivaleur.nl">daniel@omnivaleur.nl</a> — ik beantwoord alles zelf.</p></div>
+    <div class="calc reveal">
+      <div class="calc-controls">
+        <div class="calc-field">
+          <label class="calc-label" for="ads">Nieuwe advertenties per week <span class="calc-val" id="ads-v">25</span></label>
+          <input type="range" id="ads" min="5" max="150" step="5" value="25">
+        </div>
+        <div class="calc-field">
+          <label class="calc-label" for="plat">Platforms naast Marktplaats <span class="calc-val" id="plat-v">3</span></label>
+          <input type="range" id="plat" min="1" max="4" step="1" value="3">
+        </div>
+        <div class="calc-field">
+          <label class="calc-label" for="min">Minuten per advertentie per platform <span class="calc-val" id="min-v">4</span></label>
+          <input type="range" id="min" min="2" max="10" step="1" value="4">
+        </div>
+        <p class="calc-hint">Dit is jouw eigen schatting — vul in wat voor jou realistisch is. Het gaat om het overtypen naar de extra platforms, niet om de eerste keer aanmaken.</p>
+      </div>
+      <div class="calc-out">
+        <div class="calc-big">
+          <div class="calc-big-n" id="out-week">5,0 uur</div>
+          <div class="calc-big-l">overtypen per week — dat valt weg</div>
+        </div>
+        <div class="calc-row">
+          <div class="calc-mini"><div class="calc-mini-n" id="out-month">21 uur</div><div class="calc-mini-l">per maand</div></div>
+          <div class="calc-mini"><div class="calc-mini-n" id="out-year">26 dagen</div><div class="calc-mini-l">per jaar (8-urige dagen)</div></div>
+        </div>
+        <a href="/register?utm_source=email&utm_medium=cold_email&utm_campaign=marktplaats_video&utm_content=calc_cta" class="cta-primary" style="justify-content:center" onclick="gtag('event','cta_click',{cta_location:'calculator'})">Die tijd terugpakken →</a>
+      </div>
     </div>
   </div>
 </section>
 
-<div class="final-cta">
-  <h2>Klaar om tijd te besparen?</h2>
-  <p>Begin vandaag nog. 7 dagen gratis, geen creditcard nodig, stop wanneer je wilt.</p>
-  <a href="/register?utm_source=email&utm_medium=cold_email&utm_campaign=marktplaats_video&utm_content=footer_cta" class="cta-primary" id="cta-footer" onclick="gtag('event','cta_click',{cta_location:'footer'})">
+<!-- DASHBOARD -->
+<section>
+  <div class="wrap">
+    <div class="section-head reveal">
+      <div class="section-label">Live uit het dashboard</div>
+      <h2>Dit is precies wat je krijgt</h2>
+      <p class="section-sub">Geen mockups — dit zijn echte schermen uit Omnivaleur.</p>
+    </div>
+
+    <div class="reveal">
+      <div class="tabs" role="tablist">
+        <button class="tab active" role="tab" aria-selected="true" data-shot="items">Je advertenties</button>
+        <button class="tab" role="tab" aria-selected="false" data-shot="analytics">Omzet &amp; winst</button>
+      </div>
+
+      <div class="shot-panel active" id="shot-items">
+        <div class="shot-frame">
+          <div class="shot-bar"><span class="shot-dot r"></span><span class="shot-dot y"></span><span class="shot-dot g"></span><span class="shot-url">omnivaleur.com/app</span></div>
+          <div class="shot-body"><img src="/assets/leadpage/dashboard-items.jpg" alt="Overzicht van alle advertenties in Omnivaleur, met per item de status op elk platform" loading="lazy"></div>
+        </div>
+        <p class="shot-caption">Al je items in één lijst. Per advertentie zie je meteen <b>op welke platforms hij live staat</b> — en met één klik zet je hem er ergens bij.</p>
+      </div>
+
+      <div class="shot-panel" id="shot-analytics">
+        <div class="shot-frame">
+          <div class="shot-bar"><span class="shot-dot r"></span><span class="shot-dot y"></span><span class="shot-dot g"></span><span class="shot-url">omnivaleur.com/app</span></div>
+          <div class="shot-body"><img src="/assets/leadpage/dashboard-analytics.jpg" alt="Analytics-scherm van Omnivaleur met omzet, winst en verkopen per platform" loading="lazy"></div>
+        </div>
+        <p class="shot-caption">Omzet, winst en verkopen per platform. Zo zie je zwart-op-wit <b>welk kanaal het meeste oplevert</b> — en waar je aanbod blijft liggen.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- STAPPEN -->
+<section style="background: var(--bg);">
+  <div class="wrap">
+    <div class="section-head reveal">
+      <div class="section-label">Zo werkt het</div>
+      <h2>In drie stappen live</h2>
+      <p class="section-sub">Je kunt vandaag nog beginnen. Er komt geen installatie of technische kennis aan te pas.</p>
+    </div>
+    <div class="steps reveal">
+      <div class="step">
+        <div class="step-num">1</div>
+        <h3>Account koppelen</h3>
+        <p>Gratis account aanmaken en de platforms verbinden die je al gebruikt.</p>
+      </div>
+      <div class="step">
+        <div class="step-num">2</div>
+        <h3>Aanbod importeren</h3>
+        <p>Je bestaande Marktplaats-advertenties worden ingelezen. Niets overtypen.</p>
+      </div>
+      <div class="step">
+        <div class="step-num">3</div>
+        <h3>Kiezen en publiceren</h3>
+        <p>Per item aanvinken waar het heen moet. Omnivaleur doet de rest.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- NL-NOTITIE -->
+<section style="padding-top: 0;">
+  <div class="wrap">
+    <div class="nl-note reveal">
+      <div class="nl-flag">🇳🇱</div>
+      <div>
+        <h3>Het dashboard is nu nog Engels</h3>
+        <p>Deze pagina en al het contact met ons zijn gewoon Nederlands — mail, telefoon, alles. Het dashboard zelf staat op dit moment in het Engels; aan een Nederlandse versie wordt gewerkt. Twijfel je daardoor? Stel je vraag, dan lopen we het samen door.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FOUNDER -->
+<section class="founder-section">
+  <div class="wrap">
+    <div class="section-head reveal">
+      <div class="section-label">Wie erachter zit</div>
+      <h2>Ik bouwde dit eerst voor mezelf</h2>
+    </div>
+    <div class="founder reveal">
+      <div>
+        <div class="founder-media">
+          <img src="/assets/founder-daniel.jpg" alt="Daniel de Koning, oprichter van Omnivaleur" class="founder-photo" width="640" height="640">
+        </div>
+        <div class="founder-sig">
+          <div class="founder-name">Daniel de Koning</div>
+          <div class="founder-role">Oprichter — Omnivaleur &amp; Revaleur</div>
+        </div>
+      </div>
+      <div>
+        <p class="founder-quote">“Ik was elke week uren kwijt aan dezelfde advertentie vijf keer overtypen. Als IT'er weet je dan precies wat je moet doen: dat automatiseer je.”</p>
+        <div class="founder-text">
+          <p>Ik kom uit de IT en verkoop zelf al jaren tweedehands onder de naam <strong>Revaleur — inmiddels 700+ reviews</strong>. Dat betekende in de praktijk: elk item handmatig op Marktplaats, dan nog eens op 2dehands, dan Vinted, dan eBay. Dezelfde foto's, dezelfde tekst, telkens opnieuw de juiste categorie zoeken.</p>
+          <p>Het kostte niet alleen tijd, het ging ook mis. Eén keer vergeten een advertentie ergens weg te halen en je verkoopt iets wat je niet meer hebt. Dat is precies het soort werk dat een computer beter doet dan een mens.</p>
+          <p>Dus bouwde ik Omnivaleur — eerst puur voor mijn eigen voorraad. Het werkte, en <strong>inmiddels gebruiken 38 andere resellers het dagelijks</strong>. Wat je hier ziet is geen product dat bedacht is achter een bureau; het is het gereedschap dat ik zelf nodig had.</p>
+        </div>
+        <div class="founder-badges">
+          <span class="founder-badge">💻 IT-achtergrond</span>
+          <span class="founder-badge">🛍️ 700+ reviews als reseller</span>
+          <span class="founder-badge">✉️ Je mailt met mij, niet met een bot</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FAQ -->
+<section>
+  <div class="wrap">
+    <div class="section-head reveal">
+      <div class="section-label">Veelgestelde vragen</div>
+      <h2>Nog vragen?</h2>
+      <p class="section-sub">Staat je vraag er niet bij? Mail gerust — ik beantwoord alles zelf.</p>
+    </div>
+    <div class="faq reveal">
+      <div class="faq-item">
+        <button class="faq-q">Is de proefperiode echt gratis, zonder creditcard? <span class="faq-icon">+</span></button>
+        <div class="faq-a"><p>Ja. Je krijgt 7 dagen volledig gratis toegang en hoeft geen betaalgegevens in te vullen. Bevalt het niet, dan stopt het vanzelf — je hoeft niets op te zeggen.</p></div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-q">Moet ik al mijn bestaande advertenties overtypen? <span class="faq-icon">+</span></button>
+        <div class="faq-a"><p>Nee. De importfunctie leest je bestaande Marktplaats-aanbod in, inclusief foto's en teksten. Bij een groot aanbod is dat meestal het handigste startpunt: je begint niet bij nul.</p></div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-q">Wat kost het na de proefperiode? <span class="faq-icon">+</span></button>
+        <div class="faq-a"><p>€19,99 per maand, maandelijks opzegbaar. Geen opstartkosten en geen kosten per advertentie.</p></div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-q">Op welke platforms kan ik publiceren? <span class="faq-icon">+</span></button>
+        <div class="faq-a"><p>Marktplaats, 2dehands, Vinted, eBay en Shopify. Etsy komt eraan. Je kiest per advertentie waar hij heen gaat — je hoeft niet overal tegelijk te staan.</p></div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-q">Wat gebeurt er als een item verkocht is? <span class="faq-icon">+</span></button>
+        <div class="faq-a"><p>Zodra iets op één platform verkocht is, wordt de advertentie op de andere platforms weggehaald. Zo verkoop je nooit iets dat je niet meer op voorraad hebt.</p></div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-q">Is het dashboard echt alleen in het Engels? <span class="faq-icon">+</span></button>
+        <div class="faq-a"><p>Op dit moment wel. Er wordt aan een Nederlandse versie gewerkt. Het contact met ons — mail, telefoon, deze pagina — is en blijft gewoon Nederlands.</p></div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-q">Ik heb weinig verstand van dit soort programma's. <span class="faq-icon">+</span></button>
+        <div class="faq-a"><p>Dat hoeft ook niet. Je logt in via je browser, er valt niets te installeren. Kom je er niet uit, mail dan naar <a href="mailto:daniel@omnivaleur.nl">daniel@omnivaleur.nl</a> — dan help ik je persoonlijk op weg.</p></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FINAL CTA -->
+<div class="final">
+  <h2>Klaar om die uren terug te pakken?</h2>
+  <p>Zeven dagen gratis proberen. Geen creditcard, geen opzegtermijn, geen risico.</p>
+  <a href="/register?utm_source=email&utm_medium=cold_email&utm_campaign=marktplaats_video&utm_content=footer_cta" class="cta-primary" onclick="gtag('event','cta_click',{cta_location:'footer'})">
     Start gratis, 7 dagen →
   </a>
-  <div style="text-align:center;">
+  <div>
     <div class="trust-strip">
-      <img src="/assets/revaleur-logo.webp" alt="Revaleur logo">
-      <div class="trust-strip-text"><strong>Zelf ook tweedehands-verkoper</strong><br>700+ reviews met Revaleur</div>
+      <img src="/assets/revaleur-logo.webp" alt="Revaleur">
+      <div class="trust-text"><strong>Gebouwd door een reseller</strong>700+ reviews met Revaleur</div>
     </div>
   </div>
 </div>
@@ -351,12 +600,63 @@ footer a { color: var(--blue); font-weight: 600; text-decoration: none; }
   Omnivaleur · <a href="mailto:daniel@omnivaleur.nl">daniel@omnivaleur.nl</a> · <a href="/privacy">Privacy</a>
 </footer>
 
+<!-- STICKY MOBIELE CTA -->
+<div class="sticky-cta" id="sticky">
+  <span class="sticky-note">7 dagen gratis<br>geen creditcard</span>
+  <a href="/register?utm_source=email&utm_medium=cold_email&utm_campaign=marktplaats_video&utm_content=sticky_cta" class="cta-primary" onclick="gtag('event','cta_click',{cta_location:'sticky'})">Start gratis →</a>
+</div>
+
 <script>
-document.querySelectorAll('.faq-q').forEach(function(q){
-  q.addEventListener('click', function(){
-    q.parentElement.classList.toggle('open');
+(function () {
+  // FAQ
+  document.querySelectorAll('.faq-q').forEach(function (q) {
+    q.addEventListener('click', function () { q.parentElement.classList.toggle('open'); });
   });
-});
+
+  // Dashboard-tabs
+  var tabs = document.querySelectorAll('.tab');
+  tabs.forEach(function (t) {
+    t.addEventListener('click', function () {
+      tabs.forEach(function (o) { o.classList.remove('active'); o.setAttribute('aria-selected', 'false'); });
+      t.classList.add('active'); t.setAttribute('aria-selected', 'true');
+      document.querySelectorAll('.shot-panel').forEach(function (p) { p.classList.remove('active'); });
+      document.getElementById('shot-' + t.dataset.shot).classList.add('active');
+    });
+  });
+
+  // Tijdcalculator
+  var ads = document.getElementById('ads'), plat = document.getElementById('plat'), min = document.getElementById('min');
+  function nl(n, d) { return n.toLocaleString('nl-NL', { minimumFractionDigits: d, maximumFractionDigits: d }); }
+  function calc() {
+    var perWeek = (+ads.value) * (+plat.value) * (+min.value) / 60;
+    document.getElementById('ads-v').textContent = ads.value;
+    document.getElementById('plat-v').textContent = plat.value;
+    document.getElementById('min-v').textContent = min.value;
+    document.getElementById('out-week').textContent = nl(perWeek, 1) + ' uur';
+    document.getElementById('out-month').textContent = nl(perWeek * 4.33, 0) + ' uur';
+    document.getElementById('out-year').textContent = nl(perWeek * 52 / 8, 0) + ' dagen';
+  }
+  [ads, plat, min].forEach(function (el) { el.addEventListener('input', calc); });
+  calc();
+
+  // Scroll-reveal
+  if ('IntersectionObserver' in window && !matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    var io = new IntersectionObserver(function (entries) {
+      entries.forEach(function (e) { if (e.isIntersecting) { e.target.classList.add('in'); io.unobserve(e.target); } });
+    }, { rootMargin: '0px 0px -8% 0px', threshold: .08 });
+    document.querySelectorAll('.reveal').forEach(function (el) { io.observe(el); });
+  } else {
+    document.querySelectorAll('.reveal').forEach(function (el) { el.classList.add('in'); });
+  }
+
+  // Sticky CTA verschijnt zodra de hero uit beeld is
+  var sticky = document.getElementById('sticky'), hero = document.querySelector('.hero');
+  if ('IntersectionObserver' in window) {
+    new IntersectionObserver(function (e) {
+      sticky.classList.toggle('show', !e[0].isIntersecting);
+    }, { threshold: 0 }).observe(hero);
+  }
+})();
 </script>
 </body>
 </html>
