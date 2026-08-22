@@ -369,6 +369,14 @@
       "slug": "board-games-and-tabletop-reselling-automation",
       "status": "published",
       "priority": 45
+    },
+    {
+      "keyword": "vintage decor reselling automation",
+      "region": "nl",
+      "pillar": "B",
+      "slug": "vintage-decor-reselling-automation",
+      "status": "published",
+      "priority": 46
     }
   ],
   "published": [
@@ -776,6 +784,15 @@
       "action": "created",
       "url_path": "/reseller-tools/board-games-and-tabletop-reselling-automation",
       "published_at": "2026-08-21T08:31:56.497700+00:00"
+    },
+    {
+      "keyword": "vintage decor reselling automation",
+      "slug": "vintage-decor-reselling-automation",
+      "region": "nl",
+      "pillar": "B",
+      "action": "created",
+      "url_path": "/reseller-tools/vintage-decor-reselling-automation",
+      "published_at": "2026-08-22T08:21:58.343197+00:00"
     }
   ]
 }
