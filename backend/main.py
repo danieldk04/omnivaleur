@@ -238,6 +238,13 @@ async def marketplaces_page():
     return FileResponse(FRONTEND / "marketplaces.html")
 
 
+@app.get("/mp-video")
+async def mp_video_page():
+    """Losse leadpagina voor de video in de koude-mail-sequence. Bewust niet
+    in het menu en niet geïndexeerd: alleen bereikbaar via de maillink."""
+    return FileResponse(FRONTEND / "mp-video.html")
+
+
 @app.exception_handler(StarletteHTTPException)
 async def not_found_page(request: Request, exc: StarletteHTTPException):
     """Een dode link gaf kale JSON te zien: {"detail":"Not Found"}.
