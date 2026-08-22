@@ -24,12 +24,40 @@
 html { scroll-behavior: smooth; }
 body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: var(--surface); color: var(--text); line-height: 1.5; }
 a { color: inherit; }
+img { max-width: 100%; }
 .grad { background: linear-gradient(135deg, var(--blue) 0%, var(--mint) 100%); }
 .grad-text { background: linear-gradient(135deg, var(--blue), var(--mint)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
 
-header { padding: 20px 24px; display: flex; align-items: center; justify-content: center; border-bottom: 1px solid var(--border); }
-.logo { display: flex; align-items: center; gap: 10px; font-size: 17px; font-weight: 800; letter-spacing: -.4px; text-decoration: none; color: var(--text); }
-.logo img { height: 30px; }
+/* --- Site nav (identiek aan de rest van omnivaleur.com) --- */
+nav { position: sticky; top: 0; z-index: 100; background: rgba(255,255,255,.95); backdrop-filter: blur(12px); border-bottom: 1px solid var(--border); padding: 0 24px; height: 64px; display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+.nav-logo { display: flex; align-items: center; gap: 10px; font-size: 17px; font-weight: 800; letter-spacing: -.4px; text-decoration: none; color: var(--text); }
+.nav-logo img { height: 32px; width: auto; }
+.nav-links { display: flex; gap: 24px; align-items: center; }
+.nav-links a { font-size: 14px; font-weight: 500; color: var(--muted); transition: color .15s; text-decoration: none; }
+.nav-links a:hover, .nav-links a.active { color: var(--text); }
+.nav-actions { display: flex; gap: 10px; align-items: center; flex-shrink: 0; }
+.btn { display: inline-flex; align-items: center; gap: 6px; padding: 9px 20px; border-radius: 100px; font-size: 14px; font-weight: 600; cursor: pointer; border: none; transition: all .2s; white-space: nowrap; }
+.btn-outline { background: transparent; border: 1.5px solid var(--border); color: var(--text); }
+.btn-outline:hover { border-color: var(--blue); color: var(--blue); }
+.btn-primary { background: linear-gradient(135deg, var(--blue), var(--mint)); color: #fff; box-shadow: 0 2px 12px rgba(37,99,235,.25); }
+.btn-primary:hover { box-shadow: 0 4px 20px rgba(37,99,235,.4); transform: translateY(-1px); }
+.nav-toggle-cb { display: none; }
+.nav-hamburger { display: none; flex-direction: column; justify-content: center; gap: 5px; width: 30px; height: 30px; cursor: pointer; margin-left: auto; }
+.nav-hamburger span { display: block; height: 2px; width: 22px; background: var(--text); border-radius: 2px; transition: .2s; }
+.nav-toggle-cb:checked ~ .nav-hamburger span:nth-child(1) { transform: translateY(7px) rotate(45deg); }
+.nav-toggle-cb:checked ~ .nav-hamburger span:nth-child(2) { opacity: 0; }
+.nav-toggle-cb:checked ~ .nav-hamburger span:nth-child(3) { transform: translateY(-7px) rotate(-45deg); }
+.nav-panel { display: contents; }
+@media (max-width: 700px) {
+  .nav-hamburger { display: flex; }
+  .nav-panel { display: none; position: absolute; top: 64px; left: 0; right: 0; flex-direction: column; background: rgba(255,255,255,.98); backdrop-filter: blur(12px); border-bottom: 1px solid var(--border); box-shadow: 0 8px 24px rgba(15,23,42,.08); }
+  .nav-toggle-cb:checked ~ .nav-panel { display: flex; }
+  .nav-links { flex-direction: column; gap: 0; align-items: stretch; padding: 6px 0; }
+  .nav-links a { padding: 13px 24px; font-size: 15px; }
+  .nav-links a:hover { background: rgba(0,0,0,.03); }
+  .nav-actions { flex-direction: column; align-items: stretch; gap: 10px; padding: 16px 24px; border-top: 1px solid var(--border); }
+  .nav-actions .btn { width: 100%; justify-content: center; }
+}
 
 .hero { padding: 56px 24px 20px; text-align: center; background: linear-gradient(180deg, #f0f9ff 0%, #fff 100%); }
 .hero-badge { display: inline-flex; align-items: center; gap: 6px; background: linear-gradient(135deg, rgba(37,99,235,.1), rgba(52,211,153,.1)); border: 1px solid rgba(37,99,235,.2); border-radius: 100px; padding: 6px 16px; font-size: 13px; font-weight: 600; color: var(--blue); margin-bottom: 22px; }
@@ -44,7 +72,7 @@ h1 { font-size: 34px; font-weight: 900; letter-spacing: -1px; max-width: 640px; 
 .cta-primary:hover { box-shadow: 0 6px 26px rgba(37,99,235,.45); transform: translateY(-1px); }
 .cta-note { font-size: 13px; color: var(--muted); margin-top: 12px; }
 
-section { padding: 56px 24px; max-width: 900px; margin: 0 auto; }
+section { padding: 56px 24px; max-width: 1000px; margin: 0 auto; }
 .section-label { font-size: 12px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--blue); margin-bottom: 10px; text-align: center; }
 h2 { font-size: 26px; font-weight: 800; letter-spacing: -.5px; text-align: center; margin-bottom: 36px; }
 
@@ -58,6 +86,17 @@ h2 { font-size: 26px; font-weight: 800; letter-spacing: -.5px; text-align: cente
 .platform-chip { background: var(--surface); border: 1px solid var(--border); border-radius: 100px; padding: 8px 18px; font-size: 13px; font-weight: 500; color: var(--muted); display: flex; align-items: center; gap: 7px; box-shadow: 0 1px 4px rgba(0,0,0,.05); }
 .platform-logo { height: 16px; width: auto; max-width: 20px; object-fit: contain; display: block; }
 
+/* --- Inside the app / screenshots --- */
+.app-shots { display: grid; grid-template-columns: 1fr; gap: 28px; }
+.app-shot { }
+.app-shot-frame { background: #1e293b; border-radius: 14px; padding: 10px 10px 0; box-shadow: 0 30px 70px -15px rgba(15,23,42,.3), 0 10px 30px -10px rgba(15,23,42,.18); }
+.app-shot-dots { display: flex; gap: 6px; padding: 4px 6px 10px; }
+.app-shot-dot { width: 10px; height: 10px; border-radius: 50%; }
+.app-shot-dot.red { background: #f87171; } .app-shot-dot.yellow { background: #fbbf24; } .app-shot-dot.green { background: #4ade80; }
+.app-shot-body { border-radius: 8px 8px 0 0; overflow: hidden; max-height: 420px; }
+.app-shot-body img { width: 100%; display: block; object-fit: cover; object-position: top; }
+.app-shot-caption { text-align: center; font-size: 13.5px; color: var(--muted); margin-top: 14px; font-weight: 500; }
+
 .steps { counter-reset: step; display: grid; gap: 18px; max-width: 560px; margin: 0 auto; }
 .step { display: flex; gap: 16px; align-items: flex-start; }
 .step-num { flex-shrink: 0; width: 30px; height: 30px; border-radius: 50%; background: linear-gradient(135deg, var(--blue), var(--mint)); color: #fff; font-size: 14px; font-weight: 800; display: flex; align-items: center; justify-content: center; }
@@ -66,6 +105,22 @@ h2 { font-size: 26px; font-weight: 800; letter-spacing: -.5px; text-align: cente
 
 .nl-note { background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius); padding: 18px 20px; max-width: 560px; margin: 0 auto; font-size: 13.5px; color: var(--muted); text-align: center; }
 .nl-note strong { color: var(--text); }
+
+/* --- Founder --- */
+.founder { display: grid; grid-template-columns: 200px 1fr; gap: 40px; align-items: center; background: var(--bg); border: 1px solid var(--border); border-radius: 20px; padding: 40px; }
+.founder-photo { width: 180px; height: 180px; border-radius: 50%; object-fit: cover; box-shadow: 0 10px 30px -8px rgba(15,23,42,.25); border: 4px solid #fff; }
+.founder-name { font-size: 20px; font-weight: 800; margin-bottom: 2px; }
+.founder-role { font-size: 13.5px; color: var(--blue); font-weight: 600; margin-bottom: 16px; }
+.founder-text p { font-size: 14.5px; color: var(--muted); margin-bottom: 12px; }
+.founder-text p:last-child { margin-bottom: 0; }
+.founder-text strong { color: var(--text); }
+.founder-badges { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 18px; }
+.founder-badge { font-size: 12px; font-weight: 700; color: var(--text); background: #fff; border: 1px solid var(--border); padding: 6px 14px; border-radius: 100px; display: flex; align-items: center; gap: 6px; }
+@media (max-width: 700px) {
+  .founder { grid-template-columns: 1fr; text-align: center; padding: 32px 24px; }
+  .founder-photo { margin: 0 auto; }
+  .founder-badges { justify-content: center; }
+}
 
 .faq { max-width: 700px; margin: 0 auto; display: grid; gap: 10px; }
 .faq-item { border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; background: var(--surface); }
@@ -90,6 +145,9 @@ h2 { font-size: 26px; font-weight: 800; letter-spacing: -.5px; text-align: cente
 footer { padding: 28px 24px; text-align: center; font-size: 12.5px; color: var(--muted); border-top: 1px solid var(--border); }
 footer a { color: var(--blue); font-weight: 600; text-decoration: none; }
 
+@media (min-width: 860px) {
+  .app-shots { grid-template-columns: 1.1fr .9fr; align-items: start; }
+}
 @media (max-width: 600px) {
   h1 { font-size: 27px; }
   .hero { padding: 40px 16px 10px; }
@@ -107,12 +165,27 @@ footer a { color: var(--blue); font-weight: 600; text-decoration: none; }
 </head>
 <body>
 
-<header>
-  <a href="https://omnivaleur.com" class="logo">
+<nav>
+  <a href="/" class="nav-logo">
     <img src="logo.png" alt="Omnivaleur">
-    Omnivaleur
+    <span class="grad-text">Omnivaleur</span>
   </a>
-</header>
+  <input type="checkbox" id="nav-toggle" class="nav-toggle-cb">
+  <label for="nav-toggle" class="nav-hamburger" aria-label="Menu"><span></span><span></span><span></span></label>
+  <div class="nav-panel">
+    <div class="nav-links">
+      <a href="/marketplaces">Marketplaces</a>
+      <a href="/blog">Blog</a>
+      <a href="/#inside-the-app">Inside the app</a>
+      <a href="/#how-it-works">How it works</a>
+      <a href="/#pricing">Pricing</a>
+    </div>
+    <div class="nav-actions">
+      <a href="/login" class="btn btn-outline">Log in</a>
+      <a href="/register" class="btn btn-primary">7 days free →</a>
+    </div>
+  </div>
+</nav>
 
 <div class="hero">
   <div class="hero-badge">🎥 Video van 1 minuut</div>
@@ -165,6 +238,27 @@ footer a { color: var(--blue); font-weight: 600; text-decoration: none; }
   </div>
 </section>
 
+<section>
+  <div class="section-label">Live uit het dashboard</div>
+  <h2>Dit is wat je te zien krijgt</h2>
+  <div class="app-shots">
+    <div class="app-shot">
+      <div class="app-shot-frame">
+        <div class="app-shot-dots"><span class="app-shot-dot red"></span><span class="app-shot-dot yellow"></span><span class="app-shot-dot green"></span></div>
+        <div class="app-shot-body"><img src="/assets/leadpage/dashboard-items.jpg" alt="Overzicht van advertenties in het Omnivaleur-dashboard, met status per platform"></div>
+      </div>
+      <p class="app-shot-caption">Al je advertenties in één lijst, met status per platform</p>
+    </div>
+    <div class="app-shot">
+      <div class="app-shot-frame">
+        <div class="app-shot-dots"><span class="app-shot-dot red"></span><span class="app-shot-dot yellow"></span><span class="app-shot-dot green"></span></div>
+        <div class="app-shot-body"><img src="/assets/leadpage/dashboard-analytics.jpg" alt="Analytics-scherm van Omnivaleur met omzet, winst en verkopen per platform"></div>
+      </div>
+      <p class="app-shot-caption">Omzet en winst per platform, in één oogopslag</p>
+    </div>
+  </div>
+</section>
+
 <section style="background: var(--bg); border-radius: 24px;">
   <div class="section-label">Zo werkt het</div>
   <h2>In drie stappen live</h2>
@@ -187,6 +281,28 @@ footer a { color: var(--blue); font-weight: 600; text-decoration: none; }
 <section>
   <div class="nl-note">
     <strong>Let op:</strong> deze pagina en het contact met ons verlopen in het Nederlands, maar het dashboard van Omnivaleur is momenteel volledig in het Engels. Een Nederlandse versie van het dashboard staat gepland. Twijfel je daardoor? Stel gerust je vraag, we denken graag mee.
+  </div>
+</section>
+
+<section>
+  <div class="section-label">Wie erachter zit</div>
+  <h2>Waarom ik Omnivaleur ben begonnen</h2>
+  <div class="founder">
+    <img src="/assets/founder-daniel.jpg" alt="Daniel de Koning, oprichter van Omnivaleur" class="founder-photo">
+    <div>
+      <div class="founder-name">Daniel de Koning</div>
+      <div class="founder-role">Oprichter van Omnivaleur & Revaleur</div>
+      <div class="founder-text">
+        <p>Ik kom uit de IT en ben zelf al jaren actief tweedehandsverkoper met <strong>Revaleur — 700+ reviews</strong>. Elk item ging handmatig op meerdere platforms: dezelfde foto's uploaden, dezelfde tekst overtypen, en bijhouden waar iets al verkocht was zodat het nergens dubbel bleef staan.</p>
+        <p>Dat kostte me structureel uren per week, en het was foutgevoelig: een keer vergeten een advertentie ergens te verwijderen betekende een verkoop die niet meer klopte. Als IT'er loste ik dat op de enige logische manier op — door het te automatiseren.</p>
+        <p>Zo ontstond Omnivaleur: je zet een item één keer klaar, en het verschijnt overal waar jij het wilt. Inmiddels gebruiken tientallen andere resellers het dagelijks om dezelfde tijd te besparen die ik kwijt was.</p>
+      </div>
+      <div class="founder-badges">
+        <span class="founder-badge">💻 IT-achtergrond</span>
+        <span class="founder-badge">🛍️ 700+ reviews via Revaleur</span>
+        <span class="founder-badge">🇳🇱 Persoonlijk contact, geen supportbot</span>
+      </div>
+    </div>
   </div>
 </section>
 
