@@ -27,6 +27,7 @@ from __future__ import annotations
 
 import argparse
 import asyncio
+import gzip
 import json
 import os
 import re
@@ -41,7 +42,8 @@ sys.path.insert(0, str(Path(__file__).parent))
 from social_trends_analyse import PERIODES, analyseer  # noqa: E402
 from social_trends_dashboard import bouw as bouw_dashboard, haal_beeldjes  # noqa: E402
 from social_trends_discover import (  # noqa: E402
-    bundel_per_creator, schrijf_pagina, verzamel_tiktok, verzamel_youtube,
+    bundel_per_creator, schrijf_pagina, verzamel_instagram, verzamel_tiktok,
+    verzamel_youtube,
 )
 
 UITVOER = Path(__file__).parent / "output"
@@ -50,15 +52,91 @@ NOTION_OUDER = "3c3b0954-fb72-81e1-983a-c36ff2959359"  # pagina "Trendmotor"
 MODEL = "claude-opus-5"
 
 
+# ── Het archief ─────────────────────────────────────────────────────────────
+# Zonder dit begint elke week bij nul en zijn "30 dagen" en "90 dagen" niets
+# anders dan de video's die deze ochtend toevallig in beeld kwamen. Daarmee kun
+# je geen enkel patroon hard maken. Daarom houden we alles vast en tellen we
+# elke week op: dezelfde video die opnieuw langskomt krijgt zijn nieuwste
+# cijfers, een nieuwe video komt erbij. Na een paar weken staat er een paar
+# duizend video's aan bewijs in plaats van één ochtendvangst.
+ARCHIEF = Path(__file__).parent.parent / "data" / "trends-archief.json.gz"
+ARCHIEF_DAGEN = 130   # iets meer dan 90, zodat de 90-dagenlaag altijd vol is
+
+
+def _archief_lees() -> list[dict]:
+    if not ARCHIEF.exists():
+        return []
+    try:
+        with gzip.open(ARCHIEF, "rt", encoding="utf-8") as f:
+            return json.load(f).get("videos", [])
+    except Exception as e:
+        print(f"! archief onleesbaar ({type(e).__name__}) — deze week telt alleen "
+              f"de verse meting", file=sys.stderr)
+        return []
+
+
+def _archief_schrijf(videos: list[dict]) -> None:
+    ARCHIEF.parent.mkdir(parents=True, exist_ok=True)
+    with gzip.open(ARCHIEF, "wt", encoding="utf-8") as f:
+        json.dump({"bijgewerkt": datetime.now(timezone.utc).isoformat(),
+                   "aantal": len(videos), "videos": videos}, f, ensure_ascii=False)
+
+
+def voeg_samen(oud: list[dict], nieuw: list[dict]) -> list[dict]:
+    """
+    Oud en nieuw samenvoegen op videonummer.
+
+    De verse cijfers winnen altijd: een video die vorige week 40.000 views had
+    en nu 90.000 moet met 90.000 meetellen, anders meten we de leeftijd van ons
+    archief in plaats van de video. Wat we uit het oude wél overnemen is het
+    gesproken woord — dat verandert niet en de ondertitellink is inmiddels dood.
+    """
+    per_id = {}
+    for v in oud:
+        sleutel = (v.get("platform"), v.get("video_id"))
+        if sleutel[1]:
+            per_id[sleutel] = v
+    for v in nieuw:
+        sleutel = (v.get("platform"), v.get("video_id"))
+        if not sleutel[1]:
+            continue
+        bestaand = per_id.get(sleutel)
+        if bestaand and not v.get("gesproken_3s") and bestaand.get("gesproken_3s"):
+            for veld in ("gesproken_3s", "gesproken_15s", "spreektempo"):
+                v[veld] = bestaand.get(veld)
+        per_id[sleutel] = v
+
+    grens = datetime.now(timezone.utc).date().toordinal() - ARCHIEF_DAGEN
+    bewaard = []
+    for v in per_id.values():
+        datum = v.get("datum") or ""
+        if datum:
+            try:
+                if datetime.strptime(datum, "%Y-%m-%d").date().toordinal() < grens:
+                    continue
+            except ValueError:
+                pass
+        bewaard.append(v)
+    return bewaard
+
+
 # ── Meten ───────────────────────────────────────────────────────────────────
 def meet() -> dict:
-    videos = asyncio.run(verzamel_tiktok(scrolls=3, hashtag_limiet=None))
-    videos += verzamel_youtube(query_limiet=None)
+    vers = asyncio.run(verzamel_tiktok(scrolls=3, hashtag_limiet=None))
+    vers += verzamel_youtube(query_limiet=None)
+    vers += verzamel_instagram(hashtag_limiet=None)
+
+    archief = _archief_lees()
+    videos = voeg_samen(archief, vers)
+    _archief_schrijf(videos)
+    print(f"  archief: {len(archief)} bewaard + {len(vers)} vers "
+          f"= {len(videos)} video's om op te oordelen", flush=True)
+
     UITVOER.mkdir(parents=True, exist_ok=True)
     pad = UITVOER / f"trends-verkenning-{datetime.now():%Y%m%d-%H%M}.json"
     pad.write_text(json.dumps({
         "gedraaid_op": datetime.now(timezone.utc).isoformat(),
-        "aantal_videos": len(videos), "videos": videos,
+        "aantal_videos": len(videos), "vers_deze_ronde": len(vers), "videos": videos,
         "creators": bundel_per_creator(videos),
     }, ensure_ascii=False, indent=2), encoding="utf-8")
     return {"pad": pad, "videos": videos}
@@ -78,12 +156,33 @@ def _feiten(data: dict) -> str:
                 f"- {v['uitschieter']}x | {v['views']} views | eng {v['eng_ratio']}% "
                 f"| {v['duur']}s | @{v['handle']} ({v['taal']}, {v['niche']}) "
                 f"| sound: {v['sound'][:40]} | URL: {v['url']}\n"
-                f"  tekst: {(v['tekst'] or '')[:150]}")
+                f"  tekst: {(v['tekst'] or '')[:150]}"
+                + (f"\n  gezegd in de eerste 3 sec: \"{v['gesproken_3s']}\""
+                   if v.get("gesproken_3s") else ""))
+        if d.get("spreekhooks"):
+            regels.append(
+                f"GESPROKEN OPENINGEN — wat er in de eerste 3 seconden gezegd "
+                f"wordt ({d.get('met_stem', 0)} video's met gesproken tekst). "
+                f"'zeker' is hoe vaak het verschil overeind blijft bij hertrekken; "
+                f"onder de 90 is het ruis en mag je er geen advies op bouwen:")
+            for h in d["spreekhooks"]:
+                merk = "HARD" if h.get("hard") else "zwak"
+                regels.append(
+                    f"- [{merk}] {h['patroon']}: n={h['aantal']} video's van "
+                    f"{h['makers']} makers, zeker {h['zekerheid']}%, "
+                    f"{h['eng']}% vs {h['eng_rest']}% ({h['eng_lift']:+d}%)\n"
+                    f"  voorbeeld gezegd: \"{h['voorbeeld']}\" ({h['voorbeeld_url']})")
+        if d.get("spreektempo"):
+            regels.append("Spreektempo: " + " | ".join(
+                f"{r['patroon']} n={r['aantal']} {r['eng']}% ({r['eng_lift']:+d}%, "
+                f"zeker {r['zekerheid']}%)" for r in d["spreektempo"]))
         if d["hooks"]:
-            regels.append("Openingszinnen (eng% t.o.v. video's zonder dat patroon):")
+            regels.append("Bijschrift-openingen (los van wat er gezegd wordt):")
             for h in d["hooks"]:
-                regels.append(f"- {h['patroon']}: n={h['aantal']}, {h['eng']}% "
-                              f"vs {h['eng_rest']}% ({h['eng_lift']:+d}%)")
+                merk = "HARD" if h.get("hard") else "zwak"
+                regels.append(f"- [{merk}] {h['patroon']}: n={h['aantal']} van "
+                              f"{h['makers']} makers, zeker {h['zekerheid']}%, "
+                              f"{h['eng']}% vs {h['eng_rest']}% ({h['eng_lift']:+d}%)")
         if d.get("hashtags"):
             regels.append("Hashtags (eng% t.o.v. het gemiddelde):")
             for h in d["hashtags"][:10]:
@@ -111,6 +210,13 @@ HARDE REGELS:
   hieronder staat. Verzin nooit een URL.
 - Onderbouw elke opdracht met een gemeten getal uit de data. Geen getal, geen
   opdracht.
+- Bouw je advies op patronen die met [HARD] gemarkeerd zijn. Een patroon met
+  [zwak] mag je noemen als "nog niet zeker", maar er nooit een opdracht op
+  baseren. Zet in "waarom" altijd het aantal video's en de zekerheid erbij.
+- De "hook" die je schrijft is wat hij UITSPREEKT in de eerste drie seconden.
+  Leun daarbij op de gemeten gesproken openingen, niet op het bijschrift: uit de
+  meting blijkt dat het bijschrift nauwelijks iets doet en het gesproken woord
+  wel. Schrijf de hook zoals iemand praat, niet zoals iemand schrijft.
 - Noem Omnivaleur nooit als werkwoord. De handeling heet crosslisten.
 - Schrijf in het Nederlands, in gewone taal, zonder marketingtaal.
 - Als de data een patroon tegenspreekt dat je zou verwachten, volg de data.
@@ -122,7 +228,8 @@ Geef ZUIVER JSON terug, zonder tekst eromheen:
    "beeld": "wat hij filmt, in één of twee zinnen",
    "lengte": "bijv. 15-20 sec",
    "sound": "naam van de sound, of 'eigen geluid'",
-   "waarom": "welk gemeten getal dit onderbouwt",
+   "waarom": "welk gemeten getal dit onderbouwt, met n en zekerheid",
+   "bewijs": "hoe hard dit is: 'hard' of 'voorzichtig'",
    "bron": "https://..."}
 ]}
 
@@ -199,7 +306,10 @@ def mail_html(data: dict, opdrachten: list[dict], dashboard_url: str) -> str:
           {_e(o.get('lengte'))} &middot; sound: {_e(o.get('sound'))}</div>
         <div style="font:400 14px/1.5 Georgia,serif;color:#5A6867;margin:5px 0 0">
           <b>Waarom:</b> {_e(o.get('waarom'))}
-          &middot; <a href="{_e(o.get('bron'))}" style="color:#0E6F6B">bewijs</a></div>
+          &middot; <a href="{_e(o.get('bron'))}" style="color:#0E6F6B">bewijs</a>
+          &middot; <span style="font:600 12px monospace;color:{
+            '#1E7A4C' if str(o.get('bewijs','')).startswith('hard') else '#A8441C'}">{
+            _e(o.get('bewijs') or 'onbekend')}</span></div>
       </td></tr>""" for i, o in enumerate(opdrachten, 1))
     else:
         blok = ('<tr><td style="padding:0 0 22px;font:400 15px/1.5 Georgia,serif;'
@@ -217,6 +327,38 @@ def mail_html(data: dict, opdrachten: list[dict], dashboard_url: str) -> str:
             f'color:{"#1E7A4C" if h["lift"] > 0 else "#A8441C"}">{h["lift"]:+d}%</td></tr>'
             for h in rijen[:6])
 
+    # Alleen patronen die de hardheidstoets halen komen in de mail. De rest is
+    # een percentage zonder betekenis en hoort niet in iets waar hij op vaart.
+    stem_bron = d90 if len(d90.get("spreekhooks") or []) >= len(d30.get("spreekhooks") or []) else d30
+    harde_stem = [h for h in (stem_bron.get("spreekhooks") or []) if h.get("hard")]
+    if harde_stem:
+        stem_inleiding = (
+            f"Gemeten op {stem_bron.get('met_stem', 0)} video&rsquo;s waarvan we het "
+            f"gesproken woord hebben. Alleen patronen die genoeg video&rsquo;s, "
+            f"genoeg verschillende makers en een zekerheid boven 90% halen.")
+        stemrijen = "".join(
+            f'<tr><td style="padding:6px 12px 6px 0;font:600 14px Georgia,serif;'
+            f'vertical-align:top;white-space:nowrap">{_e(h["patroon"])}</td>'
+            f'<td style="padding:6px 12px 6px 0;font:400 12px monospace;'
+            f'color:#5A6867;vertical-align:top;white-space:nowrap">'
+            f'{h["aantal"]} video&rsquo;s &middot; {h["makers"]} makers &middot; '
+            f'{h["zekerheid"]}% zeker</td>'
+            f'<td style="padding:6px 0;font:600 14px monospace;vertical-align:top;'
+            f'color:{"#1E7A4C" if h["eng_lift"] > 0 else "#A8441C"}">'
+            f'{h["eng_lift"]:+d}%</td></tr>'
+            f'<tr><td colspan="3" style="padding:0 0 10px;font:400 13px/1.4 '
+            f'Georgia,serif;color:#5A6867">&ldquo;{_e(h["voorbeeld"][:120])}&rdquo; '
+            f'&mdash; <a href="{_e(h["voorbeeld_url"])}" style="color:#0E6F6B">'
+            f'bekijk</a></td></tr>'
+            for h in harde_stem[:5])
+    else:
+        stem_inleiding = (
+            f"Er is deze ronde nog geen gesproken patroon dat de toets haalt: "
+            f"{stem_bron.get('met_stem', 0)} video&rsquo;s met gesproken tekst is "
+            f"te weinig om iets hard te maken. Dat wordt elke week beter, want de "
+            f"meting stapelt op.")
+        stemrijen = ""
+
     return f"""<!doctype html><html><body style="margin:0;background:#EEF1F1;padding:24px 12px">
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr><td align="center">
 <table role="presentation" width="600" cellpadding="0" cellspacing="0"
@@ -230,6 +372,13 @@ def mail_html(data: dict, opdrachten: list[dict], dashboard_url: str) -> str:
       {d30['aantal']} over 30 dagen en {d90['aantal']} over 90 dagen.
       Alle cijfers komen rechtstreeks van het platform.</td></tr>
   {blok}
+  <tr><td style="border-top:1px solid #D2DAD9;padding:22px 0 10px;
+      font:700 17px/1.2 Georgia,serif;color:#151B1B">Wat er in de eerste drie
+      seconden gezegd wordt</td></tr>
+  <tr><td style="font:400 14px/1.5 Georgia,serif;color:#5A6867;padding:0 0 10px">
+      {stem_inleiding}</td></tr>
+  <tr><td style="padding:0 0 20px"><table role="presentation" cellpadding="0"
+      cellspacing="0">{stemrijen}</table></td></tr>
   <tr><td style="border-top:1px solid #D2DAD9;padding:22px 0 10px;
       font:700 17px/1.2 Georgia,serif;color:#151B1B">Wat de cijfers zeggen</td></tr>
   <tr><td style="font:400 14px/1.5 Georgia,serif;color:#5A6867;padding:0 0 10px">
@@ -312,6 +461,24 @@ def naar_notion(data: dict, opdrachten: list[dict], dashboard_url: str) -> str:
         blokken.append({"object": "block", "type": "paragraph", "paragraph": {
             "rich_text": [{"type": "text", "text": {
                 "content": "bewijs", "link": {"url": o.get("bron")}}}]}})
+    # Het gesproken-hookblok. Alleen de patronen die de hardheidstoets halen —
+    # in het archief hoort geen percentage waar je later op terugkijkt en denkt
+    # dat het bewezen was.
+    stem_bron = data["90d"] if (data["90d"].get("spreekhooks")) else data["30d"]
+    harde = [h for h in (stem_bron.get("spreekhooks") or []) if h.get("hard")][:6]
+    if harde:
+        blokken.append({"object": "block", "type": "heading_2", "heading_2": {
+            "rich_text": [{"type": "text", "text": {
+                "content": "Gesproken hooks die standhouden"}}]}})
+        for h in harde:
+            blokken.append({"object": "block", "type": "bulleted_list_item",
+                            "bulleted_list_item": {"rich_text": [{"type": "text", "text": {
+                                "content": (f"{h['patroon']}: {h['eng_lift']:+d}% "
+                                            f"engagement · {h['aantal']} video's van "
+                                            f"{h['makers']} makers · {h['zekerheid']}% "
+                                            f"zeker · voorbeeld: \"{h['voorbeeld'][:120]}\"")
+                                            [:1900]}}]}})
+
     try:
         r = httpx.post("https://api.notion.com/v1/pages",
                        headers={"Authorization": f"Bearer {token}",

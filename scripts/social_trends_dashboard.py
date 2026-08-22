@@ -188,6 +188,17 @@ footer{border-top:1px solid var(--rand);padding-top:18px;font-size:14px;
   color:var(--zacht);max-width:66ch}
 .verborgen{display:none!important}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
+
+/* Het gesproken begin van de video, op de kaart zelf. */
+.vid .stem{display:block;font:400 12px/1.45 var(--serif,Georgia,serif);
+  color:var(--zacht);font-style:italic;margin:2px 0 6px;
+  border-left:2px solid var(--lijn);padding-left:8px}
+.hard,.zwak{font:600 10px/1 ui-monospace,monospace;letter-spacing:.08em;
+  text-transform:uppercase;padding:3px 6px;border-radius:3px;vertical-align:middle;
+  margin-left:6px}
+.hard{background:var(--goed-zacht,#DCEFE4);color:var(--goed,#1E7A4C)}
+.zwak{background:var(--vlak,#EEF1F1);color:var(--zacht)}
+tr.onzeker td{opacity:.62}
 </style>"""
 
 
@@ -208,12 +219,22 @@ def _hooktabel(rijen: list[dict]) -> str:
     if not rijen:
         return '<p class="lead">Te weinig video&rsquo;s in deze periode om patronen op te baseren.</p>'
     r = ['<div class="tabelbox"><table><thead><tr><th>Opening</th>'
-         '<th class="num">n</th><th class="num">Eng.%</th>'
+         '<th class="num" title="aantal video&rsquo;s">n</th>'
+         '<th class="num" title="aantal verschillende makers">makers</th>'
+         '<th class="num" title="hoe vaak het verschil overeind blijft bij '
+         'hertrekken van de steekproef">zeker</th>'
+         '<th class="num">Eng.%</th>'
          '<th class="num">vs. rest</th><th class="num">Med. views</th>'
          '<th>Best presterende voorbeeld</th></tr></thead><tbody>']
     for h in rijen:
-        r.append(f'<tr><td><b>{h["patroon"]}</b></td>'
+        hard = h.get("hard")
+        merk = ('<span class="hard">hard</span>' if hard
+                else '<span class="zwak">te dun</span>')
+        r.append(f'<tr class="{"" if hard else "onzeker"}">'
+                 f'<td><b>{h["patroon"]}</b> {merk}</td>'
                  f'<td class="num">{h["aantal"]}</td>'
+                 f'<td class="num">{h.get("makers", "?")}</td>'
+                 f'<td class="num">{h.get("zekerheid", 0)}%</td>'
                  f'<td class="num">{h["eng"]}</td>'
                  f'<td class="num">{_lift(h["eng_lift"])}</td>'
                  f'<td class="num">{_n(h["views"])}</td>'
@@ -283,6 +304,11 @@ def _videokaart(v: dict) -> str:
     basis = "eigen normaal" if v["basis_herkomst"] == "eigen" else "niche-normaal"
     viraal = f'<span title="viraliteitsscore">V {v["viraal"]}</span>' if v["viraal"] else ""
     verval = 999999 if v["leeftijd_dagen"] is None else v["leeftijd_dagen"]
+    # De echte hook: wat er in de eerste drie seconden gezégd wordt. Dit staat
+    # bewust op de kaart zelf, want dit is waar je naar kijkt als je beoordeelt
+    # waarom een video het deed — niet het bijschrift.
+    stem = (f'<span class="stem">&ldquo;{_esc((v.get("gesproken_3s") or "")[:110])}'
+            f'&rdquo;</span>') if v.get("gesproken_3s") else ""
     return (f'<a class="vid" href="{v["url"]}" target="_blank" rel="noopener"'
             f' data-platform="{v["platform"]}" data-niche="{v["niche"]}"'
             f' data-taal="{v["taal"]}" data-views="{v["views"]}"'
@@ -293,6 +319,7 @@ def _videokaart(v: dict) -> str:
             f'<span class="plat">{v["platform"]}</span></figure>'
             f'<span class="maker">@{_esc(v["handle"])}</span>'
             f'<h4>{_esc(v["tekst"][:120])}</h4>'
+            f'{stem}'
             f'<span class="stats"><span>{_n(v["views"])} views</span>'
             f'<span>{v["eng_ratio"]}%</span>{viraal}</span></a>')
 
@@ -411,8 +438,35 @@ def bouw(data: dict, pad: Path) -> Path:
         d = data[p]
         blok = [f'<div data-periode="{p}" class="verborgen" '
                 'style="display:flex;flex-direction:column;gap:30px">']
+        stem_n = d.get("met_stem", 0)
         blok.append('<section><div class="sectiekop">'
-                    '<p class="eyebrow">Openingszinnen</p><h2>Welke hook werkt?</h2>'
+                    '<p class="eyebrow">Gesproken hook</p>'
+                    '<h2>Wat er in de eerste drie seconden gezegd wordt</h2>'
+                    f'<p class="lead">Dit is de echte hook: niet het bijschrift, '
+                    f'maar wat de maker uitspreekt terwijl je nog beslist of je '
+                    f'blijft kijken. Gemeten op {stem_n} video&rsquo;s waarvan '
+                    f'TikTok het gesproken woord meelevert &mdash; alleen '
+                    f'onderling vergeleken, want anders meet je het bestaan van '
+                    f'ondertiteling in plaats van de hook. &ldquo;Zeker&rdquo; is '
+                    f'hoe vaak het verschil overeind blijft als je de steekproef '
+                    f'1.500 keer opnieuw trekt; onder de 90% is het ruis.</p>'
+                    '</div>'
+                    + _hooktabel(d.get("spreekhooks") or [])
+                    + (_hooktabel(d.get("spreektempo") or [])
+                       if d.get("spreektempo") else "")
+                    + '</section>')
+        blok.append('<section><div class="sectiekop">'
+                    '<p class="eyebrow">Zelf gevonden</p>'
+                    '<h2>Welke gesproken woorden lopen mee met betere cijfers?</h2>'
+                    '<p class="lead">Hier zit geen lijstje van mij achter. Alle '
+                    'woorden die in de eerste drie seconden vaak genoeg gezegd '
+                    'worden zijn geteld, en dit zijn degene die bovengemiddeld '
+                    'scoren. Lees het als een aanwijzing waar het over moet gaan, '
+                    'niet als woorden die je erin moet proppen.</p></div>'
+                    + _hooktabel(d.get("spreekwoorden") or []) + '</section>')
+        blok.append('<section><div class="sectiekop">'
+                    '<p class="eyebrow">Bijschrift</p><h2>Welke geschreven opening '
+                    'werkt?</h2>'
                     '<p class="lead">Per patroon: hoeveel video&rsquo;s ermee openen, '
                     'hun mediane engagement, en hoeveel dat scheelt met alle video&rsquo;s '
                     'die dat patroon níet gebruiken. Patronen met minder dan acht '

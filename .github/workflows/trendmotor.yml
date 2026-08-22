@@ -40,6 +40,12 @@ jobs:
       MAIL_PASS: ${{ secrets.MAIL_PASS }}
       NOTION_TOKEN: ${{ secrets.NOTION_TOKEN }}
       ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+      # Optioneel. Zonder deze sleutel meet YouTube alleen views, datum en duur;
+      # mét sleutel ook likes en reacties, en telt YouTube dus echt mee in de
+      # engagement-vergelijking in plaats van als bijvangst.
+      YT_API_KEY: ${{ secrets.YT_API_KEY }}
+    permissions:
+      contents: write        # nodig om het opgebouwde archief terug te schrijven
     steps:
       - uses: actions/checkout@v4
 
@@ -67,6 +73,24 @@ jobs:
       - name: Echte ronde (met de hand gestart)
         if: github.event_name == 'workflow_dispatch' && inputs.echt_versturen == true
         run: python3 scripts/social_trends_rapport.py
+
+      # Het archief terugschrijven naar de repo. Dit is wat de meting van een
+      # ochtendvangst een groeiend bewijsdossier maakt: volgende week telt deze
+      # 1.400 video's mee, de week daarna 2.800. Zonder deze stap begint elke
+      # dinsdag weer bij nul en blijven "30 dagen" en "90 dagen" holle woorden.
+      - name: Archief bewaren in de repo
+        if: github.event_name == 'schedule' || inputs.echt_versturen == true
+        run: |
+          if [ -n "$(git status --porcelain data/)" ]; then
+            git config user.name "trendmotor"
+            git config user.email "daniel@omnivaleur.nl"
+            git add data/trends-archief.json.gz
+            git commit -m "trendmotor: meting van $(date +%d-%m-%Y) toegevoegd aan het archief"
+            git pull --rebase --autostash origin main || true
+            git push origin HEAD:main
+          else
+            echo "geen wijziging in het archief"
+          fi
 
       # De meting van deze week bewaren. Dat is niet alleen archief: de laag van
       # 90 dagen wordt pas betrouwbaar als er weken achter elkaar gemeten is, en

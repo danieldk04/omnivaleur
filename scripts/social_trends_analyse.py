@@ -25,6 +25,7 @@ Drie rekenregels die het verschil maken:
 """
 from __future__ import annotations
 
+import random
 import re
 import statistics
 from collections import Counter, defaultdict
@@ -58,6 +59,34 @@ HOOKS: list[tuple[str, str]] = [
     ("resultaat-claim", r"(?i)\b(\d+[.,]?\d*\s?(k|mille|euro|€|\$)|winst|verdiend|profit|made)\b"),
 ]
 
+# Gesproken openingen. Dit is een andere taal dan een bijschrift: niemand zegt
+# hardop "POV". Wat iemand in de eerste drie seconden zégt bepaalt of er
+# doorgekeken wordt, en dat is de enige plek waar de hook echt zit. Deze
+# patronen komen uit het gesproken woord dat TikTok zelf meelevert.
+SPREEKHOOKS: list[tuple[str, str]] = [
+    ("aanspreken", r"(?i)\b(als je|jij die|voor jou|iedereen die|ben jij|wil je|"
+                   r"if you|for anyone|do you|are you)\b"),
+    ("waarschuwing", r"(?i)\b(let op|pas op|kijk uit|waarschuw|scam|oplichting|"
+                     r"nooit|niet doen|fout|never|warning|careful|don'?t|mistake)\b"),
+    ("belofte", r"(?i)\b(ik ga je|zo doe je|hier is hoe|dit is hoe|ik laat je zien|"
+                r"i'?ll show|here'?s how|here'?s what|this is how|let me show)\b"),
+    ("geheim", r"(?i)\b(niemand|geheim|wist je|weet je dat|trucje|truc|secret|"
+               r"nobody|hidden|hack|tip|tips)\b"),
+    ("cijfer-opening", r"^\W*\w{0,12}\s?\d+\b"),
+    ("bedrag", r"(?i)\b(\d+\s?(euro|dollar|cent|k)\b|euro|winst|verdiend|"
+               r"opgeleverd|profit|made|sold for|paid)\b"),
+    ("vraag", r"(?i)^\W*(hoe|waarom|wat|wie|wanneer|welke|how|why|what|who|which)\b"),
+    ("verhaal-start", r"(?i)(^\W*(ik|i'?m|i)\s|\b(laatst|gisteren|vandaag|"
+                      r"vorige week|yesterday|today|last week)\b)"),
+    ("bevel", r"(?i)^\W*(stop|kijk|luister|doe|pak|ga|onthoud|schrijf|sla op|"
+              r"listen|look|watch|save this|stop scrolling)\b"),
+    ("tegenspraak", r"(?i)\b(iedereen zegt|klopt niet|mythe|actually|wrong|"
+                    r"maar nee|toch niet|denk je)\b"),
+    ("dit-aanwijzing", r"(?i)^\W*(dit|deze|this|these|that)\b"),
+    ("emotie", r"(?i)\b(oh my|niet te geloven|serieus|echt waar|insane|crazy|"
+               r"wtf|omg|kan niet)\b"),
+]
+
 
 # ── Basisbewerkingen ────────────────────────────────────────────────────────
 def _dagen_oud(datum: str, nu: datetime) -> int | None:
@@ -86,10 +115,11 @@ def _viraal(v: dict) -> float | None:
     dat uit per duizend views, zodat een kleine en een grote video vergelijkbaar
     zijn.
 
-    YouTube krijgt None: de zoekpagina geeft geen likes of reacties, dus elke
-    score zou hier verzonnen zijn.
+    YouTube en Instagram krijgen None: daar zijn delen en bewaren niet zichtbaar,
+    dus elke score zou hier verzonnen zijn. Ze doen wel gewoon mee in de
+    engagement-vergelijking, want likes en reacties zijn er wél.
     """
-    if v["platform"] == "YouTube" or not v.get("views"):
+    if v["platform"] in ("YouTube", "Instagram") or not v.get("views"):
         return None
     per_mille = 1000 / v["views"]
     return round((v["shares"] * 4 + v["saves"] * 3
@@ -113,6 +143,15 @@ def verrijk(videos: list[dict], nu: datetime | None = None) -> list[dict]:
         v["viraal"] = _viraal(v)
         v["hooks"] = [naam for naam, pat in HOOKS
                       if re.search(pat, (v.get("tekst") or "")[:80])]
+        gesproken = (v.get("gesproken_3s") or "").strip()
+        # Alleen Nederlands en Engels. Er komt ook Duits en Pools voorbij in
+        # deze hashtags, en die woorden door dezelfde patronen halen levert
+        # cijfers op die over een andere markt gaan dan waar Daniel in zit.
+        taal_ok = (v.get("stem_taal") or "").lower() in ("", "nld", "eng")
+        v["heeft_stem"] = bool(gesproken) and taal_ok
+        v["spreekhooks"] = [naam for naam, pat in SPREEKHOOKS
+                            if re.search(pat, gesproken)] if gesproken else []
+        v["spreekwoorden"] = len(gesproken.split()) if gesproken else 0
         v["tekstlengte"] = len(v.get("tekst") or "")
         v["aantal_hashtags"] = len(v.get("hashtags") or [])
 
@@ -135,10 +174,37 @@ def in_periode(videos: list[dict], dagen: int) -> list[dict]:
 
 
 # ── Patroonanalyse ──────────────────────────────────────────────────────────
+def _zekerheid(met: list[float], zonder: list[float], rondes: int = 1500) -> int:
+    """
+    Hoe zeker is het dat dit verschil echt is en geen toeval?
+
+    Een lift van +40% op tien video's betekent weinig: haal er één uitschieter
+    uit en hij is weg. Daarom trekken we duizend keer opnieuw een steekproef uit
+    dezelfde video's en kijken hoe vaak het verschil dezelfde kant op wijst.
+    Wijst het 95 van de 100 keer dezelfde kant op, dan is het een patroon;
+    wijst het 60 van de 100 keer dezelfde kant op, dan is het ruis met een mooi
+    percentage ervoor. Dit getal is het verschil tussen "opvallend" en "waar".
+    """
+    if len(met) < 5 or len(zonder) < 5:
+        return 0
+    hoger = 0
+    for _ in range(rondes):
+        a = statistics.median(random.choices(met, k=len(met)))
+        b = statistics.median(random.choices(zonder, k=len(zonder)))
+        if a > b:
+            hoger += 1
+    deel = hoger / rondes
+    return round(max(deel, 1 - deel) * 100)
+
+
 def _vergelijk(met: list[dict], zonder: list[dict], minimum: int = 8) -> dict | None:
     """
     Eén patroon versus de rest. Geeft None als er te weinig materiaal is —
     dat is geen fout maar het enige eerlijke antwoord bij vijf video's.
+
+    Naast de lift geven we het aantal video's, het aantal verschillende makers
+    en de zekerheid. Die drie samen bepalen of iets een advies mag worden:
+    twintig video's van één maker is één maker, geen patroon.
     """
     if len(met) < minimum or len(zonder) < minimum:
         return None
@@ -146,8 +212,16 @@ def _vergelijk(met: list[dict], zonder: list[dict], minimum: int = 8) -> dict | 
     z_eng = statistics.median([v["eng_ratio"] for v in zonder])
     m_view = statistics.median([v["views"] for v in met])
     z_view = statistics.median([v["views"] for v in zonder])
+    makers = len({(v["platform"], v["handle"]) for v in met})
+    zekerheid = _zekerheid([v["eng_ratio"] for v in met],
+                           [v["eng_ratio"] for v in zonder])
     return {
         "aantal": len(met),
+        "makers": makers,
+        "zekerheid": zekerheid,
+        # Hard genoeg om op te varen: genoeg video's, van genoeg verschillende
+        # makers, en een verschil dat de hertrekking overleeft.
+        "hard": len(met) >= 15 and makers >= 8 and zekerheid >= 90,
         "eng": round(m_eng, 2),
         "eng_rest": round(z_eng, 2),
         "eng_lift": round((m_eng / z_eng - 1) * 100) if z_eng else 0,
@@ -170,6 +244,88 @@ def hook_analyse(videos: list[dict]) -> list[dict]:
             r["voorbeeld_url"] = voorbeeld["url"]
             uit.append(r)
     uit.sort(key=lambda r: -r["eng_lift"])
+    return uit
+
+
+def spreekhook_analyse(videos: list[dict]) -> list[dict]:
+    """
+    Welke gesproken opening werkt?
+
+    We vergelijken alleen binnen de video's waarvan we het gesproken woord
+    hebben. Anders zou "geen hook" ook alle video's zonder ondertiteling
+    bevatten en meten we het bestaan van ondertiteling in plaats van de hook.
+    """
+    met_stem = [v for v in videos if v.get("heeft_stem")]
+    uit = []
+    for naam, _ in SPREEKHOOKS:
+        met = [v for v in met_stem if naam in v["spreekhooks"]]
+        zonder = [v for v in met_stem if naam not in v["spreekhooks"]]
+        r = _vergelijk(met, zonder)
+        if r:
+            r["patroon"] = naam
+            beste = max(met, key=lambda v: v["eng_ratio"])
+            r["voorbeeld"] = (beste.get("gesproken_3s") or "")[:140]
+            r["voorbeeld_url"] = beste["url"]
+            uit.append(r)
+    uit.sort(key=lambda r: (-r["hard"], -r["eng_lift"]))
+    return uit
+
+
+def spreekwoord_analyse(videos: list[dict], minimum: int = 8,
+                        top_n: int = 20) -> list[dict]:
+    """
+    Welke woorden in de eerste drie seconden hangen samen met betere cijfers?
+
+    Dit is bewust géén lijst die ik vooraf verzin. De vaste patronen hierboven
+    vangen maar een deel: mensen beginnen op honderd manieren, en de manier die
+    deze maand werkt staat niet in mijn lijstje. Daarom tellen we gewoon álle
+    woorden die vaak genoeg gezegd worden en kijken welke bovengemiddeld scoren.
+    Wat eruit komt is wat er gemeten is, niet wat ik verwachtte.
+    """
+    met_stem = [v for v in videos if v.get("heeft_stem")]
+    if len(met_stem) < 30:
+        return []
+    per_woord: dict[str, list[dict]] = defaultdict(list)
+    for v in met_stem:
+        for w in set(re.findall(r"[a-zA-ZÀ-ÿ']{3,}",
+                                (v.get("gesproken_3s") or "").lower())) - STOP:
+            per_woord[w].append(v)
+
+    uit = []
+    for woord, groep in per_woord.items():
+        if len(groep) < minimum:
+            continue
+        rest = [v for v in met_stem if v not in groep]
+        r = _vergelijk(groep, rest, minimum=minimum)
+        if not r or r["eng_lift"] <= 0:
+            continue
+        r["patroon"] = f'"{woord}"'
+        beste = max(groep, key=lambda v: v["eng_ratio"])
+        r["voorbeeld"] = (beste.get("gesproken_3s") or "")[:140]
+        r["voorbeeld_url"] = beste["url"]
+        uit.append(r)
+    uit.sort(key=lambda r: (-r["hard"], -r["zekerheid"], -r["eng_lift"]))
+    return uit[:top_n]
+
+
+def spreektempo_analyse(videos: list[dict]) -> list[dict]:
+    """Snel of rustig praten in de eerste seconden — maakt dat uit?"""
+    met_stem = [v for v in videos if v.get("heeft_stem") and v.get("spreektempo")]
+    if len(met_stem) < 20:
+        return []
+    grens = statistics.median([v["spreektempo"] for v in met_stem])
+    snel = [v for v in met_stem if v["spreektempo"] > grens]
+    rustig = [v for v in met_stem if v["spreektempo"] <= grens]
+    uit = []
+    for naam, groep, rest in (("snel praten", snel, rustig),
+                              ("rustig praten", rustig, snel)):
+        r = _vergelijk(groep, rest)
+        if r:
+            r["patroon"] = f"{naam} (grens {grens:.1f} woorden/sec)"
+            beste = max(groep, key=lambda v: v["eng_ratio"])
+            r["voorbeeld"] = (beste.get("gesproken_3s") or "")[:140]
+            r["voorbeeld_url"] = beste["url"]
+            uit.append(r)
     return uit
 
 
@@ -339,10 +495,15 @@ def analyseer(videos: list[dict]) -> dict:
             "aantal": len(deel),
             "top": beste_videos(deel, 60),
             "hooks": hook_analyse(deel),
+            "spreekhooks": spreekhook_analyse(deel),
+            "spreekwoorden": spreekwoord_analyse(deel),
+            "spreektempo": spreektempo_analyse(deel),
+            "met_stem": len([v for v in deel if v.get("heeft_stem")]),
             "onderwerpen": onderwerp_analyse(deel),
             "hashtags": hashtag_analyse(deel),
             "vorm": vorm_analyse(deel),
             "sounds": sound_analyse(deel),
         }
+    uit["met_stem_totaal"] = len([v for v in videos if v.get("heeft_stem")])
     uit["alles"] = videos
     return uit

@@ -28,6 +28,7 @@ from __future__ import annotations
 import argparse
 import asyncio
 import json
+import os
 import re
 import statistics
 import sys
@@ -54,6 +55,8 @@ NICHES: dict[str, dict] = {
                       "vintedseller", "resellercommunity"],
         "youtube": ["vinted verkopen tips", "reseller tips 2026",
                     "how to sell on vinted", "ebay reseller haul"],
+        "instagram_nl": ["vinted", "tweedehands"],
+        "instagram_en": ["reseller", "ebayreseller"],
     },
     "thrifting": {
         "titel": "Tweedehands mode & thrifting",
@@ -61,12 +64,16 @@ NICHES: dict[str, dict] = {
                       "kringloopwinkel", "thriftnederland"],
         "tiktok_en": ["thrifthaul", "thrifting", "vintagefashion", "thriftwithme"],
         "youtube": ["thrift haul 2026", "kringloop haul", "vintage fashion finds"],
+        "instagram_nl": ["kringloop"],
+        "instagram_en": ["thrifthaul", "vintagefashion"],
     },
     "tools": {
         "titel": "Tools & software voor verkopers",
         "tiktok_nl": ["crosslisten", "verkooptips"],
         "tiktok_en": ["crosslisting", "crosslistingapp", "resellersoftware"],
         "youtube": ["crosslisting app review", "list perfectly vs vendoo"],
+        "instagram_nl": [],
+        "instagram_en": ["crosslisting"],
     },
 }
 
@@ -145,7 +152,82 @@ def _tiktok_norm(it: dict, niche: str, taal: str, tag: str) -> dict | None:
         "beeld": ((it.get("video") or {}).get("cover")
                   or (it.get("video") or {}).get("originCover") or ""),
         "hashtags": re.findall(r"#(\w+)", it.get("desc") or "")[:12],
+        # De link naar de ondertiteling van TikTok zelf. Dit is het gesproken
+        # woord, en daarmee de echte hook: wat de maker in de eerste seconden
+        # zégt. De link verloopt binnen enkele uren, dus we halen hem binnen
+        # dezelfde browsersessie op (zie _haal_ondertitels).
+        "vtt": _kies_ondertitel(it),
     }
+
+
+def _kies_ondertitel(it: dict) -> str:
+    """
+    Kiest de bruikbaarste ondertitelspoor van een TikTok-video.
+
+    TikTok levert soms meerdere sporen: het origineel (ASR, wat er echt gezegd
+    is) en machinevertalingen. Voor hookonderzoek willen we het origineel —
+    een vertaling verandert precies de woordkeuze die we meten.
+    """
+    sporen = (it.get("video") or {}).get("subtitleInfos") or []
+    if not sporen:
+        return ""
+    origineel = [s for s in sporen if (s.get("Source") or "").upper() == "ASR"]
+    keuze = (origineel or sporen)[0]
+    return f"{keuze.get('LanguageCodeName', '')}|{keuze.get('Url') or ''}"
+
+
+def _vtt_naar_zinnen(tekst: str) -> list[tuple[float, str]]:
+    """WebVTT omzetten naar (starttijd in seconden, zin)."""
+    uit: list[tuple[float, str]] = []
+    blokken = re.split(r"\n\s*\n", tekst.replace("\r", ""))
+    for blok in blokken:
+        m = re.search(r"(\d\d):(\d\d):(\d\d)[.,](\d+)\s*-->", blok)
+        if not m:
+            continue
+        sec = int(m.group(1)) * 3600 + int(m.group(2)) * 60 + int(m.group(3)) + int(m.group(4)) / 1000
+        regels = [r.strip() for r in blok.split("\n")[1:] if r.strip() and "-->" not in r]
+        zin = " ".join(regels).strip()
+        if zin:
+            uit.append((sec, zin))
+    return uit
+
+
+async def _haal_ondertitels(ctx, rijen: list[dict]) -> int:
+    """
+    Haalt het gesproken woord op voor de video's die ondertiteling hebben.
+
+    Moet binnen dezelfde browsersessie: de ondertitel-links zijn ondertekend en
+    verlopen. We bewaren twee dingen: de eerste 3 seconden (de hook waarmee
+    iemand blijft kijken of wegveegt) en de eerste 15 seconden (de belofte die
+    daarop volgt). Ook het spreektempo, want dat blijkt op korte video's een
+    eigen signaal.
+    """
+    kandidaten = [r for r in rijen if r.get("vtt")]
+    if not kandidaten:
+        return 0
+    gelukt = 0
+    for rij in kandidaten:
+        taal, _, link = rij["vtt"].partition("|")
+        try:
+            antwoord = await ctx.request.get(
+                link, headers={"Referer": "https://www.tiktok.com/"}, timeout=20000)
+            if antwoord.status != 200:
+                continue
+            zinnen = _vtt_naar_zinnen(await antwoord.text())
+        except Exception:
+            continue
+        if not zinnen:
+            continue
+        rij["stem_taal"] = taal[:3]   # nld, eng, deu, pol …
+        rij["gesproken_3s"] = " ".join(z for t, z in zinnen if t < 3.0)[:200]
+        rij["gesproken_15s"] = " ".join(z for t, z in zinnen if t < 15.0)[:600]
+        eind = max(t for t, _ in zinnen) or 1
+        woorden = sum(len(z.split()) for _, z in zinnen)
+        rij["spreektempo"] = round(woorden / max(eind, 1), 2)
+        gelukt += 1
+    for rij in rijen:
+        rij.pop("vtt", None)   # de link is na deze ronde toch dood
+    return gelukt
 
 
 async def verzamel_tiktok(scrolls: int, hashtag_limiet: int | None) -> list[dict]:
@@ -198,7 +280,10 @@ async def verzamel_tiktok(scrolls: int, hashtag_limiet: int | None) -> list[dict
                     if rij:
                         resultaat.append(rij)
                         nieuw_aantal += 1
-                print(f" {nieuw_aantal} video's", flush=True)
+                verse = resultaat[-nieuw_aantal:] if nieuw_aantal else []
+                met_stem = await _haal_ondertitels(ctx, verse)
+                print(f" {nieuw_aantal} video's ({met_stem} met gesproken tekst)",
+                      flush=True)
             finally:
                 await browser.close()
 
@@ -306,12 +391,184 @@ def _yt_zoek(query: str, niche: str, max_items: int = 20) -> list[dict]:
     return uit
 
 
+# ── YouTube verrijken: van 'alleen views' naar echte cijfers ────────────────
+# De zoekpagina geeft alleen views en een vage "3 weken geleden". Daarmee kun
+# je niets vergelijken: zonder datum geen tijdvenster, zonder likes geen
+# engagement. Twee wegen om dat op te lossen, in deze volgorde:
+#
+#   1. De officiële YouTube Data API, als er een sleutel is. Die geeft likes,
+#      reacties, duur en de exacte datum, 50 video's per verzoek, gratis binnen
+#      een dagbudget dat we nooit halen. Dit is de goede weg.
+#   2. Anders de videopagina zelf. Die geeft datum en duur, maar geen likes:
+#      YouTube haalde dat getal uit de HTML. Beter dan niets, minder dan (1).
+def _yt_via_api(rijen: list[dict], sleutel: str) -> int:
+    raak = 0
+    ids = [r["video_id"] for r in rijen if r.get("video_id")]
+    per_id = {r["video_id"]: r for r in rijen}
+    for i in range(0, len(ids), 50):
+        blok = ids[i:i + 50]
+        url = ("https://www.googleapis.com/youtube/v3/videos?part=statistics,snippet,"
+               "contentDetails&id=" + ",".join(blok) + "&key=" + sleutel)
+        try:
+            data = json.loads(urllib.request.urlopen(url, timeout=30).read())
+        except Exception as e:
+            print(f"   ! YouTube-API mislukt: {type(e).__name__} — terug naar de "
+                  f"videopagina", file=sys.stderr)
+            return raak
+        for item in data.get("items", []):
+            rij = per_id.get(item.get("id"))
+            if not rij:
+                continue
+            st = item.get("statistics") or {}
+            sn = item.get("snippet") or {}
+            rij["views"] = _int(st.get("viewCount")) or rij["views"]
+            rij["likes"] = _int(st.get("likeCount"))
+            rij["comments"] = _int(st.get("commentCount"))
+            rij["datum"] = (sn.get("publishedAt") or "")[:10]
+            rij["duur"] = _iso_duur((item.get("contentDetails") or {}).get("duration", ""))
+            rij["hashtags"] = re.findall(r"#(\w+)", (sn.get("description") or ""))[:12]
+            raak += 1
+    return raak
+
+
+def _iso_duur(v: str) -> int:
+    m = re.match(r"PT(?:(\d+)M)?(?:(\d+)S)?", v or "")
+    if not m:
+        return 0
+    return int(m.group(1) or 0) * 60 + int(m.group(2) or 0)
+
+
+def _yt_via_pagina(rij: dict) -> bool:
+    try:
+        req = urllib.request.Request(rij["url"], headers={
+            "User-Agent": UA, "Accept-Language": "nl-NL,nl;q=0.9,en;q=0.8"})
+        html = urllib.request.urlopen(req, timeout=30).read().decode("utf-8", "replace")
+    except Exception:
+        return False
+    datum = re.search(r'"uploadDate":"(\d{4}-\d{2}-\d{2})', html)
+    duur = re.search(r'"lengthSeconds":"(\d+)"', html)
+    views = re.search(r'"viewCount":"(\d+)"', html)
+    if datum:
+        rij["datum"] = datum.group(1)
+    if duur:
+        rij["duur"] = int(duur.group(1))
+    if views:
+        rij["views"] = int(views.group(1)) or rij["views"]
+    return bool(datum)
+
+
+def verrijk_youtube(rijen: list[dict]) -> None:
+    rijen = [r for r in rijen if r["platform"] == "YouTube"]
+    if not rijen:
+        return
+    sleutel = os.environ.get("YT_API_KEY", "").strip()
+    if sleutel:
+        raak = _yt_via_api(rijen, sleutel)
+        print(f"  YouTube verrijkt via de API: {raak}/{len(rijen)} "
+              f"(met likes en reacties)", flush=True)
+        if raak:
+            return
+    from concurrent.futures import ThreadPoolExecutor
+    with ThreadPoolExecutor(max_workers=8) as pool:
+        raak = sum(pool.map(_yt_via_pagina, rijen))
+    print(f"  YouTube verrijkt via de videopagina: {raak}/{len(rijen)} "
+          f"(datum en duur, geen likes — zet YT_API_KEY voor volledige cijfers)",
+          flush=True)
+
+
+# ── Instagram ───────────────────────────────────────────────────────────────
+# Instagram is het enige platform dat niet gratis kan. Hashtagpagina's zitten
+# sinds 2024 achter de inlog, en inloggen met een echt account om te schrapen is
+# precies waar accounts voor geblokkeerd worden — dat risico is het niet waard.
+# Daarom loopt Instagram via Apify, dat de rekening en het risico overneemt.
+#
+# Bewust zuinig ingesteld: een klein aantal posts per hashtag, en alleen de
+# hashtags die er in de meting toe doen. Zonder token slaat dit stil over, dan
+# is het rapport gewoon een rapport zonder Instagram in plaats van een fout.
+IG_ACTOR = "apify~instagram-hashtag-scraper"
+IG_PER_HASHTAG = 30
+
+
+def _ig_norm(post: dict, niche: str, taal: str, tag: str) -> dict | None:
+    handle = post.get("ownerUsername") or ""
+    if not handle:
+        return None
+    views = _int(post.get("videoPlayCount") or post.get("videoViewCount"))
+    tekst = (post.get("caption") or "")[:300]
+    return {
+        "platform": "Instagram",
+        "niche": niche, "taal": taal, "gevonden_via": f"#{tag}",
+        "handle": handle, "naam": post.get("ownerFullName") or "",
+        "volgers": 0,
+        "video_id": str(post.get("id") or post.get("shortCode") or ""),
+        "url": post.get("url") or f"https://www.instagram.com/p/{post.get('shortCode','')}/",
+        "tekst": tekst,
+        "datum": (post.get("timestamp") or "")[:10],
+        "views": views,
+        "likes": _int(post.get("likesCount")),
+        "comments": _int(post.get("commentsCount")),
+        # Instagram geeft delen en bewaren niet vrij. Nul invullen zou suggereren
+        # dat het gemeten is en nul was; het is niet gemeten. De viraliteitsscore
+        # slaat Instagram daarom over, net als YouTube zonder likes.
+        "shares": 0, "saves": 0,
+        "duur": _int(post.get("videoDuration")),
+        "sound": "", "sound_id": "",
+        "beeld": post.get("displayUrl") or "",
+        "hashtags": re.findall(r"#(\w+)", tekst)[:12],
+    }
+
+
+def verzamel_instagram(hashtag_limiet: int | None) -> list[dict]:
+    token = os.environ.get("APIFY_TOKEN", "").strip()
+    if not token:
+        print("  Instagram overgeslagen: geen APIFY_TOKEN "
+              "(hashtagpagina's zijn niet zonder inlog te lezen)", flush=True)
+        return []
+
+    opdrachten = []
+    for niche, cfg in NICHES.items():
+        for taal, sleutel in (("nl", "instagram_nl"), ("en", "instagram_en")):
+            for tag in cfg.get(sleutel, [])[:hashtag_limiet]:
+                opdrachten.append((niche, taal, tag))
+    if not opdrachten:
+        return []
+
+    uit: list[dict] = []
+    gezien: set[str] = set()
+    for niche, taal, tag in opdrachten:
+        print(f"  Instagram #{tag} ({niche}/{taal}) …", end="", flush=True)
+        try:
+            verzoek = urllib.request.Request(
+                f"https://api.apify.com/v2/acts/{IG_ACTOR}/run-sync-get-dataset-items"
+                f"?token={token}&format=json&timeout=180",
+                data=json.dumps({"hashtags": [tag],
+                                 "resultsLimit": IG_PER_HASHTAG}).encode(),
+                headers={"Content-Type": "application/json"})
+            posts = json.loads(urllib.request.urlopen(verzoek, timeout=200).read())
+        except Exception as e:
+            # Meestal: het maandtegoed is op. Dat is geen storing om te herstellen,
+            # dat is een rekening. De rest van de meting gaat gewoon door.
+            print(f" mislukt ({type(e).__name__})", flush=True)
+            continue
+        nieuw = 0
+        for post in posts if isinstance(posts, list) else []:
+            rij = _ig_norm(post, niche, taal, tag)
+            if not rij or not rij["video_id"] or rij["video_id"] in gezien:
+                continue
+            gezien.add(rij["video_id"])
+            uit.append(rij)
+            nieuw += 1
+        print(f" {nieuw} posts", flush=True)
+    return uit
+
+
 def verzamel_youtube(query_limiet: int | None) -> list[dict]:
     uit: list[dict] = []
     for niche, cfg in NICHES.items():
         for q in cfg.get("youtube", [])[:query_limiet]:
             print(f"  YouTube '{q}' ({niche}) …", flush=True)
             uit.extend(_yt_zoek(q, niche))
+    verrijk_youtube(uit)
     return uit
 
 
