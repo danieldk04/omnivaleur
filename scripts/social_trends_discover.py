@@ -438,12 +438,22 @@ def _iso_duur(v: str) -> int:
     return int(m.group(1) or 0) * 60 + int(m.group(2) or 0)
 
 
+# Vanaf een datacenter (zoals GitHub) zet YouTube eerst een cookiemuur voor de
+# videopagina: je krijgt netjes een 200 terug, maar het is de toestemmingspagina
+# en niet de video. Dat was precies waarom de eerste ronde 0 van de 48 video's
+# van een datum voorzag. Deze cookies zijn de standaard "ik heb gekozen"-waarden
+# die de browser zelf ook zet; ermee krijg je de echte pagina.
+_YT_COOKIES = "CONSENT=YES+cb.20210328-17-p0.nl+FX+117; SOCS=CAISEwgDEgk0ODE3Nzk3MjQaAm5sIAEaBgiA_LyaBg"
+
+
 def _yt_via_pagina(rij: dict) -> bool:
     try:
         req = urllib.request.Request(rij["url"], headers={
-            "User-Agent": UA, "Accept-Language": "nl-NL,nl;q=0.9,en;q=0.8"})
+            "User-Agent": UA, "Accept-Language": "nl-NL,nl;q=0.9,en;q=0.8",
+            "Cookie": _YT_COOKIES})
         html = urllib.request.urlopen(req, timeout=30).read().decode("utf-8", "replace")
-    except Exception:
+    except Exception as e:
+        rij["_yt_fout"] = type(e).__name__
         return False
     datum = re.search(r'"uploadDate":"(\d{4}-\d{2}-\d{2})', html)
     duur = re.search(r'"lengthSeconds":"(\d+)"', html)
@@ -474,6 +484,16 @@ def verrijk_youtube(rijen: list[dict]) -> None:
     print(f"  YouTube verrijkt via de videopagina: {raak}/{len(rijen)} "
           f"(datum en duur, geen likes — zet YT_API_KEY voor volledige cijfers)",
           flush=True)
+    if raak == 0 and rijen:
+        # Zonder datum telt een video in geen enkel tijdvenster mee; hij staat er
+        # dan wel, maar doet nergens aan mee. Dat moet luid zijn, niet stil.
+        fouten = {r.get("_yt_fout", "lege pagina") for r in rijen}
+        print(f"  ! GEEN ENKELE YouTube-datum gevonden ({', '.join(sorted(fouten))}). "
+              f"YouTube telt deze ronde dus in geen enkel tijdvenster mee. "
+              f"Zet YT_API_KEY als secret om dit definitief op te lossen.",
+              file=sys.stderr)
+    for r in rijen:
+        r.pop("_yt_fout", None)
 
 
 # ── Instagram ───────────────────────────────────────────────────────────────

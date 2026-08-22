@@ -24,6 +24,10 @@ on:
         description: "Ook echt mailen en in Notion zetten (anders alleen een proefronde)"
         type: boolean
         default: false
+      alleen_youtube:
+        description: "Alleen de YouTube-meting nakijken (snelle controle, 1 minuut)"
+        type: boolean
+        default: false
 
 concurrency:
   group: trendmotor
@@ -66,8 +70,16 @@ jobs:
         if: github.event_name == 'schedule'
         run: python3 scripts/social_trends_rapport.py --alleen-uur 8
 
+      # Snelle controle: haalt YouTube alleen op en laat zien of de datums
+      # binnenkomen. Vanaf GitHub gedraagt YouTube zich anders dan vanaf een
+      # laptop, dus dit moet je hiervandaan kunnen nakijken zonder de hele
+      # meting van een kwartier te draaien.
+      - name: Alleen YouTube nakijken
+        if: github.event_name == 'workflow_dispatch' && inputs.alleen_youtube == true
+        run: python3 scripts/social_trends_discover.py --geen-tiktok --snel
+
       - name: Proefronde zonder versturen (met de hand gestart)
-        if: github.event_name == 'workflow_dispatch' && inputs.echt_versturen != true
+        if: github.event_name == 'workflow_dispatch' && inputs.echt_versturen != true && inputs.alleen_youtube != true
         run: python3 scripts/social_trends_rapport.py --droog
 
       - name: Echte ronde (met de hand gestart)
