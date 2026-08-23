@@ -377,6 +377,14 @@
       "slug": "vintage-decor-reselling-automation",
       "status": "published",
       "priority": 46
+    },
+    {
+      "keyword": "thrift store reselling automation",
+      "region": "nl",
+      "pillar": "B",
+      "slug": "thrift-store-reselling-automation",
+      "status": "published",
+      "priority": 47
     }
   ],
   "published": [
@@ -793,6 +801,15 @@
       "action": "created",
       "url_path": "/reseller-tools/vintage-decor-reselling-automation",
       "published_at": "2026-08-22T08:21:58.343197+00:00"
+    },
+    {
+      "keyword": "thrift store reselling automation",
+      "slug": "thrift-store-reselling-automation",
+      "region": "nl",
+      "pillar": "B",
+      "action": "created",
+      "url_path": "/reseller-tools/thrift-store-reselling-automation",
+      "published_at": "2026-08-23T08:22:17.898527+00:00"
     }
   ]
 }
