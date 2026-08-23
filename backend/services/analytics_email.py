@@ -106,9 +106,9 @@ def _verschil(nu: int, eerder: int | None, omhoog_is_goed: bool = True) -> str:
             f'<span style="color:{GRIJS_LICHT};font-weight:600;">was {nl_getal(eerder)}</span></div>')
 
 
-def _tegel(label: str, waarde: str, onder: str) -> str:
+def _tegel(label: str, waarde: str, onder: str, breedte: str = "25%") -> str:
     return (
-        f'<td width="25%" style="padding:8px;">'
+        f'<td width="{breedte}" style="padding:8px;">'
         f'<table width="100%" cellpadding="0" cellspacing="0" role="presentation" '
         f'style="background:{VLAK};border:1px solid {LIJN};border-radius:10px;">'
         f'<tr><td style="padding:12px 10px;text-align:center;">'
@@ -286,6 +286,83 @@ def _beste_posts(sc: dict, aantal: int = 5) -> str:
             + "".join(regels) + "</table>")
 
 
+def _accounts_blok(acc: dict) -> str:
+    """Wie er zijn, waar ze staan en wie er werkt.
+
+    Bewust twee losse tabellen onder één kop: de trechter (wie betaalt, wie zit
+    in zijn proef, wie haakte af) beantwoordt een andere vraag dan het gebruik
+    (wie doet er überhaupt iets). Ze in één rij proppen leest als een reeks
+    getallen zonder verhaal.
+    """
+    v = acc["verdeling"]
+    totaal = acc["totaal"]
+    dagen = acc["actief_dagen"]
+    stil = acc["stil"]
+
+    # Alleen de vakjes die iemand bevatten. Een rij nullen leidt af van de twee
+    # cijfers waar het deze week echt om gaat.
+    rijen = [
+        ("Betalend", v["betalend"], GROEN),
+        ("In proefperiode", v["proef"], BLAUW),
+        ("Proef net voorbij (bedenktijd)", v["bedenktijd"], INKT),
+        ("Proef voorbij, niet verlengd", v["niet_verlengd"], ROOD),
+        ("Opgezegd na betalen", v["opgezegd"], ROOD),
+        ("Betaling mislukt", v["betaling_mislukt"], ROOD),
+        ("Nog geen abonnementsrij", v["geen_rij"], GRIJS),
+    ]
+    zichtbaar = [r for r in rijen if r[1]]
+
+    regels = []
+    for i, (label, aantal, kleur) in enumerate(zichtbaar):
+        rand = "" if i == len(zichtbaar) - 1 else f"border-bottom:1px solid #f1f5f9;"
+        deel = f"{round(aantal / totaal * 100)}%" if totaal else ""
+        regels.append(
+            f'<tr><td style="padding:9px 10px;{rand}color:{INKT};">{label}</td>'
+            f'<td style="padding:9px 10px;{rand}text-align:right;font-weight:800;color:{kleur};">'
+            f'{nl_getal(aantal)}</td>'
+            f'<td style="padding:9px 10px;{rand}text-align:right;color:{GRIJS_LICHT};'
+            f'font-weight:600;width:52px;">{deel}</td></tr>')
+
+    trechter = (
+        f'<table width="100%" cellpadding="0" cellspacing="0" role="presentation" '
+        f'style="font-size:14px;"><tr style="background:{VLAK};">'
+        f'<td style="padding:8px 10px;color:{GRIJS};font-size:11px;font-weight:700;'
+        f'text-transform:uppercase;border-radius:6px 0 0 6px;">Verdeling ({nl_getal(totaal)} accounts)</td>'
+        f'<td style="padding:8px 10px;color:{GRIJS};font-size:11px;font-weight:700;'
+        f'text-transform:uppercase;text-align:right;" colspan="2">Aantal</td></tr>'
+        + "".join(regels) + "</table>"
+    ) if zichtbaar else ""
+
+    # Actief vs stil. "Actief" = deze persoon heeft in die periode echt iets
+    # gedaan: een klus laten lopen, een item aangemaakt of gewijzigd, of de
+    # extensie heeft ingecheckt. Ingelogd-en-wegklikken telt niet mee.
+    actief = acc["actief_maand"]
+    aandeel = round(actief / totaal * 100) if totaal else 0
+    gebruik = (
+        f'<table width="100%" cellpadding="0" cellspacing="0" role="presentation">'
+        f'<tr>'
+        + _tegel("Actief deze week", nl_getal(acc["actief_week"]),
+                 f'<div style="font-size:12px;color:{GRIJS_LICHT};font-weight:600;">'
+                 f'van {nl_getal(totaal)}</div>', breedte="33%")
+        + _tegel(f"Actief in {dagen} dagen", nl_getal(actief),
+                 f'<div style="font-size:12px;color:{GROEN if aandeel >= 50 else ROOD};'
+                 f'font-weight:700;">{aandeel}% van alle accounts</div>', breedte="34%")
+        + _tegel("Stil", nl_getal(stil),
+                 f'<div style="font-size:12px;color:{GRIJS_LICHT};font-weight:600;">'
+                 f'{dagen} dagen niets gedaan</div>', breedte="33%")
+        + '</tr></table>'
+    )
+
+    uitleg = (
+        f'<div style="font-size:12px;color:{GRIJS};padding-top:10px;line-height:1.5;">'
+        f'Actief = een publicatie, verwijdering of scan, een item aangemaakt of gewijzigd, '
+        f'of de extensie heeft ingecheckt. Alleen inloggen telt niet mee. '
+        f'Eigen accounts zijn niet meegeteld.</div>'
+    )
+
+    return _kopje("Wie er zijn en wie er werkt") + trechter + f'<div style="height:10px;"></div>' + gebruik + uitleg
+
+
 def _samenvatting(report: dict) -> str:
     """Eén zin die de week samenvat, in gevolgen."""
     seo = report.get("seo") or {}
@@ -301,11 +378,22 @@ def _samenvatting(report: dict) -> str:
     staart += "."
 
     if views >= 100 and clicks < 25:
-        return (f"Je posts liepen goed ({nl_getal(views)} weergaven), maar dat bereik komt nog "
-                f"niet op de site terecht: {staart}")
-    if views >= 100:
-        return f"{nl_getal(views)} weergaven op je posts, en op de site {staart}"
-    return f"Deze week {staart}"
+        zin = (f"Je posts liepen goed ({nl_getal(views)} weergaven), maar dat bereik komt nog "
+               f"niet op de site terecht: {staart}")
+    elif views >= 100:
+        zin = f"{nl_getal(views)} weergaven op je posts, en op de site {staart}"
+    else:
+        zin = f"Deze week {staart}"
+
+    # De stand van het bedrijf hoort in dezelfde adem als de week: nieuwe
+    # aanmeldingen zeggen weinig zonder hoeveel mensen er zijn en werken.
+    acc = report.get("accounts") or {}
+    if acc.get("available") and acc.get("totaal"):
+        zin += (f" In totaal {nl_getal(acc['totaal'])} account"
+                f"{'s' if acc['totaal'] != 1 else ''}, waarvan "
+                f"{nl_getal(acc['actief_maand'])} actief in de laatste "
+                f"{acc['actief_dagen']} dagen.")
+    return zin
 
 
 # ---------------------------------------------------------------------------
@@ -364,6 +452,12 @@ def render_html(report: dict) -> str:
     # Verloop
     if any(w["measured"] for w in trend):
         delen.append(_rij(_balken(trend), padding="14px 24px 20px 24px"))
+
+    # Accounts — de trechter en het werkelijke gebruik. Staat vóór de acties,
+    # want de eerste actie gaat meestal precies hierover.
+    acc = report.get("accounts") or {}
+    if acc.get("available") and acc.get("totaal"):
+        delen.append(_rij(_accounts_blok(acc), padding="4px 24px 20px 24px"))
 
     # Acties
     acties = report.get("actions") or []
@@ -444,6 +538,24 @@ def render_text(report: dict) -> str:
         r.append(f"Aanmeldingen: {sg['this_week']} (vorige week {sg['prev_week']})")
     if seo.get("connected"):
         r.append(f"Bezoekers via Google: {seo['total_clicks']} | vertoond: {seo['total_impressions']}")
+    acc = report.get("accounts") or {}
+    if acc.get("available") and acc.get("totaal"):
+        v = acc["verdeling"]
+        r += ["", f"Accounts: {nl_getal(acc['totaal'])} totaal (eigen accounts niet meegeteld)"]
+        for label, sleutel in (("betalend", "betalend"),
+                               ("in proefperiode", "proef"),
+                               ("proef net voorbij, in bedenktijd", "bedenktijd"),
+                               ("proef voorbij en niet verlengd", "niet_verlengd"),
+                               ("opgezegd na betalen", "opgezegd"),
+                               ("betaling mislukt", "betaling_mislukt"),
+                               ("nog geen abonnementsrij", "geen_rij")):
+            if v[sleutel]:
+                r.append(f"  • {label}: {nl_getal(v[sleutel])}")
+        r.append(f"  Actief deze week: {nl_getal(acc['actief_week'])} | "
+                 f"actief in {acc['actief_dagen']} dagen: {nl_getal(acc['actief_maand'])} | "
+                 f"stil: {nl_getal(acc['stil'])}")
+        r.append("  (actief = klus, item of extensie-incheck; alleen inloggen telt niet)")
+
     alle = sc.get("per_platform") or []
     if alle:
         r += ["", f"Weergaven op je posts: {nl_getal(sum(p['views'] for p in alle))}"]

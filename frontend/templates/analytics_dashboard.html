@@ -90,6 +90,28 @@
     </div>
   </div>
 
+  {% if report.accounts.available and report.accounts.totaal %}
+  <section>
+    <h2 class="sec">👥 Accounts — wie er zijn en wie er werkt</h2>
+    <table>
+      <tr><th>Groep</th><th style="text-align:right">Aantal</th></tr>
+      <tr><td>Betalend</td><td style="text-align:right">{{ report.accounts.verdeling.betalend }}</td></tr>
+      <tr><td>In proefperiode</td><td style="text-align:right">{{ report.accounts.verdeling.proef }}</td></tr>
+      <tr><td>Proef net voorbij (bedenktijd)</td><td style="text-align:right">{{ report.accounts.verdeling.bedenktijd }}</td></tr>
+      <tr><td>Proef voorbij, niet verlengd</td><td style="text-align:right">{{ report.accounts.verdeling.niet_verlengd }}</td></tr>
+      <tr><td>Opgezegd na betalen</td><td style="text-align:right">{{ report.accounts.verdeling.opgezegd }}</td></tr>
+      <tr><td>Betaling mislukt</td><td style="text-align:right">{{ report.accounts.verdeling.betaling_mislukt }}</td></tr>
+      <tr><td>Nog geen abonnementsrij</td><td style="text-align:right">{{ report.accounts.verdeling.geen_rij }}</td></tr>
+      <tr><td><b>Totaal</b></td><td style="text-align:right"><b>{{ report.accounts.totaal }}</b></td></tr>
+    </table>
+    <p class="flat">Actief deze week: <b>{{ report.accounts.actief_week }}</b> ·
+      actief in {{ report.accounts.actief_dagen }} dagen: <b>{{ report.accounts.actief_maand }}</b> ·
+      stil: <b>{{ report.accounts.stil }}</b>.
+      Actief = een klus (publiceren/verwijderen/scannen), een item aangemaakt of gewijzigd, of de
+      extensie heeft ingecheckt — alleen inloggen telt niet mee. Eigen accounts zijn niet meegeteld.</p>
+  </section>
+  {% endif %}
+
   <section>
     <h2 class="sec">🔎 Kanalen — waar komen bezoekers vandaan (GA4)</h2>
     {% if report.channels.connected %}

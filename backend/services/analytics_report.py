@@ -234,26 +234,42 @@ def _blog_categories(seo: dict) -> list[dict]:
 # ---------------------------------------------------------------------------
 # Signups
 # ---------------------------------------------------------------------------
-def _signup_dates() -> list[str] | None:
-    """Aanmelddatums ('YYYY-MM-DD') van alle accounts, of None als het niet lukte.
+def _auth_users() -> list[dict] | None:
+    """Alle accounts als [{id, email, created}], of None als het niet lukte.
 
     None en [] zijn met opzet verschillend: geen toegang tot de gebruikerslijst
     mag nooit als 'nul aanmeldingen' in het rapport belanden.
+
+    Eén ophaalronde voor twee vragen (hoeveel meldden zich aan, en wie zijn het),
+    zodat de trage beheerdersaanroep niet twee keer hoeft.
     """
     from backend.database import get_admin_db
+
+    def veld(u, naam):
+        return getattr(u, naam, None) or (u.get(naam) if isinstance(u, dict) else None)
 
     try:
         users = get_admin_db().auth.admin.list_users()
         rows = users if isinstance(users, list) else getattr(users, "users", []) or []
         out = []
         for u in rows:
-            created = getattr(u, "created_at", None) or (u.get("created_at") if isinstance(u, dict) else None)
-            if created:
-                out.append(str(created)[:10])
+            created = veld(u, "created_at")
+            out.append({
+                "id": str(veld(u, "id") or ""),
+                "email": veld(u, "email") or "",
+                "created": str(created)[:10] if created else None,
+            })
         return out
     except Exception as e:
-        logger.info(f"Signup-telling niet beschikbaar (best effort): {e}")
+        logger.info(f"Gebruikerslijst niet beschikbaar (best effort): {e}")
         return None
+
+
+def _signup_dates(users: list[dict] | None) -> list[str] | None:
+    """Aanmelddatums ('YYYY-MM-DD') uit de gebruikerslijst."""
+    if users is None:
+        return None
+    return [u["created"] for u in users if u.get("created")]
 
 
 def _signups_section(win: dict, dates: list[str] | None = None) -> dict:
@@ -265,6 +281,120 @@ def _signups_section(win: dict, dates: list[str] | None = None) -> dict:
     prev_n = sum(1 for d in dates if prev_s <= d < this_s)
     return {"available": True, "this_week": this_n, "prev_week": prev_n,
             "delta": _pct_delta(this_n, prev_n)}
+
+
+# ---------------------------------------------------------------------------
+# Accounts: waar staat iedereen in de trechter, en wie werkt er echt
+# ---------------------------------------------------------------------------
+# "5 aanmeldingen deze week" zegt niets over of het bedrijf groeit. Wat telt is
+# hoeveel mensen er in totaal zijn, hoeveel er nog in hun proef zitten, hoeveel
+# er na die proef zijn afgehaakt, en — het enige cijfer dat echt iets voorspelt —
+# hoeveel van hen de app daadwerkelijk gebruiken.
+#
+# De abonnementsstatus komt uit billing.evaluate_access, niet uit een eigen
+# lezing van de kolommen. Twee plekken die zelf bedenken wat "verlopen" betekent
+# lopen gegarandeerd uit elkaar, en dan klopt het rapport niet meer met wat de
+# klant in de app ziet.
+ACTIEF_DAGEN = 30
+
+
+def _actieve_user_ids(sinds: str) -> set[str]:
+    """Iedereen die sinds die datum íets gedaan heeft.
+
+    Drie sporen, want één spoor mist telkens iemand: een klus in de wachtrij
+    (publiceren, verwijderen, scannen), een item dat is aangemaakt of gewijzigd,
+    en de extensie die heeft ingecheckt. Alle drie zijn op datum begrensd, dus
+    dit blijft klein — ook bij een verkoper met duizenden advertenties.
+    """
+    from backend.database import get_db, fetch_all
+
+    db = get_db()
+    uit: set[str] = set()
+    bronnen = (
+        ("jobs", "created_at", "id"),
+        ("items", "updated_at", "id"),
+        ("extension_heartbeat", "last_seen", "user_id"),
+    )
+    for tabel, kolom, sleutel in bronnen:
+        try:
+            rijen = fetch_all(
+                lambda t=tabel, k=kolom: db.table(t).select("user_id").gte(k, sinds),
+                order_by=sleutel,
+            )
+            uit.update(r["user_id"] for r in rijen if r.get("user_id"))
+        except Exception as e:
+            logger.info(f"Activiteit uit {tabel} niet gelezen (best effort): {e}")
+    return uit
+
+
+def _accounts_section(win: dict, users: list[dict] | None) -> dict:
+    """Totaal, verdeling over de trechter, en actief vs stil."""
+    if users is None:
+        return {"available": False}
+
+    from backend.database import get_db, fetch_all
+    from backend.services.billing import evaluate_access, is_owner_email
+
+    this_s, this_e = win["this"]
+    # Eigen accounts tellen niet mee: die zitten er altijd in, gebruiken de app
+    # dagelijks en zouden elk percentage kleuren.
+    echte = [u for u in users if not is_owner_email(u.get("email"))]
+    ids = {u["id"] for u in echte if u.get("id")}
+
+    try:
+        subs = fetch_all(lambda: get_db().table("subscriptions").select(
+            "user_id,status,stripe_subscription_id,trial_ends_at,current_period_end,updated_at"))
+    except Exception as e:
+        logger.info(f"Abonnementen niet gelezen (best effort): {e}")
+        subs = []
+    per_user = {s["user_id"]: s for s in subs if s.get("user_id") in ids}
+
+    telling = {"betalend": 0, "proef": 0, "bedenktijd": 0, "niet_verlengd": 0,
+               "opgezegd": 0, "betaling_mislukt": 0, "geen_rij": 0}
+    proef_ids: set[str] = set()
+    for uid in ids:
+        sub = per_user.get(uid)
+        if sub is None:
+            telling["geen_rij"] += 1
+            continue
+        verdict = evaluate_access(sub)
+        reden = verdict["reason"]
+        betaald_ooit = bool(sub.get("stripe_subscription_id"))
+        if reden == "active":
+            telling["betalend"] += 1
+        elif reden == "trialing":
+            telling["proef"] += 1
+            proef_ids.add(uid)
+        elif reden == "trial_expired":
+            # Binnen de bedenktijd mag hij nog werken; daarna is het echt voorbij.
+            telling["bedenktijd" if verdict["allowed"] else "niet_verlengd"] += 1
+        elif reden in ("past_due", "period_ended", "active_zonder_betaling"):
+            telling["betaling_mislukt"] += 1
+        elif betaald_ooit:
+            # canceled na een echte betaling is een vertrokken klant, geen proef
+            # die niet verlengd is — dat verschil bepaalt wat je eraan doet.
+            telling["opgezegd"] += 1
+        else:
+            telling["niet_verlengd"] += 1
+
+    week_start = this_s
+    maand_start = (date.fromisoformat(this_e) - timedelta(days=ACTIEF_DAGEN - 1)).isoformat()
+    actief_maand = _actieve_user_ids(maand_start) & ids
+    actief_week = _actieve_user_ids(week_start) & ids
+
+    totaal = len(ids)
+    return {
+        "available": True,
+        "totaal": totaal,
+        "verdeling": telling,
+        "actief_week": len(actief_week),
+        "actief_maand": len(actief_maand),
+        "stil": totaal - len(actief_maand),
+        "actief_dagen": ACTIEF_DAGEN,
+        # Wie in zijn proefperiode niets doet, verlengt niet. Dit is het enige
+        # getal in dit blok waar je diezelfde week nog iets aan kunt doen.
+        "proef_stil": len(proef_ids - actief_maand),
+    }
 
 
 # ---------------------------------------------------------------------------
@@ -410,8 +540,10 @@ def build_report(today: date | None = None, include_social: bool = False) -> dic
     channels = _channels_section(win)
     social = _social_section(win)
     categories = _blog_categories(seo)
-    signup_dates = _signup_dates()
+    users = _auth_users()
+    signup_dates = _signup_dates(users)
     signups = _signups_section(win, signup_dates)
+    accounts = _accounts_section(win, users)
     trend = _trend(win, signup_dates)
     patterns = _patterns(seo, channels, signups, social, categories)
 
@@ -433,6 +565,7 @@ def build_report(today: date | None = None, include_social: bool = False) -> dic
         "social_content": social_content,
         "categories": categories,
         "signups": signups,
+        "accounts": accounts,
         "trend": trend,
         "patterns": patterns,
     }
@@ -495,6 +628,16 @@ def _actions(report: dict) -> list[str]:
             f"“{_paginanaam(p['url'])}” staat op plek {round(p['position'])} — net buiten beeld. "
             f"Dit artikel bijwerken tilt hem waarschijnlijk de eerste pagina op."
         )
+
+    acc = report.get("accounts") or {}
+    if acc.get("available") and acc.get("proef_stil"):
+        n = acc["proef_stil"]
+        out.insert(0, (
+            f"{nl_getal(n)} account{'s' if n != 1 else ''} in de proefperiode "
+            f"{'hebben' if n != 1 else 'heeft'} de afgelopen {acc['actief_dagen']} dagen niets "
+            f"gedaan. Wie in zijn proef niets doet, verlengt niet — één persoonlijke mail is "
+            f"hier de goedkoopste omzet die er te halen valt."
+        ))
 
     return out[:3]
 
