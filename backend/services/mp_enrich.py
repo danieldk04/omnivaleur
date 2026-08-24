@@ -107,7 +107,8 @@ async def zoek_verkoper_id(client: httpx.AsyncClient, titels: list[str]) -> int 
     return beste if aantal >= 2 else None
 
 
-async def haal_advertenties(client: httpx.AsyncClient, verkoper_id: int) -> dict[str, dict]:
+async def haal_advertenties(client: httpx.AsyncClient, verkoper_id: int,
+                            deadline: float | None = None) -> dict[str, dict]:
     """Alle advertenties van deze verkoper, op genormaliseerde titel.
 
     Komt een titel twee keer voor, dan houden we de eerste aan. Dat is bij één
@@ -118,6 +119,8 @@ async def haal_advertenties(client: httpx.AsyncClient, verkoper_id: int) -> dict
     per_titel: dict[str, dict] = {}
     botsing: set[str] = set()
     for pagina in range(MAX_PAGINAS):
+        if deadline is not None and time.monotonic() > deadline:
+            break
         try:
             data = await _json(client, ZOEK, {
                 "sellerIds[]": verkoper_id, "limit": PAGINA, "offset": pagina * PAGINA})
