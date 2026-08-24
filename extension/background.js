@@ -1063,7 +1063,10 @@ async function pollJobsEenRonde() {
         verzet = true;
         try {
           await processJob(job, serverUrl);
-          if (SCHRIJVENDE_ACTIES.has(job.action)) await calmVolgendeInplannen();
+          if (SCHRIJVENDE_ACTIES.has(job.action)) {
+            await calmVolgendeInplannen();
+            await new Promise(r => setTimeout(r, MIN_GAP_MS));
+          }
         } catch (e) {
           // Last line of defence. processJob claims the job BEFORE doing any
           // work, and the backend refuses to dispatch anything at all while a
