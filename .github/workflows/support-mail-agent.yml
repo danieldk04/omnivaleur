@@ -1,0 +1,55 @@
+# De support-mailagent, draaiend bij GitHub in plaats van op Daniels Mac.
+#
+# Waarom hier en niet als LaunchAgent: een LaunchAgent tegen iets onder
+# ~/Documents op deze Mac faalt stil (TCC + iCloud-eviction, zie de leadmachine-
+# geschiedenis) — geen foutmelding, het proces stopt gewoon urenlang zonder
+# signaal. GitHub Actions draait altijd door en kost bij een publieke repo niets.
+#
+# Klantdata (e-mailadressen, berichttekst, trends) staat NIET in deze repo —
+# die is publiek. Alles gaat naar Supabase, tabel support_mail_log (zie
+# scripts/support_mail_agent_schema.sql voor de handmatige CREATE TABLE-stap).
+# Wachtwoorden/keys staan in de Secrets van de repo.
+#
+# Elke beurt zet hoogstens concepten klaar in Zoho — er wordt nooit verstuurd.
+
+name: Support-mailagent
+
+on:
+  schedule:
+    # Elke 10 minuten, alleen tijdens ruime kantoortijd — vaker heeft geen zin
+    # en de leadmachine bewijst dat GitHub's cron toch al niet stipt is.
+    - cron: "*/10 6-20 * * *"
+  workflow_dispatch:       # met de hand starten vanaf github.com voor de eerste live test
+
+concurrency:
+  # Nooit twee beurten tegelijk: dan kan hetzelfde bericht twee keer een concept krijgen.
+  group: support-mailagent
+  cancel-in-progress: false
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      TZ: Europe/Amsterdam        # zonder dit rekent de server in UTC en loopt het venster 2 uur voor
+      IMAP_HOST: imap.zoho.eu
+      MAIL_USER: daniel@omnivaleur.nl
+      # Zelfde Zoho-app-wachtwoord als de leadmachine (zelfde postbus). In de
+      # macOS-sleutelhanger staat dit onder de entry omnivaleur-leadgen-mail —
+      # kopieer die waarde naar het Secret hieronder, GitHub kan niet bij de
+      # sleutelhanger.
+      MAIL_PASS: ${{ secrets.MAIL_PASS }}
+      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+      SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
+      # Nieuw secret, alleen nodig voor deze agent: een Anthropic API key zodat
+      # het script Claude kan vragen om te classificeren en te concepteren.
+      # Zonder deze secret draait het script nog wel (zie _draft_met_llm) maar
+      # zet dan alleen een neutrale plaatshoudertekst klaar, zonder inhoud.
+      ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install --quiet httpx anthropic
+      - run: python scripts/support_mail_agent.py run
