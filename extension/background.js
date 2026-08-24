@@ -652,6 +652,13 @@ const CALM_MIN_MS = 3 * 60 * 1000;
 const CALM_MAX_MS = 8 * 60 * 1000;
 const CALM_SLEUTEL = "calmVolgendeNa";
 const SCHRIJVENDE_ACTIES = new Set(["create", "delete", "content_refresh"]);
+// Zonder Calm mode stond hier helemaal geen rem: een grote stapel te herplaatsen
+// advertenties liep in één ronde achter elkaar door, en dan wisselt het werkvenster
+// tientallen keren per minuut van tabblad. Dat venster is wel unfocused, maar niet
+// elk Windows/Chrome-versie respecteert dat bij elke update — de gebruiker zag zijn
+// scherm dan continu wegflitsen. Deze korte pauze geldt ALTIJD, Calm mode of niet,
+// en kost bij een normale klus niets: een herplaatsing duurt zelf al seconden.
+const MIN_GAP_MS = 4000;
 
 async function calmAan() {
   try {
