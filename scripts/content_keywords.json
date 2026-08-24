@@ -385,6 +385,22 @@
       "slug": "thrift-store-reselling-automation",
       "status": "published",
       "priority": 47
+    },
+    {
+      "keyword": "clothing reselling automation tools",
+      "region": "nl",
+      "pillar": "B",
+      "slug": "clothing-reselling-automation-tools",
+      "status": "published",
+      "priority": 48
+    },
+    {
+      "keyword": "footwear and shoe reselling automation",
+      "region": "nl",
+      "pillar": "B",
+      "slug": "footwear-and-shoe-reselling-automation",
+      "status": "pending",
+      "priority": 49
     }
   ],
   "published": [
@@ -810,6 +826,15 @@
       "action": "created",
       "url_path": "/reseller-tools/thrift-store-reselling-automation",
       "published_at": "2026-08-23T08:22:17.898527+00:00"
+    },
+    {
+      "keyword": "clothing reselling automation tools",
+      "slug": "clothing-reselling-automation-tools",
+      "region": "nl",
+      "pillar": "B",
+      "action": "created",
+      "url_path": "/reseller-tools/clothing-reselling-automation-tools",
+      "published_at": "2026-08-24T08:40:37.700894+00:00"
     }
   ]
 }
