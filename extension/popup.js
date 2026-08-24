@@ -41,8 +41,16 @@ document.getElementById("loginBtn").addEventListener("click", async () => {
       btn.disabled = false;
       return;
     }
-    await chrome.storage.sync.set({ authToken: data.access_token, userEmail: data.user.email });
+    // refreshToken ontbrak hier: checkLoginState() (zie boven) telt pas als
+    // "ingelogd" wanneer ZOWEL authToken als refreshToken in de opslag staan,
+    // dus zonder deze regel bleef het scherm na een geslaagde login gewoon op
+    // "niet ingelogd" staan — precies zo gemeld door meerdere verkopers.
+    await chrome.storage.sync.set({
+      authToken: data.access_token, refreshToken: data.refresh_token, userEmail: data.user.email,
+    });
     statusEl.textContent = "";
+    btn.textContent = "Log in";
+    btn.disabled = false;
     checkLoginState();
   } catch (e) {
     statusEl.textContent = "Could not reach server. Check your internet connection.";
