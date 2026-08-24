@@ -27,12 +27,20 @@ import asyncio
 import html
 import logging
 import re
+import time
 import unicodedata
 
 import httpx
 from backend.database import naast_de_lus
 
 logger = logging.getLogger(__name__)
+
+# Cloudflare geeft een 524 als één verzoek langer dan 100 seconden duurt — dat
+# was precies wat hier gebeurde bij verkopers met honderden open items en veel
+# 403's van Marktplaats (elke herkansing daarop kost tot 12 seconden). Deze
+# functie stopt daarom ruim op tijd met nieuwe items beginnen en levert terug
+# wat al klaar is; het scherm roept haar gewoon nog een keer aan voor de rest.
+BUDGET_SECONDEN = 60
 
 ZOEK = "https://www.marktplaats.nl/lrp/api/search"
 BASIS = "https://www.marktplaats.nl"
