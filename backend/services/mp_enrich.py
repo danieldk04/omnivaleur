@@ -231,13 +231,38 @@ async def volledige_omschrijving(client: httpx.AsyncClient, url: str) -> str:
     return ""
 
 
+async def _in_batches(taken: list, worker, deadline: float):
+    """`worker` op elk item toepassen, in hapjes van TEGELIJK tegelijk, en
+    stoppen zodra de deadline verstreken is — met wat nog niet is gedaan als
+    tweede resultaat, zodat de aanroeper dat gewoon laat liggen voor de
+    volgende keer in plaats van de verbinding te laten timen."""
+    resultaten = []
+    i = 0
+    while i < len(taken):
+        if time.monotonic() > deadline:
+            break
+        stuk = taken[i:i + TEGELIJK]
+        resultaten.extend(await asyncio.gather(*(worker(x) for x in stuk)))
+        i += TEGELIJK
+    return resultaten, taken[i:]
+
+
 async def verrijk(db, user_id: str, schrijf: bool = True,
                  maximaal: int = 0, melden=None) -> dict:
     """Vul prijs en omschrijving aan voor items die ze missen.
 
     Overschrijft nooit: een prijs of tekst die de verkoper zelf heeft ingevuld
     blijft staan. Alleen lege velden worden gevuld.
+
+    Werkt binnen een tijdsbudget (BUDGET_SECONDEN): Cloudflare knipt een
+    verzoek van meer dan ~100 seconden zelf af met een 524, en dat gaf de
+    verkoper een kale foutpagina terwijl er niets mis was. Wat binnen het
+    budget niet af komt, blijft gewoon openstaan — de knop op het scherm roept
+    deze functie net zo vaak aan tot alles gedaan is.
     """
+    start = time.monotonic()
+    deadline = start + BUDGET_SECONDEN
+
     def zeg(tekst):
         logger.info("mp_enrich: %s", tekst)
         if melden:
@@ -256,7 +281,7 @@ async def verrijk(db, user_id: str, schrijf: bool = True,
            "prijs": 0, "omschrijving": 0, "geen_tekst": 0,
            "verkoper_id": None, "reden": ""}
     if not open_:
-        uit["reden"] = "niets te doen"
+        uit["reden"] = "nothing to do"
         return uit
 
     limiet = httpx.Limits(max_connections=TEGELIJK, max_keepalive_connections=TEGELIJK)
@@ -265,12 +290,12 @@ async def verrijk(db, user_id: str, schrijf: bool = True,
         vid = await zoek_verkoper_id(client, [r["title"] for r in open_])
         uit["verkoper_id"] = vid
         if not vid:
-            uit["reden"] = ("advertenties niet teruggevonden op Marktplaats — "
-                            "staan ze nog online onder dezelfde titels?")
+            uit["reden"] = ("could not find your adverts on Marktplaats — "
+                            "are they still online under the same titles?")
             return uit
         zeg(f"verkoper {vid} gevonden, advertenties ophalen")
 
-        adv = await haal_advertenties(client, vid)
+        adv = await haal_advertenties(client, vid, deadline=deadline)
         zeg(f"{len(adv)} advertenties met een unieke titel")
 
         koppels = [(r, adv[_sleutel(r["title"])]) for r in open_
@@ -281,47 +306,47 @@ async def verrijk(db, user_id: str, schrijf: bool = True,
 
         # De verkoperslijst houdt op bij 5.000. Alles wat daar niet in zat zoeken
         # we alsnog per titel op; dat is trager maar het scheelt de verkoper het
-        # met de hand overtikken van honderden advertenties.
+        # met de hand overtikken van honderden advertenties. Wat niet binnen het
+        # tijdsbudget past, blijft gewoon "te_doen" en komt de volgende ronde aan
+        # de beurt — beter dan de hele aanvraag laten timen.
         if rest:
-            hek_zoek = asyncio.Semaphore(TEGELIJK)
-
             async def zoek(item):
-                async with hek_zoek:
-                    a = await zoek_een_titel(client, vid, item["title"])
-                    await asyncio.sleep(0.25)
-                    return item, a
+                a = await zoek_een_titel(client, vid, item["title"])
+                await asyncio.sleep(0.25)
+                return item, a
 
-            for item, a in await asyncio.gather(*(zoek(r) for r in rest)):
+            gevonden_rest, _ = await _in_batches(rest, zoek, deadline)
+            for item, a in gevonden_rest:
                 if a:
                     koppels.append((item, a))
 
         uit["gevonden"] = len(koppels)
         zeg(f"{len(koppels)} van {len(open_)} items teruggevonden")
 
-        hek = asyncio.Semaphore(TEGELIJK)
         gedaan = [0]
 
-        async def een(item, a):
-            async with hek:
-                patch = {}
-                if not item.get("price") and a["price"]:
-                    patch["price"] = a["price"]
-                if not str(item.get("description") or "").strip():
-                    tekst = await volledige_omschrijving(client, a["url"]) if a["url"] else ""
-                    # BEWUST geen terugval op de korte tekst uit de zoekresultaten:
-                    # die is door Marktplaats afgekapt en stopt middenin een zin.
-                    # Zo'n halve tekst zou daarna gewoon op Vinted of eBay
-                    # verschijnen. Liever leeg laten en het melden — leeg blokkeert
-                    # publiceren, een halve zin niet.
-                    if tekst:
-                        patch["description"] = tekst
-                    await asyncio.sleep(0.25)
-                gedaan[0] += 1
-                if gedaan[0] % 25 == 0:
-                    zeg(f"{gedaan[0]}/{len(koppels)} verwerkt")
-                return item, patch
+        async def een(paar):
+            item, a = paar
+            patch = {}
+            if not item.get("price") and a["price"]:
+                patch["price"] = a["price"]
+            if not str(item.get("description") or "").strip():
+                tekst = await volledige_omschrijving(client, a["url"]) if a["url"] else ""
+                # BEWUST geen terugval op de korte tekst uit de zoekresultaten:
+                # die is door Marktplaats afgekapt en stopt middenin een zin.
+                # Zo'n halve tekst zou daarna gewoon op Vinted of eBay
+                # verschijnen. Liever leeg laten en het melden — leeg blokkeert
+                # publiceren, een halve zin niet.
+                if tekst:
+                    patch["description"] = tekst
+                await asyncio.sleep(0.25)
+            gedaan[0] += 1
+            if gedaan[0] % 25 == 0:
+                zeg(f"{gedaan[0]}/{len(koppels)} verwerkt")
+            return item, patch
 
-        for item, patch in await asyncio.gather(*(een(i, a) for i, a in koppels)):
+        verwerkt, _ = await _in_batches(koppels, een, deadline)
+        for item, patch in verwerkt:
             if not str(item.get("description") or "").strip() and "description" not in patch:
                 uit["geen_tekst"] += 1
             if not patch:
