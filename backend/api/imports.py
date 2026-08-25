@@ -1440,6 +1440,7 @@ async def bulk_import_candidates(body: dict = None, user_id: str = Depends(requi
         # reuse them across calls in this import session instead of re-reading a
         # seller's entire inventory on every single request.
         if cache_vers:
+            entry["ts"] = _time_mod.monotonic()  # sessie loopt door, klok niet laten aflopen
             return cands, entry["items"], entry["by_id"], entry["by_platform"]
         its = fetch_all(lambda: db.table("items").select("id,title,price,brand").eq("user_id", user_id))
         by_id, by_platform = _listing_index(db, its)
