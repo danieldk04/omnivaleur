@@ -1554,6 +1554,10 @@ async def bulk_import_candidates(body: dict = None, user_id: str = Depends(requi
 
                     db.table("import_candidates").update({"status": "imported"}).eq("id", cand["id"]).execute()
                     items.append({"id": created_item["id"], "title": created_item["title"]})
+                    pid = cand.get("platform_listing_id")
+                    if pid is not None:
+                        listings_by_id[(cand["platform"], str(pid))] = created_item["id"]
+                    platforms_by_item.setdefault(created_item["id"], set()).add(cand["platform"])
                     created += 1
             except Exception:
                 # Mark it failed so it drops out of the pending set — otherwise the batched
