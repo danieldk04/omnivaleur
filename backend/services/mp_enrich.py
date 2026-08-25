@@ -115,34 +115,53 @@ async def haal_advertenties(client: httpx.AsyncClient, verkoper_id: int,
     verkoper geen gok: dezelfde titel is bij hem hetzelfde artikel, vaak gewoon
     twee keer geplaatst. Alleen als de vraagprijzen verschillen laten we hem
     staan, want dan is niet te zeggen welke bij het item hoort.
+
+    Egbert Brouwer (25-08-2026): met 5.534 advertenties duurde alleen al het
+    NA ELKAAR ophalen van deze lijst gemeten 52,6 seconden — bijna het volledige
+    tijdsbudget van deze functie (zie BUDGET_SECONDEN), voordat er ook maar één
+    prijs was opgezocht. "Fill from Marktplaats" meldde daardoor "0 prijzen,
+    0 omschrijvingen": de matches (`koppels`) werden wel gevonden, maar de tijd
+    om ze daadwerkelijk op te zoeken was al op. Pagina's worden nu in kleine
+    beleefde groepjes van TEGELIJK gelijktijdig opgehaald in plaats van één
+    voor één met een pauze ertussen, zodat er tijd overblijft voor het echte werk.
     """
     per_titel: dict[str, dict] = {}
     botsing: set[str] = set()
-    for pagina in range(MAX_PAGINAS):
-        if deadline is not None and time.monotonic() > deadline:
-            break
+
+    async def _pagina(pagina: int) -> list[dict]:
         try:
             data = await _json(client, ZOEK, {
                 "sellerIds[]": verkoper_id, "limit": PAGINA, "offset": pagina * PAGINA})
         except Exception as e:  # noqa: BLE001
             logger.warning("mp_enrich: advertentielijst pagina %s mislukt: %s", pagina, e)
+            return []
+        return data.get("listings") or []
+
+    pagina = 0
+    door = True
+    while door and pagina < MAX_PAGINAS:
+        if deadline is not None and time.monotonic() > deadline:
             break
-        rijen = data.get("listings") or []
-        if not rijen:
-            break
-        for l in rijen:
-            s = _sleutel(l.get("title"))
-            if not s:
-                continue
-            nieuw = _naar_advertentie(l)
-            if s in per_titel:
-                if per_titel[s]["price"] != nieuw["price"]:
-                    botsing.add(s)
-                continue
-            per_titel[s] = nieuw
-        if len(rijen) < PAGINA:
-            break
-        await asyncio.sleep(0.2)
+        groep = list(range(pagina, min(pagina + TEGELIJK, MAX_PAGINAS)))
+        resultaten = await asyncio.gather(*(_pagina(p) for p in groep))
+        for rijen in resultaten:
+            if not rijen:
+                door = False
+            for l in rijen:
+                s = _sleutel(l.get("title"))
+                if not s:
+                    continue
+                nieuw = _naar_advertentie(l)
+                if s in per_titel:
+                    if per_titel[s]["price"] != nieuw["price"]:
+                        botsing.add(s)
+                    continue
+                per_titel[s] = nieuw
+            if len(rijen) < PAGINA:
+                door = False
+        pagina += len(groep)
+        if door:
+            await asyncio.sleep(0.2)
     return {k: v for k, v in per_titel.items() if k not in botsing}
 
 
