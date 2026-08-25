@@ -1478,7 +1478,9 @@ async def bulk_import_candidates(body: dict = None, user_id: str = Depends(requi
         if cache_vers:
             entry["ts"] = _time_mod.monotonic()  # sessie loopt door, klok niet laten aflopen
             return cands, entry["items"], entry["by_id"], entry["by_platform"]
-        its = fetch_all(lambda: db.table("items").select("id,title,price,brand").eq("user_id", user_id))
+        its = _parallel_fetch_all(
+            lambda: db.table("items").eq("user_id", user_id), "id,title,price,brand"
+        )
         by_id, by_platform = _listing_index(db, its)
         _BULK_IMPORT_CACHE[user_id] = {
             "items": its, "by_id": by_id, "by_platform": by_platform, "ts": _time_mod.monotonic(),
