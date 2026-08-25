@@ -1405,7 +1405,7 @@ async def bulk_import_candidates(body: dict = None, user_id: str = Depends(requi
     # turns that into a one-time cost instead of a per-request one.
     _CACHE_TTL_S = 1800
     entry = _BULK_IMPORT_CACHE.get(user_id)
-    cache_vers = entry and (_time_mod.monotonic() - entry["ts"]) < _CACHE_TTL_S
+    cache_vers = entry is not None and (_time_mod.monotonic() - entry["ts"]) < _CACHE_TTL_S
 
     # The Supabase client is SYNCHRONOUS, and this endpoint is async — so every
     # .execute() below ran directly on the event loop and froze the whole server
@@ -1414,8 +1414,6 @@ async def bulk_import_candidates(body: dict = None, user_id: str = Depends(requi
     # to everyone (including this very import) while a bulk run was going.
     # Everything that touches the database therefore runs in a worker thread.
     def _read():
-        if cache_vers:
-            return entry["cands"](), entry["items"], entry["by_id"], entry["by_platform"]
         # One channel per pass. A seller who scanned Vinted AND Marktplaats before
         # importing has both sets pending, and neither exists as an item yet — so a
         # mixed batch could create the same object twice before duplicate detection
@@ -1432,8 +1430,16 @@ async def bulk_import_candidates(body: dict = None, user_id: str = Depends(requi
         if cands:
             head = cands[0].get("platform")
             cands = [c for c in cands if c.get("platform") == head]
+        # `its`/`by_id`/`by_platform` are the expensive part (see comment above) —
+        # reuse them across calls in this import session instead of re-reading a
+        # seller's entire inventory on every single request.
+        if cache_vers:
+            return cands, entry["items"], entry["by_id"], entry["by_platform"]
         its = fetch_all(lambda: db.table("items").select("id,title,price,brand").eq("user_id", user_id))
         by_id, by_platform = _listing_index(db, its)
+        _BULK_IMPORT_CACHE[user_id] = {
+            "items": its, "by_id": by_id, "by_platform": by_platform, "ts": _time_mod.monotonic(),
+        }
         return cands, its, by_id, by_platform
 
     candidates, items, listings_by_id, platforms_by_item = await asyncio.to_thread(_read)
