@@ -215,6 +215,18 @@ def _bestaande_conceptdoelen(imap: imaplib.IMAP4_SSL) -> set[str]:
     return doelen
 
 
+# De koude-leadgenmachine (scripts/leadgen_mail.py) stuurt onder dit exacte
+# onderwerp uit en heeft haar EIGEN, veel specifiekere logica voor antwoorden
+# daarop (CONCURRENT/AFWIJZING-classificatie, Notion-fases, opvolgritme). Dit
+# script mag daar niet overheen draaien: gevonden 25-08-2026 toen dit hier per
+# ongeluk óók een koude lead beantwoordde die zei "onze webshop zet het al met
+# een paar klikken door" met een generiek productpraatje — precies het bezwaar
+# dat leadgen_mail.py als "Gebruikt concurrent" hoort te herkennen en anders
+# moet afhandelen. Onderwerpen die hiermee beginnen zijn dus NIET van dit
+# script.
+_LEADGEN_ONDERWERP = re.compile(r"^vraagje over (je|jullie) marktplaats-aanbod", re.I)
+
+
 def _inbox_wachtend(imap: imaplib.IMAP4_SSL, eigen_adres: str) -> list[Thread]:
     """Threads waarvan het LAATSTE bericht van de klant is (niet van Daniel) en
     die niet al een vers concept hebben. Alleen INBOX — Concepten/Verzonden tellen
