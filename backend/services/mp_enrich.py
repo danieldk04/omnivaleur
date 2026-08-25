@@ -147,7 +147,7 @@ async def haal_advertenties(client: httpx.AsyncClient, verkoper_id: int,
     while door and pagina < MAX_PAGINAS:
         if deadline is not None and time.monotonic() > deadline:
             break
-        groep = list(range(pagina, min(pagina + TEGELIJK, MAX_PAGINAS)))
+        groep = list(range(pagina, min(pagina + PAGINA_TEGELIJK, MAX_PAGINAS)))
         resultaten = await asyncio.gather(*(_pagina(p) for p in groep))
         for rijen in resultaten:
             if not rijen:
