@@ -21,6 +21,37 @@ SCANNABLE_PLATFORMS = {"vinted", "marktplaats", "2dehands"}
 _BULK_IMPORT_CACHE: dict[str, dict] = {}
 
 
+def _parallel_fetch_all(db_table_query_fn, page_size: int = 500, max_workers: int = 8) -> list[dict]:
+    """Zoals database.fetch_all, maar de pagina's worden GELIJKTIJDIG opgehaald
+    in plaats van na elkaar.
+
+    Egbert Brouwer (25-08-2026): zelfs met de sessie-cache (zie hierboven) bleef
+    de EERSTE aanroep van een importsessie vastlopen op "0 geïmporteerd, server
+    bleef timen out" — óók met de lading teruggeschroefd tot 1. Bij een account
+    van zijn omvang (duizenden bestaande items) is die allereerste, dure inlees
+    zelf al te traag voor één verzoek, ongeacht hoe klein de rest is. Achter
+    elkaar 10+ pagina's van 500 rijen ophalen duurt bij hem alleen al langer dan
+    de gateway toestaat. Gelijktijdig ophalen maakt daar een handvol seconden
+    van in plaats van tientallen.
+    """
+    eerste = db_table_query_fn().select("*", count="exact").range(0, 0).execute()
+    totaal = eerste.count or 0
+    if totaal == 0:
+        return []
+    import concurrent.futures as _cf
+
+    def _pagina(offset: int) -> list[dict]:
+        return (db_table_query_fn().range(offset, offset + page_size - 1)
+                .execute().data or [])
+
+    offsets = list(range(0, totaal, page_size))
+    rijen: list[dict] = []
+    with _cf.ThreadPoolExecutor(max_workers=min(max_workers, len(offsets) or 1)) as ex:
+        for pagina in ex.map(_pagina, offsets):
+            rijen.extend(pagina)
+    return rijen
+
+
 def _map_condition(raw: str | None) -> str:
     """Map a platform's free-text condition onto our new/good/fair/poor scale."""
     s = (raw or "").strip().lower()
