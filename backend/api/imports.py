@@ -21,7 +21,8 @@ SCANNABLE_PLATFORMS = {"vinted", "marktplaats", "2dehands"}
 _BULK_IMPORT_CACHE: dict[str, dict] = {}
 
 
-def _parallel_fetch_all(db_table_query_fn, page_size: int = 500, max_workers: int = 8) -> list[dict]:
+def _parallel_fetch_all(build_base_query, select_cols: str, page_size: int = 500,
+                         max_workers: int = 8) -> list[dict]:
     """Zoals database.fetch_all, maar de pagina's worden GELIJKTIJDIG opgehaald
     in plaats van na elkaar.
 
@@ -33,16 +34,20 @@ def _parallel_fetch_all(db_table_query_fn, page_size: int = 500, max_workers: in
     elkaar 10+ pagina's van 500 rijen ophalen duurt bij hem alleen al langer dan
     de gateway toestaat. Gelijktijdig ophalen maakt daar een handvol seconden
     van in plaats van tientallen.
+
+    `build_base_query` maakt telkens een VERSE, ONGESELECTEERDE query (bv.
+    `lambda: db.table("items").eq("user_id", user_id)`) — Supabase-builders zijn
+    niet herbruikbaar, en select() wordt hier zelf toegevoegd per aanroep.
     """
-    eerste = db_table_query_fn().select("*", count="exact").range(0, 0).execute()
+    eerste = build_base_query().select(select_cols, count="exact").range(0, 0).execute()
     totaal = eerste.count or 0
     if totaal == 0:
         return []
     import concurrent.futures as _cf
 
     def _pagina(offset: int) -> list[dict]:
-        return (db_table_query_fn().range(offset, offset + page_size - 1)
-                .execute().data or [])
+        return (build_base_query().select(select_cols)
+                .range(offset, offset + page_size - 1).execute().data or [])
 
     offsets = list(range(0, totaal, page_size))
     rijen: list[dict] = []
