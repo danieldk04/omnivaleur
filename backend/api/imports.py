@@ -822,11 +822,20 @@ def _listing_index(db, items: list[dict]) -> tuple[dict, dict]:
     item_ids = [it["id"] for it in items]
     if not item_ids:
         return {}, {}
+    # Zelfde reden als _parallel_fetch_all hierboven: bij duizenden items is dit
+    # tientallen brokken van 200, en na elkaar afgehandeld was dat zelf al
+    # genoeg om de gateway-tijdslimiet te raken bij een groot account.
+    brokken = [item_ids[i:i + 200] for i in range(0, len(item_ids), 200)]
+
+    def _brok_ophalen(brok: list[str]) -> list[dict]:
+        return fetch_all(lambda b=brok: db.table("listings")
+                          .select("item_id,platform,platform_listing_id").in_("item_id", b))
+
     rows = []
-    for i in range(0, len(item_ids), 200):
-        brok = item_ids[i:i + 200]
-        rows.extend(fetch_all(lambda b=brok: db.table("listings")
-                              .select("item_id,platform,platform_listing_id").in_("item_id", b)))
+    import concurrent.futures as _cf
+    with _cf.ThreadPoolExecutor(max_workers=min(8, len(brokken) or 1)) as ex:
+        for brok_rows in ex.map(_brok_ophalen, brokken):
+            rows.extend(brok_rows)
     by_listing_id, platforms = {}, {}
     for l in rows:
         item_id, plat = l.get("item_id"), l.get("platform")
