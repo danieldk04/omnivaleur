@@ -50,6 +50,11 @@ UA = ("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 "
 # Marktplaats is niet van ons. Vier tegelijk en een korte pauze houdt het beleefd
 # en blijft ver onder wat een gewone bezoeker met meerdere tabbladen doet.
 TEGELIJK = 3
+# De verkoperslijst zelf (haal_advertenties) is een generieke zoekvraag, geen
+# individuele advertentiepagina — dat is niet dezelfde kwetsbare aanvraag waar
+# de 403-bescherming in volledige_omschrijving op reageert. Iets ruimhartiger
+# hier is wat het tijdsbudget nog kan redden bij een grote winkel als Egberts.
+PAGINA_TEGELIJK = 6
 PAGINA = 100
 # Marktplaats geeft per verkoper hooguit 5.000 advertenties terug, ook als er
 # 5.534 staan. Gemeten: bij offset 5000 komt een lege lijst. Wie meer heeft, mist
