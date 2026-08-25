@@ -247,6 +247,8 @@ def _inbox_wachtend(imap: imaplib.IMAP4_SSL, eigen_adres: str) -> list[Thread]:
             continue
         onderwerp = _decode(msg.get("Subject", ""))
         kern_onderwerp = re.sub(r"^(re|fwd?):\s*", "", onderwerp, flags=re.I).strip().lower()
+        if _LEADGEN_ONDERWERP.match(kern_onderwerp):
+            continue
         sleutel = kern_onderwerp or afzender
         per_thread.setdefault(sleutel, []).append((afzender, msg))
 
