@@ -1522,6 +1522,12 @@ async def bulk_import_candidates(body: dict = None, user_id: str = Depends(requi
                         }).execute()
                     _backfill_item_from_candidate(db, match_id, cand, inferred=inferred_by_id.get(cand["id"]))
                     db.table("import_candidates").update({"status": "linked"}).eq("id", cand["id"]).execute()
+                    # Houd de (mogelijk gecachte) index bij, anders herkent de
+                    # volgende kandidaat in dit ronde deze koppeling niet.
+                    pid = cand.get("platform_listing_id")
+                    if pid is not None:
+                        listings_by_id[(cand["platform"], str(pid))] = match_id
+                    platforms_by_item.setdefault(match_id, set()).add(cand["platform"])
                     linked += 1
                 else:
                     item_data = _item_data_from_candidate(
