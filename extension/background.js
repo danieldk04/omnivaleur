@@ -1809,19 +1809,39 @@ async function verwijderViaAdvertentiepagina(tabId, adUrl, platform) {
       return false;
     }
 
-    // Bevestigen. Marktplaats vraagt het in een venstertje na; welke tekst er op
-    // de knop staat verschilt, dus alle gangbare vormen.
+    // Bevestigen. Twee verschillende vensters mogelijk: een simpel "weet je het
+    // zeker"-venstertje, ÓF (zoals ook bij de gewone lijst-verwijderroute
+    // ontdekt) "Heb je '<titel>' verkocht via Marktplaats?" met precies twee
+    // knoppen — "Niet verkocht via Marktplaats" en "Verkocht via Marktplaats".
+    // Die laatste tekst matcht geen van de oude JA-woorden (geen "verwijder",
+    // "ja", "bevestig", "delete", "confirm"), dus die knop werd nooit gevonden
+    // en het venster bleef gewoon openstaan — de advertentie werd nooit
+    // verwijderd. Zelfde oorzaak, zelfde oplossing als daar: eerst "niet
+    // verkocht" beantwoorden (verkeerd antwoord boekt een valse verkoop), dan
+    // een eventueel vervolgscherm afhandelen.
     await sleep(1200);
-    await execInTab(tabId, async () => {
-      const zichtbaar = el => el && el.offsetParent !== null && !el.disabled;
-      const tekst = el => (el.textContent || "").replace(/\s+/g, " ").trim();
-      const JA = /^(verwijder(en)?|ja,? verwijder(en)?|bevestig(en)?|yes,? delete|delete|confirm)$/i;
-      const knop = [...document.querySelectorAll('button, [role="button"]')]
-        .filter(zichtbaar).find(b => JA.test(tekst(b)));
-      if (knop) knop.click();
-      return true;
-    });
-    await sleep(2500);
+    const CONFIRM_STEPS = 3;
+    for (let stap = 0; stap < CONFIRM_STEPS; stap++) {
+      const res = await execInTab(tabId, async () => {
+        const zichtbaar = el => el && el.offsetParent !== null && !el.disabled;
+        const tekst = el => (el.textContent || "").replace(/\s+/g, " ").trim();
+        const modal = [...document.querySelectorAll('.ReactModalPortal, [role="dialog"], [aria-modal="true"]')]
+          .find(el => el.getClientRects().length > 0 && (el.innerText || "").trim());
+        const scope = modal || document;
+        const knoppen = [...scope.querySelectorAll('button, a[role="button"], [role="button"]')]
+          .filter(zichtbaar);
+        const knop =
+          knoppen.find(b => /niet\s+verkocht/i.test(tekst(b))) ||
+          knoppen.find(b => /^(verwijder(en)?|ja,? verwijder(en)?|bevestig(en)?|yes,? delete|delete|confirm|doorgaan|ok)\b/i.test(tekst(b)));
+        if (!knop) return { open: !!modal, clicked: false };
+        knop.click();
+        return { open: true, clicked: true };
+      });
+      if (!res || !res.open) break;
+      if (!res.clicked) break; // geen herkenbare knop meer — niets forceren
+      await sleep(1500);
+    }
+    await sleep(1500);
 
     // Nakijken, niet aannemen. Pas als de advertentie aantoonbaar weg is melden
     // we succes.
