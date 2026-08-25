@@ -6,6 +6,7 @@ from datetime import datetime, timezone
 import json
 import logging
 import re
+import time as _time_mod
 import uuid
 
 logger = logging.getLogger(__name__)
@@ -13,6 +14,11 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/imports", tags=["imports"])
 
 SCANNABLE_PLATFORMS = {"vinted", "marktplaats", "2dehands"}
+
+# user_id -> {"items", "by_id", "by_platform", "ts"} — zie de uitleg bij
+# bulk_import_candidates(). Eén proces, geen cross-worker gedeeld geheugen nodig
+# (de server draait met één worker, zie backend/database.py).
+_BULK_IMPORT_CACHE: dict[str, dict] = {}
 
 
 def _map_condition(raw: str | None) -> str:
