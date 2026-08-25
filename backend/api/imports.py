@@ -1392,6 +1392,21 @@ async def bulk_import_candidates(body: dict = None, user_id: str = Depends(requi
 
     import asyncio
 
+    # The frontend calls this endpoint in a tight retry loop — for a seller with
+    # thousands of items (like Egbert, 25-08-2026: "0 listing(s) were imported,
+    # server kept timing out" even with the batch shrunk to 1) that loop can hit
+    # this endpoint dozens of times in one import session. Every one of those
+    # calls used to re-fetch ALL of the user's items + ALL their listings from
+    # scratch below — tens of sequential Supabase round-trips PER CALL, entirely
+    # independent of how small `batch` is. That's why shrinking the batch to 1
+    # didn't help him at all: the slow part wasn't the candidates being
+    # processed, it was this re-read happening before a single candidate was
+    # even looked at. Caching it per user for the length of one import session
+    # turns that into a one-time cost instead of a per-request one.
+    _CACHE_TTL_S = 1800
+    entry = _BULK_IMPORT_CACHE.get(user_id)
+    cache_vers = entry and (_time_mod.monotonic() - entry["ts"]) < _CACHE_TTL_S
+
     # The Supabase client is SYNCHRONOUS, and this endpoint is async — so every
     # .execute() below ran directly on the event loop and froze the whole server
     # for the duration. Importing a few hundred listings means hundreds of
@@ -1399,6 +1414,8 @@ async def bulk_import_candidates(body: dict = None, user_id: str = Depends(requi
     # to everyone (including this very import) while a bulk run was going.
     # Everything that touches the database therefore runs in a worker thread.
     def _read():
+        if cache_vers:
+            return entry["cands"](), entry["items"], entry["by_id"], entry["by_platform"]
         # One channel per pass. A seller who scanned Vinted AND Marktplaats before
         # importing has both sets pending, and neither exists as an item yet — so a
         # mixed batch could create the same object twice before duplicate detection
