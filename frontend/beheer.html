@@ -379,10 +379,31 @@ function toonKern(d) {
   el('mail-cijfers').innerHTML = m.gekoppeld
     ? kaart('Benaderd', getal(m.benaderd), `${getal(m.verstuurd)} mails verstuurd`)
       + kaart('Antwoorden', getal(m.antwoorden), m.antwoordpercentage + '% van de benaderde', 'op')
+      + kaart('Positief', getal(m.positief), 'warme reacties', m.positief ? 'op' : '')
+      + kaart('Negatief', getal(m.negatief), 'geen interesse / concurrent', m.negatief ? 'let' : '')
       + kaart('Afgemeld', getal(m.afgemeld), '')
       + kaart('Bounces', getal(m.bounces), '', m.bounces ? 'let' : '')
+      + kaart('Open-rate', '—', veilig(m.open_tracking_reden || ''))
     : `<div class="kaart"><div class="label">Koude mail</div><div class="bij">${veilig(m.reden || 'Niet gekoppeld')}</div></div>`;
   staafjes('mail-grafiek', m.per_dag, 'dag', 'aantal');
+
+  el('mail-fouten').innerHTML = (m.fouten_vandaag && m.fouten_vandaag.length)
+    ? `<div class="kaart" style="margin-top:14px"><div class="label let">Fouten vandaag</div>
+        <ul>${m.fouten_vandaag.map(f => `<li>${veilig(f)}</li>`).join('')}</ul></div>` : '';
+
+  const leren = m.leren || {};
+  el('mail-leren-cijfer').innerHTML = leren.totaal
+    ? `<div class="cijfer">${leren.ongewijzigd_pct}%</div>
+       <div class="bij">ongewijzigd verstuurd, over de laatste ${getal(leren.totaal)} concepten</div>`
+    : `<div class="leeg">Nog geen concepten afgerond.</div>`;
+  el('mail-leren-lijst').innerHTML = (leren.recent && leren.recent.length)
+    ? leren.recent.map(r => `<div style="margin-bottom:10px">
+        <b>${veilig(r.adres)}</b> — ${geleden(r.op)} geleden
+        ${r.aangepast ? '<span class="let">aangepast</span>' : '<span class="op">ongewijzigd</span>'}
+        ${r.aangepast ? `<div class="uitleg">Voorstel: ${veilig(r.voorstel)}</div>
+                         <div class="uitleg">Verstuurd: ${veilig(r.verstuurd)}</div>` : ''}
+      </div>`).join('')
+    : `<div class="leeg">Nog geen concepten afgerond.</div>`;
 
   el('techniek').innerHTML =
       kaart('Mislukte taken (24u)', getal(t.banen_mislukt_24u), '', t.banen_mislukt_24u ? 'af' : 'op')
