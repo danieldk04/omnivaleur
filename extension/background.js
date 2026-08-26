@@ -1627,9 +1627,21 @@ function clearJobWatchdog(tabId) {
 // garderobe van de gebruiker, met dezelfde inlog als de browser. Vinden we de
 // titel terug, dan is de advertentie geplaatst en melden we hem gewoon af, in
 // plaats van een fout te tonen bij iets dat gelukt is.
+// Titel vergelijkbaar maken: kleine letters, alleen letters en cijfers.
+function _vintedTitelSleutel(t) {
+  return String(t || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+}
+// Hetzelfde, maar zonder een voorloopnummer als "(1327) ". Dat nummer staat wel
+// in het dashboard en niet altijd op het platform (of andersom), en op dat
+// verschil liep de exacte vergelijking stuk.
+function _vintedTitelZonderSku(t) {
+  return _vintedTitelSleutel(String(t || "").replace(/^\s*\([^)]{1,24}\)\s*/, ""));
+}
+
 async function bgVindVintedAdvertentie(item) {
-  const titel = String(item?.title || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+  const titel = _vintedTitelSleutel(item?.title);
   if (!titel) return null;
+  const titelKaal = _vintedTitelZonderSku(item?.title);
   const origins = [item?._create_origin, "https://www.vinted.nl", "https://www.vinted.be",
                    "https://www.vinted.com"].filter(Boolean);
   for (const origin of [...new Set(origins)]) {
@@ -1645,10 +1657,21 @@ async function bgVindVintedAdvertentie(item) {
         { headers: { Accept: "application/json" }, credentials: "include" });
       if (!res.ok) continue;
       const items = (await res.json())?.items || [];
-      const hit = items.find((it) => {
-        if (it.is_closed || it.is_draft) return false;
-        return String(it.title || "").toLowerCase().replace(/[^a-z0-9]/g, "") === titel;
-      });
+      const levend = items.filter((it) => !it.is_closed && !it.is_draft);
+      // Streng naar soepel, en elke stap moet PRECIES EEN kandidaat opleveren.
+      // Bij twijfel liever niets koppelen dan de verkeerde advertentie: een
+      // verkeerde koppeling betekent later de verkeerde advertentie weghalen.
+      const uniek = (lijst) => (lijst.length === 1 ? lijst[0] : null);
+      const hit =
+        uniek(levend.filter((it) => _vintedTitelSleutel(it.title) === titel)) ||
+        uniek(levend.filter((it) => _vintedTitelZonderSku(it.title) === titelKaal)) ||
+        // Vinted kapt lange titels af; dan is de zijne een begin van de onze.
+        (titelKaal.length >= 20
+          ? uniek(levend.filter((it) => {
+              const k = _vintedTitelZonderSku(it.title);
+              return k.length >= 20 && (titelKaal.startsWith(k) || k.startsWith(titelKaal));
+            }))
+          : null);
       if (hit) return { id: String(hit.id), url: hit.url || `${origin}/items/${hit.id}` };
     } catch (_) { /* volgende domein */ }
   }
@@ -1663,7 +1686,26 @@ async function fireJobWatchdog(tabId) {
   // A job deliberately handed back to the user to finish by hand is already
   // reported as an error and its tab is kept open on purpose — force-failing it
   // again would close the very tab they're still typing in.
-  if (meta.awaitingManualFinish) return;
+  //
+  // MAAR: hier stond alleen `return`, en daarmee keek er daarna NOOIT meer
+  // iemand of de verkoper het zelf had afgemaakt. Maakte hij de advertentie
+  // vervolgens met de hand af op Vinted, dan bleef het kaartje voor altijd
+  // oranje "nog niet geplaatst" staan terwijl de advertentie gewoon online
+  // stond. Gemeld op 26-08-2026, en het is precies het geval waarvoor deze
+  // overdracht bedoeld is — dus juist hier hoort de controle thuis.
+  if (meta.awaitingManualFinish) {
+    if (meta.platform === "vinted" && (meta.action || "create") === "create") {
+      const zelfGedaan = await bgVindVintedAdvertentie(meta.payload || meta).catch(() => null);
+      if (zelfGedaan) {
+        console.log(`[Omnivaleur] "${(meta.payload || meta).title}" is door de verkoper zelf afgemaakt op Vinted (${zelfGedaan.id}) — alsnog als geplaatst afgemeld.`);
+        await finaliseJob(meta.serverUrl, meta.jobId, "complete", {
+          platform_listing_id: zelfGedaan.id, platform_listing_url: zelfGedaan.url,
+        });
+        await chrome.storage.local.remove(`jobtab_${tabId}`);
+      }
+    }
+    return;  // nooit force-failen: hij is misschien nog aan het typen
+  }
   console.warn(`[Omnivaleur] Watchdog: job ${meta.jobId} (${meta.platform}) on tab ${tabId} did not finish in time — force-failing.`);
   // Eerst kijken of het misschien gewoon gelukt is. Niets is verwarrender dan een
   // rode melding bij een advertentie die gewoon online staat.
@@ -4913,8 +4955,43 @@ async function _mwSetVintedPrice(selector, values) {
     }
     const waardeKlopt = Math.abs((num(el.value) || -1) - want) < 0.01;
     if (!waardeKlopt) return false;
-    if (klaagt && el.getAttribute("aria-invalid") === "true") return false;
-    return true;
+
+    // HIER STOND: `if (klaagt && aria-invalid === "true") return false;` — en dat
+    // sprak zichzelf tegen met de uitleg hierboven, die juist vaststelt dat
+    // Vinted GEEN aria-invalid zet. Gevolg: Vinted klaagde zichtbaar ("Price
+    // must be greater than or equal to 1.0"), wij keurden het toch goed, en het
+    // item ging met een prijs die Vinted weigert het formulier in. Precies het
+    // geval van 26-08-2026: veld toont €4.99, melding staat eronder, wij gaan
+    // vrolijk verder.
+    //
+    // Niet meer gokken op meldingen dus. Vinted is een React-formulier en houdt
+    // zijn eigen waarde bij; die lezen we hier rechtstreeks uit. Dat is de enige
+    // harde waarheid — het zichtbare veld kan een waarde tonen die React nooit
+    // heeft geaccepteerd, en dat is exact hoe dit misging.
+    const reactWaarde = () => {
+      try {
+        for (const k in el) {
+          if (k.startsWith("__reactProps$") && el[k] && el[k].value != null) return num(el[k].value);
+        }
+        for (const k in el) {
+          if (!k.startsWith("__reactFiber$")) continue;
+          let f = el[k];
+          for (let i = 0; i < 8 && f; i++, f = f.return) {
+            if (f.memoizedProps && f.memoizedProps.value != null) return num(f.memoizedProps.value);
+          }
+        }
+      } catch (_) {}
+      return NaN;
+    };
+    const intern = reactWaarde();
+    const internKlopt = isFinite(intern) && Math.abs(intern - want) < 0.01;
+
+    // Kunnen we React's waarde lezen, dan beslist die — een blijven hangende
+    // melding mag een aantoonbaar goede prijs niet weggooien.
+    if (isFinite(intern)) return internKlopt;
+    // Lukt dat niet, dan is een zichtbare klacht het enige signaal dat we
+    // hebben, en dan is afkeuren het veilige antwoord.
+    return !klaagt;
   };
 
   // Alle schrijfwijzen proberen en de eerste houden waar Vinted NIET over klaagt.
