@@ -40,7 +40,12 @@ logger = logging.getLogger(__name__)
 # 403's van Marktplaats (elke herkansing daarop kost tot 12 seconden). Deze
 # functie stopt daarom ruim op tijd met nieuwe items beginnen en levert terug
 # wat al klaar is; het scherm roept haar gewoon nog een keer aan voor de rest.
-BUDGET_SECONDEN = 60
+#
+# 60 -> 75 (25-08-2026): sinds haal_advertenties zelf niet meer bijna het hele
+# budget opsoupeert (zie die functie), is er ruimte om de resterende marge
+# vóór Cloudflare's harde 100s-grens te benutten voor het echte verrijkwerk,
+# in plaats van hem ongebruikt te laten liggen.
+BUDGET_SECONDEN = 75
 
 ZOEK = "https://www.marktplaats.nl/lrp/api/search"
 BASIS = "https://www.marktplaats.nl"
@@ -49,7 +54,13 @@ UA = ("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 "
 
 # Marktplaats is niet van ons. Vier tegelijk en een korte pauze houdt het beleefd
 # en blijft ver onder wat een gewone bezoeker met meerdere tabbladen doet.
-TEGELIJK = 3
+#
+# Gemeten 25-08-2026 tegen Egberts echte, openbare advertenties (150 stuks):
+# TEGELIJK=3 -> 30/150 gevuld in 60s. TEGELIJK=5 -> 45/150, geen toename in
+# mislukkingen. TEGELIJK=8 brak de boel merkbaar (gevonden viel van 150 naar
+# 121, en er werd niets meer gevuld) — Marktplaats reageert dan zichtbaar op
+# te veel gelijktijdige aanvragen. 5 is dus het hoogste dat nog veilig bleek.
+TEGELIJK = 5
 # De verkoperslijst zelf (haal_advertenties) is een generieke zoekvraag, geen
 # individuele advertentiepagina — dat is niet dezelfde kwetsbare aanvraag waar
 # de 403-bescherming in volledige_omschrijving op reageert. Iets ruimhartiger
