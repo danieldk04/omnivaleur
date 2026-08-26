@@ -1660,7 +1660,8 @@ def _warme_opvolging(state: dict, boek: "Notion") -> int:
                             "References": (draad or {}).get("References", ""),
                             "From": (draad or {}).get("From", ""),
                             "Date": (draad or {}).get("Date", "")}
-                if _zet_concept_klaar(lead, inkomend, (draad or {}).get("tekst", ""), "warm", eigen_tekst=tekst):
+                if _zet_concept_klaar(lead, inkomend, (draad or {}).get("tekst", ""), "warm",
+                                      eigen_tekst=tekst, met_pixel=True):
                     st["warm_opvolg"] = beurt + 1
                     st["warm_opvolg_op"] = nu.isoformat(timespec="seconds")
                     klaar += 1
