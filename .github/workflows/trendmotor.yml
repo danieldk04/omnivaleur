@@ -24,6 +24,10 @@ on:
         description: "Ook echt mailen en in Notion zetten (anders alleen een proefronde)"
         type: boolean
         default: false
+      alleen_notion:
+        description: "Alleen de Notion-koppeling nakijken (schrijft een testpagina)"
+        type: boolean
+        default: false
       alleen_youtube:
         description: "Alleen de YouTube-meting nakijken (snelle controle, 1 minuut)"
         type: boolean
@@ -82,12 +86,16 @@ jobs:
       # binnenkomen. Vanaf GitHub gedraagt YouTube zich anders dan vanaf een
       # laptop, dus dit moet je hiervandaan kunnen nakijken zonder de hele
       # meting van een kwartier te draaien.
+      - name: Alleen Notion nakijken
+        if: github.event_name == 'workflow_dispatch' && inputs.alleen_notion == true
+        run: python3 scripts/social_trends_rapport.py --notion-test
+
       - name: Alleen YouTube nakijken
         if: github.event_name == 'workflow_dispatch' && inputs.alleen_youtube == true
         run: python3 scripts/social_trends_discover.py --geen-tiktok --snel
 
       - name: Proefronde zonder versturen (met de hand gestart)
-        if: github.event_name == 'workflow_dispatch' && inputs.echt_versturen != true && inputs.alleen_youtube != true
+        if: github.event_name == 'workflow_dispatch' && inputs.echt_versturen != true && inputs.alleen_youtube != true && inputs.alleen_notion != true
         run: python3 scripts/social_trends_rapport.py --droog
 
       - name: Echte ronde (met de hand gestart)

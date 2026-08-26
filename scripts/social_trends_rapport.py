@@ -510,11 +510,20 @@ def naar_notion(data: dict, opdrachten: list[dict], dashboard_url: str) -> str:
         r.raise_for_status()
         return r.json().get("url", "")
     except Exception as e:
-        hint = ""
-        if getattr(e, "response", None) is not None and e.response.status_code == 404:
-            hint = (" — koppel de Notion-integratie aan de pagina Trendmotor "
-                    "(··· → Connections)")
-        print(f"! Notion-archief mislukt: {type(e).__name__}{hint}", file=sys.stderr)
+        # Notion zegt in het antwoord zelf precies wat er mis is. Dat alleen als
+        # "HTTPStatusError" loggen kostte een ronde van een kwartier om níets
+        # wijzer te worden; nu staat de reden er meteen bij.
+        antwoord = getattr(e, "response", None)
+        details = ""
+        if antwoord is not None:
+            try:
+                details = f" [{antwoord.status_code}] {antwoord.text[:400]}"
+            except Exception:
+                details = f" [{antwoord.status_code}]"
+            if antwoord.status_code == 404:
+                details += (" — koppel de Notion-integratie aan de pagina "
+                            "Trendmotor (··· → Connections)")
+        print(f"! Notion-archief mislukt: {type(e).__name__}{details}", file=sys.stderr)
         return ""
 
 
@@ -525,6 +534,8 @@ def main() -> int:
     ap.add_argument("--venster", metavar="VAN-TOT", default=None,
                     help="stop tenzij het nu binnen dit lokale uurvenster is, "
                          "en tenzij het rapport vandaag nog niet uitging")
+    ap.add_argument("--notion-test", action="store_true",
+                    help="alleen een testpagina in Notion schrijven en stoppen")
     ap.add_argument("--hergebruik", metavar="JSON",
                     help="niet opnieuw meten maar deze meting gebruiken")
     args = ap.parse_args()
@@ -547,6 +558,12 @@ def main() -> int:
         if _al_verstuurd_vandaag():
             print(f"het rapport van {nu:%d-%m} is al verstuurd — overslaan")
             return 0
+
+    if args.notion_test:
+        leeg = {p: {"aantal": 0, "spreekhooks": []} for p in PERIODES}
+        url = naar_notion(leeg, [], "")
+        print(f"Notion-testpagina: {url}" if url else "Notion-testpagina mislukt")
+        return 0 if url else 1
 
     if args.hergebruik:
         pad = Path(args.hergebruik)
