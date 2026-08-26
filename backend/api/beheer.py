@@ -361,13 +361,23 @@ def _mail() -> dict:
         "afgemeld": sum(1 for v in state.values() if v.get("afgemeld")),
         "bounces": sum(1 for v in state.values() if v.get("bounce")),
         "per_dag": laatste_14,
-        # Openen bijhouden kan pas met een trackingpixel, en dat betekent HTML-mail
-        # i.p.v. platte tekst — een aparte, bewuste keuze i.v.m. spamscore. Bewust
-        # geen stille 0%, anders lijkt het alsof niemand ooit opent.
-        "open_tracking": False,
-        "open_tracking_reden": "Nog niet gebouwd: vereist een trackingpixel en dus HTML-mail.",
+        # Alleen de opvolgmails (na de eerste koude mail) dragen een pixel — zie
+        # _open_pixel_html in scripts/leadgen_mail.py. De eerste mail blijft
+        # bewust puur tekst, om niet als marketing over te komen.
+        "open_tracking": True,
+        "open_tracking_reden": "Alleen gemeten op de opvolgmails, niet op de eerste koude mail.",
+        "opens": _mail_opens(list(state.keys())),
         "leren": _mail_leren(),
         "fouten_vandaag": (_leadgen_lezen("mail_plan") or {}).get("fouten") or [],
+    }
+
+
+def _mail_opens(adressen: list[str]) -> dict:
+    opens = _leadgen_lezen("mail_opens") or {}
+    gemeten = [a for a in adressen if a in opens]
+    return {
+        "adressen": len(gemeten),
+        "totaal_geopend": sum(v.get("aantal", 0) for v in opens.values()),
     }
 
 
