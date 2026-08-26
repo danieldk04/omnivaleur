@@ -1886,11 +1886,13 @@ def _slim_concept(lead: dict, body: str, draad: str, afsluiting: str,
         tekst = "".join(b.text for b in antwoord.content if getattr(b, "type", "") == "text").strip()
     except Exception as e:  # noqa: BLE001 — geen concept is vervelend, geen ramp
         print(f"  (slim concept mislukt, val terug op sjabloon: {e})")
+        _LLM_TERUGVAL["aantal"] += 1
         return None
     # Een leeg of belachelijk kort antwoord is geen antwoord.
     if len(tekst.split()) < 15:
         print(f"  (slim concept te kort: {len(tekst.split())} woorden, "
               f"stop={getattr(antwoord, 'stop_reason', '?')})")
+        _LLM_TERUGVAL["aantal"] += 1
         return None
     # Opmaak die er niet hoort te staan alsnog weghalen: het model houdt zich
     # meestal aan de regel, en "meestal" is hier niet genoeg.
