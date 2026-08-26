@@ -3683,6 +3683,18 @@ async function bgScanMp2dh(job, serverUrl) {
       result.meta = { ...(result.meta || {}), enrichment_aborted_at: enriched,
                       enrichment_error: String(e && e.message || e).slice(0, 200) };
     }
+    // Op tijd afgekapt is geen fout, maar het scherm hoort het wel te weten:
+    // "compleet" mag dit niet heten zolang er nog advertenties op hun tekst en
+    // prijs wachten.
+    if (afgekaptOpTijd) {
+      result.meta = {
+        ...(result.meta || {}),
+        complete: false,
+        enrichment_remaining: afgekaptOpTijd,
+        truncated_reason: `${enriched} van ${total} advertenties verrijkt binnen de tijd; `
+          + `${afgekaptOpTijd} volgen bij een volgende scan`,
+      };
+    }
 
     await reportProgress(serverUrl, job.id, {
       stage: "saving", message: "Saving to your dashboard…", current: total, total,
