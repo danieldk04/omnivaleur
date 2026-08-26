@@ -320,16 +320,21 @@ def _techniek() -> dict:
 # de sleutel 'mail_state'; die tabel is met de publieke sleutel niet leesbaar,
 # dus lokaal blijft dit blok leeg en op de server niet.
 # ---------------------------------------------------------------------------
-def _mail() -> dict:
+def _leadgen_lezen(naam: str):
+    """Eén rij uit leadgen_opslag, of None als hij er niet is of niet leesbaar."""
     try:
         rijen = execute_with_retry(get_db().table("leadgen_opslag")
-                                   .select("inhoud").eq("naam", "mail_state")).data or []
-    except Exception as e:
-        return {"gekoppeld": False, "reden": f"Niet leesbaar: {type(e).__name__}: {e}"}
-    if not rijen:
+                                   .select("inhoud").eq("naam", naam)).data or []
+    except Exception:
+        return None
+    return rijen[0].get("inhoud") if rijen else None
+
+
+def _mail() -> dict:
+    state = _leadgen_lezen("mail_state")
+    if state is None:
         return {"gekoppeld": False,
                 "reden": "Nog geen administratie gevonden (leadgen_opslag/mail_state)"}
-    state = rijen[0].get("inhoud") or {}
     verstuurd = 0
     per_dag: dict[str, int] = {}
     for v in state.values():
@@ -340,6 +345,10 @@ def _mail() -> dict:
                 per_dag[dag] = per_dag.get(dag, 0) + 1
     benaderd = len(state)
     antwoorden = sum(1 for v in state.values() if v.get("beantwoord"))
+    # Warm = geïnteresseerd, dat is de positieve reactie. Afwijzing en "gebruikt
+    # al een concurrent" zijn allebei een nee, dus samen de negatieve kant.
+    positief = sum(1 for v in state.values() if v.get("soort") == "warm")
+    negatief = sum(1 for v in state.values() if v.get("afgewezen") or v.get("concurrent"))
     laatste_14 = [{"dag": _dag(i), "aantal": per_dag.get(_dag(i), 0)} for i in range(13, -1, -1)]
     return {
         "gekoppeld": True,
@@ -347,9 +356,37 @@ def _mail() -> dict:
         "verstuurd": verstuurd,
         "antwoorden": antwoorden,
         "antwoordpercentage": round(100 * antwoorden / benaderd, 1) if benaderd else 0,
+        "positief": positief,
+        "negatief": negatief,
         "afgemeld": sum(1 for v in state.values() if v.get("afgemeld")),
         "bounces": sum(1 for v in state.values() if v.get("bounce")),
         "per_dag": laatste_14,
+        # Openen bijhouden kan pas met een trackingpixel, en dat betekent HTML-mail
+        # i.p.v. platte tekst — een aparte, bewuste keuze i.v.m. spamscore. Bewust
+        # geen stille 0%, anders lijkt het alsof niemand ooit opent.
+        "open_tracking": False,
+        "open_tracking_reden": "Nog niet gebouwd: vereist een trackingpixel en dus HTML-mail.",
+        "leren": _mail_leren(),
+    }
+
+
+def _mail_leren() -> dict:
+    """Wat Daniel zelf van de voorstellen maakt, is de enige echte leerbron: hij
+    verandert alleen iets als het voorstel niet goed genoeg was. Zie
+    scripts/leadgen_mail.py, _onthoud_concept/_leer_van_verzonden."""
+    log = _leadgen_lezen("leerlog") or []
+    afgerond = [x for x in log if x.get("verstuurd")]
+    aangepast = [x for x in afgerond if x.get("aangepast")]
+    recent = sorted(afgerond, key=lambda x: x.get("op", ""), reverse=True)[:5]
+    return {
+        "totaal": len(afgerond),
+        "aangepast": len(aangepast),
+        "ongewijzigd_pct": round(100 * (len(afgerond) - len(aangepast)) / len(afgerond), 1)
+                           if afgerond else None,
+        "recent": [{"adres": x.get("adres"), "op": x.get("op"),
+                    "aangepast": bool(x.get("aangepast")),
+                    "voorstel": (x.get("voorstel") or "")[:280],
+                    "verstuurd": (x.get("verstuurd") or "")[:280]} for x in recent],
     }
 
 
