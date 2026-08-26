@@ -573,6 +573,14 @@ def verzamel_instagram(hashtag_limiet: int | None) -> list[dict]:
     return uit
 
 
+# De officiële bovengrens van een Short. YouTube's zoekfilter voor korte video's
+# laat er in de praktijk gewone video's doorheen glippen — er stonden er van drie
+# minuten tussen. Dat konden we eerder niet zien omdat we de duur niet hadden;
+# met de API-sleutel wel, en dan hoort een video van 3,5 minuut niet mee te tellen
+# in een meting over kortevideo-hooks.
+YT_MAX_SECONDEN = 180
+
+
 def verzamel_youtube(query_limiet: int | None) -> list[dict]:
     uit: list[dict] = []
     for niche, cfg in NICHES.items():
@@ -580,6 +588,18 @@ def verzamel_youtube(query_limiet: int | None) -> list[dict]:
             print(f"  YouTube '{q}' ({niche}) …", flush=True)
             uit.extend(_yt_zoek(q, niche))
     verrijk_youtube(uit)
+
+    # Alleen filteren als we de duur écht weten. Zonder API-sleutel staat duur op
+    # nul en zouden we alles weggooien.
+    met_duur = [v for v in uit if v.get("duur")]
+    if met_duur:
+        kort = [v for v in uit
+                if not v.get("duur") or v["duur"] <= YT_MAX_SECONDEN]
+        weg = len(uit) - len(kort)
+        if weg:
+            print(f"  {weg} YouTube-video's weggelaten: langer dan "
+                  f"{YT_MAX_SECONDEN} seconden, dus geen Short", flush=True)
+        return kort
     return uit
 
 

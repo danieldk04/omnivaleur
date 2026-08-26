@@ -100,10 +100,24 @@ def _dagen_oud(datum: str, nu: datetime) -> int | None:
 
 
 def _eng_ratio(v: dict) -> float:
+    """
+    Engagement als percentage van de views: alleen likes en reacties.
+
+    Bewust niet ook delen en bewaren, hoewel TikTok die wél geeft. Zodra
+    YouTube en Instagram volwaardig meedoen — en dat doen ze sinds er een
+    API-sleutel is — worden hun cijfers met die van TikTok in dezelfde
+    vergelijking gegooid. Delen en bewaren zijn op die twee platforms niet
+    zichtbaar, dus elke TikTok-video zou automatisch hoger uitkomen en zou elk
+    patroon waar toevallig meer TikTok in zit een lift geven die niets met dat
+    patroon te maken heeft.
+
+    Likes en reacties bestaan overal en betekenen overal hetzelfde. Delen en
+    bewaren zijn niet verdwenen: die wegen juist het zwaarst in de
+    viraliteitsscore hieronder, die alleen voor TikTok bestaat.
+    """
     if not v.get("views"):
         return 0.0
-    eng = v["likes"] + v["comments"] + v["shares"] + v["saves"]
-    return round(eng / v["views"] * 100, 2)
+    return round((v["likes"] + v["comments"]) / v["views"] * 100, 2)
 
 
 def _viraal(v: dict) -> float | None:
