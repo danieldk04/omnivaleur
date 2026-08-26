@@ -3480,21 +3480,43 @@ async function bgScanMp2dh(job, serverUrl) {
     // ingelogd" te zien terwijl er niets mis was met zijn inlog — Egbert
     // Brouwer, 16-08-2026. Of we op www ingelogd zijn zegt niets over Admarkt,
     // dus dat mag deze stap niet tegenhouden.
+    // ALTIJD ook Admarkt meenemen als de gebruiker dat aanheeft, niet alleen
+    // wanneer het persoonlijke overzicht helemaal niets vindt.
+    //
+    // Egbert Brouwer (26-08-2026): zijn persoonlijke overzicht vindt wél iets
+    // (~1000 advertenties) — dus deze stap sloeg vroeger altijd over, terwijl
+    // de overige duizenden van zijn 5.534 advertenties uitsluitend via Admarkt
+    // te vinden zijn. "Niets nieuws" op het persoonlijke overzicht werd dan
+    // gemeld als "klaar, niets meer te doen" terwijl er nog duizenden open
+    // stonden. Persoonlijke advertenties en Admarkt-advertenties zitten in
+    // een andere nummerreeks (zie backend/services/mp_enrich.py), dus
+    // samenvoegen op advertentienummer kan hier geen dubbele opleveren.
     let admarktFout = null;
-    if (!result.items.length && platform === "marktplaats" && await admarktToegestaan()) {
+    if (platform === "marktplaats" && await admarktToegestaan()) {
       await reportProgress(serverUrl, job.id, {
         stage: "scanning",
-        message: "Nothing on your personal overview — checking Admarkt…",
+        message: result.items.length
+          ? `${result.items.length} op je persoonlijke overzicht — nu ook Admarkt erbij…`
+          : "Nothing on your personal overview — checking Admarkt…",
         current: 0, total: 0,
       });
       try {
         const via = await bgScanAdmarkt(job, serverUrl);
-        result.items = via.items;
-        result.meta = { ...result.meta, ...via.meta, source: "admarkt" };
+        const bekend = new Set(result.items.map(it => it.platform_listing_id));
+        for (const it of via.items) {
+          if (!bekend.has(it.platform_listing_id)) result.items.push(it);
+        }
+        result.meta = {
+          ...result.meta, ...via.meta,
+          source: result.items.length && via.items.length ? "personal+admarkt" : (via.items.length ? "admarkt" : result.meta?.source),
+        };
       } catch (e) {
         // Admarkt zelf gaf niets. Die melding is specifieker dan "geen
-        // advertenties gevonden", dus die willen we terugzien.
-        admarktFout = String(e && e.message ? e.message : e);
+        // advertenties gevonden", dus die willen we terugzien — maar alleen
+        // als het persoonlijke overzicht OOK niets had; anders verdringt een
+        // Admarkt-foutmelding een prima geslaagde persoonlijke scan.
+        if (!result.items.length) admarktFout = String(e && e.message ? e.message : e);
+        else console.warn("[Omnivaleur] Admarkt-scan naast persoonlijk overzicht mislukt:", e);
       }
     }
 
