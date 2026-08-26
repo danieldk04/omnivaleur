@@ -3013,6 +3013,11 @@ def tick(args) -> None:
     # binnenkomt weet Daniel dat de machine leeft; blijft het uit, dan is dát het
     # signaal. Volledig sluitend is het niet — staat de Mac uit, dan draait er
     # niets en komt er ook geen bericht. Het gat wordt dan de volgende dag gemeld.
+    if _LLM_TERUGVAL["aantal"]:
+        plan.setdefault("fouten", []).append(
+            f"slimme tekst {_LLM_TERUGVAL['aantal']}x teruggevallen op vast sjabloon "
+            "(check ANTHROPIC_API_KEY en het anthropic-pakket in de workflow)")
+
     if not plan.get("gerapporteerd") and nu >= "20:45":
         _dagbericht(state, plan)
         plan["gerapporteerd"] = True
