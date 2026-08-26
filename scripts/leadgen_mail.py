@@ -2497,6 +2497,9 @@ def _concepten_tellen() -> tuple[int, list[str]]:
     return len(namen), namen
 
 
+CONCEPT_VERVAL_DAGEN = 21  # ruim voorbij de laatste opvolgtermijn (7 dagen)
+
+
 def _ruim_concepten_op() -> int:
     """Weggooien wat niet meer nodig is.
 
