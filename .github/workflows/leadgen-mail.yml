@@ -37,6 +37,11 @@ jobs:
       NOTION_TOKEN: ${{ secrets.NOTION_TOKEN }}
       SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
       SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
+      # Zonder deze staat de sleutel wel in de repo-secrets maar komt hij nooit
+      # bij het script terecht — elk "slim concept" (_slim_concept, _stilte_concept)
+      # viel daardoor altijd stil terug op het vaste sjabloon, ook al leek de code
+      # zelf in orde. Ontdekt 26-08-2026 bij het bouwen van de stille-opvolging.
+      ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
