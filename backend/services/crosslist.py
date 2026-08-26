@@ -1095,7 +1095,12 @@ def _dagelijkse_relist_grens(db, user_id: str) -> int:
         ids = []
         stap = 1000
         for offset in range(0, 20000, stap):
-            rij = (db.table("items").select("id").eq("user_id", user_id)
+            # Zonder .order() mag de database elke pagina anders sorteren, dus
+            # missen we item-ids en krijgen we andere dubbel — zie de uitleg bij
+            # dezelfde fout in backend/api/imports.py. Een gemist item-id hier
+            # betekent dat een verkochte advertentie niet elders wordt
+            # weggehaald.
+            rij = (db.table("items").select("id").eq("user_id", user_id).order("id")
                    .range(offset, offset + stap - 1).execute().data or [])
             ids += [r["id"] for r in rij]
             if len(rij) < stap:
