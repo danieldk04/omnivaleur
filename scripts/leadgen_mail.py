@@ -1960,8 +1960,10 @@ def _stilte_concept(draad: str, laatste_zet: bool) -> str | None:
                         if getattr(b, "type", "") == "text").strip()
     except Exception as e:  # noqa: BLE001 — geen concept is vervelend, geen ramp
         print(f"  (stilte-opvolging mislukt, val terug op sjabloon: {e})")
+        _LLM_TERUGVAL["aantal"] += 1
         return None
     if len(tekst.split()) < 10:
+        _LLM_TERUGVAL["aantal"] += 1
         return None
     tekst = re.sub(r"\*\*(.+?)\*\*", r"\1", tekst)
     tekst = re.sub(r"^\s*[-•]\s+", "", tekst, flags=re.M)
