@@ -1319,12 +1319,22 @@
 
   // True if the page/input locale uses a comma decimal separator (NL etc.).
   function _vintedLocaleIsComma(el) {
-    const lang = (document.documentElement.getAttribute("lang") || navigator.language || "").toLowerCase();
-    if (/^(nl|de|fr|es|it|pt|pl)/.test(lang)) return true;
+    // HET VELD ZELF GAAT VOOR. Vinted zet de verwachte schrijfwijze letterlijk in
+    // de placeholder ("€0.00" of "€0,00"); dat is geen gok maar het antwoord.
+    //
+    // Live gemeten op 26-08-2026 op vinted.nl: lang="en-NL" (Engels ingesteld op
+    // de Nederlandse markt) en placeholder "€0.00" — het veld wil dus een PUNT.
+    // De taal zei iets anders: navigator.language is daar "nl-NL", en op die
+    // terugval koos de oude volgorde de komma. Wat dat oplevert is niet "iets
+    // minder mooi" maar kapot: "4,99" maakt er "€NaN" van.
     const hint = (el.getAttribute("placeholder") || el.value || "").trim();
     if (hint.includes(",")) return true;
     if (hint.includes(".")) return false;
-    return false; // default: try dot first
+    // Geen aanwijzing in het veld? Dan pas de taal, en dan liefst die van de
+    // pagina zelf — navigator.language is de instelling van de bróswer, niet van
+    // het formulier, en juist die twee liepen hier uiteen.
+    const lang = (document.documentElement.getAttribute("lang") || navigator.language || "").toLowerCase();
+    return /^(nl|de|fr|es|it|pt|pl)/.test(lang);
   }
 
   // Type one formatted value into the masked price input and verify it holds the
