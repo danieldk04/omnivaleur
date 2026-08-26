@@ -1862,6 +1862,73 @@ def _slim_concept(lead: dict, body: str, draad: str, afsluiting: str,
     return tekst.strip()
 
 
+# ── Opvolging op Daniels eigen, stilgevallen bericht ──────────────────────
+# WARM_OPVOLG hierboven is een vast sjabloon en verwijst nergens naar wat er
+# al gezegd is — precies wat niet de bedoeling is bij iemand die Daniel zelf
+# al gemaild heeft. Dit schrijft in plaats daarvan een opvolging die aansluit
+# op Daniels eigen laatste bericht (zie _laatste_verzonden_bericht), en dat
+# bericht wordt bovendien in dezelfde draad gezet (zie _warme_opvolging) zodat
+# het ook voor de ontvanger een vervolg is, geen nieuwe mail uit het niets.
+_SCHRIJF_REGELS_STIL = """Je schrijft een KORTE opvolgmail namens Daniel de Koning, oprichter
+van Omnivaleur, aan iemand die hij al eerder zelf heeft gemaild (geen sjabloonmail
+maar een persoonlijk bericht) en die daar niets meer op heeft laten horen.
+
+STIJL: informeel, persoonlijk Nederlands. "Hi," / "Groetjes, Daniel". Kort — een
+paar zinnen, geen nieuwe intro en geen herhaling van wat er al is uitgelegd.
+
+HARDE REGELS:
+1. Hieronder staat Daniels EIGEN laatste bericht aan deze persoon. Sluit daar
+   inhoudelijk op aan — refereer aan wat hij toen aanbood, vroeg of beloofde
+   (bijvoorbeeld het filmpje, of een vraag die hij beantwoordde), in plaats van
+   een nieuw gesprek te beginnen.
+2. Vraag luchtig of het is aangekomen of er nog vragen zijn. Geen druk, geen
+   "laatste kans"-toon, geen overdreven excuus voor het opnieuw schrijven.
+3. Noem de prijs of de proefperiode alleen als die in het eerdere bericht ook
+   al genoemd werden.
+4. Nooit "Omnivaleur" als werkwoord; het werkwoord is "crosslisten".
+5. Schrijf ALLEEN de e-mailtekst, geen uitleg eromheen, geen onderwerpregel.
+"""
+
+
+def _stilte_concept(draad: str, laatste_zet: bool) -> str | None:
+    """LLM-opvolging op Daniels eigen stilgevallen bericht. None = niet gelukt
+    (geen sleutel, geen draadtekst, of een te kort antwoord) — dan valt de
+    aanroeper terug op het vaste WARM_OPVOLG-sjabloon."""
+    sleutel = os.environ.get("ANTHROPIC_API_KEY", "").strip()
+    if not (sleutel and draad.strip()):
+        return None
+    try:
+        import anthropic
+    except ImportError:
+        return None
+    prompt = (
+        f"Daniels eigen laatste bericht aan deze persoon, dat onbeantwoord bleef:\n\n"
+        f"{draad[:4000]}\n\n"
+        + ("Dit is de LAATSTE opvolging — zeg dat je hem niet langer lastigvalt "
+           f"en dat hij zelf een account kan aanmaken op {REGISTREREN} als hij "
+           "het wil proberen (eerste 7 dagen gratis).\n\n" if laatste_zet else "")
+        + f"Sluit af met exact dit blok:\n{_ondertekening()}\n\nSchrijf de opvolgmail."
+    )
+    try:
+        client = anthropic.Anthropic(api_key=sleutel)
+        antwoord = client.messages.create(
+            model="claude-sonnet-5",
+            max_tokens=800,
+            system=_SCHRIJF_REGELS_STIL,
+            messages=[{"role": "user", "content": prompt}],
+        )
+        tekst = "".join(b.text for b in antwoord.content
+                        if getattr(b, "type", "") == "text").strip()
+    except Exception as e:  # noqa: BLE001 — geen concept is vervelend, geen ramp
+        print(f"  (stilte-opvolging mislukt, val terug op sjabloon: {e})")
+        return None
+    if len(tekst.split()) < 10:
+        return None
+    tekst = re.sub(r"\*\*(.+?)\*\*", r"\1", tekst)
+    tekst = re.sub(r"^\s*[-•]\s+", "", tekst, flags=re.M)
+    return tekst.strip()
+
+
 def _concept_tekst(lead: dict, body: str, soort: str = "warm") -> str:
     """Het voorstel-antwoord. Kort, in Daniels toon: geen verkooppraat, concreet,
     en altijd eindigen met een lage drempel.
