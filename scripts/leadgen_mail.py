@@ -2608,6 +2608,14 @@ def _ruim_concepten_op() -> int:
                     # Zoho wil de vlag tussen haakjes; zonder geeft hij BAD.
                     imap.uid("store", uid, "+FLAGS", "(\\Deleted)")
                     weg += 1
+                    continue
+                # Geen vervanging, geen verzonden mail erna — maar wel al
+                # weken oud. Dat is voorbij elk opvolgmoment (3 en 7 dagen),
+                # dus een voorstel dat zo lang blijft liggen wordt niet meer
+                # opgepakt en is alleen nog ruis in de Concepten-map.
+                if gemaakt < (time.time() - CONCEPT_VERVAL_DAGEN * 86400):
+                    imap.uid("store", uid, "+FLAGS", "(\\Deleted)")
+                    weg += 1
             if weg:
                 imap.expunge()
     except Exception as e:  # noqa: BLE001 — opruimen mag nooit het mailen stoppen
