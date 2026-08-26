@@ -464,9 +464,19 @@ def naar_notion(data: dict, opdrachten: list[dict], dashboard_url: str) -> str:
         {"type": "text", "text": {"content":
             f"Gemeten op {week}. {data['7d']['aantal']} video's in 7 dagen, "
             f"{data['30d']['aantal']} in 30, {data['90d']['aantal']} in 90."}}]}}]
-    blokken.append({"object": "block", "type": "paragraph", "paragraph": {"rich_text": [
-        {"type": "text", "text": {"content": "Dashboard van deze week",
-                                  "link": {"url": dashboard_url}}}]}})
+    # Notion weigert een link met een lege url met een 400, en dan gaat de hele
+    # pagina niet door. Er ís geen webversie van het dashboard ingesteld, dus dit
+    # blok was elke week leeg en sloopte elke week het hele archief.
+    if dashboard_url:
+        blokken.append({"object": "block", "type": "paragraph", "paragraph": {
+            "rich_text": [{"type": "text", "text": {
+                "content": "Dashboard van deze week",
+                "link": {"url": dashboard_url}}}]}})
+    else:
+        blokken.append({"object": "block", "type": "paragraph", "paragraph": {
+            "rich_text": [{"type": "text", "text": {
+                "content": "Het dashboard met alle video's zit als bijlage bij de "
+                           "mail van deze week."}}]}})
     for i, o in enumerate(opdrachten, 1):
         blokken.append({"object": "block", "type": "heading_3", "heading_3": {
             "rich_text": [{"type": "text",
@@ -476,9 +486,10 @@ def naar_notion(data: dict, opdrachten: list[dict], dashboard_url: str) -> str:
             blokken.append({"object": "block", "type": "paragraph", "paragraph": {
                 "rich_text": [{"type": "text", "text": {
                     "content": f"{label}: {str(o.get(sleutel, ''))[:1800]}"}}]}})
-        blokken.append({"object": "block", "type": "paragraph", "paragraph": {
-            "rich_text": [{"type": "text", "text": {
-                "content": "bewijs", "link": {"url": o.get("bron")}}}]}})
+        if o.get("bron"):
+            blokken.append({"object": "block", "type": "paragraph", "paragraph": {
+                "rich_text": [{"type": "text", "text": {
+                    "content": "bewijs", "link": {"url": o["bron"]}}}]}})
     # Het gesproken-hookblok. Alleen de patronen die de hardheidstoets halen —
     # in het archief hoort geen percentage waar je later op terugkijkt en denkt
     # dat het bewezen was.
