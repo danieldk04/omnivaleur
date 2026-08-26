@@ -367,6 +367,7 @@ def _mail() -> dict:
         "open_tracking": False,
         "open_tracking_reden": "Nog niet gebouwd: vereist een trackingpixel en dus HTML-mail.",
         "leren": _mail_leren(),
+        "fouten_vandaag": (_leadgen_lezen("mail_plan") or {}).get("fouten") or [],
     }
 
 
