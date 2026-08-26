@@ -47,7 +47,12 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      - run: pip install --quiet httpx
+      # anthropic erbij: zonder dit pakket crasht elke poging tot een slim,
+      # op maat geschreven concept (_slim_concept, _stilte_concept) stil op een
+      # ImportError en valt alles terug op het kale vaste sjabloon — ontdekt
+      # 26-08-2026 toen een "stille opvolging" niets van het eerdere gesprek
+      # bleek te bevatten, ook al stond ANTHROPIC_API_KEY inmiddels wel goed.
+      - run: pip install --quiet httpx anthropic
       # Drie controles per beurt, zeven minuten uit elkaar.
       #
       # GitHub belooft geen stipte kloktijden: normaal draait dit 25 keer per dag,
