@@ -1210,6 +1210,9 @@ def _check_inbox(state: dict, boek: "Notion", dagen: int) -> tuple[int, int, int
                 afzender = _zelfde_bedrijf(afzender, state) or afzender
                 st = state.get(afzender)
             if not st:
+                afzender = _adres_uit_citaat(body, state) or afzender
+                st = state.get(afzender)
+            if not st:
                 continue
             kop = str(msg.get("Subject", ""))
             automatisch = (AUTO_ONDERWERP.match(kop.replace("Re:", "").strip())
