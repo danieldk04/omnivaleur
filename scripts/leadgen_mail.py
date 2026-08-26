@@ -1644,7 +1644,7 @@ def _warme_opvolging(state: dict, boek: "Notion") -> int:
                 inkomend = {"Subject": (draad or {}).get("Subject", ""),
                             "Message-ID": (draad or {}).get("Message-ID", ""),
                             "References": (draad or {}).get("References", "")}
-                if _zet_concept_klaar(lead, inkomend, "", "warm", eigen_tekst=tekst):
+                if _zet_concept_klaar(lead, inkomend, (draad or {}).get("tekst", ""), "warm", eigen_tekst=tekst):
                     st["warm_opvolg"] = beurt + 1
                     st["warm_opvolg_op"] = nu.isoformat(timespec="seconds")
                     klaar += 1
