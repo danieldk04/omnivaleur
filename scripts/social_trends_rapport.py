@@ -162,9 +162,29 @@ def meet() -> dict:
 
 
 # ── Vijf opdrachten, aan de lijn van de data ────────────────────────────────
-def _feiten(data: dict) -> str:
-    """Wat Claude te zien krijgt. Alleen gemeten getallen, geen duiding."""
+def _feiten(data: dict) -> tuple[str, dict]:
+    """
+    Wat Claude te zien krijgt. Alleen gemeten getallen, geen duiding.
+
+    Elke video krijgt een nummer, en de opdracht moet dat nummer noemen in
+    plaats van een URL. Een taalmodel dat een URL moet overtypen maakt daar een
+    plausibel ogende, niet-bestaande van — vorige ronde sneuvelden zo drie van
+    de vijf opdrachten op de broncontrole en kreeg Daniel er nog maar twee. Een
+    nummer overtypen kan bijna niet fout, en gaat het toch fout, dan is het een
+    nummer dat niet bestaat en dus meteen zichtbaar.
+    """
     regels = []
+    bronnen: dict[int, dict] = {}
+    teller = [0]
+
+    def nummer(v: dict) -> int:
+        for n, bestaand in bronnen.items():
+            if bestaand["url"] == v["url"]:
+                return n
+        teller[0] += 1
+        bronnen[teller[0]] = v
+        return teller[0]
+
     for p, dagen in PERIODES.items():
         d = data[p]
         regels.append(f"\n=== LAATSTE {dagen} DAGEN ({d['aantal']} video's) ===")
@@ -174,7 +194,7 @@ def _feiten(data: dict) -> str:
             regels.append(
                 f"- {v['uitschieter']}x | {v['views']} views | eng {v['eng_ratio']}% "
                 f"| {v['duur']}s | @{v['handle']} ({v['taal']}, {v['niche']}) "
-                f"| sound: {v['sound'][:40]} | URL: {v['url']}\n"
+                f"| sound: {v['sound'][:40]} | BRON {nummer(v)}\n"
                 f"  tekst: {(v['tekst'] or '')[:150]}"
                 + (f"\n  gezegd in de eerste 3 sec: \"{v['gesproken_3s']}\""
                    if v.get("gesproken_3s") else ""))
@@ -190,7 +210,12 @@ def _feiten(data: dict) -> str:
                     f"- [{merk}] {h['patroon']}: n={h['aantal']} video's van "
                     f"{h['makers']} makers, zeker {h['zekerheid']}%, "
                     f"{h['eng']}% vs {h['eng_rest']}% ({h['eng_lift']:+d}%)\n"
-                    f"  voorbeeld gezegd: \"{h['voorbeeld']}\" ({h['voorbeeld_url']})")
+                    f"  voorbeeld gezegd: \"{h['voorbeeld']}\"")
+                for vb in (h.get("voorbeelden") or [])[:4]:
+                    regels.append(
+                        f"    BRON {nummer(vb)} | {vb['views']} views | "
+                        f"eng {vb['eng_ratio']}% | @{vb['handle']} | "
+                        f"gezegd: \"{(vb.get('gesproken_3s') or '')[:110]}\"")
         if d.get("spreektempo"):
             regels.append("Spreektempo: " + " | ".join(
                 f"{r['patroon']} n={r['aantal']} {r['eng']}% ({r['eng_lift']:+d}%, "
@@ -214,19 +239,24 @@ def _feiten(data: dict) -> str:
             regels.append("Sounds die meerdere makers gebruiken: " + " | ".join(
                 f"{s['sound'][:35]} ({s['makers']} makers, {s['med_views']} views)"
                 for s in d["sounds"][:6]))
-    return "\n".join(regels)
+    regels.append("\n=== DE BRONNEN WAAR JE UIT MAG KIEZEN ===")
+    for n, v in bronnen.items():
+        regels.append(f"BRON {n}: {v['url']}")
+    return "\n".join(regels), bronnen
 
 
 PROMPT = """Je krijgt de gemeten cijfers van deze week uit de niche van Omnivaleur,
 een Nederlandse tool waarmee tweedehandsverkopers hun advertenties in één keer op
 meerdere marktplaatsen zetten (Vinted, Marktplaats, eBay, Etsy, Shopify).
 
-Daniel maakt zelf de video's. Schrijf hem vijf concrete video-opdrachten voor
+Daniel maakt zelf de video's. Schrijf hem zeven concrete video-opdrachten voor
 komende week, gebaseerd op wat hieronder gemeten is.
 
 HARDE REGELS:
-- Elke opdracht MOET een "bron" bevatten: één URL die letterlijk in de data
-  hieronder staat. Verzin nooit een URL.
+- Elke opdracht MOET een "bron_nr" bevatten: het nummer van een BRON uit de
+  lijst onderaan de data. Geen URL's overtypen, alleen het nummer. Kies een
+  bron die het patroon dat je noemt ook echt laat zien.
+- Geef ZEVEN opdrachten, niet vijf. De twee zwakste worden eruit gefilterd.
 - Onderbouw elke opdracht met een gemeten getal uit de data. Geen getal, geen
   opdracht.
 - Bouw je advies op patronen die met [HARD] gemarkeerd zijn. Een patroon met
@@ -249,7 +279,7 @@ Geef ZUIVER JSON terug, zonder tekst eromheen:
    "sound": "naam van de sound, of 'eigen geluid'",
    "waarom": "welk gemeten getal dit onderbouwt, met n en zekerheid",
    "bewijs": "hoe hard dit is: 'hard' of 'voorzichtig'",
-   "bron": "https://..."}
+   "bron_nr": 12}
 ]}
 
 DATA:
@@ -267,13 +297,13 @@ def schrijf_opdrachten(data: dict, sleutel: str) -> list[dict]:
     """
     import anthropic
 
-    geldige_urls = {v["url"] for p in PERIODES for v in data[p]["top"]}
+    feiten, bronnen = _feiten(data)
     client = anthropic.Anthropic(api_key=sleutel)
     try:
         with client.messages.stream(
             model=MODEL,
-            max_tokens=8000,
-            messages=[{"role": "user", "content": PROMPT + _feiten(data)}],
+            max_tokens=12000,
+            messages=[{"role": "user", "content": PROMPT + feiten}],
         ) as stroom:
             antwoord = stroom.get_final_message()
         tekst = "".join(b.text for b in antwoord.content if b.type == "text")
@@ -296,12 +326,17 @@ def schrijf_opdrachten(data: dict, sleutel: str) -> list[dict]:
     # maar dat niemand ooit heeft gemaakt.
     goed = []
     for o in rauw:
-        if o.get("bron") in geldige_urls:
+        try:
+            nr = int(o.get("bron_nr"))
+        except (TypeError, ValueError):
+            nr = 0
+        if nr in bronnen:
+            o["bron"] = bronnen[nr]["url"]
             goed.append(o)
         else:
-            print(f"! opdracht weggegooid, bron niet in de meting: "
-                  f"{o.get('titel')!r}", file=sys.stderr)
-    return goed
+            print(f"! opdracht weggegooid, bron {o.get('bron_nr')!r} bestaat niet "
+                  f"in de meting: {o.get('titel')!r}", file=sys.stderr)
+    return goed[:5]
 
 
 # ── Mail ────────────────────────────────────────────────────────────────────
