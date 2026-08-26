@@ -26,6 +26,7 @@ Draaien:
 from __future__ import annotations
 
 import argparse
+import base64
 import asyncio
 import gzip
 import json
@@ -308,32 +309,199 @@ def _e(t) -> str:
     return (str(t or "").replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;"))
 
 
-def mail_html(data: dict, opdrachten: list[dict], dashboard_url: str) -> str:
+def _n(g) -> str:
+    """1234567 -> 1,2 mln. Een mail leest niemand met een rekenmachine erbij."""
+    g = int(g or 0)
+    if g >= 1_000_000:
+        return f"{g/1_000_000:.1f}".replace(".", ",") + " mln"
+    if g >= 1_000:
+        return f"{g/1_000:.0f}K"
+    return str(g)
+
+
+def _beeld_tag(v: dict, beelden: dict, breedte: int = 104) -> str:
+    """
+    Het beeldje van een video, als losse bijlage in de mail.
+
+    Bewust niet als data-URI in de HTML: Gmail weigert die en dan zie je in
+    precies het programma waar jij je mail leest helemaal niets. Een bijlage met
+    een cid-verwijzing toont Gmail wél. Dat is het hele verschil tussen een mail
+    met bewijs en een mail met lege vakjes.
+    """
+    data = v.get("beeld_data") or ""
+    hoogte = round(breedte * 4 / 3)
+    if not data.startswith("data:image"):
+        return (f'<div style="width:{breedte}px;height:{hoogte}px;background:#E2E8E7;'
+                f'border:1px solid #D2DAD9"></div>')
+    cid = f"v{v.get('platform','x')[:1]}{v.get('video_id','')}"
+    if cid not in beelden:
+        try:
+            beelden[cid] = base64.b64decode(data.split(",", 1)[1])
+        except Exception:
+            return ""
+    return (f'<img src="cid:{cid}" width="{breedte}" height="{hoogte}" alt="" '
+            f'style="display:block;width:{breedte}px;height:{hoogte}px;'
+            f'object-fit:cover;border:1px solid #D2DAD9">')
+
+
+def _cijfers(v: dict) -> str:
+    """De cijfers van één video, in één regel."""
+    stukken = [f"{_n(v.get('views'))} views"]
+    if v.get("uitschieter"):
+        # Twee heel verschillende dingen die allebei "keer" heten. Zien we drie of
+        # meer video's van deze maker, dan is dit hoeveel keer beter dan hij
+        # normaal doet — dat is bewijs. Zien we er maar één, dan wordt hij tegen
+        # de hele niche afgezet en kan er 1200x uitkomen zonder dat het iets
+        # zegt. Ze onder dezelfde vlag zetten maakt het grootste getal het
+        # overtuigendste, en dat is precies verkeerd om.
+        eigen = v.get("basis_herkomst") == "eigen"
+        stukken.append(f"{v['uitschieter']}&times; boven zijn eigen normaal" if eigen
+                       else f"{v['uitschieter']}&times; de niche-mediaan "
+                            f"(1e video van deze maker)")
+    if v.get("eng_ratio"):
+        stukken.append(f"{v['eng_ratio']}% engagement")
+    return " &middot; ".join(stukken)
+
+
+def _bewijskaart(v: dict, beelden: dict) -> str:
+    """Eén bewijsstuk: beeld, wat er gezegd wordt, en de cijfers eronder."""
+    gezegd = (v.get("gesproken_3s") or "").strip()
+    return (
+        f'<td width="120" valign="top" style="padding:0 10px 0 0">'
+        f'<a href="{_e(v["url"])}" style="text-decoration:none">'
+        f'{_beeld_tag(v, beelden, 110)}</a>'
+        f'<div style="font:400 11px/1.35 Georgia,serif;color:#151B1B;'
+        f'margin:5px 0 0;width:110px">'
+        + (f'&ldquo;{_e(gezegd[:70])}&rdquo;' if gezegd
+           else f'@{_e(v["handle"])}') +
+        f'</div>'
+        f'<div style="font:400 10px/1.3 monospace;color:#5A6867;margin:3px 0 0;'
+        f'width:110px">{_n(v.get("views"))} &middot; '
+        f'{v.get("uitschieter", 0)}&times; '
+        f'{"eigen" if v.get("basis_herkomst") == "eigen" else "niche"}</div></td>')
+
+
+def _bewijsrij(videos: list[dict], beelden: dict) -> str:
+    if not videos:
+        return ""
+    return ('<table role="presentation" cellpadding="0" cellspacing="0"><tr>'
+            + "".join(_bewijskaart(v, beelden) for v in videos[:4])
+            + "</tr></table>")
+
+
+def mail_html(data: dict, opdrachten: list[dict], dashboard_url: str) -> tuple[str, dict]:
+    """
+    De weekmail. Geeft de HTML terug én de beeldjes die eraan vast moeten.
+
+    De opzet volgt één regel: geen bewering zonder beeld en zonder getal. Elke
+    opdracht toont de video waar hij vandaan komt, elk patroon toont vier
+    video's van vier verschillende makers waarin het patroon zit. Wat ik niet
+    kan laten zien, staat er niet in.
+    """
+    beelden: dict[str, bytes] = {}
     week = datetime.now().strftime("%d-%m-%Y")
     d7, d30, d90 = data["7d"], data["30d"], data["90d"]
+    per_url = {v["url"]: v for v in data.get("alles", [])}
 
+    # ── De opdrachten, elk met de video waar hij op gebaseerd is ─────────────
     if opdrachten:
-        blok = "".join(f"""
-      <tr><td style="padding:0 0 22px">
-        <div style="font:600 17px/1.3 Georgia,serif;color:#151B1B">{i}. {_e(o.get('titel'))}</div>
-        <div style="font:400 15px/1.5 Georgia,serif;color:#151B1B;margin:8px 0 0">
-          <b>Zeg dit:</b> &ldquo;{_e(o.get('hook'))}&rdquo;</div>
-        <div style="font:400 15px/1.5 Georgia,serif;color:#151B1B;margin:5px 0 0">
-          <b>Film:</b> {_e(o.get('beeld'))}</div>
-        <div style="font:400 14px/1.5 Georgia,serif;color:#5A6867;margin:5px 0 0">
-          {_e(o.get('lengte'))} &middot; sound: {_e(o.get('sound'))}</div>
-        <div style="font:400 14px/1.5 Georgia,serif;color:#5A6867;margin:5px 0 0">
-          <b>Waarom:</b> {_e(o.get('waarom'))}
-          &middot; <a href="{_e(o.get('bron'))}" style="color:#0E6F6B">bewijs</a>
-          &middot; <span style="font:600 12px monospace;color:{
-            '#1E7A4C' if str(o.get('bewijs','')).startswith('hard') else '#A8441C'}">{
-            _e(o.get('bewijs') or 'onbekend')}</span></div>
-      </td></tr>""" for i, o in enumerate(opdrachten, 1))
+        rijen = []
+        for i, o in enumerate(opdrachten, 1):
+            bron = per_url.get(o.get("bron") or "")
+            beeldcel = (
+                f'<td width="126" valign="top" style="padding:0 16px 0 0">'
+                f'<a href="{_e(o.get("bron"))}" style="text-decoration:none">'
+                f'{_beeld_tag(bron, beelden, 116)}</a>'
+                f'<div style="font:400 10px/1.3 monospace;color:#5A6867;'
+                f'margin:5px 0 0;width:116px">{_cijfers(bron)}</div>'
+                f'<div style="font:400 10px/1.3 monospace;color:#5A6867;'
+                f'width:116px">@{_e(bron["handle"])}</div></td>'
+            ) if bron else ""
+            hard = str(o.get("bewijs", "")).startswith("hard")
+            rijen.append(f"""
+      <tr><td style="padding:0 0 26px">
+        <table role="presentation" cellpadding="0" cellspacing="0" width="100%"><tr>
+          {beeldcel}
+          <td valign="top">
+            <div style="font:600 17px/1.3 Georgia,serif;color:#151B1B">
+              {i}. {_e(o.get('titel'))}</div>
+            <div style="font:400 15px/1.5 Georgia,serif;color:#151B1B;margin:8px 0 0">
+              <b>Zeg dit:</b> &ldquo;{_e(o.get('hook'))}&rdquo;</div>
+            <div style="font:400 15px/1.5 Georgia,serif;color:#151B1B;margin:5px 0 0">
+              <b>Film:</b> {_e(o.get('beeld'))}</div>
+            <div style="font:400 14px/1.5 Georgia,serif;color:#5A6867;margin:5px 0 0">
+              {_e(o.get('lengte'))} &middot; sound: {_e(o.get('sound'))}</div>
+            <div style="font:400 14px/1.5 Georgia,serif;color:#5A6867;margin:5px 0 0">
+              <b>Waarom:</b> {_e(o.get('waarom'))}</div>
+            <div style="margin:6px 0 0">
+              <span style="font:600 10px/1 monospace;letter-spacing:.08em;
+                text-transform:uppercase;padding:3px 6px;
+                background:{'#DCEFE4' if hard else '#EEF1F1'};
+                color:{'#1E7A4C' if hard else '#5A6867'}">
+                bewijs: {_e(o.get('bewijs') or 'onbekend')}</span>
+              <a href="{_e(o.get('bron'))}" style="color:#0E6F6B;font:400 13px
+                Georgia,serif;margin-left:8px">bekijk de bronvideo</a></div>
+          </td>
+        </tr></table>
+      </td></tr>""")
+        blok = "".join(rijen)
     else:
         blok = ('<tr><td style="padding:0 0 22px;font:400 15px/1.5 Georgia,serif;'
                 'color:#A8441C">Deze week geen opdrachten: er was te weinig '
                 'gemeten materiaal om iets te onderbouwen. Liever niets dan '
                 'iets verzonnens.</td></tr>')
+
+    # ── De patronen, elk met vier video's waarin je het kunt zien ────────────
+    stem_bron = d90 if (d90.get("spreekhooks") or d90.get("spreekwoorden")) else d30
+    harde = [h for h in (stem_bron.get("spreekhooks") or []) if h.get("hard")][:3]
+    harde_woorden = [h for h in (stem_bron.get("spreekwoorden") or [])
+                     if h.get("hard")][:3]
+
+    def patroonblok(h: dict, wat: str) -> str:
+        richting = "#1E7A4C" if h["eng_lift"] > 0 else "#A8441C"
+        return (
+            f'<tr><td style="padding:0 0 24px">'
+            f'<div style="font:600 15px/1.3 Georgia,serif;color:#151B1B">'
+            f'{_e(h["patroon"])} '
+            f'<span style="font:600 15px monospace;color:{richting}">'
+            f'{h["eng_lift"]:+d}%</span></div>'
+            f'<div style="font:400 12px/1.4 monospace;color:#5A6867;margin:3px 0 8px">'
+            f'{h["aantal"]} video&rsquo;s &middot; {h["makers"]} verschillende makers '
+            f'&middot; {h["zekerheid"]}% zeker &middot; {wat}</div>'
+            f'{_bewijsrij(h.get("voorbeelden") or [], beelden)}'
+            f'</td></tr>')
+
+    if harde or harde_woorden:
+        patronen = "".join(
+            [patroonblok(h, "gesproken opening") for h in harde]
+            + [patroonblok(h, "woord in de eerste 3 seconden")
+               for h in harde_woorden])
+        stem_inleiding = (
+            f"Gemeten op {stem_bron.get('met_stem', 0)} video&rsquo;s waarvan we "
+            f"het gesproken woord hebben. Alleen patronen die genoeg "
+            f"video&rsquo;s halen, van genoeg verschillende makers, en die "
+            f"overeind blijven als de steekproef 1.500 keer opnieuw getrokken "
+            f"wordt. Onder elk patroon staan vier video&rsquo;s van vier "
+            f"verschillende makers waarin je het kunt zien.")
+    else:
+        patronen = ""
+        stem_inleiding = (
+            f"Er is deze ronde nog geen gesproken patroon dat de toets haalt: "
+            f"{stem_bron.get('met_stem', 0)} video&rsquo;s met gesproken tekst is "
+            f"te weinig om iets hard te maken. Dat wordt elke week beter, want "
+            f"de meting stapelt op.")
+
+    # ── De sterkste video's van deze week, gewoon om te zien ─────────────────
+    toppers = [v for v in d7["top"] if v.get("views", 0) >= 5000][:8]
+    toprij = ""
+    if toppers:
+        cellen = "".join(_bewijskaart(v, beelden) for v in toppers[:4])
+        cellen2 = "".join(_bewijskaart(v, beelden) for v in toppers[4:8])
+        toprij = (f'<table role="presentation" cellpadding="0" cellspacing="0">'
+                  f'<tr>{cellen}</tr>'
+                  + (f'<tr><td colspan="4" height="14"></td></tr><tr>{cellen2}</tr>'
+                     if cellen2 else "")
+                  + '</table>')
 
     def tagrij(rijen):
         return "".join(
@@ -345,62 +513,31 @@ def mail_html(data: dict, opdrachten: list[dict], dashboard_url: str) -> str:
             f'color:{"#1E7A4C" if h["lift"] > 0 else "#A8441C"}">{h["lift"]:+d}%</td></tr>'
             for h in rijen[:6])
 
-    # Alleen patronen die de hardheidstoets halen komen in de mail. De rest is
-    # een percentage zonder betekenis en hoort niet in iets waar hij op vaart.
-    stem_bron = d90 if len(d90.get("spreekhooks") or []) >= len(d30.get("spreekhooks") or []) else d30
-    harde_stem = [h for h in (stem_bron.get("spreekhooks") or []) if h.get("hard")]
-    if harde_stem:
-        stem_inleiding = (
-            f"Gemeten op {stem_bron.get('met_stem', 0)} video&rsquo;s waarvan we het "
-            f"gesproken woord hebben. Alleen patronen die genoeg video&rsquo;s, "
-            f"genoeg verschillende makers en een zekerheid boven 90% halen.")
-        stemrijen = "".join(
-            f'<tr><td style="padding:6px 12px 6px 0;font:600 14px Georgia,serif;'
-            f'vertical-align:top;white-space:nowrap">{_e(h["patroon"])}</td>'
-            f'<td style="padding:6px 12px 6px 0;font:400 12px monospace;'
-            f'color:#5A6867;vertical-align:top;white-space:nowrap">'
-            f'{h["aantal"]} video&rsquo;s &middot; {h["makers"]} makers &middot; '
-            f'{h["zekerheid"]}% zeker</td>'
-            f'<td style="padding:6px 0;font:600 14px monospace;vertical-align:top;'
-            f'color:{"#1E7A4C" if h["eng_lift"] > 0 else "#A8441C"}">'
-            f'{h["eng_lift"]:+d}%</td></tr>'
-            f'<tr><td colspan="3" style="padding:0 0 10px;font:400 13px/1.4 '
-            f'Georgia,serif;color:#5A6867">&ldquo;{_e(h["voorbeeld"][:120])}&rdquo; '
-            f'&mdash; <a href="{_e(h["voorbeeld_url"])}" style="color:#0E6F6B">'
-            f'bekijk</a></td></tr>'
-            for h in harde_stem[:5])
-    else:
-        stem_inleiding = (
-            f"Er is deze ronde nog geen gesproken patroon dat de toets haalt: "
-            f"{stem_bron.get('met_stem', 0)} video&rsquo;s met gesproken tekst is "
-            f"te weinig om iets hard te maken. Dat wordt elke week beter, want de "
-            f"meting stapelt op.")
-        stemrijen = ""
-
-    return f"""<!doctype html><html><body style="margin:0;background:#EEF1F1;padding:24px 12px">
+    html = f"""<!doctype html><html><body style="margin:0;background:#EEF1F1;padding:24px 12px">
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr><td align="center">
-<table role="presentation" width="600" cellpadding="0" cellspacing="0"
-       style="max-width:600px;background:#F8FAFA;border:1px solid #D2DAD9;padding:30px">
+<table role="presentation" width="620" cellpadding="0" cellspacing="0"
+       style="max-width:620px;background:#F8FAFA;border:1px solid #D2DAD9;padding:30px">
   <tr><td style="font:600 11px/1 monospace;letter-spacing:.16em;color:#0E6F6B;
       text-transform:uppercase;padding:0 0 8px">Trendmotor &middot; {week}</td></tr>
   <tr><td style="font:700 26px/1.2 Georgia,serif;color:#151B1B;padding:0 0 6px">
       Wat je deze week zou moeten maken</td></tr>
   <tr><td style="font:400 15px/1.5 Georgia,serif;color:#5A6867;padding:0 0 26px">
       Gemeten over {d7['aantal']} video&rsquo;s van de afgelopen 7 dagen,
-      {d30['aantal']} over 30 dagen en {d90['aantal']} over 90 dagen.
+      {d30['aantal']} over 30 dagen en {d90['aantal']} over 90 dagen, waarvan
+      {data.get('met_stem_totaal', 0)} met het gesproken woord erbij.
       Alle cijfers komen rechtstreeks van het platform.</td></tr>
   {blok}
-  <tr><td style="border-top:1px solid #D2DAD9;padding:22px 0 10px;
-      font:700 17px/1.2 Georgia,serif;color:#151B1B">Wat er in de eerste drie
-      seconden gezegd wordt</td></tr>
-  <tr><td style="font:400 14px/1.5 Georgia,serif;color:#5A6867;padding:0 0 10px">
+  <tr><td style="border-top:1px solid #D2DAD9;padding:22px 0 8px;
+      font:700 17px/1.2 Georgia,serif;color:#151B1B">Het bewijs onder deze
+      opdrachten</td></tr>
+  <tr><td style="font:400 14px/1.5 Georgia,serif;color:#5A6867;padding:0 0 16px">
       {stem_inleiding}</td></tr>
-  <tr><td style="padding:0 0 20px"><table role="presentation" cellpadding="0"
-      cellspacing="0">{stemrijen}</table></td></tr>
+  {patronen}
+  {'<tr><td style="border-top:1px solid #D2DAD9;padding:22px 0 8px;font:700 17px/1.2 Georgia,serif;color:#151B1B">De sterkste video&rsquo;s van deze week</td></tr><tr><td style="font:400 14px/1.5 Georgia,serif;color:#5A6867;padding:0 0 14px">Gerangschikt op hoeveel keer ze boven het eigen normaal van hun maker uitkomen, niet op views &mdash; anders staan hier alleen de grote accounts.</td></tr><tr><td style="padding:0 0 22px">' + toprij + '</td></tr>' if toprij else ''}
   <tr><td style="border-top:1px solid #D2DAD9;padding:22px 0 10px;
-      font:700 17px/1.2 Georgia,serif;color:#151B1B">Wat de cijfers zeggen</td></tr>
+      font:700 17px/1.2 Georgia,serif;color:#151B1B">Hashtags</td></tr>
   <tr><td style="font:400 14px/1.5 Georgia,serif;color:#5A6867;padding:0 0 10px">
-      Hashtags met de hoogste engagement, laatste 7 dagen:</td></tr>
+      Hoogste engagement, laatste 7 dagen:</td></tr>
   <tr><td style="padding:0 0 18px"><table role="presentation" cellpadding="0"
       cellspacing="0">{tagrij(d7.get('hashtags') or [])}</table></td></tr>
   <tr><td style="font:400 14px/1.5 Georgia,serif;color:#5A6867;padding:0 0 22px">
@@ -416,12 +553,15 @@ def mail_html(data: dict, opdrachten: list[dict], dashboard_url: str) -> str:
        'dashboard met alle video&rsquo;s, beeld en filters zit als bijlage bij '
        'deze mail.</div>'}</td></tr>
   <tr><td style="font:400 13px/1.5 Georgia,serif;color:#5A6867;padding:18px 0 0">
-      Elke opdracht hierboven is gekoppeld aan een video die echt bestaat en echt
-      zo presteerde. Kon een opdracht dat niet, dan staat hij er niet in.</td></tr>
+      Elk beeldje hierboven is een video die echt bestaat en echt zo presteerde.
+      Klik erop om hem te bekijken. Kon een opdracht niet aan zo&rsquo;n video
+      gekoppeld worden, dan staat hij er niet in.</td></tr>
 </table></td></tr></table></body></html>"""
+    return html, beelden
 
 
-def verstuur(html: str, onderwerp: str, bijlage: Path | None = None) -> bool:
+def verstuur(html: str, onderwerp: str, bijlage: Path | None = None,
+             beelden: dict | None = None) -> bool:
     host = os.environ.get("MAIL_HOST")
     van = os.environ.get("MAIL_USER")
     wachtwoord = os.environ.get("MAIL_PASS")
@@ -436,6 +576,16 @@ def verstuur(html: str, onderwerp: str, bijlage: Path | None = None) -> bool:
     bericht.set_content("Dit bericht is in HTML. Open het in een mailprogramma "
                         "dat HTML toont.")
     bericht.add_alternative(html, subtype="html")
+    # De beeldjes gaan als losse onderdelen mee, met een cid waar de HTML naar
+    # verwijst. Dat is de enige vorm die Gmail toont: een plaatje dat rechtstreeks
+    # in de HTML gebakken zit (data:) laat Gmail weg, en dan is de hele mail een
+    # rij lege vakjes zonder dat iets een fout meldt.
+    if beelden:
+        html_deel = bericht.get_payload()[-1]
+        for cid, rauw in beelden.items():
+            html_deel.add_related(rauw, maintype="image", subtype="jpeg",
+                                  cid=f"<{cid}>")
+        print(f"  {len(beelden)} beeldjes meegestuurd in de mail", flush=True)
     # Het dashboard gaat als bijlage mee. Anders zou de mail moeten linken naar
     # een pagina die iemand met de hand opnieuw publiceert, en dan is de motor
     # niet autonoom maar afhankelijk van een handeling die niemand doet.
@@ -587,7 +737,17 @@ def main() -> int:
     print(f"gemeten: {data['totaal']} video's "
           f"({data['7d']['aantal']}/{data['30d']['aantal']}/{data['90d']['aantal']})")
 
+    # Alles waar straks een beeldje bij moet: de sterkste video's per periode én
+    # elk bewijsstuk onder elk patroon. Zonder deze tweede groep staan er in de
+    # mail wel patronen maar geen video's eronder, en dan is het weer mijn woord
+    # tegen het jouwe.
     nodig = {id(v): v for p in PERIODES for v in data[p]["top"]}
+    for p in PERIODES:
+        for sleutel in ("spreekhooks", "spreekwoorden", "spreektempo", "hooks",
+                        "hashtags", "sounds"):
+            for patroon in data[p].get(sleutel) or []:
+                for v in patroon.get("voorbeelden") or []:
+                    nodig[id(v)] = v
     haal_beeldjes(list(nodig.values()))
     dash = bouw_dashboard(data, pad.with_name(
         pad.stem.replace("verkenning", "dashboard") + ".html"))
@@ -600,9 +760,18 @@ def main() -> int:
     opdrachten = schrijf_opdrachten(data, sleutel) if sleutel else []
     print(f"opdrachten die de broncontrole haalden: {len(opdrachten)}")
 
+    # De bronvideo van elke opdracht krijgt ook een beeldje. Die staat vaak niet
+    # in de toplijsten — juist een video die het patroon goed laat zien hoeft
+    # geen uitschieter te zijn.
+    per_url = {v["url"]: v for v in data["alles"]}
+    bronnen = [per_url[o["bron"]] for o in opdrachten
+               if o.get("bron") in per_url and not per_url[o["bron"]].get("beeld_data")]
+    if bronnen:
+        haal_beeldjes(bronnen)
+
     # Zonder ingestelde webversie wijst de knop naar de bijlage; die zit er altijd bij.
     dash_url = os.environ.get("DASHBOARD_URL", "")
-    html = mail_html(data, opdrachten, dash_url)
+    html, beelden = mail_html(data, opdrachten, dash_url)
     (UITVOER / "laatste-mail.html").write_text(html, encoding="utf-8")
 
     if args.droog:
@@ -613,7 +782,8 @@ def main() -> int:
     if notion_url:
         print(f"Notion: {notion_url}")
     verstuurd = verstuur(html, f"Trendmotor — wat je deze week zou moeten maken "
-                               f"({datetime.now():%d-%m})", bijlage=dash)
+                               f"({datetime.now():%d-%m})", bijlage=dash,
+                         beelden=beelden)
     if verstuurd:
         _noteer_verstuurd()
     print("mail verstuurd" if verstuurd else "mail NIET verstuurd")

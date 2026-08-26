@@ -210,6 +210,37 @@ def _zekerheid(met: list[float], zonder: list[float], rondes: int = 1500) -> int
     return round(max(deel, 1 - deel) * 100)
 
 
+def voorbeelden_van(groep: list[dict], n: int = 4) -> list[dict]:
+    """
+    De bewijsstukken bij een patroon: niet één video maar meerdere.
+
+    Eén voorbeeld bewijst niets — dat is een anekdote, en het voelt ook als een
+    anekdote. Daarom leveren we er meerdere, van verschillende makers, zodat je
+    het patroon zelf kunt zien in plaats van het van mij aan te moeten nemen.
+
+    Twee filters: minstens 5.000 views (anders is de engagement-ratio een
+    toevalstreffer op 40 kijkers) en één video per maker (anders staat er vijf
+    keer dezelfde persoon en zie je nog steeds geen patroon).
+    """
+    bruikbaar = [v for v in groep if v.get("views", 0) >= 5000]
+    # Video's waarvan we het eigen normaal van de maker kennen gaan voor. Bij de
+    # rest is de uitschieterfactor tegen de hele niche gemeten en kan er een
+    # spectaculair getal uitkomen dat niets bewijst; als bewijsstuk is zo'n
+    # video zwakker, hoe groot het getal ook is.
+    bruikbaar.sort(key=lambda v: (v.get("basis_herkomst") != "eigen",
+                                  -(v.get("uitschieter") or 0), -v["eng_ratio"]))
+    uit, makers = [], set()
+    for v in bruikbaar:
+        sleutel = (v["platform"], v["handle"])
+        if sleutel in makers:
+            continue
+        makers.add(sleutel)
+        uit.append(v)
+        if len(uit) >= n:
+            break
+    return uit
+
+
 def _vergelijk(met: list[dict], zonder: list[dict], minimum: int = 8) -> dict | None:
     """
     Eén patroon versus de rest. Geeft None als er te weinig materiaal is —
@@ -241,6 +272,7 @@ def _vergelijk(met: list[dict], zonder: list[dict], minimum: int = 8) -> dict | 
         "views": int(m_view),
         "views_rest": int(z_view),
         "views_lift": round((m_view / z_view - 1) * 100) if z_view else 0,
+        "voorbeelden": voorbeelden_van(met),
     }
 
 
