@@ -2724,6 +2724,8 @@ def _laatste_verzonden_bericht(imap, adres: str) -> dict | None:
             "Subject": str(msg.get("Subject", "")),
             "Message-ID": _leesbaar(msg.get("Message-ID")),
             "References": _leesbaar(msg.get("References")),
+            "From": str(msg.get("From", "")),
+            "Date": str(msg.get("Date", "")),
             "tekst": _platte_tekst(msg),
         }
     except Exception:  # noqa: BLE001 — leren mag nooit iets breken
