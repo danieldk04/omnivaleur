@@ -1193,8 +1193,16 @@ def start_scan(platform: str, user_id: str = Depends(require_active_subscription
             bekend: list[str] = []
             stap = 1000
             for offset in range(0, 40000, stap):
+                # .order("id") is hier kritiek. Zonder vaste sortering geeft de
+                # database elke pagina in willekeurige volgorde terug, dus deze
+                # lijst mist advertentienummers én bevat dubbele. Gevolg: de
+                # extensie krijgt een onvolledige "deze ken ik al"-lijst mee,
+                # haalt advertenties op die we al hebben, en meldt daarna
+                # "niets nieuws gevonden" terwijl er nog duizenden open staan.
+                # Precies het beeld bij Egbert Brouwer (26-08-2026): 1000
+                # gevonden, allemaal al bekend, terwijl er 5.534 zijn.
                 rij = (db.table("import_candidates").select("platform_listing_id")
-                       .eq("user_id", user_id).eq("platform", platform)
+                       .eq("user_id", user_id).eq("platform", platform).order("id")
                        .range(offset, offset + stap - 1).execute().data or [])
                 bekend += [str(r["platform_listing_id"]) for r in rij
                            if r.get("platform_listing_id") is not None]
