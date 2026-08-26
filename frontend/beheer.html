@@ -383,7 +383,8 @@ function toonKern(d) {
       + kaart('Negatief', getal(m.negatief), 'geen interesse / concurrent', m.negatief ? 'let' : '')
       + kaart('Afgemeld', getal(m.afgemeld), '')
       + kaart('Bounces', getal(m.bounces), '', m.bounces ? 'let' : '')
-      + kaart('Open-rate', '—', veilig(m.open_tracking_reden || ''))
+      + kaart('Geopend (opvolgmails)', getal((m.opens || {}).adressen),
+              `${getal((m.opens || {}).totaal_geopend)}x totaal — ${veilig(m.open_tracking_reden || '')}`)
     : `<div class="kaart"><div class="label">Koude mail</div><div class="bij">${veilig(m.reden || 'Niet gekoppeld')}</div></div>`;
   staafjes('mail-grafiek', m.per_dag, 'dag', 'aantal');
 
