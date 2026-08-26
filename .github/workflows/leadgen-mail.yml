@@ -27,7 +27,10 @@ concurrency:
 jobs:
   tick:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    # Was 30: de slimme, op-maat-geschreven concepten (Anthropic-aanroepen)
+    # kosten meer tijd dan het oude sjabloon-alleen-pad, en braken de laatste
+    # van de 3 rondes twee keer af nog voor hij klaar was — ontdekt 26-08-2026.
+    timeout-minutes: 55
     env:
       TZ: Europe/Amsterdam       # zonder dit rekent de server in UTC en loopt het rooster twee uur voor
       MAIL_HOST: smtp.zoho.eu
