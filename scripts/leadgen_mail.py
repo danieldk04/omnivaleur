@@ -2323,7 +2323,7 @@ def _lijkt_op_recent_verstuurd(adres: str, kern: str) -> bool:
 
 
 def _zet_concept_klaar(lead: dict, inkomend, body: str, soort: str = "warm",
-                       eigen_tekst: str | None = None) -> bool:
+                       eigen_tekst: str | None = None, met_pixel: bool = False) -> bool:
     """Legt het voorstel als concept in Daniels postbus, in dezelfde draad."""
     host, van = os.environ.get("IMAP_HOST"), os.environ.get("MAIL_USER")
     wachtwoord = os.environ.get("MAIL_PASS")
