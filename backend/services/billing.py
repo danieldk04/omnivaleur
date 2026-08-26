@@ -398,6 +398,13 @@ def evaluate_access(sub: dict | None) -> dict:
     status = (sub.get("status") or "trialing").lower()
     now = datetime.now(timezone.utc)
 
+    if status == "complimentary":
+        # Handmatig toegekende gratis toegang zonder einddatum — voor partners en
+        # teamleden, nooit door de Stripe-webhook gezet. Bewust een eigen status in
+        # plaats van "active" zonder stripe_subscription_id: dat pad is hierboven
+        # juist geblokkeerd omdat het ooit een bug was.
+        return {"allowed": True, "reason": "complimentary", "grace_ends_at": None, "grace_days_left": None}
+
     if status == "active":
         # "active" zonder Stripe-abonnement is geen betaling maar een handmatig
         # gezette rij: die gaf gratis toegang die nooit verliep. Alleen de webhook
