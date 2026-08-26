@@ -2378,7 +2378,10 @@ def _zet_concept_klaar(lead: dict, inkomend, body: str, soort: str = "warm",
               f"vrijwel gelijk aan wat er net al verstuurd is")
         return False
 
-    msg.set_content(kern + _citaat(inkomend, body))
+    volledig = kern + _citaat(inkomend, body)
+    msg.set_content(volledig)
+    if met_pixel:
+        msg.add_alternative(_open_pixel_html(lead["email"], volledig), subtype="html")
     try:
         with imaplib.IMAP4_SSL(host, 993) as im:
             im.login(van, wachtwoord)
