@@ -1837,6 +1837,14 @@ LET OP: DIT IS EEN BESTAANDE KLANT, GEEN PROSPECT.
 """
 
 
+# Hoe vaak de slimme tekst vandaag is teruggevallen op het vaste sjabloon.
+# Dat gebeurde eerder wekenlang onopgemerkt (ontbrekend anthropic-pakket,
+# 26-08-2026) omdat het alleen in de Actions-log stond, die niemand leest.
+# Deze teller komt in het avondbericht terecht, zodat het niet meer stil kan
+# blijven liggen.
+_LLM_TERUGVAL = {"aantal": 0}
+
+
 def _slim_concept(lead: dict, body: str, draad: str, afsluiting: str,
                   klant: bool = False) -> str | None:
     """Laat een taalmodel het antwoord schrijven. None = niet gelukt."""
