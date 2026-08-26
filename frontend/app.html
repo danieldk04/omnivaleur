@@ -7988,6 +7988,13 @@ async function fillFromMarktplaats() {
     // er nog honderden open stonden) — precies wat Egbert Brouwer meldde. Nu
     // pas na een paar lege rondes ACHTER ELKAAR opgeven, met een oplopende
     // pauze ertussen zodat Marktplaats kan bijkomen.
+    //
+    // 3 -> 6 pogingen (25-08-2026, Daniels wens): geduldiger zijn kost hier
+    // niets extra's aan belasting bij Marktplaats — het is dezelfde oplopende
+    // pauze, alleen langer volgehouden voor we opgeven. Bij een écht blijvend
+    // probleem betekent dit alleen dat Egbert iets langer moet wachten voor
+    // het scherm het meldt; bij een tijdelijke hik geeft het meer kans om er
+    // zelf doorheen te komen.
     let legeRondesOpRij = 0;
     for (let ronde = 0; ronde < 60; ronde++) {
       const res = await apiFetchRetry(`${API}/api/items/fill-from-marktplaats?limit=150`,
@@ -8002,7 +8009,7 @@ async function fillFromMarktplaats() {
       if (!data.te_doen) break;  // echt niets meer open — klaar
       if (!data.prijs && !data.omschrijving) {
         legeRondesOpRij++;
-        if (legeRondesOpRij >= 3) break;  // drie keer niets, dan is het echt op
+        if (legeRondesOpRij >= 6) break;  // zes keer niets, dan is het echt op
         await new Promise(r => setTimeout(r, 4000 * legeRondesOpRij));
         continue;
       }
