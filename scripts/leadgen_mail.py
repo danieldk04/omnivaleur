@@ -1534,6 +1534,19 @@ def _afsluitmails(state: dict, boek: "Notion") -> int:
 WARM_OPVOLG_DAGEN = (3, 7)
 REGISTREREN = "https://omnivaleur.com/register"
 
+
+def _open_pixel_html(adres: str, kern: str) -> str:
+    """HTML-versie van de tekst met een onzichtbare pixel erin, alleen voor de
+    warme opvolgmails (zie _zet_concept_klaar, met_pixel). Regeleindes worden
+    letterlijk overgenomen zodat het er in een mailprogramma hetzelfde uitziet
+    als de platte versie ernaast."""
+    code = base64.urlsafe_b64encode(adres.lower().encode()).rstrip(b"=").decode()
+    veilig = (kern.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+                  .replace("\n", "<br>"))
+    return (f'<html><body style="font-family:sans-serif;white-space:pre-wrap">{veilig}'
+            f'<img src="https://omnivaleur.com/t/o/{code}" width="1" height="1" '
+            f'style="display:none" alt=""></body></html>')
+
 WARM_OPVOLG = [
     """Hi,
 
