@@ -31,8 +31,10 @@ without Daniel repeating himself.
   socials (TikTok/Instagram) — schema + ideation, editing gets outsourced.
   Also owns exploring a social-DM outreach system (parallel idea to the
   existing cold-email leadgen — see the `leadgen` skill for how that one is
-  structured: find → first contact → log). Paid ads (his Meta/Google
-  background) come later, see below.
+  structured: find → first contact → log). **But right now (pre-50-users),
+  the real company-wide priority is dashboard improvements, debugging, and
+  gathering user feedback** — Monaim's content/outreach work runs alongside
+  that, not instead of it, and doesn't compete with it for resources.
 - Suggested role/tasks: **Growth & Content Partner.**
   1. Weekly Dutch content schema for TikTok + Instagram — he floated 3 posts
      + 1 video/week as a first test cadence.
@@ -41,17 +43,26 @@ without Daniel repeating himself.
   3. Track weekly content performance (views, follows, signups attributed)
      — this is what tells us when organic has enough signal to justify ad
      spend, not a fixed date.
-- **When to start paid ads:** not yet. At 36 Supabase signups (mostly
-  free-trial, some expired, a few test accounts) the trial→paid conversion
-  rate isn't known or stable enough to spend on top of it — ads would just
-  amplify a funnel we haven't validated. Wait until (a) there's a real,
-  measured trial→paid conversion number from current organic + cold-email
-  traffic, and (b) Monaim's content/outreach motion is running long enough
-  to build some brand recognition — his own point from the original
-  conversation was that brand-keyword Google Ads convert far better once
-  people already recognize the name, which is exactly what the content phase
-  builds first. Small-budget Google Ads (intent-based) before Meta, once
-  those two conditions are met.
+- **When to start paid ads: at 50 users** (concrete threshold, set by
+  Daniel — not "once conversion is validated" in the abstract anymore).
+  - **First phase targets clothing/shoe sellers specifically** — that's what
+    the dashboard is built for and where it performs best; don't broaden the
+    ad targeting past that niche in phase one.
+  - **Creatives:** organic content can double as ad creatives if the quality
+    is good enough — no separate production required by default. Monaim may
+    also build dedicated landing pages for ad traffic.
+  - **Geography: Europe only.** Deliberately stay out of US/UK — competition
+    among cross-listing tools is by far the fiercest there.
+  - **Competitive positioning:** Channable is the dominant tool most
+    marketplace sellers currently use — large, but very poorly rated. Its
+    focus is broad marketplace selling in general (including bol.com etc.).
+    Omnivaleur's differentiation is staying narrow: **secondhand
+    (tweedehands) platforms only**, for now. Don't pitch Omnivaleur as a
+    general marketplace tool — that's Channable's ground, and it's already
+    lost on reviews.
+  - Blogs are **fully automated** already (see `backend/content/quality.py`
+    and the daily auto-publish job) — not part of Monaim's remit, mentioned
+    only so he doesn't assume it's an open task.
 - **Free account:** `backend/services/billing.py` now recognizes a
   `complimentary` subscription status — unlimited access, no
   `stripe_subscription_id` required (see `evaluate_access`). To activate for
