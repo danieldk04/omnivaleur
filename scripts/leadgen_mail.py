@@ -1598,14 +1598,27 @@ def _warme_opvolging(state: dict, boek: "Notion") -> int:
             ontvangen = _laatst(["INBOX", "Beantwoord", "Afval"], "From")
 
             for adres, st in list(state.items()):
-                # Alleen warme gesprekken. Een nee of een concurrent laat je met rust.
-                if st.get("soort") not in ("warm", "onbekend"):
+                # Warme gesprekken (zij reageerden ooit) ÉN "met de hand"
+                # benaderde leads (Daniel mailde zelf — bijvoorbeeld het
+                # filmpje — maar ze reageerden nooit): allebei een gesprek dat
+                # Daniel zelf voert en dat stilgevallen is. Eerder kregen alleen
+                # de warme gevallen een opvolging; wie nooit had gereageerd
+                # (dus geen "soort" heeft) viel hier altijd buiten, en dat was
+                # precies de groep die om deze opvolging vroeg. Een nee, een
+                # concurrent of een afmelding laat je met rust.
+                if not (st.get("soort") in ("warm", "onbekend") or st.get("met_de_hand")):
                     continue
                 if st.get("afgemeld") or st.get("afgewezen") or st.get("concurrent"):
                     continue
                 ons, hun = verstuurd.get(adres), ontvangen.get(adres)
-                if ons is None or hun is None or hun > ons:
-                    continue                       # bal ligt bij ons, niet bij hen
+                # ons ontbreekt: we schreven vanaf dit adres nooit iets, dus niets
+                # om op te volgen. hun > ons: zij spraken het laatst, de bal ligt
+                # bij Daniel. Ontbreekt hun (ze reageerden nog nooit), dan ligt de
+                # bal juist bij ONS — exact het geval van een stilgevallen "met de
+                # hand"-lead. Die "hun is None" mocht hier niet meetellen als
+                # skip-reden, anders viel precies deze groep er alsnog uit.
+                if ons is None or (hun is not None and hun > ons):
+                    continue
                 beurt = int(st.get("warm_opvolg", 0))
                 if beurt >= len(WARM_OPVOLG_DAGEN):
                     continue                       # twee zetjes gehad, klaar
@@ -1615,9 +1628,23 @@ def _warme_opvolging(state: dict, boek: "Notion") -> int:
 
                 lead = per_adres.get(adres) or {"email": adres, "je_jullie": "Je"}
                 lead = {**lead, "email": adres}
-                tekst = WARM_OPVOLG[beurt].format(link=REGISTREREN,
-                                                  ondertekening=ONDERTEKENING)
-                if _zet_concept_klaar(lead, None, "", "warm", eigen_tekst=tekst):
+
+                # Reageren op het laatste bericht dat Daniel zelf stuurde, in
+                # dezelfde draad — geen losse nieuwe mail. En liever een tekst
+                # die aansluit op wat daar echt in stond dan een vast sjabloon
+                # dat nergens naar verwijst; het sjabloon blijft het vangnet als
+                # er geen sleutel is of het antwoord niet lukt.
+                draad = _laatste_verzonden_bericht(imap, adres)
+                tekst = (_stilte_concept(draad.get("tekst", ""),
+                                        beurt == len(WARM_OPVOLG_DAGEN) - 1)
+                         if draad else None)
+                if not tekst:
+                    tekst = WARM_OPVOLG[beurt].format(link=REGISTREREN,
+                                                      ondertekening=ONDERTEKENING)
+                inkomend = {"Subject": (draad or {}).get("Subject", ""),
+                            "Message-ID": (draad or {}).get("Message-ID", ""),
+                            "References": (draad or {}).get("References", "")}
+                if _zet_concept_klaar(lead, inkomend, "", "warm", eigen_tekst=tekst):
                     st["warm_opvolg"] = beurt + 1
                     st["warm_opvolg_op"] = nu.isoformat(timespec="seconds")
                     klaar += 1
