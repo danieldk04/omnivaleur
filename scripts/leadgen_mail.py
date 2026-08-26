@@ -2678,6 +2678,31 @@ def _verzonden_tekst(imap, adres: str) -> str | None:
         return None
 
 
+def _laatste_verzonden_bericht(imap, adres: str) -> dict | None:
+    """Zelfde bericht als _verzonden_tekst, maar dan met de koppen erbij: Subject,
+    Message-ID en References. Nodig om een opvolging in DEZELFDE DRAAD te zetten
+    (zie _warme_opvolging) — reageren op het laatste bericht is precies het punt,
+    niet een losse nieuwe mail die toevallig hetzelfde onderwerp heeft."""
+    try:
+        imap.select('"Verzonden"', readonly=True)
+        _, d = imap.search(None, f'(TO "{adres}")')
+        nums = (d[0] or b"").split()
+        if not nums:
+            return None
+        _, ruw = imap.fetch(nums[-1], "(RFC822)")
+        if not ruw or not ruw[0]:
+            return None
+        msg = email.message_from_bytes(ruw[0][1])
+        return {
+            "Subject": str(msg.get("Subject", "")),
+            "Message-ID": _leesbaar(msg.get("Message-ID")),
+            "References": _leesbaar(msg.get("References")),
+            "tekst": _platte_tekst(msg),
+        }
+    except Exception:  # noqa: BLE001 — leren mag nooit iets breken
+        return None
+
+
 def _antwoorden_van_daniel(imap, gebruiker: str) -> dict[str, float]:
     """Per adres het TIJDSTIP van Daniels laatste eigen antwoord, in seconden
     sinds 1970.
