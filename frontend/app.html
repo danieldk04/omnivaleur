@@ -7981,6 +7981,14 @@ async function fillFromMarktplaats() {
   setBusy(true, 'Looking up your Marktplaats adverts…');
   let prijzen = 0, teksten = 0, gedaan = 0, reden = '';
   try {
+    // Marktplaats remt zelf soms tijdelijk af bij herhaalde belasting kort na
+    // elkaar — gemeten 25-08-2026: een tweede ronde vlak na een geslaagde
+    // eerste ronde leverde 0 op, terwijl er nog volop te doen was. Eén lege
+    // ronde was voorheen genoeg om helemaal te stoppen ("klaar" melden terwijl
+    // er nog honderden open stonden) — precies wat Egbert Brouwer meldde. Nu
+    // pas na een paar lege rondes ACHTER ELKAAR opgeven, met een oplopende
+    // pauze ertussen zodat Marktplaats kan bijkomen.
+    let legeRondesOpRij = 0;
     for (let ronde = 0; ronde < 60; ronde++) {
       const res = await apiFetchRetry(`${API}/api/items/fill-from-marktplaats?limit=150`,
                                       { method: 'POST' });
@@ -7991,9 +7999,14 @@ async function fillFromMarktplaats() {
       gedaan += data.gevonden || 0;
       reden = data.reden || '';
       setBusyText(`Fetched ${teksten} description${teksten === 1 ? '' : 's'} and ${prijzen} price${prijzen === 1 ? '' : 's'}…`);
-      // Klaar zodra er niets meer open staat, of zodra een ronde niets meer
-      // oplevert: doorgaan zou dan alleen dezelfde items opnieuw langslopen.
-      if (!data.te_doen || (!data.prijs && !data.omschrijving)) break;
+      if (!data.te_doen) break;  // echt niets meer open — klaar
+      if (!data.prijs && !data.omschrijving) {
+        legeRondesOpRij++;
+        if (legeRondesOpRij >= 3) break;  // drie keer niets, dan is het echt op
+        await new Promise(r => setTimeout(r, 4000 * legeRondesOpRij));
+        continue;
+      }
+      legeRondesOpRij = 0;
     }
     await fetchAllItems();
     applyFilters(false);
