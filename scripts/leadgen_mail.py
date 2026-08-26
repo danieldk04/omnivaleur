@@ -35,6 +35,7 @@ Gebruik:
 from __future__ import annotations
 
 import argparse
+import base64
 import email
 import imaplib
 import collections
