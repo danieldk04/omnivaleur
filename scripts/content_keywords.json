@@ -401,6 +401,30 @@
       "slug": "footwear-and-shoe-reselling-automation",
       "status": "published",
       "priority": 49
+    },
+    {
+      "keyword": "etsy to shopify crosslisting automation",
+      "region": "nl",
+      "pillar": "A",
+      "slug": "etsy-to-shopify-crosslisting-automation",
+      "status": "published",
+      "priority": 50
+    },
+    {
+      "keyword": "vintage records reselling automation platforms",
+      "region": "nl",
+      "pillar": "B",
+      "slug": "vintage-records-reselling-automation-platforms",
+      "status": "pending",
+      "priority": 51
+    },
+    {
+      "keyword": "handbag and accessories reselling automation",
+      "region": "nl",
+      "pillar": "B",
+      "slug": "handbag-and-accessories-reselling-automation",
+      "status": "pending",
+      "priority": 52
     }
   ],
   "published": [
@@ -844,6 +868,15 @@
       "action": "created",
       "url_path": "/reseller-tools/footwear-and-shoe-reselling-automation",
       "published_at": "2026-08-25T08:34:17.936874+00:00"
+    },
+    {
+      "keyword": "etsy to shopify crosslisting automation",
+      "slug": "etsy-to-shopify-crosslisting-automation",
+      "region": "nl",
+      "pillar": "A",
+      "action": "created",
+      "url_path": "/crosslisting/etsy-to-shopify-crosslisting-automation",
+      "published_at": "2026-08-26T08:41:11.843792+00:00"
     }
   ]
 }
