@@ -3565,8 +3565,33 @@ async function bgScanMp2dh(job, serverUrl) {
     const total = teVerrijken.length;
     let enriched = 0;
     const startedAt = Date.now();
+    // HARDE TIJDGRENS OP HET VERRIJKEN.
+    //
+    // Hier stond niets, en dat was de laatste val voor een grote winkel. Elke
+    // advertentie kost een eigen aanvraag; gemeten bij Egbert Brouwer
+    // (26-08-2026): 95 advertenties duurden "meerdere minuten", dus ~2-3
+    // seconden per stuk. Bij zijn ~1000 persoonlijke advertenties is dat een
+    // half uur tot een uur onafgebroken doorwerken in een achtergrondtabblad.
+    // Wat er dan misging is erger dan traag: brak er onderweg iets af (Chrome
+    // die de service worker opruimt, een hangende aanvraag, de gebruiker die
+    // het tabblad sluit), dan werd er NIETS teruggestuurd en was al het werk
+    // weg — "na 95 items krijg ik weer een timeout", en daarna begon alles
+    // opnieuw bij nul.
+    //
+    // Nu kappen we op tijd af en sturen we op wat er wél klaar is. De rest
+    // houdt gewoon zijn titel/prijs/foto uit het overzicht en wordt bij een
+    // volgende scan alsnog verrijkt. Onvolledig binnen is oneindig veel beter
+    // dan compleet kwijt.
+    const VERRIJK_BUDGET_MS = 4 * 60 * 1000;
+    let afgekaptOpTijd = 0;
     try {
       for (let i = 0; i < teVerrijken.length; i++) {
+        if (Date.now() - startedAt > VERRIJK_BUDGET_MS) {
+          afgekaptOpTijd = teVerrijken.length - i;
+          console.warn(`[Omnivaleur] verrijken afgekapt op tijd: ${enriched} gedaan, `
+            + `${afgekaptOpTijd} blijven staan voor een volgende scan.`);
+          break;
+        }
         const it = teVerrijken[i];
         let e = null;
         try {
