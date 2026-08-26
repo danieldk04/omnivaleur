@@ -57,6 +57,14 @@ jobs:
         with:
           python-version: "3.12"
 
+      # De tweede roosterbeurt van dezelfde dinsdag start met de code van vóór de
+      # eerste beurt, en zou het merkbriefje en het bijgewerkte archief dus niet
+      # zien. Daarom halen we die twee bestanden vers op uit main.
+      - name: Archief en merkbriefje ophalen
+        run: |
+          git fetch --depth=1 origin main
+          git checkout origin/main -- data/ 2>/dev/null || echo "nog geen data-map"
+
       - name: Benodigdheden
         run: |
           pip install --quiet playwright httpx pillow anthropic
@@ -68,7 +76,7 @@ jobs:
       # een halve mail de deur uit doet.
       - name: Meten en versturen (rooster)
         if: github.event_name == 'schedule'
-        run: python3 scripts/social_trends_rapport.py --alleen-uur 8
+        run: python3 scripts/social_trends_rapport.py --venster 8-11
 
       # Snelle controle: haalt YouTube alleen op en laat zien of de datums
       # binnenkomen. Vanaf GitHub gedraagt YouTube zich anders dan vanaf een
@@ -91,17 +99,17 @@ jobs:
       # 1.400 video's mee, de week daarna 2.800. Zonder deze stap begint elke
       # dinsdag weer bij nul en blijven "30 dagen" en "90 dagen" holle woorden.
       - name: Archief bewaren in de repo
-        if: github.event_name == 'schedule' || inputs.echt_versturen == true
+        if: always() && (github.event_name == 'schedule' || inputs.echt_versturen == true)
         run: |
-          if [ -n "$(git status --porcelain data/)" ]; then
-            git config user.name "trendmotor"
-            git config user.email "daniel@omnivaleur.nl"
-            git add data/trends-archief.json.gz
+          git config user.name "trendmotor"
+          git config user.email "daniel@omnivaleur.nl"
+          git add -A data/
+          if git diff --cached --quiet; then
+            echo "geen wijziging in het archief"
+          else
             git commit -m "trendmotor: meting van $(date +%d-%m-%Y) toegevoegd aan het archief"
             git pull --rebase --autostash origin main || true
             git push origin HEAD:main
-          else
-            echo "geen wijziging in het archief"
           fi
 
       # De meting van deze week bewaren. Dat is niet alleen archief: de laag van

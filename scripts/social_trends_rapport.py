@@ -120,6 +120,24 @@ def voeg_samen(oud: list[dict], nieuw: list[dict]) -> list[dict]:
     return bewaard
 
 
+# Het merkbriefje. Twee roosterbeurten per dinsdag (voor zomer- en wintertijd)
+# mogen samen precies één mail opleveren. Dit bestand staat in de repo naast het
+# archief en wordt door dezelfde stap teruggeschreven.
+MERK = Path(__file__).parent.parent / "data" / "laatste-rapport.txt"
+
+
+def _al_verstuurd_vandaag() -> bool:
+    try:
+        return MERK.read_text(encoding="utf-8").strip() == datetime.now().strftime("%Y-%m-%d")
+    except OSError:
+        return False
+
+
+def _noteer_verstuurd() -> None:
+    MERK.parent.mkdir(parents=True, exist_ok=True)
+    MERK.write_text(datetime.now().strftime("%Y-%m-%d") + "\n", encoding="utf-8")
+
+
 # ── Meten ───────────────────────────────────────────────────────────────────
 def meet() -> dict:
     vers = asyncio.run(verzamel_tiktok(scrolls=3, hashtag_limiet=None))
@@ -504,18 +522,31 @@ def naar_notion(data: dict, opdrachten: list[dict], dashboard_url: str) -> str:
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--droog", action="store_true", help="niet versturen, wel bouwen")
-    ap.add_argument("--alleen-uur", type=int, default=None,
-                    help="stop tenzij het nu dit uur is (lokale tijd)")
+    ap.add_argument("--venster", metavar="VAN-TOT", default=None,
+                    help="stop tenzij het nu binnen dit lokale uurvenster is, "
+                         "en tenzij het rapport vandaag nog niet uitging")
     ap.add_argument("--hergebruik", metavar="JSON",
                     help="niet opnieuw meten maar deze meting gebruiken")
     args = ap.parse_args()
 
-    # GitHub roostert in UTC, en Nederland schuift twee keer per jaar een uur op.
-    # In plaats van het rooster elk halfjaar met de hand te verzetten, draaien we
-    # op twee UTC-tijden en laat deze controle de verkeerde beurt stilletjes gaan.
-    if args.alleen_uur is not None and datetime.now().hour != args.alleen_uur:
-        print(f"nu {datetime.now():%H:%M} lokaal, niet {args.alleen_uur}:xx — overslaan")
-        return 0
+    # GitHub roostert in UTC, Nederland schuift twee keer per jaar een uur op, en
+    # — dat was de fout — GitHub start een geroosterde taak vaak een half uur tot
+    # een uur te laat. De oude controle eiste precies 08:xx en stuurde daardoor op
+    # 25-08 béide beurten weg: ze startten om 09:24 en 10:06. Het rapport ging dus
+    # nooit uit, en niets meldde dat.
+    #
+    # Nu een venster in plaats van één uur, en een merkbriefje tegen dubbele mail:
+    # zodra het rapport van vandaag verstuurd is, staat de datum in het archief en
+    # slaat elke volgende beurt van diezelfde dag zichzelf over.
+    if args.venster:
+        van, _, tot = args.venster.partition("-")
+        nu = datetime.now()
+        if not (int(van) <= nu.hour <= int(tot)):
+            print(f"nu {nu:%H:%M} lokaal, buiten {args.venster} — overslaan")
+            return 0
+        if _al_verstuurd_vandaag():
+            print(f"het rapport van {nu:%d-%m} is al verstuurd — overslaan")
+            return 0
 
     if args.hergebruik:
         pad = Path(args.hergebruik)
@@ -555,6 +586,8 @@ def main() -> int:
         print(f"Notion: {notion_url}")
     verstuurd = verstuur(html, f"Trendmotor — wat je deze week zou moeten maken "
                                f"({datetime.now():%d-%m})", bijlage=dash)
+    if verstuurd:
+        _noteer_verstuurd()
     print("mail verstuurd" if verstuurd else "mail NIET verstuurd")
     return 0 if verstuurd else 1
 
