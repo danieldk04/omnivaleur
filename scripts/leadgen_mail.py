@@ -1025,6 +1025,24 @@ def _zelfde_bedrijf(afzender: str, state: dict) -> str | None:
     return kandidaten[0] if len(kandidaten) == 1 else None
 
 
+def _adres_uit_citaat(body: str, state: dict) -> str | None:
+    """Vangnet voor als het antwoord van een heel ander adres komt dan waar wij
+    naartoe schreven — niet een variant van hetzelfde domein (dat vangt
+    _zelfde_bedrijf al af), maar een persoonlijk adres. Tino Smits van Neopta
+    antwoordde bijvoorbeeld vanaf neopta@outlook.com op mail die naar
+    info@neopta.nl was gestuurd; "neopta" vs "outlook" heeft geen overlappende
+    domeinnaam, dus _zelfde_bedrijf mist dit.
+
+    Het geciteerde bericht eronder ("Aan: info@neopta.nl") bevat het adres dat
+    wij wél kennen. Alleen een adres dat al in de administratie staat telt mee —
+    zo kan dit nooit een lead aan de verkeerde lead knopen."""
+    for adres in re.findall(r"[\w.+-]+@[\w.-]+\.\w{2,}", body):
+        adres = adres.lower()
+        if adres in state:
+            return adres
+    return None
+
+
 def _laatst_verstuurd_per_adres() -> dict[str, float]:
     """Per ontvanger het tijdstip van onze laatste mail, in seconden sinds 1970."""
     uit: dict[str, float] = {}
