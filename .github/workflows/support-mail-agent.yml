@@ -16,9 +16,12 @@ name: Support-mailagent
 
 on:
   schedule:
-    # Elke 10 minuten, alleen tijdens ruime kantoortijd — vaker heeft geen zin
-    # en de leadmachine bewijst dat GitHub's cron toch al niet stipt is.
-    - cron: "*/10 6-20 * * *"
+    # Elke 5 minuten tijdens ruime kantoortijd. Was 10; een beurt duurt sinds de
+    # bulk-ophaal (zie _koppen_in_bulk) nog maar seconden, dus vaker kijken kost
+    # vrijwel niets meer en halveert de wachttijd. Let op: GitHub's cron is zelf
+    # niet stipt en loopt in de praktijk 3-15 minuten achter — dat is vanaf hier
+    # de grootste resterende vertraging, niet het script.
+    - cron: "*/5 6-20 * * *"
   workflow_dispatch:       # met de hand starten vanaf github.com voor de eerste live test
 
 concurrency:

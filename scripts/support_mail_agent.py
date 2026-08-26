@@ -58,6 +58,12 @@ OUT = Path(__file__).parent / "output"
 TREND_REPORT = OUT / "support_trends.json"
 REVIEW_QUEUE = OUT / "support_review_needed.json"  # niet-simpele issues + auto-fix samenvatting, voor Daniel
 
+# Hoe ver terug we kijken. Was 21 dagen, en dat kostte elke beurt tientallen
+# megabytes aan bijlagen. We hebben alleen het LAATSTE bericht per gesprek nodig
+# om te bepalen of er nog een antwoord open staat; een reactie die vandaag
+# binnenkomt valt altijd binnen dit venster, ook als het gesprek zelf ouder is.
+VENSTER_DAGEN = 10
+
 CONCEPTMAP = "Concept"
 MAP_BEANTWOORD = "Beantwoord"
 TABEL = "support_mail_log"
@@ -193,6 +199,39 @@ class Thread:
     references: str       # voor In-Reply-To/References op het antwoord
 
 
+def _koppen_in_bulk(imap: imaplib.IMAP4_SSL, nummers: list[bytes],
+                    velden: str = "FROM SUBJECT MESSAGE-ID REFERENCES IN-REPLY-TO DATE") -> dict:
+    """Alle kopteksten in ÉÉN IMAP-aanroep, in plaats van één aanroep per bericht.
+
+    WAAROM. Dit script deed per bericht een aparte fetch, en bij de inbox zelfs
+    een volledige fetch inclusief bijlagen. Egberts meldingen hebben foto's van
+    ~170 kB per stuk; over een venster van drie weken werden zo tientallen
+    megabytes één voor één opgehaald voordat er ook maar één concept geschreven
+    werd. Dat is waar de wachttijd zat — niet bij het schrijven.
+
+    Alleen de kopvelden die we echt gebruiken, en alles in één keer.
+    """
+    if not nummers:
+        return {}
+    reeks = b",".join(nummers).decode()
+    try:
+        _, data = imap.fetch(reeks, f"(BODY.PEEK[HEADER.FIELDS ({velden})])")
+    except Exception:
+        return {}
+    uit: dict[str, email.message.Message] = {}
+    for stuk in data or []:
+        if not isinstance(stuk, tuple) or len(stuk) < 2:
+            continue
+        m = re.match(rb"^\s*(\d+)", stuk[0] or b"")
+        if not m:
+            continue
+        try:
+            uit[m.group(1).decode()] = email.message_from_bytes(stuk[1])
+        except Exception:
+            continue
+    return uit
+
+
 def _bestaande_conceptdoelen(imap: imaplib.IMAP4_SSL) -> set[str]:
     """Message-IDs waarvoor al een concept klaarstaat (via In-Reply-To/References
     van bestaande concepten). Per-message check, niet per-thread — zie module docstring."""
@@ -203,12 +242,12 @@ def _bestaande_conceptdoelen(imap: imaplib.IMAP4_SSL) -> set[str]:
             continue
         if imap.select(f'"{map_}"', readonly=True)[0] != "OK":
             continue
-        _, data = imap.search(None, "ALL")
-        for num in (data[0] or b"").split():
-            _, ruw = imap.fetch(num, "(BODY.PEEK[HEADER])")
-            if not ruw or not ruw[0]:
-                continue
-            kop = email.message_from_bytes(ruw[0][1])
+        # Alleen recente concepten, en in één aanroep: "ALL" plus een fetch per
+        # concept groeit mee met de hele conceptenmap en werd elke beurt trager.
+        sinds = (datetime.now() - timedelta(days=VENSTER_DAGEN)).strftime("%d-%b-%Y")
+        _, data = imap.search(None, f"(SINCE {sinds})")
+        nummers = (data[0] or b"").split()
+        for kop in _koppen_in_bulk(imap, nummers, "IN-REPLY-TO REFERENCES").values():
             for veld in ("In-Reply-To", "References"):
                 for stuk in (kop.get(veld, "") or "").split():
                     doelen.add(stuk.strip("<>"))
@@ -234,34 +273,52 @@ def _inbox_wachtend(imap: imaplib.IMAP4_SSL, eigen_adres: str) -> list[Thread]:
     if imap.select("INBOX")[0] != "OK":
         return []
     al_beantwoord = _bestaande_conceptdoelen(imap)
-    sinds = (datetime.now() - timedelta(days=21)).strftime("%d-%b-%Y")
+    sinds = (datetime.now() - timedelta(days=VENSTER_DAGEN)).strftime("%d-%b-%Y")
     _, data = imap.search(None, f'(SINCE {sinds})')
-    per_thread: dict[str, list[tuple[str, email.message.Message]]] = {}
-    for num in (data[0] or b"").split():
-        _, ruw = imap.fetch(num, "(RFC822)")
-        if not ruw or not ruw[0]:
+    nummers = (data[0] or b"").split()
+
+    # FASE 1 — alleen kopteksten, in één aanroep. Hier stond een volledige fetch
+    # (RFC822) PER BERICHT: dat haalt ook elke bijlage op. Bij meldingen met
+    # schermafbeeldingen van ~170 kB liep dat op tot tientallen megabytes per
+    # beurt, sequentieel, vóórdat er één concept geschreven was. Om te bepalen
+    # WELK bericht een antwoord nodig heeft is de koptekst genoeg.
+    koppen = _koppen_in_bulk(imap, nummers)
+
+    per_thread: dict[str, list[tuple[str, str, email.message.Message]]] = {}
+    for num in nummers:
+        kop = koppen.get(num.decode())
+        if kop is None:
             continue
-        msg = email.message_from_bytes(ruw[0][1])
-        afzender = parseaddr(msg.get("From", ""))[1].lower()
+        afzender = parseaddr(kop.get("From", ""))[1].lower()
         if not afzender or afzender == eigen_adres.lower() or SYSTEEM_AFZENDER.search(afzender):
             continue
-        onderwerp = _decode(msg.get("Subject", ""))
+        onderwerp = _decode(kop.get("Subject", ""))
         kern_onderwerp = re.sub(r"^(re|fwd?):\s*", "", onderwerp, flags=re.I).strip().lower()
         if _LEADGEN_ONDERWERP.match(kern_onderwerp):
             continue
         sleutel = kern_onderwerp or afzender
-        per_thread.setdefault(sleutel, []).append((afzender, msg))
+        per_thread.setdefault(sleutel, []).append((num.decode(), afzender, kop))
 
+    # FASE 2 — pas nu de volledige tekst ophalen, en alleen van de berichten die
+    # daadwerkelijk een concept nodig hebben. Dat zijn er per beurt een handvol
+    # in plaats van alles uit het venster.
     resultaat = []
     for _, berichten in per_thread.items():
-        afzender, laatste = berichten[-1]  # IMAP levert oplopend op datum
-        msg_id = (laatste.get("Message-ID", "") or "").strip("<>")
+        num, afzender, kop = berichten[-1]  # IMAP levert oplopend op datum
+        msg_id = (kop.get("Message-ID", "") or "").strip("<>")
         if not msg_id or msg_id in al_beantwoord:
             continue
-        naam = parseaddr(laatste.get("From", ""))[0] or afzender.split("@")[0]
-        onderwerp = _decode(laatste.get("Subject", ""))
-        body = _body_text(laatste)
-        refs = " ".join(x for x in [laatste.get("References", ""), f"<{msg_id}>"] if x)
+        try:
+            _, ruw = imap.fetch(num, "(BODY.PEEK[])")
+            if not ruw or not ruw[0]:
+                continue
+            volledig = email.message_from_bytes(ruw[0][1])
+        except Exception:
+            continue
+        naam = parseaddr(kop.get("From", ""))[0] or afzender.split("@")[0]
+        onderwerp = _decode(kop.get("Subject", ""))
+        body = _body_text(volledig)
+        refs = " ".join(x for x in [kop.get("References", ""), f"<{msg_id}>"] if x)
         resultaat.append(Thread(msg_id, afzender, _decode(naam), onderwerp, body, refs))
     return resultaat
 
@@ -421,8 +478,14 @@ def _draft_met_llm(draad: Thread, grondslag: str) -> tuple[str, str]:
         "Schrijf het conceptantwoord."
     )
     resp = client.messages.create(
-        model="claude-sonnet-4-5",
-        max_tokens=800,
+        # Sonnet 5 in plaats van 4.5: nieuwere generatie, en zowel sneller als
+        # beter in het volgen van de instructie "beweer niets dat niet in het
+        # meegeleverde bewijsmateriaal staat" — precies waar het bij deze
+        # concepten op aankomt.
+        model="claude-sonnet-5",
+        # 800 was krap voor een antwoord dat én uitlegt wat er misging én wat de
+        # klant nu moet doen; zulke concepten werden middenin afgekapt.
+        max_tokens=1500,
         system=SYSTEM_PROMPT,
         messages=[{"role": "user", "content": prompt}],
     )
