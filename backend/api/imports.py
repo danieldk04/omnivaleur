@@ -46,7 +46,14 @@ def _parallel_fetch_all(build_base_query, select_cols: str, page_size: int = 500
     import concurrent.futures as _cf
 
     def _pagina(offset: int) -> list[dict]:
-        return (build_base_query().select(select_cols)
+        # .order() is hier NIET optioneel. Zonder expliciete sortering mag de
+        # database elke pagina in een willekeurige volgorde teruggeven, en dan
+        # overlappen pagina's elkaar of missen ze rijen. Bij parallel ophalen is
+        # dat erger dan bij sequentieel: elke aanvraag kiest onafhankelijk zijn
+        # eigen volgorde, dus de kans op gaten is vrijwel gegarandeerd. Een gat
+        # hier betekent dat een bestaand item niet herkend wordt bij het
+        # importeren — precies de fout die we proberen op te lossen.
+        return (build_base_query().select(select_cols).order("id")
                 .range(offset, offset + page_size - 1).execute().data or [])
 
     offsets = list(range(0, totaal, page_size))
