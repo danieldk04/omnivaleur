@@ -401,14 +401,16 @@ function toonKern(d) {
   const leren = m.leren || {};
   el('mail-leren-cijfer').innerHTML = leren.totaal
     ? `<div class="cijfer">${leren.ongewijzigd_pct}%</div>
-       <div class="bij">ongewijzigd verstuurd, over de laatste ${getal(leren.totaal)} concepten</div>`
+       <div class="voortgang"><div style="width:${leren.ongewijzigd_pct}%"></div></div>
+       <div class="bij">ongewijzigd verstuurd, over de laatste ${getal(leren.totaal)} concepten
+         (${getal(leren.aangepast)} aangepast)</div>`
     : `<div class="leeg">Nog geen concepten afgerond.</div>`;
   el('mail-leren-lijst').innerHTML = (leren.recent && leren.recent.length)
-    ? leren.recent.map(r => `<div style="margin-bottom:10px">
-        <b>${veilig(r.adres)}</b> — ${geleden(r.op)} geleden
-        ${r.aangepast ? '<span class="let">aangepast</span>' : '<span class="op">ongewijzigd</span>'}
-        ${r.aangepast ? `<div class="uitleg">Voorstel: ${veilig(r.voorstel)}</div>
-                         <div class="uitleg">Verstuurd: ${veilig(r.verstuurd)}</div>` : ''}
+    ? leren.recent.map(r => `<div class="leerrij">
+        <b>${veilig(r.adres)}</b> — ${geleden(r.op)} geleden —
+        ${r.aangepast ? '<span class="let">aangepast</span>' : '<span class="op">ongewijzigd verstuurd</span>'}
+        ${r.aangepast ? `<div class="diff"><b>Voorstel</b><span>${veilig(r.voorstel)}</span></div>
+                         <div class="diff"><b>Verstuurd</b><span>${veilig(r.verstuurd)}</span></div>` : ''}
       </div>`).join('')
     : `<div class="leeg">Nog geen concepten afgerond.</div>`;
 
