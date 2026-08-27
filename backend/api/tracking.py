@@ -32,25 +32,36 @@ _PIXEL = base64.b64decode(
 )
 
 
-def _decode(code: str) -> str | None:
+def _decode(code: str) -> tuple[str, str] | None:
+    """Geeft (adres, laag) terug. Oudere links dragen alleen een adres; die
+    tellen als 'opvolg', want tot 27-08-2026 zat de pixel alleen daarin."""
     try:
         pad = "=" * (-len(code) % 4)
-        return base64.urlsafe_b64decode(code + pad).decode().lower()
+        rauw = base64.urlsafe_b64decode(code + pad).decode().lower()
     except Exception:  # noqa: BLE001 — een kapotte link mag nooit een fout teruggeven
         return None
+    adres, _, laag = rauw.partition("|")
+    return (adres, laag or "opvolg") if "@" in adres else None
 
 
 @router.get("/o/{code}")
 def open_pixel(code: str) -> Response:
-    adres = _decode(code)
-    if adres:
+    ontleed = _decode(code)
+    if ontleed:
+        adres, laag = ontleed
         try:
             db = get_admin_db()
             rijen = execute_with_retry(db.table("leadgen_opslag")
                                        .select("inhoud").eq("naam", "mail_opens")).data or []
             opens = rijen[0]["inhoud"] if rijen else {}
             nu = datetime.now(timezone.utc).isoformat(timespec="seconds")
-            item = opens.setdefault(adres, {"eerst": nu, "aantal": 0})
+            per_lead = opens.setdefault(adres, {})
+            # Oude vorm was {adres: {eerst, laatst, aantal}} zonder laag. Zet die
+            # om naar de nieuwe vorm i.p.v. hem te overschrijven of te laten
+            # botsen met een laag-sleutel.
+            if "aantal" in per_lead:
+                per_lead = opens[adres] = {"opvolg": per_lead}
+            item = per_lead.setdefault(laag, {"eerst": nu, "aantal": 0})
             item["laatst"] = nu
             item["aantal"] += 1
             db.table("leadgen_opslag").upsert(
