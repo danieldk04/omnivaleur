@@ -111,3 +111,32 @@ er gewoon stonden.
 Een testaccount met 50 items bewijst niets. Bij elke query over items/listings
 geldt: `fetch_all` in plaats van `.limit(...)`, en `fetch_all_in` /
 `update_in` (backend/database.py) in plaats van een kale `.in_(...)`.
+
+### 2026-08-27, aanvulling — nog twee showstoppers bij dezelfde klant
+
+Na de fixes hierboven bleken er nóg twee dingen kapot die los stonden van de
+te lange URL.
+
+**"Import all → Items" was sinds 25-08 voor iedereen dood.** In één regel zaten
+twee fouten: `db.table("items").eq(...)` zonder `select()` ervoor (bestaat niet,
+gooide meteen `AttributeError`), en een "snellere" parallelle lezer die acht
+verzoeken tegelijk over de gedeelde Supabase-verbinding stuurde. Gemeten op
+Egberts account: **45 van de 55 gelijktijdige verzoeken mislukten**; na elkaar 0
+mislukt en 4,4 seconden voor alles. De parallellisatie was zelf de storing.
+
+**Hij draaide de extensie twee keer.** Naast een bijgewerkte kopie liep er een
+met de hand geladen kopie van 16 augustus (1.0.207), die nooit meebeweegt met de
+Chrome Web Store. Beide halen werk uit dezelfde wachtrij; wie het eerst pakte
+bepaalde de uitslag — 13 scans geslaagd, 18 mislukt, en die 18 meldden allemaal
+"je bent niet ingelogd bij Marktplaats" terwijl hij ingelogd was. De Web Store
+stond al die tijd gewoon op 1.0.248; het lag dus niet aan het publiceren.
+
+Wat er nu tegen beschermt: de server zet een scan die door een extensie ouder
+dan `MINIMALE_SCANVERSIE` wordt afgekeurd terug in de wachtrij in plaats van op
+"mislukt", en het dashboard meldt welke verouderde versie er meedraait. Dat is
+af te lezen uit het versiestempel dat de extensie zelf in haar foutmeldingen
+zet — geen extra tabel, geen migratie.
+
+**Les:** de gepubliceerde Web Store-versie is zonder inloggen te controleren via
+de CRX-updatecheck. Bij "hij doet het soms wel en soms niet" is dat de eerste
+vraag: draait er ergens nog een tweede kopie?
