@@ -209,3 +209,36 @@ mét reden welke mails op Daniel wachten. Drie nieuwe commando's: `wachtenden`
 creditkaart, een ontbrekend pakket, een te oude pin. Bouw daarom nooit op één
 slot. En als iets "soms goed en soms generiek" is, kijk dan eerst naar de
 gepinde versies, niet naar de prompt.
+
+### 2026-08-27, avond — zes stilstaande tests, waarvan twee echte fouten
+
+Zes tests faalden al langer zonder dat iemand keek. Drie soorten:
+
+**Een echte fout in het publiceren naar Vinted.** `BLAD_VOORKEUR` en `enkelvoud`
+stonden rond regel 1431 van `extension/content/vinted.js`, dus ná het punt waar
+het formulier al wordt ingevuld (`await fillForm(item)`, regel 566). Een `const`
+bestaat pas zodra zijn eigen regel gedraaid is, dus de categoriestap viel om op
+een waarde die nog niet bestond. Omdat `step()` fouten opvangt en doorgaat, ging
+de advertentie zónder categorie naar Vinted — geen crash, geen melding, alleen
+een advertentie die niet klopt. Geraakt werden juist de items waar die lijst voor
+bedoeld is: cardigans, zip-vesten, geruite overhemden. Verplaatst naar boven.
+Dit is de vierde keer dat deze val toeslaat (eerder: kleurstap, V_KLEDING,
+PRICE_ERR_RE).
+
+**137 categorieën zonder bestemming.** De groepen wonen, antiek/kunst en muziek
+kwamen in augustus in het dashboard, maar kregen nooit een Vinted-hint, een
+eBay-hint of een Shopify-producttype. Vinted is in dit project bewust geen
+kleding-only platform (zie `backend/services/platformregels.py`), dus die items
+zijn echt te plaatsen — ze kwamen alleen nergens goed terecht. Alle 137 zijn nu
+ingevuld vanuit één vertaaltabel; Shopify leest de eBay-hints in plaats van een
+vierde kopie bij te houden. Belangrijk om te weten: deze hints zijn ZOEKWOORDEN
+die in Vinted's eigen categoriezoekvak worden getypt, geen vaste categorie-ID's.
+
+**Twee verouderde tests.** De bescherming tegen "gave spijkerbroek verkocht als
+kapotte spijkerbroek" en de uitsluiting van verkochte/concept-advertenties op
+Vinted bestaan allebei nog, maar waren hernoemd en verplaatst. De tests zochten
+op letterlijke tekst en braken op de vorm. Ze toetsen nu de garantie zelf.
+
+**Les:** een test die al weken rood staat, wordt genegeerd. Dat kostte hier een
+maand lang stille fouten in het publiceren. Een rode suite is een storing, geen
+achtergrondruis.
