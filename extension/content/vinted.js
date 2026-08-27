@@ -526,6 +526,56 @@
   // netjes stond, terwijl Vinted hem weigerde.
   const PRICE_ERR_RE = /price must|must be greater|greater than or equal|at least|minimaal|moet (groter|ten minste)|ongeldig|invalid/i;
 
+  // Welk blad hoort bij dit artikel?
+  //
+  // WAAROM DIT ZO MOET. De vorige versie keek of een woord uit de optienaam
+  // letterlijk in de titel stond. Vinted spelt zijn bladen in het MEERVOUD
+  // ("Cardigans", "Checked shirts"), en een titel zegt "Cardigan" — dus die
+  // vergelijking mislukte altijd en er werd steevast "Other …" gekozen. Gemeten
+  // op drie echte advertenties: een cardigan, een zip-vest en een geruit
+  // overhemd belandden alle drie bij "Other". Dat kost vindbaarheid: kopers
+  // filteren op deze bladen.
+  //
+  // Nu: enkelvoud tegen enkelvoud, plus een handjevol woorden die zo
+  // vanzelfsprekend zijn dat ze voorrang krijgen.
+  //
+  // WAAROM HIER EN NIET BIJ kiesBlad. Deze twee stonden vlak boven kiesBlad,
+  // ruim duizend regels verderop — en dus ná het punt waar het formulier al
+  // wordt ingevuld. Een `const` bestaat pas zodra zijn eigen regel gedraaid is;
+  // tot dat moment is hij niet te gebruiken. Het invullen begint bij
+  // `await fillForm(item)`, dat is de categoriestap, dat is kiesBlad, en dat is
+  // BLAD_VOORKEUR — die dan nog niet bestond. Elke Vinted-advertentie waarbij de
+  // categorieboom nog een niveau dieper ging, klapte daarop stuk. Precies de
+  // items waar deze lijst voor bedoeld is: cardigans, zip-vesten, geruite
+  // overhemden. Alles wat de invulstappen gebruiken hoort dus bóven
+  // `const job = await getJob()` te staan; tests/test_vinted_categories.py
+  // bewaakt dat.
+  const BLAD_VOORKEUR = [
+    [/\bcardigan/i,                         /cardigan/i],
+    [/\bzip[- ]?(through|up|vest|hoodie)/i, /zip[- ]?through/i],
+    [/\bhoodie/i,                           /^hoodies/i],
+    [/\bsweatshirt/i,                       /sweatshirt/i],
+    [/\bgeruit|\bchecked|\bplaid|\btartan/i, /check/i],
+    [/\bgestreept|\bstriped/i,              /stripe/i],
+    [/\bdenim(?!\s*jeans)/i,                /denim/i],
+    [/\bflanel|\bflannel/i,                 /flannel/i],
+    [/\blinnen|\blinen/i,                   /linen/i],
+    [/\boxford/i,                           /oxford/i],
+    [/\bpolo\b/i,                           /polo/i],
+    [/\bv[- ]?hals|\bv[- ]?neck/i,          /v[- ]?neck/i],
+    [/\bronde hals|\bcrew ?neck/i,          /crew ?neck/i],
+    [/\bcoltrui|\bturtleneck|\brollkragen/i, /turtleneck|roll ?neck/i],
+    [/\bgilet|\bbodywarmer|\bvest\b/i,      /gilet|waistcoat|body ?warmer/i],
+    [/\btrenchcoat/i,                       /trench/i],
+    [/\bparka/i,                            /parka/i],
+    [/\bbomber/i,                           /bomber/i],
+    [/\bblazer|\bcolbert/i,                 /blazer/i],
+  ];
+
+  // "cardigans" → "cardigan", "shirts" → "shirt". Alleen de kale meervouds-s:
+  // slimmer worden helpt hier niet en levert alleen misverstanden op.
+  const enkelvoud = (w) => (w.length > 4 && /s$/.test(w) && !/ss$/.test(w) ? w.slice(0, -1) : w);
+
   const job = await getJob();
   if (!job) return;
   const { id: jobId, serverUrl, payload: item } = job;
