@@ -3661,6 +3661,11 @@ def main() -> None:
             p.add_argument("--dry-run", action="store_true")
         p.set_defaults(func=functie)
 
+    sw = sub.add_parser("sjablonen-weg",
+                        help="oude standaard verkoopmails uit Concepten halen")
+    sw.add_argument("--dry-run", action="store_true", help="alleen tonen, niets weggooien")
+    sw.set_defaults(func=sjablonen_weg)
+
     c = sub.add_parser("check", help="antwoorden, afmeldingen en bounces ophalen")
     c.add_argument("--dagen", type=int, default=30)
     c.set_defaults(func=check)
