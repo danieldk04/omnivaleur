@@ -477,19 +477,32 @@ def _draft_met_llm(draad: Thread, grondslag: str) -> tuple[str, str]:
         f"BEWIJSMATERIAAL UIT DE CODEBASE:\n{grondslag}\n\n"
         "Schrijf het conceptantwoord."
     )
-    resp = client.messages.create(
-        # Sonnet 5 in plaats van 4.5: nieuwere generatie, en zowel sneller als
-        # beter in het volgen van de instructie "beweer niets dat niet in het
-        # meegeleverde bewijsmateriaal staat" — precies waar het bij deze
-        # concepten op aankomt.
-        model="claude-sonnet-5",
-        # 800 was krap voor een antwoord dat én uitlegt wat er misging én wat de
-        # klant nu moet doen; zulke concepten werden middenin afgekapt.
-        max_tokens=1500,
-        system=SYSTEM_PROMPT,
-        messages=[{"role": "user", "content": prompt}],
-    )
-    tekst = "".join(b.text for b in resp.content if hasattr(b, "text")).strip()
+    try:
+        resp = client.messages.create(
+            # Opus: het gaat om een handvol klantmails per dag, en de instructie
+            # "beweer niets dat niet in het meegeleverde bewijsmateriaal staat"
+            # is precies waar het betere model zich in onderscheidt.
+            model="claude-opus-5",
+            # 1500 was gevaarlijk krap. Deze modelgeneratie denkt eerst na, en dat
+            # nadenken telt mee in max_tokens — het budget kan dus op zijn vóór er
+            # één zin antwoord staat, en dan komt er een leeg blok terug. Precies
+            # die val kostte de leadgen-agent op 27-08-2026 een dag aan concepten.
+            max_tokens=16000,
+            output_config={"effort": "low"},
+            system=SYSTEM_PROMPT,
+            messages=[{"role": "user", "content": prompt}],
+        )
+    except Exception as e:  # noqa: BLE001 — geen concept is beter dan een fout concept
+        print(f"  !! concept MISLUKT ({type(e).__name__}: {e}) — bericht blijft staan")
+        return "", topic
+    tekst = "".join(b.text for b in resp.content
+                    if getattr(b, "type", "") == "text").strip()
+    # Een afgekapt of leeg antwoord is geen antwoord; dat mag niet als concept
+    # de mailbox in, want dan lijkt het werk gedaan.
+    if len(tekst.split()) < 15:
+        print(f"  !! concept te kort ({len(tekst.split())} woorden, "
+              f"stop={getattr(resp, 'stop_reason', '?')}) — bericht blijft staan")
+        return "", topic
     return tekst, topic
 
 
