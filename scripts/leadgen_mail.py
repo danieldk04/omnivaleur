@@ -1914,7 +1914,15 @@ def _slim_concept(lead: dict, body: str, draad: str, afsluiting: str,
             # ook maar één zin antwoord stond, en viel hij terug op het sjabloon —
             # precies de standaardmail die Frank de Veer als antwoord kreeg op een
             # bericht waarin hij zei het niet nodig te hebben.
-            max_tokens=2000,
+            #
+            # 2000 was om dezelfde reden nog te krap: dit model denkt eerst na, en
+            # dat nadenken telt mee in max_tokens. Op 27-08-2026 kwam de analyse
+            # terug met stop=max_tokens en alleen een denk-blok — nul woorden
+            # tekst. De grens moet ruimte laten voor denken én schrijven.
+            max_tokens=16000,
+            # Een kort mailtje schrijven vraagt geen diepe analyse; lage inspanning
+            # scheelt kosten en houdt het denken kort.
+            output_config={"effort": "low"},
             system=(_SCHRIJF_REGELS.format(prijs=PRIJS, platforms=PLATFORMS, video=VIDEO)
                 + (_KLANT_REGELS if klant else "")),
             messages=[{"role": "user", "content": prompt}],
