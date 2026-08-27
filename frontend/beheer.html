@@ -540,8 +540,8 @@ function toonKern(d) {
   el('mail-leren-cijfer').innerHTML = leren.totaal
     ? `<div class="cijfer">${leren.ongewijzigd_pct}%</div>
        <div class="voortgang"><div style="width:${leren.ongewijzigd_pct}%"></div></div>
-       <div class="bij">ongewijzigd verstuurd, over de laatste ${getal(leren.totaal)} concepten
-         (${getal(leren.aangepast)} aangepast)</div>`
+       <div class="bij">van mijn tekst bleef gemiddeld staan, over ${getal(leren.totaal)} concepten.
+         ${getal(leren.aangepast)} daarvan echt herschreven.</div>`
     : `<div class="leeg">Nog geen concepten afgerond.</div>`;
   el('mail-leren-lijst').innerHTML = (leren.recent && leren.recent.length)
     ? leren.recent.map(r => `<div class="leerrij">
