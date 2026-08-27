@@ -63,6 +63,12 @@ tr:last-child td { border-bottom: 0; }
 .staaf { width: 100%; background: var(--blauw); border-radius: 3px 3px 0 0; min-height: 2px; opacity: .9; }
 .kolom span { font-size: 10px; color: var(--zacht); }
 .leeg { color: var(--zacht); padding: 14px 4px; font-size: 13px; }
+.voortgang { background: var(--rand); border-radius: 5px; height: 8px; margin-top: 10px; overflow: hidden; }
+.voortgang > div { background: var(--groen); height: 100%; }
+.leerrij { border-top: 1px solid var(--rand); padding: 10px 0; font-size: 13px; }
+.leerrij:first-child { border-top: none; padding-top: 0; }
+.leerrij .diff { display: flex; gap: 6px; margin-top: 4px; }
+.leerrij .diff b { color: var(--zacht); font-weight: 600; flex-shrink: 0; }
 button.knop { background: var(--blauw); color: #fff; border: 0; border-radius: 9px;
   padding: 7px 13px; font-size: 12.5px; font-weight: 700; cursor: pointer; margin-bottom: 12px; }
 button.stil { background: transparent; border: 1px solid var(--rand); color: var(--zacht); }
