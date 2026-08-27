@@ -3283,6 +3283,12 @@ def main() -> None:
     c.add_argument("--dagen", type=int, default=30)
     c.set_defaults(func=check)
 
+    g = sub.add_parser("corrigeer", help="een verkeerd gezette vlag rechtzetten")
+    g.add_argument("adres")
+    g.add_argument("vlag", choices=_TOEGESTANE_VLAGGEN)
+    g.add_argument("waarde", choices=("aan", "uit"))
+    g.set_defaults(func=corrigeer)
+
     t = sub.add_parser("tick", help="autonome beurt; elke tien minuten draaien")
     t.add_argument("--per-dag", type=int, default=0,
                    help="afwijken van het opbouwschema")
