@@ -415,7 +415,7 @@
       "region": "nl",
       "pillar": "B",
       "slug": "vintage-records-reselling-automation-platforms",
-      "status": "pending",
+      "status": "published",
       "priority": 51
     },
     {
@@ -877,6 +877,15 @@
       "action": "created",
       "url_path": "/crosslisting/etsy-to-shopify-crosslisting-automation",
       "published_at": "2026-08-26T08:41:11.843792+00:00"
+    },
+    {
+      "keyword": "vintage records reselling automation platforms",
+      "slug": "vintage-records-reselling-automation-platforms",
+      "region": "nl",
+      "pillar": "B",
+      "action": "created",
+      "url_path": "/reseller-tools/vintage-records-reselling-automation-platforms",
+      "published_at": "2026-08-27T18:47:11.441807+00:00"
     }
   ]
 }
