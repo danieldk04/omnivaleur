@@ -3242,6 +3242,13 @@ def tick(args) -> None:
     # binnenkomt weet Daniel dat de machine leeft; blijft het uit, dan is dát het
     # signaal. Volledig sluitend is het niet — staat de Mac uit, dan draait er
     # niets en komt er ook geen bericht. Het gat wordt dan de volgende dag gemeld.
+        # Eén keer per week (of eerder bij een duidelijk patroon) de campagne
+        # doorrekenen. _advies_bijwerken bepaalt zelf of het aan de beurt is.
+        try:
+            _advies_bijwerken(state)
+        except Exception as e:  # noqa: BLE001 — analyse mag de ronde nooit stoppen
+            print(f"  (mailanalyse mislukt: {e})")
+
     if _LLM_TERUGVAL["aantal"]:
         plan.setdefault("fouten", []).append(
             f"slimme tekst {_LLM_TERUGVAL['aantal']}x teruggevallen op vast sjabloon "
