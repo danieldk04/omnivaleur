@@ -119,9 +119,26 @@ def test_naam_en_kruimelpad_worden_gescheiden():
 
 
 def test_geen_kapotte_spijkerbroek_bij_twijfel():
-    blok = VINTED.split("const neutraal = opties.find")[1][:200]
+    """Zegt het artikel niets over pasvorm, dan het neutrale blad — nooit de eerste.
+
+    Waar dit vandaan komt: op Vinted bestaat onder Jeans geen gewone "Jeans",
+    alleen Ripped/Skinny/Slim fit/Straight fit. Zonder deze regel viel de keuze op
+    de eerste optie, en dat is "Ripped jeans" — dan staat een gave spijkerbroek te
+    koop als kapotte. Live nagelopen op vinted.nl.
+
+    Deze test zocht naar `const neutraal = opties.find`. Die regel bestaat niet
+    meer: de keuze is verhuisd naar `kiesBlad`, waar hij nu stap 3 is en `const n
+    = namen.findIndex` heet. De bescherming zelf is ongewijzigd — alleen de vorm
+    veranderde, en daar liep de test op stuk. Daarom toetst hij nu de garantie in
+    plaats van de schrijfwijze: de neutrale woorden moeten in kiesBlad staan, en
+    "Other …" mag nooit uit de puntentelling komen rollen (dat is de tweede helft
+    van dezelfde bescherming — anders wint "Other" op woordovereenkomst).
+    """
+    blok = VINTED.split("function kiesBlad(")[1].split("\n  }")[0]
     for woord in ("other", "straight", "regular", "classic", "basic"):
-        assert woord in blok, f"neutrale terugval mist '{woord}'"
+        assert woord in blok, f"neutrale terugval mist '{woord}' in kiesBlad"
+    assert re.search(r"/\^other\\b/i\.test\(namen\[i\]\)\)\s*return", blok), \
+        "'Other …' hoort uit de puntentelling te blijven"
 
 
 @pytest.mark.parametrize("bron", [MP, TWEEDEHANDS])
