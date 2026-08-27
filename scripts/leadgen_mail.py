@@ -3200,6 +3200,66 @@ def reacties(args) -> None:
               f"bal: {bal:9} {vlaggen}")
 
 
+_TOEGESTANE_VLAGGEN = ("afgemeld", "afgewezen", "concurrent", "bounce", "afgesloten")
+
+
+def corrigeer(args) -> None:
+    """`python3 leadgen_mail.py corrigeer <adres> <vlag> <aan|uit>` — een
+    verkeerd gezette vlag met de hand rechtzetten. Alleen de vlaggen die de
+    machine zelf ook zet; niets anders is hiermee te wijzigen."""
+    adres = args.adres.lower()
+    if args.vlag not in _TOEGESTANE_VLAGGEN:
+        print(f"Onbekende vlag '{args.vlag}'. Kies uit: {', '.join(_TOEGESTANE_VLAGGEN)}")
+        return
+    state = _state()
+    if adres not in state:
+        print(f"{adres} staat niet in de administratie.")
+        return
+    was = bool(state[adres].get(args.vlag))
+    state[adres][args.vlag] = (args.waarde == "aan")
+    _save_state(state)
+    print(f"{adres}: {args.vlag} was {was}, is nu {state[adres][args.vlag]}")
+
+
+def concepten(args) -> None:
+    """`python3 leadgen_mail.py concepten` — alles wat er nu in Concepten
+    ligt, mét een controle op dubbele of verouderde voorstellen (dezelfde
+    regels als _ruim_concepten_op, maar eerst LATEN ZIEN voor het opruimt)."""
+    host, gebruiker = os.environ.get("IMAP_HOST"), os.environ.get("MAIL_USER")
+    wachtwoord = os.environ.get("MAIL_PASS")
+    if not (host and gebruiker and wachtwoord):
+        print("Geen mailtoegang (IMAP_HOST/MAIL_USER/MAIL_PASS ontbreken).")
+        return
+    try:
+        with imaplib.IMAP4_SSL(host, 993) as imap:
+            imap.login(gebruiker, wachtwoord)
+            bestaand = {r.decode().split(' "/" ')[-1].strip('"')
+                        for r in (imap.list()[1] or [])}
+            map_ = CONCEPTMAP if CONCEPTMAP in bestaand else "Drafts"
+            imap.select(f'"{map_}"', readonly=True)
+            _, d = imap.search(None, "ALL")
+            regels = []
+            per_adres: dict[str, int] = {}
+            for num in (d[0] or b"").split():
+                _, ruw = imap.fetch(num, "(BODY.PEEK[HEADER])")
+                if not ruw or not ruw[0]:
+                    continue
+                kop = email.message_from_bytes(ruw[0][1])
+                adres = parseaddr(kop.get("To", ""))[1].lower()
+                per_adres[adres] = per_adres.get(adres, 0) + 1
+                regels.append((adres, str(kop.get("Subject", ""))[:60], str(kop.get("Date", ""))[:25]))
+    except Exception as e:  # noqa: BLE001
+        print(f"Concepten niet te lezen: {e}")
+        return
+    print(f"{len(regels)} concepten in de map\n")
+    for adres, onderwerp, datum in sorted(regels, key=lambda r: r[2]):
+        dubbel = " ← DUBBEL VOOR DIT ADRES" if per_adres.get(adres, 0) > 1 else ""
+        print(f"{adres:40} {datum:25} {onderwerp}{dubbel}")
+    print(f"\nOpruimen (dubbele en >{CONCEPT_VERVAL_DAGEN} dagen oude)...")
+    weg = _ruim_concepten_op()
+    print(f"{weg} concept(en) opgeruimd.")
+
+
 def main() -> None:
     ap = argparse.ArgumentParser(
         description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
