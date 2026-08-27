@@ -3539,6 +3539,9 @@ def main() -> None:
     c.add_argument("--dagen", type=int, default=30)
     c.set_defaults(func=check)
 
+    ih = sub.add_parser("inhalen", help="reacties van vóór 27-08-2026 alsnog vastleggen")
+    ih.set_defaults(func=inhalen)
+
     a = sub.add_parser("analyse", help="de mailanalyse nu opnieuw laten schrijven")
     a.set_defaults(func=lambda _: _advies_bijwerken(_state(), forceer=True))
 
