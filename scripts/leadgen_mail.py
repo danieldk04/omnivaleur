@@ -3633,20 +3633,31 @@ Feiten die kloppen:
 """
 
 
+# Waar een binnengekomen bericht kan liggen. Alleen INBOX is niet genoeg: zodra
+# er een antwoord op is gegaan verhuist het naar "Beantwoord", en juist die
+# gevallen zoeken we hier op — het gaat immers om mensen die al een (verkeerd)
+# antwoord kregen. Met alleen INBOX werd 5 van de 12 niet teruggevonden.
+_ZOEKMAPPEN = ("INBOX", MAP_BEANTWOORD, "Archiveren", MAP_AUTOMATISCH)
+
+
 def _inkomend_bericht(imap, message_id: str):
-    """Het binnengekomen bericht met dit Message-ID uit het postvak halen."""
-    try:
-        imap.select("INBOX", readonly=True)
-        _, d = imap.search(None, f'(HEADER Message-ID "{message_id}")')
-        nummers = (d[0] or b"").split()
-        if not nummers:
-            return None
-        _, ruw = imap.fetch(nummers[-1], "(BODY.PEEK[])")
-        if not ruw or not ruw[0]:
-            return None
-        return email.message_from_bytes(ruw[0][1])
-    except Exception:  # noqa: BLE001
-        return None
+    """Het binnengekomen bericht met dit Message-ID opzoeken in alle mappen
+    waar het terecht kan zijn gekomen."""
+    for map_ in _ZOEKMAPPEN:
+        try:
+            if imap.select(f'"{map_}"', readonly=True)[0] != "OK":
+                continue
+            _, d = imap.search(None, f'(HEADER Message-ID "{message_id}")')
+            nummers = (d[0] or b"").split()
+            if not nummers:
+                continue
+            _, ruw = imap.fetch(nummers[-1], "(BODY.PEEK[])")
+            if not ruw or not ruw[0]:
+                continue
+            return email.message_from_bytes(ruw[0][1])
+        except Exception:  # noqa: BLE001
+            continue
+    return None
 
 
 def herstel(args) -> None:
