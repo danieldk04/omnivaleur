@@ -3358,6 +3358,20 @@ def tick(args) -> None:
             f"{_LLM_TERUGVAL['aantal']}x GEEN concept kunnen schrijven — die mails "
             f"wachten op jou in het postvak. Reden: {redenen}")
 
+    # Eén keer per dag de vangnetronde: wie heeft het laatst geschreven en heeft
+    # nog steeds geen concept? `check` kijkt alleen naar NIEUWE post, dus wie daar
+    # één keer doorheen glipt komt er nooit meer in. Op 27-08-2026 waren dat er
+    # vier tegelijk, waaronder Borstelbeer — die stonden dagen te wachten zonder
+    # dat iets of iemand het merkte. Dit is bewust een aparte, tragere ronde: hij
+    # leest twee hele mappen door en dat hoeft niet elk half uur.
+    if not plan.get("wachtenden_gedaan") and nu >= "19:30":
+        try:
+            wachtenden(argparse.Namespace(dry_run=False))
+        except Exception as e:  # noqa: BLE001 — vangnet mag de ronde nooit stoppen
+            print(f"  (wachtendencontrole mislukt: {e})")
+        plan["wachtenden_gedaan"] = True
+        _save_plan(plan)
+
     if not plan.get("gerapporteerd") and nu >= "20:45":
         _dagbericht(state, plan)
         plan["gerapporteerd"] = True
