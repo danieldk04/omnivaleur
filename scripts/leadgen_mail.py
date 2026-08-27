@@ -3695,6 +3695,13 @@ def herstel(args) -> None:
         return
     print(f"{len(getroffen)} verstuurde sjabloonmail(s) gevonden.")
 
+    # Voor wie al een concept heeft liggen doen we hier niets. Anders krijgt
+    # dezelfde persoon twee voorstellen naast elkaar en moet Daniel gaan kiezen —
+    # precies het werk dat dit hoort weg te nemen. Gemeten: klantenservice@
+    # budgetheld.nl kreeg om 15:48 al een vers concept uit de normale ronde.
+    _, wachtende_adressen = _concepten_tellen()
+    al_concept = {parseaddr(a)[1].lower() for a in wachtende_adressen if a}
+
     client = anthropic.Anthropic(api_key=sleutel)
     gemaakt = 0
     with imaplib.IMAP4_SSL(host, 993) as imap:
@@ -3702,6 +3709,9 @@ def herstel(args) -> None:
         for m in getroffen:
             adres = m.get("adres") or ""
             if not adres:
+                continue
+            if adres in al_concept:
+                print(f"  – {adres}: er ligt al een concept, overgeslagen")
                 continue
             # Is het gesprek al verder? Dan hoort dit commando erbuiten te blijven.
             if laatste_per_adres.get(adres, 0.0) > m.get("op", 0.0) + 60:
