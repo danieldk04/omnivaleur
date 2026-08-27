@@ -18,6 +18,11 @@ on:
     # Elke 30 minuten tussen 08:00 en 21:30 Nederlandse tijd (UTC+2).
     - cron: "*/30 6-19 * * *"
   workflow_dispatch:      # met de hand kunnen starten vanaf github.com
+    inputs:
+      opdracht:
+        description: "tick (normaal), of status/dagbericht/leren voor een momentopname zonder te mailen"
+        required: false
+        default: "tick"
 
 concurrency:
   # Nooit twee beurten tegelijk: dan zou dezelfde lead twee mails krijgen.
