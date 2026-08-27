@@ -67,16 +67,20 @@ def test_thread_dataclass_roundtrip():
     assert draad.van_naam.split()[0] == "Twan"
 
 
-def test_draft_without_llm_key_is_neutral_placeholder(monkeypatch):
+def test_draft_without_llm_key_writes_nothing(monkeypatch):
+    """Zonder sleutel komt er GEEN concept — bewuste keuze van 27-08-2026.
+
+    Hier stond een test die het tegenovergestelde vastlegde: een vriendelijke
+    plaatshoudertekst ("ik kijk ernaar en kom erop terug"). Die leest als een
+    antwoord, zegt niets, en verbergt vooral dat het schrijven mislukte — Daniel
+    ziet een concept liggen en denkt dat het werk gedaan is. Het topic wordt nog
+    wél bepaald, want dat is nodig voor het reviewrapport."""
     monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
     draad = sma.Thread("id1", "robert@example.com", "Robert", "Vraag",
                         "Doet dit ook echte crosslisting of alleen relist?", "<id1>")
     tekst, topic = sma._draft_met_llm(draad, "geen grondslag nodig voor deze test")
-    assert "Robert" in tekst
-    assert "Groetjes" in tekst
+    assert tekst == ""
     assert topic == "relist-vs-crosslist"
-    # geen technische bewering zonder LLM/grondslag
-    assert "werkt wel" not in tekst.lower()
 
 
 # ---------------------------------------------------------------- Module B: auto-fix classifier
