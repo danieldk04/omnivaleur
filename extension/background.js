@@ -3534,6 +3534,7 @@ async function bgScanMp2dh(job, serverUrl) {
     // een andere nummerreeks (zie backend/services/mp_enrich.py), dus
     // samenvoegen op advertentienummer kan hier geen dubbele opleveren.
     let admarktFout = null;
+    let admarktKlaar = false;
     if (platform === "marktplaats" && await admarktToegestaan()) {
       await reportProgress(serverUrl, job.id, {
         stage: "scanning",
@@ -3552,6 +3553,13 @@ async function bgScanMp2dh(job, serverUrl) {
           ...result.meta, ...via.meta,
           source: result.items.length && via.items.length ? "personal+admarkt" : (via.items.length ? "admarkt" : result.meta?.source),
         };
+        // Admarkt heeft alles al gehad wat wij kennen. Dat is KLAAR, geen fout —
+        // en zeker geen inlogprobleem. Voor een zakelijk account is het
+        // persoonlijke overzicht altijd leeg, dus zonder deze afslag viel deze
+        // ronde hieronder door naar "You don't appear to be signed in to
+        // Marktplaats", terwijl er niets aan de hand was. Egbert Brouwer kreeg
+        // die melding 18 keer en ging telkens zijn login controleren.
+        admarktKlaar = !!via.meta?.klaar;
       } catch (e) {
         // Admarkt zelf gaf niets. Die melding is specifieker dan "geen
         // advertenties gevonden", dus die willen we terugzien — maar alleen
@@ -3562,6 +3570,15 @@ async function bgScanMp2dh(job, serverUrl) {
       }
     }
 
+    if (!result.items.length && admarktKlaar) {
+      // Netjes afronden met nul nieuwe advertenties: het scherm meldt dan
+      // "alles is al binnen" in plaats van een verzonnen fout.
+      await finaliseJob(serverUrl, job.id, "complete", {
+        listings: [], scan_meta: { ...(result.meta || {}), klaar: true },
+      });
+      console.log("[Omnivaleur] Admarkt: niets nieuws meer — scan afgerond.");
+      return;
+    }
     if (!result.items.length) {
       if (admarktFout) throw new Error(`Admarkt: ${admarktFout}`);
       throw new Error(mpEmptyScanReason(

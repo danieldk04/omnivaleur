@@ -5208,7 +5208,12 @@ function pollScanProgress(platform, jobId) {
             // een kale "klaar" bij 250 van de 16.000 leest als een kapotte scan.
             const meta = (job.result && job.result.scan_meta) || {};
             const rest = Number(meta.rest) || 0;
-            if (rest > 0) {
+            const nieuwGevonden = ((job.result && job.result.listings) || []).length;
+            if (meta.klaar && !nieuwGevonden) {
+              // Niet "de scan vond niets": Marktplaats heeft gewoon niets meer
+              // wat wij nog niet hebben. Dat is af, en hoort ook zo te klinken.
+              showToast('Scan complete — everything Marktplaats has is already in your dashboard.');
+            } else if (rest > 0) {
               showToast(`Fetched ${meta.gevonden || 0} adverts. ${rest.toLocaleString('en-GB')} still to go — import these first, then scan again for the next batch.`);
             } else {
               showToast('Scan complete — see the summary below for what it found.');
