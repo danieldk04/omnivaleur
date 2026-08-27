@@ -518,6 +518,15 @@ function toonKern(d) {
   taart('mail-taart', 'mail-taart-uitleg', m.soorten || []);
 
   const advies = m.advies || {};
+  const pat = advies.patronen || [];
+  const patTop = Math.max(...pat.map(p => p.aantal), 1);
+  el('mail-patronen').innerHTML = pat.length
+    ? pat.map((p, i) => `<div class="patroon" title="${veilig(p.uitleg)}">
+        <div class="patroon-kop"><span>${veilig(p.naam)}</span><b>${getal(p.aantal)}x</b></div>
+        <div class="balk"><i class="l${(i % 3) + 1}" style="width:${Math.round(100 * p.aantal / patTop)}%"></i></div>
+        <div class="uitleg">${veilig(p.uitleg)}</div></div>`).join('')
+    : `<div class="leeg">Nog geen patronen — die verschijnen bij de volgende analyse.</div>`;
+
   el('mail-advies').innerHTML = advies.tekst
     ? `<div class="uitleg">Bijgewerkt ${geleden(advies.op)} geleden — opnieuw berekend na een week of zodra er veel nieuwe reacties binnen zijn.</div>
        <div class="advies">${opmaakAdvies(advies.tekst)}</div>`
