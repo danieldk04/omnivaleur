@@ -1887,6 +1887,44 @@ LET OP: DIT IS EEN BESTAANDE KLANT, GEEN PROSPECT.
 # Deze teller komt in het avondbericht terecht, zodat het niet meer stil kan
 # blijven liggen.
 _LLM_TERUGVAL = {"aantal": 0}
+# De laatste storingsreden, zodat het avondbericht kan zeggen WAAROM het misging
+# in plaats van alleen dát het misging.
+_LLM_REDEN: list[str] = []
+
+# Alle mailteksten worden hiermee geschreven. Opus is duurder per woord dan
+# Sonnet, maar het gaat om een handvol mails per dag en het verschil zit precies
+# waar het hier op aankomt: exact antwoorden op wat er gevraagd is en niets
+# verzinnen.
+MODEL = "claude-opus-5"
+
+
+def _claude(client, **kw):
+    """Eén doorgeefluik voor elke Claude-aanroep in dit script.
+
+    WAAROM DIT BESTAAT. Op 27-08-2026 kregen alle drie de aanroepen er
+    `output_config={"effort": ...}` bij. Die parameter bestaat pas in een recente
+    SDK, en op de server stond `anthropic==0.34.2` vastgezet (september 2024).
+    Elke aanroep gooide daar een TypeError, die netjes werd opgevangen — en
+    vanaf dat moment kreeg iedere lead in stilte de standaard verkoopmail in
+    plaats van een echt antwoord. Niemand zag het, want een opgevangen fout
+    ziet er precies zo uit als "even geen antwoord".
+
+    De pin is inmiddels bijgewerkt, maar dat mag niet het enige slot zijn: draait
+    dit script ergens met een oudere SDK, dan probeert hij het hier gewoon
+    opnieuw zónder de parameter die niet bestaat, en zegt luid wat er aan de hand
+    is. Beter een iets minder goed antwoord dan stilletjes geen antwoord.
+    """
+    try:
+        return client.messages.create(**kw)
+    except TypeError as e:
+        onbekend = re.search(r"unexpected keyword argument '([^']+)'", str(e))
+        if not onbekend or onbekend.group(1) not in kw:
+            raise
+        naam = onbekend.group(1)
+        print(f"  !! de geïnstalleerde anthropic-SDK kent '{naam}' niet — "
+              f"opnieuw zonder. Werk de pin in requirements.txt bij.")
+        _LLM_REDEN.append(f"SDK te oud voor '{naam}'")
+        return client.messages.create(**{k: v for k, v in kw.items() if k != naam})
 
 
 def _slim_concept(lead: dict, body: str, draad: str, afsluiting: str,
