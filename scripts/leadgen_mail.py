@@ -2216,6 +2216,54 @@ def _ondertekening() -> str:
 # les kunnen leren — maar het staat klaar om na te lezen en bewust te verwerken.
 _LEERLOG_MAX = 30
 
+# ── De reacties zelf bewaren ──────────────────────────────────────────────
+# Tot 27-08-2026 werd alleen de UITKOMST van een reactie bewaard (warm, nee,
+# concurrent) en de tekst weggegooid. Daarmee was wel te zien hóéveel mensen
+# nee zeggen, maar nooit waaróm — en dat laatste is het enige waar je de tekst
+# op kunt bijstellen. Nu gaat de reactie mee, met de mail die hem uitlokte.
+_REACTIES_MAX = 300
+
+
+def _kop_tijd(msg) -> float | None:
+    try:
+        return parsedate_to_datetime(msg.get("Date", "")).timestamp()
+    except Exception:  # noqa: BLE001
+        return None
+
+
+def _welke_beurt(st: dict, binnen: float | None) -> str:
+    """Welke van de drie mails stond er als laatste tegenover deze reactie?
+
+    De laatste mail die vóór het antwoord de deur uit ging. Zonder tijdstip
+    valt er niets toe te wijzen; dan liever niets dan een gok."""
+    verstuurd = st.get("verstuurd") or []
+    if not verstuurd:
+        return "?"
+    if binnen is None:
+        return str(verstuurd[-1].get("beurt") or "?")
+    laatste = "?"
+    for m in verstuurd:
+        try:
+            op = datetime.fromisoformat(m["op"]).timestamp()
+        except Exception:  # noqa: BLE001
+            continue
+        if op <= binnen:
+            laatste = str(m.get("beurt") or "?")
+    return laatste
+
+
+def _onthoud_reactie(adres: str, soort: str, beurt: str, tekst: str) -> None:
+    log = _db_lees("mail_reacties", None)
+    if log is None:
+        log = []
+    # Alleen het NIEUWE deel: onder elke reactie hangt onze eigen mail, en die
+    # nog eens meetellen maakt elke analyse een echo van je eigen tekst.
+    eigen = re.split(r"\n\s*(?:Op .{0,60}schreef|Van:|-----Oorspronkelijk)", tekst or "")[0]
+    log = [x for x in log if x.get("adres") != adres][-_REACTIES_MAX:]
+    log.append({"adres": adres, "op": datetime.now().isoformat(timespec="seconds"),
+                "soort": soort, "beurt": beurt, "tekst": eigen.strip()[:4000]})
+    _db_schrijf("mail_reacties", log)
+
 
 def _onthoud_concept(adres: str, tekst: str) -> None:
     log = _db_lees("leerlog", None)
