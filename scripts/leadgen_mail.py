@@ -2236,36 +2236,22 @@ def _concept_tekst(lead: dict, body: str, soort: str = "warm") -> str:
     if slim:
         return slim
 
-    # Voor een klant is er geen vangnet: een sjabloon met video en prijs is voor
-    # hem altijd fout. Lukt het echte antwoord niet, dan komt er GEEN concept en
-    # blijft zijn bericht gewoon in het postvak staan, waar Daniel het ziet.
-    if klant:
-        return ""
-
-    vraagt = _wat_vraagt_hij(body)
-    jij = "jullie" if str(lead.get("je_jullie", "")).lower().startswith("jul") else "je"
-    regels = ["Hi,", "", "Dank voor je reactie!"]
-
-    if "video" in vraagt or not vraagt:
-        regels += ["", f"Bij deze de video van een minuutje: {VIDEO}"]
-
-    if "platforms" in vraagt:
-        regels += ["", f"Qua platformen: {PLATFORMS}. Je zet een item één keer klaar "
-                       "en kiest per stuk waar het heen gaat."]
-    if "prijs" in vraagt:
-        regels += ["", f"De kosten zijn {PRIJS}, en de eerste 7 dagen zijn gratis. "
-                       f"Geen opzegtermijn — bespaart het {jij} geen tijd, dan stop "
-                       f"je gewoon weer."]
-
-    ads = lead.get("ads")
-    if isinstance(ads, int) and ads > 300:
-        regels += ["", f"Met {ads:,}".replace(",", ".") + " advertenties is de importfunctie "
-                       "waarschijnlijk het startpunt: die leest je bestaande "
-                       "Marktplaats-aanbod in, zodat je niets hoeft over te tikken."]
-
-    regels += ["", "Laat maar weten wat je ervan vindt, of als je ergens tegenaan loopt.",
-               "", _ondertekening()]
-    return "\n".join(regels)
+    # GEEN VANGNET MEER — bewuste keuze van Daniel, 27-08-2026.
+    #
+    # Hier stond een sjabloon dat op drie herkende woorden (video, prijs,
+    # platforms) een standaard verkoopmail in elkaar zette. Dat was jarenlang
+    # bedoeld als "een middelmatig concept is beter dan geen concept", en het
+    # bleek het tegenovergestelde: omdat het stil intrad zodra het echte
+    # antwoord niet lukte, kreeg iemand met een inhoudelijke vraag een
+    # productpraatje terug dat nergens op sloeg. Rob van Borstelbeer vroeg naar
+    # productvarianten en kreeg video, platformlijst en maandbedrag.
+    #
+    # Een verkeerd antwoord kost een lead. Geen antwoord kost hooguit een paar
+    # minuten van Daniel, want het bericht blijft gewoon in het postvak staan en
+    # de storing wordt geteld en gemeld (zie _LLM_TERUGVAL en het avondbericht).
+    print(f"  ⊘ geen concept voor {lead.get('email', '?')}: het echte antwoord "
+          f"lukte niet, en een standaardmail is hier erger dan niets")
+    return ""
 
 
 # ── De verzonden map: één keer lezen, drie keer gebruiken ─────────────────
