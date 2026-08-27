@@ -68,7 +68,11 @@ CONCEPTMAP = "Concept"
 MAP_BEANTWOORD = "Beantwoord"
 TABEL = "support_mail_log"
 
-VIDEO = "https://youtube.com/shorts/ymDeS37aBW4"
+# De eigen leadpagina, niet de kale YouTube-link: die pagina laat de video zien
+# mét uitleg en een aanmeldknop eronder, en hij is meetbaar. Een losse
+# YouTube-link stuurt iemand weg van de site. Zelfde waarde als in
+# scripts/leadgen_mail.py — die twee horen niet uiteen te lopen.
+VIDEO = "https://omnivaleur.com/mp-video"
 PRIJS = "€19,99 per maand"
 PROEF = "de eerste 7 dagen gratis"
 PLATFORMS = "Marktplaats, 2dehands, Vinted, eBay en Shopify"
