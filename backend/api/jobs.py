@@ -1282,6 +1282,7 @@ def _store_scan_results(db, job, scraped: list[dict]):
     # costs a handful of calls instead of 500. Chunked so no single request grows
     # large enough for the gateway to time out on.
     CHUNK = 100
+    bewaard = 0
     for i in range(0, len(rows), CHUNK):
         chunk = rows[i:i + CHUNK]
         # Optional columns may not exist yet on an un-migrated database. Drop the
@@ -1293,6 +1294,7 @@ def _store_scan_results(db, job, scraped: list[dict]):
                 db.table("import_candidates").upsert(
                     payload, on_conflict="user_id,platform,platform_listing_id"
                 ).execute()
+                bewaard += len(chunk)
                 break
             except Exception as e:
                 if attempt == 0:
@@ -1300,7 +1302,14 @@ def _store_scan_results(db, job, scraped: list[dict]):
                 elif attempt == 1:
                     logger.warning(f"Scan store: rich upsert failed ({e}); falling back to base fields. Run the import_candidates ALTER migration.")
                 else:
+                    # NIET stil doorlopen. Dit werd gelogd en verder genegeerd,
+                    # dus een mislukte opslag kwam bij de verkoper aan als een
+                    # geslaagde scan zonder resultaat — en de volgende scan sloeg
+                    # diezelfde advertenties over. Opwerpen, zodat de opdracht op
+                    # 'fout' gaat en opnieuw scannen daadwerkelijk helpt.
                     logger.error(f"Scan store: base upsert failed for {len(chunk)} rows: {e}")
+                    raise RuntimeError(
+                        f"could not save {len(chunk)} of {len(rows)} scanned listings: {e}") from e
 
     # Item backfills: one update per item that actually gained something, rather
     # than a select+update per scanned listing. On a re-scan most items are
@@ -1373,8 +1382,8 @@ def _store_scan_results(db, job, scraped: list[dict]):
             logger.warning(f"Scan store: could not close queued create for {item_id}/{platform}: {e}")
 
     logger.info(
-        "Scan store for user %s: %d candidates upserted, %d items enriched",
-        job["user_id"], len(rows), len(backfills),
+        "Scan store for user %s: %d/%d candidates upserted, %d items enriched",
+        job["user_id"], bewaard, len(rows), len(backfills),
     )
 
 
