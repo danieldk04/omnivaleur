@@ -3,7 +3,8 @@
 # Deliberately excludes sqlalchemy/asyncpg (unused anywhere in this codebase —
 # only present in the full requirements.txt for the main FastAPI app — and
 # their pinned versions fail to build from source on newer Python on CI).
-anthropic==0.34.2
+# Gelijk houden aan requirements.txt — zie de toelichting daar bij anthropic.
+anthropic==0.88.0
 httpx==0.27.2
 beautifulsoup4==4.12.3
 supabase==2.7.4
