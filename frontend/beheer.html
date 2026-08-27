@@ -516,8 +516,10 @@ function toonKern(d) {
       <td class="num">${getal(r.verstuurd)}</td>
       <td class="num">${r.open_pct == null ? `<span class="bij" title="${veilig(r.open_reden || '')}">—</span>`
                         : `${r.open_pct}%<div class="balk"><i class="l${i + 1}" style="width:${Math.min(100, r.open_pct)}%"></i></div>`}</td>
-      <td class="num">${getal(r.reacties)} <span class="bij">(${r.reactie_pct}%)</span>
-        <div class="balk"><i class="l${i + 1}" style="width:${Math.min(100, r.reactie_pct * 5)}%"></i></div></td>
+      <td class="num">${getal(r.reacties)}${r.verstuurd
+        ? ` <span class="bij">(${r.reactie_pct}%)</span>
+            <div class="balk"><i class="l${i + 1}" style="width:${Math.min(100, r.reactie_pct * 5)}%"></i></div>`
+        : ''}</td>
       <td class="num op">${getal(r.warm)}</td>
       <td class="num">${getal(r.afwijzing)}</td>
       <td class="num">${getal(r.concurrent)}</td>
