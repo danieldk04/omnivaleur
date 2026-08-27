@@ -16,7 +16,7 @@ from __future__ import annotations
 
 import logging
 
-from backend.database import get_db
+from backend.database import get_db, fetch_all
 
 logger = logging.getLogger(__name__)
 
@@ -139,8 +139,11 @@ def alle_relist_dagen() -> dict[str, int]:
     """
     uit: dict[str, int] = {}
     try:
-        for rij in (get_db().table("platform_credentials").select("user_id,extra_data")
-                    .eq("platform", RIJ).limit(5000).execute().data or []):
+        # fetch_all: een gewone select stopt stilzwijgend bij 1.000 rijen, en dan
+        # draaien de verkopers daarboven op de standaardinstelling in plaats van
+        # de hunne.
+        for rij in fetch_all(lambda: get_db().table("platform_credentials")
+                             .select("user_id,extra_data").eq("platform", RIJ)):
             uit[rij["user_id"]] = _schoon(rij.get("extra_data"))["relist_dagen"]
     except Exception as e:  # noqa: BLE001
         logger.warning("instellingen niet gelezen: %s", e)

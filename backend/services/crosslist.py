@@ -9,7 +9,7 @@ import re
 from datetime import datetime, timedelta, timezone
 import uuid
 
-from backend.database import execute_with_retry, get_db, naast_de_lus
+from backend.database import execute_with_retry, fetch_all, get_db, naast_de_lus
 from backend.platforms import get_platform
 
 _ENGLISH_PLATFORMS = {"vinted", "shopify", "ebay", "etsy"}
@@ -1142,10 +1142,13 @@ async def _echte_datums_ophalen(db) -> None:
         logger.warning("echte datums overgeslagen: %s", e)
         return
     try:
-        rijen = ((await naast_de_lus(lambda: db.table("listings")
+        # fetch_all, niet .limit(4000): PostgREST negeert een limiet boven zijn
+        # eigen max-rows en geeft er stilzwijgend 1.000 terug. Gemeten
+        # 27-08-2026: er staan er 4.751 actief, dus driekwart kreeg nooit zijn
+        # echte plaatsingsdatum.
+        rijen = (await naast_de_lus(lambda: fetch_all(lambda: db.table("listings")
                  .select("id,item_id,platform_listing_id")
-                 .eq("platform", "marktplaats").eq("status", "active")
-                 .limit(4000).execute())).data or [])
+                 .eq("platform", "marktplaats").eq("status", "active")))) or []
     except Exception as e:  # noqa: BLE001
         logger.warning("echte datums: advertenties niet gelezen: %s", e)
         return

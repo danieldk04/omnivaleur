@@ -4,7 +4,7 @@ Runs on a configurable interval via APScheduler.
 """
 import asyncio
 import logging
-from backend.database import get_db
+from backend.database import get_db, IN_BROK
 from backend.platforms import get_platform
 from backend.services.crosslist import handle_item_sold
 
@@ -59,10 +59,15 @@ async def poll_platform_statuses():
         return
 
     item_ids = list({row["item_id"] for row in listings.data})
-    owners = {
-        row["id"]: row["user_id"]
-        for row in ((await _exec(db.table("items").select("id,user_id").in_("id", item_ids))).data or [])
-    }
+    # In brokken: dit draait over ÁLLE actieve advertenties van alle verkopers
+    # samen (gemeten 27-08-2026: 4.751). Eén `.in_()` met zoveel id's maakt een
+    # URL die httpx weigert te versturen, en dan viel de hele verkoopcontrole
+    # stil — voor iedereen tegelijk, zonder zichtbare foutmelding.
+    owners = {}
+    for i in range(0, len(item_ids), IN_BROK):
+        stuk = item_ids[i:i + IN_BROK]
+        for row in ((await _exec(db.table("items").select("id,user_id").in_("id", stuk))).data or []):
+            owners[row["id"]] = row["user_id"]
 
     credentials_by_key: dict[tuple[str, str], dict] = {}
     for row in (

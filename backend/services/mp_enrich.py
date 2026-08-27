@@ -31,7 +31,7 @@ import time
 import unicodedata
 
 import httpx
-from backend.database import naast_de_lus
+from backend.database import naast_de_lus, fetch_all
 
 logger = logging.getLogger(__name__)
 
@@ -92,6 +92,20 @@ async def _json(client: httpx.AsyncClient, url: str, params: dict | None = None)
     return r.json()
 
 
+# Hoeveel titels we hooguit proberen om het verkopersnummer te vinden. We
+# stoppen zodra twee titels hetzelfde nummer aanwijzen, dus in de praktijk zijn
+# dit er twee of drie — dit is alleen het plafond voor het rare geval.
+#
+# WAAROM DIT OMHOOG MOEST (27-08-2026, Egbert Brouwer): dit stond op 8, en die
+# 8 titels kwamen uit de items die nog leeg waren. Precies die items bleken
+# advertenties waarvan de titel op Marktplaats nét anders staat ("Miniatuur
+# Cloud gitaar met gratis standaard" is daar niet terug te vinden). Acht keer
+# mis is dan genoeg om de hele ronde af te breken met "we kunnen je
+# advertenties niet vinden", terwijl 2.000 andere advertenties van dezelfde
+# verkoper wél gewoon vindbaar waren.
+MAX_TITELPOGINGEN = 25
+
+
 async def zoek_verkoper_id(client: httpx.AsyncClient, titels: list[str]) -> int | None:
     """Het verkopersnummer achterhalen door op de eigen titels te zoeken.
 
@@ -99,28 +113,47 @@ async def zoek_verkoper_id(client: httpx.AsyncClient, titels: list[str]) -> int 
     vragen. We nemen pas een nummer aan als het bij meerdere verschillende titels
     hetzelfde is; één treffer kan toevallig een andere verkoper zijn die hetzelfde
     artikel aanbiedt.
+
+    Eén titel die niet terug te vinden is, mag hier NOOIT de doorslag geven: dat
+    zegt iets over die ene advertentie, niet over de verkoper.
     """
     stemmen: dict[int, int] = {}
-    for titel in titels[:8]:
+    geprobeerd = 0
+    for titel in titels:
         doel = _sleutel(titel)
         if not doel:
             continue
+        if geprobeerd >= MAX_TITELPOGINGEN:
+            break
+        geprobeerd += 1
         try:
             data = await _json(client, ZOEK, {"query": titel[:80], "limit": 20, "offset": 0})
         except Exception as e:  # noqa: BLE001
             logger.warning("mp_enrich: zoeken op titel mislukt: %s", e)
             continue
+        gezien_deze_ronde: set[int] = set()
         for l in (data.get("listings") or []):
             if _sleutel(l.get("title")) != doel:
                 continue
             sid = ((l.get("sellerInformation") or {}).get("sellerId"))
-            if sid:
+            if sid and int(sid) not in gezien_deze_ronde:
+                # Per titel hooguit één stem per verkoper: anders levert één
+                # advertentie die twee keer online staat in zijn eentje al de
+                # vereiste twee stemmen op.
+                gezien_deze_ronde.add(int(sid))
                 stemmen[int(sid)] = stemmen.get(int(sid), 0) + 1
+        if stemmen and max(stemmen.values()) >= 2:
+            break
         await asyncio.sleep(0.3)
     if not stemmen:
+        logger.warning("mp_enrich: geen verkopersnummer na %d titels", geprobeerd)
         return None
     beste, aantal = max(stemmen.items(), key=lambda kv: kv[1])
-    return beste if aantal >= 2 else None
+    if aantal >= 2:
+        return beste
+    logger.warning("mp_enrich: verkopersnummer %s kreeg maar 1 stem na %d titels",
+                   beste, geprobeerd)
+    return None
 
 
 async def haal_advertenties(client: httpx.AsyncClient, verkoper_id: int,
@@ -306,8 +339,14 @@ async def verrijk(db, user_id: str, schrijf: bool = True,
             except Exception:  # noqa: BLE001
                 pass
 
-    rijen = ((await naast_de_lus(lambda: db.table("items").select("id,title,price,description")
-             .eq("user_id", user_id).limit(10000).execute())).data or [])
+    # fetch_all, NIET .limit(10000). PostgREST geeft er stilzwijgend hooguit
+    # 1.000 terug, hoe hoog je de limiet ook zet. Bij Egbert Brouwer (2.135
+    # items, 557 zonder prijs of tekst) betekende dat: deze functie zag alleen
+    # de eerste 1.000 items, vond daarin 5 openstaande, zocht op díe 5 titels
+    # naar zijn verkopersnummer, vond niets, en meldde "could not find your
+    # adverts on Marktplaats" — terwijl zijn advertenties er gewoon stonden.
+    rijen = await naast_de_lus(lambda: fetch_all(
+        lambda: db.table("items").select("id,title,price,description").eq("user_id", user_id)))
     open_ = [r for r in rijen
              if not str(r.get("description") or "").strip() or not r.get("price")]
     if maximaal:
@@ -319,10 +358,27 @@ async def verrijk(db, user_id: str, schrijf: bool = True,
         uit["reden"] = "nothing to do"
         return uit
 
+    # Voor het zóeken van het verkopersnummer gebruiken we titels uit het HELE
+    # aanbod, niet alleen uit de items die nog leeg zijn. Die lege items zijn
+    # namelijk precies de moeilijke gevallen — als ze makkelijk vindbaar waren,
+    # waren ze een ronde eerder al gevuld. En ze staan ook nog eens bij elkaar
+    # in de lijst, dus de eerste acht waren vaak acht varianten van hetzelfde
+    # onvindbare artikel. Vandaar: eerst de items die al een prijs hebben (die
+    # zijn aantoonbaar ooit gematcht), daarna de rest, en verspreid over de
+    # hele lijst in plaats van allemaal uit hetzelfde hoekje.
+    def _verspreid(rijtje):
+        if len(rijtje) <= MAX_TITELPOGINGEN:
+            return [r["title"] for r in rijtje if r.get("title")]
+        stap = max(1, len(rijtje) // MAX_TITELPOGINGEN)
+        return [rijtje[i]["title"] for i in range(0, len(rijtje), stap) if rijtje[i].get("title")]
+
+    gevuld = [r for r in rijen if r.get("price") and str(r.get("description") or "").strip()]
+    zoektitels = _verspreid(gevuld) + _verspreid(open_)
+
     limiet = httpx.Limits(max_connections=TEGELIJK, max_keepalive_connections=TEGELIJK)
     async with httpx.AsyncClient(timeout=30, headers={"User-Agent": UA},
                                  follow_redirects=True, limits=limiet) as client:
-        vid = await zoek_verkoper_id(client, [r["title"] for r in open_])
+        vid = await zoek_verkoper_id(client, zoektitels)
         uit["verkoper_id"] = vid
         if not vid:
             uit["reden"] = ("could not find your adverts on Marktplaats — "

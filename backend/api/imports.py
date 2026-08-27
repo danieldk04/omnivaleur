@@ -1,5 +1,5 @@
 from fastapi import APIRouter, HTTPException, Depends
-from backend.database import get_db, fetch_all, naast_de_lus
+from backend.database import get_db, fetch_all, naast_de_lus, execute_with_retry
 from backend.api.deps import get_current_user, require_active_subscription
 from backend.models import ItemCreate
 from datetime import datetime, timezone
@@ -1159,7 +1159,14 @@ def start_scan(platform: str, user_id: str = Depends(require_active_subscription
     # The extension now also triggers Vinted scans autonomously on a timer; avoid
     # piling up duplicate scan jobs (and opening a second tab) if one is already
     # queued or actively running.
-    existing = (
+    #
+    # execute_with_retry, niet .execute(): Supabase verbreekt af en toe een
+    # hergebruikte verbinding, en dat gaf hier een kale "Internal Server Error"
+    # terug. De app kon daar geen fout uit lezen en toonde de verkoper
+    # `Unexpected token 'I', "Internal S"... is not valid JSON` (Egbert Brouwer,
+    # 27-08-2026) — een onbegrijpelijke melding voor iets dat gewoon opnieuw
+    # geprobeerd had moeten worden.
+    existing = execute_with_retry(
         db.table("jobs")
         .select("id")
         .eq("user_id", user_id)
@@ -1167,9 +1174,7 @@ def start_scan(platform: str, user_id: str = Depends(require_active_subscription
         .eq("action", "scan")
         .in_("status", ["pending", "claimed"])
         .limit(1)
-        .execute()
-        .data
-    )
+    ).data
     if existing:
         return {"job_id": existing[0]["id"]}
     # Een zakelijk Marktplaats-account (Admarkt) kan tienduizenden advertenties
@@ -1215,16 +1220,25 @@ def start_scan(platform: str, user_id: str = Depends(require_active_subscription
         except Exception as e:
             logger.warning("Kon scanpositie niet bepalen voor %s: %s", user_id, e)
 
-    job = db.table("jobs").insert({
-        "id": str(uuid.uuid4()),
-        "user_id": user_id,
-        "item_id": None,
-        "platform": platform,
-        "action": "scan",
-        "status": "pending",
-        "payload": payload,
-    }).execute()
-    return {"job_id": job.data[0]["id"]}
+    job_id = str(uuid.uuid4())
+    try:
+        execute_with_retry(db.table("jobs").insert({
+            "id": job_id,
+            "user_id": user_id,
+            "item_id": None,
+            "platform": platform,
+            "action": "scan",
+            "status": "pending",
+            "payload": payload,
+        }), dubbel_is_ok=True)
+    except Exception as e:  # noqa: BLE001
+        # Nooit een kale 500: die komt in het scherm aan als onleesbare
+        # JSON-fout. Liever een zin waar de verkoper iets mee kan.
+        logger.exception("Kon scanopdracht niet aanmaken voor %s (%s)", user_id, platform)
+        raise HTTPException(
+            status_code=503,
+            detail="Could not start the scan just now — the database did not respond. Try again in a moment.")
+    return {"job_id": job_id}
 
 
 @router.get("/")
@@ -1285,14 +1299,12 @@ def import_candidates_summary(user_id: str = Depends(get_current_user)):
     nothing". This is what lets the UI say where those listings went instead.
     """
     db = get_db()
-    rows = (
-        db.table("import_candidates")
-        .select("platform,status")
-        .eq("user_id", user_id)
-        .limit(5000)
-        .execute()
-        .data or []
-    )
+    # fetch_all, niet .limit(5000): PostgREST negeert een limiet boven zijn
+    # eigen max-rows en stuurt er stilzwijgend 1.000 terug. Daardoor meldde het
+    # scherm "Last scan found 1000 listings" bij een verkoper met 2.250
+    # kandidaten — alsof de scan de helft was kwijtgeraakt.
+    rows = fetch_all(lambda: db.table("import_candidates")
+                     .select("platform,status").eq("user_id", user_id))
     by_status: dict[str, int] = {}
     by_platform: dict[str, dict[str, int]] = {}
     for r in rows:

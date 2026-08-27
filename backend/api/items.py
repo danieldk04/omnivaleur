@@ -1,6 +1,6 @@
 from fastapi import APIRouter, HTTPException, Depends
 from backend.models import ItemCreate, ItemOut
-from backend.database import get_db, execute_with_retry
+from backend.database import get_db, execute_with_retry, fetch_all, IN_BROK
 from backend.api.deps import get_current_user, require_active_subscription
 import asyncio
 import logging
@@ -134,6 +134,58 @@ def write_settings(body: dict, user_id: str = Depends(get_current_user)):
         raise HTTPException(status_code=500, detail=f"Could not save settings: {e}")
     return {**bewaard, "relist_dagen_min": RELIST_DAGEN_MIN,
             "relist_dagen_max": RELIST_DAGEN_MAX}
+
+
+# Welke staten er bestaan. Alles daarbuiten weigeren, anders zet één typefout
+# duizenden items op een waarde die de platforms niet kennen.
+_CONDITIES = {"new_with_tags", "new", "good", "fair", "poor"}
+
+
+@router.post("/bulk-condition")
+async def bulk_condition(body: dict, user_id: str = Depends(get_current_user)):
+    """De staat van veel items in één keer zetten.
+
+    WAAROM DIT BESTAAT: Marktplaats/Admarkt levert bij een import geen staat mee,
+    dus belandde alles op "Like new". Een verkoper die uitsluitend nieuwe spullen
+    verkoopt (Egbert Brouwer, 2.135 items) moest dat pagina voor pagina
+    corrigeren, met één verzoek per item — bij hem ruim tweeduizend klikrondjes.
+
+    `ids` leeg laten betekent: alle items van deze verkoper. Dat is bewust een
+    aparte, expliciete keuze in het scherm en geen standaardwaarde.
+    """
+    conditie = str((body or {}).get("condition") or "").strip()
+    if conditie not in _CONDITIES:
+        raise HTTPException(status_code=400, detail=f"Unknown condition: {conditie or '(empty)'}")
+
+    db = get_db()
+    ids = [str(i) for i in ((body or {}).get("ids") or []) if i]
+    alles = bool((body or {}).get("all_items"))
+    if not ids and not alles:
+        raise HTTPException(status_code=400, detail="No items selected")
+
+    def _doe() -> int:
+        doel = ids
+        if alles:
+            doel = [r["id"] for r in fetch_all(
+                lambda: db.table("items").select("id").eq("user_id", user_id))]
+        # Altijd op user_id blijven filteren: id's komen uit de browser en mogen
+        # nooit als bewijs van eigenaarschap gelden.
+        gedaan = 0
+        for i in range(0, len(doel), IN_BROK):
+            stuk = doel[i:i + IN_BROK]
+            rijen = execute_with_retry(
+                db.table("items").update({"condition": conditie})
+                .eq("user_id", user_id).in_("id", stuk)
+            )
+            gedaan += len(getattr(rijen, "data", None) or [])
+        return gedaan
+
+    try:
+        aantal = await asyncio.to_thread(_doe)
+    except Exception as e:  # noqa: BLE001
+        logger.exception("bulk-condition mislukt voor %s", user_id)
+        raise HTTPException(status_code=500, detail=f"Could not update the condition: {e}")
+    return {"updated": aantal, "condition": conditie}
 
 
 @router.post("/fill-from-marktplaats")

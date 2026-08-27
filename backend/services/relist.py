@@ -39,7 +39,7 @@ from __future__ import annotations
 import logging
 import random
 from datetime import datetime, timezone, timedelta
-from backend.database import get_db, fetch_all, naast_de_lus
+from backend.database import get_db, fetch_all, naast_de_lus, IN_BROK
 from backend.platforms import get_platform
 
 logger = logging.getLogger(__name__)
@@ -516,18 +516,24 @@ async def refresh_stale_listings(user_id: str, platform: str, older_than_days: i
     if not item_ids:
         return []
 
-    q = (
-        db.table("listings")
-        .select("*")
-        .in_("item_id", item_ids)
-        .eq("platform", platform)
-        .eq("status", "active")
-        .lt("listed_at", cutoff)
-        .order("listed_at")
-        .limit(limit)
-    )
+    # In brokken: boven ~639 item-id's wordt de URL van dit filter te lang en
+    # gooit httpx een uitzondering (zie database.IN_BROK). Bij een grote winkel
+    # liep het opnieuw-plaatsen daar dus stil op stuk.
+    def _brok(stuk):
+        return (db.table("listings").select("*").in_("item_id", stuk)
+                .eq("platform", platform).eq("status", "active")
+                .lt("listed_at", cutoff).order("listed_at").limit(limit)
+                .execute().data or [])
+
+    def _alles():
+        rijen = []
+        for i in range(0, len(item_ids), IN_BROK):
+            rijen.extend(_brok(item_ids[i:i + IN_BROK]))
+        rijen.sort(key=lambda l: l.get("listed_at") or "")
+        return rijen[:limit]
+
     candidates = [
-        l for l in (await naast_de_lus(lambda: q.execute())).data
+        l for l in (await naast_de_lus(_alles))
         if not l.get("last_refreshed_at") or l["last_refreshed_at"] < cooldown_cutoff
     ]
 

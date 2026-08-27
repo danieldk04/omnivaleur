@@ -1,5 +1,5 @@
 from fastapi import APIRouter, HTTPException, Depends, Request
-from backend.database import get_db, fetch_all, naast_de_lus
+from backend.database import get_db, fetch_all, fetch_all_in, update_in, naast_de_lus
 from backend.api.deps import get_current_user, require_active_subscription
 from backend.api.imports import _backfill_item_from_candidate
 from backend.services.crosslist import handle_item_sold
@@ -699,6 +699,31 @@ async def complete_job(job_id: str, body: dict, user_id: str = Depends(get_curre
     if job["status"] == "cancelled":
         return {"ok": True, "status": "cancelled"}
 
+    # EERST OPSLAAN, DAN PAS "KLAAR" ZEGGEN.
+    #
+    # Een scan werd hier op 'done' gezet vóórdat de gevonden advertenties waren
+    # weggeschreven. Ging dat wegschrijven daarna stuk, dan zag de verkoper een
+    # geslaagde scan terwijl er niets bewaard was — en de volgende scan sloeg
+    # diezelfde advertenties over, want de opdracht stond immers op klaar.
+    # Gemeten bij Egbert Brouwer: drie scans op rij, elk 2.000 nieuwe
+    # advertenties, nul opgeslagen, scherm meldde "niets nieuws".
+    if job["action"] == "scan":
+        import asyncio
+        listings = body.get("listings", [])
+        try:
+            await asyncio.to_thread(_store_scan_results, db, job, listings)
+        except Exception as e:  # noqa: BLE001
+            logger.exception("Scan store failed for job %s (%d listings)", job_id, len(listings))
+            (await naast_de_lus(lambda: db.table("jobs").update({
+                "status": "error",
+                "result": {"error": f"Saving the scan results failed: {e}",
+                           "listings": listings},
+                "done_at": datetime.now(timezone.utc).isoformat(),
+            }).eq("id", job_id).execute()))
+            raise HTTPException(
+                status_code=500,
+                detail="The scan was fetched but saving it failed. Nothing was lost — run the scan again.")
+
     (await naast_de_lus(lambda: db.table("jobs").update({
         "status": "done",
         "result": body,
@@ -802,13 +827,11 @@ async def complete_job(job_id: str, body: dict, user_id: str = Depends(get_curre
         pass
 
     elif job["action"] == "scan":
-        # Saving a full wardrobe is the heaviest write this app does. The Supabase
-        # client is synchronous, so running it inline froze the entire server for
-        # as long as it took — which is exactly what left the extension stuck on
-        # "Saving to your dashboard…" while the gateway timed the request out.
+        # De kandidaten zijn hierboven al opgeslagen (vóór 'done'). Wat hier
+        # overblijft is de Vinted-nabewerking; die mag de scan niet laten
+        # mislukken als hij zelf hapert.
         import asyncio
         listings = body.get("listings", [])
-        await asyncio.to_thread(_store_scan_results, db, job, listings)
         if job["platform"] == "vinted":
             await asyncio.to_thread(_sync_vinted_hidden, db, job, listings)
             await _reconcile_vinted_sales(db, job, listings, body.get("scan_meta") or {})
@@ -848,15 +871,11 @@ def _sync_vinted_hidden(db, job, scraped: list[dict]):
     if not item_ids:
         return
 
-    rows = (
-        db.table("listings")
-        .select("id,platform_listing_id,status")
-        .eq("platform", "vinted")
-        .in_("item_id", item_ids)
-        .in_("status", ["active", "relisting", "hidden"])
-        .execute()
-        .data or []
-    )
+    rows = fetch_all_in(lambda: db.table("listings")
+                        .select("id,platform_listing_id,status")
+                        .eq("platform", "vinted")
+                        .in_("status", ["active", "relisting", "hidden"]),
+                        "item_id", item_ids)
 
     to_hide, to_show = [], []
     for l in rows:
@@ -874,7 +893,7 @@ def _sync_vinted_hidden(db, job, scraped: list[dict]):
         if not ids:
             continue
         try:
-            db.table("listings").update({"status": new_status}).in_("id", ids).execute()
+            update_in(lambda: db.table("listings"), "id", ids, {"status": new_status})
         except Exception as e:
             logger.warning(f"Vinted hidden sync ({new_status}) failed: {e}")
     if to_hide or to_show:
@@ -973,17 +992,14 @@ async def _reconcile_vinted_sales(db, job, scraped: list[dict], scan_meta: dict 
     if not item_ids:
         return
 
-    active = (
-        (await naast_de_lus(lambda: db.table("listings")
+    active = await naast_de_lus(lambda: fetch_all_in(
+        lambda: db.table("listings")
         .select("id,item_id,platform_listing_id")
         .eq("platform", "vinted")
-        .in_("item_id", item_ids)
         # 'hidden' hoort erbij: een verborgen advertentie kan gewoon verkocht zijn
         # (Vinted zet hem dan op closed), en die verkoop werd anders nooit gezien.
-        .in_("status", ["active", "relisting", "hidden"])
-        .execute()))
-        .data or []
-    )
+        .in_("status", ["active", "relisting", "hidden"]),
+        "item_id", item_ids))
     # Two very different signals, handled differently on purpose:
     #   is_closed  → Vinted's own "sold/ended" flag. On Vinted a listing doesn't
     #                expire on its own, so closed ≈ sold → book it as a sale.
@@ -1102,9 +1118,13 @@ def _store_scan_results(db, job, scraped: list[dict]):
     # zien of het dashboard al wéét dat dit item op dit platform staat.
     listing_by_item = {}
     if item_ids:
-        lrows = fetch_all(lambda: db.table("listings")
-                          .select("id,item_id,platform,status,platform_listing_id")
-                          .in_("item_id", item_ids))
+        # In brokken: met meer dan ~639 item-id's wordt de URL van dit filter te
+        # lang en gooit httpx een uitzondering (zie database.IN_BROK). Die knalde
+        # hier midden in het opslaan van een scan, waardoor GEEN ENKELE gevonden
+        # advertentie werd bewaard terwijl de opdracht al op "klaar" stond.
+        lrows = fetch_all_in(lambda: db.table("listings")
+                             .select("id,item_id,platform,status,platform_listing_id"),
+                             "item_id", item_ids)
         for l in lrows:
             pid = l.get("platform_listing_id")
             if pid is not None and l.get("item_id"):
@@ -1138,14 +1158,14 @@ def _store_scan_results(db, job, scraped: list[dict]):
     # status='pending' unconditionally, so a re-scan resurrected every listing you
     # had already imported, linked or ignored straight back into the review list.
     prior_status = {}
-    prev = (
-        db.table("import_candidates")
-        .select("platform_listing_id,status")
-        .eq("user_id", job["user_id"])
-        .eq("platform", job["platform"])
-        .execute()
-        .data or []
-    )
+    # fetch_all, niet één select: PostgREST geeft er stilzwijgend hooguit 1.000
+    # terug. Bij een verkoper met meer kandidaten kregen alle rijen daarboven
+    # opnieuw status 'pending' — advertenties die hij al geïmporteerd had,
+    # stonden daarna zó weer op de te-beoordelen lijst.
+    prev = fetch_all(lambda: db.table("import_candidates")
+                     .select("platform_listing_id,status")
+                     .eq("user_id", job["user_id"])
+                     .eq("platform", job["platform"]))
     for c in prev:
         pid = c.get("platform_listing_id")
         if pid is not None:

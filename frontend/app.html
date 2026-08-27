@@ -5130,9 +5130,12 @@ function clearImportProgress() {
 async function scanPlatform(platform) {
   setBusy(true, `Queuing ${PLATFORM_LABELS[platform] || platform} scan…`);
   try {
+    // parseJsonSafe, niet r.json(): een serverfout of gateway-timeout levert
+    // geen JSON maar platte tekst, en dan zag de verkoper alleen
+    // `Unexpected token 'I', "Internal S"... is not valid JSON`.
     const r = await apiFetch(`${API}/api/imports/scan/${platform}`, { method: 'POST' });
-    const data = await r.json();
-    if (!r.ok) throw new Error(data.detail || 'Scan failed');
+    const data = await parseJsonSafe(r);
+    if (!r.ok) throw new Error((data && data.detail) || `The server could not start the scan (HTTP ${r.status}). Try again in a moment.`);
     scanningPlatforms[platform] = true;
     renderImportScanButtons();
     renderImportProgress(platform, { stage: 'queued' });
@@ -8029,46 +8032,58 @@ async function fillFromMarktplaats() {
 }
 
 async function doBulkCondition() {
-  const ids = [...selectedIds];
+  let ids = [...selectedIds];
   if (!ids.length) return;
   const keuzes = [
     ['new_with_tags', 'New with tags'], ['new', 'New (without tags)'],
     ['good', 'Like new'], ['fair', 'Used'], ['poor', 'Damaged'],
   ];
-  const vraag = 'Set the condition for ' + ids.length + ' item' + (ids.length === 1 ? '' : 's') +
+
+  // "Select all" vinkt alleen de zichtbare pagina aan. Wie zijn hele voorraad op
+  // één staat wil zetten (Marktplaats levert er geen mee, dus alles belandt op
+  // "Like new") moest daardoor pagina na pagina door. Als er meer items zijn dan
+  // hier geselecteerd, bieden we die hele voorraad expliciet aan.
+  const totaal = (state.items || []).length;
+  let alleItems = false;
+  if (totaal > ids.length) {
+    alleItems = confirm(
+      `${ids.length} item${ids.length === 1 ? ' is' : 's are'} selected on this page.\n\n` +
+      `OK  = apply to ALL ${totaal} items in your dashboard\n` +
+      `Cancel = apply to the ${ids.length} selected only`);
+  }
+  const aantal = alleItems ? totaal : ids.length;
+
+  const vraag = 'Set the condition for ' + aantal + ' item' + (aantal === 1 ? '' : 's') +
     ' to:\n\n' + keuzes.map((k, i) => `${i + 1}. ${k[1]}`).join('\n') + '\n\nType a number (1-5):';
   const antwoord = prompt(vraag, '2');
   const idx = parseInt(antwoord, 10) - 1;
   if (!(idx >= 0 && idx < keuzes.length)) return;
   const [waarde, label] = keuzes[idx];
-  if (!confirm(`Set ${ids.length} item${ids.length === 1 ? '' : 's'} to "${label}"?`)) return;
+  if (!confirm(`Set ${aantal} item${aantal === 1 ? '' : 's'} to "${label}"?`)) return;
 
-  // Eén verzoek tegelijk — een stortvloed parallelle schrijfacties is precies
-  // wat de hele site laat vastlopen (zie doBulkPrice).
-  setBusy(true, `Updating condition… 0/${ids.length}`);
-  const mislukt = [];
-  let klaar = 0;
-  for (const id of ids) {
-    try {
-      const res = await apiFetchRetry(`${API}/api/items/${id}`, {
-        method: 'PATCH', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ condition: waarde }),
-      });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const item = state.items.find(i => i.id === id);
-      if (item) item.condition = waarde;
-    } catch (e) {
-      mislukt.push(id);
+  // Eén verzoek voor de hele lading. Dit was één PATCH per item: bij een
+  // voorraad van tweeduizend stuks duurde dat tientallen minuten en liep het
+  // halverwege stuk.
+  setBusy(true, `Updating the condition of ${aantal} item${aantal === 1 ? '' : 's'}…`);
+  try {
+    const res = await apiFetchRetry(`${API}/api/items/bulk-condition`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(alleItems ? { condition: waarde, all_items: true }
+                                     : { condition: waarde, ids }),
+    });
+    const data = await parseJsonSafe(res);
+    if (!res.ok) throw new Error((data && data.detail) || `HTTP ${res.status}`);
+    for (const item of (state.items || [])) {
+      if (alleItems || selectedIds.has(item.id)) item.condition = waarde;
     }
-    klaar++;
-    setBusyText(`Updating condition… ${klaar}/${ids.length}`);
+    setBusy(false);
+    clearSelection();
+    applyFilters(false);
+    alert(`✅ ${data.updated ?? aantal} item${(data.updated ?? aantal) === 1 ? '' : 's'} set to "${label}".`);
+  } catch (e) {
+    setBusy(false);
+    alert(`Could not update the condition: ${e.message}`);
   }
-  setBusy(false);
-  clearSelection();
-  applyFilters(false);
-  alert(mislukt.length
-    ? `${ids.length - mislukt.length} updated, ${mislukt.length} failed — try those again.`
-    : `✅ ${ids.length} item${ids.length === 1 ? '' : 's'} set to "${label}".`);
 }
 
 async function doBulkPrice() {

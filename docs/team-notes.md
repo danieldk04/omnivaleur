@@ -78,3 +78,36 @@ without Daniel repeating himself.
   cijfers) was published as a Claude Artifact on 2026-08-26 and handed to
   Daniel directly in chat — not duplicated here since artifacts aren't repo
   files.
+
+## 2026-08-27 — Egbert Brouwer (Papa's Plectrums): waarom zijn account vastliep
+
+Eerste zakelijke klant met een grote voorraad (2.135 items, 5.534 Marktplaats-
+advertenties). Hij dreigde af te haken ("ik begin er moedeloos van te worden").
+Hieronder wat er écht misging, zodat dit niet nog eens ongemerkt gebeurt.
+
+**De hoofdoorzaak: een te lange URL.** PostgREST zet een `.in_("item_id", [...])`
+als tekst in de URL. Gemeten met echte item-id's: vanaf **640 id's** weigert
+httpx het verzoek (`InvalidURL: URL component 'query' too long`). Elke klant met
+meer dan ~639 items liep daarop stuk — zonder nette foutmelding, midden in de
+verwerking. Gevolgen die we bij Egbert konden aanwijzen:
+
+- **Scans werden opgehaald maar nooit opgeslagen.** De extensie leverde drie
+  keer op rij 2.000 nieuwe advertenties aan; het opslaan knalde stuk, maar de
+  opdracht stond toen al op "klaar". Het scherm meldde dus "niets nieuws" en de
+  volgende scan sloeg diezelfde advertenties over. 2.000 advertenties zijn
+  op 27-08-2026 alsnog teruggezet uit het bewaarde scanresultaat.
+- **Verkoopcontrole (polling) lag stil voor iedereen**, niet alleen voor hem:
+  die draait over álle actieve advertenties samen (4.751 gemeten).
+- Ook opnieuw-plaatsen en de Vinted-verkoopcontrole raakten dit.
+
+**Tweede oorzaak: het stille 1.000-rijenplafond.** PostgREST negeert een
+`.limit(10000)` en geeft er gewoon 1.000 terug, zonder iets te zeggen.
+"Fill from Marktplaats" zag daardoor alleen zijn eerste 1.000 items, vond daarin
+5 lege, zocht op díe 5 titels naar zijn verkopersnummer, vond niets, en meldde
+"could not find your adverts on Marktplaats" — terwijl zijn 4.754 advertenties
+er gewoon stonden.
+
+**Les voor volgende keer:** grote accounts breken op andere plekken dan kleine.
+Een testaccount met 50 items bewijst niets. Bij elke query over items/listings
+geldt: `fetch_all` in plaats van `.limit(...)`, en `fetch_all_in` /
+`update_in` (backend/database.py) in plaats van een kale `.in_(...)`.

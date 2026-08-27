@@ -136,6 +136,53 @@ def fetch_all(build_query, order_by: str = "id", page_size: int = 500) -> list[d
     return rijen
 
 
+# Hoeveel id's er hooguit in één `.in_(...)`-filter mogen.
+#
+# WAAROM DIT BESTAAT — de duurste fout die dit project heeft gehad.
+# PostgREST zet een `.in_("item_id", [...])` als tekst in de URL. Bij een
+# account met veel items wordt die URL zó lang dat httpx hem weigert nog vóór
+# hij verstuurd wordt: `httpx.InvalidURL: URL component 'query' too long`.
+# Gemeten (27-08-2026) met echte item-id's: tot 639 id's gaat goed, vanaf 640
+# breekt het. Dat is geen nette foutmelding maar een uitzondering midden in de
+# verwerking.
+#
+# Gevolg bij Egbert Brouwer (2.135 items): élke Marktplaats-scan werd wel
+# opgehaald door de extensie én als "klaar" weggeschreven, maar het opslaan
+# van de gevonden advertenties knalde hierop stuk. Drie scans op rij leverden
+# 2.000 nieuwe advertenties op die nooit ergens landden — het scherm meldde
+# "niets nieuws". Ook het boeken van verkopen (polling) lag hierdoor stil.
+#
+# 200 is ruim onder de grens en wordt elders in de code al gebruikt.
+IN_BROK = 200
+
+
+def fetch_all_in(build_query, kolom: str, waarden, brok: int = IN_BROK,
+                 order_by: str = "id", page_size: int = 500) -> list[dict]:
+    """Zoals `fetch_all`, maar met een `.in_(kolom, waarden)`-filter dat te
+    groot is voor één URL (zie IN_BROK).
+
+    `build_query` krijgt geen argumenten en levert een VERSE query zonder het
+    in-filter; dit voegt het per brok zelf toe.
+    """
+    waarden = list(dict.fromkeys(w for w in (waarden or []) if w is not None))
+    if not waarden:
+        return []
+    rijen: list[dict] = []
+    for i in range(0, len(waarden), brok):
+        stuk = waarden[i:i + brok]
+        rijen.extend(fetch_all(lambda s=stuk: build_query().in_(kolom, s),
+                               order_by=order_by, page_size=page_size))
+    return rijen
+
+
+def update_in(build_query, kolom: str, waarden, patch: dict, brok: int = IN_BROK) -> int:
+    """Eén update over veel rijen, opgeknipt zodat de URL nooit te lang wordt."""
+    waarden = list(dict.fromkeys(w for w in (waarden or []) if w is not None))
+    for i in range(0, len(waarden), brok):
+        build_query().update(patch).in_(kolom, waarden[i:i + brok]).execute()
+    return len(waarden)
+
+
 async def naast_de_lus(aanroep):
     """Draai één synchrone database-aanroep in een aparte werkdraad.
 
