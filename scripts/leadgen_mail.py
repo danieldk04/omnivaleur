@@ -1535,12 +1535,20 @@ WARM_OPVOLG_DAGEN = (3, 7)
 REGISTREREN = "https://omnivaleur.com/register"
 
 
-def _open_pixel_html(adres: str, kern: str) -> str:
-    """HTML-versie van de tekst met een onzichtbare pixel erin, alleen voor de
-    warme opvolgmails (zie _zet_concept_klaar, met_pixel). Regeleindes worden
-    letterlijk overgenomen zodat het er in een mailprogramma hetzelfde uitziet
-    als de platte versie ernaast."""
-    code = base64.urlsafe_b64encode(adres.lower().encode()).rstrip(b"=").decode()
+def _open_pixel_html(adres: str, kern: str, laag: str = "opvolg") -> str:
+    """HTML-versie van de tekst met een onzichtbare pixel erin. Regeleindes
+    worden letterlijk overgenomen zodat het er in een mailprogramma hetzelfde
+    uitziet als de platte versie ernaast.
+
+    De LAAG gaat mee in de link (mail2, mail3 of opvolg), want de vraag is niet
+    "wordt er geopend" maar "welke tekst wordt geopend" — zonder dat onderscheid
+    is er niets te vergelijken en valt er dus ook niets te verbeteren.
+
+    Mail1 draagt bewust GEEN pixel: dat eerste bericht moet als gewone
+    persoonlijke tekst binnenkomen, en HTML-met-pixel is precies wat een
+    spamfilter als massamail herkent. Bij mail 2 en 3 is er al een bericht
+    aangekomen en weegt meten zwaarder dan dat risico."""
+    code = base64.urlsafe_b64encode(f"{adres.lower()}|{laag}".encode()).rstrip(b"=").decode()
     veilig = (kern.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
                   .replace("\n", "<br>"))
     return (f'<html><body style="font-family:sans-serif;white-space:pre-wrap">{veilig}'
