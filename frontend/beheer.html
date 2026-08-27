@@ -428,10 +428,34 @@ function toonKern(d) {
       + kaart('Negatief', getal(m.negatief), 'geen interesse / concurrent', m.negatief ? 'let' : '')
       + kaart('Afgemeld', getal(m.afgemeld), '')
       + kaart('Bounces', getal(m.bounces), '', m.bounces ? 'let' : '')
-      + kaart('Geopend (opvolgmails)', getal((m.opens || {}).adressen),
+      + kaart('Geopend', getal((m.opens || {}).adressen),
               `${getal((m.opens || {}).totaal_geopend)}x totaal — ${veilig(m.open_tracking_reden || '')}`)
     : `<div class="kaart"><div class="label">Koude mail</div><div class="bij">${veilig(m.reden || 'Niet gekoppeld')}</div></div>`;
-  staafjes('mail-grafiek', m.per_dag, 'dag', 'aantal');
+  gestapeld('mail-grafiek', m.per_dag);
+  el('mail-legenda').innerHTML = LAGEN.map((l, i) =>
+    `<span><i class="l${i + 1}"></i>${l.naam}</span>`).join('');
+
+  tabel('mail-lagen', ['Mail', 'Verstuurd', 'Geopend', 'Reacties', 'Warm', 'Nee', 'Heeft al iets'],
+    m.lagen || [],
+    (r, i) => `<tr>
+      <td><span class="legenda" style="margin:0"><i class="l${i + 1}"></i>${veilig(r.naam)}</span></td>
+      <td class="num">${getal(r.verstuurd)}</td>
+      <td class="num">${r.open_pct == null ? '<span title="Mail 1 draagt bewust geen pixel">—</span>'
+                        : `${r.open_pct}%<div class="balk"><i class="l${i + 1}" style="width:${Math.min(100, r.open_pct)}%"></i></div>`}</td>
+      <td class="num">${getal(r.reacties)} <span class="bij">(${r.reactie_pct}%)</span>
+        <div class="balk"><i class="l${i + 1}" style="width:${Math.min(100, r.reactie_pct * 5)}%"></i></div></td>
+      <td class="num op">${getal(r.warm)}</td>
+      <td class="num">${getal(r.afwijzing)}</td>
+      <td class="num">${getal(r.concurrent)}</td>
+    </tr>`);
+
+  taart('mail-taart', 'mail-taart-uitleg', m.soorten || []);
+
+  const advies = m.advies || {};
+  el('mail-advies').innerHTML = advies.tekst
+    ? `<div class="uitleg">Bijgewerkt ${geleden(advies.op)} geleden — opnieuw berekend na een week of zodra er veel nieuwe reacties binnen zijn.</div>
+       <div class="advies">${opmaakAdvies(advies.tekst)}</div>`
+    : `<div class="leeg">Nog geen analyse. Die wordt automatisch geschreven zodra er genoeg reacties binnen zijn (of na een week).</div>`;
 
   el('mail-fouten').innerHTML = (m.fouten_vandaag && m.fouten_vandaag.length)
     ? `<div class="kaart" style="margin-top:14px"><div class="label let">Fouten vandaag</div>
