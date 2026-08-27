@@ -3210,7 +3210,8 @@ def _dagplan(state: dict, override: int) -> dict:
         gemist = _gemiste_dagen(plan.get("dag"))
         plan = {"dag": vandaag, "tijden": _tijdstippen(budget), "gedaan": 0,
                 "al_met_de_hand": al_gedaan, "gecheckt": False,
-                "gerapporteerd": False, "gemist": gemist, "fouten": []}
+                "gerapporteerd": False, "wachtenden_gedaan": False,
+                "gemist": gemist, "fouten": []}
         _save_plan(plan)
     return plan
 
