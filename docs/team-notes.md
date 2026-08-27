@@ -367,3 +367,46 @@ Wattage wordt alleen ingevuld als er echt een getal met watt in de tekst staat.
 Raden is hier net zo schadelijk als een verkeerd type — de koper filtert de
 advertentie er juist mee weg. Alleen Marktplaats; voor 2dehands is niet nagemeten
 of dezelfde labels bestaan.
+
+### 2026-08-27, avond — controleronde: drie echte fouten
+
+**1. Vinted-voorkeur blokkeerde groepen die niemand kon aanvinken.** De lijst met
+categoriegroepen staat op drie plekken: de vinkjes in het dashboard
+(`VINTED_GROEPEN` in app.html), wat er bij opslaan bewaard mag blijven
+(`VINTED_GROEPEN_GELDIG` in instellingen.py) en waarop de server blokkeert
+(`GROEPEN` in platformregels.py). "wonen" stond alleen in de laatste — sinds
+augustus. Gevolg voor iedere verkoper mét een ingestelde voorkeur: elk
+woon-artikel werd op Vinted geweigerd met "je eigen instelling laat alleen X toe",
+terwijl die instelling niet bestond en in het dashboard niets aan de hand leek.
+Met "audio" zou het vandaag opnieuw zijn gebeurd. Alle drie gelijkgetrokken,
+`tests/test_vinted_voorkeur.py` bewaakt het.
+
+**2. Vijf Vinted-hints werden stil overschreven.** Onderaan `CAT_HINTS` staat een
+blok "legacy keys". Vijf daarvan bestaan nog gewoon: sportkleding, ondergoed en
+pakken (dames en heren). JavaScript laat bij een dubbele sleutel zonder één
+waarschuwing de laatste winnen, en dat blok staat onderaan — dus "ondergoed"
+kreeg `["underwear"]` in plaats van `["lingerie & nightwear", "socks &
+underwear"]`. Weggehaald; er staan nu vier tests op dubbele sleutels in
+CAT_HINTS, MP_CATEGORIES en de keuzelijst.
+
+**3. Het klantenslot in de koude mail viel OPEN in plaats van dicht.** `_klanten()`
+haalt de accountlijst bij Supabase en ving elke fout op met een lege verzameling —
+die ook nog werd onthouden. `is_klant()` zei dan voor iedereen "nee", elke
+betalende klant gold weer als prospect, en één hapering vergiftigde de hele run.
+Dat is letterlijk het pad waarlangs Jaap zijn afscheidsmail kreeg, en het kon
+alleen omdat de server destijds op de anon-sleutel draaide (auth/admin faalt daar
+altijd). Nu: bij twijfel geldt iedereen als klant, een mislukte poging wordt niet
+onthouden, en een lege lijst telt als storing — er is altijd minstens één account.
+De run meldt het als kop, want nul mails ziet er anders precies zo uit als een
+rustige dag.
+
+**Bijvangst, en die is niet klein: omnivaleur.nl staat geparkeerd.** Het domein
+waar de koude mail vandaan komt (`daniel@omnivaleur.nl`) heeft geen werkende
+HTTPS — `omnivaleur.nl` geeft een time-out en `www.omnivaleur.nl` een SSL-fout.
+Over gewone http komt er een Namecheap-parkeerpagina met "has been recently
+registered... Want a domain name like this?". Iedere ontvanger die de afzender
+natrekt komt daar terecht. Dit is DNS-werk bij Namecheap, geen code.
+
+**Ook vastgesteld:** Railway draait nu op de `service_role`-sleutel (`/health`
+toont `supabase_key_role`). De oude notitie dat alles met auth.admin stil faalt,
+is daarmee achterhaald.

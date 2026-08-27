@@ -6907,10 +6907,11 @@ const VINTED_TWIJFEL = [
   [/\b(ivoor|ivoren|bont(jas|kraag)?|nertsbont|vossenbont|reptielenhuid|krokodillenleer|schildpad)\b/i,
    'Looks like an animal product (ivory, fur, reptile skin) — Vinted does not allow these'],
 ];
-const VINTED_GROEPEN = ['dames','heren','kinderen','unisex','sieraden','antiek','kunst','muziek','games','electronics'];
+const VINTED_GROEPEN = ['dames','heren','kinderen','unisex','sieraden','antiek','kunst','muziek','games','electronics','wonen','audio'];
 const VINTED_GROEP_LABELS = { dames:"Women's", heren:"Men's", kinderen:"Kids", unisex:'Unisex',
   sieraden:'Jewellery, watches & bags', antiek:'Antiques', kunst:'Art', muziek:'Music',
-  games:'Games', electronics:'Electronics' };
+  games:'Games', electronics:'Electronics', wonen:'Home & garden',
+  audio:'Audio, TV & photo' };
 
 function itemGroep(item) {
   const cat = String(item?.category || '').trim().toLowerCase();

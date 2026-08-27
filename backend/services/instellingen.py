@@ -36,8 +36,16 @@ RELIST_DAGEN_MAX = 85
 # Zilverwebsite wil er alleen sieraden op, maar zijn buurman mag daar prima
 # elektronica verkopen. Die twee dingen moeten uit elkaar blijven, anders staat
 # de voorkeur van de een als verbod in de weg bij de ander.
+# LET OP: deze lijst moet gelijk blijven aan GROEPEN in platformregels.py en aan
+# VINTED_GROEPEN in frontend/app.html. Loopt hij achter, dan ontstaat het ergste
+# soort fout: het dashboard zegt dat een artikel op Vinted mag en de server
+# blokkeert het alsnog, met een reden die naar een instelling wijst die de
+# verkoper nooit heeft kunnen aanvinken. Precies dat gebeurde met "wonen" (sinds
+# augustus 2026) en zou met "audio" ook zijn gebeurd; beide op 27-08-2026
+# toegevoegd. test_vinted_voorkeur bewaakt het nu.
 VINTED_GROEPEN_GELDIG = ("dames", "heren", "kinderen", "unisex", "sieraden",
-                         "antiek", "kunst", "muziek", "games", "electronics")
+                         "antiek", "kunst", "muziek", "games", "electronics",
+                         "wonen", "audio")
 
 # De EU verplicht sinds de GPSR bij vrijwel elke advertentie een
 # "verantwoordelijke partij": naam, postadres en e-mailadres van de fabrikant of

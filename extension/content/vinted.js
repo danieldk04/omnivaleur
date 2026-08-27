@@ -292,12 +292,18 @@
     "sandals":             ["sandals", "flip flops", "slippers"],
     "loafers":             ["loafers", "boat shoes", "moccasins"],
     // ── Legacy keys (backwards compat for existing saved items) ────
+    // LET OP: hier mag alleen een sleutel staan die NIET meer in de
+    // dashboard-keuzelijst voorkomt. JavaScript laat bij een dubbele sleutel
+    // stilzwijgend de laatste winnen, en dit blok staat onderaan — dus een
+    // sleutel die hierboven al bestaat wordt hier overschreven door de oude,
+    // grovere hint. Dat was tot 27-08-2026 het geval voor sportkleding,
+    // ondergoed en pakken (dames en heren): "ondergoed" kreeg ["underwear"]
+    // in plaats van ["lingerie & nightwear", "socks & underwear"]. Die vijf
+    // regels zijn weggehaald; test_vinted_categories bewaakt het nu.
     "schoenen":            ["sneakers", "trainers", "shoes", "loafers", "boots"],
     "truien / vesten":     ["jumpers", "cardigans", "knitwear"],
     "heren truien / vesten": ["jumpers", "sweaters", "cardigans", "knitwear"],
     "heren t-shirts / polo": ["t-shirts", "polo shirts"],
-    "sportkleding":        ["activewear", "sports"],
-    "heren sportkleding":  ["activewear", "sports"],
     "jassen | winter":     ["coats", "winter coats", "jackets"],
     "blouses en tunieken": ["blouses", "tunics", "shirts"],
     "polo's":              ["polo shirts", "polos"],
@@ -305,9 +311,6 @@
     "leggings":            ["leggings"],
     "badkleding":          ["swimwear", "swimsuits"],
     "heren broeken":       ["trousers", "pants", "chinos"],
-    "heren pakken":        ["suits", "blazers"],
-    "ondergoed":           ["underwear"],
-    "heren ondergoed":     ["underwear", "socks"],
     // ── Non-clothing (games, consoles, electronics) ───────────────
     // Vinted has "Video games & consoles" and (in some markets) "Electronics".
     // If a market lacks these leaves no row matches and fillCategoryVinted

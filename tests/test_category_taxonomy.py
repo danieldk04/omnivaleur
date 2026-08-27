@@ -105,3 +105,49 @@ def test_sport_items_are_recognised(title, expected):
 
     got = _infer_attributes(title, "")
     assert got.get("category") == expected
+
+
+# ── Dubbele sleutels ────────────────────────────────────────────────────────
+# JavaScript laat bij een dubbele sleutel in een object stilzwijgend de laatste
+# winnen. Er is geen foutmelding en geen waarschuwing. Op 27-08-2026 bleek het
+# "legacy keys"-blok onderaan CAT_HINTS vijf sleutels te overschrijven die nog
+# gewoon in gebruik zijn: "ondergoed" kreeg daardoor ["underwear"] in plaats van
+# ["lingerie & nightwear", "socks & underwear"]. Zoiets is aan de advertentie
+# niet te zien — hooguit aan een categorie die net naast de goede zit.
+
+def _dubbele_sleutels(rel: str, marker: str, einde: str) -> list[str]:
+    import collections
+    src = _read(rel)
+    start = src.index(marker)
+    blok = src[start:src.index(einde, start)]
+    keys = re.findall(r'^\s*"([^"]+)":', blok, flags=re.M)
+    return sorted(k for k, n in collections.Counter(keys).items() if n > 1)
+
+
+def test_geen_dubbele_vinted_hints():
+    dubbel = _dubbele_sleutels("extension/content/vinted.js", "const CAT_HINTS = {", "\n  };")
+    assert not dubbel, f"deze sleutels staan twee keer in CAT_HINTS, de laatste wint: {dubbel}"
+
+
+def test_geen_dubbele_marktplaats_categorieen():
+    dubbel = _dubbele_sleutels("extension/background.js", "const MP_CATEGORIES = {", "\n};")
+    assert not dubbel, f"deze sleutels staan twee keer in MP_CATEGORIES: {dubbel}"
+
+
+def test_geen_dubbele_dashboard_categorieen(all_keys):
+    import collections
+    dubbel = sorted(k for k, n in collections.Counter(all_keys).items() if n > 1)
+    assert not dubbel, f"deze categorieen staan twee keer in de keuzelijst: {dubbel}"
+
+
+def test_legacy_hints_overschrijven_geen_levende_categorie(all_keys):
+    """Het legacy-blok staat onderaan, dus alles wat daar staat wint. Er mag daar
+    dus alleen een sleutel staan die NIET meer in het dashboard te kiezen is."""
+    src = _read("extension/content/vinted.js")
+    start = src.index("// ── Legacy keys")
+    blok = src[start:src.index("\n    // ──", start + 10)]
+    legacy = set(re.findall(r'^\s*"([^"]+)":', blok, flags=re.M))
+    botsing = sorted(legacy & set(all_keys))
+    assert not botsing, (
+        f"deze legacy-sleutels bestaan nog gewoon in het dashboard en overschrijven "
+        f"daar de goede hints: {botsing}")

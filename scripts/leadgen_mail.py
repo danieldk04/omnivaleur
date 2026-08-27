@@ -869,6 +869,12 @@ def send(args) -> None:
     boek = Notion()
     verstuurd = _verstuur(rij, gebruiker, host, state, boek)
     boek.afsluiten()
+    if klantenlijst_kapot:
+        # Niet als voetnoot maar als kop: nul mails ziet er precies zo uit als een
+        # rustige dag, en dat is nu juist het verschil dat je moet zien.
+        print(f"\n  !! ER IS NIETS VERSTUURD OMDAT DE KLANTENLIJST ONBEKEND IS:")
+        print(f"     {klantenlijst_kapot}")
+        print("     Herstel dat eerst; daarna loopt de volgende ronde vanzelf weer.")
     print(f"\n{verstuurd} mails verstuurd. Morgen weer — draai 'check' voor antwoorden.")
 
 
@@ -1758,18 +1764,35 @@ def _eigen_tekst(body: str) -> str:
 # Wie een account heeft is geen prospect. Voor hem gaat het nooit meer over
 # verkopen: hij krijgt hulp, of hij krijgt niets tot Daniel er zelf naar kijkt.
 _klanten_kas: set | None = None
+klantenlijst_kapot: str = ""      # gevulde tekst = de lijst kon niet gelezen worden
+
+
+class KlantenlijstOnbekend(RuntimeError):
+    """De klantenlijst kon niet worden opgehaald."""
 
 
 def _klanten() -> set:
-    """Alle e-mailadressen met een Omnivaleur-account."""
+    """Alle e-mailadressen met een Omnivaleur-account.
+
+    Gooit KlantenlijstOnbekend als de lijst niet te lezen is, en onthoudt in dat
+    geval NIETS. Dat is het hele punt: hiervoor ving deze functie de fout op en
+    gaf een lege verzameling terug, die ook nog eens werd onthouden. Gevolg:
+    is_klant() zei dan voor iedereen "nee", élke betalende klant gold weer als
+    prospect, en één hapering was genoeg om de hele run te vergiftigen. Dat is
+    exact het pad waarlangs Jaap zijn afscheidsmail kreeg — en het gebeurde
+    juist toen de server nog op de anon-sleutel draaide, waarmee auth/admin
+    altijd faalt.
+    """
     global _klanten_kas
     if _klanten_kas is not None:
         return _klanten_kas
-    _klanten_kas = set()
+
     verbinding = _supabase()
     if not verbinding:
-        return _klanten_kas
+        raise KlantenlijstOnbekend("geen Supabase-verbinding geconfigureerd")
+
     url, sleutel = verbinding
+    gevonden: set = set()
     try:
         import httpx
         for bladzijde in range(1, 12):
@@ -1781,16 +1804,42 @@ def _klanten() -> set:
             rij = r.json().get("users", [])
             for u in rij:
                 if u.get("email"):
-                    _klanten_kas.add(u["email"].strip().lower())
+                    gevonden.add(u["email"].strip().lower())
             if len(rij) < 200:
                 break
-    except Exception as e:  # noqa: BLE001 — bij twijfel liever niemand mailen dan de verkeerde
-        print(f"  (klantenlijst niet gelezen: {e})")
+    except Exception as e:  # noqa: BLE001
+        raise KlantenlijstOnbekend(str(e)) from e
+
+    # Een lijst zonder één enkel adres is geen antwoord maar een symptoom: er is
+    # altijd minstens één account. Dit vangt de anon-sleutel af, die netjes
+    # HTTP 200 met een lege lijst teruggeeft in plaats van een foutmelding.
+    if not gevonden:
+        raise KlantenlijstOnbekend("de lijst kwam leeg terug — bijna zeker de "
+                                   "verkeerde Supabase-sleutel (auth/admin vereist "
+                                   "de service_role-sleutel)")
+
+    _klanten_kas = gevonden
     return _klanten_kas
 
 
 def is_klant(adres: str) -> bool:
-    return (adres or "").strip().lower() in _klanten()
+    """Heeft dit adres een account? Bij twijfel: JA.
+
+    Ja-bij-twijfel is hier de veilige kant op. Deze functie is een rem: wie klant
+    is krijgt geen koude mail en geen afscheidsmail. Weten we het niet, dan is
+    niemand mailen ongemakkelijk, maar een betalende klant "veel succes met de
+    winkel" sturen is schade die je niet terugdraait.
+    """
+    global klantenlijst_kapot
+    try:
+        return (adres or "").strip().lower() in _klanten()
+    except KlantenlijstOnbekend as e:
+        if not klantenlijst_kapot:
+            klantenlijst_kapot = str(e)
+            print(f"\n  !! KLANTENLIJST NIET GELEZEN: {e}")
+            print("     Zolang dit zo is gaat er GEEN koude mail uit — iedereen "
+                  "wordt als klant behandeld.\n")
+        return True
 
 
 # ── Het slimme antwoord ───────────────────────────────────────────────────
