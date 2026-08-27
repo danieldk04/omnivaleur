@@ -3174,6 +3174,32 @@ def status(args) -> None:
     print(f"{wacht} staan er nog in de wachtrij")
 
 
+def reacties(args) -> None:
+    """`python3 leadgen_mail.py reacties` — één regel per lead die ooit
+    reageerde: waar staat het gesprek, en bij wie ligt de bal nu."""
+    state = _state()
+    gereageerd = {a: st for a, st in state.items() if st.get("beantwoord")}
+    print(f"{len(gereageerd)} leads die ooit reageerden\n")
+    for adres, st in sorted(gereageerd.items(), key=lambda kv: kv[1].get("laatste", "")):
+        soort = st.get("soort", "?")
+        vlaggen = ", ".join(v for v in (
+            "afgemeld" if st.get("afgemeld") else "",
+            "afgewezen" if st.get("afgewezen") else "",
+            "concurrent" if st.get("concurrent") else "",
+            "bounce" if st.get("bounce") else "",
+            "afgesloten" if st.get("afgesloten") else "",
+            "auto-antwoord" if st.get("auto_antwoord") else "",
+            f"opvolging {st.get('warm_opvolg')}x" if st.get("warm_opvolg") else "",
+        ) if v)
+        # Ligt de bal bij ons of bij hen? Zelfde logica als _warme_opvolging:
+        # als er nooit iets teruggemaild is ná hun laatste bericht, wachten zij
+        # op Daniel — anders heeft Daniel (of de machine) al gereageerd.
+        bal = "bij ons" if not (st.get("afgemeld") or st.get("afgewezen")
+                                or st.get("concurrent") or st.get("afgesloten")) else "afgerond"
+        print(f"{adres:40} {soort:12} laatste: {st.get('laatste', '?')[:16]:16} "
+              f"bal: {bal:9} {vlaggen}")
+
+
 def main() -> None:
     ap = argparse.ArgumentParser(
         description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
