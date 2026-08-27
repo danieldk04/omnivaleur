@@ -21,6 +21,38 @@ router = APIRouter(prefix="/jobs", tags=["jobs"])
 STALE_CLAIM_MINUTES = 5
 MAX_RECLAIMS = 2
 
+# De oudste extensieversie die we nog vertrouwen voor een scan.
+#
+# WAAROM DIT BESTAAT (27-08-2026, Egbert Brouwer). Hij bleek de extensie TWEE
+# keer te draaien: een bijgewerkte kopie én een losse, met de hand geladen kopie
+# van 16 augustus (1.0.207) die nooit meebeweegt met de Chrome Web Store. Beide
+# halen opdrachten uit dezelfde wachtrij. Welke van de twee de scan het eerst
+# pakt bepaalt de uitslag — en de oude kopie kán het niet: die haalt hooguit 250
+# advertenties op en kent de "sla over wat we al hebben"-lijst niet. Uitslag over
+# twee weken: 13 geslaagde scans, 18 mislukte, en die 18 meldden allemaal
+# "je bent niet ingelogd bij Marktplaats" terwijl hij gewoon ingelogd was.
+#
+# 1.0.244 is de eerste versie die de bekende-id's-lijst gebruikt; alles daaronder
+# kan een grote winkel niet uitlezen.
+MINIMALE_SCANVERSIE = (1, 0, 244)
+# Hoe vaak een scan die door een te oude kopie is opgepakt terug in de wachtrij
+# mag. Twee: genoeg om de bijgewerkte kopie een kans te geven, te weinig om te
+# blijven rondzingen bij iemand die alleen die oude kopie heeft.
+MAX_HERKANSING_OUDE_EXTENSIE = 2
+
+_EXT_VERSIE = re.compile(r"\[extensie\s+(\d+)\.(\d+)\.(\d+)\]")
+
+
+def _extensie_versie(tekst) -> tuple[int, int, int] | None:
+    """De versie die de extensie zelf in haar foutmelding stempelt, of None.
+
+    Handig omdat een oude extensie niets anders over zichzelf prijsgeeft: dit
+    stempel zit er al sinds 1.0.19x in, dus we kunnen een verouderde kopie
+    herkennen zonder dat die kopie daaraan hoeft mee te werken.
+    """
+    m = _EXT_VERSIE.search(str(tekst or ""))
+    return (int(m.group(1)), int(m.group(2)), int(m.group(3))) if m else None
+
 # The optional import_candidates snapshot columns, dropped together if the
 # migration hasn't run (see _store_scan_results).
 RICH_KEYS = ("photo_urls", "description", "brand", "size", "condition",
@@ -299,6 +331,10 @@ def extension_status(user_id: str = Depends(get_current_user)):
     "offline". online=False means we've never seen it, or not recently.
     """
     db = get_db()
+    # De waarschuwing over een verouderde kopie hoort óók zichtbaar te zijn als
+    # de hartslagtabel nog niet bestaat — dat is precies een account waar dit
+    # soort dingen ongemerkt misgaat.
+    oud = _verouderde_extensie(db, user_id)
     try:
         row = (
             db.table("extension_heartbeat")
@@ -309,21 +345,53 @@ def extension_status(user_id: str = Depends(get_current_user)):
             .data
         )
     except Exception:
-        return {"online": None}  # table not migrated yet — hide the indicator
+        return {"online": None, **oud}  # table not migrated yet — hide the indicator
 
     if not row or not row[0].get("last_seen"):
-        return {"online": False, "last_seen": None, "seconds_ago": None}
+        return {"online": False, "last_seen": None, "seconds_ago": None, **oud}
 
     last_seen = _parse_ts(row[0]["last_seen"])
     if not last_seen:
-        return {"online": False, "last_seen": None, "seconds_ago": None}
+        return {"online": False, "last_seen": None, "seconds_ago": None, **oud}
 
     seconds_ago = int((datetime.now(timezone.utc) - last_seen).total_seconds())
     return {
         "online": seconds_ago <= EXTENSION_ONLINE_WINDOW_SECONDS,
         "last_seen": last_seen.isoformat(),
         "seconds_ago": max(0, seconds_ago),
+        **oud,
     }
+
+
+def _verouderde_extensie(db, user_id: str) -> dict:
+    """Draait er ergens nog een oude kopie van de extensie mee?
+
+    Een tweede, met de hand geladen kopie beweegt niet mee met de Chrome Web
+    Store en blijft dus voor altijd op de versie van de dag dat hij is
+    neergezet. Hij haalt wél opdrachten uit dezelfde wachtrij, en bij een grote
+    winkel kan hij die niet aan. Dat is van buitenaf niet te zien — het lijkt op
+    "de app doet het soms wel en soms niet" (Egbert Brouwer, twee weken lang).
+
+    De extensie stempelt haar versie in elke foutmelding, dus we kunnen dit
+    aflezen uit werk dat al gedaan is. Geen extra tabel, geen migratie.
+    """
+    try:
+        grens = (datetime.now(timezone.utc) - timedelta(days=7)).isoformat()
+        rijen = (db.table("jobs").select("result")
+                 .eq("user_id", user_id).eq("status", "error")
+                 .gte("created_at", grens)
+                 .order("created_at", desc=True).limit(40).execute().data or [])
+    except Exception:  # noqa: BLE001 — een waarschuwing mag nooit de indicator slopen
+        return {}
+    oudste = None
+    for r in rijen:
+        res = r.get("result")
+        v = _extensie_versie((res or {}).get("error") if isinstance(res, dict) else res)
+        if v and v < MINIMALE_SCANVERSIE and (oudste is None or v < oudste):
+            oudste = v
+    if not oudste:
+        return {}
+    return {"outdated_extension": ".".join(map(str, oudste))}
 
 
 @router.get("/relist-status")
@@ -1411,6 +1479,25 @@ def fail_job(job_id: str, body: dict, user_id: str = Depends(get_current_user)):
     db = get_db()
     _record_extension_heartbeat(db, user_id)  # only the extension reports job errors
     job = db.table("jobs").select("item_id,platform,action,payload").eq("id", job_id).eq("user_id", user_id).single().execute().data
+
+    # Een scan die door een verouderde kopie van de extensie is opgepakt telt
+    # niet als mislukt: die kopie kán het werk gewoon niet. Terug in de wachtrij,
+    # zodat de bijgewerkte kopie hem alsnog oppakt. Zie MINIMALE_SCANVERSIE.
+    versie = _extensie_versie(body.get("error"))
+    if job and job["action"] == "scan" and versie and versie < MINIMALE_SCANVERSIE:
+        payload = dict(job.get("payload") or {})
+        pogingen = int(payload.get("_oude_extensie_pogingen") or 0)
+        if pogingen < MAX_HERKANSING_OUDE_EXTENSIE:
+            payload["_oude_extensie_pogingen"] = pogingen + 1
+            payload["_oude_extensie_versie"] = ".".join(map(str, versie))
+            db.table("jobs").update({
+                "status": "pending", "payload": payload, "claimed_at": None,
+            }).eq("id", job_id).execute()
+            logger.info("Scan %s geweigerd door extensie %s (te oud) — terug in de wachtrij (%d/%d)",
+                        job_id, payload["_oude_extensie_versie"], pogingen + 1,
+                        MAX_HERKANSING_OUDE_EXTENSIE)
+            return {"ok": True, "requeued": True, "reason": "outdated_extension"}
+
     db.table("jobs").update({
         "status": "error",
         "result": body,

@@ -5956,11 +5956,21 @@ async function loadExtensionStatus() {
 function renderExtensionStatus() {
   const data = state.extStatus;
   const queued = (state.jobs || []).length;
+  // Een tweede, met de hand geïnstalleerde kopie van de extensie beweegt niet
+  // mee met de Chrome Web Store en blijft dus hangen op de versie van de dag
+  // dat hij is neergezet. Hij pakt wél opdrachten uit dezelfde wachtrij, en kan
+  // ze bij een grote voorraad niet aan — dan lijkt het of de app het "soms wel
+  // en soms niet" doet. Dit is van buitenaf onzichtbaar, dus het moet gezegd.
+  const oud = data && data.outdated_extension;
   document.querySelectorAll('.comp-status').forEach(el => {
     // online === null/undefined means "unknown" (heartbeat not available yet) —
-    // hide rather than show a misleading state.
+    // hide rather than show a misleading state. Een verouderde kopie melden we
+    // wél, ook dan.
     if (!data || data.online === null || data.online === undefined) {
-      el.style.display = 'none';
+      if (!oud) { el.style.display = 'none'; return; }
+      el.style.display = 'flex';
+      el.className = 'comp-status comp-status-offline';
+      el.innerHTML = extraOudeExtensieMelding(oud);
       return;
     }
     el.style.display = 'flex';
@@ -5976,7 +5986,18 @@ function renderExtensionStatus() {
           : 'Anything you queue from your phone will run'
       } as soon as you open Chrome — with the Omnivaleur extension — on your computer.</div>`;
     }
+    if (oud) el.innerHTML += extraOudeExtensieMelding(oud);
   });
+}
+
+function extraOudeExtensieMelding(versie) {
+  return `<div style="margin-top:8px;padding:10px 12px;border-radius:8px;background:#fef3c7;color:#92400e;font-size:13px;line-height:1.55">
+    <b>An outdated copy of the extension (${esc(versie)}) is running on one of your computers.</b>
+    It picks up jobs from the same queue as the up-to-date one but can't finish them,
+    so scans fail at random. Open <b>chrome://extensions</b> on each computer you use,
+    remove any Omnivaleur entry that is not version 1.0.249 or newer, and
+    <a href="https://chrome.google.com/webstore/detail/gfaogapbhaacfbpdppdcmnkjndlphleh" target="_blank" rel="noopener">reinstall it from the Chrome Web Store</a>.
+  </div>`;
 }
 
 function renderRefreshView() {
