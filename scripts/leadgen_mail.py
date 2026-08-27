@@ -3820,7 +3820,10 @@ def wachtenden(args) -> None:
             if st.get("afgemeld") or st.get("afgewezen") or st.get("concurrent") \
                     or st.get("afgesloten") or st.get("bounce") or st.get("auto_antwoord"):
                 continue
-            if SYSTEEM_AFZENDER.search(adres) if 'SYSTEEM_AFZENDER' in globals() else False:
+            # Systeempost en bounces zijn geen mensen die op antwoord wachten.
+            if SYSTEEM_AFZENDER.search(adres) or BOUNCE_AFZENDERS.search(adres):
+                continue
+            if adres == gebruiker.lower():
                 continue
             ons = verstuurd.get(adres)
             if ons is not None and ons[0] > hun:
