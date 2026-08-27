@@ -434,14 +434,20 @@ def _mail_lagen(state: dict) -> list[dict]:
     """De kernvraag van dit dashboard: welke van de drie teksten opent een
     gesprek? Een reactie hoort bij de mail die er als laatste tegenover stond."""
     opens = _open_tellingen()
+    # Sinds wanneer draagt een mail een pixel? Alles wat daarvóór verstuurd is
+    # kán niet gemeten zijn, en meetellen in de noemer maakt van "nog niet
+    # gemeten" een "niemand opent" — precies de verkeerde conclusie.
+    gemeten_vanaf = _leadgen_lezen("mail_opens_vanaf") or _PIXEL_VANAF
     uit = []
     for sleutel, naam in _LAAGNAMEN.items():
-        rij = {"laag": sleutel, "naam": naam, "verstuurd": 0, "reacties": 0,
-               "warm": 0, "afwijzing": 0, "concurrent": 0, "afmelding": 0}
+        rij = {"laag": sleutel, "naam": naam, "verstuurd": 0, "meetbaar": 0,
+               "reacties": 0, "warm": 0, "afwijzing": 0, "concurrent": 0, "afmelding": 0}
         for st in state.values():
             for m in (st.get("verstuurd") or []):
                 if isinstance(m, dict) and m.get("beurt") == sleutel:
                     rij["verstuurd"] += 1
+                    if str(m.get("op") or "") >= gemeten_vanaf:
+                        rij["meetbaar"] += 1
             if st.get("beantwoord"):
                 try:
                     binnen = datetime.fromisoformat(st["beantwoord"]).timestamp()
@@ -456,10 +462,34 @@ def _mail_lagen(state: dict) -> list[dict]:
                               if rij["verstuurd"] else 0)
         geopend = len(opens.get(sleutel, ()))
         rij["geopend"] = geopend
-        # Mail 1 draagt bewust geen pixel; een 0% zou daar liegen, dus geen cijfer.
-        rij["open_pct"] = (None if sleutel == "mail1" else
-                           (round(100 * geopend / rij["verstuurd"], 1) if rij["verstuurd"] else 0))
+        # Mail 1 draagt bewust nooit een pixel. Mail 2 en 3 pas sinds de pixel
+        # erin zit; is er sindsdien niets verstuurd, dan is er niets te melden.
+        rij["open_pct"] = (round(100 * geopend / rij["meetbaar"], 1)
+                           if sleutel != "mail1" and rij["meetbaar"] else None)
+        rij["open_reden"] = ("Mail 1 blijft bewust zonder meetpixel." if sleutel == "mail1"
+                             else ("Nog niets verstuurd sinds de meting aanstaat."
+                                   if not rij["meetbaar"] else ""))
         uit.append(rij)
+    # Reacties van mensen die Daniel zelf mailde horen bij geen enkele laag.
+    # Zonder deze regel tellen de kolommen niet op tot het totaal erboven, en
+    # dan gaat iemand terecht twijfelen aan de rest van het scherm.
+    los = {"laag": "?", "naam": "Buiten de campagne om", "verstuurd": 0, "meetbaar": 0,
+           "reacties": 0, "warm": 0, "afwijzing": 0, "concurrent": 0, "afmelding": 0,
+           "reactie_pct": 0, "geopend": 0, "open_pct": None,
+           "open_reden": "Door jou zelf gemaild, buiten de machine om."}
+    for st in state.values():
+        if not st.get("beantwoord"):
+            continue
+        try:
+            binnen = datetime.fromisoformat(st["beantwoord"]).timestamp()
+        except Exception:
+            binnen = None
+        if _welke_beurt(st, binnen) not in _LAAGNAMEN:
+            los["reacties"] += 1
+            if st.get("soort") in los:
+                los[st.get("soort")] += 1
+    if los["reacties"]:
+        uit.append(los)
     return uit
 
 
