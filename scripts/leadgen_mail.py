@@ -3799,6 +3799,11 @@ def main() -> None:
             p.add_argument("--dry-run", action="store_true")
         p.set_defaults(func=functie)
 
+    hs = sub.add_parser("herstel",
+                        help="vervolgconcept voor wie de sjabloonmail al verstuurd kreeg")
+    hs.add_argument("--dry-run", action="store_true", help="alleen tonen, niets klaarzetten")
+    hs.set_defaults(func=herstel)
+
     sw = sub.add_parser("sjablonen-weg",
                         help="oude standaard verkoopmails uit Concepten halen")
     sw.add_argument("--dry-run", action="store_true", help="alleen tonen, niets weggooien")
