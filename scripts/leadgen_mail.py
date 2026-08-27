@@ -3490,6 +3490,9 @@ def main() -> None:
     c.add_argument("--dagen", type=int, default=30)
     c.set_defaults(func=check)
 
+    a = sub.add_parser("analyse", help="de mailanalyse nu opnieuw laten schrijven")
+    a.set_defaults(func=lambda _: _advies_bijwerken(_state(), forceer=True))
+
     g = sub.add_parser("corrigeer", help="een verkeerd gezette vlag rechtzetten")
     g.add_argument("adres")
     g.add_argument("vlag", choices=_TOEGESTANE_VLAGGEN)
