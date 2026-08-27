@@ -3532,6 +3532,77 @@ def corrigeer(args) -> None:
     print(f"{adres}: {args.vlag} was {was}, is nu {state[adres][args.vlag]}")
 
 
+# Herkenningspunten van de verwijderde sjabloonmail. Twee eisen tegelijk, want
+# één zin alleen is te grof: Daniel schrijft zelf ook weleens "Dank voor je
+# reactie". De combinatie met de vaste video-link of de vaste platformzin komt
+# alleen uit het sjabloon.
+_SJABLOON_OPENING = "Dank voor je reactie!"
+_SJABLOON_KENMERKEN = (VIDEO, "Qua platformen:",
+                       "Laat maar weten wat je ervan vindt, of als je ergens tegenaan loopt.")
+
+
+def _is_sjabloonconcept(tekst: str) -> bool:
+    return _SJABLOON_OPENING in tekst and any(k in tekst for k in _SJABLOON_KENMERKEN)
+
+
+def sjablonen_weg(args) -> None:
+    """`python3 leadgen_mail.py sjablonen-weg` — de oude standaard verkoopmails
+    uit de conceptenmap halen.
+
+    Waarom dit een apart commando is en geen automatische opruiming: het gaat om
+    concepten die er al liggen en die Daniel zo zou kunnen versturen. Zolang ze
+    er liggen, staan ze een goed antwoord in de weg — de machine ziet een
+    bestaand concept namelijk als 'dit gesprek is al beantwoord' en schrijft er
+    geen tweede naast. Weghalen is dus genoeg: de eerstvolgende ronde schrijft
+    er vanzelf een echt antwoord voor.
+
+    Al VERSTUURDE mail blijft ongemoeid en krijgt ook geen nieuw concept; wat de
+    deur uit is, is uit."""
+    host, gebruiker = os.environ.get("IMAP_HOST"), os.environ.get("MAIL_USER")
+    wachtwoord = os.environ.get("MAIL_PASS")
+    if not (host and gebruiker and wachtwoord):
+        print("Geen mailtoegang (IMAP_HOST/MAIL_USER/MAIL_PASS ontbreken).")
+        return
+    droog = getattr(args, "dry_run", False)
+    gevonden, weg = 0, 0
+    try:
+        with imaplib.IMAP4_SSL(host, 993) as imap:
+            imap.login(gebruiker, wachtwoord)
+            bestaand = {r.decode().split(' "/" ')[-1].strip('"')
+                        for r in (imap.list()[1] or [])}
+            map_ = CONCEPTMAP if CONCEPTMAP in bestaand else "Drafts"
+            imap.select(f'"{map_}"', readonly=droog)
+            _, d = imap.search(None, "ALL")
+            for num in (d[0] or b"").split():
+                _, ruw = imap.fetch(num, "(BODY.PEEK[])")
+                if not ruw or not ruw[0]:
+                    continue
+                msg = email.message_from_bytes(ruw[0][1])
+                tekst = _platte_tekst(msg)
+                if not _is_sjabloonconcept(tekst):
+                    continue
+                gevonden += 1
+                naar = _leesbaar(msg.get("To", "")) or "?"
+                if droog:
+                    print(f"  zou weghalen: concept voor {naar}")
+                    continue
+                imap.store(num, "+FLAGS", "\\Deleted")
+                weg += 1
+                print(f"  ✗ sjabloonconcept weggehaald voor {naar}")
+            if weg:
+                imap.expunge()
+    except Exception as e:  # noqa: BLE001
+        print(f"  (opruimen mislukt: {e})")
+        return
+    if not gevonden:
+        print("Geen sjabloonconcepten gevonden — er ligt niets meer van het oude soort.")
+    elif droog:
+        print(f"{gevonden} sjabloonconcept(en) gevonden. Draai zonder --dry-run om ze weg te halen.")
+    else:
+        print(f"{weg} sjabloonconcept(en) weggehaald. De eerstvolgende ronde "
+              f"schrijft er echte antwoorden voor.")
+
+
 def concepten(args) -> None:
     """`python3 leadgen_mail.py concepten` — alles wat er nu in Concepten
     ligt, mét een controle op dubbele of verouderde voorstellen (dezelfde
