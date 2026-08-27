@@ -1253,6 +1253,13 @@ def _check_inbox(state: dict, boek: "Notion", dagen: int) -> tuple[int, int, int
                 nieuw += 1
                 if lead:
                     boek.geantwoord(lead, soort)
+                # De reactie zelf bewaren, met de mail die hem uitlokte erbij.
+                # Zonder de tekst valt er niets over patronen te zeggen ("waarom
+                # zegt men nee?"), en zonder de laag valt niet te vergelijken
+                # welke van de drie mails het gesprek opent. Alleen de EERSTE
+                # reactie: dat is de reactie op de koude tekst, daarna gaat het
+                # over het gesprek en niet meer over de mail.
+                _onthoud_reactie(afzender, soort, _welke_beurt(st, binnen_op_kop(msg)), body)
 
             # ── Een concept voor ELK nieuw bericht, niet alleen het eerste ──
             #
