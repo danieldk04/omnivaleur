@@ -337,7 +337,9 @@ def _mail() -> dict:
         return {"gekoppeld": False,
                 "reden": "Nog geen administratie gevonden (leadgen_opslag/mail_state)"}
     verstuurd = 0
-    per_dag: dict[str, int] = {}
+    # Per dag én per laag: alleen zo is te zien of een piek uit nieuwe leads
+    # komt of uit opvolgingen op de bestaande lijst.
+    per_dag: dict[str, dict[str, int]] = {}
     for v in state.values():
         for m in (v.get("verstuurd") or []):
             verstuurd += 1
@@ -345,7 +347,9 @@ def _mail() -> dict:
             # bestaan niet en lieten deze grafiek altijd leeg zien.
             dag = str(m.get("op") or "")[:10] if isinstance(m, dict) else str(m)[:10]
             if dag:
-                per_dag[dag] = per_dag.get(dag, 0) + 1
+                emmer = per_dag.setdefault(dag, {})
+                laag = str(m.get("beurt") or "?") if isinstance(m, dict) else "?"
+                emmer[laag] = emmer.get(laag, 0) + 1
     benaderd = len(state)
     antwoorden = sum(1 for v in state.values() if v.get("beantwoord"))
     # Warm = geïnteresseerd, dat is de positieve reactie. Afwijzing en "gebruikt
