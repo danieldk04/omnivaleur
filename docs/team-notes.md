@@ -140,3 +140,20 @@ zet — geen extra tabel, geen migratie.
 **Les:** de gepubliceerde Web Store-versie is zonder inloggen te controleren via
 de CRX-updatecheck. Bij "hij doet het soms wel en soms niet" is dat de eerste
 vraag: draait er ergens nog een tweede kopie?
+
+### 2026-08-27 — tweede ontwikkelaar ingehuurd (eigen Claude-abonnement)
+
+Daniel heeft een tweede ontwikkelaar ingehuurd die aan Omnivaleur meewerkt via
+een **eigen, apart Claude Code-abonnement**. Die persoon springt in wanneer
+Daniels gebruikslimiet op is. **Daniel houdt de leiding**: scope, prioriteiten
+en beslissingen liggen bij hem; de tweede ontwikkelaar is aanvullend.
+
+Praktisch:
+- Werken vanaf een ander account of een andere pc kan gewoon — de code staat op
+  GitHub (`danieldk04/crosslisteu`), `git clone` + `claude` in die map volstaat.
+  Alleen het `.env`-bestand met sleutels staat niet in git en moet apart en
+  veilig overgezet worden.
+- **De git-auteursnaam bewijst niets.** Alle commits verschijnen als
+  "Daniel de Koning" omdat de lokale git-config dat zo instelt, ongeacht welk
+  Claude-account de sessie draait. Wie een wijziging maakte, is dus niet uit
+  `git log` af te lezen — navragen bij twijfel.
