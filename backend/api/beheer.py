@@ -378,7 +378,7 @@ def _mail() -> dict:
         # _open_pixel_html in scripts/leadgen_mail.py. De eerste mail blijft
         # bewust puur tekst, om niet als marketing over te komen.
         "open_tracking": True,
-        "open_tracking_reden": "Alleen gemeten op de opvolgmails, niet op de eerste koude mail.",
+        "open_tracking_reden": "Gemeten op mail 2, mail 3 en de opvolgmails — niet op mail 1.",
         "opens": _mail_opens(list(state.keys())),
         "lagen": _mail_lagen(state),
         "soorten": _mail_soorten(state),
