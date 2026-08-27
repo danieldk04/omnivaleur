@@ -340,7 +340,9 @@ def _mail() -> dict:
     for v in state.values():
         for m in (v.get("verstuurd") or []):
             verstuurd += 1
-            dag = str(m.get("datum") or m.get("dag") or "")[:10] if isinstance(m, dict) else str(m)[:10]
+            # Het veld heet "op" (zie scripts/leadgen_mail.py, send()) — "datum"/"dag"
+            # bestaan niet en lieten deze grafiek altijd leeg zien.
+            dag = str(m.get("op") or "")[:10] if isinstance(m, dict) else str(m)[:10]
             if dag:
                 per_dag[dag] = per_dag.get(dag, 0) + 1
     benaderd = len(state)
