@@ -458,17 +458,17 @@ def _llm_beschikbaar() -> bool:
 
 
 def _draft_met_llm(draad: Thread, grondslag: str) -> tuple[str, str]:
-    """Retourneert (concepttekst, topic). Vereist ANTHROPIC_API_KEY; zonder key
-    valt dit terug op een neutrale plaatshouder-tekst die het probleem alleen
-    aankondigt maar geen technische claims doet."""
+    """Retourneert (concepttekst, topic). Lege tekst = geen concept.
+
+    Er is bewust GEEN vangnettekst meer. Hier stond een vriendelijk
+    "ik kijk ernaar en kom erop terug", dat intrad zodra de sleutel ontbrak.
+    Dat leest als een antwoord maar zegt niets, en het verbergt de storing:
+    Daniel zag een concept liggen en ging ervan uit dat het werk gedaan was.
+    Liever niets, plus een regel in het reviewrapport waar hij op afgaat."""
     topic = _classificeer_topic(draad.body)
     if not _llm_beschikbaar():
-        return (
-            f"Hi {draad.van_naam.split()[0] if draad.van_naam else ''},\n\n"
-            "Bedankt voor je bericht — ik kijk dit na en kom er zo snel mogelijk "
-            "op terug.\n\nGroetjes,\nDaniel",
-            topic,
-        )
+        print("  !! ANTHROPIC_API_KEY ontbreekt — geen concept, bericht blijft staan")
+        return "", topic
     import anthropic
     client = anthropic.Anthropic()
     prompt = (
