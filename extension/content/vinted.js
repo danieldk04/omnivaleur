@@ -1416,43 +1416,8 @@
     return [isHeren ? "Men" : "Women", "Clothing", ...rest];
   }
 
-  // Welk blad hoort bij dit artikel?
-  //
-  // WAAROM DIT ZO MOET. De vorige versie keek of een woord uit de optienaam
-  // lettterlijk in de titel stond. Vinted spelt zijn bladen in het MEERVOUD
-  // ("Cardigans", "Checked shirts"), en een titel zegt "Cardigan" — dus die
-  // vergelijking mislukte altijd en er werd steevast "Other …" gekozen. Gemeten
-  // op drie echte advertenties: een cardigan, een zip-vest en een geruit
-  // overhemd belandden alle drie bij "Other". Dat kost vindbaarheid: kopers
-  // filteren op deze bladen.
-  //
-  // Nu: enkelvoud tegen enkelvoud, plus een handjevol woorden die zo
-  // vanzelfsprekend zijn dat ze voorrang krijgen.
-  const BLAD_VOORKEUR = [
-    [/\bcardigan/i,                         /cardigan/i],
-    [/\bzip[- ]?(through|up|vest|hoodie)/i, /zip[- ]?through/i],
-    [/\bhoodie/i,                           /^hoodies/i],
-    [/\bsweatshirt/i,                       /sweatshirt/i],
-    [/\bgeruit|\bchecked|\bplaid|\btartan/i, /check/i],
-    [/\bgestreept|\bstriped/i,              /stripe/i],
-    [/\bdenim(?!\s*jeans)/i,                /denim/i],
-    [/\bflanel|\bflannel/i,                 /flannel/i],
-    [/\blinnen|\blinen/i,                   /linen/i],
-    [/\boxford/i,                           /oxford/i],
-    [/\bpolo\b/i,                           /polo/i],
-    [/\bv[- ]?hals|\bv[- ]?neck/i,          /v[- ]?neck/i],
-    [/\bronde hals|\bcrew ?neck/i,          /crew ?neck/i],
-    [/\bcoltrui|\bturtleneck|\brollkragen/i, /turtleneck|roll ?neck/i],
-    [/\bgilet|\bbodywarmer|\bvest\b/i,      /gilet|waistcoat|body ?warmer/i],
-    [/\btrenchcoat/i,                       /trench/i],
-    [/\bparka/i,                            /parka/i],
-    [/\bbomber/i,                           /bomber/i],
-    [/\bblazer|\bcolbert/i,                 /blazer/i],
-  ];
-
-  // "cardigans" → "cardigan", "shirts" → "shirt". Alleen de kale meervouds-s:
-  // slimmer worden helpt hier niet en levert alleen misverstanden op.
-  const enkelvoud = (w) => (w.length > 4 && /s$/.test(w) && !/ss$/.test(w) ? w.slice(0, -1) : w);
+  // BLAD_VOORKEUR en enkelvoud stonden hier, en dat brak het publiceren.
+  // Ze staan nu bovenaan, bij de andere hulpwaarden — zie de toelichting daar.
 
   function kiesBlad(namen, tekst) {
     // 1. Een voorkeurswoord in de tekst dat één op één bij een blad hoort.
