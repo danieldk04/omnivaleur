@@ -4,7 +4,7 @@ Runs on a configurable interval via APScheduler.
 """
 import asyncio
 import logging
-from backend.database import get_db, IN_BROK
+from backend.database import get_db, fetch_all, IN_BROK
 from backend.platforms import get_platform
 from backend.services.crosslist import handle_item_sold
 
@@ -48,17 +48,18 @@ async def poll_platform_statuses():
     """
     db = get_db()
 
-    listings = await _exec(
-        db.table("listings")
+    # fetch_all, niet één select: PostgREST kapt stilzwijgend af op 1.000 rijen.
+    # Gemeten 27-08-2026 stonden er 4.751 actief, dus de verkoopcontrole keek
+    # nooit verder dan de eerste duizend — de rest werd nooit gecontroleerd.
+    rijen = await asyncio.to_thread(lambda: fetch_all(lambda: db.table("listings")
         .select("id,item_id,platform,platform_listing_id,not_found_count")
         .eq("status", "active")
-        .in_("platform", list(POLL_PLATFORMS))
-    )
+        .in_("platform", list(POLL_PLATFORMS))))
 
-    if not listings.data:
+    if not rijen:
         return
 
-    item_ids = list({row["item_id"] for row in listings.data})
+    item_ids = list({row["item_id"] for row in rijen})
     # In brokken: dit draait over ÁLLE actieve advertenties van alle verkopers
     # samen (gemeten 27-08-2026: 4.751). Eén `.in_()` met zoveel id's maakt een
     # URL die httpx weigert te versturen, en dan viel de hele verkoopcontrole
@@ -82,12 +83,12 @@ async def poll_platform_statuses():
 
     pollable = [
         (row, credentials_by_key[(owners[row["item_id"]], row["platform"])])
-        for row in listings.data
+        for row in rijen
         if owners.get(row["item_id"])
         and (owners[row["item_id"]], row["platform"]) in credentials_by_key
     ]
 
-    skipped = len(listings.data) - len(pollable)
+    skipped = len(rijen) - len(pollable)
     logger.info(
         f"Polling {len(pollable)} active listings"
         + (f" ({skipped} skipped — no platform connection for the owner)" if skipped else "")
