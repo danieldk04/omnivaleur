@@ -3348,10 +3348,15 @@ def tick(args) -> None:
         except Exception as e:  # noqa: BLE001 — analyse mag de ronde nooit stoppen
             print(f"  (mailanalyse mislukt: {e})")
 
+    # Sinds er geen sjabloon-vangnet meer is, betekent elke storing hier: er ligt
+    # GEEN concept en dat bericht wacht in het postvak op Daniel zelf. Dat mag
+    # nooit stil blijven, dus de reden gaat mee — anders staat er alleen een
+    # aantal en begint het zoeken opnieuw.
     if _LLM_TERUGVAL["aantal"]:
+        redenen = ", ".join(dict.fromkeys(_LLM_REDEN))[:200] or "onbekend"
         plan.setdefault("fouten", []).append(
-            f"slimme tekst {_LLM_TERUGVAL['aantal']}x teruggevallen op vast sjabloon "
-            "(check ANTHROPIC_API_KEY en het anthropic-pakket in de workflow)")
+            f"{_LLM_TERUGVAL['aantal']}x GEEN concept kunnen schrijven — die mails "
+            f"wachten op jou in het postvak. Reden: {redenen}")
 
     if not plan.get("gerapporteerd") and nu >= "20:45":
         _dagbericht(state, plan)
