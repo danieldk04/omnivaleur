@@ -10,7 +10,15 @@ httpx==0.27.2
 playwright==1.47.0
 playwright-stealth==1.0.6
 curl-cffi==0.7.3
-anthropic==0.34.2
+# LET OP — deze pin bepaalt of de mailagent echte antwoorden schrijft.
+# 0.34.2 is van september 2024 en kent `output_config` niet. Toen de mailagent
+# op 27-08-2026 die parameter ging meesturen, gooide de oude SDK een TypeError,
+# die netjes werd opgevangen — en viel ELK conceptantwoord stil terug op de
+# standaard verkoopmail. Rob van Borstelbeer stelde een vraag over
+# productvarianten en kreeg video, prijs en platformen terug.
+# Bij het verhogen van andere pins: controleer altijd of de SDK de parameters
+# kent die de code meestuurt; een te oude SDK faalt hier stil.
+anthropic==0.88.0
 cloudinary==1.40.0
 # Cloudflare R2 spreekt het S3-protocol; hiermee gaan de advertentiefoto's erin.
 boto3==1.35.36
