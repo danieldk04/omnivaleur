@@ -163,7 +163,23 @@ def _english_type_from_category(category: str) -> str:
     for word in reversed(cat.split()):
         if word in _NL_EN_TYPE:
             return _NL_EN_TYPE[word]
-    return ""
+
+    # Wonen, antiek/kunst en muziek: honderdzevenendertig categorieen die in
+    # augustus 2026 aan het dashboard werden toegevoegd en hier geen producttype
+    # kregen. Zonder type valt Shopify terug op raden uit de titel, en dan matcht
+    # geen enkele slimme collectie ("product type is X") meer.
+    #
+    # Bewust GEEN vierde kopie van dezelfde vertaallijst. De eBay-hints zijn al
+    # precies wat hier nodig is — onze categoriesleutel naar gewone Engelse
+    # woorden — en één bron betekent dat de platforms niet uiteen kunnen lopen.
+    # De import staat in de functie omdat ebay.py de instellingen laadt en dit
+    # bestand ook bij een import zonder eBay-configuratie moet blijven werken.
+    try:
+        from backend.platforms.ebay import _EBAY_CATEGORY_HINTS
+    except Exception:  # noqa: BLE001 — liever geen producttype dan een importfout
+        return ""
+    hint = _EBAY_CATEGORY_HINTS.get(cat, "")
+    return hint.title() if hint else ""
 
 
 def _english_type_from_title(title: str) -> str:
