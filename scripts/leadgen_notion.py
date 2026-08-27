@@ -89,6 +89,15 @@ def _properties(lead: dict) -> dict:
         lead.get("site") or lead.get("website"), lead.get("email"), lead.get("tel"),
         f"KvK {lead['kvk']}" if lead.get("kvk") else "",
         lead.get("reden"),
+        # Waar deze verkoper in ONZE categorieboom valt, en of zijn webshop te
+        # koppelen is. Allebei nodig om een mail te schrijven die waargemaakt kan
+        # worden; zonder dit werd er twee keer een koppeling beloofd die niet
+        # bestaat. Gaat bewust in Notities: dat veld bestaat altijd, dus het kan
+        # nooit een hele push laten omvallen op een ontbrekende kolom.
+        f"past bij ons onder {lead['categorie_fit']}" if lead.get("categorie_fit") else "",
+        lead.get("categorie_fit_reden"),
+        "LET OP: webshop niet koppelbaar (geen Shopify)"
+        if lead.get("webshop_koppelbaar") is False else "",
     ] if x)
     props = {
         "Name": {"title": [{"text": {"content":

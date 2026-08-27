@@ -48,6 +48,7 @@ import re
 import sys
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
+from functools import lru_cache
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
@@ -493,6 +494,95 @@ def crosslist(args) -> None:
           f"verkopen ook op bol.com")
 
 
+# ------------------------------------------------------- wat wij kunnen plaatsen
+
+
+# EEN LEAD DIE VERKOOPT WAT WIJ NIET KUNNEN PUBLICEREN, IS GEEN LEAD.
+#
+# Dat klinkt vanzelfsprekend, maar het ging tot 27-08-2026 mis. De prompt hieronder
+# noemde vroeger uit het hoofd "boeken, verzamelobjecten, computers" als goede
+# handel. Voor geen van die drie bestaat een categorie in het dashboard, dus die
+# leads kregen een mail, reageerden enthousiast, en kregen daarna te horen dat het
+# niet kan. Twee van die gesprekken op één dag (Borstelbeer: refurbished elektrische
+# tandenborstels; Vianen Telecom: telefoonaccessoires) waren vooraf te voorkomen.
+#
+# Daarom leest dit blok de categoriekeuze uit frontend/app.html: exact hetzelfde
+# lijstje dat een klant in zijn dashboard ziet. Kan een verkoper daar niets kiezen,
+# dan loopt publiceren stuk op CategoryUnresolvedError en heeft benaderen geen zin.
+#
+# Bewust NIET een eigen kopie van de lijst hier: die loopt binnen een maand uit de
+# pas met de echte, en dan filtert dit precies verkeerd om.
+
+APP_HTML = Path(__file__).resolve().parents[1] / "frontend" / "app.html"
+
+# Hoe de groepsnamen uit de code in gewoon Nederlands heten. Alleen voor de prompt
+# en de rapportage; de sleutel links is wat telt.
+GROEP_NAMEN = {
+    "dames": "dameskleding en -schoenen",
+    "heren": "herenkleding en -schoenen",
+    "kinderen": "kinder- en babykleding",
+    "unisex": "unisex kleding",
+    "sieraden": "sieraden, horloges en tassen",
+    "games": "games en consoles",
+    "electronics": "telefoons",
+    "antiek": "antiek en curiosa",
+    "kunst": "kunst",
+    "muziek": "muziekinstrumenten en apparatuur",
+    "wonen": "wonen, tuin en interieur",
+}
+
+
+@lru_cache(maxsize=1)
+def _publiceerbare_groepen() -> dict[str, list[str]]:
+    """De categoriekeuze uit het dashboard, per groep, in het Nederlands.
+
+    Gooit een fout als het bestand niet te lezen valt. Bewust hard: een leeg
+    resultaat zou elke lead afkeuren en een "alles mag"-terugval zou het filter
+    stilzwijgend uitzetten. Allebei erger dan een run die stopt met een melding.
+    """
+    src = APP_HTML.read_text(encoding="utf-8")
+    start = src.index("const CATEGORIES = {")
+    blok = src[start:src.index("\n};", start)]
+
+    groepen: dict[str, list[str]] = {}
+    huidig = None
+    for regel in blok.splitlines():
+        kop = re.match(r"\s*([a-z]+):\s*\[", regel)
+        if kop:
+            huidig = kop.group(1)
+            groepen[huidig] = []
+        if huidig:
+            for sleutel in re.findall(r'\["([^"]+)"\s*,\s*"[^"]*"\]', regel):
+                # "wonen tuinstoelen" → "tuinstoelen"; kledingsleutels hebben geen
+                # voorvoegsel en blijven zoals ze zijn.
+                woorden = sleutel.split()
+                kaal = " ".join(woorden[1:]) if woorden[0] == huidig else sleutel
+                if kaal:
+                    groepen[huidig].append(kaal)
+
+    groepen = {g: k for g, k in groepen.items() if k}
+    if len(groepen) < 8:
+        raise RuntimeError(
+            f"Kon de categoriekeuze niet uit {APP_HTML.name} lezen "
+            f"(gevonden: {sorted(groepen)}). Zonder die lijst mag dit script niet "
+            f"beoordelen, want dan filtert het willekeurig.")
+    return groepen
+
+
+@lru_cache(maxsize=1)
+def _groepen_tekst() -> str:
+    """De lijst zoals het model hem te zien krijgt: volledig, geen samenvatting.
+
+    Volledig omdat het verschil juist in de staart zit. "elektronica" klinkt als
+    een prima lead tot je ziet dat de hele tak uit tien telefoonmerken bestaat.
+    """
+    regels = []
+    for groep, sleutels in _publiceerbare_groepen().items():
+        naam = GROEP_NAMEN.get(groep, groep)
+        regels.append(f"  {groep} ({naam}): " + ", ".join(sorted(set(sleutels))))
+    return "\n".join(regels)
+
+
 # ---------------------------------------------------------------- classify
 
 
@@ -503,10 +593,21 @@ en die waarde is het grootst bij iemand met veel voorraad die nu alles handmatig
 elke site apart moet zetten.
 
 Een goede lead moet aan ALLE DRIE voldoen:
- 1. HANDEL IN VERZENDBARE SPULLEN — kleding, schoenen, sneakers, tassen, sieraden,
-    horloges, accessoires, games, consoles, elektronica, telefoons, computers,
-    boeken, verzamelobjecten, muziekinstrumenten (klein). Dus GEEN meubels, keukens,
-    banken, auto's, aanhangers, machines of andere dingen die niet in een doos gaan.
+ 1. ZIJN HANDEL PAST IN ONZE CATEGORIEBOOM. Dit is de belangrijkste toets en de
+    enige die hard is. Omnivaleur kan een advertentie ALLEEN aanmaken binnen de
+    lijst hieronder; alles daarbuiten loopt vast en die verkoper kunnen we niet
+    helpen. Lees de lijst letterlijk en vul niet aan uit je eigen kennis. Drie
+    plekken waar het steeds misgaat:
+      - de tak "electronics" bestaat UITSLUITEND uit telefoons. Geen hoesjes,
+        opladers, oordopjes, computers, laptops, camera's, tv of audio.
+      - boeken, gereedschap, speelgoed, servies en tv/audio staan er alléén in de
+        tak "antiek", en dus alleen als het echt antiek of vintage is. Dezelfde
+        spullen modern en nieuw passen niet.
+      - helemaal afwezig: persoonlijke verzorging, witgoed en huishoudelijke
+        apparaten, auto- en fietsonderdelen, bouwmateriaal en dierbenodigdheden.
+
+{groepen}
+
  2. VOORRAAD EN WINSTMOTIEF — een handelaar, niet iemand die één keer zijn zolder
     opruimt. Meerdere advertenties, een handelsnaam, een winkel of webshop.
  3. NL/BE — Nederlandstalig bedrijf.
@@ -518,10 +619,15 @@ Wijs af (is_lead = false):
  * Marktplaats-partners en veilinghuizen (Catawiki en dergelijke).
  * Grote ketens en fabrikanten die uitsluitend nieuwe eigen producten verkopen.
  * Kringloopwinkels en goede doelen: geen winstmotief, verzenden meestal niet.
+ * Webshops die NIEUWE producten in maten/kleuren met voorraad per variant
+   verkopen — een normaal retail-assortiment dus. Bij ons is één artikel één
+   stuk met één prijs; varianten bestaan niet en een voorraadaantal ook niet.
+   Let op het verschil: een handelaar met tien losse tweedehands jassen is een
+   prima lead, een webshop met één jas in vijf maten en drie kleuren niet.
 
 De ideale lead is de handelaar in tweedehands of restpartijen: iemand met tientallen
-advertenties in kleding, sneakers, games of elektronica die ook op Vinted of eBay
-zou kunnen staan maar daar nu de tijd niet voor heeft.
+losse advertenties in kleding, sneakers, sieraden, games of telefoons die ook op
+Vinted of eBay zouden kunnen staan maar daar nu de tijd niet voor heeft.
 
 Verkoper:
   {naam} (handelsnaam: {handelsnaam})
@@ -539,10 +645,21 @@ Antwoord met UITSLUITEND JSON:
   "verzendbaar": true/false,
   "commercieel": true/false,
   "reden": "één zin, Nederlands",
+  "categorie_fit": "één groepsnaam uit de lijst bij punt 1 waar zijn handel echt in valt: dames, heren, kinderen, unisex, sieraden, games, electronics, antiek, muziek of wonen. Past niets, antwoord dan met het woord geen",
+  "categorie_fit_reden": "welke van zijn artikelen je in die groep plaatst, of waarom niets past — één korte zin",
+  "retail_varianten": true/false,
   "verkoopt_vooral": "Kleding|Meubilair|Alles|Antieke vintage|Hoogwaardige vintage|Vintage interieur|Sieraden|Knutselmaterialen",
   "verkoop_op": "Marktplaats|Eigen website|Fysieke winkel|Onbekend",
   "je_jullie": "Je|Jullie",
   "language": "NL|EN"}}"""
+
+# Elk oordeel draagt de versie van de prompt die het velde. Gaat die omhoog, dan
+# worden bestaande oordelen weggegooid en opnieuw gevraagd. Zonder dat verandert
+# een strenger filter niets aan de stapel waar Daniel uit mailt — en dat is juist
+# de stapel waar het misging. Verhoog dit dus bij elke inhoudelijke promptwijziging.
+#   2  categoriefilter + variantenfilter (27-08-2026)
+PROMPT_VERSIE = 2
+
 
 # "veilinghuis" staat niet in de lijst die de prompt aanbiedt, maar het model
 # verzint hem toch voor Catawiki-achtigen. Onbekende typen wegfilteren kan niet —
@@ -564,16 +681,40 @@ def _fill(row: dict) -> str:
         kanalen=", ".join(row.get("kanalen") or ["Marktplaats"]),
         shopsysteem=row.get("shopsysteem") or "(geen gevonden)",
         over_ons=row.get("over_ons") or "(leeg)",
+        groepen=_groepen_tekst(),
     )
 
 
-def _keep(verdict: dict, min_confidence: int) -> bool:
+def _afwijsreden(verdict: dict, min_confidence: int) -> str:
+    """Lege string = houden. Anders in één woord waaróm hij afvalt.
+
+    Als reden teruggeven en niet als kale boolean, want zonder die reden is een
+    run van 800 verkopers waar er 40 van overblijven niet te controleren — en
+    juist een filter dat te streng staat merk je anders pas weken later.
+    """
     vtype = (verdict.get("verkopertype") or "onduidelijk").lower()
-    return bool(verdict.get("is_lead")
-                and verdict.get("confidence", 0) >= min_confidence
-                and vtype not in REJECT_TYPES
-                and verdict.get("verzendbaar") is not False
-                and verdict.get("commercieel") is not False)
+    if not verdict.get("is_lead"):
+        return "geen lead"
+    if verdict.get("confidence", 0) < min_confidence:
+        return "twijfel"
+    if vtype in REJECT_TYPES:
+        return vtype
+    if verdict.get("verzendbaar") is False:
+        return "onverzendbaar"
+    if verdict.get("commercieel") is False:
+        return "particulier"
+    # De twee toetsen die op 27-08-2026 zijn toegevoegd. Zie het blok
+    # "wat wij kunnen plaatsen" hierboven voor waarom.
+    fit = str(verdict.get("categorie_fit") or "").strip().lower()
+    if fit not in _publiceerbare_groepen():
+        return "geen categorie"
+    if verdict.get("retail_varianten") is True:
+        return "varianten"
+    return ""
+
+
+def _keep(verdict: dict, min_confidence: int) -> bool:
+    return not _afwijsreden(verdict, min_confidence)
 
 
 def classify(args) -> None:
@@ -585,6 +726,15 @@ def classify(args) -> None:
         rows = [r for r in rows if r.get("email")]
     if not rows:
         sys.exit("Nog geen verrijkte verkopers — draai eerst 'enrich'")
+
+    verlopen = [r for r in rows
+                if r.get("verdict")
+                and r["verdict"].get("prompt_versie") != PROMPT_VERSIE]
+    for r in verlopen:
+        r.pop("verdict", None)
+    if verlopen:
+        print(f"{len(verlopen)} eerdere oordelen zijn met een oudere prompt geveld "
+              f"— die vraag ik opnieuw")
 
     print(f"{len(rows)} verkopers beoordelen "
           f"(vanaf {args.min_ads} advertenties"
@@ -598,13 +748,42 @@ def classify(args) -> None:
                "email", "tel", "kvk", "plaats", "website", "site", "kanalen",
                "shopsysteem", "crosslist"),
         url=lambda r: r.get("url") or PROFILE.format(sid=r["seller_id"]))
+    for row in rows:
+        if row.get("verdict"):
+            row["verdict"]["prompt_versie"] = PROMPT_VERSIE
+
     for lead in leads:
         lead["platform"] = "MP"
         lead["full_name"] = lead.get("handelsnaam") or lead.get("name")
+        # Niet aan het model gevraagd maar gemeten: van de webshopsystemen die we
+        # herkennen koppelt alleen Shopify. Staat dit op False, dan mag de mail
+        # geen webshopkoppeling beloven — dat was precies de belofte die bij
+        # WooCommerce-leads teruggedraaid moest worden.
+        systeem = lead.get("shopsysteem") or ""
+        lead["webshop_koppelbaar"] = (not systeem) or ("Shopify" in systeem)
 
     _save(SELLERS, everything)
     _save(MP_LEADS, leads)
     print(f"\n{len(leads)} van {len(rows)} verkopers gekwalificeerd → {MP_LEADS}")
+
+    # Waarom de rest afviel. Een filter dat je niet kunt nalezen, staat vroeg of
+    # laat te streng zonder dat iemand het merkt.
+    afgevallen: dict[str, int] = {}
+    for row in rows:
+        verdict = row.get("verdict")
+        if not verdict:
+            continue
+        reden = _afwijsreden(verdict, args.min_confidence)
+        if reden:
+            afgevallen[reden] = afgevallen.get(reden, 0) + 1
+    if afgevallen:
+        print("afgevallen: " + ", ".join(
+            f"{reden} {aantal}" for reden, aantal
+            in sorted(afgevallen.items(), key=lambda x: -x[1])))
+    niet_koppelbaar = [l for l in leads if not l.get("webshop_koppelbaar")]
+    if niet_koppelbaar:
+        print(f"let op: {len(niet_koppelbaar)} leads hebben een webshop die wij niet "
+              f"koppelen (geen Shopify) — beloof ze geen webshopkoppeling")
 
 
 # -------------------------------------------------------------------- push

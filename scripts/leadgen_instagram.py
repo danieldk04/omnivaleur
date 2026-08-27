@@ -355,7 +355,10 @@ def _judge(client, row: dict, fill=None) -> dict | None:
     try:
         resp = client.messages.create(
             model="claude-haiku-4-5-20251001",
-            max_tokens=400,
+            # Ruim: het Marktplaats-oordeel kreeg er velden bij (categorie_fit en
+            # co). Wordt de JSON afgekapt, dan mislukt het uitlezen, krijgt de rij
+            # géén oordeel en verdwijnt hij stil uit de trechter.
+            max_tokens=700,
             messages=[{"role": "user", "content": prompt}],
         )
         return json.loads(re.search(r"\{.*\}", resp.content[0].text, re.S).group(0))
