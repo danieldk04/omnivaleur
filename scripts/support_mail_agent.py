@@ -600,6 +600,15 @@ def run(args) -> None:
             continue
         grondslag = _grep_grondslag(draad.body)
         tekst, topic = _draft_met_llm(draad, grondslag)
+        # Lege tekst = het schrijven lukte niet. Dan gaat er niets de
+        # conceptenmap in; het bericht blijft in het postvak staan en komt in het
+        # reviewrapport, zodat de storing zichtbaar is in plaats van te lijken op
+        # "er was even geen post".
+        if not tekst.strip():
+            review_items.append({"van": draad.van_adres, "onderwerp": draad.onderwerp,
+                                  "topic": topic,
+                                  "reden": "geen concept kunnen schrijven — wacht op jou"})
+            continue
         gelukt = _zet_concept_klaar(draad, tekst, args.dry_run)
         if not args.dry_run:
             _db_log({
