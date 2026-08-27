@@ -2355,6 +2355,55 @@ _LEERLOG_MAX = 30
 _REACTIES_MAX = 300
 
 
+def inhalen(args) -> None:
+    """`python3 leadgen_mail.py inhalen` — de reacties die al binnen zijn
+    alsnog vastleggen.
+
+    Het bewaren van reactieteksten begon pas op 27-08-2026. De reacties van
+    daarvóór staan alleen nog in de postbus, en zonder die 45 heeft de analyse
+    niets om patronen in te zien. Dit leest ze eenmalig alsnog in. Veilig te
+    herhalen: per adres blijft er één reactie staan."""
+    host, gebruiker = os.environ.get("IMAP_HOST"), os.environ.get("MAIL_USER")
+    wachtwoord = os.environ.get("MAIL_PASS")
+    if not (host and gebruiker and wachtwoord):
+        print("Geen mailtoegang.")
+        return
+    state = _state()
+    # Alleen wie volgens de administratie ooit reageerde: dat filtert nieuwsbrieven,
+    # bounces en al het andere in de postbus er meteen uit.
+    gereageerd = {a: st for a, st in state.items() if st.get("beantwoord")}
+    bestaand = {x.get("adres") for x in (_db_lees("mail_reacties", None) or [])}
+    todo = {a: st for a, st in gereageerd.items() if a not in bestaand}
+    print(f"{len(gereageerd)} leads reageerden ooit, {len(todo)} daarvan nog zonder tekst.")
+    if not todo:
+        return
+    gevonden = 0
+    with imaplib.IMAP4_SSL(host, 993) as imap:
+        imap.login(gebruiker, wachtwoord)
+        for map_ in ("INBOX", "Beantwoord", "Afval", "Archiveren"):
+            if not todo or imap.select(f'"{map_}"', readonly=True)[0] != "OK":
+                continue
+            _, d = imap.search(None, "ALL")
+            for num in (d[0] or b"").split():
+                _, ruw = imap.fetch(num, "(RFC822)")
+                if not ruw or not ruw[0]:
+                    continue
+                msg = email.message_from_bytes(ruw[0][1])
+                afzender = parseaddr(msg.get("From", ""))[1].lower()
+                st = todo.get(afzender)
+                if not st:
+                    continue
+                tekst = _platte_tekst(msg)
+                if not (tekst or "").strip():
+                    continue
+                _onthoud_reactie(afzender, st.get("soort") or "onbekend",
+                                 _welke_beurt(st, _kop_tijd(msg)), tekst)
+                todo.pop(afzender, None)
+                gevonden += 1
+    print(f"{gevonden} reactie(s) alsnog vastgelegd; {len(todo)} niet teruggevonden "
+          f"in de postbus (opgeruimd of vanaf een ander adres binnengekomen).")
+
+
 def _kop_tijd(msg) -> float | None:
     try:
         return parsedate_to_datetime(msg.get("Date", "")).timestamp()
