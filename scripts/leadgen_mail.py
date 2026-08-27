@@ -1736,28 +1736,14 @@ def _eigen_tekst(body: str) -> str:
     return "\n".join(regels).strip()
 
 
-def _wat_vraagt_hij(body: str) -> set[str]:
-    """Welke van de drie standaardvragen zitten in dit antwoord?
-
-    Alleen in wat HIJ schreef. Dit las eerder de hele mail inclusief het citaat
-    van onze eigen koude mail eronder — en die noemt zelf de platformen en de
-    prijs. Daardoor "vroeg" iedereen die antwoordde automatisch naar allebei.
-    Rob van Borstelbeer schreef op 27-08-2026 alleen dat productvarianten niet
-    op Marktplaats te zetten zijn, en kreeg een antwoord met de platformlijst en
-    het maandbedrag erin — beide overgenomen uit onze eigen geciteerde tekst.
-    """
-    t = _eigen_tekst(body).lower()
-    uit = set()
-    if re.search(r"\b(video|filmpje|demo|laten zien|zien wat)\b", t):
-        uit.add("video")
-    if re.search(r"\b(prijs|prijzen|kost|kosten|tarief|per maand|abonnement)\b", t):
-        uit.add("prijs")
-    # \b(platform)\b vond "platformen" en "marketplaces" niet — de meervouden die
-    # mensen juist schrijven. Vandaar \w* achter de stam.
-    if re.search(r"\b(platform\w*|marketplace\w*|kanal\w*|welke sites|waar allemaal"
-                 r"|welke marktplaatsen|ondersteun\w*)", t):
-        uit.add("platforms")
-    return uit
+# Hier stond _wat_vraagt_hij(): dat zocht drie standaardvragen (video, prijs,
+# platforms) op om er een sjabloonmail mee samen te stellen. Dat sjabloon is op
+# 27-08-2026 verwijderd (zie _concept_tekst), en daarmee had deze functie geen
+# gebruiker meer. Voor de volledigheid van het verhaal: hij las de hele mail
+# inclusief het citaat van onze eigen koude mail eronder, en die noemt zélf de
+# platformen en de prijs — dus "vroeg" iedereen die antwoordde automatisch naar
+# allebei. Dat is precies hoe Rob van Borstelbeer een platformlijst en een
+# maandbedrag kreeg op een vraag over productvarianten.
 
 
 # ── Klant of lead? ────────────────────────────────────────────────────────
