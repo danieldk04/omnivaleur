@@ -8031,9 +8031,18 @@ async function fillFromMarktplaats() {
     return;
   }
   setBusy(false);
-  alert(gedaan
-    ? `Done. Filled in ${teksten} description${teksten === 1 ? '' : 's'} and ${prijzen} price${prijzen === 1 ? '' : 's'}.`
-    : `Nothing found. ${reden || 'Your adverts could not be matched on Marktplaats — are they still online under the same titles?'}`);
+  // Drie verschillende uitkomsten, drie verschillende zinnen. "Nothing found"
+  // bij items die simpelweg niet meer op Marktplaats staan leest als een
+  // storing, en dat is het niet.
+  if (teksten || prijzen) {
+    alert(`Done. Filled in ${teksten} description${teksten === 1 ? '' : 's'} and ${prijzen} price${prijzen === 1 ? '' : 's'}.`);
+  } else if (gedaan) {
+    alert(`Nothing left to fetch. The remaining item${open === 1 ? '' : 's'} are already as complete as ` +
+          `Marktplaats can make them — anything still empty has to be filled in by hand via Edit.`);
+  } else {
+    alert(`Nothing found. ${reden || 'These adverts are no longer on Marktplaats under the same title, ' +
+          'so there is nothing to fetch. Fill them in by hand via Edit.'}`);
+  }
 }
 
 async function doBulkCondition() {
