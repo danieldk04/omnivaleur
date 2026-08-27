@@ -92,13 +92,30 @@ def test_vinted_publicatie_wordt_ook_zonder_nette_url_herkend():
 
 
 def test_vinted_wordt_bij_twijfel_op_het_platform_zelf_nagekeken():
-    """Geen rode melding bij een advertentie die gewoon online staat."""
+    """Geen rode melding bij een advertentie die gewoon online staat.
+
+    De uitsluiting van verkochte en concept-advertenties werd getoetst op de
+    letterlijke tekst `is_closed || it.is_draft`, binnen de eerste 1200 tekens van
+    de functie. Allebei die aannames bleken te wankel: de code filtert nu positief
+    (`!it.is_closed && !it.is_draft` — houd de levende over) en de functie is
+    inmiddels langer dan 1200 tekens, dus zelfs de oude tekst zou eruit gevallen
+    zijn. De bescherming is ongewijzigd; alleen de schrijfwijze veranderde.
+
+    Daarom toetst deze test nu de garantie: ergens in de functie worden beide
+    vlaggen gebruikt om advertenties uit te sluiten vóórdat er gekoppeld wordt.
+    Waarom dat moet: een verkochte of nog niet gepubliceerde advertentie meetellen
+    betekent later de verkeerde advertentie weghalen.
+    """
     src = _background_js()
     assert "async function bgVindVintedAdvertentie(item)" in src
     # zowel bij een vastgelopen opdracht als bij een verdwenen tabblad
     assert src.count("bgVindVintedAdvertentie(meta.payload || meta)") >= 2
-    zoek = src.split("async function bgVindVintedAdvertentie(item)")[1][:1200]
-    assert "is_closed || it.is_draft" in zoek, "verkochte of concept-advertenties tellen niet"
+    zoek = src.split("async function bgVindVintedAdvertentie(item)")[1].split("\n}")[0]
+    assert "is_closed" in zoek and "is_draft" in zoek, \
+        "verkochte of concept-advertenties tellen niet"
+    # De uitsluiting moet vóór het koppelen gebeuren, niet erna.
+    assert zoek.index("is_draft") < zoek.index("return { id:"), \
+        "eerst uitsluiten, dan pas koppelen"
     assert 'credentials: "include"' in zoek, "zonder inlog geeft Vinted niets terug"
 
 
