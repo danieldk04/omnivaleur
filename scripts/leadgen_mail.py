@@ -3762,6 +3762,100 @@ def herstel(args) -> None:
           f"{'zouden klaargezet worden' if args.dry_run else 'klaargezet'}.")
 
 
+def wachtenden(args) -> None:
+    """`python3 leadgen_mail.py wachtenden` — iedereen die op een antwoord wacht
+    en voor wie nog géén concept klaarligt.
+
+    WAAROM DIT NAAST 'check' BESTAAT. `check` kijkt naar NIEUWE binnenkomende
+    post en schrijft daar een concept voor. Wie daar één keer doorheen glipt,
+    komt nooit meer aan de beurt: zijn bericht is dan al verwerkt en verhuisd
+    naar Beantwoord, en `check` kijkt er niet meer naar om. Dat gebeurde bij
+    Borstelbeer — zijn vraag stond als 'bal bij ons' in de administratie, er lag
+    geen concept, en er ging ook nooit een antwoord uit.
+
+    Dit commando vraagt niet "is er nieuwe post" maar de enige vraag die telt:
+    heeft iemand het laatst geschreven, en ligt er niets klaar? Dan hoort daar
+    een concept te komen, ongeacht hoe oud het bericht is."""
+    host, gebruiker = os.environ.get("IMAP_HOST"), os.environ.get("MAIL_USER")
+    wachtwoord = os.environ.get("MAIL_PASS")
+    if not (host and gebruiker and wachtwoord):
+        print("Geen mailtoegang (IMAP_HOST/MAIL_USER/MAIL_PASS ontbreken).")
+        return
+
+    state = _state()
+    _, wachtende_adressen = _concepten_tellen()
+    al_concept = {parseaddr(a)[1].lower() for a in wachtende_adressen if a}
+    per_adres = {l["email"].lower(): l for l in _leads()}
+
+    gevonden, gemaakt = 0, 0
+    with imaplib.IMAP4_SSL(host, 993) as imap:
+        imap.login(gebruiker, wachtwoord)
+
+        def _laatst(mappen, veld):
+            uit: dict[str, tuple[float, str]] = {}
+            for m_ in mappen:
+                if imap.select(f'"{m_}"', readonly=True)[0] != "OK":
+                    continue
+                _, d = imap.search(None, "ALL")
+                for num in (d[0] or b"").split():
+                    _, ruw = imap.fetch(num, "(BODY.PEEK[HEADER])")
+                    if not ruw or not ruw[0]:
+                        continue
+                    kop = email.message_from_bytes(ruw[0][1])
+                    a = parseaddr(kop.get(veld, ""))[1].lower()
+                    try:
+                        ts = parsedate_to_datetime(kop.get("Date", "")).timestamp()
+                    except Exception:  # noqa: BLE001
+                        continue
+                    if a and (a not in uit or ts > uit[a][0]):
+                        uit[a] = (ts, f'"{m_}"|{num.decode()}')
+            return uit
+
+        verstuurd = _laatst(["Verzonden"], "To")
+        ontvangen = _laatst(["INBOX", MAP_BEANTWOORD], "From")
+
+        for adres, (hun, plek) in sorted(ontvangen.items(), key=lambda kv: -kv[1][0]):
+            st = state.get(adres, {})
+            # Een nee, een concurrent of een afmelding laat je met rust.
+            if st.get("afgemeld") or st.get("afgewezen") or st.get("concurrent") \
+                    or st.get("afgesloten") or st.get("bounce") or st.get("auto_antwoord"):
+                continue
+            if SYSTEEM_AFZENDER.search(adres) if 'SYSTEEM_AFZENDER' in globals() else False:
+                continue
+            ons = verstuurd.get(adres)
+            if ons is not None and ons[0] > hun:
+                continue                     # wij spraken het laatst
+            if adres in al_concept:
+                continue                     # er ligt al iets klaar
+            gevonden += 1
+            map_, num = plek.split("|", 1)
+            try:
+                imap.select(map_, readonly=True)
+                _, ruw = imap.fetch(num, "(BODY.PEEK[])")
+                inkomend = email.message_from_bytes(ruw[0][1])
+            except Exception as e:  # noqa: BLE001
+                print(f"  – {adres}: bericht niet op te halen ({e})")
+                continue
+            body = _platte_tekst(inkomend)
+            if not _eigen_tekst(body).strip():
+                print(f"  – {adres}: geen eigen tekst in zijn bericht, overgeslagen")
+                continue
+            if args.dry_run:
+                onderwerp = _leesbaar(inkomend.get("Subject", ""))[:60]
+                print(f"  wacht op antwoord: {adres:38} {onderwerp}")
+                continue
+            lead = per_adres.get(adres, {"email": adres})
+            if _zet_concept_klaar(lead, inkomend, body, soort=st.get("soort", "warm")):
+                gemaakt += 1
+
+    if not gevonden:
+        print("Niemand wacht op een antwoord zonder dat er een concept ligt.")
+    elif args.dry_run:
+        print(f"\n{gevonden} wachtende(n). Draai zonder --dry-run om er concepten voor te schrijven.")
+    else:
+        print(f"\n{gevonden} wachtende(n), {gemaakt} concept(en) klaargezet.")
+
+
 def concepten(args) -> None:
     """`python3 leadgen_mail.py concepten` — alles wat er nu in Concepten
     ligt, mét een controle op dubbele of verouderde voorstellen (dezelfde
