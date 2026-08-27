@@ -309,8 +309,17 @@ const MP_CATEGORIES = {
   // de naam horen (38 = luidsprekers, 37 = koptelefoons, 33 = buizenversterkers).
   // 68 van 68, geen enkele leeg of afwijkend.
   //
-  // WAT NOG NIET IS AANGETOOND: dat /plaats/31/{cat3} het formulier ook echt in
-  // die categorie opent. Dat vergt een ingelogde browser (zie de muziektak).
+  // Op 27-08-2026 in een INGELOGDE browser bevestigd: /plaats/31/38 opent het
+  // formulier op "Audio, Tv en Foto > Luidsprekers", zonder bucketId. Daarmee
+  // staat ook de URL-vorm vast; alle 68 delen die vorm.
+  //
+  // Wat daarbij opviel: deze tak heeft wél kenmerkvelden (bij Luidsprekers Type,
+  // Wattage, Merk, Handelsnaam fabrikant). Alleen titel, beschrijving en foto's
+  // zijn verplicht — de kenmerken zijn een kwaliteitsduwtje ("1 / 8 ingevuld").
+  // Merk en conditie vullen we al (fillBrandField/selectCondition zijn algemeen,
+  // niet kleding-only). Type en Wattage blijven leeg; net als destijds bij
+  // sportkleding betekent dat: wie op zo'n filter zoekt, ziet de advertentie niet.
+  // Wil je dat oplossen, dan is mpSportType() het model om na te volgen.
   // Let op: /plaats/ geeft zonder login HTTP 401 vóór enige controle van de URL —
   // ook /plaats/99999/38 geeft exact hetzelfde 401. Uit een statuscode valt hier
   // dus niets af te leiden; alleen de gerenderde categorienaam telt.

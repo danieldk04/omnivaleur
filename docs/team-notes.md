@@ -329,3 +329,16 @@ keer: `/plaats/` geeft zonder login HTTP 401 **vóór** enige controle van de UR
 statuscode valt hier dus niets af te leiden, net zoals bij Admarkt een onbekend
 adres HTTP 200 gaf. En de Claude-in-Chrome-extensie was niet verbonden, dus de
 ingelogde controle kon deze sessie niet gedaan worden.
+
+**Bevestigd 27-08-2026, ingelogd.** `/plaats/31/38` opent op "Audio, Tv en Foto >
+Luidsprekers". De URL-vorm klopt dus, zonder bucketId, en alle 68 delen die vorm.
+De audio-tak is af.
+
+Eén ding dat we bij het bouwen niet wisten: de aanname in `crosslist.py` dat
+niet-kledingtakken géén kenmerkvelden hebben, klopt niet voor audio. Luidsprekers
+vraagt om Type, Wattage, Merk en Handelsnaam fabrikant. Verplicht zijn ze niet —
+alleen titel, beschrijving en foto's zijn dat — en Merk en Conditie vullen we al,
+want die twee functies zijn algemeen en niet kleding-only. Type en Wattage blijven
+leeg. Gevolg is hetzelfde als ooit bij sportkleding: wie in de zoekfilters op
+"Type" filtert, krijgt onze advertentie niet te zien. Geen storing, wel gemiste
+zichtbaarheid. `mpSportType()` is het model als je dit wilt oplossen.
