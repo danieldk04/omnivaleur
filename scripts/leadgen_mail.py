@@ -2043,8 +2043,9 @@ def _stilte_concept(draad: str, laatste_zet: bool) -> str | None:
         tekst = "".join(b.text for b in antwoord.content
                         if getattr(b, "type", "") == "text").strip()
     except Exception as e:  # noqa: BLE001 — geen concept is vervelend, geen ramp
-        print(f"  (stilte-opvolging mislukt, val terug op sjabloon: {e})")
+        print(f"  !! stilte-opvolging MISLUKT ({type(e).__name__}: {e})")
         _LLM_TERUGVAL["aantal"] += 1
+        _LLM_REDEN.append(f"{type(e).__name__}: {str(e)[:120]}")
         return None
     if len(tekst.split()) < 10:
         _LLM_TERUGVAL["aantal"] += 1
