@@ -501,6 +501,35 @@ def _zonder_citaat(t: str) -> str:
     return _CITAAT_SPLITSER.split(t or "", maxsplit=1)[0].strip()
 
 
+_PATROON_REGEL = re.compile(r"^\s*(\d+)\s*\|\s*([^|]{2,60}?)\s*\|\s*(.+?)\s*$")
+
+
+def _mail_advies() -> dict:
+    """De analyse, met de PATRONEN-regels apart zodat het scherm er balken van
+    kan tekenen in plaats van nog een lap tekst. Valt de opmaak tegen (oudere
+    analyse, of het model week af), dan blijft de tekst gewoon staan — liever
+    leesbaar dan weg."""
+    advies = _leadgen_lezen("mail_advies") or {}
+    tekst = advies.get("tekst") or ""
+    if not tekst:
+        return advies
+    patronen, rest, in_patronen = [], [], False
+    for regel in tekst.splitlines():
+        kaal = regel.strip()
+        if kaal in ("PATRONEN", "WAT WERKT", "AANBEVELINGEN"):
+            in_patronen = kaal == "PATRONEN"
+            if not in_patronen:
+                rest.append(regel)
+            continue
+        gevonden = _PATROON_REGEL.match(regel) if in_patronen else None
+        if gevonden:
+            patronen.append({"aantal": int(gevonden.group(1)),
+                             "naam": gevonden.group(2), "uitleg": gevonden.group(3)})
+        elif not in_patronen or kaal:
+            rest.append(regel)
+    return {**advies, "patronen": patronen, "tekst": "\n".join(rest).strip()}
+
+
 def _overeenkomst(a: str, b: str) -> float:
     """Hoeveel procent van het voorstel bleef staan, 0-100.
 
