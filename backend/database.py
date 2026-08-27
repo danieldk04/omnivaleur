@@ -127,8 +127,12 @@ def fetch_all(build_query, order_by: str = "id", page_size: int = 500) -> list[d
     rijen: list[dict] = []
     offset = 0
     while True:
-        pagina = (build_query().order(order_by)
-                  .range(offset, offset + page_size - 1).execute().data or [])
+        # execute_with_retry: Supabase verbreekt af en toe een hergebruikte
+        # verbinding (RemoteProtocolError). Bij een lezing die over tien pagina's
+        # loopt is de kans daarop tien keer zo groot, en zonder herkansing valt
+        # de hele aanroep om op iets wat een browser zelf stil zou wegwerken.
+        pagina = (execute_with_retry(build_query().order(order_by)
+                  .range(offset, offset + page_size - 1)).data or [])
         if not pagina:
             break
         rijen.extend(pagina)

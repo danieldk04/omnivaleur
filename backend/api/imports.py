@@ -1,5 +1,6 @@
 from fastapi import APIRouter, HTTPException, Depends
-from backend.database import get_db, fetch_all, naast_de_lus, execute_with_retry
+from backend.database import (get_db, fetch_all, fetch_all_in, naast_de_lus,
+                               execute_with_retry)
 from backend.api.deps import get_current_user, require_active_subscription
 from backend.models import ItemCreate
 from datetime import datetime, timezone
@@ -21,47 +22,22 @@ SCANNABLE_PLATFORMS = {"vinted", "marktplaats", "2dehands"}
 _BULK_IMPORT_CACHE: dict[str, dict] = {}
 
 
-def _parallel_fetch_all(build_base_query, select_cols: str, page_size: int = 500,
-                         max_workers: int = 8) -> list[dict]:
-    """Zoals database.fetch_all, maar de pagina's worden GELIJKTIJDIG opgehaald
-    in plaats van na elkaar.
-
-    Egbert Brouwer (25-08-2026): zelfs met de sessie-cache (zie hierboven) bleef
-    de EERSTE aanroep van een importsessie vastlopen op "0 geïmporteerd, server
-    bleef timen out" — óók met de lading teruggeschroefd tot 1. Bij een account
-    van zijn omvang (duizenden bestaande items) is die allereerste, dure inlees
-    zelf al te traag voor één verzoek, ongeacht hoe klein de rest is. Achter
-    elkaar 10+ pagina's van 500 rijen ophalen duurt bij hem alleen al langer dan
-    de gateway toestaat. Gelijktijdig ophalen maakt daar een handvol seconden
-    van in plaats van tientallen.
-
-    `build_base_query` maakt telkens een VERSE, ONGESELECTEERDE query (bv.
-    `lambda: db.table("items").eq("user_id", user_id)`) — Supabase-builders zijn
-    niet herbruikbaar, en select() wordt hier zelf toegevoegd per aanroep.
-    """
-    eerste = build_base_query().select(select_cols, count="exact").range(0, 0).execute()
-    totaal = eerste.count or 0
-    if totaal == 0:
-        return []
-    import concurrent.futures as _cf
-
-    def _pagina(offset: int) -> list[dict]:
-        # .order() is hier NIET optioneel. Zonder expliciete sortering mag de
-        # database elke pagina in een willekeurige volgorde teruggeven, en dan
-        # overlappen pagina's elkaar of missen ze rijen. Bij parallel ophalen is
-        # dat erger dan bij sequentieel: elke aanvraag kiest onafhankelijk zijn
-        # eigen volgorde, dus de kans op gaten is vrijwel gegarandeerd. Een gat
-        # hier betekent dat een bestaand item niet herkend wordt bij het
-        # importeren — precies de fout die we proberen op te lossen.
-        return (build_base_query().select(select_cols).order("id")
-                .range(offset, offset + page_size - 1).execute().data or [])
-
-    offsets = list(range(0, totaal, page_size))
-    rijen: list[dict] = []
-    with _cf.ThreadPoolExecutor(max_workers=min(max_workers, len(offsets) or 1)) as ex:
-        for pagina in ex.map(_pagina, offsets):
-            rijen.extend(pagina)
-    return rijen
+# WAAROM HIER GEEN PARALLELLE LEZER MEER STAAT (27-08-2026).
+#
+# Hier stond `_parallel_fetch_all`: acht pagina's tegelijk ophalen om een grote
+# voorraad sneller in te lezen. Dat is gemeten en het werkt niet. De
+# Supabase-client is synchroon en deelt ÉÉN verbinding; acht werkdraden die daar
+# tegelijk overheen gaan krijgen van Cloudflare "400 Bad Request" of van de
+# verbinding zelf "ConnectionTerminated" terug.
+#
+# Gemeten op het echte account van Egbert Brouwer (2.135 items): 55 gelijktijdige
+# verzoeken -> 45 mislukt. Na elkaar: 0 mislukt, en het hele inlezen kost 4,4
+# seconden. "Import all -> Items" gaf daardoor sinds 25-08-2026 bij iedereen een
+# kale serverfout, hoe klein de lading ook was.
+#
+# Dus: gewoon `fetch_all` / `fetch_all_in` uit backend/database.py. Die zijn
+# sequentieel, herkansen een weggevallen verbinding, en zijn ruim snel genoeg —
+# zeker omdat het resultaat een half uur bewaard blijft (_BULK_IMPORT_CACHE).
 
 
 def _map_condition(raw: str | None) -> str:
@@ -829,20 +805,12 @@ def _listing_index(db, items: list[dict]) -> tuple[dict, dict]:
     item_ids = [it["id"] for it in items]
     if not item_ids:
         return {}, {}
-    # Zelfde reden als _parallel_fetch_all hierboven: bij duizenden items is dit
-    # tientallen brokken van 200, en na elkaar afgehandeld was dat zelf al
-    # genoeg om de gateway-tijdslimiet te raken bij een groot account.
-    brokken = [item_ids[i:i + 200] for i in range(0, len(item_ids), 200)]
-
-    def _brok_ophalen(brok: list[str]) -> list[dict]:
-        return fetch_all(lambda b=brok: db.table("listings")
-                          .select("item_id,platform,platform_listing_id").in_("item_id", b))
-
-    rows = []
-    import concurrent.futures as _cf
-    with _cf.ThreadPoolExecutor(max_workers=min(8, len(brokken) or 1)) as ex:
-        for brok_rows in ex.map(_brok_ophalen, brokken):
-            rows.extend(brok_rows)
+    # Na elkaar, niet tegelijk — zie de uitleg bovenaan dit bestand. Gemeten bij
+    # 2.135 items: 3,7 seconden voor alle brokken samen, tegen een foutkans van
+    # ruim tachtig procent zodra dit gelijktijdig gebeurt.
+    rows = fetch_all_in(lambda: db.table("listings")
+                        .select("item_id,platform,platform_listing_id"),
+                        "item_id", item_ids)
     by_listing_id, platforms = {}, {}
     for l in rows:
         item_id, plat = l.get("item_id"), l.get("platform")
@@ -1514,9 +1482,8 @@ async def bulk_import_candidates(body: dict = None, user_id: str = Depends(requi
         if cache_vers:
             entry["ts"] = _time_mod.monotonic()  # sessie loopt door, klok niet laten aflopen
             return cands, entry["items"], entry["by_id"], entry["by_platform"]
-        its = _parallel_fetch_all(
-            lambda: db.table("items").eq("user_id", user_id), "id,title,price,brand"
-        )
+        its = fetch_all(lambda: db.table("items")
+                        .select("id,title,price,brand").eq("user_id", user_id))
         by_id, by_platform = _listing_index(db, its)
         _BULK_IMPORT_CACHE[user_id] = {
             "items": its, "by_id": by_id, "by_platform": by_platform, "ts": _time_mod.monotonic(),
