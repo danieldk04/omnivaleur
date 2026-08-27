@@ -1737,8 +1737,16 @@ def _eigen_tekst(body: str) -> str:
 
 
 def _wat_vraagt_hij(body: str) -> set[str]:
-    """Welke van de drie standaardvragen zitten in dit antwoord?"""
-    t = body.lower()
+    """Welke van de drie standaardvragen zitten in dit antwoord?
+
+    Alleen in wat HIJ schreef. Dit las eerder de hele mail inclusief het citaat
+    van onze eigen koude mail eronder — en die noemt zelf de platformen en de
+    prijs. Daardoor "vroeg" iedereen die antwoordde automatisch naar allebei.
+    Rob van Borstelbeer schreef op 27-08-2026 alleen dat productvarianten niet
+    op Marktplaats te zetten zijn, en kreeg een antwoord met de platformlijst en
+    het maandbedrag erin — beide overgenomen uit onze eigen geciteerde tekst.
+    """
+    t = _eigen_tekst(body).lower()
     uit = set()
     if re.search(r"\b(video|filmpje|demo|laten zien|zien wat)\b", t):
         uit.add("video")
