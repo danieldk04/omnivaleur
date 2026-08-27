@@ -157,3 +157,55 @@ Praktisch:
   "Daniel de Koning" omdat de lokale git-config dat zo instelt, ongeacht welk
   Claude-account de sessie draait. Wie een wijziging maakte, is dus niet uit
   `git log` af te lezen — navragen bij twijfel.
+- **Rechten:** de ingehuurde ontwikkelaar heeft exact dezelfde rechten als
+  Daniel. Geen beperkingen op live-server, mailbox of betaalcode.
+
+**Werkafspraak voor elke sessie (Daniel, 27-08-2026).** Begin nooit met bouwen
+voordat je hebt gelezen wat er in de afgelopen dag in de code is veranderd:
+
+```bash
+git log --since="30 hours ago" --name-only
+```
+
+Let daarbij op de commits met de tekst "auto: update ..." — die komen van de
+auto-push-hook en bevatten het echte werk van eerdere sessies onder een
+nietszeggende titel. Dit is geen formaliteit: op 27-08-2026 voegde een eerdere
+sessie om 14:04 een API-parameter toe die de op de server gepinde SDK niet kende,
+waarna de mailagent een halve dag lang stilletjes standaardmails uitstuurde in
+plaats van echte antwoorden. Dat was alleen te vinden door die commits te lezen.
+
+### 2026-08-27, avond — de mailagent stuurde weer standaardmail
+
+Rob Kruizinga van Borstelbeer antwoordde op de koude mail met één inhoudelijke
+zin: de productvariabelen uit zijn webshop zijn niet op Marktplaats te zetten.
+Het concept dat klaarstond ging over de demovideo, de prijs en de lijst met
+kanalen. Over zijn vraag stond er niets.
+
+**De oorzaak lag in een pin, niet in de tekst.** De server draaide op
+`anthropic==0.34.2` uit september 2024. Toen de code er diezelfde middag
+`output_config` bij ging sturen, gooide die SDK een `TypeError` die netjes werd
+opgevangen — waarna élk conceptantwoord terugviel op het sjabloon. Een opgevangen
+fout ziet er precies zo uit als "even geen antwoord", dus niemand zag het.
+Bewezen door 0.34.2 in een schone venv te installeren en de aanroep te herhalen.
+
+**Daarnaast las het sjabloon onze eigen mail.** Het bepaalde waar iemand "naar
+vroeg" door de hele mail te lezen, inclusief het citaat van onze eigen koude mail
+eronder — en die noemt zelf de platformen en de prijs. Iedereen die antwoordde
+"vroeg" dus automatisch naar allebei. Dat is precies hoe Rob aan een
+platformlijst en een maandbedrag kwam.
+
+**En er bleek een derde gat.** `check` kijkt alleen naar nieuwe post. Wie daar
+één keer doorheen glipt, komt nooit meer aan de beurt: zijn bericht is dan al
+verwerkt en verhuisd naar Beantwoord. Vier mensen stonden zo te wachten zonder
+dat iets het merkte, Borstelbeer incluis.
+
+Wat er nu geldt: **geen vangnet meer.** Lukt het echte antwoord niet, dan komt er
+geen concept, blijft het bericht in het postvak staan en meldt het avondbericht
+mét reden welke mails op Daniel wachten. Drie nieuwe commando's: `wachtenden`
+(wie wacht er zonder concept — draait vanzelf één keer per dag), `herstel`
+(vervolgconcept voor wie de sjabloonmail al verstuurd kreeg) en `sjablonen-weg`.
+
+**Les:** alles rond de Anthropic-koppeling in dit project faalt stil — een lege
+creditkaart, een ontbrekend pakket, een te oude pin. Bouw daarom nooit op één
+slot. En als iets "soms goed en soms generiek" is, kijk dan eerst naar de
+gepinde versies, niet naar de prompt.
