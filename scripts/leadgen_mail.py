@@ -2130,7 +2130,12 @@ def _advies_bijwerken(state: dict, forceer: bool = False) -> bool:
     try:
         client = anthropic.Anthropic(api_key=sleutel)
         antwoord = client.messages.create(
-            model="claude-sonnet-5", max_tokens=1600,
+            # 1600 was te krap: het model denkt binnen max_tokens, en kwam op
+            # 27-08-2026 met stop=max_tokens terug zonder één woord tekst.
+            # Dit is de enige plek waar diep nadenken de moeite waard is —
+            # hier komt het advies uit dat de teksten stuurt.
+            model="claude-sonnet-5", max_tokens=16000,
+            output_config={"effort": "high"},
             system=_ADVIES_REGELS,
             messages=[{"role": "user", "content": prompt}])
         tekst = "".join(b.text for b in antwoord.content
