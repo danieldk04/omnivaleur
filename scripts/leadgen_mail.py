@@ -1954,8 +1954,9 @@ def _slim_concept(lead: dict, body: str, draad: str, afsluiting: str,
     )
     try:
         client = anthropic.Anthropic(api_key=sleutel)
-        antwoord = client.messages.create(
-            model="claude-sonnet-5",
+        antwoord = _claude(
+            client,
+            model=MODEL,
             # Ruim genoeg. Op 900 raakte het budget bij een langere mail op vóór er
             # ook maar één zin antwoord stond, en viel hij terug op het sjabloon —
             # precies de standaardmail die Frank de Veer als antwoord kreeg op een
