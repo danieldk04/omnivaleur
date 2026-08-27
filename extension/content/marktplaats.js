@@ -87,6 +87,183 @@
     return null;
   }
 
+  // ── Audio, tv en foto: "Type" en "Wattage" ────────────────────────────────
+  //
+  // Waarom dit bestaat: dezelfde reden als mpSportType hierboven. Deze velden
+  // zijn NIET verplicht — een advertentie komt zonder ook gewoon online — maar
+  // wie in de zoekfilters op "Type" of "Wattage" filtert, krijgt een advertentie
+  // zonder die waarde simpelweg niet te zien. Dat is stille onzichtbaarheid.
+  //
+  // De keuzelijsten hieronder zijn niet bedacht maar OPGEHAALD, op 27-08-2026,
+  // uit de facetten van Marktplaats' eigen zoek-API:
+  //   /lrp/api/search?l1CategoryId=31&l2CategoryId={cat3}  →  facets[key=type|power]
+  // Dat is dezelfde lijst die een koper in de filterbalk ziet. Ze staan hier
+  // WOORDELIJK; een zelfbedachte waarde wordt door het formulier genegeerd en is
+  // dan niet van "niet ingevuld" te onderscheiden.
+  //
+  // 39 van de 68 audio-categorieën hebben een Type, en maar twee een Wattage.
+  // De indeling van Wattage verschilt per categorie — luidsprekers kent
+  // "120 tot 150 watt", versterkers niet — dus die grenzen staan apart.
+  //
+  // Alleen Marktplaats. Voor 2dehands is niet nagemeten of dezelfde labels daar
+  // bestaan, en een gok zou hier precies het probleem zijn dat we oplossen.
+  const MP_AUDIO_TYPE = {
+    "luidsprekers": ["Boekenplank luidspreker", "Center speaker", "Draagbare speaker", "Party speaker", "Slimme speaker", "Speakerset", "Stereo speakers", "Studiomonitor", "Subwoofer", "Surroundset", "Vloerstaande luidspreker", "Overige typen"],
+    "koptelefoons": ["Bone conduction", "Gaming", "Gehoorbeschermer", "In-ear", "On-ear", "Open-ear", "Over-ear", "Studio / DJ", "Overige typen"],
+    "buizenversterkers": ["Versterker", "Buis of Buizen", "Overige onderdelen", "Toebehoren"],
+    "platenspelers": ["Platenspeler", "Platenspeler-onderdeel"],
+    "dvd spelers": ["Dvd-speler", "Dvd-recorder"],
+    "videospelers": ["VHS-speler of -recorder", "Video 2000-speler of -recorder", "Betamax-speler of -recorder", "Videoband", "Overige typen"],
+    "cassettedecks": ["Enkel", "Dubbel"],
+    "bandrecorders": ["Bandrecorder", "Defecte bandrecorder", "Onderdeel"],
+    "radio s": ["Radio", "Bouwradio", "Transistorradio", "Wereldontvanger", "Overige typen"],
+    "walkmans en discmans": ["Walkman", "Discman", "Minidisc-speler", "Minidisc-recorder", "Overige typen"],
+    "mp3 spelers ipod": ["Classic", "Mini", "Nano", "Photo", "Shuffle", "Touch", "Overige types"],
+    "mp3 accessoires ipod": ["Dock of Kabel", "Carkit of Auto-accessoire", "Opberg- of Beschermhoesje", "Koptelefoon", "Speaker", "Voeding", "Overige typen"],
+    "mp3 accessoires overige": ["Dock of Kabel", "Carkit of Auto-accessoire", "Opberg- of Beschermhoesje", "Koptelefoon", "Speaker", "Voeding", "Overige typen"],
+    "karaoke apparatuur": ["Complete set", "Luidspreker(s)", "Microfoon(s)", "Mixer", "Speler", "Versterker of Tuner", "Overige typen"],
+    "professionele audio en video": ["Audio", "Tv en Weergevers", "Video"],
+    "televisies": ["LCD", "LED", "OLED", "QLED"],
+    "afstandsbedieningen": ["Origineel", "Universeel"],
+    "decoders en harddiskrecorders": ["Decoder", "Harddiskrecorder"],
+    "schotelantennes": ["(Schotel)antenne", "(Schotel)antenne-accessoires"],
+    "audio en tv kabels": ["Scartkabel", "Luidsprekerkabel", "Tv-kabel", "Coaxiale kabel", "Optische kabel", "HDMI-kabel", "Componentkabel", "Interlink-kabel", "Overige kabels"],
+    "videobewaking": ["Binnencamera", "Buitencamera"],
+    "fotocamera s digitaal": ["Bridgecamera", "Cinemacamera", "Compactcamera", "Instant camera", "Kindercamera", "Spiegelreflex", "Systeemcamera", "Vlogcamera", "Wildcamera", "Overige typen"],
+    "fotocamera s analoog": ["Compact", "Spiegelreflex", "Polaroid"],
+    "onderwatercamera s": ["Accessoires", "Camera", "Complete set", "Dome port", "Onderwaterflitser", "Onderwaterhuis", "Smartphonebehuizing", "Overige typen"],
+    "videocamera s digitaal": ["Camera", "Band, Disc of Geheugen", "Overige typen"],
+    "videocamera s analoog": ["Camera", "(Video)band", "Overige typen"],
+    "lenzen en objectieven": ["Fisheye-lens", "Groothoeklens", "Macrolens", "Standaardlens", "Telelens", "Toebehoren", "Voorzetlens/converter", "Overige typen"],
+    "filters": ["Beschermfilter", "Effectfilter", "Filterset", "Kleurfilter", "Macro-filter", "ND-filter", "Polarisatiefilter", "Skylightfilter", "Softfilter", "UV-filter", "Overige typen"],
+    "statieven en balhoofden": ["Balhoofd", "Driepoot", "Eenpoot", "Gimbal", "L-bracket", "Ministatief", "Selfiestick", "Slider", "Statiefkop", "Overige typen"],
+    "fototassen": ["Heuptas", "Hoes", "Koffer", "Lenstas", "Pouch", "Rolkoffer", "Rugtas", "Schoudertas", "Slingtas", "Overige typen"],
+    "geheugenkaarten": ["CFexpress Type B", "Compact Flash (CF)", "CompactFlash", "Memory stick", "MicroSD", "MicroSDHC", "MicroSDXC", "SD", "SDHC", "SDXC", "XD", "XQD", "Overige typen"],
+    "fotostudio en toebehoren": ["Achtergrond", "Complete fotostudio", "Lamp of Flitsset", "Mini fotostudio", "Statief", "Studioflitser", "Studiolamp", "Overige typen"],
+    "doka toebehoren": ["Belichtingsmeter", "Complete dokaset", "Dokalamp", "Focushulp", "Fotodroger", "Kleurenaccessoire", "Ontwikkeltank", "Overig typen", "Snijder", "Timer", "Vergroter", "Vergrotingsaccessoire"],
+    "filmrollen": ["8mm film", "16mm film", "35mm film", "Accessoire"],
+    "fotoalbums en accessoires": ["Bewaarbox", "Dia-accessoire", "Fotoalbum-accessoire", "Fotomap", "Insteekalbum", "Losbladig album", "Plakboek", "Spiraalalbum", "Thema-album", "Overige typen"],
+    "verrekijkers": ["Dakkant (recht)", "Porro (met knik)", "Overige typen"],
+    "telescopen": ["Lenzentelescoop (refractor)", "Spiegeltelescoop (reflector)", "Onderdelen of Toebehoren"],
+    "microscopen": ["Biologische microscoop", "Stereomicroscoop", "Onderdelen of Toebehoren"],
+    "weerstations en barometers": ["Weerstation", "Barometer"],
+  };
+
+  const MP_AUDIO_WATT = {
+    "luidsprekers": [[0, 60, "Minder dan 60 watt"], [60, 120, "60 tot 120 watt"], [120, 150, "120 tot 150 watt"], [150, null, "150 watt of meer"]],
+    "versterkers en receivers": [[0, 60, "Minder dan 60 watt"], [60, 120, "60 tot 120 watt"], [120, null, "120 watt of meer"]],
+  };
+
+  // Woorden die hetzelfde betekenen als een optie maar er niet in staan. Klein
+  // en handmatig gehouden: het label zelf wordt altijd eerst geprobeerd, dit is
+  // alleen de brug van het Engels (en van hoe verkopers het echt opschrijven)
+  // naar het Nederlandse label.
+  const MP_AUDIO_SYNONIEMEN = {
+    "Boekenplank luidspreker": ["bookshelf"],
+    "Vloerstaande luidspreker": ["floorstanding", "vloerstaand", "zuilspeaker"],
+    "Draagbare speaker": ["portable speaker", "bluetooth speaker"],
+    "Studiomonitor": ["studio monitor", "monitorspeaker"],
+    "Subwoofer": ["sub woofer"],
+    "In-ear": ["earbuds", "oordopjes", "oortjes"],
+    "Over-ear": ["overear"],
+    "On-ear": ["onear"],
+    "Spiegelreflex": ["dslr", "slr"],
+    "Systeemcamera": ["mirrorless", "systeem camera"],
+    "Compactcamera": ["compact camera", "point and shoot"],
+    "Groothoeklens": ["groothoek", "wide angle", "wideangle"],
+    "Telelens": ["telephoto", "tele lens"],
+    "Macrolens": ["macro lens"],
+    "Fisheye-lens": ["fisheye", "vissenoog"],
+    "Rugtas": ["rugzak", "backpack"],
+    "Schoudertas": ["shoulder bag"],
+    "MicroSD": ["micro sd"],
+    "Polarisatiefilter": ["polarisatie", "cpl filter", "circular polarizer"],
+  };
+
+  // Marktplaats schrijft zijn vangnet-optie op drie manieren ("Overige typen",
+  // "Overige types", "Overig typen"). Nooit zelf een variant verzinnen: pak de
+  // vorm die in DEZE lijst staat, of vul niets in.
+  function mpAudioRest(opties) {
+    return opties.find(o => /^overige?\s+type/i.test(o)) || null;
+  }
+
+  function mpAudioPlat(tekst) {
+    return ` ${String(tekst || "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim()} `;
+  }
+
+  // Zoeken op de kale tekst is niet genoeg: een verkoper schrijft "vloerstaande
+  // luidsprekers" en het label is "Vloerstaande luidspreker". Zonder buiging
+  // viel dat terug op "Overige typen" — precies de zichtbaarheid die we hier
+  // juist willen winnen. Daarom mag het LAATSTE woord een Nederlandse uitgang
+  // dragen (-e, -en, -s, -es). Alleen het laatste: alles vrijgeven zou van
+  // "Enkel" ook "enkele kabels" maken.
+  function mpAudioRegex(zin) {
+    const woorden = mpAudioPlat(zin).trim().split(" ").filter(Boolean);
+    if (!woorden.length) return null;
+    const esc = (w) => w.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    const kop = woorden.slice(0, -1).map(esc);
+
+    // Het laatste woord in al zijn Nederlandse meervouds- en verbogen vormen.
+    // De gewone uitgangen dekken "luidspreker(s)" en "vloerstaand(e)", maar niet
+    // de klankwisseling: het meervoud van "lens" is "lenzen" en van "brief"
+    // "brieven". Zonder die twee regels viel "Canon telelenzen" terug op
+    // "Overige typen".
+    const laatste = woorden[woorden.length - 1];
+    const vormen = [esc(laatste) + "(?:e|en|s|es)?"];
+    if (/s$/.test(laatste)) vormen.push(esc(laatste.slice(0, -1)) + "zen");
+    if (/f$/.test(laatste)) vormen.push(esc(laatste.slice(0, -1)) + "ven");
+    const staart = `(?:${vormen.join("|")})`;
+
+    return new RegExp(`(?:^| )${[...kop, staart].join(" ")}(?= |$)`);
+  }
+
+  // Geeft de Type-waarde voor dit artikel, of null. Null betekent "niets
+  // invullen" en is altijd beter dan een verkeerd type: op een verkeerd type
+  // filtert een koper de advertentie juist wég.
+  function mpAudioType(item) {
+    const cat = String(item?.category || "").toLowerCase().trim();
+    if (!cat.startsWith("audio ")) return null;
+    const opties = MP_AUDIO_TYPE[cat.slice(6)];
+    if (!opties) return null;
+
+    const hooi = mpAudioPlat(`${item?.title || ""} ${item?.description || ""}`);
+    const rest = mpAudioRest(opties);
+    // Langste eerst, anders wint "SD" van "MicroSDXC" en "Camera" van
+    // "Cinemacamera". Het vangnet doet niet mee aan het zoeken zelf, anders
+    // zou het woord "overige" in een advertentietekst het al triggeren.
+    const kandidaten = opties.filter(o => o !== rest)
+      .slice().sort((a, b) => b.length - a.length);
+
+    for (const optie of kandidaten) {
+      const woorden = [optie, ...(MP_AUDIO_SYNONIEMEN[optie] || [])];
+      for (const w of woorden) {
+        const re = mpAudioRegex(w);
+        if (re && re.test(hooi)) return optie;
+      }
+    }
+    return rest;
+  }
+
+  // Wattage alleen als er ECHT een getal met watt in de tekst staat. Geen getal
+  // is geen wattage — raden zou hier hetzelfde kwaad doen als een fout type.
+  function mpAudioWattage(item) {
+    const cat = String(item?.category || "").toLowerCase().trim();
+    if (!cat.startsWith("audio ")) return null;
+    const vakken = MP_AUDIO_WATT[cat.slice(6)];
+    if (!vakken) return null;
+
+    const tekst = `${item?.title || ""} ${item?.description || ""}`;
+    const m = tekst.match(/(\d{1,5})\s*(?:watt\b|w\b|wrms\b)/i);
+    if (!m) return null;
+    const watt = parseInt(m[1], 10);
+    if (!Number.isFinite(watt) || watt <= 0 || watt > 20000) return null;
+
+    for (const [onder, boven, label] of vakken) {
+      if (watt >= onder && (boven === null || watt < boven)) return label;
+    }
+    return null;
+  }
+
   async function fillForm(item) {
     await waitForEl('input[name="title_nl-NL"]', 20000);
     await step("title",        () => fillInputHuman(qs('input[name="title_nl-NL"]'), smartTrunc(item.title || "", 60)));
@@ -120,6 +297,8 @@
     await step("intendedFor",  () => selectIntendedFor(item));
     await sleep(400); // let React re-render kenmerken after condition selection
     await step("sporttype",    () => mpSportType(item) && selectDropdown("Type", mpSportType(item)));
+    await step("audiotype",    () => { const t = mpAudioType(item);    return t && selectDropdown("Type", t); });
+    await step("wattage",      () => { const w = mpAudioWattage(item); return w && selectDropdown("Wattage", w); });
     await step("size",         () => item.size && selectDropdown(["Maat", "Jeansmaat", "Maat (cm)", "Maat bovenstuk", "Maat onderstuk"], item.size));
     // Halswijdte werkt op getallen in plaats van op tekst; zie vulHalswijdte.
     await step("halswijdte",   () => vulHalswijdte(item));

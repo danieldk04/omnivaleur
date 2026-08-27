@@ -342,3 +342,28 @@ want die twee functies zijn algemeen en niet kleding-only. Type en Wattage blijv
 leeg. Gevolg is hetzelfde als ooit bij sportkleding: wie in de zoekfilters op
 "Type" filtert, krijgt onze advertentie niet te zien. Geen storing, wel gemiste
 zichtbaarheid. `mpSportType()` is het model als je dit wilt oplossen.
+
+### 2026-08-27 — Type en Wattage bij audio
+
+De kenmerkvelden zijn ingevuld voor de audio-tak. Twee dingen om te onthouden.
+
+**De keuzelijsten zijn opgehaald, niet bedacht.** Marktplaats' eigen zoek-API
+geeft ze gewoon weg: `/lrp/api/search?l1CategoryId=31&l2CategoryId={cat3}` levert
+onder `facets` per attribuut de complete optielijst met labels — dezelfde lijst
+die een koper in de filterbalk ziet. Geen login nodig. Dit is de route om te
+gebruiken als er nog een tak bij komt; raden of uit het formulier overtypen is
+niet meer nodig. 39 van de 68 audio-categorieën hebben een Type, en maar twee een
+Wattage (luidsprekers en versterkers). De wattage-indeling verschilt per
+categorie: luidsprekers kent "120 tot 150 watt", versterkers niet.
+
+**Nederlandse meervouden kostten twee ronden.** Het label is "Vloerstaande
+luidspreker", de verkoper schrijft "vloerstaande luidsprekers", en op letterlijk
+zoeken viel dat terug op "Overige typen". Nu mag het laatste woord een uitgang
+dragen (-e, -en, -s, -es) plus de klankwisseling s→z en f→v, want het meervoud
+van "lens" is "lenzen". Alleen het láátste woord: alles vrijgeven zou van "Enkel"
+ook "enkele kabels" maken.
+
+Wattage wordt alleen ingevuld als er echt een getal met watt in de tekst staat.
+Raden is hier net zo schadelijk als een verkeerd type — de koper filtert de
+advertentie er juist mee weg. Alleen Marktplaats; voor 2dehands is niet nagemeten
+of dezelfde labels bestaan.
