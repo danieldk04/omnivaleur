@@ -2128,6 +2128,7 @@ def _advies_bijwerken(state: dict, forceer: bool = False) -> bool:
         print(f"  (advies mislukt: {e})")
         return False
     if len(tekst.split()) < 20:
+        print(f"  (advies te kort: {len(tekst.split())} woorden — niet opgeslagen)")
         return False
     _db_schrijf("mail_advies", {"op": datetime.now().isoformat(timespec="seconds"),
                                 "op_reacties": len(reacties),
