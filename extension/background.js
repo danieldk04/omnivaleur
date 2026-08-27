@@ -301,9 +301,20 @@ const MP_CATEGORIES = {
   // antiek: dus GEEN bucketId — met een bucketId erbij antwoordt Marktplaats
   // met HTTP 400. Elke cat3 hieronder komt uit searchCategoryOptions van
   // /l/audio-tv-en-foto/ (l1=31), waar id en naam in hetzelfde record staan;
-  // een id kan dus niet bij de verkeerde naam belanden. Wat daarmee NIET is
-  // aangetoond is dat het formulier ze accepteert — dat vergt een ingelogde
-  // browser, zie de opmerking bij de muziektak. 2dehands gebruikt dezelfde ids.
+  // een id kan dus niet bij de verkeerde naam belanden.
+  //
+  // Daarbovenop op 27-08-2026 alle 68 langs een TWEEDE, onafhankelijke bron
+  // gelegd: /lrp/api/search met l2CategoryId={cat3} gaf voor elk id echte
+  // advertenties terug die zelf datzelfde categoryId dragen, met titels die bij
+  // de naam horen (38 = luidsprekers, 37 = koptelefoons, 33 = buizenversterkers).
+  // 68 van 68, geen enkele leeg of afwijkend.
+  //
+  // WAT NOG NIET IS AANGETOOND: dat /plaats/31/{cat3} het formulier ook echt in
+  // die categorie opent. Dat vergt een ingelogde browser (zie de muziektak).
+  // Let op: /plaats/ geeft zonder login HTTP 401 vóór enige controle van de URL —
+  // ook /plaats/99999/38 geeft exact hetzelfde 401. Uit een statuscode valt hier
+  // dus niets af te leiden; alleen de gerenderde categorienaam telt.
+  // 2dehands gebruikt dezelfde ids.
   "audio luidsprekers":                  { cat1: 31, cat3: 38 },
   "audio soundbars":                     { cat1: 31, cat3: 3053 },
   "audio koptelefoons":                  { cat1: 31, cat3: 37 },

@@ -315,3 +315,17 @@ categorieën niet kent geeft `CategoryUnresolvedError` met de versie in de meldi
 — zichtbaar falen, geen stil half werk. De ondergrens is er voor dat tweede
 geval; hem hiervoor optrekken zou iedereen buitensluiten voor een categorie die
 de meesten nooit gebruiken.
+
+**Aanvulling 27-08-2026, avond.** De audio-ids zijn alsnog langs een tweede,
+onafhankelijke bron gelegd: `/lrp/api/search?l1CategoryId=31&l2CategoryId={cat3}`
+gaf voor alle 68 echte advertenties terug die zelf datzelfde `categoryId` dragen,
+met titels die bij de categorienaam passen. 68 van 68, geen leeg, geen afwijking.
+Daarmee staat de koppeling id ↔ categorie vast; alleen de vorm van de SYI-URL is
+nog een aanname.
+
+Twee dingen die daarbij vastgesteld zijn en die je moet weten voor de volgende
+keer: `/plaats/` geeft zonder login HTTP 401 **vóór** enige controle van de URL —
+`/plaats/99999/38` geeft precies hetzelfde antwoord als een geldige. Uit een
+statuscode valt hier dus niets af te leiden, net zoals bij Admarkt een onbekend
+adres HTTP 200 gaf. En de Claude-in-Chrome-extensie was niet verbonden, dus de
+ingelogde controle kon deze sessie niet gedaan worden.
