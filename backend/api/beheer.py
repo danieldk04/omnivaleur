@@ -425,6 +425,10 @@ def _welke_beurt(st: dict, binnen: float | None) -> str:
     return laatste
 
 
+# Vanaf dit moment dragen mail 2 en 3 een meetpixel (zie _open_pixel_html in
+# scripts/leadgen_mail.py). Alles daarvóór is per definitie ongemeten.
+_PIXEL_VANAF = "2026-08-27T13:00:00"
+
 _LAAGNAMEN = {"mail1": "Mail 1 — eerste contact",
               "mail2": "Mail 2 — eerste opvolging",
               "mail3": "Mail 3 — laatste bericht"}
