@@ -19,6 +19,7 @@ DRIE REGELS DIE HIER GELDEN
 """
 from __future__ import annotations
 
+import difflib
 import logging
 import re
 import time
@@ -382,7 +383,7 @@ def _mail() -> dict:
         "opens": _mail_opens(list(state.keys())),
         "lagen": _mail_lagen(state),
         "soorten": _mail_soorten(state),
-        "advies": _leadgen_lezen("mail_advies") or {},
+        "advies": _mail_advies(),
         "leren": _mail_leren(),
         "fouten_vandaag": (_leadgen_lezen("mail_plan") or {}).get("fouten") or [],
     }
