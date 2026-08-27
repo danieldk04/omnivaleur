@@ -94,8 +94,10 @@ tr:last-child td { border-bottom: 0; }
 .advies .kop { color: var(--blauw); font-weight: 700; text-transform: uppercase;
                font-size: 11px; letter-spacing: .8px; display: block; margin: 14px 0 4px; }
 .advies .kop:first-child { margin-top: 0; }
-table td .balk { background: var(--rand); border-radius: 4px; height: 6px; margin-top: 4px; }
-table td .balk > i { display: block; height: 100%; border-radius: 4px; }
+/* Niet aan `table td` hangen: dezelfde balk wordt ook buiten een tabel gebruikt
+   (de patronenlijst), en daar was hij dan onzichtbaar. */
+.balk { background: var(--rand); border-radius: 4px; height: 6px; margin-top: 4px; }
+.balk > i { display: block; height: 100%; border-radius: 4px; min-width: 2px; }
 button.knop { background: var(--blauw); color: #fff; border: 0; border-radius: 9px;
   padding: 7px 13px; font-size: 12.5px; font-weight: 700; cursor: pointer; margin-bottom: 12px; }
 button.stil { background: transparent; border: 1px solid var(--rand); color: var(--zacht); }
