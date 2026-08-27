@@ -356,7 +356,13 @@ def _mail() -> dict:
     # al een concurrent" zijn allebei een nee, dus samen de negatieve kant.
     positief = sum(1 for v in state.values() if v.get("soort") == "warm")
     negatief = sum(1 for v in state.values() if v.get("afgewezen") or v.get("concurrent"))
-    laatste_14 = [{"dag": _dag(i), "aantal": per_dag.get(_dag(i), 0)} for i in range(13, -1, -1)]
+    laatste_14 = []
+    for i in range(13, -1, -1):
+        d = _dag(i)
+        emmer = per_dag.get(d, {})
+        laatste_14.append({"dag": d, "mail1": emmer.get("mail1", 0),
+                           "mail2": emmer.get("mail2", 0), "mail3": emmer.get("mail3", 0),
+                           "aantal": sum(emmer.values())})
     return {
         "gekoppeld": True,
         "benaderd": benaderd,
