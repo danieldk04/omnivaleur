@@ -1996,7 +1996,10 @@ def _stilte_concept(draad: str, laatste_zet: bool) -> str | None:
         client = anthropic.Anthropic(api_key=sleutel)
         antwoord = client.messages.create(
             model="claude-sonnet-5",
-            max_tokens=800,
+            # Zie _slim_concept: het nadenken van het model telt mee in
+            # max_tokens, dus 800 kon opraken vóór er tekst stond.
+            max_tokens=16000,
+            output_config={"effort": "low"},
             system=_SCHRIJF_REGELS_STIL,
             messages=[{"role": "user", "content": prompt}],
         )
