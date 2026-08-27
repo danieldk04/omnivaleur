@@ -51,8 +51,21 @@ def test_hele_productgebieden_ontbreken_nog_steeds(groepen):
     onder 'antiek'. Dat onderscheid staat in de prompt zelf."""
     alles = " ".join(s for sleutels in groepen.values() for s in sleutels).lower()
     for ontbreekt in ("tandenborstel", "verzorging", "witgoed", "wasmachine",
-                      "koelkast", "laptop", "camera", "fiets", "huisdier"):
+                      "koelkast", "laptop", "toetsenbord", "fiets", "huisdier"):
         assert ontbreekt not in alles, f"'{ontbreekt}' bestaat nu wel — verruim het filter"
+
+
+def test_de_audiotak_bestaat_en_is_compleet(groepen):
+    """Toegevoegd op 27-08-2026 voor de 51 leads in audio/tv/foto die we niet
+    konden bedienen. Alle 68 Marktplaats-subcategorieën van l1=31 horen erin;
+    een half afgemaakte tak is precies het probleem dat we wilden oplossen."""
+    audio = groepen["audio"]
+    assert len(audio) == 68, f"{len(audio)} in plaats van 68 — is er een categorie weggevallen?"
+    tekst = " ".join(audio)
+    for verwacht in ("luidsprekers", "koptelefoons", "televisies",
+                     "fotocamera s digitaal", "lenzen en objectieven",
+                     "verrekijkers", "platenspelers"):
+        assert verwacht in tekst
 
 
 def test_boeken_en_gereedschap_bestaan_alleen_als_antiek(groepen):

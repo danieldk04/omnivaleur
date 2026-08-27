@@ -525,6 +525,7 @@ GROEP_NAMEN = {
     "sieraden": "sieraden, horloges en tassen",
     "games": "games en consoles",
     "electronics": "telefoons",
+    "audio": "audio, tv, foto en optiek",
     "antiek": "antiek en curiosa",
     "kunst": "kunst",
     "muziek": "muziekinstrumenten en apparatuur",
@@ -598,13 +599,15 @@ Een goede lead moet aan ALLE DRIE voldoen:
     lijst hieronder; alles daarbuiten loopt vast en die verkoper kunnen we niet
     helpen. Lees de lijst letterlijk en vul niet aan uit je eigen kennis. Drie
     plekken waar het steeds misgaat:
-      - de tak "electronics" bestaat UITSLUITEND uit telefoons. Geen hoesjes,
-        opladers, oordopjes, computers, laptops, camera's, tv of audio.
+      - de tak "electronics" bestaat UITSLUITEND uit telefoons; een hoesje of
+        oplader hoort daar niet in. Speakers, koptelefoons, tv's, camera's,
+        lenzen, verrekijkers en telescopen horen wel in de tak "audio".
       - boeken, gereedschap, speelgoed, servies en tv/audio staan er alléén in de
         tak "antiek", en dus alleen als het echt antiek of vintage is. Dezelfde
         spullen modern en nieuw passen niet.
-      - helemaal afwezig: persoonlijke verzorging, witgoed en huishoudelijke
-        apparaten, auto- en fietsonderdelen, bouwmateriaal en dierbenodigdheden.
+      - helemaal afwezig: computers en laptops, persoonlijke verzorging,
+        witgoed en huishoudelijke apparaten, auto- en fietsonderdelen,
+        bouwmateriaal en dierbenodigdheden.
 
 {groepen}
 
@@ -645,7 +648,7 @@ Antwoord met UITSLUITEND JSON:
   "verzendbaar": true/false,
   "commercieel": true/false,
   "reden": "één zin, Nederlands",
-  "categorie_fit": "één groepsnaam uit de lijst bij punt 1 waar zijn handel echt in valt: dames, heren, kinderen, unisex, sieraden, games, electronics, antiek, muziek of wonen. Past niets, antwoord dan met het woord geen",
+  "categorie_fit": "één groepsnaam uit de lijst bij punt 1 waar zijn handel echt in valt: dames, heren, kinderen, unisex, sieraden, games, electronics, audio, antiek, muziek of wonen. Past niets, antwoord dan met het woord geen",
   "categorie_fit_reden": "welke van zijn artikelen je in die groep plaatst, of waarom niets past — één korte zin",
   "retail_varianten": true/false,
   "verkoopt_vooral": "Kleding|Meubilair|Alles|Antieke vintage|Hoogwaardige vintage|Vintage interieur|Sieraden|Knutselmaterialen",
@@ -658,7 +661,8 @@ Antwoord met UITSLUITEND JSON:
 # een strenger filter niets aan de stapel waar Daniel uit mailt — en dat is juist
 # de stapel waar het misging. Verhoog dit dus bij elke inhoudelijke promptwijziging.
 #   2  categoriefilter + variantenfilter (27-08-2026)
-PROMPT_VERSIE = 2
+#   3  de tak "audio" erbij, dus opnieuw beoordelen (27-08-2026)
+PROMPT_VERSIE = 3
 
 
 # "veilinghuis" staat niet in de lijst die de prompt aanbiedt, maar het model
@@ -852,6 +856,101 @@ def export(args) -> None:
     print(f"  met webshopsysteem: {sum(1 for l in leads if l.get('shopsysteem'))}")
 
 
+# ------------------------------------------------- onbedienbare leads markeren
+
+
+# Welke Marktplaats-hoofdrubriek wij kunnen publiceren. Bewust op de RUBRIEK en
+# niet op het oordeel van het model: de leads die hier al staan zijn geveld met
+# de oude, te ruime prompt en dragen dus geen categorie_fit. De rubriek komt uit
+# de scrape zelf en is een feit, geen inschatting.
+#
+# "deels" is geen twijfel maar een echte halve: telecommunicatie kan wél voor
+# losse toestellen en niet voor hoesjes en opladers.
+RUBRIEK_BEDIENBAAR = {
+    "kleding-dames": "ja",
+    "kleding-heren": "ja",
+    "sieraden-tassen-en-uiterlijk": "ja",
+    "spelcomputers-en-games": "ja",
+    "muziek-en-instrumenten": "ja",
+    "verzamelen": "ja",
+    "audio-tv-en-foto": "ja",          # sinds 27-08-2026, zie de audio-tak
+    "telecommunicatie": "deels",
+    "computers-en-software": "nee",
+    "boeken": "nee",
+    "sport-en-fitness": "nee",
+}
+GEEN_TAK_REDEN = {
+    "computers-en-software": "computers en laptops",
+    "boeken": "moderne boeken (antieke boeken kunnen wel, via de antiek-tak)",
+    "sport-en-fitness": "fitness- en wellnessapparatuur",
+}
+
+
+def _bedienbaar(lead: dict) -> str:
+    return RUBRIEK_BEDIENBAAR.get((lead.get("source") or "").split("/")[0], "onbekend")
+
+
+def markeer(args) -> None:
+    """Zet bij leads die wij niet kunnen publiceren waaróm dat zo is.
+
+    Niet verwijderen: de contactgegevens zijn duur verzameld en zodra de
+    ontbrekende tak er wél is, zijn deze rijen met één filter terug te vinden.
+
+    Twee lagen, net als bij het loggen van verstuurde mail: een regel onder aan de
+    pagina kan nooit stukgaan op een kolomnaam, en de kolommen zijn best-effort.
+    """
+    leads = _load(MP_LEADS)
+    if not leads:
+        sys.exit("Nog geen mp_leads.json — draai eerst 'classify'")
+
+    doel = [l for l in leads if _bedienbaar(l) == "nee"]
+    deels = [l for l in leads if _bedienbaar(l) == "deels"]
+    print(f"{len(leads)} leads · {len(doel)} niet te bedienen · {len(deels)} half "
+          f"(telecom: losse toestellen wel, accessoires niet)")
+    for rubriek, reden in GEEN_TAK_REDEN.items():
+        n = sum(1 for l in doel if (l.get("source") or "").startswith(rubriek))
+        if n:
+            print(f"  {n:>4} × {rubriek}: geen tak voor {reden}")
+
+    if args.dry_run:
+        print("\ndry-run, er wordt niets naar Notion geschreven")
+        return
+    if not doel:
+        return
+
+    token = ig._need("NOTION_TOKEN")
+    props = notion.schema(token)
+    paginas = notion.existing_pages(token)
+    vandaag = time.strftime("%Y-%m-%d")
+
+    gedaan = gemist = 0
+    overgeslagen_kolommen: set[str] = set()
+    for lead in doel:
+        page_id = paginas.get((lead.get("ig_url") or "").rstrip("/").lower())
+        if not page_id:
+            gemist += 1
+            continue
+        rubriek = (lead.get("source") or "").split("/")[0]
+        reden = GEEN_TAK_REDEN.get(rubriek, rubriek)
+        try:
+            notion.append_log(page_id, token,
+                              f"{vandaag} — niet te bedienen: wij hebben geen categorie voor "
+                              f"{reden}. Niet benaderen tot die tak er is.")
+            overgeslagen_kolommen.update(notion.set_props(page_id, token, {
+                "Fase": ("select", "0. Kan (nog) niet"),
+                "Volgende actie op": ("date", None),
+            }, props))
+            gedaan += 1
+        except Exception as e:  # noqa: BLE001 — één rij mag de rest niet stoppen
+            print(f"  ! {lead.get('full_name') or lead.get('name')}: {e}")
+
+    print(f"\n{gedaan} leads gemarkeerd, {gemist} stonden niet in Notion")
+    if overgeslagen_kolommen:
+        print("niet gezet omdat de kolom of de optie niet bestaat: "
+              + ", ".join(sorted(overgeslagen_kolommen))
+              + "\n  → maak in Notion de Fase-optie \"0. Kan (nog) niet\" aan en draai opnieuw")
+
+
 def run(args) -> None:
     if not args.dry_run:
         ig._need("NOTION_TOKEN")
@@ -872,6 +971,11 @@ def main() -> None:
     ap = argparse.ArgumentParser(
         description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     sub = ap.add_subparsers(dest="cmd", required=True)
+
+    m = sub.add_parser("markeer", help="leads markeren die wij niet kunnen publiceren")
+    m.add_argument("--dry-run", action="store_true",
+                   help="alleen tonen wat er gemarkeerd zou worden")
+    m.set_defaults(func=markeer)
 
     def common(p, *, disc=False, enr=False, cls=False, psh=False):
         if disc:
