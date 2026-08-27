@@ -383,6 +383,17 @@ def _mail_opens(adressen: list[str]) -> dict:
     }
 
 
+_CITAAT_SPLITSER = re.compile(r"\n\s*(?:Op .{0,60}schreef|Van:|-----Oorspronkelijk)")
+
+
+def _zonder_citaat(t: str) -> str:
+    """Zelfde afkap als _kern() in scripts/leadgen_mail.py: alleen de eigen
+    tekst, zonder het geciteerde gesprek eronder — anders toont de kaart
+    dezelfde quote twee keer en is niet in één oogopslag te zien wát er
+    veranderd is."""
+    return _CITAAT_SPLITSER.split(t or "", maxsplit=1)[0].strip()
+
+
 def _mail_leren() -> dict:
     """Wat Daniel zelf van de voorstellen maakt, is de enige echte leerbron: hij
     verandert alleen iets als het voorstel niet goed genoeg was. Zie
@@ -398,8 +409,8 @@ def _mail_leren() -> dict:
                            if afgerond else None,
         "recent": [{"adres": x.get("adres"), "op": x.get("op"),
                     "aangepast": bool(x.get("aangepast")),
-                    "voorstel": (x.get("voorstel") or "")[:280],
-                    "verstuurd": (x.get("verstuurd") or "")[:280]} for x in recent],
+                    "voorstel": _zonder_citaat(x.get("voorstel"))[:280],
+                    "verstuurd": _zonder_citaat(x.get("verstuurd"))[:280]} for x in recent],
     }
 
 
