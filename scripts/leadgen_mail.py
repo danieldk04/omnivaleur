@@ -2040,17 +2040,23 @@ REGELS
   dan 10 reacties op een laag is elk patroon toeval; benoem dat dan zo.
 - Noem bij een patroon hoe vaak je het zag.
 
-GEEF TERUG (exact deze drie kopjes, verder platte tekst, geen opsomtekens met
-sterretjes):
+GEEF TERUG (exact deze drie kopjes, geen opsomtekens met sterretjes):
+
 PATRONEN
-Wat zeggen mensen het vaakst? Per patroon één regel, met het aantal erbij.
+Alleen regels in de vorm:  aantal | korte naam | uitleg in één zin
+De korte naam is maximaal 4 woorden. Het aantal is een getal, geen tekst. Geen
+inleiding, geen slotzin, niets anders onder dit kopje — deze regels worden als
+grafiek getekend, dus elke afwijkende regel valt eruit. Meest voorkomend eerst,
+maximaal zes regels.
+Voorbeeld:
+10 | Gebruikt al een tool | Noemt Channable of een eigen script om te crosslisten.
 
 WAT WERKT
-Welke van de drie mails doet het goed en waaraan zie je dat.
+Twee tot vier zinnen. Welke van de drie mails doet het goed en waaraan zie je dat.
 
 AANBEVELINGEN
-Maximaal drie dingen die Daniel concreet kan wijzigen, belangrijkste eerst.
-Elk met de reden erbij in één zin."""
+Maximaal drie genummerde regels, belangrijkste eerst. Elk één zin met de reden
+erbij. Kort houden — dit moet in één blik te lezen zijn."""
 
 
 def _mail_cijfers(state: dict) -> dict:
