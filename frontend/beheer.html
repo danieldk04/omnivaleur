@@ -317,6 +317,67 @@ function staafjes(id, rijen, labelVeld, waardeVeld, opmaak) {
   }).join('');
 }
 
+// De drie lagen van de campagne. Volgorde en kleur (l1/l2/l3 in de CSS) horen
+// overal gelijk te zijn: grafiek, legenda en tabel.
+const LAGEN = [{ sleutel: 'mail1', naam: 'Mail 1' },
+               { sleutel: 'mail2', naam: 'Mail 2' },
+               { sleutel: 'mail3', naam: 'Mail 3' }];
+
+function gestapeld(id, rijen) {
+  const doel = el(id);
+  if (!doel) return;
+  if (!rijen || !rijen.length) { doel.innerHTML = '<div class="leeg">Geen gegevens.</div>'; return; }
+  // Schalen op de hoogste DAGTOTAAL, niet per segment: anders lijkt een dag met
+  // één mail even hoog als een dag met veertig.
+  const top = Math.max(...rijen.map(r => Number(r.aantal) || 0), 1);
+  doel.innerHTML = rijen.map(r => {
+    const totaal = Number(r.aantal) || 0;
+    const hoogte = Math.round(88 * totaal / top);
+    const stukjes = LAGEN.map((l, i) => {
+      const w = Number(r[l.sleutel]) || 0;
+      if (!w) return '';
+      return `<i class="l${i + 1}" style="height:${Math.max(1, Math.round(hoogte * w / totaal))}px"></i>`;
+    }).join('');
+    const uitleg = LAGEN.map(l => `${l.naam}: ${getal(r[l.sleutel] || 0)}`).join(', ');
+    return `<div class="kolom" title="${veilig(r.dag)} — ${veilig(uitleg)} (totaal ${totaal})">
+      <div class="stapel" style="height:${Math.max(2, hoogte)}px">${stukjes || '<i></i>'}</div>
+      <span>${veilig(String(r.dag || '').slice(-5))}</span></div>`;
+  }).join('');
+}
+
+function taart(idRing, idUitleg, rijen) {
+  const ring = el(idRing), uitleg = el(idUitleg);
+  if (!ring) return;
+  const totaal = (rijen || []).reduce((s, r) => s + (Number(r.aantal) || 0), 0);
+  if (!totaal) {
+    ring.innerHTML = ''; ring.className = '';
+    if (uitleg) uitleg.innerHTML = '<div class="leeg">Nog geen reacties.</div>';
+    return;
+  }
+  const kleur = { warm: 'var(--groen)', afwijzing: 'var(--rood)',
+                  concurrent: 'var(--geel)', afmelding: 'var(--zacht)' };
+  let graad = 0;
+  const stops = rijen.map(r => {
+    const van = graad;
+    graad += 360 * (Number(r.aantal) || 0) / totaal;
+    return `${kleur[r.soort] || 'var(--blauw)'} ${van}deg ${graad}deg`;
+  }).join(', ');
+  ring.className = 'taart';
+  ring.style.background = `conic-gradient(${stops})`;
+  if (uitleg) uitleg.className = 'taart-uitleg';
+  if (uitleg) uitleg.innerHTML = rijen.map(r =>
+    `<div><i style="background:${kleur[r.soort] || 'var(--blauw)'}"></i>${veilig(r.naam)}
+      <b>${getal(r.aantal)} · ${Math.round(100 * r.aantal / totaal)}%</b></div>`).join('');
+}
+
+// De analyse komt terug met drie vaste kopjes in hoofdletters. Die als kop
+// tonen in plaats van als gewone regel maakt het verschil tussen een lap tekst
+// en iets dat je in één blik scant.
+function opmaakAdvies(tekst) {
+  return veilig(tekst).replace(/^(PATRONEN|WAT WERKT|AANBEVELINGEN)\s*$/gm,
+                              m => `<span class="kop">${m}</span>`);
+}
+
 function tabel(id, kolommen, rijen, cel) {
   const doel = el(id);
   if (!doel) return;
