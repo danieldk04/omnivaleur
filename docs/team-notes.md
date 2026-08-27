@@ -287,3 +287,31 @@ repareert elektrische tandenborstels en verkoopt daarnaast refurbished Oral-B
 IO's — precies onze conditie-doelgroep. De afwijzing klopte alsnog (geen
 categorie voor tandenborstels), maar op de verkeerde gronden, en dat was in de
 mail te zien geweest. Eén minuut op de site van de lead voorkomt dat.
+
+### 2026-08-27 — Audio, tv en foto erbij, en wat er nog niet aan bewezen is
+
+**Waarom deze tak en niet een andere.** Gemeten op de 324 leads met e-mailadres:
+36% verkocht iets dat wij niet konden publiceren. Audio/tv/foto was de grootste
+losse groep (51), daarna computers (41), boeken (20) en sport (6). Daniel koos
+audio; computers en boeken zijn bewust nog niet gebouwd.
+
+**Wat er nieuw aan de methode is.** De 68 cat3-nummers komen niet uit de
+SYI-picker maar uit `searchCategoryOptions` van `/l/audio-tv-en-foto/` — publiek,
+geen login. Dat is aantoonbaar veiliger dan raden: id en naam staan daar in
+hetzelfde JSON-record, dus een nummer kan niet bij de verkeerde naam belanden.
+Bij telefoons en games bleek dat cat3 exact het L2-zoekcategorie-id is.
+
+**Wat nog NIET bewezen is, en dat is belangrijk.** Dat de SYI-URL
+`/plaats/31/{cat3}` het formulier ook echt in die categorie opent. `/plaats/` geeft
+zonder login HTTP 401, dus dat is met een script niet te controleren. De muziek-
+en antiektak zijn destijds wél in een ingelogde browser nagelopen tegen de
+gerenderde categorienaam. Deze 68 nog niet. Het risico is beperkt — de vorm is
+identiek aan muziek en antiek, en de tak is net als die twee twee niveaus diep,
+dus zonder bucketId — maar het is een aanname en geen meting. Zolang die niet
+gedaan is, is dit de zwakste schakel in de tak.
+
+**De extensieversieondergrens is bewust NIET verhoogd.** Een oude kopie die deze
+categorieën niet kent geeft `CategoryUnresolvedError` met de versie in de melding
+— zichtbaar falen, geen stil half werk. De ondergrens is er voor dat tweede
+geval; hem hiervoor optrekken zou iedereen buitensluiten voor een categorie die
+de meesten nooit gebruiken.
