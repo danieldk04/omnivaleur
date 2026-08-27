@@ -3917,6 +3917,11 @@ def main() -> None:
             p.add_argument("--dry-run", action="store_true")
         p.set_defaults(func=functie)
 
+    wt = sub.add_parser("wachtenden",
+                        help="wie wacht op antwoord zonder dat er een concept ligt")
+    wt.add_argument("--dry-run", action="store_true", help="alleen tonen, niets klaarzetten")
+    wt.set_defaults(func=wachtenden)
+
     hs = sub.add_parser("herstel",
                         help="vervolgconcept voor wie de sjabloonmail al verstuurd kreeg")
     hs.add_argument("--dry-run", action="store_true", help="alleen tonen, niets klaarzetten")
