@@ -380,18 +380,113 @@ def _mail() -> dict:
         "open_tracking": True,
         "open_tracking_reden": "Alleen gemeten op de opvolgmails, niet op de eerste koude mail.",
         "opens": _mail_opens(list(state.keys())),
+        "lagen": _mail_lagen(state),
+        "soorten": _mail_soorten(state),
+        "advies": _leadgen_lezen("mail_advies") or {},
         "leren": _mail_leren(),
         "fouten_vandaag": (_leadgen_lezen("mail_plan") or {}).get("fouten") or [],
     }
 
 
+def _open_tellingen() -> dict[str, set]:
+    """Per laag de adressen die die mail geopend hebben. Twee vormen: de oude
+    (adres → telling, altijd een opvolgmail) en de nieuwe (adres → laag →
+    telling). Zie backend/api/tracking.py."""
+    per_laag: dict[str, set] = {}
+    for adres, waarde in (_leadgen_lezen("mail_opens") or {}).items():
+        if not isinstance(waarde, dict):
+            continue
+        if "aantal" in waarde:
+            per_laag.setdefault("opvolg", set()).add(adres)
+            continue
+        for laag in waarde:
+            per_laag.setdefault(laag, set()).add(adres)
+    return per_laag
+
+
+def _welke_beurt(st: dict, binnen: float | None) -> str:
+    """Welke mail stond er als laatste tegenover deze reactie? Zelfde regel als
+    _welke_beurt in scripts/leadgen_mail.py — de laatste mail die vóór het
+    antwoord verstuurd is."""
+    verstuurd = st.get("verstuurd") or []
+    if not verstuurd:
+        return "?"
+    if binnen is None:
+        return str(verstuurd[-1].get("beurt") or "?")
+    laatste = "?"
+    for m in verstuurd:
+        try:
+            op = datetime.fromisoformat(m["op"]).timestamp()
+        except Exception:
+            continue
+        if op <= binnen:
+            laatste = str(m.get("beurt") or "?")
+    return laatste
+
+
+_LAAGNAMEN = {"mail1": "Mail 1 — eerste contact",
+              "mail2": "Mail 2 — eerste opvolging",
+              "mail3": "Mail 3 — laatste bericht"}
+
+
+def _mail_lagen(state: dict) -> list[dict]:
+    """De kernvraag van dit dashboard: welke van de drie teksten opent een
+    gesprek? Een reactie hoort bij de mail die er als laatste tegenover stond."""
+    opens = _open_tellingen()
+    uit = []
+    for sleutel, naam in _LAAGNAMEN.items():
+        rij = {"laag": sleutel, "naam": naam, "verstuurd": 0, "reacties": 0,
+               "warm": 0, "afwijzing": 0, "concurrent": 0, "afmelding": 0}
+        for st in state.values():
+            for m in (st.get("verstuurd") or []):
+                if isinstance(m, dict) and m.get("beurt") == sleutel:
+                    rij["verstuurd"] += 1
+            if st.get("beantwoord"):
+                try:
+                    binnen = datetime.fromisoformat(st["beantwoord"]).timestamp()
+                except Exception:
+                    binnen = None
+                if _welke_beurt(st, binnen) == sleutel:
+                    rij["reacties"] += 1
+                    soort = st.get("soort")
+                    if soort in rij:
+                        rij[soort] += 1
+        rij["reactie_pct"] = (round(100 * rij["reacties"] / rij["verstuurd"], 1)
+                              if rij["verstuurd"] else 0)
+        geopend = len(opens.get(sleutel, ()))
+        rij["geopend"] = geopend
+        # Mail 1 draagt bewust geen pixel; een 0% zou daar liegen, dus geen cijfer.
+        rij["open_pct"] = (None if sleutel == "mail1" else
+                           (round(100 * geopend / rij["verstuurd"], 1) if rij["verstuurd"] else 0))
+        uit.append(rij)
+    return uit
+
+
+def _mail_soorten(state: dict) -> list[dict]:
+    """De verdeling van alle reacties — de basis voor het cirkeldiagram."""
+    telling: dict[str, int] = {}
+    for st in state.values():
+        if st.get("beantwoord"):
+            telling[st.get("soort") or "onbekend"] = telling.get(st.get("soort") or "onbekend", 0) + 1
+    labels = {"warm": "Warm / interesse", "afwijzing": "Geen interesse",
+              "concurrent": "Gebruikt al iets", "afmelding": "Afgemeld",
+              "onbekend": "Onbekend"}
+    return [{"soort": k, "naam": labels.get(k, k), "aantal": v}
+            for k, v in sorted(telling.items(), key=lambda kv: -kv[1])]
+
+
 def _mail_opens(adressen: list[str]) -> dict:
     opens = _leadgen_lezen("mail_opens") or {}
     gemeten = [a for a in adressen if a in opens]
-    return {
-        "adressen": len(gemeten),
-        "totaal_geopend": sum(v.get("aantal", 0) for v in opens.values()),
-    }
+    totaal = 0
+    for waarde in opens.values():
+        if not isinstance(waarde, dict):
+            continue
+        if "aantal" in waarde:
+            totaal += waarde.get("aantal", 0)
+        else:
+            totaal += sum(v.get("aantal", 0) for v in waarde.values() if isinstance(v, dict))
+    return {"adressen": len(gemeten), "totaal_geopend": totaal}
 
 
 _CITAAT_SPLITSER = re.compile(r"\n\s*(?:Op .{0,60}schreef|Van:|-----Oorspronkelijk)")
