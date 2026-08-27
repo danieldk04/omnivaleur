@@ -74,8 +74,14 @@ jobs:
       # exitcode 1 is. Omdat het de laatste opdracht van de stap is, viel de hele
       # beurt daarop om, elke halve beurt van 18-08-2026, terwijl het mailwerk zelf
       # gewoon gelukt was. Een if-blok geeft die 1 niet door.
-      - run: |
+      - if: github.event.inputs.opdracht == '' || github.event.inputs.opdracht == 'tick'
+        run: |
           for i in 1 2 3; do
             python scripts/leadgen_mail.py tick || true
             if [ "$i" -lt 3 ]; then sleep 420; fi
           done
+      # Een momentopname (status/dagbericht/leren) zonder de mail-lus: voor als
+      # Daniel gewoon wil weten waar het staat, zonder dat er meteen weer een
+      # ronde mails/concepten bijkomt.
+      - if: github.event.inputs.opdracht != '' && github.event.inputs.opdracht != 'tick'
+        run: python scripts/leadgen_mail.py ${{ github.event.inputs.opdracht }}
