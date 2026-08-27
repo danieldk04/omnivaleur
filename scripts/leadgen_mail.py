@@ -3603,6 +3603,144 @@ def sjablonen_weg(args) -> None:
               f"schrijft er echte antwoorden voor.")
 
 
+_HERSTEL_REGELS = """Je schrijft een KORT vervolgbericht namens Daniel de Koning, oprichter
+van Omnivaleur, aan iemand die zojuist een nietszeggend standaardantwoord van hem
+kreeg op een concrete vraag.
+
+De situatie: hij stelde een vraag, en het antwoord dat terugkwam ging over de
+demovideo, de prijs en de lijst met kanalen — niet over zijn vraag. Dit bericht
+maakt dat goed.
+
+Harde regels:
+- Nederlands, gewone spreektaal, kort. Drie alinea's is al veel.
+- Geen uitgebreide excuses en zeker geen bedrijfstaal. Eén korte zin dat het
+  vorige antwoord langs zijn vraag heen ging is genoeg; daarna meteen de inhoud.
+- Noem NOOIT dat er een systeem, een automatische mail of een taalmodel in het
+  spel is. Dit is gewoon Daniel die zijn eigen mail overdoet.
+- Ga in op wat hij ECHT vroeg, in zijn eigen woorden. Dat is het hele punt.
+- Geen video, geen prijs en geen kanalenlijst tenzij hij daar zelf naar vroeg.
+- Verzin niets. Weet je niet of iets kan, schrijf dan dat je het uitzoekt en
+  erop terugkomt. Beloof geen korting en geen opleverdatum.
+- Eindig met exact het afsluitblok dat je meekrijgt.
+- Begin met een aanhefregel en een lege regel. Alleen de brieftekst teruggeven.
+
+Feiten die kloppen:
+- Prijs: {prijs}. Eerste 7 dagen gratis, geen opzegtermijn.
+- Kanalen: {platforms}. bol.com hoort daar NIET bij.
+- Publiceren gaat via een Chrome-extensie in de eigen browser van de verkoper.
+- Bestaand Marktplaats-aanbod kan geimporteerd worden.
+- Etsy is nog niet klaar. Facebook Marketplace is beta en op eigen risico.
+"""
+
+
+def _inkomend_bericht(imap, message_id: str):
+    """Het binnengekomen bericht met dit Message-ID uit het postvak halen."""
+    try:
+        imap.select("INBOX", readonly=True)
+        _, d = imap.search(None, f'(HEADER Message-ID "{message_id}")')
+        nummers = (d[0] or b"").split()
+        if not nummers:
+            return None
+        _, ruw = imap.fetch(nummers[-1], "(BODY.PEEK[])")
+        if not ruw or not ruw[0]:
+            return None
+        return email.message_from_bytes(ruw[0][1])
+    except Exception:  # noqa: BLE001
+        return None
+
+
+def herstel(args) -> None:
+    """`python3 leadgen_mail.py herstel` — een vervolgconcept voor iedereen die
+    de oude sjabloonmail al VERSTUURD heeft gekregen.
+
+    Concepten weghalen helpt alleen zolang de mail nog niet weg is. Voor wie hem
+    al in zijn postvak heeft liggen is het enige nette herstel een tweede bericht
+    dat alsnog op zijn vraag ingaat. Dat schrijft dit commando — als concept, dus
+    Daniel leest het na en beslist zelf of het weggaat.
+
+    Er wordt hooguit één vervolg per adres gemaakt: is er na de sjabloonmail al
+    iets anders naar dat adres gegaan, dan is het gesprek verder en bemoeit dit
+    zich er niet mee."""
+    host, gebruiker = os.environ.get("IMAP_HOST"), os.environ.get("MAIL_USER")
+    wachtwoord = os.environ.get("MAIL_PASS")
+    if not (host and gebruiker and wachtwoord):
+        print("Geen mailtoegang (IMAP_HOST/MAIL_USER/MAIL_PASS ontbreken).")
+        return
+    sleutel = os.environ.get("ANTHROPIC_API_KEY", "").strip()
+    if not sleutel:
+        print("Geen ANTHROPIC_API_KEY — zonder het echte antwoord heeft dit geen zin.")
+        return
+    import anthropic
+
+    verzonden = _verzonden_lezen()
+    laatste_per_adres: dict[str, float] = {}
+    for m in verzonden:
+        adres = m.get("adres") or ""
+        laatste_per_adres[adres] = max(laatste_per_adres.get(adres, 0.0), m.get("op", 0.0))
+
+    getroffen = [m for m in verzonden if _is_sjabloonconcept(m.get("eigen", ""))]
+    if not getroffen:
+        print("Geen verstuurde sjabloonmails gevonden in de laatste weken.")
+        return
+    print(f"{len(getroffen)} verstuurde sjabloonmail(s) gevonden.")
+
+    client = anthropic.Anthropic(api_key=sleutel)
+    gemaakt = 0
+    with imaplib.IMAP4_SSL(host, 993) as imap:
+        imap.login(gebruiker, wachtwoord)
+        for m in getroffen:
+            adres = m.get("adres") or ""
+            if not adres:
+                continue
+            # Is het gesprek al verder? Dan hoort dit commando erbuiten te blijven.
+            if laatste_per_adres.get(adres, 0.0) > m.get("op", 0.0) + 60:
+                print(f"  – {adres}: er ging daarna al iets anders heen, overgeslagen")
+                continue
+            inkomend = None
+            for mid in sorted(m.get("verwijst") or []):
+                inkomend = _inkomend_bericht(imap, mid)
+                if inkomend is not None:
+                    break
+            if inkomend is None:
+                print(f"  – {adres}: oorspronkelijke vraag niet teruggevonden, overgeslagen")
+                continue
+            vraag = _eigen_tekst(_platte_tekst(inkomend)).strip()
+            if not vraag:
+                print(f"  – {adres}: geen eigen tekst in zijn bericht, overgeslagen")
+                continue
+            prompt = (
+                f"Dit vroeg hij:\n\n{vraag[:4000]}\n\n"
+                f"Dit kreeg hij als antwoord, en dat ging langs zijn vraag heen:\n\n"
+                f"{m.get('eigen', '')[:1500]}\n\n"
+                f"Sluit af met exact dit blok:\n{_ondertekening()}\n\n"
+                f"Schrijf het vervolgbericht."
+            )
+            try:
+                antwoord = _claude(
+                    client, model=MODEL, max_tokens=16000,
+                    output_config={"effort": "low"},
+                    system=_HERSTEL_REGELS.format(prijs=PRIJS, platforms=PLATFORMS),
+                    messages=[{"role": "user", "content": prompt}])
+                tekst = "".join(b.text for b in antwoord.content
+                                if getattr(b, "type", "") == "text").strip()
+            except Exception as e:  # noqa: BLE001
+                print(f"  !! {adres}: schrijven mislukt ({type(e).__name__}: {e})")
+                continue
+            if len(tekst.split()) < 15:
+                print(f"  !! {adres}: te kort, geen concept")
+                continue
+            tekst = re.sub(r"\*\*(.+?)\*\*", r"\1", tekst)
+            if args.dry_run:
+                print(f"\n=== zou vervolgconcept maken voor {adres} ===\n{tekst}\n")
+                gemaakt += 1
+                continue
+            if _zet_concept_klaar({"email": adres}, inkomend, _platte_tekst(inkomend),
+                                   eigen_tekst=tekst):
+                gemaakt += 1
+    print(f"\n{gemaakt} vervolgconcept(en) "
+          f"{'zouden klaargezet worden' if args.dry_run else 'klaargezet'}.")
+
+
 def concepten(args) -> None:
     """`python3 leadgen_mail.py concepten` — alles wat er nu in Concepten
     ligt, mét een controle op dubbele of verouderde voorstellen (dezelfde
