@@ -127,3 +127,35 @@ def test_een_oud_oordeel_telt_niet_meer_mee():
     """Zonder versiestempel verandert een strenger filter niets aan de stapel waar
     de mails uit komen — precies de stapel waar het misging."""
     assert mp.PROMPT_VERSIE >= 2
+
+
+# ── Een leesfout mag geen advertentie onzichtbaar maken ─────────────────────
+
+def test_bij_een_leesfout_wordt_geen_advertentienummer_overschreven():
+    """`_tweede_advertentie` bewaakt de verkoper die hetzelfde artikel meerdere
+    keren los te koop zet: tien identieke blikjes plectrums zijn tien
+    advertenties. Zei die functie ten onrechte "nee", dan werd het nummer van de
+    bestaande regel overschreven en kende het dashboard negen advertenties niet
+    meer — dus kon het ze ook niet weghalen bij verkoop.
+
+    Tot 27-08-2026 gaf hij bij een databasefout False terug, precies die kant op.
+    En leesfouten zijn hier geen theorie: parallelle Supabase-leesacties vielen
+    gemeten 45 van de 55 keer om.
+    """
+    from backend.api import imports
+
+    class _Stuk:
+        def table(self, *a, **k): raise RuntimeError("Supabase deed het even niet")
+
+    assert imports._tweede_advertentie(_Stuk(), "item-1", "marktplaats", "123") is True
+
+    class _Werkt:
+        def table(self, *a, **k): return self
+        def select(self, *a, **k): return self
+        def eq(self, *a, **k): return self
+        def execute(self): return type("R", (), {"data": [{"platform_listing_id": "123"}]})()
+
+    # Alleen dezelfde advertentie bekend → geen tweede, koppelen mag.
+    assert imports._tweede_advertentie(_Werkt(), "item-1", "marktplaats", "123") is False
+    # Een ander nummer bekend → er staat er al een, dus niet overschrijven.
+    assert imports._tweede_advertentie(_Werkt(), "item-1", "marktplaats", "999") is True

@@ -839,7 +839,16 @@ def _tweede_advertentie(db, item_id: str, platform: str, listing_id) -> bool:
         rijen = (db.table("listings").select("platform_listing_id")
                  .eq("item_id", item_id).eq("platform", platform).execute().data or [])
     except Exception:
-        return False
+        # Bewust True bij een leesfout, en dat is geen slordigheid maar de enige
+        # kant die te herstellen valt. False betekent hier "er is geen tweede
+        # advertentie", waarna de aanroeper het advertentienummer van de
+        # BESTAANDE regel overschrijft — precies de schade die deze functie moet
+        # voorkomen: een advertentie die het dashboard niet meer kent en dus ook
+        # niet kan weghalen als hij verkocht is. True laat de kandidaat een eigen
+        # item worden; dat is hooguit een dubbeling die de verkoper zelf ziet en
+        # samenvoegt. Leesfouten zijn hier geen theorie — parallelle
+        # Supabase-leesacties vielen eerder gemeten 45 van de 55 keer om.
+        return True
     return any(
         (r.get("platform_listing_id") is not None
          and str(r["platform_listing_id"]) != str(listing_id))
