@@ -242,3 +242,48 @@ op letterlijke tekst en braken op de vorm. Ze toetsen nu de garantie zelf.
 **Les:** een test die al weken rood staat, wordt genegeerd. Dat kostte hier een
 maand lang stille fouten in het publiceren. Een rode suite is een storing, geen
 achtergrondruis.
+
+### 2026-08-27 — Wat leads terugvragen, en het gecontroleerde antwoord
+
+Bijhouden wat er in de koude-mailantwoorden steeds terugkomt, mét het antwoord
+zoals het écht in de code staat. Elk antwoord hieronder is geverifieerd, niet
+gegokt. Vul deze lijst aan bij elke nieuwe vraag; verstuur nooit een concept met
+een claim die hier niet in staat of niet in de code is nagekeken.
+
+**1. "Koppelen jullie met WooCommerce?"** (Rob/Borstelbeer, Vianen Telecom —
+2x in één dag, dus de meest gestelde vraag)
+Nee. Van webshops alleen Shopify. WooCommerce komt in de hele codebase alleen
+voor als herkenningsregel in `scripts/leadgen_marktplaats.py` (om te zien dát een
+lead een webshop heeft), nergens als koppeling. Staat ook niet op de roadmap.
+
+**2. "Is het een AI-agent? Foto maken en hij vult de rest in."** (Vianen Telecom)
+Half. Wat er wél is: automatisch vertalen (NL/EN) en Claude die bij een import
+categorie/gender/kleur/maat raadt uit titel + omschrijving
+(`_classify_with_claude` in `backend/api/imports.py`). Wat er NIET is: foto →
+kant-en-klare advertentie. De code bestaat wel
+(`backend/services/ai_listing.py`, endpoint `POST /api/platforms/ai-listing`),
+maar geen enkele knop in `frontend/app.html` roept hem aan, en de prompt is
+kleding-only. Beloof dit dus niet. Openstaand: afbouwen of afmaken.
+
+**3. "Kunnen mijn productvarianten mee?"** (Rob/Borstelbeer)
+Nee, en dat is fundamenteel. Eén artikel = één stuk, één prijs, voorraad 1
+(zie `_ensure_stock_of_one` en `"inventory_management": "shopify"` in
+`backend/platforms/`). Bij een Shopify-product met meerdere varianten leest
+`_convert()` alleen `variants[0]`. Er is geen aantal-veld in het datamodel.
+
+**4. "Past mijn assortiment?"** — de scherpste filter, en hij wordt te vaak
+gemist. Publiceren naar Marktplaats/2dehands kan alleen binnen de 322 vaste
+sleutels van `MP_CATEGORIES` in `extension/background.js`: kleding, schoenen,
+sieraden/tassen/horloges, wonen & tuin, antiek/kunst, muziek, games en
+`electronics` — en die laatste is **uitsluitend telefoons** (10 sleutels,
+cat1 820). Geen persoonlijke verzorging, geen huishoudelijke apparaten, geen
+gereedschap, geen audio/tv/computers. Valt een item erbuiten, dan stopt de
+extensie met `CategoryUnresolvedError` en komt de advertentie er niet.
+
+**Werkafspraak:** controleer bij elke lead eerst wat hij écht verkoopt vóór je
+antwoordt. Op 27-08-2026 ging er bijna een concept uit waarin Borstelbeer werd
+afgeschreven als "borstelfabrikant met nieuwe producten in bulk". Borstelbeer
+repareert elektrische tandenborstels en verkoopt daarnaast refurbished Oral-B
+IO's — precies onze conditie-doelgroep. De afwijzing klopte alsnog (geen
+categorie voor tandenborstels), maar op de verkeerde gronden, en dat was in de
+mail te zien geweest. Eén minuut op de site van de lead voorkomt dat.
