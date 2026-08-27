@@ -869,6 +869,11 @@ async function getAuthHeaders() {
   }
   const headers = { "Content-Type": "application/json" };
   if (token) headers["Authorization"] = `Bearer ${token}`;
+  // Vertel de server bij ELK verzoek wie we zijn. Zonder dit kon een kopie van
+  // maanden oud gewoon werk blijven ophalen en half afleveren; de server had
+  // geen enkele manier om dat te zien, want een oude kopie stempelt haar versie
+  // alleen in foutmeldingen — en juist deze gevallen liepen vast zonder fout.
+  try { headers["X-Omnivaleur-Ext"] = chrome.runtime.getManifest().version; } catch (_) {}
   return headers;
 }
 

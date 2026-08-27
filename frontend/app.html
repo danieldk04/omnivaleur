@@ -2324,6 +2324,52 @@ input[type="checkbox"].row-check { width: 15px; height: 15px; cursor: pointer; a
   </div>
 </div>
 
+<!-- Verouderde extensie. Dit blokkeert bewust, net als de "niet geinstalleerd"-melding.
+     WAAROM (27-08-2026, Jaap): hij draaide drie weken lang 1.0.218 terwijl de Web Store
+     op 1.0.249 stond. Elk probleem dat hij meldde — het "verkocht via Marktplaats?"-venster
+     dat bleef staan, een herplaatsing zonder foto's en zonder tekst — was in 1.0.244 al
+     verholpen. Het dashboard zette al die tijd een groen "Extension active (v1.0.218)"
+     neer, want de ondergrens stond nog op 1.0.171. Een kopie die het werk aantoonbaar
+     niet aankan mag nooit meer als "in orde" doorgaan. -->
+<div id="ext-outdated-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:501;align-items:center;justify-content:center;padding:20px">
+  <div style="background:#fff;border-radius:20px;max-width:520px;width:100%;padding:36px;box-shadow:0 20px 60px rgba(0,0,0,.2)">
+    <div style="width:64px;height:64px;border-radius:16px;background:linear-gradient(135deg,#f59e0b,#ef4444);display:flex;align-items:center;justify-content:center;font-size:28px;margin:0 auto 20px">⚠️</div>
+    <h2 style="font-size:22px;font-weight:800;margin-bottom:10px;letter-spacing:-.3px;text-align:center">Your extension is out of date</h2>
+    <p style="font-size:14px;color:#64748b;line-height:1.6;margin-bottom:20px;text-align:center">
+      This browser is running Omnivaleur <b id="ext-outdated-version">?</b>, which is too old to publish, relist or scan correctly.
+      Newer versions fix the "Did you sell it on Marktplaats?" pop-up that used to block every relist, and refuse to publish a listing without photos or description instead of leaving it half-finished.
+    </p>
+    <div style="text-align:left;display:flex;flex-direction:column;gap:14px;margin-bottom:24px">
+      <div style="display:flex;gap:12px;align-items:flex-start">
+        <div style="flex:0 0 26px;height:26px;border-radius:50%;background:#2563eb;color:#fff;font-size:13px;font-weight:700;display:flex;align-items:center;justify-content:center">1</div>
+        <div>
+          <div style="font-size:14px;font-weight:700;color:#0f172a">Open <span style="font-family:monospace">chrome://extensions</span></div>
+          <div style="font-size:13px;color:#64748b;line-height:1.5">Copy that address into a new tab — Chrome won't let this page open it for you.</div>
+        </div>
+      </div>
+      <div style="display:flex;gap:12px;align-items:flex-start">
+        <div style="flex:0 0 26px;height:26px;border-radius:50%;background:#2563eb;color:#fff;font-size:13px;font-weight:700;display:flex;align-items:center;justify-content:center">2</div>
+        <div>
+          <div style="font-size:14px;font-weight:700;color:#0f172a">Turn on "Developer mode", then click "Update"</div>
+          <div style="font-size:13px;color:#64748b;line-height:1.5">Chrome normally updates by itself, but only every few hours and only while it's running.</div>
+        </div>
+      </div>
+      <div style="display:flex;gap:12px;align-items:flex-start">
+        <div style="flex:0 0 26px;height:26px;border-radius:50%;background:#ef4444;color:#fff;font-size:13px;font-weight:700;display:flex;align-items:center;justify-content:center">3</div>
+        <div>
+          <div style="font-size:14px;font-weight:700;color:#0f172a">Check there is only ONE Omnivaleur listed</div>
+          <div style="font-size:13px;color:#64748b;line-height:1.5">A second, hand-loaded copy never updates itself, keeps taking on work, and does it the old way. Remove it — keep only the one that came from the Chrome Web Store.</div>
+        </div>
+      </div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:10px">
+      <button onclick="pingExtension()" style="padding:13px;background:linear-gradient(135deg,#2563eb,#34d399);color:#fff;border:none;border-radius:100px;font-size:15px;font-weight:700;cursor:pointer">I've updated — check again</button>
+      <button onclick="dismissExtOutdated()" style="padding:11px;background:transparent;border:1.5px solid #e2e8f0;border-radius:100px;font-size:14px;font-weight:600;color:#64748b;cursor:pointer">Continue anyway (things may fail)</button>
+    </div>
+    <p style="font-size:12px;color:#94a3b8;margin-top:14px;line-height:1.5;text-align:center">This closes by itself as soon as an up-to-date copy answers.</p>
+  </div>
+</div>
+
 <script>
 if (!sessionStorage.getItem('cl_auth')) { window.location.href = '/login.html'; }
 
@@ -2387,6 +2433,12 @@ function dismissExtOverlay() {
   localStorage.setItem('cl_ext_ok', '1');
   document.getElementById('ext-overlay').style.display = 'none';
 }
+function dismissExtOutdated() {
+  // Per versie onthouden: wie doorklikt op 1.0.218 krijgt de melding opnieuw
+  // zodra hij op 1.0.219 zit maar nog steeds achterloopt.
+  localStorage.setItem('cl_ext_oud_ok', extState.version || '1');
+  document.getElementById('ext-outdated-overlay').style.display = 'none';
+}
 function hideExtSigninCallout() {
   sessionStorage.setItem('cl_signin_hint_hidden', '1');
   document.getElementById('ext-signin-callout').style.display = 'none';
@@ -2405,6 +2457,17 @@ function renderExtSetup() {
   // Install step: blocking, because publishing is impossible without it.
   // Dismissal is per-browser ("Not now"), but a real detection still wins.
   modal.style.display = (missing && !localStorage.getItem('cl_ext_ok')) ? 'flex' : 'none';
+
+  // Bijwerkstap: net zo blokkerend. Een te oude kopie is erger dan geen kopie,
+  // want ze neemt werk aan en levert het half af. Het weggeklikte "toch doorgaan"
+  // geldt per versie, zodat de melding bij de volgende achterstand terugkomt.
+  const verouderd = extVersionIsOld();
+  const oudModal = document.getElementById('ext-outdated-overlay');
+  if (oudModal) {
+    const genegeerd = localStorage.getItem('cl_ext_oud_ok') === extState.version;
+    if (verouderd) document.getElementById('ext-outdated-version').textContent = 'v' + extState.version;
+    oudModal.style.display = (verouderd && !genegeerd) ? 'flex' : 'none';
+  }
 
   // Sign-in step: non-blocking arrow pointing at the toolbar.
   overlay.style.display = (signedOut && !sessionStorage.getItem('cl_signin_hint_hidden')) ? 'block' : 'none';
@@ -4608,9 +4671,17 @@ function renderExtStatus() {
   }
 }
 
-// De laagste extensieversie die met de huidige site meekan. Verhoog dit bij
-// elke uitgerolde extensie-fix waarvan de gebruiker moet merken dat hij hem mist.
-const EXT_MIN_VERSION = '1.0.171';
+// De laagste extensieversie die het werk aantoonbaar aankan.
+//
+// Dit is geen "fijn om bij te zijn"-grens maar een harde: onder 1.0.244 blijft
+// elke verwijdering en dus elke herplaatsing staan op het "Heb je dit verkocht
+// via Marktplaats?"-venster, en kan een scan een grote winkel niet uitlezen.
+// De backend hanteert dezelfde grens (MINIMALE_SCANVERSIE in backend/api/jobs.py) —
+// verhoog ze samen, anders blokkeert de een wat de ander goedkeurt.
+//
+// Stond tot 27-08-2026 op 1.0.171, waardoor iemand op 1.0.218 een groen
+// "Extension active" te zien kreeg terwijl niets van zijn werk kon slagen.
+const EXT_MIN_VERSION = '1.0.244';
 function extVersionIsOld() {
   if (extState.status !== 'ready' || !extState.version) return false;
   const a = String(extState.version).split('.').map(Number);

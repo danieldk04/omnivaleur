@@ -53,6 +53,18 @@ def _extensie_versie(tekst) -> tuple[int, int, int] | None:
     m = _EXT_VERSIE.search(str(tekst or ""))
     return (int(m.group(1)), int(m.group(2)), int(m.group(3))) if m else None
 
+
+def _kopstuk_versie(waarde) -> tuple[int, int, int] | None:
+    """De versie uit het X-Omnivaleur-Ext-kopstuk, of None als die er niet is.
+
+    Anders dan _extensie_versie hoeft er hier niets mis te zijn gegaan: elke
+    ronde langs de wachtrij vertelt de extensie wie ze is. Onleesbaar of
+    afwezig geeft None — dan houden we niets tegen, want een kopie ten onrechte
+    stilzetten is erger dan er een keer eentje doorlaten.
+    """
+    m = re.fullmatch(r"\s*(\d{1,3})\.(\d{1,3})\.(\d{1,4})\s*", str(waarde or ""))
+    return (int(m.group(1)), int(m.group(2)), int(m.group(3))) if m else None
+
 # The optional import_candidates snapshot columns, dropped together if the
 # migration hasn't run (see _store_scan_results).
 RICH_KEYS = ("photo_urls", "description", "brand", "size", "condition",
@@ -208,6 +220,27 @@ def get_pending_jobs(request: Request, platform: str = None, user_id: str = Depe
     # so the "computer online" indicator works without any extension change.
     if platform is not None:
         _record_extension_heartbeat(db, user_id, request.headers.get("user-agent"))
+        # Een te oude kopie krijgt niets meer te doen.
+        #
+        # WAAROM (27-08-2026, Jaap): drie weken lang draaide bij hem 1.0.218
+        # terwijl de Web Store al op 1.0.249 stond. Die kopie NAM het werk wel
+        # aan — ze bleef staan op het "verkocht via Marktplaats?"-venster en
+        # maakte daarna advertenties zonder foto's en zonder tekst. Werk dat
+        # niet wordt opgepakt is zichtbaar; werk dat half wordt afgemaakt niet.
+        #
+        # De versie komt uit een kopstuk dat de extensie zelf meestuurt. Kopieen
+        # van voor 1.0.250 sturen dat kopstuk niet; die worden hier dus niet
+        # tegengehouden (we weten hun versie eenvoudigweg niet) — daarvoor staat
+        # de blokkerende melding in het dashboard. Vanaf 1.0.250 sluit deze
+        # controle het gat definitief.
+        gemeld = _kopstuk_versie(request.headers.get("x-omnivaleur-ext"))
+        if gemeld is not None and gemeld < MINIMALE_SCANVERSIE:
+            logger.warning(
+                "Geen werk uitgedeeld: extensie %s bij gebruiker %s ligt onder %s",
+                ".".join(map(str, gemeld)), user_id,
+                ".".join(map(str, MINIMALE_SCANVERSIE)),
+            )
+            return []
     # First, rescue anything stuck 'claimed' from an interrupted run.
     _recover_stale_claims(db, user_id, platform, now_dt)
 
