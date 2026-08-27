@@ -500,21 +500,40 @@ def _zonder_citaat(t: str) -> str:
     return _CITAAT_SPLITSER.split(t or "", maxsplit=1)[0].strip()
 
 
+def _overeenkomst(a: str, b: str) -> float:
+    """Hoeveel procent van het voorstel bleef staan, 0-100.
+
+    Het oude cijfer was ja/nee: één toegevoegde smiley telde net zo zwaar als
+    een volledig herschreven mail, en dus stond er 0% terwijl de voorstellen
+    vrijwel woordelijk werden verstuurd. Dat leest als "waardeloos" terwijl het
+    tegendeel waar is. Dit meet hoevéél er bleef staan."""
+    a, b = re.sub(r"\s+", " ", a or "").strip().lower(), re.sub(r"\s+", " ", b or "").strip().lower()
+    if not a or not b:
+        return 0.0
+    return round(100 * difflib.SequenceMatcher(None, a, b).ratio(), 1)
+
+
 def _mail_leren() -> dict:
     """Wat Daniel zelf van de voorstellen maakt, is de enige echte leerbron: hij
     verandert alleen iets als het voorstel niet goed genoeg was. Zie
     scripts/leadgen_mail.py, _onthoud_concept/_leer_van_verzonden."""
     log = _leadgen_lezen("leerlog") or []
     afgerond = [x for x in log if x.get("verstuurd")]
-    aangepast = [x for x in afgerond if x.get("aangepast")]
+    for x in afgerond:
+        x["_gelijk"] = _overeenkomst(_zonder_citaat(x.get("voorstel")),
+                                     _zonder_citaat(x.get("verstuurd")))
+    # Onder de 90% is er echt iets herschreven; daarboven gaat het om een woord,
+    # een naam of een smiley — dat is bijschaven, geen afkeuring.
+    herschreven = [x for x in afgerond if x["_gelijk"] < 90]
     recent = sorted(afgerond, key=lambda x: x.get("op", ""), reverse=True)[:5]
     return {
         "totaal": len(afgerond),
-        "aangepast": len(aangepast),
-        "ongewijzigd_pct": round(100 * (len(afgerond) - len(aangepast)) / len(afgerond), 1)
-                           if afgerond else None,
+        "aangepast": len(herschreven),
+        "ongewijzigd_pct": (round(sum(x["_gelijk"] for x in afgerond) / len(afgerond), 1)
+                            if afgerond else None),
         "recent": [{"adres": x.get("adres"), "op": x.get("op"),
-                    "aangepast": bool(x.get("aangepast")),
+                    "gelijk": x["_gelijk"],
+                    "aangepast": x["_gelijk"] < 90,
                     "voorstel": _zonder_citaat(x.get("voorstel"))[:280],
                     "verstuurd": _zonder_citaat(x.get("verstuurd"))[:280]} for x in recent],
     }
