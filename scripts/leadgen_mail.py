@@ -834,7 +834,13 @@ def _bericht(lead: dict, n: int, van: str) -> EmailMessage:
     # Zonder deze kop ziet een mailprogramma geen nette afmeldweg en telt het
     # eerder als spam. Met een mailto hoef je er geen webpagina voor te bouwen.
     msg["List-Unsubscribe"] = f"<mailto:{van}?subject=stop>"
-    msg.set_content(_netjes(_tekst(lead, sjabloon)))
+    tekst = _netjes(_tekst(lead, sjabloon))
+    msg.set_content(tekst)
+    # Vanaf mail 2 meten we of er geopend wordt; mail 1 blijft schone tekst.
+    # Zie _open_pixel_html voor het waarom van die grens.
+    if n >= 1:
+        msg.add_alternative(_open_pixel_html(lead["email"], tekst, BEURTEN[n][0]),
+                            subtype="html")
     return msg
 
 
