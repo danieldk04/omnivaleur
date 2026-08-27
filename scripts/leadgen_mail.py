@@ -2006,6 +2006,137 @@ def _stilte_concept(draad: str, laatste_zet: bool) -> str | None:
     return tekst.strip()
 
 
+# ── Wekelijkse analyse: wat werkt er, en wat moet er anders ───────────────
+# Cijfers vertellen wélke mail slecht loopt, niet waaróm. De reacties vertellen
+# het waarom, maar niemand leest er tweehonderd. Dit zet die twee naast elkaar
+# en laat er één keer per week iets bruikbaars uit komen.
+#
+# Draait NIET bij elke beurt: dat zou 25 keer per dag hetzelfde advies
+# herschrijven op nauwelijks veranderde cijfers. Wel eerder dan de week om is
+# als er een duidelijk patroon ontstaat — zie _advies_nodig.
+_ADVIES_REGELS = """Je analyseert de koude-mailcampagne van Omnivaleur, een
+crosslist-tool voor tweedehandsverkopers. Je schrijft voor Daniel: geen
+programmeur, geen marketeer. Hij wil weten wat hij moet veranderen, niet hoe
+het werkt.
+
+REGELS
+- Nederlands, gewone taal, geen marketingjargon, geen Engelse termen.
+- Wees concreet: "mail 2 wordt wel geopend maar niemand reageert — de vraag
+  onderaan is te vrijblijvend" is bruikbaar, "optimaliseer je call-to-action"
+  niet.
+- Baseer ALLES op de cijfers en citaten die je krijgt. Verzin nooit een cijfer.
+- Zeg het eerlijk als er te weinig gegevens zijn voor een conclusie. Bij minder
+  dan 10 reacties op een laag is elk patroon toeval; benoem dat dan zo.
+- Noem bij een patroon hoe vaak je het zag.
+
+GEEF TERUG (exact deze drie kopjes, verder platte tekst, geen opsomtekens met
+sterretjes):
+PATRONEN
+Wat zeggen mensen het vaakst? Per patroon één regel, met het aantal erbij.
+
+WAT WERKT
+Welke van de drie mails doet het goed en waaraan zie je dat.
+
+AANBEVELINGEN
+Maximaal drie dingen die Daniel concreet kan wijzigen, belangrijkste eerst.
+Elk met de reden erbij in één zin."""
+
+
+def _mail_cijfers(state: dict) -> dict:
+    """Per laag: verstuurd, reacties en hoe die reacties uitvielen.
+
+    Dit is de kern van "welke tekst werkt": een reactie hoort bij de mail die er
+    als laatste tegenover stond, niet bij de campagne als geheel."""
+    lagen = {b[0]: {"verstuurd": 0, "reacties": 0, "warm": 0,
+                    "afwijzing": 0, "concurrent": 0, "afmelding": 0}
+             for b in BEURTEN}
+    for st in state.values():
+        for m in (st.get("verstuurd") or []):
+            laag = lagen.get(str(m.get("beurt") or ""))
+            if laag:
+                laag["verstuurd"] += 1
+        if st.get("beantwoord"):
+            try:
+                binnen = datetime.fromisoformat(st["beantwoord"]).timestamp()
+            except Exception:  # noqa: BLE001
+                binnen = None
+            laag = lagen.get(_welke_beurt(st, binnen))
+            if laag:
+                laag["reacties"] += 1
+                soort = st.get("soort")
+                if soort in laag:
+                    laag[soort] += 1
+    for naam, laag in lagen.items():
+        laag["reactie_pct"] = (round(100 * laag["reacties"] / laag["verstuurd"], 1)
+                               if laag["verstuurd"] else 0)
+    return lagen
+
+
+def _advies_nodig(vorig: dict, reacties: list) -> bool:
+    """Een week om, of tien nieuwe reacties erbij — dat laatste is het "heel
+    duidelijk patroon"-geval: als er in korte tijd veel binnenkomt, is wachten
+    tot zondag precies het moment missen waarop je nog kunt bijsturen."""
+    if not vorig:
+        return True
+    try:
+        dagen = (datetime.now() - datetime.fromisoformat(vorig["op"])).days
+    except Exception:  # noqa: BLE001
+        return True
+    return dagen >= 7 or (len(reacties) - int(vorig.get("op_reacties", 0))) >= 10
+
+
+def _advies_bijwerken(state: dict, forceer: bool = False) -> bool:
+    reacties = _db_lees("mail_reacties", None) or []
+    vorig = _db_lees("mail_advies", None) or {}
+    if not forceer and not _advies_nodig(vorig, reacties):
+        return False
+    sleutel = os.environ.get("ANTHROPIC_API_KEY")
+    if not sleutel:
+        print("  (advies overgeslagen: geen ANTHROPIC_API_KEY)")
+        return False
+    try:
+        import anthropic
+    except ImportError:
+        print("  (advies overgeslagen: anthropic-pakket ontbreekt)")
+        return False
+
+    lagen = _mail_cijfers(state)
+    cijfers = "\n".join(
+        f"{naam}: {l['verstuurd']} verstuurd, {l['reacties']} reacties "
+        f"({l['reactie_pct']}%) — {l['warm']} warm, {l['afwijzing']} nee, "
+        f"{l['concurrent']} gebruikt al iets, {l['afmelding']} afgemeld"
+        for naam, l in lagen.items())
+    citaten = "\n\n".join(
+        f"[{r.get('beurt', '?')} / {r.get('soort', '?')}] {(r.get('tekst') or '')[:400]}"
+        for r in reacties[-80:])
+    prompt = (f"CIJFERS PER MAIL\n{cijfers}\n\n"
+              f"DE MAILS ZELF\n"
+              f"mail1: {_netjes(BEURTEN[0][2])[:700]}\n\n"
+              f"mail2: {_netjes(BEURTEN[1][2])[:700]}\n\n"
+              f"mail3: {_netjes(BEURTEN[2][2])[:700]}\n\n"
+              f"DE LAATSTE REACTIES ({len(reacties[-80:])} stuks)\n{citaten}\n\n"
+              f"Analyseer.")
+    try:
+        client = anthropic.Anthropic(api_key=sleutel)
+        antwoord = client.messages.create(
+            model="claude-sonnet-5", max_tokens=1600,
+            system=_ADVIES_REGELS,
+            messages=[{"role": "user", "content": prompt}])
+        tekst = "".join(b.text for b in antwoord.content
+                        if getattr(b, "type", "") == "text").strip()
+    except Exception as e:  # noqa: BLE001 — advies is nooit belangrijker dan mailen
+        print(f"  (advies mislukt: {e})")
+        return False
+    if len(tekst.split()) < 20:
+        return False
+    _db_schrijf("mail_advies", {"op": datetime.now().isoformat(timespec="seconds"),
+                                "op_reacties": len(reacties),
+                                "tekst": re.sub(r"\*\*(.+?)\*\*", r"\1", tekst),
+                                "lagen": lagen})
+    print(f"{datetime.now():%d-%m %H:%M} — mailanalyse bijgewerkt")
+    return True
+
+
 def _concept_tekst(lead: dict, body: str, soort: str = "warm") -> str:
     """Het voorstel-antwoord. Kort, in Daniels toon: geen verkooppraat, concreet,
     en altijd eindigen met een lage drempel.
