@@ -2030,8 +2030,9 @@ def _stilte_concept(draad: str, laatste_zet: bool) -> str | None:
     )
     try:
         client = anthropic.Anthropic(api_key=sleutel)
-        antwoord = client.messages.create(
-            model="claude-sonnet-5",
+        antwoord = _claude(
+            client,
+            model=MODEL,
             # Zie _slim_concept: het nadenken van het model telt mee in
             # max_tokens, dus 800 kon opraken vóór er tekst stond.
             max_tokens=16000,
