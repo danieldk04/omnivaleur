@@ -3208,7 +3208,8 @@ def main() -> None:
     for naam, functie, hulp in (
             ("plan", plan, "wie is vandaag aan de beurt"),
             ("send", send, "de mails van vandaag versturen"),
-            ("status", status, "hoe staat het ervoor")):
+            ("status", status, "hoe staat het ervoor"),
+            ("reacties", reacties, "elke lead die ooit reageerde, één regel per lead")):
         p = sub.add_parser(naam, help=hulp)
         if naam in ("plan", "send"):
             p.add_argument("--per-dag", type=int, default=0,
