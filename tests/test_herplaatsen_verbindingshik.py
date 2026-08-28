@@ -63,8 +63,33 @@ def test_naast_de_lus_probeert_opnieuw():
             raise ssl.SSLEOFError("EOF occurred in violation of protocol (_ssl.c:2417)")
         return "gelukt"
 
-    assert asyncio.run(naast_de_lus(hik)) == "gelukt"
+    assert asyncio.run(naast_de_lus(hik, herkans=True)) == "gelukt"
     assert pogingen["n"] == 3
+
+
+def test_herkansen_staat_standaard_uit():
+    """Blind herhalen van een insert maakt een tweede opdracht — en dus een
+    tweede advertentie — als het antwoord onderweg wegviel."""
+    import ssl
+    from backend.database import naast_de_lus
+
+    pogingen = {"n": 0}
+
+    def hik():
+        pogingen["n"] += 1
+        raise ssl.SSLEOFError("EOF occurred in violation of protocol (_ssl.c:2417)")
+
+    with pytest.raises(ssl.SSLEOFError):
+        asyncio.run(naast_de_lus(hik))
+    assert pogingen["n"] == 1
+
+
+def test_de_opdrachten_krijgen_een_zelfbedacht_id():
+    """Alleen dan is een herhaalde poging herkenbaar als 'stond er al'."""
+    tak = _relist_tak()
+    assert 'verwijder_id = str(uuid.uuid4())' in tak
+    assert tak.count("dubbel_is_ok=True") == 2
+    assert '"id": verwijder_id' in tak
 
 
 def test_naast_de_lus_herhaalt_een_echte_fout_niet():
@@ -77,7 +102,7 @@ def test_naast_de_lus_herhaalt_een_echte_fout_niet():
         raise ValueError("kolom bestaat niet")
 
     with pytest.raises(ValueError):
-        asyncio.run(naast_de_lus(stuk))
+        asyncio.run(naast_de_lus(stuk, herkans=True))
     assert pogingen["n"] == 1, "een echte fout drie keer proberen is alleen maar traag"
 
 

@@ -38,9 +38,11 @@ Per-platform, what's actually available differs a lot:
 from __future__ import annotations
 import logging
 import random
+import uuid
 from datetime import datetime, timezone, timedelta
 from backend.database import get_db, fetch_all, naast_de_lus, IN_BROK
 from backend.platforms import get_platform
+from backend.services.crosslist import _exec
 
 logger = logging.getLogger(__name__)
 
@@ -356,7 +358,7 @@ async def refresh_listing(item_id: str, platform: str, user_id: str, strategy: s
 
     db = get_db()
 
-    item_resp = (await naast_de_lus(lambda: db.table("items").select("*").eq("id", item_id).eq("user_id", user_id).execute()))
+    item_resp = (await naast_de_lus(lambda: db.table("items").select("*").eq("id", item_id).eq("user_id", user_id).execute(), herkans=True))
     if not item_resp.data:
         raise RefreshError("Item not found")
     item = item_resp.data[0]
@@ -367,7 +369,7 @@ async def refresh_listing(item_id: str, platform: str, user_id: str, strategy: s
         .eq("item_id", item_id)
         .eq("platform", platform)
         .eq("status", "active")
-        .execute()))
+        .execute(), herkans=True))
     )
     if not listing_resp.data:
         raise RefreshError("No active listing on this platform")
@@ -471,7 +473,7 @@ async def refresh_listing(item_id: str, platform: str, user_id: str, strategy: s
         if new_price <= 0:
             raise RefreshError("Price must be greater than 0")
         relist_price = round(new_price, 2)
-        (await naast_de_lus(lambda: db.table("items").update({"price": relist_price}).eq("id", item_id).execute()))
+        (await naast_de_lus(lambda: db.table("items").update({"price": relist_price}).eq("id", item_id).execute(), herkans=True))
     else:
         # Slight variation so the new listing isn't byte-identical to the old one —
         # legitimate reasons (price update, reordered photos), not spoofing.
@@ -539,18 +541,25 @@ async def refresh_listing(item_id: str, platform: str, user_id: str, strategy: s
     # herplaatsing. Draai je dit om, dan vindt hij hem niet en vuurt de
     # herplaatsing terwijl de oude advertentie nog online staat (dubbele
     # advertentie).
-    verwijder = (await naast_de_lus(lambda: db.table("jobs").insert({
+    # Het id zelf bepalen. Valt de verbinding weg terwijl het ANTWOORD onderweg
+    # is, dan staat de opdracht er misschien al; een herhaalde poging loopt dan
+    # op een dubbele sleutel en dat betekent "stond er al" — geen tweede
+    # opdracht, en dus geen tweede advertentie. Zonder dit zou herkansen op een
+    # insert het probleem alleen maar verplaatsen.
+    verwijder_id = str(uuid.uuid4())
+    await _exec(db.table("jobs").insert({
+        "id": verwijder_id,
         "user_id": user_id,
         "item_id": item_id,
         "platform": platform,
         "action": "delete",
         "status": "pending",
         "payload": delete_payload,
-    }).execute()))
-    verwijder_id = (verwijder.data or [{}])[0].get("id")
+    }), dubbel_is_ok=True)
 
     try:
-        (await naast_de_lus(lambda: db.table("jobs").insert({
+        await _exec(db.table("jobs").insert({
+            "id": str(uuid.uuid4()),
             "user_id": user_id,
             "item_id": item_id,
             "platform": platform,
@@ -558,7 +567,7 @@ async def refresh_listing(item_id: str, platform: str, user_id: str, strategy: s
             "status": "pending",
             "payload": create_payload,
             "scheduled_for": scheduled_for,
-        }).execute()))
+        }), dubbel_is_ok=True)
     except Exception as e:  # noqa: BLE001
         # De herplaatsing kon niet worden vastgelegd. Dan mag de verwijdering
         # ook niet blijven staan — anders haalt de extensie straks een
@@ -566,7 +575,7 @@ async def refresh_listing(item_id: str, platform: str, user_id: str, strategy: s
         # verversing dan een verdwenen advertentie.
         if verwijder_id:
             try:
-                (await naast_de_lus(lambda: db.table("jobs").delete().eq("id", verwijder_id).execute()))
+                (await naast_de_lus(lambda: db.table("jobs").delete().eq("id", verwijder_id).execute(), herkans=True))
             except Exception:  # noqa: BLE001
                 # Lukt zelfs dat niet, dan zetten we hem op geannuleerd; de
                 # extensie pakt alleen "pending" op.
@@ -574,7 +583,7 @@ async def refresh_listing(item_id: str, platform: str, user_id: str, strategy: s
                     (await naast_de_lus(lambda: db.table("jobs").update({
                         "status": "cancelled",
                         "result": {"error": "Relist aborted before the recreate was queued."},
-                    }).eq("id", verwijder_id).execute()))
+                    }).eq("id", verwijder_id).execute(), herkans=True))
                 except Exception:  # noqa: BLE001
                     logger.error(
                         "KRITIEK: verwijderopdracht %s kon niet worden teruggedraaid voor item %s op %s",
@@ -666,7 +675,7 @@ async def renew_etsy_listing(item_id: str, user_id: str) -> dict:
     clicking Renew on etsy.com.
     """
     db = get_db()
-    item_resp = (await naast_de_lus(lambda: db.table("items").select("*").eq("id", item_id).eq("user_id", user_id).execute()))
+    item_resp = (await naast_de_lus(lambda: db.table("items").select("*").eq("id", item_id).eq("user_id", user_id).execute(), herkans=True))
     if not item_resp.data:
         raise RefreshError("Item not found")
 
@@ -716,7 +725,7 @@ async def relist_ended_ebay_listing(item_id: str, user_id: str) -> dict:
     already ended (sold, withdrawn, or expired).
     """
     db = get_db()
-    item_resp = (await naast_de_lus(lambda: db.table("items").select("*").eq("id", item_id).eq("user_id", user_id).execute()))
+    item_resp = (await naast_de_lus(lambda: db.table("items").select("*").eq("id", item_id).eq("user_id", user_id).execute(), herkans=True))
     if not item_resp.data:
         raise RefreshError("Item not found")
 

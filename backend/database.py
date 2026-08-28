@@ -294,7 +294,7 @@ def update_in(build_query, kolom: str, waarden, patch: dict, brok: int = IN_BROK
     return len(waarden)
 
 
-async def naast_de_lus(aanroep):
+async def naast_de_lus(aanroep, herkans: bool = False):
     """Draai één synchrone database-aanroep in een aparte werkdraad.
 
     De Supabase-client is synchroon. In een `async def` liep elke `.execute()`
@@ -305,15 +305,23 @@ async def naast_de_lus(aanroep):
 
     Gebruik: `rij = (await naast_de_lus(lambda: db.table("x").select("*").execute())).data`
 
-    HERKANSING — waarom die hier ook hoort.
+    HERKANSING — alleen als de aanroeper hem aanzet, en dat is met opzet.
     Tot 28-08-2026 herhaalde alleen execute_with_retry een weggevallen
-    verbinding. Alles wat via deze weg loopt — en dat is zo ongeveer het hele
-    herplaatsen, plaatsen en verwijderen — deed dat niet. Eén weggevallen
-    verbinding halverwege een verversing was daardoor meteen een harde fout,
-    met een advertentie die al wél weg was. Nu wordt dezelfde hik hier net zo
-    stil opgevangen als daar.
+    verbinding; alles wat via deze weg loopt deed dat niet, en één hik
+    halverwege een verversing was meteen een harde fout.
+
+    Maar blind herhalen mag hier NIET standaard. Valt de verbinding weg terwijl
+    het ANTWOORD onderweg is, dan is de rij misschien allang aangemaakt en maakt
+    een tweede poging er nog een. Bij een opdracht in de wachtrij betekent dat
+    een tweede advertentie. Daarom staat `herkans` standaard uit: zet hem alleen
+    aan voor aanroepen die je twee keer mag doen (lezen, of een update die
+    hetzelfde resultaat geeft). Voor een insert hoort execute_with_retry met een
+    zelfbedacht id en `dubbel_is_ok=True` — zie crosslist._exec.
     """
     import asyncio
+
+    if not herkans:
+        return await asyncio.to_thread(aanroep)
 
     laatste: BaseException | None = None
     for poging in range(3):
