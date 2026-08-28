@@ -1548,6 +1548,14 @@ window.CL = (() => {
       + (rood.length ? `| Fields marked invalid: ${rood.join(", ")} ` : "| No field is marked invalid. ")
       + `| Real click: ${_laatsteEchteKlik} | Still on ${waar}, ${knopStand} `
       + `| Attribute fields: ${keuzeveldenKort()} | Form's own description length: ${_echteBeschrijvingLengte} `
+      // HOEVEEL FOTO'S HOUDT HET FORMULIER VAST?
+      //
+      // Marktplaats weigert te plaatsen zonder foto, en doet dat zonder rood
+      // veld en zonder klacht — precies het beeld van "de knop doet niets".
+      // Zonder dit getal is dat niet te onderscheiden van elke andere stille
+      // weigering, en daar liep het onderzoek elke keer op vast.
+      + `| Photos the form holds: ${((qs('input[name="images.ids"]') || {}).value || "").split(",").filter(Boolean).length}`
+      + ` (${countPhotoThumbs()} thumbs) `
       + `| Free option: ${_laatsteGratisKlik} | Price field: ${(qs('input[name="price.value"]') || {}).value || "LEEG"} | Page says: ${zichtbaar}`
     );
   }
