@@ -828,3 +828,36 @@ wij hebben letterlijk het begin is van wat er op de pagina staat (_is_afgekapt).
 Een tekst die de verkoper zelf heeft aangepast blijft staan.
 
 Extensie 1.0.260.
+
+### De weg die wél voor iedere klant werkt (28-08-2026, definitief)
+
+De oplossing zat in een detail van de client credentials grant. Die eist dat de
+app en de winkel in **dezelfde Shopify-organisatie** zitten. Dat leek een
+blokkade voor klanten — tot je omdraait wie de app maakt: laat de **winkelier
+zelf** de app in zíjn eigen organisatie aanmaken voor zíjn eigen winkel. Dan is
+aan die voorwaarde per definitie voldaan, en werkt het voor iedereen. Geen
+beoordeling, geen App Store, geen afhankelijkheid van Shopify's goedkeuring.
+
+De winkelier maakt de app via Settings → Apps → Develop apps → "Build apps in Dev
+Dashboard", zet de scopes, klikt Release, installeert hem op zijn winkel, en
+geeft ons **client ID + client secret**. Wij wisselen die in voor een sleutel:
+
+    POST https://{shop}/admin/oauth/access_token
+    grant_type=client_credentials&client_id=…&client_secret=…
+    → {"access_token": …, "scope": …, "expires_in": 86399}
+
+Gebouwd:
+- `vraag_token()` en `controleer_app_gegevens()` in `backend/platforms/shopify.py`.
+- `POST /api/platforms/shopify/connect-app` — haalt éérst echt een sleutel op en
+  slaat pas daarna iets op. Alleen zo weten we dat het werkt; precies dat
+  ontbrak toen het venster stappen beschreef die Shopify had geschrapt.
+- `_shop_creds()` is nu async en ververst de sleutel automatisch, met tien
+  minuten speling. **Die sleutel leeft 24 uur** — zonder verversing zou álles
+  elke dag stilvallen op een 401 die niemand ziet.
+- Koppelingen zonder client_id/secret (OAuth, oude custom apps) blijven werken.
+
+Let op bij wijzigen: de verkoopronde mag `extra_data` nooit terugschrijven vanuit
+een kopie van vóór de verversing — dan wist hij de nieuwe vervaldatum weer. Hij
+leest de rij daarom opnieuw vlak voor het wegschrijven.
+
+Vastgelegd in `tests/test_shopify_eigen_sleutel.py` (37 tests).
