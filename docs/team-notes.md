@@ -489,3 +489,65 @@ SPF op de wortel én op `send`, DMARC, de twee DKIM-sleutels, en pas daarna de
 doorverwijzing naar omnivaleur.com inclusief een pad zoals `/pricing`. Blijft het
 na een dag hangen, dan is het een vraag aan Namecheap of ze de EPP-update echt
 hebben doorgestuurd — de registratie zegt van wel.
+
+### 2026-08-28 — Jaap: 60 advertenties weg zonder vervanger, en het plaatsen ligt nog stil
+
+Jaap (info@zilverwebsite.nl, gebruiker `26cf5471`, ~1.222 advertenties) meldde dat
+alles keurig verwijderd werd maar dat er bij het plaatsen alleen een kop en een
+prijs verschenen — geen foto's, geen tekst, geen kenmerken. Er stonden ~50 halve
+Marktplaats-tabbladen open.
+
+**Wat er in zijn eigen gegevens stond.** Op 28-08 't ochtends: 60 geslaagde
+verwijderingen, 61 mislukte plaatsingen, waarvan **58 met "This item has no
+description"**. Van zijn 1.222 items hadden er **532 geen omschrijving** — die zijn
+geïmporteerd uit de zoeklijst van Marktplaats, en die geeft alleen titel, prijs en
+één omslagfoto. Het plaatsformulier eist een tekst, dus de extensie brak af nog vóór
+de foto's; daarom bleven ook de kenmerken leeg. Marktplaats zet een verwijderde
+advertentie meteen op **410**, dus die 60 teksten waren daarmee ook weg (Wayback had
+niets). Vanaf 22-08 t/m 27-08 mislukten zijn herplaatsingen al, maar toen op de
+verwijderstap — dan blijft de advertentie staan en gaat er niets verloren. Pas toen
+verwijderen op 28-08 wél werkte, werd het schadelijk.
+
+**Wat er is veranderd (commits f7090b6, a041057, en de 1.0.258-bump).**
+1. `refresh_listing` weigert een relist als het item geen omschrijving of foto's
+   heeft (`ontbreekt_voor_herplaatsen`) — er wordt dan niets verwijderd.
+2. Vlak vóór het herplaatsen wordt ontbrekende tekst/foto's/merk/maat alsnog van de
+   eigen, nog live advertentiepagina gehaald (`mp_enrich.vul_item_aan_uit_advertentie`).
+3. De extensie maakt het formulier af vóór hij over de tekst klaagt, en wacht op de
+   tekst-editor in plaats van hem meteen "niet gevonden" te noemen.
+4. De dagteller van de handmatige verversknop telde élke verwijderopdracht mee, ook
+   die van de nachtronde — daardoor stond die knop bij hem altijd op "3 per dag
+   bereikt". Telt nu alleen nog geslaagde, handmatige verversingen
+   (`payload->>_handmatige_verversing`).
+
+**Data-reparatie (eenmalig, al gedraaid).** 474 van de 532 lege omschrijvingen
+gevuld: 338 vanaf de nog live MP-advertentiepagina's, 50 uit zijn eigen webshop
+(`scripts/backfill_beschrijving_uit_webshop.py`). Zijn webshop **zilverwebsite.nl is
+een Shopify-winkel** met dezelfde titels; `/products.json` staat achter Cloudflare
+en weigert httpx (429, `cf-mitigated: challenge`) maar komt er via **curl met
+browser-headers** wél doorheen. Er blijven **58 items zonder tekst** over; fuzzy
+matchen op titel gaf te veel bijna-treffers ("ring met bloedkoraal" → "ring met
+granaat", "knipslot 1875" → "1881") en is bij een antiekhandelaar erger dan niets.
+
+**Nog niet opgelost — hier verder oppakken.** Van de 34 advertenties die terug
+konden (`scripts/herstel_verwijderde_advertenties.py`) is er **geen enkele
+geplaatst**: 7× "Not published — complete the fields marked in red" met een compleet
+formulier (tekst 205–1936 tekens, prijs gevuld, gratis-keuze aangeklikt, géén rood
+veld), 1× een time-out. De overige 26 opdrachten zijn **gepauzeerd tot 28-08 15:49
+UTC** via `scheduled_for`, zodat hij er niet nog 26 vastgelopen tabbladen bij krijgt.
+
+Wat we wél weten: op 21-08 plaatste hij nog 60 advertenties foutloos, en toen
+draaide hij **1.0.218**; sindsdien nul geslaagde plaatsingen. Bij een andere klant
+(`3bfbed2c`) lukt plaatsen op Marktplaats gewoon (22 geplaatst sinds 24-08). Het zit
+dus in zijn situatie, niet in de code als geheel. Sterkste verdachte: zijn ~50
+openstaande Marktplaats-tabbladen — één "Site verlaten?"-venster daarin zet álle
+tabbladen van dezelfde site stil, óók het tabblad dat op dat moment publiceert. Dat
+is precies de fix uit 1.0.256, en hij draait 1.0.251. **1.0.258 meldt nu ook hoeveel
+foto's het formulier vasthoudt bij een mislukte plaatsing** — dat was het enige gat
+in de bewijsvoering, want Marktplaats weigert zonder foto net zo geruisloos.
+
+Openstaand handwerk: `dist/omnivaleur-extension-1.0.258.zip` uploaden in de Chrome
+Web Store, en Jaap eerst alle Marktplaats-tabbladen laten sluiten. Zijn categorie
+klopt op één na: "Miniatuur varken op ladder, W. van Strant, Amsterdam, 1732" staat
+in "Beelden en houtsnijwerken" in plaats van "Goud en zilver" — dat is de
+"spaarvarken" die hij meldde. Hooguit 15 van zijn 1.222 staan zo scheef.
