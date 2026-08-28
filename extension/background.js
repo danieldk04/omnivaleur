@@ -1994,6 +1994,10 @@ async function expandMp2dhOverview(tabId) {
 // Geeft true terug als er aantoonbaar iets is verwijderd. Bij twijfel false:
 // "waarschijnlijk weg" melden als succes is de gevaarlijkste uitkomst, want dan
 // wordt er een tweede advertentie naast de eerste geplaatst.
+// Wat er op de advertentiepagina stond toen het verwijderen niet lukte. Reist
+// mee in de foutmelding, want zonder dat is elke mislukking dezelfde ene zin.
+let _laatsteVerwijderpagina = "niet gekeken";
+
 async function verwijderViaAdvertentiepagina(tabId, adUrl, platform) {
   const sleep = ms => new Promise(r => setTimeout(r, ms));
   try {
@@ -2014,7 +2018,16 @@ async function verwijderViaAdvertentiepagina(tabId, adUrl, platform) {
       return { ok: true };
     });
     if (!geklikt || !geklikt.ok) {
-      console.log("[Omnivaleur] geen verwijderknop op de advertentiepagina:", geklikt && geklikt.gezien);
+      // WELKE KNOPPEN STONDEN ER DAN WEL?
+      //
+      // Dit stond alleen in de console van de verkoper, en daar kijkt niemand.
+      // Gevolg: 360 mislukte verwijderopdrachten in een week met exact dezelfde
+      // zin "de verwijderknop kon niet worden gebruikt", en geen enkele manier
+      // om te zien of de knop anders heet, achter een menu zit, of er helemaal
+      // niet is. Nu reist die lijst mee naar het dashboard.
+      const gezien = (geklikt && geklikt.gezien || []).join(" / ") || "geen enkele knop";
+      console.log("[Omnivaleur] geen verwijderknop op de advertentiepagina:", gezien);
+      _laatsteVerwijderpagina = gezien;
       return false;
     }
 
@@ -2444,7 +2457,7 @@ async function bgDeleteMp2dh(job, serverUrl) {
         throw new Error(
           `"${title}" cannot be found in your ${platform} listings overview, and the delete button on its ` +
           `own page (${adUrl}) could not be used either. Nothing was removed — delete it by hand, or check ` +
-          `that you are signed in to the right account.`
+          `that you are signed in to the right account. | Buttons on that page: ${_laatsteVerwijderpagina}`
         );
       }
       if (live !== false) {
