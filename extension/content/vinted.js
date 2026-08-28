@@ -523,6 +523,8 @@
     "wonen tapijten en kleden":                            ["rug", "home textiles"],
     "wonen kussens":                                       ["cushion", "home textiles"],
     "wonen plaids en woondekens":                          ["blanket", "home textiles"],
+    "wonen vachten":                                       ["sheepskin", "home textiles"],
+    "wonen beddengoed":                                    ["bedspread", "home textiles"],
     "wonen vazen":                                         ["vase", "home decor"],
     "wonen spiegels":                                      ["mirror", "home decor"],
     "wonen wanddecoraties":                                ["wall decor", "home decor"],

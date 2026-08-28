@@ -1,5 +1,6 @@
 from __future__ import annotations
 import logging
+import ssl
 import time
 from typing import Optional
 import httpx
@@ -109,6 +110,24 @@ _HERSTELBAAR = (
     httpx.ReadError,
     httpx.WriteError,
     httpx.PoolTimeout,
+    httpx.ReadTimeout,
+    httpx.WriteTimeout,
+    # Valt de verbinding weg tijdens de beveiligde handdruk, dan komt er geen
+    # httpx-fout maar een kale ssl.SSLEOFError: "EOF occurred in violation of
+    # protocol". Die stond hier niet bij, dus werd zo'n hik NIET herhaald en
+    # kwam hij als harde storing bij de verkoper op het scherm. Jaap Kroon zag
+    # hem op 28-08-2026 letterlijk zo staan bij het verversen van een
+    # advertentie.
+    ssl.SSLError,
+)
+
+# Sommige lagen geven de oorzaak niet door als uitzondering maar alleen als
+# tekst. Dan is de tekst het enige wat we hebben.
+_HERSTELBARE_TEKST = (
+    "eof occurred in violation of protocol",
+    "server disconnected",
+    "connection reset by peer",
+    "connection aborted",
 )
 
 
@@ -116,6 +135,9 @@ def _is_herstelbaar(exc: BaseException) -> bool:
     huidige: BaseException | None = exc
     while huidige is not None:
         if isinstance(huidige, _HERSTELBAAR):
+            return True
+        tekst = str(huidige).lower()
+        if any(fragment in tekst for fragment in _HERSTELBARE_TEKST):
             return True
         huidige = huidige.__cause__ or huidige.__context__
     return False
@@ -282,6 +304,26 @@ async def naast_de_lus(aanroep):
     kwamen de 500-fouten vandaan die een import lieten vastlopen.
 
     Gebruik: `rij = (await naast_de_lus(lambda: db.table("x").select("*").execute())).data`
+
+    HERKANSING — waarom die hier ook hoort.
+    Tot 28-08-2026 herhaalde alleen execute_with_retry een weggevallen
+    verbinding. Alles wat via deze weg loopt — en dat is zo ongeveer het hele
+    herplaatsen, plaatsen en verwijderen — deed dat niet. Eén weggevallen
+    verbinding halverwege een verversing was daardoor meteen een harde fout,
+    met een advertentie die al wél weg was. Nu wordt dezelfde hik hier net zo
+    stil opgevangen als daar.
     """
     import asyncio
-    return await asyncio.to_thread(aanroep)
+
+    laatste: BaseException | None = None
+    for poging in range(3):
+        try:
+            return await asyncio.to_thread(aanroep)
+        except Exception as e:  # noqa: BLE001 - alleen verbindingsfouten herhalen
+            if not _is_herstelbaar(e) or poging == 2:
+                raise
+            laatste = e
+            logger.warning(
+                "Verbinding viel weg (%s) — poging %d opnieuw", type(e).__name__, poging + 2)
+            await asyncio.sleep(0.25 * (poging + 1))
+    raise laatste  # type: ignore[misc]

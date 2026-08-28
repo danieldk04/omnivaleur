@@ -1571,6 +1571,32 @@ def fail_job(job_id: str, body: dict, user_id: str = Depends(get_current_user)):
                         MAX_HERKANSING_OUDE_EXTENSIE)
             return {"ok": True, "requeued": True, "reason": "outdated_extension"}
 
+    # DE MELDING VAN EEN OUDE EXTENSIE HIER RECHTZETTEN.
+    #
+    # Tot 1.0.259 meldde de extensie bij een lege Marktplaats-scan altijd "je
+    # bent niet ingelogd". Voor een zakelijke verkoper is dat aantoonbaar
+    # onjuist: zijn persoonlijke overzicht IS leeg, zijn advertenties staan in
+    # Admarkt, en het enige wat helpt is de Admarkt-schakelaar aanzetten.
+    # Egbert Brouwer (info@papas-plectrums.nl) kreeg deze zin twintig keer in
+    # zeven dagen en controleerde elke keer zijn login. Een nieuwe extensie
+    # staat pas na goedkeuring van de Chrome Web Store bij hem op de computer —
+    # dagen later — dus zetten we de tekst hier recht, voor iedereen die nog een
+    # oudere kopie draait. Zodra 1.0.259 er staat, komt deze zin niet meer voor
+    # en doet deze regel niets meer.
+    if (job and job.get("action") == "scan"
+            and job.get("platform") == "marktplaats"
+            and "appear to be signed in" in str(body.get("error") or "")):
+        body = dict(body)
+        body["error_oorspronkelijk"] = body.get("error")
+        body["error"] = (
+            "Je persoonlijke advertentieoverzicht op Marktplaats is leeg. Bij een "
+            "zakelijk account hoort dat zo: die advertenties staan in Admarkt, met "
+            "een eigen inlog. Klik op het Omnivaleur-icoon in je browserbalk en zet "
+            "\"Business account (Admarkt)\" aan, en start de scan opnieuw. Heb je een "
+            "gewoon particulier account, controleer dan of je op Marktplaats zelf "
+            "bent ingelogd."
+        )
+
     db.table("jobs").update({
         "status": "error",
         "result": body,

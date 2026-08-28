@@ -618,3 +618,70 @@ Van fout 2 is niet bewezen dat hij Egbert getroffen heeft (niemand vroeg in dat
 uur een herstelmail aan), maar het is een echt gat en het staat nu dicht.
 Openstaand: Egbert één keer laten inloggen; lukt dat nog steeds niet, dan
 "Wachtwoord vergeten" — dat pad werkt en is nu ook race-vrij.
+
+## 28-08-2026 — Herplaatsen kon een advertentie kosten bij een verbindingshik
+
+Jaap (zilverwebsite.nl) draaide eindelijk 1.0.258, verving één advertentie en
+kreeg op zijn scherm: `Refresh failed unexpectedly: EOF occurred in violation of
+protocol (_ssl.c:2417)`. Dat is een weggevallen verbinding met Supabase, geen
+fout in zijn gegevens.
+
+Twee dingen zaten fout:
+
+1. **De hik werd niet opgevangen.** `execute_with_retry` herhaalde zulke fouten
+   al, maar het hele herplaats-, plaats- en verwijderpad loopt via
+   `naast_de_lus`, en die herhaalde niets. Bovendien stond de kale
+   `ssl.SSLEOFError` niet in `_HERSTELBAAR`, dus zelfs `execute_with_retry` zou
+   hem hebben doorgelaten. Nu: `naast_de_lus` probeert drie keer, en `ssl.SSLError`
+   plus een tekstherkenning ("EOF occurred in violation of protocol", "Server
+   disconnected", "connection reset/aborted") tellen als herstelbaar.
+
+2. **De volgorde in `refresh_listing` was onveilig.** De verwijderopdracht werd
+   als eerste weggeschreven; pas dáárna werden de prijs, de vertaling
+   (Anthropic, over het net) en de verzend-/fabrikantinstellingen opgehaald om
+   de herplaatsing te bouwen. Viel de verbinding op één van die stappen weg, dan
+   stond de verwijdering er wél en de herplaatsing niet. De extensie haalde de
+   advertentie dus keurig weg en er kwam nooit iets terug. Erger: de status ging
+   pas ná de tweede insert op `relisting`, dus `herstel_vastgelopen_werk` zag hem
+   niet eens — de advertentie was stil en definitief weg.
+
+   Nu gebeurt álle voorbereiding vóór de eerste insert. De twee inserts staan
+   direct achter elkaar en lukt de tweede alsnog niet, dan wordt de
+   verwijderopdracht weer verwijderd (of anders op `cancelled` gezet). Uitkomst:
+   twee opdrachten of geen enkele — nooit alleen een verwijdering.
+
+   De verwijdering moet wél als eerste in de database blijven staan: het
+   dispatch-filter in `jobs.py` zoekt de bijbehorende verwijdering op
+   `created_at <= die van de herplaatsing`. Draai je dat om, dan vindt hij hem
+   niet en plaatst hij een tweede advertentie naast de nog levende oude.
+
+Verder krijgt de verkoper bij zo'n hik nu een 503 met leesbare tekst ("nothing
+was changed and your listing is still live") in plaats van Python-jargon.
+
+Vastgelegd in `tests/test_herplaatsen_verbindingshik.py`.
+
+## 28-08-2026 — Twee Marktplaats-rubrieken erbij voor woontextiel
+
+Voor De Juiste Toon (Etten-Leur, 237 advertenties) vielen 21 advertenties buiten
+de rubrieken die we aankonden. Toegevoegd:
+
+- `wonen vachten` → Marktplaats 504/536 (Woonaccessoires | Overige) — schapen-,
+  rendier- en koeienvachten; Marktplaats heeft er geen eigen rubriek voor en
+  verkopers zetten ze daar zelf ook neer.
+- `wonen beddengoed` → Marktplaats 504/525 (Slaapkamer | Beddengoed) — spreien.
+
+Beide id's en hun ouder (504) zijn nagekeken in de openbare categorieboom van
+Marktplaats zelf (`lrp/api/search`, facet RelevantCategories), niet geraden. De
+SYI-pagina zelf geeft 401 zonder ingelogde sessie, dus die weg was hier niet
+beschikbaar.
+
+Toegevoegd in alle vijf de plaatsen die `test_category_taxonomy.py` bewaakt:
+`frontend/app.html`, `extension/background.js`, `extension/content/vinted.js`,
+`backend/platforms/ebay.py`, `backend/api/imports.py`.
+
+Daarmee dekken we 234 van Toons 237 advertenties. **Let op:** de bewering in de
+koude mail aan Toon ("290 stuks in kleding") klopte niet — het zijn 237
+advertenties en het is woontextiel, geen kleding.
+
+Zijn webshop (dejuistetoon.eu, ~1.000 producten) draait op WooCommerce, en dat
+ondersteunen we niet. Alleen Shopify.

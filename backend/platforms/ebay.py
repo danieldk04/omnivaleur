@@ -966,6 +966,8 @@ _EBAY_CATEGORY_HINTS = {
     "wonen tapijten en kleden": "rug",
     "wonen kussens": "cushion",
     "wonen plaids en woondekens": "blanket",
+    "wonen vachten": "sheepskin rug",
+    "wonen beddengoed": "bedspread",
     "wonen vazen": "vase",
     "wonen spiegels": "mirror",
     "wonen wanddecoraties": "wall decor",

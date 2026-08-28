@@ -445,33 +445,25 @@ async def refresh_listing(item_id: str, platform: str, user_id: str, strategy: s
         return {"strategy": "content", "job_id": job["id"], "status": "queued"}
 
     # strategy == "relist": delete now, recreate after a randomized delay.
-    # Marktplaats/2dehands publish under a Dutch-translated title (never
-    # persisted anywhere), so the delete automation must search for that
-    # exact title, not item["title"] — otherwise it can't find the listing
-    # on the overview page. Recover it from the last "create" job's payload.
-    from backend.services.crosslist import _last_listed_title
-    delete_payload = {
-        **item,
-        "title": _last_listed_title(db, item_id, platform, item.get("title", "")),
-        "platform_listing_id": listing["platform_listing_id"],
-        "platform_listing_url": listing["platform_listing_url"],
-        # If the delist fails the whole relist aborts (the paired create is
-        # skipped in /jobs/pending), so undo the cooldown/quota here too.
-        "_refresh_rollback": rollback,
-        # Alleen de handmatige verversknop valt onder de 3-per-dag-grens; het
-        # nachtelijke herplaatsen heeft zijn eigen, ruimere grens. Zonder dit
-        # merkteken telde de dagteller ze allebei. Zie _check_and_increment_quota.
-        "_handmatige_verversing": not eigen_quotum,
-    }
-    (await naast_de_lus(lambda: db.table("jobs").insert({
-        "user_id": user_id,
-        "item_id": item_id,
-        "platform": platform,
-        "action": "delete",
-        "status": "pending",
-        "payload": delete_payload,
-    }).execute()))
+    #
+    # DE VOLGORDE HIERONDER IS DE HELE VEILIGHEID — niet zomaar herschikken.
+    #
+    # Wat hier misging (Jaap Kroon, 28-08-2026): de verwijderopdracht werd als
+    # eerste weggeschreven en pas dáárna werd de nieuwe advertentie opgebouwd —
+    # met een vertaling, een prijsberekening en een paar databaseaanroepen
+    # ertussen. Viel de verbinding op één van die stappen weg, dan stond de
+    # verwijderopdracht er al en de herplaatsing niet. De extensie haalde de
+    # advertentie dus netjes weg en er kwam nooit iets voor terug. Erger nog:
+    # de status ging pas onderaan op "relisting", dus de reddingsronde
+    # (herstel_vastgelopen_werk) zag hem niet eens staan. De advertentie was
+    # stil en definitief weg.
+    #
+    # Daarom: ALLES wat kan mislukken gebeurt nu vóór de eerste opdracht wordt
+    # weggeschreven. Daarna staan de twee inserts direct achter elkaar, en lukt
+    # de tweede alsnog niet, dan halen we de eerste weer weg. Uitkomst: er staan
+    # altijd twee opdrachten, of geen enkele. Nooit alleen een verwijdering.
 
+    # ---- 1. Alles voorbereiden. Hier mag het misgaan; er is nog niets weg. ----
     delay_minutes = random.randint(RELIST_DELAY_MIN_MINUTES, RELIST_DELAY_MAX_MINUTES)
     scheduled_for = (now + timedelta(minutes=delay_minutes)).isoformat()
 
@@ -521,15 +513,77 @@ async def refresh_listing(item_id: str, platform: str, user_id: str, strategy: s
                 create_payload["_create_origin"] = f"{p.scheme}://{p.netloc}"
         except Exception:
             pass
-    (await naast_de_lus(lambda: db.table("jobs").insert({
+
+    # Marktplaats/2dehands publish under a Dutch-translated title (never
+    # persisted anywhere), so the delete automation must search for that
+    # exact title, not item["title"] — otherwise it can't find the listing
+    # on the overview page. Recover it from the last "create" job's payload.
+    from backend.services.crosslist import _last_listed_title
+    delete_payload = {
+        **item,
+        "title": _last_listed_title(db, item_id, platform, item.get("title", "")),
+        "platform_listing_id": listing["platform_listing_id"],
+        "platform_listing_url": listing["platform_listing_url"],
+        # If the delist fails the whole relist aborts (the paired create is
+        # skipped in /jobs/pending), so undo the cooldown/quota here too.
+        "_refresh_rollback": rollback,
+        # Alleen de handmatige verversknop valt onder de 3-per-dag-grens; het
+        # nachtelijke herplaatsen heeft zijn eigen, ruimere grens. Zonder dit
+        # merkteken telde de dagteller ze allebei. Zie _check_and_increment_quota.
+        "_handmatige_verversing": not eigen_quotum,
+    }
+
+    # ---- 2. Nu pas wegschrijven. Vanaf hier is er geen voorbereiding meer. ----
+    # De verwijdering moet als eerste in de database staan: het dispatch-filter in
+    # jobs.py zoekt de bijbehorende verwijdering op created_at <= die van de
+    # herplaatsing. Draai je dit om, dan vindt hij hem niet en vuurt de
+    # herplaatsing terwijl de oude advertentie nog online staat (dubbele
+    # advertentie).
+    verwijder = (await naast_de_lus(lambda: db.table("jobs").insert({
         "user_id": user_id,
         "item_id": item_id,
         "platform": platform,
-        "action": "create",
+        "action": "delete",
         "status": "pending",
-        "payload": create_payload,
-        "scheduled_for": scheduled_for,
+        "payload": delete_payload,
     }).execute()))
+    verwijder_id = (verwijder.data or [{}])[0].get("id")
+
+    try:
+        (await naast_de_lus(lambda: db.table("jobs").insert({
+            "user_id": user_id,
+            "item_id": item_id,
+            "platform": platform,
+            "action": "create",
+            "status": "pending",
+            "payload": create_payload,
+            "scheduled_for": scheduled_for,
+        }).execute()))
+    except Exception as e:  # noqa: BLE001
+        # De herplaatsing kon niet worden vastgelegd. Dan mag de verwijdering
+        # ook niet blijven staan — anders haalt de extensie straks een
+        # advertentie weg die nooit meer terugkomt. Liever een mislukte
+        # verversing dan een verdwenen advertentie.
+        if verwijder_id:
+            try:
+                (await naast_de_lus(lambda: db.table("jobs").delete().eq("id", verwijder_id).execute()))
+            except Exception:  # noqa: BLE001
+                # Lukt zelfs dat niet, dan zetten we hem op geannuleerd; de
+                # extensie pakt alleen "pending" op.
+                try:
+                    (await naast_de_lus(lambda: db.table("jobs").update({
+                        "status": "cancelled",
+                        "result": {"error": "Relist aborted before the recreate was queued."},
+                    }).eq("id", verwijder_id).execute()))
+                except Exception:  # noqa: BLE001
+                    logger.error(
+                        "KRITIEK: verwijderopdracht %s kon niet worden teruggedraaid voor item %s op %s",
+                        verwijder_id, item_id, platform)
+        logger.error("Herplaatsen afgebroken voor item %s op %s: %s", item_id, platform, e)
+        raise RefreshError(
+            "The connection dropped while setting up the relist, so nothing was "
+            "changed and your listing is still live. Please try again."
+        ) from e
 
     _update_listing_refresh_state(db, listing["id"], {
         "status": "relisting",

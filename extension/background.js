@@ -545,6 +545,13 @@ const MP_CATEGORIES = {
   "wonen tapijten en kleden":                    { cat1: 504, cat3: 533 },   // Tapijten en Kleden
   "wonen kussens":                               { cat1: 504, cat3: 2768 },   // Kussens
   "wonen plaids en woondekens":                  { cat1: 504, cat3: 2870 },   // Plaids en Woondekens
+  // Marktplaats heeft geen eigen rubriek voor schapen-, rendier- of koeienvachten;
+  // verkopers zetten ze zelf onder Woonaccessoires | Overige (536). Spreien horen
+  // onder Slaapkamer | Beddengoed (525). Beide id's en hun ouder (504) zijn
+  // 28-08-2026 nagekeken in de openbare categorieboom van Marktplaats zelf,
+  // niet geraden. Zonder deze twee bleef woontextiel deels onplaatsbaar.
+  "wonen vachten":                               { cat1: 504, cat3: 536 },   // Woonaccessoires | Overige
+  "wonen beddengoed":                            { cat1: 504, cat3: 525 },   // Slaapkamer | Beddengoed
   "wonen vazen":                                 { cat1: 504, cat3: 1516 },   // Vazen
   "wonen spiegels":                              { cat1: 504, cat3: 529 },   // Spiegels
   "wonen wanddecoraties":                        { cat1: 504, cat3: 2875 },   // Wanddecoraties
@@ -3408,29 +3415,50 @@ async function bgScanVinted(job, serverUrl) {
 // Say which of the three it is, because the fix is different every time.
 function mpEmptyScanReason(meta, platform) {
   const site = platform === "marktplaats" ? "Marktplaats" : "2dehands";
-  if (meta.api_status === 401 || meta.api_status === 403 || meta.signed_in === false) {
-    return `You don't appear to be signed in to ${site} in this browser. Open ${site}, sign in, and run the scan again.`;
-  }
-  // Wél ingelogd, maar het persoonlijke overzicht is leeg. Dat betekent bijna
-  // nooit "je hebt geen advertenties": een zakelijke verkoper beheert zijn
-  // advertenties in Admarkt, het betaalde platform van Marktplaats, en die staan
-  // simpelweg niet op deze pagina. Gemeten geval: een verkoper met 5.529 live
-  // advertenties kreeg hier tweemaal nul terug.
+  // ALTIJD de waargenomen feiten erbij. Zonder dit was elke mislukte scan
+  // dezelfde ene zin, en stond er in het opdrachtenlogboek van de server
+  // twintig keer exact dezelfde tekst — waaruit niet valt op te maken of de
+  // overzichtspagina 401 gaf, of hij gewoon leeg was, of de Admarkt-schakelaar
+  // uitstond. Dat kostte bij Egbert Brouwer een week aan gokwerk.
+  const feiten =
+    ` [overzicht: API ${meta.api_status ?? "geen antwoord"}, ` +
+    `${meta.fetched ?? 0} advertenties, ingelogd op ${site}: ${meta.signed_in ? "ja" : "nee"}` +
+    (platform === "marktplaats"
+      ? `, Admarkt-schakelaar: ${meta.admarkt_toegestaan ? "aan" : "uit"}` : "") + `]`;
+
+  // DE BELANGRIJKSTE AFSLAG, EN HIJ STOND VROEGER ONDERAAN.
   //
-  // We noemen dat nu altijd, in plaats van het uit de paginatekst te raden —
-  // die gok gaf een verkeerd antwoord en kostte een ronde. Voor iemand die
-  // écht niets te koop heeft is deze tekst nog steeds waar.
+  // Voor een zakelijke verkoper is het persoonlijke "Mijn advertenties"-
+  // overzicht van www.marktplaats.nl per definitie leeg: zijn advertenties
+  // staan in Admarkt, met een EIGEN inlog. Zo iemand is dus tegelijk "niet
+  // ingelogd op www" én volkomen in orde. Staat de Admarkt-schakelaar dan uit,
+  // dan kan Omnivaleur nergens kijken — en dat is het enige wat hij kan
+  // oplossen. De oude volgorde zette "je bent niet ingelogd" er als eerste
+  // overheen, waardoor die ene bruikbare aanwijzing nooit in beeld kwam.
   if (platform === "marktplaats" && !meta.admarkt_toegestaan) {
-    return `Signed in fine, but ${site} shows no adverts on your personal "my listings" page. ` +
-      `That is what a business account looks like: your adverts live in Admarkt, ` +
-      `Marktplaats' separate platform for business sellers. Omnivaleur can read those too, ` +
-      `but only once you allow it: click the Omnivaleur icon in your browser toolbar and ` +
-      `switch on "Business account (Admarkt)", then run the scan again.`;
+    return (meta.admarkt_ooit_aan
+      ? `De Admarkt-schakelaar staat uit — eerder stond hij aan. Chrome zet zo'n `
+        + `toestemming soms terug na een update van de extensie of een herstart. `
+      : `Je persoonlijke advertentieoverzicht op ${site} is leeg. Dat is precies `
+        + `hoe een zakelijk account eruitziet: die advertenties staan in Admarkt. `)
+      + `Klik op het Omnivaleur-icoon in je browserbalk en zet "Business account `
+      + `(Admarkt)" aan, en start de scan opnieuw. Heb je een gewoon particulier `
+      + `account, controleer dan of je op ${site} zelf bent ingelogd.` + feiten;
   }
-  return `Signed in fine, but ${site} shows no adverts on your personal "my listings" page. ` +
-    `If you do have adverts running, they are almost certainly managed through Admarkt — ` +
-    `${site}' separate platform for business sellers — which Omnivaleur cannot read yet. ` +
-    `Importing works for a private ${site} account for now.`;
+
+  // Pas hier mag "je bent niet ingelogd" klinken: Admarkt staat aan (of het is
+  // 2dehands, dat geen Admarkt heeft) én ${site} weigerde ons echt.
+  if (meta.api_status === 401 || meta.api_status === 403) {
+    return `${site} weigert je advertentieoverzicht (foutcode ${meta.api_status}). `
+      + `Open ${site}, log opnieuw in en start de scan nog een keer.` + feiten;
+  }
+  if (meta.signed_in === false) {
+    return `You don't appear to be signed in to ${site} in this browser. `
+      + `Open ${site}, sign in, and run the scan again.` + feiten;
+  }
+  return `Signed in fine, but ${site} shows no adverts on your personal "my listings" page. `
+    + `If you do have adverts running, they are almost certainly managed through Admarkt — `
+    + `${site}' separate platform for business sellers.` + feiten;
 }
 
 // ── Admarkt ────────────────────────────────────────────────────────────────
@@ -3474,8 +3502,19 @@ const ADMARKT_MAX = 2000;
 
 async function admarktToegestaan() {
   try {
-    return await chrome.permissions.contains({ origins: [`${ADMARKT_ORIGIN}/*`] });
+    const mag = await chrome.permissions.contains({ origins: [`${ADMARKT_ORIGIN}/*`] });
+    // Onthouden DAT hij ooit aan stond. Een optionele toestemming kan in Chrome
+    // stilletjes verdwijnen (update van de extensie, ander profiel, tweede
+    // kopie). Zonder dit geheugen is "uit" niet te onderscheiden van "nooit
+    // aangezet", en dat verschil bepaalt wat de verkoper moet doen.
+    if (mag) { try { await chrome.storage.local.set({ admarkt_ooit_aan: true }); } catch (_) {} }
+    return mag;
   } catch (_) { return false; }
+}
+
+async function admarktOoitAan() {
+  try { return !!(await chrome.storage.local.get("admarkt_ooit_aan")).admarkt_ooit_aan; }
+  catch (_) { return false; }
 }
 
 // De meekijker moet vóór de pagina-code draaien, en dat kan alleen met een
@@ -3891,8 +3930,11 @@ async function bgScanMp2dh(job, serverUrl) {
     }
     if (!result.items.length) {
       if (admarktFout) throw new Error(`Admarkt: ${admarktFout}`);
-      throw new Error(mpEmptyScanReason(
-        { ...(result.meta || {}), admarkt_toegestaan: await admarktToegestaan() }, platform));
+      throw new Error(mpEmptyScanReason({
+        ...(result.meta || {}),
+        admarkt_toegestaan: await admarktToegestaan(),
+        admarkt_ooit_aan: await admarktOoitAan(),
+      }, platform));
     }
     // De verrijking hieronder haalt elke advertentiepagina op VANUIT dit tabblad,
     // en dat tabblad staat op www.marktplaats.nl. Voor een advertentie waarvan de

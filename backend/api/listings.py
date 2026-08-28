@@ -249,6 +249,20 @@ async def refresh_one_listing(body: dict, user_id: str = Depends(require_active_
         # Anything unexpected here (e.g. a schema mismatch) would otherwise bubble up
         # as a raw, non-JSON 500 page — the frontend's r.json() call then throws its
         # own confusing "Unexpected token" error instead of showing the real problem.
+        #
+        # Maar een weggevallen verbinding is geen storing om de verkoper mee lastig
+        # te vallen met Python-taal. Jaap Kroon kreeg op 28-08-2026 letterlijk
+        # "Refresh failed unexpectedly: EOF occurred in violation of protocol
+        # (_ssl.c:2417)" op zijn scherm en kon daar niets mee — hij wist niet eens
+        # of zijn advertentie nog online stond.
+        from backend.database import _is_herstelbaar
+        if _is_herstelbaar(e):
+            logger.warning("Verversen viel weg op een verbindingsfout: %s", e)
+            raise HTTPException(
+                status_code=503,
+                detail="The connection dropped, so nothing was changed and your "
+                       "listing is still live. Please try again in a moment.",
+            )
         raise HTTPException(status_code=500, detail=f"Refresh failed unexpectedly: {e}")
 
 

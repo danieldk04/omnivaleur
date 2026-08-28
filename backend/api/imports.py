@@ -273,6 +273,8 @@ _TAXONOMY = {
         "wonen tapijten en kleden",
         "wonen kussens",
         "wonen plaids en woondekens",
+        "wonen vachten",
+        "wonen beddengoed",
         "wonen vazen",
         "wonen spiegels",
         "wonen wanddecoraties",
