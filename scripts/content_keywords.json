@@ -423,7 +423,7 @@
       "region": "nl",
       "pillar": "B",
       "slug": "handbag-and-accessories-reselling-automation",
-      "status": "pending",
+      "status": "published",
       "priority": 52
     }
   ],
@@ -886,6 +886,15 @@
       "action": "created",
       "url_path": "/reseller-tools/vintage-records-reselling-automation-platforms",
       "published_at": "2026-08-27T18:47:11.441807+00:00"
+    },
+    {
+      "keyword": "handbag and accessories reselling automation",
+      "slug": "handbag-and-accessories-reselling-automation",
+      "region": "nl",
+      "pillar": "B",
+      "action": "created",
+      "url_path": "/reseller-tools/handbag-and-accessories-reselling-automation",
+      "published_at": "2026-08-28T19:50:56.140497+00:00"
     }
   ]
 }
