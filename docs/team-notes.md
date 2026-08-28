@@ -725,3 +725,47 @@ Wat er is veranderd:
 4. Zolang oude extensies rondlopen (Egbert draait 1.0.251, de Web Store loopt
    achter) zet de server de melding zelf recht in backend/api/jobs.py:fail_job.
 
+
+## 28-08-2026 — Shopify weigert de app; koppelen gaat nu met een eigen sleutel
+
+Shopify heeft de app-aanvraag op **paused** gezet (ref 131213). Reden, letterlijk:
+"Shopify is not currently accepting apps that connect to a marketplace system
+outside of Shopify. This applies to all apps." Dat is beleid, geen defect: er is
+geen versie van Omnivaleur die daar doorheen komt zolang ze naar Marktplaats,
+Vinted en eBay publiceert. Bezwaar maken heeft daarom geen zin.
+
+De app stond op "limited visibility" — hij stond nog niet in de App Store. Wat
+gepauzeerd is, is de aanvraag; de twee bestaande koppelingen bleven werken.
+
+**De nieuwe weg.** Nagekeken in Shopifys eigen documentatie: een app die de
+winkelier zelf in zijn beheerscherm maakt (Settings → Apps and sales channels →
+Develop apps) heeft géén review nodig, en levert een Admin API access token
+(`shpat_…`) dat via exact dezelfde `X-Shopify-Access-Token`-kopregel werkt.
+"Custom distribution" via een Partner-app is géén alternatief: die is beperkt tot
+één winkel per app.
+
+Gebouwd:
+- `POST /api/platforms/shopify/connect-token` — controleert de sleutel eerst bij
+  Shopify (`/admin/oauth/access_scopes.json` + `shop.json`) en slaat pas daarna
+  op. `read_products` en `write_products` zijn hard vereist; de rest wordt
+  gemeld, niet geblokkeerd. `extra_data.koppeling = "eigen_sleutel"`.
+- Een venster in het dashboard met de drie stappen en alle benodigde rechten
+  eronder, inclusief waarschuwing wat er stukgaat als er eentje ontbreekt.
+- `backend/services/shopify_orders.py` — **dit is het belangrijke deel.** De
+  verkoopmelding liep over de webhook `orders/paid`, en die hoort bij ÓNZE app.
+  Bij een zelfgemaakte app komt hij nooit binnen, dus zou een winkelier stil zijn
+  belangrijkste functie kwijtraken: iets dat in de eigen winkel verkocht is bleef
+  dan op Marktplaats, Vinted en eBay te koop staan. Deze ronde haalt elke 5
+  minuten de betaalde bestellingen op en draait dezelfde afhandeling. Draait voor
+  álle winkels, ook de OAuth-koppelingen — daar is de webhook dan de snelle
+  melding en dit het vangnet.
+
+Nagekeken tegen de echte winkels, niet alleen tegen tests:
+- `ywqad3-xb.myshopify.com` (Revaleur) antwoordt 200 en heeft alleen
+  `read_products, write_products` — dus **geen `read_orders`**, waardoor de
+  verkoopcontrole daar 403 geeft en overslaat. Wil je dat werkend hebben, dan
+  moet die winkel opnieuw gekoppeld worden met meer rechten.
+- `1xhfjx-a0.myshopify.com` (gekoppeld 27-08) geeft **401 — die sleutel is
+  ongeldig**. Die klant heeft op dit moment een kapotte Shopify-koppeling.
+
+Vastgelegd in `tests/test_shopify_eigen_sleutel.py` (29 tests).

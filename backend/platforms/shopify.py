@@ -36,6 +36,96 @@ def verify_install_hmac(params: dict) -> bool:
     return hmac.compare_digest(digest, received or "")
 
 
+# Een sleutel die de winkelier zelf aanmaakt begint altijd met shpat_ (Admin API
+# access token). shpca_/shpss_ zijn andere soorten en werken hier niet; die
+# meteen weigeren scheelt de winkelier een onbegrijpelijke 401 van Shopify.
+_ADMIN_TOKEN_RE = re.compile(r"^shpat_[0-9a-fA-F]{32,}$")
+
+# Wat de app minimaal moet mogen om te kunnen werken. Precies dezelfde rechten
+# als bij de knop-koppeling (settings.shopify_scopes), maar hier moeten we ze
+# zelf controleren: bij een zelfgemaakte app vinkt de winkelier ze met de hand
+# aan, en één vergeten vinkje levert anders pas weken later een onverklaarbare
+# fout op midden in een publicatie.
+VERPLICHTE_SCOPES = ("read_products", "write_products")
+# Nodig voor voorraad en verkoopkanalen. Ontbreken ze, dan kan er wél
+# geïmporteerd en gepubliceerd worden, maar blijft een product onzichtbaar in de
+# winkel of staat de voorraad verkeerd. Dat melden we, we blokkeren het niet.
+AANBEVOLEN_SCOPES = ("write_inventory", "read_locations", "read_publications",
+                     "write_publications", "read_orders")
+
+
+def is_valid_admin_token(token: str) -> bool:
+    return bool(_ADMIN_TOKEN_RE.match((token or "").strip()))
+
+
+async def controleer_admin_token(shop: str, token: str) -> dict:
+    """Controleer een zelfgemaakte sleutel vóór we hem opslaan.
+
+    WAAROM DIT ER IS. Shopify accepteert sinds 28-08-2026 geen apps meer die
+    koppelen met een marktplaats buiten Shopify, dus de knop-koppeling via de
+    App Store is geen weg meer. Winkeliers maken nu zelf een app in hun eigen
+    beheerscherm en plakken de sleutel bij ons. Dat betekent ook dat niemand
+    anders meer controleert of die sleutel klopt en genoeg mag — dus doen wij
+    het hier, meteen, in plaats van het te ontdekken als er een publicatie
+    mislukt.
+
+    Levert de winkelnaam, de toegekende rechten, en welke daarvan ontbreken.
+    Gooit ValueError met een leesbare uitleg als de sleutel niet bruikbaar is.
+    """
+    import httpx
+
+    shop = (shop or "").strip().lower()
+    token = (token or "").strip()
+    if not is_valid_shop_domain(shop):
+        raise ValueError("That doesn't look like a Shopify store address. "
+                         "It should end in .myshopify.com, for example my-store.myshopify.com.")
+    if not is_valid_admin_token(token):
+        raise ValueError("That doesn't look like an Admin API access token. "
+                         "It starts with shpat_ and you'll find it in your Shopify admin under "
+                         "the app you created, on the API credentials tab.")
+
+    headers = {"X-Shopify-Access-Token": token, "Content-Type": "application/json"}
+    timeout = httpx.Timeout(30.0, connect=10.0)
+    async with httpx.AsyncClient(timeout=timeout) as c:
+        try:
+            r = await c.get(f"https://{shop}/admin/oauth/access_scopes.json", headers=headers)
+        except httpx.HTTPError as e:
+            raise ValueError(f"We couldn't reach {shop}. Check the store address and try again.") from e
+        if r.status_code in (401, 403):
+            raise ValueError("Shopify rejected that token. Check that you copied the whole "
+                             "Admin API access token, and that it belongs to this store.")
+        if r.status_code == 404:
+            raise ValueError(f"{shop} doesn't exist, or that token belongs to a different store.")
+        if r.status_code >= 400:
+            raise ValueError(f"Shopify returned an unexpected error ({r.status_code}). Please try again.")
+        toegekend = {s.get("handle") for s in (r.json().get("access_scopes") or [])}
+
+        # De rechten kloppen; nu nog bewijzen dat de winkel echt antwoordt.
+        # access_scopes zegt alleen iets over de sleutel, niet over de winkel.
+        rs = await c.get(f"https://{shop}/admin/api/2024-01/shop.json?fields=name,myshopify_domain",
+                         headers=headers)
+        if rs.status_code >= 400:
+            raise ValueError("The token is valid but the store didn't answer. "
+                             "Give it a minute and try again.")
+        winkel = (rs.json().get("shop") or {})
+
+    ontbreekt = [s for s in VERPLICHTE_SCOPES if s not in toegekend]
+    if ontbreekt:
+        raise ValueError(
+            "This app doesn't have enough permissions yet. Missing: "
+            + ", ".join(ontbreekt)
+            + ". Open the app in your Shopify admin, tick those under Admin API access scopes, "
+              "save, and copy the token again."
+        )
+
+    return {
+        "shop": shop,
+        "shop_name": winkel.get("name") or shop,
+        "scopes": sorted(toegekend),
+        "aanbevolen_ontbreekt": [s for s in AANBEVOLEN_SCOPES if s not in toegekend],
+    }
+
+
 def verify_webhook(raw_body: bytes, hmac_header: str) -> bool:
     """Verify Shopify webhook signature.
 

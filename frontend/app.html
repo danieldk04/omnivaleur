@@ -2331,6 +2331,62 @@ input[type="checkbox"].row-check { width: 15px; height: 15px; cursor: pointer; a
      verholpen. Het dashboard zette al die tijd een groen "Extension active (v1.0.218)"
      neer, want de ondergrens stond nog op 1.0.171. Een kopie die het werk aantoonbaar
      niet aankan mag nooit meer als "in orde" doorgaan. -->
+<div id="shopify-connect-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:502;align-items:center;justify-content:center;padding:20px;overflow-y:auto">
+  <div style="background:#fff;border-radius:20px;max-width:600px;width:100%;padding:36px;box-shadow:0 20px 60px rgba(0,0,0,.2);margin:auto">
+    <div style="width:64px;height:64px;border-radius:16px;background:linear-gradient(135deg,#96bf48,#5e8e3e);display:flex;align-items:center;justify-content:center;font-size:28px;margin:0 auto 20px">🏪</div>
+    <h2 style="font-size:22px;font-weight:800;margin-bottom:10px;letter-spacing:-.3px;text-align:center">Connect your Shopify store</h2>
+    <p style="font-size:14px;color:#64748b;line-height:1.6;margin-bottom:22px;text-align:center">
+      You create a small app inside your own Shopify admin and paste its key here. It takes about five minutes, once.
+      Nothing is installed and no Shopify approval is involved &mdash; the key stays between your store and Omnivaleur, and you can revoke it yourself at any time.
+    </p>
+    <div style="text-align:left;display:flex;flex-direction:column;gap:14px;margin-bottom:22px">
+      <div style="display:flex;gap:12px;align-items:flex-start">
+        <div style="flex:0 0 26px;height:26px;border-radius:50%;background:#5e8e3e;color:#fff;font-size:13px;font-weight:700;display:flex;align-items:center;justify-content:center">1</div>
+        <div>
+          <div style="font-size:14px;font-weight:700;color:#0f172a">In Shopify: Settings &rarr; Apps and sales channels &rarr; Develop apps</div>
+          <div style="font-size:13px;color:#64748b;line-height:1.5">Click "Allow custom app development" if Shopify asks, then "Create an app". Name it <b>Omnivaleur</b>.</div>
+        </div>
+      </div>
+      <div style="display:flex;gap:12px;align-items:flex-start">
+        <div style="flex:0 0 26px;height:26px;border-radius:50%;background:#5e8e3e;color:#fff;font-size:13px;font-weight:700;display:flex;align-items:center;justify-content:center">2</div>
+        <div>
+          <div style="font-size:14px;font-weight:700;color:#0f172a">Open "Configuration" &rarr; Admin API access scopes and tick these</div>
+          <div style="font-size:13px;color:#64748b;line-height:1.5;margin-top:4px">
+            <code style="background:#f1f5f9;padding:2px 6px;border-radius:5px;display:inline-block;margin:2px 0">read_products</code>
+            <code style="background:#f1f5f9;padding:2px 6px;border-radius:5px;display:inline-block;margin:2px 0">write_products</code>
+            <code style="background:#f1f5f9;padding:2px 6px;border-radius:5px;display:inline-block;margin:2px 0">write_inventory</code>
+            <code style="background:#f1f5f9;padding:2px 6px;border-radius:5px;display:inline-block;margin:2px 0">read_locations</code>
+            <code style="background:#f1f5f9;padding:2px 6px;border-radius:5px;display:inline-block;margin:2px 0">read_publications</code>
+            <code style="background:#f1f5f9;padding:2px 6px;border-radius:5px;display:inline-block;margin:2px 0">write_publications</code>
+            <code style="background:#f1f5f9;padding:2px 6px;border-radius:5px;display:inline-block;margin:2px 0">read_orders</code>
+            <div style="margin-top:5px"><b>read_orders</b> is how we notice something sold in your own shop and take it off the other channels for you. Without it that stops working.</div>
+          </div>
+        </div>
+      </div>
+      <div style="display:flex;gap:12px;align-items:flex-start">
+        <div style="flex:0 0 26px;height:26px;border-radius:50%;background:#5e8e3e;color:#fff;font-size:13px;font-weight:700;display:flex;align-items:center;justify-content:center">3</div>
+        <div>
+          <div style="font-size:14px;font-weight:700;color:#0f172a">Save, click "Install app", then open the "API credentials" tab</div>
+          <div style="font-size:13px;color:#64748b;line-height:1.5">Under "Admin API access token", click "Reveal token once" and copy it. Shopify shows it exactly once &mdash; paste it below straight away.</div>
+        </div>
+      </div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:6px">
+      <label style="font-size:12px;font-weight:700;color:#0f172a">Your store address</label>
+      <input id="shopify-shop-input" type="text" placeholder="my-store.myshopify.com" autocomplete="off" spellcheck="false"
+             style="padding:12px;border:1.5px solid #e2e8f0;border-radius:12px;font-size:14px;width:100%;box-sizing:border-box">
+      <label style="font-size:12px;font-weight:700;color:#0f172a;margin-top:6px">Admin API access token</label>
+      <input id="shopify-token-input" type="password" placeholder="shpat_&hellip;" autocomplete="off" spellcheck="false"
+             style="padding:12px;border:1.5px solid #e2e8f0;border-radius:12px;font-size:14px;width:100%;box-sizing:border-box;font-family:monospace">
+    </div>
+    <div id="shopify-connect-msg" style="display:none;font-size:13px;line-height:1.5;padding:11px 13px;border-radius:11px;margin:12px 0"></div>
+    <div style="display:flex;flex-direction:column;gap:10px;margin-top:16px">
+      <button id="shopify-connect-btn" onclick="submitShopifyToken()" style="padding:13px;background:linear-gradient(135deg,#96bf48,#5e8e3e);color:#fff;border:none;border-radius:100px;font-size:15px;font-weight:700;cursor:pointer">Connect store</button>
+      <button onclick="closeShopifyConnect()" style="padding:11px;background:transparent;border:1.5px solid #e2e8f0;border-radius:100px;font-size:14px;font-weight:600;color:#64748b;cursor:pointer">Cancel</button>
+    </div>
+  </div>
+</div>
+
 <div id="ext-outdated-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:501;align-items:center;justify-content:center;padding:20px">
   <div style="background:#fff;border-radius:20px;max-width:520px;width:100%;padding:36px;box-shadow:0 20px 60px rgba(0,0,0,.2)">
     <div style="width:64px;height:64px;border-radius:16px;background:linear-gradient(135deg,#f59e0b,#ef4444);display:flex;align-items:center;justify-content:center;font-size:28px;margin:0 auto 20px">⚠️</div>
@@ -4413,22 +4469,92 @@ async function connectEbay() {
   }
 }
 
-async function connectShopify() {
-  let shop = prompt('Enter your Shopify store domain (e.g. your-store.myshopify.com):');
-  if (!shop) return;
-  shop = shop.trim().toLowerCase().replace(/^https?:\/\//, '').replace(/\/$/, '');
-  if (!shop.includes('.')) shop += '.myshopify.com';
+// Shopify koppelt met een sleutel die de winkelier zelf aanmaakt.
+//
+// WAAROM NIET MEER MET DE KNOP. Shopify liet op 28-08-2026 weten geen apps meer
+// toe te laten die koppelen met een marktplaats buiten Shopify, en zette de
+// aanvraag op "paused". Dat is beleid, geen fout: er is geen versie van deze app
+// die daar doorheen komt zolang ze naar Marktplaats, Vinted en eBay publiceert.
+// Een app die de winkelier zelf in zijn beheerscherm maakt heeft geen enkele
+// beoordeling nodig en gebruikt dezelfde Admin API — alleen het verkrijgen van
+// de sleutel verschilt. Zie backend/api/platforms.py > shopify_connect_token.
+function connectShopify() {
+  const msg = document.getElementById('shopify-connect-msg');
+  if (msg) msg.style.display = 'none';
+  document.getElementById('shopify-connect-overlay').style.display = 'flex';
+  document.getElementById('shopify-shop-input').focus();
+}
+
+function closeShopifyConnect() {
+  // De sleutel niet laten staan in een gesloten venster.
+  document.getElementById('shopify-token-input').value = '';
+  document.getElementById('shopify-connect-overlay').style.display = 'none';
+}
+
+function _shopifyMsg(tekst, soort) {
+  const el = document.getElementById('shopify-connect-msg');
+  const kleuren = {
+    fout:  ['#fef2f2', '#b91c1c'],
+    let:   ['#fffbeb', '#b45309'],
+    goed:  ['#f0fdf4', '#15803d'],
+  }[soort] || ['#f8fafc', '#475569'];
+  el.style.background = kleuren[0];
+  el.style.color = kleuren[1];
+  el.innerHTML = tekst;
+  el.style.display = 'block';
+}
+
+async function submitShopifyToken() {
+  const knop = document.getElementById('shopify-connect-btn');
+  let shop = document.getElementById('shopify-shop-input').value.trim().toLowerCase();
+  const token = document.getElementById('shopify-token-input').value.trim();
+  // Winkeliers plakken vaak de hele URL uit hun adresbalk; de server knipt hem
+  // ook op, maar zo ziet de winkelier meteen wat er straks wordt opgeslagen.
+  shop = shop.replace(/^https?:\/\//, '').split('/')[0];
+  if (shop && !shop.includes('.')) shop += '.myshopify.com';
+  document.getElementById('shopify-shop-input').value = shop;
+
+  if (!shop) { _shopifyMsg('Fill in your store address first.', 'fout'); return; }
+  if (!token) { _shopifyMsg('Paste the Admin API access token first.', 'fout'); return; }
+  if (!/^shpat_/.test(token)) {
+    _shopifyMsg('That token should start with <b>shpat_</b>. The API key and secret key on that same page are different values &mdash; you need the <b>Admin API access token</b>.', 'fout');
+    return;
+  }
+
+  knop.disabled = true;
+  knop.textContent = 'Checking with Shopify…';
   try {
-    const res = await apiFetch(`${API}/api/platforms/shopify/auth-url?shop=${encodeURIComponent(shop)}`);
+    const res = await apiFetch(`${API}/api/platforms/shopify/connect-token`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ shop, access_token: token }),
+    });
+    const data = await parseJsonSafe(res);
     if (!res.ok) {
-      const err = await res.json().catch(() => ({}));
-      alert(err.detail || 'Shopify is not configured yet. Contact support.');
+      _shopifyMsg(data.detail || 'Shopify refused that token.', 'fout');
       return;
     }
-    const { url } = await res.json();
-    window.location.href = url;
+    document.getElementById('shopify-token-input').value = '';
+    const mist = data.missing_optional_scopes || [];
+    if (mist.length) {
+      // Niet blokkeren, wel eerlijk zijn: dit is precies het soort ding dat
+      // anders weken later als onverklaarbare storing terugkomt.
+      _shopifyMsg('Connected to <b>' + (data.shop_name || data.shop) + '</b>, but these permissions are missing: <b>'
+        + mist.join(', ') + '</b>.' + (mist.includes('read_orders')
+          ? ' Without <b>read_orders</b> we can\'t see when something sells in your shop, so it will stay listed on the other channels.'
+          : ' Some products may not appear in your shop or show the wrong stock.')
+        + ' Add them in Shopify and paste a fresh token to fix it.', 'let');
+    } else {
+      _shopifyMsg('Connected to <b>' + (data.shop_name || data.shop) + '</b>.', 'goed');
+    }
+    if (!state.connected.includes('shopify')) state.connected.push('shopify');
+    renderPlatforms();
+    if (!mist.length) setTimeout(closeShopifyConnect, 1400);
   } catch (e) {
-    alert('Could not start Shopify connection: ' + e.message);
+    _shopifyMsg('Could not reach Omnivaleur: ' + e.message, 'fout');
+  } finally {
+    knop.disabled = false;
+    knop.textContent = 'Connect store';
   }
 }
 

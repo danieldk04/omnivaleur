@@ -1,6 +1,7 @@
 """
 Platform auth endpoints — login endpoints for all platforms.
 """
+import re
 from fastapi import APIRouter, HTTPException, Depends, Request
 from backend.database import get_db, naast_de_lus
 from backend.platforms.marktplaats import MarktplaatsPlatform, TweedehandsPlatform
@@ -165,6 +166,51 @@ async def shopify_callback(shop: str, code: str, request: Request, user_id: str 
         raise HTTPException(status_code=400, detail=f"Shopify authorization failed: {e}")
     _save_credentials(user_id, "shopify", tokens)
     return {"status": "connected", "platform": "shopify"}
+
+
+@router.post("/shopify/connect-token")
+async def shopify_connect_token(body: dict, user_id: str = Depends(get_current_user)):
+    """Koppelen met een sleutel die de winkelier zelf aanmaakt.
+
+    Body: {"shop": "mijn-winkel.myshopify.com", "access_token": "shpat_..."}
+
+    WAAROM DEZE WEG BESTAAT. Shopify accepteert geen apps meer die koppelen met
+    een marktplaats buiten Shopify (bericht van 28-08-2026, app op 'paused'), dus
+    de koppelknop via de App Store is doodlopend. Een app die de winkelier zelf
+    in zijn eigen beheerscherm maakt heeft geen enkele beoordeling nodig en werkt
+    verder precies hetzelfde: dezelfde Admin API, dezelfde kopregel, dezelfde
+    rechten. Alleen het verkrijgen van de sleutel verschilt.
+    """
+    from backend.platforms.shopify import controleer_admin_token
+    shop = str(body.get("shop") or "").strip().lower()
+    token = str(body.get("access_token") or "").strip()
+    # Winkeliers plakken vaak de hele URL uit hun adresbalk.
+    shop = re.sub(r"^https?://", "", shop).split("/")[0]
+    try:
+        gegevens = await controleer_admin_token(shop, token)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+    _save_credentials(user_id, "shopify", {
+        "access_token": token,
+        "extra_data": {
+            "shop_domain": gegevens["shop"],
+            "shop_name": gegevens["shop_name"],
+            "scope": ",".join(gegevens["scopes"]),
+            # Vastleggen HOE er gekoppeld is. De verkoopmelding werkt anders bij
+            # een zelfgemaakte app (geen webhook, wij kijken zelf na), en zonder
+            # dit merkteken weet niets in de code welk van de twee het is.
+            "koppeling": "eigen_sleutel",
+        },
+    })
+    return {
+        "status": "connected",
+        "platform": "shopify",
+        "shop": gegevens["shop"],
+        "shop_name": gegevens["shop_name"],
+        # Niet blokkerend, maar de winkelier moet het wél weten.
+        "missing_optional_scopes": gegevens["aanbevolen_ontbreekt"],
+    }
 
 
 @router.post("/vinted/bootstrap")

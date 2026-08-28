@@ -53,6 +53,7 @@ def start_scheduler():
     from backend.services.polling import poll_platform_statuses
     from backend.services.crosslist import relist_expiring_marktplaats
     from backend.services.relist import herstel_vastgelopen_werk
+    from backend.services.shopify_orders import controleer_shopify_verkopen
 
     from backend.services.billing import expire_trials, send_trial_reminders
     from backend.services.analytics_report import send_weekly_report
@@ -65,6 +66,18 @@ def start_scheduler():
         "interval",
         seconds=settings.polling_interval,
         id="poll_platforms",
+        replace_existing=True,
+    )
+    # Verkopen op Shopify zelf nakijken. Bij een winkel die met een eigen sleutel
+    # is gekoppeld komt er GEEN orders/paid-webhook binnen — die hoort bij onze
+    # app, en die weg is dicht sinds Shopify geen marktplaats-apps meer toelaat.
+    # Zonder deze ronde blijft iets dat in de eigen winkel verkocht is overal
+    # anders gewoon te koop staan. Zie backend/services/shopify_orders.py.
+    _scheduler.add_job(
+        _off_the_request_loop(controleer_shopify_verkopen),
+        "interval",
+        minutes=5,
+        id="shopify_verkopen",
         replace_existing=True,
     )
     _scheduler.add_job(
