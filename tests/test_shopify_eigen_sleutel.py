@@ -224,6 +224,37 @@ def test_leeg_rechtenantwoord_leidt_niet_tot_een_onterechte_afwijzing():
     assert "access_scopes.json" in fn, "bij een leeg antwoord alsnog bij de bron navragen"
 
 
+def test_schrijfrecht_telt_als_leesrecht():
+    """Vraag je read_products EN write_products, dan meldt Shopify alleen
+    write_products terug. Letterlijk naar read_products zoeken meldde dus dat het
+    ontbrak terwijl het gewoon aan stond (Revaleur, 28-08-2026)."""
+    from backend.platforms.shopify import _met_impliciete_leesrechten
+    vol = _met_impliciete_leesrechten({"write_products"})
+    assert "read_products" in vol and "write_products" in vol
+
+
+def test_leesrecht_wordt_geen_schrijfrecht():
+    """Andersom mag beslist niet: read_products geeft geen schrijftoegang."""
+    from backend.platforms.shopify import _met_impliciete_leesrechten
+    assert "write_products" not in _met_impliciete_leesrechten({"read_products"})
+
+
+def test_de_echte_rechten_van_revaleur_worden_goedgekeurd():
+    """Precies wat Shopify voor deze app teruggaf. Deze mag nooit meer afketsen."""
+    from backend.platforms.shopify import _met_impliciete_leesrechten
+    echt = {"read_orders", "write_inventory", "write_locations",
+            "write_products", "write_publications"}
+    vol = _met_impliciete_leesrechten(echt)
+    assert [x for x in VERPLICHTE_SCOPES if x not in vol] == []
+    assert [x for x in AANBEVOLEN_SCOPES if x not in vol] == []
+
+
+def test_beide_koppelroutes_rekenen_hetzelfde():
+    src = (ROOT / "backend/platforms/shopify.py").read_text(encoding="utf-8")
+    assert src.count("_met_impliciete_leesrechten(toegekend)") == 2, \
+        "zowel de eigen app als een bestaand token moet dit meenemen"
+
+
 # ── 6. De weg die voor iedere klant werkt ────────────────────────────────────
 
 def test_er_wordt_een_echte_sleutel_opgehaald_voor_we_iets_opslaan():

@@ -54,6 +54,22 @@ AANBEVOLEN_SCOPES = ("write_inventory", "read_locations", "read_publications",
                      "write_publications", "read_orders")
 
 
+def _met_impliciete_leesrechten(toegekend: set[str]) -> set[str]:
+    """Schrijfrecht ómvat leesrecht — bij Shopify staat dat er niet apart bij.
+
+    Vraag je `read_products,write_products`, dan meldt Shopify alleen
+    `write_products` terug. Onze controle zocht letterlijk naar `read_products`,
+    zag die niet, en meldde dat het recht ontbrak terwijl het gewoon aan stond.
+    Dat kostte Daniel op 28-08-2026 drie pogingen op een app die de hele tijd
+    goed was.
+    """
+    volledig = set(toegekend)
+    for x in toegekend:
+        if x and x.startswith("write_"):
+            volledig.add("read_" + x[len("write_"):])
+    return volledig
+
+
 def is_valid_admin_token(token: str) -> bool:
     return bool(_ADMIN_TOKEN_RE.match((token or "").strip()))
 
@@ -92,7 +108,8 @@ async def controleer_app_gegevens(shop: str, client_id: str, client_secret: str)
             )
         vers["scopes"] = sorted(toegekend)
 
-    ontbreekt = [x for x in VERPLICHTE_SCOPES if x not in toegekend]
+    volledig = _met_impliciete_leesrechten(toegekend)
+    ontbreekt = [x for x in VERPLICHTE_SCOPES if x not in volledig]
     if ontbreekt:
         # ZEG ERBIJ WAT SHOPIFY WÉL GAF. Zonder dat is dit een muur: de winkelier
         # ziet zijn vinkje aan staan en onze melding zegt het tegendeel, en er is
@@ -123,7 +140,7 @@ async def controleer_app_gegevens(shop: str, client_id: str, client_secret: str)
         "scopes": vers["scopes"],
         "access_token": vers["access_token"],
         "expires_at": vers["expires_at"],
-        "aanbevolen_ontbreekt": [x for x in AANBEVOLEN_SCOPES if x not in toegekend],
+        "aanbevolen_ontbreekt": [x for x in AANBEVOLEN_SCOPES if x not in volledig],
     }
 
 
@@ -178,7 +195,8 @@ async def controleer_admin_token(shop: str, token: str) -> dict:
                              "Give it a minute and try again.")
         winkel = (rs.json().get("shop") or {})
 
-    ontbreekt = [s for s in VERPLICHTE_SCOPES if s not in toegekend]
+    volledig = _met_impliciete_leesrechten(toegekend)
+    ontbreekt = [s for s in VERPLICHTE_SCOPES if s not in volledig]
     if ontbreekt:
         raise ValueError(
             "This app doesn't have enough permissions yet. Missing: "
@@ -191,7 +209,7 @@ async def controleer_admin_token(shop: str, token: str) -> dict:
         "shop": shop,
         "shop_name": winkel.get("name") or shop,
         "scopes": sorted(toegekend),
-        "aanbevolen_ontbreekt": [s for s in AANBEVOLEN_SCOPES if s not in toegekend],
+        "aanbevolen_ontbreekt": [s for s in AANBEVOLEN_SCOPES if s not in volledig],
     }
 
 
