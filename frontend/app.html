@@ -2339,37 +2339,21 @@ input[type="checkbox"].row-check { width: 15px; height: 15px; cursor: pointer; a
       You create a small app inside your own Shopify admin and paste its key here. It takes about five minutes, once.
       Nothing is installed and no Shopify approval is involved &mdash; the key stays between your store and Omnivaleur, and you can revoke it yourself at any time.
     </p>
-    <div style="text-align:left;display:flex;flex-direction:column;gap:14px;margin-bottom:22px">
-      <div style="display:flex;gap:12px;align-items:flex-start">
-        <div style="flex:0 0 26px;height:26px;border-radius:50%;background:#5e8e3e;color:#fff;font-size:13px;font-weight:700;display:flex;align-items:center;justify-content:center">1</div>
-        <div>
-          <div style="font-size:14px;font-weight:700;color:#0f172a">In Shopify: Settings &rarr; Apps and sales channels &rarr; Develop apps</div>
-          <div style="font-size:13px;color:#64748b;line-height:1.5">Click "Allow custom app development" if Shopify asks, then "Create an app". Name it <b>Omnivaleur</b>.</div>
-        </div>
+    <div style="background:#fffbeb;border:1px solid #fde68a;border-radius:12px;padding:14px;margin-bottom:18px;font-size:13px;color:#92400e;line-height:1.55">
+      <b>Waar vind ik die sleutel?</b> Shopify heeft dit in 2026 gewijzigd: je kunt in het winkelbeheer geen nieuwe custom app meer aanmaken, dus de oude route
+      &ldquo;Settings &rarr; Develop apps &rarr; Reveal token once&rdquo; bestaat alleen nog voor apps die je al eerder had.
+      Heb je zo'n app al, dan werkt die sleutel hier gewoon. Heb je die niet, neem dan even contact op &mdash; we zetten hem samen voor je op.
+      <div style="margin-top:10px">Welke route je ook gebruikt, de app moet deze rechten hebben:</div>
+      <div style="margin-top:5px">
+        <code style="background:#fff;padding:2px 6px;border-radius:5px;display:inline-block;margin:2px 0">read_products</code>
+        <code style="background:#fff;padding:2px 6px;border-radius:5px;display:inline-block;margin:2px 0">write_products</code>
+        <code style="background:#fff;padding:2px 6px;border-radius:5px;display:inline-block;margin:2px 0">write_inventory</code>
+        <code style="background:#fff;padding:2px 6px;border-radius:5px;display:inline-block;margin:2px 0">read_locations</code>
+        <code style="background:#fff;padding:2px 6px;border-radius:5px;display:inline-block;margin:2px 0">read_publications</code>
+        <code style="background:#fff;padding:2px 6px;border-radius:5px;display:inline-block;margin:2px 0">write_publications</code>
+        <code style="background:#fff;padding:2px 6px;border-radius:5px;display:inline-block;margin:2px 0">read_orders</code>
       </div>
-      <div style="display:flex;gap:12px;align-items:flex-start">
-        <div style="flex:0 0 26px;height:26px;border-radius:50%;background:#5e8e3e;color:#fff;font-size:13px;font-weight:700;display:flex;align-items:center;justify-content:center">2</div>
-        <div>
-          <div style="font-size:14px;font-weight:700;color:#0f172a">Open "Configuration" &rarr; Admin API access scopes and tick these</div>
-          <div style="font-size:13px;color:#64748b;line-height:1.5;margin-top:4px">
-            <code style="background:#f1f5f9;padding:2px 6px;border-radius:5px;display:inline-block;margin:2px 0">read_products</code>
-            <code style="background:#f1f5f9;padding:2px 6px;border-radius:5px;display:inline-block;margin:2px 0">write_products</code>
-            <code style="background:#f1f5f9;padding:2px 6px;border-radius:5px;display:inline-block;margin:2px 0">write_inventory</code>
-            <code style="background:#f1f5f9;padding:2px 6px;border-radius:5px;display:inline-block;margin:2px 0">read_locations</code>
-            <code style="background:#f1f5f9;padding:2px 6px;border-radius:5px;display:inline-block;margin:2px 0">read_publications</code>
-            <code style="background:#f1f5f9;padding:2px 6px;border-radius:5px;display:inline-block;margin:2px 0">write_publications</code>
-            <code style="background:#f1f5f9;padding:2px 6px;border-radius:5px;display:inline-block;margin:2px 0">read_orders</code>
-            <div style="margin-top:5px"><b>read_orders</b> is how we notice something sold in your own shop and take it off the other channels for you. Without it that stops working.</div>
-          </div>
-        </div>
-      </div>
-      <div style="display:flex;gap:12px;align-items:flex-start">
-        <div style="flex:0 0 26px;height:26px;border-radius:50%;background:#5e8e3e;color:#fff;font-size:13px;font-weight:700;display:flex;align-items:center;justify-content:center">3</div>
-        <div>
-          <div style="font-size:14px;font-weight:700;color:#0f172a">Save, click "Install app", then open the "API credentials" tab</div>
-          <div style="font-size:13px;color:#64748b;line-height:1.5">Under "Admin API access token", click "Reveal token once" and copy it. Shopify shows it exactly once &mdash; paste it below straight away.</div>
-        </div>
-      </div>
+      <div style="margin-top:6px"><b>read_orders</b> is hoe we merken dat iets in je eigen winkel verkocht is en het van de andere kanalen halen. Zonder dat recht stopt dat.</div>
     </div>
     <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:6px">
       <label style="font-size:12px;font-weight:700;color:#0f172a">Your store address</label>

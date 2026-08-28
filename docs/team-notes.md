@@ -769,3 +769,37 @@ Nagekeken tegen de echte winkels, niet alleen tegen tests:
   ongeldig**. Die klant heeft op dit moment een kapotte Shopify-koppeling.
 
 Vastgelegd in `tests/test_shopify_eigen_sleutel.py` (29 tests).
+
+### Correctie, later op 28-08-2026: de "eigen sleutel"-route bestaat niet meer voor nieuwe apps
+
+De instructies die hierboven staan (Settings → Develop apps → Reveal token once)
+zijn achterhaald. Shopifys eigen documentatie zegt nu letterlijk: *"You can no
+longer create new admin-created custom apps. Existing apps are unaffected and
+continue to work."* Wie zo'n app al had, houdt hem en houdt zijn sleutel. Wie er
+nu een wil, kan die weg niet meer inslaan.
+
+Wat er nog wél is:
+
+- **Client credentials grant** — werkt, maar **alleen als de winkel en de app in
+  dezelfde Shopify-organisatie zitten**. Dat geldt voor Daniels eigen
+  Revaleur-winkel (app "Omnivaleur" in de Dev Dashboard, 1 install), maar per
+  definitie niet voor klanten. Tokens verlopen na 24 uur en moeten dus telkens
+  opnieuw worden opgehaald met client id + secret.
+- **Authorization code grant (OAuth)** — de weg die we al hebben. De vraag is of
+  een public-distribution app die (nog) niet is goedgekeurd, door winkeliers
+  búiten onze organisatie geïnstalleerd kan worden via een directe installatielink.
+  Shopifys openbare documentatie zegt daar niets over. **Dit is de beslissende
+  vraag en die moet bij Shopify Partner Support gesteld worden.**
+
+Wat blijft staan van wat er gebouwd is:
+- `POST /api/platforms/shopify/connect-token` en de controle erachter zijn
+  correct: ze accepteren elk geldig Admin API-token, dus zowel dat van een
+  bestaande custom app als een OAuth-token.
+- `backend/services/shopify_orders.py` is correct en nodig ongeacht welke route
+  het wordt.
+- Het venster in het dashboard beweerde de oude stappen; dat is gecorrigeerd naar
+  een eerlijke uitleg plus de vereiste rechten.
+
+Bronnen:
+- https://shopify.dev/docs/apps/build/authentication-authorization/access-tokens/generate-app-access-tokens-admin
+- https://shopify.dev/docs/apps/build/dev-dashboard/get-api-access-tokens
