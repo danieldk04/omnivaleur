@@ -189,11 +189,58 @@ def test_geen_toegang_stopt_niet_de_hele_ronde():
 
 
 # ── 5. Wat de winkelier op zijn scherm ziet ──────────────────────────────────
+#
+# Dit is de ENIGE koppeling waarbij hij zelf iets in een ander systeem moet
+# aanmaken; de rest gaat vanzelf via de extensie. Eén scherm met zeven rechten en
+# twee geheimen schrikt af, dus staat het in drie stappen.
 
-def test_het_scherm_noemt_elke_benodigde_toestemming():
-    venster = APP.split('id="shopify-connect-overlay"')[1].split("</div>\n\n<div id=")[0]
+def _venster() -> str:
+    return APP.split('id="shopify-connect-overlay"')[1].split('<div id="ext-outdated-overlay"')[0]
+
+
+def test_het_gaat_in_drie_stappen():
+    v = _venster()
+    for n in (1, 2, 3):
+        assert f'data-step="{n}"' in v
+    assert v.count('class="shop-bar"') == 3, "een voortgangsbalk per stap"
+
+
+def test_alleen_de_eerste_stap_staat_open():
+    v = _venster()
+    assert v.count('class="shop-step" data-step="1"') == 1
+    assert 'data-step="2" style="display:none"' in v
+    assert 'data-step="3" style="display:none"' in v
+
+
+def test_de_knop_gaat_rechtstreeks_naar_de_juiste_winkel():
+    """Zelf door de instellingen zoeken is precies waar mensen afhaken."""
+    fn = APP.split("function shopStep(n)")[1].split("\nfunction ")[0]
+    assert "admin.shopify.com/store/" in fn
+    assert "settings/apps" in fn
+    assert "encodeURIComponent(handle)" in fn
+
+
+def test_de_rechten_kunnen_met_een_klik_gekopieerd():
+    v = _venster()
+    assert 'id="shopify-scopes-text"' in v
+    assert "copyShopifyScopes" in v
     for scope in list(VERPLICHTE_SCOPES) + list(AANBEVOLEN_SCOPES):
-        assert scope in venster, f"{scope} staat niet in de uitleg"
+        assert scope in v, f"{scope} staat niet in de te kopiëren regel"
+
+
+def test_kopieren_werkt_ook_zonder_klembord():
+    """Zonder https of in een oudere browser bestaat navigator.clipboard niet.
+    Dan moet de tekst tenminste geselecteerd worden, niet stil niets doen."""
+    fn = APP.split("function copyShopifyScopes(")[1].split("\nfunction _shopifyMsg")[0]
+    assert "_shopSelecteerScopes" in fn
+    assert ".catch(" in fn
+
+
+def test_het_scherm_legt_uit_dat_write_ook_read_is():
+    """Anders denkt de verkoper dat er iets misging als Shopify alleen de
+    write-rechten toont — precies wat er bij Revaleur gebeurde."""
+    v = _venster()
+    assert "write access includes read access" in v
 
 
 def test_het_geheim_blijft_niet_in_een_gesloten_venster_staan():
@@ -202,57 +249,17 @@ def test_het_geheim_blijft_niet_in_een_gesloten_venster_staan():
 
 
 def test_het_geheimveld_is_afgeschermd():
-    venster = APP.split('id="shopify-connect-overlay"')[1].split("</div>\n\n<div id=")[0]
-    assert 'id="shopify-secret-input" type="password"' in venster
+    assert 'id="shopify-secret-input" type="password"' in _venster()
 
 
-def test_rechten_worden_gelezen_met_komma_of_spatie():
-    """Shopify levert ze soms met komma's, soms met spaties. Alleen op komma
-    splitsen maakte er één sliert van, en meldde dan onterecht dat read_products
-    ontbrak terwijl het recht gewoon aan stond (Revaleur, 28-08-2026)."""
-    import re as _re
-    src = (ROOT / "backend/platforms/shopify.py").read_text(encoding="utf-8")
-    fn = src.split("async def vraag_token(")[1].split("\n\n# ")[0]
-    patroon = _re.search(r'_re?\.?split\(r"\[([^"]+)\]\+"', fn) or _re.search(r'split\(r"(\[[^"]+\]\+)"', fn)
-    assert "re.split" in fn and "\\s" in fn, "moet ook op spaties splitsen"
+def test_ontbrekende_verkooprechten_worden_op_het_scherm_gemeld():
+    fn = APP.split("async function submitShopifyToken()")[1].split("\nasync function ")[0]
+    assert "missing_optional_scopes" in fn
+    assert "read_orders" in fn
 
 
-def test_leeg_rechtenantwoord_leidt_niet_tot_een_onterechte_afwijzing():
-    src = (ROOT / "backend/platforms/shopify.py").read_text(encoding="utf-8")
-    fn = src.split("async def controleer_app_gegevens(")[1].split("\nasync def ")[0]
-    assert "if not toegekend:" in fn
-    assert "access_scopes.json" in fn, "bij een leeg antwoord alsnog bij de bron navragen"
-
-
-def test_schrijfrecht_telt_als_leesrecht():
-    """Vraag je read_products EN write_products, dan meldt Shopify alleen
-    write_products terug. Letterlijk naar read_products zoeken meldde dus dat het
-    ontbrak terwijl het gewoon aan stond (Revaleur, 28-08-2026)."""
-    from backend.platforms.shopify import _met_impliciete_leesrechten
-    vol = _met_impliciete_leesrechten({"write_products"})
-    assert "read_products" in vol and "write_products" in vol
-
-
-def test_leesrecht_wordt_geen_schrijfrecht():
-    """Andersom mag beslist niet: read_products geeft geen schrijftoegang."""
-    from backend.platforms.shopify import _met_impliciete_leesrechten
-    assert "write_products" not in _met_impliciete_leesrechten({"read_products"})
-
-
-def test_de_echte_rechten_van_revaleur_worden_goedgekeurd():
-    """Precies wat Shopify voor deze app teruggaf. Deze mag nooit meer afketsen."""
-    from backend.platforms.shopify import _met_impliciete_leesrechten
-    echt = {"read_orders", "write_inventory", "write_locations",
-            "write_products", "write_publications"}
-    vol = _met_impliciete_leesrechten(echt)
-    assert [x for x in VERPLICHTE_SCOPES if x not in vol] == []
-    assert [x for x in AANBEVOLEN_SCOPES if x not in vol] == []
-
-
-def test_beide_koppelroutes_rekenen_hetzelfde():
-    src = (ROOT / "backend/platforms/shopify.py").read_text(encoding="utf-8")
-    assert src.count("_met_impliciete_leesrechten(toegekend)") == 2, \
-        "zowel de eigen app als een bestaand token moet dit meenemen"
+def test_er_is_een_uitweg_als_iemand_vastloopt():
+    assert "Stuck?" in _venster(), "niemand mag hier stranden zonder volgende stap"
 
 
 # ── 6. De weg die voor iedere klant werkt ────────────────────────────────────

@@ -2332,64 +2332,83 @@ input[type="checkbox"].row-check { width: 15px; height: 15px; cursor: pointer; a
      neer, want de ondergrens stond nog op 1.0.171. Een kopie die het werk aantoonbaar
      niet aankan mag nooit meer als "in orde" doorgaan. -->
 <div id="shopify-connect-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:502;align-items:center;justify-content:center;padding:20px;overflow-y:auto">
-  <div style="background:#fff;border-radius:20px;max-width:600px;width:100%;padding:36px;box-shadow:0 20px 60px rgba(0,0,0,.2);margin:auto">
-    <div style="width:64px;height:64px;border-radius:16px;background:linear-gradient(135deg,#96bf48,#5e8e3e);display:flex;align-items:center;justify-content:center;font-size:28px;margin:0 auto 20px">🏪</div>
-    <h2 style="font-size:22px;font-weight:800;margin-bottom:10px;letter-spacing:-.3px;text-align:center">Connect your Shopify store</h2>
-    <p style="font-size:14px;color:#64748b;line-height:1.6;margin-bottom:22px;text-align:center">
-      You create a small app inside your own Shopify admin and paste its key here. It takes about five minutes, once.
-      Nothing is installed and no Shopify approval is involved &mdash; the key stays between your store and Omnivaleur, and you can revoke it yourself at any time.
-    </p>
-    <div style="text-align:left;display:flex;flex-direction:column;gap:14px;margin-bottom:22px">
-      <div style="display:flex;gap:12px;align-items:flex-start">
-        <div style="flex:0 0 26px;height:26px;border-radius:50%;background:#5e8e3e;color:#fff;font-size:13px;font-weight:700;display:flex;align-items:center;justify-content:center">1</div>
-        <div>
-          <div style="font-size:14px;font-weight:700;color:#0f172a">In Shopify: Settings &rarr; Apps and sales channels &rarr; Develop apps</div>
-          <div style="font-size:13px;color:#64748b;line-height:1.5">Click "Build apps in Dev Dashboard", then "Create app". Name it <b>Omnivaleur</b>.</div>
-        </div>
-      </div>
-      <div style="display:flex;gap:12px;align-items:flex-start">
-        <div style="flex:0 0 26px;height:26px;border-radius:50%;background:#5e8e3e;color:#fff;font-size:13px;font-weight:700;display:flex;align-items:center;justify-content:center">2</div>
-        <div>
-          <div style="font-size:14px;font-weight:700;color:#0f172a">Set the API scopes, then click "Release"</div>
-          <div style="font-size:13px;color:#64748b;line-height:1.5;margin-top:4px">
-            <code style="background:#f1f5f9;padding:2px 6px;border-radius:5px;display:inline-block;margin:2px 0">read_products</code>
-            <code style="background:#f1f5f9;padding:2px 6px;border-radius:5px;display:inline-block;margin:2px 0">write_products</code>
-            <code style="background:#f1f5f9;padding:2px 6px;border-radius:5px;display:inline-block;margin:2px 0">write_inventory</code>
-            <code style="background:#f1f5f9;padding:2px 6px;border-radius:5px;display:inline-block;margin:2px 0">read_locations</code>
-            <code style="background:#f1f5f9;padding:2px 6px;border-radius:5px;display:inline-block;margin:2px 0">read_publications</code>
-            <code style="background:#f1f5f9;padding:2px 6px;border-radius:5px;display:inline-block;margin:2px 0">write_publications</code>
-            <code style="background:#f1f5f9;padding:2px 6px;border-radius:5px;display:inline-block;margin:2px 0">read_orders</code>
-            <div style="margin-top:5px"><b>read_orders</b> is how we notice something sold in your own shop and take it off the other channels for you. Without it that stops working.</div>
-          </div>
-        </div>
-      </div>
-      <div style="display:flex;gap:12px;align-items:flex-start">
-        <div style="flex:0 0 26px;height:26px;border-radius:50%;background:#5e8e3e;color:#fff;font-size:13px;font-weight:700;display:flex;align-items:center;justify-content:center">3</div>
-        <div>
-          <div style="font-size:14px;font-weight:700;color:#0f172a">Install it on your store, then open the app's "Settings"</div>
-          <div style="font-size:13px;color:#64748b;line-height:1.5">In the Dev Dashboard, under Installs, click "Install app". Then copy the <b>Client ID</b> and <b>Client secret</b> from the app's Settings page and paste them below.</div>
-        </div>
-      </div>
-      <div style="font-size:12px;color:#94a3b8;line-height:1.5;padding-left:38px">
-        The app has to live in the same Shopify organisation as your store &mdash; which it does when you create it from your own admin, as above. Nothing is submitted to Shopify for review.
+  <div style="background:#fff;border-radius:20px;max-width:520px;width:100%;padding:32px;box-shadow:0 20px 60px rgba(0,0,0,.2);margin:auto">
+
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:6px">
+      <div style="width:40px;height:40px;border-radius:11px;background:linear-gradient(135deg,#96bf48,#5e8e3e);display:flex;align-items:center;justify-content:center;font-size:19px">🏪</div>
+      <div>
+        <div style="font-size:18px;font-weight:800;letter-spacing:-.3px">Connect Shopify</div>
+        <div id="shop-step-label" style="font-size:12px;color:#94a3b8;font-weight:600">Step 1 of 3</div>
       </div>
     </div>
-    <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:6px">
-      <label style="font-size:12px;font-weight:700;color:#0f172a">Your store address</label>
+    <div style="display:flex;gap:5px;margin:14px 0 22px">
+      <div class="shop-bar" style="flex:1;height:4px;border-radius:99px;background:#5e8e3e"></div>
+      <div class="shop-bar" style="flex:1;height:4px;border-radius:99px;background:#e2e8f0"></div>
+      <div class="shop-bar" style="flex:1;height:4px;border-radius:99px;background:#e2e8f0"></div>
+    </div>
+
+    <!-- STAP 1 -->
+    <div class="shop-step" data-step="1">
+      <div style="font-size:16px;font-weight:700;color:#0f172a;margin-bottom:6px">What's your Shopify address?</div>
+      <p style="font-size:13.5px;color:#64748b;line-height:1.6;margin-bottom:16px">
+        The one ending in <b>.myshopify.com</b>. You'll find it in your browser's address bar when you're in your Shopify admin. Don't worry about getting the format exactly right &mdash; paste whatever you have.
+      </p>
       <input id="shopify-shop-input" type="text" placeholder="my-store.myshopify.com" autocomplete="off" spellcheck="false"
-             style="padding:12px;border:1.5px solid #e2e8f0;border-radius:12px;font-size:14px;width:100%;box-sizing:border-box">
-      <label style="font-size:12px;font-weight:700;color:#0f172a;margin-top:6px">Client ID</label>
+             onkeydown="if(event.key==='Enter')shopStep(2)"
+             style="padding:13px;border:1.5px solid #e2e8f0;border-radius:12px;font-size:14px;width:100%;box-sizing:border-box">
+    </div>
+
+    <!-- STAP 2 -->
+    <div class="shop-step" data-step="2" style="display:none">
+      <div style="font-size:16px;font-weight:700;color:#0f172a;margin-bottom:6px">Create a small app in your Shopify</div>
+      <p style="font-size:13.5px;color:#64748b;line-height:1.6;margin-bottom:14px">
+        This gives Omnivaleur permission to read and place your products. It stays entirely between your store and us, and you can switch it off yourself at any time.
+      </p>
+      <a id="shopify-admin-link" href="#" target="_blank" rel="noopener"
+         style="display:block;text-align:center;padding:13px;background:#0f172a;color:#fff;border-radius:12px;font-size:14px;font-weight:700;text-decoration:none;margin-bottom:16px">
+        Open Shopify &rarr; Develop apps &nbsp;↗
+      </a>
+      <div style="font-size:13.5px;color:#334155;line-height:1.75;margin-bottom:14px">
+        <div>1. Click <b>Create app</b> and give it any name.</div>
+        <div>2. Find the box for <b>Scopes</b> and paste the line below.</div>
+        <div>3. Click <b>Release</b>, then <b>Install app</b>.</div>
+      </div>
+      <div style="font-size:12px;font-weight:700;color:#0f172a;margin-bottom:6px">Paste this into the Scopes box</div>
+      <div style="display:flex;gap:8px;align-items:stretch;margin-bottom:8px">
+        <code id="shopify-scopes-text" style="flex:1;background:#f1f5f9;padding:10px 12px;border-radius:11px;font-size:11.5px;line-height:1.5;color:#334155;word-break:break-all">read_products,write_products,write_inventory,read_locations,read_publications,write_publications,read_orders</code>
+        <button onclick="copyShopifyScopes(this)" style="flex:0 0 auto;padding:0 16px;background:#5e8e3e;color:#fff;border:none;border-radius:11px;font-size:13px;font-weight:700;cursor:pointer">Copy</button>
+      </div>
+      <p style="font-size:12px;color:#94a3b8;line-height:1.5">Shopify may show these as "write" only afterwards &mdash; that's normal, write access includes read access.</p>
+    </div>
+
+    <!-- STAP 3 -->
+    <div class="shop-step" data-step="3" style="display:none">
+      <div style="font-size:16px;font-weight:700;color:#0f172a;margin-bottom:6px">Copy the two values across</div>
+      <p style="font-size:13.5px;color:#64748b;line-height:1.6;margin-bottom:16px">
+        In that same app, open <b>Settings</b>. You'll see a Client ID and a Client secret. Copy them here.
+      </p>
+      <label style="font-size:12px;font-weight:700;color:#0f172a">Client ID</label>
       <input id="shopify-clientid-input" type="text" autocomplete="off" spellcheck="false"
-             style="padding:12px;border:1.5px solid #e2e8f0;border-radius:12px;font-size:14px;width:100%;box-sizing:border-box;font-family:monospace">
-      <label style="font-size:12px;font-weight:700;color:#0f172a;margin-top:6px">Client secret</label>
+             style="padding:13px;border:1.5px solid #e2e8f0;border-radius:12px;font-size:14px;width:100%;box-sizing:border-box;font-family:monospace;margin:6px 0 14px">
+      <label style="font-size:12px;font-weight:700;color:#0f172a">Client secret</label>
       <input id="shopify-secret-input" type="password" autocomplete="off" spellcheck="false"
-             style="padding:12px;border:1.5px solid #e2e8f0;border-radius:12px;font-size:14px;width:100%;box-sizing:border-box;font-family:monospace">
+             onkeydown="if(event.key==='Enter')submitShopifyToken()"
+             style="padding:13px;border:1.5px solid #e2e8f0;border-radius:12px;font-size:14px;width:100%;box-sizing:border-box;font-family:monospace;margin:6px 0 0">
     </div>
-    <div id="shopify-connect-msg" style="display:none;font-size:13px;line-height:1.5;padding:11px 13px;border-radius:11px;margin:12px 0"></div>
-    <div style="display:flex;flex-direction:column;gap:10px;margin-top:16px">
-      <button id="shopify-connect-btn" onclick="submitShopifyToken()" style="padding:13px;background:linear-gradient(135deg,#96bf48,#5e8e3e);color:#fff;border:none;border-radius:100px;font-size:15px;font-weight:700;cursor:pointer">Connect store</button>
-      <button onclick="closeShopifyConnect()" style="padding:11px;background:transparent;border:1.5px solid #e2e8f0;border-radius:100px;font-size:14px;font-weight:600;color:#64748b;cursor:pointer">Cancel</button>
+
+    <div id="shopify-connect-msg" style="display:none;font-size:13px;line-height:1.55;padding:12px 14px;border-radius:11px;margin-top:16px"></div>
+
+    <div style="display:flex;gap:10px;margin-top:20px">
+      <button id="shopify-back-btn" onclick="shopStep(shopStapNu - 1)"
+              style="display:none;padding:12px 18px;background:transparent;border:1.5px solid #e2e8f0;border-radius:100px;font-size:14px;font-weight:600;color:#64748b;cursor:pointer">Back</button>
+      <button id="shopify-connect-btn" onclick="shopStapNu < 3 ? shopStep(shopStapNu + 1) : submitShopifyToken()"
+              style="flex:1;padding:13px;background:linear-gradient(135deg,#96bf48,#5e8e3e);color:#fff;border:none;border-radius:100px;font-size:15px;font-weight:700;cursor:pointer">Continue</button>
     </div>
+    <button onclick="closeShopifyConnect()" style="width:100%;padding:10px;margin-top:8px;background:transparent;border:none;font-size:13px;font-weight:600;color:#94a3b8;cursor:pointer">Cancel</button>
+
+    <p style="font-size:12px;color:#94a3b8;margin-top:14px;line-height:1.5;text-align:center">
+      Stuck? Reply to any of our emails and we'll set it up with you.
+    </p>
   </div>
 </div>
 
@@ -4484,25 +4503,105 @@ async function connectEbay() {
 // Een app die de winkelier zelf in zijn beheerscherm maakt heeft geen enkele
 // beoordeling nodig en gebruikt dezelfde Admin API — alleen het verkrijgen van
 // de sleutel verschilt. Zie backend/api/platforms.py > shopify_connect_token.
+// Shopify koppelen in drie kleine stappen.
+//
+// WAAROM STAP VOOR STAP. Dit is de enige koppeling waarbij de verkoper zelf iets
+// in een ander systeem moet aanmaken — de rest gaat vanzelf via de extensie. In
+// één scherm werd dat een muur tekst met zeven rechten en twee geheimen, en dat
+// schrikt af. Nu ziet hij per keer één ding, en de knop naar Shopify gaat
+// rechtstreeks naar de juiste pagina van zíjn winkel in plaats van naar een
+// klikpad dat hij zelf moet volgen.
+//
+// De weg zelf: Shopify laat geen apps meer toe die koppelen met een marktplaats
+// erbuiten, dus de winkelier maakt er een in zijn eigen organisatie. Zie
+// backend/api/platforms.py > shopify_connect_app.
+let shopStapNu = 1;
+
 function connectShopify() {
+  shopStapNu = 1;
   const msg = document.getElementById('shopify-connect-msg');
   if (msg) msg.style.display = 'none';
+  _shopTeken();
   document.getElementById('shopify-connect-overlay').style.display = 'flex';
-  document.getElementById('shopify-shop-input').focus();
+  setTimeout(() => document.getElementById('shopify-shop-input').focus(), 50);
 }
 
 function closeShopifyConnect() {
-  // De sleutel niet laten staan in een gesloten venster.
+  // Het geheim niet laten staan in een gesloten venster.
   document.getElementById('shopify-secret-input').value = '';
   document.getElementById('shopify-connect-overlay').style.display = 'none';
+}
+
+// Het winkeladres opschonen. Verkopers plakken hier van alles: de hele URL uit
+// hun adresbalk, admin.shopify.com/store/naam, of alleen de naam. Alles daarvan
+// moet gewoon werken — hierop struikelen is een dom obstakel vlak voor de finish.
+function _shopSchoon(ruw) {
+  let v = (ruw || '').trim().toLowerCase();
+  v = v.replace(/^https?:\/\//, '').replace(/\/+$/, '');
+  const m = v.match(/admin\.shopify\.com\/store\/([a-z0-9-]+)/);
+  if (m) return m[1] + '.myshopify.com';
+  v = v.split('/')[0];
+  if (v && !v.includes('.')) v += '.myshopify.com';
+  return v;
+}
+
+function _shopTeken() {
+  document.querySelectorAll('.shop-step').forEach(el => {
+    el.style.display = (+el.dataset.step === shopStapNu) ? 'block' : 'none';
+  });
+  document.querySelectorAll('.shop-bar').forEach((el, i) => {
+    el.style.background = (i < shopStapNu) ? '#5e8e3e' : '#e2e8f0';
+  });
+  document.getElementById('shop-step-label').textContent = 'Step ' + shopStapNu + ' of 3';
+  document.getElementById('shopify-back-btn').style.display = shopStapNu > 1 ? 'block' : 'none';
+  document.getElementById('shopify-connect-btn').textContent =
+    shopStapNu < 3 ? 'Continue' : 'Connect store';
+}
+
+function shopStep(n) {
+  if (n === 2 && shopStapNu === 1) {
+    const shop = _shopSchoon(document.getElementById('shopify-shop-input').value);
+    if (!shop) { _shopifyMsg('Fill in your store address first.', 'fout'); return; }
+    document.getElementById('shopify-shop-input').value = shop;
+    // Rechtstreeks naar de juiste pagina van deze winkel, zodat niemand zelf
+    // door de instellingen hoeft te zoeken.
+    const handle = shop.replace('.myshopify.com', '');
+    document.getElementById('shopify-admin-link').href =
+      'https://admin.shopify.com/store/' + encodeURIComponent(handle) + '/settings/apps';
+  }
+  shopStapNu = Math.min(3, Math.max(1, n));
+  document.getElementById('shopify-connect-msg').style.display = 'none';
+  _shopTeken();
+  if (shopStapNu === 3) setTimeout(() => document.getElementById('shopify-clientid-input').focus(), 50);
+}
+
+function copyShopifyScopes(knop) {
+  const tekst = document.getElementById('shopify-scopes-text').textContent.trim();
+  const klaar = () => { knop.textContent = 'Copied'; setTimeout(() => knop.textContent = 'Copy', 1600); };
+  // Het klembord is niet overal beschikbaar (oudere browsers, geen https).
+  // Dan selecteren we de tekst, zodat hij hem alsnog zelf kan kopiëren.
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(tekst).then(klaar).catch(() => _shopSelecteerScopes());
+  } else {
+    _shopSelecteerScopes();
+  }
+}
+
+function _shopSelecteerScopes() {
+  const el = document.getElementById('shopify-scopes-text');
+  const bereik = document.createRange();
+  bereik.selectNodeContents(el);
+  const sel = window.getSelection();
+  sel.removeAllRanges();
+  sel.addRange(bereik);
 }
 
 function _shopifyMsg(tekst, soort) {
   const el = document.getElementById('shopify-connect-msg');
   const kleuren = {
-    fout:  ['#fef2f2', '#b91c1c'],
-    let:   ['#fffbeb', '#b45309'],
-    goed:  ['#f0fdf4', '#15803d'],
+    fout: ['#fef2f2', '#b91c1c'],
+    let:  ['#fffbeb', '#b45309'],
+    goed: ['#f0fdf4', '#15803d'],
   }[soort] || ['#f8fafc', '#475569'];
   el.style.background = kleuren[0];
   el.style.color = kleuren[1];
@@ -4512,15 +4611,10 @@ function _shopifyMsg(tekst, soort) {
 
 async function submitShopifyToken() {
   const knop = document.getElementById('shopify-connect-btn');
-  let shop = document.getElementById('shopify-shop-input').value.trim().toLowerCase();
+  const shop = _shopSchoon(document.getElementById('shopify-shop-input').value);
   const clientId = document.getElementById('shopify-clientid-input').value.trim();
   const secret = document.getElementById('shopify-secret-input').value.trim();
-  // Winkeliers plakken vaak de hele URL uit hun adresbalk.
-  shop = shop.replace(/^https?:\/\//, '').split('/')[0];
-  if (shop && !shop.includes('.')) shop += '.myshopify.com';
-  document.getElementById('shopify-shop-input').value = shop;
 
-  if (!shop) { _shopifyMsg('Fill in your store address first.', 'fout'); return; }
   if (!clientId || !secret) { _shopifyMsg('Fill in both the client ID and the client secret.', 'fout'); return; }
 
   knop.disabled = true;
@@ -4532,7 +4626,14 @@ async function submitShopifyToken() {
       body: JSON.stringify({ shop, client_id: clientId, client_secret: secret }),
     });
     const data = await parseJsonSafe(res);
-    if (!res.ok) { _shopifyMsg(data.detail || 'Shopify refused those credentials.', 'fout'); return; }
+    if (!res.ok) {
+      // Het meest voorkomende struikelblok krijgt een zetje in de goede richting
+      // in plaats van alleen Shopify's eigen woorden.
+      let hulp = data.detail || 'Shopify refused those credentials.';
+      if (/permissions/i.test(hulp)) hulp += '<br><br>Tip: in Shopify, check that your version shows as <b>Active</b> — a version that was saved but not released doesn\'t count yet.';
+      _shopifyMsg(hulp, 'fout');
+      return;
+    }
     document.getElementById('shopify-secret-input').value = '';
     const mist = data.missing_optional_scopes || [];
     if (mist.length) {
@@ -4542,13 +4643,13 @@ async function submitShopifyToken() {
         + mist.join(', ') + '</b>.' + (mist.includes('read_orders')
           ? ' Without <b>read_orders</b> we can\'t see when something sells in your shop, so it will stay listed on the other channels.'
           : ' Some products may not appear in your shop or show the wrong stock.')
-        + ' Add them in the Dev Dashboard, release a new version, and connect again.', 'let');
+        + ' Add them in Shopify, release a new version, and connect again.', 'let');
     } else {
-      _shopifyMsg('Connected to <b>' + (data.shop_name || data.shop) + '</b>.', 'goed');
+      _shopifyMsg('Connected to <b>' + (data.shop_name || data.shop) + '</b>. Your products can now be imported and published.', 'goed');
     }
     if (!state.connected.includes('shopify')) state.connected.push('shopify');
     renderPlatforms();
-    if (!mist.length) setTimeout(closeShopifyConnect, 1400);
+    if (!mist.length) setTimeout(closeShopifyConnect, 1800);
   } catch (e) {
     _shopifyMsg('Could not reach Omnivaleur: ' + e.message, 'fout');
   } finally {
