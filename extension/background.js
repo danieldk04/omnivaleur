@@ -3517,6 +3517,36 @@ async function admarktOoitAan() {
   catch (_) { return false; }
 }
 
+// WANNEER KIJKEN WE IN ADMARKT?
+//
+// Vroeger hing dat aan één ding: de optionele toestemming voor
+// admarkt.marktplaats.nl. Dat is te wankel gebleken. Zo'n toestemming kan in
+// Chrome verdwijnen zonder dat de verkoper er iets voor doet — een update, een
+// tweede kopie van de extensie, een ander profiel — en dan valt de hele
+// Admarkt-kant stil. Bij Egbert Brouwer gebeurde dat tussen 27-08 11:09 (2.000
+// nieuwe advertenties binnengehaald) en 27-08 20:35 (vanaf dan twintig keer
+// "je bent niet ingelogd"). Hij heeft niets aangeraakt.
+//
+// Twee dingen zijn daarom veranderd. De toestemming staat sinds 1.0.258 vast in
+// het manifest (via https://*.marktplaats.nl/*), dus hij kan niet meer
+// wegvallen. En de keuze om in Admarkt te kijken is nu een gewone voorkeur MET
+// een vangnet: staat het persoonlijke overzicht leeg, dan kijken we sowieso in
+// Admarkt. Precies het geval van een zakelijke verkoper — en het kost een
+// particuliere verkoper niets, want die scan liep daar toch al op een fout uit.
+async function admarktVoorkeurAan() {
+  try {
+    const opgeslagen = await chrome.storage.local.get(["admarkt_aan", "admarkt_ooit_aan"]);
+    if (typeof opgeslagen.admarkt_aan === "boolean") return opgeslagen.admarkt_aan;
+    return !!opgeslagen.admarkt_ooit_aan;   // wie hem ooit aanzette, houdt hem aan
+  } catch (_) { return false; }
+}
+
+async function admarktMeenemen(persoonlijkGevonden) {
+  if (!await admarktToegestaan()) return false;
+  if (persoonlijkGevonden === 0) return true;
+  return await admarktVoorkeurAan();
+}
+
 // De meekijker moet vóór de pagina-code draaien, en dat kan alleen met een
 // aangemeld script — executeScript komt altijd te laat, want dan heeft de app
 // haar gegevens al binnen. Aanmelden kan pas als de toestemming er is, dus dit
@@ -3884,7 +3914,7 @@ async function bgScanMp2dh(job, serverUrl) {
     // samenvoegen op advertentienummer kan hier geen dubbele opleveren.
     let admarktFout = null;
     let admarktKlaar = false;
-    if (platform === "marktplaats" && await admarktToegestaan()) {
+    if (platform === "marktplaats" && await admarktMeenemen(result.items.length)) {
       await reportProgress(serverUrl, job.id, {
         stage: "scanning",
         message: result.items.length
@@ -3932,7 +3962,7 @@ async function bgScanMp2dh(job, serverUrl) {
       if (admarktFout) throw new Error(`Admarkt: ${admarktFout}`);
       throw new Error(mpEmptyScanReason({
         ...(result.meta || {}),
-        admarkt_toegestaan: await admarktToegestaan(),
+        admarkt_toegestaan: await admarktMeenemen(0),
         admarkt_ooit_aan: await admarktOoitAan(),
       }, platform));
     }

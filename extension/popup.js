@@ -110,9 +110,16 @@ toonCalm();
 const ADMARKT = { origins: ["https://admarkt.marktplaats.nl/*"] };
 const admarktToggle = document.getElementById("admarktToggle");
 
+// De schakelaar volgt de VOORKEUR, niet meer de toestemming. Sinds 1.0.258 staat
+// de toegang tot admarkt.marktplaats.nl vast in het manifest, dus
+// permissions.contains() zegt voortaan altijd "ja" — dat is geen antwoord meer
+// op de vraag "wil deze verkoper dat wij in Admarkt kijken".
 async function toonAdmarkt() {
-  try { admarktToggle.checked = await chrome.permissions.contains(ADMARKT); }
-  catch (_) { admarktToggle.checked = false; }
+  try {
+    const o = await chrome.storage.local.get(["admarkt_aan", "admarkt_ooit_aan"]);
+    if (typeof o.admarkt_aan === "boolean") { admarktToggle.checked = o.admarkt_aan; return; }
+    admarktToggle.checked = !!o.admarkt_ooit_aan || await chrome.permissions.contains(ADMARKT);
+  } catch (_) { admarktToggle.checked = false; }
 }
 
 // Deze pagina dient twee doelen: het uitklapvenster onder het icoontje, en
@@ -131,30 +138,41 @@ if (inTabblad && admarktUitleg) admarktUitleg.style.display = "block";
 
 admarktToggle.addEventListener("change", async () => {
   const aan = admarktToggle.checked;
+  // Eerst de voorkeur vastleggen: die overleeft een update van de extensie, een
+  // herstart en een ingetrokken toestemming. Dat laatste is bij een klant echt
+  // gebeurd, en de Admarkt-kant lag daarna een week stil.
+  try {
+    await chrome.storage.local.set(aan ? { admarkt_aan: true, admarkt_ooit_aan: true }
+                                       : { admarkt_aan: false });
+  } catch (_) {}
 
   // Uitzetten mag overal: dat vraagt Chrome niets en sluit dus niets.
   if (!aan) {
     try { await chrome.permissions.remove(ADMARKT); } catch (_) {}
-    return toonAdmarkt();
+    admarktToggle.checked = false;
+    return;
   }
 
   // Aanzetten vanuit het uitklapvenster: eerst gewoon proberen. Lukt het (sommige
   // Chrome-versies laten het toe), dan is de gebruiker in één klik klaar.
   try {
-    if (await chrome.permissions.request(ADMARKT)) return toonAdmarkt();
+    if (await chrome.permissions.contains(ADMARKT)) { admarktToggle.checked = true; return; }
+    if (await chrome.permissions.request(ADMARKT)) { admarktToggle.checked = true; return; }
   } catch (_) {}
 
   if (!inTabblad) {
     // Niet gelukt en we zitten in het venstertje: dezelfde pagina in een tabblad
     // openen, waar de vraag wél blijft staan.
+    try { await chrome.storage.local.set({ admarkt_aan: false }); } catch (_) {}
     admarktToggle.checked = false;
     chrome.tabs.create({ url: chrome.runtime.getURL("popup.html?tab=1") });
     window.close();
     return;
   }
 
+  // Toestemming niet gekregen: dan is de voorkeur ook niet waargemaakt.
+  try { await chrome.storage.local.set({ admarkt_aan: false }); } catch (_) {}
   admarktToggle.checked = false;
-  toonAdmarkt();
 });
 
 toonAdmarkt();

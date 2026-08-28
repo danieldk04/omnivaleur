@@ -685,3 +685,34 @@ advertenties en het is woontextiel, geen kleding.
 
 Zijn webshop (dejuistetoon.eu, ~1.000 producten) draait op WooCommerce, en dat
 ondersteunen we niet. Alleen Shopify.
+
+## 28-08-2026 — Egbert: "je bent niet ingelogd bij Marktplaats" was twintig keer een verkeerde diagnose
+
+Egbert Brouwer (info@papas-plectrums.nl, zakelijk, 4.250 advertenties binnen)
+kreeg vanaf 22-08 twintig mislukte scans met exact dezelfde zin: "You don't
+appear to be signed in to Marktplaats". Hij heeft elke keer zijn login
+gecontroleerd. Uit de opdrachtenlijst op de server (tabel `jobs`) blijkt:
+
+- 27-08 11:09 nog 2.000 nieuwe Admarkt-advertenties binnengehaald.
+- 27-08 20:35 en daarna: mislukt in 5-6 seconden.
+
+Uit de code volgt dwingend dat in al die mislukte rondes de Admarkt-stap NIET
+is gedraaid: was hij wel gedraaid en mislukt, dan had de melding met "Admarkt:"
+begonnen. De optionele toestemming voor admarkt.marktplaats.nl was dus weg,
+zonder dat Egbert iets heeft aangeraakt. En met die toestemming weg viel de
+scan door naar de tak "niet ingelogd", die voor een zakelijk account per
+definitie onjuist is: zijn persoonlijke overzicht op www hoort leeg te zijn.
+
+Wat er is veranderd:
+1. De Admarkt-toegang hangt niet langer aan een optionele toestemming die kan
+   verdwijnen — die staat vast in het manifest (https://*.marktplaats.nl/*,
+   toegevoegd in 1.0.258).
+2. Is het persoonlijke overzicht leeg, dan wordt Admarkt sowieso bekeken, ook
+   als de schakelaar uitstaat. De schakelaar is nu een gewone voorkeur in
+   chrome.storage, die een update overleeft.
+3. Elke mislukte scan noemt voortaan de waargenomen feiten (API-status, aantal,
+   ingelogd ja/nee, Admarkt aan/uit). Twintig identieke meldingen zonder cijfers
+   hebben een week gekost.
+4. Zolang oude extensies rondlopen (Egbert draait 1.0.251, de Web Store loopt
+   achter) zet de server de melding zelf recht in backend/api/jobs.py:fail_job.
+
