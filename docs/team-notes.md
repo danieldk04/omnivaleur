@@ -442,3 +442,32 @@ nameservers staan nog op `dns1/dns2.registrar-servers.com`. De .com draait al vi
 Cloudflare; het domein daar onderbrengen en een doorverwijzing naar omnivaleur.com
 zetten lost het in één keer op, inclusief geldig certificaat. Vereist een login bij
 Namecheap, dus dat blijft handwerk.
+
+### 2026-08-27 — omnivaleur.nl klaargezet bij Cloudflare
+
+Het domein stond al in Cloudflare, in het account op **danieldekoning66@gmail.com
+(inlog via GitHub)** — niet in dat op dkresellacademy, waar nul zones staan. Zone
+stond op "pending": ooit toegevoegd, nameservers nooit omgezet. Daarom serveerde
+het al die tijd de Namecheap-parkeerpagina zonder HTTPS.
+
+Wat er nu klaarstaat (alles in de zone, nog niet live):
+- Wortel-A wees naar de parkeerpagina (162.255.119.233) en staat nu op 192.0.2.1,
+  een adres uit de documentatiereeks RFC 5737 dat nergens bestaat. Bewust: het
+  verkeer komt daar nooit, de doorverwijzing grijpt eerder in. `www` wees als
+  CNAME naar `parkingpage.namecheap.com` en wijst nu naar het domein zelf.
+- Eén redirect rule: `omnivaleur.nl` en `www` → `https://omnivaleur.com`, 301, pad
+  en querystring blijven behouden.
+- "Always Use HTTPS" aan, SSL op flexible (de doorverwijzing gebeurt aan de rand,
+  dus er is geen origin waar een certificaat toe doet).
+
+**Alle acht mailrecords stonden er al en zijn geverifieerd** vóór er iets werd
+aangeraakt: MX naar Zoho (3×), MX `send` naar Amazon SES, SPF op de wortel en op
+`send`, DMARC, Zoho-verificatie en twee DKIM-sleutels (resend én zmail). De
+zmail-DKIM staat zelfs alleen in Cloudflare en niet in de huidige live DNS, dus de
+mailopzet wordt met de omzetting eerder beter dan slechter. Er is een volledige
+inventaris van de live DNS gemaakt vóór de wijziging.
+
+**Nog te doen, en alleen met de hand:** bij Namecheap de nameservers omzetten van
+`dns1/dns2.registrar-servers.com` naar `ariadne.ns.cloudflare.com` en
+`keenan.ns.cloudflare.com`. Daar kan geen sessie bij — inloggen bij een registrar
+is handwerk. Pas ná die omzetting wordt alles hierboven actief.
