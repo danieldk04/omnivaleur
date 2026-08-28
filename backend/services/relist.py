@@ -380,14 +380,29 @@ async def refresh_listing(item_id: str, platform: str, user_id: str, strategy: s
 
     # Eerst: kunnen we deze advertentie straks überhaupt terugzetten? Zo niet,
     # dan halen we hem ook niet weg. Zie ontbreekt_voor_herplaatsen.
-    if strategy == "relist" and ontbreekt_voor_herplaatsen(item):
-        # Nog niet opgeven: wat het item mist staat op dit moment gewoon op zijn
-        # eigen advertentiepagina — die staat immers nog online, daarom zijn we
-        # hier. Eerst overnemen, dan pas oordelen.
-        if platform in ("marktplaats", "2dehands") and listing.get("platform_listing_url"):
-            from backend.services.mp_enrich import vul_item_aan_uit_advertentie
-            item = await vul_item_aan_uit_advertentie(
-                db, item, listing["platform_listing_url"])
+    # NU OOGSTEN, WANT STRAKS IS DE PAGINA WEG.
+    #
+    # Herplaatsen is: eerst weghalen, dan opnieuw plaatsen. Zodra dat weghalen
+    # gebeurd is, geeft Marktplaats op de advertentiepagina HTTP 410 en is alles
+    # wat daar stond onherroepelijk weg — de foto's voorop.
+    #
+    # Deze stap stond er al, maar alleen als het item helemaal LEEG was (geen
+    # tekst of geen enkele foto). Een geïmporteerde advertentie heeft precies
+    # één foto en een ingekorte tekst, en kwam daar dus zonder aanvulling
+    # doorheen. Gemeten bij Jaap (Zilverwebsite, 28-08-2026): 14 advertenties
+    # halverwege een herplaatsing, alle 14 met één foto, alle 14 pagina's
+    # inmiddels 410 — die foto's zijn niet meer terug te halen. Nog eens 51
+    # stonden op het punt hetzelfde te overkomen.
+    #
+    # Daarom oogsten we nu ALTIJD als er iets te winnen valt, en niet pas als
+    # er niets meer over is.
+    if (strategy == "relist" and platform in ("marktplaats", "2dehands")
+            and listing.get("platform_listing_url")
+            and (ontbreekt_voor_herplaatsen(item) or len(item.get("photo_urls") or []) <= 1)):
+        from backend.services.mp_enrich import vul_item_aan_uit_advertentie
+        item = await vul_item_aan_uit_advertentie(
+            db, item, listing["platform_listing_url"])
+    if strategy == "relist":
         mist = ontbreekt_voor_herplaatsen(item)
         if mist:
             raise RefreshError(f"Relist skipped — {mist}")

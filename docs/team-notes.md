@@ -861,3 +861,26 @@ een kopie van vóór de verversing — dan wist hij de nieuwe vervaldatum weer. 
 leest de rij daarom opnieuw vlak voor het wegschrijven.
 
 Vastgelegd in `tests/test_shopify_eigen_sleutel.py` (37 tests).
+
+### Naslag 28-08-2026 — bewijs uit de live Marktplaats-pagina's (Jaap)
+
+Getoetst in plaats van beredeneerd:
+
+- 41 van zijn advertenties die nog online stonden gaven allemaal **5 foto's** in
+  plaats van de ene die wij hadden, en teksten van 1.756 tot **5.936** tekens.
+  Daarmee is bewezen dat (a) de advertentiepagina de hele reeks foto's bevat en
+  (b) Marktplaats teksten ver boven onze oude grenzen van 2.000 en 4.000 aanneemt.
+  Die 41 zijn meteen bijgewerkt: <=1 foto ging van 108 naar 67 items, lege tekst
+  van 58 naar 34, langste tekst van 4.000 naar 5.936.
+- 4 advertenties gaven **HTTP 410**: al verwijderd voor een herplaatsing. Hun
+  foto's zijn onherroepelijk weg. De 14 items in zijn publicatiewachtrij zitten
+  in diezelfde toestand.
+- 6 gaven 401 (Marktplaats wil daar een inlog voor); die kan alleen de extensie
+  in zijn eigen browser ophalen.
+
+Let op: een 410-pagina bevat 51 foto's van ÁNDERE advertenties van dezelfde
+verkoper. `volledige_advertentie` weigert een niet-200 en pakt ze dus niet — dat
+moet zo blijven, anders krijgt een item de foto's van zijn buurman.
+
+Daarom oogst het herplaatsen nu vóór het verwijderen, ook als het item niet leeg
+is maar alleen dun (één foto).

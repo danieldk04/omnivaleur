@@ -52,16 +52,24 @@ def test_compleet_item_mag_gewoon():
 
 def test_de_rem_staat_voor_de_verwijderopdracht():
     """Volgorde is hier alles: controleren ná het verwijderen helpt niemand."""
-    rem = RELIST.index('if strategy == "relist" and ontbreekt_voor_herplaatsen(item)')
+    rem = RELIST.index('raise RefreshError(f"Relist skipped')
     verwijder = RELIST.index('"action": "delete"')
     assert rem < verwijder
 
 
 def test_er_wordt_eerst_geprobeerd_aan_te_vullen():
-    """De advertentie staat op dat moment nog online; daar staat de tekst."""
-    blok = RELIST.split("if strategy == \"relist\" and ontbreekt_voor_herplaatsen(item)")[1][:900]
-    assert "vul_item_aan_uit_advertentie" in blok
+    """De advertentie staat op dat moment nog online; daar staat alles.
+
+    Ook — sinds 28-08-2026 — als het item niet leeg is maar alleen dun: één foto
+    en een ingekorte tekst. Na het verwijderen geeft Marktplaats 410 en is het
+    onherroepelijk weg (Jaap, Zilverwebsite: 14 advertenties, 14 keer één foto).
+    """
+    blok = RELIST.split("vul_item_aan_uit_advertentie")[0][-1200:]
+    assert 'len(item.get("photo_urls") or []) <= 1' in blok
     assert "platform_listing_url" in blok
+    oogst = RELIST.index("vul_item_aan_uit_advertentie")
+    verwijder = RELIST.index('"action": "delete"')
+    assert oogst < verwijder, "oogsten na het verwijderen is oogsten van een 410"
 
 
 def test_aanvullen_overschrijft_nooit_wat_de_verkoper_zelf_invulde():
