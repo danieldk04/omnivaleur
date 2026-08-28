@@ -84,12 +84,20 @@ def main() -> int:
         print("\n(proefdraai — draai opnieuw met --schrijf om ze in te plannen)")
         return 0
 
+    # Eerst tellen wat er écht op 'delisted' staat: een update geeft in deze
+    # client niet betrouwbaar de gewijzigde rijen terug, dus daarop tellen
+    # meldde "0 ingepland" terwijl er 34 waren gezet.
     gezet = 0
     for iid in klaar:
-        r = (db.table("listings").update({"status": "relisting"})
-             .eq("item_id", iid).eq("platform", args.platform)
-             .eq("status", "delisted").execute())
-        gezet += len(r.data or [])
+        rijen = (db.table("listings").select("id")
+                 .eq("item_id", iid).eq("platform", args.platform)
+                 .eq("status", "delisted").execute().data or [])
+        if not rijen:
+            continue
+        (db.table("listings").update({"status": "relisting"})
+         .eq("item_id", iid).eq("platform", args.platform)
+         .eq("status", "delisted").execute())
+        gezet += len(rijen)
     print(f"\n{gezet} advertentie(s) ingepland om terug te komen. De opruimronde "
           f"(elke 6 uur) zet er een plaatsopdracht achteraan.")
     return 0
