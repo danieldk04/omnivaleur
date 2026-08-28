@@ -309,9 +309,10 @@ const MP_CATEGORIES = {
   // de naam horen (38 = luidsprekers, 37 = koptelefoons, 33 = buizenversterkers).
   // 68 van 68, geen enkele leeg of afwijkend.
   //
-  // Op 27-08-2026 in een INGELOGDE browser bevestigd: /plaats/31/38 opent het
-  // formulier op "Audio, Tv en Foto > Luidsprekers", zonder bucketId. Daarmee
-  // staat ook de URL-vorm vast; alle 68 delen die vorm.
+  // Op 27-08-2026 in een INGELOGDE browser bevestigd, en niet steekproefsgewijs:
+  // alle 68 opgehaald via /plaats/31/{cat3} en de "categoryName" uit het
+  // antwoord vergeleken met de naam die Marktplaats zelf aan dat id hangt.
+  // 68 van 68 gelijk. Zonder bucketId, zoals bij muziek en antiek.
   //
   // Wat daarbij opviel: deze tak heeft wél kenmerkvelden (bij Luidsprekers Type,
   // Wattage, Merk, Handelsnaam fabrikant). Alleen titel, beschrijving en foto's

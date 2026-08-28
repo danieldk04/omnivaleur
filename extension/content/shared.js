@@ -135,6 +135,46 @@ window.CL = (() => {
     });
   }
 
+  // ---- Beschrijving: altijd platte tekst ----
+  //
+  // Een beschrijving kan HTML bevatten. Items die uit Shopify komen dragen daar
+  // letterlijk `body_html` mee, dus met <br/>, <p> en &amp; erin. Marktplaats,
+  // 2dehands, Vinted en Facebook hebben alle vier een PLAT tekstveld: die tags
+  // worden daar geen witregel maar staan er als tekst in de advertentie —
+  // "...voordat u koopt!<br/><br/>Dit item is..." — precies zoals de verkoper
+  // het meldde. Hier gaan ze er één keer uit, vlak voordat er getypt wordt, dus
+  // voor élk platform en ook voor items die al met HTML in de database staan.
+  //
+  // Alleen ECHTE html-tags sneuvelen. Een maat als "< 40 cm" of "5 > 3" in de
+  // tekst van de verkoper blijft staan; er wordt op een tagnaam gematcht, niet
+  // op elk driehoekje.
+  const _HTML_TAG = /<\/?(?:br|p|div|span|strong|b|i|em|u|ul|ol|li|h[1-6]|a|img|table|tbody|tr|td|th|hr|font|small|section|article|figure|figcaption)\b[^>]*>/gi;
+
+  function platteTekst(ruw) {
+    let s = String(ruw == null ? "" : ruw);
+    if (!/[<&]/.test(s)) return s;
+    s = s
+      .replace(/<\s*br\s*\/?\s*>/gi, "\n")
+      .replace(/<\s*\/\s*(?:p|div|li|h[1-6]|tr)\s*>/gi, "\n")
+      .replace(/<\s*li\b[^>]*>/gi, "- ")
+      .replace(_HTML_TAG, "");
+    if (/&[a-z#0-9]{2,8};/i.test(s)) {
+      // Entiteiten (&amp; &euro; &#39;) fatsoenlijk terugvertalen. Een <textarea>
+      // decodeert wel, maar voert niets uit — er is hier geen enkele tag meer
+      // over, dus dit kan niets in de pagina zetten.
+      try {
+        const t = document.createElement("textarea");
+        t.innerHTML = s;
+        s = t.value;
+      } catch (_) { /* dan maar met entiteiten */ }
+    }
+    return s
+      .replace(/\u00a0/g, " ")
+      .replace(/[ \t]+\n/g, "\n")
+      .replace(/\n{3,}/g, "\n\n")
+      .trim();
+  }
+
   // ---- Lexical / contenteditable description ----
   let _pendingDescription = null;
   let _descriptionSelector = null;
@@ -146,7 +186,7 @@ window.CL = (() => {
   // THROWS on failure. "Geen advertentietekst ingevuld" is a platform-side
   // rejection the user cannot act on; the causes below can be reported precisely.
   async function fillDescription(selectors, text, opties) {
-    const value = (text || "").trim().slice(0, 2000);
+    const value = platteTekst(text).trim().slice(0, 2000);
     if (!value) throw new Error("This item has no description — add one in Omnivaleur and publish again");
     const selector = selectors.find((s) => document.querySelector(s));
     if (!selector) throw new Error("The description field could not be found on the page (" + selectors.join(", ") + ")");
@@ -753,7 +793,10 @@ window.CL = (() => {
   //
   // Daarom typen we hem hier na het invullen alsnog, en controleren we het:
   // blijft de staat leeg, dan weten we dat vóór het plaatsen in plaats van erna.
-  async function typBeschrijvingEcht(tekst) {
+  async function typBeschrijvingEcht(ruweTekst) {
+    // Dezelfde opschoning als in fillDescription: anders typt deze stap alsnog
+    // de HTML-versie over de nette tekst heen.
+    const tekst = platteTekst(ruweTekst).trim().slice(0, 2000);
     if (!tekst) return "geen tekst";
     const uitkomst = await new Promise((res) => {
       try { chrome.runtime.sendMessage({ type: "TYPE_ECHT", text: tekst }, (r) => res(r || "geen antwoord")); }
@@ -1609,6 +1652,6 @@ window.CL = (() => {
     findFieldByLabel, selectDropdown, fillBrand, fillManufacturer, selectBundleFree,
     selectDelivery, gekozenLevering, selectPakketWaarde, vulHalswijdte, keuzeveldenKort, typBeschrijvingEcht,
     selectPackageSize, uploadPhotos, submitListing, step, closePopup, smartTrunc, fillBidding,
-    clog, plaatsBlokkade, dutchColor, verifyMpGroupFields, repairMpGroupFields, ensureDescriptionStillFilled, selectCondition, selectIntendedFor, fillBrandField, logMpFields, mpPrijs,
+    clog, plaatsBlokkade, dutchColor, platteTekst, verifyMpGroupFields, repairMpGroupFields, ensureDescriptionStillFilled, selectCondition, selectIntendedFor, fillBrandField, logMpFields, mpPrijs,
   };
 })();

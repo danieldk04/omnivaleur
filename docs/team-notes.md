@@ -410,3 +410,35 @@ natrekt komt daar terecht. Dit is DNS-werk bij Namecheap, geen code.
 **Ook vastgesteld:** Railway draait nu op de `service_role`-sleutel (`/health`
 toont `supabase_key_role`). De oude notitie dat alles met auth.admin stil faalt,
 is daarmee achterhaald.
+
+### 2026-08-27, laat — audio 68/68 bevestigd, en drie dingen rechtgezet
+
+**De audio-tak is volledig geverifieerd.** Niet met een steekproef: in een
+ingelogde browser alle 68 opgehaald via `/plaats/31/{cat3}` en de `categoryName`
+uit het antwoord vergeleken met de naam die Marktplaats zelf aan dat id hangt.
+68 van 68 gelijk. Dit is meteen de snelste route voor een volgende tak — vanuit
+een ingelogd tabblad met `fetch()` en die ene regex, geen 68 keer klikken.
+
+**De Notion-markering is gedraaid.** De Fase-optie "0. Kan (nog) niet" bestond
+niet en is aangemaakt (let op: Notion vervangt bij zo'n PATCH de héle optielijst,
+dus de bestaande 18 moesten meegestuurd worden). Daarna alle 75 onbedienbare
+leads gemarkeerd, fase gezet en reden op de pagina.
+
+**Twee dingen die ik verkeerd had en die niemand moet overnemen:**
+
+1. De Claude-extensie leek op een ander account te draaien (`heidi.cumbre@gmail.com`
+   stond in het instellingenscherm). Dat was niet de oorzaak — de koppeling kwam
+   even later gewoon tot stand. Een lege browserlijst betekent "nog niet
+   verbonden", niet "verkeerd account".
+2. Ik dacht dat de koude mail SPF zou falen omdat de SPF van omnivaleur.nl alleen
+   Zoho noemt. Onjuist: Resend gebruikt `send.omnivaleur.nl` als Return-Path, en
+   dáár staan MX (feedback-smtp.eu-west-1.amazonses.com), SPF
+   (`include:amazonses.com`) en de DKIM-sleutel keurig. De mailauthenticatie is
+   in orde; DMARC staat op `p=none`, wat voor een jong domein normaal is.
+
+**Wat er van omnivaleur.nl wél stukstaat is alleen de website**, en dat blijft
+staan: geen werkende HTTPS, en over http een Namecheap-parkeerpagina. De
+nameservers staan nog op `dns1/dns2.registrar-servers.com`. De .com draait al via
+Cloudflare; het domein daar onderbrengen en een doorverwijzing naar omnivaleur.com
+zetten lost het in één keer op, inclusief geldig certificaat. Vereist een login bij
+Namecheap, dus dat blijft handwerk.
