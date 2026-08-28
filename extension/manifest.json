@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Omnivaleur",
-  "version": "1.0.255",
+  "version": "1.0.256",
   "description": "Omnivaleur — publiceer je items automatisch op Marktplaats, 2dehands, Vinted en meer",
   "permissions": [
     "storage",
@@ -26,7 +26,11 @@
     "https://*.vinted.net/*",
     "https://*.supabase.co/*",
     "https://omnivaleur.com/*",
-    "https://www.google-analytics.com/*"
+    "https://www.google-analytics.com/*",
+    "https://images.marktplaats.com/*",
+    "https://images.2dehands.com/*",
+    "https://*.marktplaats.nl/*",
+    "https://*.2dehands.be/*"
   ],
   "optional_host_permissions": [
     "https://admarkt.marktplaats.nl/*"
@@ -35,6 +39,24 @@
     "service_worker": "background.js"
   },
   "content_scripts": [
+    {
+      "matches": [
+        "https://www.marktplaats.nl/*",
+        "https://www.2dehands.be/*",
+        "https://www.vinted.com/items/*",
+        "https://www.vinted.nl/items/*",
+        "https://www.vinted.be/items/*",
+        "https://www.vinted.de/items/*",
+        "https://www.vinted.fr/items/*",
+        "https://www.facebook.com/marketplace/*"
+      ],
+      "js": [
+        "content/unload_guard.js"
+      ],
+      "run_at": "document_start",
+      "world": "MAIN",
+      "all_frames": false
+    },
     {
       "matches": [
         "https://omnivaleur.com/*",

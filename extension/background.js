@@ -1494,6 +1494,52 @@ function stilTabblad(url, callback) {
 }
 
 
+// "SITE VERLATEN?" MAG NOOIT MEER IN BEELD KOMEN.
+//
+// Marktplaats en 2dehands hangen aan hun plaatsformulier een bevestigingsvraag
+// bij het weggaan. Sluiten wij zo'n tabblad — na een geplaatste advertentie, of
+// nadat een opdracht is afgerond — dan stelt Chrome die vraag aan de verkoper.
+// Zolang hij niet klikt staat álles stil, ook het tabblad waarin op dat moment
+// het volgende formulier wordt ingevuld: twee tabbladen van dezelfde site delen
+// één proces. Dat is exact de melding "ik moet elke keer zelf op Verlaten
+// drukken, en dan publiceert hij meteen".
+//
+// content/unload_guard.js draait in elke marktplaats/2dehands/vinted-pagina en
+// onthoudt die meldingen zonder ze te blokkeren. Hier, vlak voor wij zelf het
+// tabblad sluiten of wegsturen, zetten we ze uit. Doet de verkoper het zelf,
+// dan krijgt hij zijn waarschuwing gewoon.
+async function ontwapenAfsluitvraag(tabId) {
+  if (tabId == null) return;
+  try {
+    await chrome.scripting.executeScript({
+      target: { tabId }, world: "MAIN",
+      func: () => {
+        try { if (window.__ovDisarmUnload) return window.__ovDisarmUnload(); } catch (_) {}
+        try { window.onbeforeunload = null; } catch (_) {}
+        return 0;
+      },
+    });
+  } catch (_) { /* tabblad al weg, of geen toegang: dan gewoon sluiten */ }
+}
+
+// Een werk-tabblad sluiten zonder dat de verkoper er iets van merkt.
+function sluitWerkTabblad(tabId, vertragingMs = 0) {
+  if (tabId == null) return;
+  const sluit = () => {
+    ontwapenAfsluitvraag(tabId).finally(() => chrome.tabs.remove(tabId).catch(() => {}));
+  };
+  if (vertragingMs > 0) setTimeout(sluit, vertragingMs);
+  else sluit();
+}
+
+// Een werk-tabblad naar een ander adres sturen. Ook een navigatie laat het
+// formulier "wil je echt weg?" vragen, dus dezelfde ontwapening vooraf.
+async function stuurWerkTabbladNaar(tabId, url) {
+  await ontwapenAfsluitvraag(tabId);
+  return new Promise((res, rej) => chrome.tabs.update(tabId, { url }, () =>
+    chrome.runtime.lastError ? rej(new Error(chrome.runtime.lastError.message)) : res()));
+}
+
 // Tabbladen waar we al aan gekoppeld zijn (zie koppelVroeg).
 const _vroegGekoppeld = new Set();
 
@@ -1541,7 +1587,20 @@ function openWorkerTab(url, callback, opts = {}) {
 }
 
 async function openWorkerTabInner(url, opts = {}) {
-  const wantState = opts.silent ? "minimized" : "normal";
+  // HET WERKVENSTER KOMT NOOIT MEER IN BEELD.
+  //
+  // Hier stond: scans ingeklapt, publiceren in een gewoon venster. Gevolg: bij
+  // elke advertentie klapte het venster weer open over het werk van de verkoper
+  // heen — "elke keer komt het scherm in beeld waar hij aan het listen is".
+  // Publiceren hoort net zo onzichtbaar te zijn als de scans.
+  //
+  // De prijs is bekend en aanvaard: Chrome vertraagt korte pauzes in een
+  // verborgen tabblad tot een seconde, dus invullen duurt wat langer. In de
+  // praktijk gebeurde dat toch al — een venster dat achter de vensters van de
+  // verkoper ligt, telt op een Mac ook als verborgen. Elke logregel uit het
+  // formulier zet de bewaker opnieuw op scherp, dus trager werk wordt niet
+  // afgebroken.
+  const wantState = "minimized";
   let existing = await getWorkerWindowId();
   if (existing == null) {
     // Geen nummer in het geheugen (bijvoorbeeld na een update): kijk of ons
@@ -1582,11 +1641,9 @@ async function openWorkerTabInner(url, opts = {}) {
     // Leeg openen en pas daarna navigeren: alleen op een leeg tabblad laat
     // Chrome ons aan de toetsen komen (zie koppelVroeg).
     const leeg = "about:blank";
-    const w = opts.silent
-      ? await chrome.windows.create({ url: leeg, focused: false, state: "minimized" })
-          .catch(() => chrome.windows.create({ url: leeg, state: "minimized" }))
-          .catch(() => chrome.windows.create({ url: leeg, focused: false, ...WORKER_WIN_SIZE }))
-      : await chrome.windows.create({ url: leeg, focused: false, ...WORKER_WIN_SIZE });
+    const w = await chrome.windows.create({ url: leeg, focused: false, state: "minimized" })
+      .catch(() => chrome.windows.create({ url: leeg, state: "minimized" }))
+      .catch(() => chrome.windows.create({ url: leeg, focused: false, ...WORKER_WIN_SIZE }));
     if (!w || !w.tabs || !w.tabs[0]) throw new Error("no tab in new window");
     await setWorkerWindowId(w.id);
     // Anker erbij: vanaf nu blijft dit ene venster bestaan in plaats van bij
@@ -1820,7 +1877,7 @@ async function fireJobWatchdog(tabId) {
         platform_listing_id: gevonden.id, platform_listing_url: gevonden.url,
       }).catch(() => {});
       await chrome.storage.local.remove(key);
-      chrome.tabs.remove(tabId).catch(() => {});
+      sluitWerkTabblad(tabId);
       return;
     }
   }
@@ -1841,7 +1898,7 @@ async function fireJobWatchdog(tabId) {
     return;
   }
   chrome.storage.local.remove(key);
-  chrome.tabs.remove(tabId).catch(() => {});
+  sluitWerkTabblad(tabId);
 }
 
 chrome.alarms.onAlarm.addListener((alarm) => {
@@ -1933,7 +1990,7 @@ async function expandMp2dhOverview(tabId) {
 async function verwijderViaAdvertentiepagina(tabId, adUrl, platform) {
   const sleep = ms => new Promise(r => setTimeout(r, ms));
   try {
-    await chrome.tabs.update(tabId, { url: adUrl });
+    await stuurWerkTabbladNaar(tabId, adUrl);
     await waitForTabLoad(tabId);
     await sleep(2500);
 
@@ -2010,6 +2067,145 @@ async function verwijderViaAdvertentiepagina(tabId, adUrl, platform) {
   }
 }
 
+// ── De advertentie vastleggen VOORDAT hij weggehaald wordt ────────────────
+//
+// WAAROM DIT ER MOET ZIJN.
+//
+// Herplaatsen is: weghalen en opnieuw plaatsen. De nieuwe advertentie wordt
+// gebouwd uit wat er in Omnivaleur over het item bekend is — en van een
+// geïmporteerde advertentie is dat maar ÉÉN foto. Marktplaats geeft in zijn
+// zoeklijst namelijk alleen het omslagplaatje mee, niet de hele reeks. Gevolg:
+// een advertentie met negen foto's kwam met één foto terug. Precies de melding
+// "bij het herplaatsen neemt hij elke keer maar één foto mee".
+//
+// De volledige reeks staat wél op de advertentiepagina zelf, en die pagina
+// hebben we op dit moment gewoon voor ons — vlak voor het verwijderen. We lezen
+// de miniaturen uit de galerij (dat is meteen de juiste volgorde, dus de
+// omslagfoto blijft de omslagfoto) en vragen van elke foto de grootste versie
+// op. De server zet ze in de al klaarstaande plaatsingsopdracht.
+const MP_FOTO_REGEL = "ecg_mp_eps$_86";   // grootste versie; live nagemeten
+
+async function mpAdvertentieSnapshot(tabId) {
+  try {
+    const snap = await execInTab(tabId, async (regel) => {
+      const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+      const uitUrl = (waarde) => {
+        const m = /url\(\s*["']?([^"')]+)/i.exec(waarde || "");
+        return m ? m[1] : null;
+      };
+      // Miniaturen dragen "Foto 3 van 9", dus de pagina zegt zelf hoeveel het er
+      // zijn. Zolang we er minder zien blijven we even wachten: de galerij wordt
+      // pas na het laden opgebouwd.
+      const lees = () => {
+        const knoppen = [...document.querySelectorAll('[class*="Thumbnails-module-item"]')];
+        const urls = [];
+        for (const k of knoppen) {
+          const u = uitUrl(k.style && k.style.backgroundImage) ||
+                    uitUrl(getComputedStyle(k).backgroundImage) ||
+                    (k.querySelector("img") || {}).src;
+          if (u) urls.push(u);
+        }
+        if (!urls.length) {
+          // Advertentie met één foto: dan tekent Marktplaats geen miniatuurrij.
+          const hoofd = [...document.querySelectorAll("img")]
+            .map((i) => i.src || "")
+            .filter((u) => /images\.(?:marktplaats|2dehands)\.com\/api\/v1\/[^/]+\/images\//.test(u));
+          urls.push(...hoofd);
+        }
+        return urls;
+      };
+      let totaal = 0;
+      const label = [...document.querySelectorAll('[aria-label*="van"]')]
+        .map((e) => /(\d+)\s+van\s+(\d+)/.exec(e.getAttribute("aria-label") || ""))
+        .find(Boolean);
+      if (label) totaal = parseInt(label[2], 10) || 0;
+
+      let beste = [];
+      for (let poging = 0; poging < 10; poging++) {
+        const nu = lees();
+        if (nu.length > beste.length) beste = nu;
+        if (totaal && beste.length >= totaal) break;
+        if (!totaal && beste.length) break;
+        // Miniaturen verderop in de rij worden pas geladen als ze in beeld
+        // komen. Even langsscrollen dus, anders houden we er vijf van negen.
+        const rij = document.querySelectorAll('[class*="Thumbnails-module-item"]');
+        if (rij.length) {
+          try { rij[rij.length - 1].scrollIntoView({ block: "nearest" }); } catch (_) {}
+        }
+        await sleep(500);
+      }
+
+      // Grootste versie opvragen en dubbele eruit: dezelfde foto staat vaak in
+      // meerdere maten in de pagina.
+      const gezien = new Set();
+      const fotos = [];
+      for (let u of beste) {
+        if (!u) continue;
+        if (u.startsWith("//")) u = "https:" + u;
+        if (!/^https?:\/\//.test(u)) continue;
+        const m = /\/images\/([0-9a-f-]{16,})/i.exec(u);
+        const sleutel = m ? m[1] : u;
+        if (gezien.has(sleutel)) continue;
+        gezien.add(sleutel);
+        fotos.push(u.split("?")[0] + "?rule=" + regel);
+      }
+
+      // "Kenmerken" van de advertentie zelf. Precies de velden waar het
+      // dashboard om vraagt bij een geïmporteerde advertentie ("Vul merk en maat
+      // aan voor Marktplaats & 2dehands") — ze stonden altijd al op de
+      // advertentie, alleen niet in de zoeklijst waaruit geïmporteerd wordt.
+      const kenmerk = {};
+      for (const rij of document.querySelectorAll('[class*="Attributes-module-item"]')) {
+        const label = (rij.querySelector('[class*="Attributes-module-label"]') || {}).innerText;
+        const waarde = (rij.querySelector('[class*="Attributes-module-value"]') || {}).innerText;
+        if (label && waarde) kenmerk[label.trim().toLowerCase()] = waarde.trim();
+      }
+      const conditieNaarOns = (w) => {
+        const t = (w || "").toLowerCase();
+        if (!t) return "";
+        if (t.includes("nieuw met")) return "new_with_tags";
+        if (t.includes("zo goed als nieuw")) return "good";
+        if (t.includes("nieuw")) return "new";
+        if (t.includes("beschadigd") || t.includes("defect")) return "poor";
+        if (t.includes("gebruikt") || t.includes("gedragen")) return "fair";
+        return "";
+      };
+      // Marktplaats zet maten soms in emmertjes ("Maat 46/48 (XL) of groter",
+      // "Overige maten"). Alleen een maat die ook op een ander platform een maat
+      // ís nemen we over; een emmertje zou daar onzin worden.
+      const maatUit = (w) => {
+        const t = (w || "").trim();
+        if (!t) return "";
+        const m = /\b(XXXS|XXS|XS|S|M|L|XL|XXL|XXXL|XXXXL)\b/i.exec(t);
+        if (m) return m[1].toUpperCase();
+        const n = /^\s*(\d{2,3})\s*$/.exec(t);
+        return n ? n[1] : "";
+      };
+
+      const blok = document.querySelector('[class*="Description-module-description"]');
+      return {
+        photo_urls: fotos,
+        foto_totaal: totaal || fotos.length,
+        description: blok ? (blok.innerText || "").trim().slice(0, 4000) : "",
+        brand: kenmerk["merk"] || "",
+        size: maatUit(kenmerk["maat"] || kenmerk["kledingmaat"] || ""),
+        color: kenmerk["kleur"] || "",
+        condition: conditieNaarOns(kenmerk["conditie"] || kenmerk["staat"] || ""),
+      };
+    }, [MP_FOTO_REGEL]);
+    if (!snap) return {};
+    if (!Array.isArray(snap.photo_urls) || !snap.photo_urls.length) {
+      console.log("[Omnivaleur] snapshot: geen foto's gevonden op de advertentiepagina");
+      snap.photo_urls = [];
+    }
+    console.log(`[Omnivaleur] snapshot: ${snap.photo_urls.length} van ${snap.foto_totaal} foto('s) vastgelegd`);
+    return snap;
+  } catch (e) {
+    console.warn("[Omnivaleur] snapshot mislukt:", e && e.message);
+    return {};
+  }
+}
+
 async function bgDeleteMp2dh(job, serverUrl) {
   const sleep = ms => new Promise(r => setTimeout(r, ms));
   const platform = job.platform;
@@ -2027,14 +2223,27 @@ async function bgDeleteMp2dh(job, serverUrl) {
     ? "https://www.marktplaats.nl/my-account/sell/index.html"
     : "https://www.2dehands.be/my-account/sell/index.html";
 
+  // De echte advertentiepagina, als we die hebben. Daar staan alle foto's; op
+  // het overzicht staat alleen het omslagplaatje.
+  const adUrl = String(payload.platform_listing_url || "").trim();
+  const startUrl = /^https:\/\/(?:www\.)?(?:marktplaats\.nl|2dehands\.be)\/v\//.test(adUrl)
+    ? adUrl : overviewUrl;
+
   const tabId = await new Promise((res, rej) =>
-    openWorkerTab(overviewUrl, t =>
+    openWorkerTab(startUrl, t =>
       t ? res(t.id) : rej(new Error("could not open worker tab")), { silent: true }
     )
   );
 
+  let snapshot = {};
   try {
     await waitForTabLoad(tabId);
+    if (startUrl !== overviewUrl) {
+      await sleep(1500);
+      snapshot = await mpAdvertentieSnapshot(tabId);
+      await stuurWerkTabbladNaar(tabId, overviewUrl);
+      await waitForTabLoad(tabId);
+    }
     await sleep(3000); // let React fully render listings
     await expandMp2dhOverview(tabId); // load ALL ads, not just the first 50
 
@@ -2357,11 +2566,17 @@ async function bgDeleteMp2dh(job, serverUrl) {
 
     if (stillPresent) throw new Error(`Listing "${title}" still visible on ${overviewUrl} after confirming delete — removal was not verified`);
 
-    await finaliseJob(serverUrl, job.id, "complete", {});
+    // De vastgelegde advertentie gaat mee: de server zet de volledige fotoreeks
+    // in de plaatsingsopdracht die hierna volgt (het tweede deel van een
+    // herplaatsing). Zonder dit komt een geïmporteerde advertentie met één foto
+    // terug.
+    const iets = snapshot && ((snapshot.photo_urls || []).length || snapshot.brand ||
+                             snapshot.size || snapshot.description);
+    await finaliseJob(serverUrl, job.id, "complete", iets ? { captured_listing: snapshot } : {});
     console.log(`[Omnivaleur] bgDelete success: ${platform} listing "${title}"`);
 
   } finally {
-    setTimeout(() => chrome.tabs.remove(tabId).catch(() => {}), 2500);
+    sluitWerkTabblad(tabId, 2500);
   }
 }
 
@@ -2412,11 +2627,7 @@ async function resolveVintedIdByTitle(title, sku) {
     // Navigate to the home-country origin so the wardrobe fetch is same-origin.
     const currentTab = await new Promise(res => chrome.tabs.get(tabId, res));
     if (idInfo.origin && currentTab?.url && new URL(currentTab.url).origin !== idInfo.origin) {
-      await new Promise((res, rej) =>
-        chrome.tabs.update(tabId, { url: idInfo.origin + "/" }, () =>
-          chrome.runtime.lastError ? rej(new Error(chrome.runtime.lastError.message)) : res()
-        )
-      );
+      await stuurWerkTabbladNaar(tabId, idInfo.origin + "/");
       await waitForTabLoad(tabId);
       await sleep(1500);
     }
@@ -2470,7 +2681,7 @@ async function resolveVintedIdByTitle(title, sku) {
     if (found?.ambiguous) return { id: null, ambiguous: true, origin: idInfo.origin };
     return { id: found?.id || null, closed: !!found?.closed, origin: idInfo.origin };
   } finally {
-    setTimeout(() => chrome.tabs.remove(tabId).catch(() => {}), 2500);
+    sluitWerkTabblad(tabId, 2500);
   }
 }
 
@@ -2794,7 +3005,7 @@ async function bgDeleteVinted(job, serverUrl) {
     await finaliseJob(serverUrl, job.id, "complete", { captured_listing: snapshot });
     console.log(`[Omnivaleur] bgDeleteVinted success: listing ${listingId}`, snapshot);
   } finally {
-    setTimeout(() => chrome.tabs.remove(tabId).catch(() => {}), 2500);
+    sluitWerkTabblad(tabId, 2500);
   }
 }
 
@@ -2861,11 +3072,7 @@ async function bgScanVinted(job, serverUrl) {
     // so the items fetch is same-origin (and actually has the right catalog).
     const currentTab = await new Promise(res => chrome.tabs.get(tabId, res));
     if (idInfo.origin && currentTab?.url && new URL(currentTab.url).origin !== idInfo.origin) {
-      await new Promise((res, rej) =>
-        chrome.tabs.update(tabId, { url: idInfo.origin + "/" }, () =>
-          chrome.runtime.lastError ? rej(new Error(chrome.runtime.lastError.message)) : res()
-        )
-      );
+      await stuurWerkTabbladNaar(tabId, idInfo.origin + "/");
       await waitForTabLoad(tabId);
       await sleep(1500);
     }
@@ -3188,7 +3395,7 @@ async function bgScanVinted(job, serverUrl) {
       `complete=${result.meta?.complete} ${result.meta?.truncated_reason || ""}`
     );
   } finally {
-    setTimeout(() => chrome.tabs.remove(tabId).catch(() => {}), 2500);
+    sluitWerkTabblad(tabId, 2500);
   }
 }
 
@@ -3464,7 +3671,7 @@ async function bgScanAdmarkt(job, serverUrl) {
     }
     return result;
   } finally {
-    setTimeout(() => chrome.tabs.remove(tabId).catch(() => {}), 2500);
+    sluitWerkTabblad(tabId, 2500);
   }
 }
 
@@ -3870,7 +4077,7 @@ async function bgScanMp2dh(job, serverUrl) {
       `via ${result.meta?.source} complete=${result.meta?.complete} ${result.meta?.truncated_reason || ""}`
     );
   } finally {
-    setTimeout(() => chrome.tabs.remove(tabId).catch(() => {}), 2500);
+    sluitWerkTabblad(tabId, 2500);
   }
 }
 
@@ -3998,7 +4205,7 @@ chrome.tabs.onUpdated.addListener(async (tabId, changeInfo) => {
     platform_listing_id: listingId, platform_listing_url: listingUrl,
   });
 
-  setTimeout(() => chrome.tabs.remove(tabId).catch(() => {}), 2000);
+  sluitWerkTabblad(tabId, 2000);
 });
 
 // ── Autonomous sold detection + cross-platform delist ─────────────────────
@@ -4271,7 +4478,7 @@ function scrapeMarktplaatsAds(url, platform) {
             return { ads, diag };
           },
         }, (results) => {
-          chrome.tabs.remove(tabId).catch(() => {});
+          sluitWerkTabblad(tabId);
           const out = results?.[0]?.result || { ads: [], diag: null };
           const ads = out.ads || [];
           console.log(`[Omnivaleur][sold] ${platform}: scraper found ${ads.length} ad cards (sold-labelled: ${ads.filter(a => a.sold).length})`);
@@ -4287,7 +4494,7 @@ function scrapeMarktplaatsAds(url, platform) {
       chrome.tabs.onUpdated.addListener(onUpdated);
       setTimeout(() => {
         chrome.tabs.onUpdated.removeListener(onUpdated);
-        chrome.tabs.remove(tabId).catch(() => {});
+        sluitWerkTabblad(tabId);
         resolve([]);
       }, 30000);
     });
@@ -4397,7 +4604,7 @@ function scrapeVintedOrders(url) {
               return { orders: Object.values(rows), selectorHits, rowCandidates: anchors.size };
             },
           }, (results) => {
-            chrome.tabs.remove(tabId).catch(() => {});
+            sluitWerkTabblad(tabId);
             const out = results?.[0]?.result || { orders: [], selectorHits: {}, rowCandidates: 0 };
             const orders = out.orders || [];
             console.log(`[Omnivaleur][sold] Vinted: selector hits`, out.selectorHits, `→ ${out.rowCandidates} candidate row(s), ${orders.length} order row(s) (${orders.filter(o => o.sku).length} with a (SKU), sold: ${orders.filter(o => o.sold).length})`);
@@ -4409,7 +4616,7 @@ function scrapeVintedOrders(url) {
       chrome.tabs.onUpdated.addListener(onUpdated);
       setTimeout(() => {
         chrome.tabs.onUpdated.removeListener(onUpdated);
-        chrome.tabs.remove(tabId).catch(() => {});
+        sluitWerkTabblad(tabId);
         resolve([]);
       }, 30000);
     });
@@ -4542,7 +4749,7 @@ function scrapeNotificationCounts(url, platform) {
         if (settled) return;
         settled = true;
         chrome.tabs.onUpdated.removeListener(onUpdated);
-        chrome.tabs.remove(tabId).catch(() => {});
+        sluitWerkTabblad(tabId);
         resolve(val);
       };
 
@@ -5757,7 +5964,7 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
       clearJobWatchdog(sender.tab?.id);
       chrome.storage.local.remove([`job_${platform}`, `jobtab_${sender.tab?.id}`]);
       // Keep tab open 2s so user can see the listing was created
-      if (sender.tab?.id) setTimeout(() => chrome.tabs.remove(sender.tab.id).catch(() => {}), 2000);
+      if (sender.tab?.id) sluitWerkTabblad(sender.tab.id, 2000);
     });
     sendResponse({ ok: true });
   }

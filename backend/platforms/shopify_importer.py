@@ -644,6 +644,12 @@ async def create_product(item: dict) -> dict:
         if item.get("condition"):
             parts.append(f"Condition: {item['condition']}")
         body_html = "<br>".join(parts)
+    elif "<" not in body_html:
+        # De omschrijving is platte tekst (zo staat hij sinds de import in de
+        # database). In HTML verdwijnt een regelovergang, dus zonder deze regel
+        # werd de tekst in de webwinkel één lange lap.
+        import html as _html
+        body_html = _html.escape(body_html).replace("\n", "<br>")
 
     tags = []
     if item.get("brand"):
@@ -753,6 +759,32 @@ async def delete_product(product_id: str) -> bool:
     )
 
 
+def _platte_tekst(ruwe_html: str) -> str:
+    """Shopify bewaart de omschrijving als HTML (`body_html`).
+
+    Marktplaats, 2dehands, Vinted en Facebook hebben alle vier een PLAT
+    tekstveld. Sloegen we die HTML onbewerkt op als omschrijving van het item,
+    dan stond er in de advertentie letterlijk "...voordat u koopt!<br/><br/>Dit
+    item is..." — de tags werden geen witregel maar tekst. Hier gaan ze er bij
+    het importeren al uit, met behoud van de regelovergangen die de verkoper
+    zelf heeft gezet.
+    """
+    import html as _html
+
+    tekst = str(ruwe_html or "")
+    if not tekst.strip():
+        return ""
+    tekst = re.sub(r"<\s*br\s*/?\s*>", "\n", tekst, flags=re.I)
+    tekst = re.sub(r"</\s*(p|div|li|h[1-6]|tr)\s*>", "\n", tekst, flags=re.I)
+    tekst = re.sub(r"<\s*li[^>]*>", "- ", tekst, flags=re.I)
+    tekst = re.sub(r"<\s*(p|div|h[1-6]|tr)\b[^>]*>", "\n", tekst, flags=re.I)
+    tekst = re.sub(r"<[^>]+>", "", tekst)
+    tekst = _html.unescape(tekst).replace("\xa0", " ")
+    tekst = re.sub(r"[ \t]+\n", "\n", tekst)
+    tekst = re.sub(r"\n{3,}", "\n\n", tekst)
+    return tekst.strip()
+
+
 _DESC_FIELDS = {
     "material": re.compile(r"Material:\s*([^\n<]+)", re.IGNORECASE),
     "size": re.compile(r"\b(XS|S|M|L|XL|XXL|XXXL|XXS|\d{2,3})\b"),
@@ -826,7 +858,7 @@ def _convert(p: dict) -> dict:
     return {
         "shopify_id": str(p["id"]),
         "title": p.get("title", ""),
-        "description": p.get("body_html", ""),
+        "description": _platte_tekst(desc_raw),
         "price": price,
         "photo_urls": images,
         "size": size,

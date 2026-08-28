@@ -923,6 +923,46 @@ async def complete_job(job_id: str, body: dict, user_id: str = Depends(get_curre
                         pass
                 (await naast_de_lus(lambda: db.table("jobs").update({"payload": payload}).eq("id", paired[0]["id"]).execute()))
 
+            # HET ITEM ZELF OOK BIJWERKEN.
+            #
+            # Een geïmporteerde advertentie kwam met één foto binnen: de zoeklijst
+            # van Marktplaats geeft alleen het omslagplaatje mee. Bij het
+            # verwijderen hebben we de advertentiepagina gezien en dáár staan ze
+            # allemaal. Zetten we die alleen in de plaatsingsopdracht, dan is het
+            # item volgende keer weer arm — en publiceren naar Vinted of eBay
+            # blijft dan ook met één foto gebeuren.
+            #
+            # Alleen als het item er zelf hooguit één had. Een verkoper die zijn
+            # foto's zelf heeft gekozen wordt hier nooit overruled.
+            #
+            # Hetzelfde geldt voor merk, maat, kleur en staat: die staan wél op de
+            # advertentie maar niet in de zoeklijst waaruit geïmporteerd wordt.
+            # Zolang ze leeg zijn weigert het dashboard te publiceren naar
+            # Marktplaats en 2dehands ("Vul merk en maat aan") — precies de
+            # melding die bij elke geïmporteerde advertentie stond.
+            cap_photos = captured.get("photo_urls") or []
+            try:
+                huidig = ((await naast_de_lus(lambda: db.table("items")
+                          .select("photo_urls,brand,size,color,condition")
+                          .eq("id", job["item_id"]).single().execute())).data or {})
+                patch = {}
+                if len(cap_photos) > 1 and len(huidig.get("photo_urls") or []) <= 1:
+                    patch["photo_urls"] = cap_photos
+                for veld in ("brand", "size", "color", "condition"):
+                    waarde = (captured.get(veld) or "")
+                    if isinstance(waarde, str):
+                        waarde = waarde.strip()
+                    if waarde and not str(huidig.get(veld) or "").strip():
+                        patch[veld] = waarde
+                if patch:
+                    (await naast_de_lus(lambda: db.table("items")
+                     .update(patch).eq("id", job["item_id"]).execute()))
+                    logger.info("[relist] item %s aangevuld uit de live advertentie: %s",
+                                job["item_id"], ", ".join(sorted(patch)))
+            except Exception as e:  # noqa: BLE001 — nooit de afronding laten vallen
+                logger.warning("[relist] kon gegevens niet terugschrijven naar item %s: %s",
+                               job["item_id"], e)
+
     elif job["action"] == "content_refresh":
         # Listing stays active — this is an in-place edit, not a new listing.
         pass

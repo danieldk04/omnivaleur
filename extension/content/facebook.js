@@ -20,7 +20,7 @@
     fair: ["Gebruikt - in redelijke staat", "Used - fair", "Used – fair"],
     poor: ["Gebruikt - in redelijke staat", "Used - fair", "Used – fair"],
   };
-  const { qs, sleep, waitForEl, uploadPhotos, smartTrunc } = window.CL;
+  const { qs, sleep, waitForEl, uploadPhotos, smartTrunc, platteTekst } = window.CL;
 
   // Proof that a photo actually reached Facebook. VERIFIED live 2026-07-29 on the
   // real create form: the page carries ZERO <img> elements until a file is picked,
@@ -358,7 +358,7 @@
     // Poll for it instead of a single lookup — that late mount is why the field
     // stayed empty before while title/price/category/condition all filled.
     const desc = await waitForField(/^(beschrijving|description)$/i, 5000);
-    if (desc) await typeInto(desc, item.description || "");
+    if (desc) await typeInto(desc, platteTekst(item.description || ""));
     await sleep(400);
   }
 

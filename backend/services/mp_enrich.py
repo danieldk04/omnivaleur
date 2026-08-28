@@ -276,6 +276,108 @@ def _tekst_uit_html(ruwe: str) -> str:
     return stuk.strip()[:DESC_MAX]
 
 
+_KENMERK = re.compile(
+    r'Attributes-module-label[^>]*>(.*?)</div>\s*<div[^>]*Attributes-module-value[^>]*>(.*?)</div>',
+    re.S | re.I)
+_FOTO = re.compile(
+    r'(?:https?:)?//images\.(?:marktplaats|2dehands)\.com/api/v1/[a-z0-9\-]+/images/'
+    r'([0-9a-f\-]{16,})', re.I)
+# De grootste versie die Marktplaats van een foto teruggeeft. Live nagemeten:
+# _82 = 6 kB, _83 = 33 kB, _85 = 148 kB, _86 = 288 kB.
+FOTO_REGEL = "ecg_mp_eps$_86"
+
+
+def _kenmerken_uit_html(ruwe: str) -> dict:
+    """Het blok "Kenmerken" van een advertentiepagina: merk, maat, kleur, staat.
+
+    Deze staan NIET in de zoeklijst waaruit geïmporteerd wordt — daar zit alleen
+    titel, prijs en het omslagplaatje in. Gevolg: elke geïmporteerde advertentie
+    kreeg in het dashboard "Vul merk en maat aan voor Marktplaats & 2dehands",
+    terwijl de verkoper ze op Marktplaats gewoon had ingevuld. Ze staan hier, op
+    de pagina die we tóch al ophalen voor de omschrijving.
+    """
+    uit = {}
+    for label, waarde in _KENMERK.findall(ruwe or ""):
+        l = html.unescape(re.sub(r"<[^>]+>", "", label)).strip().lower()
+        w = html.unescape(re.sub(r"<[^>]+>", "", waarde)).strip()
+        if l and w:
+            uit[l] = w
+    return uit
+
+
+def _fotos_uit_html(ruwe: str) -> list[str]:
+    """Alle foto's van de advertentie, op volgorde, in de grootste versie.
+
+    Let op: de pagina levert bij het opvragen niet altijd de hele reeks mee (de
+    laatste miniaturen worden pas in een echte browser bijgeladen). Wat we hier
+    krijgen is dus "alles wat de pagina meestuurt" — bij een advertentie met één
+    foto in ons systeem is dat vrijwel altijd een verbetering.
+    """
+    basis = {"marktplaats": "https://images.marktplaats.com",
+             "2dehands": "https://images.2dehands.com"}
+    uit, gezien = [], set()
+    for m in re.finditer(
+            r'(?:https?:)?//images\.(marktplaats|2dehands)\.com(/api/v1/[a-z0-9\-]+/images/'
+            r'[0-9a-f\-]{16,})', ruwe or "", re.I):
+        sleutel = m.group(2).lower()
+        if sleutel in gezien:
+            continue
+        gezien.add(sleutel)
+        uit.append(f"{basis[m.group(1).lower()]}{m.group(2)}?rule={FOTO_REGEL}")
+    return uit
+
+
+def _onze_conditie(waarde: str) -> str:
+    """Marktplaats' woord voor de staat, in het woord dat wij gebruiken."""
+    t = (waarde or "").lower()
+    if not t:
+        return ""
+    if "nieuw met" in t:
+        return "new_with_tags"
+    if "zo goed als nieuw" in t:
+        return "good"
+    if "nieuw" in t:
+        return "new"
+    if "beschadigd" in t or "defect" in t:
+        return "poor"
+    if "gebruikt" in t or "gedragen" in t:
+        return "fair"
+    return ""
+
+
+def _onze_maat(waarde: str) -> str:
+    """Alleen een maat die op élk platform een maat is.
+
+    Marktplaats kent emmertjes als "Overige maten" en "Maat 46/48 (XL) of
+    groter". Zoiets in het item zetten zou op Vinted en eBay onzin worden, dus
+    daar halen we hooguit de echte maat uit.
+    """
+    t = (waarde or "").strip()
+    if not t:
+        return ""
+    m = re.search(r"\b(XXXS|XXS|XS|S|M|L|XL|XXL|XXXL|XXXXL)\b", t, re.I)
+    if m:
+        return m.group(1).upper()
+    n = re.fullmatch(r"\s*(\d{2,3})\s*", t)
+    return n.group(1) if n else ""
+
+
+async def volledige_advertentie(client: httpx.AsyncClient, url: str) -> dict:
+    """Alles wat één advertentiepagina prijsgeeft, in één ophaalronde."""
+    ruwe = await _pagina(client, url)
+    if not ruwe:
+        return {}
+    k = _kenmerken_uit_html(ruwe)
+    return {
+        "description": _tekst_uit_html(ruwe),
+        "photo_urls": _fotos_uit_html(ruwe),
+        "brand": k.get("merk", ""),
+        "size": _onze_maat(k.get("maat") or k.get("kledingmaat") or ""),
+        "color": k.get("kleur", ""),
+        "condition": _onze_conditie(k.get("conditie") or k.get("staat") or ""),
+    }
+
+
 async def volledige_omschrijving(client: httpx.AsyncClient, url: str) -> str:
     """De volledige tekst van één advertentiepagina.
 
@@ -284,6 +386,11 @@ async def volledige_omschrijving(client: httpx.AsyncClient, url: str) -> str:
     en opnieuw proberen is het juiste antwoord. Gemeten: zonder deze herkansing
     kwamen 52 van 240 teksten niet binnen.
     """
+    return _tekst_uit_html(await _pagina(client, url))
+
+
+async def _pagina(client: httpx.AsyncClient, url: str) -> str:
+    """De ruwe HTML van één advertentiepagina, met dezelfde beleefde herkansing."""
     for poging in range(4):
         try:
             r = await client.get(url, headers={"Accept": "text/html"})
@@ -292,7 +399,7 @@ async def volledige_omschrijving(client: httpx.AsyncClient, url: str) -> str:
                 continue
             if r.status_code != 200:
                 return ""
-            return _tekst_uit_html(r.text)
+            return r.text
         except Exception as e:  # noqa: BLE001
             logger.warning("mp_enrich: advertentiepagina mislukt (%s): %s", url, e)
             await asyncio.sleep(2)
@@ -346,13 +453,26 @@ async def verrijk(db, user_id: str, schrijf: bool = True,
     # naar zijn verkopersnummer, vond niets, en meldde "could not find your
     # adverts on Marktplaats" — terwijl zijn advertenties er gewoon stonden.
     rijen = await naast_de_lus(lambda: fetch_all(
-        lambda: db.table("items").select("id,title,price,description").eq("user_id", user_id)))
-    open_ = [r for r in rijen
-             if not str(r.get("description") or "").strip() or not r.get("price")]
+        lambda: db.table("items")
+        .select("id,title,price,description,photo_urls,brand,size,color,condition")
+        .eq("user_id", user_id)))
+
+    def _mist_iets(r: dict) -> bool:
+        # Niet alleen prijs en tekst. Een geïmporteerde advertentie kwam ook
+        # binnen met één foto en zonder merk of maat, en juist dat blokkeert
+        # publiceren naar Marktplaats en 2dehands. Het staat allemaal op dezelfde
+        # advertentiepagina die we hier tóch al ophalen.
+        return (not str(r.get("description") or "").strip()
+                or not r.get("price")
+                or len(r.get("photo_urls") or []) <= 1
+                or not str(r.get("brand") or "").strip()
+                or not str(r.get("size") or "").strip())
+
+    open_ = [r for r in rijen if _mist_iets(r)]
     if maximaal:
         open_ = open_[:maximaal]
     uit = {"items": len(rijen), "te_doen": len(open_), "gevonden": 0,
-           "prijs": 0, "omschrijving": 0, "geen_tekst": 0,
+           "prijs": 0, "omschrijving": 0, "geen_tekst": 0, "fotos": 0, "kenmerken": 0,
            "verkoper_id": None, "reden": ""}
     if not open_:
         uit["reden"] = "nothing to do"
@@ -421,15 +541,29 @@ async def verrijk(db, user_id: str, schrijf: bool = True,
             patch = {}
             if not item.get("price") and a["price"]:
                 patch["price"] = a["price"]
-            if not str(item.get("description") or "").strip():
-                tekst = await volledige_omschrijving(client, a["url"]) if a["url"] else ""
+            # Eén ophaalronde per advertentie, en daar komt alles uit: de tekst,
+            # de hele fotoreeks en de kenmerken.
+            mist_tekst = not str(item.get("description") or "").strip()
+            mist_rest = (len(item.get("photo_urls") or []) <= 1
+                         or not str(item.get("brand") or "").strip()
+                         or not str(item.get("size") or "").strip()
+                         or not str(item.get("color") or "").strip()
+                         or not str(item.get("condition") or "").strip())
+            if (mist_tekst or mist_rest) and a["url"]:
+                pagina = await volledige_advertentie(client, a["url"])
                 # BEWUST geen terugval op de korte tekst uit de zoekresultaten:
                 # die is door Marktplaats afgekapt en stopt middenin een zin.
                 # Zo'n halve tekst zou daarna gewoon op Vinted of eBay
                 # verschijnen. Liever leeg laten en het melden — leeg blokkeert
                 # publiceren, een halve zin niet.
-                if tekst:
-                    patch["description"] = tekst
+                if mist_tekst and pagina.get("description"):
+                    patch["description"] = pagina["description"]
+                fotos = pagina.get("photo_urls") or []
+                if len(fotos) > len(item.get("photo_urls") or []):
+                    patch["photo_urls"] = fotos
+                for veld in ("brand", "size", "color", "condition"):
+                    if pagina.get(veld) and not str(item.get(veld) or "").strip():
+                        patch[veld] = pagina[veld]
                 await asyncio.sleep(0.25)
             gedaan[0] += 1
             if gedaan[0] % 25 == 0:
@@ -446,6 +580,10 @@ async def verrijk(db, user_id: str, schrijf: bool = True,
                 uit["prijs"] += 1
             if "description" in patch:
                 uit["omschrijving"] += 1
+            if "photo_urls" in patch:
+                uit["fotos"] = uit.get("fotos", 0) + 1
+            if any(v in patch for v in ("brand", "size", "color", "condition")):
+                uit["kenmerken"] = uit.get("kenmerken", 0) + 1
             if schrijf:
                 try:
                     (await naast_de_lus(lambda: db.table("items").update(patch).eq("id", item["id"]).execute()))

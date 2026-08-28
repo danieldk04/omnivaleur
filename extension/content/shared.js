@@ -157,6 +157,7 @@ window.CL = (() => {
       .replace(/<\s*br\s*\/?\s*>/gi, "\n")
       .replace(/<\s*\/\s*(?:p|div|li|h[1-6]|tr)\s*>/gi, "\n")
       .replace(/<\s*li\b[^>]*>/gi, "- ")
+      .replace(/<\s*(?:p|div|h[1-6]|tr)\b[^>]*>/gi, "\n")
       .replace(_HTML_TAG, "");
     if (/&[a-z#0-9]{2,8};/i.test(s)) {
       // Entiteiten (&amp; &euro; &#39;) fatsoenlijk terugvertalen. Een <textarea>
