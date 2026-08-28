@@ -551,3 +551,26 @@ Web Store, en Jaap eerst alle Marktplaats-tabbladen laten sluiten. Zijn categori
 klopt op één na: "Miniatuur varken op ladder, W. van Strant, Amsterdam, 1732" staat
 in "Beelden en houtsnijwerken" in plaats van "Goud en zilver" — dat is de
 "spaarvarken" die hij meldde. Hooguit 15 van zijn 1.222 staan zo scheef.
+
+### 2026-08-28 — De aanhef van de koude mail: winkelnaam en HTML-code
+
+Albert Kok kreeg als eerste mail "Hi kok modelauto&#x27;s,". Twee fouten in de
+eerste regel die iemand leest: zijn Marktplaats-verkopersnaam gebruikt als
+voornaam, en de HTML-codering waarin Marktplaats die naam teruggeeft onvertaald
+meegenomen. Hij reageerde alsnog positief ("Heel graag"), maar het is precies het
+soort regel waarop de rest afhaakt.
+
+Wat er is veranderd:
+- Namen worden ontcodeerd zodra ze binnenkomen (`unescape` in
+  `leadgen_marktplaats.py`), en `_schoon()` in `leadgen_mail.py` vangt af wat er
+  al in de administratie stond. Zeven bestaande gevallen zijn rechtgezet.
+- De aanhef gebruikt alleen nog een voornaam die letterlijk als voornaam in het
+  veld staat (`voornaam`/`contactpersoon`). Er is een regel geprobeerd die er een
+  voornaam uit een verkopersnaam afleidde — twee woorden, hoofdletters, geen
+  handelswoord — maar tegen de echte lijst gehouden gaf die "Hi Boutique,",
+  "Hi Trimsalon," en "Hi Partytenten,". Van de 1.447 leads was er geen enkele bij
+  wie het klopte, dus staat er nu overal gewoon "Hi,". Vastgelegd in
+  `tests/test_leadgen_concepten.py`.
+
+Het antwoord aan Albert staat als concept klaar in Concept, met de link naar
+/mp-video.
