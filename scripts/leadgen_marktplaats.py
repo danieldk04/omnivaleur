@@ -45,6 +45,7 @@ from __future__ import annotations
 import argparse
 import json
 import re
+from html import unescape
 import sys
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -164,7 +165,11 @@ def discover(args) -> None:
                     if row:
                         row["ads_seen"] = row.get("ads_seen", 0) + 1
                         continue
-                    row = {"seller_id": sid, "name": s.get("sellerName") or "",
+                    # Marktplaats levert de verkopersnaam terug zoals hij in de
+                    # HTML staat: "kok modelauto&#x27;s". Ontcodeerd bewaren, want
+                    # anders staat die code later letterlijk in een mail.
+                    row = {"seller_id": sid,
+                           "name": unescape(s.get("sellerName") or ""),
                            "method": "marktplaats", "source": src, "ads_seen": 1,
                            # Doorklik-link van Marktplaats naar de eigen webshop.
                            # Bewaren loont: bij verkopers zonder e-mail in hun
@@ -236,7 +241,7 @@ def _profile(client: httpx.Client, sid: int) -> tuple[dict | None, bool]:
         "btw": btw and btw.group(1),
         "tel": tel and tel.group(1).strip(),
         "email": mail and mail.group(0).lower(),
-        "handelsnaam": naam and naam.group(1).strip(),
+        "handelsnaam": naam and unescape(naam.group(1).strip()),
         "postcode": plaats and plaats.group(1),
         "plaats": plaats and _plaatsnaam(plaats.group(2)),
         "over_ons": over,

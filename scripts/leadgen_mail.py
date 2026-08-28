@@ -1012,7 +1012,7 @@ def _verstuur(rij: list, gebruiker: str, host: str, state: dict,
                 print(f"  ! {lead['email']}: {e}")
                 continue
             st = state.setdefault(sleutel, {"verstuurd": [],
-                                            "bedrijf": lead.get("handelsnaam")})
+                                            "bedrijf": _bedrijfsnaam(lead)})
             st["verstuurd"].append({"beurt": BEURTEN[n][0],
                                     "op": datetime.now().isoformat(timespec="seconds")})
             st["laatste"] = datetime.now().isoformat(timespec="seconds")
