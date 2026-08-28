@@ -1,6 +1,11 @@
 import asyncio
+import logging
+
 from fastapi import Depends, Header, HTTPException
-from backend.database import get_auth_db, get_db
+from backend.database import (AuthTijdelijkOnbereikbaar, auth_met_herkansing,
+                               get_auth_db, get_db)
+
+logger = logging.getLogger(__name__)
 
 
 async def get_current_user(authorization: str = Header(...)) -> str:
@@ -22,12 +27,24 @@ async def get_current_user_full(authorization: str = Header(...)):
         # occasionally a request got its connection cut mid-response. This
         # dependency runs on nearly every authenticated request, so offloading
         # it to a thread removes the single biggest source of that contention.
-        res = await asyncio.to_thread(get_auth_db().auth.get_user, token)
+        res = await asyncio.to_thread(
+            lambda: auth_met_herkansing(lambda: get_auth_db().auth.get_user(token)))
         if not res.user:
             raise HTTPException(status_code=401, detail="Your session expired — please sign in again")
         return res.user
     except HTTPException:
         raise
+    except AuthTijdelijkOnbereikbaar as e:
+        # 503, geen 401. Dit draait op ZO GOED ALS ELK verzoek, en het dashboard
+        # gooit je bij een 401 meteen naar het inlogscherm. Eén weggevallen
+        # verbinding richting Supabase — iets wat hier volgens database.py
+        # geregeld gebeurt — betekende dus: midden in je werk eruit gegooid, met
+        # "je sessie is verlopen" terwijl er niets verlopen was. Precies wat
+        # Egbert Brouwer meldde: "eerst een aantal keren uitgegooid vlak nadat ik
+        # was ingelogd".
+        logger.error("Kon het inlogbewijs niet controleren: %s", e)
+        raise HTTPException(status_code=503,
+                            detail="Connection hiccup — you're still signed in. Please try again in a moment.")
     except Exception:
         raise HTTPException(status_code=401, detail="Your session expired — please sign in again")
 

@@ -574,3 +574,47 @@ Wat er is veranderd:
 
 Het antwoord aan Albert staat als concept klaar in Concept, met de link naar
 /mp-video.
+
+## 28-08-2026 — Egbert kon niet meer inloggen: twee fouten in de auth-laag
+
+Egbert Brouwer (info@papas-plectrums.nl, `bcdf9aa4`) meldde: eerst een paar keer
+uitgegooid vlak na het inloggen, daarna helemaal niet meer binnenkomen, met
+"Invalid email or password" op een ingevuld (autofill-)wachtwoord.
+
+**Wat er in zijn accountgegevens staat.** Laatste geslaagde inlog 28-08 07:50:57
+UTC; zijn auth-rij werd 07:51:07 nog één keer bijgewerkt (= een
+tokenvernieuwing, tien seconden na het inloggen — dus er ging tien seconden na
+zijn inlog een verzoek mis dat het dashboard als "sessie verlopen" las). Niet
+geblokkeerd, e-mail bevestigd, `recovery_sent_at` leeg (hij heeft dus nooit zelf
+een herstelmail aangevraagd). Inloggen via de live server werkt op dit moment
+gewoon: getest met een tijdelijk diagnose-account, en weer verwijderd.
+
+**Fout 1 — een weggevallen verbinding zag eruit als een verkeerd wachtwoord.**
+`database.py` documenteert al jaren dat Supabase geregeld een hergebruikte
+verbinding verbreekt; voor gegevens ving `execute_with_retry` dat op. De
+auth-laag had niets: `login` vertaalde élke uitzondering naar "Invalid email or
+password", en `get_current_user_full` (draait op zo goed als elk verzoek) élke
+uitzondering naar 401 "sessie verlopen". Het dashboard gooit je bij een 401 naar
+het inlogscherm en de extensie wist bij 401/403 haar inlogbewijs. Eén hik =
+eruit gegooid; hik tijdens het opnieuw inloggen = "verkeerd wachtwoord". Nu:
+`auth_met_herkansing()` probeert het drie keer opnieuw bij verbindingsfouten en
+5xx, en levert daarna `AuthTijdelijkOnbereikbaar` → **503**, niet 401. Een echt
+4xx-antwoord van Supabase gaat ongemoeid door. Inloggen onderscheidt nu ook
+"te veel pogingen" (429) en "e-mail niet bevestigd" (403).
+
+**Fout 2 — het wachtwoord van de een kon op het account van de ander landen.**
+`auth.update_user({"password": ...})` schrijft naar de sessie die IN DE CLIENT
+staat (`self.get_session()`), niet naar de aanvrager. Alles liep over één
+gedeelde client, waarop élke inlog en élke tokenvernieuwing van welke klant dan
+ook een sessie neerzette — en inloggen/verversen draaien via `asyncio.to_thread`,
+dus die schuiven écht tussen `set_session` en `update_user` door. Klikte er
+iemand een herstellink af op het verkeerde moment, dan kreeg een willekeurige
+andere klant dat wachtwoord en kon die er niet meer in. Nu pakt elk
+auth-endpoint een `verse_auth_client()`: eigen verbinding, lege sessie, na het
+verzoek weg. `tests/test_auth_sessies_gescheiden.py` bootst de race na en faalt
+aantoonbaar op de oude opzet.
+
+Van fout 2 is niet bewezen dat hij Egbert getroffen heeft (niemand vroeg in dat
+uur een herstelmail aan), maar het is een echt gat en het staat nu dicht.
+Openstaand: Egbert één keer laten inloggen; lukt dat nog steeds niet, dan
+"Wachtwoord vergeten" — dat pad werkt en is nu ook race-vrij.

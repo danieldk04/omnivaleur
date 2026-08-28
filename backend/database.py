@@ -47,14 +47,53 @@ def get_admin_db() -> Client:
 
 def get_auth_db() -> Client:
     """
-    Een aparte verbinding voor alles wat mét een gebruikerssessie werkt:
-    registreren, inloggen, wachtwoord zetten. Die mág vervuild raken — daar is hij
-    voor. Zo blijven de gegevens- en beheerdersverbinding schoon.
+    Een gedeelde verbinding voor auth-aanroepen die GEEN sessie achterlaten.
+
+    In de praktijk is dat er nog maar één: `auth.get_user(token)`, waar het
+    bewijs expliciet wordt meegegeven. Die staat op elk binnenkomend verzoek, dus
+    daar telkens een nieuwe verbinding voor opzetten zou zonde zijn.
+
+    ALLES wat inlogt, ververst of een wachtwoord zet hoort hier NIET. Zie
+    `verse_auth_client()` hieronder voor waarom dat een gebruiker zijn account
+    kostte.
     """
     global _auth_client
     if _auth_client is None:
         _auth_client = create_client(settings.supabase_url, settings.supabase_key)
     return _auth_client
+
+
+def verse_auth_client() -> Client:
+    """
+    Een GLOEDNIEUWE verbinding, voor precies één gebruiker, voor precies één
+    verzoek. Nooit hergebruiken en nooit ergens bewaren.
+
+    DE DUURSTE FOUT IN DIT BESTAND — hier is een klant zijn account door
+    kwijtgeraakt.
+
+    Een Supabase-client onthoudt de laatste sessie. `sign_in_with_password`,
+    `refresh_session` en `set_session` schrijven die sessie in de client; en
+    `auth.update_user({"password": ...})` kijkt NIET naar wie hem aanroept maar
+    naar díé opgeslagen sessie (zie `update_user` in supabase_auth: het pakt
+    `self.get_session()`).
+
+    Alles liep over één gedeelde verbinding. Elke inlog en elke tokenvernieuwing
+    van welke klant dan ook — en dat zijn er tientallen per minuut, want elke
+    extensie ververst zelf — overschreef die sessie. Klikte er op dat moment
+    iemand anders zijn "wachtwoord vergeten"-link af, dan zette Supabase dat
+    nieuwe wachtwoord op de account van de laatste inlogger. Die kon daarna niet
+    meer inloggen, met "Invalid email or password", zonder ooit iets gevraagd of
+    veranderd te hebben. Aantoonbaar gebeurd bij info@papas-plectrums.nl op
+    28-08-2026 om 07:51:07 UTC, tien seconden na zijn eigen geslaagde inlog: zijn
+    account werd bijgewerkt terwijl hij zelf nooit een herstelmail had
+    aangevraagd (`recovery_sent_at` leeg). Een wachtwoordwijziging trekt
+    bovendien alle lopende sessies in — vandaar dat hij er eerst uit vloog en er
+    daarna helemaal niet meer in kwam.
+
+    Een verse verbinding heeft een lege sessie en wordt na het verzoek
+    weggegooid. Dan kan geen enkele gebruiker de sessie van een ander raken.
+    """
+    return create_client(settings.supabase_url, settings.supabase_key)
 
 
 # Supabase houdt verbindingen open om ze te hergebruiken. Sluit de andere kant
@@ -109,6 +148,52 @@ def execute_with_retry(query, pogingen: int = 3, dubbel_is_ok: bool = False):
             logger.warning("Databaseverbinding viel weg (%s) — poging %d opnieuw", type(e).__name__, poging + 2)
             time.sleep(0.25 * (poging + 1))
     raise laatste  # type: ignore[misc]
+
+
+class AuthTijdelijkOnbereikbaar(Exception):
+    """Supabase kon niet beantwoord worden — dat is GEEN afgekeurd wachtwoord."""
+
+
+def auth_met_herkansing(aanroep, pogingen: int = 3):
+    """
+    Voer één auth-aanroep uit en probeer opnieuw als de verbinding wegviel.
+
+    WAAROM DIT BESTAAT — dit heeft klanten hun toegang gekost.
+    Supabase verbreekt af en toe een hergebruikte verbinding (zie _HERSTELBAAR
+    hierboven; voor gegevens werd dat allang opgevangen door execute_with_retry).
+    Bij auth gebeurde dat niet, en erger: elke fout werd daar vertaald naar "je
+    sessie is verlopen" of "Invalid email or password". Eén weggevallen
+    verbinding zag er voor de verkoper dus uit als een verkeerd wachtwoord.
+
+    Gevolg bij Egbert Brouwer (info@papas-plectrums.nl, 28-08-2026): hij vloog er
+    een paar keer uit vlak na het inloggen — het dashboard leest die 401 als
+    "opnieuw inloggen" en gooit je eruit — en kreeg daarna op het inlogscherm
+    "Invalid email or password" te zien terwijl zijn wachtwoord gewoon goed was.
+
+    Lukt het na de herkansingen nog steeds niet, dan volgt
+    AuthTijdelijkOnbereikbaar. Dat moet naar buiten als "even niet bereikbaar",
+    nooit als een afgewezen inlog: op een afgewezen inlog gooit het dashboard je
+    eruit en wist de extensie haar inlogbewijs.
+    """
+    laatste: BaseException | None = None
+    for poging in range(pogingen):
+        try:
+            return aanroep()
+        except Exception as e:  # noqa: BLE001
+            status = getattr(e, "status", None)
+            # Alleen opnieuw proberen bij een weggevallen verbinding of een 5xx
+            # van Supabase zelf. Alles daarbuiten — verkeerd wachtwoord, verlopen
+            # bewijs, te veel pogingen — is een écht antwoord en moet ongemoeid
+            # door naar de aanroeper.
+            tijdelijk = _is_herstelbaar(e) or (isinstance(status, int) and status >= 500)
+            if not tijdelijk or poging == pogingen - 1:
+                if not tijdelijk:
+                    raise
+            laatste = e
+            logger.warning("Auth-aanroep viel weg (%s) — poging %d opnieuw",
+                           type(e).__name__, poging + 2)
+            time.sleep(0.25 * (poging + 1))
+    raise AuthTijdelijkOnbereikbaar(str(laatste)) from laatste
 
 
 def fetch_all(build_query, order_by: str = "id", page_size: int = 500) -> list[dict]:
