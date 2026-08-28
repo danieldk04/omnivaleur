@@ -5,6 +5,31 @@ Code session opened against this repo — on any of Daniel's machines or
 Anthropic accounts. That makes it the right place for anything that must
 never depend on which account happens to be running.
 
+## Begin elke sessie met kijken wat er veranderd is
+
+Voordat je aan wat dan ook begint — een codetaak, een vraag, een mail, een
+controle — zoek je eerst uit wat er is veranderd sinds jouw vorige sessie:
+
+1. `git log --since="30 hours ago" --name-only`, en lees de diff van alles wat je
+   onderwerp raakt. Bij een langere pauze: sinds je laatste sessie.
+2. De laatste toevoegingen onder aan `docs/team-notes.md`.
+
+Let op de commits met de tekst "auto: update ...": die komen van de auto-push-hook
+en bevatten echt werk achter een nietszeggende titel. De auteursnaam zegt niets
+over wie het deed.
+
+**Waarom dit hier staat en niet alleen in lokale memory:** aan dit project werken
+drie partijen die elkaar niet zien — Daniel op zijn eigen account, een tweede
+ontwikkelaar, en meerdere Claude-sessies naast elkaar. Zonder deze stap bouw je
+iets wat er al is, repareer je iets wat net gewijzigd is, of mis je juist de
+wijziging die het probleem veroorzaakte. Dat is op 27-08-2026 aantoonbaar
+gebeurd: een eerdere sessie voegde `output_config` toe aan de Claude-aanroepen van
+de mailagent, de gepinde SDK op de server kende die parameter niet, de fout werd
+stil opgevangen en elke lead kreeg wekenlang de standaardmail.
+
+Noem in je eerste antwoord kort wat je hebt gezien, zodat duidelijk is dat je het
+huidige beeld hebt.
+
 ## Before touching anything people/business/decision-related
 
 Read [docs/team-notes.md](docs/team-notes.md) first. It's an append-only log
