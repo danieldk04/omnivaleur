@@ -388,6 +388,36 @@ async def publish_to_platforms(item_id: str, platforms: list[str], user_id: str)
     # moest de gebruiker kleur en maat zelf in het Vinted-formulier typen.
     item = await _fill_inferred_gaps(db, item)
 
+    # EÉN FOTO IS BIJNA NOOIT DE HELE ADVERTENTIE.
+    #
+    # Een geïmporteerde Marktplaats-advertentie komt binnen via de zoeklijst, en
+    # die geeft alleen het omslagplaatje en een ingekorte tekst. De rest — alle
+    # foto's, de volledige tekst — staat op de advertentiepagina zelf. Tot nu toe
+    # moest de verkoper daarvoor zelf op "Fill from Marktplaats" klikken; deed
+    # hij dat niet, dan werd de advertentie elders gepubliceerd met één foto en
+    # een halve tekst. Jaap (Zilverwebsite, 28-08-2026) publiceerde zo veertien
+    # advertenties: alle veertien met precies één foto.
+    #
+    # Dus halen we het hier alsnog op, op het moment dat het ertoe doet, en
+    # alleen als er iets te halen valt. Bestaande waarden blijven staan.
+    if len(item.get("photo_urls") or []) <= 1:
+        try:
+            bron = (await _exec(
+                db.table("listings").select("platform_listing_url")
+                .eq("item_id", item_id)
+                .in_("platform", ["marktplaats", "2dehands"])
+                .not_.is_("platform_listing_url", "null")
+                .limit(1)
+            )).data
+            if bron and bron[0].get("platform_listing_url"):
+                from backend.services.mp_enrich import vul_item_aan_uit_advertentie
+                item = await vul_item_aan_uit_advertentie(
+                    db, item, bron[0]["platform_listing_url"])
+        except Exception as e:  # noqa: BLE001
+            # Lukt het niet, dan publiceren we met wat we hebben. Een advertentie
+            # met één foto is beter dan geen advertentie.
+            logger.warning("Kon item %s niet aanvullen uit de advertentiepagina: %s", item_id, e)
+
     missing = _missing_fields_per_platform(item, platforms)
     # De EU-verplichte "verantwoordelijke partij" hoort bij de verkoper, niet bij
     # het artikel: hij staat één keer in zijn instellingen. Ontbreekt hij, dan

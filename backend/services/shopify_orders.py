@@ -2,10 +2,10 @@
 
 WAAROM DIT ER IS (28-08-2026)
 Shopify accepteert geen apps meer die koppelen met een marktplaats buiten
-Shopify. Winkeliers koppelen daarom voortaan met een sleutel die ze zelf in hun
-beheerscherm aanmaken. Dat werkt voor importeren en publiceren precies hetzelfde
-— maar niet voor de verkoopmelding: die liep over een webhook (`orders/paid`)
-die alleen bij ONZE app hoort. Bij een zelfgemaakte app komt die nooit binnen.
+Shopify. Winkeliers koppelen daarom voortaan met een app die ze in hun eigen
+Shopify-organisatie maken. Dat werkt voor importeren en publiceren precies
+hetzelfde — maar niet voor de verkoopmelding: die liep over een webhook
+(`orders/paid`) die alleen bij ÓNZE app hoort en bij hun app nooit binnenkomt.
 
 Zonder deze ronde zou een winkelier dus stilletjes de belangrijkste functie
 kwijtraken: verkoopt hij iets in zijn eigen winkel, dan blijft het op
@@ -76,8 +76,17 @@ async def controleer_shopify_verkopen() -> dict:
 
     for rij in winkels:
         extra = rij.get("extra_data") or {}
-        shop = extra.get("shop_domain")
-        token = rij.get("access_token")
+        # Via _shop_creds, niet rechtstreeks uit de rij: bij een eigen app van de
+        # winkelier verloopt de sleutel na 24 uur en moet hij hier ververst
+        # worden. Dat rechtstreeks lezen zou deze ronde elke dag stil laten
+        # vastlopen op 401 — precies de stille storing die we willen vermijden.
+        from backend.platforms.shopify import _shop_creds
+        try:
+            shop, token = await _shop_creds({**rij, "user_id": rij["user_id"]})
+        except Exception as e:  # noqa: BLE001
+            logger.warning("shopify-verkoopcontrole: geen sleutel voor %s: %s",
+                           extra.get("shop_domain") or rij["user_id"][:8], e)
+            continue
         # De oudste koppeling draaide op één winkel uit de serverinstellingen en
         # heeft geen eigen domein opgeslagen. Die kunnen we hier niet nakijken;
         # overslaan is beter dan een gok op de verkeerde winkel.
@@ -124,9 +133,19 @@ async def controleer_shopify_verkopen() -> dict:
         # liever twee keer dan een gemiste verkoop.
         nieuw = (nu - timedelta(minutes=OVERLAP_MINUTEN)).isoformat()
         try:
+            # OPNIEUW LEZEN, niet `extra` hergebruiken. _shop_creds kan hierboven
+            # net een verse sleutel hebben opgehaald en weggeschreven; schrijven
+            # we dan de oude `extra` terug, dan wissen we die vervaldatum weer en
+            # halen we elke ronde onnodig een nieuwe sleutel op — of erger, we
+            # zetten er een verlopen datum overheen.
+            huidig = ((await naast_de_lus(
+                lambda: db.table("platform_credentials").select("extra_data")
+                .eq("user_id", rij["user_id"]).eq("platform", "shopify")
+                .limit(1).execute(), herkans=True)).data or [])
+            basis = (huidig[0].get("extra_data") if huidig else None) or extra
             (await naast_de_lus(
                 lambda: db.table("platform_credentials")
-                .update({"extra_data": {**extra, "orders_gezien_tot": nieuw}})
+                .update({"extra_data": {**basis, "orders_gezien_tot": nieuw}})
                 .eq("user_id", rij["user_id"]).eq("platform", "shopify").execute(),
                 herkans=True))
         except Exception as e:  # noqa: BLE001

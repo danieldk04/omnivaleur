@@ -65,10 +65,53 @@ def test_er_wordt_eerst_geprobeerd_aan_te_vullen():
 
 
 def test_aanvullen_overschrijft_nooit_wat_de_verkoper_zelf_invulde():
+    """Aanvullen mag, overschrijven niet.
+
+    Sinds 28-08-2026 vervangen we een opgeslagen omschrijving wél, maar alleen
+    als die letterlijk het begin is van wat er op de advertentiepagina staat —
+    dus een afgekapte versie van dezelfde tekst. Dat was nodig omdat onze eigen
+    4000-tekengrens de onderkant van elke lange advertentietekst wegsneed
+    (Jaap, Zilverwebsite). Een tekst die de verkoper zelf heeft aangepast wijkt
+    af en blijft staan.
+    """
     src = (ROOT / "backend/services/mp_enrich.py").read_text(encoding="utf-8")
     fn = src.split("async def vul_item_aan_uit_advertentie(")[1].split("\nasync def ")[0]
-    assert 'not str(item.get("description") or "").strip()' in fn
-    assert 'len(item.get("photo_urls") or []) <= 1' in fn
+    assert 'not huidig' in fn
+    assert '_is_afgekapt(huidig, tekst)' in fn
+
+
+def test_alleen_een_afgekapte_tekst_wordt_vervangen():
+    from backend.services.mp_enrich import _is_afgekapt
+    vol = "Zilveren lepel, 1802.\n\nGewicht: 15,8 gram.\n\nArtikelnummer 4711. Verzendkosten 6,95."
+    assert _is_afgekapt("Zilveren lepel, 1802.\n\nGewicht: 15,8 gram.", vol)
+    assert _is_afgekapt("Zilveren lepel, 1802. Gewicht: 15,8 gram...", vol)
+    assert _is_afgekapt("", vol)
+    assert not _is_afgekapt("Mijn eigen tekst over deze lepel", vol)
+
+
+def test_de_tekstgrens_knipt_geen_advertenties_meer_af():
+    """2000 tekens was een zelfverzonnen grens die de onderkant wegsneed."""
+    shared = (ROOT / "extension/content/shared.js").read_text(encoding="utf-8")
+    assert "slice(0, 2000)" not in shared
+    assert "MAX_BESCHRIJVING = 20000" in shared
+    enrich = (ROOT / "backend/services/mp_enrich.py").read_text(encoding="utf-8")
+    assert "DESC_MAX = 20000" in enrich
+
+
+def test_de_afsluitvraag_gaat_uit_voor_de_plaatsklik():
+    """"Site verlaten?" bevroor het publiceren tot de verkoper zelf klikte."""
+    shared = (ROOT / "extension/content/shared.js").read_text(encoding="utf-8")
+    blok = shared.split('type: "SUBMIT_CLICKED"')[1].split("btn.click()")[0]
+    assert "ONTWAPEN_AFSLUITVRAAG" in blok
+    bg = (ROOT / "extension/background.js").read_text(encoding="utf-8")
+    assert 'msg.type === "ONTWAPEN_AFSLUITVRAAG"' in bg
+
+
+def test_publiceren_vult_een_item_met_een_enkele_foto_eerst_aan():
+    src = (ROOT / "backend/services/crosslist.py").read_text(encoding="utf-8")
+    blok = src.split("_fill_inferred_gaps(db, item)")[1][:1600]
+    assert 'len(item.get("photo_urls") or []) <= 1' in blok
+    assert "vul_item_aan_uit_advertentie" in blok
 
 
 # ── 2. De dagteller telt alleen de knop die hij bewaakt ──────────────────────

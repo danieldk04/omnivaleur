@@ -58,6 +58,49 @@ def is_valid_admin_token(token: str) -> bool:
     return bool(_ADMIN_TOKEN_RE.match((token or "").strip()))
 
 
+async def controleer_app_gegevens(shop: str, client_id: str, client_secret: str) -> dict:
+    """Controleer een eigen app vóór we hem opslaan, door er echt een sleutel mee
+    op te halen. Alleen dán weten we zeker dat het werkt — en dat is precies wat
+    hier misging toen we de winkelier stappen gaven die Shopify had geschrapt."""
+    shop = (shop or "").strip().lower()
+    client_id = (client_id or "").strip()
+    client_secret = (client_secret or "").strip()
+    if not is_valid_shop_domain(shop):
+        raise ValueError("That doesn't look like a Shopify store address. "
+                         "It should end in .myshopify.com, for example my-store.myshopify.com.")
+    if not client_id or not client_secret:
+        raise ValueError("Fill in both the client ID and the client secret from your app's "
+                         "Settings page in the Shopify Dev Dashboard.")
+
+    vers = await vraag_token(shop, client_id, client_secret)
+    toegekend = set(vers["scopes"])
+    ontbreekt = [x for x in VERPLICHTE_SCOPES if x not in toegekend]
+    if ontbreekt:
+        raise ValueError(
+            "This app doesn't have enough permissions yet. Missing: " + ", ".join(ontbreekt)
+            + ". Open the app in the Dev Dashboard, add those scopes to its configuration, "
+              "release a new version, and try again."
+        )
+
+    # De sleutel klopt; nu nog bewijzen dat de winkel echt antwoordt.
+    import httpx
+    async with httpx.AsyncClient(timeout=httpx.Timeout(30.0, connect=10.0)) as c:
+        r = await c.get(f"https://{shop}/admin/api/2024-01/shop.json?fields=name",
+                        headers={"X-Shopify-Access-Token": vers["access_token"]})
+    if r.status_code >= 400:
+        raise ValueError("The credentials work but the store didn't answer. "
+                         "Check that the app is installed on this store, then try again.")
+
+    return {
+        "shop": shop,
+        "shop_name": (r.json().get("shop") or {}).get("name") or shop,
+        "scopes": vers["scopes"],
+        "access_token": vers["access_token"],
+        "expires_at": vers["expires_at"],
+        "aanbevolen_ontbreekt": [x for x in AANBEVOLEN_SCOPES if x not in toegekend],
+    }
+
+
 async def controleer_admin_token(shop: str, token: str) -> dict:
     """Controleer een zelfgemaakte sleutel vóór we hem opslaan.
 
@@ -349,9 +392,109 @@ from backend.platforms.base import PlatformBase
 from backend.platforms.shopify_importer import create_product, delete_product
 
 
-def _shop_creds(credentials: dict) -> tuple[Optional[str], Optional[str]]:
-    extra = (credentials or {}).get("extra_data") or {}
-    return extra.get("shop_domain"), credentials.get("access_token") if credentials else None
+async def vraag_token(shop: str, client_id: str, client_secret: str) -> dict:
+    """Een verse sleutel opvragen met de gegevens van de app zelf.
+
+    Dit is Shopify's "client credentials grant". Waarom die hier nodig is: sinds
+    2026 kan een winkelier in zijn winkelbeheer geen app meer aanmaken die een
+    sleutel toont ("You can no longer create new admin-created custom apps").
+    Hij maakt er nu een in zijn EIGEN Dev Dashboard, en daar staat geen sleutel
+    maar een client-ID en een clientgeheim. Daarmee vragen we zelf een sleutel op.
+
+    Dat mag alleen als de app en de winkel van dezelfde Shopify-organisatie zijn.
+    Dat is precies het geval als de winkelier zijn eigen app voor zijn eigen
+    winkel maakt — en dus werkt dit voor iedere klant, zonder dat Shopify er een
+    app voor hoeft goed te keuren.
+
+    De sleutel verloopt na 24 uur; vandaar dat we hem samen met zijn houdbaarheid
+    teruggeven en de aanroeper hem opnieuw laat ophalen als hij oud is.
+    """
+    import httpx
+    from datetime import datetime, timedelta, timezone
+
+    async with httpx.AsyncClient(timeout=httpx.Timeout(30.0, connect=10.0)) as c:
+        r = await c.post(
+            f"https://{shop}/admin/oauth/access_token",
+            headers={"Content-Type": "application/x-www-form-urlencoded"},
+            data={
+                "grant_type": "client_credentials",
+                "client_id": client_id,
+                "client_secret": client_secret,
+            },
+        )
+    if r.status_code in (400, 401, 403):
+        raise ValueError(
+            "Shopify didn't accept those app credentials. Check that the client ID and "
+            "client secret belong to an app in the SAME Shopify organisation as this store, "
+            "and that you installed the app on the store."
+        )
+    if r.status_code >= 400:
+        raise ValueError(f"Shopify returned an unexpected error ({r.status_code}). Please try again.")
+    data = r.json()
+    token = data.get("access_token")
+    if not token:
+        raise ValueError("Shopify accepted the request but returned no token. Please try again.")
+    geldig_tot = datetime.now(timezone.utc) + timedelta(seconds=int(data.get("expires_in") or 86399))
+    return {
+        "access_token": token,
+        "scopes": sorted(x for x in (data.get("scope") or "").split(",") if x),
+        "expires_at": geldig_tot.isoformat(),
+    }
+
+
+# Hoe lang voor het verlopen we al een nieuwe sleutel halen. Een sleutel die
+# midden in een publicatie verloopt kost een halve advertentie; tien minuten
+# speling kost niets.
+TOKEN_MARGE_MINUTEN = 10
+
+
+async def _shop_creds(credentials: dict) -> tuple[Optional[str], Optional[str]]:
+    """Winkeladres en een BRUIKBARE sleutel.
+
+    Drie soorten koppeling komen hier binnen en moeten alle drie werken:
+      1. de oude knop-koppeling (OAuth) — sleutel verloopt niet;
+      2. een custom app van vóór 2026 — sleutel verloopt niet;
+      3. een eigen app in de Dev Dashboard — client-ID en geheim, sleutel
+         verloopt na 24 uur en wordt hier ververst.
+    """
+    from datetime import datetime, timezone
+
+    if not credentials:
+        return None, None
+    extra = credentials.get("extra_data") or {}
+    shop = extra.get("shop_domain")
+    client_id = extra.get("client_id")
+    client_secret = extra.get("client_secret")
+
+    if not (shop and client_id and client_secret):
+        return shop, credentials.get("access_token")
+
+    # Nog geldig? Dan niet onnodig een nieuwe halen.
+    bestaand = credentials.get("access_token")
+    tot = extra.get("token_expires_at")
+    if bestaand and tot:
+        try:
+            over = (datetime.fromisoformat(tot) - datetime.now(timezone.utc)).total_seconds()
+            if over > TOKEN_MARGE_MINUTEN * 60:
+                return shop, bestaand
+        except (TypeError, ValueError):
+            pass  # onleesbare datum: gewoon een nieuwe halen
+
+    vers = await vraag_token(shop, client_id, client_secret)
+    # Opslaan zodat de volgende aanroep hem niet opnieuw hoeft te halen. Lukt dat
+    # niet, dan werken we gewoon door met de sleutel die we net kregen — een
+    # mislukte opslag mag geen publicatie kosten.
+    try:
+        from backend.database import get_db, naast_de_lus
+        db = get_db()
+        (await naast_de_lus(lambda: db.table("platform_credentials").update({
+            "access_token": vers["access_token"],
+            "extra_data": {**extra, "token_expires_at": vers["expires_at"],
+                           "scope": ",".join(vers["scopes"]) or extra.get("scope", "")},
+        }).eq("user_id", credentials["user_id"]).eq("platform", "shopify").execute()))
+    except Exception as e:  # noqa: BLE001
+        logger.warning("shopify: verse sleutel niet opgeslagen: %s", e)
+    return shop, vers["access_token"]
 
 
 def _maak_vastleggen(shop: str, callback):
@@ -406,7 +549,7 @@ class ShopifyPlatform(PlatformBase):
         }
 
     async def create_listing(self, item: dict, credentials: dict, on_created=None) -> dict:
-        shop, token = _shop_creds(credentials)
+        shop, token = await _shop_creds(credentials)
         if not shop or not token:
             # No per-user store connected yet — fall back to the single globally
             # configured store (existing behaviour for the account this was built for).
@@ -421,13 +564,13 @@ class ShopifyPlatform(PlatformBase):
         }
 
     async def delete_listing(self, platform_listing_id: str, credentials: dict) -> bool:
-        shop, token = _shop_creds(credentials)
+        shop, token = await _shop_creds(credentials)
         if not shop or not token:
             return await delete_product(platform_listing_id)
         return await ShopifyClient(shop, token).delete_product(platform_listing_id)
 
     async def update_listing_price(self, platform_listing_id: str, price: float, credentials: dict) -> bool:
-        shop, token = _shop_creds(credentials)
+        shop, token = await _shop_creds(credentials)
         if not shop or not token:
             # Same single-store fallback the create/delete paths use: the globally
             # configured store, whose token is fetched (and cached) on demand.

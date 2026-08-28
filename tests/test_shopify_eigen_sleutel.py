@@ -196,14 +196,56 @@ def test_het_scherm_noemt_elke_benodigde_toestemming():
         assert scope in venster, f"{scope} staat niet in de uitleg"
 
 
-def test_de_sleutel_blijft_niet_in_een_gesloten_venster_staan():
+def test_het_geheim_blijft_niet_in_een_gesloten_venster_staan():
     fn = APP.split("function closeShopifyConnect()")[1][:300]
-    assert "shopify-token-input').value = ''" in fn
+    assert "shopify-secret-input').value = ''" in fn
 
 
-def test_het_sleutelveld_is_afgeschermd():
+def test_het_geheimveld_is_afgeschermd():
     venster = APP.split('id="shopify-connect-overlay"')[1].split("</div>\n\n<div id=")[0]
-    assert 'id="shopify-token-input" type="password"' in venster
+    assert 'id="shopify-secret-input" type="password"' in venster
+
+
+# ── 6. De weg die voor iedere klant werkt ────────────────────────────────────
+
+def test_er_wordt_een_echte_sleutel_opgehaald_voor_we_iets_opslaan():
+    """Alleen door het écht te doen weten we dat het werkt. Precies dat ging mis
+    toen het venster stappen beschreef die Shopify allang had geschrapt."""
+    fn = PLATFORMS.split("async def shopify_connect_app(")[1].split("\n@router.")[0]
+    assert fn.index("controleer_app_gegevens(") < fn.index("_save_credentials(")
+    assert '"koppeling": "eigen_app"' in fn
+    assert '"client_secret"' in fn, "zonder het geheim kan de sleutel morgen niet ververst worden"
+
+
+def test_de_sleutel_wordt_ververst_voor_hij_verloopt():
+    """De sleutel van een eigen app leeft 24 uur. Zonder verversen valt alles
+    elke dag stil op een 401 die niemand ziet."""
+    src = (ROOT / "backend/platforms/shopify.py").read_text(encoding="utf-8")
+    fn = src.split("async def _shop_creds(")[1].split("\nasync def ")[0]
+    assert "vraag_token(" in fn
+    assert "TOKEN_MARGE_MINUTEN" in fn, "op het laatste moment verversen breekt midden in een publicatie"
+    assert "token_expires_at" in fn
+
+
+def test_een_koppeling_zonder_geheim_blijft_gewoon_werken():
+    """OAuth-koppelingen en oude custom apps hebben geen client_id/secret en
+    hun sleutel verloopt niet — die mogen niet ineens stukgaan."""
+    src = (ROOT / "backend/platforms/shopify.py").read_text(encoding="utf-8")
+    fn = src.split("async def _shop_creds(")[1].split("\nasync def ")[0]
+    assert "if not (shop and client_id and client_secret):" in fn
+    assert 'return shop, credentials.get("access_token")' in fn
+
+
+def test_de_verkoopronde_gebruikt_dezelfde_verversing():
+    assert "_shop_creds" in ORDERS, "anders loopt die ronde elke dag vast op een verlopen sleutel"
+
+
+def test_de_verkoopronde_overschrijft_geen_verse_sleutel():
+    """Het merkteken wegschrijven met de OUDE gegevens zou de zojuist opgehaalde
+    vervaldatum weer wissen."""
+    staart = ORDERS.split("orders_gezien_tot\": nieuw")[0][-700:]
+    assert 'select("extra_data")' in staart
+    assert "basis" in staart
 
 
 def test_ontbrekende_verkooprechten_worden_op_het_scherm_gemeld():

@@ -71,7 +71,11 @@ PAGINA = 100
 # 5.534 staan. Gemeten: bij offset 5000 komt een lege lijst. Wie meer heeft, mist
 # de rest in deze lijst; die halen we daarna per titel op.
 MAX_PAGINAS = 50
-DESC_MAX = 4000
+# Was 4000. Dat sneed de onderkant van elke uitgebreide advertentietekst eraf —
+# artikelnummer, winkeluitleg, verzendkosten, tags — en daar kwam de klacht
+# "een hele lap tekst ontbreekt" vandaan. Het is onze eigen grens, geen grens
+# van Marktplaats: de tekst die we hier binnenhalen STOND daar zelf.
+DESC_MAX = 20000
 
 
 def _sleutel(titel: str) -> str:
@@ -378,6 +382,24 @@ async def volledige_advertentie(client: httpx.AsyncClient, url: str) -> dict:
     }
 
 
+def _is_afgekapt(kort: str, lang: str) -> bool:
+    """Is `kort` het begin van `lang`, afgezien van witruimte?
+
+    Alleen dan mogen we de opgeslagen omschrijving vervangen: het is dezelfde
+    tekst, alleen korter. Wijkt hij inhoudelijk af, dan heeft de verkoper hem
+    zelf aangepast en blijft hij staan.
+    """
+    def plat(t: str) -> str:
+        return re.sub(r"\s+", " ", str(t or "")).strip().lower()
+
+    k, l = plat(kort), plat(lang)
+    if not k:
+        return True
+    # Marktplaats zet zelf soms een beletselteken achter een ingekorte tekst.
+    k = k.rstrip(". \u2026")
+    return bool(k) and l.startswith(k[: max(1, len(k) - 3)])
+
+
 async def vul_item_aan_uit_advertentie(db, item: dict, url: str) -> dict:
     """Eén item bijwerken met wat er op zijn eigen advertentiepagina staat.
 
@@ -405,10 +427,23 @@ async def vul_item_aan_uit_advertentie(db, item: dict, url: str) -> dict:
 
     patch: dict = {}
     tekst = (gevonden.get("description") or "").strip()
-    if tekst and not str(item.get("description") or "").strip():
+    huidig = str(item.get("description") or "").strip()
+    if tekst and not huidig:
+        patch["description"] = tekst
+    elif tekst and len(tekst) > len(huidig) and _is_afgekapt(huidig, tekst):
+        # DE TEKST DIE WE HEBBEN IS EEN AFGEKAPTE VERSIE VAN DEZELFDE TEKST.
+        #
+        # Dat gebeurde door onze eigen 4000-tekengrens en door de zoeklijst van
+        # Marktplaats, die alleen het begin meegeeft. Gevolg: advertenties
+        # zonder artikelnummer, zonder verzendkosten, zonder de winkeluitleg
+        # onderaan (Jaap, Zilverwebsite, 28-08-2026). We vullen alleen aan als
+        # wat wij hebben letterlijk het begin is van wat er op de pagina staat;
+        # een tekst die de verkoper zelf heeft aangepast blijft dus staan.
         patch["description"] = tekst
     fotos = gevonden.get("photo_urls") or []
-    if len(fotos) > 1 and len(item.get("photo_urls") or []) <= 1:
+    # Meer foto's dan we hebben is altijd winst: de advertentiepagina toont de
+    # hele reeks, de zoeklijst waar de import uit komt alleen het omslagplaatje.
+    if len(fotos) > len(item.get("photo_urls") or []):
         patch["photo_urls"] = fotos
     for veld in ("brand", "size", "color", "condition"):
         waarde = str(gevonden.get(veld) or "").strip()

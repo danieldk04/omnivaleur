@@ -803,3 +803,28 @@ Wat blijft staan van wat er gebouwd is:
 Bronnen:
 - https://shopify.dev/docs/apps/build/authentication-authorization/access-tokens/generate-app-access-tokens-admin
 - https://shopify.dev/docs/apps/build/dev-dashboard/get-api-access-tokens
+
+## 28-08-2026 — Jaap (Zilverwebsite): drie klachten, drie aantoonbare oorzaken
+
+1. **"Site verlaten?" bevroor het publiceren.** De plaatsknop navigeert de
+   pagina weg en het Marktplaats-formulier hangt daar een beforeunload aan.
+   content/unload_guard.js bestond al, maar werd alleen aangeroepen als WIJ een
+   tabblad sloten of wegstuurden — niet bij de navigatie die de plaatsknop zelf
+   veroorzaakt. Nu ontwapenen we vlak vóór de klik (ONTWAPEN_AFSLUITVRAAG).
+2. **Eén foto per advertentie.** Gemeten: alle 14 items in zijn publicatiewachtrij
+   hadden precies één foto. Een import uit de Marktplaats-zoeklijst levert alleen
+   het omslagplaatje; de hele reeks staat op de advertentiepagina. Publiceren
+   vult dat nu zelf aan (crosslist.publish_to_platforms) in plaats van te wachten
+   op de knop "Fill from Marktplaats".
+3. **De onderkant van de tekst ontbrak.** Twee zelfverzonnen grenzen:
+   `slice(0, 2000)` bij het invullen van het formulier en `DESC_MAX = 4000` bij
+   het binnenhalen. Zijn 1.222 items hadden een mediaan van 2.044 tekens en een
+   maximum van exact 4.000 — het bewijs. Beide staan nu op 20.000. Zijn eigen
+   advertenties bewijzen dat Marktplaats langere tekst aanneemt; die tekst kwam
+   daarvandaan. Het is NIET de Shopify-tekst, zoals hij vermoedde.
+
+Aanvullen vervangt voortaan ook een afgekapte omschrijving, maar alleen als wat
+wij hebben letterlijk het begin is van wat er op de pagina staat (_is_afgekapt).
+Een tekst die de verkoper zelf heeft aangepast blijft staan.
+
+Extensie 1.0.260.

@@ -179,6 +179,11 @@ window.CL = (() => {
   // ---- Lexical / contenteditable description ----
   let _pendingDescription = null;
   let _descriptionSelector = null;
+  // De bovengrens voor een advertentietekst. Ruim boven wat een verkoper
+  // schrijft, zodat wij nooit de knipper zijn — maar niet oneindig, want een
+  // formulier dat een boekwerk krijgt loopt vast.
+  const MAX_BESCHRIJVING = 20000;
+
   // Alleen Marktplaats heeft de "echte toetsaanslag"-duw nodig; 2dehands werkt
   // zonder en dat laten we met rust.
   let _descriptionNudge = false;
@@ -187,7 +192,16 @@ window.CL = (() => {
   // THROWS on failure. "Geen advertentietekst ingevuld" is a platform-side
   // rejection the user cannot act on; the causes below can be reported precisely.
   async function fillDescription(selectors, text, opties) {
-    const value = platteTekst(text).trim().slice(0, 2000);
+    // WAAROM 20.000 EN NIET 2.000.
+    //
+    // Hier stond een grens van 2.000 tekens. Dat was geen limiet van Marktplaats maar een
+    // zelfverzonnen getal, en het sneed bij elke verkoper met een uitgebreide
+    // advertentietekst de onderkant eraf: artikelnummer, uitleg over de winkel,
+    // verzendkosten, tags. Jaap (Zilverwebsite) meldde precies dat, en zijn
+    // eigen advertenties op Marktplaats bewijzen dat het platform langere tekst
+    // gewoon aanneemt — die tekst kwam daar vandaan. Weigert een platform het
+    // alsnog, dan zet het een klacht op de pagina en die melden we al.
+    const value = platteTekst(text).trim().slice(0, MAX_BESCHRIJVING);
     if (!value) throw new Error("This item has no description — add one in Omnivaleur and publish again");
     // WACHTEN, NIET METEEN OPGEVEN. Het titelveld staat er direct; de
     // tekst-editor wordt door Marktplaats/2dehands apart bijgeladen en is een
@@ -806,7 +820,7 @@ window.CL = (() => {
   async function typBeschrijvingEcht(ruweTekst) {
     // Dezelfde opschoning als in fillDescription: anders typt deze stap alsnog
     // de HTML-versie over de nette tekst heen.
-    const tekst = platteTekst(ruweTekst).trim().slice(0, 2000);
+    const tekst = platteTekst(ruweTekst).trim().slice(0, MAX_BESCHRIJVING);
     if (!tekst) return "geen tekst";
     const uitkomst = await new Promise((res) => {
       try { chrome.runtime.sendMessage({ type: "TYPE_ECHT", text: tekst }, (r) => res(r || "geen antwoord")); }
@@ -1363,6 +1377,14 @@ window.CL = (() => {
     await sleep(400);
 
     try { chrome.runtime.sendMessage({ type: "SUBMIT_CLICKED" }, () => chrome.runtime.lastError); } catch (_) {}
+    // De plaatsklik navigeert de pagina weg en dan vraagt Marktplaats "Site
+    // verlaten?". Die vraag bevriest het hele proces tot de verkoper zelf klikt.
+    // Hem hier uitzetten kan geen kwaad: we staan op het punt te publiceren, er
+    // valt niets meer te bewaren.
+    await new Promise((res) => {
+      try { chrome.runtime.sendMessage({ type: "ONTWAPEN_AFSLUITVRAAG" }, () => res()); }
+      catch (_) { res(); }
+    });
     btn.click();
     clog("plaatsen: op de knop geklikt, wachten op de advertentie");
 

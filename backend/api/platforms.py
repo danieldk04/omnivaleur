@@ -168,6 +168,50 @@ async def shopify_callback(shop: str, code: str, request: Request, user_id: str 
     return {"status": "connected", "platform": "shopify"}
 
 
+@router.post("/shopify/connect-app")
+async def shopify_connect_app(body: dict, user_id: str = Depends(get_current_user)):
+    """Koppelen met een app die de winkelier zelf in zijn Dev Dashboard maakt.
+
+    Body: {"shop": "...", "client_id": "...", "client_secret": "..."}
+
+    DIT IS DE WEG DIE VOOR IEDEREEN WERKT. Shopify laat geen apps meer toe die
+    koppelen met een marktplaats erbuiten, en heeft óók het aanmaken van
+    sleutel-tonende apps in het winkelbeheer geschrapt. Wat overblijft: de
+    winkelier maakt een app in zijn EIGEN Shopify-organisatie. App en winkel
+    zitten dan per definitie in dezelfde organisatie, en dat is precies de
+    voorwaarde voor de client credentials grant. Geen beoordeling, geen App
+    Store, geen afhankelijkheid van Shopify's goedkeuring.
+    """
+    from backend.platforms.shopify import controleer_app_gegevens
+    shop = re.sub(r"^https?://", "", str(body.get("shop") or "").strip().lower()).split("/")[0]
+    try:
+        g = await controleer_app_gegevens(shop, body.get("client_id"), body.get("client_secret"))
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+    _save_credentials(user_id, "shopify", {
+        "access_token": g["access_token"],
+        "extra_data": {
+            "shop_domain": g["shop"],
+            "shop_name": g["shop_name"],
+            "scope": ",".join(g["scopes"]),
+            # Deze twee zijn de eigenlijke koppeling: de sleutel zelf verloopt na
+            # 24 uur en wordt hiermee steeds opnieuw opgehaald.
+            "client_id": str(body.get("client_id")).strip(),
+            "client_secret": str(body.get("client_secret")).strip(),
+            "token_expires_at": g["expires_at"],
+            "koppeling": "eigen_app",
+        },
+    })
+    return {
+        "status": "connected",
+        "platform": "shopify",
+        "shop": g["shop"],
+        "shop_name": g["shop_name"],
+        "missing_optional_scopes": g["aanbevolen_ontbreekt"],
+    }
+
+
 @router.post("/shopify/connect-token")
 async def shopify_connect_token(body: dict, user_id: str = Depends(get_current_user)):
     """Koppelen met een sleutel die de winkelier zelf aanmaakt.

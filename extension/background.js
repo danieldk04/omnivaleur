@@ -2193,7 +2193,7 @@ async function mpAdvertentieSnapshot(tabId) {
       return {
         photo_urls: fotos,
         foto_totaal: totaal || fotos.length,
-        description: blok ? (blok.innerText || "").trim().slice(0, 4000) : "",
+        description: blok ? (blok.innerText || "").trim().slice(0, 20000) : "",
         brand: kenmerk["merk"] || "",
         size: maatUit(kenmerk["maat"] || kenmerk["kledingmaat"] || ""),
         color: kenmerk["kleur"] || "",
@@ -4075,7 +4075,7 @@ async function bgScanMp2dh(job, serverUrl) {
                     if (/^https?:\/\//.test(u)) photos.push(u);
                   }
                 }
-                return { description: description.trim().slice(0, 4000), photo_urls: [...new Set(photos)] };
+                return { description: description.trim().slice(0, 20000), photo_urls: [...new Set(photos)] };
               } catch (e3) {
                 await nap(500 * Math.pow(2, attempt));
               }
@@ -5823,6 +5823,23 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
       if (meta) chrome.storage.local.set({ [key]: { ...meta, submitClicked: true } });
       sendResponse(true);
     });
+    return true;
+  }
+
+  // ONTWAPEN VLAK VOOR DE PLAATSKLIK.
+  //
+  // De plaatsknop stuurt de pagina weg, en het formulier van Marktplaats hangt
+  // aan dat wegnavigeren een "Site verlaten? Wijzigingen die je hebt aangebracht
+  // worden mogelijk niet opgeslagen". Chrome toont die vraag aan de verkoper en
+  // zet ALLES stil tot hij klikt — ook het volgende tabblad, want twee tabbladen
+  // van dezelfde site delen één proces. Jaap (Zilverwebsite) meldde het exact zo:
+  // "als ik hier handmatig op leave klik, wordt de advertentie geplaatst".
+  //
+  // De wacht in content/unload_guard.js werd tot nu toe alleen aangeroepen als
+  // WIJ een tabblad sloten of wegstuurden. De navigatie die de plaatsknop zelf
+  // veroorzaakt viel daar buiten. Dat gat is dit.
+  if (msg.type === "ONTWAPEN_AFSLUITVRAAG") {
+    ontwapenAfsluitvraag(sender.tab?.id).finally(() => sendResponse(true));
     return true;
   }
 
