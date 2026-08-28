@@ -273,9 +273,12 @@
     // with an empty advertentietekst and no photos, with nothing to explain it.
     // Let these throw so the job reports the real cause and keeps the tab open.
     // nudge: Marktplaats accepteert de tekst pas na een echte toetsaanslag.
-    await fillDescription(['[data-testid="text-editor-input_nl-NL"]'], item.description, { nudge: true });
-    // Nu pas echt typen: alleen dan telt de tekst mee bij het plaatsen.
-    await step("echte tekst", () => typBeschrijvingEcht(item.description));
+    let descError = null;
+    try {
+      await fillDescription(['[data-testid="text-editor-input_nl-NL"]'], item.description, { nudge: true });
+      // Nu pas echt typen: alleen dan telt de tekst mee bij het plaatsen.
+      await step("echte tekst", () => typBeschrijvingEcht(item.description));
+    } catch (e) { descError = e; clog(`beschrijving: FOUT — ${e && e.message ? e.message : e}`); }
 
     // Foto's zijn verplicht, maar een mislukte upload mag niet de rest van het
     // formulier overslaan: dan blijft alles daarna leeg zonder dat iemand ziet
@@ -317,6 +320,14 @@
     await repairMpGroupFields(item);
 
     // Lees het formulier terug voor we plaatsen — zie verifyMpGroupFields.
+    // EERST HET FORMULIER AFMAKEN, DAN PAS KLAGEN.
+    //
+    // De beschrijving werd hier als eerste ingevuld en gooide bij een probleem
+    // meteen de hele invulbeurt weg. Gevolg voor de verkoper: een tabblad met
+    // alleen een titel en een prijs, geen foto's, geen kenmerken — en een
+    // melding die niet uitlegde waarom de rest ontbrak. Nu wordt alles
+    // ingevuld en komt het bezwaar er pas achteraan, mét de echte reden.
+    if (descError) throw descError;
     if (photoError) throw photoError;
     // De advertentietekst is als eerste ingevuld, maar daarna zijn er foto's
     // geüpload en kenmerken gekozen — elke herteken-ronde kan de editor

@@ -189,7 +189,16 @@ window.CL = (() => {
   async function fillDescription(selectors, text, opties) {
     const value = platteTekst(text).trim().slice(0, 2000);
     if (!value) throw new Error("This item has no description — add one in Omnivaleur and publish again");
-    const selector = selectors.find((s) => document.querySelector(s));
+    // WACHTEN, NIET METEEN OPGEVEN. Het titelveld staat er direct; de
+    // tekst-editor wordt door Marktplaats/2dehands apart bijgeladen en is een
+    // fractie later pas in de pagina. Wie hier meteen "kan het veld niet
+    // vinden" gooit, breekt het hele formulier af — en dan blijven ook de
+    // foto's en de kenmerken leeg, zonder dat iemand ziet waarom.
+    let selector = null;
+    for (let poging = 0; poging < 60 && !selector; poging++) {
+      selector = selectors.find((s) => document.querySelector(s)) || null;
+      if (!selector) await sleep(250);
+    }
     if (!selector) throw new Error("The description field could not be found on the page (" + selectors.join(", ") + ")");
     _pendingDescription = value;
     _descriptionSelector = selector;

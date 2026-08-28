@@ -378,6 +378,55 @@ async def volledige_advertentie(client: httpx.AsyncClient, url: str) -> dict:
     }
 
 
+async def vul_item_aan_uit_advertentie(db, item: dict, url: str) -> dict:
+    """Eén item bijwerken met wat er op zijn eigen advertentiepagina staat.
+
+    Bedoeld voor het moment vlak voor een herplaatsing: de advertentie staat dan
+    nog online, dus alles wat het item mist (omschrijving, de rest van de foto's,
+    merk, maat, kleur, staat) is daar gewoon te lezen. Zonder deze stap wordt een
+    geïmporteerde advertentie — die uit de zoeklijst komt en dus alleen titel,
+    prijs en het omslagplaatje meekreeg — verwijderd en daarna geweigerd door het
+    plaatsformulier, dat een omschrijving eist.
+
+    Vult NOOIT iets dat al gevuld is, en schrijft niets als de pagina niets
+    prijsgeeft. Geeft het bijgewerkte item terug.
+    """
+    if not (url or "").strip():
+        return item
+    try:
+        async with httpx.AsyncClient(timeout=30, headers={"User-Agent": UA},
+                                     follow_redirects=True) as client:
+            gevonden = await volledige_advertentie(client, url)
+    except Exception as e:  # noqa: BLE001 — een mislukte aanvulling mag niets breken
+        logger.warning("mp_enrich: aanvullen vanaf %s mislukt: %s", url, e)
+        return item
+    if not gevonden:
+        return item
+
+    patch: dict = {}
+    tekst = (gevonden.get("description") or "").strip()
+    if tekst and not str(item.get("description") or "").strip():
+        patch["description"] = tekst
+    fotos = gevonden.get("photo_urls") or []
+    if len(fotos) > 1 and len(item.get("photo_urls") or []) <= 1:
+        patch["photo_urls"] = fotos
+    for veld in ("brand", "size", "color", "condition"):
+        waarde = str(gevonden.get(veld) or "").strip()
+        if waarde and not str(item.get(veld) or "").strip():
+            patch[veld] = waarde
+    if not patch:
+        return item
+    try:
+        await naast_de_lus(lambda: db.table("items").update(patch)
+                           .eq("id", item["id"]).execute())
+    except Exception as e:  # noqa: BLE001
+        logger.warning("mp_enrich: item %s bijwerken mislukt: %s", item.get("id"), e)
+        return item
+    logger.info("mp_enrich: item %s aangevuld vanaf de advertentiepagina (%s)",
+                item.get("id"), ", ".join(sorted(patch)))
+    return {**item, **patch}
+
+
 async def volledige_omschrijving(client: httpx.AsyncClient, url: str) -> str:
     """De volledige tekst van één advertentiepagina.
 

@@ -192,6 +192,30 @@ class RefreshError(Exception):
     pass
 
 
+# Wat een advertentie MOET hebben voordat we hem durven weg te halen.
+#
+# WAAROM DIT ER IS (28-08-2026, Jaap). Herplaatsen is twee stappen: eerst weg
+# bij Marktplaats, daarna opnieuw plaatsen. Die tweede stap struikelde op items
+# zonder omschrijving — het plaatsformulier van Marktplaats eist een tekst, dus
+# de extensie brak af nog voor de foto's. Gevolg op één dag: 60 advertenties
+# verwijderd, 0 teruggeplaatst, en omdat Marktplaats een verwijderde advertentie
+# meteen op 410 zet was ook de tekst zelf onherstelbaar weg.
+#
+# Deze controle staat vóór het verwijderen. Ontbreekt er iets, dan gebeurt er
+# niets: de advertentie blijft gewoon online staan. Een gemiste verversing kost
+# een plek in de zoekresultaten; een mislukte herplaatsing kost de advertentie.
+def ontbreekt_voor_herplaatsen(item: dict) -> str | None:
+    """Geeft terug wat er mist, of None als deze advertentie veilig terug kan."""
+    if not str(item.get("description") or "").strip():
+        return ("this item has no description — Marktplaats refuses a listing "
+                "without one, so removing the current listing would lose it. "
+                "Fill the description (or use 'Fill from Marktplaats') first.")
+    if not (item.get("photo_urls") or []):
+        return ("this item has no photos — Marktplaats refuses a listing "
+                "without one, so removing the current listing would lose it.")
+    return None
+
+
 def _check_and_increment_quota(db, user_id: str, platform: str | None = None) -> None:
     today = datetime.now(timezone.utc).date().isoformat()
     row = db.table("refresh_quota").select("count").eq("user_id", user_id).eq("day", today).execute()
@@ -209,12 +233,25 @@ def _check_and_increment_quota(db, user_id: str, platform: str | None = None) ->
     # teller bijgehouden hoeft te worden die uit de pas kan gaan lopen.
     if platform in COOLDOWN_DAYS_PER_PLATFORM:
         vandaag = datetime.now(timezone.utc).date().isoformat()
+        # ALLEEN DE HANDMATIGE KNOP TELT HIER MEE, EN ALLEEN ALS HIJ LUKTE.
+        #
+        # Hier werd elke verwijderopdracht van vandaag geteld. Dat zijn er bij
+        # een grote verkoper tientallen die niets met deze knop te maken hebben:
+        # het nachtelijke automatisch herplaatsen (dat zijn eigen, veel ruimere
+        # grens heeft), een advertentie die elders verkocht was, en een
+        # verwijdering die zelf mislukte. Gemeten bij Jaap op 28-08-2026: 61
+        # verwijderopdrachten uit de nachtronde, dus de verversknop meldde de
+        # hele dag "3 per dag bereikt" terwijl hij hem nog geen enkele keer had
+        # gebruikt. Een mislukte poging hoort al helemaal niet mee te tellen —
+        # er is dan niets verwijderd en niets herplaatst.
         mp_vandaag = (
             db.table("jobs")
             .select("id", count="exact")
             .eq("user_id", user_id)
             .eq("platform", platform)
             .eq("action", "delete")
+            .eq("payload->>_handmatige_verversing", "true")
+            .neq("status", "error")
             .gte("created_at", vandaag)
             .execute()
         )
@@ -339,6 +376,20 @@ async def refresh_listing(item_id: str, platform: str, user_id: str, strategy: s
     if platform not in REFRESH_CAPABLE_PLATFORMS:
         raise RefreshError(f"Refresh isn't available for {platform} yet")
 
+    # Eerst: kunnen we deze advertentie straks überhaupt terugzetten? Zo niet,
+    # dan halen we hem ook niet weg. Zie ontbreekt_voor_herplaatsen.
+    if strategy == "relist" and ontbreekt_voor_herplaatsen(item):
+        # Nog niet opgeven: wat het item mist staat op dit moment gewoon op zijn
+        # eigen advertentiepagina — die staat immers nog online, daarom zijn we
+        # hier. Eerst overnemen, dan pas oordelen.
+        if platform in ("marktplaats", "2dehands") and listing.get("platform_listing_url"):
+            from backend.services.mp_enrich import vul_item_aan_uit_advertentie
+            item = await vul_item_aan_uit_advertentie(
+                db, item, listing["platform_listing_url"])
+        mist = ontbreekt_voor_herplaatsen(item)
+        if mist:
+            raise RefreshError(f"Relist skipped — {mist}")
+
     _check_cooldown(listing, platform)
     # `eigen_quotum` betekent: de aanroeper bewaakt zelf hoeveel er per dag mag.
     # Dat is het automatisch herplaatsen, dat zijn eigen, veel ruimere grens per
@@ -407,6 +458,10 @@ async def refresh_listing(item_id: str, platform: str, user_id: str, strategy: s
         # If the delist fails the whole relist aborts (the paired create is
         # skipped in /jobs/pending), so undo the cooldown/quota here too.
         "_refresh_rollback": rollback,
+        # Alleen de handmatige verversknop valt onder de 3-per-dag-grens; het
+        # nachtelijke herplaatsen heeft zijn eigen, ruimere grens. Zonder dit
+        # merkteken telde de dagteller ze allebei. Zie _check_and_increment_quota.
+        "_handmatige_verversing": not eigen_quotum,
     }
     (await naast_de_lus(lambda: db.table("jobs").insert({
         "user_id": user_id,

@@ -92,9 +92,12 @@
     await step("price",        () => { const el = qs('input[name="price.value"]'); return fillInputHuman(el, mpPrijs(item.price, el)); });
     // Mandatory fields — deliberately NOT inside step(), see marktplaats.js.
     // nudge: ook 2dehands rekent de tekst pas mee na een echte toetsaanslag.
-    await fillDescription(['[data-testid="text-editor-input_nl-BE"]', '[data-testid="text-editor-input_nl-NL"]'], sanitize2dh(item.description), { nudge: true });
-    // Nu pas echt typen: alleen wat er echt getypt is telt mee bij het plaatsen.
-    await step("echte tekst", () => typBeschrijvingEcht(sanitize2dh(item.description)));
+    let descError = null;
+    try {
+      await fillDescription(['[data-testid="text-editor-input_nl-BE"]', '[data-testid="text-editor-input_nl-NL"]'], sanitize2dh(item.description), { nudge: true });
+      // Nu pas echt typen: alleen wat er echt getypt is telt mee bij het plaatsen.
+      await step("echte tekst", () => typBeschrijvingEcht(sanitize2dh(item.description)));
+    } catch (e) { descError = e; clog(`beschrijving: FOUT — ${e && e.message ? e.message : e}`); }
     // Foto's zijn verplicht, maar een mislukte upload mag niet de rest van het
     // formulier overslaan: dan blijft alles daarna leeg zonder dat iemand ziet
     // waarom. We onthouden de fout en melden hem pas aan het eind.
@@ -128,6 +131,14 @@
 
     // Zelfde controle als op Marktplaats: 2dehands draait hetzelfde formulier,
     // maar plaatste tot nu toe zonder terug te lezen — dus met stille gaten.
+    // EERST HET FORMULIER AFMAKEN, DAN PAS KLAGEN.
+    //
+    // De beschrijving werd hier als eerste ingevuld en gooide bij een probleem
+    // meteen de hele invulbeurt weg. Gevolg voor de verkoper: een tabblad met
+    // alleen een titel en een prijs, geen foto's, geen kenmerken — en een
+    // melding die niet uitlegde waarom de rest ontbrak. Nu wordt alles
+    // ingevuld en komt het bezwaar er pas achteraan, mét de echte reden.
+    if (descError) throw descError;
     if (photoError) throw photoError;
     // De advertentietekst is als eerste ingevuld, maar daarna zijn er foto's
     // geüpload en kenmerken gekozen — elke herteken-ronde kan de editor
