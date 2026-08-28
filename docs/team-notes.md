@@ -632,9 +632,18 @@ Twee dingen zaten fout:
    al, maar het hele herplaats-, plaats- en verwijderpad loopt via
    `naast_de_lus`, en die herhaalde niets. Bovendien stond de kale
    `ssl.SSLEOFError` niet in `_HERSTELBAAR`, dus zelfs `execute_with_retry` zou
-   hem hebben doorgelaten. Nu: `naast_de_lus` probeert drie keer, en `ssl.SSLError`
-   plus een tekstherkenning ("EOF occurred in violation of protocol", "Server
-   disconnected", "connection reset/aborted") tellen als herstelbaar.
+   hem hebben doorgelaten. Nu tellen `ssl.SSLError` plus een tekstherkenning
+   ("EOF occurred in violation of protocol", "Server disconnected", "connection
+   reset/aborted") als herstelbaar, en kan `naast_de_lus` herkansen.
+
+   **Maar `herkans` staat standaard UIT, en dat is met opzet.** Valt de
+   verbinding weg terwijl het *antwoord* onderweg is, dan staat de rij er
+   misschien al en maakt een tweede poging er nog een. Bij een opdracht in de
+   wachtrij is dat een tweede advertentie. Blind herhalen zou het probleem dus
+   alleen verplaatsen. Zet `herkans=True` alleen op aanroepen die je twee keer
+   mag doen; voor een insert hoort het patroon uit `crosslist._exec`: zelf een
+   uuid bepalen en `dubbel_is_ok=True`, zodat een dubbele sleutel "stond er al"
+   betekent. De twee opdrachten van een herplaatsing gaan nu zo.
 
 2. **De volgorde in `refresh_listing` was onveilig.** De verwijderopdracht werd
    als eerste weggeschreven; pas dáárna werden de prijs, de vertaling
