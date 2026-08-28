@@ -471,3 +471,21 @@ inventaris van de live DNS gemaakt vóór de wijziging.
 `dns1/dns2.registrar-servers.com` naar `ariadne.ns.cloudflare.com` en
 `keenan.ns.cloudflare.com`. Daar kan geen sessie bij — inloggen bij een registrar
 is handwerk. Pas ná die omzetting wordt alles hierboven actief.
+
+**Stand 28-08-2026, einde van de avond.** De nameserverwijziging bij Namecheap was
+de eerste keer níet opgeslagen (dropdown stond nog op "Namecheap BasicDNS", velden
+leeg). Alsnog gezet: Custom DNS met `ariadne`/`keenan.ns.cloudflare.com`. SIDN heeft
+het verwerkt — whois toont beide Cloudflare-nameservers met `Updated Date:
+2026-08-28` — maar na ~50 minuten serveren `ns1/ns3/ns4.dns.nl` nog steeds de oude
+delegatie. Cloudflare antwoordt gezaghebbend (aa-vlag, geldige SOA) en er is geen
+DNSSEC, dus er is geen technische blokkade; het is puur SIDN's publicatieschema.
+
+Controleer bij de volgende sessie eerst of het inmiddels live is:
+
+    dig +norecurse NS omnivaleur.nl @ns1.dns.nl
+
+Staat daar Cloudflare, controleer dan in deze volgorde: MX (moet Zoho blijven),
+SPF op de wortel én op `send`, DMARC, de twee DKIM-sleutels, en pas daarna de
+doorverwijzing naar omnivaleur.com inclusief een pad zoals `/pricing`. Blijft het
+na een dag hangen, dan is het een vraag aan Namecheap of ze de EPP-update echt
+hebben doorgestuurd — de registratie zegt van wel.
