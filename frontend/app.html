@@ -2644,6 +2644,19 @@ const CROSSLIST_PLATFORM_REQUIRED = {
 };
 // Platforms that are still beta/best-effort — shown with a risk warning in the UI.
 const BETA_PLATFORMS = new Set(['facebook']);
+// Wat de "Fill from Marktplaats"-ronde kan aanvullen. Dit moet gelijk blijven aan
+// _mist_iets in backend/services/mp_enrich.py: stond hier alleen prijs en tekst,
+// dan verdween de knop zodra die twee gevuld waren — terwijl geimporteerde
+// advertenties juist met een enkele foto en zonder merk of maat binnenkomen, en
+// dat is precies wat publiceren naar Marktplaats en 2dehands blokkeert.
+function mistMarktplaatsGegevens(i) {
+  return !i.price
+      || !String(i.description || '').trim()
+      || (i.photo_urls || []).length <= 1
+      || !String(i.brand || '').trim()
+      || !String(i.size || '').trim();
+}
+
 const CROSSLIST_FIELD_LABELS = { description: 'description', photo_urls: 'photos', category: 'category', gender: 'gender', brand: 'brand', size: 'size', color: 'color', price: 'price' };
 
 // Hoe een prijs in een lijst getoond wordt. Eén plek, want dit stond op drie
@@ -3851,8 +3864,7 @@ function applyFilters(resetPage) {
   // De knop hoort alleen te bestaan als er echt iets te halen valt. Een knop die
   // altijd staat te wachten op een probleem dat de meeste verkopers niet hebben,
   // is voor hen alleen maar ruis.
-  const teVullen = (state.items || []).filter(
-    i => !i.price || !String(i.description || '').trim()).length;
+  const teVullen = (state.items || []).filter(mistMarktplaatsGegevens).length;
   const mpKnop = document.getElementById('mp-fill-btn');
   if (mpKnop) {
     mpKnop.style.display = teVullen ? '' : 'none';
@@ -8143,11 +8155,10 @@ async function saveRelistDagen() {
 }
 
 async function fillFromMarktplaats() {
-  const open = (state.items || []).filter(
-    i => !i.price || !String(i.description || '').trim()).length;
+  const open = (state.items || []).filter(mistMarktplaatsGegevens).length;
   if (!open) return;
   if (!confirm(
-    `Fetch the price and description for ${open} item${open === 1 ? '' : 's'} ` +
+    `Fetch the missing details for ${open} item${open === 1 ? '' : 's'} ` +
     `from your own Marktplaats adverts?\n\n` +
     `Anything you already filled in stays as it is. This can take a few minutes.`)) return;
 
