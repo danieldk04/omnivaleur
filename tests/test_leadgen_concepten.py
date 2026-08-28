@@ -123,3 +123,41 @@ def test_een_echte_fout_wordt_niet_stilgehouden():
 
     with pytest.raises(TypeError):
         L._claude(_Stuk(), max_tokens=100, messages=[])
+
+
+# ------------------------------------------------------------------ de aanhef
+#
+# Aanleiding, 28-08-2026. Albert Kok kreeg als koude mail "Hi kok
+# modelauto&#x27;s," — zijn winkelnaam als voornaam, én ongeschonden HTML zoals
+# Marktplaats die teruggeeft. Twee fouten in één regel, en het is de eerste
+# regel die iemand leest.
+def test_html_codes_komen_nooit_in_een_naam():
+    lead = {"email": "albertkok63@gmail.com", "name": "kok modelauto&#x27;s"}
+    assert "&#" not in L._bedrijfsnaam(lead)
+    assert L._bedrijfsnaam(lead) == "kok modelauto's"
+    assert "&#" not in L._tekst(lead, L.MAIL1)
+
+
+def test_een_verkopersnaam_wordt_nooit_als_voornaam_gebruikt():
+    """Ook niet als hij toevallig als een naam van een mens leest.
+
+    De namen hieronder komen uit de echte lijst. Elke poging om er met een regel
+    een voornaam uit te halen liep hierop stuk: "Hi Boutique," is niet beter dan
+    "Hi kok modelauto's,"."""
+    for naam in ("kok modelauto's", "Vintage Kleding Store B.V.", "Boutique MoDo",
+                 "Trimsalon Sanndjees", "Houtkamp Lederwaren", "Albert Kok",
+                 "de Kledingkast", "Emtrade", "2ehands Import"):
+        lead = {"email": "info@ergens.nl", "name": naam}
+        assert L._persoonsnaam(lead) == "", naam
+        assert L._aanhef(lead) == "Hi", naam
+        assert L._tekst(lead, L.MAIL1).startswith("Hi,\n"), naam
+
+
+def test_een_voornaam_die_er_echt_staat_mag_wel_in_de_aanhef():
+    assert L._aanhef({"email": "a@b.nl", "voornaam": "Albert"}) == "Hi Albert"
+    assert L._aanhef({"email": "a@b.nl", "contactpersoon": "Albert Kok"}) == "Hi Albert"
+
+
+def test_het_emailadres_wordt_nooit_een_aanhef():
+    """"Hi Zilverwebsite," leest als een rondzendbrief, en dat is het ook."""
+    assert L._aanhef({"email": "info@zilverwebsite.nl"}) == "Hi"

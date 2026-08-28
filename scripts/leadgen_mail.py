@@ -372,18 +372,58 @@ def _leads() -> list[dict]:
 # ------------------------------------------------------------------ teksten
 
 
+def _schoon(tekst: str) -> str:
+    """Marktplaats levert namen terug zoals ze in de HTML staan: "kok modelauto&#x27;s".
+    Onvertaald belandde dat letterlijk in de aanhef. Twee keer ontsleutelen, want
+    dubbel gecodeerd (&amp;#x27;) komt ook voor; daarna eventuele tags eruit."""
+    for _ in range(2):
+        nieuw = unescape(tekst)
+        if nieuw == tekst:
+            break
+        tekst = nieuw
+    tekst = re.sub(r"<[^>]+>", " ", tekst)
+    return re.sub(r"\s+", " ", tekst).strip()
+
+
 def _bedrijfsnaam(lead: dict) -> str:
     """De handelsnaam uit het KvK-veld is het netst, maar niet iedereen vult die in;
     de verkopersnaam op Marktplaats is dan het volgende beste. Nooit het e-mailadres
-    in een aanhef gebruiken — "Hoi info@" leest als een rondzendbrief."""
+    in een aanhef gebruiken — "Hoi info@" leest als een rondzendbrief.
+
+    Dit is de naam van het BEDRIJF, voor intern gebruik (meldingen, context voor
+    het taalmodel). Voor de aanhef geldt `_persoonsnaam`; zie daar waarom."""
     for sleutel in ("handelsnaam", "full_name", "name"):
         if lead.get(sleutel):
-            return str(lead[sleutel])
+            schoon = _schoon(str(lead[sleutel]))
+            if schoon:
+                return schoon
     return lead["email"].split("@")[-1].split(".")[0].title()
 
 
+def _persoonsnaam(lead: dict) -> str:
+    """De voornaam voor in de aanhef, of "" als we die niet hebben.
+
+    Van een Marktplaats-lead kennen we alleen de verkopersnaam, en dat is de
+    naam van de winkel. Die achter "Hi" zetten leest als software: Albert Kok
+    kreeg "Hi kok modelauto&#x27;s,". Er is geprobeerd om er met een regel een
+    voornaam uit te halen (twee woorden, hoofdletters, geen handelswoord), maar
+    tegen de echte lijst gehouden leverde dat "Hi Boutique," , "Hi Trimsalon,"
+    en "Hi Partytenten," op: van de 1.123 verkopers was er geen enkele bij wie
+    het klopte. Vandaar de harde regel: een naam in de aanhef alleen als iemand
+    zijn voornaam expliciet in het veld staat. In alle andere gevallen "Hi,".
+    """
+    for sleutel in ("voornaam", "contactpersoon"):
+        if lead.get(sleutel):
+            deel = _schoon(str(lead[sleutel])).split()
+            if deel and re.fullmatch(r"[A-Za-zÀ-ÿ]{2,}(?:-[A-Za-zÀ-ÿ]{2,})?", deel[0]):
+                return deel[0]
+    return ""
+
+
 def _aanhef(lead: dict) -> str:
-    return "Hi"
+    """De hele aanhefregel zonder komma: "Hi Albert" of gewoon "Hi"."""
+    naam = _persoonsnaam(lead)
+    return f"Hi {naam}" if naam else "Hi"
 
 
 def _jij(lead: dict) -> dict[str, str]:
@@ -459,7 +499,7 @@ def _haakje(lead: dict) -> str:
 # dat het wettelijk anders hoort. De afmeldweg zit nu alleen nog in de
 # List-Unsubscribe-header van elke mail — onzichtbaar voor de ontvanger, maar
 # mailprogramma's tonen er hun eigen "afmelden"-knop mee.
-MAIL1 = """{aanhef} {naam},
+MAIL1 = """{aanhef},
 
 {haakje}
 
@@ -476,7 +516,7 @@ voor {jou} is.
 
 {ondertekening}"""
 
-MAIL2 = """{aanhef} {naam},
+MAIL2 = """{aanhef},
 
 Nog even over mijn mailtje van vorige week, geen idee of het bij {jou} langs is
 gekomen.
@@ -490,7 +530,7 @@ scheelt. Geen verplichtingen, gewoon even kijken.
 
 {ondertekening}"""
 
-MAIL3 = """{aanhef} {naam},
+MAIL3 = """{aanhef},
 
 Ik ga {jou} niet langer lastigvallen, dit is mijn laatste mailtje.
 
@@ -516,10 +556,8 @@ BEURTEN = [
 
 
 def _tekst(lead: dict, sjabloon: str) -> str:
-    naam = _bedrijfsnaam(lead)
     return sjabloon.format(
         aanhef=_aanhef(lead),
-        naam=naam.split()[0] if naam and len(naam.split()) == 1 else naam,
         haakje=_haakje(lead),
         bedrijf=BEDRIJF,
         site=SITE.replace("https://", ""),
