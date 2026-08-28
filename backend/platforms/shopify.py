@@ -74,6 +74,24 @@ async def controleer_app_gegevens(shop: str, client_id: str, client_secret: str)
 
     vers = await vraag_token(shop, client_id, client_secret)
     toegekend = set(vers["scopes"])
+
+    # Geeft de uitwisseling zelf geen rechten terug, vraag het dan alsnog na bij
+    # de bron. Nooit oordelen op een leeg antwoord: dan zou een winkelier te
+    # horen krijgen dat alles ontbreekt terwijl er niets mis is.
+    if not toegekend:
+        import httpx
+        async with httpx.AsyncClient(timeout=httpx.Timeout(30.0, connect=10.0)) as c:
+            rs = await c.get(f"https://{shop}/admin/oauth/access_scopes.json",
+                             headers={"X-Shopify-Access-Token": vers["access_token"]})
+        if rs.status_code == 200:
+            toegekend = {x.get("handle") for x in (rs.json().get("access_scopes") or [])}
+        if not toegekend:
+            raise ValueError(
+                "Shopify gave us a working key but wouldn't say which permissions it has. "
+                "Check that your new version is Released and shows as Active, then try again."
+            )
+        vers["scopes"] = sorted(toegekend)
+
     ontbreekt = [x for x in VERPLICHTE_SCOPES if x not in toegekend]
     if ontbreekt:
         raise ValueError(
@@ -437,7 +455,11 @@ async def vraag_token(shop: str, client_id: str, client_secret: str) -> dict:
     geldig_tot = datetime.now(timezone.utc) + timedelta(seconds=int(data.get("expires_in") or 86399))
     return {
         "access_token": token,
-        "scopes": sorted(x for x in (data.get("scope") or "").split(",") if x),
+        # De rechten kunnen met komma's ÓF met spaties gescheiden terugkomen —
+        # OAuth doet het ene, deze uitwisseling soms het andere. Alleen op komma
+        # splitsen leverde één lange sliert op, en dus de onterechte melding
+        # "read_products ontbreekt" terwijl het recht gewoon aan stond.
+        "scopes": sorted({x for x in re.split(r"[,\s]+", data.get("scope") or "") if x}),
         "expires_at": geldig_tot.isoformat(),
     }
 

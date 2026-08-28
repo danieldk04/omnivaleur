@@ -206,6 +206,24 @@ def test_het_geheimveld_is_afgeschermd():
     assert 'id="shopify-secret-input" type="password"' in venster
 
 
+def test_rechten_worden_gelezen_met_komma_of_spatie():
+    """Shopify levert ze soms met komma's, soms met spaties. Alleen op komma
+    splitsen maakte er één sliert van, en meldde dan onterecht dat read_products
+    ontbrak terwijl het recht gewoon aan stond (Revaleur, 28-08-2026)."""
+    import re as _re
+    src = (ROOT / "backend/platforms/shopify.py").read_text(encoding="utf-8")
+    fn = src.split("async def vraag_token(")[1].split("\n\n# ")[0]
+    patroon = _re.search(r'_re?\.?split\(r"\[([^"]+)\]\+"', fn) or _re.search(r'split\(r"(\[[^"]+\]\+)"', fn)
+    assert "re.split" in fn and "\\s" in fn, "moet ook op spaties splitsen"
+
+
+def test_leeg_rechtenantwoord_leidt_niet_tot_een_onterechte_afwijzing():
+    src = (ROOT / "backend/platforms/shopify.py").read_text(encoding="utf-8")
+    fn = src.split("async def controleer_app_gegevens(")[1].split("\nasync def ")[0]
+    assert "if not toegekend:" in fn
+    assert "access_scopes.json" in fn, "bij een leeg antwoord alsnog bij de bron navragen"
+
+
 # ── 6. De weg die voor iedere klant werkt ────────────────────────────────────
 
 def test_er_wordt_een_echte_sleutel_opgehaald_voor_we_iets_opslaan():
