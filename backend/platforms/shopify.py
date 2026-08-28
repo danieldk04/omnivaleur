@@ -94,10 +94,18 @@ async def controleer_app_gegevens(shop: str, client_id: str, client_secret: str)
 
     ontbreekt = [x for x in VERPLICHTE_SCOPES if x not in toegekend]
     if ontbreekt:
+        # ZEG ERBIJ WAT SHOPIFY WÉL GAF. Zonder dat is dit een muur: de winkelier
+        # ziet zijn vinkje aan staan en onze melding zegt het tegendeel, en er is
+        # niets om op verder te zoeken. Met de werkelijke lijst erbij is meteen
+        # duidelijk of de versie niet is vrijgegeven (lege lijst), of dat er
+        # andere rechten op staan dan hij dacht.
+        gaf = ", ".join(sorted(toegekend)) if toegekend else "(none at all)"
         raise ValueError(
             "This app doesn't have enough permissions yet. Missing: " + ", ".join(ontbreekt)
-            + ". Open the app in the Dev Dashboard, add those scopes to its configuration, "
-              "release a new version, and try again."
+            + ". Shopify says this app currently has: " + gaf
+            + ". If that list is empty or out of date, your new version probably isn't released "
+              "yet — open the app in the Dev Dashboard, check that your version shows as Active, "
+              "then try again."
         )
 
     # De sleutel klopt; nu nog bewijzen dat de winkel echt antwoordt.
