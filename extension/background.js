@@ -85,10 +85,13 @@ const MP_CATEGORIES = {
   "zwemkleding":            { cat1: 621,  cat3: 631,  bucketId: 162 },
   "badkleding":             { cat1: 621,  cat3: 631,  bucketId: 162 },
   "ondergoed":              { cat1: 621,  cat3: 631,  bucketId: 162 },
-  // Carnaval, verkleedkleding en klederdracht. Marktplaats heeft hier een eigen
-  // type voor (623 onder Kleding | Dames, 2031 onder Kleding | Heren, opgehaald
-  // uit de categorieboom van Marktplaats zelf en niet gegokt). Zonder deze regel
-  // viel een dirndl of lederhose terug op broeken en jeans.
+  // Carnaval, verkleedkleding en klederdracht. Zonder deze regel viel een dirndl
+  // of lederhose terug op broeken en jeans.
+  //
+  // GEVERIFIEERD in een ingelogde browser op 30-08-2026, niet gegokt en niet op
+  // een HTTP 200 afgegaan: /plaats/621/623?bucketId=162 toont in het
+  // plaatsformulier "Kleding | Dames > Kleding > Carnavalskleding en
+  // Feestkleding", en /plaats/1776/2031?bucketId=169 hetzelfde onder Heren.
   "verkleedkleding":        { cat1: 621,  cat3: 623,  bucketId: 162 },  // Carnavalskleding en Feestkleding
   "unisex verkleedkleding": { cat1: 621,  cat3: 623,  bucketId: 162 },
   "accessoires dames":      { cat1: 621,  cat3: 628,  bucketId: 162 },
