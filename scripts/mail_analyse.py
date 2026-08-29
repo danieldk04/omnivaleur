@@ -346,7 +346,13 @@ def _spoedbericht(escalaties: list[dict]) -> None:
     if not spoed:
         return
     host, van = os.environ.get("MAIL_HOST"), os.environ.get("MAIL_USER")
-    if not (host and van and L.ALARM_NAAR):
+    # Op de server gaat de post via Resend en is MAIL_HOST leeg — Railway laat
+    # geen SMTP door. Stond die eis hier hard, dan viel het spoedbericht juist
+    # dáár stil, en precies daar draait deze machine. En als er echt niets kan,
+    # zeggen we dat: een gemist seintje over geld mag nooit in stilte verdwijnen.
+    if not (van and L.ALARM_NAAR) or not (host or L._resend_actief()):
+        print(f"  !! {len(spoed)} spoedgeval(len) NIET gemeld — geen verzendweg "
+              f"(MAIL_HOST leeg en geen RESEND_API_KEY)")
         return
     from email.message import EmailMessage
     msg = EmailMessage()
