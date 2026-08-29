@@ -1433,3 +1433,25 @@ Vastgelegd in `tests/test_mail_klantenservice.py`.
 was van 15:12, en `tabbladen-flitsen-op-voorgrond` kreeg om 15:19 netjes zijn
 concept naar zilverwebsite.nl. De machine liep dus wel; de terugweg naar één
 klant liep vast.
+
+### 2026-08-29 — `advertenties-verwijderen-mislukt` was dezelfde 1.0.218-storing, nu bevestigd op verwijderen zelf
+
+Met voorrang binnengekomen (klant dreigde te stoppen), gemeld door
+zilverwebsite.nl op 22-08, laatst 24-08: "advertenties worden niet verwijderd
+en daardoor ook geen nieuwe geplaatst." Nagemeten in het opdrachtenlogboek in
+plaats van aangenomen: 22 t/m 24-08 gaven bij dit account **179 mislukte
+verwijderopdrachten en 178 mislukte plaatsingen**, allemaal op extensie
+**1.0.218** met dezelfde foutmelding ("cannot be found in your marktplaats
+listings overview") — exact dezelfde verouderde-extensiekopie als
+`tabbladen-flitsen-op-voorgrond` hierboven, ditmaal op de verwijderstap zelf in
+plaats van het werkvenster.
+
+Vandaag (29-08) draait dit account op 1.0.251: **47 van de 47**
+verwijderopdrachten en 55 van de 58 plaatsingen liepen foutloos, geen
+achterstallige opdrachten meer in de wachtrij. De drie resterende
+plaatsingsfouten zijn bekende, andere gevallen (ontbrekend kenmerk,
+onderbroken Chrome-sessie) en horen niet bij deze melding. Niets aan de code
+gewijzigd — dit was al gerepareerd door de ondergrens van 1.0.244
+(27-08-2026) en de `refresh_listing`-volgordefix (28-08-2026, zie
+"Herplaatsen kon een advertentie kosten bij een verbindingshik" hierboven).
+Teruggemeld met `opgelost`.
