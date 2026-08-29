@@ -598,7 +598,8 @@ def bericht_over_reparaties() -> int:
         tekst = _herstelbericht(adres, reparaties)
         if not tekst:
             continue
-        if L._zet_concept_klaar({"email": adres}, None, "", eigen_tekst=tekst):
+        if L._zet_concept_klaar({"email": adres}, None, "", eigen_tekst=tekst,
+                                bron="klantenservice + developer"):
             for s in reparaties:
                 s["bericht_verstuurd"] = sorted(
                     set(s.get("bericht_verstuurd") or []) | {adres})

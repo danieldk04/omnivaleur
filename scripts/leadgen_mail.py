@@ -3138,7 +3138,8 @@ def _waarom_geen_concept(adres: str, inkomend) -> str | None:
 
 
 def _zet_concept_klaar(lead: dict, inkomend, body: str, soort: str = "warm",
-                       eigen_tekst: str | None = None, met_pixel: bool = False) -> bool:
+                       eigen_tekst: str | None = None, met_pixel: bool = False,
+                       bron: str = "klantenservice") -> bool:
     """Legt het voorstel als concept in Daniels postbus, in dezelfde draad."""
     host, van = os.environ.get("IMAP_HOST"), os.environ.get("MAIL_USER")
     wachtwoord = os.environ.get("MAIL_PASS")
@@ -3215,6 +3216,7 @@ def _zet_concept_klaar(lead: dict, inkomend, body: str, soort: str = "warm",
             map_ = CONCEPTMAP if CONCEPTMAP in bestaand else "Drafts"
             im.append(f'"{map_}"', "\\Draft", None, msg.as_bytes())
         print(f"  ✎ concept klaargezet voor {lead['email']}")
+        _meld_concept_klaar(lead, msg["Subject"], kern, bron)
         # De voorgestelde tekst bewaren. Zonder dit valt later niet te zien wát
         # Daniel eraan veranderd heeft, en dan leert dit systeem nooit iets.
         _onthoud_concept(lead["email"].lower(), msg.get_content())
@@ -3222,6 +3224,50 @@ def _zet_concept_klaar(lead: dict, inkomend, body: str, soort: str = "warm",
     except Exception as e:  # noqa: BLE001 — geen concept is vervelend, niet fataal
         print(f"  (concept niet klaargezet: {e})")
         return False
+
+
+# ── Seintje zodra er een concept klaarligt ───────────────────────────────
+# WAAROM DIT ER IS (29-08-2026)
+# Daniel wil niet meer in de post zitten; hij wil alleen nog op verzenden
+# drukken. Dan moet hij wél weten wannéér er iets te versturen is. Zonder dit
+# moest hij zijn conceptenmap in de gaten houden, en dat is precies het werk dat
+# hier weg hoort te zijn. Er staat ook in wie het antwoord heeft geschreven: is
+# er een storing bij, dan is die eerst door de developer beantwoord, en dat
+# scheelt hem het nalezen of het klopt.
+def _meld_concept_klaar(lead: dict, onderwerp: str, tekst: str,
+                        bron: str = "klantenservice") -> None:
+    adres = (lead.get("email") or "").lower()
+    host, van = os.environ.get("MAIL_HOST"), os.environ.get("MAIL_USER")
+    if not (host and van and ALARM_NAAR and adres):
+        return
+    # Kwam er een reparatie van de developer aan te pas, dan hoort dat erbij:
+    # dat is het verschil tussen "de klantenservice heeft iets geschreven" en
+    # "dit is nagekeken in de code".
+    if bron == "klantenservice":
+        try:
+            import mail_analyse
+            for storing in (mail_analyse.bugs() or {}).values():
+                if adres in (storing.get("melders") or []) and storing.get("status") == "opgelost":
+                    bron = "klantenservice + developer"
+                    break
+        except Exception:  # noqa: BLE001 — zonder dit label nog steeds een seintje
+            pass
+    msg = EmailMessage()
+    msg["From"] = f"Klantenservice <{van}>"
+    msg["To"] = ", ".join(ALARM_NAAR)
+    msg["Subject"] = f"Klaar om te versturen: {_bedrijfsnaam(lead) or adres}"
+    msg.set_content(
+        f"Er ligt een concept klaar in je conceptenmap.\n\n"
+        f"Aan:        {adres}\n"
+        f"Onderwerp:  {onderwerp}\n"
+        f"Geschreven: {bron}\n\n"
+        f"--- het concept ---\n{(tekst or '').strip()[:1500]}\n--- einde ---\n\n"
+        f"Nalezen en versturen; aanpassen mag, dan leer ik daarvan.\n")
+    try:
+        with _postbode(van, host) as stuur:
+            stuur(msg)
+    except Exception as e:  # noqa: BLE001 — een mislukt seintje mag nooit iets blokkeren
+        print(f"  (seintje 'concept klaar' niet verstuurd: {e})")
 
 
 def _alarm(lead: dict, onderwerp: str, body: str) -> None:
