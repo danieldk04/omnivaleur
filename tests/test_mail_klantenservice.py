@@ -28,6 +28,10 @@ def opslag(monkeypatch):
     monkeypatch.setattr(M.L, "_db_lees", lambda naam, standaard: kast.get(naam, standaard))
     monkeypatch.setattr(M.L, "_db_schrijf", lambda naam, inhoud: kast.__setitem__(naam, inhoud) or True)
     monkeypatch.setattr(M.L, "is_klant", lambda adres: True)
+    # Het slot op dubbele concepten kijkt in de echte postbus; die is er hier niet.
+    # Standaard "er mag een concept", zodat elke test over de terugkoppeling gaat
+    # en niet over de mailverbinding.
+    monkeypatch.setattr(M.L, "_waarom_geen_concept", lambda adres, inkomend: None)
     return kast
 
 
@@ -143,8 +147,8 @@ def test_melders_krijgen_bericht_als_het_gerepareerd_is(opslag, monkeypatch):
     M.opgelost(type("A", (), {"sleutel": "publiceren-mislukt-vinted",
                               "uitleg": "Vinted krijgt nu alle foto's mee."})())
     monkeypatch.setattr(M, "_herstelbericht",
-                        lambda adres, s: "Hi, je meldde dat het publiceren niet "
-                                          "lukte. Dat is nu gerepareerd, kijk je even mee?")
+                        lambda adres, signalen: "Hi, je meldde dat het publiceren niet "
+                                                "lukte. Dat is nu gerepareerd, kijk je even mee?")
     gezet = []
     monkeypatch.setattr(M.L, "_zet_concept_klaar",
                         lambda lead, *a, **k: gezet.append(lead["email"]) or True)
@@ -184,3 +188,42 @@ def test_mislukt_opslaan_wordt_hard_gemeld(capsys, monkeypatch):
     monkeypatch.setattr(M.L, "_db_schrijf", lambda naam, inhoud: False)
     assert M._schrijf("mail_analyse", {}) is False
     assert "NIET opgeslagen" in capsys.readouterr().out
+
+
+def test_vier_reparaties_voor_dezelfde_persoon_worden_een_mail(opslag, monkeypatch):
+    """HIER GING HET MIS (29-08-2026). Er ligt nooit meer dan één concept tegelijk
+    voor dezelfde persoon. Ging de terugkoppeling per storing, dan kreeg iemand met
+    vier gerepareerde meldingen er één en bleven de andere drie hangen tot Daniel
+    die eerste mail had verstuurd. Egbert had er vier klaarstaan en hoorde niets —
+    juist de klant die dreigde te stoppen."""
+    signalen = {}
+    for i in range(4):
+        signalen[f"storing{i}"] = {
+            "melders": ["egbert@x.nl"], "status": "opgelost", "uitleg": f"reparatie {i}",
+            "omschrijving": f"probleem {i}", "bericht_verstuurd": []}
+    opslag["bug_signalen"] = signalen
+    meegegeven = []
+    monkeypatch.setattr(M, "_herstelbericht",
+                        lambda adres, sn: meegegeven.append(len(sn)) or "Hi, alles is gemaakt.")
+    gezet = []
+    monkeypatch.setattr(M.L, "_zet_concept_klaar",
+                        lambda lead, *a, **k: gezet.append(lead["email"]) or True)
+    assert M.bericht_over_reparaties() == 1, "er hoort één mail te komen, geen vier"
+    assert meegegeven == [4], "alle vier de reparaties horen in die ene mail te staan"
+    assert gezet == ["egbert@x.nl"]
+    # en alle vier staan als afgehandeld genoteerd, dus geen herhaling
+    assert all(s["bericht_verstuurd"] == ["egbert@x.nl"] for s in signalen.values())
+    assert M.bericht_over_reparaties() == 0
+
+
+def test_er_wordt_geen_tekst_geschreven_die_toch_wordt_weggegooid(opslag, monkeypatch):
+    """Het slot werd pas NA het schrijven geraadpleegd. Dat kostte elke ronde vier
+    modelaanroepen waarvan de tekst meteen de prullenbak in ging, elke tien minuten."""
+    opslag["bug_signalen"] = {"kapot": {"melders": ["a@x.nl"], "status": "opgelost",
+                                        "uitleg": "gemaakt", "omschrijving": "x",
+                                        "bericht_verstuurd": []}}
+    monkeypatch.setattr(M.L, "_waarom_geen_concept",
+                        lambda adres, inkomend: "er ligt al een concept voor deze persoon")
+    monkeypatch.setattr(M, "_herstelbericht",
+                        lambda *a: pytest.fail("er is een mail geschreven die toch niet mag"))
+    assert M.bericht_over_reparaties() == 0

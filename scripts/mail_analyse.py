@@ -557,8 +557,9 @@ in de ik-vorm aan een klant die eerder een probleem meldde. Het is nu opgelost.
 - Begin met erkennen wat hij meldde en dat hij de moeite nam het door te geven.
 - Zeg in gewone taal wat er nu anders is, in gevolgen die hij merkt. Geen techniek.
 - Beweer niets meer dan wat er hieronder staat als reparatie. Verzin geen extra's.
-- Kort: vier tot zeven zinnen. Informeel Nederlands, "Hi <naam>," en aan het eind
-  het meegegeven ondertekeningsblok, letterlijk.
+- Kort: vier tot zeven zinnen, ook als er meerdere punten zijn — dan een korte
+  alinea per punt. Informeel Nederlands, "Hi <naam>," en aan het eind het
+  meegegeven ondertekeningsblok, letterlijk.
 - Vraag hem of het bij hem ook echt weg is.
 Schrijf alleen de mailtekst."""
 
@@ -571,33 +572,54 @@ def bericht_over_reparaties() -> int:
     melden, en die melden de volgende keer niets meer.
     """
     signalen = bugs()
-    gemaakt = 0
+    # PER PERSOON, NIET PER STORING — en dat is geen opmaakkeuze.
+    # Er ligt nooit meer dan één concept tegelijk voor dezelfde persoon (het slot
+    # in _waarom_geen_concept). Ging dit per storing, dan kreeg iemand met vier
+    # gerepareerde meldingen er één, en bleven de andere drie hangen tot Daniel
+    # die eerste mail had verstuurd. Gemeten op 29-08-2026: Egbert had er vier
+    # klaarstaan en hoorde niets — juist de klant die dreigde te stoppen.
+    per_adres: dict[str, list[dict]] = {}
     for sleutel, s in signalen.items():
         if s.get("status") != "opgelost" or not s.get("uitleg"):
             continue
-        verstuurd = set(s.get("bericht_verstuurd") or [])
         for adres in s.get("melders", []):
-            if adres in verstuurd:
-                continue
-            tekst = _herstelbericht(adres, s)
-            if not tekst:
-                continue
-            # Via de gewone weg, dus langs het slot: nooit een tweede concept
-            # voor iemand die er al een heeft liggen.
-            if L._zet_concept_klaar({"email": adres}, None, "", eigen_tekst=tekst):
-                verstuurd.add(adres)
-                gemaakt += 1
-        s["bericht_verstuurd"] = sorted(verstuurd)
+            if adres not in set(s.get("bericht_verstuurd") or []):
+                per_adres.setdefault(adres, []).append(s)
+
+    gemaakt = 0
+    for adres, reparaties in per_adres.items():
+        # EERST HET SLOT, DAN PAS SCHRIJVEN. Andersom kostte elke ronde vier
+        # modelaanroepen waarvan de tekst meteen werd weggegooid, elke tien
+        # minuten opnieuw.
+        reden = L._waarom_geen_concept(adres, None)
+        if reden:
+            print(f"  (nog geen bericht aan {adres}: {reden})")
+            continue
+        tekst = _herstelbericht(adres, reparaties)
+        if not tekst:
+            continue
+        if L._zet_concept_klaar({"email": adres}, None, "", eigen_tekst=tekst):
+            for s in reparaties:
+                s["bericht_verstuurd"] = sorted(
+                    set(s.get("bericht_verstuurd") or []) | {adres})
+            gemaakt += 1
     if gemaakt:
         _schrijf(BUG_SLEUTEL, signalen)
     return gemaakt
 
 
-def _herstelbericht(adres: str, signaal: dict) -> str:
+def _herstelbericht(adres: str, signalen: list[dict]) -> str:
+    """Eén mail over alles wat er voor deze persoon gerepareerd is."""
     sleutel = os.environ.get("ANTHROPIC_API_KEY", "").strip()
     if not sleutel:
         return ""
     import anthropic
+    punten = "\n\n".join(
+        f"- Wat hij meldde: {s.get('omschrijving','')}\n"
+        f"  Wat er gerepareerd is: {s.get('uitleg','')}" for s in signalen)
+    kop = ("Deze persoon meldde meerdere dingen; ze zijn ALLEMAAL gerepareerd. "
+           "Behandel ze in één mail, kort per punt, zonder ze te herhalen.\n\n"
+           if len(signalen) > 1 else "")
     try:
         antwoord = L._claude(
             anthropic.Anthropic(api_key=sleutel),
@@ -605,8 +627,7 @@ def _herstelbericht(adres: str, signaal: dict) -> str:
             output_config={"effort": "low"},
             system=HERSTELBERICHT_REGELS,
             messages=[{"role": "user", "content":
-                       f"Wat hij meldde: {signaal.get('omschrijving','')}\n"
-                       f"Wat er gerepareerd is: {signaal.get('uitleg','')}\n\n"
+                       f"{kop}{punten}\n\n"
                        f"Sluit af met exact dit blok:\n{L._ondertekening()}"}])
         tekst = "".join(b.text for b in antwoord.content
                         if getattr(b, "type", "") == "text").strip()

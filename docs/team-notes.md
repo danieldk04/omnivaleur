@@ -1410,3 +1410,26 @@ het dashboard eronder. Zilverwebsite draait sindsdien op 1.0.251: zijn
 delete+create-jobs van vandaag (29-08) liepen tientallen keren achter elkaar
 foutloos af, zonder gemeld probleem. Niets aan de code gewijzigd — teruggemeld
 met `opgelost`.
+
+### 29-08-2026 — De terugkoppeling naar de klant ging per storing in plaats van per persoon
+
+Gevonden bij het nameten van de mailagent, op verzoek van Daniel. Twee fouten in
+`bericht_over_reparaties()`, allebei met dezelfde oorzaak: de lus liep over
+storingen terwijl het slot per persoon werkt.
+
+1. **Iemand met vier gerepareerde meldingen kreeg er één.** Er ligt nooit meer
+   dan één concept tegelijk voor dezelfde persoon (`_waarom_geen_concept`). Egbert
+   (info@papas-plectrums.nl) had er vandaag vier klaarstaan — import server
+   timeout, marktplaats import foutmelding, import onvolledig, en de eerdere —
+   en hoorde niets, terwijl hij juist de klant is die dreigde te stoppen. Nu gaat
+   er één mail per persoon uit die alle reparaties behandelt.
+2. **Elke ronde werden er vier mailteksten geschreven die meteen werden
+   weggegooid.** Het slot werd pas ná `_herstelbericht()` geraadpleegd, dus elke
+   tien minuten vier modelaanroepen voor niets. Het slot komt nu eerst.
+
+Vastgelegd in `tests/test_mail_klantenservice.py`.
+
+**Nagemeten dat de agent zelf gewoon draait:** het nieuwste beoordeelde bericht
+was van 15:12, en `tabbladen-flitsen-op-voorgrond` kreeg om 15:19 netjes zijn
+concept naar zilverwebsite.nl. De machine liep dus wel; de terugweg naar één
+klant liep vast.
