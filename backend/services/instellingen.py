@@ -71,10 +71,27 @@ LEVERING_GELDIG = ("beide", "verzenden", "ophalen")
 # brievenbuspakje wil hebben, wij kunnen dat niet zien aan een foto.
 PAKKET_GRENS_MAX = 5000
 
+# VASTE TEKST ONDER ELKE ADVERTENTIE.
+#
+# WAAROM (29-08-2026, Jaap van zilverwebsite.nl). Hij meldde dat er onderaan
+# elke advertentie "een hele lap tekst" ontbrak: zijn artikelnummer, de uitleg
+# over de winkel, de verzendkosten en zijn zoekwoorden. En hij zag scherp dat
+# het altijd op DEZELFDE plek stopte — vlak onder gewicht en afmetingen,
+# ongeacht hoeveel tekst eraan voorafging.
+#
+# Nagemeten: de omschrijving in onze database is teken voor teken gelijk aan de
+# omschrijving van hetzelfde product in zijn eigen webshop, en die eindigt daar
+# ook. Dat blok stond dus nooit in de producttekst; hij tikte het per advertentie
+# op Marktplaats zelf erbij. Er viel hier niets af te knippen en niets terug te
+# halen — het moest gemaakt worden.
+#
+# 4.000 tekens is ruim: het langste blok dat we bij hem zagen is er nog geen 800.
+SLOTTEKST_MAX = 4000
+
 STANDAARD = {"relist_dagen": RELIST_DAGEN_STANDAARD, "vinted_groepen": [],
              "auto_relist": True,
              "fabrikant_naam": "", "fabrikant_adres": "", "fabrikant_email": "",
-             "levering": "beide", "pakket_grens": 0}
+             "levering": "beide", "pakket_grens": 0, "slottekst": ""}
 
 
 def _schoon(rauw: dict | None) -> dict:
@@ -99,6 +116,8 @@ def _schoon(rauw: dict | None) -> dict:
     for veld in FABRIKANT_VELDEN:
         if veld in rauw:
             uit[veld] = str(rauw.get(veld) or "").strip()[:255]
+    if "slottekst" in rauw:
+        uit["slottekst"] = str(rauw.get("slottekst") or "").strip()[:SLOTTEKST_MAX]
     lev = str(rauw.get("levering") or "").strip().lower()
     if lev in LEVERING_GELDIG:
         uit["levering"] = lev

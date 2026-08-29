@@ -884,3 +884,35 @@ moet zo blijven, anders krijgt een item de foto's van zijn buurman.
 
 Daarom oogst het herplaatsen nu vóór het verwijderen, ook als het item niet leeg
 is maar alleen dun (één foto).
+
+## 29-08-2026 — Jaap: de ontbrekende lap tekst is NIET afgekapt, hij bestond nooit
+
+Jaap zag het scherper dan wij: "alle advertenties zijn exact op hetzelfde plekje
+afgeknipt, onder het gewicht en de afmetingen, ongeacht hoeveel tekens ervoor
+stonden." Dat sluit een tekenlimiet uit, en dus ook mijn eigen diagnose van
+28-08.
+
+Nagemeten op zijn echte gegevens: de omschrijving in `items` is TEKEN VOOR TEKEN
+gelijk aan de omschrijving van hetzelfde product in zijn webshop
+(www.zilverwebsite.nl/products.json), en die eindigt daar ook — bij gewicht en
+afmetingen. Drie voorbeelden gecontroleerd: 242/242, 599/599, 192/192 tekens.
+
+Zijn artikelnummer, winkeluitleg, verzendkosten en zoekwoorden stonden dus nooit
+in de producttekst. Die tikte hij per advertentie zelf op Marktplaats erbij. Er
+viel niets af te knippen en niets terug te halen: dit moest gebouwd worden.
+
+**Nieuw:** instelling "Standard text under every listing" (Preferences →
+Shipping-blok). Wat daar staat komt onder de omschrijving van elke advertentie op
+elk kanaal, en nooit twee keer (een scan leest zijn eigen advertentie weer in).
+Zie `instellingen.SLOTTEKST_MAX` en `crosslist._met_slot`.
+
+Verder deze ronde, alles gemeten:
+- Zijn extensie meldde zich 13 uur niet terwijl er 105 opdrachten klaarstonden.
+  Sinds 07:13 draait hij weer; 8 van 8 publicaties geslaagd, nul fouten.
+- 32 advertenties zijn vannacht en gisteren dun geplaatst (1 foto). De 47 die nog
+  in de wachtrij staan dragen allemaal meerdere foto's en ~1.800 tekens.
+- Foto's uit zijn webshop teruggezet: items met hooguit één foto van 108 → 67 → 34.
+  De webshop levert 5 tot 11 foto's per product; het `products.json` van Shopify
+  is openbaar. Zie scripts/backfill_beschrijving_uit_webshop.py (haalt nu ook foto's).
+- De waarschuwing "er staat werk klaar maar je extensie meldt zich niet" is in een
+  echte browser op bureaubladbreedte getoetst: display flex, zichtbaar, juiste tekst.

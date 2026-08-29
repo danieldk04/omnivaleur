@@ -1330,6 +1330,26 @@ input[type="checkbox"].row-check { width: 15px; height: 15px; cursor: pointer; a
           <input type="number" id="pakket-grens" min="0" max="5000" step="1" style="max-width:90px">
         </div>
       </div>
+      <!-- Vaste tekst onder elke advertentie.
+           Jaap (zilverwebsite.nl) miste onderaan elke advertentie zijn
+           artikelnummer, winkeluitleg, verzendkosten en zoekwoorden, en zag dat
+           het altijd op dezelfde plek stopte. Nagemeten: die tekst stond nooit
+           in zijn producttekst — hij tikte hem per advertentie zelf erbij. Dit
+           veld doet dat voortaan voor hem, op elk kanaal. -->
+      <div style="background:var(--card,#fff);border:1px solid var(--border,#e5e7eb);border-radius:12px;padding:16px 18px;margin-bottom:16px">
+        <div style="font-weight:700;margin-bottom:4px">Standard text under every listing</div>
+        <div style="font-size:12.5px;color:var(--muted);line-height:1.6;margin-bottom:12px">
+          Whatever you type here is added below the description of every listing you publish, on every channel —
+          your item number format, shipping costs, a line about your shop, search keywords. It is never added twice:
+          if the text is already in a description, we leave it alone. Leave it empty to change nothing.
+        </div>
+        <textarea id="slottekst" rows="6" maxlength="4000" placeholder="Wordt zorgvuldig ingepakt en GRATIS verzonden.&#10;&#10;Kijkt u ook eens bij onze andere advertenties…"
+          style="width:100%;padding:10px 12px;border:1px solid var(--border,#e5e7eb);border-radius:8px;font:inherit;font-size:13px;line-height:1.6;resize:vertical"></textarea>
+        <div style="display:flex;gap:10px;align-items:center;margin-top:10px">
+          <button class="btn btn-sm btn-primary" onclick="saveSlottekst()">Save</button>
+          <span id="slottekst-status" style="font-size:12px;color:var(--muted)"></span>
+        </div>
+      </div>
       <h2 style="font-size:13px;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);margin:26px 0 10px;font-weight:800">Upkeep</h2>
       <!-- Automatisch herplaatsen: het ritme is een keuze van de verkoper.
            Hoe vaak Marktplaats een advertentie weggooit verschilt per account en
@@ -8275,6 +8295,8 @@ async function loadRelistDagen() {
     if (lev) lev.value = data.levering || 'beide';
     const grens = document.getElementById('pakket-grens');
     if (grens) grens.value = data.pakket_grens != null ? data.pakket_grens : 0;
+    const slot = document.getElementById('slottekst');
+    if (slot) slot.value = data.slottekst || '';
     if (data.relist_dagen_min != null) veld.min = data.relist_dagen_min;
     if (data.relist_dagen_max != null) veld.max = data.relist_dagen_max;
   } catch (e) {
@@ -8304,6 +8326,26 @@ async function saveVerzenden() {
     melding.textContent = data.pakket_grens
       ? `Saved — below €${data.pakket_grens} a letterbox parcel, above it a large parcel.`
       : 'Saved.';
+  } catch (e) {
+    melding.textContent = `Could not save: ${e.message}`;
+  }
+}
+
+async function saveSlottekst() {
+  const melding = document.getElementById('slottekst-status');
+  melding.textContent = 'Saving…';
+  try {
+    const r = await apiFetchRetry(`${API}/api/items/settings`, {
+      method: 'PUT', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ slottekst: document.getElementById('slottekst').value }),
+    });
+    const data = await parseJsonSafe(r);
+    if (!r.ok) throw new Error(data.detail || `HTTP ${r.status}`);
+    state.settings = { ...state.settings, ...data };
+    document.getElementById('slottekst').value = data.slottekst || '';
+    melding.textContent = data.slottekst
+      ? `Saved — ${data.slottekst.length} characters go under every new listing.`
+      : 'Saved — nothing is added.';
   } catch (e) {
     melding.textContent = `Could not save: ${e.message}`;
   }

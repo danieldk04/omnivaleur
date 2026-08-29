@@ -85,10 +85,17 @@ def sleutel(titel: str) -> str:
     return re.sub(r"\s+", " ", re.sub(r"[^a-z0-9 ]+", " ", t.lower())).strip()
 
 
-def haal_producten(shop: str) -> dict[str, str]:
-    """Titel -> platte omschrijving. Dubbele titels vallen af (te onzeker)."""
+def haal_producten(shop: str) -> dict[str, dict]:
+    """Titel -> {"tekst": ..., "fotos": [...]}. Dubbele titels vallen af.
+
+    Sinds 29-08-2026 halen we OOK de foto's op. Reden: van een advertentie die
+    al voor een herplaatsing is weggehaald geeft Marktplaats 410, en dan zijn
+    niet alleen de tekst maar ook alle foto's onbereikbaar. Gemeten bij Jaap:
+    32 advertenties zijn vandaag met één foto opnieuw online gezet. De winkel
+    heeft ze allemaal nog.
+    """
     basis = shop if shop.startswith("http") else f"https://{shop}"
-    per_titel: dict[str, str] = {}
+    per_titel: dict[str, dict] = {}
     dubbel: set[str] = set()
     pagina = 1
     while pagina <= MAX_PAGINAS:
@@ -107,12 +114,13 @@ def haal_producten(shop: str) -> dict[str, str]:
         for p in producten:
             s = sleutel(p.get("title"))
             tekst = _platte_tekst(p.get("body_html") or "")
-            if not s or not tekst:
+            fotos = [i.get("src") for i in (p.get("images") or []) if i.get("src")]
+            if not s or (not tekst and not fotos):
                 continue
-            if s in per_titel and per_titel[s] != tekst:
+            if s in per_titel and per_titel[s]["tekst"] != tekst:
                 dubbel.add(s)
-            per_titel.setdefault(s, tekst)
-        print(f"  pagina {pagina}: {len(producten)} producten ({len(per_titel)} met tekst)")
+            per_titel.setdefault(s, {"tekst": tekst, "fotos": fotos})
+        print(f"  pagina {pagina}: {len(producten)} producten ({len(per_titel)} bruikbaar)")
         pagina += 1
         time.sleep(PAUZE)
     for s in dubbel:
@@ -141,14 +149,20 @@ def main() -> int:
 
     items, start = [], 0
     while True:
-        rij = (db.table("items").select("id,title,description")
+        rij = (db.table("items").select("id,title,description,photo_urls")
                .eq("user_id", gebruiker.id).range(start, start + 999).execute().data or [])
         items += rij
         if len(rij) < 1000:
             break
         start += 1000
-    leeg = [i for i in items if not str(i.get("description") or "").strip()]
-    print(f"{len(items)} items, {len(leeg)} zonder omschrijving")
+    def mist_iets(i):
+        return (not str(i.get("description") or "").strip()
+                or len(i.get("photo_urls") or []) <= 1)
+
+    leeg = [i for i in items if mist_iets(i)]
+    zonder_tekst = sum(1 for i in items if not str(i.get("description") or "").strip())
+    zonder_fotos = sum(1 for i in items if len(i.get("photo_urls") or []) <= 1)
+    print(f"{len(items)} items | {zonder_tekst} zonder omschrijving | {zonder_fotos} met hooguit een foto")
     if not leeg:
         return 0
 
@@ -156,17 +170,34 @@ def main() -> int:
     teksten = haal_producten(args.shop)
     print(f"{len(teksten)} producten met een omschrijving gevonden")
 
-    gevuld, niet_gevonden = 0, []
+    tekst_gevuld, fotos_gevuld, niet_gevonden = 0, 0, []
     for item in leeg:
-        tekst = teksten.get(sleutel(item.get("title")))
-        if not tekst:
+        bron = teksten.get(sleutel(item.get("title")))
+        if not bron:
             niet_gevonden.append(item.get("title"))
             continue
+        patch = {}
+        huidig = str(item.get("description") or "").strip()
+        winkel = (bron.get("tekst") or "").strip()
+        # Tekst alleen als hij leeg is, of als de winkeltekst aantoonbaar
+        # dezelfde tekst is maar langer: onze (afgekapte) versie moet er
+        # letterlijk in terugkomen. Zo blijft een tekst die de verkoper zelf
+        # heeft aangepast onaangeroerd.
+        def plat(t):
+            return re.sub(r"\s+", " ", t).strip().lower()
+        if winkel and (not huidig or (len(winkel) > len(huidig) and plat(huidig)[:200] and plat(huidig)[:200] in plat(winkel))):
+            patch["description"] = winkel
+        fotos = bron.get("fotos") or []
+        if len(fotos) > len(item.get("photo_urls") or []):
+            patch["photo_urls"] = fotos
+        if not patch:
+            continue
         if args.schrijf:
-            db.table("items").update({"description": tekst}).eq("id", item["id"]).execute()
-        gevuld += 1
+            db.table("items").update(patch).eq("id", item["id"]).execute()
+        tekst_gevuld += "description" in patch
+        fotos_gevuld += "photo_urls" in patch
 
-    print(f"\n{'GEVULD' if args.schrijf else 'ZOU VULLEN'}: {gevuld}")
+    print(f"\n{'GEVULD' if args.schrijf else 'ZOU VULLEN'}: {tekst_gevuld} teksten, {fotos_gevuld} fotoreeksen")
     print(f"Niet teruggevonden op de webshop: {len(niet_gevonden)}")
     for t in niet_gevonden[:15]:
         print(f"  - {t}")

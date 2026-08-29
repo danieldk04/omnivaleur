@@ -478,6 +478,25 @@ async def publish_to_platforms(item_id: str, platforms: list[str], user_id: str)
         "shopify": "price_shopify",
     }
 
+    # De vaste tekst van deze verkoper, onder élke advertentie op élk kanaal.
+    # Zie instellingen.SLOTTEKST_MAX voor het waarom.
+    try:
+        from backend.services.instellingen import lees as _lees_instellingen
+        _slot = (_lees_instellingen(user_id) or {}).get("slottekst") or ""
+    except Exception as e:  # noqa: BLE001 — geen slottekst is vervelend, niet fataal
+        logger.warning("Kon de vaste slottekst niet lezen voor %s: %s", user_id, e)
+        _slot = ""
+
+    def _met_slot(tekst: str) -> str:
+        schoon = str(tekst or "").rstrip()
+        if not _slot:
+            return schoon
+        # Al aanwezig? Dan niet nog een keer. Dat gebeurt zodra een advertentie
+        # met slottekst en al weer wordt ingelezen bij een scan.
+        if _slot.strip() and _slot.strip() in schoon:
+            return schoon
+        return (schoon + "\n\n" + _slot).strip() if schoon else _slot
+
     def _pick(platform: str) -> dict:
         if platform in _ENGLISH_PLATFORMS and english_item:
             base = english_item
@@ -497,7 +516,7 @@ async def publish_to_platforms(item_id: str, platforms: list[str], user_id: str)
         return {
             **base,
             "title": _strip_text_tags(base.get("title") or ""),
-            "description": _strip_text_tags(base.get("description") or ""),
+            "description": _met_slot(_strip_text_tags(base.get("description") or "")),
         }
 
     # Eerst de extensieplatforms in de wachtrij, dán de API-platforms.
