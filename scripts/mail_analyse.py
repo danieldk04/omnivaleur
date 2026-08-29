@@ -85,11 +85,19 @@ def _lees(sleutel: str, standaard):
 
 
 def _schrijf(sleutel: str, inhoud) -> bool:
+    """Mislukt opslaan, dan zeggen we dat hard.
+
+    Dit ging eerder stil mis met de publieke sleutel: het beoordelen lukte, de
+    melding "25 berichten beoordeeld" verscheen, en er was niets opgeslagen. Dan
+    lijkt het te werken terwijl de hele lijst leeg blijft.
+    """
     try:
-        return L._db_schrijf(sleutel, inhoud)
+        if L._db_schrijf(sleutel, inhoud):
+            return True
+        print(f"  !! {sleutel} NIET opgeslagen — geen databaseverbinding")
     except Exception as e:  # noqa: BLE001
-        print(f"  (kon {sleutel} niet opslaan: {e})")
-        return False
+        print(f"  !! {sleutel} NIET opgeslagen: {e}")
+    return False
 
 
 def analyses() -> dict:
@@ -134,6 +142,12 @@ def _nieuwe_post(al_gezien: set[str]) -> list[dict]:
                     veld = "From" if richting == "in" else "To"
                     adres = parseaddr(L._leesbaar(kop.get(veld, "")))[1].lower()
                     if not adres or L.SYSTEEM_AFZENDER.search(adres):
+                        continue
+                    # Onze eigen post in het postvak IN is geen klantbericht: dat
+                    # zijn de seintjes die de machine aan zichzelf stuurt (het
+                    # weekbericht, de trendmotor, de alarmen). Die als "binnengekomen"
+                    # tellen vervuilt de thema's en de stemming meteen.
+                    if richting == "in" and adres == gebruiker.lower():
                         continue
                     wil.append((num, mid, adres, kop))
                     if len(uit) + len(wil) >= PER_BEURT:
@@ -565,11 +579,13 @@ def _omgeving_uit_env_bestand() -> None:
             continue
         naam, waarde = regel.split("=", 1)
         os.environ.setdefault(naam.strip(), waarde.strip().strip('"').strip("'"))
-    if not os.environ.get("SUPABASE_KEY"):
-        for wissel in ("SUPABASE_SERVICE_KEY", "SUPABASE_SERVICE_ROLE_KEY"):
-            if os.environ.get(wissel):
-                os.environ["SUPABASE_KEY"] = os.environ[wissel]
-                break
+    # De schrijfsleutel gaat vóór de publieke. Met de publieke sleutel lukt lezen
+    # wel en schrijven niet, en dan is `opgelost` een dode knop die zegt dat het
+    # gelukt is terwijl er niets is opgeslagen.
+    for wissel in ("SUPABASE_SERVICE_KEY", "SUPABASE_SERVICE_ROLE_KEY"):
+        if os.environ.get(wissel):
+            os.environ["SUPABASE_KEY"] = os.environ[wissel]
+            break
 
 
 def main() -> None:

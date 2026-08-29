@@ -169,3 +169,18 @@ def test_de_developer_leest_dit_postvak_bij_elke_sessie():
     afspraken = (Path(__file__).parent.parent / "CLAUDE.md").read_text()
     assert "mail_analyse.py bugs" in afspraken
     assert "mail_analyse.py opgelost" in afspraken
+
+
+def test_onze_eigen_seintjes_tellen_niet_als_binnengekomen_post(monkeypatch):
+    """Het weekbericht, de trendmotor en de alarmen sturen we aan onszelf. Die
+    als klantpost tellen vervuilt de thema's en de stemming meteen."""
+    bron = (Path(__file__).parent.parent / "scripts" / "mail_analyse.py").read_text()
+    ophalen = bron.split("def _nieuwe_post")[1].split("\ndef ")[0]
+    assert 'adres == gebruiker.lower()' in ophalen
+
+
+def test_mislukt_opslaan_wordt_hard_gemeld(capsys, monkeypatch):
+    """Anders meldt hij '25 beoordeeld' terwijl er niets is opgeslagen."""
+    monkeypatch.setattr(M.L, "_db_schrijf", lambda naam, inhoud: False)
+    assert M._schrijf("mail_analyse", {}) is False
+    assert "NIET opgeslagen" in capsys.readouterr().out
