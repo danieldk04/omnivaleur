@@ -1303,3 +1303,24 @@ gerepareerd (`_rechtgezette_foutmelding` in `backend/api/jobs.py`, commit
 `089d506`). Sinds zijn geslaagde scan op 28-08 14:25:37 is er geen nieuwe
 mislukking meer bij hem geweest. Twee mailtjes, één storing, één fix — niets
 aan de code gewijzigd, teruggemeld met `opgelost`.
+
+### 29-08-2026 — `import-onvolledig-geen-nieuwe-items` was ook al bekend en gerepareerd
+
+Egbert (info@papas-plectrums.nl, `bcdf9aa4`) meldde 26-08 t/m 27-08 09:34:
+het systeem zei dat er niets meer op te halen viel, terwijl er advertenties
+ontbraken. Nagemeten in het opdrachtenlogboek in plaats van aangenomen: zijn
+scans van 25-08 tot 27-08 lieten precies het patroon zien dat hierboven (entry
+27-08 "waarom zijn account vastliep") al is beschreven — elke ronde leverde
+2.000 "nieuwe" advertenties, maar het bekende-aantal (`bekende_ids` dat de
+server meestuurt) bleef vier scans lang op 2.250 steken, dus de volgende ronde
+vond telkens dezelfde advertenties opnieuw en er kwam niets bij. Oorzaak: de
+opslag liep stuk op de te-lange-URL-bug (vanaf ~640 item-id's) en de opdracht
+stond toen al op "klaar" — precies "niets nieuws" terwijl er duizenden open
+stonden. Die fix, plus de twee showstoppers erna (foute inlogstatus-melding,
+dubbele extensiekopie), zijn diezelfde week al opgelost.
+
+Nagemeten vandaag in de database: zijn account staat compleet, **5.534 van
+5.534** Marktplaats-advertenties bekend (4.227 geïmporteerd, 23 gekoppeld,
+1.284 nog te beoordelen, 0 ontbrekend). Niets aan de code gewijzigd — dit was
+dezelfde storing als 27-08, alleen nog niet apart teruggemeld — en nu wel,
+met `opgelost`.
