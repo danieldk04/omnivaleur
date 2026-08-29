@@ -61,6 +61,11 @@ MAX_PER_DAG = 3
 # volgende niet blokkeren.
 MAX_MINUTEN = 90
 
+# Hoe lang we wachten na een sessie die meteen afsloeg. Lang genoeg om niet elke
+# tien minuten dezelfde regel in het logboek te zetten, kort genoeg om een
+# gebruikslimiet die weer opengaat vanzelf op te pikken.
+HERSTELPAUZE_MINUTEN = 60
+
 
 # ---------------------------------------------------------------- staat
 def _staat() -> dict:
@@ -358,15 +363,22 @@ def ronde(droog: bool = False) -> None:
         print(f"Werkmap is niet schoon ({waarom}) — niets gestart.")
         return
 
-    # Sloeg de vorige sessie meteen af, dan gaat de volgende dat ook doen: de
-    # oorzaak (limiet, inlog) ligt buiten dit script. Blijven proberen levert
-    # alleen een logboek vol dezelfde regel op. De reden staat intussen op het
-    # beheerdashboard, waar Daniel hem kan oplossen.
+    # Sloeg de vorige sessie meteen af, dan gaat de volgende dat binnen een paar
+    # minuten ook doen: de oorzaak (limiet, inlog) ligt buiten dit script.
+    # Even wachten dus — maar NIET voorgoed. Een gebruikslimiet loopt vanzelf
+    # weer open; op 29-08-2026 was hij een uur later gewoon weg. Zou hij hier
+    # blijven staan, dan lag de hele machine stil tot iemand hem met de hand
+    # aanschopte, en precies dat moest deze starter juist voorkomen.
     laatste = sorted((s for s in staat.values() if s.get("gestart")),
                      key=lambda s: s["gestart"])
     if laatste and laatste[-1].get("mislukt"):
-        print(f"Vorige sessie leverde niets op — niets gestart.\n  {laatste[-1]['mislukt']}")
-        return
+        rust = HERSTELPAUZE_MINUTEN - _minuten_bezig(laatste[-1])
+        if rust > 0:
+            print(f"Vorige sessie leverde niets op; nog {int(rust)} min wachten.\n"
+                  f"  {laatste[-1]['mislukt']}")
+            return
+        print("Vorige sessie leverde niets op, maar dat is lang genoeg geleden — "
+              "opnieuw proberen.")
 
     sleutel, signaal = wachtrij[0]
     if droog:

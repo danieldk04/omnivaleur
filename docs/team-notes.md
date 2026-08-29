@@ -1267,8 +1267,10 @@ Wat er nu tegen beschermt (`scripts/dev_starter.py`):
   dat staat ook in de hookmeldingen van een sessie die zijn werk gewoon deed.
 - Zo'n sessie krijgt status `mislukt`. De sleutel komt daardoor gewoon weer in de
   wachtrij (hij is nooit aangeraakt) en telt niet mee voor het dagmaximum.
-- Na een mislukking start de volgende ronde niets: de oorzaak ligt buiten dit
-  script, en blijven proberen levert alleen een logboek vol dezelfde regel op.
+- Na een mislukking wacht de volgende ronde een uur (`HERSTELPAUZE_MINUTEN`) en
+  probeert het dan gewoon opnieuw. NIET voorgoed stoppen: nagemeten op 29-08-2026
+  was diezelfde limiet een uur later vanzelf weg, en een starter die daarna blijft
+  liggen tot iemand hem aanschopt is precies wat hij moest voorkomen.
 - De reden staat boven in Werkplaats, met wat Daniel eraan moet doen.
 - Ook een sessie die al op "afgerond" stond wordt alsnog nagekeken, want de
   eerste ronde deed dat nog niet — anders bleven die drie eeuwig op slot.
@@ -1280,3 +1282,11 @@ elke sessie omvielen met "node: command not found". `scripts/dev_starter.sh` zet
 **Les:** een test met een vaste starttijd in de toekomst-of-verleden faalt vanzelf
 zodra de klok voorbij de drempel loopt. `tests/test_dev_starter.py` gebruikt nu
 `datetime.now()`.
+
+**Nagemeten, want de eerste conclusie was te snel.** "Verhoog je maandlimiet" was
+niet het goede advies. Losse controle op 29-08 om 14:26, via exact dezelfde weg
+als de starter (LaunchAgent → stub → repo → `claude -p`): dat werkt gewoon, met
+afsluitcode 0. Er zit dus geen probleem in de omgeving van launchd — geen
+sleutelhanger, geen HOME, geen PATH. De limiet van 12:20–13:10 was een tijdelijke
+gebruikslimiet die vanzelf weer openging. Vandaar de herstelpauze hierboven in
+plaats van definitief stoppen.

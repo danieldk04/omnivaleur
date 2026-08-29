@@ -266,3 +266,20 @@ def test_het_dashboard_toont_waarom_er_niets_gebeurt(monkeypatch):
     assert w["bezig"] is None
     assert w["wachtrij"][0]["sleutel"] == "eentje"
     assert w["wachtrij"][0]["melders"] == ["a@x.nl"]
+
+
+def test_na_een_limiet_wordt_het_later_gewoon_weer_geprobeerd(kast, gestart, monkeypatch):
+    """Een gebruikslimiet loopt vanzelf weer open — op 29-08-2026 binnen het uur.
+
+    Zou de starter na één mislukking voorgoed stoppen, dan lag de hele machine
+    stil tot iemand hem met de hand aanschopte. Precies wat hij moest voorkomen.
+    """
+    kast["bug_signalen"] = {"eentje": _signaal()}
+    monkeypatch.setattr(S, "_leeft", lambda pid: False)
+    monkeypatch.setattr(S, "_waarom_niets_geworden", lambda log: "De maandlimiet is bereikt.")
+    S.ronde()
+    S.ronde()                                    # stelt de mislukking vast, wacht
+    assert len(gestart) == 1
+    monkeypatch.setattr(S, "_minuten_bezig", lambda s: S.HERSTELPAUZE_MINUTEN + 1)
+    S.ronde()
+    assert len(gestart) == 2, "hij bleef na de wachttijd alsnog stilstaan"
