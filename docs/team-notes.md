@@ -1455,3 +1455,54 @@ gewijzigd — dit was al gerepareerd door de ondergrens van 1.0.244
 (27-08-2026) en de `refresh_listing`-volgordefix (28-08-2026, zie
 "Herplaatsen kon een advertentie kosten bij een verbindingshik" hierboven).
 Teruggemeld met `opgelost`.
+
+### 29-08-2026 — Vaste UTM-afspraak: waar komt het bezoek vandaan
+
+Daniel wilde kunnen zien welk kanaal bezoek oplevert. Er stond nog geen enkele
+getagde link; bezoek uit een bio in een telefoon-app komt bij Google Analytics
+(G-VJ5BVD3GCH) binnen als "direct", dus dat was tot nu toe onmeetbaar.
+
+**De afspraak — drie velden, verder niets:**
+
+| veld | wat erin staat |
+|---|---|
+| `utm_source` | het kanaal, kleine letters: `tiktok`, `instagram`, `youtube`, `pinterest`, `threads`, `koude-mail` |
+| `utm_medium` | alleen `social` of `email` — dit zijn de woorden die Analytics zelf in zijn kanaalgroepering herkent |
+| `utm_campaign` | waar de link staat: `bio-en`, `bio-nl`, `marktplaats-nl` |
+
+`utm_content` blijft vrij voor losse posts (linkbouwer onder aan het
+analytics-dashboard). De tabel met vaste links staat als `KANAAL_LINKS` in
+`backend/api/content.py` en wordt op datzelfde dashboard getoond met een
+kopieerknop per kanaal.
+
+Nederlands en Engels delen dezelfde bron (twee Instagram-accounts, twee
+TikToks, twee YouTubes). Ze zijn uit elkaar te houden aan de campagne, niet aan
+de bron — vandaar `bio-nl` naast `bio-en`. Een test bewaakt dat elk kanaal per
+bron zijn eigen campagne houdt.
+
+**Drie dingen die hierbij fout kunnen gaan, en waarom ze nu vastliggen in
+`tests/test_utm_links.py`:**
+
+1. **Hoofdletters.** Analytics is hoofdlettergevoelig: `TikTok` en `tiktok` zijn
+   twee kanalen en dan klopt geen enkel totaal meer.
+2. **Een zelfbedacht medium.** Op `/mp-video` stond `utm_medium=cold_email`.
+   Dat woord kent Analytics niet, dus dat verkeer belandde in de bak "niet
+   toegewezen".
+3. **Getagde links binnen de eigen site.** De vier knoppen op `/mp-video` naar
+   `/register` droegen zelf UTM's. Analytics bepaalt de herkomst bij binnenkomst;
+   komt er halverwege een andere `utm_source` langs, dan start er een nieuwe
+   sessie met een nieuwe bron — één bezoeker werd twee bezoeken en de echte
+   herkomst was weg. Die tags zijn eraf; welke knop geklikt is, meten we al met
+   het `cta_click`-event. Een test scant alle frontend-pagina's hierop.
+
+**De maillink is kort met opzet.** `https://omnivaleur.com/mp` stuurt met een
+307 door naar `/mp-video` mét de tags (`KORTE_LINKS` in `backend/main.py`).
+Twee redenen: de koude mail wordt per lead door een taalmodel geschreven en dat
+kan een lange URL met parameters verhaspelen, en een zichtbare parameterslinger
+in een persoonlijke eerste mail leest als massapost — precies wat de opbouw in
+`leadgen_mail.py` vermijdt (mail1 draagt daarom ook geen pixel). Bijkomend: de
+campagnenaam is later te wijzigen zonder dat verstuurde links breken. Bewust 307
+en geen 301, want een blijvende omleiding onthoudt de browser.
+
+Openstaand voor Daniel: de acht bio-links moeten nog in de profielen geplakt
+worden. Dat kan niemand namens hem doen zonder in te loggen.

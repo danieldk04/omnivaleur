@@ -292,6 +292,15 @@ footer a { color: var(--blue); font-weight: 650; text-decoration: none; }
 }
 @media (max-width: 600px) { section { padding: 60px 0; } .wrap { padding: 0 18px; } }
 </style>
+<!--
+  Meten. De UTM-tags staan op de LINK IN DE MAIL (via /mp, zie KORTE_LINKS in
+  backend/main.py) en met opzet NIET op de knoppen hieronder. Google Analytics
+  bepaalt de herkomst van een bezoeker bij binnenkomst; komt er halverwege een
+  andere utm_source langs, dan begint er een nieuwe sessie met een nieuwe bron.
+  Getagde interne links maken van één bezoeker dus twee bezoeken en verpesten de
+  vraag die we juist willen beantwoorden: waar kwam hij vandaan.
+  Welke knop er geklikt is, meten we met het cta_click-event hieronder.
+-->
 <!-- Google tag (gtag.js) -->
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-VJ5BVD3GCH"></script>
 <script>
@@ -336,7 +345,7 @@ footer a { color: var(--blue); font-weight: 650; text-decoration: none; }
 
     <div class="hero-actions">
       <div class="hero-cta-row">
-        <a href="/register?utm_source=email&utm_medium=cold_email&utm_campaign=marktplaats_video&utm_content=hero_cta" class="cta-primary" onclick="gtag('event','cta_click',{cta_location:'hero'})">
+        <a href="/register" class="cta-primary" onclick="gtag('event','cta_click',{cta_location:'hero'})">
           Start gratis, 7 dagen →
         </a>
         <span class="cta-sub"><b>Geen creditcard nodig</b><br>Stop wanneer je wilt</span>
@@ -441,7 +450,7 @@ footer a { color: var(--blue); font-weight: 650; text-decoration: none; }
           <div class="calc-mini"><div class="calc-mini-n" id="out-month">21 uur</div><div class="calc-mini-l">per maand</div></div>
           <div class="calc-mini"><div class="calc-mini-n" id="out-year">26 dagen</div><div class="calc-mini-l">per jaar (8-urige dagen)</div></div>
         </div>
-        <a href="/register?utm_source=email&utm_medium=cold_email&utm_campaign=marktplaats_video&utm_content=calc_cta" class="cta-primary" style="justify-content:center" onclick="gtag('event','cta_click',{cta_location:'calculator'})">Die tijd terugpakken →</a>
+        <a href="/register" class="cta-primary" style="justify-content:center" onclick="gtag('event','cta_click',{cta_location:'calculator'})">Die tijd terugpakken →</a>
       </div>
     </div>
   </div>
@@ -605,7 +614,7 @@ footer a { color: var(--blue); font-weight: 650; text-decoration: none; }
 <div class="final">
   <h2>Klaar om die uren terug te pakken?</h2>
   <p>Zeven dagen gratis proberen. Geen creditcard, geen opzegtermijn, geen risico.</p>
-  <a href="/register?utm_source=email&utm_medium=cold_email&utm_campaign=marktplaats_video&utm_content=footer_cta" class="cta-primary" onclick="gtag('event','cta_click',{cta_location:'footer'})">
+  <a href="/register" class="cta-primary" onclick="gtag('event','cta_click',{cta_location:'footer'})">
     Start gratis, 7 dagen →
   </a>
   <div>
@@ -623,7 +632,7 @@ footer a { color: var(--blue); font-weight: 650; text-decoration: none; }
 <!-- STICKY MOBIELE CTA -->
 <div class="sticky-cta" id="sticky">
   <span class="sticky-note">7 dagen gratis<br>geen creditcard</span>
-  <a href="/register?utm_source=email&utm_medium=cold_email&utm_campaign=marktplaats_video&utm_content=sticky_cta" class="cta-primary" onclick="gtag('event','cta_click',{cta_location:'sticky'})">Start gratis →</a>
+  <a href="/register" class="cta-primary" onclick="gtag('event','cta_click',{cta_location:'sticky'})">Start gratis →</a>
 </div>
 
 <script>

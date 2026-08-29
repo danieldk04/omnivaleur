@@ -214,6 +214,37 @@
   </section>
 
   <section>
+    <h2 class="sec">🔗 Vaste links per kanaal — deze horen in je profiel</h2>
+    <div class="card">
+      <p class="note" style="margin-top:0">Zet in élk profiel de link uit deze tabel, niet de kale
+        omnivaleur.com. Zonder de tags komt bezoek uit een app-bio bij Google Analytics binnen als
+        “direct” en zie je nooit welk kanaal het opleverde. Eén keer plakken en je bent klaar.</p>
+      <table>
+        <tr><th>Kanaal</th><th>Taal</th><th>Link</th><th></th></tr>
+        {% for k in kanalen %}
+        <tr>
+          <td>{{ k.kanaal }}</td>
+          <td>{{ k.taal }}</td>
+          <td style="font-family:ui-monospace,monospace;font-size:12px;word-break:break-all">{{ k.link }}</td>
+          <td><button class="btn" type="button" onclick="copyLink(this,'{{ k.link }}')">Kopieer</button></td>
+        </tr>
+        {% endfor %}
+        <tr>
+          <td>{{ maillink.kanaal }}</td>
+          <td>{{ maillink.taal }}</td>
+          <td style="font-family:ui-monospace,monospace;font-size:12px;word-break:break-all">{{ maillink.kortelink }}</td>
+          <td><button class="btn" type="button" onclick="copyLink(this,'{{ maillink.kortelink }}')">Kopieer</button></td>
+        </tr>
+      </table>
+      <div class="note">De maillink is kort met opzet: hij stuurt door naar
+        <code>{{ maillink.pad }}</code> met de tags erachter. Zo staat er geen parameterslinger in een
+        persoonlijke mail, en kun je de campagnenaam later wijzigen zonder dat verstuurde links breken.
+        <br>Terugkijken doe je in Analytics onder <strong>Rapporten → Acquisitie → Verkeersacquisitie</strong>,
+        met “Sessiebron/medium” of “Sessiecampagne” als rij.</div>
+    </div>
+  </section>
+
+  <section>
     <h2 class="sec">🏷️ UTM-linkbouwer — plak dit in je posts voor postniveau-tracking</h2>
     <div class="card">
       <p class="note" style="margin-top:0">Kies platform + geef de post een herkenbare naam. Plak de gegenereerde
@@ -272,6 +303,13 @@ function buildUtm(){
   document.getElementById('uResult').value=url;
   document.getElementById('uNote').textContent=content?'':'Tip: geef een postnaam op zodat je posts individueel meetbaar zijn.';
   return url;
+}
+function copyLink(btn, url){
+  const was = btn.textContent;
+  navigator.clipboard.writeText(url).then(()=>{
+    btn.textContent='✅ Gekopieerd';
+    setTimeout(()=>{btn.textContent=was;}, 1800);
+  }).catch(()=>{ btn.textContent='Kopiëren mislukt'; setTimeout(()=>{btn.textContent=was;},1800); });
 }
 function copyUtm(){
   const url=buildUtm();

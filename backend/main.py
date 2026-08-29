@@ -246,6 +246,31 @@ async def mp_video_page():
     return FileResponse(FRONTEND / "mp-video.html")
 
 
+# ── Korte links met vaste UTM-tags ────────────────────────────────────────
+# Waarom een omweg in plaats van de UTM's gewoon in de mail zetten:
+#
+# 1. De koude mail wordt per lead geschreven door een taalmodel. Een lange URL
+#    met drie parameters is iets wat een model kan verhaspelen; "/mp" niet.
+# 2. Een zichtbare "?utm_source=..." in een persoonlijke eerste mail leest als
+#    massapost — precies wat de opbouw in scripts/leadgen_mail.py probeert te
+#    vermijden (mail1 draagt daarom ook bewust geen pixel).
+# 3. De tagging staat zo op één plek. Wil je de campagnenaam wijzigen, dan
+#    hoeft er geen enkele verstuurde link ongeldig te worden.
+#
+# De bezoeker landt op de échte URL mét parameters, dus Google Analytics ziet
+# gewoon bron/medium/campagne. 307 en niet 301: een blijvende omleiding wordt
+# door browsers onthouden, en dan is de tag later niet meer te wijzigen.
+KORTE_LINKS = {
+    # De koude-mail-sequence naar Nederlandse Marktplaats-verkopers.
+    "mp": "/mp-video?utm_source=koude-mail&utm_medium=email&utm_campaign=marktplaats-nl",
+}
+
+
+@app.get("/mp")
+async def korte_link_mp():
+    return RedirectResponse(KORTE_LINKS["mp"], status_code=307)
+
+
 @app.exception_handler(StarletteHTTPException)
 async def not_found_page(request: Request, exc: StarletteHTTPException):
     """Een dode link gaf kale JSON te zien: {"detail":"Not Found"}.

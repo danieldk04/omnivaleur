@@ -513,14 +513,74 @@ def _require_dashboard_token(token: str | None) -> None:
         raise HTTPException(status_code=401, detail="unauthorized")
 
 
+# ── De vaste links per kanaal ─────────────────────────────────────────────
+# Eén plek waar staat welke link waar hoort. Waarom dit niet "gewoon even zelf
+# in elkaar zetten" is: zodra dezelfde TikTok-link een keer `tiktok` en een
+# keer `TikTok` of `tik-tok` als bron krijgt, telt Google Analytics dat als
+# twee kanalen en klopt geen enkel totaal meer. Vandaar drie afspraken:
+#
+#   utm_source    het kanaal, kleine letters:  tiktok / instagram / youtube /
+#                 pinterest / threads / koude-mail
+#   utm_medium    alleen `social` of `email`. Dit zijn de woorden die Analytics
+#                 zelf herkent; iets anders (`cold_email`) belandt in de bak
+#                 "niet toegewezen" en is dan onvindbaar in de rapporten.
+#   utm_campaign  waar de link staat: bio-en / bio-nl / marktplaats-nl.
+#                 Nederlands en Engels hebben dezelfde bron (instagram), dus
+#                 dit veld is wat de twee accounts uit elkaar houdt.
+#
+# utm_content blijft vrij voor losse posts — daar is de linkbouwer onderaan het
+# dashboard voor. Deze tabel gaat alleen over de vaste links in de profielen.
+KANAAL_LINKS: list[dict] = [
+    {"kanaal": "TikTok", "taal": "EN", "profiel": "https://www.tiktok.com/@omnivaleur",
+     "pad": "/", "source": "tiktok", "medium": "social", "campagne": "bio-en"},
+    {"kanaal": "Instagram", "taal": "EN", "profiel": "https://www.instagram.com/omnivaleur/",
+     "pad": "/", "source": "instagram", "medium": "social", "campagne": "bio-en"},
+    {"kanaal": "YouTube", "taal": "EN", "profiel": "https://www.youtube.com/@Omnivaleur",
+     "pad": "/", "source": "youtube", "medium": "social", "campagne": "bio-en"},
+    {"kanaal": "Pinterest", "taal": "EN", "profiel": "https://nl.pinterest.com/Omnivaleur/",
+     "pad": "/", "source": "pinterest", "medium": "social", "campagne": "bio-en"},
+    {"kanaal": "Threads", "taal": "EN", "profiel": "https://www.threads.com/@omnivaleur",
+     "pad": "/", "source": "threads", "medium": "social", "campagne": "bio-en"},
+    {"kanaal": "Instagram", "taal": "NL", "profiel": "https://www.instagram.com/omnivaleurnl/",
+     "pad": "/", "source": "instagram", "medium": "social", "campagne": "bio-nl"},
+    {"kanaal": "TikTok", "taal": "NL", "profiel": "https://www.tiktok.com/@omni.valeur",
+     "pad": "/", "source": "tiktok", "medium": "social", "campagne": "bio-nl"},
+    {"kanaal": "YouTube", "taal": "NL", "profiel": "https://www.youtube.com/@OmnivaleurNL",
+     "pad": "/", "source": "youtube", "medium": "social", "campagne": "bio-nl"},
+]
+
+# De koude mail staat er apart bij: die link wordt niet ergens geplakt maar door
+# het script verstuurd, en hij is kort omdat een taalmodel hem overtypt. De tags
+# hangen aan de omleiding (KORTE_LINKS in backend/main.py).
+MAIL_LINK = {
+    "kanaal": "Koude mail (Marktplaats)", "taal": "NL",
+    "profiel": "", "kort": "/mp",
+    "pad": "/mp-video", "source": "koude-mail", "medium": "email",
+    "campagne": "marktplaats-nl",
+}
+
+
+def kanaal_link(k: dict, site_url: str = "") -> str:
+    """De volledige link met tags, opgebouwd uit één afspraak in plaats van uit
+    het hoofd. Volgorde vast (source, medium, campaign) zodat twee links naar
+    hetzelfde kanaal er ook echt hetzelfde uitzien."""
+    basis = (site_url or SITE_URL).rstrip("/")
+    return (f"{basis}{k['pad']}?utm_source={k['source']}"
+            f"&utm_medium={k['medium']}&utm_campaign={k['campagne']}")
+
+
 @router.get("/analytics", response_class=HTMLResponse)
 async def analytics_dashboard(request: Request, token: str | None = None):
     _require_dashboard_token(token)
     from backend.services.analytics_report import build_report
     report = build_report()
+    kanalen = [{**k, "link": kanaal_link(k, SITE_URL)} for k in KANAAL_LINKS]
+    mail = {**MAIL_LINK, "link": kanaal_link(MAIL_LINK, SITE_URL),
+            "kortelink": SITE_URL.rstrip("/") + MAIL_LINK["kort"]}
     return templates.TemplateResponse(
         "analytics_dashboard.html",
-        {"request": request, "report": report, "token": token, "site_url": SITE_URL},
+        {"request": request, "report": report, "token": token, "site_url": SITE_URL,
+         "kanalen": kanalen, "maillink": mail},
     )
 
 

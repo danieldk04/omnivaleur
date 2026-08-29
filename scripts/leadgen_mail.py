@@ -80,9 +80,16 @@ SITE = "https://omnivaleur.com"
 # ontvangstbevestigingen tellen niet mee, anders is het geen seintje meer maar ruis.
 ALARM_NAAR = ["danieldekoning66@gmail.com", "info@revaleur.com"]
 # De demo van één minuut. Staat hier één keer, zodat er nooit een oude link in
-# een concept belandt. Wijst naar de leadpagina (met UTM's en founder-story),
-# niet meer naar de kale YouTube-link.
-VIDEO = "https://omnivaleur.com/mp-video"
+# een concept belandt. Wijst naar de leadpagina (met founder-story), niet meer
+# naar de kale YouTube-link.
+#
+# Bewust de KORTE vorm: /mp stuurt door naar /mp-video mét de UTM-tags
+# (bron=koude-mail, medium=email, campagne=marktplaats-nl), zodat Google
+# Analytics ziet welk bezoek uit deze mailronde komt. Zie KORTE_LINKS in
+# backend/main.py. De lange versie met "?utm_source=..." erin zou hier twee
+# problemen geven: het model dat deze mails schrijft kan zo'n URL verhaspelen,
+# en een parameterslinger in een persoonlijke eerste mail leest als massapost.
+VIDEO = "https://omnivaleur.com/mp"
 PRIJS = "€19,99 per maand"
 PLATFORMS = "Marktplaats, 2dehands, Vinted, eBay en Shopify. Etsy komt eraan"
 # Waar een klaargezet antwoord terechtkomt. Zoho noemt zijn conceptenmap zo.
