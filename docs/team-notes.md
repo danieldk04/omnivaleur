@@ -1369,3 +1369,30 @@ nooit meer op de gateway-tijdslimiet vastloopt.
 Niets aan de code gewijzigd — de fix stond al op main en is al drie uur live.
 Teruggemeld met `opgelost` onder de sleutel `import-server-timeout`, zodat
 Egbert ook onder díe melding bericht krijgt.
+
+### 29-08-2026 — Vier dingen op de werkplaats die niet waar waren
+
+Bij het nalezen van het scherm met de echte gegevens. Alle vier hetzelfde soort
+fout: het scherm bewéérde iets dat op dat moment niet klopte.
+
+1. **"Aan het werk" boven een reparatie die al klaar was.** De starter zet een
+   sessie pas bij zijn volgende ronde op afgerond — tien minuten later. Tot die
+   tijd stond er "aan het werk sinds 15:02" boven een kaart die de terugmelding
+   van 15:09 al toonde. Nu telt de storing zelf: is die teruggemeld, dan is er
+   niemand meer mee bezig.
+2. **Vier van de twaalf actiepunten waren al opgelost.** Escalaties bleven op
+   Daniels lijst staan terwijl de bijbehorende storing gerepareerd was. Een lijst
+   met vier dode punten leer je overslaan. Escalaties met een `bug_sleutel` die
+   op opgelost of afgewezen staat, vallen er nu af.
+3. **De lijst werd stil afgekapt op twaalf terwijl er vijftien punten waren.**
+   Drie punten waren dus onzichtbaar. Nu compleet, gesorteerd op de volgorde die
+   Daniel zelf koos (geld, vertrek, dan de rest), met de eerste acht open en de
+   rest achter één regel.
+4. **"Klant bericht: concept staat nog klaar"** terwijl er juist géén concept
+   stond — het bericht was tegengehouden omdat er al post voor die persoon lag.
+   Nu: "nog geen bericht; volgt zodra er geen andere post voor hem klaarligt",
+   en bij een deel-bericht "1 van de 2 melders". De tegel zei om dezelfde reden
+   "klant heeft bericht" voor vijf terugmeldingen waarvan er twee bericht hadden.
+
+Ook: wachtende berichten worden per PERSOON gebundeld, niet per storing. Egbert
+had er vier openstaan met dezelfde oorzaak; dat waren vier identieke regels.

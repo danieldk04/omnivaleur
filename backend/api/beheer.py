@@ -1075,24 +1075,41 @@ def _voor_jou(signalen: dict, escalaties: list, starter: dict, probleem: str) ->
     for e in escalaties:
         if e.get("afgehandeld"):
             continue
+        # Ging de escalatie over een storing die intussen is gerepareerd, dan is
+        # er voor Daniel niets meer te doen. Nagemeten op 29-08-2026: vier van de
+        # twaalf punten op zijn lijst waren al opgelost — precies de manier
+        # waarop zo'n lijst zijn waarde verliest.
+        sleutel = e.get("bug_sleutel") or ""
+        if sleutel and (signalen.get(sleutel) or {}).get("status") in ("opgelost", "afgewezen"):
+            continue
         lijst.append({"soort": e.get("escalatie", "aandacht"), "wie": e.get("adres", ""),
                       "wat": e.get("samenvatting", "")})
     # Iemand die bericht hoort te krijgen, maar bij wie al post klaarligt: er gaat
     # nooit twee mail tegelijk naar dezelfde persoon, dus die wacht op Daniel.
+    # Per PERSOON gebundeld, niet per storing: vier losse regels voor dezelfde
+    # man met dezelfde oorzaak is vier keer dezelfde actie.
+    wachtenden: dict[str, list[str]] = {}
     for sleutel, v in signalen.items():
         if v.get("status") != "opgelost":
             continue
-        wacht = [m for m in (v.get("melders") or [])
-                 if m not in (v.get("bericht_verstuurd") or [])]
-        for adres in wacht:
-            lijst.append({"soort": "concept", "wie": adres,
-                          "wat": f"wacht op je vorige mail aan hem; daarna gaat het "
-                                 f"bericht over '{sleutel}' vanzelf klaarstaan"})
+        for adres in (v.get("melders") or []):
+            if adres not in (v.get("bericht_verstuurd") or []):
+                wachtenden.setdefault(adres, []).append(sleutel)
+    for adres, sleutels in wachtenden.items():
+        wat = (f"{len(sleutels)} berichten wachten" if len(sleutels) > 1
+               else "een bericht wacht")
+        lijst.append({"soort": "concept", "wie": adres,
+                      "wat": f"{wat} op je vorige mail aan hem; daarna gaat het vanzelf "
+                             f"klaarstaan ({', '.join(s.replace('-', ' ') for s in sleutels[:3])})"})
     if probleem:
         lijst.append({"soort": "machine", "wie": "de developer", "wat": probleem})
     if starter.get("waarschuwing"):
         lijst.append({"soort": "machine", "wie": "de starter", "wat": starter["waarschuwing"]})
-    return lijst[:12]
+    # Geld en vertrek bovenaan: dat is de volgorde waarin Daniel zelf heeft
+    # gekozen gestoord te worden (docs/team-notes.md, 29-08-2026).
+    orde = {"machine": 0, "geld": 1, "vertrek": 2, "concept": 3}
+    lijst.sort(key=lambda a: orde.get(a["soort"], 4))
+    return lijst
 
 
 @router.get("/werkplaats")
@@ -1108,6 +1125,12 @@ def werkplaats(user=Depends(get_current_user_full)):
     for sleutel, ses in sessies.items():
         minuten = _minuten_sinds(ses.get("gestart"))
         if ses.get("status") != "gestart" or minuten is None or minuten > SESSIE_MAX_MINUTEN:
+            continue
+        # De starter zet een sessie pas op "afgerond" bij zijn volgende ronde,
+        # tien minuten later. Heeft de storing intussen al een terugmelding, dan
+        # is het werk klaar en stond hier tot tien minuten lang "aan het werk"
+        # boven een kaart die de reparatie al beschreef.
+        if (signalen.get(sleutel) or {}).get("status") in ("opgelost", "afgewezen"):
             continue
         bezig = {**_storing_rij(sleutel, signalen.get(sleutel) or {}, ses), "minuten": minuten}
         break

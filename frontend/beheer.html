@@ -849,7 +849,9 @@ function storingRij(r) {
       ${regel('Voorrang', (r.waarom || []).join(' · '))}
       ${regel(r.status === 'afgewezen' ? 'Niet gerepareerd' : 'Wat er nu anders is', r.uitleg)}
       ${r.status === 'opgelost'
-        ? regel('Klant bericht', r.bericht_naar ? `ja, ${r.bericht_naar} melder(s)` : 'concept staat nog klaar')
+        ? regel('Klant bericht', r.bericht_naar
+            ? `${r.bericht_naar} van ${(r.melders || []).length} melder(s)`
+            : 'nog geen bericht; volgt zodra er geen andere post voor hem klaarligt')
         : ''}
       ${r.sessie_mislukt ? regel('Eerder geprobeerd', 'de sessie sloeg af voor hij begon; staat weer in de rij') : ''}
     </div>`;
@@ -897,10 +899,16 @@ function toonWerkplaats(w) {
              : 'Geen storing met voorrang open.'} Laatste ronde: ${veilig(tijdstip(st.laatste_ronde) || 'nooit')}.</div></div>`);
   WP_BEZIG_START = b ? new Date(b.opgepakt_op).getTime() : null;
 
-  el('wp-voor-jou').innerHTML = (w.voor_jou || []).map(a =>
+  const jij = (w.voor_jou || []).map(a =>
     `<div class="jij"><span class="merk ${SOORT_KLEUR[a.soort] || 'm-onbekend'}">${veilig(SOORT_NAAM[a.soort] || a.soort)}</span>
-       <span><b>${veilig(a.wie)}</b><br><span class="uitleg">${veilig(a.wat)}</span></span></div>`).join('')
-    || '<div class="leeg">Niets. Alles ligt bij de klantenservice of bij mij.</div>';
+       <span><b>${veilig(a.wie)}</b><br><span class="uitleg">${veilig(a.wat)}</span></span></div>`);
+  el('wp-voor-jou').innerHTML = jij.length
+    ? jij.slice(0, 8).join('')
+      + (jij.length > 8
+          ? `<details><summary class="uitleg" style="cursor:pointer;padding:10px 0">
+               nog ${jij.length - 8} punt(en)</summary>${jij.slice(8).join('')}</details>`
+          : '')
+    : '<div class="leeg">Niets. Alles ligt bij de klantenservice of bij mij.</div>';
 
   // De gebeurtenissen van het laatste uur krijgen een groene stip: dat is wat er
   // net gebeurd is, en daar kijk je op een scherm als dit als eerste naar.
@@ -916,8 +924,10 @@ function toonWerkplaats(w) {
   el('wp-cijfers').innerHTML =
       kaart('Doorgegeven aan mij', getal((w.wachtrij || []).length), 'met voorrang',
             (w.wachtrij || []).length ? 'let' : 'op')
-    + kaart('Teruggemeld', getal((w.gedaan || []).length), 'klant heeft bericht', 'op')
-    + kaart('Zonder voorrang', getal(w.overig_open), 'blijft bij de klantenservice')
+    + kaart('Teruggemeld', getal((w.gedaan || []).length),
+            `${getal((w.gedaan || []).filter(g => g.bericht_naar).length)} met bericht naar de klant`, 'op')
+    + kaart('Voor jou', getal((w.voor_jou || []).length), 'alleen wat ik niet zelf kan',
+            (w.voor_jou || []).length ? 'let' : 'op')
     + kaart('Laatste ronde', veilig(klok(st.laatste_ronde) || 'nooit'), 'elke tien minuten',
             alarm ? 'af' : 'op');
 

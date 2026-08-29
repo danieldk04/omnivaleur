@@ -379,3 +379,44 @@ def test_wie_nog_geen_bericht_kon_krijgen_staat_bij_daniel(monkeypatch):
                    "gerepareerd_op": "2026-08-29T11:00:00+00:00"}})
     voor_jou = beheer.werkplaats(user=None)["voor_jou"]
     assert any(a["soort"] == "concept" and a["wie"] == "b@x.nl" for a in voor_jou)
+
+
+# ── het scherm mag niets beweren wat niet waar is ─────────────────────────
+def test_een_teruggemelde_storing_staat_niet_meer_als_bezig(monkeypatch):
+    """De starter zet een sessie pas tien minuten later op afgerond. Tot die tijd
+    stond er "aan het werk" boven een kaart die de reparatie al beschreef."""
+    from datetime import datetime, timezone
+    nu = datetime.now(timezone.utc).isoformat()
+    beheer = _beheer(monkeypatch,
+        {"kapot": {"status": "opgelost", "melders": ["a@x.nl"], "uitleg": "gemaakt",
+                   "laatst": "2026-08-29T09:00:00+00:00", "gerepareerd_op": nu}},
+        {"kapot": {"status": "gestart", "gestart": nu}})
+    assert beheer.werkplaats(user=None)["bezig"] is None
+
+
+def test_een_escalatie_over_een_gerepareerde_storing_valt_van_de_lijst(monkeypatch):
+    """Nagemeten op 29-08-2026: vier van de twaalf punten op Daniels lijst gingen
+    over storingen die al opgelost waren. Zo verliest zo'n lijst zijn waarde."""
+    beheer = _beheer(monkeypatch,
+        {"klaar": {"status": "opgelost", "melders": ["a@x.nl"], "uitleg": "gemaakt",
+                   "laatst": "2026-08-29T09:00:00+00:00",
+                   "gerepareerd_op": "2026-08-29T11:00:00+00:00",
+                   "bericht_verstuurd": ["a@x.nl"]},
+         "nog niet": {"status": "open", "melders": ["b@x.nl"], "omschrijving": "x",
+                      "laatst": "2026-08-29T09:00:00+00:00"}},
+        {},
+        [{"escalatie": "vertrek", "adres": "a@x.nl", "bug_sleutel": "klaar",
+          "samenvatting": "dreigt te stoppen", "afgehandeld": False},
+         {"escalatie": "vertrek", "adres": "b@x.nl", "bug_sleutel": "nog niet",
+          "samenvatting": "dreigt ook", "afgehandeld": False}])
+    wie = [a["wie"] for a in beheer.werkplaats(user=None)["voor_jou"]]
+    assert "b@x.nl" in wie
+    assert "a@x.nl" not in wie, "een escalatie over een gerepareerde storing bleef staan"
+
+
+def test_een_escalatie_zonder_storing_blijft_gewoon_staan(monkeypatch):
+    """Geld en 'hier heb ik geen antwoord op' hangen niet aan een storing."""
+    beheer = _beheer(monkeypatch, {},
+        {}, [{"escalatie": "geld", "adres": "a@x.nl", "samenvatting": "dubbel afgeschreven",
+              "afgehandeld": False}])
+    assert any(a["wie"] == "a@x.nl" for a in beheer.werkplaats(user=None)["voor_jou"])
