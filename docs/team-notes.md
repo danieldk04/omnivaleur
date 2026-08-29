@@ -945,3 +945,14 @@ Vinted (5) en 2dehands (1). De zin "platgeslagen vanuit Shopify" in de mail van
 Er is op dit moment nog maar één Shopify-koppeling in de database: Revaleur, via
 de nieuwe eigen-app-weg. Na het omdraaien van het clientgeheim nagemeten: sleutel
 ophalen en producten lezen werkt.
+
+### 29-08-2026 — extensie 1.0.260 ingediend bij de Chrome Web Store
+
+Daniel heeft geüpload. Daarin zit: het "Site verlaten?"-venster dat vlak voor de
+plaatsklik wordt uitgezet, de Admarkt-scan die niet meer aan een intrekbare
+toestemming hangt, de foto's die bij het publiceren worden aangevuld, en de
+diagnostiek bij een mislukt verwijderen (welke knoppen er op de pagina stonden).
+
+Openstaand daarna: de 32 dun geplaatste advertenties van Jaap één keer
+herplaatsen (hun foto's staan er weer bij), en zijn vaste tekst instellen zodra
+hij ja zegt — die staat klaar in de conceptmail.
