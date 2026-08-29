@@ -308,3 +308,39 @@ def test_ontbrekende_verkooprechten_worden_op_het_scherm_gemeld():
     fn = APP.split("async function submitShopifyToken()")[1].split("\nasync function ")[0]
     assert "missing_optional_scopes" in fn
     assert "read_orders" in fn
+
+
+# ── 7. Niemand publiceert ooit in de winkel van een ander ────────────────────
+#
+# Deze drie methodes vielen bij een verkoper zonder eigen koppeling terug op de
+# winkel uit de serverinstellingen. Met één account was dat logisch; met klanten
+# erbij zette het het artikel van de een in de winkel van de ander.
+
+def test_publiceren_zonder_koppeling_wordt_geweigerd():
+    import asyncio
+    from backend.platforms.shopify import ShopifyPlatform
+    with pytest.raises(RuntimeError) as e:
+        asyncio.run(ShopifyPlatform().create_listing({"title": "x"}, {}))
+    assert "No Shopify store is connected" in str(e.value)
+
+
+def test_verwijderen_zonder_koppeling_wordt_geweigerd():
+    """Erger nog dan publiceren: dit haalde iets weg uit andermans winkel."""
+    import asyncio
+    from backend.platforms.shopify import ShopifyPlatform
+    with pytest.raises(RuntimeError):
+        asyncio.run(ShopifyPlatform().delete_listing("123", {}))
+
+
+def test_prijs_wijzigen_zonder_koppeling_wordt_geweigerd():
+    import asyncio
+    from backend.platforms.shopify import ShopifyPlatform
+    with pytest.raises(RuntimeError):
+        asyncio.run(ShopifyPlatform().update_listing_price("123", 9.99, {}))
+
+
+def test_de_vaste_winkel_uit_de_instellingen_wordt_nergens_meer_gebruikt():
+    src = (ROOT / "backend/platforms/shopify.py").read_text(encoding="utf-8")
+    klasse = src.split("class ShopifyPlatform")[1]
+    assert "settings.shopify_store" not in klasse, \
+        "een vaste winkel uit de serverinstellingen hoort nooit voor een klant te gelden"

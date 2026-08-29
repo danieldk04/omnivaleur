@@ -916,3 +916,32 @@ Verder deze ronde, alles gemeten:
   is openbaar. Zie scripts/backfill_beschrijving_uit_webshop.py (haalt nu ook foto's).
 - De waarschuwing "er staat werk klaar maar je extensie meldt zich niet" is in een
   echte browser op bureaubladbreedte getoetst: display flex, zichtbaar, juiste tekst.
+
+### 29-08-2026 — Publiceren zonder Shopify-koppeling ging naar Daniels eigen winkel
+
+Bij het narekenen of de nieuwe koppeling voor iederéén werkt (en niet alleen
+voor het eigen account) bleek er een terugval in te zitten die met klanten erbij
+niet meer klopte.
+
+`ShopifyPlatform.create_listing`, `delete_listing` en `update_listing_price`
+vielen bij een verkoper zónder eigen koppeling terug op de winkel uit de
+serverinstellingen (`SHOPIFY_STORE`, = `ywqad3-xb.myshopify.com`, Revaleur).
+Ooit logisch — er was één account en dat was de eigenaar — maar met klanten erbij
+betekende het: publiceren zonder koppeling zette het artikel van de een in de
+wínkel van de ander, en verwijderen haalde daar iets weg.
+
+Bereikbaar was het ook: `crosslist._publish_one` krijgt `creds_by_platform.get(p, {})`,
+dus een lege dict voor wie niets gekoppeld heeft. Het dashboard verbergt de knop
+wel, maar de server mag daar niet op vertrouwen.
+
+Nu weigert `_eis_winkel()` dat met een leesbare uitleg. Vastgelegd in vier tests.
+
+**Terzijde, over Jaap (zilverwebsite.nl):** hij heeft nooit een Shopify-koppeling
+gehad — alleen `_settings`. Zijn 1.222 artikelen kwamen via de
+Marktplaats-import binnen, en zijn advertenties staan op Marktplaats (600),
+Vinted (5) en 2dehands (1). De zin "platgeslagen vanuit Shopify" in de mail van
+28-08 klopte dus niet.
+
+Er is op dit moment nog maar één Shopify-koppeling in de database: Revaleur, via
+de nieuwe eigen-app-weg. Na het omdraaien van het clientgeheim nagemeten: sleutel
+ophalen en producten lezen werkt.

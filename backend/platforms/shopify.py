@@ -596,12 +596,29 @@ class ShopifyPlatform(PlatformBase):
             "extra_data": {"shop_domain": shop, "scope": data.get("scope", "")},
         }
 
+    # WAAROM ER GEEN TERUGVAL MEER IS OP ÉÉN VASTE WINKEL.
+    #
+    # Deze drie methodes vielen bij een verkoper zónder eigen koppeling terug op
+    # de winkel uit de serverinstellingen (SHOPIFY_STORE). Dat was ooit logisch:
+    # er was één account en dat was de eigenaar. Met klanten erbij is het een
+    # regelrechte fout — publiceren zonder koppeling zette het artikel van de een
+    # in de wínkel van de ander, en verwijderen haalde daar iets weg. Het
+    # dashboard verbergt de knop wel, maar de server mag daar niet op vertrouwen.
+    #
+    # Nu: geen koppeling is een nette weigering met uitleg. Zie
+    # backend/api/platforms.py > shopify_connect_app voor de manier waarop een
+    # verkoper zijn eigen winkel koppelt.
+    @staticmethod
+    def _eis_winkel(shop, token):
+        if not shop or not token:
+            raise RuntimeError(
+                "No Shopify store is connected to this account. Open Platforms → "
+                "Shopify → Connect and link your own store first."
+            )
+
     async def create_listing(self, item: dict, credentials: dict, on_created=None) -> dict:
         shop, token = await _shop_creds(credentials)
-        if not shop or not token:
-            # No per-user store connected yet — fall back to the single globally
-            # configured store (existing behaviour for the account this was built for).
-            return await create_product(item)
+        self._eis_winkel(shop, token)
         product = await ShopifyClient(shop, token).create_product(
             item, on_created=_maak_vastleggen(shop, on_created),
         )
@@ -613,19 +630,12 @@ class ShopifyPlatform(PlatformBase):
 
     async def delete_listing(self, platform_listing_id: str, credentials: dict) -> bool:
         shop, token = await _shop_creds(credentials)
-        if not shop or not token:
-            return await delete_product(platform_listing_id)
+        self._eis_winkel(shop, token)
         return await ShopifyClient(shop, token).delete_product(platform_listing_id)
 
     async def update_listing_price(self, platform_listing_id: str, price: float, credentials: dict) -> bool:
         shop, token = await _shop_creds(credentials)
-        if not shop or not token:
-            # Same single-store fallback the create/delete paths use: the globally
-            # configured store, whose token is fetched (and cached) on demand.
-            from backend.platforms.shopify_importer import _get_token
-            shop, token = settings.shopify_store, await _get_token()
-        if not shop or not token:
-            raise RuntimeError("No Shopify store connected")
+        self._eis_winkel(shop, token)
         return await ShopifyClient(shop, token).update_price(platform_listing_id, price)
 
     async def refresh_credentials(self, credentials: dict) -> dict:
