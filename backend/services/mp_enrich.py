@@ -695,6 +695,11 @@ async def verrijk(db, user_id: str, schrijf: bool = True,
 # hetzelfde tijdsbudget als de knop. De volgende ronde is de volgende verkoper.
 AANVUL_PER_VERKOPER = 150
 
+# Het demo-account staat vol nepadvertenties die niet op Marktplaats bestaan.
+# Daarvoor zoeken is puur belasting bij Marktplaats zonder dat er iets te vinden
+# valt.
+DEMO_ACCOUNT = "00000000-0000-0000-0000-000000000001"
+
 # Waar we gebleven waren. Blijft niet bewaard over een herstart heen, en dat mag:
 # de ronde draait elk kwartier, dus na een herstart begint hij gewoon weer
 # vooraan en komt iedereen alsnog aan de beurt.
@@ -704,8 +709,17 @@ _volgende_verkoper = 0
 async def _verkopers_met_gaten(db) -> list[str]:
     """De verkopers die nog items zonder omschrijving hebben, meest eerst.
 
-    Alleen verkopers met een Marktplaats-koppeling: bij de rest kunnen we de
-    advertenties niet terugvinden en zouden we Marktplaats voor niets belasten.
+    Alleen verkopers die ooit vanaf Marktplaats of 2dehands hebben geïmporteerd:
+    bij de rest staan de advertenties daar niet en zouden we Marktplaats voor
+    niets belasten.
+
+    NIET op `platform_credentials` filteren, hoe logisch dat ook klinkt. Gemeten
+    29-08-2026: van de acht verkopers met ontbrekende teksten had er precies één
+    zo'n rij, en dat was het demo-account. Marktplaats loopt via de extensie in
+    de browser van de verkoper, dus er is voor gewone verkopers helemaal geen
+    inlogrij op de server. Die filter liet deze ronde dus alleen op het
+    demo-account draaien — het tegenovergestelde van de bedoeling. Wat er wél
+    staat bij iedereen die geïmporteerd heeft, is zijn importlijst.
     """
     rijen = await naast_de_lus(lambda: fetch_all(
         lambda: db.table("items")
@@ -717,10 +731,20 @@ async def _verkopers_met_gaten(db) -> list[str]:
             aantal[r["user_id"]] = aantal.get(r["user_id"], 0) + 1
     if not aantal:
         return []
-    gekoppeld = {r["user_id"] for r in ((await naast_de_lus(
-        lambda: db.table("platform_credentials").select("user_id")
-        .in_("platform", ["marktplaats", "2dehands"]).execute())).data or [])}
-    met_gaten = [u for u in aantal if u in gekoppeld]
+    # Per verkoper één vraag met count: de importlijst telt tienduizenden rijen,
+    # en die allemaal ophalen om er acht namen uit te halen is verspilling.
+    def _heeft_geimporteerd(uid: str) -> bool:
+        try:
+            return bool(db.table("import_candidates").select("id", count="exact")
+                        .eq("user_id", uid).in_("platform", ["marktplaats", "2dehands"])
+                        .limit(1).execute().count)
+        except Exception as e:  # noqa: BLE001 — bij twijfel overslaan
+            logger.warning("mp_enrich: kon importlijst van %s niet lezen: %s", uid, e)
+            return False
+
+    met_gaten = [u for u in aantal
+                 if u != DEMO_ACCOUNT and await naast_de_lus(
+                     lambda u=u: _heeft_geimporteerd(u))]
     return sorted(met_gaten, key=lambda u: -aantal[u])
 
 

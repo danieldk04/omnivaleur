@@ -15,9 +15,10 @@ from backend.services import mp_enrich
 class NepDb:
     """Alleen wat mp_enrich echt aanroept: items en platform_credentials."""
 
-    def __init__(self, items, gekoppeld):
+    def __init__(self, items, geimporteerd):
         self.items = items
-        self.gekoppeld = gekoppeld
+        # user_ids die ooit vanaf Marktplaats hebben geïmporteerd
+        self.geimporteerd = geimporteerd
 
     def table(self, naam):
         return NepTabel(self, naam)
@@ -27,6 +28,7 @@ class NepTabel:
     def __init__(self, db, naam):
         self.db, self.naam = db, naam
         self.venster = None
+        self.user = None
 
     def select(self, *a, **kw):
         return self
@@ -37,6 +39,14 @@ class NepTabel:
     def in_(self, *a, **kw):
         return self
 
+    def eq(self, kolom, waarde):
+        if kolom == "user_id":
+            self.user = waarde
+        return self
+
+    def limit(self, *a, **kw):
+        return self
+
     def range(self, start, eind):
         self.venster = (start, eind)
         return self
@@ -45,8 +55,11 @@ class NepTabel:
         return self
 
     def execute(self):
-        rijen = (self.db.items if self.naam == "items"
-                 else [{"user_id": u} for u in self.db.gekoppeld])
+        if self.naam == "import_candidates":
+            # count: heeft deze verkoper ooit vanaf Marktplaats geïmporteerd?
+            return types.SimpleNamespace(
+                data=[], count=1 if self.user in self.db.geimporteerd else 0)
+        rijen = self.db.items
         if self.venster:  # fetch_all bladert; zonder venster blijft hij doorgaan
             start, eind = self.venster
             rijen = rijen[start:eind + 1]
@@ -77,9 +90,9 @@ def test_verkoper_zonder_teksten_wordt_bijgewerkt(monkeypatch):
     assert uit["verkoper"] == "u1"
 
 
-def test_zonder_marktplaats_koppeling_gebeurt_er_niets(monkeypatch):
-    """Zonder koppeling vinden we zijn advertenties niet — dan Marktplaats
-    ook niet lastigvallen."""
+def test_wie_nooit_importeerde_wordt_overgeslagen(monkeypatch):
+    """Staan zijn advertenties niet op Marktplaats, dan valt daar niets te
+    halen — Marktplaats dan ook niet lastigvallen."""
     db = NepDb([{"user_id": "u9"}], set())
     gedaan = []
     uit = _draai(db, monkeypatch, gedaan)
@@ -112,3 +125,13 @@ def test_de_ronde_staat_in_de_planner():
     bron = inspect.getsource(scheduler.start_scheduler)
     assert "vul_ontbrekende_teksten_aan" in bron
     assert 'id="mp_teksten_aanvullen"' in bron
+
+
+def test_demo_account_wordt_overgeslagen(monkeypatch):
+    """Het demo-account staat vol advertenties die niet op Marktplaats bestaan."""
+    demo = mp_enrich.DEMO_ACCOUNT
+    db = NepDb([{"user_id": demo}], {demo})
+    gedaan = []
+    uit = _draai(db, monkeypatch, gedaan)
+    assert gedaan == []
+    assert uit["verkopers"] == 0
