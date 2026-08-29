@@ -2225,15 +2225,37 @@ def _grondslag(body: str) -> str:
     return "\n\n".join(stukken)
 
 
+GEEN_ANTWOORD = "GEEN ANTWOORD:"
+
 GRONDSLAG_REGEL = """
 
 BEWIJSMATERIAAL UIT DE CODE. Hieronder staat de echte broncode bij dit
 onderwerp. Doe GEEN technische bewering (dit werkt wel/niet, dit komt door X,
-dit ondersteunen we wel/niet) die daar niet in terug te vinden is. Weet je het
-niet, schrijf dan dat je het nakijkt en erop terugkomt. Liever een open punt dan
-een verzonnen oorzaak: een verkeerde uitleg kost het vertrouwen van de klant.
+dit ondersteunen we wel/niet) die daar niet in terug te vinden is.
+
+Staat het antwoord er WEL in, geef het dan ook concreet: zeg wat er gebeurt en
+wanneer, niet dat je het gaat nakijken. Hij heeft een feitelijke vraag gesteld
+en het antwoord ligt hier voor je.
+
+Staat het antwoord er NIET in, schrijf dan GEEN mail. Geef in plaats daarvan
+precies één regel terug, en verder niets:
+
+    {marker} <de vraag die Daniel moet beantwoorden, in één zin>
+
+Dus niet "ik kijk het even na en kom erop terug". Dat is drie dagen stilte voor
+de klant en drie dagen niks voor Daniel. Deze ene regel legt de vraag bij hem
+neer op het moment dat hij ontstaat.
 
 """
+
+
+def _geen_antwoord(tekst: str) -> str | None:
+    """De vraag die het model niet kon beantwoorden, of None."""
+    for regel in (tekst or "").splitlines():
+        schoon = regel.strip().lstrip("*# ").strip()
+        if schoon.upper().startswith(GEEN_ANTWOORD):
+            return schoon[len(GEEN_ANTWOORD):].strip() or "(geen vraag meegegeven)"
+    return None
 
 
 def _slim_concept(lead: dict, body: str, draad: str, afsluiting: str,
