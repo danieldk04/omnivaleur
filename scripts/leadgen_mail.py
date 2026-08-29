@@ -2246,7 +2246,7 @@ Dus niet "ik kijk het even na en kom erop terug". Dat is drie dagen stilte voor
 de klant en drie dagen niks voor Daniel. Deze ene regel legt de vraag bij hem
 neer op het moment dat hij ontstaat.
 
-"""
+""".format(marker=GEEN_ANTWOORD)
 
 
 def _geen_antwoord(tekst: str) -> str | None:
