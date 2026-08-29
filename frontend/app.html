@@ -3502,6 +3502,14 @@ async function startCheckout() {
     const raw = await res.text();
     let data = {};
     try { data = raw ? JSON.parse(raw) : {}; } catch {}
+    // Er loopt al een abonnement. Niet nog een betaalpagina openen — dat is
+    // precies hoe iemand per ongeluk twee keer per maand betaalt.
+    if (data.already_subscribed) {
+      alert('You already have an active subscription — you will not be charged twice. Opening your billing settings.');
+      if (data.url) { window.location.href = data.url; return; }
+      btns.forEach(b => { b.textContent = 'Manage subscription'; b.disabled = false; });
+      return;
+    }
     if (data.url) { window.location.href = data.url; return; }
     alert(`Could not start checkout (${res.status}): ${data.detail || raw.slice(0, 300) || 'no response body'}`);
   } catch (e) {

@@ -159,6 +159,37 @@ async def billing_status(user=Depends(get_current_user_full)):
                 "access_allowed": True, "grace_ends_at": None, "grace_days_left": None}
 
 
+# Welke Stripe-statussen tellen als "loopt al". incomplete hoort erbij: dat is een
+# betaling die nog onderweg is (SEPA-incasso duurt dagen), en juist in dat gat
+# klikte de klant nog eens op de knop.
+_LOPENDE_STATUSSEN = {"active", "trialing", "past_due", "unpaid", "incomplete"}
+
+
+def bestaand_abonnement(customer_id: str | None) -> str | None:
+    """Het id van een al lopend abonnement van deze klant, of None.
+
+    Bewust bij Stripe navragen en niet in onze eigen tabel kijken: die kent maar
+    één abonnementsnummer per gebruiker en wordt pas door de webhook bijgewerkt.
+    Precies in de uren tussen betalen en de webhook zag onze database dus nog
+    niets, terwijl er bij Stripe al een abonnement liep.
+    """
+    if not customer_id:
+        return None
+    try:
+        bestaand = stripe.Subscription.list(customer=customer_id, status="all", limit=100)
+    except Exception:
+        # Kan Stripe het niet zeggen, dan blokkeren we het afrekenen niet: iemand
+        # die nog niets heeft mag nooit stranden op een storing bij het navragen.
+        logger.exception("Kon bestaande abonnementen niet ophalen voor %s", customer_id)
+        return None
+    for sub in (bestaand.data or []):
+        status = sub.get("status") if isinstance(sub, dict) else getattr(sub, "status", None)
+        if status in _LOPENDE_STATUSSEN:
+            sub_id = sub.get("id") if isinstance(sub, dict) else getattr(sub, "id", None)
+            return sub_id
+    return None
+
+
 @router.post("/checkout")
 def create_checkout(user=Depends(get_current_user_full)):
     if not settings.stripe_secret_key or not settings.stripe_price_id:
@@ -175,6 +206,37 @@ def create_checkout(user=Depends(get_current_user_full)):
     # service-role sleutel. Gevolg: iedere eerste betaalpoging klapte er hier op
     # stuk, nog voordat Stripe in zicht kwam.
     customer_id = sub.get("stripe_customer_id")
+
+    # NOOIT TWEE ABONNEMENTEN OP DEZELFDE KLANT.
+    #
+    # Er zat geen enkele rem op deze knop. Wie al betaalde en nog eens op
+    # "Activate Pro" drukte, kreeg een tweede abonnement bij dezelfde klant —
+    # en dus elke maand twee keer 19,99 van dezelfde rekening. Onze eigen tabel
+    # onthoudt maar één nummer, dus het eerste abonnement liep onzichtbaar door.
+    # Gemeten geval 24-08-2026 (zilverwebsite.nl): twee abonnementen binnen drie
+    # uur, twee SEPA-machtigingen op dezelfde rekening, MRR 39,98 in plaats van
+    # 19,99. Ontdekt doordat de klant het zelf meldde, niet door ons.
+    #
+    # Loopt er al een, dan sturen we hem naar het klantportaal in plaats van naar
+    # een nieuwe betaalpagina: daar kan hij wél doen wat hij waarschijnlijk wilde
+    # (betaalgegevens wijzigen, opzeggen, factuur bekijken).
+    lopend = bestaand_abonnement(customer_id)
+    if lopend:
+        logger.info("Checkout geweigerd voor %s: abonnement %s loopt al", user_id, lopend)
+        try:
+            portal = stripe.billing_portal.Session.create(
+                customer=customer_id,
+                return_url=f"{settings.app_url}/app.html",
+            )
+            portal_url = portal.url if not isinstance(portal, dict) else portal.get("url")
+        except Exception:
+            logger.exception("Kon het klantportaal niet openen voor %s", user_id)
+            portal_url = None
+        return {
+            "already_subscribed": True,
+            "url": portal_url,
+            "detail": "Je hebt al een lopend abonnement.",
+        }
 
     # De proefperiode loopt al vanaf de eerste login; hier nog eens 7 dagen
     # meegeven zou hem verdubbelen voor wie halverwege upgradet. Stripe wil een
