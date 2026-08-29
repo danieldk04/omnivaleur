@@ -1290,3 +1290,16 @@ afsluitcode 0. Er zit dus geen probleem in de omgeving van launchd — geen
 sleutelhanger, geen HOME, geen PATH. De limiet van 12:20–13:10 was een tijdelijke
 gebruikslimiet die vanzelf weer openging. Vandaar de herstelpauze hierboven in
 plaats van definitief stoppen.
+
+### 29-08-2026 — `marktplaats-import-foutmelding` was hetzelfde als `marktplaats-niet-ingelogd-melding`
+
+Egbert (info@papas-plectrums.nl, `bcdf9aa4`) meldde op 28-08: steeds dezelfde
+foutcode bij importeren, hoewel hij is ingelogd. Nagemeten in het
+opdrachtenlogboek (tabel `jobs`) in plaats van aangenomen: zijn scans van
+27-08 20:35 tot 28-08 10:38 kregen stuk voor stuk "You don't appear to be
+signed in" en daarna "zet Admarkt aan" — exact de reeks die hierboven onder
+`marktplaats-niet-ingelogd-melding` al is uitgezocht en om 12:06 vandaag
+gerepareerd (`_rechtgezette_foutmelding` in `backend/api/jobs.py`, commit
+`089d506`). Sinds zijn geslaagde scan op 28-08 14:25:37 is er geen nieuwe
+mislukking meer bij hem geweest. Twee mailtjes, één storing, één fix — niets
+aan de code gewijzigd, teruggemeld met `opgelost`.
