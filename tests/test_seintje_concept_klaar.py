@@ -95,3 +95,32 @@ def test_elk_concept_komt_langs_het_seintje():
 def test_terugkoppeling_meldt_de_developer():
     bron = (WORTEL / "scripts" / "mail_analyse.py").read_text()
     assert 'bron="klantenservice + developer"' in bron
+
+
+def test_resend_krijgt_elke_ontvanger_apart(L, monkeypatch):
+    """Twee adressen als één tekst weigert Resend met een 422 — en dan komt het
+    seintje nooit aan, terwijl de fout alleen in het serverlog staat."""
+    from email.message import EmailMessage
+
+    verstuurd = {}
+
+    class NepAntwoord:
+        status_code = 200
+        text = "ok"
+
+    def nep_post(url, headers=None, json=None, timeout=None):
+        verstuurd.update(json)
+        return NepAntwoord()
+
+    import httpx
+    monkeypatch.setattr(httpx, "post", nep_post)
+    monkeypatch.setenv("RESEND_API_KEY", "re_test")
+
+    msg = EmailMessage()
+    msg["From"] = "Klantenservice <info@omnivaleur.nl>"
+    msg["To"] = "danieldekoning66@gmail.com, info@revaleur.com"
+    msg["Subject"] = "Klaar om te versturen: Vintage Freaks"
+    msg.set_content("tekst")
+    L._resend_stuur(msg)
+
+    assert verstuurd["to"] == ["danieldekoning66@gmail.com", "info@revaleur.com"]

@@ -977,9 +977,14 @@ def resend_mag_versturen() -> bool:
 
 def _resend_stuur(msg: EmailMessage) -> None:
     import httpx
+    # ELKE ONTVANGER APART. Resend wil een lijst met losse adressen; "a@x, b@y"
+    # als één tekst weigert hij met een 422. Alle berichten aan Daniel zelf gaan
+    # naar twee adressen (ALARM_NAAR), dus precies de seintjes over wat er
+    # klaarligt kwamen zo nooit aan — en de fout stond alleen in het serverlog.
+    ontvangers = [a.strip() for a in str(msg["To"] or "").split(",") if a.strip()]
     lading = {
         "from": msg["From"],
-        "to": [msg["To"]],
+        "to": ontvangers,
         "subject": msg["Subject"],
         "text": msg.get_content(),
     }
