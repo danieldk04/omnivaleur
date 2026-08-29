@@ -13,6 +13,29 @@ controle — zoek je eerst uit wat er is veranderd sinds jouw vorige sessie:
 1. `git log --since="30 hours ago" --name-only`, en lees de diff van alles wat je
    onderwerp raakt. Bij een langere pauze: sinds je laatste sessie.
 2. De laatste toevoegingen onder aan `docs/team-notes.md`.
+3. Je eigen postvak van de klantenservice:
+
+   ```bash
+   python3 scripts/mail_analyse.py bugs
+   ```
+
+   Dat is geen extraatje. De rolverdeling ligt vast (zie `docs/team-notes.md`):
+   Daniel is CEO, de mailagent is de klantenservicemedewerker, jij bent de
+   developer. Wat klanten melden komt via die lijst bij jou terecht en niet via
+   Daniel. Staat er `MOET ZEKER` bij, dan is dat het seintje dat die storing met
+   zekerheid gerepareerd moet worden — een klant is er boos over, dreigt te
+   stoppen, of het overkomt meerdere mensen.
+
+   Heb je iets gerepareerd, meld dat dan terug in dezelfde lijn:
+
+   ```bash
+   python3 scripts/mail_analyse.py opgelost <sleutel> "wat er nu anders is, in gewone taal"
+   ```
+
+   Daarmee weet de klantenservice het: iedereen die het meldde krijgt bericht,
+   en elk nieuw concept over dat onderwerp zegt voortaan wat jij hebt vastgelegd
+   in plaats van te gokken. Overslaan betekent dat de klant nooit hoort dat zijn
+   melding iets heeft opgeleverd.
 
 Let op de commits met de tekst "auto: update ...": die komen van de auto-push-hook
 en bevatten echt werk achter een nietszeggende titel. De auteursnaam zegt niets

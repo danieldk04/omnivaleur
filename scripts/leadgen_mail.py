@@ -2180,6 +2180,15 @@ def _slim_concept(lead: dict, body: str, draad: str, afsluiting: str,
     # De broncode bij dit onderwerp erbij, zodat het model niets kan beweren wat
     # er niet staat. Zie GRONDSLAG_BESTANDEN hierboven.
     bewijs = _grondslag(eigen)
+    # En wat de developer over precies deze storing heeft vastgelegd: bekend,
+    # met voorrang, of gerepareerd met de uitleg erbij. Dat stuurt het concept —
+    # anders schrijft de klantenservice "ik kijk ernaar" terwijl het gisteren is
+    # opgelost, of belooft hij iets wat niemand aan het bouwen is.
+    try:
+        import mail_analyse
+        stand = mail_analyse.stand_van_de_storingen(eigen)
+    except Exception:  # noqa: BLE001 — zonder deze kennis nog steeds een antwoord
+        stand = ""
     ads = lead.get("ads")
     over_hem = "\n".join(filter(None, [
         f"Bedrijf: {_bedrijfsnaam(lead)}" if _bedrijfsnaam(lead) else "",
@@ -2191,6 +2200,7 @@ def _slim_concept(lead: dict, body: str, draad: str, afsluiting: str,
         + (f"Eerder in deze draad, van Daniel:\n\n{draad[:4000]}\n\n" if draad else "")
         + (f"Wat we van hem weten:\n{over_hem}\n\n" if over_hem else "")
         + (GRONDSLAG_REGEL + bewijs + "\n\n" if bewijs else "")
+        + (stand + "\n\n" if stand else "")
         + f"Sluit af met exact dit blok:\n{afsluiting}\n\nSchrijf het antwoord."
     )
     try:
@@ -3712,6 +3722,27 @@ def tick(args) -> None:
                       f"→ opvolging klaargezet in je concepten")
         except Exception as e:  # noqa: BLE001
             print(f"  (warme opvolging mislukt: {e})")
+
+        # DE KLANTENSERVICEMEDEWERKER HOUDT BIJ WAT ER SPEELT.
+        #
+        # Alle post, in- en uitgaand, wordt gelezen en ingedeeld; storingen worden
+        # gebundeld tot patronen; wat echt bij Daniel hoort komt op zijn lijst in
+        # het dashboard. En wie een storing meldde die inmiddels gerepareerd is,
+        # krijgt daar bericht over. Zie scripts/mail_analyse.py en de rolverdeling
+        # in docs/team-notes.md: Daniel hoort geen mail te lezen om te weten wat
+        # er speelt, en de klantenservice en de developer praten onderling.
+        try:
+            import mail_analyse
+            uitkomst = mail_analyse.lezen(argparse.Namespace())
+            if uitkomst.get("gelezen"):
+                print(f"{datetime.now():%d-%m %H:%M} — {uitkomst['gelezen']} bericht(en) "
+                      f"beoordeeld, {uitkomst['escalaties']} voor jou")
+            terug = mail_analyse.bericht_over_reparaties()
+            if terug:
+                print(f"{datetime.now():%d-%m %H:%M} — {terug} klant(en) bericht over "
+                      f"een reparatie klaargezet")
+        except Exception as e:  # noqa: BLE001 — mag de ronde nooit stoppen
+            print(f"  (post niet beoordeeld: {e})")
 
         try:
             _stapel_melden(plan)

@@ -885,3 +885,53 @@ def social(ververs: bool = False, user=Depends(get_current_user_full)):
         return {"gekoppeld": False, "reden": f"Ophalen mislukt: {type(e).__name__}"}
     data["tijd"] = _nu().isoformat()
     return _in_cache("social", data)
+
+
+# ---------------------------------------------------------------------------
+# De klantenservicemedewerker. Wat er in de post speelt, wat er voor Daniel
+# ligt, en welke storingen terugkomen. Gevuld door scripts/mail_analyse.py.
+#
+# WAAROM DIT ER IS. De rolverdeling ligt vast (zie docs/team-notes.md): Daniel is
+# CEO en hoort geen mail te lezen om te weten wat er speelt. Dit scherm is wat
+# hij in plaats daarvan opent.
+# ---------------------------------------------------------------------------
+@router.get("/klantenservice")
+def klantenservice(user=Depends(get_current_user_full)):
+    _eigenaar(user)
+    analyses = _leadgen_lezen("mail_analyse")
+    if analyses is None:
+        return {"gekoppeld": False,
+                "reden": "Nog geen beoordeelde post (leadgen_opslag/mail_analyse)"}
+    signalen = _leadgen_lezen("bug_signalen") or {}
+    lijst = _leadgen_lezen("mail_escalaties") or []
+
+    grens = (datetime.now(timezone.utc) - timedelta(days=14)).isoformat()
+    recent = [r for r in analyses.values() if (r.get("wanneer") or "") >= grens]
+
+    def tel(veld: str, waar=lambda r: True) -> dict:
+        uit: dict[str, int] = {}
+        for r in recent:
+            if not waar(r):
+                continue
+            k = r.get(veld) or "overig"
+            uit[k] = uit.get(k, 0) + 1
+        return dict(sorted(uit.items(), key=lambda kv: -kv[1])[:12])
+
+    binnen = [r for r in recent if r.get("richting") == "in"]
+    return {
+        "gekoppeld": True,
+        "berichten_14d": len(recent),
+        "binnen_14d": len(binnen),
+        "uit_14d": len(recent) - len(binnen),
+        "van_klanten": sum(1 for r in binnen if r.get("klant")),
+        "themas": tel("thema", lambda r: r.get("richting") == "in"),
+        "stemming": tel("stemming", lambda r: r.get("richting") == "in"),
+        "escalaties": [e for e in lijst if not e.get("afgehandeld")][-25:],
+        "storingen": sorted(
+            [{"sleutel": k, "melders": len(v.get("melders") or []),
+              "omschrijving": v.get("omschrijving", ""), "status": v.get("status", "open"),
+              "laatst": (v.get("laatst") or "")[:10],
+              "uitleg": v.get("uitleg", "")}
+             for k, v in signalen.items()],
+            key=lambda s: (s["status"] != "open", -s["melders"]))[:25],
+    }

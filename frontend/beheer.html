@@ -220,6 +220,18 @@ button.stil { background: transparent; border: 1px solid var(--rand); color: var
 
   <!-- ─────────────────────────────── MARKETING -->
   <section id="tab-marketing" hidden>
+    <h2>Klantenservice</h2>
+    <div id="ks-escalaties"></div>
+    <div class="raster" id="ks-cijfers"></div>
+    <div class="twee" style="margin-top:14px">
+      <div class="kaart"><div class="label">Waar de post over gaat</div>
+        <div class="uitleg">Binnengekomen berichten van de afgelopen twee weken.</div>
+        <table id="ks-themas"></table></div>
+      <div class="kaart"><div class="label">Storingen die terugkomen</div>
+        <div class="uitleg">Doorgegeven aan de developer. Zodra iets gerepareerd is, krijgen de melders vanzelf bericht.</div>
+        <table id="ks-storingen"></table></div>
+    </div>
+
     <h2>Koude mail</h2>
     <div class="raster" id="mail-cijfers"></div>
     <div id="mail-fouten"></div>
@@ -670,6 +682,46 @@ async function haalKern() {
   catch (e) { el('stip').classList.add('uit');
               el('vers').textContent = 'niet bijgewerkt: ' + e.message; }
 }
+function toonKlantenservice(k) {
+  if (!k.gekoppeld) {
+    el('ks-cijfers').innerHTML = `<div class="leeg">${k.reden || 'Nog geen post beoordeeld.'}</div>`;
+    return;
+  }
+  const uitleg = { geld: 'gaat over geld', vertrek: 'dreigt te stoppen',
+                   storing_bij_meerderen: 'meerdere mensen, zelfde storing',
+                   kan_niet_onderbouwen: 'hier heb ik geen antwoord op' };
+  el('ks-escalaties').innerHTML = (k.escalaties || []).length
+    ? '<div class="attentie let"><b>Dit ligt bij jou:</b><ul>'
+      + k.escalaties.map(e => `<li>${veilig(e.adres)} — ${veilig(uitleg[e.escalatie] || e.escalatie)}<br>`
+                              + `<span class="uitleg">${veilig(e.samenvatting || '')}</span></li>`).join('')
+      + '</ul></div>'
+    : '<div class="attentie op">Niets wat jouw aandacht nodig heeft.</div>';
+
+  el('ks-cijfers').innerHTML =
+      kaart('Post (14 dgn)', getal(k.berichten_14d), `${getal(k.binnen_14d)} in, ${getal(k.uit_14d)} uit`)
+    + kaart('Van klanten', getal(k.van_klanten), 'de rest zijn leads')
+    + kaart('Ligt bij jou', getal((k.escalaties || []).length), 'alleen wat ik niet zelf kan',
+            (k.escalaties || []).length ? 'let' : 'op')
+    + kaart('Open storingen', getal((k.storingen || []).filter(s => s.status === 'open').length),
+            'doorgegeven aan de developer');
+
+  el('ks-themas').innerHTML =
+    Object.entries(k.themas || {}).map(([t, n]) =>
+      `<tr><td>${veilig(t.replace(/-/g, ' '))}</td><td class="num">${n}</td></tr>`).join('')
+    || '<tr><td class="leeg">Nog niets.</td></tr>';
+
+  el('ks-storingen').innerHTML =
+    (k.storingen || []).map(s =>
+      `<tr><td>${veilig(s.sleutel.replace(/-/g, ' '))}<br><span class="uitleg">${veilig(s.omschrijving || '')}`
+      + `${s.status === 'opgelost' && s.uitleg ? ' — opgelost: ' + veilig(s.uitleg) : ''}</span></td>`
+      + `<td class="num">${s.melders}×</td>`
+      + `<td class="num">${s.status === 'opgelost' ? 'klaar' : 'open'}</td></tr>`).join('')
+    || '<tr><td class="leeg">Geen storingen gemeld.</td></tr>';
+}
+
+async function haalKlantenservice() {
+  try { toonKlantenservice(await vraag('/api/beheer/klantenservice')); } catch (e) {}
+}
 async function haalGroei() { try { toonGroei(await vraag('/api/beheer/groei')); } catch (e) {} }
 async function haalWebsite() { try { toonWebsite(await vraag('/api/beheer/website')); } catch (e) {} }
 async function haalSocial(ververs) {
@@ -695,7 +747,7 @@ function start() {
     const knop = document.querySelector(`#tabs button[data-tab="${bewaard}"]`);
     if (knop) knop.click();
   }
-  haalKern(); haalGroei(); haalWebsite(); haalSocial(false);
+  haalKern(); haalGroei(); haalWebsite(); haalSocial(false); haalKlantenservice();
   // Elke minuut de snelle cijfers, elk kwartier de Google-cijfers. Die laatste
   // hebben server-side toch tien minuten cache en dagquota.
   setInterval(haalKern, 60000);

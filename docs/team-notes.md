@@ -1085,3 +1085,48 @@ en gaat die als bewijsmateriaal mee, met de harde regel dat er geen technische
 bewering mag staan die daar niet in terug te vinden is. Zie
 `GRONDSLAG_BESTANDEN` — nieuwe onderwerpen vragen om een regel daarbij, niet om
 het model zelf te laten raden waar het moet kijken.
+
+### 29-08-2026 — De klantenservice houdt zelf bij wat er speelt, en praat met de developer
+
+Uitwerking van de rolverdeling hierboven. Nieuw: `scripts/mail_analyse.py`,
+aangehaakt in de tien-minutenronde van `leadgen_mail.py tick`.
+
+**Alle post wordt gelezen, in- én uitgaand.** Per bericht: thema, stemming, is
+het een storing, is het een klant, en één zin samenvatting. Opgeslagen in
+`leadgen_opslag` onder `mail_analyse` — bewust géén nieuwe tabel, want dat zou
+een handmatige migratie in Supabase vragen en Daniels tijd is juist wat dit moet
+besparen. Laatste 600 berichten, 25 per beurt.
+
+**Wat bij Daniel hoort, en niet meer dan dat.** Door hem zelf gekozen op
+29-08-2026: geld, een klant die dreigt te stoppen, een storing bij meerdere
+mensen, en iets wat de agent niet kan onderbouwen. Dat staat als lijst bovenaan
+Marketing → Klantenservice in het beheerdashboard (`GET /api/beheer/klantenservice`).
+Alleen geld en vertrek zijn spoed en krijgen ook een mailtje; de rest niet, want
+daar wil hij geen post voor. Ook gekozen: **alles blijft concept**, er gaat nooit
+iets automatisch de deur uit.
+
+**De lijn klantenservice → developer.** Storingen worden gebundeld op een vaste
+sleutel. `python3 scripts/mail_analyse.py bugs` is het postvak van de developer;
+dit staat nu als vaste stap 3 in `CLAUDE.md`, naast de commits en deze notities.
+Staat er `⚠ MOET ZEKER` bij, dan is dat het seintje dat het met zekerheid
+gerepareerd moet worden — een klant is er boos over, dreigt te stoppen, of het
+overkomt meerdere mensen.
+
+**De lijn developer → klantenservice → klant.** Na een reparatie:
+
+```
+python3 scripts/mail_analyse.py opgelost <sleutel> "wat er nu anders is"
+```
+
+Twee dingen gebeuren dan. Iedereen die het meldde krijgt een concept met die
+uitleg (via `_zet_concept_klaar`, dus langs het slot — nooit een tweede concept
+voor wie er al een heeft liggen). En `stand_van_de_storingen()` legt vanaf dat
+moment aan élk nieuw concept over dat onderwerp op wat er echt is vastgelegd:
+bekend / met voorrang / gerepareerd-met-uitleg. Zonder die laatste stap schrijft
+de klantenservice "ik kijk ernaar" terwijl het gisteren gerepareerd is, of
+belooft hij iets wat niemand aan het bouwen is.
+
+Vastgelegd in `tests/test_mail_klantenservice.py` (18 tests).
+
+**Nagemeten:** 14 controles over 21 minuten na de reparatie van vanochtend, nul
+dubbele concepten.
