@@ -34,18 +34,18 @@ def test_lederhose_wordt_geen_korte_broek():
 @pytest.mark.parametrize("titel", [
     "Vintage kleed dames maat 38",
     "Zwart kleedje dames",
+    "Perzisch kleed 200x300 dames",
 ])
-def test_vlaams_kleed_is_een_jurk(titel):
-    assert _infer_attributes(titel, "").get("category") == "jurken casual"
+def test_kleed_wordt_nooit_geraden(titel):
+    """In Vlaanderen is een kleed een jurk, in Nederland een vloerkleed. Wij weten
+    niet welke de verkoper bedoelt, dus vullen we niets in — een leeg veld vraagt
+    om aandacht, een fout veld niet."""
+    assert _infer_attributes(titel, "").get("category") is None
 
 
-@pytest.mark.parametrize("titel", [
-    "Perzisch vloerkleed 200x300 dames slaapkamer",
-    "Linnen tafelkleed dames wit",
-])
-def test_vloerkleed_en_tafelkleed_blijven_buiten_de_kledingregel(titel):
-    """Hele woorden, anders wordt elk tapijt een jurk."""
-    assert _infer_attributes(titel, "").get("category") != "jurken casual"
+def test_het_model_krijgt_beide_betekenissen_mee():
+    bron = (WORTEL / "backend/api/imports.py").read_text()
+    assert "In Flemish" in bron and "means a RUG" in bron
 
 
 def test_de_categorie_staat_in_alle_lijsten():

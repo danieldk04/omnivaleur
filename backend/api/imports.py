@@ -171,10 +171,13 @@ _CATEGORY_RULES = [
       "jas", "jassen", "winterjas", "zomerjas", "regenjas"),
      {"heren": "heren jassen", "dames": "jassen", "unisex": "unisex jassen"}),
     (("skirt", "rok"), {"dames": "rokken"}),
-    # "kleed" en "kleedje" zijn Vlaams voor jurk (De Juiste Toon, 30-08-2026:
-    # een kleed werd een tas). Hele woorden, dus een tafelkleed of vloerkleed
-    # blijft hier buiten.
-    (("dress", "jurk", "jurkje", "kleed", "kleedje"), {"dames": "jurken casual"}),
+    # "kleed" staat hier BEWUST NIET bij. In Vlaanderen is een kleed een jurk, in
+    # Nederland een vloerkleed — en wij weten niet welk van de twee de verkoper
+    # bedoelt. Een vaste regel zou dus de helft van de gevallen fout indelen, en
+    # dat is erger dan geen indeling: een leeg veld vraagt om aandacht, een fout
+    # veld niet. Het model krijgt beide betekenissen uitgelegd en moet bij twijfel
+    # "low" teruggeven, waarna er niets wordt ingevuld. Zie _classify_with_claude.
+    (("dress", "jurk", "jurkje"), {"dames": "jurken casual"}),
     (("blouse", "tunic", "tuniek"), {"dames": "blouses"}),
 ]
 
@@ -450,8 +453,12 @@ async def _classify_with_claude(title: str | None, description: str | None,
             "  dirndl, Tyrolean outfits, carnival and Halloween outfits, cosplay and mascot\n"
             "  suits all go in a verkleedkleding category, never in shorts, trousers, jeans\n"
             "  or dresses.\n"
-            "- Dutch/Flemish: a \"kleed\" or \"kleedje\" is a DRESS, not a bag and not a rug.\n"
-            "  A rug is a \"vloerkleed\" or \"tapijt\"; a tablecloth is a \"tafelkleed\".\n"
+            "- The Dutch word \"kleed\" is ambiguous and must NEVER be guessed. In Flemish\n"
+            "  it means a DRESS; in the Netherlands it usually means a RUG (vloerkleed,\n"
+            "  tapijt). Decide only if the rest of the text makes it obvious (a size like\n"
+            "  200x300 or the word tapijt means a rug; a clothing size, a brand of clothing\n"
+            "  or words like mouwen/taille mean a dress). If it stays unclear, return\n"
+            '  confidence "low" so nothing is filled in. It is never a bag.\n'
             '- The "sieraden" branch covers jewellery, watches, bags, suitcases, wallets\n'
             "  and sunglasses. Pick it for anything worn or carried as an accessory.\n"
             '  When you pick a "sieraden" category, gender must be "sieraden" too.\n\n'
