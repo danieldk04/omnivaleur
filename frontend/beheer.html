@@ -132,7 +132,7 @@ button.stil { background: transparent; border: 1px solid var(--rand); color: var
     <button data-tab="klanten">Klanten</button>
     <button data-tab="website">Website</button>
     <button data-tab="marketing">Marketing</button>
-    <button data-tab="systeem">Systeem</button>
+    <button data-tab="systeem">Werkplaats</button>
   </nav>
 </header>
 
@@ -289,7 +289,25 @@ button.stil { background: transparent; border: 1px solid var(--rand); color: var
   </section>
 
   <!-- ─────────────────────────────── SYSTEEM -->
+  <!-- ─────────────────────────────── WERKPLAATS
+       Wat de developer doet, voor wie en waarom. Dit verving het oude tabblad
+       Systeem, dat alleen losse tellers liet zien. De mailagent en Claude Code
+       praten onderling; dit is het venster waardoor Daniel dat kan volgen
+       zonder het te hoeven vragen. De machinetellers staan onderaan. -->
   <section id="tab-systeem" hidden>
+    <h2>Waar ik nu aan werk</h2>
+    <div id="wp-bezig"></div>
+
+    <div class="twee" style="margin-top:14px">
+      <div class="kaart"><div class="label">Wacht op mij</div>
+        <div class="uitleg">Met voorrang, de drukste storing eerst.</div>
+        <div id="wp-wachtrij"></div></div>
+      <div class="kaart"><div class="label">Afgehandeld</div>
+        <div class="uitleg">Wat ik terugmeldde aan de klantenservice, en wie daar bericht over kreeg.</div>
+        <div id="wp-gedaan"></div></div>
+    </div>
+
+    <h2>Draait de machine</h2>
     <div class="raster" id="techniek"></div>
   </section>
 </main>
@@ -744,6 +762,58 @@ async function haalSocial(ververs) {
   catch (e) { doel.innerHTML = '<div class="leeg">Ophalen mislukt.</div>'; }
 }
 
+// ── Werkplaats ───────────────────────────────────────────────────────────
+// Eén vorm voor elke storing, of hij nu wacht of klaar is: wie het meldde,
+// waarom het voorrang kreeg, en wat eruit is gekomen.
+function storingRij(r) {
+  const regel = (kop, waarde) => waarde
+    ? `<div class="diff"><b>${kop}</b><span>${veilig(waarde)}</span></div>` : '';
+  return `<div class="leerrij">
+      <div class="patroon-kop"><span>${veilig(r.sleutel.replace(/-/g, ' '))}</span>
+        <b>${veilig(r.klaar_op || r.laatst || '')}</b></div>
+      <div class="uitleg" style="margin:4px 0 6px">${veilig(r.omschrijving || '')}</div>
+      ${regel('Gemeld door', (r.melders || []).join(', '))}
+      ${regel('Voorrang', (r.waarom || []).join(' · '))}
+      ${regel(r.status === 'afgewezen' ? 'Niet gerepareerd' : 'Wat er nu anders is', r.uitleg)}
+      ${r.status === 'opgelost'
+        ? regel('Klant bericht', r.bericht_naar ? `ja, ${r.bericht_naar} melder(s)` : 'concept staat nog klaar')
+        : ''}
+      ${regel('Sessie gestopt', r.sessie_mislukt)}
+    </div>`;
+}
+
+function toonWerkplaats(w) {
+  if (!w.gekoppeld) {
+    el('wp-bezig').innerHTML = `<div class="leeg">${veilig(w.reden || 'Nog niets doorgegeven.')}</div>`;
+    return;
+  }
+  const st = w.starter || {}, b = w.bezig;
+  // Twee dingen kunnen de hele machine stilzetten, en allebei zijn ze
+  // onzichtbaar zonder deze regels: geen toegang tot de projectmap, en een
+  // sessie die meteen afslaat (op 29-08-2026 drie keer op de maandlimiet).
+  const alarm = st.waarschuwing || w.sessie_probleem;
+  el('wp-bezig').innerHTML =
+    (alarm ? `<div class="attentie let" style="margin-bottom:12px">
+        <b>Er wordt niets meer vanzelf opgepakt.</b><br>
+        <span class="uitleg">${veilig(alarm)}</span></div>` : '')
+    + (b
+      ? `<div class="kaart"><div class="label">Bezig sinds ${veilig(b.opgepakt_op)} — ${getal(b.minuten)} min</div>
+           ${storingRij(b)}</div>`
+      : `<div class="kaart"><div class="label">Niets onder handen</div>
+           <div class="uitleg" style="margin:6px 0 0">${(w.wachtrij || []).length
+             ? getal(w.wachtrij.length) + ' storing(en) wachten; de volgende start binnen tien minuten.'
+             : 'Geen storing met voorrang open.'} Laatste ronde: ${veilig(st.laatste_ronde || 'nooit')}.</div></div>`);
+
+  el('wp-wachtrij').innerHTML = (w.wachtrij || []).map(storingRij).join('')
+    || `<div class="leeg">Niets met voorrang. ${getal(w.overig_open)} andere melding(en) staan open.</div>`;
+  el('wp-gedaan').innerHTML = (w.gedaan || []).map(storingRij).join('')
+    || '<div class="leeg">Nog niets afgehandeld.</div>';
+}
+
+async function haalWerkplaats() {
+  try { toonWerkplaats(await vraag('/api/beheer/werkplaats')); } catch (e) {}
+}
+
 document.getElementById('tabs').addEventListener('click', (e) => {
   const knop = e.target.closest('button[data-tab]');
   if (!knop) return;
@@ -760,10 +830,12 @@ function start() {
     const knop = document.querySelector(`#tabs button[data-tab="${bewaard}"]`);
     if (knop) knop.click();
   }
-  haalKern(); haalGroei(); haalWebsite(); haalSocial(false); haalKlantenservice();
+  haalKern(); haalGroei(); haalWebsite(); haalSocial(false); haalKlantenservice(); haalWerkplaats();
   // Elke minuut de snelle cijfers, elk kwartier de Google-cijfers. Die laatste
   // hebben server-side toch tien minuten cache en dagquota.
   setInterval(haalKern, 60000);
+  // De werkplaats verandert per sessie, niet per seconde.
+  setInterval(haalWerkplaats, 120000);
   setInterval(haalGroei, 300000);
   setInterval(haalWebsite, 900000);
 }

@@ -16,6 +16,11 @@ set -u
 
 REPO=~/Documents/omnivaleur
 LOG=~/Library/Application\ Support/omnivaleur/dev-starter.log
+# launchd geeft een kaal PATH mee, zonder node. De sessie draait daardoor wel,
+# maar haar eigen hooks vallen om met "node: command not found" — zichtbaar in
+# de logboeken van 29-08-2026. Dit zet de gebruikelijke plekken erbij.
+export PATH=/opt/homebrew/bin:/usr/local/bin:$HOME/.local/bin:$PATH
+
 PYTHON=/Library/Frameworks/Python.framework/Versions/3.13/bin/python3
 [[ -x $PYTHON ]] || PYTHON=$(command -v python3)
 

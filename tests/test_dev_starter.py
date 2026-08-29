@@ -42,8 +42,10 @@ def gestart(monkeypatch):
     lijst: list[str] = []
 
     def nep(sleutel, signaal, staat):
+        from datetime import datetime, timezone
         lijst.append(sleutel)
-        staat[sleutel] = {"status": "gestart", "pid": 1, "gestart": "2026-08-29T10:00:00+00:00"}
+        staat[sleutel] = {"status": "gestart", "pid": 1, "log": "/dev/null",
+                          "gestart": datetime.now(timezone.utc).isoformat()}
         S._bewaar(staat)
         return True
 
@@ -182,3 +184,85 @@ def test_een_verse_hartslag_geeft_geen_waarschuwing(monkeypatch):
     monkeypatch.setattr(beheer, "_leadgen_lezen", lambda naam: nu)
     stand = beheer._starter_stand({"iets": {"status": "open", "moet_zeker": True}})
     assert stand["waarschuwing"] == ""
+
+
+# ── een sessie die niets opleverde ────────────────────────────────────────
+# Aanleiding 29-08-2026: drie sessies stopten binnen twee seconden op de
+# maandlimiet. Ze telden alle drie als "gedaan", vraten het dagmaximum op, en de
+# drie storingen stonden daarna als opgepakt te verstoffen. De reden stond
+# alleen in een logboek dat niemand opent.
+def _log(tmp_path, tekst):
+    pad = tmp_path / "sessie.log"
+    pad.write_text(tekst)
+    return str(pad)
+
+
+def test_de_maandlimiet_wordt_herkend(tmp_path):
+    reden = S._waarom_niets_geworden(_log(tmp_path,
+        "# sessie\n\nYou've hit your monthly spend limit · raise it at claude.ai\n"))
+    assert "maandlimiet" in reden
+
+
+def test_een_sessie_die_niets_deed_valt_ook_op(tmp_path):
+    """Ook zonder bekende foutzin: drie regels is geen gedane reparatie."""
+    assert S._waarom_niets_geworden(_log(tmp_path, "# sessie\n\nklaar\n"))
+
+
+def test_een_sessie_die_echt_werk_deed_is_geen_mislukking(tmp_path):
+    assert S._waarom_niets_geworden(_log(tmp_path, "\n".join(
+        [f"regel {i}: aan het werk" for i in range(40)]))) == ""
+
+
+def test_een_hookmelding_over_node_is_geen_mislukking(tmp_path):
+    """"node: not found" staat óók in het logboek van een geslaagde sessie."""
+    tekst = "\n".join([f"regel {i}" for i in range(40)]
+                      + ["SessionEnd hook failed: sh: node: command not found"])
+    assert S._waarom_niets_geworden(_log(tmp_path, tekst)) == ""
+
+
+def test_een_mislukte_sessie_geeft_de_storing_weer_vrij(kast, gestart, monkeypatch, tmp_path):
+    kast["bug_signalen"] = {"eentje": _signaal()}
+    monkeypatch.setattr(S, "_leeft", lambda pid: False)
+    monkeypatch.setattr(S, "_waarom_niets_geworden", lambda log: "De maandlimiet is bereikt.")
+    S.ronde()
+    assert gestart == ["eentje"]
+    S.ronde()          # pas nu is het proces weg en wordt het logboek gelezen
+    # De storing is nooit aangeraakt, dus hij hoort gewoon weer in de wachtrij.
+    staat = S._staat()
+    assert staat["eentje"]["mislukt"]
+    assert [k for k, _ in S._te_doen(kast["bug_signalen"], staat)] == ["eentje"]
+
+
+def test_een_mislukte_sessie_kost_geen_plek_van_de_dag(kast, monkeypatch):
+    from datetime import datetime, timezone
+    nu = datetime.now(timezone.utc).isoformat()
+    staat = {f"nr{i}": {"gestart": nu, "mislukt": "limiet"} for i in range(5)}
+    assert S._vandaag_gestart(staat) == 0
+    staat["echt"] = {"gestart": nu}
+    assert S._vandaag_gestart(staat) == 1
+
+
+def test_na_een_mislukking_wordt_er_niet_blindelings_doorgestart(kast, gestart, monkeypatch):
+    """De oorzaak ligt buiten dit script; blijven proberen levert alleen ruis op."""
+    kast["bug_signalen"] = {"een": _signaal(), "twee": _signaal()}
+    monkeypatch.setattr(S, "_leeft", lambda pid: False)
+    monkeypatch.setattr(S, "_waarom_niets_geworden", lambda log: "De maandlimiet is bereikt.")
+    S.ronde()
+    S.ronde()
+    assert len(gestart) == 1, "hij is na een mislukking gewoon doorgegaan"
+
+
+def test_het_dashboard_toont_waarom_er_niets_gebeurt(monkeypatch):
+    from backend.api import beheer
+    monkeypatch.setattr(beheer, "_eigenaar", lambda u: None)
+    monkeypatch.setattr(beheer, "_leadgen_lezen", lambda naam: {
+        "bug_signalen": {"eentje": {"status": "open", "moet_zeker": True,
+                                    "melders": ["a@x.nl"], "omschrijving": "kapot"}},
+        "dev_sessies": {"eentje": {"status": "mislukt", "gestart": "2026-08-29T12:20:00+00:00",
+                                   "mislukt": "De maandlimiet is bereikt."}},
+    }.get(naam))
+    w = beheer.werkplaats(user=None)
+    assert w["sessie_probleem"] == "De maandlimiet is bereikt."
+    assert w["bezig"] is None
+    assert w["wachtrij"][0]["sleutel"] == "eentje"
+    assert w["wachtrij"][0]["melders"] == ["a@x.nl"]

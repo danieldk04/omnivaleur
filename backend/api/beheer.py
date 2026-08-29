@@ -939,6 +939,112 @@ def klantenservice(user=Depends(get_current_user_full)):
     }
 
 
+# ---------------------------------------------------------------------------
+# De werkplaats. Wat de developer doet, voor wie, en waarom — plus de lijn
+# tussen de klantenservice en de developer, van melding tot bericht terug.
+#
+# WAAROM DIT ER IS. De rolverdeling ligt vast: de mailagent en Claude Code
+# praten onderling en storen Daniel alleen als het echt bij hem hoort. Dat werkt
+# alleen als hij kán zien wat die twee doen zonder het te vragen. Dit scherm is
+# dat venster; het verving het oude tabblad Systeem, dat alleen losse tellers
+# liet zien. Die tellers staan er nog, maar onderaan.
+# ---------------------------------------------------------------------------
+
+# Hoe lang een sessie hoogstens hoort te draaien. Staat hij daarna nog op
+# "gestart", dan is hij niet aan het werk maar vastgelopen. De server kan geen
+# procesnummer op Daniels Mac nakijken, dus dit is hier het enige houvast.
+# Gelijk aan MAX_MINUTEN in scripts/dev_starter.py.
+SESSIE_MAX_MINUTEN = 90
+
+
+def _minuten_sinds(waarde) -> int | None:
+    if not waarde:
+        return None
+    try:
+        toen = datetime.fromisoformat(str(waarde))
+    except ValueError:
+        return None
+    if toen.tzinfo is None:
+        toen = toen.replace(tzinfo=timezone.utc)
+    return int((datetime.now(timezone.utc) - toen).total_seconds() // 60)
+
+
+def _storing_rij(sleutel: str, v: dict, sessie: dict | None) -> dict:
+    """Eén storing met de hele lijn eromheen: wie, waarom, wat ermee gebeurd is.
+
+    Bewust dezelfde vorm voor een wachtende en een afgehandelde storing. Zonder
+    de melder en de reden is een storingssleutel een woord zonder verhaal, en
+    dan kan Daniel niet zien of het werk over de juiste dingen gaat.
+    """
+    return {
+        "sleutel": sleutel,
+        "omschrijving": v.get("omschrijving", ""),
+        "melders": v.get("melders") or [],
+        "waarom": v.get("waarom_zeker") or [],
+        "voorrang": bool(v.get("moet_zeker")),
+        "eerst": (v.get("eerst") or "")[:10],
+        "laatst": (v.get("laatst") or "")[:10],
+        "status": v.get("status", "open"),
+        "uitleg": v.get("uitleg") or v.get("reden") or "",
+        "klaar_op": (v.get("gerepareerd_op") or v.get("afgewezen_op") or "")[:16].replace("T", " "),
+        # Wie er bericht over kreeg. Nul terwijl het wél is opgelost betekent dat
+        # de klantenservice het concept nog moet klaarzetten — zichtbare
+        # informatie, geen detail.
+        "bericht_naar": len(v.get("bericht_verstuurd") or []),
+        "opgepakt_op": str((sessie or {}).get("gestart", ""))[:16].replace("T", " "),
+        "sessie": (sessie or {}).get("status", ""),
+        # Waarom een sessie niets heeft opgeleverd. Zonder dit staat de reden in
+        # een logboek dat niemand opent; zo stopten er op 29-08-2026 drie sessies
+        # op de maandlimiet zonder dat het ergens te zien was.
+        "sessie_mislukt": (sessie or {}).get("mislukt", ""),
+    }
+
+
+@router.get("/werkplaats")
+def werkplaats(user=Depends(get_current_user_full)):
+    _eigenaar(user)
+    signalen = _leadgen_lezen("bug_signalen")
+    if signalen is None:
+        return {"gekoppeld": False,
+                "reden": "Nog geen storingen doorgegeven (leadgen_opslag/bug_signalen)"}
+    sessies = _leadgen_lezen("dev_sessies") or {}
+
+    bezig = None
+    for sleutel, ses in sessies.items():
+        minuten = _minuten_sinds(ses.get("gestart"))
+        if ses.get("status") != "gestart" or minuten is None or minuten > SESSIE_MAX_MINUTEN:
+            continue
+        bezig = {**_storing_rij(sleutel, signalen.get(sleutel) or {}, ses), "minuten": minuten}
+        break
+
+    wachtrij, gedaan, overig = [], [], 0
+    for sleutel, v in signalen.items():
+        if bezig and sleutel == bezig["sleutel"]:
+            continue
+        rij = _storing_rij(sleutel, v, sessies.get(sleutel))
+        if v.get("status") in ("opgelost", "afgewezen"):
+            gedaan.append(rij)
+        elif v.get("moet_zeker"):
+            wachtrij.append(rij)
+        else:
+            overig += 1
+    wachtrij.sort(key=lambda r: (-len(r["melders"]), r["laatst"]))
+    gedaan.sort(key=lambda r: r["klaar_op"], reverse=True)
+
+    # Een sessie die niets opleverde is geen detail: zolang dit blijft staan,
+    # gebeurt er niets meer vanzelf.
+    mislukt = [s for s in sessies.values() if s.get("mislukt")]
+    return {
+        "gekoppeld": True,
+        "bezig": bezig,
+        "wachtrij": wachtrij[:15],
+        "gedaan": gedaan[:15],
+        "overig_open": overig,
+        "sessie_probleem": (mislukt[-1].get("mislukt") if mislukt else ""),
+        "starter": _starter_stand(signalen),
+    }
+
+
 def _starter_stand(signalen: dict) -> dict:
     """Draait de automatische developer-starter nog?
 

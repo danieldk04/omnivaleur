@@ -89,8 +89,16 @@ def _loopt_er_een(staat: dict) -> str | None:
 
 
 def _vandaag_gestart(staat: dict) -> int:
+    """Hoeveel sessies er vandaag ECHT aan het werk zijn geweest.
+
+    Een sessie die meteen afsloeg telt niet mee: op 29-08-2026 waren de drie
+    plekken van die dag in tien minuten op aan sessies die geen regel code hebben
+    aangeraakt. Het dagmaximum is er om gebruikslimiet te sparen, en een sessie
+    die niets deed heeft niets gekost.
+    """
     vandaag = datetime.now(timezone.utc).strftime("%Y-%m-%d")
-    return sum(1 for s in staat.values() if str(s.get("gestart", ""))[:10] == vandaag)
+    return sum(1 for s in staat.values()
+               if str(s.get("gestart", ""))[:10] == vandaag and not s.get("mislukt"))
 
 
 # ---------------------------------------------------------------- keuze
@@ -101,7 +109,10 @@ def _te_doen(signalen: dict, staat: dict) -> list[tuple[str, dict]]:
     """
     open_ = [(k, v) for k, v in signalen.items()
              if v.get("status") == "open" and v.get("moet_zeker")
-             and k not in staat]
+             # Een sessie die meteen afsloeg heeft de storing nooit aangeraakt.
+             # Die sleutel hoort dus gewoon weer in de wachtrij te staan, anders
+             # verdwijnt hij stil uit beeld zodra de limiet een keer op was.
+             and (k not in staat or staat[k].get("mislukt"))]
     op_datum = sorted(open_, key=lambda kv: kv[1].get("laatst", ""), reverse=True)
     return sorted(op_datum, key=lambda kv: -len(kv[1].get("melders") or []))
 
@@ -122,6 +133,14 @@ def _opruimen(signalen: dict, staat: dict) -> bool:
         elif staat[sleutel].get("status") == "gestart" and not _leeft(staat[sleutel].get("pid")):
             staat[sleutel]["status"] = "afgerond"
             staat[sleutel]["afgerond_op"] = datetime.now(timezone.utc).isoformat()
+            _beoordeel_afloop(sleutel, staat[sleutel])
+            veranderd = True
+        elif staat[sleutel].get("status") == "afgerond" and not staat[sleutel].get("nagekeken"):
+            # Een ronde kan een sessie op "afgerond" zetten voordat het logboek
+            # is nagekeken — dat gebeurde op 29-08-2026, en drie storingen bleven
+            # daardoor als opgepakt staan terwijl er niets was gebeurd. Het
+            # logboek blijft staan, dus we kunnen dat alsnog nakijken.
+            _beoordeel_afloop(sleutel, staat[sleutel])
             veranderd = True
         elif (staat[sleutel].get("status") == "gestart"
                 and _minuten_bezig(staat[sleutel]) > MAX_MINUTEN):
@@ -138,6 +157,56 @@ def _opruimen(signalen: dict, staat: dict) -> bool:
                   f"en is gestopt — zie {staat[sleutel].get('log','het logboek')}")
             veranderd = True
     return veranderd
+
+
+def _beoordeel_afloop(sleutel: str, sessie: dict) -> None:
+    """Heeft deze sessie werk geleverd, of sloeg hij meteen af?
+
+    Een sessie die niets deed mag de sleutel niet op slot houden: de storing is
+    dan nooit aangeraakt. En de reden hoort op het beheerdashboard te komen, want
+    hij is altijd iets wat alleen Daniel kan oplossen (een limiet, een inlog).
+    """
+    sessie["nagekeken"] = True
+    reden = _waarom_niets_geworden(sessie.get("log"))
+    if reden:
+        sessie["status"] = "mislukt"
+        sessie["mislukt"] = reden
+        print(f"  !! sessie voor {sleutel} leverde niets op: {reden}")
+
+
+# Wat er in het logboek staat als de sessie niet eens is begonnen. Elk van deze
+# dingen kan alleen Daniel oplossen, dus ze horen op zijn scherm en niet in een
+# bestand dat niemand opent.
+NIETS_GEWORDEN = {
+    "spend limit": "De maandlimiet van je Claude-abonnement is bereikt. "
+                   "Tot je die verhoogt op claude.ai/settings/usage start er geen sessie.",
+    "usage limit": "De gebruikslimiet van je Claude-abonnement is bereikt. "
+                   "Tot die weer opengaat start er geen sessie.",
+    "Invalid API key": "Claude Code is niet ingelogd op deze Mac. "
+                       "Open een keer `claude` in een venster en log in.",
+    "Please run /login": "Claude Code is niet ingelogd op deze Mac. "
+                        "Open een keer `claude` in een venster en log in.",
+}
+# Een sessie die het werk echt doet schrijft tientallen regels. Blijft het hierbij,
+# dan is er niets gebeurd, ook als de reden niet in het lijstje hierboven staat.
+GEEN_WERK_ONDER = 12
+
+
+def _waarom_niets_geworden(logpad) -> str:
+    """Waarom deze sessie niets heeft opgeleverd, of "" als hij gewoon klaar is."""
+    if not logpad:
+        return ""
+    try:
+        tekst = Path(logpad).read_text(errors="replace")
+    except OSError:
+        return ""
+    for merk, uitleg in NIETS_GEWORDEN.items():
+        if merk in tekst:
+            return uitleg
+    if len(tekst.splitlines()) < GEEN_WERK_ONDER:
+        return ("De sessie stopte zonder iets te doen. Wat er precies gebeurde "
+                f"staat in {logpad}.")
+    return ""
 
 
 def _minuten_bezig(s: dict) -> float:
@@ -287,6 +356,16 @@ def ronde(droog: bool = False) -> None:
     schoon, waarom = _werkmap_schoon()
     if not schoon:
         print(f"Werkmap is niet schoon ({waarom}) — niets gestart.")
+        return
+
+    # Sloeg de vorige sessie meteen af, dan gaat de volgende dat ook doen: de
+    # oorzaak (limiet, inlog) ligt buiten dit script. Blijven proberen levert
+    # alleen een logboek vol dezelfde regel op. De reden staat intussen op het
+    # beheerdashboard, waar Daniel hem kan oplossen.
+    laatste = sorted((s for s in staat.values() if s.get("gestart")),
+                     key=lambda s: s["gestart"])
+    if laatste and laatste[-1].get("mislukt"):
+        print(f"Vorige sessie leverde niets op — niets gestart.\n  {laatste[-1]['mislukt']}")
         return
 
     sleutel, signaal = wachtrij[0]

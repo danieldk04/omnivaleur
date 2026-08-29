@@ -1242,3 +1242,41 @@ toegang tot `~/Documents`. Gemeten, niet vermoed — `launchctl kickstart` gaf
 (Systeeminstellingen → Privacy en beveiliging → Volledige schijftoegang → +,
 cmd+shift+G, `/bin/zsh`). Tot dat gebeurt start de LaunchAgent niets en meldt het
 dashboard dat.
+
+### 29-08-2026 — Tabblad Systeem is Werkplaats geworden
+
+Door Daniel gevraagd: hij wil kunnen zien wat de mailagent en de developer met
+elkaar doen zonder het te vragen. Het oude tabblad Systeem liet alleen losse
+tellers zien. Nieuw: `GET /api/beheer/werkplaats`, met per storing dezelfde vorm
+of hij nu wacht of klaar is — wie het meldde, waarom het voorrang kreeg, wat
+eruit gekomen is en of de melders bericht hebben gehad. Bovenaan waar ik nu aan
+werk, onderaan de machinetellers die er al stonden.
+
+### 29-08-2026 — De eerste drie autonome sessies leverden niets op
+
+Meteen goed om te weten hoe dit stukgaat. Alle drie stopten binnen enkele
+seconden op **"You've hit your monthly spend limit"**. Ze telden als "afgerond",
+vraten het dagmaximum van drie op, en de drie storingen stonden daarna als
+opgepakt te verstoffen — terwijl er niets was gebeurd. De reden stond alleen in
+een logboek dat niemand opent.
+
+Wat er nu tegen beschermt (`scripts/dev_starter.py`):
+- `_waarom_niets_geworden()` leest het logboek van een afgelopen sessie. Bekende
+  zinnen (maandlimiet, gebruikslimiet, niet ingelogd) én "minder dan twaalf
+  regels" gelden als: er is niets gebeurd. Let op: "not found" mag hier NIET in —
+  dat staat ook in de hookmeldingen van een sessie die zijn werk gewoon deed.
+- Zo'n sessie krijgt status `mislukt`. De sleutel komt daardoor gewoon weer in de
+  wachtrij (hij is nooit aangeraakt) en telt niet mee voor het dagmaximum.
+- Na een mislukking start de volgende ronde niets: de oorzaak ligt buiten dit
+  script, en blijven proberen levert alleen een logboek vol dezelfde regel op.
+- De reden staat boven in Werkplaats, met wat Daniel eraan moet doen.
+- Ook een sessie die al op "afgerond" stond wordt alsnog nagekeken, want de
+  eerste ronde deed dat nog niet — anders bleven die drie eeuwig op slot.
+
+Verder: launchd geeft een kaal PATH mee zonder node, waardoor de eigen hooks van
+elke sessie omvielen met "node: command not found". `scripts/dev_starter.sh` zet
+/opt/homebrew/bin en /usr/local/bin er nu bij.
+
+**Les:** een test met een vaste starttijd in de toekomst-of-verleden faalt vanzelf
+zodra de klok voorbij de drempel loopt. `tests/test_dev_starter.py` gebruikt nu
+`datetime.now()`.
