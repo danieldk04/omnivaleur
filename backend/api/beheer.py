@@ -1012,6 +1012,89 @@ def _storing_rij(sleutel: str, v: dict, sessie: dict | None) -> dict:
     }
 
 
+def _tijdlijn(signalen: dict, sessies: dict, escalaties: list) -> list[dict]:
+    """De exacte communicatie tussen de klantenservice en de developer, op tijd.
+
+    Een operationeel scherm hoort te laten zien wat er NU gebeurt en wat er net
+    gebeurd is, niet alleen een eindstand. Zonder deze lijst kun je wel zien dat
+    een storing is opgelost, maar niet dat hij drie uur eerder is doorgegeven, om
+    kwart over twee is opgepakt en om tien voor drie is teruggemeld. Die volgorde
+    is precies wat er te controleren valt.
+
+    Alles wordt afgeleid uit de administratie die er al is — geen nieuwe opslag.
+    """
+    uit: list[dict] = []
+
+    def zet(wanneer, van, naar, wat, sleutel="", extra=""):
+        if wanneer:
+            uit.append({"wanneer": str(wanneer), "van": van, "naar": naar,
+                        "wat": wat, "sleutel": sleutel, "extra": extra})
+
+    for sleutel, v in signalen.items():
+        melders = v.get("melders") or []
+        zet(v.get("laatst"), "klant", "klantenservice",
+            f"gemeld door {', '.join(melders[:2]) or 'onbekend'}"
+            + (f" +{len(melders) - 2}" if len(melders) > 2 else ""),
+            sleutel, v.get("omschrijving", ""))
+        if v.get("moet_zeker"):
+            zet(v.get("gemeld_als_patroon") or v.get("laatst"), "klantenservice", "developer",
+                "met voorrang doorgegeven", sleutel,
+                "; ".join(v.get("waarom_zeker") or []))
+        ses = sessies.get(sleutel) or {}
+        zet(ses.get("gestart"), "developer", "developer",
+            "sessie gestart" if not ses.get("mislukt") else "sessie sloeg af voor hij begon",
+            sleutel, ses.get("mislukt", ""))
+        if v.get("status") == "opgelost":
+            zet(v.get("gerepareerd_op"), "developer", "klantenservice",
+                "teruggemeld als opgelost", sleutel, v.get("uitleg", ""))
+        elif v.get("status") == "afgewezen":
+            zet(v.get("afgewezen_op"), "developer", "klantenservice",
+                "geen storing, niet gerepareerd", sleutel, v.get("reden", ""))
+        if v.get("bericht_verstuurd"):
+            zet(v.get("gerepareerd_op"), "klantenservice", "klant",
+                f"concept klaargezet voor {', '.join(v['bericht_verstuurd'][:2])}", sleutel)
+
+    for e in escalaties:
+        if not e.get("afgehandeld"):
+            zet(e.get("gezien_op") or e.get("wanneer"), "klantenservice", "Daniel",
+                f"{e.get('escalatie', 'aandacht')} — {e.get('adres', '')}",
+                "", e.get("samenvatting", ""))
+
+    uit.sort(key=lambda r: r["wanneer"], reverse=True)
+    return uit[:30]
+
+
+def _voor_jou(signalen: dict, escalaties: list, starter: dict, probleem: str) -> list[dict]:
+    """Wat er op DIT moment van Daniel wordt gevraagd, en niets anders.
+
+    Expliciet eigenaarschap is het verschil tussen een scherm dat informeert en
+    een scherm waar je iets mee doet. Alles wat de klantenservice of de developer
+    zelf afhandelt hoort hier dus NIET te staan.
+    """
+    lijst = []
+    for e in escalaties:
+        if e.get("afgehandeld"):
+            continue
+        lijst.append({"soort": e.get("escalatie", "aandacht"), "wie": e.get("adres", ""),
+                      "wat": e.get("samenvatting", "")})
+    # Iemand die bericht hoort te krijgen, maar bij wie al post klaarligt: er gaat
+    # nooit twee mail tegelijk naar dezelfde persoon, dus die wacht op Daniel.
+    for sleutel, v in signalen.items():
+        if v.get("status") != "opgelost":
+            continue
+        wacht = [m for m in (v.get("melders") or [])
+                 if m not in (v.get("bericht_verstuurd") or [])]
+        for adres in wacht:
+            lijst.append({"soort": "concept", "wie": adres,
+                          "wat": f"wacht op je vorige mail aan hem; daarna gaat het "
+                                 f"bericht over '{sleutel}' vanzelf klaarstaan"})
+    if probleem:
+        lijst.append({"soort": "machine", "wie": "de developer", "wat": probleem})
+    if starter.get("waarschuwing"):
+        lijst.append({"soort": "machine", "wie": "de starter", "wat": starter["waarschuwing"]})
+    return lijst[:12]
+
+
 @router.get("/werkplaats")
 def werkplaats(user=Depends(get_current_user_full)):
     _eigenaar(user)
@@ -1054,14 +1137,19 @@ def werkplaats(user=Depends(get_current_user_full)):
         wacht = _minuten_sinds(mislukt[-1].get("gestart"))
         if wacht is not None and wacht < STARTER_HERSTELPAUZE_MINUTEN:
             probleem = mislukt[-1].get("mislukt", "")
+    escalaties = _leadgen_lezen("mail_escalaties") or []
+    starter = _starter_stand(signalen)
     return {
         "gekoppeld": True,
         "bezig": bezig,
+        "tijdlijn": _tijdlijn(signalen, sessies, escalaties),
+        "voor_jou": _voor_jou(signalen, escalaties, starter, probleem),
+        "nu": datetime.now(timezone.utc).isoformat(),
         "wachtrij": wachtrij[:15],
         "gedaan": gedaan[:15],
         "overig_open": overig,
         "sessie_probleem": probleem,
-        "starter": _starter_stand(signalen),
+        "starter": starter,
     }
 
 

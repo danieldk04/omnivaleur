@@ -93,17 +93,44 @@ def _loopt_er_een(staat: dict) -> str | None:
     return None
 
 
-def _vandaag_gestart(staat: dict) -> int:
-    """Hoeveel sessies er vandaag ECHT aan het werk zijn geweest.
+DAGTELLER_SLEUTEL = "dev_starter_dagteller"
 
-    Een sessie die meteen afsloeg telt niet mee: op 29-08-2026 waren de drie
-    plekken van die dag in tien minuten op aan sessies die geen regel code hebben
-    aangeraakt. Het dagmaximum is er om gebruikslimiet te sparen, en een sessie
-    die niets deed heeft niets gekost.
+
+def _vandaag() -> str:
+    return datetime.now(timezone.utc).strftime("%Y-%m-%d")
+
+
+def _vandaag_gestart() -> int:
+    """Hoeveel sessies er vandaag echt zijn begonnen.
+
+    APARTE TELLER, EN DAT IS DE HELE REDEN DAT DEZE FUNCTIE BESTAAT.
+    Eerst werd dit uit `dev_sessies` afgeleid. Dat telde structureel te laag:
+    zodra een storing is opgelost verdwijnt hij uit die administratie, en dan
+    kwam zijn plek van de dag weer vrij. Juist een geslaagde sessie — de duurste
+    — raakte je dus kwijt uit de telling, en konden er op één dag veel meer dan
+    MAX_PER_DAG draaien. Precies wat dit maximum moest voorkomen.
+
+    Een sessie die meteen afsloeg wordt niet meegeteld (zie _start): die heeft
+    geen gebruikslimiet gekost.
     """
-    vandaag = datetime.now(timezone.utc).strftime("%Y-%m-%d")
-    return sum(1 for s in staat.values()
-               if str(s.get("gestart", ""))[:10] == vandaag and not s.get("mislukt"))
+    teller = A._lees(DAGTELLER_SLEUTEL, {}) or {}
+    return int(teller.get("aantal", 0)) if teller.get("datum") == _vandaag() else 0
+
+
+def _tel_een_start_mee() -> None:
+    teller = A._lees(DAGTELLER_SLEUTEL, {}) or {}
+    if teller.get("datum") != _vandaag():
+        teller = {"datum": _vandaag(), "aantal": 0}
+    teller["aantal"] = int(teller.get("aantal", 0)) + 1
+    A._schrijf(DAGTELLER_SLEUTEL, teller)
+
+
+def _haal_een_start_af() -> None:
+    """Een sessie die niets werd, geeft zijn plek van de dag terug."""
+    teller = A._lees(DAGTELLER_SLEUTEL, {}) or {}
+    if teller.get("datum") == _vandaag() and int(teller.get("aantal", 0)) > 0:
+        teller["aantal"] = int(teller["aantal"]) - 1
+        A._schrijf(DAGTELLER_SLEUTEL, teller)
 
 
 # ---------------------------------------------------------------- keuze
@@ -176,6 +203,8 @@ def _beoordeel_afloop(sleutel: str, sessie: dict) -> None:
     if reden:
         sessie["status"] = "mislukt"
         sessie["mislukt"] = reden
+        if str(sessie.get("gestart", ""))[:10] == _vandaag():
+            _haal_een_start_af()
         print(f"  !! sessie voor {sleutel} leverde niets op: {reden}")
 
 
@@ -321,6 +350,7 @@ def _start(sleutel: str, signaal: dict, staat: dict) -> bool:
         proc.terminate()
         print(f"  !! staat niet opgeslagen — sessie voor {sleutel} weer gestopt")
         return False
+    _tel_een_start_mee()
     print(f"  ↳ sessie gestart voor {sleutel} (pid {proc.pid})\n     logboek: {log}")
     return True
 
@@ -358,7 +388,7 @@ def ronde(droog: bool = False) -> None:
         print("Geen storing die met zekerheid gerepareerd moet worden. Niets gestart.")
         return
 
-    if _vandaag_gestart(staat) >= MAX_PER_DAG:
+    if _vandaag_gestart() >= MAX_PER_DAG:
         print(f"Vandaag al {MAX_PER_DAG} sessies gestart — de rest wacht tot morgen. "
               f"In de wachtrij: {', '.join(k for k, _ in wachtrij)}")
         return

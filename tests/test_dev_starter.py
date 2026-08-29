@@ -46,6 +46,7 @@ def gestart(monkeypatch):
         lijst.append(sleutel)
         staat[sleutel] = {"status": "gestart", "pid": 1, "log": "/dev/null",
                           "gestart": datetime.now(timezone.utc).isoformat()}
+        S._tel_een_start_mee()          # net als de echte _start
         S._bewaar(staat)
         return True
 
@@ -115,10 +116,44 @@ def test_niet_meer_dan_het_dagmaximum(kast, gestart, monkeypatch):
     monkeypatch.setattr(S, "_start", lambda k, s, st: (
         gestart.append(k),
         st.__setitem__(k, {"status": "gestart", "pid": 1, "gestart": vandaag}),
-        S._bewaar(st), True)[-1])
+        S._tel_een_start_mee(), S._bewaar(st), True)[-1])
     for _ in range(S.MAX_PER_DAG + 2):
         S.ronde()
     assert len(gestart) == S.MAX_PER_DAG
+
+
+def test_een_opgeloste_storing_geeft_zijn_plek_van_de_dag_niet_terug(kast, gestart, monkeypatch):
+    """Hier zat de fout: het maximum werd uit dev_sessies afgeleid, en een
+    opgeloste storing verdwijnt daaruit. Juist een geslaagde sessie — de duurste —
+    raakte je dus kwijt uit de telling, en dan konden er veel meer dan drie draaien."""
+    from datetime import datetime, timezone
+    vandaag = datetime.now(timezone.utc).isoformat()
+    monkeypatch.setattr(S, "_leeft", lambda pid: False)
+    monkeypatch.setattr(S, "_start", lambda k, s, st: (
+        gestart.append(k),
+        st.__setitem__(k, {"status": "gestart", "pid": 1, "gestart": vandaag}),
+        S._tel_een_start_mee(), S._bewaar(st), True)[-1])
+    for i in range(S.MAX_PER_DAG):
+        kast["bug_signalen"] = {f"klaar{i}": _signaal()}
+        S.ronde()
+        # de storing wordt gerepareerd en verdwijnt uit de administratie
+        kast["bug_signalen"][f"klaar{i}"]["status"] = "opgelost"
+        S.ronde()
+    assert len(gestart) == S.MAX_PER_DAG
+    kast["bug_signalen"] = {"nog een": _signaal()}
+    S.ronde()
+    assert len(gestart) == S.MAX_PER_DAG, "het dagmaximum lekt bij elke geslaagde reparatie"
+
+
+def test_een_mislukte_sessie_geeft_zijn_plek_wel_terug(kast, gestart, monkeypatch):
+    """Die heeft geen gebruikslimiet gekost, dus mag hij geen plek kosten."""
+    monkeypatch.setattr(S, "_leeft", lambda pid: False)
+    monkeypatch.setattr(S, "_waarom_niets_geworden", lambda log: "De limiet was even vol.")
+    kast["bug_signalen"] = {"eentje": _signaal()}
+    S.ronde()
+    assert S._vandaag_gestart() == 1
+    S.ronde()                     # stelt de mislukking vast
+    assert S._vandaag_gestart() == 0
 
 
 def test_niet_beginnen_in_de_werkmap_van_iemand_anders(kast, gestart, monkeypatch):
@@ -239,15 +274,6 @@ def test_een_mislukte_sessie_geeft_de_storing_weer_vrij(kast, gestart, monkeypat
     staat = S._staat()
     assert staat["eentje"]["mislukt"]
     assert [k for k, _ in S._te_doen(kast["bug_signalen"], staat)] == ["eentje"]
-
-
-def test_een_mislukte_sessie_kost_geen_plek_van_de_dag(kast, monkeypatch):
-    from datetime import datetime, timezone
-    nu = datetime.now(timezone.utc).isoformat()
-    staat = {f"nr{i}": {"gestart": nu, "mislukt": "limiet"} for i in range(5)}
-    assert S._vandaag_gestart(staat) == 0
-    staat["echt"] = {"gestart": nu}
-    assert S._vandaag_gestart(staat) == 1
 
 
 def test_na_een_mislukking_wordt_er_niet_blindelings_doorgestart(kast, gestart, monkeypatch):
