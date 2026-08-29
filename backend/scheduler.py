@@ -189,9 +189,23 @@ def start_scheduler():
                 omgeving["SUPABASE_URL"] = settings.supabase_url
             if settings.supabase_key:
                 omgeving["SUPABASE_KEY"] = settings.supabase_key
-            r = subprocess.run([sys.executable, str(script), "tick"],
-                               capture_output=True, text=True, timeout=1500,
-                               env=omgeving)
+            try:
+                r = subprocess.run([sys.executable, str(script), "tick"],
+                                   capture_output=True, text=True, timeout=1500,
+                                   env=omgeving)
+            except subprocess.TimeoutExpired as e:
+                # Een afgekapte beurt is geen onschuldige vertraging: het werk dat
+                # al gedaan was (een concept neerleggen) staat er wel, maar de
+                # administratie erover is niet meer weggeschreven. De volgende
+                # beurt begint dan met het oude beeld. Dat is de reden dat er op
+                # 29-08-2026 drie concepten naast elkaar lagen voor dezelfde
+                # persoon. Het slot in leadgen_mail voorkomt de schade; deze regel
+                # zorgt dat de oorzaak zichtbaar blijft in plaats van stil te zijn.
+                logger.warning("leadgen tick AFGEKAPT na %s s — de ronde duurt te lang. "
+                               "Laatste uitvoer:\n%s", e.timeout,
+                               ((e.stdout or "") if isinstance(e.stdout, str)
+                                else (e.stdout or b"").decode("utf-8", "replace"))[-2000:])
+                return
             uit = (r.stdout or "").strip()
             if uit:
                 logger.info("leadgen tick:\n%s", uit[-2000:])

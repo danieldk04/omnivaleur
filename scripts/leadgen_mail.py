@@ -1354,6 +1354,7 @@ def _check_inbox(state: dict, boek: "Notion", dagen: int) -> tuple[int, int, int
                                       soort if soort in ("concurrent", "afwijzing") else "warm"):
                     st["laatste_inkomend"] = binnen_op
                     st["concept_klaar"] = datetime.now().isoformat(timespec="seconds")
+                    _save_state(state)   # zie _warme_opvolging: meteen, niet aan het eind
                 if soort in ("warm", "onbekend"):
                     boek.wacht_op_daniel(lead)
 
@@ -1729,6 +1730,13 @@ def _warme_opvolging(state: dict, boek: "Notion") -> int:
                                       eigen_tekst=tekst, met_pixel=True):
                     st["warm_opvolg"] = beurt + 1
                     st["warm_opvolg_op"] = nu.isoformat(timespec="seconds")
+                    # METEEN vastleggen, niet aan het eind van de ronde. Het
+                    # concept ligt er nu al; wordt de beurt hierna afgebroken
+                    # (de server kapt hem af na 25 minuten), dan begint de
+                    # volgende met het oude beeld en legt hij er nog een naast.
+                    # Zo is er nooit een moment waarop het concept bestaat en de
+                    # administratie dat niet weet.
+                    _save_state(state)
                     klaar += 1
                     if per_adres.get(adres):
                         boek.wacht_op_daniel(per_adres[adres])
@@ -2709,6 +2717,140 @@ def _lijkt_op_recent_verstuurd(adres: str, kern: str) -> bool:
     return False
 
 
+# ─────────────────────────────────────────────────────────────────────────────
+# HET SLOT: de postbus beslist, niet het geheugen.
+#
+# WAAROM DIT ER IS (29-08-2026). Er lagen drie concepten naast elkaar voor
+# dezelfde persoon (frenky@autodokumentatie.nl, 08:49 / 09:09 / 09:28), alle
+# drie een antwoord op hetzelfde bericht, alle drie met een andere tekst. En er
+# bleven concepten liggen voor mensen die Daniel allang zelf had beantwoord.
+#
+# Elke bestaande controle daartegen leunde op de administratie: "warm_opvolg
+# staat op 1, dus dit is de laatste keer". Die administratie staat in Supabase en
+# wordt pas aan het EIND van een stap weggeschreven. Wordt de beurt onderweg
+# afgebroken — de server kapt hem af na 25 minuten, en deze ronde leest honderden
+# berichten één voor één — dan is het concept al neergelegd en de administratie
+# niet bijgewerkt. De volgende beurt begint met het oude beeld en doet het
+# gewoon nog een keer. Opruimen achteraf (_ruim_concepten_op) haalt de dubbele
+# er wel weer uit, maar pas een beurt later; in de tussentijd staan ze er, en
+# dan is de kans groot dat Daniel juist de verkeerde opent.
+#
+# Daarom staat de vraag nu vlak vóór het neerleggen, en wordt hij gesteld aan de
+# enige bron die niet kan kwijtraken wat er gebeurd is: de mailbox. Die is ook
+# waar het misgaat zichtbaar wordt, hij overleeft een afgebroken beurt, en hij
+# klopt ook als er per ongeluk twee kopieën van dit script tegelijk draaien.
+CONCEPT_MARGE = 60          # seconden speling; koppen lopen nooit op de seconde gelijk
+
+
+def _waarom_geen_concept(adres: str, inkomend) -> str | None:
+    """Reden om dit concept NIET neer te leggen, of None als het mag.
+
+    Vier vragen, alle vier aan de postbus:
+      1. ligt er al een concept voor deze persoon?
+      2. ligt er al een concept op precies dit bericht?
+      3. hebben wij na dit bericht al iets naar deze persoon gestuurd?
+      4. heeft deze persoon na dit bericht nog iets geschreven?
+
+    Bij vraag 4 hoort het antwoord op het LAATSTE bericht te gaan, niet op het
+    bericht dat deze ronde toevallig in handen had. Dat is precies de klacht
+    "het concept reageert niet op wat er als laatste stond".
+
+    Kan de postbus niet gelezen worden, dan weigeren we. Een gemist concept ziet
+    Daniel meteen in zijn postvak staan; een dubbele of achterhaalde mail ziet de
+    klant, en die is niet terug te halen.
+    """
+    host, gebruiker = os.environ.get("IMAP_HOST"), os.environ.get("MAIL_USER")
+    wachtwoord = os.environ.get("MAIL_PASS")
+    if not (host and gebruiker and wachtwoord):
+        return "geen mailtoegang om te controleren of er al iets klaarligt"
+    adres = (adres or "").lower()
+    if not adres:
+        return "geen ontvanger"
+    stam = adres.split("@")[-1].split(".")[0].replace("-online", "")
+
+    def hoort_bij(ander: str) -> bool:
+        ander = (ander or "").lower()
+        if not ander:
+            return False
+        if ander == adres:
+            return True
+        # Mensen antwoorden vanaf info@bedrijf.nl terwijl wij naar
+        # info@bedrijf-online.nl schreven. Zelfde huis, ander adres.
+        return bool(stam) and len(stam) >= 5 and stam in ander.split("@")[-1]
+
+    plat = lambda v: re.sub(r"\s+", " ", str(v or "")).strip()
+    eigen_mid = plat(inkomend.get("Message-ID")) if inkomend is not None else ""
+    try:
+        waarop = parsedate_to_datetime(inkomend.get("Date", "")).timestamp() \
+            if inkomend is not None else None
+    except Exception:  # noqa: BLE001
+        waarop = None
+
+    try:
+        with imaplib.IMAP4_SSL(host, 993) as imap:
+            imap.login(gebruiker, wachtwoord)
+            bestaand = {r.decode().split(' "/" ')[-1].strip('"')
+                        for r in (imap.list()[1] or [])}
+            conceptmap = CONCEPTMAP if CONCEPTMAP in bestaand else "Drafts"
+
+            # 1 en 2 — wat ligt er al klaar?
+            if imap.select(f'"{conceptmap}"', readonly=True)[0] == "OK":
+                _, d = imap.search(None, "ALL")
+                for num in (d[0] or b"").split():
+                    _, ruw = imap.fetch(num, "(BODY.PEEK[HEADER])")
+                    if not ruw or not ruw[0]:
+                        continue
+                    kop = email.message_from_bytes(ruw[0][1])
+                    if hoort_bij(parseaddr(_leesbaar(kop.get("To", "")))[1]):
+                        return "er ligt al een concept voor deze persoon"
+                    if eigen_mid:
+                        for veld in ("In-Reply-To", "References"):
+                            if eigen_mid in _leesbaar(kop.get(veld, "")):
+                                return "er ligt al een concept op precies dit bericht"
+
+            # 3 — hebben wij na dit bericht al iets gestuurd?
+            if waarop and imap.select('"Verzonden"', readonly=True)[0] == "OK":
+                sinds = (datetime.now() - timedelta(days=VERZONDEN_DAGEN)).strftime("%d-%b-%Y")
+                _, d = imap.search(None, f"(SINCE {sinds})")
+                for num in (d[0] or b"").split():
+                    _, ruw = imap.fetch(num, "(BODY.PEEK[HEADER])")
+                    if not ruw or not ruw[0]:
+                        continue
+                    kop = email.message_from_bytes(ruw[0][1])
+                    if not hoort_bij(parseaddr(_leesbaar(kop.get("To", "")))[1]):
+                        continue
+                    try:
+                        ts = parsedate_to_datetime(kop.get("Date", "")).timestamp()
+                    except Exception:  # noqa: BLE001
+                        continue
+                    if ts > waarop + CONCEPT_MARGE:
+                        return "je hebt deze persoon hierna zelf al geantwoord"
+
+            # 4 — heeft hij na dit bericht nog iets geschreven?
+            if waarop:
+                sinds = (datetime.now() - timedelta(days=VERZONDEN_DAGEN)).strftime("%d-%b-%Y")
+                for map_ in ("INBOX", MAP_BEANTWOORD):
+                    if imap.select(f'"{map_}"', readonly=True)[0] != "OK":
+                        continue
+                    _, d = imap.search(None, f"(SINCE {sinds})")
+                    for num in (d[0] or b"").split():
+                        _, ruw = imap.fetch(num, "(BODY.PEEK[HEADER])")
+                        if not ruw or not ruw[0]:
+                            continue
+                        kop = email.message_from_bytes(ruw[0][1])
+                        if not hoort_bij(parseaddr(kop.get("From", ""))[1]):
+                            continue
+                        try:
+                            ts = parsedate_to_datetime(kop.get("Date", "")).timestamp()
+                        except Exception:  # noqa: BLE001
+                            continue
+                        if ts > waarop + CONCEPT_MARGE:
+                            return "hij schreef hierna nog iets — dit antwoord gaat over een achterhaald bericht"
+    except Exception as e:  # noqa: BLE001
+        return f"postbus niet te controleren ({e})"
+    return None
+
+
 def _zet_concept_klaar(lead: dict, inkomend, body: str, soort: str = "warm",
                        eigen_tekst: str | None = None, met_pixel: bool = False) -> bool:
     """Legt het voorstel als concept in Daniels postbus, in dezelfde draad."""
@@ -2751,6 +2893,16 @@ def _zet_concept_klaar(lead: dict, inkomend, body: str, soort: str = "warm",
     if not (kern or "").strip():
         print(f"  ⊘ geen concept voor {lead.get('email')}: "
               f"klant met een vraag die ik niet zelf mag beantwoorden")
+        return False
+
+    # HET SLOT (zie _waarom_geen_concept hierboven). Elke weg naar een concept
+    # komt hier langs — de gewone ronde, de warme opvolging, de vangnetronde en
+    # het herstelcommando — dus dit is de enige plek waar één controle álles
+    # afdekt. Bewust hier en niet bij de aanroepers: daar is het vier keer
+    # onthouden, en dat is precies hoe het mis kon gaan.
+    weigering = _waarom_geen_concept(lead.get("email", ""), inkomend)
+    if weigering:
+        print(f"  \u2298 geen concept voor {lead.get('email')}: {weigering}")
         return False
 
     # LAATSTE SLOT TEGEN DUBBELE MAIL.
@@ -3366,6 +3518,20 @@ def tick(args) -> None:
             plan["gedaan"] = verlopen      # niemand beschikbaar: slot laten vervallen
             _save_plan(plan)
 
+    # EERST OPRUIMEN, DAN PAS SCHRIJVEN. Dit stond onderaan de ronde, en dat gaf
+    # twee problemen. Het opruimen werd niet meer bereikt als de ronde onderweg
+    # werd afgekapt — dat is waarom er op 29-08-2026 drie concepten voor dezelfde
+    # persoon bleven liggen. En sinds het slot weigert te schrijven zodra er al
+    # een concept ligt, zou een achterhaald concept (allang verstuurd, of weken
+    # oud) een nieuw en wél nodig antwoord voorgoed tegenhouden. Weg met wat niet
+    # meer telt, en pas daarna kijken wat er nog geschreven moet worden.
+    try:
+        opgeruimd = _ruim_concepten_op()
+        if opgeruimd:
+            print(f"{datetime.now():%d-%m %H:%M} — {opgeruimd} achterhaald concept opgeruimd")
+    except Exception as e:  # noqa: BLE001 — opruimen mag de ronde nooit stoppen
+        print(f"  (concepten niet opgeruimd: {e})")
+
     # Elke beurt de inbox nakijken. Dit stond eerst op één keer per dag om 13:00,
     # maar dan blijft een reactie van 's avonds een etmaal liggen — en juist bij
     # een warme reactie telt elk uur. Zo valt iemand die antwoordt ook meteen uit
@@ -3413,10 +3579,6 @@ def tick(args) -> None:
             _stapel_melden(plan)
         except Exception as e:  # noqa: BLE001
             print(f"  (stapelmelding mislukt: {e})")
-
-        opgeruimd = _ruim_concepten_op()
-        if opgeruimd:
-            print(f"{datetime.now():%d-%m %H:%M} — {opgeruimd} verstuurd concept opgeruimd")
 
         gesloten = _afsluiten_stille_leads(state, boek)
         if gesloten:

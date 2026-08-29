@@ -956,3 +956,49 @@ diagnostiek bij een mislukt verwijderen (welke knoppen er op de pagina stonden).
 Openstaand daarna: de 32 dun geplaatste advertenties van Jaap één keer
 herplaatsen (hun foto's staan er weer bij), en zijn vaste tekst instellen zodra
 hij ja zegt — die staat klaar in de conceptmail.
+
+### 29-08-2026 — Dubbele en achterhaalde conceptmails: het slot zit nu in de postbus
+
+Daniel meldde dat er steeds vaker twee concepten voor dezelfde persoon lagen,
+dat concepten niet op het laatste bericht van een gesprek reageerden, en dat
+mensen terugkwamen die hij al had beantwoord.
+
+**Gemeten, niet geraden.** In de conceptenmap lagen drie voorstellen voor
+frenky@autodokumentatie.nl — 08:49, 09:09 en 09:28 — alle drie een antwoord op
+hetzelfde bericht (dezelfde In-Reply-To), alle drie met een andere tekst. Zijn
+laatste bericht dateert van 20-08; Daniel had hem toen al beantwoord. Ook lagen
+er nog concepten voor spacecartoonsafari en recycleland terwijl er ná dat concept
+al een mail naar ze uit was gegaan.
+
+**Waarom.** Elke controle daartegen leunde op de administratie in Supabase
+(`warm_opvolg`, `laatste_inkomend`), en die wordt pas aan het EIND van een stap
+weggeschreven. De ronde draait op de server met een harde grens van 25 minuten en
+leest honderden berichten één voor één; wordt hij afgekapt, dan ligt het concept
+er wel en weet de administratie het niet. De volgende ronde begint met het oude
+beeld en doet het nog eens. `_ruim_concepten_op` stond onderaan de ronde en werd
+dan óók niet meer bereikt.
+
+**Wat er nu staat:**
+
+1. `_waarom_geen_concept()` in `scripts/leadgen_mail.py`, aangeroepen vanuit
+   `_zet_concept_klaar` — de enige doorgang waar alle vier de wegen naar een
+   concept langskomen (gewone ronde, warme opvolging, vangnetronde, herstel).
+   Vier vragen, alle vier aan de postbus zelf: ligt er al een concept voor deze
+   persoon; ligt er al een concept op precies dit bericht; hebben wij hierna al
+   iets gestuurd; heeft hij hierna nog iets geschreven. Bij twijfel of een
+   onbereikbare postbus: geen concept.
+2. De administratie wordt meteen na het neerleggen weggeschreven, niet aan het
+   eind van de ronde.
+3. Opruimen gebeurt nu vóór het schrijven, niet erna — anders houdt een
+   achterhaald concept een nieuw en wél nodig antwoord voorgoed tegen.
+4. Een afgekapte ronde wordt als waarschuwing gelogd (`backend/scheduler.py`) in
+   plaats van stil te verdwijnen.
+
+Vastgelegd in `tests/test_leadgen_dubbele_concepten.py` (15 tests).
+
+**Nog open:** de ronde is echt te traag — hij haalt de map Verzonden (381
+berichten) volledig op, bericht voor bericht, en doet dat meerdere keren per
+beurt. De ticks liepen daardoor ~20 minuten uit elkaar in plaats van 10. Het slot
+maakt de uitkomst goed, maar de traagheid zelf staat nog. De support-mailagent
+(`scripts/support_mail_agent.py`) draait nergens ingepland en is buiten beschouwing
+gebleven.
