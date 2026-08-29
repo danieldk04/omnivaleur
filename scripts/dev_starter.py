@@ -124,7 +124,31 @@ def _opruimen(signalen: dict, staat: dict) -> bool:
             staat[sleutel]["status"] = "afgerond"
             staat[sleutel]["afgerond_op"] = datetime.now(timezone.utc).isoformat()
             veranderd = True
+        elif (staat[sleutel].get("status") == "gestart"
+                and _minuten_bezig(staat[sleutel]) > MAX_MINUTEN):
+            # Een sessie die vastloopt houdt alle andere storingen tegen, want er
+            # mag er maar één tegelijk draaien. Na anderhalf uur is hij niet meer
+            # aan het werk maar aan het wachten.
+            try:
+                os.kill(int(staat[sleutel]["pid"]), 15)
+            except Exception:  # noqa: BLE001
+                pass
+            staat[sleutel]["status"] = "afgebroken"
+            staat[sleutel]["afgerond_op"] = datetime.now(timezone.utc).isoformat()
+            print(f"  !! sessie voor {sleutel} liep langer dan {MAX_MINUTEN} minuten "
+                  f"en is gestopt — zie {staat[sleutel].get('log','het logboek')}")
+            veranderd = True
     return veranderd
+
+
+def _minuten_bezig(s: dict) -> float:
+    try:
+        gestart = datetime.fromisoformat(str(s.get("gestart")))
+    except (TypeError, ValueError):
+        return 0.0
+    if gestart.tzinfo is None:
+        gestart = gestart.replace(tzinfo=timezone.utc)
+    return (datetime.now(timezone.utc) - gestart).total_seconds() / 60
 
 
 def _werkmap_schoon() -> tuple[bool, str]:
