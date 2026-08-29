@@ -131,6 +131,10 @@ button.stil { background: transparent; border: 1px solid var(--rand); color: var
 .tl-tijd { color: var(--zacht); font-variant-numeric: tabular-nums; margin-right: 8px; }
 .tl-pijl { color: var(--zacht); }
 .tl-extra { color: var(--zacht); font-size: 12px; margin-top: 2px; }
+/* De twee kolommen lopen sterk uiteen in lengte — links kan leeg zijn terwijl
+   rechts vier terugmeldingen van tien regels staan. Zonder grens werd het blok
+   een meter hoog en moest je langs een lege kolom scrollen. */
+.kolomlijst { max-height: 460px; overflow-y: auto; }
 .jij { border-top: 1px solid var(--rand); padding: 10px 0; font-size: 13px; display: flex; gap: 10px; }
 .jij:first-child { border-top: none; padding-top: 0; }
 .jij .merk { flex-shrink: 0; align-self: flex-start; }
@@ -346,11 +350,11 @@ button.stil { background: transparent; border: 1px solid var(--rand); color: var
       <div class="kaart"><div class="label">→ Doorgegeven aan mij</div>
         <div class="uitleg">Met voorrang gemarkeerd omdat een klant boos is, dreigt te
           stoppen, of het meerdere mensen overkomt. De drukste eerst.</div>
-        <div id="wp-wachtrij"></div></div>
+        <div class="kolomlijst" id="wp-wachtrij"></div></div>
       <div class="kaart"><div class="label">← Teruggemeld aan de klant</div>
         <div class="uitleg">Wat er nu anders is, in de woorden die de klant krijgt,
           en of dat bericht ook echt klaarstaat.</div>
-        <div id="wp-gedaan"></div></div>
+        <div class="kolomlijst" id="wp-gedaan"></div></div>
     </div>
 
     <h2>Draait de machine</h2>
@@ -849,9 +853,11 @@ function storingRij(r) {
       ${regel('Voorrang', (r.waarom || []).join(' · '))}
       ${regel(r.status === 'afgewezen' ? 'Niet gerepareerd' : 'Wat er nu anders is', r.uitleg)}
       ${r.status === 'opgelost'
-        ? regel('Klant bericht', r.bericht_naar
-            ? `${r.bericht_naar} van ${(r.melders || []).length} melder(s)`
-            : 'nog geen bericht; volgt zodra er geen andere post voor hem klaarligt')
+        ? regel('Klant bericht', !r.bericht_naar
+            ? 'nog geen bericht; volgt zodra er geen andere post voor hem klaarligt'
+            : r.bericht_naar === (r.melders || []).length
+              ? 'ja, staat klaar in Concepten'
+              : `${r.bericht_naar} van de ${(r.melders || []).length} melders; de rest volgt`)
         : ''}
       ${r.sessie_mislukt ? regel('Eerder geprobeerd', 'de sessie sloeg af voor hij begon; staat weer in de rij') : ''}
     </div>`;
@@ -913,13 +919,24 @@ function toonWerkplaats(w) {
   // De gebeurtenissen van het laatste uur krijgen een groene stip: dat is wat er
   // net gebeurd is, en daar kijk je op een scherm als dit als eerste naar.
   const grens = Date.now() - 3600000;
-  el('wp-tijdlijn').innerHTML = (w.tijdlijn || []).map(r =>
-    `<div class="tl-rij ${new Date(r.wanneer).getTime() > grens ? 'nieuw' : ''}">
+  // EEN REGEL PER GEBEURTENIS. Hier stond eerst de volledige uitleg onder elke
+  // regel, en dat maakte de tijdlijn de helft van de pagina — met woordelijk
+  // dezelfde tekst die rechtsonder bij de terugmelding al staat. Wie de uitleg
+  // wil, houdt de muis erop; wie wil zien wat er gebeurd is, leest de volgorde.
+  const tl = (w.tijdlijn || []).map(r =>
+    `<div class="tl-rij ${new Date(r.wanneer).getTime() > grens ? 'nieuw' : ''}"
+          title="${veilig(r.extra || '')}">
        <span class="tl-tijd">${veilig(tijdstip(r.wanneer))}</span>
        <span class="tl-pijl">${veilig(r.van)} →</span> <b>${veilig(r.naar)}</b>
        — ${veilig(r.wat)}${r.sleutel ? ` <span class="tl-pijl">(${veilig(r.sleutel.replace(/-/g, ' '))})</span>` : ''}
-       ${r.extra ? `<div class="tl-extra">${veilig(r.extra)}</div>` : ''}
-     </div>`).join('') || '<div class="leeg">Nog niets gebeurd.</div>';
+     </div>`);
+  el('wp-tijdlijn').innerHTML = tl.length
+    ? tl.slice(0, 10).join('')
+      + (tl.length > 10
+          ? `<details><summary class="uitleg" style="cursor:pointer;padding:8px 0">
+               nog ${tl.length - 10} eerdere gebeurtenis(sen)</summary>${tl.slice(10).join('')}</details>`
+          : '')
+    : '<div class="leeg">Nog niets gebeurd.</div>';
 
   el('wp-cijfers').innerHTML =
       kaart('Doorgegeven aan mij', getal((w.wachtrij || []).length), 'met voorrang',

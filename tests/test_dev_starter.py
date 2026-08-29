@@ -287,12 +287,17 @@ def test_na_een_mislukking_wordt_er_niet_blindelings_doorgestart(kast, gestart, 
 
 
 def test_het_dashboard_toont_waarom_er_niets_gebeurt(monkeypatch):
+    # Een VERSE mislukking. Met een vaste datum faalde deze test vanzelf zodra de
+    # echte klok voorbij de herstelpauze liep — de tweede keer vandaag dat een
+    # vast tijdstip in een test dat deed.
+    from datetime import datetime, timezone
     from backend.api import beheer
+    nu = datetime.now(timezone.utc).isoformat()
     monkeypatch.setattr(beheer, "_eigenaar", lambda u: None)
     monkeypatch.setattr(beheer, "_leadgen_lezen", lambda naam: {
         "bug_signalen": {"eentje": {"status": "open", "moet_zeker": True,
                                     "melders": ["a@x.nl"], "omschrijving": "kapot"}},
-        "dev_sessies": {"eentje": {"status": "mislukt", "gestart": "2026-08-29T12:20:00+00:00",
+        "dev_sessies": {"eentje": {"status": "mislukt", "gestart": nu,
                                    "mislukt": "De maandlimiet is bereikt."}},
     }.get(naam))
     w = beheer.werkplaats(user=None)

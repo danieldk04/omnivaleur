@@ -1054,10 +1054,16 @@ def _tijdlijn(signalen: dict, sessies: dict, escalaties: list) -> list[dict]:
             zet(v.get("gerepareerd_op"), "klantenservice", "klant",
                 f"concept klaargezet voor {', '.join(v['bericht_verstuurd'][:2])}", sleutel)
 
+    # In gewone taal. "kan_niet_onderbouwen" met liggende streepjes is jargon uit
+    # de code; op dit scherm hoort te staan wat het betekent.
+    reden_naam = {"geld": "gaat over geld", "vertrek": "dreigt te stoppen",
+                  "storing_bij_meerderen": "meerdere mensen, zelfde storing",
+                  "kan_niet_onderbouwen": "hier heb ik geen antwoord op"}
     for e in escalaties:
         if not e.get("afgehandeld"):
+            soort = e.get("escalatie", "aandacht")
             zet(e.get("gezien_op") or e.get("wanneer"), "klantenservice", "Daniel",
-                f"{e.get('escalatie', 'aandacht')} — {e.get('adres', '')}",
+                f"{reden_naam.get(soort, soort)} — {e.get('adres', '')}",
                 "", e.get("samenvatting", ""))
 
     uit.sort(key=lambda r: r["wanneer"], reverse=True)
