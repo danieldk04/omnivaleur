@@ -32,15 +32,31 @@ def test_lederhose_wordt_geen_korte_broek():
 
 
 @pytest.mark.parametrize("titel", [
+    "Vintage kleed 200x300",
+    "Perzisch kleed handgeknoopt",
+    "Berber vloerkleed wol",
+    "Groot tapijt beige",
+])
+def test_kleed_zonder_kledingsignaal_is_een_vloerkleed(titel):
+    """Bevestigd door De Juiste Toon (30-08-2026): met "kleed" bedoelden zij
+    vloerkleden. Zonder kledingsignaal is dat in Nederland de betekenis."""
+    uit = _infer_attributes(titel, "")
+    assert uit.get("category") == "wonen tapijten en kleden"
+    assert uit.get("gender") == "wonen"
+
+
+@pytest.mark.parametrize("titel", [
     "Vintage kleed dames maat 38",
     "Zwart kleedje dames",
-    "Perzisch kleed 200x300 dames",
 ])
-def test_kleed_wordt_nooit_geraden(titel):
-    """In Vlaanderen is een kleed een jurk, in Nederland een vloerkleed. Wij weten
-    niet welke de verkoper bedoelt, dus vullen we niets in — een leeg veld vraagt
-    om aandacht, een fout veld niet."""
-    assert _infer_attributes(titel, "").get("category") is None
+def test_met_kledingsignaal_beslist_het_model(titel):
+    """Staat er "dames" bij, dan raden we niets: dan kan het toch een jurk zijn
+    (Vlaams) en beslist het model op de rest van de tekst."""
+    assert _infer_attributes(titel, "").get("category") != "wonen tapijten en kleden"
+
+
+def test_tafelkleed_is_geen_vloerkleed():
+    assert _infer_attributes("Linnen tafelkleed wit", "").get("category") is None
 
 
 def test_het_model_krijgt_beide_betekenissen_mee():

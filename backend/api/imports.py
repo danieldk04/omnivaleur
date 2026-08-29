@@ -457,8 +457,9 @@ async def _classify_with_claude(title: str | None, description: str | None,
             "  it means a DRESS; in the Netherlands it usually means a RUG (vloerkleed,\n"
             "  tapijt). Decide only if the rest of the text makes it obvious (a size like\n"
             "  200x300 or the word tapijt means a rug; a clothing size, a brand of clothing\n"
-            "  or words like mouwen/taille mean a dress). If it stays unclear, return\n"
-            '  confidence "low" so nothing is filled in. It is never a bag.\n'
+            "  or words like mouwen/taille mean a dress). With nothing else to go on,\n"
+            '  a Dutch listing means a rug: pick "wonen tapijten en kleden". It is never\n'
+            "  a bag.\n"
             '- The "sieraden" branch covers jewellery, watches, bags, suitcases, wallets\n'
             "  and sunglasses. Pick it for anything worn or carried as an accessory.\n"
             '  When you pick a "sieraden" category, gender must be "sieraden" too.\n\n'
@@ -562,6 +563,16 @@ def _infer_attributes(title: str | None, description: str | None = None) -> dict
             out["category"] = "jongens kleding"
         elif any(_word_in(w, text) for w in ("girls", "girl", "meisjes", "meisje")):
             out["category"] = "meisjes kleding"
+    elif not gender and any(_word_in(w, text) for w in
+                            ("vloerkleed", "vloerkleden", "tapijt", "tapijten",
+                             "karpet", "karpetten", "kleed", "kleden")):
+        # "Kleed" zonder enig kledingsignaal is in Nederland een vloerkleed —
+        # bevestigd door De Juiste Toon op 30-08-2026, die er vintage kleden mee
+        # bedoelde. Alleen als er verder niets op kleding wijst: staat er "dames"
+        # of "heren" bij, dan is de tak hierboven al gekozen en beslist het model.
+        # Een tafelkleed valt hier buiten, want er wordt op hele woorden gekeken.
+        out["gender"] = "wonen"
+        out["category"] = "wonen tapijten en kleden"
     elif gender:
         for keywords, per_gender in _CATEGORY_RULES:
             if any(_garment_in(k) for k in keywords):
