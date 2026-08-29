@@ -217,28 +217,26 @@
     <h2 class="sec">🔗 Vaste links per kanaal — deze horen in je profiel</h2>
     <div class="card">
       <p class="note" style="margin-top:0">Zet in élk profiel de link uit deze tabel, niet de kale
-        omnivaleur.com. Zonder de tags komt bezoek uit een app-bio bij Google Analytics binnen als
+        omnivaleur.com. Zonder tags komt bezoek uit een app-bio bij Google Analytics binnen als
         “direct” en zie je nooit welk kanaal het opleverde. Eén keer plakken en je bent klaar.</p>
       <table>
-        <tr><th>Kanaal</th><th>Taal</th><th>Link</th><th></th></tr>
-        {% for k in kanalen %}
+        <tr><th>Kanaal</th><th>Taal</th><th>Dit plak je</th><th></th></tr>
+        {% for k in kanalen + [maillink] %}
         <tr>
           <td>{{ k.kanaal }}</td>
           <td>{{ k.taal }}</td>
-          <td style="font-family:ui-monospace,monospace;font-size:12px;word-break:break-all">{{ k.link }}</td>
-          <td><button class="btn" type="button" onclick="copyLink(this,'{{ k.link }}')">Kopieer</button></td>
+          <td>
+            <span style="font-family:ui-monospace,monospace;font-size:14px">{{ k.kortelink }}</span>
+            <div class="note" style="margin:2px 0 0;font-size:11px;word-break:break-all">→ {{ k.link }}</div>
+          </td>
+          <td><button class="btn" type="button" onclick="copyLink(this,'{{ k.kortelink }}')">Kopieer</button></td>
         </tr>
         {% endfor %}
-        <tr>
-          <td>{{ maillink.kanaal }}</td>
-          <td>{{ maillink.taal }}</td>
-          <td style="font-family:ui-monospace,monospace;font-size:12px;word-break:break-all">{{ maillink.kortelink }}</td>
-          <td><button class="btn" type="button" onclick="copyLink(this,'{{ maillink.kortelink }}')">Kopieer</button></td>
-        </tr>
       </table>
-      <div class="note">De maillink is kort met opzet: hij stuurt door naar
-        <code>{{ maillink.pad }}</code> met de tags erachter. Zo staat er geen parameterslinger in een
-        persoonlijke mail, en kun je de campagnenaam later wijzigen zonder dat verstuurde links breken.
+      <div class="note">Kort met opzet. Instagram, TikTok en Threads tonen de link letterlijk onder je
+        naam, en een afgekapte parameterslinger leest daar als reclame. De korte link stuurt door naar
+        het adres in de grijze regel, dus Analytics meet precies hetzelfde. Bijkomend voordeel: wil je
+        een campagnenaam wijzigen, dan hoef je niet acht profielen langs.
         <br>Terugkijken doe je in Analytics onder <strong>Rapporten → Acquisitie → Verkeersacquisitie</strong>,
         met “Sessiebron/medium” of “Sessiecampagne” als rij.</div>
     </div>

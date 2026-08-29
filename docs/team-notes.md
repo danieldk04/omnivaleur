@@ -1504,5 +1504,24 @@ in een persoonlijke eerste mail leest als massapost — precies wat de opbouw in
 campagnenaam is later te wijzigen zonder dat verstuurde links breken. Bewust 307
 en geen 301, want een blijvende omleiding onthoudt de browser.
 
+**Aanvulling dezelfde dag — wat je plakt is kort, wat Analytics meet is getagd.**
+Daniel zag op zijn Instagram-profiel `omnivaleur.com/?utm_source=instagram&u…`
+staan: Instagram, TikTok en Threads tonen de link letterlijk onder je naam, en
+een afgekapte parameterslinger leest daar als reclame in plaats van als merk.
+Elk kanaal heeft daarom nu een korte link op het eigen domein die met een 307
+doorstuurt naar de getagde URL:
+
+    /ig  /tt  /yt  /pin  /th        (Engels, bio-en)
+    /ig-nl  /tt-nl  /yt-nl          (Nederlands, bio-nl)
+    /mp                             (koude mail)
+
+Ze worden in `backend/main.py` gegenereerd uit dezelfde tabel, dus een kanaal
+erbij is één regel in `KANAAL_LINKS`. Een test loopt ze alle negen langs met een
+echte aanroep en controleert dat er een 307 komt met precies de drie tags, dat
+geen twee kanalen dezelfde code hebben, en dat een korte code geen bestaande
+pagina overschaduwt (`/th` naast een `frontend/th.html` zou die pagina stil
+onbereikbaar maken).
+
 Openstaand voor Daniel: de acht bio-links moeten nog in de profielen geplakt
-worden. Dat kan niemand namens hem doen zonder in te loggen.
+worden. Dat kan niemand namens hem doen zonder in te loggen; de Chrome-extensie
+die dat zou toestaan was niet verbonden.

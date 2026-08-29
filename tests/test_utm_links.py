@@ -18,7 +18,9 @@ from urllib.parse import parse_qs, urlparse
 REPO = Path(__file__).parent.parent
 sys.path.insert(0, str(REPO / "scripts"))
 
-from backend.api.content import KANAAL_LINKS, MAIL_LINK, kanaal_link  # noqa: E402
+from backend.api.content import (  # noqa: E402
+    KANAAL_LINKS, MAIL_LINK, kanaal_link, korte_link,
+)
 from backend.main import KORTE_LINKS  # noqa: E402
 from backend.services import ga4  # noqa: E402
 import leadgen_mail as L  # noqa: E402
@@ -84,6 +86,54 @@ def test_de_maillink_is_kort_en_de_omleiding_draagt_de_tags():
     assert tags["utm_medium"] == MAIL_LINK["medium"]
     assert tags["utm_campaign"] == MAIL_LINK["campagne"]
     assert doel.startswith(MAIL_LINK["pad"] + "?")
+
+
+def test_elk_kanaal_heeft_een_eigen_korte_link():
+    """Twee kanalen met dezelfde korte code betekent dat er één stil overschreven
+    wordt, en dat de helft van je bezoek onder het verkeerde kanaal terechtkomt."""
+    codes = [k["kort"] for k in ALLE]
+    assert len(codes) == len(set(codes)), codes
+    for code in codes:
+        assert re.fullmatch(r"[a-z0-9-]+", code), code
+
+
+def test_wat_je_plakt_is_kort_en_wat_analytics_ziet_draagt_de_tags():
+    """Instagram en TikTok tonen de link letterlijk onder je naam. Wat de
+    bezoeker daar ziet mag kort zijn, zolang hij op de getagde URL landt."""
+    from fastapi.testclient import TestClient
+    from backend.main import app
+
+    client = TestClient(app)
+    for k in ALLE:
+        zichtbaar = korte_link(k, "https://omnivaleur.com")
+        assert len(zichtbaar) <= 32, zichtbaar
+        antwoord = client.get("/" + k["kort"], follow_redirects=False)
+        assert antwoord.status_code == 307, k["kort"]
+        doel = antwoord.headers["location"]
+        assert _tags(doel) == {
+            "utm_source": k["source"],
+            "utm_medium": k["medium"],
+            "utm_campaign": k["campagne"],
+        }, k["kort"]
+
+
+def test_een_korte_link_kaapt_geen_bestaande_pagina():
+    """/th of /pin mag nooit een echte pagina overschaduwen — dan verdwijnt die
+    pagina zonder dat er ergens een foutmelding komt."""
+    from backend.main import app
+
+    bezet = set()
+    for route in app.routes:
+        pad = getattr(route, "path", "")
+        naam = getattr(getattr(route, "endpoint", None), "__name__", "")
+        if naam == "omleiding":       # de korte links zelf tellen niet mee
+            continue
+        if pad.count("/") == 1 and "{" not in pad and pad != "/":
+            bezet.add(pad)
+    for k in ALLE:
+        assert "/" + k["kort"] not in bezet, k["kort"]
+        # StaticFiles(html=True) serveert frontend/<naam>.html op hetzelfde pad.
+        assert not (REPO / "frontend" / f"{k['kort']}.html").exists(), k["kort"]
 
 
 def test_geen_getagde_links_binnen_de_eigen_site():

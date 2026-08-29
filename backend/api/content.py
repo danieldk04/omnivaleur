@@ -532,21 +532,29 @@ def _require_dashboard_token(token: str | None) -> None:
 # dashboard voor. Deze tabel gaat alleen over de vaste links in de profielen.
 KANAAL_LINKS: list[dict] = [
     {"kanaal": "TikTok", "taal": "EN", "profiel": "https://www.tiktok.com/@omnivaleur",
-     "pad": "/", "source": "tiktok", "medium": "social", "campagne": "bio-en"},
+     "pad": "/", "source": "tiktok", "medium": "social", "campagne": "bio-en",
+     "kort": "tt"},
     {"kanaal": "Instagram", "taal": "EN", "profiel": "https://www.instagram.com/omnivaleur/",
-     "pad": "/", "source": "instagram", "medium": "social", "campagne": "bio-en"},
+     "pad": "/", "source": "instagram", "medium": "social", "campagne": "bio-en",
+     "kort": "ig"},
     {"kanaal": "YouTube", "taal": "EN", "profiel": "https://www.youtube.com/@Omnivaleur",
-     "pad": "/", "source": "youtube", "medium": "social", "campagne": "bio-en"},
+     "pad": "/", "source": "youtube", "medium": "social", "campagne": "bio-en",
+     "kort": "yt"},
     {"kanaal": "Pinterest", "taal": "EN", "profiel": "https://nl.pinterest.com/Omnivaleur/",
-     "pad": "/", "source": "pinterest", "medium": "social", "campagne": "bio-en"},
+     "pad": "/", "source": "pinterest", "medium": "social", "campagne": "bio-en",
+     "kort": "pin"},
     {"kanaal": "Threads", "taal": "EN", "profiel": "https://www.threads.com/@omnivaleur",
-     "pad": "/", "source": "threads", "medium": "social", "campagne": "bio-en"},
+     "pad": "/", "source": "threads", "medium": "social", "campagne": "bio-en",
+     "kort": "th"},
     {"kanaal": "Instagram", "taal": "NL", "profiel": "https://www.instagram.com/omnivaleurnl/",
-     "pad": "/", "source": "instagram", "medium": "social", "campagne": "bio-nl"},
+     "pad": "/", "source": "instagram", "medium": "social", "campagne": "bio-nl",
+     "kort": "ig-nl"},
     {"kanaal": "TikTok", "taal": "NL", "profiel": "https://www.tiktok.com/@omni.valeur",
-     "pad": "/", "source": "tiktok", "medium": "social", "campagne": "bio-nl"},
+     "pad": "/", "source": "tiktok", "medium": "social", "campagne": "bio-nl",
+     "kort": "tt-nl"},
     {"kanaal": "YouTube", "taal": "NL", "profiel": "https://www.youtube.com/@OmnivaleurNL",
-     "pad": "/", "source": "youtube", "medium": "social", "campagne": "bio-nl"},
+     "pad": "/", "source": "youtube", "medium": "social", "campagne": "bio-nl",
+     "kort": "yt-nl"},
 ]
 
 # De koude mail staat er apart bij: die link wordt niet ergens geplakt maar door
@@ -554,19 +562,35 @@ KANAAL_LINKS: list[dict] = [
 # hangen aan de omleiding (KORTE_LINKS in backend/main.py).
 MAIL_LINK = {
     "kanaal": "Koude mail (Marktplaats)", "taal": "NL",
-    "profiel": "", "kort": "/mp",
+    "profiel": "", "kort": "mp",
     "pad": "/mp-video", "source": "koude-mail", "medium": "email",
     "campagne": "marktplaats-nl",
 }
 
 
-def kanaal_link(k: dict, site_url: str = "") -> str:
-    """De volledige link met tags, opgebouwd uit één afspraak in plaats van uit
-    het hoofd. Volgorde vast (source, medium, campaign) zodat twee links naar
-    hetzelfde kanaal er ook echt hetzelfde uitzien."""
-    basis = (site_url or SITE_URL).rstrip("/")
-    return (f"{basis}{k['pad']}?utm_source={k['source']}"
+def kanaal_pad(k: dict) -> str:
+    """Het pad met tags, opgebouwd uit één afspraak in plaats van uit het hoofd.
+    Volgorde vast (source, medium, campaign) zodat twee links naar hetzelfde
+    kanaal er ook echt hetzelfde uitzien."""
+    return (f"{k['pad']}?utm_source={k['source']}"
             f"&utm_medium={k['medium']}&utm_campaign={k['campagne']}")
+
+
+def kanaal_link(k: dict, site_url: str = "") -> str:
+    """De volledige, getagde link. Dit is wat er in de rapporten terechtkomt."""
+    return (site_url or SITE_URL).rstrip("/") + kanaal_pad(k)
+
+
+def korte_link(k: dict, site_url: str = "") -> str:
+    """De link zoals hij in een profiel geplakt wordt.
+
+    Waarom kort: Instagram, TikTok en Threads tonen de link letterlijk onder je
+    naam. `omnivaleur.com/?utm_source=instagram&utm_medium=social&...` staat daar
+    als een afgekapte parameterslinger — dat leest als reclame, niet als merk.
+    `omnivaleur.com/ig` is net zo meetbaar en oogt als een gewone link. De tags
+    hangen aan de omleiding (zie backend/main.py), niet aan wat de bezoeker ziet.
+    """
+    return (site_url or SITE_URL).rstrip("/") + "/" + k["kort"]
 
 
 @router.get("/analytics", response_class=HTMLResponse)
@@ -574,9 +598,10 @@ async def analytics_dashboard(request: Request, token: str | None = None):
     _require_dashboard_token(token)
     from backend.services.analytics_report import build_report
     report = build_report()
-    kanalen = [{**k, "link": kanaal_link(k, SITE_URL)} for k in KANAAL_LINKS]
+    kanalen = [{**k, "link": kanaal_link(k, SITE_URL),
+                "kortelink": korte_link(k, SITE_URL)} for k in KANAAL_LINKS]
     mail = {**MAIL_LINK, "link": kanaal_link(MAIL_LINK, SITE_URL),
-            "kortelink": SITE_URL.rstrip("/") + MAIL_LINK["kort"]}
+            "kortelink": korte_link(MAIL_LINK, SITE_URL)}
     return templates.TemplateResponse(
         "analytics_dashboard.html",
         {"request": request, "report": report, "token": token, "site_url": SITE_URL,

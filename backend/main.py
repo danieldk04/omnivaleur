@@ -247,28 +247,40 @@ async def mp_video_page():
 
 
 # ── Korte links met vaste UTM-tags ────────────────────────────────────────
-# Waarom een omweg in plaats van de UTM's gewoon in de mail zetten:
+# omnivaleur.com/ig, /tt, /yt, /pin, /th (+ de -nl varianten) en /mp sturen door
+# naar dezelfde pagina mét meet-tags erachter.
 #
-# 1. De koude mail wordt per lead geschreven door een taalmodel. Een lange URL
-#    met drie parameters is iets wat een model kan verhaspelen; "/mp" niet.
-# 2. Een zichtbare "?utm_source=..." in een persoonlijke eerste mail leest als
-#    massapost — precies wat de opbouw in scripts/leadgen_mail.py probeert te
-#    vermijden (mail1 draagt daarom ook bewust geen pixel).
-# 3. De tagging staat zo op één plek. Wil je de campagnenaam wijzigen, dan
-#    hoeft er geen enkele verstuurde link ongeldig te worden.
+# Waarom een omweg in plaats van de tags gewoon in de link zetten:
 #
-# De bezoeker landt op de échte URL mét parameters, dus Google Analytics ziet
-# gewoon bron/medium/campagne. 307 en niet 301: een blijvende omleiding wordt
-# door browsers onthouden, en dan is de tag later niet meer te wijzigen.
+# 1. Instagram, TikTok en Threads tonen de link letterlijk onder je naam. Een
+#    afgekapte "?utm_source=instagram&u…" leest daar als reclame in plaats van
+#    als merk. Wat de bezoeker ziet en wat Analytics meet, hoeven niet dezelfde
+#    tekst te zijn.
+# 2. De koude mail wordt per lead door een taalmodel geschreven. Een lange URL
+#    met drie parameters is iets wat een model kan verhaspelen; "/mp" niet. En
+#    een parameterslinger in een persoonlijke eerste mail leest als massapost —
+#    precies wat de opbouw in scripts/leadgen_mail.py vermijdt.
+# 3. De tagging staat op één plek (KANAAL_LINKS in backend/api/content.py).
+#    Wil je een campagnenaam wijzigen, dan hoeft er geen enkele geplakte link
+#    ongeldig te worden — en dat scheelt acht profielen langsgaan.
+#
+# De bezoeker landt op de échte URL mét parameters, dus Analytics ziet gewoon
+# bron/medium/campagne. 307 en niet 301: een blijvende omleiding wordt door
+# browsers onthouden, en dan is de tag later niet meer te wijzigen.
 KORTE_LINKS = {
-    # De koude-mail-sequence naar Nederlandse Marktplaats-verkopers.
-    "mp": "/mp-video?utm_source=koude-mail&utm_medium=email&utm_campaign=marktplaats-nl",
+    k["kort"]: content.kanaal_pad(k)
+    for k in [*content.KANAAL_LINKS, content.MAIL_LINK]
 }
 
 
-@app.get("/mp")
-async def korte_link_mp():
-    return RedirectResponse(KORTE_LINKS["mp"], status_code=307)
+def _korte_link_route(doel: str):
+    async def omleiding():
+        return RedirectResponse(doel, status_code=307)
+    return omleiding
+
+
+for _code, _doel in KORTE_LINKS.items():
+    app.get(f"/{_code}", include_in_schema=False)(_korte_link_route(_doel))
 
 
 @app.exception_handler(StarletteHTTPException)
