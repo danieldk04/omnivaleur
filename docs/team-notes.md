@@ -1351,3 +1351,21 @@ gebeurtenissen — en niets meer dan dat, want elke extra teller kost aandacht.
   ze met de publieke sleutel niet), met de oplossing erbij.
 
 Bewegende onderdelen respecteren `prefers-reduced-motion`.
+
+### 2026-08-29 — `import-server-timeout` was al gerepareerd onder een andere sleutel
+
+Egbert (info@papas-plectrums.nl) meldde op 25-08 tweemaal (11:29 en 13:20): de
+server geeft time-outs, waardoor er maar een paar items tegelijk importeren.
+Nagemeten in plaats van aangenomen: dit is dezelfde storing als
+`import-wordt-steeds-trager`, vanochtend 10:05 al gerepareerd via de
+importcache in `backend/api/imports.py` (`_BULK_IMPORT_CACHE`, rond regel
+1452-1500) — de code daar noemt Egberts 25-08-melding zelfs letterlijk als
+aanleiding. Oorzaak was dat elke aanroep van "Import all" éérst zijn hele
+voorraad + advertenties opnieuw uit de database las, ongeacht hoe klein de
+lading werd gezet; dat werd nu gecachet voor de duur van een import-sessie.
+Er is nu ook een harde grens van 20 seconden per aanroep, zodat een verzoek
+nooit meer op de gateway-tijdslimiet vastloopt.
+
+Niets aan de code gewijzigd — de fix stond al op main en is al drie uur live.
+Teruggemeld met `opgelost` onder de sleutel `import-server-timeout`, zodat
+Egbert ook onder díe melding bericht krijgt.
