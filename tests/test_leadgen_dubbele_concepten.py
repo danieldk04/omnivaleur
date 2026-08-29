@@ -62,9 +62,20 @@ class NepImap:
         n = len(self.mappen.get(self.huidig, []))
         return ("OK", [b" ".join(str(i + 1).encode() for i in range(n))])
 
-    def fetch(self, num, _wat):
-        ruw = self.mappen[self.huidig][int(num) - 1]
-        return ("OK", [(b"1 (BODY[HEADER] {0}", ruw)])
+    def fetch(self, reeks, _wat):
+        """Net als imaplib: een reeks nummers in één aanroep, antwoord per
+        bericht voorafgegaan door het volgnummer."""
+        uit = []
+        for deel in str(reeks).replace(" ", "").split(","):
+            if not deel.isdigit():
+                continue
+            i = int(deel)
+            berichten = self.mappen.get(self.huidig) or []
+            if not 1 <= i <= len(berichten):
+                continue
+            uit.append((f"{i} (BODY[HEADER] {{0}}".encode(), berichten[i - 1]))
+            uit.append(b")")
+        return ("OK", uit)
 
 
 @pytest.fixture
@@ -209,3 +220,17 @@ def test_opruimen_gaat_vooraf_aan_schrijven():
     ronde = bron.split("def tick(args)")[1]
     assert ronde.index("_ruim_concepten_op()") < ronde.index("_check_inbox(")
     assert ronde.index("_ruim_concepten_op()") < ronde.index("_warme_opvolging(")
+
+
+def test_de_nep_postbus_levert_echt_koppen_op(postbus):
+    """Vangnet voor deze tests zelf: leest het slot de postbus niet, dan zou
+    alles er 'schoon' uitzien en zouden de tests hierboven niets bewijzen."""
+    import imaplib
+    postbus(Concept=[_kop(To="frank@klant.nl", Date=_tijd(30)),
+                     _kop(To="iemand@anders.nl", Date=_tijd(30))])
+    with imaplib.IMAP4_SSL() as imap:
+        imap.select('"Concept"', readonly=True)
+        _, d = imap.search(None, "ALL")
+        koppen = L._koppen_in_bulk(imap, (d[0] or b"").split())
+    assert len(koppen) == 2
+    assert {k["To"] for k in koppen.values()} == {"frank@klant.nl", "iemand@anders.nl"}

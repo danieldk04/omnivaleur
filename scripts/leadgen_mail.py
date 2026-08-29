@@ -1114,6 +1114,97 @@ def _leesbaar(waarde) -> str:
         return str(waarde)
 
 
+# ─────────────────────────────────────────────────────────────────────────────
+# BERICHTEN IN BULK OPHALEN
+#
+# WAAROM (29-08-2026). Elke ronde vroeg de postbus bericht voor bericht op: één
+# IMAP-aanroep per mail, honderden per beurt, en voor de map Verzonden zelfs de
+# volledige mail inclusief bijlagen. Heen en weer naar Zoho kost telkens een
+# tiende seconde; bij 381 verzonden mails, 123 binnengekomen mails en drie
+# stappen die dezelfde mappen nóg eens doorlopen liep één beurt op tot ongeveer
+# twintig minuten. De server kapt een beurt af na vijfentwintig, en dan is het
+# werk dat al gedaan was niet meer weggeschreven — dat is precies hoe er drie
+# concepten voor dezelfde persoon konden ontstaan.
+#
+# IMAP kan een reeks berichten in ÉÉN aanroep leveren. Dat is dezelfde vraag, met
+# honderden keren minder wachten. Alleen de kopteksten waar dat kan, en de
+# volledige mail in kleine groepjes waar het moet — een hele map in één keer
+# ophalen zou het geheugen van de server opeten.
+KOPPEN_PER_KEER = 200        # kopteksten zijn klein
+BERICHTEN_PER_KEER = 20      # volledige mails dragen bijlagen mee
+
+
+def _in_groepjes(nummers: list, per: int):
+    for i in range(0, len(nummers), per):
+        yield nummers[i:i + per]
+
+
+def _fetch_in_bulk(imap, nummers, wat: str, per: int) -> dict:
+    """{volgnummer: ruwe bytes} voor alle gevraagde berichten."""
+    uit: dict[bytes, bytes] = {}
+    nummers = [n for n in (nummers or []) if n]
+    if not nummers:
+        return uit
+    for groep in _in_groepjes(nummers, per):
+        try:
+            _, data = imap.fetch(b",".join(groep).decode(), wat)
+        except Exception:  # noqa: BLE001 — één mislukte groep mag de rest niet slopen
+            continue
+        for stuk in data or []:
+            if not isinstance(stuk, tuple) or len(stuk) < 2:
+                continue
+            m = re.match(rb"^\s*(\d+)", stuk[0] or b"")
+            if m and stuk[1]:
+                uit[m.group(1)] = stuk[1]
+    return uit
+
+
+def _koppen_in_bulk(imap, nummers) -> dict:
+    """{volgnummer: bericht met alleen de kopteksten}."""
+    uit = {}
+    for num, ruw in _fetch_in_bulk(imap, nummers, "(BODY.PEEK[HEADER])",
+                                    KOPPEN_PER_KEER).items():
+        try:
+            uit[num] = email.message_from_bytes(ruw)
+        except Exception:  # noqa: BLE001
+            continue
+    return uit
+
+
+def _berichten_in_bulk(imap, nummers) -> dict:
+    """{volgnummer: ruwe, volledige mail}. Markeert als gelezen, net als eerst."""
+    return _fetch_in_bulk(imap, nummers, "(RFC822)", BERICHTEN_PER_KEER)
+
+
+def _uid_berichten_in_bulk(imap, uids) -> dict:
+    """{uid: ruwe, volledige mail}. Op UID werken is nodig zodra er iets
+    verplaatst of verwijderd wordt: volgnummers schuiven dan op."""
+    uit: dict[bytes, bytes] = {}
+    uids = [u for u in (uids or []) if u]
+    for groep in _in_groepjes(uids, BERICHTEN_PER_KEER):
+        try:
+            _, data = imap.uid("fetch", b",".join(groep).decode(), "(UID RFC822)")
+        except Exception:  # noqa: BLE001
+            continue
+        for stuk in data or []:
+            if not isinstance(stuk, tuple) or len(stuk) < 2:
+                continue
+            m = re.search(rb"UID\s+(\d+)", stuk[0] or b"")
+            if m and stuk[1]:
+                uit[m.group(1)] = stuk[1]
+    return uit
+
+
+# Hoe ver terug de "wie sprak het laatst"-vragen kijken. Verder dan dit is een
+# gesprek zo oud dat er geen opvolging meer op volgt, en elke extra maand kost
+# alleen maar tijd.
+LAATST_DAGEN = 60
+
+
+def _sinds(dagen: int) -> str:
+    return (datetime.now() - timedelta(days=dagen)).strftime("%d-%b-%Y")
+
+
 def _beantwoorde_berichten() -> set[str]:
     """Message-ID's van binnengekomen mails waar al een antwoord op is gegaan.
 
@@ -1145,11 +1236,7 @@ def _beantwoorde_berichten() -> set[str]:
                     continue
                 imap.select(f'"{map_}"', readonly=True)
                 _, d = imap.search(None, "ALL")
-                for num in (d[0] or b"").split():
-                    _, ruw = imap.fetch(num, "(BODY.PEEK[HEADER])")
-                    if not ruw or not ruw[0]:
-                        continue
-                    kop = email.message_from_bytes(ruw[0][1])
+                for kop in _koppen_in_bulk(imap, (d[0] or b"").split()).values():
                     for veld in ("In-Reply-To", "References"):
                         # Zoho verstuurt deze koppen gecodeerd terug
                         # ("=?utf-8?q?=3CAM9PR03...=3E?="). Ongedecodeerd
@@ -1207,10 +1294,7 @@ def _check_inbox(state: dict, boek: "Notion", dagen: int) -> tuple[int, int, int
                 _, data = imap.search(None, f'(SINCE {sinds})')
             except Exception:  # noqa: BLE001
                 continue
-            for num in (data[0] or b"").split():
-                _, ruw = imap.fetch(num, "(RFC822)")
-                if ruw and ruw[0]:
-                    berichten.append(ruw[0][1])
+            berichten.extend(_berichten_in_bulk(imap, (data[0] or b"").split()).values())
 
         # ÉÉN CONCEPT PER PERSOON, EN ALLEEN OP HET LAATSTE BERICHT.
         #
@@ -1488,12 +1572,8 @@ def _eigen_mail_meenemen(state: dict, boek: "Notion") -> int:
     with imaplib.IMAP4_SSL(host, 993) as imap:
         imap.login(gebruiker, wachtwoord)
         imap.select('"Verzonden"')
-        _, data = imap.search(None, "ALL")
-        for num in (data[0] or b"").split():
-            _, ruw = imap.fetch(num, "(BODY.PEEK[HEADER])")
-            if not ruw or not ruw[0]:
-                continue
-            msg = email.message_from_bytes(ruw[0][1])
+        _, data = imap.search(None, f"(SINCE {_sinds(LAATST_DAGEN)})")
+        for msg in _koppen_in_bulk(imap, (data[0] or b"").split()).values():
             ontvanger = parseaddr(msg.get("To", ""))[1].lower()
             onderwerp = str(msg.get("Subject", ""))
             if not ontvanger or onderwerp.lower().startswith("re:"):
@@ -1659,12 +1739,8 @@ def _warme_opvolging(state: dict, boek: "Notion") -> int:
                 for m_ in mappen:
                     if imap.select(f'"{m_}"', readonly=True)[0] != "OK":
                         continue
-                    _, d = imap.search(None, "ALL")
-                    for num in (d[0] or b"").split():
-                        _, ruw = imap.fetch(num, "(BODY.PEEK[HEADER])")
-                        if not ruw or not ruw[0]:
-                            continue
-                        msg = email.message_from_bytes(ruw[0][1])
+                    _, d = imap.search(None, f"(SINCE {_sinds(LAATST_DAGEN)})")
+                    for msg in _koppen_in_bulk(imap, (d[0] or b"").split()).values():
                         a = parseaddr(msg.get(veld, ""))[1].lower()
                         try:
                             ts = parsedate_to_datetime(msg.get("Date", "")).timestamp()
@@ -2364,12 +2440,8 @@ def _verzonden_lezen() -> list[dict]:
             imap.login(gebruiker, wachtwoord)
             imap.select('"Verzonden"', readonly=True)
             _, d = imap.search(None, f'(SINCE {sinds})')
-            nummers = (d[0] or b"").split()
-            for num in nummers:
-                _, ruw = imap.fetch(num, "(RFC822)")
-                if not ruw or not ruw[0]:
-                    continue
-                msg = email.message_from_bytes(ruw[0][1])
+            for ruw in _berichten_in_bulk(imap, (d[0] or b"").split()).values():
+                msg = email.message_from_bytes(ruw)
                 tekst = ""
                 for deel in msg.walk():
                     if deel.get_content_type() == "text/plain":
@@ -2778,6 +2850,14 @@ def _waarom_geen_concept(adres: str, inkomend) -> str | None:
         # info@bedrijf-online.nl schreven. Zelfde huis, ander adres.
         return bool(stam) and len(stam) >= 5 and stam in ander.split("@")[-1]
 
+    # De mailserver kan zelf al filteren op wie erin voorkomt, en dat scheelt het
+    # optillen van honderden kopteksten per concept. IMAP zoekt op een stukje
+    # tekst in de kop, dus de bedrijfsnaam vangt meteen ook het andere adres van
+    # hetzelfde huis. Alleen letters en cijfers, zodat er niets in de zoekopdracht
+    # kan sluipen wat er niet hoort.
+    zoekterm = stam if len(stam) >= 5 else adres
+    zoekterm = re.sub(r"[^A-Za-z0-9@.\-]", "", zoekterm)[:64] or adres
+
     plat = lambda v: re.sub(r"\s+", " ", str(v or "")).strip()
     eigen_mid = plat(inkomend.get("Message-ID")) if inkomend is not None else ""
     try:
@@ -2796,11 +2876,7 @@ def _waarom_geen_concept(adres: str, inkomend) -> str | None:
             # 1 en 2 — wat ligt er al klaar?
             if imap.select(f'"{conceptmap}"', readonly=True)[0] == "OK":
                 _, d = imap.search(None, "ALL")
-                for num in (d[0] or b"").split():
-                    _, ruw = imap.fetch(num, "(BODY.PEEK[HEADER])")
-                    if not ruw or not ruw[0]:
-                        continue
-                    kop = email.message_from_bytes(ruw[0][1])
+                for kop in _koppen_in_bulk(imap, (d[0] or b"").split()).values():
                     if hoort_bij(parseaddr(_leesbaar(kop.get("To", "")))[1]):
                         return "er ligt al een concept voor deze persoon"
                     if eigen_mid:
@@ -2810,13 +2886,8 @@ def _waarom_geen_concept(adres: str, inkomend) -> str | None:
 
             # 3 — hebben wij na dit bericht al iets gestuurd?
             if waarop and imap.select('"Verzonden"', readonly=True)[0] == "OK":
-                sinds = (datetime.now() - timedelta(days=VERZONDEN_DAGEN)).strftime("%d-%b-%Y")
-                _, d = imap.search(None, f"(SINCE {sinds})")
-                for num in (d[0] or b"").split():
-                    _, ruw = imap.fetch(num, "(BODY.PEEK[HEADER])")
-                    if not ruw or not ruw[0]:
-                        continue
-                    kop = email.message_from_bytes(ruw[0][1])
+                _, d = imap.search(None, f'(SINCE {_sinds(VERZONDEN_DAGEN)} TO "{zoekterm}")')
+                for kop in _koppen_in_bulk(imap, (d[0] or b"").split()).values():
                     if not hoort_bij(parseaddr(_leesbaar(kop.get("To", "")))[1]):
                         continue
                     try:
@@ -2828,16 +2899,11 @@ def _waarom_geen_concept(adres: str, inkomend) -> str | None:
 
             # 4 — heeft hij na dit bericht nog iets geschreven?
             if waarop:
-                sinds = (datetime.now() - timedelta(days=VERZONDEN_DAGEN)).strftime("%d-%b-%Y")
                 for map_ in ("INBOX", MAP_BEANTWOORD):
                     if imap.select(f'"{map_}"', readonly=True)[0] != "OK":
                         continue
-                    _, d = imap.search(None, f"(SINCE {sinds})")
-                    for num in (d[0] or b"").split():
-                        _, ruw = imap.fetch(num, "(BODY.PEEK[HEADER])")
-                        if not ruw or not ruw[0]:
-                            continue
-                        kop = email.message_from_bytes(ruw[0][1])
+                    _, d = imap.search(None, f'(SINCE {_sinds(VERZONDEN_DAGEN)} FROM "{zoekterm}")')
+                    for kop in _koppen_in_bulk(imap, (d[0] or b"").split()).values():
                         if not hoort_bij(parseaddr(kop.get("From", ""))[1]):
                             continue
                         try:
@@ -3088,12 +3154,8 @@ def _ruim_concepten_op() -> int:
                 for m_ in mappen:
                     if imap.select(f'"{m_}"', readonly=True)[0] != "OK":
                         continue
-                    _, d = imap.search(None, "ALL")
-                    for num in (d[0] or b"").split():
-                        _, ruw = imap.fetch(num, "(BODY.PEEK[HEADER])")
-                        if not ruw or not ruw[0]:
-                            continue
-                        msg = email.message_from_bytes(ruw[0][1])
+                    _, d = imap.search(None, f"(SINCE {_sinds(CONCEPT_VERVAL_DAGEN + 7)})")
+                    for msg in _koppen_in_bulk(imap, (d[0] or b"").split()).values():
                         adres = parseaddr(msg.get(veld, ""))[1].lower()
                         try:
                             ts = parsedate_to_datetime(msg.get("Date", "")).timestamp()
@@ -3214,11 +3276,8 @@ def _opruimen(state: dict) -> None:
             # volgende nummer naar niets meer.
             imap.select("INBOX")
             _, data = imap.uid("search", None, "ALL")
-            for uid in (data[0] or b"").split():
-                _, ruw = imap.uid("fetch", uid, "(RFC822)")
-                if not ruw or not ruw[0]:
-                    continue
-                msg = email.message_from_bytes(ruw[0][1])
+            for uid, ruw in _uid_berichten_in_bulk(imap, (data[0] or b"").split()).items():
+                msg = email.message_from_bytes(ruw)
                 afzender = parseaddr(msg.get("From", ""))[1].lower()
                 doel = _waar_hoort_dit(msg, afzender, state, beantwoord_na)
                 if not doel:
@@ -3239,11 +3298,8 @@ def _opruimen(state: dict) -> None:
             # Daniel het ziet.
             imap.select(f'"{MAP_BEANTWOORD}"')
             _, data = imap.uid("search", None, "ALL")
-            for uid in (data[0] or b"").split():
-                _, ruw = imap.uid("fetch", uid, "(RFC822)")
-                if not ruw or not ruw[0]:
-                    continue
-                msg = email.message_from_bytes(ruw[0][1])
+            for uid, ruw in _uid_berichten_in_bulk(imap, (data[0] or b"").split()).items():
+                msg = email.message_from_bytes(ruw)
                 afzender = parseaddr(msg.get("From", ""))[1].lower()
                 if not afzender or SYSTEEM_AFZENDER.search(afzender):
                     continue
@@ -3325,10 +3381,8 @@ def _antwoorden_van_daniel(imap, gebruiker: str) -> dict[str, float]:
     dat gaf regelmatig de verkeerde als laatste."""
     laatste: dict[str, float] = {}
     imap.select('"Verzonden"')
-    _, data = imap.search(None, "ALL")
-    for num in data[0].split():
-        _, ruw = imap.fetch(num, "(BODY.PEEK[HEADER])")
-        msg = email.message_from_bytes(ruw[0][1])
+    _, data = imap.search(None, f"(SINCE {_sinds(LAATST_DAGEN)})")
+    for msg in _koppen_in_bulk(imap, (data[0] or b"").split()).values():
         ontvanger = parseaddr(msg.get("To", ""))[1].lower()
         onderwerp = str(msg.get("Subject", ""))
         # Alleen echte reacties: die beginnen met Re:. De koude mails niet.

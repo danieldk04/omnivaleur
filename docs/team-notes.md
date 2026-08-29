@@ -1014,3 +1014,34 @@ nergens meer vandaan te halen (de SKU komt maar bij 1 op de 40 overeen).
 De 23 publicatieopdrachten die al in zijn wachtrij stonden zijn bijgewerkt, zodat
 ook die compleet de deur uit gaan. Hij draait sinds vanochtend 1.0.260 en heeft
 de foto's van de eerste tien dun geplaatste advertenties zelf rechtgezet.
+
+### 29-08-2026 (later) — De mailronde was te traag; nu in bulk
+
+De onderliggende oorzaak van de dubbele concepten (zie de vorige notitie) was de
+duur van een ronde. De postbus werd bericht voor bericht bevraagd: één
+IMAP-aanroep per mail, en voor de map Verzonden zelfs de volledige mail inclusief
+bijlagen. Gemeten op de echte postbus: 635 kopteksten één voor één = 28,5 s, in
+bulk 2,5 s. Dezelfde mappen werden per beurt drie tot vijf keer doorlopen.
+
+Wat er veranderd is in `scripts/leadgen_mail.py`:
+
+- `_fetch_in_bulk` / `_koppen_in_bulk` / `_berichten_in_bulk` /
+  `_uid_berichten_in_bulk`: één IMAP-aanroep per groep in plaats van per bericht
+  (koppen 200 tegelijk, volledige mails 20 — die dragen bijlagen).
+  Omgezet: `_beantwoorde_berichten`, `_check_inbox`, `_eigen_mail_meenemen`,
+  `_warme_opvolging`, `_verzonden_lezen`, `_ruim_concepten_op`,
+  `_antwoorden_van_daniel`, beide lussen in `_opruimen`, en `_waarom_geen_concept`.
+- `LAATST_DAGEN = 60`: de "wie sprak het laatst"-vragen liepen over ALLE post in
+  Verzonden/INBOX/Beantwoord/Afval zonder enige grens.
+- `_waarom_geen_concept` laat de mailserver zelf filteren
+  (`SEARCH ... TO "<bedrijfsnaam>"`). Gemeten: 637 treffers → 3. Het slot kost nu
+  0,3–1,0 s per concept in plaats van seconden.
+
+Alles gemeten tegen de échte postbus, één voor één versus bulk, met vergelijking
+van de uitkomst: identiek (635/635, 165/165, 151/151 volledige mails, 151/151 op
+UID). `_verzonden_lezen` doet 637 mails nu in 10 s.
+
+**Handmatig opgeruimd:** de vier achtergebleven concepten (twee dubbele van
+Frenky, plus spacecartoonsafari en recycleland waar allang een mail naartoe was)
+via `leadgen_mail.py concepten`. Frenky's `warm_opvolg` is op 2 gezet, zodat hij
+geen derde zetje meer krijgt.
