@@ -297,13 +297,20 @@ button.stil { background: transparent; border: 1px solid var(--rand); color: var
   <section id="tab-systeem" hidden>
     <h2>Waar ik nu aan werk</h2>
     <div id="wp-bezig"></div>
+    <div class="raster" id="wp-cijfers" style="margin-top:14px"></div>
 
-    <div class="twee" style="margin-top:14px">
-      <div class="kaart"><div class="label">Wacht op mij</div>
-        <div class="uitleg">Met voorrang, de drukste storing eerst.</div>
+    <!-- De twee richtingen van de lijn, naast elkaar: wat de klantenservice
+         aan mij doorgeeft, en wat ik haar terugmeld. Zo is in één blik te
+         zien of er iets blijft hangen aan één van beide kanten. -->
+    <h2>De lijn klantenservice ↔ developer</h2>
+    <div class="twee">
+      <div class="kaart"><div class="label">→ Doorgegeven aan mij</div>
+        <div class="uitleg">Met voorrang gemarkeerd omdat een klant boos is, dreigt te
+          stoppen, of het meerdere mensen overkomt. De drukste eerst.</div>
         <div id="wp-wachtrij"></div></div>
-      <div class="kaart"><div class="label">Afgehandeld</div>
-        <div class="uitleg">Wat ik terugmeldde aan de klantenservice, en wie daar bericht over kreeg.</div>
+      <div class="kaart"><div class="label">← Teruggemeld aan de klant</div>
+        <div class="uitleg">Wat er nu anders is, in de woorden die de klant krijgt,
+          en of dat bericht ook echt klaarstaat.</div>
         <div id="wp-gedaan"></div></div>
     </div>
 
@@ -323,6 +330,11 @@ let VERVERS = localStorage.getItem('ov_beheer_refresh') || '';
 let LAATSTE = { kern: null, web: null, groei: null };
 
 const getal = (n) => Number(n || 0).toLocaleString('nl-NL');
+// Apart van getal(), want overal elders is een ontbrekende waarde gewoon nul.
+// Hier niet: de server mag jobs/listings/import_candidates met de publieke
+// sleutel niet lezen, en dat werd stil een nul — "0 advertenties live" terwijl
+// het er 8.916 waren. Niet mogen kijken is iets anders dan niets zien.
+const getalOfStreep = (n) => n == null ? '—' : Number(n).toLocaleString('nl-NL');
 const euro = (n) => '€ ' + Number(n || 0).toLocaleString('nl-NL', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const geleden = (v) => {
   if (!v) return '—';
@@ -595,12 +607,12 @@ function toonKern(d) {
     : `<div class="leeg">Nog geen concepten afgerond.</div>`;
 
   el('techniek').innerHTML =
-      kaart('Mislukte taken (24u)', getal(t.banen_mislukt_24u), '', t.banen_mislukt_24u ? 'af' : 'op')
-    + kaart('Taken in de wachtrij', getal(t.banen_wachtend), '')
-    + kaart('Klaar (24u)', getal(t.banen_klaar_24u), '')
-    + kaart('Advertenties live', getal(t.advertenties_live), `${getal(t.advertenties_fout)} met een fout`)
-    + kaart('Verkocht deze week', getal(t.verkocht_7d), '', 'op')
-    + kaart('Import open', getal(t.importkandidaten_open), 'nog niet overgezet')
+      kaart('Mislukte taken (24u)', getalOfStreep(t.banen_mislukt_24u), '', t.banen_mislukt_24u ? 'af' : 'op')
+    + kaart('Taken in de wachtrij', getalOfStreep(t.banen_wachtend), '')
+    + kaart('Klaar (24u)', getalOfStreep(t.banen_klaar_24u), '')
+    + kaart('Advertenties live', getalOfStreep(t.advertenties_live), `${getalOfStreep(t.advertenties_fout)} met een fout`)
+    + kaart('Verkocht deze week', getalOfStreep(t.verkocht_7d), '', 'op')
+    + kaart('Import open', getalOfStreep(t.importkandidaten_open), 'nog niet overgezet')
     + kaart('Extensie online', getal(k.extensies_online), 'nu aan het werk');
 
   tekenTrechter();
@@ -770,7 +782,7 @@ function storingRij(r) {
     ? `<div class="diff"><b>${kop}</b><span>${veilig(waarde)}</span></div>` : '';
   return `<div class="leerrij">
       <div class="patroon-kop"><span>${veilig(r.sleutel.replace(/-/g, ' '))}</span>
-        <b>${veilig(r.klaar_op || r.laatst || '')}</b></div>
+        <b>${(r.melders || []).length}× · ${veilig(r.klaar_op || r.laatst || '')}</b></div>
       <div class="uitleg" style="margin:4px 0 6px">${veilig(r.omschrijving || '')}</div>
       ${regel('Gemeld door', (r.melders || []).join(', '))}
       ${regel('Voorrang', (r.waarom || []).join(' · '))}
@@ -778,7 +790,7 @@ function storingRij(r) {
       ${r.status === 'opgelost'
         ? regel('Klant bericht', r.bericht_naar ? `ja, ${r.bericht_naar} melder(s)` : 'concept staat nog klaar')
         : ''}
-      ${regel('Sessie gestopt', r.sessie_mislukt)}
+      ${r.sessie_mislukt ? regel('Eerder geprobeerd', 'de sessie sloeg af voor hij begon; staat weer in de rij') : ''}
     </div>`;
 }
 
@@ -803,6 +815,14 @@ function toonWerkplaats(w) {
            <div class="uitleg" style="margin:6px 0 0">${(w.wachtrij || []).length
              ? getal(w.wachtrij.length) + ' storing(en) wachten; de volgende start binnen tien minuten.'
              : 'Geen storing met voorrang open.'} Laatste ronde: ${veilig(st.laatste_ronde || 'nooit')}.</div></div>`);
+
+  el('wp-cijfers').innerHTML =
+      kaart('Doorgegeven aan mij', getal((w.wachtrij || []).length), 'met voorrang',
+            (w.wachtrij || []).length ? 'let' : 'op')
+    + kaart('Teruggemeld', getal((w.gedaan || []).length), 'klant heeft bericht', 'op')
+    + kaart('Zonder voorrang', getal(w.overig_open), 'blijft bij de klantenservice')
+    + kaart('Laatste ronde', veilig((st.laatste_ronde || 'nooit').slice(-5)), 'elke tien minuten',
+            alarm ? 'af' : 'op');
 
   el('wp-wachtrij').innerHTML = (w.wachtrij || []).map(storingRij).join('')
     || `<div class="leeg">Niets met voorrang. ${getal(w.overig_open)} andere melding(en) staan open.</div>`;

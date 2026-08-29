@@ -197,10 +197,18 @@ def _log(tmp_path, tekst):
     return str(pad)
 
 
-def test_de_maandlimiet_wordt_herkend(tmp_path):
+def test_de_limiet_wordt_herkend_zonder_verkeerd_advies(tmp_path):
+    """De melding mag niet naar een betaalpagina wijzen.
+
+    Nagemeten op 29-08-2026: precies deze limiet was een uur later vanzelf weer
+    weg, zonder dat er iets is betaald of gewijzigd. "Verhoog je maandlimiet"
+    stuurt Daniel dan de verkeerde kant op voor iets wat zichzelf oplost.
+    """
     reden = S._waarom_niets_geworden(_log(tmp_path,
         "# sessie\n\nYou've hit your monthly spend limit · raise it at claude.ai\n"))
-    assert "maandlimiet" in reden
+    assert reden, "de limiet werd niet herkend"
+    assert "verhoog" not in reden.lower() and "settings/usage" not in reden
+    assert "opnieuw" in reden.lower()
 
 
 def test_een_sessie_die_niets_deed_valt_ook_op(tmp_path):

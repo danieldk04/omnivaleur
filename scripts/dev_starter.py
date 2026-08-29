@@ -183,10 +183,15 @@ def _beoordeel_afloop(sleutel: str, sessie: dict) -> None:
 # dingen kan alleen Daniel oplossen, dus ze horen op zijn scherm en niet in een
 # bestand dat niemand opent.
 NIETS_GEWORDEN = {
-    "spend limit": "De maandlimiet van je Claude-abonnement is bereikt. "
-                   "Tot je die verhoogt op claude.ai/settings/usage start er geen sessie.",
-    "usage limit": "De gebruikslimiet van je Claude-abonnement is bereikt. "
-                   "Tot die weer opengaat start er geen sessie.",
+    # LET OP DE TOON. Hier stond eerst "verhoog je maandlimiet". Dat was fout:
+    # nagemeten op 29-08-2026 ging diezelfde limiet een uur later vanzelf weer
+    # open, zonder dat er iets betaald of veranderd is. Een melding die de
+    # gebruiker naar een betaalpagina stuurt voor iets wat zichzelf oplost, is
+    # erger dan geen melding.
+    "spend limit": "Er was even geen ruimte in je Claude-abonnement. Dat loopt "
+                   "vanzelf weer vol; ik probeer het binnen een uur opnieuw.",
+    "usage limit": "Er was even geen ruimte in je Claude-abonnement. Dat loopt "
+                   "vanzelf weer vol; ik probeer het binnen een uur opnieuw.",
     "Invalid API key": "Claude Code is niet ingelogd op deze Mac. "
                        "Open een keer `claude` in een venster en log in.",
     "Please run /login": "Claude Code is niet ingelogd op deze Mac. "

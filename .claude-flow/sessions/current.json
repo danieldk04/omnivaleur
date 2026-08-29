@@ -2,11 +2,20 @@
   "id": "session-1788005908156",
   "startedAt": "2026-08-29T12:18:28.156Z",
   "cwd": "/Users/Danie/Documents/omnivaleur",
-  "context": {},
+  "context": {
+    "lastMatchedPatterns": [
+      "mem-shopify_workflow-belangrijk--nooit-content-over",
+      "mem-shopify_workflow-auto-push-workflow-for-shopify",
+      "mem-project_content_pipeline----",
+      "mem-project_zenbtw----",
+      "mem-MEMORY-memory-index"
+    ]
+  },
   "metrics": {
     "edits": 0,
     "commands": 0,
     "tasks": 0,
     "errors": 0
-  }
+  },
+  "updatedAt": "2026-08-29T12:29:28.276Z"
 }

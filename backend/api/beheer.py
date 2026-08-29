@@ -89,10 +89,19 @@ def _dagen_tot(waarde) -> int | None:
     return None if dt is None else (dt - _nu()).days
 
 
-def _telling(tabel: str, **filters) -> int:
-    """Aantal rijen zonder ze op te halen. Zonder count='exact' haalde dit
-    scherm bij elke verversing tienduizenden rijen op om er één getal van te
-    maken."""
+def _telling(tabel: str, **filters) -> int | None:
+    """Aantal rijen zonder ze op te halen, of None als we het niet mogen weten.
+
+    Zonder count='exact' haalde dit scherm bij elke verversing tienduizenden
+    rijen op om er één getal van te maken.
+
+    WAAROM None EN GEEN 0 (29-08-2026). Op de server draait dit op de publieke
+    sleutel, en die mag jobs/listings/import_candidates niet lezen. Dat liep in
+    de except hieronder en werd een nul — dus stond er "0 advertenties live" en
+    "0 imports open" op het scherm terwijl het er 8.916 en 5.260 waren. Een nul
+    is een bewering; niet mogen kijken is iets anders, en dat hoort het scherm te
+    zeggen in plaats van iets rustgevends te verzinnen.
+    """
     try:
         q = get_db().table(tabel).select("*", count="exact", head=True)
         for kolom, waarde in filters.items():
@@ -107,7 +116,7 @@ def _telling(tabel: str, **filters) -> int:
         return execute_with_retry(q).count or 0
     except Exception as e:
         logger.warning("Tellen mislukt op %s (%s): %s", tabel, filters, e)
-        return 0
+        return None
 
 
 # ---------------------------------------------------------------------------
@@ -955,6 +964,9 @@ def klantenservice(user=Depends(get_current_user_full)):
 # procesnummer op Daniels Mac nakijken, dus dit is hier het enige houvast.
 # Gelijk aan MAX_MINUTEN in scripts/dev_starter.py.
 SESSIE_MAX_MINUTEN = 90
+# Zo lang wacht de starter na een sessie die meteen afsloeg, voor hij het weer
+# probeert. Gelijk aan HERSTELPAUZE_MINUTEN in scripts/dev_starter.py.
+STARTER_HERSTELPAUZE_MINUTEN = 60
 
 
 def _minuten_sinds(waarde) -> int | None:
@@ -1031,16 +1043,24 @@ def werkplaats(user=Depends(get_current_user_full)):
     wachtrij.sort(key=lambda r: (-len(r["melders"]), r["laatst"]))
     gedaan.sort(key=lambda r: r["klaar_op"], reverse=True)
 
-    # Een sessie die niets opleverde is geen detail: zolang dit blijft staan,
-    # gebeurt er niets meer vanzelf.
-    mislukt = [s for s in sessies.values() if s.get("mislukt")]
+    # Een sessie die niets opleverde is geen detail — maar hij mag ook niet
+    # blijven staan als hij allang voorbij is. De starter wacht een uur en
+    # probeert het dan opnieuw; daarna is de melding niet meer waar, en een
+    # waarschuwing die niet meer waar is leert je hem te negeren.
+    mislukt = sorted((x for x in sessies.values() if x.get("mislukt")),
+                     key=lambda x: str(x.get("gestart", "")))
+    probleem = ""
+    if mislukt:
+        wacht = _minuten_sinds(mislukt[-1].get("gestart"))
+        if wacht is not None and wacht < STARTER_HERSTELPAUZE_MINUTEN:
+            probleem = mislukt[-1].get("mislukt", "")
     return {
         "gekoppeld": True,
         "bezig": bezig,
         "wachtrij": wachtrij[:15],
         "gedaan": gedaan[:15],
         "overig_open": overig,
-        "sessie_probleem": (mislukt[-1].get("mislukt") if mislukt else ""),
+        "sessie_probleem": probleem,
         "starter": _starter_stand(signalen),
     }
 
