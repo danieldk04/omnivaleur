@@ -2333,6 +2333,17 @@ def _slim_concept(lead: dict, body: str, draad: str, afsluiting: str,
         _LLM_TERUGVAL["aantal"] += 1
         _LLM_REDEN.append(f"{type(e).__name__}: {str(e)[:120]}")
         return None
+    # Kon hij het niet uit de code halen, dan gaat de vraag naar Daniel in plaats
+    # van een mail met "ik kijk het na" naar de klant. Zie GRONDSLAG_REGEL.
+    vraag = _geen_antwoord(tekst)
+    if vraag:
+        print(f"  ↳ geen concept voor {lead.get('email','?')}: vraag naar Daniel — {vraag}")
+        try:
+            import mail_analyse
+            mail_analyse.vraag_voor_daniel(lead.get("email", ""), vraag, eigen[:200])
+        except Exception as e:  # noqa: BLE001 — de vraag mag niet zoekraken in stilte
+            print(f"  !! vraag voor Daniel NIET vastgelegd ({type(e).__name__}: {e})")
+        return None
     # Een leeg of belachelijk kort antwoord is geen antwoord.
     if len(tekst.split()) < 15:
         print(f"  !! slim concept te kort: {len(tekst.split())} woorden, "
