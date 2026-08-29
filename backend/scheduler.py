@@ -53,6 +53,7 @@ def start_scheduler():
     from backend.services.polling import poll_platform_statuses
     from backend.services.crosslist import relist_expiring_marktplaats
     from backend.services.relist import herstel_vastgelopen_werk
+    from backend.services.mp_enrich import vul_ontbrekende_teksten_aan
     from backend.services.shopify_orders import controleer_shopify_verkopen
 
     from backend.services.billing import expire_trials, send_trial_reminders
@@ -95,6 +96,19 @@ def start_scheduler():
         "interval",
         hours=6,
         id="herstel_vastgelopen_werk",
+        replace_existing=True,
+    )
+    # Teksten die bij het importeren niet meekwamen alsnog ophalen. De extensie
+    # kapt het verrijken na vier minuten af (anders raakt een grote import alles
+    # kwijt), dus wie veel advertenties heeft houdt items zonder omschrijving
+    # over. Die stonden te wachten tot de verkoper zelf de knop "Fill from
+    # Marktplaats" vond. Nu gebeurt het vanzelf: elk kwartier één verkoper, van
+    # de server af, zonder dat er een browser open hoeft te staan.
+    _scheduler.add_job(
+        _off_the_request_loop(vul_ontbrekende_teksten_aan),
+        "interval",
+        minutes=15,
+        id="mp_teksten_aanvullen",
         replace_existing=True,
     )
     _scheduler.add_job(

@@ -674,3 +674,72 @@ async def verrijk(db, user_id: str, schrijf: bool = True,
                 except Exception as e:  # noqa: BLE001
                     logger.warning("mp_enrich: opslaan mislukt voor %s: %s", item["id"], e)
     return uit
+
+
+# ── Vanzelf aanvullen, zonder dat er iemand op een knop drukt ─────────────
+#
+# WAAROM DIT ER IS (29-08-2026)
+# Bij het importeren haalt de extensie de volledige tekst per advertentie op,
+# maar daar zit een harde tijdgrens van vier minuten op (zie VERRIJK_BUDGET_MS in
+# extension/background.js — zonder die grens raakte een grote import onderweg
+# álles kwijt). Alles wat na die vier minuten komt, komt binnen met alleen titel,
+# prijs en foto. Amanda Haas meldde precies dat: "de advertenties zijn wel
+# geïmporteerd, maar de teksten niet."
+#
+# De reparatie bestond al — de knop "Fill from Marktplaats" — maar die moet je
+# kennen én zelf indrukken. Een import die half werk aflevert en dan wacht tot de
+# verkoper doorheeft dat er nog een knop is, is geen afgeronde import. Deze ronde
+# doet hetzelfde werk vanzelf, op de server, zonder browser.
+#
+# Beleefd blijven bij Marktplaats: één verkoper per ronde, hooguit 150 items, en
+# hetzelfde tijdsbudget als de knop. De volgende ronde is de volgende verkoper.
+AANVUL_PER_VERKOPER = 150
+
+# Waar we gebleven waren. Blijft niet bewaard over een herstart heen, en dat mag:
+# de ronde draait elk kwartier, dus na een herstart begint hij gewoon weer
+# vooraan en komt iedereen alsnog aan de beurt.
+_volgende_verkoper = 0
+
+
+async def _verkopers_met_gaten(db) -> list[str]:
+    """De verkopers die nog items zonder omschrijving hebben, meest eerst.
+
+    Alleen verkopers met een Marktplaats-koppeling: bij de rest kunnen we de
+    advertenties niet terugvinden en zouden we Marktplaats voor niets belasten.
+    """
+    rijen = await naast_de_lus(lambda: fetch_all(
+        lambda: db.table("items")
+        .select("user_id")
+        .or_("description.is.null,description.eq.")))
+    aantal: dict[str, int] = {}
+    for r in (rijen or []):
+        if r.get("user_id"):
+            aantal[r["user_id"]] = aantal.get(r["user_id"], 0) + 1
+    if not aantal:
+        return []
+    gekoppeld = {r["user_id"] for r in ((await naast_de_lus(
+        lambda: db.table("platform_credentials").select("user_id")
+        .in_("platform", ["marktplaats", "2dehands"]).execute())).data or [])}
+    met_gaten = [u for u in aantal if u in gekoppeld]
+    return sorted(met_gaten, key=lambda u: -aantal[u])
+
+
+async def vul_ontbrekende_teksten_aan() -> dict:
+    """Eén verkoper per ronde bijwerken. Aangeroepen door de planner."""
+    global _volgende_verkoper
+    from backend.database import get_db
+
+    db = get_db()
+    verkopers = await _verkopers_met_gaten(db)
+    if not verkopers:
+        return {"verkopers": 0, "reden": "niets te doen"}
+
+    # Beurtelings, zodat één verkoper met duizenden items de rest niet blokkeert.
+    _volgende_verkoper %= len(verkopers)
+    user_id = verkopers[_volgende_verkoper]
+    _volgende_verkoper += 1
+
+    uit = await verrijk(db, user_id, schrijf=True, maximaal=AANVUL_PER_VERKOPER)
+    logger.info("mp_enrich automatisch: %s -> %s teksten, %s prijzen (van %s open)",
+                user_id, uit.get("omschrijving"), uit.get("prijs"), uit.get("te_doen"))
+    return {"verkopers": len(verkopers), "verkoper": user_id, **uit}
