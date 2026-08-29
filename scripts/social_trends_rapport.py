@@ -121,6 +121,23 @@ def voeg_samen(oud: list[dict], nieuw: list[dict]) -> list[dict]:
     return bewaard
 
 
+DASHBOARD_WEB = Path(__file__).parent.parent / "data" / "trends-dashboard.html.gz"
+
+
+def _dashboard_publiceren(bron: Path) -> None:
+    """Het dashboard gezipt naast het archief zetten, zodat dezelfde stap die het
+    archief terugpusht ook de webversie meeneemt. De site serveert dat bestand op
+    /trends; zonder deze stap bestaat het dashboard alleen als mailbijlage."""
+    try:
+        DASHBOARD_WEB.parent.mkdir(parents=True, exist_ok=True)
+        with gzip.open(DASHBOARD_WEB, "wt", encoding="utf-8") as f:
+            f.write(bron.read_text(encoding="utf-8"))
+        print(f"  webversie: {DASHBOARD_WEB} "
+              f"({DASHBOARD_WEB.stat().st_size / 1024 / 1024:.1f} MB gezipt)")
+    except Exception as e:
+        print(f"! webversie niet weggeschreven ({type(e).__name__}: {e})")
+
+
 # Het merkbriefje. Twee roosterbeurten per dinsdag (voor zomer- en wintertijd)
 # mogen samen precies één mail opleveren. Dit bestand staat in de repo naast het
 # archief en wordt door dezelfde stap teruggeschreven.
@@ -786,6 +803,7 @@ def main() -> int:
     haal_beeldjes(list(nodig.values()))
     dash = bouw_dashboard(data, pad.with_name(
         pad.stem.replace("verkenning", "dashboard") + ".html"))
+    _dashboard_publiceren(dash)
     schrijf_pagina({"aantal_videos": data["totaal"],
                     "aantal_creators": len(bundel_per_creator(videos)),
                     "creators": bundel_per_creator(videos)},

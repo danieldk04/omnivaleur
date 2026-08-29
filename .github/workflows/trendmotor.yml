@@ -52,6 +52,10 @@ jobs:
       # mét sleutel ook likes en reacties, en telt YouTube dus echt mee in de
       # engagement-vergelijking in plaats van als bijvangst.
       YT_API_KEY: ${{ secrets.YT_API_KEY }}
+      # Zonder dit wijst de dashboardknop in de mail naar de bijlage. Mét deze
+      # sleutel wijst hij naar de webversie op omnivaleur.com/trends, hetzelfde
+      # token als het marketingdashboard.
+      DASHBOARD_URL: ${{ secrets.ANALYTICS_DASHBOARD_TOKEN && format('https://omnivaleur.com/trends?token={0}', secrets.ANALYTICS_DASHBOARD_TOKEN) || '' }}
     permissions:
       contents: write        # nodig om het opgebouwde archief terug te schrijven
     steps:

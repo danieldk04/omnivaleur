@@ -524,6 +524,26 @@ async def analytics_dashboard(request: Request, token: str | None = None):
     )
 
 
+# Het trenddashboard (wekelijkse social-meting) staat als één gezipt HTML-bestand
+# in de repo; de trendmotor schrijft het daar elke dinsdag opnieuw naartoe. Het
+# ging tot nu toe alleen als bijlage mee in de mail, en een bijlage van twee
+# megabyte is geen dashboard dat je even openslaat.
+TRENDS_DASHBOARD = Path(__file__).parent.parent.parent / "data" / "trends-dashboard.html.gz"
+
+
+@router.get("/trends", response_class=HTMLResponse)
+async def trends_dashboard(token: str | None = None):
+    _require_dashboard_token(token)
+    if not TRENDS_DASHBOARD.exists():
+        raise HTTPException(
+            status_code=404,
+            detail="nog geen trenddashboard — dit verschijnt na de eerstvolgende "
+                   "dinsdagmeting van de trendmotor",
+        )
+    import gzip
+    return HTMLResponse(gzip.open(TRENDS_DASHBOARD, "rt", encoding="utf-8").read())
+
+
 @router.get("/api/analytics/diag")
 async def analytics_diagnostics(token: str | None = None, property: str | None = None):
     """Definitieve koppelingscheck (auth vs geen-data) voor GSC + GA4."""
