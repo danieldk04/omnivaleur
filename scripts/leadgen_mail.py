@@ -2207,12 +2207,19 @@ def _grondslag(body: str) -> str:
             regels = pad.read_text(errors="replace").splitlines()
         except Exception:  # noqa: BLE001
             continue
-        houden: set[int] = set(range(min(25, len(regels))))   # de kop van het bestand
+        kop = min(25, len(regels))
+        houden: set[int] = set(range(kop))                   # de kop van het bestand
         gevonden = 0
-        for i, regel in enumerate(regels):
+        for i in range(kop, len(regels)):
             if gevonden >= GRONDSLAG_TREFFERS_MAX:
                 break
+            regel = regels[i]
             klein = regel.lower()
+            # Een invoerregel is nooit het antwoord op de vraag van een klant, en
+            # bij een mail over "import" zou de halve bovenkant van elk
+            # Python-bestand als bewijsmateriaal meegaan.
+            if klein.lstrip().startswith(("import ", "from ")):
+                continue
             if any(w in klein for w in treffers):
                 houden.update(range(max(0, i - GRONDSLAG_VENSTER),
                                     min(len(regels), i + GRONDSLAG_VENSTER + 1)))

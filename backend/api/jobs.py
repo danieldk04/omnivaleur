@@ -1547,6 +1547,58 @@ def _queue_scan(db, user_id: str, platform: str):
         logger.warning(f"Could not queue follow-up scan for {platform}: {e}")
 
 
+def _rechtgezette_foutmelding(job: dict | None, body: dict, versie) -> dict:
+    """Welke foutmelding de verkoper te zien krijgt bij een mislukte opdracht.
+
+    Los van de database gehouden zodat hij te testen is — deze tekst is precies
+    wat een klant dagenlang de verkeerde kant op stuurde.
+
+    Twee rechtzettingen, in deze volgorde, en die volgorde is het hele punt:
+
+    1. WETEN WE DAT DE KOPIE TE OUD IS, DAN IS DAT HET ANTWOORD.
+       Dit stond er niet, en dat kostte twee klanten samen ruim dertig
+       foutmeldingen die de verkeerde kant op wezen. Nagemeten in het
+       opdrachtenlogboek op 29-08-2026:
+         Dennis (info@retrogameking.com)   14 mislukte scans vanaf 1.0.217/218
+         Egbert (info@papas-plectrums.nl)  11 mislukte scans vanaf 1.0.200/202/207
+       Beiden kregen "je bent niet ingelogd", en Egbert daarna "zet Admarkt aan"
+       — terwijl de server uit hun eigen versiestempel wist dat het aan de kopie
+       lag. Die wetenschap werd weggegooid zodra de twee herkansingen op waren.
+       Beiden zijn dagenlang hun inlog blijven controleren.
+       Dit geldt voor elk platform en elke soort opdracht; de herkansing in
+       fail_job blijft beperkt tot een scan, want een halve publicatie opnieuw
+       uitdelen is een ander risico. Een verkeerd antwoord is overal even schadelijk.
+
+    2. Tot 1.0.259 meldde de extensie bij een lege Marktplaats-scan altijd "je
+       bent niet ingelogd". Voor een zakelijke verkoper is dat aantoonbaar
+       onjuist: zijn persoonlijke overzicht IS leeg, zijn advertenties staan in
+       Admarkt, en het enige wat helpt is de Admarkt-schakelaar aanzetten. Een
+       nieuwe extensie staat pas dagen later bij hem op de computer, dus zetten
+       we die tekst hier recht voor iedereen die nog een oudere kopie draait.
+    """
+    fout = str((body or {}).get("error") or "")
+    if versie and versie < MINIMALE_SCANVERSIE:
+        return {**(body or {}), "error_oorspronkelijk": fout, "error": (
+            f"Deze opdracht is opgepakt door een verouderde kopie van de "
+            f"Omnivaleur-extensie (versie {'.'.join(map(str, versie))}; nodig is "
+            f"minstens {'.'.join(map(str, MINIMALE_SCANVERSIE))}). Die kopie kan dit "
+            f"werk niet afmaken, en wat ze meldt over inloggen klopt niet. Open "
+            f"chrome://extensions, zet \"Ontwikkelaarsmodus\" aan en verwijder elke "
+            f"met de hand geladen kopie van Omnivaleur; laat alleen de versie uit "
+            f"de Chrome Web Store staan en herstart Chrome.")}
+    if ((job or {}).get("action") == "scan"
+            and (job or {}).get("platform") == "marktplaats"
+            and "appear to be signed in" in fout):
+        return {**(body or {}), "error_oorspronkelijk": fout, "error": (
+            "Je persoonlijke advertentieoverzicht op Marktplaats is leeg. Bij een "
+            "zakelijk account hoort dat zo: die advertenties staan in Admarkt, met "
+            "een eigen inlog. Klik op het Omnivaleur-icoon in je browserbalk en zet "
+            "\"Business account (Admarkt)\" aan, en start de scan opnieuw. Heb je een "
+            "gewoon particulier account, controleer dan of je op Marktplaats zelf "
+            "bent ingelogd.")}
+    return body or {}
+
+
 @router.post("/{job_id}/error")
 def fail_job(job_id: str, body: dict, user_id: str = Depends(get_current_user)):
     db = get_db()
@@ -1571,60 +1623,7 @@ def fail_job(job_id: str, body: dict, user_id: str = Depends(get_current_user)):
                         MAX_HERKANSING_OUDE_EXTENSIE)
             return {"ok": True, "requeued": True, "reason": "outdated_extension"}
 
-    # WETEN WE DAT DE KOPIE TE OUD IS, DAN IS DAT HET ANTWOORD — EN NIETS ANDERS.
-    #
-    # Dit stond hier niet, en dat kostte twee klanten samen ruim dertig
-    # foutmeldingen die alle drie de keren de verkeerde kant op wezen.
-    # Nagemeten in het opdrachtenlogboek op 29-08-2026:
-    #   Dennis (info@retrogameking.com)      14 mislukte scans vanaf 1.0.217/218
-    #   Egbert (info@papas-plectrums.nl)     11 mislukte scans vanaf 1.0.200/202/207
-    # Beiden kregen "je bent niet ingelogd" te zien, en Egbert daarna "zet
-    # Admarkt aan" — terwijl de server uit hun eigen versiestempel wist dat het
-    # aan de kopie lag. Die wetenschap werd hieronder weggegooid zodra de twee
-    # herkansingen op waren: dan viel de opdracht door naar de tekst hieronder.
-    # Beiden zijn dagenlang hun inlog blijven controleren.
-    #
-    # Dus: is de versie bekend én te oud, dan zegt de melding dat, voor élk
-    # platform en élke soort opdracht. De herkansing hierboven blijft beperkt
-    # tot een scan (een halve publicatie opnieuw uitdelen is een ander risico);
-    # de tekst niet, want een verkeerd antwoord is overal even schadelijk.
-    if versie and versie < MINIMALE_SCANVERSIE:
-        body = dict(body)
-        body["error_oorspronkelijk"] = body.get("error")
-        body["error"] = (
-            f"Deze opdracht is opgepakt door een verouderde kopie van de "
-            f"Omnivaleur-extensie (versie {'.'.join(map(str, versie))}; nodig is "
-            f"minstens {'.'.join(map(str, MINIMALE_SCANVERSIE))}). Die kopie kan dit "
-            f"werk niet afmaken, en wat ze meldt over inloggen klopt niet. Open "
-            f"chrome://extensions, zet \"Ontwikkelaarsmodus\" aan en verwijder elke "
-            f"met de hand geladen kopie van Omnivaleur; laat alleen de versie uit "
-            f"de Chrome Web Store staan en herstart Chrome."
-        )
-    # DE MELDING VAN EEN OUDE EXTENSIE HIER RECHTZETTEN.
-    #
-    # Tot 1.0.259 meldde de extensie bij een lege Marktplaats-scan altijd "je
-    # bent niet ingelogd". Voor een zakelijke verkoper is dat aantoonbaar
-    # onjuist: zijn persoonlijke overzicht IS leeg, zijn advertenties staan in
-    # Admarkt, en het enige wat helpt is de Admarkt-schakelaar aanzetten.
-    # Egbert Brouwer (info@papas-plectrums.nl) kreeg deze zin twintig keer in
-    # zeven dagen en controleerde elke keer zijn login. Een nieuwe extensie
-    # staat pas na goedkeuring van de Chrome Web Store bij hem op de computer —
-    # dagen later — dus zetten we de tekst hier recht, voor iedereen die nog een
-    # oudere kopie draait. Zodra 1.0.259 er staat, komt deze zin niet meer voor
-    # en doet deze regel niets meer.
-    elif (job and job.get("action") == "scan"
-            and job.get("platform") == "marktplaats"
-            and "appear to be signed in" in str(body.get("error") or "")):
-        body = dict(body)
-        body["error_oorspronkelijk"] = body.get("error")
-        body["error"] = (
-            "Je persoonlijke advertentieoverzicht op Marktplaats is leeg. Bij een "
-            "zakelijk account hoort dat zo: die advertenties staan in Admarkt, met "
-            "een eigen inlog. Klik op het Omnivaleur-icoon in je browserbalk en zet "
-            "\"Business account (Admarkt)\" aan, en start de scan opnieuw. Heb je een "
-            "gewoon particulier account, controleer dan of je op Marktplaats zelf "
-            "bent ingelogd."
-        )
+    body = _rechtgezette_foutmelding(job, body, versie)
 
     db.table("jobs").update({
         "status": "error",

@@ -8,7 +8,8 @@ trekken. Deze test bewaakt dat die twee grenzen dezelfde blijven.
 import re
 from pathlib import Path
 
-from backend.api.jobs import MINIMALE_SCANVERSIE, _kopstuk_versie
+from backend.api.jobs import (MINIMALE_SCANVERSIE, _kopstuk_versie,
+                              _rechtgezette_foutmelding)
 
 WORTEL = Path(__file__).resolve().parents[1]
 
@@ -53,3 +54,52 @@ def test_verouderde_kopie_wordt_geblokkeerd_in_het_dashboard():
     assert 'id="ext-outdated-overlay"' in app
     # De melding moet ook echt getoond worden, niet alleen bestaan.
     assert "extVersionIsOld()" in app.split("function renderExtSetup()")[1][:1500]
+
+
+# ── De foutmelding die de verkoper te zien krijgt ──────────────────────────
+# Aanleiding 29-08-2026: twee klanten kregen samen ruim dertig keer "je bent
+# niet ingelogd" terwijl de server uit hun eigen versiestempel wist dat het aan
+# een verouderde kopie lag. Zie _rechtgezette_foutmelding.
+
+NIET_INGELOGD = ("Error: You don't appear to be signed in to Marktplaats in this "
+                 "browser. Open Marktplaats, sign in, and run the scan again.")
+SCAN = {"action": "scan", "platform": "marktplaats"}
+
+
+def test_een_te_oude_kopie_krijgt_de_schuld_en_niet_de_inlog():
+    uit = _rechtgezette_foutmelding(SCAN, {"error": NIET_INGELOGD}, (1, 0, 207))
+    assert "1.0.207" in uit["error"]
+    assert "verouderde kopie" in uit["error"]
+    # En de originele tekst blijft bewaard, anders is later niet meer na te gaan
+    # wat de extensie zélf meldde.
+    assert uit["error_oorspronkelijk"] == NIET_INGELOGD
+
+
+def test_de_versie_gaat_voor_op_het_admarkt_antwoord():
+    """Allebei van toepassing? Dan wint wat we ZEKER weten.
+
+    Egbert kreeg eerst "je bent niet ingelogd" en daarna "zet Admarkt aan",
+    terwijl zijn kopie 1.0.207 was. Admarkt stond bij hem gewoon aan.
+    """
+    uit = _rechtgezette_foutmelding(SCAN, {"error": NIET_INGELOGD}, (1, 0, 207))
+    assert "Admarkt" not in uit["error"]
+
+
+def test_een_oude_kopie_krijgt_dit_ook_bij_publiceren():
+    """Niet alleen bij een scan: een halve publicatie is erger dan een halve scan."""
+    uit = _rechtgezette_foutmelding(
+        {"action": "create", "platform": "vinted"}, {"error": "Error: iets ging mis"},
+        (1, 0, 218))
+    assert "verouderde kopie" in uit["error"]
+
+
+def test_een_bijgewerkte_kopie_krijgt_gewoon_het_admarkt_antwoord():
+    uit = _rechtgezette_foutmelding(SCAN, {"error": NIET_INGELOGD}, (1, 0, 251))
+    assert "Admarkt" in uit["error"]
+    assert "verouderde kopie" not in uit["error"]
+
+
+def test_zonder_bekende_versie_verandert_er_niets_aan_een_gewone_fout():
+    body = {"error": "Error: Vinted weigerde de advertentie"}
+    assert _rechtgezette_foutmelding({"action": "create", "platform": "vinted"},
+                                     body, None) == body

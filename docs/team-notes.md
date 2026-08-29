@@ -1130,3 +1130,92 @@ Vastgelegd in `tests/test_mail_klantenservice.py` (18 tests).
 
 **Nagemeten:** 14 controles over 21 minuten na de reparatie van vanochtend, nul
 dubbele concepten.
+
+### 29-08-2026 — De developer wordt nu vanzelf aan het werk gezet
+
+De lijn klantenservice → developer bestond, maar werd pas gelezen wanneer Daniel
+toevallig een sessie opende. Een klant die woensdag boos meldt dat het niet
+werkt, wachtte dus op de CEO. Nieuw: `scripts/dev_starter.py`, gestart door de
+LaunchAgent `com.omnivaleur.devstarter` (plist in `config/`, wrapper in
+`scripts/dev_starter.sh`, elke tien minuten).
+
+Zet `mail_analyse` een storing op `moet_zeker`, dan begint de starter zelf een
+Claude Code-sessie met de opdracht om die ene storing uit te zoeken, te
+repareren, de tests te draaien, te pushen en daarna zelf
+`mail_analyse.py opgelost <sleutel> "..."` te draaien. Door Daniel gekozen op
+29-08-2026: **volledig autonoom**, inclusief pushen, want alleen dan is de klant
+echt eerder geholpen.
+
+De remmen staan in `tests/test_dev_starter.py`: één sessie tegelijk, nooit twee
+voor dezelfde sleutel, een sleutel komt pas terug als hij is opgelost of
+afgewezen, hooguit drie starts per dag, en niet beginnen in een werkmap waar het
+werk van iemand anders klaarstaat. Nieuw commando daarvoor:
+`mail_analyse.py afgewezen <sleutel> "reden"` — een besluit om iets níet te
+repareren, zodat de sleutel niet eeuwig op de lijst blijft staan.
+
+De sessie draait op Daniels abonnement: `ANTHROPIC_API_KEY` wordt bewust uit de
+omgeving van het kindproces gehaald.
+
+### 29-08-2026 — De klantenservice zoekt een feitelijke vraag eerst zelf op
+
+Aanleiding: de mail van Jaap (info@zilverwebsite.nl) van 29-08 met twee vragen —
+"moet de computer aan blijven staan bij het verversen?" en "er is deze maand
+twee keer afgeschreven". Op allebei zei het concept dat Daniel het zou nakijken.
+De eerste vraag is gewoon in de code na te zoeken.
+
+Waarom het misging: `_grondslag()` kende geen van de woorden uit zijn vraag
+(verversen, computer, browser, wachtrij), dus er ging nul regel code mee. En
+zelfs mét een treffer leverde het "de eerste zestig regels van het bestand" op —
+dat zijn de invoerregels. Drie plekken in de schrijfregels schreven daarnaast
+letterlijk voor: "weet je het niet, schrijf dan dat Daniel het nakijkt."
+
+Wat er nu anders is (`scripts/leadgen_mail.py`):
+- `GRONDSLAG_BESTANDEN` kent de woorden waarmee klanten hun vraag stellen, niet
+  alleen de woorden waarmee wij onze bestanden noemen.
+- `_grondslag()` levert de kop van het bestand (waarom het bestaat) plus de
+  stukken rond zijn eigen woorden, met `...` waar er iets tussenuit is. Op
+  Jaaps vraag komt nu onder meer de regel mee dat de service worker sterft zodra
+  Chrome dichtgaat — precies het antwoord.
+- Lukt het antwoord niet met zekerheid, dan komt er **geen mail**. Het model
+  geeft één regel terug (`GEEN ANTWOORD: <de vraag>`) en die vraag belandt via
+  `mail_analyse.vraag_voor_daniel()` op de lijst die Daniel al leest. Een
+  "ik kijk het na" in een verstuurde mail verdwijnt daarna nergens meer heen.
+- Geld blijft bij Daniel. Jaaps tweede vraag is gecontroleerd: de escalatie
+  `geld | info@zilverwebsite.nl | 29-08` staat op zijn lijst, dus die route
+  werkte. Wel gerepareerd: het spoedbericht eiste `MAIL_HOST`, en dat is op
+  Railway leeg (SMTP is daar dicht, alles gaat via Resend) — daar viel het
+  seintje dus juist stil. Nu gaat het langs Resend, en kán het niet, dan zégt hij dat.
+
+Vastgelegd in `tests/test_antwoord_uit_de_code.py`.
+
+### 29-08-2026 — De twee storingen met voorrang, uitgezocht
+
+**`marktplaats-niet-ingelogd-melding` — zelfde oorzaak, en al gerepareerd.**
+Eerst gecontroleerd of het de bekende Admarkt-toestemming was, zoals gevraagd.
+Nagemeten in het opdrachtenlogboek: het is de verouderde-kopie-oorzaak.
+Dennis (info@retrogameking.com) draaide 1.0.217/1.0.218 en kreeg 14 mislukte
+scans — óók op 2dehands en Vinted, die geen Admarkt hebben, dus Admarkt kan het
+niet zijn. Bij hem was het na zestien minuten over ("denkt dat het nu lukt").
+Egbert (info@papas-plectrums.nl) draaide 1.0.200/202/207 naast een nieuwere
+kopie: geslaagde en mislukte scans op dezelfde dag, het patroon van twee kopieën
+uit dezelfde wachtrij.
+
+Wat er nog wél stuk was, en nu gerepareerd is: de server wist uit het
+versiestempel dát de kopie te oud was, maar gooide die wetenschap weg zodra de
+twee herkansingen op waren. Daarna kreeg de verkoper alsnog "je bent niet
+ingelogd", en sinds 28-08 "zet Admarkt aan" — terwijl Admarkt bij Egbert gewoon
+aanstond. Nu wint de versie: is de kopie aantoonbaar te oud, dan noemt de melding
+die versie en de stap om de handmatig geladen kopie te verwijderen, voor elk
+platform en elke soort opdracht. Zie `_rechtgezette_foutmelding` in
+`backend/api/jobs.py` en de tests in `tests/test_extensieversie.py`.
+
+**`import-wordt-steeds-trager` — terechte rem, aangezet door een echte storing.**
+Egbert zag "eerst vijf tegelijk, nu één per keer". Dat is de ladder in
+`bulkImportAllCandidates`: bij een 500/502 halveert de lading (10 → 5 → 2 → 1) om
+een gateway-time-out te vermijden. De rem is terecht. De storing zat eronder:
+elke aanroep las zijn hele voorraad opnieuw in, dus kleiner happen hielp niets —
+precies wat hij merkte. Dat is op 27-08 gerepareerd (`_BULK_IMPORT_CACHE`, plus
+alle databasewerk naar een werkdraad zodat het de server niet meer bevriest), en
+de ladder klimt sindsdien ook weer terug omhoog na drie goede ladingen.
+Nagemeten op zijn account op 29-08: **4.227 geïmporteerd, 23 gekoppeld, 1.284 nog
+te gaan, 0 mislukt.** Geen wijziging nodig; via `opgelost` teruggemeld.

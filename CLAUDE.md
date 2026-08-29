@@ -37,6 +37,19 @@ controle — zoek je eerst uit wat er is veranderd sinds jouw vorige sessie:
    in plaats van te gokken. Overslaan betekent dat de klant nooit hoort dat zijn
    melding iets heeft opgeleverd.
 
+   Blijkt iets géén storing, of gaan we het bewust niet repareren, meld dat dan
+   net zo goed terug — anders blijft de sleutel eeuwig op de lijst staan:
+
+   ```bash
+   python3 scripts/mail_analyse.py afgewezen <sleutel> "waarom niet, in één zin"
+   ```
+
+   Ben je hier vanzelf terechtgekomen zonder dat Daniel iets vroeg, dan is dat de
+   automatische starter (`scripts/dev_starter.py`, LaunchAgent
+   com.omnivaleur.devstarter). Die start één sessie per MOET ZEKER-storing en
+   verwacht dat je hem afmaakt: repareren, tests draaien, pushen als ze groen
+   zijn, en terugmelden met `opgelost` of `afgewezen`.
+
 Let op de commits met de tekst "auto: update ...": die komen van de auto-push-hook
 en bevatten echt werk achter een nietszeggende titel. De auteursnaam zegt niets
 over wie het deed.
