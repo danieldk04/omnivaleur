@@ -103,8 +103,8 @@ def _te_doen(signalen: dict, staat: dict) -> list[tuple[str, dict]]:
     open_ = [(k, v) for k, v in signalen.items()
              if v.get("status") == "open" and v.get("moet_zeker")
              and k not in staat]
-    return sorted(open_, key=lambda kv: (-len(kv[1].get("melders") or []),
-                                         kv[1].get("laatst", "")), reverse=False)
+    op_datum = sorted(open_, key=lambda kv: kv[1].get("laatst", ""), reverse=True)
+    return sorted(op_datum, key=lambda kv: -len(kv[1].get("melders") or []))
 
 
 def _opruimen(signalen: dict, staat: dict) -> bool:
