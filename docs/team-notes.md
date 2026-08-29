@@ -1396,3 +1396,17 @@ fout: het scherm bewéérde iets dat op dat moment niet klopte.
 
 Ook: wachtende berichten worden per PERSOON gebundeld, niet per storing. Egbert
 had er vier openstaan met dezelfde oorzaak; dat waren vier identieke regels.
+
+### 2026-08-29 — `tabbladen-flitsen-op-voorgrond` was hetzelfde bekende verhaal, alleen bij een andere klant
+
+Zilverwebsite (info@zilverwebsite.nl) meldde op 24-08: openende Marktplaats-
+tabbladen flitsen over zijn scherm. Nagemeten in het opdrachtenlogboek in
+plaats van aangenomen: zijn herplaats-jobs van die dag liepen op extensie
+**1.0.218** — exact de verouderde kopie die hierboven al bij Jaap is
+beschreven (`extension-version-floor`), en die het werkvenster nog niet
+geminimaliseerd hield. Sinds de ondergrens van 1.0.244 (27-08-2026, jobs.py +
+app.html) krijgt zo'n oude kopie vanaf 1.0.250 geen werk meer, en waarschuwt
+het dashboard eronder. Zilverwebsite draait sindsdien op 1.0.251: zijn
+delete+create-jobs van vandaag (29-08) liepen tientallen keren achter elkaar
+foutloos af, zonder gemeld probleem. Niets aan de code gewijzigd — teruggemeld
+met `opgelost`.
