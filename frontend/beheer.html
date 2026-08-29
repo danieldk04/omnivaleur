@@ -105,6 +105,35 @@ button.stil { background: transparent; border: 1px solid var(--rand); color: var
 #inlog input { width: 100%; padding: 11px 13px; margin-bottom: 10px; border-radius: 9px;
   border: 1px solid var(--rand); background: #0e1428; color: var(--tekst); font-size: 14px; }
 .fout { color: var(--rood); font-size: 13px; margin-top: 10px; }
+/* De werkplaats is een operationeel scherm: het laat zien wat er NU gebeurt.
+   Daar hoort een levende toestand bij — een stilstaand vlak leest als "klaar",
+   ook als er iemand aan het werk is. */
+.bezig { background: linear-gradient(180deg, rgba(52,211,153,.10), transparent 60%);
+         border: 1px solid rgba(52,211,153,.35); border-radius: 14px; padding: 16px 18px; }
+.puls { display: inline-block; width: 9px; height: 9px; border-radius: 50%;
+        background: var(--groen); margin-right: 8px; animation: pols 1.6s ease-in-out infinite; }
+@keyframes pols { 0%,100% { opacity: 1; transform: scale(1); }
+                  50% { opacity: .35; transform: scale(.75); } }
+.balk { height: 3px; border-radius: 3px; background: rgba(52,211,153,.18);
+        overflow: hidden; margin-top: 12px; }
+.balk > i { display: block; height: 100%; width: 34%; background: var(--groen);
+            border-radius: 3px; animation: schuif 2.4s ease-in-out infinite; }
+@keyframes schuif { 0% { transform: translateX(-100%); } 100% { transform: translateX(320%); } }
+@media (prefers-reduced-motion: reduce) {
+  .puls, .balk > i { animation: none; }
+}
+/* Tijdlijn: één regel per gebeurtenis, met de richting ervoor. */
+.tl { border-left: 2px solid var(--rand); margin-left: 6px; padding-left: 14px; }
+.tl-rij { position: relative; padding: 8px 0; font-size: 13px; }
+.tl-rij::before { content: ''; position: absolute; left: -20px; top: 14px;
+  width: 7px; height: 7px; border-radius: 50%; background: var(--rand); }
+.tl-rij.nieuw::before { background: var(--groen); }
+.tl-tijd { color: var(--zacht); font-variant-numeric: tabular-nums; margin-right: 8px; }
+.tl-pijl { color: var(--zacht); }
+.tl-extra { color: var(--zacht); font-size: 12px; margin-top: 2px; }
+.jij { border-top: 1px solid var(--rand); padding: 10px 0; font-size: 13px; display: flex; gap: 10px; }
+.jij:first-child { border-top: none; padding-top: 0; }
+.jij .merk { flex-shrink: 0; align-self: flex-start; }
 .attentie { background: rgba(251,191,36,.09); border: 1px solid rgba(251,191,36,.35);
   border-radius: 12px; padding: 12px 16px; margin-bottom: 14px; font-size: 13px; }
 .attentie b { color: var(--geel); }
@@ -295,9 +324,19 @@ button.stil { background: transparent; border: 1px solid var(--rand); color: var
        praten onderling; dit is het venster waardoor Daniel dat kan volgen
        zonder het te hoeven vragen. De machinetellers staan onderaan. -->
   <section id="tab-systeem" hidden>
-    <h2>Waar ik nu aan werk</h2>
+    <h2>Nu</h2>
     <div id="wp-bezig"></div>
     <div class="raster" id="wp-cijfers" style="margin-top:14px"></div>
+
+    <h2>Wat er van jou wordt gevraagd</h2>
+    <div class="kaart"><div class="uitleg" style="margin:0 0 8px">Alleen dit. De rest
+      handelen de klantenservice en ik onderling af.</div>
+      <div id="wp-voor-jou"></div></div>
+
+    <h2>Wat er precies gebeurd is</h2>
+    <div class="kaart"><div class="uitleg" style="margin:0 0 10px">De post tussen de
+      klantenservice en mij, op volgorde van tijd. Nieuwste bovenaan.</div>
+      <div class="tl" id="wp-tijdlijn"></div></div>
 
     <!-- De twee richtingen van de lijn, naast elkaar: wat de klantenservice
          aan mij doorgeeft, en wat ik haar terugmeld. Zo is in één blik te
@@ -315,6 +354,7 @@ button.stil { background: transparent; border: 1px solid var(--rand); color: var
     </div>
 
     <h2>Draait de machine</h2>
+    <div class="uitleg" id="techniek-uitleg"></div>
     <div class="raster" id="techniek"></div>
   </section>
 </main>
@@ -538,6 +578,12 @@ function toonKern(d) {
     + kaart('Nieuw deze week', getal(k.nieuw_7d), '')
     + kaart('Actief deze week', getal(k.actief_7d), 'heeft echt iets gepubliceerd', k.actief_7d ? 'op' : 'af')
     + kaart('Extensie online', getal(k.extensies_online), 'nu aan het werk');
+  // Een rij streepjes zonder uitleg leest als "kapot". Zeg wat er aan de hand is.
+  const blind = [t.banen_wachtend, t.advertenties_live, t.importkandidaten_open].filter(v => v == null).length;
+  const u = el('techniek-uitleg');
+  if (u) u.textContent = blind
+    ? 'De server mag deze tellingen met zijn huidige sleutel niet lezen — daarom streepjes in plaats van nullen. Zet SUPABASE_SERVICE_KEY op Railway om ze terug te krijgen.'
+    : 'Uit de database, elke minuut ververst.';
 
   tabel('klanten-tabel',
     ['Klant', 'Status', 'Proef', 'Artikelen', 'Live', 'Verkocht 7d', 'Laatst actief', 'Laatste login'],
@@ -809,6 +855,23 @@ function storingRij(r) {
     </div>`;
 }
 
+// De verstreken tijd loopt in de browser door, zodat "bezig sinds" niet twintig
+// seconden stil staat tussen twee verversingen in. Zonder dit oogt een levend
+// scherm alsof het vastzit.
+let WP_BEZIG_START = null;
+setInterval(() => {
+  const doel = document.getElementById('wp-duur');
+  if (doel && WP_BEZIG_START) {
+    const min = Math.floor((Date.now() - WP_BEZIG_START) / 60000);
+    doel.textContent = min < 60 ? `${min} min` : `${Math.floor(min / 60)} u ${min % 60} min`;
+  }
+}, 10000);
+
+const SOORT_KLEUR = { geld: 'm-past_due', vertrek: 'm-canceled', concept: 'm-trialing',
+                      machine: 'm-past_due', kan_niet_onderbouwen: 'm-onbekend' };
+const SOORT_NAAM = { geld: 'geld', vertrek: 'dreigt te stoppen', concept: 'wacht op jou',
+                     machine: 'machine', kan_niet_onderbouwen: 'geen antwoord' };
+
 function toonWerkplaats(w) {
   if (!w.gekoppeld) {
     el('wp-bezig').innerHTML = `<div class="leeg">${veilig(w.reden || 'Nog niets doorgegeven.')}</div>`;
@@ -824,12 +887,31 @@ function toonWerkplaats(w) {
         <b>Er wordt niets meer vanzelf opgepakt.</b><br>
         <span class="uitleg">${veilig(alarm)}</span></div>` : '')
     + (b
-      ? `<div class="kaart"><div class="label">Bezig sinds ${veilig(klok(b.opgepakt_op))} — ${getal(b.minuten)} min</div>
-           ${storingRij(b)}</div>`
+      ? `<div class="bezig"><div class="label"><span class="puls"></span>Aan het werk sinds
+           ${veilig(klok(b.opgepakt_op))} — <span id="wp-duur">${getal(b.minuten)} min</span></div>
+           ${storingRij(b)}
+           <div class="balk"><i></i></div></div>`
       : `<div class="kaart"><div class="label">Niets onder handen</div>
            <div class="uitleg" style="margin:6px 0 0">${(w.wachtrij || []).length
              ? getal(w.wachtrij.length) + ' storing(en) wachten; de volgende start binnen tien minuten.'
              : 'Geen storing met voorrang open.'} Laatste ronde: ${veilig(tijdstip(st.laatste_ronde) || 'nooit')}.</div></div>`);
+  WP_BEZIG_START = b ? new Date(b.opgepakt_op).getTime() : null;
+
+  el('wp-voor-jou').innerHTML = (w.voor_jou || []).map(a =>
+    `<div class="jij"><span class="merk ${SOORT_KLEUR[a.soort] || 'm-onbekend'}">${veilig(SOORT_NAAM[a.soort] || a.soort)}</span>
+       <span><b>${veilig(a.wie)}</b><br><span class="uitleg">${veilig(a.wat)}</span></span></div>`).join('')
+    || '<div class="leeg">Niets. Alles ligt bij de klantenservice of bij mij.</div>';
+
+  // De gebeurtenissen van het laatste uur krijgen een groene stip: dat is wat er
+  // net gebeurd is, en daar kijk je op een scherm als dit als eerste naar.
+  const grens = Date.now() - 3600000;
+  el('wp-tijdlijn').innerHTML = (w.tijdlijn || []).map(r =>
+    `<div class="tl-rij ${new Date(r.wanneer).getTime() > grens ? 'nieuw' : ''}">
+       <span class="tl-tijd">${veilig(tijdstip(r.wanneer))}</span>
+       <span class="tl-pijl">${veilig(r.van)} →</span> <b>${veilig(r.naar)}</b>
+       — ${veilig(r.wat)}${r.sleutel ? ` <span class="tl-pijl">(${veilig(r.sleutel.replace(/-/g, ' '))})</span>` : ''}
+       ${r.extra ? `<div class="tl-extra">${veilig(r.extra)}</div>` : ''}
+     </div>`).join('') || '<div class="leeg">Nog niets gebeurd.</div>';
 
   el('wp-cijfers').innerHTML =
       kaart('Doorgegeven aan mij', getal((w.wachtrij || []).length), 'met voorrang',
@@ -869,8 +951,10 @@ function start() {
   // Elke minuut de snelle cijfers, elk kwartier de Google-cijfers. Die laatste
   // hebben server-side toch tien minuten cache en dagquota.
   setInterval(haalKern, 60000);
-  // De werkplaats verandert per sessie, niet per seconde.
-  setInterval(haalWerkplaats, 120000);
+  // Dit is een operationeel scherm: het hoort te tonen wat er nu gebeurt.
+  // Twintig seconden is vaak genoeg om een sessie te zien starten en stoppen,
+  // en licht genoeg om de hele dag open te kunnen staan.
+  setInterval(haalWerkplaats, 20000);
   setInterval(haalGroei, 300000);
   setInterval(haalWebsite, 900000);
 }

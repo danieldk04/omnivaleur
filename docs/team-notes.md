@@ -1324,3 +1324,30 @@ Nagemeten vandaag in de database: zijn account staat compleet, **5.534 van
 1.284 nog te beoordelen, 0 ontbrekend). Niets aan de code gewijzigd — dit was
 dezelfde storing als 27-08, alleen nog niet apart teruggemeld — en nu wel,
 met `opgelost`.
+
+### 29-08-2026 — Werkplaats als operationeel scherm, en het dagmaximum gerepareerd
+
+**Het dagmaximum lekte.** Het maximum van drie sessies per dag werd afgeleid uit
+`dev_sessies`, maar zodra een storing is opgelost verdwijnt hij daaruit — en dan
+kwam zijn plek weer vrij. Juist een geslaagde sessie, de duurste, raakte je dus
+kwijt uit de telling. Nu een eigen dagteller (`dev_starter_dagteller`); een
+sessie die meteen afsloeg geeft zijn plek netjes terug.
+
+**Het scherm.** Opgezet volgens wat voor een operationeel scherm geldt: eerst de
+huidige toestand, groot en zichtbaar levend, dan expliciet eigenaarschap, dan de
+gebeurtenissen — en niets meer dan dat, want elke extra teller kost aandacht.
+
+- **Nu** — wie er aan het werk is, sinds wanneer, met een meelopende teller in de
+  browser (anders staat "18 min" twintig seconden stil en lijkt het vast te zitten).
+- **Wat er van jou wordt gevraagd** — alleen dat: escalaties, en wie nog geen
+  bericht kon krijgen omdat er al post voor hem klaarligt. Wat de klantenservice
+  en de developer onderling afhandelen staat hier niet.
+- **Wat er precies gebeurd is** — een tijdlijn van de post tussen klantenservice
+  en developer: gemeld → met voorrang doorgegeven → sessie gestart → teruggemeld
+  → concept naar de klant. Afgeleid uit de bestaande administratie, geen nieuwe
+  opslag. Gebeurtenissen van het laatste uur krijgen een groene stip.
+- Verversen elke 20 seconden in plaats van elke twee minuten.
+- De machinetellers zeggen er nu bij waaróm ze streepjes tonen (de server leest
+  ze met de publieke sleutel niet), met de oplossing erbij.
+
+Bewegende onderdelen respecteren `prefers-reduced-motion`.

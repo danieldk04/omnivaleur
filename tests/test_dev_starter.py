@@ -317,3 +317,65 @@ def test_na_een_limiet_wordt_het_later_gewoon_weer_geprobeerd(kast, gestart, mon
     monkeypatch.setattr(S, "_minuten_bezig", lambda s: S.HERSTELPAUZE_MINUTEN + 1)
     S.ronde()
     assert len(gestart) == 2, "hij bleef na de wachttijd alsnog stilstaan"
+
+
+# ── het scherm: wat er gebeurd is en wat er van Daniel wordt gevraagd ──────
+def _beheer(monkeypatch, signalen, sessies=None, escalaties=None):
+    from backend.api import beheer
+    monkeypatch.setattr(beheer, "_eigenaar", lambda u: None)
+    monkeypatch.setattr(beheer, "_leadgen_lezen", lambda naam: {
+        "bug_signalen": signalen, "dev_sessies": sessies or {},
+        "mail_escalaties": escalaties or [],
+        "dev_starter_hartslag": None}.get(naam))
+    return beheer
+
+
+def test_de_tijdlijn_toont_de_hele_lijn_op_volgorde(monkeypatch):
+    """Melding → doorgegeven → opgepakt → teruggemeld → concept naar de klant."""
+    beheer = _beheer(monkeypatch,
+        {"kapot": {"status": "opgelost", "moet_zeker": True, "melders": ["a@x.nl"],
+                   "omschrijving": "het lukt niet", "waarom_zeker": ["boos"],
+                   "laatst": "2026-08-29T09:00:00+00:00",
+                   "gemeld_als_patroon": "2026-08-29T09:10:00+00:00",
+                   "gerepareerd_op": "2026-08-29T11:00:00+00:00", "uitleg": "gemaakt",
+                   "bericht_verstuurd": ["a@x.nl"]}},
+        {"kapot": {"status": "afgerond", "gestart": "2026-08-29T10:00:00+00:00"}})
+    rijen = beheer.werkplaats(user=None)["tijdlijn"]
+    stappen = [(r["van"], r["naar"]) for r in rijen]
+    assert ("klant", "klantenservice") in stappen
+    assert ("klantenservice", "developer") in stappen
+    assert ("developer", "klantenservice") in stappen
+    assert ("klantenservice", "klant") in stappen
+    # nieuwste bovenaan
+    assert rijen == sorted(rijen, key=lambda r: r["wanneer"], reverse=True)
+
+
+def test_voor_jou_bevat_alleen_wat_van_daniel_is(monkeypatch):
+    beheer = _beheer(monkeypatch,
+        {"kapot": {"status": "open", "moet_zeker": True, "melders": ["a@x.nl"],
+                   "omschrijving": "x", "laatst": "2026-08-29T09:00:00+00:00"}},
+        {}, [{"escalatie": "geld", "adres": "a@x.nl", "samenvatting": "dubbel afgeschreven",
+              "afgehandeld": False},
+             {"escalatie": "geld", "adres": "oud@x.nl", "samenvatting": "al gedaan",
+              "afgehandeld": True}])
+    voor_jou = beheer.werkplaats(user=None)["voor_jou"]
+    wie = [a["wie"] for a in voor_jou]
+    assert "a@x.nl" in wie
+    assert "oud@x.nl" not in wie, "een afgehandelde escalatie hoort hier niet meer"
+    # Een openstaande storing is werk voor MIJ, niet voor Daniel. Wat hier wél
+    # bij mag staan is de machine zelf: een starter die stilligt kan alleen hij
+    # oplossen, en die staat hier omdat er geen hartslag is in deze test.
+    assert all(a["soort"] != "storing" for a in voor_jou)
+    assert all(a["soort"] in ("geld", "vertrek", "kan_niet_onderbouwen", "concept", "machine")
+               for a in voor_jou)
+
+
+def test_wie_nog_geen_bericht_kon_krijgen_staat_bij_daniel(monkeypatch):
+    """Er gaat nooit twee post tegelijk naar dezelfde persoon; die wacht dus op hem."""
+    beheer = _beheer(monkeypatch,
+        {"kapot": {"status": "opgelost", "melders": ["a@x.nl", "b@x.nl"],
+                   "bericht_verstuurd": ["a@x.nl"], "uitleg": "gemaakt",
+                   "laatst": "2026-08-29T09:00:00+00:00",
+                   "gerepareerd_op": "2026-08-29T11:00:00+00:00"}})
+    voor_jou = beheer.werkplaats(user=None)["voor_jou"]
+    assert any(a["soort"] == "concept" and a["wie"] == "b@x.nl" for a in voor_jou)
