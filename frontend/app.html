@@ -262,7 +262,15 @@ textarea { resize: vertical; min-height: 80px; }
    actions. On desktop you ARE that computer, so the banner is noise (and the
    heartbeat can read a false "offline" when the extension isn't mid-poll). Hide
    it above the mobile breakpoint. !important beats the inline display the JS sets. */
-@media (min-width: 769px) { .comp-status { display: none !important; } }
+@media (min-width: 769px) { .comp-status:not(.comp-toon-op-desktop) { display: none !important; } }
+/* UITZONDERING, EN WAAROM DIE ER MOET ZIJN.
+   Dit blokje stond op de telefoon en was op de computer verborgen, met als
+   redenering: op je computer BEN je die computer zelf. Dat klopt niet zodra de
+   extensie niet meer meldt. Gemeten 29-08-2026 bij Jaap: 105 opdrachten in de
+   wachtrij, extensie al 13 uur niet gezien, en nergens op zijn scherm stond dat.
+   Hij zag alleen een teller aflopen en dacht dat het liep — terwijl er niets
+   gebeurde en hij alles met de hand zat te doen. Staat er werk klaar en meldt de
+   extensie zich langere tijd niet, dan moet dat op élk scherm te zien zijn. */
 
 /* ── Global "extension is busy — don't touch anything" activity bar ──
    Shown on EVERY view (it lives above the view container) whenever the
@@ -6289,6 +6297,21 @@ function renderExtensionStatus() {
     } else {
       const ago = data.last_seen ? ` (last online ${fmtSeenAgo(data.seconds_ago)})` : '';
       el.className = 'comp-status comp-status-offline';
+      // Werk in de wachtrij én de extensie langer dan tien minuten stil: dan is
+      // dit geen randinformatie meer maar het antwoord op "waarom gebeurt er
+      // niets". Ook op de computer laten zien. Tien minuten, niet twee, zodat
+      // een kortstondige stilte tussen twee rondes geen vals alarm geeft.
+      const langWeg = data.seconds_ago == null || data.seconds_ago > 600;
+      if (queued && langWeg) {
+        el.classList.add('comp-toon-op-desktop');
+        el.innerHTML = `<span class="comp-dot"></span><div><b>Nothing is running: your extension has not checked in${ago}.</b> `
+          + `${queued} action${queued === 1 ? ' is' : 's are'} waiting. Open Chrome on the computer with the `
+          + `Omnivaleur extension, and make sure you are signed in to Omnivaleur in that browser — after `
+          + `reinstalling the extension it needs the Omnivaleur tab open once to reconnect.</div>`;
+        if (oud) el.innerHTML += extraOudeExtensieMelding(oud);
+        return;
+      }
+      el.classList.remove('comp-toon-op-desktop');
       el.innerHTML = `<span class="comp-dot"></span><div><b>No computer online right now${ago}.</b> ${
         queued
           ? `Your ${queued} queued action${queued === 1 ? '' : 's'} will run`
