@@ -248,9 +248,25 @@ def _start(sleutel: str, signaal: dict, staat: dict) -> bool:
 
 
 # ---------------------------------------------------------------- rondes
+HARTSLAG_SLEUTEL = "dev_starter_hartslag"
+
+
+def _hartslag() -> None:
+    """Zeggen dat hij langs is geweest.
+
+    Zonder dit valt de starter stil zonder dat iemand het merkt — macOS geeft een
+    achtergrondtaak standaard geen toegang tot ~/Documents en meldt dat nergens.
+    Het beheerdashboard leest deze hartslag en waarschuwt als hij uitblijft
+    terwijl er werk klaarstaat. Zie _starter_stand in backend/api/beheer.py.
+    """
+    A._schrijf(HARTSLAG_SLEUTEL, {"wanneer": datetime.now(timezone.utc).isoformat()})
+
+
 def ronde(droog: bool = False) -> None:
     signalen = A.bugs()
     staat = _staat()
+    if not droog:
+        _hartslag()
     if _opruimen(signalen, staat):
         _bewaar(staat)
 

@@ -222,6 +222,7 @@ button.stil { background: transparent; border: 1px solid var(--rand); color: var
   <section id="tab-marketing" hidden>
     <h2>Klantenservice</h2>
     <div id="ks-escalaties"></div>
+    <div id="ks-starter"></div>
     <div class="raster" id="ks-cijfers"></div>
     <div class="twee" style="margin-top:14px">
       <div class="kaart"><div class="label">Waar de post over gaat</div>
@@ -696,6 +697,18 @@ function toonKlantenservice(k) {
                               + `<span class="uitleg">${veilig(e.samenvatting || '')}</span></li>`).join('')
       + '</ul></div>'
     : '<div class="attentie op">Niets wat jouw aandacht nodig heeft.</div>';
+
+  // De automatische developer-starter. Alleen zichtbaar als hij stil is terwijl
+  // er werk klaarstaat — anders is het ruis. Zonder deze regel kan hij dagen
+  // stilliggen zonder dat iemand het merkt (macOS blokkeert achtergrondtaken de
+  // toegang tot de projectmap, en meldt dat nergens).
+  const st = k.starter || {};
+  el('ks-starter').innerHTML = st.waarschuwing
+    ? `<div class="attentie let"><b>De developer wordt niet meer vanzelf gestart.</b><br>`
+      + `<span class="uitleg">${veilig(st.waarschuwing)} `
+      + `Er ${st.wacht_op_sessie === 1 ? 'wacht 1 storing' : 'wachten ' + getal(st.wacht_op_sessie) + ' storingen'} `
+      + `op een sessie; laatste ronde: ${veilig(st.laatste_ronde || 'nooit')}.</span></div>`
+    : '';
 
   el('ks-cijfers').innerHTML =
       kaart('Post (14 dgn)', getal(k.berichten_14d), `${getal(k.binnen_14d)} in, ${getal(k.uit_14d)} uit`)

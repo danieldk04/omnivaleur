@@ -1219,3 +1219,26 @@ alle databasewerk naar een werkdraad zodat het de server niet meer bevriest), en
 de ladder klimt sindsdien ook weer terug omhoog na drie goede ladingen.
 Nagemeten op zijn account op 29-08: **4.227 geïmporteerd, 23 gekoppeld, 1.284 nog
 te gaan, 0 mislukt.** Geen wijziging nodig; via `opgelost` teruggemeld.
+
+### 29-08-2026 (aanvulling) — De starter kan niet stil stilvallen
+
+Bij het aanzetten liep hij meteen tegen de bekende macOS-val: launchd krijgt geen
+toegang tot `~/Documents`. Gemeten, niet vermoed — `launchctl kickstart` gaf
+`can't open input file`. Twee dingen daaruit:
+
+1. **`[[ -r bestand ]]` is hier een nutteloze test.** macOS staat het opvragen
+   van de bestandsgegevens gewoon toe en weigert pas het openen, dus die test
+   slaagt terwijl de volgende regel alsnog stukloopt. De stub
+   (`config/dev_starter_stub.sh`) leest daarom echt een byte, en zegt anders in
+   gewone taal wat Daniel moet doen.
+2. **Het dashboard merkt het nu zelf.** De starter schrijft bij elke ronde een
+   hartslag weg (`dev_starter_hartslag`). Blijft die langer dan een uur uit
+   terwijl er MOET ZEKER-werk klaarstaat, dan staat er een waarschuwing boven in
+   Marketing → Klantenservice met de oplossing erbij. Zonder dat had hij dagen
+   stil kunnen liggen zonder één signaal — precies wat de koude-mailmachine op
+   11-08-2026 overkwam.
+
+**Openstaand handwerk voor Daniel:** Volledige schijftoegang geven aan `/bin/zsh`
+(Systeeminstellingen → Privacy en beveiliging → Volledige schijftoegang → +,
+cmd+shift+G, `/bin/zsh`). Tot dat gebeurt start de LaunchAgent niets en meldt het
+dashboard dat.

@@ -904,6 +904,7 @@ def klantenservice(user=Depends(get_current_user_full)):
                 "reden": "Nog geen beoordeelde post (leadgen_opslag/mail_analyse)"}
     signalen = _leadgen_lezen("bug_signalen") or {}
     lijst = _leadgen_lezen("mail_escalaties") or []
+    starter = _starter_stand(signalen)
 
     grens = (datetime.now(timezone.utc) - timedelta(days=14)).isoformat()
     recent = [r for r in analyses.values() if (r.get("wanneer") or "") >= grens]
@@ -934,4 +935,43 @@ def klantenservice(user=Depends(get_current_user_full)):
               "uitleg": v.get("uitleg", "")}
              for k, v in signalen.items()],
             key=lambda s: (s["status"] != "open", -s["melders"]))[:25],
+        "starter": starter,
+    }
+
+
+def _starter_stand(signalen: dict) -> dict:
+    """Draait de automatische developer-starter nog?
+
+    WAAROM DIT HIER STAAT. De starter draait op Daniels Mac als LaunchAgent, en
+    macOS blokkeert een achtergrondtaak standaard de toegang tot ~/Documents —
+    zonder een enkele foutmelding op een plek die iemand leest. Dezelfde val
+    heeft de koude-mailmachine op 11-08-2026 een halve dag stilgelegd. Een
+    starter die stil kan vallen zonder dat iemand het merkt is geen starter.
+
+    Hij schrijft daarom bij elke ronde een hartslag weg. Blijft die uit terwijl
+    er werk klaarstaat, dan staat dat hier — op het scherm dat Daniel toch al
+    opent.
+    """
+    hartslag = _leadgen_lezen("dev_starter_hartslag") or {}
+    wachtend = sum(1 for v in signalen.values()
+                   if v.get("status") == "open" and v.get("moet_zeker"))
+    laatst = hartslag.get("wanneer") or ""
+    stil_minuten = None
+    if laatst:
+        try:
+            stil_minuten = int((datetime.now(timezone.utc)
+                                - datetime.fromisoformat(laatst)).total_seconds() // 60)
+        except ValueError:
+            stil_minuten = None
+    # Hij hoort elke tien minuten langs te komen. Een uur stilte is geen toeval.
+    stil = stil_minuten is None or stil_minuten > 60
+    return {
+        "laatste_ronde": laatst[:16].replace("T", " "),
+        "stil_minuten": stil_minuten,
+        "wacht_op_sessie": wachtend,
+        "waarschuwing": (
+            "De automatische starter heeft zich niet gemeld. Meestal blokkeert macOS "
+            "de toegang tot de projectmap: Systeeminstellingen > Privacy en beveiliging "
+            "> Volledige schijftoegang, en zet /bin/zsh erbij."
+        ) if stil and wachtend else "",
     }

@@ -152,3 +152,33 @@ def test_de_launchagent_wijst_naar_de_wrapper_die_bestaat():
     # Laden mag niet meteen een sessie starten.
     assert plist["RunAtLoad"] is False
     assert (WORTEL / "scripts" / "dev_starter.sh").is_file()
+
+
+# ── stilvallen mag niet onzichtbaar zijn ──────────────────────────────────
+def test_de_starter_meldt_zich_bij_elke_ronde(kast, gestart):
+    kast["bug_signalen"] = {}
+    S.ronde()
+    assert kast["dev_starter_hartslag"]["wanneer"], "geen hartslag weggeschreven"
+
+
+def test_het_dashboard_waarschuwt_als_hij_stil_is_terwijl_er_werk_wacht(monkeypatch):
+    from backend.api import beheer
+    monkeypatch.setattr(beheer, "_leadgen_lezen", lambda naam: None)
+    stand = beheer._starter_stand({"iets": {"status": "open", "moet_zeker": True}})
+    assert stand["waarschuwing"], "een starter die nooit draaide moet opvallen"
+    assert stand["wacht_op_sessie"] == 1
+
+
+def test_het_dashboard_zwijgt_als_er_niets_te_doen_is(monkeypatch):
+    from backend.api import beheer
+    monkeypatch.setattr(beheer, "_leadgen_lezen", lambda naam: None)
+    assert beheer._starter_stand({})["waarschuwing"] == ""
+
+
+def test_een_verse_hartslag_geeft_geen_waarschuwing(monkeypatch):
+    from datetime import datetime, timezone
+    from backend.api import beheer
+    nu = {"wanneer": datetime.now(timezone.utc).isoformat()}
+    monkeypatch.setattr(beheer, "_leadgen_lezen", lambda naam: nu)
+    stand = beheer._starter_stand({"iets": {"status": "open", "moet_zeker": True}})
+    assert stand["waarschuwing"] == ""
