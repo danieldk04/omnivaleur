@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  De automatische developer-starter. Elke tien minuten kijkt hij in het postvak
+  van de klantenservice (mail_analyse.py bugs) en start hij zelf een Claude
+  Code-sessie voor een storing die met zekerheid gerepareerd moet worden.
+
+  Installeren:
+      cp config/com.omnivaleur.devstarter.plist ~/Library/LaunchAgents/
+      launchctl load ~/Library/LaunchAgents/com.omnivaleur.devstarter.plist
+
+  Stoppen:
+      launchctl unload ~/Library/LaunchAgents/com.omnivaleur.devstarter.plist
+
+  RunAtLoad staat bewust uit: laden mag niet meteen een sessie starten.
+-->
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.omnivaleur.devstarter</string>
+
+    <key>ProgramArguments</key>
+    <array>
+        <string>/bin/zsh</string>
+        <string>/Users/Danie/Library/Application Support/omnivaleur/dev_starter.sh</string>
+    </array>
+
+    <key>StartInterval</key>
+    <integer>600</integer>
+
+    <key>RunAtLoad</key>
+    <false/>
+
+    <key>StandardOutPath</key>
+    <string>/Users/Danie/Library/Application Support/omnivaleur/dev-starter.log</string>
+    <key>StandardErrorPath</key>
+    <string>/Users/Danie/Library/Application Support/omnivaleur/dev-starter.log</string>
+
+    <key>WorkingDirectory</key>
+    <string>/Users/Danie/Library/Application Support/omnivaleur</string>
+</dict>
+</plist>
