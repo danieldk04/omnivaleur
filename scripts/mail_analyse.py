@@ -429,6 +429,57 @@ def bugs_tonen(args) -> None:
         print(f"    gemeld door: {', '.join(melders[:8])}")
 
 
+def vraag_voor_daniel(adres: str, vraag: str, aanleiding: str = "") -> bool:
+    """De klantenservice komt er niet uit — leg de vraag bij Daniel neer.
+
+    WAAROM DIT BESTAAT (29-08-2026). Jaap vroeg of zijn computer aan moet blijven
+    staan bij het verversen. Het antwoord staat gewoon in de code, maar het
+    concept zei "ik kijk het na". Zo'n zin is voor de klant hetzelfde als geen
+    antwoord, en er komt niets van terecht: hij staat in een concept dat Daniel
+    verstuurt en daarna nergens meer.
+
+    Kan de agent een feitelijke vraag écht niet onderbouwen, dan hoort hij dus
+    geen mail te schrijven maar de vraag hier neer te leggen — op de lijst die
+    Daniel al leest. Geen mailtje: dit is geen spoed, het is werk.
+    """
+    vraag = (vraag or "").strip()
+    if not vraag:
+        return False
+    rij = {
+        "richting": "in", "adres": adres or "onbekend",
+        "onderwerp": (aanleiding or vraag)[:120],
+        "wanneer": datetime.now(timezone.utc).isoformat(), "klant": True,
+        "thema": "vraag-voor-daniel", "stemming": "neutraal", "storing": False,
+        "bug_sleutel": "", "escalatie": "kan_niet_onderbouwen",
+        "samenvatting": vraag[:200],
+        # Dezelfde vraag van dezelfde persoon is één keer genoeg. Zonder deze
+        # sleutel komt hij bij elke ronde opnieuw op de lijst.
+        "message_id": f"vraag:{adres}:{re.sub(r'[^a-z0-9]+', '-', vraag.lower())[:60]}",
+    }
+    _bewaar_escalaties([rij])
+    return True
+
+
+def afgewezen(args) -> None:
+    """Deze storing gaan we niet repareren, en dat is een besluit.
+
+    Zonder deze knop blijft een sleutel voor altijd op de lijst staan en blijft de
+    automatische starter (scripts/dev_starter.py) hem als openstaand werk zien.
+    """
+    signalen = bugs()
+    s = signalen.get(args.sleutel)
+    if not s:
+        print(f"Geen storing bekend onder '{args.sleutel}'. "
+              f"Bekend: {', '.join(sorted(signalen)) or 'geen'}")
+        return
+    s["status"] = "afgewezen"
+    s["afgewezen_op"] = datetime.now(timezone.utc).isoformat()
+    s["reden"] = args.reden
+    s.pop("gemeld_als_patroon", None)
+    _schrijf(BUG_SLEUTEL, signalen)
+    print(f"'{args.sleutel}' staat op afgewezen: {args.reden}")
+
+
 def opgelost(args) -> None:
     """De developer meldt terug dat het gerepareerd is.
 
