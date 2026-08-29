@@ -2126,19 +2126,71 @@ GRONDSLAG_BESTANDEN: dict[str, list[str]] = {
     "verkocht": ["backend/services/crosslist.py"],
     "foto": ["backend/services/crosslist.py"],
     "extensie": ["extension/background.js"],
+    # Toegevoegd 29-08-2026 naar aanleiding van de mail van Jaap
+    # (info@zilverwebsite.nl): "moet de computer aan blijven staan bij het
+    # verversen?" Dat is gewoon na te zoeken — publiceren, verversen en scannen
+    # lopen allemaal via de wachtrij die de extensie in Chrome leegpoetst — maar
+    # geen van deze woorden stond in deze lijst. Er ging dus geen enkele regel
+    # code mee, en het concept zei "ik kijk het na". Precies wat niet meer mag.
+    "verversen": ["backend/services/relist.py", "backend/api/jobs.py"],
+    "ververs": ["backend/services/relist.py", "backend/api/jobs.py"],
+    "vernieuw": ["backend/services/relist.py"],
+    "opnieuw plaatsen": ["backend/services/relist.py"],
+    "computer": ["backend/api/jobs.py", "extension/background.js"],
+    "aan blijven": ["backend/api/jobs.py", "extension/background.js"],
+    "aan laten staan": ["backend/api/jobs.py", "extension/background.js"],
+    "aanstaan": ["backend/api/jobs.py", "extension/background.js"],
+    "laptop": ["backend/api/jobs.py", "extension/background.js"],
+    "browser": ["extension/background.js", "backend/api/jobs.py"],
+    "chrome": ["extension/background.js", "backend/api/jobs.py"],
+    "wachtrij": ["backend/api/jobs.py"],
+    "opdracht": ["backend/api/jobs.py"],
+    "tabblad": ["extension/background.js"],
+    "verwijder": ["extension/content/marktplaats.js", "backend/services/relist.py"],
+    "weghalen": ["extension/content/marktplaats.js", "backend/services/relist.py"],
+    "traag": ["backend/api/imports.py"],
+    "langzaam": ["backend/api/imports.py"],
+    "duurt": ["backend/api/imports.py"],
+    "afgeschreven": ["backend/api/billing.py"],
+    "incasso": ["backend/api/billing.py"],
+    "abonnement": ["backend/api/billing.py"],
+    "opzegg": ["backend/api/billing.py"],
+    "categorie": ["extension/background.js"],
+    "maat": ["extension/content/marktplaats.js"],
+    "materiaal": ["extension/content/marktplaats.js"],
 }
 GRONDSLAG_BESTANDEN_MAX = 3
-GRONDSLAG_REGELS_MAX = 60
+GRONDSLAG_REGELS_MAX = 90
+# Hoeveel regels er rond een treffer meegaan, en hoeveel treffers per bestand.
+GRONDSLAG_VENSTER = 12
+GRONDSLAG_TREFFERS_MAX = 3
 
 
 def _grondslag(body: str) -> str:
-    """De broncode bij dit onderwerp, als bewijsmateriaal voor het model."""
+    """De broncode bij dit onderwerp, als bewijsmateriaal voor het model.
+
+    HIER STOND EERST ALLEEN "de eerste 60 regels van het bestand", en dat is
+    bijna nooit het antwoord: de eerste zestig regels van een bestand zijn de
+    invoerregels en de inleiding. Op de vraag van Jaap of zijn computer aan moet
+    blijven staan leverde dat nul bruikbare regels op, ook al staat het antwoord
+    er letterlijk in (de extensie haalt elke vijftien seconden werk op, dus zonder
+    draaiende Chrome gebeurt er niets).
+
+    Nu gaat de kop van het bestand mee — daar staat waaróm het bestaat — plus de
+    stukken rond de woorden waar hij zelf over schrijft. Dat is het verschil
+    tussen "ik kijk het na" en een antwoord.
+    """
     laag = (body or "").lower()
-    paden: list[str] = []
-    for woord, bestanden in GRONDSLAG_BESTANDEN.items():
-        if woord in laag:
-            paden.extend(bestanden)
-    paden = list(dict.fromkeys(paden))[:GRONDSLAG_BESTANDEN_MAX]
+    treffers = [w for w in GRONDSLAG_BESTANDEN if w in laag]
+    if not treffers:
+        return ""
+    # Het bestand dat door de meeste van zijn woorden wordt aangewezen, gaat voor.
+    telling: dict[str, int] = {}
+    for woord in treffers:
+        for rel in GRONDSLAG_BESTANDEN[woord]:
+            telling[rel] = telling.get(rel, 0) + 1
+    paden = sorted(telling, key=lambda r: -telling[r])[:GRONDSLAG_BESTANDEN_MAX]
+
     stukken = []
     for rel in paden:
         pad = REPO / rel
@@ -2148,8 +2200,28 @@ def _grondslag(body: str) -> str:
             regels = pad.read_text(errors="replace").splitlines()
         except Exception:  # noqa: BLE001
             continue
-        stukken.append(f"=== {rel} (eerste {GRONDSLAG_REGELS_MAX} regels) ===\n"
-                        + "\n".join(regels[:GRONDSLAG_REGELS_MAX]))
+        houden: set[int] = set(range(min(25, len(regels))))   # de kop van het bestand
+        gevonden = 0
+        for i, regel in enumerate(regels):
+            if gevonden >= GRONDSLAG_TREFFERS_MAX:
+                break
+            klein = regel.lower()
+            if any(w in klein for w in treffers):
+                houden.update(range(max(0, i - GRONDSLAG_VENSTER),
+                                    min(len(regels), i + GRONDSLAG_VENSTER + 1)))
+                gevonden += 1
+        gekozen = sorted(houden)[:GRONDSLAG_REGELS_MAX]
+        if not gekozen:
+            continue
+        # Weggelaten stukken markeren, anders lijken twee losse fragmenten één
+        # doorlopend stuk code en kan het model er iets uit afleiden wat er niet staat.
+        tekst, vorige = [], None
+        for i in gekozen:
+            if vorige is not None and i != vorige + 1:
+                tekst.append("        ...")
+            tekst.append(regels[i])
+            vorige = i
+        stukken.append(f"=== {rel} ===\n" + "\n".join(tekst))
     return "\n\n".join(stukken)
 
 
