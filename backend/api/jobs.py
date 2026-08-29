@@ -1571,6 +1571,35 @@ def fail_job(job_id: str, body: dict, user_id: str = Depends(get_current_user)):
                         MAX_HERKANSING_OUDE_EXTENSIE)
             return {"ok": True, "requeued": True, "reason": "outdated_extension"}
 
+    # WETEN WE DAT DE KOPIE TE OUD IS, DAN IS DAT HET ANTWOORD — EN NIETS ANDERS.
+    #
+    # Dit stond hier niet, en dat kostte twee klanten samen ruim dertig
+    # foutmeldingen die alle drie de keren de verkeerde kant op wezen.
+    # Nagemeten in het opdrachtenlogboek op 29-08-2026:
+    #   Dennis (info@retrogameking.com)      14 mislukte scans vanaf 1.0.217/218
+    #   Egbert (info@papas-plectrums.nl)     11 mislukte scans vanaf 1.0.200/202/207
+    # Beiden kregen "je bent niet ingelogd" te zien, en Egbert daarna "zet
+    # Admarkt aan" — terwijl de server uit hun eigen versiestempel wist dat het
+    # aan de kopie lag. Die wetenschap werd hieronder weggegooid zodra de twee
+    # herkansingen op waren: dan viel de opdracht door naar de tekst hieronder.
+    # Beiden zijn dagenlang hun inlog blijven controleren.
+    #
+    # Dus: is de versie bekend én te oud, dan zegt de melding dat, voor élk
+    # platform en élke soort opdracht. De herkansing hierboven blijft beperkt
+    # tot een scan (een halve publicatie opnieuw uitdelen is een ander risico);
+    # de tekst niet, want een verkeerd antwoord is overal even schadelijk.
+    if versie and versie < MINIMALE_SCANVERSIE:
+        body = dict(body)
+        body["error_oorspronkelijk"] = body.get("error")
+        body["error"] = (
+            f"Deze opdracht is opgepakt door een verouderde kopie van de "
+            f"Omnivaleur-extensie (versie {'.'.join(map(str, versie))}; nodig is "
+            f"minstens {'.'.join(map(str, MINIMALE_SCANVERSIE))}). Die kopie kan dit "
+            f"werk niet afmaken, en wat ze meldt over inloggen klopt niet. Open "
+            f"chrome://extensions, zet \"Ontwikkelaarsmodus\" aan en verwijder elke "
+            f"met de hand geladen kopie van Omnivaleur; laat alleen de versie uit "
+            f"de Chrome Web Store staan en herstart Chrome."
+        )
     # DE MELDING VAN EEN OUDE EXTENSIE HIER RECHTZETTEN.
     #
     # Tot 1.0.259 meldde de extensie bij een lege Marktplaats-scan altijd "je
@@ -1583,7 +1612,7 @@ def fail_job(job_id: str, body: dict, user_id: str = Depends(get_current_user)):
     # dagen later — dus zetten we de tekst hier recht, voor iedereen die nog een
     # oudere kopie draait. Zodra 1.0.259 er staat, komt deze zin niet meer voor
     # en doet deze regel niets meer.
-    if (job and job.get("action") == "scan"
+    elif (job and job.get("action") == "scan"
             and job.get("platform") == "marktplaats"
             and "appear to be signed in" in str(body.get("error") or "")):
         body = dict(body)
