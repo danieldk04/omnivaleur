@@ -1002,3 +1002,15 @@ beurt. De ticks liepen daardoor ~20 minuten uit elkaar in plaats van 10. Het slo
 maakt de uitkomst goed, maar de traagheid zelf staat nog. De support-mailagent
 (`scripts/support_mail_agent.py`) draait nergens ingepland en is buiten beschouwing
 gebleven.
+
+### 29-08-2026 — Jaaps vaste tekst staat aan
+
+Hij zei ja. `slottekst` (1.604 tekens) staat op zijn account; de overige
+instellingen zijn ongemoeid gebleven. 378 items bevatten het blok al compleet
+(inclusief artikelnummer) en worden overgeslagen door de dubbelcontrole; 844
+krijgen het er voortaan bij, zonder artikelnummer — dat verschilt per item en is
+nergens meer vandaan te halen (de SKU komt maar bij 1 op de 40 overeen).
+
+De 23 publicatieopdrachten die al in zijn wachtrij stonden zijn bijgewerkt, zodat
+ook die compleet de deur uit gaan. Hij draait sinds vanochtend 1.0.260 en heeft
+de foto's van de eerste tien dun geplaatste advertenties zelf rechtgezet.
