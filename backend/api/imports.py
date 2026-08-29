@@ -134,6 +134,17 @@ _CATEGORY_RULES = [
       "activewear", "voetbalshirt", "wielrenshirt"),
      {"dames": "sportbroeken", "heren": "heren sportbroeken",
       "kinderen": "kinderen sportkleding", "unisex": "unisex sportkleding"}),
+    # Verkleedkleding en klederdracht STAAT VOOR de pak- en broekregels. Een
+    # lederhose bevat "hose" noch "short", maar viel bij het model wél terug op
+    # een broektype, en op Marktplaats werd dat een spijkerbroek. Een dirndl ging
+    # dezelfde kant op als jurk. Dit zijn feestkleding, geen dagelijkse kleding.
+    (("lederhose", "lederhosen", "dirndl", "tiroler", "tirol", "carnaval",
+      "carnavalskleding", "carnavalspak", "carnavalskostuum", "carnavalsoutfit",
+      "carnival", "verkleedkleding", "verkleedkleren", "verkleedpak",
+      "verkleedkostuum", "fancy dress", "cosplay", "klederdracht", "kerstman",
+      "halloween", "onesie pak", "mascottepak"),
+     {"dames": "verkleedkleding", "heren": "heren verkleedkleding",
+      "kinderen": "kinderen accessoires", "unisex": "unisex verkleedkleding"}),
     (("blazer", "suit", "pak", "tuxedo", "colbert", "kostuum"), {"heren": "heren pakken"}),
     (("turtleneck", "half zip", "half-zip", "jumper", "sweater", "knitted", "knit",
       "pullover", "cardigan", "fleece", "zip vest", "gilet", "bodywarmer", "vest",
@@ -160,7 +171,10 @@ _CATEGORY_RULES = [
       "jas", "jassen", "winterjas", "zomerjas", "regenjas"),
      {"heren": "heren jassen", "dames": "jassen", "unisex": "unisex jassen"}),
     (("skirt", "rok"), {"dames": "rokken"}),
-    (("dress", "jurk", "jurkje"), {"dames": "jurken casual"}),
+    # "kleed" en "kleedje" zijn Vlaams voor jurk (De Juiste Toon, 30-08-2026:
+    # een kleed werd een tas). Hele woorden, dus een tafelkleed of vloerkleed
+    # blijft hier buiten.
+    (("dress", "jurk", "jurkje", "kleed", "kleedje"), {"dames": "jurken casual"}),
     (("blouse", "tunic", "tuniek"), {"dames": "blouses"}),
 ]
 
@@ -174,7 +188,7 @@ _TAXONOMY = {
         "blouses", "tops", "truien", "hoodies", "jassen", "sport bh",
         "sportleggings", "sportbroeken", "zwemkleding", "ondergoed",
         "sneakers dames", "schoenen dames", "hakken", "laarzen dames",
-        "sandalen", "accessoires dames",
+        "sandalen", "accessoires dames", "verkleedkleding",
         "sport tops", "sportjassen", "trainingspakken", "hardloopkleding",
         "wielrenkleding", "voetbalkleding", "yogakleding", "gymkleding",
         "skikleding", "sportkleding",
@@ -184,7 +198,7 @@ _TAXONOMY = {
         "heren polo's", "heren overhemden", "heren truien", "heren hoodies",
         "heren jassen", "heren pakken", "heren sportbroeken", "heren sneakers",
         "heren schoenen", "heren formele schoenen", "heren laarzen",
-        "heren accessoires",
+        "heren accessoires", "heren verkleedkleding",
         "heren sport tops", "heren sportjassen", "heren trainingspakken",
         "heren hardloopkleding", "heren wielrenkleding", "heren voetbalkleding",
         "heren gymkleding", "heren skikleding", "heren sportkleding",
@@ -198,7 +212,7 @@ _TAXONOMY = {
     ],
     "unisex": [
         "unisex truien", "unisex jassen", "unisex sportkleding",
-        "unisex schoenen", "unisex accessoires",
+        "unisex schoenen", "unisex accessoires", "unisex verkleedkleding",
         "unisex wielrenkleding", "unisex trainingspakken", "unisex hardloopkleding",
     ],
     # Niet-kleding: Muziek en Instrumenten. Zelfde sleutels als in
@@ -432,6 +446,12 @@ async def _classify_with_claude(title: str | None, description: str | None,
             "  decorations. This is ordinary modern homeware — genuinely old or\n"
             '  collectable pieces belong in "antiek" instead.\n'
             '  When you pick a "wonen" category, gender must be "wonen" too.\n'
+            "- Costumes, fancy dress and folk dress are NEVER everyday clothing: lederhosen,\n"
+            "  dirndl, Tyrolean outfits, carnival and Halloween outfits, cosplay and mascot\n"
+            "  suits all go in a verkleedkleding category, never in shorts, trousers, jeans\n"
+            "  or dresses.\n"
+            "- Dutch/Flemish: a \"kleed\" or \"kleedje\" is a DRESS, not a bag and not a rug.\n"
+            "  A rug is a \"vloerkleed\" or \"tapijt\"; a tablecloth is a \"tafelkleed\".\n"
             '- The "sieraden" branch covers jewellery, watches, bags, suitcases, wallets\n'
             "  and sunglasses. Pick it for anything worn or carried as an accessory.\n"
             '  When you pick a "sieraden" category, gender must be "sieraden" too.\n\n'

@@ -85,6 +85,12 @@ const MP_CATEGORIES = {
   "zwemkleding":            { cat1: 621,  cat3: 631,  bucketId: 162 },
   "badkleding":             { cat1: 621,  cat3: 631,  bucketId: 162 },
   "ondergoed":              { cat1: 621,  cat3: 631,  bucketId: 162 },
+  // Carnaval, verkleedkleding en klederdracht. Marktplaats heeft hier een eigen
+  // type voor (623 onder Kleding | Dames, 2031 onder Kleding | Heren, opgehaald
+  // uit de categorieboom van Marktplaats zelf en niet gegokt). Zonder deze regel
+  // viel een dirndl of lederhose terug op broeken en jeans.
+  "verkleedkleding":        { cat1: 621,  cat3: 623,  bucketId: 162 },  // Carnavalskleding en Feestkleding
+  "unisex verkleedkleding": { cat1: 621,  cat3: 623,  bucketId: 162 },
   "accessoires dames":      { cat1: 621,  cat3: 628,  bucketId: 162 },
   "unisex accessoires":     { cat1: 621,  cat3: 628,  bucketId: 162 },
   // Schoenen: één type (625) voor alle soorten, Marktplaats splitst niet verder.
@@ -110,6 +116,7 @@ const MP_CATEGORIES = {
   "heren overhemden":       { cat1: 1776, cat3: 649,  bucketId: 169 },  // Overhemden
   "heren polo's":           { cat1: 1776, cat3: 2790, bucketId: 169 },  // Polo's
   "heren polo":             { cat1: 1776, cat3: 2790, bucketId: 169 },
+  "heren verkleedkleding":  { cat1: 1776, cat3: 2031, bucketId: 169 },  // Carnavalskleding en Feestkleding
   "heren t-shirts":         { cat1: 1776, cat3: 651,  bucketId: 169 },  // T-shirts
   "heren t-shirts / polo":  { cat1: 1776, cat3: 651,  bucketId: 169 },
   "heren truien":           { cat1: 1776, cat3: 652,  bucketId: 169 },  // Truien en Vesten

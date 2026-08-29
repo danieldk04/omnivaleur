@@ -272,6 +272,11 @@
     "kinderen schoenen":      ["shoes", "kids shoes"],
     "kinderen accessoires":   ["accessories"],
     // ── Unisex ─────────────────────────────────────────────────────
+    // Vinted heeft geen eigen carnavalstak; "Other clothing" is de bladnaam waar
+    // verkleedkleding en klederdracht daar terechtkomen.
+    "verkleedkleding":     ["other clothing"],
+    "heren verkleedkleding": ["other clothing"],
+    "unisex verkleedkleding": ["other clothing"],
     "unisex truien":       ["jumpers & sweaters", "hoodies & sweatshirts"],
     "unisex jassen":       ["outerwear", "jackets", "coats"],
     "unisex sportkleding": ["activewear", "other activewear"],
