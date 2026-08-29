@@ -1045,3 +1045,43 @@ UID). `_verzonden_lezen` doet 637 mails nu in 10 s.
 Frenky, plus spacecartoonsafari en recycleland waar allang een mail naartoe was)
 via `leadgen_mail.py concepten`. Frenky's `warm_opvolg` is op 2 gezet, zodat hij
 geen derde zetje meer krijgt.
+
+### 29-08-2026 — Vaste rolverdeling: CEO, klantenservice, developer
+
+Door Daniel vastgesteld, expliciet als iets dat níet verandert. Dit staat hier en
+niet alleen in lokale memory, omdat het voor elke sessie op elk account moet
+gelden.
+
+- **Daniel = CEO.** Hij schrijft geen conceptmails meer en controleert geen
+  dubbelingen. Hij opent Concepten en ziet daar alleen juiste, volledige mails
+  die hij hooguit verstuurt. Elke minuut die hij aan mailbeheer kwijt is, is een
+  bug in dit systeem — geen normaal werk.
+- **De mailagent = klantenservicemedewerker.** Analyseert álle mail, in- én
+  uitgaand. Houdt de marketingvoortgang bij in het beheerdashboard. Escaleert
+  naar Daniel alleen wanneer het echt nodig is.
+- **Claude Code = developer.** Krijgt van de mailagent door welke bugs
+  terugkomen, welk patroon erin zit en wie ze meldt; koppelt terug wanneer iets
+  gerepareerd is, zodat de klant daar bericht over kan krijgen.
+
+De mailagent en Claude Code horen ONDERLING te communiceren, niet allebei apart
+via Daniel. Escalatie naar hem is de uitzondering, geen route.
+
+### 29-08-2026 — De losse support-mailagent is opgeheven
+
+`scripts/support_mail_agent.py` stond nergens ingepland en deed dus niets, maar
+zag eruit alsof het meedeed. Eén klantenservicemedewerker, niet twee: alles loopt
+via `scripts/leadgen_mail.py`. Verwijderd (staat in de geschiedenis als er ooit
+iets uit terug moet).
+
+Eén ding is eerst overgezet, want dat deed hij aantoonbaar beter: **antwoorden op
+de code in plaats van op gevoel.** De leadgen-agent gaf het model alleen de mail
+te lezen; bij een technische vraag levert dat een zelfverzekerde bewering op die
+nergens op steunt. Dat is geen theorie — in de mail aan Jaap van 28-08 stond dat
+zijn advertentietekst "platgeslagen vanuit Shopify" was, terwijl hij nooit een
+Shopify-koppeling heeft gehad.
+
+Nu zoekt `_grondslag()` op trefwoorden uit het bericht de bijbehorende broncode op
+en gaat die als bewijsmateriaal mee, met de harde regel dat er geen technische
+bewering mag staan die daar niet in terug te vinden is. Zie
+`GRONDSLAG_BESTANDEN` — nieuwe onderwerpen vragen om een regel daarbij, niet om
+het model zelf te laten raden waar het moet kijken.

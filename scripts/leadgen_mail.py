@@ -59,6 +59,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
+REPO = Path(__file__).resolve().parent.parent   # de broncode zelf, als bewijsmateriaal
 OUT = Path(__file__).parent / "output" / "leads"
 MP_LEADS = OUT / "mp_leads.json"
 IG_LEADS = OUT / "leads.json"
@@ -2084,6 +2085,85 @@ def _claude(client, **kw):
         return client.messages.create(**{k: v for k, v in kw.items() if k != naam})
 
 
+# ─────────────────────────────────────────────────────────────────────────────
+# ANTWOORDEN OP DE CODE, NIET OP GEVOEL
+#
+# WAAROM (29-08-2026). Het model kreeg alleen de mail te lezen en schreef daarop
+# een antwoord. Bij een verkooppraatje kan dat; bij een klant met een technische
+# vraag levert het een zelfverzekerde bewering op die nergens op steunt. Dat is
+# geen theorie: in de mail aan Jaap van 28-08 stond dat zijn advertentietekst
+# "platgeslagen vanuit Shopify" was, terwijl hij helemaal geen Shopify-koppeling
+# heeft en nooit heeft gehad.
+#
+# Deze aanpak komt van de losse support-mailagent, die verder is opgeheven: zoek
+# op trefwoorden uit het bericht de bijbehorende broncode op, geef die mee als
+# bewijsmateriaal, en verbied elke technische bewering die daar niet in staat.
+#
+# Nieuwe onderwerpen vragen om een regel hierbij, niet om het model zelf te laten
+# raden waar het moet kijken.
+GRONDSLAG_BESTANDEN: dict[str, list[str]] = {
+    "kenmerk": ["extension/content/marktplaats.js"],
+    "attribut": ["extension/content/marktplaats.js"],
+    "herplaats": ["backend/services/relist.py"],
+    "relist": ["backend/services/relist.py"],
+    "verlopen": ["backend/services/relist.py"],
+    "crosslist": ["backend/services/crosslist.py"],
+    "publiceer": ["backend/services/crosslist.py"],
+    "plaatsen": ["backend/services/crosslist.py"],
+    "admarkt": ["backend/api/imports.py"],
+    "scan": ["backend/api/imports.py"],
+    "import": ["backend/api/imports.py"],
+    "prijs": ["backend/services/billing.py"],
+    "proef": ["backend/services/billing.py"],
+    "trial": ["backend/services/billing.py"],
+    "factuur": ["backend/api/billing.py"],
+    "betaal": ["backend/api/billing.py"],
+    "inloggen": ["backend/api/auth.py"],
+    "wachtwoord": ["backend/api/auth.py"],
+    "vinted": ["extension/content/vinted.js"],
+    "ebay": ["backend/platforms/ebay.py"],
+    "shopify": ["backend/platforms/shopify.py"],
+    "verkocht": ["backend/services/crosslist.py"],
+    "foto": ["backend/services/crosslist.py"],
+    "extensie": ["extension/background.js"],
+}
+GRONDSLAG_BESTANDEN_MAX = 3
+GRONDSLAG_REGELS_MAX = 60
+
+
+def _grondslag(body: str) -> str:
+    """De broncode bij dit onderwerp, als bewijsmateriaal voor het model."""
+    laag = (body or "").lower()
+    paden: list[str] = []
+    for woord, bestanden in GRONDSLAG_BESTANDEN.items():
+        if woord in laag:
+            paden.extend(bestanden)
+    paden = list(dict.fromkeys(paden))[:GRONDSLAG_BESTANDEN_MAX]
+    stukken = []
+    for rel in paden:
+        pad = REPO / rel
+        if not pad.is_file():
+            continue
+        try:
+            regels = pad.read_text(errors="replace").splitlines()
+        except Exception:  # noqa: BLE001
+            continue
+        stukken.append(f"=== {rel} (eerste {GRONDSLAG_REGELS_MAX} regels) ===\n"
+                        + "\n".join(regels[:GRONDSLAG_REGELS_MAX]))
+    return "\n\n".join(stukken)
+
+
+GRONDSLAG_REGEL = """
+
+BEWIJSMATERIAAL UIT DE CODE. Hieronder staat de echte broncode bij dit
+onderwerp. Doe GEEN technische bewering (dit werkt wel/niet, dit komt door X,
+dit ondersteunen we wel/niet) die daar niet in terug te vinden is. Weet je het
+niet, schrijf dan dat je het nakijkt en erop terugkomt. Liever een open punt dan
+een verzonnen oorzaak: een verkeerde uitleg kost het vertrouwen van de klant.
+
+"""
+
+
 def _slim_concept(lead: dict, body: str, draad: str, afsluiting: str,
                   klant: bool = False) -> str | None:
     """Laat een taalmodel het antwoord schrijven. None = niet gelukt."""
@@ -2097,6 +2177,9 @@ def _slim_concept(lead: dict, body: str, draad: str, afsluiting: str,
     eigen = _eigen_tekst(body).strip()
     if not eigen:
         return None
+    # De broncode bij dit onderwerp erbij, zodat het model niets kan beweren wat
+    # er niet staat. Zie GRONDSLAG_BESTANDEN hierboven.
+    bewijs = _grondslag(eigen)
     ads = lead.get("ads")
     over_hem = "\n".join(filter(None, [
         f"Bedrijf: {_bedrijfsnaam(lead)}" if _bedrijfsnaam(lead) else "",
@@ -2107,6 +2190,7 @@ def _slim_concept(lead: dict, body: str, draad: str, afsluiting: str,
         f"Dit schreef hij zojuist:\n\n{eigen[:4000]}\n\n"
         + (f"Eerder in deze draad, van Daniel:\n\n{draad[:4000]}\n\n" if draad else "")
         + (f"Wat we van hem weten:\n{over_hem}\n\n" if over_hem else "")
+        + (GRONDSLAG_REGEL + bewijs + "\n\n" if bewijs else "")
         + f"Sluit af met exact dit blok:\n{afsluiting}\n\nSchrijf het antwoord."
     )
     try:

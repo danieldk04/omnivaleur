@@ -234,3 +234,31 @@ def test_de_nep_postbus_levert_echt_koppen_op(postbus):
         koppen = L._koppen_in_bulk(imap, (d[0] or b"").split())
     assert len(koppen) == 2
     assert {k["To"] for k in koppen.values()} == {"frank@klant.nl", "iemand@anders.nl"}
+
+
+# ------------------------------------- antwoorden op de code, niet op gevoel
+def test_technische_vragen_krijgen_de_broncode_als_bewijs():
+    """Zonder dit schrijft het model een zelfverzekerde uitleg die nergens op
+    steunt — zoals "platgeslagen vanuit Shopify" aan Jaap, die helemaal geen
+    Shopify-koppeling heeft."""
+    bewijs = L._grondslag("Mijn advertenties op Vinted worden niet geplaatst")
+    assert "extension/content/vinted.js" in bewijs
+
+
+def test_een_gewoon_bericht_sleept_geen_code_mee():
+    assert L._grondslag("Hoi Daniel, bedankt voor je bericht!") == ""
+
+
+def test_het_bewijs_gaat_ook_echt_mee_in_de_opdracht():
+    bron = (Path(__file__).parent.parent / "scripts" / "leadgen_mail.py").read_text()
+    schrijver = bron.split("def _slim_concept")[1].split("def ")[0]
+    assert "_grondslag(" in schrijver
+    assert "GRONDSLAG_REGEL" in schrijver
+
+
+def test_de_losse_support_mailagent_is_weg():
+    """Eén klantenservicemedewerker, niet twee. Een tweede script dat nergens
+    draait maar er wel uitziet alsof het meedoet, kost alleen maar tijd bij het
+    zoeken naar waar iets misging."""
+    scripts = Path(__file__).parent.parent / "scripts"
+    assert not (scripts / "support_mail_agent.py").exists()
