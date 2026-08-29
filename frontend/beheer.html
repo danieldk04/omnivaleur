@@ -344,6 +344,21 @@ const geleden = (v) => {
   if (min < 1440) return Math.floor(min / 60) + ' uur';
   return Math.floor(min / 1440) + ' dgn';
 };
+// Tijdstempels komen als ISO met tijdzone binnen (de server rekent in UTC) en
+// worden hier pas omgezet naar de tijd van de kijker. Ze afgekapt tonen liet
+// "laatste ronde 12:52" zien terwijl het 14:52 was — en dan lijkt een machine
+// die net nog gedraaid heeft twee uur stil te staan.
+const tijdstip = (v) => {
+  if (!v) return '';
+  const d = new Date(v);
+  return isNaN(d) ? String(v)
+    : d.toLocaleString('nl-NL', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
+};
+const klok = (v) => {
+  if (!v) return '';
+  const d = new Date(v);
+  return isNaN(d) ? String(v) : d.toLocaleTimeString('nl-NL', { hour: '2-digit', minute: '2-digit' });
+};
 const veilig = (s) => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 const el = (id) => document.getElementById(id);
 
@@ -782,7 +797,7 @@ function storingRij(r) {
     ? `<div class="diff"><b>${kop}</b><span>${veilig(waarde)}</span></div>` : '';
   return `<div class="leerrij">
       <div class="patroon-kop"><span>${veilig(r.sleutel.replace(/-/g, ' '))}</span>
-        <b>${(r.melders || []).length}× · ${veilig(r.klaar_op || r.laatst || '')}</b></div>
+        <b>${(r.melders || []).length}× · ${veilig(tijdstip(r.klaar_op) || r.laatst || '')}</b></div>
       <div class="uitleg" style="margin:4px 0 6px">${veilig(r.omschrijving || '')}</div>
       ${regel('Gemeld door', (r.melders || []).join(', '))}
       ${regel('Voorrang', (r.waarom || []).join(' · '))}
@@ -809,19 +824,19 @@ function toonWerkplaats(w) {
         <b>Er wordt niets meer vanzelf opgepakt.</b><br>
         <span class="uitleg">${veilig(alarm)}</span></div>` : '')
     + (b
-      ? `<div class="kaart"><div class="label">Bezig sinds ${veilig(b.opgepakt_op)} — ${getal(b.minuten)} min</div>
+      ? `<div class="kaart"><div class="label">Bezig sinds ${veilig(klok(b.opgepakt_op))} — ${getal(b.minuten)} min</div>
            ${storingRij(b)}</div>`
       : `<div class="kaart"><div class="label">Niets onder handen</div>
            <div class="uitleg" style="margin:6px 0 0">${(w.wachtrij || []).length
              ? getal(w.wachtrij.length) + ' storing(en) wachten; de volgende start binnen tien minuten.'
-             : 'Geen storing met voorrang open.'} Laatste ronde: ${veilig(st.laatste_ronde || 'nooit')}.</div></div>`);
+             : 'Geen storing met voorrang open.'} Laatste ronde: ${veilig(tijdstip(st.laatste_ronde) || 'nooit')}.</div></div>`);
 
   el('wp-cijfers').innerHTML =
       kaart('Doorgegeven aan mij', getal((w.wachtrij || []).length), 'met voorrang',
             (w.wachtrij || []).length ? 'let' : 'op')
     + kaart('Teruggemeld', getal((w.gedaan || []).length), 'klant heeft bericht', 'op')
     + kaart('Zonder voorrang', getal(w.overig_open), 'blijft bij de klantenservice')
-    + kaart('Laatste ronde', veilig((st.laatste_ronde || 'nooit').slice(-5)), 'elke tien minuten',
+    + kaart('Laatste ronde', veilig(klok(st.laatste_ronde) || 'nooit'), 'elke tien minuten',
             alarm ? 'af' : 'op');
 
   el('wp-wachtrij').innerHTML = (w.wachtrij || []).map(storingRij).join('')

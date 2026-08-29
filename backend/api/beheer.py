@@ -998,12 +998,12 @@ def _storing_rij(sleutel: str, v: dict, sessie: dict | None) -> dict:
         "laatst": (v.get("laatst") or "")[:10],
         "status": v.get("status", "open"),
         "uitleg": v.get("uitleg") or v.get("reden") or "",
-        "klaar_op": (v.get("gerepareerd_op") or v.get("afgewezen_op") or "")[:16].replace("T", " "),
+        "klaar_op": v.get("gerepareerd_op") or v.get("afgewezen_op") or "",
         # Wie er bericht over kreeg. Nul terwijl het wél is opgelost betekent dat
         # de klantenservice het concept nog moet klaarzetten — zichtbare
         # informatie, geen detail.
         "bericht_naar": len(v.get("bericht_verstuurd") or []),
-        "opgepakt_op": str((sessie or {}).get("gestart", ""))[:16].replace("T", " "),
+        "opgepakt_op": str((sessie or {}).get("gestart", "")),
         "sessie": (sessie or {}).get("status", ""),
         # Waarom een sessie niets heeft opgeleverd. Zonder dit staat de reden in
         # een logboek dat niemand opent; zo stopten er op 29-08-2026 drie sessies
@@ -1092,7 +1092,7 @@ def _starter_stand(signalen: dict) -> dict:
     # Hij hoort elke tien minuten langs te komen. Een uur stilte is geen toeval.
     stil = stil_minuten is None or stil_minuten > 60
     return {
-        "laatste_ronde": laatst[:16].replace("T", " "),
+        "laatste_ronde": laatst,
         "stil_minuten": stil_minuten,
         "wacht_op_sessie": wachtend,
         "waarschuwing": (
