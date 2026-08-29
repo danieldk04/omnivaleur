@@ -652,6 +652,10 @@ def main() -> None:
     o.add_argument("sleutel")
     o.add_argument("uitleg", help="één zin voor de klant, in gewone taal")
     o.set_defaults(func=opgelost)
+    w = sub.add_parser("afgewezen", help="een storing bewust niet repareren")
+    w.add_argument("sleutel")
+    w.add_argument("reden", help="waarom niet, in één zin")
+    w.set_defaults(func=afgewezen)
     args = p.parse_args()
     args.func(args)
 
