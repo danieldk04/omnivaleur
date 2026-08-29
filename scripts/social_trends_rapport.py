@@ -105,6 +105,12 @@ def voeg_samen(oud: list[dict], nieuw: list[dict]) -> list[dict]:
         if bestaand and not v.get("gesproken_3s") and bestaand.get("gesproken_3s"):
             for veld in ("gesproken_3s", "gesproken_15s", "spreektempo"):
                 v[veld] = bestaand.get(veld)
+        # Het beeldje net zo goed. TikToks plaatjeslinks zijn ondertekend en
+        # verlopen na een paar dagen; wie alleen de link bewaart, houdt over een
+        # week een archief van dode adressen over. Het plaatje zelf zit al als
+        # data in de video en verandert niet meer.
+        if bestaand and not v.get("beeld_data") and bestaand.get("beeld_data"):
+            v["beeld_data"] = bestaand["beeld_data"]
         per_id[sleutel] = v
 
     grens = datetime.now(timezone.utc).date().toordinal() - ARCHIEF_DAGEN
@@ -801,6 +807,10 @@ def main() -> int:
                 for v in patroon.get("voorbeelden") or []:
                     nodig[id(v)] = v
     haal_beeldjes(list(nodig.values()))
+    # Het archief is hierboven al weggeschreven, maar toen bestonden de plaatjes
+    # nog niet. Nu wel — en dit is het enige moment waarop ze op te halen zijn,
+    # want volgende week zijn de links verlopen. Dus nog een keer.
+    _archief_schrijf(videos)
     dash = bouw_dashboard(data, pad.with_name(
         pad.stem.replace("verkenning", "dashboard") + ".html"))
     _dashboard_publiceren(dash)

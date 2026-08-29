@@ -57,12 +57,41 @@ def _haal_beeld(url: str) -> str:
         return ""
 
 
+def _verse_beeldlink(v: dict) -> str:
+    """Een nieuw plaatjesadres voor een video waarvan het opgeslagen adres dood is.
+
+    TikToks plaatjesadressen zijn ondertekend en verlopen na een paar dagen, dus
+    alles wat uit het archief komt is bij voorbaat kansloos. De openbare
+    oEmbed-ingang geeft gratis een vers adres terug. YouTube heeft dat probleem
+    niet, maar wel een vast adres per video dat altijd werkt."""
+    try:
+        if v.get("platform") == "TikTok" and v.get("url"):
+            req = urllib.request.Request(
+                "https://www.tiktok.com/oembed?url=" + v["url"],
+                headers={"User-Agent": UA})
+            antwoord = json.loads(urllib.request.urlopen(req, timeout=20).read())
+            return antwoord.get("thumbnail_url") or ""
+        if v.get("platform") == "YouTube" and v.get("video_id"):
+            return f"https://i.ytimg.com/vi/{v['video_id']}/hqdefault.jpg"
+    except Exception:
+        pass
+    return ""
+
+
+def _beeld_met_herkansing(v: dict) -> str:
+    data = _haal_beeld(v.get("beeld") or "")
+    if data:
+        return data
+    vers = _verse_beeldlink(v)
+    return _haal_beeld(vers) if vers else ""
+
+
 def haal_beeldjes(videos: list[dict]) -> None:
     """Parallel, want honderd beeldjes achter elkaar duurt minuten."""
-    todo = [v for v in videos if v.get("beeld") and not v.get("beeld_data")]
+    todo = [v for v in videos if not v.get("beeld_data")]
     print(f"  {len(todo)} beeldjes ophalen …", flush=True)
     with ThreadPoolExecutor(max_workers=8) as pool:
-        for v, data in zip(todo, pool.map(lambda x: _haal_beeld(x["beeld"]), todo)):
+        for v, data in zip(todo, pool.map(_beeld_met_herkansing, todo)):
             v["beeld_data"] = data
     gelukt = sum(1 for v in todo if v.get("beeld_data"))
     print(f"  {gelukt} van {len(todo)} gelukt", flush=True)
