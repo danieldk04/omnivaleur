@@ -319,36 +319,121 @@ async def relist_ended_ebay(body: dict, user_id: str = Depends(require_active_su
         raise HTTPException(status_code=400, detail=str(e))
 
 
+# Waarom een advertentie als "mogelijk verkocht" is aangemerkt. De verkoper krijgt
+# deze zin letterlijk te zien, want het verschil bepaalt hoe zeker het is:
+# een label op de pagina is bewijs, een verdwenen advertentie is een aanwijzing.
+#
+# LET OP: deze teksten mogen de woorden "relist", "delist" of "still live" niet
+# bevatten. Het herplaats-overzicht in het dashboard herkent een mislukte
+# herplaatsing aan die woorden in dit veld, en zou deze advertenties dan als
+# mislukte herplaatsing tonen.
+VERDENKING_REDENEN = {
+    "label": "Mogelijk verkocht: de advertentiepagina toont zelf 'verkocht' of 'gereserveerd'.",
+    "weg": "Mogelijk verkocht: de advertentie is niet meer op het platform te vinden. "
+           "Let op — op Marktplaats verdwijnt een gratis advertentie ook vanzelf na 30 dagen.",
+}
+VERDENKING_STANDAARD = VERDENKING_REDENEN["weg"]
+
+
 @router.post("/possibly-sold")
 def possibly_sold(body: dict, user_id: str = Depends(get_current_user)):
     """Advertenties die verkocht LIJKEN, ter bevestiging door de verkoper.
 
-    Waarom niet meteen afmelden: dit signaal komt van een advertentiepagina
-    waarvan de opmaak bij een verkocht exemplaar nooit is nagekeken — zonder
-    ingelogde zakelijke sessie geeft die pagina 401. Een verkeerde "verkocht"
-    haalt het item van alle andere kanalen af, en dat is onherstelbaar werk.
-    Daarom wordt het gemarkeerd en beslist de verkoper.
+    Waarom niet meteen afmelden: op Marktplaats is een verkoop meestal onzichtbaar
+    voor Marktplaats zelf — verkoop je met de hand, dan komt er nooit een
+    "verkocht" op je advertentie. Wat overblijft is dat de advertentie verdwenen
+    is, en dát betekent daar óók "verlopen na 30 dagen". Zouden we daarop
+    afgaan, dan haalden we een nog levend artikel van Vinted, eBay en de webshop
+    af, en dat is onherstelbaar werk voor de verkoper. Daarom wordt het gemeld en
+    beslist hij.
+
+    De extensie levert alleen regels aan die haar eigen drempel hebben gehaald:
+    een label op de advertentiepagina (bewijs, meteen), of twee aparte rondes
+    minstens een half uur uit elkaar waarin de advertentie niet te vinden was.
+
+    Body: {listings: [{item_id, platform, platform_listing_id?, title?, reden?}]}
     """
     db = get_db()
     regels = (body or {}).get("listings") or []
     gemarkeerd = 0
+    nu = datetime.now(timezone.utc).isoformat()
     for r in regels[:200]:
         item_id = r.get("item_id")
         platform = r.get("platform")
         if not item_id or not platform:
             continue
         # Alleen eigen items, en alleen advertenties die nu nog als levend gelden.
+        # 'sold' staat er bewust niet bij: een al bevestigde verkoop mag nooit
+        # terugvallen naar een vraag.
         eigen = (db.table("items").select("id").eq("id", item_id)
                  .eq("user_id", user_id).limit(1).execute().data or [])
         if not eigen:
             continue
-        db.table("listings").update({"status": "sold_unconfirmed"}) \
-            .eq("item_id", item_id).eq("platform", platform) \
-            .in_("status", ["active", "hidden", "relisting"]).execute()
+        reden = VERDENKING_REDENEN.get(str(r.get("reden") or ""), VERDENKING_STANDAARD)
+        velden = {"status": "sold_unconfirmed", "error_message": reden, "last_checked": nu}
+
+        def _markeer(f):
+            return (db.table("listings").update(f)
+                    .eq("item_id", item_id).eq("platform", platform)
+                    .in_("status", ["active", "hidden", "relisting"]).execute())
+        try:
+            _markeer(velden)
+        except Exception as e:  # noqa: BLE001 — de melding mag nooit op een veld stuklopen
+            logger.warning("[sold] kon reden niet meeschrijven voor %s/%s: %s", item_id, platform, e)
+            _markeer({"status": "sold_unconfirmed"})
         gemarkeerd += 1
     logger.info("[sold] %s advertentie(s) als mogelijk verkocht gemarkeerd voor %s",
                 gemarkeerd, user_id)
     return {"marked": gemarkeerd}
+
+
+@router.post("/possibly-sold/answer")
+def answer_possibly_sold(body: dict, background_tasks: BackgroundTasks,
+                         user_id: str = Depends(get_current_user)):
+    """Het antwoord van de verkoper op "is dit verkocht?".
+
+    Twee uitkomsten, allebei definitief voor deze advertentie:
+
+    - verkocht=true  → de normale verkoopafhandeling: geboekt in Analytics en van
+      alle ANDERE kanalen afgehaald. Precies wat de Sold-knop doet.
+    - verkocht=false → de advertentie staat niet meer op het platform maar is niet
+      verkocht (verlopen, of zelf weggehaald). Dan hoort hij in het archief, niet
+      op "live". Zo blijft de vraag ook niet terugkomen: de verkoopcontrole kijkt
+      alleen naar actieve advertenties.
+
+    Body: {item_id, platform, verkocht: bool, sold_price?}
+    """
+    item_id = (body or {}).get("item_id")
+    platform = (body or {}).get("platform")
+    if not item_id or not platform:
+        raise HTTPException(status_code=400, detail="item_id and platform are required")
+
+    db = get_db()
+    owned = db.table("items").select("id").eq("id", item_id).eq("user_id", user_id).execute()
+    if not owned.data:
+        raise HTTPException(status_code=404, detail="Item not found")
+
+    rij = (db.table("listings").select("id,status")
+           .eq("item_id", item_id).eq("platform", platform)
+           .eq("status", "sold_unconfirmed").limit(1).execute().data or [])
+    if not rij:
+        raise HTTPException(status_code=404, detail="No listing awaiting confirmation for this item on that platform")
+
+    if body.get("verkocht"):
+        prijs = body.get("sold_price")
+        try:
+            prijs = None if prijs in (None, "") else round(float(str(prijs).replace(",", ".")), 2)
+        except (TypeError, ValueError):
+            prijs = None
+        # De datum is die van vandaag: wanneer het precies verkocht is weet
+        # niemand hier. In Analytics is de datum aan te klikken en te corrigeren.
+        logger.info("[sold] bevestigd door de verkoper: item=%s platform=%s prijs=%s", item_id, platform, prijs)
+        background_tasks.add_task(handle_item_sold, item_id, platform, prijs)
+        return {"ok": True, "status": "sold"}
+
+    db.table("listings").update({"status": "delisted", "error_message": None})         .eq("id", rij[0]["id"]).execute()
+    logger.info("[sold] niet verkocht volgens de verkoper: item=%s platform=%s → archief", item_id, platform)
+    return {"ok": True, "status": "delisted"}
 
 
 @router.post("/sold")

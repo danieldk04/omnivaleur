@@ -981,6 +981,11 @@ input[type="checkbox"].row-check { width: 15px; height: 15px; cursor: pointer; a
           <button class="items-tab" data-tab="sold" onclick="setItemsTab('sold')">Sold <span class="items-tab-count" id="tabcount-sold">0</span></button>
           <button class="items-tab" data-tab="archived" onclick="setItemsTab('archived')">Archived <span class="items-tab-count" id="tabcount-archived">0</span></button>
         </div>
+        <!-- "Is dit verkocht?" — advertenties die van het platform verdwenen zijn of
+             daar als verkocht staan. Bewust een vraag en geen conclusie: op
+             Marktplaats betekent verdwenen ook "verlopen", en automatisch boeken
+             zou een nog levend artikel overal weghalen. -->
+        <div id="sold-confirm-bar" style="display:none"></div>
         <div class="filter-bar">
           <span class="filter-label">Filter</span>
           <select id="filter-platform" onchange="applyFilters()">
@@ -4125,7 +4130,101 @@ function itemActions(item) {
     <button class="btn btn-sm btn-danger" onclick="delistItem('${item.id}','${t}')" style="margin-left:4px" title="Delist from all platforms">Delist</button>`;
 }
 
+// ── "Is dit verkocht?" ────────────────────────────────────────────────────
+// Op Marktplaats en 2dehands weet het platform zelf meestal niet dat je iets
+// verkocht hebt: verkoop je met de hand, dan komt er nooit een "verkocht" op je
+// advertentie — jij haalt hem gewoon weg. Wat wij dan zien is dat de advertentie
+// er niet meer is, en dat betekent daar óók "verlopen na 30 dagen". Daarom vragen
+// we het in plaats van het te concluderen: pas op "Ja, verkocht" gaat het item
+// van de andere kanalen af en telt het mee in Analytics.
+function soldConfirmRows() {
+  const byId = new Map((state.items || []).map(i => [i.id, i]));
+  return (state.listings || [])
+    .filter(l => l.status === 'sold_unconfirmed' && byId.has(l.item_id))
+    .map(l => ({ listing: l, item: byId.get(l.item_id) }));
+}
+
+function renderSoldConfirmBar() {
+  const bar = document.getElementById('sold-confirm-bar');
+  if (!bar) return;
+  const rows = soldConfirmRows();
+  if (!rows.length) { bar.style.display = 'none'; bar.innerHTML = ''; return; }
+
+  const TOON = 8;
+  const regels = rows.slice(0, TOON).map(({ listing, item }) => {
+    const p = listing.platform;
+    // Hoe lang stond hij online? Dat is het verschil tussen "verkocht" en
+    // "verlopen": Marktplaats haalt een gratis advertentie na 30 dagen zelf weg.
+    const start = listing.listed_at || listing.created_at;
+    const dagen = start ? Math.floor((Date.now() - new Date(start).getTime()) / 86400000) : null;
+    const label = (listing.error_message || '').includes('toont zelf')
+      ? `<span style="color:#b45309;font-weight:600">The advert itself says sold</span>`
+      : `Not found on the platform any more`;
+    const ouderdom = dagen === null ? ''
+      : (dagen >= 28 && (p === 'marktplaats' || p === '2dehands')
+          ? ` &middot; online for ${dagen} days &mdash; adverts expire after 30, so this may just have run out`
+          : ` &middot; online for ${dagen} day${dagen === 1 ? '' : 's'}`);
+    const prijs = item.price != null ? Number(item.price).toFixed(2) : '';
+    return `<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-top:1px solid var(--border)">
+      <div style="flex:1;min-width:0">
+        <div style="font-weight:600;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${PLATFORM_ICONS[p] || '🏪'} ${esc(item.title || 'Untitled')}</div>
+        <div style="font-size:11.5px;color:var(--muted)">${PLATFORM_LABELS[p] || p} &middot; ${label}${ouderdom}</div>
+      </div>
+      <button class="btn btn-sm btn-success" onclick="answerPossiblySold('${item.id}','${p}',true,'${prijs}')">Yes, sold</button>
+      <button class="btn btn-sm btn-outline" onclick="answerPossiblySold('${item.id}','${p}',false,'')">No</button>
+    </div>`;
+  }).join('');
+
+  const meer = rows.length > TOON ? `<div style="font-size:11.5px;color:var(--muted);padding-top:8px">and ${rows.length - TOON} more &mdash; answer these first</div>` : '';
+  bar.style.display = 'block';
+  bar.innerHTML = `<div style="margin:0 0 4px;padding:12px 14px;border:1px solid #f59e0b55;background:rgba(245,158,11,.08);border-radius:10px">
+    <div style="font-weight:700;font-size:14px;margin-bottom:2px">❔ Did ${rows.length === 1 ? 'this item' : `these ${rows.length} items`} sell?</div>
+    <div style="font-size:12px;color:var(--muted)">Nothing has been removed anywhere yet. Marktplaats and 2dehands don't tell us when you sell by hand, so we ask instead of guessing. <b>Yes, sold</b> takes it off every other platform and counts it in Analytics; <b>No</b> moves it to Archived.</div>
+    ${regels}${meer}
+  </div>`;
+}
+
+async function answerPossiblySold(itemId, platform, verkocht, suggested) {
+  const label = PLATFORM_LABELS[platform] || platform;
+  let sold_price = null;
+  if (verkocht) {
+    const raw = prompt(`What did it sell for on ${label}? (\u20ac)\n\nLeave blank if you don't know \u2014 you can fill it in later under Analytics.`,
+      suggested || '');
+    if (raw === null) return;                     // cancelled
+    if (String(raw).trim() !== '') {
+      const v = parseFloat(String(raw).replace(',', '.'));
+      if (isNaN(v) || v < 0) { alert('Please enter a valid amount (e.g. 22.50).'); return; }
+      sold_price = v;
+    }
+  } else if (!confirm(`Not sold on ${label}?\n\nThe advert isn't on the platform any more, so it moves to Archived. Nothing is removed from your other platforms.`)) {
+    return;
+  }
+  try {
+    const r = await apiFetch(`${API}/api/listings/possibly-sold/answer`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ item_id: itemId, platform, verkocht, sold_price }),
+    });
+    const data = await parseJsonSafe(r);
+    if (!r.ok) throw new Error(data.detail || 'Could not save your answer');
+    const l = (state.listings || []).find(x => x.item_id === itemId && x.platform === platform && x.status === 'sold_unconfirmed');
+    if (l) {
+      l.status = data.status;
+      l.error_message = null;
+      if (data.status === 'sold') l.sold_at = new Date().toISOString();
+      if (sold_price != null) l.sold_price = sold_price;
+    }
+    showToast(verkocht
+      ? `Marked sold on ${label} \u2014 removing it from your other platforms.`
+      : 'Moved to Archived.');
+    renderSoldConfirmBar();
+    applyFilters();
+  } catch (e) {
+    alert('Error saving your answer: ' + e.message);
+  }
+}
+
 function renderItemsTable(items) {
+  renderSoldConfirmBar();
   let lastBucket = null;
   const rows = items.map(item => {
     const checked = selectedIds.has(item.id) ? 'checked' : '';
@@ -4139,7 +4238,7 @@ function renderItemsTable(items) {
     // blijft gewoon staan — de verkoper beslist, wij raden.
     const soldMaybe = (state.listings || []).some(
       l => l.item_id === item.id && l.status === 'sold_unconfirmed')
-      ? ` <span class="badge warning" title="This listing looks sold on the platform, but we could not confirm it. Nothing was removed anywhere. Open the item and mark it sold if that's right.">❔ Sold?</span>`
+      ? ` <span class="badge warning" style="cursor:pointer" title="This listing looks sold on the platform, but we could not confirm it. Nothing was removed anywhere \u2014 answer the question at the top of this list." onclick="event.stopPropagation();document.getElementById('sold-confirm-bar')?.scrollIntoView({behavior:'smooth',block:'center'})">❔ Sold?</span>`
       : '';
     // Een mislukte publicatie krijgt voorrang op de "ontbrekende velden"-tip:
     // er is iets échts misgegaan, en dat hoort zichtbaar te zijn zonder hover.
@@ -6475,7 +6574,7 @@ function renderRefreshView() {
         statusCell = `<span class="rf-pill rf-pill-relisting"><span class="rf-spin">↻</span> New listing in ${fmtEta(msLeft)}</span>`;
       }
       actionCell = `<button class="btn btn-sm btn-outline" disabled title="Relist in progress">In progress…</button>`;
-    } else if (l.error_message && /relist|delist|still live/i.test(l.error_message)) {
+    } else if (l.status !== 'sold_unconfirmed' && l.error_message && /relist|delist|still live/i.test(l.error_message)) {
       // A relist whose delist failed: the item is still live, nothing was lost,
       // and a retry is safe. Surface it right here so it's not stuck silently.
       statusCell = `<span class="rf-pill rf-pill-never" style="color:var(--red,#dc2626);background:rgba(220,38,38,.08)">⚠ Relist failed — still live</span>`;

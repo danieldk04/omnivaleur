@@ -1853,3 +1853,46 @@ Beide concepten staan er weer goed in.
 Regel voor de volgende keer: **verwijder een concept op UID, nooit op
 volgnummer**, en controleer vóór het verwijderen de ontvanger van precies dat
 bericht. Een expunge in `Concept` gaat níet naar Afval.
+
+### 30-08-2026 — "Is dit verkocht?" voor Marktplaats en 2dehands
+
+Daniel zag alleen Vinted-verkopen. Gemeten in zijn account: 26 verkopen, alle 26
+op Vinted, terwijl er 110 Marktplaats- en 54 2dehands-advertenties actief staan.
+Over alle klanten samen was `sold_unconfirmed` nog nooit één keer gezet.
+
+**Waarom Marktplaats niet meedeed.** Marktplaats weet zelf meestal niet dat er
+verkocht is: bij een verkoop met de hand komt er nooit een "verkocht" op de
+advertentie — de verkoper haalt hem weg. Het enige wat wij zien is dat de
+advertentie verdwenen is, en dat betekent daar óók "verlopen na 30 dagen".
+Automatisch boeken op afwezigheid is uitgesloten: dat haalt een nog levend
+artikel van Vinted, eBay en de webshop af. De bestaande tussenweg keek alleen
+naar advertenties die er nog stónden mét een label en sloeg dus nooit aan.
+
+**Wat er nu gebeurt.** De verkoopcontrole (elke 10 min) kijkt per advertentie die
+niet in het overzicht staat op de advertentiepagina zelf, en geeft één van vier
+oordelen: `verkocht` (label op de pagina), `weg` (404, of doorgestuurd naar iets
+anders), `leeft`, `onbekend` (401/403/5xx/geen verbinding). Alleen `verkocht` en
+`weg` leiden ergens toe, en dan nog:
+
+- `verkocht` is bewijs → meteen als vraag doorgegeven.
+- `weg` moet twee aparte rondes standhouden, minstens een half uur uit elkaar.
+  Zien we hem terug, dan vervalt de verdenking meteen.
+- Gaf het overzicht **nul** advertenties terug, dan wordt er die ronde niets als
+  verdwenen geteld. Anders lijkt bij een uitgelogde sessie álles verdwenen.
+- Vijf pagina's achter elkaar `onbekend` breekt de ronde af (uitgelogd of
+  geblokkeerd), en er zit 250 ms tussen elke aanvraag.
+- Elke ronde wordt een ander stuk van de lijst nagekeken; voorheen werden bij een
+  groot account eeuwig dezelfde veertig bekeken.
+
+In het dashboard staat boven de itemlijst een balk met de vraag en twee knoppen.
+*Yes, sold* vraagt de prijs (mag leeg) en doet daarna de normale verkoopafhandeling.
+*No* zet de advertentie in het archief — niet terug op live, anders komt dezelfde
+vraag elke ronde terug. De reden staat erbij, inclusief hoe lang de advertentie
+online stond, want boven de 28 dagen is "verlopen" de waarschijnlijker verklaring.
+
+De reden wordt in `error_message` bewaard (geen migratie nodig). Die tekst mag de
+woorden "relist", "delist" of "still live" niet bevatten: het herplaats-overzicht
+herkent daaraan een mislukte herplaatsing. Een test bewaakt dat, en het scherm
+heeft er bovendien een statusslot op.
+
+Extensie 1.0.268. Ondergrens bewust niet opgehoogd.

@@ -4447,24 +4447,84 @@ async function checkSoldListings() {
       // dat betekent op Marktplaats ook "verlopen" en dan zou een nog levend item
       // overal worden weggehaald.
       const gezien = new Set(ads.map(a => a.id).filter(Boolean));
-      const gemist = withId.filter(l => !gezien.has(l.platform_listing_id));
-      if (gemist.length) {
-        console.log(`[Omnivaleur][sold] ${platform}: ${gemist.length} advertentie(s) niet in het overzicht — eigen pagina nakijken`);
-        // Niet het hele bestand per beurt: dat zijn duizenden aanvragen. Een
-        // vaste hap per ronde houdt het rustig en komt vanzelf overal langs.
-        const teBevestigen = [];
-        for (const l of gemist.slice(0, 40)) {
-          if (await lijktVerkochtOpEigenPagina(platform, l.platform_listing_id)) {
-            teBevestigen.push({ item_id: l.item_id, platform,
-                                platform_listing_id: l.platform_listing_id,
-                                title: l.title });
-          }
+      // HARDE VOORWAARDE. Leverde het overzicht geen enkele advertentie op, dan
+      // weten we niet of er advertenties ontbreken of dat de pagina niet geladen
+      // is (uitgelogd, opmaak gewijzigd, trage verbinding). Dan lijkt ALLES
+      // verdwenen en zouden we de verkoper honderden verkoopvragen sturen.
+      // Absentie zegt alleen iets als we echt gekeken hebben.
+      if (!ads.length) {
+        console.warn(`[Omnivaleur][sold] ${platform}: het overzicht gaf 0 advertenties — deze ronde wordt niets als verdwenen geteld.`);
+      } else {
+        const gemist = withId.filter(l => !gezien.has(l.platform_listing_id));
+        const staat = await verdenkingen();
+        // Advertenties die we WEL terugzagen: elke verdenking daarop vervalt.
+        for (const l of withId) {
+          if (gezien.has(l.platform_listing_id)) delete staat[`${platform}:${l.platform_listing_id}`];
         }
-        if (teBevestigen.length) {
-          // Melden, niet afmelden. De verkoper bevestigt het zelf in het
-          // dashboard; pas dan gaat het item van de andere kanalen af.
-          console.log(`[Omnivaleur][sold] ${platform}: ${teBevestigen.length} advertentie(s) lijken verkocht — ter bevestiging doorgegeven`);
-          await meldMogelijkeVerkopen(serverUrl, teBevestigen);
+        if (gemist.length) {
+          console.log(`[Omnivaleur][sold] ${platform}: ${gemist.length} advertentie(s) niet in het overzicht — eigen pagina nakijken`);
+          // Niet het hele bestand per beurt: dat zijn duizenden aanvragen. Een
+          // vaste hap per ronde houdt het rustig. Wél elke ronde een STUK
+          // VERDEROP, anders werden bij een groot account eeuwig dezelfde
+          // veertig nagekeken en kwam de rest nooit aan de beurt.
+          const HAP = 40;
+          const startSleutel = `mogelijk_verkocht_start_${platform}`;
+          let start = 0;
+          try { start = (await chrome.storage.local.get(startSleutel))?.[startSleutel] || 0; } catch (_) {}
+          if (start >= gemist.length) start = 0;
+          const beurt = gemist.slice(start, start + HAP);
+          try { await chrome.storage.local.set({ [startSleutel]: start + beurt.length }); } catch (_) {}
+
+          const teBevestigen = [];
+          const tellers = { verkocht: 0, weg: 0, leeft: 0, onbekend: 0 };
+          let nagekeken = 0;
+          for (const l of beurt) {
+            // Rustig aan: veertig aanvragen achter elkaar op volle snelheid is
+            // precies waar Marktplaats met een 403 op reageert.
+            if (nagekeken) await new Promise(r => setTimeout(r, 250));
+            const sleutel = `${platform}:${l.platform_listing_id}`;
+            const oordeel = await bekijkEigenPagina(platform, l.platform_listing_id);
+            nagekeken++;
+            tellers[oordeel] = (tellers[oordeel] || 0) + 1;
+            const regel = { item_id: l.item_id, platform,
+                            platform_listing_id: l.platform_listing_id,
+                            title: l.title };
+            if (oordeel === "verkocht") {
+              // Bewijs op de pagina zelf. Geen tweede ronde nodig.
+              delete staat[sleutel];
+              teBevestigen.push({ ...regel, reden: "label" });
+            } else if (oordeel === "weg") {
+              const eerder = staat[sleutel];
+              const nu = Date.now();
+              if (eerder && nu - eerder.eerst >= VERDENKING_MIN_MINUTEN * 60000) {
+                delete staat[sleutel];
+                teBevestigen.push({ ...regel, reden: "weg" });
+              } else if (!eerder) {
+                staat[sleutel] = { eerst: nu, n: 1 };
+              }
+            } else {
+              // "leeft" of "onbekend": niets bewezen, dus geen verdenking laten
+              // staan die op een storing of op een nog levende advertentie berust.
+              delete staat[sleutel];
+            }
+            // Vijf keer achter elkaar niets kunnen vaststellen betekent dat er
+            // iets mis is met de sessie of de verbinding, niet dat er advertenties
+            // verdwenen zijn. Dan deze ronde stoppen in plaats van doorbeuken.
+            if (nagekeken >= 5 && tellers.onbekend === nagekeken) {
+              console.warn(`[Omnivaleur][sold] ${platform}: eerste ${nagekeken} pagina's gaven geen uitsluitsel (uitgelogd of geblokkeerd) — ronde afgebroken.`);
+              break;
+            }
+          }
+          await verdenkingenOpslaan(staat);
+          console.log(`[Omnivaleur][sold] ${platform}: ${beurt.length} eigen pagina(s) nagekeken vanaf ${start} →`, tellers);
+          if (teBevestigen.length) {
+            // Melden, niet afmelden. De verkoper bevestigt het zelf in het
+            // dashboard; pas dan gaat het item van de andere kanalen af.
+            console.log(`[Omnivaleur][sold] ${platform}: ${teBevestigen.length} advertentie(s) ter bevestiging doorgegeven`);
+            await meldMogelijkeVerkopen(serverUrl, teBevestigen);
+          }
+        } else {
+          await verdenkingenOpslaan(staat);
         }
       }
 
@@ -4541,20 +4601,69 @@ async function meldMogelijkeVerkopen(serverUrl, regels) {
   }
 }
 
-async function lijktVerkochtOpEigenPagina(platform, advertentieId) {
-  if (!advertentieId) return false;
+// Wat zegt de advertentie zelf? Vier uitkomsten, bewust uit elkaar gehouden —
+// ze leiden tot heel verschillende conclusies:
+//
+//   "verkocht"  De pagina draagt zelf het label verkocht/gereserveerd. Het
+//               sterkste bewijs dat er is; hier hoeft niets bevestigd te worden
+//               met een tweede ronde.
+//   "weg"       De advertentie bestaat niet meer (404, of doorgestuurd naar iets
+//               anders dan deze advertentie). Dat kan verkocht zijn, maar op
+//               Marktplaats óók gewoon verlopen — dus nooit alleen hierop
+//               afgaan.
+//   "leeft"     Staat er nog gewoon. Elke verdenking vervalt.
+//   "onbekend"  401/403 (zakelijk account zonder sessie), serverfout, of geen
+//               verbinding. Niets bewezen, dus niets doen — en vooral geen
+//               verdenking laten staan die op een storing berust.
+const NIET_MEER_BESCHIKBAAR = /(deze\s+)?advertentie\s+(is\s+)?(niet\s+meer\s+beschikbaar|niet\s+gevonden|verwijderd|bestaat niet)|pagina niet gevonden|no longer available|not found/;
+
+async function bekijkEigenPagina(platform, advertentieId) {
+  if (!advertentieId) return "onbekend";
   const basis = platform === "marktplaats" ? "https://www.marktplaats.nl" : "https://www.2dehands.be";
+  const url = `${basis}/seller/view/${advertentieId}`;
   try {
-    const r = await fetch(`${basis}/seller/view/${advertentieId}`, {
-      credentials: "include", redirect: "follow",
-    });
-    if (!r.ok) return false;                       // 404 = weg, niet aantoonbaar verkocht
+    const r = await fetch(url, { credentials: "include", redirect: "follow" });
+    if (r.status === 404 || r.status === 410) return "weg";
+    if (!r.ok) return "onbekend";                  // 401/403/5xx: niets bewezen
+    // Doorgestuurd naar iets anders dan deze advertentie (meestal de homepage of
+    // een zoekpagina) betekent bij Marktplaats: deze advertentie bestaat niet meer.
+    if (r.redirected && !String(r.url || "").includes(String(advertentieId))) return "weg";
     const html = (await r.text()).toLowerCase();
-    return /(^|[^a-z])(verkocht|gereserveerd)([^a-z]|$)/.test(html)
-        && !/verkochte\s+artikelen|verkocht\?|meld het/.test(html);
+    // Het label eerst: dat is bewijs, de rest is gevolgtrekking.
+    if (/(^|[^a-z])(verkocht|gereserveerd)([^a-z]|$)/.test(html)
+        && !/verkochte\s+artikelen|verkocht\?|meld het/.test(html)) return "verkocht";
+    if (NIET_MEER_BESCHIKBAAR.test(html)) return "weg";
+    // Een echte advertentiepagina noemt het advertentienummer. Staat dat er niet
+    // in, dan kijken we niet naar deze advertentie en concluderen we niets.
+    return html.includes(String(advertentieId).toLowerCase()) ? "leeft" : "onbekend";
   } catch (e) {
-    return false;                                  // niets bewezen is geen verkoop
+    return "onbekend";                             // niets bewezen is geen verkoop
   }
+}
+
+// ── Verdenkingen die twee rondes moeten standhouden ────────────────────────
+// "Weg" is het zwakke signaal: een hik in het ophalen, een uitgelogde sessie of
+// een trage pagina mag nooit tot een verkoopvraag leiden. Daarom telt een
+// advertentie pas als "mogelijk verkocht" wanneer hij in TWEE aparte rondes,
+// minstens een half uur uit elkaar, verdwenen was. Ziet een ronde hem weer
+// staan, dan vervalt de telling meteen.
+const VERDENKING_SLEUTEL = "mogelijk_verkocht_verdenkingen";
+const VERDENKING_MIN_MINUTEN = 30;
+const VERDENKING_VERVALT_DAGEN = 14;
+
+async function verdenkingen() {
+  try {
+    const o = await chrome.storage.local.get(VERDENKING_SLEUTEL);
+    return o?.[VERDENKING_SLEUTEL] && typeof o[VERDENKING_SLEUTEL] === "object" ? o[VERDENKING_SLEUTEL] : {};
+  } catch (_) { return {}; }
+}
+
+async function verdenkingenOpslaan(staat) {
+  const grens = Date.now() - VERDENKING_VERVALT_DAGEN * 86400000;
+  for (const [k, v] of Object.entries(staat)) {
+    if (!v || !v.eerst || v.eerst < grens) delete staat[k];
+  }
+  try { await chrome.storage.local.set({ [VERDENKING_SLEUTEL]: staat }); } catch (_) {}
 }
 
 function scrapeMarktplaatsAds(url, platform) {

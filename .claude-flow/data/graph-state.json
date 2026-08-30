@@ -1,13 +1,13 @@
 {
   "version": 1,
-  "updatedAt": 1788078478978,
+  "updatedAt": 1788080729998,
   "nodeCount": 23,
   "nodes": {
     "mem-MEMORY-memory-index": {
       "id": "mem-MEMORY-memory-index",
       "category": "core",
-      "confidence": 0.5,
-      "accessCount": 0,
+      "confidence": 0.55,
+      "accessCount": 1,
       "createdAt": 1783151212569
     },
     "mem-feedback_push_to_live----": {
@@ -34,8 +34,8 @@
     "mem-shopify_workflow-auto-push-workflow-for-shopify": {
       "id": "mem-shopify_workflow-auto-push-workflow-for-shopify",
       "category": "shopify_workflow",
-      "confidence": 0.5,
-      "accessCount": 0,
+      "confidence": 0.55,
+      "accessCount": 1,
       "createdAt": 1783151212563
     },
     "mem-shopify_workflow-belangrijk--nooit-content-over": {
@@ -97,8 +97,8 @@
     "mem-feedback_manual_images----": {
       "id": "mem-feedback_manual_images----",
       "category": "feedback_manual_images",
-      "confidence": 0.55,
-      "accessCount": 1,
+      "confidence": 0.5,
+      "accessCount": 0,
       "createdAt": 1783151212567
     },
     "mem-feedback_push_railway----": {
@@ -146,15 +146,15 @@
     "mem-revaleur-blog-no-test-publishing----": {
       "id": "mem-revaleur-blog-no-test-publishing----",
       "category": "revaleur-blog-no-test-publishing",
-      "confidence": 0.5,
-      "accessCount": 0,
+      "confidence": 0.55,
+      "accessCount": 1,
       "createdAt": 1783151212569
     },
     "mem-revaleur-blog-system----": {
       "id": "mem-revaleur-blog-system----",
       "category": "revaleur-blog-system",
-      "confidence": 0.5,
-      "accessCount": 0,
+      "confidence": 0.55,
+      "accessCount": 1,
       "createdAt": 1783151212569
     },
     "insight-1783155000983-xaii": {
