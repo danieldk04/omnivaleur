@@ -1051,6 +1051,17 @@ async def complete_job(job_id: str, body: dict, user_id: str = Depends(get_curre
                     val = captured.get(key)
                     if val and not payload.get(key):
                         payload[key] = val
+                # DE ECHTE CATEGORIE VAN DE ADVERTENTIE OVERSCHRIJFT WEL.
+                #
+                # Anders dan de velden hierboven is dit geen aanvulling maar een
+                # correctie: de categorie in de opdracht is geraden uit de titel,
+                # deze is letterlijk van de advertentiepagina van Marktplaats
+                # gelezen vlak voor we hem weghaalden. Amanda, 30-08-2026: na een
+                # verversing kwam alles in de verkeerde categorie terug, en op
+                # Marktplaats is dat achteraf niet te wijzigen.
+                cap_cat = captured.get("mp_category") or {}
+                if cap_cat.get("l1") and cap_cat.get("l2"):
+                    payload["mp_category"] = cap_cat
                 # Photos: prefer the fuller captured set (imports often keep only 1).
                 cap_photos = captured.get("photo_urls") or []
                 if len(cap_photos) > len(payload.get("photo_urls") or []):
