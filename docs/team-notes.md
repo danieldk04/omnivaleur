@@ -2218,3 +2218,33 @@ gevaarlijke soort (gemeld als gelukt terwijl de advertentie online bleef).
 Daarnaast staat er nu een test die voor ALLE 25 functies die in een pagina worden
 uitgevoerd nagaat of ze op zichzelf staan — de fout die ik gisteren zelf in 1.0.270
 introduceerde was Vinted-specifiek bewaakt, nu geldt het voor de hele extensie.
+
+## 30-08-2026 — "verkeerde-categorie-toegewezen": geen nieuwe reparatie, wel uitgezocht
+
+Met voorrang doorgegeven (zilverwebsite.nl + amandahaas1979, storing sinds
+17-08). Nagelopen in plaats van blind gerepareerd, want de melding bundelt
+twee losse dingen onder één sleutel:
+
+**Zilverwebsite (17-08): "zilver ontbreekt in de lijst".** Op dat moment
+bestond de sieraden/antiek-taxonomie nog niet in de huidige vorm. Nagemeten in
+de echte `items`-tabel: van zijn 1000 advertenties staan er nu 990 correct
+onder `antiek`/`sieraden` (390 alleen al onder "antiek goud en zilver"), en
+maar 8 zonder categorie — allemaal smalle randgevallen (manchetknopen,
+dasklem) waarvoor inderdaad geen bladcategorie bestaat. Die 8 krijgen nu een
+nette vraag om zelf een categorie te kiezen (`CategoryUnresolvedError`/422),
+geen foute toewijzing en geen 500. Te klein en te specifiek om nu een nieuwe
+Marktplaats-categorie-ID bij te verzinnen zonder hem in een ingelogde browser
+na te lopen — dat blijft een aparte melding als het weer opduikt.
+
+**Amanda (30-08, 14:57): "verkeerde categorie bij verversen, ook een 500".**
+Haar melding valt exact in het gat 12:50–14:11 waarin de server alleen nog
+`RemoteProtocolError` (weggevallen Supabase-verbinding) teruggaf — te zien in
+`server_fouten`, en dat gat is dezelfde storing die twee regels hierboven al
+werd gerepareerd (de leesherhaling in `backend/database.py`, commit 74ec109).
+Haar eigen items (`Verzilverd beertje beeldje`, `Vintage russische matroesjka
+fles hout`) staan inmiddels gewoon goed gecategoriseerd. Sinds 14:15 uur staat
+er geen server_fout meer, van niemand.
+
+Geen code gewijzigd. Teruggemeld als `opgelost` — de uitleg wijst naar de
+databasefix die al onder een andere titel in dit logboek staat, niet naar een
+nieuwe reparatie.
