@@ -1073,6 +1073,24 @@ window.CL = (() => {
   // zero photos and the user got no explanation at all. The thrown message names
   // the actual cause (no field / nothing downloadable / platform rejected them).
   async function uploadPhotos(urls, opts = {}) {
+    // DEZELFDE FOTO MAAR ÉÉN KEER.
+    //
+    // De adressen van geïmporteerde foto's dragen de vingerafdruk van de
+    // afbeelding zelf in hun naam. Stond dezelfde foto twee keer bij de bron,
+    // dan staat hetzelfde adres hier twee keer in de lijst — en dan uploadt dit
+    // formulier hem ook twee keer. Precies de melding "of plaatst de foto's
+    // dubbel". De vraagtekens (?rule=…) tellen niet mee: dat is dezelfde foto in
+    // een ander formaat. De vololgorde blijft staan, want de eerste foto is de
+    // omslagfoto.
+    {
+      const gezien = new Set();
+      urls = (urls || []).filter((u) => {
+        const sleutel = String(u || "").split("?")[0];
+        if (!sleutel || gezien.has(sleutel)) return false;
+        gezien.add(sleutel);
+        return true;
+      });
+    }
     // Prefer the real image picker: MP's page also carries an unrelated
     // input[name="file"], and a plain input[type=file] grab can land on that one.
     const fileInput = qs('input[type="file"][accept*="image"]')
