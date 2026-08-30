@@ -8652,8 +8652,35 @@ function toonFabrikant(data) {
     el.value = data[sleutel] || '';
     if (!el.value.trim()) leeg = true;
   }
+  const meesturen = data.fabrikant_meesturen !== false;
+  const schakel = document.getElementById('fabrikant-meesturen');
+  if (schakel) schakel.checked = meesturen;
   const waarschuwing = document.getElementById('fabrikant-waarschuwing');
-  if (waarschuwing) waarschuwing.style.display = leeg ? 'block' : 'none';
+  // Wie het blok niet meestuurt heeft ook geen ontbrekende velden — dan is de
+  // waarschuwing "publiceren staat stil" gewoon niet waar.
+  if (waarschuwing) waarschuwing.style.display = (leeg && meesturen) ? 'block' : 'none';
+}
+
+async function saveFabrikantMeesturen() {
+  const schakel = document.getElementById('fabrikant-meesturen');
+  const melding = document.getElementById('fabrikant-status');
+  melding.textContent = 'Saving…';
+  try {
+    const r = await apiFetchRetry(`${API}/api/items/settings`, {
+      method: 'PUT', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ fabrikant_meesturen: !!schakel.checked }),
+    });
+    const data = await parseJsonSafe(r);
+    if (!r.ok) throw new Error(data.detail || `HTTP ${r.status}`);
+    state.settings = { ...state.settings, ...data };
+    toonFabrikant(data);
+    melding.textContent = schakel.checked
+      ? 'Saved — every new listing carries these details.'
+      : 'Saved — we leave those fields on Marktplaats alone.';
+  } catch (e) {
+    schakel.checked = !schakel.checked;
+    melding.textContent = `Could not save: ${e.message}`;
+  }
 }
 
 async function saveFabrikant() {
