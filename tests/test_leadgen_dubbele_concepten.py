@@ -112,9 +112,23 @@ def test_tweede_concept_voor_dezelfde_persoon_wordt_geweigerd(postbus):
 def test_ander_adres_van_hetzelfde_bedrijf_telt_ook_mee(postbus):
     """Mensen antwoorden vanaf info@bedrijf.nl terwijl wij naar
     info@bedrijf-online.nl schreven. Twee adressen, één gesprek."""
-    postbus(Concept=[_kop(To="info@afstandsbediening.nl", Date=_tijd(30))])
+    postbus(Concept=[_kop(To="info@afstandsbediening.nl",
+                          In_Reply_To="<een-ander-bericht@klant.nl>", Date=_tijd(30))])
     reden = L._waarom_geen_concept("info@afstandsbediening-online.nl", HUN)
     assert reden and "al een concept" in reden
+
+
+def test_losse_reparatiemelding_blokkeert_een_echt_antwoord_niet(postbus):
+    """Egbert, 30-08-2026. Er lag een concept voor hem, maar dat was de losse
+    reparatiemelding over de trage import — geen antwoord op zijn bericht waarin
+    hij vroeg of we konden bellen. Het slot keek alleen óf er iets lag, en
+    daarmee kon zijn laatste bericht nooit meer een antwoord krijgen.
+
+    Een concept zonder In-Reply-To beantwoordt niemand en mag dus niets
+    blokkeren."""
+    postbus(Concept=[_kop(To="frank@klant.nl", Subject="Over je melding",
+                          Date=_tijd(30))])
+    assert L._waarom_geen_concept("frank@klant.nl", HUN) is None
 
 
 def test_een_concept_voor_iemand_anders_blokkeert_niets(postbus):
