@@ -1,0 +1,187 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Vinted delete-flow replica — Omnivaleur test harness</title>
+<!--
+  WAAROM DEZE PAGINA BESTAAT (30-08-2026)
+
+  Bij één verkoper mislukten acht Vinted-verversingen op rij met "still in your
+  wardrobe after confirming delete", terwijl haar advertenties aantoonbaar nog
+  online stonden. Er was dus echt niets weggehaald.
+
+  De knopteksten hieronder zijn geen gok: ze komen uit Vinted's eigen
+  tekstenboek, dat in elke artikelpagina wordt meegestuurd. Opgehaald op
+  30-08-2026 van vinted.nl, .be, .fr, .de en .com:
+
+    item.actions.delete                   nl "Verwijderen"  fr "Supprimer"  de "Löschen"  en "Delete"
+    item.deletion_modal.actions.delete    nl "Bevestigen en verwijderen"    fr "Confirmer et supprimer"
+    item.deletion_modal.actions.delete_v2 nl "Ja, verwijderen"              fr "Supprimer"   de "Löschen"
+    item.deletion_modal.actions.cancel    nl "Annuleren"                    fr "Annuler"     de "Abbrechen"
+
+  Let op de Franse en Duitse tweede variant: de bevestigknop in het venster heet
+  daar LETTERLIJK hetzelfde als de knop op de pagina. Wie in de hele pagina naar
+  "Supprimer" zoekt en de eerste pakt, klikt dus gegarandeerd de verkeerde aan —
+  het venster gaat open en weer dicht en er gebeurt niets.
+
+  Deze pagina draait de ECHTE routine uit extension/background.js (via build.js
+  eruit gesneden) tegen een namaakscherm, en controleert per land dat er in het
+  VENSTER wordt geklikt en niet op de pagina.
+-->
+<style>
+  body { font: 14px/1.6 system-ui; margin: 0; padding: 24px 32px; }
+  .venster { position: fixed; inset: 0; background: rgba(0,0,0,.4); display: flex;
+             align-items: center; justify-content: center; }
+  .venster .doos { background: #fff; padding: 24px; border-radius: 10px; min-width: 320px; }
+  #uitslag { font: 13px/1.6 ui-monospace, monospace; white-space: pre; background: #f6f8fa;
+             padding: 14px; border-radius: 6px; margin-top: 18px; }
+  .goed { color: #0a7c2f } .fout { color: #c02626; font-weight: 700 }
+</style>
+
+<h2>Replica van het Vinted-scherm "advertentie verwijderen"</h2>
+<div id="pagina"></div>
+<div id="uitslag">bezig…</div>
+
+<script src="mw-functions.js"></script>
+<script>
+// Elk geval: de tekst op de pagina, de tekst in het venster, en hoe het venster
+// herkenbaar is. Precies de varianten die Vinted zelf uitserveert.
+const GEVALLEN = [
+  { naam: "vinted.nl — variant 1", knop: "Verwijderen", bevestig: "Bevestigen en verwijderen", annuleer: "Annuleren", rol: true },
+  { naam: "vinted.nl — variant 2", knop: "Verwijderen", bevestig: "Ja, verwijderen",           annuleer: "Annuleren", rol: true },
+  { naam: "vinted.fr — zelfde tekst!", knop: "Supprimer", bevestig: "Supprimer",               annuleer: "Annuler",   rol: true },
+  { naam: "vinted.de — zelfde tekst!", knop: "Löschen",   bevestig: "Löschen",                 annuleer: "Abbrechen", rol: true },
+  { naam: "vinted.com",                knop: "Delete",    bevestig: "Confirm and delete",      annuleer: "Cancel",    rol: true },
+  { naam: "venster zonder role=dialog", knop: "Verwijderen", bevestig: "Ja, verwijderen",      annuleer: "Annuleren", rol: false,
+    titel: "Advertentie verwijderen?" },
+  { naam: "knop achter het menu",      knop: "Verwijderen", bevestig: "Ja, verwijderen",       annuleer: "Annuleren", rol: true,
+    kebab: true },
+  // PRECIES WAT ER BIJ DE VERKOPER GEBEURDE. De knop op de pagina draagt een
+  // data-testid met "delete", dus de oude code vond hem wél — maar het venster
+  // is niet als role="dialog" herkenbaar. De bevestiging werd dan in de hele
+  // pagina gezocht, en dat is opnieuw de knop op de pagina zelf: venster open,
+  // venster dicht, niets verwijderd. En daarna terecht: "still in your wardrobe".
+  { naam: "haar geval: testid + geen rol", knop: "Verwijderen", bevestig: "Ja, verwijderen",
+    annuleer: "Annuleren", rol: false, testid: "item-delete-button" },
+];
+
+function bouw(geval) {
+  document.querySelectorAll(".venster").forEach(v => v.remove());
+  const p = document.getElementById("pagina");
+  p.innerHTML = "";
+  const telling = { pagina: 0, bevestig: 0, annuleer: 0 };
+
+  const paginaKnop = document.createElement("button");
+  paginaKnop.textContent = geval.knop;
+  if (geval.testid) paginaKnop.setAttribute("data-testid", geval.testid);
+  // Twee keer klikken op de knop van de pagina zet het venster open en weer
+  // dicht — net als bij Vinted. Dát is wat er misging.
+  paginaKnop.onclick = () => {
+    telling.pagina++;
+    const open = document.querySelector(".venster");
+    if (open) open.remove(); else opuit();
+  };
+
+  if (geval.kebab) {
+    const menu = document.createElement("button");
+    menu.setAttribute("data-testid", "item-actions-button");
+    menu.textContent = "···";
+    const lade = document.createElement("div");
+    lade.setAttribute("role", "menu");
+    lade.style.display = "none";
+    lade.appendChild(paginaKnop);
+    menu.onclick = () => { lade.style.display = "block"; };
+    p.append(menu, lade);
+  } else {
+    p.append(document.createTextNode("Favoriet  "), paginaKnop);
+  }
+
+  function opuit() {
+    // Het venster wordt — net als bij Vinted — ONDERAAN de body gehangen.
+    const laag = document.createElement("div");
+    laag.className = "venster";
+    if (geval.rol) laag.setAttribute("role", "dialog");
+    const doos = document.createElement("div");
+    doos.className = "doos";
+    if (geval.titel) { const h = document.createElement("h3"); h.textContent = geval.titel; doos.appendChild(h); }
+    const ja = document.createElement("button");
+    ja.textContent = geval.bevestig;
+    ja.onclick = () => { telling.bevestig++; laag.remove(); };
+    const nee = document.createElement("button");
+    nee.textContent = geval.annuleer;
+    nee.onclick = () => { telling.annuleer++; laag.remove(); };
+    doos.append(nee, ja);          // annuleren staat als eerste, net als bij Vinted
+    laag.appendChild(doos);
+    document.body.appendChild(laag);
+  }
+  return telling;
+}
+
+// DE CODE VAN VÓÓR 30-08-2026, letterlijk. Staat hier als TEGENPROEF: zonder
+// dit is niet te zien dát deze pagina iets aantoont. Hij hoort te falen op elk
+// land dat geen Engels spreekt, en op een venster zonder role="dialog".
+async function _oudVintedVerwijderen() {
+  const sleep = ms => new Promise(r => setTimeout(r, ms));
+  let del = [...document.querySelectorAll('button, a, [role="menuitem"], [role="button"]')]
+    .find(e => e.offsetParent !== null && (/^\s*delete\s*$/i.test(e.textContent) || e.dataset.testid?.includes("delete")));
+  if (!del) {
+    const actions = document.querySelector('[data-testid="item-actions-button"], [data-testid*="kebab"]');
+    if (actions) {
+      actions.click();
+      await sleep(300);
+      const menu = document.querySelector('[role="menu"], [role="listbox"], [data-testid*="dropdown"]') || document;
+      del = [...menu.querySelectorAll('button, a, [role="menuitem"]')]
+        .find(e => /^\s*delete\s*$/i.test(e.textContent) || e.dataset.testid?.includes("delete"));
+    }
+  }
+  if (!del) return { clickedDelete: false };
+  del.click();
+  await sleep(400);
+  const scope = document.querySelector('[role="dialog"], [role="alertdialog"], [data-testid*="modal"], .ReactModal__Content') || document;
+  const bevestig = [...scope.querySelectorAll('button, a[role="button"]')]
+    .find(el => {
+      const t = el.textContent.trim();
+      if (/annuleer|cancel|terug|back/i.test(t)) return false;
+      return /confirm|delete|verwijder|remove|\byes\b|\bja\b/i.test(t) || el.dataset.testid?.includes("delete");
+    });
+  if (!bevestig) return { clickedDelete: true, clickedConfirm: false };
+  bevestig.click();
+  await sleep(300);
+  return { clickedDelete: true, clickedConfirm: true };
+}
+
+async function draai(routine) {
+  const regels = [];
+  let stuk = 0;
+  for (const geval of GEVALLEN) {
+    const telling = bouw(geval);
+    let uit;
+    try { uit = await routine(); }
+    catch (e) { uit = { fout: String(e) }; }
+    // GOED = het artikel is echt weg: precies één klik op de bevestiging in het
+    // venster, en niet op annuleren.
+    const goed = telling.bevestig === 1 && telling.annuleer === 0 && uit.clickedConfirm === true;
+    if (!goed) stuk++;
+    regels.push(`${goed ? "  ok  " : " FOUT "} ${geval.naam.padEnd(30)} `
+      + `bevestigd=${JSON.stringify(uit.bevestigd || null)} `
+      + `klikken(pagina/ja/annuleer)=${telling.pagina}/${telling.bevestig}/${telling.annuleer}`
+      + (uit.clickedDelete === false ? "  ← knop niet eens gevonden" : ""));
+  }
+  document.querySelectorAll(".venster").forEach(v => v.remove());
+  return { stuk, regels };
+}
+
+(async () => {
+  const nieuwe = await draai(_mwVintedVerwijderen);
+  const oude = await draai(_oudVintedVerwijderen);
+  const el = document.getElementById("uitslag");
+  el.textContent =
+    "NU (extension/background.js)\n" + nieuwe.regels.join("\n")
+    + `\n  → ${nieuwe.stuk === 0 ? "alle " + GEVALLEN.length + " goed" : nieuwe.stuk + " stuk"}\n\n`
+    + "TER VERGELIJKING — de code van vóór 30-08-2026\n" + oude.regels.join("\n")
+    + `\n  → ${oude.stuk} van de ${GEVALLEN.length} stuk\n\n`
+    + (nieuwe.stuk === 0 && oude.stuk > 0
+        ? "ALLES GOED — en de oude code faalt aantoonbaar op dezelfde schermen"
+        : "LET OP: deze proef toont niets aan");
+  el.className = (nieuwe.stuk === 0 && oude.stuk > 0) ? "goed" : "fout";
+  window.__uitslag = { nieuw: nieuwe.stuk, oud: oude.stuk, gevallen: GEVALLEN.length };
+})();
+</script>

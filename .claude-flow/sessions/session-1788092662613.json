@@ -1,6 +1,6 @@
 {
-  "id": "session-1788096259786",
-  "startedAt": "2026-08-30T13:24:19.786Z",
+  "id": "session-1788092662613",
+  "startedAt": "2026-08-30T12:24:22.613Z",
   "cwd": "/Users/Danie/Documents/omnivaleur",
   "context": {
     "lastMatchedPatterns": [
@@ -13,5 +13,8 @@
     "tasks": 0,
     "errors": 0
   },
-  "updatedAt": "2026-08-30T13:24:21.078Z"
+  "updatedAt": "2026-08-30T13:14:53.896Z",
+  "restoredAt": "2026-08-30T13:24:06.269Z",
+  "endedAt": "2026-08-30T13:24:06.984Z",
+  "duration": 3584372
 }

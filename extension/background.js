@@ -1958,6 +1958,121 @@ chrome.alarms.onAlarm.addListener((alarm) => {
 // title on the overview → clicks options → clicks Verwijder → confirms.
 // No content script needed — all via executeScript from background.
 
+// ─────────────────────────────────────────────────────────────────────────────
+// VINTED: DE ADVERTENTIE WEGHALEN
+//
+// WAAROM DIT EEN APARTE FUNCTIE MET VASTE TEKSTEN IS (30-08-2026)
+// Bij één verkoper mislukten acht verversingen op rij met "still in your
+// wardrobe after confirming delete". Haar advertenties stonden aantoonbaar nog
+// online, dus er was echt niets weggehaald. De oorzaak zat in twee aannames:
+//
+//   1. De knop werd alleen als /^delete$/ gezocht. Op vinted.nl heet hij
+//      "Verwijderen", op .fr/.be "Supprimer", op .de "Löschen".
+//   2. Werd het bevestigingsvenster niet herkend, dan zocht de bevestiging in
+//      de HELE pagina en pakte hij het EERSTE element dat op "verwijderen"
+//      leek — en dat is de knop op de pagina zelf. Die werd dus twee keer
+//      aangeklikt, het venster ging open en weer dicht, en er gebeurde niets.
+//      Op .fr en .de is dat gegarandeerd mis: daar heet de bevestigknop
+//      LETTERLIJK hetzelfde als de knop op de pagina ("Supprimer", "Löschen").
+//
+// De teksten hieronder zijn geen gok. Ze komen uit Vinted's eigen tekstenboek,
+// dat in elke artikelpagina meegestuurd wordt, opgehaald op 30-08-2026 voor
+// vinted.nl, .be, .fr, .de en .com:
+//
+//   item.actions.delete                    → de knop op de pagina
+//   item.deletion_modal.actions.delete     → "Bevestigen en verwijderen"
+//   item.deletion_modal.actions.delete_v2  → "Ja, verwijderen"  (tweede variant)
+//   item.deletion_modal.actions.cancel     → "Annuleren"
+//   item.deletion_modal.title(_v2)         → de titel van het venster
+//
+// Er is GEEN stap waarin Vinted om een reden vraagt; het is één venster.
+async function _mwVintedVerwijderen() {
+  const sleep = ms => new Promise(r => setTimeout(r, ms));
+  const WEG = ["verwijderen", "supprimer", "löschen", "loschen", "delete",
+               "eliminar", "elimina", "usuń", "usun", "ištrinti", "smazat"];
+  const BEVESTIG = [
+    "bevestigen en verwijderen", "ja, verwijderen",
+    "confirmer et supprimer", "supprimer",
+    "bestätigen und löschen", "bestatigen und loschen", "löschen", "loschen",
+    "confirm and delete", "delete", "verwijderen",
+    "confirmar y eliminar", "eliminar", "conferma ed elimina", "elimina",
+    "ja", "yes", "oui",
+  ];
+  const ANNULEER = ["annuleren", "annuler", "abbrechen", "cancel", "cancelar",
+                    "annulla", "terug", "back", "sluiten", "close", "nee", "no", "non"];
+  const TITELS = ["artikel verwijderen", "advertentie verwijderen",
+                  "supprimer l'article", "artikel löschen", "artikel loschen",
+                  "delete item", "eliminar artículo", "elimina l'oggetto"];
+
+  const tekst = e => (e.textContent || "").replace(/\s+/g, " ").trim().toLowerCase();
+  const kaal = t => t.replace(/[?!.]+$/, "").trim();
+  const zichtbaar = e => e.offsetParent !== null || e.getClientRects().length > 0;
+  const knoppen = w => [...w.querySelectorAll('button, a, [role="menuitem"], [role="button"]')];
+  const isWeg = e => WEG.includes(kaal(tekst(e))) || (e.dataset && e.dataset.testid || "").includes("delete");
+
+  // 1) De knop op de pagina zelf, eventueel achter het menu met de drie puntjes.
+  let del = knoppen(document).find(e => zichtbaar(e) && isWeg(e));
+  if (!del) {
+    const menuknop = document.querySelector(
+      '[data-testid="item-actions-button"], [data-testid="item-menu-button"], ' +
+      '[data-testid="item-page-actions-dropdown-button"], [data-testid*="kebab"], ' +
+      'button[aria-label*="more" i], button[aria-label*="actions" i], button[aria-label*="options" i]'
+    );
+    if (menuknop) {
+      menuknop.click();
+      await sleep(700);
+      const menu = document.querySelector('[role="menu"], [role="listbox"], [data-testid*="dropdown"]') || document;
+      del = knoppen(menu).find(isWeg) || knoppen(document).find(e => zichtbaar(e) && isWeg(e));
+    }
+  }
+  if (!del) return { clickedDelete: false, opScherm: _mwVintedSchermbeeld() };
+  del.click();
+
+  // 2) Wachten tot het bevestigingsvenster er echt staat. Herkenning op drie
+  //    manieren, want Vinted wisselt van opmaak: de rol, of de titel uit hun
+  //    eigen tekstenboek.
+  let venster = null;
+  for (let i = 0; i < 10 && !venster; i++) {
+    await sleep(300);
+    venster = document.querySelector('[role="dialog"], [role="alertdialog"], [aria-modal="true"], '
+                                     + '[data-testid*="modal"], [data-testid*="dialog"], .ReactModal__Content');
+    if (!venster) {
+      const kop = [...document.querySelectorAll("h1,h2,h3,h4,[class*='title' i]")]
+        .find(e => zichtbaar(e) && TITELS.includes(kaal(tekst(e))));
+      if (kop) venster = kop.closest("div[class],section,form") || kop.parentElement;
+    }
+  }
+
+  // 3) Bevestigen. NOOIT hetzelfde element nog een keer, en nooit "Annuleren".
+  //    Zonder venster zoeken we in de hele pagina, maar dan van ACHTEREN naar
+  //    voren: een venster wordt onderaan de body gehangen, de knop van de
+  //    pagina staat erboven.
+  const kandidaten = knoppen(venster || document)
+    .filter(e => e !== del && zichtbaar(e) && !e.disabled)
+    .filter(e => { const t = kaal(tekst(e)); return t && !ANNULEER.includes(t) && BEVESTIG.includes(t); });
+  const bevestig = venster ? kandidaten[0] : kandidaten[kandidaten.length - 1];
+  if (!bevestig) return { clickedDelete: true, clickedConfirm: false, venster: !!venster,
+                          opScherm: _mwVintedSchermbeeld() };
+  bevestig.click();
+  await sleep(1200);
+  return { clickedDelete: true, clickedConfirm: true, venster: !!venster,
+           bevestigd: kaal(tekst(bevestig)) };
+}
+
+// Wat er op dat moment op het scherm stond, kort samengevat. Zonder dit is een
+// mislukte verwijdering niet na te lopen zonder in te loggen op het account van
+// de verkoper — en dat kan niet.
+function _mwVintedSchermbeeld() {
+  const w = document.querySelector('[role="dialog"], [role="alertdialog"], [aria-modal="true"], '
+                                   + '[data-testid*="modal"], .ReactModal__Content') || document;
+  return [...w.querySelectorAll('button, a, [role="button"], [role="menuitem"]')]
+    .filter(e => e.offsetParent !== null || e.getClientRects().length > 0)
+    .slice(0, 25)
+    .map(e => (e.textContent || "").replace(/\s+/g, " ").trim().slice(0, 30)
+              + (e.dataset && e.dataset.testid ? `#${e.dataset.testid}` : ""))
+    .filter(Boolean).join(" | ").slice(0, 400);
+}
+
 function execInTab(tabId, func, args = []) {
   return new Promise((resolve, reject) => {
     chrome.scripting.executeScript(
@@ -2989,91 +3104,7 @@ async function bgDeleteVinted(job, serverUrl) {
 
     // 2) Click Delete, then confirm. "Confirm and delete" is multi-word, so
     //    match on containing confirm/delete and never the Cancel button.
-    const clicked = await execInTab(tabId, async () => {
-      const sleep = ms => new Promise(r => setTimeout(r, ms));
-      // VINTED SPREEKT DE TAAL VAN DE VERKOPER.
-      //
-      // Hier stond alleen /^delete$/. Op vinted.nl heet die knop "Verwijderen",
-      // op .fr "Supprimer", op .de "Löschen". De knop werd dan alleen nog
-      // gevonden als Vinted er toevallig een data-testid met "delete" op had
-      // staan — en anders viel het verversen om met "Delete control not found".
-      // Omnivaleur is een Europese app; Engels alleen is hier geen uitgangspunt.
-      const WEG = /^\s*(delete|verwijder(en)?|supprimer|löschen|loschen|eliminar|elimina|usuń|usun|slet|ta bort|poista)\s*$/i;
-      const NIET = /annuleer|annuleren|cancel|terug|back|abbrechen|annuler|sluiten|close/i;
-      const BEVESTIG = /confirm|bevestig|delete|verwijder(en)?|remove|supprimer|löschen|loschen|\byes\b|\bja\b|\boui\b|ok/i;
-      const zichtbaar = e => e.offsetParent !== null || e.getClientRects().length > 0;
-      const knoppen = wortel => [...wortel.querySelectorAll('button, a, [role="menuitem"], [role="button"]')];
-
-      // Direct visible Delete button/link, else open a kebab/actions dropdown.
-      let del = knoppen(document)
-        .find(e => zichtbaar(e) && (WEG.test(e.textContent) || e.dataset.testid?.includes("delete")));
-      if (!del) {
-        const actions = document.querySelector(
-          '[data-testid="item-actions-button"], [data-testid="item-menu-button"], ' +
-          '[data-testid="item-page-actions-dropdown-button"], [data-testid*="kebab"], ' +
-          'button[aria-label*="more" i], button[aria-label*="actions" i], button[aria-label*="options" i]'
-        );
-        if (actions) {
-          actions.click();
-          await sleep(600);
-          const menu = document.querySelector('[role="menu"], [role="listbox"], [data-testid*="dropdown"], [data-testid*="modal"]') || document;
-          del = knoppen(menu).find(e => WEG.test(e.textContent) || e.dataset.testid?.includes("delete"))
-            || knoppen(document).find(e => WEG.test(e.textContent) || e.dataset.testid?.includes("delete"));
-        }
-      }
-      if (!del) return { clickedDelete: false, opScherm: schermbeeld() };
-      del.click();
-      await sleep(900);
-
-      // BEVESTIGEN KAN MEER DAN ÉÉN STAP ZIJN.
-      //
-      // Vinted vraagt in sommige gevallen eerst waaróm je het artikel weghaalt
-      // (verkocht, van gedachten veranderd, …) en pas daarna de definitieve
-      // knop. Werd alleen die eerste knop aangeklikt, dan bleef het tweede
-      // venster staan, gebeurde er niets, en meldde de controle terecht dat de
-      // advertentie nog in de garderobe stond — precies wat er op 30-08-2026
-      // acht keer op rij gebeurde bij één verkoper.
-      let stappen = 0;
-      for (let ronde = 0; ronde < 3; ronde++) {
-        const venster = document.querySelector(
-          '[role="dialog"], [role="alertdialog"], [data-testid*="modal"], .ReactModal__Content');
-        if (!venster) break;
-        // Moet er eerst een reden gekozen worden? Kies de eerste die er staat.
-        const keuze = [...venster.querySelectorAll('input[type="radio"], [role="radio"]')]
-          .find(e => zichtbaar(e) && !e.checked && e.getAttribute("aria-checked") !== "true");
-        if (keuze) {
-          (keuze.closest("label") || keuze).click();
-          await sleep(400);
-        }
-        const knop = knoppen(venster).find(el => {
-          const t = el.textContent.trim();
-          if (!t || NIET.test(t)) return false;
-          if (el.disabled) return false;
-          return BEVESTIG.test(t) || el.dataset.testid?.includes("delete");
-        });
-        if (!knop) break;
-        knop.click();
-        stappen++;
-        await sleep(1200);
-      }
-      if (!stappen) return { clickedDelete: true, clickedConfirm: false, opScherm: schermbeeld() };
-      return { clickedDelete: true, clickedConfirm: true, stappen };
-
-      // Wat er op dat moment op het scherm stond, kort samengevat. Zonder dit
-      // is een mislukte verwijdering niet na te lopen: niemand kan achteraf zien
-      // welke knoppen er stonden, en dan blijft het gissen naar de selector.
-      function schermbeeld() {
-        const venster = document.querySelector(
-          '[role="dialog"], [role="alertdialog"], [data-testid*="modal"], .ReactModal__Content');
-        return knoppen(venster || document)
-          .filter(e => e.offsetParent !== null || e.getClientRects().length > 0)
-          .slice(0, 25)
-          .map(e => (e.textContent || "").trim().slice(0, 30) + (e.dataset.testid ? `#${e.dataset.testid}` : ""))
-          .filter(Boolean)
-          .join(" | ")
-          .slice(0, 400);
-      }
-    });
+    const clicked = await execInTab(tabId, _mwVintedVerwijderen);
 
     // De knoppen die er wél stonden gaan mee in de melding. Anders is dit
     // achteraf niet na te lopen zonder toegang tot het account van de verkoper.

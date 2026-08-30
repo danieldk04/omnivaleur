@@ -2105,3 +2105,46 @@ melding waar niemand iets mee kan.
 
 Niet met zekerheid vast te stellen zonder een echt Vinted-account: welke van de
 twee het bij deze verkoper was. De volgende mislukte poging zegt het zelf.
+
+## 30-08-2026 — De Vinted-verwijderknop, nu met bewijs in plaats van een gok
+
+Daniel vroeg of die 70% zekerheid naar 100% kon. Dat kan, zonder in te loggen op
+het account van een verkoper: **Vinted stuurt zijn eigen tekstenboek mee in elke
+artikelpagina.** Daar staat letterlijk in hoe elke knop heet, per land.
+
+Opgehaald op 30-08-2026:
+
+    domein      item.actions.delete   ...modal.actions.delete    ...delete_v2
+    vinted.nl   Verwijderen           Bevestigen en verwijderen  Ja, verwijderen
+    vinted.be   Supprimer             Confirmer et supprimer     Supprimer
+    vinted.fr   Supprimer             Confirmer et supprimer     Supprimer
+    vinted.de   Löschen               Bestätigen und löschen     Löschen
+    vinted.com  Delete                Confirm and delete         Delete
+
+Daarmee is de oorzaak géén gok meer. Twee dingen, allebei hard:
+
+1. De knop werd alleen als `/^delete$/` gezocht. Op vinted.nl heet hij
+   "Verwijderen". Er is trouwens **geen** stap waarin Vinted om een reden vraagt
+   — dat vermoedde ik eerder, en dat klopt niet; het is één venster.
+2. Werd dat venster niet als `role="dialog"` herkend, dan zocht de bevestiging in
+   de HELE pagina en pakte de eerste treffer: de knop op de pagina zelf. Die werd
+   dan twee keer aangeklikt — venster open, venster dicht, niets verwijderd, en
+   daarna terecht "still in your wardrobe". Bij .fr/.be en .de is dat gegarandeerd
+   mis, want daar heet de bevestigknop letterlijk hetzelfde als de knop op de
+   pagina.
+
+**Het bewijs staat in `tests/vinted-mock/vinted-delete.html`.** Die pagina bootst
+acht schermen na met Vinted's echte teksten, draait de ECHTE routine uit
+`background.js` (er door `build.js` uitgesneden) en zet de code van vóór vandaag
+ernaast. Uitkomst in een echte browser:
+
+    NU:  8 van de 8 goed
+    OUD: 7 van de 8 stuk — waaronder het geval van deze verkoper, waar de knop
+         op de pagina TWEE keer werd aangeklikt en de bevestiging nul keer
+
+De routine staat daarom nu als losse functie `_mwVintedVerwijderen` in
+background.js. Zet hem niet terug als anonieme functie binnen `bgDeleteVinted`:
+dan snijdt het harnas hem niet meer uit en test die pagina stilletjes niets meer.
+`tests/test_vinted_verwijderknop.py` bewaakt dat, en bewaakt de knopteksten zelf.
+
+Extensie 1.0.270. Ondergrens niet opgehoogd.
