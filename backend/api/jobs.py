@@ -368,7 +368,7 @@ def get_pending_jobs(request: Request, platform: str = None, user_id: str = Depe
         if j["action"] == "create" and j.get("scheduled_for"):
             paired_delete = (
                 db.table("jobs")
-                .select("status")
+                .select("status,payload")
                 .eq("user_id", user_id)
                 .eq("item_id", j["item_id"])
                 .eq("platform", j["platform"])
@@ -379,20 +379,42 @@ def get_pending_jobs(request: Request, platform: str = None, user_id: str = Depe
                 .execute()
                 .data
             )
-            if paired_delete and paired_delete[0]["status"] == "error":
+            # "cancelled" telt hier hetzelfde als "error". Een verwijdering die
+            # is afgebroken gaat NOOIT meer lopen, dus een herplaatsing die op
+            # hem wacht bleef eeuwig "pending" staan: het scherm bleef melden
+            # "nieuwe advertentie over ~X min" terwijl er niets meer zou komen.
+            # Zo stond bij Pleun Aertssen (30-08-2026) een herplaatsing van
+            # 12:35 uur nog steeds te wachten op een verwijdering die al om
+            # 12:48 was afgebroken.
+            if paired_delete and paired_delete[0]["status"] in ("error", "cancelled"):
+                mislukt = paired_delete[0]["status"] == "error"
                 db.table("jobs").update({
                     "status": "error",
-                    "result": {"error": "Skipped — the paired delist failed, so the old listing is still live; creating a new one would duplicate it."},
+                    "result": {"error": "Skipped — the paired delist failed, so the old listing is still live; creating a new one would duplicate it."
+                                        if mislukt else
+                                        "Skipped — the paired delist was cancelled, so the old listing is still live and this recreate would duplicate it."},
                     "done_at": now,
                 }).eq("id", j["id"]).execute()
-                # The delist failed, so the OLD listing is still live. Keep the
-                # listing "active" (its true state) rather than "error" — the item
-                # never left the platform, so it must not vanish from the dashboard.
-                # The message lets the refresh view offer a one-click retry.
+                # De verwijdering ging niet door, dus de OUDE advertentie staat er
+                # nog. Laat de regel op "active" staan — hij is nooit van het
+                # platform verdwenen en mag dus niet uit het dashboard vallen.
                 db.table("listings").update({
                     "status": "active",
                     "error_message": "Relist aborted: the old listing couldn't be removed, so it's still live and no duplicate was created. You can retry the relist.",
                 }).eq("item_id", j["item_id"]).eq("platform", j["platform"]).execute()
+                # EN de boekhouding terugdraaien. Zonder deze regel bleef de
+                # verversing meetellen: teller opgehoogd, veertien dagen
+                # afkoeling en een dagquotum opgesnoept — voor een verversing
+                # die aantoonbaar nooit heeft plaatsgevonden. Het dashboard zei
+                # dan "ververst" over een advertentie waar niets mee gebeurd is.
+                rollback = ((paired_delete[0].get("payload") or {}).get("_refresh_rollback"))
+                if rollback:
+                    try:
+                        from backend.services.relist import rollback_refresh
+                        rollback_refresh(rollback, user_id)
+                    except Exception as e:  # noqa: BLE001 — nooit de uitgifte blokkeren
+                        logger.warning("Kon de verversing van item %s niet terugdraaien: %s",
+                                       j["item_id"], e)
                 continue
             # Delete not confirmed "done" yet (still pending/claimed, e.g. Chrome
             # was closed and just reopened) — hold the create job rather than
@@ -708,6 +730,45 @@ async def relist_retry(body: dict, user_id: str = Depends(require_active_subscri
 
     db = get_db()
 
+    # EERST DE BOEKHOUDING VAN DE MISLUKTE POGING TERUGDRAAIEN.
+    #
+    # WAAROM (30-08-2026, Pleun Aertssen). Een verversing hoogt de teller op,
+    # zet de afkoelperiode van veertien dagen en snoept een dagquotum op zodra
+    # hij in de wachtrij staat — vóórdat er iets gebeurd is. Mislukt de
+    # verwijdering, dan geeft `fail_job` dat allemaal terug. Maar bij een
+    # herkansing gebeurde dat niet, en dan botste de herkansing op de
+    # afkoelperiode die zijn eigen mislukte poging net had gezet:
+    #
+    #     "This listing was refreshed 0d ago. Wait 14d more."
+    #
+    # De opdrachten waren op dat moment al geannuleerd en de foutmelding was al
+    # gewist. Wat overbleef was een advertentie die volgens het dashboard net
+    # ververst was — teller op 1, geen foutmelding — terwijl er niets was
+    # gebeurd en er ook niets meer stond te gebeuren. Precies het beeld
+    # "foutmelding op het scherm, maar gemeld als gelukt".
+    laatste_delete = (
+        (await naast_de_lus(lambda: db.table("jobs")
+        .select("status,payload")
+        .eq("user_id", user_id)
+        .eq("item_id", item_id)
+        .eq("platform", platform)
+        .eq("action", "delete")
+        .order("created_at", desc=True)
+        .limit(1)
+        .execute()))
+        .data
+        or []
+    )
+    vorige = laatste_delete[0] if laatste_delete else {}
+    # Alleen terugdraaien als die verwijdering NIET is gelukt. Was hij wél
+    # gelukt, dan is de advertentie echt van het platform gehaald en is de
+    # verversing echt gebeurd — die mag je niet terugdraaien.
+    rollback = ((vorige.get("payload") or {}).get("_refresh_rollback")
+                if vorige.get("status") != "done" else None)
+    if rollback:
+        from backend.services.relist import rollback_refresh
+        await naast_de_lus(lambda: rollback_refresh(rollback, user_id))
+
     # Cancel any outstanding jobs from the failed relist so nothing fires twice.
     # Only pending/claimed/error jobs — never a job that already completed ("done").
     stale = (
@@ -728,12 +789,13 @@ async def relist_retry(body: dict, user_id: str = Depends(require_active_subscri
             "done_at": datetime.now(timezone.utc).isoformat(),
         }).eq("id", j["id"]).execute()))
 
-    # Reset the listing to a clean active state before re-queuing. The failed
-    # delist left it live, so "active" is correct; clearing error_message stops
-    # the failed-relist banner from lingering after a successful retry.
+    # De advertentie staat nog gewoon live (een mislukte verwijdering haalt niets
+    # weg), dus "active" is zijn echte staat. De FOUTMELDING BLIJFT STAAN tot de
+    # nieuwe poging echt in de wachtrij staat: hem alvast wissen betekende dat
+    # een geweigerde herkansing een schoon scherm achterliet waarop niets meer
+    # te zien was van wat er misging.
     (await naast_de_lus(lambda: db.table("listings").update({
         "status": "active",
-        "error_message": None,
     }).eq("item_id", item_id).eq("platform", platform).execute()))
 
     from backend.services.relist import refresh_listing, RefreshError
@@ -741,6 +803,11 @@ async def relist_retry(body: dict, user_id: str = Depends(require_active_subscri
         result = await refresh_listing(item_id, platform, user_id, "relist")
     except RefreshError as e:
         raise HTTPException(status_code=400, detail=str(e))
+
+    # Pas nu weg met de oude foutmelding: er staat een nieuwe poging klaar.
+    (await naast_de_lus(lambda: db.table("listings").update({
+        "error_message": None,
+    }).eq("item_id", item_id).eq("platform", platform).execute()))
     return {"ok": True, **result}
 
 

@@ -2039,3 +2039,38 @@ terug en blijven bewust onaangeraakt: een insert blind herhalen na een
 weggevallen antwoord maakt een tweede rij, en dus een tweede advertentie.
 `execute_with_retry` gebruikt intern de onbewerkte versie, zodat er drie
 pogingen zijn en geen negen.
+
+## 30-08-2026 — "Foutmelding, maar wel gemeld als gelukt" (Pleun Aertssen)
+
+Daniel meldde dat het verversen bij dat account misging: een foutmelding op het
+scherm, maar in het dashboard stond de advertentie als ververst. Nagezocht in de
+opdrachten van dat account. Drie Vinted-verversingen, alle drie mislukt bij de
+eerste stap — de extensie kreeg de advertentie niet uit de garderobe
+("still in your wardrobe after confirming delete"). Daaronder lagen twee fouten.
+
+**1. De herkansing botste op zijn eigen mislukte poging.** Een verversing hoogt
+de teller op, zet de afkoelperiode van veertien dagen en snoept een dagquotum op
+zodra hij in de wachtrij staat — dus vóórdat er iets gebeurd is. Mislukt hij, dan
+geeft `fail_job` dat allemaal terug. Maar `relist-retry` deed dat niet: die
+annuleerde de oude opdrachten, wiste de foutmelding, en liep daarna tegen
+`This listing was refreshed 0d ago. Wait 14d more.` — de afkoelperiode die zijn
+eigen mislukte poging net had gezet. Wat overbleef: geen opdrachten, geen
+foutmelding, teller op 1. Dat is precies "gemeld als gelukt". Nu wordt eerst
+teruggedraaid en pas daarna geannuleerd, en de foutmelding blijft staan tot de
+nieuwe poging écht in de wachtrij staat.
+
+**2. Een herplaatsing kon eeuwig blijven wachten.** Bij het uitdelen van werk
+werd een herplaatsing alleen afgeblazen als de bijbehorende verwijdering op
+`error` stond. Stond die op `cancelled` — wat gebeurt zodra iemand opnieuw
+probeert of annuleert — dan viel hij in de tak "verwijdering nog niet klaar,
+wachten". Die verwijdering gaat nooit meer lopen, dus bleef de herplaatsing
+eeuwig `pending` en bleef het scherm melden "nieuwe advertentie over ~X min".
+Bij Pleun stond zo'n herplaatsing van 12:35 uur te wachten op een verwijdering
+die om 12:48 was afgebroken. `cancelled` telt nu hetzelfde als `error`.
+
+**En in beide gevallen wordt de boekhouding nu teruggedraaid**, zodat een
+verversing die aantoonbaar niet heeft plaatsgevonden niet meetelt en de verkoper
+er geen veertien dagen op vastzit.
+
+Tien tests in `tests/test_verversen_gemeld_als_gelukt.py`; zes daarvan falen
+aantoonbaar op de oude code.
