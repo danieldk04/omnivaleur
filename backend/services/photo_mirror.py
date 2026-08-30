@@ -177,3 +177,48 @@ def ontdubbel(urls: list[str]) -> list[str]:
         gezien.add(sleutel)
         uit.append(u)
     return uit
+
+
+async def ontdubbel_bestaande_fotolijsten() -> dict:
+    """Eén ronde over de voorraad: dezelfde foto twee keer in één artikel weg.
+
+    WAAROM DIT ER IS (30-08-2026). `ontdubbel` hierboven voorkomt nieuwe
+    gevallen, maar de artikelen die er al staan houden hun dubbele regel — en
+    dan ziet de verkoper dezelfde foto twee keer in zijn eigen overzicht. Gemeten
+    bij het inschakelen: 71 artikelen over vier accounts.
+
+    Draait dagelijks, schrijft alleen als er echt iets dubbel staat, en gooit
+    nooit een foto weg die maar één keer voorkomt. Zodra alles opgeschoond is
+    doet deze ronde niets meer.
+    """
+    from backend.database import fetch_all, get_db, naast_de_lus
+
+    db = get_db()
+    try:
+        rijen = await naast_de_lus(
+            lambda: fetch_all(lambda: db.table("items").select("id,photo_urls")))
+    except Exception as e:  # noqa: BLE001 — een opruimronde mag niets omver halen
+        logger.warning("ontdubbelen: voorraad niet gelezen: %s", e)
+        return {"bekeken": 0, "hersteld": 0}
+
+    hersteld = weg = 0
+    for rij in rijen:
+        oud = rij.get("photo_urls") or []
+        if len(oud) < 2:
+            continue
+        nieuw = ontdubbel(oud)
+        if len(nieuw) == len(oud):
+            continue
+        try:
+            await naast_de_lus(lambda: db.table("items")
+                               .update({"photo_urls": nieuw})
+                               .eq("id", rij["id"]).execute())
+        except Exception as e:  # noqa: BLE001
+            logger.warning("ontdubbelen: item %s niet bijgewerkt: %s", rij["id"], e)
+            continue
+        hersteld += 1
+        weg += len(oud) - len(nieuw)
+    if hersteld:
+        logger.info("ontdubbelen: %d artikelen opgeschoond, %d dubbele foto's weg",
+                    hersteld, weg)
+    return {"bekeken": len(rijen), "hersteld": hersteld, "verwijderd": weg}

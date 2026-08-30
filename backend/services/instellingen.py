@@ -106,6 +106,7 @@ SLOTTEKST_MAX = 4000
 STANDAARD = {"relist_dagen": RELIST_DAGEN_STANDAARD, "vinted_groepen": [],
              "auto_relist": True,
              "fabrikant_naam": "", "fabrikant_adres": "", "fabrikant_email": "",
+             FABRIKANT_MEESTUREN: True,
              "levering": "beide", "pakket_grens": 0, "slottekst": ""}
 
 
@@ -131,6 +132,8 @@ def _schoon(rauw: dict | None) -> dict:
     for veld in FABRIKANT_VELDEN:
         if veld in rauw:
             uit[veld] = str(rauw.get(veld) or "").strip()[:255]
+    if FABRIKANT_MEESTUREN in rauw:
+        uit[FABRIKANT_MEESTUREN] = bool(rauw.get(FABRIKANT_MEESTUREN))
     if "slottekst" in rauw:
         uit["slottekst"] = str(rauw.get("slottekst") or "").strip()[:SLOTTEKST_MAX]
     lev = str(rauw.get("levering") or "").strip().lower()
@@ -196,8 +199,15 @@ def fabrikant(user_id: str) -> dict:
     """De verantwoordelijke partij van deze verkoper, of een leeg blok.
 
     Apart van `lees` omdat de publicatiekant hier maar drie velden van nodig
-    heeft en die één op één de namen van het Marktplaats-formulier volgen."""
+    heeft en die één op één de namen van het Marktplaats-formulier volgen.
+
+    Staat de schakelaar uit, dan geeft dit een LEEG blok terug — dan wordt er
+    niets ingevuld op het formulier en wordt er ook niets geëist voor het
+    publiceren. Zie FABRIKANT_MEESTUREN."""
     s = lees(user_id)
+    if not s.get(FABRIKANT_MEESTUREN, True):
+        return {"manufacturer_name": "", "manufacturer_address": "",
+                "manufacturer_email": ""}
     return {
         "manufacturer_name": s.get("fabrikant_naam") or "",
         "manufacturer_address": s.get("fabrikant_adres") or "",
@@ -207,6 +217,14 @@ def fabrikant(user_id: str) -> dict:
 
 def fabrikant_compleet(user_id: str) -> bool:
     return all(fabrikant(user_id).values())
+
+
+def fabrikant_verplicht(user_id: str) -> bool:
+    """Moeten we het publiceren tegenhouden als het blok niet compleet is?
+
+    Alleen als de verkoper het wíl meesturen. Staat de schakelaar uit, dan is
+    een leeg blok zijn eigen keuze en geen ontbrekend gegeven."""
+    return bool(lees(user_id).get(FABRIKANT_MEESTUREN, True))
 
 
 # De radiowaarden zoals Marktplaats ze zelf op het formulier zet, live afgelezen

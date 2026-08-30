@@ -652,6 +652,32 @@ class CategoryUnresolvedError extends Error {
   }
 }
 
+// De omgekeerde weg door MP_CATEGORIES: van de twee nummers die Marktplaats
+// zelf op een advertentie zet terug naar onze eigen regel.
+//
+// Waarom dat nodig is: aan onze regel hangt het bucketId (de groep in het
+// plaatsformulier) en bij kinderkleding een maat-afhankelijke onderverdeling.
+// Kennen we het paar, dan bouwen we het adres dus op de bewezen manier; kennen
+// we het niet — munten, postzegels, boeken, alles buiten onze lijst — dan gaan
+// we rechtstreeks op de twee nummers af.
+//
+// Eén keer opbouwen en bewaren: deze functie draait bij elke plaatsing.
+let _mpOpNummer = null;
+function mpCategorieOpNummer(l1, l2) {
+  if (!_mpOpNummer) {
+    _mpOpNummer = new Map();
+    for (const regel of Object.values(MP_CATEGORIES)) {
+      if (!regel || regel.cat1 == null || regel.cat3 == null) continue;
+      const sleutel = `${regel.cat1}/${regel.cat3}`;
+      // De eerste die we tegenkomen wint. Meerdere sleutels wijzen naar dezelfde
+      // Marktplaats-categorie ("jeans" en "spijkerbroeken"), en die leveren
+      // hetzelfde adres op — welke het wordt maakt dus niet uit.
+      if (!_mpOpNummer.has(sleutel)) _mpOpNummer.set(sleutel, regel);
+    }
+  }
+  return _mpOpNummer.get(`${l1}/${l2}`) || null;
+}
+
 function getMpSyiUrl(platform, item) {
   // Vinted has a simple listing flow — no category-based URLs needed.
   // Open the create form on the account's real country domain when known
@@ -688,9 +714,10 @@ function getMpSyiUrl(platform, item) {
   // van Marktplaats af, zonder bucketId; precies de vorm die de tweeniveau-
   // takken (muziek) al gebruiken.
   const mpCat = item?.mp_category;
-  if (mpCat && mpCat.l1 && mpCat.l2) {
-    const eigen = mpCategorieOpNummer(mpCat.l1, mpCat.l2);
-    if (!eigen) return `${base}/${mpCat.l1}/${mpCat.l2}?title=`;
+  const eigenPaar = (mpCat && mpCat.l1 && mpCat.l2)
+    ? mpCategorieOpNummer(mpCat.l1, mpCat.l2) : null;
+  if (mpCat && mpCat.l1 && mpCat.l2 && !eigenPaar) {
+    return `${base}/${mpCat.l1}/${mpCat.l2}?title=`;
   }
 
   const cat = (item?.category || "").toLowerCase().trim();
@@ -706,10 +733,13 @@ function getMpSyiUrl(platform, item) {
     else if (/\bdames\b|\bwomen'?s\b|\bvrouwen\b/.test(t)) gender = "dames";
   }
 
-  let c;
+  // Kennen we het paar van Marktplaats zelf ook? Dan die regel, want daar hangt
+  // het bucketId aan (en bij kinderkleding de maat-afhankelijke onderverdeling).
+  let c = eigenPaar;
 
   // When gender is heren, always try heren-prefixed first so "truien / vesten" + heren → Heren
-  if (gender === "heren") {
+  if (c) { /* de advertentie zelf heeft het al gezegd */ }
+  else if (gender === "heren") {
     c = MP_CATEGORIES[`heren ${cat}`] || MP_CATEGORIES[cat];
     // A dames category (cat1=621) for a heren item is a mismatch, not a result.
     if (c && c.cat1 === 621) c = null;
@@ -2406,6 +2436,32 @@ async function mpAdvertentieSnapshot(tabId) {
         return n ? n[1] : "";
       };
 
+      // DE CATEGORIE WAAR DEZE ADVERTENTIE ECHT IN STAAT.
+      //
+      // Marktplaats zet hem gewoon in de pagina:
+      //   "l1CategoryId":1784,"l1CategoryName":"Postzegels en Munten",
+      //   "l2CategoryId":1789,"l2CategoryName":"Bankbiljetten | Afrika"
+      // Bij een verversing plaatsen we hem daarmee terug waar hij stond, in
+      // plaats van in de categorie die wij uit de titel hebben geraden. Amanda
+      // meldde precies dat: "hij zet deze dan in de verkeerde categorie. Dit
+      // kun je bij MP niet aanpassen."
+      const mp_category = (() => {
+        try {
+          const bron = document.documentElement.innerHTML;
+          const nr = (naam) => {
+            const m = new RegExp('"' + naam + '"\\s*:\\s*"?(\\d+)"?').exec(bron);
+            return m ? parseInt(m[1], 10) : null;
+          };
+          const tekst = (naam) => {
+            const m = new RegExp('"' + naam + '"\\s*:\\s*"([^"]{1,120})"').exec(bron);
+            return m ? m[1] : "";
+          };
+          const l1 = nr("l1CategoryId"), l2 = nr("l2CategoryId");
+          if (!l1 || !l2) return null;
+          return { l1, l2, l1_naam: tekst("l1CategoryName"), l2_naam: tekst("l2CategoryName") };
+        } catch (e) { return null; }
+      })();
+
       const blok = document.querySelector('[class*="Description-module-description"]');
       return {
         photo_urls: fotos,
@@ -2415,6 +2471,7 @@ async function mpAdvertentieSnapshot(tabId) {
         size: maatUit(kenmerk["maat"] || kenmerk["kledingmaat"] || ""),
         color: kenmerk["kleur"] || "",
         condition: conditieNaarOns(kenmerk["conditie"] || kenmerk["staat"] || ""),
+        mp_category,
       };
     }, [MP_FOTO_REGEL]);
     if (!snap) return {};

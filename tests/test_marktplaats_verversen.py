@@ -233,3 +233,158 @@ def test_de_bouwer_snijdt_de_echte_marktplaats_code_mee():
     bouwer = (ROOT / "tests/vinted-mock/build.js").read_text(encoding="utf-8")
     for naam in ("bgDeleteMp2dh", "expandMp2dhOverview", "verwijderViaAdvertentiepagina"):
         assert naam in bouwer, f"{naam} wordt niet meer in het namaakscherm geladen"
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# DE ADVERTENTIE KOMT TERUG IN ZIJN EIGEN CATEGORIE (30-08-2026, Amanda)
+#
+# "Als je een advertentie van marktplaats laat refreshen: dan gaat dat goed, tot
+# het punt dat de advertentie is geplaatst: hij zet deze dan in de verkeerde
+# categorie. Dit kun je bij MP niet aanpassen, dus moet je de advertentie weer
+# in zijn geheel handmatig plaatsen."
+#
+# Oorzaak: bij het importeren werd de categorie van Marktplaats weggegooid en
+# door een taalmodel opnieuw geraden uit onze eigen lijst. Die lijst kent
+# kleding, wonen, antiek, muziek en sieraden — Amanda verkoopt daarnaast munten,
+# bankbiljetten, postzegels en boeken. Voor die takken bestaat er geen goede
+# doos, dus werd het altijd de verkeerde.
+#
+# Marktplaats zet de echte categorie gewoon op de advertentiepagina. Die wordt nu
+# vlak vóór het verwijderen gelezen (en nog eens door de extensie zelf, die daar
+# ingelogd staat) en gaat mee in de plaatsingsopdracht.
+
+import json
+import shutil
+import subprocess
+import sys
+
+sys.path.insert(0, str(ROOT))
+NODE = shutil.which("node")
+
+# Zoals het er letterlijk op een echte, openbare advertentiepagina staat
+# (marktplaats.nl, 30-08-2026, een Libisch bankbiljet).
+ECHTE_PAGINA = (
+    '{"categoryId":"1784","x":1,"l1CategoryId":1784,"l1CategoryName":"Postzegels en Munten",'
+    '"l2CategoryId":1789,"l2CategoryName":"Bankbiljetten | Afrika","y":2}'
+)
+
+
+def test_de_echte_categorie_wordt_van_de_pagina_gelezen():
+    from backend.services.mp_enrich import categorie_uit_html
+    assert categorie_uit_html(ECHTE_PAGINA) == {
+        "l1": 1784, "l1_naam": "Postzegels en Munten",
+        "l2": 1789, "l2_naam": "Bankbiljetten | Afrika",
+    }
+
+
+def test_een_half_paar_telt_niet():
+    """Met alleen een hoofdcategorie kun je geen plaatsformulier openen — en half
+    raden is precies wat dit moet stoppen."""
+    from backend.services.mp_enrich import categorie_uit_html
+    assert categorie_uit_html('{"l1CategoryId":1784}') == {}
+    assert categorie_uit_html("") == {}
+
+
+def _mp_url_js() -> str:
+    """MP_CATEGORIES + getMpSyiUrl, letterlijk uit background.js gesneden."""
+    stukken = []
+    for tabel in ("const MP_BABY_SIZES = {", "const MP_KIDS_SIZES = {", "const MP_CATEGORIES = {"):
+        i = BG.index(tabel)
+        stukken.append(BG[i:BG.index("{", i)] + _body_vanaf(BG, i) + ";")
+    for naam in ("mpCategorieOpNummer", "mpKidsSizeCat3", "getMpSyiUrl"):
+        m = re.search(rf"^function {naam}\(", BG, flags=re.M)
+        assert m, naam
+        stukken.append(BG[m.start():BG.index("{", m.start())] + _body_vanaf(BG, m.start()))
+    m = re.search(r"^let _mpOpNummer[^\n]*", BG, flags=re.M)
+    assert m, "_mpOpNummer"
+    return (m.group(0) + "\n"
+            + "class CategoryUnresolvedError extends Error {}\n"
+            + "\n".join(stukken))
+
+
+def _syi(item: dict, bron: str | None = None) -> str:
+    driver = (f"{bron if bron is not None else _mp_url_js()}\n"
+              f"try {{ console.log(getMpSyiUrl('marktplaats', {json.dumps(item)})); }}"
+              f" catch (e) {{ console.log('FOUT: ' + e.message); }}")
+    r = subprocess.run([NODE, "-e", driver], capture_output=True, text=True, timeout=30)
+    assert r.returncode == 0, r.stderr
+    return r.stdout.strip()
+
+
+@pytest.mark.skipif(NODE is None, reason="node is niet geïnstalleerd")
+def test_een_categorie_buiten_onze_lijst_gaat_op_de_nummers_van_marktplaats():
+    """Postzegels en Munten staat niet in onze lijst — en hoeft dat ook niet."""
+    url = _syi({
+        "title": "Libisch 1 Dinar biljet - Zeldzaam verzamelobject",
+        "category": "antiek curiosa en brocante",   # de geraden categorie
+        "gender": "antiek",
+        "mp_category": {"l1": 1784, "l2": 1789, "l2_naam": "Bankbiljetten | Afrika"},
+    })
+    assert url == "https://www.marktplaats.nl/plaats/1784/1789?title="
+
+
+@pytest.mark.skipif(NODE is None, reason="node is niet geïnstalleerd")
+def test_de_oude_versie_zette_hem_in_de_geraden_categorie():
+    """Tegenbewijs: zonder deze reparatie meet de test hierboven niets."""
+    oud = subprocess.run(["git", "show", "HEAD:extension/background.js"],
+                         cwd=ROOT, capture_output=True, text=True, check=True).stdout
+    bron = "class CategoryUnresolvedError extends Error {}\n"
+    for tabel in ("const MP_BABY_SIZES = {", "const MP_KIDS_SIZES = {", "const MP_CATEGORIES = {"):
+        i = oud.index(tabel)
+        bron += oud[i:oud.index("{", i)] + _body_vanaf(oud, i) + ";\n"
+    for naam in ("mpKidsSizeCat3", "getMpSyiUrl"):
+        m = re.search(rf"^function {naam}\(", oud, flags=re.M)
+        bron += oud[m.start():oud.index("{", m.start())] + _body_vanaf(oud, m.start()) + "\n"
+    url = _syi({
+        "title": "Libisch 1 Dinar biljet - Zeldzaam verzamelobject",
+        "category": "antiek curiosa en brocante",
+        "gender": "antiek",
+        "mp_category": {"l1": 1784, "l2": 1789},
+    }, bron=bron)
+    assert url != "https://www.marktplaats.nl/plaats/1784/1789?title=", \
+        "de oude versie deed dit al — dan is het tegenbewijs weg"
+    assert "1784" not in url, url
+
+
+@pytest.mark.skipif(NODE is None, reason="node is niet geïnstalleerd")
+def test_een_categorie_die_we_wel_kennen_houdt_zijn_eigen_regel():
+    """Daar hangt het bucketId aan; dat adres is bewezen en blijft leidend."""
+    kleding = _syi({"title": "Grijze trui", "category": "jeans", "gender": "dames"})
+    assert kleding == "https://www.marktplaats.nl/plaats/621/636?bucketId=162&title="
+    # Nu hetzelfde paar, maar aangereikt door Marktplaats zelf: zelfde adres,
+    # inclusief bucketId — niet de kale tweenummervorm.
+    zelfde = _syi({"title": "Grijze trui", "category": "", "gender": "",
+                   "mp_category": {"l1": 621, "l2": 636}})
+    assert zelfde == kleding, zelfde
+
+
+@pytest.mark.skipif(NODE is None, reason="node is niet geïnstalleerd")
+def test_zonder_categorie_van_marktplaats_verandert_er_niets():
+    assert _syi({"title": "Grijze trui", "category": "jeans", "gender": "dames"}) \
+        == "https://www.marktplaats.nl/plaats/621/636?bucketId=162&title="
+    assert _syi({"title": "Iets", "category": "", "gender": ""}).startswith("FOUT: ")
+
+
+def test_de_categorie_wordt_opgehaald_voor_het_verwijderen():
+    """Na het verwijderen is de advertentiepagina 410 en is de categorie weg —
+    en een mislukte herplaatsing kost de advertentie."""
+    relist = (ROOT / "backend/services/relist.py").read_text(encoding="utf-8")
+    assert "categorie_van_advertentie" in relist
+    voorbereiden = relist.index("---- 1. Alles voorbereiden")
+    wegschrijven = relist.index("---- 2. Nu pas wegschrijven")
+    assert voorbereiden < relist.index("categorie_van_advertentie") < wegschrijven
+
+
+def test_de_extensie_legt_de_categorie_ook_zelf_vast():
+    """Tweede bron: de extensie staat ingelogd op die pagina, de server niet —
+    Marktplaats geeft een server nog weleens een 403."""
+    snap = BG.split("async function mpAdvertentieSnapshot(tabId)")[1].split("\n}\n")[0]
+    assert "l1CategoryId" in snap and "l2CategoryId" in snap
+    assert "mp_category," in snap, "de categorie moet ook echt teruggegeven worden"
+
+
+def test_de_opgevangen_categorie_overschrijft_de_geraden_categorie():
+    jobs = (ROOT / "backend/api/jobs.py").read_text(encoding="utf-8")
+    blok = jobs.split('cap_cat = captured.get("mp_category")')[1][:400]
+    assert 'payload["mp_category"] = cap_cat' in blok
+    assert 'cap_cat.get("l1") and cap_cat.get("l2")' in blok

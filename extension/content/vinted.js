@@ -1985,15 +1985,21 @@
       // A -4 penalty wasn't enough: on ties or weak hints "Tennis shoes" could still
       // surface. A normal sneaker must NEVER land in Tennis/Football/Running shoes.
       for (const n of NICHE_SHOE) if (t.includes(n) && !sportNamed(n)) return -Infinity;
+      // Een lamp, een beeldje of een rozenkrans hoort nergens onder "Kleding".
+      // Vinted noemt die tak in het Engels "Clothing" en in het Nederlands
+      // "Kleding"; beide vormen komen in het kruimelpad voor.
+      if (isNietKleding && /\bclothing\b|\bkleding\b/.test(t)) return -Infinity;
       let s = 0;
+      // Raakt dit blad überhaupt iets van wat we zoeken?
+      let geraakt = false;
       // De naam van de categorie zelf weegt zwaarder dan het pad ernaartoe.
       // Anders telde een woord dubbel — één keer als bladnaam en één keer in het
       // kruimelpad — en won "Activewear > Tops & t-shirts" van het gewone
       // "Tops & t-shirts > T-shirts" voor een doodgewoon T-shirt.
       const [blad, pad] = t.includes(" | ") ? t.split(" | ") : [t, ""];
       for (const h of hints) {
-        if (blad.includes(h)) s += 3;
-        else if (pad.includes(h)) s += 2;
+        if (blad.includes(h)) { s += 3; geraakt = true; }
+        else if (pad.includes(h)) { s += 2; geraakt = true; }
       }
       // Sportkleding zit bij Vinted in een eigen tak ("Activewear"). Hoort het
       // artikel daar niet, dan mag het daar ook niet belanden — en andersom.
@@ -2019,7 +2025,20 @@
       const isWomenRow = /\bwomen\b/.test(t);
       if (wantMen) { if (isMenRow) s += 3; if (isWomenRow) s -= 5; }
       if (wantWomen) { if (isWomenRow) s += 3; if (isMenRow) s -= 5; }
-      if (hints.length === 0 && /shoe|clothing|jacket|dress|jeans/.test(t)) s += 1;
+      if (hints.length === 0 && /shoe|clothing|jacket|dress|jeans/.test(t)) { s += 1; geraakt = true; }
+      // EEN BONUSPUNT MAG NOOIT DE KEUZE MAKEN.
+      //
+      // Alles hierboven ("Other …" is +1, sneakers is +2, de juiste sekse is +3)
+      // is bedoeld om te kiezen TUSSEN bladen die al ergens op sloegen. Maar
+      // `best()` neemt elk blad met een score boven nul, dus zo'n bonuspunt was
+      // in zijn eentje genoeg. Bij een artikel waar geen enkele hint op past —
+      // een vintage lamp, een beeldje, een rozenkrans — won daardoor het eerste
+      // blad dat toevallig "Other …" heette of het woord "sneakers" droeg. Dat
+      // is precies hoe brocante bij de kinderkleding belandde.
+      //
+      // Raakt een blad geen enkele hint, dan is het geen kandidaat. Liever geen
+      // categorie (de verkoper kiest zelf) dan de verkeerde.
+      if (!geraakt) return 0;
       return s;
     };
 

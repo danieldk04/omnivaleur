@@ -232,3 +232,59 @@ def test_databasefout_wist_nooit_iets(gewist):
 
     _release_photos(_Plat(), "u1", [BUCKET_URL + "u1/aaa.jpg"])
     assert gewist == []
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# DEZELFDE FOTO MAAR ÉÉN KEER (30-08-2026, Amanda: "of plaatst de foto's dubbel")
+#
+# De naam van een gespiegelde foto is de vingerafdruk van de INHOUD. Twee foto's
+# die bij Marktplaats onder verschillende nummers staan maar dezelfde afbeelding
+# zijn — een verkoper die dezelfde foto twee keer uploadde — komen er hier dus
+# als twee identieke adressen uit, en gingen allebei mee naar het formulier.
+# Gemeten op 30-08-2026: 71 artikelen over vier accounts hadden zo'n dubbele
+# regel in hun fotolijst.
+
+from backend.services.photo_mirror import ontdubbel  # noqa: E402
+
+EXT = Path(__file__).resolve().parents[1] / "extension"
+
+
+def test_dezelfde_foto_blijft_een_keer_over():
+    a = "https://img.omnivaleur.com/u/imported/aaaa.jpg"
+    b = "https://img.omnivaleur.com/u/imported/bbbb.jpg"
+    assert ontdubbel([a, b, a, b, a]) == [a, b]
+
+
+def test_de_volgorde_blijft_staan_want_foto_een_is_de_omslagfoto():
+    a, b, c = "x/1.jpg", "x/2.jpg", "x/3.jpg"
+    assert ontdubbel([b, a, b, c]) == [b, a, c]
+
+
+def test_hetzelfde_plaatje_in_een_ander_formaat_telt_als_dubbel():
+    """Marktplaats hangt het formaat achter een vraagteken: ?rule=… — dat is
+    dezelfde foto, niet een tweede."""
+    basis = "https://images.marktplaats.com/api/v1/x/images/abcdef1234567890"
+    assert ontdubbel([f"{basis}?rule=groot", f"{basis}?rule=klein"]) == [f"{basis}?rule=groot"]
+
+
+def test_er_wordt_nooit_een_foto_weggegooid_die_uniek_is():
+    urls = [f"x/{i}.jpg" for i in range(9)]
+    assert ontdubbel(urls) == urls
+
+
+def test_de_spiegeling_ontdubbelt_zelf():
+    bron = (Path(__file__).resolve().parents[1]
+            / "backend/services/photo_mirror.py").read_text(encoding="utf-8")
+    assert "return ontdubbel(list(await asyncio.gather" in bron, \
+        "zonder dit staat de dubbele regel meteen weer in de database"
+
+
+def test_de_extensie_uploadt_nooit_twee_keer_dezelfde_foto():
+    """Vangnet voor items die al vóór deze reparatie zijn opgeslagen — die
+    dragen hun dubbele regel gewoon nog met zich mee."""
+    shared = (EXT / "content/shared.js").read_text(encoding="utf-8")
+    blok = shared.split("async function uploadPhotos(urls, opts = {}) {")[1][:1200]
+    assert "const gezien = new Set();" in blok
+    assert 'String(u || "").split("?")[0]' in blok
+    # vóór het ophalen van de bestanden, anders is het werk al gedaan
+    assert blok.index("gezien.add") < blok.index("input[type=\"file\"]")
