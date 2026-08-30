@@ -366,6 +366,44 @@ def _onze_maat(waarde: str) -> str:
     return n.group(1) if n else ""
 
 
+def categorie_uit_html(ruwe: str) -> dict:
+    """De categorie waar deze advertentie ECHT in staat, met de nummers erbij.
+
+    WAAROM DIT BESTAAT (30-08-2026, Amanda). "Als je een advertentie van
+    marktplaats laat refreshen: dan gaat dat goed, tot het punt dat de
+    advertentie is geplaatst: hij zet deze dan in de verkeerde categorie. Dit
+    kun je bij MP niet aanpassen, dus moet je de advertentie weer in zijn geheel
+    handmatig plaatsen."
+
+    Dat klopte, en de oorzaak was pijnlijk simpel: bij het importeren gooiden we
+    de echte categorie weg en lieten we een taalmodel er een nieuwe bij raden uit
+    onze eigen, veel kleinere lijst. Amanda verkoopt brocante, munten,
+    bankbiljetten en boeken — takken die in onze lijst niet eens bestaan. Alles
+    werd dus in de dichtstbijzijnde doos geduwd, en bij het herplaatsen kwam de
+    advertentie daar ook echt terecht.
+
+    Terwijl Marktplaats het gewoon zelf op de advertentiepagina zet:
+    "l1CategoryId":1784,"l1CategoryName":"Postzegels en Munten",
+    "l2CategoryId":1789,"l2CategoryName":"Bankbiljetten | Afrika".
+    Nagelezen op 30-08-2026 op een echte, openbare advertentie.
+    """
+    if not ruwe:
+        return {}
+    uit: dict = {}
+    for nummer, naam, sleutel in (("l1CategoryId", "l1CategoryName", "l1"),
+                                  ("l2CategoryId", "l2CategoryName", "l2")):
+        m = re.search(rf'"{nummer}"\s*:\s*"?(\d+)"?', ruwe)
+        if not m:
+            continue
+        uit[sleutel] = int(m.group(1))
+        n = re.search(rf'"{naam}"\s*:\s*"([^"]{{1,120}})"', ruwe)
+        if n:
+            uit[f"{sleutel}_naam"] = html.unescape(n.group(1))
+    # Alleen een compleet paar is bruikbaar: met alleen een hoofdcategorie kun je
+    # geen plaatsformulier openen, en half raden is precies wat dit moet stoppen.
+    return uit if uit.get("l1") and uit.get("l2") else {}
+
+
 async def volledige_advertentie(client: httpx.AsyncClient, url: str) -> dict:
     """Alles wat één advertentiepagina prijsgeeft, in één ophaalronde."""
     ruwe = await _pagina(client, url)
@@ -379,7 +417,27 @@ async def volledige_advertentie(client: httpx.AsyncClient, url: str) -> dict:
         "size": _onze_maat(k.get("maat") or k.get("kledingmaat") or ""),
         "color": k.get("kleur", ""),
         "condition": _onze_conditie(k.get("conditie") or k.get("staat") or ""),
+        "mp_category": categorie_uit_html(ruwe),
     }
+
+
+async def categorie_van_advertentie(url: str) -> dict:
+    """De echte Marktplaats-categorie van één advertentie, of een leeg blok.
+
+    Wordt aangeroepen vlak vóór een herplaatsing, als de oude advertentie nog
+    online staat. Mislukt het (403, tijdslimiet, gewijzigde pagina), dan komt er
+    een leeg blok terug en valt het herplaatsen terug op de oude weg — nooit een
+    fout, want een gemiste categorie mag geen advertentie kosten.
+    """
+    if not url or not re.match(r"^https://(?:www\.)?(?:marktplaats\.nl|2dehands\.be)/v/", url):
+        return {}
+    try:
+        async with httpx.AsyncClient(timeout=20, follow_redirects=True,
+                                     headers={"User-Agent": UA}) as client:
+            return categorie_uit_html(await _pagina(client, url))
+    except Exception as e:  # noqa: BLE001
+        logger.warning("mp_enrich: categorie niet gelezen (%s): %s", url, e)
+        return {}
 
 
 def _is_afgekapt(kort: str, lang: str) -> bool:
