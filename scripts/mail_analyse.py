@@ -573,8 +573,8 @@ def bericht_over_reparaties() -> int:
     """
     signalen = bugs()
     # PER PERSOON, NIET PER STORING — en dat is geen opmaakkeuze.
-    # Er ligt nooit meer dan één concept tegelijk voor dezelfde persoon (het slot
-    # in _waarom_geen_concept). Ging dit per storing, dan kreeg iemand met vier
+    # Zolang er een antwoord voor deze persoon klaarligt komt hier niets bij (het
+    # slot in _waarom_geen_concept). Ging dit per storing, dan kreeg iemand met vier
     # gerepareerde meldingen er één, en bleven de andere drie hangen tot Daniel
     # die eerste mail had verstuurd. Gemeten op 29-08-2026: Egbert had er vier
     # klaarstaan en hoorde niets — juist de klant die dreigde te stoppen.
