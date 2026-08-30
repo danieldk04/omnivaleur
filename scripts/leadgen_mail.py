@@ -3350,8 +3350,16 @@ def _meld_concept_klaar(lead: dict, onderwerp: str, tekst: str,
     msg["From"] = f"Klantenservice <{van}>"
     msg["To"] = ", ".join(ALARM_NAAR)
     msg["Subject"] = f"Klaar om te versturen: {_bedrijfsnaam(lead) or adres}"
+    # Ligt er nog een ouder concept voor dezelfde persoon, dan moet dat erbij:
+    # het gaat over een bericht dat inmiddels is ingehaald, en het staat eronder
+    # in de map. Zonder deze regel is de kans groot dat het verkeerde de deur
+    # uit gaat.
+    dubbel = ("\nLET OP: er ligt ook nog een OUDER concept voor deze persoon, over "
+              "een bericht dat hij daarna heeft ingehaald. Dit hier is de nieuwe; "
+              "de oude kun je weggooien.\n"
+              if adres in _ACHTERHAALD_CONCEPT else "")
     msg.set_content(
-        f"Er ligt een concept klaar in je conceptenmap.\n\n"
+        f"Er ligt een concept klaar in je conceptenmap.\n{dubbel}\n"
         f"Aan:        {adres}\n"
         f"Onderwerp:  {onderwerp}\n"
         f"Geschreven: {bron}\n\n"
