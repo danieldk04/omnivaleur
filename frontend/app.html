@@ -928,7 +928,7 @@ input[type="checkbox"].row-check { width: 15px; height: 15px; cursor: pointer; a
           <div class="an-chart-title" style="margin-bottom:0">Sales breakdown</div>
           <div style="font-size:11.5px;color:var(--muted)" id="an-sales-summary"></div>
         </div>
-        <div style="font-size:11.5px;color:var(--muted);margin-bottom:12px">Every sale behind the numbers above. Highlighted rows need a tweak: <b>confirm</b> the real sale price, <b>＋ add cost</b> for profit, or mark <b>Not sold</b> if it isn't actually sold.</div>
+        <div style="font-size:11.5px;color:var(--muted);margin-bottom:12px">Every sale behind the numbers above. Highlighted rows need a tweak: <b>confirm</b> the real sale price, <b>＋ add cost</b> for profit, or mark <b>Not sold</b> if it isn't actually sold. The date is the day we <i>detected</i> the sale — click it to correct one that's off.</div>
         <div style="overflow-x:auto">
           <table class="an-sales-table" id="an-sales-table">
             <thead>
@@ -8724,6 +8724,31 @@ async function setSoldPrice(itemId, platform, suggested) {
   }
 }
 
+// Correct a sale date. We stamp the moment we NOTICE a sale; when the platform's
+// own order page doesn't tell us the real date (or told us nothing for weeks),
+// that stamp can be days off and the revenue chart shows a spike that never
+// happened. This lets the seller put the sale back on the day it happened.
+async function setSoldDate(itemId, platform, current) {
+  const label = PLATFORM_LABELS[platform] || platform;
+  const huidig = current ? String(current).slice(0, 10) : '';
+  const raw = prompt(`When did this item actually sell on ${label}?\n\nUse YYYY-MM-DD. We fill in the day we detected the sale, which can be later than the real one.`, huidig);
+  if (raw === null) return;                     // cancelled
+  try {
+    const r = await apiFetch(`${API}/api/listings/sold-date`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ item_id: itemId, platform, sold_at: String(raw).trim() }),
+    });
+    const data = await parseJsonSafe(r);
+    if (!r.ok) throw new Error(data.detail || 'Could not save the date');
+    const l = state.listings.find(x => x.item_id === itemId && x.platform === platform && x.status === 'sold');
+    if (l) l.sold_at = data.sold_at;
+    showToast('Sale date updated.');
+    renderAnalytics(true);
+  } catch (e) {
+    alert('Error saving the sale date: ' + e.message);
+  }
+}
+
 // Undo a false "sold" (dashboard auto-detected a Vinted sale that didn't happen).
 // Flips the listing back to active so it leaves the analytics again.
 async function markNotSold(itemId, platform, title) {
@@ -9005,7 +9030,7 @@ function renderAnalytics(force) {
         ? `<button class="an-cost-btn" title="This is the asking price — set what you actually received" onclick="setSoldPrice('${item.id}','${p}',${amount})">~€${amount.toFixed(2)} · confirm</button>`
         : `€${amount.toFixed(2)} <span style="cursor:pointer;color:var(--muted)" title="Edit sold price" onclick="setSoldPrice('${item.id}','${p}',${amount})">✎</span>`;
       return `<tr class="${(estimate || !hasCost) ? 'an-row-missing' : ''}">
-        <td style="color:var(--muted)">${soldDate}</td>
+        <td style="color:var(--muted)"><span style="cursor:pointer;text-decoration:underline;text-decoration-style:dotted" title="Wrong date? We fill in the day we detected the sale — click to correct it" onclick="setSoldDate('${item.id}','${p}','${listing.sold_at || ''}')">${soldDate}</span></td>
         <td><div class="an-sales-item">${thumb}<span class="an-sales-title" title="${esc(item.title || '')}">${esc(item.title || 'Untitled')}</span></div></td>
         <td><span style="font-size:12px">${PLATFORM_ICONS[p] || '🏪'}</span> ${PLATFORM_LABELS[p] || p}</td>
         <td class="an-sales-num">${saleCell}</td>

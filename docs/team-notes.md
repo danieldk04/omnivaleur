@@ -1757,3 +1757,42 @@ gat.
 
 **Voor Daniel:** er ligt een concept klaar dat hem door de drie stappen loodst en
 een gesprek aanbiedt; de Google Meet-link moet daar zelf in.
+
+### 30-08-2026 — De omzet van weken stond op één dag
+
+Daniel zag in Analytics twaalf verkopen op 30 augustus staan, met artikelen die
+in mei en juni waren geplaatst. In de database staan ze inderdaad alle twaalf
+gestempeld tussen 07:36:54 en 07:37:06 — één en dezelfde ronde.
+
+**De oorzaak.** Een verkoop kreeg tot nu toe de datum waarop wij hem ONTDEKTEN,
+niet de datum waarop hij plaatsvond. Bij Vinted ontdekken we verkopen door elke
+tien minuten de eigen bestellingenpagina van de verkoper te lezen. Die pagina is
+een geschiedenis: er staan ook bestellingen van weken terug op. Zolang elke ronde
+draait valt dat niet op. Slaat er een periode over — de extensie lag stil (zie de
+Chrome-storing hierboven), de verkoper is net begonnen, of een verbetering
+herkent ineens oude bestellingen die eerder niet te koppelen waren — dan worden
+ze in één klap geboekt met de klok van dat moment.
+
+Dit raakte niet alleen Vinted. Ook de Shopify-inhaalronde (die bewust 24 uur
+terugkijkt) en de eBay-melding gooiden de datum weg die ze wél meekregen.
+
+**Wat er nu geldt.**
+
+1. De extensie stuurt de datum mee die het platform zelf bij de bestelling toont
+   (het machineleesbare `datetime`-veld eerst, de zichtbare tekst als vangnet).
+   Shopify geeft `processed_at`, eBay het verkooptijdstip uit de melding.
+2. Een datum die niet met zekerheid te lezen is, wordt niet gegokt — dezelfde
+   regel als in `mp_datums.py`. Dan blijft staan wat er staat.
+3. **Een verkoopdatum mag alleen naar voren in de tijd worden bijgesteld, nooit
+   naar achteren.** Ontdekken kan nooit eerder dan verkopen, dus een lagere datum
+   is per definitie de betere. Daardoor repareren de bestaande foute stempels
+   zichzelf zodra een ronde de echte datum leest, en kan geen enkele herdetectie
+   een oude verkoop opnieuw naar vandaag schuiven.
+4. Boekt een ronde vier of meer verkopen tegelijk zonder één leesbare datum, dan
+   staat er een waarschuwing in de serverlog: dan is de opmaak van de
+   bestellingenpagina veranderd en moet de scraper bij.
+5. De datum in Analytics is aanklikbaar en corrigeerbaar (`/listings/sold-date`),
+   zodat een verkeerde datum nooit meer vastligt.
+
+Extensie 1.0.267. De ondergrens is bewust niet opgehoogd: een oudere kopie stuurt
+geen datum mee en valt terug op het oude gedrag, wat niet erger is dan nu.

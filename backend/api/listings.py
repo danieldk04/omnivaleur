@@ -7,6 +7,7 @@ from backend.services.relist import (
     RefreshError, REFRESH_CAPABLE_PLATFORMS,
 )
 from backend.api.deps import get_current_user, require_active_subscription
+from backend.services.verkoopdatum import als_datum, lees_verkoopdatum
 from datetime import datetime, timezone
 import re
 import unicodedata
@@ -422,6 +423,46 @@ def set_sold_price(body: dict, user_id: str = Depends(get_current_user)):
     return {"ok": True, "sold_price": sold_price}
 
 
+@router.post("/sold-date")
+def set_sold_date(body: dict, user_id: str = Depends(get_current_user)):
+    """
+    De verkoopdatum van een al verkochte advertentie bijstellen.
+
+    Nodig omdat wij een verkoop soms pas later opmerken. Herkennen we de datum
+    op de bestellingenpagina van het platform niet, dan staat er de dag waarop
+    wij hem zagen — en die kan er weken naast zitten. Zonder deze knop kan de
+    verkoper dat nooit rechtzetten en blijft zijn omzetgrafiek scheef staan.
+
+    Body: {item_id, platform, sold_at}  (ISO-datum, "2026-08-17")
+    """
+    item_id = body.get("item_id")
+    platform = body.get("platform")
+    if not item_id or not platform:
+        raise HTTPException(status_code=400, detail="item_id and platform are required")
+
+    datum = lees_verkoopdatum(body.get("sold_at"))
+    if datum is None:
+        raise HTTPException(status_code=400,
+                            detail="sold_at must be a real date, no later than today")
+
+    db = get_db()
+    owned = db.table("items").select("id").eq("id", item_id).eq("user_id", user_id).execute()
+    if not owned.data:
+        raise HTTPException(status_code=404, detail="Item not found")
+
+    res = (
+        db.table("listings")
+        .update({"sold_at": datum.isoformat()})
+        .eq("item_id", item_id)
+        .eq("platform", platform)
+        .eq("status", "sold")
+        .execute()
+    )
+    if not res.data:
+        raise HTTPException(status_code=404, detail="No sold listing found for this item on that platform")
+    return {"ok": True, "sold_at": datum.isoformat()}
+
+
 @router.post("/not-sold")
 def mark_not_sold(body: dict, user_id: str = Depends(get_current_user)):
     """
@@ -500,10 +541,19 @@ async def reconcile_vinted_orders(body: dict, user_id: str = Depends(get_current
     — either the SKU, or the item's full title appearing verbatim in the order row.
     Anything ambiguous or unknown is skipped, never guessed, so a bad scrape can't
     mark the wrong item sold (and trigger its cross-platform delist).
-    Already-sold items are only touched to backfill a missing sold_price, so this
-    endpoint can run every few minutes without re-queuing delist jobs.
+    Already-sold items are only touched to backfill a missing sold_price or to
+    correct a sale date that was stamped too late, so this endpoint can run every
+    few minutes without re-queuing delist jobs.
 
-    Body: {orders: [{sku?, text?, price, sold}]}
+    DE DATUM (30-08-2026). Deze pagina is een GESCHIEDENIS, geen melding: er
+    staan ook bestellingen van weken terug op. Boekten we die met de klok van het
+    moment van ontdekken, dan kreeg elke bestelling die we voor het eerst konden
+    koppelen de datum van vandaag — en na een stille periode landde de omzet van
+    weken op één dag. De extensie stuurt daarom de datum mee die Vinted zelf bij
+    de bestelling toont; herkennen we die niet, dan verandert er niets aan een
+    al geboekte datum en valt een nieuwe verkoop terug op nu.
+
+    Body: {orders: [{sku?, text?, price, sold, date?}]}
     """
     orders = body.get("orders")
     if not isinstance(orders, list):
@@ -540,6 +590,8 @@ async def reconcile_vinted_orders(body: dict, user_id: str = Depends(get_current
 
     marked_sold = 0
     price_backfilled = 0
+    date_fixed = 0
+    zonder_datum = 0
     matched = 0
     unmatched_skus = []
     sold_orders = [o for o in orders if isinstance(o, dict) and o.get("sold")]
@@ -551,6 +603,18 @@ async def reconcile_vinted_orders(body: dict, user_id: str = Depends(get_current
             continue
         sku = str(o.get("sku") or "").strip()
         price = _parse_sku_price(o.get("price"))
+        # De datum die Vinted bij de bestelling toont. De extensie levert de
+        # kandidaten op volgorde van betrouwbaarheid aan (het datetime-attribuut
+        # van de pagina eerst, de zichtbare regeltekst als laatste); de eerste die
+        # met zekerheid te lezen is wint. Lukt geen enkele, dan blijft het None en
+        # raken we een bestaande datum niet aan.
+        datum = None
+        for kandidaat in ([o.get("date")] if not isinstance(o.get("date"), list) else o.get("date")) + [o.get("text")]:
+            datum = lees_verkoopdatum(kandidaat)
+            if datum:
+                break
+        if datum is None:
+            zonder_datum += 1
 
         item_id = None
         if sku:
@@ -579,6 +643,19 @@ async def reconcile_vinted_orders(body: dict, user_id: str = Depends(get_current
                     price_backfilled += 1
                 except Exception:
                     pass
+            # En de datum terugzetten als die te laat is gestempeld. Alleen naar
+            # VOREN in de tijd: ontdekken kan nooit eerder dan verkopen, dus een
+            # eerdere datum is per definitie de betere. Hiermee repareren zich ook
+            # de verkopen die eerder allemaal op de ontdekdag zijn beland.
+            if datum is not None:
+                staand = sold_row.get("sold_at")
+                if not staand or datum < als_datum(staand):
+                    try:
+                        (await naast_de_lus(lambda: db.table("listings")
+                         .update({"sold_at": datum.isoformat()}).eq("id", sold_row["id"]).execute()))
+                        date_fixed += 1
+                    except Exception:
+                        pass
             continue
 
         # New sale. Ensure a Vinted listing row exists so it shows in analytics,
@@ -588,11 +665,26 @@ async def reconcile_vinted_orders(body: dict, user_id: str = Depends(get_current
                 "item_id": item_id, "platform": "vinted", "status": "active",
             }).execute()))
         try:
-            await handle_item_sold(item_id, "vinted", price)
+            await handle_item_sold(item_id, "vinted", price, sold_at=datum)
             marked_sold += 1
         except Exception:
             pass
 
-    logger.info("[sold] reconcile-vinted-orders: matched=%d newly_sold=%d price_backfilled=%d unmatched=%d unmatched_skus=%s",
-                matched, marked_sold, price_backfilled, len(unmatched_skus), unmatched_skus)
-    return {"ok": True, "marked_sold": marked_sold, "price_backfilled": price_backfilled}
+    # Alarm voor precies de storing die dit alles veroorzaakte: een ronde die in
+    # één keer een stapel verkopen boekt ZONDER dat er ook maar één datum te
+    # lezen was. Dan is de opmaak van Vinteds bestellingenpagina veranderd en
+    # krijgen die verkopen allemaal de datum van vandaag. Zichtbaar in de logs,
+    # zodat het niet weer weken onopgemerkt blijft.
+    if marked_sold > 3 and zonder_datum >= marked_sold:
+        logger.warning(
+            "[sold] reconcile-vinted-orders: %d verkopen tegelijk geboekt zonder ENKELE leesbare "
+            "datum (user=%s). Ze krijgen nu allemaal de datum van vandaag. Controleer de "
+            "datumvelden op de Vinted-bestellingenpagina in de extensie.",
+            marked_sold, user_id,
+        )
+    logger.info("[sold] reconcile-vinted-orders: matched=%d newly_sold=%d price_backfilled=%d "
+                "date_fixed=%d zonder_datum=%d unmatched=%d unmatched_skus=%s",
+                matched, marked_sold, price_backfilled, date_fixed, zonder_datum,
+                len(unmatched_skus), unmatched_skus)
+    return {"ok": True, "marked_sold": marked_sold, "price_backfilled": price_backfilled,
+            "date_fixed": date_fixed, "zonder_datum": zonder_datum}

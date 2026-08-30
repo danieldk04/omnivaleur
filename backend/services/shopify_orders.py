@@ -110,6 +110,11 @@ async def controleer_shopify_verkopen() -> dict:
             if not skus:
                 continue
             prijzen = extract_sku_prices_from_order(order)
+            # De ECHTE besteldatum. Deze ronde kijkt bewust terug in de tijd (bij
+            # een nieuwe koppeling 24 uur, na een storing langer), dus zonder deze
+            # datum zou elke ingehaalde bestelling als "vandaag verkocht" in de
+            # omzet belanden.
+            besteld_op = order.get("processed_at") or order.get("created_at")
             for sku in skus:
                 try:
                     # LET OP: altijd op user_id filteren. Twee winkeliers kunnen
@@ -123,7 +128,8 @@ async def controleer_shopify_verkopen() -> dict:
                     if not treffer:
                         continue
                     await handle_item_sold(treffer[0]["id"], "shopify",
-                                           sold_price=prijzen.get(sku))
+                                           sold_price=prijzen.get(sku),
+                                           sold_at=besteld_op)
                     verwerkt += 1
                 except Exception as e:  # noqa: BLE001
                     logger.warning("shopify-verkoopcontrole: %s / sku %s: %s", shop, sku, e)

@@ -64,11 +64,27 @@ async def ebay_webhook(request: Request):
                     pass
         return None
 
+    # Net als de prijs: eBay hangt het moment van de verkoop onder wisselende
+    # namen in de melding. De ECHTE datum is belangrijk, want zonder krijgt de
+    # verkoop de klok van het moment van verwerken — en bij een herhaalde of
+    # vertraagde melding staat de omzet dan op de verkeerde dag.
+    def _ebay_sale_time(payload_, d):
+        for bron in (d, payload_.get("metadata") or {}, payload_):
+            for key in ("saleDate", "soldDate", "creationDate", "eventDate", "emitTime", "publishDate"):
+                v = bron.get(key)
+                if isinstance(v, dict):
+                    v = v.get("value")
+                if v:
+                    return v
+        return None
+
     if listing_id:
         db = get_db()
         listing = (await naast_de_lus(lambda: db.table("listings").select("item_id").eq("platform_listing_id", str(listing_id)).eq("platform", "ebay").execute()))
         if listing.data:
-            await handle_item_sold(listing.data[0]["item_id"], "ebay", sold_price=_ebay_sale_price(item_data))
+            await handle_item_sold(listing.data[0]["item_id"], "ebay",
+                                   sold_price=_ebay_sale_price(item_data),
+                                   sold_at=_ebay_sale_time(payload, item_data))
 
     return {"status": "ok"}
 
@@ -94,11 +110,16 @@ async def shopify_order_paid(request: Request):
     # Shopify tells us the real amount paid per line item — record it as the sold price.
     sku_prices = extract_sku_prices_from_order(order)
 
+    # Shopify weet precies wanneer de bestelling betaald is. Die datum meegeven,
+    # anders krijgt een bestelling die wij later verwerken de dag van vandaag.
+    besteld_op = order.get("processed_at") or order.get("created_at")
+
     db = get_db()
     for sku in skus:
         item = (await naast_de_lus(lambda: db.table("items").select("id").eq("sku", sku).execute()))
         if item.data:
-            await handle_item_sold(item.data[0]["id"], "shopify", sold_price=sku_prices.get(sku))
+            await handle_item_sold(item.data[0]["id"], "shopify",
+                                   sold_price=sku_prices.get(sku), sold_at=besteld_op)
 
     return {"status": "ok", "skus_processed": skus}
 

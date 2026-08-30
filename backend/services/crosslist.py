@@ -935,7 +935,8 @@ async def delist_all_platforms(item_id: str, user_id: str) -> list[dict]:
 _EXTENSION_DELIST_PLATFORMS = {"marktplaats", "2dehands", "vinted", "facebook"}
 
 
-async def handle_item_sold(item_id: str, sold_on_platform: str, sold_price: float | None = None):
+async def handle_item_sold(item_id: str, sold_on_platform: str, sold_price: float | None = None,
+                           sold_at: datetime | str | None = None):
     """
     Called when an item is confirmed sold on one platform. Marks that listing
     sold and delists every OTHER active listing for the item — extension
@@ -946,25 +947,46 @@ async def handle_item_sold(item_id: str, sold_on_platform: str, sold_price: floa
     order total, eBay sale price). Left NULL for sources that don't — mainly the
     Vinted wardrobe scan, which only sees that a listing vanished, not for how
     much. Analytics falls back to the asking price and asks the user to confirm.
+
+    sold_at: de ECHTE verkoopdatum, als de bron die kent (de datum op Vinteds
+    bestellingenpagina, de besteldatum bij Shopify). Zonder die datum vallen we
+    terug op nu — dat klopt zolang we de verkoop meteen opmerken, maar niet als
+    er een ronde is overgeslagen. Daarom de harde regel hieronder: een datum mag
+    alleen naar VOREN in de tijd worden bijgesteld, nooit naar achteren. Wij
+    kunnen een verkoop immers nooit eerder ontdekken dan hij plaatsvond, dus een
+    lagere datum is per definitie de betere. Zo repareert een latere ronde met
+    de echte datum vanzelf de te late stempel van een eerdere ronde.
     """
     db = get_db()
+
+    from backend.services.verkoopdatum import als_datum, lees_verkoopdatum
+    echte_datum = lees_verkoopdatum(sold_at) if sold_at is not None else None
 
     # Mark sold listing. Only write sold_price when we actually have it, so a
     # later confirmed amount is never overwritten with NULL by a re-detection.
     update = {
         "status": "sold",
-        "sold_at": datetime.now(timezone.utc).isoformat(),
+        "sold_at": (echte_datum or datetime.now(timezone.utc)).isoformat(),
     }
     if sold_price is not None:
         update["sold_price"] = round(float(sold_price), 2)
 
     def _write_sold():
         existing = (
-            db.table("listings").select("id")
+            db.table("listings").select("id,status,sold_at")
             .eq("item_id", item_id).eq("platform", sold_on_platform).execute()
         )
         if existing.data:
-            db.table("listings").update(update).eq("item_id", item_id).eq("platform", sold_on_platform).execute()
+            velden = dict(update)
+            staand = existing.data[0]
+            if staand.get("status") == "sold" and staand.get("sold_at"):
+                # Al geboekt. De datum alleen aanpassen als de nieuwe aantoonbaar
+                # eerder is; anders zou elke herdetectie de verkoop opnieuw naar
+                # vandaag schuiven — precies hoe twaalf verkopen van weken op
+                # 30-08-2026 op één dag terechtkwamen.
+                if not (echte_datum and echte_datum < als_datum(staand["sold_at"])):
+                    velden.pop("sold_at", None)
+            db.table("listings").update(velden).eq("item_id", item_id).eq("platform", sold_on_platform).execute()
         else:
             # No listing record on the sold platform (e.g. the user sold something
             # Omnivaleur wasn't tracking there, or a manual/unlinked sale). Still

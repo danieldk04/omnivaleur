@@ -4698,6 +4698,26 @@ function scrapeVintedOrders(url) {
                 found.forEach(el => anchors.add(el));
               });
 
+              // De datum die Vinted bij de bestelling toont. ZONDER deze datum
+              // krijgt elke bestelling die wij voor het eerst zien de klok van
+              // dit moment — en dan landt na een stille periode de omzet van
+              // weken op één dag (gemeten 30-08-2026: twaalf verkopen binnen
+              // twaalf seconden). Meerdere kandidaten, van hard naar zacht: het
+              // datetime-attribuut is machineleesbaar, een title-attribuut komt
+              // daarna, dan de tekst van een datumveld. De server neemt de eerste
+              // die hij met zekerheid kan lezen en gokt nooit.
+              const datumKandidaten = (row) => {
+                const uit = [];
+                row.querySelectorAll('time[datetime]').forEach(t => uit.push(t.getAttribute('datetime')));
+                row.querySelectorAll('time, [datetime], [title], [data-testid*="date" i], [class*="date" i], [class*="time" i]').forEach(el => {
+                  const attr = el.getAttribute('datetime') || el.getAttribute('title');
+                  if (attr) uit.push(attr);
+                  const txt = (el.innerText || "").replace(/\s+/g, " ").trim();
+                  if (txt && txt.length <= 40) uit.push(txt);
+                });
+                return [...new Set(uit.filter(Boolean))].slice(0, 8);
+              };
+
               const rows = {};
               anchors.forEach(el => {
                 const row = el.closest('div, li, article') || el;
@@ -4716,14 +4736,16 @@ function scrapeVintedOrders(url) {
                   sku: skuM ? skuM[1] : null,
                   text: text.slice(0, 300),
                   price: priceM ? priceM[1] : null,
+                  date: datumKandidaten(row),
                   sold,
                 };
                 const prev = rows[key];
                 // Keep the sold entry (with price) over a cancelled one for the same row.
                 if (!prev || (sold && !prev.sold)) {
                   rows[key] = entry;
-                } else if (sold && prev.sold && !prev.price && priceM) {
-                  prev.price = priceM[1];
+                } else if (sold && prev.sold) {
+                  if (!prev.price && priceM) prev.price = priceM[1];
+                  if (!prev.date?.length && entry.date.length) prev.date = entry.date;
                 }
               });
               return { orders: Object.values(rows), selectorHits, rowCandidates: anchors.size };
@@ -4732,7 +4754,10 @@ function scrapeVintedOrders(url) {
             sluitWerkTabblad(tabId);
             const out = results?.[0]?.result || { orders: [], selectorHits: {}, rowCandidates: 0 };
             const orders = out.orders || [];
-            console.log(`[Omnivaleur][sold] Vinted: selector hits`, out.selectorHits, `→ ${out.rowCandidates} candidate row(s), ${orders.length} order row(s) (${orders.filter(o => o.sku).length} with a (SKU), sold: ${orders.filter(o => o.sold).length})`);
+            console.log(`[Omnivaleur][sold] Vinted: selector hits`, out.selectorHits, `→ ${out.rowCandidates} candidate row(s), ${orders.length} order row(s) (${orders.filter(o => o.sku).length} with a (SKU), sold: ${orders.filter(o => o.sold).length}, met datum: ${orders.filter(o => o.date?.length).length})`);
+            if (orders.length && !orders.some(o => o.date?.length)) {
+              console.warn("[Omnivaleur][sold] Vinted: GEEN datumveld gevonden op de bestellingenpagina. Nieuwe verkopen krijgen dan de datum van vandaag; de opmaak van de pagina is waarschijnlijk gewijzigd.");
+            }
             resolve(orders);
           });
         }, 2500);
