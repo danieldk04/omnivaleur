@@ -1314,7 +1314,7 @@ input[type="checkbox"].row-check { width: 15px; height: 15px; cursor: pointer; a
              zonder ingevulde velden niet kón publiceren, en dus stonden er
              bedrijfsnaam, adres en e-mailadres onder tweedehands spullen waar
              de verkoper helemaal niet de fabrikant van is. -->
-        <label class="vg-chip" style="max-width:520px;margin-top:14px">
+        <label class="vg-chip on" style="max-width:520px;margin-top:14px">
           <input type="checkbox" id="fabrikant-meesturen" onchange="saveFabrikantMeesturen()" checked>
           <span>Add these details to my Marktplaats &amp; 2dehands listings</span>
         </label>
@@ -8656,7 +8656,10 @@ function toonFabrikant(data) {
   }
   const meesturen = data.fabrikant_meesturen !== false;
   const schakel = document.getElementById('fabrikant-meesturen');
-  if (schakel) schakel.checked = meesturen;
+  if (schakel) {
+    schakel.checked = meesturen;
+    schakel.closest('.vg-chip').classList.toggle('on', meesturen);
+  }
   const waarschuwing = document.getElementById('fabrikant-waarschuwing');
   // Wie het blok niet meestuurt heeft ook geen ontbrekende velden — dan is de
   // waarschuwing "publiceren staat stil" gewoon niet waar.
@@ -8681,6 +8684,7 @@ async function saveFabrikantMeesturen() {
       : 'Saved — we leave those fields on Marktplaats alone.';
   } catch (e) {
     schakel.checked = !schakel.checked;
+    schakel.closest('.vg-chip').classList.toggle('on', schakel.checked);
     melding.textContent = `Could not save: ${e.message}`;
   }
 }
