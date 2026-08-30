@@ -2248,3 +2248,45 @@ er geen server_fout meer, van niemand.
 Geen code gewijzigd. Teruggemeld als `opgelost` — de uitleg wijst naar de
 databasefix die al onder een andere titel in dit logboek staat, niet naar een
 nieuwe reparatie.
+
+## 30-08-2026 — "advertentietekst-onjuist-overgenomen": geen code gewijzigd, geen storing
+
+Met voorrang doorgegeven (amandahaas1979 + zilverwebsite.nl). Nagelopen via de
+`analyses()`/`bugs()`-opslag van de mailagent en het opdrachtenlogboek (`jobs`),
+niet blind gerepareerd.
+
+**De bundeling zelf klopt niet.** In de opgeslagen berichtbeoordelingen draagt
+maar één bericht deze exacte `bug_sleutel`: zilverwebsite.nl, 28-08 16:02,
+"Klant vermoedt dat Shopify-tekst wordt gebruikt en stopt met handmatig
+klikken." Amanda's bericht van 30-08 12:12:30 — waarvan de tijd toevallig het
+"eerst"-veld van dit signaal vult — staat in diezelfde opslag ondertussen onder
+een ANDERE sleutel: `advertentietekst-niet-geimporteerd` (die staat al apart op
+de lijst). De melderslijst van dit signaal bevat haar adres dus als restant van
+een eerdere, andere classificatie van hetzelfde bericht — een boekhoudkundig
+mankement in `scripts/mail_analyse.py` (een sleutel die niet meebeweegt als een
+bericht later anders beoordeeld wordt), niet een crosslisting-bug. Dat verdient
+op een ander moment een eigen blik, maar valt buiten wat hier gemeld is.
+
+**Zilverwebsite's eigen vermoeden klopt feitelijk niet.** Zijn advertentietekst
+komt niet van Shopify: `items.description` is bij zijn spullen woordelijk zijn
+eigen, live Marktplaats-advertentietekst, opgehaald via de publieke
+advertentiepagina (`backend/services/mp_enrich.py`, dezelfde route als de
+eerdere Admarkt-omschrijvingen-fix). Elke omschrijving eindigt met dezelfde
+lange SEO/winkeltekst die hij zelf op al zijn advertenties zet — dat ziet er
+op een cross-listing wat vreemd uit, maar het is precies wat hij zelf typte,
+niet iets wat wij verkeerd overnamen.
+
+**Zijn account heeft wél een echt probleem, alleen een ander.** 815 van zijn
+1203 opdrachten staan op `error`, 117 hangen al sinds 03:23 uur op `pending`.
+Verreweg de meeste fouten zijn al bekend en apart getrackt (ontbrekende
+"verantwoordelijke partij"-velden, "niet geplaatst — velden in het rood",
+Chrome die halverwege sluit). Wel gevonden: één opdracht ("description could
+not be placed into the editor", 29-08 02:26) waarbij de verwijdering wél
+lukte maar de herplaatsing niet — en er geen nieuwe poging op volgde, dus die
+advertentie staat sindsdien nergens meer. Te smal en te zeldzaam (1 van 815)
+om nu een aanpassing aan de al zwaar geharde `_mwFillDescription` in
+`extension/content/shared.js` op te hangen zonder het in een ingelogde browser
+te kunnen zien — dat hoort bij een herplaatsen/verliest-advertenties-melding,
+niet bij deze sleutel.
+
+Geen code gewijzigd. Teruggemeld als `afgewezen`.
