@@ -2074,3 +2074,34 @@ er geen veertien dagen op vastzit.
 
 Tien tests in `tests/test_verversen_gemeld_als_gelukt.py`; zes daarvan falen
 aantoonbaar op de oude code.
+
+## 30-08-2026 — Waarom die Vinted-verversingen überhaupt mislukten
+
+Nagemeten, niet aangenomen: de twee advertenties waarvan de verwijdering
+"mislukte" staan gewoon nog online (vinted.nl/items/8587347818 en /5462539816
+geven allebei HTTP 200, een verzonnen nummer geeft 404). De controle in de
+extensie had dus gelijk: er was niets verwijderd. Geen enkele advertentie van
+deze verkoper is kwijtgeraakt.
+
+Twee dingen in `bgDeleteVinted` konden dat veroorzaken, allebei aangepakt in
+extensie 1.0.269:
+
+1. **De weg-knop werd alleen in het Engels gezocht** (`/^delete$/`). Op vinted.nl
+   heet hij "Verwijderen", op .fr "Supprimer", op .de "Löschen". Hij werd dus
+   alleen nog gevonden als Vinted er toevallig een `data-testid` met "delete" op
+   had staan. Omnivaleur is een Europese app; Engels alleen is geen uitgangspunt.
+2. **Bevestigen kan meer dan één stap zijn.** Vinted vraagt soms eerst een reden
+   (verkocht, van gedachten veranderd, …) en pas daarna de definitieve knop. Er
+   werd alleen op die eerste knop geklikt; het tweede venster bleef staan en er
+   gebeurde niets. Nu worden er tot drie stappen doorlopen, inclusief het kiezen
+   van de eerste reden als daarom gevraagd wordt.
+
+**En als het tóch misgaat, staat er nu bij wát er op het scherm stond.** De
+foutmelding bevat voortaan de zichtbare knoppen en hun `data-testid`. Zonder dat
+is zo'n storing niet na te lopen zonder in te loggen op het account van de
+verkoper — en dat kan niet. Dit is dezelfde aanpak als de foutcodes op de server:
+liever een melding die de volgende keer meteen het antwoord geeft dan een
+melding waar niemand iets mee kan.
+
+Niet met zekerheid vast te stellen zonder een echt Vinted-account: welke van de
+twee het bij deze verkoper was. De volgende mislukte poging zegt het zelf.

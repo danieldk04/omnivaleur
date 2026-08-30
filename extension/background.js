@@ -2991,9 +2991,22 @@ async function bgDeleteVinted(job, serverUrl) {
     //    match on containing confirm/delete and never the Cancel button.
     const clicked = await execInTab(tabId, async () => {
       const sleep = ms => new Promise(r => setTimeout(r, ms));
+      // VINTED SPREEKT DE TAAL VAN DE VERKOPER.
+      //
+      // Hier stond alleen /^delete$/. Op vinted.nl heet die knop "Verwijderen",
+      // op .fr "Supprimer", op .de "Löschen". De knop werd dan alleen nog
+      // gevonden als Vinted er toevallig een data-testid met "delete" op had
+      // staan — en anders viel het verversen om met "Delete control not found".
+      // Omnivaleur is een Europese app; Engels alleen is hier geen uitgangspunt.
+      const WEG = /^\s*(delete|verwijder(en)?|supprimer|löschen|loschen|eliminar|elimina|usuń|usun|slet|ta bort|poista)\s*$/i;
+      const NIET = /annuleer|annuleren|cancel|terug|back|abbrechen|annuler|sluiten|close/i;
+      const BEVESTIG = /confirm|bevestig|delete|verwijder(en)?|remove|supprimer|löschen|loschen|\byes\b|\bja\b|\boui\b|ok/i;
+      const zichtbaar = e => e.offsetParent !== null || e.getClientRects().length > 0;
+      const knoppen = wortel => [...wortel.querySelectorAll('button, a, [role="menuitem"], [role="button"]')];
+
       // Direct visible Delete button/link, else open a kebab/actions dropdown.
-      let del = [...document.querySelectorAll('button, a, [role="menuitem"], [role="button"]')]
-        .find(e => e.offsetParent !== null && (/^\s*delete\s*$/i.test(e.textContent) || e.dataset.testid?.includes("delete")));
+      let del = knoppen(document)
+        .find(e => zichtbaar(e) && (WEG.test(e.textContent) || e.dataset.testid?.includes("delete")));
       if (!del) {
         const actions = document.querySelector(
           '[data-testid="item-actions-button"], [data-testid="item-menu-button"], ' +
@@ -3004,29 +3017,69 @@ async function bgDeleteVinted(job, serverUrl) {
           actions.click();
           await sleep(600);
           const menu = document.querySelector('[role="menu"], [role="listbox"], [data-testid*="dropdown"], [data-testid*="modal"]') || document;
-          del = [...menu.querySelectorAll('button, a, [role="menuitem"]')]
-            .find(e => /^\s*delete\s*$/i.test(e.textContent) || e.dataset.testid?.includes("delete"))
-            || [...document.querySelectorAll('button, a, [role="menuitem"], [data-testid*="delete"]')]
-              .find(e => /delete/i.test(e.textContent) || e.dataset.testid?.includes("delete"));
+          del = knoppen(menu).find(e => WEG.test(e.textContent) || e.dataset.testid?.includes("delete"))
+            || knoppen(document).find(e => WEG.test(e.textContent) || e.dataset.testid?.includes("delete"));
         }
       }
-      if (!del) return { clickedDelete: false };
+      if (!del) return { clickedDelete: false, opScherm: schermbeeld() };
       del.click();
       await sleep(900);
-      const scope = document.querySelector('[role="dialog"], [role="alertdialog"], [data-testid*="modal"], .ReactModal__Content') || document;
-      const confirm = [...scope.querySelectorAll('button, a[role="button"]')]
-        .find(el => {
+
+      // BEVESTIGEN KAN MEER DAN ÉÉN STAP ZIJN.
+      //
+      // Vinted vraagt in sommige gevallen eerst waaróm je het artikel weghaalt
+      // (verkocht, van gedachten veranderd, …) en pas daarna de definitieve
+      // knop. Werd alleen die eerste knop aangeklikt, dan bleef het tweede
+      // venster staan, gebeurde er niets, en meldde de controle terecht dat de
+      // advertentie nog in de garderobe stond — precies wat er op 30-08-2026
+      // acht keer op rij gebeurde bij één verkoper.
+      let stappen = 0;
+      for (let ronde = 0; ronde < 3; ronde++) {
+        const venster = document.querySelector(
+          '[role="dialog"], [role="alertdialog"], [data-testid*="modal"], .ReactModal__Content');
+        if (!venster) break;
+        // Moet er eerst een reden gekozen worden? Kies de eerste die er staat.
+        const keuze = [...venster.querySelectorAll('input[type="radio"], [role="radio"]')]
+          .find(e => zichtbaar(e) && !e.checked && e.getAttribute("aria-checked") !== "true");
+        if (keuze) {
+          (keuze.closest("label") || keuze).click();
+          await sleep(400);
+        }
+        const knop = knoppen(venster).find(el => {
           const t = el.textContent.trim();
-          if (/annuleer|cancel|terug|back/i.test(t)) return false;
-          return /confirm|delete|verwijder|remove|\byes\b|\bja\b/i.test(t) || el.dataset.testid?.includes("delete");
+          if (!t || NIET.test(t)) return false;
+          if (el.disabled) return false;
+          return BEVESTIG.test(t) || el.dataset.testid?.includes("delete");
         });
-      if (!confirm) return { clickedDelete: true, clickedConfirm: false };
-      confirm.click();
-      return { clickedDelete: true, clickedConfirm: true };
+        if (!knop) break;
+        knop.click();
+        stappen++;
+        await sleep(1200);
+      }
+      if (!stappen) return { clickedDelete: true, clickedConfirm: false, opScherm: schermbeeld() };
+      return { clickedDelete: true, clickedConfirm: true, stappen };
+
+      // Wat er op dat moment op het scherm stond, kort samengevat. Zonder dit
+      // is een mislukte verwijdering niet na te lopen: niemand kan achteraf zien
+      // welke knoppen er stonden, en dan blijft het gissen naar de selector.
+      function schermbeeld() {
+        const venster = document.querySelector(
+          '[role="dialog"], [role="alertdialog"], [data-testid*="modal"], .ReactModal__Content');
+        return knoppen(venster || document)
+          .filter(e => e.offsetParent !== null || e.getClientRects().length > 0)
+          .slice(0, 25)
+          .map(e => (e.textContent || "").trim().slice(0, 30) + (e.dataset.testid ? `#${e.dataset.testid}` : ""))
+          .filter(Boolean)
+          .join(" | ")
+          .slice(0, 400);
+      }
     });
 
-    if (!clicked?.clickedDelete) throw new Error(`Delete control not found on Vinted item page for ID ${listingId} — Vinted may have changed its layout.`);
-    if (!clicked.clickedConfirm) throw new Error(`Confirm-delete button not found on Vinted for ID ${listingId} — deletion was not confirmed.`);
+    // De knoppen die er wél stonden gaan mee in de melding. Anders is dit
+    // achteraf niet na te lopen zonder toegang tot het account van de verkoper.
+    const opScherm = clicked?.opScherm ? ` Zichtbaar op het scherm: ${clicked.opScherm}` : "";
+    if (!clicked?.clickedDelete) throw new Error(`Delete control not found on Vinted item page for ID ${listingId} — Vinted may have changed its layout.${opScherm}`);
+    if (!clicked.clickedConfirm) throw new Error(`Confirm-delete button not found on Vinted for ID ${listingId} — deletion was not confirmed.${opScherm}`);
 
     // 3) Give Vinted a moment to process + redirect, then verify the item is
     //    gone from the wardrobe. The tab is now on some page of the SAME
@@ -3058,7 +3111,19 @@ async function bgDeleteVinted(job, serverUrl) {
       if (present === false) { goneAfter = true; break; }
       await sleep(1800);
     }
-    if (!goneAfter) throw new Error(`Vinted listing ${listingId} still in your wardrobe after confirming delete — removal was not verified.`);
+    if (!goneAfter) {
+      const rest = await execInTab(tabId, async () => {
+        const v = document.querySelector('[role="dialog"], [role="alertdialog"], [data-testid*="modal"], .ReactModal__Content');
+        if (!v) return "";
+        return [...v.querySelectorAll('button, a, [role="button"], [role="radio"], input[type="radio"]')]
+          .map(e => (e.textContent || e.value || "").trim().slice(0, 30) + (e.dataset.testid ? `#${e.dataset.testid}` : ""))
+          .filter(Boolean).join(" | ").slice(0, 400);
+      });
+      // Staat er nog een venster open, dan is de bevestiging niet afgerond en
+      // zegt dít precies welke knop er nog wachtte.
+      throw new Error(`Vinted listing ${listingId} still in your wardrobe after confirming delete — removal was not verified.`
+        + (rest ? ` Er stond nog een venster open met: ${rest}` : ""));
+    }
 
     // The captured listing snapshot lets the backend enrich the paired relist
     // recreate job (imported items otherwise lack this data).
