@@ -1840,3 +1840,16 @@ De zeven storingsmeldingen die hierover binnenkwamen (`items-pagina-leeg`,
 `foutmelding-schermafbeelding`) staan bij de klantenservice op opgelost.
 `import-teller-klopt-niet` bewust niet: dat gaat over een teller en een
 berichten-badge en is hier niet mee gerepareerd.
+
+**Valkuil bij het bijwerken van een concept (zelfde dag, meteen hersteld).** Het
+concept voor Egbert is vervangen door: nieuwe versie toevoegen, oude weghalen.
+Zoho behield daarbij het bestaande bericht met hetzelfde `Message-Id` niet als
+nummer 6, maar hernummerde de map — waardoor het weghalen op volgnummer het
+*volgende* concept trof (dat voor d.r.seubring). Dat concept is teruggezet uit de
+`leerlog` in `leadgen_opslag`, waar `_onthoud_concept()` de volledige tekst mét
+citaat bewaart; de draadkoppen kwamen uit het oorspronkelijke bericht in INBOX.
+Beide concepten staan er weer goed in.
+
+Regel voor de volgende keer: **verwijder een concept op UID, nooit op
+volgnummer**, en controleer vóór het verwijderen de ontvanger van precies dat
+bericht. Een expunge in `Concept` gaat níet naar Afval.
