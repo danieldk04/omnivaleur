@@ -3099,6 +3099,12 @@ def _lijkt_op_recent_verstuurd(adres: str, kern: str) -> bool:
 CONCEPT_MARGE = 60          # seconden speling; koppen lopen nooit op de seconde gelijk
 
 
+# Adressen waarvoor deze beurt een nieuw concept naast een ouder, achterhaald
+# concept is gelegd. Alleen om het in het seintje te kunnen zeggen: er liggen er
+# dan twee in de map, en Daniel moet de bovenste hebben.
+_ACHTERHAALD_CONCEPT: set = set()
+
+
 def _waarom_geen_concept(adres: str, inkomend) -> str | None:
     """Reden om dit concept NIET neer te leggen, of None als het mag.
 
@@ -3163,7 +3169,30 @@ def _waarom_geen_concept(adres: str, inkomend) -> str | None:
                 _, d = imap.search(None, "ALL")
                 for kop in _koppen_in_bulk(imap, (d[0] or b"").split()).values():
                     if hoort_bij(parseaddr(_leesbaar(kop.get("To", "")))[1]):
-                        return "er ligt al een concept voor deze persoon"
+                        # EEN OUDER CONCEPT MAG NIET EEUWIG BLOKKEREN
+                        # (30-08-2026, Egbert Brouwer). Dit slot keek alleen of
+                        # er iets lag, niet waar het over ging. Voor Egbert lag
+                        # er een concept van vrijdag 10:52 over zijn inlogvraag;
+                        # om 12:46 schreef hij dat hij er niet uitkwam en wilde
+                        # bellen. Dat bericht kon nooit meer een concept krijgen,
+                        # want er "lag al iets". Twee dagen later stond er nog
+                        # steeds geen antwoord op zijn laatste bericht, terwijl
+                        # hij als vertrekrisico op de lijst stond.
+                        #
+                        # Een concept blokkeert dus alleen als het NIET ouder is
+                        # dan het bericht dat we willen beantwoorden. Is het
+                        # ouder, dan gaat het over een achterhaalde vraag en
+                        # hoort er een nieuw concept bij. Het oude blijft staan —
+                        # niets van Daniel wordt weggegooid — en het seintje
+                        # zegt erbij dat er nu twee liggen.
+                        try:
+                            concept_op = parsedate_to_datetime(kop.get("Date", "")).timestamp()
+                        except Exception:  # noqa: BLE001
+                            concept_op = None
+                        if waarop is None or concept_op is None or concept_op >= waarop:
+                            return "er ligt al een concept voor deze persoon"
+                        _ACHTERHAALD_CONCEPT.add(adres)
+                        continue
                     if eigen_mid:
                         for veld in ("In-Reply-To", "References"):
                             if eigen_mid in _leesbaar(kop.get(veld, "")):
