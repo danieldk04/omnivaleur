@@ -326,7 +326,9 @@ def test_een_categorie_buiten_onze_lijst_gaat_op_de_nummers_van_marktplaats():
 @pytest.mark.skipif(NODE is None, reason="node is niet geïnstalleerd")
 def test_de_oude_versie_zette_hem_in_de_geraden_categorie():
     """Tegenbewijs: zonder deze reparatie meet de test hierboven niets."""
-    oud = subprocess.run(["git", "show", "HEAD:extension/background.js"],
+    # Vastgezet op de laatste versie VÓÓR de reparatie van 30-08-2026 — met
+    # "HEAD" vergelijkt de proef zichzelf zodra dit gecommit is.
+    oud = subprocess.run(["git", "show", "37a02e2:extension/background.js"],
                          cwd=ROOT, capture_output=True, text=True, check=True).stdout
     bron = "class CategoryUnresolvedError extends Error {}\n"
     for tabel in ("const MP_BABY_SIZES = {", "const MP_KIDS_SIZES = {", "const MP_CATEGORIES = {"):

@@ -303,9 +303,15 @@ def _kies(bron_js: str, cat: str, gender: str, hints: list[str],
     return json.loads(r.stdout.strip())
 
 
+# Vastgezet op de laatste versie VÓÓR de reparatie van 30-08-2026. Zou hier
+# "HEAD" staan, dan vergelijkt de proef zichzelf zodra dit gecommit is en wordt
+# het tegenbewijs stilletjes betekenisloos.
+VOOR_DE_REPARATIE = "2561032"
+
+
 def _oude_vinted() -> str:
     return subprocess.run(
-        ["git", "show", "HEAD:extension/content/vinted.js"],
+        ["git", "show", f"{VOOR_DE_REPARATIE}:extension/content/vinted.js"],
         cwd=ROOT, capture_output=True, text=True, check=True).stdout
 
 
