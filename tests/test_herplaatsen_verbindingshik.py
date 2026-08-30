@@ -241,3 +241,19 @@ def test_de_wrapper_telt_niet_dubbel(monkeypatch):
     monkeypatch.setattr(D, "_ORIGINEEL_SELECT_EXECUTE", hik)
     assert D.execute_with_retry(_nep_select()) == "gelukt"
     assert pogingen["n"] == 3
+
+
+def test_een_html_pagina_van_de_gateway_telt_als_hik():
+    """Supabase staat achter Cloudflare. Hapert die, dan komt er een HTML-pagina
+    terug die de client "JSON could not be generated (400)" noemt — dat lijkt een
+    kapotte query maar het verzoek is de database nooit binnengekomen."""
+    boodschap = ("{'message': 'JSON could not be generated', 'code': 400, "
+                 "'details': \"b'<html><head><title>400 Bad Request</title></head>"
+                 "<body><center><h1>400 Bad Request</h1></center>"
+                 "<hr><center>cloudflare</center></body></html>'\"}")
+    assert _is_herstelbaar(RuntimeError(boodschap))
+
+
+def test_een_echte_400_van_de_database_wordt_niet_herhaald():
+    assert not _is_herstelbaar(RuntimeError(
+        "{'message': 'column listings.zzz does not exist', 'code': '42703'}"))

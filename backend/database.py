@@ -131,13 +131,27 @@ _HERSTELBARE_TEKST = (
 )
 
 
+def _is_een_gateway_pagina(tekst: str) -> bool:
+    """Een HTML-pagina waar JSON hoort te staan is nooit een echte databasefout.
+
+    Supabase staat achter Cloudflare. Hapert die ertussen, dan komt er een
+    HTML-foutpagina terug en maakt de client daar "JSON could not be generated,
+    code 400" van — een fout die eruitziet als een kapotte query, maar het niet
+    is. Op 30-08-2026 waren dat er negen in een half uur, op het ophalen van de
+    advertentielijst en op de wachtrij van de extensie. PostgREST antwoordt altijd
+    met JSON, dus HTML betekent per definitie: het verzoek is de database nooit
+    binnengekomen. Opnieuw proberen mag.
+    """
+    return "json could not be generated" in tekst and ("<html" in tekst or "cloudflare" in tekst)
+
+
 def _is_herstelbaar(exc: BaseException) -> bool:
     huidige: BaseException | None = exc
     while huidige is not None:
         if isinstance(huidige, _HERSTELBAAR):
             return True
         tekst = str(huidige).lower()
-        if any(fragment in tekst for fragment in _HERSTELBARE_TEKST):
+        if any(fragment in tekst for fragment in _HERSTELBARE_TEKST) or _is_een_gateway_pagina(tekst):
             return True
         huidige = huidige.__cause__ or huidige.__context__
     return False
