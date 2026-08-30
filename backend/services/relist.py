@@ -522,6 +522,31 @@ async def refresh_listing(item_id: str, platform: str, user_id: str, strategy: s
         from backend.services.instellingen import fabrikant as _fabrikant, verzendkeuzes
         create_payload.update(_fabrikant(user_id))
         create_payload.update(verzendkeuzes(user_id, create_payload.get("price")))
+        # DE ADVERTENTIE KOMT TERUG IN ZIJN EIGEN CATEGORIE.
+        #
+        # Amanda, 30-08-2026: "als je een advertentie van marktplaats laat
+        # refreshen gaat dat goed, tot het punt dat de advertentie is geplaatst:
+        # hij zet deze dan in de verkeerde categorie. Dit kun je bij MP niet
+        # aanpassen, dus moet je de advertentie weer in zijn geheel handmatig
+        # plaatsen."
+        #
+        # Bij het importeren wordt de categorie geráden uit titel en tekst, uit
+        # een lijst die veel kleiner is dan de boom van Marktplaats. Voor
+        # brocante, munten, boeken en postzegels bestaat er in die lijst
+        # helemaal geen goede doos, dus werd het altijd de verkeerde. Terwijl de
+        # oude advertentie — die op dit moment nog gewoon online staat — zijn
+        # échte categorie zelf op de pagina zet.
+        #
+        # Dit gebeurt in stap 1, dus VÓÓR het verwijderen. Lukt het niet, dan
+        # blijft alles bij het oude: een gemiste categorie mag nooit een
+        # advertentie kosten.
+        if listing.get("platform_listing_url"):
+            from backend.services.mp_enrich import categorie_van_advertentie
+            mp_cat = await categorie_van_advertentie(listing["platform_listing_url"])
+            if mp_cat:
+                create_payload["mp_category"] = mp_cat
+                logger.info("[relist] item %s komt terug in zijn eigen categorie: %s",
+                            item_id, mp_cat.get("l2_naam") or mp_cat)
     if platform == "vinted" and listing.get("platform_listing_url"):
         try:
             from urllib.parse import urlparse
