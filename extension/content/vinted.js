@@ -1937,12 +1937,29 @@
       "golf", "cycling", "skate", "boxing", "wrestling", "climbing"];
     const itemText = `${item.title || ""} ${item.description || ""}`.toLowerCase();
 
+    // WELKE TAK IS DIT ARTIKEL SOWIESO NIET?
+    //
+    // Het dashboard groepeert zijn categorieën per tak, en die tak staat vooraan
+    // in de sleutel: "antiek lampen", "wonen tafellampen", "kunst beelden en
+    // houtsnijwerken", "muziek gitaren", "sieraden ringen", "games …",
+    // "electronics …", "audio …". Niets daarvan is kleding, en dus mag zo'n
+    // artikel NOOIT in een kledingblad van Vinted belanden.
+    //
+    // Amanda, 30-08-2026: "Bij het plaatsen op Vinted, wil hij alles in de
+    // categorie kinderkleding gooien". Haar voorraad is brocante: lampen,
+    // beeldjes, servies, rozenkransen. Bij zo'n artikel raakt geen enkele hint
+    // een kledingblad — maar een blad dat "Other …" heet kreeg hieronder tóch
+    // een bonuspunt, en één punt is genoeg om gekozen te worden. Zo won
+    // "Other children's clothing" van niets.
+    const NIET_KLEDING_TAK = /^(wonen|antiek|kunst|muziek|sieraden|games|electronics|audio)\b/;
+    const isNietKleding = NIET_KLEDING_TAK.test(cat);
+
     // Gaat het om een kledingstuk? Alleen dan gelden de uitsluitingen hieronder.
     // Schoen-, sieraden-, games- en elektronicacategorieën moeten juist wél in
     // hun eigen tak terechtkomen.
     const isClothingCat = !!cat
+      && !isNietKleding
       && !/schoen|sneaker|laarzen|hakken|sandalen|boots|shoes|trainers/.test(cat)
-      && !/^(games|electronics|sieraden)\b/.test(cat)
       && !/accessoire|accessor/.test(cat);
 
     // Does the listing (title/description) OR the dashboard category actually name
