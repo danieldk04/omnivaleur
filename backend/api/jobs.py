@@ -1,5 +1,5 @@
 from fastapi import APIRouter, HTTPException, Depends, Request
-from backend.database import get_db, fetch_all, fetch_all_in, update_in, naast_de_lus
+from backend.database import get_db, fetch_all, fetch_all_in, update_in, naast_de_lus, execute_with_retry
 from backend.api.deps import get_current_user, require_active_subscription
 from backend.api.imports import _backfill_item_from_candidate
 from backend.services.crosslist import handle_item_sold
@@ -1696,9 +1696,9 @@ def fail_job(job_id: str, body: dict, user_id: str = Depends(get_current_user)):
         if pogingen < MAX_HERKANSING_OUDE_EXTENSIE:
             payload["_oude_extensie_pogingen"] = pogingen + 1
             payload["_oude_extensie_versie"] = ".".join(map(str, versie))
-            db.table("jobs").update({
+            execute_with_retry(db.table("jobs").update({
                 "status": "pending", "payload": payload, "claimed_at": None,
-            }).eq("id", job_id).execute()
+            }).eq("id", job_id))
             logger.info("Scan %s geweigerd door extensie %s (te oud) — terug in de wachtrij (%d/%d)",
                         job_id, payload["_oude_extensie_versie"], pogingen + 1,
                         MAX_HERKANSING_OUDE_EXTENSIE)
@@ -1706,11 +1706,18 @@ def fail_job(job_id: str, body: dict, user_id: str = Depends(get_current_user)):
 
     body = _rechtgezette_foutmelding(job, body, versie)
 
-    db.table("jobs").update({
+    # Deze vier bijwerkingen MOETEN aankomen. Viel de verbinding met de database
+    # weg, dan kreeg de extensie een 500 terug en bleef de opdracht op "claimed"
+    # staan — waarna de hele wachtrij stilstond en de verkoper zag dat "hij niks
+    # doet". Gemeten op 30-08-2026: twee van deze fouten binnen tien minuten.
+    # Herhalen mag hier, want het zijn vaste waarden op één opdracht: twee keer
+    # hetzelfde wegschrijven verandert niets. Bij een insert zou dat wél een
+    # tweede rij opleveren; die blijven daarom met rust.
+    execute_with_retry(db.table("jobs").update({
         "status": "error",
         "result": body,
         "done_at": datetime.now(timezone.utc).isoformat(),
-    }).eq("id", job_id).execute()
+    }).eq("id", job_id))
     # A content-refresh or relist-delete bumped the listing's cooldown + daily
     # quota at enqueue time; since the job failed, give both back.
     rollback = ((job or {}).get("payload") or {}).get("_refresh_rollback")
@@ -1718,10 +1725,10 @@ def fail_job(job_id: str, body: dict, user_id: str = Depends(get_current_user)):
         from backend.services.relist import rollback_refresh
         rollback_refresh(rollback, user_id)
     if job and job["action"] == "create":
-        db.table("listings").update({
+        execute_with_retry(db.table("listings").update({
             "status": "error",
             "error_message": body.get("error", "Extension reported failure"),
-        }).eq("item_id", job["item_id"]).eq("platform", job["platform"]).eq("status", "pending").execute()
+        }).eq("item_id", job["item_id"]).eq("platform", job["platform"]).eq("status", "pending"))
         # Een mislukte publicatie betekent vaak dat de gebruiker het formulier
         # zelf heeft afgemaakt. Plan meteen een scan in, zodat de app binnen
         # enkele minuten zelf ziet dat de advertentie tóch online staat in
@@ -1733,10 +1740,10 @@ def fail_job(job_id: str, body: dict, user_id: str = Depends(get_current_user)):
         # views, so it looked deleted while it was actually still up (and, for a
         # relist, left the item in limbo). Keep it "active" (its true state) and
         # attach a visible message so the UI can offer a retry instead of hiding it.
-        db.table("listings").update({
+        execute_with_retry(db.table("listings").update({
             "status": "active",
             "error_message": body.get("error", "Delist failed — the listing is still live. You can retry."),
-        }).eq("item_id", job["item_id"]).eq("platform", job["platform"]).execute()
+        }).eq("item_id", job["item_id"]).eq("platform", job["platform"]))
     return {"ok": True}
 
 
