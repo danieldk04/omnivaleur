@@ -38,7 +38,38 @@ async function gaEvent(name, params = {}) {
           client_id: clientId,
           // engagement_time_msec keeps the event out of GA's "(not set)"
           // engagement bucket so it shows up in standard reports.
-          events: [{ name, params: { engagement_time_msec: 1, ...params } }],
+          //
+          // De drie regels daaronder houden dit telemetrieverkeer uit de
+          // marketingrapporten. Zonder die regels stond de extensie op
+          // 29-08-2026 als "(not set)" in Verkeersacquisitie: 33 sessies met
+          // 1.511 gebeurtenissen — bijna de helft van alles in de property —
+          // met 0% betrokkenheid, want deze meldingen komen niet van een
+          // pagina en Google kan ze dus nergens plaatsen. Daarmee zat er een
+          // "kanaal" in de lijst dat geen kanaal is, precies in het rapport
+          // waarin je wilt zien wat je kanalen opleveren.
+          //
+          //   traffic_type: het haakje waar GA's ingebouwde filter voor intern
+          //     verkeer op aangrijpt. Staat dat filter aan, dan komen deze
+          //     meldingen de property niet eens meer in.
+          //   campaign_source/medium: het vangnet als dat filter uit staat.
+          //     Dan staat er tenminste een leesbare naam in plaats van
+          //     "(not set)".
+          //
+          // Dit kan het verkeer van een échte bezoeker niet vervuilen: de
+          // client_id hierboven is een eigen id per installatie en heeft niets
+          // te maken met de cookie van de website.
+          events: [
+            {
+              name,
+              params: {
+                engagement_time_msec: 1,
+                traffic_type: "internal",
+                campaign_source: "omnivaleur-extensie",
+                campaign_medium: "app",
+                ...params,
+              },
+            },
+          ],
         }),
       }
     );

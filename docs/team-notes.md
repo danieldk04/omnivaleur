@@ -1525,3 +1525,40 @@ onbereikbaar maken).
 Openstaand voor Daniel: de acht bio-links moeten nog in de profielen geplakt
 worden. Dat kan niemand namens hem doen zonder in te loggen; de Chrome-extensie
 die dat zou toestaan was niet verbonden.
+
+### 30-08-2026 — De extensie stond als "kanaal" in de marketingrapporten
+
+Nagemeten in Verkeersacquisitie (23–29 aug): de rij `(not set)` telde 33 sessies
+met **1.511 gebeurtenissen — 49,7% van alles in de property** — bij 0%
+betrokkenheid en 45,8 gebeurtenissen per sessie. Dat zijn geen bezoekers.
+
+Oorzaak: `extension/analytics.js` stuurt `job_started`, `job_error`,
+`popup_opened` en `extension_installed/updated` via het Measurement Protocol
+rechtstreeks naar GA4. Zulke meldingen komen niet van een pagina, dus er is geen
+bron, geen medium en geen referrer — Google plaatst ze onder `(not set)`. Daarmee
+stond er een kanaal in de lijst dat geen kanaal is, precies in het rapport waar
+Daniel wil zien wat zijn kanalen opleveren, en het slokte de helft van de
+gebeurtenissen op.
+
+Elke melding draagt nu drie extra velden (extensie 1.0.266):
+
+* `traffic_type: "internal"` — het haakje waar GA's ingebouwde filter voor intern
+  verkeer op aangrijpt. Staat dat filter aan, dan komt dit de property niet meer in.
+* `campaign_source: "omnivaleur-extensie"` en `campaign_medium: "app"` — het
+  vangnet als dat filter uit blijft: dan staat er een leesbare naam in plaats van
+  `(not set)`.
+
+Kan dit het verkeer van een echte bezoeker vervuilen? Nee: de `client_id` van de
+extensie is een eigen UUID per installatie (chrome.storage) en staat volledig los
+van de cookie van de website.
+
+Werkt pas zodra 1.0.266 in de Web Store staat en is uitgerold. Geen haast — mag
+met de volgende release mee.
+
+**Losse vondst in hetzelfde rapport: Instagram staat onder twee namen.**
+`ig / social` had 19 sessies, `instagram / social` 8. Er loopt dus ergens nog een
+link met `?utm_source=ig` — niet uit deze repo, want daar staat hij nergens; dat
+is dus met de hand ergens geplaatst (post, oudere bio, of via Monaim). Precies de
+splitsing waar `tests/test_utm_links.py` voor waarschuwt. Ook `email / cold_email`
+(25 sessies) staat er nog: dat zijn de interne knoppen op /mp-video die op
+29-08 zijn ontdaan van hun tags, die rij dooft vanzelf uit.
