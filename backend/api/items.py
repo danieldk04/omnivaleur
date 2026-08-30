@@ -2,6 +2,9 @@ from fastapi import APIRouter, HTTPException, Depends
 from backend.models import ItemCreate, ItemOut
 from backend.database import get_db, execute_with_retry, fetch_all, IN_BROK
 from backend.api.deps import get_current_user, require_active_subscription
+from backend.services.tweelingen import (
+    groepeer, zelfde_artikel, advertentiecode, bekende_merken_van,
+)
 import asyncio
 import logging
 import uuid
@@ -213,6 +216,105 @@ async def fill_from_marktplaats(limit: int = 150,
         logger.exception("fill-from-marktplaats mislukt voor %s", user_id)
         raise HTTPException(status_code=502, detail=f"Marktplaats lookup failed: {e}")
     return uit
+
+
+@router.get("/duplicates")
+def list_duplicates(user_id: str = Depends(get_current_user)):
+    """
+    Welke items in deze voorraad in werkelijkheid hetzelfde artikel zijn.
+
+    Gegroepeerd op het artikelnummer dat de verkoper zelf voor de titel zet,
+    en alleen als kleur, maat, merk en prijs elkaar niet tegenspreken. Per groep
+    staat het OUDSTE item vooraan: dat is het item dat de rest opslokt, want
+    daar hangt de langste geschiedenis aan.
+    """
+    db = get_db()
+    items = fetch_all(lambda: db.table("items")
+                      .select("id,title,sku,brand,price,photo_urls,created_at")
+                      .eq("user_id", user_id))
+    groepen = groepeer(items)
+    if not groepen:
+        return {"groups": []}
+
+    ids = [i["id"] for g in groepen for i in g]
+    rijen = []
+    for s_ in range(0, len(ids), IN_BROK):
+        brok = ids[s_:s_ + IN_BROK]
+        rijen.extend(fetch_all(lambda b=brok: db.table("listings")
+                               .select("item_id,platform,status,platform_listing_url")
+                               .in_("item_id", b)))
+    per_item = {}
+    for r in rijen:
+        per_item.setdefault(r["item_id"], []).append(r)
+
+    return {"groups": [
+        {
+            "code": advertentiecode(g[0].get("title"), g[0].get("sku")),
+            "items": [
+                {
+                    "id": i["id"], "title": i.get("title"), "sku": i.get("sku"),
+                    "price": i.get("price"), "created_at": i.get("created_at"),
+                    "photo": (i.get("photo_urls") or [None])[0],
+                    "listings": sorted(
+                        ({"platform": r["platform"], "status": r["status"],
+                          "url": r.get("platform_listing_url")}
+                         for r in per_item.get(i["id"], [])),
+                        key=lambda r: (r["platform"], r["status"]),
+                    ),
+                }
+                for i in g
+            ],
+        }
+        for g in groepen
+    ]}
+
+
+@router.post("/merge")
+def merge_items(body: dict, user_id: str = Depends(get_current_user)):
+    """
+    Voeg dubbele rijen van hetzelfde artikel samen tot één item.
+
+    Alle advertenties en opdrachten verhuizen naar `keep`, de overige items
+    verdwijnen. Onomkeerbaar, dus: alleen eigen items, en alleen items die de
+    controle in tweelingen.py als hetzelfde artikel ziet. Een verzoek dat langs
+    die controle glipt wordt geweigerd in plaats van uitgevoerd — twee
+    verschillende truien samenvoegen is niet terug te draaien.
+
+    De foto's blijven staan. `_release_photos` zou een foto kunnen weghalen die
+    het overgebleven item zelf ook gebruikt, en een advertentie zonder plaatje
+    is erger dan een paar ongebruikte bestanden.
+    """
+    keep = (body or {}).get("keep")
+    losers = [i for i in ((body or {}).get("merge") or []) if i and i != keep]
+    if not keep or not losers:
+        raise HTTPException(status_code=400, detail="keep and merge[] are required")
+
+    db = get_db()
+    rijen = (db.table("items").select("id,title,sku,brand,price")
+             .eq("user_id", user_id).in_("id", [keep, *losers]).execute().data or [])
+    per_id = {r["id"]: r for r in rijen}
+    if keep not in per_id:
+        raise HTTPException(status_code=404, detail="Item not found")
+
+    merken = bekende_merken_van(rijen)
+    samengevoegd, geweigerd = [], []
+    for lid in losers:
+        ander = per_id.get(lid)
+        if not ander:
+            geweigerd.append({"id": lid, "reason": "not_found"})
+            continue
+        if not zelfde_artikel(per_id[keep], ander, merken):
+            geweigerd.append({"id": lid, "reason": "not_the_same_article"})
+            continue
+        # Advertenties verhuizen. Staat de andere rij op een kanaal waar het
+        # bewaarde item óók op staat, dan blijven ze allebei bestaan: het zijn
+        # twee echte advertenties en die moeten allebei weg als er verkocht is.
+        db.table("listings").update({"item_id": keep}).eq("item_id", lid).execute()
+        db.table("jobs").update({"item_id": keep}).eq("item_id", lid).execute()
+        db.table("items").delete().eq("id", lid).eq("user_id", user_id).execute()
+        samengevoegd.append(lid)
+
+    return {"kept": keep, "merged": samengevoegd, "refused": geweigerd}
 
 
 @router.get("/{item_id}")

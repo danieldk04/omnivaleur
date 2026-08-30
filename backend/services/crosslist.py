@@ -433,6 +433,51 @@ async def publish_to_platforms(item_id: str, platforms: list[str], user_id: str)
     if missing:
         raise CrosslistValidationError(missing)
 
+    # STAAT DIT ARTIKEL ER AL OP, ONDER EEN ANDERE RIJ? (30-08-2026)
+    #
+    # Dezelfde trui staat vaak meerdere keren in de voorraad: één rij per
+    # importbron, met dezelfde nummering voor de titel — "(1032) Grijs Ralph
+    # Lauren Zip Vest" naast "(1032) Grey Ralph Lauren Zip Vest". Het dashboard
+    # keek alleen naar de eigen rij, zag daar geen Vinted-advertentie en zei
+    # "staat niet op Vinted". Wie dan op Publish drukte zette de trui een TWEEDE
+    # keer op Vinted — met twee kopers voor één trui als afloop.
+    #
+    # Dus kijken we naar de hele familie. Staat er al een levende advertentie op
+    # dit kanaal, dan publiceren we niet en zeggen we waaróm niet.
+    bezet: dict[str, dict] = {}
+    try:
+        from backend.services.tweelingen import familie_ids
+        familie = [i for i in await naast_de_lus(lambda: familie_ids(db, item))
+                   if i != item_id]
+        if familie:
+            zuster_rijen = (await _exec(
+                db.table("listings")
+                .select("item_id,platform,status,platform_listing_id,platform_listing_url")
+                .in_("item_id", familie)
+                .in_("status", ["active", "hidden", "pending", "relisting"])
+            )).data or []
+            for rij in zuster_rijen:
+                if rij.get("platform") in platforms:
+                    bezet.setdefault(rij["platform"], rij)
+    except Exception as e:  # noqa: BLE001
+        # Kunnen we de familie niet lezen, dan publiceren we gewoon. Een
+        # dubbele advertentie is vervelend; niets kunnen publiceren is erger.
+        logger.warning("Kon de zusterrijen van %s niet lezen: %s", item_id, e)
+
+    if bezet:
+        results.extend([
+            {"platform": p, "status": "duplicate",
+             "platform_listing_id": rij.get("platform_listing_id"),
+             "platform_listing_url": rij.get("platform_listing_url"),
+             "duplicate_of": rij.get("item_id"),
+             "message": ("This exact article is already listed here under a duplicate copy"
+                         " of this item — merge the two instead of publishing again."),
+             "error": ("Already listed here under a duplicate copy of this item."
+                       " Merge them first, otherwise you get two adverts for one article.")}
+            for p, rij in bezet.items()
+        ])
+        platforms = [p for p in platforms if p not in bezet]
+
     api_platforms = [p for p in platforms if p in API_PLATFORMS]
     ext_platforms = [p for p in platforms if p in EXTENSION_PLATFORMS]
 
@@ -557,7 +602,14 @@ async def publish_to_platforms(item_id: str, platforms: list[str], user_id: str)
             # Staat het er al op? Dan geen tweede advertentie aanmaken. De API-kant
             # had deze bescherming al (_publish_one); de extensieplatforms niet, dus
             # een tweede keer publiceren zette hetzelfde item nog eens op Vinted.
-            row = (existing_listing.data or [None])[0]
+            # Niet de eerste rij, maar de LEVENDE rij. Sinds een tweede
+            # advertentie op hetzelfde kanaal een eigen regel krijgt, kan de
+            # actieve advertentie ook de tweede regel zijn — en dan zei deze
+            # controle "niets gevonden" en publiceerde er nog een derde bij.
+            rijen = existing_listing.data or []
+            row = next((r for r in rijen
+                        if r.get("status") == "active" and r.get("platform_listing_id")),
+                       rijen[0] if rijen else None)
             if row and row.get("status") == "active" and row.get("platform_listing_id"):
                 results.append({
                     "platform": platform,

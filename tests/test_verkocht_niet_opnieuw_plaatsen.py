@@ -141,7 +141,11 @@ def test_familie_zoekt_op_nummer_en_sku():
 
     ids = familie_ids(D(), {"id": "a", "user_id": "u1", "title": "(1237) Navy"})
     assert ids == ["a", "b"]
-    assert gezien["or"] == "sku.eq.1237,title.ilike.(1237)%"
+    # De aanhalingstekens om het patroon zijn het verschil tussen werken en
+    # stilstaan: zonder die tekens leest PostgREST de haakjes als zijn eigen
+    # groepering en komt er een LEGE lijst terug zonder foutmelding. Gemeten op
+    # 30-08-2026 op echte data: 1 van de 8 rijen gevonden.
+    assert gezien["or"] == 'sku.eq.1237,title.ilike."(1237)%"'
 
 
 def test_vertaalde_tweeling_krijgt_wel_een_koppeling():

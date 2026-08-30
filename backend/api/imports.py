@@ -814,13 +814,18 @@ def _best_match(title: str, items: list[dict]) -> str | None:
     return matches[0] if len(matches) == 1 else None
 
 
-def _match_candidate(cand: dict, items: list[dict], listings_by_id: dict) -> tuple[str | None, str | None]:
+def _match_candidate(cand: dict, items: list[dict], listings_by_id: dict,
+                     bekende_merken: set | None = None) -> tuple[str | None, str | None]:
     """
     Decide which existing item (if any) a scraped listing belongs to, and why.
-    Two confident signals, strongest first:
+    Three confident signals, strongest first:
       1. same_listing — the exact same platform listing id already lives on an
          item (we imported/created this listing before). 100% certain.
-      2. same_title  — a single existing item has an identical title.
+      2. same_code   — de advertentie begint met hetzelfde artikelnummer als een
+         item dat we al hebben, en kleur/maat/merk/prijs spreken elkaar niet
+         tegen. Dit is het signaal dat een VERTAALDE advertentie herkent: de
+         titel verschilt per taal, het nummer tussen haakjes niet.
+      3. same_title  — a single existing item has an identical title.
     Anything else → (None, None): no auto-link, the row becomes a new item.
     Returns (item_id, reason).
     """
@@ -829,6 +834,20 @@ def _match_candidate(cand: dict, items: list[dict], listings_by_id: dict) -> tup
         item_id = listings_by_id.get((cand.get("platform"), str(lid)))
         if item_id and any(it["id"] == item_id for it in items):
             return item_id, "same_listing"
+
+    # Het artikelnummer. Staan er meerdere items met datzelfde nummer, dan is dat
+    # zelf al de rommel die we hier proberen te stoppen: dan pakken we het OUDSTE
+    # item, want daar hangt de langste geschiedenis aan. Een nieuw item erbij
+    # maken zou de stapel alleen maar hoger maken.
+    code = advertentiecode(cand.get("title"))
+    if code:
+        gelijk = [it for it in items
+                  if advertentiecode(it.get("title"), it.get("sku")) == code
+                  and plausibel(cand, it, bekende_merken or set()) is None]
+        if gelijk:
+            gelijk.sort(key=lambda i: (i.get("created_at") or "", i.get("id") or ""))
+            return gelijk[0]["id"], "same_code"
+
     title_match = _best_match(cand.get("title"), items)
     if title_match:
         return title_match, "same_title"
@@ -872,6 +891,11 @@ def _tweede_advertentie(db, item_id: str, platform: str, listing_id) -> bool:
     hierboven ziet dat verschil niet, en de koppeling overschreef dan het
     advertentienummer van de vorige. Gevolg: negen advertenties die het dashboard
     niet meer kende en dus ook niet kon verwijderen als er één verkocht was.
+
+    Geldt alleen nog voor de TITELmatch. Draagt de advertentie hetzelfde
+    artikelnummer als een bestaand item, dan zegt de verkoper zelf dat het één
+    artikel is en krijgt de tweede advertentie een eigen regel onder datzelfde
+    item — zie de uitleg in bulk_import_candidates().
     """
     if not item_id or listing_id is None:
         return False
@@ -915,7 +939,7 @@ def _tweede_advertentie(db, item_id: str, platform: str, listing_id) -> bool:
 
 _TWIN_BATCH = 40          # candidates per model call
 _TWIN_MAX_ITEMS = 250     # never build a prompt bigger than this
-_TWIN_PRICE_FACTOR = 2.5  # a twin priced 2.5x apart is not the same object
+# De prijsgrens voor een tweeling staat in backend/services/dubbelen.py.
 
 
 def _twin_pool(platform: str, items: list[dict], platforms_by_item: dict) -> list[dict]:
@@ -937,112 +961,17 @@ def _twin_pool(platform: str, items: list[dict], platforms_by_item: dict) -> lis
     return pool[:_TWIN_MAX_ITEMS]
 
 
-def _price(v) -> float | None:
-    try:
-        return float(v) if v is not None else None
-    except (TypeError, ValueError):
-        return None
-
-
-# Colour words that mean the same thing across the two languages. Everything not
-# listed here canonicalises to itself, so an unknown colour simply never matches
-# a different one. Built from _COLORS above, which already covers NL inflections.
-_COLOR_CANON = {
-    "zwart": "black", "zwarte": "black", "black": "black",
-    "wit": "white", "witte": "white", "white": "white",
-    "gebroken wit": "offwhite", "off white": "offwhite", "ecru": "offwhite", "crème": "cream",
-    "creme": "cream", "cream": "cream",
-    "grijs": "grey", "grijze": "grey", "grey": "grey", "gray": "grey",
-    "lichtgrijs": "lightgrey", "lichtgrijze": "lightgrey", "light grey": "lightgrey",
-    "donkergrijs": "darkgrey", "donkergrijze": "darkgrey", "dark grey": "darkgrey",
-    "blauw": "blue", "blauwe": "blue", "blue": "blue", "royal blue": "blue",
-    "lichtblauw": "lightblue", "lichtblauwe": "lightblue", "light blue": "lightblue",
-    "donkerblauw": "navy", "donkerblauwe": "navy", "dark blue": "navy",
-    "marine": "navy", "marineblauw": "navy", "marineblauwe": "navy", "navy": "navy",
-    "rood": "red", "rode": "red", "red": "red",
-    "bordeaux": "burgundy", "burgundy": "burgundy", "maroon": "burgundy", "wine": "burgundy",
-    "groen": "green", "groene": "green", "green": "green",
-    "lichtgroen": "lightgreen", "lichtgroene": "lightgreen", "light green": "lightgreen",
-    "donkergroen": "darkgreen", "donkergroene": "darkgreen", "dark green": "darkgreen",
-    "olijfgroen": "olive", "olijfgroene": "olive", "olive": "olive", "kaki": "khaki", "khaki": "khaki",
-    "bruin": "brown", "bruine": "brown", "brown": "brown", "cognac": "cognac", "camel": "camel",
-    "taupe": "taupe", "beige": "beige", "tan": "beige",
-    "geel": "yellow", "gele": "yellow", "yellow": "yellow", "mustard": "mustard",
-    "oranje": "orange", "orange": "orange",
-    "roze": "pink", "pink": "pink", "zalm": "salmon",
-    "paars": "purple", "paarse": "purple", "purple": "purple",
-    "lila": "lilac", "lilac": "lilac", "lavender": "lilac",
-    "zilver": "silver", "zilveren": "silver", "silver": "silver",
-    "goud": "gold", "gouden": "gold", "gold": "gold",
-    "mint": "mint", "teal": "teal", "turquoise": "turquoise", "multi": "multi",
-}
-
-_SIZE_WORDS = {
-    "small": "S", "medium": "M", "large": "L",
-    "extra small": "XS", "extra large": "XL",
-}
-_SIZE_TOKEN = re.compile(r"^(xxxs|xxs|xs|s|m|l|xl|xxl|xxxl|w\d{2}|\d{2})$", re.I)
-
-
-def _canon_colors(text: str | None) -> set:
-    """Every colour named in a title, in one language-neutral vocabulary."""
-    s = f" {' '.join((text or '').lower().split())} "
-    found = set()
-    for word in sorted(_COLOR_CANON, key=len, reverse=True):
-        if f" {word} " in s or f" {word}e " in s:
-            found.add(_COLOR_CANON[word])
-    return found
-
-
-def _sizes(text: str | None) -> set:
-    """Size labels in a title — 'Heren XXL', 'Men XXL', "Men's Medium", 'W36', 'maat 42'."""
-    s = " ".join((text or "").lower().split())
-    out = set()
-    for word, canon in _SIZE_WORDS.items():
-        if re.search(rf"\b{re.escape(word)}\b", s):
-            out.add(canon)
-    for tok in re.split(r"[^a-z0-9]+", s):
-        if not tok or not _SIZE_TOKEN.match(tok):
-            continue
-        if tok.isdigit() and not (28 <= int(tok) <= 52):
-            continue      # a number that is not a plausible clothing/shoe size
-        out.add(tok.upper())
-    return out
-
-
-def _brands(text: str | None, known: set) -> set:
-    """Which of the seller's own brand names appear in a title."""
-    s = " ".join((text or "").lower().split())
-    return {b for b in known if b and re.search(rf"\b{re.escape(b)}\b", s)}
-
-
-def _twin_plausible(cand: dict, item: dict, known_brands: set) -> str | None:
-    """
-    Hard checks the language model cannot talk its way past. Returns the reason
-    for rejection, or None when the pair survives.
-
-    Measured on real inventory: the model on its own paired grey with blue,
-    Profuomo with Suitsupply and an M with an XL. Colour, size and brand are
-    right there in the title, so they get decided by rules, not by judgement.
-    """
-    a, b = _price(cand.get("price")), _price(item.get("price"))
-    if a and b and a > 0 and b > 0 and max(a, b) / min(a, b) > _TWIN_PRICE_FACTOR:
-        return "price"
-
-    ca, cb = _canon_colors(cand.get("title")), _canon_colors(item.get("title"))
-    if ca and cb and not (ca & cb):
-        return "colour"
-
-    sa, sb = _sizes(cand.get("title")), _sizes(item.get("title"))
-    if sa and sb and not (sa & sb):
-        return "size"
-
-    ba = _brands(cand.get("title"), known_brands) | ({(cand.get("brand") or "").lower()} - {""})
-    bb = _brands(item.get("title"), known_brands) | ({(item.get("brand") or "").lower()} - {""})
-    if ba and bb and not (ba & bb):
-        return "brand"
-
-    return None
+# Kleur, maat, merk en prijs vergelijken zit sinds 30-08-2026 in één module,
+# omdat het publiceren dezelfde controle nodig heeft: zonder die controle zette
+# "Publish" een artikel dat al op een kanaal stond er voor de tweede keer op.
+from backend.services.tweelingen import (          # noqa: E402
+    advertentiecode, plausibel, bekende_merken_van,
+    plausibel as _twin_plausible,
+    kleuren as _canon_colors,
+    maten as _sizes,
+    merken as _brands,
+    _prijs as _price,
+)
 
 
 async def _find_twins(cands: list[dict], items: list[dict], platforms_by_item: dict) -> dict:
@@ -1531,8 +1460,10 @@ async def bulk_import_candidates(body: dict = None, user_id: str = Depends(requi
         if cache_vers:
             entry["ts"] = _time_mod.monotonic()  # sessie loopt door, klok niet laten aflopen
             return cands, entry["items"], entry["by_id"], entry["by_platform"]
+        # created_at en sku horen erbij: het advertentienummer kan uit de sku
+        # komen, en bij meerdere rijen met hetzelfde nummer wint de oudste.
         its = fetch_all(lambda: db.table("items")
-                        .select("id,title,price,brand").eq("user_id", user_id))
+                        .select("id,title,price,brand,sku,created_at").eq("user_id", user_id))
         by_id, by_platform = _listing_index(db, its)
         _BULK_IMPORT_CACHE[user_id] = {
             "items": its, "by_id": by_id, "by_platform": by_platform, "ts": _time_mod.monotonic(),
@@ -1541,10 +1472,14 @@ async def bulk_import_candidates(body: dict = None, user_id: str = Depends(requi
 
     candidates, items, listings_by_id, platforms_by_item = await asyncio.to_thread(_read)
 
+    # De eigen merkenwoordenschat van deze verkoper: nodig om te beslissen of
+    # twee advertenties met hetzelfde nummer echt hetzelfde artikel zijn.
+    merken_van_verkoper = bekende_merken_van(items) | bekende_merken_van(candidates)
+
     # Work out up front which rows must NOT be processed automatically, and drop
     # them from this pass entirely.
     unmatched = [c for c in candidates
-                 if not _match_candidate(c, items, listings_by_id)[0]]
+                 if not _match_candidate(c, items, listings_by_id, merken_van_verkoper)[0]]
     twins = await _find_twins(unmatched, items, platforms_by_item)
     parked = len(twins)
     if twins:
@@ -1593,29 +1528,55 @@ async def bulk_import_candidates(body: dict = None, user_id: str = Depends(requi
                 break
             try:
                 listed_at = cand.get("platform_listed_at") or now
-                match_id, reden = _match_candidate(cand, items, listings_by_id)
-                # Alleen een titelmatch kan hiernaast zitten; hetzelfde
-                # advertentienummer is per definitie dezelfde advertentie.
+                match_id, reden = _match_candidate(
+                    cand, items, listings_by_id, merken_van_verkoper)
+                # Een TITELmatch zegt niets over aantallen: tien identieke
+                # blikjes plectrums heten alle tien hetzelfde en zijn tien
+                # voorwerpen. Staat er al een ándere advertentie op dat kanaal,
+                # dan blijft het een eigen item. Bij een advertentieNUMMER ligt
+                # dat anders — dan zegt de verkoper zelf dat het één artikel is.
                 if match_id and reden == "same_title" and _tweede_advertentie(
                         db, match_id, cand["platform"], cand.get("platform_listing_id")):
                     match_id = None
                 if match_id:
-                    existing = db.table("listings").select("id").eq("item_id", match_id).eq("platform", cand["platform"]).execute()
-                    if existing.data:
-                        db.table("listings").update({
-                            "platform_listing_id": cand["platform_listing_id"],
-                            "platform_listing_url": cand["platform_listing_url"],
-                            "status": _listing_status_for(cand),
-                            "listed_at": listed_at,
-                        }).eq("id", existing.data[0]["id"]).execute()
+                    velden = {
+                        "platform_listing_id": cand["platform_listing_id"],
+                        "platform_listing_url": cand["platform_listing_url"],
+                        "status": _listing_status_for(cand),
+                        "listed_at": listed_at,
+                    }
+                    # WELKE REGEL HOORT BIJ DEZE ADVERTENTIE? (30-08-2026)
+                    #
+                    # Een verkoper kan hetzelfde artikel meerdere keren op één
+                    # kanaal hebben staan — een advertentie die hij zelf opnieuw
+                    # plaatste, of een oude die bleef hangen. Vroeger werd dan
+                    # het advertentienummer van de BESTAANDE regel overschreven
+                    # (advertentie kwijt) of, met de rem erop, een heel nieuw
+                    # item aangemaakt. Dat tweede is wat de voorraad opblies:
+                    # zeven rijen voor één vest, en bij elke rij zei het
+                    # dashboard "staat niet op Vinted".
+                    #
+                    # Nu krijgt elke advertentie zijn eigen regel ONDER hetzelfde
+                    # item. Dan klopt het overzicht, en bij verkoop gaan ze
+                    # allemaal weg in plaats van één.
+                    bestaand = (db.table("listings")
+                                .select("id,platform_listing_id")
+                                .eq("item_id", match_id)
+                                .eq("platform", cand["platform"]).execute().data or [])
+                    pid = cand.get("platform_listing_id")
+                    doel = next((r for r in bestaand
+                                 if pid is not None
+                                 and str(r.get("platform_listing_id")) == str(pid)), None)
+                    if doel is None:
+                        # Een regel die nog geen advertentienummer draagt is de
+                        # lege plek die deze advertentie hoort te vullen.
+                        doel = next((r for r in bestaand
+                                     if r.get("platform_listing_id") is None), None)
+                    if doel is not None:
+                        db.table("listings").update(velden).eq("id", doel["id"]).execute()
                     else:
                         db.table("listings").insert({
-                            "item_id": match_id,
-                            "platform": cand["platform"],
-                            "platform_listing_id": cand["platform_listing_id"],
-                            "platform_listing_url": cand["platform_listing_url"],
-                            "status": _listing_status_for(cand),
-                            "listed_at": listed_at,
+                            "item_id": match_id, "platform": cand["platform"], **velden,
                         }).execute()
                     _backfill_item_from_candidate(db, match_id, cand, inferred=inferred_by_id.get(cand["id"]))
                     db.table("import_candidates").update({"status": "linked"}).eq("id", cand["id"]).execute()
@@ -1650,7 +1611,12 @@ async def bulk_import_candidates(body: dict = None, user_id: str = Depends(requi
                     }).execute()
 
                     db.table("import_candidates").update({"status": "imported"}).eq("id", cand["id"]).execute()
-                    items.append({"id": created_item["id"], "title": created_item["title"]})
+                    items.append({
+                        "id": created_item["id"], "title": created_item["title"],
+                        "sku": created_item.get("sku"), "brand": created_item.get("brand"),
+                        "price": created_item.get("price"),
+                        "created_at": created_item.get("created_at"),
+                    })
                     pid = cand.get("platform_listing_id")
                     if pid is not None:
                         listings_by_id[(cand["platform"], str(pid))] = created_item["id"]

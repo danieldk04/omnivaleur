@@ -1896,3 +1896,60 @@ herkent daaraan een mislukte herplaatsing. Een test bewaakt dat, en het scherm
 heeft er bovendien een statusslot op.
 
 Extensie 1.0.268. Ondergrens bewust niet opgehoogd.
+
+## 30-08-2026 — Eén trui, zeven keer in de voorraad
+
+Daniel meldde dat het dashboard bij een reeks items "staat niet op Vinted" zei
+terwijl hij zeker wist dat ze er wél op stonden — en hetzelfde voor Shopify.
+
+**Wat er echt aan de hand was.** Niets aan de Vinted- of Shopify-herkenning. De
+import maakte van dezelfde trui meerdere items. Gemeten op zijn eigen voorraad:
+440 items, waarvan 46 in werkelijkheid 13 artikelen waren. Bij één vest zeven
+rijen. Elke rij kende alleen zijn eigen advertentie, dus alle andere kanalen
+stonden daar op "niet geplaatst". Eén druk op Publish had er een tweede echte
+advertentie van gemaakt.
+
+Hoe de rijen ontstonden, in volgorde:
+1. De koppeling op titel eist een EXACTE en UNIEKE titel. De Marktplaats-
+   advertentie is Nederlands, de Vinted-advertentie Engels — geen match.
+2. Zodra er twee rijen met dezelfde titel bestaan, is de titel niet meer uniek en
+   koppelt er nóóit meer iets. Elke volgende importronde legde er een rij bij.
+3. De tweelingdetectie met het taalmodel kon niet helpen: `_twin_pool` sluit
+   items uit die al op het kanaal van de kandidaat staan, en dat was precies het
+   geval.
+
+**`familie_ids` heeft nooit gewerkt.** De tweelingafhandeling van 30-08 zocht met
+`or_("sku.eq.1032,title.ilike.(1032)%")`. PostgREST leest die haakjes als zijn
+eigen groepering en geeft dan géén fout maar een lege lijst terug. Gemeten: 1 van
+de 8 rijen gevonden. Met aanhalingstekens om het patroon — `title.ilike."(1032)%"`
+— worden het er 8. Daardoor werkt nu pas wat er stond: bij een verkoop gaan ook de
+advertenties van de zusterrijen weg. Een test bewaakt die aanhalingstekens.
+
+**Wat er nu gebeurt.**
+- `backend/services/tweelingen.py` is de enige plek voor "is dit hetzelfde
+  artikel". Het advertentienummer voor de titel — "(1032)" — is de sleutel, want
+  dat overleeft de vertaling. Erbovenop de harde controle op kleur, maat, merk en
+  prijs, zodat een hergebruikt nummer geen twee verschillende artikelen plakt.
+  Het nummer moet minstens drie tekens en twee cijfers hebben: anders werd "(XL)"
+  een familienummer en kregen alle XL-artikelen bij één verkoop een
+  verwijderopdracht.
+- De import koppelt op dat nummer (`same_code`) vóór de titelmatch. Staat er al
+  een andere advertentie op dat kanaal, dan komt er een EXTRA advertentieregel
+  onder hetzelfde item — geen nieuw item meer. De rem op de titelmatch blijft
+  staan: tien identieke blikjes plectrums zijn tien voorwerpen.
+- Publiceren slaat een kanaal over waar een zusterrij al live staat, met reden.
+  Dat is de directe rem op dubbele advertenties.
+- Het dashboard telt de advertenties van zusterrijen mee: paarse stip ⧉, niet
+  klikbaar, met de tekst dat samenvoegen de bedoeling is en niet publiceren.
+- Nieuw: `GET /api/items/duplicates` en `POST /api/items/merge`. De balk boven de
+  itemlijst voegt per groep of in één keer samen. De server weigert een
+  samenvoeging die kleur, maat, merk of prijs tegenspreekt.
+
+Samenvoegen is onomkeerbaar en gebeurt daarom nooit vanzelf. Foto's blijven staan
+— opruimen zou een foto kunnen weghalen die het overgebleven item zelf gebruikt.
+
+De dubbelenlijst wordt hoogstens eens per tien minuten opgehaald (en meteen na
+een import): het is een volledige voorraaduitlezing, en bij een account met 5.500
+items is dat niet iets voor elke verversing.
+
+Geen extensiewijziging, dus geen versieophoging.

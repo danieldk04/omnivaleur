@@ -168,12 +168,16 @@ tr.selected td { background: #eff6ff; }
 .pm-dot-icon.s-pending { background: #fef3c7; border-color: #fcd34d; }
 .pm-dot-icon.s-error { background: #fff7ed; border-color: #fbbf24; }
 .pm-dot-icon.s-none { background: #f1f5f9; border-color: #e2e8f0; opacity: .45; }
+/* Staat er wél op, maar via een dubbele rij van hetzelfde artikel. */
+.pm-dot-icon.s-twin { background: #ede9fe; border-color: #c4b5fd; }
 .pm-dot-icon .pm-dot-badge { position: absolute; bottom: -3px; right: -3px; width: 12px; height: 12px; border-radius: 50%; border: 1.5px solid #fff; font-size: 7px; display: flex; align-items: center; justify-content: center; font-weight: 800; line-height: 1; }
 .pm-dot-icon.s-active .pm-dot-badge { background: #059669; color: #fff; }
 .pm-dot-icon.s-pending .pm-dot-badge { background: #d97706; color: #fff; }
 .pm-dot-icon.s-error .pm-dot-badge { background: #dc2626; color: #fff; }
+.pm-dot-icon.s-twin .pm-dot-badge { background: #7c3aed; color: #fff; }
 .pm-dot-label { font-size: 9px; font-weight: 700; color: #94a3b8; letter-spacing: .2px; text-transform: uppercase; }
 .pm-dot-icon.s-active + .pm-dot-label { color: #065f46; }
+.pm-dot-icon.s-twin + .pm-dot-label { color: #6d28d9; }
 .pm-cb-listed { display: flex; align-items: center; gap: 8px; padding: 9px 13px; border: 1.5px solid #6ee7b7; border-radius: 8px; background: #f0fdf4; }
 .pm-cb-listed span { font-size: 13px; font-weight: 600; color: #065f46; }
 .pm-cb-listed .pm-cb-check { font-size: 13px; margin-left: auto; color: #059669; font-weight: 800; }
@@ -986,6 +990,7 @@ input[type="checkbox"].row-check { width: 15px; height: 15px; cursor: pointer; a
              Marktplaats betekent verdwenen ook "verlopen", en automatisch boeken
              zou een nog levend artikel overal weghalen. -->
         <div id="sold-confirm-bar" style="display:none"></div>
+        <div id="duplicate-bar" style="display:none"></div>
         <div class="filter-bar">
           <span class="filter-label">Filter</span>
           <select id="filter-platform" onchange="applyFilters()">
@@ -2935,7 +2940,8 @@ const PLATFORM_ICONS = new Proxy({}, { get: (_, key) => platIcon(key) });
 // dat onderscheid was "nog niet geladen" niet te onderscheiden van "niets staat
 // online", en dan schoof de hele catalogus naar "To list".
 let state = { items: [], listings: [], jobs: [], connected: [], crosslistItemId: null,
-              listingsLoaded: false, listingsLoadError: null, settings: {} };
+              listingsLoaded: false, listingsLoadError: null, settings: {},
+              dupGroups: [], dupSisters: {} };
 let selectedIds = new Set();
 
 // ── Marge calculator ────────────────────────────────────────────
@@ -3616,6 +3622,33 @@ async function fetchAllItems() {
   return all;
 }
 
+// ── Dubbele rijen van hetzelfde artikel ──────────────────────────
+//
+// Waarom dit apart wordt opgehaald en niet elke ronde: dezelfde trui staat
+// vaak meerdere keren in de voorraad (één rij per importbron). Het dashboard
+// keek alleen naar de eigen rij, zag daar geen Vinted-advertentie en zei
+// "staat niet op Vinted" — waarna Publish er een tweede advertentie bij zette.
+// De groepen veranderen alleen bij een import of een samenvoeging, dus één keer
+// per tien minuten ophalen is ruim genoeg en scheelt een volledige
+// voorraaduitlezing bij elke verversing.
+let _dupTs = 0;
+async function loadDuplicates(force) {
+  if (!force && Date.now() - _dupTs < 600000) return;
+  _dupTs = Date.now();
+  try {
+    const r = await apiFetch(`${API}/api/items/duplicates`);
+    const data = await parseJsonSafe(r);
+    if (!r.ok || !data || !Array.isArray(data.groups)) return;
+    state.dupGroups = data.groups;
+    state.dupSisters = {};
+    for (const g of data.groups) {
+      for (const it of g.items) {
+        state.dupSisters[it.id] = g.items.filter(x => x.id !== it.id).map(x => x.id);
+      }
+    }
+  } catch (e) { /* geen groepen is hooguit een gemiste waarschuwing */ }
+}
+
 async function loadAll() {
   const [itemsRes, listingsRes, jobsRes, platformsRes, settingsRes] = await Promise.allSettled([
     fetchAllItems(),
@@ -3651,6 +3684,7 @@ async function loadAll() {
   if (settingsRes.status === 'fulfilled' && settingsRes.value && typeof settingsRes.value === 'object') {
     state.settings = settingsRes.value;
   }
+  await loadDuplicates();
   renderDashboard();
   renderExtStatus();
   // Re-render items view if active
@@ -3745,6 +3779,25 @@ function renderPlatformMatrix(itemId) {
     if (!byPlatform[j.platform]) byPlatform[j.platform] = { status: 'pending' };
   }
 
+  // WAT DE ZUSTERRIJ ERBIJ WEET.
+  //
+  // Hetzelfde artikel staat vaak meerdere keren in de voorraad — één rij per
+  // importbron, met dezelfde nummering voor de titel. De advertentie op Vinted
+  // hangt dan aan de ándere rij, en deze rij zei doodleuk "staat niet op
+  // Vinted". Wie daarop afging drukte op Publish en had twee advertenties voor
+  // één trui. Dus tellen de advertenties van de zusterrijen hier gewoon mee,
+  // met een eigen stip zodat zichtbaar blijft waar ze vandaan komen.
+  const sisters = state.dupSisters[itemId] || [];
+  const bySister = {};
+  if (sisters.length) {
+    for (const l of state.listings) {
+      if (!sisters.includes(l.item_id)) continue;
+      if (!['active', 'hidden'].includes(l.status)) continue;
+      if (byPlatform[l.platform] || bySister[l.platform]) continue;
+      bySister[l.platform] = l;
+    }
+  }
+
   const SHORT = { marktplaats: 'MP', '2dehands': '2dh', vinted: 'V', facebook: 'FB', ebay: 'eBay', etsy: 'Etsy', shopify: 'Shop' };
 
   const dots = PLATFORMS.map(p => {
@@ -3762,6 +3815,10 @@ function renderPlatformMatrix(itemId) {
     } else if (l && l.status === 'error') {
       cls = 's-error'; badge = '!';
       tip = l.error_message ? `${PLATFORM_LABELS[p]}: ${l.error_message}` : `${PLATFORM_LABELS[p]}: failed — publish again`;
+    } else if (bySister[p]) {
+      cls = 's-twin'; badge = '⧉';
+      tip = `${PLATFORM_LABELS[p]}: already listed here — but under a duplicate copy of this item.`
+          + ` Do NOT publish again; merge the copies instead.`;
     }
     const badgeEl = badge ? `<span class="pm-dot-badge">${badge}</span>` : '';
     // Manual override: if the dashboard didn't auto-detect a listing (not-listed or
@@ -3774,7 +3831,7 @@ function renderPlatformMatrix(itemId) {
     // eindeloos oranje en was er geen enkele manier om dat recht te zetten. Eén
     // klik zet hem op listed én sluit de vastgelopen opdracht af, zodat de
     // wachtrij weer loopt.
-    const canMark = !(l && l.status === 'active') && !(l && l.status === 'hidden');
+    const canMark = !(l && l.status === 'active') && !(l && l.status === 'hidden') && !bySister[p];
     const isBusy = !!(l && (l.status === 'pending' || l.status === 'queued'));
     const clickAttrs = canMark
       ? ` onclick="markPlatformListed('${itemId}','${p}','${PLATFORM_LABELS[p]}',${isBusy})" style="cursor:pointer"`
@@ -4223,8 +4280,97 @@ async function answerPossiblySold(itemId, platform, verkocht, suggested) {
   }
 }
 
+// ── "Dit is twee keer hetzelfde artikel" ─────────────────────────
+//
+// Waarom dit een knop is en geen automatische opruiming: samenvoegen is niet
+// terug te draaien. De server weigert een samenvoeging die kleur, maat, merk of
+// prijs tegenspreekt, maar het laatste woord hoort bij de verkoper — het is
+// zijn voorraad.
+function renderDuplicateBar() {
+  const bar = document.getElementById('duplicate-bar');
+  if (!bar) return;
+  const groepen = state.dupGroups || [];
+  if (!groepen.length) { bar.style.display = 'none'; bar.innerHTML = ''; return; }
+
+  const teveel = groepen.reduce((n, g) => n + g.items.length - 1, 0);
+  const TOON = 6;
+  const regels = groepen.slice(0, TOON).map(g => {
+    const kanalen = [...new Set(g.items.flatMap(i =>
+      (i.listings || []).filter(l => ['active', 'hidden'].includes(l.status))
+                        .map(l => PLATFORM_LABELS[l.platform] || l.platform)))];
+    const eerste = g.items[0];
+    return `<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-top:1px solid #ede9fe">
+      <div style="flex:1;min-width:0">
+        <div style="font-size:13px;font-weight:600;color:#1e293b;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(eerste.title || '')}</div>
+        <div style="font-size:11px;color:#64748b">${g.items.length} copies of one article${kanalen.length ? ' · live on ' + esc(kanalen.join(', ')) : ''}</div>
+      </div>
+      <button class="btn btn-primary btn-sm" onclick="mergeDuplicateGroup('${esc(eerste.id)}')">Merge into one</button>
+    </div>`;
+  }).join('');
+
+  bar.style.display = '';
+  bar.innerHTML = `<div style="border:1.5px solid #c4b5fd;background:#f5f3ff;border-radius:10px;padding:12px 14px;margin-bottom:14px">
+    <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+      <strong style="font-size:14px;color:#5b21b6">⧉ ${teveel} duplicate row${teveel === 1 ? '' : 's'} — the same article is in your inventory more than once</strong>
+      <button class="btn btn-primary btn-sm" style="margin-left:auto" onclick="mergeAllDuplicates()">Merge all ${groepen.length}</button>
+    </div>
+    <div style="font-size:12px;color:#5b21b6;margin-top:4px">
+      Each copy only knows its own adverts, so the others look "not listed" — publish from one and you get a second advert for an article you already have for sale. Merging keeps every advert and puts them under one item.
+    </div>
+    ${regels}
+    ${groepen.length > TOON ? `<div style="font-size:11px;color:#7c3aed;padding-top:8px">…and ${groepen.length - TOON} more.</div>` : ''}
+  </div>`;
+}
+
+async function mergeDuplicateGroup(keepId) {
+  const groep = (state.dupGroups || []).find(g => g.items.some(i => i.id === keepId));
+  if (!groep) return;
+  const others = groep.items.filter(i => i.id !== keepId).map(i => i.id);
+  if (!confirm(`Merge ${groep.items.length} copies of "${groep.items[0].title || ''}" into one item?\n\nEvery advert stays; they all end up under one item. This cannot be undone.`)) return;
+  await mergeItems(keepId, others);
+  await loadDuplicates(true);
+  await loadAll();
+}
+
+async function mergeAllDuplicates() {
+  const groepen = state.dupGroups || [];
+  if (!groepen.length) return;
+  const teveel = groepen.reduce((n, g) => n + g.items.length - 1, 0);
+  if (!confirm(`Merge ${teveel} duplicate rows into ${groepen.length} item${groepen.length === 1 ? '' : 's'}?\n\nEvery advert stays; they end up under one item each. This cannot be undone.`)) return;
+  let mislukt = 0;
+  for (const g of groepen) {
+    const ok = await mergeItems(g.items[0].id, g.items.slice(1).map(i => i.id));
+    if (!ok) mislukt++;
+  }
+  await loadDuplicates(true);
+  await loadAll();
+  if (mislukt) showToast(`${mislukt} group(s) could not be merged — they are still in the list.`);
+}
+
+async function mergeItems(keep, merge) {
+  try {
+    const r = await apiFetch(`${API}/api/items/merge`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ keep, merge }),
+    });
+    const data = await parseJsonSafe(r);
+    if (!r.ok) { showToast(data?.detail || 'Could not merge these items'); return false; }
+    // Geweigerde rijen zijn geen storing maar een oordeel: de server vond ze
+    // niet hetzelfde artikel. Dat hoort hij te horen, niet stilzwijgend te missen.
+    if ((data.refused || []).length) {
+      showToast(`${data.refused.length} row(s) were left alone — they did not match closely enough to merge safely.`);
+    }
+    return true;
+  } catch (e) {
+    showToast('Could not merge these items — try again');
+    return false;
+  }
+}
+
 function renderItemsTable(items) {
   renderSoldConfirmBar();
+  renderDuplicateBar();
   let lastBucket = null;
   const rows = items.map(item => {
     const checked = selectedIds.has(item.id) ? 'checked' : '';
@@ -4395,7 +4541,10 @@ async function doBulkCrosslist() {
       }
       // res.ok doesn't mean every platform succeeded — API platforms report
       // per-platform errors in results.
-      (data.results || []).filter(r => r.status === 'error')
+      // 'duplicate' hoort hier ook bij: dat kanaal is bewust overgeslagen omdat
+      // het artikel er al op staat onder een dubbele rij. Stil overslaan zou
+      // lezen als "gelukt", en dan blijft de dubbeling ongemerkt staan.
+      (data.results || []).filter(r => r.status === 'error' || r.status === 'duplicate')
         .forEach(r => apiErrors.add(`${PLATFORM_LABELS[r.platform] || r.platform}: ${r.error || 'failed'}`));
       done++;
     } catch (e) {
@@ -6078,6 +6227,7 @@ async function bulkImportAllCandidates() {
       // Nothing moved this pass (all remaining are un-processable) — stop to avoid a loop.
       if ((data.linked || 0) + (data.created || 0) + (data.failed || 0) + (data.parked || 0) === 0) break;
     }
+    await loadDuplicates(true);   // een import is precies waar dubbelen ontstaan
     await loadAll();
     await loadImportCandidates();
     setBusy(false);
@@ -7060,11 +7210,14 @@ async function doCrosslist() {
     closeModal('modal-crosslist');
     // API platforms (eBay/Shopify) publish server-side and can fail immediately —
     // surface those instead of always claiming success.
-    const errored = (data.results || []).filter(r => r.status === 'error');
-    const ok = (data.results || []).filter(r => r.status !== 'error').map(r => PLATFORM_LABELS[r.platform] || r.platform);
+    // 'duplicate' telt hier mee als "niet gepubliceerd, en dit is waarom":
+    // het artikel staat er al op onder een dubbele rij van hetzelfde item.
+    const errored = (data.results || []).filter(r => r.status === 'error' || r.status === 'duplicate');
+    const ok = (data.results || []).filter(r => r.status !== 'error' && r.status !== 'duplicate')
+                                   .map(r => PLATFORM_LABELS[r.platform] || r.platform);
     if (errored.length) {
       const lines = errored.map(r => `• ${PLATFORM_LABELS[r.platform] || r.platform}: ${r.error || 'failed'}`).join('\n');
-      alert((ok.length ? `Queued: ${ok.join(', ')}.\n\n` : '') + `Could not publish:\n${lines}`);
+      alert((ok.length ? `Queued: ${ok.join(', ')}.\n\n` : '') + `Not published:\n${lines}`);
     } else {
       showToast(`Queued for ${selected.map(p => PLATFORM_LABELS[p]).join(', ')} — the extension starts right away`);
     }
