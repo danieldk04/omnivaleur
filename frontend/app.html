@@ -7502,6 +7502,8 @@ function fabrikantCompleet() {
   // het niet — en dan blokkeren we niet. Een verzonnen blokkade is erger dan een
   // gemiste: de server weigert de publicatie in dat geval alsnog, met uitleg.
   if (!s || !Object.keys(s).length) return true;
+  // Stuurt de verkoper het blok bewust niet mee, dan is er niets te blokkeren.
+  if (s.fabrikant_meesturen === false) return true;
   return !!(String(s.fabrikant_naam || '').trim()
          && String(s.fabrikant_adres || '').trim()
          && String(s.fabrikant_email || '').trim());
