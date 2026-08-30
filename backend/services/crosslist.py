@@ -1037,29 +1037,21 @@ async def handle_item_sold(item_id: str, sold_on_platform: str, sold_price: floa
     # booked, and not one that sold earlier. A second sale record on another
     # channel (a manual "Sold" after an auto-detected one) used to send a delete
     # job to the platform where the buyer's order lives.
-    # De advertentie WAAR DE KOPER ZIT blijft staan — dat is de rij die op
-    # verkocht staat, en elke andere rij die naar diezelfde advertentie wijst.
-    # Alles daarnaast moet weg, óók op hetzelfde platform: bij een tweeling staat
-    # dezelfde trui soms twee keer op Vinted, en na de verkoop hoort die tweede
-    # advertentie net zo goed offline.
+    # HET PLATFORM VAN DE VERKOOP BLIJFT MET RUST.
+    #
+    # Daar zit de koper, en een tweede advertentie op datzelfde platform kan
+    # net zo goed een tweede exemplaar zijn dat de verkoper er bewust bij heeft
+    # gezet. Dat verschil kunnen wij niet zien, en een advertentie te veel
+    # weghalen is niet terug te draaien. Op de ándere kanalen is er geen twijfel:
+    # het artikel is verkocht, dus daar hoort het weg — ook de advertenties die
+    # bij de tweelingrij horen.
     verkochte_rijen = [l for l in (all_rows.data or []) if l["status"] == "sold"]
-    verkochte_advertenties = {
-        (l["platform"], str(l.get("platform_listing_id")))
-        for l in verkochte_rijen if l.get("platform_listing_id")
-    }
-    # Het platform van deze verkoop zonder bekend advertentienummer: dan kunnen we
-    # de juiste advertentie niet aanwijzen en laten we dat hele platform met rust.
-    onbekend_op = {l["platform"] for l in verkochte_rijen if not l.get("platform_listing_id")}
-    if not any(l["platform"] == sold_on_platform and l.get("platform_listing_id")
-               for l in verkochte_rijen):
-        onbekend_op.add(sold_on_platform)
+    sold_platforms = {l["platform"] for l in verkochte_rijen} | {sold_on_platform}
     other_rows = [
         l for l in (all_rows.data or [])
-        if l["status"] in ("active", "relisting", "error", "delisted", "hidden")
-        and l["platform"] not in onbekend_op
-        and (l["platform"], str(l.get("platform_listing_id"))) not in verkochte_advertenties
+        if l["platform"] not in sold_platforms
+        and l["status"] in ("active", "relisting", "error", "delisted", "hidden")
     ]
-    sold_platforms = {l["platform"] for l in verkochte_rijen} | {sold_on_platform}
 
     logger.info(
         "[sold] item_id=%s sold_on=%s → %d other listing(s) to delist: %s (sold platforms left alone: %s)",
