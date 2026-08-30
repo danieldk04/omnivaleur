@@ -1562,3 +1562,47 @@ is dus met de hand ergens geplaatst (post, oudere bio, of via Monaim). Precies d
 splitsing waar `tests/test_utm_links.py` voor waarschuwt. Ook `email / cold_email`
 (25 sessies) staat er nog: dat zijn de interne knoppen op /mp-video die op
 29-08 zijn ontdaan van hun tags, die rij dooft vanzelf uit.
+
+---
+
+## 30-08-2026 — Merkkoppeling: waarom "omnivaleur" de socials gaf en niet de site
+
+Daniel zag dat een zoektocht op "omnivaleur" zijn Instagram-accounts, de
+YouTube-shorts en de Chrome Web Store bovenaan gaf, maar de site zelf nergens —
+mét de vraag "bedoelde je: omnivore", en bij doorklikken zette Google de
+zoekopdracht zelfs om naar dát woord.
+
+**Nagemeten, niet gegokt** (Search Console, week 23 t/m 29 augustus):
+
+- 275 vertoningen, 8 klikken over de hele site.
+- De homepage: 5 klikken, 19 vertoningen, gemiddelde positie 3,5.
+- Zoekterm "omnivaleur": 2 klikken, gemiddelde positie 1,8.
+- In een privévenster staat de site wél bovenaan — maar pas ná "zoek in plaats
+  daarvan naar omnivaleur".
+
+De site is dus niet geblokkeerd en niet ongeïndexeerd. Het domein bestaat sinds
+11-07-2026 (zeven weken) en Google kent "Omnivaleur" nog niet als merknaam, dus
+corrigeert hij naar een woord dat hij wél kent. Instagram, YouTube en de Chrome
+Web Store lenen intussen het vertrouwen van hun eigen domein.
+
+Twee bijvangsten die het beeld verklaren:
+
+- Bing en DuckDuckGo hebben de hele site wél compleet staan. Dat komt door de
+  IndexNow-melding bij elke publicatie (`backend/services/indexnow.py`); Google
+  doet niet mee aan IndexNow en moet alles zelf komen ophalen.
+- De homepage noemde de eigen profielen nergens — niet in een link en niet in de
+  merkgegevens. Er was letterlijk geen enkele uitspraak dat die accounts bij dit
+  domein horen.
+
+**Wat er is toegevoegd.** De organisatie op de homepage draagt nu `sameAs` met
+alle acht profielen plus de Web Store-vermelding, en er staan echte links met
+`rel="me"` onder aan de pagina. Dezelfde uitspraak staat via `_footer.html` op
+alle blogpagina's, en de uitgever van elk artikel deelt nu hetzelfde
+`@id` (`/#organization`) — één entiteit in plaats van honderd naamloze
+bedrijfjes die toevallig ook Omnivaleur heten. De profiellijst is afgeleid van
+`KANAAL_LINKS`, dezelfde tabel als de bio-links, zodat een kanaal erbij vanzelf
+meeloopt. `tests/test_merkkoppeling.py` bewaakt dat de statische homepage niet
+uit de pas gaat lopen met die tabel.
+
+Dit is een versneller, geen schakelaar: merkherkenning bij Google komt van
+herhaling en leeftijd. Verwachting is weken, niet dagen.

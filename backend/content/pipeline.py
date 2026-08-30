@@ -53,6 +53,15 @@ STATIC_LINK_CANDIDATES = [
 ]
 
 
+def _merk_profielen() -> list[str]:
+    """De openbare profielen van het merk, uit de tabel die het dashboard ook
+    gebruikt. Bewust binnen de functie geïmporteerd: bovenin zou het een
+    kringetje geven met backend.api.content."""
+    from backend.api.content import merk_profielen
+
+    return merk_profielen()
+
+
 def _url_path(language: str, pillar: str, slug: str) -> str:
     """
     English (the default) gets no URL prefix at all — /crosslisting/{slug}.
@@ -165,9 +174,15 @@ def _save_page_row(
         },
         "publisher": {
             "@type": "Organization",
+            # Vast id + sameAs: hiermee is de uitgever van elk artikel dezelfde
+            # entiteit als de organisatie op de homepage, inclusief haar profielen.
+            # Zonder die koppeling ziet een zoekmachine per pagina een naamloos
+            # bedrijfje dat toevallig ook Omnivaleur heet.
+            "@id": f"{SITE_URL}/#organization",
             "name": "Omnivaleur",
             "url": SITE_URL,
             "logo": {"@type": "ImageObject", "url": f"{SITE_URL}/logo.png"},
+            "sameAs": _merk_profielen(),
         },
         "mainEntityOfPage": {"@type": "WebPage", "@id": canonical},
         "inLanguage": language,

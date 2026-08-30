@@ -33,6 +33,12 @@
       </ul>
     </div>
   </div>
+  {% if merk_links %}
+  <div class="footer-social">
+    <span>Omnivaleur elsewhere:</span>
+    {% for l in merk_links %}<a href="{{ l.url }}" rel="me noopener" target="_blank">{{ l.label }}</a>{% endfor %}
+  </div>
+  {% endif %}
   <div class="footer-bottom">
     <span>© 2026 Omnivaleur</span>
     <div class="footer-bottom-links">
@@ -41,3 +47,4 @@
     </div>
   </div>
 </footer>
+{% if org_json_ld %}<script type="application/ld+json">{{ org_json_ld | tojson }}</script>{% endif %}

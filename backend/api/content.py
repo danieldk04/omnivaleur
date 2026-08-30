@@ -254,6 +254,8 @@ def _render_page(request: Request, language: str, pillar: str, slug: str) -> HTM
             "blog_index_path": blog_index_path,
             "hreflang_variants": hreflang_variants,
             "x_default": x_default,
+            "org_json_ld": merk_json_ld(),
+            "merk_links": MERK_LINKS,
             "faq_json_ld": faq_json_ld,
             "software_json_ld": page.get("software_application_json_ld") or {},
             "article_json_ld": article_json_ld,
@@ -414,6 +416,8 @@ def _render_blog_index(request: Request, language: str = "en") -> HTMLResponse:
             "language_switch": {"language": other, "url": BLOG_INDEX_PATHS[other]},
             "copy": BLOG_INDEX_COPY[language],
             "item_list_json_ld": item_list_json_ld,
+            "org_json_ld": merk_json_ld(),
+            "merk_links": MERK_LINKS,
         },
     )
 
@@ -556,6 +560,78 @@ KANAAL_LINKS: list[dict] = [
      "pad": "/", "source": "youtube", "medium": "social", "campagne": "bio-nl",
      "kort": "yt-nl"},
 ]
+
+# ── Merkkoppeling: welke profielen zijn aantoonbaar hetzelfde merk ────────
+# Google leidde "Omnivaleur" niet af als merknaam — hij stelde "omnivore" voor en
+# corrigeerde de zoekopdracht zelfs stilzwijgend — terwijl de socials en de Web
+# Store-vermelding wél bovenaan stonden. Oorzaak: de site en die profielen stonden
+# volledig los van elkaar. Er was geen enkele machineleesbare uitspraak dat ze bij
+# hetzelfde bedrijf horen, en de homepage linkte er ook nergens naartoe.
+#
+# sameAs is precies die uitspraak, en het is de manier waarop een zoekmachine een
+# merkentiteit opbouwt. Deze lijst is afgeleid van KANAAL_LINKS (waar de profielen
+# toch al staan) zodat een kanaal erbij automatisch meeloopt; hij mag daar dus
+# nooit los van gaan leven. Een test bewaakt dat de statische homepage dezelfde
+# verzameling draagt.
+WEBSTORE_URL = (
+    "https://chromewebstore.google.com/detail/omnivaleur/"
+    "gfaogapbhaacfbpdppdcmnkjndlphleh"
+)
+
+
+def merk_profielen() -> list[str]:
+    """Alle openbare profielen van het merk, ontdubbeld en in vaste volgorde.
+    Vaste volgorde omdat een wisselende sameAs bij elke deploy een gewijzigde
+    pagina lijkt zonder dat er iets veranderd is."""
+    uniek: list[str] = []
+    for kanaal in KANAAL_LINKS:
+        profiel = kanaal.get("profiel")
+        if profiel and profiel not in uniek:
+            uniek.append(profiel)
+    if WEBSTORE_URL not in uniek:
+        uniek.append(WEBSTORE_URL)
+    return uniek
+
+
+def merk_json_ld() -> dict:
+    """De organisatie achter de site, met alle profielen eraan vastgeknoopt.
+    Staat op élke pagina (homepage + alle blogpagina's): een merkentiteit wordt
+    sterker naarmate dezelfde claim vanaf meer pagina's van hetzelfde domein komt."""
+    return {
+        "@context": "https://schema.org",
+        "@type": "Organization",
+        "@id": f"{SITE_URL}/#organization",
+        "name": "Omnivaleur",
+        "legalName": "Revaleur",
+        "url": f"{SITE_URL}/",
+        "logo": f"{SITE_URL}/logo.png",
+        "description": (
+            "Omnivaleur cross-lists second-hand items to Marktplaats, 2dehands, "
+            "Vinted, eBay and Shopify from one dashboard, each in the right language."
+        ),
+        "email": "info@revaleur.com",
+        "vatID": "NL004117227B97",
+        "address": {
+            "@type": "PostalAddress",
+            "streetAddress": "Kleine Melanen 5",
+            "postalCode": "4614RG",
+            "addressLocality": "Bergen op Zoom",
+            "addressCountry": "NL",
+        },
+        "sameAs": merk_profielen(),
+    }
+
+
+# Dezelfde profielen, maar dan als zichtbare links onder aan elke pagina. Alleen
+# sameAs in de broncode is een claim zonder bewijs; een echte link met rel="me"
+# is de kant van de koppeling die een crawler zelf kan volgen. Het label zegt er
+# de taal bij, anders staat er twee keer "Instagram" zonder verschil.
+MERK_LINKS: list[dict] = [
+    {"label": k["kanaal"] + (" (NL)" if k["taal"] == "NL" else ""), "url": k["profiel"]}
+    for k in KANAAL_LINKS
+    if k.get("profiel")
+] + [{"label": "Chrome Web Store", "url": WEBSTORE_URL}]
+
 
 # De koude mail staat er apart bij: die link wordt niet ergens geplakt maar door
 # het script verstuurd, en hij is kort omdat een taalmodel hem overtypt. De tags
