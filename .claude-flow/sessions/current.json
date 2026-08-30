@@ -1,17 +1,8 @@
 {
-  "id": "session-1788075265688",
-  "startedAt": "2026-08-30T07:34:25.688Z",
-  "cwd": "/Users/Danie/Documents/omnivaleur",
   "context": {
     "lastMatchedPatterns": [
       "mem-shopify_workflow-belangrijk--nooit-content-over"
     ]
   },
-  "metrics": {
-    "edits": 1,
-    "commands": 0,
-    "tasks": 0,
-    "errors": 0
-  },
-  "updatedAt": "2026-08-30T07:42:12.648Z"
+  "updatedAt": "2026-08-30T08:08:05.293Z"
 }

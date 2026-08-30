@@ -1702,3 +1702,58 @@ push van vandaag, extensie **1.0.265**, door Daniel geüpload naar de Web Store)
 3. Toon & Lynn (De Juiste Toon) wachten op antwoord over de nieuwe categorie
    Verkleedkleding en over "kleed" = vloerkleed. Storing staat teruggemeld als
    `categorie-verkeerd-vanuit-vinted`.
+
+### 30-08-2026 — Een extensie-update zette bij iedereen stilletjes de motor af
+
+Egbert (Papa's Plectrums) vroeg om te bellen: "ik krijg het gewoon niet rond, en
+ik zag een nieuwe banner die meer vragen oplevert dan antwoorden." Wat we hier
+zien in zijn account:
+
+- Zijn extensie heeft zich sinds **vrijdag 28-08 om 20:13** niet meer gemeld.
+  Geen scan, geen publicatie, geen verkoopcontrole — twee dagen niets.
+- Hij is zakelijk verkoper (Admarkt). 4.249 items, 5.534 advertenties gevonden,
+  1.284 daarvan staan nog als `pending` te wachten om binnengehaald te worden.
+- **Nul advertenties gecrosslist.** Na 17 dagen betalen staat er nog niets op
+  2dehands, Vinted, eBay of Shopify. Zijn hele ervaring is import geweest.
+
+**De oorzaak van de stilte.** Versie 1.0.256 zette vier nieuwe VASTE
+host-toestemmingen in het manifest, waaronder `https://*.marktplaats.nl/*` naast
+de al verleende `https://www.marktplaats.nl/*`. Chrome ziet zo'n uitbreiding als
+"deze extensie wil meer dan waar je ja op zei" en zet haar bij ELKE bestaande
+gebruiker uit tot hij opnieuw goedkeurt. Zonder foutmelding, zonder mail. De Web
+Store staat op 1.0.262, dus dat is bij alle klanten langsgekomen. Jaaps 105
+wachtende opdrachten met een 13 uur stille extensie (29-08) zijn hetzelfde
+verhaal.
+
+Pijnlijk detail: het commentaar in `background.js` waarschuwde hier al letterlijk
+voor als reden om Admarkt optioneel te houden. Een commentaar in een ander
+bestand houdt niemand tegen; `tests/test_extensie_permissies.py` nu wel. De regel
+is: `host_permissions` mag krimpen, nooit groeien. Nieuw domein →
+`optional_host_permissions`. Moet het echt vast, dan is dat een besluit mét
+gevolgen (iedereen ligt stil tot hij klikt) en waarschuwen we klanten vóór de
+release.
+
+**Het dashboard zei het niet.** Het blokje "extensie meldt zich niet" was op de
+computer verborgen, en sinds 29-08 zichtbaar zodra er werk in de wachtrij stond.
+Egbert had niets in de wachtrij — hij kwam er immers niet eens aan toe — dus zag
+hij niets. Het staat er nu ook zonder wachtrij, na een uur stilte, met de
+Chrome-oorzaak en de drie stappen erbij.
+
+**De mailkoppeling had een blinde vlek.** Er lag wel een concept voor Egbert,
+maar dat was de losse reparatiemelding over de trage import van 29-08 — geen
+antwoord op zijn bericht van 28-08 12:46 waarin hij om een gesprek vroeg. Het
+slot "er ligt al een concept voor deze persoon" keek alleen óf er iets lag, niet
+waar het over ging, en blokkeerde daarmee elk echt antwoord. Nu geldt: een
+concept mét In-Reply-To beantwoordt een bericht en blokkeert; een concept zonder
+(reparatiemelding, opvolging) staat een antwoord niet in de weg, en het seintje
+meldt dat er twee liggen.
+
+Daarbovenop: kon de klantenservice het antwoord niet in de code vinden, dan
+schreef ze niets — bewust, want een gegokt antwoord kost een lead. Voor een
+BETALENDE klant is stilte erger. Die krijgt nu een tweede ronde met één harde
+regel: geen enkele technische bewering, wel erkennen, de openstaande vraag
+benoemen en die bij Daniel leggen. Egberts vraag om te bellen viel precies in dat
+gat.
+
+**Voor Daniel:** er ligt een concept klaar dat hem door de drie stappen loodst en
+een gesprek aanbiedt; de Google Meet-link moet daar zelf in.
