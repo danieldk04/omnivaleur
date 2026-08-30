@@ -122,13 +122,32 @@ def _scan_norm_title(t: str) -> str:
     return " ".join(re.sub(r"[^a-z0-9]+", " ", t).split())
 
 
-def _unique_index(pairs) -> dict:
-    """key → id, maar alleen als die sleutel bij precies één id hoort."""
+def _unique_index(pairs, tweelingen: dict | None = None) -> dict:
+    """key → id, maar alleen als die sleutel bij precies één id hoort.
+
+    Uitzondering: TWEELINGEN. Dezelfde trui staat vaak twee keer in de voorraad
+    (één rij per importbron), met hetzelfde nummer én dezelfde titel. Dan zijn er
+    twee kandidaten en viel de sleutel weg — met als gevolg dat een advertentie
+    die gewoon live stond aan geen van beide rijen gekoppeld werd, en het
+    dashboard "staat niet op Vinted" toonde terwijl hij er wél stond. Zijn alle
+    kandidaten aantoonbaar hetzelfde product, dan kiezen we er één, altijd
+    dezelfde (de laagste id, zodat elke ronde tot dezelfde uitkomst komt).
+    Verschillende producten met hetzelfde nummer blijven zonder koppeling.
+    """
     out: dict = {}
+    botsingen: dict = {}
     for key, value in pairs:
         if not key:
             continue
-        out[key] = value if key not in out else (value if out[key] == value else None)
+        if key not in out:
+            out[key] = value
+        elif out[key] != value:
+            botsingen.setdefault(key, {out[key]}).add(value)
+            out[key] = None
+    for key, ids in botsingen.items():
+        titels = {(tweelingen or {}).get(i) for i in ids}
+        if len(titels) == 1 and None not in titels:
+            out[key] = sorted(ids)[0]
     return {k: v for k, v in out.items() if v}
 
 
@@ -296,15 +315,33 @@ def get_pending_jobs(request: Request, platform: str = None, user_id: str = Depe
     # extensie het daarna alsnog online. Ook een verkoop die pas ná het inplannen
     # werd opgemerkt kwam er zo doorheen. Daarom hier, vlak voor het uitdelen, en
     # niet bij het aanmaken.
+    # Ook de TWEELING telt mee. Dezelfde trui staat vaak twee keer in de
+    # voorraad (één keer per importbron, herkenbaar aan het nummer voor de
+    # titel). Verkocht op Vinted op rij A betekende niets voor rij B, en die werd
+    # daarna gewoon opnieuw op Marktplaats gezet. Zie backend/services/tweelingen.py.
     verkocht_op: dict[str, list[str]] = {}
     te_toetsen = [j["item_id"] for j in due
                   if j["action"] == "create" and j.get("item_id")]
     if te_toetsen:
         try:
+            from backend.services.tweelingen import familie_ids
+            familie_van: dict[str, list[str]] = {}
+            alle_ids: list[str] = []
+            for iid in dict.fromkeys(te_toetsen):
+                rij = (db.table("items").select("id,user_id,title,sku")
+                       .eq("id", iid).limit(1).execute().data or [None])[0]
+                fam = familie_ids(db, rij) if rij else [iid]
+                familie_van[iid] = fam
+                alle_ids += fam
+            verkocht_per_item: dict[str, list[str]] = {}
             for rij in (db.table("listings").select("item_id,platform")
-                        .in_("item_id", list(dict.fromkeys(te_toetsen)))
+                        .in_("item_id", list(dict.fromkeys(alle_ids)))
                         .eq("status", "sold").execute().data or []):
-                verkocht_op.setdefault(rij["item_id"], []).append(rij["platform"])
+                verkocht_per_item.setdefault(rij["item_id"], []).append(rij["platform"])
+            for iid, fam in familie_van.items():
+                kanalen = [p for f in fam for p in verkocht_per_item.get(f, [])]
+                if kanalen:
+                    verkocht_op[iid] = kanalen
         except Exception as e:  # noqa: BLE001
             # Kunnen we het niet nakijken, dan delen we geen publicatiewerk uit.
             # Een gemiste publicatie is een vertraging; een dubbelverkocht artikel
@@ -1281,11 +1318,16 @@ def _store_scan_results(db, job, scraped: list[dict]):
     # Extra koppelsleutels: het SKU-nummer vooraan de titel en de titel zonder
     # leestekens/accenten. Die overleven een vertaling of een kleine handmatige
     # aanpassing op het platform, waar een exacte titelvergelijking op stukliep.
+    # Titel zonder nummer per item: waarmee _unique_index kan zien of twee
+    # kandidaten met hetzelfde nummer echt hetzelfde product zijn.
+    _titel_van = {it["id"]: _scan_norm_title(it.get("title")) for it in items}
     _sku_index = _unique_index(
         [(_scan_sku(it.get("title")), it["id"]) for it in items]
-        + [(str(it.get("sku") or "").strip().lower(), it["id"]) for it in items]
+        + [(str(it.get("sku") or "").strip().lower(), it["id"]) for it in items],
+        _titel_van,
     )
-    _norm_title_index = _unique_index((_scan_norm_title(it.get("title")), it["id"]) for it in items)
+    _norm_title_index = _unique_index(
+        ((_scan_norm_title(it.get("title")), it["id"]) for it in items), _titel_van)
     # (platform, listing id) → item_id, so a re-scan of an already-known listing
     # links back to the exact same item. Scoped by the user's item ids because
     # the listings table has no user_id column.

@@ -1405,6 +1405,8 @@ async function maakWerkTabblad(opties, url) {
   const tab = await chrome.tabs.create({ ...opties, url: "about:blank" });
   await koppelVroeg(tab.id);
   await chrome.tabs.update(tab.id, { url });
+  // Een nieuw tabblad haalt het venster op macOS terug in beeld.
+  await houdWerkvensterGeminimaliseerd();
   return tab;
 }
 
@@ -1540,10 +1542,28 @@ async function ontwapenAfsluitvraag(tabId) {
 }
 
 // Een werk-tabblad sluiten zonder dat de verkoper er iets van merkt.
+// HET WERKVENSTER MOET GEMINIMALISEERD BLIJVEN.
+//
+// Eén keer minimaliseren is niet genoeg gebleken. Op macOS zet Chrome het venster
+// terug zodra er een tabblad in wordt geopend of het laatste tabblad sluit —
+// precies de twee momenten waarop de verkoper het scherm zag opklappen ("hij
+// opent nog steeds een venster, op het einde"). Deze functie kost niets als het
+// venster al klein staat en wordt daarom na elk van die momenten aangeroepen.
+async function houdWerkvensterGeminimaliseerd() {
+  try {
+    const id = await getWorkerWindowId();
+    if (id == null) return;
+    const win = await chrome.windows.get(id).catch(() => null);
+    if (!win || win.state === "minimized") return;
+    await chrome.windows.update(id, { state: "minimized", focused: false }).catch(() => {});
+  } catch (_) { /* nooit een klus laten vallen om een venster */ }
+}
+
 function sluitWerkTabblad(tabId, vertragingMs = 0) {
   if (tabId == null) return;
   const sluit = () => {
-    ontwapenAfsluitvraag(tabId).finally(() => chrome.tabs.remove(tabId).catch(() => {}));
+    ontwapenAfsluitvraag(tabId).finally(() => chrome.tabs.remove(tabId).catch(() => {}))
+      .finally(() => houdWerkvensterGeminimaliseerd());
   };
   if (vertragingMs > 0) setTimeout(sluit, vertragingMs);
   else sluit();

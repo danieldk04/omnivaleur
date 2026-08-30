@@ -106,3 +106,70 @@ def test_werkvenster_wordt_altijd_geminimaliseerd():
     kop = bron.index("async function openWorkerTabInner")
     blok = bron[kop:bron.index("async function processJob")]
     assert blok.count('chrome.windows.update(w.id, { state: "minimized", focused: false })') == 2
+
+
+# ── Tweelingen: dezelfde trui, twee rijen in de voorraad ────────────────────
+
+def test_nummer_uit_titel_en_sku():
+    from backend.services.tweelingen import nummer_van
+    assert nummer_van({"title": "(1237) Navy Suitsupply Half Zip"}) == "1237"
+    assert nummer_van({"title": "Navy Suitsupply", "sku": "AB-12"}) == "ab-12"
+    assert nummer_van({"title": "Navy Suitsupply"}) == ""
+    # Niets waar een zoekopdracht op kan stukgaan.
+    assert nummer_van({"title": "(1237, 1238) Twee truien"}) == ""
+
+
+def test_familie_zoekt_op_nummer_en_sku():
+    from backend.services.tweelingen import familie_ids
+
+    gezien = {}
+
+    class T:
+        def select(self, *a, **kw): return self
+        def eq(self, k, v): gezien[k] = v; return self
+        def or_(self, expr): gezien["or"] = expr; return self
+        def limit(self, n): return self
+        def execute(self):
+            import types
+            return types.SimpleNamespace(data=[{"id": "b"}, {"id": "a"}])
+
+    class D:
+        def table(self, naam): return T()
+
+    ids = familie_ids(D(), {"id": "a", "user_id": "u1", "title": "(1237) Navy"})
+    assert ids == ["a", "b"]
+    assert gezien["or"] == "sku.eq.1237,title.ilike.(1237)%"
+
+
+def test_tweeling_met_dezelfde_titel_krijgt_wel_een_koppeling():
+    """Twee rijen met hetzelfde nummer én dezelfde titel zijn hetzelfde product.
+    Zonder dit bleef een live Vinted-advertentie ongekoppeld en zei het dashboard
+    dat het item daar niet stond."""
+    from backend.api.jobs import _unique_index
+
+    titels = {"i2": "navy suitsupply half zip", "i1": "navy suitsupply half zip"}
+    index = _unique_index([("1237", "i2"), ("1237", "i1")], titels)
+    assert index["1237"] == "i1", "altijd dezelfde keuze, anders wisselt de koppeling per ronde"
+
+
+def test_verschillende_producten_met_hetzelfde_nummer_blijven_ongekoppeld():
+    from backend.api.jobs import _unique_index
+
+    titels = {"i1": "navy half zip", "i2": "rode broek"}
+    assert _unique_index([("1237", "i1"), ("1237", "i2")], titels) == {}
+
+
+def test_de_verkoopafhandeling_kijkt_naar_de_hele_familie():
+    bron = (WORTEL / "backend/services/crosslist.py").read_text()
+    kop = bron.index("async def handle_item_sold")
+    blok = bron[kop:kop + 9000]
+    assert "familie_ids" in blok and '.in_("item_id", familie)' in blok
+
+
+def test_werkvenster_wordt_ook_na_openen_en_sluiten_klein_gehouden():
+    bron = (WORTEL / "extension/background.js").read_text()
+    assert "async function houdWerkvensterGeminimaliseerd" in bron
+    kop = bron.index("async function maakWerkTabblad")
+    assert "houdWerkvensterGeminimaliseerd" in bron[kop:kop + 600]
+    kop2 = bron.index("function sluitWerkTabblad")
+    assert "houdWerkvensterGeminimaliseerd" in bron[kop2:kop2 + 600]

@@ -1017,24 +1017,49 @@ async def handle_item_sold(item_id: str, sold_on_platform: str, sold_price: floa
     # this is gone everywhere", so we re-attempt removal on any listing that isn't
     # already the sold one. The extension verifies presence first and treats an
     # absent listing as success, so re-checking a genuinely-gone one is harmless.
+    # Ook de advertenties van de TWEELING. Dezelfde trui staat vaak twee keer in
+    # de voorraad (één rij per importbron, zelfde nummer voor de titel). Verkocht
+    # op de ene rij liet de advertenties van de andere gewoon staan — en die werd
+    # daarna ook nog opnieuw geplaatst. Zie backend/services/tweelingen.py.
+    item_vooraf = ((await naast_de_lus(lambda: db.table("items")
+                   .select("id,user_id,title,sku").eq("id", item_id)
+                   .limit(1).execute())).data or [None])[0]
+    from backend.services.tweelingen import familie_ids
+    familie = await naast_de_lus(lambda: familie_ids(db, item_vooraf)) if item_vooraf else [item_id]
+
     all_rows = (
         (await naast_de_lus(lambda: db.table("listings")
         .select("*")
-        .eq("item_id", item_id)
+        .in_("item_id", familie)
         .execute()))
     )
     # Never touch a platform this item already sold on — not the one we just
     # booked, and not one that sold earlier. A second sale record on another
     # channel (a manual "Sold" after an auto-detected one) used to send a delete
     # job to the platform where the buyer's order lives.
-    sold_platforms = {
-        l["platform"] for l in (all_rows.data or []) if l["status"] == "sold"
-    } | {sold_on_platform}
+    # De advertentie WAAR DE KOPER ZIT blijft staan — dat is de rij die op
+    # verkocht staat, en elke andere rij die naar diezelfde advertentie wijst.
+    # Alles daarnaast moet weg, óók op hetzelfde platform: bij een tweeling staat
+    # dezelfde trui soms twee keer op Vinted, en na de verkoop hoort die tweede
+    # advertentie net zo goed offline.
+    verkochte_rijen = [l for l in (all_rows.data or []) if l["status"] == "sold"]
+    verkochte_advertenties = {
+        (l["platform"], str(l.get("platform_listing_id")))
+        for l in verkochte_rijen if l.get("platform_listing_id")
+    }
+    # Het platform van deze verkoop zonder bekend advertentienummer: dan kunnen we
+    # de juiste advertentie niet aanwijzen en laten we dat hele platform met rust.
+    onbekend_op = {l["platform"] for l in verkochte_rijen if not l.get("platform_listing_id")}
+    if not any(l["platform"] == sold_on_platform and l.get("platform_listing_id")
+               for l in verkochte_rijen):
+        onbekend_op.add(sold_on_platform)
     other_rows = [
         l for l in (all_rows.data or [])
-        if l["platform"] not in sold_platforms
-        and l["status"] in ("active", "relisting", "error", "delisted", "hidden")
+        if l["status"] in ("active", "relisting", "error", "delisted", "hidden")
+        and l["platform"] not in onbekend_op
+        and (l["platform"], str(l.get("platform_listing_id"))) not in verkochte_advertenties
     ]
+    sold_platforms = {l["platform"] for l in verkochte_rijen} | {sold_on_platform}
 
     logger.info(
         "[sold] item_id=%s sold_on=%s → %d other listing(s) to delist: %s (sold platforms left alone: %s)",
@@ -1052,15 +1077,23 @@ async def handle_item_sold(item_id: str, sold_on_platform: str, sold_price: floa
 
     # Dedup to one delete per platform (a platform can have both an 'error' and a
     # 'delisted' row from earlier attempts — we only need one delete job).
+    # Eén verwijderopdracht per ADVERTENTIE, niet per platform: bij een tweeling
+    # staan er twee verschillende advertenties op hetzelfde platform en die moeten
+    # allebei weg. Rijen zonder advertentienummer worden per platform samengevat,
+    # want daar valt niets aan te wijzen.
     seen_plat = set()
     api_listings = []
     for listing in other_rows:
-        plat = listing["platform"]
-        if plat in seen_plat:
+        sleutel = (listing["platform"], str(listing.get("platform_listing_id") or ""))
+        if sleutel in seen_plat:
             continue
-        seen_plat.add(plat)
+        seen_plat.add(sleutel)
+        plat = listing["platform"]
         if plat in _EXTENSION_DELIST_PLATFORMS and user_id:
-            _enqueue_extension_delete(db, user_id, item_id, listing, item_row)
+            # item_id van de listing zelf: bij een tweeling hoort de advertentie
+            # bij de ándere rij, en een verwijderopdracht op het verkeerde item
+            # vindt de advertentie niet terug.
+            _enqueue_extension_delete(db, user_id, listing["item_id"], listing, item_row)
             logger.info("[sold] queued extension delete for %s (was %s)", plat, listing["status"])
         else:
             api_listings.append(listing)
