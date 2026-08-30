@@ -690,38 +690,70 @@ async def publish_to_platforms(item_id: str, platforms: list[str], user_id: str)
             _publish_one(_pick(p), p, creds_by_platform.get(p, {}), user_id)
             for p in api_platforms
         ]
-        results += await asyncio.gather(*tasks, return_exceptions=False)
+        # Elk kanaal apart, net als bij de extensieplatforms hierboven. Met
+        # return_exceptions=False sleepte één struikelende taak de hele
+        # publicatie mee: de gebruiker kreeg een kale "HTTP 500 Internal Server
+        # Error" en wist niet dat Marktplaats en Vinted wél in de wachtrij
+        # stonden. Een fout op eBay hoort een fout op eBay te blijven.
+        for platform, uitkomst in zip(api_platforms,
+                                      await asyncio.gather(*tasks, return_exceptions=True)):
+            if isinstance(uitkomst, BaseException):
+                logger.error("Publiceren naar %s mislukte onverwacht", platform,
+                             exc_info=uitkomst)
+                results.append({
+                    "platform": platform, "status": "error",
+                    "error": f"Could not publish here ({type(uitkomst).__name__}). "
+                             f"Nothing was published on this channel — try again.",
+                })
+            else:
+                results.append(uitkomst)
 
     return results
 
 
 async def _publish_one(item: dict, platform_name: str, credentials: dict, user_id: str) -> dict:
     db = get_db()
-    existing = await _exec(db.table("listings").select("id,status,platform_listing_id,platform_listing_url")
-                           .eq("item_id", item["id"]).eq("platform", platform_name))
-    if existing.data:
-        listing_id = existing.data[0]["id"]
-        # Staat het er al op? Dan niet nóg een keer aanmaken. create_listing maakt
-        # elke keer een nieuw product aan, dus een herhaalde poging (na een
-        # time-out bijvoorbeeld) liet er twee achter waarvan het dashboard er
-        # maar één kende — de eerste bleef onzichtbaar te koop staan.
-        if existing.data[0].get("status") == "active" and existing.data[0].get("platform_listing_id"):
-            return {
-                "listing_id": listing_id,
+    # Alles tot en met het klaarzetten van de advertentieregel zit óók in een
+    # vangnet. Zonder dit vloog een weggevallen databaseverbinding — of een
+    # insert die niets teruggaf, waarna `insert.data[0]` een IndexError werd —
+    # ongevangen omhoog tot buiten het verzoek, en zag de gebruiker "HTTP 500:
+    # Internal Server Error" zonder één woord over wat er misging.
+    try:
+        existing = await _exec(db.table("listings").select("id,status,platform_listing_id,platform_listing_url")
+                               .eq("item_id", item["id"]).eq("platform", platform_name))
+        if existing.data:
+            listing_id = existing.data[0]["id"]
+            # Staat het er al op? Dan niet nóg een keer aanmaken. create_listing maakt
+            # elke keer een nieuw product aan, dus een herhaalde poging (na een
+            # time-out bijvoorbeeld) liet er twee achter waarvan het dashboard er
+            # maar één kende — de eerste bleef onzichtbaar te koop staan.
+            if existing.data[0].get("status") == "active" and existing.data[0].get("platform_listing_id"):
+                return {
+                    "listing_id": listing_id,
+                    "platform": platform_name,
+                    "status": "active",
+                    "platform_listing_id": existing.data[0].get("platform_listing_id"),
+                    "platform_listing_url": existing.data[0].get("platform_listing_url"),
+                    "message": "Already live here — not published a second time",
+                }
+            await _exec(db.table("listings").update({"status": "pending", "error_message": None}).eq("id", listing_id))
+        else:
+            insert = await _exec(db.table("listings").insert({
+                "item_id": item["id"],
                 "platform": platform_name,
-                "status": "active",
-                "platform_listing_id": existing.data[0].get("platform_listing_id"),
-                "platform_listing_url": existing.data[0].get("platform_listing_url"),
-                "message": "Already live here — not published a second time",
-            }
-        await _exec(db.table("listings").update({"status": "pending", "error_message": None}).eq("id", listing_id))
-    else:
-        insert = await _exec(db.table("listings").insert({
-            "item_id": item["id"],
+                "status": "pending",
+            }))
+            if not insert.data:
+                raise RuntimeError("de advertentieregel werd niet aangemaakt")
+            listing_id = insert.data[0]["id"]
+    except Exception as e:  # noqa: BLE001
+        logger.exception("Kon de advertentieregel voor %s niet klaarzetten", platform_name)
+        return {
             "platform": platform_name,
-            "status": "pending",
-        }))
-        listing_id = insert.data[0]["id"]
+            "status": "error",
+            "error": f"Could not start publishing here ({type(e).__name__}). "
+                     f"Nothing was published on this channel — try again.",
+        }
 
     try:
         platform = get_platform(platform_name)

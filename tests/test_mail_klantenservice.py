@@ -35,10 +35,12 @@ def opslag(monkeypatch):
     return kast
 
 
-def _bericht(mid="<a@b.nl>", adres="klant@voorbeeld.nl", richting="in"):
-    return {"message_id": mid, "richting": richting, "adres": adres,
-            "onderwerp": "Probleem", "wanneer": "2026-08-29T09:00:00+00:00",
-            "tekst": "Het lukt niet"}
+def _bericht(mid="<a@b.nl>", adres="klant@voorbeeld.nl", richting="in", **kw):
+    basis = {"message_id": mid, "richting": richting, "adres": adres,
+             "onderwerp": "Probleem", "wanneer": "2026-08-29T09:00:00+00:00",
+             "tekst": "Het lukt niet", "afbeeldingen": []}
+    basis.update(kw)
+    return basis
 
 
 def _oordeel(mid="<a@b.nl>", **kw):
@@ -227,3 +229,95 @@ def test_er_wordt_geen_tekst_geschreven_die_toch_wordt_weggegooid(opslag, monkey
     monkeypatch.setattr(M, "_herstelbericht",
                         lambda *a: pytest.fail("er is een mail geschreven die toch niet mag"))
     assert M.bericht_over_reparaties() == 0
+
+
+# ------------------------------------- 4. dezelfde storing houdt dezelfde sleutel
+#
+# WAAROM (30-08-2026). Op de lijst van de developer stonden 45 sleutels waarvan
+# 44 met precies één melder, met vier verschillende namen voor dezelfde
+# Admarkt-importfout. Het model kende de bestaande sleutels niet en verzon er bij
+# elke mail een nieuwe. Daardoor haalde vrijwel niets ooit de grens van twee
+# melders, kreeg vrijwel niets voorrang, en startte er voor vrijwel niets een
+# reparatie. Één storing hoort één sleutel te hebben.
+
+def test_het_model_krijgt_de_bestaande_sleutels_te_zien(monkeypatch):
+    gezien = {}
+    monkeypatch.setattr(M.os.environ, "get", lambda k, d=None: "sleutel" if k == "ANTHROPIC_API_KEY" else d)
+
+    def nep(_client, **kw):
+        gezien.update(kw)
+        raise RuntimeError("stop hier")
+
+    monkeypatch.setattr(M.L, "_claude", nep)
+    M._beoordeel([_bericht()], ["import"], ["admarkt-import-fout"])
+    tekst = gezien["messages"][0]["content"][0]["text"]
+    assert "admarkt-import-fout" in tekst
+
+
+def test_een_nieuwe_naam_voor_dezelfde_storing_valt_samen(opslag):
+    M._verwerk([_bericht(mid="<1>")], [_oordeel(mid="<1>", bug_sleutel="admarkt-import-fout")])
+    M._verwerk([_bericht(mid="<2>", adres="tweede@voorbeeld.nl")],
+               [_oordeel(mid="<2>", bug_sleutel="admarkt-import-mislukt")])
+    signalen = opslag["bug_signalen"]
+    assert list(signalen) == ["admarkt-import-fout"]
+    assert len(signalen["admarkt-import-fout"]["melders"]) == 2
+    assert signalen["admarkt-import-fout"]["moet_zeker"] is True
+
+
+def test_twee_verschillende_storingen_blijven_uit_elkaar(opslag):
+    M._verwerk([_bericht(mid="<1>")], [_oordeel(mid="<1>", bug_sleutel="vinted-publiceren-geweigerd")])
+    M._verwerk([_bericht(mid="<2>")], [_oordeel(mid="<2>", bug_sleutel="shopify-koppeling-mislukt")])
+    assert len(opslag["bug_signalen"]) == 2
+
+
+def test_een_afgewezen_storing_wordt_niet_stiekem_hergebruikt(opslag):
+    M._verwerk([_bericht(mid="<1>")], [_oordeel(mid="<1>", bug_sleutel="admarkt-import-fout")])
+    opslag["bug_signalen"]["admarkt-import-fout"]["status"] = "afgewezen"
+    M._verwerk([_bericht(mid="<2>")], [_oordeel(mid="<2>", bug_sleutel="admarkt-import-mislukt")])
+    assert "admarkt-import-mislukt" in opslag["bug_signalen"]
+
+
+# ------------------------------------- 5. wat op een foto staat telt ook mee
+#
+# WAAROM (30-08-2026, Amanda). Haar mail bevatte één zin: "Ik stuur een foto mee
+# van de melding". Op die foto stond "Publishing failed (HTTP 500): Internal
+# Server Error" — publiceren was voor haar gewoon stuk. Hier werd alleen platte
+# tekst gelezen, dus die storing is nooit ergens aangekomen. En omdat ze er
+# vriendelijk onder bleef, zou hij zelfs mét die tekst geen voorrang hebben
+# gekregen: toon is geen maat voor ernst.
+
+def test_een_schermafbeelding_gaat_mee_naar_het_model(monkeypatch):
+    gezien = {}
+    monkeypatch.setattr(M.os.environ, "get", lambda k, d=None: "sleutel" if k == "ANTHROPIC_API_KEY" else d)
+
+    def nep(_client, **kw):
+        gezien.update(kw)
+        raise RuntimeError("stop hier")
+
+    monkeypatch.setattr(M.L, "_claude", nep)
+    M._beoordeel([_bericht(afbeeldingen=[{"media_type": "image/jpeg", "data": "AAAA"}])], [], [])
+    soorten = [d["type"] for d in gezien["messages"][0]["content"]]
+    assert "image" in soorten
+
+
+def test_onze_eigen_uitgaande_post_stuurt_geen_plaatjes_mee():
+    """Uitgaande mail bevat hooguit ons eigen logo — elke ronde opnieuw
+    meesturen kost geld en levert niets op."""
+    bron = (Path(__file__).parent.parent / "scripts/mail_analyse.py").read_text(encoding="utf-8")
+    assert '_afbeeldingen(msg) if richting == "in" else []' in bron
+
+
+def test_een_serverfout_krijgt_voorrang_ook_bij_een_vriendelijke_klant(opslag):
+    M._verwerk(
+        [_bericht()],
+        [_oordeel(stemming="blij",
+                  foutmelding="Publishing failed (HTTP 500): Internal Server Error")])
+    signaal = opslag["bug_signalen"]["publiceren-mislukt-vinted"]
+    assert signaal["moet_zeker"] is True
+    assert any("interne fout" in r for r in signaal["waarom_zeker"])
+    assert "Publishing failed (HTTP 500): Internal Server Error" in signaal["foutmeldingen"]
+
+
+def test_zonder_foutmelding_verandert_er_niets(opslag):
+    M._verwerk([_bericht()], [_oordeel(stemming="blij")])
+    assert not opslag["bug_signalen"]["publiceren-mislukt-vinted"].get("moet_zeker")

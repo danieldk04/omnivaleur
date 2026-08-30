@@ -1953,3 +1953,51 @@ een import): het is een volledige voorraaduitlezing, en bij een account met 5.50
 items is dat niet iets voor elke verversing.
 
 Geen extensiewijziging, dus geen versieophoging.
+
+## 30-08-2026 — Waarom Amanda's serverfout nergens aankwam
+
+Daniel vroeg waarom de melding van Amanda ("Publishing failed (HTTP 500):
+Internal Server Error", met een foto erbij) niet door de mailagent én niet door
+de developer was opgepakt. Drie oorzaken, alle drie gerepareerd.
+
+**1. Een 500 liet geen enkel spoor na.** Een onverwachte fout in de server ging
+als kale tekst terug naar de browser en verder alleen naar de logregels van de
+Railway-container — bij de volgende deploy weg. Er was dus geen plek waar iemand
+kon zien wélke fout het was, bij welk artikel, of hoe vaak hij voorkwam. Haar
+foto was het enige bewijs dat het ooit gebeurd is. Nu krijgt elke onverwachte
+fout een korte code (`backend/main.py`, `onverwachte_fout`). Die staat op het
+scherm van de klant, gaat mee in zijn mail of screenshot, en is terug te vinden
+met `python3 scripts/mail_analyse.py fouten` — inclusief het spoor. Bewaard in
+`leadgen_opslag` onder `server_fouten`, de laatste 60, dus geen migratie.
+
+**2. De mailagent kon de foto niet zien.** In Amanda's mail stond alleen "ik
+stuur een foto mee van de melding". De agent las uitsluitend platte tekst, dus
+de storing zelf kwam nergens aan. Egbert deed twee keer hetzelfde met een
+importfout. Schermafbeeldingen gaan nu mee naar het model (max 2 per bericht,
+verkleind naar 1400 px), en er is een veld `foutmelding` waarin de letterlijke
+tekst van zo'n melding wordt vastgelegd en in `bugs` wordt getoond.
+
+**3. Elke mail kreeg een nieuwe bugsleutel.** Op de lijst stonden 45 sleutels
+waarvan 44 met precies één melder — met vier verschillende namen voor dezelfde
+Admarkt-importfout. Het model kreeg de bestaande sleutels nooit te zien en kon
+ze dus niet hergebruiken. Daardoor haalde vrijwel niets de grens van twee
+melders, kreeg vrijwel niets MOET ZEKER, en startte `dev_starter.py` voor
+vrijwel niets een sessie. De bestaande sleutels gaan nu mee in de opdracht, en
+daaronder ligt een vangnet dat een nieuwe naam met genoeg woordoverlap
+(≥ 0,6) op de bestaande sleutel laat vallen. Een sleutel op *afgewezen* blijft
+buiten schot: daar is een besluit over genomen.
+
+**Toon is geen maat voor ernst.** Amanda bleef vriendelijk, dus haar melding
+gold als gewone support terwijl publiceren voor haar stuk was. Een serverfout
+(5xx of "internal server error" in de foutmelding) zet nu uit zichzelf MOET
+ZEKER — dat is bewijs, geen inschatting.
+
+**En de publicatie zelf.** De API-kant van publiceren (eBay, Shopify) liep op
+`asyncio.gather(..., return_exceptions=False)`: één struikelend kanaal trok de
+hele publicatie om, ook de kanalen die al in de wachtrij stonden, en de
+gebruiker zag alleen "HTTP 500". De extensiekant had die afscherming al. Nu is
+elk kanaal apart afgeschermd, en het eerste stuk van `_publish_one` (waar
+`insert.data[0]` een IndexError kon worden) ook.
+
+Nog niet vastgesteld: wélke fout Amanda precies raakte. Dat is precies wat er
+niet meer kan gebeuren — de volgende keer staat er een code onder.

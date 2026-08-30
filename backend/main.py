@@ -8,10 +8,14 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse, RedirectResponse
 from fastapi.exception_handlers import http_exception_handler
 from starlette.exceptions import HTTPException as StarletteHTTPException
+from fastapi.responses import JSONResponse
 from contextlib import asynccontextmanager
 from concurrent.futures import ThreadPoolExecutor
+from datetime import datetime, timezone
 from pathlib import Path
 import asyncio
+import traceback
+import uuid
 from backend.api import items, listings, platforms, webhooks, jobs, uploads, shopify, auth, billing, imports, content, notifications, beheer, tracking
 from backend.scheduler import start_scheduler, stop_scheduler
 
@@ -299,6 +303,71 @@ async def not_found_page(request: Request, exc: StarletteHTTPException):
         # de extensie HTML terug waar ze JSON verwachten.
         return FileResponse(FRONTEND / "not-found.html", status_code=404)
     return await http_exception_handler(request, exc)
+
+
+logger = logging.getLogger(__name__)
+
+# Hoeveel serverfouten we bewaren. Genoeg om een terugkerend patroon te zien,
+# klein genoeg om in één veld te passen — het gaat in dezelfde sleutel-waarde-
+# tabel als de rest van de boekhouding, zodat er geen migratie voor nodig is.
+FOUTEN_BEWAREN = 60
+
+
+def _bewaar_serverfout(code: str, methode: str, pad: str,
+                       exc: BaseException) -> None:
+    """Leg een onverwachte fout vast onder een code die de klant ook ziet."""
+    try:
+        from backend.database import get_db
+        db = get_db()
+        rij = {
+            "code": code,
+            "wanneer": datetime.now(timezone.utc).isoformat(),
+            "methode": methode,
+            "pad": pad,
+            "soort": type(exc).__name__,
+            "bericht": str(exc)[:500],
+            "spoor": "".join(traceback.format_exception(
+                type(exc), exc, exc.__traceback__))[-2500:],
+        }
+        bestaand = (db.table("leadgen_opslag").select("inhoud")
+                    .eq("naam", "server_fouten").execute().data)
+        lijst = (bestaand[0]["inhoud"] if bestaand else []) or []
+        if not isinstance(lijst, list):
+            lijst = []
+        db.table("leadgen_opslag").upsert(
+            {"naam": "server_fouten", "inhoud": ([rij] + lijst)[:FOUTEN_BEWAREN]},
+            on_conflict="naam").execute()
+    except Exception:  # noqa: BLE001 — vastleggen mag nooit een tweede fout worden
+        logger.exception("Serverfout %s kon niet worden vastgelegd", code)
+
+
+@app.exception_handler(Exception)
+async def onverwachte_fout(request: Request, exc: Exception):
+    """Een fout die niemand voorzag mag geen spoorloze 500 meer zijn.
+
+    WAAROM DIT BESTAAT (30-08-2026). Amanda kreeg bij het publiceren
+    "Publishing failed (HTTP 500): Internal Server Error" en stuurde er een foto
+    van. Dat was het enige bewijs dat er ooit is geweest: een onverwachte fout
+    ging als kale tekst terug naar de browser en verder alleen naar de logregels
+    van de container, die bij de volgende deploy weg zijn. Niemand kon zien
+    welke fout het was, bij welk artikel, of hoe vaak het gebeurde — en dus is er
+    dagen niets mee gedaan.
+
+    Nu krijgt elke onverwachte fout een korte code. Die staat op het scherm van
+    de klant, gaat mee in zijn mail of schermafbeelding, en is hier terug te
+    vinden met `python3 scripts/mail_analyse.py fouten`.
+    """
+    code = uuid.uuid4().hex[:6].upper()
+    logger.exception("Onverwachte fout %s bij %s %s", code,
+                     request.method, request.url.path)
+    await asyncio.to_thread(
+        _bewaar_serverfout, code, request.method, request.url.path, exc)
+    return JSONResponse(
+        status_code=500,
+        content={"detail": f"Something went wrong on our side (code {code}). "
+                           f"Please try again — and if it keeps happening, send "
+                           f"us this code so we can look up exactly what broke.",
+                 "error_code": code})
 
 
 # Serve frontend static assets (CSS, images, JS) — must come last

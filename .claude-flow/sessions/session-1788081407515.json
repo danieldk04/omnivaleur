@@ -1,14 +1,14 @@
 {
-  "id": "session-1788092662613",
-  "startedAt": "2026-08-30T12:24:22.613Z",
+  "id": "session-1788081407515",
+  "startedAt": "2026-08-30T09:16:47.515Z",
   "cwd": "/Users/Danie/Documents/omnivaleur",
   "context": {
     "lastMatchedPatterns": [
       "mem-shopify_workflow-belangrijk--nooit-content-over",
       "mem-shopify_workflow-auto-push-workflow-for-shopify",
+      "mem-feedback_verify_thoroughly----",
       "mem-MEMORY-memory-index",
-      "mem-project_nexus----",
-      "mem-feedback_push_to_live----"
+      "mem-project_nexus----"
     ]
   },
   "metrics": {
@@ -17,5 +17,8 @@
     "tasks": 0,
     "errors": 0
   },
-  "updatedAt": "2026-08-30T12:24:23.924Z"
+  "updatedAt": "2026-08-30T09:21:08.628Z",
+  "restoredAt": "2026-08-30T12:17:36.348Z",
+  "endedAt": "2026-08-30T12:17:36.789Z",
+  "duration": 10849276
 }

@@ -35,6 +35,7 @@ GEBRUIK
 from __future__ import annotations
 
 import argparse
+import base64
 import email
 import imaplib
 import json
@@ -67,6 +68,26 @@ VENSTER_DAGEN = 14
 # Vanaf hoeveel verschillende melders een storing een patroon heet. Eén iemand
 # met een probleem is support; twee is een bug die de developer moet zien.
 PATROON_VANAF = 2
+
+# Hoeveel schermafbeeldingen er per bericht meegaan naar het model, en hoe groot
+# ze dan nog zijn. Twee is genoeg: de derde foto is bijna altijd hetzelfde scherm
+# vanuit een andere hoek, en elke foto kost geld en tijd in elke ronde.
+MAX_AFBEELDINGEN = 2
+AFBEELDING_MAX_PX = 1400
+
+# Woorden die niets zeggen over wélke storing het is. Ze staan in bijna elke
+# sleutel die het model bedenkt en maken twee sleutels voor hetzelfde probleem
+# kunstmatig verschillend ("admarkt-import-fout" naast "admarkt-import-mislukt").
+SLEUTELRUIS = frozenset({
+    "mislukt", "mislukte", "fout", "fouten", "foutmelding", "foutmeldingen",
+    "probleem", "problemen", "niet", "geen", "werkt", "gaat", "bij", "van",
+    "de", "het", "een", "met", "op", "in", "is", "wordt", "worden", "klopt",
+})
+
+# Vanaf hoeveel overlap twee sleutels dezelfde storing heten. 0,6 is bewust hoog:
+# liever twee sleutels voor één storing dan één sleutel voor twee storingen — dat
+# laatste stuurt de developer op pad voor een probleem dat niemand meldde.
+SLEUTEL_GELIJKENIS = 0.6
 
 # Waarvoor Daniel gestoord mag worden — door hemzelf gekozen op 29-08-2026.
 # "geld" en "vertrek" zijn spoed en krijgen ook een mailtje; de rest staat
@@ -109,6 +130,59 @@ def bugs() -> dict:
 
 
 # ---------------------------------------------------------------- post ophalen
+def _verklein(ruw: bytes) -> bytes | None:
+    """Een meegestuurde foto terugbrengen tot iets wat door de leiding past.
+
+    De API weigert een afbeelding boven de 5 MB, en een telefoonfoto zit daar zo
+    overheen. Lukt verkleinen niet, dan gaat het origineel alleen mee als het uit
+    zichzelf klein genoeg is: één geweigerde aanroep kost de hele ronde, en dan
+    wordt er van vijfentwintig berichten niet één beoordeeld.
+    """
+    try:
+        import io
+
+        from PIL import Image, ImageOps
+        with Image.open(io.BytesIO(ruw)) as afb:
+            afb = (ImageOps.exif_transpose(afb) or afb).convert("RGB")
+            afb.thumbnail((AFBEELDING_MAX_PX, AFBEELDING_MAX_PX))
+            buf = io.BytesIO()
+            afb.save(buf, format="JPEG", quality=75)
+            return buf.getvalue()
+    except Exception as e:  # noqa: BLE001
+        print(f"  (afbeelding niet verkleind: {e})")
+        return ruw if len(ruw) < 3_500_000 else None
+
+
+def _afbeeldingen(msg) -> list[dict]:
+    """De schermafbeeldingen uit een mail, klaar om aan het model te geven.
+
+    WAAROM DIT BESTAAT (30-08-2026). Amanda stuurde een foto van de melding
+    "Publishing failed (HTTP 500): Internal Server Error". In de tekst van haar
+    mail stond alleen "ik stuur een foto mee van de melding" — verder niets. Hier
+    werd uitsluitend de platte tekst gelezen, dus wat er op die foto stond is
+    nooit ergens aangekomen: niet op de lijst van de developer, en dus ook niet
+    bij Daniel. Egbert deed twee keer hetzelfde met een importfout.
+
+    Een foutmelding op een foto is nog steeds een foutmelding.
+    """
+    uit: list[dict] = []
+    for deel in msg.walk():
+        if deel.get_content_maintype() != "image":
+            continue
+        try:
+            ruw = deel.get_payload(decode=True) or b""
+        except Exception:  # noqa: BLE001
+            continue
+        klein = _verklein(ruw) if ruw else None
+        if not klein:
+            continue
+        uit.append({"media_type": "image/jpeg",
+                    "data": base64.b64encode(klein).decode("ascii")})
+        if len(uit) >= MAX_AFBEELDINGEN:
+            break
+    return uit
+
+
 def _nieuwe_post(al_gezien: set[str]) -> list[dict]:
     """Alles uit de laatste twee weken dat nog niet beoordeeld is, in- én uitgaand.
 
@@ -170,6 +244,9 @@ def _nieuwe_post(al_gezien: set[str]) -> list[dict]:
                         "onderwerp": L._leesbaar(kop.get("Subject", "")),
                         "wanneer": wanneer,
                         "tekst": L._eigen_tekst(L._platte_tekst(msg))[:4000],
+                        # Alleen bij binnenkomende post: onze eigen uitgaande
+                        # mail bevat hooguit ons eigen logo.
+                        "afbeeldingen": _afbeeldingen(msg) if richting == "in" else [],
                     })
                 if len(uit) >= PER_BEURT:
                     break
@@ -196,6 +273,16 @@ Geef per bericht exact dit terug, als één JSON-object per bericht in een lijst
   "bug_sleutel": als storing true is, een korte vaste sleutel in kleine letters
                 met streepjes die HETZELFDE is voor hetzelfde probleem, ook als
                 twee mensen het anders opschrijven. Anders "".
+                NEEM EEN BESTAANDE SLEUTEL UIT DE LIJST HIERONDER zodra het over
+                hetzelfde probleem gaat. Een nieuwe sleutel verzinnen voor iets
+                wat er al staat is de duurste fout die je hier kunt maken: dan
+                telt de storing als één melder, komt hij nooit boven aan de lijst
+                en gaat niemand hem repareren. Verzin alleen een nieuwe sleutel
+                als geen enkele bestaande erop past.
+  "foutmelding": de foutmelding LETTERLIJK zoals hij er staat, als de klant er
+                een noemt of er een schermafbeelding bij zit. Neem cijfers en
+                codes precies over ("Publishing failed (HTTP 500): Internal
+                Server Error"). Staat er geen foutmelding, dan "".
   "escalatie":  "" als het niets voor de directeur is, anders precies één van:
                 "geld"  — factuur, terugbetaling, opzegging, betaalprobleem
                 "vertrek" — hij is ontevreden of dreigt te stoppen
@@ -203,10 +290,17 @@ Geef per bericht exact dit terug, als één JSON-object per bericht in een lijst
                 op hebben zonder erbij te raden
   "samenvatting": één zin, hooguit 20 woorden, in gewone taal, zonder jargon.
 
+BIJLAGEN. Bij sommige berichten zitten schermafbeeldingen; die krijg je erbij,
+met de message_id erboven. Lees wat erop staat. Klanten sturen vaak alleen een
+foto met de zin "hier is de melding" erbij — de storing staat dan volledig op die
+foto en nergens anders. Wat je op zo'n foto ziet telt precies zo zwaar als tekst:
+zie je een foutmelding, dan is "storing" true en gaat de tekst in "foutmelding".
+
 Geef ALLEEN de JSON-lijst terug, niets eromheen."""
 
 
-def _beoordeel(berichten: list[dict], bestaande_themas: list[str]) -> list[dict]:
+def _beoordeel(berichten: list[dict], bestaande_themas: list[str],
+               bestaande_sleutels: list[str] | None = None) -> list[dict]:
     if not berichten:
         return []
     sleutel = os.environ.get("ANTHROPIC_API_KEY", "").strip()
@@ -216,19 +310,39 @@ def _beoordeel(berichten: list[dict], bestaande_themas: list[str]) -> list[dict]
     import anthropic
     lading = [{"message_id": b["message_id"], "richting": b["richting"],
                "van_of_naar": b["adres"], "onderwerp": b["onderwerp"],
-               "tekst": b["tekst"][:2000]} for b in berichten]
+               "tekst": b["tekst"][:2000],
+               "bijlagen": len(b.get("afbeeldingen") or [])} for b in berichten]
     prompt = (
         (f"Thema's die al bestaan, hergebruik ze waar het past:\n"
          f"{', '.join(bestaande_themas[:60])}\n\n" if bestaande_themas else "")
+        # De bestaande bugsleutels MOETEN mee. Zonder deze lijst kon het model
+        # onmogelijk hergebruiken wat het niet kende, en verzon het bij elke mail
+        # een nieuwe sleutel: op 30-08-2026 stonden er 45 sleutels waarvan 44 met
+        # precies één melder, met vier verschillende namen voor dezelfde
+        # Admarkt-importfout. Daardoor haalde vrijwel niets ooit de grens van
+        # twee melders, kreeg vrijwel niets "MOET ZEKER", en startte de
+        # automatische starter voor vrijwel niets een sessie.
+        + (f"Bugsleutels die al bestaan. Gebruik er één van zodra het over "
+           f"hetzelfde probleem gaat:\n{', '.join(sorted(bestaande_sleutels)[:120])}\n\n"
+           if bestaande_sleutels else "")
         + f"De berichten:\n{json.dumps(lading, ensure_ascii=False)}"
     )
+    inhoud: list[dict] = [{"type": "text", "text": prompt}]
+    for b in berichten:
+        for afb in b.get("afbeeldingen") or []:
+            inhoud.append({"type": "text",
+                           "text": f"Schermafbeelding bij message_id {b['message_id']}:"})
+            inhoud.append({"type": "image",
+                           "source": {"type": "base64",
+                                      "media_type": afb["media_type"],
+                                      "data": afb["data"]}})
     try:
         antwoord = L._claude(
             anthropic.Anthropic(api_key=sleutel),
             model=L.MODEL, max_tokens=16000,
             output_config={"effort": "low"},
             system=BEOORDEEL_REGELS,
-            messages=[{"role": "user", "content": prompt}])
+            messages=[{"role": "user", "content": inhoud}])
         tekst = "".join(b.text for b in antwoord.content
                         if getattr(b, "type", "") == "text").strip()
     except Exception as e:  # noqa: BLE001
@@ -249,6 +363,46 @@ def _beoordeel(berichten: list[dict], bestaande_themas: list[str]) -> list[dict]
 
 
 # ---------------------------------------------------------------- bijhouden
+def _kern(sleutel: str) -> frozenset:
+    """De betekenisdragende woorden van een sleutel."""
+    return frozenset(w for w in re.split(r"[^a-z0-9]+", (sleutel or "").lower())
+                     if w and w not in SLEUTELRUIS)
+
+
+def _bestaande_sleutel(nieuw: str, signalen: dict) -> str:
+    """Valt deze sleutel samen met eentje die er al staat? Dan die gebruiken.
+
+    Het model krijgt de bestaande sleutels nu mee, maar het blijft een model: het
+    schrijft alsnog "admarkt-import-mislukt" naast "admarkt-import-fout". Twee
+    sleutels voor één storing betekent twee keer één melder, en dus nooit
+    voorrang. Dit is het vangnet daaronder.
+
+    Een sleutel die bewust is AFGEWEZEN blijft buiten schot: daar is een besluit
+    over genomen, en een nieuwe melding hoort dat besluit niet stilletjes terug
+    te draaien.
+    """
+    kern = _kern(nieuw)
+    if not kern:
+        return nieuw
+    beste, hoogste = nieuw, 0.0
+    for bestaand, s in signalen.items():
+        if bestaand == nieuw:
+            return nieuw
+        if s.get("status") == "afgewezen":
+            continue
+        andere = _kern(bestaand)
+        if not andere:
+            continue
+        gelijkenis = len(kern & andere) / len(kern | andere)
+        if gelijkenis > hoogste:
+            beste, hoogste = bestaand, gelijkenis
+    return beste if hoogste >= SLEUTEL_GELIJKENIS else nieuw
+
+
+# Een serverfout is geen inschatting maar bewijs: er ging iets stuk aan ONZE kant.
+_SERVERFOUT = re.compile(r"\b(http\s*)?5\d{2}\b|internal server error", re.I)
+
+
 def _verwerk(berichten: list[dict], oordelen: list[dict]) -> tuple[int, list[dict]]:
     """Oordelen wegschrijven, bugs bundelen, escalaties bepalen."""
     per_id = {b["message_id"]: b for b in berichten}
@@ -273,7 +427,10 @@ def _verwerk(berichten: list[dict], oordelen: list[dict]) -> tuple[int, list[dic
             "bug_sleutel": str(oordeel.get("bug_sleutel") or "")[:60],
             "escalatie": str(oordeel.get("escalatie") or "")[:40],
             "samenvatting": str(oordeel.get("samenvatting") or "")[:200],
+            "foutmelding": str(oordeel.get("foutmelding") or "")[:300],
         }
+        if rij["bug_sleutel"]:
+            rij["bug_sleutel"] = _bestaande_sleutel(rij["bug_sleutel"], signalen)
         alles[oordeel["message_id"]] = rij
 
         # Een storing van ONS uit is geen melding. Alleen wat binnenkomt telt.
@@ -288,19 +445,36 @@ def _verwerk(berichten: list[dict], oordelen: list[dict]) -> tuple[int, list[dic
                 s["heropend_op"] = rij["wanneer"]
             if rij["adres"] not in s["melders"]:
                 s["melders"].append(rij["adres"])
+            # De letterlijke foutmelding erbij bewaren. Die staat vaak alleen op
+            # een meegestuurde schermafbeelding, en juist die tekst is wat de
+            # developer nodig heeft om de fout terug te vinden.
+            if rij["foutmelding"]:
+                meldingen = s.setdefault("foutmeldingen", [])
+                if rij["foutmelding"] not in meldingen:
+                    meldingen.append(rij["foutmelding"])
+                del meldingen[:-5]
             # HET SEINTJE AAN DE DEVELOPER: dit moet met zekerheid gerepareerd,
             # niet "als het uitkomt". Drie aanleidingen, alle drie gemeten aan de
             # klant en niet aan een inschatting: hij is boos, hij dreigt te
             # stoppen, of het overkomt meer dan één iemand. De developer leest dit
             # bij het begin van elke sessie (zie CLAUDE.md).
+            # Een serverfout hoort hier ook bij, en die stond er niet in. Amanda
+            # kreeg op 30-08-2026 "Publishing failed (HTTP 500)" te zien en bleef
+            # er vriendelijk onder — niet boos, niet vertrekkend, de enige melder.
+            # Dus bleef het staan als gewone support terwijl publiceren voor haar
+            # gewoon stuk was. Toon is geen maat voor ernst: een 500 is bewijs dat
+            # er iets aan onze kant kapot is.
+            serverfout = bool(_SERVERFOUT.search(rij["foutmelding"]))
             if (rij["stemming"] == "boos" or rij["escalatie"] == "vertrek"
-                    or len(s["melders"]) >= PATROON_VANAF):
+                    or serverfout or len(s["melders"]) >= PATROON_VANAF):
                 s["moet_zeker"] = True
                 redenen = set(s.get("waarom_zeker") or [])
                 if rij["stemming"] == "boos":
                     redenen.add("een klant is hier boos over")
                 if rij["escalatie"] == "vertrek":
                     redenen.add("een klant dreigt hierom te stoppen")
+                if serverfout:
+                    redenen.add("de server gaf een interne fout terug")
                 if len(s["melders"]) >= PATROON_VANAF:
                     redenen.add(f"{len(s['melders'])} mensen melden hetzelfde")
                 s["waarom_zeker"] = sorted(redenen)
@@ -398,7 +572,7 @@ def lezen(args) -> dict:
     if not berichten:
         return {"gelezen": 0, "escalaties": 0}
     themas = sorted({r.get("thema", "") for r in al.values() if r.get("thema")})
-    oordelen = _beoordeel(berichten, themas)
+    oordelen = _beoordeel(berichten, themas, list(bugs()))
     aantal, nieuw = _verwerk(berichten, oordelen)
     if nieuw:
         _bewaar_escalaties(nieuw)
@@ -432,7 +606,31 @@ def bugs_tonen(args) -> None:
         if s.get("waarom_zeker"):
             print(f"    waarom met voorrang: {', '.join(s['waarom_zeker'])}")
         print(f"    {s.get('omschrijving','')}")
+        for melding in (s.get("foutmeldingen") or [])[:3]:
+            print(f"    foutmelding: {melding}")
         print(f"    gemeld door: {', '.join(melders[:8])}")
+
+
+def fouten_tonen(args) -> None:
+    """Wat er op de server stukging, met de code die de klant op zijn scherm zag.
+
+    WAAROM DIT BESTAAT (30-08-2026). Een onverwachte fout in de server leverde de
+    klant "HTTP 500: Internal Server Error" op en liet verder NERGENS een spoor
+    na: niet in de database, niet in een lijst, alleen in de logregels van de
+    container die na een herstart weg zijn. Amanda kon daardoor niet publiceren
+    zonder dat iemand ooit kon zien waaróm. Nu krijgt elke onverwachte fout een
+    code die zij op haar scherm ziet staan, en staat hij hier terug te vinden.
+    """
+    lijst = _lees("server_fouten", []) or []
+    if not lijst:
+        print("Geen serverfouten vastgelegd.")
+        return
+    for f in lijst[: (args.aantal if getattr(args, "aantal", 0) else 20)]:
+        print(f"\n{f.get('code','?')}  {str(f.get('wanneer',''))[:16]}  "
+              f"{f.get('methode','')} {f.get('pad','')}")
+        print(f"    {f.get('soort','')}: {f.get('bericht','')}")
+        for regel in str(f.get("spoor", "")).strip().splitlines()[-6:]:
+            print(f"    | {regel}")
 
 
 def vraag_voor_daniel(adres: str, vraag: str, aanleiding: str = "") -> bool:
@@ -674,6 +872,9 @@ def main() -> None:
     sub.add_parser("lezen", help="nieuwe post beoordelen").set_defaults(func=lezen)
     sub.add_parser("escalaties", help="wat er voor Daniel ligt").set_defaults(func=escalaties)
     sub.add_parser("bugs", help="het postvak van de developer").set_defaults(func=bugs_tonen)
+    f = sub.add_parser("fouten", help="wat er op de server stukging, met foutcode")
+    f.add_argument("--aantal", type=int, default=20)
+    f.set_defaults(func=fouten_tonen)
     sub.add_parser("terugkoppelen", help="melders bericht sturen over reparaties"
                    ).set_defaults(func=lambda a: print(f"{bericht_over_reparaties()} bericht(en) klaargezet"))
     o = sub.add_parser("opgelost", help="een storing als gerepareerd melden")
