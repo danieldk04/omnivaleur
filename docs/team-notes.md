@@ -1655,3 +1655,50 @@ staan in plaats van een foutmelding te tonen.
 
 Ook gevonden: de losse link met `?utm_source=ig` draagt campagne `link_in_bio`
 (18 sessies). Handmatig geplaatst, staat nergens in de repo.
+
+### 30-08-2026 — Overdracht: sessie op het tweede account stopt hier
+
+Wie hierna op Daniels eigen account verdergaat, begint met dit.
+
+**Wat er vandaag is gerepareerd en live staat** (commits `c434e60` t/m de laatste
+push van vandaag, extensie **1.0.265**, door Daniel geüpload naar de Web Store):
+
+- Verkocht is verkocht. Een publicatieopdracht wordt getoetst op het moment van
+  UITDELEN (`backend/api/jobs.py`, `/pending`) — het enige punt waar elke
+  publicatie langskomt. Staat er ergens een verkoop, dan wordt de opdracht
+  geannuleerd. Kan de controle niet worden gedaan, dan gaat er die ronde geen
+  enkele publicatie uit.
+- Tweelingen. Dezelfde trui staat meerdere keren in de voorraad (vertaalde
+  importrijen). `backend/services/tweelingen.py` bepaalt de familie op het nummer
+  in de TITEL (niet op het SKU-veld: dat is per importbron verschillend) plus
+  hetzelfde merk. Verkocht op één rij geldt nu voor de hele familie.
+  Gemeten bij Daniel: 440 items, 13 producten met dubbele rijen, tot acht rijen
+  voor dezelfde trui.
+- Op het platform van de verkoop halen we bewust NIETS weg: een tweede
+  advertentie daar kan een tweede exemplaar zijn.
+- Verkoopdetectie: eBay en Etsy worden nu server-side via hun eigen API
+  nagekeken (`POLL_PLATFORMS` in `backend/services/polling.py`). Vinted hangt op
+  de uurlijkse garderobescan, MP/2dehands op de tienminutencontrole in de
+  extensie — beide vereisen dus een draaiende browser.
+- Ontbrekende advertentieteksten worden elk kwartier vanzelf opgehaald
+  (`vul_ontbrekende_teksten_aan`, één verkoper per ronde).
+- Elk klaargezet conceptantwoord stuurt nu een mailtje naar Daniel. Dat werkte
+  eerder niet: berichten aan hemzelf gaan naar twee adressen en die gingen als
+  één tekstveld naar Resend, wat een 422 gaf.
+- Dubbele Stripe-abonnementen zijn geblokkeerd (zilverwebsite.nl had er twee).
+
+**Wat er nog openstaat**
+
+1. Er lopen verwijderopdrachten op Daniels account: 12 producten waren verkocht
+   en stonden nog live elders. Vanochtend 09:42 stonden er 16 op klaar, 14 in de
+   rij, 3 mislukt (die advertenties bestonden al niet meer op Marktplaats).
+   Nakijken of de rest is afgerond — ze lopen alleen met zijn browser open.
+2. Het werkvenster van de extensie klapte op macOS steeds open. Het wordt nu op
+   drie momenten expliciet geminimaliseerd (aanmaken, tabblad openen, tabblad
+   sluiten). Nog niet bevestigd door Daniel. Blijft het gebeuren, dan is de
+   volgende stap het venster helemaal laten vallen en in een verborgen tabblad
+   werken — met als bekende prijs dat Chrome korte pauzes daar tot een seconde
+   oprekt.
+3. Toon & Lynn (De Juiste Toon) wachten op antwoord over de nieuwe categorie
+   Verkleedkleding en over "kleed" = vloerkleed. Storing staat teruggemeld als
+   `categorie-verkeerd-vanuit-vinted`.
