@@ -1,0 +1,264 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Marktplaats verwijderen — proef</title>
+<style>
+  body { font: 14px/1.5 system-ui, sans-serif; margin: 16px; }
+  h1 { font-size: 18px; }
+  #uitslag { font-weight: 600; padding: 8px 0; }
+  table { border-collapse: collapse; width: 100%; font-size: 13px; }
+  td, th { border-bottom: 1px solid #ddd; padding: 4px 8px; text-align: left; vertical-align: top; }
+  .goed { color: #0a7d28; } .fout { color: #b00020; font-weight: 600; }
+  iframe { position: absolute; left: -10000px; top: 0; width: 900px; height: 700px; border: 0; }
+  code { background: #f3f3f3; padding: 0 3px; }
+</style>
+<h1>Marktplaats / 2dehands verwijderen — de echte code tegen een nagebouwd overzicht</h1>
+<p>Deze pagina draait <code>bgDeleteMp2dh</code> verbatim zoals hij in de extensie zit
+(gesneden door <code>build.js</code>). Elk scenario krijgt een eigen iframe; de
+geïnjecteerde functies worden met <code>iframe.contentWindow.eval</code> in dat frame
+uitgevoerd — precies wat Chrome doet met <code>executeScript({world:"MAIN"})</code>,
+inclusief het feit dat alles buiten de functie daar niet bestaat.</p>
+<div id="uitslag">bezig…</div>
+<table id="tabel"><thead><tr><th>scenario</th><th>verwacht</th><th>nieuwe code</th><th>oude code</th></tr></thead><tbody></tbody></table>
+
+<script src="mw-functions.js"></script>
+<script>
+// ── Nagebouwd "Mijn advertenties" van Marktplaats ─────────────────────────
+// Klassen en attributen zoals de echte pagina ze gebruikt (input.verkopen-select
+// met data-ad-id, /v/-links met het m-nummer, .ReactModalPortal voor het venster,
+// en de knop "Toon 50 volgende advertenties." onder de eerste vijftig).
+function rijenHtml(ads) {
+  return ads.map(a => `
+    <article class="row">
+      <input type="checkbox" class="verkopen-select" data-ad-id="${a.id}">
+      <input type="checkbox" id="up-call-select-${a.id}" class="feature-select">
+      <a href="/v/kleding-heren/vesten/${a.id}-${a.slug || "adv"}"><span>${a.titel}</span></a>
+      ${a.verkocht ? '<span class="label">Verkocht</span>' : ""}
+      <button>Omhoog bellen</button>
+      <button>Verkocht? Meld het</button>
+    </article>`).join("");
+}
+function overzichtHtml(ads, opties = {}) {
+  const zichtbaar = ads.slice(0, opties.perPagina || 999);
+  const rest = ads.length - zichtbaar.length;
+  return `
+    ${opties.lokknop ? '<button id="lok">Verwijder zoekopdracht</button>' : ""}
+    <div class="toolbar"><button id="bulk-verwijder" disabled>Verwijder</button></div>
+    <div id="lijst">${rijenHtml(zichtbaar)}</div>
+    ${rest > 0 ? `<button id="meer">Toon 50 volgende advertenties.</button>` : ""}
+  `;
+}
+
+function bouwFrame(state, herladen) {
+  const f = document.createElement("iframe");
+  document.body.appendChild(f);
+  const d = f.contentDocument;
+  d.open();
+  d.write("<!doctype html><body style='font:13px sans-serif'></body>");
+  d.close();
+  const weg = state.uitgelogd || (herladen && state.uitgelogdNaHerladen);
+  // Bij een grote verkoper rendert Marktplaats onze advertentie simpelweg niet
+  // mee: hij staat voorbij de vijftig die getoond worden.
+  const zichtbaar = herladen && state.verstopNaHerladen
+    ? state.ads.filter(a => a.id !== "m2423718603") : state.ads;
+  d.body.innerHTML = weg ? "<p>Log in om je advertenties te zien.</p>"
+                         : overzichtHtml(zichtbaar, state);
+  // De advertentiepagina zelf. Die wordt met fetch opgevraagd en is bij een
+  // grote verkoper de enige betrouwbare getuige: het overzicht laat maar
+  // vijftig advertenties per keer zien.
+  f.contentWindow.fetch = async (u) => {
+    if (state.adPagina === "weg") return { ok: false, status: 404, text: async () => "" };
+    if (state.adPagina === "leeft") return { ok: true, status: 200, text: async () => "<h1>" + state.ads.map(a => a.titel).join("") + "</h1> te koop" };
+    throw new Error("netwerk onbereikbaar");   // geen uitsluitsel
+  };
+  bedraad(f, state);
+  return f;
+}
+
+// Het gedrag van de echte pagina: de bulk-knop wordt pas actief als er iets is
+// aangevinkt en krijgt dan een telling, en na het klikken opent het venster met
+// Marktplaats' eigen twee knoppen.
+function bedraad(f, state) {
+  const d = f.contentDocument, w = f.contentWindow;
+  const bulk = d.querySelector("#bulk-verwijder");
+  d.querySelectorAll("input.verkopen-select").forEach(cb => {
+    cb.addEventListener("change", () => {
+      const n = d.querySelectorAll("input.verkopen-select:checked").length;
+      if (bulk) { bulk.disabled = n === 0; bulk.textContent = n ? `Verwijder (${n})` : "Verwijder"; }
+    });
+  });
+  const meer = d.querySelector("#meer");
+  if (meer) meer.addEventListener("click", () => {
+    d.querySelector("#lijst").innerHTML = rijenHtml(state.ads);
+    meer.remove();
+    bedraad(f, state);
+  });
+  if (bulk) bulk.addEventListener("click", () => {
+    if (bulk.disabled) return;
+    const gekozen = [...d.querySelectorAll("input.verkopen-select:checked")].map(c => c.dataset.adId);
+    const portal = d.createElement("div");
+    portal.className = "ReactModalPortal";
+    portal.innerHTML = state.vreemdVenster
+      ? `<div role="dialog"><p>Even geduld</p><button>Sluiten</button><button>Meer weten</button></div>`
+      : `<div role="dialog"><p>Heb je "${state.ads[0].titel}" verkocht via Marktplaats?</p>
+           <button class="a">Niet verkocht via Marktplaats</button>
+           <button class="b">Verkocht via Marktplaats</button></div>`;
+    d.body.appendChild(portal);
+    portal.querySelector(".a")?.addEventListener("click", () => {
+      portal.remove();
+      // Weg is weg: de rijen verdwijnen uit de lijst.
+      gekozen.forEach(id => d.querySelector(`input[data-ad-id="${id}"]`)?.closest("article")?.remove());
+      state.ads = state.ads.filter(a => !gekozen.includes(a.id));
+    });
+    portal.querySelector(".b")?.addEventListener("click", () => { w.__valseVerkoop = true; portal.remove(); });
+  });
+}
+
+// ── Chrome nagedaan ────────────────────────────────────────────────────────
+let FRAME = null, STAAT = null;
+window.chrome = {
+  tabs: {
+    reload(tabId, opts, cb) {
+      // Herladen = de pagina opnieuw opbouwen. Precies hier ging het mis: als de
+      // sessie in de tussentijd wegvalt rendert Marktplaats géén advertenties.
+      const oud = FRAME; FRAME = bouwFrame(STAAT, true); oud.remove();
+      setTimeout(cb, 0);
+    },
+    get(id, cb) { cb({ status: "complete" }); },
+    onUpdated: { addListener() {}, removeListener() {} },
+  },
+  runtime: { lastError: undefined },
+};
+function execInTab(tabId, func, args = []) {
+  // Zoals chrome.scripting.executeScript({world:"MAIN"}): de functie wordt in het
+  // realm van de pagina opnieuw opgebouwd uit haar brontekst. Alles wat buiten
+  // die functie staat bestaat daar niet — een verwijzing naar buiten geeft hier
+  // dus dezelfde ReferenceError als in het echt.
+  const fn = FRAME.contentWindow.eval("(" + func.toString() + ")");
+  return Promise.resolve(fn.apply(null, args));
+}
+function openWorkerTab(url, cb) { cb({ id: 1 }); }
+function waitForTabLoad() { return Promise.resolve(); }
+function stuurWerkTabbladNaar() { return Promise.resolve(); }
+function sluitWerkTabblad() {}
+function mpAdvertentieSnapshot() { return Promise.resolve({}); }
+let GEMELD = null;
+function finaliseJob(serverUrl, jobId, kind, body) { GEMELD = { kind, body }; return Promise.resolve(); }
+
+// ── De scenario's ──────────────────────────────────────────────────────────
+let _nr = 2423718600;
+const NR = () => "m" + (++_nr);
+const AD = (id, titel, extra = {}) => ({ id, titel, ...extra });
+const HET_VEST = "Khaki Profuomo Zip Vest";
+
+const scenarios = [
+  { naam: "gewone verwijdering op advertentienummer",
+    payload: { title: HET_VEST, platform_listing_id: "m2423718603" },
+    staat: { ads: [AD("m2423718603", HET_VEST), AD("m2999999999", "Blauwe trui")] },
+    verwacht: "complete" },
+
+  { naam: "op SKU, zonder advertentienummer",
+    payload: { title: "(1339) " + HET_VEST, sku: "1339" },
+    staat: { ads: [AD("m2423718601", "(1339) " + HET_VEST), AD("m2423718602", "(1400) Blauwe trui")] },
+    verwacht: "complete" },
+
+  { naam: "op titel, zonder nummer en zonder SKU",
+    payload: { title: HET_VEST },
+    staat: { ads: [AD("m2423718601", HET_VEST), AD("m2423718602", "Blauwe trui")] },
+    verwacht: "complete" },
+
+  { naam: "twee advertenties met dezelfde titel — niet gokken",
+    payload: { title: HET_VEST },
+    staat: { ads: [AD("m2423718601", HET_VEST), AD("m2423718602", HET_VEST)] },
+    verwacht: "error" },
+
+  { naam: "rij draagt een Verkocht-label — verkoop boeken, niet verwijderen",
+    payload: { title: HET_VEST, platform_listing_id: "m2423718601" },
+    staat: { ads: [AD("m2423718601", HET_VEST, { verkocht: true })] },
+    verwacht: "sold" },
+
+  { naam: "sessie valt weg TIJDENS de controle achteraf",
+    payload: { title: HET_VEST, platform_listing_id: "m2423718603" },
+    staat: { uitgelogdNaHerladen: true,
+             ads: [AD("m2423718603", HET_VEST), AD("m2999999999", "Blauwe trui")] },
+    verwacht: "error" },
+
+  { naam: "lokknop 'Verwijder zoekopdracht' staat vóór de echte knop",
+    payload: { title: HET_VEST, platform_listing_id: "m2423718601" },
+    staat: { lokknop: true, ads: [AD("m2423718601", HET_VEST)] },
+    verwacht: "complete" },
+
+  { naam: "de laatste advertentie: leeg overzicht is dan wél eerlijk",
+    payload: { title: HET_VEST, platform_listing_id: "m2423718601" },
+    staat: { ads: [AD("m2423718601", HET_VEST)] },
+    verwacht: "complete" },
+
+  { naam: "groot account: overzicht zegt weg, de advertentie leeft nog",
+    payload: { title: HET_VEST, platform_listing_id: "m2423718603" },
+    staat: { adPagina: "leeft", verstopNaHerladen: true,
+             ads: [AD("m2423718603", HET_VEST), AD("m2999999999", "Blauwe trui")] },
+    verwacht: "error" },
+
+  { naam: "advertentiepagina bevestigt zelf dat hij weg is",
+    payload: { title: HET_VEST, platform_listing_id: "m2423718603" },
+    staat: { adPagina: "weg",
+             ads: [AD("m2423718603", HET_VEST), AD("m2999999999", "Blauwe trui")] },
+    verwacht: "complete" },
+
+  { naam: "onbekend venster — eerlijk stoppen met de knopteksten erbij",
+    payload: { title: HET_VEST, platform_listing_id: "m2423718601" },
+    staat: { vreemdVenster: true, ads: [AD("m2423718601", HET_VEST)] },
+    verwacht: "error" },
+
+  { naam: "advertentie staat op plek 60, achter 'Toon 50 volgende'",
+    payload: { title: HET_VEST, platform_listing_id: "m2423718660" },
+    staat: { perPagina: 50,
+             ads: [...Array(59)].map((_, i) => AD("m24237187" + String(10 + i), "Advertentie " + i))
+                    .concat([AD("m2423718660", HET_VEST)]) },
+    verwacht: "complete" },
+];
+
+async function draai(sc, routine) {
+  STAAT = JSON.parse(JSON.stringify(sc.staat));   // verse pagina per poging
+  GEMELD = null;
+  FRAME = bouwFrame(STAAT, false);
+  const job = { id: "j1", platform: "marktplaats", payload: sc.payload };
+  try {
+    await routine(job, "https://example.invalid");
+    if (!GEMELD) return { uitkomst: "niets", detail: "geen melding naar de server" };
+    if (GEMELD.body && GEMELD.body.sold_on_platform) return { uitkomst: "sold", detail: "verkoop geboekt" };
+    // "complete" mag alleen als de advertentie er ECHT niet meer staat.
+    const nogAanwezig = STAAT.ads.some(a => a.id === sc.payload.platform_listing_id ||
+                                            a.titel.includes(sc.payload.title.replace(/^\(\d+\) /, "")));
+    return { uitkomst: nogAanwezig ? "VALS-GELUKT" : "complete",
+             detail: nogAanwezig ? "gemeld als verwijderd terwijl de advertentie er nog staat"
+                                 : JSON.stringify(GEMELD.body || {}) };
+  } catch (e) {
+    return { uitkomst: "error", detail: String(e.message || e).slice(0, 160) };
+  } finally {
+    FRAME.remove();
+  }
+}
+
+(async () => {
+  const tb = document.querySelector("#tabel tbody");
+  let nieuwFout = 0;
+  let oudFout = 0;
+  for (const sc of scenarios) {
+    const r = await draai(sc, bgDeleteMp2dh);
+    const o = typeof _oudBgDeleteMp2dh === "function" ? await draai(sc, _oudBgDeleteMp2dh) : { uitkomst: "?" };
+    const ok = r.uitkomst === sc.verwacht;
+    const okOud = o.uitkomst === sc.verwacht;
+    if (!ok) nieuwFout++;
+    if (!okOud) oudFout++;
+    const tr = document.createElement("tr");
+    tr.innerHTML = `<td>${sc.naam}</td><td>${sc.verwacht}</td>
+      <td class="${ok ? "goed" : "fout"}">${r.uitkomst}<br><small>${String(r.detail).replace(/</g, "&lt;")}</small></td>
+      <td class="${okOud ? "goed" : "fout"}">${o.uitkomst}</td>`;
+    tb.appendChild(tr);
+  }
+  window.__uitslag = { nieuw: nieuwFout, oud: oudFout, gevallen: scenarios.length };
+  document.querySelector("#uitslag").textContent =
+    nieuwFout === 0 ? `ALLES GOED — ${scenarios.length} scenario's` : `${nieuwFout} van ${scenarios.length} FOUT`;
+  document.querySelector("#uitslag").className = nieuwFout ? "fout" : "goed";
+})();
+</script>

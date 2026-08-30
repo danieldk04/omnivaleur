@@ -2657,15 +2657,41 @@ async function bgDeleteMp2dh(job, serverUrl) {
     // The label carries a count once something is selected ("Verwijder (1)"), so
     // an exact-text match found nothing and the delete silently never started.
     const clickedDelete = await execInTab(tabId, () => {
-      const el = [...document.querySelectorAll('button, a, [role="button"]')]
-        .find(e => /^\s*(🗑\s*)?verwijder(en)?\b/i.test((e.textContent || "").trim())
-          && !e.disabled && e.getAttribute("aria-disabled") !== "true"
-          && e.getClientRects().length > 0);
-      if (el) { el.click(); return true; }
-      return false;
+      // ALLEEN DE KNOP DIE ÉCHT VERWIJDERT.
+      //
+      // Hier stond "de eerste knop waarvan de tekst met verwijder begint". Dat
+      // is één woord te ruim: alles wat "Verwijder <iets>" heet — een opgeslagen
+      // zoekopdracht, een filter, een bericht — staat vaak hoger op de pagina en
+      // won dus altijd. Er werd dan netjes geklikt, er kwam geen venster, en de
+      // verversing eindigde met "de advertentie staat er nog" zonder dat iemand
+      // kon zien dat de verkeerde knop was geraakt.
+      //
+      // De echte knop is de bulk-knop boven de lijst, en die is te herkennen:
+      // zijn tekst is precies "Verwijder"/"Verwijderen", eventueel met de
+      // telling die Marktplaats erbij zet zodra er iets is aangevinkt
+      // ("Verwijder (1)"). Een knop mét telling wint altijd van een knop zonder.
+      const zichtbaar = e => !e.disabled && e.getAttribute("aria-disabled") !== "true"
+        && e.getClientRects().length > 0;
+      const tekst = e => (e.textContent || "").replace(/\s+/g, " ").trim();
+      const PRECIES = /^(🗑\s*)?verwijder(en)?(\s*\(\d+\))?$/i;
+      const knoppen = [...document.querySelectorAll('button, a, [role="button"]')].filter(zichtbaar);
+      const passend = knoppen.filter(e => PRECIES.test(tekst(e)));
+      const el = passend.find(e => /\(\d+\)/.test(tekst(e))) || passend[0];
+      if (el) { el.click(); return { ok: true, geklikt: tekst(el) }; }
+      return { ok: false, gezien: knoppen.map(tekst).filter(Boolean).slice(0, 15) };
     });
 
-    if (!clickedDelete) throw new Error("Top 'Verwijder' button not found or disabled — selection may not have registered");
+    if (!clickedDelete || !clickedDelete.ok) {
+      // Welke knoppen stonden er dan wél? Zonder die lijst is elke mislukking
+      // dezelfde ene zin en valt er niets aan te repareren. Zelfde les als bij
+      // de verwijderknop op de advertentiepagina zelf.
+      const gezien = (clickedDelete && clickedDelete.gezien || []).join(" / ") || "geen enkele knop";
+      throw new Error(
+        `The ${platform} "Verwijder" button above the list could not be used — the selection may not have ` +
+        `registered, or the button was renamed. Nothing was deleted. | Buttons on that page: ${gezien}`
+      );
+    }
+    console.log(`[Omnivaleur] bgDelete: klikte "${clickedDelete.geklikt}"`);
 
     await sleep(900);
 
@@ -2716,6 +2742,50 @@ async function bgDeleteMp2dh(job, serverUrl) {
       await sleep(1500);
     }
 
+    // NAKIJKEN OP DE ADVERTENTIE ZELF, ALS WE HAAR NUMMER HEBBEN.
+    //
+    // Het overzicht is een wankele getuige bij een grote verkoper: het rendert
+    // vijftig advertenties per keer en wij klikken maximaal veertig keer door.
+    // Boven de tweeduizend advertenties staat de onze dus gewoon niet in beeld,
+    // en "ik zie hem niet meer" betekent daar niets. Bij Egbert (5.540
+    // advertenties) en Jaap (1.284) is dat de dagelijkse werkelijkheid.
+    //
+    // De advertentiepagina zelf antwoordt wél eenduidig, en die vinden we op
+    // nummer. Geeft die aantoonbaar "weg", dan zijn we klaar; zegt hij dat de
+    // advertentie nog leeft, dan is er niets verwijderd. Alleen als hij géén
+    // uitsluitsel geeft vallen we terug op het overzicht hieronder.
+    if (listingId) {
+      const origin = new URL(overviewUrl).origin;
+      const eigenUrl = `${origin}/seller/view/${listingId}`;
+      for (let poging = 0; poging < 3; poging++) {
+        const weg = await execInTab(tabId, async (u) => {
+          try {
+            const r = await fetch(u, { credentials: "include", redirect: "follow" });
+            if (r.status === 404 || r.status === 410) return true;
+            if (!r.ok) return null;
+            const html = (await r.text()).toLowerCase();
+            if (/niet meer beschikbaar|is verwijderd|verlopen advertentie|not available|no longer available/.test(html)) return true;
+            return false;
+          } catch (e) { return null; }
+        }, [eigenUrl]).catch(() => null);
+        if (weg === true) {
+          const iets0 = snapshot && ((snapshot.photo_urls || []).length || snapshot.brand ||
+                                     snapshot.size || snapshot.description);
+          await finaliseJob(serverUrl, job.id, "complete", iets0 ? { captured_listing: snapshot } : {});
+          console.log(`[Omnivaleur] bgDelete success (op de advertentiepagina bevestigd): ${platform} "${title}"`);
+          return;
+        }
+        if (weg === false && poging === 2) {
+          throw new Error(
+            `"${title}" is still online on ${platform} (${eigenUrl}) after confirming the delete — ` +
+            `nothing was removed, so no new listing was created. Check it by hand.`
+          );
+        }
+        if (weg === false) { await sleep(2000); continue; }
+        break; // geen uitsluitsel: het overzicht hieronder beslist
+      }
+    }
+
     // Verify the listing is actually gone before reporting success — without
     // this the job was marked "done" (DB set to "delisted") even when nothing
     // was removed. Reload the overview to be sure it's not a stale DOM.
@@ -2727,7 +2797,23 @@ async function bgDeleteMp2dh(job, serverUrl) {
     // would read as "successfully deleted" and report a false success.
     await expandMp2dhOverview(tabId);
 
-    const stillPresent = await execInTab(tabId, (rawTitle, listingId, wantSku) => {
+    const naControle = await execInTab(tabId, (rawTitle, listingId, wantSku) => {
+      // HOEVEEL ADVERTENTIES RENDERDE DEZE PAGINA?
+      //
+      // Precies dezelfde telling als bij het zoeken hierboven, en om precies
+      // dezelfde reden — maar die stond hier niet, en dát is het gat waar de
+      // dubbele advertenties uit kwamen. Na het bevestigen wordt het overzicht
+      // herladen; valt de sessie daar weg, laadt de pagina te traag, of geeft
+      // Marktplaats een foutpagina, dan staat er geen enkele advertentie op het
+      // scherm. "Onze advertentie staat er niet meer" werd dan gelezen als
+      // "verwijderd", de opdracht werd als geslaagd gemeld, en de tweede helft
+      // van de verversing plaatste er een nieuwe naast — terwijl de oude gewoon
+      // online stond. Vandaar: "aantal op Marktplaats is gegroeid".
+      const rendered = new Set(
+        [...document.querySelectorAll('a[href*="/v/"], a[href*="/seller/view/"]')]
+          .map(a => ((a.getAttribute("href") || "").match(/(m\d{6,})/) || [])[1])
+          .filter(Boolean)
+      ).size;
       const norm = s => (s || "")
         .normalize("NFKD").replace(/[\u0300-\u036f]/g, "")
         .toLowerCase()
@@ -2738,20 +2824,42 @@ async function bgDeleteMp2dh(job, serverUrl) {
         .filter(el => el.children.length === 0 && el.textContent.trim());
       // Dezelfde sleutels als bij het zoeken, zodat "weg" ook echt weg betekent
       // en niet "onder een net iets andere titel niet teruggevonden".
-      if (listingId && document.querySelector(`a[href*="${listingId}"]`)) return true;
-      if (wantSku) {
-        const needle = `(${String(wantSku).trim().toLowerCase()})`;
-        if (leaves.some(e => e.textContent.replace(/\s+/g, " ").trim().toLowerCase().startsWith(needle))) return true;
-      }
-      const want = norm(rawTitle);
-      if (!want) return false;
-      return leaves.some(el => {
-        const t = norm(el.textContent);
-        return t && (t === want || (t.length >= 12 && want.startsWith(t)));
-      });
+      const aanwezig = (() => {
+        if (listingId && document.querySelector(`a[href*="${listingId}"]`)) return true;
+        if (wantSku) {
+          const needle = `(${String(wantSku).trim().toLowerCase()})`;
+          if (leaves.some(e => e.textContent.replace(/\s+/g, " ").trim().toLowerCase().startsWith(needle))) return true;
+        }
+        const want = norm(rawTitle);
+        if (!want) return false;
+        return leaves.some(el => {
+          const t = norm(el.textContent);
+          return t && (t === want || (t.length >= 12 && want.startsWith(t)));
+        });
+      })();
+      return { aanwezig, rendered };
     }, [title, listingId, sku]);
 
-    if (stillPresent) throw new Error(`Listing "${title}" still visible on ${overviewUrl} after confirming delete — removal was not verified`);
+    if (naControle && naControle.aanwezig) {
+      throw new Error(`Listing "${title}" still visible on ${overviewUrl} after confirming delete — removal was not verified`);
+    }
+    if ((!naControle || !naControle.rendered) && (findResult.rendered || 0) > 1) {
+      // Geen enkele advertentie op het scherm bewijst niets. Dit als succes
+      // melden is de duurste fout die dit bestand kan maken: de server zet de
+      // advertentie op "verwijderd" en plaatst er daarna een tweede naast.
+      //
+      // We vergelijken met het aantal van VÓÓR het verwijderen, want nul kan ook
+      // eerlijk zijn: wie zijn laatste advertentie ververst houdt een leeg
+      // overzicht over. Stonden er eerst meer, dan hoort er nu ook nog wat te
+      // staan — en is leeg dus een weggevallen sessie of een pagina die niet
+      // laadde, niet een geslaagde verwijdering.
+      throw new Error(
+        `Couldn't confirm the removal: your ${platform} listings overview came back empty right after ` +
+        `deleting, while it showed ${findResult.rendered} ads a moment earlier. That usually means the page ` +
+        `didn't load or you were signed out — so we can't tell whether "${title}" is really gone. ` +
+        `Check it by hand on ${platform}; no new listing was created.`
+      );
+    }
 
     // De vastgelegde advertentie gaat mee: de server zet de volledige fotoreeks
     // in de plaatsingsopdracht die hierna volgt (het tweede deel van een

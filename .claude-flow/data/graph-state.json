@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updatedAt": 1788096259800,
+  "updatedAt": 1788097177783,
   "nodeCount": 23,
   "nodes": {
     "mem-MEMORY-memory-index": {
@@ -41,8 +41,8 @@
     "mem-shopify_workflow-belangrijk--nooit-content-over": {
       "id": "mem-shopify_workflow-belangrijk--nooit-content-over",
       "category": "shopify_workflow",
-      "confidence": 0.6000000000000001,
-      "accessCount": 2,
+      "confidence": 0.5,
+      "accessCount": 0,
       "createdAt": 1783151212563
     },
     "mem-feedback_always_push----": {

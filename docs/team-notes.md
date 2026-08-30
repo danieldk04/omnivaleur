@@ -2178,3 +2178,43 @@ Verder wordt er nu eerst gewacht tot Vinted de pagina heeft opgebouwd — te vro
 kijken levert nul knoppen op en heet dan ten onrechte "knop niet gevonden".
 
 Extensie 1.0.271.
+
+## 30-08-2026 17:05 — Marktplaats verversen: "verwijderd" betekende niet altijd verwijderd
+
+Daniel vroeg de verversing van Marktplaats op dezelfde manier na te lopen als
+die van Vinted. Een verversing is weghalen + opnieuw plaatsen, en de server laat
+die tweede helft alleen los als de verwijderopdracht "done" meldt. Meldt het
+verwijderen dus ten onrechte succes, dan komt er een tweede advertentie naast de
+eerste. Dat is letterlijk de melding van zilverwebsite.nl:
+"Na verversen blijven oude advertenties staan, aantal op Marktplaats is gegroeid."
+
+Drie gaten gevonden, alle drie aangetoond in een echte browser
+(tests/vinted-mock/mp-delete.html draait de ECHTE bgDeleteMp2dh tegen een
+nagebouwd "Mijn advertenties", met de versie van vóór vandaag ernaast — vastgezet
+op commit 0536966 zodat het tegenbewijs niet stilletjes zichzelf wordt):
+
+1. De controle NA het verwijderen telde niet hoeveel advertenties de pagina liet
+   zien. Bij het zoeken gebeurde dat al wel, juist om "hij staat er niet" te
+   kunnen onderscheiden van "de pagina laadde niet / je bent uitgelogd" — maar bij
+   het nakijken niet. Een leeg overzicht las de extensie daar als "verwijderd".
+   Nu vergeleken met het aantal van vóór het verwijderen, want nul kan ook eerlijk
+   zijn: wie zijn laatste advertentie ververst houdt een leeg overzicht over.
+
+2. Het overzicht is bij een grote verkoper geen getuige. Het rendert vijftig
+   advertenties per keer en de extensie klikt maximaal veertig keer door; boven de
+   tweeduizend staat de advertentie er simpelweg niet tussen. Jaap heeft er 1.284,
+   Egbert 5.540. Nu wordt met een advertentienummer eerst de advertentiepagina zelf
+   opgevraagd (/seller/view/{id}) — die antwoordt wél eenduidig.
+
+3. De verwijderknop werd gekozen op "tekst begint met verwijder". Eén woord te
+   ruim: elke knop die "Verwijder <iets>" heet en hoger op de pagina staat won.
+   Er werd geklikt, er kwam geen venster, en de verversing eindigde zonder dat
+   iemand kon zien dat de verkeerde knop was geraakt. Nu op de hele tekst, en de
+   knop met de telling ("Verwijder (1)") wint — alleen de bulk-knop krijgt die.
+
+Uitslag van de proef: nieuw 12 van de 12 goed, oud 3 fout, waarvan twee van het
+gevaarlijke soort (gemeld als gelukt terwijl de advertentie online bleef).
+
+Daarnaast staat er nu een test die voor ALLE 25 functies die in een pagina worden
+uitgevoerd nagaat of ze op zichzelf staan — de fout die ik gisteren zelf in 1.0.270
+introduceerde was Vinted-specifiek bewaakt, nu geldt het voor de hele extensie.
