@@ -145,8 +145,11 @@ def _unique_index(pairs, tweelingen: dict | None = None) -> dict:
             botsingen.setdefault(key, {out[key]}).add(value)
             out[key] = None
     for key, ids in botsingen.items():
-        titels = {(tweelingen or {}).get(i) for i in ids}
-        if len(titels) == 1 and None not in titels:
+        # Tweelingen zijn vaak VERTALINGEN van elkaar ("Suitable Half Zip" en
+        # "Geschikte Halve Rits"), dus titels vergelijken werkt hier niet. Het
+        # merk wel: dat staat in een eigen veld en vertaalt niet mee.
+        kenmerk = {(tweelingen or {}).get(i) for i in ids}
+        if len(kenmerk) == 1 and None not in kenmerk and "" not in kenmerk:
             out[key] = sorted(ids)[0]
     return {k: v for k, v in out.items() if v}
 
@@ -328,7 +331,7 @@ def get_pending_jobs(request: Request, platform: str = None, user_id: str = Depe
             familie_van: dict[str, list[str]] = {}
             alle_ids: list[str] = []
             for iid in dict.fromkeys(te_toetsen):
-                rij = (db.table("items").select("id,user_id,title,sku")
+                rij = (db.table("items").select("id,user_id,title,sku,brand")
                        .eq("id", iid).limit(1).execute().data or [None])[0]
                 fam = familie_ids(db, rij) if rij else [iid]
                 familie_van[iid] = fam
@@ -1318,16 +1321,16 @@ def _store_scan_results(db, job, scraped: list[dict]):
     # Extra koppelsleutels: het SKU-nummer vooraan de titel en de titel zonder
     # leestekens/accenten. Die overleven een vertaling of een kleine handmatige
     # aanpassing op het platform, waar een exacte titelvergelijking op stukliep.
-    # Titel zonder nummer per item: waarmee _unique_index kan zien of twee
-    # kandidaten met hetzelfde nummer echt hetzelfde product zijn.
-    _titel_van = {it["id"]: _scan_norm_title(it.get("title")) for it in items}
+    # Merk per item: waarmee _unique_index kan zien of twee kandidaten met
+    # hetzelfde nummer echt hetzelfde product zijn.
+    _merk_van = {it["id"]: str(it.get("brand") or "").strip().lower() for it in items}
     _sku_index = _unique_index(
         [(_scan_sku(it.get("title")), it["id"]) for it in items]
         + [(str(it.get("sku") or "").strip().lower(), it["id"]) for it in items],
-        _titel_van,
+        _merk_van,
     )
     _norm_title_index = _unique_index(
-        ((_scan_norm_title(it.get("title")), it["id"]) for it in items), _titel_van)
+        ((_scan_norm_title(it.get("title")), it["id"]) for it in items), _merk_van)
     # (platform, listing id) → item_id, so a re-scan of an already-known listing
     # links back to the exact same item. Scoped by the user's item ids because
     # the listings table has no user_id column.

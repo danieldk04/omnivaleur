@@ -29,13 +29,20 @@ _VEILIG = re.compile(r"^[A-Za-z0-9_-]{1,24}$")
 
 
 def nummer_van(item: dict) -> str:
-    """Het eigen nummer van de verkoper: uit het SKU-veld, anders uit de titel."""
-    sku = str((item or {}).get("sku") or "").strip().lower()
-    if sku and _VEILIG.match(sku):
-        return sku
+    """Het eigen nummer van de verkoper: uit de TITEL, anders uit het SKU-veld.
+
+    De titel gaat voor, en dat is geen smaakkwestie. Het SKU-veld wordt bij het
+    importeren zelf gevuld en krijgt per bron een eigen waarde ("imp-4eb880ca",
+    "rev-2e6d54b5"), dus twee rijen van hetzelfde product hebben daar juist
+    VERSCHILLENDE waarden. Het nummer dat de verkoper zelf voor de titel zet —
+    "(1237)" — is het enige dat bij beide rijen gelijk is.
+    """
     m = re.match(r"^\s*\(([^)]{1,24})\)", str((item or {}).get("title") or ""))
-    kandidaat = (m.group(1).strip().lower() if m else "")
-    return kandidaat if _VEILIG.match(kandidaat or " ") else ""
+    uit_titel = (m.group(1).strip().lower() if m else "")
+    if uit_titel and _VEILIG.match(uit_titel):
+        return uit_titel
+    sku = str((item or {}).get("sku") or "").strip().lower()
+    return sku if sku and _VEILIG.match(sku) else ""
 
 
 def familie_ids(db, item: dict) -> list[str]:
@@ -50,12 +57,26 @@ def familie_ids(db, item: dict) -> list[str]:
     if not (eigen and nummer and user_id):
         return [eigen] if eigen else []
     try:
-        rijen = (db.table("items").select("id")
+        rijen = (db.table("items").select("id,brand,title")
                  .eq("user_id", user_id)
                  .or_(f"sku.eq.{nummer},title.ilike.({nummer})%")
                  .limit(50).execute().data or [])
     except Exception as e:  # noqa: BLE001 — bij twijfel alleen het item zelf
         logger.warning("tweelingen: kon familie van %s niet lezen: %s", eigen, e)
         return [eigen]
-    ids = [r["id"] for r in rijen if r.get("id")]
+
+    # Zelfde nummer is een sterk signaal, maar niet genoeg om een advertentie op
+    # weg te halen: een verkoper kan een nummer hergebruiken. Staat er een merk
+    # bij, dan moet dat overeenkomen. Titels vergelijken heeft hier geen zin —
+    # de tweelingen zijn juist vertalingen van elkaar ("Suitable Half Zip" en
+    # "Geschikte Halve Rits").
+    eigen_merk = str((item or {}).get("brand") or "").strip().lower()
+    ids = []
+    for r in rijen:
+        if not r.get("id"):
+            continue
+        merk = str(r.get("brand") or "").strip().lower()
+        if eigen_merk and merk and merk != eigen_merk:
+            continue
+        ids.append(r["id"])
     return list(dict.fromkeys([eigen, *ids]))

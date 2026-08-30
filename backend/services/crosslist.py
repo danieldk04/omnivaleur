@@ -1022,7 +1022,7 @@ async def handle_item_sold(item_id: str, sold_on_platform: str, sold_price: floa
     # op de ene rij liet de advertenties van de andere gewoon staan — en die werd
     # daarna ook nog opnieuw geplaatst. Zie backend/services/tweelingen.py.
     item_vooraf = ((await naast_de_lus(lambda: db.table("items")
-                   .select("id,user_id,title,sku").eq("id", item_id)
+                   .select("id,user_id,title,sku,brand").eq("id", item_id)
                    .limit(1).execute())).data or [None])[0]
     from backend.services.tweelingen import familie_ids
     familie = await naast_de_lus(lambda: familie_ids(db, item_vooraf)) if item_vooraf else [item_id]

@@ -114,6 +114,9 @@ def test_nummer_uit_titel_en_sku():
     from backend.services.tweelingen import nummer_van
     assert nummer_van({"title": "(1237) Navy Suitsupply Half Zip"}) == "1237"
     assert nummer_van({"title": "Navy Suitsupply", "sku": "AB-12"}) == "ab-12"
+    # De titel gaat vóór het SKU-veld: dat laatste krijgt per importbron een
+    # eigen waarde, juist bij twee rijen van hetzelfde product.
+    assert nummer_van({"title": "(1237) Navy", "sku": "imp-4eb880ca"}) == "1237"
     assert nummer_van({"title": "Navy Suitsupply"}) == ""
     # Niets waar een zoekopdracht op kan stukgaan.
     assert nummer_van({"title": "(1237, 1238) Twee truien"}) == ""
@@ -141,22 +144,25 @@ def test_familie_zoekt_op_nummer_en_sku():
     assert gezien["or"] == "sku.eq.1237,title.ilike.(1237)%"
 
 
-def test_tweeling_met_dezelfde_titel_krijgt_wel_een_koppeling():
-    """Twee rijen met hetzelfde nummer én dezelfde titel zijn hetzelfde product.
-    Zonder dit bleef een live Vinted-advertentie ongekoppeld en zei het dashboard
-    dat het item daar niet stond."""
+def test_vertaalde_tweeling_krijgt_wel_een_koppeling():
+    """Twee rijen met hetzelfde nummer en hetzelfde merk zijn hetzelfde product,
+    ook als de titels vertalingen van elkaar zijn. Zonder dit bleef een live
+    Vinted-advertentie ongekoppeld en zei het dashboard dat het item daar niet
+    stond."""
     from backend.api.jobs import _unique_index
 
-    titels = {"i2": "navy suitsupply half zip", "i1": "navy suitsupply half zip"}
-    index = _unique_index([("1237", "i2"), ("1237", "i1")], titels)
+    merken = {"i2": "suitable", "i1": "suitable"}
+    index = _unique_index([("1237", "i2"), ("1237", "i1")], merken)
     assert index["1237"] == "i1", "altijd dezelfde keuze, anders wisselt de koppeling per ronde"
 
 
 def test_verschillende_producten_met_hetzelfde_nummer_blijven_ongekoppeld():
     from backend.api.jobs import _unique_index
 
-    titels = {"i1": "navy half zip", "i2": "rode broek"}
-    assert _unique_index([("1237", "i1"), ("1237", "i2")], titels) == {}
+    merken = {"i1": "suitable", "i2": "gymshark"}
+    assert _unique_index([("1237", "i1"), ("1237", "i2")], merken) == {}
+    # En zonder merk weten we het niet: dan liever geen koppeling.
+    assert _unique_index([("1237", "i1"), ("1237", "i2")], {"i1": "", "i2": ""}) == {}
 
 
 def test_de_verkoopafhandeling_kijkt_naar_de_hele_familie():
