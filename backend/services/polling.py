@@ -24,7 +24,12 @@ async def _exec(query):
 # from the browser-extension session used for scan/publish) that requires storing the
 # user's Vinted password, and when it goes stale it silently mass-delists live listings
 # via false "not found" reads. Not worth that risk for a status check.
-POLL_PLATFORMS = {"marktplaats", "2dehands"}
+# eBay en Etsy staan er sinds 30-08-2026 bij. Die twee zijn via hun eigen API te
+# bevragen met de sleutel die de verkoper al heeft gekoppeld — geen cookies, geen
+# browser. Tot dan kwam een eBay-verkoop alleen binnen via de webhook (die alleen
+# werkt als eBay-meldingen goed staan) en een Etsy-verkoop helemaal niet, waardoor
+# het artikel overal elders gewoon te koop bleef staan.
+POLL_PLATFORMS = {"marktplaats", "2dehands", "ebay", "etsy"}
 
 
 async def poll_platform_statuses():

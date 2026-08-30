@@ -1307,6 +1307,19 @@ async def relist_expiring_marktplaats():
 
             eigenaar = item["user_id"]
 
+            # Verkocht op een ander kanaal? Dan niet verversen. De uitdeelstap in
+            # backend/api/jobs.py houdt zo'n publicatie ook tegen, maar dan is de
+            # oude advertentie al weggehaald — verversen is immers weghalen en
+            # opnieuw plaatsen. Hier stoppen betekent dat de advertentie gewoon
+            # blijft staan tot de verkoopafhandeling hem netjes weghaalt.
+            verkocht = ((await naast_de_lus(lambda: db.table("listings")
+                        .select("platform").eq("item_id", listing["item_id"])
+                        .eq("status", "sold").limit(1).execute())).data or [])
+            if verkocht:
+                logger.info("Auto-relist overgeslagen voor listing %s: item al verkocht op %s",
+                            listing["id"], verkocht[0]["platform"])
+                continue
+
             # Advertenties uit Admarkt (zakelijk Marktplaats) hebben geen eigen
             # advertentie-adres: het enige adres dat Admarkt teruggeeft is de
             # webwinkel van de verkoper. Zonder dat adres kunnen we de oude niet

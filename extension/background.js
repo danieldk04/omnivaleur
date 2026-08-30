@@ -1662,12 +1662,22 @@ async function openWorkerTabInner(url, opts = {}) {
       .catch(() => chrome.windows.create({ url: leeg, state: "minimized" }))
       .catch(() => chrome.windows.create({ url: leeg, focused: false, ...WORKER_WIN_SIZE }));
     if (!w || !w.tabs || !w.tabs[0]) throw new Error("no tab in new window");
+    // NOG EEN KEER MINIMALISEREN, EXPLICIET.
+    //
+    // Op macOS weigert Chrome windows.create met state:"minimized" regelmatig;
+    // dan valt hij hierboven terug op een gewoon venster en pópt er elke ronde
+    // een Marktplaats-scherm open over het werk van de verkoper heen — ook als
+    // hij het net zelf had geminimaliseerd. windows.update accepteert die stand
+    // wél, ook direct na het aanmaken.
+    await chrome.windows.update(w.id, { state: "minimized", focused: false }).catch(() => {});
     await setWorkerWindowId(w.id);
     // Anker erbij: vanaf nu blijft dit ene venster bestaan in plaats van bij
     // elke klus opnieuw op te poppen.
     await ensureKeeperTab(w.id);
     await koppelVroeg(w.tabs[0].id);
     await chrome.tabs.update(w.tabs[0].id, { url });
+    // Navigeren kan het venster terugzetten; nog één keer wegduwen kost niets.
+    await chrome.windows.update(w.id, { state: "minimized", focused: false }).catch(() => {});
     return w.tabs[0];
   } catch {
     // Window creation blocked (rare) — fall back to a plain background tab so

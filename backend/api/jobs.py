@@ -287,8 +287,44 @@ def get_pending_jobs(request: Request, platform: str = None, user_id: str = Depe
     # job it's paired with actually failed — otherwise the old listing stays
     # live on the platform and this would create a duplicate. Hold/fail those
     # instead of handing them to the extension.
+    # VERKOCHT IS VERKOCHT — HIER KOMT NIETS MEER DOORHEEN.
+    #
+    # Elke publicatie loopt langs dit punt: de gewone knop, de automatische
+    # verversing, het herstel van vastgelopen werk en de herkansing. Eerder werd
+    # er alleen bij het inplannen gekeken, en een opdracht kan uren in de wachtrij
+    # staan — verkoopt het artikel in die tijd op een ander kanaal, dan zette de
+    # extensie het daarna alsnog online. Ook een verkoop die pas ná het inplannen
+    # werd opgemerkt kwam er zo doorheen. Daarom hier, vlak voor het uitdelen, en
+    # niet bij het aanmaken.
+    verkocht_op: dict[str, list[str]] = {}
+    te_toetsen = [j["item_id"] for j in due
+                  if j["action"] == "create" and j.get("item_id")]
+    if te_toetsen:
+        try:
+            for rij in (db.table("listings").select("item_id,platform")
+                        .in_("item_id", list(dict.fromkeys(te_toetsen)))
+                        .eq("status", "sold").execute().data or []):
+                verkocht_op.setdefault(rij["item_id"], []).append(rij["platform"])
+        except Exception as e:  # noqa: BLE001
+            # Kunnen we het niet nakijken, dan delen we geen publicatiewerk uit.
+            # Een gemiste publicatie is een vertraging; een dubbelverkocht artikel
+            # is een boze koper op twee kanalen.
+            logger.warning("Verkoopcontrole voor publicatie mislukt (%s) — "
+                           "publicaties deze ronde overgeslagen", e)
+            due = [j for j in due if j["action"] != "create"]
+
     ready = []
     for j in due:
+        if j["action"] == "create" and verkocht_op.get(j.get("item_id")):
+            kanalen = ", ".join(sorted(set(verkocht_op[j["item_id"]])))
+            db.table("jobs").update({
+                "status": "cancelled",
+                "result": {"cancelled": f"Item already sold on {kanalen} — not published again."},
+                "done_at": now,
+            }).eq("id", j["id"]).execute()
+            logger.info("Publicatie geannuleerd: item %s is al verkocht op %s",
+                        j["item_id"], kanalen)
+            continue
         if j["action"] == "create" and j.get("scheduled_for"):
             paired_delete = (
                 db.table("jobs")
