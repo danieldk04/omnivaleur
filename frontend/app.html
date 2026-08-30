@@ -1310,6 +1310,18 @@ input[type="checkbox"].row-check { width: 15px; height: 15px; cursor: pointer; a
           <button class="btn btn-sm btn-primary" onclick="saveFabrikant()">Save</button>
           <span id="fabrikant-status" style="font-size:12px;color:var(--muted)"></span>
         </div>
+        <!-- Uitzetten mag. Dit blok verscheen onder ELKE advertentie omdat je
+             zonder ingevulde velden niet kón publiceren, en dus stonden er
+             bedrijfsnaam, adres en e-mailadres onder tweedehands spullen waar
+             de verkoper helemaal niet de fabrikant van is. -->
+        <label class="vg-chip" style="max-width:520px;margin-top:14px">
+          <input type="checkbox" id="fabrikant-meesturen" onchange="saveFabrikantMeesturen()" checked>
+          <span>Add these details to my Marktplaats &amp; 2dehands listings</span>
+        </label>
+        <div style="font-size:12.5px;color:var(--muted);line-height:1.6;margin-top:6px">
+          Turn this off and we leave those three fields on the form alone, and never hold up a listing over them.
+          Marktplaats may still ask for them itself in some categories — then you fill them in there.
+        </div>
       </div>
       <h2 style="font-size:13px;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);margin:26px 0 10px;font-weight:800">How you deliver</h2>
       <!-- Verzenden. Stond alleen in de extensie-instellingen, achter een
