@@ -173,6 +173,22 @@ def start_scheduler():
         id="daily_nl_backfill",
         replace_existing=True,
     )
+    # Dezelfde foto twee keer in één artikel opruimen — dagelijks 04:30 (NL-tijd),
+    # als er niemand aan het werk is. Nieuwe gevallen ontstaan niet meer (zie
+    # photo_mirror.ontdubbel), maar de artikelen die er al stonden houden hun
+    # dubbele regel: 71 stuks over vier accounts bij het inschakelen. Deze ronde
+    # schrijft alleen als er echt iets dubbel staat en doet daarna niets meer.
+    from backend.services.photo_mirror import ontdubbel_bestaande_fotolijsten
+
+    _scheduler.add_job(
+        _off_the_request_loop(ontdubbel_bestaande_fotolijsten),
+        "cron",
+        hour=4,
+        minute=30,
+        timezone="Europe/Amsterdam",
+        id="daily_foto_ontdubbelen",
+        replace_existing=True,
+    )
     # ── De koude-mailmachine ──────────────────────────────────────────────
     #
     # Draaide tot 20-08-2026 op Daniels eigen Mac, via een LaunchAgent. Dat werkt
