@@ -2001,3 +2001,41 @@ elk kanaal apart afgeschermd, en het eerste stuk van `_publish_one` (waar
 
 Nog niet vastgesteld: wélke fout Amanda precies raakte. Dat is precies wat er
 niet meer kan gebeuren — de volgende keer staat er een code onder.
+
+## 30-08-2026 — De foutcodes wezen binnen een kwartier de oorzaak aan
+
+Daniel vroeg of de reparatie ook echt te testen was in plaats van te beloven.
+Dat leverde twee dingen op die anders onopgemerkt waren gebleven.
+
+**Proef 1: kan de server een fout überhaupt wegschrijven?** Met de PUBLIEKE
+Supabase-sleutel niet: `new row violates row-level security policy for table
+"leadgen_opslag"` (401). De live server draait op `service_role` (te zien op
+/health), dus daar werkt het wél — maar had Railway op de publieke sleutel
+gestaan, dan was de hele foutcode een dode letter geweest, stil opgevangen door
+de `except` eromheen. Zoiets is hier al vaker gebeurd; nu is het nagemeten.
+
+**Proef 2: een echte publicatie die omvalt.** Via een echt HTTP-verzoek op
+`/api/items/{id}/crosslist`, met de echte database en een fout in het
+publiceerpad. De klant kreeg "Something went wrong on our side (code 685B5C)",
+en die code was terug te vinden met `mail_analyse.py fouten`, met pad, soort
+fout en het volledige spoor. De hele keten werkt.
+
+**En toen stonden er twee ECHTE fouten in de lijst**, allebei van die ochtend,
+allebei op `GET /api/jobs/relist-status`:
+
+    httpx.RemoteProtocolError: <ConnectionTerminated error_code:1>
+
+Dat is Supabase dat een hergebruikte verbinding sluit. `execute_with_retry` ving
+zoiets al op — maar verreweg de meeste plekken in de code roepen gewoon
+`.execute()` aan, zo'n tweehonderd stuks, en die vlogen er ongevangen uit. Dat is
+naar alle waarschijnlijkheid ook wat Amanda raakte: de allereerste regel van het
+publiceerpad (`items.py`, het item ophalen) is zo'n kale leesactie.
+
+**Wat er nu gebeurt.** In `backend/database.py` hangt de herhaling op de bouwer
+die Supabase teruggeeft bij een SELECT. Elke leesactie in het hele project
+overleeft daarmee een weggevallen verbinding, zonder tweehonderd plekken aan te
+raken. Schrijfacties (insert, update, upsert, delete) geven een ándere bouwer
+terug en blijven bewust onaangeraakt: een insert blind herhalen na een
+weggevallen antwoord maakt een tweede rij, en dus een tweede advertentie.
+`execute_with_retry` gebruikt intern de onbewerkte versie, zodat er drie
+pogingen zijn en geen negen.

@@ -143,6 +143,58 @@ def _is_herstelbaar(exc: BaseException) -> bool:
     return False
 
 
+# ─────────────────────────────────────────────────────────────────────────────
+# ELKE LEESACTIE OVERLEEFT EEN WEGGEVALLEN VERBINDING — OOK ZONDER WRAPPER
+#
+# WAAROM DIT ER IS (30-08-2026). `execute_with_retry` bestond al, maar verreweg
+# de meeste plekken in de code roepen gewoon `.execute()` aan: zo'n tweehonderd
+# stuks. Viel de verbinding daar weg, dan vloog de fout ongevangen omhoog en
+# kreeg de gebruiker "HTTP 500: Internal Server Error" — precies het scherm
+# waar Amanda een foto van stuurde. Binnen een kwartier na het inschakelen van
+# de foutcodes stonden er twee van deze fouten in de lijst, allebei op
+# /api/jobs/relist-status, allebei een verbroken verbinding met Supabase.
+#
+# Tweehonderd plekken één voor één omzetten is vragen om fouten. Daarom hangt de
+# herhaling hier, op de bouwer die Supabase teruggeeft bij een SELECT.
+#
+# ALLEEN LEZEN. Schrijfacties (insert, update, upsert, delete) geven een ANDERE
+# bouwer terug en blijven dus onaangeraakt. Dat is opzet: een leesactie opnieuw
+# doen is gratis, maar een insert blind herhalen na een weggevallen antwoord
+# maakt een tweede rij — en dus een tweede advertentie. Die les staat al in
+# `dubbel_is_ok` hieronder.
+_ORIGINEEL_SELECT_EXECUTE = None
+try:
+    from postgrest import SyncSelectRequestBuilder as _SelectBouwer
+
+    _ORIGINEEL_SELECT_EXECUTE = _SelectBouwer.execute
+
+    def _lezen_met_herkansing(self, *a, **kw):
+        laatste: BaseException | None = None
+        for poging in range(3):
+            try:
+                return _ORIGINEEL_SELECT_EXECUTE(self, *a, **kw)
+            except Exception as e:  # noqa: BLE001
+                if not _is_herstelbaar(e) or poging == 2:
+                    raise
+                laatste = e
+                logger.warning("Leesactie viel weg (%s) — poging %d opnieuw",
+                               type(e).__name__, poging + 2)
+                time.sleep(0.25 * (poging + 1))
+        raise laatste  # type: ignore[misc]
+
+    _SelectBouwer.execute = _lezen_met_herkansing
+except Exception:  # noqa: BLE001 — nooit de start van de server blokkeren
+    logger.exception("Kon de herhaling op leesacties niet installeren")
+
+
+def _eenmaal_uitvoeren(query):
+    """Eén poging, zonder de herhaling hierboven — anders herhaalt
+    `execute_with_retry` een leesactie negen keer in plaats van drie."""
+    if _ORIGINEEL_SELECT_EXECUTE is not None and isinstance(query, _SelectBouwer):
+        return _ORIGINEEL_SELECT_EXECUTE(query)
+    return query.execute()
+
+
 def execute_with_retry(query, pogingen: int = 3, dubbel_is_ok: bool = False):
     """
     Voer een Supabase-query uit en probeer opnieuw als de verbinding wegviel.
@@ -154,7 +206,7 @@ def execute_with_retry(query, pogingen: int = 3, dubbel_is_ok: bool = False):
     laatste: BaseException | None = None
     for poging in range(pogingen):
         try:
-            return query.execute()
+            return _eenmaal_uitvoeren(query)
         except Exception as e:  # noqa: BLE001 - alleen verbindingsfouten herhalen
             # Alleen ná een herhaling, en alleen op de primaire sleutel: dat id
             # is door ons bedacht, dus als dat al bestaat is het onze eigen

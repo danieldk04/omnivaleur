@@ -164,3 +164,80 @@ def test_verbindingsfout_wordt_geen_ruwe_python_op_het_scherm():
     assert herstelbaar < ruw, "de hik moet eerder worden afgevangen dan de ruwe 500"
     assert "status_code=503" in fn
     assert "still live" in fn
+
+
+# ── 4. Elke leesactie overleeft de hik, ook zonder wrapper ───────────────────
+#
+# WAAROM (30-08-2026). `execute_with_retry` bestond, maar zo'n tweehonderd
+# plekken roepen gewoon `.execute()` aan. Viel de verbinding daar weg, dan werd
+# het een kale "HTTP 500: Internal Server Error" — het scherm waar Amanda een
+# foto van stuurde. Binnen een kwartier na het inschakelen van de foutcodes
+# stonden er twee zulke fouten in de lijst, allebei op /api/jobs/relist-status.
+
+def _nep_select():
+    """Een echte Supabase-selectbouwer, zonder verbinding te maken."""
+    from postgrest import SyncSelectRequestBuilder
+    return SyncSelectRequestBuilder.__new__(SyncSelectRequestBuilder)
+
+
+def test_een_kale_leesactie_wordt_opnieuw_geprobeerd(monkeypatch):
+    import httpx
+
+    from backend import database as D
+
+    pogingen = {"n": 0}
+
+    def hik(_self, *a, **kw):
+        pogingen["n"] += 1
+        if pogingen["n"] < 3:
+            raise httpx.RemoteProtocolError("<ConnectionTerminated error_code:1>")
+        return "gelukt"
+
+    monkeypatch.setattr(D, "_ORIGINEEL_SELECT_EXECUTE", hik)
+    assert _nep_select().execute() == "gelukt"
+    assert pogingen["n"] == 3
+
+
+def test_een_kapotte_query_wordt_niet_herhaald(monkeypatch):
+    from backend import database as D
+
+    pogingen = {"n": 0}
+
+    def kapot(_self, *a, **kw):
+        pogingen["n"] += 1
+        raise ValueError("column does not exist")
+
+    monkeypatch.setattr(D, "_ORIGINEEL_SELECT_EXECUTE", kapot)
+    with pytest.raises(ValueError):
+        _nep_select().execute()
+    assert pogingen["n"] == 1, "een fout in de query herhalen heeft geen zin"
+
+
+def test_schrijfacties_blijven_met_rust():
+    """Een insert blind herhalen na een weggevallen antwoord maakt een tweede
+    rij — en dus een tweede advertentie. Alleen lezen wordt herhaald."""
+    import postgrest
+
+    for bouwer in (postgrest.SyncQueryRequestBuilder, postgrest.SyncFilterRequestBuilder):
+        assert not issubclass(bouwer, postgrest.SyncSelectRequestBuilder)
+    assert "execute" in postgrest.SyncSelectRequestBuilder.__dict__, \
+        "de herhaling hoort alleen op de selectbouwer te staan"
+
+
+def test_de_wrapper_telt_niet_dubbel(monkeypatch):
+    """execute_with_retry mag er geen negen pogingen van maken."""
+    import httpx
+
+    from backend import database as D
+
+    pogingen = {"n": 0}
+
+    def hik(_self, *a, **kw):
+        pogingen["n"] += 1
+        if pogingen["n"] < 3:
+            raise httpx.RemoteProtocolError("<ConnectionTerminated error_code:1>")
+        return "gelukt"
+
+    monkeypatch.setattr(D, "_ORIGINEEL_SELECT_EXECUTE", hik)
+    assert D.execute_with_retry(_nep_select()) == "gelukt"
+    assert pogingen["n"] == 3
