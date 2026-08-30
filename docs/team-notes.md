@@ -2290,3 +2290,97 @@ te kunnen zien — dat hoort bij een herplaatsen/verliest-advertenties-melding,
 niet bij deze sleutel.
 
 Geen code gewijzigd. Teruggemeld als `afgewezen`.
+
+## 30-08-2026 — Amanda's vier meldingen van vandaag (extensie 1.0.273)
+
+Vier binnengekomen berichten, twee met een schermafbeelding. Alle vier nagelopen
+op haar echte gegevens (477 artikelen, 486 advertenties, 9 op Vinted) en op de
+echte pagina's van Marktplaats en Vinted — niet op een namaakscherm.
+
+**1. Verversen zette de advertentie in een verkeerde categorie.** Haar woorden:
+"dan gaat dat goed, tot het punt dat de advertentie is geplaatst: hij zet deze
+dan in de verkeerde categorie. Dit kun je bij MP niet aanpassen, dus moet je de
+advertentie weer in zijn geheel handmatig plaatsen."
+
+Oorzaak: bij het importeren gooien we de categorie van Marktplaats wég en laten
+we Haiku er een nieuwe bij raden uit `_TAXONOMY` (backend/api/imports.py). Die
+lijst kent kleding, wonen, antiek, muziek en sieraden. Amanda verkoopt daarnaast
+munten, bankbiljetten, postzegels en boeken — daar bestaat in onze lijst geen
+goede doos voor, dus werd het altijd de dichtstbijzijnde verkeerde. Bij het
+herplaatsen kwam de advertentie daar dan ook echt terecht.
+
+`import_candidates.category` is bij al haar 477 items NULL, terwijl de scan het
+veld `category_name` van Marktplaats wél meestuurt (background.js). Dat wordt
+serverkant nergens gelezen. Dat gat staat nog open.
+
+Wat er nu wél gebeurt: de oude advertentie staat op het moment van verversen nog
+online, en Marktplaats zet zijn eigen categorie letterlijk op die pagina
+(`"l1CategoryId":1784,"l1CategoryName":"Postzegels en Munten","l2CategoryId":1789`).
+Die wordt nu gelezen — door de server in stap 1 van `relist.py`, dus VÓÓR het
+verwijderen, en nog eens door de extensie in `mpAdvertentieSnapshot` (die staat
+daar ingelogd; Marktplaats geeft een kale server geregeld een 403). Kennen we het
+paar zelf ook, dan houdt het zijn eigen regel uit `MP_CATEGORIES` — daar hangt
+het bucketId aan, en bij kinderkleding de maat-afhankelijke onderverdeling.
+Kennen we het niet, dan `/plaats/{l1}/{l2}?title=`, dezelfde tweenummervorm die
+de muziektak al gebruikt. Mislukt het ophalen, dan verandert er niets: een
+gemiste categorie mag nooit een advertentie kosten.
+
+**2. Vinted gooide brocante in de kinderkleding.** "Bij het plaatsen op Vinted,
+wil hij alles in de categorie kinderkleding gooien :P".
+
+De puntentelling in `fillCategoryVinted` deelt losse bonuspunten uit — "Other …"
+is +1, "sneakers" +2, de juiste sekse +3 — en `best()` neemt élk blad met een
+score boven nul. Die bonussen zijn bedoeld om te kiezen TUSSEN bladen die al
+ergens op sloegen, maar één bonuspunt was in zijn eentje genoeg. Bij een vintage
+lamp of een beeldje raakt geen enkele hint iets, en dan won het eerste blad dat
+toevallig "Other children's clothing" heette.
+
+Aangetoond, niet beredeneerd: de echte puntentelling draait nu in Node tegen een
+suggestielijst zoals Vinted die rendert, met de versie van vóór vandaag ernaast
+(tests/test_vinted_categories.py). Oud: de wandlamp gaat naar
+"other children's clothing | kids > clothing". Nieuw: geen categorie, dus de
+verkoper kiest zelf. Twee regels erbij: een blad dat geen enkele hint raakt is
+geen kandidaat, en een artikel uit de takken wonen/antiek/kunst/muziek/sieraden/
+games/electronics/audio kan nooit meer in een kledingblad belanden.
+
+Haar negen bestaande Vinted-advertenties staan overigens wél goed (Home >
+Wandverlichting, Home > Standbeelden en beeldjes, Dames > Kettingen — live
+nagekeken). Die heeft ze zelf rechtgezet, of Vinted's eigen suggestie was daar
+goed genoeg.
+
+**3. Dezelfde foto twee keer.** De naam van een gespiegelde foto is de
+vingerafdruk van de INHOUD (`photo_mirror.py`), dus twee bronfoto's die hetzelfde
+plaatje zijn — een verkoper die hem twee keer op Marktplaats zette — leveren
+twee identieke adressen op, en die gingen allebei naar het formulier. Gemeten
+over de hele voorraad: 71 artikelen op vier accounts, waarvan 3 van Amanda.
+Ontdubbeld bij het spiegelen én in `uploadPhotos` (dat dekt meteen Vinted, eBay
+en Facebook), plus een nachtelijke ronde om 04:30 die de bestaande regels
+opschoont.
+
+**4. De "browserfoutmelding" was geen fout.** Op haar schermafbeelding staat
+Chrome's gele balk: "'Omnivaleur' is begonnen met foutopsporing voor deze
+browser", met een knop Annuleren. Die koppeling (`koppelVroeg`) stond bij ELK
+werk-tabblad aan — scannen, Vinted, eBay, verwijderen — terwijl hij maar één
+ding doet: een échte toetsaanslag in het verborgen omschrijvingsveld van het
+plaatsformulier van Marktplaats. Nu koppelt hij alleen nog op
+`/(marktplaats\.nl|2dehands\.be)/plaats/`. Die knop Annuleren verbreekt de
+koppeling, dus wie hem indrukte brak zonder het te weten zijn eigen
+Marktplaats-publicaties.
+
+**Ook langsgekomen, bewust niet als storing behandeld:** de
+"verantwoordelijke partij". Amanda: "hij zet bij fabrikant, adres en mailadres
+de bedrijfsgegevens van mijn bedrijf neer… Dat is niet de bedoeling." Ze heeft
+gelijk dat dat een keuze hoort te zijn — ze had die velden alleen ingevuld omdat
+het dashboard anders wéigerde te publiceren naar Marktplaats en 2dehands. Er
+staat nu een schakelaar bij (standaard aan, dus voor bestaande klanten verandert
+er niets); staat hij uit, dan wordt er niets ingevuld, niets geblokkeerd, en
+klaagt de extensie ook niet meer over een leeg veld dat wij niet hoefden te
+vullen. Of dit blok juridisch verplicht is voor tweedehands brocante is geen
+vraag die wij voor haar kunnen beantwoorden — daarom een keuze en geen standpunt.
+
+**Nog open na vandaag:**
+- `category_name` uit de Marktplaats-scan komt nog steeds niet in
+  `import_candidates`. Een eerste publicatie (geen verversing) draait dus nog
+  altijd op de geraden categorie.
+- De sleutel `advertentietekst-onjuist-overgenomen` is vandaag door een andere
+  sessie afgehandeld; zie de aantekening hierboven.
