@@ -424,9 +424,15 @@ async def publish_to_platforms(item_id: str, platforms: list[str], user_id: str)
     # markeert Marktplaats de drie velden rood en gebeurt er verder niets — een
     # publicatie die stilstaat op een scherm dat de gebruiker niet ziet. Hier
     # gevangen, zodat hij een zin te lezen krijgt in plaats van een dood tabblad.
-    from backend.services.instellingen import fabrikant as _fabrikant
+    # ... maar alleen als de verkoper hem ook wíl meesturen. Staat die
+    # schakelaar uit, dan is een leeg blok een keuze en geen gebrek — dan houden
+    # we het publiceren niet tegen en vullen we op het formulier niets in.
+    # Amanda, 30-08-2026: haar bedrijfsgegevens kwamen onder elke advertentie te
+    # staan omdat ze anders niet kón publiceren.
+    from backend.services.instellingen import (fabrikant as _fabrikant,
+                                               fabrikant_verplicht as _fab_verplicht)
     fab = _fabrikant(user_id)
-    if not all(fab.values()):
+    if _fab_verplicht(user_id) and not all(fab.values()):
         for platform in ("marktplaats", "2dehands"):
             if platform in platforms:
                 missing.setdefault(platform, []).append("manufacturer_details")
