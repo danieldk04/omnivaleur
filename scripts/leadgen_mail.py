@@ -2362,7 +2362,42 @@ def _slim_concept(lead: dict, body: str, draad: str, afsluiting: str,
             mail_analyse.vraag_voor_daniel(lead.get("email", ""), vraag, eigen[:200])
         except Exception as e:  # noqa: BLE001 — de vraag mag niet zoekraken in stilte
             print(f"  !! vraag voor Daniel NIET vastgelegd ({type(e).__name__}: {e})")
-        return None
+        # EEN KLANT KRIJGT ALTIJD EEN CONCEPT (30-08-2026, Egbert Brouwer).
+        #
+        # Tot hier ging de vraag naar Daniel en bleef het postvak leeg. Voor een
+        # koude lead is dat de goede keuze: liever niets dan een verkeerd
+        # antwoord. Voor een BETALENDE klant is het de verkeerde. Egbert schreef
+        # op 28-08 dat hij er niet uitkwam en of we konden bellen; die vraag is
+        # nergens in de code te vinden, dus schreef de klantenservice niets — en
+        # twee dagen later stond er nog steeds geen letter klaar terwijl hij als
+        # vertrekrisico op de lijst stond.
+        #
+        # Wat hier nu gebeurt is niet "toch maar iets verzinnen": het is een
+        # tweede ronde met één harde regel erbij — geen enkele technische
+        # bewering. Erkennen, zeggen wat er openstaat, en de vraag bij Daniel
+        # leggen. Dat kan niet fout zijn zoals een gegokt antwoord fout kan zijn,
+        # en het is oneindig veel beter dan stilte.
+        if not klant:
+            return None
+        try:
+            menselijk = _claude(
+                client, model=MODEL, max_tokens=16000,
+                output_config={"effort": "low"},
+                system=(_SCHRIJF_REGELS.format(prijs=PRIJS, platforms=PLATFORMS, video=VIDEO)
+                        + _KLANT_REGELS + _ZONDER_BEWERING_REGELS.format(vraag=vraag)),
+                messages=[{"role": "user", "content": prompt}],
+            )
+            tekst = "".join(b.text for b in menselijk.content
+                            if getattr(b, "type", "") == "text").strip()
+        except Exception as e:  # noqa: BLE001
+            print(f"  !! menselijk concept MISLUKT ({type(e).__name__}: {e})")
+            return None
+        if _geen_antwoord(tekst) or len(tekst.split()) < 15:
+            print(f"  !! menselijk concept onbruikbaar voor {lead.get('email','?')}")
+            return None
+        print(f"  ↳ concept zonder technische bewering voor {lead.get('email','?')}")
+        tekst = re.sub(r"\*\*(.+?)\*\*", r"\1", tekst)
+        return re.sub(r"^\s*[-•]\s+", "", tekst, flags=re.M).strip()
     # Een leeg of belachelijk kort antwoord is geen antwoord.
     if len(tekst.split()) < 15:
         print(f"  !! slim concept te kort: {len(tekst.split())} woorden, "
