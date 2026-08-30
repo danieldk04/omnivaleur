@@ -2384,3 +2384,25 @@ vraag die wij voor haar kunnen beantwoorden — daarom een keuze en geen standpu
   altijd op de geraden categorie.
 - De sleutel `advertentietekst-onjuist-overgenomen` is vandaag door een andere
   sessie afgehandeld; zie de aantekening hierboven.
+
+### 30-08-2026 — `marktplaats-niet-ingelogd-melding` was al gerepareerd, alleen nooit teruggemeld
+
+Met voorrang doorgegeven (2 melders, klant dreigt te stoppen). Nagemeten in
+plaats van aangenomen: dit is exact dezelfde verouderde-extensiekopie-storing
+die op 29-08 hierboven al is uitgezocht en gerepareerd (`_rechtgezette_foutmelding`
+in `backend/api/jobs.py`, commit `089d506`, `tests/test_extensieversie.py` —
+11 tests, allemaal groen, fix staat op main). Beide melders van vandaag
+(info@retrogameking.com, info@papas-plectrums.nl) zijn dezelfde Dennis en
+Egbert uit die eerdere aantekening.
+
+Wat er mis ging: de fix zelf was er, maar de terugmelding met `opgelost` voor
+déze exacte sleutel is toen vergeten — de paragraaf van 29-08 meldt de
+aanverwante sleutels (`marktplaats-import-foutmelding`,
+`import-wordt-steeds-trager`) wel als teruggekoppeld, maar
+`marktplaats-niet-ingelogd-melding` zelf niet. Daardoor bleef hij op de
+bugslijst staan en kreeg hij vandaag opnieuw voorrang, met dezelfde twee
+melders van weken geleden.
+
+Geen code gewijzigd. Teruggemeld als `opgelost`. Les: bij een groep verwante
+sleutels die in één ronde worden uitgezocht, elke sleutel apart afmelden —
+niet alleen de sleutel waarvan de mail toevallig als eerste binnenkwam.
