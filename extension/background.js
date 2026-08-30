@@ -1591,8 +1591,24 @@ const _vroegGekoppeld = new Set();
 // Een leeg tabblad (about:blank) mag Chrome wél, en de koppeling blijft daarna
 // gewoon staan als het tabblad naar Marktplaats navigeert. Dus koppelen we
 // meteen bij het openen, vóór er iets geladen is.
-async function koppelVroeg(tabId) {
+// Alleen het plaatsformulier van Marktplaats/2dehands heeft de echte
+// toetsaanslag nodig (het verborgen omschrijvingsveld — zie typEchteToets).
+// Overal elders is de koppeling puur schade: Chrome zet dan de gele balk
+// "'Omnivaleur' is begonnen met foutopsporing voor deze browser" boven het
+// venster van de verkoper.
+const HEEFT_TOETSEN_NODIG = /^https:\/\/(?:www\.)?(?:marktplaats\.nl|2dehands\.be)\/plaats\b/i;
+
+async function koppelVroeg(tabId, url) {
   try {
+    // GEEN GELE BALK WAAR HIJ NIETS OPLOST (30-08-2026).
+    //
+    // Deze koppeling stond bij ELK werk-tabblad aan: scannen, Vinted, eBay,
+    // verwijderen. Chrome zet daar een balk voor neer die eruitziet als een
+    // storing, mét een knop "Annuleren" die de koppeling verbreekt. Amanda
+    // stuurde er een foto van als "een foutmelding wat betreft de browser" —
+    // terwijl er niets aan de hand was. Nu koppelen we alleen nog waar het
+    // écht nodig is: het plaatsformulier van Marktplaats en 2dehands.
+    if (url && !HEEFT_TOETSEN_NODIG.test(String(url))) return false;
     if (_vroegGekoppeld.has(tabId)) return true;
     if (!(await heeftDebugger())) return false;
     await new Promise((res, rej) => chrome.debugger.attach({ tabId }, "1.3", () => {
