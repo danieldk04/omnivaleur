@@ -58,6 +58,21 @@ VINTED_GROEPEN_GELDIG = ("dames", "heren", "kinderen", "unisex", "sieraden",
 # De verkoper vult het één keer zelf in en het gaat daarna overal mee.
 FABRIKANT_VELDEN = ("fabrikant_naam", "fabrikant_adres", "fabrikant_email")
 
+# ... MAAR HET IS EEN KEUZE, GEEN VERPLICHTING (30-08-2026, Amanda).
+#
+# Zo stond het hier niet. Wie zijn drie velden niet invulde kón niet publiceren
+# naar Marktplaats en 2dehands, dus vulde iedereen ze in — en daarna staan je
+# bedrijfsnaam, postadres en e-mailadres onder ELKE advertentie, in het blok dat
+# op Marktplaats "Fabrikant" heet. Amanda: "hij zet bij fabrikant, adres en
+# mailadres de bedrijfsgegevens van mijn bedrijf neer… Dat is niet de bedoeling."
+#
+# Ze heeft gelijk dat dat een keuze hoort te zijn. Wie tweedehands en brocante
+# verkoopt is niet de fabrikant van wat hij verkoopt, en Marktplaats vraagt dit
+# blok lang niet in elke categorie. Daarom: aan blijft aan (er verandert niets
+# voor wie het al ingevuld heeft), maar het kan uit — en dan wordt er niets meer
+# ingevuld en niets meer geblokkeerd.
+FABRIKANT_MEESTUREN = "fabrikant_meesturen"
+
 # Hoe deze verkoper levert. Stond alleen in de extensie-instellingen, waar
 # vrijwel niemand komt: Jaap verzendt uitsluitend, en kreeg bij elke advertentie
 # "Ophalen of Verzenden" — een belofte die hij niet kan waarmaken. Hoort bij het
