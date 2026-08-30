@@ -1796,3 +1796,47 @@ terugkijkt) en de eBay-melding gooiden de datum weg die ze wél meekregen.
 
 Extensie 1.0.267. De ondergrens is bewust niet opgehoogd: een oudere kopie stuurt
 geen datum mee en valt terug op het oude gedrag, wat niet erger is dan nu.
+
+### 30-08-2026 — Egberts 1.284 advertenties zijn binnengehaald (met toestemming)
+
+Daniel gaf toestemming om de import voor Egbert Brouwer (Papa's Plectrums) zelf
+uit te voeren, zodat het van tafel was vóór hun telefoongesprek. Gedaan: **1.284
+advertenties aangemaakt, 0 mislukt, 0 geparkeerd, 0 over** — in 26 porties van 50,
+850 seconden.
+
+**Belangrijkste les: importeren heeft zijn browser niet nodig.** De kandidaten
+stonden al in `import_candidates`; `/imports/bulk-import` draait volledig op de
+server. Egberts extensie ligt sinds 28-08 20:13 stil door de Chrome-storing
+hierboven, en dat blokkeerde dit dus níet. Wie in dezelfde situatie zit kan op
+dezelfde manier geholpen worden zonder dat de klant iets hoeft te doen.
+
+**Prijs en tekst komen niet uit Admarkt.** Admarkt levert alleen titel en foto's.
+De prijs en de omschrijving zijn er daarna bijgehaald uit het openbare aanbod van
+dezelfde verkoper (verkopers-id 6999351, 4.754 advertenties met een unieke
+titel): 1.285 van de 1.296 items teruggevonden, **1.284 prijzen en 1.174
+omschrijvingen** ingevuld.
+
+**Er zit een verhongeringsfout in de vaste kwartierronde.** `_mist_iets()` in
+`backend/services/mp_enrich.py` markeert een item ook als het geen merk, geen maat
+of hooguit één foto heeft. Bij Egbert heeft géén enkel item een merk, dus die
+lijst loopt nooit leeg, en de ronde pakt telkens de eerste 150 op uuid — steeds
+dezelfde. Zijn nieuwe items zouden daar nooit aan de beurt zijn gekomen. Daarom is
+dit met een eenmalige gerichte ronde gedaan (alleen items zónder prijs of zónder
+tekst) en niet met de knop. **Die fout staat nog open in de productcode.**
+
+**Stand nu:** 5.533 items voor Egbert. Zonder prijs 12, zonder tekst 121, zonder
+foto 1, zonder categorie 119 — waarvan 33 uit de partij van vandaag. Dat laatste
+zijn pins, mokken en sleutelhangers ("officiële merchandise"), die passen niet in
+de taxonomie. 2% van het geheel; die kunnen niet naar Marktplaats tot er een
+categorie bij komt.
+
+**Voor het gesprek:** hij heeft **nul** gekoppelde kanalen (geen eBay, Etsy of
+Shopify) en zijn abonnement staat op `pro`, status `trialing`, proef loopt tot
+19-09-2026.
+
+De zeven storingsmeldingen die hierover binnenkwamen (`items-pagina-leeg`,
+`admarkt-import-fout`, `admarkt-import-mislukt`, `admarkt-import-foutmelding`,
+`import-admarkt-foutmelding`, `import-timeout-marktplaats`,
+`foutmelding-schermafbeelding`) staan bij de klantenservice op opgelost.
+`import-teller-klopt-niet` bewust niet: dat gaat over een teller en een
+berichten-badge en is hier niet mee gerepareerd.
