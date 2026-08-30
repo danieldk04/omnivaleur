@@ -3179,17 +3179,22 @@ def _waarom_geen_concept(adres: str, inkomend) -> str | None:
                         # steeds geen antwoord op zijn laatste bericht, terwijl
                         # hij als vertrekrisico op de lijst stond.
                         #
-                        # Een concept blokkeert dus alleen als het NIET ouder is
-                        # dan het bericht dat we willen beantwoorden. Is het
-                        # ouder, dan gaat het over een achterhaalde vraag en
-                        # hoort er een nieuw concept bij. Het oude blijft staan —
-                        # niets van Daniel wordt weggegooid — en het seintje
-                        # zegt erbij dat er nu twee liggen.
-                        try:
-                            concept_op = parsedate_to_datetime(kop.get("Date", "")).timestamp()
-                        except Exception:  # noqa: BLE001
-                            concept_op = None
-                        if waarop is None or concept_op is None or concept_op >= waarop:
+                        # Wat er lag was bovendien geen antwoord op hem, maar de
+                        # losse reparatiemelding van de developer over de trage
+                        # import — geschreven op 29-08, dus nieuwer dan zijn
+                        # bericht, en tóch geen antwoord erop. Op de datum
+                        # vergelijken helpt daar niets.
+                        #
+                        # De goede vraag is: IS DIT CONCEPT EEN ANTWOORD? Een
+                        # concept met een In-Reply-To beantwoordt een bericht en
+                        # blokkeert dus (op precies dit bericht vangt controle 2
+                        # hem, op een nieuwer bericht deze). Een concept zónder
+                        # In-Reply-To is een losse mail — een reparatiemelding,
+                        # een opvolging — en die mag nooit in de weg staan van
+                        # een antwoord op wat de klant écht schreef. Het oude
+                        # blijft gewoon staan; niets van Daniel wordt weggegooid,
+                        # en het seintje zegt erbij dat er twee liggen.
+                        if plat(kop.get("In-Reply-To", "")):
                             return "er ligt al een concept voor deze persoon"
                         _ACHTERHAALD_CONCEPT.add(adres)
                         continue
