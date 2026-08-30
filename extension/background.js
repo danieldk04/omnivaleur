@@ -672,6 +672,27 @@ function getMpSyiUrl(platform, item) {
   const base = platform === "marktplaats"
     ? "https://www.marktplaats.nl/plaats"
     : "https://www.2dehands.be/plaats";
+
+  // DE ECHTE CATEGORIE VAN DE OUDE ADVERTENTIE GAAT VOOR.
+  //
+  // Bij een verversing haalt de server vlak vóór het verwijderen op in welke
+  // categorie de advertentie stond (l1/l2, letterlijk van de advertentiepagina
+  // van Marktplaats). Die is per definitie beter dan wat wij uit de titel
+  // kunnen afleiden: onze eigen lijst dekt kleding, wonen, antiek, muziek en
+  // sieraden, en Amanda verkoopt daarnaast munten, bankbiljetten en boeken.
+  // Voor die takken bestond er geen goede doos en werd het altijd de verkeerde.
+  //
+  // Kennen we het paar zelf ook (dan hoort er een bucketId bij, en bij
+  // kinderkleding een maat-afhankelijk type), dan gebruiken we onze eigen regel
+  // — dat adres is bewezen. Kennen we het niet, dan gaan we op de twee nummers
+  // van Marktplaats af, zonder bucketId; precies de vorm die de tweeniveau-
+  // takken (muziek) al gebruiken.
+  const mpCat = item?.mp_category;
+  if (mpCat && mpCat.l1 && mpCat.l2) {
+    const eigen = mpCategorieOpNummer(mpCat.l1, mpCat.l2);
+    if (!eigen) return `${base}/${mpCat.l1}/${mpCat.l2}?title=`;
+  }
+
   const cat = (item?.category || "").toLowerCase().trim();
   // Imported items often have no gender/category saved at all (only title +
   // 1 photo carry over) — item.gender is then empty and this used to silently
@@ -1403,7 +1424,7 @@ function openStilWerkTabblad(url, callback) {
 // zodra Marktplaats geladen is weigert Chrome de koppeling (zie koppelVroeg).
 async function maakWerkTabblad(opties, url) {
   const tab = await chrome.tabs.create({ ...opties, url: "about:blank" });
-  await koppelVroeg(tab.id);
+  await koppelVroeg(tab.id, url);
   await chrome.tabs.update(tab.id, { url });
   // Een nieuw tabblad haalt het venster op macOS terug in beeld.
   await houdWerkvensterGeminimaliseerd();
@@ -1710,7 +1731,7 @@ async function openWorkerTabInner(url, opts = {}) {
     // Anker erbij: vanaf nu blijft dit ene venster bestaan in plaats van bij
     // elke klus opnieuw op te poppen.
     await ensureKeeperTab(w.id);
-    await koppelVroeg(w.tabs[0].id);
+    await koppelVroeg(w.tabs[0].id, url);
     await chrome.tabs.update(w.tabs[0].id, { url });
     // Navigeren kan het venster terugzetten; nog één keer wegduwen kost niets.
     await chrome.windows.update(w.id, { state: "minimized", focused: false }).catch(() => {});
