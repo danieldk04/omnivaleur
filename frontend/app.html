@@ -6329,13 +6329,24 @@ function renderExtensionStatus() {
       // dit geen randinformatie meer maar het antwoord op "waarom gebeurt er
       // niets". Ook op de computer laten zien. Tien minuten, niet twee, zodat
       // een kortstondige stilte tussen twee rondes geen vals alarm geeft.
-      const langWeg = data.seconds_ago == null || data.seconds_ago > 600;
-      if (queued && langWeg) {
+      //
+      // EN ZONDER WACHTRIJ NET ZO GOED (30-08-2026, Egbert Brouwer). Zijn
+      // extensie had zich twee dagen niet gemeld en er stond niets in de
+      // wachtrij — dus bleef dit blokje op de computer verborgen en zag hij
+      // alleen dat er niets gebeurde. Terwijl een stille extensie betekent dat
+      // ALLES stilstaat: scannen, publiceren, verkoopcontrole. De redenering
+      // "op je computer ben je die computer zelf" klopt alleen zolang ze leeft.
+      // De extensie meldt zich elke 15 seconden; een uur stilte is dus nooit
+      // een hapering tussen twee rondes, maar staat ze uit.
+      const stilSeconden = data.seconds_ago == null ? Infinity : data.seconds_ago;
+      const langWeg = stilSeconden > 600;
+      if (langWeg && (queued || stilSeconden > 3600)) {
         el.classList.add('comp-toon-op-desktop');
         el.innerHTML = `<span class="comp-dot"></span><div><b>Nothing is running: your extension has not checked in${ago}.</b> `
-          + `${queued} action${queued === 1 ? ' is' : 's are'} waiting. Open Chrome on the computer with the `
-          + `Omnivaleur extension, and make sure you are signed in to Omnivaleur in that browser — after `
-          + `reinstalling the extension it needs the Omnivaleur tab open once to reconnect.</div>`;
+          + (queued ? `${queued} action${queued === 1 ? ' is' : 's are'} waiting. ` : `Scans, publishing and sold-checks are all on hold until it does. `)
+          + `Open <b>chrome://extensions</b> on the computer you use for Omnivaleur: after an update Chrome `
+          + `switches the extension off until you approve it again, and it stays off — silently — until you do. `
+          + `Turn it back on there, then open Omnivaleur once in that browser so the extension signs back in.</div>`;
         if (oud) el.innerHTML += extraOudeExtensieMelding(oud);
         return;
       }
