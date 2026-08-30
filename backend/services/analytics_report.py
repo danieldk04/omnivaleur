@@ -134,7 +134,8 @@ def _channels_section(win: dict) -> dict:
     return {
         "connected": True,
         "channels": now,
-        "landing_pages": ga4.top_landing_pages(this_s, this_e, limit=12),
+        "landing_pages": ga4.top_landing_pages(this_s, this_e, limit=8),
+        "pages": ga4.top_pages(this_s, this_e, limit=8),
         "totals": ga4.totals(this_s, this_e),
     }
 

@@ -64,37 +64,41 @@
     </ul>
   </div>
 
+  {% set tot = report.channels.totals or {} %}
   <div class="grid">
     <div class="card">
-      <h2>SEO-clicks (week)</h2>
-      <div style="font-size:1.8rem;font-weight:700">{{ report.seo.total_clicks or 0 }}</div>
-      <div>{{ delta(report.seo.total_clicks_delta) }} vs vorige week</div>
+      <h2>Bezoekers</h2>
+      <div style="font-size:1.8rem;font-weight:700">{{ tot.sessions or 0 }}</div>
+      <div class="flat">{{ tot.newUsers or 0 }} voor het eerst hier</div>
     </div>
     <div class="card">
-      <h2>Impressies (week)</h2>
-      <div style="font-size:1.8rem;font-weight:700">{{ report.seo.total_impressions or 0 }}</div>
-    </div>
-    <div class="card">
-      <h2>Nieuwe signups</h2>
+      <h2>Aanmeldingen</h2>
       {% if report.signups.available %}
       <div style="font-size:1.8rem;font-weight:700">{{ report.signups.this_week }}</div>
       <div>{{ delta(report.signups.delta) }} · vorige week {{ report.signups.prev_week }}</div>
       {% else %}<div class="empty">niet beschikbaar</div>{% endif %}
     </div>
     <div class="card">
-      <h2>GA4-verkeer</h2>
-      {% if report.channels.connected %}
-      <div style="font-size:1.8rem;font-weight:700">{{ report.channels.totals.sessions or 0 }}</div>
-      <div class="flat">sessies · {{ report.channels.totals.conversions or 0 }} conversies</div>
-      {% else %}<div class="empty">GA4 nog niet gekoppeld</div>{% endif %}
+      <h2>Van bezoek naar account</h2>
+      {% if report.signups.available and (tot.newUsers or 0) > 0 %}
+      <div style="font-size:1.8rem;font-weight:700">{{ ((report.signups.this_week / tot.newUsers * 100) | round(1)) | string | replace('.', ',') }}%</div>
+      <div class="flat">{{ report.signups.this_week }} van {{ tot.newUsers }} nieuwe bezoekers</div>
+      {% else %}<div class="empty">nog te weinig bezoek</div>{% endif %}
+    </div>
+    <div class="card">
+      <h2>Blijven ze hangen</h2>
+      {% if tot.engagementRate %}
+      <div style="font-size:1.8rem;font-weight:700">{{ (tot.engagementRate * 100) | round(0) | int }}%</div>
+      <div class="flat">gemiddeld {{ (tot.averageSessionDuration or 0) | round(0) | int }} seconden per bezoek</div>
+      {% else %}<div class="empty">nog geen data</div>{% endif %}
     </div>
   </div>
 
   <section>
-    <h2 class="sec">🔎 Kanalen — waar komen bezoekers vandaan (GA4)</h2>
+    <h2 class="sec">🔎 Waar bezoekers vandaan komen</h2>
     {% if report.channels.connected %}
     <div class="card"><table>
-      <tr><th>Kanaal</th><th class="num">Sessies</th><th class="num">vs vorige</th><th class="num">Nieuwe gebr.</th><th class="num">Conversies</th></tr>
+      <tr><th>Kanaal</th><th class="num">Bezoeken</th><th class="num">vs vorige</th><th class="num">Nieuw</th><th class="num">Aanmeldingen</th></tr>
       {% for c in report.channels.channels %}
       <tr><td>{{ c.sessionDefaultChannelGroup }}</td>
           <td class="num">{{ c.sessions or 0 }}</td>
@@ -104,113 +108,136 @@
       {% endfor %}
     </table></div>
     {% else %}
-    <div class="card empty">GA4 nog niet gekoppeld. Met GA4 zie je hier hoeveel bezoekers via
-      <b>Organic Social</b> (Instagram/TikTok), <b>Referral</b> (Reddit) en <b>Organic Search</b> (blog/SEO)
-      binnenkomen — en welk kanaal converteert. Zie de setup-instructies.</div>
+    <div class="card empty">Analytics nog niet gekoppeld.</div>
     {% endif %}
   </section>
 
   <section>
-    <h2 class="sec">📱 Social media per platform — waar komen je bezoekers vandaan</h2>
-    {% if report.social.connected %}
-      {% if report.social.platforms %}
-      <div class="card"><table>
-        <tr><th>Platform</th><th class="num">Sessies</th><th class="num">vs vorige</th><th class="num">Nieuwe bezoekers</th><th class="num">Conversies</th><th class="num">Conv.%</th></tr>
-        {% for p in report.social.platforms %}
-        <tr><td>{{ p.platform }}</td>
-            <td class="num">{{ p.sessions }}</td>
-            <td class="num">{{ delta(p.sessions_delta) }}</td>
-            <td class="num">{{ p.newUsers }}</td>
-            <td class="num">{{ p.conversions }}</td>
-            <td class="num">{{ p.conv_rate }}%</td></tr>
-        {% endfor %}
-      </table></div>
-      {% else %}
-      <div class="card empty">Nog geen herkend social-verkeer deze week. TikTok/Instagram strippen vaak de
-        referrer, dus tag je post-links met UTM's (zie de linkbouwer onderaan) — dan verschijnen ze hier
-        én op postniveau.</div>
-      {% endif %}
-    {% else %}<div class="card empty">GA4 nog niet gekoppeld.</div>{% endif %}
+    <h2 class="sec">🧭 Wat ze op de site doen</h2>
+    {% if report.channels.landing_pages or report.channels.pages %}
+    <div class="card">
+      <p class="note" style="margin-top:0">Links: de pagina waarop iemand binnenkomt. Rechts: wat er daarna
+        bekeken wordt. Het verschil tussen die twee is waar je bezoekers onderweg blijven steken.</p>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:18px">
+        <div>
+          <table>
+            <tr><th>Binnenkomst</th><th class="num">Bezoeken</th><th class="num">Blijft</th></tr>
+            {% for p in report.channels.landing_pages %}
+            <tr><td class="trunc" title="{{ p.landingPagePlusQueryString }}">{{ p.landingPagePlusQueryString or '/' }}</td>
+                <td class="num">{{ p.sessions or 0 }}</td>
+                <td class="num">{{ ((p.engagementRate or 0) * 100) | round(0) | int }}%</td></tr>
+            {% endfor %}
+          </table>
+        </div>
+        <div>
+          <table>
+            <tr><th>Bekeken pagina</th><th class="num">Weergaven</th><th class="num">Mensen</th></tr>
+            {% for p in report.channels.pages %}
+            <tr><td class="trunc" title="{{ p.pagePath }}">{{ p.pagePath }}</td>
+                <td class="num">{{ p.screenPageViews or 0 }}</td>
+                <td class="num">{{ p.activeUsers or 0 }}</td></tr>
+            {% endfor %}
+          </table>
+        </div>
+      </div>
+    </div>
+    {% else %}<div class="card empty">Nog geen paginagegevens deze week.</div>{% endif %}
   </section>
 
   <section>
-    <h2 class="sec">🎬 Best presterende posts (UTM-getagd)</h2>
-    {% if report.social.posts %}
+    <h2 class="sec">📱 Welk social-kanaal levert wat op</h2>
+    {% if report.social.platforms %}
     <div class="card"><table>
-      <tr><th>Platform</th><th>Post / campagne</th><th class="num">Sessies</th><th class="num">Nieuw</th><th class="num">Conversies</th></tr>
-      {% for p in report.social.posts %}
+      <tr><th>Platform</th><th class="num">Bezoeken</th><th class="num">vs vorige</th><th class="num">Nieuw</th><th class="num">Aanmeldingen</th></tr>
+      {% for p in report.social.platforms %}
       <tr><td>{{ p.platform }}</td>
-          <td class="trunc" title="{{ p.sessionManualAdContent or p.sessionCampaignName }}">{{ p.sessionManualAdContent or p.sessionCampaignName }}</td>
           <td class="num">{{ p.sessions }}</td>
+          <td class="num">{{ delta(p.sessions_delta) }}</td>
           <td class="num">{{ p.newUsers }}</td>
           <td class="num">{{ p.conversions }}</td></tr>
       {% endfor %}
     </table></div>
+    {% if report.social.posts %}
+    <details style="margin-top:10px">
+      <summary style="cursor:pointer;font-size:14px;color:var(--muted)">Per losse link of post ({{ report.social.posts|length }})</summary>
+      <div class="card" style="margin-top:8px"><table>
+        <tr><th>Bron</th><th>Campagne of post</th><th class="num">Bezoeken</th><th class="num">Nieuw</th></tr>
+        {% for p in report.social.posts[:8] %}
+        <tr><td>{{ p.platform }}</td>
+            <td class="trunc" title="{{ p.sessionManualAdContent or p.sessionCampaignName }}">{{ p.sessionManualAdContent or p.sessionCampaignName }}</td>
+            <td class="num">{{ p.sessions }}</td>
+            <td class="num">{{ p.newUsers }}</td></tr>
+        {% endfor %}
+      </table></div>
+    </details>
+    {% endif %}
     {% else %}
-    <div class="card empty">Nog geen postniveau-data. Zodra je UTM-getagde links deelt (linkbouwer onderaan),
-      zie je hier per losse TikTok/Reel/Pin/Reddit-post hoeveel bezoek én signups die opleverde — zo weet je
-      exact wélke content aanslaat.</div>
+    <div class="card empty">Nog geen herkend social-verkeer deze week.</div>
     {% endif %}
   </section>
 
   <section>
-    <h2 class="sec">🔥 Social content — postprestaties van de week (Apify)</h2>
+    <h2 class="sec">🔍 Zoekverkeer — {{ report.seo.total_clicks or 0 }} clicks, {{ report.seo.total_impressions or 0 }} keer vertoond</h2>
+    {% if report.seo.connected and not report.seo.has_data %}
+    <div class="card empty">Search Console is gekoppeld, maar heeft nog geen zoekverkeer in deze week.
+      Nieuwe pagina's hebben dagen tot weken nodig voordat Google ze meetelt.</div>
+    {% elif report.seo.connected %}
     <div class="card">
-      <p class="note" style="margin-top:0">On-platform bereik &amp; engagement per post (TikTok, Instagram, YouTube, Pinterest).
-        Dit scrapet je profielen live, dus het duurt ~10-30s. Deze data zit ook automatisch in je zondagsrapport.</p>
-      <button class="btn" id="socBtn" onclick="loadSocial()">📊 Laad social-postprestaties</button>
-      <div class="note" id="socNote"></div>
-      <div id="socResult" style="margin-top:14px"></div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:18px">
+        <div>
+          <table>
+            <tr><th>Pagina</th><th class="num">Clicks</th><th class="num">Positie</th></tr>
+            {% for p in report.seo.top_pages[:6] %}
+            <tr><td class="trunc" title="{{ p.url }}">{{ p.url.replace(site_url, '') or '/' }}</td>
+                <td class="num">{{ p.clicks }}</td>
+                <td class="num">{{ p.position }}</td></tr>
+            {% endfor %}
+          </table>
+        </div>
+        <div>
+          {% if report.seo.risers %}
+          <table>
+            <tr><th>Stijgende zoekterm</th><th class="num">Was</th><th class="num">Nu</th></tr>
+            {% for q in report.seo.risers[:6] %}
+            <tr><td>{{ q.query }}</td><td class="num">{{ q.clicks_prev }}</td><td class="num up">{{ q.clicks }}</td></tr>
+            {% endfor %}
+          </table>
+          {% else %}<div class="empty">Geen stijgende zoektermen deze week.</div>{% endif %}
+        </div>
+      </div>
     </div>
+    {% else %}<div class="card empty">Search Console nog niet gekoppeld.</div>{% endif %}
   </section>
 
+  {# De categorietabel zegt pas iets zodra er meerdere categorieën mét verkeer
+     zijn. Bij drie categorieën en acht clicks is het ruis die de rest verdringt,
+     dus die verschijnt vanzelf zodra hij iets te melden heeft. #}
+  {% if report.categories and report.categories|length >= 3
+        and (report.categories|sum(attribute='clicks')) >= 20 %}
   <section>
-    <h2 class="sec">🗂️ Blog-prestaties per categorie</h2>
-    {% if report.categories %}
+    <h2 class="sec">🗂️ Welk soort artikel trekt zoekverkeer</h2>
     <div class="card"><table>
-      <tr><th>Categorie</th><th class="num">Pagina's</th><th class="num">Clicks</th><th class="num">vs vorige</th><th class="num">Impressies</th><th class="num">CTR</th></tr>
+      <tr><th>Categorie</th><th class="num">Pagina's</th><th class="num">Clicks</th><th class="num">vs vorige</th><th class="num">CTR</th></tr>
       {% for c in report.categories %}
       <tr><td>{{ c.category }}</td>
           <td class="num">{{ c.pages }}</td>
           <td class="num">{{ c.clicks }}</td>
           <td class="num">{{ delta(c.clicks_delta) }}</td>
-          <td class="num">{{ c.impressions }}</td>
           <td class="num">{{ c.ctr }}%</td></tr>
       {% endfor %}
     </table></div>
-    {% else %}<div class="card empty">Nog geen categorie-data (Search Console heeft nog geen pagina-clicks).</div>{% endif %}
   </section>
+  {% endif %}
 
   <section>
-    <h2 class="sec">🏆 Best presterende blogposts (Search Console)</h2>
-    {% if report.seo.connected and not report.seo.has_data %}
-    <div class="card empty">✅ Search Console is gekoppeld, maar er is nog geen zoekverkeer-data
-      in deze week ({{ report.period.this[0] }}–{{ report.period.this[1] }}). Nieuwe pagina's
-      hebben ~enkele dagen tot weken nodig voordat Google impressies/clicks registreert.</div>
-    {% elif report.seo.connected %}
-    <div class="card"><table>
-      <tr><th>Pagina</th><th class="num">Clicks</th><th class="num">vs vorige</th><th class="num">Impressies</th><th class="num">Positie</th></tr>
-      {% for p in report.seo.top_pages %}
-      <tr><td class="trunc" title="{{ p.url }}">{{ p.url.replace(site_url, '') or '/' }}</td>
-          <td class="num">{{ p.clicks }}</td>
-          <td class="num">{{ delta(p.clicks_delta) }}</td>
-          <td class="num">{{ p.impressions }}</td>
-          <td class="num">{{ p.position }}</td></tr>
-      {% endfor %}
-    </table></div>
-    {% else %}<div class="card empty">Search Console nog niet gekoppeld.</div>{% endif %}
-  </section>
-
-  <section>
-    <h2 class="sec">📈 Stijgende zoektermen</h2>
-    {% if report.seo.risers %}
-    <div class="card"><table>
-      <tr><th>Zoekterm</th><th class="num">Vorige week</th><th class="num">Deze week</th><th class="num">Positie</th></tr>
-      {% for q in report.seo.risers %}
-      <tr><td>{{ q.query }}</td><td class="num">{{ q.clicks_prev }}</td><td class="num up">{{ q.clicks }}</td><td class="num">{{ q.position }}</td></tr>
-      {% endfor %}
-    </table></div>
-    {% else %}<div class="card empty">Geen stijgende zoektermen deze week.</div>{% endif %}
+    <h2 class="sec">🔥 Bereik op de platforms zelf</h2>
+    <div class="card">
+      <p class="note" style="margin-top:0">Weergaven en reacties op je posts, opgehaald bij de platforms zelf.
+        Dit kijkt live op je profielen, dus het duurt ~10-30 seconden. Zit ook in je zondagsmail.</p>
+      <button class="btn" id="socBtn" onclick="loadSocial()">📊 Laad postprestaties</button>
+      <div class="note" id="socNote"></div>
+      <div id="socResult" style="margin-top:14px"></div>
+    </div>
   </section>
 
   <section>
@@ -237,7 +264,8 @@
         naam, en een afgekapte parameterslinger leest daar als reclame. De korte link stuurt door naar
         het adres in de grijze regel, dus Analytics meet precies hetzelfde. Bijkomend voordeel: wil je
         een campagnenaam wijzigen, dan hoef je niet acht profielen langs.
-        <br>Terugkijken doe je in Analytics onder <strong>Rapporten → Acquisitie → Verkeersacquisitie</strong>,
+        <br>Je hoeft Google Analytics hiervoor niet te openen — alles staat hierboven. Wil je er toch zelf in
+        graven, dan zit het onder <strong>Bedrijfsdoelen → Leads genereren → Verkeersacquisitie</strong>,
         met “Sessiebron/medium” of “Sessiecampagne” als rij.</div>
     </div>
   </section>

@@ -1606,3 +1606,52 @@ uit de pas gaat lopen met die tabel.
 
 Dit is een versneller, geen schakelaar: merkherkenning bij Google komt van
 herhaling en leeftijd. Verwachting is weken, niet dagen.
+
+### 30-08-2026 — Marketing-dashboard uitgedund en gedrag toegevoegd
+
+Daniel las het dashboard voor het eerst helemaal door en vroeg om minder, met
+alleen wat telt, plus zicht op wat bezoekers op de site doen. Negen secties zijn
+zes geworden.
+
+**Weg of samengevoegd:** "Blog-prestaties per categorie", "Best presterende
+blogposts" en "Stijgende zoektermen" waren drie tabellen over hetzelfde. Nu één
+sectie "Zoekverkeer" met de clicks in de kop en twee smalle tabellen naast
+elkaar. De categorietabel verschijnt alleen nog bij minstens drie categorieën én
+twintig clicks samen — bij drie categorieën en acht clicks is het ruis die de
+rest verdringt. De postniveau-tabel zit onder een uitklapper in de social-sectie
+in plaats van als eigen kop.
+
+**Nieuw: "Wat ze op de site doen".** Links waar iemand binnenkomt (met
+betrokkenheidspercentage per pagina — een landingspagina die veel trekt en waar
+iedereen meteen weg is, is geen succes maar een lek), rechts wat er daarna
+bekeken wordt. Daarvoor is `ga4.top_pages()` bijgekomen (pagePath +
+screenPageViews) en draagt `top_landing_pages` nu `engagementRate`.
+
+**Tegels bovenaan** zijn nu bezoekers / aanmeldingen / van bezoek naar account /
+blijven ze hangen. "Impressies" is eruit (staat in de zoekkop) en "GA4-verkeer
+· 0 conversies" is vervangen door het aanmeldpercentage, wat het cijfer is waar
+een beslissing aan hangt. `totals` levert daarvoor nu ook
+`averageSessionDuration`.
+
+De kolom "Conversies" heet overal "Aanmeldingen". Die stond op nul omdat
+`sign_up` pas op 30-08 als belangrijke gebeurtenis is aangezet; vanaf nu vult
+hij zich.
+
+**`tests/test_analytics_dashboard_render.py`** is nieuw en rendert het sjabloon
+met een vol én een volledig leeg rapport. Dat tweede geval is het gevaarlijkste:
+zo ziet het eruit zodra een koppeling wegvalt, en juist dan moet de pagina blijven
+staan in plaats van een foutmelding te tonen.
+
+**Drie dingen die in het rapport van 23–29 aug niet klopten en geen bug zijn:**
+
+1. `Unassigned` (33 sessies) is de extensie — zie de notitie hierboven; dooft uit
+   zodra 1.0.266 is uitgerold.
+2. `Email / cold_email` met campagne `marktplaats_video` (25 sessies) zijn de
+   interne knoppen op /mp-video die op 29-08 van hun tags zijn ontdaan.
+3. `Organic Shopping` (46 sessies, maar 2 nieuwe gebruikers) is geen marketing:
+   dat zijn bestaande klanten die vanaf Shopify en de marktplaatsen terugkomen.
+   Stripe is inmiddels als ongewenste verwijzing uitgesloten; hetzelfde zou voor
+   shopify.com en de marktplaatsdomeinen kunnen, maar dat is Daniels keuze.
+
+Ook gevonden: de losse link met `?utm_source=ig` draagt campagne `link_in_bio`
+(18 sessies). Handmatig geplaatst, staat nergens in de repo.

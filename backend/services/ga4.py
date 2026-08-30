@@ -178,10 +178,13 @@ def sessions_by_day(start: str, end: str) -> dict[str, int]:
 
 
 def top_landing_pages(start: str, end: str, limit: int = 15) -> list[dict]:
-    """Best presterende landingspagina's op sessies — 'welke blogposts trekken bezoek'."""
+    """Waar bezoekers binnenkomen — 'welke pagina vangt het verkeer op'.
+
+    Met engagementRate erbij, want een landingspagina die veel sessies trekt en
+    waar iedereen meteen weer weg is, is geen succes maar een lek."""
     rows = _run(
         dimensions=["landingPagePlusQueryString"],
-        metrics=["sessions", "activeUsers", "conversions"],
+        metrics=["sessions", "activeUsers", "conversions", "engagementRate"],
         start=start,
         end=end,
         limit=limit,
@@ -189,11 +192,29 @@ def top_landing_pages(start: str, end: str, limit: int = 15) -> list[dict]:
     return sorted(rows, key=lambda r: r.get("sessions", 0), reverse=True)
 
 
+def top_pages(start: str, end: str, limit: int = 12) -> list[dict]:
+    """Wat bezoekers bekijken zodra ze binnen zijn.
+
+    Landingspagina's vertellen waar iemand aankomt; dit vertelt waar hij daarna
+    heen loopt. Het verschil tussen die twee is het enige zicht op gedrag dat
+    zonder extra meetwerk te krijgen is — en het beantwoordt de vraag die er
+    echt toe doet: halen bezoekers de registratiepagina wel?"""
+    rows = _run(
+        dimensions=["pagePath"],
+        metrics=["screenPageViews", "activeUsers"],
+        start=start,
+        end=end,
+        limit=limit,
+    )
+    return sorted(rows, key=lambda r: r.get("screenPageViews", 0), reverse=True)
+
+
 def totals(start: str, end: str) -> dict:
     """Kerncijfers voor de hele site over het venster."""
     rows = _run(
         dimensions=[],
-        metrics=["sessions", "activeUsers", "newUsers", "conversions", "engagementRate"],
+        metrics=["sessions", "activeUsers", "newUsers", "conversions",
+                 "engagementRate", "averageSessionDuration"],
         start=start,
         end=end,
         limit=1,
