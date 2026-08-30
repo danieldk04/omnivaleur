@@ -2004,11 +2004,37 @@ async function _mwVintedVerwijderen() {
                   "supprimer l'article", "artikel löschen", "artikel loschen",
                   "delete item", "eliminar artículo", "elimina l'oggetto"];
 
+  // ALLES WAT DEZE FUNCTIE GEBRUIKT MOET HIERBINNEN STAAN.
+  //
+  // Chrome injecteert alleen déze functie in de pagina; de rest van
+  // background.js bestaat daar niet. Stond de hulpfunctie hieronder los, dan
+  // gooide de pagina meteen een ReferenceError en kreeg de verkoper altijd
+  // "Delete control not found" te zien, ongeacht wat er op het scherm stond.
+  // Dat is op 30-08-2026 precies zo misgegaan. tests/test_vinted_verwijderknop.py
+  // bewaakt dat er niets van buiten wordt aangeroepen.
   const tekst = e => (e.textContent || "").replace(/\s+/g, " ").trim().toLowerCase();
   const kaal = t => t.replace(/[?!.]+$/, "").trim();
   const zichtbaar = e => e.offsetParent !== null || e.getClientRects().length > 0;
   const knoppen = w => [...w.querySelectorAll('button, a, [role="menuitem"], [role="button"]')];
   const isWeg = e => WEG.includes(kaal(tekst(e))) || (e.dataset && e.dataset.testid || "").includes("delete");
+  const schermbeeld = () => {
+    const w = document.querySelector('[role="dialog"], [role="alertdialog"], [aria-modal="true"], '
+                                     + '[data-testid*="modal"], .ReactModal__Content') || document;
+    return knoppen(w).filter(zichtbaar).slice(0, 25)
+      .map(e => tekst(e).slice(0, 30) + (e.dataset && e.dataset.testid ? `#${e.dataset.testid}` : ""))
+      .filter(Boolean).join(" | ").slice(0, 400);
+  };
+
+  // 0) WACHTEN TOT DE PAGINA ER ECHT STAAT.
+  //
+  // Vinted bouwt de artikelpagina met JavaScript op. Kijken we te vroeg, dan is
+  // er nog geen enkele knop en heet dat ten onrechte "Delete control not found".
+  // Wachten tot er iets staat kost hooguit een paar seconden en scheelt een
+  // mislukte verversing.
+  for (let i = 0; i < 20; i++) {
+    if (knoppen(document).some(zichtbaar)) break;
+    await sleep(250);
+  }
 
   // 1) De knop op de pagina zelf, eventueel achter het menu met de drie puntjes.
   let del = knoppen(document).find(e => zichtbaar(e) && isWeg(e));
@@ -2025,7 +2051,7 @@ async function _mwVintedVerwijderen() {
       del = knoppen(menu).find(isWeg) || knoppen(document).find(e => zichtbaar(e) && isWeg(e));
     }
   }
-  if (!del) return { clickedDelete: false, opScherm: _mwVintedSchermbeeld() };
+  if (!del) return { clickedDelete: false, opScherm: schermbeeld() };
   del.click();
 
   // 2) Wachten tot het bevestigingsvenster er echt staat. Herkenning op drie
@@ -2052,25 +2078,11 @@ async function _mwVintedVerwijderen() {
     .filter(e => { const t = kaal(tekst(e)); return t && !ANNULEER.includes(t) && BEVESTIG.includes(t); });
   const bevestig = venster ? kandidaten[0] : kandidaten[kandidaten.length - 1];
   if (!bevestig) return { clickedDelete: true, clickedConfirm: false, venster: !!venster,
-                          opScherm: _mwVintedSchermbeeld() };
+                          opScherm: schermbeeld() };
   bevestig.click();
   await sleep(1200);
   return { clickedDelete: true, clickedConfirm: true, venster: !!venster,
            bevestigd: kaal(tekst(bevestig)) };
-}
-
-// Wat er op dat moment op het scherm stond, kort samengevat. Zonder dit is een
-// mislukte verwijdering niet na te lopen zonder in te loggen op het account van
-// de verkoper — en dat kan niet.
-function _mwVintedSchermbeeld() {
-  const w = document.querySelector('[role="dialog"], [role="alertdialog"], [aria-modal="true"], '
-                                   + '[data-testid*="modal"], .ReactModal__Content') || document;
-  return [...w.querySelectorAll('button, a, [role="button"], [role="menuitem"]')]
-    .filter(e => e.offsetParent !== null || e.getClientRects().length > 0)
-    .slice(0, 25)
-    .map(e => (e.textContent || "").replace(/\s+/g, " ").trim().slice(0, 30)
-              + (e.dataset && e.dataset.testid ? `#${e.dataset.testid}` : ""))
-    .filter(Boolean).join(" | ").slice(0, 400);
 }
 
 function execInTab(tabId, func, args = []) {

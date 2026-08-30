@@ -2148,3 +2148,33 @@ dan snijdt het harnas hem niet meer uit en test die pagina stilletjes niets meer
 `tests/test_vinted_verwijderknop.py` bewaakt dat, en bewaakt de knopteksten zelf.
 
 Extensie 1.0.270. Ondergrens niet opgehoogd.
+
+## 30-08-2026 15:27 — Mijn eigen fout: de geïnjecteerde functie stond niet op zichzelf
+
+Daniel probeerde 1.0.270 zelf en kreeg bij élke poging meteen:
+
+    Delete control not found on Vinted item page for ID 8556988767 — Vinted may
+    have changed its layout. [extensie 1.0.270]
+
+Zonder de regel "Zichtbaar op het scherm: …" die daar had moeten staan. Dát was
+het spoor: die tekst ontbrak omdat de hele routine al was omgevallen vóór er ook
+maar iets was bekeken.
+
+**Oorzaak.** Chrome injecteert bij `chrome.scripting.executeScript` alléén de ene
+functie die je meegeeft; de rest van background.js bestaat in die pagina niet. Ik
+had de hulpfunctie voor het schermbeeld ernaast gezet als losse
+`_mwVintedSchermbeeld()`. In de pagina gooide dat een ReferenceError, `execInTab`
+gaf `undefined` terug, en dat leest als "knop niet gevonden". De verversing was
+daarmee voor iedereen stuk — erger dan de storing die ik aan het repareren was.
+
+**Waarom het namaakscherm dit niet ving.** Daar stonden beide functies gewoon op
+de pagina, dus daar wérkte het. Een harnas dat de code anders laadt dan de
+werkelijkheid bewijst niet wat je denkt.
+
+**Wat er nu staat.** De hulpfunctie is genest, en er is een test die naar de enige
+vraag kijkt die telt: roept de geïnjecteerde functie iets aan dat straks niet
+bestaat? Die test vindt op de kapotte versie precies `_mwVintedSchermbeeld` terug.
+Verder wordt er nu eerst gewacht tot Vinted de pagina heeft opgebouwd — te vroeg
+kijken levert nul knoppen op en heet dan ten onrechte "knop niet gevonden".
+
+Extensie 1.0.271.

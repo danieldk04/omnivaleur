@@ -92,3 +92,46 @@ def test_de_routine_staat_los_zodat_de_proef_de_echte_code_draait():
     assert "execInTab(tabId, _mwVintedVerwijderen)" in BG
     build = (ROOT / "tests/vinted-mock/build.js").read_text(encoding="utf-8")
     assert "_mwVintedVerwijderen" in build
+
+
+def test_de_geinjecteerde_routine_staat_helemaal_op_zichzelf():
+    """DE FOUT VAN 30-08-2026, 15:27 — door mij gemaakt en meteen zichtbaar.
+
+    Chrome injecteert alléén deze ene functie in de pagina; de rest van
+    background.js bestaat daar niet. Ik had de hulpfunctie voor het schermbeeld
+    ernaast gezet, en dus gooide de pagina bij élke poging meteen een
+    ReferenceError. Gevolg: iedereen kreeg "Delete control not found", ongeacht
+    wat er op het scherm stond — de verversing was daarmee volledig stuk.
+
+    Het namaakscherm ving dit niet, want daar stonden beide functies wél op de
+    pagina. Deze test kijkt naar de enige vraag die telt: roept de geïnjecteerde
+    functie iets aan dat straks niet bestaat?
+    """
+    import re
+
+    start = BG.index("async function _mwVintedVerwijderen()")
+    i, diepte, eind = BG.index("{", start), 0, -1
+    while i < len(BG):
+        if BG[i] == "{":
+            diepte += 1
+        elif BG[i] == "}":
+            diepte -= 1
+            if diepte == 0:
+                eind = i + 1
+                break
+        i += 1
+    lichaam = BG[start:eind]
+
+    # Alles wat in background.js op het hoogste niveau als functie bestaat.
+    buiten = set(re.findall(r"^(?:async )?function ([A-Za-z_$][\w$]*)\s*\(", BG, re.M))
+    buiten.discard("_mwVintedVerwijderen")
+    gebruikt = sorted(n for n in buiten if re.search(rf"\b{re.escape(n)}\s*\(", lichaam))
+    assert not gebruikt, (
+        f"deze functie draait in de PAGINA en kan {gebruikt} daar niet aanroepen — "
+        f"zet ze erbinnen neer")
+
+
+def test_er_wordt_gewacht_tot_de_pagina_is_opgebouwd():
+    """Vinted bouwt de pagina met JavaScript op. Te vroeg kijken betekent geen
+    enkele knop, en dat heet dan ten onrechte "Delete control not found"."""
+    assert "knoppen(document).some(zichtbaar)" in BG
