@@ -2275,6 +2275,31 @@ neer op het moment dat hij ontstaat.
 """.format(marker=GEEN_ANTWOORD)
 
 
+_ZONDER_BEWERING_REGELS = """
+
+TWEEDE RONDE — SCHRIJF NU WÉL, MAAR ZONDER ÉÉN TECHNISCHE BEWERING.
+
+Je hebt zojuist vastgesteld dat het antwoord op deze vraag niet in de code
+staat. Die vraag ligt inmiddels bij Daniel:
+
+    {vraag}
+
+Dit is een BETALENDE KLANT. Hem twee dagen niets sturen is erger dan een kort,
+eerlijk bericht. Schrijf dus wel een mail, met deze harde grenzen:
+
+1. GEEN enkele uitspraak over wat werkt, niet werkt, opgelost is, komt, of
+   waardoor iets gebeurde. Geen oorzaak, geen oplossing, geen belofte over een
+   datum. Ook niet voorzichtig geformuleerd.
+2. Erken concreet wat hij schreef — in zijn eigen woorden, niet in algemene
+   ("vervelend dat het niet lekker loopt").
+3. Zeg in één zin wat er openstaat en dat Daniel daar zelf op terugkomt.
+4. Vroeg hij om bellen of een afspraak? Ga daar dan op in en stel voor dat
+   Daniel een moment voorstelt. Vroeg hij daar niet om, bied het dan niet aan.
+5. Kort. Vijf tot acht zinnen, inclusief aanhef en afsluiting.
+
+"""
+
+
 def _geen_antwoord(tekst: str) -> str | None:
     """De vraag die het model niet kon beantwoorden, of None."""
     for regel in (tekst or "").splitlines():
