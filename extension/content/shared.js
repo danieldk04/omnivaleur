@@ -732,8 +732,16 @@ window.CL = (() => {
     if (intendedEl && !intendedEl.value) missing.push("intended for");
     const bf = brandField();
     if (item.brand && bf && !fieldFilled(bf)) missing.push("brand");
-    if (emptyInput("textAttribute[manufacturerTradename]")) missing.push("manufacturer trade name");
-    if (emptyInput("textAttribute[manufacturerEmail]")) missing.push("manufacturer e-mail");
+    // Alleen klagen over de verantwoordelijke partij als de verkoper hem ook
+    // wílde meesturen. Staat die schakelaar in zijn instellingen uit, dan komt
+    // het blok leeg mee en is een leeg veld hier zijn eigen keuze — daarop de
+    // hele advertentie tegenhouden zou de keuze onmogelijk maken.
+    if (item.manufacturer_name && emptyInput("textAttribute[manufacturerTradename]")) {
+      missing.push("manufacturer trade name");
+    }
+    if (item.manufacturer_email && emptyInput("textAttribute[manufacturerEmail]")) {
+      missing.push("manufacturer e-mail");
+    }
     if (item.bid_percentage && emptyInput("price.minimumBidPrice")) missing.push("minimum bid");
 
     if (missing.length) {
@@ -1080,7 +1088,7 @@ window.CL = (() => {
     // dan staat hetzelfde adres hier twee keer in de lijst — en dan uploadt dit
     // formulier hem ook twee keer. Precies de melding "of plaatst de foto's
     // dubbel". De vraagtekens (?rule=…) tellen niet mee: dat is dezelfde foto in
-    // een ander formaat. De vololgorde blijft staan, want de eerste foto is de
+    // een ander formaat. De volgorde blijft staan, want de eerste foto is de
     // omslagfoto.
     {
       const gezien = new Set();
