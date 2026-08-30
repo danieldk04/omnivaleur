@@ -151,4 +151,29 @@ async def mirror_photos(urls: list[str] | None, user_id: str, _sem=None) -> list
     # multi-photo item.
     limits = httpx.Limits(max_connections=MAX_CONCURRENCY, max_keepalive_connections=MAX_CONCURRENCY)
     async with httpx.AsyncClient(timeout=REQUEST_TIMEOUT, limits=limits) as client:
-        return list(await asyncio.gather(*(one(client, u) for u in urls)))
+        return ontdubbel(list(await asyncio.gather(*(one(client, u) for u in urls))))
+
+
+def ontdubbel(urls: list[str]) -> list[str]:
+    """Dezelfde foto maar één keer, op de plek waar hij het eerst stond.
+
+    WAAROM DIT HIER MOET (30-08-2026). De naam in onze eigen opslag is de
+    vingerafdruk van de INHOUD (zie `digest` hierboven). Twee foto's die bij
+    Marktplaats onder verschillende nummers staan maar dezelfde afbeelding zijn
+    — een verkoper die dezelfde foto twee keer uploadde — komen hier dus als
+    twee identieke adressen uit. Die gingen allebei mee naar het formulier, en
+    dan staat dezelfde foto twee keer in de advertentie. Gemeld door Amanda:
+    "Of plaatst de foto's dubbel". Gemeten op 30-08-2026: 71 artikelen over vier
+    accounts hadden zo'n dubbele regel.
+
+    Volgorde blijft heilig: de eerste foto is op elk platform de omslagfoto.
+    """
+    gezien: set[str] = set()
+    uit: list[str] = []
+    for u in urls:
+        sleutel = u.split("?")[0] if isinstance(u, str) else repr(u)
+        if sleutel in gezien:
+            continue
+        gezien.add(sleutel)
+        uit.append(u)
+    return uit
