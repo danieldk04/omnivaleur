@@ -129,5 +129,6 @@ WHERE tablename = 'listings';
 
 SELECT item_id, platform, platform_listing_id, COUNT(*) AS aantal
 FROM listings
+WHERE status = 'active'
 GROUP BY item_id, platform, platform_listing_id
 HAVING COUNT(*) > 1;
