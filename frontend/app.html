@@ -6782,10 +6782,10 @@ function renderRefreshView() {
       actionCell = `<button class="btn btn-sm btn-outline" disabled title="Refreshable again in ${daysLeft} day(s)">Refresh</button>`;
     } else if (vintedStatus[relistKey(l.item_id, l.platform)] === 'ready') {
       statusCell = `<span class="rf-pill rf-pill-ready">✓ Ready to refresh</span>`;
-      actionCell = `<button class="btn btn-sm btn-primary" onclick="refreshItem('${item.id}','${esc(item.title)}','${l.platform}')">Refresh</button>`;
+      actionCell = `<button class="btn btn-sm btn-primary" onclick="refreshItem('${item.id}','${jsArg(item.title)}','${l.platform}')">Refresh</button>`;
     } else {
       statusCell = `<span class="rf-pill rf-pill-never">Never refreshed</span>`;
-      actionCell = `<button class="btn btn-sm btn-primary" onclick="refreshItem('${item.id}','${esc(item.title)}','${l.platform}')">Refresh</button>`;
+      actionCell = `<button class="btn btn-sm btn-primary" onclick="refreshItem('${item.id}','${jsArg(item.title)}','${l.platform}')">Refresh</button>`;
     }
 
     return `<tr>
@@ -9380,7 +9380,7 @@ function renderAnalytics(force) {
         <td class="an-sales-num">${costCell}</td>
         <td class="an-sales-num">${profCell}</td>
         <td class="an-sales-num">${marginCell}</td>
-        <td class="an-sales-num"><button class="an-notsold-btn" title="This item isn't actually sold — put it back to active" onclick="markNotSold('${item.id}','${p}','${esc(item.title || '').replace(/'/g, '\\\'')}')">Not sold</button></td>
+        <td class="an-sales-num"><button class="an-notsold-btn" title="This item isn't actually sold — put it back to active" onclick="markNotSold('${item.id}','${p}','${jsArg(item.title)}')">Not sold</button></td>
       </tr>`;
     }).join('');
   }
