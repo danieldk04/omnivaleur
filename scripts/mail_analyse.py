@@ -753,7 +753,8 @@ def _verloop_kandidaten(signalen: dict, staat: dict, nu=None) -> list[tuple[str,
         if s.get("status") != "open":
             continue
         laatst = _als_tijd(s.get("laatst"))
-        if not laatst or (nu - laatst).days < VERLOOP_DAGEN:
+        grens = VERLOOP_DAGEN_ZWAAR if s.get("moet_zeker") else VERLOOP_DAGEN
+        if not laatst or (nu - laatst).days < grens:
             continue
         melders = [m for m in (s.get("melders") or []) if m]
         if not melders:
