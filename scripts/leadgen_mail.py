@@ -1561,8 +1561,20 @@ def _check_inbox(state: dict, boek: "Notion", dagen: int) -> tuple[int, int, int
                     and is_laatste and not wij_aan_zet
                     and binnen_op > al_gedaan
                     and not (beantwoord_door_daniel and beantwoord_door_daniel > binnen_op)):
+                # Een antwoord op een NEE gaat vanzelf de deur uit; een antwoord
+                # op interesse blijft liggen. Dat onderscheid is precies waar
+                # Daniel om vroeg (31-08-2026): van de tien wachtende concepten
+                # waren het juist deze beleefdheidsberichten — "ik laat het
+                # hierbij", "dan is er voor jullie weinig te winnen" — die daar
+                # niets te zoeken hadden. Er valt niets te beslissen, er wordt
+                # niets beloofd, en ze lagen er twee dagen.
+                #
+                # Bij "warm" ligt dat anders: dat is een gesprek met iemand die
+                # misschien klant wordt, en dat is van hem. `_stuur_zelf` haalt
+                # er sowieso nog alles uit waar een toezegging in staat.
                 if _zet_concept_klaar(lead, msg, body,
-                                      soort if soort in ("concurrent", "afwijzing") else "warm"):
+                                      soort if soort in ("concurrent", "afwijzing") else "warm",
+                                      zelf_versturen=soort in ("concurrent", "afwijzing")):
                     st["laatste_inkomend"] = binnen_op
                     st["concept_klaar"] = datetime.now().isoformat(timespec="seconds")
                     _save_state(state)   # zie _warme_opvolging: meteen, niet aan het eind
