@@ -725,7 +725,15 @@ def vraag_voor_daniel(adres: str, vraag: str, aanleiding: str = "") -> bool:
 # Daarom een DERDE status, en dat onderscheid is de hele truc: `verlopen` haalt
 # de melding van de lijst en stuurt NOOIT bericht naar de klant. Alleen
 # `opgelost` doet dat. Uitdoven is geen reparatie en mag er ook niet op lijken.
-VERLOOP_DAGEN = 14
+# Hoe zwaarder het signaal, hoe langer we een melding vasthouden. Een gewone
+# klacht waar iemand daarna niet meer op terugkwam is na een week vermoedelijk
+# geschiedenis. Bij een klant die boos was, dreigde te stoppen, of bij een
+# storing die meerdere mensen meldden, is stilte veel minder overtuigend — die
+# houden we drie weken vast. Gemeten op 31-08-2026: met één vaste grens van 14
+# dagen doofde geen enkele melding van Zilverwebsite uit, terwijl Daniel zei dat
+# daar niets meer speelde; de meeste zaten net op 12 of 13 dagen.
+VERLOOP_DAGEN = 7
+VERLOOP_DAGEN_ZWAAR = 21
 
 
 def _verloop_kandidaten(signalen: dict, staat: dict, nu=None) -> list[tuple[str, str]]:
