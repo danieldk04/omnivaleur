@@ -1175,7 +1175,8 @@ def werkplaats(user=Depends(get_current_user_full)):
         # tien minuten later. Heeft de storing intussen al een terugmelding, dan
         # is het werk klaar en stond hier tot tien minuten lang "aan het werk"
         # boven een kaart die de reparatie al beschreef.
-        if (signalen.get(sleutel) or {}).get("status") in ("opgelost", "afgewezen"):
+        if (signalen.get(sleutel) or {}).get("status") in (
+                "opgelost", "afgewezen", "verlopen"):
             continue
         bezig = {**_storing_rij(sleutel, signalen.get(sleutel) or {}, ses), "minuten": minuten}
         break
