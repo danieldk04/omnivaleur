@@ -870,7 +870,11 @@ function storingRij(r) {
       <div class="uitleg" style="margin:4px 0 6px">${veilig(r.omschrijving || '')}</div>
       ${regel('Gemeld door', (r.melders || []).join(', '))}
       ${regel('Voorrang', (r.waarom || []).join(' · '))}
-      ${regel(r.status === 'afgewezen' ? 'Niet gerepareerd' : 'Wat er nu anders is', r.uitleg)}
+      ${r.status === 'verlopen'
+        ? regel('Uitgedoofd', (r.reden || 'speelde niet meer')
+                              + ' — de melder heeft hier géén bericht over gekregen')
+        : regel(r.status === 'afgewezen' ? 'Niet gerepareerd' : 'Wat er nu anders is',
+                r.uitleg || r.reden)}
       ${r.status === 'opgelost'
         ? regel('Klant bericht', !r.bericht_naar
             ? 'nog geen bericht; volgt zodra er geen andere post voor hem klaarligt'
