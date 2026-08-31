@@ -172,9 +172,56 @@ def test_via_resend_komt_er_altijd_een_kopie_in_verzonden(L, monkeypatch):
         "er is verstuurd zonder kopie in Verzonden — het slot tegen dubbele mail is blind"
 
 
+def test_via_zoho_wordt_er_niet_dubbel_gearchiveerd(L, monkeypatch):
+    """Zoho zet post die via zijn eigen SMTP gaat zelf al in Verzonden. Doen wij
+    het er nog eens overheen, dan staat alles dubbel — gemeten op 31-08-2026 met
+    negen met de hand verstuurde mails. Dat breekt het slot niet, maar het
+    vervuilt wél de map waar `_toonprofiel` Daniels toon uit afleidt."""
+    monkeypatch.delenv("RESEND_API_KEY", raising=False)
+    gearchiveerd = []
+
+    class Postbode:
+        def __enter__(self):
+            return lambda m: None
+
+        def __exit__(self, *a):
+            return False
+
+    class NepImap:
+        def __init__(self, *a, **kw):
+            pass
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *a):
+            return False
+
+        def login(self, *a):
+            return ("OK", [])
+
+        def append(self, map_, *a):
+            gearchiveerd.append(map_)
+            return ("OK", [])
+
+    monkeypatch.setattr(L, "_postbode", lambda *a, **kw: Postbode())
+    monkeypatch.setattr(L.imaplib, "IMAP4_SSL", NepImap)
+    monkeypatch.setattr(L, "_onthoud_concept", lambda *a, **kw: None)
+    monkeypatch.setattr(L, "_meld_verstuurd", lambda *a, **kw: None)
+
+    from email.message import EmailMessage
+    msg = EmailMessage()
+    msg["To"] = "info@voorbeeld.nl"
+    msg.set_content("Hi.")
+    L._stuur_zelf({"email": "info@voorbeeld.nl"}, msg, "Hi.", "klantenservice")
+
+    assert gearchiveerd == [], "Zoho archiveert zelf al; dit levert een dubbele regel op"
+
+
 def test_een_mislukte_kopie_in_verzonden_slaat_alarm(L, monkeypatch):
     """Stil falen is hier het gevaarlijkst: er is verstuurd, en niemand weet dat
     het slot van de volgende ronde er niets van terugziet."""
+    monkeypatch.setenv("RESEND_API_KEY", "re_test")
     alarmen = []
 
     class Postbode:
