@@ -3646,13 +3646,16 @@ def _leg_mailboxstand_vast() -> None:
                     "datum": _leesbaar(kop.get("Date")),
                 })
 
-    verzonden = [{"aan": m.get("aan"), "onderwerp": m.get("onderwerp"),
-                  "op": m.get("op")}
+    # `op` is een tijdstempel in seconden; als tekst is het voor een mens (en
+    # voor de developer die dit later leest) meteen te plaatsen.
+    verzonden = [{"aan": m.get("adres") or m.get("naar"),
+                  "op": datetime.fromtimestamp(m["op"]).isoformat(timespec="minutes")
+                        if m.get("op") else None}
                  for m in _verzonden_lezen()[-120:]]
 
     import mail_analyse
     mail_analyse._schrijf("mailbox_stand", {
-        "bijgewerkt": datetime.now(timezone.utc).isoformat(),
+        "bijgewerkt": datetime.now().isoformat(timespec="seconds"),
         "concepten": concepten,
         "verzonden_recent": verzonden,
     })
