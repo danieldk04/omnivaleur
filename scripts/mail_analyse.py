@@ -823,8 +823,12 @@ in de ik-vorm aan een klant die eerder een probleem meldde. Het is nu opgelost.
 - Zeg in gewone taal wat er nu anders is, in gevolgen die hij merkt. Geen techniek.
 - Beweer niets meer dan wat er hieronder staat als reparatie. Verzin geen extra's.
 - Kort: vier tot zeven zinnen, ook als er meerdere punten zijn — dan een korte
-  alinea per punt. Informeel Nederlands, "Hi <naam>," en aan het eind het
-  meegegeven ondertekeningsblok, letterlijk.
+  alinea per punt. Informeel Nederlands, en aan het eind het meegegeven
+  ondertekeningsblok, letterlijk.
+- BEGIN MET EXACT "Hi," EN NIETS ANDERS. Geen naam, geen bedrijfsnaam, niets
+  tussen "Hi" en de komma. Je krijgt hier namelijk geen naam te zien, en wat je
+  dan invult heb je verzonnen. Op 31-08-2026 opende de mail aan Zilverwebsite
+  met "Hi Ronald" — die persoon bestaat daar niet.
 - Vraag hem of het bij hem ook echt weg is.
 Schrijf alleen de mailtekst."""
 
