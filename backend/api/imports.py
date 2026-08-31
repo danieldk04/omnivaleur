@@ -1092,9 +1092,36 @@ async def _find_twins(cands: list[dict], items: list[dict], platforms_by_item: d
     return merged
 
 
+# Hoeveel modelaanroepen er hier hooguit tegelijk mogen lopen.
+#
+# WAAROM DIT ER IS (31-08-2026, Egbert Brouwer).
+# Egbert stuurde een schermafbeelding: zijn importlijst blijft leeg en het
+# scherm zegt "Server error (500). Please try again in a moment." Zijn extensie
+# staat op 1.0.273 en de Admarkt-schakelaar staat aan — daar lag het dus niet
+# aan.
+#
+# Wat hier gebeurde: bij 500 kandidaten maakt de code 13 brokken en vuurt die
+# ALLEMAAL tegelijk af met `asyncio.gather`. Elke brok doet zijn modelaanroep
+# via `asyncio.to_thread`, en die deelt zijn draden met de inlogcontrole die op
+# élk verzoek draait — dezelfde valkuil die bovenaan scheduler.py al beschreven
+# staat. Op Railway is die voorraad zes draden groot. Dertig seconden lang was
+# er dus geen draad meer over voor wie dan ook, en dat is precies hoe een
+# verzoek eindigt in een 500 zonder JSON eronder.
+#
+# Drie tegelijk is nog steeds ruim vier keer sneller dan één voor één, en laat
+# de helft van de draden vrij voor gewone verzoeken.
+_TWIN_TEGELIJK = 3
+
+
 async def _asyncio_gather_safe(chunks, fn):
     import asyncio as _asyncio
-    return await _asyncio.gather(*(fn(c) for c in chunks))
+    rem = _asyncio.Semaphore(_TWIN_TEGELIJK)
+
+    async def _met_rem(c):
+        async with rem:
+            return await fn(c)
+
+    return await _asyncio.gather(*(_met_rem(c) for c in chunks))
 
 
 @router.post("/scan/{platform}")
