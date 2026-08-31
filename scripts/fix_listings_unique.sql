@@ -32,9 +32,26 @@
 -- ja welke. Die voorwaarde moet in stap 2 terugkomen, anders verdwijnt met de
 -- botsing ook de bescherming tegen dubbel publiceren.
 
+-- 1a — welke indexen staan er (uitgevoerd 31-08-2026):
+--   listings_pkey, idx_listings_item_id, idx_listings_status,
+--   idx_listings_platform, listings_item_platform_unique
+-- De laatste is dus inderdaad een UNIQUE INDEX. Alleen viel de definitie rechts
+-- van het scherm weg, en juist daar zou een WHERE staan.
+
 SELECT indexname, indexdef
 FROM pg_indexes
 WHERE tablename = 'listings';
+
+
+-- 1b — DE ENIGE VRAAG DIE NOG OPEN STAAT. Geeft dit NULL terug, dan geldt de
+-- index voor álle rijen. Komt er tekst uit, dan is dat de voorwaarde en moet
+-- die ONVERANDERD mee naar de nieuwe index in stap 2.
+-- Deze vorm past altijd op het scherm, hoe smal de kolom ook is.
+
+SELECT pg_get_expr(i.indpred, i.indrelid) AS voorwaarde
+FROM pg_index i
+JOIN pg_class c ON c.oid = i.indexrelid
+WHERE c.relname = 'listings_item_platform_unique';
 
 
 -- ── STAP 2: WIJZIGEN ────────────────────────────────────────────────────────
