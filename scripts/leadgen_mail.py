@@ -1132,7 +1132,17 @@ def _verstuur(rij: list, gebruiker: str, host: str, state: dict,
             st["verstuurd"].append({"beurt": BEURTEN[n][0],
                                     "op": datetime.now().isoformat(timespec="seconds")})
             st["laatste"] = datetime.now().isoformat(timespec="seconds")
-            _save_state(state)          # na elke mail, zodat een crash niets dubbel doet
+            try:
+                _save_state(state)      # na elke mail, zodat een crash niets dubbel doet
+            except OpslagOnbereikbaar as e:
+                # STOPPEN, NIET DOORGAAN. Deze mail is de deur uit maar staat
+                # nergens genoteerd. Elke volgende mail vergroot alleen de groep
+                # die hem straks nog een keer krijgt.
+                print(f"!! administratie niet bijgewerkt na {lead['email']} — "
+                      f"de rest van de ronde gaat NIET door: {e}")
+                _storingsalarm(f"{e}\n\nDe mail aan {lead['email']} is wél verstuurd "
+                               f"maar niet genoteerd; controleer die ene met de hand.")
+                return verstuurd + 1
             verstuurd += 1
             boek.verstuurd(lead, n, _onderwerp(lead, n))
             print(f"  → {BEURTEN[n][0]} {lead['email']}", flush=True)
