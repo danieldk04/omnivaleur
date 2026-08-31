@@ -757,6 +757,12 @@
   // netjes stond, terwijl Vinted hem weigerde.
   const PRICE_ERR_RE = /price must|must be greater|greater than or equal|at least|minimaal|moet (groter|ten minste)|ongeldig|invalid/i;
 
+  // Elke rode regel die het formulier zelf toont ("Fill in size to continue").
+  // Bewust smal gehouden: het moet echt LEZEN als een klacht, anders zou een
+  // willekeurig element met "error" in de klassenaam een geslaagde opslag
+  // alsnog als mislukt laten eindigen.
+  const FORM_ERR_RE = /fill in|vul .+ in|is required|required|verplicht|must be|moet |at least|greater than|invalid|ongeldig|select a|kies /i;
+
   // Welk blad hoort bij dit artikel?
   //
   // WAAROM DIT ZO MOET. De vorige versie keek of een woord uit de optienaam
@@ -941,6 +947,15 @@
       throw new Error("Vinted refresh: couldn't re-order the photos while keeping the first one fixed. This needs at least 3 photos, and Vinted must accept the drag. Nothing was changed — use refresh 2 (relist) instead.");
     }
 
+    // Vinted keurt bij het opslaan de HELE advertentie, niet alleen het veld dat
+    // wij veranderden. Een oudere of geïmporteerde advertentie die een inmiddels
+    // verplicht veld mist — meestal de maat — wordt daarom geweigerd: het
+    // formulier blijft gewoon staan met "Fill in size to continue" eronder. Van
+    // buitenaf is dat niet te onderscheiden van "hij drukt niet op opslaan", en
+    // precies zo werd het gemeld. Dus eerst aanvullen wat we uit het dashboard
+    // kunnen halen; wat dan nog ontbreekt, staat straks met naam in de fout.
+    await topUpRequiredFieldsVinted(item);
+
     // Save/update button — Vinted's edit page uses the same testid as create ("Save"/"Update").
     const saveBtn = [...document.querySelectorAll('button[data-testid], button')]
       .find(b => b.offsetParent !== null && /^(save|update|opslaan|bijwerken)$/i.test(b.textContent.trim()));
@@ -959,15 +974,97 @@
       if (stillEditing.getAttribute("aria-invalid") === "true" || _num(stillEditing.value) < 1) {
         throw new Error("Vinted refresh: save was rejected — the price is invalid (Vinted requires €1.00 or more).");
       }
-      const errText = [...document.querySelectorAll('[class*="validation"], [class*="Validation"], [role="alert"], [class*="error" i]')]
-        .find(e => e.offsetParent !== null && /price must|greater than|at least|minimaal|moet (groter|ten minste)|ongeldig|invalid/i.test(e.textContent || ""));
-      if (errText) {
-        throw new Error("Vinted refresh: save was rejected — " + errText.textContent.trim().slice(0, 140));
+      // Elke klacht van het formulier telt, niet alleen die over de prijs. Een
+      // geweigerde opslag om een leeg maatveld gaf hiervoor de nietszeggende
+      // "could not be verified" terug, terwijl Vinted er letterlijk bij zette
+      // wat er miste.
+      const klachten = formErrorsVinted();
+      if (klachten.length) {
+        throw new Error("Vinted refresh: save was rejected — " + klachten.join(" · ") + saveHintVinted(item, klachten));
       }
     }
     // Still on the edit form after ~7s with no visible error — treat as failure
     // rather than falsely reporting success (nothing verified as saved).
-    throw new Error("Vinted refresh: clicked Save but the edit form never closed — the update could not be verified.");
+    // Zonder zichtbare melding kunnen we nog steeds zeggen wélk verplicht veld
+    // leeg staat; dat is negen van de tien keer waar Vinted op blokkeert.
+    const nogLeeg = emptyRequiredFieldsVinted();
+    throw new Error("Vinted refresh: clicked Save but the edit form never closed — the update could not be verified." +
+      (nogLeeg.length ? " Still empty on the Vinted form: " + nogLeeg.join(", ") + "." : "") +
+      saveHintVinted(item, nogLeeg));
+  }
+
+  // Vult velden aan die op de Vinted-pagina leeg staan, met wat het dashboard
+  // van dit item weet. Raakt uitsluitend LEGE velden aan — wat de verkoper daar
+  // zelf heeft staan blijft onaangeroerd, ook bij een prijswijziging.
+  async function topUpRequiredFieldsVinted(item) {
+    const gevuld = [];
+    const maatVeld = () => qs('input[data-testid="category-size-single-grid-input"]')
+      || [...document.querySelectorAll('input[data-testid^="category-size"][data-testid$="-input"]')]
+        .find(e => e.offsetParent) || null;
+
+    if (maatVeld() && !sizeIsFilledVinted() && String(item.size || "").trim()) {
+      // Dezelfde herhaling als bij het plaatsen: welke vorm het maatveld
+      // aanneemt hangt van de categorie af, en één poging is geregeld te vroeg.
+      for (let poging = 0; poging < 3 && !sizeIsFilledVinted(); poging++) {
+        await fillAttributeVinted(["size"], String(item.size));
+        await sleep(500);
+      }
+      if (sizeIsFilledVinted()) gevuld.push("size");
+      else console.warn("[Omnivaleur] Vinted edit: maat bleef leeg na herhalen:", item.size);
+    }
+
+    if (gevuld.length) {
+      clog("edit: leeg veld aangevuld vóór opslaan — " + gevuld.join(", "));
+      // Laat geen open paneel over de opslaanknop heen staan.
+      const buiten = qs('input[data-testid="title--input"]');
+      if (buiten) { realClickEl(buiten); await sleep(400); }
+    }
+    return gevuld;
+  }
+
+  // Waar klaagt het formulier over, in Vinted's eigen woorden?
+  function formErrorsVinted() {
+    const gezien = new Set();
+    const regels = [];
+    for (const e of document.querySelectorAll('[class*="validation" i], [role="alert"], [class*="error" i]')) {
+      if (e.offsetParent === null) continue;
+      const t = (e.textContent || "").replace(/\s+/g, " ").trim();
+      if (!t || t.length > 160 || gezien.has(t) || !FORM_ERR_RE.test(t)) continue;
+      gezien.add(t);
+      regels.push(t);
+    }
+    // Alleen de meest specifieke regels: een omhullend blok herhaalt de tekst
+    // van zijn kind, en dan zou dezelfde klacht er twee keer in staan.
+    return regels.filter(t => !regels.some(o => o !== t && t.includes(o)));
+  }
+
+  // Welke velden waar Vinted op blokkeert staan op dit moment zichtbaar leeg.
+  function emptyRequiredFieldsVinted() {
+    const leeg = [];
+    const maat = qs('input[data-testid="category-size-single-grid-input"]')
+      || [...document.querySelectorAll('input[data-testid^="category-size"][data-testid$="-input"]')]
+        .find(e => e.offsetParent);
+    if (maat && !(maat.value || "").trim()) leeg.push("size");
+    for (const [naam, sel] of [
+      ["colour",    'input[data-testid="color-select-dropdown-input"]'],
+      ["condition", 'input[data-testid="category-condition-single-list-input"]'],
+      ["category",  'input[data-testid="catalog-select-dropdown-input"]'],
+    ]) {
+      const el = qs(sel);
+      if (el && el.offsetParent !== null && !(el.value || "").trim()) leeg.push(naam);
+    }
+    return leeg;
+  }
+
+  // Eén regel die de gebruiker écht verder helpt. Verreweg het vaakst: Vinted
+  // wil een maat op een advertentie die er nooit een had, en het item in
+  // Omnivaleur heeft er ook geen — dan lost opnieuw proberen niets op.
+  function saveHintVinted(item, klachten) {
+    const tekst = (klachten || []).join(" ").toLowerCase();
+    if (!/size|maat/.test(tekst)) return "";
+    return String(item.size || "").trim()
+      ? ` Omnivaleur has size "${item.size}" for this item but Vinted wouldn't accept it — set the size on the Vinted page yourself and click Save.`
+      : " This item has no size in Omnivaleur, so it can't be filled in for you — add the size to the item and try again.";
   }
 
   // Locate the uploaded-photo tiles on the edit page. Verified live against

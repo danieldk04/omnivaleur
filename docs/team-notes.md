@@ -2776,3 +2776,28 @@ zelfde advertentienummer, bij status 'active'), met daaronder een vangnet dat
 een 23505 van de database opvangt in plaats van hem als serverfout door te
 laten. Dat vangnet blijft staan: het beschermt ook tegen een toekomstige
 schemawijziging die niemand hier doorgeeft.
+
+### 31-08-2026 — Vinted keurt bij opslaan de héle advertentie, niet je wijziging
+
+Stale stock verlaagde een prijs naar €27,99, de extensie zette die netjes in het
+veld, en daarna leek er niets meer te gebeuren — "hij drukt niet op opslaan".
+Er wérd op Save gedrukt. Vinted weigerde, omdat de maat op die advertentie leeg
+stond, en liet het formulier open staan met "Fill in size to continue".
+
+De controle na het opslaan zocht alleen naar klachten over de prijs. Die was er
+niet, dus liep de lus zeven seconden leeg en eindigde met "clicked Save but the
+edit form never closed — the update could not be verified". Die zin noemt het
+maatveld niet en leest daarom als een knop die nooit is ingedrukt.
+
+**Les, breder dan Vinted:** een kanaal valideert bij het opslaan het hele
+zoekertje, niet alleen het veld dat wij aanraakten. Elke bewerkroute moet dus
+(a) de verplichte velden die leeg staan aanvullen vóór het opslaan, en (b) bij
+een weigering de eigen tekst van het kanaal doorgeven. Een foutmelding die alleen
+zegt "kon niet worden bevestigd" stuurt de diagnose gegarandeerd de verkeerde
+kant op — hier naar de opslaanknop, terwijl het probleem drie velden hoger zat.
+
+Gerepareerd in `extension/content/vinted.js` (1.0.274): `refreshListingVinted`
+vult een leeg maatveld eerst uit het dashboarditem, en noemt bij een weigering
+Vinted's eigen rode regel plus welk verplicht veld leeg bleef. Bewezen in
+`tests/vinted-mock/opslaan-geweigerd-test.js` (de echte code tegen een
+namaakscherm) en `tests/test_vinted_opslaan_geweigerd.py`.
