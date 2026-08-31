@@ -150,8 +150,22 @@ async def poll_platform_statuses():
 
 
 async def _check_one(listing: dict, credentials: dict):
+    """Eén advertentie nakijken, en er ALTIJD een stempel op zetten.
+
+    Dat stempel (`last_checked`) is sinds 31-08-2026 niet alleen administratie
+    maar ook de wachtrij: `poll_platform_statuses` kiest de advertenties die het
+    langst geleden zijn nagekeken. Blijft het stempel achterwege als het
+    nakijken misgaat — een platform dat er even uit ligt, een verlopen sessie —
+    dan blijft precies díe advertentie vooraan staan en verdringt hij elke ronde
+    opnieuw alle andere. Eén kapotte advertentie zou zo de hele verkoopcontrole
+    kunnen laten vastlopen.
+
+    Alles gaat in ÉÉN update de deur uit in plaats van twee tot drie losse.
+    """
     db = get_db()
     platform_name = listing["platform"]
+    velden: dict = {"last_checked": datetime.now(timezone.utc).isoformat()}
+    naderhand = None
 
     try:
         platform = get_platform(platform_name)
@@ -159,14 +173,9 @@ async def _check_one(listing: dict, credentials: dict):
             listing["platform_listing_id"], credentials
         )
 
-        from datetime import datetime, timezone
-        await _exec(db.table("listings").update({
-            "last_checked": datetime.now(timezone.utc).isoformat()
-        }).eq("id", listing["id"]))
-
         if status == "sold":
             logger.info(f"Item {listing['item_id']} sold on {platform_name} — triggering delist")
-            await handle_item_sold(listing["item_id"], platform_name)
+            naderhand = listing["item_id"]
 
         elif status == "not_found":
             # A single 404 is often caused by a stale/expired polling session rather than
@@ -174,16 +183,28 @@ async def _check_one(listing: dict, credentials: dict):
             # Vinted listings during a session outage). Require 2 consecutive not-found
             # polls before trusting it enough to actually delist.
             not_found_count = (listing.get("not_found_count") or 0) + 1
+            velden["not_found_count"] = not_found_count
             if not_found_count >= 2:
                 logger.warning(f"Listing {listing['id']} not found on {platform_name} for {not_found_count} consecutive polls — marking delisted")
-                await _exec(db.table("listings").update({"status": "delisted", "not_found_count": not_found_count}).eq("id", listing["id"]))
+                velden["status"] = "delisted"
             else:
                 logger.warning(f"Listing {listing['id']} not found on {platform_name} (1st time) — waiting for confirmation before delisting")
-                await _exec(db.table("listings").update({"not_found_count": not_found_count}).eq("id", listing["id"]))
 
-        elif status in ("active", "sold"):
-            if listing.get("not_found_count"):
-                await _exec(db.table("listings").update({"not_found_count": 0}).eq("id", listing["id"]))
+        elif status == "active" and listing.get("not_found_count"):
+            velden["not_found_count"] = 0
 
     except Exception as e:
         logger.error(f"Poll failed for listing {listing['id']}: {e}")
+
+    try:
+        await _exec(db.table("listings").update(velden).eq("id", listing["id"]))
+    except Exception as e:  # noqa: BLE001
+        logger.error(f"Poll: listing {listing['id']} niet bijgewerkt: {e}")
+
+    # Pas ná het stempel. Zou het afmelden hier stukgaan, dan is deze
+    # advertentie in elk geval niet meer "aan de beurt" en blijft de rij lopen.
+    if naderhand:
+        try:
+            await handle_item_sold(naderhand, platform_name)
+        except Exception as e:  # noqa: BLE001
+            logger.error(f"Poll: afmelden van item {naderhand} mislukt: {e}")
