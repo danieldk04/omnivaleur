@@ -693,6 +693,120 @@ def vraag_voor_daniel(adres: str, vraag: str, aanleiding: str = "") -> bool:
 # concept klaar) en vertelden geen van drieën het verhaal. Wat de twee samen
 # gedaan hebben staat nu in ÉÉN mail: het seintje dat er een concept klaarligt.
 # Zie `_samenwerking` in leadgen_mail.py.
+# ------------------------------------------- meldingen die vanzelf uitdoven
+#
+# WAAROM DIT ER IS (31-08-2026, Daniel: "er is namelijk niks meer mbt
+# zilverwebsite wat openstaat op dit moment").
+#
+# De lijst ging maar één kant op. Klantmail zette storingen erop, en er waren
+# precies twee manieren om ze eraf te krijgen: `opgelost` of `afgewezen`, allebei
+# door de developer. Handelde Daniel iets zelf af, of loste het vanzelf op, dan
+# bleef het eeuwig staan. Gemeten: zeventien meldingen van Zilverwebsite stonden
+# als "open" terwijl er volgens Daniel niets meer speelde, de oudste van 17-08.
+#
+# Dat is niet alleen rommelig:
+#   * de automatische starter zet sessies op storingen die niet meer bestaan;
+#   * de developer rapporteert een beeld dat structureel te somber is;
+#   * en wie zo'n oude melding alsnog met `opgelost` afsluit, stuurt de klant
+#     post over een probleem dat hij allang vergeten is — precies het soort mail
+#     dat op 31-08 misging.
+#
+# Daarom een DERDE status, en dat onderscheid is de hele truc: `verlopen` haalt
+# de melding van de lijst en stuurt NOOIT bericht naar de klant. Alleen
+# `opgelost` doet dat. Uitdoven is geen reparatie en mag er ook niet op lijken.
+VERLOOP_DAGEN = 14
+
+
+def _verloop_kandidaten(signalen: dict, staat: dict, nu=None) -> list[tuple[str, str]]:
+    """(sleutel, reden) voor elke melding die stilletjes van de lijst mag.
+
+    Het beslissende signaal is niet tijd maar CONTACT ZONDER HERHALING: de
+    melder heeft ons ná zijn klacht nog geschreven (of kreeg antwoord) en is er
+    niet op teruggekomen. Alleen tijd zou te zwak zijn — iemand die drie weken
+    op vakantie is heeft zijn storing niet ingetrokken.
+
+    Was er ná de melding geen enkel contact, dan blijft hij staan. Niets weten
+    is geen reden om iets weg te halen.
+    """
+    nu = nu or datetime.now(timezone.utc)
+    uit: list[tuple[str, str]] = []
+    for sleutel, s in signalen.items():
+        if s.get("status") != "open":
+            continue
+        laatst = _als_tijd(s.get("laatst"))
+        if not laatst or (nu - laatst).days < VERLOOP_DAGEN:
+            continue
+        melders = [m for m in (s.get("melders") or []) if m]
+        if not melders:
+            continue
+        # ELKE melder moet erover heen zijn. Bij twee melders is één stille geen
+        # bewijs dat het over is — de ander kan er nog middenin zitten.
+        redenen = []
+        for adres in melders:
+            k = (staat.get(adres) or {})
+            na = max(_seconden(k.get("laatste_inkomend")),
+                     _seconden(k.get("daniel_antwoordde")))
+            if not na or na <= laatst.timestamp():
+                redenen = []
+                break
+            redenen.append(adres)
+        if redenen:
+            uit.append((sleutel, f"na {laatst:%d-%m} nog contact met "
+                                 f"{', '.join(redenen[:3])} zonder dat het terugkwam"))
+    return uit
+
+
+def _als_tijd(waarde):
+    try:
+        d = datetime.fromisoformat(str(waarde))
+        return d if d.tzinfo else d.replace(tzinfo=timezone.utc)
+    except (ValueError, TypeError):
+        return None
+
+
+def _seconden(waarde) -> float:
+    try:
+        return float(waarde or 0)
+    except (ValueError, TypeError):
+        return 0.0
+
+
+def laat_verlopen_uitdoven() -> int:
+    """Zet stilgevallen meldingen op `verlopen`. Geen klant krijgt hier post van."""
+    signalen = bugs()
+    if not signalen:
+        return 0
+    staat = _lees("mail_state", {}) or {}
+    kandidaten = _verloop_kandidaten(signalen, staat)
+    for sleutel, reden in kandidaten:
+        s = signalen[sleutel]
+        s["status"] = "verlopen"
+        s["verlopen_op"] = datetime.now(timezone.utc).isoformat()
+        s["reden"] = reden
+        s.pop("gemeld_als_patroon", None)
+        print(f"  ⌛ '{sleutel}' uitgedoofd: {reden}")
+    if kandidaten:
+        _schrijf(BUG_SLEUTEL, signalen)
+    return len(kandidaten)
+
+
+def verlopen(args) -> None:
+    """Handmatig: deze melding speelt niet meer, zonder de klant lastig te vallen."""
+    signalen = bugs()
+    s = signalen.get(args.sleutel)
+    if not s:
+        print(f"Geen storing bekend onder '{args.sleutel}'. "
+              f"Bekend: {', '.join(sorted(signalen)) or 'geen'}")
+        return
+    s["status"] = "verlopen"
+    s["verlopen_op"] = datetime.now(timezone.utc).isoformat()
+    s["reden"] = args.reden
+    s.pop("gemeld_als_patroon", None)
+    _schrijf(BUG_SLEUTEL, signalen)
+    print(f"'{args.sleutel}' staat op verlopen: {args.reden}. "
+          f"Er gaat GEEN bericht naar de melder(s).")
+
+
 def afgewezen(args) -> None:
     """Deze storing gaan we niet repareren, en dat is een besluit.
 
