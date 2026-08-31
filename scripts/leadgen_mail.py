@@ -3602,6 +3602,64 @@ def _seintje(msg: EmailMessage, sleutel: str, wat: str) -> None:
     _archiveer(msg)
 
 
+def _leg_mailboxstand_vast() -> None:
+    """Schrijf op wat er in Concepten en in Verzonden staat.
+
+    WAAROM DIT ER IS (31-08-2026). Daniel vroeg de developer te kijken wat er
+    verzonden is en wat er in concept staat, en of dat nog klopt. Dat kon niet:
+    de mailwachtwoorden staan alleen op Railway, dus vanaf een ontwikkelmachine
+    is de postbus onzichtbaar. Het gevolg was erger dan lastig — de developer
+    gaf een statusbeeld op basis van de storingenlijst alleen, en dat beeld was
+    aantoonbaar fout (zeventien "openstaande" meldingen van Zilverwebsite die
+    allang waren afgehandeld).
+
+    De wachtwoorden hierheen kopiëren zou het oplossen en tegelijk een tweede
+    plek maken waar ze kunnen weglekken. Dit doet het andersom: de agent draait
+    tóch al elke tien minuten mét die toegang, en legt hier neer wát hij ziet.
+    Iedereen die bij de administratie kan, kan daarna de postbus lezen zonder
+    één wachtwoord te kennen.
+
+    Bewust ZONDER berichtinhoud: alleen aan wie, waarover en wanneer. Genoeg om
+    te weten of een antwoord al bestaat, te weinig om klantpost te lekken naar
+    een plek die daar niet voor bedoeld is.
+    """
+    host, gebruiker = os.environ.get("IMAP_HOST"), os.environ.get("MAIL_USER")
+    wachtwoord = os.environ.get("MAIL_PASS")
+    if not (host and gebruiker and wachtwoord):
+        return
+
+    concepten: list[dict] = []
+    with imaplib.IMAP4_SSL(host, 993) as imap:
+        imap.login(gebruiker, wachtwoord)
+        bestaand = {r.decode().split(' "/" ')[-1].strip('"')
+                    for r in (imap.list()[1] or [])}
+        for map_ in (CONCEPTMAP, "Drafts"):
+            if map_ not in bestaand:
+                continue
+            imap.select(f'"{map_}"', readonly=True)
+            _, d = imap.search(None, "ALL")
+            for kop in _koppen_in_bulk(imap, (d[0] or b"").split()).values():
+                concepten.append({
+                    "map": map_,
+                    "aan": _leesbaar(kop.get("To")),
+                    "onderwerp": _leesbaar(kop.get("Subject")),
+                    "datum": _leesbaar(kop.get("Date")),
+                })
+
+    verzonden = [{"aan": m.get("aan"), "onderwerp": m.get("onderwerp"),
+                  "op": m.get("op")}
+                 for m in _verzonden_lezen()[-120:]]
+
+    import mail_analyse
+    mail_analyse._schrijf("mailbox_stand", {
+        "bijgewerkt": datetime.now(timezone.utc).isoformat(),
+        "concepten": concepten,
+        "verzonden_recent": verzonden,
+    })
+    print(f"  mailboxstand vastgelegd: {len(concepten)} concept(en), "
+          f"{len(verzonden)} verzonden")
+
+
 def _samenwerking(adres: str, bron: str) -> tuple[str, str]:
     """Wie eraan gewerkt heeft, en WAT die twee samen hebben gedaan.
 
