@@ -3538,24 +3538,91 @@ def _stuur_zelf(lead: dict, msg: EmailMessage, kern: str, bron: str) -> bool:
 # hier weg hoort te zijn. Er staat ook in wie het antwoord heeft geschreven: is
 # er een storing bij, dan is die eerst door de developer beantwoord, en dat
 # scheelt hem het nalezen of het klopt.
-def _meld_concept_klaar(lead: dict, onderwerp: str, tekst: str,
-                        bron: str = "klantenservice") -> None:
-    adres = (lead.get("email") or "").lower()
+# ── Nooit twee keer hetzelfde seintje ────────────────────────────────────────
+# WAAROM DIT ER IS (31-08-2026). Daniel: "nooit meer dubbele mails of dubbele
+# meldingen dat een concept klaar staat". Elk seintje ging tot nu toe blind de
+# deur uit. Werd dezelfde ronde twee keer gedraaid — een afgekapte beurt, een
+# herstart van de server, een handmatig commando — dan lag hetzelfde seintje er
+# twee keer, over hetzelfde concept.
+#
+# De administratie is hier de verkeerde plek voor: die lag op 31-08 juist plat.
+# Het bewijs staat daarom waar het altijd staat in dit systeem — in de postbus
+# zelf. Elk seintje krijgt een eigen kenmerk mee en een kopie in de meldingenmap;
+# voordat er een nieuw seintje uitgaat, wordt op dat kenmerk gezocht.
+MELDKOP = "X-Omnivaleur-Melding"
+MELDING_DAGEN = 14
+
+
+def _meldsleutel(*delen: str) -> str:
+    ruw = "|".join((d or "").strip().lower() for d in delen)
+    return hashlib.sha1(ruw.encode("utf-8", "replace")).hexdigest()[:16]
+
+
+def _al_gemeld(sleutel: str) -> bool:
+    """Is er over precies dit al een seintje geweest?"""
+    host, van = os.environ.get("IMAP_HOST"), os.environ.get("MAIL_USER")
+    wachtwoord = os.environ.get("MAIL_PASS")
+    if not (host and van and wachtwoord and sleutel):
+        return False
+    try:
+        with imaplib.IMAP4_SSL(host, 993) as im:
+            im.login(van, wachtwoord)
+            if im.select(f'"{ALARM_MAP}"', readonly=True)[0] != "OK":
+                return False
+            _, d = im.search(None, f'(SINCE {_sinds(MELDING_DAGEN)} '
+                                   f'HEADER "{MELDKOP}" "{sleutel}")')
+            return bool((d[0] or b"").split())
+    except Exception as e:  # noqa: BLE001 — niet kunnen kijken is geen bewijs
+        print(f"  (kon niet nakijken of dit al gemeld is: {e})")
+        return False
+
+
+def _seintje(msg: EmailMessage, sleutel: str, wat: str) -> None:
+    """Eén seintje versturen én archiveren, hooguit één keer per kenmerk."""
     host, van = os.environ.get("MAIL_HOST"), os.environ.get("MAIL_USER")
-    if not (host and van and ALARM_NAAR and adres):
+    if not (host and van and ALARM_NAAR):
         return
-    # Kwam er een reparatie van de developer aan te pas, dan hoort dat erbij:
-    # dat is het verschil tussen "de klantenservice heeft iets geschreven" en
-    # "dit is nagekeken in de code".
-    if bron == "klantenservice":
-        try:
-            import mail_analyse
-            for storing in (mail_analyse.bugs() or {}).values():
-                if adres in (storing.get("melders") or []) and storing.get("status") == "opgelost":
-                    bron = "klantenservice + developer"
-                    break
-        except Exception:  # noqa: BLE001 — zonder dit label nog steeds een seintje
-            pass
+    if _al_gemeld(sleutel):
+        print(f"  ⊘ seintje '{wat}' overgeslagen: al eerder gemeld")
+        return
+    msg[MELDKOP] = sleutel
+    try:
+        with _postbode(van, host) as stuur:
+            stuur(msg)
+    except Exception as e:  # noqa: BLE001 — een mislukt seintje mag nooit iets blokkeren
+        print(f"  (seintje '{wat}' niet verstuurd: {e})")
+        return
+    # De kopie is wat de volgende ronde terugvindt. Zonder deze regel werkt de
+    # controle hierboven niet en zijn we terug bij dubbele meldingen.
+    _archiveer(msg)
+
+
+def _bron_met_developer(adres: str, bron: str) -> str:
+    """Kwam er een reparatie van de developer aan te pas, dan hoort dat erbij:
+    dat is het verschil tussen "de klantenservice heeft iets geschreven" en
+    "dit is nagekeken in de code"."""
+    if bron != "klantenservice":
+        return bron
+    try:
+        import mail_analyse
+        for storing in (mail_analyse.bugs() or {}).values():
+            if adres in (storing.get("melders") or []) and storing.get("status") == "opgelost":
+                return "klantenservice + developer"
+    except Exception:  # noqa: BLE001 — zonder dit label nog steeds een seintje
+        pass
+    return bron
+
+
+def _meld_concept_klaar(lead: dict, onderwerp: str, tekst: str,
+                        bron: str = "klantenservice",
+                        wachtreden: str = "") -> None:
+    adres = (lead.get("email") or "").lower()
+    if not adres:
+        return
+    van = os.environ.get("MAIL_USER")
+    if not van:
+        return
+    bron = _bron_met_developer(adres, bron)
     msg = EmailMessage()
     msg["From"] = f"Klantenservice <{van}>"
     msg["To"] = ", ".join(ALARM_NAAR)
@@ -3568,18 +3635,47 @@ def _meld_concept_klaar(lead: dict, onderwerp: str, tekst: str,
               "een bericht dat hij daarna heeft ingehaald. Dit hier is de nieuwe; "
               "de oude kun je weggooien.\n"
               if adres in _ACHTERHAALD_CONCEPT else "")
+    # Waaróm dit blijft liggen in plaats van vanzelf weg te gaan. Zonder die zin
+    # lijkt elk wachtend concept willekeurig, en dan is de map weer een stapel.
+    waarom = (f"Waarom dit blijft liggen en niet vanzelf is verstuurd:\n"
+              f"  {wachtreden}\n\n" if wachtreden else "")
     msg.set_content(
         f"Er ligt een concept klaar in je conceptenmap.\n{dubbel}\n"
         f"Aan:        {adres}\n"
         f"Onderwerp:  {onderwerp}\n"
         f"Geschreven: {bron}\n\n"
+        f"{waarom}"
         f"--- het concept ---\n{(tekst or '').strip()[:1500]}\n--- einde ---\n\n"
         f"Nalezen en versturen; aanpassen mag, dan leer ik daarvan.\n")
-    try:
-        with _postbode(van, host) as stuur:
-            stuur(msg)
-    except Exception as e:  # noqa: BLE001 — een mislukt seintje mag nooit iets blokkeren
-        print(f"  (seintje 'concept klaar' niet verstuurd: {e})")
+    _seintje(msg, _meldsleutel("concept", adres, _kern_tekst(tekst)), "concept klaar")
+
+
+def _meld_verstuurd(lead: dict, onderwerp: str, tekst: str,
+                    bron: str = "klantenservice") -> None:
+    """Seintje ACHTERAF: dit is zelf de deur uit gegaan.
+
+    Daniel wil weten wat de machine namens hem doet, ook — juist — als hij er
+    niets aan hoefde te doen. Dit is dus geen verzoek om actie maar een
+    logboekregel in zijn postbus, met de tekst erbij zodat hij kan bijsturen als
+    de toon hem niet bevalt.
+    """
+    adres = (lead.get("email") or "").lower()
+    van = os.environ.get("MAIL_USER")
+    if not (adres and van):
+        return
+    bron = _bron_met_developer(adres, bron)
+    msg = EmailMessage()
+    msg["From"] = f"Klantenservice <{van}>"
+    msg["To"] = ", ".join(ALARM_NAAR)
+    msg["Subject"] = f"Zelf verstuurd: {_bedrijfsnaam(lead) or adres}"
+    msg.set_content(
+        f"Dit heb ik zojuist zelf verstuurd. Je hoeft niets te doen.\n\n"
+        f"Aan:        {adres}\n"
+        f"Onderwerp:  {onderwerp}\n"
+        f"Geschreven: {bron}\n\n"
+        f"--- wat er uitging ---\n{(tekst or '').strip()[:1500]}\n--- einde ---\n\n"
+        f"Klopt de toon niet, zeg het dan — dan pas ik het aan voor de volgende.\n")
+    _seintje(msg, _meldsleutel("verstuurd", adres, _kern_tekst(tekst)), "zelf verstuurd")
 
 
 def _alarm(lead: dict, onderwerp: str, body: str) -> None:
