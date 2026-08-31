@@ -150,16 +150,21 @@ def _te_doen(signalen: dict, staat: dict) -> list[tuple[str, dict]]:
 
 
 def _opruimen(signalen: dict, staat: dict) -> bool:
-    """Een sleutel die is opgelost of afgewezen hoeft niet meer op slot.
+    """Een sleutel die is afgehandeld hoeft niet meer op slot.
 
     Dit is precies de afspraak: een sleutel wordt niet opnieuw gestart zolang hij
     niet is opgelost of afgewezen — en dus wél weer beschikbaar zodra dat gebeurt
     (voor als dezelfde storing later terugkomt).
+
+    `verlopen` hoort daar sinds 31-08-2026 bij: een melding die vanzelf uitdooft
+    omdat er niets meer over gezegd is, is net zo goed afgehandeld. Blijft het
+    slot staan, dan kan diezelfde storing later niet opnieuw opgepakt worden als
+    hij tóch terugkomt.
     """
     veranderd = False
     for sleutel in list(staat):
         stand = (signalen.get(sleutel) or {}).get("status")
-        if stand in ("opgelost", "afgewezen"):
+        if stand in ("opgelost", "afgewezen", "verlopen"):
             staat.pop(sleutel)
             veranderd = True
         elif staat[sleutel].get("status") == "gestart" and not _leeft(staat[sleutel].get("pid")):
