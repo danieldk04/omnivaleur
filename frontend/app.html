@@ -4349,14 +4349,33 @@ async function mergeAllDuplicates() {
   if (!groepen.length) return;
   const teveel = groepen.reduce((n, g) => n + g.items.length - 1, 0);
   if (!confirm(`Merge ${teveel} duplicate rows into ${groepen.length} item${groepen.length === 1 ? '' : 's'}?\n\nEvery advert stays; they end up under one item each. This cannot be undone.`)) return;
-  let mislukt = 0;
-  for (const g of groepen) {
-    const ok = await mergeItems(g.items[0].id, g.items.slice(1).map(i => i.id));
-    if (!ok) mislukt++;
+  // ZEG DAT ER IETS GEBEURT (31-08-2026). Tien groepen achter elkaar duurt
+  // seconden en het scherm stond al die tijd stil — Daniel dacht dat de knop
+  // niets deed en drukte opnieuw. Een tweede ronde over dezelfde groepen is
+  // niet gevaarlijk (verhuizen en verwijderen leveren twee keer hetzelfde op),
+  // maar het verdubbelt wel het aantal aanroepen op precies het moment dat de
+  // databaseverbinding het al zwaar heeft.
+  const knoppen = document.querySelectorAll('[onclick^="mergeAllDuplicates"], [onclick^="mergeDuplicateGroup"]');
+  knoppen.forEach(b => { b.disabled = true; });
+  let mislukt = 0, gedaan = 0;
+  try {
+    for (const g of groepen) {
+      gedaan++;
+      showToast(`Merging ${gedaan} of ${groepen.length}…`);
+      const ok = await mergeItems(g.items[0].id, g.items.slice(1).map(i => i.id), true);
+      if (!ok) mislukt++;
+    }
+  } finally {
+    knoppen.forEach(b => { b.disabled = false; });
   }
   await loadDuplicates(true);
   await loadAll();
-  if (mislukt) showToast(`${mislukt} group(s) could not be merged — they are still in the list.`);
+  const gelukt = groepen.length - mislukt;
+  if (mislukt) {
+    showToast(`${gelukt} group(s) merged, ${mislukt} could not be merged — those are still in the list. Nothing was lost; try again for the rest.`);
+  } else {
+    showToast(`All ${gelukt} group(s) merged.`);
+  }
 }
 
 async function mergeItems(keep, merge) {
