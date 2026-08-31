@@ -2514,3 +2514,34 @@ die lag bij deze storing juist plat.
 - Jordi (Budgetheld) vraagt om hulp bij een integratie. Nog geen concept.
 - De tien wachtende concepten zijn geschreven vóór deze wijziging en gaan dus
   niet vanzelf alsnog weg; die keuze ligt bij Daniel.
+
+### 31-08-2026 — Aanvulling: wannéér de blokkade begon, en een dubbele kopie in Verzonden
+
+**De blokkade begon vanochtend, niet 's nachts.** Na te meten aan de map
+Verzonden: de mailagent stuurde om 09:45 en 09:46 nog gewoon post (Twan de Haas,
+TipTopLaptop) en om 00:08 nog het seintje "12 conceptmails wachten op je". Ronald
+van Zilverwebsite kreeg zijn inlogfout om 09:22. Rond 10:20 gaf elke aanroep een
+402. De storing zit dus in het venster 09:20–10:20 en de agent heeft daarna geen
+beurt meer afgemaakt. Dat sluit aan bij het beeld: de meter liep de hele maand
+vol en tikte vanochtend over.
+
+**Zoho archiveert zelf al.** Bij het met de hand versturen van de negen wachtende
+concepten bleek elke mail dáárna DUBBEL in Verzonden te staan: één kopie van Zoho
+zelf (dat doet hij voor alles wat via zijn eigen SMTP gaat) en één van ons. Dat
+breekt het slot tegen dubbele mail niet — dat kijkt alleen óf er iets staat —
+maar het vervuilt wel de map waar `_toonprofiel` Daniels toon uit afleidt.
+
+`_stuur_zelf` legt die kopie daarom alleen nog neer als er via Resend verstuurd
+is. Dat is precies het geval op de server: Resend kent Zoho niet en zet daar dus
+niets neer, en juist dáár is de kopie geen netheid maar het slot zelf. De negen
+dubbele regels van vandaag blijven staan; e-mail weggooien doen we niet.
+
+**Wat er nog open ligt bij de klanten (31-08, eind ochtend):**
+- Egbert Brouwer wil bellen, vandaag tussen 14:00 en 16:30. Zijn concept ligt
+  klaar maar is ingehaald door zijn eigen bericht van 23:16.
+- Twan de Haas vroeg om 10:07 om de video ("Ik zie de video graag tegemoet").
+  Dat is een warme lead en dus een concept voor Daniel; die kan pas gemaakt
+  worden als de database weer open is.
+- Jordi (Budgetheld) vroeg om hulp bij een integratie.
+- Rob Michiels (Data Impact) zei netjes nee ("we hebben al een koppeling"). Die
+  gaat vanaf nu vanzelf een afsluitend berichtje krijgen.
