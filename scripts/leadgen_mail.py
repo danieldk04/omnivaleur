@@ -79,7 +79,13 @@ BEDRIJF_KVK = "86792423"
 SITE = "https://omnivaleur.com"
 # Waar Daniel een seintje krijgt zodra iemand écht antwoordt. Automatische
 # ontvangstbevestigingen tellen niet mee, anders is het geen seintje meer maar ruis.
-ALARM_NAAR = ["danieldekoning66@gmail.com", "info@revaleur.com"]
+# ÉÉN ADRES, EN DAT IS EEN BESLUIT (31-08-2026). Daniel: "dat er bij mij dan één
+# mail binnenkomt, want ik krijg nu een mail op twee e-mailadressen." Hier stond
+# ["danieldekoning66@gmail.com", "info@revaleur.com"]. Dat was één mail aan twee
+# ontvangers, maar in zijn postbus zijn dat gewoon twee berichten om te lezen en
+# twee om weg te gooien. Wie hetzelfde bericht twee keer krijgt, gaat het minder
+# goed lezen — en juist deze mail moet hij lezen, want er hangt een concept aan.
+ALARM_NAAR = ["danieldekoning66@gmail.com"]
 # De demo van één minuut. Staat hier één keer, zodat er nooit een oude link in
 # een concept belandt. Wijst naar de leadpagina (met founder-story), niet meer
 # naar de kale YouTube-link.
@@ -4324,6 +4330,11 @@ def tick(args) -> None:
                       f"een reparatie klaargezet")
         except Exception as e:  # noqa: BLE001 — mag de ronde nooit stoppen
             print(f"  (post niet beoordeeld: {e})")
+
+        try:
+            _leg_mailboxstand_vast()
+        except Exception as e:  # noqa: BLE001 — mag de ronde nooit stoppen
+            print(f"  (mailboxstand niet vastgelegd: {e})")
 
         try:
             _stapel_melden(plan)
