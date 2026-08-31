@@ -1,6 +1,7 @@
 from __future__ import annotations
 import logging
 import ssl
+import threading
 import time
 from typing import Optional
 import httpx
