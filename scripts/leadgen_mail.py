@@ -4268,6 +4268,13 @@ def tick(args) -> None:
     Alle beslissingen staan op schijf, niet in het geheugen: valt de Mac uit of
     slaapt hij een uur, dan pakt de volgende beurt het rooster gewoon weer op en
     gaat er niets dubbel de deur uit."""
+    # EERSTE REGEL, VOOR ALLES. Zie MAILFLOW_GEPAUZEERD bovenaan dit bestand.
+    # Bewust vóór het controleren van de afzender en vóór het lezen van de
+    # administratie: een pauze die pas werkt als de rest het doet, is geen pauze.
+    if MAILFLOW_GEPAUZEERD:
+        print("De mailflow staat op pauze (MAILFLOW_GEPAUZEERD). Er gaat niets uit.")
+        return
+
     host = _controleer_afzender()
     gebruiker = _need("MAIL_USER")
     try:
