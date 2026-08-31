@@ -4599,6 +4599,32 @@ chrome.tabs.onUpdated.addListener(async (tabId, changeInfo) => {
   // slug-url — vaak op een kale /items/{id} — en dan bleef de advertentie in het
   // dashboard staan als mislukt terwijl hij gewoon online stond. Daarom in die
   // situatie ook de kale vorm accepteren, maar nooit /items/new of .../edit.
+  // NA EEN HANDMATIGE UPLOAD LANDT VINTED OP DE KAST, NIET OP DE ADVERTENTIE
+  // (31-08-2026, waargenomen: https://www.vinted.com/member/35817973).
+  //
+  // Alle patronen hieronder zoeken een advertentie-id in het adres. Dat adres
+  // krijgt de verkoper na een handmatige "Upload" helemaal niet te zien: hij
+  // wordt naar zijn eigen kastpagina gestuurd. Er viel dus niets te matchen, en
+  // de advertentie bleef in het dashboard staan als niet-geplaatst terwijl hij
+  // gewoon online stond.
+  //
+  // Op die kastpagina weten we het antwoord wél: de garderobe zelf. Die zoeker
+  // koppelt alleen bij PRECIES één kandidaat (zie bgVindVintedAdvertentie), dus
+  // bij twijfel gebeurt er niets — een verkeerde koppeling zou later de
+  // verkeerde advertentie weghalen.
+  if (meta.platform === "vinted" && meta.awaitingManualFinish
+      && /\/member\/\d+/.test(url)) {
+    const zelfGedaan = await bgVindVintedAdvertentie(meta.payload || meta).catch(() => null);
+    if (!zelfGedaan) return;   // niets gevonden: laat de opdracht met rust
+    console.log(`[Omnivaleur] Handmatig geplaatst op Vinted (${zelfGedaan.id}) — alsnog als geplaatst afgemeld.`);
+    clearJobWatchdog(tabId);
+    chrome.storage.local.remove([key, `job_${meta.platform}`]);
+    await finaliseJob(meta.serverUrl, meta.jobId, "complete", {
+      platform_listing_id: zelfGedaan.id, platform_listing_url: zelfGedaan.url,
+    });
+    return;
+  }
+
   let m;
   if (meta.platform === "vinted") {
     m = url.match(/\/items\/(\d+)-[a-z0-9]/i);
@@ -6558,8 +6584,11 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   if (msg.type === "JOB_ERROR") {
     const { platform, jobId, serverUrl, error } = msg;
     finaliseJob(serverUrl, jobId, "error", { error }).finally(() => {
-      // The tab is intentionally left open for a manual finish, so stand the
-      // watchdog down — otherwise it would close that tab mid-edit.
+      // De bewaker stond hier helemaal uit, zodat hij het tabblad niet zou
+      // sluiten waar de verkoper nog in typt. Bijeffect: de controle "heeft hij
+      // het zelf afgemaakt?" in fireJobWatchdog liep daardoor NOOIT meer — die
+      // zit juist achter awaitingManualFinish en kan niets force-failen. Hem
+      // opnieuw opwinden is dus veilig én nodig; sluiten doet hij daar niet.
       clearJobWatchdog(sender.tab?.id);
       // Keep the tab OPEN so the user can review the filled form and finish
       // manually. Closing it here loses all the work that was filled in.
@@ -6578,6 +6607,10 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
           if (meta) {
             chrome.storage.local.set({
               [`jobtab_${sender.tab.id}`]: { ...meta, awaitingManualFinish: true },
+            }, () => {
+              // Zie hierboven: vanaf hier mag de bewaker alleen nog kijken of de
+              // verkoper het zelf heeft afgemaakt.
+              if ((meta.action || "create") === "create") armJobWatchdog(sender.tab.id);
             });
           }
         });

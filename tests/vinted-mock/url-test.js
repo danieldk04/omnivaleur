@@ -36,5 +36,60 @@ for (const [url, wantAuto, wantManual] of cases) {
   console.log(`${ok ? "PASS" : "FAIL"}  ${url}\n      tijdens invullen: ${gotAuto} (verwacht ${wantAuto})`
     + `   | na overdracht: ${gotManual} (verwacht ${wantManual})`);
 }
-console.log(fails ? `\n${fails} FOUT` : "\nalle gevallen goed");
-process.exit(fails ? 1 : 0);
+
+// ── Na een handmatige Upload landt Vinted op de KAST ────────────────────────
+// Waargenomen 31-08-2026: https://www.vinted.com/member/35817973. Daar staat
+// geen advertentie-id in, dus de matcher hierboven vindt niets. De garderobe
+// weet het wel. Deze proef draait het verscheepte blok, niet een kopie.
+const mStart = bg.indexOf("  // NA EEN HANDMATIGE UPLOAD LANDT VINTED OP DE KAST");
+const mEnd = bg.indexOf("  let m;\n  if (meta.platform === \"vinted\")", mStart);
+if (mStart < 0 || mEnd < 0) { console.error("kastblok niet gevonden"); process.exit(1); }
+const kastBlok = bg.slice(mStart, mEnd);
+
+async function kast(url, meta, gevonden) {
+  const gedaan = { afgemeld: null, gewist: null, bewakerUit: false };
+  const fn = new Function(
+    "url", "meta", "key", "tabId", "bgVindVintedAdvertentie", "clearJobWatchdog",
+    "chrome", "finaliseJob", "console", "gedaan",
+    "return (async () => {" + kastBlok + "return 'DOORGELOPEN'; })();");
+  const uit = await fn(
+    url, meta, "jobtab_7", 7,
+    async () => gevonden,
+    () => { gedaan.bewakerUit = true; },
+    { storage: { local: { remove: (k) => { gedaan.gewist = k; } } } },
+    async (_s, jobId, status, data) => { gedaan.afgemeld = { jobId, status, ...data }; },
+    { log: () => {} },
+    gedaan);
+  return { uit, ...gedaan };
+}
+
+const advertentie = { id: "9998887776", url: "https://www.vinted.com/items/9998887776" };
+const metaKlaar = () => ({ platform: "vinted", awaitingManualFinish: true, jobId: 42,
+                           serverUrl: "https://omnivaleur.com", payload: { title: "Grey Suitsupply Shirt" } });
+
+(async () => {
+  let stuk = 0;
+  const zeg = (ok, naam) => { console.log(`${ok ? "PASS" : "FAIL"}  ${naam}`); if (!ok) stuk++; };
+
+  let r = await kast("https://www.vinted.com/member/35817973", metaKlaar(), advertentie);
+  zeg(r.afgemeld && r.afgemeld.status === "complete"
+      && r.afgemeld.platform_listing_id === "9998887776" && r.uit !== "DOORGELOPEN",
+      "kastpagina na handmatig plaatsen: advertentie gekoppeld en afgemeld");
+
+  r = await kast("https://www.vinted.com/member/35817973", metaKlaar(), null);
+  zeg(!r.afgemeld && !r.gewist && r.uit !== "DOORGELOPEN",
+      "niets te vinden in de garderobe: er wordt niets gekoppeld");
+
+  r = await kast("https://www.vinted.com/member/35817973",
+                 { ...metaKlaar(), awaitingManualFinish: false }, advertentie);
+  zeg(!r.afgemeld && r.uit === "DOORGELOPEN",
+      "terwijl de extensie zelf nog bezig is verandert er niets");
+
+  r = await kast("https://www.vinted.com/items/9998887776-grey-shirt", metaKlaar(), advertentie);
+  zeg(!r.afgemeld && r.uit === "DOORGELOPEN",
+      "een gewone advertentiepagina gaat nog steeds langs de matcher");
+
+  const totaal = stuk + fails;
+  console.log(totaal ? `\n${totaal} FOUT` : "\nalle gevallen goed");
+  process.exit(totaal ? 1 : 0);
+})();
