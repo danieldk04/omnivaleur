@@ -122,10 +122,12 @@ def test_de_terugkoppeling_van_de_developer_gaat_vanzelf(L):
 
 # ── 3. verstuurd betekent: er ligt een spoor in Verzonden ────────────────────
 
-def test_zelf_versturen_legt_altijd_een_kopie_in_verzonden(L, monkeypatch):
+def test_via_resend_komt_er_altijd_een_kopie_in_verzonden(L, monkeypatch):
     """HET SLOT. `_waarom_geen_concept` beantwoordt "hebben wij hierna al iets
-    gestuurd?" door in Verzonden te kijken. Zonder die kopie ziet de volgende
-    beurt geen enkel spoor en gaat hetzelfde bericht nog een keer weg."""
+    gestuurd?" door in Verzonden te kijken. Op de server loopt alles via Resend,
+    en Resend kent Zoho niet — zonder deze kopie ziet de volgende beurt dus geen
+    enkel spoor en gaat hetzelfde bericht nog een keer weg."""
+    monkeypatch.setenv("RESEND_API_KEY", "re_test")
     verstuurd, gearchiveerd = [], []
 
     class Postbode:
