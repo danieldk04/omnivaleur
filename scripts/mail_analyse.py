@@ -105,6 +105,25 @@ def _lees(sleutel: str, standaard):
         return standaard
 
 
+def _bereikbaar() -> str:
+    """Lege string als de opslag werkt, anders waaróm niet.
+
+    WAAROM DIT ER IS (31-08-2026). `_lees` hierboven geeft bij een storing de
+    lege standaard terug, en dat is voor tonen precies goed — maar voor
+    beoordelen levensgevaarlijk. "Welke post is al beoordeeld?" wordt dan
+    namelijk óók leeg beantwoord, waarna de ronde ALLE post van veertien dagen
+    opnieuw langs het model haalt, opnieuw escalatiemails verstuurt over
+    berichten van vorige week, en het resultaat vervolgens niet kan opslaan.
+    Elke tien minuten opnieuw. Dat is precies de dubbele meldingen waar Daniel
+    op 31-08 over klaagde, en het kost bij elke ronde geld.
+    """
+    try:
+        L._db_lees(ANALYSE_SLEUTEL, {})
+    except Exception as e:  # noqa: BLE001
+        return str(e)
+    return ""
+
+
 def _schrijf(sleutel: str, inhoud) -> bool:
     """Mislukt opslaan, dan zeggen we dat hard.
 
