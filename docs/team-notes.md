@@ -17,6 +17,29 @@ memory can still be written on top for fast recall, but never as the only
 record: anything here has to survive a switch to a different Claude account
 without Daniel repeating himself.
 
+## 2026-08-31 — Storing "niet ingelogd bij Marktplaats" was al gerepareerd
+
+MOET ZEKER-storing van de klantenservice: Dennis (retrogameking) en Egbert
+(papas-plectrums) meldden allebei "je bent niet ingelogd bij Marktplaats"
+tijdens het scannen. Onderzoek in het opdrachtenlogboek (tabel `jobs`) wees uit
+dat dit dezelfde storing is die op 29/30-08-2026 al gerepareerd is in
+`backend/api/jobs.py` (`_rechtgezette_foutmelding`, commit 9967b9e, live op
+main): beide klanten draaiden extensieversies ruim onder de ondergrens
+(1.0.200/1.0.202/1.0.207/1.0.217/1.0.218 tegen een vereiste van 1.0.244), en
+Egbert heeft bovendien een zakelijk account waarbij zijn persoonlijke overzicht
+altijd leeg hoort te zijn (advertenties staan in Admarkt).
+
+Bewijs dat de fix werkt: Egberts scan kreeg op 28-08 de gecorrigeerde melding
+("zet Admarkt aan") en slaagde diezelfde dag. Dennis heeft sinds 22-08 geen
+scan meer geprobeerd (extensie voor het laatst gezien 23-08) — voor hem staat
+de oude foutmelding dus nog "on the shelf" totdat hij het nog eens probeert met
+een bijgewerkte kopie van de extensie.
+
+Niets aan de code gewijzigd; teruggemeld via `mail_analyse.py opgelost`. Les:
+altijd eerst het opdrachtenlogboek raadplegen voordat je een MOET ZEKER-storing
+gaat repareren — deze was al klaar en had zonder die stap dubbel werk
+opgeleverd.
+
 ## 2026-08-26 — Monaim joins as 50/50 partner
 
 - Monaim is coming on as a 50/50 partner on **Omnivaleur** specifically —
