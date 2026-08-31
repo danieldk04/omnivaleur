@@ -2406,3 +2406,111 @@ melders van weken geleden.
 Geen code gewijzigd. Teruggemeld als `opgelost`. Les: bij een groep verwante
 sleutels die in één ronde worden uitgezocht, elke sleutel apart afmelden —
 niet alleen de sleutel waarvan de mail toevallig als eerste binnenkwam.
+
+## 31-08-2026 — Het project stond op slot, en niemand kreeg bericht
+
+**Wat er aan de hand was.** Supabase weigerde elk verzoek met een 402:
+`exceed_cached_egress_quota, exceed_egress_quota, exceed_storage_size_quota`.
+Inloggen op omnivaleur.com gaf 503, de blog 500, en de mailagent viel volledig
+stil. Gemeten in het Supabase-dashboard: verkeer 21.827 MB tegen een limiet van
+5 GB (437%), cache-verkeer 5.845 MB (117%), opslag 2.108 MB tegen 1 GB (211%).
+Database zelf 104 MB van 500 MB, en 24 actieve gebruikers van de 50.000 die het
+gratis plan toestaat.
+
+Die verhouding is het hele verhaal: 21,8 GB verkeer op 24 gebruikers is 900 MB
+per persoon. Dat komt niet van bezoekers. Het kwam van onze eigen lussen.
+
+**Wie het merkte.** Ronald van Zilverwebsite, om 07:22, met een
+schermafbeelding van het inlogscherm. Onze eigen server wist het al uren en
+zei niets. Dat is de verkeerde volgorde en is nu gerepareerd (zie onder).
+
+**De drie kranen die openstonden.**
+
+1. `poll_platform_statuses` haalde ELKE ronde alle actieve advertenties op
+   (gemeten 27-08: 4.751) en liep ze daarna sequentieel langs met een
+   netwerkaanroep per stuk. Elke vijf minuten. Twee gevolgen, allebei
+   onzichtbaar: het verkeer, én het feit dat zo'n ronde niet áf kan — wat
+   achteraan de lijst stond werd in de praktijk nooit gecontroleerd. Nu een
+   wachtrij op `last_checked` (oudste eerst, nooit gecontroleerd gaat voor),
+   hooguit 500 per ronde, en altijd een stempel — ook als het nakijken mislukt,
+   anders blijft één kapotte advertentie eeuwig vooraan staan.
+2. `vul_ontbrekende_teksten_aan` haalde elk kwartier van álle items de
+   volledige `description` op om te kijken óf hij leeg was. Bij Egbert (2.135
+   items) zijn dat megabytes per kwartier voor een vinkje. Nu een lichte
+   id-vraag met dezelfde filter die `_verkopers_met_gaten` al gebruikt, en de
+   echte tekst alleen voor de rijen die deze ronde aangepakt worden (daar is
+   hij nodig voor `_is_afgekapt`).
+3. De mailagent haalde per beurt dezelfde lijsten vijf tot tien keer opnieuw
+   op — 144 beurten per dag. Nu één keer per beurt (`_GELEZEN`).
+
+**Wat er nog moet gebeuren zodra de database open is:** de laatste foto's van
+Supabase Storage naar Cloudflare R2 (`scripts/migrate_photos_to_r2.py`, met
+`--budget-mb`, want terúglezen kost zelf ook verkeer). R2 geeft 10 GB en rekent
+geen verkeer, dus dat haalt de opslag van 211% naar bijna niets en de 5,8 GB
+cache-verkeer naar nul.
+
+**Besluit dat bij Daniel ligt:** de factuurperiode liep tot 1 september, dus de
+blokkade gaat er vanzelf af en kost niets — maar tot dat moment ligt de site
+plat voor klanten. Meteen open kan door Supabase Pro aan te zetten (€25, weer
+opzegbaar). Dat is een geldbeslissing en dus zijn keuze, niet die van de
+developer.
+
+## 31-08-2026 — De mailagent maakt zijn eigen werk af
+
+Daniel, met tien concepten in zijn map: "nu staan er veel mails klaar in
+concepten die daar niet horen", "nooit meer dubbele mails of dubbele meldingen
+dat een concept klaar staat", "automatische follow up automatisch verstuurd
+worden (bijvoorbeeld stap 2 of 3 in de mailsequence of een follow up mail als ik
+de video al gestuurd heb)".
+
+**Waar de grens nu ligt, en waarom daar.** Van die tien concepten waren er zeven
+beleefdheidsberichten zonder één belofte — "ik laat het hierbij", "was het
+filmpje duidelijk?" — waarvan de oudste twee dagen lag. De drie die er wél
+hoorden te liggen hadden alle drie hetzelfde kenmerk: een toezegging die alleen
+Daniel kan waarmaken (een belafspraak), of een storing die nog openstaat. De
+scheidslijn is dus niet "koud of warm" en niet "lead of klant", maar: staat er
+iets in wat iemand moet nakomen?
+
+Gaat vanzelf weg: opvolging op stilte (stap 2 en 3), antwoorden op een nee, en
+de terugkoppeling van de developer over een gerepareerde storing — die laatste
+is de enige tekst in de hele machine die vóór het schrijven aan de code is
+getoetst. Blijft liggen: alles met een toezegging (bellen, geld, "kom erop
+terug"), alles waar het model de vraag niet uit de code kon beantwoorden, en
+alles aan een betalende klant waar geen developer aan te pas kwam.
+
+Die rem (`_waarom_niet_zelf_versturen`) kan alleen tegenhouden, nooit
+doorlaten: een mail die onterecht blijft liggen kost één klik, een mail die
+onterecht weggaat is niet terug te halen. Het seintje zegt er voortaan bij
+waaróm iets blijft liggen, anders is de map weer een stapel.
+
+**Wat verstuurd wordt, komt in Verzonden te staan.** Dat is geen netheid maar
+het slot: `_waarom_geen_concept` beantwoordt "hebben wij hierna al iets
+gestuurd?" door in die map te kijken. Zonder die kopie ziet de volgende beurt
+geen spoor en gaat hetzelfde bericht nog een keer weg. Mislukt de kopie, dan is
+dat een alarm.
+
+**Geen administratie = niets versturen.** Bij de 402 hierboven klapte de agent
+om op zijn eerste regel en zweeg een etmaal, terwijl er vier klanten wachtten.
+Erger was het vangnet in `_save_state`: dat schreef alleen naar schijf als er
+hélemaal geen database was ingesteld, dus bij een échte storing werd er niets
+bewaard. Doorwerken op een administratie die niet bijgewerkt kan worden is
+precies hoe iemand twee keer dezelfde mail krijgt. Nu: lezen of schrijven
+mislukt = de beurt gaat niet door, en er gaat alarm uit (hooguit eens per 6 uur).
+
+**Meldingen over wat de twee agenten afspreken.** Op Daniels verzoek. De
+klantenservice die de developer aan het werk zet (`dev_starter`), en de
+developer die `opgelost` of `afgewezen` terugmeldt, sturen nu allebei een
+logboekregel naar zijn postbus. Geen verzoek om actie — zodat hij kan bijsturen
+voordat een sessie zelfstandig code pusht.
+
+**Nooit twee keer hetzelfde seintje.** Elk seintje draagt een kenmerk
+(`X-Omnivaleur-Melding`) en een kopie in de meldingenmap; voor het versturen
+wordt op dat kenmerk gezocht. Bewust in de postbus en niet in de administratie —
+die lag bij deze storing juist plat.
+
+**Openstaand na vandaag:**
+- Egbert Brouwer wil bellen; hij was 31-08 tussen 14:00 en 16:30 beschikbaar.
+  Dat is een afspraak die Daniel zelf moet maken; het concept ligt klaar.
+- Jordi (Budgetheld) vraagt om hulp bij een integratie. Nog geen concept.
+- De tien wachtende concepten zijn geschreven vóór deze wijziging en gaan dus
+  niet vanzelf alsnog weg; die keuze ligt bij Daniel.
