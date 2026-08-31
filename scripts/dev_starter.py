@@ -352,7 +352,45 @@ def _start(sleutel: str, signaal: dict, staat: dict) -> bool:
         return False
     _tel_een_start_mee()
     print(f"  ↳ sessie gestart voor {sleutel} (pid {proc.pid})\n     logboek: {log}")
+    _meld_start(sleutel, signaal, log)
     return True
+
+
+def _meld_start(sleutel: str, signaal: dict, log) -> None:
+    """Seintje aan Daniel: de klantenservice heeft de developer aan het werk gezet.
+
+    WAAROM (31-08-2026). Daniel vroeg om melding "wanneer claude code en de
+    mailagent communiceren over wat ze gaan doen en wat er gebeurt". Dit is de
+    heenweg van die lijn — de klantenservice geeft een storing door en er start
+    een sessie die zelfstandig code gaat wijzigen en pushen. Dat is precies het
+    moment waarop hij wil kunnen zeggen "niet doen".
+    """
+    try:
+        sys.path.insert(0, str(Path(__file__).resolve().parent))
+        import leadgen_mail as L
+        from email.message import EmailMessage
+        van = os.environ.get("MAIL_USER")
+        if not (van and L.ALARM_NAAR):
+            return
+        melders = signaal.get("melders") or []
+        msg = EmailMessage()
+        msg["From"] = f"Klantenservice <{van}>"
+        msg["To"] = ", ".join(L.ALARM_NAAR)
+        msg["Subject"] = f"Klantenservice → developer: aan het werk op {sleutel}"
+        msg.set_content(
+            f"Er is zojuist een developersessie gestart voor een storing die met "
+            f"zekerheid gerepareerd moet worden. Je hoeft niets te doen.\n\n"
+            f"Storing:      {sleutel}\n"
+            f"Waarom nu:    {'; '.join(signaal.get('waarom_zeker') or []) or 'gemarkeerd als MOET ZEKER'}\n"
+            f"Wat er speelt: {signaal.get('omschrijving', '')}\n"
+            f"Gemeld door:  {', '.join(melders[:8]) or 'onbekend'}\n\n"
+            f"Die sessie mag zelfstandig code wijzigen, tests draaien en pushen. "
+            f"Als hij klaar is krijg je bericht met wat er gerepareerd is, en "
+            f"gaan de melders hierboven vanzelf antwoord krijgen.\n\n"
+            f"Logboek: {log}\n")
+        L._seintje(msg, L._meldsleutel("devstart", sleutel, str(log)), "developer gestart")
+    except Exception as e:  # noqa: BLE001 — een gemist seintje mag nooit een sessie tegenhouden
+        print(f"  (seintje 'developer gestart' niet verstuurd: {e})")
 
 
 # ---------------------------------------------------------------- rondes
