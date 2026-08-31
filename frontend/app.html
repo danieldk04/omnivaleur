@@ -8080,6 +8080,21 @@ function updatePhotoUploadGate() {
 function closeModal(id){document.getElementById(id).style.display='none';}
 function closeOnOverlay(e,id){if(e.target.id===id)closeModal(id);}
 function esc(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+// Een tekst die als JS-string BINNEN een onclick-attribuut komt te staan.
+//
+// WAAROM DIT ER IS (31-08-2026, Amanda Haas: "Nee, hij pakt de refresh button
+// niet: er gebeurt niets!"). De Refresh-knop zette de titel er met esc() in.
+// Die maakt van een apostrof &#39; — keurig voor HTML, maar de browser
+// DECODEERT attributen vóór hij de JavaScript leest. Bij "Vintage Levi's Denim
+// Jasje" werd de handler dus refreshItem('id','Vintage Levi's Denim Jasje',...)
+// en dat is een syntaxfout: de klik doet niets, zonder melding, zonder spoor.
+// Gemeten in de database: vijftien artikelen met een apostrof in de titel —
+// Levi's, Arc'teryx, Women's, 's-Hertogenbosch.
+//
+// De volgorde is de hele truc: EERST de JS-escape, DAN pas de HTML-escape.
+// Andersom werkt niet — na esc() zijn er geen apostroffen meer om te escapen,
+// alleen entiteiten die later weer apostrof worden.
+function jsArg(s){return esc(String(s ?? '').replace(/\\/g,'\\\\').replace(/'/g,"\\'"));}
 function itemPhotoThumb(item){
   const n = item.photo_urls?.length || 0;
   if (!n) return '👗';
