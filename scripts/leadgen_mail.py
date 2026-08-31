@@ -1564,6 +1564,13 @@ def _check_inbox(state: dict, boek: "Notion", dagen: int) -> tuple[int, int, int
 
             al_gedaan = float(st.get("laatste_inkomend") or 0)
             beantwoord_door_daniel = laatst_verstuurd.get(afzender)
+            # Is het concept dat we hiervoor maakten weggegooid? Dan één nieuwe
+            # kans. Zie `_concept_verdwenen` voor waarom, en waarom precies één.
+            opnieuw = bool(
+                binnen_op and st.get("concept_klaar")
+                and 0 < al_gedaan and binnen_op <= al_gedaan
+                and float(st.get("concept_opnieuw") or 0) < binnen_op
+                and _concept_verdwenen(afzender))
             # Ligt er al een antwoord of een concept voor precies dit bericht,
             # dan zijn we klaar. Dit is de enige controle die ook standhoudt als
             # iemand vanaf een ander adres schrijft dan waar wij naartoe mailden.
@@ -1588,12 +1595,14 @@ def _check_inbox(state: dict, boek: "Notion", dagen: int) -> tuple[int, int, int
 
             if (lead and binnen_op and soort != "afmelding" and not al_gedekt
                     and is_laatste and not wij_aan_zet
-                    and binnen_op > al_gedaan
+                    and (binnen_op > al_gedaan or opnieuw)
                     and not (beantwoord_door_daniel and beantwoord_door_daniel > binnen_op)):
                 if _zet_concept_klaar(lead, msg, body,
                                       soort if soort in ("concurrent", "afwijzing") else "warm"):
                     st["laatste_inkomend"] = binnen_op
                     st["concept_klaar"] = datetime.now().isoformat(timespec="seconds")
+                    if opnieuw:
+                        st["concept_opnieuw"] = binnen_op
                     _save_state(state)   # zie _warme_opvolging: meteen, niet aan het eind
                 if soort in ("warm", "onbekend"):
                     boek.wacht_op_daniel(lead)
@@ -3927,12 +3936,59 @@ def _stapel_melden(plan: dict) -> None:
         print(f"  (stapelmelding niet verstuurd: {e})")
 
 
-def _concepten_tellen() -> tuple[int, list[str]]:
-    """Hoeveel concepten liggen er, en voor wie."""
+# WAAROM EEN WEGGEGOOID CONCEPT EEN TWEEDE KANS KRIJGT (31-08-2026).
+#
+# Daniel gooide het concept voor vintagegamestore@hotmail.com weg omdat het niet
+# deugde — het zei "dat zoek ik uit" over iets wat gewoon in de code staat — en
+# verwachtte dat de volgende beurt een beter concept zou neerleggen. Dat gebeurde
+# niet. In de administratie stond `laatste_inkomend` op de tijd van zijn bericht,
+# en de regel daaronder is "dit bericht is al gedaan". Weggooien haalt dat niet
+# weg. Voor die klant was het gesprek daarmee stil, voorgoed.
+#
+# Weggooien betekent niet "laat deze klant maar zitten", het betekent "dit
+# antwoord niet". Daarom: is het concept uit de map verdwenen en heeft Daniel
+# daarna zelf niets gestuurd, dan mag er nog één komen. Precies één — anders
+# staat er elke tien minuten een nieuwe, en dan wordt weggooien dweilen.
+_CONCEPT_ONTVANGERS: list | None = []
+
+
+def _concept_verdwenen(adres: str) -> bool:
+    """Ligt er voor deze persoon GEEN concept meer? Bij twijfel: False.
+
+    De postbus wordt één keer per beurt bevraagd; binnen een beurt verandert er
+    niets aan wat er ligt behalve door onszelf.
+    """
+    global _CONCEPT_ONTVANGERS
+    if _CONCEPT_ONTVANGERS == []:
+        _CONCEPT_ONTVANGERS = _concept_ontvangers()
+    if _CONCEPT_ONTVANGERS is None:      # postbus zweeg — niets aannemen
+        return False
+    adres = (adres or "").lower()
+    if not adres:
+        return False
+    stam = adres.split("@")[-1].split(".")[0].replace("-online", "")
+    for naam in _CONCEPT_ONTVANGERS:
+        ander = (parseaddr(_leesbaar(naam))[1] or "").lower()
+        if not ander:
+            continue
+        # Zelfde huis, ander adres telt ook als "er ligt al iets".
+        if ander == adres or (len(stam) >= 5 and stam in ander.split("@")[-1]):
+            return False
+    return True
+
+
+def _concept_ontvangers() -> list[str] | None:
+    """Voor wie er een concept klaarligt. None = de postbus zei het niet.
+
+    Dat onderscheid is de hele reden dat deze functie bestaat naast
+    `_concepten_tellen`. "Er ligt niets" en "ik kon niet kijken" zien er in een
+    lege lijst hetzelfde uit, en op dat verschil hangt hieronder de vraag of we
+    een concept opnieuw mogen maken. Bij twijfel doen we niets.
+    """
     host, gebruiker = os.environ.get("IMAP_HOST"), os.environ.get("MAIL_USER")
     wachtwoord = os.environ.get("MAIL_PASS")
     if not (host and gebruiker and wachtwoord):
-        return 0, []
+        return None
     namen: list[str] = []
     try:
         with imaplib.IMAP4_SSL(host, 993) as imap:
@@ -3942,16 +3998,20 @@ def _concepten_tellen() -> tuple[int, list[str]]:
             map_ = CONCEPTMAP if CONCEPTMAP in bestaand else "Drafts"
             imap.select(f'"{map_}"', readonly=True)
             _, d = imap.search(None, "ALL")
-            for num in (d[0] or b"").split():
-                _, ruw = imap.fetch(num, "(BODY.PEEK[HEADER])")
-                if not ruw or not ruw[0]:
-                    continue
-                kop = email.message_from_bytes(ruw[0][1])
+            # In één keer ophalen, net als het slot hierboven: bij dertig
+            # wachtende concepten scheelt dat dertig heen-en-weertjes.
+            for kop in _koppen_in_bulk(imap, (d[0] or b"").split()).values():
                 namen.append(_leesbaar(kop.get("To", "")) or "?")
     except Exception as e:  # noqa: BLE001
         print(f"  (concepten niet geteld: {e})")
-        return 0, []
-    return len(namen), namen
+        return None
+    return namen
+
+
+def _concepten_tellen() -> tuple[int, list[str]]:
+    """Hoeveel concepten liggen er, en voor wie."""
+    namen = _concept_ontvangers()
+    return (len(namen), namen) if namen is not None else (0, [])
 
 
 CONCEPT_VERVAL_DAGEN = 21  # ruim voorbij de laatste opvolgtermijn (7 dagen)

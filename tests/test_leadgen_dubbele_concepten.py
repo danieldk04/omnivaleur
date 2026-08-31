@@ -276,3 +276,54 @@ def test_de_losse_support_mailagent_is_weg():
     zoeken naar waar iets misging."""
     scripts = Path(__file__).parent.parent / "scripts"
     assert not (scripts / "support_mail_agent.py").exists()
+
+
+# ------------------------------------------- 6. een weggegooid concept
+# AANLEIDING 31-08-2026. Daniel gooide het concept voor vintagegamestore weg
+# omdat het niet deugde, en verwachtte een beter voorstel bij de volgende beurt.
+# Dat kwam nooit: in de administratie stond dat dit bericht al gedaan was, en
+# weggooien haalt dat niet weg. Het gesprek met die klant lag daarmee stil.
+@pytest.fixture(autouse=True)
+def _verse_conceptenlijst(monkeypatch):
+    """De lijst wachtende concepten wordt per beurt één keer opgehaald."""
+    monkeypatch.setattr(L, "_CONCEPT_ONTVANGERS", [])
+
+
+def test_een_weggegooid_concept_geldt_als_verdwenen(postbus):
+    postbus(Concept=[])
+    assert L._concept_verdwenen("frank@klant.nl") is True
+
+
+def test_een_concept_dat_er_nog_ligt_is_niet_verdwenen(postbus):
+    postbus(Concept=[_kop(To="frank@klant.nl", In_Reply_To="<hun-bericht@klant.nl>")])
+    assert L._concept_verdwenen("frank@klant.nl") is False
+
+
+def test_hetzelfde_bedrijf_op_een_ander_adres_telt_mee(postbus):
+    postbus(Concept=[_kop(To="info@klant-online.nl")])
+    assert L._concept_verdwenen("info@klant.nl") is False
+
+
+def test_een_zwijgende_postbus_levert_nooit_een_tweede_concept_op(monkeypatch):
+    """"Ik kon niet kijken" mag nooit gelezen worden als "er ligt niets" — dan
+    zou één storing bij iedereen een tweede concept opleveren."""
+    monkeypatch.delenv("IMAP_HOST", raising=False)
+    assert L._concept_verdwenen("frank@klant.nl") is False
+
+
+def test_een_kapotte_postbus_ook_niet(postbus, monkeypatch):
+    postbus()
+
+    class Stuk(NepImap):
+        def search(self, *a):
+            raise OSError("verbinding weg")
+    monkeypatch.setattr(L.imaplib, "IMAP4_SSL", lambda *a, **k: Stuk({"Concept": []}))
+    assert L._concept_verdwenen("frank@klant.nl") is False
+
+
+def test_er_komt_hooguit_een_tweede_concept_en_geen_derde():
+    """Anders staat er elke tien minuten een nieuwe en wordt weggooien dweilen."""
+    ronde = Path(L.__file__).read_text()
+    kop = ronde[ronde.index("            opnieuw = bool("):]
+    assert 'float(st.get("concept_opnieuw") or 0) < binnen_op' in kop[:600]
+    assert 'st["concept_opnieuw"] = binnen_op' in ronde
