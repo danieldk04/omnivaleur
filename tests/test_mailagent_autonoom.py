@@ -47,21 +47,43 @@ def L(monkeypatch):
 
 # ── 1. de rem: wat mag vanzelf weg en wat niet ───────────────────────────────
 
-def test_een_beleefd_afscheid_mag_vanzelf_weg(L):
-    """Dit is letterlijk het soort bericht dat op 31-08 twee dagen bleef liggen."""
-    kern = ("Hi Frank,\n\nIk laat het hierbij, ik ga je er niet langer mee "
-            "lastigvallen. Je hebt het duidelijk goed geregeld zoals het nu "
-            "loopt.\n\nGroetjes,\nDaniel")
-    assert L._waarom_niet_zelf_versturen(kern, klant=False, bron="klantenservice") == ""
+@pytest.mark.parametrize("kern", [
+    "Hi Frank,\n\nIk laat het hierbij, ik ga je er niet langer mee lastigvallen.",
+    "Hi,\n\nEven een kort berichtje: heb je nog naar de video kunnen kijken?",
+    "Hi,\n\nBedankt voor je reactie, dan laat ik het hierbij. Succes!",
+])
+def test_er_gaat_niets_uit_zichzelf_de_deur_uit(L, kern):
+    """DE HOOFDREGEL, en die staat boven alle andere in dit bestand.
+
+    Ik had dit vanochtend aangezet omdat een beleefdheidsmail zonder toezegging
+    geen beslissing bevat. Dat was fout. Wat een mail schadelijk maakt zit niet
+    alleen in wat hij belooft, maar in of hij nog KLOPT — de aanhef, de naam, of
+    het gesprek al gesloten was. Patricia van Boutique MoDo kreeg zo op 31-08
+    nog een keer wat Daniel haar op 27-08 zelf al had geschreven.
+    """
+    assert L.ZELF_VERSTUREN_UIT is True
+    assert L._waarom_niet_zelf_versturen(kern, klant=False, bron="klantenservice")
 
 
-def test_een_opvolging_op_stilte_mag_vanzelf_weg(L):
-    """Stap 2 en 3 van de reeks, en de "heb je de video gezien"-mail. Precies
-    waar Daniel om vroeg."""
-    kern = ("Hi,\n\nEven een kort berichtje: heb je nog naar de video kunnen "
-            "kijken? Ik ben benieuwd of het aansluit bij hoe jij het nu doet.\n\n"
-            "Groetjes,\nDaniel")
-    assert L._waarom_niet_zelf_versturen(kern, klant=False, bron="klantenservice") == ""
+def test_ook_de_terugkoppeling_van_de_developer_gaat_niet_vanzelf(L):
+    """Juist deze leek veilig — hij is aan de code getoetst. Maar de mail aan
+    Zilverwebsite begon met "Hi Ronald", en die naam bestaat daar niet."""
+    kern = "Hi,\n\nJe advertenties komen nu terug in dezelfde categorie."
+    assert L._waarom_niet_zelf_versturen(kern, klant=True,
+                                         bron="klantenservice + developer")
+
+
+def test_de_mailflow_staat_stil(L):
+    """Op Daniels verzoek van 31-08. `tick` moet stoppen vóór hij iets leest of
+    controleert — een pauze die pas werkt als de rest het doet is geen pauze."""
+    assert L.MAILFLOW_GEPAUZEERD is True
+    bron = (WORTEL / "scripts" / "leadgen_mail.py").read_text(encoding="utf-8")
+    body = bron.split("def tick(args) -> None:", 1)[1].split("\ndef ", 1)[0]
+    kop = body.split("\n")[:12]
+    assert any("MAILFLOW_GEPAUZEERD" in r for r in kop), \
+        "de pauze staat niet bovenaan tick"
+    # en wel vóór het lezen van de administratie
+    assert body.index("MAILFLOW_GEPAUZEERD") < body.index("_state()")
 
 
 @pytest.mark.parametrize("kern, waarover", [
