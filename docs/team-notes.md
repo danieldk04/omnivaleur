@@ -2730,3 +2730,49 @@ zowel Resend als SMTP, met `tests/test_alarm_bereikt_beide_adressen.py`.
 
 **Les.** Een alarm dat zijn eigen mislukking wegslikt is geen alarm. Bij elk
 vangnet dat bewust zwijgt hoort een proef die bewijst dat het pad erheen werkt.
+
+### 31-08-2026 — De sleutel op listings is vervangen, samenvoegen kan nu echt
+
+Uitgevoerd door Daniel in de Supabase SQL Editor. De oude
+`listings_item_platform_unique` is weg, `listings_item_platform_advert_unique`
+staat er. Omdat het één transactie was, is daarmee ook de definitie bewezen:
+was de CREATE mislukt, dan stond de oude index er nog.
+
+Wat de oude was (nagemeten voordat we hem aanraakten):
+
+    CREATE UNIQUE INDEX listings_item_platform_unique
+      ON public.listings USING btree (item_id, platform)
+      WHERE ((status)::text = 'active'::text);
+
+En wat er nu staat:
+
+    CREATE UNIQUE INDEX listings_item_platform_advert_unique
+      ON listings (item_id, platform, platform_listing_id)
+      NULLS NOT DISTINCT
+      WHERE status = 'active';
+
+Eén item mag dus meerdere lopende advertenties op hetzelfde kanaal hebben,
+zolang het echt verschillende advertenties zijn. `NULLS NOT DISTINCT` houdt de
+oude bescherming overeind: twee lopende advertenties zónder advertentienummer op
+hetzelfde kanaal blijven onmogelijk, en zo ziet dubbel publiceren eruit (101 van
+de 11.102 rijen hebben geen nummer, dus dat geval is echt).
+
+**Hoe dit is uitgezocht, want dat was het leerzame deel.** De eerste aanname —
+een gewone constraint op (item_id, platform) — klopte niet: `pg_constraint`
+toonde alleen de primaire sleutel en de verwijzing naar `items`. Een unieke
+INDEX staat daar niet in, alleen in `pg_indexes`. En Postgres staat geen
+constraint mét voorwaarde toe, wél een index mét voorwaarde. Dat verklaarde
+meteen de zes item/kanaal-combinaties die naast elkaar bestonden en alle zes
+hooguit één 'active' hadden.
+
+**Les:** bij een unieke sleutel die niet in `pg_constraint` staat, kijk in
+`pg_indexes` — en vraag de voorwaarde apart op met
+`pg_get_expr(i.indpred, i.indrelid)`, want de Supabase-editor kapt `indexdef`
+rechts af en juist daar staat de WHERE. De hele route staat in
+`scripts/fix_listings_unique.sql`.
+
+De code in `merge_items` weigert nu alleen wat écht botst (zelfde kanaal én
+zelfde advertentienummer, bij status 'active'), met daaronder een vangnet dat
+een 23505 van de database opvangt in plaats van hem als serverfout door te
+laten. Dat vangnet blijft staan: het beschermt ook tegen een toekomstige
+schemawijziging die niemand hier doorgeeft.
