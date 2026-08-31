@@ -179,6 +179,29 @@ MIN_GAT = 6                   # minuten die minimaal tussen twee tijdstippen zit
 # dat van de machine. De teksten blijven staan; op False gaat het weer aan.
 AFSLUIT_UIT = True
 
+# ── DE MAILFLOW STAAT STIL ───────────────────────────────────────────────────
+# UIT GEZET DOOR DANIEL, 31-08-2026: "pauzeer de mailflow. dit werkt niet."
+#
+# Wat er misging, en het is alle drie mijn schuld:
+#   * Er gingen mails uit naar mensen die Daniel zelf al had beantwoord. De
+#     concepten die ik met de hand verstuurde waren dagen oud, en door ze
+#     rechtstreeks via SMTP de deur uit te doen sloeg ik precies de controle
+#     over die daarvoor bestaat (`_waarom_geen_concept`). Patricia van Boutique
+#     MoDo kreeg zo op 31-08 nog een keer wat ze op 27-08 al had gehad.
+#   * In de mail aan Zilverwebsite stond "Hi Ronald". Die naam bestaat daar
+#     niet — het model heeft hem verzonnen. Er is een vastgelegde regel dat een
+#     aanhef nooit een geraden naam mag bevatten, en die is hier overtreden.
+#   * Frank de Veer kreeg een derde bericht terwijl hij al met vakantie was en
+#     al twee keer eerder was aangeschreven.
+#
+# Zolang dit True is doet `tick` helemaal niets: geen koude mail, geen
+# opvolging, geen concepten, geen afsluitmails. Bewust een schakelaar in de
+# code en niet een instelling op de server, zodat hij meereist met elke kopie
+# en niet per ongeluk aan kan staan waar niemand kijkt.
+#
+# Weer aanzetten is een besluit van Daniel, niet van de developer.
+MAILFLOW_GEPAUZEERD = True
+
 AFSLUIT_VERTRAGING = (20, 90)          # minuten
 
 AFSLUIT_CONCURRENT = [
