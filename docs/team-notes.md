@@ -2545,3 +2545,57 @@ dubbele regels van vandaag blijven staan; e-mail weggooien doen we niet.
 - Jordi (Budgetheld) vroeg om hulp bij een integratie.
 - Rob Michiels (Data Impact) zei netjes nee ("we hebben al een koppeling"). Die
   gaat vanaf nu vanzelf een afsluitend berichtje krijgen.
+
+## 31-08-2026 — CORRECTIE op de aantekening van vanochtend: zelf versturen was fout
+
+De aantekening hierboven ("De mailagent maakt zijn eigen werk af") beschrijft een
+grens die niet houdbaar bleek. Binnen een uur nadat hij aan stond, ging het drie
+keer mis en heeft Daniel de hele mailflow gepauzeerd.
+
+**Wat er misging.**
+
+1. **Een verzonnen naam.** De mail aan Zilverwebsite begon met "Hi Ronald". Zo
+   iemand bestaat daar niet. Oorzaak is aantoonbaar en zat niet in het model
+   maar in onze eigen instructie: `HERSTELBERICHT_REGELS` vroeg letterlijk om
+   `"Hi <naam>,"` terwijl er in dat hele verzoek nergens een naam meegegeven
+   werd — alleen een e-mailadres en de reparatiepunten. Het model vulde dat gat
+   zelf in. Er stond al sinds 20-08 vast dat een aanhef nooit een geraden naam
+   mag bevatten (`_persoonsnaam`), maar die regel gold alleen voor de koude
+   mail en niet voor deze route.
+2. **Een antwoord op een gesloten gesprek.** Patricia van Boutique MoDo kreeg
+   op 31-08 een antwoord op een bericht dat Daniel op 27-08 zelf al had
+   beantwoord. Dat kwam niet door de agent maar door mij: ik verstuurde de
+   wachtende concepten rechtstreeks via SMTP en sloeg daarmee juist de controle
+   over die daarvoor bestaat (`_waarom_geen_concept`). Een concept van dagen
+   oud is geen concept meer maar een momentopname.
+3. **Een derde bericht aan iemand die met vakantie was.** Frank de Veer kreeg op
+   31-08 een opvolging, terwijl ons bericht van 20-08 al eindigde met "dan hoor
+   ik het wel" — een afsluiting — en het enige wat hij ooit terugstuurde zijn
+   afwezigheidsassistent was.
+
+**Waarom de grens zelf fout was.** Ik toetste of een mail iets BELOOFDE. Maar wat
+een mail schadelijk maakt is of hij nog KLOPT: de aanhef, de naam, of het gesprek
+al gesloten was, of iemand er eigenlijk wel is. Geen van die drie fouten bevatte
+één toezegging. Een filter op toezeggingen ziet ze geen van drieën.
+
+**Wat er nu staat.**
+- `MAILFLOW_GEPAUZEERD = True`. `tick` doet niets, vóór het controleren van de
+  afzender en vóór het lezen van de administratie. Weer aanzetten is Daniels
+  besluit.
+- De hele zelf-verstuur-machinerie is WEGGEHAALD, niet uitgezet. Een schakelaar
+  is iets wat iemand later per ongeluk omzet.
+- De instructie vraagt niet meer om een naam, én er zit een slot achter dat elke
+  naam uit de aanhef haalt voordat de tekst de map in gaat — een promptregel is
+  een verzoek, geen garantie.
+- Na een afsluiting van onze kant komt er geen opvolging meer (`_is_afsluiting`),
+  en een afwezigheidsassistent telt niet als een gesprek.
+
+**Les voor de volgende keer.** "Er valt hier niets te beslissen" is geen goede
+reden om iets zelf te versturen. De vraag is niet of het bericht een besluit
+bevat, maar of iemand die de klant kent er nog naar gekeken heeft. Bij een
+machine die teksten schrijft is dat antwoord voorlopig altijd: nee.
+
+**Nog recht te zetten:** in de map Verzonden staan negen berichten van 31-08
+dubbel. Daar is maar één keer verstuurd — Zoho zet post die via zijn eigen SMTP
+gaat zelf al in Verzonden, en ik legde er nog een kopie naast. De ontvangers
+hebben elk één mail gekregen; het dubbele zit alleen in Daniels eigen map.
