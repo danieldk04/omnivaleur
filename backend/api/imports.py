@@ -974,7 +974,8 @@ from backend.services.tweelingen import (          # noqa: E402
 )
 
 
-async def _find_twins(cands: list[dict], items: list[dict], platforms_by_item: dict) -> dict:
+async def _find_twins(cands: list[dict], items: list[dict], platforms_by_item: dict,
+                      _rem=None) -> dict:
     """
     candidate_id → item_id for listings that look like the same physical object
     already in the inventory under another language. Empty dict on any failure:
