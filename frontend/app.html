@@ -4378,7 +4378,10 @@ async function mergeAllDuplicates() {
   }
 }
 
-async function mergeItems(keep, merge) {
+// `stil` staat aan tijdens "Merge all": daar vertelt de voortgangsmelding het
+// verhaal en zou een melding per groep die alleen maar overschrijven.
+async function mergeItems(keep, merge, stil = false) {
+  const zeg = (tekst) => { if (!stil) showToast(tekst); };
   try {
     const r = await apiFetch(`${API}/api/items/merge`, {
       method: 'POST',
@@ -4386,7 +4389,7 @@ async function mergeItems(keep, merge) {
       body: JSON.stringify({ keep, merge }),
     });
     const data = await parseJsonSafe(r);
-    if (!r.ok) { showToast(data?.detail || 'Could not merge these items'); return false; }
+    if (!r.ok) { zeg(data?.detail || 'Could not merge these items'); return false; }
     // Geweigerde rijen zijn geen storing maar een oordeel. Er zijn twee heel
     // verschillende oordelen en die verwarren is erger dan zwijgen: "lijkt niet
     // genoeg op elkaar" vraagt om nakijken, "staat op hetzelfde kanaal" is een
