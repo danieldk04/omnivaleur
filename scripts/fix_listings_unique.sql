@@ -78,12 +78,12 @@ COMMIT;
 
 
 -- ── STAP 3: CONTROLEREN ─────────────────────────────────────────────────────
--- Moet één regel teruggeven met de nieuwe naam.
+-- Moet één regel teruggeven met de nieuwe naam, en de oude mag niet meer
+-- voorkomen. Draai ook deze los.
 
-SELECT conname, pg_get_constraintdef(oid) AS definitie
-FROM pg_constraint
-WHERE conrelid = 'listings'::regclass
-  AND conname = 'listings_item_platform_advert_unique';
+SELECT indexname, indexdef
+FROM pg_indexes
+WHERE tablename = 'listings';
 
 
 -- ── ALS STAP 2 KLAAGT ───────────────────────────────────────────────────────
