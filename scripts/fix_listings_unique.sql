@@ -73,11 +73,28 @@ WHERE c.relname = 'listings_item_platform_unique';
 -- Alles binnen één transactie: gaat er iets mis, dan draait de hele wijziging
 -- terug en blijft de oude sleutel gewoon staan.
 
--- Uit stap 1 blijkt inmiddels dat het om een INDEX gaat en niet om een
--- constraint, dus de vervanger wordt óók een index — dat is bovendien de enige
--- vorm die een voorwaarde (WHERE) kan dragen. Staat er in stap 1 een WHERE
--- achter de oude index, plak die dan ONVERANDERD achter de nieuwe hieronder
--- voordat je dit draait; laat het me anders eerst zien.
+-- Stap 1 is uitgevoerd (31-08-2026). De oude index is:
+--
+--   CREATE UNIQUE INDEX listings_item_platform_unique
+--     ON public.listings USING btree (item_id, platform)
+--     WHERE ((status)::text = 'active'::text);
+--
+-- De voorwaarde `status = 'active'` verklaart de zes item/kanaal-combinaties
+-- die naast elkaar bestaan: daar is er telkens hooguit één actief. Die
+-- voorwaarde blijft hieronder ONGEWIJZIGD staan — hij is de reden dat een
+-- verkochte of ingetrokken advertentie niets blokkeert.
+--
+-- Wat er verandert is alleen `platform_listing_id` erbij. Daarmee mag één item
+-- meerdere lopende advertenties op hetzelfde kanaal hebben, zolang het echt
+-- verschillende advertenties zijn.
+--
+-- NULLS NOT DISTINCT is het deel dat de oude bescherming overeind houdt.
+-- Postgres ziet twee lege waarden normaal als verschillend; zonder deze regel
+-- zouden er onbeperkt ACTIEVE rijen zonder advertentienummer per item en kanaal
+-- kunnen ontstaan, en dat is precies wat dubbel publiceren oplevert. Er staan
+-- 101 van de 11.102 advertenties zonder nummer in de database, dus dat geval is
+-- echt. (Vereist Postgres 15 of hoger; klaagt hij hierover, laat het me weten —
+-- dan is er een langere variant met een tweede index.)
 
 BEGIN;
 
@@ -89,7 +106,8 @@ ALTER TABLE listings
 
 CREATE UNIQUE INDEX listings_item_platform_advert_unique
   ON listings (item_id, platform, platform_listing_id)
-  NULLS NOT DISTINCT;
+  NULLS NOT DISTINCT
+  WHERE status = 'active';
 
 COMMIT;
 
