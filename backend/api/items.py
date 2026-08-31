@@ -366,8 +366,10 @@ def merge_items(body: dict, user_id: str = Depends(get_current_user)):
                               "platforms": sorted(
                                   {p for p, _ in bezet.get(lid, set()) if p})})
             continue
-        db.table("jobs").update({"item_id": keep}).eq("item_id", lid).execute()
-        db.table("items").delete().eq("id", lid).eq("user_id", user_id).execute()
+        execute_with_retry(
+            db.table("jobs").update({"item_id": keep}).eq("item_id", lid))
+        execute_with_retry(
+            db.table("items").delete().eq("id", lid).eq("user_id", user_id))
         # Het bewaarde item draagt nu ook de advertenties van deze rij; een
         # volgende loser in dezelfde aanroep moet daar tegenaan botsen.
         bezet.setdefault(keep, set()).update(bezet.get(lid, set()))
