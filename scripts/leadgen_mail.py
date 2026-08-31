@@ -3466,6 +3466,14 @@ def _zet_concept_klaar(lead: dict, inkomend, body: str, soort: str = "warm",
     msg.set_content(volledig)
     if met_pixel:
         msg.add_alternative(_open_pixel_html(lead["email"], volledig), subtype="html")
+
+    klant = is_klant(lead.get("email", ""))
+    rem = _waarom_niet_zelf_versturen(kern, klant, bron) if zelf_versturen else ""
+    if zelf_versturen and not rem:
+        return _stuur_zelf(lead, msg, kern, bron)
+    if zelf_versturen:
+        print(f"  ↯ niet zelf verstuurd aan {lead.get('email')}: {rem}")
+
     try:
         with imaplib.IMAP4_SSL(host, 993) as im:
             im.login(van, wachtwoord)
@@ -3474,7 +3482,7 @@ def _zet_concept_klaar(lead: dict, inkomend, body: str, soort: str = "warm",
             map_ = CONCEPTMAP if CONCEPTMAP in bestaand else "Drafts"
             im.append(f'"{map_}"', "\\Draft", None, msg.as_bytes())
         print(f"  ✎ concept klaargezet voor {lead['email']}")
-        _meld_concept_klaar(lead, msg["Subject"], kern, bron)
+        _meld_concept_klaar(lead, msg["Subject"], kern, bron, wachtreden=rem)
         # De voorgestelde tekst bewaren. Zonder dit valt later niet te zien wát
         # Daniel eraan veranderd heeft, en dan leert dit systeem nooit iets.
         _onthoud_concept(lead["email"].lower(), msg.get_content())
@@ -3482,6 +3490,44 @@ def _zet_concept_klaar(lead: dict, inkomend, body: str, soort: str = "warm",
     except Exception as e:  # noqa: BLE001 — geen concept is vervelend, niet fataal
         print(f"  (concept niet klaargezet: {e})")
         return False
+
+
+def _stuur_zelf(lead: dict, msg: EmailMessage, kern: str, bron: str) -> bool:
+    """Het bericht nu de deur uit doen, en een kopie in Verzonden leggen.
+
+    DIE KOPIE IS GEEN NETHEID MAAR HET SLOT. `_waarom_geen_concept` beantwoordt
+    de vraag "hebben wij hierna al iets gestuurd?" door in de map Verzonden te
+    kijken. Verstuurt deze functie iets zonder die kopie, dan ziet de volgende
+    beurt geen enkel spoor en legt hij er vrolijk nog een bericht naast — precies
+    de dubbele mail die hier voorkomen moet worden. Lukt de kopie niet, dan is
+    dat een alarm waard.
+    """
+    host, van = os.environ.get("MAIL_HOST"), os.environ.get("MAIL_USER")
+    if not (host and van):
+        return False
+    try:
+        with _postbode(van, host) as stuur:
+            stuur(msg)
+    except Exception as e:  # noqa: BLE001
+        print(f"  ! zelf versturen aan {lead.get('email')} mislukt: {e}")
+        return False
+    print(f"  → zelf verstuurd aan {lead['email']}")
+
+    imap_host, wachtwoord = os.environ.get("IMAP_HOST"), os.environ.get("MAIL_PASS")
+    if imap_host and wachtwoord:
+        try:
+            with imaplib.IMAP4_SSL(imap_host, 993) as im:
+                im.login(van, wachtwoord)
+                im.append('"Verzonden"', "\\Seen", None, msg.as_bytes())
+        except Exception as e:  # noqa: BLE001
+            print(f"  !! kopie in Verzonden MISLUKT voor {lead.get('email')}: {e}")
+            _storingsalarm(
+                f"Er is een mail verstuurd aan {lead.get('email')} maar de kopie in "
+                f"Verzonden lukte niet ({e}). Het slot tegen dubbele mail kijkt in die "
+                f"map, dus deze persoon kan hetzelfde bericht nog een keer krijgen.")
+    _onthoud_concept(lead["email"].lower(), msg.get_content())
+    _meld_verstuurd(lead, msg["Subject"], kern, bron)
+    return True
 
 
 # ── Seintje zodra er een concept klaarligt ───────────────────────────────
