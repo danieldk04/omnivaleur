@@ -909,8 +909,40 @@ def _herstelbericht(adres: str, signalen: list[dict]) -> str:
     except Exception as e:  # noqa: BLE001
         print(f"  !! herstelbericht voor {adres} mislukt ({type(e).__name__}: {e})")
         return ""
+    tekst = _aanhef_zonder_naam(tekst, adres)
     # Te kort is geen bericht; dan liever niets dan iets halfs in de map.
     return tekst if len(tekst.split()) >= 15 else ""
+
+
+# Een aanhef met iets tussen "Hi" en de komma.
+_AANHEF_MET_NAAM = re.compile(r"^\s*(hi|hoi|hallo|beste|dag)\b[^\S\n]+([^\n,]+),",
+                              re.I)
+
+
+def _aanhef_zonder_naam(tekst: str, adres: str) -> str:
+    """Elke naam uit de aanhef halen. Altijd, zonder uitzondering.
+
+    WAAROM DIT EEN SLOT IS EN NIET ALLEEN EEN PROMPTREGEL (31-08-2026).
+    De mail aan Zilverwebsite begon met "Hi Ronald". Zo iemand bestaat daar
+    niet; het model had die naam verzonnen omdat de instructie letterlijk
+    "Hi <naam>," vroeg terwijl er nergens een naam werd meegegeven.
+
+    Die instructie is aangepast, maar een promptregel is een verzoek en geen
+    garantie — en juist hier is de schade groot: een verkeerde voornaam in de
+    eerste regel zegt tegen de klant dat er een machine schrijft die hem niet
+    kent. Deze functie kijkt dus naar de tekst die er werkelijk uitkwam.
+
+    Ook een bedrijfsnaam gaat eruit. Zilverwebsite is een winkelnaam en geen
+    persoon; "Hi Zilverwebsite," leest net zo verkeerd. Dezelfde regel als bij
+    de koude mail (zie `_persoonsnaam` in leadgen_mail.py): een naam in de
+    aanhef alleen als iemand hem zelf heeft opgegeven, en dat is hier nooit zo.
+    """
+    treffer = _AANHEF_MET_NAAM.match(tekst or "")
+    if not treffer:
+        return tekst
+    print(f"  ⚠ verzonnen aanhef weggehaald voor {adres}: "
+          f"{treffer.group(0).strip()!r} -> 'Hi,'")
+    return _AANHEF_MET_NAAM.sub("Hi,", tekst, count=1)
 
 
 def _omgeving_uit_env_bestand() -> None:
