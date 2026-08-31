@@ -1091,7 +1091,7 @@ async def _find_twins(cands: list[dict], items: list[dict], platforms_by_item: d
         return out
 
     chunks = [cands[i:i + _TWIN_BATCH] for i in range(0, len(cands), _TWIN_BATCH)]
-    results = await _asyncio_gather_safe(chunks, _chunk)
+    results = await _asyncio_gather_safe(chunks, _chunk, _rem)
     merged = {}
     for r in results:
         merged.update(r)
