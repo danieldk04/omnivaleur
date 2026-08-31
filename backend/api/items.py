@@ -313,12 +313,17 @@ def merge_items(body: dict, user_id: str = Depends(get_current_user)):
     if keep not in per_id:
         raise HTTPException(status_code=404, detail="Item not found")
 
-    # Welke kanalen bezet het bewaarde item al, en welke de anderen. In één
-    # vraag, want per item vragen is bij "Merge all" honderden aanroepen.
-    kanalen: dict[str, set] = {}
-    for rij in (db.table("listings").select("item_id,platform")
+    # Welke LOPENDE advertenties hebben deze items. In één vraag, want per item
+    # vragen is bij "Merge all" honderden aanroepen. Alleen 'active' telt: de
+    # unieke index draagt `WHERE status = 'active'`, dus een verkochte of
+    # ingetrokken advertentie blokkeert niets.
+    bezet: dict[str, set] = {}
+    for rij in (db.table("listings").select("item_id,platform,platform_listing_id,status")
                 .in_("item_id", [keep, *losers]).execute().data or []):
-        kanalen.setdefault(rij["item_id"], set()).add(rij.get("platform"))
+        if rij.get("status") != "active":
+            continue
+        bezet.setdefault(rij["item_id"], set()).add(
+            (rij.get("platform"), rij.get("platform_listing_id")))
 
     merken = bekende_merken_van(rijen)
     samengevoegd, geweigerd = [], []
@@ -330,20 +335,55 @@ def merge_items(body: dict, user_id: str = Depends(get_current_user)):
         if not zelfde_artikel(per_id[keep], ander, merken):
             geweigerd.append({"id": lid, "reason": "not_the_same_article"})
             continue
-        botsing = kanalen.get(keep, set()) & kanalen.get(lid, set())
+        botsing = _botsende_kanalen(bezet.get(keep, set()), bezet.get(lid, set()))
         if botsing:
             geweigerd.append({"id": lid, "reason": "advert_on_same_platform",
-                              "platforms": sorted(p for p in botsing if p)})
+                              "platforms": sorted(botsing)})
             continue
-        db.table("listings").update({"item_id": keep}).eq("item_id", lid).execute()
+        try:
+            db.table("listings").update({"item_id": keep}).eq("item_id", lid).execute()
+        except Exception as e:  # noqa: BLE001
+            # HET VANGNET, EN WAAROM HET ER NAAST DE CONTROLE HIERBOVEN STAAT.
+            # De controle modelleert de index zoals die er ná
+            # scripts/fix_listings_unique.sql uitziet. Zolang die wijziging niet
+            # gedraaid is, is de index nog de striktere oude versie en laat de
+            # controle dus iets door dat de database alsnog weigert. Dat mag
+            # nooit meer als serverfout bij de klant belanden — dat was precies
+            # de storing van 31-08-2026.
+            if "23505" not in str(e) and "duplicate key" not in str(e).lower():
+                raise
+            geweigerd.append({"id": lid, "reason": "advert_on_same_platform",
+                              "platforms": sorted(
+                                  {p for p, _ in bezet.get(lid, set()) if p})})
+            continue
         db.table("jobs").update({"item_id": keep}).eq("item_id", lid).execute()
         db.table("items").delete().eq("id", lid).eq("user_id", user_id).execute()
-        # Het bewaarde item bezet nu ook de kanalen van deze rij; een volgende
-        # loser in dezelfde aanroep moet daar tegenaan botsen.
-        kanalen.setdefault(keep, set()).update(kanalen.get(lid, set()))
+        # Het bewaarde item draagt nu ook de advertenties van deze rij; een
+        # volgende loser in dezelfde aanroep moet daar tegenaan botsen.
+        bezet.setdefault(keep, set()).update(bezet.get(lid, set()))
         samengevoegd.append(lid)
 
     return {"kept": keep, "merged": samengevoegd, "refused": geweigerd}
+
+
+def _botsende_kanalen(van_keep: set, van_ander: set) -> set:
+    """De kanalen waarop deze twee items niet samen kunnen.
+
+    Twee lopende advertenties botsen alleen als het dezelfde advertentie zou
+    worden: hetzelfde kanaal én hetzelfde advertentienummer. Twee echte,
+    verschillende advertenties op Marktplaats mogen naast elkaar bestaan — dat
+    is juist wat samenvoegen oplevert.
+
+    Een ontbrekend advertentienummer telt daarbij als één en dezelfde waarde,
+    net als `NULLS NOT DISTINCT` in de index. Anders zou een item onbeperkt
+    lopende advertenties zonder nummer kunnen verzamelen, en dat is precies hoe
+    dubbel publiceren eruitziet.
+    """
+    per_kanaal = {}
+    for kanaal, nummer in van_keep:
+        per_kanaal.setdefault(kanaal, set()).add(nummer or "")
+    return {kanaal for kanaal, nummer in van_ander
+            if kanaal and (nummer or "") in per_kanaal.get(kanaal, set())}
 
 
 @router.get("/{item_id}")
