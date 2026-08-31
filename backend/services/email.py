@@ -158,7 +158,7 @@ def send_email_checked(subject: str, body: str, to: str | None = None, reply_to:
     raise last_error  # type: ignore[misc]
 
 
-def _deliver(port: int, recipient: str, msg) -> None:
+def _deliver(port: int, recipient: list[str], msg) -> None:
     """Eén verzendpoging op één poort.
 
     Poort 465 is versleuteld vanaf de eerste byte (o.a. Hostinger); 587 begint
