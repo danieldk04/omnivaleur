@@ -44,9 +44,12 @@ def _send_via_resend(subject: str, body: str, recipient: str, reply_to: str | No
     # scheelt daar merkbaar in, en klopt ook: deze mails komen van Daniel.
     if sender and "<" not in sender and settings.email_from_name:
         sender = f"{settings.email_from_name} <{sender}>"
+    aan = ontvangers(recipient)
+    if not aan:
+        raise RuntimeError("Geen geldig ontvangeradres voor deze mail")
     payload = {
         "from": sender,
-        "to": [recipient],
+        "to": aan,
         "subject": subject,
         "text": body,
     }
