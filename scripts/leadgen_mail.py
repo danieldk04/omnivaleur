@@ -4385,6 +4385,13 @@ def tick(args) -> None:
             if uitkomst.get("gelezen"):
                 print(f"{datetime.now():%d-%m %H:%M} — {uitkomst['gelezen']} bericht(en) "
                       f"beoordeeld, {uitkomst['escalaties']} voor jou")
+            # EERST UITDOVEN, DAN TERUGKOPPELEN. Andersom zou een melding die al
+            # weken niet meer speelt alsnog een mail opleveren aan iemand die er
+            # niet meer op zit te wachten.
+            uitgedoofd = mail_analyse.laat_verlopen_uitdoven()
+            if uitgedoofd:
+                print(f"{datetime.now():%d-%m %H:%M} — {uitgedoofd} melding(en) "
+                      f"uitgedoofd: speelden niet meer")
             terug = mail_analyse.bericht_over_reparaties()
             if terug:
                 print(f"{datetime.now():%d-%m %H:%M} — {terug} klant(en) bericht over "
