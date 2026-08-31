@@ -31,19 +31,39 @@ async def _exec(query):
 # het artikel overal elders gewoon te koop bleef staan.
 POLL_PLATFORMS = {"marktplaats", "2dehands", "ebay", "etsy"}
 
+# Hoe lang een advertentie met rust gelaten wordt nadat hij is nagekeken, en
+# hoeveel er hooguit in één ronde langskomen.
+#
+# WAAROM DIT ER IS (31-08-2026) — de duurste lus die dit project had.
+# Deze taak haalde élke ronde ALLE actieve advertenties opnieuw op (gemeten
+# 27-08: 4.751) en liep ze daarna één voor één langs met een netwerkaanroep per
+# stuk. Twee dingen gingen daar mis, en allebei bleven ze onzichtbaar:
+#
+#   * De ronde kón niet af. 4.751 aanroepen achter elkaar duren tientallen
+#     minuten, terwijl de taak elke vijf minuten opnieuw wil starten. Wat
+#     achteraan de lijst stond werd dus in de praktijk NOOIT gecontroleerd —
+#     precies de advertenties die het langst te koop stonden.
+#   * Elke ronde trok dezelfde 4.751 rijen opnieuw uit de database. Bij 288
+#     rondes per dag is dat vele gigabytes verkeer per maand aan gegevens die
+#     niemand had opgevraagd. Op 31-08-2026 zette Supabase het hele project op
+#     slot wegens overschreden verkeer (402), waarmee de site voor iedereen
+#     plat lag.
+#
+# Nu komt alleen langs wat écht aan de beurt is, oudste eerst. Iedere
+# advertentie komt daardoor gegarandeerd een keer aan de beurt in plaats van
+# alleen de eerste paar honderd, en het verkeer per ronde is een fractie.
+HERCONTROLE_NA = 3600          # seconden: hooguit één keer per uur per advertentie
+PER_RONDE = 500                # hooguit zoveel advertenties in één ronde
+
 
 async def poll_platform_statuses():
     """
-    Check all active listings on polled platforms for status changes.
+    Check active listings on polled platforms for status changes.
     Triggers auto-delist if a sold item is detected.
 
-    Draait elke `polling_interval` seconden, dus alles wat hier per listing aan
-    database-verkeer gebeurt, gebeurt honderden keren per dag. Daarom in drie
-    gebundelde queries in plaats van twee losse queries pér listing:
-
-      1. de actieve listings (alleen de kolommen die we echt gebruiken),
-      2. in één keer welk item bij welke gebruiker hoort,
-      3. in één keer alle platformkoppelingen.
+    Alleen de advertenties die aan de beurt zijn: nog nooit gecontroleerd, of
+    langer dan HERCONTROLE_NA geleden. Oudste eerst, met een dak erop, zodat
+    één ronde altijd afloopt en niemand achteraan de rij blijft staan.
 
     Listings van gebruikers zonder koppeling voor dat platform worden
     overgeslagen. `get_listing_status` vraagt bij Marktplaats/2dehands een
@@ -53,38 +73,49 @@ async def poll_platform_statuses():
     """
     db = get_db()
 
-    # fetch_all, niet één select: PostgREST kapt stilzwijgend af op 1.000 rijen.
-    # Gemeten 27-08-2026 stonden er 4.751 actief, dus de verkoopcontrole keek
-    # nooit verder dan de eerste duizend — de rest werd nooit gecontroleerd.
-    rijen = await asyncio.to_thread(lambda: fetch_all(lambda: db.table("listings")
-        .select("id,item_id,platform,platform_listing_id,not_found_count")
-        .eq("status", "active")
-        .in_("platform", list(POLL_PLATFORMS))))
+    grens = (datetime.now(timezone.utc)
+             - timedelta(seconds=HERCONTROLE_NA)).isoformat()
+    # `nullsfirst`: een advertentie die nog nooit is nagekeken gaat voor. Zonder
+    # dat zou een nieuwe advertentie achter de hele bestaande voorraad aansluiten.
+    rijen = ((await _exec(db.table("listings")
+              .select("id,item_id,platform,platform_listing_id,not_found_count,last_checked")
+              .eq("status", "active")
+              .in_("platform", list(POLL_PLATFORMS))
+              .or_(f"last_checked.is.null,last_checked.lt.{grens}")
+              .order("last_checked", desc=False, nullsfirst=True)
+              .limit(PER_RONDE))).data or [])
 
     if not rijen:
         return
 
     item_ids = list({row["item_id"] for row in rijen})
-    # In brokken: dit draait over ÁLLE actieve advertenties van alle verkopers
-    # samen (gemeten 27-08-2026: 4.751). Eén `.in_()` met zoveel id's maakt een
-    # URL die httpx weigert te versturen, en dan viel de hele verkoopcontrole
-    # stil — voor iedereen tegelijk, zonder zichtbare foutmelding.
+    # In brokken: één `.in_()` met te veel id's maakt een URL die httpx weigert
+    # te versturen, en dan viel de hele verkoopcontrole stil — voor iedereen
+    # tegelijk, zonder zichtbare foutmelding. Zie IN_BROK in database.py.
     owners = {}
     for i in range(0, len(item_ids), IN_BROK):
         stuk = item_ids[i:i + IN_BROK]
         for row in ((await _exec(db.table("items").select("id,user_id").in_("id", stuk))).data or []):
             owners[row["id"]] = row["user_id"]
 
+    # Alleen de koppelingen van de eigenaren die in DEZE ronde meedoen. Die
+    # rijen bevatten tokens en cookies en zijn daarmee de dikste rijen die we
+    # hebben; ze allemaal ophalen terwijl er een handvol nodig is, is precies
+    # het soort verkeer dat het project op slot heeft gezet.
     credentials_by_key: dict[tuple[str, str], dict] = {}
-    for row in (
-        (await _exec(
-            db.table("platform_credentials")
-            .select("*")
-            .in_("platform", list(POLL_PLATFORMS))
-        )).data
-        or []
-    ):
-        credentials_by_key[(row["user_id"], row["platform"])] = row
+    eigenaren = sorted({u for u in owners.values() if u})
+    for i in range(0, len(eigenaren), IN_BROK):
+        stuk = eigenaren[i:i + IN_BROK]
+        for row in (
+            (await _exec(
+                db.table("platform_credentials")
+                .select("*")
+                .in_("platform", list(POLL_PLATFORMS))
+                .in_("user_id", stuk)
+            )).data
+            or []
+        ):
+            credentials_by_key[(row["user_id"], row["platform"])] = row
 
     pollable = [
         (row, credentials_by_key[(owners[row["item_id"]], row["platform"])])
@@ -95,9 +126,24 @@ async def poll_platform_statuses():
 
     skipped = len(rijen) - len(pollable)
     logger.info(
-        f"Polling {len(pollable)} active listings"
+        f"Polling {len(pollable)} active listings (aan de beurt: {len(rijen)})"
         + (f" ({skipped} skipped — no platform connection for the owner)" if skipped else "")
     )
+
+    # Een overgeslagen advertentie (eigenaar zonder koppeling) moet óók een
+    # stempel krijgen. Zonder dat blijft hij eeuwig "aan de beurt" en verdringt
+    # hij elke ronde opnieuw de advertenties die wél gecontroleerd kunnen worden.
+    nu = datetime.now(timezone.utc).isoformat()
+    overgeslagen = [r["id"] for r in rijen
+                    if (r, credentials_by_key.get((owners.get(r["item_id"]), r["platform"])))
+                    and not (owners.get(r["item_id"])
+                             and (owners[r["item_id"]], r["platform"]) in credentials_by_key)]
+    for i in range(0, len(overgeslagen), IN_BROK):
+        try:
+            await _exec(db.table("listings").update({"last_checked": nu})
+                        .in_("id", overgeslagen[i:i + IN_BROK]))
+        except Exception as e:  # noqa: BLE001 — een stempel is geen reden om te stoppen
+            logger.warning("Kon overgeslagen listings niet stempelen: %s", e)
 
     for listing, credentials in pollable:
         await _check_one(listing, credentials)
