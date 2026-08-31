@@ -989,8 +989,13 @@ async def _find_twins(cands: list[dict], items: list[dict], platforms_by_item: d
         by_platform.setdefault(c.get("platform"), []).append(c)
     if len(by_platform) > 1:
         import asyncio as _a
+        # Eén rem voor de héle aanroep, ook over de platforms heen. Zonder dat
+        # zou elk platform zijn eigen budget krijgen en zijn we bij drie
+        # platforms alsnog met negen tegelijk bezig. Zie _TWIN_TEGELIJK.
+        rem = _rem or _a.Semaphore(_TWIN_TEGELIJK)
         results = await _a.gather(*(
-            _find_twins(group, items, platforms_by_item) for group in by_platform.values()
+            _find_twins(group, items, platforms_by_item, _rem=rem)
+            for group in by_platform.values()
         ))
         merged = {}
         for r in results:
