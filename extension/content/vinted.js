@@ -1867,8 +1867,22 @@
     //    niets en tellen daarom niet mee.
     const alleWoorden = namen.map((n) =>
       n.toLowerCase().replace(/&/g, " ").split(/[^a-z0-9-]+/).filter((w) => w.length > 3).map(enkelvoud));
+    // HET VANGBLAD MAG NIET MEETELLEN BIJ HET TELLEN (31-08-2026).
+    //
+    // "Other jumpers & sweaters" herhaalt per definitie de woorden van zijn
+    // buren. Telde dat blad mee, dan was "jumper" ineens géén eigen woord meer
+    // van "Jumpers" — het kwam immers twee keer voor — en scoorde geen enkel
+    // blad iets. Daarna viel de keuze op stap 3, en dat is nu juist datzelfde
+    // "Other …". Gevolg: (1356) Beige Suitsupply Jumper belandde onder "Other
+    // jumpers & sweaters" terwijl "Jumpers" er letterlijk in de titel stond.
+    //
+    // Dit blad wordt hieronder toch al overgeslagen bij het scoren; het hoort
+    // dus ook niet mee te tellen bij het bepalen wat een eigen woord is.
     const telling = {};
-    for (const ws of alleWoorden) for (const w of new Set(ws)) telling[w] = (telling[w] || 0) + 1;
+    for (let i = 0; i < alleWoorden.length; i++) {
+      if (/^other\b/i.test(namen[i])) continue;
+      for (const w of new Set(alleWoorden[i])) telling[w] = (telling[w] || 0) + 1;
+    }
     const woordenTekst = new Set(tekst.replace(/&/g, " ").split(/[^a-z0-9-]+/).map(enkelvoud));
     let beste = -1, besteScore = 0;
     alleWoorden.forEach((ws, i) => {
