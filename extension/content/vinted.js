@@ -1692,7 +1692,65 @@
     for (const out of variants) {
       if (await _typePriceVariant(el, out, num, { perChar: true })) return true;
     }
+
+    // VIERDE EN BESLISSENDE POGING (31-08-2026).
+    //
+    // Alle routes hierboven zetten de prijs opnieuw. Als het veld de prijs al
+    // TOONT en Vinted tóch klaagt, is dat niet het probleem: het formulier houdt
+    // dan een eigen, lege waarde vast naast wat er op het scherm staat. Daniel
+    // vond de handeling die dat wél oplost, en die is verrassend klein: hij
+    // vervangt met de hand één teken door hetzelfde teken ("een 9 door mijn
+    // eigen 9"), en daarna gaat publiceren gewoon door.
+    //
+    // Dat doen we hier na, met de bewerkroute van de browser zelf in plaats van
+    // met verzonnen gebeurtenissen — dus dezelfde weg als een toetsaanslag.
+    if (Math.abs((_num(el.value) || -1) - num) < 0.01) {
+      for (let poging = 0; poging < 2; poging++) {
+        if (await _hertypLaatsteTeken(el, num)) return true;
+      }
+    }
     return false;
+  }
+
+  // Eén teken weghalen en meteen opnieuw typen, zonder de prijs te veranderen.
+  // Zie de vierde poging in fillPriceVinted: dit is de handeling waarvan op het
+  // echte formulier is vastgesteld dat hij de klacht wegneemt. Goedkeuren doen
+  // we alleen als de prijs daarna nog steeds klopt én de rode regel weg is.
+  async function _hertypLaatsteTeken(el, num) {
+    const huidig = String(el.value || "");
+    if (!huidig) return false;
+    const laatste = huidig.slice(-1);
+    el.focus();
+    el.dispatchEvent(new Event("focus", { bubbles: true }));
+
+    // Eerst het laatste teken selecteren en over zichzelf heen typen. Lukt die
+    // selectie niet (een gemaskeerd veld staat dat niet altijd toe), dan wissen
+    // we het teken en typen het opnieuw — hetzelfde eindresultaat.
+    let gelukt = false;
+    try { el.setSelectionRange(huidig.length - 1, huidig.length); } catch (e) {}
+    try { gelukt = document.execCommand("insertText", false, laatste); } catch (e) { gelukt = false; }
+    if (!gelukt || String(el.value || "") !== huidig) {
+      try { el.setSelectionRange(huidig.length, huidig.length); } catch (e) {}
+      try { document.execCommand("delete", false, null); } catch (e) {}
+      await sleep(80);
+      try { document.execCommand("insertText", false, laatste); } catch (e) {}
+    }
+    await sleep(150);
+    el.dispatchEvent(new Event("change", { bubbles: true }));
+    el.dispatchEvent(new Event("blur", { bubbles: true }));
+
+    const got = _num(el.value);
+    if (!isFinite(got) || Math.abs(got - num) >= 0.01) {
+      clog(`hertypen veranderde de prijs (${el.value}) — niet geaccepteerd`);
+      return false;
+    }
+    const err = await priceErrorAfterSettle(900);
+    if (err) {
+      clog(`hertypen hielp niet, Vinted klaagt nog steeds: ${err}`);
+      return false;
+    }
+    clog("prijs geaccepteerd na het opnieuw typen van het laatste teken");
+    return true;
   }
 
   // True if the page/input locale uses a comma decimal separator (NL etc.).
