@@ -33,6 +33,35 @@ def test_de_verkoopcontrole_haalt_niet_meer_alles_op():
     assert "last_checked.lt." in ronde
 
 
+def test_de_wachtrijvraag_komt_ongeschonden_bij_de_database_aan():
+    """De grens is een tijdstempel met een `+` erin (`…+00:00`). In een URL is
+    een kale `+` een SPATIE. Zou die niet gecodeerd worden, dan vraagt de
+    verkoopcontrole iets anders dan bedoeld en merkt niemand dat: hij geeft
+    gewoon een lijst terug, alleen de verkeerde. Vandaar deze proef op de
+    werkelijk verstuurde URL."""
+    import httpx
+    from datetime import datetime, timedelta, timezone
+    from supabase import create_client
+
+    gezien = {}
+
+    def vang(request):
+        gezien["url"] = str(request.url)
+        return httpx.Response(200, json=[])
+
+    c = create_client("https://x.supabase.co", "x")
+    c.postgrest.session._transport = httpx.MockTransport(vang)
+    grens = (datetime.now(timezone.utc) - timedelta(seconds=3600)).isoformat()
+    (c.table("listings").select("id").eq("status", "active")
+      .or_(f"last_checked.is.null,last_checked.lt.{grens}")
+      .order("last_checked", desc=False, nullsfirst=True).limit(5).execute())
+
+    url = gezien["url"]
+    assert "%2B" in url, "de + in het tijdstempel is niet gecodeerd — dit wordt een spatie"
+    assert "+00%3A00" not in url
+    assert "order=last_checked.asc.nullsfirst" in url
+
+
 def test_de_koppelingen_worden_niet_meer_allemaal_opgehaald():
     """`platform_credentials` bevat tokens en cookies — de dikste rijen die we
     hebben. Die hoorden nooit in hun geheel opgehaald te worden."""
