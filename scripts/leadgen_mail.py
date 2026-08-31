@@ -3962,7 +3962,16 @@ def tick(args) -> None:
     gaat er niets dubbel de deur uit."""
     host = _controleer_afzender()
     gebruiker = _need("MAIL_USER")
-    state = _state()
+    try:
+        state = _state()
+    except OpslagOnbereikbaar as e:
+        # DE BEURT GAAT NIET DOOR. Zonder administratie weten we niet wie er al
+        # gemaild is, en dan is elke verstuurde mail een gok. Zie
+        # OpslagOnbereikbaar. Wél luid melden: op 31-08-2026 lag dit een etmaal
+        # stil zonder dat iemand het merkte, terwijl er vier klanten wachtten.
+        print(f"!! de administratie is onbereikbaar — deze beurt gaat NIET door: {e}")
+        _storingsalarm(str(e))
+        return
     plan = _dagplan(state, args.per_dag)
     nu = datetime.now().strftime("%H:%M")
 
