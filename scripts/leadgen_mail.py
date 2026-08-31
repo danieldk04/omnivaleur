@@ -1914,6 +1914,15 @@ def _warme_opvolging(state: dict, boek: "Notion") -> int:
                 # concurrent of een afmelding laat je met rust.
                 if not (st.get("soort") in ("warm", "onbekend") or st.get("met_de_hand")):
                     continue
+                # EEN VAKANTIEMELDING IS GEEN GESPREK (31-08-2026, Frank de Veer).
+                # Het enige wat Frank ooit terugstuurde was "Ben momenteel met
+                # vakantie, waardoor ik niet altijd direct zal reageren". Dat
+                # wordt hier gelezen als "hij heeft gereageerd, dus dit is een
+                # lopend gesprek dat is stilgevallen" — terwijl er nooit iemand
+                # heeft meegelezen. Iemand porren omdat zijn afwezigheidsassistent
+                # antwoordde is precies één mail te veel.
+                if st.get("auto_antwoord") and not st.get("beantwoord"):
+                    continue
                 if st.get("afgemeld") or st.get("afgewezen") or st.get("concurrent"):
                     continue
                 ons, hun = verstuurd.get(adres), ontvangen.get(adres)
