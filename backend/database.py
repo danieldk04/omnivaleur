@@ -145,7 +145,72 @@ def _is_een_gateway_pagina(tekst: str) -> bool:
     return "json could not be generated" in tekst and ("<html" in tekst or "cloudflare" in tekst)
 
 
+# ─────────────────────────────────────────────────────────────────────────────
+# HET PROJECT OP SLOT — ALARM, NIET AFWACHTEN
+#
+# WAAROM DIT ER IS (31-08-2026). Supabase zette het hele project op slot wegens
+# overschreden verkeer: elk verzoek kreeg een 402 met "Service for this project
+# is restricted". Inloggen gaf 503, de blog 500, de mailagent viel stil. Wij
+# hoorden dat niet van onze eigen server maar van een klant, die 's ochtends
+# mailde dat inloggen niet lukte. Dat is de verkeerde volgorde.
+#
+# Dit is bewust géén herstelbare fout: opnieuw proberen helpt niet en maakt het
+# alleen maar erger. Het is een toestand die iemand moet oplossen, en dus een
+# alarm. Hooguit één keer per QUOTA_STILTE_UREN, anders wordt het bij duizenden
+# verzoeken per uur zelf een storing.
+QUOTA_STILTE_UREN = 4
+_QUOTA_GEMELD_OP = 0.0
+_QUOTA_SLOT = threading.Lock()
+
+
+def _is_quotastoring(exc: BaseException) -> str:
+    """De tekst van de blokkade, of "" als dit iets anders is."""
+    huidige: BaseException | None = exc
+    while huidige is not None:
+        tekst = str(huidige)
+        laag = tekst.lower()
+        if "restricted due to the following violations" in laag or (
+                "402" in laag and "quota" in laag):
+            return tekst[:400]
+        huidige = huidige.__cause__ or huidige.__context__
+    return ""
+
+
+def meld_quotastoring(exc: BaseException) -> None:
+    """Eén mail naar Daniel zodra het project op slot staat. Faalt dit, dan zwijgt het."""
+    global _QUOTA_GEMELD_OP
+    reden = _is_quotastoring(exc)
+    if not reden:
+        return
+    with _QUOTA_SLOT:
+        if time.time() - _QUOTA_GEMELD_OP < QUOTA_STILTE_UREN * 3600:
+            return
+        _QUOTA_GEMELD_OP = time.time()
+    logger.error("SUPABASE HEEFT HET PROJECT OP SLOT GEZET: %s", reden)
+    try:
+        from backend.services.email import send_email
+        send_email(
+            "Omnivaleur ligt eruit — Supabase heeft het project op slot gezet",
+            "Supabase weigert elk verzoek omdat het gratis plan op is. Voor je "
+            "klanten betekent dit dat inloggen, publiceren en het dashboard geen "
+            "van alle werken.\n\n"
+            f"Wat Supabase teruggeeft:\n  {reden}\n\n"
+            "Wat je kunt doen:\n"
+            "  1. Wachten tot je factuurperiode omslaat — dan gaat de blokkade er "
+            "vanzelf af en kost het niets.\n"
+            "  2. In Supabase het plan opwaarderen; dan is het meteen opgelost.\n\n"
+            "Kijk daarna op supabase.com/dashboard bij Usage welke meter vol liep.\n\n"
+            f"Je krijgt hooguit elke {QUOTA_STILTE_UREN} uur een herinnering.\n")
+    except Exception:  # noqa: BLE001 — een mislukt alarm mag nooit iets blokkeren
+        logger.exception("Kon de quotastoring niet mailen")
+
+
 def _is_herstelbaar(exc: BaseException) -> bool:
+    # Een project dat op slot staat is niet "even weg": herhalen helpt niet en
+    # verbruikt alleen nog meer van precies datgene wat op is.
+    if _is_quotastoring(exc):
+        meld_quotastoring(exc)
+        return False
     huidige: BaseException | None = exc
     while huidige is not None:
         if isinstance(huidige, _HERSTELBAAR):
