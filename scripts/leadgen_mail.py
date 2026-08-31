@@ -3394,7 +3394,10 @@ _TOEZEGGING = re.compile(
     r"\b("
     r"bel(len|afspraak|t? je|t? ik)|telefonisch|meet-?link|google\s*meet|zoom|"
     r"afspraak (in|maken|plannen)|moment (voor|stel)|inplannen|"
-    r"terugbetal|geld terug|restitutie|crediter|vergoed|korting|gratis maand|factuur|"
+    # "terugbeta", niet "terugbetal": de voltooide vorm is terugbetAALd, en die
+    # bevat "terugbetal" helemaal niet. Precies zo glipte de duurste zin die er
+    # is — een toezegging over geld — langs de rem.
+    r"terugbeta|geld terug|restitutie|crediter|vergoed|korting|gratis maand|factuur|"
     r"kom er.{0,20}op terug|kijk ik naar|zoek ik uit|zoek het uit|"
     r"laat ik (het )?weten|houd ik je op de hoogte|hoor je van me|kom ik bij je terug"
     r")", re.I)
