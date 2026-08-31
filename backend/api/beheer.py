@@ -1031,7 +1031,13 @@ def _storing_rij(sleutel: str, v: dict, sessie: dict | None) -> dict:
         "laatst": (v.get("laatst") or "")[:10],
         "status": v.get("status", "open"),
         "uitleg": v.get("uitleg") or v.get("reden") or "",
-        "klaar_op": v.get("gerepareerd_op") or v.get("afgewezen_op") or "",
+        # Apart van `uitleg`, want het verschil is wat het scherm moet laten
+        # zien: `uitleg` hoort bij een reparatie waar de klant bericht over
+        # krijgt, `reden` bij een melding die is afgewezen of vanzelf uitgedoofd
+        # en waar juist NIEMAND bericht over krijgt.
+        "reden": v.get("reden") or "",
+        "klaar_op": (v.get("gerepareerd_op") or v.get("afgewezen_op")
+                     or v.get("verlopen_op") or ""),
         # Wie er bericht over kreeg. Nul terwijl het wél is opgelost betekent dat
         # de klantenservice het concept nog moet klaarzetten — zichtbare
         # informatie, geen detail.
@@ -1179,7 +1185,10 @@ def werkplaats(user=Depends(get_current_user_full)):
         if bezig and sleutel == bezig["sleutel"]:
             continue
         rij = _storing_rij(sleutel, v, sessies.get(sleutel))
-        if v.get("status") in ("opgelost", "afgewezen"):
+        # `verlopen` hoort hier bij het afgehandelde werk. Zonder dat viel een
+        # uitgedoofde melding in "overig", en dan leest hij als iets dat nog
+        # wacht terwijl er juist bewust niets meer mee gebeurt.
+        if v.get("status") in ("opgelost", "afgewezen", "verlopen"):
             gedaan.append(rij)
         elif v.get("moet_zeker"):
             wachtrij.append(rij)
