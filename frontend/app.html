@@ -4399,14 +4399,14 @@ async function mergeItems(keep, merge, stil = false) {
     const anders = refused.length - zelfdeKanaal.length;
     if (zelfdeKanaal.length) {
       const kanalen = [...new Set(zelfdeKanaal.flatMap(r => r.platforms || []))];
-      showToast(`${zelfdeKanaal.length} row(s) kept separate — they have their own advert on ${kanalen.join(', ') || 'the same channel'}, and one item cannot hold two adverts on one channel. Nothing was lost.`);
+      zeg(`${zelfdeKanaal.length} row(s) kept separate — they have their own advert on ${kanalen.join(', ') || 'the same channel'}, and one item cannot hold two adverts on one channel. Nothing was lost.`);
     }
     if (anders) {
-      showToast(`${anders} row(s) were left alone — they did not match closely enough to merge safely.`);
+      zeg(`${anders} row(s) were left alone — they did not match closely enough to merge safely.`);
     }
     return true;
   } catch (e) {
-    showToast('Could not merge these items — try again');
+    zeg('Could not merge these items — try again');
     return false;
   }
 }
