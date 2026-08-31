@@ -4368,10 +4368,19 @@ async function mergeItems(keep, merge) {
     });
     const data = await parseJsonSafe(r);
     if (!r.ok) { showToast(data?.detail || 'Could not merge these items'); return false; }
-    // Geweigerde rijen zijn geen storing maar een oordeel: de server vond ze
-    // niet hetzelfde artikel. Dat hoort hij te horen, niet stilzwijgend te missen.
-    if ((data.refused || []).length) {
-      showToast(`${data.refused.length} row(s) were left alone — they did not match closely enough to merge safely.`);
+    // Geweigerde rijen zijn geen storing maar een oordeel. Er zijn twee heel
+    // verschillende oordelen en die verwarren is erger dan zwijgen: "lijkt niet
+    // genoeg op elkaar" vraagt om nakijken, "staat op hetzelfde kanaal" is een
+    // grens van het systeem waar de klant niets aan kan doen.
+    const refused = data.refused || [];
+    const zelfdeKanaal = refused.filter(r => r.reason === 'advert_on_same_platform');
+    const anders = refused.length - zelfdeKanaal.length;
+    if (zelfdeKanaal.length) {
+      const kanalen = [...new Set(zelfdeKanaal.flatMap(r => r.platforms || []))];
+      showToast(`${zelfdeKanaal.length} row(s) kept separate — they have their own advert on ${kanalen.join(', ') || 'the same channel'}, and one item cannot hold two adverts on one channel. Nothing was lost.`);
+    }
+    if (anders) {
+      showToast(`${anders} row(s) were left alone — they did not match closely enough to merge safely.`);
     }
     return true;
   } catch (e) {
