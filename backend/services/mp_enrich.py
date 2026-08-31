@@ -31,7 +31,7 @@ import time
 import unicodedata
 
 import httpx
-from backend.database import naast_de_lus, fetch_all
+from backend.database import naast_de_lus, fetch_all, IN_BROK
 
 logger = logging.getLogger(__name__)
 
@@ -612,19 +612,22 @@ async def verrijk(db, user_id: str, schrijf: bool = True,
         .select("id,title,price,photo_urls,brand,size,color,condition")
         .eq("user_id", user_id)))
 
+    # Bewust dezelfde filter als `_verkopers_met_gaten` verderop in dit bestand,
+    # die al maanden in productie draait: vraag wie er GEEN tekst heeft. Een
+    # nieuwe, ongeteste negatie hier zou bij een verkeerde uitkomst stilzwijgend
+    # de verkeerde advertenties aanpakken.
     try:
-        met_tekst = {r["id"] for r in (await naast_de_lus(lambda: fetch_all(
+        zonder_tekst = {r["id"] for r in (await naast_de_lus(lambda: fetch_all(
             lambda: db.table("items").select("id")
             .eq("user_id", user_id)
-            .not_.is_("description", "null")
-            .neq("description", ""))))}
+            .or_("description.is.null,description.eq."))))}
     except Exception as e:  # noqa: BLE001
         # Bij twijfel doen alsof iedereen tekst heeft. Dan doet deze ronde niets
         # in plaats van 2.000 advertenties onnodig van Marktplaats te trekken.
-        logger.warning("mp_enrich: kon niet zien wie tekst heeft (%s) — ronde overgeslagen", e)
-        met_tekst = {r["id"] for r in rijen}
+        logger.warning("mp_enrich: kon niet zien wie tekst mist (%s) — ronde overgeslagen", e)
+        zonder_tekst = set()
     for r in rijen:
-        r["heeft_tekst"] = r["id"] in met_tekst
+        r["heeft_tekst"] = r["id"] not in zonder_tekst
 
     def _mist_iets(r: dict) -> bool:
         # Niet alleen prijs en tekst. Een geïmporteerde advertentie kwam ook
