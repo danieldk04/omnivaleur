@@ -3471,13 +3471,6 @@ def _zet_concept_klaar(lead: dict, inkomend, body: str, soort: str = "warm",
     if met_pixel:
         msg.add_alternative(_open_pixel_html(lead["email"], volledig), subtype="html")
 
-    klant = is_klant(lead.get("email", ""))
-    rem = _waarom_niet_zelf_versturen(kern, klant, bron) if zelf_versturen else ""
-    if zelf_versturen and not rem:
-        return _stuur_zelf(lead, msg, kern, bron)
-    if zelf_versturen:
-        print(f"  ↯ niet zelf verstuurd aan {lead.get('email')}: {rem}")
-
     try:
         with imaplib.IMAP4_SSL(host, 993) as im:
             im.login(van, wachtwoord)
