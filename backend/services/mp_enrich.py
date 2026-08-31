@@ -681,7 +681,7 @@ async def verrijk(db, user_id: str, schrijf: bool = True,
         stap = max(1, len(rijtje) // MAX_TITELPOGINGEN)
         return [rijtje[i]["title"] for i in range(0, len(rijtje), stap) if rijtje[i].get("title")]
 
-    gevuld = [r for r in rijen if r.get("price") and str(r.get("description") or "").strip()]
+    gevuld = [r for r in rijen if r.get("price") and r.get("heeft_tekst")]
     zoektitels = _verspreid(gevuld) + _verspreid(open_)
 
     limiet = httpx.Limits(max_connections=TEGELIJK, max_keepalive_connections=TEGELIJK)
