@@ -143,7 +143,7 @@ def send_email_checked(subject: str, body: str, to: str | None = None, reply_to:
     last_error: Exception | None = None
     for port in ports:
         try:
-            _deliver(port, recipient, msg)
+            _deliver(port, aan, msg)
             if port != int(settings.smtp_port):
                 logger.warning(f"SMTP: poort {settings.smtp_port} werkte niet, verstuurd via {port}")
             return
