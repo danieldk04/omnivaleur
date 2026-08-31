@@ -3427,7 +3427,15 @@ _TOEZEGGING = re.compile(
 
 
 def _waarom_niet_zelf_versturen(kern: str, klant: bool, bron: str) -> str:
-    """Reden om dit bericht tóch als concept neer te leggen, of "" als het mag."""
+    """Reden om dit bericht tóch als concept neer te leggen, of "" als het mag.
+
+    STAAT UIT. Zie ZELF_VERSTUREN_UIT hieronder: er gaat op dit moment niets
+    vanzelf weg, wat deze functie er ook van vindt. De regels blijven staan
+    omdat ze op zichzelf klopten — het probleem zat er niet in wát ze
+    tegenhielden, maar dat er überhaupt iets zonder Daniel de deur uit ging.
+    """
+    if ZELF_VERSTUREN_UIT:
+        return "de machine verstuurt niets uit zichzelf (ZELF_VERSTUREN_UIT)"
     treffer = _TOEZEGGING.search(kern or "")
     if treffer:
         return f"er staat een toezegging in ({treffer.group(0)!r})"
