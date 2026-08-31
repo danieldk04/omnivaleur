@@ -37,6 +37,7 @@ from __future__ import annotations
 import argparse
 import base64
 import email
+import hashlib
 import imaplib
 import collections
 import difflib
