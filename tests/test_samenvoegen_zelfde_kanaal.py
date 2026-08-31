@@ -139,6 +139,48 @@ def test_bij_een_weigering_wordt_er_niets_weggegooid(monkeypatch):
         "de opdrachten zijn verhuisd terwijl de advertenties bleven staan")
 
 
+def test_een_weggevallen_verbinding_wordt_herkanst(monkeypatch):
+    """WAAROM (31-08-2026, na de schemawijziging). De botsing was weg, maar
+    "Merge all" struikelde alsnog: RemoteProtocolError, ConnectionTerminated en
+    "EOF occurred in violation of protocol". Dat is de gedeelde
+    databaseverbinding die het onder een reeks schrijfacties begeeft.
+
+    Herkansen mag hier omdat de drie schrijfacties `update ... where` en
+    `delete ... where` zijn: twee keer uitgevoerd leveren ze exact hetzelfde op.
+    Bij een insert zou dit juist verkeerd zijn."""
+    listings = [_advert(KEEP, "marktplaats", "m100"),
+                _advert(ANDER, "marktplaats", "m200")]
+    db = _NepDb(_items(), listings)
+    pogingen = {"n": 0}
+    echte_table = db.table
+
+    def hikt(naam):
+        q = echte_table(naam)
+        if naam == "listings":
+            origineel = q.execute
+
+            def eerst_stuk():
+                if q.soort == "update":
+                    pogingen["n"] += 1
+                    if pogingen["n"] == 1:
+                        import httpx
+                        raise httpx.RemoteProtocolError("Server disconnected")
+                return origineel()
+            q.execute = eerst_stuk
+        return q
+
+    db.table = hikt
+    monkeypatch.setattr(api, "get_db", lambda: db)
+    monkeypatch.setattr(api, "zelfde_artikel", lambda *_a, **_k: True)
+    monkeypatch.setattr(api, "bekende_merken_van", lambda *_a, **_k: set())
+
+    uitslag = api.merge_items({"keep": KEEP, "merge": [ANDER]}, user_id="u1")
+
+    assert uitslag["merged"] == [ANDER], (
+        "een verbindingshik hoort een tweede poging te krijgen, geen weigering")
+    assert pogingen["n"] >= 2, "er is niet opnieuw geprobeerd"
+
+
 def test_een_andere_databasefout_wordt_niet_stilletjes_ingeslikt(monkeypatch):
     """Het vangnet is er voor één specifieke botsing. Alles daarbuiten moet
     gewoon omhoog blijven vliegen, anders verdwijnt de volgende storing net zo
