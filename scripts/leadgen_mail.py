@@ -3393,6 +3393,23 @@ def _waarom_geen_concept(adres: str, inkomend) -> str | None:
     return None
 
 
+# ── NIETS GAAT UIT ZICHZELF DE DEUR UIT ──────────────────────────────────────
+# DANIEL, 31-08-2026: "nooit uit jezelf versturen."
+#
+# Ik had dit vanochtend aangezet met het idee dat een beleefdheidsmail zonder
+# toezegging geen beslissing bevat. Dat klopt niet. Wat een mail schadelijk
+# maakt zit niet alleen in wat hij belóóft, maar ook in of hij nog kló́pt: de
+# aanhef, de naam, of het gesprek al gesloten was, of iemand net iets anders
+# schreef. Precies daar ging het mis — een verzonnen voornaam bij Zilverwebsite,
+# een derde bericht aan Frank die al met vakantie was, en een antwoord aan
+# Patricia dat Daniel vier dagen eerder zelf al had gegeven.
+#
+# Daar is geen filter tegen te bouwen dat ik met droge ogen "veilig" kan noemen.
+# Dus: alles wordt een concept, altijd. Deze schakelaar is de enige plek waar
+# dat besluit staat.
+ZELF_VERSTUREN_UIT = True
+
+
 # ── Zelf versturen of laten liggen ───────────────────────────────────────────
 # WAAROM DIT ER IS (31-08-2026)
 # Daniel: "nu staan er veel mails klaar in concepten die daar niet horen" en
