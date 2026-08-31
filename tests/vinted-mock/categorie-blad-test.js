@@ -35,6 +35,10 @@ const gevallen = [
   [TRUIEN, "(1356) beige suitsupply jumper - men m - very good", "Jumpers"],
   [TRUIEN, "grey suitsupply cardigan men m", "Cardigans"],
   [TRUIEN, "nike hoodie zwart", "Hoodies"],
+  // Waar een half-zip hoort is door Daniel bepaald op 31-08-2026: Zip-throughs.
+  [TRUIEN, "profuomo half zip trui", "Zip-throughs"],
+  [TRUIEN, "(1275) Grey Profuomo Half Zip - Men XS - Very Good", "Zip-throughs"],
+  [TRUIEN, "denham quarter zip navy", "Zip-throughs"],
   [TRUIEN, "coltrui van wol", "Turtlenecks"],
   // Zegt de titel niets over het model, dan is het vangblad wél het goede
   // antwoord — die terugval moet blijven werken.

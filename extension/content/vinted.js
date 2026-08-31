@@ -790,6 +790,11 @@
   const BLAD_VOORKEUR = [
     [/\bcardigan/i,                         /cardigan/i],
     [/\bzip[- ]?(through|up|vest|hoodie)/i, /zip[- ]?through/i],
+    // Een half-zip hoort volgens Daniel bij Zip-throughs (31-08-2026). Dat is
+    // een verkopersoordeel, geen taalkunde: het staat hier omdat hij het zo
+    // verkoopt. Zonder deze regel valt elke half-zip in de restcategorie, want
+    // de titel zegt "half zip" en geen enkel blad heet zo.
+    [/\b(half|quarter|kwart|halve)[- ]?zip\b|\b1\/[24][- ]?zip\b/i, /zip[- ]?through/i],
     [/\bhoodie/i,                           /^hoodies/i],
     [/\bsweatshirt/i,                       /sweatshirt/i],
     [/\bgeruit|\bchecked|\bplaid|\btartan/i, /check/i],
