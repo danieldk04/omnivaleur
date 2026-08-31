@@ -2658,7 +2658,9 @@ foto's te verhuizen, en dat kon alleen als de database open was. Wachten tot
 1 september zou die klem niet hebben doorbroken.
 
 **Wat de meting daarna liet zien.** De fotoverhuizing naar Cloudflare R2 was al
-gedaan — vermoedelijk door de tweede ontwikkelaar. Gemeten na het openen:
+gedaan — niet vandaag door de tweede ontwikkelaar, maar al op 16-08-2026, samen
+met een opruiming die de bucket van 3,71 GB naar 0,67 GB bracht. Gemeten na het
+openen:
 
   * `items`: 36.193 foto-urls, waarvan **0** nog op Supabase en 32.668 op
     img.omnivaleur.com. De rest zijn externe CDN-urls (Marktplaats, Vinted).
@@ -2682,3 +2684,49 @@ bugslijst. Bij een blokkade moet elke terugmelding van die dag opnieuw.
 **Open bij Daniel:** Pro weer uitzetten zodra het dashboard bevestigt dat opslag
 en verkeer onder de gratis grens staan. De meting zegt van wel, het dashboard
 loopt een dag achter.
+
+### 31-08-2026 — Waar die 2,1 GB dan wél zat: nergens
+
+Nagemeten met de service-sleutel: er is **één** bucket (`photos`), en die is
+0,67 GB — precies de stand van na de opruiming van 16-08-2026. Er is dus geen
+tweede bucket en geen verborgen opslag. Het dashboardcijfer van 2,108 GB liep
+achter op de werkelijkheid (Supabase telt verwijderde objecten nog een tijd mee).
+
+**Wat dat betekent.** De opslag zat al onder de gratis grens van 1 GB. Van de
+drie overtredingen was `exceed_storage_size_quota` dus vermoedelijk een
+naijl-effect, en had wachten tot 1 september waarschijnlijk óók gewerkt. Het
+advies om Pro aan te zetten is gegeven op het enige zichtbare cijfer (211%) en
+dat cijfer was verouderd. Voor de volgende keer: bij een opslagoverschrijding
+éérst `cleanup_orphan_photos.py` droogdraaien — dat leest de bucket echt uit —
+voordat je op het dashboard afgaat.
+
+### 31-08-2026 — Twee dingen die vandaag boven water kwamen
+
+**1. "Merge all" klapte op elke groep.** Daniel kreeg elf serverfouten op rij
+(269E80, 0A2143, 07F3A8, 9D7E67, DFD460, 2C75C5 …). Oorzaak: `listings` heeft
+een unieke sleutel op (item_id, platform), dus één item kan hoogstens één
+advertentie per kanaal hebben. Acht kopieën van dezelfde trui met elk een eigen
+Marktplaats-advertentie botsen daar per definitie mee. Er ging niets verloren —
+de listings-update is de eerste van drie stappen, dus verwijderen werd nooit
+bereikt — maar de dubbele rijen bleven staan en de klant zag alleen een code.
+Nu wordt de botsing vóóraf herkend en die groep overgeslagen met een reden die
+de app uitlegt. Vastgelegd in `tests/test_samenvoegen_zelfde_kanaal.py`.
+
+**Nog open, en dit is een keuze voor Daniel:** zolang die unieke sleutel bestaat
+kunnen dubbele rijen die állebei op Marktplaats staan niet samengevoegd worden —
+en dat is juist het normale geval. Echt oplossen vraagt een handmatige wijziging
+in Supabase: de sleutel op (item_id, platform) vervangen door één op
+(item_id, platform, platform_listing_id). Dat is dezelfde soort handmatige stap
+als eerder bij `listings.sold_price` en `extension_heartbeat`.
+
+**2. Het storingsalarm kon zichzelf niet bezorgen.** `owner_email` staat op
+Railway op twee adressen in één instelling. `is_owner_email` in billing.py
+splitste die al op komma's; de mailverzending niet — Resend kreeg
+`to: ["a@x.nl, b@y.nl"]` en wees dat af. En omdat `meld_quotastoring` een
+mislukt alarm expres afvangt (een mailprobleem mag nooit iets blokkeren),
+verdween de afwijzing in de containerlogs. Het alarm dat vanochtend had moeten
+melden dat de site plat lag, had het dus sowieso niet gered. Gerepareerd voor
+zowel Resend als SMTP, met `tests/test_alarm_bereikt_beide_adressen.py`.
+
+**Les.** Een alarm dat zijn eigen mislukking wegslikt is geen alarm. Bij elk
+vangnet dat bewust zwijgt hoort een proef die bewijst dat het pad erheen werkt.
