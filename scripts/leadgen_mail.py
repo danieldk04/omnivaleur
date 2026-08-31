@@ -3479,7 +3479,7 @@ def _zet_concept_klaar(lead: dict, inkomend, body: str, soort: str = "warm",
             map_ = CONCEPTMAP if CONCEPTMAP in bestaand else "Drafts"
             im.append(f'"{map_}"', "\\Draft", None, msg.as_bytes())
         print(f"  ✎ concept klaargezet voor {lead['email']}")
-        _meld_concept_klaar(lead, msg["Subject"], kern, bron, wachtreden=rem)
+        _meld_concept_klaar(lead, msg["Subject"], kern, bron)
         # De voorgestelde tekst bewaren. Zonder dit valt later niet te zien wát
         # Daniel eraan veranderd heeft, en dan leert dit systeem nooit iets.
         _onthoud_concept(lead["email"].lower(), msg.get_content())
@@ -3565,8 +3565,7 @@ def _bron_met_developer(adres: str, bron: str) -> str:
 
 
 def _meld_concept_klaar(lead: dict, onderwerp: str, tekst: str,
-                        bron: str = "klantenservice",
-                        wachtreden: str = "") -> None:
+                        bron: str = "klantenservice") -> None:
     adres = (lead.get("email") or "").lower()
     if not adres:
         return
@@ -3586,47 +3585,14 @@ def _meld_concept_klaar(lead: dict, onderwerp: str, tekst: str,
               "een bericht dat hij daarna heeft ingehaald. Dit hier is de nieuwe; "
               "de oude kun je weggooien.\n"
               if adres in _ACHTERHAALD_CONCEPT else "")
-    # Waaróm dit blijft liggen in plaats van vanzelf weg te gaan. Zonder die zin
-    # lijkt elk wachtend concept willekeurig, en dan is de map weer een stapel.
-    waarom = (f"Waarom dit blijft liggen en niet vanzelf is verstuurd:\n"
-              f"  {wachtreden}\n\n" if wachtreden else "")
     msg.set_content(
         f"Er ligt een concept klaar in je conceptenmap.\n{dubbel}\n"
         f"Aan:        {adres}\n"
         f"Onderwerp:  {onderwerp}\n"
         f"Geschreven: {bron}\n\n"
-        f"{waarom}"
         f"--- het concept ---\n{(tekst or '').strip()[:1500]}\n--- einde ---\n\n"
         f"Nalezen en versturen; aanpassen mag, dan leer ik daarvan.\n")
     _seintje(msg, _meldsleutel("concept", adres, _kern_tekst(tekst)), "concept klaar")
-
-
-def _meld_verstuurd(lead: dict, onderwerp: str, tekst: str,
-                    bron: str = "klantenservice") -> None:
-    """Seintje ACHTERAF: dit is zelf de deur uit gegaan.
-
-    Daniel wil weten wat de machine namens hem doet, ook — juist — als hij er
-    niets aan hoefde te doen. Dit is dus geen verzoek om actie maar een
-    logboekregel in zijn postbus, met de tekst erbij zodat hij kan bijsturen als
-    de toon hem niet bevalt.
-    """
-    adres = (lead.get("email") or "").lower()
-    van = os.environ.get("MAIL_USER")
-    if not (adres and van):
-        return
-    bron = _bron_met_developer(adres, bron)
-    msg = EmailMessage()
-    msg["From"] = f"Klantenservice <{van}>"
-    msg["To"] = ", ".join(ALARM_NAAR)
-    msg["Subject"] = f"Zelf verstuurd: {_bedrijfsnaam(lead) or adres}"
-    msg.set_content(
-        f"Dit heb ik zojuist zelf verstuurd. Je hoeft niets te doen.\n\n"
-        f"Aan:        {adres}\n"
-        f"Onderwerp:  {onderwerp}\n"
-        f"Geschreven: {bron}\n\n"
-        f"--- wat er uitging ---\n{(tekst or '').strip()[:1500]}\n--- einde ---\n\n"
-        f"Klopt de toon niet, zeg het dan — dan pas ik het aan voor de volgende.\n")
-    _seintje(msg, _meldsleutel("verstuurd", adres, _kern_tekst(tekst)), "zelf verstuurd")
 
 
 def _alarm(lead: dict, onderwerp: str, body: str) -> None:

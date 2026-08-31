@@ -863,19 +863,13 @@ def bericht_over_reparaties() -> int:
         tekst = _herstelbericht(adres, reparaties)
         if not tekst:
             continue
-        # DE TERUGWEG GAAT VANZELF (31-08-2026). Dit bericht is het enige in de
-        # hele machine dat vóór het schrijven aan de code is getoetst: de
-        # developer heeft de storing gerepareerd, de proef staat groen, en de
-        # uitleg komt woordelijk uit `opgelost`. Er valt voor Daniel niets aan na
-        # te kijken. Bleef het als concept liggen, dan hing de melder — precies
-        # degene die de moeite nam iets te melden — aan de klik van iemand die
-        # net had gezegd dat hij niet meer in de post wil zitten.
-        #
-        # `_waarom_niet_zelf_versturen` houdt het alsnog tegen zodra er een
-        # toezegging in blijkt te staan.
+        # BLIJFT EEN CONCEPT (31-08-2026). Dit bericht lijkt het veiligst van
+        # allemaal — het is aan de code getoetst voordat het geschreven werd —
+        # en juist hier ging het mis: de mail aan Zilverwebsite opende met "Hi
+        # Ronald", een naam die daar niet bestaat. Getoetst op de feiten is niet
+        # hetzelfde als getoetst op de aanhef.
         if L._zet_concept_klaar({"email": adres}, None, "", eigen_tekst=tekst,
-                                bron="klantenservice + developer",
-                                zelf_versturen=True):
+                                bron="klantenservice + developer"):
             for s in reparaties:
                 s["bericht_verstuurd"] = sorted(
                     set(s.get("bericht_verstuurd") or []) | {adres})
