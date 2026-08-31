@@ -4,7 +4,9 @@ Runs on a configurable interval via APScheduler.
 """
 import asyncio
 import logging
-from backend.database import get_db, fetch_all, IN_BROK
+from datetime import datetime, timedelta, timezone
+
+from backend.database import get_db, IN_BROK
 from backend.platforms import get_platform
 from backend.services.crosslist import handle_item_sold
 
