@@ -1070,6 +1070,14 @@ def main() -> None:
     w.add_argument("sleutel")
     w.add_argument("reden", help="waarom niet, in één zin")
     w.set_defaults(func=afgewezen)
+    v = sub.add_parser("verlopen", help="speelt niet meer; haalt hem van de lijst "
+                                        "ZONDER de melder bericht te sturen")
+    v.add_argument("sleutel")
+    v.add_argument("reden", help="waarom hij niet meer speelt, in één zin")
+    v.set_defaults(func=verlopen)
+    sub.add_parser("uitdoven", help="stilgevallen meldingen automatisch van de lijst"
+                   ).set_defaults(func=lambda a: print(
+                       f"{laat_verlopen_uitdoven()} melding(en) uitgedoofd"))
     args = p.parse_args()
     args.func(args)
 
