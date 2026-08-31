@@ -824,13 +824,24 @@ function toonKlantenservice(k) {
       `<tr><td>${veilig(t.replace(/-/g, ' '))}</td><td class="num">${n}</td></tr>`).join('')
     || '<tr><td class="leeg">Nog niets.</td></tr>';
 
+  // VIER STATUSSEN, VIER WOORDEN (31-08-2026). Hier stond
+  // `status === 'opgelost' ? 'klaar' : 'open'`, dus een melding die bewust was
+  // afgewezen of vanzelf uitgedoofd las als openstaand werk. Zo kwam Daniel aan
+  // een lijst van 46 "open" storingen terwijl er negen speelden.
+  const stand = { opgelost: ['klaar', 'op'], verlopen: ['uitgedoofd', ''],
+                  afgewezen: ['niet doen', ''], open: ['open', 'let'] };
   el('ks-storingen').innerHTML =
-    (k.storingen || []).map(s =>
-      `<tr><td>${veilig(s.sleutel.replace(/-/g, ' '))}<br><span class="uitleg">${veilig(s.omschrijving || '')}`
-      + `${s.status === 'opgelost' && s.uitleg ? ' — opgelost: ' + veilig(s.uitleg) : ''}</span></td>`
-      + `<td class="num">${s.melders}×</td>`
-      + `<td class="num">${s.status === 'opgelost' ? 'klaar' : 'open'}</td></tr>`).join('')
-    || '<tr><td class="leeg">Geen storingen gemeld.</td></tr>';
+    (k.storingen || []).map(s => {
+      const [woord, kleur] = stand[s.status] || stand.open;
+      const staart = s.status === 'opgelost' && s.uitleg ? ' — opgelost: ' + veilig(s.uitleg)
+                   : (s.status === 'verlopen' || s.status === 'afgewezen') && s.reden
+                     ? ' — ' + veilig(s.reden) : '';
+      return `<tr><td>${s.moet_zeker && s.status === 'open' ? '⚠ ' : ''}`
+        + `${veilig(s.sleutel.replace(/-/g, ' '))}<br>`
+        + `<span class="uitleg">${veilig(s.omschrijving || '')}${staart}</span></td>`
+        + `<td class="num">${s.melders}×</td>`
+        + `<td class="num ${kleur}">${woord}</td></tr>`;
+    }).join('') || '<tr><td class="leeg">Geen storingen gemeld.</td></tr>';
 }
 
 async function haalKlantenservice() {
