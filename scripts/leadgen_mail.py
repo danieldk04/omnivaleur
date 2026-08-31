@@ -1941,8 +1941,16 @@ def _warme_opvolging(state: dict, boek: "Notion") -> int:
                             "References": (draad or {}).get("References", ""),
                             "From": (draad or {}).get("From", ""),
                             "Date": (draad or {}).get("Date", "")}
+                # DIT GAAT VANZELF WEG (31-08-2026, op Daniels verzoek: "stap 2
+                # of 3 in de mailsequence of een follow up mail als ik de video
+                # al gestuurd heb"). Een opvolging op stilte vraagt niets, belooft
+                # niets en beslist niets — hij herinnert er alleen aan. Hem laten
+                # wachten op een klik betekende in de praktijk dat hij dagen bleef
+                # liggen: de opvolging voor De Boekenkamer stond er op 31-08 nog
+                # steeds, geschreven op 29-08.
                 if _zet_concept_klaar(lead, inkomend, (draad or {}).get("tekst", ""), "warm",
-                                      eigen_tekst=tekst, met_pixel=True):
+                                      eigen_tekst=tekst, met_pixel=True,
+                                      zelf_versturen=True):
                     st["warm_opvolg"] = beurt + 1
                     st["warm_opvolg_op"] = nu.isoformat(timespec="seconds")
                     # METEEN vastleggen, niet aan het eind van de ronde. Het
