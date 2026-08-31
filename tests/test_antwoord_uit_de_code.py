@@ -107,3 +107,90 @@ def test_over_geld_beslist_daniel_nog_steeds_zelf():
     """Een dubbele afschrijving is geen technische vraag. Die route blijft."""
     assert "geld" in L._KLANT_REGELS
     assert "geld" in M.ESCALATIE_REDENEN and "geld" in M.SPOED
+
+
+# ── 4. het vangnet hangt niet af van de vangst ─────────────────────────────
+# AANLEIDING (31-08-2026). Twee mails op één dag lieten zien dat de uitweg
+# hierboven alleen bestond als er broncode gevonden wás. Een klant vroeg of er
+# een chatfunctie in zit en Amanda meldde dat de refreshknop niets doet; bij
+# geen van beide kwam er één regel code mee, dus ging de opdracht om te
+# escaleren ook niet mee — en schreef het concept "dat zoek ik uit". Daarmee
+# lag de vraag bij niemand: niet bij Daniel, niet bij de developer.
+class _Blok:
+    type = "text"
+
+    def __init__(self, tekst):
+        self.text = tekst
+
+
+class _Antwoord:
+    stop_reason = "end_turn"
+
+    def __init__(self, tekst):
+        self.content = [_Blok(tekst)]
+
+
+def _prompt_van(monkeypatch, body: str, antwoord: str = "Hi,\n\n" + "woord " * 40) -> dict:
+    """Wat er werkelijk naar het model gaat bij deze mail."""
+    gevangen: dict = {}
+
+    def nep(client, **kw):
+        gevangen.update(kw)
+        return _Antwoord(antwoord)
+
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "test")
+    monkeypatch.setattr(L, "_claude", nep)
+    L._slim_concept({"email": "klant@voorbeeld.nl"}, body, "", "Groetjes,\nDaniel", klant=True)
+    return gevangen
+
+
+def test_de_refreshknop_van_amanda_levert_nu_code_op():
+    """Zij schreef Engels waar de lijst Nederlands kent. Nul woorden, nul code."""
+    bewijs = L._grondslag("Nee, hij pakt de refresh button niet: er gebeurt niets!")
+    assert bewijs, "geen regel code bij een melding over verversen"
+    assert "jobs.py" in bewijs or "relist.py" in bewijs
+
+
+def test_vertalen_gooit_nooit_iets_weg():
+    verrijkt = L.verrijk("De refresh doet niets bij mijn advertenties")
+    assert "de refresh doet niets bij mijn advertenties" in verrijkt
+    assert "ververs" in verrijkt
+
+
+def test_zonder_code_gaat_de_escalatieregel_toch_mee(monkeypatch):
+    """De chatvraag: nergens in de code te vinden, dus juist wél escaleren."""
+    kw = _prompt_van(monkeypatch, "Heeft jullie systeem voor marktplaats een chat functie?")
+    assert L.GEEN_ANTWOORD in kw["messages"][0]["content"]
+
+
+def test_zonder_code_mag_er_niets_beweerd_worden(monkeypatch):
+    kw = _prompt_van(monkeypatch, "Zit er een berichtenoverzicht in?")
+    assert "GEEN BRONCODE" in kw["messages"][0]["content"]
+
+
+def test_met_code_blijft_het_bewijsmateriaal_leidend(monkeypatch):
+    kw = _prompt_van(monkeypatch, "Waarom worden mijn advertenties niet ververst?")
+    prompt = kw["messages"][0]["content"]
+    assert "BEWIJSMATERIAAL UIT DE CODE" in prompt
+    assert "GEEN BRONCODE" not in prompt
+
+
+def test_de_vraag_van_de_klant_bereikt_daniel(monkeypatch):
+    """Kan het model het niet onderbouwen, dan ligt de vraag bij Daniel — ook
+    wanneer er geen code bij het onderwerp bestaat."""
+    vragen: list = []
+    monkeypatch.setattr(M, "vraag_voor_daniel",
+                        lambda adres, vraag, aanleiding="": vragen.append((adres, vraag)))
+    _prompt_van(monkeypatch, "Zit er een chatfunctie in?",
+                antwoord="GEEN ANTWOORD: Heeft Omnivaleur een gebundeld berichtenoverzicht?")
+    assert vragen and vragen[0][0] == "klant@voorbeeld.nl"
+
+
+def test_een_bekende_storing_wordt_ook_in_het_engels_herkend(monkeypatch):
+    """Wie 'refresh' schrijft bedoelt verversen; anders ziet de klantenservice
+    niet dat de developer die storing allang heeft opgepakt."""
+    kast = {"bug_signalen": {"verversen-blijft-hangen": {
+        "status": "open", "melders": ["a@b.nl"]}}}
+    monkeypatch.setattr(M.L, "_db_lees", lambda naam, standaard: kast.get(naam, standaard))
+    stand = M.stand_van_de_storingen("De refresh blijft hangen bij mij")
+    assert "verversen-blijft-hangen" in stand

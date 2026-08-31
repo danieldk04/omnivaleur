@@ -2817,3 +2817,35 @@ Nagemeten aan de 57 mails van `info@zilverwebsite.nl`: de contactpersoon heet
 aantekeningen die erna geschreven worden. Anders wordt de fout binnen een dag
 gewassen tot bron. Bij twijfel: de naam komt uit de mails zelf, nergens anders
 vandaan.
+
+### 31-08-2026 — Het vangnet van de klantenservice hing af van de vangst
+
+Twee mails op één dag kregen hetzelfde niet-antwoord. Een klant vroeg of er een
+chatfunctie in zit; het concept zei "daar heb ik nu geen goed antwoord op, dat
+zoek ik uit". Amanda meldde "hij pakt de refresh button niet"; idem. In beide
+gevallen kwam er geen vraag bij Daniel terecht en geen melding bij de developer.
+
+Twee oorzaken, allebei stil:
+
+1. **De trefwoordenlijst is Nederlands, klanten schrijven Engels.** `_grondslag`
+   zoekt op woorden als "ververs" en "herplaats". Amanda schreef "refresh", dus
+   nul treffers, dus nul regels broncode — over precies het onderwerp waar de
+   halve lijst over gaat.
+2. **En dat is waar het echt misging:** de regel "kun je het niet uit de code
+   halen, geef dan de vraag door aan Daniel" ging alléén mee als er code gevonden
+   wás. Precies andersom dus. Juist bij een onderwerp waar niets over te vinden
+   is verdween ook de opdracht om te escaleren, en schreef het model vrijuit.
+
+Gerepareerd in `scripts/leadgen_mail.py`: een synoniemenlaag (`verrijk`) vertaalt
+Engelse en spreektaalwoorden eerst naar het woord dat de lijst kent — aanvullend,
+nooit vervangend — en `GEEN_GRONDSLAG_REGEL` gaat mee wanneer er géén code is:
+geen enkele technische bewering, en bij een feitelijke vraag of storing de ene
+regel `GEEN ANTWOORD:` die de vraag bij Daniel neerlegt. Voor een betalende klant
+volgt daarna nog steeds de tweede ronde zonder beweringen, zodat er wel post is.
+Dezelfde vertaalslag zit nu ook in `stand_van_de_storingen`, anders herkent de
+klantenservice een bekende storing niet in zijn eigen woorden.
+
+**Les, breder dan deze twee mails:** een vangnet dat pas openklapt als de vangst
+lukt, is geen vangnet. Elke regel die zegt "kun je X niet, doe dan Y" hoort
+onvoorwaardelijk in de opdracht te staan — het geval waarin hij nodig is, is per
+definitie het geval waarin de voorwaarde niet klopt.

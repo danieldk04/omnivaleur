@@ -882,8 +882,10 @@ def stand_van_de_storingen(tekst: str) -> str:
     bouwen is. Wat hier staat is niet zijn inschatting maar wat er werkelijk is
     vastgelegd: open, in behandeling, of klaar met de uitleg erbij.
     """
-    laag = (tekst or "").lower()
-    if not laag:
+    # Dezelfde vertaalslag als bij de broncode: wie "refresh" schrijft, bedoelt
+    # verversen, en anders herkennen we een bekende storing niet in zijn woorden.
+    laag = L.verrijk(tekst)
+    if not laag.strip():
         return ""
     regels = []
     for sleutel, s in (bugs() or {}).items():

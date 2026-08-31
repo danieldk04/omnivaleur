@@ -2311,6 +2311,63 @@ def _claude(client, **kw):
 #
 # Nieuwe onderwerpen vragen om een regel hierbij, niet om het model zelf te laten
 # raden waar het moet kijken.
+# Wat klanten schrijven en wat hierboven staat, is niet dezelfde taal. Amanda
+# schreef op 31-08-2026 "hij pakt de refresh button niet"; de lijst kent alleen
+# "ververs". Nul trefwoorden, dus nul regels code, dus een concept dat zei "dat
+# zoek ik uit" terwijl het over de knop ging waar de helft van deze lijst over
+# gaat. Engelse en spreektaalwoorden worden daarom eerst vertaald naar het woord
+# dat de lijst wél kent. Dit is geen luxe: één gemist woord is het verschil
+# tussen een antwoord en drie dagen stilte.
+GRONDSLAG_SYNONIEMEN: dict[str, str] = {
+    "refresh": "verversen",
+    "refreshen": "verversen",
+    "renew": "vernieuw",
+    "relist": "herplaats",
+    "publish": "publiceer",
+    "posten": "publiceer",
+    "sold": "verkocht",
+    "price": "prijs",
+    "photo": "foto",
+    "picture": "foto",
+    "image": "foto",
+    "login": "inloggen",
+    "log in": "inloggen",
+    "inlog": "inloggen",
+    "password": "wachtwoord",
+    "subscription": "abonnement",
+    "invoice": "factuur",
+    "billing": "factuur",
+    "payment": "betaal",
+    "cancel": "opzegg",
+    "category": "categorie",
+    "size": "maat",
+    "queue": "wachtrij",
+    "job": "opdracht",
+    "tab": "tabblad",
+    "delete": "verwijder",
+    "remove": "verwijder",
+    "slow": "traag",
+    "extension": "extensie",
+    "plugin": "extensie",
+    "add-on": "extensie",
+    "listing": "advertentie",
+    "sync": "verversen",
+    "update": "verversen",
+}
+
+
+def verrijk(tekst: str) -> str:
+    """De mail plus de Nederlandse woorden voor wat hij in het Engels schreef.
+
+    Alleen aanvullen, nooit vervangen: de oorspronkelijke tekst blijft heel, er
+    komt hooguit een regel extra woorden onder. Zo kan een vertaling nooit iets
+    wegpoetsen wat er wel stond.
+    """
+    laag = (tekst or "").lower()
+    extra = sorted({nl for en, nl in GRONDSLAG_SYNONIEMEN.items() if en in laag})
+    return f"{laag}\n{' '.join(extra)}" if extra else laag
+
+
 GRONDSLAG_BESTANDEN: dict[str, list[str]] = {
     "kenmerk": ["extension/content/marktplaats.js"],
     "attribut": ["extension/content/marktplaats.js"],
@@ -2390,7 +2447,7 @@ def _grondslag(body: str) -> str:
     stukken rond de woorden waar hij zelf over schrijft. Dat is het verschil
     tussen "ik kijk het na" en een antwoord.
     """
-    laag = (body or "").lower()
+    laag = verrijk(body)
     treffers = [w for w in GRONDSLAG_BESTANDEN if w in laag]
     if not treffers:
         return ""
@@ -2466,6 +2523,45 @@ neer op het moment dat hij ontstaat.
 """.format(marker=GEEN_ANTWOORD)
 
 
+# HET VANGNET MAG NIET AFHANGEN VAN DE VANGST (31-08-2026).
+#
+# De regel hierboven — kun je het niet uit de code halen, geef dan de vraag door
+# aan Daniel — ging alleen mee als er broncode gevonden wás. Precies andersom
+# dus: juist bij een onderwerp waar niets over te vinden is, verdween ook de
+# opdracht om te escaleren, en schreef het model vrijuit wat het dacht.
+#
+# Twee keer gemeten op 31-08-2026. Een klant vroeg of er een chatfunctie in zit:
+# nul trefwoorden, dus het concept zei "daar heb ik nu geen goed antwoord op, dat
+# zoek ik uit" — en er kwam geen vraag bij Daniel en geen melding bij de
+# developer terecht. Amanda meldde dat de refreshknop niets doet: idem.
+#
+# Zonder code is er dus GEEN vrijbrief maar juist een verbod, plus dezelfde
+# uitweg. Wel met een grens: dit gaat over feitelijke vragen en storingen. Een
+# koude lead die schrijft "ik heb al een API, bedankt" stelt geen technische
+# vraag en moet gewoon een normaal antwoord krijgen.
+GEEN_GRONDSLAG_REGEL = """
+
+ER IS GEEN BRONCODE BIJ DIT ONDERWERP GEVONDEN.
+
+Dat betekent niet dat je vrij bent — het betekent dat je nergens op kunt
+steunen. Doe dus GEEN enkele technische bewering: niet dat iets wel of niet
+kan, niet waardoor het komt, niet dat het opgelost is of eraan komt.
+
+Stelt hij een feitelijke vraag over hoe het product werkt, of meldt hij dat iets
+niet werkt? Schrijf dan GEEN mail. Geef precies één regel terug, en verder
+niets:
+
+    {marker} <de vraag die Daniel moet beantwoorden, in één zin>
+
+Schrijf vooral niet "ik zoek het uit en kom erop terug". Dat is stilte voor de
+klant en niets voor Daniel; deze ene regel legt de vraag bij hem neer.
+
+Gaat zijn bericht niet over techniek — een reactie op het aanbod, een bedankje,
+een afspraak, een afmelding — schrijf dan gewoon je antwoord.
+
+""".format(marker=GEEN_ANTWOORD)
+
+
 _ZONDER_BEWERING_REGELS = """
 
 TWEEDE RONDE — SCHRIJF NU WÉL, MAAR ZONDER ÉÉN TECHNISCHE BEWERING.
@@ -2535,7 +2631,8 @@ def _slim_concept(lead: dict, body: str, draad: str, afsluiting: str,
         f"Dit schreef hij zojuist:\n\n{eigen[:4000]}\n\n"
         + (f"Eerder in deze draad, van Daniel:\n\n{draad[:4000]}\n\n" if draad else "")
         + (f"Wat we van hem weten:\n{over_hem}\n\n" if over_hem else "")
-        + (GRONDSLAG_REGEL + bewijs + "\n\n" if bewijs else "")
+        + (GRONDSLAG_REGEL + bewijs + "\n\n" if bewijs
+           else GEEN_GRONDSLAG_REGEL + "\n\n")
         + (stand + "\n\n" if stand else "")
         + f"Sluit af met exact dit blok:\n{afsluiting}\n\nSchrijf het antwoord."
     )
