@@ -1119,9 +1119,9 @@ async def _find_twins(cands: list[dict], items: list[dict], platforms_by_item: d
 _TWIN_TEGELIJK = 3
 
 
-async def _asyncio_gather_safe(chunks, fn):
+async def _asyncio_gather_safe(chunks, fn, rem=None):
     import asyncio as _asyncio
-    rem = _asyncio.Semaphore(_TWIN_TEGELIJK)
+    rem = rem or _asyncio.Semaphore(_TWIN_TEGELIJK)
 
     async def _met_rem(c):
         async with rem:
