@@ -936,16 +936,49 @@ def klantenservice(user=Depends(get_current_user_full)):
         "van_klanten": sum(1 for r in binnen if r.get("klant")),
         "themas": tel("thema", lambda r: r.get("richting") == "in"),
         "stemming": tel("stemming", lambda r: r.get("richting") == "in"),
-        "escalaties": [e for e in lijst if not e.get("afgehandeld")][-25:],
+        # ALLEEN WAT ER ÉCHT LIGT (31-08-2026). Hier stonden de laatste 25
+        # niet-afgehandelde escalaties, wat in de praktijk een muur van 25
+        # regels opleverde waarin de urgente tussen de weken oude verdween.
+        # Daniel over dit scherm: "kopje marketing en werkplaats zijn een
+        # chaos." Een lijst die alles toont, toont niets.
+        "escalaties": _escalaties_die_er_toe_doen(lijst),
+        "escalaties_ouder": max(0, len([e for e in lijst if not e.get("afgehandeld")])
+                                - len(_escalaties_die_er_toe_doen(lijst))),
         "storingen": sorted(
             [{"sleutel": k, "melders": len(v.get("melders") or []),
               "omschrijving": v.get("omschrijving", ""), "status": v.get("status", "open"),
               "laatst": (v.get("laatst") or "")[:10],
+              "moet_zeker": bool(v.get("moet_zeker")),
+              # `reden` hoort bij verlopen/afgewezen, `uitleg` bij opgelost.
+              # Ze door elkaar halen laat een uitgedoofde melding lezen als een
+              # reparatie, en dat is precies het verschil dat ertoe doet.
+              "reden": v.get("reden", ""),
               "uitleg": v.get("uitleg", "")}
              for k, v in signalen.items()],
-            key=lambda s: (s["status"] != "open", -s["melders"]))[:25],
+            key=lambda s: (s["status"] != "open", not s["moet_zeker"],
+                           -s["melders"], s["laatst"]))[:25],
+        "storingen_totaal": {
+            soort: sum(1 for v in signalen.values() if v.get("status", "open") == soort)
+            for soort in ("open", "opgelost", "verlopen", "afgewezen")},
         "starter": starter,
     }
+
+
+# Twee weken. Wat langer dan dat blijft liggen is geen taak meer maar een
+# aantekening, en die hoort niet bovenaan het scherm te schreeuwen.
+ESCALATIE_DAGEN = 14
+
+
+def _escalaties_die_er_toe_doen(lijst: list) -> list:
+    """De openstaande escalaties van de afgelopen twee weken, urgentste eerst."""
+    grens = (datetime.now(timezone.utc) - timedelta(days=ESCALATIE_DAGEN)).isoformat()
+    open_ = [e for e in lijst if not e.get("afgehandeld")]
+    vers = [e for e in open_ if (e.get("wanneer") or "") >= grens]
+    # Geld en vertrek eerst: dat zijn de twee die geld kosten als ze blijven
+    # liggen. De rest op volgorde van binnenkomst, nieuwste boven.
+    rang = {"vertrek": 0, "geld": 1, "storing_bij_meerderen": 2}
+    return sorted(vers, key=lambda e: (rang.get(e.get("escalatie"), 3),
+                                       -(len(e.get("wanneer") or ""))))[:12]
 
 
 # ---------------------------------------------------------------------------
