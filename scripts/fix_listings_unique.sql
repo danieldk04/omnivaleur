@@ -16,21 +16,25 @@
 
 
 -- ── STAP 1: KIJKEN ──────────────────────────────────────────────────────────
--- Draai eerst alleen dit en stuur de uitkomst door. Er verandert niets.
+-- LET OP: draai deze query ALLEEN, zonder de rest te selecteren. De Supabase
+-- SQL Editor toont bij meerdere query's achter elkaar alleen het resultaat van
+-- de laatste, en juist deze eerste heb ik nodig.
 --
--- Waarom deze stap niet over te slaan is: in de database staan zes item/kanaal-
--- combinaties die volgens een gewone sleutel op (item_id, platform) niet zouden
--- kunnen bestaan, en ze hebben alle zes hoogstens één advertentie met de status
--- 'active'. Dat wijst op een GEDEELTELIJKE sleutel (eentje met een voorwaarde).
--- Welke voorwaarde dat precies is, bepaalt hoe stap 2 eruit moet zien.
+-- Op 31-08-2026 is `pg_constraint` al bekeken: daar staan alleen
+-- `listings_pkey` en `listings_item_id_fkey`. `listings_item_platform_unique`
+-- zit er NIET bij, en dat is het antwoord in plaats van een raadsel — een
+-- unieke INDEX verschijnt niet in `pg_constraint`, alleen hier. Postgres staat
+-- bovendien geen constraint met een voorwaarde toe, wél een index met een
+-- voorwaarde. Dat sluit aan op de zes item/kanaal-combinaties die naast elkaar
+-- bestaan en alle zes hoogstens één advertentie met status 'active' hebben.
+--
+-- Wat ik uit de uitkomst moet halen: staat er achter de index een WHERE, en zo
+-- ja welke. Die voorwaarde moet in stap 2 terugkomen, anders verdwijnt met de
+-- botsing ook de bescherming tegen dubbel publiceren.
 
 SELECT indexname, indexdef
 FROM pg_indexes
 WHERE tablename = 'listings';
-
-SELECT conname, pg_get_constraintdef(oid) AS definitie
-FROM pg_constraint
-WHERE conrelid = 'listings'::regclass;
 
 
 -- ── STAP 2: WIJZIGEN ────────────────────────────────────────────────────────
