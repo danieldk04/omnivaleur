@@ -2646,3 +2646,39 @@ drie keer en vertelden geen van drieën het verhaal. Het staat nu in één mail:
 `_samenwerking` in leadgen_mail.py zoekt bij het adres van het concept de
 gerepareerde storingen op en zet in het seintje wat de klant meldde, wat de
 developer eraan deed, en daaronder het concept zelf.
+
+## 31-08-2026 — Pro aangezet, en de fotoverhuizing bleek al gedaan
+
+**Besluit van Daniel:** Supabase Pro aangezet (€25/mnd) om het project van slot
+te krijgen. Aanleiding: het project stond niet meer alleen "restricted" maar
+volledig **paused**, en van de drie overtredingen resetten er maar twee met de
+factuurperiode. `exceed_storage_size_quota` reset nooit — opslag is een
+momentopname. Daarmee was er een klem: de opslag kon alleen omlaag door de
+foto's te verhuizen, en dat kon alleen als de database open was. Wachten tot
+1 september zou die klem niet hebben doorbroken.
+
+**Wat de meting daarna liet zien.** De fotoverhuizing naar Cloudflare R2 was al
+gedaan — vermoedelijk door de tweede ontwikkelaar. Gemeten na het openen:
+
+  * `items`: 36.193 foto-urls, waarvan **0** nog op Supabase en 32.668 op
+    img.omnivaleur.com. De rest zijn externe CDN-urls (Marktplaats, Vinted).
+  * Bucket `photos`: 507 objecten, **0,67 GB** — niet de 2,1 GB die het
+    dashboard meldde. Supabase-opslagmetingen lopen achter; de 2,1 GB was
+    vermoedelijk de stand van vóór die verhuizing.
+  * Daarvan zijn er 33 echt wees (0,06 GB). De overige 461 worden alleen nog
+    genoemd in oude rijen van `jobs`/`import_candidates`, niet in actieve
+    advertenties. `cleanup_orphan_photos.py` laat die bewust staan.
+
+**Les.** De 402-melding noemt drie overtredingen zonder te zeggen welke met de
+periode meereset. Alleen verkeer en cache-verkeer doen dat. Bij een volgende
+blokkade: kijk éérst of `exceed_storage_size_quota` erbij staat, want die alleen
+maakt wachten zinloos.
+
+**Ook gebleken:** de `opgelost`-terugmelding voor
+`marktplaats-niet-ingelogd-melding` van eerder vandaag is nooit aangekomen — de
+402 slikte de schrijfactie. De sleutel staat nog steeds als MOET ZEKER op de
+bugslijst. Bij een blokkade moet elke terugmelding van die dag opnieuw.
+
+**Open bij Daniel:** Pro weer uitzetten zodra het dashboard bevestigt dat opslag
+en verkeer onder de gratis grens staan. De meting zegt van wel, het dashboard
+loopt een dag achter.
