@@ -594,17 +594,44 @@ async def verrijk(db, user_id: str, schrijf: bool = True,
     # de eerste 1.000 items, vond daarin 5 openstaande, zocht op díe 5 titels
     # naar zijn verkopersnummer, vond niets, en meldde "could not find your
     # adverts on Marktplaats" — terwijl zijn advertenties er gewoon stonden.
+    # `description` ZIT HIER BEWUST NIET BIJ (31-08-2026).
+    # Dat is de dikste kolom die we hebben — een volledige advertentietekst,
+    # vaak enkele kilobytes. Deze ronde draait elk kwartier, en van die hele
+    # tekst werd hieronder maar één ding gevraagd: is hij leeg, ja of nee. Bij
+    # Egbert (2.135 items) betekende dat elk kwartier megabytes ophalen om een
+    # vinkje te zetten. Opgeteld over een maand is dat een flinke hap uit het
+    # verkeer dat Supabase op 31-08-2026 deed besluiten het hele project op slot
+    # te zetten — waarna de site voor iedereen plat lag.
+    #
+    # Dus: de lijst zonder tekst, en apart de vraag WELKE items er een hebben.
+    # Dat tweede antwoord is een rij id's en kost vrijwel niets. De echte tekst
+    # halen we verderop alleen op voor de handvol items die we deze ronde ook
+    # daadwerkelijk aanpakken — daar is hij wél nodig (zie `_is_afgekapt`).
     rijen = await naast_de_lus(lambda: fetch_all(
         lambda: db.table("items")
-        .select("id,title,price,description,photo_urls,brand,size,color,condition")
+        .select("id,title,price,photo_urls,brand,size,color,condition")
         .eq("user_id", user_id)))
+
+    try:
+        met_tekst = {r["id"] for r in (await naast_de_lus(lambda: fetch_all(
+            lambda: db.table("items").select("id")
+            .eq("user_id", user_id)
+            .not_.is_("description", "null")
+            .neq("description", ""))))}
+    except Exception as e:  # noqa: BLE001
+        # Bij twijfel doen alsof iedereen tekst heeft. Dan doet deze ronde niets
+        # in plaats van 2.000 advertenties onnodig van Marktplaats te trekken.
+        logger.warning("mp_enrich: kon niet zien wie tekst heeft (%s) — ronde overgeslagen", e)
+        met_tekst = {r["id"] for r in rijen}
+    for r in rijen:
+        r["heeft_tekst"] = r["id"] in met_tekst
 
     def _mist_iets(r: dict) -> bool:
         # Niet alleen prijs en tekst. Een geïmporteerde advertentie kwam ook
         # binnen met één foto en zonder merk of maat, en juist dat blokkeert
         # publiceren naar Marktplaats en 2dehands. Het staat allemaal op dezelfde
         # advertentiepagina die we hier tóch al ophalen.
-        return (not str(r.get("description") or "").strip()
+        return (not r.get("heeft_tekst")
                 or not r.get("price")
                 or len(r.get("photo_urls") or []) <= 1
                 or not str(r.get("brand") or "").strip()
@@ -613,6 +640,26 @@ async def verrijk(db, user_id: str, schrijf: bool = True,
     open_ = [r for r in rijen if _mist_iets(r)]
     if maximaal:
         open_ = open_[:maximaal]
+
+    # Nu pas de echte teksten, en alleen van wat we aanpakken. `_is_afgekapt`
+    # verderop vergelijkt de tekst die wij hebben met die op de advertentie, dus
+    # voor déze rijen is de inhoud wél nodig.
+    if open_:
+        ids = [r["id"] for r in open_]
+        teksten: dict = {}
+        for i in range(0, len(ids), IN_BROK):
+            stuk = ids[i:i + IN_BROK]
+            try:
+                gehaald = await naast_de_lus(
+                    lambda s=stuk: db.table("items").select("id,description")
+                    .in_("id", s).execute())
+            except Exception as e:  # noqa: BLE001
+                logger.warning("mp_enrich: teksten niet opgehaald: %s", e)
+                continue
+            for r in (gehaald.data or []):
+                teksten[r["id"]] = r.get("description")
+        for r in open_:
+            r["description"] = teksten.get(r["id"])
     uit = {"items": len(rijen), "te_doen": len(open_), "gevonden": 0,
            "prijs": 0, "omschrijving": 0, "geen_tekst": 0, "fotos": 0, "kenmerken": 0,
            "verkoper_id": None, "reden": ""}
