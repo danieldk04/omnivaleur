@@ -2801,3 +2801,19 @@ vult een leeg maatveld eerst uit het dashboarditem, en noemt bij een weigering
 Vinted's eigen rode regel plus welk verplicht veld leeg bleef. Bewezen in
 `tests/vinted-mock/opslaan-geweigerd-test.js` (de echte code tegen een
 namaakscherm) en `tests/test_vinted_opslaan_geweigerd.py`.
+
+### 31-08-2026 — Correctie: de klant bij Zilverwebsite heet Jaap, niet Ronald
+
+Twee aantekeningen van vanochtend schrijven "Ronald van Zilverwebsite" (bij de
+inlogfout van 09:22 en bij "wie het merkte"). Die naam is precies de naam die de
+mailagent had verzonnen in "Hi Ronald" — en die in de correctie daaronder al werd
+weggezet als iemand die daar niet bestaat. Hij is daarna alsnog twee keer als
+feit overgenomen.
+
+Nagemeten aan de 57 mails van `info@zilverwebsite.nl`: de contactpersoon heet
+**Jaap**. Lees op die twee plekken dus Jaap.
+
+**Les:** een naam die één keer als verzinsel is aangemerkt, moet ook uit de
+aantekeningen die erna geschreven worden. Anders wordt de fout binnen een dag
+gewassen tot bron. Bij twijfel: de naam komt uit de mails zelf, nergens anders
+vandaan.
