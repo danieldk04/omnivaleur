@@ -1052,6 +1052,56 @@ def _resend_stuur(msg: EmailMessage) -> None:
         raise RuntimeError(f"Resend weigerde de mail ({r.status_code}): {r.text[:200]}")
 
 
+# ── Alarm als de machine zelf stukligt ───────────────────────────────────────
+# WAAROM DIT ER IS (31-08-2026)
+# Supabase zette het project op slot wegens overschreden verkeer. De mailagent
+# klapte daarop meteen om bij de eerste regel, en dat was het. Geen concepten,
+# geen opvolging, geen bericht — een etmaal lang, terwijl er vier klanten op een
+# antwoord wachtten. Een machine die onbewaakt draait moet zélf kunnen roepen
+# dat hij stukligt, en wel langs een weg die niets nodig heeft van het onderdeel
+# dat kapot is (dus geen database).
+#
+# Hooguit één keer per ALARM_STILTE uur, anders staat er elke tien minuten een
+# nieuwe mail in de bus en kijkt niemand er meer naar.
+ALARM_STILTE_UREN = 6
+_ALARMKLOK = Path.home() / ".omnivaleur-storingsalarm"
+
+
+def _storingsalarm(reden: str) -> None:
+    """Meld dat de machine zelf niet kan draaien. Faalt dit ook, dan zwijgt het."""
+    try:
+        vorige = float(_ALARMKLOK.read_text().strip()) if _ALARMKLOK.exists() else 0.0
+    except Exception:  # noqa: BLE001
+        vorige = 0.0
+    nu = time.time()
+    if nu - vorige < ALARM_STILTE_UREN * 3600:
+        return
+    host, van = os.environ.get("MAIL_HOST"), os.environ.get("MAIL_USER")
+    if not (host and van and ALARM_NAAR):
+        return
+    msg = EmailMessage()
+    msg["From"] = f"Klantenservice <{van}>"
+    msg["To"] = ", ".join(ALARM_NAAR)
+    msg["Subject"] = "De klantenservice ligt stil"
+    msg.set_content(
+        "De mailagent kan zijn eigen administratie niet lezen of schrijven en "
+        "heeft daarom NIETS gedaan deze beurt: geen concepten, geen opvolging, "
+        "geen antwoorden.\n\n"
+        f"Wat er misgaat:\n  {reden}\n\n"
+        "Er wordt bewust niets verstuurd zolang dit speelt. Doorwerken zonder "
+        "administratie betekent dat mensen dezelfde mail twee keer krijgen, en "
+        "dat is niet terug te halen.\n\n"
+        f"Zolang dit duurt komt er hooguit elke {ALARM_STILTE_UREN} uur een "
+        "herinnering.\n")
+    try:
+        with _postbode(van, host) as stuur:
+            stuur(msg)
+        _ALARMKLOK.write_text(str(nu))
+        print(f"  ↳ storingsalarm gestuurd naar {', '.join(ALARM_NAAR)}")
+    except Exception as e:  # noqa: BLE001 — als dít ook stuk is, rest alleen het logboek
+        print(f"  (storingsalarm niet verstuurd: {e})")
+
+
 @contextlib.contextmanager
 def _postbode(gebruiker: str, host: str):
     """Levert één functie op die een bericht de deur uit doet, langs welke weg dan
