@@ -786,12 +786,18 @@ function toonKlantenservice(k) {
   const uitleg = { geld: 'gaat over geld', vertrek: 'dreigt te stoppen',
                    storing_bij_meerderen: 'meerdere mensen, zelfde storing',
                    kan_niet_onderbouwen: 'hier heb ik geen antwoord op' };
+  const ouder = k.escalaties_ouder || 0;
   el('ks-escalaties').innerHTML = (k.escalaties || []).length
     ? '<div class="attentie let"><b>Dit ligt bij jou:</b><ul>'
       + k.escalaties.map(e => `<li>${veilig(e.adres)} — ${veilig(uitleg[e.escalatie] || e.escalatie)}<br>`
                               + `<span class="uitleg">${veilig(e.samenvatting || '')}</span></li>`).join('')
-      + '</ul></div>'
-    : '<div class="attentie op">Niets wat jouw aandacht nodig heeft.</div>';
+      + '</ul>'
+      + (ouder ? `<span class="uitleg">Daarnaast ${getal(ouder)} ouder dan twee weken. `
+                 + `Die zijn hier weggelaten: wat zo lang blijft liggen is geen taak meer.</span>` : '')
+      + '</div>'
+    : '<div class="attentie op">Niets wat jouw aandacht nodig heeft.'
+      + (ouder ? `<br><span class="uitleg">${getal(ouder)} ouder dan twee weken, hier weggelaten.</span>` : '')
+      + '</div>';
 
   // De automatische developer-starter. Alleen zichtbaar als hij stil is terwijl
   // er werk klaarstaat — anders is het ruis. Zonder deze regel kan hij dagen
