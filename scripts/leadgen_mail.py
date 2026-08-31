@@ -3386,14 +3386,18 @@ def _waarom_geen_concept(adres: str, inkomend) -> str | None:
 # De rem kan alleen maar TEGENHOUDEN, nooit doorlaten. Een mail die onterecht
 # blijft liggen kost Daniel één klik; een mail die onterecht de deur uit gaat is
 # niet terug te halen. Bij twijfel dus altijd het concept.
+# Let op: alleen een woordgrens aan de VOORKANT. De stammen hieronder moeten
+# hun eigen verbuigingen vangen — "terugbetaald" glipte met een sluitende
+# grens gewoon langs de rem, en dat is precies het bericht dat nooit vanzelf
+# mag vertrekken. Gevonden door tests/test_mailagent_autonoom.py.
 _TOEZEGGING = re.compile(
     r"\b("
-    r"bel(len|afspraak|len we|t? je|t? ik)|telefonisch|meet-?link|google\s*meet|zoom|"
+    r"bel(len|afspraak|t? je|t? ik)|telefonisch|meet-?link|google\s*meet|zoom|"
     r"afspraak (in|maken|plannen)|moment (voor|stel)|inplannen|"
     r"terugbetal|geld terug|restitutie|crediter|vergoed|korting|gratis maand|factuur|"
     r"kom er.{0,20}op terug|kijk ik naar|zoek ik uit|zoek het uit|"
     r"laat ik (het )?weten|houd ik je op de hoogte|hoor je van me|kom ik bij je terug"
-    r")\b", re.I)
+    r")", re.I)
 
 
 def _waarom_niet_zelf_versturen(kern: str, klant: bool, bron: str) -> str:
