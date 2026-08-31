@@ -134,10 +134,8 @@ async def poll_platform_statuses():
     # stempel krijgen. Zonder dat blijft hij eeuwig "aan de beurt" en verdringt
     # hij elke ronde opnieuw de advertenties die wél gecontroleerd kunnen worden.
     nu = datetime.now(timezone.utc).isoformat()
-    overgeslagen = [r["id"] for r in rijen
-                    if (r, credentials_by_key.get((owners.get(r["item_id"]), r["platform"])))
-                    and not (owners.get(r["item_id"])
-                             and (owners[r["item_id"]], r["platform"]) in credentials_by_key)]
+    mee = {id(r) for r, _ in pollable}
+    overgeslagen = [r["id"] for r in rijen if id(r) not in mee]
     for i in range(0, len(overgeslagen), IN_BROK):
         try:
             await _exec(db.table("listings").update({"last_checked": nu})
