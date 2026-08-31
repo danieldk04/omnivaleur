@@ -2425,6 +2425,18 @@ GRONDSLAG_BESTANDEN: dict[str, list[str]] = {
     "categorie": ["extension/background.js"],
     "maat": ["extension/content/marktplaats.js"],
     "materiaal": ["extension/content/marktplaats.js"],
+    # Toegevoegd 31-08-2026 na de vraag van vintagegamestore@hotmail.com: "zit
+    # de chatfunctie erbij?". Nul trefwoorden, dus het concept schreef dat het
+    # dat ging uitzoeken — terwijl het antwoord er gewoon staat, tot en met een
+    # scherm "Messages & offers" in de app. Chatten doe je op het kanaal zelf,
+    # maar er IS één overzicht van waar iets op je wacht.
+    "chat": ["backend/api/notifications.py"],
+    "berichten": ["backend/api/notifications.py"],
+    "message": ["backend/api/notifications.py"],
+    "inbox": ["backend/api/notifications.py"],
+    "kopers": ["backend/api/notifications.py"],
+    "bieding": ["backend/api/notifications.py"],
+    "bod op": ["backend/api/notifications.py"],
 }
 GRONDSLAG_BESTANDEN_MAX = 3
 GRONDSLAG_REGELS_MAX = 90

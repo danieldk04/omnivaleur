@@ -164,7 +164,9 @@ def test_zonder_code_gaat_de_escalatieregel_toch_mee(monkeypatch):
 
 
 def test_zonder_code_mag_er_niets_beweerd_worden(monkeypatch):
-    kw = _prompt_van(monkeypatch, "Zit er een berichtenoverzicht in?")
+    # Bewust een onderwerp waar niets over vastligt. De vraag over berichten
+    # stond hier eerst, maar die is sinds 31-08 juist wél op te zoeken.
+    kw = _prompt_van(monkeypatch, "Zit er een app voor mijn telefoon bij?")
     assert "GEEN BRONCODE" in kw["messages"][0]["content"]
 
 
@@ -194,3 +196,12 @@ def test_een_bekende_storing_wordt_ook_in_het_engels_herkend(monkeypatch):
     monkeypatch.setattr(M.L, "_db_lees", lambda naam, standaard: kast.get(naam, standaard))
     stand = M.stand_van_de_storingen("De refresh blijft hangen bij mij")
     assert "verversen-blijft-hangen" in stand
+
+
+def test_de_chatvraag_wordt_nu_beantwoord_in_plaats_van_uitgezocht():
+    """vintagegamestore@hotmail.com, 31-08-2026. Chatten gebeurt op het kanaal
+    zelf, maar het overzicht van wachtende berichten en biedingen bestaat wel —
+    en stond al die tijd in de code."""
+    bewijs = L._grondslag("Heeft jullie systeem voor marktplaats/2dehands "
+                          "dat de chat functie aanwezig is?")
+    assert "backend/api/notifications.py" in bewijs
