@@ -15,6 +15,24 @@ from backend.config import settings
 logger = logging.getLogger(__name__)
 
 
+def ontvangers(veld: str | None) -> list[str]:
+    """Eén of meer adressen uit één instelling.
+
+    WAAROM DIT ER IS (31-08-2026). `owner_email` op Railway staat op
+    "dkresellacademy@gmail.com, aertssen.pleun@gmail.com" — twee adressen in één
+    instelling, precies zoals `is_owner_email` in billing.py het al las. Hier
+    werd datzelfde veld als ÉÉN adres doorgegeven: Resend kreeg
+    `to: ["a@x.nl, b@y.nl"]` en wees dat af als ongeldig adres.
+
+    Dat maakte elke systeemmail aan de eigenaar stil onbezorgbaar, en het ergste
+    geval was het alarm dat er die ochtend bij kwam: `meld_quotastoring` vangt
+    een mislukt alarm bewust af zodat het niets blokkeert, dus de afwijzing
+    verdween in de logregels. Het alarm dat moest melden dat de site plat lag
+    kon zichzelf niet bezorgen.
+    """
+    return [deel.strip() for deel in (veld or "").split(",") if deel.strip()]
+
+
 def _send_via_resend(subject: str, body: str, recipient: str, reply_to: str | None,
                      html: str | None = None) -> None:
     """Versturen over https, de enige poort die Railway wél doorlaat."""
