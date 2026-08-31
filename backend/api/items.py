@@ -341,7 +341,17 @@ def merge_items(body: dict, user_id: str = Depends(get_current_user)):
                               "platforms": sorted(botsing)})
             continue
         try:
-            db.table("listings").update({"item_id": keep}).eq("item_id", lid).execute()
+            # HERKANSEN MAG HIER, EN DAT IS NIET VANZELFSPREKEND (31-08-2026).
+            # Bij inserts is opnieuw proberen gevaarlijk — dan staat er twee
+            # keer iets. Deze drie zijn `update ... where` en `delete ... where`
+            # en leveren twee keer uitgevoerd exact hetzelfde op. Zonder dit
+            # sneuvelde "Merge all" halverwege op een weggevallen verbinding:
+            # gemeten na de schemawijziging kwamen er RemoteProtocolError,
+            # ConnectionTerminated en "EOF occurred in violation of protocol"
+            # terug — geen botsing meer, maar de gedeelde databaseverbinding die
+            # het onder een reeks schrijfacties begaf.
+            execute_with_retry(
+                db.table("listings").update({"item_id": keep}).eq("item_id", lid))
         except Exception as e:  # noqa: BLE001
             # HET VANGNET, EN WAAROM HET ER NAAST DE CONTROLE HIERBOVEN STAAT.
             # De controle modelleert de index zoals die er ná
