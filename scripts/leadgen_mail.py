@@ -3541,8 +3541,17 @@ def _stuur_zelf(lead: dict, msg: EmailMessage, kern: str, bron: str) -> bool:
         return False
     print(f"  → zelf verstuurd aan {lead['email']}")
 
+    # ALLEEN BIJ RESEND ZELF ARCHIVEREN.
+    # Gaat de mail via Zoho's eigen SMTP, dan zet Zoho hem al in Verzonden.
+    # Gemeten op 31-08-2026: negen met de hand verstuurde mails stonden daarna
+    # allemaal DUBBEL in die map, één van Zoho en één van ons. Dat breekt niets
+    # (het slot kijkt alleen of er iets staat) maar het vervuilt de map, en die
+    # map is ook wat `_toonprofiel` leest om Daniels toon uit af te leiden.
+    #
+    # Op de server loopt alles via Resend — die kent Zoho niet en zet dus niets
+    # in Verzonden. Daar is deze kopie geen netheid maar het slot zelf.
     imap_host, wachtwoord = os.environ.get("IMAP_HOST"), os.environ.get("MAIL_PASS")
-    if imap_host and wachtwoord:
+    if _resend_actief() and imap_host and wachtwoord:
         try:
             with imaplib.IMAP4_SSL(imap_host, 993) as im:
                 im.login(van, wachtwoord)
