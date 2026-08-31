@@ -1822,6 +1822,29 @@ def _afsluitmails(state: dict, boek: "Notion") -> int:
 WARM_OPVOLG_DAGEN = (3, 7)
 REGISTREREN = "https://omnivaleur.com/register"
 
+# Zinnen waarmee wij een gesprek dichtdoen.
+#
+# WAAROM DIT ER IS (31-08-2026, Frank de Veer). Zijn laatste bericht van ons
+# eindigde met "Mocht dat op enig moment anders liggen, dan hoor ik het wel".
+# Negen dagen later legde de opvolging er een derde bericht bovenop, dat begon
+# met "Ik laat het hierbij, ik ga je er niet langer mee lastigvallen". Twee keer
+# afscheid nemen van dezelfde persoon is erger dan één keer te weinig.
+#
+# Bewust ONZE eigen zinnen en niet die van de klant: dit gaat over de vraag of
+# wij de bal nog bij hem hebben liggen. Hebben we zelf gezegd dat hij zich niet
+# hoeft te melden, dan is stilte geen uitblijvend antwoord maar het antwoord.
+_AFSLUITZINNEN = re.compile(
+    r"(laat ik het hierbij|ik laat het hierbij|niet langer mee lastigvallen|"
+    r"val je verder niet lastig|laatste (bericht|mailtje|berichtje) van mij|"
+    r"hoor ik het wel|dan hoor ik het vanzelf|weten (jullie|je) me te vinden|"
+    r"succes met de (shop|verkoop|winkel)|ik wens (jullie|je) veel succes|"
+    r"dan spreken we elkaar later|dan pak ik het (gewoon )?dan weer op)", re.I)
+
+
+def _is_afsluiting(tekst: str) -> bool:
+    """Hebben wij dit gesprek zelf al dichtgedaan?"""
+    return bool(_AFSLUITZINNEN.search(_kern_tekst(tekst or "")))
+
 
 def _open_pixel_html(adres: str, kern: str, laag: str = "opvolg") -> str:
     """HTML-versie van de tekst met een onzichtbare pixel erin. Regeleindes
