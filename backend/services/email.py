@@ -178,7 +178,7 @@ def _deliver(port: int, recipient: list[str], msg) -> None:
             server.starttls()
         with server:
             server.login(settings.smtp_user, settings.smtp_password)
-            server.sendmail(settings.smtp_from_email, [recipient], msg.as_string())
+            server.sendmail(settings.smtp_from_email, recipient, msg.as_string())
 
 
 @contextmanager
