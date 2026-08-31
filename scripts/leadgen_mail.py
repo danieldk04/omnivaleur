@@ -3349,10 +3349,56 @@ def _waarom_geen_concept(adres: str, inkomend) -> str | None:
     return None
 
 
+# ── Zelf versturen of laten liggen ───────────────────────────────────────────
+# WAAROM DIT ER IS (31-08-2026)
+# Daniel: "nu staan er veel mails klaar in concepten die daar niet horen" en
+# "automatische follow up automatisch verstuurd worden". Hij had gelijk. Van de
+# tien wachtende concepten waren er zeven beleefdheidsberichten zonder enige
+# belofte — "ik laat het hierbij", "was het filmpje duidelijk?" — waarvan de
+# oudste twee dagen lag te verpieteren. Daar hoeft niemand naar te kijken.
+#
+# De drie die er WEL hoorden te liggen hadden alle drie hetzelfde kenmerk: er
+# stond een toezegging in die alleen Daniel kan waarmaken (een belafspraak), of
+# het ging over een storing die nog openstaat. Dat is dus de scheidslijn, en
+# niet "koud of warm" of "lead of klant".
+#
+# De rem kan alleen maar TEGENHOUDEN, nooit doorlaten. Een mail die onterecht
+# blijft liggen kost Daniel één klik; een mail die onterecht de deur uit gaat is
+# niet terug te halen. Bij twijfel dus altijd het concept.
+_TOEZEGGING = re.compile(
+    r"\b("
+    r"bel(len|afspraak|len we|t? je|t? ik)|telefonisch|meet-?link|google\s*meet|zoom|"
+    r"afspraak (in|maken|plannen)|moment (voor|stel)|inplannen|"
+    r"terugbetal|geld terug|restitutie|crediter|vergoed|korting|gratis maand|factuur|"
+    r"kom er.{0,20}op terug|kijk ik naar|zoek ik uit|zoek het uit|"
+    r"laat ik (het )?weten|houd ik je op de hoogte|hoor je van me|kom ik bij je terug"
+    r")\b", re.I)
+
+
+def _waarom_niet_zelf_versturen(kern: str, klant: bool, bron: str) -> str:
+    """Reden om dit bericht tóch als concept neer te leggen, of "" als het mag."""
+    treffer = _TOEZEGGING.search(kern or "")
+    if treffer:
+        return f"er staat een toezegging in ({treffer.group(0)!r})"
+    if _geen_antwoord(kern or ""):
+        return "het model kon de vraag niet uit de code beantwoorden"
+    # Een betalende klant is de plek waar een verkeerd woord het duurst is. Daar
+    # gaat alleen de terugkoppeling van de developer vanzelf weg: die is aan de
+    # code getoetst voordat hij geschreven werd.
+    if klant and "developer" not in bron:
+        return "dit is een betalende klant en er kwam geen developer aan te pas"
+    return ""
+
+
 def _zet_concept_klaar(lead: dict, inkomend, body: str, soort: str = "warm",
                        eigen_tekst: str | None = None, met_pixel: bool = False,
-                       bron: str = "klantenservice") -> bool:
-    """Legt het voorstel als concept in Daniels postbus, in dezelfde draad."""
+                       bron: str = "klantenservice",
+                       zelf_versturen: bool = False) -> bool:
+    """Legt het voorstel klaar — als concept, of stuurt het zelf.
+
+    `zelf_versturen` is een VERZOEK, geen bevel: `_waarom_niet_zelf_versturen`
+    hierboven mag het altijd terugzetten naar een concept.
+    """
     host, van = os.environ.get("IMAP_HOST"), os.environ.get("MAIL_USER")
     wachtwoord = os.environ.get("MAIL_PASS")
     if not (host and van and wachtwoord):
