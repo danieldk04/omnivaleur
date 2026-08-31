@@ -200,7 +200,7 @@ AFSLUIT_UIT = True
 # en niet per ongeluk aan kan staan waar niemand kijkt.
 #
 # Weer aanzetten is een besluit van Daniel, niet van de developer.
-MAILFLOW_GEPAUZEERD = True
+MAILFLOW_GEPAUZEERD = False
 
 AFSLUIT_VERTRAGING = (20, 90)          # minuten
 
@@ -3596,20 +3596,39 @@ def _seintje(msg: EmailMessage, sleutel: str, wat: str) -> None:
     _archiveer(msg)
 
 
-def _bron_met_developer(adres: str, bron: str) -> str:
-    """Kwam er een reparatie van de developer aan te pas, dan hoort dat erbij:
-    dat is het verschil tussen "de klantenservice heeft iets geschreven" en
-    "dit is nagekeken in de code"."""
-    if bron != "klantenservice":
-        return bron
+def _samenwerking(adres: str, bron: str) -> tuple[str, str]:
+    """Wie eraan gewerkt heeft, en WAT die twee samen hebben gedaan.
+
+    WAAROM DIT ER IS (31-08-2026). Daniel: "het gaat mij echt om de samenwerking
+    mail-agent - claude code, en dat er dan een mail naar mij gestuurd wordt met
+    wat er dan gedaan is door deze 2 en dat ze samen een concept voor me hebben
+    klaargezet."
+
+    Er stonden drie losse seintjes: de klantenservice die de developer aan het
+    werk zet, de developer die terugmeldt, en het concept dat klaarligt. Drie
+    mails over één ding, en geen van drieën vertelde het verhaal. Dit levert de
+    regels die in dat ene seintje het hele rondje laten zien: wat de klant
+    meldde, wat de developer eraan deed, en dat het antwoord nu klaarligt.
+    """
     try:
         import mail_analyse
-        for storing in (mail_analyse.bugs() or {}).values():
-            if adres in (storing.get("melders") or []) and storing.get("status") == "opgelost":
-                return "klantenservice + developer"
-    except Exception:  # noqa: BLE001 — zonder dit label nog steeds een seintje
-        pass
-    return bron
+        gedaan = [
+            f"  {sleutel}\n"
+            f"    de klant meldde:  {(s.get('omschrijving') or '').strip()[:200]}\n"
+            f"    de developer fixte: {(s.get('uitleg') or '').strip()[:200]}"
+            for sleutel, s in (mail_analyse.bugs() or {}).items()
+            if adres in (s.get("melders") or []) and s.get("status") == "opgelost"
+            and s.get("uitleg")
+        ]
+    except Exception:  # noqa: BLE001 — zonder dit verhaal nog steeds een seintje
+        return bron, ""
+    if not gedaan:
+        return bron, ""
+    return "klantenservice + developer", (
+        "Wat de klantenservice en de developer hier samen aan gedaan hebben:\n\n"
+        + "\n\n".join(gedaan[:4])
+        + "\n\nDe developer heeft dat gerepareerd en teruggemeld; de "
+          "klantenservice heeft daar het antwoord hieronder van gemaakt.\n\n")
 
 
 def _meld_concept_klaar(lead: dict, onderwerp: str, tekst: str,
@@ -3620,7 +3639,7 @@ def _meld_concept_klaar(lead: dict, onderwerp: str, tekst: str,
     van = os.environ.get("MAIL_USER")
     if not van:
         return
-    bron = _bron_met_developer(adres, bron)
+    bron, samenwerking = _samenwerking(adres, bron)
     msg = EmailMessage()
     msg["From"] = f"Klantenservice <{van}>"
     msg["To"] = ", ".join(ALARM_NAAR)
@@ -3638,6 +3657,7 @@ def _meld_concept_klaar(lead: dict, onderwerp: str, tekst: str,
         f"Aan:        {adres}\n"
         f"Onderwerp:  {onderwerp}\n"
         f"Geschreven: {bron}\n\n"
+        f"{samenwerking}"
         f"--- het concept ---\n{(tekst or '').strip()[:1500]}\n--- einde ---\n\n"
         f"Nalezen en versturen; aanpassen mag, dan leer ik daarvan.\n")
     _seintje(msg, _meldsleutel("concept", adres, _kern_tekst(tekst)), "concept klaar")

@@ -62,10 +62,19 @@ def test_reparatie_van_de_developer_staat_erbij(L, monkeypatch):
     post = _vang_post(L, monkeypatch)
     nep = types.SimpleNamespace(bugs=lambda: {
         "advertentietekst-niet-geimporteerd": {
-            "melders": ["klant@example.nl"], "status": "opgelost"}})
+            "melders": ["klant@example.nl"], "status": "opgelost",
+            "omschrijving": "zijn advertentietekst kwam niet mee bij het importeren",
+            "uitleg": "de tekst wordt nu van de advertentiepagina zelf gelezen"}})
     monkeypatch.setitem(sys.modules, "mail_analyse", nep)
     L._meld_concept_klaar({"email": "klant@example.nl"}, "Re: vraag", "tekst")
-    assert "Geschreven: klantenservice + developer" in post[0].get_content()
+    inhoud = post[0].get_content()
+    assert "Geschreven: klantenservice + developer" in inhoud
+    # HET HELE RONDJE IN ÉÉN MAIL (31-08-2026, op Daniels verzoek): wat de klant
+    # meldde, wat de developer eraan deed, en dat het antwoord klaarligt.
+    assert "samen" in inhoud
+    assert "advertentietekst-niet-geimporteerd" in inhoud
+    assert "kwam niet mee bij het importeren" in inhoud
+    assert "van de advertentiepagina zelf gelezen" in inhoud
 
 
 def test_zonder_mailinstellingen_gebeurt_er_niets(L, monkeypatch):

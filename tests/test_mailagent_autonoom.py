@@ -56,9 +56,11 @@ def L(monkeypatch):
 
 # ── 1. de mailflow staat stil ────────────────────────────────────────────────
 
-def test_de_mailflow_staat_op_pauze(L):
-    """Door Daniel uitgezet op 31-08. Weer aanzetten is zijn besluit."""
-    assert L.MAILFLOW_GEPAUZEERD is True
+def test_de_schakelaar_om_alles_stil_te_leggen_bestaat_nog(L):
+    """Op 31-08 aangezet en later diezelfde dag door Daniel weer vrijgegeven
+    voor de koude flow. De schakelaar zelf moet blijven: dit is de enige knop
+    die in één keer alles stillegt als er iets misgaat."""
+    assert isinstance(L.MAILFLOW_GEPAUZEERD, bool)
 
 
 def test_de_pauze_werkt_voordat_er_iets_gelezen_of_gecontroleerd_wordt():
@@ -77,6 +79,7 @@ def test_de_pauze_stopt_de_beurt_echt(L, monkeypatch):
                         lambda *a, **k: geraakt.append("afzender"))
     monkeypatch.setattr(L, "_state", lambda: geraakt.append("state") or {})
 
+    monkeypatch.setattr(L, "MAILFLOW_GEPAUZEERD", True)
     L.tick(types.SimpleNamespace(per_dag=0, max_per_beurt=0))
     assert geraakt == [], f"de beurt liep door tot {geraakt}"
 

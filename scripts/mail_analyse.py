@@ -688,40 +688,11 @@ def vraag_voor_daniel(adres: str, vraag: str, aanleiding: str = "") -> bool:
     return True
 
 
-# ── Wat de twee agenten onderling afspreken ──────────────────────────────────
-# WAAROM DIT ER IS (31-08-2026)
-# Daniel: "ik wil meldingen krijgen wanneer claude code en de mailagent
-# communiceren over wat ze gaan doen en wat er gebeurt."
-#
-# Terecht. De rolverdeling (zie docs/team-notes.md) is juist bedoeld om hem uit
-# de post te houden: de klantenservice geeft storingen door aan de developer, de
-# developer meldt terug wat er gerepareerd is, en de klantenservice schrijft de
-# melders aan. Alle drie die stappen gebeurden tot nu toe volledig onzichtbaar.
-# Dat is prima zolang het goed gaat, maar het betekent ook dat hij het pas merkt
-# als een klant klaagt — precies wat er op 29-08 gebeurde toen een reparatie wél
-# klaar was maar de terugmelding vergeten werd.
-#
-# Dit is een LOGBOEKREGEL, geen verzoek om actie. Hij hoeft er niets mee.
-def _meld_overleg(wat: str, sleutel: str, uitleg: str, gevolg: str) -> None:
-    """Seintje aan Daniel dat de twee agenten iets hebben afgesproken."""
-    van = os.environ.get("MAIL_USER")
-    if not (van and L.ALARM_NAAR):
-        return
-    from email.message import EmailMessage
-    msg = EmailMessage()
-    msg["From"] = f"Klantenservice <{van}>"
-    msg["To"] = ", ".join(L.ALARM_NAAR)
-    msg["Subject"] = f"Developer → klantenservice: {wat} ({sleutel})"
-    msg.set_content(
-        f"De developer heeft zojuist iets doorgegeven aan de klantenservice.\n"
-        f"Je hoeft hier niets mee; dit is zodat je weet wat er speelt.\n\n"
-        f"Storing:   {sleutel}\n"
-        f"Besluit:   {wat}\n"
-        f"Toelichting: {uitleg}\n\n"
-        f"Wat er nu gebeurt:\n  {gevolg}\n")
-    L._seintje(msg, L._meldsleutel("overleg", sleutel, wat + uitleg), "overleg")
-
-
+# De losse seintjes "developer → klantenservice" zijn er op 31-08-2026 weer
+# uitgehaald. Ze meldden hetzelfde ding drie keer (aan het werk / gerepareerd /
+# concept klaar) en vertelden geen van drieën het verhaal. Wat de twee samen
+# gedaan hebben staat nu in ÉÉN mail: het seintje dat er een concept klaarligt.
+# Zie `_samenwerking` in leadgen_mail.py.
 def afgewezen(args) -> None:
     """Deze storing gaan we niet repareren, en dat is een besluit.
 
@@ -740,9 +711,6 @@ def afgewezen(args) -> None:
     s.pop("gemeld_als_patroon", None)
     _schrijf(BUG_SLEUTEL, signalen)
     print(f"'{args.sleutel}' staat op afgewezen: {args.reden}")
-    _meld_overleg("wordt NIET gerepareerd", args.sleutel, args.reden,
-                  "De storing gaat van de lijst af. De melders krijgen hierover "
-                  "géén bericht — er valt niets te melden.")
 
 
 def opgelost(args) -> None:
@@ -766,11 +734,6 @@ def opgelost(args) -> None:
     print(f"'{args.sleutel}' staat op opgelost. "
           f"{len(melders)} melder(s) krijgen bericht: "
           f"{', '.join(melders[:8])}")
-    _meld_overleg("gerepareerd", args.sleutel, args.uitleg,
-                  (f"{len(melders)} melder(s) krijgen hierover vanzelf bericht: "
-                   f"{', '.join(melders[:8]) or 'niemand — er stond geen melder bij'}."
-                   if melders else
-                   "Er stond geen melder bij deze storing, dus er gaat geen bericht uit."))
 
 
 # ------------------------------------------- wat de developer zegt, telt
