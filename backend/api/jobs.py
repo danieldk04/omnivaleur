@@ -977,74 +977,7 @@ async def complete_job(job_id: str, body: dict, user_id: str = Depends(get_curre
     if job["action"] == "create":
         await _rond_publicatie_af(db, job, body)
 
-    elif job["action"] == "delete":
-            #
-            # Hier stond `.eq(item_id).eq(platform)` — één artikel had immers
-            # hoogstens één advertentie per kanaal, want dat dwong de unieke
-            # index `listings_item_platform_unique` af. Sinds dubbele rijen
-            # samengevoegd kunnen worden (zie scripts/fix_listings_unique.sql)
-            # klopt die aanname niet meer: één artikel draagt nu de acht
-            # Marktplaats-advertenties van zijn acht voormalige kopieën.
-            #
-            # De oude regel werkte ze dan ALLEMAAL bij met hetzelfde
-            # advertentienummer. De database weigert dat sinds vanmiddag
-            # (foutcode A1C211: duplicate key ... listings_item_platform_advert_unique)
-            # — maar het was daarvóór net zo fout en alleen onzichtbaar: acht
-            # verschillende advertenties kregen stilletjes hetzelfde nummer, en
-            # daarmee raakten we het spoor van zeven ervan kwijt.
-            #
-            # De juiste rij, in deze volgorde:
-            #   1. staat dit advertentienummer er al? Dan is dit een herhaalde
-            #      of late afronding van dezelfde publicatie — die rij bijwerken.
-            #   2. anders de rij die op een nummer wacht (nog leeg, dus door deze
-            #      opdracht aangemaakt en nog niet afgerond).
-            #   3. anders is dit een echt nieuwe advertentie: een rij erbij.
-            rijen = (await naast_de_lus(lambda: db.table("listings")
-                                        .select("id,platform_listing_id,status")
-                                        .eq("item_id", job["item_id"])
-                                        .eq("platform", job["platform"]).execute())).data or []
-            doel = next((r for r in rijen
-                         if r.get("platform_listing_id") == body["platform_listing_id"]), None)
-            if doel is None:
-                doel = next((r for r in rijen if not r.get("platform_listing_id")), None)
-            if doel is not None:
-                (await naast_de_lus(lambda: db.table("listings").update({
-                    "platform_listing_id": body["platform_listing_id"],
-                    "platform_listing_url": body.get("platform_listing_url"),
-                    "status": "active",
-                    # This completion may arrive AFTER the job was marked failed
-                    # (the user fixed the form by hand and published themselves —
-                    # the extension's auto-detect then completes it late). Clear
-                    # the stale error, otherwise the listing shows as live and
-                    # broken at the same time.
-                    "error_message": None,
-                    "listed_at": datetime.now(timezone.utc).isoformat(),
-                }).eq("id", doel["id"]).execute()))
-            else:
-                (await naast_de_lus(lambda: db.table("listings").insert({
-                    "item_id": job["item_id"],
-                    "platform": job["platform"],
-                    "platform_listing_id": body["platform_listing_id"],
-                    "platform_listing_url": body.get("platform_listing_url"),
-                    "status": "active",
-                    "listed_at": datetime.now(timezone.utc).isoformat(),
-                }).execute()))
-        else:
-            # Ook hier hoogstens één rij: de advertentie die op deze publicatie
-            # wachtte. Alle rijen van dit kanaal op 'error' zetten zou zeven
-            # lopende advertenties als kapot markeren omdat de achtste faalde.
-            wachtend = (await naast_de_lus(lambda: db.table("listings")
-                                           .select("id").eq("item_id", job["item_id"])
-                                           .eq("platform", job["platform"])
-                                           .is_("platform_listing_id", "null")
-                                           .execute())).data or []
-            if wachtend:
-                (await naast_de_lus(lambda: db.table("listings").update({
-                    "status": "error",
-                    "error_message": "Extension completed job but returned no platform_listing_id",
-                }).eq("id", wachtend[0]["id"]).execute()))
-
-    elif job["action"] == "delete":
+    elif job["action"] == "delete":  # noqa: SIM114
         # De extensie kan tijdens het verwijderen ontdekken dat de advertentie op
         # DIT platform verkocht is (Vinted: is_closed; MP/2dehands: een
         # "Verkocht"-label op de rij). Dan is verwijderen precies het verkeerde:
