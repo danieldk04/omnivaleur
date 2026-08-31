@@ -1941,6 +1941,22 @@ def _warme_opvolging(state: dict, boek: "Notion") -> int:
                 # dat nergens naar verwijst; het sjabloon blijft het vangnet als
                 # er geen sleutel is of het antwoord niet lukt.
                 draad = _laatste_verzonden_bericht(imap, adres)
+
+                # WIJ HEBBEN HET GESPREK ZELF AL AFGESLOTEN (31-08-2026, Frank
+                # de Veer). Frank kreeg op 20-08 om 10:49 een bericht dat eindigde
+                # met "Mocht dat op enig moment anders liggen, dan hoor ik het
+                # wel" — een afsluiting. Negen dagen later stond er een opvolging
+                # klaar die begon met "Ik laat het hierbij, ik ga je er niet
+                # langer mee lastigvallen", en dat was zijn derde bericht van ons.
+                #
+                # De stiltemeting kan dit niet zien: er is stilte, en dat klopt
+                # ook — wij hebben het gesprek dichtgedaan. Na een afsluiting
+                # hoort er geen zetje meer te komen. Dat is precies het verschil
+                # tussen "ik wacht op je" en "ik laat je met rust".
+                if _is_afsluiting((draad or {}).get("tekst", "")):
+                    st["warm_opvolg"] = len(WARM_OPVOLG_DAGEN)   # klaar, niet nog eens kijken
+                    continue
+
                 tekst = (_stilte_concept(draad.get("tekst", ""),
                                         beurt == len(WARM_OPVOLG_DAGEN) - 1)
                          if draad else None)
