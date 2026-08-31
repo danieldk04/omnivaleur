@@ -2599,3 +2599,27 @@ machine die teksten schrijft is dat antwoord voorlopig altijd: nee.
 dubbel. Daar is maar één keer verstuurd — Zoho zet post die via zijn eigen SMTP
 gaat zelf al in Verzonden, en ik legde er nog een kopie naast. De ontvangers
 hebben elk één mail gekregen; het dubbele zit alleen in Daniels eigen map.
+
+### 31-08-2026 — Bijstelling: koude flow weer aan, en één seintje in plaats van drie
+
+Daniel, na de pauze van vanmiddag: "koude email flow mag wel (1, 2 en 3),
+reacties in concepten ook, maar het gaat mij echt om de samenwerking mail-agent
+- claude code, en dat er dan een mail naar mij gestuurd wordt met wat er dan
+gedaan is door deze 2 en dat ze samen een concept voor me hebben klaargezet."
+
+`MAILFLOW_GEPAUZEERD` staat dus weer op False. De aantekening hierboven ("weer
+aanzetten is Daniels besluit") is daarmee ingehaald — dat besluit is genomen.
+De schakelaar zelf blijft staan; het is de enige knop die in één keer alles
+stillegt.
+
+Wat er nu geldt: mail 1, 2 en 3 van de koude reeks gaan vanzelf (dat deden ze
+altijd al en daar is nooit iets mee misgegaan). Alles wat een ANTWOORD is —
+reacties, opvolgingen, terugkoppelingen van de developer — blijft een concept.
+Het zelf-versturen van antwoorden blijft weg.
+
+De drie losse seintjes rond de samenwerking zijn er weer uit (klantenservice →
+developer, developer → klantenservice, concept klaar). Ze meldden hetzelfde ding
+drie keer en vertelden geen van drieën het verhaal. Het staat nu in één mail:
+`_samenwerking` in leadgen_mail.py zoekt bij het adres van het concept de
+gerepareerde storingen op en zet in het seintje wat de klant meldde, wat de
+developer eraan deed, en daaronder het concept zelf.
