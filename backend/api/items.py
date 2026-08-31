@@ -283,6 +283,23 @@ def merge_items(body: dict, user_id: str = Depends(get_current_user)):
     De foto's blijven staan. `_release_photos` zou een foto kunnen weghalen die
     het overgebleven item zelf ook gebruikt, en een advertentie zonder plaatje
     is erger dan een paar ongebruikte bestanden.
+
+    WAAROM ER VOORAF OP HET PLATFORM WORDT GECONTROLEERD (31-08-2026). Daniel
+    drukte op "Merge all" en kreeg elf keer op rij een serverfout (codes 269E80,
+    0A2143, 07F3A8 en verder). De oorzaak stond in de database, niet hier:
+    `listings` heeft een unieke sleutel op (item_id, platform), dus één item kan
+    hoogstens één advertentie per kanaal hebben. Precies wat samenvoegen
+    oplevert — acht kopieën van dezelfde trui met elk een eigen Marktplaats-
+    advertentie — botst daarmee. De regel hieronder ging er in bulk overheen en
+    liet de hele aanroep klappen.
+
+    Er ging niets verloren (de listings-regel is de eerste van de drie, dus de
+    verwijdering werd nooit bereikt), maar de klant zag alleen een foutcode en
+    de dubbele rijen bleven staan. Nu wordt zo'n botsing vóóraf herkend en die
+    ene groep overgeslagen, met een reden die de app kan uitleggen. Zolang de
+    unieke sleutel bestaat is overslaan het enige juiste: doorgaan zou betekenen
+    dat een echte advertentie van een kanaal verdwijnt uit onze administratie
+    terwijl hij online gewoon doorloopt.
     """
     keep = (body or {}).get("keep")
     losers = [i for i in ((body or {}).get("merge") or []) if i and i != keep]
@@ -296,6 +313,13 @@ def merge_items(body: dict, user_id: str = Depends(get_current_user)):
     if keep not in per_id:
         raise HTTPException(status_code=404, detail="Item not found")
 
+    # Welke kanalen bezet het bewaarde item al, en welke de anderen. In één
+    # vraag, want per item vragen is bij "Merge all" honderden aanroepen.
+    kanalen: dict[str, set] = {}
+    for rij in (db.table("listings").select("item_id,platform")
+                .in_("item_id", [keep, *losers]).execute().data or []):
+        kanalen.setdefault(rij["item_id"], set()).add(rij.get("platform"))
+
     merken = bekende_merken_van(rijen)
     samengevoegd, geweigerd = [], []
     for lid in losers:
@@ -306,12 +330,17 @@ def merge_items(body: dict, user_id: str = Depends(get_current_user)):
         if not zelfde_artikel(per_id[keep], ander, merken):
             geweigerd.append({"id": lid, "reason": "not_the_same_article"})
             continue
-        # Advertenties verhuizen. Staat de andere rij op een kanaal waar het
-        # bewaarde item óók op staat, dan blijven ze allebei bestaan: het zijn
-        # twee echte advertenties en die moeten allebei weg als er verkocht is.
+        botsing = kanalen.get(keep, set()) & kanalen.get(lid, set())
+        if botsing:
+            geweigerd.append({"id": lid, "reason": "advert_on_same_platform",
+                              "platforms": sorted(p for p in botsing if p)})
+            continue
         db.table("listings").update({"item_id": keep}).eq("item_id", lid).execute()
         db.table("jobs").update({"item_id": keep}).eq("item_id", lid).execute()
         db.table("items").delete().eq("id", lid).eq("user_id", user_id).execute()
+        # Het bewaarde item bezet nu ook de kanalen van deze rij; een volgende
+        # loser in dezelfde aanroep moet daar tegenaan botsen.
+        kanalen.setdefault(keep, set()).update(kanalen.get(lid, set()))
         samengevoegd.append(lid)
 
     return {"kept": keep, "merged": samengevoegd, "refused": geweigerd}
