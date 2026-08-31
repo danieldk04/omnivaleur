@@ -121,9 +121,12 @@ def send_email_checked(subject: str, body: str, to: str | None = None, reply_to:
         msg.attach(MIMEText(html, "html", "utf-8"))
     else:
         msg = MIMEText(body, "plain", "utf-8")
+    aan = ontvangers(recipient)
+    if not aan:
+        raise RuntimeError("Geen geldig ontvangeradres voor deze mail")
     msg["Subject"] = subject
     msg["From"] = settings.smtp_from_email
-    msg["To"] = recipient
+    msg["To"] = ", ".join(aan)
     if reply_to:
         # De mail vertrekt vanaf de mailbox die toevallig is ingesteld; antwoorden
         # moeten bij het adres in de handtekening uitkomen.
