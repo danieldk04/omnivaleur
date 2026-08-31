@@ -307,19 +307,58 @@ def _supabase() -> tuple[str, str] | None:
     return (url.rstrip("/"), sleutel) if url and sleutel else None
 
 
+class OpslagOnbereikbaar(RuntimeError):
+    """De administratie kon niet gelezen of geschreven worden.
+
+    WAAROM DIT EEN EIGEN FOUT IS (31-08-2026)
+    Op 31-08-2026 zette Supabase het hele project op slot (402, verkeer boven
+    het gratis plan). Twee dingen gingen toen mis, en allebei stil:
+
+      * `_state()` liet de fout gewoon doorschieten, dus de hele beurt klapte
+        er meteen op. Vier klanten die zondagnacht en maandagochtend schreven
+        kregen daardoor geen enkel concept, en niemand kreeg daar bericht van.
+      * `_save_state` had een vangnet dat nooit aanging: het schreef alleen
+        naar schijf als `_db_schrijf` FALSE teruggaf, en dat gebeurt alleen als
+        er helemaal geen database is ingesteld. Bij een echte storing gooide
+        die functie een fout, en dan werd er dus níets bewaard.
+
+    Dat tweede is het gevaarlijke geval. Wordt er verstuurd terwijl de
+    administratie niet bijgewerkt kan worden, dan begint de volgende beurt met
+    het oude beeld en gaat dezelfde mail nog een keer de deur uit. Daarom:
+    lezen mislukt of schrijven mislukt = er wordt niets verstuurd, en Daniel
+    krijgt bericht. Liever een uur stil dan een dubbele mail aan een klant.
+    """
+
+
+# Wat er deze beurt al opgehaald is. Eén beurt is één proces van hooguit een
+# paar minuten; binnen die tijd verandert de leadlijst niet en de administratie
+# alleen door onszelf. Zonder dit haalde één beurt dezelfde lijsten vijf tot
+# tien keer opnieuw op — bij 144 beurten per dag is dat het verschil tussen
+# honderden megabytes en een paar. Zie ook OpslagOnbereikbaar hierboven: dit is
+# de tweede helft van dezelfde 402-storing.
+_GELEZEN: dict[str, object] = {}
+
+
 def _db_lees(naam: str, standaard):
     verbinding = _supabase()
     if not verbinding:
         return None
+    if naam in _GELEZEN:
+        return _GELEZEN[naam]
     import httpx
     url, sleutel = verbinding
-    r = httpx.get(f"{url}/rest/v1/{TABEL}", params={"naam": f"eq.{naam}",
-                                                    "select": "inhoud"},
-                  headers={"apikey": sleutel, "Authorization": f"Bearer {sleutel}"},
-                  timeout=30.0)
-    r.raise_for_status()
-    rijen = r.json()
-    return rijen[0]["inhoud"] if rijen else standaard
+    try:
+        r = httpx.get(f"{url}/rest/v1/{TABEL}", params={"naam": f"eq.{naam}",
+                                                        "select": "inhoud"},
+                      headers={"apikey": sleutel, "Authorization": f"Bearer {sleutel}"},
+                      timeout=30.0)
+        r.raise_for_status()
+        rijen = r.json()
+    except Exception as e:  # noqa: BLE001 — vertaald naar één herkenbare fout
+        raise OpslagOnbereikbaar(f"{naam} niet gelezen: {e}") from e
+    uit = rijen[0]["inhoud"] if rijen else standaard
+    _GELEZEN[naam] = uit
+    return uit
 
 
 def _db_schrijf(naam: str, inhoud) -> bool:
@@ -328,13 +367,19 @@ def _db_schrijf(naam: str, inhoud) -> bool:
         return False
     import httpx
     url, sleutel = verbinding
-    r = httpx.post(f"{url}/rest/v1/{TABEL}",
-                   params={"on_conflict": "naam"},
-                   headers={"apikey": sleutel, "Authorization": f"Bearer {sleutel}",
-                            "Content-Type": "application/json",
-                            "Prefer": "resolution=merge-duplicates"},
-                   json={"naam": naam, "inhoud": inhoud}, timeout=30.0)
-    r.raise_for_status()
+    try:
+        r = httpx.post(f"{url}/rest/v1/{TABEL}",
+                       params={"on_conflict": "naam"},
+                       headers={"apikey": sleutel, "Authorization": f"Bearer {sleutel}",
+                                "Content-Type": "application/json",
+                                "Prefer": "resolution=merge-duplicates"},
+                       json={"naam": naam, "inhoud": inhoud}, timeout=30.0)
+        r.raise_for_status()
+    except Exception as e:  # noqa: BLE001
+        raise OpslagOnbereikbaar(f"{naam} niet opgeslagen: {e}") from e
+    # Wat we net wegschreven is voortaan wat we zelf teruglezen; anders zou een
+    # tweede lezing in dezelfde beurt de oude versie uit de cache pakken.
+    _GELEZEN[naam] = inhoud
     return True
 
 
@@ -351,6 +396,14 @@ def _state() -> dict:
 
 
 def _save_state(state: dict) -> None:
+    """De administratie wegschrijven, of hard klagen.
+
+    Er is bewust GEEN stille terugval meer op het lokale bestand als de
+    database wél is ingesteld maar niet bereikbaar is. Dat bestand loopt binnen
+    een dag achter (het draait op de server, die zijn schijf niet bewaart), en
+    doorwerken op een achterlopende administratie is precies hoe iemand twee
+    keer dezelfde mail krijgt.
+    """
     if _db_schrijf("mail_state", state):
         return
     OUT.mkdir(parents=True, exist_ok=True)
