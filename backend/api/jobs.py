@@ -975,8 +975,9 @@ async def complete_job(job_id: str, body: dict, user_id: str = Depends(get_curre
     }).eq("id", job_id).execute()))
 
     if job["action"] == "create":
-        if body.get("platform_listing_id"):
-            # WELKE RIJ HOORT BIJ DEZE PUBLICATIE (31-08-2026).
+        await _rond_publicatie_af(db, job, body)
+
+    elif job["action"] == "delete":
             #
             # Hier stond `.eq(item_id).eq(platform)` — één artikel had immers
             # hoogstens één advertentie per kanaal, want dat dwong de unieke
