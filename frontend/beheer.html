@@ -816,8 +816,10 @@ function toonKlantenservice(k) {
     + kaart('Van klanten', getal(k.van_klanten), 'de rest zijn leads')
     + kaart('Ligt bij jou', getal((k.escalaties || []).length), 'alleen wat ik niet zelf kan',
             (k.escalaties || []).length ? 'let' : 'op')
-    + kaart('Open storingen', getal((k.storingen || []).filter(s => s.status === 'open').length),
-            'doorgegeven aan de developer');
+    + kaart('Open storingen', getal((k.storingen_totaal || {}).open || 0),
+            `${getal((k.storingen_totaal || {}).opgelost || 0)} gerepareerd, `
+            + `${getal((k.storingen_totaal || {}).verlopen || 0)} uitgedoofd`,
+            ((k.storingen_totaal || {}).open || 0) ? 'let' : 'op');
 
   el('ks-themas').innerHTML =
     Object.entries(k.themas || {}).map(([t, n]) =>
