@@ -56,17 +56,23 @@ WHERE tablename = 'listings';
 -- Alles binnen één transactie: gaat er iets mis, dan draait de hele wijziging
 -- terug en blijft de oude sleutel gewoon staan.
 
+-- Uit stap 1 blijkt inmiddels dat het om een INDEX gaat en niet om een
+-- constraint, dus de vervanger wordt óók een index — dat is bovendien de enige
+-- vorm die een voorwaarde (WHERE) kan dragen. Staat er in stap 1 een WHERE
+-- achter de oude index, plak die dan ONVERANDERD achter de nieuwe hieronder
+-- voordat je dit draait; laat het me anders eerst zien.
+
 BEGIN;
 
+DROP INDEX IF EXISTS listings_item_platform_unique;
+
+-- Voor het geval hij ooit tóch als constraint is aangemaakt:
 ALTER TABLE listings
   DROP CONSTRAINT IF EXISTS listings_item_platform_unique;
 
--- Was het een index in plaats van een constraint, dan vangt deze regel dat op.
-DROP INDEX IF EXISTS listings_item_platform_unique;
-
-ALTER TABLE listings
-  ADD CONSTRAINT listings_item_platform_advert_unique
-  UNIQUE NULLS NOT DISTINCT (item_id, platform, platform_listing_id);
+CREATE UNIQUE INDEX listings_item_platform_advert_unique
+  ON listings (item_id, platform, platform_listing_id)
+  NULLS NOT DISTINCT;
 
 COMMIT;
 
