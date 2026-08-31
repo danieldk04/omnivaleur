@@ -69,6 +69,34 @@ def test_zonder_contact_daarna_blijft_hij_staan():
     assert M._verloop_kandidaten(signalen, staat, nu=NU) == []
 
 
+def test_een_zware_melding_krijgt_veel_langer_de_tijd():
+    """Bij een klant die boos was of dreigde te stoppen, of bij een storing die
+    meerdere mensen melden, is stilte veel minder overtuigend. Die houden we
+    drie weken vast in plaats van één."""
+    zwaar = _melding(10)
+    zwaar["moet_zeker"] = True
+    zwaar["waarom_zeker"] = ["een klant dreigt hierom te stoppen"]
+    signalen = {"automatisch-verversen-mislukt-popup": zwaar}
+    staat = {ZW: {"laatste_inkomend": _contact_op(1)}}
+
+    assert M._verloop_kandidaten(signalen, staat, nu=NU) == [], (
+        "een zware melding van 10 dagen oud mag nog niet uitdoven")
+
+    zwaar["laatst"] = (NU - timedelta(days=25)).isoformat()
+    assert len(M._verloop_kandidaten(signalen, staat, nu=NU)) == 1, (
+        "na drie weken stilte mag ook een zware melding uitdoven")
+
+
+def test_een_gewone_melding_dooft_na_een_week():
+    """Zonder deze kortere grens bleef alles staan: gemeten op 31-08-2026 zaten
+    de meeste meldingen van Zilverwebsite op 12 of 13 dagen, net binnen de oude
+    grens van 14, terwijl er niets meer speelde."""
+    signalen = {"maar-een-foto-geimporteerd": _melding(9)}
+    staat = {ZW: {"laatste_inkomend": _contact_op(1)}}
+
+    assert len(M._verloop_kandidaten(signalen, staat, nu=NU)) == 1
+
+
 def test_een_verse_melding_dooft_nooit_uit():
     signalen = {"inloggen-mislukt": _melding(1)}
     staat = {ZW: {"laatste_inkomend": _contact_op(0)}}
