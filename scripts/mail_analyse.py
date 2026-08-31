@@ -618,6 +618,17 @@ def bugs_tonen(args) -> None:
     """Het postvak van de developer: welke storing komt hoe vaak terug."""
     signalen = bugs()
     open_ = {k: v for k, v in signalen.items() if v.get("status") == "open"}
+    # Uitgedoofde meldingen blijven zichtbaar. Werk dat stilletjes verdwijnt is
+    # net zo erg als werk dat eeuwig blijft staan: als hier iets tussen staat
+    # dat wél nog speelt, moet dat opvallen en teruggezet kunnen worden.
+    doof = {k: v for k, v in signalen.items() if v.get("status") == "verlopen"}
+    if doof:
+        print(f"({len(doof)} melding(en) uitgedoofd omdat ze niet meer speelden — "
+              f"niemand kreeg daar bericht van:)")
+        for sleutel, s in sorted(doof.items(),
+                                 key=lambda kv: str(kv[1].get("verlopen_op", "")))[-5:]:
+            print(f"    ⌛ {sleutel} — {s.get('reden', '')}")
+        print()
     if not open_:
         print("Geen openstaande storingen gemeld.")
         return
