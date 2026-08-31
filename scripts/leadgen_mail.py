@@ -1584,20 +1584,8 @@ def _check_inbox(state: dict, boek: "Notion", dagen: int) -> tuple[int, int, int
                     and is_laatste and not wij_aan_zet
                     and binnen_op > al_gedaan
                     and not (beantwoord_door_daniel and beantwoord_door_daniel > binnen_op)):
-                # Een antwoord op een NEE gaat vanzelf de deur uit; een antwoord
-                # op interesse blijft liggen. Dat onderscheid is precies waar
-                # Daniel om vroeg (31-08-2026): van de tien wachtende concepten
-                # waren het juist deze beleefdheidsberichten — "ik laat het
-                # hierbij", "dan is er voor jullie weinig te winnen" — die daar
-                # niets te zoeken hadden. Er valt niets te beslissen, er wordt
-                # niets beloofd, en ze lagen er twee dagen.
-                #
-                # Bij "warm" ligt dat anders: dat is een gesprek met iemand die
-                # misschien klant wordt, en dat is van hem. `_stuur_zelf` haalt
-                # er sowieso nog alles uit waar een toezegging in staat.
                 if _zet_concept_klaar(lead, msg, body,
-                                      soort if soort in ("concurrent", "afwijzing") else "warm",
-                                      zelf_versturen=soort in ("concurrent", "afwijzing")):
+                                      soort if soort in ("concurrent", "afwijzing") else "warm"):
                     st["laatste_inkomend"] = binnen_op
                     st["concept_klaar"] = datetime.now().isoformat(timespec="seconds")
                     _save_state(state)   # zie _warme_opvolging: meteen, niet aan het eind
@@ -1964,16 +1952,8 @@ def _warme_opvolging(state: dict, boek: "Notion") -> int:
                             "References": (draad or {}).get("References", ""),
                             "From": (draad or {}).get("From", ""),
                             "Date": (draad or {}).get("Date", "")}
-                # DIT GAAT VANZELF WEG (31-08-2026, op Daniels verzoek: "stap 2
-                # of 3 in de mailsequence of een follow up mail als ik de video
-                # al gestuurd heb"). Een opvolging op stilte vraagt niets, belooft
-                # niets en beslist niets — hij herinnert er alleen aan. Hem laten
-                # wachten op een klik betekende in de praktijk dat hij dagen bleef
-                # liggen: de opvolging voor De Boekenkamer stond er op 31-08 nog
-                # steeds, geschreven op 29-08.
                 if _zet_concept_klaar(lead, inkomend, (draad or {}).get("tekst", ""), "warm",
-                                      eigen_tekst=tekst, met_pixel=True,
-                                      zelf_versturen=True):
+                                      eigen_tekst=tekst, met_pixel=True):
                     st["warm_opvolg"] = beurt + 1
                     st["warm_opvolg_op"] = nu.isoformat(timespec="seconds")
                     # METEEN vastleggen, niet aan het eind van de ronde. Het
@@ -3393,87 +3373,35 @@ def _waarom_geen_concept(adres: str, inkomend) -> str | None:
     return None
 
 
-# ── NIETS GAAT UIT ZICHZELF DE DEUR UIT ──────────────────────────────────────
+# ── ALLES WORDT EEN CONCEPT ──────────────────────────────────────────────────
 # DANIEL, 31-08-2026: "nooit uit jezelf versturen."
 #
-# Ik had dit vanochtend aangezet met het idee dat een beleefdheidsmail zonder
-# toezegging geen beslissing bevat. Dat klopt niet. Wat een mail schadelijk
-# maakt zit niet alleen in wat hij belóóft, maar ook in of hij nog kló́pt: de
-# aanhef, de naam, of het gesprek al gesloten was, of iemand net iets anders
-# schreef. Precies daar ging het mis — een verzonnen voornaam bij Zilverwebsite,
-# een derde bericht aan Frank die al met vakantie was, en een antwoord aan
-# Patricia dat Daniel vier dagen eerder zelf al had gegeven.
+# Er heeft hier een halve dag een uitzondering gestaan: berichten zonder
+# toezegging mochten zichzelf versturen. Dat idee klopte niet en het is er weer
+# helemaal uit gehaald — niet achter een schakelaar gezet, want een schakelaar
+# is iets wat iemand later per ongeluk omzet.
 #
-# Daar is geen filter tegen te bouwen dat ik met droge ogen "veilig" kan noemen.
-# Dus: alles wordt een concept, altijd. Deze schakelaar is de enige plek waar
-# dat besluit staat.
-ZELF_VERSTUREN_UIT = True
-
-
-# ── Zelf versturen of laten liggen ───────────────────────────────────────────
-# WAAROM DIT ER IS (31-08-2026)
-# Daniel: "nu staan er veel mails klaar in concepten die daar niet horen" en
-# "automatische follow up automatisch verstuurd worden". Hij had gelijk. Van de
-# tien wachtende concepten waren er zeven beleefdheidsberichten zonder enige
-# belofte — "ik laat het hierbij", "was het filmpje duidelijk?" — waarvan de
-# oudste twee dagen lag te verpieteren. Daar hoeft niemand naar te kijken.
+# WAAROM HET NIET KLOPTE. Ik toetste of een mail iets BELOOFDE. Maar wat een
+# mail schadelijk maakt is of hij nog KLOPT, en dat is iets heel anders:
 #
-# De drie die er WEL hoorden te liggen hadden alle drie hetzelfde kenmerk: er
-# stond een toezegging in die alleen Daniel kan waarmaken (een belafspraak), of
-# het ging over een storing die nog openstaat. Dat is dus de scheidslijn, en
-# niet "koud of warm" of "lead of klant".
+#   * Zilverwebsite kreeg een mail die begon met "Hi Ronald". Die naam bestaat
+#     daar niet; het model had hem verzonnen. Er staat al sinds 20-08 vast dat
+#     een aanhef nooit een geraden naam mag bevatten, en geen enkele toets op
+#     toezeggingen ziet zoiets.
+#   * Patricia van Boutique MoDo kreeg op 31-08 een antwoord op een bericht dat
+#     Daniel op 27-08 zelf al had beantwoord.
+#   * Frank de Veer kreeg een derde bericht terwijl hij al met vakantie was.
 #
-# De rem kan alleen maar TEGENHOUDEN, nooit doorlaten. Een mail die onterecht
-# blijft liggen kost Daniel één klik; een mail die onterecht de deur uit gaat is
-# niet terug te halen. Bij twijfel dus altijd het concept.
-# Let op: alleen een woordgrens aan de VOORKANT. De stammen hieronder moeten
-# hun eigen verbuigingen vangen — "terugbetaald" glipte met een sluitende
-# grens gewoon langs de rem, en dat is precies het bericht dat nooit vanzelf
-# mag vertrekken. Gevonden door tests/test_mailagent_autonoom.py.
-_TOEZEGGING = re.compile(
-    r"\b("
-    r"bel(len|afspraak|t? je|t? ik)|telefonisch|meet-?link|google\s*meet|zoom|"
-    r"afspraak (in|maken|plannen)|moment (voor|stel)|inplannen|"
-    # "terugbeta", niet "terugbetal": de voltooide vorm is terugbetAALd, en die
-    # bevat "terugbetal" helemaal niet. Precies zo glipte de duurste zin die er
-    # is — een toezegging over geld — langs de rem.
-    r"terugbeta|geld terug|restitutie|crediter|vergoed|korting|gratis maand|factuur|"
-    r"kom er.{0,20}op terug|kijk ik naar|zoek ik uit|zoek het uit|"
-    r"laat ik (het )?weten|houd ik je op de hoogte|hoor je van me|kom ik bij je terug"
-    r")", re.I)
-
-
-def _waarom_niet_zelf_versturen(kern: str, klant: bool, bron: str) -> str:
-    """Reden om dit bericht tóch als concept neer te leggen, of "" als het mag.
-
-    STAAT UIT. Zie ZELF_VERSTUREN_UIT hieronder: er gaat op dit moment niets
-    vanzelf weg, wat deze functie er ook van vindt. De regels blijven staan
-    omdat ze op zichzelf klopten — het probleem zat er niet in wát ze
-    tegenhielden, maar dat er überhaupt iets zonder Daniel de deur uit ging.
-    """
-    if ZELF_VERSTUREN_UIT:
-        return "de machine verstuurt niets uit zichzelf (ZELF_VERSTUREN_UIT)"
-    treffer = _TOEZEGGING.search(kern or "")
-    if treffer:
-        return f"er staat een toezegging in ({treffer.group(0)!r})"
-    if _geen_antwoord(kern or ""):
-        return "het model kon de vraag niet uit de code beantwoorden"
-    # Een betalende klant is de plek waar een verkeerd woord het duurst is. Daar
-    # gaat alleen de terugkoppeling van de developer vanzelf weg: die is aan de
-    # code getoetst voordat hij geschreven werd.
-    if klant and "developer" not in bron:
-        return "dit is een betalende klant en er kwam geen developer aan te pas"
-    return ""
-
-
+# Alles gaat daarom weer als concept in Daniels map, zonder uitzondering — ook
+# de terugkoppeling van de developer, ook een opvolging op stilte, ook een
+# antwoord op een nee.
 def _zet_concept_klaar(lead: dict, inkomend, body: str, soort: str = "warm",
                        eigen_tekst: str | None = None, met_pixel: bool = False,
-                       bron: str = "klantenservice",
-                       zelf_versturen: bool = False) -> bool:
-    """Legt het voorstel klaar — als concept, of stuurt het zelf.
+                       bron: str = "klantenservice") -> bool:
+    """Legt het voorstel als concept in Daniels postbus, in dezelfde draad.
 
-    `zelf_versturen` is een VERZOEK, geen bevel: `_waarom_niet_zelf_versturen`
-    hierboven mag het altijd terugzetten naar een concept.
+    ALTIJD een concept. Er is bewust geen weg langs deze functie heen die iets
+    verstuurt; zie de toelichting hierboven.
     """
     host, van = os.environ.get("IMAP_HOST"), os.environ.get("MAIL_USER")
     wachtwoord = os.environ.get("MAIL_PASS")
@@ -3568,61 +3496,6 @@ def _zet_concept_klaar(lead: dict, inkomend, body: str, soort: str = "warm",
         return False
 
 
-def _stuur_zelf(lead: dict, msg: EmailMessage, kern: str, bron: str) -> bool:
-    """Het bericht nu de deur uit doen, en een kopie in Verzonden leggen.
-
-    DIE KOPIE IS GEEN NETHEID MAAR HET SLOT. `_waarom_geen_concept` beantwoordt
-    de vraag "hebben wij hierna al iets gestuurd?" door in de map Verzonden te
-    kijken. Verstuurt deze functie iets zonder die kopie, dan ziet de volgende
-    beurt geen enkel spoor en legt hij er vrolijk nog een bericht naast — precies
-    de dubbele mail die hier voorkomen moet worden. Lukt de kopie niet, dan is
-    dat een alarm waard.
-    """
-    host, van = os.environ.get("MAIL_HOST"), os.environ.get("MAIL_USER")
-    if not (host and van):
-        return False
-    try:
-        with _postbode(van, host) as stuur:
-            stuur(msg)
-    except Exception as e:  # noqa: BLE001
-        print(f"  ! zelf versturen aan {lead.get('email')} mislukt: {e}")
-        return False
-    print(f"  → zelf verstuurd aan {lead['email']}")
-
-    # ALLEEN BIJ RESEND ZELF ARCHIVEREN.
-    # Gaat de mail via Zoho's eigen SMTP, dan zet Zoho hem al in Verzonden.
-    # Gemeten op 31-08-2026: negen met de hand verstuurde mails stonden daarna
-    # allemaal DUBBEL in die map, één van Zoho en één van ons. Dat breekt niets
-    # (het slot kijkt alleen of er iets staat) maar het vervuilt de map, en die
-    # map is ook wat `_toonprofiel` leest om Daniels toon uit af te leiden.
-    #
-    # Op de server loopt alles via Resend — die kent Zoho niet en zet dus niets
-    # in Verzonden. Daar is deze kopie geen netheid maar het slot zelf.
-    imap_host, wachtwoord = os.environ.get("IMAP_HOST"), os.environ.get("MAIL_PASS")
-    if _resend_actief() and imap_host and wachtwoord:
-        try:
-            with imaplib.IMAP4_SSL(imap_host, 993) as im:
-                im.login(van, wachtwoord)
-                im.append('"Verzonden"', "\\Seen", None, msg.as_bytes())
-        except Exception as e:  # noqa: BLE001
-            print(f"  !! kopie in Verzonden MISLUKT voor {lead.get('email')}: {e}")
-            _storingsalarm(
-                f"Er is een mail verstuurd aan {lead.get('email')} maar de kopie in "
-                f"Verzonden lukte niet ({e}). Het slot tegen dubbele mail kijkt in die "
-                f"map, dus deze persoon kan hetzelfde bericht nog een keer krijgen.")
-    _onthoud_concept(lead["email"].lower(), msg.get_content())
-    _meld_verstuurd(lead, msg["Subject"], kern, bron)
-    return True
-
-
-# ── Seintje zodra er een concept klaarligt ───────────────────────────────
-# WAAROM DIT ER IS (29-08-2026)
-# Daniel wil niet meer in de post zitten; hij wil alleen nog op verzenden
-# drukken. Dan moet hij wél weten wannéér er iets te versturen is. Zonder dit
-# moest hij zijn conceptenmap in de gaten houden, en dat is precies het werk dat
-# hier weg hoort te zijn. Er staat ook in wie het antwoord heeft geschreven: is
-# er een storing bij, dan is die eerst door de developer beantwoord, en dat
-# scheelt hem het nalezen of het klopt.
 # ── Nooit twee keer hetzelfde seintje ────────────────────────────────────────
 # WAAROM DIT ER IS (31-08-2026). Daniel: "nooit meer dubbele mails of dubbele
 # meldingen dat een concept klaar staat". Elk seintje ging tot nu toe blind de
