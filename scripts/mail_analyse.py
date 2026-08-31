@@ -586,6 +586,11 @@ def _bewaar_escalaties(nieuw: list[dict]) -> None:
 # ---------------------------------------------------------------- commando's
 def lezen(args) -> dict:
     """Eén ronde: nieuwe post beoordelen, bugs bundelen, escalaties bepalen."""
+    kapot = _bereikbaar()
+    if kapot:
+        # Niet doorwerken op een leeg beeld — zie _bereikbaar hierboven.
+        print(f"  !! de administratie is niet te lezen, deze ronde slaat over: {kapot}")
+        return {"gelezen": 0, "escalaties": 0, "storing": kapot}
     al = analyses()
     berichten = _nieuwe_post(set(al))
     if not berichten:
