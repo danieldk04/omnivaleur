@@ -1016,7 +1016,7 @@ EINDSTATUSSEN = ("sold", "sold_unconfirmed", "delisted", "archived")
 ZELF_VERLOPEN_NA_DAGEN = 28
 
 
-async def _verwijderdoelen(db, job: dict) -> list[dict]:
+def _verwijderdoelen(db, job: dict) -> list[dict]:
     """De advertentierij(en) die bij DEZE verwijderopdracht horen.
 
     WAAROM DIT ER IS (01-09-2026, item 1288 en 1314). Een verwijdering werkte
