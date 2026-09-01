@@ -3,6 +3,7 @@ import logging
 import ssl
 import threading
 import time
+from datetime import datetime, timezone
 from typing import Optional
 import httpx
 from supabase import create_client, Client
@@ -265,6 +266,61 @@ try:
     _SelectBouwer.execute = _lezen_met_herkansing
 except Exception:  # noqa: BLE001 — nooit de start van de server blokkeren
     logger.exception("Kon de herhaling op leesacties niet installeren")
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# ELKE WIJZIGING AAN EEN ITEM ZET OOK updated_at
+#
+# WAAROM DIT ER IS (01-09-2026). Het dashboard haalde elke 15 seconden de HELE
+# catalogus opnieuw op: bij het grootste account 15 MB en zo'n negentig
+# opvragingen per ronde, vier keer per minuut. Dat is de reden dat de
+# verkeersmeter van Supabase vol liep. Sinds vandaag vraagt het scherm alleen
+# nog op wat er veranderd is, en dat kan alleen als `updated_at` ook echt
+# meebeweegt. Er staat geen trigger op de tabel — de kolom stond bij vrijwel
+# elke rij nog op het tijdstip van aanmaken — en tweehonderd schrijfplekken één
+# voor één omzetten is vragen om precies die ene vergeten plek waardoor een
+# gewijzigd item nooit meer op het scherm verandert. Daarom stempelt de bouwer
+# zelf, op de enige plek waar geen enkele schrijfactie langs kan.
+#
+# Alleen `items`, en alleen als de aanroeper zelf niets meegaf: een expliciete
+# waarde is een bedoeling en die overschrijven we nooit.
+_STEMPEL_TABELLEN = ("items",)
+
+
+def _stempel(pad, lading):
+    """Zet updated_at op het meegegeven schrijfverzoek, indien van toepassing."""
+    try:
+        if str(pad).rstrip("/").rsplit("/", 1)[-1] not in _STEMPEL_TABELLEN:
+            return lading
+        nu = datetime.now(timezone.utc).isoformat()
+        if isinstance(lading, dict):
+            return lading if "updated_at" in lading else {**lading, "updated_at": nu}
+        if isinstance(lading, list):
+            return [
+                ({**rij, "updated_at": nu} if isinstance(rij, dict) and "updated_at" not in rij else rij)
+                for rij in lading
+            ]
+    except Exception:  # noqa: BLE001 — een stempel mag nooit een schrijfactie breken
+        logger.exception("Kon updated_at niet stempelen")
+    return lading
+
+
+try:
+    from postgrest import SyncRequestBuilder as _TabelBouwer
+
+    _ORIGINEEL_UPDATE = _TabelBouwer.update
+    _ORIGINEEL_UPSERT = _TabelBouwer.upsert
+
+    def _update_met_stempel(self, json, *a, **kw):
+        return _ORIGINEEL_UPDATE(self, _stempel(self.path, json), *a, **kw)
+
+    def _upsert_met_stempel(self, json, *a, **kw):
+        return _ORIGINEEL_UPSERT(self, _stempel(self.path, json), *a, **kw)
+
+    _TabelBouwer.update = _update_met_stempel
+    _TabelBouwer.upsert = _upsert_met_stempel
+except Exception:  # noqa: BLE001 — nooit de start van de server blokkeren
+    logger.exception("Kon het tijdstempel op schrijfacties niet installeren")
 
 
 def _eenmaal_uitvoeren(query):

@@ -115,6 +115,55 @@ def list_items(limit: int = 50, offset: int = 0, user_id: str = Depends(get_curr
     return result.data
 
 
+@router.get("/sync")
+def sync_items(since: str = "", limit: int = 500,
+               user_id: str = Depends(get_current_user)):
+    """
+    Alleen wat er sinds `since` veranderd is, plus hoeveel items er in totaal
+    zijn.
+
+    WAAROM (01-09-2026). Het dashboard haalde elke 15 seconden de hele catalogus
+    op. Bij het grootste account is dat 28 pagina's van een halve MB — 15 MB en
+    negentig opvragingen per ronde, vier rondes per minuut. Daar liep de
+    verkeersmeter van Supabase op leeg, en het scherm werd er niet beter van:
+    negen van de tien rondes was er niets veranderd.
+
+    `gte` en niet `gt`: twee rijen kunnen dezelfde `updated_at` hebben, en dan
+    zou de tweede voorgoed overgeslagen worden. Het scherm voegt samen op id,
+    dus dezelfde rij nog eens krijgen kost één regel en kan niets breken —
+    een rij missen kost een verkeerd scherm.
+
+    `count` is de vangnetregel voor wat een tijdstempel niet kán melden: een
+    verwijderd item laat geen wijziging achter. Klopt het totaal niet meer met
+    wat het scherm heeft, dan haalt het scherm alles opnieuw op.
+    """
+    db = get_db()
+    limit = max(1, min(limit, 1000))
+    q = (
+        db.table("items")
+        .select("*")
+        .eq("user_id", user_id)
+        .order("updated_at")
+        .order("id")
+        .limit(limit)
+    )
+    if since:
+        q = q.gte("updated_at", since)
+    rijen = q.execute().data or []
+    # head=True: alleen de telling in de kop, geen enkele rij in het antwoord.
+    telling = (
+        db.table("items").select("id", count="exact", head=True)
+        .eq("user_id", user_id).execute().count
+    )
+    return {
+        "items": rijen,
+        "count": telling or 0,
+        # Meer wijzigingen dan er in één keer meekunnen (een import bijvoorbeeld):
+        # dan is alles opnieuw ophalen goedkoper én zekerder dan doorbladeren.
+        "truncated": len(rijen) >= limit,
+    }
+
+
 @router.get("/settings")
 def read_settings(user_id: str = Depends(get_current_user)):
     """De persoonlijke instellingen van deze verkoper."""

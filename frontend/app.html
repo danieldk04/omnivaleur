@@ -3668,10 +3668,66 @@ async function loadDuplicates(force) {
   } catch (e) { /* geen groepen is hooguit een gemiste waarschuwing */ }
 }
 
-async function loadAll() {
+// ── Bijwerken zonder alles opnieuw op te halen ───────────────────
+//
+// WAAROM (01-09-2026). Deze ronde liep elke 15 seconden en haalde élke keer de
+// hele catalogus én alle advertenties opnieuw op. Bij het grootste account is
+// dat 15 MB en zo'n negentig opvragingen, vier keer per minuut — goed voor
+// ruim 3 GB per uur dat het tabblad openstond. Daar liep de verkeersmeter van
+// Supabase op leeg. Negen van de tien rondes was er niets veranderd.
+//
+// Sindsdien: de tikkende ronde vraagt alleen nog wat er sinds de vorige keer is
+// gewijzigd (`/api/items/sync`), en de advertentielijst hoogstens één keer per
+// minuut. Elke ronde die door een handeling of een afgerond klusje wordt
+// gestart, haalt nog steeds gewoon alles op — dat is precies het moment waarop
+// het scherm het meest recente beeld moet tonen.
+let _itemsSinds = null;        // hoogste updated_at die we binnen hebben
+let _listingsOpgehaald = 0;    // wanneer we de advertenties voor het laatst haalden
+const LISTINGS_INTERVAL = 60000;
+
+function _onthoudItemsStempel() {
+  let hoogste = null;
+  for (const it of (state.items || [])) {
+    const u = it && it.updated_at;
+    if (u && (!hoogste || u > hoogste)) hoogste = u;
+  }
+  _itemsSinds = hoogste;
+}
+
+// Dezelfde volgorde als de server (nieuwste eerst, id als tiebreak), zodat een
+// bijgewerkte lijst niet ineens anders staat dan een volledig opgehaalde.
+function _sorteerAlsServer(rijen) {
+  return rijen.sort((a, b) => {
+    const va = a.created_at || '', vb = b.created_at || '';
+    if (va !== vb) return va < vb ? 1 : -1;
+    return String(a.id).localeCompare(String(b.id));
+  });
+}
+
+async function syncItems() {
+  const res = await apiFetch(`${API}/api/items/sync?since=${encodeURIComponent(_itemsSinds || '')}`);
+  const data = await parseJsonSafe(res);
+  if (!res.ok) throw new Error(data?.detail || `Could not load your items (${res.status})`);
+  // Meer gewijzigd dan er in één antwoord past (een import): dan is alles
+  // ophalen goedkoper dan doorbladeren.
+  if (data && data.truncated) return fetchAllItems();
+  const perId = new Map((state.items || []).map(i => [i.id, i]));
+  for (const rij of (Array.isArray(data?.items) ? data.items : [])) perId.set(rij.id, rij);
+  const samen = _sorteerAlsServer([...perId.values()]);
+  // Een verwijderd item laat geen wijziging achter; alleen het totaal verraadt
+  // het. Klopt dat niet meer, dan halen we alsnog alles op.
+  if (typeof data?.count === 'number' && data.count !== samen.length) return fetchAllItems();
+  return samen;
+}
+
+async function loadAll(opties = {}) {
+  // Alleen de tikkende ronde gaat "snel". Alles wat na een handeling ververst,
+  // haalt bewust het volledige beeld op.
+  const snel = !!opties.snel && !!_itemsSinds && (state.items || []).length > 0;
+  const listingsNodig = !snel || (Date.now() - _listingsOpgehaald) >= LISTINGS_INTERVAL;
   const [itemsRes, listingsRes, jobsRes, platformsRes, settingsRes] = await Promise.allSettled([
-    fetchAllItems(),
-    apiFetch(`${API}/api/listings/`).then(parseJsonSafe),
+    snel ? syncItems() : fetchAllItems(),
+    listingsNodig ? apiFetch(`${API}/api/listings/`).then(parseJsonSafe) : Promise.resolve(null),
     apiFetch(`${API}/api/jobs/pending`).then(parseJsonSafe),
     apiFetch(`${API}/api/platforms/status`).then(parseJsonSafe),
     apiFetch(`${API}/api/items/settings`).then(parseJsonSafe),
@@ -3681,17 +3737,24 @@ async function loadAll() {
   // iemand die net 240 items heeft geïmporteerd.
   state.itemsLoadError = itemsRes.status === 'rejected'
     ? (itemsRes.reason?.message || 'Could not load your items') : null;
-  if (itemsRes.status === 'fulfilled') state.items = Array.isArray(itemsRes.value) ? itemsRes.value : [];
+  if (itemsRes.status === 'fulfilled') {
+    state.items = Array.isArray(itemsRes.value) ? itemsRes.value : [];
+    _onthoudItemsStempel();
+  }
   // Welke advertenties er online staan is de ENIGE bron voor het tabblad waar
   // een item onder valt. Kwam die lijst niet binnen, dan weten we dat niet — en
   // dan mag het scherm niet doen alsof er niets online staat. Dat gebeurde wel:
   // bij een hapering sprong de hele catalogus naar "To list", en pas bij de
   // volgende geslaagde ronde kwam alles vanzelf terug onder "Live". Voor wie
   // ondertussen keek waren zijn advertenties zoek.
-  if (listingsRes.status === 'fulfilled' && Array.isArray(listingsRes.value)) {
+  if (!listingsNodig) {
+    // Deze ronde bewust overgeslagen — wat we hebben blijft staan. Dit is géén
+    // mislukte ophaalpoging en mag dus ook geen foutmelding worden.
+  } else if (listingsRes.status === 'fulfilled' && Array.isArray(listingsRes.value)) {
     state.listings = listingsRes.value;
     state.listingsLoaded = true;
     state.listingsLoadError = null;
+    _listingsOpgehaald = Date.now();
   } else {
     state.listingsLoadError = listingsRes.reason?.message || 'Could not load your listings';
   }
@@ -8312,8 +8375,18 @@ loadExtensionStatus();
 function pollWhenVisible(fn, ms) {
   return setInterval(() => { if (!document.hidden) fn(); }, ms);
 }
-pollWhenVisible(loadAll, 15000);
-pollWhenVisible(pollActivity, 4000);
+// `snel`: alleen de wijzigingen ophalen. Zie loadAll().
+pollWhenVisible(() => loadAll({ snel: true }), 15000);
+// Vier seconden is het tempo dat je wilt terwijl de extensie bezig is. Staat er
+// niets in de rij, dan is het vierentwintig uur per dag vragen naar niets — dat
+// waren ruim 21.000 opvragingen per dag per open tabblad. Dan volstaat 20 sec.
+let _activityTik = 0;
+pollWhenVisible(() => {
+  const bezig = (_activityState.working || []).length || (_activityState.queued || []).length;
+  if (!bezig && (++_activityTik % 5)) return;
+  _activityTik = 0;
+  pollActivity();
+}, 4000);
 pollWhenVisible(loadBillingStatus, 60000);
 pollWhenVisible(loadNotifications, 60000);
 // The "computer online?" heartbeat — flips the indicator within ~20s of a
@@ -8323,7 +8396,7 @@ pollWhenVisible(loadExtensionStatus, 20000);
 // Coming back to the tab shouldn't mean staring at stale numbers for up to 15s,
 // so refresh straight away instead of waiting for the next tick.
 document.addEventListener('visibilitychange', () => {
-  if (!document.hidden) { loadAll(); pollActivity(); loadExtensionStatus(); }
+  if (!document.hidden) { loadAll({ snel: true }); pollActivity(); loadExtensionStatus(); }
 });
 
 // ── Stale stock ───────────────────────────────────────────────────

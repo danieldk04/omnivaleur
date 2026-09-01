@@ -2970,3 +2970,45 @@ draagt alleen de advertentie die op dat moment leefde de verkoop.
 **Les:** als een platform iets niet zegt op de plek waar je kijkt, betekent dat
 niet dat het het nergens zegt. De verkoper wist waar het stond; wij hadden het
 hem nooit gevraagd.
+
+### 01-09-2026 — Waar het Supabase-dataverkeer vandaan kwam
+
+Daniel vroeg of Supabase Pro nog nodig was, of dat hij onder de 1 GB opslag zou
+blijven. Nagemeten: opslag 0,642 GB van 1 GB, database 108,9 MB van 500 MB —
+allebei ruim binnen het gratis plan. Het dataverkeer niet: 2,174 GB in
+anderhalve dag, bij zeven actieve gebruikers en 320.843 API-verzoeken per etmaal.
+
+Dat verkeer kwam niet van bezoekers maar van ons eigen dashboard. Elke 15
+seconden haalde het scherm de HELE catalogus opnieuw op. Op het grootste account
+(5.533 items) is dat 28 pagina's van een halve MB — 11,8 MB — plus 2,87 MB
+advertenties: samen zo'n negentig opvragingen per ronde, vier rondes per minuut,
+ruim 3 GB per uur dat het tabblad openstond. Van die 11,8 MB was 41% de
+foto-adressen en 25% de volledige advertentieteksten van alle 5.533 artikelen,
+elke 15 seconden opnieuw, terwijl het overzicht die niet toont.
+
+Daarbovenop werd bij élk verzoek het inlogbewijs apart bij Supabase nagevraagd:
+61.030 keer in een etmaal, altijd dezelfde vraag met hetzelfde antwoord.
+
+Vier ingrepen:
+
+1. `/api/items/sync` geeft alleen wat er sinds een tijdstempel is veranderd,
+   plus het totaal aantal items. De tikkende ronde gebruikt die; elke ronde na
+   een handeling haalt nog gewoon alles op.
+2. `updated_at` op items wordt nu centraal gestempeld in `backend/database.py`.
+   Er staat geen trigger op de tabel — de kolom stond bij vrijwel elke rij nog
+   op het tijdstip van aanmaken — en tweehonderd schrijfplekken los omzetten is
+   vragen om die ene vergeten plek.
+3. Het inlogbewijs wordt een minuut onthouden (`backend/api/deps.py`), gehasht.
+   Bij wachtwoord- of e-mailwijziging meteen vergeten.
+4. De advertentielijst hoogstens één keer per minuut, de activiteitsvraag elke
+   20 seconden in plaats van elke 4 zolang er niets in de rij staat, en
+   `relist-status` laat de database filteren in plaats van alle create-opdrachten
+   op te halen.
+
+**Les, breder dan deze meter:** dit is de tweede keer dat de verkeersmeter vol
+liep door onze eigen lussen (zie 31-08-2026, het project stond op slot bij 437%).
+Beide keren was de oorzaak dezelfde vorm: een ronde die met een vaste tik draait
+en élke keer de volledige waarheid ophaalt in plaats van het verschil. Een tik
+die niets kost bij tien items kost bij vijfduizend het duizendvoudige — de prijs
+van zo'n ronde hoort mee te groeien met wat er veranderd is, niet met wat er ís.
+

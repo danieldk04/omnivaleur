@@ -547,6 +547,11 @@ def relist_status(user_id: str = Depends(get_current_user)):
         .eq("user_id", user_id)
         .eq("action", "create")
         .in_("status", ["pending", "claimed", "done"])
+        # Alleen herplaatsingen dragen een scheduled_for, en hieronder wordt al
+        # het andere meteen weggegooid. Toch werd het eerst allemáál opgehaald —
+        # elke 15 seconden opnieuw, en die stapel groeit met elke publicatie mee.
+        # Filteren doet de database gratis; ophalen kost dataverkeer (01-09-2026).
+        .not_.is_("scheduled_for", "null")
         .execute()
         .data
     )

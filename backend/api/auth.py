@@ -5,7 +5,7 @@ from fastapi import APIRouter, HTTPException, Header, Depends
 from pydantic import BaseModel
 from backend.database import (AuthTijdelijkOnbereikbaar, auth_met_herkansing,
                                get_admin_db, get_db, verse_auth_client)
-from backend.api.deps import get_current_user_full
+from backend.api.deps import get_current_user_full, vergeet_inlogbewijs
 
 logger = logging.getLogger(__name__)
 
@@ -94,6 +94,9 @@ async def reset_password(body: PasswordUpdate, authorization: str = Header(...))
         auth_db = verse_auth_client()
         auth_db.auth.set_session(token, body.refresh_token)
         auth_db.auth.update_user({"password": body.password})
+        # Het inlogbewijs wordt een minuut onthouden (zie deps.py). Na een
+        # wachtwoordwijziging mag dat niet blijven staan.
+        vergeet_inlogbewijs(token)
         return {"ok": True, "message": "Password updated."}
     except Exception:
         raise HTTPException(status_code=400, detail="Password update failed. The link may have expired.")
@@ -247,6 +250,9 @@ async def change_email(body: ChangeEmailRequest, user=Depends(get_current_user_f
         # tot díé gebruiker. Op dezelfde client zou deze beheerdersactie dus altijd
         # "User not allowed" geven — daarom heeft e-mail wijzigen nooit gewerkt.
         get_admin_db().auth.admin.update_user_by_id(user.id, {"email": new_email, "email_confirm": True})
+        # Het onthouden inlogbewijs draagt het OUDE e-mailadres bij zich, en
+        # daar hangt de abonnementscontrole aan. Meteen vergeten dus.
+        vergeet_inlogbewijs()
     except Exception as e:
         msg = str(e).lower()
         if "already" in msg or "registered" in msg or "exists" in msg:
