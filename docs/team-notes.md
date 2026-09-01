@@ -3270,4 +3270,45 @@ Een volledige ronde over alle 1.656 is niet nodig: `backend/services/polling.py`
 doet dit al uit zichzelf — oudste eerst, en na twee keer achter elkaar
 niet-gevonden gaat een advertentie op delisted. Deze twee waren simpelweg nog niet
 twee keer aan de beurt geweest. De boekhouding (`not_found_count`) is gelijkgezet
+
+## 01-09-2026 — "publiceren-mislukt": met voorrang doorgegeven, maar al gerepareerd
+
+Met voorrang doorgegeven (amandahaas1979 + zilverwebsite.nl, storing sinds
+30-08, MOET ZEKER wegens de serverfout). Nagelopen in plaats van blind
+gerepareerd, en de vier gebundelde klachten — bedrijfsgegevens meegestuurd,
+Vinted zet alles in kinderkleding, dubbele foto's, publiceerfout 500 — bleken
+letterlijk dezelfde vier dingen die al op 30-08 zijn opgelost, onder twee
+andere aantekeningen hierboven: "Waarom Amanda's serverfout nergens aankwam"
+(de 500, opgelost met per-kanaal afscherming + leesherhaling in
+`backend/database.py`) en "Amanda's vier meldingen van vandaag (extensie
+1.0.273)" (kinderkleding, dubbele foto's, bedrijfsgegevens). Deze sleutel zelf
+was na die reparaties nooit met `opgelost` afgesloten — vandaar dat hij als
+nieuwe MOET ZEKER-storing terugkwam, hetzelfde boekhoudkundige mankement als
+bij `marktplaats-niet-ingelogd-melding` op 30-08: de fix stond er, de
+afmelding niet.
+
+**Gecontroleerd, niet aangenomen.** Beide accounts opgevraagd in de tabel
+`jobs` sinds 28-08: bij Amanda 284 opdrachten, bij Zilverwebsite 500, allebei
+tot en met vandaag actief blijven publiceren. Geen van de foutmeldingen sinds
+30-08 bevat een serverfout, een `RemoteProtocolError` of iets anders dat op de
+oude 500 lijkt — alleen bekende, aparte problemen (lege velden, Chrome die
+dichtklapt). De laatste 60 vastgelegde serverfouten (`server_fouten`) gaan
+allemaal over een heel andere, wél nu actieve storing (`/api/items/sync`,
+zie hieronder) en bevatten geen enkele treffer voor crosslist/publish/relist.
+De extensieversie staat op 1.0.280, ruim boven de 1.0.273 van de reparatie.
+
+Geen code gewijzigd. Teruggemeld als `opgelost`, met dezelfde uitleg als de
+oorspronkelijke reparaties.
+
+**Terzijde, een nieuwe en wél nu actieve storing gevonden tijdens het
+uitzoeken (nog niet gerepareerd, staat niet bij deze sleutel):** de server
+gooit op dit moment continu `GET /api/items/sync` fouten op:
+`SyncRequestBuilder.select() got an unexpected keyword argument 'head'`
+(`backend/api/items.py:160`, `db.table("items").select("id", count="exact",
+head=True)`) — tientallen per uur, nog bezig op het moment van schrijven.
+Niet meegenomen in deze ronde: dit is een andere sleutel, geen van beide
+melders raakte deze route, en het rook naar een lopende wijziging van een
+andere sessie op `backend/database.py` (herhaalde bestandsvergrendelingen
+tijdens dit onderzoek wijzen op gelijktijdig werk daar). Verdient een eigen
+blik zodra het zeker is dat er niemand meer in zit.
 met wat die ronde zelf zou hebben opgeschreven.
