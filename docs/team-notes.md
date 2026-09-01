@@ -2930,3 +2930,43 @@ leeftijd van iets dat afwezig is soms wél. Een gratis Marktplaats-advertentie
 verdwijnt pas na dertig dagen vanzelf; is hij eerder weg, dan heeft iemand hem
 weggehaald. Dat onderscheid was gratis beschikbaar en werd niet gemaakt, en
 daardoor kreeg "weg" één betekenis waar er twee nodig waren.
+
+### 01-09-2026 — De verkocht-badge staat op het gesprek, niet op de advertentie
+
+Daniel, kijkend naar zijn eigen berichtenlijst: "de enige manier dat ik zelf kan
+controleren of iets op Marktplaats echt verkocht is, is via de verkocht badge."
+Dat is precies waarom wij een handmatige verkoop nooit zagen: wij keken naar het
+advertentie-overzicht en naar de advertentiepagina, en daar komt bij een
+handverkoop nooit een label te staan — de verkoper haalt de advertentie gewoon
+weg. Marktplaats zet het label op het GESPREK met de koper.
+
+Sinds 1.0.279 leest de kwartaalronde die de berichten telt die badges mee
+(`_mwReadNotifCounts` in `extension/background.js`, endpoint
+`POST /api/listings/sold-from-messages`). Geen extra bezoek aan Marktplaats: die
+pagina ging toch al open.
+
+Dit is bewijs en geen aanwijzing, dus hier wordt geboekt in plaats van gevraagd.
+Drie grenzen maken dat verantwoord: (a) alleen een LOS labeltje dat exact
+"verkocht" is telt, nooit het woord uit een berichtvoorbeeld; (b) het nummer voor
+de titel — "(1308)" — moet bij precies één artikel van deze verkoper horen, want
+de titel staat afgekapt in de lijst; (c) het artikel moet nog ergens te koop
+staan, want een gesprek houdt zijn badge voor altijd en zonder die grens zou elke
+ronde de hele verkoopgeschiedenis opnieuw als omzet van vandaag boeken. Bewezen
+in `tests/berichten-verkocht-badge-test.js` (de echte extensiecode tegen een
+namaaklijst, nagebouwd op Daniels scherm) en `tests/test_verkocht_uit_berichten.py`.
+
+**Wat het NIET oplost:** een verkoop buiten Marktplaats' eigen betaal- of
+verzendstroom om krijgt geen badge. (1314) heeft drie gesprekken en geen badge,
+(1001) staat helemaal niet in de lijst. Voor die gevallen blijft de vraag
+"is dit verkocht?" in het dashboard de enige route.
+
+**Meteen meegenomen, en het is een geldfout:** `handle_item_sold` zette élke
+advertentierij van dat kanaal op 'verkocht'. Sinds elke herplaatsing er een rij
+bij zet — één artikel van Daniel had er zes — telde één trui zesmaal mee in de
+omzet. Dat bleef onzichtbaar zolang er op Marktplaats vrijwel nooit iets geboekt
+werd; met verkopen uit de berichtenlijst zou het meteen zijn gaan tellen. Nu
+draagt alleen de advertentie die op dat moment leefde de verkoop.
+
+**Les:** als een platform iets niet zegt op de plek waar je kijkt, betekent dat
+niet dat het het nergens zegt. De verkoper wist waar het stond; wij hadden het
+hem nooit gevraagd.
