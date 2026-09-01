@@ -9154,6 +9154,11 @@ function renderAnalytics(force) {
   if (!force && sig === _anLastSig && _anChartRevenue) return;
   _anLastSig = sig;
 
+  // Verkopen in wording, boven de tabel. Ná de kortsluiting hierboven: dan
+  // wordt de balk alleen opnieuw opgebouwd als er echt iets veranderd is, en
+  // niet bij elke achtergrondronde onder een klik vandaan.
+  renderSoldConfirmBar();
+
   // Gather sold listings within period
   const soldListings = state.listings.filter(l => l.status === 'sold' && anFilterDate(l.sold_at));
 
