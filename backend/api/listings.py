@@ -393,6 +393,93 @@ def possibly_sold(body: dict, user_id: str = Depends(get_current_user)):
     return {"marked": gemarkeerd}
 
 
+# Statussen waarin een artikel nog "in de verkoop" is. Alleen dán boeken we een
+# verkoop uit de berichtenlijst: een gesprek houdt zijn verkocht-badge voor
+# altijd, dus zonder deze grens zou elke ronde dezelfde verkopen van maanden
+# geleden opnieuw melden — en een artikel dat de verkoper bewust heeft
+# gearchiveerd alsnog als omzet van vandaag in de boeken zetten.
+IN_DE_VERKOOP = ("active", "relisting", "hidden", "pending", "sold_unconfirmed")
+
+
+def _sku_uit_titel(titel: str) -> str | None:
+    """Het nummer waarmee elke door deze app geplaatste titel begint: "(1308) ..."."""
+    m = re.match(r"\s*\((\d{1,6})\)", titel or "")
+    return m.group(1) if m else None
+
+
+@router.post("/sold-from-messages")
+def sold_from_messages(body: dict, background_tasks: BackgroundTasks,
+                       user_id: str = Depends(get_current_user)):
+    """Verkopen die Marktplaats alleen in de BERICHTENLIJST prijsgeeft.
+
+    WAAROM DIT ER IS (01-09-2026, Daniel). Op de advertentie zelf komt nooit een
+    "verkocht" te staan als je met de hand verkoopt — jij haalt de advertentie
+    weg en meer ziet Marktplaats niet. Maar op het GESPREK met de koper zet
+    Marktplaats wél een groene "Verkocht!"-badge. Dat is het enige plek waar het
+    platform een handmatige verkoop hardop bevestigt, en het is ook precies hoe
+    Daniel het zelf nakijkt. De extensie opent die pagina toch al elk kwartier
+    voor het tellen van berichten, dus dit kost geen extra bezoek.
+
+    Dit is bewijs, geen aanwijzing: hier wordt dus wél geboekt en niet gevraagd.
+    Drie grenzen houden dat veilig:
+
+    1. De extensie meldt alleen een LOS labeltje dat exact "verkocht" is, nooit
+       het woord uit een berichtvoorbeeld.
+    2. De sleutel is het nummer voor de titel — "(1308)" — en dat moet bij precies
+       één artikel van deze verkoper horen. Twee treffers betekent overslaan:
+       liever niets boeken dan de verkeerde verkoop.
+    3. Alleen artikelen die nog ergens te koop staan. Een badge blijft eeuwig op
+       een oud gesprek staan; zonder deze grens zou elke ronde de hele
+       verkoopgeschiedenis opnieuw als omzet van vandaag boeken.
+
+    Body: {platform, sold: [{sku, title}]}
+    """
+    platform = (body or {}).get("platform")
+    regels = (body or {}).get("sold") or []
+    if platform not in ("marktplaats", "2dehands"):
+        raise HTTPException(status_code=400, detail="platform must be marktplaats or 2dehands")
+
+    db = get_db()
+    eigen = fetch_all(lambda: db.table("items").select("id,title").eq("user_id", user_id))
+    per_sku: dict[str, list[str]] = {}
+    for it in eigen or []:
+        sku = _sku_uit_titel(it.get("title"))
+        if sku:
+            per_sku.setdefault(sku, []).append(it["id"])
+
+    geboekt, overgeslagen = 0, 0
+    for regel in regels[:200]:
+        sku = str((regel or {}).get("sku") or "").strip()
+        kandidaten = per_sku.get(sku) or []
+        if len(kandidaten) != 1:
+            # Nul: een advertentie die niet uit deze app komt (of van een ander
+            # account). Twee of meer: dubbel nummer, dus niet te herleiden.
+            if kandidaten:
+                logger.info("[sold] berichten: nummer %s hoort bij %d artikelen — overgeslagen",
+                            sku, len(kandidaten))
+            overgeslagen += 1
+            continue
+        item_id = kandidaten[0]
+
+        rijen = (db.table("listings").select("status,platform")
+                 .eq("item_id", item_id).execute().data or [])
+        if any(r.get("status") == "sold" for r in rijen):
+            overgeslagen += 1            # al geboekt, badge blijft eeuwig staan
+            continue
+        if not any(r.get("status") in IN_DE_VERKOOP for r in rijen):
+            overgeslagen += 1            # staat nergens meer te koop
+            continue
+
+        logger.info("[sold] berichten: verkocht-badge op %s (%s) → boeken op %s",
+                    sku, item_id, platform)
+        background_tasks.add_task(handle_item_sold, item_id, platform, None)
+        geboekt += 1
+
+    logger.info("[sold] berichten (%s): %d geboekt, %d overgeslagen van %d melding(en)",
+                platform, geboekt, overgeslagen, len(regels))
+    return {"booked": geboekt, "skipped": overgeslagen}
+
+
 @router.post("/possibly-sold/answer")
 def answer_possibly_sold(body: dict, background_tasks: BackgroundTasks,
                          user_id: str = Depends(get_current_user)):
