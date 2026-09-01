@@ -1186,7 +1186,19 @@ async def complete_job(job_id: str, body: dict, user_id: str = Depends(get_curre
                 logger.warning("[sold] booking sale from delete job %s failed: %s", job_id, e)
             return {"ok": True, "status": "sold_on_platform"}
 
-        (await naast_de_lus(lambda: db.table("listings").update({"status": "delisted"}).eq("item_id", job["item_id"]).eq("platform", job["platform"]).execute()))
+        # De advertentie stond er al niet meer toen de extensie hem kwam
+        # weghalen. Was hij te jong om vanzelf verlopen te zijn, dan heeft iemand
+        # hem weggehaald en is "verkocht?" de juiste vraag — geen herplaatsing.
+        if body.get("note") == "already_absent" and await _al_weg_voor_wij_er_waren(db, job):
+            return {"ok": True, "status": "possibly_sold"}
+
+        # Alleen de advertentie die deze opdracht te pakken had. Zie
+        # _verwijderdoelen: een artikel heeft er inmiddels meerdere.
+        for rij in await _verwijderdoelen(db, job):
+            if rij.get("status") in ("sold", "sold_unconfirmed"):
+                continue        # een verkoop is een eindpunt, geen tussenstand
+            (await naast_de_lus(lambda r=rij: db.table("listings")
+                                .update({"status": "delisted"}).eq("id", r["id"]).execute()))
 
         # If this delete is the first half of a relist, the extension may have
         # snapshotted the full live listing before removing it (imported items
