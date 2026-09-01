@@ -5281,9 +5281,32 @@ async function scanNotifications() {
     try {
       const counts = await scrapeNotificationCounts(url, platform);
       await melden(platform, counts, url);
+      await meldVerkochtUitBerichten(serverUrl, headers, platform, counts?.sold);
     } catch (e) {
       console.error(`[Omnivaleur] notif-scan error (${platform}):`, e);
     }
+  }
+}
+
+// De verkocht-badges uit de berichtenlijst doorgeven. Dit is de enige plek waar
+// Marktplaats een handmatige verkoop wél hardop zegt: op de advertentie zelf
+// komt nooit een label te staan, want die haal je gewoon weg.
+//
+// Alleen doorgeven, niet beslissen. De server kijkt of het artikel nog ergens te
+// koop staat en boekt alleen dan — een gesprek van maanden geleden houdt zijn
+// badge voor eeuwig, dus zonder die controle zou elke ronde dezelfde oude
+// verkopen opnieuw melden.
+async function meldVerkochtUitBerichten(serverUrl, headers, platform, sold) {
+  if (!Array.isArray(sold) || !sold.length) return;
+  console.log(`[Omnivaleur][sold] ${platform}: ${sold.length} gesprek(ken) met een verkocht-badge`, sold.map(s => s.sku));
+  const r = await fetch(`${serverUrl}/api/listings/sold-from-messages`, {
+    method: "POST",
+    headers: { ...headers, "Content-Type": "application/json" },
+    body: JSON.stringify({ platform, sold }),
+  }).catch((e) => { console.error("[Omnivaleur][sold] sold-from-messages POST failed:", e); return null; });
+  if (r?.ok) {
+    const uit = await r.json().catch(() => ({}));
+    console.log(`[Omnivaleur][sold] ${platform}: ${uit.booked ?? 0} verkoop/verkopen geboekt, ${uit.skipped ?? 0} overgeslagen`);
   }
 }
 
