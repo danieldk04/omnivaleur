@@ -1962,6 +1962,57 @@ async function vintedIngelogd(origin) {
   }
 }
 
+// Is advertentie {listingId} er een van deze verkoper zelf?
+// true / false / null (niet vast te stellen).
+//
+// WAAROM DIT ER IS (01-09-2026, gemeten). De automatische herkenning hieronder
+// (chrome.tabs.onUpdated) neemt ELK advertentie-adres dat in het werk-tabblad
+// verschijnt voor "onze zojuist geplaatste advertentie". Zolang de extensie het
+// tabblad bestuurt klopt dat. Maar is de verkoper niet ingelogd op Vinted, dan
+// stuurt Vinted /items/new door naar /member/register/select_type (nagemeten op
+// 01-09-2026: HTTP 200, geen foutmelding, geen plaatsformulier). Er valt daar
+// niets in te vullen, dus gaat hij zelf klikken — en het tabblad blijft drie
+// minuten open. Eén klik op een willekeurige advertentie levert
+// /items/12345-een-slug op, en dát adres werd afgemeld als "geplaatst". Groen
+// vinkje bij de advertentie van een vreemde, en bij een latere verwijdering
+// wijst dat nummer naar diens advertentie. Precies wat Budgetheld zag.
+//
+// DE GRENS LIGT BEWUST BIJ "INGELOGD", NIET BIJ "STAAT IN DE KAST".
+//
+// Vinted laat een net geplaatste advertentie eerst door een controle lopen; hij
+// verschijnt pas een minuut of twee later in de kast (daarom polst
+// resolveCreatedVintedItem 90 seconden). "Nog niet in de kast" mag dus nooit
+// "niet van jou" betekenen — dan zouden we een échte publicatie weggooien, en
+// dat komt bij de verkoper terug als een mogelijk dubbele advertentie.
+// Uitgelogd is wél beslissend: wie niet is ingelogd, kan onmogelijk zojuist iets
+// geplaatst hebben. Dat is precies het geval dat we moeten tegenhouden, en het
+// is met één vraag vast te stellen.
+async function bgVintedEigenAdvertentie(origin, listingId) {
+  const want = String(listingId);
+  const ingelogd = await vintedIngelogd(origin);
+  if (ingelogd === false) return false;   // uitgelogd: nooit van hem
+  if (ingelogd !== true) return null;     // niet vast te stellen: laat het door
+
+  // Wel ingelogd. Staat hij in de kast, dan weten we het zeker (true). Staat hij
+  // er niet, dan zegt dat niets — zie hierboven — en geven we 'onbekend' terug.
+  try {
+    const me = await fetch(`${origin}/api/v2/users/current`, {
+      headers: { Accept: "application/json" }, credentials: "include",
+    });
+    if (!me.ok) return null;
+    const userId = (await me.json())?.user?.id;
+    if (!userId) return null;
+    const res = await fetch(
+      `${origin}/api/v2/wardrobe/${userId}/items?order=newest_first&page=1&per_page=50`,
+      { headers: { Accept: "application/json" }, credentials: "include" });
+    if (!res.ok) return null;
+    const items = (await res.json())?.items || [];
+    return items.some((it) => String(it.id) === want) ? true : null;
+  } catch (_) {
+    return null;
+  }
+}
+
 async function bgVindVintedAdvertentie(item) {
   const titel = _vintedTitelSleutel(item?.title);
   if (!titel) return null;
@@ -4691,6 +4742,18 @@ chrome.tabs.onUpdated.addListener(async (tabId, changeInfo) => {
   if (!m) return;
 
   const listingId = m[1];
+
+  // Alleen afmelden als deze advertentie aantoonbaar van deze verkoper is.
+  // Zie de toelichting bij bgVintedEigenAdvertentie: zonder dit werd een
+  // willekeurige advertentie waar de verkoper op klikte afgemeld als de zijne.
+  if (meta.platform === "vinted") {
+    const vanHem = await bgVintedEigenAdvertentie(new URL(url).origin, listingId);
+    if (vanHem === false) {
+      console.log(`[Omnivaleur] /items/${listingId} staat niet in de kast van deze verkoper — niet afgemeld.`);
+      return;
+    }
+  }
+
   console.log(`[Omnivaleur] Auto-detected listing after publish: ${listingId} (${meta.platform})`);
 
   // Clear stored job

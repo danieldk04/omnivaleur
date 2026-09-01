@@ -3144,3 +3144,58 @@ lijst voor later — er is al een Shopify-koppeling via een zelfgemaakte sleutel
 import van producten naar items. Bewust niet meegenomen in deze ronde.
 
 Extensie 1.0.280 — moet naar de Chrome Web Store voordat punt 4 bij klanten werkt.
+
+### 01-09-2026 — Naderhand: het groene vinkje had een andere oorzaak dan gedacht
+
+Daniel vroeg om hogere zekerheid. Dat betekende: de aannames onder de reparatie
+hierboven omzetten in metingen. Twee daarvan hielden stand, één niet.
+
+**Gemeten, klopt:** uitgelogd geeft Vinted **401** op `/api/v2/users/current`
+(zowel .nl als .com, met `invalid_authentication_token`). De inlogcontrole staat
+dus op vaste grond.
+
+**Gemeten, en dit veranderde de diagnose:** uitgelogd geeft `/items/new` géén
+fout maar **HTTP 200**, met een doorverwijzing naar
+`/member/register/select_type?ref_url=%2Fitems%2Fnew`. Op die pagina staat geen
+enkel formulierveld (`title--input` komt nul keer voor). Ons invulscript draait
+daar niet eens — de manifest-patronen dekken `/items/*`, niet `/member/*`. De
+opdracht kón dus niet via het invulscript groen worden.
+
+Waar het vinkje wél vandaan kwam: `chrome.tabs.onUpdated` neemt élk
+advertentie-adres dat in het werk-tabblad verschijnt voor "onze zojuist
+geplaatste advertentie". De verkoper staat op een registratiepagina waar niets te
+doen is, het tabblad blijft drie minuten open, hij gaat klikken — en de eerste
+advertentie die hij opent (`/items/12345-een-slug`, van een wildvreemde) werd
+afgemeld als de zijne. Groen vinkje bij andermans advertentie, en een latere
+verwijdering zou naar díé advertentie wijzen.
+
+Er zit nu een eigendomscontrole voor die afmelding. **De grens ligt bewust bij
+"is deze browser ingelogd", niet bij "staat hij in de kast":** Vinted zet een
+nieuwe advertentie pas na een minuut of twee in de kast (daarom polst
+`resolveCreatedVintedItem` 90 seconden), dus "nog niet gevonden" mag nooit "niet
+van jou" betekenen — dat zou een échte publicatie weggooien en bij de verkoper
+terugkomen als een mogelijk dubbele advertentie. Uitgelogd is wél beslissend: wie
+niet is ingelogd kan onmogelijk zojuist iets geplaatst hebben.
+
+**Voor-en-na in een echte browser** (extensie-detectie, punt 1 hierboven). Beide
+versies van `app.html` naast elkaar gedraaid met een nagebootste extensie die
+pas na 6 seconden antwoordt — het gedrag van een koud opgestarte service worker:
+
+| | pogingen | uitkomst |
+|---|---|---|
+| oud (4c66972) | 0 opgevangen; één ping op 400 ms, deadline 2,5 s | "Extension not detected" + blokkerend installatievenster |
+| nieuw | 4 (765, 1697, 3888, 6751 ms) | "Extension active (v1.0.280)" |
+
+Dat de oude versie nul pings opving is geen meetfout maar de tweede storing in
+dezelfde zin: die ene ping vertrok vóórdat de luisteraar er was, en er kwam er
+geen tweede. Precies wat er gebeurt als `content/webapp_sync.js` (document_idle)
+later klaar is dan het dashboard.
+
+**Les:** een plausibele oorzaak die de klacht verklaart is nog geen bewezen
+oorzaak. Had ik het bij de inlogcontrole gelaten, dan had de klant nog steeds een
+groen vinkje bij andermans advertentie kunnen krijgen — en had ik gezegd dat het
+opgelost was.
+
+Alle 68 audiocategorieën zijn nagelopen over de hele keten: Marktplaats-nummers,
+eBay-vertaling en Vinted-hints staan er alle 68 bij. Er is dus niets half
+gekoppeld.

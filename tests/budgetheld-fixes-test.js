@@ -150,5 +150,45 @@ ok("die controle staat vóór fillForm",
    VINTED.indexOf('if (!qs(\'input[data-testid="title--input"]\')) {') <
    VINTED.indexOf("await fillForm(item);"));
 
+// ── 5. De audiocategorieën zijn ook echt te publiceren ─────────────────────
+// Ze in het scherm zetten heeft geen zin als de rest van de keten ze niet kent.
+// Gemeten op 01-09-2026: alle 68 staan compleet in MP_CATEGORIES, ebay.py en
+// CAT_HINTS. Deze test bewaakt dat een nieuwe categorie niet half wordt gekoppeld.
+console.log("\nElke audiocategorie is over de hele keten bekend");
+
+const MP_START = BG.indexOf("const MP_CATEGORIES");
+const MP = eval("(" + BG.slice(BG.indexOf("{", MP_START), BG.indexOf("\n};", MP_START) + 2)
+                      .replace(/sizeMap: [A-Z_]+/g, "sizeMap: null") + ")");
+const EBAY = fs.readFileSync(path.join(ROOT, "backend", "platforms", "ebay.py"), "utf8");
+const audioSleutels = CATEGORIES.audio.map(a => a[0]);
+
+const zonderMp = audioSleutels.filter(k => !MP[k] || MP[k].cat1 == null || MP[k].cat3 == null);
+ok("alle audiocategorieën hebben Marktplaats-nummers", zonderMp.length === 0, zonderMp.join(", "));
+ok("alle audiocategorieën hebben een eBay-vertaling",
+   audioSleutels.every(k => EBAY.includes(`"${k}"`)));
+ok("alle audiocategorieën hebben een Vinted-hint",
+   audioSleutels.every(k => VINTED.includes(`"${k}"`)));
+
+// ── 6. Alleen een advertentie van de verkoper zelf wordt afgemeld ───────────
+// De echte oorzaak van het groene vinkje: de automatische herkenning nam ELK
+// advertentie-adres in het werk-tabblad voor "de onze". Uitgelogd stuurt Vinted
+// /items/new door naar /member/register/select_type (gemeten: HTTP 200, geen
+// formulier), de verkoper gaat klikken, en de eerste advertentie die hij opent
+// werd afgemeld als de zijne.
+console.log("\nGeen afmelding op andermans advertentie");
+
+ok("er is een eigendomscontrole", /async function bgVintedEigenAdvertentie\(origin, listingId\)/.test(BG));
+ok("uitgelogd telt als 'niet van hem'",
+   /if \(ingelogd === false\) return false;   \/\/ uitgelogd: nooit van hem/.test(BG));
+ok("'nog niet in de kast' levert nooit false op (een echte publicatie sneuvelt niet)",
+   /return items\.some\(\(it\) => String\(it\.id\) === want\) \? true : null;/.test(BG));
+ok("de controle staat vóór de afmelding",
+   BG.indexOf("const vanHem = await bgVintedEigenAdvertentie(") <
+   BG.indexOf('await finaliseJob(meta.serverUrl, meta.jobId, "complete", {\n    platform_listing_id: listingId'));
+ok("bewezen 'niet van hem' houdt de afmelding tegen",
+   /if \(vanHem === false\) \{[\s\S]{0,220}?return;/.test(BG));
+ok("twijfel (null) laat een echte publicatie gewoon door",
+   !/if \(vanHem !== true\)/.test(BG));
+
 console.log(mislukt ? `\n${mislukt} test(s) mislukt\n` : "\nAlles groen\n");
 process.exit(mislukt ? 1 : 0);
