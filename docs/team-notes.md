@@ -2890,3 +2890,43 @@ die kop de rest van de rij tegen, en blijft de ronde net zo lang werk melden als
 dat er niets gebeurt. Elke ronde die een lijst afkapt heeft daarom twee dingen
 nodig: een volgorde die zegt wat er het meest toe doet, en een startplek die
 opschuift als er niets uitkomt.
+
+### 01-09-2026 — Een verkocht artikel werd elke dag opnieuw te koop gezet
+
+Daniel viel op dat (1314) Suitable Half Zip en (1288) Profuomo Fleece Jacket
+"super vaak gerelist" waren op Marktplaats, terwijl ze allebei verkocht zijn.
+Nagemeten: (1288) had zes Marktplaats-rijen en 27 opdrachten, (1314) zes
+herplaatsingen in vier dagen — bij een instelling van dertig dagen.
+
+Twee fouten die elkaar in stand hielden:
+
+1. **Een verwijdering raakte élke advertentierij van dat artikel.** Elke
+   herplaatsing zet er een rij bij (de oude blijft als archief staan). Mislukte
+   de verwijdering, dan gingen ze allemaal terug op 'actief' — inclusief de rij
+   van juni, mét de datum van juni. Die was daarmee meteen weer over zijn
+   termijn en werd de volgende ronde opnieuw opgepakt. Dat is de lus. Hetzelfde
+   gold voor een al gestelde vraag "is dit verkocht?": die werd stilletjes
+   teruggezet naar 'actief'.
+
+2. **"De advertentie was er al niet meer" gold als een geslaagde verwijdering.**
+   Stap twee plaatste dan gewoon een nieuwe. Precies wat er bij een verkoop
+   gebeurt: de verkoper haalt zijn advertentie zelf weg. Wij zetten hem opnieuw
+   te koop, en de verkoop werd nooit opgemerkt.
+
+Gerepareerd in `backend/api/jobs.py`: een verwijderopdracht wijst nu zijn eigen
+rij aan (via het rij-id dat de herplaatsing meedraagt, anders het
+advertentienummer) en laat afgemelde en verkochte rijen met rust. En een
+advertentie die al weg was terwijl hij jonger was dan 28 dagen kan niet vanzelf
+verlopen zijn — dat wordt een verkoopvraag in het dashboard, met annulering van
+de wachtende plaatsing. Bewezen in `tests/test_herplaatslus.py`.
+`scripts/stop_herplaatslus.py` past dezelfde regel toe op wat er al in zat;
+uitgevoerd voor Daniels eigen account (18 combinaties, 7 met een levende
+advertentie). Bij klanten stelt de gerepareerde code de vraag vanzelf zodra hun
+eerstvolgende herplaatsing erop stuit — hun dashboard is niet met terugwerkende
+kracht aangepast.
+
+**Les, breder dan het herplaatsen:** afwezigheid is geen bewijs, maar de
+leeftijd van iets dat afwezig is soms wél. Een gratis Marktplaats-advertentie
+verdwijnt pas na dertig dagen vanzelf; is hij eerder weg, dan heeft iemand hem
+weggehaald. Dat onderscheid was gratis beschikbaar en werd niet gemaakt, en
+daardoor kreeg "weg" één betekenis waar er twee nodig waren.
