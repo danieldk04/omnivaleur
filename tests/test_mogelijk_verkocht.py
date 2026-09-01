@@ -224,6 +224,21 @@ def test_de_vraag_staat_boven_de_itemlijst_met_beide_knoppen():
     assert "Nothing has been removed anywhere yet" in APP
 
 
+def test_de_vraag_staat_ook_bij_analytics():
+    """Daniel zocht ze in Analytics, want daar kijk je naar verkopen — en daar
+    stonden ze niet. Een onbeantwoorde vraag is precies het verschil tussen wat
+    je verkocht hebt en wat de omzet laat zien, dus hij hoort op beide plekken."""
+    assert 'id="an-sold-confirm-bar"' in APP
+    assert "const SOLD_CONFIRM_BARS = ['sold-confirm-bar', 'an-sold-confirm-bar'];" in APP
+    # En Analytics tekent hem ook echt, anders blijft het vak leeg.
+    kop = APP.split("function renderAnalytics(force) {", 1)[1][:900]
+    assert "renderSoldConfirmBar();" in kop
+    # Wel zichtbaar, niet meegeteld: de omzet hierboven blijft bevestigde verkopen.
+    assert "none of this counts towards your revenue until you answer" in APP
+    tabel = APP.split("// ── Sales breakdown table", 1)[1][:1200]
+    assert "sold_unconfirmed" not in tabel
+
+
 # ── 5. Het oordeel over één advertentiepagina, echt uitgevoerd ──────────────
 # Een tekstcontrole zegt niets over wat de code bij een 403 of een doorstuur
 # doet, en juist dáár zit het verschil tussen "verkocht" en "de sessie is weg".
