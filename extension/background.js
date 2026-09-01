@@ -5397,6 +5397,21 @@ async function _mwReadNotifCounts(platform) {
   const MP_OFFER_RE = /\bbod\b|\bgeboden\b|\bbieding\b|\bbiedingen\b/i;
   let messages = 0;
   let offers = 0;
+  // DE VERKOCHT-BADGE IN DE BERICHTENLIJST.
+  //
+  // Waarom dit hier staat (01-09-2026, Daniel): "de enige manier dat ik zelf kan
+  // controleren of iets op Marktplaats echt verkocht is, is via de verkocht
+  // badge". Die badge staat op het gesprek, niet op de advertentie — dat is
+  // precies waarom wij hem nooit zagen. Wij keken naar het advertentie-overzicht,
+  // en daar verdwijnt een handmatig verkocht artikel gewoon zonder label.
+  //
+  // Even streng als bij het verwijderen: alleen een LOS labeltje dat exact
+  // "verkocht" is telt. Het woord in een berichtvoorbeeld ("Is deze nog te koop?
+  // Verkocht?") mag nooit een verkoop boeken. En de sleutel is het nummer
+  // waarmee elke door deze app geplaatste titel begint — "(1308)" — want de
+  // titel zelf staat afgekapt in de lijst.
+  const sold = [];
+  const gezien = new Set();
   // Een bod telt alleen mee als het gesprek ONGELEZEN is. Eerder werd elke rij
   // geteld, ook gesprekken van maanden geleden die allang afgehandeld waren.
   // Daardoor stonden er structureel meer "biedingen" dan "berichten" op het
