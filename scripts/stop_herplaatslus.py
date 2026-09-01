@@ -26,8 +26,14 @@ Er wordt niets als verkocht geboekt en er wordt niets verwijderd. De verkoper
 beslist.
 
 Gebruik:
-    python3 scripts/stop_herplaatslus.py            # laat zien wat het zou doen
-    python3 scripts/stop_herplaatslus.py --apply    # voer het uit
+    python3 scripts/stop_herplaatslus.py                    # laat zien wat het zou doen
+    python3 scripts/stop_herplaatslus.py --apply            # voer het uit
+    python3 scripts/stop_herplaatslus.py --user <id>        # beperk tot één verkoper
+
+Zonder --user raakt dit ook de advertenties van klanten. Dat is geen technische
+grens maar een keuze: bij een klant verschijnt de vraag "is dit verkocht?" in
+zíjn dashboard, en dat hoort niet ongevraagd te gebeuren. De gerepareerde code
+stelt die vraag bij hen vanzelf zodra hun eerstvolgende herplaatsing erop stuit.
 """
 import sys
 from datetime import datetime, timedelta, timezone
