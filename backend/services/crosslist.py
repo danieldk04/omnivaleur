@@ -1061,14 +1061,35 @@ async def handle_item_sold(item_id: str, sold_on_platform: str, sold_price: floa
     if sold_price is not None:
         update["sold_price"] = round(float(sold_price), 2)
 
+    # Welke advertentierij de verkoop draagt, als er meerdere zijn.
+    #
+    # WAAROM DIT ER IS (01-09-2026). Elke herplaatsing zet er een advertentierij
+    # bij: één artikel van Daniel had er zes op Marktplaats. Deze functie zette
+    # ze ALLEMAAL op 'verkocht', en Analytics telt per rij — dus één verkoop
+    # verscheen zes keer in de omzet. Zichtbaar werd dat pas toen verkopen uit de
+    # berichtenlijst geboekt gingen worden; daarvoor werd op Marktplaats vrijwel
+    # nooit iets geboekt en bleef het onzichtbaar.
+    #
+    # De verkoop hoort bij de advertentie die op dat moment leefde; de andere
+    # rijen zijn archief van eerdere herplaatsingen en gaan naar 'delisted'.
+    LEVEND = ("active", "relisting", "hidden", "sold_unconfirmed", "pending")
+
+    def _kies_rij(rijen: list[dict]) -> dict:
+        al_verkocht = [r for r in rijen if r.get("status") == "sold"]
+        if al_verkocht:
+            return al_verkocht[0]      # herdetectie: dezelfde rij blijft de rij
+        levend = [r for r in rijen if r.get("status") in LEVEND]
+        kandidaten = levend or rijen
+        return max(kandidaten, key=lambda r: str(r.get("listed_at") or r.get("created_at") or ""))
+
     def _write_sold():
         existing = (
-            db.table("listings").select("id,status,sold_at")
+            db.table("listings").select("id,status,sold_at,listed_at,created_at")
             .eq("item_id", item_id).eq("platform", sold_on_platform).execute()
         )
         if existing.data:
             velden = dict(update)
-            staand = existing.data[0]
+            staand = _kies_rij(existing.data)
             if staand.get("status") == "sold" and staand.get("sold_at"):
                 # Al geboekt. De datum alleen aanpassen als de nieuwe aantoonbaar
                 # eerder is; anders zou elke herdetectie de verkoop opnieuw naar
@@ -1076,7 +1097,12 @@ async def handle_item_sold(item_id: str, sold_on_platform: str, sold_price: floa
                 # 30-08-2026 op één dag terechtkwamen.
                 if not (echte_datum and echte_datum < als_datum(staand["sold_at"])):
                     velden.pop("sold_at", None)
-            db.table("listings").update(velden).eq("item_id", item_id).eq("platform", sold_on_platform).execute()
+            db.table("listings").update(velden).eq("id", staand["id"]).execute()
+            # De overige rijen van dit kanaal zijn archief, geen tweede verkoop.
+            for r in existing.data:
+                if r["id"] == staand["id"] or r.get("status") in ("sold", "delisted"):
+                    continue
+                db.table("listings").update({"status": "delisted"}).eq("id", r["id"]).execute()
         else:
             # No listing record on the sold platform (e.g. the user sold something
             # Omnivaleur wasn't tracking there, or a manual/unlinked sale). Still
