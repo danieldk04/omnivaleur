@@ -3029,16 +3029,26 @@ seconden**, dezelfde rijen, dezelfde velden (gecontroleerd op zijn echte
 voorraad, rij voor rij). De oude weg blijft als vangnet staan voor het geval die
 sleutel ooit verdwijnt.
 
-Daarnaast: de catalogus ging **ongecomprimeerd** over de lijn. 13,4 MB. Met
-gzip-middleware erop 1,53 MB — negen tiende minder, en dat is precies het
-verschil tussen "hij doet het niet" en een lijst die er staat. De catalogus komt
-nu ook in pagina's van 1.000 in plaats van 200 (29 → 7 vragen, 5,9 → 2,9s), en
-tijdens de eerste lading staat er "Loading your items… 3.000 loaded so far" in
-plaats van een leeg scherm.
+De catalogus komt nu ook in pagina's van 1.000 in plaats van 200 (29 → 7 vragen,
+5,9 → 2,9s), en tijdens de eerste lading staat er "Loading your items… 3.000
+loaded so far" in plaats van een leeg scherm.
 
-**Les:** twee van de drie winsten waren geen algoritme maar boekhouding — een
-vraag die met het verkeerde ding meeschaalt, en een antwoord dat niemand had
-ingepakt. Bij 100 items zie je geen van beide.
+**Correctie op wat hier eerst stond.** Ik schreef dat de catalogus
+ongecomprimeerd over de lijn ging en dat de nieuwe gzip-middleware dat van
+13,4 MB naar 1,53 MB bracht — negen tiende winst voor de verkoper. Dat klopt
+niet, en het is nagemeten: `/health` is 437 bytes en komt van de live site
+gzipped terug, terwijl onze eigen middleware pas vanaf 1.024 bytes inpakt.
+**Cloudflare perst het er aan de rand al in, en deed dat dus ook vóór vandaag.**
+Egberts browser kreeg de gegevens al ingepakt binnen.
+
+De middleware blijft staan en is nuttig — hij scheelt op de weg Railway →
+Cloudflare, en dus in ons eigen dataverkeer — maar hij is NIET waarom Egberts
+scherm sneller opent. Dat is de gekoppelde vraag hierboven (14,6 → 2,0s) en het
+aantal opvragingen (29 → 7).
+
+**Les:** "de server stuurt het onverpakt" is een aanname over een laag die je
+niet zelf beheert. Eén verzoek onder je eigen ondergrens verraadt wie het
+werkelijk doet — dat had vóór de meting gemoeten, niet erna.
 
 **2. De import meldde "alles opgehaald" terwijl prijs of tekst ontbrak.**
 Marktplaats levert die bij een zakelijke (Admarkt) import niet mee; ze staan

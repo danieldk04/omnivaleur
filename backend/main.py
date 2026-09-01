@@ -46,14 +46,20 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
-# Antwoorden ingepakt over de lijn.
+# Antwoorden ingepakt op de weg naar Cloudflare.
 #
-# WAAROM (01-09-2026, Egbert). Zijn catalogus van 5.533 artikelen is 13,4 MB aan
-# JSON. Die ging onverpakt naar de browser: op een gewone verbinding minuten
-# wachten op een leeg scherm, en bij een hik een tijdverloop. Gemeten op zijn
-# echte gegevens: 13,4 MB -> 1,53 MB ingepakt, negen tiende minder. Het kost de
-# server een fractie van een seconde en de verkoper scheelt het het verschil
-# tussen "hij doet het niet" en een lijst die er staat.
+# WAAROM (01-09-2026). Egberts catalogus van 5.533 artikelen is 13,4 MB aan JSON;
+# ingepakt 1,53 MB.
+#
+# LET OP WAT DIT WEL EN NIET DOET. Cloudflare perst er aan de rand zelf al
+# gzip in — nagemeten: /health is 437 bytes en komt gzipped bij de browser aan,
+# terwijl deze middleware pas vanaf 1.024 bytes inpakt. De browser van de
+# verkoper kreeg het dus al ingepakt binnen, ook voor vandaag. Wat hier wél
+# gewonnen wordt is de weg Railway -> Cloudflare: ons eigen uitgaande verkeer,
+# waar de meter van Supabase en Railway op meelopen.
+#
+# Verwacht hier dus GEEN snellere pagina van. Dat zit in het aantal opvragingen
+# en in de gekoppelde vraag in backend/api/listings.py.
 #
 # 1024 bytes ondergrens: kleine antwoorden inpakken kost meer dan het oplevert.
 app.add_middleware(GZipMiddleware, minimum_size=1024)

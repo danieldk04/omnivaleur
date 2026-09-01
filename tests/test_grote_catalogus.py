@@ -164,12 +164,17 @@ def test_valt_de_snelle_weg_weg_dan_komt_de_oude_erachteraan(monkeypatch):
     assert len(uit) == 10
 
 
-def test_antwoorden_gaan_ingepakt_over_de_lijn():
-    """13,4 MB tegen 1,53 MB. Zonder dit blijft een grote catalogus minuten
-    onderweg, hoe snel de server hem ook opdiept."""
+def test_antwoorden_gaan_ingepakt_de_deur_uit():
+    """13,4 MB tegen 1,53 MB op de weg naar Cloudflare.
+
+    NIET waarom het scherm sneller opent: Cloudflare perst er aan de rand zelf
+    al gzip in (nagemeten — /health is 437 bytes en komt gzipped aan, onder onze
+    eigen ondergrens van 1.024). Dit scheelt ons eigen uitgaande verkeer.
+    """
     from backend.main import app
-    namen = [m.cls.__name__ for m in app.user_middleware]
-    assert "GZipMiddleware" in namen
+    lagen = {m.cls.__name__: m for m in app.user_middleware}
+    assert "GZipMiddleware" in lagen
+    assert lagen["GZipMiddleware"].kwargs.get("minimum_size") == 1024
 
 
 def test_het_scherm_haalt_de_catalogus_in_pagina_s_van_duizend():
