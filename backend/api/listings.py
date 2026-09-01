@@ -334,8 +334,9 @@ VERDENKING_REDENEN = {
     "verdwenen_te_jong":
         "Mogelijk verkocht: de advertentie was al van het platform af toen we hem "
         "voor het herplaatsen wilden weghalen, en hij was nog te jong om vanzelf te "
-        "verlopen. Er is dus niets opnieuw geplaatst. Verkocht? Bevestig het hier. "
-        "Zo niet, dan zetten we hem terug te koop.",
+        "verlopen. Er is dus niets opnieuw geplaatst. Verkocht? Bevestig het hier — "
+        "dan gaat hij ook van de andere kanalen af. Niet verkocht? Dan gaat deze "
+        "advertentie naar het archief en kun je hem met één klik opnieuw plaatsen.",
 }
 VERDENKING_STANDAARD = VERDENKING_REDENEN["weg"]
 
