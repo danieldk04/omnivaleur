@@ -3079,3 +3079,68 @@ klikken, plus "v1.0.258 — v1.0.279 available" in de zijbalk.
 
 **Les:** een ondergrens die met de hand meebeweegt, beweegt niet mee. De vraag
 "is dit de nieuwste?" heeft maar één eerlijke bron, en dat is de winkel zelf.
+
+### 01-09-2026 — De punten uit de call met Budgetheld
+
+Vier storingen en één wens. Punt 2 bleek diezelfde ochtend al gerepareerd in de
+Egbert-ronde; de andere drie hadden alle drie dezelfde vorm: **iets dat zwijgt
+waar het had moeten klagen.**
+
+**1. "Extension not detected" bij mensen die hem wél hadden.** Het dashboard
+stuurde precies één ping naar de extensie en gaf er 2,5 seconde later een
+oordeel over. Dat antwoord moet drie horden nemen die geen van alle binnen 2,5
+seconde hoeven te passen: het bruggetje (`content/webapp_sync.js`) draait op
+`document_idle` en is op een zwaar dashboard later dan de ping; het antwoord komt
+pas na twéé heen-en-weertjes met de service worker; en die worker moet in MV3
+eerst koud opstarten. Eén trage start = permanent rood, mét een blokkerend
+installatievenster over het scherm van iemand die alles al goed had staan.
+Nu: vijf pogingen over ~8,8 seconde vóór het oordeel valt, en daarna elke halve
+minuut nog een stille controle, zodat installeren of inloggen in een ander
+tabblad vanzelf wordt opgemerkt. "Re-check" zet de status ook echt terug op
+"aan het kijken" — dat deed die knop eerder niet.
+
+**2. Halve import (prijs/omschrijving leeg).** Zelfde melding als Egbert, en
+dezelfde oorzaak: de automatische aanvulronde selecteerde alleen op lege
+omschrijvingen, dus wie alleen de prijs miste kwam nooit aan de beurt. Gerepareerd
+in commit ae3a196 (zie de vorige notitie). Niets extra's aan gedaan.
+
+**3. De categorie sprong terug naar "Clothing & Shoes".** In `CATEGORIES` staan
+68 audio-, tv- en fotocategorieën (luidsprekers, koptelefoons, platenspelers,
+camera's) — compleet, mét Marktplaats-nummers in `background.js`, eBay-vertaling
+in `ebay.py` en Vinted-hints in `vinted.js`. Alleen ontbrak "audio" in twee
+plekken in het scherm: de keuzelijst *Item type* en `NON_CLOTHING_PREFIXES`.
+Gevolg: die 68 categorieën waren met de hand niet te kiezen, en een geïmporteerd
+artikel dat er wél in stond werd bij openen teruggezet op kleding — waarna
+opslaan de echte categorie overschreef. Dat is precies wat zij zagen.
+Toegevoegd, plus een vangnet: een opgeslagen categorie die wij niet kennen
+blijft nu gewoon staan (`Current: …`) in plaats van weggegooid te worden — zelfde
+aanpak als bij maat en de eBay-categorie.
+
+**Les:** een lijst op twee plekken onderhouden gaat een keer mis. De test
+(`tests/budgetheld-fixes-test.js`) loopt nu élke groep in `CATEGORIES` langs en
+eist dat hij heen én terug hetzelfde item-type oplevert.
+
+**4. Groen vinkje bij een advertentie die niet op Vinted stond.** De klant was
+niet ingelogd op Vinted. Uitgelogd geeft Vinted op `/items/new` gewoon een
+pagina terug — geen 401, geen doorverwijzing die wij herkennen. Het invulscript
+liep dan over een formulier dat er niet was: elke stap mislukt stil (`step()`
+logt en gaat door), en de eindcontrole klaagde óók niet, want die kijkt of een
+veld leeg is — en een veld dat er niet ís, is niet leeg. Daarna was elk
+`/items/{cijfers}` in de adresbalk genoeg om af te melden als geplaatst.
+Twee sloten erop: de achtergrond vraagt vóór het openen van het tabblad aan
+Vinted zelf of deze browser is ingelogd (`/api/v2/users/current`, met de eigen
+cookies) en meldt de opdracht anders af als mislukt mét wat er moet gebeuren;
+en het invulscript stopt als de titelbalk van het formulier er niet staat.
+Kunnen we het niet vaststellen (netwerk, endpoint veranderd), dan gaat het werk
+gewoon door — een onzekere controle mag geen advertentie tegenhouden.
+
+**Les:** "geen klacht" is geen bewijs van slagen. Een controle die alleen kijkt
+of een veld leeg is, keurt een leeg formulier goed.
+
+**5. Shopify-import (wens, niet gebouwd).** Budgetheld doet voorraadbeheer in
+Shopify en verkoopt op Marktplaats. Directe import vanuit Shopify staat op de
+lijst voor later — er is al een Shopify-koppeling via een zelfgemaakte sleutel
+(zie `shopify_orders.py`), dus de weg ernaartoe bestaat; wat ontbreekt is de
+import van producten naar items. Bewust niet meegenomen in deze ronde.
+
+Extensie 1.0.280 — moet naar de Chrome Web Store voordat punt 4 bij klanten werkt.

@@ -1989,6 +1989,7 @@ input[type="checkbox"].row-check { width: 15px; height: 15px; cursor: pointer; a
           <option value="clothing">Clothing &amp; Shoes</option>
           <option value="games">Games &amp; Consoles</option>
           <option value="electronics">Electronics &amp; Gadgets</option>
+          <option value="audio">Audio, TV, Photo &amp; Video</option>
           <option value="sieraden">Jewellery, Watches &amp; Bags</option>
           <option value="muziek">Music &amp; Instruments</option>
           <option value="antiek">Antiques, Art &amp; Collectables</option>
@@ -2577,19 +2578,72 @@ async function laadGepubliceerdeVersie() {
   } catch (_) { /* geen antwoord = geen melding */ }
 }
 
+// ÉÉN POGING WAS TE WEINIG (Budgetheld, 01-09-2026).
+//
+// Hier stond één ping met een wachttijd van 2,5 seconde, en daarna stond er voor
+// de rest van de sessie "Extension not detected" — ook bij mensen die de
+// extensie gewoon geïnstalleerd én ingelogd hadden. Dat kon niet anders, want
+// het antwoord moet drie horden nemen die geen van alle binnen 2,5 seconde
+// hoeven te passen:
+//   1. content/webapp_sync.js draait op `document_idle`; op een zwaar dashboard
+//      is dat later dan de ping op 400 ms, en een ping zonder luisteraar is weg.
+//   2. het antwoord komt pas ná twee heen-en-weertjes met de service worker
+//      (SYNC_TOKEN, dan GET_AUTH_STATE), en die worker moet in MV3 eerst
+//      koud opstarten.
+//   3. Chrome knijpt achtergrondwerk af in een tabblad dat niet vooraan staat.
+// Eén trage koude start = permanent rood, met een installatievenster over het
+// scherm van iemand die alles al goed had staan.
+//
+// Nu: blijven vragen, met oplopende tussenpozen, tot de extensie antwoordt of
+// tot we mogen concluderen dat ze er niet is. Pas na de laatste poging valt het
+// oordeel "missing" — en ook daarna blijft er elke halve minuut één stille
+// controle lopen, zodat installeren of inloggen vanzelf wordt opgemerkt.
+const EXT_PING_SCHEMA_MS = [0, 600, 1400, 2600, 4200];  // samen ~8,8s voor het oordeel valt
+let _extPingRonde = 0;
+let _extHerhaalTimer = null;
+
+function _extGeefOp() {
+  if (extState.status !== 'checking') return;
+  extState = { status: 'missing', version: '', email: '' };
+  renderExtSetup();
+  if (typeof renderExtStatus === 'function') renderExtStatus();
+}
+
+// Eén los tikje op de ruit. Geen oordeel — dat doet het schema hieronder.
+function _extPingEenmaal() {
+  try {
+    window.postMessage({ source: EXT_PAGE_SOURCE, type: 'EXT_PING' }, window.location.origin);
+  } catch (_) { /* niets aan te doen; de volgende ronde probeert het weer */ }
+}
+
 function pingExtension() {
   clearTimeout(_extReplyTimer);
-  window.postMessage({ source: EXT_PAGE_SOURCE, type: 'EXT_PING' }, window.location.origin);
-  // No answer in time = not installed. The content script replies synchronously
-  // once the worker wakes, so this only needs to cover a cold service worker.
-  _extReplyTimer = setTimeout(() => {
-    if (extState.status === 'checking') {
-      extState = { status: 'missing', version: '', email: '' };
-      renderExtSetup();
-      if (typeof renderExtStatus === 'function') renderExtStatus();
-    }
-  }, 2500);
+  clearTimeout(_extHerhaalTimer);
+  _extPingRonde = 0;
+  // Opnieuw controleren betekent opnieuw open staan voor een positief antwoord.
+  // Bleef dit op 'missing' staan, dan deed de knop "I've signed in — re-check"
+  // niets: renderExtStatus keek naar een status die niemand meer bijwerkte.
+  if (extState.status !== 'ready') extState = { status: 'checking', version: extState.version, email: extState.email };
+  renderExtSetup();
+  if (typeof renderExtStatus === 'function') renderExtStatus();
+
+  const volgende = () => {
+    if (extState.status === 'ready' || extState.status === 'signed-out') return;
+    if (_extPingRonde >= EXT_PING_SCHEMA_MS.length) { _extGeefOp(); return; }
+    const wacht = EXT_PING_SCHEMA_MS[_extPingRonde++];
+    _extHerhaalTimer = setTimeout(() => { _extPingEenmaal(); volgende(); }, wacht);
+  };
+  volgende();
 }
+
+// Blijven meekijken, ook nadat we "missing" concludeerden: wie de extensie in een
+// ander tabblad installeert of erin inlogt, hoeft dit scherm niet te verversen.
+// Eén bericht per halve minuut kost niets en staat stil zodra we 'ready' zijn.
+setInterval(() => {
+  if (extState.status === 'ready') return;
+  if (document.hidden) return;   // een verborgen tabblad krijgt van Chrome toch geen tijd
+  _extPingEenmaal();
+}, 30000);
 
 // Porren: "er staat werk klaar, ga nu kijken".
 //
@@ -8147,7 +8201,14 @@ const CATEGORIES = {
 // Non-clothing items are recognised purely by their category prefix (mirrors
 // backend crosslist.py _is_non_clothing), so no extra field has to be stored.
 // Each prefix maps to the matching item-type value in the form's type select.
-const NON_CLOTHING_PREFIXES = { 'games ': 'games', 'electronics ': 'electronics', 'sieraden ': 'sieraden', 'muziek ': 'muziek', 'antiek ': 'antiek', 'kunst ': 'antiek', 'wonen ': 'wonen' };
+// LET OP: elke sleutelgroep in CATEGORIES hoort hier een voorvoegsel te hebben
+// EN een <option> in #f-item-type. Ontbreekt er een, dan valt itemTypeForCategory
+// terug op 'clothing', wordt de categorielijst uit de kledingtaxonomie opgebouwd
+// en springt de keuze van de verkoper zichtbaar terug naar "Clothing & Shoes" —
+// waarna opslaan zijn echte categorie overschrijft. Zo verdwenen 68 audio-,
+// tv- en fotocategorieën (Budgetheld, 01-09-2026); tests/audio-categorie-test.js
+// bewaakt het nu.
+const NON_CLOTHING_PREFIXES = { 'games ': 'games', 'electronics ': 'electronics', 'audio ': 'audio', 'sieraden ': 'sieraden', 'muziek ': 'muziek', 'antiek ': 'antiek', 'kunst ': 'antiek', 'wonen ': 'wonen' };
 function isNonClothingItem(item) {
   const cat = String(item?.category || '').trim().toLowerCase();
   return Object.keys(NON_CLOTHING_PREFIXES).some(p => cat.startsWith(p));
@@ -8205,10 +8266,26 @@ function updateBidLabel() {
   if (label) label.textContent = pct && price ? `→ minimum €${(price * pct / 100).toFixed(2)}` : '';
 }
 
+// Houd een opgeslagen categorie vast die niet in de zojuist opgebouwde lijst
+// staat. Zonder dit verdween de categorie van de verkoper zodra onze taxonomie
+// hem niet kende — hij zag "— choose category —" en opslaan schreef de echte
+// categorie leeg, of erger, de eerste kledingcategorie eroverheen. Dezelfde
+// aanpak als bij maat (setSizeValue) en de eBay-categorie (populateEbayCategorySelect):
+// de waarde van de gebruiker wint, ook als wij er geen label bij weten.
+function _bewaarOnbekendeCategorie(sel, selectedCategory) {
+  if (!selectedCategory) return;
+  if ([...sel.options].some(o => o.value === selectedCategory)) return;
+  const opt = document.createElement('option');
+  opt.value = selectedCategory;
+  opt.textContent = `Current: ${selectedCategory}`;
+  opt.selected = true;
+  sel.appendChild(opt);
+}
+
 function updateCategoryOptions(selectedCategory) {
   const sel = document.getElementById('f-category');
-  // Non-clothing types (games, electronics, …) don't branch on gender — the
-  // type select alone names a CATEGORIES list to populate from.
+  // Non-clothing types (games, electronics, audio, …) don't branch on gender —
+  // the type select alone names a CATEGORIES list to populate from.
   const type = currentItemType();
   if (type !== 'clothing' && CATEGORIES[type]) {
     sel.innerHTML = '<option value="">— choose category —</option>';
@@ -8218,10 +8295,15 @@ function updateCategoryOptions(selectedCategory) {
       if (selectedCategory && val === selectedCategory) opt.selected = true;
       sel.appendChild(opt);
     }
+    _bewaarOnbekendeCategorie(sel, selectedCategory);
     return;
   }
   const gender = document.getElementById('f-gender').value;
-  if (!gender || !CATEGORIES[gender]) { sel.innerHTML = '<option value="">— choose gender first —</option>'; return; }
+  if (!gender || !CATEGORIES[gender]) {
+    sel.innerHTML = '<option value="">— choose gender first —</option>';
+    _bewaarOnbekendeCategorie(sel, selectedCategory);
+    return;
+  }
   sel.innerHTML = '<option value="">— choose category —</option>';
   for (const [val, label] of CATEGORIES[gender]) {
     const opt = document.createElement('option');
@@ -8229,6 +8311,7 @@ function updateCategoryOptions(selectedCategory) {
     if (selectedCategory && val === selectedCategory) opt.selected = true;
     sel.appendChild(opt);
   }
+  _bewaarOnbekendeCategorie(sel, selectedCategory);
 }
 
 // ── Photo upload ──────────────────────────────────────────────────

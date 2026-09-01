@@ -855,6 +855,23 @@
         });
         return;
       }
+      // STAAT HET FORMULIER ER EIGENLIJK WEL? (Budgetheld, 01-09-2026)
+      //
+      // Uitgelogd — of op een onderhouds-/tussenpagina — geeft Vinted op
+      // /items/new gewoon een pagina terug, alleen zonder plaatsformulier. Alle
+      // invulstappen mislukken dan stil (step() logt en gaat door), en de
+      // controle hieronder klaagt óók niet: die kijkt of een veld leeg is, en
+      // een veld dat er niet ís, is niet leeg. Zo kon een advertentie als
+      // geplaatst worden afgemeld terwijl er nooit een formulier was. De titel
+      // is het veld dat op elk Vinted-formulier staat; ontbreekt die, dan is dit
+      // geen plaatsformulier en stoppen we vóórdat er iets afgemeld kan worden.
+      await waitForEl('input[data-testid="title--input"]', 20000).catch(() => null);
+      if (!qs('input[data-testid="title--input"]')) {
+        const ingelogd = document.querySelector('a[href*="/member/"], #user-menu-button, [data-testid="user-menu-button"]');
+        throw new Error(ingelogd
+          ? `The Vinted listing form did not load on ${location.href} — nothing was published. Open Vinted yourself and try again.`
+          : `You are not signed in to Vinted on ${location.origin} — nothing was published. Log in to Vinted in this browser and publish again.`);
+      }
       await fillForm(item);
       // Controleer de velden waar Vinted op blokkeert vóór we opsturen. Bleef er
       // iets leeg, dan stoppen we met een melding die zegt wát er ontbrak en met

@@ -1816,6 +1816,37 @@ async function processJob(job, serverUrl) {
     return;
   }
 
+  // ── IS HIJ WEL INGELOGD OP VINTED? ────────────────────────────────────────
+  //
+  // Budgetheld, 01-09-2026: het dashboard zette een groen vinkje bij een
+  // advertentie die helemaal niet op hun Vinted-profiel stond. De klant was op
+  // dat moment niet ingelogd op Vinted.
+  //
+  // Uitgelogd levert Vinted op /items/new gewoon een pagina op — geen 401, geen
+  // doorverwijzing die wij herkennen. Het invulscript loopt dan over een
+  // formulier dat er niet is: elke stap mislukt stil (step() logt en gaat door),
+  // de eindcontrole vindt geen veld en klaagt dus ook niet (een veld dat niet
+  // bestaat is niet leeg), en daarna is elk /items/{cijfers} in de adresbalk
+  // genoeg om de opdracht af te melden als geplaatst. Vandaar het vinkje bij
+  // niets.
+  //
+  // Deze controle is het enige eerlijke antwoord op "ben je ingelogd": het
+  // gaat langs Vinted's eigen endpoint, met de cookies van de browser. Komt daar
+  // geen gebruiker uit, dan openen we geen tabblad en melden we de opdracht af
+  // als mislukt, met wat de verkoper moet doen. Kunnen we het niet vaststellen
+  // (netwerk, endpoint veranderd), dan gaat het gewoon door — een onzekere
+  // controle mag geen werk tegenhouden.
+  if (job.platform === "vinted" && job.action !== "scan") {
+    const origin = job.payload?._create_origin || "https://www.vinted.com";
+    const ingelogd = await vintedIngelogd(origin);
+    if (ingelogd === false) {
+      await reportError(job.id, serverUrl,
+        `You are not signed in to Vinted (${origin.replace(/^https:\/\/(www\.)?/, "")}). ` +
+        `Nothing was published. Open Vinted in this browser, log in, and publish again.`);
+      return;
+    }
+  }
+
   let url;
   try {
     url = job.action === "delete" ? getDeleteUrl(job.platform, job.payload)
@@ -1910,6 +1941,25 @@ function _vintedTitelSleutel(t) {
 // verschil liep de exacte vergelijking stuk.
 function _vintedTitelZonderSku(t) {
   return _vintedTitelSleutel(String(t || "").replace(/^\s*\([^)]{1,24}\)\s*/, ""));
+}
+
+// Ingelogd op Vinted, ja/nee/onbekend. `null` = niet vast te stellen.
+//
+// credentials:"include" is hier geen sierlijkheid maar de kern: we willen exact
+// weten wat de browser van de verkoper te zien krijgt, met zijn eigen cookies.
+async function vintedIngelogd(origin) {
+  try {
+    const res = await fetch(`${origin}/api/v2/users/current`, {
+      headers: { Accept: "application/json" }, credentials: "include",
+    });
+    if (res.status === 401 || res.status === 403) return false;
+    if (!res.ok) return null;                       // 5xx, onderhoud: niet ons oordeel
+    const data = await res.json().catch(() => null);
+    if (!data) return null;
+    return data.user && data.user.id ? true : false;
+  } catch (_) {
+    return null;                                    // geen netwerk: laat het werk door
+  }
 }
 
 async function bgVindVintedAdvertentie(item) {
