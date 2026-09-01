@@ -4220,11 +4220,20 @@ function soldConfirmRows() {
     .map(l => ({ listing: l, item: byId.get(l.item_id) }));
 }
 
+// De vraag staat op twee plekken: bij Items (daar beheer je je voorraad) en bij
+// Analytics (daar kijk je naar je verkopen). Een onbeantwoorde vraag is precies
+// het verschil tussen wat je verkocht hebt en wat de omzet laat zien, dus hij
+// hoort óók te staan waar je die omzet leest.
+const SOLD_CONFIRM_BARS = ['sold-confirm-bar', 'an-sold-confirm-bar'];
+
 function renderSoldConfirmBar() {
-  const bar = document.getElementById('sold-confirm-bar');
-  if (!bar) return;
+  const balken = SOLD_CONFIRM_BARS.map(id => document.getElementById(id)).filter(Boolean);
+  if (!balken.length) return;
   const rows = soldConfirmRows();
-  if (!rows.length) { bar.style.display = 'none'; bar.innerHTML = ''; return; }
+  if (!rows.length) {
+    for (const b of balken) { b.style.display = 'none'; b.innerHTML = ''; }
+    return;
+  }
 
   const TOON = 8;
   const regels = rows.slice(0, TOON).map(({ listing, item }) => {
