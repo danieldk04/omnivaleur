@@ -66,6 +66,18 @@ stil opgevangen en elke lead kreeg wekenlang de standaardmail.
 Noem in je eerste antwoord kort wat je hebt gezien, zodat duidelijk is dat je het
 huidige beeld hebt.
 
+## De kennisbank: lessen van eerdere sessies
+
+[docs/kennisbank.md](docs/kennisbank.md) bundelt alles wat eerdere sessies hebben
+geleerd — valkuilen, werkafspraken, waarom bepaalde keuzes zo zijn. Die lessen
+staan normaal in de lokale geheugenmap van één Claude-account en zijn voor een
+andere ontwikkelaar onzichtbaar; hier reizen ze mee met de repo.
+
+Sla het niet over voor je iets aanpakt dat je niet kent: het scheelt je de fout
+die iemand anders al een keer heeft gemaakt. Leer je zelf iets nieuws, leg het
+vast in je geheugen en draai daarna `python3 scripts/export_kennisbank.py`, en
+commit het bestand.
+
 ## Before touching anything people/business/decision-related
 
 Read [docs/team-notes.md](docs/team-notes.md) first. It's an append-only log
