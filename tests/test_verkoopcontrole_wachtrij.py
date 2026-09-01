@@ -23,6 +23,7 @@ dingen vast die, als ze wegvallen, het project opnieuw op slot zetten:
 """
 import asyncio
 import sys
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 import pytest
@@ -168,8 +169,11 @@ def omgeving(monkeypatch):
 def test_een_advertentie_die_net_is_nagekeken_blijft_deze_ronde_liggen(omgeving):
     """De kern van de reparatie. Wie net is nagekeken kost deze ronde niets —
     geen rij uit de database en geen netwerkaanroep."""
-    net_gezien = "2026-08-31T12:00:00+00:00"        # ver binnen het uur
-    lang_geleden = "2026-08-01T00:00:00+00:00"
+    # Relatief aan nu, nooit een vaste datum: een vast "net gezien" wordt na
+    # een uur vanzelf oud, en dan meet deze proef niets meer.
+    nu = datetime.now(timezone.utc)
+    net_gezien = (nu - timedelta(seconds=polling.HERCONTROLE_NA / 12)).isoformat()
+    lang_geleden = (nu - timedelta(seconds=polling.HERCONTROLE_NA * 24)).isoformat()
     db = _opzet([_listing(1, net_gezien), _listing(2, lang_geleden),
                  _listing(3, None)])
     platform = _NepPlatform()
