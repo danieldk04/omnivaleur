@@ -1073,7 +1073,7 @@ async def _al_weg_voor_wij_er_waren(db, job: dict) -> bool:
     """
     if job["platform"] not in ("marktplaats", "2dehands"):
         return False
-    doelen = await _verwijderdoelen(db, job)
+    doelen = await naast_de_lus(lambda: _verwijderdoelen(db, job))
     jong = []
     for rij in doelen:
         if rij.get("status") in ("sold", "sold_unconfirmed"):
@@ -1194,7 +1194,7 @@ async def complete_job(job_id: str, body: dict, user_id: str = Depends(get_curre
 
         # Alleen de advertentie die deze opdracht te pakken had. Zie
         # _verwijderdoelen: een artikel heeft er inmiddels meerdere.
-        for rij in await _verwijderdoelen(db, job):
+        for rij in await naast_de_lus(lambda: _verwijderdoelen(db, job)):
             if rij.get("status") in ("sold", "sold_unconfirmed"):
                 continue        # een verkoop is een eindpunt, geen tussenstand
             (await naast_de_lus(lambda r=rij: db.table("listings")
@@ -2005,7 +2005,7 @@ def fail_job(job_id: str, body: dict, user_id: str = Depends(get_current_user)):
         # geplaatst werden. Bovendien wiste het een al gestelde vraag
         # "is dit verkocht?" weer uit. Zie _verwijderdoelen.
         melding = body.get("error", "Delist failed — the listing is still live. You can retry.")
-        for rij in _in_de_lus(_verwijderdoelen(db, job)):
+        for rij in _verwijderdoelen(db, job):
             if rij.get("status") in ("sold", "sold_unconfirmed"):
                 continue
             execute_with_retry(db.table("listings").update({

@@ -45,7 +45,7 @@ TERUGKIJKEN_DAGEN = 30
 KANALEN = ("marktplaats", "2dehands")
 
 
-def main(apply: bool) -> None:
+def main(apply: bool, alleen_user: str | None = None) -> None:
     from backend.database import get_db, fetch_all
     from backend.api.jobs import ZELF_VERLOPEN_NA_DAGEN, _verwijderdoelen
     from backend.api.listings import VERDENKING_REDENEN
@@ -61,6 +61,8 @@ def main(apply: bool) -> None:
     verdacht: dict[tuple[str, str], dict] = {}
     for baan in verwijderingen or []:
         if baan["platform"] not in KANALEN:
+            continue
+        if alleen_user and baan["user_id"] != alleen_user:
             continue
         if ((baan.get("result") or {}).get("note")) != "already_absent":
             continue
@@ -124,4 +126,6 @@ def main(apply: bool) -> None:
 
 
 if __name__ == "__main__":
-    main("--apply" in sys.argv)
+    argv = sys.argv[1:]
+    user = argv[argv.index("--user") + 1] if "--user" in argv else None
+    main("--apply" in argv, user)

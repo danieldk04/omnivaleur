@@ -41,7 +41,7 @@ from backend.api import jobs as api  # noqa: E402
 class _Q:
     def __init__(self, db, tabel):
         self.db, self.tabel = db, tabel
-        self.filters, self.in_filters, self.gte = {}, {}, None
+        self.filters, self.in_filters, self.vanaf = {}, {}, None
         self.op, self.velden = None, None
 
     def select(self, *_a, **_k):
@@ -57,7 +57,7 @@ class _Q:
         self.in_filters[k] = list(v); return self
 
     def gte(self, k, v):
-        self.gte = (k, v); return self
+        self.vanaf = (k, v); return self
 
     def limit(self, _n):
         return self
@@ -67,8 +67,8 @@ class _Q:
         uit = [r for r in bron
                if all(r.get(k) == v for k, v in self.filters.items())
                and all(r.get(k) in v for k, v in self.in_filters.items())]
-        if self.gte:
-            k, v = self.gte
+        if self.vanaf:
+            k, v = self.vanaf
             uit = [r for r in uit if str(r.get(k) or "") >= str(v)]
         return uit
 
@@ -107,9 +107,11 @@ def _verwijderopdracht(rij_id=None, nummer=None, platform="marktplaats"):
         payload["_refresh_rollback"] = {"listing_id": rij_id}
     if nummer:
         payload["platform_listing_id"] = nummer
+    # De herplaatsing zet de verwijdering eerst in de wachtrij en de plaatsing
+    # daarna; die volgorde bepaalt welke plaatsing bij deze verwijdering hoort.
     return {"id": "job-1", "item_id": "it1", "platform": platform,
             "action": "delete", "payload": payload,
-            "created_at": _dagen_geleden(0)}
+            "created_at": _dagen_geleden(1)}
 
 
 # ── 1. Een verwijdering raakt alleen de advertentie die hij te pakken had ────
