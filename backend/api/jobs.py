@@ -1003,6 +1003,126 @@ async def _rond_publicatie_af(db, job: dict, body: dict) -> None:
         }).eq("id", wachtend[0]["id"]).execute()))
 
 
+# Statussen die een verwijderopdracht nooit mag overschrijven. Een bevestigde
+# verkoop en een al gestelde verkoopvraag zijn eindpunten, en een allang
+# afgemelde advertentie hoort niet terug te komen omdat een ÁNDERE advertentie
+# van hetzelfde artikel niet verwijderd kon worden.
+EINDSTATUSSEN = ("sold", "sold_unconfirmed", "delisted", "archived")
+
+# Hoe lang een gratis Marktplaats-advertentie blijft staan voor het platform hem
+# zelf weggooit. Is een verdwenen advertentie jónger dan dit, dan kan hij niet
+# vanzelf verlopen zijn en heeft iemand hem weggehaald — meestal de verkoper,
+# omdat het artikel verkocht is.
+ZELF_VERLOPEN_NA_DAGEN = 28
+
+
+async def _verwijderdoelen(db, job: dict) -> list[dict]:
+    """De advertentierij(en) die bij DEZE verwijderopdracht horen.
+
+    WAAROM DIT ER IS (01-09-2026, item 1288 en 1314). Een verwijdering werkte
+    élke advertentierij van dat artikel op dat kanaal bij. Eén artikel heeft daar
+    inmiddels tot zes rijen van: elke herplaatsing zet er een nieuwe bij. Gevolg:
+    een mislukte verwijdering zette OOK de rij van juni weer op 'actief', met de
+    datum van juni erbij. Die was daarmee meteen weer een kandidaat voor het
+    automatisch herplaatsen — dus werd hetzelfde artikel elke ronde opnieuw
+    weggehaald en geplaatst, dag na dag. Gemeten bij (1314): zes herplaatsingen
+    in vier dagen, terwijl de instelling op 30 dagen staat.
+
+    De verwijderopdracht weet precies welke rij hij te pakken had: hij draagt het
+    rij-id van de herplaatsing mee, en anders het advertentienummer. Alleen als
+    geen van beide bekend is vallen we terug op "alle rijen van dit kanaal", en
+    dan nog zonder de rijen die al een eindstatus hebben.
+    """
+    payload = job.get("payload") or {}
+    rij_id = (payload.get("_refresh_rollback") or {}).get("listing_id")
+    nummer = payload.get("platform_listing_id")
+    basis = (lambda: db.table("listings").select("id,status,listed_at,platform_listing_id")
+             .eq("item_id", job["item_id"]).eq("platform", job["platform"]))
+    if rij_id:
+        rijen = (await naast_de_lus(lambda: basis().eq("id", rij_id).execute())).data or []
+        if rijen:
+            return rijen
+    if nummer:
+        rijen = (await naast_de_lus(lambda: basis().eq("platform_listing_id", nummer).execute())).data or []
+        if rijen:
+            return rijen
+    alle = (await naast_de_lus(lambda: basis().execute())).data or []
+    return [r for r in alle if r.get("status") not in EINDSTATUSSEN]
+
+
+async def _al_weg_voor_wij_er_waren(db, job: dict) -> bool:
+    """Advertentie was al weg toen we hem kwamen weghalen: verkocht, of verlopen?
+
+    WAAROM DIT ER IS (01-09-2026, Daniel over (1288) en (1314)). Bij het
+    herplaatsen haalt de extensie eerst de oude advertentie weg. Stond die er al
+    niet meer, dan gold dat als "doel bereikt" en plaatste stap twee vrolijk een
+    nieuwe. Precies wat er gebeurt bij een VERKOCHT artikel: de verkoper haalt de
+    advertentie weg, wij zien hem niet meer, en zetten hem opnieuw te koop. Elke
+    ronde opnieuw, want de verkoop wordt zo ook nooit opgemerkt.
+
+    Het onderscheid zit in de leeftijd. Marktplaats gooit een gratis advertentie
+    pas na dertig dagen zelf weg. Is de advertentie jonger dan dat en tóch weg,
+    dan kán het geen verlopen zijn en heeft iemand hem weggehaald. Dat is geen
+    bewijs van verkoop — de verkoper kan hem ook zelf hebben verwijderd — dus we
+    boeken niets, we vrágen het: de advertentie krijgt de status 'mogelijk
+    verkocht' die in het dashboard al een ja/nee-knop heeft, en de nieuwe
+    advertentie wordt niet geplaatst.
+
+    Is de advertentie wél oud genoeg om verlopen te zijn, dan verandert er niets
+    aan het oude gedrag: herplaatsen is dan juist de bedoeling.
+    """
+    if job["platform"] not in ("marktplaats", "2dehands"):
+        return False
+    doelen = await _verwijderdoelen(db, job)
+    jong = []
+    for rij in doelen:
+        if rij.get("status") in ("sold", "sold_unconfirmed"):
+            continue
+        geplaatst = rij.get("listed_at")
+        if not geplaatst:
+            return False        # zonder datum valt er niets te concluderen
+        try:
+            leeftijd = datetime.now(timezone.utc) - datetime.fromisoformat(geplaatst)
+        except (TypeError, ValueError):
+            return False
+        if leeftijd >= timedelta(days=ZELF_VERLOPEN_NA_DAGEN):
+            return False        # oud genoeg om vanzelf verlopen te zijn
+        jong.append(rij)
+    if not jong:
+        return False
+
+    from backend.api.listings import VERDENKING_REDENEN
+    reden = VERDENKING_REDENEN["verdwenen_te_jong"]
+    for rij in jong:
+        (await naast_de_lus(lambda r=rij: db.table("listings").update({
+            "status": "sold_unconfirmed",
+            "error_message": reden,
+            "last_checked": datetime.now(timezone.utc).isoformat(),
+        }).eq("id", r["id"]).execute()))
+
+    # De nieuwe advertentie mag niet geplaatst worden zolang niet vaststaat dat
+    # het artikel nog te koop is. Zonder dit blijft de lus gewoon draaien: de
+    # herplaatsing staat immers al klaar in de wachtrij.
+    wachtend = ((await naast_de_lus(lambda: db.table("jobs").select("id")
+                .eq("item_id", job["item_id"]).eq("platform", job["platform"])
+                .eq("action", "create").in_("status", ["pending", "claimed"])
+                .gte("created_at", job["created_at"]).execute())).data or [])
+    for baan in wachtend:
+        (await naast_de_lus(lambda b=baan: db.table("jobs").update({
+            "status": "cancelled",
+            "done_at": datetime.now(timezone.utc).isoformat(),
+            "result": {"cancelled": (
+                "De oude advertentie was al van het platform af voordat wij hem "
+                "weghaalden, en daarvoor was hij te jong om vanzelf te verlopen. "
+                "Bevestig eerst in het dashboard of dit artikel verkocht is.")},
+        }).eq("id", b["id"]).execute()))
+
+    logger.info("[sold] item %s op %s: advertentie was al weg en te jong om te verlopen "
+                "— %d rij(en) op 'mogelijk verkocht', %d herplaatsing(en) geannuleerd",
+                job["item_id"], job["platform"], len(jong), len(wachtend))
+    return True
+
+
 @router.post("/{job_id}/complete")
 async def complete_job(job_id: str, body: dict, user_id: str = Depends(get_current_user)):
     db = get_db()
