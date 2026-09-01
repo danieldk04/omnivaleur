@@ -5301,7 +5301,7 @@ async function meldVerkochtUitBerichten(serverUrl, headers, platform, sold) {
   console.log(`[Omnivaleur][sold] ${platform}: ${sold.length} gesprek(ken) met een verkocht-badge`, sold.map(s => s.sku));
   const r = await fetch(`${serverUrl}/api/listings/sold-from-messages`, {
     method: "POST",
-    headers: { ...headers, "Content-Type": "application/json" },
+    headers,
     body: JSON.stringify({ platform, sold }),
   }).catch((e) => { console.error("[Omnivaleur][sold] sold-from-messages POST failed:", e); return null; });
   if (r?.ok) {
