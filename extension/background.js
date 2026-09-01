@@ -5417,12 +5417,26 @@ async function _mwReadNotifCounts(platform) {
   // Daardoor stonden er structureel meer "biedingen" dan "berichten" op het
   // dashboard — een getal waar niets meer achter zat om te doen.
   rows.forEach((r) => {
+    // Verkocht-badge: los labeltje, exacte tekst, geen kindelementen.
+    const verkocht = [...r.querySelectorAll("span, div, p, strong, b, em")]
+      .filter((el) => el.children.length === 0)
+      .some((el) => /^verkocht!?$/i.test((el.textContent || "").replace(/\s+/g, " ").trim()));
+    if (verkocht) {
+      // Het nummer waar de advertentietitel mee begint. Alleen aan het BEGIN van
+      // een regel, zodat een nummer uit een berichttekst ("ik bied 1300") of een
+      // jaartal er niet voor door kan gaan.
+      const m = /(?:^|\n)\s*\((\d{1,6})\)\s*(.{0,80})/.exec(r.innerText || r.textContent || "");
+      if (m && !gezien.has(m[1])) {
+        gezien.add(m[1]);
+        sold.push({ sku: m[1], title: `(${m[1]}) ${(m[2] || "").trim()}` });
+      }
+    }
     const ongelezen = !!r.querySelector('[class*="u-textStyleBodySmallStrong"]');
     if (!ongelezen) return;
     messages++;
     if (MP_OFFER_RE.test(r.textContent || "")) offers++;
   });
-  return { messages, offers };
+  return { messages, offers, sold };
 }
 
 // ---- Main-world helpers (injected via chrome.scripting, bypasses page CSP) ----
