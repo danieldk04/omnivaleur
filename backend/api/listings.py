@@ -64,23 +64,58 @@ def _user_item_ids(db, user_id: str) -> list[str]:
         lambda: db.table("items").select("id").eq("user_id", user_id))]
 
 
-@router.get("/")
-def list_all_listings(
-    limit: int = 200,
-    platform: str = None,
-    status: str = None,
-    user_id: str = Depends(get_current_user),
-):
-    db = get_db()
+def _listings_via_items(db, user_id: str, platform: str | None,
+                        status: str | None) -> list[dict]:
+    """Alle advertenties van deze verkoper in één vraag, titel en SKU inbegrepen.
+
+    WAAROM DIT ER IS (01-09-2026, Egbert). De oude weg vroeg eerst alle item-id's
+    op, hakte die in brokken van 200 en stelde per brok een aparte vraag, en deed
+    dat daarna nóg een keer om bij elke advertentie de titel te zoeken. Bij zijn
+    5.533 artikelen zijn dat ruim zeventig vragen achter elkaar binnen één
+    verzoek. Gemeten op zijn echte gegevens: 17,9 seconden. Op de server, waar
+    het langzamer gaat dan hier, is dat precies de aanroep die de gateway opgaf —
+    het lege scherm en de tijdverloop-fout waar hij over belde.
+
+    Postgres kent de band tussen een advertentie en zijn artikel al (de sleutel
+    `listings_item_id_fkey`), dus die vraag kan in één keer: geef de advertenties
+    wáár het artikel van deze verkoper is, en lever titel en SKU meteen mee.
+    Zelfde uitkomst, zelfde velden: 1,5 seconde in plaats van 17,9.
+    """
+    def bouw():
+        q = (db.table("listings")
+             .select("*,items!inner(title,sku,user_id)")
+             .eq("items.user_id", user_id))
+        if platform:
+            q = q.eq("platform", platform)
+        if status:
+            q = q.eq("status", status)
+        return q
+
+    rijen = fetch_all(bouw, page_size=1000)
+    # De titel en SKU staan in een apart blokje omdat ze uit de andere tabel
+    # komen; het dashboard en de extensie verwachten ze los op de advertentie.
+    for l in rijen:
+        it = l.pop("items", None) or {}
+        l["title"] = it.get("title")
+        l["sku"] = it.get("sku")
+    return rijen
+
+
+def _listings_per_brok(db, user_id: str, platform: str | None,
+                       status: str | None) -> list[dict]:
+    """De oude weg: per brok van 200 item-id's. Alleen nog als vangnet.
+
+    Fetch every listing, in chunks and pages. The old single call asked for
+    2000 rows in one go: PostgREST caps a response at its own max-rows limit
+    and says nothing about it, so past that point the dashboard simply never
+    saw those listings — items that were live on a platform showed up under
+    "To list". A stable order is required, otherwise paging can repeat or skip
+    rows.
+    """
     item_ids = _user_item_ids(db, user_id)
     if not item_ids:
         return []
-    # Fetch every listing, in chunks and pages. The old single call asked for
-    # 2000 rows in one go: PostgREST caps a response at its own max-rows limit
-    # and says nothing about it, so past that point the dashboard simply never
-    # saw those listings — items that were live on a platform showed up under
-    # "To list". A stable order is required, otherwise paging can repeat or skip
-    # rows.
+
     def bouw(chunk):
         q = db.table("listings").select("*").in_("item_id", chunk)
         if platform:
@@ -109,6 +144,24 @@ def list_all_listings(
             l["title"] = it.get("title")
             l["sku"] = it.get("sku")
     return listings
+
+
+@router.get("/")
+def list_all_listings(
+    limit: int = 200,
+    platform: str = None,
+    status: str = None,
+    user_id: str = Depends(get_current_user),
+):
+    db = get_db()
+    try:
+        return _listings_via_items(db, user_id, platform, status)
+    except Exception as e:  # noqa: BLE001
+        # De snelle weg leunt op de sleutel tussen listings en items. Valt die
+        # ooit weg, dan is een traag antwoord nog altijd oneindig veel beter dan
+        # een verkoper die zijn advertenties kwijt is.
+        logger.warning("advertentielijst via items mislukt (%s) — terug naar de oude weg", e)
+        return _listings_per_brok(db, user_id, platform, status)
 
 
 @router.post("/publish")

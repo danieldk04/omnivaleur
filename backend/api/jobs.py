@@ -449,6 +449,74 @@ def get_pending_jobs(request: Request, platform: str = None, user_id: str = Depe
     return ready[:1] if is_extension_dispatch else ready
 
 
+# ── Welke extensieversie staat er in de Chrome Web Store? ────────────────────
+#
+# WAAROM DIT ER IS (01-09-2026, Egbert). Hij draaide 1.0.258 terwijl de Web Store
+# op 1.0.279 stond, en het dashboard zei al die tijd groen "Extension active".
+# De ondergrens hieronder (1.0.244) is een HARDE grens: alles daarboven gold als
+# in orde, ook eenentwintig versies achter. Chrome werkt een extensie normaal
+# vanzelf bij, maar alleen elke paar uur en alleen terwijl hij draait — en een
+# met de hand geladen kopie nooit. Wie dus achterloopt, hoort dat te horen.
+#
+# De enige eerlijke bron voor "wat kan hij nu installeren" is de Web Store zelf.
+# Dit is dezelfde vraag die Chrome stelt om te kijken of er een update is; het
+# antwoord is een doorverwijzing waarin de versie in de bestandsnaam staat
+# (..._1_0_279_0.crx). We halen de crx niet op — alleen de doorverwijzing.
+_WEBSTORE_EXT_ID = "gfaogapbhaacfbpdppdcmnkjndlphleh"
+_WEBSTORE_URL = (
+    "https://clients2.google.com/service/update2/crx"
+    "?response=redirect&acceptformat=crx3&prodversion=126.0"
+    f"&x=id%3D{_WEBSTORE_EXT_ID}%26installsource%3Dondemand%26uc"
+)
+_CRX_VERSIE = re.compile(r"_(\d+)_(\d+)_(\d+)(?:_(\d+))?\.crx", re.I)
+# Eén uur onthouden. Een nieuwe versie doorgeven mag best een uur duren; Google
+# elke paar seconden bevragen mag niet. Een mislukking onthouden we tien minuten,
+# zodat een storing bij Google geen bui van verzoeken oplevert.
+_WEBSTORE_CACHE = {"versie": None, "ts": 0.0, "ok": False}
+_WEBSTORE_TTL_OK = 3600
+_WEBSTORE_TTL_FOUT = 600
+
+
+def _gepubliceerde_extensieversie() -> str | None:
+    """De versie die op dit moment in de Chrome Web Store staat, of None."""
+    import time as _t
+    nu = _t.monotonic()
+    ttl = _WEBSTORE_TTL_OK if _WEBSTORE_CACHE["ok"] else _WEBSTORE_TTL_FOUT
+    if _WEBSTORE_CACHE["ts"] and (nu - _WEBSTORE_CACHE["ts"]) < ttl:
+        return _WEBSTORE_CACHE["versie"]
+    versie = None
+    try:
+        import httpx
+        # follow_redirects=False: we willen juist de doorverwijzing, niet het
+        # bestand. Zo halen we nooit een crx binnen — alleen een kopregel.
+        r = httpx.get(_WEBSTORE_URL, follow_redirects=False, timeout=8.0)
+        m = _CRX_VERSIE.search(r.headers.get("location") or "")
+        if m:
+            versie = f"{int(m.group(1))}.{int(m.group(2))}.{int(m.group(3))}"
+    except Exception as e:  # noqa: BLE001
+        logger.info("versie uit de Web Store ophalen mislukt: %s", e)
+    _WEBSTORE_CACHE.update(
+        versie=versie or _WEBSTORE_CACHE["versie"], ts=nu, ok=bool(versie)
+    )
+    return _WEBSTORE_CACHE["versie"]
+
+
+@router.get("/extension-version")
+def extension_version(user_id: str = Depends(get_current_user)):
+    """Welke extensieversie hoort erop te staan.
+
+    `minimum` is de harde grens: daaronder blokkeert het dashboard, want dan
+    kán het werk niet slagen. `published` is wat er nu in de Chrome Web Store
+    staat; daartussenin krijgt de verkoper een gewone bijwerkmelding die hij weg
+    kan klikken. Komt `published` niet binnen, dan is hij leeg en verandert er
+    niets aan wat het scherm laat zien.
+    """
+    return {
+        "published": _gepubliceerde_extensieversie(),
+        "minimum": ".".join(str(x) for x in MINIMALE_SCANVERSIE),
+    }
+
+
 @router.get("/extension-status")
 def extension_status(user_id: str = Depends(get_current_user)):
     """

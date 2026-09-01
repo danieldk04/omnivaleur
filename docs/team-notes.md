@@ -3012,3 +3012,60 @@ en élke keer de volledige waarheid ophaalt in plaats van het verschil. Een tik
 die niets kost bij tien items kost bij vijfduizend het duizendvoudige — de prijs
 van zo'n ronde hoort mee te groeien met wat er veranderd is, niet met wat er ís.
 
+
+### 01-09-2026 — De drie dingen uit het gesprek met Egbert (Papa's Plectrums)
+
+Daniel belde met Egbert. Drie klachten, alle drie dezelfde soort: iets dat bij
+honderd artikelen niet opvalt en bij zijn 5.533 een muur wordt.
+
+**1. Het overzicht laadde eindeloos, of gaf 502.** Nagemeten op zijn echte
+gegevens, niet geschat. De aanroep die het scherm opgaf was `/api/listings/`:
+17,9 seconden. Die haalde eerst alle item-id's op, hakte ze in brokken van 200,
+stelde per brok een vraag — en deed die hele ronde daarna nóg eens om bij elke
+advertentie de titel op te zoeken. Ruim zeventig vragen achter elkaar binnen één
+verzoek. Postgres kent de band tussen advertentie en artikel al (de sleutel
+`listings_item_id_fkey`), dus dat kan in één gekoppelde vraag: **14,6 → 2,0
+seconden**, dezelfde rijen, dezelfde velden (gecontroleerd op zijn echte
+voorraad, rij voor rij). De oude weg blijft als vangnet staan voor het geval die
+sleutel ooit verdwijnt.
+
+Daarnaast: de catalogus ging **ongecomprimeerd** over de lijn. 13,4 MB. Met
+gzip-middleware erop 1,53 MB — negen tiende minder, en dat is precies het
+verschil tussen "hij doet het niet" en een lijst die er staat. De catalogus komt
+nu ook in pagina's van 1.000 in plaats van 200 (29 → 7 vragen, 5,9 → 2,9s), en
+tijdens de eerste lading staat er "Loading your items… 3.000 loaded so far" in
+plaats van een leeg scherm.
+
+**Les:** twee van de drie winsten waren geen algoritme maar boekhouding — een
+vraag die met het verkeerde ding meeschaalt, en een antwoord dat niemand had
+ingepakt. Bij 100 items zie je geen van beide.
+
+**2. De import meldde "alles opgehaald" terwijl prijs of tekst ontbrak.**
+Marktplaats levert die bij een zakelijke (Admarkt) import niet mee; ze staan
+alleen op de openbare advertentie. De server haalt ze sinds 29-08 vanzelf op,
+elk kwartier één verkoper — maar die ronde selecteerde **alleen op lege
+omschrijvingen**. Wie de tekst wél had en de prijs niet, kwam dus nooit aan de
+beurt. Gemeten op de echte database: één account met 185 zulke artikelen die
+daardoor nooit zijn aangeraakt. Prijs telt nu mee.
+
+Verder maakt de import het nu zelf af: na afloop vier ophaalrondes, en de
+slotmelding noemt wat er dan nog leeg is in plaats van "✅ Import successful" te
+zeggen over een halve voorraad. Egbert zelf staat inmiddels op 12 items zonder
+prijs en 11 zonder tekst van de 5.533 — zijn honderd tot tweehonderd zijn dus al
+weggewerkt door de automatische ronde.
+
+**3. Hij draaide 1.0.258 terwijl de Web Store op 1.0.279 stond.** De harde
+ondergrens (1.0.244) blokkeert alleen wat aantoonbaar niet kán werken; alles
+daarboven kreeg groen "Extension active", hoeveel versies achter ook. Dat is
+dezelfde val als bij Jaap in augustus, één laag hoger.
+
+Er is nu een tweede, zachte grens: wat er op dít moment in de Chrome Web Store
+staat. Die vragen we op bij dezelfde bron die Chrome zelf gebruikt — de
+update-doorverwijzing van Google draagt de versie in de bestandsnaam
+(`..._1_0_279_0.crx`). We halen de crx niet op, alleen de kopregel; hoogstens
+één keer per uur, en komt er niets terug, dan verandert er niets aan het scherm.
+Loopt hij achter maar boven de ondergrens: een gele balk die hij weg kan
+klikken, plus "v1.0.258 — v1.0.279 available" in de zijbalk.
+
+**Les:** een ondergrens die met de hand meebeweegt, beweegt niet mee. De vraag
+"is dit de nieuwste?" heeft maar één eerlijke bron, en dat is de winkel zelf.

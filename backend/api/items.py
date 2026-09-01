@@ -97,6 +97,11 @@ def create_item(item: ItemCreate, user_id: str = Depends(get_current_user)):
 @router.get("/", response_model=list)
 def list_items(limit: int = 50, offset: int = 0, user_id: str = Depends(get_current_user)):
     db = get_db()
+    # Het dashboard leest de catalogus pagina voor pagina. Bij 5.533 artikelen
+    # waren dat 29 vragen achter elkaar met de oude 200 per pagina; met 1.000 zijn
+    # het er 7 en scheelt het de helft van de tijd. De bovengrens staat er zodat
+    # één aanroep nooit de hele voorraad in één antwoord kan opeisen.
+    limit = max(1, min(limit, 1000))
     result = (
         db.table("items")
         .select("*")

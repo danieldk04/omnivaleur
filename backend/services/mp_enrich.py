@@ -880,7 +880,7 @@ _volgende_verkoper = 0
 
 
 async def _verkopers_met_gaten(db) -> list[str]:
-    """De verkopers die nog items zonder omschrijving hebben, meest eerst.
+    """De verkopers die nog items zonder omschrijving OF zonder prijs hebben.
 
     Alleen verkopers die ooit vanaf Marktplaats of 2dehands hebben geïmporteerd:
     bij de rest staan de advertenties daar niet en zouden we Marktplaats voor
@@ -894,10 +894,18 @@ async def _verkopers_met_gaten(db) -> list[str]:
     demo-account draaien — het tegenovergestelde van de bedoeling. Wat er wél
     staat bij iedereen die geïmporteerd heeft, is zijn importlijst.
     """
+    # De prijs hoort hier net zo goed bij als de tekst.
+    #
+    # WAAROM (01-09-2026, Egbert): dit keek alleen naar een lege omschrijving.
+    # Een verkoper bij wie de tekst wél binnenkwam maar de prijs niet, kwam dus
+    # nooit aan de beurt — hoeveel items het ook betrof. Nagemeten op de echte
+    # database: één account had 185 artikelen zonder prijs die om die reden nooit
+    # zijn aangeraakt. Zonder prijs weigert het plaatsformulier de advertentie
+    # net zo hard als zonder tekst, dus dat is precies even blokkerend.
     rijen = await naast_de_lus(lambda: fetch_all(
         lambda: db.table("items")
         .select("user_id")
-        .or_("description.is.null,description.eq.")))
+        .or_("description.is.null,description.eq.,price.is.null,price.eq.0")))
     aantal: dict[str, int] = {}
     for r in (rijen or []):
         if r.get("user_id"):

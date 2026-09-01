@@ -4,6 +4,7 @@ logging.basicConfig(level=logging.INFO, format="%(levelname)s %(name)s: %(messag
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse, RedirectResponse
 from fastapi.exception_handlers import http_exception_handler
@@ -44,6 +45,18 @@ app = FastAPI(
     version="0.1.0",
     lifespan=lifespan,
 )
+
+# Antwoorden ingepakt over de lijn.
+#
+# WAAROM (01-09-2026, Egbert). Zijn catalogus van 5.533 artikelen is 13,4 MB aan
+# JSON. Die ging onverpakt naar de browser: op een gewone verbinding minuten
+# wachten op een leeg scherm, en bij een hik een tijdverloop. Gemeten op zijn
+# echte gegevens: 13,4 MB -> 1,53 MB ingepakt, negen tiende minder. Het kost de
+# server een fractie van een seconde en de verkoper scheelt het het verschil
+# tussen "hij doet het niet" en een lijst die er staat.
+#
+# 1024 bytes ondergrens: kleine antwoorden inpakken kost meer dan het oplevert.
+app.add_middleware(GZipMiddleware, minimum_size=1024)
 
 app.add_middleware(
     CORSMiddleware,

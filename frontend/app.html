@@ -801,6 +801,25 @@ input[type="checkbox"].row-check { width: 15px; height: 15px; cursor: pointer; a
         <button class="btn btn-sm btn-outline" id="refresh-btn" onclick="refreshDashboard(this)">Refresh</button>
       </div>
 
+      <!-- Bijwerkmelding. Zichtbaar, maar bewust NIET blokkerend.
+           WAAROM (01-09-2026, Egbert): hij draaide 1.0.258 terwijl de Web Store op
+           1.0.279 stond. De harde ondergrens (1.0.244) blokkeert alleen wat
+           aantoonbaar niet kán werken; daarboven zei het scherm gewoon groen
+           "Extension active" en hoorde hij nooit dat er iets nieuws was. Chrome
+           werkt een extensie vanzelf bij, maar alleen elke paar uur en alleen
+           terwijl hij draait — een handmatig geladen kopie nooit. -->
+      <div id="ext-update-banner" class="trial-banner" style="display:none;background:#fffbeb;border:1px solid #fcd34d;color:#78350f">
+        <div style="display:flex;align-items:center;gap:8px">
+          <span>⬆️</span>
+          <span>Your Chrome extension is <strong>v<span id="ext-update-current">?</span></strong> &mdash;
+            <strong>v<span id="ext-update-latest">?</span></strong> is available.
+            Open <span style="font-family:monospace">chrome://extensions</span>, switch on
+            &ldquo;Developer mode&rdquo; and click <strong>Update</strong>. Chrome only does this
+            by itself every few hours.</span>
+        </div>
+        <button class="btn btn-sm btn-outline" onclick="dismissExtUpdateBanner()" style="flex-shrink:0">Dismiss</button>
+      </div>
+
       <!-- Is a computer with the extension online to actually run queued jobs?
            Key for anyone working from their phone. Populated by loadExtensionStatus(). -->
       <div class="comp-status" style="display:none"></div>
@@ -2537,7 +2556,26 @@ window.addEventListener('message', (event) => {
   };
   renderExtSetup();
   if (typeof renderExtStatus === 'function') renderExtStatus();
+  laadGepubliceerdeVersie();
 });
+
+// Wat er op dit moment in de Chrome Web Store staat. Hoogstens één keer per uur
+// opgevraagd; komt er niets binnen, dan blijft dit leeg en verandert er niets aan
+// wat het scherm toont — liever geen melding dan een verkeerde.
+let _gepubliceerdeVersie = '';
+let _gepubliceerdeVersieTs = 0;
+async function laadGepubliceerdeVersie() {
+  if (_gepubliceerdeVersieTs && Date.now() - _gepubliceerdeVersieTs < 3600000) return;
+  _gepubliceerdeVersieTs = Date.now();
+  try {
+    const r = await apiFetch(`${API}/api/jobs/extension-version`);
+    const d = await parseJsonSafe(r);
+    if (!r.ok || !d || !d.published) return;
+    _gepubliceerdeVersie = d.published;
+    renderExtSetup();
+    if (typeof renderExtStatus === 'function') renderExtStatus();
+  } catch (_) { /* geen antwoord = geen melding */ }
+}
 
 function pingExtension() {
   clearTimeout(_extReplyTimer);
@@ -2571,6 +2609,14 @@ function dismissExtOverlay() {
   localStorage.setItem('cl_ext_ok', '1');
   document.getElementById('ext-overlay').style.display = 'none';
 }
+function dismissExtUpdateBanner() {
+  // Per versie onthouden: wie hem wegklikt op 1.0.258 krijgt hem opnieuw zodra
+  // er weer een nieuwere in de Web Store staat.
+  localStorage.setItem('cl_ext_bijwerk_ok', `${extState.version}>${_gepubliceerdeVersie}`);
+  const b = document.getElementById('ext-update-banner');
+  if (b) b.style.display = 'none';
+}
+
 function dismissExtOutdated() {
   // Per versie onthouden: wie doorklikt op 1.0.218 krijgt de melding opnieuw
   // zodra hij op 1.0.219 zit maar nog steeds achterloopt.
@@ -2605,6 +2651,18 @@ function renderExtSetup() {
     const genegeerd = localStorage.getItem('cl_ext_oud_ok') === extState.version;
     if (verouderd) document.getElementById('ext-outdated-version').textContent = 'v' + extState.version;
     oudModal.style.display = (verouderd && !genegeerd) ? 'flex' : 'none';
+  }
+
+  // Bijwerkstap-licht: wel achter, maar nog boven de harde ondergrens.
+  const bijwerk = document.getElementById('ext-update-banner');
+  if (bijwerk) {
+    const achter = extVersionAchter();
+    const weg = localStorage.getItem('cl_ext_bijwerk_ok') === `${extState.version}>${_gepubliceerdeVersie}`;
+    if (achter) {
+      document.getElementById('ext-update-current').textContent = extState.version;
+      document.getElementById('ext-update-latest').textContent = _gepubliceerdeVersie;
+    }
+    bijwerk.style.display = (achter && !weg) ? 'flex' : 'none';
   }
 
   // Sign-in step: non-blocking arrow pointing at the toolbar.
@@ -3618,8 +3676,26 @@ async function refreshDashboard(btn) {
 
 // Backend paginates /api/items/ — keep fetching pages until one comes back
 // empty, so the dashboard always has the user's full item set.
-async function fetchAllItems() {
-  const pageSize = 200;
+// Tijdens de allereerste lading staat het scherm leeg en lijkt er niets te
+// gebeuren. Bij 5.533 artikelen duurt die lading seconden; zonder dit leest dat
+// als "hij doet het niet" — precies wat Egbert meldde. Dit schrijft rechtstreeks
+// in de tabel en raakt de toestand niet aan: er is nog niets om te tonen, dus er
+// kan ook niets verkeerd getoond worden.
+function _toonLaadVoortgang(aantal) {
+  const body = document.getElementById('items-body');
+  if (!body || (state.items || []).length) return;
+  body.innerHTML = `<tr><td colspan="8"><div class="empty">
+      <h3>Loading your items…</h3>
+      <p>${aantal.toLocaleString()} loaded so far. A large catalogue takes a few seconds.</p>
+    </div></td></tr>`;
+}
+
+async function fetchAllItems(onVoortgang) {
+  // 200 -> 1000 (01-09-2026). Bij 5.533 artikelen waren dat 29 vragen achter
+  // elkaar; nu 7. Gemeten op Egberts echte voorraad: 5,9 -> 2,9 seconden. De
+  // database geeft 1.000 rijen per pagina zonder morren; wordt een pagina toch
+  // korter, dan telt de lus met wat er echt kwam (zie hieronder).
+  const pageSize = 1000;
   let offset = 0, all = [];
   while (true) {
     // parseJsonSafe, niet r.json(): valt de server even weg, dan komt er een
@@ -3636,6 +3712,7 @@ async function fetchAllItems() {
     // Tel door met wat we echt kregen, niet met wat we vroegen: geeft de server
     // een kortere pagina, dan stopte "korter dus klaar" halverwege de catalogus.
     offset += page.length;
+    if (onVoortgang) { try { onVoortgang(all.length); } catch (_) {} }
     if (all.length > 20000) break;   // noodrem tegen een eindeloze lus
   }
   return all;
@@ -3726,7 +3803,7 @@ async function loadAll(opties = {}) {
   const snel = !!opties.snel && !!_itemsSinds && (state.items || []).length > 0;
   const listingsNodig = !snel || (Date.now() - _listingsOpgehaald) >= LISTINGS_INTERVAL;
   const [itemsRes, listingsRes, jobsRes, platformsRes, settingsRes] = await Promise.allSettled([
-    snel ? syncItems() : fetchAllItems(),
+    snel ? syncItems() : fetchAllItems(_toonLaadVoortgang),
     listingsNodig ? apiFetch(`${API}/api/listings/`).then(parseJsonSafe) : Promise.resolve(null),
     apiFetch(`${API}/api/jobs/pending`).then(parseJsonSafe),
     apiFetch(`${API}/api/platforms/status`).then(parseJsonSafe),
@@ -5310,6 +5387,11 @@ function renderExtStatus() {
     // fout allang verholpen was — en leek het alsof de fix niet werkte.
     dot.classList.add('ext-dot-warn');
     label.textContent = `Extension v${extState.version} — update needed`;
+  } else if (extVersionAchter()) {
+    // Geen rood: hij werkt. Wel zichtbaar, want elke storing die hij meldt kan
+    // in een nieuwere versie al verholpen zijn.
+    dot.classList.add('ext-dot-warn');
+    label.textContent = `Extension v${extState.version} — v${_gepubliceerdeVersie} available`;
   } else {
     label.textContent = pending > 0 ? `${pending} job(s) pending` : `Extension active (v${extState.version})`;
   }
@@ -5326,15 +5408,31 @@ function renderExtStatus() {
 // Stond tot 27-08-2026 op 1.0.171, waardoor iemand op 1.0.218 een groen
 // "Extension active" te zien kreeg terwijl niets van zijn werk kon slagen.
 const EXT_MIN_VERSION = '1.0.244';
-function extVersionIsOld() {
-  if (extState.status !== 'ready' || !extState.version) return false;
-  const a = String(extState.version).split('.').map(Number);
-  const b = EXT_MIN_VERSION.split('.').map(Number);
-  for (let i = 0; i < Math.max(a.length, b.length); i++) {
-    const x = a[i] || 0, y = b[i] || 0;
-    if (x !== y) return x < y;
+
+// Staat versie `a` vóór versie `b`? Los, want er zijn nu twee grenzen: de harde
+// ondergrens en wat er vandaag in de Chrome Web Store staat.
+function versieLager(a, b) {
+  const x = String(a || '').split('.').map(Number);
+  const y = String(b || '').split('.').map(Number);
+  for (let i = 0; i < Math.max(x.length, y.length); i++) {
+    const p = x[i] || 0, q = y[i] || 0;
+    if (p !== q) return p < q;
   }
   return false;
+}
+
+function extVersionIsOld() {
+  if (extState.status !== 'ready' || !extState.version) return false;
+  return versieLager(extState.version, EXT_MIN_VERSION);
+}
+
+// Loopt achter op de Web Store, maar boven de harde ondergrens: melden, niet
+// blokkeren. Zonder dit stond er groen "Extension active (v1.0.258)" terwijl er
+// eenentwintig versies nieuwer klaarstonden — Egbert kon dat nergens zien.
+function extVersionAchter() {
+  if (extState.status !== 'ready' || !extState.version) return false;
+  if (!_gepubliceerdeVersie || extVersionIsOld()) return false;
+  return versieLager(extState.version, _gepubliceerdeVersie);
 }
 
 // ── Add / Edit Item ──────────────────────────────────────────────
@@ -6351,6 +6449,50 @@ async function bulkImportAllCandidates() {
     }
     await loadDuplicates(true);   // een import is precies waar dubbelen ontstaan
     await loadAll();
+
+    // Een import is pas af als de advertenties ook bruikbaar zijn.
+    //
+    // WAAROM (01-09-2026, Egbert): Marktplaats levert bij een zakelijke
+    // (Admarkt) import geen prijs en geen omschrijving mee — die staan alleen op
+    // de openbare advertentie. Het scherm meldde "✅ Import successful" en liet
+    // honderd tot tweehonderd artikelen achter zonder prijs of tekst, met een
+    // knop die de verkoper zelf moest zien staan. Nu maakt de import het af, en
+    // wat er daarna nog leeg is wordt genoemd in plaats van verzwegen.
+    let aanvulNote = '';
+    const teVullen = (state.items || []).filter(mistKernGegevens).length;
+    const heeftMp = (state.listings || []).some(
+      l => l.platform === 'marktplaats' || l.platform === '2dehands');
+    if (teVullen && heeftMp) {
+      setBusyText(`Import done — fetching the missing price/description for ${teVullen} item(s)…`);
+      try {
+        // Vier rondes, geen zestig. Een import van duizenden advertenties zou
+        // hem anders nog tien minuten voor een wachtscherm zetten. Wat na deze
+        // rondes overblijft haalt de server zelf op — elk kwartier een ronde —
+        // dus dat hoeft hij hier niet uit te zitten.
+        const r = await vulUitMarktplaats((t, pr) => setBusyText(
+          `Fetching missing details… ${t} description(s) and ${pr} price(s) so far`), 4);
+        state.items = await fetchAllItems();
+        applyFilters(false);
+        const over = (state.items || []).filter(mistKernGegevens).length;
+        aanvulNote = (r.teksten || r.prijzen)
+          ? `\n\nMarktplaats does not include price and description in a business import, ` +
+            `so those were fetched from your own public adverts: ` +
+            `${r.teksten} description(s) and ${r.prijzen} price(s).` +
+            (over ? ` ${over} item(s) still need one; those keep being fetched in the ` +
+                    `background. Set the "Complete or not" filter to "Missing anything" ` +
+                    `to see which.` : '')
+          : `\n\n⚠️ ${teVullen} item(s) came in without a price or description. Marktplaats does not ` +
+            `include those in a business import, and they could not be found on your public adverts ` +
+            `either. Set the "Complete or not" filter to "Missing anything" to fill them in.`;
+      } catch (e) {
+        aanvulNote = `\n\n⚠️ ${teVullen} item(s) came in without a price or description, and fetching ` +
+                     `those failed (${e.message}). Use "Fill … from Marktplaats" above the item list to try again.`;
+      }
+    } else if (teVullen) {
+      aanvulNote = `\n\n⚠️ ${teVullen} item(s) have no price or description yet, so they cannot be ` +
+                   `published. Set the "Complete or not" filter to "Missing anything" to find them.`;
+    }
+
     await loadImportCandidates();
     setBusy(false);
     // Tell the user clearly whether it worked — not just a toast that vanishes.
@@ -6368,9 +6510,9 @@ async function bulkImportAllCandidates() {
     } else if (imported === 0 && totalFailed > 0) {
       alert(`❌ Import failed — ${totalFailed} listing(s) could not be imported.`);
     } else if (totalFailed > 0) {
-      alert(`⚠️ Import partly succeeded: ${detail}\n\nThe failed ones stay out of your items — you can rescan and retry them.${parkedNote}`);
+      alert(`⚠️ Import partly succeeded: ${detail}\n\nThe failed ones stay out of your items — you can rescan and retry them.${parkedNote}${aanvulNote}`);
     } else {
-      alert(`✅ Import successful: ${detail}${parkedNote}`);
+      alert(`✅ Import successful: ${detail}${parkedNote}${aanvulNote}`);
     }
   } catch (e) {
     // Even on error, refresh so any items already imported before the failure show up.
@@ -8904,6 +9046,61 @@ async function saveRelistDagen() {
   }
 }
 
+// Wat publiceren echt blokkeert. Smaller dan mistMarktplaatsGegevens (dat kijkt
+// ook naar merk, maat en een tweede foto): zonder prijs of zonder tekst kán een
+// advertentie niet geplaatst worden, de rest is afwerking.
+//
+// WAAROM DIT APART STAAT (01-09-2026, Egbert): de import meldde "✅ Import
+// successful" terwijl bij honderd tot tweehonderd artikelen de prijs of de tekst
+// ontbrak. Marktplaats levert die bij een zakelijke (Admarkt) import niet mee —
+// ze staan alleen op de openbare advertentie. Dat was dus geen mislukte import
+// maar een halve, en het scherm zei er niets over.
+function mistKernGegevens(i) {
+  return !i.price || !String(i.description || '').trim();
+}
+
+// De ophaalronde zelf, zonder vragen en zonder meldingen — zodat de import hem
+// net zo goed kan draaien als de knop.
+async function vulUitMarktplaats(meld, maxRondes) {
+  let prijzen = 0, teksten = 0, gedaan = 0, reden = '', open = false;
+  // Marktplaats remt zelf soms tijdelijk af bij herhaalde belasting kort na
+  // elkaar — gemeten 25-08-2026: een tweede ronde vlak na een geslaagde
+  // eerste ronde leverde 0 op, terwijl er nog volop te doen was. Eén lege
+  // ronde was voorheen genoeg om helemaal te stoppen ("klaar" melden terwijl
+  // er nog honderden open stonden) — precies wat Egbert Brouwer meldde. Nu
+  // pas na een paar lege rondes ACHTER ELKAAR opgeven, met een oplopende
+  // pauze ertussen zodat Marktplaats kan bijkomen.
+  //
+  // 3 -> 6 pogingen (25-08-2026, Daniels wens): geduldiger zijn kost hier
+  // niets extra's aan belasting bij Marktplaats — het is dezelfde oplopende
+  // pauze, alleen langer volgehouden voor we opgeven. Bij een écht blijvend
+  // probleem betekent dit alleen dat Egbert iets langer moet wachten voor
+  // het scherm het meldt; bij een tijdelijke hik geeft het meer kans om er
+  // zelf doorheen te komen.
+  let legeRondesOpRij = 0;
+  for (let ronde = 0; ronde < (maxRondes || 60); ronde++) {
+    const res = await apiFetchRetry(`${API}/api/items/fill-from-marktplaats?limit=150`,
+                                    { method: 'POST' });
+    const data = await parseJsonSafe(res);
+    if (!res.ok) throw new Error((data && data.detail) || `HTTP ${res.status}`);
+    prijzen += data.prijs || 0;
+    teksten += data.omschrijving || 0;
+    gedaan += data.gevonden || 0;
+    reden = data.reden || '';
+    open = !!data.te_doen;
+    if (meld) meld(teksten, prijzen);
+    if (!data.te_doen) break;  // echt niets meer open — klaar
+    if (!data.prijs && !data.omschrijving) {
+      legeRondesOpRij++;
+      if (legeRondesOpRij >= 6) break;  // zes keer niets, dan is het echt op
+      await new Promise(r => setTimeout(r, 4000 * legeRondesOpRij));
+      continue;
+    }
+    legeRondesOpRij = 0;
+  }
+  return { prijzen, teksten, gedaan, reden, open };
+}
+
 async function fillFromMarktplaats() {
   const open = (state.items || []).filter(mistMarktplaatsGegevens).length;
   if (!open) return;
@@ -8918,41 +9115,10 @@ async function fillFromMarktplaats() {
   setBusy(true, 'Looking up your Marktplaats adverts…');
   let prijzen = 0, teksten = 0, gedaan = 0, reden = '';
   try {
-    // Marktplaats remt zelf soms tijdelijk af bij herhaalde belasting kort na
-    // elkaar — gemeten 25-08-2026: een tweede ronde vlak na een geslaagde
-    // eerste ronde leverde 0 op, terwijl er nog volop te doen was. Eén lege
-    // ronde was voorheen genoeg om helemaal te stoppen ("klaar" melden terwijl
-    // er nog honderden open stonden) — precies wat Egbert Brouwer meldde. Nu
-    // pas na een paar lege rondes ACHTER ELKAAR opgeven, met een oplopende
-    // pauze ertussen zodat Marktplaats kan bijkomen.
-    //
-    // 3 -> 6 pogingen (25-08-2026, Daniels wens): geduldiger zijn kost hier
-    // niets extra's aan belasting bij Marktplaats — het is dezelfde oplopende
-    // pauze, alleen langer volgehouden voor we opgeven. Bij een écht blijvend
-    // probleem betekent dit alleen dat Egbert iets langer moet wachten voor
-    // het scherm het meldt; bij een tijdelijke hik geeft het meer kans om er
-    // zelf doorheen te komen.
-    let legeRondesOpRij = 0;
-    for (let ronde = 0; ronde < 60; ronde++) {
-      const res = await apiFetchRetry(`${API}/api/items/fill-from-marktplaats?limit=150`,
-                                      { method: 'POST' });
-      const data = await parseJsonSafe(res);
-      if (!res.ok) throw new Error((data && data.detail) || `HTTP ${res.status}`);
-      prijzen += data.prijs || 0;
-      teksten += data.omschrijving || 0;
-      gedaan += data.gevonden || 0;
-      reden = data.reden || '';
-      setBusyText(`Fetched ${teksten} description${teksten === 1 ? '' : 's'} and ${prijzen} price${prijzen === 1 ? '' : 's'}…`);
-      if (!data.te_doen) break;  // echt niets meer open — klaar
-      if (!data.prijs && !data.omschrijving) {
-        legeRondesOpRij++;
-        if (legeRondesOpRij >= 6) break;  // zes keer niets, dan is het echt op
-        await new Promise(r => setTimeout(r, 4000 * legeRondesOpRij));
-        continue;
-      }
-      legeRondesOpRij = 0;
-    }
-    await fetchAllItems();
+    ({ prijzen, teksten, gedaan, reden } = await vulUitMarktplaats(
+      (t, p) => setBusyText(
+        `Fetched ${t} description${t === 1 ? '' : 's'} and ${p} price${p === 1 ? '' : 's'}…`)));
+    state.items = await fetchAllItems();
     applyFilters(false);
   } catch (e) {
     setBusy(false);
