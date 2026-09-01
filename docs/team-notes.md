@@ -2849,3 +2849,44 @@ klantenservice een bekende storing niet in zijn eigen woorden.
 lukt, is geen vangnet. Elke regel die zegt "kun je X niet, doe dan Y" hoort
 onvoorwaardelijk in de opdracht te staan — het geval waarin hij nodig is, is per
 definitie het geval waarin de voorwaarde niet klopt.
+
+### 01-09-2026 — Amanda's teksten stonden één plaats achter de afkapstreep
+
+Amanda: "Ik heb idd eentje kunnen refreshen en die zet hij dan in de juiste
+categorie op MP neer! Hij haalt wel nog steeds niet alle teksten uit de
+omschrijvingen in de advertenties op."
+
+De reparatie van 29-08 (`vul_ontbrekende_teksten_aan`, elk kwartier een verkoper
+bijwerken vanaf de server) draaide gewoon. Hij deed bij haar alleen niets, en dat
+was met geen enkele logregel te zien: hij meldde netjes dat hij 150 items had
+behandeld.
+
+**Nagemeten aan haar echte voorraad**, niet beredeneerd: 479 items, 200 zonder
+omschrijving, verkopersnummer 12058863. De ronde pakt alles wat "iets mist" en
+kapt dat af op 150. Maar `_mist_iets` telt ook een leeg merk en een lege maat
+mee — en Amanda verkoopt brocante, dus 459 van haar 479 items missen per
+definitie iets, voor altijd. Van die lijst had geen van de eerste 150 een lege
+omschrijving. Het eerste item zónder tekst stond op plek **150**: één plaats
+achter de streep. Elke ronde opnieuw, sinds 29-08.
+
+Dezelfde muur zat voor de knop "Fill from Marktplaats" — die kapt hetzelfde
+lijstje op dezelfde plek af. Het scherm geeft na zes lege rondes op, dus wie de
+knop wél vond kreeg "niets gevonden" te zien terwijl er 200 teksten klaarstonden.
+
+Gerepareerd in `backend/services/mp_enrich.py` met `_deze_ronde`: wat publiceren
+blokkeert gaat voor (eerst zonder tekst, dan zonder prijs, dan één foto, dan de
+rest), en de startplek schuift op zodra een ronde niets oplevert.
+
+**Bewezen op de echte gegevens, dezelfde aanroep twee keer, zonder te schrijven:**
+oude selectie 20 items → 0 teksten. Nieuwe selectie 20 items → 20 teksten, en 18
+kregen meteen ook de rest van hun foto's. Plus zeven tests in
+`tests/test_teksten_achteraan_de_rij.py` op haar gemeten vorm, met de selectie van
+vóór vandaag ernaast.
+
+**Les, breder dan deze melding:** een wachtrij die altijd bij het begin begint is
+geen wachtrij maar een vaste kop. Zodra er ook maar één reden is waarom een item
+nooit "af" raakt — hier een merkveld dat bij brocante nooit gevuld wordt — houdt
+die kop de rest van de rij tegen, en blijft de ronde net zo lang werk melden als
+dat er niets gebeurt. Elke ronde die een lijst afkapt heeft daarom twee dingen
+nodig: een volgorde die zegt wat er het meest toe doet, en een startplek die
+opschuift als er niets uitkomt.

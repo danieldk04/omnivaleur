@@ -564,6 +564,76 @@ async def _in_batches(taken: list, worker, deadline: float):
     return resultaten, taken[i:]
 
 
+# Waar de vorige ronde voor deze verkoper ophield. Alleen in het geheugen: na
+# een herstart begint iedereen weer vooraan, en dat is precies goed — vooraan
+# staat het werk dat er het meest toe doet.
+_beurt_per_verkoper: dict[str, int] = {}
+
+
+def _mist_iets(r: dict) -> bool:
+    """Valt er op dit item nog iets aan te vullen?
+
+    Niet alleen prijs en tekst. Een geïmporteerde advertentie kwam ook binnen
+    met één foto en zonder merk of maat, en juist dat blokkeert publiceren naar
+    Marktplaats en 2dehands. Het staat allemaal op dezelfde advertentiepagina
+    die we hier tóch al ophalen.
+    """
+    return (not r.get("heeft_tekst")
+            or not r.get("price")
+            or len(r.get("photo_urls") or []) <= 1
+            or not str(r.get("brand") or "").strip()
+            or not str(r.get("size") or "").strip())
+
+
+def _urgentie(r: dict) -> tuple:
+    """Wat blokkeert het meest? Dat gaat voor.
+
+    Zonder omschrijving kán een advertentie helemaal niet geplaatst worden — het
+    plaatsformulier van Marktplaats en 2dehands weigert hem. Zonder prijs
+    evenmin. Een ontbrekend merk of een ontbrekende maat is vervelend, maar
+    houdt niemand tegen. False sorteert vóór True, dus wat ontbreekt staat
+    vooraan.
+    """
+    return (bool(r.get("heeft_tekst")),
+            bool(r.get("price")),
+            len(r.get("photo_urls") or []) > 1)
+
+
+def _deze_ronde(open_: list, user_id: str, maximaal: int) -> list:
+    """Welke van de openstaande items pakken we deze ronde?
+
+    WAAROM DIT NIET GEWOON `open_[:maximaal]` IS (01-09-2026, Amanda Haas)
+    Dat stond er, en daardoor deed deze ronde bij haar sinds 29-08 elk kwartier
+    exact niets. Nagemeten aan haar echte voorraad: 459 van haar 479 items
+    tellen als "mist iets", want ze verkoopt brocante — geen merk, geen maat, en
+    die twee velden komen ook nooit meer. Van de eerste 150 uit die lijst had
+    er niet één een lege omschrijving; het eerste item zónder tekst stond op
+    plek 150, één plaats achter de afkapstreep. Elke ronde opnieuw. Haar 200
+    teksten stonden dus achter een muur van 150 items die allang klaar waren,
+    en dezelfde muur zat voor de knop "Fill from Marktplaats", die precies
+    hetzelfde lijstje afkapt.
+
+    Twee regels, en de tweede is de belangrijkste:
+
+    1. Wat publiceren blokkeert gaat voor (`_urgentie`): eerst de items zonder
+       tekst, dan zonder prijs, dan met één foto, dan de rest.
+    2. En daarna schuift de startplek elke ronde op. Zonder dat kan een kop van
+       items die om wat voor reden dan ook nooit te vullen is — advertenties die
+       van Marktplaats verwijderd zijn, bijvoorbeeld — de rest van de lijst
+       alsnog eeuwig vasthouden. Dat is dezelfde fout in een nieuw jasje. Nu
+       krijgt iedereen gegarandeerd binnen een paar rondes een beurt.
+    """
+    op_volgorde = sorted(open_, key=_urgentie)
+    if not maximaal or len(op_volgorde) <= maximaal:
+        _beurt_per_verkoper.pop(user_id, None)
+        return op_volgorde
+    start = _beurt_per_verkoper.get(user_id, 0) % len(op_volgorde)
+    _beurt_per_verkoper[user_id] = (start + maximaal) % len(op_volgorde)
+    # Rondom doorlopen, zodat een lading die over het einde heen valt niet
+    # halfleeg terugkomt.
+    return (op_volgorde + op_volgorde)[start:start + maximaal]
+
+
 async def verrijk(db, user_id: str, schrijf: bool = True,
                  maximaal: int = 0, melden=None) -> dict:
     """Vul prijs en omschrijving aan voor items die ze missen.
@@ -629,20 +699,7 @@ async def verrijk(db, user_id: str, schrijf: bool = True,
     for r in rijen:
         r["heeft_tekst"] = r["id"] not in zonder_tekst
 
-    def _mist_iets(r: dict) -> bool:
-        # Niet alleen prijs en tekst. Een geïmporteerde advertentie kwam ook
-        # binnen met één foto en zonder merk of maat, en juist dat blokkeert
-        # publiceren naar Marktplaats en 2dehands. Het staat allemaal op dezelfde
-        # advertentiepagina die we hier tóch al ophalen.
-        return (not r.get("heeft_tekst")
-                or not r.get("price")
-                or len(r.get("photo_urls") or []) <= 1
-                or not str(r.get("brand") or "").strip()
-                or not str(r.get("size") or "").strip())
-
-    open_ = [r for r in rijen if _mist_iets(r)]
-    if maximaal:
-        open_ = open_[:maximaal]
+    open_ = _deze_ronde([r for r in rijen if _mist_iets(r)], user_id, maximaal)
 
     # Nu pas de echte teksten, en alleen van wat we aanpakken. `_is_afgekapt`
     # verderop vergelijkt de tekst die wij hebben met die op de advertentie, dus
@@ -781,6 +838,14 @@ async def verrijk(db, user_id: str, schrijf: bool = True,
                     (await naast_de_lus(lambda: db.table("items").update(patch).eq("id", item["id"]).execute()))
                 except Exception as e:  # noqa: BLE001
                     logger.warning("mp_enrich: opslaan mislukt voor %s: %s", item["id"], e)
+
+    # Heeft deze ronde iets opgeleverd, dan begint de volgende weer vooraan: de
+    # kop van de lijst is dan echt het volgende dringende werk. Leverde hij
+    # niets op, dan blijft de startplek staan waar `_deze_ronde` hem zette en
+    # schuift de volgende ronde door — zo kan een kop die niet te vullen is de
+    # rest nooit blijvend tegenhouden.
+    if uit["prijs"] or uit["omschrijving"] or uit["fotos"] or uit["kenmerken"]:
+        _beurt_per_verkoper.pop(user_id, None)
     return uit
 
 
