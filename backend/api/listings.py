@@ -331,6 +331,11 @@ VERDENKING_REDENEN = {
     "label": "Mogelijk verkocht: de advertentiepagina toont zelf 'verkocht' of 'gereserveerd'.",
     "weg": "Mogelijk verkocht: de advertentie is niet meer op het platform te vinden. "
            "Let op — op Marktplaats verdwijnt een gratis advertentie ook vanzelf na 30 dagen.",
+    "verdwenen_te_jong":
+        "Mogelijk verkocht: de advertentie was al van het platform af toen we hem "
+        "voor het herplaatsen wilden weghalen, en hij was nog te jong om vanzelf te "
+        "verlopen. Er is dus niets opnieuw geplaatst. Verkocht? Bevestig het hier. "
+        "Zo niet, dan zetten we hem terug te koop.",
 }
 VERDENKING_STANDAARD = VERDENKING_REDENEN["weg"]
 
