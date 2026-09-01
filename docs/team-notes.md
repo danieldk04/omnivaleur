@@ -3270,6 +3270,7 @@ Een volledige ronde over alle 1.656 is niet nodig: `backend/services/polling.py`
 doet dit al uit zichzelf — oudste eerst, en na twee keer achter elkaar
 niet-gevonden gaat een advertentie op delisted. Deze twee waren simpelweg nog niet
 twee keer aan de beurt geweest. De boekhouding (`not_found_count`) is gelijkgezet
+met wat die ronde zelf zou hebben opgeschreven.
 
 ## 01-09-2026 — "publiceren-mislukt": met voorrang doorgegeven, maar al gerepareerd
 
@@ -3311,4 +3312,3 @@ melders raakte deze route, en het rook naar een lopende wijziging van een
 andere sessie op `backend/database.py` (herhaalde bestandsvergrendelingen
 tijdens dit onderzoek wijzen op gelijktijdig werk daar). Verdient een eigen
 blik zodra het zeker is dat er niemand meer in zit.
-met wat die ronde zelf zou hebben opgeschreven.
