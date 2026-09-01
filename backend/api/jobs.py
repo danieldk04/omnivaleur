@@ -1995,10 +1995,23 @@ def fail_job(job_id: str, body: dict, user_id: str = Depends(get_current_user)):
         # views, so it looked deleted while it was actually still up (and, for a
         # relist, left the item in limbo). Keep it "active" (its true state) and
         # attach a visible message so the UI can offer a retry instead of hiding it.
-        execute_with_retry(db.table("listings").update({
-            "status": "active",
-            "error_message": body.get("error", "Delist failed — the listing is still live. You can retry."),
-        }).eq("item_id", job["item_id"]).eq("platform", job["platform"]))
+        #
+        # ALLEEN DE ADVERTENTIE DIE DEZE OPDRACHT TE PAKKEN HAD (01-09-2026).
+        # Dit werkte élke rij van dat artikel op dat kanaal bij, en daar zijn er
+        # inmiddels tot zes van — één per eerdere herplaatsing. Eén mislukte
+        # verwijdering zette ze dus allemaal terug op 'actief', mét hun oude
+        # plaatsingsdatum, waarna het automatisch herplaatsen ze meteen weer
+        # oppakte. Dat is de lus waardoor (1288) en (1314) dagelijks opnieuw
+        # geplaatst werden. Bovendien wiste het een al gestelde vraag
+        # "is dit verkocht?" weer uit. Zie _verwijderdoelen.
+        melding = body.get("error", "Delist failed — the listing is still live. You can retry.")
+        for rij in _in_de_lus(_verwijderdoelen(db, job)):
+            if rij.get("status") in ("sold", "sold_unconfirmed"):
+                continue
+            execute_with_retry(db.table("listings").update({
+                "status": "active",
+                "error_message": melding,
+            }).eq("id", rij["id"]))
     return {"ok": True}
 
 
