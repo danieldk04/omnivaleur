@@ -1039,14 +1039,14 @@ def _verwijderdoelen(db, job: dict) -> list[dict]:
     basis = (lambda: db.table("listings").select("id,status,listed_at,platform_listing_id")
              .eq("item_id", job["item_id"]).eq("platform", job["platform"]))
     if rij_id:
-        rijen = (await naast_de_lus(lambda: basis().eq("id", rij_id).execute())).data or []
+        rijen = execute_with_retry(basis().eq("id", rij_id)).data or []
         if rijen:
             return rijen
     if nummer:
-        rijen = (await naast_de_lus(lambda: basis().eq("platform_listing_id", nummer).execute())).data or []
+        rijen = execute_with_retry(basis().eq("platform_listing_id", nummer)).data or []
         if rijen:
             return rijen
-    alle = (await naast_de_lus(lambda: basis().execute())).data or []
+    alle = execute_with_retry(basis()).data or []
     return [r for r in alle if r.get("status") not in EINDSTATUSSEN]
 
 
