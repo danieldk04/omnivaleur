@@ -926,6 +926,13 @@ input[type="checkbox"].row-check { width: 15px; height: 15px; cursor: pointer; a
         </div>
       </div>
 
+      <!-- "Is dit verkocht?" — óók hier, en niet alleen bij Items.
+           Dit zijn verkopen in wording: ze tellen nog niet mee in de omzet
+           hierboven, maar dit is wel de plek waar naar verkopen gekeken wordt.
+           Stond de vraag alleen bij Items, dan bleef hij daar onbeantwoord staan
+           terwijl de omzet in Analytics onverklaarbaar te laag was. -->
+      <div id="an-sold-confirm-bar" style="display:none;margin-top:16px"></div>
+
       <!-- Where the numbers come from: every sale in the period, itemised -->
       <div class="an-chart-card" style="margin-top:16px">
         <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:4px">
