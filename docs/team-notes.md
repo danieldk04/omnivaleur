@@ -3240,3 +3240,21 @@ De data nalopen wás de test.
 Verder: 8 advertenties staan bij ons op 'active' maar geven 404 bij Vinted. Dat
 is een aparte, mildere onnauwkeurigheid (verwijderd zonder dat wij het merkten)
 en niet in deze ronde aangepakt.
+
+**Naderhand rechtgezet (01-09-2026).** Gebruiker 3bfbed2c is Daniel zelf, dus er
+is géén klant geraakt — de enige verkeerde koppeling stond op het eigen account.
+
+En weghalen bleek niet de goede reparatie. Vinted's openbare zoekpagina laat zien
+dat (1353) Dark Green Suitsupply Cardigan gewoon online staat, onder nummer
+**9727142603** (nagelopen: HTTP 200, exacte titel, `is_closed:false`). Het record
+wees dus niet naar niets maar naar de buurman. Het nummer is gecorrigeerd in
+plaats van gewist; had ik de rij verwijderd, dan was er bij een volgende
+publicatie een dubbele advertentie ontstaan.
+
+Nagemeten na de correctie: 1352 houdt zijn eigen nummer, en er staat geen nummer
+meer dubbel behalve drie bekende gevallen — dat zijn dubbele kopieën van hetzelfde
+artikel (identieke titel, identiek tijdstempel), het bestaande dubbelen-probleem,
+geen verkeerde nummers.
+
+**Les:** "dit record klopt niet" is nog geen "dit record moet weg". Eerst kijken
+wat het hóórt te zijn.
