@@ -177,11 +177,13 @@ ok("alle audiocategorieën hebben een Vinted-hint",
 // werd afgemeld als de zijne.
 console.log("\nGeen afmelding op andermans advertentie");
 
-ok("er is een eigendomscontrole", /async function bgVintedEigenAdvertentie\(origin, listingId\)/.test(BG));
+ok("er is een eigendomscontrole", /async function bgVintedEigenAdvertentie\(origin, listingId, item\)/.test(BG));
 ok("uitgelogd telt als 'niet van hem'",
    /if \(ingelogd === false\) return false;   \/\/ uitgelogd: nooit van hem/.test(BG));
 ok("'nog niet in de kast' levert nooit false op (een echte publicatie sneuvelt niet)",
-   /return items\.some\(\(it\) => String\(it\.id\) === want\) \? true : null;/.test(BG));
+   /if \(!gevonden\) return null;\s*\/\/ nog niet geregistreerd: laat door/.test(BG));
+ok("een advertentie van hemzelf maar van het verkeerde artikel wordt tegengehouden",
+   /return vintedTitelHoortBij\(gevonden\.title, item\) \? true : false;/.test(BG));
 ok("de controle staat vóór de afmelding",
    BG.indexOf("const vanHem = await bgVintedEigenAdvertentie(") <
    BG.indexOf('await finaliseJob(meta.serverUrl, meta.jobId, "complete", {\n    platform_listing_id: listingId'));

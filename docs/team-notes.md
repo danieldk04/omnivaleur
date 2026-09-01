@@ -3199,3 +3199,44 @@ opgelost was.
 Alle 68 audiocategorieën zijn nagelopen over de hele keten: Marktplaats-nummers,
 eBay-vertaling en Vinted-hints staan er alle 68 bij. Er is dus niets half
 gekoppeld.
+
+### 01-09-2026 — Nagelopen: staan er verkeerde Vinted-nummers in de database?
+
+Ja, één. En het uitzoeken legde een gat bloot in de reparatie van vanmiddag.
+
+**Hoe ik het heb afgebakend.** Er staan 1.721 Vinted-advertenties in de database,
+1.656 met een echt nummer. Die allemaal bij Vinted opvragen liep vast: boven zo'n
+veertig snelle verzoeken knijpt Vinted af (eerste poging: 1.613 van de 1.656
+onleesbaar — een meetfout, geen resultaat). Belangrijker was de inzicht dat het
+ook niet hóéft: een nummer dat uit een **scan** komt is uit de eigen kast van de
+verkoper gelezen en kan per definitie niet van een vreemde zijn. Alleen een
+**geslaagde publicatie-opdracht** kan een verkeerd nummer opleveren, en dat zijn
+er ooit 51 geweest. Die 51 rustig nagelopen (één voor één, 1,2s ertussen): 43
+leesbaar, 8 bestaan niet meer bij Vinted, 0 onleesbaar.
+
+**Uitkomst.** 18 leken af te wijken, maar 17 daarvan waren gewoon de vertaling —
+onze titel is Nederlands, Vinted toont de vertaalde. Eén was echt:
+
+> artikel **(1353) Dark Green Suitsupply Cardigan** droeg het nummer van
+> **(1352) Navy Suitsupply Zip Vest** (9727012245). Beide van dezelfde verkoper.
+> 1353's advertentie is geregistreerd om 08:34:50, 1352's eigen advertentie om
+> 08:37:55 — drie minuten later.
+
+Gevolg als het zo blijft staan: wordt 1353 ooit verwijderd of herplaatst, dan gaat
+de advertentie van 1352 eraan. 1353 staat waarschijnlijk helemaal niet op Vinted.
+
+**Het gat in de reparatie.** Mijn eigendomscontrole van vanmiddag vraagt "staat
+deze advertentie in de kast van deze verkoper". Bij 1352/1353 is het antwoord
+*ja* — het is zijn eigen advertentie, alleen de verkeerde. De controle had dit
+dus doorgelaten. Er wordt nu ook op titel vergeleken, ruimhartig genoeg om
+vertalingen en door Vinted afgekapte titels door te laten (getest), en met het
+SKU-nummer als hardste bewijs: dat vertaalt niet mee.
+
+**Les:** ik had de reparatie gebouwd op één waargenomen scenario (uitgelogd,
+klikt op andermans advertentie) en de test daarop geschreven. Het énige geval dat
+in de echte data voorkomt was een ánder scenario, dat er precies doorheen viel.
+De data nalopen wás de test.
+
+Verder: 8 advertenties staan bij ons op 'active' maar geven 404 bij Vinted. Dat
+is een aparte, mildere onnauwkeurigheid (verwijderd zonder dat wij het merkten)
+en niet in deze ronde aangepakt.

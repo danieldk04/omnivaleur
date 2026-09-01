@@ -1987,14 +1987,23 @@ async function vintedIngelogd(origin) {
 // Uitgelogd is wél beslissend: wie niet is ingelogd, kan onmogelijk zojuist iets
 // geplaatst hebben. Dat is precies het geval dat we moeten tegenhouden, en het
 // is met één vraag vast te stellen.
-async function bgVintedEigenAdvertentie(origin, listingId) {
+async function bgVintedEigenAdvertentie(origin, listingId, item) {
   const want = String(listingId);
   const ingelogd = await vintedIngelogd(origin);
   if (ingelogd === false) return false;   // uitgelogd: nooit van hem
   if (ingelogd !== true) return null;     // niet vast te stellen: laat het door
 
-  // Wel ingelogd. Staat hij in de kast, dan weten we het zeker (true). Staat hij
-  // er niet, dan zegt dat niets — zie hierboven — en geven we 'onbekend' terug.
+  // Wel ingelogd. Staat hij in de kast, dan is het een advertentie van hemzelf —
+  // maar dat is niet genoeg. Nagemeten op 01-09-2026 in de echte database:
+  // artikel (1353) Dark Green Suitsupply Cardigan droeg het nummer van (1352)
+  // Navy Suitsupply Zip Vest. Beide van dezelfde verkoper, dus een eigendoms-
+  // controle alleen had dit doorgelaten. Daarom vergelijken we ook de titel: die
+  // van de kast hoort bij het artikel dat we zojuist plaatsten. Klopt dat niet,
+  // dan is dit de verkeerde advertentie en melden we niets af.
+  //
+  // Staat hij nog niet in de kast (Vinted's controle duurt een minuut of twee),
+  // dan zegt dat niets en geven we 'onbekend' terug — een echte publicatie mag
+  // hier nooit sneuvelen.
   try {
     const me = await fetch(`${origin}/api/v2/users/current`, {
       headers: { Accept: "application/json" }, credentials: "include",
@@ -2007,10 +2016,39 @@ async function bgVintedEigenAdvertentie(origin, listingId) {
       { headers: { Accept: "application/json" }, credentials: "include" });
     if (!res.ok) return null;
     const items = (await res.json())?.items || [];
-    return items.some((it) => String(it.id) === want) ? true : null;
+    const gevonden = items.find((it) => String(it.id) === want);
+    if (!gevonden) return null;                 // nog niet geregistreerd: laat door
+    if (!item) return true;                     // niets om mee te vergelijken
+    return vintedTitelHoortBij(gevonden.title, item) ? true : false;
   } catch (_) {
     return null;
   }
+}
+
+// Hoort deze Vinted-titel bij dit dashboarditem? Ruimhartig, want Vinted toont de
+// VERTAALDE titel en kapt lange titels af: het volstaat dat een van onze titels
+// (met of zonder het SKU-nummer vooraan) erin voorkomt of ermee begint. Alleen
+// als geen enkele vorm past, noemen we het een andere advertentie.
+function vintedTitelHoortBij(vintedTitel, item) {
+  const kaal = (t) => String(t || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+  const zonderSku = (t) => kaal(String(t || "").replace(/^\s*\([^)]{1,24}\)\s*/, ""));
+  const hun = kaal(vintedTitel);
+  if (!hun) return true;                        // geen titel gekregen: niet ons oordeel
+  const onze = [item.title, item.title_en, item.title_nl].filter(Boolean);
+  if (!onze.length) return true;
+  for (const t of onze) {
+    for (const vorm of [kaal(t), zonderSku(t)]) {
+      if (!vorm) continue;
+      if (hun.includes(vorm) || vorm.includes(hun)) return true;
+      const kop = vorm.slice(0, Math.max(12, Math.floor(vorm.length / 2)));
+      if (kop && hun.startsWith(kop)) return true;
+    }
+  }
+  // Het SKU-nummer is het hardste bewijs dat er is: dat vertaalt niet mee.
+  const onsSku = (String(item.title || "").match(/^\s*\((\d{1,6})\)/) || [])[1];
+  const hunSku = (String(vintedTitel || "").match(/^\s*\(?(\d{1,6})\)?\b/) || [])[1];
+  if (onsSku && hunSku) return onsSku === hunSku;
+  return false;
 }
 
 async function bgVindVintedAdvertentie(item) {
@@ -4747,7 +4785,7 @@ chrome.tabs.onUpdated.addListener(async (tabId, changeInfo) => {
   // Zie de toelichting bij bgVintedEigenAdvertentie: zonder dit werd een
   // willekeurige advertentie waar de verkoper op klikte afgemeld als de zijne.
   if (meta.platform === "vinted") {
-    const vanHem = await bgVintedEigenAdvertentie(new URL(url).origin, listingId);
+    const vanHem = await bgVintedEigenAdvertentie(new URL(url).origin, listingId, meta.payload || meta);
     if (vanHem === false) {
       console.log(`[Omnivaleur] /items/${listingId} staat niet in de kast van deze verkoper — niet afgemeld.`);
       return;

@@ -31,7 +31,8 @@ global.fetch = async (url) => {
   throw new Error("onverwachte aanroep: " + url);
 };
 
-eval(functieUit("vintedIngelogd") + functieUit("bgVintedEigenAdvertentie"));
+eval(functieUit("vintedIngelogd") + functieUit("bgVintedEigenAdvertentie")
+     + BG.slice(BG.indexOf("function vintedTitelHoortBij("), BG.indexOf("\n}\n", BG.indexOf("function vintedTitelHoortBij(")) + 2));
 
 let mislukt = 0;
 const ok = (naam, v, extra) => {
@@ -40,7 +41,9 @@ const ok = (naam, v, extra) => {
 };
 
 const KAST = (ids, totalPages = 1) => ({
-  status: 200, body: { items: ids.map(id => ({ id })), pagination: { total_pages: totalPages } },
+  status: 200,
+  body: { items: ids.map(x => (typeof x === "object" ? x : { id: x, title: "" })),
+          pagination: { total_pages: totalPages } },
 });
 const UITGELOGD = { status: 401, body: { code: 100, message_code: "invalid_authentication_token" } };
 const INGELOGD = { status: 200, body: { user: { id: 42 } } };
@@ -67,9 +70,43 @@ const INGELOGD = { status: 200, body: { user: { id: 42 } } };
   console.log("\nbgVintedEigenAdvertentie");
   const O = "https://www.vinted.nl";
 
+  const CARDIGAN = { title: "(1353) Dark Green Suitsupply Cardigan - Men S - Very Good" };
+  const VEST = { title: "(1352) Navy Suitsupply Zip Vest - Men XS - Very Good" };
+
   antwoorden = { "users/current": INGELOGD, "wardrobe": KAST([111, 222, 333]) };
   ok("eigen advertentie = true", (await bgVintedEigenAdvertentie(O, 222)) === true);
   ok("id als tekst telt ook", (await bgVintedEigenAdvertentie(O, "222")) === true);
+
+  // DE ECHTE FOUT UIT DE DATABASE (01-09-2026): artikel 1353 droeg het nummer
+  // van 1352. Beide van dezelfde verkoper, dus eigendom alleen is niet genoeg.
+  antwoorden = { "users/current": INGELOGD,
+                 "wardrobe": KAST([{ id: 9727012245, title: VEST.title }]) };
+  ok("advertentie van de verkoper zelf, maar het VERKEERDE artikel = false",
+     (await bgVintedEigenAdvertentie(O, 9727012245, CARDIGAN)) === false,
+     await bgVintedEigenAdvertentie(O, 9727012245, CARDIGAN));
+  ok("hetzelfde artikel = true",
+     (await bgVintedEigenAdvertentie(O, 9727012245, VEST)) === true);
+
+  // Vinted toont de VERTAALDE titel. Dat mag nooit als "verkeerde advertentie"
+  // gelden, anders sneuvelt elke Nederlandse advertentie.
+  antwoorden = { "users/current": INGELOGD,
+                 "wardrobe": KAST([{ id: 777, title: "Dubarry of Ireland mens shoes size 41 brown" }]) };
+  ok("een vertaalde titel telt gewoon als dezelfde advertentie",
+     (await bgVintedEigenAdvertentie(O, 777,
+        { title: "Dubarry of Ireland Herenschoenen Maat 41 Bruin",
+          title_en: "Dubarry of Ireland mens shoes size 41 brown" })) === true);
+
+  // Afgekapte titel: Vinted kort lange titels in.
+  antwoorden = { "users/current": INGELOGD,
+                 "wardrobe": KAST([{ id: 888, title: "(1017) Grey Ralph Lauren Zip Vest" }]) };
+  ok("een afgekapte titel telt ook",
+     (await bgVintedEigenAdvertentie(O, 888,
+        { title: "(1017) Grey Ralph Lauren Zip Vest - Men S - Very Good" })) === true);
+
+  // Geen titel van Vinted gekregen: dan is het niet aan ons om te oordelen.
+  antwoorden = { "users/current": INGELOGD, "wardrobe": KAST([{ id: 999, title: "" }]) };
+  ok("zonder titel van Vinted geen oordeel",
+     (await bgVintedEigenAdvertentie(O, 999, CARDIGAN)) === true);
 
   // Dit is de storing van Budgetheld: een advertentie van een vreemde waar de
   // verkoper op klikte nadat Vinted hem naar de registratiepagina stuurde.
