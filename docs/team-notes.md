@@ -3258,3 +3258,16 @@ geen verkeerde nummers.
 
 **Les:** "dit record klopt niet" is nog geen "dit record moet weg". Eerst kijken
 wat het hóórt te zijn.
+
+**Die 8 alsnog nagekeken (01-09-2026).** Twee keer opgevraagd, alle acht bevestigd
+weg bij Vinted. Maar er waren er maar **twee** echt fout: zes stonden al goed als
+verkocht of verwijderd. De twee die op 'active' stonden (9067082034 Nike polo,
+9657888362 Massimo Dutti polo) staan nu op **delisted** — bewust niet op 'sold',
+want we weten dat ze eraf zijn, niet dat ze verkocht zijn, en dat verschil telt
+mee in de omzetcijfers. Er stond geen werk meer voor ze in de rij.
+
+Een volledige ronde over alle 1.656 is niet nodig: `backend/services/polling.py`
+doet dit al uit zichzelf — oudste eerst, en na twee keer achter elkaar
+niet-gevonden gaat een advertentie op delisted. Deze twee waren simpelweg nog niet
+twee keer aan de beurt geweest. De boekhouding (`not_found_count`) is gelijkgezet
+met wat die ronde zelf zou hebben opgeschreven.
