@@ -4263,7 +4263,7 @@ function renderSoldConfirmBar() {
   const meer = rows.length > TOON ? `<div style="font-size:11.5px;color:var(--muted);padding-top:8px">and ${rows.length - TOON} more &mdash; answer these first</div>` : '';
   const html = `<div style="margin:0 0 4px;padding:12px 14px;border:1px solid #f59e0b55;background:rgba(245,158,11,.08);border-radius:10px">
     <div style="font-weight:700;font-size:14px;margin-bottom:2px">❔ Did ${rows.length === 1 ? 'this item' : `these ${rows.length} items`} sell?</div>
-    <div style="font-size:12px;color:var(--muted)">Not counted in the revenue above yet &mdash; nothing has been removed anywhere either. Marktplaats and 2dehands don't tell us when you sell by hand, so we ask instead of guessing. <b>Yes, sold</b> takes it off every other platform and counts it in Analytics; <b>No</b> moves it to Archived.</div>
+    <div style="font-size:12px;color:var(--muted)">Nothing has been removed anywhere yet, and none of this counts towards your revenue until you answer. Marktplaats and 2dehands don't tell us when you sell by hand, so we ask instead of guessing. <b>Yes, sold</b> takes it off every other platform and counts it in Analytics; <b>No</b> moves it to Archived.</div>
     ${regels}${meer}
   </div>`;
   for (const b of balken) { b.style.display = 'block'; b.innerHTML = html; }
