@@ -766,7 +766,10 @@ window.CL = (() => {
     for (const [label, value] of [["Maat", item.size], ["Kleur", dutchColor(item.color)]]) {
       if (!value) continue;
       const el = findFieldByLabel(label);
-      if (el?.tagName === "SELECT" && !el.value) { fillNativeSelect(el, value); await sleep(300); }
+      // kiesMetTerugval, niet fillNativeSelect: staat onze waarde niet in de
+      // lijst van déze categorie, dan pakt hij het dichtstbijzijnde dat er wél
+      // in staat in plaats van het veld leeg te laten (zie COLOUR_FALLBACK).
+      if (el?.tagName === "SELECT" && !el.value) { kiesMetTerugval(el, label, value); await sleep(300); }
     }
 
     const brandEl = brandField();
