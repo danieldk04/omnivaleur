@@ -3312,3 +3312,91 @@ melders raakte deze route, en het rook naar een lopende wijziging van een
 andere sessie op `backend/database.py` (herhaalde bestandsvergrendelingen
 tijdens dit onderzoek wijzen op gelijktijdig werk daar). Verdient een eigen
 blik zodra het zeker is dat er niemand meer in zit.
+
+## 02-09-2026 — Toon (dejuistetoon): "alles blijft vaag en kan niets aanklikken"
+
+Toon mailde Daniel een foto van zijn publiceervenster: elk kanaal grijs met
+"MISSING: DESCRIPTION", alleen Vinted op groen. Geen knop die iets deed. Hij is
+er dagen mee bezig geweest.
+
+**Wat er echt aan de hand was.** Van zijn 1.024 geïmporteerde artikelen hadden er
+**244 geen omschrijving**. Zonder omschrijving weigert het dashboard te
+publiceren naar Marktplaats, 2dehands en Facebook — terecht, want die tekst is
+verplicht — maar het venster bood daarna geen enkele uitweg. 768 artikelen waren
+wél publiceerklaar, 24 misten alleen een categorie.
+
+**De keten, elke schakel gemeten en niet beredeneerd.**
+
+1. Vinted's kastoverzicht (`/api/v2/wardrobe/{id}/items`) geeft titel, prijs,
+   foto's, merk en maat, maar géén omschrijving. Gecontroleerd: nul van de vijf.
+2. Het detail-endpoint dat de extensie daarvoor gebruikte, `/api/v2/items/{id}`,
+   is **dood**: 404, allebei de varianten, ook zonder inloggen. Vinted heeft het
+   eruit gehaald. In Toons eigen scanlogboek staat het letterlijk:
+   `9739740557(api404/pg429)`.
+3. De openbare advertentiepagina `/items/{id}` heeft de tekst wél. Steekproef van
+   acht die bij ons leeg stonden: **alle acht** hadden op Vinted gewoon een
+   omschrijving van 51 tot 313 tekens. Het was dus geen ontbrekende data.
+4. Maar Vinted knijpt af. Gemeten vanaf één adres:
+   26 verzoeken op rij (0,5s ertussen) → 429. Daarna 30s pauze → nog 2 pagina's.
+   60s pauze → 15 pagina's. 120s pauze → ook 15. Ruwweg **vijftien per minuut**,
+   en dat is alles.
+5. De scan vroeg er per keer **1.017** op — driekwart daarvan voor teksten die
+   allang in het dashboard stonden — en verspilde er per advertentie ook nog twee
+   aan het dode endpoint. Zijn drie scans van dezelfde kast leverden
+   achtereenvolgens **52, 776 en 507** advertenties zonder tekst op. Dezelfde
+   kast, alleen een leger budget.
+6. En dan de schakel die het blijvend maakte: `_store_scan_results` schreef
+   `description = row.get("description") or None`. Een afgeknepen scan wíste dus
+   de tekst die een eerdere scan wél had gevonden. Bewijs uit zijn eigen
+   gegevens: **271 kandidaten stonden zonder tekst terwijl het artikel dat eruit
+   geïmporteerd was er wél een had** — die tekst kan alleen uit een eerdere scan
+   komen, dus die 271 zijn achteraf gewist.
+
+**Wat er is veranderd.**
+
+- De server stuurt bij een Vinted-scan mee van welke advertenties hij de tekst al
+  heeft (`tekst_bekend`, `imports._vinted_ids_met_tekst`). Bij Toon zakt dat van
+  1.017 op te halen pagina's naar 52. Alleen nummers worden gelezen, nooit de
+  teksten zelf — dat was de Supabase-verkeersles van 31-08.
+- De extensie slaat die over, stopt met het dode endpoint zodra het één keer 404
+  geeft, wacht bij een 429 dertig seconden in plaats van 1,2 seconde, en stopt
+  na drie keer afknijpen met wat ze heeft in plaats van leeg door te vragen. De
+  volgende scan pakt precies de rest op.
+- Een scan mag nooit meer leeghalen wat hij niet zelf kon vinden
+  (`jobs._rijke_velden`, apart gezet zodat de regel te testen is zonder scan).
+- Het publiceervenster is geen doodlopende straat meer. Staat de advertentie nog
+  op Vinted, dan is "Missing: description" een link die de tekst daar ophaalt.
+  Kan dat niet, dan brengt hij naar het invulscherm.
+- Nieuw: "Fill N from Vinted" naast de bestaande Marktplaats-knop, en
+  `POST /api/items/fill-from-vinted` eronder (`services/vinted_enrich.py`,
+  vier seconden tussen verzoeken — precies onder de gemeten grens).
+
+**Toons account is rechtgezet.** 240 van de 244 teksten alsnog opgehaald met
+`scripts/vul_vinted_teksten.py`. Vier niet: die Vinted-advertenties bestaan niet
+meer, daar valt niets te halen. Nooit iets overschreven, alleen lege velden.
+
+**Tweede probleem bij hem, apart en ook gerepareerd.** Van zijn 37 mislukte
+plaatsingen zijn er 9 hetzelfde geval: een maat of kleur die wij bewaren maar die
+Marktplaats in díe categorie niet aanbiedt. "Universeel" bij heren shorts —
+**zeven keer geprobeerd, zeven keer mislukt**, op beide kanalen. "bordeaux" bij
+wanddecoraties. Het verplichte veld bleef leeg en dan komt de advertentie er
+niet. Er is nu een terugval (dezelfde aanpak als `CONDITION_CANDIDATES`, die dit
+al maanden doet): staat onze waarde niet in de lijst, dan wordt het
+dichtstbijzijnde gekozen dat er wél in staat, uit de lijst zelf gelezen. En de
+foutmelding noemt voortaan wélke waarde niet paste en wat het veld wél aanbiedt,
+in plaats van alleen "size was left empty".
+
+**Wat ik NIET heb opgelost, met zoveel woorden.** 17 van zijn 37 mislukkingen zijn
+"Extension timed out … no response after 3 minutes", plus 4 keer een tabblad of
+Chrome die dichtging. Die zijn van hier niet te herleiden: daarvoor moet je in
+zijn browser meekijken terwijl het gebeurt. Ze vallen op 01-09 in twee dichte
+bosjes (19:22–19:40 acht stuks), wat past bij werken in een venster dat naar de
+achtergrond gaat — bekend patroon, zie de aantekening over verborgen tabbladen —
+maar dat is een vermoeden en geen meting, en zo staat het hier ook. Zijn
+2dehands-inlog is verlopen (2x foutcode 401); dat kan alleen hij zelf herstellen.
+
+**Les.** "De data ontbreekt" was hier drie keer achter elkaar het verkeerde
+antwoord. De tekst stond er gewoon; het adres was verhuisd, het budget was op, en
+wat er wél binnenkwam werd door de volgende ronde gewist. Een scan die elke keer
+alles opnieuw ophaalt lijkt grondig en is in werkelijkheid de reden dat hij niets
+binnenhaalt.

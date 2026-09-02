@@ -1808,6 +1808,6 @@ window.CL = (() => {
     findFieldByLabel, selectDropdown, fillBrand, fillManufacturer, selectBundleFree,
     selectDelivery, gekozenLevering, selectPakketWaarde, vulHalswijdte, keuzeveldenKort, typBeschrijvingEcht,
     selectPackageSize, uploadPhotos, submitListing, step, closePopup, smartTrunc, fillBidding,
-    clog, plaatsBlokkade, dutchColor, platteTekst, verifyMpGroupFields, repairMpGroupFields, ensureDescriptionStillFilled, selectCondition, selectIntendedFor, fillBrandField, logMpFields, mpPrijs,
+    clog, plaatsBlokkade, dutchColor, kiesMetTerugval, lijstOpties, platteTekst, verifyMpGroupFields, repairMpGroupFields, ensureDescriptionStillFilled, selectCondition, selectIntendedFor, fillBrandField, logMpFields, mpPrijs,
   };
 })();

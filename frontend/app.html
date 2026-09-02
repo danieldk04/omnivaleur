@@ -9275,7 +9275,7 @@ async function haalOmschrijvingOp(itemId, el) {
       // Opnieuw tekenen in het vak waar deze regel zelf in staat. Het gewone
       // publiceervenster en het bulkvenster gebruiken allebei deze functie maar
       // hebben een andere container; een vaste naam raakt er dus altijd één mis.
-      const vak = el && el.closest('[id$="platform-checkboxes"]');
+      const vak = el && el.closest('[id$="checkboxes"]');
       if (vak) renderPlatformCheckboxes(vak.id, itemId);
       applyFilters(false);
       return;

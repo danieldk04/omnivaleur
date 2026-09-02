@@ -17,6 +17,92 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ---
 
+## geen-doodlopende-straat-in-de-ui
+
+*02-09-2026 — Elk grijs vakje en elke blokkade in het dashboard hoort een klik te zijn die je naar de oplossing brengt*
+
+Een melding over wat er ontbreekt of geblokkeerd is, moet altijd een weg vooruit
+hebben: een link naar het invulscherm, naar de instelling, of een knop die het
+zelf oplost. Een uitgegrijsd vakje met alleen tekst eronder is een doodlopende
+straat.
+
+**Waarom:** Toon (dejuistetoon) stuurde op 02-09-2026 een foto van zijn
+publiceervenster — elk kanaal grijs met "MISSING: DESCRIPTION" — met de zin
+"Lukt niet alles blijft vaag en kan niets aanklikken". Hij was er dagen mee bezig.
+De melding klopte inhoudelijk volledig; er zat alleen niets achter. De tekst die
+hij miste stond gewoon nog op zijn Vinted-advertenties en was met één klik op te
+halen.
+
+**Hoe toe te passen:** in `renderPlatformCheckboxes` (app.html) hebben de andere
+blokkades dit al langer — "Not connected — set up →" gaat naar Platforms, "Not
+possible here" naar Preferences. Missende velden waren de uitzondering; die
+wijzen nu naar `haalOmschrijvingOp()` als de bron nog leeft, en anders naar
+`editItem()`. Doe hetzelfde bij elke nieuwe blokkade die je toevoegt.
+
+Zelfde gedachte een laag dieper: een foutmelding hoort te zeggen wélke waarde
+niet paste en wat er wél kan ("Universeel staat niet in de lijst bij size — die
+biedt: S, M, L, XL"), niet alleen dat een veld leeg bleef.
+
+Zie ook "rapportage-in-gewone-taal" en "klantmails-meer-empathie".
+
+---
+
+## scan-mag-nooit-leeghalen
+
+*02-09-2026 — "Een scan mag aanvullen en bijwerken, nooit wissen; een afgeknepen ronde schreef lege waarden over goede heen"*
+
+Een scan die iets niet kon ophalen mag dat veld **niet leegmaken**. Alleen een
+waarde die de scan echt vond wint; leegte verliest altijd van wat er al stond.
+
+**Waarom:** in `_store_scan_results` stond
+`"description": row.get("description") or None`. Platforms knijpen af, dus een
+scan komt geregeld terug met niets voor advertenties waar de vorige scan wél iets
+vond. Die leegte ging er keihard overheen. Bij Toon (dejuistetoon, 02-09-2026)
+zijn zo 271 kandidaatteksten gewist; wie daarna importeerde kreeg artikelen zonder
+tekst en kon niet meer publiceren naar Marktplaats, 2dehands en Facebook. Zijn
+klacht was "alles blijft vaag en kan niets aanklikken".
+
+**Hoe toe te passen:** lees bij het opslaan van een scan eerst de vorige waarden
+op (alleen de velden die je overschrijft) en val daarop terug als de nieuwe leeg
+is. De regel staat als losse, database-vrije functie `jobs._rijke_velden` zodat
+hij te testen is zonder scan — met een test die de óude regel naspeelt en
+aantoonbaar zakt. Zelfde reden als bij `imports._backfill_patch`.
+
+Geldt niet alleen voor Vinted: elk platform dat throttlet (Marktplaats, 2dehands)
+kan dit patroon veroorzaken.
+
+Zie ook "vinted-tekst-alleen-op-de-pagina" en "omnivaleur-altijd-bewijzen".
+
+---
+
+## vinted-tekst-alleen-op-de-pagina
+
+*02-09-2026 — "Vinted geeft omschrijvingen alleen op de openbare advertentiepagina, ~15 per minuut; het item-API-endpoint is dood (404)"*
+
+Waar de advertentietekst van Vinted vandaan komt, gemeten op 02-09-2026:
+
+- Het kastoverzicht `/api/v2/wardrobe/{id}/items` geeft titel, prijs, foto's,
+  merk en maat, maar **nooit** de omschrijving.
+- `/api/v2/items/{id}` is **dood**: 404, allebei de varianten, ook zonder
+  inloggen. `/api/v2/item_upload/items/{id}` geeft 403. Er is geen enkel
+  endpoint dat teksten in bulk levert.
+- De openbare pagina `/items/{id}` heeft de tekst wél, ook zonder cookies. Pak
+  de **langste** `"description":"…"` uit de HTML: de eerste is vaak een lege
+  SEO-stomp.
+- Vinted knijpt af op ~**15 pagina's per minuut**. Gemeten: 26 verzoeken op rij
+  (0,5s ertussen) → 429; daarna 30s pauze → nog 2 door; 60s pauze → 15 door;
+  120s pauze → ook 15. Vier seconden ertussen is dus het houdbare tempo, en dat
+  staat zo in `backend/services/vinted_enrich.py`.
+
+Gevolg voor elk ontwerp dat teksten ophaalt: **vraag nooit op wat je al hebt.**
+Een scan die elke keer de hele kast opnieuw ophaalt is het budget kwijt vóór de
+advertenties die het nodig hebben aan de beurt zijn. De server stuurt daarom
+`tekst_bekend` mee in de scanopdracht.
+
+Zie ook "scan-mag-nooit-leeghalen" en "omnivaleur-altijd-bewijzen".
+
+---
+
 ## videoknipper
 
 *01-09-2026 — Stille video's automatisch inkorten tot een montage — script + dashboard in ~/Documents/Handige Scripts Mac*
@@ -27,11 +113,41 @@ Sinds 31-08-2026 staat er een videoknipper in `~/Documents/Handige Scripts Mac/`
 `🎬 VIDEO KNIPPEN - dubbelklik.command` start het.
 
 Werkt op **stil beeld zonder gesproken woord** — magazijn-, studio- en
-b-rollmateriaal. ffmpeg levert acht verkleinde grijze beeldjes per seconde (64x36)
-aan numpy; 15 sec rekentijd per 3 minuten video, dus ~75 sec voor een kwartier.
+b-rollmateriaal. ffmpeg levert acht verkleinde grijze beeldjes per seconde (128x72)
+aan numpy, plus één scherptegetal per beeldje van een 480px-brede versie.
 De video wordt in evenveel vensters verdeeld als er fragmenten nodig zijn en uit
 elk venster komt het beste fragment. Een montage mag hoogstens 40% van de bron
 beslaan, anders valt er niets te kiezen.
+
+**Het uitpakken van beeld is de hele kostenpost, niet het rekenwerk** (01-09-2026).
+Een kwartier telefoonvideo in 1080p op 60 beelden per seconde bevat bijna
+veertigduizend beeldjes en die moeten allemaal door de decoder, ook al houden we er
+maar acht per seconde van over. Op de processor kostte dat ruim zes minuten, waarvan
+de balk al die tijd op 8% bleef staan; Daniel las dat als vastgelopen. Sinds
+01-09-2026 leest `_uitlezen` de video in vier stukken tegelijk en laat hij de
+videochip van de Mac decoderen (`-hwaccel videotoolbox`). Gemeten op dezelfde video
+van 2,4 GB: de hele klus gaat van ruim zes minuten naar 2 min 40, en de beeldjes zijn
+bit voor bit dezelfde als op de processor (vergeleken met de oude versie, nul verschil
+op alle zes de signalen en dezelfde gekozen momenten). Vier stukken is het optimum op
+een M2; bij acht wordt het weer trager, want dan raakt de videochip verzadigd. Lukt de
+chip het bestand niet, dan wordt alles opnieuw op de processor gelezen.
+
+Twee valstrikken daarbij:
+
+1. **De stukken moeten op hetzelfde meetrooster beginnen.** Bij een stukgrens die
+   geen veelvoud van 1/8 seconde is, meet elk stuk op nét andere momenten en komt er
+   een andere montage uit dan eerst. Uitlijnen op het rooster maakte de uitkomst weer
+   identiek aan de oude versie. Dit was zichtbaar als tientallen afwijkende beeldjes
+   ná de eerste stukgrens, terwijl het eerste stuk perfect klopte.
+2. **De schatting hierboven klopte niet.** In de eerste versie van deze notitie stond
+   "~75 sec voor een kwartier", doorgerekend vanaf een korte testvideo. In werkelijkheid
+   was het vijf keer zoveel. Meet de zwaarste échte video, niet een schaalregel vanaf
+   een korte.
+
+**De balk beweegt nu tijdens het analyseren.** Hij telt hoeveel beeldjes er al binnen
+zijn en meldt dat als 8% tot 45%, met tekst erbij ("beeld analyseren",
+"camerabewegingen zoeken"). Een stap die minutenlang stilstaat leest als kapot, ook als
+er niets mis is.
 
 **De kern: verschuift het beeld, of beweegt er iets ín het beeld?** Puur op
 "er verandert iets" selecteren kiest juist de cameraverzetten, want dan verandert
@@ -51,7 +167,7 @@ dezelfde doorloop uit op een 480px-brede versie via `convolution` + `signalstats
 en levert één getal per beeldje — verschil wordt dan 0,8 tegen 2,5. Beide grenzen
 zijn percentielen van de video zelf (waziste 25%, onrustigste 25% vallen af), want
 wat "scherp" is verschilt per camera en licht. Eén ffmpeg-aanroep met `split`
-levert beide signalen: 16 sec per 3 minuten, ~80 sec voor een kwartier.
+levert beide signalen; de scherpte kost daarbij bijna niets, het decoderen alles.
 
 **Gemeten op testvideo's met ingebouwde fouten** (studiobeeld met twee magazijnpans
 erin geplakt): 100% van de zwenken herkend, montage ging van 5 van de 14 fragmenten
