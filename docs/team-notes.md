@@ -3439,3 +3439,26 @@ mailagent zelf, geen bug in het publiceren. Verdient een eigen blik als het
 patroon zich herhaalt.
 
 Geen code gewijzigd. Opnieuw teruggemeld als `opgelost` aan beide melders.
+
+## 02-09-2026 — Stripe-billing gecontroleerd, dubbel product gearchiveerd
+
+Controle op verzoek van Daniel: klopt het dat er één abonnement is en betalen de
+juiste mensen.
+
+Bevindingen: in de productcatalogus stonden twee actieve producten van 19,99 per
+maand, allebei "Omnivaleur Pro". Alle abonnementen hingen aan prod_UnKYIeWID9kOrs;
+prod_UnKVdJAsnrpZ4Z had nul abonnees en nul omzet. Dat tweede product is met
+akkoord van Daniel gearchiveerd, zodat het nooit per ongeluk gekozen kan worden.
+
+Betalende klanten op dit moment: albinmooi1009 (19,99 binnen), zilverwebsite
+(19,99 via SEPA-incasso, valt 4 september binnen) en papas-plectrums (14,99 met
+aanmeldkorting, geld kwam 2 september binnen). Daniels eigen account stopt 8
+september. Zilverwebsite had 24 augustus kort twee abonnementen; het tweede is
+29 augustus opgezegd en terugbetaald.
+
+De proefperiode van papas-plectrums die op 20 augustus verlengd werd tot 19
+september is door Daniel zelf gezet. Geen storing in de code.
+
+Gebruikerslijst tegen Stripe gelegd: 41 accounts, 3 betalend, 9 in proef, 29
+verlopen. Niemand heeft de gratis-voor-altijd status (trial_ends_at 2099) uit de
+comp-knop. Er gebruikt dus niemand de app gratis buiten een echte proefperiode om.
