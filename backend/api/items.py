@@ -272,6 +272,33 @@ async def fill_from_marktplaats(limit: int = 150,
     return uit
 
 
+@router.post("/fill-from-vinted")
+async def fill_from_vinted(item_id: str = "", limit: int = 0,
+                           user_id: str = Depends(get_current_user)):
+    """Ontbrekende advertentietekst ophalen bij de eigen Vinted-advertenties.
+
+    Vinted's kastoverzicht levert geen omschrijving en het detail-endpoint dat
+    de extensie ervoor gebruikte is dood (404). Wie importeerde terwijl Vinted
+    afkneep, hield artikelen zonder tekst over — en zonder tekst weigert het
+    dashboard te publiceren. Deze knop haalt de tekst alsnog van de openbare
+    advertentie. Bestaande teksten blijven altijd staan.
+
+    `item_id` gezet: alleen dat ene artikel, voor de knop in het
+    publiceervenster. Zonder: alles wat leeg is, per lading — Vinted laat er
+    ongeveer vijftien per minuut door, dus het scherm roept dit net zo vaak aan
+    tot er niets meer te doen is.
+    """
+    from backend.services.vinted_enrich import verrijk
+
+    db = get_db()
+    try:
+        return await verrijk(db, user_id, item_id=item_id or None,
+                             maximaal=max(0, min(limit, 400)))
+    except Exception as e:  # noqa: BLE001
+        logger.exception("fill-from-vinted mislukt voor %s", user_id)
+        raise HTTPException(status_code=502, detail=f"Vinted lookup failed: {e}")
+
+
 @router.get("/duplicates")
 def list_duplicates(user_id: str = Depends(get_current_user)):
     """
