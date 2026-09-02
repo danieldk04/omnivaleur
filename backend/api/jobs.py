@@ -1834,17 +1834,8 @@ def _store_scan_results(db, job, scraped: list[dict]):
         # Full snapshot columns — only present once the schema migration has run.
         # If they don't exist yet, PostgREST rejects the whole upsert, so retry
         # with just the base fields so scanning never breaks on an un-migrated DB.
-        rich = {
-            "photo_urls": photo_urls or None,
-            "description": (row.get("description") or None),
-            "brand": (row.get("brand") or None),
-            "size": (row.get("size") or None),
-            "condition": (row.get("condition") or None),
-            "category": (row.get("category") or None),
-            "gender": (row.get("gender") or None),
-            "color": (row.get("color") or None),
-            "material": (row.get("material") or None),
-        }
+        rich = _rijke_velden(row, photo_urls,
+                             prior_rich.get(str(platform_listing_id)))
         # is_hidden is the newest optional column, so it gets its own tier: if only
         # THAT one is missing we still want the description/brand/photos to land,
         # instead of dropping every rich field over one absent column.
