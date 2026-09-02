@@ -31,9 +31,7 @@ try:
 except Exception as e:
     print("admin list_users failed:", e)
 
-uid_candidates = set()
-for row in subs.data if 'subs' in dir() else []:
-    uid_candidates.add(row.get("id") or row.get("user_id"))
+uid_candidates = {"26cf5471-8367-4669-b4c1-9ce3e36f6a5f"}
 
 for uid in uid_candidates:
     if not uid:
