@@ -1708,18 +1708,42 @@ def _store_scan_results(db, job, scraped: list[dict]):
     # status='pending' unconditionally, so a re-scan resurrected every listing you
     # had already imported, linked or ignored straight back into the review list.
     prior_status = {}
+    # Wat een EERDERE scan al wist. Dit is niet alleen de status: ook de
+    # omschrijving, het merk, de foto's.
+    #
+    # Toon (dejuistetoon), 02-09-2026: een tweede scan van dezelfde kast wiste de
+    # omschrijvingen van 271 advertenties. Vinted knijpt af — het detail-endpoint
+    # is dood (404) en de openbare pagina geeft na ~14 snelle verzoeken 429 — dus
+    # een scan komt regelmatig terug met een lege omschrijving voor advertenties
+    # waar de vorige scan er wél een vond. Die lege waarde werd hier keihard
+    # overheen geschreven. Wie daarna importeerde kreeg een artikel zonder tekst,
+    # en zonder tekst weigert het dashboard te publiceren naar Marktplaats,
+    # 2dehands en Facebook: alles grijs, niets aanklikbaar.
+    #
+    # Regel: een scan mag toevoegen en bijwerken, nooit leeghalen. Staat er een
+    # waarde en levert de nieuwe scan niets, dan blijft de oude staan.
+    prior_rich = {}
     # fetch_all, niet één select: PostgREST geeft er stilzwijgend hooguit 1.000
     # terug. Bij een verkoper met meer kandidaten kregen alle rijen daarboven
     # opnieuw status 'pending' — advertenties die hij al geïmporteerd had,
     # stonden daarna zó weer op de te-beoordelen lijst.
-    prev = fetch_all(lambda: db.table("import_candidates")
-                     .select("platform_listing_id,status")
-                     .eq("user_id", job["user_id"])
-                     .eq("platform", job["platform"]))
+    def _lees_vorige(kolommen: str):
+        return fetch_all(lambda: db.table("import_candidates")
+                         .select(kolommen)
+                         .eq("user_id", job["user_id"])
+                         .eq("platform", job["platform"]))
+    try:
+        prev = _lees_vorige("platform_listing_id,status," + ",".join(RICH_KEYS))
+    except Exception as e:
+        # Nog niet gemigreerde database: de rijke kolommen bestaan daar niet.
+        # Dan alleen de status lezen — beschermen kan niet wat er niet is.
+        logger.warning(f"Scan store: rich prior read failed ({e}); status only.")
+        prev = _lees_vorige("platform_listing_id,status")
     for c in prev:
         pid = c.get("platform_listing_id")
         if pid is not None:
             prior_status[str(pid)] = c.get("status") or "pending"
+            prior_rich[str(pid)] = {k: c[k] for k in RICH_KEYS if k in c}
 
     rows = []          # candidate rows, upserted in bulk below
     backfills = {}     # item_id -> merged patch, applied in bulk below
