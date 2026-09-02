@@ -836,6 +836,7 @@ window.CL = (() => {
     if (missing.length) {
       throw new Error(
         `These fields were left empty on the form: ${missing.join(", ")}. ` +
+        (uitleg.length ? uitleg.join(". ") + ". " : "") +
         `The listing was NOT published — fill them in yourself and click publish.`
       );
     }
