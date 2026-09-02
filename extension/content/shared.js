@@ -500,6 +500,76 @@ window.CL = (() => {
     return COLOUR_NL[raw.toLowerCase()] || raw;
   }
 
+  // ── ALS ONZE WAARDE NIET IN DE LIJST STAAT ────────────────────────────────
+  //
+  // Toon (dejuistetoon), 02-09-2026. Zeven van zijn mislukte plaatsingen zijn
+  // precies hetzelfde geval: een maat of kleur die wij bewaren maar die
+  // Marktplaats in díe categorie niet aanbiedt. "Universeel" bij heren shorts
+  // (7x mislukt, 7x hetzelfde), "bordeaux" bij wanddecoraties. De lijst kent de
+  // waarde niet, het veld blijft leeg, en het veld is verplicht — dus geen
+  // advertentie, elke keer opnieuw, zonder dat iemand kon zien waarom.
+  //
+  // Dezelfde aanpak als bij CONDITION_CANDIDATES hierboven, die dit al maanden
+  // doet: probeer op volgorde van nauwkeurigheid en neem de eerste die
+  // daadwerkelijk in de lijst staat. Wat er echt in staat lezen we uit de
+  // keuzelijst zelf — dat is meten in plaats van gokken, want elke categorie
+  // biedt iets anders aan.
+  const COLOUR_FALLBACK = {
+    bordeaux: ["Rood", "Paars", "Bruin"],
+    multicolour: ["Multicolour", "Overige", "Overig"],
+    goud: ["Goud", "Geel", "Bruin"],
+    zilver: ["Grijs", "Wit"],
+    beige: ["Beige", "Bruin", "Wit"],
+    oranje: ["Oranje", "Rood", "Geel"],
+    paars: ["Paars", "Roze", "Blauw"],
+    roze: ["Roze", "Rood", "Paars"],
+  };
+
+  // Maten die geen maat zijn maar "past iedereen". Marktplaats noemt dat per
+  // categorie anders, of helemaal niet.
+  const MAAT_UNIVERSEEL = ["Universeel", "One size", "Onesize", "Overige",
+                           "Overig", "Overige maten", "Niet van toepassing", "Anders"];
+
+  function _alternatievenVoor(label, waarde) {
+    const w = String(waarde || "").trim();
+    if (!w) return [];
+    const laag = w.toLowerCase();
+    if (/kleur/i.test(label)) {
+      return COLOUR_FALLBACK[laag] || ["Multicolour", "Overige", "Overig"];
+    }
+    if (MAAT_UNIVERSEEL.some((m) => m.toLowerCase() === laag)) {
+      return MAAT_UNIVERSEEL;
+    }
+    return ["Overige", "Overig", "Anders"];
+  }
+
+  // Vult een keuzelijst met de waarde zelf, en als die er niet in staat met het
+  // dichtstbijzijnde alternatief dat er wél in staat. Geeft terug wat er
+  // uiteindelijk gekozen is, of "" als de lijst niets bruikbaars bood.
+  function kiesMetTerugval(el, label, waarde) {
+    if (!el || el.tagName !== "SELECT" || !waarde) return "";
+    if (fillNativeSelect(el, waarde)) return String(waarde);
+    for (const alt of _alternatievenVoor(label, waarde)) {
+      if (fillNativeSelect(el, alt)) {
+        clog(`${label}: "${waarde}" staat niet in de lijst — "${alt}" gekozen`);
+        return alt;
+      }
+    }
+    return "";
+  }
+
+  // Wat de keuzelijst wél aanbiedt, om in een foutmelding te zetten. Een
+  // verkoper die leest "size stond leeg" weet niets; wie leest welke waarde niet
+  // paste en wat er wel kan, is in tien seconden klaar.
+  function lijstOpties(el, maximaal = 8) {
+    if (!el || el.tagName !== "SELECT") return [];
+    return [...el.options]
+      .filter((o) => o.value !== "" && !o.disabled)
+      .map((o) => o.text.trim())
+      .filter(Boolean)
+      .slice(0, maximaal);
+  }
+
   // Leest het formulier terug na het invullen. Elke stap hierboven zit in step(),
   // dat fouten met opzet opslokt zodat één ontbrekend kenmerk de rest niet
   // afbreekt — maar daardoor kon een advertentie zonder maat, merk of
