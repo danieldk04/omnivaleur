@@ -3758,6 +3758,8 @@ async function bgScanVinted(job, serverUrl) {
       const noDesc = [];
       let idx = 0;
       let apiDood = false;   // /api/v2/items/{id} bleek 404 — niet meer proberen
+      let knepen = 0;        // 429's op rij; MAX_KNEPEN keer = stoppen voor nu
+      const MAX_KNEPEN = 3;
       for (const it of toEnrich) {
         let d = null;
         try {
