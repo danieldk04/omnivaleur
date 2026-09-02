@@ -3400,3 +3400,42 @@ antwoord. De tekst stond er gewoon; het adres was verhuisd, het budget was op, e
 wat er wél binnenkwam werd door de volgende ronde gewist. Een scan die elke keer
 alles opnieuw ophaalt lijkt grondig en is in werkelijkheid de reden dat hij niets
 binnenhaalt.
+
+## 02-09-2026 — "verkeerde-categorie-toegewezen": opnieuw uitgezocht, nog steeds al gerepareerd
+
+Met voorrang doorgegeven (zilverwebsite.nl + amandahaas1979, ⚠ MOET ZEKER,
+laatst gemeld 30-08 14:57). Dit is dezelfde sleutel die op 30-08 al werd
+onderzocht (zie hierboven, "geen nieuwe reparatie, wel uitgezocht") en die dag
+ook als `opgelost` is teruggemeld aan de mailagent, met bericht naar beide
+melders. Vandaag stond hij toch weer als open in `mail_analyse.py bugs`.
+
+Niet blind opnieuw gerepareerd, eerst nagelopen of de fix van 30-08 er nog
+staat en of hij houdt:
+
+- `getMpSyiUrl` in `extension/background.js` (regel 702 e.v.) leest bij een
+  verversing nog steeds eerst de categorie van de bestaande advertentie zelf
+  af, vóór hij hem weghaalt — de code van 30-08 staat er ongewijzigd.
+- Kan er geen categorie bepaald worden, dan gooit de extensie
+  `CategoryUnresolvedError` (regel 642/751) met een duidelijke tekst ("Set a
+  category on the item and publish again"). Die wordt op regel 1855 opgevangen
+  en als nette jobfout gemeld — nooit een gok, nooit een onbehandelde crash.
+  (In de notitie van 30-08 stond dit aangeduid als "CategoryUnresolvedError/422";
+  het is een foutklasse in de extensie, geen server-statuscode — vandaar dat
+  zoeken in de backend-code er niets van vond.)
+- Opdrachtenlogboek nagekeken voor beide accounts (Jaap `26cf5471…`, Amanda
+  `0b28c1ce…`) vanaf 30-08 14:57 tot nu: geen enkele opdracht met een categorie-
+  gerelateerde fout of een 500 Internal Server Error. Wat er wél misging in die
+  periode zijn andere, al bekende dingen (lege kleur/maat/prijsvelden, Chrome
+  die dichtging, een timeout) — niets van deze sleutel.
+
+**Vermoedelijke oorzaak van het spontaan heropenen:** het opgeslagen signaal had
+`heropend_op` gelijk aan `eerst` (allebei 17-08), terwijl de reparatie van 30-08
+er logisch tussenin zit. Dat past bij een bericht dat een tweede keer als
+"nieuw" wordt gezien door `mail_analyse.py` (bijvoorbeeld omdat het uit de
+bewaarde `alles`-lijst is gevallen, die maar een beperkt aantal berichten
+bewaart) en daardoor een al opgeloste storing met zijn oude datum heropent. Niet
+verder uitgezocht binnen deze storing, want dat is een apart mankement in de
+mailagent zelf, geen bug in het publiceren. Verdient een eigen blik als het
+patroon zich herhaalt.
+
+Geen code gewijzigd. Opnieuw teruggemeld als `opgelost` aan beide melders.
