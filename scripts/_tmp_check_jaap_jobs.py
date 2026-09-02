@@ -38,11 +38,22 @@ for uid in uid_candidates:
         continue
     print(f"\n=== jobs for user_id={uid} since 2026-08-27 ===")
     jobs = (sb.table("jobs")
-            .select("id,status,error,platform,created_at,completed_at,job_type")
+            .select("id,status,result,platform,action,created_at,claimed_at,done_at")
             .eq("user_id", uid)
             .gte("created_at", "2026-08-27T00:00:00")
             .order("created_at", desc=True)
-            .limit(100)
+            .limit(300)
             .execute())
+    from collections import Counter
+    status_counts = Counter()
     for j in jobs.data:
-        print(j.get("created_at"), j.get("job_type"), j.get("platform"), j.get("status"), "|", (j.get("error") or "")[:160])
+        status_counts[j.get("status")] += 1
+    print("STATUS COUNTS:", dict(status_counts))
+    print(f"total rows: {len(jobs.data)}")
+    print("\n--- failed/error jobs ---")
+    for j in jobs.data:
+        st = j.get("status")
+        if st in ("error", "failed"):
+            res = j.get("result")
+            errtxt = json.dumps(res, default=str)[:300] if res else ""
+            print(j.get("created_at"), j.get("platform"), j.get("action"), st, "|", errtxt)
