@@ -3907,11 +3907,38 @@ async function bgScanVinted(job, serverUrl) {
           message: `Fetching details ${idx}/${total}…`,
           current: idx, total, eta_seconds: etaSeconds,
         });
-        // Adaptive pacing: if this item came back throttled (429) or empty
-        // despite retries, Vinted is rate-limiting us — back off harder for the
-        // next item so we don't drag a whole cluster down. Otherwise stay gentle.
-        const throttled = d && (d._status === 429 || (!d.description && d._status));
-        await sleep(throttled ? 1200 : 200); // keeps the SW warm either way
+        // TEMPO, GEMETEN IN PLAATS VAN GESCHAT (02-09-2026).
+        //
+        // Vinted's advertentiepagina laat een bui van zo'n twintig verzoeken
+        // toe en geeft daarna 429. Na een pauze van een halve minuut komen er
+        // maar twee doorheen voordat hij weer dichtgaat. Hier stond 1.200 ms
+        // als "harder terugtrekken" — dat is voor deze rem niets, dus liep een
+        // grote scan na de eerste 429 gewoon leeg door te vragen: honderden
+        // advertenties zonder tekst, en dat werden vroeger de lege waarden die
+        // over de goede heen gingen.
+        //
+        // Nu: bij een 429 dertig seconden wachten. Blijft hij dichtzitten, dan
+        // stoppen we met verrijken en leveren we op wat we wél hebben. De
+        // volgende scan pakt precies de rest op, want de server stuurt mee wat
+        // hij al heeft (tekst_bekend) — zo komt het in een paar rondes rond in
+        // plaats van elke keer opnieuw op dezelfde muur te lopen.
+        const geknepen = d && (d._status === 429 || d._pageStatus === 429);
+        if (geknepen) {
+          knepen++;
+          if (knepen >= MAX_KNEPEN) {
+            console.warn(`[Omnivaleur] Vinted blijft afknijpen na ${idx}/${total} — rest volgende scan`);
+            await reportProgress(serverUrl, job.id, {
+              stage: "enriching",
+              message: `Vinted is rate-limiting — got ${enriched} of ${total}, the rest follows on the next scan`,
+              current: idx, total,
+            });
+            break;
+          }
+          await sleep(30000);
+        } else {
+          knepen = 0;
+          await sleep(200); // keeps the SW warm either way
+        }
       }
       // Surface which listings still lack a description and what Vinted returned
       // for them (api<status>/pg<status>:<pageDescLen>) — visible in the panel.
