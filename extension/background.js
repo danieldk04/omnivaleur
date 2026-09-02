@@ -3769,7 +3769,20 @@ async function bgScanVinted(job, serverUrl) {
             // page uses and what the seller sees, so it always carries the
             // visible description. `?localize=false` is only a fallback: for
             // some items it returns a null description, which was the bug.
-            const urls = [`/api/v2/items/${id}`, `/api/v2/items/${id}?localize=false`];
+            // GEEN VERZOEKEN VERSPILLEN AAN EEN DOOD ADRES.
+            //
+            // Gemeten 02-09-2026: /api/v2/items/{id} geeft 404, allebei de
+            // varianten, ook zonder inloggen. Vinted heeft dit endpoint eruit
+            // gehaald. Toch werden er per advertentie eerst twee verzoeken aan
+            // besteed — en die tellen gewoon mee in Vinted's budget, dus was
+            // twee derde van het budget op vóór de pagina aan de beurt was
+            // waar de tekst wél op staat. In Toons eigen scanlogboek is dat
+            // letterlijk terug te zien: "9739740557(api404/pg429)".
+            //
+            // Blijkt het bij de eerste advertentie 404, dan slaat de rest van
+            // deze scan de API over en gaat meteen naar de pagina. Komt hij ooit
+            // terug, dan pakken we hem vanzelf weer op.
+            const urls = apiDood ? [] : [`/api/v2/items/${id}`, `/api/v2/items/${id}?localize=false`];
             for (const url of urls) {
               // Retry each variant with exponential backoff on rate-limits
               // (429/5xx) or an empty body — throttling is transient.
