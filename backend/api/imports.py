@@ -1198,6 +1198,31 @@ def start_scan(platform: str, user_id: str = Depends(require_active_subscription
             payload["scan_offset"] = len(bekend)
         except Exception as e:
             logger.warning("Kon scanpositie niet bepalen voor %s: %s", user_id, e)
+    elif platform == "vinted":
+        # VAN WELKE ADVERTENTIES WE DE TEKST AL HEBBEN.
+        #
+        # Toon (dejuistetoon), 02-09-2026. Vinted's kastoverzicht geeft alles
+        # behalve de omschrijving; die staat alleen op de advertentiepagina
+        # zelf. De scan haalde daarom ELKE keer alle ruim duizend pagina's op,
+        # ook die van advertenties waarvan de tekst allang in het dashboard
+        # stond. Vinted knijpt dat af: gemeten geeft hij na een bui verzoeken
+        # 429 terug en laat er daarna nog maar een handvol per halve minuut
+        # door. Zijn drie scans van dezelfde kast leverden achtereenvolgens 52,
+        # 776 en 507 advertenties zónder tekst op — dezelfde kast, alleen een
+        # leger budget. Die lege uitkomsten werden vervolgens over de goede
+        # heen geschreven (dichtgezet in jobs._store_scan_results), en wat je
+        # daarna importeerde had geen tekst meer. Zonder tekst weigert het
+        # dashboard te publiceren: alles grijs, niets aanklikbaar.
+        #
+        # We sturen daarom mee wat we al hebben. De extensie slaat die over en
+        # besteedt haar hele budget aan de advertenties die het echt nodig
+        # hebben — bij Toon 52 in plaats van 1.017.
+        try:
+            payload["tekst_bekend"] = _vinted_ids_met_tekst(db, user_id)
+        except Exception as e:  # noqa: BLE001
+            # Niet fataal: zonder deze lijst doet de scan gewoon wat hij altijd
+            # deed. Een mislukte optimalisatie mag geen scan tegenhouden.
+            logger.warning("Kon 'tekst al bekend'-lijst niet maken voor %s: %s", user_id, e)
 
     job_id = str(uuid.uuid4())
     try:
