@@ -3746,7 +3746,9 @@ async function bgScanVinted(job, serverUrl) {
     const overgeslagen = openStaand.length - toEnrich.length;
     await reportProgress(serverUrl, job.id, {
       stage: "enriching",
-      message: `Found ${result.items.length} listings (${total} still for sale) — fetching full details…`,
+      message: overgeslagen
+        ? `Found ${result.items.length} listings — ${overgeslagen} already have their text, fetching ${total}…`
+        : `Found ${result.items.length} listings (${total} still for sale) — fetching full details…`,
       current: 0, total,
     });
     let enriched = 0;
