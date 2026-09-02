@@ -3725,9 +3725,25 @@ async function bgScanVinted(job, serverUrl) {
     // still in the wardrobe (is_closed) and are shipped to the server for the
     // sale reconcile, but nobody is going to import them — fetching a detail
     // page for each would triple the scan time for data no one reads.
-    const toEnrich = result.items.filter(it => !it.is_closed && !it.is_draft);
+    // WAT WE AL HEBBEN, SLAAN WE OVER.
+    //
+    // Toon (dejuistetoon), 02-09-2026. Vinted heeft een budget: gemeten geeft
+    // hij na een bui verzoeken 429 en laat daarna nog maar een handvol per
+    // halve minuut door. Deze lus haalde élke scan alle ruim duizend
+    // advertentiepagina's opnieuw op, ook die waarvan de tekst allang in het
+    // dashboard stond — dus was het budget op vóór de advertenties die het
+    // echt nodig hadden aan de beurt waren. Zijn drie scans van dezelfde kast
+    // gaven 52, 776 en 507 advertenties zonder tekst.
+    //
+    // De server stuurt nu mee van welke nummers hij de tekst al heeft
+    // (payload.tekst_bekend). Bij Toon zakt dat van 1.017 naar 52 pagina's.
+    // Ontbreekt de lijst (oudere server), dan doen we gewoon wat we altijd deden.
+    const alBekend = new Set((job.payload?.tekst_bekend || []).map(String));
+    const openStaand = result.items.filter(it => !it.is_closed && !it.is_draft);
+    const toEnrich = openStaand.filter(it => !alBekend.has(String(it.platform_listing_id)));
     const total = toEnrich.length;
     const skipped = result.items.length - total;
+    const overgeslagen = openStaand.length - toEnrich.length;
     await reportProgress(serverUrl, job.id, {
       stage: "enriching",
       message: `Found ${result.items.length} listings (${total} still for sale) — fetching full details…`,
