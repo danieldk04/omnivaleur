@@ -4264,6 +4264,17 @@ function applyFilters(resetPage) {
     mpKnop.style.display = teVullen ? '' : 'none';
     mpKnop.textContent = `Fill ${teVullen} from Marktplaats`;
   }
+  // Zelfde afweging voor Vinted, maar smaller: alleen de omschrijving, en alleen
+  // als de advertentie er nog staat — anders valt er niets te halen.
+  const vintedTeVullen = (state.items || []).filter(i =>
+    !String(i.description || '').trim() &&
+    state.listings.some(l => l.item_id === i.id && l.platform === 'vinted' && l.status === 'active')
+  ).length;
+  const vintedKnop = document.getElementById('vinted-fill-btn');
+  if (vintedKnop) {
+    vintedKnop.style.display = vintedTeVullen ? '' : 'none';
+    vintedKnop.textContent = `Fill ${vintedTeVullen} from Vinted`;
+  }
   const actief = [platformFilter, vintedFilter, catFilter, brandFilter, todoFilter]
     .some(v => v && v !== 'all') || !!search || sortBy !== 'recent';
   const resetKnop = document.getElementById('filter-reset');
