@@ -3860,6 +3860,13 @@ async function bgScanVinted(job, serverUrl) {
             return out;
           }, [it.platform_listing_id, apiDood]);
         } catch (e) { d = null; }
+        // Geeft de API 404, dan is dat geen pech bij déze advertentie maar een
+        // adres dat Vinted heeft weggehaald. Vanaf nu overslaan, zodat het
+        // budget naar de pagina gaat die de tekst wél draagt.
+        if (!apiDood && d && d._status === 404) {
+          apiDood = true;
+          console.log("[Omnivaleur] Vinted item-API geeft 404 — rest van deze scan direct via de pagina");
+        }
         // One-time diagnostic on the first item so we can see exactly what Vinted
         // returned (visible in the service-worker console AND surfaced to the UI).
         if (idx === 0 && d) {
