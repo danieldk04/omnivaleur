@@ -7877,10 +7877,25 @@ function renderPlatformCheckboxes(containerId, itemId) {
     }
     const missing = item ? missingFieldsForPlatform(item, p) : [];
     if (missing.length) {
+      // GEEN DOODLOPENDE STRAAT. Toon (dejuistetoon), 02-09-2026: "alles blijft
+      // vaag en kan niets aanklikken". Bij hem miste van 244 geïmporteerde
+      // artikelen de omschrijving, dus stond dit venster vol grijze vakjes
+      // zonder één knop die iets deed. Wat er ontbreekt hoort een klik te zijn
+      // die je er meteen heen brengt — en als de tekst nog op het platform
+      // staat, halen we hem gewoon zelf op.
+      const kanOphalen = itemId && missing.length === 1 && /description/i.test(missing[0])
+        && state.listings.some(l => l.item_id === itemId && l.platform === 'vinted' && l.status === 'active');
+      const actie = kanOphalen
+        ? `<span class="pm-cb-missing" style="cursor:pointer;text-decoration:underline"
+             onclick="event.preventDefault();event.stopPropagation();haalOmschrijvingOp('${itemId}', this)"
+             title="Fetch the description from your Vinted listing">Missing: ${esc(missing.join(', '))} — fetch from Vinted →</span>`
+        : `<span class="pm-cb-missing" style="cursor:pointer;text-decoration:underline"
+             onclick="event.preventDefault();event.stopPropagation();closeModal('modal-crosslist');closeModal('modal-bulk-crosslist');editItem('${itemId}')"
+             title="Open this item and fill in what's missing">Missing: ${esc(missing.join(', '))} — fill in →</span>`;
       return `<label class="platform-checkbox platform-checkbox-disabled" title="Missing: ${esc(missing.join(', '))}">
         <input type="checkbox" value="${p}" disabled>
         <span>${PLATFORM_ICONS[p]} ${label}</span>
-        <span class="pm-cb-missing">Missing: ${esc(missing.join(', '))}</span>
+        ${actie}
       </label>`;
     }
     // Twijfelgeval: wél aan te vinken, met de reden erbij. Dit verving een
