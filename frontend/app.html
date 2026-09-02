@@ -9238,6 +9238,90 @@ async function fillFromMarktplaats() {
   }
 }
 
+// ── Tekst alsnog van Vinted halen ────────────────────────────────────────
+//
+// Toon (dejuistetoon), 02-09-2026: 244 van zijn 1.024 geïmporteerde artikelen
+// hadden geen omschrijving, want Vinted kneep af tijdens het importeren. Zonder
+// omschrijving staat het publiceervenster vol grijze vakjes. De tekst staat
+// gewoon nog op zijn Vinted-advertentie, dus die halen we daar op in plaats van
+// hem te laten typen.
+async function haalOmschrijvingOp(itemId, el) {
+  if (!itemId) return;
+  const oud = el ? el.textContent : '';
+  if (el) { el.textContent = 'Fetching from Vinted…'; el.style.cursor = 'default'; el.onclick = null; }
+  try {
+    const res = await apiFetchRetry(
+      `${API}/api/items/fill-from-vinted?item_id=${encodeURIComponent(itemId)}`, { method: 'POST' });
+    const data = await parseJsonSafe(res);
+    if (!res.ok) throw new Error((data && data.detail) || `HTTP ${res.status}`);
+    if (data.gevuld) {
+      // Alleen dit ene item verversen, niet de hele catalogus opnieuw ophalen.
+      const verse = await parseJsonSafe(await apiFetchRetry(`${API}/api/items/${itemId}`));
+      const i = state.items.findIndex(x => x.id === itemId);
+      if (i >= 0 && verse && verse.id) state.items[i] = verse;
+      renderPlatformCheckboxes('crosslist-platforms', itemId);
+      applyFilters(false);
+      return;
+    }
+    if (el) {
+      el.textContent = data.geknepen
+        ? 'Vinted is busy — try again in a minute'
+        : 'No text on the Vinted advert — fill in →';
+      el.style.cursor = 'pointer';
+      el.onclick = (ev) => { ev.preventDefault(); closeModal('modal-crosslist'); editItem(itemId); };
+    }
+  } catch (e) {
+    if (el) {
+      el.textContent = `Could not fetch — ${e.message}`;
+      el.style.cursor = 'pointer';
+      el.onclick = (ev) => { ev.preventDefault(); closeModal('modal-crosslist'); editItem(itemId); };
+    }
+  }
+}
+
+// Alles in één keer, voor wie honderden artikelen zonder tekst heeft. Per lading,
+// want Vinted laat er gemeten ongeveer vijftien per minuut door en één lang
+// verzoek wordt onderweg afgekapt.
+async function fillFromVinted() {
+  const open = (state.items || []).filter(i =>
+    !String(i.description || '').trim() &&
+    state.listings.some(l => l.item_id === i.id && l.platform === 'vinted' && l.status === 'active')
+  ).length;
+  if (!open) { alert('Nothing to fetch — every item with a live Vinted advert already has its text.'); return; }
+  if (!confirm(
+    `Fetch the missing description for ${open} item${open === 1 ? '' : 's'} from your own Vinted adverts?\n\n` +
+    `Anything you already wrote stays as it is. Vinted only allows about fifteen a minute, ` +
+    `so this takes roughly ${Math.max(1, Math.ceil(open / 15))} minute${open > 15 ? 's' : ''}. ` +
+    `You can keep working — leave this tab open.`)) return;
+
+  setBusy(true, 'Reading your Vinted adverts…');
+  let gevuld = 0, reden = '';
+  try {
+    for (let ronde = 0; ronde < 80; ronde++) {
+      const res = await apiFetchRetry(`${API}/api/items/fill-from-vinted`, { method: 'POST' });
+      const data = await parseJsonSafe(res);
+      if (!res.ok) throw new Error((data && data.detail) || `HTTP ${res.status}`);
+      gevuld += data.gevuld || 0;
+      reden = data.reden || '';
+      setBusyText(`Fetched ${gevuld} description${gevuld === 1 ? '' : 's'}…`);
+      if (!data.te_doen) break;
+      // Afgeknepen: even wachten heeft zin, doorrammen niet.
+      if (data.geknepen) await new Promise(r => setTimeout(r, 60000));
+      if (!data.gevuld && !data.geknepen) break;  // niets meer te halen
+    }
+    state.items = await fetchAllItems();
+    applyFilters(false);
+  } catch (e) {
+    setBusy(false);
+    alert(`Could not fetch from Vinted: ${e.message}`);
+    return;
+  }
+  setBusy(false);
+  alert(gevuld
+    ? `Done. Filled in ${gevuld} description${gevuld === 1 ? '' : 's'} from your Vinted adverts.`
+    : `Nothing found. ${reden || 'These adverts no longer carry a description on Vinted, so they have to be filled in by hand via Edit.'}`);
+}
+
 async function doBulkCondition() {
   let ids = [...selectedIds];
   if (!ids.length) return;
