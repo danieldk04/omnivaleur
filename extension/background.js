@@ -3857,7 +3857,7 @@ async function bgScanVinted(job, serverUrl) {
               }
             }
             return out;
-          }, [it.platform_listing_id]);
+          }, [it.platform_listing_id, apiDood]);
         } catch (e) { d = null; }
         // One-time diagnostic on the first item so we can see exactly what Vinted
         // returned (visible in the service-worker console AND surfaced to the UI).
