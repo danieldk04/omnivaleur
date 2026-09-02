@@ -1631,6 +1631,47 @@ def _fix_photo_url(u):
     return s
 
 
+def _rijke_velden(row: dict, photo_urls, vorige: dict | None) -> dict:
+    """Wat er van deze gescande advertentie in de kandidaat komt te staan.
+
+    EEN SCAN MAG AANVULLEN EN BIJWERKEN, NOOIT LEEGHALEN.
+
+    Toon (dejuistetoon), 02-09-2026. Hier stond simpelweg
+    `"description": row.get("description") or None`. Vinted knijpt af tijdens
+    een scan — gemeten laat hij er zo'n vijftien per minuut door en geeft daarna
+    429 — dus komt een scan geregeld terug met een lege omschrijving voor een
+    advertentie waar de vórige scan er wél een vond. Die leegte ging er keihard
+    overheen. Nagemeten in zijn gegevens: 271 kandidaten stonden zonder tekst
+    terwijl het artikel dat eruit geïmporteerd was er wél een had — die tekst
+    kán alleen uit een eerdere scan zijn gekomen, dus die 271 zijn achteraf
+    gewist. Wie daarna importeerde kreeg een artikel zonder tekst, en zonder
+    tekst weigert het dashboard te publiceren naar Marktplaats, 2dehands en
+    Facebook: alles grijs, niets aanklikbaar.
+
+    Zuiver rekenwerk, geen database — zo is deze regel te testen zonder scan.
+    """
+    nieuw = {
+        "photo_urls": photo_urls or None,
+        "description": (row.get("description") or None),
+        "brand": (row.get("brand") or None),
+        "size": (row.get("size") or None),
+        "condition": (row.get("condition") or None),
+        "category": (row.get("category") or None),
+        "gender": (row.get("gender") or None),
+        "color": (row.get("color") or None),
+        "material": (row.get("material") or None),
+    }
+    if not vorige:
+        return nieuw
+    for veld, waarde in list(nieuw.items()):
+        if waarde:
+            continue  # de scan wéét iets — dat wint altijd
+        oud = vorige.get(veld)
+        if oud not in (None, "", [], {}):
+            nieuw[veld] = oud
+    return nieuw
+
+
 def _store_scan_results(db, job, scraped: list[dict]):
     """
     Persist scraped "my listings" cards as import_candidates for manual review.
