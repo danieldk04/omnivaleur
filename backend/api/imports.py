@@ -747,6 +747,58 @@ def _listing_status_for(cand: dict) -> str:
 BACKFILL_FIELDS = "id,description,brand,size,color,material,condition,photo_urls,gender,category"
 
 
+def _vinted_ids_met_tekst(db, user_id: str) -> list[str]:
+    """Vinted-advertentienummers waarvan we de omschrijving al hebben.
+
+    Twee bronnen, allebei even hard:
+      1. een kandidaat uit een eerdere scan die al tekst droeg;
+      2. een geïmporteerd artikel dát tekst heeft — de advertentie die eraan
+         hangt hoeft dan niet opnieuw van Vinted gehaald te worden.
+
+    Er worden alleen NUMMERS gelezen, nooit de teksten zelf. `description` is de
+    dikste kolom die we hebben; een eerdere ronde die hem wel meenam at het
+    verkeersbudget van Supabase op en zette daarmee de hele site plat (zie de
+    uitleg in mp_enrich.verrijk). De vraag hier is "heeft dit tekst, ja of nee",
+    en dat antwoord is een rij id's.
+    """
+    uit: set[str] = set()
+
+    # 1. Kandidaten die zelf al tekst dragen.
+    try:
+        rijen = fetch_all(lambda: db.table("import_candidates")
+                          .select("platform_listing_id")
+                          .eq("user_id", user_id).eq("platform", "vinted")
+                          .not_.is_("description", "null").neq("description", ""))
+        uit |= {str(r["platform_listing_id"]) for r in rijen
+                if r.get("platform_listing_id") is not None}
+    except Exception as e:  # noqa: BLE001
+        logger.warning("tekst_bekend: kandidaten niet gelezen (%s)", e)
+
+    # 2. Artikelen met tekst → hun Vinted-advertentie.
+    #    Dezelfde negatie als mp_enrich gebruikt ("wie mist tekst"), en dan het
+    #    verschil nemen. Een nieuwe, ongeteste positieve filter zou bij een
+    #    verkeerde uitkomst stilzwijgend de verkeerde advertenties overslaan —
+    #    en overslaan is hier het gevaarlijke antwoord.
+    try:
+        alle = {r["id"] for r in fetch_all(
+            lambda: db.table("items").select("id").eq("user_id", user_id))}
+        zonder = {r["id"] for r in fetch_all(
+            lambda: db.table("items").select("id").eq("user_id", user_id)
+            .or_("description.is.null,description.eq."))}
+        met = list(alle - zonder)
+        if met:
+            for l in fetch_all_in(lambda: db.table("listings")
+                                  .select("platform_listing_id")
+                                  .eq("platform", "vinted"),
+                                  "item_id", met):
+                if l.get("platform_listing_id") is not None:
+                    uit.add(str(l["platform_listing_id"]))
+    except Exception as e:  # noqa: BLE001
+        logger.warning("tekst_bekend: artikelen niet gelezen (%s)", e)
+
+    return sorted(uit)
+
+
 def _backfill_item_from_candidate(db, item_id: str, cand: dict,
                                   inferred: dict | None = None) -> dict:
     """Fill ONLY the empty fields on an existing item from a freshly scanned
