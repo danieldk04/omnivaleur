@@ -3757,6 +3757,7 @@ async function bgScanVinted(job, serverUrl) {
       const startedAt = Date.now();
       const noDesc = [];
       let idx = 0;
+      let apiDood = false;   // /api/v2/items/{id} bleek 404 — niet meer proberen
       for (const it of toEnrich) {
         let d = null;
         try {
