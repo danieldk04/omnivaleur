@@ -3760,7 +3760,7 @@ async function bgScanVinted(job, serverUrl) {
       for (const it of toEnrich) {
         let d = null;
         try {
-          d = await execInTab(tabId, async (id) => {
+          d = await execInTab(tabId, async (id, apiDood) => {
             const nap = ms => new Promise(r => setTimeout(r, ms));
             const out = { _status: null, _err: null, _tries: 0, description: "", color: "", material: "", brand: "", size: "", condition: "", photo_urls: [] };
             // Try the JSON detail endpoint (same-origin, carries the full
