@@ -797,8 +797,24 @@ window.CL = (() => {
       return el?.tagName === "SELECT" && !el.value;
     };
 
-    if (item.size && emptyLabel("Maat")) missing.push("size");
-    if (item.color && emptyLabel("Kleur")) missing.push("colour");
+    // ZEG WELKE WAARDE NIET PASTE, NIET ALLEEN DAT HET VELD LEEG IS.
+    //
+    // "These fields were left empty on the form: size" kreeg Toon zeven keer,
+    // elke keer bij dezelfde advertenties, zonder dat eruit op te maken viel wat
+    // hij eraan moest doen. Zijn maat stond gewoon ingevuld — hij paste alleen
+    // niet in de lijst van die categorie. Dat is een zin verschil.
+    const uitleg = [];
+    const nietGeplaatst = (label, waarde, naam) => {
+      const el = findFieldByLabel(label);
+      if (!el || el.tagName !== "SELECT" || el.value) return;
+      missing.push(naam);
+      const opties = lijstOpties(el);
+      uitleg.push(opties.length
+        ? `"${waarde}" staat niet in de lijst bij ${naam} — die biedt: ${opties.join(", ")}`
+        : `${naam} kon niet worden ingevuld`);
+    };
+    if (item.size) nietGeplaatst("Maat", item.size, "size");
+    if (item.color) nietGeplaatst("Kleur", dutchColor(item.color), "colour");
     const condEl = conditionSelect();
     if (condEl && !condEl.value) missing.push("condition");
     const intendedEl = intendedForSelect();
