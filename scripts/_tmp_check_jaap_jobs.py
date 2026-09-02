@@ -57,3 +57,12 @@ for uid in uid_candidates:
             res = j.get("result")
             errtxt = json.dumps(res, default=str)[:300] if res else ""
             print(j.get("created_at"), j.get("platform"), j.get("action"), st, "|", errtxt)
+
+    dates = sorted(j.get("created_at") for j in jobs.data)
+    print("\noldest in this page:", dates[0] if dates else None)
+    print("newest in this page:", dates[-1] if dates else None)
+
+    # full count via head request
+    cnt = (sb.table("jobs").select("id", count="exact")
+           .eq("user_id", uid).gte("created_at", "2026-08-27T00:00:00").execute())
+    print("TOTAL matching rows (exact count):", cnt.count)
