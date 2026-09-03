@@ -3700,3 +3700,37 @@ Voor de tweede ontwikkelaar: neem dit meteen mee, ook in wat je zelf voor hem
 opstelt. Het is de tweede keer dat dezelfde correctie langskomt (eerder al
 "mails kort houden" en "meer empathie"), dus hij staat nu op twee plekken vast:
 in de prompts en hier.
+
+## 03-09-2026 — "automatisch-verversen-mislukt-popup": met voorrang doorgegeven, maar al gerepareerd
+
+Met voorrang doorgegeven (info@zilverwebsite.nl, MOET ZEKER wegens dreigend
+opzeggen). Melding: "Automatisch verversen loopt vast op pop-up; foto's en
+omschrijving worden niet ingevuld", laatst gemeld 27-08-2026.
+
+Nagelopen in het opdrachtenlogboek (`jobs`, user_id `26cf5471`) in plaats van
+blind gerepareerd. Op 26 en 27 augustus mislukten 240 van de 245 opdrachten:
+120 keer kon een advertentie niet gevonden worden in het Marktplaats-overzicht
+(delete), en daardoor werden 119 bijbehorende herplaatsingen overgeslagen
+("paired delist failed") nog vóór foto's of tekst aan bod kwamen — precies het
+beeld dat de klant beschrijft. Dat is exact het mechanisme dat op 28-08-2026 is
+gerepareerd (zie "Jaap (Zilverwebsite): drie klachten, drie aantoonbare
+oorzaken" hierboven, extensie 1.0.256/1.0.260): het "Site verlaten?"-venstertje
+van het Marktplaats-formulier bevroor het tabblad tijdens het verwijderen, en
+werd toen alleen ontwapend bij het sluiten van een tabblad, niet vlak vóór de
+klik die de pagina zelf wegnavigeert.
+
+**Gecontroleerd, niet aangenomen.** Sinds 28-08 zijn er 868 opdrachten geweest
+bij deze klant: 639 gelukt (waaronder herhaaldelijk "deleted_via_ad_page", de
+fix in actie), en maar 1 mislukte verwijdering — die ene was op 28-08 03:02 uur
+en droeg nog het stempel `[extensie 1.0.251]`, dus een kopie van vóór de update
+had de reparatie simpelweg nog niet. Sindsdien geen enkele opdracht meer met
+"cannot be found in your listings overview", "verlaten" of "unload" in de
+foutmelding. De 102 create-fouten die sinds 28-08 wél voorkwamen zijn stuk voor
+stuk andere, bekende datakwaliteitsproblemen (58× ontbrekende omschrijving,
+lege kleur/vorm-velden) — geen van alle het popup-mechanisme.
+
+Geen code gewijzigd. Teruggemeld als `opgelost`.
+
+**Why dit hier staat:** derde keer dat een MOET ZEKER-melding van vóór 28-08
+binnenkomt over een probleem dat die dag al is opgelost — de melding zelf is
+ouder dan de reparatie. Zie ook de vergelijkbare aantekening van 01-09-2026.
