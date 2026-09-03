@@ -17,6 +17,70 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ---
 
+## eigen-klik-gaat-voor-de-nachtronde
+
+*03-09-2026 — De uitgifte pakte de oudste twintig, dus een verse klik stond achter de 50 opdrachten van de nachtelijke verversing*
+
+`get_pending_jobs` haalde de wachtrij op met `order(created_at).limit(20)` en
+deelde daar één opdracht uit. Bij Toon zette de nachtelijke verversing om 02:33
+vijftig opdrachten klaar; zijn eigen publiceerklik van 13:28 stond daarmee op
+plek 24 en kwam niet eens in dat venster van twintig voor. Met Calm mode erbij
+(3 tot 8 minuten per opdracht) is dat uren wachten op een knop waar je net op
+drukte.
+
+**Why:** het venster van twintig was onzichtbaar. Van buiten lijkt het of de
+knop niets doet, terwijl de wachtrij gewoon in de verkeerde volgorde stond.
+
+**How to apply:** de volgorde is nu urgentie, niet aankomst
+(`_wachtrij_volgorde` in `backend/api/jobs.py`):
+
+0. een herplaatsing waarvan de oude advertentie al weg is (staat nú nergens
+   online) — altijd eerst;
+1. wat de verkoper zelf aanklikte;
+2. de nachtronde die al langer dan zes uur wacht;
+3. de verse nachtronde (die advertentie staat gewoon nog te koop);
+4. scans.
+
+De volgorde wordt bepaald over de HELE wachtrij met alleen de lichte velden;
+pas daarna worden de payloads van de kop opgehaald. Dataverkeer blijft dus
+gelijk. Zie "job-dispatch-serialisation" en
+"beloofd-tempo-moet-gemeten-tempo-zijn".
+
+---
+
+## beloofd-tempo-moet-gemeten-tempo-zijn
+
+*03-09-2026 — Een scherm dat "binnen 15 seconden" belooft terwijl het 6 minuten duurt, leest als een storing; meet het tempo in plaats van het te beloven*
+
+Het dashboard beloofde op zes plekken "within ~15 seconds the extension opens a
+tab". Bij Toon (dejuistetoon, 03-09-2026) zat er **345 seconden** tussen twee
+publicaties omdat Calm mode aanstond. Die schakelaar zit in de extensie
+(`chrome.storage.sync`), dus de server wist er niets van en het scherm dus ook
+niet. Hij keek naar een balk die zei dat het zo ging beginnen, zag minutenlang
+niets, en meldde "er gebeurt eigenlijk niets". Zijn werk liep gewoon.
+
+**Why:** een belofte die het systeem niet waarmaakt is erger dan geen belofte.
+De gebruiker concludeert dat het stuk is, drukt nog een keer (vier identieke
+scans in dezelfde seconde), en meldt een storing die er niet is. Dat kost
+Daniel klantvertrouwen én mijn tijd aan een spookbug.
+
+**How to apply:** vraag het niet aan de extensie (een nieuwe versie is pas over
+weken bij de klant, zie "rem-op-de-server-bij-een-extensiefout"), maar **meet
+het aan werk dat al gedaan is**: de tussentijd tussen `done_at` van de vorige
+opdracht en `claimed_at` van de volgende staat gewoon in de database. Gaten
+groter dan twintig minuten weggooien (dan stond de computer uit), mediaan
+nemen, en pas iets beweren vanaf drie metingen. Gemeten 03-09-2026: Toon 345 s
+→ Calm mode aan; drie andere verkopers dezelfde dag 10 tot 12 s → uit. Dat
+onderscheidt dus echt.
+
+Cache zo'n meting per gebruiker: `/api/jobs/active` wordt elke vier seconden
+opgevraagd en één zo'n vraag kost 368 ms op een blokkerende client. Zie
+"omnivaleur-blocking-supabase-event-loop" en "lean-tokengebruik".
+
+Zie ook "calm-mode" en "geen-doodlopende-straat-in-de-ui".
+
+---
+
 ## geen-vraagprijs-is-bieden
 
 *03-09-2026 — een artikel zonder prijs is op Marktplaats geen fout maar de advertentievorm "Bieden"; een lege vraagprijs laat het plaatsformulier hangen en kost bij herplaatsen de advertentie*

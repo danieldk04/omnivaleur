@@ -3983,3 +3983,81 @@ plaats van een gok.
 844 tests groen. Extensie op 1.0.287 (die versie komt van de andere sessie en
 bevat beide reparaties). Het pakket dat eerder als 1.0.286 is doorgestuurd is
 daarmee vervangen.
+
+## 03-09-2026 — Toon (dejuistetoon): "50 jobs, er gebeurt eigenlijk niets"
+
+Twee WhatsApp-berichten van dezelfde dag, allebei nagemeten aan zijn eigen
+account (96e30080…) en niet beredeneerd.
+
+  12:44  "Ben al ff aan het laden 50 jobs, maar er gebeurd eigenlijk niets?"
+  16:18  "Diverse item zijn geplaatst echter nog niets zichtbaar op marktplaats
+          en tweedehands"
+
+**Het tweede bericht klopt feitelijk niet, en dat is meetbaar.** Zijn
+advertenties stonden er gewoon. Van de negen die er die dag op Marktplaats bij
+kwamen zijn alle negen opgehaald: HTTP 200, juiste titel, juiste categorie. Ze
+staan ook alle negen boven aan zijn openbare verkoperslijst
+(`lrp/api/search?sellerIds[]=17981431`, "DJT De Juiste Toon", 280 advertenties),
+gedateerd "Vandaag". De twee 2dehands-advertenties van die dag idem, 200 met de
+juiste titel. Er valt daar dus niets te repareren; hij moet horen wáár hij moet
+kijken. Let op: hij is een **zakelijk** account (seller_type TRADER), en zijn
+scan loopt dan ook over `personal+admarkt`.
+
+**Het eerste bericht klopt wel, en had twee oorzaken.**
+
+**1. Calm mode stond aan, het scherm wist dat niet.** Gemeten aan de
+tijdstippen van zijn eigen opdrachten: het werk zelf duurt 20 tot 35 seconden,
+maar tussen twee opdrachten zat 192 tot 571 seconden — precies de 3 tot 8
+minuten van `CALM_MIN_MS`/`CALM_MAX_MS`. Mediaan 345 s. Ter vergelijking, op
+dezelfde dag: Egbert 12 s, Amanda 11 s, bcdf9aa4 10 s. Ondertussen zei de balk
+op zijn scherm "50 jobs queued — the extension is about to start … within ~15
+seconds". Om 12:44 was hij vier minuten in zo'n pauze. Het liep gewoon; de
+belofte was vijfentwintig keer te snel.
+
+De schakelaar zit in `chrome.storage.sync` van de extensie, dus vragen kan niet
+en een nieuwe extensie is pas over weken bij hem. De server **meet** het nu uit
+werk dat al gedaan is (`_gemeten_tempo`): mediaan van de gaten tussen `done_at`
+en het volgende `claimed_at`, gaten boven twintig minuten weggegooid (computer
+uit), minimaal drie metingen voor we iets beweren. Werkt vandaag, op de kopie
+die hij nu draait. Eén minuut gecachet, want `/api/jobs/active` wordt elke vier
+seconden opgevraagd en zo'n vraag kost 368 ms op een blokkerende client.
+
+De balk zegt nu drie verschillende dingen in plaats van één: bij Calm mode het
+gemeten tempo plus hoe lang de rij gaat duren plus waar de schakelaar zit, bij
+een stille extensie dat er niets gaat lopen en wat hij daaraan doet, en anders
+gewoon de oude tekst. Dezelfde meting zit ook in de melding vlak na een klik.
+
+**2. Zijn eigen klik stond achter de nachtronde.** De uitgifte deed
+`order(created_at).limit(20)` en gaf daar één opdracht uit. Om 02:33 zette de
+verversing 50 opdrachten klaar (24 herplaatsparen); zijn publiceerklik van
+13:28 stond daarmee op plek 24 en kwam niet eens in dat venster voor. De
+volgorde is nu urgentie in plaats van aankomst: eerst een herplaatsing waarvan
+de oude advertentie al wég is (die staat nu nergens online), dan zijn eigen
+klikken, dan de nachtronde die langer dan zes uur wacht, dan de verse
+nachtronde, dan scans. Voor-en-na op zijn echte wachtrij van dat moment: oud
+stonden de zes oudste allemaal uit de nachtronde van 02:33, nu staat de offline
+advertentie voorop en daarna zijn eigen klikken van 10:49 en verder.
+
+De volgorde wordt over de héle wachtrij bepaald met alleen de lichte velden;
+pas de kop wordt volledig ingelezen. Dataverkeer blijft dus gelijk aan de oude
+limit(20), maar het zijn wel de goede twintig.
+
+**Meegenomen omdat het uit dezelfde klacht komt:** er stonden vier identieke
+Marktplaats-scans van dezelfde seconde klaar (op 02-09 zelfs dertien). Dat is
+wat iemand doet als er niets lijkt te gebeuren. Er blijft er nog één over, en
+wel de **nieuwste** — die draagt de meest bijgewerkte lijst van "dit hebben we
+al" mee, en daar bespaart de extensie haar Vinted-verzoeken op.
+
+**Wat NIET gerepareerd is, met zoveel woorden.**
+- Zijn extensie heeft zich sinds 17:00 niet meer gemeld terwijl er 62
+  opdrachten wachten. Daar kan van hier niets aan gedaan worden: Chrome moet
+  openstaan met de extensie aan. De balk zegt dat nu wel.
+- Tien "Extension timed out — no response after 3 minutes" op Marktplaats
+  vandaag. Onveranderd niet van hier te herleiden; daarvoor moet je meekijken.
+- Zijn 2dehands-advertentieoverzicht geeft 401. Alleen hij kan opnieuw
+  inloggen. Publiceren op 2dehands lukt wél, dus dit raakt alleen het overzicht.
+- Het gat van 11:19 tot 13:21 waarin niets werd opgepakt, past bij een
+  Chromebook die in slaap gaat, maar dat is een vermoeden en geen meting.
+
+Geen extensiewijziging, dus geen versiebump: alles hierboven werkt op de kopie
+die hij vandaag draait. 854 tests groen (was 844).

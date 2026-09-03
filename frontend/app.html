@@ -7441,7 +7441,7 @@ async function retryRelist(itemId, platform, btn) {
     });
     const data = await r.json();
     if (!r.ok) throw new Error(data.detail || 'Retry failed');
-    showToast('Relist re-queued — the extension will open ' + label + ' within ~15 seconds.');
+    showToast('Relist re-queued — the extension will open ' + label + ' ' + fmtStartBelofte() + '.');
     await loadAll();
     await loadRelistStatus();
     await pollActivity();
@@ -7492,7 +7492,7 @@ async function publishRelistNow(itemId, platform, btn) {
     });
     const data = await r.json();
     if (!r.ok) throw new Error(data.detail || 'Could not publish now');
-    showToast('Publishing now — the extension will open ' + label + ' within ~15 seconds. Stay logged in.');
+    showToast('Queued — the extension will open ' + label + ' ' + fmtStartBelofte() + '. Stay logged in.');
     await loadRelistStatus();
     await pollActivity();
     if (document.getElementById('view-refresh')?.classList.contains('active')) renderRefreshView();
@@ -8668,7 +8668,30 @@ document.querySelectorAll('.nav-item').forEach(el => {
 // lightweight endpoint often (every 4s — faster than the 15s data reload,
 // because a delete tab can be open for only a few seconds) and show a loud,
 // global banner the whole time anything is running.
-let _activityState = { working: 0, queued: 0 };
+let _activityState = { working: 0, queued: 0, pace: null };
+
+// Hoe snel begint de extensie er echt aan? Met Calm mode aan is dat minuten,
+// niet seconden — en dan is "within ~15 seconds" een onwaarheid op het moment
+// dat iemand net geklikt heeft. Zie renderActivityBar.
+function fmtStartBelofte() {
+  const pace = _activityState.pace || null;
+  const ext = state.extStatus || null;
+  if (ext && ext.online === false) return 'as soon as your computer is online again';
+  if (pace && pace.calm && pace.seconds_between) {
+    return `within ~${Math.max(1, Math.round(pace.seconds_between / 60))} minutes (Calm mode is on)`;
+  }
+  return 'within ~15 seconds';
+}
+
+// Hoe lang duurt het nog voor deze wachtrij leeg is, in gewone woorden?
+function fmtQueueEta(nJobs, secondsEach) {
+  const totaal = Math.round(nJobs * secondsEach);
+  if (totaal < 90) return 'about a minute';
+  const min = Math.round(totaal / 60);
+  if (min < 60) return `about ${min} minutes`;
+  const uur = totaal / 3600;
+  return uur < 1.6 ? 'about an hour' : `about ${Math.round(uur)} hours`;
+}
 
 const ACTION_VERB = {
   create: 'publishing a listing',
@@ -8721,13 +8744,43 @@ function renderActivityBar() {
       + '<b>Don\'t click, type in, or close that tab</b>, and don\'t start new actions here — '
       + 'the tab closes by itself when it\'s done. Interrupting it makes the listing fail.';
   } else {
-    // Nothing open yet, but a due job will be picked up within ~15s.
     bar.className = 'activity-bar queued';
     icon.textContent = '⏳';
-    title.textContent = `${nQueued} job${nQueued === 1 ? '' : 's'} queued — the extension is about to start`;
-    text.innerHTML = 'Within ~15 seconds the extension opens a tab and handles this automatically ('
-      + describeJobs(queued) + '). '
-      + '<b>Once it starts, leave the tab it opens alone</b> and hold off on new actions until it finishes.';
+    // NOOIT MEER "within ~15 seconds" BELOVEN ALS DAT NIET WAAR IS.
+    //
+    // WAAROM (03-09-2026, Toon). Deze balk zei "the extension is about to start
+    // — within ~15 seconds", terwijl er bij hem 5 tot 6 minuten tussen twee
+    // publicaties zat omdat Calm mode aanstond. Die schakelaar zit in de
+    // extensie, dus het dashboard wist er niets van. Hij keek naar een balk die
+    // beloofde dat het zo begon, zag minutenlang niets, en concludeerde dat de
+    // app stuk was. Alles liep gewoon.
+    //
+    // De server meet nu de échte tussentijd uit werk dat al gedaan is en stuurt
+    // hem mee als `pace`. Staat de extensie stil, dan zeggen we dát in plaats
+    // van iets te beloven wat niemand gaat uitvoeren.
+    const pace = _activityState.pace || null;
+    const ext = state.extStatus || null;
+    const offline = ext && ext.online === false;
+    if (offline) {
+      const geleden = ext.seconds_ago != null ? ` (last seen ${fmtSeenAgo(ext.seconds_ago)})` : '';
+      title.textContent = `${nQueued} job${nQueued === 1 ? '' : 's'} queued — nothing is running`;
+      text.innerHTML = `Your extension has not checked in${geleden}, so nothing will start `
+        + `(${describeJobs(queued)}). Open Chrome on the computer you use for Omnivaleur and make sure `
+        + `the Omnivaleur extension is switched on at <b>chrome://extensions</b> — the queue picks up by itself after that. `
+        + `Nothing is lost while it waits.`;
+    } else if (pace && pace.calm && pace.seconds_between) {
+      const minuten = Math.max(1, Math.round(pace.seconds_between / 60));
+      title.textContent = `${nQueued} job${nQueued === 1 ? '' : 's'} queued — Calm mode is spacing them out`;
+      text.innerHTML = `Calm mode is on, so the extension does about <b>one every ${minuten} minutes</b> `
+        + `instead of back to back. These ${nQueued} will take ${fmtQueueEta(nQueued, pace.seconds_between)} `
+        + `(${describeJobs(queued)}). <b>Nothing is stuck</b> — long quiet gaps are what Calm mode does. `
+        + `To run them straight through, click the Omnivaleur extension icon and switch Calm mode off.`;
+    } else {
+      title.textContent = `${nQueued} job${nQueued === 1 ? '' : 's'} queued — the extension is about to start`;
+      text.innerHTML = 'Within ~15 seconds the extension opens a tab and handles this automatically ('
+        + describeJobs(queued) + '). '
+        + '<b>Once it starts, leave the tab it opens alone</b> and hold off on new actions until it finishes.';
+    }
   }
   bar.style.display = 'flex';
 }
@@ -8765,7 +8818,7 @@ async function pollActivity() {
     if (!r.ok) return;
     const data = await r.json();
     const prevWorking = (_activityState.working || []).length;
-    _activityState = { working: data.working || [], queued: data.queued || [] };
+    _activityState = { working: data.working || [], queued: data.queued || [], pace: data.pace || null };
     renderActivityBar();
     // When the extension finishes an active job, pull fresh data promptly so
     // statuses/badges update without waiting for the next 15s reload.

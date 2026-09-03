@@ -5,7 +5,9 @@ from backend.api.imports import _backfill_item_from_candidate
 from backend.services.crosslist import handle_item_sold
 from backend.services.kleur import normaliseer_kleur
 from datetime import datetime, timezone, timedelta
+from types import SimpleNamespace
 import logging
+import time
 import re
 import unicodedata
 
@@ -258,6 +260,174 @@ def _zet_kleur_goed(jobs: list) -> int:
             aangepast += 1
     return aangepast
 
+# ── Wie is er als eerste aan de beurt? ────────────────────────────────────────
+#
+# WAAROM DIT ER IS (03-09-2026, Toon / De Juiste Toon). Om 02:33 zette de
+# nachtelijke verversing 50 opdrachten klaar. Toen hij 's middags zelf op
+# publiceren drukte, kwam die klik achteraan die rij te staan: de uitgifte
+# pakte simpelweg de oudste twintig. Met Calm mode aan (3 tot 8 minuten tussen
+# twee acties) is dat uren wachten op iets waar je net op geklikt hebt, en dat
+# voelt als "de knop doet niets".
+#
+# De volgorde is daarom niet meer "wie het eerst kwam" maar "wie het hardst
+# nodig heeft":
+#   0. een herplaatsing waarvan de OUDE advertentie al weg is. Die staat nu
+#      nergens online; alles wat dat verkort gaat voor.
+#   1. wat de verkoper zelf zojuist aanklikte. Iets wat nergens online staat
+#      gaat voor het opfrissen van iets wat al te koop staat.
+#   2. de nachtronde die al langer dan NACHTRONDE_GEDULD wacht.
+#   3. de nachtronde die nog moet beginnen met weghalen. Daar staat de
+#      advertentie gewoon nog online, dus die kan wachten.
+#   4. scans; die lezen alleen.
+# Binnen elke groep blijft het gewoon op volgorde van binnenkomst.
+#
+# De nachtronde verhongert niet: zodra het eigen werk op is komt groep 2/3 aan
+# de beurt, en een verwijdering die lang genoeg heeft gewacht schuift boven de
+# verse nachtronde en boven de scans uit.
+SCHRIJVEND = ("create", "delete", "content_refresh")
+NACHTRONDE_GEDULD = timedelta(hours=6)
+# Hoeveel opdrachten we volledig inlezen nadat de volgorde bepaald is. De
+# volgorde wordt over de HELE wachtrij bepaald (alleen de lichte velden), de
+# zware payloads halen we daarna alleen op voor deze kop. Zo kost het kiezen
+# niets extra's aan dataverkeer.
+WACHTRIJ_KOP = 25
+WACHTRIJ_MAX = 500
+
+
+def _wachtrij_volgorde(licht: list[dict], now_dt: datetime) -> list[dict]:
+    """De hele wachtrij op urgentie zetten (alleen met de lichte velden)."""
+    # Welke verwijderingen staan er nog te wachten? Staat de verwijdering die bij
+    # een herplaatsing hoort er niet meer bij, dan is ze al gelopen en is de oude
+    # advertentie hoogstwaarschijnlijk offline.
+    open_verwijderingen = {(j.get("item_id"), j.get("platform"))
+                           for j in licht if j.get("action") == "delete"}
+    herplaats_paren = {(j.get("item_id"), j.get("platform"))
+                       for j in licht
+                       if j.get("action") == "create" and j.get("scheduled_for")}
+
+    def groep(j: dict) -> int:
+        actie = j.get("action")
+        if actie not in SCHRIJVEND:
+            return 4
+        sleutel = (j.get("item_id"), j.get("platform"))
+        if actie == "create" and j.get("scheduled_for"):
+            return 3 if sleutel in open_verwijderingen else 0
+        if actie == "delete" and sleutel in herplaats_paren:
+            gemaakt = _parse_ts(j.get("created_at"))
+            if gemaakt and now_dt - gemaakt >= NACHTRONDE_GEDULD:
+                return 2          # lang genoeg gewacht, anders komt hij nooit
+            return 3
+        return 1
+
+    return sorted(licht, key=lambda j: (groep(j), j.get("created_at") or ""))
+
+
+def _ruim_dubbele_scans_op(db, licht: list[dict], now: str) -> list[dict]:
+    """Meer dan één wachtende scan op hetzelfde kanaal is altijd per ongeluk.
+
+    WAAROM (03-09-2026, Toon). Er stonden vier identieke Marktplaats-scans van
+    dezelfde seconde klaar, en op 02-09 zelfs dertien. Dat gebeurt als er niets
+    lijkt te gebeuren en iemand nog een keer drukt. Elke scan leest dan opnieuw
+    de hele voorraad; de tweede tot en met de dertiende leveren niets op en
+    houden alleen de rij bezet.
+
+    We houden de NIEUWSTE over, niet de oudste. In de payload van een scan zit
+    een momentopname van wat we al binnen hebben (`bekende_ids`, `tekst_bekend`,
+    zie imports.py). Die lijst is bij de jongste opdracht het meest bij, en juist
+    daarop bespaart de extensie haar verzoeken — bij Toon 52 pagina's in plaats
+    van 1.017.
+    """
+    gezien: set = set()
+    weg: list[str] = []
+    houden = []
+    for j in sorted(licht, key=lambda r: r.get("created_at") or "", reverse=True):
+        if j.get("action") != "scan":
+            houden.append(j)
+            continue
+        sleutel = j.get("platform")
+        if sleutel in gezien:
+            weg.append(j["id"])
+            continue
+        gezien.add(sleutel)
+        houden.append(j)
+    houden.sort(key=lambda r: r.get("created_at") or "")
+    for job_id in weg:
+        try:
+            db.table("jobs").update({
+                "status": "cancelled",
+                "result": {"cancelled": "Duplicate scan — an identical scan for this "
+                                        "marketplace was already queued."},
+                "done_at": now,
+            }).eq("id", job_id).execute()
+        except Exception as e:  # noqa: BLE001 — nooit de uitgifte omgooien
+            logger.warning("dubbele scan %s niet opgeruimd: %s", job_id, e)
+    if weg:
+        logger.info("%d dubbele scan(s) opgeruimd", len(weg))
+    return houden
+
+
+# ── Hoe snel loopt deze wachtrij ECHT? ───────────────────────────────────────
+#
+# WAAROM DIT ER IS (03-09-2026, Toon). Het dashboard belooft op zes plekken
+# "within ~15 seconds". Met Calm mode aan zit er 3 tot 8 minuten tussen twee
+# publicaties, en die schakelaar zit in de extensie: de server weet er niets
+# van en het dashboard dus ook niet. Toon keek naar een balk die zei dat het zo
+# ging beginnen, zag acht minuten lang niets, en meldde "er gebeurt eigenlijk
+# niets". Zijn opdrachten liepen gewoon.
+#
+# We kunnen het niet vragen — een nieuwe extensie is pas over weken bij hem —
+# maar we kunnen het METEN: het staat in de tijdstippen van werk dat al gedaan
+# is. Werkt vandaag, op de kopie die hij nu draait.
+TEMPO_KALM_DREMPEL = 150       # 2,5 min; zonder Calm mode is de tussentijd < 30s
+TEMPO_ONDERBREKING = 20 * 60   # groter gat = de computer stond uit, niet meetellen
+TEMPO_MONSTERS = 12
+# Het dashboard vraagt /active elke vier seconden op. Een extra databasevraag in
+# dat ritme is vijftien per minuut per open scherm, en de Supabase-client blokkeert
+# de lus terwijl hij wacht. Het tempo verandert langzaam, dus een minuut onthouden
+# kost niets en scheelt 95% van die vragen.
+TEMPO_GELDIG_SECONDEN = 60
+_tempo_cache: dict[str, tuple[float, dict]] = {}
+
+
+def _gemeten_tempo(db, user_id: str) -> dict:
+    """De echte tussentijd tussen twee schrijvende opdrachten, in seconden."""
+    leeg = {"seconds_between": None, "calm": False, "samples": 0}
+    nu = time.monotonic()
+    bewaard = _tempo_cache.get(user_id)
+    if bewaard and nu - bewaard[0] < TEMPO_GELDIG_SECONDEN:
+        return bewaard[1]
+    try:
+        grens = (datetime.now(timezone.utc) - timedelta(hours=12)).isoformat()
+        rijen = (db.table("jobs").select("action,claimed_at,done_at")
+                 .eq("user_id", user_id).in_("action", list(SCHRIJVEND))
+                 .gte("claimed_at", grens).not_.is_("done_at", "null")
+                 .order("claimed_at", desc=True).limit(TEMPO_MONSTERS).execute().data or [])
+    except Exception as e:  # noqa: BLE001 — een schatting mag nooit een scherm slopen
+        logger.warning("tempo niet te meten voor %s: %s", user_id, e)
+        return leeg
+    rijen = [r for r in rijen if r.get("claimed_at") and r.get("done_at")]
+    rijen.sort(key=lambda r: r["claimed_at"])
+    gaten = []
+    for vorige, volgende in zip(rijen, rijen[1:]):
+        klaar = _parse_ts(vorige["done_at"])
+        start = _parse_ts(volgende["claimed_at"])
+        if not klaar or not start:
+            continue
+        gat = (start - klaar).total_seconds()
+        if 0 <= gat <= TEMPO_ONDERBREKING:
+            gaten.append(gat)
+    if len(gaten) < 3:
+        _tempo_cache[user_id] = (nu, leeg)
+        return leeg               # te weinig om iets over te beweren
+    gaten.sort()
+    midden = gaten[len(gaten) // 2]
+    uitkomst = {"seconds_between": int(midden),
+                "calm": midden >= TEMPO_KALM_DREMPEL,
+                "samples": len(gaten)}
+    _tempo_cache[user_id] = (nu, uitkomst)
+    return uitkomst
+
+
 @router.get("/pending")
 def get_pending_jobs(request: Request, platform: str = None, user_id: str = Depends(require_active_subscription)):
     db = get_db()
@@ -293,11 +463,32 @@ def get_pending_jobs(request: Request, platform: str = None, user_id: str = Depe
     # First, rescue anything stuck 'claimed' from an interrupted run.
     _recover_stale_claims(db, user_id, platform, now_dt)
 
-    q = db.table("jobs").select("*").eq("user_id", user_id).eq("status", "pending")
-    if platform:
-        q = q.eq("platform", platform)
-    result = q.order("created_at").limit(20).execute()
     now = now_dt.isoformat()
+    if platform:
+        # ALLEEN de lichte velden over de HELE wachtrij: daarmee bepalen we de
+        # volgorde zonder ook maar één payload op te halen. Daarna lezen we
+        # alleen de kop volledig in — evenveel dataverkeer als de oude
+        # limit(20), maar dan wel de twintig die er echt toe doen.
+        licht = (db.table("jobs")
+                 .select("id,action,platform,item_id,created_at,scheduled_for")
+                 .eq("user_id", user_id).eq("status", "pending").eq("platform", platform)
+                 .order("created_at").limit(WACHTRIJ_MAX).execute().data or [])
+        licht = _ruim_dubbele_scans_op(db, licht, now)
+        kop = [j["id"] for j in _wachtrij_volgorde(licht, now_dt)[:WACHTRIJ_KOP]]
+        rijen = []
+        if kop:
+            # Dezelfde afbakening als hierboven, plus de gekozen kop. Nooit een
+            # rij inladen die niet van deze gebruiker, dit kanaal en deze
+            # wachtrij is.
+            rijen = (db.table("jobs").select("*")
+                     .eq("user_id", user_id).eq("status", "pending").eq("platform", platform)
+                     .in_("id", kop).execute().data or [])
+            op_plek = {job_id: i for i, job_id in enumerate(kop)}
+            rijen.sort(key=lambda j: op_plek.get(j["id"], len(kop)))
+        result = SimpleNamespace(data=rijen)
+    else:
+        result = (db.table("jobs").select("*").eq("user_id", user_id)
+                  .eq("status", "pending").order("created_at").limit(20).execute())
 
     # STRICT GLOBAL SERIALISATION (extension dispatch only).
     # Every job drives a REAL browser tab. The create path doesn't wait for one
@@ -316,7 +507,6 @@ def get_pending_jobs(request: Request, platform: str = None, user_id: str = Depe
     # stip. Precies wat een gebruiker als "hij doet het niet" ervaart. Een scan
     # tegelijk met één publicatie kan geen kwaad: elk tabblad heeft zijn eigen
     # opdracht (jobtab_<tabId>), dus ze kunnen elkaars gegevens niet overschrijven.
-    SCHRIJVEND = ("create", "delete", "content_refresh")
     is_extension_dispatch = platform is not None
     if is_extension_dispatch:
         for c in (
@@ -803,7 +993,9 @@ def active_jobs(user_id: str = Depends(get_current_user)):
         elif not j.get("scheduled_for") or j["scheduled_for"] <= now:
             j.pop("result", None)
             queued.append(j)
-    return {"working": working, "queued": queued}
+    # Het gemeten tempo mee terug: het dashboard beloofde "within ~15 seconds"
+    # terwijl Calm mode er 3 tot 8 minuten van maakt. Zie _gemeten_tempo.
+    return {"working": working, "queued": queued, "pace": _gemeten_tempo(db, user_id)}
 
 
 @router.post("/reschedule-now")
