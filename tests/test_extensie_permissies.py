@@ -60,6 +60,19 @@ GOEDGEKEURDE_HOSTS = {
 GOEDGEKEURDE_PERMISSIES = {
     "storage", "tabs", "alarms", "clipboardWrite", "clipboardRead",
     "scripting", "idle", "debugger",
+    # "background" is er op 03-09-2026 bij gekomen (1.0.288) en is de enige
+    # uitzondering die niet op goed vertrouwen is toegevoegd. Chrome zelf is
+    # ernaar gevraagd via chrome.management.getPermissionWarningsByManifest: het
+    # huidige manifest en het manifest mét "background" leveren exact dezelfde
+    # waarschuwingenlijst op. Geen nieuwe waarschuwing betekent geen nieuwe
+    # goedkeuringsvraag, en dus geen stille uitschakeling.
+    #
+    # Waarom hij erin moet: zonder deze permissie ruimt Chrome het hele profiel
+    # op zodra het laatste venster dicht gaat, en dan stopt de extensie meteen.
+    # Gemeten met twee identieke testextensies naast elkaar: alle vensters dicht,
+    # 155 seconden, zonder de permissie 0 tikken en met de permissie 5. Zie
+    # docs/team-notes.md, 03-09-2026.
+    "background",
 }
 
 HULP = (

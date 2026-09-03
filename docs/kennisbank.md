@@ -17,6 +17,91 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ---
 
+## prijs-naar-aantal-advertenties
+
+*03-09-2026 — Prijs staffelen naar aantal advertenties is besproken en uitgesteld tot het dashboard echt goed werkt*
+
+Daniel wil de prijs op termijn staffelen naar aantal advertenties. Nu betaalt
+iedereen 19,99 per maand, terwijl Toon met 280 advertenties tien keer zoveel
+serverwerk kost en tien keer zoveel tijdwinst krijgt als iemand met 25.
+
+**Waarom nu niet:** het dashboard moet eerst echt goed werken. Meer vragen voor
+iets wat nog haperende meldingen en wachtrijen heeft, kost klanten in plaats van
+dat het omzet oplevert. Dit is Daniels expliciete beslissing op 03-09-2026, niet
+een openstaand voorstel.
+
+**Hoe toe te passen:** breng het pas weer ter sprake als de klachten over
+publiceren en wachtrijen weg zijn. Ga er ondertussen niet vast op bouwen.
+
+Uit hetzelfde gesprek: Naoufal (websitebouwer van Toon) is een kanaal voor
+installatie en doorverwijzing, en het idee om de extensie zelf op een server met
+klantwachtwoorden te draaien is bewust afgewezen. Zie docs/team-notes.md,
+03-09-2026.
+
+---
+
+## offline-waarschuwing-per-mail
+
+*03-09-2026 — Klant krijgt mail als zijn computer uren stil is met werk in de wachtrij; vereist één handmatige Supabase-kolom*
+
+Sinds 03-09-2026 draait er elk uur een controle
+(`backend/services/extension_offline.py`): staat de extensie van een klant meer
+dan drie uur stil terwijl er minstens drie uur werk wacht, dan krijgt hij één
+mail. Alleen tussen 10:00 en 20:00 NL, hoogstens één per 24 uur, en alleen bij
+een lopende proef of abonnement.
+
+Het tijdvenster is geen detail: de nachtelijke herplaatsronde zet bij iedereen
+rond 02:30 werk klaar, dus zonder dat venster kreeg elke klant met een uitgezette
+computer midden in de nacht een mail.
+
+OPENSTAAND zolang niemand het doet:
+`ALTER TABLE extension_heartbeat ADD COLUMN offline_mail_sent_at timestamptz;`
+Ontbreekt die kolom, dan onthoudt de server zelf wie al gemaild is en kan de mail
+zich na een deploy herhalen. Bewust geen stille uitschakeling zoals bij
+"extension-heartbeat-migration" en "sold-price-actual", want dan blijft de
+melding maanden onzichtbaar.
+
+Aanleiding: Toon (dejuistetoon) meldde "50 jobs, er gebeurt eigenlijk niets"
+terwijl zijn extensie 196 minuten stil was met 62 wachtende opdrachten. Zie ook
+"chrome-ruimt-profiel-op-bij-venster-dicht".
+
+---
+
+## chrome-ruimt-profiel-op-bij-venster-dicht
+
+*03-09-2026 — Zonder de background-permissie stopt de extensie zodra het laatste Chrome-venster dicht gaat; Chrome ruimt dan het profiel op*
+
+Chrome sluit niet alleen het venster als de klant zijn laatste venster sluit: het
+ruimt het hele profiel op (DestroyProfileOnBrowserClose), en daarmee stopt de
+extensie onmiddellijk. Geen alarms, geen poll, niets. De permissie `background`
+in het manifest houdt het profiel in leven en lost dat op. Sinds 1.0.288 staat
+hij erin.
+
+Gemeten 03-09-2026 op Chrome 152 (Mac), twee identieke testextensies naast elkaar
+in eigen profielen, pingend via chrome.alarms: venster open allebei 2 tikken in
+75 sec; alle vensters dicht 155 sec lang 0 tikken zonder de permissie en 5 met.
+Controleproef die het mechanisme aanwijst: dezelfde extensie zonder de permissie
+maar gestart met `--disable-features=DestroyProfileOnBrowserClose` tikte met alle
+vensters dicht wél door.
+
+Toevoegen was veilig omdat Chrome zelf zegt dat er geen nieuwe waarschuwing bij
+komt: `chrome.management.getPermissionWarningsByManifest` geeft voor het oude en
+het nieuwe manifest exact dezelfde lijst. Dat is de meting die je bij elke nieuwe
+permissie moet doen voordat je hem toevoegt, want een permissie die wél een
+waarschuwing oplevert zet de extensie bij iedereen stil. Zie
+"extension-release-bump-version" en de bewakingstest
+tests/test_extensie_permissies.py.
+
+Let op: een uitgezette of slapende computer blijft onoplosbaar. Daarvoor is er
+"offline-waarschuwing-per-mail".
+
+Testtruc die je nodig hebt: sinds Chrome 137 wordt `--load-extension` genegeerd.
+Laden gaat via CDP `Extensions.loadUnpacked` met de vlag
+`--enable-unsafe-extension-debugging`. Zo geladen extensies zijn wel vluchtig:
+ze staan niet in het profiel en komen na een profielopruiming niet terug.
+
+---
+
 ## eigen-klik-gaat-voor-de-nachtronde
 
 *03-09-2026 — De uitgifte pakte de oudste twintig, dus een verse klik stond achter de 50 opdrachten van de nachtelijke verversing*

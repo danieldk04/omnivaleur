@@ -4061,3 +4061,59 @@ al" mee, en daar bespaart de extensie haar Vinted-verzoeken op.
 
 Geen extensiewijziging, dus geen versiebump: alles hierboven werkt op de kopie
 die hij vandaag draait. 854 tests groen (was 844).
+
+## 03-09-2026 — Chrome zet de extensie stil zodra het laatste venster dicht gaat
+
+Naar aanleiding van het gesprek met Naoufal (websitebouwer van Toon/dejuistetoon)
+en Toons klacht "50 jobs, er gebeurt eigenlijk niets". Naoufal bevestigde wat al
+gemeten was: Toon heeft geen technische kennis en snapt niet dat hij Chrome open
+moet laten. Zijn tip was om de extensie zelf op een server te draaien met de
+inloggegevens van klanten. Dat doen we bewust niet: wachtwoorden van klanten in
+eigen beheer, accountdelen is tegen de voorwaarden van Marktplaats, en al die
+klanten vanaf één datacenter-IP is precies het patroon dat Calm mode moet
+vermijden.
+
+**Wat wel gemeten is (Mac, Chrome 152).** Twee identieke testextensies naast
+elkaar, één met de permissie `background` en één zonder, elk in een eigen Chrome
+met een eigen profiel, allebei pingend op een lokale logserver via
+`chrome.alarms` (30 sec):
+
+| fase | zonder permissie | met permissie |
+|---|---|---|
+| venster open, 75 sec | 2 tikken | 2 tikken |
+| alle vensters dicht, 155 sec | 0 tikken | 5 tikken |
+
+Controleproef die het mechanisme aanwijst: dezelfde extensie zónder de permissie,
+maar gestart met `--disable-features=DestroyProfileOnBrowserClose`, tikte met alle
+vensters dicht wél door (5 tikken in 150 sec). Het is dus niet de service worker
+die in slaap valt, maar Chrome die het hele profiel opruimt zodra het laatste
+venster sluit. De permissie `background` houdt het profiel in leven.
+
+Risico afgedekt: Chrome zelf (`chrome.management.getPermissionWarningsByManifest`)
+geeft voor het huidige manifest en het manifest mét `background` exact dezelfde
+waarschuwingenlijst. Bestaande klanten krijgen dus géén nieuwe toestemmingsvraag
+en de extensie valt niet stil in afwachting van een klik.
+
+Doorgevoerd in extensie 1.0.288. Let op: dit werkt pas als de Web Store hem heeft
+goedgekeurd, dus voor Toon verandert er deze week nog niets.
+
+**Wat het niet oplost:** een computer die uit staat of slaapt. Daar helpt geen
+enkele instelling tegen.
+
+**Daarom er ook bij:** een offline-waarschuwing per e-mail
+(`backend/services/extension_offline.py`, elk uur). Staat de extensie meer dan
+drie uur stil terwijl er minstens drie uur werk wacht, dan krijgt de klant één
+mail per 24 uur, alleen tussen 10:00 en 20:00 NL, en alleen bij een lopende proef
+of abonnement. Dat tijdvenster is er omdat de nachtelijke herplaatsronde rond
+02:30 bij iedereen werk klaarzet.
+
+**Openstaand:** de markeerkolom moet met de hand in Supabase komen:
+`ALTER TABLE extension_heartbeat ADD COLUMN offline_mail_sent_at timestamptz;`
+Zolang die ontbreekt onthoudt de server het zelf, en kan de mail zich na een
+deploy herhalen.
+
+**Zakelijk uit hetzelfde gesprek:** Naoufal onderhoudt websites voor meerdere
+Marktplaats-verkopers en bood uit zichzelf aan Omnivaleur door te vertellen. Hij
+is de logische installateur voor klanten zoals Toon. Prijs naar aantal
+advertenties (Toon heeft er 280 en betaalt hetzelfde als iemand met 25) is
+besproken maar bewust uitgesteld: eerst moet het dashboard echt goed werken.

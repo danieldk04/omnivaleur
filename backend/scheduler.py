@@ -57,6 +57,7 @@ def start_scheduler():
     from backend.services.shopify_orders import controleer_shopify_verkopen
 
     from backend.services.billing import expire_trials, send_trial_reminders
+    from backend.services.extension_offline import waarschuw_offline_extensies
     from backend.services.analytics_report import send_weekly_report
     from backend.content.evaluator import run_evaluation_cycle_sync
     from backend.content.pipeline import translate_missing_pages
@@ -128,6 +129,16 @@ def start_scheduler():
         minute=0,
         timezone="Europe/Amsterdam",
         id="trial_reminders",
+        replace_existing=True,
+    )
+    # Staat de computer van een klant uit terwijl er werk klaarstaat, dan weet
+    # hij dat niet: hij kijkt niet op het dashboard. Elk uur overdag kijken we of
+    # er iemand al uren stil is met een volle wachtrij, en mailen we dat één keer.
+    _scheduler.add_job(
+        _off_the_request_loop(waarschuw_offline_extensies),
+        "interval",
+        hours=1,
+        id="offline_extensie_waarschuwing",
         replace_existing=True,
     )
     # Wekelijks marketingrapport — elke zondagochtend 08:00 (NL-tijd) per e-mail.
