@@ -3794,3 +3794,79 @@ extensie op 1.0.286.
 moet onderscheiden". Spreekt een klant je conclusie tegen, behandel dat als de
 sterkste tegenmeting die je hebt. Hij kijkt naar het echte scherm, jij naar een
 logboek.
+
+## 03-09-2026 — Amanda: bieden-advertenties lieten alles hangen
+
+Amanda Haas (amandahaas1979@gmail.com, 479 artikelen) mailde vier dingen: bij
+elke herplaatsing moet ze met de hand iets bij de extensie doen, het dashboard
+zegt dan wel dan niet dat de extensie er niet is, er wordt een advertentie
+gemeld die daarna nergens op Marktplaats staat, en advertenties met "geen
+vraagprijs, maar bieden" laten het programma hangen: "dan moet ik de hele tijd
+bij de pc in de buurt blijven".
+
+**De hoofdoorzaak, gemeten in haar eigen gegevens.** 179 van haar 479 artikelen
+hebben geen prijs. Van de 168 die op Marktplaats terug te vinden zijn staan er
+**161 als "Bieden"** (`FAST_BID`), 6 als "Bieden vanaf" en 1 als "Gratis". Dat is
+geen importfout: een bied-advertentie hééft geen prijs, en `_naar_advertentie`
+neemt met opzet alleen een échte vraagprijs over. Maar het plaatsformulier stond
+altijd op "Vraagprijs", en `mpPrijs(0)` vult dan een leeg veld in. Haar
+opdrachtenlogboek geeft letterlijk terug: "Geen prijs ingevuld. | Fields marked
+invalid: price.value=LEEG" en "Je hebt geen advertentievorm gekozen." Het
+tabblad blijft dan open staan wachten op haar, de bewaker breekt na drie minuten
+af, en de wachtrij staat stil — precies wat ze beschrijft.
+
+**En daardoor raakte ze advertenties kwijt.** Herplaatsen is eerst weg, dan
+opnieuw plaatsen. Struikelt stap twee, dan is de advertentie weg. Nagemeten:
+elf artikelen zonder enige advertentie op Marktplaats, en bij de laatste ronde
+nog eens één (item 6aff4466, 03-09 10:16). Erger nog: dat werd nérgens
+vastgelegd. De regel die een mislukte publicatie zichtbaar maakt raakt alleen een
+rij die op 'pending' staat, en dat is een eerste publicatie; bij een
+herplaatsing staat de rij op 'delisted'. Geen advertentie, geen foutmelding,
+geen bolletje. Dat is haar derde punt.
+
+**Wat er is veranderd.**
+
+1. De extensie kiest de advertentievorm zelf zodra er geen vraagprijs is
+   (`mpPrijsvorm`/`kiesPrijsvorm` in `extension/content/shared.js`, gebruikt door
+   Marktplaats én 2dehands) en laat het prijsveld dan leeg. Wat de oude
+   advertentie was lezen we van de advertentiepagina, in dezelfde ophaalronde als
+   de categorie en dus vóór het verwijderen (`advertentie_kenmerken`). Artikelen
+   mét prijs veranderen niet: de keuzelijst wordt dan niet eens aangeraakt.
+2. Een mislukte herplaatsing is nu zichtbaar: de weggehaalde advertentie krijgt
+   status 'error' met de reden erbij, zodat het scherm er een rode melding en een
+   knop bij tekent in plaats van niets.
+3. En liever nog: draait er nog een kopie van vóór 1.0.285, dan gaat de
+   verwijdering van een advertentie zonder vraagprijs **niet door** en blijft
+   alles gewoon staan (`_herplaatsing_kansloos` in `backend/api/jobs.py`). Die rem
+   staat op de server om dezelfde reden als bij Egbert en Toon: een
+   extensiereparatie bereikt haar pas na goedkeuring door de Web Store.
+4. "Extension not detected" terwijl hij er wel is: `content/ext_stamp.js` zet bij
+   het laden van de pagina het versienummer op `<html data-omnivaleur-ext>`.
+   Staat dat er, dan is de extensie er — dan blijft het scherm vragen
+   ("starting up…") in plaats van een blokkerend installatievenster te tonen.
+
+**Haar elf verdwenen advertenties zijn vandaag met de hand rechtgezet:** zeven
+met een prijs staan op 'relisting' en komen vanzelf terug via de opruimronde; de
+vier bied-artikelen staan op 'error' met de uitleg erbij en komen terug zodra de
+bijgewerkte extensie bij haar draait. Alle elf zijn eerst nagekeken op de
+openbare zoek-API van Marktplaats: ze waren echt weg, dus geen dubbele
+advertenties.
+
+**Wat ik NIET heb kunnen bewijzen:** haar eerste punt, "elke keer handmatig bij
+de extensie toestemming geven, en hij schakelt elke keer uit". Er is in dit
+project niets dat bij een herplaatsing om toestemming vraagt, en er is sinds
+1.0.273 geen wijziging in de toestemmingen van het manifest. Twee kandidaten
+passen: (a) het formulier dat op een rood veld blijft staan, waarna zij het zelf
+moet afmaken — dat is precies wat punt 4 veroorzaakte en dat is nu weg; en (b) de
+gele balk "'Omnivaleur' is begonnen met foutopsporing voor deze browser" met de
+knop Annuleren, die sinds 1.0.273 alleen nog bij het plaatsformulier hoort — dus
+bij elke herplaatsing. Klikt ze daar op Annuleren, dan mislukt de
+advertentietekst. Aan haar is één vraag gesteld om dat te onderscheiden.
+
+840 tests groen (samen met het werk van de tweede sessie van vandaag). Extensie
+op 1.0.286; de code van deze reparatie ging mee in commit 02aac88, die door de
+andere sessie is weggeschreven — we werkten in dezelfde werkmap.
+
+**Openstaand bij Daniel:** het pakket 1.0.286 moet naar de Chrome Web Store
+(`dist/omnivaleur-extension-1.0.286.zip`, opnieuw gebouwd ná die commit), en het
+antwoord op de vraag over de gele balk.

@@ -17,6 +17,97 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ---
 
+## rem-op-de-server-bij-een-extensiefout
+
+*03-09-2026 — een extensiereparatie bereikt een klant pas na goedkeuring door de Web Store; tot die tijd hoort de rem op de server te staan, en die kent de versie uit de poll-header*
+
+Elke reparatie in `extension/` bereikt een verkoper pas nadat de Chrome Web Store
+hem heeft goedgekeurd én Chrome hem heeft opgehaald. Bij Egbert Brouwer duurde
+dat drie weken. Tot die tijd loopt de schade gewoon door, en bij herplaatsen kost
+elke ronde een advertentie.
+
+Daarom hoort er bij zo'n reparatie een tweede, die vandaag werkt: op de server.
+De extensie stuurt haar versie mee in het kopstuk `x-omnivaleur-ext` bij elke
+poll (sinds 1.0.250), dus `GET /api/jobs/pending` weet precies welke kopie er
+draait. Voorbeelden die er al staan:
+
+* `_zet_kleur_goed` — kleuren goedzetten vlak vóór uitgifte (1.0.282).
+* `_herplaatsing_kansloos` / `_neem_herplaatsing_terug` — een verwijdering die
+  niet terug kan komen gaat niet door (1.0.285, advertenties zonder vraagprijs).
+
+De vorm die werkt: **de verwijdering tegenhouden, niet de plaatsing repareren.**
+Zolang stap 1 niet loopt is er niets kwijt en staat de advertentie er gewoon nog.
+Een onbekende versie telt daarbij als oud: kopieën van vóór 1.0.250 sturen niets
+mee en kunnen het zeker niet.
+
+Zie ook "extension-version-floor" en "extension-release-bump-version".
+
+---
+
+## aanwezigheid-niet-vragen-maar-stempelen
+
+*03-09-2026 — "Extension not detected" kwam doordat we het aan de slapende service worker vroegen; een content script dat zijn versie op de pagina zet weet het zonder heen-en-weer*
+
+Of de extensie geïnstalleerd is, is geen vraag die je aan haar achtergrond moet
+stellen. Dat antwoord moet in MV3 twee heen-en-weertjes met een service worker
+overleven die Chrome koud moet starten — en juist terwijl er gepubliceerd wordt
+duurt dat het langst. Het dashboard gaf na ~8,8 seconde op en zette een
+blokkerend installatievenster over het scherm van iemand die alles goed had
+staan (Budgetheld 01-09-2026, Amanda 03-09-2026, allebei mét extensie).
+
+Sinds 1.0.285 zet `extension/content/ext_stamp.js` op `document_start` het
+versienummer op `<html data-omnivaleur-ext="…">`. Een content script kent zijn
+eigen manifest; daar komt geen achtergrond aan te pas. Staat het stempel er, dan
+IS de extensie er — dan blijft het scherm vragen ("starting up…") in plaats van
+"niet gevonden" te beweren.
+
+De regel erachter: **vraag aanwezigheid nooit aan iets dat kan slapen.** Alleen
+wat de achtergrond echt als enige weet (is ze ingelogd, welke opdrachten staan
+klaar) blijft een vraag met een antwoord.
+
+---
+
+## geen-vraagprijs-is-bieden
+
+*03-09-2026 — een artikel zonder prijs is op Marktplaats geen fout maar de advertentievorm "Bieden"; een lege vraagprijs laat het plaatsformulier hangen en kost bij herplaatsen de advertentie*
+
+Prijs 0 in onze database betekent bijna nooit "vergeten in te vullen". Op
+Marktplaats kies je bij elke advertentie een **advertentievorm**, en drie ervan
+hebben geen bedrag: Bieden (`FAST_BID`), Gratis (`FREE`) en Zie omschrijving.
+Onze import neemt met opzet alleen een échte vraagprijs over (`_naar_advertentie`
+in `backend/services/mp_enrich.py`), dus komt zo'n advertentie binnen als 0.
+
+Gemeten 03-09-2026 bij Amanda Haas: 179 van haar 479 artikelen zonder prijs,
+waarvan er 168 op Marktplaats terug te vinden waren — **161 als "Bieden"**, 6 als
+"Bieden vanaf" en 1 als "Gratis".
+
+Het plaatsformulier stond altijd op "Vraagprijs" en `mpPrijs(0)` vult dan een
+leeg veld in. Marktplaats weigert dat ("Geen prijs ingevuld", "Je hebt geen
+advertentievorm gekozen"), laat het tabblad open staan wachten op de verkoper, en
+bij een herplaatsing is de oude advertentie op dat moment al weg. Elf van haar
+advertenties waren zo verdwenen, en zij moest bij elke ronde bij de computer
+blijven.
+
+Sinds 1.0.285 kiest de extensie de vorm zelf (`mpPrijsvorm` in
+`extension/content/shared.js`) en laat ze het prijsveld dan leeg. Twee dingen om
+te onthouden:
+
+* **De keuzelijst heet `select#Dropdown-prijstype`** en de opties dragen dezelfde
+  namen die de openbare advertentiepagina teruggeeft (`priceType`). Kiezen kan dus
+  op de zichtbare tekst én op de waarde; lukt geen van beide, dan noemt de
+  foutmelding de echte opties op, zodat de volgende melding zichzelf aanwijst in
+  plaats van dat wij moeten raden.
+* **De vorm van de oude advertentie lezen we van de advertentiepagina**, in
+  dezelfde ophaalronde als de categorie en dus vóór het verwijderen
+  (`advertentie_kenmerken`). Daarna geeft die pagina 410.
+
+Zie ook "verbogen-kleurnamen-matchen-niet" en
+"herplaatsen-verliest-advertenties": alle drie hetzelfde patroon — een
+verplicht veld dat het formulier niet aanneemt, en een verkoper die daarna zonder
+advertentie zit.
+
+---
+
 ## bewijs-moet-onderscheiden
 
 *03-09-2026 — Een waarneming die op het werkende én het kapotte kanaal hetzelfde is, verklaart het verschil niet en is dus geen bewijs*
