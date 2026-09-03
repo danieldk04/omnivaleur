@@ -281,6 +281,56 @@ const meta = { jobId: "j1", serverUrl: "https://omnivaleur.com", platform: "2deh
     /api_status === 200 && !result\.meta\?\.total_entries/.test(scan),
     "anders verdoezelt het een leesfout aan onze kant");
 
+  // ── 5. De rode balk moet weg kunnen ───────────────────────────────────
+  //
+  // "Ik kom echter niet verder omdat de 1e 6 pagina's van de miniaturen er voor
+  // mij zo uit zien." Dat waren 303 mislukte 2dehands-publicaties, en zo'n balk
+  // verdween alleen door alsnog met succes te publiceren: precies wat er niet
+  // lukte. Een scherm vol rood zonder één knop die ergens heen leidt.
+  console.log("\nUit elke rode balk komt een knop die ergens heen gaat");
+
+  const opruimen = { state: null, html: "" };
+  const stubs5 = {
+    esc: (v) => String(v == null ? "" : v),
+    PLATFORM_ICONS: {}, PLATFORM_LABELS: { "2dehands": "2dehands" },
+    document: { body: { insertAdjacentHTML: (_p, h) => { opruimen.html = h; } } },
+    get state() { return opruimen.state; },
+  };
+  const bouw = new Function(
+    "esc", "PLATFORM_ICONS", "PLATFORM_LABELS", "document", "state",
+    functieUit(APP, "zelfdeFout") + "\n" +
+    functieUit(APP, "showPublishError") + "\n" +
+    "return { zelfdeFout, showPublishError };");
+
+  const mislukteRijen = (n) => Array.from({ length: n }, (_, i) => ({
+    item_id: `i${i}`, platform: "2dehands", status: "error",
+    error_message: "The 2dehands listing form never opened",
+  }));
+
+  // Eén enkele mislukking: opruimen mag, maar "alle 1" is onzin.
+  opruimen.state = { items: [{ id: "i0", title: "Miniatuur replica" }], listings: mislukteRijen(1) };
+  bouw(stubs5.esc, stubs5.PLATFORM_ICONS, stubs5.PLATFORM_LABELS,
+       stubs5.document, opruimen.state).showPublishError("i0");
+  check("bij één mislukking staat er een knop om hem op te ruimen",
+    /Clear this error/.test(opruimen.html), opruimen.html.slice(0, 120));
+  check("bij één mislukking geen 'ruim ze allemaal op'",
+    !/Clear all/.test(opruimen.html));
+
+  // Zijn echte geval: 303 rijen op één kanaal.
+  opruimen.state = { items: [{ id: "i0", title: "Miniatuur replica" }], listings: mislukteRijen(303) };
+  bouw(stubs5.esc, stubs5.PLATFORM_ICONS, stubs5.PLATFORM_LABELS,
+       stubs5.document, opruimen.state).showPublishError("i0");
+  check("bij 303 mislukkingen biedt hij ze in één klik aan",
+    /Clear all 303 on 2dehands/.test(opruimen.html), opruimen.html.slice(0, 200));
+  check("de melding zelf staat er nog steeds bij",
+    /never opened/.test(opruimen.html));
+  check("en 'hij staat wél online' blijft bestaan",
+    /mark as listed/.test(opruimen.html));
+
+  check("de knop praat met de server, niet alleen met het scherm",
+    /api\/listings\/clear-error/.test(APP),
+    "zonder die aanroep is het scherm schoon en de database niet");
+
   console.log(mislukt ? `\n${mislukt} controle(s) mislukt` : "\nAlles groen");
   process.exit(mislukt ? 1 : 0);
 })();
