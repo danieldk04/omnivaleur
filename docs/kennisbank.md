@@ -17,6 +17,41 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ---
 
+## klantmail-kort-en-menselijk
+
+*03-09-2026 — Klantmails van Daniel: hooguit 200 woorden, één zin erkenning, per punt het gevolg voor de klant vooraan, geen boetekleed en geen slijmen*
+
+Elke mail aan een klant is hooguit 200 woorden en staat vanuit zijn kant
+geschreven: wat er nu anders is en hoe dat zijn probleem oplost. Dat is het
+belangrijkste. De oorzaak mag hooguit in een halve zin mee, waar die helpt om
+het te snappen.
+
+De vorm die Daniel zelf gebruikt:
+
+- Eén menselijke openingszin die erkent wat de klant merkte, in zijn eigen
+  woorden, plus dat je hebt gekeken. Eén keer, niet meer.
+- Per punt: onderwerp, dubbele punt, dan in een of twee zinnen het gevolg dat
+  hij merkt. Concreet wat hij kan doen: waar hij klikt, wat hij intypt.
+- Afsluiten met een korte vraag of vervolgstap, niet met een samenvatting.
+- Geen techniek, geen bestandsnamen, geen versienummers tenzij hij er zelf iets
+  mee moet. Geen opmaaktekens, want de mail gaat als platte tekst de deur uit.
+
+**Why:** het concept dat hij op 03-09-2026 afkeurde was 250 woorden, opende met
+een compliment over hoe goed de klant het had opgeschreven, en legde per punt
+eerst uit wat er fout ging voordat het zei wat de klant eraan heeft. Zijn
+correctie: "trek niet teveel het boetekleed aan... niet teveel BS, niet teveel
+slijmen, hou het menselijk vriendelijk en duidelijk." Excuses en uitleg over onze
+storing kosten woorden en lossen niets voor hem op.
+
+**How to apply:** de regels staan als code in `TOON_KORT_EN_MENSELIJK` in
+`scripts/leadgen_mail.py` en hangen aan `_KLANT_REGELS` daar en aan
+`HERSTELBERICHT_REGELS` in `scripts/mail_analyse.py`, zodat elk concept van de
+mailagent ze meekrijgt. Schrijf je met de hand een mail voor Daniel, hou je dan
+aan dezelfde vorm. Zie "mails-kort-houden", "klantmails-meer-empathie" en
+"rapportage-in-gewone-taal".
+
+---
+
 ## tel-alleen-wat-er-echt-ontbreekt
 
 *03-09-2026 — Een teller op een knop die velden meerekent die in die categorie niet bestaan, roept altijd het hele bestand en leest als ruis*

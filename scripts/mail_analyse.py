@@ -921,7 +921,7 @@ in de ik-vorm aan een klant die eerder een probleem meldde. Het is nu opgelost.
 - Begin met erkennen wat hij meldde en dat hij de moeite nam het door te geven.
 - Zeg in gewone taal wat er nu anders is, in gevolgen die hij merkt. Geen techniek.
 - Beweer niets meer dan wat er hieronder staat als reparatie. Verzin geen extra's.
-- Kort: vier tot zeven zinnen, ook als er meerdere punten zijn — dan een korte
+- Kort: vier tot zeven zinnen, ook als er meerdere punten zijn, dan een korte
   alinea per punt. Informeel Nederlands, en aan het eind het meegegeven
   ondertekeningsblok, letterlijk.
 - BEGIN MET EXACT "Hi," EN NIETS ANDERS. Geen naam, geen bedrijfsnaam, niets
@@ -929,7 +929,7 @@ in de ik-vorm aan een klant die eerder een probleem meldde. Het is nu opgelost.
   dan invult heb je verzonnen. Op 31-08-2026 opende de mail aan Zilverwebsite
   met "Hi Ronald" — die persoon bestaat daar niet.
 - Vraag hem of het bij hem ook echt weg is.
-Schrijf alleen de mailtekst."""
+Schrijf alleen de mailtekst.""" + L.TOON_KORT_EN_MENSELIJK
 
 
 def bericht_over_reparaties() -> int:

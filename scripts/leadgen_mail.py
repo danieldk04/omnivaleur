@@ -2236,6 +2236,37 @@ Feiten die kloppen:
 """
 
 
+# ── HOE EEN KLANTMAIL KLINKT ────────────────────────────────────────────────
+#
+# Daniel, 03-09-2026, met twee van zijn eigen verstuurde mails als voorbeeld:
+# "zo kort en compact mogelijk, trek niet teveel het boetekleed aan, werk vanuit
+#  het perspectief van de klant: zo compact en duidelijk mogelijk wat er gebeurd
+#  is en hoe dit zijn probleem oplost. Dat is het belangrijkste. Niet teveel BS,
+#  niet teveel slijmen, hou het menselijk vriendelijk en duidelijk."
+#
+# Het concept dat hij hiermee afkeurde was 250 woorden, opende met een compliment
+# over hoe goed de klant het had opgeschreven, en legde per punt eerst uit wat er
+# fout was gegaan voordat het zei wat de klant er nu aan heeft. Precies andersom
+# dus. Deze regels staan apart zodat ze op elke klantmail gelden, of het nu een
+# antwoord is of een bericht over een reparatie.
+TOON_KORT_EN_MENSELIJK = """
+
+TOON: KORT, MENSELIJK, VANUIT ZIJN KANT.
+- Hooguit 200 woorden. Korter mag altijd. Elke zin die niets voor hem verandert,
+  gaat eruit.
+- Open met EEN menselijke zin: erken kort wat hij merkte, in zijn eigen woorden,
+  en dat je hebt gekeken. Geen excuusalinea, geen "sorry voor het ongemak", geen
+  complimenten over hoe goed hij het opschreef. Een keer erkennen is genoeg.
+- Per punt: noem het onderwerp, dubbele punt, en dan in een of twee zinnen wat er
+  NU anders is. Het gevolg dat hij merkt gaat voor, niet de oorzaak. Waar de
+  oorzaak helpt om het te snappen, mag hij in een halve zin mee.
+- Zeg concreet wat hij kan doen: waar hij klikt, wat hij intypt, wat hij ziet.
+- Geen techniek, geen bestandsnamen, geen versienummers tenzij hij er zelf iets
+  mee moet.
+- Sluit af met een korte vraag of vervolgstap, niet met een samenvatting.
+"""
+
+
 _KLANT_REGELS = """
 
 LET OP: DIT IS EEN BESTAANDE KLANT, GEEN PROSPECT.
@@ -2255,7 +2286,7 @@ LET OP: DIT IS EEN BESTAANDE KLANT, GEEN PROSPECT.
   wat er gebouwd gaat worden, dan beslist Daniel dat zelf. Zeg dan wél kort dat
   je er persoonlijk naar kijkt en erop terugkomt, en verzin geen toezegging.
 - Nooit afsluiten alsof het contact eindigt. Het contact loopt door.
-"""
+""" + TOON_KORT_EN_MENSELIJK
 
 
 # Hoe vaak de slimme tekst vandaag is teruggevallen op het vaste sjabloon.

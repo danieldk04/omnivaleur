@@ -3663,3 +3663,40 @@ Suite: 811 tests groen (was 803). Extensie op 1.0.284.
 **Openstaand bij Daniel:** Egbert moet zelf op 2dehands.be inloggen (of besluiten
 dat hij België overslaat), en 1.0.284 moet nog door de Web Store. De serverkant
 werkt vandaag al, ook op de kopie die nu bij hem draait.
+
+## 03-09-2026 — Hoe een klantmail klinkt (voor iedereen die er een schrijft)
+
+Daniel keurde een conceptmail aan Egbert af. Die was 250 woorden, opende met een
+compliment over hoe goed de klant het had opgeschreven, en legde per punt eerst
+uit wat er fout was gegaan voordat er stond wat de klant er nu aan heeft.
+Precies andersom dus.
+
+Zijn correctie, letterlijk: "zo kort en compact mogelijk, trek niet teveel het
+boetekleed aan, werk vanuit het perspectief van de klant: zo compact en duidelijk
+mogelijk wat er gebeurd is en hoe dit zijn probleem oplost. Dat is het
+belangrijkste. Niet teveel BS, niet teveel slijmen, hou het menselijk vriendelijk
+en duidelijk."
+
+De vorm die hij zelf gebruikt, en die vanaf nu geldt:
+
+* Hooguit 200 woorden. Elke zin die niets voor de klant verandert, gaat eruit.
+* Eén menselijke openingszin die erkent wat hij merkte, plus dat je hebt gekeken.
+  Eén keer. Geen excuusalinea, geen complimenten.
+* Per punt: onderwerp, dubbele punt, dan in een of twee zinnen het gevolg dat hij
+  merkt. De oorzaak mag hooguit in een halve zin mee.
+* Concreet wat hij kan doen: waar hij klikt, wat hij intypt, wat hij ziet.
+* Afsluiten met een korte vraag of vervolgstap, niet met een samenvatting.
+* Geen techniek, geen bestandsnamen, geen versienummers tenzij hij er zelf iets
+  mee moet.
+
+**Dit is geen richtlijn maar code.** De regels staan in
+`TOON_KORT_EN_MENSELIJK` in `scripts/leadgen_mail.py` en hangen daar aan
+`_KLANT_REGELS` en in `scripts/mail_analyse.py` aan `HERSTELBERICHT_REGELS`.
+Elk concept dat de mailagent schrijft krijgt ze dus mee. Schrijf je met de hand
+een mail namens Daniel, hou dan dezelfde vorm aan. Zie ook
+`docs/kennisbank.md`, les "Klantmail: kort en menselijk".
+
+Voor de tweede ontwikkelaar: neem dit meteen mee, ook in wat je zelf voor hem
+opstelt. Het is de tweede keer dat dezelfde correctie langskomt (eerder al
+"mails kort houden" en "meer empathie"), dus hij staat nu op twee plekken vast:
+in de prompts en hier.
