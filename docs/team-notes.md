@@ -3590,3 +3590,18 @@ Suite: 803 tests groen (was 763). Extensie op 1.0.283.
 **Wat nu nog buiten mijn bereik ligt, en dus als actiepunt bij Daniel:** de Web
 Store-goedkeuring, Toons 2dehands-inlog, de keuze of het dashboard Nederlands
 wordt, en meekijken in zijn browser tijdens een tijdsoverschrijding.
+
+## 03-09-2026 — Dashboard blijft voorlopig Engels
+
+Toon (dejuistetoon) vroeg om een Nederlandse interface. Besluit van Daniel: het
+komt er, maar nu nog niet. Reden om het niet even snel te doen: er zit geen
+taalschakelaar in. Elke zin staat hard in de pagina. Gemeten op 03-09-2026:
+785 verschillende zinnen in `frontend/app.html` (ongeveer 5.800 woorden), plus
+483 op de andere pagina's (index, marketplaces, login, wachtwoord), plus alle
+foutteksten die de extensie doorstuurt. `tests/test_meldingen_engels.py` bewaakt
+op dit moment juist het omgekeerde: alles wat de gebruiker ziet moet Engels zijn.
+
+Wie dit oppakt: eerst de schakelaar bouwen (een tabel met sleutels, niet zoeken
+en vervangen), dan pas vertalen, en die test omzetten naar "beide talen compleet".
+Half vertaald is slechter dan Engels: een half-Nederlandse melding leest als een
+storing. Zie ook de klantmail van 03-09-2026 aan Toon.
