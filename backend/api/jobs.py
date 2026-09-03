@@ -449,7 +449,10 @@ def get_pending_jobs(request: Request, platform: str = None, user_id: str = Depe
             # "pending" and will be re-checked on the next poll.
             if paired_delete and paired_delete[0]["status"] != "done":
                 continue
-        if j["action"] == "delete":
+        # Alleen bij een ECHTE poll van de extensie (die stuurt een platform mee).
+        # Het dashboard telt hier alleen opdrachten; dan weten we niet welke kopie
+        # er draait, en op dat niet-weten mag geen herplaatsing sneuvelen.
+        if j["action"] == "delete" and platform is not None:
             reden = _herplaatsing_kansloos(db, user_id, j, versie_van_de_kopie)
             if reden:
                 _neem_herplaatsing_terug(db, j, now, reden)

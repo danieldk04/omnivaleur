@@ -245,3 +245,15 @@ def test_de_uitdeellus_roept_de_rem_ook_echt_aan():
     bron = (ROOT / "backend/api/jobs.py").read_text(encoding="utf-8")
     lus = bron[bron.index("    ready = []"):bron.index("    # A relist's \"create\" job can sit queued")]
     assert "_herplaatsing_kansloos" in lus and "_neem_herplaatsing_terug" in lus
+
+
+def test_de_rem_geldt_alleen_bij_een_echte_poll_van_de_extensie():
+    """Het dashboard telt hier alleen opdrachten en stuurt geen platform mee; dan
+    weten we niet welke kopie er draait. Op dat niet-weten mag geen herplaatsing
+    sneuvelen — anders zou het openstaande scherm van de verkoper zijn eigen
+    verversingen afbreken."""
+    bron = (ROOT / "backend/api/jobs.py").read_text(encoding="utf-8")
+    lus = bron[bron.index("    ready = []"):bron.index("    # A relist's \"create\" job can sit queued")]
+    regels = lus.splitlines()
+    i = next(n for n, r in enumerate(regels) if "_herplaatsing_kansloos" in r)
+    assert "platform is not None" in regels[i - 1], regels[i - 1]
