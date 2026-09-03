@@ -17,6 +17,41 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ---
 
+## lean-tokengebruik
+
+*03-09-2026 — "Het aantal beurten bepaalt de kosten, niet de moeilijkheid; elke ronde stuurt het hele gesprek opnieuw mee, dus tel beurten voor je ze uitgeeft"*
+
+Op 03-09-2026 was Daniel na één opgeloste klacht al op de helft van zijn
+vijfuurslimiet. Het schrijven van één klantmail kostte vier tool-beurten. Zijn
+oordeel: dit moet echt efficienter, altijd en overal, zonder kwaliteitsverlies.
+
+**Why:** elke beurt stuurt het complete gesprek opnieuw mee. Een beurt die één
+regel oplevert kost daardoor net zoveel als een beurt die het probleem oplost.
+Bij een lang gesprek is het aantal beurten dus vrijwel de hele rekening, en de
+limiet is de rem op wat er die dag af komt. Niet de moeilijkheid van de taak
+kost geld, maar de manier waarop ik hem uitvoer.
+
+**How to apply:** tel vooraf hoeveel beurten iets gaat kosten en haal daar
+alles uit wat niet nodig is.
+
+- Weet ik het antwoord al, dan schrijf ik het op zonder eerst iets op te zoeken.
+  Een mail schrijven vraagt nul tool-beurten. Meten doe je alleen voor een
+  bewering die anders een gok zou zijn, en dan in één beurt, niet in vier.
+- Alles wat niet van elkaar afhangt gaat in één bericht. Een bestand schrijven
+  plus een script draaien plus committen is één bash-aanroep met een heredoc,
+  geen drie beurten.
+- Geen tussenstap om het formaat van een bestand te bekijken waar ik daarna toch
+  aan toevoeg: `tail` en de bewerking horen in dezelfde aanroep.
+- Nooit iets nalezen wat ik zojuist zelf schreef.
+- Achtergrondwerk niet pollen.
+
+Dit botst niet met "omnivaleur-altijd-bewijzen" en
+"zekerheid-is-geen-stopplek": de zuinigheid zit in hoe ik iets uitzoek, nooit
+in of ik het uitzoek. Een bewijs dat een beurt kost is die beurt waard; een
+beurt die alleen bevestigt wat ik al wist, niet.
+
+---
+
 ## verbogen-kleurnamen-matchen-niet
 
 *03-09-2026 — "bruine" en "rode" matchen op geen enkele Marktplaats-kleuroptie; verkopers schrijven verbogen en samengestelde kleuren, de lijst kent alleen de grondvorm*
@@ -316,41 +351,6 @@ alleen een tweede vangnet. Geldt voor élke dienst die de Mac zelf start.
 Slepen kopieert niet meer blind: `/api/bestaat` kijkt eerst op naam en grootte
 of het bestand er al staat. Daniels schijf zat op 98% vol en er stond een kopie
 van 2,4 GB in `Aangeleverd/` van een video die al in Downloads stond.
-
----
-
-## lean-tokengebruik
-
-*01-09-2026 — "Werk zo zuinig mogelijk met tokens — één gerichte vraag i.p.v. een sleepnet, batchen, en nooit twee keer hetzelfde lezen"*
-
-Daniel wil dat ik zo lean en efficiënt mogelijk met tokens en zijn limiet omga.
-
-**Why:** elke API-ronde stuurt het hele gesprek opnieuw mee, dus het aantal beurten
-bepaalt de kosten — niet de moeilijkheid van de taak. Een verspilde beurt kost hem
-net zoveel als een nuttige. Zijn limiet is de rem op wat we samen af krijgen.
-
-**How to apply:**
-
-1. **Batch alles wat niet van elkaar afhangt** in één bericht — meerdere Bash-,
-   lees- en bewerkacties tegelijk. Dat is de grootste besparing die er is.
-2. **Lees gericht, niet ruim.** `sed -n 'x,yp'` of `grep -n` boven een heel
-   bestand; `app.html` is 570 kB en die hoeft er nooit in zijn geheel in.
-   Weet ik het regelnummer niet, dan eerst grep, dan pas lezen.
-3. **Nooit twee keer hetzelfde lezen.** Een bestand dat ik net bewerkte niet
-   opnieuw openen "om te controleren" — Edit had gefaald als het misging.
-4. **Geen sleepnet-zoekopdrachten.** `grep -r` over de hele repo loopt vast op
-   `.git` en `node_modules` en levert een muur tekst; sluit die uit of zoek in de
-   map waar het antwoord staat.
-5. **Lange commando's in de achtergrond**, één keer op wachten, nooit pollen met
-   `sleep`.
-6. **Geen subagents tenzij Daniel erom vraagt** — die beginnen koud en leiden
-   alles opnieuw af wat ik al weet.
-7. **Klaar is klaar.** Geen extra controleronde, geen documentatie, changelog of
-   opmaakronde die niet gevraagd is.
-
-Dit staat náást "omnivaleur-altijd-bewijzen" en gaat er niet boven: zuinig zijn
-mag nooit betekenen dat ik een aanname niet meet. Zuinigheid zit in hoe ik het
-uitzoek (gericht, gebatcht, in één keer goed), niet in of ik het uitzoek.
 
 ---
 
