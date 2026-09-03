@@ -3605,3 +3605,61 @@ Wie dit oppakt: eerst de schakelaar bouwen (een tabel met sleutels, niet zoeken
 en vervangen), dan pas vertalen, en die test omzetten naar "beide talen compleet".
 Half vertaald is slechter dan Engels: een half-Nederlandse melding leest als een
 storing. Zie ook de klantmail van 03-09-2026 aan Toon.
+
+## 03-09-2026 — Egbert liep vast op 2dehands, en waarom dat niemand vertelde
+
+Egbert Brouwer (papas-plectrums, 5.533 artikelen) mailde drie dingen op één dag,
+eindigend met "ik loop compleet vast hier, kan niet doen wat ik wil doen".
+
+**Wat er echt aan de hand was, gemeten in het opdrachtenlogboek.** Van zijn 305
+opdrachten voor 2dehands is er nooit één geslaagd. 26 werden er afgebroken door
+de bewaker van de extensie na exact drie minuten, telkens zonder één teken van
+leven uit het tabblad, en 279 stonden er nog achter. Zijn Marktplaats-opdrachten
+uit dezelfde ronde liepen wél door (15 geplaatst), en bij andere verkopers
+slaagde 2dehands in dezelfde periode 97 keer. De categorienummers kloppen ook:
+728/748 geeft via hun eigen zoek-API op allebei de sites "Muziek en Instrumenten
+> Gitaren | Elektrisch". Het verschil zit dus niet in onze code, niet in de
+categorie en niet in de browser, maar in de site: www.2dehands.be antwoordt op
+het plaatsadres met HTTP 401 (twaalf bytes platte tekst, geen formulier) zolang
+je daar niet bent ingelogd. Op zo'n pagina draait ons invulscript helemaal niet,
+dus meldt niemand iets terug en loopt de bewaker af.
+
+**Marktplaats.nl en 2dehands.be zijn twee aparte sites met twee aparte
+inlogsessies.** Dat is nergens uitgelegd, en de foutmelding zei "de pagina is
+misschien veranderd" — precies de verkeerde kant op. De extensie doet met opzet
+één opdracht tegelijk, dus 279 wachtende opdrachten van drie en een halve minuut
+zijn zestien uur waarin hij verder niets kon publiceren.
+
+**Wat er is veranderd.** De bewaker maakt nu onderscheid tussen "het formulier
+liep vast" en "het formulier is nooit opengegaan": het invulscript zet een
+stempel zodra het zich meldt. Ging het formulier niet open, dan zegt de melding
+dat, noemt de site, en legt uit dat het twee aparte logins zijn. Drie keer op rij
+op een kanaal dat bij deze verkoper nog nooit heeft gewerkt, en de rest van de
+wachtrij wordt teruggenomen in plaats van zestien uur herhaald.
+
+Die rem staat op de SERVER en niet alleen in de extensie, om dezelfde reden als
+bij de kleurreparatie van gisteren: een extensiereparatie bereikt een verkoper
+pas nadat Google hem heeft goedgekeurd, en bij Egbert duurde dat eerder drie
+weken. Zijn 276 vastzittende opdrachten zijn vandaag met de hand teruggenomen,
+met de reden op elke advertentierij.
+
+**Twee kleinere dingen uit dezelfde mail.**
+
+Alles selecteren wat aan een filter voldoet kon niet. Het vinkje in de kop pakte
+alleen de getekende bladzijde van vijftig rijen; zijn zoekopdracht "miniatuur"
+levert er 434 op. Hij kwam niet verder dan 150 en schreef dat ook zo op. Er staat
+nu een link in de balk: "Select all 434 matching". Het paginaspringen dat het
+erger maakte was vanochtend al gerepareerd (zie de notitie over Toon).
+
+De knop "Fill from Marktplaats" telde merk en maat mee als ontbrekend. Geen
+enkele miniatuurgitaar heeft een maat en vrijwel geen een merk, dus stond er
+eeuwig "Fill 5533 from Marktplaats" terwijl er 11 artikelen echt iets misten.
+Hij las dat als ruis en schreef "ik zie geen knop". Merk en maat tellen nu alleen
+mee in de takken waar Marktplaats er ook om vraagt. Zonder prijs staat er nu
+overigens niets meer: 0 van 5.533.
+
+Suite: 811 tests groen (was 803). Extensie op 1.0.284.
+
+**Openstaand bij Daniel:** Egbert moet zelf op 2dehands.be inloggen (of besluiten
+dat hij België overslaat), en 1.0.284 moet nog door de Web Store. De serverkant
+werkt vandaag al, ook op de kopie die nu bij hem draait.

@@ -577,12 +577,22 @@ def _mist_iets(r: dict) -> bool:
     met één foto en zonder merk of maat, en juist dat blokkeert publiceren naar
     Marktplaats en 2dehands. Het staat allemaal op dezelfde advertentiepagina
     die we hier tóch al ophalen.
+
+    Merk en maat tellen alleen mee waar Marktplaats er ook om vraagt. In de tak
+    muziek, antiek, sieraden, games, wonen en electronics doet hij dat niet, en
+    daar hebben de artikelen ze dus ook nooit. Zonder die uitzondering stond
+    Egberts hele voorraad van 5.533 miniatuurgitaren eeuwig als "nog aan te
+    vullen" te boek, terwijl er 11 iets misten (gemeten 03-09-2026) — en werd
+    diezelfde voorraad elke ronde opnieuw langs de openbare zoekpagina van
+    Marktplaats gehaald. Zie _is_non_clothing in backend/services/crosslist.py.
     """
+    from backend.services.crosslist import _is_non_clothing
+    kleding = not _is_non_clothing(r)
     return (not r.get("heeft_tekst")
             or not r.get("price")
             or len(r.get("photo_urls") or []) <= 1
-            or not str(r.get("brand") or "").strip()
-            or not str(r.get("size") or "").strip())
+            or (kleding and not str(r.get("brand") or "").strip())
+            or (kleding and not str(r.get("size") or "").strip()))
 
 
 def _urgentie(r: dict) -> tuple:
@@ -679,7 +689,7 @@ async def verrijk(db, user_id: str, schrijf: bool = True,
     # daadwerkelijk aanpakken — daar is hij wél nodig (zie `_is_afgekapt`).
     rijen = await naast_de_lus(lambda: fetch_all(
         lambda: db.table("items")
-        .select("id,title,price,photo_urls,brand,size,color,condition")
+        .select("id,title,price,photo_urls,brand,size,color,condition,category")
         .eq("user_id", user_id)))
 
     # Bewust dezelfde filter als `_verkopers_met_gaten` verderop in dit bestand,

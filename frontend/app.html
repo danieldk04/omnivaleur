@@ -1059,7 +1059,10 @@ input[type="checkbox"].row-check { width: 15px; height: 15px; cursor: pointer; a
           <span id="filter-count" style="font-size:12px;color:var(--muted);font-weight:500"></span>
         </div>
         <div class="bulk-bar" id="bulk-bar">
-          <strong id="bulk-count">0</strong> selected &nbsp;·
+          <strong id="bulk-count">0</strong> selected
+          <span id="bulk-allmatch" style="display:none">&nbsp;·&nbsp;<a href="#" onclick="selectAllFiltered();return false;" style="font-weight:600">Select all <span id="bulk-allmatch-n">0</span> matching</a></span>
+          <span id="bulk-allmatch-done" style="display:none;color:var(--muted)">&nbsp;· every item matching this filter is selected</span>
+          &nbsp;·
           <button class="btn btn-sm btn-success" onclick="openBulkCrosslist()">Publish to…</button>
           <button class="btn btn-sm btn-outline" onclick="openBulkPrice()">Change price…</button>
           <button class="btn btn-sm btn-outline" onclick="doBulkCondition()">Change condition…</button>
@@ -2902,11 +2905,25 @@ const BETA_PLATFORMS = new Set(['facebook']);
 // advertenties juist met een enkele foto en zonder merk of maat binnenkomen, en
 // dat is precies wat publiceren naar Marktplaats en 2dehands blokkeert.
 function mistMarktplaatsGegevens(i) {
+  // MERK EN MAAT ALLEEN WAAR ZE BESTAAN.
+  //
+  // Gemeten op 03-09-2026 bij Egbert Brouwer (papas-plectrums, 5.533 artikelen:
+  // miniatuurgitaren en plectrums). Zonder deze uitzondering telde deze functie
+  // ze alle 5.533 mee — want geen enkele gitaar heeft een maat en vrijwel geen
+  // een merk. De knop zei dus eeuwig "Fill 5533 from Marktplaats", terwijl er in
+  // werkelijkheid 11 artikelen iets misten. Een knop die altijd hetzelfde te
+  // hoog getal roept, leest als ruis en niet als werk; hij schreef letterlijk
+  // dat hij "geen knop zag om deze alsnog op te halen".
+  //
+  // Marktplaats vraagt in de tak muziek, antiek, sieraden, games, wonen en
+  // electronics helemaal niet om merk of maat. Zie _is_non_clothing in
+  // backend/services/crosslist.py en _mist_iets in backend/services/mp_enrich.py.
+  const kleding = !isNonClothingItem(i);
   return !i.price
       || !String(i.description || '').trim()
       || (i.photo_urls || []).length <= 1
-      || !String(i.brand || '').trim()
-      || !String(i.size || '').trim();
+      || (kleding && !String(i.brand || '').trim())
+      || (kleding && !String(i.size || '').trim());
 }
 
 const CROSSLIST_FIELD_LABELS = { description: 'description', photo_urls: 'photos', category: 'category', gender: 'gender', brand: 'brand', size: 'size', color: 'color', price: 'price' };
@@ -4256,6 +4273,10 @@ function applyFilters(resetPage) {
   // De datumkopjes in de tabel kloppen alleen als de lijst op tijd staat.
   itemsGroepeerOpDatum = (sortBy === 'recent' || sortBy === 'oldest');
 
+  // De hele uitkomst van het filter bewaren, niet alleen de bladzijde die op
+  // het scherm past. Zonder dit kon "alles selecteren" nooit verder reiken dan
+  // de vijftig rijen die toevallig getekend waren — zie selectAllFiltered.
+  itemsGefilterd = filtered;
   const totalPages = Math.max(1, Math.ceil(filtered.length / ITEMS_PAGE_SIZE));
   if (itemsCurrentPage > totalPages) itemsCurrentPage = totalPages;
   const start = (itemsCurrentPage - 1) * ITEMS_PAGE_SIZE;
@@ -4752,14 +4773,40 @@ function toggleRowSelect(id, checked) {
   updateBulkBar();
 }
 
+// De volledige uitkomst van het laatste filter — alle bladzijden, niet alleen
+// de vijftig rijen die getekend zijn. Zie applyFilters.
+let itemsGefilterd = [];
+
 function toggleSelectAll(checked) {
-  // Select/deselect only visible (filtered) rows
+  // Het vinkje in de kop doet wat het altijd deed: deze bladzijde. Voor de rest
+  // staat er nu een link in de balk eronder ("Select all N matching"), want een
+  // vinkje dat stilletjes 441 artikelen aanvinkt is geen vinkje meer.
   document.querySelectorAll('#items-body tr[id^="row-"]').forEach(row => {
     const id = row.id.replace('row-', '');
     const cb = row.querySelector('.row-check');
     if (checked) { selectedIds.add(id); row.className = 'selected'; if (cb) cb.checked = true; }
     else { selectedIds.delete(id); row.className = ''; if (cb) cb.checked = false; }
   });
+  updateBulkBar();
+}
+
+// ALLES WAT AAN HET FILTER VOLDOET, IN ÉÉN KLIK.
+//
+// Egbert Brouwer (papas-plectrums), 03-09-2026: "ik wilde alle artikelen met
+// het woordje miniatuur selecteren... ik kwam niet verder dan 150 artikelen".
+// Dat klopte precies: het vinkje in de kop pakte alleen de bladzijde die
+// getekend was, vijftig rijen, en zijn zoekopdracht leverde er 434 op. Negen
+// bladzijden dus, met telkens opnieuw klikken.
+function selectAllFiltered() {
+  for (const item of itemsGefilterd) selectedIds.add(item.id);
+  // De rijen die op het scherm staan meteen laten zien dat ze meedoen.
+  document.querySelectorAll('#items-body tr[id^="row-"]').forEach(row => {
+    row.className = 'selected';
+    const cb = row.querySelector('.row-check');
+    if (cb) cb.checked = true;
+  });
+  const kop = document.getElementById('check-all');
+  if (kop) kop.checked = true;
   updateBulkBar();
 }
 
@@ -4776,6 +4823,18 @@ function clearSelection() {
 
 function updateBulkBar() {
   const n = selectedIds.size;
+  // Hoeveel artikelen voldoen er aan het filter maar zitten nog niet in de
+  // selectie? Zolang dat er zijn, hoort daar een klik bij die ze er alsnog
+  // bij haalt. Anders is het enige alternatief: negen keer bladeren.
+  const buiten = itemsGefilterd.filter(i => !selectedIds.has(i.id)).length;
+  const link = document.getElementById('bulk-allmatch');
+  const klaar = document.getElementById('bulk-allmatch-done');
+  if (link && klaar) {
+    const tonen = n > 0 && buiten > 0 && itemsGefilterd.length > n;
+    link.style.display = tonen ? '' : 'none';
+    if (tonen) document.getElementById('bulk-allmatch-n').textContent = itemsGefilterd.length.toLocaleString();
+    klaar.style.display = (n > 0 && !buiten && itemsGefilterd.length > ITEMS_PAGE_SIZE) ? '' : 'none';
+  }
   // Both views have their own bar; keep them in step so a selection never looks
   // lost when you switch between them.
   for (const [barId, countId] of [['bulk-bar', 'bulk-count'], ['stale-bulk-bar', 'stale-bulk-count']]) {

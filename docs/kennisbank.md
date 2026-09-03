@@ -17,6 +17,66 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ---
 
+## tel-alleen-wat-er-echt-ontbreekt
+
+*03-09-2026 — Een teller op een knop die velden meerekent die in die categorie niet bestaan, roept altijd het hele bestand en leest als ruis*
+
+"Fill from Marktplaats" telde merk en maat mee als ontbrekend. Egbert Brouwer
+verkoopt miniatuurgitaren en plectrums: geen enkele heeft een maat, vrijwel geen
+een merk. De knop zei daardoor eeuwig "Fill 5533 from Marktplaats" terwijl er
+11 artikelen echt iets misten. Zijn reactie: "ik zie geen knop om deze alsnog op
+te halen" — de knop stond er wel, maar riep zo'n hoog getal dat hij hem niet als
+zijn probleem herkende.
+
+**Why:** Marktplaats vraagt in de takken muziek, antiek, sieraden, games, wonen
+en electronics helemaal niet om merk of maat. Een verplicht veld dat daar niet
+bestaat kan ook niet ontbreken. Bovendien haalde elke ronde zijn hele voorraad
+opnieuw langs de openbare zoekpagina.
+
+**How to apply:** toets elke "N moeten nog"-teller aan een echte klantvoorraad
+vóór je hem live zet, en sluit velden uit die in die categorie niet bestaan
+(`_is_non_clothing` in `backend/services/crosslist.py`, `isNonClothingItem` in
+app.html). Let op: staat `category` niet in de `select()`, dan leest de
+uitzondering altijd "leeg" en verandert er stilletjes niets. Zie
+"omnivaleur-niet-kledingcategorieen" en "geen-doodlopende-straat-in-de-ui".
+
+---
+
+## stille-tab-is-geen-formulier
+
+*03-09-2026 — Een opdracht die zonder één teken van leven afloopt betekent "het formulier ging nooit open", niet "de pagina is veranderd"; 2dehands en Marktplaats hebben aparte logins*
+
+Loopt een publicatie-opdracht af op de bewaker van drie minuten **zonder dat het
+invulscript zich ooit heeft gemeld**, dan is de pagina die openging niet het
+plaatsformulier geweest. Dat is een andere storing dan "het formulier liep vast"
+en vraagt om een ander antwoord.
+
+Gemeten 03-09-2026 bij Egbert Brouwer (papas-plectrums): 305 opdrachten voor
+2dehands, nooit één geslaagd, 26 afgebroken na exact 3m20s, 279 in de wachtrij.
+Zijn Marktplaats-opdrachten uit dezelfde ronde liepen wél door, en bij andere
+verkopers slaagde 2dehands in dezelfde periode 97 keer. www.2dehands.be antwoordt
+op `/plaats/{l1}/{l2}` met HTTP 401 (12 bytes platte tekst) zolang je daar niet
+bent ingelogd; op zo'n pagina draait ons invulscript niet.
+
+**marktplaats.nl en 2dehands.be zijn twee aparte sites met twee aparte
+inlogsessies.** Ingelogd op de een is niet ingelogd op de ander. De categorie-
+nummers zijn wél identiek (nagemeten via hun eigen zoek-API: 728/748 geeft op
+allebei "Muziek en Instrumenten > Gitaren | Elektrisch").
+
+**Why:** de extensie doet met opzet één opdracht tegelijk. 279 × 3,5 minuut is
+zestien uur waarin de verkoper verder niets kan publiceren, met 279 keer dezelfde
+onbegrijpelijke melding. Zie ook "verborgen-tabblad-vertraagt-wachttijden".
+
+**How to apply:** een kanaal dat bij deze verkoper nog nóóit een geslaagde
+plaatsing had én drie keer op rij op de bewaker afliep, is kansloos: neem de rest
+van de wachtrij terug en zeg waaróm. Bouw die rem op de server (`_kansloze_reeks`
+in `backend/api/jobs.py`), niet alleen in de extensie — een extensiereparatie
+bereikt de verkoper pas na goedkeuring door de Web Store, bij hem eerder drie
+weken. Zie "extension-release-bump-version" en "anthropic-sdk-pin-valstrik"
+voor hetzelfde patroon.
+
+---
+
 ## lean-tokengebruik
 
 *03-09-2026 — "Het aantal beurten bepaalt de kosten, niet de moeilijkheid; elke ronde stuurt het hele gesprek opnieuw mee, dus tel beurten voor je ze uitgeeft"*

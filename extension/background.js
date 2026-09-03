@@ -1903,6 +1903,87 @@ function armJobWatchdog(tabId) {
   chrome.alarms.create(`${JOB_WATCHDOG_PREFIX}${tabId}`, { delayInMinutes: JOB_TAB_TIMEOUT_MIN });
 }
 
+// ── "Het formulier is nooit opengegaan" ────────────────────────────────────
+//
+// GEMETEN, NIET GEGOKT (03-09-2026, Egbert Brouwer / papas-plectrums).
+// Van zijn 305 opdrachten voor 2dehands is er nooit één geslaagd: 26 werden er
+// door de bewaker hieronder afgebroken na exact drie minuten, telkens zonder
+// één teken van leven uit het tabblad, en 279 stonden er nog achter. Zijn
+// Marktplaats-opdrachten uit diezelfde ronde liepen wél door (15 geplaatst), en
+// bij andere verkopers slaagde 2dehands in dezelfde periode 97 keer. Het
+// verschil zit dus niet in onze code en niet in de categorie, maar in de site:
+// www.2dehands.be antwoordt op het plaatsadres met HTTP 401 zolang je daar niet
+// bent ingelogd (nagemeten op 03-09-2026: twaalf bytes platte tekst, geen
+// formulier). Op zo'n pagina draait ons invulscript helemaal niet, dus meldt
+// niemand iets terug en loopt de bewaker af.
+//
+// Marktplaats.nl en 2dehands.be zijn twee aparte sites met twee aparte
+// inlogsessies. Wie op de een is ingelogd, is dat op de ander niet vanzelf.
+//
+// Dat verschil is nu zichtbaar: heeft het invulscript zich gemeld, dan is het
+// formulier echt opengegaan en is er iets ánders misgegaan. Heeft het zich niet
+// gemeld, dan is de pagina nooit het formulier geweest — en dan is elke
+// volgende opdracht op dat kanaal net zo kansloos.
+const NIET_GESTART_PREFIX = "nietgestart_";
+const NIET_GESTART_GRENS = 2;   // pas na twee op rij: één keer kan pech zijn
+
+const SITE_NAAM = {
+  marktplaats: "Marktplaats (marktplaats.nl)",
+  "2dehands": "2dehands (2dehands.be)",
+  vinted: "Vinted",
+  facebook: "Facebook Marketplace",
+};
+
+// Neem in één keer alles terug wat nog voor dit kanaal in de wachtrij staat.
+// Zonder dit bleef de rij hem 279 keer hetzelfde vertellen, drie en een halve
+// minuut per keer: zestien uur waarin hij niets anders kon publiceren, want de
+// extensie doet met opzet één opdracht tegelijk.
+async function stopPlatformWachtrij(serverUrl, platform, reden) {
+  try {
+    const headers = await getAuthHeaders();
+    const res = await fetch(`${serverUrl}/api/jobs/stop-platform`, {
+      method: "POST",
+      headers: { ...headers, "Content-Type": "application/json" },
+      body: JSON.stringify({ platform, reason: reden }),
+    });
+    const data = await res.json().catch(() => ({}));
+    console.warn(`[Omnivaleur] ${platform}: wachtrij gestopt, ${data.cancelled ?? "?"} opdrachten teruggenomen.`);
+  } catch (e) {
+    console.error("[Omnivaleur] Wachtrij stoppen mislukt:", e);
+  }
+}
+
+async function meldNooitBegonnen(tabId, meta) {
+  const site = SITE_NAAM[meta.platform] || meta.platform;
+  let waar = "";
+  try {
+    const tab = await chrome.tabs.get(tabId);
+    if (tab && tab.url && !/^about:/.test(tab.url)) {
+      waar = ` The tab ended up on ${tab.url.split("?")[0]}.`;
+    }
+  } catch (_) { /* tabblad al weg */ }
+  const tekst =
+    `The ${site} listing form never opened, so nothing was filled in and nothing was published. ` +
+    `That is what it looks like when you are not signed in to ${site} in this browser — ` +
+    `the site then answers with an error page instead of the form.${waar} ` +
+    `Marktplaats and 2dehands are separate sites with separate logins: being signed in to one ` +
+    `does not sign you in to the other. Open ${site}, sign in, and publish again.`;
+  await reportError(meta.jobId, meta.serverUrl, tekst).catch(() => {});
+  // Er valt hier niets met de hand af te maken — er staat geen formulier. Het
+  // tabblad openhouden levert alleen een stapel foutpagina's op.
+  await chrome.storage.local.remove(`jobtab_${tabId}`);
+  sluitWerkTabblad(tabId);
+
+  const sleutel = `${NIET_GESTART_PREFIX}${meta.platform}`;
+  const opgeslagen = await chrome.storage.local.get(sleutel);
+  const opRij = (Number(opgeslagen[sleutel]) || 0) + 1;
+  await chrome.storage.local.set({ [sleutel]: opRij });
+  if (opRij >= NIET_GESTART_GRENS) {
+    await chrome.storage.local.remove(sleutel);
+    await stopPlatformWachtrij(meta.serverUrl, meta.platform, tekst);
+  }
+}
+
 // Hoe lang een opdracht in totaal mag doen over zijn tab. Ruim onder de vijf
 // minuten waarop de server een niet-afgemelde opdracht terugneemt.
 const JOB_MAX_LIFETIME_MS = 4.5 * 60 * 1000;
@@ -2118,6 +2199,14 @@ async function fireJobWatchdog(tabId) {
       }
     }
     return;  // nooit force-failen: hij is misschien nog aan het typen
+  }
+  // Nooit een teken van leven uit het tabblad: dan is het formulier niet
+  // opengegaan. Zie de toelichting bij meldNooitBegonnen — dit is een andere
+  // storing dan "het formulier liep vast", en hij vraagt om een ander antwoord.
+  if (!meta.scriptSeen) {
+    console.warn(`[Omnivaleur] Watchdog: job ${meta.jobId} (${meta.platform}) — het invulscript heeft zich nooit gemeld; het formulier is niet opengegaan.`);
+    await meldNooitBegonnen(tabId, meta);
+    return;
   }
   console.warn(`[Omnivaleur] Watchdog: job ${meta.jobId} (${meta.platform}) on tab ${tabId} did not finish in time — force-failing.`);
   // Eerst kijken of het misschien gewoon gelukt is. Niets is verwarrender dan een
@@ -6603,7 +6692,18 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   // content script retries briefly to cover the tab-open race.
   if (msg.type === "GET_JOB") {
     const key = `jobtab_${sender.tab?.id}`;
-    chrome.storage.local.get(key, (s) => sendResponse({ job: s[key] || null }));
+    chrome.storage.local.get(key, (s) => {
+      const meta = s[key] || null;
+      // HET ENIGE HARDE BEWIJS DAT HET FORMULIER ECHT OPENGING.
+      // Dit script staat in de manifest alleen op het plaatsformulier zelf. Op
+      // een foutpagina of een inlogscherm draait het niet en komt deze vraag
+      // dus nooit. De bewaker gebruikt dat verschil, zie meldNooitBegonnen.
+      if (meta && !meta.scriptSeen) {
+        chrome.storage.local.set({ [key]: { ...meta, scriptSeen: true } });
+        if (meta.platform) chrome.storage.local.remove(`${NIET_GESTART_PREFIX}${meta.platform}`);
+      }
+      sendResponse({ job: meta });
+    });
     return true;
   }
 

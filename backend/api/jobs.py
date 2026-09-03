@@ -2056,7 +2056,65 @@ def _queue_scan(db, user_id: str, platform: str):
         logger.warning(f"Could not queue follow-up scan for {platform}: {e}")
 
 
-def _rechtgezette_foutmelding(job: dict | None, body: dict, versie) -> dict:
+# De melding die de bewaker van de extensie achterlaat als het invulscript zich
+# nooit heeft gemeld. Dat is geen "de pagina is veranderd": dat is "de pagina die
+# openging was het plaatsformulier niet".
+_TIJDSOVERSCHRIJDING = re.compile(r"timed out waiting for this .* job to finish", re.I)
+
+
+def _nooit_gelukt_op(db, user_id: str, platform: str) -> bool:
+    """Heeft deze verkoper op dit kanaal ooit iets geplaatst gekregen?
+
+    Dit is het verschil tussen "deze ene advertentie liep vast" en "dit kanaal
+    heeft bij hem nog nooit gewerkt". Alleen in het tweede geval mogen we de
+    hele wachtrij terugnemen.
+    """
+    return not (db.table("jobs").select("id").eq("user_id", user_id)
+                .eq("platform", platform).eq("status", "done").limit(1).execute().data or [])
+
+
+def _kansloze_reeks(db, user_id: str, platform: str) -> bool:
+    """Drie keer op rij dezelfde stilte, en nog nooit één geslaagde plaatsing.
+
+    GEMETEN (03-09-2026, Egbert Brouwer / papas-plectrums). Hij zette 305
+    artikelen klaar voor 2dehands. Op 2dehands was hij niet ingelogd, dus gaf de
+    site op het plaatsadres HTTP 401 en ging het formulier nooit open. Elke
+    opdracht liep daardoor tegen de bewaker van drie minuten aan: 26 keer
+    dezelfde onbegrijpelijke melding, met nog 279 opdrachten erachter. De
+    extensie doet met opzet één opdracht tegelijk, dus dat waren zestien uur
+    waarin hij verder niets kon publiceren. Zijn woorden: "ik loop compleet vast".
+
+    Drie op rij is de rem: één keer kan pech zijn, drie keer op een kanaal dat
+    nog nooit heeft gewerkt is een patroon. Dat kost hem tien minuten in plaats
+    van zestien uur.
+    """
+    laatste = (db.table("jobs").select("status,result").eq("user_id", user_id)
+               .eq("platform", platform).eq("action", "create")
+               .in_("status", ["done", "error"])
+               .order("created_at", desc=True).limit(12).execute().data or [])
+    op_rij = 0
+    for j in laatste:
+        if j.get("status") == "done":
+            return False
+        if not _TIJDSOVERSCHRIJDING.search(str((j.get("result") or {}).get("error") or "")):
+            return False
+        op_rij += 1
+        if op_rij >= 3:
+            break
+    return op_rij >= 3 and _nooit_gelukt_op(db, user_id, platform)
+
+
+def _melding_formulier_ging_niet_open(platform: str) -> str:
+    site = {"marktplaats": "Marktplaats (marktplaats.nl)",
+            "2dehands": "2dehands (2dehands.be)"}.get(platform, platform)
+    return (f"The {site} listing form never opened, so nothing was filled in and nothing was "
+            f"published. That is what it looks like when you are not signed in to {site} in this "
+            f"browser: the site then answers with an error page instead of the form. Marktplaats "
+            f"and 2dehands are separate sites with separate logins, so being signed in to one does "
+            f"not sign you in to the other. Open {site} in this browser, sign in, and publish again.")
+
+
+def _rechtgezette_foutmelding(job: dict | None, body: dict, versie, kansloos: bool = False) -> dict:
     """Welke foutmelding de verkoper te zien krijgt bij een mislukte opdracht.
 
     Los van de database gehouden zodat hij te testen is — deze tekst is precies
@@ -2086,6 +2144,13 @@ def _rechtgezette_foutmelding(job: dict | None, body: dict, versie) -> dict:
        we die tekst hier recht voor iedereen die nog een oudere kopie draait.
     """
     fout = str((body or {}).get("error") or "")
+    # 3. HET FORMULIER GING NOOIT OPEN — zie _kansloze_reeks.
+    #    Bewust vóór de rest: dit is de enige rechtzetting die weet dat het
+    #    kanaal bij deze verkoper nog nooit heeft gewerkt, en dat weegt zwaarder
+    #    dan elke gok over wat er in het formulier is misgegaan.
+    if kansloos and (job or {}).get("action") == "create" and _TIJDSOVERSCHRIJDING.search(fout):
+        return {**(body or {}), "error_oorspronkelijk": fout,
+                "error": _melding_formulier_ging_niet_open((job or {}).get("platform") or "")}
     if versie and versie < MINIMALE_SCANVERSIE:
         return {**(body or {}), "error_oorspronkelijk": fout, "error": (
             f"Deze opdracht is opgepakt door een verouderde kopie van de "
@@ -2132,7 +2197,16 @@ def fail_job(job_id: str, body: dict, user_id: str = Depends(get_current_user)):
                         MAX_HERKANSING_OUDE_EXTENSIE)
             return {"ok": True, "requeued": True, "reason": "outdated_extension"}
 
-    body = _rechtgezette_foutmelding(job, body, versie)
+    # Alleen navragen als het er echt toe doet: een tijdsoverschrijding op een
+    # publicatie. Anders is dit een extra databasevraag bij elke foutmelding.
+    kansloos = False
+    if (job and job.get("action") == "create"
+            and _TIJDSOVERSCHRIJDING.search(str((body or {}).get("error") or ""))):
+        try:
+            kansloos = _kansloze_reeks(db, user_id, job.get("platform") or "")
+        except Exception:
+            logger.warning("kansloze reeks niet vast te stellen voor %s", job_id)
+    body = _rechtgezette_foutmelding(job, body, versie, kansloos)
 
     # Deze vier bijwerkingen MOETEN aankomen. Viel de verbinding met de database
     # weg, dan kreeg de extensie een 500 terug en bleef de opdracht op "claimed"
@@ -2157,6 +2231,15 @@ def fail_job(job_id: str, body: dict, user_id: str = Depends(get_current_user)):
             "status": "error",
             "error_message": body.get("error", "Extension reported failure"),
         }).eq("item_id", job["item_id"]).eq("platform", job["platform"]).eq("status", "pending"))
+        # DE REST VAN DE RIJ HEEFT GEEN KANS MEER.
+        #
+        # Dit hoort hier en niet alleen in de extensie: een reparatie in de
+        # extensie bereikt een verkoper pas nadat Google hem heeft goedgekeurd
+        # en Chrome hem heeft opgehaald — bij Egbert duurde dat drie weken.
+        # Hier werkt hij vandaag, ook op de kopie die nu bij hem draait.
+        if kansloos:
+            _stop_wachtrij(db, user_id, job["platform"],
+                           _melding_formulier_ging_niet_open(job["platform"]))
         # Een mislukte publicatie betekent vaak dat de gebruiker het formulier
         # zelf heeft afgemaakt. Plan meteen een scan in, zodat de app binnen
         # enkele minuten zelf ziet dat de advertentie tóch online staat in
@@ -2186,6 +2269,74 @@ def fail_job(job_id: str, body: dict, user_id: str = Depends(get_current_user)):
                 "error_message": melding,
             }).eq("id", rij["id"]))
     return {"ok": True}
+
+
+def _stop_wachtrij(db, user_id: str, platform: str, reden: str) -> int:
+    """Neem alles terug wat nog voor dit kanaal in de wachtrij staat."""
+    wachtend = db.table("jobs").select("id,item_id,action,payload").eq(
+        "user_id", user_id).eq("platform", platform).eq("status", "pending").execute().data or []
+    if not wachtend:
+        return 0
+    now = datetime.now(timezone.utc).isoformat()
+    ids = [j["id"] for j in wachtend]
+    # Per brok bijwerken: boven ongeveer 640 id's breekt PostgREST het verzoek
+    # stil af op de lengte van de URL. Zie de kennisbank; dat heeft eerder
+    # scans, verkoopcontrole en herplaatsen kapotgemaakt.
+    for i in range(0, len(ids), 200):
+        execute_with_retry(db.table("jobs").update({
+            "status": "cancelled",
+            "result": {"cancelled": "queue stopped", "error": reden},
+            "done_at": now,
+        }).in_("id", ids[i:i + 200]))
+
+    # De advertentierijen die op deze opdrachten stonden te wachten horen niet
+    # op "bezig" te blijven staan: er is niets geplaatst. Met de reden erbij,
+    # want een leeg foutveld leest als een raadsel.
+    item_ids = sorted({j["item_id"] for j in wachtend
+                       if j.get("action") == "create" and j.get("item_id")})
+    for i in range(0, len(item_ids), 200):
+        execute_with_retry(db.table("listings").update({
+            "status": "error", "error_message": reden,
+        }).in_("item_id", item_ids[i:i + 200]).eq("platform", platform).eq("status", "pending"))
+
+    # Een herplaatsing leende bij het inplannen alvast uit de dagteller en de
+    # afkoeltijd. De ronde gaat niet door, dus dat gaat terug.
+    from backend.services.relist import rollback_refresh
+    for j in wachtend:
+        rollback = (j.get("payload") or {}).get("_refresh_rollback")
+        if rollback:
+            try:
+                rollback_refresh(rollback, user_id)
+            except Exception:
+                logger.warning("stop-wachtrij: teruggeven van de herplaatsteller mislukt voor %s", j["id"])
+
+    logger.warning("stop-wachtrij: %d opdrachten voor %s teruggenomen bij %s (%s)",
+                   len(ids), platform, user_id, reden[:120])
+    return len(ids)
+
+
+@router.post("/stop-platform")
+def stop_platform(body: dict, user_id: str = Depends(get_current_user)):
+    """Neem in één keer alles terug wat nog voor één kanaal in de wachtrij staat.
+
+    WAAROM DIT BESTAAT (03-09-2026, gemeten bij Egbert Brouwer). Hij zette 152
+    artikelen tegelijk klaar voor Marktplaats én 2dehands. Op 2dehands was hij
+    niet ingelogd, dus ging daar het plaatsformulier nooit open. Elke opdracht
+    liep daardoor tegen de bewaker van drie minuten aan: 26 keer dezelfde
+    onbegrijpelijke melding, met nog 279 opdrachten erachter. De extensie doet
+    met opzet één opdracht tegelijk, dus dat was zestien uur waarin hij niets
+    anders kon publiceren. Zijn woorden: "ik loop compleet vast".
+
+    Weet de extensie zeker dat het formulier niet opengaat, dan heeft de rest
+    van de rij geen enkele kans meer. Die halen we hier in één keer weg, met de
+    reden erbij, zodat hij ziet wat er is gebeurd in plaats van het zestien uur
+    lang opnieuw te zien mislukken.
+    """
+    platform = str(body.get("platform") or "").strip()
+    if not platform:
+        raise HTTPException(status_code=400, detail="platform is required")
+    reden = str(body.get("reason") or "").strip() or _melding_formulier_ging_niet_open(platform)
+    return {"ok": True, "cancelled": _stop_wachtrij(get_db(), user_id, platform, reden)}
 
 
 @router.post("/{job_id}/cancel")
