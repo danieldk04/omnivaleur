@@ -60,10 +60,23 @@ check("GET_JOB stempelt dat het invulscript er echt was",
   "zonder stempel weet de bewaker nooit of het formulier openging");
 
 // De echte meldNooitBegonnen draaien, met een nagebootste browser.
-const omgeving = { verstuurdeFouten: [], geslotenTabs: [], gestopt: [], opslag: {} };
+// De waarneming die de bewaker straks uit het tabblad haalt. Standaard: de
+// pagina die een uitgelogde bezoeker krijgt. Nagemeten op 03-09-2026 met een
+// kale aanvraag zonder cookies: HTTP 401, twaalf bytes "Unauthorized".
+const omgeving = {
+  verstuurdeFouten: [], geslotenTabs: [], gestopt: [], opslag: {},
+  waarneming: {
+    url: "https://www.2dehands.be/plaats/728/748", titel: "Unauthorized",
+    begin: "Unauthorized", stempel: null, velden: 0, wachtwoordveld: false,
+  },
+};
 const chrome = {
   tabs: {
     get: async () => ({ url: "https://www.2dehands.be/plaats/728/748?title=" }),
+  },
+  runtime: { getManifest: () => ({ version: "1.0.286" }) },
+  scripting: {
+    executeScript: async () => [{ result: omgeving.waarneming }],
   },
   storage: {
     local: {
@@ -87,6 +100,7 @@ const bron = [
   BG.slice(BG.indexOf("const NIET_GESTART_PREFIX"), BG.indexOf("const SITE_NAAM")),
   BG.slice(BG.indexOf("const SITE_NAAM"), BG.indexOf("\n};", BG.indexOf("const SITE_NAAM")) + 3),
   functieUit(BG, "stopPlatformWachtrij", "async function"),
+  functieUit(BG, "bekijkVastgelopenTabblad", "async function"),
   functieUit(BG, "meldNooitBegonnen", "async function"),
   "return meldNooitBegonnen;",
 ].join("\n");
@@ -103,6 +117,12 @@ const meta = { jobId: "j1", serverUrl: "https://omnivaleur.com", platform: "2deh
     /never opened/i.test(eerste), eerste.slice(0, 90));
   check("de melding noemt de site waar hij moet inloggen",
     /2dehands\.be/.test(eerste) && /sign in/i.test(eerste), eerste.slice(0, 90));
+  // EN DAT MAG ALLEEN OMDAT HET GEMETEN IS. De bewaker heeft in het tabblad
+  // gekeken en dáár "Unauthorized" gezien; hij heeft het niet afgeleid uit het
+  // enkele feit dat er niets terugkwam. Dat verschil kostte Egbert een week.
+  check("en zegt erbij wat er op die pagina stond",
+    /Unauthorized/.test(eerste) && /invulscript geladen: nee/.test(eerste),
+    eerste.slice(-140));
   check("de melding legt uit dat het twee aparte logins zijn",
     /separate logins/i.test(eerste),
     "hij is op Marktplaats wel ingelogd, dus zonder dit klopt 'log in' niet voor hem");
@@ -330,6 +350,71 @@ const meta = { jobId: "j1", serverUrl: "https://omnivaleur.com", platform: "2deh
   check("de knop praat met de server, niet alleen met het scherm",
     /api\/listings\/clear-error/.test(APP),
     "zonder die aanroep is het scherm schoon en de database niet");
+
+  // ── 6. "Geen teken van leven" is geen oorzaak ─────────────────────────
+  //
+  // Dertig plaatsingen van Egbert liepen af zonder dat het tabblad iets
+  // terugmeldde. Daar hoorde de tekst bij "dat is hoe het eruitziet als je niet
+  // bent ingelogd". Dat was een gok, en hij was fout. De bewaker kijkt nu eerst
+  // in het tabblad, en content/shared.js laat een stempel achter zodat er iets
+  // te kijken valt: staat het stempel er, dan is ons script geladen en ligt het
+  // aan ons.
+  console.log("\nDe bewaker kijkt in het tabblad in plaats van te gokken");
+
+  const SHARED = fs.readFileSync(path.join(__dirname, "..", "extension", "content", "shared.js"), "utf8");
+  check("het invulscript zet een stempel zodra het laadt",
+    /data-omnivaleur-cs/.test(SHARED),
+    "zonder stempel valt 'nooit geladen' niet te onderscheiden van 'wel geladen'");
+  check("en de bewaker leest datzelfde stempel uit",
+    /data-omnivaleur-cs/.test(BG));
+
+  const meld = functieUit(BG, "meldNooitBegonnen", "async function");
+  const bouwMeld = (waarneming) => {
+    const gemeld = { tekst: null, gestopt: null };
+    const fn = new Function(
+      "SITE_NAAM", "bekijkVastgelopenTabblad", "reportError", "chrome",
+      "sluitWerkTabblad", "NIET_GESTART_PREFIX", "NIET_GESTART_GRENS",
+      "stopPlatformWachtrij", "console",
+      meld + "\nreturn meldNooitBegonnen;")(
+      { "2dehands": "2dehands (2dehands.be)" },
+      async () => waarneming,
+      async (_id, _url, t) => { gemeld.tekst = t; },
+      { storage: { local: { get: async () => ({}), set: async () => {}, remove: async () => {} } } },
+      () => {}, "nietgestart_", 2,
+      async (_u, _p, r) => { gemeld.gestopt = r; },
+      console);
+    return { fn, gemeld };
+  };
+
+  // (a) Ons script stond er wel: dan is het onze fout, en dat zeggen we.
+  let g = bouwMeld({ url: "https://www.2dehands.be/plaats/728/748", titel: "Plaats je advertentie",
+                     begin: "Plaats je advertentie", stempel: "1.0.286", velden: 14, wachtwoordveld: false });
+  await g.fn(1, { platform: "2dehands", jobId: "j1", serverUrl: "s" });
+  check("stempel gevonden: fout aan onze kant, niet aan zijn login",
+    /fault on our side/.test(g.gemeld.tekst) && !/sign in/i.test(g.gemeld.tekst),
+    g.gemeld.tekst);
+  check("en het stempel staat bij de feiten",
+    /invulscript geladen: 1\.0\.286/.test(g.gemeld.tekst), g.gemeld.tekst.slice(-140));
+
+  // (b) Een echte inlogpagina: dán mag "log in" klinken.
+  g = bouwMeld({ url: "https://www.2dehands.be/plaats/728/748", titel: "Unauthorized",
+                 begin: "Unauthorized", stempel: null, velden: 0, wachtwoordveld: false });
+  await g.fn(1, { platform: "2dehands", jobId: "j2", serverUrl: "s" });
+  check("Unauthorized zonder stempel: dán pas over inloggen beginnen",
+    /showed a login page/.test(g.gemeld.tekst) && /separate logins/.test(g.gemeld.tekst),
+    g.gemeld.tekst);
+
+  // (c) Iets anders: opschrijven wat er stond, geen oorzaak verzinnen.
+  g = bouwMeld({ url: "https://www.2dehands.be/plaats/728/748", titel: "Oeps",
+                 begin: "Er ging iets mis", stempel: null, velden: 3, wachtwoordveld: false });
+  await g.fn(1, { platform: "2dehands", jobId: "j3", serverUrl: "s" });
+  check("onbekende pagina: geen oorzaak verzonnen",
+    /could not tell from here/.test(g.gemeld.tekst)
+      && !/not signed in|fault on our side/.test(g.gemeld.tekst),
+    g.gemeld.tekst);
+  check("maar wél met de pagina erbij, zodat het na te kijken is",
+    /Oeps/.test(g.gemeld.tekst) && /plaats\/728\/748/.test(g.gemeld.tekst),
+    g.gemeld.tekst.slice(-160));
 
   console.log(mislukt ? `\n${mislukt} controle(s) mislukt` : "\nAlles groen");
   process.exit(mislukt ? 1 : 0);

@@ -3870,3 +3870,58 @@ andere sessie is weggeschreven — we werkten in dezelfde werkmap.
 **Openstaand bij Daniel:** het pakket 1.0.286 moet naar de Chrome Web Store
 (`dist/omnivaleur-extension-1.0.286.zip`, opnieuw gebouwd ná die commit), en het
 antwoord op de vraag over de gele balk.
+
+## 03-09-2026 — Correctie: Egbert heeft nog nooit iets gepubliceerd, op geen enkel kanaal
+
+In de notitie hierboven en in de commit van 12:12 staat dat zijn Marktplaats-
+opdrachten uit dezelfde ronde wél doorliepen, "15 geplaatst". Dat klopt niet.
+Nagemeten over zijn hele logboek (348 opdrachten, `fetch_all`, dus zonder de
+duizendgrens van PostgREST):
+
+* 304 create-opdrachten, allemaal voor 2dehands, nul geslaagd.
+* Nul create-opdrachten voor Marktplaats. Ooit. Die 15 "done" waren SCANS.
+* Zijn 5.533 actieve Marktplaats-rijen komen uit de import, niet uit publiceren.
+
+Dat is een ander verhaal dan "2dehands is stuk bij hem". Wat er werkt en wat er
+niet werkt loopt bij hem precies langs één lijn:
+
+* Scannen gebeurt met `chrome.scripting.executeScript` vanuit de service worker.
+  Dat werkt bij hem: 15 geslaagde Marktplaats-scans.
+* Publiceren gebeurt met de content scripts uit het manifest
+  (`content/shared.js` + `content/marktplaats.js` of `tweedehands.js`). Daarvan
+  is bij hem nog nooit één keer aantoonbaar iets gedraaid.
+
+Het versiestempel `[extensie 1.0.281]` in zijn foutmeldingen komt uit
+`chrome.runtime.getManifest()` in background.js en zegt dus alleen iets over de
+service worker, niet over de content scripts. Zie ook de kennisbanknotitie
+"Tweede extensiekopie": een handmatig geladen kopie pikt opdrachten op en levert
+half werk af.
+
+**Wat er nu is bijgebouwd om dit te beslissen.** `content/shared.js` zet bij het
+laden `data-omnivaleur-cs` met zijn versie op de pagina, en de bewaker kijkt
+vanaf nu in het vastgelopen tabblad in plaats van een oorzaak aan te nemen: URL,
+paginatitel, aantal invulvelden, de eerste regels tekst, en of dat stempel er
+staat. Drie uitkomsten, drie verschillende meldingen:
+
+1. stempel gevonden: ons script is geladen en het ligt aan ons, en dat zeggen we
+   ook met zoveel woorden ("a fault on our side").
+2. geen stempel, en de pagina toont "Unauthorized" of een wachtwoordveld: dán
+   pas gaat het over inloggen.
+3. iets anders: we schrijven op wat er stond en verzinnen geen oorzaak.
+
+**De proef die vandaag al kan, zonder Web Store.** Laat hem één artikel naar
+Marktplaats publiceren. Daar is hij aantoonbaar ingelogd (zijn scans lukken).
+Loopt dat óók vast zonder teken van leven, dan ligt het aan zijn extensiekopie
+en niet aan 2dehands. Lukt het wel, dan is 2dehands echt anders en weten we waar
+we verder moeten kijken.
+
+**Ook gedaan:** de opruimknop is op de echte database beproefd, met één rij van
+Egbert. Voor 304 mislukte 2dehands-rijen, na 303, precies de bedoelde rij weg,
+zijn 5.533 Marktplaats-rijen onaangeroerd.
+
+**Let op, apart houden:** Daniel heeft tegelijk contact met Amanda over de
+extensie (categorieën, `verkeerde-categorie-toegewezen`). Aan de categorietabel
+in background.js is vandaag met opzet niets veranderd. De categorienummers
+728/748 zijn overigens wel nagemeten en kloppen op allebei de sites
+("Muziek en Instrumenten | Gitaren | Elektrisch", 2.265 advertenties op
+2dehands), dus daar zit Egberts probleem niet.

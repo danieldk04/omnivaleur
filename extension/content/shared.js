@@ -1,5 +1,22 @@
 // Shared, robust form-filling engine for Marktplaats / 2dehands (Adevinta ECG forms).
 // Exposes window.CL with reliable helpers. Loaded before each platform script.
+
+// EEN STEMPEL DAT ZEGT: IK BEN ER GEWEEST (03-09-2026).
+//
+// Loopt een plaatsing vast zonder één teken van leven, dan zijn er twee heel
+// verschillende oorzaken en tot vandaag konden we ze niet uit elkaar houden:
+// (a) dit invulscript is nooit geladen, dus de pagina was het formulier niet,
+// of (b) het is wél geladen en heeft daarna iets niet gevonden. Bij Egbert
+// Brouwer mislukten dertig plaatsingen op precies deze manier en werd (a)
+// aangenomen zonder bewijs, met een verkeerd advies aan de klant tot gevolg.
+//
+// Dit stempeltje kost niets en beslist het: de bewaker leest het straks uit het
+// tabblad zelf. Staat het er niet, dan is dit script nooit gedraaid.
+try {
+  document.documentElement.setAttribute(
+    "data-omnivaleur-cs", chrome.runtime.getManifest().version);
+} catch (_) { /* liever geen stempel dan een kapotte pagina */ }
+
 window.CL = (() => {
   const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
   const qs = (sel) => document.querySelector(sel);
@@ -267,6 +284,19 @@ window.CL = (() => {
   // De namen links komen van Marktplaats zelf (priceType op de
   // advertentiepagina, nagemeten 03-09-2026 op haar eigen advertenties). De
   // teksten rechts zijn de keuzes in de lijst van het plaatsformulier.
+  //
+  // NAGEMETEN OP HET ECHTE, INGELOGDE PLAATSFORMULIER (03-09-2026), in twee
+  // verschillende categorieën (kleding 621/636 en Huis en Inrichting > Servies
+  // 504/1262). Allebei exact deze vier, en verder geen:
+  //     Vraagprijs = FIXED
+  //     Bieden = FAST_BID
+  //     Zie omschrijving = SEE_DESCRIPTION
+  //     Gratis = FREE
+  // Kiezen we "Bieden", dan VERDWIJNT het prijsveld (input[name="price.value"])
+  // uit het formulier — vandaar dat de vorm vóór de prijs wordt gezet en het
+  // prijsveld daarna wordt overgeslagen. "Bieden vanaf" is geen aparte vorm maar
+  // een vraagprijs met de schakelaar #syi-bidding-switch-input aan; die staat er
+  // in beide categorieën.
   const MP_PRIJSVORM = {
     FIXED:           "Vraagprijs",
     MIN_BID:         "Vraagprijs",   // vraagprijs MET "bieden vanaf" — zie fillBidding
@@ -337,11 +367,19 @@ window.CL = (() => {
     }
 
     const kaal = (t) => String(t || "").toLowerCase().replace(/[^a-z]/g, "");
-    const waarden = MP_VORM_WAARDEN[vorm] || [];
     const opties = [...sel.options].filter((o) => o.value !== "" && !o.disabled);
-    const optie = opties.find((o) => kaal(o.text) === kaal(vorm))
-               || opties.find((o) => waarden.includes(String(o.value).toUpperCase()))
-               || opties.find((o) => kaal(o.text).startsWith(kaal(vorm)));
+    const zoek = (naam) => {
+      const waarden = MP_VORM_WAARDEN[naam] || [];
+      return opties.find((o) => kaal(o.text) === kaal(naam))
+          || opties.find((o) => waarden.includes(String(o.value).toUpperCase()))
+          || opties.find((o) => kaal(o.text).startsWith(kaal(naam)));
+    };
+    // "Bieden" als terugval. Het formulier biedt maar vier vormen aan
+    // (nagemeten, zie hierboven); een advertentie die op Marktplaats als
+    // "Gereserveerd" of "Ruilen" stond kan hier dus niet in zijn eigen vorm
+    // terugkomen. Zonder vraagprijs is "Bieden" dan de enige vorm die klopt —
+    // beter dan de hele advertentie laten stranden op een leeg prijsveld.
+    const optie = zoek(vorm) || (vorm !== "Bieden" ? zoek("Bieden") : null);
     if (!optie) {
       // De echte keuzes meesturen. Heet de knop bij Marktplaats anders dan wij
       // denken, dan staat dat in de eerstvolgende foutmelding in plaats van dat
@@ -357,7 +395,7 @@ window.CL = (() => {
     if (String(sel.value) !== String(optie.value)) {
       throw new Error(`The listing type snapped back: the form did not accept "${vorm}"`);
     }
-    clog(`advertentievorm: ${vorm} (${optie.value})`);
+    clog(`advertentievorm: ${vorm} -> ${(optie.text || "").trim()} (${optie.value})`);
     return true;
   }
 

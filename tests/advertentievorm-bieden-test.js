@@ -46,6 +46,8 @@ class FakeSelect {
   dispatchEvent(e) {
     this.events.push(e && e.type);
     if (this.weigert && this._v === this.weigert) this._v = this.options[0].value;
+    // Het echte formulier haalt het prijsveld weg bij een vorm zonder bedrag.
+    if (this.formulier) this.formulier.prijsWeg = this._v !== "FIXED";
     return true;
   }
 }
@@ -60,19 +62,24 @@ class FakeInput {
   dispatchEvent() { return true; }
 }
 
+// LETTERLIJK OVERGENOMEN VAN HET ECHTE, INGELOGDE PLAATSFORMULIER (03-09-2026),
+// in twee categorieën gemeten (kleding 621/636 en Huis en Inrichting > Servies
+// 504/1262, de hoek waarin Amanda verkoopt). Allebei exact deze vier en verder
+// geen. Op het echte formulier verdween het prijsveld zodra "Bieden" gekozen
+// werd, en React nam de keuze aan — precies wat kiesPrijsvorm hieronder doet.
 const MP_OPTIES = [
   { text: "Vraagprijs", value: "FIXED" },
   { text: "Bieden", value: "FAST_BID" },
-  { text: "Gratis", value: "FREE" },
-  { text: "Ruilen", value: "EXCHANGE" },
-  { text: "N.o.t.k.", value: "NOTK" },
   { text: "Zie omschrijving", value: "SEE_DESCRIPTION" },
+  { text: "Gratis", value: "FREE" },
 ];
 
 function nieuwFormulier(opties = MP_OPTIES) {
   const select = new FakeSelect("Dropdown-prijstype", opties);
   const prijs = new FakeInput("price.value");
-  return { select, prijs };
+  const f = { select, prijs, prijsWeg: false };
+  select.formulier = f;
+  return f;
 }
 
 // Wat Marktplaats zelf doet als je op "Plaats je advertentie" klikt. De twee
@@ -93,7 +100,7 @@ function laadCL(formulier) {
     querySelector(sel) {
       if (!formulier) return null;
       if (sel === "select#Dropdown-prijstype") return formulier.select;
-      if (sel === 'input[name="price.value"]') return formulier.prijs;
+      if (sel === 'input[name="price.value"]') return formulier.prijsWeg ? null : formulier.prijs;
       return null;
     },
     querySelectorAll() { return []; },
@@ -212,6 +219,29 @@ function laadCL(formulier) {
        "dan stopt het met een uitleg in plaats van een advertentie kwijt te raken");
   }
 
-  console.log(mislukt === 0 ? "\nAlles goed.\n" : `\n${mislukt} proef(en) mislukt.\n`);
+    console.log("\n8. Het prijsveld verdwijnt bij Bieden, net als op het echte formulier");
+  {
+    const f = nieuwFormulier();
+    const CL9 = laadCL(f);
+    await CL9.kiesPrijsvorm("Bieden");
+    ok(f.prijsWeg === true, "het formulier haalt het prijsveld weg");
+    // De invulstap slaat de prijs over; zou hij het tóch proberen, dan is er niets.
+    ok(CL9.MP_ZONDER_BEDRAG.has("Bieden"), "en onze invulstap slaat de prijs dus over");
+  }
+
+  console.log("\n9. Een vorm die Marktplaats niet aanbiedt valt terug op Bieden");
+  {
+    // Marktplaats biedt maar vier vormen aan; "Gereserveerd" staat er niet bij.
+    // Zonder terugval zou zo'n advertentie stranden op een leeg prijsveld.
+    const f = nieuwFormulier();
+    const CL10 = laadCL(f);
+    const gekozen = CL10.mpPrijsvorm({ price: 0, mp_prijstype: { soort: "RESERVED" } });
+    ok(gekozen === "Gereserveerd", "we vragen eerst om zijn eigen vorm");
+    await CL10.kiesPrijsvorm(gekozen);
+    ok(f.select.value === "FAST_BID", "die staat er niet, dus wordt het Bieden in plaats van een mislukking");
+    ok(marktplaatsPlaatst(f).geplaatst === true, "en de advertentie gaat gewoon online");
+  }
+
+console.log(mislukt === 0 ? "\nAlles goed.\n" : `\n${mislukt} proef(en) mislukt.\n`);
   process.exit(mislukt === 0 ? 0 : 1);
 })();

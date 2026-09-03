@@ -1953,21 +1953,73 @@ async function stopPlatformWachtrij(serverUrl, platform, reden) {
   }
 }
 
+// Wat er op dat tabblad te zien was, gemeten in plaats van aangenomen.
+//
+// HIER STOND EEN CONCLUSIE, EN DIE WAS FOUT (03-09-2026). De vorige versie zei
+// zonder voorbehoud "dat is hoe het eruitziet als je niet bent ingelogd".
+// Egbert Brouwer kreeg die tekst dertig keer en was gewoon ingelogd. Wat we
+// hadden was: het tabblad ging open en er kwam nooit iets terug. Dat is een
+// waarneming van niets, en daar hoort geen oorzaak bij.
+//
+// Deze functie kijkt daarom eerst in het tabblad zelf. Dat kan: scannen doet
+// hetzelfde en dat werkt bij hem wél. Het beslissende gegeven is het stempel
+// dat content/shared.js achterlaat. Staat het er, dan is ons invulscript
+// geladen en ligt het aan ons. Staat het er niet en zegt de pagina
+// "Unauthorized" of vraagt ze om een wachtwoord, dan is het de inlog. Staat er
+// iets anders, dan schrijven we op wat er stond in plaats van te gokken.
+async function bekijkVastgelopenTabblad(tabId) {
+  try {
+    const [res] = await chrome.scripting.executeScript({
+      target: { tabId },
+      func: () => {
+        const tekst = (document.body?.innerText || "").trim();
+        return {
+          url: String(location.href).split("?")[0],
+          titel: (document.title || "").slice(0, 120),
+          begin: tekst.slice(0, 200),
+          stempel: document.documentElement?.getAttribute("data-omnivaleur-cs") || null,
+          velden: document.querySelectorAll("input, textarea, [contenteditable=true]").length,
+          wachtwoordveld: !!document.querySelector('input[type="password"]'),
+        };
+      },
+    });
+    return res?.result || null;
+  } catch (e) {
+    console.warn("[Omnivaleur] Kon het vastgelopen tabblad niet bekijken:", e);
+    return null;
+  }
+}
+
 async function meldNooitBegonnen(tabId, meta) {
   const site = SITE_NAAM[meta.platform] || meta.platform;
-  let waar = "";
-  try {
-    const tab = await chrome.tabs.get(tabId);
-    if (tab && tab.url && !/^about:/.test(tab.url)) {
-      waar = ` The tab ended up on ${tab.url.split("?")[0]}.`;
-    }
-  } catch (_) { /* tabblad al weg */ }
-  const tekst =
-    `The ${site} listing form never opened, so nothing was filled in and nothing was published. ` +
-    `That is what it looks like when you are not signed in to ${site} in this browser — ` +
-    `the site then answers with an error page instead of the form.${waar} ` +
-    `Marktplaats and 2dehands are separate sites with separate logins: being signed in to one ` +
-    `does not sign you in to the other. Open ${site}, sign in, and publish again.`;
+  const f = await bekijkVastgelopenTabblad(tabId);
+
+  const feiten = f
+    ? ` [pagina: ${f.url}, titel ${JSON.stringify(f.titel)}, ${f.velden} invulveld(en), `
+      + `invulscript geladen: ${f.stempel ? f.stempel : "nee"}${f.begin ? `, begint met ${JSON.stringify(f.begin.slice(0, 80))}` : ""}]`
+    : " [het tabblad was al weg voordat we konden kijken]";
+
+  let tekst;
+  if (f && f.stempel) {
+    // Ons eigen script stond er wel degelijk. Dan is het onze fout, en dat mag
+    // een verkoper gewoon horen in plaats van naar zijn login gestuurd worden.
+    tekst =
+      `The ${site} listing form opened and our filling script did load, but it never got as far as `
+      + `filling anything in. That is a fault on our side, not with your account or your login. `
+      + `Nothing was published and nothing was changed on ${site}.` + feiten;
+  } else if (f && (f.wachtwoordveld || /unauthorized|inloggen|log in|sign in/i.test(f.begin || ""))) {
+    tekst =
+      `The ${site} listing form never opened: that browser tab showed a login page instead. `
+      + `Marktplaats and 2dehands are separate sites with separate logins, so being signed in to `
+      + `one does not sign you in to the other. Open ${site}, sign in, and publish again.` + feiten;
+  } else {
+    tekst =
+      `The ${site} listing form never opened: the page never reported back, so nothing was filled `
+      + `in and nothing was published. We could not tell from here whether that page was a login `
+      + `screen or something else, so the details we did see are below. Please send them to us.`
+      + feiten;
+  }
+
   await reportError(meta.jobId, meta.serverUrl, tekst).catch(() => {});
   // Er valt hier niets met de hand af te maken — er staat geen formulier. Het
   // tabblad openhouden levert alleen een stapel foutpagina's op.
