@@ -21,23 +21,33 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 *03-09-2026 — "bruine" en "rode" matchen op geen enkele Marktplaats-kleuroptie; verkopers schrijven verbogen en samengestelde kleuren, de lijst kent alleen de grondvorm*
 
-Marktplaats biedt in het Kleur-veld alleen kale grondvormen aan: Zwart, Wit,
-Grijs, Beige, Bruin, Rood, Bordeaux, Roze, Oranje, Geel, Groen, Blauw, Paars,
-Goud, Multicolour. Verkopers schrijven iets anders op. Geteld in Toons kast
+Marktplaats vraagt niet in elke categorie om een kleur, en waar het veld wél
+staat heet het per categorie anders (`plaidsKleur`, …) met een eigen lijst.
+Gemeten 03-09-2026 aan Toons eigen live advertentie in "plaids en woondekens":
+de verzamelnaam is daar **"Meerkleurig"**, niet "Multicolour" — precies de waarde
+die onze tabel eerder als doel had. Nooit één vaste lijst aannemen dus; lees de
+opties uit het formulier zelf en ga meerdere schrijfwijzen langs.
+
+Waar het veld staat, biedt het alleen de kale grondvorm aan. Verkopers schrijven
+iets anders op. Geteld in Toons kast
 (1.024 artikelen, 03-09-2026): 59 verschillende kleurwaarden, waarvan "bruine"
 41x, "zwarte" 20x, "rode" 16x, "groene" 15x, "crème" 13x, "witte" 10x, plus
 "lichtblauw", "olijfgroene", "Beige bruin", "divers", "Meerkleurig".
 
 De vertaaltabel ging alleen van Engels naar Nederlands, dus die woorden kwamen
 ongewijzigd bij `matchScore` aan en scoorden nul op elke optie. Gemeten met de
-echte code uit 1.0.280: 31 van de 59 waarden lieten het veld leeg, goed voor 175
-van zijn 1.024 artikelen. En een leeg kenmerkveld betekent bij Marktplaats geen
-advertentie: de plaatsknop doet dan stil niets (gemeten 21-08-2026).
+echte code uit 1.0.280: 31 van de 59 waarden lieten het veld leeg. Die 31 zitten
+op 171 van zijn 1.024 artikelen; hoeveel daarvan echt vastlopen hangt af van de
+categorie, want alleen waar het veld bestaat blokkeert het. Voor "plaids en
+woondekens" is dat bewezen: 15 artikelen. En een leeg kenmerkveld betekent bij
+Marktplaats geen advertentie: de plaatsknop doet dan stil niets (gemeten
+21-08-2026).
 
 **Why:** je ziet dit niet aankomen door naar de code te kijken, alleen door de
 echte waarden van een echte klant te tellen. Zeven mislukte plaatsingen in het
-logboek lijken een randgeval; 175 artikelen is de helft van wat hij nog wil
-plaatsen.
+logboek lijken een randgeval; 171 artikelen is een heel andere orde van grootte.
+En andersom: reken je die 171 door alsof ze állemaal vastlopen, dan overdrijf je,
+want de helft van zijn categorieën vraagt niet eens om een kleur. Tel wat er is.
 
 **How to apply:** normaliseer vóór het matchen, in deze volgorde: verbuiging
 afhalen (bruine → bruin, rode → rood, witte → wit, grijze → grijs, gouden →
@@ -45,8 +55,41 @@ goud), samenstelling terugbrengen tot de kleur die er als laatste in zit
 (lichtblauw → blauw, olijfgroen → groen), en pas dan bekende bijzondere namen
 (ecru → wit, marine → blauw, divers → multicolour). Meerdere woorden leveren
 meerdere kandidaten op, in geschreven volgorde. Kies altijd uit de opties die
-er echt in staan, verzin nooit een waarde. Zie ook
+er echt in staan, verzin nooit een waarde. Zet de kleur ook op de server goed op
+het moment dat de opdracht uitgaat: een extensiereparatie bereikt de verkoper pas
+na goedkeuring door de Chrome Web Store, de server bij de eerstvolgende opdracht. Zie ook
 "marktplaats-publiceren-valkuilen" en "omnivaleur-altijd-bewijzen".
+
+---
+
+## zekerheid-is-geen-stopplek
+
+*03-09-2026 — "Een percentage onder de 100 is geen eindverslag maar een opdracht; eerst alles doen wat het cijfer omhoog kan brengen, pas dan melden"*
+
+Op 03-09-2026 meldde ik Toons reparaties af op "zekerheid 85%", met als reden dat
+ik niet in zijn browser kon meekijken. Daniel: "kan je de zekerheid nog hoger
+krijgen? is dit alles wat je kan doen?" Twee keer, want de eerste keer had ik het
+nog niet door.
+
+Er was wél meer te doen, en het was niet eens duur: nakijken of de reparatie
+werkelijk live stond op omnivaleur.nl (dat kon in één opvraging), de maten net zo
+grondig doormeten als de kleuren in plaats van ze te laten liggen, en de kleur al
+op de server goedzetten zodat de reparatie vandaag werkt in plaats van pas nadat
+de Chrome Web Store bijwerkt. Dat laatste is precies het verschil tussen "het is
+gerepareerd" en "hij heeft er iets aan".
+
+**Why:** het blokje "Zekerheid: X%" is bedoeld als eerlijke maat, niet als
+uitweg. Zodra het als afsluiting wordt gebruikt, wordt eerlijkheid over een gat
+een manier om het gat te laten liggen. Daniel verkoopt zekerheid door aan zijn
+klanten; 85% betekent voor hem dat hij het niet met droge ogen kan beloven.
+
+**How to apply:** voordat je een percentage opschrijft, maak je de lijst van alles
+wat het omhoog zou brengen en doe je dat eerst. Wat overblijft mag alleen dat zijn
+wat buiten je bereik ligt (in de browser van de klant meekijken, een Web
+Store-goedkeuring, een beslissing van Daniel), en dat noem je bij naam als
+actiepunt. Vraag jezelf altijd: werkt dit vandaag voor de klant, of pas na een
+stap die iemand anders nog moet zetten? Kun je het vandaag laten werken, doe dat
+dan ook. Zie ook "omnivaleur-altijd-bewijzen" en "rapportage-in-gewone-taal".
 
 ---
 

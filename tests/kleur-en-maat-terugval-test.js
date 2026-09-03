@@ -48,13 +48,14 @@ const TOON_KLEUREN = [
   ["Taupe",1],["Bruin taupe",1],["divers",1],["Ecru",1],["Grijs",1],["marine",1],
 ];
 
-// Wat Marktplaats in de Kleur-lijst aanbiedt. Deze namen staan al sinds de
-// eerste versie als doelwaarde in de vertaaltabel; ze zijn destijds van het
-// echte formulier afgelezen. Per categorie kan de lijst korter zijn, nooit
-// anders geschreven.
+// Wat Marktplaats in de Kleur-lijst aanbiedt. Let op: het veld heet per
+// categorie anders (plaidsKleur, …) en de lijst verschilt. "Meerkleurig" is
+// gemeten op 03-09-2026 aan Toons eigen live advertentie in "plaids en
+// woondekens" — daar heet de optie NIET "Multicolour". Vandaar dat de extensie
+// altijd uit de echte lijst kiest en meerdere schrijfwijzen langsgaat.
 const MP_KLEUREN = ["Zwart","Grijs","Wit","Beige","Bruin","Rood","Bordeaux",
                     "Roze","Oranje","Geel","Groen","Blauw","Paars","Goud",
-                    "Zilver","Multicolour"];
+                    "Zilver","Meerkleurig"];
 
 // ── Een nagemaakt <select>, genoeg om de echte code op te draaien ─────────
 function maakSelect(opties) {
@@ -155,8 +156,8 @@ for (const [waarde, verwacht] of [
   ["donkergroen", "Groen"], ["crème", "Wit"], ["ecru", "Wit"], ["taupe", "Beige"],
   ["camel", "Beige"], ["marine", "Blauw"], ["zalm", "Roze"], ["lila", "Paars"],
   ["kaki", "Groen"], ["khaki", "Groen"], ["mint", "Groen"],
-  ["Meerkleurig", "Multicolour"], ["Kleurrijk", "Multicolour"],
-  ["divers", "Multicolour"], ["Beige bruin", "Beige"], ["Bruin taupe", "Bruin"],
+  ["Meerkleurig", "Meerkleurig"], ["Kleurrijk", "Meerkleurig"],
+  ["divers", "Meerkleurig"], ["Beige bruin", "Beige"], ["Bruin taupe", "Bruin"],
   ["Zwart, Rood", "Zwart"], ["bruin olijfgroen", "Bruin"],
   ["Donkergroen zwart", "Groen"], ["red", "Rood"], ["bordeaux", "Bordeaux"],
 ]) {
@@ -179,6 +180,41 @@ const geenKleuren = ["Katoen", "Wol", "Linnen"];
 const leeg = vulKleur(CLnu, "bruine", geenKleuren);
 check("een lijst zonder enige kleur blijft leeg", leeg.veldwaarde === "",
   `koos "${leeg.veldwaarde}" uit een lijst met alleen stoffen`);
+
+
+// ── Maten met een getal erin ─────────────────────────────────────────────
+// Vinted schrijft kindermaten als "10 jaar / 140 cm"; Marktplaats biedt
+// "Maat 140" aan. Toon heeft er vijftien van dat soort.
+console.log("\nMaten met een getal erin");
+function vulMaat(CL, waarde, opties) {
+  const el = maakSelect(opties);
+  const proxy = new Proxy(el, {
+    get(t, k) { return k === "value" ? (t._v || "") : t[k]; },
+    set(t, k, v) { if (k === "value") t._v = v; else t[k] = v; return true; },
+  });
+  for (const v of CL.valueVariants ? CL.valueVariants(waarde) : [waarde]) {
+    if (CL.fillNativeSelect(proxy, v)) break;
+  }
+  return el._v || "";
+}
+const KINDERMATEN = ["Maat 98","Maat 104","Maat 116","Maat 134","Maat 140",
+                     "Maat 152","Maat 158","Maat 164","Overige maten"];
+for (const [waarde, verwacht] of [
+  ["10 jaar / 140 cm", "Maat 140"], ["3 jaar / 98 cm", "Maat 98"],
+  ["12 jaar / 152 cm", "Maat 152"], ["14 jaar / 164 cm", "Maat 164"],
+]) {
+  check(`"${waarde}" → ${verwacht}`, vulMaat(CLnu, waarde, KINDERMATEN) === verwacht,
+    `koos "${vulMaat(CLnu, waarde, KINDERMATEN)}"`);
+  check(`"${waarde}" lukte vóór de reparatie niet`,
+    vulMaat(CLoud, waarde, KINDERMATEN) !== verwacht);
+}
+// Het kale getal is een grove sleutel en mag nooit voorgaan op iets beters.
+const VOLWASSEN = ["Maat 36 (S)","Maat 38 (M)","Maat 40 (M)","Maat 42 (L)","Overige maten"];
+check('"M / 38 / 10" kiest nog steeds op de maat zelf',
+  vulMaat(CLnu, "M / 38 / 10", VOLWASSEN) === "Maat 38 (M)",
+  `koos "${vulMaat(CLnu, "M / 38 / 10", VOLWASSEN)}"`);
+check('"40 x 40 cm" (een kussen) pakt geen kledingmaat uit een lijst zonder cm',
+  vulMaat(CLnu, "40 x 40 cm", ["Rond","Vierkant","Rechthoekig"]) === "");
 
 console.log(mislukt ? `\n${mislukt} controle(s) mislukt` : "\nAlles goed.");
 process.exit(mislukt ? 1 : 0);

@@ -35,7 +35,9 @@ KLEUR_BASIS = {
     "bruin": "Bruin", "rood": "Rood", "bordeaux": "Bordeaux", "roze": "Roze",
     "oranje": "Oranje", "geel": "Geel", "groen": "Groen", "blauw": "Blauw",
     "paars": "Paars", "goud": "Goud", "zilver": "Zilver",
-    "multicolour": "Multicolour",
+    # "Meerkleurig", niet "Multicolour": gemeten 03-09-2026 op Toons eigen
+    # advertentie in "plaids en woondekens" (plaidsKleur: "Meerkleurig").
+    "multicolour": "Meerkleurig",
 }
 
 # Namen die geen grondvorm zijn maar wel iedereen bekend.
@@ -160,7 +162,12 @@ def normaliseer_kleur(waarde) -> str:
         return ""
     if rauw.lower() in COLOUR_NL:
         return COLOUR_NL[rauw.lower()]
-    kandidaten = kleur_kandidaten(rauw)
-    # kandidaten[0] is de waarde zelf; de eerste afgeleide is wat we ervan
-    # begrijpen. Begrijpen we er niets van, dan is er niets te normaliseren.
-    return kandidaten[1] if len(kandidaten) > 1 else ""
+    # Woord voor woord en in de geschreven volgorde: bij "Beige bruin" bedoelt de
+    # verkoper eerst beige. Pas als geen enkel los woord iets oplevert, de hele
+    # tekst als één woord — die pikt het laatste stuk op ("lichtblauw" → blauw).
+    for woord in re.split(r"[\s,/&+·-]+", rauw):
+        stam = _kleur_stam(woord)
+        if stam:
+            return KLEUR_BASIS.get(stam, "")
+    stam = _kleur_stam(rauw)
+    return KLEUR_BASIS.get(stam, "") if stam else ""

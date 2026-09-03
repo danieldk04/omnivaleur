@@ -517,7 +517,10 @@ window.CL = (() => {
     zwart: "Zwart", wit: "Wit", grijs: "Grijs", beige: "Beige", bruin: "Bruin",
     rood: "Rood", bordeaux: "Bordeaux", roze: "Roze", oranje: "Oranje",
     geel: "Geel", groen: "Groen", blauw: "Blauw", paars: "Paars",
-    goud: "Goud", zilver: "Zilver", multicolour: "Multicolour",
+    goud: "Goud", zilver: "Zilver",
+    // "Meerkleurig", niet "Multicolour": gemeten 03-09-2026 op Toons eigen
+    // advertentie in "plaids en woondekens" (plaidsKleur: "Meerkleurig").
+    multicolour: "Meerkleurig",
   };
   // Namen die geen grondvorm zijn maar wel iedereen bekend: naar de basiskleur.
   const KLEUR_SYNONIEM = {
@@ -608,11 +611,21 @@ window.CL = (() => {
   // kennen — een onbekende kleur mag nooit een lege waarde worden.
   function dutchColor(value) {
     const raw = String(value || "").trim();
+    if (!raw) return raw;
     if (COLOUR_NL[raw.toLowerCase()]) return COLOUR_NL[raw.toLowerCase()];
-    const kandidaten = kleurKandidaten(raw);
-    // kandidaten[0] is de waarde zelf; de eerste afgeleide is wat we ervan
-    // begrijpen. Begrijpen we er niets van, dan blijft het de eigen tekst.
-    return kandidaten.length > 1 ? kandidaten[1] : raw;
+    // Woord voor woord en in de geschreven volgorde: bij "Beige bruin" bedoelt
+    // de verkoper eerst beige. Pas als geen enkel los woord iets oplevert, de
+    // hele tekst als één woord — die pikt het laatste stuk op.
+    // Gelijk aan normaliseer_kleur() in backend/services/kleur.py; dat is met
+    // opzet en tests/test_kleur_normalisatie.py bewaakt dat ze gelijk blijven.
+    for (const woord of raw.split(/[\s,/&+·-]+/)) {
+      const stam = _kleurStam(woord);
+      if (stam) return KLEUR_BASIS[stam] || raw;
+    }
+    const heel = _kleurStam(raw);
+    // Kennen we de kleur niet, dan blijft het de eigen tekst van de verkoper —
+    // nooit een verzonnen kleur.
+    return heel ? (KLEUR_BASIS[heel] || raw) : raw;
   }
 
   // ── ALS ONZE WAARDE NIET IN DE LIJST STAAT ────────────────────────────────
@@ -656,7 +669,12 @@ window.CL = (() => {
       // of samengestelde kleurnaam meteen bij "Overige" uit, of nergens.
       const uit = kleurKandidaten(w).slice(1);
       for (const alt of (COLOUR_FALLBACK[laag] || [])) if (!uit.includes(alt)) uit.push(alt);
-      for (const alt of ["Multicolour", "Overige", "Overig", "Anders", "Divers"]) {
+      // Elke categorie schrijft de verzamelnaam anders op: "plaids en
+      // woondekens" gebruikt "Meerkleurig" (gemeten op Toons eigen advertentie),
+      // elders staat "Multicolour" of alleen "Overige". Ze allemaal langsgaan
+      // kost niets: fillNativeSelect kiest alleen wat er echt in de lijst staat.
+      for (const alt of ["Meerkleurig", "Multicolour", "Veelkleurig", "Gemengd",
+                         "Overige", "Overig", "Anders", "Divers"]) {
         if (!uit.includes(alt)) uit.push(alt);
       }
       return uit;
@@ -974,6 +992,20 @@ window.CL = (() => {
         const p = part.trim();
         if (p && !out.includes(p)) out.push(p);
       }
+    }
+    // KINDERMATEN EN LENGTEMATEN OP HET KALE GETAL.
+    //
+    // Vinted schrijft kindermaten als "10 jaar / 140 cm" en Marktplaats biedt
+    // "Maat 140" aan. De stukken hierboven leveren "10 jaar" en "140 cm" op, en
+    // geen van beide komt in "Maat 140" voor — dus bleef het veld leeg. Het kale
+    // getal wél: "140" staat als los woord in "Maat 140".
+    //
+    // Met opzet als laatste en alleen uit "<getal> cm" of "<getal> jaar": een
+    // los getal is een grove sleutel, dus die mag pas aan de beurt komen als
+    // niets nauwkeurigers past. Zonder die inperking zou "40 x 40 cm" (een
+    // kussen) op "Maat 40" in een kledinglijst uitkomen.
+    for (const m of raw.matchAll(/(\d{2,3})\s*(?:cm|jaar)\b/gi)) {
+      if (!out.includes(m[1])) out.push(m[1]);
     }
     return out;
   }
@@ -1932,6 +1964,6 @@ window.CL = (() => {
     findFieldByLabel, selectDropdown, fillBrand, fillManufacturer, selectBundleFree,
     selectDelivery, gekozenLevering, selectPakketWaarde, vulHalswijdte, keuzeveldenKort, typBeschrijvingEcht,
     selectPackageSize, uploadPhotos, submitListing, step, closePopup, smartTrunc, fillBidding,
-    clog, plaatsBlokkade, dutchColor, kleurKandidaten, kiesMetTerugval, lijstOpties, platteTekst, verifyMpGroupFields, repairMpGroupFields, ensureDescriptionStillFilled, selectCondition, selectIntendedFor, fillBrandField, logMpFields, mpPrijs,
+    clog, plaatsBlokkade, dutchColor, kleurKandidaten, kiesMetTerugval, lijstOpties, valueVariants, platteTekst, verifyMpGroupFields, repairMpGroupFields, ensureDescriptionStillFilled, selectCondition, selectIntendedFor, fillBrandField, logMpFields, mpPrijs,
   };
 })();

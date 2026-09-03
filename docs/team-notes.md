@@ -3535,3 +3535,58 @@ importscherm.
 Extensie op 1.0.282, zip gebouwd. Zolang die niet in de Chrome Web Store staat,
 draait Toon de oude en blijft het kleurprobleem bestaan — dat is de laatste stap
 en die kan alleen Daniel zetten.
+
+## 03-09-2026 (vervolg) — doorgemeten na "is dit alles wat je kan doen?"
+
+Daniel vroeg terecht door op de 85% van hierboven. Vijf dingen die ik nog kon
+meten in plaats van aannemen, en één correctie op mezelf.
+
+**De reparatie staat aantoonbaar live.** `omnivaleur.nl/app.html` opgehaald en
+nagekeken: de vaste bladzijde, de stempel op de tabel en de trage miniaturen
+zitten er alle drie in. Dat was eerder aangenomen op grond van een geslaagde push.
+
+**Correctie op mijn eigen getal.** Ik schreef "175 van de 1.024 artikelen". Bij
+narekenen zijn het er 171, en belangrijker: dat is een bovengrens, geen aantal
+storingen. Marktplaats vraagt lang niet in elke categorie om een kleur. Van 35
+opgehaalde live advertenties van Toon had er precies één soort een kleurveld
+(`plaidsKleur`). Wat vaststaat: 692 van zijn artikelen dragen een kleur, 171
+daarvan in een schrijfwijze die de oude code niet kon plaatsen, en 15 daarvan
+staan in "plaids en woondekens" — de enige categorie waarvan ik bewezen heb dat
+ze om een kleur vraagt. Van de andere categorieën weet ik het niet en dat zeg ik
+er dan ook bij.
+
+**Een aanname die niet klopte.** Mijn hele kleurreparatie mikte op de namen uit
+onze eigen vertaaltabel, met "Multicolour" als verzamelnaam. Op zijn eigen live
+advertentie in "plaids en woondekens" staat `plaidsKleur: "Meerkleurig"`. Daar
+bestaat "Multicolour" dus niet, en de granny square met kleur *divers* zou ook na
+mijn reparatie zijn blijven hangen. Nu gecorrigeerd: de grondvorm is
+"Meerkleurig" en de extensie gaat bij een verzamelnaam meerdere schrijfwijzen
+langs (Meerkleurig, Multicolour, Veelkleurig, Gemengd, Overige, Overig, Anders,
+Divers) en kiest wat er in díe lijst echt in staat.
+
+**Nu werkt het vandaag, niet pas na de Web Store.** Dit was het grootste gat: een
+extensiereparatie bereikt een verkoper pas nadat Google hem heeft goedgekeurd en
+Chrome hem heeft opgehaald — bij Egbert duurde dat drie weken. Daarom zet de
+server de kleur nu goed op het moment dat de opdracht de deur uit gaat
+(`_zet_kleur_goed` in `backend/api/jobs.py`, met `backend/services/kleur.py`).
+Dat geldt ook voor de 24 herplaatsingen die nu klaarstaan, en dus ook op de kopie
+die Toon vandaag draait. Alleen als we de kleur herkennen; een onbekend woord
+blijft staan zoals hij het schreef. Vinted heeft een eigen lijst en blijft buiten
+schot.
+
+Omdat dezelfde logica nu op twee plekken staat (Python op de server, JavaScript in
+de extensie) leest `tests/test_kleur_normalisatie.py` de tabellen uit shared.js en
+legt ze naast die in Python. Lopen ze uit elkaar, dan valt de test om.
+
+**Maten er alsnog bij.** Die had ik laten liggen. Vinted schrijft kindermaten als
+"10 jaar / 140 cm", Marktplaats biedt "Maat 140" aan, en geen van beide helften
+komt in die optie voor. Vijftien van Toons artikelen hebben zo'n maat. De extensie
+probeert nu ook het kale getal, met opzet als laatste en alleen uit "<getal> cm"
+of "<getal> jaar" — anders zou "40 x 40 cm" (een kussen) op "Maat 40" in een
+kledinglijst uitkomen. Ook dat staat met een voor-en-na-proef in de test.
+
+Suite: 803 tests groen (was 763). Extensie op 1.0.283.
+
+**Wat nu nog buiten mijn bereik ligt, en dus als actiepunt bij Daniel:** de Web
+Store-goedkeuring, Toons 2dehands-inlog, de keuze of het dashboard Nederlands
+wordt, en meekijken in zijn browser tijdens een tijdsoverschrijding.

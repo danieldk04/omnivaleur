@@ -3,6 +3,7 @@ from backend.database import get_db, fetch_all, fetch_all_in, update_in, naast_d
 from backend.api.deps import get_current_user, require_active_subscription
 from backend.api.imports import _backfill_item_from_candidate
 from backend.services.crosslist import handle_item_sold
+from backend.services.kleur import normaliseer_kleur
 from datetime import datetime, timezone, timedelta
 import logging
 import re
@@ -233,6 +234,30 @@ def _recover_stale_claims(db, user_id: str, platform: str, now_dt: datetime) -> 
                 }).eq("item_id", j["item_id"]).eq("platform", j["platform"]).execute()
 
 
+
+
+def _zet_kleur_goed(jobs: list) -> int:
+    """Zet de kleur in elke uitgaande opdracht om naar de naam die Marktplaats
+    aanbiedt. Geeft terug hoeveel er zijn aangepast.
+
+    Alleen als we de kleur herkennen. Een woord dat we niet kennen blijft staan
+    zoals de verkoper het schreef — nooit een verzonnen kleur. Vinted heeft een
+    eigen kleurenlijst en blijft hier buiten.
+    """
+    aangepast = 0
+    for j in jobs or []:
+        pl = j.get("payload")
+        if j.get("platform") not in ("marktplaats", "2dehands"):
+            continue
+        if not isinstance(pl, dict) or not pl.get("color"):
+            continue
+        net = normaliseer_kleur(pl["color"])
+        if net and net != str(pl["color"]).strip():
+            logger.info("job %s: kleur %r -> %r", j.get("id"), pl["color"], net)
+            pl["color"] = net
+            aangepast += 1
+    return aangepast
+
 @router.get("/pending")
 def get_pending_jobs(request: Request, platform: str = None, user_id: str = Depends(require_active_subscription)):
     db = get_db()
@@ -437,6 +462,25 @@ def get_pending_jobs(request: Request, platform: str = None, user_id: str = Depe
             current = db.table("items").select("price").eq("id", j["item_id"]).execute().data
             if current and current[0].get("price") not in (None, ""):
                 j["payload"]["price"] = current[0]["price"]
+
+    # DE KLEUR GOEDZETTEN VLAK VOOR UITGIFTE.
+    #
+    # Marktplaats en 2dehands bieden alleen kale kleurnamen aan (Bruin, Rood,
+    # Wit); verkopers schrijven "bruine", "rode", "crème". Zo'n woord past op
+    # geen enkele optie, het verplichte veld blijft leeg, en dan doet de
+    # plaatsknop stil niets. Bij Toon raakte dat 175 van zijn 1.024 artikelen.
+    #
+    # De extensie kan dit sinds 1.0.282 zelf, maar die bereikt hem pas nadat de
+    # Chrome Web Store hem heeft goedgekeurd en Chrome hem heeft opgehaald —
+    # dagen tot weken. Hier gezet werkt het bij de eerstvolgende opdracht, ook op
+    # de kopie die hij vandaag draait. De extensie kiest daarna nog steeds uit
+    # wat er in die categorie echt in de lijst staat; dit maakt alleen de kans
+    # dat er iets past zo groot mogelijk.
+    #
+    # Alleen als we de kleur herkennen. Een woord dat we niet kennen blijft staan
+    # zoals de verkoper het schreef — nooit een verzonnen kleur. Vinted heeft een
+    # eigen kleurenlijst en blijft hier buiten.
+    _zet_kleur_goed(ready)
 
     # Wie het eerst geholpen wordt: de gebruiker. Een scan die toevallig eerder in
     # de wachtrij kwam (bijvoorbeeld de uurlijkse controle) ging vóór een publicatie
