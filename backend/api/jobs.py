@@ -2756,6 +2756,20 @@ def cancel_job(job_id: str, user_id: str = Depends(get_current_user)):
         return {"ok": True, "status": job["status"]}
 
     now = datetime.now(timezone.utc).isoformat()
+
+    # De verwijdering van een HERPLAATSING annuleren betekent: de oude
+    # advertentie blijft gewoon online. Dan hoort de rij terug op 'active' en
+    # moet de gepaarde plaatsing mee vervallen. Bleef de rij op 'relisting'
+    # staan, dan zette de reddingsronde er zes uur later een kale plaatsing
+    # voor klaar, naast de advertentie die nooit weg was (Toon, 03-09-2026:
+    # drie kelims, drie dubbele plaatsingen in de wachtrij).
+    if job["action"] == "delete" and (job.get("payload") or {}).get("_refresh_rollback"):
+        _neem_herplaatsing_terug(
+            db, job, now,
+            "Cancelled by you: the old listing was never removed and is still live here. "
+            "Nothing was reposted.")
+        return {"ok": True, "status": "cancelled"}
+
     db.table("jobs").update({
         "status": "cancelled",
         "result": {"cancelled": "by user"},

@@ -129,7 +129,7 @@ async def herstel_vastgelopen_werk() -> dict:
     """
     db = get_db()
     grens = (datetime.now(timezone.utc) - timedelta(days=VASTGELOPEN_NA_DAGEN)).isoformat()
-    hersteld, gemeld = 0, 0
+    hersteld, gemeld, teruggenomen = 0, 0, 0
 
     try:
         vast = ((await naast_de_lus(lambda: db.table("listings").select("id,item_id,platform")
@@ -140,10 +140,30 @@ async def herstel_vastgelopen_werk() -> dict:
 
     for rij in vast:
         try:
-            lopend = ((await naast_de_lus(lambda: db.table("jobs").select("id")
+            lopend = ((await naast_de_lus(lambda: db.table("jobs").select("id,scheduled_for,created_at")
                       .eq("item_id", rij["item_id"]).eq("platform", rij["platform"])
                       .eq("action", "create").in_("status", ["pending", "claimed", "running"])
-                      .limit(1).execute())).data or [])
+                      .limit(5).execute())).data or [])
+            # IS DE OUDE ADVERTENTIE WEL ECHT WEG? (03-09-2026, Toon)
+            #
+            # Een kale plaatsing hoort alleen bij een verwijdering die is
+            # afgerond. Is die verlopen, afgebroken of door de verkoper zelf
+            # geannuleerd, dan staat de oude advertentie gewoon nog online en
+            # zet een nieuwe plaatsing er een tweede naast. Toon annuleerde om
+            # 02:34 drie herplaatsingen; om 17:44 stonden hier drie kale
+            # plaatsingen voor klaar. Bij twee andere verkopers gebeurde
+            # hetzelfde via de driedagenveger, met de oude advertentie nog
+            # aantoonbaar live (HTTP 200).
+            laatste = ((await naast_de_lus(lambda: db.table("jobs")
+                        .select("id,user_id,item_id,platform,status,created_at,payload")
+                        .eq("item_id", rij["item_id"]).eq("platform", rij["platform"])
+                        .eq("action", "delete").order("created_at", desc=True)
+                        .limit(1).execute())).data or [None])[0]
+            if laatste and laatste.get("status") in ("pending", "claimed", "running"):
+                continue          # het weghalen komt nog; de plaatsing volgt daarna
+            if not laatste or laatste.get("status") != "done":
+                teruggenomen += await _herplaatsing_terugnemen(db, rij, laatste, lopend)
+                continue
             if lopend:
                 continue          # er komt nog werk aan, afblijven
             item = ((await naast_de_lus(lambda: db.table("items").select("*").eq("id", rij["item_id"])
@@ -164,12 +184,33 @@ async def herstel_vastgelopen_werk() -> dict:
 
     # Werk dat al dagen stilstaat hoort zichtbaar te worden.
     try:
-        oud = ((await naast_de_lus(lambda: db.table("jobs").select("id")
+        oud = ((await naast_de_lus(lambda: db.table("jobs")
+               .select("id,user_id,item_id,platform,action,created_at,payload")
                .in_("status", ["pending", "claimed"])
                .lt("created_at", grens).limit(500).execute())).data or [])
         # De banen die we hierboven zojuist zelf hebben ingepland zijn van
         # vandaag en vallen dus per definitie buiten deze grens.
+        #
+        # Een verlopen VERWIJDERING van een herplaatsing is meer dan een baan
+        # die stilstond: de oude advertentie is nooit weggehaald en staat dus
+        # nog online. Die herplaatsing nemen we in zijn geheel terug (advertentie
+        # terug op 'active', gepaarde plaatsing mee geannuleerd, verversbeurt
+        # teruggegeven), anders bleef de rij op 'relisting' hangen en zette de
+        # reddingsronde hierboven er later een kale plaatsing naast.
+        oud.sort(key=lambda b: 0 if b.get("action") == "delete" else 1)
+        teruggenomen_paren: set = set()
         for baan in oud:
+            sleutel = (baan.get("item_id"), baan.get("platform"))
+            if (baan.get("action") == "delete"
+                    and (baan.get("payload") or {}).get("_refresh_rollback")):
+                from backend.api.jobs import _neem_herplaatsing_terug
+                await naast_de_lus(lambda b=baan: _neem_herplaatsing_terug(
+                    db, b, datetime.now(timezone.utc).isoformat(), VERLOPEN_HERPLAATSING))
+                teruggenomen_paren.add(sleutel)
+                gemeld += 1
+                continue
+            if baan.get("action") == "create" and sleutel in teruggenomen_paren:
+                continue          # al meegenomen met zijn verwijdering
             # De reden hoort in 'result'. De tabel heeft geen 'error'-kolom, en
             # daarop schrijven laat deze hele opruimronde stilletjes mislukken.
             (await naast_de_lus(lambda: db.table("jobs").update({
@@ -184,10 +225,49 @@ async def herstel_vastgelopen_werk() -> dict:
     except Exception as e:  # noqa: BLE001
         logger.warning("herstel: kon oude banen niet melden: %s", e)
 
-    if hersteld or gemeld:
-        logger.info("herstel: %d advertentie(s) opnieuw ingepland, %d vastgelopen baan/banen gemeld",
-                    hersteld, gemeld)
-    return {"hersteld": hersteld, "gemeld": gemeld}
+    if hersteld or gemeld or teruggenomen:
+        logger.info("herstel: %d advertentie(s) opnieuw ingepland, %d vastgelopen baan/banen gemeld, "
+                    "%d herplaatsing(en) teruggenomen", hersteld, gemeld, teruggenomen)
+    return {"hersteld": hersteld, "gemeld": gemeld, "teruggenomen": teruggenomen}
+
+
+HERPLAATSING_TERUGGENOMEN = (
+    "Relist taken back: the old listing was never removed, so it is still live here. "
+    "Nothing was reposted, so there is no duplicate. It will be picked up again in a "
+    "later relist round."
+)
+VERLOPEN_HERPLAATSING = (
+    f"Deze herplaatsing stond meer dan {VASTGELOPEN_NA_DAGEN} dagen te wachten en is "
+    "niet uitgevoerd: de oude advertentie is nooit weggehaald en staat dus nog gewoon "
+    "online. Er is niets opnieuw geplaatst. Zet je computer met de Omnivaleur-extensie "
+    "aan; de volgende herplaatsronde pakt hem opnieuw op."
+)
+
+
+async def _herplaatsing_terugnemen(db, rij: dict, verwijderopdracht: dict | None,
+                                   lopend: list[dict]) -> int:
+    """Een herplaatsing waarvan het weghalen nooit is afgerond ongedaan maken.
+
+    De advertentie staat nog online, dus 'active' is de waarheid. Elke
+    klaarstaande plaatsing wordt ingetrokken: die zou er een tweede naast zetten.
+    """
+    now = datetime.now(timezone.utc).isoformat()
+    for baan in lopend:
+        await naast_de_lus(lambda b=baan: db.table("jobs").update({
+            "status": "cancelled", "result": {"cancelled": HERPLAATSING_TERUGGENOMEN},
+            "done_at": now,
+        }).eq("id", b["id"]).execute())
+    if verwijderopdracht:
+        from backend.api.jobs import _neem_herplaatsing_terug
+        await naast_de_lus(lambda: _neem_herplaatsing_terug(
+            db, verwijderopdracht, now, HERPLAATSING_TERUGGENOMEN))
+    # De rij zelf, mocht de verwijderopdracht een andere rij hebben aangewezen.
+    await naast_de_lus(lambda: db.table("listings").update({
+        "status": "active", "error_message": HERPLAATSING_TERUGGENOMEN,
+    }).eq("id", rij["id"]).eq("status", "relisting").execute())
+    logger.info("herstel: herplaatsing van item %s op %s teruggenomen (%d plaatsing(en) ingetrokken)",
+                rij.get("item_id"), rij.get("platform"), len(lopend))
+    return 1
 
 
 class RefreshError(Exception):

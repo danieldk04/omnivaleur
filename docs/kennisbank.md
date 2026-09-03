@@ -17,6 +17,29 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ---
 
+## reddingsronde-kale-plaatsing-dubbele-advertentie
+
+*03-09-2026 — Een advertentie op 'relisting' mag alleen kaal opnieuw geplaatst worden als het weghalen aantoonbaar 'done' is; anders staat de oude nog online en wordt het een dubbele*
+
+De reddingsronde (`herstel_vastgelopen_werk`, elke 6 uur) zag "rij op 'relisting'
+zonder plaatsopdracht" en zette dan een kale plaatsing klaar, zonder te kijken of
+het weghalen ooit gelukt was. Gemeten 03-09-2026: bij Toon drie kelims waarvan hij
+de herplaatsing zelf had geannuleerd (oude advertentie nog online) met drie kale
+plaatsingen in de rij; bij twee andere verkopers hetzelfde via de driedagenveger,
+oude advertentie nog HTTP 200. Per-job annuleren (`cancel_job`) zette de rij ook
+niet terug op 'active'.
+
+**Why:** een 'relisting'-rij zegt alleen dat er een herplaatsing is ingepland, niet
+dat de oude advertentie weg is. Alleen de status van de laatste verwijderopdracht
+zegt dat.
+
+**How to apply:** nieuw plaatsen alleen bij delete 'done'; bij error/cancelled/
+afwezig de herplaatsing terugnemen (`_neem_herplaatsing_terug`: rij 'active' met
+uitleg, gepaarde plaatsing geannuleerd, verversbeurt terug). Zie ook
+"herplaatsen-verliest-advertenties" en "herkansen-mag-geen-dubbele-opdracht".
+
+---
+
 ## prijs-naar-aantal-advertenties
 
 *03-09-2026 — Prijs staffelen naar aantal advertenties is besproken en uitgesteld tot het dashboard echt goed werkt*

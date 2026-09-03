@@ -4117,3 +4117,38 @@ Marktplaats-verkopers en bood uit zichzelf aan Omnivaleur door te vertellen. Hij
 is de logische installateur voor klanten zoals Toon. Prijs naar aantal
 advertenties (Toon heeft er 280 en betaalt hetzelfde als iemand met 25) is
 besproken maar bewust uitgesteld: eerst moet het dashboard echt goed werken.
+
+## 03-09-2026 — Audit kernfuncties: de reddingsronde zette dubbele advertenties klaar
+
+Daniel vroeg om een kritische audit van de vitale functies (publiceren, ophalen,
+verversen) op basis van wat er echt in de opdrachtentabel staat. Gemeten over de
+laatste drie dagen: 743 klaar, 85 fout, 86 geannuleerd. Vrijwel alle fouten
+vallen vóór de reparaties van vanochtend (kleurnamen, kansloze reeks) of zijn
+één verkoper die niet op 2dehands is ingelogd (304 opdrachten, terecht
+tegengehouden). Eén echte fout bleef over, en die stond op scherp:
+
+**74 advertenties stonden op 'relisting'.** De reddingsronde (elke zes uur)
+zette voor elke 'relisting'-rij zonder plaatsopdracht een kale plaatsing klaar,
+zonder te kijken of het weghalen ooit gelukt was. Bij Toon: drie kelims waarvan
+hij de herplaatsing om 02:34 zelf annuleerde (oude advertentie dus nog online),
+en om 17:44 drie kale plaatsingen in de rij. Bij twee andere verkopers via de
+driedagenveger, oude advertentie nog aantoonbaar live (HTTP 200). 48 van de 74
+waren demo-accounts, maar het mechanisme was hetzelfde.
+
+Gerepareerd op drie plekken (`relist.py`, `jobs.py`):
+- de reddingsronde plaatst alleen opnieuw als de laatste verwijdering 'done' is;
+  anders neemt ze de herplaatsing terug (rij 'active' met uitleg, klaarstaande
+  plaatsingen ingetrokken, verversbeurt terug);
+- de driedagenveger neemt een verlopen herplaatsverwijdering in zijn geheel terug
+  in plaats van beide banen op fout te zetten en de rij te laten hangen;
+- een verwijdering die de verkoper zelf annuleert zet de rij meteen terug.
+
+Eén keer met de hand gedraaid tegen de live database (de server draait de ronde
+pas zes uur na een herstart): relisting nu 15, teruggenomen 59, via veger 0. Toons drie dubbele
+plaatsingen zijn ingetrokken voordat zijn extensie ze kon oppakken.
+
+**Niet gerepareerd, wel gezien:** Jaaps zilveren dameshorloge krijgt elke ronde
+een nieuwe plaatsing die op het advertentievorm-veld sneuvelt (vier keer in twee
+dagen); dat lost de extensie 1.0.285+ op zodra de Web Store hem doorlaat.
+Kleurwoorden "zilverkleurig", "goudkleurig" en "multicolor" worden nog niet
+herkend; of "Zilver" in de sieradencategorie bestaat als optie is niet gemeten.
