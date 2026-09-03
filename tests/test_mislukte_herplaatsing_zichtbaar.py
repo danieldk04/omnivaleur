@@ -257,3 +257,112 @@ def test_de_rem_geldt_alleen_bij_een_echte_poll_van_de_extensie():
     regels = lus.splitlines()
     i = next(n for n, r in enumerate(regels) if "_herplaatsing_kansloos" in r)
     assert "platform is not None" in regels[i - 1], regels[i - 1]
+
+
+# ── De rem in de ECHTE uitgifte, niet alleen in de losse functie ─────────────
+#
+# De twee helpers hierboven zijn los getoetst. Hier draait `get_pending_jobs`
+# zelf, met een wachtende verwijdering + herplaatsing van een artikel zonder
+# vraagprijs, en met het versiekopstuk dat de extensie echt meestuurt.
+
+from backend.api import jobs as J  # noqa: E402
+
+
+class _Bouwer:
+    """Een minimale Supabase-bouwer die onthoudt wat er is gevraagd."""
+
+    def __init__(self, tabel, log, antwoorden):
+        self.tabel, self.log, self.antwoorden = tabel, log, antwoorden
+        self.soort, self.velden, self.filters = "select", None, {}
+
+    def select(self, *a, **kw): self.soort = "select"; return self
+    def update(self, velden): self.soort, self.velden = "update", velden; return self
+    def insert(self, velden): self.soort, self.velden = "insert", velden; return self
+    def eq(self, kolom, waarde): self.filters[kolom] = waarde; return self
+    def in_(self, kolom, waarden): self.filters[kolom] = list(waarden); return self
+    def lte(self, *a, **kw): return self
+    def gte(self, *a, **kw): return self
+    def order(self, *a, **kw): return self
+    def limit(self, *a, **kw): return self
+    def single(self): return self
+
+    def execute(self):
+        self.log.append({"tabel": self.tabel, "soort": self.soort,
+                         "velden": self.velden, "filters": dict(self.filters)})
+        data = self.antwoorden(self) if self.soort == "select" else []
+        return type("R", (), {"data": data})()
+
+
+class _EchteDB:
+    def __init__(self, antwoorden):
+        self.log, self._antwoorden = [], antwoorden
+
+    def table(self, naam):
+        return _Bouwer(naam, self.log, self._antwoorden)
+
+
+def _uitgifte(monkeypatch, ext_versie, prijs):
+    """De echte uitgifte draaien met één wachtend herplaatspaar."""
+    VERWIJDER = {"id": "delete-1", "user_id": "u1", "item_id": "it1",
+                 "platform": "marktplaats", "action": "delete", "status": "pending",
+                 "created_at": "2026-09-03T02:34:00+00:00",
+                 "payload": {"_refresh_rollback": {"listing_id": "rij-1", "day": "2026-09-03"},
+                             "platform_listing_id": "m1"}}
+    PLAATS = {"id": "create-1", "user_id": "u1", "item_id": "it1",
+              "platform": "marktplaats", "action": "create", "status": "pending",
+              "created_at": "2026-09-03T02:34:01+00:00",
+              "scheduled_for": "2020-01-01T00:00:00+00:00",
+              "payload": {"price": prijs}}
+
+    def antwoorden(b):
+        if b.tabel == "jobs" and b.filters.get("action") == "create" \
+                and b.filters.get("status") == "pending":
+            return [PLAATS]
+        if b.tabel == "jobs" and b.filters.get("action") == "delete":
+            return [VERWIJDER]
+        if b.tabel == "jobs" and b.filters.get("status") == "pending":
+            return [VERWIJDER, PLAATS]
+        if b.tabel == "listings" and b.filters.get("id") == "rij-1":
+            return [{"id": "rij-1", "status": "relisting", "listed_at": None,
+                     "platform_listing_id": "m1"}]
+        if b.tabel == "items":
+            return [{"id": "it1", "user_id": "u1", "title": "Vintage schaal",
+                     "sku": None, "brand": None, "price": prijs}]
+        return []
+
+    db = _EchteDB(antwoorden)
+    monkeypatch.setattr(J, "get_db", lambda: db)
+    monkeypatch.setattr(J, "_record_extension_heartbeat", lambda *a, **kw: None)
+    monkeypatch.setattr(J, "_recover_stale_claims", lambda *a, **kw: None)
+    monkeypatch.setattr(J, "execute_with_retry", lambda q, *a, **k: q.execute())
+    import backend.services.relist as R
+    monkeypatch.setattr(R, "rollback_refresh", lambda rb, uid: None)
+
+    class _Verzoek:
+        headers = {"x-omnivaleur-ext": ext_versie, "user-agent": "test"}
+
+    uit = J.get_pending_jobs(_Verzoek(), platform="marktplaats", user_id="u1")
+    return db, uit
+
+
+def test_de_oude_kopie_krijgt_de_verwijdering_niet_te_zien(monkeypatch):
+    db, uit = _uitgifte(monkeypatch, "1.0.281", prijs=0)
+    assert [j["id"] for j in uit] == [], "niets uitgedeeld: er valt hier niets te winnen"
+    geannuleerd = [r for r in db.log if r["tabel"] == "jobs" and r["soort"] == "update"
+                   and (r["velden"] or {}).get("status") == "cancelled"]
+    assert len(geannuleerd) == 2, "verwijdering én herplaatsing gaan terug"
+    terug = [r for r in db.log if r["tabel"] == "listings" and r["soort"] == "update"]
+    assert terug and terug[0]["velden"]["status"] == "active", "de advertentie blijft gewoon staan"
+    assert "no asking price" in terug[0]["velden"]["error_message"]
+
+
+def test_de_bijgewerkte_kopie_krijgt_het_werk_gewoon(monkeypatch):
+    db, uit = _uitgifte(monkeypatch, "1.0.286", prijs=0)
+    assert "delete-1" in [j["id"] for j in uit], "vanaf 1.0.285 kan de extensie dit wél"
+    assert not [r for r in db.log if r["tabel"] == "listings" and r["soort"] == "update"], \
+        "en er wordt niets teruggedraaid"
+
+
+def test_een_artikel_met_prijs_gaat_ook_op_de_oude_kopie_gewoon_door(monkeypatch):
+    db, uit = _uitgifte(monkeypatch, "1.0.281", prijs=12.5)
+    assert "delete-1" in [j["id"] for j in uit]
