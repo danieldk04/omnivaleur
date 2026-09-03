@@ -493,11 +493,126 @@ window.CL = (() => {
     yellow: "Geel", gold: "Goud", multi: "Multicolour", clear: "Wit",
   };
 
+  // ── VERBOGEN EN SAMENGESTELDE KLEURNAMEN ──────────────────────────────────
+  //
+  // Toon (dejuistetoon), 03-09-2026. Zijn kast telt 59 verschillende
+  // kleurwaarden en die staan in het Nederlands zoals een mens ze opschrijft:
+  // "bruine" (41x), "zwarte" (20x), "rode" (16x), "lichtblauw", "olijfgroene",
+  // "crème", "Beige bruin", "divers". Marktplaats biedt in zijn Kleur-lijst
+  // alleen de kale grondvorm aan: Bruin, Zwart, Rood, Blauw, Groen.
+  //
+  // De tabel hierboven vertaalt Engels naar Nederlands en verder niets, dus
+  // "bruine" kwam er ongewijzigd uit, matchte op geen enkele optie en liet het
+  // verplichte veld leeg. Een leeg kenmerkveld betekent bij Marktplaats geen
+  // advertentie (gemeten 21-08-2026, zie de halswijdte hieronder). Geteld over
+  // zijn eigen kast raakt dat 217 van de 1.024 artikelen.
+  //
+  // Vandaar deze drie stappen, van de meest naar de minst letterlijke:
+  //   1. verbuiging afhalen  — "bruine" → "bruin", "rode" → "rood",
+  //      "witte" → "wit", "grijze" → "grijs", "gouden" → "goud"
+  //   2. samenstelling terugbrengen tot de kleur die erin zit —
+  //      "lichtblauw"/"donkerblauw" → "blauw", "olijfgroen" → "groen"
+  //   3. bekende bijzondere namen — "ecru"/"crème" → "wit", "marine" → "blauw"
+  const KLEUR_BASIS = {
+    zwart: "Zwart", wit: "Wit", grijs: "Grijs", beige: "Beige", bruin: "Bruin",
+    rood: "Rood", bordeaux: "Bordeaux", roze: "Roze", oranje: "Oranje",
+    geel: "Geel", groen: "Groen", blauw: "Blauw", paars: "Paars",
+    goud: "Goud", zilver: "Zilver", multicolour: "Multicolour",
+  };
+  // Namen die geen grondvorm zijn maar wel iedereen bekend: naar de basiskleur.
+  const KLEUR_SYNONIEM = {
+    ecru: "wit", creme: "wit", ivoor: "wit", gebroken: "wit", offwhite: "wit",
+    taupe: "beige", camel: "beige", zand: "beige", naturel: "beige",
+    cognac: "bruin", chocolade: "bruin", koffie: "bruin", brique: "bruin",
+    marine: "blauw", navy: "blauw", turquoise: "blauw", aqua: "blauw",
+    petrol: "blauw", jeans: "blauw", denim: "blauw", kobalt: "blauw",
+    lila: "paars", lavendel: "paars", mauve: "paars", aubergine: "paars",
+    kaki: "groen", khaki: "groen", olijf: "groen", mint: "groen",
+    legergroen: "groen", army: "groen", jade: "groen",
+    zalm: "roze", fuchsia: "roze", framboos: "roze", oudroze: "roze",
+    koraal: "rood", terracotta: "rood", robijn: "rood",
+    wijn: "bordeaux", wijnrood: "bordeaux", burgundy: "bordeaux",
+    oker: "geel", okergeel: "geel", mosterd: "geel", limoen: "geel",
+    antraciet: "grijs", muisgrijs: "grijs", grafiet: "grijs",
+    brons: "goud", messing: "goud",
+    divers: "multicolour", diverse: "multicolour", kleurrijk: "multicolour",
+    meerkleurig: "multicolour", veelkleurig: "multicolour", bont: "multicolour",
+    gemengd: "multicolour", multi: "multicolour", print: "multicolour",
+    gekleurd: "multicolour", regenboog: "multicolour",
+  };
+
+  // Van één geschreven woord naar de basiskleur die erin zit, of "".
+  function _kleurStam(woord) {
+    const w = String(woord || "").toLowerCase()
+      .replace(/[àáâä]/g, "a").replace(/[èéêë]/g, "e").replace(/[ìíîï]/g, "i")
+      .replace(/[òóôö]/g, "o").replace(/[ùúûü]/g, "u")
+      .replace(/[^a-z]/g, "");
+    if (!w) return "";
+    // Alles wat dit woord zou kunnen zijn, van letterlijk naar afgeleid.
+    const kandidaten = [w];
+    if (w.endsWith("en") && w.length > 4) kandidaten.push(w.slice(0, -2)); // gouden → goud
+    if (w.endsWith("e")) {
+      const kaal = w.slice(0, -1);
+      kandidaten.push(kaal);                                    // bruine  → bruin
+      if (/(.)\1$/.test(kaal)) kandidaten.push(kaal.slice(0, -1));  // witte → witt → wit
+      if (kaal.endsWith("z")) kandidaten.push(kaal.slice(0, -1) + "s"); // grijze → grijs
+      // Korte klinker wordt lang zodra de -e wegvalt: rode → rod → rood.
+      kandidaten.push(kaal.replace(/([aeiou])([a-z])$/, "$1$1$2"));
+    }
+    for (const k of kandidaten) {
+      if (KLEUR_BASIS[k]) return k;
+      if (KLEUR_SYNONIEM[k]) return KLEUR_SYNONIEM[k];
+      if (COLOUR_NL[k]) return String(COLOUR_NL[k]).toLowerCase();
+    }
+    // Samenstelling: het laatste stuk is de kleur ("lichtblauw", "olijfgroen",
+    // "zilvergrijs"). Het langste achtervoegsel wint, zodat "donkergroen" op
+    // groen uitkomt en niet toevallig op iets korters.
+    for (const k of kandidaten) {
+      let beste = "";
+      for (const basis of Object.keys(KLEUR_BASIS)) {
+        if (k.length > basis.length && k.endsWith(basis) && basis.length > beste.length) beste = basis;
+      }
+      if (beste) return beste;
+      for (const syn of Object.keys(KLEUR_SYNONIEM)) {
+        if (k.length > syn.length && k.endsWith(syn) && syn.length > beste.length) beste = KLEUR_SYNONIEM[syn];
+      }
+      if (beste) return beste;
+    }
+    return "";
+  }
+
+  // Alles wat we voor deze kleur in de lijst mogen proberen, op volgorde van
+  // nauwkeurigheid. Meerdere woorden ("Beige bruin", "Zwart, Rood") leveren
+  // meerdere kandidaten op — de eerste die Marktplaats in déze categorie
+  // aanbiedt wint.
+  function kleurKandidaten(value) {
+    const raw = String(value || "").trim();
+    if (!raw) return [];
+    const uit = [];
+    const voegToe = (v) => { if (v && !uit.some((x) => x.toLowerCase() === v.toLowerCase())) uit.push(v); };
+    voegToe(raw);                                    // staat het er letterlijk in, dan die
+    // Woord voor woord en in de geschreven volgorde: bij "Beige bruin" bedoelt
+    // de verkoper eerst beige. Pas daarna de hele tekst als één woord, want dat
+    // pikt alleen het laatste stuk op ("Beige bruin" → bruin) en dat is hier
+    // juist de tweede keus.
+    for (const woord of raw.split(/[\s,/&+·-]+/)) {
+      const stam = _kleurStam(woord);
+      if (stam) voegToe(KLEUR_BASIS[stam] || stam);
+    }
+    const heel = _kleurStam(raw);
+    if (heel) voegToe(KLEUR_BASIS[heel] || heel);
+    return uit;
+  }
+
   // Geeft de Nederlandse kleurnaam terug, of de originele waarde als we hem niet
   // kennen — een onbekende kleur mag nooit een lege waarde worden.
   function dutchColor(value) {
     const raw = String(value || "").trim();
-    return COLOUR_NL[raw.toLowerCase()] || raw;
+    if (COLOUR_NL[raw.toLowerCase()]) return COLOUR_NL[raw.toLowerCase()];
+    const kandidaten = kleurKandidaten(raw);
+    // kandidaten[0] is de waarde zelf; de eerste afgeleide is wat we ervan
+    // begrijpen. Begrijpen we er niets van, dan blijft het de eigen tekst.
+    return kandidaten.length > 1 ? kandidaten[1] : raw;
   }
 
   // ── ALS ONZE WAARDE NIET IN DE LIJST STAAT ────────────────────────────────
@@ -535,7 +650,16 @@ window.CL = (() => {
     if (!w) return [];
     const laag = w.toLowerCase();
     if (/kleur/i.test(label)) {
-      return COLOUR_FALLBACK[laag] || ["Multicolour", "Overige", "Overig"];
+      // Eerst wat we van de geschreven kleur begrijpen ("bruine" → Bruin,
+      // "Beige bruin" → Beige, Bruin), dan de bekende uitwijkkleuren, en pas
+      // als laatste een verzamelnaam. Zonder de eerste stap kwam een verbogen
+      // of samengestelde kleurnaam meteen bij "Overige" uit, of nergens.
+      const uit = kleurKandidaten(w).slice(1);
+      for (const alt of (COLOUR_FALLBACK[laag] || [])) if (!uit.includes(alt)) uit.push(alt);
+      for (const alt of ["Multicolour", "Overige", "Overig", "Anders", "Divers"]) {
+        if (!uit.includes(alt)) uit.push(alt);
+      }
+      return uit;
     }
     if (MAAT_UNIVERSEEL.some((m) => m.toLowerCase() === laag)) {
       return MAAT_UNIVERSEEL;
@@ -1808,6 +1932,6 @@ window.CL = (() => {
     findFieldByLabel, selectDropdown, fillBrand, fillManufacturer, selectBundleFree,
     selectDelivery, gekozenLevering, selectPakketWaarde, vulHalswijdte, keuzeveldenKort, typBeschrijvingEcht,
     selectPackageSize, uploadPhotos, submitListing, step, closePopup, smartTrunc, fillBidding,
-    clog, plaatsBlokkade, dutchColor, kiesMetTerugval, lijstOpties, platteTekst, verifyMpGroupFields, repairMpGroupFields, ensureDescriptionStillFilled, selectCondition, selectIntendedFor, fillBrandField, logMpFields, mpPrijs,
+    clog, plaatsBlokkade, dutchColor, kleurKandidaten, kiesMetTerugval, lijstOpties, platteTekst, verifyMpGroupFields, repairMpGroupFields, ensureDescriptionStillFilled, selectCondition, selectIntendedFor, fillBrandField, logMpFields, mpPrijs,
   };
 })();

@@ -17,6 +17,72 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ---
 
+## verbogen-kleurnamen-matchen-niet
+
+*03-09-2026 — "bruine" en "rode" matchen op geen enkele Marktplaats-kleuroptie; verkopers schrijven verbogen en samengestelde kleuren, de lijst kent alleen de grondvorm*
+
+Marktplaats biedt in het Kleur-veld alleen kale grondvormen aan: Zwart, Wit,
+Grijs, Beige, Bruin, Rood, Bordeaux, Roze, Oranje, Geel, Groen, Blauw, Paars,
+Goud, Multicolour. Verkopers schrijven iets anders op. Geteld in Toons kast
+(1.024 artikelen, 03-09-2026): 59 verschillende kleurwaarden, waarvan "bruine"
+41x, "zwarte" 20x, "rode" 16x, "groene" 15x, "crème" 13x, "witte" 10x, plus
+"lichtblauw", "olijfgroene", "Beige bruin", "divers", "Meerkleurig".
+
+De vertaaltabel ging alleen van Engels naar Nederlands, dus die woorden kwamen
+ongewijzigd bij `matchScore` aan en scoorden nul op elke optie. Gemeten met de
+echte code uit 1.0.280: 31 van de 59 waarden lieten het veld leeg, goed voor 175
+van zijn 1.024 artikelen. En een leeg kenmerkveld betekent bij Marktplaats geen
+advertentie: de plaatsknop doet dan stil niets (gemeten 21-08-2026).
+
+**Why:** je ziet dit niet aankomen door naar de code te kijken, alleen door de
+echte waarden van een echte klant te tellen. Zeven mislukte plaatsingen in het
+logboek lijken een randgeval; 175 artikelen is de helft van wat hij nog wil
+plaatsen.
+
+**How to apply:** normaliseer vóór het matchen, in deze volgorde: verbuiging
+afhalen (bruine → bruin, rode → rood, witte → wit, grijze → grijs, gouden →
+goud), samenstelling terugbrengen tot de kleur die er als laatste in zit
+(lichtblauw → blauw, olijfgroen → groen), en pas dan bekende bijzondere namen
+(ecru → wit, marine → blauw, divers → multicolour). Meerdere woorden leveren
+meerdere kandidaten op, in geschreven volgorde. Kies altijd uit de opties die
+er echt in staan, verzin nooit een waarde. Zie ook
+"marktplaats-publiceren-valkuilen" en "omnivaleur-altijd-bewijzen".
+
+---
+
+## achtergrondronde-mag-de-lijst-niet-herbouwen
+
+*03-09-2026 — "De ronde die elke 15 seconden bijwerkt zette de lijst terug op bladzijde 1 en hertekende alle rijen met foto's; op een Chromebook viel het tabblad daardoor weg"*
+
+Toon (dejuistetoon), 02-09-2026: "kan niet naar volgende pagina scrollen, springt
+elke keer terug naar pagina 1", "na invoeren springt hij naar het 1ste artikel",
+"regelmatig valt het beeldscherm totaal weg". Drie klachten, één oorzaak.
+
+`loadAll()` in `frontend/app.html` draait elke 15 seconden en riep `applyFilters()`
+aan zonder argument. Die zet `itemsCurrentPage` terug op 1. Bij 1.024 artikelen
+zijn dat 21 bladzijden, dus wie verder bladerde had steeds 15 seconden.
+
+Dezelfde ronde verving ook onvoorwaardelijk `#items-body.innerHTML`, dus vijftig
+rijen met vijftig `<img>`-elementen. Die foto's zijn de originelen uit de import:
+gemeten op Toons eigen artikelen gemiddeld 450 kB per stuk, dus 22 MB die de
+browser elke 15 seconden opnieuw ophaalt en uitpakt. Hij werkt op een Chromebook
+(afgelezen aan zijn eigen verbinding: CrOS x86_64, Chrome 151) en daar zet Chrome
+het tabblad dan weg: leeg scherm.
+
+**Why:** een achtergrondronde die "gewoon alles opnieuw tekent" is onzichtbaar op
+een snelle machine met tien artikelen en slopend bij duizend op een Chromebook.
+Het gedrag dat de klant beschrijft (springen, wegvallen) leest niet als een
+verversingsprobleem, dus je zoekt het in de verkeerde hoek.
+
+**How to apply:** een periodieke ronde mag nooit de keuze van de gebruiker
+terugzetten (bladzijde, scrollpositie, selectie) en nooit DOM herschrijven die
+niet veranderd is. Vergelijk de opgebouwde HTML met wat er staat en schrijf alleen
+bij verschil. Geef elke miniatuur `loading="lazy"`, `decoding="async"` en een
+vaste breedte/hoogte. Zie ook "verborgen-tabblad-vertraagt-wachttijden" en
+"frontend-parse-json-safe".
+
+---
+
 ## geen-doodlopende-straat-in-de-ui
 
 *02-09-2026 — Elk grijs vakje en elke blokkade in het dashboard hoort een klik te zijn die je naar de oplossing brengt*

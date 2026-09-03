@@ -3462,3 +3462,76 @@ september is door Daniel zelf gezet. Geen storing in de code.
 Gebruikerslijst tegen Stripe gelegd: 41 accounts, 3 betalend, 9 in proef, 29
 verlopen. Niemand heeft de gratis-voor-altijd status (trial_ends_at 2099) uit de
 comp-knop. Er gebruikt dus niemand de app gratis buiten een echte proefperiode om.
+
+## 03-09-2026 — Toon (dejuistetoon): drie klachten, twee echte oorzaken
+
+Daniel gaf Toons WhatsApp door met de opdracht het soepel te laten lopen. Alles
+hieronder is gemeten aan zijn eigen account (96e30080…), niet geredeneerd.
+
+**1. "Springt elke keer terug naar pagina 1" en "na invoeren naar het 1ste
+artikel".** Eén oorzaak: de ronde in `loadAll()` die elke 15 seconden bijwerkt
+(en nog eens zodra het tabblad naar voren komt) riep `applyFilters()` aan zonder
+argument, en dat zet de lijst terug op bladzijde 1. Met 1.024 artikelen zijn dat
+21 bladzijden, dus wie verder bladerde had telkens vijftien seconden. Staat nu op
+`applyFilters(false)`; alleen een echte keuze van hemzelf (filter, zoekterm,
+sortering, tabblad) zet hem nog terug naar 1.
+
+**2. "Regelmatig valt het beeldscherm totaal weg".** Toon werkt op een Chromebook
+— afgelezen aan zijn eigen verbinding met de server: `CrOS x86_64, Chrome 151`.
+Dezelfde ronde verving elke vijftien seconden de hele tabel, dus vijftig rijen met
+vijftig foto's, en dat zijn de originelen uit de import: gemeten op zijn eigen
+artikelen gemiddeld 450 kB per stuk. 22 MB opnieuw ophalen en uitpakken, vier keer
+per minuut, op een Chromebook. Twee dingen veranderd: de tabel wordt alleen nog
+hertekend als de inhoud echt anders is, en elke miniatuur staat nu op
+`loading="lazy"` met `decoding="async"` en een vaste maat.
+
+**3. Twee artikelen die bleven mislukken — veel groter dan twee.** De klacht ging
+over "Vrolijke granny square" (kleur *divers*) en een 2dehands-plaatsing. In zijn
+logboek staan sinds 01-09 zeven mislukkingen op een leeg Kleur- of Maat-veld. De
+echte omvang bleek pas bij tellen: zijn kast bevat 59 verschillende kleurwaarden,
+opgeschreven zoals een mens dat doet — "bruine" (41x), "zwarte" (20x), "rode"
+(16x), "groene" (15x), "crème" (13x), "witte" (10x), "lichtblauw", "olijfgroene",
+"Beige bruin", "divers". Marktplaats biedt alleen de kale grondvorm aan. De oude
+vertaaltabel ging enkel van Engels naar Nederlands, dus die woorden matchten op
+niets en het verplichte veld bleef leeg — en dan komt de advertentie er niet
+(gemeten 21-08-2026: knop doet stil niets).
+
+Gemeten met de échte code van 1.0.280, de versie die hij draaide toen het misging:
+**31 van de 59 kleurwaarden lieten het veld leeg, goed voor 175 van zijn 1.024
+artikelen.** Na de reparatie: nul. De test in `tests/kleur-en-maat-terugval-test.js`
+draait beide versies tegen die 59 echte waarden, zodat de voor-en-na-proef er
+staat en niet alleen de belofte.
+
+**Wat dit vandaag nog voorkomt.** Er staan 50 opdrachten klaar: 24 herplaatsingen
+(eerst weghalen, dan opnieuw plaatsen) op Marktplaats. Drie daarvan hebben een
+kleur die de oude code niet kon plaatsen (*rode*, *zwarte*, *crème*). Was de
+verwijdering doorgegaan en de plaatsing daarna gestrand op een leeg kleurveld, dan
+was die advertentie weg geweest.
+
+**Niet gerepareerd, met zoveel woorden.**
+- Tien van zijn 23 mislukkingen sinds 01-09 zijn "Extension timed out — no
+  response after 3 minutes", plus één tabblad dat dichtging. Dat past bij een
+  Chromebook die het werk-tabblad wegzet, maar dat is van hier niet te bewijzen;
+  daarvoor moet je meekijken terwijl het gebeurt. De twee reparaties hierboven
+  halen wel druk van datzelfde geheugen.
+- Zijn 2dehands-inlog is verlopen: twee keer foutcode 401 op zijn
+  advertentieoverzicht, laatst 02-09 15:13. Alleen hij kan dat herstellen door op
+  2dehands opnieuw in te loggen. Zijn wachtwoord staat in de WhatsApp; daar is
+  niets mee gedaan en dat hoort ook niet.
+- "Voor mij ook beter als de tekst in het Nederland zou kunnen." Het dashboard is
+  bewust volledig Engels en dat wordt afgedwongen door
+  `tests/test_meldingen_engels.py`. Nederlands maken is een productbeslissing van
+  Daniel en een apart project, geen reparatie. Niet aan begonnen.
+- "Vanaf onze eigen webshop doorplaatsen" is een wens, geen storing. Genoteerd.
+
+**Wat geen storing bleek.** Toon ziet 1.128 artikelen op Vinted en 1.008 in het
+dashboard. Zijn laatste Vinted-scan (31-08) vond 1.130 advertenties; daarvan
+werden er 1.025 kandidaat en 1.024 artikel. Het verschil zijn de advertenties die
+Vinted als gesloten (verkocht of beëindigd) markeert — die telt Vinted wel mee in
+het totaal op zijn profiel en wij bewust niet. Wel staan er nog 37 Vinted-,
+501 2dehands- en 286 Marktplaats-kandidaten op zijn bevestiging te wachten in het
+importscherm.
+
+Extensie op 1.0.282, zip gebouwd. Zolang die niet in de Chrome Web Store staat,
+draait Toon de oude en blijft het kleurprobleem bestaan — dat is de laatste stap
+en die kan alleen Daniel zetten.

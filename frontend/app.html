@@ -3744,6 +3744,10 @@ function _toonLaadVoortgang(aantal) {
       <h3>Loading your items…</h3>
       <p>${aantal.toLocaleString()} loaded so far. A large catalogue takes a few seconds.</p>
     </div></td></tr>`;
+  // Hier is de tabel buiten renderItemsTable om overschreven, dus wat die functie
+  // dacht te hebben getekend klopt niet meer. Stempel weg, anders slaat de
+  // eerstvolgende ronde het opnieuw tekenen over en blijft deze melding staan.
+  _itemsTabelStempel = null;
 }
 
 async function fetchAllItems(onVoortgang) {
@@ -3902,8 +3906,15 @@ async function loadAll(opties = {}) {
   await loadDuplicates();
   renderDashboard();
   renderExtStatus();
-  // Re-render items view if active
-  if (document.getElementById('view-items').classList.contains('active')) applyFilters();
+  // Re-render items view if active.
+  //
+  // applyFilters(false) — NIET applyFilters(). Toon (dejuistetoon), 02-09-2026:
+  // "kan niet naar volgende pagina scrollen, springt elke keer terug naar
+  // pagina 1". Deze ronde loopt elke 15 seconden en bij elke keer dat het
+  // tabblad weer naar voren komt. Zonder die false zette hij de lijst telkens
+  // op bladzijde 1, dus wie op bladzijde 6 stond had hooguit vijftien seconden
+  // om iets te doen. Met 1.024 artikelen zijn dat 21 bladzijden.
+  if (document.getElementById('view-items').classList.contains('active')) applyFilters(false);
   // …and analytics too. Without this, editing an item (e.g. filling in a missing
   // purchase price) left the open Analytics view showing the old numbers until you
   // navigated away and back — it looked like the save hadn't worked at all.
@@ -4634,6 +4645,8 @@ async function mergeItems(keep, merge, stil = false) {
   }
 }
 
+let _itemsTabelStempel = null;
+
 function renderItemsTable(items) {
   renderSoldConfirmBar();
   renderDuplicateBar();
@@ -4707,7 +4720,24 @@ function renderItemsTable(items) {
          </div>
        </div></td></tr>`
     : `<tr><td colspan="8"><div class="empty"><h3>${EMPTY_TAB[itemsTab].h}</h3><p>${EMPTY_TAB[itemsTab].p}</p></div></td></tr>`;
-  document.getElementById('items-body').innerHTML = rows || emptyHtml;
+  // ALLEEN OPNIEUW TEKENEN ALS ER ECHT IETS VERANDERD IS.
+  //
+  // Toon (dejuistetoon), 02-09-2026: "regelmatig valt het beeldscherm totaal
+  // weg". Hij werkt op een Chromebook (gemeten aan zijn eigen verbinding:
+  // CrOS x86_64, Chrome 151). Deze functie liep elke vijftien seconden en
+  // verving dan de hele tabel, ook als er niets was gebeurd. Elke rij bevat een
+  // foto, en die foto's zijn de originelen: gemeten op zijn eigen artikelen
+  // gemiddeld 450 kB per stuk. Vijftig rijen is dus 22 MB die de browser elke
+  // vijftien seconden opnieuw moet ophalen en uitpakken. Daar loopt het geheugen
+  // van een Chromebook op leeg, en dan gooit Chrome het tabblad weg — een leeg
+  // scherm. Bovendien sprong de lijst daarbij terug naar boven.
+  //
+  // Vergelijken kost één tekstvergelijking; opnieuw tekenen kost de hele tabel.
+  const html = rows || emptyHtml;
+  if (_itemsTabelStempel !== html) {
+    _itemsTabelStempel = html;
+    document.getElementById('items-body').innerHTML = html;
+  }
   updateBulkBar();
 }
 
@@ -8431,7 +8461,12 @@ function itemPhotoThumb(item){
   const n = item.photo_urls?.length || 0;
   if (!n) return '👗';
   const badge = n > 1 ? `<span class="item-photo-count">${n}</span>` : '';
-  return `<img src="${item.photo_urls[0]}" style="width:40px;height:40px;border-radius:6px;object-fit:cover">${badge}`;
+  // loading="lazy" en decoding="async": de foto's zijn de originelen uit de
+  // import, gemiddeld 450 kB. Zonder deze twee haalt de browser alle vijftig van
+  // een bladzijde tegelijk op en pakt ze meteen uit, ook de rijen waar niemand
+  // naar kijkt. Op een Chromebook is dat het verschil tussen een lijst die
+  // scrollt en een tabblad dat Chrome wegzet.
+  return `<img src="${item.photo_urls[0]}" loading="lazy" decoding="async" width="40" height="40" style="width:40px;height:40px;border-radius:6px;object-fit:cover">${badge}`;
 }
 function conditionLabel(c){return{new_with_tags:'New with tags',new:'New',good:'Like new',fair:'Used',poor:'Damaged'}[c]||c||'—';}
 // Date.toLocaleDateString() builds a fresh Intl formatter on every single call,
