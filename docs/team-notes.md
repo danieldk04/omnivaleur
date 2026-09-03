@@ -3734,3 +3734,63 @@ Geen code gewijzigd. Teruggemeld als `opgelost`.
 **Why dit hier staat:** derde keer dat een MOET ZEKER-melding van vóór 28-08
 binnenkomt over een probleem dat die dag al is opgelost — de melding zelf is
 ouder dan de reparatie. Zie ook de vergelijkbare aantekening van 01-09-2026.
+
+## 03-09-2026 — Egbert had gelijk: hij wás ingelogd op 2dehands
+
+Vanochtend schreef ik op dat Egbert Brouwer niet was ingelogd op 2dehands, en
+die conclusie ging als tekst naar 303 van zijn artikelrijen en als advies in
+een mail naar hem toe. Hij mailde terug: "Ik ben ingelogd op 2ehand.be, dus
+weet niet wat er nu mis gaat?" Hij had gelijk, en de fout zat in mijn bewijs.
+
+**Wat er niet deugde aan het bewijs.** Ik had gemeten dat www.2dehands.be op
+het plaatsadres HTTP 401 geeft zolang je niet bent ingelogd: twaalf bytes
+"Unauthorized". Dat klopt. Maar www.marktplaats.nl doet op precies datzelfde
+adres precies hetzelfde, en dáár publiceerde hij die dag gewoon door. Een
+waarneming die op het werkende én op het kapotte kanaal identiek is, verklaart
+het verschil niet. Nagemeten met een kale aanvraag zonder cookies, beide 401.
+
+**Twee metingen wijzen de andere kant op.**
+
+1. Zijn eigen 2dehands-scan van 12:13 uur meldde `API 200, 0 advertenties`. Het
+   advertentie-overzicht (`/my-account/sell/api/listings`) is afgeschermd:
+   zonder geldige sessie is het antwoord 401. Een 200 krijg je alleen als de
+   site je herkent. Hij was dus ingelogd, en had daar alleen nog nooit iets
+   geplaatst, dus was de lijst leeg.
+2. De inlogcontrole in de extensie zocht in de paginatekst naar "uitloggen",
+   "log uit", "mijn marktplaats" en "my account". Die woorden staan niet op
+   2dehands. Op dat kanaal was het antwoord dus altijd "niet ingelogd", hoe goed
+   je ook was ingelogd. Ook bij een andere verkoper zichtbaar: die publiceerde
+   op 02-09 om 13:46 met succes naar 2dehands en kreeg om 15:13 "niet ingelogd".
+
+**Wat er nu anders is.**
+
+* Wat de site antwoordt weegt zwaarder dan welk woord er op de pagina staat.
+  Bij HTTP 200 valt het woord "niet ingelogd" niet meer; er staat dan dat hij
+  ingelogd is en dat er niets te importeren valt.
+* Zegt de site zelf dat er advertenties zijn en lezen wij er nul, dan noemen we
+  dat onze fout en niet zijn inlog.
+* Een ingelogd maar leeg account rondt de scan netjes af in plaats van rood.
+* De melding bij "het formulier ging nooit open" beweert geen oorzaak meer. Ze
+  beschrijft de waarneming en geeft de controle die het in één klik beslist:
+  open `https://www.2dehands.be/my-account/sell/index.html`. Zie je je
+  advertentiepagina, dan ligt het aan ons. Zie je "Unauthorized", dan aan de
+  inlog. Beide adressen zijn nagemeten.
+* 320 artikelrijen en 275 teruggenomen opdrachten dragen die nieuwe tekst nu
+  ook met terugwerkende kracht (`scripts/herstel_2dehands_meldingen.py`).
+  Nagemeten na afloop: nul rijen met de oude tekst.
+* Een rode balk kan weg. Nieuwe knoppen "Clear this error" en "Clear all N on
+  {kanaal}"; een advertentie die nooit een nummer kreeg was nooit geplaatst, dus
+  verdwijnt die rij echt en staat het artikel weer op "nog plaatsen". Egbert
+  keek tegen zes bladzijden rood aan zonder één knop die ergens heen leidde.
+
+**Wat nog openstaat, en dat is het belangrijkste.** Waaróm het plaatsformulier
+van 2dehands bij hem nooit iets terugmeldde weten we nog steeds niet. Zijn kopie
+is 1.0.281 en de meting die dat onderscheidt (`scriptSeen`) zit pas in 1.0.284.
+Zolang hij die niet heeft, kan alleen hij het zien, en daarom staat die ene
+controle nu in de melding zelf. 840 pytest-tests groen, alle node-tests groen,
+extensie op 1.0.286.
+
+**Voor iedereen die hier straks werkt:** zie `docs/kennisbank.md`, les "Bewijs
+moet onderscheiden". Spreekt een klant je conclusie tegen, behandel dat als de
+sterkste tegenmeting die je hebt. Hij kijkt naar het echte scherm, jij naar een
+logboek.

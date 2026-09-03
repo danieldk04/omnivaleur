@@ -224,6 +224,63 @@ const meta = { jobId: "j1", serverUrl: "https://omnivaleur.com", platform: "2deh
   check("VOOR: de knop riep 5533", voor === 5533, `${voor}`);
   check("NA: de knop noemt de 11 die het echt betreft", na === 11, `${na}`);
 
+  // ── 4. De inlogverdenking was ongegrond ───────────────────────────────
+  //
+  // Egbert kreeg op 303 artikelrijen te lezen dat hij niet was ingelogd op
+  // 2dehands, en mailde terug: "Ik ben ingelogd op 2dehands, dus weet niet wat
+  // er nu mis gaat?" Hij had gelijk, en twee metingen bewijzen dat:
+  //
+  //   1. Het advertentie-overzicht (/my-account/sell/api/listings) is
+  //      afgeschermd. Een kale aanvraag zonder cookies krijgt HTTP 401,
+  //      twaalf bytes "Unauthorized" — op 2dehands.be én op marktplaats.nl.
+  //      Zijn scan kreeg HTTP 200. Dat kan alleen met een geldige sessie.
+  //   2. De inlogcontrole zelf zocht naar "mijn marktplaats" en "uitloggen" in
+  //      de paginatekst. Op 2dehands staan die woorden er niet, dus was het
+  //      antwoord daar altijd "niet ingelogd", hoe goed je ook was ingelogd.
+  console.log("\nEen 200 van de site weegt zwaarder dan een woord op de pagina");
+
+  const reden = eval("(" + functieUit(BG, "mpEmptyScanReason") + ")");
+
+  const ingelogd200 = reden(
+    { api_status: 200, fetched: 0, total_entries: 0, signed_in: false }, "2dehands");
+  check("VOOR: de oude tekst luidde 'You don't appear to be signed in'",
+    /You don't appear to be signed in/.test(
+      reden({ api_status: null, fetched: 0, signed_in: false }, "2dehands")),
+    "die tekst hoort te blijven bestaan voor het geval dat hij wél klopt");
+  check("NA: bij HTTP 200 valt het woord 'not signed in' niet meer",
+    !/don't appear to be signed in|not signed in/i.test(ingelogd200),
+    ingelogd200.slice(0, 120));
+  check("NA: bij HTTP 200 staat er dat hij juist wél is ingelogd",
+    /You are signed in to 2dehands/.test(ingelogd200), ingelogd200.slice(0, 120));
+  check("NA: en dat er simpelweg niets te importeren valt",
+    /nothing to import/.test(ingelogd200), ingelogd200.slice(0, 160));
+  check("de waargenomen feiten staan er nog steeds bij",
+    /API 200/.test(ingelogd200), ingelogd200.slice(-90));
+
+  // Zegt de site zelf dat er advertenties zijn en lezen wij er nul, dan is er
+  // wél iets stuk — maar bij ons, niet bij zijn inlog.
+  const leesfout = reden(
+    { api_status: 200, fetched: 0, total_entries: 812, signed_in: false }, "2dehands");
+  check("zegt de site 812 advertenties en lezen wij er nul, dan is dat ONZE fout",
+    /problem on our side/.test(leesfout) && !/not signed in/i.test(leesfout),
+    leesfout.slice(0, 140));
+
+  // Een echte weigering blijft gewoon een weigering.
+  const geweigerd = reden({ api_status: 401, fetched: 0, signed_in: false }, "2dehands");
+  check("HTTP 401 blijft 'log opnieuw in'", /foutcode 401/.test(geweigerd), geweigerd.slice(0, 100));
+
+  check("de inlogcontrole kent nu ook de woorden van 2dehands",
+    /mijn 2dehands/.test(BG) && /afmelden/.test(BG),
+    "anders blijft elke ingelogde 2dehands-verkoper 'niet ingelogd'");
+
+  const scan = functieUit(BG, "bgScanMp2dh", "async function");
+  check("een ingelogd maar leeg account rondt netjes af in plaats van rood",
+    /leeg_account: true/.test(scan) && /echtLeeg/.test(scan),
+    "een account zonder advertenties is geen storing");
+  check("dat mag alleen als de site zelf zegt dat er niets staat",
+    /api_status === 200 && !result\.meta\?\.total_entries/.test(scan),
+    "anders verdoezelt het een leesfout aan onze kant");
+
   console.log(mislukt ? `\n${mislukt} controle(s) mislukt` : "\nAlles groen");
   process.exit(mislukt ? 1 : 0);
 })();

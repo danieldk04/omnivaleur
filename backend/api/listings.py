@@ -274,6 +274,71 @@ def mark_listing_active(body: dict, user_id: str = Depends(get_current_user)):
     return {"ok": True, "listing": listing, "linked": linked, "scan_queued": scan_queued}
 
 
+@router.post("/clear-error")
+def clear_listing_errors(body: dict, user_id: str = Depends(get_current_user)):
+    """Haal een mislukte publicatie van het scherm af.
+
+    WAAROM DIT BESTAAT (03-09-2026, Egbert Brouwer / papas-plectrums)
+
+    Zijn wachtrij voor 2dehands werd teruggenomen. Dat was terecht: 279
+    opdrachten van elk drie en een halve minuut zijn zestien uur waarin hij
+    verder niets kan. Maar elke teruggenomen opdracht liet een rode balk achter
+    op de artikelrij, en die balken gaan alleen weg als er alsnog met succes
+    wordt gepubliceerd. Hij keek dus tegen zes bladzijden rood aan, zonder een
+    enkele knop om er iets mee te doen, en concludeerde: "Ik kom niet verder."
+
+    Een advertentie die nooit is aangemaakt hoort geen mislukte advertentie te
+    zijn maar een niet-geplaatste. Daarom verdwijnt de rij hier echt als er
+    nooit een advertentienummer aan hing; hing dat er wel, dan blijft de rij
+    staan en gaat alleen de foutmelding eraf.
+
+    body: {platform, item_id?}  zonder item_id: alles wat op dit kanaal faalde.
+    """
+    platform = (body.get("platform") or "").strip()
+    if not platform:
+        raise HTTPException(status_code=400, detail="platform required")
+    item_id = (body.get("item_id") or "").strip() or None
+
+    db = get_db()
+    if item_id:
+        eigen = db.table("items").select("id").eq("id", item_id).eq("user_id", user_id).execute()
+        if not eigen.data:
+            raise HTTPException(status_code=404, detail="Item not found")
+        item_ids = [item_id]
+    else:
+        # Alleen zijn eigen artikelen, en in EEN gekoppelde vraag. Zelf de id's
+        # ophalen en die in stukken terugsturen is precies de 502 waar de
+        # kennisbank voor waarschuwt: boven ongeveer 640 id's knapt de URL.
+        eigen = fetch_all(lambda: db.table("items").select("id").eq("user_id", user_id))
+        item_ids = [r["id"] for r in (eigen or [])]
+    if not item_ids:
+        return {"ok": True, "cleared": 0, "removed": 0}
+
+    rijen = []
+    for i in range(0, len(item_ids), 200):
+        rijen += (db.table("listings")
+                  .select("id,item_id,platform,status,platform_listing_id")
+                  .in_("item_id", item_ids[i:i + 200])
+                  .eq("platform", platform).eq("status", "error").execute().data or [])
+
+    # Nooit een advertentienummer gehad? Dan is er niets geplaatst en is de rij
+    # zelf onzin. Weg ermee, dan staat het artikel weer gewoon op "nog plaatsen".
+    weg = [r["id"] for r in rijen if not r.get("platform_listing_id")]
+    houden = [r["id"] for r in rijen if r.get("platform_listing_id")]
+    for i in range(0, len(weg), 200):
+        db.table("listings").delete().in_("id", weg[i:i + 200]).execute()
+    # Wel een advertentienummer: dat wordt alleen weggeschreven als het platform
+    # de advertentie heeft aangemaakt en het nummer heeft teruggegeven. Zo'n rij
+    # weggooien zou de link kwijtmaken die auto-delist later nodig heeft, dus
+    # die blijft staan als gewone actieve advertentie zonder foutmelding.
+    for i in range(0, len(houden), 200):
+        db.table("listings").update({
+            "status": "active", "error_message": None,
+        }).in_("id", houden[i:i + 200]).execute()
+
+    return {"ok": True, "cleared": len(rijen), "removed": len(weg)}
+
+
 @router.post("/refresh")
 async def refresh_one_listing(body: dict, user_id: str = Depends(require_active_subscription)):
     """

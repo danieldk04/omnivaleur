@@ -371,10 +371,13 @@ def test_de_categorie_wordt_opgehaald_voor_het_verwijderen():
     """Na het verwijderen is de advertentiepagina 410 en is de categorie weg —
     en een mislukte herplaatsing kost de advertentie."""
     relist = (ROOT / "backend/services/relist.py").read_text(encoding="utf-8")
-    assert "categorie_van_advertentie" in relist
+    # Sinds 03-09-2026 haalt dezelfde ronde ook de advertentievorm op
+    # (advertentie_kenmerken); het gaat er hier om DAT het vóór het verwijderen
+    # gebeurt, want daarna geeft de pagina 410.
+    assert "advertentie_kenmerken" in relist
     voorbereiden = relist.index("---- 1. Alles voorbereiden")
     wegschrijven = relist.index("---- 2. Nu pas wegschrijven")
-    assert voorbereiden < relist.index("categorie_van_advertentie") < wegschrijven
+    assert voorbereiden < relist.index("advertentie_kenmerken") < wegschrijven
 
 
 def test_de_extensie_legt_de_categorie_ook_zelf_vast():
@@ -390,3 +393,41 @@ def test_de_opgevangen_categorie_overschrijft_de_geraden_categorie():
     blok = jobs.split('cap_cat = captured.get("mp_category")')[1][:400]
     assert 'payload["mp_category"] = cap_cat' in blok
     assert 'cap_cat.get("l1") and cap_cat.get("l2")' in blok
+
+
+# ── De advertentievorm komt van dezelfde pagina (03-09-2026, Amanda) ─────────
+#
+# Letterlijk overgenomen uit drie van haar eigen advertentiepagina's, opgehaald
+# op 03-09-2026. Op alle drie stond het blok precies één keer.
+BIED_PAGINA = ('..."itemId":"m2437013996"...,"bidsInfo":{"isBiddingEnabled":true},'
+               '"priceInfo":{"priceCents":0,"priceType":"FAST_BID"},"customDimensions":[...')
+VRAAGPRIJS_PAGINA = ('..."priceInfo":{"priceCents":1000,"priceType":"FIXED"},"customDimensions"...')
+BIEDEN_VANAF_PAGINA = ('..."priceInfo":{"priceCents":1500,"priceType":"MIN_BID"},"customDimensions"...')
+
+
+def test_de_advertentievorm_wordt_van_de_pagina_gelezen():
+    from backend.services.mp_enrich import prijstype_uit_html
+    assert prijstype_uit_html(BIED_PAGINA) == {"soort": "FAST_BID", "cents": 0}
+    assert prijstype_uit_html(VRAAGPRIJS_PAGINA) == {"soort": "FIXED", "cents": 1000}
+    assert prijstype_uit_html(BIEDEN_VANAF_PAGINA) == {"soort": "MIN_BID", "cents": 1500}
+
+
+def test_bij_twijfel_geen_advertentievorm():
+    """Staat er een tweede advertentie op de pagina met een ándere vorm, dan is
+    niet te zeggen welke van de onze is. Dan liever niets: een verkeerde vorm is
+    erger dan de oude weg."""
+    from backend.services.mp_enrich import prijstype_uit_html
+    twee = ('"priceInfo":{"priceCents":1000,"priceType":"FIXED"} ... '
+            '"priceInfo":{"priceCents":0,"priceType":"FAST_BID"}')
+    assert prijstype_uit_html(twee) == {}
+    assert prijstype_uit_html("") == {}
+    assert prijstype_uit_html("geen prijsblok") == {}
+
+
+def test_de_vorm_gaat_mee_in_de_plaatsopdracht():
+    relist = (ROOT / "backend/services/relist.py").read_text(encoding="utf-8")
+    assert 'create_payload["mp_prijstype"]' in relist
+    voorbereiden = relist.index("---- 1. Alles voorbereiden")
+    wegschrijven = relist.index("---- 2. Nu pas wegschrijven")
+    # Ook dit moet vóór het verwijderen gebeuren: daarna geeft de pagina 410.
+    assert voorbereiden < relist.index('create_payload["mp_prijstype"]') < wegschrijven

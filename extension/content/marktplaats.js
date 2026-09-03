@@ -4,7 +4,8 @@
   const { step, clog, qs, sleep, waitForEl, fillInput, fillInputHuman, fillDescription, selectDropdown,
           fillBrand, fillBrandField, fillManufacturer, selectBundleFree, selectDelivery, selectPakketWaarde, typBeschrijvingEcht, vulHalswijdte, uploadPhotos, submitListing,
           clickRadioByValue, smartTrunc, fillBidding, dutchColor,
-          ensureDescriptionStillFilled, verifyMpGroupFields, repairMpGroupFields, selectCondition, selectIntendedFor, mpPrijs } = window.CL;
+          ensureDescriptionStillFilled, verifyMpGroupFields, repairMpGroupFields, selectCondition, selectIntendedFor, mpPrijs,
+          mpPrijsvorm, kiesPrijsvorm, MP_ZONDER_BEDRAG } = window.CL;
 
   const job = await getJob();
   if (!job) return;
@@ -267,7 +268,24 @@
   async function fillForm(item) {
     await waitForEl('input[name="title_nl-NL"]', 20000);
     await step("title",        () => fillInputHuman(qs('input[name="title_nl-NL"]'), smartTrunc(item.title || "", 60)));
-    await step("price",        () => { const el = qs('input[name="price.value"]'); return fillInputHuman(el, mpPrijs(item.price, el)); });
+    // EERST DE ADVERTENTIEVORM, DAN PAS DE PRIJS (03-09-2026, Amanda Haas).
+    //
+    // Een artikel zonder vraagprijs is op Marktplaats geen fout maar een keuze:
+    // "Bieden". Stond de lijst op "Vraagprijs" en het prijsveld leeg, dan
+    // weigerde het formulier en bleef het tabblad open staan wachten op de
+    // verkoper — met de oude advertentie al weg. Zie mpPrijsvorm in shared.js.
+    //
+    // De volgorde is niet vrij: bij "Bieden" verdwijnt het prijsveld, dus een
+    // eerst ingevulde prijs is daarna weg.
+    let vormError = null;
+    const vorm = mpPrijsvorm(item);
+    if (vorm) {
+      try { await kiesPrijsvorm(vorm); }
+      catch (e) { vormError = e; clog(`advertentievorm: FOUT — ${e && e.message ? e.message : e}`); }
+    }
+    if (!(vorm && MP_ZONDER_BEDRAG.has(vorm))) {
+      await step("price",      () => { const el = qs('input[name="price.value"]'); return fillInputHuman(el, mpPrijs(item.price, el)); });
+    }
     // NOT wrapped in step(): description and photos are mandatory on Marktplaats,
     // and step() swallows the error — which is how listings ended up submitted
     // with an empty advertentietekst and no photos, with nothing to explain it.
@@ -314,7 +332,9 @@
     // zelf aanklikken. item.pakket komt uit zijn eigen instelling (onder de
     // prijsgrens brievenbuspakje, daarboven groot pakket).
     await step("package",      () => item.pakket && selectPakketWaarde(item.pakket));
-    await step("bidding",      () => item.bid_percentage && fillBidding(item.price, item.bid_percentage));
+    // "Bieden vanaf" hoort bij een vraagprijs. Zonder prijs is het minimumbod 0,
+    // en dat is geen bod maar een leeg veld dat de advertentie tegenhoudt.
+    await step("bidding",      () => item.bid_percentage && Number(item.price) > 0 && fillBidding(item.price, item.bid_percentage));
 
     await sleep(600);
     await repairMpGroupFields(item);
@@ -327,6 +347,7 @@
     // alleen een titel en een prijs, geen foto's, geen kenmerken — en een
     // melding die niet uitlegde waarom de rest ontbrak. Nu wordt alles
     // ingevuld en komt het bezwaar er pas achteraan, mét de echte reden.
+    if (vormError) throw vormError;
     if (descError) throw descError;
     if (photoError) throw photoError;
     // De advertentietekst is als eerste ingevuld, maar daarna zijn er foto's

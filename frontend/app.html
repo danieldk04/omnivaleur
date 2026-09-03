@@ -2607,8 +2607,35 @@ const EXT_PING_SCHEMA_MS = [0, 600, 1400, 2600, 4200];  // samen ~8,8s voor het 
 let _extPingRonde = 0;
 let _extHerhaalTimer = null;
 
+// HET STEMPEL VAN DE EXTENSIE (Amanda, 03-09-2026).
+//
+// "Hij geeft dan wel/dan niet aan dat de extensie niet is gevonden, terwijl deze
+// up-to-date is." Dat klopte, en de reden is dat we het aan de verkeerde kant
+// vroegen: het antwoord op onze ping komt pas na twee heen-en-weertjes met de
+// achtergrond van de extensie, en die moet in Chrome koud opstarten — juist
+// terwijl ze aan het publiceren is duurt dat het langst. Kwam er binnen ~8,8
+// seconde niets, dan viel het oordeel "niet gevonden" en kwam er een blokkerend
+// installatievenster over het scherm van iemand die alles goed had staan.
+//
+// content/ext_stamp.js zet bij het laden van de pagina het versienummer op
+// <html data-omnivaleur-ext="...">. Daar komt geen achtergrond aan te pas.
+// Staat dat er, dan IS de extensie geïnstalleerd, punt.
+function extStempel() {
+  try { return document.documentElement.getAttribute('data-omnivaleur-ext') || ''; }
+  catch (_) { return ''; }
+}
+
 function _extGeefOp() {
   if (extState.status !== 'checking') return;
+  const stempel = extStempel();
+  if (stempel) {
+    // Wel geïnstalleerd, nog geen antwoord. Blijven vragen (zie de halve-minuut
+    // ronde hieronder) en ondertussen niets beweren wat niet waar is.
+    extState = { status: 'waking', version: stempel, email: extState.email };
+    renderExtSetup();
+    if (typeof renderExtStatus === 'function') renderExtStatus();
+    return;
+  }
   extState = { status: 'missing', version: '', email: '' };
   renderExtSetup();
   if (typeof renderExtStatus === 'function') renderExtStatus();
@@ -2985,6 +3012,43 @@ function publishErrorBadge(item) {
     title="${esc(eerste)}">⚠ ${esc(namen)} failed — ${esc(kort)}</div>`;
 }
 
+// Hoeveel artikelen staan er op DIT kanaal in de fout? Bepaalt of de knop
+// "ruim ze allemaal op" verschijnt: bij één mislukking is die knop onzin, bij
+// driehonderd is hij het enige wat helpt.
+function zelfdeFout(platform) {
+  return state.listings.filter(l => l.platform === platform && l.status === 'error').length;
+}
+
+// EEN RODE BALK MOET WEG KUNNEN (03-09-2026).
+//
+// Egbert Brouwer keek na een teruggenomen wachtrij tegen zes bladzijden rood
+// aan: 303 artikelen met een mislukte 2dehands-publicatie, en geen enkele knop
+// om er iets mee te doen. Zo'n balk verdween alleen door alsnog met succes te
+// publiceren — precies wat er niet lukte. Dat is een doodlopende straat, en die
+// horen niet in dit dashboard te zitten.
+async function clearPublishError(itemId, platform, label) {
+  const aantal = itemId ? 1 : zelfdeFout(platform);
+  const vraag = itemId
+    ? `Clear the failed ${label} publish for this item?\n\nThe item goes back to "to list" — nothing is removed from ${label}.`
+    : `Clear all ${aantal} failed ${label} publishes?\n\nThose items go back to "to list". Nothing is removed from ${label}.`;
+  if (!confirm(vraag)) return;
+  try {
+    const r = await apiFetch(`${API}/api/listings/clear-error`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(itemId ? { item_id: itemId, platform } : { platform }),
+    });
+    const data = await parseJsonSafe(r);
+    if (!r.ok) throw new Error(data.detail || 'Could not clear the error');
+    document.getElementById('modal-publish-error')?.remove();
+    await loadAll();
+    showToast(data.cleared === 1
+      ? `Cleared the failed ${label} publish.`
+      : `Cleared ${data.cleared} failed ${label} publishes.`);
+  } catch (e) {
+    alert('Could not clear: ' + e.message);
+  }
+}
+
 function showPublishError(itemId) {
   const item = state.items.find(i => i.id === itemId);
   const failed = state.listings.filter(l => l.item_id === itemId && l.status === 'error');
@@ -2995,6 +3059,8 @@ function showPublishError(itemId) {
       <div style="font-size:13px;color:var(--muted);white-space:pre-wrap">${esc(l.error_message || 'No reason recorded.')}</div>
       <div style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap">
         <button class="btn btn-sm btn-outline" onclick="document.getElementById('modal-publish-error').remove();markPlatformListed('${itemId}','${l.platform}','${esc(PLATFORM_LABELS[l.platform] || l.platform)}')">It is online — mark as listed</button>
+        <button class="btn btn-sm btn-outline" onclick="clearPublishError('${itemId}','${l.platform}','${esc(PLATFORM_LABELS[l.platform] || l.platform)}')">Clear this error</button>
+        ${zelfdeFout(l.platform) > 1 ? `<button class="btn btn-sm btn-outline" onclick="clearPublishError(null,'${l.platform}','${esc(PLATFORM_LABELS[l.platform] || l.platform)}')">Clear all ${zelfdeFout(l.platform)} on ${esc(PLATFORM_LABELS[l.platform] || l.platform)}</button>` : ''}
       </div>
     </div>`).join('');
   const html = `
@@ -5538,6 +5604,11 @@ function renderExtStatus() {
     label.textContent = 'Extension not signed in';
   } else if (extState.status === 'checking') {
     label.textContent = 'Checking extension…';
+  } else if (extState.status === 'waking') {
+    // Geïnstalleerd (haar eigen stempel staat op de pagina), maar de achtergrond
+    // van de extensie slaapt nog. Geen rood: er is niets kapot.
+    dot.classList.add('ext-dot-warn');
+    label.textContent = `Extension v${extState.version} — starting up…`;
   } else if (extVersionIsOld()) {
     // Zonder dit kon een oude extensie stilletjes blijven draaien terwijl de
     // fout allang verholpen was — en leek het alsof de fix niet werkte.

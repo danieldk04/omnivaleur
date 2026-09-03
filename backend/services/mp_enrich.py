@@ -404,6 +404,67 @@ def categorie_uit_html(ruwe: str) -> dict:
     return uit if uit.get("l1") and uit.get("l2") else {}
 
 
+# De PRIJSVORM van een advertentie: "Vraagprijs", "Bieden", "Gratis"…
+#
+# WAAROM DIT ER IS (03-09-2026, Amanda Haas). 161 van haar advertenties staan op
+# Marktplaats als "Bieden": geen vraagprijs, alleen biedingen. Bij het importeren
+# nemen we alleen een échte vraagprijs over (zie _naar_advertentie), dus staat er
+# bij ons 0. Bij het herplaatsen ging het formulier vervolgens altijd uit van een
+# vraagprijs, en een vraagprijs van 0 is een leeg prijsveld: Marktplaats weigert
+# dat met "Geen prijs ingevuld". De advertentie was op dat moment al weg.
+#
+# Marktplaats zet de vorm zelf op de advertentiepagina, in hetzelfde blok als de
+# prijs. Nagemeten 03-09-2026 op drie echte advertenties van haar:
+#   "priceInfo":{"priceCents":0,"priceType":"FAST_BID"}      → Bieden
+#   "priceInfo":{"priceCents":1500,"priceType":"MIN_BID"}    → vraagprijs + bieden
+#   "priceInfo":{"priceCents":1000,"priceType":"FIXED"}      → vaste vraagprijs
+# Op alle drie de pagina's stond het blok precies één keer, vlak achter het eigen
+# advertentienummer. Staat het er twee keer met verschillende uitkomsten (een
+# aanbevolen advertentie ernaast), dan geven we niets terug: liever de oude weg
+# dan de verkeerde vorm.
+_PRIJSINFO_RE = re.compile(r'"priceInfo"\s*:\s*\{([^{}]{0,300})\}')
+
+
+def prijstype_uit_html(ruwe: str) -> dict:
+    """{"soort": "FAST_BID", "cents": 0} — of een leeg blok als het niet zeker is."""
+    if not ruwe:
+        return {}
+    blokken = _PRIJSINFO_RE.findall(ruwe)
+    soorten, eerste = set(), None
+    for blok in blokken:
+        m = re.search(r'"priceType"\s*:\s*"([A-Z_]{2,30})"', blok)
+        if not m:
+            continue
+        c = re.search(r'"priceCents"\s*:\s*(-?\d{1,9})', blok)
+        gevonden = {"soort": m.group(1), "cents": int(c.group(1)) if c else None}
+        soorten.add(gevonden["soort"])
+        if eerste is None:
+            eerste = gevonden
+    if not eerste or len(soorten) != 1:
+        return {}
+    return eerste
+
+
+async def advertentie_kenmerken(url: str) -> dict:
+    """Categorie én prijsvorm van één advertentie, uit ÉÉN ophaalronde.
+
+    Wordt aangeroepen vlak vóór een herplaatsing, als de oude advertentie nog
+    online staat. Mislukt het (403, tijdslimiet, gewijzigde pagina), dan komt er
+    een leeg blok terug en valt het herplaatsen terug op de oude weg — nooit een
+    fout, want een gemist kenmerk mag geen advertentie kosten.
+    """
+    if not url or not re.match(r"^https://(?:www\.)?(?:marktplaats\.nl|2dehands\.be)/v/", url):
+        return {}
+    try:
+        async with httpx.AsyncClient(timeout=20, follow_redirects=True,
+                                     headers={"User-Agent": UA}) as client:
+            ruwe = await _pagina(client, url)
+    except Exception as e:  # noqa: BLE001
+        logger.warning("mp_enrich: advertentiepagina niet gelezen (%s): %s", url, e)
+        return {}
+    return {"mp_category": categorie_uit_html(ruwe), "mp_prijstype": prijstype_uit_html(ruwe)}
+
+
 async def volledige_advertentie(client: httpx.AsyncClient, url: str) -> dict:
     """Alles wat één advertentiepagina prijsgeeft, in één ophaalronde."""
     ruwe = await _pagina(client, url)
@@ -422,22 +483,8 @@ async def volledige_advertentie(client: httpx.AsyncClient, url: str) -> dict:
 
 
 async def categorie_van_advertentie(url: str) -> dict:
-    """De echte Marktplaats-categorie van één advertentie, of een leeg blok.
-
-    Wordt aangeroepen vlak vóór een herplaatsing, als de oude advertentie nog
-    online staat. Mislukt het (403, tijdslimiet, gewijzigde pagina), dan komt er
-    een leeg blok terug en valt het herplaatsen terug op de oude weg — nooit een
-    fout, want een gemiste categorie mag geen advertentie kosten.
-    """
-    if not url or not re.match(r"^https://(?:www\.)?(?:marktplaats\.nl|2dehands\.be)/v/", url):
-        return {}
-    try:
-        async with httpx.AsyncClient(timeout=20, follow_redirects=True,
-                                     headers={"User-Agent": UA}) as client:
-            return categorie_uit_html(await _pagina(client, url))
-    except Exception as e:  # noqa: BLE001
-        logger.warning("mp_enrich: categorie niet gelezen (%s): %s", url, e)
-        return {}
+    """De echte Marktplaats-categorie van één advertentie, of een leeg blok."""
+    return (await advertentie_kenmerken(url)).get("mp_category") or {}
 
 
 def _is_afgekapt(kort: str, lang: str) -> bool:

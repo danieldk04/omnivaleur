@@ -17,6 +17,36 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ---
 
+## bewijs-moet-onderscheiden
+
+*03-09-2026 — Een waarneming die op het werkende én het kapotte kanaal hetzelfde is, verklaart het verschil niet en is dus geen bewijs*
+
+Een meting is pas bewijs als ze de twee gevallen uit elkaar houdt. Doet ze dat
+niet, dan voelt ze als bewijs en is ze een gok met cijfers erbij.
+
+**Waarom:** op 03-09-2026 concludeerde ik dat Egbert Brouwer niet was ingelogd
+op 2dehands. Het "bewijs": www.2dehands.be antwoordt op het plaatsadres met
+HTTP 401 zolang je niet bent ingelogd, twaalf bytes "Unauthorized". Dat klopt,
+maar www.marktplaats.nl doet op precies datzelfde adres precies hetzelfde, en
+daar publiceerde hij die dag gewoon door. De meting zei dus niets over het
+verschil tussen het kanaal dat wél werkte en het kanaal dat niet werkte.
+
+Die conclusie ging als tekst naar 303 artikelrijen en in een mail naar de klant.
+Hij mailde terug: "Ik ben ingelogd op 2dehands, dus weet niet wat er nu mis
+gaat?" Hij had gelijk. Twee metingen bewezen het tegendeel: zijn eigen scan
+kreeg HTTP 200 op het afgeschermde advertentie-overzicht (dat kan alleen met een
+geldige sessie), en onze inlogcontrole zocht in de paginatekst naar "mijn
+marktplaats" en "uitloggen" en draaide óók op 2dehands, waar die woorden niet
+staan. Zie "stille-tab-is-geen-formulier" en "omnivaleur-altijd-bewijzen".
+
+**How to apply:** voor je een oorzaak opschrijft, vraag: wat zou ik hebben
+gemeten in het geval dat wél werkt? Is dat hetzelfde, dan heb je niets. Zoek een
+waarneming die alleen bij de storing voorkomt. Spreekt de klant je daarna tegen,
+behandel dat als de sterkste tegenmeting die je hebt en meet opnieuw, want hij
+kijkt naar het echte scherm en jij naar een logboek.
+
+---
+
 ## klantmail-kort-en-menselijk
 
 *03-09-2026 — Klantmails van Daniel: hooguit 200 woorden, één zin erkenning, per punt het gevolg voor de klant vooraan, geen boetekleed en geen slijmen*

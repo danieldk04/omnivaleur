@@ -4111,6 +4111,30 @@ function mpEmptyScanReason(meta, platform) {
     return `${site} weigert je advertentieoverzicht (foutcode ${meta.api_status}). `
       + `Open ${site}, log opnieuw in en start de scan nog een keer.` + feiten;
   }
+  // EEN 200 IS HET BEWIJS DAT DE INLOG WERD GEACCEPTEERD (03-09-2026).
+  //
+  // Dit is de belangrijkste afslag van deze functie, en hij ontbrak. Het
+  // advertentie-overzicht (/my-account/sell/api/listings) is afgeschermd:
+  // zonder geldige sessie antwoordt het met HTTP 401, twaalf bytes "Unauthorized".
+  // Nagemeten met een kale aanvraag zonder cookies, op 2dehands.be én op
+  // marktplaats.nl — allebei 401. Krijgen wij dus een 200, dan heeft de site
+  // die verkoper herkend en is hij per definitie ingelogd.
+  //
+  // Egbert Brouwer kreeg "You don't appear to be signed in to 2dehands" terwijl
+  // in diezelfde melding "API 200" stond. Hij was ingelogd; hij had daar alleen
+  // nog nooit een advertentie geplaatst, dus was de lijst leeg. Die ene zin
+  // stuurde hem, en ons, een week de verkeerde kant op.
+  if (meta.api_status === 200) {
+    if (meta.total_entries) {
+      return `${site} says your account has ${meta.total_entries} advert(s), but we could not read `
+        + `a single one of them. That is a problem on our side, not with your login — `
+        + `please report it so we can fix it.` + feiten;
+    }
+    return `You are signed in to ${site} — it recognised your account and answered us — but there `
+      + `are no adverts on it, so there is nothing to import. If you do have adverts running on `
+      + `${site}, they belong to a different account than the one you are signed in with in this `
+      + `browser.` + feiten;
+  }
   if (meta.signed_in === false) {
     return `You don't appear to be signed in to ${site} in this browser. `
       + `Open ${site}, sign in, and run the scan again.` + feiten;
@@ -4544,7 +4568,16 @@ async function bgScanMp2dh(job, serverUrl) {
           // Alleen of we überhaupt ingelogd zijn. Of dit een zakelijk account
           // is, valt hier niet betrouwbaar aan de paginatekst af te lezen — dat
           // is geprobeerd en het gaf een verkeerd antwoord.
-          signed_in: /uitloggen|log ?uit|mijn marktplaats|my account/i.test(document.body.innerText || ""),
+          // GEMETEN OP 03-09-2026, EN HET WAS FOUT.
+          //
+          // Deze zin stond er met alleen Marktplaats-woorden in, maar hij draait
+          // óók op 2dehands. Een verkoper die daar keurig was ingelogd kreeg
+          // daardoor "je bent niet ingelogd op 2dehands" te horen — Egbert
+          // Brouwer, en hij mailde terug dat hij wél was ingelogd. Hij had
+          // gelijk. Zie mpEmptyScanReason: wat de site ANTWOORDT weegt vanaf nu
+          // zwaarder dan welk woord er toevallig op de pagina staat.
+          signed_in: /uitloggen|log ?uit|afmelden|mijn marktplaats|mijn 2dehands|my account/i
+            .test(document.body.innerText || ""),
         },
       };
     });
@@ -4619,9 +4652,27 @@ async function bgScanMp2dh(job, serverUrl) {
     }
     if (!result.items.length) {
       if (admarktFout) throw new Error(`Admarkt: ${admarktFout}`);
+      const admarktAan = await admarktMeenemen(0);
+      // EEN LEEG ACCOUNT IS GEEN STORING (03-09-2026).
+      //
+      // Wie op 2dehands nog nooit iets heeft geplaatst, hééft daar geen
+      // advertenties. Dat meldden we als rode fout met de tekst "je bent niet
+      // ingelogd" erbij, en dat is twee keer onwaar. Voorwaarde om het rustig
+      // af te ronden: de site gaf een 200 (dus de inlog werd geaccepteerd) én
+      // zegt zelf dat er niets staat. Zegt hij een aantal en lezen wij er nul,
+      // dan is er wél iets stuk en blijft het een fout — zie mpEmptyScanReason.
+      const echtLeeg = result.meta?.api_status === 200 && !result.meta?.total_entries;
+      const admarktKanNogWat = platform === "marktplaats" && !admarktAan;
+      if (echtLeeg && !admarktKanNogWat) {
+        await finaliseJob(serverUrl, job.id, "complete", {
+          listings: [], scan_meta: { ...(result.meta || {}), klaar: true, leeg_account: true },
+        });
+        console.log(`[Omnivaleur] ${platform}: ingelogd, maar dit account heeft daar geen advertenties — scan netjes afgerond.`);
+        return;
+      }
       throw new Error(mpEmptyScanReason({
         ...(result.meta || {}),
-        admarkt_toegestaan: await admarktMeenemen(0),
+        admarkt_toegestaan: admarktAan,
         admarkt_ooit_aan: await admarktOoitAan(),
       }, platform));
     }

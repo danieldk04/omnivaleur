@@ -130,6 +130,43 @@ def test_de_melding_wijst_hem_naar_de_juiste_site():
     assert uit["error_oorspronkelijk"] == TIMEOUT
 
 
+def test_de_melding_beweert_niet_langer_dat_hij_uitgelogd_is():
+    """DE OORZAAK STOND ER ALS FEIT, EN HET WAS EEN GOK (03-09-2026).
+
+    De eerste versie zei "That is what it looks like when you are not signed
+    in". Het bewijs daarvoor was HTTP 401 op het plaatsadres van 2dehands.
+    Nagemeten: www.marktplaats.nl geeft op precies datzelfde adres precies
+    dezelfde 401, twaalf bytes "Unauthorized" — en daar publiceert Egbert wel.
+    Het bewijs bewees dus niets, en hij mailde terecht terug dat hij ingelogd
+    was. Wat we mogen opschrijven is de waarneming, plus de controle die hij
+    zelf kan doen.
+    """
+    tekst = api._melding_formulier_ging_niet_open("2dehands")
+    # VOOR: één oorzaak, als feit gebracht.
+    assert "That is what it looks like when you are not signed in" not in tekst
+    # NA: de waarneming.
+    assert "never reported back" in tekst
+    # NA: de controle die het in één klik beslist, met het adres erbij.
+    assert "https://www.2dehands.be/my-account/sell/index.html" in tekst
+    # NA: allebei de mogelijkheden, en die van ons staat vooraan.
+    assert "the fault is on our side" in tekst
+    assert tekst.index("on our side") < tekst.index("not signed in")
+    assert "Unauthorized" in tekst
+
+
+def test_marktplaats_krijgt_zijn_eigen_controlepagina():
+    tekst = api._melding_formulier_ging_niet_open("marktplaats")
+    assert "https://www.marktplaats.nl/my-account/sell/index.html" in tekst
+    assert "2dehands.be/my-account" not in tekst
+
+
+def test_de_eerste_zeventig_tekens_zeggen_al_iets():
+    """De rode balk in het dashboard kapt af op 70 tekens. Wat daar staat is
+    voor de meeste verkopers de hele boodschap, dus dat mag geen aanloop zijn."""
+    kop = api._melding_formulier_ging_niet_open("2dehands")[:70]
+    assert "never opened" in kop
+
+
 def test_zonder_patroon_blijft_de_oorspronkelijke_melding_staan():
     job = {"action": "create", "platform": "2dehands"}
     uit = api._rechtgezette_foutmelding(job, {"error": TIMEOUT}, None, kansloos=False)

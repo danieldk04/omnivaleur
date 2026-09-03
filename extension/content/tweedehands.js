@@ -4,7 +4,8 @@
   const { step, clog, qs, sleep, waitForEl, fillInput, fillInputHuman, fillDescription, selectDropdown,
           fillBrand, fillBrandField, fillManufacturer, selectBundleFree, selectDelivery, selectPackageSize, typBeschrijvingEcht,
           uploadPhotos, submitListing, clickRadioByValue, smartTrunc, fillBidding,
-          dutchColor, ensureDescriptionStillFilled, verifyMpGroupFields, repairMpGroupFields, selectCondition, selectIntendedFor, mpPrijs } = window.CL;
+          dutchColor, ensureDescriptionStillFilled, verifyMpGroupFields, repairMpGroupFields, selectCondition, selectIntendedFor, mpPrijs,
+          mpPrijsvorm, kiesPrijsvorm, MP_ZONDER_BEDRAG } = window.CL;
 
   const job = await getJob();
   if (!job) return;
@@ -89,7 +90,19 @@
   async function fillForm(item) {
     await waitForEl('input[name="title_nl-BE"], input[name="title_nl-NL"]', 20000);
     await step("title",        () => fillInputHuman(titleInput(), smartTrunc(item.title || "", 60)));
-    await step("price",        () => { const el = qs('input[name="price.value"]'); return fillInputHuman(el, mpPrijs(item.price, el)); });
+    // EERST DE ADVERTENTIEVORM, DAN PAS DE PRIJS (03-09-2026, Amanda Haas).
+    // 2dehands draait hetzelfde formulier als Marktplaats: een artikel zonder
+    // vraagprijs hoort op "Bieden" te staan, anders weigert het formulier en
+    // blijft het tabblad wachten op de verkoper. Zie mpPrijsvorm in shared.js.
+    let vormError = null;
+    const vorm = mpPrijsvorm(item);
+    if (vorm) {
+      try { await kiesPrijsvorm(vorm); }
+      catch (e) { vormError = e; clog(`advertentievorm: FOUT — ${e && e.message ? e.message : e}`); }
+    }
+    if (!(vorm && MP_ZONDER_BEDRAG.has(vorm))) {
+      await step("price",      () => { const el = qs('input[name="price.value"]'); return fillInputHuman(el, mpPrijs(item.price, el)); });
+    }
     // Mandatory fields — deliberately NOT inside step(), see marktplaats.js.
     // nudge: ook 2dehands rekent de tekst pas mee na een echte toetsaanslag.
     let descError = null;
@@ -124,7 +137,8 @@
     await step("brand",        () => item.brand && fillBrandField(item.brand));
     await step("manufacturer", () => fillManufacturer(item));
     await step("delivery",     async () => { await selectDelivery(item); selectBundleFree(); });
-    await step("bidding",      () => item.bid_percentage && fillBidding(item.price, item.bid_percentage));
+    // "Bieden vanaf" hoort bij een vraagprijs; zonder prijs is het minimumbod 0.
+    await step("bidding",      () => item.bid_percentage && Number(item.price) > 0 && fillBidding(item.price, item.bid_percentage));
 
     await sleep(600);
     await repairMpGroupFields(item);
@@ -138,6 +152,7 @@
     // alleen een titel en een prijs, geen foto's, geen kenmerken — en een
     // melding die niet uitlegde waarom de rest ontbrak. Nu wordt alles
     // ingevuld en komt het bezwaar er pas achteraan, mét de echte reden.
+    if (vormError) throw vormError;
     if (descError) throw descError;
     if (photoError) throw photoError;
     // De advertentietekst is als eerste ingevuld, maar daarna zijn er foto's

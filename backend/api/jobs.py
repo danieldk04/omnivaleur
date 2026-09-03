@@ -262,6 +262,7 @@ def _zet_kleur_goed(jobs: list) -> int:
 def get_pending_jobs(request: Request, platform: str = None, user_id: str = Depends(require_active_subscription)):
     db = get_db()
     now_dt = datetime.now(timezone.utc)
+    versie_van_de_kopie = None   # wat de pollende extensie zelf zegt te zijn
     # A poll WITH a platform is a real extension dispatch poll (the dashboard
     # polls without one, just to count) — treat it as the extension's heartbeat
     # so the "computer online" indicator works without any extension change.
@@ -281,6 +282,7 @@ def get_pending_jobs(request: Request, platform: str = None, user_id: str = Depe
         # de blokkerende melding in het dashboard. Vanaf 1.0.250 sluit deze
         # controle het gat definitief.
         gemeld = _kopstuk_versie(request.headers.get("x-omnivaleur-ext"))
+        versie_van_de_kopie = gemeld
         if gemeld is not None and gemeld < MINIMALE_SCANVERSIE:
             logger.warning(
                 "Geen werk uitgedeeld: extensie %s bij gebruiker %s ligt onder %s",
@@ -446,6 +448,11 @@ def get_pending_jobs(request: Request, platform: str = None, user_id: str = Depe
             # risk it firing before the old listing is actually gone. It stays
             # "pending" and will be re-checked on the next poll.
             if paired_delete and paired_delete[0]["status"] != "done":
+                continue
+        if j["action"] == "delete":
+            reden = _herplaatsing_kansloos(db, user_id, j, versie_van_de_kopie)
+            if reden:
+                _neem_herplaatsing_terug(db, j, now, reden)
                 continue
         ready.append(j)
 
@@ -2104,14 +2111,56 @@ def _kansloze_reeks(db, user_id: str, platform: str) -> bool:
     return op_rij >= 3 and _nooit_gelukt_op(db, user_id, platform)
 
 
+# Het adres waarop de verkoper zelf, in een klik, kan zien of hij is ingelogd.
+# GEMETEN op 03-09-2026 met een kale aanvraag zonder cookies: allebei deze
+# pagina's antwoorden dan met HTTP 401 en het kale woord "Unauthorized"
+# (twaalf bytes). Met een geldige sessie krijg je je advertentieoverzicht. Er
+# bestaat dus een test die geen uitleg nodig heeft en niet te misverstaan is,
+# en die hoort in de melding zelf te staan in plaats van in een mailwisseling.
+_CONTROLEPAGINA = {
+    "marktplaats": "https://www.marktplaats.nl/my-account/sell/index.html",
+    "2dehands": "https://www.2dehands.be/my-account/sell/index.html",
+}
+
+
 def _melding_formulier_ging_niet_open(platform: str) -> str:
+    """Wat de verkoper leest als het plaatsformulier zich nooit meldde.
+
+    HIER STOND EERST EEN CONCLUSIE, EN DIE WAS FOUT (03-09-2026).
+
+    De eerste versie zei het zonder voorbehoud: "That is what it looks like when
+    you are not signed in". Het bewijs daarvoor was dat www.2dehands.be op het
+    plaatsadres HTTP 401 geeft zolang je niet bent ingelogd. Dat klopt, maar het
+    bewijst niets: www.marktplaats.nl doet op precies hetzelfde adres precies
+    hetzelfde, en daar publiceert dezelfde verkoper wel. Nagemeten, allebei 401,
+    twaalf bytes.
+
+    Egbert Brouwer kreeg die tekst op 275 artikelrijen te zien en mailde terug:
+    "Ik ben ingelogd op 2dehands, dus weet niet wat er nu mis gaat?" Hij had
+    gelijk. Zijn eigen scan van diezelfde ochtend meldde HTTP 200 op het
+    afgeschermde advertentie-overzicht, en dat antwoord krijg je alleen met een
+    geldige sessie.
+
+    Wat we wel weten is dit: het tabblad ging open en er kwam nooit een teken
+    van leven uit. Dat is de waarneming, en die schrijven we op. Welke van de
+    twee oorzaken het is kan hij in een klik zelf zien, en dat staat erbij.
+    """
     site = {"marktplaats": "Marktplaats (marktplaats.nl)",
             "2dehands": "2dehands (2dehands.be)"}.get(platform, platform)
-    return (f"The {site} listing form never opened, so nothing was filled in and nothing was "
-            f"published. That is what it looks like when you are not signed in to {site} in this "
-            f"browser: the site then answers with an error page instead of the form. Marktplaats "
-            f"and 2dehands are separate sites with separate logins, so being signed in to one does "
-            f"not sign you in to the other. Open {site} in this browser, sign in, and publish again.")
+    controle = _CONTROLEPAGINA.get(platform, "")
+    return (
+        f"The {site} listing form never opened: the page never reported back, so nothing was "
+        f"filled in and nothing was published. The rest of the queue for {site} has been stopped, "
+        f"so it will not keep repeating this for hours.\n\n"
+        f"One click tells you which of the two causes it is. Open this page in this browser:\n"
+        f"{controle}\n\n"
+        f"1. You see your own adverts page. Then you are signed in and the fault is on our side. "
+        f"Please tell us, because we cannot see that from here.\n"
+        f"2. You see the word \"Unauthorized\", or a login screen. Then you are not signed in to "
+        f"{site} in this browser. Marktplaats and 2dehands are separate sites with separate "
+        f"logins, so being signed in to one does not sign you in to the other. Go there, "
+        f"sign in, and publish again."
+    )
 
 
 def _rechtgezette_foutmelding(job: dict | None, body: dict, versie, kansloos: bool = False) -> dict:
@@ -2231,6 +2280,23 @@ def fail_job(job_id: str, body: dict, user_id: str = Depends(get_current_user)):
             "status": "error",
             "error_message": body.get("error", "Extension reported failure"),
         }).eq("item_id", job["item_id"]).eq("platform", job["platform"]).eq("status", "pending"))
+        # EEN MISLUKTE HERPLAATSING MOET OOK TE ZIEN ZIJN (03-09-2026, Amanda).
+        #
+        # De regel hierboven raakt alleen een rij die op 'pending' staat — dat is
+        # een eerste publicatie. Bij een herplaatsing is de oude advertentie op
+        # dit moment al weggehaald en staat die rij op 'delisted'. Er werd dus
+        # NERGENS iets vastgelegd: het artikel had geen advertentie meer, geen
+        # foutmelding, geen bolletje, niets. Precies haar melding: "dan zie ik
+        # vervolgens niks in het overzicht bij mp, terwijl hij wel aangeeft een
+        # nieuwe advertentie te hebben geplaatst." Gemeten bij haar: elf
+        # artikelen in die stille toestand.
+        #
+        # De status wordt 'error' en niet 'active', want de advertentie is er
+        # echt niet meer; 'active' zou hem ook meteen weer kandidaat maken voor
+        # de volgende herplaatsronde. Alleen de rij die bij DEZE herplaatsing
+        # hoort, via dezelfde weg als bij een mislukte verwijdering.
+        _meld_mislukte_herplaatsing(db, user_id, job,
+                                    body.get("error", "Extension reported failure"))
         # DE REST VAN DE RIJ HEEFT GEEN KANS MEER.
         #
         # Dit hoort hier en niet alleen in de extensie: een reparatie in de
@@ -2269,6 +2335,144 @@ def fail_job(job_id: str, body: dict, user_id: str = Depends(get_current_user)):
                 "error_message": melding,
             }).eq("id", rij["id"]))
     return {"ok": True}
+
+
+# Vanaf deze versie kan de extensie een advertentie zonder vraagprijs plaatsen
+# (ze zet de advertentievorm dan op "Bieden"). Zie extension/content/shared.js,
+# mpPrijsvorm. Dit is GEEN nieuwe ondergrens: alles wat een prijs heeft blijft op
+# elke kopie gewoon werken.
+KAN_BIEDEN_VANAF = (1, 0, 285)
+
+
+def _herplaatsing_kansloos(db, user_id: str, verwijderopdracht: dict,
+                           versie: tuple | None) -> str | None:
+    """Zou de plaatsing die bij DEZE verwijdering hoort zeker mislukken?
+
+    WAAROM DIT ER IS (03-09-2026, Amanda Haas). Van haar 479 artikelen hebben er
+    179 geen vraagprijs: op Marktplaats staan die als "Bieden". Een kopie van de
+    extensie van vóór 1.0.285 vult dan een leeg prijsveld in bij "Vraagprijs",
+    waarop Marktplaats weigert met "Geen prijs ingevuld". Op dat moment is de
+    oude advertentie al weg — elf van haar advertenties waren zo verdwenen.
+
+    De reparatie zit in de extensie, maar die bereikt haar pas nadat de Chrome
+    Web Store hem heeft goedgekeurd; bij een eerdere klant duurde dat drie weken.
+    Deze rem staat daarom hier: draait er nog een oudere kopie, dan gaat de
+    verwijdering niet door en blijft de advertentie gewoon staan. Zodra de
+    bijgewerkte kopie draait, loopt alles weer zoals bedoeld.
+
+    Een onbekende versie telt als oud: kopieën van vóór 1.0.250 sturen hun
+    versie niet mee, en die kunnen dit zeker niet.
+    """
+    if verwijderopdracht.get("platform") not in ("marktplaats", "2dehands"):
+        return None
+    if versie is not None and versie >= KAN_BIEDEN_VANAF:
+        return None
+    try:
+        paar = (db.table("jobs").select("id,payload")
+                .eq("user_id", user_id).eq("item_id", verwijderopdracht["item_id"])
+                .eq("platform", verwijderopdracht["platform"]).eq("action", "create")
+                .eq("status", "pending")
+                .gte("created_at", verwijderopdracht["created_at"])
+                .order("created_at").limit(1).execute().data or [])
+    except Exception as e:  # noqa: BLE001 — een rem mag nooit de uitgifte omgooien
+        logger.warning("kon de gepaarde plaatsing niet nakijken voor %s: %s",
+                       verwijderopdracht.get("id"), e)
+        return None
+    if not paar:
+        return None                      # losse verwijdering, geen herplaatsing
+    prijs = (paar[0].get("payload") or {}).get("price")
+    try:
+        heeft_prijs = float(prijs) > 0
+    except (TypeError, ValueError):
+        heeft_prijs = False
+    if heeft_prijs:
+        return None
+    return ("Relist skipped: this listing has no asking price (it runs as \"Bieden\" on "
+            "Marktplaats), and the extension on this computer cannot publish that yet. "
+            "Your listing is untouched and still live. Update the Omnivaleur extension "
+            "and it will refresh on the next round.")
+
+
+def _neem_herplaatsing_terug(db, verwijderopdracht: dict, now: str, reden: str) -> None:
+    """Verwijdering én de bijbehorende plaatsing terugnemen, advertentie blijft staan."""
+    ids = [verwijderopdracht["id"]]
+    try:
+        paar = (db.table("jobs").select("id")
+                .eq("user_id", verwijderopdracht["user_id"])
+                .eq("item_id", verwijderopdracht["item_id"])
+                .eq("platform", verwijderopdracht["platform"]).eq("action", "create")
+                .eq("status", "pending")
+                .gte("created_at", verwijderopdracht["created_at"])
+                .order("created_at").limit(1).execute().data or [])
+        ids += [r["id"] for r in paar]
+    except Exception as e:  # noqa: BLE001
+        logger.warning("gepaarde plaatsing niet gevonden bij het terugnemen: %s", e)
+    for job_id in ids:
+        try:
+            db.table("jobs").update({
+                "status": "cancelled", "result": {"cancelled": reden}, "done_at": now,
+            }).eq("id", job_id).execute()
+        except Exception as e:  # noqa: BLE001
+            logger.warning("opdracht %s niet teruggenomen: %s", job_id, e)
+
+    # De verversbeurt en het dagquotum teruggeven: er is niets ververst.
+    rollback = (verwijderopdracht.get("payload") or {}).get("_refresh_rollback")
+    if rollback:
+        try:
+            from backend.services.relist import rollback_refresh
+            rollback_refresh(rollback, verwijderopdracht["user_id"])
+        except Exception as e:  # noqa: BLE001
+            logger.warning("verversbeurt niet teruggedraaid: %s", e)
+
+    # De advertentie stond op 'relisting' vanaf het inplannen. Er is niets
+    # weggehaald, dus 'active' is de waarheid — en de melding erbij, anders is
+    # het een stille niet-gebeurtenis.
+    for rij in _verwijderdoelen(db, verwijderopdracht):
+        if rij.get("status") in ("sold", "sold_unconfirmed"):
+            continue
+        try:
+            db.table("listings").update({
+                "status": "active", "error_message": reden,
+            }).eq("id", rij["id"]).execute()
+        except Exception as e:  # noqa: BLE001
+            logger.warning("advertentie %s niet teruggezet: %s", rij.get("id"), e)
+    logger.info("Herplaatsing teruggenomen voor item %s op %s: %s",
+                verwijderopdracht.get("item_id"), verwijderopdracht.get("platform"), reden)
+
+
+def _meld_mislukte_herplaatsing(db, user_id: str, job: dict, melding: str) -> int:
+    """De weggehaalde advertentie van een mislukte herplaatsing zichtbaar maken.
+
+    Was dit een herplaatsing (er hoort een geslaagde verwijdering bij die vlak
+    hiervoor liep), dan is de oude advertentie weg en is er geen nieuwe gekomen.
+    Zonder deze regel blijft dat artikel achter zonder advertentie én zonder
+    uitleg — een doodlopende straat in het scherm.
+    """
+    try:
+        paar = (db.table("jobs").select("id,item_id,platform,payload,status,created_at")
+                .eq("user_id", user_id).eq("item_id", job["item_id"])
+                .eq("platform", job["platform"]).eq("action", "delete")
+                .lte("created_at", job["created_at"])
+                .order("created_at", desc=True).limit(1).execute().data or [])
+    except Exception as e:  # noqa: BLE001
+        logger.warning("mislukte herplaatsing niet te melden voor %s: %s", job.get("id"), e)
+        return 0
+    if not paar or paar[0].get("status") != "done":
+        return 0                      # geen herplaatsing, of er is niets weggehaald
+
+    uitleg = (f"{melding} — the old listing was already removed for this refresh, "
+              f"so this item is not live here right now. Publish it again, or mark "
+              f"it as listed if you finished the form yourself.")
+    geraakt = 0
+    for rij in _verwijderdoelen(db, paar[0]):
+        if rij.get("status") in ("sold", "sold_unconfirmed", "active"):
+            continue                  # verkocht of tóch nog live: afblijven
+        execute_with_retry(db.table("listings").update({
+            "status": "error",
+            "error_message": uitleg,
+        }).eq("id", rij["id"]))
+        geraakt += 1
+    return geraakt
 
 
 def _stop_wachtrij(db, user_id: str, platform: str, reden: str) -> int:

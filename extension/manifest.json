@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Omnivaleur",
-  "version": "1.0.284",
+  "version": "1.0.286",
   "description": "Omnivaleur — publiceer je items automatisch op Marktplaats, 2dehands, Vinted en meer",
   "permissions": [
     "storage",
@@ -56,6 +56,16 @@
       "run_at": "document_start",
       "world": "MAIN",
       "all_frames": false
+    },
+    {
+      "matches": [
+        "https://omnivaleur.com/*",
+        "https://www.omnivaleur.com/*"
+      ],
+      "js": [
+        "content/ext_stamp.js"
+      ],
+      "run_at": "document_start"
     },
     {
       "matches": [

@@ -540,13 +540,28 @@ async def refresh_listing(item_id: str, platform: str, user_id: str, strategy: s
         # Dit gebeurt in stap 1, dus VÓÓR het verwijderen. Lukt het niet, dan
         # blijft alles bij het oude: een gemiste categorie mag nooit een
         # advertentie kosten.
+        #
+        # EN IN ZIJN EIGEN ADVERTENTIEVORM (03-09-2026, Amanda Haas).
+        #
+        # Dezelfde pagina zegt ook of het een vraagprijs is of "Bieden". Bij
+        # het importeren nemen we alleen een échte vraagprijs over, dus een
+        # bied-advertentie staat bij ons op 0 — en een vraagprijs van 0 is voor
+        # Marktplaats een leeg prijsveld: "Geen prijs ingevuld". Het tabblad
+        # bleef dan open staan wachten op de verkoper, terwijl de oude
+        # advertentie al weg was. Elf van haar advertenties stonden daardoor
+        # nergens meer. Eén ophaalronde levert nu allebei op.
         if listing.get("platform_listing_url"):
-            from backend.services.mp_enrich import categorie_van_advertentie
-            mp_cat = await categorie_van_advertentie(listing["platform_listing_url"])
+            from backend.services.mp_enrich import advertentie_kenmerken
+            kenmerken = await advertentie_kenmerken(listing["platform_listing_url"])
+            mp_cat = kenmerken.get("mp_category") or {}
             if mp_cat:
                 create_payload["mp_category"] = mp_cat
                 logger.info("[relist] item %s komt terug in zijn eigen categorie: %s",
                             item_id, mp_cat.get("l2_naam") or mp_cat)
+            mp_vorm = kenmerken.get("mp_prijstype") or {}
+            if mp_vorm:
+                create_payload["mp_prijstype"] = mp_vorm
+                logger.info("[relist] item %s komt terug als %s", item_id, mp_vorm.get("soort"))
     if platform == "vinted" and listing.get("platform_listing_url"):
         try:
             from urllib.parse import urlparse

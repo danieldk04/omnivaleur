@@ -251,6 +251,116 @@ window.CL = (() => {
     return n.toFixed(2).replace(".", ",");
   }
 
+  // ── De advertentievorm: "Vraagprijs", "Bieden", "Gratis" ─────────────────
+  //
+  // WAAROM DIT ER IS (03-09-2026, Amanda Haas). Van haar 479 artikelen hebben er
+  // 179 geen vraagprijs; op Marktplaats staan er daarvan 161 als "Bieden". Dat
+  // is geen fout in de import: een bied-advertentie hééft geen prijs, dus komt
+  // hij bij ons binnen als 0. Het plaatsformulier bleef intussen altijd op
+  // "Vraagprijs" staan, en mpPrijs() vult een prijs van 0 in als een leeg veld.
+  // Marktplaats weigert dat ("Geen prijs ingevuld" / "Je hebt geen
+  // advertentievorm gekozen"), laat het tabblad open staan wachten op de
+  // verkoper, en omdat bij een herplaatsing de oude advertentie op dat moment
+  // al weg is, is de advertentie kwijt. Elf van haar advertenties stonden
+  // daardoor nergens meer, en zij moest bij elke ronde bij de computer blijven.
+  //
+  // De namen links komen van Marktplaats zelf (priceType op de
+  // advertentiepagina, nagemeten 03-09-2026 op haar eigen advertenties). De
+  // teksten rechts zijn de keuzes in de lijst van het plaatsformulier.
+  const MP_PRIJSVORM = {
+    FIXED:           "Vraagprijs",
+    MIN_BID:         "Vraagprijs",   // vraagprijs MET "bieden vanaf" — zie fillBidding
+    FAST_BID:        "Bieden",
+    BIDDING:         "Bieden",
+    FREE:            "Gratis",
+    RESERVED:        "Gereserveerd",
+    EXCHANGE:        "Ruilen",
+    NOTK:            "N.o.t.k.",
+    ON_REQUEST:      "Op aanvraag",
+    SEE_DESCRIPTION: "Zie omschrijving",
+  };
+
+  // Vormen zonder bedrag: dan hoort het prijsveld leeg te blijven.
+  const MP_ZONDER_BEDRAG = new Set([
+    "Bieden", "Gratis", "Gereserveerd", "Ruilen", "N.o.t.k.", "Op aanvraag", "Zie omschrijving",
+  ]);
+
+  // Waar Marktplaats de keuze zelf onder opslaat. Tweede weg, voor het geval de
+  // zichtbare tekst anders blijkt te heten dan hierboven.
+  const MP_VORM_WAARDEN = {
+    "Bieden":           ["FAST_BID", "BIDDING"],
+    "Gratis":           ["FREE"],
+    "Gereserveerd":     ["RESERVED"],
+    "Ruilen":           ["EXCHANGE"],
+    "N.o.t.k.":         ["NOTK"],
+    "Op aanvraag":      ["ON_REQUEST"],
+    "Zie omschrijving": ["SEE_DESCRIPTION"],
+    "Vraagprijs":       ["FIXED", "MIN_BID"],
+  };
+
+  // WELKE VORM MOET DIT ARTIKEL KRIJGEN?
+  //
+  // Is er een vraagprijs, dan blijft alles zoals het was: we raken de keuzelijst
+  // niet aan en het formulier houdt zijn eigen stand ("Vraagprijs"). Alleen als
+  // er GEEN vraagprijs is moet er iets gebeuren, want dan weigert het formulier.
+  // Wat het dan wordt weet de oude advertentie zelf (mp_prijstype komt van de
+  // advertentiepagina, vlak vóór het verwijderen opgehaald); weten we het niet,
+  // dan is "Bieden" de enige vorm die klopt bij een artikel zonder prijs.
+  function mpPrijsvorm(item) {
+    const prijs = Number(item && item.price);
+    if (isFinite(prijs) && prijs > 0) return null;
+    const soort = String((item && item.mp_prijstype && item.mp_prijstype.soort) || "").toUpperCase();
+    const vorm = MP_PRIJSVORM[soort];
+    if (vorm && vorm !== "Vraagprijs") return vorm;
+    return "Bieden";
+  }
+
+  // De keuzelijst omzetten, en daarna nakijken of hij ook echt om is. React zet
+  // een waarde die hij niet aannam gewoon terug, en dan zou de advertentie
+  // alsnog op een lege vraagprijs stranden zonder dat iemand weet waarom.
+  async function kiesPrijsvorm(vorm) {
+    if (!vorm) return false;
+    let sel = null;
+    for (let i = 0; i < 15; i++) {
+      sel = qs("select#Dropdown-prijstype")
+         || qs('select[name="priceType"]')
+         || qs('select[name="price.priceType"]')
+         || findFieldByLabel("Prijstype")
+         || findFieldByLabel("Advertentievorm");
+      if (sel && sel.tagName === "SELECT") break;
+      sel = null;
+      await sleep(200);
+    }
+    if (!sel) {
+      throw new Error(`The listing-type dropdown ("${vorm}") is not on the form, `
+        + `so this listing without an asking price could not be published`);
+    }
+
+    const kaal = (t) => String(t || "").toLowerCase().replace(/[^a-z]/g, "");
+    const waarden = MP_VORM_WAARDEN[vorm] || [];
+    const opties = [...sel.options].filter((o) => o.value !== "" && !o.disabled);
+    const optie = opties.find((o) => kaal(o.text) === kaal(vorm))
+               || opties.find((o) => waarden.includes(String(o.value).toUpperCase()))
+               || opties.find((o) => kaal(o.text).startsWith(kaal(vorm)));
+    if (!optie) {
+      // De echte keuzes meesturen. Heet de knop bij Marktplaats anders dan wij
+      // denken, dan staat dat in de eerstvolgende foutmelding in plaats van dat
+      // we ernaar moeten raden.
+      throw new Error(`"${vorm}" is not one of the listing types on the form — it offers: `
+        + opties.map((o) => `${(o.text || "").trim()} (${o.value})`).join(", "));
+    }
+
+    const setter = Object.getOwnPropertyDescriptor(window.HTMLSelectElement.prototype, "value").set;
+    setter.call(sel, optie.value);
+    sel.dispatchEvent(new Event("change", { bubbles: true }));
+    await sleep(400);
+    if (String(sel.value) !== String(optie.value)) {
+      throw new Error(`The listing type snapped back: the form did not accept "${vorm}"`);
+    }
+    clog(`advertentievorm: ${vorm} (${optie.value})`);
+    return true;
+  }
+
   // Alles wat het formulier zelf zichtbaar als bezwaar toont. Eén lijst, zodat
   // elke mislukte publicatie dezelfde volledige uitleg meekrijgt.
   // "52 of 60 characters used" is geen klacht maar een tellertje onder een
@@ -1965,5 +2075,6 @@ window.CL = (() => {
     selectDelivery, gekozenLevering, selectPakketWaarde, vulHalswijdte, keuzeveldenKort, typBeschrijvingEcht,
     selectPackageSize, uploadPhotos, submitListing, step, closePopup, smartTrunc, fillBidding,
     clog, plaatsBlokkade, dutchColor, kleurKandidaten, kiesMetTerugval, lijstOpties, valueVariants, platteTekst, verifyMpGroupFields, repairMpGroupFields, ensureDescriptionStillFilled, selectCondition, selectIntendedFor, fillBrandField, logMpFields, mpPrijs,
+    mpPrijsvorm, kiesPrijsvorm, MP_ZONDER_BEDRAG,
   };
 })();
