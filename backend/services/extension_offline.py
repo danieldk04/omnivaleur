@@ -58,6 +58,16 @@ def _parse_ts(waarde) -> datetime | None:
     return d if d.tzinfo else d.replace(tzinfo=timezone.utc)
 
 
+def _stilte_in_woorden(uren: int) -> str:
+    """"591 hours" leest als een computerfout, niet als een mededeling. Gemeten op
+    echte gegevens: een stille extensie staat al snel weken stil, dus boven de twee
+    dagen tellen we in dagen."""
+    if uren < 48:
+        return f"{uren} hours" if uren != 1 else "1 hour"
+    dagen = uren // 24
+    return f"{dagen} days"
+
+
 def offline_mail(aantal: int, uren: int) -> tuple[str, str]:
     """De mail zelf. Kort, gevolg vooraan, geen verwijt en geen jargon."""
     from backend.services.billing import CONTACT_EMAIL
@@ -67,7 +77,7 @@ def offline_mail(aantal: int, uren: int) -> tuple[str, str]:
     tekst = f"""Hi,
 
 Omnivaleur has {aantal} listing{'' if aantal == 1 else 's'} queued for you, but we have not heard from
-your computer for {uren} hours.
+your computer for {_stilte_in_woorden(uren)}.
 
 The Omnivaleur extension does the actual posting, so Chrome needs to be running
 on the computer where you installed it. Open Chrome again and the queue starts

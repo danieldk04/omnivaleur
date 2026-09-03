@@ -192,3 +192,13 @@ def test_mail_is_kort_en_zonder_opmaak(monkeypatch):
     assert "*" not in tekst and "—" not in tekst and " - " not in tekst
     assert "—" not in onderwerp
     assert len(tekst.split()) < 200
+
+
+def test_lange_stilte_staat_in_dagen():
+    """Gemeten op echte gegevens: een stille extensie stond 591 uur stil. Dat als
+    "591 hours" in een klantmail zetten leest als een computerfout."""
+    _, tekst = mod.offline_mail(15, 591)
+    assert "591 hours" not in tekst
+    assert "24 days" in tekst
+    _, kort = mod.offline_mail(3, 5)
+    assert "5 hours" in kort
