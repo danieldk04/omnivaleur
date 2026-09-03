@@ -3925,3 +3925,61 @@ in background.js is vandaag met opzet niets veranderd. De categorienummers
 728/748 zijn overigens wel nagemeten en kloppen op allebei de sites
 ("Muziek en Instrumenten | Gitaren | Elektrisch", 2.265 advertenties op
 2dehands), dus daar zit Egberts probleem niet.
+
+## 03-09-2026 — Amanda, nagemeten op het echte plaatsformulier
+
+Daniel vroeg wat er nog kon om van 85% naar 100% te komen. Vier dingen stonden
+open; drie zijn nu gemeten, één blijft bij Amanda liggen. Dit gaat ALLEEN over
+haar bieden-advertenties en het stempel van de extensie; Egberts 2dehands-inlog
+staat hier los van en is niet aangeraakt.
+
+**1. De keuzelijst voor de advertentievorm.** Ik gokte op de namen uit een
+eerdere waarneming. Anoniem is dat niet te controleren: `marktplaats.nl/plaats`
+geeft 401 met twaalf bytes, precies zoals `2dehands.be/plaats` bij Egbert. Via
+Daniels eigen ingelogde browser wél, in twee categorieën (kleding 621/636 en
+Huis en Inrichting > Servies 504/1262). Allebei exact vier keuzes en verder
+geen:
+
+    Vraagprijs = FIXED
+    Bieden = FAST_BID
+    Zie omschrijving = SEE_DESCRIPTION
+    Gratis = FREE
+
+Onze code kiest "Bieden" op tekst én op de waarde FAST_BID, dus die klopt. Twee
+dingen kwamen er bovenop:
+
+* Bij het kiezen van "Bieden" **verdwijnt het prijsveld** uit het formulier. De
+  volgorde in `fillForm` (eerst de vorm, dan de prijs) was dus geen voorzorg maar
+  noodzaak, en dat staat nu ook zo in de proef.
+* React neemt de keuze aan via de eigen value-setter plus een change-gebeurtenis,
+  live nagemeten: van `FIXED` met een zichtbaar prijsveld naar `FAST_BID` zonder.
+* Marktplaats kent hier geen "Gereserveerd" of "Ruilen". Een advertentie die op
+  het platform zo staat kon dus niet in zijn eigen vorm terugkomen en liep tegen
+  een foutmelding aan. Die valt nu terug op "Bieden", want zonder vraagprijs is
+  dat de enige vorm die klopt.
+
+**2. De rem in de uitgifte.** Die was los getoetst. Nu draaien drie proeven
+`get_pending_jobs` zelf, met het versiekopstuk dat de extensie echt meestuurt:
+een kopie van vóór 1.0.285 krijgt de verwijdering niet te zien en beide
+opdrachten gaan terug terwijl de advertentie blijft staan; 1.0.286 krijgt het
+werk gewoon; een artikel mét prijs gaat ook op de oude kopie door.
+
+**3. Het dashboard, op de live uitgerolde pagina.** De echte `app.html` van
+omnivaleur.com opgehaald en zijn eigen functies gedraaid. Met stempel:
+"Extension v1.0.286 — starting up…" en geen installatievenster. Zonder stempel
+(iedereen die de update nog niet heeft): onveranderd "Extension not detected"
+met het venster. Geen achteruitgang dus voor bestaande gebruikers.
+
+**4. Haar eerste punt blijft open, maar één theorie is nu weg.** Ik dacht aan de
+gele balk "Omnivaleur is begonnen met foutopsporing" met de knop Annuleren. In
+haar 194 plaatsopdrachten staat geen enkele mislukte debugger-koppeling op
+Marktplaats; er staat juist een geslaagde echte klik in ("geklikt op 871,251").
+De drie treffers op "niet gekoppeld" zijn alle drie Vinted en gaan over de
+gratis-keuze, niet over de balk. Wat overblijft als verklaring: het formulier dat
+op een rood veld bleef staan en dat zij zelf moest afmaken — precies de storing
+die nu weg is. De vraag aan haar blijft staan, maar is nu een bevestiging in
+plaats van een gok.
+
+844 tests groen. Extensie op 1.0.287 (die versie komt van de andere sessie en
+bevat beide reparaties). Het pakket dat eerder als 1.0.286 is doorgestuurd is
+daarmee vervangen.

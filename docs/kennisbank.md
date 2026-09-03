@@ -17,6 +17,55 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ---
 
+## geen-vraagprijs-is-bieden
+
+*03-09-2026 — een artikel zonder prijs is op Marktplaats geen fout maar de advertentievorm "Bieden"; een lege vraagprijs laat het plaatsformulier hangen en kost bij herplaatsen de advertentie*
+
+Prijs 0 in onze database betekent bijna nooit "vergeten in te vullen". Op
+Marktplaats kies je bij elke advertentie een **advertentievorm**, en drie ervan
+hebben geen bedrag: Bieden (`FAST_BID`), Gratis (`FREE`) en Zie omschrijving.
+Onze import neemt met opzet alleen een échte vraagprijs over (`_naar_advertentie`
+in `backend/services/mp_enrich.py`), dus komt zo'n advertentie binnen als 0.
+
+Gemeten 03-09-2026 bij Amanda Haas: 179 van haar 479 artikelen zonder prijs,
+waarvan er 168 op Marktplaats terug te vinden waren — **161 als "Bieden"**, 6 als
+"Bieden vanaf" en 1 als "Gratis".
+
+Het plaatsformulier stond altijd op "Vraagprijs" en `mpPrijs(0)` vult dan een
+leeg veld in. Marktplaats weigert dat ("Geen prijs ingevuld", "Je hebt geen
+advertentievorm gekozen"), laat het tabblad open staan wachten op de verkoper, en
+bij een herplaatsing is de oude advertentie op dat moment al weg. Elf van haar
+advertenties waren zo verdwenen, en zij moest bij elke ronde bij de computer
+blijven.
+
+Sinds 1.0.285 kiest de extensie de vorm zelf (`mpPrijsvorm` in
+`extension/content/shared.js`) en laat ze het prijsveld dan leeg. Twee dingen om
+te onthouden:
+
+* **De keuzelijst heet `select#Dropdown-prijstype` en biedt precies vier vormen
+  aan.** Nagemeten op het echte, ingelogde plaatsformulier op 03-09-2026, in twee
+  categorieën (kleding 621/636 en Huis en Inrichting > Servies 504/1262), allebei
+  identiek: `Vraagprijs = FIXED`, `Bieden = FAST_BID`,
+  `Zie omschrijving = SEE_DESCRIPTION`, `Gratis = FREE`. Meer niet — een
+  advertentie die op Marktplaats "Gereserveerd" of "Ruilen" is kan hier dus niet
+  in zijn eigen vorm terugkomen, en valt terug op Bieden.
+* **Kies je "Bieden", dan verdwijnt het prijsveld** (`input[name="price.value"]`)
+  uit het formulier. Daarom eerst de vorm en dan pas de prijs: andersom is het
+  ingevulde bedrag weg. React neemt de keuze aan via de eigen value-setter plus
+  een change-gebeurtenis; ook dat is op het echte formulier nagemeten.
+* "Bieden vanaf" (`MIN_BID`) is geen aparte vorm maar een vraagprijs met de
+  schakelaar `#syi-bidding-switch-input` aan.
+* **De vorm van de oude advertentie lezen we van de advertentiepagina**, in
+  dezelfde ophaalronde als de categorie en dus vóór het verwijderen
+  (`advertentie_kenmerken`). Daarna geeft die pagina 410.
+
+Zie ook "verbogen-kleurnamen-matchen-niet" en
+"herplaatsen-verliest-advertenties": alle drie hetzelfde patroon — een
+verplicht veld dat het formulier niet aanneemt, en een verkoper die daarna zonder
+advertentie zit.
+
+---
+
 ## rem-op-de-server-bij-een-extensiefout
 
 *03-09-2026 — een extensiereparatie bereikt een klant pas na goedkeuring door de Web Store; tot die tijd hoort de rem op de server te staan, en die kent de versie uit de poll-header*
@@ -64,47 +113,6 @@ IS de extensie er — dan blijft het scherm vragen ("starting up…") in plaats 
 De regel erachter: **vraag aanwezigheid nooit aan iets dat kan slapen.** Alleen
 wat de achtergrond echt als enige weet (is ze ingelogd, welke opdrachten staan
 klaar) blijft een vraag met een antwoord.
-
----
-
-## geen-vraagprijs-is-bieden
-
-*03-09-2026 — een artikel zonder prijs is op Marktplaats geen fout maar de advertentievorm "Bieden"; een lege vraagprijs laat het plaatsformulier hangen en kost bij herplaatsen de advertentie*
-
-Prijs 0 in onze database betekent bijna nooit "vergeten in te vullen". Op
-Marktplaats kies je bij elke advertentie een **advertentievorm**, en drie ervan
-hebben geen bedrag: Bieden (`FAST_BID`), Gratis (`FREE`) en Zie omschrijving.
-Onze import neemt met opzet alleen een échte vraagprijs over (`_naar_advertentie`
-in `backend/services/mp_enrich.py`), dus komt zo'n advertentie binnen als 0.
-
-Gemeten 03-09-2026 bij Amanda Haas: 179 van haar 479 artikelen zonder prijs,
-waarvan er 168 op Marktplaats terug te vinden waren — **161 als "Bieden"**, 6 als
-"Bieden vanaf" en 1 als "Gratis".
-
-Het plaatsformulier stond altijd op "Vraagprijs" en `mpPrijs(0)` vult dan een
-leeg veld in. Marktplaats weigert dat ("Geen prijs ingevuld", "Je hebt geen
-advertentievorm gekozen"), laat het tabblad open staan wachten op de verkoper, en
-bij een herplaatsing is de oude advertentie op dat moment al weg. Elf van haar
-advertenties waren zo verdwenen, en zij moest bij elke ronde bij de computer
-blijven.
-
-Sinds 1.0.285 kiest de extensie de vorm zelf (`mpPrijsvorm` in
-`extension/content/shared.js`) en laat ze het prijsveld dan leeg. Twee dingen om
-te onthouden:
-
-* **De keuzelijst heet `select#Dropdown-prijstype`** en de opties dragen dezelfde
-  namen die de openbare advertentiepagina teruggeeft (`priceType`). Kiezen kan dus
-  op de zichtbare tekst én op de waarde; lukt geen van beide, dan noemt de
-  foutmelding de echte opties op, zodat de volgende melding zichzelf aanwijst in
-  plaats van dat wij moeten raden.
-* **De vorm van de oude advertentie lezen we van de advertentiepagina**, in
-  dezelfde ophaalronde als de categorie en dus vóór het verwijderen
-  (`advertentie_kenmerken`). Daarna geeft die pagina 410.
-
-Zie ook "verbogen-kleurnamen-matchen-niet" en
-"herplaatsen-verliest-advertenties": alle drie hetzelfde patroon — een
-verplicht veld dat het formulier niet aanneemt, en een verkoper die daarna zonder
-advertentie zit.
 
 ---
 
