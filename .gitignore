@@ -9,3 +9,7 @@ scripts/output/leads/
 # Ruwe uitkomsten van de trendverkenning — data, geen code
 scripts/output/trends-verkenning-*.json
 scripts/output/trends-verkenning-*.html
+
+# Lokale sessie-staat van claude-flow — geheugen en logs van losse Claude-sessies,
+# geen projectcode. Hoort niet in de repo (zie team-notes 04-09-2026).
+.claude-flow/

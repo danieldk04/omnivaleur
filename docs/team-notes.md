@@ -4407,3 +4407,49 @@ Openstaand:
 - De MOET ZEKER-melding `verkeerde-categorie-toegewezen` (zilverwebsite, Amanda)
   is hiermee NIET opgelost: die gaat over een HTTP 500 en over zilver dat in de
   lijst ontbreekt.
+
+## 04-09-2026 — Uitgavenpiek: waar het geld heen ging, en wat we eraan doen
+
+Daniel zag de API-kosten van deze maand hard oplopen en vroeg waar dat vandaan
+kwam. Wat het onderzoek opleverde, en de afspraken die eruit volgen.
+
+Wat het niet was: één dure taak. Kosten worden bepaald door het aantal beurten,
+niet door de moeilijkheid van de vraag — elke beurt stuurt het hele gesprek tot
+dan toe opnieuw mee. Een lange reeks kleine stapjes is dus duurder dan één
+zware vraag. Dat stond al als les in de kennisbank ("lean-tokengebruik") maar
+werd in de praktijk niet gevolgd: de Vinted-reparaties van vandaag liepen in
+korte edit-test-edit-lussen (op één punt vijf commits binnen een minuut op
+`vinted.js`), allemaal op Opus, het duurste model.
+
+Wat er daarnaast meedraaide: `claude-flow`. Dat gereedschap stond nergens in
+de projectdocumentatie, start zelf meerdere sub-agents per taak, en valt buiten
+de rem die `scripts/dev_starter.py` wél heeft (max aantal starts per dag, max
+looptijd per sessie). Het schreef vandaag ook 316 bestanden lokale sessie-staat
+de repo in (commit 668afc8), inclusief geheugen van andere projecten van Daniel
+(zenbtw, nexus). Die staat is met deze commit uit de tracking gehaald en staat
+nu in `.gitignore`; de geschiedenis blijft hem bevatten, alleen groeit hij niet
+verder.
+
+Afspraken:
+
+- Modelkeuze per soort werk. Opus voor het denkwerk (waaróm faalt dit, welke
+  aanpak). Zodra het een edit-test-edit-lus wordt: Sonnet. Die lussen zijn per
+  definitie veel beurten met simpele stappen en dat is precies waar Opus het
+  duurst is voor wat het oplevert.
+- Beurten tellen vóór je begint. Bundel wat onafhankelijk is in één beurt
+  (bestand schrijven + test draaien + committen), lees niet terug wat je net
+  zelf schreef, zoek niet op wat al in het gesprek staat, en poll niet op
+  achtergrondwerk — je wordt vanzelf gewekt als het klaar is.
+- `claude-flow` gebruiken we bewust of niet. Wie het aanhoudt zet het op
+  Sonnet, beperkt het aantal agents per swarm, en zet het in voor taken die
+  het waard zijn — niet als reflex bij elke bugfix. Dezelfde soort rem als
+  `dev_starter.py` heeft, dus.
+- Daniel zet een uitgavenlimiet in de Anthropic Console (Settings → Limits) als
+  vangnet, en kijkt tijdens actieve ontwikkelperiodes elke paar dagen op het
+  kostenoverzicht gegroepeerd per model in plaats van pas aan het eind van de
+  maand.
+
+Openstaand: de config van claude-flow staat lokaal op Daniels machine, niet in
+deze repo, dus de modelinstelling en de agent-limiet zijn hier niet te
+controleren of af te dwingen. Als het gereedschap blijft, hoort die keuze hier
+alsnog vastgelegd te worden zodra hij gemaakt is.
