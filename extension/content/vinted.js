@@ -1822,15 +1822,20 @@
 
     if (opts.perChar) {
       // Zo dicht mogelijk bij echt typen: per teken keydown → invoer → keyup.
+      let eerste = true;
       for (const ch of out) {
         el.dispatchEvent(new KeyboardEvent("keydown", { key: ch, bubbles: true }));
         let typed = false;
         try { typed = document.execCommand("insertText", false, ch); } catch (e) { typed = false; }
         if (!typed) {
-          try { setter.call(el, (el.value || "") + ch); } catch (e) { el.value = (el.value || "") + ch; }
+          // Het eerste teken vervangt wat er stond (de selectie van clear()),
+          // de rest komt erachteraan. Altijd aanvullen zou "14.9914.99" maken.
+          const basis = eerste ? "" : (el.value || "");
+          try { setter.call(el, basis + ch); } catch (e) { el.value = basis + ch; }
           el.dispatchEvent(new InputEvent("input", { bubbles: true, inputType: "insertText", data: ch }));
         }
         el.dispatchEvent(new KeyboardEvent("keyup", { key: ch, bubbles: true }));
+        eerste = false;
         await sleep(60);
       }
       el.dispatchEvent(new Event("change", { bubbles: true }));
