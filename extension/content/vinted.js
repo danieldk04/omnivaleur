@@ -822,6 +822,13 @@
   // slimmer worden helpt hier niet en levert alleen misverstanden op.
   const enkelvoud = (w) => (w.length > 4 && /s$/.test(w) && !/ss$/.test(w) ? w.slice(0, -1) : w);
 
+  // WAAROM KOOS kiesBlad DIT BLAD? "voorkeur" of "woorden" betekent dat de tekst
+  // van het artikel het zelf zei. "neutraal" betekent dat er niets in stond en we
+  // het vangblad ("Other ...") pakken omdat er gekozen moet worden. Dat verschil
+  // is het enige moment waarop Vinted's eigen voorstel meer weet dan wij: hij
+  // heeft de foto's gezien. Zie walkVintedCategoryPath.
+  let bladReden = null;
+
   const job = await getJob();
   if (!job) return;
   const { id: jobId, serverUrl, payload: item } = job;
