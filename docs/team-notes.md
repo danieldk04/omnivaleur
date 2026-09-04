@@ -4175,3 +4175,7 @@ tasks.google.com/u/2/. Lezen van de lijst werkt; het toevoegen via automation wa
 op 04-09 wisselvallig (renderer bevriest, invoerveld opent niet altijd). Agenda
 blijft de terugval. Betere optie: een echte Google Tasks connector aanzetten in
 claude.ai als die bestaat.
+
+Definitief 04-09: geen Google Tasks connector beschikbaar, dus de omnivaleur-taken
+skill zet alles als geel hele-dag-item op de agenda danieldekoning66@gmail.com
+met "Omnivaleur:" ervoor. Getest en werkt.
