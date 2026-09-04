@@ -1,6 +1,6 @@
 from fastapi import APIRouter, HTTPException, BackgroundTasks, Depends
 from backend.models import ListingCreate
-from backend.database import get_db, fetch_all, naast_de_lus
+from backend.database import get_db, fetch_all, naast_de_lus, execute_with_retry, IN_BROK
 from backend.services.crosslist import publish_to_platforms, handle_item_sold, CrosslistValidationError
 from backend.services.relist import (
     refresh_listing, refresh_stale_listings, renew_etsy_listing, relist_ended_ebay_listing,
@@ -144,6 +144,34 @@ def _listings_per_brok(db, user_id: str, platform: str | None,
             l["title"] = it.get("title")
             l["sku"] = it.get("sku")
     return listings
+
+
+def _mislukte_advertenties(db, user_id: str, platform: str,
+                           item_id: str | None = None) -> list[dict]:
+    """De mislukte advertenties van deze verkoper op dit kanaal, in ÉÉN vraag.
+
+    WAAROM DIT ER IS (04-09-2026, Egbert). Het opruimen deed het nog op de oude
+    manier: eerst alle item-id's ophalen, die in brokken van 200 hakken en per
+    brok een aparte vraag stellen. Bij zijn 5.533 artikelen zijn dat 29 vragen
+    achter elkaar binnen één verzoek, en geen van die 29 werd herkanst. Gemeten
+    op zijn echte gegevens: 7,8 seconden en 29 vragen, tegen 0,2 seconde en één
+    vraag langs dezelfde weg als `_listings_via_items` — met exact dezelfde 304
+    rijen als uitkomst. Elke losse vraag is een kans dat Supabase de hergebruikte
+    verbinding wegtrekt, en dát werd op zijn scherm een kale foutcode.
+    """
+    def bouw():
+        q = (db.table("listings")
+             .select("id,item_id,platform_listing_id,items!inner(user_id)")
+             .eq("items.user_id", user_id)
+             .eq("platform", platform).eq("status", "error"))
+        if item_id:
+            q = q.eq("item_id", item_id)
+        return q
+
+    rijen = fetch_all(bouw, page_size=1000)
+    for r in rijen:
+        r.pop("items", None)
+    return rijen
 
 
 @router.get("/")
@@ -293,6 +321,10 @@ def clear_listing_errors(body: dict, user_id: str = Depends(get_current_user)):
     staan en gaat alleen de foutmelding eraf.
 
     body: {platform, item_id?}  zonder item_id: alles wat op dit kanaal faalde.
+
+    04-09-2026: het opzoeken gaat nu in één gekoppelde vraag in plaats van in
+    29 losse (zie `_mislukte_advertenties`), elke schrijfactie wordt herkanst,
+    en gaat er tóch iets stuk dan staat er in het antwoord wát er stukging.
     """
     platform = (body.get("platform") or "").strip()
     if not platform:
@@ -304,37 +336,41 @@ def clear_listing_errors(body: dict, user_id: str = Depends(get_current_user)):
         eigen = db.table("items").select("id").eq("id", item_id).eq("user_id", user_id).execute()
         if not eigen.data:
             raise HTTPException(status_code=404, detail="Item not found")
-        item_ids = [item_id]
-    else:
-        # Alleen zijn eigen artikelen, en in EEN gekoppelde vraag. Zelf de id's
-        # ophalen en die in stukken terugsturen is precies de 502 waar de
-        # kennisbank voor waarschuwt: boven ongeveer 640 id's knapt de URL.
-        eigen = fetch_all(lambda: db.table("items").select("id").eq("user_id", user_id))
-        item_ids = [r["id"] for r in (eigen or [])]
-    if not item_ids:
-        return {"ok": True, "cleared": 0, "removed": 0}
 
-    rijen = []
-    for i in range(0, len(item_ids), 200):
-        rijen += (db.table("listings")
-                  .select("id,item_id,platform,status,platform_listing_id")
-                  .in_("item_id", item_ids[i:i + 200])
-                  .eq("platform", platform).eq("status", "error").execute().data or [])
+    try:
+        rijen = _mislukte_advertenties(db, user_id, platform, item_id)
 
-    # Nooit een advertentienummer gehad? Dan is er niets geplaatst en is de rij
-    # zelf onzin. Weg ermee, dan staat het artikel weer gewoon op "nog plaatsen".
-    weg = [r["id"] for r in rijen if not r.get("platform_listing_id")]
-    houden = [r["id"] for r in rijen if r.get("platform_listing_id")]
-    for i in range(0, len(weg), 200):
-        db.table("listings").delete().in_("id", weg[i:i + 200]).execute()
-    # Wel een advertentienummer: dat wordt alleen weggeschreven als het platform
-    # de advertentie heeft aangemaakt en het nummer heeft teruggegeven. Zo'n rij
-    # weggooien zou de link kwijtmaken die auto-delist later nodig heeft, dus
-    # die blijft staan als gewone actieve advertentie zonder foutmelding.
-    for i in range(0, len(houden), 200):
-        db.table("listings").update({
-            "status": "active", "error_message": None,
-        }).in_("id", houden[i:i + 200]).execute()
+        # Nooit een advertentienummer gehad? Dan is er niets geplaatst en is de
+        # rij zelf onzin. Weg ermee, dan staat het artikel weer op "nog plaatsen".
+        weg = [r["id"] for r in rijen if not r.get("platform_listing_id")]
+        # Wel een advertentienummer: dat wordt alleen weggeschreven als het
+        # platform de advertentie heeft aangemaakt en het nummer heeft
+        # teruggegeven. Zo'n rij weggooien zou de link kwijtmaken die
+        # auto-delist later nodig heeft, dus die blijft staan als gewone
+        # actieve advertentie zonder foutmelding.
+        houden = [r["id"] for r in rijen if r.get("platform_listing_id")]
+
+        # execute_with_retry: Supabase trekt af en toe een hergebruikte
+        # verbinding weg. Zonder herkansing is dat hier geen hik maar een
+        # mislukte knop, en de klant ziet alleen een foutcode.
+        for i in range(0, len(weg), IN_BROK):
+            execute_with_retry(db.table("listings").delete().in_("id", weg[i:i + IN_BROK]))
+        for i in range(0, len(houden), IN_BROK):
+            execute_with_retry(db.table("listings").update({
+                "status": "active", "error_message": None,
+            }).in_("id", houden[i:i + IN_BROK]))
+    except HTTPException:
+        raise
+    except Exception as e:  # noqa: BLE001
+        # Geen naamloze 500 meer. Die kwam bij Egbert als "code F1F7E7" op zijn
+        # scherm, en het logboek waar die code bij hoort was op dat moment al
+        # volgelopen met een andere storing. Wat er misging hoort in het
+        # antwoord zelf te staan.
+        logger.exception("clear-error mislukte voor %s op %s", user_id, platform)
+        raise HTTPException(status_code=502, detail=(
+            f"Could not clear the failed {platform} publishes "
+            f"({type(e).__name__}: {str(e)[:200]}). Nothing was removed from "
+            f"{platform} itself. Reload the page and try again."))
 
     return {"ok": True, "cleared": len(rijen), "removed": len(weg)}
 

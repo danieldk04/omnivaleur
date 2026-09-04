@@ -4407,3 +4407,61 @@ Openstaand:
 - De MOET ZEKER-melding `verkeerde-categorie-toegewezen` (zilverwebsite, Amanda)
   is hiermee NIET opgelost: die gaat over een HTTP 500 en over zilver dat in de
   lijst ontbreekt.
+
+## 04-09-2026 — Egbert: "Ik kan nu de knop zien, maar hij werkt niet"
+
+Hij stuurde een schermafbeelding: *"Cleared 0. These did not clear: 2dehands:
+Something went wrong on our side (code F1F7E7)"*. De knop van gisteren deed dus
+niets.
+
+Die code was niet meer terug te vinden, en dat is een storing op zichzelf. Het
+foutenlogboek bewaart zestig regels, nieuwste bovenaan, en alle zestig waren op
+dat moment exact dezelfde fout van `/api/items/sync` — die faalde elke vijftien
+seconden. Zijn code was er binnen een uur uit gedrukt. Het logboek dat er is om
+te kunnen bewijzen wat er stukging, wiste het bewijs zelf.
+
+Drie reparaties, alle drie apart gemeten:
+
+**1. `/api/items/sync` was drie dagen stuk.** Sinds commit 8747493 (01-09) telde
+die met `select(..., head=True)`. `requirements.txt` pint `supabase==2.7.4`
+(postgrest 0.16.11) en die kent `head` niet; lokaal stond 2.31.0 en daar werkt
+het wel. Gevolg: elke automatische verversing van elk open dashboard gaf een
+interne fout, dus het scherm werkte zichzelf niet meer bij (alleen na een eigen
+handeling). Dezelfde fout stond ook in `backend/api/beheer.py`, waar hij in een
+`except` viel: daardoor stond er "onbekend" op het beheerscherm in plaats van de
+aantallen. Nu geteld met `count="exact"` + `limit(1)`; gecontroleerd tégen de
+echte database mét de gepinde client: 5.533 artikelen en 10.794 actieve
+advertenties, één opgehaalde rij. De oude code loopt onder dezelfde nabootsing
+aantoonbaar stuk op `TypeError: ... 'head'`.
+
+Waarom de tests dit niet zagen: de nabootsing in `tests/test_dataverkeer_
+dashboard.py` slikte `head=` gewoon. Die heeft nu exact de handtekening van de
+gepinde client, plus een bewaker die `head=True` nergens in `backend/` meer
+toestaat.
+
+**2. Het foutenlogboek telt dezelfde storing nu als één regel** met `aantal` en
+de laatste tien codes. Zestig plekken zijn nu zestig vérschillende storingen.
+Bewezen: honderd keer dezelfde fout wegschrijven laat F1F7E7 staan; op de oude
+versie is hij weg.
+
+**3. Het opruimen zelf.** `/api/listings/clear-error` deed het nog op de oude
+manier: alle item-id's ophalen, in brokken van 200 hakken, per brok een vraag.
+Bij zijn 5.533 artikelen 29 vragen binnen één verzoek. Gemeten op zijn echte
+gegevens: 7,8 seconden tegen 0,2 seconde via de gekoppelde vraag, met exact
+dezelfde 304 rijen. Belangrijker: van die 29 vragen waren de twee deletes de
+enige onbeschermde. Leesacties worden sinds 30-08 overal automatisch herkanst,
+schrijfacties met opzet niet (een insert herhalen maakt een tweede advertentie),
+maar een rij weggooien die tóch weg moet is veilig om nog eens te proberen.
+Zonder die herkansing wordt één weggevallen Supabase-verbinding een naamloze
+500. Dat is de waarschijnlijkste verklaring voor F1F7E7.
+
+Openstaand en eerlijk: **bewezen is dat niet.** De trace was al uit het logboek
+gedrukt voordat ik keek. Wat wél is gemeten: het leespad en de schrijfvorm
+werken allebei tegen zijn echte gegevens mét de gepinde client, en de deletes
+waren de enige stap zonder vangnet. Gaat het na deze deploy tóch nog mis, dan
+staat er nu in het antwoord zelf wát er misging (502 met de fout erin) in plaats
+van een code, en blijft die code voortaan in het logboek staan.
+
+Ook nog van hem: hij biedt aan te blijven testen in ruil voor gratis gebruik van
+Omnivaleur. Dat is een beslissing voor Daniel, niet voor mij; hier alleen
+vastgelegd zodat het niet in een mailtje blijft hangen.

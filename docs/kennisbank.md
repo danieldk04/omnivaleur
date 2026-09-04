@@ -17,6 +17,105 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ---
 
+## schrijfacties-zonder-herkansing
+
+*04-09-2026 — Leesacties worden overal automatisch herkanst, schrijfacties met opzet niet; bij delete en statuswijziging moet dat wel*
+
+`backend/database.py` hangt sinds 30-08-2026 een herkansing op de SELECT-bouwer
+van Supabase, dus élke leesactie overleeft een weggevallen verbinding, ook zonder
+`execute_with_retry`. Schrijfacties zijn daar bewust buiten gelaten: een insert
+blind herhalen maakt een tweede rij, en dus een tweede advertentie.
+
+**Maar dat argument geldt niet voor alles.** Een rij weggooien die toch weg moet,
+of een status van "error" naar "active" zetten, levert bij een tweede poging
+precies dezelfde uitkomst op. Blijft de herkansing daar weg, dan wordt één
+verbroken verbinding een naamloze 500 op het scherm van de klant.
+
+Zo stond het in `/api/listings/clear-error`: de leesacties waren beschermd, de
+twee deletes niet. Egbert kreeg "code F1F7E7" en de knop deed niets.
+
+**Hoe hiermee om te gaan:** vraag bij elke schrijfactie of herhalen iets dubbels
+maakt. Nee (delete, statuswijziging, upsert op een vaste sleutel) → in
+`execute_with_retry`. Ja (insert met een nieuw id) → laten staan, of
+`dubbel_is_ok=True` gebruiken. En vang de rest af met een foutmelding die zegt
+wát er misging: een kale foutcode is voor de klant hetzelfde als niets.
+Zie ook "geen-doodlopende-straat-in-de-ui" en "foutenlogboek-wist-zichzelf".
+
+---
+
+## foutenlogboek-wist-zichzelf
+
+*04-09-2026 — Een storing die zich herhaalt duwde alle andere foutcodes uit het logboek; nu telt dezelfde fout als één regel*
+
+De foutcodes die de klant op zijn scherm ziet ("code F1F7E7") worden bewaard in
+`leadgen_opslag/server_fouten`, hooguit `FOUTEN_BEWAREN = 60` stuks, nieuwste
+bovenaan. Dat was een simpele stapel.
+
+Op 04-09-2026 klikte Egbert op "Clear all" en kreeg code F1F7E7. Toen ik ging
+kijken waren alle zestig plekken gevuld met exact dezelfde fout van
+`/api/items/sync` — die faalde elke vijftien seconden. Zijn code was er binnen
+een uur uit gedrukt. **Het logboek dat er is om te kunnen bewijzen wat er
+stukging, wiste het bewijs zelf.**
+
+**Hoe het nu werkt:** dezelfde (methode, pad, soort, bericht) is één regel met
+`aantal` en de laatste tien `codes`. Zestig plekken betekent nu zestig
+verschillende storingen. `mail_analyse.py fouten` toont "(100x, codes: ...)".
+
+**Hoe hiermee om te gaan:** vind je een klantcode niet terug, kijk dan eerst of
+er een herhalende storing loopt — en repareer die eerst, anders blijf je blind.
+Zie ook "omnivaleur-altijd-bewijzen" en "anthropic-sdk-pin-valstrik".
+
+---
+
+## anthropic-sdk-pin-valstrik
+
+*04-09-2026 — Een te oude pin (anthropic OF supabase) laat nieuwe parameters falen; lokaal werkt het, op Railway niet*
+
+`requirements.txt` en `requirements-content.txt` pinnen de `anthropic`-SDK. Stond
+tot 27-08-2026 op `0.34.2` (september 2024). GitHub Actions installeert daarentegen
+`pip install httpx anthropic` — altijd de nieuwste. **Die twee liepen dus uiteen**,
+en code die lokaal en in Actions werkte, faalde op Railway.
+
+Wat er gebeurde: de mailagent kreeg `output_config={"effort": ...}` mee. Op 0.34.2
+gooide dat `TypeError: unexpected keyword argument`, die netjes werd opgevangen —
+waarna elk conceptantwoord terugviel op het standaard verkoopsjabloon. Niemand zag
+het, want een opgevangen fout ziet eruit als "even geen antwoord".
+
+**Hoe hiermee om te gaan:**
+- Voeg je een API-parameter toe, controleer dan of de gepinde SDK hem kent.
+  Testje: `pip install anthropic==<pin>` in een venv en de parameter meesturen.
+- `scripts/leadgen_mail.py` heeft nu `_claude()`: die vangt een onbekende
+  parameter op, probeert opnieuw zonder, en meldt het luid.
+- Bumpen kan veilig samen met de gepinde `httpx==0.27.2` (gecontroleerd met
+  `pip install --dry-run -r requirements.txt`) — doe die controle wél, want een
+  mislukte resolutie betekent een mislukte Railway-deploy en dus site down.
+- Zie ook "anthropic-credit-silent-translation-fallback": hetzelfde patroon,
+  andere oorzaak. Alles rond Anthropic in dit project faalt stil.
+
+
+## Zelfde val, 04-09-2026: `supabase`
+
+`requirements.txt` pint `supabase==2.7.4` (postgrest 0.16.11). Lokaal stond
+2.31.0. Op 01-09 kwam er `select("id", count="exact", head=True)` in
+`backend/api/items.py` en in `backend/api/beheer.py` — `head` bestaat pas in
+nieuwere postgrest.
+
+Gevolg: `/api/items/sync` gaf drie dagen lang bij ELKE verversing (elke 15
+seconden per open dashboard) een interne fout. Het scherm ververste zichzelf
+niet meer, en op het beheerscherm stond "onbekend" in plaats van de aantallen.
+
+Tellen zonder `head`: `select("id", count="exact").eq(...).limit(1)` — het getal
+komt uit de kop (Content-Range) en de `limit(1)` houdt het verkeer klein.
+Gecontroleerd tegen de echte database met de gepinde client: 5.533 en 10.794,
+één opgehaalde rij.
+
+**De les die hier bovenop komt:** de nabootsing in de test slikte `head=` gewoon,
+dus stonden de tests groen terwijl productie stuk was. Een nabootsing moet de
+handtekening van de GEPINDE client hebben, niet die van de nieuwste.
+Zie ook "schrijfacties-zonder-herkansing" en "foutenlogboek-wist-zichzelf".
+
+---
+
 ## vinted-voorstel-verslaat-vangblad
 
 *04-09-2026 — "Zegt de tekst van het artikel niets over het model, dan weet het platform het beter dan onze gok: Vinted's eigen voorstel uit de foto's, maar alleen binnen ons eigen pad"*
@@ -1781,33 +1880,6 @@ Nieuwe commando's die hierbij horen:
 - `leadgen_mail.py sjablonen-weg` — oude sjabloonconcepten uit de map halen.
 
 Zie ook "anthropic-sdk-pin-valstrik" en "mails-kort-houden".
-
----
-
-## anthropic-sdk-pin-valstrik
-
-*27-08-2026 — Een te oude anthropic-pin laat nieuwe API-parameters stil falen; alles valt dan terug op vangnetteksten*
-
-`requirements.txt` en `requirements-content.txt` pinnen de `anthropic`-SDK. Stond
-tot 27-08-2026 op `0.34.2` (september 2024). GitHub Actions installeert daarentegen
-`pip install httpx anthropic` — altijd de nieuwste. **Die twee liepen dus uiteen**,
-en code die lokaal en in Actions werkte, faalde op Railway.
-
-Wat er gebeurde: de mailagent kreeg `output_config={"effort": ...}` mee. Op 0.34.2
-gooide dat `TypeError: unexpected keyword argument`, die netjes werd opgevangen —
-waarna elk conceptantwoord terugviel op het standaard verkoopsjabloon. Niemand zag
-het, want een opgevangen fout ziet eruit als "even geen antwoord".
-
-**Hoe hiermee om te gaan:**
-- Voeg je een API-parameter toe, controleer dan of de gepinde SDK hem kent.
-  Testje: `pip install anthropic==<pin>` in een venv en de parameter meesturen.
-- `scripts/leadgen_mail.py` heeft nu `_claude()`: die vangt een onbekende
-  parameter op, probeert opnieuw zonder, en meldt het luid.
-- Bumpen kan veilig samen met de gepinde `httpx==0.27.2` (gecontroleerd met
-  `pip install --dry-run -r requirements.txt`) — doe die controle wél, want een
-  mislukte resolutie betekent een mislukte Railway-deploy en dus site down.
-- Zie ook "anthropic-credit-silent-translation-fallback": hetzelfde patroon,
-  andere oorzaak. Alles rond Anthropic in dit project faalt stil.
 
 ---
 

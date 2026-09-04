@@ -36,11 +36,15 @@ class _Q:
     def __init__(self, db, tabel):
         self.db, self.tabel = db, tabel
         self.filters, self.vanaf = {}, None
-        self.head, self.grens = False, None
+        self.telling, self.grens = None, None
 
-    def select(self, *_a, **kw):
-        self.head = bool(kw.get("head"))
-        self.telling = kw.get("count")
+    def select(self, *_a, count=None):
+        # EXACT de handtekening van de client die op de server draait
+        # (supabase 2.7.4 / postgrest 0.16.11): wél `count`, géén `head`.
+        # Deze nabootsing slikte eerder alles, en daardoor stond hier drie dagen
+        # een groene test terwijl /api/items/sync op Railway bij élke verversing
+        # een interne fout gaf. Zie docs/kennisbank.md, "SDK-pin valstrik".
+        self.telling = count
         return self
 
     def eq(self, k, v):
@@ -66,11 +70,13 @@ class _Q:
             kolom, waarde = self.vanaf
             rijen = [r for r in rijen if (r.get(kolom) or "") >= waarde]
         rijen.sort(key=lambda r: (r.get("updated_at") or "", r["id"]))
-        if self.head:
-            return type("R", (), {"data": [], "count": len(rijen)})()
+        # De telling staat in de kop van het antwoord en gaat dus NIET mee met
+        # de beperking op het aantal rijen. Zo werkt PostgREST ook.
+        aantal = len(rijen)
         if self.grens:
             rijen = rijen[:self.grens]
-        return type("R", (), {"data": rijen, "count": None})()
+        return type("R", (), {"data": rijen,
+                              "count": (aantal if self.telling == "exact" else None)})()
 
 
 class _DB:
@@ -127,15 +133,17 @@ def test_de_telling_verraadt_een_verwijderd_item(monkeypatch):
     assert uit["items"] == [] and uit["count"] == 1
 
 
-def test_de_telling_haalt_geen_enkele_rij_op(monkeypatch):
-    """head=True: alleen het getal in de kop. Zou dit een gewone select zijn,
-    dan haalden we alsnog de hele catalogus op en was er niets gewonnen."""
+def test_de_telling_haalt_de_catalogus_niet_op(monkeypatch):
+    """Het getal komt uit de kop van het antwoord. Zou dit een gewone select
+    zijn, dan haalden we alsnog de hele catalogus op en was er niets gewonnen."""
     db = _DB([_item(n, "2026-09-01T10:00:00+00:00") for n in range(20)])
     monkeypatch.setattr(api, "get_db", lambda: db)
-    api.sync_items(since="2026-09-02T00:00:00+00:00", user_id="u1")
-    telverzoeken = [v for v in db.verzoeken if v.head]
+    uit = api.sync_items(since="2026-09-02T00:00:00+00:00", user_id="u1")
+    telverzoeken = [v for v in db.verzoeken if v.telling == "exact"]
     assert len(telverzoeken) == 1
     assert telverzoeken[0].filters == {"user_id": "u1"}
+    assert telverzoeken[0].grens == 1, "de telling mag hooguit één rij meenemen"
+    assert uit["count"] == 20
 
 
 def test_te_veel_wijzigingen_meldt_zichzelf(monkeypatch):
@@ -281,3 +289,55 @@ def test_de_herplaatsvraag_haalt_niet_alle_opdrachten_op():
     ronde = bron.split("def relist_status(", 1)[1].split("\n@router", 1)[0]
     assert '.not_.is_("scheduled_for", "null")' in ronde, \
         "relist_status haalt weer alle create-opdrachten op in plaats van alleen de geplande"
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# 04-09-2026 — de verversing gaf drie dagen lang een interne fout
+#
+# Vanaf commit 8747493 (01-09) telde `sync_items` met `head=True`. Dat kent de
+# clientversie die in requirements.txt staat niet, dus antwoordde de server bij
+# élke verversing met "Something went wrong on our side (code ...)". Het
+# foutenlogboek stond er vol mee: 60 van de 60 regels, allemaal dezelfde.
+
+class _Verboden(dict):
+    """Namen die de oude functie bij het inlezen nodig heeft (Depends en
+    vrienden) mogen hier leeg zijn; get_db zetten we er daarna zelf in."""
+    def __missing__(self, _naam):
+        return lambda *a, **k: None
+
+
+def _oude_sync():
+    import re
+    import subprocess
+    bron = subprocess.run(["git", "show", "4687587:backend/api/items.py"],
+                          cwd=ROOT, capture_output=True, text=True, check=True).stdout
+    stuk = re.search(r"\ndef sync_items\(.*?(?=\n@router)", bron, re.S)
+    assert stuk, "sync_items staat niet in die commit"
+    ruimte = _Verboden()
+    exec(compile(stuk.group(0), "<oud>", "exec"), ruimte)
+    return ruimte["sync_items"], ruimte
+
+
+def test_de_telling_werkt_met_de_client_die_op_de_server_staat(monkeypatch):
+    db = _DB([_item(1, "2026-09-01T10:00:00+00:00"),
+              _item(2, "2026-09-01T11:00:00+00:00"),
+              _item(3, "2026-09-01T12:00:00+00:00")])
+    monkeypatch.setattr(api, "get_db", lambda: db)
+    uit = api.sync_items(since="2026-09-01T11:00:00+00:00", user_id="u1")
+    assert uit["count"] == 3, "de telling hoort ALLE artikelen te zijn, niet alleen de gewijzigde"
+    assert len(uit["items"]) == 2
+
+    # VOOR: dezelfde aanroep op de oude code loopt stuk op precies de fout die
+    # zestig keer in het foutenlogboek stond.
+    oud, ruimte = _oude_sync()
+    ruimte["get_db"] = lambda: db
+    with pytest.raises(TypeError, match="head"):
+        oud(since="2026-09-01T11:00:00+00:00", user_id="u1")
+
+
+def test_er_wordt_nergens_meer_met_head_geteld():
+    """Eén plek repareren helpt niet als de volgende sessie hem terugzet."""
+    for pad in (ROOT / "backend").rglob("*.py"):
+        for nr, regel in enumerate(pad.read_text(encoding="utf-8").splitlines(), 1):
+            code = regel.split("#", 1)[0]     # de waarschuwing in het commentaar mag
+            assert "head=True" not in code, f"{pad.name}:{nr} telt weer met head=True"

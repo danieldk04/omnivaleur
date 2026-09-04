@@ -103,7 +103,12 @@ def _telling(tabel: str, **filters) -> int | None:
     zeggen in plaats van iets rustgevends te verzinnen.
     """
     try:
-        q = get_db().table(tabel).select("*", count="exact", head=True)
+        # Géén `head=True`: de clientversie in requirements.txt (postgrest
+        # 0.16.11) kent die niet en gooit een TypeError, die hier in de except
+        # belandt — dan staat er "onbekend" op het beheerscherm terwijl de
+        # database gewoon antwoordt. De telling komt uit de kop, dus één rij
+        # ophalen is genoeg. Zie docs/kennisbank.md, "SDK-pin valstrik".
+        q = get_db().table(tabel).select("*", count="exact")
         for kolom, waarde in filters.items():
             if kolom.endswith("__gte"):
                 q = q.gte(kolom[:-5], waarde)
@@ -113,7 +118,7 @@ def _telling(tabel: str, **filters) -> int | None:
                 q = q.not_.is_(kolom[:-10], "null")
             else:
                 q = q.eq(kolom, waarde)
-        return execute_with_retry(q).count or 0
+        return execute_with_retry(q.limit(1)).count or 0
     except Exception as e:
         logger.warning("Tellen mislukt op %s (%s): %s", tabel, filters, e)
         return None

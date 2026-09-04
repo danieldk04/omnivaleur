@@ -183,3 +183,85 @@ def test_de_developer_kan_de_fouten_opvragen():
     tekst = (ROOT / "scripts/mail_analyse.py").read_text(encoding="utf-8")
     assert 'sub.add_parser("fouten"' in tekst
     assert '_lees("server_fouten"' in tekst
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# 04-09-2026 — het logboek wiste zichzelf
+#
+# Egbert klikte op "Clear all" en kreeg code F1F7E7 op zijn scherm. Tegen de
+# tijd dat wij die opzochten was hij weg: een verversing die elke vijftien
+# seconden faalde had in ruim een uur alle zestig plekken gevuld met exact
+# dezelfde fout. Het logboek dat er is om te kunnen BEWIJZEN wat er stukging,
+# duwde het bewijs er zelf uit.
+
+def _logboek_opzet(monkeypatch, beginstand):
+    import backend.database as D
+
+    kast = {"server_fouten": beginstand}
+
+    class _Tabel:
+        def select(self, *_a): return self
+        def eq(self, *_a): return self
+        def execute(self): return _Antwoord([{"inhoud": kast["server_fouten"]}])
+
+        def upsert(self, rij, **_kw):
+            kast[rij["naam"]] = rij["inhoud"]
+            return self
+
+    monkeypatch.setattr(D, "get_db",
+                        lambda: type("DB", (), {"table": lambda _s, _n: _Tabel()})())
+    return kast
+
+
+def _oude_bewaarder():
+    """De echte oude versie uit git, niet een nagemaakte."""
+    import re
+    import subprocess
+    import backend.main as M
+    bron = subprocess.run(["git", "show", "4687587:backend/main.py"],
+                          cwd=ROOT, capture_output=True, text=True, check=True).stdout
+    stuk = re.search(r"\ndef _bewaar_serverfout\(.*?(?=\n@app)", bron, re.S)
+    assert stuk, "de oude bewaarder staat niet in die commit"
+    ruimte = {"datetime": M.datetime, "timezone": M.timezone,
+              "traceback": M.traceback, "FOUTEN_BEWAREN": M.FOUTEN_BEWAREN,
+              "logger": M.logger}
+    exec(compile(stuk.group(0), "<oud>", "exec"), ruimte)
+    return ruimte["_bewaar_serverfout"]
+
+
+def test_een_storing_die_zich_herhaalt_wist_de_rest_niet(monkeypatch):
+    import backend.main as M
+
+    egbert = {"code": "F1F7E7", "wanneer": "2026-09-04T11:00:00+00:00",
+              "methode": "POST", "pad": "/api/listings/clear-error",
+              "soort": "RemoteProtocolError", "bericht": "Server disconnected",
+              "spoor": "", "aantal": 1, "codes": ["F1F7E7"]}
+    kast = _logboek_opzet(monkeypatch, [egbert])
+
+    # De verversing faalt honderd keer achter elkaar met exact dezelfde fout.
+    for n in range(100):
+        M._bewaar_serverfout(f"S{n:05d}", "GET", "/api/items/sync",
+                             TypeError("select() got an unexpected keyword argument 'head'"))
+
+    lijst = kast["server_fouten"]
+    codes = [f.get("code") for f in lijst]
+    assert "F1F7E7" in codes, "de melding van Egbert is er weer uit gedrukt"
+    herhaling = [f for f in lijst if f["pad"] == "/api/items/sync"]
+    assert len(herhaling) == 1, "dezelfde storing hoort één regel te zijn"
+    assert herhaling[0]["aantal"] == 100
+    assert herhaling[0]["codes"][0] == "S00099", "de laatste code moet terug te vinden zijn"
+    assert len(herhaling[0]["codes"]) == 10
+
+    # VOOR: dezelfde honderd meldingen op de oude bewaarder, en F1F7E7 is weg.
+    kast2 = _logboek_opzet(monkeypatch, [dict(egbert)])
+    oud = _oude_bewaarder()
+    for n in range(100):
+        oud(f"S{n:05d}", "GET", "/api/items/sync",
+            TypeError("select() got an unexpected keyword argument 'head'"))
+    assert "F1F7E7" not in [f.get("code") for f in kast2["server_fouten"]]
+    assert len(kast2["server_fouten"]) == M.FOUTEN_BEWAREN
+
+
+def test_de_developer_ziet_hoe_vaak_en_met_welke_codes():
+    tekst = (ROOT / "scripts/mail_analyse.py").read_text(encoding="utf-8")
+    assert "codes:" in tekst, "de codes van een herhaalde storing horen zichtbaar te zijn"
