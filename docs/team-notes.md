@@ -4363,3 +4363,47 @@ faalde daar vandaag op en wijst nu naar een vaste commit.
 Openstaand: nog niet nagemeten op het echte, ingelogde Vinted-formulier (daar is
 Daniels eigen browser voor nodig). 1.0.289 tot en met 1.0.292 staan alle vier nog
 niet in de Chrome Web Store.
+
+## 04-09-2026 — Vinted zette bijna alles onder "Other ..." terwijl hij zelf iets beters voorstelde
+
+Daniel: "hij upload heel vaak binnen een categorie op vinted naar other...
+terwijl vinted iets anders voorstelt en ik ook denk dat het een andere categorie
+moet zijn. gebeurt vaker." Voorbeeld: (1365) Black Uniqlo Trousers kwam onder
+Men > Clothing > Trousers > Other trousers.
+
+De tak was goed. Het niveau daaronder niet. Onder een tak zet Vinted nog een
+niveau (Chinos, Cargo trousers, Skinny trousers, Other trousers) en `kiesBlad`
+koos dat blad op woorden uit titel en omschrijving. Zegt de tekst daar niets
+over, en dat is bij een gewone advertentie bijna altijd zo, dan viel de keuze op
+het vangblad "Other ...". Kopers filteren juist op die bladen, dus dat kost
+vindbaarheid bij vrijwel elk artikel.
+
+Wat er over het hoofd werd gezien: op het moment dat de kiezer opengaat toont
+Vinted bovenaan zijn eigen voorstellen, afgeleid uit de foto's, als een regel met
+de bladnaam en daaronder het kruimelpad ("Chinos", "Men > Clothing > Trousers").
+De extensie klikte daar dwars doorheen de boom in, en dan zijn ze weg.
+
+Vanaf 1.0.293 leest `walkVintedCategoryPath` die voorstellen zodra de kiezer
+opengaat, en gebruikt er één als de tekst van het artikel niets over het model
+zegt. `kiesBlad` schrijft daarvoor in `bladReden` waaróm het koos: "voorkeur" of
+"woorden" is een echte aanwijzing uit de tekst en wint altijd, "neutraal" is de
+gok en die wijkt voor Vinted. Een voorstel telt alleen mee als het onder ons
+eigen pad ligt: Vinted mag het blad kiezen, nooit de tak, anders belandt een
+herenbroek in de damesafdeling omdat de foto daarop leek.
+
+Bewezen met `tests/vinted-mock/categorie-voorstel-test.js` (13 controles): de
+vorige versie kiest onder dezelfde omstandigheden aantoonbaar "Other trousers",
+de nieuwe "Chinos"; tekst wint van voorstel; een voorstel uit een andere tak of
+uit de damesafdeling verandert niets; zonder voorstellen blijft het oude gedrag.
+
+Openstaand:
+- De vorm van de voorstelregels is overgenomen uit wat er in vinted.js staat
+  opgeschreven van de echte pagina, niet opnieuw gemeten op een ingelogde Vinted.
+  Klopt die vorm niet, dan doet de reparatie niets en blijft het bij "Other ...";
+  slechter wordt het niet.
+- 1.0.289 tot en met 1.0.293 staan geen van alle in de Chrome Web Store.
+- `tests/vinted-mock/prijs-hertypen-test.js` stond rood sinds de prijsreparatie
+  van gisteren (FocusEvent bestaat niet in Node); die proef geeft hem nu zelf mee.
+- De MOET ZEKER-melding `verkeerde-categorie-toegewezen` (zilverwebsite, Amanda)
+  is hiermee NIET opgelost: die gaat over een HTTP 500 en over zilver dat in de
+  lijst ontbreekt.

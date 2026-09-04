@@ -109,12 +109,16 @@ async function draai(veld) {
   const Event = function (naam) { this.type = naam; };
   const InputEvent = Event;
   const KeyboardEvent = Event;
+  // Sinds 04-09-2026 verlaat de prijsroutine het veld ook echt (blur + focusout),
+  // want alleen dan herbeoordeelt Vinted de prijs. Zonder deze regel viel de
+  // proef om op een gebeurtenis die in Node niet bestaat.
+  const FocusEvent = Event;
   const maak = new Function(
     "window", "document", "chrome", "qs", "sleep", "clog", "_num", "priceErrorAfterSettle",
-    "Event", "InputEvent", "KeyboardEvent",
+    "Event", "InputEvent", "KeyboardEvent", "FocusEvent",
     SRC.slice(start, eind) + "\nreturn { fillPriceVinted };");
   const { fillPriceVinted } = maak(window, document, chrome, () => veld,
-    sleep, clog, _num, priceErrorAfterSettle, Event, InputEvent, KeyboardEvent);
+    sleep, clog, _num, priceErrorAfterSettle, Event, InputEvent, KeyboardEvent, FocusEvent);
   return await fillPriceVinted(19.99);
 }
 

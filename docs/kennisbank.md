@@ -17,6 +17,36 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ---
 
+## vinted-voorstel-verslaat-vangblad
+
+*04-09-2026 — "Zegt de tekst van het artikel niets over het model, dan weet het platform het beter dan onze gok: Vinted's eigen voorstel uit de foto's, maar alleen binnen ons eigen pad"*
+
+Vinted zette bijna elke advertentie onder "Other ..." (Men > Clothing > Trousers
+> Other trousers voor een gewone Uniqlo-broek), terwijl Vinted zelf bovenaan de
+kiezer "Chinos" voorstelde. De tak was goed, het blad daaronder niet: `kiesBlad`
+koos op woorden uit titel en omschrijving, en die zeggen bijna nooit iets over
+het model. De terugval was het vangblad, en juist daarop filteren kopers niet.
+
+**Why:** wij kennen de tak (die staat in het dashboard), maar over het blad
+daarbinnen weet het platform meer dan wij: het heeft de foto's gezien en wij
+niet. Onze eigen gok inruilen voor zijn voorstel kost niets, want een gok is
+geen aanwijzing. Andersom mag nooit: een echte aanwijzing uit de tekst
+("cargo", "half zip") verslaat elk voorstel.
+
+**How to apply:** laat de keuzefunctie opschrijven waaróm ze koos (bij Vinted:
+`bladReden` = "voorkeur"/"woorden"/"neutraal"). Alleen bij "neutraal" wijkt ze
+voor het voorstel van het platform. Lees de voorstellen op het moment dat de
+kiezer opengaat, want ze verdwijnen zodra je de boom in klikt; ze staan er als
+een regel met de naam in `Cell__title` en het kruimelpad in `Cell__body`. Neem
+alleen voorstellen waarvan het kruimelpad begint met ons eigen pad: het platform
+mag het blad kiezen, nooit de tak, anders belandt een herenbroek in de
+damesafdeling omdat de foto daarop leek. Sla een omhulsel met meer dan één
+`Cell__title` over, anders knoop je de naam van de ene regel aan het pad van de
+andere. Zie "rode-regel-is-geen-oordeel" en
+"omnivaleur-niet-kledingcategorieen".
+
+---
+
 ## rode-regel-is-geen-oordeel
 
 *04-09-2026 — "Een foutmelding onder een veld die weggaat van een teken dat niets verandert, zegt niets over de waarde; laat het formulier zelf beslissen"*

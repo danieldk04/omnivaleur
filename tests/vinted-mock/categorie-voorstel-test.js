@@ -51,7 +51,7 @@ function laad(bron) {
     stuk(bron, "  function realClickEl(el) {", "  // Has Vinted accepted a size?") +
     stuk(bron, "  async function walkVintedCategoryPath(item, cat, gender) {",
          "  async function fillCategoryVinted(item) {");
-  return new Function("document", "qs", "sleep", "clog", "PointerEvent", "MouseEvent",
+  return new Function("document", "window", "qs", "sleep", "clog", "PointerEvent", "MouseEvent",
     `${code}\nreturn { walkVintedCategoryPath };`);
 }
 
@@ -153,6 +153,7 @@ async function draai(bron, item, voorstellen) {
   const nep = function (type) { this.type = type; };
   const { walkVintedCategoryPath } = laad(bron)(
     doc,
+    {},
     (sel) => (/catalog-select-dropdown-input/.test(sel) ? inp : null),
     () => Promise.resolve(),
     (t) => log.push(String(t)),
