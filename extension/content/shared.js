@@ -249,6 +249,15 @@ window.CL = (() => {
     // staat. Alles tussen hier en de Plaatsen-knop (foto's, kenmerken, het
     // merk-venster) kan het veld namelijk opnieuw leeggooien.
     await runInMainWorld("ENFORCE_DESC", { text: value, durationMs: 300000 });
+    // EN DE PLEK DIE ER ÉCHT TOE DOET (gemeten 04-09-2026 op het echte
+    // formulier van 2dehands én Marktplaats): het plaatsformulier is een
+    // react-hook-form, en de controle bij het plaatsen kijkt naar de waarde die
+    // dat formulier zelf bewaart. De zichtbare editor vullen laat die waarde op
+    // nul staan — dát is "Geen zoekertjestekst ingevuld" met de tekst gewoon in
+    // beeld. Zie _mwZetFormulierBeschrijving in background.js.
+    const inStaat = await runInMainWorld("FILL_FORM_DESC", { text: value });
+    clog(`beschrijving: formulier houdt nu ${inStaat} tekens vast`);
+    await runInMainWorld("ENFORCE_FORM_DESC", { text: value, durationMs: 300000 });
     return true;
   }
 
@@ -1663,6 +1672,13 @@ window.CL = (() => {
       await runInMainWorld("ENFORCE_DESC", { text: _pendingDescription, durationMs: 120000 });
       await sleep(250);
 
+      // Wat het formulier zélf vasthoudt is de enige harde waarheid: de
+      // zichtbare editor kan vol staan terwijl de controle bij het plaatsen
+      // niets ziet. -1 betekent "dit platform werkt niet zo" (Vinted, Facebook).
+      await runInMainWorld("FILL_FORM_DESC", { text: _pendingDescription });
+      await runInMainWorld("ENFORCE_FORM_DESC", { text: _pendingDescription, durationMs: 120000 });
+      const inStaat = await runInMainWorld("READ_FORM_DESC", {});
+
       const zichtbaarLeeg = descriptionIsEmpty();
       // Het verborgen veld is BEWUST geen voorwaarde meer. Live gemeten op
       // marktplaats.nl (aug. 2026): dat veld blijft leeg — ook als een mens de
@@ -1673,7 +1689,7 @@ window.CL = (() => {
       // gewoon stond. De editor is de waarheid; het verborgen veld vullen we
       // alleen nog "voor het geval dat".
       const verborgenOk = await hiddenDescriptionOk();
-      if (!zichtbaarLeeg) {
+      if (!zichtbaarLeeg && inStaat !== 0) {
         // Laatste stap vlak vóór Plaatsen: één echte spatie typen. Marktplaats
         // rekende de tekst pas mee ná een toetsaanslag — zonder dit bleef
         // "Geen advertentietekst ingevuld" staan met de tekst gewoon in beeld.
@@ -1687,7 +1703,7 @@ window.CL = (() => {
         return true;
       }
       clog(`beschrijving poging ${poging}: editor ${zichtbaarLeeg ? "LEEG" : "ok"}, ` +
-           `verborgen veld ${verborgenOk ? "ok" : "LEEG"}`);
+           `verborgen veld ${verborgenOk ? "ok" : "LEEG"}, formulier ${inStaat} tekens`);
       await sleep(600);
     }
 
@@ -1886,6 +1902,9 @@ window.CL = (() => {
         // leest, én een echte toetsaanslag in de zichtbare editor. Welke van de
         // twee het formulier gelooft verschilt per platform, dus doen we allebei.
         await runInMainWorld("FILL_HIDDEN_DESC", { text: _pendingDescription });
+        // De staat van het formulier zelf opnieuw zetten: daar gaat de controle
+        // op af, en die raakt bij elke hertekening leeg.
+        await runInMainWorld("FILL_FORM_DESC", { text: _pendingDescription });
         const geduwd = await runInMainWorld("NUDGE_DESC", { selector: _descriptionSelector });
         // De nagemaakte spatie hierboven verandert de staat van het Marktplaats-
         // formulier aantoonbaar NIET (zie typEchteToets in background.js). Blijft
@@ -1937,6 +1956,7 @@ window.CL = (() => {
         // aan beide kanten) terwijl deze melding er nog stond, en toen wees hij
         // ons de verkeerde kant op omdat het echte bezwaar ergens anders zat.
         const staat = await runInMainWorld("DESCRIBE_DESC", {});
+        const inStaat = await runInMainWorld("READ_FORM_DESC", {});
         const rest = formulierklachten().filter((t) => !/advertentietekst|zoekertjestekst/i.test(t));
         // WIE ZIT ER NOG MEER IN DIT TABBLAD?
         //
@@ -1962,6 +1982,7 @@ window.CL = (() => {
           (vreemdeKaders.length
             ? `Other extensions inside this tab: ${vreemdeKaders.join(", ")}. `
             : "No other extension frames in this tab. ") +
+          `The form's own description value: ${inStaat} characters. ` +
           `What the form actually held — ${staat}` +
           (rest.length ? ` | Other complaints on the page: ${rest.join(" | ")}` : ` | No other complaints on the page.`)
         );

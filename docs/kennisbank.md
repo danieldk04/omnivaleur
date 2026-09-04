@@ -17,6 +17,52 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ---
 
+## zoekertjestekst-zit-in-react-hook-form
+
+*04-09-2026 — "Marktplaats/2dehands valideren de beschrijving op react-hook-form's _formValues.description, niet op de editor en niet op het verborgen veld"*
+
+Het plaatsformulier van Marktplaats en 2dehands is een **react-hook-form**. De
+controle bij het plaatsen leest `control._formValues.description`. Dat is de
+enige waarheid. Gemeten op 04-09-2026, ingelogd, op zowel
+`www.2dehands.be/plaats/1776/652?bucketId=169` als dezelfde URL op
+`www.marktplaats.nl`:
+
+- de zichtbare Lexical-editor vullen (onze `FILL_DESC`) zet 122 tekens in beeld
+  en laat `_formValues.description` op **0** staan;
+- het verborgen veld `description_nl-BE` vullen helpt niet: de DOM-waarde
+  verandert wel, maar `__reactProps.value` blijft leeg en het formulier leest
+  hem niet. Dat veld is uitvoer, geen invoer;
+- `document.execCommand("insertText")` doet in deze editor **niets** (de tekst
+  wordt niet langer). Lexical's eigen `insertText` maakt de editor wél langer
+  maar `_formValues` niet. Ook `dispatchCommand(CONTROLLED_TEXT_INSERTION)` en
+  een echte focusverplaatsing veranderen er niets aan;
+- het formulier zijn eigen validatie laten draaien (`control.handleSubmit` met
+  eigen callbacks, dus zonder te plaatsen) gaf met een gevulde editor de fout op
+  `description` — dat is "Geen zoekertjestekst ingevuld" — en na alléén
+  `_formValues.description` te vullen viel `description` uit de foutenlijst weg.
+  Op beide platforms.
+
+De control is te vinden door vanaf `[data-testid^="text-editor-input"]` (of het
+`form`) omhoog te lopen door de React-fiberketen en in de hooks te zoeken naar
+een object met `_formValues` én `_fields`. Gemeten: diepte 8, hook 17, op beide
+platforms identiek. Het veld heet `description` (zonder taalachtervoegsel).
+
+**Why:** hierdoor was "Geen zoekertjestekst ingevuld" met de tekst zichtbaar in
+beeld jarenlang onverklaarbaar en "soms wel, soms niet". Een echte toetsaanslag
+via `chrome.debugger` werkte omdat die de waarde indirect wél in de staat zet;
+dat is een fragiele omweg met een gele balk, een koppeling die kan weigeren en
+muiscoördinaten die ernaast kunnen zitten.
+
+**How to apply:** schrijf bij elke beschrijvingswijziging rechtstreeks in
+`control._formValues.description` (en `_fields.description._f.value`), lees hem
+terug vóór het plaatsen, en houd een bewaker draaiend tot en met de klik — elke
+hertekening (foto klaar, kenmerk gekozen, merk-venster dicht) kan hem
+leeggooien. Levert de zoeker `-1` op, dan werkt dat platform niet zo (Vinted,
+Facebook) en is er niets aan de hand; `0` betekent wél leeg. Zie
+"mp-2dehands-hidden-description-field" en "extension-release-bump-version".
+
+---
+
 ## reddingsronde-kale-plaatsing-dubbele-advertentie
 
 *03-09-2026 — Een advertentie op 'relisting' mag alleen kaal opnieuw geplaatst worden als het weghalen aantoonbaar 'done' is; anders staat de oude nog online en wordt het een dubbele*

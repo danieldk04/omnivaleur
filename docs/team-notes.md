@@ -4179,3 +4179,40 @@ claude.ai als die bestaat.
 Definitief 04-09: geen Google Tasks connector beschikbaar, dus de omnivaleur-taken
 skill zet alles als geel hele-dag-item op de agenda danieldekoning66@gmail.com
 met "Omnivaleur:" ervoor. Getest en werkt.
+
+## 04-09-2026 — "Geen zoekertjestekst ingevuld": het formulier bewaart de tekst ergens anders
+
+Daniel: "2dehands geeft nu weer deze melding... soms wel en soms niet, soms
+schrijft ie gelijk door en publiceert ie zelf." Op zijn scherm: het zoekertje
+(598) Burgundy Suitsupply Turtleneck, de beschrijving zichtbaar in de editor, en
+er rood onder "Geen zoekertjestekst ingevuld." Typte hij zelf één spatie, dan
+verdween de melding en ging het zoekertje eruit.
+
+In zijn opdrachtenlijst is het verschil te zien: (598) duurde 9 minuten 20, de
+twee zoekertjes erna 20 en 21 seconden. Alle drie dezelfde verkoper, dezelfde
+categorie, dezelfde ochtend.
+
+**Gemeten op het echte formulier** (ingelogd, 2dehands.be én marktplaats.nl,
+categorie Heren > Truien en Vesten): het plaatsformulier is een react-hook-form
+en de controle bij het plaatsen leest `control._formValues.description`. Onze
+manier van invullen zet 122 tekens in de zichtbare editor en laat die waarde op
+0 staan. Het verborgen veld `description_nl-BE` vullen helpt niet (React kent
+die waarde niet), `execCommand` doet in deze editor helemaal niets, en ook
+Lexical's eigen invoegcommando en een echte focusverplaatsing veranderen er
+niets aan. Waarom een getypte spatie wél werkt: die zet de waarde indirect
+alsnog in de staat van het formulier.
+
+**Voor-en-na-proef, zonder iets te plaatsen:** het formulier zijn eigen
+validatie laten draaien (handleSubmit met eigen callbacks) gaf met een gevulde
+editor de fout op `description`; na alleen `_formValues.description` te vullen
+viel `description` uit de foutenlijst weg. Op beide platforms.
+
+Gerepareerd in 1.0.289: de extensie schrijft de beschrijving nu rechtstreeks in
+de staat van het formulier, leest hem terug vlak vóór het plaatsen, en houdt een
+bewaker draaiend tot en met de klik — want elke hertekening (foto klaar, kenmerk
+gekozen, merk-venster dicht) kan hem weer leeggooien. Dat laatste is precies
+waarom het "soms wel, soms niet" was. De echte toetsaanslag via chrome.debugger
+blijft als achtervang bestaan, maar is niet langer de enige weg.
+
+**Openstaand:** 1.0.289 moet naar de Chrome Web Store. Tot die tijd werkt de
+reparatie alleen op een handmatig geladen kopie.

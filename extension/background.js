@@ -6241,6 +6241,151 @@ function _mwEnforceDescription(descText, durationMs) {
   return true;
 }
 
+// ── WAAR HET FORMULIER DE BESCHRIJVING ÉCHT BEWAART ───────────────────────
+//
+// Live gemeten op 04-09-2026, ingelogd, op zowel www.2dehands.be/plaats/… als
+// www.marktplaats.nl/plaats/… (categorie Heren > Truien en Vesten):
+//
+//   * het plaatsformulier is een react-hook-form; de waarde waarop het
+//     valideert staat in `control._formValues.description`;
+//   * de zichtbare Lexical-editor vullen (onze FILL_DESC) zet 48 tekens in
+//     beeld en laat `_formValues.description` op 0 staan;
+//   * het verborgen veld `description_nl-BE` erin zetten helpt niet: React
+//     kent die waarde niet (`__reactProps.value` blijft leeg) en het formulier
+//     leest hem niet;
+//   * `document.execCommand("insertText")` doet in deze editor helemaal niets
+//     (de tekst wordt niet langer), en Lexical's eigen insertText maakt de
+//     editor wél langer maar `_formValues` niet;
+//   * het formulier zelf laten valideren (handleSubmit met eigen callbacks, dus
+//     zonder te plaatsen) gaf met een gevulde editor en lege `_formValues` de
+//     fout op `description` — precies "Geen zoekertjestekst ingevuld" — en na
+//     alléén `_formValues.description` te vullen viel `description` uit de
+//     foutenlijst weg. Dat is de voor-en-na-proef op de plek waar de klacht
+//     vandaan komt.
+//
+// Daarom schrijven we hier rechtstreeks in de staat van het formulier. Dat is
+// wat een echte toetsaanslag indirect ook bereikt, maar zonder debugger-koppeling,
+// zonder gele balk en zonder muiscoördinaten die ernaast kunnen zitten.
+//
+// Let op: chrome.scripting.executeScript injecteert alléén de functie zelf, dus
+// de zoeker staat opzettelijk in elke functie opnieuw.
+function _mwZetFormulierBeschrijving(descText) {
+  const _vind = () => {
+    const starts = [
+      document.querySelector('[data-testid^="text-editor-input"]'),
+      document.querySelector('input[name^="title_"]'),
+      document.querySelector("form"),
+    ].filter(Boolean);
+    for (const start of starts) {
+      const fk = Object.keys(start).find((k) => k.startsWith("__reactFiber"));
+      if (!fk) continue;
+      let f = start[fk], d = 0;
+      while (f && d < 40) {
+        let ms = f.memoizedState, i = 0;
+        while (ms && i < 40) {
+          const s = ms.memoizedState;
+          const k = (s && s.current && typeof s.current === "object") ? s.current : s;
+          if (k && typeof k === "object" && k._formValues && k._fields) return k;
+          ms = ms.next; i++;
+        }
+        f = f.return; d++;
+      }
+    }
+    return null;
+  };
+  const c = _vind();
+  if (!c) return -1;                       // geen react-hook-form: niets te doen
+  if (!("description" in c._formValues) && !(c._fields || {}).description) return -1;
+  try {
+    c._formValues.description = descText;
+    const veld = (c._fields || {}).description;
+    if (veld && veld._f) veld._f.value = descText;
+    return String(c._formValues.description || "").length;
+  } catch (_) {
+    return -1;
+  }
+}
+
+// Leest terug wat het formulier zélf als beschrijving vasthoudt. Dit is de enige
+// harde waarheid: de zichtbare editor en het verborgen veld zeggen allebei niets
+// over wat er bij het plaatsen wordt gecontroleerd.
+function _mwLeesFormulierBeschrijving() {
+  const _vind = () => {
+    const starts = [
+      document.querySelector('[data-testid^="text-editor-input"]'),
+      document.querySelector('input[name^="title_"]'),
+      document.querySelector("form"),
+    ].filter(Boolean);
+    for (const start of starts) {
+      const fk = Object.keys(start).find((k) => k.startsWith("__reactFiber"));
+      if (!fk) continue;
+      let f = start[fk], d = 0;
+      while (f && d < 40) {
+        let ms = f.memoizedState, i = 0;
+        while (ms && i < 40) {
+          const s = ms.memoizedState;
+          const k = (s && s.current && typeof s.current === "object") ? s.current : s;
+          if (k && typeof k === "object" && k._formValues && k._fields) return k;
+          ms = ms.next; i++;
+        }
+        f = f.return; d++;
+      }
+    }
+    return null;
+  };
+  const c = _vind();
+  if (!c) return -1;
+  try { return String(c._formValues.description || "").length; } catch (_) { return -1; }
+}
+
+// De staat van het formulier raakt niet één keer leeg maar telkens opnieuw: elke
+// hertekening (foto klaar, kenmerk gekozen, merk-venster dicht) kan de
+// beschrijving terugzetten op leeg. Deze bewaker zet hem terug zodra hij leeg is,
+// tot en met het plaatsen. Hij schrijft uitsluitend als de waarde leeg is, dus
+// tekst die het formulier er zelf in zet blijft staan.
+function _mwBewaakFormulierBeschrijving(descText, durationMs) {
+  const _vind = () => {
+    const starts = [
+      document.querySelector('[data-testid^="text-editor-input"]'),
+      document.querySelector('input[name^="title_"]'),
+      document.querySelector("form"),
+    ].filter(Boolean);
+    for (const start of starts) {
+      const fk = Object.keys(start).find((k) => k.startsWith("__reactFiber"));
+      if (!fk) continue;
+      let f = start[fk], d = 0;
+      while (f && d < 40) {
+        let ms = f.memoizedState, i = 0;
+        while (ms && i < 40) {
+          const s = ms.memoizedState;
+          const k = (s && s.current && typeof s.current === "object") ? s.current : s;
+          if (k && typeof k === "object" && k._formValues && k._fields) return k;
+          ms = ms.next; i++;
+        }
+        f = f.return; d++;
+      }
+    }
+    return null;
+  };
+  try { clearInterval(window.__ovFormDescKeeper); } catch (_) {}
+  const einde = Date.now() + (durationMs || 300000);
+  const herstel = () => {
+    if (Date.now() > einde) { try { clearInterval(window.__ovFormDescKeeper); } catch (_) {} return; }
+    const c = _vind();
+    if (!c) return;
+    try {
+      if (String(c._formValues.description || "").trim().length > 0) return;
+      c._formValues.description = descText;
+      const veld = (c._fields || {}).description;
+      if (veld && veld._f) veld._f.value = descText;
+    } catch (_) {}
+  };
+  herstel();
+  window.__ovFormDescKeeper = setInterval(herstel, 250);
+  return true;
+}
+
+
 // Marktplaats beschouwde de advertentietekst als leeg terwijl hij zichtbaar in de
 // editor stond — en één zelf getypte spatie liet de melding meteen verdwijnen.
 // Dat is het bewijs dat het formulier niet naar de inhoud kijkt maar naar een
@@ -6952,6 +7097,43 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     }, (results) => {
       if (chrome.runtime.lastError) sendResponse(null);
       else sendResponse(results?.[0]?.result ?? null);
+    });
+    return true;
+  }
+
+  // Zet de beschrijving in de staat van het formulier zelf — zie
+  // _mwZetFormulierBeschrijving. Dit is de plek waar de validatie op afgaat.
+  if (msg.type === "FILL_FORM_DESC") {
+    chrome.scripting.executeScript({
+      target: { tabId: sender.tab.id }, world: "MAIN",
+      func: _mwZetFormulierBeschrijving, args: [msg.text],
+    }, (results) => {
+      if (chrome.runtime.lastError) sendResponse(-1);
+      else sendResponse(results?.[0]?.result ?? -1);
+    });
+    return true;
+  }
+
+  // Leest terug hoeveel tekens het formulier zelf als beschrijving vasthoudt.
+  if (msg.type === "READ_FORM_DESC") {
+    chrome.scripting.executeScript({
+      target: { tabId: sender.tab.id }, world: "MAIN",
+      func: _mwLeesFormulierBeschrijving, args: [],
+    }, (results) => {
+      if (chrome.runtime.lastError) sendResponse(-1);
+      else sendResponse(results?.[0]?.result ?? -1);
+    });
+    return true;
+  }
+
+  // Houdt die staat gevuld zolang het formulier openstaat.
+  if (msg.type === "ENFORCE_FORM_DESC") {
+    chrome.scripting.executeScript({
+      target: { tabId: sender.tab.id }, world: "MAIN",
+      func: _mwBewaakFormulierBeschrijving, args: [msg.text, msg.durationMs || 300000],
+    }, (results) => {
+      if (chrome.runtime.lastError) sendResponse(false);
+      else sendResponse(results?.[0]?.result ?? false);
     });
     return true;
   }
