@@ -4152,3 +4152,18 @@ een nieuwe plaatsing die op het advertentievorm-veld sneuvelt (vier keer in twee
 dagen); dat lost de extensie 1.0.285+ op zodra de Web Store hem doorlaat.
 Kleurwoorden "zilverkleurig", "goudkleurig" en "multicolor" worden nog niet
 herkend; of "Zilver" in de sieradencategorie bestaat als optie is niet gemeten.
+
+## 04-09-2026 — Skill: openstaande Daniel-taken naar Google Agenda
+
+Daniel gebruikt Google Agenda, Tasks en Drive veel en wil dat elke openstaande
+Omnivaleur-taak die alleen hij zelf kan doen automatisch in zijn agenda komt.
+Google Tasks is niet als koppeling beschikbaar, Google Agenda wel. Nieuwe skill
+`~/.claude/skills/omnivaleur-taken/` (account-lokaal, niet in de repo): verzamelt
+Daniel-only taken uit mail_analyse bugs, team-notes en terugkerende acties (Web
+Store upload, handmatige Supabase-migraties), controleert op dubbelen via
+list_events, en zet ze als hele-dag-item op de hoofdagenda met prefix
+"Omnivaleur:". Activeert bij "wat moet ik doen / mijn taken / zet in mijn agenda"
+en aan het eind van een sessie met een openstaande Daniel-stap.
+
+Eerste ronde vandaag toegevoegd: extensie 1.0.288 naar de Chrome Web Store, en
+de kolom offline_mail_sent_at in Supabase.
