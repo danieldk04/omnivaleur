@@ -898,6 +898,7 @@
       if (!(await prijsIsGeaccepteerd())) {
         gaps.push(`price (${item.price}${prijsFout ? " — Vinted says: " + prijsFout : ""})`);
       } else if (prijsFout) {
+        prijsKlachtBijPlaatsen = prijsFout;
         clog(`Vinted toont nog "${prijsFout}", maar het formulier houdt de prijs vast — toch plaatsen`);
       }
       if (descEl && !(descEl.value || "").trim()) gaps.push("description");
