@@ -1806,14 +1806,18 @@
   // then — leaving whichever separator worked in the field.
   async function _typePriceVariant(el, out, num, opts = {}) {
     const setter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, "value").set;
+    // LEEGMAKEN MET EEN INPUT-GEBEURTENIS DEDEN WE ZELF DE DAS OM.
+    // Dat gaf het formulier een LEGE prijs te zien, en dat is precies de invoer
+    // waar "Price must be greater than or equal to 1.0" op slaat. De melding die
+    // we daarna niet meer weg kregen, zetten we hier dus zelf neer. Selecteren
+    // en overschrijven doet hetzelfde werk zonder die tussenstap.
     const clear = () => {
       el.focus();
       try { el.select(); } catch (e) {}
-      try { setter.call(el, ""); } catch (e) { el.value = ""; }
-      el.dispatchEvent(new InputEvent("input", { bubbles: true, inputType: "deleteContentBackward" }));
+      try { el.setSelectionRange(0, String(el.value || "").length); } catch (e) {}
     };
 
-    el.dispatchEvent(new Event("focus", { bubbles: true }));
+    el.dispatchEvent(new FocusEvent("focusin", { bubbles: true }));
     clear();
 
     if (opts.perChar) {
