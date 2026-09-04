@@ -682,6 +682,10 @@
   // Wat er bij de kleurstap gebeurde, in gewone taal — belandt in het logboek én
   // in de foutmelding op het dashboard.
   let kleurDiagnose = "the colour step never ran";
+  // Wat stond er onder het prijsveld op het moment van plaatsen? We stoppen daar
+  // niet meer voor (zie de eindcontrole), maar als het plaatsen daarna alsnog
+  // misgaat, hoort die melding in de foutmelding te staan.
+  let prijsKlachtBijPlaatsen = null;
 
   // LET OP — deze twee blokken staan hier bewust, vóór `await getJob()`.
   // Een const wordt pas aangemaakt op het moment dat de uitvoering die regel
