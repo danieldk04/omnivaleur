@@ -1685,11 +1685,17 @@
           (r) => resolve(r || null),
         );
       });
-      // De hoofdwereld heeft zelf al op de klacht gewacht; hier nog een korte
-      // tweede blik, want de melding kan ook buiten het blokje rond het veld
-      // opduiken.
-      if (res && res.ok && !(await priceErrorAfterSettle(1500))) {
-        clog(`prijs gezet via de pagina zelf: ${res.used}`);
+      // HIER STOND een tweede controle op de rode regel, en die maakte alles
+      // stuk (Daniel, 04-09-2026: "vinted geeft nu regelmatig deze melding; als
+      // ik zelf een 9 typ verdwijnt hij"). De hoofdwereld heeft op dat moment al
+      // vastgesteld dat het formulier zelf de juiste prijs vasthoudt. Bleef de
+      // melding daarna toch staan, dan gooiden we die goede prijs alsnog weg en
+      // begon de hele reeks pogingen opnieuw, die stuk voor stuk op dezelfde
+      // blijven hangende melding stuklopen. Uitkomst: het veld toonde de prijs,
+      // en er werd niets geplaatst.
+      if (res && res.ok) {
+        clog(`prijs gezet via de pagina zelf: ${res.used}` +
+             (res.klacht ? " (Vinted's melding bleef staan terwijl het formulier de prijs vasthoudt)" : ""));
         return true;
       }
       if (res && !res.ok) clog(`prijs via de pagina zelf lukte niet (${res.reason || "?"}) — nu de gewone route`);
