@@ -12,9 +12,13 @@ niets. Dat is een gegeven. Wat we wél kunnen: het meteen zeggen, in plaats van
 de klant het zelf te laten ontdekken.
 
 Bewust terughoudend:
-* alleen tussen 10:00 en 20:00 (NL), want de nachtelijke herplaatsronde zet bij
+* alleen tussen 10:00 en 22:00 (NL), want de nachtelijke herplaatsronde zet bij
   iedereen rond 02:30 werk klaar en niemand wil daar om drie uur 's nachts een
-  mail over;
+  mail over. De grens lag eerst op 20:00 en dat was te vroeg: wie 's middags
+  zijn laptop dichtklapt is pas rond achten drie uur stil, en dan was het
+  venster net dicht (Toon, 04-09-2026, gemeten: met 20:00 kwam er die dag geen
+  enkel moment een mail uit, met 22:00 om 20:00 NL een mail over 39 wachtende
+  opdrachten);
 * alleen als het werk al minstens drie uur staat te wachten, zodat een verse
   klik van net nooit een mail oplevert;
 * hoogstens één mail per 24 uur per klant;
@@ -35,7 +39,7 @@ STIL_NA = timedelta(hours=3)
 WACHT_MINSTENS = timedelta(hours=3)
 STILTE_NA_MAIL = timedelta(hours=24)
 VROEGSTE_UUR = 10
-LAATSTE_UUR = 20
+LAATSTE_UUR = 22
 NL = ZoneInfo("Europe/Amsterdam")
 
 SCHRIJVEND = ("create", "delete", "content_refresh")

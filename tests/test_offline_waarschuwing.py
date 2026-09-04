@@ -130,6 +130,31 @@ def test_nooit_midden_in_de_nacht(monkeypatch):
     assert verzonden == []
 
 
+def test_laptop_dicht_om_vijf_uur_krijgt_s_avonds_alsnog_bericht(monkeypatch):
+    """Toon, 04-09-2026. Hij zette 's middags 51 publicaties klaar, elf liepen,
+    en om 16:58 NL ging zijn Chromebook uit. Drie uur stilte is dan pas om 19:58
+    bereikt — en met de oude grens van 20:00 viel het venster net dicht. Gemeten
+    op zijn echte gegevens: die dag kwam er op geen enkel uur een mail uit. Om
+    20:23 gooide hij de hele wachtrij weg omdat hij dacht dat het vastzat.
+
+    Met de grens op 22:00 gaat er om 20:00 NL wél een mail uit."""
+    avond = datetime(2026, 9, 4, 18, 0, tzinfo=timezone.utc)   # 20:00 NL
+    db = _DB(_jobs(39, 4), [_hart(3)], [_abo()])
+    verzonden = _opzet(monkeypatch, db)
+    assert asyncio.run(mod.waarschuw_offline_extensies(avond)) == 1
+    assert "39 listings are waiting" in verzonden[0]["subject"]
+
+
+def test_kwart_over_tien_s_avonds_is_te_laat(monkeypatch):
+    """De grens moet ergens liggen: 's avonds laat nog een mail sturen over werk
+    dat morgen vanzelf loopt, is een melding waar niemand iets mee kan."""
+    laat = datetime(2026, 9, 4, 20, 15, tzinfo=timezone.utc)    # 22:15 NL
+    db = _DB(_jobs(39, 4), [_hart(3)], [_abo()])
+    verzonden = _opzet(monkeypatch, db)
+    assert asyncio.run(mod.waarschuw_offline_extensies(laat)) == 0
+    assert verzonden == []
+
+
 def test_verse_klik_levert_geen_mail_op(monkeypatch):
     """Wie net op publiceren klikte terwijl zijn computer toevallig even stil is,
     krijgt geen paniekmail."""

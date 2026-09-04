@@ -2860,7 +2860,17 @@ def cancel_job(job_id: str, user_id: str = Depends(get_current_user)):
         }).eq("item_id", job["item_id"]).eq("platform", job["platform"]).eq("status", "pending").execute()
         # Vaak maakt de gebruiker de advertentie na een afbreking zelf af. Een
         # scan erachteraan zorgt dat het dashboard dat vanzelf oppikt.
-        _queue_scan(db, user_id, job["platform"])
+        #
+        # ALLEEN als de extensie er ook echt aan begonnen was. Een opdracht die
+        # nooit is opgepakt heeft geen tabblad gehad en dus niets half
+        # achtergelaten; daar valt niets op te halen. Het scheelde bovendien een
+        # stortvloed: toen Toon op 04-09-2026 in één klik 39 wachtende
+        # publicaties weggooide, vroegen die 39 annuleringen tegelijk om een
+        # scan. De dubbelcontrole in _queue_scan leest en schrijft niet in
+        # dezelfde stap, dus vier daarvan glipten er samen doorheen en zijn
+        # wachtrij stond meteen weer vol met scans die niemand had gevraagd.
+        if job.get("claimed_at"):
+            _queue_scan(db, user_id, job["platform"])
     return {"ok": True, "status": "cancelled"}
 
 

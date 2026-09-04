@@ -8915,6 +8915,24 @@ function renderActivityBar() {
         + '<b>Once it starts, leave the tab it opens alone</b> and hold off on new actions until it finishes.';
     }
   }
+
+  // DE KNOP MOET ZEGGEN WAT HIJ SLOOPT.
+  //
+  // WAAROM (04-09-2026, Toon / dejuistetoon). Hij zette 's middags 51
+  // publicaties klaar. Elf liepen, toen ging zijn Chromebook uit en stond de
+  // rest stil. 's Avonds drukte hij op deze knop en waren in één seconde 39
+  // publicaties weg — waaronder alle dertien Lederhosen waar hij de volgende
+  // dag naar zocht. Diezelfde ochtend gebeurde het al een keer: 93 opdrachten.
+  // De knop heette "Cancel" en het venster erachter vroeg of hij "the current
+  // publishing action" wilde afbreken: enkelvoud, terwijl er zesendertig aan
+  // hingen. Wie leest "nothing is running" en daarnaast "Cancel" ziet staan,
+  // denkt dat hij iets vastgelopens opruimt.
+  const knop = document.getElementById('ext-activity-cancel');
+  if (knop) {
+    knop.textContent = nWorking > 0
+      ? 'Stop this one'
+      : `Clear queue (${nQueued})`;
+  }
   bar.style.display = 'flex';
 }
 
@@ -8924,24 +8942,63 @@ function renderActivityBar() {
 // the item is NOT actually published. Cancelling settles the job so the banner clears
 // and the item correctly shows as not-listed.
 async function cancelActiveJobs() {
-  const jobs = [...(_activityState.working || []), ...(_activityState.queued || [])];
-  const ids = [...new Set(jobs.map(j => j.id).filter(Boolean))];
+  const working = _activityState.working || [];
+  const queued = _activityState.queued || [];
+  let ids;
+
+  if (working.length) {
+    // Er draait er echt eentje. Dat is waar deze knop voor bedoeld is: een
+    // vastgelopen tabblad afbreken. De rij eromheen blijft met rust — die is
+    // niet vastgelopen, die is nog niet aan de beurt geweest.
+    const rest = queued.length
+      ? `\n\nThe ${queued.length} still waiting stay in the queue.`
+      : '';
+    if (!confirm(`Stop the publication that is running right now?${rest}\n\n`
+      + 'Use this if it got stuck or picked something wrong. That one item will show as not '
+      + 'listed — you can fix it and publish again, or mark it listed if it did go live. '
+      + 'If the extension tab is still open, close it.')) return;
+    ids = [...new Set(working.map(j => j.id).filter(Boolean))];
+  } else if (queued.length) {
+    // Niets draait er. Dan is dit geen "afbreken" maar "weggooien", en dat moet
+    // er ook staan, mét het aantal.
+    const n = queued.length;
+    if (!confirm(`Remove all ${n} queued publication${n === 1 ? '' : 's'} from the queue?\n\n`
+      + `Nothing gets published: ${n === 1 ? 'it disappears' : 'they disappear'} from the queue and `
+      + `${n === 1 ? 'shows' : 'show'} up as not listed.\n\n`
+      + 'Nothing is wrong with waiting — the queue runs by itself as soon as Chrome is open on '
+      + 'the computer with the Omnivaleur extension. Your items stay in Omnivaleur either way, '
+      + 'so you can always publish them again.')) return;
+    ids = [...new Set(queued.map(j => j.id).filter(Boolean))];
+  } else {
+    renderActivityBar();
+    return;
+  }
   if (!ids.length) { renderActivityBar(); return; }
-  if (!confirm('Cancel the current publishing action?\n\nUse this if it got stuck or picked something wrong. The item will show as not listed — you can fix it and publish again, or mark it listed if it did go live. If the extension tab is still open, close it.')) return;
   const btn = document.getElementById('ext-activity-cancel');
   if (btn) { btn.disabled = true; btn.textContent = 'Cancelling…'; }
   try {
     await Promise.all(ids.map(id =>
       apiFetch(`${API}/api/jobs/${id}/cancel`, { method: 'POST' }).catch(() => {})
     ));
-    _activityState = { working: [], queued: [] };
+    // Alleen weghalen wat we ook echt geannuleerd hebben. Vroeger werd hier de
+    // hele stand leeggemaakt, dus na het stoppen van één lopende opdracht leek
+    // de wachtrij ook verdwenen terwijl die er gewoon nog stond.
+    const weg = new Set(ids);
+    _activityState = {
+      ..._activityState,
+      working: (_activityState.working || []).filter(j => !weg.has(j.id)),
+      queued: (_activityState.queued || []).filter(j => !weg.has(j.id)),
+    };
     renderActivityBar();
     await loadAll();
-    showToast('Cancelled.');
+    showToast(ids.length === 1 ? 'Cancelled.' : `Cancelled ${ids.length}.`);
   } catch (e) {
     alert('Could not cancel: ' + e.message);
   } finally {
-    if (btn) { btn.disabled = false; btn.textContent = 'Cancel'; }
+    // Niet terugzetten op een vaste tekst: renderActivityBar bepaalt wat er nu
+    // nog te annuleren valt en zet het bijschrift daarop.
+    if (btn) btn.disabled = false;
+    renderActivityBar();
   }
 }
 

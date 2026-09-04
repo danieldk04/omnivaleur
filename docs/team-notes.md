@@ -4591,3 +4591,91 @@ zweeg omdat die het veld ook niet vond. Die zoekt nu ook op betekenis.
   vertaalreparatie werkt wél meteen: die zit in de server.
 - De halswijdte op diezelfde advertentie stond op "Overige halswijdtes" terwijl
   het item maat 45 heeft. Niet aangeraakt — apart onderzoek waard.
+
+## 04-09-2026 — Toon (dejuistetoon): "de Lederhosen verschijnen niet op Marktplaats"
+
+Zijn melding via Daniel: *"Wederom aan het plaatsen zoals gisteren komt niet echt
+door op marktplaats, net aantal Lederhosen gedaan zie ze niet verschijnen?"* Met
+een foto van de balk: "36 jobs queued — Calm mode is spacing them out".
+
+Nagemeten op zijn eigen account (96e30080…), niet beredeneerd. De hele dag staat
+in zijn opdrachtenlogboek en dat leest als één sluitend verhaal.
+
+**Publiceren op Marktplaats werkt bij hem gewoon.** Twaalf advertenties zijn er
+vandaag echt bij gekomen, alle twaalf met een advertentienummer, en alle twaalf
+teruggevonden op zijn openbare verkoperslijst (`lrp/api/search`,
+sellerId 17981431, 288 advertenties, gedateerd "Vandaag"). Daar valt niets te
+repareren.
+
+**Maar er zat geen enkele Lederhosen bij, en dat klopt.** Tussen 16:02 en 16:35
+NL zette hij 51 publicaties klaar. Calm mode staat bij hem aan, dus er gaat 3 tot
+8 minuten tussen twee acties: in de 52 minuten dat zijn Chromebook aan bleef zijn
+de eerste elf gelopen (kleden, tafelkleden, kussens). De dertien Lederhosen
+stonden verderop in de rij en waren nog niet aan de beurt.
+
+**Om 16:58 NL viel zijn extensie stil.** Laatste hartslag 14:58:50 UTC, user
+agent CrOS. Daarna geen enkele poll meer. Zonder draaiende Chrome gebeurt er
+niets, dat is een gegeven van het product.
+
+**Om 20:23 NL waren de resterende 39 in één seconde weg.** Allemaal met
+`{"cancelled": "by user"}` en allemaal zonder ooit opgepakt te zijn. Dat is de
+knop naast de wachtrijbalk. Diezelfde ochtend gebeurde het al een keer, om 07:31
+en 07:33, samen 93 opdrachten. De dertien Lederhosen zaten in die 39.
+
+### Wat er stuk was, en gerepareerd is
+
+**1. De knop "Cancel" wiste de hele wachtrij achter een venster dat over één
+advertentie sprak.** De tekst was: *"Cancel the current publishing action? Use
+this if it got stuck… The item will show as not listed."* Enkelvoud, terwijl er
+zesendertig aan hingen. En hij staat pal naast een balk die kan zeggen "nothing
+is running" — wie dat leest denkt dat hij iets vastgelopens opruimt.
+
+De knop zegt nu wat hij gaat doen: **"Stop this one"** zolang er echt iets draait
+(en dan blijft de rij eromheen staan, want die is niet vastgelopen maar nog niet
+aan de beurt), en **"Clear queue (36)"** als er niets loopt. In dat tweede geval
+vraagt het venster met zoveel woorden of hij alle 36 wachtende publicaties wil
+weggooien, zegt erbij dat de rij vanzelf loopt zodra Chrome openstaat, en dat
+zijn artikelen blijven bestaan zodat hij ze opnieuw kan publiceren.
+
+Voor-en-na bewezen met dezelfde proef op beide versies
+(`tests/annuleerknop-wachtrij-test.js`, draait de échte functies uit app.html):
+op de oude versie annuleert één klik bij 1 lopende + 35 wachtende alle 36; op de
+nieuwe alleen die ene. Zeven van de elf controles falen op de oude versie.
+
+**2. De offline-waarschuwing kon hem vandaag onmogelijk bereiken.** Die mail gaat
+uit als de extensie drie uur stil is terwijl er drie uur werk wacht, maar alleen
+tussen 10:00 en 20:00 NL. Zijn laptop ging om 16:58 uit, dus drie uur stilte was
+pas om 19:58 bereikt en toen viel het venster net dicht. Gemeten op zijn echte
+gegevens, uur voor uur: met de grens op 20:00 kwam er die dag op geen enkel
+moment een mail uit; met de grens op 22:00 om 20:00 NL wél, over 39 wachtende
+opdrachten, 23 minuten vóór hij de rij weggooide. Grens staat nu op 22:00.
+
+**3. Massaal annuleren zette de wachtrij meteen weer vol met scans.** Elke
+geannuleerde plaatsing vroeg om een scan erachteraan. Die dubbelcontrole leest en
+schrijft niet in dezelfde stap, dus van de 39 tegelijk glipten er vier
+doorheen: na het legen stonden er vier identieke Marktplaats-scans klaar. Een
+opdracht die nooit is opgepakt heeft ook nooit een tabblad gehad, dus daar valt
+niets op te halen — de scan komt er nu alleen nog achteraan als de extensie er
+echt aan begonnen was.
+
+### Wat NIET gerepareerd is, met zoveel woorden
+
+- **Zijn 39 publicaties komen niet vanzelf terug.** Ze staan als mislukt in zijn
+  overzicht ("Publishing was cancelled — the item is not listed"), geen van de 39
+  heeft een advertentienummer, dus opnieuw publiceren maakt géén dubbele
+  advertentie. Dat is bewust aan hem gelaten: 39 advertenties namens een klant
+  online zetten is niets wat wij ongevraagd doen.
+- **Een uitgezette computer blijft een uitgezette computer.** De permissie
+  `background` (extensie 1.0.288) houdt het profiel in leven als het laatste
+  venster dichtgaat, maar wacht nog op de Web Store. Tegen een Chromebook die in
+  slaap gaat helpt niets.
+- **Waaróm zijn extensie om 16:58 stilviel is niet gemeten.** Hij bediende het
+  dashboard om 20:23 nog wel, dus er stond ergens een browser open. Of dat een
+  ander apparaat was, of dezelfde Chromebook met een uitgeschakelde extensie, is
+  van hier niet te zien.
+- De MOET ZEKER-storing `verkeerde-categorie-toegewezen` staat los hiervan nog
+  open. Zijn "Grand Foulard Groot 264/128 cm" staat onder "sieraden damestassen",
+  wat in datzelfde straatje past.
+
+Geen extensiewijziging, dus geen versiebump. 898 python-tests groen (was 898,
+twee nieuwe erbij), alle JS-proeven groen.

@@ -17,6 +17,52 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ---
 
+## waarschuwing-moet-in-het-venster-passen
+
+*04-09-2026 — Een alarm met een drempel (3 uur stil) én een tijdvenster (10-20 uur) kan elkaar uitsluiten; reken het na op echte gegevens*
+
+De offline-waarschuwing ging pas af na drie uur stilte en alleen tussen 10:00 en
+20:00 NL. Wie om 16:58 zijn laptop dichtklapt is pas om 19:58 drie uur stil, en
+dan is het venster nog twee minuten open. Gemeten op Toons echte gegevens van
+04-09-2026: die hele dag kwam er op geen enkel uur een mail uit. Grens naar 22:00
+en er gaat om 20:00 NL wél een mail over 39 wachtende opdrachten, 23 minuten
+voordat hij de wachtrij weggooide omdat hij dacht dat het vastzat.
+
+**Why:** twee onafhankelijke voorwaarden op tijd lijken allebei redelijk en
+sluiten elkaar in de praktijk uit. Dat zie je niet door ernaar te kijken, alleen
+door het uur voor uur na te rekenen op iemands echte tijdstippen.
+
+**How to apply:** bij elk alarm met zowel een wachtdrempel als een tijdvenster:
+draai de selectie op echte gegevens langs elk uur van de dag, oud én nieuw, en
+kijk of er überhaupt een uur overblijft waarop hij afgaat. Zie ook
+"offline-waarschuwing-per-mail" en "omnivaleur-altijd-bewijzen".
+
+---
+
+## annuleerknop-wist-de-hele-wachtrij
+
+*04-09-2026 — Een knop die "Cancel" heet naast een balk met 36 wachtende opdrachten wist ze alle 36; enkelvoud in de tekst is een val*
+
+Een afbreekknop moet in zijn bijschrift én in zijn bevestigingsvenster het aantal
+noemen dat hij raakt. "Cancel the current publishing action?" naast een balk die
+"36 jobs queued" zegt, leest als "ruim die ene vastgelopen actie op" en wiste er
+zesendertig (Toon, 04-09-2026: 39 publicaties 's avonds, 93 diezelfde ochtend,
+waaronder de dertien Lederhosen waar hij de volgende dag naar zocht).
+
+**Why:** wachtende opdrachten zijn niet vastgelopen, ze zijn nog niet aan de
+beurt. Ze op één hoop gooien met de opdracht die écht hangt, betekent dat de
+oplossing van het ene probleem het andere veroorzaakt: de klant ruimt op en
+concludeert daarna dat publiceren niet werkt. Extra verraderlijk als de balk
+ernaast "nothing is running" zegt.
+
+**How to apply:** splits afbreken van leegmaken. Draait er iets, dan raakt de
+knop alleen dat ("Stop this one") en zeg erbij dat de rest blijft staan. Draait
+er niets, dan heet de knop "Clear queue (N)" en vraagt het venster om precies die
+N, met erbij wat er daarna nog mogelijk is. Zie ook
+"geen-doodlopende-straat-in-de-ui" en "beloofd-tempo-moet-gemeten-tempo-zijn".
+
+---
+
 ## sync-events-blokkeert-verwijderen
 
 *04-09-2026 — sync_events wijst met een sleutel naar listings zonder cascade; een advertentierij met gebeurtenissen is niet te verwijderen*
