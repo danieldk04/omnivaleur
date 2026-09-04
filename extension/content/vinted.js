@@ -1995,7 +1995,7 @@
       const score = ws.filter((w) => telling[w] === 1 && woordenTekst.has(w)).length;
       if (score > besteScore) { besteScore = score; beste = i; }
     });
-    if (beste >= 0) return beste;
+    if (beste >= 0) { bladReden = "woorden"; return beste; }
     // 3. Zegt het artikel niets over model of pasvorm, kies dan het meest
     //    neutrale blad. Zonder deze regel viel de keuze op de éérste optie, en
     //    dat is bij spijkerbroeken "Ripped jeans" — dan staat een gave broek te
