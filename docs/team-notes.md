@@ -4245,3 +4245,8 @@ omnivaleur-taken skill schrijft nu echt in de Tasks-lijst Omnivaleur
 roept de omnivaleur-taken skill aan om de Tasks-lijst Omnivaleur bij te werken.
 Draait alleen als de Claude-desktop-app open staat. Eerste keer 'Run now' zodat
 de tool-toestemmingen (workspacemcp, bash) blijven hangen.
+
+04-09: de ochtendtaak draait onbewaakt. In ~/.claude/settings.json staan
+allow-regels voor de tools die hij gebruikt (workspacemcp Tasks, agenda-connector,
+git, mail_analyse, lees-commando's), zodat er geen toestemmingsvraag komt. Geen
+globale bypass-mode aangezet; iets onverwachts vraagt nog wel.
