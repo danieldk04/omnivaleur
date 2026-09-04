@@ -882,9 +882,20 @@
       const colEl = qs('input[data-testid="color-select-dropdown-input"]');
       const descEl = qs('textarea[data-testid="description--input"]');
       const prijsFout = priceErrorVinted();
+      // DE RODE REGEL ALLEEN HOUDT HET PLAATSEN NIET MEER TEGEN (04-09-2026).
+      //
+      // Hier stond: staat er een prijsmelding, dan stoppen. Dat kostte Daniel
+      // het plaatsen van artikelen waarvan de prijs er gewoon in stond: hij
+      // typte zelf één teken, de melding verdween, en Plaatsen werkte meteen.
+      // Een melding die weggaat van een teken dat de prijs niet verandert, zegt
+      // niets over de prijs. Wat wél telt is wat het formulier zelf vasthoudt.
       // De melding gaat één op één naar het dashboard, en dat is Engels. Half
       // Nederlands, half Engels leest als een storing in plaats van als uitleg.
-      if (prijsFout) gaps.push(`price (${item.price} — Vinted says: ${prijsFout})`);
+      if (!(await prijsIsGeaccepteerd())) {
+        gaps.push(`price (${item.price}${prijsFout ? " — Vinted says: " + prijsFout : ""})`);
+      } else if (prijsFout) {
+        clog(`Vinted toont nog "${prijsFout}", maar het formulier houdt de prijs vast — toch plaatsen`);
+      }
       if (descEl && !(descEl.value || "").trim()) gaps.push("description");
       if (sizeEl && !(sizeEl.value || "").trim()) gaps.push(`size (${item.size || "empty"})`);
       if (colEl && !(colEl.value || "").trim()) {
