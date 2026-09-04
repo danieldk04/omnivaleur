@@ -6536,11 +6536,10 @@ async function _mwSetVintedPrice(selector, values) {
   const want = num(values[0]);
 
   // Vinted zet zijn klacht ("Price must be greater than or equal to 1.0") pas
-  // een halve seconde ná het verlaten van het veld neer, en zet géén
+  // een halve seconde na het verlaten van het veld neer, en zet geen
   // aria-invalid. Wie alleen naar de waarde kijkt, keurt dus een prijs goed die
-  // Vinted een tel later weigert — precies waarom een ingevulde €14,99 tóch niet
-  // gepubliceerd kon worden. Daarom lezen we hier de melding zelf, in dezelfde
-  // wereld als het formulier.
+  // Vinted een tel later weigert. Daarom lezen we hier de melding zelf, in
+  // dezelfde wereld als het formulier.
   const FOUT = /price must|must be greater|greater than or equal|at least|minimaal|moet (groter|ten minste)|ongeldig|invalid/i;
   const klacht = () => {
     const kandidaten = [];
@@ -6553,78 +6552,166 @@ async function _mwSetVintedPrice(selector, values) {
     return kandidaten.some((e) => e && e.offsetParent !== null && FOUT.test((e.textContent || "").trim()));
   };
 
+  // De waarde die het FORMULIER zelf vasthoudt. Dat is de enige harde waarheid:
+  // het zichtbare veld kan een prijs tonen die het formulier nooit heeft
+  // overgenomen, en andersom kan een rode regel blijven staan terwijl het
+  // formulier de prijs allang heeft.
+  const formWaarde = () => {
+    try {
+      for (const k in el) {
+        if (k.startsWith("__reactProps$") && el[k] && el[k].value != null) return num(el[k].value);
+      }
+      for (const k in el) {
+        if (!k.startsWith("__reactFiber$")) continue;
+        let f = el[k];
+        for (let i = 0; i < 8 && f; i++, f = f.return) {
+          if (f.memoizedProps && f.memoizedProps.value != null) return num(f.memoizedProps.value);
+        }
+      }
+    } catch (_) {}
+    return NaN;
+  };
+
+  // HET VELD ECHT VERLATEN.
+  // Gemeten in Chrome (04-09-2026): `dispatchEvent(new Event("blur"))` levert
+  // GEEN focusout op, en React luistert nu juist op focusout. Alles wat wij tot
+  // nu toe deden liet het veld dus gefocust achter en het formulier heeft zijn
+  // controle nooit opnieuw gedraaid: de rode regel bleef staan terwijl de prijs
+  // er gewoon in stond. Een echte el.blur() doet het wel, maar niet in een
+  // venster zonder toetsenbordfocus, en het werk draait ingeklapt op de
+  // achtergrond. Daarom allebei: de echte blur, plus een focusout die bubbelt.
+  const verlaatVeld = () => {
+    try { el.blur(); } catch (_) {}
+    el.dispatchEvent(new FocusEvent("focusout", { bubbles: true }));
+    el.dispatchEvent(new Event("change", { bubbles: true }));
+  };
+
+  const betreedVeld = () => {
+    try { el.focus(); } catch (_) {}
+    el.dispatchEvent(new FocusEvent("focusin", { bubbles: true }));
+  };
+
+  // DE WAARDE ZETTEN ZONDER HET VELD EERST LEEG TE MAKEN.
+  // Hier stond eerst: waarde op "" zetten, een input-gebeurtenis sturen, en dan
+  // pas de prijs. Dat gaf het formulier zwart op wit een LEGE prijs te zien, en
+  // dat is precies de invoer waar "Price must be greater than or equal to 1.0"
+  // op slaat. We maakten de klacht dus zelf. Nu gaat de prijs er in een keer in,
+  // over de oude waarde heen.
+  const zetWaarde = (out) => {
+    betreedVeld();
+    try { el.setSelectionRange(0, String(el.value || "").length); } catch (_) {}
+    try { el._valueTracker && el._valueTracker.setValue(" "); } catch (_) {}
+    setter.call(el, out);
+    el.dispatchEvent(new InputEvent("input", { bubbles: true, inputType: "insertText", data: out }));
+  };
+
+  // DE HANDELING VAN DE VERKOPER ZELF.
+  // Daniel: "als ik dan zelf een 9 typ of iets weghaal, verdwijnt die melding."
+  // Een teken over zichzelf heen typen dus, zonder de prijs te veranderen.
+  // execCommand("insertText") is de enige route uit een script die daarbij een
+  // ECHTE (isTrusted) invoergebeurtenis oplevert, gemeten in Chrome op
+  // 04-09-2026; alles wat we met dispatchEvent sturen is isTrusted=false.
+  const hertyp = async () => {
+    const huidig = String(el.value || "");
+    if (!huidig) return false;
+    const laatsteTeken = huidig.slice(-1);
+    betreedVeld();
+    let gelukt = false;
+    try { el.setSelectionRange(huidig.length - 1, huidig.length); } catch (_) {}
+    try { gelukt = document.execCommand("insertText", false, laatsteTeken); } catch (_) { gelukt = false; }
+    if (!gelukt || String(el.value || "") !== huidig) {
+      try { el.setSelectionRange(huidig.length, huidig.length); } catch (_) {}
+      try { document.execCommand("delete", false, null); } catch (_) {}
+      await sleep(80);
+      try { document.execCommand("insertText", false, laatsteTeken); } catch (_) {}
+    }
+    await sleep(150);
+    verlaatVeld();
+    await sleep(300);
+    return Math.abs((num(el.value) || -1) - want) < 0.01;
+  };
+
   const zet = async (out) => {
     el.scrollIntoView({ block: "center" });
-    el.focus();
-    // Leegmaken mét trackerreset, anders ziet React het legen niet.
-    try { el._valueTracker && el._valueTracker.setValue("x"); } catch (_) {}
-    setter.call(el, "");
-    el.dispatchEvent(new Event("input", { bubbles: true }));
-    await sleep(60);
-    try { el._valueTracker && el._valueTracker.setValue(""); } catch (_) {}
-    setter.call(el, out);
-    el.dispatchEvent(new Event("input", { bubbles: true }));
-    el.dispatchEvent(new Event("change", { bubbles: true }));
+    zetWaarde(out);
     await sleep(200);
-    el.dispatchEvent(new Event("blur", { bubbles: true }));
-    // Even de tijd geven om alsnog te klagen — te vroeg kijken is precies hoe een
-    // afgekeurde prijs er goed uitzag. Maar een klacht telt ALLEEN als de waarde
-    // zelf ook niet klopt: gemeten op het echte formulier blijft die melding soms
-    // staan terwijl het veld en React allebei netjes 9.99 bevatten, en dan zou
-    // afkeuren een prima prijs weggooien.
+    verlaatVeld();
+
+    // Even de tijd geven om alsnog te klagen: te vroeg kijken is precies hoe een
+    // afgekeurde prijs er goed uitzag.
     let klaagt = false;
     for (let i = 0; i < 5; i++) {
       await sleep(200);
       if (klacht()) { klaagt = true; break; }
     }
     const waardeKlopt = Math.abs((num(el.value) || -1) - want) < 0.01;
-    if (!waardeKlopt) return false;
+    if (!waardeKlopt) return null;
 
-    // HIER STOND: `if (klaagt && aria-invalid === "true") return false;` — en dat
+    // Blijft de klacht staan terwijl de prijs er goed in staat? Dan doen we na
+    // wat de verkoper met de hand doet, in plaats van de prijs nog een keer te
+    // zetten. Dat laatste hielp aantoonbaar niet: hij stond er al goed in.
+    if (klaagt) {
+      for (let poging = 0; poging < 2 && klacht(); poging++) await hertyp();
+      klaagt = klacht();
+    }
+
+    // HIER STOND: `if (klaagt && aria-invalid === "true") return false;` en dat
     // sprak zichzelf tegen met de uitleg hierboven, die juist vaststelt dat
-    // Vinted GEEN aria-invalid zet. Gevolg: Vinted klaagde zichtbaar ("Price
-    // must be greater than or equal to 1.0"), wij keurden het toch goed, en het
-    // item ging met een prijs die Vinted weigert het formulier in. Precies het
-    // geval van 26-08-2026: veld toont €4.99, melding staat eronder, wij gaan
-    // vrolijk verder.
+    // Vinted GEEN aria-invalid zet.
     //
-    // Niet meer gokken op meldingen dus. Vinted is een React-formulier en houdt
-    // zijn eigen waarde bij; die lezen we hier rechtstreeks uit. Dat is de enige
-    // harde waarheid — het zichtbare veld kan een waarde tonen die React nooit
-    // heeft geaccepteerd, en dat is exact hoe dit misging.
-    const reactWaarde = () => {
-      try {
-        for (const k in el) {
-          if (k.startsWith("__reactProps$") && el[k] && el[k].value != null) return num(el[k].value);
-        }
-        for (const k in el) {
-          if (!k.startsWith("__reactFiber$")) continue;
-          let f = el[k];
-          for (let i = 0; i < 8 && f; i++, f = f.return) {
-            if (f.memoizedProps && f.memoizedProps.value != null) return num(f.memoizedProps.value);
-          }
-        }
-      } catch (_) {}
-      return NaN;
-    };
-    const intern = reactWaarde();
-    const internKlopt = isFinite(intern) && Math.abs(intern - want) < 0.01;
-
-    // Kunnen we React's waarde lezen, dan beslist die — een blijven hangende
-    // melding mag een aantoonbaar goede prijs niet weggooien.
-    if (isFinite(intern)) return internKlopt;
+    // Niet gokken op meldingen dus. Vinted is een React-formulier en houdt zijn
+    // eigen waarde bij; die lezen we hier rechtstreeks uit. Houdt het formulier
+    // de juiste prijs vast, dan is de prijs in orde, ook als de rode regel blijft
+    // hangen. Een blijven hangende melding mag een aantoonbaar goede prijs niet
+    // weggooien, want dan wordt er helemaal niets geplaatst.
+    const intern = formWaarde();
+    if (isFinite(intern)) {
+      if (Math.abs(intern - want) >= 0.01) return null;
+      return { used: out, value: el.value, form: intern, klacht: klaagt };
+    }
     // Lukt dat niet, dan is een zichtbare klacht het enige signaal dat we
-    // hebben, en dan is afkeuren het veilige antwoord.
-    return !klaagt;
+    // hebben, en dan proberen we eerst de volgende schrijfwijze.
+    return klaagt ? null : { used: out, value: el.value, form: null, klacht: false };
   };
 
   // Alle schrijfwijzen proberen en de eerste houden waar Vinted NIET over klaagt.
   // Welke dat is verschilt per taalinstelling van het account, en dat viel niet
-  // betrouwbaar aan de pagina af te lezen — dus laten we het formulier het zeggen.
+  // betrouwbaar aan de pagina af te lezen, dus laten we het formulier het zeggen.
   for (const out of values) {
-    if (await zet(out)) return { ok: true, used: out, value: el.value };
+    const uit = await zet(out);
+    if (uit) return { ok: true, ...uit };
   }
-  return { ok: false, reason: "rejected", value: el.value };
+  return { ok: false, reason: "rejected", value: el.value, klacht: klacht() };
+}
+
+// Wat houdt het FORMULIER zelf op dit moment als prijs vast? Dit is de vraag
+// waarop de eindcontrole voor het plaatsen afgaat. Alleen naar de rode regel
+// kijken was fout: die bleef staan bij een prijs die er gewoon in stond, en dan
+// werd er helemaal niets geplaatst.
+function _mwLeesVintedPrijs(selector) {
+  const el = document.querySelector(selector);
+  if (!el) return { gevonden: false };
+  const num = (v) => {
+    const n = parseFloat(String(v ?? "").replace(/[^\d.,]/g, "").replace(",", "."));
+    return isFinite(n) ? n : NaN;
+  };
+  let form = NaN;
+  try {
+    for (const k in el) {
+      if (k.startsWith("__reactProps$") && el[k] && el[k].value != null) { form = num(el[k].value); break; }
+    }
+    if (!isFinite(form)) {
+      for (const k in el) {
+        if (!k.startsWith("__reactFiber$")) continue;
+        let f = el[k];
+        for (let i = 0; i < 8 && f; i++, f = f.return) {
+          if (f.memoizedProps && f.memoizedProps.value != null) { form = num(f.memoizedProps.value); break; }
+        }
+        if (isFinite(form)) break;
+      }
+    }
+  } catch (_) {}
+  return { gevonden: true, dom: num(el.value), form: isFinite(form) ? form : null };
 }
 
 async function _mwFillDescription(selector, descText) {
@@ -7113,6 +7200,21 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
         console.log("[Omnivaleur] SET_PRICE_MAIN result:", results?.[0]?.result);
         sendResponse(results?.[0]?.result ?? { ok: false, reason: "no-result" });
       }
+    });
+    return true;
+  }
+
+  // Leest terug welke prijs het formulier zelf vasthoudt. De eindcontrole voor
+  // het plaatsen gaat hierop af in plaats van op de rode regel onder het veld.
+  if (msg.type === "READ_PRICE_MAIN") {
+    chrome.scripting.executeScript({
+      target: { tabId: sender.tab.id },
+      world: "MAIN",
+      func: _mwLeesVintedPrijs,
+      args: [msg.selector],
+    }, (results) => {
+      if (chrome.runtime.lastError) sendResponse(null);
+      else sendResponse(results?.[0]?.result ?? null);
     });
     return true;
   }
