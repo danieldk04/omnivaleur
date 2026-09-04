@@ -4465,3 +4465,37 @@ van een code, en blijft die code voortaan in het logboek staan.
 Ook nog van hem: hij biedt aan te blijven testen in ruil voor gratis gebruik van
 Omnivaleur. Dat is een beslissing voor Daniel, niet voor mij; hier alleen
 vastgelegd zodat het niet in een mailtje blijft hangen.
+
+### Vervolg dezelfde dag: de klikproef op Daniels eigen account
+
+Daniel wilde geen 80% maar zekerheid, dus is de knop echt geklikt, ingelogd als
+dkresellacademy. Beginstand vooraf vastgelegd: 691 advertentierijen, waarvan 13
+mislukt (8 eBay, 3 Facebook, 1 2dehands, 1 Shopify), alle 13 zonder
+advertentienummer.
+
+Uitkomst op zijn scherm: *"Cleared 4. These did not clear: eBay: The server took
+too long to respond (502). Shopify: idem."* Nagemeten in de database: 4 rijen
+echt weg (3 Facebook, 1 2dehands), 9 blijven staan (8 eBay, 1 Shopify), en nul
+rijen geraakt die niet mislukt waren.
+
+Daarmee lag de tweede oorzaak wél op tafel, en die is bewezen in plaats van
+waarschijnlijk:
+
+**`sync_events` blokkeert het verwijderen.** `sync_events.listing_id` wijst met
+een echte sleutel naar `listings(id)` en heeft geen `on delete cascade`. Aan
+precies die 9 vastzittende rijen hingen 21 gebeurtenissen; aan de 4 die wél
+opruimden geen enkele. eBay en Shopify schrijven bij elke poging zo'n regel
+(`_log_event` in crosslist.py), de extensiekanalen niet. Dat is de scheidslijn.
+`backend/api/items.py` ruimde bij het verwijderen van een artikel die
+gebeurtenissen al eerst op; clear-error deed dat niet. Nu wel.
+
+**En waarom de reden onzichtbaar bleef.** Mijn eigen vangnet gaf een 502 met de
+uitleg erin. Cloudflare vervangt een 502 of 503 door zijn eigen HTML-foutpagina,
+dus die uitleg bereikte de browser nooit en werd "de server duurde te lang" bij
+een fout die in een fractie van een seconde optrad. Dat staat al sinds 30-08 als
+waarschuwing in `backend/api/items.py` bij `create_item`, en ik trapte er alsnog
+in. Nu 500, die komt ongewijzigd door.
+
+Openstaand: er staan nog meer 502/503-antwoorden in `shopify.py`, `content.py`,
+`billing.py`, `deps.py` en `listings.py:432`. Die verbergen hun boodschap op
+dezelfde manier. Niet aangeraakt, want buiten deze storing om.

@@ -66,6 +66,15 @@ class _Q:
             self.db.hik = False
             raise httpx.RemoteProtocolError("Server disconnected without sending a response.")
         rijen = self._raak()
+        if self.op == "delete" and self.tabel == "listings":
+            # Zoals de echte database: `sync_events.listing_id` wijst met een
+            # sleutel naar `listings` en heeft geen "on delete cascade". Staat
+            # daar nog een regel, dan weigert Postgres de rij weg te gooien.
+            geraakt = {r["id"] for r in rijen}
+            if [g for g in self.db.tabellen.get("sync_events", [])
+                    if g.get("listing_id") in geraakt]:
+                raise RuntimeError('update or delete on table "listings" violates '
+                                   'foreign key constraint "sync_events_listing_id_fkey"')
         if self.op == "update":
             for r in rijen:
                 r.update(self.velden)
@@ -83,11 +92,13 @@ class _DB:
     def table(self, naam): return _Q(self, naam)
 
 
-def _opzet(monkeypatch, listings, aantal_items=5, echte_herkansing=False):
+def _opzet(monkeypatch, listings, aantal_items=5, echte_herkansing=False,
+           gebeurtenissen=None):
     db = _DB(
         items=[{"id": f"i{i}", "user_id": "u"} for i in range(aantal_items)]
               + [{"id": "vreemd", "user_id": "ander"}],
         listings=listings,
+        sync_events=list(gebeurtenissen or []),
     )
     monkeypatch.setattr(api, "get_db", lambda: db)
     monkeypatch.setattr(api, "fetch_all", lambda maak, *a, **k: maak().execute().data)
@@ -227,8 +238,9 @@ def test_een_vraag_in_plaats_van_negenentwintig(monkeypatch):
     _draai_oud(db2, {"platform": "2dehands"})
     oud_aantal = db2.vragen
 
+    # Nieuw: één opzoekvraag plus de twee opruimstappen (gebeurtenissen, rijen).
     assert oud_aantal >= 29, f"oude weg deed maar {oud_aantal} vragen"
-    assert nieuw_aantal <= 2, f"nieuwe weg doet er {nieuw_aantal}"
+    assert nieuw_aantal <= 4, f"nieuwe weg doet er {nieuw_aantal}"
 
 
 def test_gaat_het_toch_mis_dan_staat_er_wat(monkeypatch):
@@ -242,6 +254,56 @@ def test_gaat_het_toch_mis_dan_staat_er_wat(monkeypatch):
     monkeypatch.setattr(api, "execute_with_retry", altijd_stuk)
     with pytest.raises(api.HTTPException) as e:
         api.clear_listing_errors({"platform": "2dehands"}, user_id="u")
-    assert e.value.status_code == 502
+    assert e.value.status_code == 500, "502/503 wordt door Cloudflare vervangen"
     assert "RuntimeError" in e.value.detail and "database zegt nee" in e.value.detail
     assert "Nothing was removed from 2dehands" in e.value.detail
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# 04-09-2026, tweede ronde — de klikproef op Daniels eigen account
+#
+# Hij klikte op "Clear all 13". Vier gingen weg (3 Facebook, 1 2dehands), negen
+# niet (8 eBay, 1 Shopify), met op zijn scherm "The server took too long to
+# respond (502)". Gemeten: aan precies die negen rijen hingen 21 regels in
+# `sync_events`, aan de vier andere geen enkele. eBay en Shopify schrijven zo'n
+# regel bij elke poging (`_log_event` in crosslist.py), de extensiekanalen niet.
+
+def test_een_rij_met_gebeurtenissen_gaat_ook_weg(monkeypatch):
+    listings = _mislukt(3)
+    gebeurtenissen = [{"id": "g1", "listing_id": listings[0]["id"], "event_type": "error"},
+                      {"id": "g2", "listing_id": listings[0]["id"], "event_type": "error"},
+                      {"id": "g3", "listing_id": listings[2]["id"], "event_type": "error"}]
+    db = _opzet(monkeypatch, listings, gebeurtenissen=gebeurtenissen)
+    uit = api.clear_listing_errors({"platform": "2dehands"}, user_id="u")
+    assert uit["cleared"] == 3 and uit["removed"] == 3
+    assert db.tabellen["listings"] == []
+    assert db.tabellen["sync_events"] == [], "de gebeurtenissen horen mee te verdwijnen"
+
+    # VOOR: dezelfde rijen op de vorige versie -> de database weigert, en de
+    # klant zag daardoor negen rode balken die niet weg te krijgen waren.
+    db2 = _DB(items=[{"id": f"i{i}", "user_id": "u"} for i in range(5)],
+              listings=_mislukt(3),
+              sync_events=[dict(g) for g in gebeurtenissen])
+    with pytest.raises(RuntimeError, match="foreign key"):
+        _draai_oud(db2, {"platform": "2dehands"})
+    assert len(db2.tabellen["listings"]) == 3
+
+
+def test_gebeurtenissen_van_andere_advertenties_blijven(monkeypatch):
+    listings = _mislukt(2)
+    gebeurtenissen = [{"id": "g1", "listing_id": listings[0]["id"], "event_type": "error"},
+                      {"id": "vreemd", "listing_id": "van-iemand-anders", "event_type": "sold"}]
+    db = _opzet(monkeypatch, listings, gebeurtenissen=gebeurtenissen)
+    api.clear_listing_errors({"platform": "2dehands"}, user_id="u")
+    assert [g["id"] for g in db.tabellen["sync_events"]] == ["vreemd"]
+
+
+def test_nooit_een_502_of_503_terug():
+    """Cloudflare vervangt een 502 of 503 door zijn eigen HTML-foutpagina, dus
+    de uitleg die wij meesturen bereikt de browser nooit. Dat is precies wat er
+    bij de proef gebeurde: een fout die in een fractie van een seconde optrad
+    kwam op het scherm als "de server duurde te lang". 500 komt wél door."""
+    bron = (ROOT / "backend/api/listings.py").read_text(encoding="utf-8")
+    stuk = bron.split("def clear_listing_errors(", 1)[1].split("\n@router", 1)[0]
+    assert "status_code=502" not in stuk and "status_code=503" not in stuk
+    assert "status_code=500" in stuk

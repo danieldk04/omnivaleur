@@ -17,6 +17,58 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ---
 
+## sync-events-blokkeert-verwijderen
+
+*04-09-2026 — sync_events wijst met een sleutel naar listings zonder cascade; een advertentierij met gebeurtenissen is niet te verwijderen*
+
+`sync_events.listing_id` verwijst met een echte sleutel naar `listings(id)` en
+heeft GEEN `on delete cascade` (zie `schema.sql`). Staat er nog één gebeurtenis,
+dan weigert Postgres de advertentierij weg te gooien.
+
+Gemeten op 04-09-2026 bij de klikproef op "Clear all 13": 4 rijen gingen weg
+(3 Facebook, 1 2dehands, nul gebeurtenissen), 9 bleven staan (8 eBay, 1 Shopify,
+samen 21 gebeurtenissen). eBay en Shopify schrijven bij elke poging een regel via
+`_log_event` in `backend/services/crosslist.py`; de extensiekanalen doen dat niet.
+Dat is dus de scheidslijn: **API-kanalen hebben gebeurtenissen, extensiekanalen
+niet.**
+
+**Hoe hiermee om te gaan:** verwijder je een `listings`-rij, ruim dan eerst zijn
+`sync_events` op. `backend/api/items.py` deed dat bij het verwijderen van een
+artikel al; `/api/listings/clear-error` deed het niet en liet daardoor negen
+onwisbare rode balken achter. Dit geldt voor elke nieuwe plek die listings
+verwijdert.
+Zie ook "frontend-parse-json-safe" en "schrijfacties-zonder-herkansing".
+
+---
+
+## frontend-parse-json-safe
+
+*04-09-2026 — "Frontend must parse API responses via parseJsonSafe, never blind r.json()"*
+
+In frontend/app.html, never call `.json()` blindly on a fetch response. Use the `parseJsonSafe(r)` helper instead.
+
+**Why:** When a proxy/gateway (Railway) times out or errors, it returns an HTML error page, not JSON. Blind `r.json()` then throws the cryptic `Unexpected token '<', "<!DOCTYPE "... is not valid JSON`, which is what the user saw after a large bulk import. Daniel explicitly asked that this class of error never surface again.
+
+**How to apply:** `parseJsonSafe` reads the body once and, on non-JSON, throws a human-readable message (e.g. 502/503/504 → "server took too long, may still be processing, refresh"). Also prefer bounding long operations into batches server-side so requests can't hit the gateway timeout at all — see the bulk-import loop (backend returns `remaining`, frontend loops batches of 25). Related: "deploy-pipeline".
+
+
+## En andersom: stuur zelf nooit een 502 of 503 (04-09-2026)
+
+Cloudflare vervangt een 502- of 503-antwoord door zijn EIGEN HTML-foutpagina.
+De uitleg die wij in `detail` meesturen bereikt de browser dan nooit, en
+`parseJsonSafe` maakt er terecht "de server duurde te lang" van. Zo werd bij de
+klikproef op "Clear all" een sleutelfout die in een fractie van een seconde
+optrad op het scherm een tijdverloop, en was de echte reden onvindbaar.
+
+`backend/api/items.py` waarschuwde hier al voor bij `create_item`, en ik trapte
+er alsnog in. **500 komt wél ongewijzigd door.** Er staan nog meer 502/503's in
+`backend/api/shopify.py`, `content.py`, `billing.py`, `deps.py` en
+`listings.py:432`; die verbergen hun boodschap dus net zo goed. Nog niet
+aangepakt.
+Zie ook "sync-events-blokkeert-verwijderen".
+
+---
+
 ## schrijfacties-zonder-herkansing
 
 *04-09-2026 — Leesacties worden overal automatisch herkanst, schrijfacties met opzet niet; bij delete en statuswijziging moet dat wel*
@@ -3629,18 +3681,6 @@ The **old deterministic formula** that used to fill this column was renamed to *
 **Why:** Daniel wanted real LLM-quality Dutch, generated centrally in Notion from one base prompt, for all existing and new leads.
 
 **How to apply:** To change wording, edit the AI-autofill prompt (column header "AI Generated Tekst" → Autofill Text). AI autofill can't run on a formula, so the backup column stays formula-only. Notion AI autofill costs credits (~1 AI response per generated row); bulk-filling existing leads via "Run AI Autofill now" spends ~1 per lead. Availability: this workspace has custom AI autofill on Text props (Basic + Custom Agent); the property-type picker only pre-lists Summarise/Translate, so reach custom autofill via Edit property → AI Autofill. See "omnivaleur-brand-never-a-verb".
-
----
-
-## frontend-parse-json-safe
-
-*18-07-2026 — "Frontend must parse API responses via parseJsonSafe, never blind r.json()"*
-
-In frontend/app.html, never call `.json()` blindly on a fetch response. Use the `parseJsonSafe(r)` helper instead.
-
-**Why:** When a proxy/gateway (Railway) times out or errors, it returns an HTML error page, not JSON. Blind `r.json()` then throws the cryptic `Unexpected token '<', "<!DOCTYPE "... is not valid JSON`, which is what the user saw after a large bulk import. Daniel explicitly asked that this class of error never surface again.
-
-**How to apply:** `parseJsonSafe` reads the body once and, on non-JSON, throws a human-readable message (e.g. 502/503/504 → "server took too long, may still be processing, refresh"). Also prefer bounding long operations into batches server-side so requests can't hit the gateway timeout at all — see the bulk-import loop (backend returns `remaining`, frontend loops batches of 25). Related: "deploy-pipeline".
 
 ---
 

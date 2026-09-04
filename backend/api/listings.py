@@ -353,6 +353,16 @@ def clear_listing_errors(body: dict, user_id: str = Depends(get_current_user)):
         # execute_with_retry: Supabase trekt af en toe een hergebruikte
         # verbinding weg. Zonder herkansing is dat hier geen hik maar een
         # mislukte knop, en de klant ziet alleen een foutcode.
+        # Eerst de gebeurtenissen die aan zo'n rij hangen. `sync_events.listing_id`
+        # wijst met een echte sleutel naar `listings` en heeft GEEN "on delete
+        # cascade", dus zolang daar één regel staat weigert de database de rij
+        # weg te gooien. Bij Daniel bleven daardoor precies de acht eBay- en de
+        # ene Shopify-rij staan (samen 21 gebeurtenissen), terwijl Facebook en
+        # 2dehands, die er geen hebben, wél opruimden. `backend/api/items.py`
+        # doet bij het verwijderen van een artikel al hetzelfde.
+        for i in range(0, len(weg), IN_BROK):
+            execute_with_retry(
+                db.table("sync_events").delete().in_("listing_id", weg[i:i + IN_BROK]))
         for i in range(0, len(weg), IN_BROK):
             execute_with_retry(db.table("listings").delete().in_("id", weg[i:i + IN_BROK]))
         for i in range(0, len(houden), IN_BROK):
@@ -367,7 +377,12 @@ def clear_listing_errors(body: dict, user_id: str = Depends(get_current_user)):
         # volgelopen met een andere storing. Wat er misging hoort in het
         # antwoord zelf te staan.
         logger.exception("clear-error mislukte voor %s op %s", user_id, platform)
-        raise HTTPException(status_code=502, detail=(
+        # 500 en NIET 502: Cloudflare vervangt een 502 of 503 door zijn eigen
+        # HTML-foutpagina, en dan komt deze uitleg nooit bij de gebruiker aan.
+        # Precies dát gebeurde bij de proef van 04-09: de echte reden (de sleutel
+        # hierboven) werd op het scherm "de server duurde te lang". Zie de
+        # waarschuwing bij `create_item` in backend/api/items.py.
+        raise HTTPException(status_code=500, detail=(
             f"Could not clear the failed {platform} publishes "
             f"({type(e).__name__}: {str(e)[:200]}). Nothing was removed from "
             f"{platform} itself. Reload the page and try again."))
