@@ -4224,3 +4224,13 @@ Daniel moet nog een Google Cloud OAuth-client (Desktop app) maken en client id +
 secret in .env zetten. Daarna: start.command draaien en
 `claude mcp add --transport http workspacemcp http://localhost:8000/mcp`.
 De skill gebruikt Tasks zodra die tool er is, anders de agenda als terugval.
+
+04-09 workspace-mcp draait: LaunchAgent com.omnivaleur.workspacemcp (KeepAlive,
+start bij inloggen) draait `uvx workspace-mcp` op http://localhost:8000/mcp,
+tool-tier complete. Toegevoegd aan Claude Code als MCP 'workspacemcp' (local
+config, project omnivaleur). OAuth-client (Desktop app) hoort bij
+danieldekoning66@gmail.com, id+secret in de .env naast het startscript.
+Openstaand: (1) Claude-sessie herstarten zodat de workspacemcp-tools laden,
+(2) bij de eerste Tasks-aanroep opent een browser voor Google-toestemming,
+Daniel moet door de 'niet geverifieerde app' klikken. Daarna kan de
+omnivaleur-taken skill echt in Google Tasks lijst Omnivaleur schrijven.
