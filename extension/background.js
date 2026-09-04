@@ -1854,14 +1854,8 @@ async function processJob(job, serverUrl) {
   // (netwerk, endpoint veranderd), dan gaat het gewoon door — een onzekere
   // controle mag geen werk tegenhouden.
   if (job.platform === "vinted" && job.action !== "scan") {
-    const origin = job.payload?._create_origin || "https://www.vinted.com";
-    const ingelogd = await vintedIngelogd(origin);
-    if (ingelogd === false) {
-      await reportError(job.id, serverUrl,
-        `You are not signed in to Vinted (${origin.replace(/^https:\/\/(www\.)?/, "")}). ` +
-        `Nothing was published. Open Vinted in this browser, log in, and publish again.`);
-      return;
-    }
+    const klaar = await vintedOriginKlaarzetten(job);
+    if (!klaar.ok) { await reportError(job.id, serverUrl, klaar.melding); return; }
   }
 
   let url;
@@ -2093,6 +2087,85 @@ function _vintedTitelZonderSku(t) {
   return _vintedTitelSleutel(String(t || "").replace(/^\s*\([^)]{1,24}\)\s*/, ""));
 }
 
+// OP WELK VINTED-DOMEIN IS DEZE VERKOPER INGELOGD? (04-09-2026, gemeten)
+//
+// Een Vinted-account leeft op één landdomein, en cookies reizen niet mee:
+// vinted.nl en vinted.com zijn losse domeinen met losse sessies. Gemeten op
+// 04-09-2026: https://www.vinted.com/api/v2/users/current geeft 401 zonder
+// enige doorverwijzing naar het landdomein. Wie dus op vinted.nl is ingelogd,
+// is voor vinted.com een vreemde.
+//
+// Daar liep de inlogcontrole op stuk. Een eerste plaatsing draagt geen
+// _create_origin — dat zet alleen een herplaatsing, afgeleid uit het oude
+// advertentieadres (backend/services/relist.py) — dus viel de controle terug op
+// vinted.com, kreeg netjes 401 en meldde "je bent niet ingelogd op Vinted" aan
+// iemand die zichtbaar was ingelogd op vinted.nl. Er werd niets geplaatst.
+//
+// Dezelfde aanname zat in het adres van het plaatsformulier zelf: vinted.com
+// /items/new stuurt een uitgelogde bezoeker door naar
+// /member/register/select_type (gemeten: HTTP 200 op dat registratieadres), dus
+// ook zonder de controle viel daar niets in te vullen.
+//
+// Daarom zoeken we het domein op in plaats van het te gokken, en geven we dat
+// door aan de rest van de opdracht.
+const VINTED_ORIGINS = [
+  "https://www.vinted.nl", "https://www.vinted.be", "https://www.vinted.de",
+  "https://www.vinted.fr", "https://www.vinted.com",
+];
+const vintedKaalDomein = (o) => String(o || "").replace(/^https:\/\/(www\.)?/, "");
+
+// Onthouden wat we vonden. Vijf vragen per opdracht is zonde als het antwoord
+// een kwartier lang hetzelfde is; de gevonden waarde wordt hoe dan ook opnieuw
+// nagelopen voordat hij gebruikt wordt.
+let _vintedOriginCache = null;                 // { origin, at }
+const VINTED_ORIGIN_TTL_MS = 15 * 60 * 1000;
+
+// Geeft het origin waar een sessie leeft, `false` als élk domein hardop zegt dat
+// er niemand is ingelogd, en `null` als we het niet konden vaststellen (netwerk,
+// onderhoud). Bij `null` gaat het werk gewoon door: een onzekere controle mag
+// nooit werk tegenhouden.
+async function vintedIngelogdOrigin(voorkeur) {
+  const kandidaten = [];
+  const zet = (o) => { if (o && !kandidaten.includes(o)) kandidaten.push(o); };
+  zet(voorkeur);
+  if (_vintedOriginCache && Date.now() - _vintedOriginCache.at < VINTED_ORIGIN_TTL_MS) {
+    zet(_vintedOriginCache.origin);
+  }
+  for (const o of VINTED_ORIGINS) zet(o);
+
+  let ergensOnzeker = false;
+  for (const origin of kandidaten) {
+    const uitslag = await vintedIngelogd(origin);
+    if (uitslag === true) { _vintedOriginCache = { origin, at: Date.now() }; return origin; }
+    if (uitslag === null) ergensOnzeker = true;
+  }
+  _vintedOriginCache = null;
+  return ergensOnzeker ? null : false;
+}
+
+// Zet de opdracht klaar op het domein waar de verkoper echt is ingelogd, en
+// zeg het alleen dan af als geen enkel domein een sessie kent. Het gevonden
+// origin gaat in _create_origin, want daar leest getMpSyiUrl het uit: zo opent
+// het plaatsformulier op vinted.nl in plaats van op vinted.com.
+async function vintedOriginKlaarzetten(job) {
+  let voorkeur = job.payload && job.payload._create_origin;
+  if (!voorkeur && job.payload && job.payload.platform_listing_url) {
+    try { voorkeur = new URL(job.payload.platform_listing_url).origin; } catch (_) {}
+  }
+  const gevonden = await vintedIngelogdOrigin(voorkeur);
+  if (gevonden === false) {
+    return { ok: false, melding:
+      "You are not signed in to Vinted in this browser, so nothing was published. " +
+      "We checked " + VINTED_ORIGINS.map(vintedKaalDomein).join(", ") + ". " +
+      "Open Vinted, log in there, and publish again." };
+  }
+  if (typeof gevonden === "string") {
+    if (!job.payload) job.payload = {};
+    job.payload._create_origin = gevonden;
+  }
+  return { ok: true, origin: typeof gevonden === "string" ? gevonden : null };
+}
+
 // Ingelogd op Vinted, ja/nee/onbekend. `null` = niet vast te stellen.
 //
 // credentials:"include" is hier geen sierlijkheid maar de kern: we willen exact
@@ -2205,8 +2278,7 @@ async function bgVindVintedAdvertentie(item) {
   const titel = _vintedTitelSleutel(item?.title);
   if (!titel) return null;
   const titelKaal = _vintedTitelZonderSku(item?.title);
-  const origins = [item?._create_origin, "https://www.vinted.nl", "https://www.vinted.be",
-                   "https://www.vinted.com"].filter(Boolean);
+  const origins = [item?._create_origin, ...VINTED_ORIGINS].filter(Boolean);
   for (const origin of [...new Set(origins)]) {
     try {
       const me = await fetch(`${origin}/api/v2/users/current`, {
@@ -5742,8 +5814,7 @@ async function meldVerkochtUitBerichten(serverUrl, headers, platform, sold) {
 // ingelogd. Geeft null als we nergens een geldige sessie vinden — dan blijft de
 // vorige stand staan in plaats van dat er een nul wordt gemeld.
 async function bgVintedInbox() {
-  for (const origin of ["https://www.vinted.nl", "https://www.vinted.be", "https://www.vinted.com",
-                        "https://www.vinted.de", "https://www.vinted.fr"]) {
+  for (const origin of VINTED_ORIGINS) {
     try {
       const me = await fetch(`${origin}/api/v2/users/current`, {
         headers: { Accept: "application/json" }, credentials: "include",

@@ -17,6 +17,32 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ---
 
+## vinted-sessie-per-landdomein
+
+*04-09-2026 — Een Vinted-account leeft op één landdomein; vinted.com weet niets van een sessie op vinted.nl, dus "niet ingelogd" is meestal het verkeerde domein*
+
+Vinted heeft per land een eigen domein (vinted.nl, .be, .de, .fr, .com) en de
+sessiecookie reist niet mee. Gemeten op 04-09-2026:
+`https://www.vinted.com/api/v2/users/current` geeft 401 zonder enige
+doorverwijzing naar het landdomein, ook al is de verkoper op vinted.nl ingelogd.
+`https://www.vinted.com/items/new` stuurt een uitgelogde bezoeker door naar
+`/member/register/select_type` met HTTP 200, dus daar valt niets in te vullen.
+
+**Why:** de extensie viel bij elke eerste plaatsing terug op vinted.com, want
+`_create_origin` wordt alleen gezet bij herplaatsen (backend/services/relist.py).
+De inlogcontrole kreeg daar 401 en meldde "je bent niet ingelogd op Vinted" aan
+iemand die zichtbaar was ingelogd. Er werd niets geplaatst. Dezelfde aanname zou
+de advertentie ook in de verkeerde catalogus hebben gezet.
+
+**How to apply:** nooit een Vinted-domein aannemen. Zoek het op met
+`vintedIngelogdOrigin()` in extension/background.js: die loopt VINTED_ORIGINS af
+met de cookies van de browser, onthoudt het antwoord een kwartier, en zegt alleen
+"niet ingelogd" als élk domein dat hardop zegt. Een netwerkfout geeft `null` en
+laat het werk gewoon door, zoals bij "zekerheid-is-geen-stopplek" en
+"bewijs-moet-onderscheiden".
+
+---
+
 ## geen-doodlopende-straat-in-de-ui
 
 *04-09-2026 — Elk grijs vakje en elke blokkade in het dashboard hoort een klik te zijn die je naar de oplossing brengt*

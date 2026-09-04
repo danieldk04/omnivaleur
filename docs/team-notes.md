@@ -4287,3 +4287,33 @@ is geen nieuwe extensie voor nodig.
 Wat Egberts plaatsen zelf blokkeert is hier níét mee opgelost: 309 van zijn
 foutrijen zeggen "the 2dehands listing form never opened: the page never
 reported back". Dat is de bekende stille tab, en dat staat nog open.
+
+## 04-09-2026 — Vinted meldde "niet ingelogd" bij een ingelogde verkoper
+
+Daniel kreeg bij het publiceren naar Vinted "You are not signed in to Vinted
+(vinted.com). Nothing was published", terwijl hij in dezelfde browser gewoon op
+vinted.nl was ingelogd. Er werd niets geplaatst.
+
+Oorzaak, gemeten: een Vinted-account leeft op één landdomein en de sessiecookie
+reist niet mee. `https://www.vinted.com/api/v2/users/current` geeft 401 zonder
+doorverwijzing naar vinted.nl. De inlogcontrole (toegevoegd 01-09 na de zaak
+Budgetheld) viel terug op vinted.com zodra de opdracht geen `_create_origin`
+droeg, en dat is bij élke eerste plaatsing zo: dat veld wordt alleen gezet bij
+herplaatsen (backend/services/relist.py:650). Dezelfde aanname zat in het adres
+van het plaatsformulier zelf, dus zonder de controle was de advertentie in de
+verkeerde catalogus beland; `vinted.com/items/new` stuurt een uitgelogde
+bezoeker bovendien door naar `/member/register/select_type` (HTTP 200).
+
+Vanaf 1.0.291 zoekt de extensie het domein op in plaats van het te gokken
+(`vintedIngelogdOrigin`, VINTED_ORIGINS: nl, be, de, fr, com), onthoudt het
+antwoord een kwartier, geeft het gevonden domein door aan het plaatsformulier, en
+meldt alleen "niet ingelogd" als élk domein dat hardop zegt. Een netwerkfout of
+onderhoud geeft "onbekend" en houdt het werk niet tegen. Bewezen met
+`tests/vinted-inlogdomein-test.js`, inclusief voor-en-na-proef tegen de vorige
+versie van background.js.
+
+Openstaand: 1.0.291 moet nog naar de Chrome Web Store. 1.0.289 en 1.0.290 staan
+er ook nog niet op, dus tot die upload werkt dit alleen op een handmatig geladen
+kopie. In de database stond op dat moment één foutregel met deze melding (van
+Daniel zelf, 09:24); de 309 openstaande "the listing form never opened" op
+2dehands zijn hier los van en nog niet opgelost.
