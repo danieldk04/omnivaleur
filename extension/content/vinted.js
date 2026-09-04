@@ -937,7 +937,12 @@
       send("JOB_DONE", { platform_listing_id: id, platform_listing_url: `${location.origin}/items/${id}` });
     }
   } catch (e) {
-    send("JOB_ERROR", null, String(e));
+    // Ging het plaatsen mis terwijl Vinted onder het prijsveld nog klaagde? Dan
+    // hoort dat in de melding, anders is niet te zien of de prijs er iets mee te
+    // maken had.
+    const extra = prijsKlachtBijPlaatsen && !/price/i.test(String(e))
+      ? ` (Vinted also showed under the price: ${prijsKlachtBijPlaatsen})` : "";
+    send("JOB_ERROR", null, String(e) + extra);
   }
 
   // Light in-place edit: re-order the photos (a real change Vinted re-indexes on)
