@@ -67,7 +67,10 @@ const CODE = stukUit(BG, "const VINTED_ORIGINS = [",
 (async () => {
   // ── 1. De voor-proef: de oude code zei aantoonbaar "niet ingelogd" ──────
   console.log("Wat de oude versie deed");
-  const OUD = execFileSync("git", ["show", "HEAD:extension/background.js"],
+  // Vaste commit, geen HEAD: de auto-push-hook commit werk in uitvoering onder
+  // "auto: update …", dus HEAD bevat de reparatie al en dan bewijst de
+  // voor-proef niets meer.
+  const OUD = execFileSync("git", ["show", "2db3c64:extension/background.js"],
     { cwd: path.join(__dirname, ".."), encoding: "utf8", maxBuffer: 64 * 1024 * 1024 });
   check("de oude controle viel terug op vinted.com",
     /const origin = job\.payload\?\._create_origin \|\| "https:\/\/www\.vinted\.com";\s*\n\s*const ingelogd = await vintedIngelogd\(origin\);/.test(OUD),
