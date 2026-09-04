@@ -1965,7 +1965,7 @@
     for (const [inTekst, inNaam] of BLAD_VOORKEUR) {
       if (!inTekst.test(tekst)) continue;
       const i = namen.findIndex((n) => inNaam.test(n));
-      if (i >= 0) return i;
+      if (i >= 0) { bladReden = "voorkeur"; return i; }
     }
     // 2. Anders: het blad waarvan de meeste eigen woorden in de tekst staan.
     //    Woorden die in élk blad terugkomen ("shirts" onder Shirts) zeggen
