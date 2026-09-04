@@ -2035,6 +2035,42 @@
     }
     if (!cellen().length) return false;
 
+    // WAT STELT VINTED ZELF VOOR?
+    //
+    // Zodra de kiezer opengaat staan er bovenaan een paar voorstellen die uit de
+    // FOTO'S komen: een bladnaam met daaronder het kruimelpad ernaartoe
+    // ("Chinos", met eronder "Men > Clothing > Trousers"). Wij kennen de tak, die
+    // staat in het dashboard, maar over het blad DAARBINNEN zegt de titel meestal
+    // niets. Dan viel de keuze hieronder altijd op het vangblad, en zo belandde
+    // een doodgewone Uniqlo-broek onder "Other trousers" terwijl Vinted zelf
+    // "Chinos" voorstelde. Op dat moment heeft Vinted de foto's gezien en wij niet.
+    //
+    // De voorstellen verdwijnen zodra je de boom in klikt, dus we lezen ze nu.
+    // Alleen voorstellen die ONDER ons eigen pad liggen tellen mee: Vinted mag het
+    // blad kiezen, nooit de tak. Anders belandt een herenbroek in de damesafdeling
+    // omdat de foto daarop leek.
+    const voorstelPaden = [];
+    const gezienVoorstel = new Set();
+    for (const cel of document.querySelectorAll('[class*="Cell"]')) {
+      if (cel.offsetParent === null) continue;
+      // Een omhulsel met meerdere voorstellen erin zou naam en kruimelpad van
+      // twee verschillende regels aan elkaar knopen. Alleen de regel zelf telt.
+      if (cel.querySelectorAll('[class*="Cell__title"]').length !== 1) continue;
+      const naam = (cel.querySelector('[class*="Cell__title"]')?.textContent || "").trim();
+      const kruimel = (cel.querySelector('[class*="Cell__body"]')?.textContent || "").trim();
+      if (!naam || !/[>›]/.test(kruimel)) continue;
+      const delen = kruimel.split(/[>›]/).map((s) => s.trim()).filter(Boolean);
+      const sleutel = `${delen.join(">")}>${naam}`;
+      if (gezienVoorstel.has(sleutel)) continue;
+      gezienVoorstel.add(sleutel);
+      if (delen.length < pad.length) continue;
+      if (pad.some((stap, i) => delen[i].toLowerCase() !== stap.toLowerCase())) continue;
+      voorstelPaden.push([...delen.slice(pad.length), naam]);
+    }
+    if (voorstelPaden.length) {
+      clog(`Vinted stelt zelf voor: ${voorstelPaden.map((p) => p.join(" > ")).join(", ")}`);
+    }
+
     for (const stap of pad) {
       if (!(await klik(stap))) {
         clog(`Vinted-categorie: stap "${stap}" niet gevonden — terug naar zoeken`);
