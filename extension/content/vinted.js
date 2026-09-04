@@ -2001,6 +2001,7 @@
     //    dat is bij spijkerbroeken "Ripped jeans" — dan staat een gave broek te
     //    koop als kapotte broek. Live nagelopen op vinted.nl.
     const n = namen.findIndex((t) => /^(other|straight|regular|classic|basic)\b/i.test(t));
+    bladReden = "neutraal";
     return n >= 0 ? n : (namen.length ? 0 : null);
   }
 
