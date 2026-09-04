@@ -4407,3 +4407,94 @@ Openstaand:
 - De MOET ZEKER-melding `verkeerde-categorie-toegewezen` (zilverwebsite, Amanda)
   is hiermee NIET opgelost: die gaat over een HTTP 500 en over zilver dat in de
   lijst ontbreekt.
+
+## 04-09-2026 — Marktplaats kreeg de Engelse tekst en de verkeerde staat
+
+Daniel stuurde een schermafdruk van zijn eigen advertentie: **(1357) Lilac
+Profuomo Shirt - Men 45 - New With Tags**, met daaronder **Conditie: Zo goed als
+nieuw**. Twee dingen fout tegelijk, met twee losse oorzaken.
+
+### 1. De titel stond in het Engels
+
+Omnivaleur belooft: je tikt in het Engels in, wij vertalen naar het Nederlands
+voor Marktplaats en 2dehands. Die vertaling zat op élke plek die een
+'create'-opdracht klaarzet apart ingebouwd — publiceren (`_build_dutch`/`_pick`),
+verversen en herplaatsen (`localize_item_for_platform`) — en op één plek niet:
+`herstel_vastgelopen_werk` in `backend/services/relist.py`. Dat is de
+reddingsronde die elke zes uur advertenties oppikt die tussen weghalen en
+terugplaatsen zijn blijven hangen. Die bouwde zijn payload uit de kale
+databaserij, en dat is de Engelse tekst uit het dashboard. Dezelfde regel sloeg
+ook de vaste slottekst van de verkoper over.
+
+Er ging technisch niets mis, dus er kwam ook geen foutmelding: de advertentie
+stond gewoon in het Engels online.
+
+Gerepareerd, en daarnaast een vangnet gelegd zodat "elk pad moet er zelf aan
+denken" niet nóg een keer misgaat:
+
+- elke localisatie zet nu een taalstempel in de payload (`crosslist.TAAL_VELD`);
+- `_zet_taal_goed` in `backend/api/jobs.py` zeeft daarop, op de enige plek waar
+  élke opdracht langskomt: de uitgifte aan de extensie. Wat er zonder stempel
+  langskomt wordt daar alsnog vertaald en teruggeschreven. Dat repareert meteen
+  de opdrachten die nu al in de wachtrij staan.
+- `_met_slot` en het lezen van de slottekst staan niet meer binnen
+  `publish_to_platforms` maar op moduleniveau, zodat een ander pad ze niet meer
+  kán missen.
+
+Vertalen zelf is opgesplitst in `_vertaal` (synchroon, de enige kopie van de
+logica) en `_translate_with_claude` (dezelfde functie in een draad). Zonder die
+splitsing kon de uitgifte — een gewone `def` — er niet bij.
+
+### 2. De staat klopte niet met wat er in Omnivaleur stond
+
+`selectCondition` in `extension/content/shared.js` had per staat een rijtje
+LETTERLIJKE opties en koos het eerste rijtje-woord dat exact in de conditielijst
+van die categorie stond:
+
+    new_with_tags: ["Nieuw met etiket", "Nieuw", "Zo goed als nieuw"]
+
+Marktplaats spelt de "nieuw met kaartje"-optie per categorie anders — "Nieuw met
+prijskaartje" (zie `mp_enrich._onze_conditie`), "Nieuw met etiket", "Nieuw met
+label" (zie `vinted.js`) — en het rijtje kende er precies één van. Paste die niet
+en bood de categorie ook geen kale "Nieuw", dan viel de keuze door naar het derde
+woord: "Zo goed als nieuw". Precies wat er bij Daniel op het scherm stond.
+Onzichtbaar, want `verifyMpGroupFields` controleert of het veld gevuld is, niet
+of er het juiste in staat.
+
+Vanaf 1.0.294 wordt er niet meer geraden hoe Marktplaats het deze week spelt,
+maar gelezen wat er in de lijst staat: elke optie krijgt een trap toegekend op
+grond van de woorden die erin voorkomen (`conditieTrap`), en we nemen de optie
+die het dichtst bij onze eigen staat ligt. Bij gelijke afstand wint de lagere —
+een artikel mooier voorstellen dan het is kost een retour. Begrijpen we geen
+enkele optie, dan blijft het veld leeg en houdt `verifyMpGroupFields` het
+plaatsen tegen met de lijst die er wél staat, in plaats van zomaar de eerste
+optie in te vullen (dat was "pak de eerste", en de eerste is bijna altijd
+"Nieuw").
+
+Bij het meten bleek `conditionSelect` dezelfde valkuil te hebben: die zocht de
+conditielijst op vier letterlijke woorden, dus een categorie met uitsluitend
+samengestelde opties werd helemáál niet gevonden — leeg veld, en de eindcontrole
+zweeg omdat die het veld ook niet vond. Die zoekt nu ook op betekenis.
+
+### Bewijs
+
+- `tests/conditie-marktplaats-test.js` — de echte code uit shared.js tegen zes
+  conditielijsten × vijf staten, twee keer gedraaid: met de huidige versie en met
+  die van commit 4687587. VOOR: 10 van de 30 verkeerd. NA: 0.
+- `tests/test_marktplaats_vertaling.py` — 13 controles, waaronder een
+  voor-en-na-proef die de oude `herstel_vastgelopen_werk` uit git laadt en
+  aantoont dat die de Engelse titel wegschreef.
+
+### Openstaand
+
+- Welke spelling Marktplaats op Kleding | Heren > Overhemden precies gebruikt is
+  van hieruit niet te meten (marktplaats.nl is vanaf de bouwomgeving niet
+  bereikbaar). Dat hoeft ook niet meer: de reparatie leest de lijst in plaats van
+  hem te kennen, en de proef draait alle spellingen die in deze code zijn
+  vastgelegd. Ziet Daniel na 1.0.294 nog een verkeerde staat, dan staat in de
+  extensielog de regel `conditie: "<staat>" -> "<keuze>" (uit: <hele lijst>)` —
+  daarmee is het in één keer na te rekenen.
+- 1.0.289 tot en met 1.0.294 staan geen van alle in de Chrome Web Store. De
+  vertaalreparatie werkt wél meteen: die zit in de server.
+- De halswijdte op diezelfde advertentie stond op "Overige halswijdtes" terwijl
+  het item maat 45 heeft. Niet aangeraakt — apart onderzoek waard.

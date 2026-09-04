@@ -5754,11 +5754,16 @@ function extVersionAchter() {
 }
 
 // ── Add / Edit Item ──────────────────────────────────────────────
+// Marktplaats/2dehands spellen hun conditie-opties per categorie anders ("Nieuw
+// met prijskaartje", "Nieuw met etiket", soms alleen een kale "Nieuw"). De
+// extensie kiest de optie die het dichtst bij deze staat ligt uit wát die
+// categorie aanbiedt, dus dit is de strekking en niet altijd het letterlijke
+// woord. Zie CONDITIE_TRAP_* in extension/content/shared.js.
 const CONDITION_HINTS = {
-  new_with_tags: 'MP/2dehands: New · Vinted: New with tags',
-  new:           'MP/2dehands: New · Vinted: New without tags',
+  new_with_tags: 'MP/2dehands: New, with tag · Vinted: New with tags',
+  new:           'MP/2dehands: New, without tag · Vinted: New without tags',
   good:          'MP/2dehands: Like new · Vinted: Very good',
-  fair:          'MP/2dehands: Good condition · Vinted: Good',
+  fair:          'MP/2dehands: Used · Vinted: Good',
   poor:          'MP/2dehands: Damaged · Vinted: Satisfactory',
 };
 

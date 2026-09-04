@@ -260,6 +260,65 @@ def _zet_kleur_goed(jobs: list) -> int:
             aangepast += 1
     return aangepast
 
+
+def _zet_taal_goed(db, jobs: list) -> int:
+    """De advertentie in de taal van het platform, vlak voordat hij de deur uitgaat.
+
+    WAAROM DIT ER IS (04-09-2026, Daniel). Marktplaats en 2dehands zijn
+    Nederlandstalig; de verkoper tikt zijn advertentie in het Engels in en de
+    publicatiestroom vertaalt hem. Die vertaling zat op drie plekken los
+    ingebouwd (publiceren, verversen, herplaatsen) en op een vierde plek niet:
+    de reddingsronde zette een 'create' klaar met de kale databaserij erin. Wat
+    daar doorheen glipte kwam gewoon in het Engels op Marktplaats te staan —
+    "(1357) Lilac Profuomo Shirt - Men 45 - New With Tags" — zonder foutmelding,
+    want er ging technisch niets mis.
+
+    De reddingsronde is gerepareerd, maar dat lost alleen het pad op dat we
+    kennen. Dit is de laatste zeef, op de enige plek waar élke opdracht
+    langskomt: hier gaat er precies één opdracht naar de extensie, en pas hier is
+    zeker dat hij ook echt gebruikt wordt. Zie ook _zet_kleur_goed hierboven,
+    dat op dezelfde plek en om dezelfde reden staat.
+
+    Herkennen doen we aan TAAL_VELD, dat elke localisatie in de payload zet.
+    Ontbreekt het (of staat er een andere taal in), dan vertalen we alsnog en
+    schrijven we het resultaat terug in de opdracht — anders zou dezelfde
+    opdracht bij elke poll opnieuw vertaald worden.
+
+    Alleen de Nederlandstalige kanalen. Op Vinted en Shopify gaat de tekst uit
+    zoals de verkoper hem zelf schreef, en die hoort hier niet alsnog door een
+    vertaling heen te gaan.
+    """
+    try:
+        from backend.services.crosslist import (TAAL_VELD, localiseer_sync,
+                                                taal_van_platform)
+    except Exception as e:  # noqa: BLE001 — het uitdelen gaat hoe dan ook door
+        logger.warning("taalzeef niet beschikbaar: %s", e)
+        return 0
+
+    aangepast = 0
+    for j in jobs or []:
+        if j.get("action") != "create" or not isinstance(j.get("payload"), dict):
+            continue
+        try:
+            platform = j.get("platform")
+            if taal_van_platform(platform) != "nl":
+                continue
+            payload = j["payload"]
+            if payload.get(TAAL_VELD) == "nl":
+                continue
+            nieuw = localiseer_sync(payload, platform)
+            if nieuw.get("title") != payload.get("title"):
+                logger.info("job %s: titel alsnog vertaald voor %s (%r -> %r)",
+                            j.get("id"), platform,
+                            str(payload.get("title"))[:60], str(nieuw.get("title"))[:60])
+                aangepast += 1
+            j["payload"] = nieuw
+            db.table("jobs").update({"payload": nieuw}).eq("id", j["id"]).execute()
+        except Exception as e:  # noqa: BLE001 — liever de oude tekst dan geen advertentie
+            logger.warning("job %s: taal niet kunnen goedzetten: %s", j.get("id"), e)
+    return aangepast
+
+
 # ── Wie is er als eerste aan de beurt? ────────────────────────────────────────
 #
 # WAAROM DIT ER IS (03-09-2026, Toon / De Juiste Toon). Om 02:33 zette de
@@ -690,7 +749,15 @@ def get_pending_jobs(request: Request, platform: str = None, user_id: str = Depe
         ready.sort(key=lambda j: 0 if j.get("action") in SCHRIJVEND else 1)
 
     # Extension: exactly one job at a time. Dashboard: the whole queue, to count.
-    return ready[:1] if is_extension_dispatch else ready
+    if not is_extension_dispatch:
+        return ready
+    uit = ready[:1]
+    # Pas hier, en niet een regel eerder: vertalen kost een gesprek met een
+    # dienst buiten de deur. Het dashboard telt alleen en krijgt niets vertaald,
+    # en van de wachtrij gaat er precies één opdracht doorheen — die ene die de
+    # extensie nu ook echt gaat uitvoeren.
+    _zet_taal_goed(db, uit)
+    return uit
 
 
 # ── Welke extensieversie staat er in de Chrome Web Store? ────────────────────

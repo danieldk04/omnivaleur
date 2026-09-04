@@ -24,13 +24,11 @@ from backend.services.instellingen import SLOTTEKST_MAX, STANDAARD, _schoon  # n
 SLOT = "23-10-013\n\nGRATIS verzonden.\n\nKijkt u ook eens bij onze andere advertenties."
 
 
-def _met_slot(tekst: str, slot: str) -> str:
-    """Dezelfde regel als in crosslist.publish_to_platforms, los te toetsen."""
-    bron = (ROOT / "backend/services/crosslist.py").read_text(encoding="utf-8")
-    blok = bron.split("def _met_slot(tekst: str) -> str:")[1].split("\n\n    def _pick")[0]
-    ruimte = {"_slot": slot}
-    exec("def _met_slot(tekst: str) -> str:" + blok, ruimte)   # noqa: S102 — eigen broncode
-    return ruimte["_met_slot"](tekst)
+# De echte functie, niet een kopie ervan. Hij stond als hulpfunctie binnen
+# publish_to_platforms en werd hier uit de broncode geknipt en uitgevoerd; sinds
+# hij op moduleniveau staat (zodat ook de reddingsronde in relist.py hem
+# gebruikt) kan de proef hem gewoon aanroepen.
+from backend.services.crosslist import _met_slot  # noqa: E402
 
 
 def test_de_slottekst_komt_onder_de_omschrijving():

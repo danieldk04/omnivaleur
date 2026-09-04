@@ -877,16 +877,84 @@ window.CL = (() => {
   // Marktplaats en 2dehands draaien hetzelfde plaatsingsformulier, dus dezelfde
   // veldnamen. Een veld dat op deze categorie niet bestaat levert null op en
   // wordt overgeslagen: er wordt nooit iets gemeld wat het item zelf niet heeft.
-  // Elke 2dehands/Marktplaats-categorie heeft zijn eigen conditielijst: kleding
-  // kent "Gedragen", kinderkleding alleen "Gebruikt". Eén vaste waarde vindt dus
-  // in de helft van de categorieën niets. We proberen ze op volgorde van
-  // nauwkeurigheid en pakken de eerste die daadwerkelijk bestaat.
+
+  // ── DE STAAT VAN HET ARTIKEL ──────────────────────────────────────────────
+  //
+  // WAAROM DIT GEEN LIJSTJE MET VASTE WOORDEN MEER IS (04-09-2026, Daniel).
+  //
+  // Hier stond per staat een rijtje letterlijke opties, en gekozen werd het
+  // eerste rijtje-woord dat LETTERLIJK in de keuzelijst van de categorie stond.
+  // Marktplaats spelt de "nieuw met kaartje"-optie echter per categorie anders
+  // — "Nieuw met prijskaartje", "Nieuw met etiket", "Nieuw met label" — en het
+  // rijtje kende er precies één van. Paste die niet, en bood de categorie ook
+  // geen kale "Nieuw", dan viel de keuze door naar het laatste woord in het
+  // rijtje: "Zo goed als nieuw".
+  //
+  // Dat is geen leeg veld maar een verkeerd gevuld veld, en dat is erger. Het
+  // overhemd dat in het dashboard op "New with tags" stond kwam op
+  // marktplaats.nl online als "Conditie: Zo goed als nieuw" — een uitspraak over
+  // de goederen die de verkoper nooit heeft gedaan. Niemand zag het: de
+  // eindcontrole (verifyMpGroupFields) kijkt of het veld gevuld is, niet of er
+  // het juiste in staat. Dezelfde doorval zette omgekeerd "Gedragen" op "Zo goed
+  // als nieuw" zodra "Gedragen" niet bestond — en dan belooft de advertentie
+  // meer dan het artikel is.
+  //
+  // Dus niet meer raden hoe Marktplaats het deze week spelt, maar lezen wat er
+  // in de lijst staat: elke optie krijgt een trap toegekend op grond van de
+  // woorden die erin voorkomen, en we nemen de optie die het dichtst bij onze
+  // eigen staat ligt. Staat er op dezelfde afstand een optie boven én onder ons,
+  // dan wint de lagere: een artikel minder mooi voorstellen dan het is kost
+  // hooguit een bod, mooier voorstellen kost een retour. Dat is uitdrukkelijk
+  // alleen de gelijkspelregel — de dichtstbijzijnde trap wint altijd, ook als
+  // die erboven ligt. Een gedragen artikel in een lijst die alleen "Nieuw",
+  // "Zo goed als nieuw" en "Beschadigd" kent hoort bij "Zo goed als nieuw":
+  // "Beschadigd" is niet bescheiden maar onwaar.
+  //
+  // Hoger = nieuwer. De getallen zijn alleen onderling van belang.
+  const CONDITIE_TRAP_NIEUW_MET   = 7;   // Nieuw met prijskaartje / etiket / label / in doos
+  const CONDITIE_TRAP_NIEUW       = 6;   // kale "Nieuw"
+  const CONDITIE_TRAP_NIEUW_ZONDER = 5;  // Nieuw zonder prijskaartje / niet in verpakking
+  const CONDITIE_TRAP_ZGAN        = 4;   // Zo goed als nieuw
+  const CONDITIE_TRAP_GEBRUIKT    = 3;   // Gebruikt / Gedragen / In goede staat
+  const CONDITIE_TRAP_MATIG       = 2;   // In redelijke staat / Matig
+  const CONDITIE_TRAP_STUK        = 1;   // Beschadigd / Defect
+
+  // Welke trap hoort bij een optie zoals hij in de lijst staat? Volgorde telt:
+  // "Zo goed als nieuw" bevat het woord "nieuw", en "Nieuw, niet in verpakking"
+  // bevat "in verpakking". De specifiekere regel gaat dus eerst.
+  function conditieTrap(tekst) {
+    const t = ` ${String(tekst || "").toLowerCase().replace(/[^a-z]+/g, " ").trim()} `;
+    if (!t.trim()) return null;
+    if (/\b(beschadig|defect|kapot|onderdelen|reparatie|sloop)/.test(t)) return CONDITIE_TRAP_STUK;
+    if (/\b(zo goed als nieuw|als nieuw|nieuwstaat|zgan|z g a n)\b/.test(t)) return CONDITIE_TRAP_ZGAN;
+    if (/\b(matig|redelijk)/.test(t)) return CONDITIE_TRAP_MATIG;
+    if (/\b(gebruikt|gedragen|refurbish|tweedehands|goede staat|nette staat|gebruikssporen)/.test(t)) return CONDITIE_TRAP_GEBRUIKT;
+    if (!/\bnieuw\b/.test(t)) return null;
+    if (/\b(zonder|niet in|geen)\b/.test(t)) return CONDITIE_TRAP_NIEUW_ZONDER;
+    if (/\b(met|in verpakking|in doos|ongeopend|sealed|ongebruikt)\b/.test(t)) return CONDITIE_TRAP_NIEUW_MET;
+    return CONDITIE_TRAP_NIEUW;
+  }
+
+  // Onze eigen staat (zoals hij in het dashboard staat) op diezelfde ladder.
+  const CONDITIE_DOEL = {
+    new_with_tags: CONDITIE_TRAP_NIEUW_MET,
+    new:           CONDITIE_TRAP_NIEUW,
+    good:          CONDITIE_TRAP_ZGAN,
+    fair:          CONDITIE_TRAP_GEBRUIKT,
+    poor:          CONDITIE_TRAP_STUK,
+  };
+
+  // Voor een keuzelijst die GEEN echte <select> is (een React-kiezer): dan valt
+  // er niets af te lezen en moeten we blind een woord aanbieden. Op volgorde van
+  // voorkeur, en met de spellingen die Marktplaats in de praktijk gebruikt.
   const CONDITION_CANDIDATES = {
-    new_with_tags: ["Nieuw met etiket", "Nieuw", "Zo goed als nieuw"],
-    new:           ["Nieuw", "Nieuw met etiket", "Zo goed als nieuw"],
+    new_with_tags: ["Nieuw met prijskaartje", "Nieuw met kaartje", "Nieuw met etiket",
+                    "Nieuw met label", "Nieuw", "Zo goed als nieuw"],
+    new:           ["Nieuw", "Nieuw zonder prijskaartje", "Nieuw zonder kaartje",
+                    "Nieuw zonder etiket", "Nieuw zonder label", "Zo goed als nieuw"],
     good:          ["Zo goed als nieuw", "Gebruikt", "Gedragen"],
-    fair:          ["Gedragen", "Gebruikt", "Zo goed als nieuw"],
-    poor:          ["Beschadigd", "Gebruikt", "Gedragen"],
+    fair:          ["Gedragen", "Gebruikt", "Beschadigd"],
+    poor:          ["Beschadigd", "Defect", "Gebruikt", "Gedragen"],
   };
 
   // Veldnamen verschillen per categorie (condition, clothingCondition,
@@ -907,7 +975,21 @@ window.CL = (() => {
   function conditionSelect() {
     const byLabel = findFieldByLabel("Conditie");
     if (byLabel?.tagName === "SELECT") return byLabel;
-    return selectByOptions(["nieuw", "zo goed als nieuw", "gebruikt", "gedragen"]);
+    const opWoord = selectByOptions(["nieuw", "zo goed als nieuw", "gebruikt", "gedragen"]);
+    if (opWoord) return opWoord;
+    // DEZELFDE VALKUIL ALS BIJ HET KIEZEN (04-09-2026). selectByOptions zoekt de
+    // lijst op vier LETTERLIJKE woorden. Een categorie die uitsluitend
+    // samengestelde opties aanbiedt — "Nieuw met prijskaartje", "Nieuw zonder
+    // prijskaartje", "Gebruikt met gebruikssporen" — heeft geen van die vier
+    // woorden kaal staan, en dan werd de conditielijst helemáál niet gevonden:
+    // veld leeg, en verifyMpGroupFields zwijgt erover omdat het het veld ook
+    // niet vindt. Dus zoeken we ook op betekenis: een keuzelijst waarvan drie of
+    // meer opties een staat beschrijven, ís de conditielijst. Drie en niet twee,
+    // zodat een "Type"-lijst met bijvoorbeeld "Defecte bandrecorder" erin nooit
+    // per ongeluk wordt aangezien voor een conditielijst.
+    return attrSelects().find((el) =>
+      [...el.options].filter((o) => o.value !== "" && !o.disabled)
+        .filter((o) => conditieTrap(o.text) !== null).length >= 3) || null;
   }
 
   function intendedForSelect() {
@@ -937,18 +1019,45 @@ window.CL = (() => {
     } catch (e) { /* logging mag nooit het plaatsen breken */ }
   }
 
+  // Welke van de aangeboden opties past het best bij `condition`? Zie de
+  // toelichting bij CONDITIE_TRAP_* hierboven.
+  function kiesConditieOptie(opties, condition) {
+    const doel = CONDITIE_DOEL[condition] || CONDITIE_DOEL.good;
+    let beste = null, besteKosten = Infinity;
+    for (const optie of opties) {
+      const trap = conditieTrap(optie);
+      if (trap === null) continue;
+      // Even ver weg naar boven of naar beneden? Dan wint beneden. De halve punt
+      // doet niets anders dan die voorkeur uitdrukken.
+      const kosten = Math.abs(trap - doel) + (trap > doel ? 0.5 : 0);
+      if (kosten < besteKosten) { beste = optie; besteKosten = kosten; }
+    }
+    return beste;
+  }
+
   async function selectCondition(condition) {
-    const list = CONDITION_CANDIDATES[condition] || CONDITION_CANDIDATES.good;
     const el = conditionSelect();
     if (el) {
-      const texts = [...el.options].map((o) => o.text.trim().toLowerCase());
-      const hit = list.find((c) => texts.includes(c.toLowerCase()));
-      if (hit) return fillNativeSelect(el, hit);
-      // Onbekende lijst: pak gewoon de eerste echte optie, beter dan leeg laten.
-      const first = [...el.options].find((o) => o.value !== "" && !o.disabled);
-      return first ? fillNativeSelect(el, first.text) : false;
+      const opties = [...el.options]
+        .filter((o) => o.value !== "" && !o.disabled)
+        .map((o) => o.text.trim())
+        .filter(Boolean);
+      const keuze = kiesConditieOptie(opties, condition);
+      if (keuze) {
+        clog(`conditie: "${condition}" -> "${keuze}" (uit: ${opties.join(" | ")})`);
+        return fillNativeSelect(el, keuze);
+      }
+      // NIETS DAT WE BEGRIJPEN. Hier stond "pak dan maar de eerste optie" — en
+      // de eerste optie op een conditielijst is bijna altijd "Nieuw". Dat is
+      // geen terugval maar een bewering over de goederen die niemand heeft
+      // gedaan. Liever leeg laten: verifyMpGroupFields houdt het plaatsen dan
+      // tegen en noemt de verkoper de opties die er wél staan.
+      clog(`conditie: geen enkele optie te plaatsen bij "${condition}" (uit: ${opties.join(" | ")})`);
+      return false;
     }
-    for (const c of list) {
+    // Geen echte <select> maar een React-kiezer: dan valt er niets af te lezen
+    // en bieden we op volgorde van voorkeur een woord aan.
+    for (const c of (CONDITION_CANDIDATES[condition] || CONDITION_CANDIDATES.good)) {
       if (await selectDropdown("Conditie", c)) return true;
     }
     return false;
@@ -1114,8 +1223,17 @@ window.CL = (() => {
     };
     if (item.size) nietGeplaatst("Maat", item.size, "size");
     if (item.color) nietGeplaatst("Kleur", dutchColor(item.color), "colour");
+    // Ook hier de reden erbij, net als bij maat en kleur: een lege conditie is
+    // vrijwel altijd "geen van deze opties leek op wat het item zegt te zijn",
+    // en dan helpt de lijst die er wél staat meer dan het woord "condition".
     const condEl = conditionSelect();
-    if (condEl && !condEl.value) missing.push("condition");
+    if (condEl && !condEl.value) {
+      missing.push("condition");
+      const opties = lijstOpties(condEl);
+      uitleg.push(opties.length
+        ? `"${item.condition || "(geen staat ingevuld)"}" past op geen van de opties bij condition — die biedt: ${opties.join(", ")}`
+        : "condition kon niet worden ingevuld");
+    }
     const intendedEl = intendedForSelect();
     if (intendedEl && !intendedEl.value) missing.push("intended for");
     const bf = brandField();

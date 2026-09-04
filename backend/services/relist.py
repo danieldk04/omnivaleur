@@ -170,13 +170,34 @@ async def herstel_vastgelopen_werk() -> dict:
                     .single().execute())).data)
             if not item:
                 continue
+            # DEZELFDE ADVERTENTIE ALS DE OORSPRONKELIJKE, DUS OOK IN DEZELFDE
+            # TAAL EN MET DEZELFDE SLOTTEKST (04-09-2026, Daniel).
+            #
+            # Hier stond de kale databaserij. Op Marktplaats en 2dehands is dat de
+            # Engelse tekst die de verkoper in het dashboard intikt — de vertaling
+            # naar het Nederlands gebeurt pas in de publicatiestroom. Een
+            # advertentie die door deze ronde werd teruggezet kwam dus in het
+            # Engels online, met de titel en de omschrijving van het dashboard, en
+            # zonder de vaste slottekst van de verkoper. Aangetroffen: "(1357)
+            # Lilac Profuomo Shirt - Men 45 - New With Tags" op marktplaats.nl.
+            #
+            # publish_to_platforms en refresh_listing deden dit allang goed; dit
+            # was het enige pad dat een 'create' klaarzette zonder erlangs te
+            # gaan. Zie ook _zet_taal_goed in backend/api/jobs.py: dat is het
+            # vangnet voor het geval er ooit nog zo'n pad bijkomt.
+            from backend.services.crosslist import (localize_item_for_platform,
+                                                    slottekst_van, _met_slot)
+            gelokaliseerd = await localize_item_for_platform(item, rij["platform"])
+            gelokaliseerd = {**gelokaliseerd,
+                             "description": _met_slot(gelokaliseerd.get("description") or "",
+                                                      slottekst_van(item["user_id"]))}
             (await naast_de_lus(lambda: db.table("jobs").insert({
                 "user_id": item["user_id"],
                 "item_id": rij["item_id"],
                 "platform": rij["platform"],
                 "action": "create",
                 "status": "pending",
-                "payload": _met_fabrikant(item, rij["platform"], item["user_id"]),
+                "payload": _met_fabrikant(gelokaliseerd, rij["platform"], item["user_id"]),
             }).execute()))
             hersteld += 1
         except Exception as e:  # noqa: BLE001

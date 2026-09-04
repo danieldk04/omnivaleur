@@ -108,8 +108,17 @@ def _claude_client():
     return _CLAUDE_CLIENT
 
 
-async def _translate_with_claude(text: str, target_lang: str, brand: str | None = None) -> str:
-    """Translate text using Claude. Preserves brand names, formatting and paragraph structure."""
+def _vertaal(text: str, target_lang: str, brand: str | None = None) -> str:
+    """Translate text using Claude. Preserves brand names, formatting and paragraph structure.
+
+    Synchroon met opzet. Het vertalen zelf is één netwerkgesprek met een
+    synchrone client, en het wordt vanaf twee kanten aangeroepen: de
+    publicatiestroom (async, zie _translate_with_claude hieronder, die hem in een
+    draad zet zodat vier vertalingen echt naast elkaar lopen) en de uitgifte van
+    werk aan de extensie (backend/api/jobs.py, een gewone def). Eén keer
+    opschrijven, twee kanten bediend — anders drijft de ene kopie weg van de
+    andere en vertaalt het ene pad net iets anders dan het andere.
+    """
     if not text or not text.strip():
         return text
     try:
@@ -154,14 +163,7 @@ async def _translate_with_claude(text: str, target_lang: str, brand: str | None 
             " Return only the translated text, nothing else.\n\n"
             f"<text>{marked_text}</text>"
         )
-        # De Anthropic-client is synchroon. Zonder to_thread stond dit `await`-loze
-        # netwerkgesprek middenin een async-functie, waardoor de vier vertalingen
-        # (titel+tekst, Engels+Nederlands) NIET naast elkaar liepen maar netjes op
-        # elkaar wachtten — en de rest van de server ondertussen ook stilstond.
-        # Met to_thread vertalen ze echt tegelijk: de wachttijd is die van één
-        # vertaling in plaats van de som van vier.
-        response = await asyncio.to_thread(
-            _client.messages.create,
+        response = _client.messages.create(
             model="claude-haiku-4-5-20251001",
             max_tokens=1024,
             messages=[{"role": "user", "content": prompt}],
@@ -198,12 +200,70 @@ async def _translate_with_claude(text: str, target_lang: str, brand: str | None 
         return text
 
 
+async def _translate_with_claude(text: str, target_lang: str, brand: str | None = None) -> str:
+    """`_vertaal` in een draad, zodat vier vertalingen echt naast elkaar lopen.
+
+    De Anthropic-client is synchroon. Zonder to_thread stond dit `await`-loze
+    netwerkgesprek middenin een async-functie, waardoor de vier vertalingen
+    (titel+tekst, Engels+Nederlands) NIET naast elkaar liepen maar netjes op
+    elkaar wachtten — en de rest van de server ondertussen ook stilstond. Met
+    to_thread vertalen ze echt tegelijk: de wachttijd is die van één vertaling in
+    plaats van de som van vier.
+    """
+    return await asyncio.to_thread(_vertaal, text, target_lang, brand)
+
+
 async def _translate_to_english(text: str, brand: str | None = None) -> str:
     return await _translate_with_claude(text, "en", brand)
 
 
 async def _translate_to_dutch(text: str, brand: str | None = None) -> str:
     return await _translate_with_claude(text, "nl", brand)
+
+
+# IN WELKE TAAL STAAT DEZE OPDRACHT AL?
+#
+# Aan een opdracht in de wachtrij was niet te zien of de titel en de omschrijving
+# de vertaling al hadden gehad. Elk pad dat zelf een payload in elkaar zette
+# moest er dus zelf aan denken — en één pad deed dat niet (de reddingsronde in
+# services/relist.py). Gevolg: een Marktplaats-advertentie in het Engels, precies
+# wat de vertaling had moeten voorkomen, zonder dat er ergens iets rood werd.
+#
+# Vanaf nu zet elke localisatie dit veld in de payload. Wie een opdracht uitdeelt
+# kan daaraan zien of hij nog vertaald moet worden (zie _zet_taal_goed in
+# backend/api/jobs.py). Het is een onderstreept veld, net als _refresh_rollback
+# en _price_update: de extensie kijkt er niet naar en struikelt er niet over.
+TAAL_VELD = "_taal"
+
+_PLATFORM_TAAL = {
+    **{p: "nl" for p in _DUTCH_PLATFORMS},
+    **{p: "en" for p in _ENGLISH_PLATFORMS},
+}
+
+
+def taal_van_platform(platform: str) -> str | None:
+    """De taal waarin dit platform zijn advertenties verwacht, of None."""
+    return _PLATFORM_TAAL.get(platform)
+
+
+def localiseer_sync(item: dict, platform: str) -> dict:
+    """`localize_item_for_platform` zonder event-lus.
+
+    Het uitdelen van werk aan de extensie (backend/api/jobs.py) is een gewone
+    def en kan dus niet awaiten. Titel en omschrijving gaan hier achter elkaar in
+    plaats van naast elkaar: het gaat om hooguit één opdracht per keer, en die
+    twee vertalingen samen duren nog altijd korter dan de klik waar de verkoper
+    op wacht.
+    """
+    taal = taal_van_platform(platform)
+    if not taal:
+        return item
+    brand = item.get("brand") or None
+    # Shopify-only override — Vinted/eBay keep the item's own translated title.
+    manual_title = (item.get("shopify_title") or "").strip() if platform == "shopify" else ""
+    title = manual_title or _vertaal(item.get("title", ""), taal, brand)
+    desc = _vertaal(item.get("description", ""), taal, brand)
+    return {**item, "title": title, "description": desc, TAAL_VELD: taal}
 
 
 async def localize_item_for_platform(item: dict, platform: str) -> dict:
@@ -218,26 +278,21 @@ async def localize_item_for_platform(item: dict, platform: str) -> dict:
 
     Non-localized platforms (and translation failures) return the item unchanged.
     """
-    brand = item.get("brand") or None
-    if platform in _DUTCH_PLATFORMS:
-        title, desc = await asyncio.gather(
-            _translate_to_dutch(item.get("title", ""), brand),
-            _translate_to_dutch(item.get("description", ""), brand),
-        )
-    elif platform in _ENGLISH_PLATFORMS:
-        # Shopify-only override — Vinted/eBay keep the item's own translated title.
-        manual_title = (item.get("shopify_title") or "").strip() if platform == "shopify" else ""
-        if manual_title:
-            title = manual_title
-            desc = await _translate_to_english(item.get("description", ""), brand)
-        else:
-            title, desc = await asyncio.gather(
-                _translate_to_english(item.get("title", ""), brand),
-                _translate_to_english(item.get("description", ""), brand),
-            )
-    else:
+    taal = taal_van_platform(platform)
+    if not taal:
         return item
-    return {**item, "title": title, "description": desc}
+    brand = item.get("brand") or None
+    # Shopify-only override — Vinted/eBay keep the item's own translated title.
+    manual_title = (item.get("shopify_title") or "").strip() if platform == "shopify" else ""
+    if manual_title:
+        title = manual_title
+        desc = await _translate_with_claude(item.get("description", ""), taal, brand)
+    else:
+        title, desc = await asyncio.gather(
+            _translate_with_claude(item.get("title", ""), taal, brand),
+            _translate_with_claude(item.get("description", ""), taal, brand),
+        )
+    return {**item, "title": title, "description": desc, TAAL_VELD: taal}
 
 
 # Platforms handled by the Chrome extension (form automation in real browser)
@@ -351,6 +406,33 @@ def _missing_fields_per_platform(item: dict, platforms: list[str]) -> dict[str, 
         if gaps:
             missing[platform] = gaps
     return missing
+
+
+def slottekst_van(user_id: str) -> str:
+    """De vaste tekst die deze verkoper onder élke advertentie wil hebben."""
+    try:
+        from backend.services.instellingen import lees as _lees_instellingen
+        return (_lees_instellingen(user_id) or {}).get("slottekst") or ""
+    except Exception as e:  # noqa: BLE001 — geen slottekst is vervelend, niet fataal
+        logger.warning("Kon de vaste slottekst niet lezen voor %s: %s", user_id, e)
+        return ""
+
+
+def _met_slot(tekst: str, slot: str) -> str:
+    """De omschrijving met de vaste slottekst eronder.
+
+    Stond als hulpfunctie binnen publish_to_platforms, en dus kon elk ánder pad
+    dat zelf een payload bouwt hem missen — wat de reddingsronde in
+    services/relist.py ook deed. Hier staat hij één keer, voor iedereen.
+    """
+    schoon = str(tekst or "").rstrip()
+    if not slot:
+        return schoon
+    # Al aanwezig? Dan niet nog een keer. Dat gebeurt zodra een advertentie
+    # met slottekst en al weer wordt ingelezen bij een scan.
+    if slot.strip() and slot.strip() in schoon:
+        return schoon
+    return (schoon + "\n\n" + slot).strip() if schoon else slot
 
 
 async def publish_to_platforms(item_id: str, platforms: list[str], user_id: str) -> list[dict]:
@@ -503,14 +585,14 @@ async def publish_to_platforms(item_id: str, platforms: list[str], user_id: str)
             _translate_to_english(item.get("title", ""), brand),
             _translate_to_english(item.get("description", ""), brand),
         )
-        return {**item, "title": title_en, "description": desc_en}
+        return {**item, "title": title_en, "description": desc_en, TAAL_VELD: "en"}
 
     async def _build_dutch():
         title_nl, desc_nl = await asyncio.gather(
             _translate_to_dutch(item.get("title", ""), brand),
             _translate_to_dutch(item.get("description", ""), brand),
         )
-        return {**item, "title": title_nl, "description": desc_nl}
+        return {**item, "title": title_nl, "description": desc_nl, TAAL_VELD: "nl"}
 
     translations = await asyncio.gather(
         _build_english() if need_en else asyncio.sleep(0),
@@ -531,22 +613,7 @@ async def publish_to_platforms(item_id: str, platforms: list[str], user_id: str)
 
     # De vaste tekst van deze verkoper, onder élke advertentie op élk kanaal.
     # Zie instellingen.SLOTTEKST_MAX voor het waarom.
-    try:
-        from backend.services.instellingen import lees as _lees_instellingen
-        _slot = (_lees_instellingen(user_id) or {}).get("slottekst") or ""
-    except Exception as e:  # noqa: BLE001 — geen slottekst is vervelend, niet fataal
-        logger.warning("Kon de vaste slottekst niet lezen voor %s: %s", user_id, e)
-        _slot = ""
-
-    def _met_slot(tekst: str) -> str:
-        schoon = str(tekst or "").rstrip()
-        if not _slot:
-            return schoon
-        # Al aanwezig? Dan niet nog een keer. Dat gebeurt zodra een advertentie
-        # met slottekst en al weer wordt ingelezen bij een scan.
-        if _slot.strip() and _slot.strip() in schoon:
-            return schoon
-        return (schoon + "\n\n" + _slot).strip() if schoon else _slot
+    _slot = slottekst_van(user_id)
 
     def _pick(platform: str) -> dict:
         if platform in _ENGLISH_PLATFORMS and english_item:
@@ -567,7 +634,7 @@ async def publish_to_platforms(item_id: str, platforms: list[str], user_id: str)
         return {
             **base,
             "title": _strip_text_tags(base.get("title") or ""),
-            "description": _met_slot(_strip_text_tags(base.get("description") or "")),
+            "description": _met_slot(_strip_text_tags(base.get("description") or ""), _slot),
         }
 
     # Eerst de extensieplatforms in de wachtrij, dán de API-platforms.
