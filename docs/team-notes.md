@@ -4167,3 +4167,11 @@ en aan het eind van een sessie met een openstaande Daniel-stap.
 
 Eerste ronde vandaag toegevoegd: extensie 1.0.288 naar de Chrome Web Store, en
 de kolom offline_mail_sent_at in Supabase.
+
+Correctie 04-09: de taken horen in de Google Tasks lijst "Omnivaleur" (onder
+danieldekoning66@gmail.com, in Chrome authuser=2), niet in de agenda. Er is geen
+Google Tasks koppeling, dus de skill doet het via de Chrome-extensie op
+tasks.google.com/u/2/. Lezen van de lijst werkt; het toevoegen via automation was
+op 04-09 wisselvallig (renderer bevriest, invoerveld opent niet altijd). Agenda
+blijft de terugval. Betere optie: een echte Google Tasks connector aanzetten in
+claude.ai als die bestaat.
