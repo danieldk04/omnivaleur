@@ -4240,3 +4240,8 @@ omnivaleur-taken skill echt in Google Tasks lijst Omnivaleur schrijven.
 omnivaleur-taken skill schrijft nu echt in de Tasks-lijst Omnivaleur
 (id UnlxRk9OVzFYdlBuYVpsbw) via mcp__workspacemcp__manage_task. Eerste ronde:
 "Extensie 1.0.289 naar Chrome Web Store uploaden" toegevoegd, de rest stond er al.
+
+04-09: geplande taak 'omnivaleur-taken-ochtend' draait elke ochtend ~08:22 en
+roept de omnivaleur-taken skill aan om de Tasks-lijst Omnivaleur bij te werken.
+Draait alleen als de Claude-desktop-app open staat. Eerste keer 'Run now' zodat
+de tool-toestemmingen (workspacemcp, bash) blijven hangen.
