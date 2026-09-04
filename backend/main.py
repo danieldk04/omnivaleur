@@ -353,8 +353,30 @@ def _bewaar_serverfout(code: str, methode: str, pad: str,
         lijst = (bestaand[0]["inhoud"] if bestaand else []) or []
         if not isinstance(lijst, list):
             lijst = []
+        # Dezelfde storing telt als ÉÉN regel, niet als honderd.
+        #
+        # WAAROM (04-09-2026). Een verversing die elke vijftien seconden faalde
+        # vulde deze lijst in ruim een uur met zestig keer exact dezelfde fout.
+        # Egbert klikte in diezelfde periode op "Clear all", kreeg code F1F7E7 —
+        # en tegen de tijd dat wij keken was die eruit gedrukt. Het logboek dat
+        # er juist is om te kunnen bewijzen wat er stukging, wiste zichzelf.
+        sleutel = (rij["methode"], rij["pad"], rij["soort"], rij["bericht"])
+        eerder = next((x for x in lijst if (x.get("methode"), x.get("pad"),
+                                            x.get("soort"), x.get("bericht")) == sleutel), None)
+        if eerder is not None:
+            eerder["aantal"] = int(eerder.get("aantal") or 1) + 1
+            eerder["wanneer"] = rij["wanneer"]
+            eerder["code"] = code
+            # De codes van de laatste keren blijven staan: die staan op het
+            # scherm van de klant, en daarmee zoekt hij deze regel terug.
+            eerder["codes"] = ([code] + [c for c in (eerder.get("codes") or []) if c])[:10]
+            lijst = [eerder] + [x for x in lijst if x is not eerder]
+        else:
+            rij["aantal"] = 1
+            rij["codes"] = [code]
+            lijst = [rij] + lijst
         db.table("leadgen_opslag").upsert(
-            {"naam": "server_fouten", "inhoud": ([rij] + lijst)[:FOUTEN_BEWAREN]},
+            {"naam": "server_fouten", "inhoud": lijst[:FOUTEN_BEWAREN]},
             on_conflict="naam").execute()
     except Exception:  # noqa: BLE001 — vastleggen mag nooit een tweede fout worden
         logger.exception("Serverfout %s kon niet worden vastgelegd", code)

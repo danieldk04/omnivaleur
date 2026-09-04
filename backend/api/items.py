@@ -155,10 +155,14 @@ def sync_items(since: str = "", limit: int = 500,
     if since:
         q = q.gte("updated_at", since)
     rijen = q.execute().data or []
-    # head=True: alleen de telling in de kop, geen enkele rij in het antwoord.
+    # De telling komt uit de kop van het antwoord (Content-Range), niet uit de
+    # rijen: daarom `limit(1)`. Géén `head=True` — dat kent de clientversie die
+    # op de server staat (supabase 2.7.4 / postgrest 0.16.11) niet, en dan is
+    # elke verversing een interne fout in plaats van een telling. Zie
+    # docs/kennisbank.md, "SDK-pin valstrik".
     telling = (
-        db.table("items").select("id", count="exact", head=True)
-        .eq("user_id", user_id).execute().count
+        db.table("items").select("id", count="exact")
+        .eq("user_id", user_id).limit(1).execute().count
     )
     return {
         "items": rijen,

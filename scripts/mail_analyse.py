@@ -661,8 +661,11 @@ def fouten_tonen(args) -> None:
         print("Geen serverfouten vastgelegd.")
         return
     for f in lijst[: (args.aantal if getattr(args, "aantal", 0) else 20)]:
+        aantal = int(f.get("aantal") or 1)
+        codes = [c for c in (f.get("codes") or [f.get("code", "?")]) if c]
         print(f"\n{f.get('code','?')}  {str(f.get('wanneer',''))[:16]}  "
-              f"{f.get('methode','')} {f.get('pad','')}")
+              f"{f.get('methode','')} {f.get('pad','')}"
+              + (f"  ({aantal}x, codes: {', '.join(codes)})" if aantal > 1 else ""))
         print(f"    {f.get('soort','')}: {f.get('bericht','')}")
         for regel in str(f.get("spoor", "")).strip().splitlines()[-6:]:
             print(f"    | {regel}")
