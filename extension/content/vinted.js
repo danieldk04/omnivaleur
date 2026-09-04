@@ -1857,7 +1857,11 @@
         await sleep(120);
       }
     }
-    el.dispatchEvent(new Event("blur", { bubbles: true }));
+    // Het veld ECHT verlaten. Een verzonnen blur-gebeurtenis levert geen
+    // focusout op (gemeten in Chrome, 04-09-2026) en React luistert nu juist
+    // daarop, dus het formulier draaide zijn controle nooit opnieuw.
+    try { el.blur(); } catch (e) {}
+    el.dispatchEvent(new FocusEvent("focusout", { bubbles: true }));
     await sleep(150);
 
     // Verify: field parses to the intended number AND isn't flagged invalid.
