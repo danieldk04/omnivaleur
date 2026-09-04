@@ -2080,11 +2080,27 @@
 
     // Nog dieper? Dan zelf een verstandig blad kiezen (max 3 niveaus).
     const tekst = `${item.title || ""} ${item.description || ""}`.toLowerCase();
+    // "Chinos" en "Chino" zijn hetzelfde blad. Vinted spelt zijn voorstellen niet
+    // altijd letterlijk zoals de regels in de boom, dus vergelijken we op de kale
+    // woorden in enkelvoud in plaats van teken voor teken.
+    const kaal = (s) => s.toLowerCase().replace(/&/g, " ").split(/[^a-z0-9-]+/)
+      .filter(Boolean).map(enkelvoud).join(" ");
     for (let i = 0; i < 3 && cellen().length; i++) {
       const opties = cellen();
-      const keuze = kiesBlad(opties.map(titel), tekst) != null
-        ? opties[kiesBlad(opties.map(titel), tekst)] : opties[0];
-      clog(`Vinted-categorie: extra niveau → "${titel(keuze)}"`);
+      const namen = opties.map(titel);
+      const idx = kiesBlad(namen, tekst);
+      let keuze = idx != null ? opties[idx] : opties[0];
+      let waarom = idx != null ? bladReden : "eerste";
+      // Zegt de tekst van het artikel niets over het model? Dan weet Vinted het
+      // beter dan onze gok, want hij heeft de foto's gezien. Alleen dan, en
+      // alleen binnen ons eigen pad.
+      if (waarom === "neutraal") {
+        for (const vp of voorstelPaden) {
+          const j = namen.findIndex((n) => kaal(n) === kaal(vp[i] || ""));
+          if (j >= 0) { keuze = opties[j]; waarom = "voorstel van Vinted"; break; }
+        }
+      }
+      clog(`Vinted-categorie: extra niveau → "${titel(keuze)}" (${waarom})`);
       realClickEl(keuze);
       await sleep(1100);
     }
