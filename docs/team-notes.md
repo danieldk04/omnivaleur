@@ -4216,3 +4216,11 @@ blijft als achtervang bestaan, maar is niet langer de enige weg.
 
 **Openstaand:** 1.0.289 moet naar de Chrome Web Store. Tot die tijd werkt de
 reparatie alleen op een handmatig geladen kopie.
+
+04-09 vervolg: voor echte Google Tasks komt er een losse MCP-server
+(taylorwilsdon/workspace-mcp, pakket workspace-mcp via uvx). uv is geinstalleerd.
+Startscript en .env-sjabloon staan in ~/Documents/Handige Scripts Mac/google-workspace-mcp/.
+Daniel moet nog een Google Cloud OAuth-client (Desktop app) maken en client id +
+secret in .env zetten. Daarna: start.command draaien en
+`claude mcp add --transport http workspacemcp http://localhost:8000/mcp`.
+De skill gebruikt Tasks zodra die tool er is, anders de agenda als terugval.
