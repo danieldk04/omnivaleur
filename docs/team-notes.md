@@ -4234,3 +4234,9 @@ Openstaand: (1) Claude-sessie herstarten zodat de workspacemcp-tools laden,
 (2) bij de eerste Tasks-aanroep opent een browser voor Google-toestemming,
 Daniel moet door de 'niet geverifieerde app' klikken. Daarna kan de
 omnivaleur-taken skill echt in Google Tasks lijst Omnivaleur schrijven.
+
+04-09 werkt: Google Tasks-koppeling via workspace-mcp is rond. OAuth gedaan
+(Daniel als testgebruiker toegevoegd, tokens in ~/.workspace-mcp/). De
+omnivaleur-taken skill schrijft nu echt in de Tasks-lijst Omnivaleur
+(id UnlxRk9OVzFYdlBuYVpsbw) via mcp__workspacemcp__manage_task. Eerste ronde:
+"Extensie 1.0.289 naar Chrome Web Store uploaden" toegevoegd, de rest stond er al.
