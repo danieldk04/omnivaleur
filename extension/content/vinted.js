@@ -1650,6 +1650,40 @@
     return null;
   }
 
+  // WELKE PRIJS HOUDT HET FORMULIER ZELF VAST? (04-09-2026)
+  //
+  // De rode regel onder het veld is geen betrouwbaar antwoord op de vraag of de
+  // prijs erin staat. Daniel zag hem staan bij een keurige 14,99, en hij ging
+  // weg zodra hij zelf een teken typte, zonder de prijs te veranderen. Het is
+  // dus een blijven hangende melding, geen oordeel over de waarde. Toch stopte
+  // die melding het plaatsen volledig.
+  //
+  // Vinted's formulier is een React-formulier en houdt zijn eigen waarde bij.
+  // Die lezen we hier op, in de wereld van de pagina zelf. Lukt dat niet, dan
+  // telt wat er zichtbaar in het veld staat.
+  async function prijsVolgensFormulier() {
+    try {
+      return await new Promise((resolve) => {
+        chrome.runtime.sendMessage(
+          { type: "READ_PRICE_MAIN", selector: 'input[data-testid="price-input--input"]' },
+          (r) => resolve(r || null),
+        );
+      });
+    } catch (e) {
+      return null;
+    }
+  }
+
+  // true = er staat een bruikbare prijs in het formulier, dus plaatsen mag door.
+  async function prijsIsGeaccepteerd() {
+    const uit = await prijsVolgensFormulier();
+    if (uit && uit.gevonden && uit.form != null && isFinite(Number(uit.form))) {
+      return Number(uit.form) >= 1;
+    }
+    const el = qs('input[data-testid="price-input--input"]');
+    return !!(el && _num(el.value) >= 1);
+  }
+
   // ---- PRICE: Vinted expects a plain number with a DOT (or no decimals). ----
   // Vinted's price field is a masked/React-controlled input, so a bare
   // native-setter + "input" event often gets discarded and the field stays €0.
