@@ -4317,3 +4317,49 @@ er ook nog niet op, dus tot die upload werkt dit alleen op een handmatig geladen
 kopie. In de database stond op dat moment één foutregel met deze melding (van
 Daniel zelf, 09:24); de 309 openstaande "the listing form never opened" op
 2dehands zijn hier los van en nog niet opgelost.
+
+## 04-09-2026 — Vinted hield het plaatsen tegen om een melding die niets over de prijs zei
+
+Daniel, met schermafbeelding: "vinted geeft nu regelmatig deze melding. als ik
+dan zelf een 9 typ of iets weghaal (random) dan verdwijnt die melding." In beeld:
+prijsveld €14.99, eronder in het rood "Price must be greater than or equal to
+1.0". Het plaatsen stopte daarop met "Vinted wouldn't accept these fields:
+price (...)".
+
+Die melding was geen oordeel over de prijs. Ze verdween door één teken opnieuw te
+typen zónder de prijs te veranderen, dus ze bleef gewoon hangen. Toch was ze in de
+code hét afkeurcriterium: elke invulroute keurde zichzelf af zolang de regel er
+stond, en de eindcontrole vóór het plaatsen stopte erop. Uitkomst: het veld toonde
+de juiste prijs en er werd niets geplaatst.
+
+Gemeten in Chrome (04-09-2026), dit zijn eigenschappen van de browser, niet van
+Vinted:
+* `dispatchEvent(new Event("blur"))` levert géén focusout op en het veld blijft
+  gefocust. React hangt zijn onBlur aan focusout, dus het formulier heeft zijn
+  eigen controle na onze invulling nooit opnieuw gedraaid.
+* `document.execCommand("insertText")` is de enige route uit een script die een
+  invoergebeurtenis met isTrusted=true oplevert; alles wat we met dispatchEvent
+  sturen is isTrusted=false.
+* de oude invulroute stuurde het formulier eerst een LEGE prijs (waarde "" plus
+  een input-gebeurtenis) voordat de prijs erin ging. Dat is precies de invoer waar
+  "must be greater than or equal to 1.0" op slaat: we zetten de klacht zelf neer.
+
+Vanaf 1.0.292: de prijs gaat er in één keer in zonder tussenstap via leeg, het
+veld wordt echt verlaten (blur plus een focusout die bubbelt), en blijft de regel
+tóch staan, dan doet de extensie na wat Daniel met de hand doet: één teken over
+zichzelf heen typen met execCommand. Beslissend is niet meer de rode regel maar
+de waarde die het formulier zelf vasthoudt (nieuw: READ_PRICE_MAIN /
+`_mwLeesVintedPrijs`). Houdt het formulier een bruikbare prijs vast, dan gaat het
+plaatsen gewoon door en beslist Vinted zelf bij Uploaden; mislukt het daarna, dan
+staat de prijsmelding in de foutmelding. Bewezen met
+`tests/vinted-prijsmelding-test.js`, inclusief voor-en-na-proef tegen commit
+668afc8.
+
+Let op voor de volgende sessie: de voor-en-na-proef mag niet tegen HEAD draaien.
+De auto-push-hook commit werk in uitvoering onder "auto: update ...", dus HEAD
+bevat de reparatie al voordat de test draait. `tests/vinted-inlogdomein-test.js`
+faalde daar vandaag op en wijst nu naar een vaste commit.
+
+Openstaand: nog niet nagemeten op het echte, ingelogde Vinted-formulier (daar is
+Daniels eigen browser voor nodig). 1.0.289 tot en met 1.0.292 staan alle vier nog
+niet in de Chrome Web Store.

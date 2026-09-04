@@ -37,8 +37,13 @@ const { execFileSync } = require("child_process");
 const WORTEL = path.join(__dirname, "..");
 const VINTED = fs.readFileSync(path.join(WORTEL, "extension", "content", "vinted.js"), "utf8");
 const BACKGROUND = fs.readFileSync(path.join(WORTEL, "extension", "background.js"), "utf8");
-const OUD_VINTED = execFileSync("git", ["show", "HEAD:extension/content/vinted.js"], { cwd: WORTEL }).toString();
-const OUD_BACKGROUND = execFileSync("git", ["show", "HEAD:extension/background.js"], { cwd: WORTEL }).toString();
+// De voor-en-na-proef vergelijkt met de versie van vóór deze reparatie. Dat is
+// met opzet een vaste commit en niet HEAD: de auto-push-hook commit werk in
+// uitvoering onder de titel "auto: update …", dus HEAD bevat de nieuwe code al
+// terwijl je denkt de oude te pakken.
+const VOOR = "668afc8";
+const OUD_VINTED = execFileSync("git", ["show", `${VOOR}:extension/content/vinted.js`], { cwd: WORTEL }).toString();
+const OUD_BACKGROUND = execFileSync("git", ["show", `${VOOR}:extension/background.js`], { cwd: WORTEL }).toString();
 
 let mislukt = 0;
 function check(naam, voorwaarde, uitleg) {
@@ -52,8 +57,17 @@ function functieUit(bron, naam) {
   const re = new RegExp(`(?:^|\\n)\\s*(?:async\\s+)?function ${naam}\\s*\\(`);
   const m = re.exec(bron);
   if (!m) throw new Error(`${naam} niet gevonden`);
-  const start = m.index + m[0].indexOf("function");
-  let i = bron.indexOf("{", start), diep = 0;
+  const start = m.index + m[0].search(/async|function/);
+  // Eerst de haakjes van de parameterlijst uitlopen: een standaardwaarde als
+  // `opts = {}` levert anders een accolade op die als begin van de romp geldt,
+  // en dan knip je de functie na één regel af.
+  let i = bron.indexOf("(", m.index + m[0].indexOf(naam)), haakjes = 0;
+  for (; i < bron.length; i++) {
+    if (bron[i] === "(") haakjes++;
+    else if (bron[i] === ")") { haakjes--; if (haakjes === 0) { i++; break; } }
+  }
+  i = bron.indexOf("{", i);
+  let diep = 0;
   for (; i < bron.length; i++) {
     if (bron[i] === "{") diep++;
     else if (bron[i] === "}") { diep--; if (diep === 0) return bron.slice(start, i + 1); }
@@ -164,62 +178,63 @@ function maakWereld({ startKlacht = true, reactLeesbaar = true } = {}) {
   return zand;
 }
 
-// ── 1. De hoofdwereld: de prijs zetten zonder het formulier eerst leeg te melden
-console.log("De prijs zetten in de pagina zelf");
+(async function main() {
+  // ── 1. De hoofdwereld: de prijs zetten zonder het formulier eerst leeg te melden
+  console.log("De prijs zetten in de pagina zelf");
 
-async function draaiZetter(bron, opties) {
+  async function draaiZetter(bron, opties) {
   const zand = maakWereld(opties);
   vm.createContext(zand);
   vm.runInContext(functieUit(bron, "_mwSetVintedPrice"), zand, { filename: "background.js" });
   const uit = await zand._mwSetVintedPrice("input", ["14.99", "14,99"]);
   return { uit, zand };
-}
+  }
 
-const oud = await draaiZetter(OUD_BACKGROUND, {});
-check("de oude route meldde het formulier eerst een LEGE prijs",
+  const oud = await draaiZetter(OUD_BACKGROUND, {});
+  check("de oude route meldde het formulier eerst een LEGE prijs",
   oud.zand.gelog.inputWaarden.includes(""),
   `input-waarden: ${JSON.stringify(oud.zand.gelog.inputWaarden)} — dan bewijst deze test niets`);
-check("de oude route verliet het veld nooit echt (geen focusout)",
+  check("de oude route verliet het veld nooit echt (geen focusout)",
   !oud.zand.gelog.events.includes("focusout"),
   `gebeurtenissen: ${oud.zand.gelog.events.join(", ")}`);
 
-const nieuw = await draaiZetter(BACKGROUND, {});
-check("de nieuwe route stuurt het formulier nooit een lege prijs",
+  const nieuw = await draaiZetter(BACKGROUND, {});
+  check("de nieuwe route stuurt het formulier nooit een lege prijs",
   !nieuw.zand.gelog.inputWaarden.includes(""),
   `input-waarden: ${JSON.stringify(nieuw.zand.gelog.inputWaarden)}`);
-check("de nieuwe route verlaat het veld echt (focusout)",
+  check("de nieuwe route verlaat het veld echt (focusout)",
   nieuw.zand.gelog.events.includes("focusout"));
-check("de prijs staat erin", Math.abs(parseFloat(nieuw.zand.el.value.replace(",", ".")) - 14.99) < 0.01,
+  check("de prijs staat erin", Math.abs(parseFloat(nieuw.zand.el.value.replace(",", ".")) - 14.99) < 0.01,
   `veld: ${nieuw.zand.el.value}`);
-check("het formulier houdt de prijs vast", Math.abs(parseFloat(nieuw.zand.formulier.waarde.replace(",", ".")) - 14.99) < 0.01,
+  check("het formulier houdt de prijs vast", Math.abs(parseFloat(nieuw.zand.formulier.waarde.replace(",", ".")) - 14.99) < 0.01,
   `formulier: ${nieuw.zand.formulier.waarde}`);
-check("de melding is weg", nieuw.zand.formulier.klacht === false);
-check("de uitslag is: gelukt", nieuw.uit && nieuw.uit.ok === true, JSON.stringify(nieuw.uit));
+  check("de melding is weg", nieuw.zand.formulier.klacht === false);
+  check("de uitslag is: gelukt", nieuw.uit && nieuw.uit.ok === true, JSON.stringify(nieuw.uit));
 
-// ── 2. De melding die blijft plakken ─────────────────────────────────────
-console.log("\nEen melding die blijft staan bij een prijs die er goed in staat");
+  // ── 2. De melding die blijft plakken ─────────────────────────────────────
+  console.log("\nEen melding die blijft staan bij een prijs die er goed in staat");
 
-async function draaiPlakkendeMelding(bron) {
+  async function draaiPlakkendeMelding(bron) {
   const zand = maakWereld({});
   // Dit formulier haalt de rode regel NOOIT weg, wat we ook doen.
   Object.defineProperty(zand.formulier, "klacht", { get: () => true, set() {}, configurable: true });
   vm.createContext(zand);
   vm.runInContext(functieUit(bron, "_mwSetVintedPrice"), zand, { filename: "background.js" });
   return { uit: await zand._mwSetVintedPrice("input", ["14.99", "14,99"]), zand };
-}
+  }
 
-const plakkend = await draaiPlakkendeMelding(BACKGROUND);
-check("de prijs wordt goedgekeurd omdat het formulier hem vasthoudt",
+  const plakkend = await draaiPlakkendeMelding(BACKGROUND);
+  check("de prijs wordt goedgekeurd omdat het formulier hem vasthoudt",
   plakkend.uit && plakkend.uit.ok === true, JSON.stringify(plakkend.uit));
-check("de melding wordt wel doorgegeven", plakkend.uit && plakkend.uit.klacht === true);
-check("er is geprobeerd wat Daniel met de hand doet (een echt teken typen)",
+  check("de melding wordt wel doorgegeven", plakkend.uit && plakkend.uit.klacht === true);
+  check("er is geprobeerd wat Daniel met de hand doet (een echt teken typen)",
   plakkend.zand.gelog.events.some((e) => e === "input(echt)"),
   `gebeurtenissen: ${plakkend.zand.gelog.events.join(", ")}`);
 
-// ── 3. Het invulscript liet die goedkeuring alsnog vallen ────────────────
-console.log("\nHet invulscript neemt de uitslag van de pagina over");
+  // ── 3. Het invulscript liet die goedkeuring alsnog vallen ────────────────
+  console.log("\nHet invulscript neemt de uitslag van de pagina over");
 
-async function draaiInvuller(bron, antwoord) {
+  async function draaiInvuller(bron, antwoord) {
   const zand = maakWereld({});
   Object.defineProperty(zand.formulier, "klacht", { get: () => true, set() {}, configurable: true });
   zand.chrome = {
@@ -243,38 +258,39 @@ async function draaiInvuller(bron, antwoord) {
     .map((n) => functieUit(bron, n));
   vm.runInContext(stukken.join("\n"), zand, { filename: "vinted.js" });
   return { ok: await zand.fillPriceVinted(14.99), zand };
-}
+  }
 
-const invulOud = await draaiInvuller(OUD_VINTED, { ok: true, used: "14.99" });
-check("het OUDE invulscript keurde de prijs af terwijl de pagina 'gelukt' zei",
+  const invulOud = await draaiInvuller(OUD_VINTED, { ok: true, used: "14.99" });
+  check("het OUDE invulscript keurde de prijs af terwijl de pagina 'gelukt' zei",
   invulOud.ok === false,
   "dan bewijst deze test niets: de oude versie deed het al goed");
 
-const invulNieuw = await draaiInvuller(VINTED, { ok: true, used: "14.99", klacht: true, form: 14.99 });
-check("het nieuwe invulscript neemt die goedkeuring over", invulNieuw.ok === true);
-check("en zet daarbij niet nog eens een lege prijs in het formulier",
+  const invulNieuw = await draaiInvuller(VINTED, { ok: true, used: "14.99", klacht: true, form: 14.99 });
+  check("het nieuwe invulscript neemt die goedkeuring over", invulNieuw.ok === true);
+  check("en zet daarbij niet nog eens een lege prijs in het formulier",
   !invulNieuw.zand.gelog.inputWaarden.includes(""),
   `input-waarden: ${JSON.stringify(invulNieuw.zand.gelog.inputWaarden)}`);
 
-const invulEcht = await draaiInvuller(VINTED, { ok: false, reason: "rejected" });
-check("een echte weigering van de pagina wordt niet zomaar goedgekeurd",
-  typeof invulEcht.ok === "boolean");
+  const invulEcht = await draaiInvuller(VINTED, { ok: false, reason: "rejected" });
+  check("een echte weigering van de pagina wordt niet zomaar goedgekeurd",
+  invulEcht.ok === false, JSON.stringify(invulEcht.ok));
 
-// ── 4. De eindcontrole vóór het plaatsen ─────────────────────────────────
-console.log("\nDe eindcontrole houdt het plaatsen niet meer tegen om een rode regel");
-check("de eindcontrole vraagt het formulier zelf naar de prijs",
+  // ── 4. De eindcontrole vóór het plaatsen ─────────────────────────────────
+  console.log("\nDe eindcontrole houdt het plaatsen niet meer tegen om een rode regel");
+  check("de eindcontrole vraagt het formulier zelf naar de prijs",
   /if \(!\(await prijsIsGeaccepteerd\(\)\)\) \{\s*\n\s*gaps\.push\(`price/.test(VINTED));
-check("de oude regel (stoppen zodra er een melding staat) is weg",
+  check("de oude regel (stoppen zodra er een melding staat) is weg",
   !/if \(prijsFout\) gaps\.push\(/.test(VINTED));
-check("de oude versie stopte daar aantoonbaar wél op",
+  check("de oude versie stopte daar aantoonbaar wél op",
   /if \(prijsFout\) gaps\.push\(/.test(OUD_VINTED),
   "dan bewijst deze test niets");
-check("de herstelronde telt alleen een prijs die het formulier niet vasthoudt",
+  check("de herstelronde telt alleen een prijs die het formulier niet vasthoudt",
   /if \(priceEl && !\(await prijsIsGeaccepteerd\(\)\)\) missing\.push\("price"\)/.test(VINTED));
-check("de achtergrond kan de prijs van het formulier teruglezen",
+  check("de achtergrond kan de prijs van het formulier teruglezen",
   /msg\.type === "READ_PRICE_MAIN"/.test(BACKGROUND) && /function _mwLeesVintedPrijs\(/.test(BACKGROUND));
-check("een mislukte plaatsing meldt de prijsklacht mee",
+  check("een mislukte plaatsing meldt de prijsklacht mee",
   /Vinted also showed under the price/.test(VINTED));
 
-console.log(mislukt ? `\n${mislukt} controle(s) mislukt` : "\nAlles goed.");
-process.exit(mislukt ? 1 : 0);
+  console.log(mislukt ? `\n${mislukt} controle(s) mislukt` : "\nAlles goed.");
+  process.exit(mislukt ? 1 : 0);
+})();

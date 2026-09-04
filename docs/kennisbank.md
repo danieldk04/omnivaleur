@@ -17,6 +17,35 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ---
 
+## rode-regel-is-geen-oordeel
+
+*04-09-2026 — "Een foutmelding onder een veld die weggaat van een teken dat niets verandert, zegt niets over de waarde; laat het formulier zelf beslissen"*
+
+Vinted toonde "Price must be greater than or equal to 1.0" onder een keurig
+ingevulde €14,99. Daniel typte één teken over zichzelf heen, de melding
+verdween, en plaatsen werkte. In de code was die melding het afkeurcriterium van
+elke invulroute én van de eindcontrole, dus er werd niets geplaatst terwijl de
+prijs er goed in stond.
+
+**Why:** een melding die weggaat van een handeling die de waarde niet verandert,
+is blijven hangen weergave en geen oordeel. Erop afgaan is meten aan het
+verkeerde ding. Wat telt is de waarde die het formulier zelf vasthoudt (React:
+`__reactProps$*.value`, react-hook-form: `_formValues`), en anders het oordeel van
+het platform bij het opsturen.
+
+**How to apply:** lees de waarde van het formulier in de hoofdwereld (MAIN world)
+en beslis daarop. Houdt het formulier een bruikbare waarde vast, laat het werk dan
+doorgaan en laat het platform bij opsturen beslissen; onthoud de melding en zet
+hem in de foutmelding als het opsturen alsnog mislukt. Gemeten in Chrome
+(04-09-2026): `dispatchEvent(new Event("blur"))` geeft geen focusout, dus React's
+onBlur draait nooit en het formulier herbeoordeelt niets; gebruik `el.blur()` plus
+een bubbelende focusout. `document.execCommand("insertText")` is de enige route
+uit een script met isTrusted=true. Zet nooit eerst "" met een input-gebeurtenis:
+daarmee zet je de "waarde te laag"-klacht zelf neer. Zie
+"zoekertjestekst-zit-in-react-hook-form" en "stille-tab-is-geen-formulier".
+
+---
+
 ## vinted-sessie-per-landdomein
 
 *04-09-2026 — Een Vinted-account leeft op één landdomein; vinted.com weet niets van een sessie op vinted.nl, dus "niet ingelogd" is meestal het verkeerde domein*

@@ -137,11 +137,15 @@ console.log("\nVinted: geen groen vinkje zonder inlog");
 
 ok("er is een inlogcontrole tegen Vinted's eigen endpoint",
    /async function vintedIngelogd\(origin\)/.test(BG) && /users\/current/.test(BG));
+// Sinds 04-09-2026 kijkt die controle niet meer op één gegokt domein maar zoekt
+// hij op waar de verkoper is ingelogd (vintedOriginKlaarzetten). De garantie is
+// dezelfde: hij draait vóór het tabblad opengaat, en uitgelogd betekent stoppen.
 ok("die wordt vóór het openen van het tabblad gedraaid",
-   BG.indexOf("const ingelogd = await vintedIngelogd(origin)") <
+   BG.indexOf("const klaar = await vintedOriginKlaarzetten(job)") <
    BG.indexOf("openWorkerTab(url, (tab) =>"));
 ok("uitgelogd = de opdracht mislukt, er gaat geen tabblad open",
-   /if \(ingelogd === false\) \{[\s\S]{0,400}?reportError\(job\.id, serverUrl,[\s\S]{0,400}?return;/.test(BG));
+   /if \(!klaar\.ok\) \{ await reportError\(job\.id, serverUrl, klaar\.melding\); return; \}/.test(BG)
+   && /gevonden === false/.test(BG));
 ok("twijfel houdt het werk niet tegen (null gaat door)",
    /return null;\s*\/\/ geen netwerk: laat het werk door/.test(BG));
 ok("het invulscript stopt als het plaatsformulier er niet is",
