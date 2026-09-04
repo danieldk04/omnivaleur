@@ -1765,7 +1765,8 @@
     }
     await sleep(150);
     el.dispatchEvent(new Event("change", { bubbles: true }));
-    el.dispatchEvent(new Event("blur", { bubbles: true }));
+    try { el.blur(); } catch (e) {}
+    el.dispatchEvent(new FocusEvent("focusout", { bubbles: true }));
 
     const got = _num(el.value);
     if (!isFinite(got) || Math.abs(got - num) >= 0.01) {
