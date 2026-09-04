@@ -17,6 +17,57 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ---
 
+## geen-doodlopende-straat-in-de-ui
+
+*04-09-2026 — Elk grijs vakje en elke blokkade in het dashboard hoort een klik te zijn die je naar de oplossing brengt*
+
+Een melding over wat er ontbreekt of geblokkeerd is, moet altijd een weg vooruit
+hebben: een link naar het invulscherm, naar de instelling, of een knop die het
+zelf oplost. Een uitgegrijsd vakje met alleen tekst eronder is een doodlopende
+straat.
+
+**Waarom:** Toon (dejuistetoon) stuurde op 02-09-2026 een foto van zijn
+publiceervenster — elk kanaal grijs met "MISSING: DESCRIPTION" — met de zin
+"Lukt niet alles blijft vaag en kan niets aanklikken". Hij was er dagen mee bezig.
+De melding klopte inhoudelijk volledig; er zat alleen niets achter. De tekst die
+hij miste stond gewoon nog op zijn Vinted-advertenties en was met één klik op te
+halen.
+
+**Hoe toe te passen:** in `renderPlatformCheckboxes` (app.html) hebben de andere
+blokkades dit al langer — "Not connected — set up →" gaat naar Platforms, "Not
+possible here" naar Preferences. Missende velden waren de uitzondering; die
+wijzen nu naar `haalOmschrijvingOp()` als de bron nog leeft, en anders naar
+`editItem()`. Doe hetzelfde bij elke nieuwe blokkade die je toevoegt.
+
+Zelfde gedachte een laag dieper: een foutmelding hoort te zeggen wélke waarde
+niet paste en wat er wél kan ("Universeel staat niet in de lijst bij size — die
+biedt: S, M, L, XL"), niet alleen dat een veld leeg bleef.
+
+Twee varianten die er op 04-09-2026 bij kwamen, allebei van Egbert Brouwer:
+
+**Een knop die je niet vindt bestaat niet.** De knop "Clear all 303 on 2dehands"
+bestond al sinds 03-09, maar zat achter een klik op een rode balk in de lijst,
+en niets aan die balk zei dat je erop kon klikken. Egbert, mét de nieuwste
+versie: "Waar kan ik die knop vinden om alle rode balken weg te halen, ik zie
+hem niet." Zit de oplossing achter een klik, zorg dan dat het ding waarop je
+moet klikken eruitziet als een knop — of zet hem ergens waar hij vanzelf in
+beeld staat. Nu: een balk boven de lijst (`renderPublishErrorBar`), naast de
+sold- en duplicate-balk.
+
+**Een toestand die als mededeling wordt getoond is óók een doodlopende straat.**
+Het publiceervenster liet "✓ Listed" zien als een vakje zónder aanvinkmogelijkheid.
+Egbert importeerde 5.533 advertenties van Marktplaats, dus élk artikel stond zo,
+en hij kon letterlijk niets naar Marktplaats publiceren: op Publish kwam alleen
+"Choose at least one platform". Dat gold ook voor de echte situatie waarin de
+advertentie op het platform verlopen is en je hem opnieuw wilt plaatsen. Nu is
+het een keuze mét waarschuwing over de tweede advertentie. Let op: de server
+houdt dit niet tegen, die kijkt alleen naar dubbele rijen van hetzelfde artikel
+(`bezet` in crosslist.py), niet naar de rij zelf.
+
+Zie ook "rapportage-in-gewone-taal" en "klantmails-meer-empathie".
+
+---
+
 ## zoekertjestekst-zit-in-react-hook-form
 
 *04-09-2026 — "Marktplaats/2dehands valideren de beschrijving op react-hook-form's _formValues.description, niet op de editor en niet op het verborgen veld"*
@@ -600,36 +651,6 @@ niet veranderd is. Vergelijk de opgebouwde HTML met wat er staat en schrijf alle
 bij verschil. Geef elke miniatuur `loading="lazy"`, `decoding="async"` en een
 vaste breedte/hoogte. Zie ook "verborgen-tabblad-vertraagt-wachttijden" en
 "frontend-parse-json-safe".
-
----
-
-## geen-doodlopende-straat-in-de-ui
-
-*02-09-2026 — Elk grijs vakje en elke blokkade in het dashboard hoort een klik te zijn die je naar de oplossing brengt*
-
-Een melding over wat er ontbreekt of geblokkeerd is, moet altijd een weg vooruit
-hebben: een link naar het invulscherm, naar de instelling, of een knop die het
-zelf oplost. Een uitgegrijsd vakje met alleen tekst eronder is een doodlopende
-straat.
-
-**Waarom:** Toon (dejuistetoon) stuurde op 02-09-2026 een foto van zijn
-publiceervenster — elk kanaal grijs met "MISSING: DESCRIPTION" — met de zin
-"Lukt niet alles blijft vaag en kan niets aanklikken". Hij was er dagen mee bezig.
-De melding klopte inhoudelijk volledig; er zat alleen niets achter. De tekst die
-hij miste stond gewoon nog op zijn Vinted-advertenties en was met één klik op te
-halen.
-
-**Hoe toe te passen:** in `renderPlatformCheckboxes` (app.html) hebben de andere
-blokkades dit al langer — "Not connected — set up →" gaat naar Platforms, "Not
-possible here" naar Preferences. Missende velden waren de uitzondering; die
-wijzen nu naar `haalOmschrijvingOp()` als de bron nog leeft, en anders naar
-`editItem()`. Doe hetzelfde bij elke nieuwe blokkade die je toevoegt.
-
-Zelfde gedachte een laag dieper: een foutmelding hoort te zeggen wélke waarde
-niet paste en wat er wél kan ("Universeel staat niet in de lijst bij size — die
-biedt: S, M, L, XL"), niet alleen dat een veld leeg bleef.
-
-Zie ook "rapportage-in-gewone-taal" en "klantmails-meer-empathie".
 
 ---
 

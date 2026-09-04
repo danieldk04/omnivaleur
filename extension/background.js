@@ -1681,6 +1681,23 @@ function ontkoppelVroeg(tabId) {
 
 chrome.tabs.onRemoved.addListener((tabId) => _vroegGekoppeld.delete(tabId));
 
+// DE KNOP "ANNULEREN" IN DE GELE BALK (04-09-2026).
+//
+// Chrome zet boven het venster een balk "'Omnivaleur' is begonnen met
+// foutopsporing voor deze browser", mét een knop Annuleren. Egbert Brouwer
+// stuurde er een foto van met een pijl naar precies die knop. Wie hem indrukt
+// verbreekt de koppeling — en daar hing tot nu toe niets aan vast: onze lijst
+// dacht nog dat we vastzaten, dus klikEcht stuurde zijn muisklik het niets in
+// en typEchteToets sloeg het opnieuw koppelen over. Gevolg: het formulier staat
+// volledig ingevuld op het scherm en er wordt nooit op Plaatsen gedrukt.
+//
+// Nu houden we het bij, zodat de volgende klik gewoon opnieuw koppelt.
+chrome.debugger.onDetach.addListener((bron) => {
+  if (bron && bron.tabId != null && _vroegGekoppeld.delete(bron.tabId)) {
+    console.warn("[Omnivaleur] debugger-koppeling verbroken op tab", bron.tabId);
+  }
+});
+
 function openWorkerTab(url, callback, opts = {}) {
   _workerWindowChain = _workerWindowChain
     .then(() => openWorkerTabInner(url, opts))
@@ -6079,8 +6096,14 @@ async function klikEcht(tabId, selector) {
       await new Promise((r) => setTimeout(r, 600));
     }
   } catch (_) {}
-  const doel = _vroegGekoppeld.has(tabId) ? { tabId } : null;
-  if (!doel) return "niet gekoppeld";
+  if (!_vroegGekoppeld.has(tabId)) {
+    // Koppeling weg: de verkoper drukte op Annuleren in de gele balk, of het
+    // tabblad navigeerde ertussenuit. Nog één poging, want anders blijft het
+    // zoekertje ingevuld-maar-ongeplaatst staan.
+    const tab = await chrome.tabs.get(tabId).catch(() => null);
+    if (!(await koppelVroeg(tabId, tab && tab.url))) return "niet gekoppeld";
+  }
+  const doel = { tabId };
   const stuur = (methode, params) => new Promise((res, rej) => {
     chrome.debugger.sendCommand(doel, methode, params, (r) => {
       chrome.runtime.lastError ? rej(new Error(chrome.runtime.lastError.message)) : res(r);

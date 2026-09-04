@@ -74,6 +74,7 @@ zand.document = {
 const stubs = `
   function renderSoldConfirmBar() {}
   function renderDuplicateBar() {}
+  function renderPublishErrorBar() {}
   function updateBulkBar() {}
   function publishedAt() { return ""; }
   function smartMissingBadge() { return ""; }

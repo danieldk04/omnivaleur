@@ -4250,3 +4250,40 @@ de tool-toestemmingen (workspacemcp, bash) blijven hangen.
 allow-regels voor de tools die hij gebruikt (workspacemcp Tasks, agenda-connector,
 git, mail_analyse, lees-commando's), zodat er geen toestemmingsvraag komt. Geen
 globale bypass-mode aangezet; iets onverwachts vraagt nog wel.
+
+04-09 Egbert Brouwer (Papa's Plectrums) mailde twee dingen terug, allebei
+gerepareerd:
+
+1. "Waar kan ik die knop vinden om alle rode balken weg te halen, ik zie hem
+   niet maar heb al wel de laatste versie (1.0.288)?" De knop bestond sinds
+   03-09, maar alleen achter een klik op een rode balk in de lijst, en die balk
+   zag er niet uit als iets waarop je kunt klikken. Er staat nu een balk boven
+   de artikellijst ("314 publishes failed" met per kanaal "Clear 303 on
+   2dehands"), naast de sold- en duplicate-balk. De rode balk in de rij zegt
+   voortaan "what now?" zodat duidelijk is dat er iets achter zit.
+
+2. "Publiceer een enkel artikel naar Marktplaats: die mogelijkheid is er niet
+   omdat MP al geselecteerd staat." Klopte. Al zijn 5.533 advertenties komen uit
+   de Marktplaats-import, dus elk artikel stond in het publiceervenster op
+   "✓ Listed" zonder aanvinkvakje, en Publish antwoordde met "Choose at least
+   one platform". Het is nu een aanvinkbare keuze met een waarschuwing dat je er
+   een tweede advertentie bij krijgt als de eerste er nog staat. Let op: de
+   server houdt dit niet tegen — die kijkt alleen naar dubbele rijen van
+   hetzelfde artikel, niet naar de rij zelf.
+
+3. Zijn tweede foto ging over de gele balk "Omnivaleur is begonnen met
+   foutopsporing voor deze browser", met een pijl naar de knop Annuleren. Die
+   koppeling is nodig: Marktplaats en 2dehands negeren een muisklik die van een
+   script komt, dus zonder koppeling wordt er nooit op "Plaats je advertentie"
+   gedrukt. Wie op Annuleren drukte brak het plaatsen af zonder dat de extensie
+   het merkte — gemeten op de oude code: klikEcht gaf daarna "Debugger is not
+   attached to the tab". In 1.0.290 luistert de extensie naar
+   chrome.debugger.onDetach en koppelt hij opnieuw.
+
+Openstaand: 1.0.290 moet naar de Chrome Web Store (1.0.289 stond er ook nog niet
+op). De dashboard-reparaties (1 en 2) werken meteen na de Railway-deploy, daar
+is geen nieuwe extensie voor nodig.
+
+Wat Egberts plaatsen zelf blokkeert is hier níét mee opgelost: 309 van zijn
+foutrijen zeggen "the 2dehands listing form never opened: the page never
+reported back". Dat is de bekende stille tab, en dat staat nog open.

@@ -181,6 +181,11 @@ tr.selected td { background: #eff6ff; }
 .pm-cb-listed { display: flex; align-items: center; gap: 8px; padding: 9px 13px; border: 1.5px solid #6ee7b7; border-radius: 8px; background: #f0fdf4; }
 .pm-cb-listed span { font-size: 13px; font-weight: 600; color: #065f46; }
 .pm-cb-listed .pm-cb-check { font-size: 13px; margin-left: auto; color: #059669; font-weight: 800; }
+/* Hetzelfde groen, maar wél aan te vinken: publiceren op een kanaal waar het
+   artikel al op staat moet kunnen, met een waarschuwing. */
+.pm-cb-listed-pick { border-color: #6ee7b7; background: #f0fdf4; }
+.pm-cb-listed-pick span { color: #065f46; }
+.pm-cb-listed-pick .pm-cb-check { margin-left: auto; color: #059669; font-weight: 800; }
 
 /* ── Modal ──────────────────────────────────────────────────────── */
 .modal-overlay { position: fixed; inset: 0; background: rgba(15,23,42,.5); backdrop-filter: blur(4px); z-index: 200; display: flex; align-items: center; justify-content: center; padding: 20px; }
@@ -1017,6 +1022,10 @@ input[type="checkbox"].row-check { width: 15px; height: 15px; cursor: pointer; a
              zou een nog levend artikel overal weghalen. -->
         <div id="sold-confirm-bar" style="display:none"></div>
         <div id="duplicate-bar" style="display:none"></div>
+        <!-- Alles wat op een kanaal mislukte, in één balk met één knop. De knop om
+             ze op te ruimen zat hiervoor achter een klik op een rode balk in de
+             lijst, en niemand vond hem daar. -->
+        <div id="publish-error-bar" style="display:none"></div>
         <div class="filter-bar">
           <span class="filter-label">Filter</span>
           <select id="filter-platform" onchange="applyFilters()">
@@ -3009,7 +3018,7 @@ function publishErrorBadge(item) {
   const kort = eerste.length > 70 ? eerste.slice(0, 70) + '…' : eerste;
   return `<div class="missing-data-badge" style="background:rgba(220,38,38,.1);color:#b91c1c;border-color:#dc262633;cursor:pointer"
     onclick="event.stopPropagation();showPublishError('${item.id}')"
-    title="${esc(eerste)}">⚠ ${esc(namen)} failed — ${esc(kort)}</div>`;
+    title="${esc(eerste)}">⚠ ${esc(namen)} failed — ${esc(kort)} <u>what now?</u></div>`;
 }
 
 // Hoeveel artikelen staan er op DIT kanaal in de fout? Bepaalt of de knop
@@ -4655,6 +4664,40 @@ function renderDuplicateBar() {
   </div>`;
 }
 
+// ── "Al die rode balken moeten in één keer weg" ───────────────────
+//
+// De knop om ze op te ruimen bestond al (03-09-2026), maar zat verstopt achter
+// een klik op zo'n rode balk in de lijst — en niets aan die balk zei dat je
+// erop kón klikken. Egbert Brouwer, mét de nieuwste versie: "Waar kan ik die
+// knop vinden om alle rode balken weg te halen, ik zie hem niet." Een knop die
+// je niet vindt bestaat niet. Hij staat nu boven de lijst, met het aantal
+// erbij, op dezelfde plek als de andere meldingen die om een besluit vragen.
+function renderPublishErrorBar() {
+  const bar = document.getElementById('publish-error-bar');
+  if (!bar) return;
+  const perKanaal = new Map();
+  for (const l of (state.listings || [])) {
+    if (l.status !== 'error') continue;
+    perKanaal.set(l.platform, (perKanaal.get(l.platform) || 0) + 1);
+  }
+  if (!perKanaal.size) { bar.style.display = 'none'; bar.innerHTML = ''; return; }
+  const totaal = [...perKanaal.values()].reduce((a, b) => a + b, 0);
+  const knoppen = [...perKanaal.entries()].sort((a, b) => b[1] - a[1]).map(([p, n]) => {
+    const label = PLATFORM_LABELS[p] || p;
+    return `<button class="btn btn-sm btn-outline" onclick="clearPublishError(null,'${p}','${esc(label)}')">Clear ${n} on ${esc(label)}</button>`;
+  }).join('');
+  bar.style.display = '';
+  bar.innerHTML = `<div style="border:1.5px solid #fca5a5;background:#fef2f2;border-radius:10px;padding:12px 14px;margin-bottom:14px">
+    <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+      <strong style="font-size:14px;color:#b91c1c">⚠ ${totaal} publish${totaal === 1 ? '' : 'es'} failed</strong>
+      <span style="margin-left:auto;display:flex;gap:8px;flex-wrap:wrap">${knoppen}</span>
+    </div>
+    <div style="font-size:12px;color:#b91c1c;margin-top:4px">
+      Clearing moves those items back to <strong>To list</strong> so you can try again. Nothing is removed from any platform, and nothing gets published by clearing.
+    </div>
+  </div>`;
+}
+
 async function mergeDuplicateGroup(keepId) {
   const groep = (state.dupGroups || []).find(g => g.items.some(i => i.id === keepId));
   if (!groep) return;
@@ -4737,6 +4780,7 @@ let _itemsTabelStempel = null;
 function renderItemsTable(items) {
   renderSoldConfirmBar();
   renderDuplicateBar();
+  renderPublishErrorBar();
   let lastBucket = null;
   const rows = items.map(item => {
     const checked = selectedIds.has(item.id) ? 'checked' : '';
@@ -4922,7 +4966,7 @@ function openBulkCrosslist() {
 
 async function doBulkCrosslist() {
   const selected = [...document.querySelectorAll('#bulk-crosslist-checkboxes input:checked')].map(c => c.value);
-  if (!selected.length) return alert('Choose at least one platform');
+  if (!selected.length) return alert(geenPlatformGekozen('bulk-crosslist-checkboxes'));
   const ids = [...selectedIds];
   closeModal('modal-bulk-crosslist');
   setBusy(true, `Publishing 0 / ${ids.length}…`);
@@ -7646,7 +7690,7 @@ function openMarkActiveModal(itemId, event) {
 
 async function doMarkActive(itemId) {
   const selected = [...document.querySelectorAll('#mark-active-checkboxes input:checked')].map(c => c.value);
-  if (!selected.length) return alert('Choose at least one platform');
+  if (!selected.length) return alert(geenPlatformGekozen('mark-active-checkboxes'));
   setBusy(true, 'Marking as published…');
   try {
     await Promise.all(selected.map(platform =>
@@ -7682,7 +7726,7 @@ function resetCrosslistButton() {
 
 async function doCrosslist() {
   const selected = [...document.querySelectorAll('#crosslist-platform-checkboxes input:checked')].map(c => c.value);
-  if (!selected.length) return alert('Choose at least one platform');
+  if (!selected.length) return alert(geenPlatformGekozen('crosslist-platform-checkboxes'));
   const btn = document.querySelector('#modal-crosslist .btn-primary');
   btn.disabled = true;
   btn.textContent = 'Adding to queue…';
@@ -8014,6 +8058,29 @@ function platformOordeel(item, platform) {
   return { oordeel: 'ok', reden: '' };
 }
 
+// Een kanaal aanvinken waar het artikel al op staat. Eén keer bevestigen, want
+// hierna volgt er een echte tweede advertentie als de eerste er nog is.
+function bevestigOpnieuwPlaatsen(cb, label) {
+  if (!cb.checked) return;
+  const ok = confirm(`This item is already listed on ${label}.\n\n`
+    + `Publishing again creates a SECOND advert unless the first one is gone from ${label}.\n\n`
+    + `Only continue if that advert has disappeared there (expired, or you removed it).`);
+  if (!ok) cb.checked = false;
+}
+
+// "Choose at least one platform" is een nutteloos antwoord als er niets te
+// kiezen valt. Zeg dan wát er in de weg staat.
+function geenPlatformGekozen(containerId) {
+  const el = document.getElementById(containerId);
+  const vakjes = el ? [...el.querySelectorAll('input[type=checkbox]')] : [];
+  if (vakjes.length && !vakjes.some(c => !c.disabled)) {
+    return 'There is no channel you can publish this to right now.\n\n'
+         + 'Every channel is either not connected yet, or missing something this item needs. '
+         + 'The grey text next to each one says which, and clicking it takes you there.';
+  }
+  return 'Choose at least one platform.';
+}
+
 function renderPlatformCheckboxes(containerId, itemId) {
   const activePlatforms = itemId
     ? new Set(state.listings.filter(l => l.item_id === itemId && l.status === 'active').map(l => l.platform))
@@ -8023,10 +8090,24 @@ function renderPlatformCheckboxes(containerId, itemId) {
     const label = PLATFORM_LABELS[p] || p;
     const already = activePlatforms.has(p);
     if (already) {
-      return `<div class="pm-cb-listed">
+      // GEEN DOODLOPENDE STRAAT ALS ALLES AL "LISTED" IS (04-09-2026).
+      //
+      // Egbert Brouwer heeft 5.533 advertenties geïmporteerd van Marktplaats.
+      // Elk artikel staat daardoor als "listed" op Marktplaats, en dit vakje
+      // was geen vakje maar een mededeling: niet aan te klikken. Hij kon dus
+      // letterlijk geen enkel artikel naar Marktplaats publiceren om een test
+      // te doen, en kreeg op Publish alleen "Choose at least one platform"
+      // terug — een vraag om iets te kiezen wat er niet te kiezen viel.
+      //
+      // Het is nu wél een keuze, met de waarschuwing waar het om draait: staat
+      // de advertentie er nog, dan krijg je er een tweede bij. Dat is een
+      // afweging van de verkoper. De server houdt dit niet tegen: die kijkt
+      // alleen naar dubbele rijen van hetzelfde artikel, niet naar deze rij.
+      return `<label class="platform-checkbox pm-cb-listed-pick" title="Already listed on ${esc(label)} — only tick this if that advert is gone">
+        <input type="checkbox" value="${p}" onchange="bevestigOpnieuwPlaatsen(this,'${esc(label)}')">
         <span>${PLATFORM_ICONS[p]} ${label}</span>
         <span class="pm-cb-check">✓ Listed</span>
-      </div>`;
+      </label>`;
     }
     // eBay/Shopify publish server-side via their API — they must be connected
     // first, otherwise publishing silently fails. Block selection until then.
