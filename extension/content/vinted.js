@@ -2096,7 +2096,8 @@
       // alleen binnen ons eigen pad.
       if (waarom === "neutraal") {
         for (const vp of voorstelPaden) {
-          const j = namen.findIndex((n) => kaal(n) === kaal(vp[i] || ""));
+          if (!vp[i]) continue;   // dit voorstel gaat niet zo diep
+          const j = namen.findIndex((n) => n && kaal(n) === kaal(vp[i]));
           if (j >= 0) { keuze = opties[j]; waarom = "voorstel van Vinted"; break; }
         }
       }
