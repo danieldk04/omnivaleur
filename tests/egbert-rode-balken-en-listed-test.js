@@ -85,14 +85,19 @@ if (bron) {
   ctx.renderPublishErrorBar();
   const uit = balken["publish-error-bar"].innerHTML;
   check("hij noemt het totaal", /314 publishes failed/.test(uit), uit.slice(0, 120));
-  check("één knop voor alle 303 op 2dehands", /Clear 303 on 2dehands/.test(uit));
-  check("en een aparte voor Marktplaats", /Clear 11 on Marktplaats/.test(uit));
+  check("één knop ruimt alles op, over de kanalen heen",
+        /clearAllPublishErrors\(\)/.test(uit) && /Clear all 314/.test(uit));
+  check("per kanaal blijft het uit te splitsen", /303 on 2dehands/.test(uit));
+  check("en Marktplaats staat er apart bij", /11 on Marktplaats/.test(uit));
   check("het grootste kanaal staat vooraan",
-        uit.indexOf("Clear 303") < uit.indexOf("Clear 11"));
-  check("de knop roept de bestaande opruiming aan",
+        uit.indexOf("303 on") < uit.indexOf("11 on"));
+  check("elk kanaal is een klik naar de bestaande opruiming",
         /clearPublishError\(null,'2dehands'/.test(uit));
   check("hij zegt dat er niets van het platform af gaat",
-        /Nothing is removed from any platform/.test(uit));
+        /nothing is removed from any platform/i.test(uit));
+  check("de knoppenbalk is er niet meer", !/Clear 303 on 2dehands/.test(uit),
+        "vier kanalen = vier knoppen naast elkaar, breder dan de melding zelf");
+  check("de opruimronde bestaat", /function clearAllPublishErrors\(/.test(html));
   check("gezonde advertenties tellen niet mee", !/315|304/.test(uit));
 
   // Zonder fouten hoort de balk weg te zijn, anders staat er eeuwig rood.
@@ -149,6 +154,25 @@ if (tekstfn) {
   check("valt er wél iets te kiezen, dan gewoon de korte vraag",
         /Choose at least one platform/.test(ctx.geenPlatformGekozen("half")));
 }
+
+// ── 4. "Fill from Marktplaats" is een actie, geen filter ──
+console.log("\nStaat 'Fill 61 from Marktplaats' op een logische plek?");
+const filterbalk = html.slice(html.indexOf('<div class="filter-bar">'),
+                              html.indexOf('<div class="bulk-bar" id="bulk-bar">'));
+check("hij hangt niet meer tussen de keuzelijstjes",
+      !/id="mp-fill-btn"/.test(filterbalk),
+      "hij zweeft op een eigen regel naast het aantal artikelen");
+check("en staat bij de knoppen boven de lijst",
+      /id="mp-fill-btn"[\s\S]{0,900}?onclick="openAddItem\(\)"/.test(html));
+check("Vinted gaat mee", !/id="vinted-fill-btn"/.test(filterbalk));
+check("het aantal artikelen staat onder de titel, niet achteraan een rij die afbreekt",
+      /items-sub-label'\);\n\s*if \(teller\) teller\.textContent/.test(html)
+      && !/id="filter-count"/.test(html),
+      "het hing achter een flex-spacer en belandde dus linksonder op een eigen regel");
+check("de filterbalk bevat alleen nog filters",
+      !/filter-reset|filter-spacer|mp-fill-btn|vinted-fill-btn/.test(filterbalk));
+check("'Clear filters' staat bij het aantal dat overblijft",
+      /id="items-sub-label"[\s\S]{0,260}id="filter-reset"/.test(html));
 
 console.log(mislukt ? `\n${mislukt} controle(s) mislukt` : "\nAlles goed");
 process.exit(mislukt ? 1 : 0);
