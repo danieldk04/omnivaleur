@@ -1596,10 +1596,11 @@
       const missing = [];
       if (titleEl && titleEl.value !== wantTitle) missing.push("title");
       if (descEl && !(descEl.value || "").trim() && item.description) missing.push("description");
-      // Ook een prijs die er wél staat maar die Vinted afkeurt telt als "leeg" —
-      // dat is precies het geval waarin het veld €39.99 toonde en het formulier
-      // toch bleef klagen dat de prijs minstens 1,0 moet zijn.
-      if (priceEl && (!(_num(priceEl.value) >= 1) || priceErrorVinted())) missing.push("price");
+      // Alleen een prijs die het FORMULIER niet vasthoudt telt als leeg. Op de
+      // rode regel afgaan liet deze ronde drie keer een prijs "herstellen" die
+      // er allang goed in stond, en dat kostte de tijd die nodig was om te
+      // plaatsen (deze ronde heeft een tijdslot van 45 seconden).
+      if (priceEl && !(await prijsIsGeaccepteerd())) missing.push("price");
       if (sizeEl && !(sizeEl.value || "").trim() && item.size) missing.push("size");
       if (colEl && !(colEl.value || "").trim()) missing.push("colour");
       if (!missing.length) return true;
