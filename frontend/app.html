@@ -4829,6 +4829,19 @@ function renderItemsTable(items) {
   renderDuplicateBar();
   renderPublishErrorBar();
   let lastBucket = null;
+  // DE DUBBELE ADVERTENTIE ZICHTBAAR MAKEN VOOR ER GEKLIKT WORDT.
+  //
+  // Lynn (De Juiste Toon), 05-09-2026: ze importeerde de laatste advertenties
+  // per ongeluk twee keer en vroeg of ze de dubbele mocht delisten. Dat mocht
+  // juist niet: beide regels wijzen naar precies dezelfde advertentie, dus
+  // Delist haalt de échte advertentie weg. De waarschuwing daarover bestond
+  // al, maar pas op het moment dat er iets weg zou gaan. Wie de lijst
+  // doorkijkt kon niet zien welke regels het betreft.
+  //
+  // De index wordt één keer per tekenronde opgebouwd (één doorloop over alle
+  // advertenties) en aan elke rij meegegeven. Per kaartje opnieuw rekenen zou
+  // kwadratisch zijn, en dat is precies wat een Chromebook laat vastlopen.
+  const advIdx = advertIndex();
   const rows = items.map(item => {
     const checked = selectedIds.has(item.id) ? 'checked' : '';
     const rowClass = selectedIds.has(item.id) ? 'selected' : '';
@@ -4846,6 +4859,7 @@ function renderItemsTable(items) {
     // Een mislukte publicatie krijgt voorrang op de "ontbrekende velden"-tip:
     // er is iets échts misgegaan, en dat hoort zichtbaar te zijn zonder hover.
     const errorBadge = publishingItemIds.has(item.id) ? '' : publishErrorBadge(item);
+    const sharedBadge = sharedAdvertBadge(item, advIdx);
     // Subtle time-section subheader between contiguous groups (list is sorted
     // most-recently-handled first, so buckets stay contiguous).
     const bucket = itemsGroepeerOpDatum ? handledBucket(lastHandledAt(item)) : '';
@@ -4858,7 +4872,7 @@ function renderItemsTable(items) {
       <td class="col-check"><input type="checkbox" class="row-check" ${checked} onchange="toggleRowSelect('${item.id}',this.checked)"></td>
       <td><div class="item-info">
         <div class="item-photo">${itemPhotoThumb(item)}</div>
-        <div><div class="item-title">${esc(item.title)}${(item.sku || '').startsWith('IMP-') ? ` <span class="badge" style="background:#eef2ff;color:#4f46e5;font-size:10px;vertical-align:middle" title="Created by importing an existing platform listing">↓ Imported</span>` : ''}${publishingPill}${soldMaybe}</div><div class="item-meta">${item.brand || '—'}${item.size ? ' · ' + item.size : ''}</div>${errorBadge}${missingBadge}</div>
+        <div><div class="item-title">${esc(item.title)}${(item.sku || '').startsWith('IMP-') ? ` <span class="badge" style="background:#eef2ff;color:#4f46e5;font-size:10px;vertical-align:middle" title="Created by importing an existing platform listing">↓ Imported</span>` : ''}${publishingPill}${soldMaybe}${sharedBadge}</div><div class="item-meta">${item.brand || '—'}${item.size ? ' · ' + item.size : ''}</div>${errorBadge}${missingBadge}</div>
       </div></td>
       <td>${priceCell(item)}</td>
       <td class="hide-mobile">${conditionLabel(item.condition)}</td>
@@ -6096,6 +6110,26 @@ function sharedAdverts(itemId, idx) {
     if (others.length) out.push({ platform: l.platform, advert: l.platform_listing_id, others });
   }
   return out;
+}
+
+// Het merkje op de rij zelf. Bewust dezelfde woorden als de waarschuwing bij
+// Delist, zodat het geen nieuw begrip wordt: dit is één advertentie onder twee
+// regels, en Delete is hier de veilige knop.
+function sharedAdvertBadge(item, idx) {
+  const shared = sharedAdverts(item.id, idx);
+  if (!shared.length) return '';
+  const kanalen = [...new Set(shared.map(s => PLATFORM_LABELS[s.platform] || s.platform))].join(', ');
+  const tip = `This row and another row in your dashboard point at the SAME advert on ${kanalen}. `
+    + `Delist would remove that advert from the platform for both. Imported twice? Use Delete: `
+    + `that only clears this row and leaves the advert online.`;
+  return ` <span class="badge" style="background:#ede9fe;color:#5b21b6;font-weight:700;cursor:pointer"
+    title="${esc(tip)}"
+    onclick="event.stopPropagation();showSharedAdvertInfo('${esc(item.id)}')">\u{1F517} Shared advert</span>`;
+}
+
+function showSharedAdvertInfo(itemId) {
+  const titel = state.items.find(i => i.id === itemId)?.title || '';
+  alert(sharedAdvertWarning(sharedAdverts(itemId), titel));
 }
 
 function sharedAdvertWarning(shared, ditTitel) {

@@ -5146,3 +5146,29 @@ Egbert Brouwer (papas-plectrums) mailde terug dat hij wél was ingelogd op
 - Blijft het na 1.0.294 misgaan terwijl hij is ingelogd, dan noemt de melding
   vanaf nu zelf het adres waar het tabblad terechtkwam. Dat is het volgende
   gegeven dat we nodig hebben.
+
+## 05-09-2026 — Lynn (De Juiste Toon): het merkje op de rij zelf
+
+Lynn is weekendhulp bij Toon (dejuistetoon) en de handigste van de twee met dit
+soort dingen. Ze heeft haar eigen nummer gegeven, maar communicatie loopt bij
+voorkeur via Toon zelf.
+
+Ze importeerde de laatste advertenties per ongeluk dubbel en vroeg of ze de
+dubbele mocht delisten. Nee: beide rijen wijzen naar precies dezelfde
+advertentie, dus Delist haalt de echte advertentie weg. De waarschuwing daarover
+kwam pas op het moment dat er iets weg zou gaan; in de lijst was niets te zien.
+Sinds vandaag staat er een merkje "🔗 Shared advert" op de rij zelf, met dezelfde
+woorden als de waarschuwing: Delete is hier de veilige knop. De index wordt één
+keer per tekenronde opgebouwd, niet per kaartje, anders loopt Toons Chromebook
+weer vast. Bewijs: `tests/dubbele-advertentie-merkje-op-de-rij-test.js`, met
+`--oud` tegen de vorige commit, waar hij faalt.
+
+Twee dingen van Lynn zelf, niet van ons:
+
+- De Foulard plaid met de zeilschepen wordt door Marktplaats geweigerd omdat er
+  een website in de omschrijving staat. Ze zag daar een mail van Marktplaats over
+  langskomen. Dat is dus geen storing bij ons.
+- Ze heeft calm mode uitgezet en merkt dat het daardoor een stuk sneller gaat.
+
+**Openstaand:** Lynn vraagt of wij de 52 dubbele rijen van hier opruimen. Dat is
+weggooien in het account van een klant, dus dat wacht op Daniels akkoord.
