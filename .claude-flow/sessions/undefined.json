@@ -1,11 +1,12 @@
 {
   "context": {
     "lastMatchedPatterns": [
-      "mem-shopify_workflow-belangrijk--nooit-content-over"
+      "mem-shopify_workflow-belangrijk--nooit-content-over",
+      "mem-MEMORY-memory-index"
     ]
   },
-  "updatedAt": "2026-09-04T08:23:02.076Z",
-  "restoredAt": "2026-09-04T08:14:58.927Z",
-  "endedAt": "2026-09-04T08:24:35.845Z",
+  "updatedAt": "2026-09-05T18:20:28.594Z",
+  "restoredAt": "2026-09-05T19:22:25.815Z",
+  "endedAt": "2026-09-05T19:22:26.131Z",
   "duration": null
 }

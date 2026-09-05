@@ -7854,3 +7854,74 @@ async function reportError(jobId, serverUrl, error) {
   // claimed until the stale-claim sweep guesses at what happened.
   await finaliseJob(serverUrl, jobId, "error", { error: tekst });
 }
+
+
+// ── Zichzelf bijwerken, zonder dat de verkoper er iets voor hoeft te doen ────
+//
+// WAAROM DIT ER IS (05-09-2026, Toon via Naoufal). Chrome werkt een extensie
+// alleen bij terwijl hij draait, en dan nog eens per paar uur. Wie Chrome twee
+// keer per week openklapt hangt dus dagen achter zonder dat hij het weet. Op
+// 05-09-2026 gemeten: van de negen verkopers waarvan we de versie konden
+// aflezen draaide er niet één de versie uit de Web Store, en de oudste zat op
+// 1.0.260 terwijl 1.0.303 klaarstond. Drieënveertig versies achter.
+//
+// Het dashboard zei dat al (de gele melding linksonder), maar zeggen is geen
+// oplossing: de verkoper moet er dan zelf iets mee, en dat doet hij niet.
+//
+// Hieronder vragen we het Chrome elk uur zelf. Vindt hij een nieuwe versie, dan
+// haalt hij die binnen en herstarten we onszelf, waarmee de nieuwe versie in
+// gebruik komt. De verkoper merkt er niets van.
+const UPDATE_CHECK_MINUTEN = 60;
+// Hoe lang we op zijn hoogst wachten met herstarten omdat er nog werk loopt.
+// Blijft er na een dag nog steeds werk hangen, dan is dát het probleem en
+// herstarten we alsnog: een vastgelopen wachtrij mag geen oude versie
+// conserveren.
+const UPDATE_UITSTEL_MAX_MS = 24 * 60 * 60 * 1000;
+let _updateWachtSinds = 0;
+
+// Herstarten mag NOOIT midden in een klus. Een tabblad dat halverwege een
+// plaatsing wordt losgelaten kost een advertentie, en die fout kennen we al
+// (zie de herplaatsings-notities in docs/team-notes.md).
+async function magNuHerstarten() {
+  if (_pollLoopt || _lopendeScans.size > 0) return false;
+  try {
+    const alarmen = await chrome.alarms.getAll();
+    // Elk lopend job-tabblad heeft een waakhond-alarm. Staat er één, dan is er
+    // werk onderweg.
+    if (alarmen.some((a) => a.name.startsWith(JOB_WATCHDOG_PREFIX))) return false;
+  } catch (_) { return false; }
+  return true;
+}
+
+async function herstartAlsHetKan(reden) {
+  if (!_updateWachtSinds) _updateWachtSinds = Date.now();
+  const tochMaar = (Date.now() - _updateWachtSinds) > UPDATE_UITSTEL_MAX_MS;
+  if (!(await magNuHerstarten()) && !tochMaar) {
+    console.log(`[Omnivaleur] nieuwe versie klaar (${reden}), maar er loopt werk — later opnieuw`);
+    return;
+  }
+  console.log(`[Omnivaleur] nieuwe versie klaar (${reden}) — extensie herstart zichzelf`);
+  try { chrome.runtime.reload(); } catch (_) { /* dan bij de volgende ronde */ }
+}
+
+async function controleerOpNieuweVersie() {
+  // Staat er al een update klaar die we alleen niet konden installeren omdat er
+  // werk liep, dan is opnieuw vragen zinloos: gewoon nog eens proberen.
+  if (_updateWachtSinds) { await herstartAlsHetKan("wachtend"); return; }
+  try {
+    const { status } = await chrome.runtime.requestUpdateCheck();
+    if (status === "update_available") await herstartAlsHetKan("gevonden");
+  } catch (_) {
+    // Een met de hand geladen kopie kan dit niet, en Chrome knijpt de vraag af
+    // als je hem te vaak stelt. Beide zijn geen storing.
+  }
+}
+
+// Chrome kan de update ook uit zichzelf vinden. Standaard wacht hij dan tot de
+// browser opnieuw start — bij iemand die Chrome nooit afsluit is dat nooit.
+chrome.runtime.onUpdateAvailable.addListener(() => { herstartAlsHetKan("gemeld"); });
+
+chrome.alarms.create("update-check", { periodInMinutes: UPDATE_CHECK_MINUTEN });
+chrome.alarms.onAlarm.addListener((alarm) => {
+  if (alarm.name === "update-check") controleerOpNieuweVersie();
+});

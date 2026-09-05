@@ -82,7 +82,13 @@ RICH_KEYS = ("photo_urls", "description", "brand", "size", "condition",
 EXTENSION_ONLINE_WINDOW_SECONDS = 120
 
 
-def _record_extension_heartbeat(db, user_id: str, user_agent: str | None = None) -> None:
+# Eén keer per proces vaststellen of de kolom bestaat; anders levert elke
+# hartslag een mislukte schrijfpoging op.
+_HEARTBEAT_VERSIEKOLOM = [True]
+
+
+def _record_extension_heartbeat(db, user_id: str, user_agent: str | None = None,
+                                versie: str | None = None) -> None:
     """
     Stamp that the extension just checked in, so a user on their phone can see
     whether a computer is online to run their queued jobs. Called from every
@@ -103,7 +109,25 @@ def _record_extension_heartbeat(db, user_id: str, user_agent: str | None = None)
         ua = (user_agent or "")[:300]
         if ua:
             row["user_agent"] = ua
-        db.table("extension_heartbeat").upsert(row).execute()
+        # De versie erbij, zodat we kunnen TELLEN wie er achterloopt in plaats
+        # van het af te leiden uit foutmeldingen (waarmee je alleen de mensen
+        # ziet die iets kapot hadden). De kolom moet met de hand worden
+        # toegevoegd; tot die tijd valt hij hieronder weg zonder dat de
+        # aanwezigheidsstempel eronder lijdt.
+        if versie and _HEARTBEAT_VERSIEKOLOM[0]:
+            row["ext_version"] = versie[:20]
+        try:
+            db.table("extension_heartbeat").upsert(row).execute()
+        except Exception:
+            if "ext_version" not in row:
+                raise
+            _HEARTBEAT_VERSIEKOLOM[0] = False
+            logger.info(
+                "Kolom ext_version ontbreekt nog in extension_heartbeat; de "
+                "versie wordt niet vastgelegd. Zet hem erbij met: ALTER TABLE "
+                "extension_heartbeat ADD COLUMN ext_version text;")
+            row.pop("ext_version")
+            db.table("extension_heartbeat").upsert(row).execute()
     except Exception:
         pass
 
@@ -513,7 +537,8 @@ def get_pending_jobs(request: Request, platform: str = None, user_id: str = Depe
     # polls without one, just to count) — treat it as the extension's heartbeat
     # so the "computer online" indicator works without any extension change.
     if platform is not None:
-        _record_extension_heartbeat(db, user_id, request.headers.get("user-agent"))
+        _record_extension_heartbeat(db, user_id, request.headers.get("user-agent"),
+                                    versie=request.headers.get("x-omnivaleur-ext"))
         # Een te oude kopie krijgt niets meer te doen.
         #
         # WAAROM (27-08-2026, Jaap): drie weken lang draaide bij hem 1.0.218

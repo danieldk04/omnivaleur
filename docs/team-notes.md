@@ -5369,3 +5369,33 @@ het wachtwoord nooit.
 eerste kandidaat, een maand meten. Pas daarna een echte server, een IP per klant en
 een prijs in de lijst. Niet verkopen voordat die maand gedraaid heeft: je belooft dan
 ontzorging en levert een storing waar de klant zelf niet eens bij kan.
+
+## 05-09-2026 — Gemeten: niemand draaide de nieuwste extensie, en nu werkt hij zichzelf bij
+
+Voor het done-for-you-plan hierboven eerst geteld hoe groot het echte probleem
+is. Uit de laatste duizend foutmeldingen zijn negen verkopers af te lezen met een
+versiestempel. Geen van de negen draaide 1.0.303 (de versie die in de Web Store
+stond):
+
+    1.0.258, 1.0.260 (nog op 05-09), 1.0.268, 1.0.273, 1.0.279 (2x),
+    1.0.281, 1.0.294 (2x)
+
+De oudste zat drieënveertig versies achter. Let op de meetbeperking: dit ziet
+alleen mensen die een fout hadden, en het venster is duizend regels. Er zijn 21
+computers met een hartslag ooit, dus het echte beeld kan slechter zijn.
+
+Sinds 1.0.304 vraagt de extensie Chrome elk uur zelf om een bijwerkcontrole
+(`chrome.runtime.requestUpdateCheck`) en luistert hij op `onUpdateAvailable`.
+Vindt hij een nieuwe versie, dan herstart hij zichzelf, waarmee die in gebruik
+komt. De rem erop: nooit herstarten terwijl er werk loopt (poll bezig, scan
+bezig, of een job-tabblad met een waakhond-alarm), want een tabblad dat
+halverwege een plaatsing wordt losgelaten kost een advertentie. Blijft werk
+langer dan een dag hangen, dan herstart hij alsnog: een vastgelopen wachtrij mag
+geen oude versie conserveren. Bewijs: `tests/extensie-zelf-bijwerken-test.js`
+(9 gevallen); tegen de vorige commit bestaat de code niet eens.
+
+Daarnaast schrijft de server de versie voortaan mee in `extension_heartbeat`, in
+een nieuwe kolom `ext_version`, zodat dit voortaan te tellen is zonder omweg via
+foutmeldingen. **Vereist één handmatige stap in Supabase:**
+`ALTER TABLE extension_heartbeat ADD COLUMN ext_version text;` Tot die tijd valt
+de kolom weg zonder dat de aanwezigheidsstempel eronder lijdt.
