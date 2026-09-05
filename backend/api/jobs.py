@@ -1379,13 +1379,29 @@ async def _rond_publicatie_af(db, job: dict, body: dict) -> None:
             # stond met drie identieke advertenties tegelijk op Marktplaats.
             #
             # refresh_listing schrijft daarom nu in de opdracht welke rij deze
-            # plaatsing vervangt. Alleen die rij, en alleen als hij ook echt nog
-            # op 'relisting' staat — anders raken we een advertentie kwijt die
-            # gewoon online staat.
+            # plaatsing vervangt.
+            #
+            # WAAROM 'delisted' HIER OOK MEETELT (05-09-2026, gemeten op Daniels
+            # eigen account, artikel (1275)). De rij gaat bij het inplannen op
+            # 'relisting', maar zodra de extensie de oude advertentie heeft
+            # weggehaald zet _verwijderdoelen diezelfde rij op 'delisted'. Tegen
+            # de tijd dat de plaatsing binnenkomt staat er dus nooit meer
+            # 'relisting' — precies het geval waarin het mis ging. Alleen als de
+            # verwijdering mislukte bleef de rij op 'relisting' staan, en dat is
+            # het enige geval dat de vorige versie afving. 'active' blijft
+            # buiten schot: die rij hoort bij een advertentie die gewoon online
+            # staat, en die mogen we nooit overschrijven.
+            VERVANGBAAR = ("relisting", "delisted")
             vervangt = ((job.get("payload") or {}).get("_vervangt_listing_id"))
+            if not vervangt:
+                # Opdrachten van vóór het merkteken (en alles wat al in de
+                # wachtrij stond) hebben het niet. De bijbehorende verwijdering
+                # weet het wél: die draagt het rij-id in _refresh_rollback.
+                vervangt = await _rij_van_de_gepaarde_verwijdering(db, job)
             if vervangt:
                 doel = next((r for r in rijen
-                             if r["id"] == vervangt and r.get("status") == "relisting"), None)
+                             if r["id"] == vervangt
+                             and r.get("status") in VERVANGBAAR), None)
             if doel is None:
                 # Oudere opdrachten (nog zonder merkteken) en de reddingsronde:
                 # is er precies één rij die op zijn herplaatsing wacht, dan is
@@ -1444,6 +1460,36 @@ EINDSTATUSSEN = ("sold", "sold_unconfirmed", "delisted", "archived")
 # vanzelf verlopen zijn en heeft iemand hem weggehaald — meestal de verkoper,
 # omdat het artikel verkocht is.
 ZELF_VERLOPEN_NA_DAGEN = 28
+
+
+async def _rij_van_de_gepaarde_verwijdering(db, job: dict):
+    """Welke advertentierij haalde de verwijdering weg die bij deze plaatsing hoort?
+
+    Een herplaatsing is twee opdrachten: eerst weghalen, dan plaatsen. De
+    verwijdering draagt het rij-id mee in `_refresh_rollback`; de plaatsing
+    kreeg dat pas op 05-09-2026. Alles wat op dat moment al in de wachtrij
+    stond mist het merkteken dus, en zonder deze terugval zou daar nog één
+    dubbele advertentie uit komen. Een handmatige verwijdering heeft geen
+    `_refresh_rollback` en levert hier dus niets op: alleen een herplaatsing
+    kan een rij overnemen.
+    """
+    try:
+        rijen = (await naast_de_lus(lambda: db.table("jobs")
+                 .select("payload,created_at")
+                 .eq("user_id", job["user_id"]).eq("item_id", job["item_id"])
+                 .eq("platform", job["platform"]).eq("action", "delete")
+                 .lte("created_at", job["created_at"])
+                 .order("created_at", desc=True).limit(1).execute())).data or []
+    except Exception:  # noqa: BLE001
+        return None
+    if not rijen:
+        return None
+    verwijdering = rijen[0]
+    # Een verwijdering van weken geleden hoort niet bij deze plaatsing.
+    begin, eind = _parse_ts(verwijdering.get("created_at")), _parse_ts(job.get("created_at"))
+    if begin and eind and (eind - begin) > timedelta(days=2):
+        return None
+    return ((verwijdering.get("payload") or {}).get("_refresh_rollback") or {}).get("listing_id")
 
 
 def _verwijderdoelen(db, job: dict) -> list[dict]:

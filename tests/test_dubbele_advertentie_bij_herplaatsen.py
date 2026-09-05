@@ -41,7 +41,7 @@ from backend.services import relist as rl    # noqa: E402
 class _Q:
     def __init__(self, db, tabel):
         self.db, self.tabel = db, tabel
-        self.filters, self.in_filters = {}, {}
+        self.filters, self.in_filters, self.lte_filters = {}, {}, {}
         self.op, self.velden, self.rijen_in = None, None, None
 
     def select(self, *_a, **_k):
@@ -61,6 +61,9 @@ class _Q:
     def in_(self, k, v):
         self.in_filters[k] = list(v); return self
 
+    def lte(self, k, v):
+        self.lte_filters[k] = v; return self
+
     def lt(self, *_a):
         self.filters["__nooit__"] = object(); return self   # niets is "oud"
 
@@ -79,7 +82,8 @@ class _Q:
     def _rijen(self):
         return [r for r in self._bron()
                 if all(r.get(k) == v for k, v in self.filters.items())
-                and all(r.get(k) in v for k, v in self.in_filters.items())]
+                and all(r.get(k) in v for k, v in self.in_filters.items())
+                and all(str(r.get(k) or "") <= str(v) for k, v in self.lte_filters.items())]
 
     def execute(self):
         if self.op == "insert":
@@ -254,3 +258,86 @@ def test_reddingsronde_helpt_een_echt_vastgelopen_herplaatsing_nog_steeds():
     assert len(plaatsingen) == 1, "een écht vastgelopen herplaatsing hoort geholpen te worden"
     assert plaatsingen[0]["payload"]["_vervangt_listing_id"] == "oud"
     assert uit.get("hersteld") == 1
+
+
+# ── 3. De echte volgorde: weghalen zet de rij op 'delisted' ──────────────────
+#
+# WAAROM DIT ER APART STAAT (05-09-2026, gemeten op Daniels eigen account bij
+# artikel (1275) Grey Profuomo Half Zip). De tests hierboven zetten de rij op
+# 'relisting' en dat is ook wat het inplannen doet, maar zo ziet de plaatsing
+# hem nooit. Ertussen zit de geslaagde verwijdering, en die zet dezelfde rij op
+# 'delisted' (zie _verwijderdoelen). In het echte verloop stond er dus nooit
+# 'relisting' meer op het moment dat de plaatsing binnenkwam, en kwam er alsnog
+# een tweede rij bij. Alleen als de verwijdering MISLUKTE bleef 'relisting'
+# staan. Deze drie tests bewaken het verloop waarin alles goed gaat.
+
+def test_na_een_geslaagde_verwijdering_komt_er_geen_rij_bij():
+    db = _DB(listings=[
+        {"id": "oud", "item_id": "it1", "platform": "marktplaats",
+         "status": "delisted", "platform_listing_id": "m2426331226"},
+    ])
+    job = {"id": "j1", "user_id": "u1", "item_id": "it1", "platform": "marktplaats",
+           "created_at": _uur_geleden(1),
+           "payload": {"_vervangt_listing_id": "oud"}}
+    asyncio.run(api._rond_publicatie_af(
+        db, job, {"platform_listing_id": "m2440000001",
+                  "platform_listing_url": "https://www.marktplaats.nl/x"}))
+
+    assert len(db.listings) == 1, "de weggehaalde rij hoort te worden hergebruikt"
+    assert db.listings[0]["status"] == "active"
+    assert db.listings[0]["platform_listing_id"] == "m2440000001"
+
+
+def test_opdracht_zonder_merkteken_vindt_de_rij_via_de_verwijdering():
+    """Alles wat al in de wachtrij stond mist het merkteken; de verwijdering
+    die erbij hoort draagt het rij-id wél."""
+    db = _DB(
+        listings=[{"id": "oud", "item_id": "it1", "platform": "marktplaats",
+                   "status": "delisted", "platform_listing_id": "m2426331226"}],
+        jobs=[{"id": "d1", "user_id": "u1", "item_id": "it1", "platform": "marktplaats",
+               "action": "delete", "status": "done", "created_at": _uur_geleden(2),
+               "payload": {"platform_listing_id": "m2426331226",
+                           "_refresh_rollback": {"listing_id": "oud"}}}],
+    )
+    job = {"id": "j1", "user_id": "u1", "item_id": "it1", "platform": "marktplaats",
+           "created_at": _uur_geleden(1), "payload": {}}
+    asyncio.run(api._rond_publicatie_af(
+        db, job, {"platform_listing_id": "m2440000002", "platform_listing_url": "u"}))
+
+    assert len(db.listings) == 1
+    assert db.listings[0]["platform_listing_id"] == "m2440000002"
+
+
+def test_een_handmatige_verwijdering_kaapt_geen_rij():
+    """Alleen een herplaatsing draagt _refresh_rollback. Zonder dat merkteken
+    hoort een plaatsing gewoon een nieuwe rij te krijgen."""
+    db = _DB(
+        listings=[{"id": "oud", "item_id": "it1", "platform": "marktplaats",
+                   "status": "delisted", "platform_listing_id": "m1"}],
+        jobs=[{"id": "d1", "user_id": "u1", "item_id": "it1", "platform": "marktplaats",
+               "action": "delete", "status": "done", "created_at": _uur_geleden(2),
+               "payload": {"platform_listing_id": "m1"}}],
+    )
+    job = {"id": "j1", "user_id": "u1", "item_id": "it1", "platform": "marktplaats",
+           "created_at": _uur_geleden(1), "payload": {}}
+    asyncio.run(api._rond_publicatie_af(
+        db, job, {"platform_listing_id": "m2", "platform_listing_url": "u"}))
+
+    assert len(db.listings) == 2
+    assert db.listings[0]["platform_listing_id"] == "m1"
+
+
+def test_een_verwijdering_van_weken_geleden_telt_niet_mee():
+    db = _DB(
+        listings=[{"id": "oud", "item_id": "it1", "platform": "marktplaats",
+                   "status": "delisted", "platform_listing_id": "m1"}],
+        jobs=[{"id": "d1", "user_id": "u1", "item_id": "it1", "platform": "marktplaats",
+               "action": "delete", "status": "done", "created_at": _uur_geleden(24 * 12),
+               "payload": {"_refresh_rollback": {"listing_id": "oud"}}}],
+    )
+    job = {"id": "j1", "user_id": "u1", "item_id": "it1", "platform": "marktplaats",
+           "created_at": _uur_geleden(1), "payload": {}}
+    asyncio.run(api._rond_publicatie_af(
+        db, job, {"platform_listing_id": "m2", "platform_listing_url": "u"}))
+
+    assert len(db.listings) == 2, "een oude verwijdering hoort geen rij te kapen"
