@@ -2252,11 +2252,18 @@ Feiten die kloppen:
 TOON_KORT_EN_MENSELIJK = """
 
 TOON: KORT, MENSELIJK, VANUIT ZIJN KANT.
-- Hooguit 200 woorden. Korter mag altijd. Elke zin die niets voor hem verandert,
+- Hooguit 120 woorden. Korter mag altijd. Elke zin die niets voor hem verandert,
   gaat eruit.
+- Schrijf zoals je praat. Korte zinnen, gewone woorden, spreek hem aan met je.
+  Lees het hardop terug: klinkt het als een collega die even iets uitlegt, dan is
+  het goed. Klinkt het als een bedrijf dat een klant informeert, dan is het te
+  lang en te stijf. Geen "wij hebben geconstateerd", geen "hierbij bevestig ik",
+  geen "excuses voor het ongemak".
 - Open met EEN menselijke zin: erken kort wat hij merkte, in zijn eigen woorden,
-  en dat je hebt gekeken. Geen excuusalinea, geen "sorry voor het ongemak", geen
-  complimenten over hoe goed hij het opschreef. Een keer erkennen is genoeg.
+  en dat je hebt gekeken. Geen excuusalinea, geen complimenten over hoe goed hij
+  het opschreef. Een keer erkennen is genoeg.
+- Is er goed nieuws, zeg dat als eerste. Niemand hoeft door drie zinnen uitleg
+  heen te lezen om te horen dat zijn probleem al weg is.
 - Per punt: noem het onderwerp, dubbele punt, en dan in een of twee zinnen wat er
   NU anders is. Het gevolg dat hij merkt gaat voor, niet de oorzaak. Waar de
   oorzaak helpt om het te snappen, mag hij in een halve zin mee.
