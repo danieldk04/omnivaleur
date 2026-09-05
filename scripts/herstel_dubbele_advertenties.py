@@ -73,9 +73,18 @@ def main(user_id: str, apply: bool) -> None:
     def _jongste_eerst(rij):
         return str(rij.get("listed_at") or rij.get("created_at") or "")
 
-    te_verwijderen = []
+    # Alleen kanalen die de extensie bedient. Een verwijderopdracht voor eBay of
+    # Shopify wordt door niemand opgepakt: die lopen via hun eigen API. Zo'n rij
+    # blijft dan eeuwig in de wachtrij staan en telt mee in de teller op het
+    # dashboard (05-09-2026 gebeurd op Daniels eigen account, Shopify).
+    from backend.services.crosslist import EXTENSION_PLATFORMS
+
+    te_verwijderen, buiten_bereik = [], []
     for (item_id, platform), rijen in per_kanaal.items():
         if len(rijen) < 2:
+            continue
+        if platform not in EXTENSION_PLATFORMS:
+            buiten_bereik.append((titel_van.get(item_id), platform, len(rijen)))
             continue
         rijen.sort(key=_jongste_eerst, reverse=True)
         houden, weg = rijen[0], rijen[1:]
@@ -86,6 +95,10 @@ def main(user_id: str, apply: bool) -> None:
             print(f"   weghalen    : {r['platform_listing_id']} "
                   f"({str(r.get('listed_at'))[:19]})")
             te_verwijderen.append((item_id, platform, r))
+
+    for titel, platform, aantal in buiten_bereik:
+        print(f"\n{titel!r} op {platform}: {aantal} advertenties — NIET automatisch op te "
+              f"ruimen, dat kanaal loopt via zijn eigen API en niet via de extensie.")
 
     # ── 2. Kandidaten die allang gekoppeld zijn ──────────────────────────────
     nummers_in_gebruik = {(l["platform"], str(l["platform_listing_id"]))
