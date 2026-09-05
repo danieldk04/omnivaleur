@@ -5399,3 +5399,19 @@ een nieuwe kolom `ext_version`, zodat dit voortaan te tellen is zonder omweg via
 foutmeldingen. **Vereist één handmatige stap in Supabase:**
 `ALTER TABLE extension_heartbeat ADD COLUMN ext_version text;` Tot die tijd valt
 de kolom weg zonder dat de aanwezigheidsstempel eronder lijdt.
+
+## 05-09-2026 — De nameting op het zelf bijwerken staat gepland
+
+1.0.304 is naar de Chrome Web Store geüpload. Of het zelf bijwerken echt werkt
+is daarmee nog niet bewezen: Daniels eigen kopie is met de hand geladen, en
+Chrome laat een handmatig geladen extensie nooit zelf naar updates zoeken. Het
+bewijs moet dus van de klanten komen.
+
+`scripts/tel_extensieversies.py` doet de meting: hij haalt op wat er in de Web
+Store staat en zet daar de versie naast van elke computer die de afgelopen week
+online was. Eerste meting op 05-09-2026, vlak na de deploy: van de acht actieve
+computers stond er één op 1.0.304 (Daniel, handmatig), twee op 1.0.294 en vijf
+zonder versie, want hun laatste hartslag was van vóór de deploy.
+
+Er staat een geplande taak voor 07-09-2026 die de meting herhaalt en de uitkomst
+hier vastlegt, goed nieuws of niet.

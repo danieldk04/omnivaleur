@@ -6,8 +6,8 @@
     "mem-MEMORY-memory-index": {
       "id": "mem-MEMORY-memory-index",
       "category": "core",
-      "confidence": 0.6500000000000001,
-      "accessCount": 3,
+      "confidence": 0.7000000000000002,
+      "accessCount": 4,
       "createdAt": 1783151212569
     },
     "mem-feedback_push_to_live----": {
@@ -20,8 +20,8 @@
     "mem-project_zenbtw----": {
       "id": "mem-project_zenbtw----",
       "category": "project_zenbtw",
-      "confidence": 0.6800000000000002,
-      "accessCount": 4,
+      "confidence": 0.7300000000000002,
+      "accessCount": 5,
       "createdAt": 1783151212563
     },
     "mem-shopify_workflow----": {
@@ -41,8 +41,8 @@
     "mem-shopify_workflow-belangrijk--nooit-content-over": {
       "id": "mem-shopify_workflow-belangrijk--nooit-content-over",
       "category": "shopify_workflow",
-      "confidence": 0.7500000000000002,
-      "accessCount": 5,
+      "confidence": 0.8000000000000003,
+      "accessCount": 6,
       "createdAt": 1783151212563
     },
     "mem-feedback_always_push----": {
@@ -97,8 +97,8 @@
     "mem-feedback_manual_images----": {
       "id": "mem-feedback_manual_images----",
       "category": "feedback_manual_images",
-      "confidence": 0.5,
-      "accessCount": 0,
+      "confidence": 0.55,
+      "accessCount": 1,
       "createdAt": 1783151212567
     },
     "mem-feedback_push_railway----": {
