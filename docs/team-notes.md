@@ -4987,7 +4987,7 @@ Dat kon, en het leverde meteen een tweede storing op.
 
 **Het gat.** De reparatie van vanochtend nam de oude advertentierij alleen over
 als die nog op `relisting` stond. In het echte verloop staat daar nooit meer
-`relisting`: het inplannen zet hem daarop, maar de gESLAAGDE verwijdering zet
+`relisting`: het inplannen zet hem daarop, maar de GESLAAGDE verwijdering zet
 dezelfde rij meteen daarna op `delisted` (`_verwijderdoelen` pakt hem op het
 rij-id uit `_refresh_rollback`). We vingen dus precies het zeldzame geval af, de
 mislukte verwijdering, en lieten het normale geval door. Aanwijsbaar bij Amanda:
