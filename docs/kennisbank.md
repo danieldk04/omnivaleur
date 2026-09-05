@@ -17,6 +17,89 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ---
 
+## vinted-zoekterugval-stopt-op-tak
+
+*05-09-2026 — Vinted's zoek-terugval klikte één regel aan en stopte, ook als daaronder nog subcategorieën zaten*
+
+Vinted heeft twee wegen naar een categorie: de boom aflopen
+(`walkVintedCategoryPath`, kent alleen KLEDINGpaden) en zoeken op een trefwoord
+en de best scorende regel aanklikken. Die tweede weg stopte na één klik. Bij
+wonen, antiek, kunst en muziek gaat Vinted's boom daar nog een of twee niveaus
+onder door, dus het veld bleef leeg en het formulier weigerde met "Kies een
+subcategorie".
+
+Gemeten bij Amanda Haas (05-09-2026): zeven mislukte plaatsingen met precies die
+melding, bij "wonen plaids en woondekens", "wonen beddengoed" en "antiek
+gereedschap en instrumenten". Zij verkoopt brocante, dus alles bij haar loopt
+via de zoek-terugval.
+
+**Why:** een categorie kiezen is niet "een regel aanklikken" maar "doorklikken
+tot Vinted het veld zelf invult". Dat veld is het enige bewijs.
+
+**How to apply:** `kiesRestSubcategorie` daalt na de klik nog maximaal drie
+niveaus af met dezelfde `kiesBlad`-logica als de boom, tot
+`input[data-testid="catalog-select-dropdown-input"]` een waarde heeft. Let op
+"extensie-const-na-await-valstrik": alles wat de invulstappen gebruiken moet
+een function declaration zijn of boven `const job = await getJob()` staan.
+
+---
+
+## chrome-sitetoegang-op-klik
+
+*05-09-2026 — Chrome's site-access "Als je erop klikt" laat elke opdracht stil doodlopen in een lege pagina; permissions.contains() verraadt het*
+
+Chrome kent per extensie drie standen voor site-toegang: "Op alle sites", "Op
+specifieke sites" en "Als je erop klikt". Bij die laatste ziet de extensie een
+pagina pas nadat de verkoper op het icoontje rechts van de adresbalk heeft
+geklikt — per pagina. Onze werk-tabbladen openen zichzelf, dus dan gebeurt er
+niets: geen invulstap, geen foutmelding, en na drie minuten "Extension timed out
+waiting for this job to finish".
+
+Amanda Haas (05-09-2026): "Die toestemming geven betrof elke keer als een nieuwe
+pagina werd geopend, rechts van de werkbalk" — daarom moest ze erbij blijven
+zitten.
+
+**Why:** een time-out leest als "de site is veranderd" terwijl het een
+browserinstelling is. Zonder deze controle zoek je weken in de verkeerde hoek.
+
+**How to apply:** `chrome.permissions.contains({origins:[…]})` geeft de ECHTE
+stand terug, ook voor host-permissies die in het manifest staan (Chrome mag ze
+inhouden). `processJob` stopt nu meteen met een leesbare uitleg als Chrome met
+zoveel woorden nee zegt, en gaat gewoon door bij twijfel. De popup toont een
+knop die `chrome.permissions.request` doet — en die moet uit een echt tabblad
+komen, want Chrome sluit het uitklapvenster zodra hij de vraag toont (zelfde val
+als bij "admarkt-toestemming-verdwijnt").
+
+---
+
+## herplaatsing-laat-oude-rij-staan
+
+*05-09-2026 — Een geslaagde herplaatsing liet de oude rij op 'relisting' staan, waarna de reddingsronde elke zes uur een dubbele advertentie plaatste*
+
+Herplaatsen zet de BESTAANDE advertentierij op `relisting` en laat het oude
+advertentienummer erop staan. `_rond_publicatie_af` zocht bij binnenkomst van de
+nieuwe advertentie een rij met het nieuwe nummer (bestaat niet) of een rij zonder
+nummer (bestaat niet), en zette er dus een tweede rij naast. De oude bleef eeuwig
+op `relisting`.
+
+`herstel_vastgelopen_werk` leest `relisting` als "halverwege blijven steken" en
+zette er elke zes uur een nieuwe plaatsing voor klaar. Gemeten bij Amanda Haas
+(05-09-2026): drie artikelen met elk drie identieke Marktplaats-advertenties
+tegelijk online, elke dag eentje erbij. Dat is precies het dubbel plaatsen waar
+Marktplaats accounts voor blokkeert.
+
+**Why:** een status die niemand afsluit is geen tussenstand maar een lopende
+band. Elke ronde die op zo'n status reageert vermenigvuldigt zichzelf.
+
+**How to apply:** een herplaatsingsopdracht draagt nu `_vervangt_listing_id` in
+zijn payload; de afronding werkt díé rij bij. En de reddingsronde kijkt eerst of
+er al een andere levende advertentie voor hetzelfde artikel op hetzelfde kanaal
+staat: dan was de herplaatsing gewoon gelukt en gaat de oude rij op `delisted`.
+Zie ook "herplaatslus-op-verkochte-artikelen" en
+"reddingsronde-kale-plaatsing-dubbele-advertentie".
+
+---
+
 ## waarschuwing-moet-in-het-venster-passen
 
 *04-09-2026 — Een alarm met een drempel (3 uur stil) én een tijdvenster (10-20 uur) kan elkaar uitsluiten; reken het na op echte gegevens*

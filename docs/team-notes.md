@@ -4773,3 +4773,117 @@ op. Eén advertentie per minuut is dus de bodem zolang we via alarms werken.
   **Actie voor Daniel: tegoed bijvullen en het controleren.**
 
 898 → 915 python-tests groen, alle JS-proeven groen.
+
+## 05-09-2026 — Amanda: waarom dezelfde advertentie elke dag terugkwam
+
+Amanda Haas mailde drie dingen: "hij blijft dezelfde advertenties er opnieuw
+opzetten", "hij importeert nieuw geplaatste advertenties niet van marktplaats",
+en "bij Vinted blijft hij elke keer steken op de categorie". Plus het antwoord op
+Daniels vraag: die toestemming gaf ze "elke keer als een nieuwe pagina werd
+geopend, rechts van de werkbalk".
+
+Alle vier nagemeten in haar account (0b28c1ce-b913-4431-a765-395ac1e22100, 479
+artikelen).
+
+### 1. De dubbele advertenties: een lopende band, geen toeval
+
+Haar "AH hamster knuffel kok nieuw" stond op 05-09 met drie identieke
+Marktplaats-advertenties tegelijk online: m2439045744, m2439067409 en
+m2439186265, geplaatst op drie opeenvolgende dagen. Idem voor haar Jumbo
+legpuzzel en haar teckelbeeldje. Zes overtollige advertenties in totaal, en er
+kwam elke dag eentje bij.
+
+Het mechanisme, bewezen op haar opdrachtenlogboek:
+
+1. Herplaatsen zet de BESTAANDE advertentierij op 'relisting' en laat het oude
+   advertentienummer erop staan.
+2. Kwam de nieuwe advertentie binnen, dan zocht de afronding een rij met dát
+   nieuwe nummer (bestaat niet) of een rij zónder nummer (bestaat ook niet, want
+   de oude rij hééft er een). Dus zette hij er een NIEUWE rij naast en bleef de
+   oude eeuwig op 'relisting' staan.
+3. De reddingsronde (`herstel_vastgelopen_werk`, elke zes uur) leest 'relisting'
+   als "halverwege blijven steken" en zette er weer een plaatsing voor klaar.
+   Advertentie erbij. Elke ronde.
+
+Dit is niet Amanda-specifiek: op dat moment stonden er 72 rijen op 'relisting'
+verdeeld over zes verkopers. Het is ook precies het patroon waar Marktplaats
+accounts voor blokkeert.
+
+Gerepareerd op twee plekken, zodat één gemiste schakel niet meteen weer een
+advertentie kost: de herplaatsopdracht draagt nu `_vervangt_listing_id` en de
+afronding werkt díé rij bij, en de reddingsronde kijkt eerst of er al een andere
+levende advertentie voor hetzelfde artikel op hetzelfde kanaal staat.
+
+Haar zes overtollige advertenties staan als verwijderopdracht klaar
+(`scripts/herstel_dubbele_advertenties.py`), telkens op advertentienummer. De
+extensie zoekt eerst op dat nummer en weigert te gokken bij twijfel, dus er kan
+nooit de verkeerde weg.
+
+### 2. "Importeert nieuw geplaatste advertenties niet" — hij vond ze wél
+
+Op haar te-beoordelen lijst stonden 117 Marktplaats-advertenties. Daarvan hingen
+er 111 allang aan een artikel in haar overzicht: hun advertentienummer stond
+gewoon in `listings`. Het waren advertenties die WIJ hadden geplaatst of
+herplaatst — elke publicatie levert een nieuw nummer op, en een nummer dat de
+vorige scan niet kende gold als "nieuw, de verkoper moet beslissen".
+
+De zes advertenties die ze écht zelf op Marktplaats had gezet verdronken daarin.
+Dat leest als "hij importeert mijn nieuwe advertenties niet".
+
+Nu geldt: hangt het advertentienummer al aan een artikel, dan valt er niets te
+beslissen en staat het op 'linked'. Haar lijst is teruggebracht van 122 wachtende
+naar precies de 6 die van haar zijn (o.a. "Switch On koffieapparaat nieuw",
+"Cougar Voetbaltafel Freestyle pro White").
+
+### 3. Vinted: blijven steken op de categorie
+
+Zeven van haar mislukte Vinted-plaatsingen eindigen letterlijk met "Kies een
+subcategorie", bij "wonen plaids en woondekens", "wonen beddengoed" en "antiek
+gereedschap en instrumenten".
+
+Vinted heeft twee wegen naar een categorie. De boom aflopen klikt netjes door tot
+er geen niveau meer onder zit, maar kent alleen KLEDINGpaden. Zoeken op een
+trefwoord klikte één regel aan en stopte — en zo'n gevonden regel is bij wonen en
+antiek zelden een eindpunt. Amanda verkoopt brocante, dus alles bij haar loopt via
+die tweede weg.
+
+De zoek-terugval daalt nu na de klik nog maximaal drie niveaus af, met dezelfde
+keuzelogica als de boom, tot Vinted de categorie echt vastlegt.
+
+### 4. De toestemming rechts van de werkbalk
+
+Dat is Chrome's site-access per extensie, en die staat bij haar op "Als je erop
+klikt". Dan ziet de extensie een pagina pas nadat je op het icoontje hebt geklikt
+— per pagina. Onze werk-tabbladen openen zichzelf, dus er gebeurt niets: geen
+invulstap, geen melding, en na drie minuten "Extension timed out". Haar logboek
+staat er vol mee.
+
+Chrome geeft die stand gewoon terug via `permissions.contains()`, ook voor
+host-permissies die in het manifest staan. De extensie stopt nu meteen met een
+leesbare uitleg als Chrome met zoveel woorden nee zegt, en gaat gewoon door bij
+twijfel. De popup heeft een rode balk met een knop die het in één klik goedzet.
+
+Dat laatste is het enige punt waar Amanda zelf iets moet doen: één klik in de
+popup, of in Chrome zelf de site-toegang op "Op alle sites" zetten.
+
+### Wat NIET gerepareerd is, met zoveel woorden
+
+- **De MOET ZEKER-storing `verkeerde-categorie-toegewezen` blijft open.** Het
+  Vinted-deel ervan is hierboven opgelost, maar de melding van
+  info@zilverwebsite.nl gaat over iets anders (zilver ontbreekt in de lijst, met
+  een HTTP 500). Die sleutel afmelden zou die klant een onwaar bericht sturen.
+- **Andere verkopers hebben ook dubbele advertenties.** Gemeten op 05-09:
+  3bfbed2c-e8a7-4b28-8870-f3581d48afc5 heeft 11 overtollige advertenties op
+  2dehands en 5 op Marktplaats, 96e30080-ab81-47ac-8626-e8637f1e2a9e heeft er 1.
+  De oorzaak staat stil, maar wat er al staat is niet opgeruimd — `scripts/
+  herstel_dubbele_advertenties.py --user <uuid>` doet dat, per verkoper.
+- **Of Amanda's Chrome écht op "Als je erop klikt" staat is van hier niet te
+  zien.** Het past op alles wat ze beschrijft en op haar time-outs, maar het
+  bewijs komt pas van haar eigen machine — vanaf 1.0.296 zegt de extensie het
+  zelf in plaats van drie minuten te zwijgen.
+- **De extensie 1.0.296 moet nog naar de Chrome Web Store.** Tot dan werkt de
+  serverkant (dubbele advertenties, importlijst) al wel; Vinted en de
+  toestemmingsmelding niet.
+
+Voor-en-na bewezen: 4 van de 6 nieuwe python-proeven en beide JS-proeven falen op
+de versie van vóór deze reparatie. 925 python-tests groen, alle JS-proeven groen.
