@@ -4936,3 +4936,45 @@ hij het artikel intussen buiten ons om heeft verkocht, en dan zetten we iets te
 koop wat er niet meer is. Dat is een vraag aan Toon, geen aanname van ons.
 
 Zijn extensie viel om 11:29 NL opnieuw stil met 9 opdrachten in de rij.
+
+## 05-09-2026 (vervolg 2) — de 26 staan terug online, en een correctie op mijn eigen bewijs
+
+**Correctie eerst.** Hierboven staat bij de twintig dode advertenties "404 of 410
+op de eigen pagina" als tweede bewijs. Dat bewijs deugde niet. Ik vroeg die
+pagina's op als `https://www.marktplaats.nl/v/a/{nummer}`, en die vorm geeft
+ALTIJD 404, ook voor een advertentie die springlevend is. Dat stond al met zoveel
+woorden in `extension/background.js:3106` en in de kennisbank, en ik heb het
+vandaag toch gebruikt. Bewezen door de controlemeting: van 26 advertenties die
+vandaag nieuw online kwamen gaven alle 26 een 404 op die url, terwijl er 25 gewoon
+op zijn openbare verkoperslijst staan. De echte url zit in `vipUrl` van de zoek-API
+en ziet eruit als `/v/kleding-heren/broeken-en-pantalons/m2439260097-mooie-lederhosen`.
+
+De conclusie over die twintig blijft wel staan, want het eerste bewijs was de
+volledig opgehaalde openbare verkoperslijst, en juist die meting heeft zich
+vandaag bewezen. Maar het was één bewijs, geen twee.
+
+**Daniel gaf groen licht om de 26 terug online te zetten.** Uitkomst:
+
+- 3 van de 26 kende ons systeem al als verkocht op een ander kanaal. Die zijn
+  overgeslagen: een verkocht artikel gaat er niet opnieuw op. Het waren "Kelim
+  kleedje rood zwart beige 127/59", "Oosters Tapijtkussen 48/42" en "Perzisch
+  tapijt Bokhara 124/72".
+- De overige 23 zijn via de gewone publicatieweg in de wachtrij gezet, dus alle
+  bestaande controles liepen mee. 23 in de rij, 0 mislukt bij het inplannen.
+- 21 daarvan staan nu aantoonbaar op zijn openbare verkoperslijst (349 stuks,
+  was 325 voor deze ronde).
+- 1 mislukte tijdens het plaatsen omdat Chrome halverwege dichtging ("Kelim
+  kleedje Tunesië"). Opnieuw in de rij gezet.
+- 1 blijft een raadsel: "Foulard plaid zeilschepen dorp boerderij 160/98". Die
+  kreeg vandaag voor de tweede keer een vers advertentienummer (m2439189692 op
+  09:04, m2439215272 op 10:05) en staat allebei de keren niet op zijn openbare
+  lijst. Twee keer hetzelfde artikel, twee verschillende nummers, allebei
+  onzichtbaar. Dat wijst op een weigering aan de kant van Marktplaats voor dit
+  specifieke artikel, niet op onze kant. Alleen Toon ziet in zijn eigen overzicht
+  wat er staat.
+
+**De rubriekreparatie van vanmorgen werkt in het echt.** Drie artikelen gingen
+zonder rubriek de rij in ("Kelim loper 98/35", en twee keer "Kleedje recycle
+geweven kleurrijk") en kregen bij het publiceren vanzelf "wonen tapijten en
+kleden" toegewezen. Dat is de woordenlijst die vanmorgen is uitgebreid met
+kleedje, kelim, wandkleed, sprei en tafelloper.

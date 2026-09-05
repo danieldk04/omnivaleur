@@ -17,6 +17,32 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ---
 
+## marktplaats-advertentiepagina-url
+
+*05-09-2026 — /v/a/{nummer} geeft ALTIJD 404, ook voor een levende advertentie; gebruik vipUrl of de openbare verkoperslijst*
+
+Een Marktplaats-advertentie is niet op te vragen als
+`https://www.marktplaats.nl/v/a/{nummer}`. Die vorm geeft altijd 404, ook voor
+een advertentie die springlevend is. Hetzelfde geldt voor `/v/listing/{id}`.
+
+De werkende url staat in het veld `vipUrl` van de zoek-API en heeft de vorm
+`/v/{rubriek}/{subrubriek}/{nummer}-{slug}`, bijvoorbeeld
+`/v/kleding-heren/broeken-en-pantalons/m2439260097-mooie-lederhosen`.
+
+**Waarom:** op 05-09-2026 gebruikte ik `/v/a/{nummer}` als "tweede bewijs" dat
+twintig advertenties weg waren. Later gaven alle 26 advertenties die diezelfde dag
+nieuw online kwamen ook 404 op die url, terwijl 25 ervan gewoon op de openbare
+verkoperslijst stonden. Het bewijs was dus geen bewijs. Het stond al in
+`extension/background.js:3106` en ik heb het toch gebruikt.
+
+**Hoe toe te passen:** wil je weten of een advertentie echt online staat, haal dan
+de volledige openbare verkoperslijst op via
+`https://www.marktplaats.nl/lrp/api/search?sellerIds[]={id}` en kijk of het
+`itemId` erin zit. Dat is de meting die zich bewezen heeft. Zie
+"scan-mag-nooit-leeghalen" en "marktplaats-publiceren-valkuilen".
+
+---
+
 ## vinted-zoekterugval-stopt-op-tak
 
 *05-09-2026 — Vinted's zoek-terugval klikte één regel aan en stopte, ook als daaronder nog subcategorieën zaten*
