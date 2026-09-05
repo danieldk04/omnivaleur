@@ -17,6 +17,70 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ---
 
+## een-bron-is-geen-bewijs-bij-weg
+
+*05-09-2026 — De openbare verkoperspagina noemde 21 advertenties weg; per advertentie nagekeken stonden er 2 gewoon online*
+
+`scripts/controleer_advertenties_online.py` vergelijkt onze "live" rijen met de
+openbare zoek-API van Marktplaats. Bij Amanda Haas (05-09-2026) noemde die 21
+advertenties verdwenen. Stuk voor stuk nagekeken op `link.marktplaats.nl/<id>`:
+23 gaven 404 of 410 (echt weg), maar 2 gaven gewoon 200. Ongeveer een op de tien
+was vals alarm.
+
+**Why:** de zoek-API is gepagineerd, loopt achter en toont niet altijd alles van
+een verkoper. Had ik die rijen op `delisted` gezet, dan waren twee advertenties
+die gewoon te koop staan uit het overzicht verdwenen. Zie ook
+"scan-mag-nooit-leeghalen".
+
+**How to apply:** een advertentie pas als weg behandelen als twee onafhankelijke
+bronnen het zeggen. De verkoperslijst is de zeef, de advertentiepagina zelf is
+het bewijs (`link.marktplaats.nl/<advertentienummer>`, 404 of 410 is weg, 200 is
+online). Datzelfde geldt andersom: een lijst die "leeg" of "nul" zegt is eerst
+een reden om de meting te wantrouwen.
+
+---
+
+## herplaatsing-laat-oude-rij-staan
+
+*05-09-2026 — Een geslaagde herplaatsing liet de oude rij op 'relisting' staan, waarna de reddingsronde elke zes uur een dubbele advertentie plaatste*
+
+Herplaatsen zet de BESTAANDE advertentierij op `relisting` en laat het oude
+advertentienummer erop staan. `_rond_publicatie_af` zocht bij binnenkomst van de
+nieuwe advertentie een rij met het nieuwe nummer (bestaat niet) of een rij zonder
+nummer (bestaat niet), en zette er dus een tweede rij naast. De oude bleef eeuwig
+op `relisting`.
+
+`herstel_vastgelopen_werk` leest `relisting` als "halverwege blijven steken" en
+zette er elke zes uur een nieuwe plaatsing voor klaar. Gemeten bij Amanda Haas
+(05-09-2026): drie artikelen met elk drie identieke Marktplaats-advertenties
+tegelijk online, elke dag eentje erbij. Dat is precies het dubbel plaatsen waar
+Marktplaats accounts voor blokkeert.
+
+**Why:** een status die niemand afsluit is geen tussenstand maar een lopende
+band. Elke ronde die op zo'n status reageert vermenigvuldigt zichzelf.
+
+De reparatie was eerst maar half af, en dat is een les op zichzelf. De eerste
+versie nam de oude rij alleen over als die nog op `relisting` stond. In het
+echte verloop staat daar nooit meer `relisting`: het inplannen zet hem daarop,
+maar de GESLAAGDE verwijdering zet dezelfde rij meteen daarna op `delisted`
+(`_verwijderdoelen` pakt hem op het rij-id uit `_refresh_rollback`). Alleen als
+de verwijdering MISLUKTE bleef `relisting` staan. De reparatie ving dus precies
+het zeldzame geval af en liet het normale geval door. Gemeten op Daniels eigen
+account, artikel (1275), 05-09-2026.
+
+**How to apply:** een herplaatsingsopdracht draagt nu `_vervangt_listing_id` in
+zijn payload; de afronding werkt díé rij bij, of hij nu op `relisting` of op
+`delisted` staat (`active` nooit: die hoort bij een advertentie die online
+staat). Opdrachten die al in de wachtrij stonden missen dat merkteken; voor die
+wordt de bijbehorende verwijdering opgezocht, want die draagt het rij-id in
+`_refresh_rollback`. En de reddingsronde kijkt eerst of
+er al een andere levende advertentie voor hetzelfde artikel op hetzelfde kanaal
+staat: dan was de herplaatsing gewoon gelukt en gaat de oude rij op `delisted`.
+Zie ook "herplaatslus-op-verkochte-artikelen" en
+"reddingsronde-kale-plaatsing-dubbele-advertentie".
+
+---
+
 ## marktplaats-advertentiepagina-url
 
 *05-09-2026 — /v/a/{nummer} geeft ALTIJD 404, ook voor een levende advertentie; gebruik vipUrl of de openbare verkoperslijst*
@@ -95,34 +159,6 @@ zoveel woorden nee zegt, en gaat gewoon door bij twijfel. De popup toont een
 knop die `chrome.permissions.request` doet — en die moet uit een echt tabblad
 komen, want Chrome sluit het uitklapvenster zodra hij de vraag toont (zelfde val
 als bij "admarkt-toestemming-verdwijnt").
-
----
-
-## herplaatsing-laat-oude-rij-staan
-
-*05-09-2026 — Een geslaagde herplaatsing liet de oude rij op 'relisting' staan, waarna de reddingsronde elke zes uur een dubbele advertentie plaatste*
-
-Herplaatsen zet de BESTAANDE advertentierij op `relisting` en laat het oude
-advertentienummer erop staan. `_rond_publicatie_af` zocht bij binnenkomst van de
-nieuwe advertentie een rij met het nieuwe nummer (bestaat niet) of een rij zonder
-nummer (bestaat niet), en zette er dus een tweede rij naast. De oude bleef eeuwig
-op `relisting`.
-
-`herstel_vastgelopen_werk` leest `relisting` als "halverwege blijven steken" en
-zette er elke zes uur een nieuwe plaatsing voor klaar. Gemeten bij Amanda Haas
-(05-09-2026): drie artikelen met elk drie identieke Marktplaats-advertenties
-tegelijk online, elke dag eentje erbij. Dat is precies het dubbel plaatsen waar
-Marktplaats accounts voor blokkeert.
-
-**Why:** een status die niemand afsluit is geen tussenstand maar een lopende
-band. Elke ronde die op zo'n status reageert vermenigvuldigt zichzelf.
-
-**How to apply:** een herplaatsingsopdracht draagt nu `_vervangt_listing_id` in
-zijn payload; de afronding werkt díé rij bij. En de reddingsronde kijkt eerst of
-er al een andere levende advertentie voor hetzelfde artikel op hetzelfde kanaal
-staat: dan was de herplaatsing gewoon gelukt en gaat de oude rij op `delisted`.
-Zie ook "herplaatslus-op-verkochte-artikelen" en
-"reddingsronde-kale-plaatsing-dubbele-advertentie".
 
 ---
 

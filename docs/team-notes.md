@@ -4978,3 +4978,54 @@ zonder rubriek de rij in ("Kelim loper 98/35", en twee keer "Kleedje recycle
 geweven kleurrijk") en kregen bij het publiceren vanzelf "wonen tapijten en
 kleden" toegewezen. Dat is de woordenlijst die vanmorgen is uitgebreid met
 kleedje, kelim, wandkleed, sprei en tafelloper.
+
+## 05-09-2026 (later die dag) — Daniels eigen account: opgeruimd, en het gat in de reparatie gevonden
+
+Daniel gaf toestemming om de dubbele advertenties op zijn eigen verkoopaccount
+(`3bfbed2c`) op te ruimen en vroeg of de zekerheid vanuit zijn account omhoog kon.
+Dat kon, en het leverde meteen een tweede storing op.
+
+**Het gat.** De reparatie van vanochtend nam de oude advertentierij alleen over
+als die nog op `relisting` stond. In het echte verloop staat daar nooit meer
+`relisting`: het inplannen zet hem daarop, maar de gESLAAGDE verwijdering zet
+dezelfde rij meteen daarna op `delisted` (`_verwijderdoelen` pakt hem op het
+rij-id uit `_refresh_rollback`). We vingen dus precies het zeldzame geval af, de
+mislukte verwijdering, en lieten het normale geval door. Aanwijsbaar bij Amanda:
+haar Waltherglas-schalen kregen vanochtend om 09:44 UTC alsnog een tweede
+advertentie, na de deploy van de eerste reparatie.
+
+Nu neemt het merkteken `_vervangt_listing_id` ook een rij op `delisted` over
+(`active` nooit), en opdrachten die al in de wachtrij stonden vinden hun rij via
+de bijbehorende verwijdering. Commit 8b50ea5, 947 tests groen.
+
+**De live proef, op zijn eigen account.** Artikel (1275) Grey Profuomo Half Zip
+had om 08:51 UTC een herplaatsing lopen: verwijdering geslaagd, plaatsing
+ingepland voor 10:20. Die opdracht droeg het merkteken nog niet. Voorspelling
+vooraf: met de oude code komt er een vierde rij bij, met de nieuwe wordt rij
+`00c61482` hergebruikt. Ik heb de plaatsing naar 10:30 verzet zodat de deploy
+er eerst was. Uitkomst om 10:30:32: advertentie m2439226665, rij `00c61482`
+bijgewerkt, geen rij erbij. Precies zoals voorspeld.
+
+**Opgeruimd.** 17 verwijderopdrachten klaargezet, 16 uitgevoerd zonder één fout,
+de laatste liep nog. Zijn te-beoordelen lijst ging van 66 onterechte naar 0.
+Bij Amanda stond er nog één dubbele over (Waltherglas), ook klaargezet.
+
+**Twee dingen die dit opleverde en die nog openstaan:**
+
+1. **De Chrome Web Store staat nog op 1.0.294.** Daniel zegt 1.0.296 zelf te
+   hebben geüpload, maar het update-endpoint van Google geeft nog steeds 1.0.294,
+   en zijn eigen kopie meldde diezelfde versie. Ook 1.0.295 is dus nooit
+   doorgekomen. Tot Google hem doorlaat werken de Vinted-subcategoriefix en de
+   melding over de site-toegang bij Amanda niet.
+2. **Advertenties die wij "live" noemen maar er niet meer zijn.** Bij Daniel 21
+   van 93, bij Amanda 21 van 450 (Toon had er 20; zie de vorige aantekening).
+   BELANGRIJK voor wie dit oppakt: de openbare verkoperspagina alleen is geen
+   bewijs. Ik heb Amanda's 21 stuk voor stuk nagekeken op
+   `link.marktplaats.nl/<nummer>`: 23 gaven 404 of 410, maar 2 stonden gewoon
+   online (200). Eén op de tien was vals alarm. Twee bronnen, altijd.
+
+**Klein maar hinderlijk:** het opruimscript zette ook een verwijderopdracht klaar
+voor een dubbele Shopify-advertentie. Shopify en eBay lopen via hun eigen API, dus
+die opdracht werd nooit opgepakt en bleef in de wachtrij staan. Geannuleerd, en
+het script slaat die kanalen nu over (commit d77de10). Die ene Shopify-dubbel
+staat er dus nog.
