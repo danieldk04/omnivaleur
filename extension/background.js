@@ -3656,7 +3656,20 @@ async function bgDeleteVinted(job, serverUrl) {
         return id;
       }
       const userId = await findUserId();
-      if (!userId) return { userId: null };
+      if (!userId) {
+        // Geen lidnummer op de pagina heeft twee heel verschillende oorzaken:
+        // uitgelogd, of de advertentie bestaat niet meer (Vinted serveert dan
+        // een 404-pagina zonder menu). Die twee zijn niet uit elkaar te houden
+        // aan de DOM, en "je bent niet ingelogd" tegen iemand die wél ingelogd
+        // is stuurt hem een uur de verkeerde kant op. De statuscode van de
+        // pagina zelf is wel eenduidig en taalonafhankelijk.
+        let httpStatus = 0;
+        try {
+          const r = await fetch(location.href, { headers: { Accept: "text/html" }, redirect: "follow" });
+          httpStatus = r.status;
+        } catch (e) { httpStatus = 0; }
+        return { userId: null, httpStatus };
+      }
       // Page through the WHOLE wardrobe. Vinted caps per_page at 96 server-side
       // and silently ignores anything larger, so the old single "per_page=200"
       // call only ever proved the 96 NEWEST listings. Any older listing looked
@@ -3684,6 +3697,12 @@ async function bgDeleteVinted(job, serverUrl) {
       } catch (e) { return { userId, present: null }; }
     }, [listingId]);
 
+    if (!before?.userId && before?.httpStatus === 404) {
+      throw new Error(
+        `This Vinted listing no longer exists (${url} gives "Page not found"), so there is nothing to remove. ` +
+        `It was probably already deleted on Vinted. Cancel the relist below; the item stays in Omnivaleur.`
+      );
+    }
     if (!before?.userId) throw new Error(`Could not determine your Vinted member id on the item page — make sure you're logged into this Vinted account.`);
     if (before.present === null) throw new Error(`Could not read your Vinted wardrobe to verify item ${listingId} — aborting to avoid an unverified delete.`);
     if (before.present === false) throw new Error(`Vinted item ${listingId} is not in your wardrobe — it may already be gone or belong to a different account; nothing to delete.`);

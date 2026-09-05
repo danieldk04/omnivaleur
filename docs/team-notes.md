@@ -5177,3 +5177,25 @@ heeft en niets verkochts, gaat weg. Nameting: van 1371 naar 1319 artikelen,
 2021 naar 1969 advertentieregels, en 0 advertenties die nog aan meer dan een
 rij hangen. Steekproef op drie behouden rijen: die staan er nog, met hun
 advertentienummer. Er is geen enkele opdracht naar een platform gegaan.
+
+## 05-09-2026 — "Vinted weet niet wie je bent" terwijl de advertentie gewoon weg was
+
+Daniels herplaatsing van (1071) Light Blue Massimo Dutti Turtleneck bleef hangen
+op "Could not determine your Vinted member id on the item page — make sure
+you're logged into this Vinted account". Hij was ingelogd. Gemeten:
+https://www.vinted.nl/items/8289521490 geeft 404, met en zonder slug, ook zonder
+cookies. De advertentie bestaat dus niet meer op Vinted.
+
+Waarom de melding zo misleidend was: de verwijderstap opent de
+advertentiepagina en zoekt daar een /member/-link om het lidnummer te vinden.
+Een 404-pagina van Vinted heeft geen menu en dus geen enkele /member/-link, wat
+niet te onderscheiden is van uitgelogd. Sinds 1.0.298 haalt diezelfde controle
+ook de statuscode van de pagina op: 404 betekent "deze advertentie bestaat niet
+meer", uitgelogd blijft uitgelogd. Bewijs:
+`tests/vinted-verwijderen-404-test.js`, met `--oud` tegen de vorige commit, waar
+hij faalt.
+
+Daarnaast stond er bij een mislukte verwijderstap alleen "Retry relist", en dat
+is bij een verdwenen advertentie een doodlopende straat: elke poging faalt weer.
+Er staat nu ook "Cancel relist & keep the current listing" onder. De server
+staat dat toe zolang de verwijderstap niet op 'done' staat, dus dit is veilig.
