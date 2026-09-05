@@ -5297,3 +5297,34 @@ bij zodra de kast leeg blijkt:
 Bewijs: `tests/vinted-verwijderen-404-test.js` (5 gevallen) en
 `tests/vinted-verwijderen-knop-vs-kast-test.js` (12 gevallen), allebei met
 `--oud` tegen de vorige commit, waar het nieuwe geval faalt.
+
+## 05-09-2026 — Vinted's eigen categorievoorstel gaat voor, met feitencontrole
+
+Daniel: "laat hem op Vinted gewoon de aanbevolen categorie kiezen, slim, wel
+even fact checkend." Tot nu toe was het andersom: onze gok uit de titel won, en
+Vinted's voorstel telde alleen mee als wij helemaal niets wisten. Terwijl Vinted
+op dat moment de foto's heeft gezien en wij niet.
+
+Sinds 1.0.303 kiest hij standaard het voorstel van Vinted, binnen onze eigen tak
+(Vinted mag het blad kiezen, nooit de afdeling). De rem erop: zegt de tekst van
+het artikel zelf iets anders, dan wint de tekst. "Anders" is streng gedefinieerd:
+ons blad kwam uit de tekst (een voorkeurswoord of een eigen woord dat er
+letterlijk in staat) én geen enkel woord van Vinted's voorstel komt in die tekst
+voor. Schrijft iemand "ripped jeans", dan levert een gave foto dus nog steeds
+geen gewone spijkerbroek op. Bewijs: `tests/vinted-voorstel-wint-test.js`.
+
+## 05-09-2026 — "Publishing now…" bleef staan na een handmatige plaatsing
+
+Daniel maakte (1071) met de hand af op Vinted; het kaartje bleef "Publishing
+now…" zeggen. De controle "heeft hij het zelf gedaan?" bestond al sinds
+26-08-2026, maar hing aan een eenmalige wekker: die ging één keer af, gaf het
+werk uit handen, en werd daarna nooit meer gezet. Er ging dus letterlijk nooit
+meer iemand kijken.
+
+Sinds 1.0.303 loopt er na zo'n overdracht een herhaalwekker: elke twee minuten
+kijken of de advertentie inmiddels in de kast staat, een half uur lang, en
+meteen kijken zodra de verkoper het werk-tabblad sluit. Wordt hij gevonden, dan
+gaat de opdracht alsnog op geplaatst, met het echte advertentienummer erbij.
+Daarna stopt de wekker vanzelf. Bewijs:
+`tests/vinted-zelf-geplaatst-test.js`, met `--oud` tegen de vorige commit, waar
+twee gevallen falen.

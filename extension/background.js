@@ -1686,6 +1686,17 @@ function ontkoppelVroeg(tabId) {
 
 chrome.tabs.onRemoved.addListener((tabId) => _vroegGekoppeld.delete(tabId));
 
+// Sluit de verkoper het werk-tabblad, dan is dat het duidelijkste teken dat hij
+// klaar is met wat hij zelf deed. Meteen kijken of de advertentie er staat,
+// in plaats van tot de volgende wekker te wachten.
+chrome.tabs.onRemoved.addListener((tabId) => {
+  const key = `jobtab_${tabId}`;
+  chrome.storage.local.get(key).then(({ [key]: meta }) => {
+    if (!meta || !meta.awaitingManualFinish) return;
+    return fireJobWatchdog(tabId);
+  }).catch(() => {});
+});
+
 // DE KNOP "ANNULEREN" IN DE GELE BALK (04-09-2026).
 //
 // Chrome zet boven het venster een balk "'Omnivaleur' is begonnen met
@@ -1983,6 +1994,21 @@ const JOB_WATCHDOG_PREFIX = "jobwd_";
 // the worker back up, so the timeout actually fires.
 function armJobWatchdog(tabId) {
   chrome.alarms.create(`${JOB_WATCHDOG_PREFIX}${tabId}`, { delayInMinutes: JOB_TAB_TIMEOUT_MIN });
+}
+
+// BLIJVEN KIJKEN OF HIJ HET ZELF AFMAAKT (05-09-2026, Daniel).
+//
+// De bewaker hierboven is een eenmalige wekker. Ging een plaatsing over in
+// "maak hem zelf af", dan werd die wekker nooit opnieuw gezet, en dus keek er
+// daarna niemand meer of de advertentie er alsnog stond. Daniel plaatste zijn
+// coltrui met de hand en het kaartje bleef "Publishing now…" zeggen. De
+// controle bestond dus wel, maar er ging nooit meer een wekker af die hem
+// aanriep. Nu kijkt hij elke twee minuten, een half uur lang.
+const MANUELE_CONTROLE_MIN = 2;
+const MANUELE_CONTROLES_MAX = 15;
+function armManueleControle(tabId) {
+  chrome.alarms.create(`${JOB_WATCHDOG_PREFIX}${tabId}`,
+    { delayInMinutes: MANUELE_CONTROLE_MIN, periodInMinutes: MANUELE_CONTROLE_MIN });
 }
 
 // ── "Het formulier is nooit opengegaan" ────────────────────────────────────
@@ -2486,8 +2512,18 @@ async function fireJobWatchdog(tabId) {
         await finaliseJob(meta.serverUrl, meta.jobId, "complete", {
           platform_listing_id: zelfGedaan.id, platform_listing_url: zelfGedaan.url,
         });
-        await chrome.storage.local.remove(`jobtab_${tabId}`);
+        chrome.alarms.clear(`${JOB_WATCHDOG_PREFIX}${tabId}`);
+        await chrome.storage.local.remove(key);
+        return;
       }
+      const gedaan = (meta.manueleControles || 0) + 1;
+      if (gedaan >= MANUELE_CONTROLES_MAX) {
+        // Na een half uur houdt het op. De opdracht blijft staan met de knop
+        // "ik heb hem zelf geplaatst" in het dashboard; eeuwig doorkijken kost
+        // alleen maar Vinted-verkeer.
+        chrome.alarms.clear(`${JOB_WATCHDOG_PREFIX}${tabId}`);
+      }
+      await chrome.storage.local.set({ [key]: { ...meta, manueleControles: gedaan } });
     }
     return;  // nooit force-failen: hij is misschien nog aan het typen
   }
@@ -2527,7 +2563,8 @@ async function fireJobWatchdog(tabId) {
   // and, worse, leave the manual-publish auto-detect with nothing to match on — so
   // a listing they finished themselves would stay "not posted" in the dashboard.
   if ((meta.action || "create") === "create") {
-    chrome.storage.local.set({ [key]: { ...meta, awaitingManualFinish: true } });
+    chrome.storage.local.set({ [key]: { ...meta, awaitingManualFinish: true, manueleControles: 0 } });
+    armManueleControle(tabId);
     return;
   }
   chrome.storage.local.remove(key);

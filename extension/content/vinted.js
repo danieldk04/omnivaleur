@@ -2132,15 +2132,35 @@
       const idx = kiesBlad(namen, tekst);
       let keuze = idx != null ? opties[idx] : opties[0];
       let waarom = idx != null ? bladReden : "eerste";
-      // Zegt de tekst van het artikel niets over het model? Dan weet Vinted het
-      // beter dan onze gok, want hij heeft de foto's gezien. Alleen dan, en
-      // alleen binnen ons eigen pad.
-      if (waarom === "neutraal") {
-        for (const vp of voorstelPaden) {
-          if (!vp[i]) continue;   // dit voorstel gaat niet zo diep
-          const j = namen.findIndex((n) => n && kaal(n) === kaal(vp[i]));
-          if (j >= 0) { keuze = opties[j]; waarom = "voorstel van Vinted"; break; }
+      // VINTED'S EIGEN VOORSTEL GAAT VOOR, MAAR NIET BLIND (05-09-2026).
+      //
+      // Vinted heeft de foto's gezien en wij niet, dus zijn voorstel is bijna
+      // altijd raker dan onze gok uit de titel. Daarom kiest hij dat voorstel
+      // nu standaard, in plaats van alleen als wij niets weten.
+      //
+      // De feitencontrole: zegt de tekst van het artikel zélf iets anders, dan
+      // wint de tekst. "Anders" betekent hier: ons blad is uit de tekst
+      // gekozen (een voorkeurswoord of een eigen woord dat er letterlijk in
+      // staat) én geen enkel woord van Vinted's voorstel komt in die tekst
+      // voor. Een verkoper die "ripped jeans" schrijft krijgt dus geen gewone
+      // spijkerbroek omdat de foto er heel uitzag.
+      const uitDeTekst = waarom === "voorkeur" || waarom === "woorden";
+      for (const vp of voorstelPaden) {
+        if (!vp[i]) continue;   // dit voorstel gaat niet zo diep
+        const j = namen.findIndex((n) => n && kaal(n) === kaal(vp[i]));
+        if (j < 0) continue;
+        if (j === idx) break;   // Vinted en wij zitten al op hetzelfde blad
+        const woordenTekst = new Set(tekst.replace(/&/g, " ").split(/[^a-z0-9-]+/)
+          .filter(Boolean).map(enkelvoud));
+        const bevestigd = kaal(namen[j]).split(" ")
+          .some((w) => w.length > 3 && woordenTekst.has(w));
+        if (uitDeTekst && !bevestigd) {
+          clog(`Vinted stelt "${namen[j]}" voor, maar de tekst zegt "${namen[idx]}" — de tekst wint`);
+          break;
         }
+        keuze = opties[j];
+        waarom = bevestigd ? "voorstel van Vinted, bevestigd door de tekst" : "voorstel van Vinted";
+        break;
       }
       clog(`Vinted-categorie: extra niveau → "${titel(keuze)}" (${waarom})`);
       realClickEl(keuze);
