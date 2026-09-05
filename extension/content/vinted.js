@@ -2010,6 +2010,47 @@
   // gekozen is. Zijn er onderweg nog subcategorieën, dan kiest hij het blad dat
   // in de titel/beschrijving voorkomt, anders het neutrale "Other …", anders de
   // eerste. Zo wordt er nooit een eigenschap verzonnen die er niet is.
+  // De zichtbare regels in Vinted's categoriekiezer, en hun opschrift.
+  // Stonden als kopie binnen walkVintedCategoryPath; de zoek-terugval had ze
+  // niet en kon daardoor niet dieper klikken (zie kiesRestSubcategorie).
+  function catCellen() {
+    return [...document.querySelectorAll('[class*="Cell__clickable"]')]
+      .filter((e) => e.offsetParent !== null);
+  }
+  function catTitel(e) {
+    return (e.querySelector('[class*="Cell__title"]')?.textContent || e.textContent || "").trim();
+  }
+
+  // KLIK DOOR TOT ER ECHT EEN CATEGORIE STAAT (05-09-2026, Amanda Haas).
+  //
+  // De zoek-terugval hieronder koos één regel uit de zoekresultaten en was dan
+  // klaar. Maar zo'n regel is lang niet altijd een eindpunt: bij wonen, antiek
+  // en kunst gaat Vinted's boom er nog een of twee niveaus onder door. De kiezer
+  // bleef dan openstaan met de volgende laag, het veld bleef leeg, en het
+  // formulier weigerde met "Kies een subcategorie". Amanda moest dat elke keer
+  // met de hand doen — precies waarom ze achter de computer moest blijven zitten.
+  //
+  // De categorieboom (walkVintedCategoryPath) deed dit allang goed, maar die
+  // kent alleen kledingpaden. Dit is dezelfde afdaling, nu ook voor alles wat
+  // via zoeken wordt gekozen.
+  async function kiesRestSubcategorie(item, maxNiveaus = 3) {
+    const inp = qs('input[data-testid="catalog-select-dropdown-input"]');
+    if (!inp) return false;
+    const tekst = `${item.title || ""} ${item.description || ""}`.toLowerCase();
+    for (let i = 0; i < maxNiveaus; i++) {
+      if ((inp.value || "").trim()) return true;   // Vinted heeft het vastgelegd
+      const opties = catCellen();
+      if (!opties.length) break;
+      const namen = opties.map(catTitel);
+      const idx = kiesBlad(namen, tekst);
+      const keuze = idx != null ? opties[idx] : opties[0];
+      clog(`Vinted-categorie: subcategorie nodig → "${catTitel(keuze)}" (${idx != null ? bladReden : "eerste"})`);
+      realClickEl(keuze);
+      await sleep(1100);
+    }
+    return !!(inp.value || "").trim();
+  }
+
   async function walkVintedCategoryPath(item, cat, gender) {
     const pad = vintedPathFor(cat, gender);
     if (!pad) return false;
@@ -2439,6 +2480,10 @@
 
     if (choice) {
       await commit(choice);
+      // De gekozen regel hoeft geen eindpunt te zijn. Staat de kiezer nog open
+      // met een volgende laag, dan klikken we door tot Vinted de categorie echt
+      // vastlegt — anders weigert het formulier met "Kies een subcategorie".
+      await kiesRestSubcategorie(item);
       return verifyCategory(hints, wantWomen);
     }
     return false;

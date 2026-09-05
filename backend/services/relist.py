@@ -129,10 +129,11 @@ async def herstel_vastgelopen_werk() -> dict:
     """
     db = get_db()
     grens = (datetime.now(timezone.utc) - timedelta(days=VASTGELOPEN_NA_DAGEN)).isoformat()
-    hersteld, gemeld, teruggenomen = 0, 0, 0
+    hersteld, gemeld, teruggenomen, afgesloten = 0, 0, 0, 0
 
     try:
-        vast = ((await naast_de_lus(lambda: db.table("listings").select("id,item_id,platform")
+        vast = ((await naast_de_lus(lambda: db.table("listings")
+                .select("id,item_id,platform,platform_listing_id,last_refreshed_at")
                 .eq("status", "relisting").limit(1000).execute())).data or [])
     except Exception as e:  # noqa: BLE001
         logger.warning("herstel: kon vastgelopen advertenties niet lezen: %s", e)
@@ -166,6 +167,39 @@ async def herstel_vastgelopen_werk() -> dict:
                 continue
             if lopend:
                 continue          # er komt nog werk aan, afblijven
+
+            # IS DE HERPLAATSING STIEKEM AL GELUKT? (05-09-2026, Amanda Haas)
+            #
+            # Deze ronde ging er vanuit dat een rij op 'relisting' betekent dat de
+            # nieuwe advertentie er nog niet is. Dat klopte niet: de afronding zette
+            # de nieuwe advertentie in een NIEUWE rij en liet deze op 'relisting'
+            # staan. Dus zag deze ronde elke zes uur een "vastgelopen" herplaatsing
+            # die allang gelukt was, en zette er nog een advertentie voor klaar.
+            # Gemeten bij Amanda: drie artikelen met drie tot vier identieke
+            # Marktplaats-advertenties naast elkaar, en elke dag kwam er eentje bij.
+            #
+            # Staat er een andere, levende advertentie voor hetzelfde artikel op
+            # hetzelfde kanaal? Dan is dat de vervanger. Deze rij is dan geschiedenis
+            # en gaat op 'delisted' — niet op een nieuwe plaatsing.
+            levend = ((await naast_de_lus(lambda: db.table("listings")
+                      .select("id,platform_listing_id,listed_at")
+                      .eq("item_id", rij["item_id"]).eq("platform", rij["platform"])
+                      .eq("status", "active").limit(5).execute())).data or [])
+            vervanger = next((l for l in levend
+                              if str(l.get("platform_listing_id") or "")
+                              != str(rij.get("platform_listing_id") or "")), None)
+            if vervanger:
+                await naast_de_lus(lambda: db.table("listings").update({
+                    "status": "delisted",
+                    "error_message": None,
+                }).eq("id", rij["id"]).eq("status", "relisting").execute())
+                logger.info("herstel: herplaatsing van item %s op %s was al gelukt "
+                            "(advertentie %s staat live) — oude rij afgesloten",
+                            rij["item_id"], rij["platform"],
+                            vervanger.get("platform_listing_id"))
+                afgesloten += 1
+                continue
+
             item = ((await naast_de_lus(lambda: db.table("items").select("*").eq("id", rij["item_id"])
                     .single().execute())).data)
             if not item:
@@ -197,7 +231,10 @@ async def herstel_vastgelopen_werk() -> dict:
                 "platform": rij["platform"],
                 "action": "create",
                 "status": "pending",
-                "payload": _met_fabrikant(gelokaliseerd, rij["platform"], item["user_id"]),
+                # Deze plaatsing VERVANGT de rij die op 'relisting' staat; hij komt
+                # er niet naast. Zie _rond_publicatie_af in backend/api/jobs.py.
+                "payload": {**_met_fabrikant(gelokaliseerd, rij["platform"], item["user_id"]),
+                            "_vervangt_listing_id": rij["id"]},
             }).execute()))
             hersteld += 1
         except Exception as e:  # noqa: BLE001
@@ -246,10 +283,12 @@ async def herstel_vastgelopen_werk() -> dict:
     except Exception as e:  # noqa: BLE001
         logger.warning("herstel: kon oude banen niet melden: %s", e)
 
-    if hersteld or gemeld or teruggenomen:
+    if hersteld or gemeld or teruggenomen or afgesloten:
         logger.info("herstel: %d advertentie(s) opnieuw ingepland, %d vastgelopen baan/banen gemeld, "
-                    "%d herplaatsing(en) teruggenomen", hersteld, gemeld, teruggenomen)
-    return {"hersteld": hersteld, "gemeld": gemeld, "teruggenomen": teruggenomen}
+                    "%d herplaatsing(en) teruggenomen, %d al geslaagde herplaatsing(en) afgesloten",
+                    hersteld, gemeld, teruggenomen, afgesloten)
+    return {"hersteld": hersteld, "gemeld": gemeld, "teruggenomen": teruggenomen,
+            "afgesloten": afgesloten}
 
 
 HERPLAATSING_TERUGGENOMEN = (
@@ -604,6 +643,22 @@ async def refresh_listing(item_id: str, platform: str, user_id: str, strategy: s
     create_payload = {
         **localized,
         "price": relist_price,
+        # WELKE RIJ VERVANGT DEZE PLAATSING? (05-09-2026, Amanda Haas)
+        #
+        # Een herplaatsing zet de OUDE rij op 'relisting' en laat zijn
+        # advertentienummer staan. Kwam de nieuwe advertentie binnen, dan zocht
+        # _rond_publicatie_af een rij zonder nummer, vond die niet, en zette er
+        # een NIEUWE rij naast. De oude bleef dus eeuwig op 'relisting' staan —
+        # en de reddingsronde (herstel_vastgelopen_werk) ziet zo'n rij als
+        # "hangt halverwege" en zette er elke ronde weer een plaatsing voor
+        # klaar. Gemeten bij Amanda: drie artikelen met elk drie tot vier
+        # identieke Marktplaats-advertenties naast elkaar, elke dag eentje erbij.
+        # Dat is precies het dubbel plaatsen waar Marktplaats accounts voor
+        # blokkeert.
+        #
+        # Met dit merkteken weet de afronding welke rij hij moet bijwerken in
+        # plaats van welke rij hij ernaast moet zetten.
+        "_vervangt_listing_id": listing["id"],
         # Keep the EXACT original photo order — photo 1 must stay photo 1 (it's the
         # cover image the seller chose). The recreate already gets genuinely new
         # images because each photo is re-encoded on upload, so there's no need to

@@ -124,6 +124,25 @@
 
   <div class="body">
 
+    <!-- SITETOEGANG. Staat Chrome's site-access van deze extensie op "Als je
+         erop klikt", dan blijft elk werk-tabblad leeg en moet de verkoper bij
+         elke pagina zelf op het icoontje klikken. Dat is niet te zien in het
+         dashboard, dus het hoort hier te staan — met de knop die het oplost. -->
+    <div id="siteToegangBlok" style="display:none;flex-direction:column;gap:8px;
+         background:#fef2f2;border:1px solid #fecaca;border-radius:10px;padding:12px 14px">
+      <div style="font-size:12px;font-weight:700;color:#991b1b">
+        Chrome laat ons de verkoopsites niet zien
+      </div>
+      <div style="font-size:11px;line-height:1.5;color:#7f1d1d">
+        Daardoor blijft elk tabblad dat Omnivaleur opent leeg en moet je er zelf
+        bij blijven. Eén klik en dat is voorbij.
+      </div>
+      <button id="siteToegangKnop" style="border:0;border-radius:8px;background:#dc2626;
+              color:#fff;font-size:12px;font-weight:700;padding:8px 10px;cursor:pointer">
+        Toegang geven tot alle verkoopsites
+      </button>
+    </div>
+
     <!-- LOGGED OUT STATE -->
     <div id="loggedOut" style="display:none;flex-direction:column;gap:12px">
       <div class="status-badge disconnected">

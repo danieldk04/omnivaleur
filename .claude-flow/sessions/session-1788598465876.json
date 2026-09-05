@@ -1,6 +1,6 @@
 {
-  "id": "session-1788601468966",
-  "startedAt": "2026-09-05T09:44:28.966Z",
+  "id": "session-1788598465876",
+  "startedAt": "2026-09-05T08:54:25.876Z",
   "cwd": "/Users/Danie/Documents/omnivaleur",
   "context": {},
   "metrics": {
@@ -8,5 +8,7 @@
     "commands": 0,
     "tasks": 0,
     "errors": 0
-  }
+  },
+  "endedAt": "2026-09-05T08:54:29.255Z",
+  "duration": 3380
 }

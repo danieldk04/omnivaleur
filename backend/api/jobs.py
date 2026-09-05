@@ -1367,6 +1367,33 @@ async def _rond_publicatie_af(db, job: dict, body: dict) -> None:
                      if r.get("platform_listing_id") == body["platform_listing_id"]), None)
         if doel is None:
             doel = next((r for r in rijen if not r.get("platform_listing_id")), None)
+        if doel is None:
+            # DIT IS EEN HERPLAATSING: DE OUDE RIJ IS DE JUISTE (05-09-2026, Amanda).
+            #
+            # Bij herplaatsen blijft het oude advertentienummer op de rij staan
+            # terwijl de status op 'relisting' gaat. Geen van de twee regels
+            # hierboven vindt die rij, dus kwam er een tweede rij naast — en de
+            # oude bleef op 'relisting' hangen. De reddingsronde leest zo'n rij
+            # als "halverwege blijven steken" en zet er elke zes uur opnieuw een
+            # plaatsing voor klaar. Gemeten bij Amanda Haas: één hamsterknuffel
+            # stond met drie identieke advertenties tegelijk op Marktplaats.
+            #
+            # refresh_listing schrijft daarom nu in de opdracht welke rij deze
+            # plaatsing vervangt. Alleen die rij, en alleen als hij ook echt nog
+            # op 'relisting' staat — anders raken we een advertentie kwijt die
+            # gewoon online staat.
+            vervangt = ((job.get("payload") or {}).get("_vervangt_listing_id"))
+            if vervangt:
+                doel = next((r for r in rijen
+                             if r["id"] == vervangt and r.get("status") == "relisting"), None)
+            if doel is None:
+                # Oudere opdrachten (nog zonder merkteken) en de reddingsronde:
+                # is er precies één rij die op zijn herplaatsing wacht, dan is
+                # dat hem. Bij twijfel (meer dan één) geen gok, dan komt er een
+                # rij bij zoals voorheen.
+                wachtend = [r for r in rijen if r.get("status") == "relisting"]
+                if len(wachtend) == 1:
+                    doel = wachtend[0]
         if doel is not None:
             (await naast_de_lus(lambda: db.table("listings").update({
                 "platform_listing_id": body["platform_listing_id"],
@@ -2200,7 +2227,24 @@ def _store_scan_results(db, job, scraped: list[dict]):
             "suggested_item_id": best_id,
             "platform_listed_at": row.get("platform_listed_at"),
             # Keep whatever we already decided; only genuinely new rows start pending.
-            "status": prior_status.get(str(platform_listing_id), "pending"),
+            #
+            # EN "AL GEIMPORTEERD" IS GEEN BESLISSING MEER (05-09-2026, Amanda).
+            #
+            # Een advertentie die wij zelf zojuist hebben geplaatst of herplaatst
+            # heeft een nieuw advertentienummer, dus stond hij hier als "nieuw" en
+            # kwam hij op de te-beoordelen lijst. Bij Amanda stonden er zo 117
+            # advertenties te wachten, waarvan er 111 allang in haar overzicht
+            # stonden. De zes advertenties die ze ECHT zelf op Marktplaats had
+            # gezet verdronken daarin, en dat leest als "hij importeert mijn
+            # nieuwe advertenties niet".
+            #
+            # Hangt dit advertentienummer al aan een artikel, dan valt er niets te
+            # beslissen: het is gekoppeld. Alleen het nummer telt hier; een
+            # gelijkende titel is een vermoeden en geen bewijs.
+            "status": prior_status.get(
+                str(platform_listing_id),
+                "linked" if listings_by_id.get((job["platform"], str(platform_listing_id)))
+                else "pending"),
         }
         # Full snapshot columns — only present once the schema migration has run.
         # If they don't exist yet, PostgREST rejects the whole upsert, so retry

@@ -178,6 +178,59 @@ admarktToggle.addEventListener("change", async () => {
 toonAdmarkt();
 checkLoginState();
 
+// ── Sitetoegang: mag Chrome ons de verkoopsites laten zien? ────────────────
+//
+// Chrome kent per extensie drie standen: "Op alle sites", "Op specifieke sites"
+// en "Als je erop klikt". Bij die laatste moet de verkoper bij ELKE nieuwe
+// pagina eerst op het icoontje rechts van de adresbalk klikken. Onze
+// werk-tabbladen openen zichzelf, dus dan gebeurt er niets — geen invulstap,
+// geen melding, en na drie minuten "timed out". Amanda Haas (05-09-2026):
+// "die toestemming betrof elke keer als een nieuwe pagina werd geopend".
+//
+// Dit blok toont de ECHTE stand en biedt de knop die hem in één keer goed zet.
+const SITE_ORIGINS = [
+  "https://www.marktplaats.nl/*",
+  "https://www.2dehands.be/*",
+  "https://www.vinted.nl/*",
+  "https://www.vinted.be/*",
+  "https://www.vinted.com/*",
+];
+const siteToegangBlok = document.getElementById("siteToegangBlok");
+const siteToegangKnop = document.getElementById("siteToegangKnop");
+
+async function toonSiteToegang() {
+  if (!siteToegangBlok) return;
+  try {
+    for (const o of SITE_ORIGINS) {
+      if (!(await chrome.permissions.contains({ origins: [o] }))) {
+        siteToegangBlok.style.display = "flex";
+        return;
+      }
+    }
+  } catch (_) { /* niet kunnen vragen is geen bewijs — dan niets tonen */ }
+  siteToegangBlok.style.display = "none";
+}
+
+if (siteToegangKnop) {
+  siteToegangKnop.addEventListener("click", async () => {
+    // Chrome sluit het uitklapvenster zodra hij de vraag toont, en dan is er
+    // niets meer dat op het antwoord wacht — dezelfde val als bij Admarkt.
+    // Lukt het hier, prima; anders dezelfde pagina in een echt tabblad.
+    try {
+      if (await chrome.permissions.request({ origins: SITE_ORIGINS })) {
+        await toonSiteToegang();
+        return;
+      }
+    } catch (_) {}
+    if (!inTabblad) {
+      chrome.tabs.create({ url: chrome.runtime.getURL("popup.html?tab=1") });
+      window.close();
+    }
+  });
+}
+
+toonSiteToegang();
+
 
 // De schakelaar "echt typen". Bewust een gewone voorkeur en geen
 // toestemmingsvraag: Chrome laat "debugger" niet als optionele permissie toe, dus

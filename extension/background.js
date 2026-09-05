@@ -1790,11 +1790,68 @@ async function openWorkerTabInner(url, opts = {}) {
   }
 }
 
+// WAT ALS CHROME ONS DE SITE NIET LAAT ZIEN? (05-09-2026, Amanda Haas)
+//
+// In Chrome kun je per extensie instellen wanneer hij een site mag lezen: "Op
+// alle sites", "Op specifieke sites" of "Als je erop klikt". Staat hij op dat
+// laatste, dan moet de verkoper bij ELKE nieuwe pagina eerst op het icoontje
+// rechts van de adresbalk klikken. Onze werk-tabbladen openen zichzelf, dus dan
+// gebeurt er domweg niets: geen invulstap, geen foutmelding, en na drie minuten
+// "Extension timed out waiting for this job to finish". Amanda beschreef precies
+// dat: "moet er dan wel voor achter de pc blijven hangen".
+//
+// Chrome geeft dit gewoon eerlijk terug via permissions.contains(). Weten we het
+// zeker, dan stoppen we meteen met een leesbare uitleg in plaats van de verkoper
+// drie minuten te laten wachten op niets. Bij twijfel (een uitzondering, een
+// onbekend kanaal) gaat de opdracht gewoon door — deze rem mag nooit werk
+// tegenhouden dat het wél zou doen.
+const SITE_ORIGINS = {
+  marktplaats: ["https://www.marktplaats.nl/*"],
+  "2dehands":  ["https://www.2dehands.be/*"],
+  vinted:      ["https://www.vinted.nl/*", "https://www.vinted.be/*",
+                "https://www.vinted.com/*", "https://www.vinted.de/*",
+                "https://www.vinted.fr/*"],
+  facebook:    ["https://www.facebook.com/*"],
+};
+
+const GEEN_SITETOEGANG =
+  "Chrome laat Omnivaleur deze site alleen zien als je zelf op het icoontje "
+  + "klikt, dus het werk-tabblad bleef leeg. Er is niets geplaatst of verwijderd. "
+  + "Zet het eenmalig goed: klik rechts van de adresbalk op het puzzelstukje, dan "
+  + "op de drie puntjes naast Omnivaleur, \"Deze extensie kan lezen en wijzigen\" "
+  + "→ \"Op alle sites\". Daarna loopt de wachtrij vanzelf door.";
+
+async function siteToegangOntbreekt(platform, payload) {
+  let origins = SITE_ORIGINS[platform];
+  if (!origins) return false;              // onbekend kanaal: nooit tegenhouden
+  // Vinted leeft op één landdomein per account. Weten we welk, dan is dat het
+  // enige dat telt; anders is één van de landen genoeg.
+  const eigen = (payload || {})._create_origin;
+  if (platform === "vinted" && eigen) {
+    try { origins = [`${new URL(eigen).origin}/*`]; } catch (_) { /* laat staan */ }
+  }
+  try {
+    for (const o of origins) {
+      if (await chrome.permissions.contains({ origins: [o] })) return false;
+    }
+    return true;                            // Chrome zegt met zoveel woorden nee
+  } catch (_) {
+    return false;                           // niet kunnen vragen is geen bewijs
+  }
+}
+
 async function processJob(job, serverUrl) {
   const headers = await getAuthHeaders();
   // Claim job first
   const claimRes = await fetch(`${serverUrl}/api/jobs/${job.id}/claim`, { method: "POST", headers });
   if (!claimRes.ok) return;
+
+  // Eerst: mág deze kopie de site van dit kanaal überhaupt lezen? Zo niet, dan
+  // heeft doorgaan geen enkele zin en kost het de verkoper drie minuten stilte.
+  if (await siteToegangOntbreekt(job.platform, job.payload)) {
+    await reportError(job.id, serverUrl, GEEN_SITETOEGANG);
+    return;
+  }
 
   gaEvent("job_started", { action: job.action, platform: job.platform });
 
