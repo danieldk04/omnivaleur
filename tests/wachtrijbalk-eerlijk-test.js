@@ -89,5 +89,30 @@ console.log("Weten we het tempo niet, dan doen we geen bewering");
 const onbekend = draai({ queued: VIJFTIG, pace: { calm: false, seconds_between: null, samples: 0 }, online: null });
 check("valt terug op de gewone tekst", /15 seconds/.test(onbekend.tekst));
 
+// 05-09-2026, Toon opnieuw. Calm mode stond die dag UIT, en tóch stonden er 38
+// publicaties van elk een minuut te wachten. De balk zei alleen "about to
+// start": over de looptijd van de rij zweeg hij, want die zin zat alleen in de
+// Calm mode-tak. Gemeten op zijn account: gat 30 s, hele opdracht 60 s.
+console.log("Zonder Calm mode noemt de balk nu wél hoe lang de rij duurt");
+const lang = draai({ queued: VIJFTIG,
+                     pace: { calm: false, seconds_between: 30, seconds_per_job: 60, samples: 11 },
+                     online: true });
+check("noemt de looptijd van de hele rij", /about 50 minutes/.test(lang.tekst), lang.tekst.slice(0, 220));
+check("zegt met zoveel woorden dat er niets stuk is", /nothing is stuck/i.test(lang.tekst));
+check("zegt er nog steeds bij wanneer het begint", /15 seconds/.test(lang.tekst));
+check("nog steeds geen Calm mode-praat", !/Calm mode/.test(lang.titel + lang.tekst));
+
+console.log("Bij een kort rijtje geen looptijd erbij");
+const kort = draai({ queued: VIJFTIG.slice(0, 2),
+                     pace: { calm: false, seconds_between: 30, seconds_per_job: 60, samples: 11 },
+                     online: true });
+check("twee opdrachten krijgen geen looptijdzin", !/together take/.test(kort.tekst), kort.tekst.slice(0, 160));
+
+console.log("De looptijd rekent met de hele opdracht, niet met het gat ertussen");
+const kalmEcht = draai({ queued: VIJFTIG,
+                         pace: { calm: true, seconds_between: 345, seconds_per_job: 375, samples: 10 },
+                         online: true });
+check("Calm mode rekent met seconds_per_job", /about 5 hours/.test(kalmEcht.tekst), kalmEcht.tekst.slice(0, 200));
+
 console.log(mislukt === 0 ? "\nAlles goed." : `\n${mislukt} controle(s) mislukt.`);
 process.exit(mislukt === 0 ? 0 : 1);

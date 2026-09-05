@@ -216,6 +216,26 @@ def test_een_computer_die_uit_stond_telt_niet_als_traagheid():
     assert tempo["calm"] is False, "een nacht stilstand is geen tempo"
 
 
+def test_een_wachtrij_duurt_langer_dan_de_gaten_ertussen():
+    """05-09-2026, Toon opnieuw.
+
+    Het gat tussen twee opdrachten zegt hoe snel de extensie eráán begint. Het
+    zegt niet hoe lang een wachtrij duurt, want het werk zelf zit er niet in.
+    Gemeten op zijn eigen account, 39 monsters uit twaalf uur: gat 16 seconden,
+    werk 29 seconden, van start tot start 46. Wie de looptijd van 38 opdrachten
+    met het gat uitrekent belooft bijna drie keer te snel.
+    """
+    tempo = _tempo(_reeks([30, 30, 30, 30, 30], duur=30), "toon-tempo")
+    assert tempo["seconds_between"] == 30, "het gat blijft het gat"
+    assert tempo["seconds_per_job"] == 60, (
+        "een opdracht van 30 seconden met 30 seconden ertussen kost een minuut")
+
+
+def test_zonder_genoeg_metingen_beweren_we_niets_over_de_looptijd():
+    tempo = _tempo(_reeks([300]), "te-weinig-looptijd")
+    assert tempo["seconds_per_job"] is None
+
+
 def test_te_weinig_metingen_levert_geen_bewering_op():
     tempo = _tempo(_reeks([300]), "te-weinig")
     assert tempo["seconds_between"] is None and tempo["calm"] is False, (

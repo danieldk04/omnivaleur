@@ -8905,13 +8905,24 @@ function renderActivityBar() {
       const minuten = Math.max(1, Math.round(pace.seconds_between / 60));
       title.textContent = `${nQueued} job${nQueued === 1 ? '' : 's'} queued — Calm mode is spacing them out`;
       text.innerHTML = `Calm mode is on, so the extension does about <b>one every ${minuten} minutes</b> `
-        + `instead of back to back. These ${nQueued} will take ${fmtQueueEta(nQueued, pace.seconds_between)} `
+        + `instead of back to back. These ${nQueued} will take ${fmtQueueEta(nQueued, pace.seconds_per_job || pace.seconds_between)} `
         + `(${describeJobs(queued)}). <b>Nothing is stuck</b> — long quiet gaps are what Calm mode does. `
         + `To run them straight through, click the Omnivaleur extension icon and switch Calm mode off.`;
     } else {
+      // OOK ZONDER CALM MODE IS EEN LANGE RIJ EEN LANGE RIJ.
+      //
+      // "Within ~15 seconds" gaat over wanneer de eerste opdracht begint, niet
+      // over wanneer de rij leeg is. Bij Toon (dejuistetoon) stonden er 39 te
+      // wachten van elk een minuut: hij las "about to start", zag na een
+      // kwartier nog steeds een rij en concludeerde weer dat er niets gebeurde.
+      // Dus zeggen we er de gemeten looptijd bij zodra we er een hebben.
+      const perJob = pace && pace.seconds_per_job;
+      const eta = perJob && nQueued > 2
+        ? ` All ${nQueued} together take <b>${fmtQueueEta(nQueued, perJob)}</b> at the speed we measured on your computer — that is normal, nothing is stuck.`
+        : '';
       title.textContent = `${nQueued} job${nQueued === 1 ? '' : 's'} queued — the extension is about to start`;
       text.innerHTML = 'Within ~15 seconds the extension opens a tab and handles this automatically ('
-        + describeJobs(queued) + '). '
+        + describeJobs(queued) + ').' + eta + ' '
         + '<b>Once it starts, leave the tab it opens alone</b> and hold off on new actions until it finishes.';
     }
   }

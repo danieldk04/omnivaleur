@@ -450,7 +450,8 @@ _tempo_cache: dict[str, tuple[float, dict]] = {}
 
 def _gemeten_tempo(db, user_id: str) -> dict:
     """De echte tussentijd tussen twee schrijvende opdrachten, in seconden."""
-    leeg = {"seconds_between": None, "calm": False, "samples": 0}
+    leeg = {"seconds_between": None, "seconds_per_job": None,
+            "calm": False, "samples": 0}
     nu = time.monotonic()
     bewaard = _tempo_cache.get(user_id)
     if bewaard and nu - bewaard[0] < TEMPO_GELDIG_SECONDEN:
@@ -467,20 +468,36 @@ def _gemeten_tempo(db, user_id: str) -> dict:
     rijen = [r for r in rijen if r.get("claimed_at") and r.get("done_at")]
     rijen.sort(key=lambda r: r["claimed_at"])
     gaten = []
+    # HOE LANG DUURT ÉÉN OPDRACHT ÉCHT?
+    #
+    # Het gat tussen twee opdrachten (klaar → volgende opgepakt) zegt hoe snel
+    # de extensie eráán begint. Het zegt niet hoe lang een wachtrij duurt: het
+    # werk zelf zit er niet in. Gemeten bij Toon (dejuistetoon) op 05-09-2026,
+    # 39 monsters uit twaalf uur: gat 16 s, werk 29 s, van start tot start 46 s.
+    # Wie met het gat rekent belooft dus bijna drie keer te snel — precies de
+    # soort belofte waar hij op 03-09 op afknapte.
+    cycli = []
     for vorige, volgende in zip(rijen, rijen[1:]):
         klaar = _parse_ts(vorige["done_at"])
+        begin = _parse_ts(vorige["claimed_at"])
         start = _parse_ts(volgende["claimed_at"])
         if not klaar or not start:
             continue
         gat = (start - klaar).total_seconds()
         if 0 <= gat <= TEMPO_ONDERBREKING:
             gaten.append(gat)
+            if begin:
+                cyclus = (start - begin).total_seconds()
+                if cyclus > 0:
+                    cycli.append(cyclus)
     if len(gaten) < 3:
         _tempo_cache[user_id] = (nu, leeg)
         return leeg               # te weinig om iets over te beweren
     gaten.sort()
+    cycli.sort()
     midden = gaten[len(gaten) // 2]
     uitkomst = {"seconds_between": int(midden),
+                "seconds_per_job": int(cycli[len(cycli) // 2]) if len(cycli) >= 3 else None,
                 "calm": midden >= TEMPO_KALM_DREMPEL,
                 "samples": len(gaten)}
     _tempo_cache[user_id] = (nu, uitkomst)
