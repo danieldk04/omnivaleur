@@ -4887,3 +4887,52 @@ popup, of in Chrome zelf de site-toegang op "Op alle sites" zetten.
 
 Voor-en-na bewezen: 4 van de 6 nieuwe python-proeven en beide JS-proeven falen op
 de versie van vóór deze reparatie. 925 python-tests groen, alle JS-proeven groen.
+
+## 05-09-2026 — Toon, vervolg: 20 advertenties stonden groen en waren weg
+
+Na het terugzetten van de 39 zijn account doorgelicht. Drie dingen gevonden.
+
+**1. Twintig advertenties stonden "live op Marktplaats" en bestonden niet meer.**
+Zijn dashboard zei het van 274 stuks; zijn openbare verkoperspagina toonde er 317
+en twintig van onze 274 zaten daar niet bij. Alle twintig apart nagelopen: 404 of
+410 op hun eigen advertentiepagina. Twee onafhankelijke bewijzen per advertentie,
+dus zijn ze op `delisted` gezet. Dat publiceert niets; het maakt alleen de knop
+weer beschikbaar. Zeventien zijn kleine tapijtjes van 10 tot 20 euro uit één
+importronde, drie zijn recent.
+
+**Waarom geen van beide controles dit zag, aanwijsbaar:**
+- `services/polling.py` vraagt een pagina op mét de cookies van de verkoper en
+  slaat over wie geen koppeling heeft. Toon heeft alleen een `_settings`-rij in
+  `platform_credentials`. Zijn advertenties kregen dus elke ronde netjes een
+  `last_checked`-stempel (stond vandaag) zonder ooit te zijn nagekeken, en
+  `not_found_count` bleef 0.
+- De controle in de extensie leest zijn eigen "Mijn advertenties", en dat
+  overzicht is bij een zakelijk account leeg. Juist daarom mag een lege uitkomst
+  daar nooit als "weg" tellen.
+
+Daarom `scripts/controleer_advertenties_online.py`: de openbare zoek-API heeft
+geen van beide bezwaren. Het script SCHRIJFT NIETS, vastgelegd als proef.
+
+**2. Eenentwintig artikelen zonder rubriek, dus onpubliceerbaar.** Zeven daarvan
+vielen net naast de woordenlijst: die kijkt op hele woorden, dus "kleed" ving wél
+"kleed" maar niet "kleedje", "wandkleed", "sprei", "tafelloper" of "kelim". Die
+zeven vullen zichzelf nu bij het publiceren. De overige veertien zijn kleding
+zonder geslachtssignaal in de titel; daar blijft het model voor nodig, en dat
+kan pas als het Anthropic-tegoed is bijgevuld.
+
+**3. Dubbelverkoop: gecontroleerd, geen risico.** Twee artikelen stonden verkocht
+op het ene kanaal en actief op het andere. Beide advertenties zijn in
+werkelijkheid al weg (Marktplaats 404, 2dehands 410). Alleen onze administratie
+liep achter. Wel het noteren waard: de verwijderopdracht voor "Perzisch tapijt
+Bokhara" was op 04-09 om 07:31 meegegaan met de knop die zijn hele wachtrij
+wiste. Van de 31 weggegooide verwijderopdrachten van die ochtend waren de meeste
+verversingsparen die vannacht om 02:42 alsnog gelopen zijn.
+
+**Stand aan het eind:** 26 artikelen staan niet op Marktplaats terwijl er wel een
+advertentieregel voor bestaat. Vijfentwintig daarvan zijn meteen te publiceren,
+één mist nog een omschrijving. Bewust NIET ongevraagd gedaan: van een advertentie
+die door Marktplaats of door hemzelf is weggehaald valt van hier niet te zien of
+hij het artikel intussen buiten ons om heeft verkocht, en dan zetten we iets te
+koop wat er niet meer is. Dat is een vraag aan Toon, geen aanname van ons.
+
+Zijn extensie viel om 11:29 NL opnieuw stil met 9 opdrachten in de rij.
