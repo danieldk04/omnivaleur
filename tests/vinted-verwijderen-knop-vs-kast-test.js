@@ -114,6 +114,14 @@ async function ronde({ knopGevonden, wegNa, eerste, kast, anderOrigin = null }) 
   ok("geen sessie op vinted.nl maar wel op .com -> daar kijken, dan pas oordelen",
      !r.fout && r.gemeld[0]?.extra?.note === "already_absent", r);
 
+  r = await ronde({ eerste: { userId: "12345", present: false, httpStatus: 404 } });
+  ok("lidnummer bekend, kast leeg, pagina weg -> 'al weg', herplaatsing loopt door",
+     !r.fout && r.gemeld[0]?.extra?.note === "already_absent", r);
+
+  r = await ronde({ eerste: { userId: "12345", present: false, httpStatus: 200 } });
+  ok("kast leeg maar de advertentie bestaat wél -> afblijven, foutmelding",
+     /not in your wardrobe/.test(r.fout || "") && r.gemeld.length === 0, r.fout);
+
   console.log(mislukt === 0 ? "\nAlles goed\n" : `\n${mislukt} mislukt\n`);
   process.exit(mislukt === 0 ? 0 : 1);
 })();

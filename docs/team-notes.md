@@ -5275,3 +5275,25 @@ voordat er iets over inloggen gezegd wordt.
 Bewijs: `tests/vinted-lidnummer-test.js` (5 gevallen, drie falen op de vorige
 commit) en de uitgebreide `tests/vinted-verwijderen-knop-vs-kast-test.js` (10
 gevallen).
+
+## 05-09-2026 — "Niet in je kast" was de laatste doodlopende straat
+
+Met 1.0.301 werkte het lidnummer wél, en daardoor kwam de 404-tak juist nooit
+meer aan bod: de code vond nu een lidnummer (via `/api/v2/users/current`, dat
+ook op een 404-pagina antwoordt), liep de kast langs, vond de advertentie daar
+niet, en stopte met "not in your wardrobe — it may already be gone or belong to
+a different account". Weer een dood spoor, met dezelfde oorzaak als eerder: een
+uitkomst die twee heel verschillende dingen kan betekenen, waarvan er één zonder
+meer wordt aangenomen.
+
+Sinds 1.0.302 haalt de kastcontrole er de statuscode van de advertentiepagina
+bij zodra de kast leeg blijkt:
+
+- 404 → de advertentie bestaat niet meer. Verwijderen is dan klaar; de
+  herplaatsing loopt gewoon door.
+- pagina bestaat wél → hij hoort bij een ander account, en dan blijven we eraf.
+  Dezelfde foutmelding als voorheen.
+
+Bewijs: `tests/vinted-verwijderen-404-test.js` (5 gevallen) en
+`tests/vinted-verwijderen-knop-vs-kast-test.js` (12 gevallen), allebei met
+`--oud` tegen de vorige commit, waar het nieuwe geval faalt.

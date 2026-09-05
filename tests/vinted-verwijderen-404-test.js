@@ -55,6 +55,31 @@ const kast = (ids) => async () => ({
                       { href: "https://www.vinted.nl/items/8289521490" }, setTimeout);
   ok("advertentie weg -> statuscode 404 wordt teruggegeven", r.userId === null && r.httpStatus === 404, r);
 
+  // 2b. Ingelogd (lidnummer via Vinted zelf), maar de advertentie bestaat niet
+  //     meer: dan moet de statuscode meekomen, anders is "weg" niet te
+  //     onderscheiden van "hoort bij een ander account".
+  const ingelogdMaarWeg = async (u) => {
+    if (String(u).includes("users/current")) return { ok: true, status: 200, json: async () => ({ user: { id: 12345 } }) };
+    if (String(u).includes("/wardrobe/")) return { ok: true, status: 200, json: async () => ({ items: [{ id: 111 }], pagination: { total_pages: 1 } }) };
+    return { ok: false, status: 404, json: async () => ({}) };   // de advertentiepagina zelf
+  };
+  r = await inTabblad("8289521490", doc([]), ingelogdMaarWeg,
+                      { href: "https://www.vinted.nl/items/8289521490" }, setTimeout);
+  ok("ingelogd + advertentie weg -> present false MET statuscode 404",
+     r.userId === "12345" && r.present === false && r.httpStatus === 404, r);
+
+  // 2c. Zelfde situatie, maar de pagina bestaat wel: dan is het een ander
+  //     account en mag er niets als "weg" gelden.
+  const ingelogdAnderAccount = async (u) => {
+    if (String(u).includes("users/current")) return { ok: true, status: 200, json: async () => ({ user: { id: 12345 } }) };
+    if (String(u).includes("/wardrobe/")) return { ok: true, status: 200, json: async () => ({ items: [{ id: 111 }], pagination: { total_pages: 1 } }) };
+    return { ok: true, status: 200, json: async () => ({}) };
+  };
+  r = await inTabblad("8289521490", doc([]), ingelogdAnderAccount,
+                      { href: "https://www.vinted.nl/items/8289521490" }, setTimeout);
+  ok("advertentie bestaat wél maar staat niet in mijn kast -> geen 404",
+     r.present === false && r.httpStatus !== 404, r);
+
   // 3. Echt uitgelogd: de pagina bestaat wel (200), er is alleen geen menu.
   const paginaBestaat = async () => ({ ok: true, status: 200, json: async () => ({}) });
   r = await inTabblad("8289521490", doc([]), paginaBestaat,

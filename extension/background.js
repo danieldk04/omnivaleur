@@ -3739,6 +3739,20 @@ async function bgDeleteVinted(job, serverUrl) {
       // absent, which aborted its delete with "not in your wardrobe" while the
       // listing was in fact live — verified live 2026-07: item 8557510561 sits
       // on page 2 of a 536-item wardrobe. Only a full walk may return false.
+      // Niet in de kast heeft twee heel verschillende betekenissen: de
+      // advertentie is weg (dan is de verwijderstap gewoon klaar), of hij hoort
+      // bij een ander account (dan moeten we van hem afblijven). De statuscode
+      // van de advertentiepagina zelf zegt welke van de twee: 404 = weg.
+      // Zonder dit liep een herplaatsing dood op "not in your wardrobe" terwijl
+      // de advertentie aantoonbaar niet meer bestond (Daniel, 05-09-2026).
+      const wegOfVreemd = async () => {
+        let httpStatus = 0;
+        try {
+          const r = await fetch(location.href, { headers: { Accept: "text/html" }, redirect: "follow" });
+          httpStatus = r.status;
+        } catch (e) { httpStatus = 0; }
+        return { userId, present: false, httpStatus };
+      };
       try {
         for (let page = 1; page <= 60; page++) {
           const res = await fetch(`/api/v2/wardrobe/${userId}/items?order=newest_first&page=${page}&per_page=96`, { headers: { Accept: "application/json" } });
@@ -3752,9 +3766,9 @@ async function bgDeleteVinted(job, serverUrl) {
           // that's still for sale — and it must never be deleted.
           if (mine) return { userId, present: true, closed: !!mine.is_closed };
           const pg = data.pagination || {};
-          if (items.length === 0) return { userId, present: false };
-          if (pg.total_pages && page >= pg.total_pages) return { userId, present: false };
-          if (!pg.total_pages && items.length < 96) return { userId, present: false };
+          if (items.length === 0) return await wegOfVreemd();
+          if (pg.total_pages && page >= pg.total_pages) return await wegOfVreemd();
+          if (!pg.total_pages && items.length < 96) return await wegOfVreemd();
         }
         return { userId, present: null };  // never saw the end — don't claim absent
       } catch (e) { return { userId, present: null }; }
@@ -3808,6 +3822,14 @@ async function bgDeleteVinted(job, serverUrl) {
     }
     if (!before?.userId) throw new Error(`Could not determine your Vinted member id on the item page — make sure you're logged into this Vinted account.`);
     if (before.present === null) throw new Error(`Could not read your Vinted wardrobe to verify item ${listingId} — aborting to avoid an unverified delete.`);
+    if (before.present === false && before.httpStatus === 404) {
+      // Advertentiepagina bestaat niet meer én hij staat niet in de kast: weg
+      // is weg, en dat is precies het doel van deze stap. Afmelden als geslaagd
+      // zodat de herplaatsing doorloopt in plaats van dood te lopen.
+      console.log(`[Omnivaleur] bgDeleteVinted: item ${listingId} bestaat niet meer op Vinted en staat niet in de kast — als al weg afgemeld`);
+      await finaliseJob(serverUrl, job.id, "complete", { note: "already_absent" });
+      return;
+    }
     if (before.present === false) throw new Error(`Vinted item ${listingId} is not in your wardrobe — it may already be gone or belong to a different account; nothing to delete.`);
     if (before.closed) {
       // Verkocht (of beëindigd) op Vinted zelf: weghalen is fout — de verkoop
