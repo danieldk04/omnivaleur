@@ -17,6 +17,30 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ---
 
+## eigen-advertentie-heeft-geen-leesbaar-adres
+
+*05-09-2026 — Van advertenties die de extensie zelf plaatste bewaren we /seller/view/{id}, en die pagina is voor de server onleesbaar; de openbare zoek-API is de weg terug*
+
+Bij een plaatsing door de extensie slaan we `/seller/view/{nummer}` op als
+advertentieadres. Die pagina vereist een login, dus elke servercontrole die de
+advertentiepagina leest krijgt niets: bij het herplaatsen viel de categorie
+daardoor terug op de gok uit de titel. Gemeten 05-09-2026 bij Zilverwebsite: 398
+van 968 lopende advertenties stonden op zo'n adres, 82 daarvan zouden bij de
+volgende verversing verhuizen.
+
+De weg terug is de openbare zoek-API (`/lrp/api/search`, dezelfde op
+marktplaats.nl en 2dehands.be): zoeken op de exacte gepubliceerde titel binnen
+het aanbod van dat verkopersnummer levert `vipUrl` op, en dat is wél een
+leesbare advertentiepagina. De lijst geeft ook `categoryId` en `priceInfo`
+rechtstreeks mee, maar zonder l1, dus we lezen de pagina alsnog.
+
+Gebruik de titel uit de laatste create-opdracht (`_last_listed_title`), niet de
+titel van het item: die kan vertaald of op 60 tekens afgekapt zijn en matcht dan
+niet. Zie "marktplaats-advertentiepagina-url" en
+"admarkt-omschrijving-via-openbaar-mp".
+
+---
+
 ## formulier-onthoudt-vorige-keuze
 
 *05-09-2026 — Marktplaats zet de advertentievorm van de vorige plaatsing voor; wat je nodig hebt moet je zelf zetten, ook als de standaardstand meestal goed is*
