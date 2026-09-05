@@ -5170,5 +5170,10 @@ Twee dingen van Lynn zelf, niet van ons:
   langskomen. Dat is dus geen storing bij ons.
 - Ze heeft calm mode uitgezet en merkt dat het daardoor een stuk sneller gaat.
 
-**Openstaand:** Lynn vraagt of wij de 52 dubbele rijen van hier opruimen. Dat is
-weggooien in het account van een klant, dus dat wacht op Daniels akkoord.
+**De 52 rijen zijn opgeruimd** (05-09-2026, met akkoord van Daniel). Met
+`scripts/ruim_dubbele_artikelrijen_op.py`: per advertentie blijft de oudste
+artikelrij staan, en alleen een jongere rij die verder geen eigen advertentie
+heeft en niets verkochts, gaat weg. Nameting: van 1371 naar 1319 artikelen,
+2021 naar 1969 advertentieregels, en 0 advertenties die nog aan meer dan een
+rij hangen. Steekproef op drie behouden rijen: die staan er nog, met hun
+advertentienummer. Er is geen enkele opdracht naar een platform gegaan.
