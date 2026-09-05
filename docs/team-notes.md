@@ -5328,3 +5328,44 @@ gaat de opdracht alsnog op geplaatst, met het echte advertentienummer erbij.
 Daarna stopt de wekker vanzelf. Bewijs:
 `tests/vinted-zelf-geplaatst-test.js`, met `--oud` tegen de vorige commit, waar
 twee gevallen falen.
+
+## 05-09-2026 — Done-for-you: de extensie voor de klant draaien op onze eigen machine
+
+Gesprek met Naoufal, de webbouwer/onderhouder van Toon (De Juiste Toon). Hij belde
+namens Toon om de instellingen na te lopen; de account-instellingen bleken goed, het
+probleem was de extensieversie plus het feit dat Toon zijn laptop dichtklapt. Toon
+heeft naar eigen zeggen van Naoufal "nul" technische kennis. Naoufal doet voor hem
+website-onderhoud tegen een abonnement en wil Omnivaleur doorverwijzen naar zijn
+andere klanten, waarvan er meer op Marktplaats verkopen.
+
+Zijn tip, letterlijk: neem een server of mini-pc, vraag de klant zijn inloggegevens,
+en draai de extensie 24/7 voor hem. De klant hoeft dan niets meer te doen. Hij zegt
+er zelf bij dat Toon zijn gegevens twee keer fout zou doorgeven voordat het klopt.
+
+**Daniels richting (05-09-2026):** dit als premium-pakket aanbieden aan iedereen,
+met ontzorging als belofte.
+
+**Wat de afweging is.**
+
+Technisch kan het. Elke klant heeft een eigen Chrome-profiel nodig (twee accounts in
+één browser is precies het patroon waar Marktplaats op bant), ongeveer een halve GB
+werkgeheugen per klant, dus tien à twaalf klanten op een server van 16 GB. Elke klant
+heeft daarbovenop een eigen Nederlands IP nodig, drie tot acht euro per maand. Samen
+vijf tot twaalf euro per klant per maand. Dat kan niet uit EUR 19,99; het is een apart
+pakket in de orde van EUR 49 tot 79.
+
+Twee dingen die het plan kunnen breken en die nog niet gemeten zijn:
+
+1. Vinted en eBay sturen bij een nieuwe locatie een controlecode naar de klant. Die
+   is niet uit te zetten. Komt dat wekelijks, dan is de ontzorging weg.
+2. Hoe snel Marktplaats een serverlocatie opmerkt, ook mét eigen IP per klant.
+
+**Afspraak over wachtwoorden:** we nemen ze niet aan en slaan ze niet op. Zodra wij
+ze bewaren zijn wij aansprakelijk. In plaats daarvan zetten we de machine klaar en
+laat de klant in een schermdeel-sessie zelf inloggen op zijn eigen accounts. Wij zien
+het wachtwoord nooit.
+
+**Volgorde:** eerst één mini-pc (ca. EUR 200 eenmalig) met drie klanten erop, Toon als
+eerste kandidaat, een maand meten. Pas daarna een echte server, een IP per klant en
+een prijs in de lijst. Niet verkopen voordat die maand gedraaid heeft: je belooft dan
+ontzorging en levert een storing waar de klant zelf niet eens bij kan.
