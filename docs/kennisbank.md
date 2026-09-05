@@ -17,6 +17,41 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ---
 
+## succes-nooit-uit-uitsluitingslijst
+
+*05-09-2026 — Het scherm bepaalde "gelukt" door fouten uit te sluiten, dus elke nieuwe serverstatus werd stilzwijgend een succesmelding*
+
+Het publiceervenster besliste zo: `status !== 'error' && status !== 'duplicate'`
+telt als gelukt. De server had daarnaast een tak "staat er al op, dus ik plaats
+geen tweede advertentie" en gaf die `status: "active"` mee. Die viel dus onder
+"gelukt", en het scherm meldde "Queued for Marktplaats, the extension starts
+right away" terwijl er geen enkele opdracht was aangemaakt.
+
+Erger nog: `"active"` betekende op de API-kant (eBay, Shopify) juist WEL zojuist
+gepubliceerd. Eén woord voor twee tegengestelde uitkomsten, dus het scherm kon ze
+niet uit elkaar houden ook al had het gewild.
+
+Gemeten bij Papa's Plectrums (Egbert Brouwer), 05-09-2026. Al zijn 5533
+artikelen zijn ingelezen vanaf zijn eigen Marktplaats-account en staan daar dus
+al. Elke publicatie naar Marktplaats verdween daardoor in die tak: nul
+opdrachten in drie weken, en elke keer een groene bevestiging. Hij wachtte vijf
+minuten op een advertentie die niet kon komen.
+
+**Why:** een succesmelding die ontstaat door fouten weg te strepen is geen
+oordeel maar een gat. Elke status die de server er later bij verzint komt er
+vanzelf doorheen als "gelukt", en niemand merkt het, want een succesmelding
+onderzoekt niemand.
+
+**How to apply:** noem het succes bij naam (`queued`) in plaats van de fouten uit
+te sluiten, en geef elke uitkomst een eigen woord. "Staat er al op" heet nu
+`already_live` en heeft een eigen melding: er is niets gepubliceerd en niets in
+de wachtrij gezet. De test bewaakt dat de server en het scherm hetzelfde woord
+gebruiken, want zodra die twee uiteenlopen valt het geval stil terug in
+"gelukt". Zie ook "beloofd-tempo-moet-gemeten-tempo-zijn" en
+"geen-doodlopende-straat-in-de-ui".
+
+---
+
 ## een-bron-is-geen-bewijs-bij-weg
 
 *05-09-2026 — De openbare verkoperspagina noemde 21 advertenties weg; per advertentie nagekeken stonden er 2 gewoon online*

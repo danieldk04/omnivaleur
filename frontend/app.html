@@ -5023,6 +5023,7 @@ async function doBulkCrosslist() {
   // erbij, terwijl tweederde daarvan antiek is. De server weigert ze ook, maar
   // dan waren het 300 mislukte pogingen en een berg rode meldingen.
   const overgeslagen = new Map();   // platform → aantal artikelen
+  const alLive = new Map();         // platform → stond er al op, niets gedaan
   const blockedItems = [];
   const apiErrors = new Set();   // distinct server-side (eBay/Shopify) failures
   for (const id of ids) {
@@ -5056,9 +5057,15 @@ async function doBulkCrosslist() {
       // 'duplicate' hoort hier ook bij: dat kanaal is bewust overgeslagen omdat
       // het artikel er al op staat onder een dubbele rij. Stil overslaan zou
       // lezen als "gelukt", en dan blijft de dubbeling ongemerkt staan.
-      (data.results || []).filter(r => r.status === 'error' || r.status === 'duplicate')
+      const resultaten = data.results || [];
+      resultaten.filter(r => r.status === 'error' || r.status === 'duplicate')
         .forEach(r => apiErrors.add(`${PLATFORM_LABELS[r.platform] || r.platform}: ${r.error || 'failed'}`));
-      done++;
+      // Staat het er al op, dan is er voor dat kanaal niets in de wachtrij gezet.
+      // Meetellen als "queued" maakt van honderden overgeslagen artikelen een
+      // groen getal waar niets achter zit.
+      resultaten.filter(r => r.status === 'already_live')
+        .forEach(r => alLive.set(r.platform, (alLive.get(r.platform) || 0) + 1));
+      if (!resultaten.length || resultaten.some(r => r.status !== 'already_live')) done++;
     } catch (e) {
       errors++;
       // De reden werd hier weggegooid: je zag alleen "3 error(s)" en nooit
@@ -5081,6 +5088,12 @@ async function doBulkCrosslist() {
     alert(`Some items were left off a platform they can't be listed on:\n\n${regels.join('\n')}\n\n`
       + `Either Vinted bans them (coins, banknotes, stamps, securities, archaeological items), `
       + `or your own Vinted setting under Platforms leaves that category out. Everything else went through as normal.`);
+  }
+  if (alLive.size) {
+    const regels = [...alLive.entries()]
+      .map(([p, n]) => `• ${n} item${n !== 1 ? 's' : ''} already on ${PLATFORM_LABELS[p] || p}`);
+    alert(`Nothing was published for these, because the advert is already there:\n\n${regels.join('\n')}\n\n`
+      + `Use Relist if you want to replace an existing advert with a fresh one.`);
   }
   if (blockedItems.length) {
     alert(`${blockedItems.length} item(s) couldn't be published — missing data:\n\n${blockedItems.join('\n')}\n\nFill these in first, then try again.`);
@@ -5875,6 +5888,7 @@ function numOrNull(raw) {
   return isNaN(n) ? null : n;
 }
 
+let alLiveNaOpslaan = [];   // kanalen die bij het opslaan zijn overgeslagen omdat het er al op staat
 async function saveItem() {
   if (_uploadsInFlight > 0) return alert('Photos are still uploading — please wait for them to finish before saving.');
   const id = document.getElementById('edit-id').value;
@@ -5972,6 +5986,7 @@ async function saveItem() {
         // alle knoppen uit, geen weg terug. Vandaar deze uitweg, met de eerlijke
         // mededeling dat het publiceren gewoon doorgaat.
         let losgelaten = false;
+        alLiveNaOpslaan = [];
         const losmaken = () => {
           if (losgelaten) return;
           losgelaten = true;
@@ -5994,7 +6009,14 @@ async function saveItem() {
         ], { onEscape: losmaken, escapeNa: 2, autoNa: 8, escapeLabel: 'Continue in the background' });
 
         try {
-          await apiFetch(`${API}/api/items/${itemId}/crosslist`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ platforms: selected }) });
+          const clRes = await apiFetch(`${API}/api/items/${itemId}/crosslist`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ platforms: selected }) });
+          // Staat het artikel er al op, dan is er niets in de wachtrij gezet.
+          // Zonder deze regel meldde het scherm alleen "Item saved" en wachtte de
+          // gebruiker op een advertentie die niet zou komen.
+          const clText = await clRes.text();
+          let clData = {};
+          try { clData = clText ? JSON.parse(clText) : {}; } catch { clData = {}; }
+          alLiveNaOpslaan = (clData.results || []).filter(r => r.status === 'already_live');
           nudgeExtension();
         } catch (e) {
           if (!losgelaten) throw e;
@@ -6010,6 +6032,11 @@ async function saveItem() {
     // Confirm the save landed. Without this an edit that changed only a number
     // (a purchase price, say) gave no visible sign anything had happened.
     showToast(id ? 'Item saved — figures updated.' : 'Item created.');
+    if (alLiveNaOpslaan.length) {
+      alert(`Not published:\n`
+        + alLiveNaOpslaan.map(r => `• ${PLATFORM_LABELS[r.platform] || r.platform}: `
+            + `${r.message || 'already live there, so nothing was published'}`).join('\n'));
+    }
   } catch(e) {
     alert('Error: ' + e.message);
   } finally {
@@ -7800,10 +7827,19 @@ async function doCrosslist() {
     // 'duplicate' telt hier mee als "niet gepubliceerd, en dit is waarom":
     // het artikel staat er al op onder een dubbele rij van hetzelfde item.
     const errored = (data.results || []).filter(r => r.status === 'error' || r.status === 'duplicate');
-    const ok = (data.results || []).filter(r => r.status !== 'error' && r.status !== 'duplicate')
+    // 'already_live' is geen succes en geen fout: er is bewust niets gebeurd.
+    // Zonder deze regel viel het onder `ok` en zei het scherm "Queued", terwijl
+    // er nooit een opdracht is aangemaakt. Papa's Plectrums keek daardoor vijf
+    // minuten naar een advertentie die niet kon komen: al zijn 5533 artikelen
+    // staan al op Marktplaats, dus dit gold daar voor elke publicatie.
+    const alLive = (data.results || []).filter(r => r.status === 'already_live');
+    const ok = (data.results || []).filter(r => !['error', 'duplicate', 'already_live'].includes(r.status))
                                    .map(r => PLATFORM_LABELS[r.platform] || r.platform);
-    if (errored.length) {
-      const lines = errored.map(r => `• ${PLATFORM_LABELS[r.platform] || r.platform}: ${r.error || 'failed'}`).join('\n');
+    if (errored.length || alLive.length) {
+      const lines = [
+        ...errored.map(r => `• ${PLATFORM_LABELS[r.platform] || r.platform}: ${r.error || 'failed'}`),
+        ...alLive.map(r => `• ${PLATFORM_LABELS[r.platform] || r.platform}: ${r.message || 'already live there, so nothing was published'}`),
+      ].join('\n');
       alert((ok.length ? `Queued: ${ok.join(', ')}.\n\n` : '') + `Not published:\n${lines}`);
     } else {
       showToast(`Queued for ${selected.map(p => PLATFORM_LABELS[p]).join(', ')} — the extension starts right away`);

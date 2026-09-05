@@ -307,6 +307,13 @@ API_PLATFORMS = {"ebay", "shopify"}
 # exists (backend/platforms/etsy.py) but the flow isn't finished/tested.
 NOT_YET_AVAILABLE = {"etsy"}
 
+# Wat het scherm laat zien als een kanaal wordt overgeslagen omdat het artikel er
+# al op staat. Eén zin die zegt dat er NIETS is gebeurd, en wat de weg vooruit is.
+ALREADY_LIVE_MESSAGE = (
+    "Already live on this channel, so nothing was published and nothing was queued. "
+    "Use Relist if you want to replace the existing advert with a fresh one."
+)
+
 # Required on every platform — an empty description or zero photos means the
 # extension has nothing to type/upload, so the listing goes out looking broken
 # rather than just "safely bare".
@@ -684,13 +691,20 @@ async def publish_to_platforms(item_id: str, platforms: list[str], user_id: str)
                         if r.get("status") == "active" and r.get("platform_listing_id")),
                        rijen[0] if rijen else None)
             if row and row.get("status") == "active" and row.get("platform_listing_id"):
+                # EIGEN STATUS, GEEN "active" (05-09-2026, gemeten bij Papa's
+                # Plectrums). "active" betekent op de API-kant juist WEL zojuist
+                # gepubliceerd (_publish_one geeft dezelfde waarde terug), dus
+                # het scherm kon deze twee niet uit elkaar houden en meldde
+                # "Queued" terwijl er geen opdracht werd aangemaakt. Zijn 5533
+                # artikelen staan allemaal al op Marktplaats, dus elke publicatie
+                # daarheen verdween geruisloos in dit tak.
                 results.append({
                     "platform": platform,
-                    "status": "active",
+                    "status": "already_live",
                     "listing_id": row["id"],
                     "platform_listing_id": row.get("platform_listing_id"),
                     "platform_listing_url": row.get("platform_listing_url"),
-                    "message": "Already live here — not published a second time",
+                    "message": ALREADY_LIVE_MESSAGE,
                 })
                 continue
             if not existing_listing.data:
@@ -804,10 +818,10 @@ async def _publish_one(item: dict, platform_name: str, credentials: dict, user_i
                 return {
                     "listing_id": listing_id,
                     "platform": platform_name,
-                    "status": "active",
+                    "status": "already_live",
                     "platform_listing_id": existing.data[0].get("platform_listing_id"),
                     "platform_listing_url": existing.data[0].get("platform_listing_url"),
-                    "message": "Already live here — not published a second time",
+                    "message": ALREADY_LIVE_MESSAGE,
                 }
             await _exec(db.table("listings").update({"status": "pending", "error_message": None}).eq("id", listing_id))
         else:

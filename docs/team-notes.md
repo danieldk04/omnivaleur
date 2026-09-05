@@ -5029,3 +5029,59 @@ voor een dubbele Shopify-advertentie. Shopify en eBay lopen via hun eigen API, d
 die opdracht werd nooit opgepakt en bleef in de wachtrij staan. Geannuleerd, en
 het script slaat die kanalen nu over (commit d77de10). Die ene Shopify-dubbel
 staat er dus nog.
+
+## 05-09-2026 (avond) — Papa's Plectrums: waarom er in drie weken geen enkele advertentie is geplaatst
+
+Egbert Brouwer (info@papas-plectrums.nl, proef tot 19-09) meldde: "Ik heb 1
+artikel gepubliceerd naar MP, ik kreeg geen foutmelding of zo. Na 5 minuten was
+het artikel nog niet zichtbaar." Uitgezocht, en het is groter dan die ene
+advertentie.
+
+**Gemeten aan zijn account (niet geschat):**
+
+- 5533 artikelen, en alle 5533 hebben een advertentierij `marktplaats / active`.
+  Zijn hele voorraad is ingelezen vanaf zijn eigen zakelijke Marktplaats-account,
+  dus alles staat daar al.
+- 351 opdrachten sinds 13-08. Daarvan 305 plaatsingen op 2dehands: 274
+  geannuleerd, 31 op fout, **nul geslaagd**. Verder 40 Marktplaats-scans en 6
+  2dehands-scans. Er is nooit één `marktplaats / create` geweest.
+- Op de dag van zijn test is er geen enkele opdracht aangemaakt. Zijn laatste
+  opdracht dateert van 04-09 08:07.
+
+**Oorzaak van zijn klacht.** `publish_to_platforms` slaat een kanaal bewust over
+als het artikel er al op staat, en gaf dat terug als `status: "active"`. Het
+scherm bepaalde "gelukt" door uitsluiting (`!== 'error' && !== 'duplicate'`), dus
+dat telde als succes en de melding luidde "Queued for Marktplaats, the extension
+starts right away". Er is nooit iets in de wachtrij gezet. Bij hem gold dat voor
+élk artikel, want ze staan er allemaal al op.
+
+`"active"` betekende bovendien op de API-kant (eBay, Shopify) juist wél zojuist
+gepubliceerd. Eén woord voor twee tegengestelde uitkomsten.
+
+**Gerepareerd.** Nieuwe status `already_live` met een eigen tekst, op de drie
+plekken waar het dashboard publiceert: het losse venster, Bulk publish en Save &
+publish (die derde las het antwoord van de server voorheen helemaal niet).
+Voor-en-na bewezen met `tests/publiceren-zegt-queued-terwijl-er-niets-gebeurt-test.js`:
+op de vorige commit komt er "Queued for Marktplaats", op de nieuwe "Not
+published: Marktplaats: Already live...". 947 pytests groen.
+
+**Zijn echte blokkade staat nog open: 2dehands.** 276 van de 305 mislukkingen
+zeggen "The 2dehands listing form never opened". De extensie heeft er op 04-09
+twee keer bij gemeten: "API 200, 0 advertenties, ingelogd op 2dehands: nee" en
+daarna "API 401 ... ingelogd: nee". Zijn browser heeft dus geen 2dehands-sessie.
+Hij moet zelf kijken of hij daar een account heeft. Dat is de vraag in de
+conceptmail.
+
+**Correctie op de aantekening van vanmiddag.** Daar stond dat er twee kopieën van
+de extensie naast elkaar draaiden (1.0.258 en 1.0.281 op 03-09). Nagemeten per
+tijdstip: 1.0.258 tot 09:48, 1.0.281 vanaf 09:58. Dat is één kopie die is
+bijgewerkt, geen twee. Hij draait nu 1.0.281, de Web Store staat op 1.0.294.
+
+**Waarschuwing bij de online-controle.** `controleer_advertenties_online.py`
+meldt voor hem "STAAT ER NIET MEER: 699". Dat is géén bewijs: zijn openbare
+verkoperslijst is afgekapt op 4900 advertenties (de bekende grens van ~5000) en
+hij heeft er 5533. De 699 zitten simpelweg niet in de steekproef. Van de 4900 die
+er wel in zaten werden er 4834 teruggevonden, alleen met een `a` ervoor
+(Admarkt-nummering: wij bewaren `1521375186`, Marktplaats noemt het
+`a1521375186`). Daardoor geeft `link.marktplaats.nl/<nummer>` bij hem altijd 404,
+ook voor advertenties die gewoon online staan.
