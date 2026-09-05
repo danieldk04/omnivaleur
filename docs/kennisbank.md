@@ -17,6 +17,29 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ---
 
+## formulier-onthoudt-vorige-keuze
+
+*05-09-2026 — Marktplaats zet de advertentievorm van de vorige plaatsing voor; wat je nodig hebt moet je zelf zetten, ook als de standaardstand meestal goed is*
+
+Het Marktplaats-plaatsformulier zet de advertentievorm van de vórige advertentie
+alvast klaar. Eén advertentie op "Zie omschrijving" (Zilverwebsite, 05-09-2026)
+zette het formulier voor élke volgende plaatsing in die stand, en bij die vorm
+bestaat `input[name="price.value"]` niet. De extensie raakte de keuzelijst niet
+aan zolang er een prijs was, vulde dus een veld dat er niet was, kreeg netjes
+`false` terug en plaatste zestig advertenties zonder prijs.
+
+**Why:** "Het staat er toch al goed op" is een aanname over een formulier dat
+niet van ons is. Een stand die meestal klopt is geen stand die je mag overslaan,
+en een invulstap die stil `false` teruggeeft ziet niemand.
+
+**How to apply:** zet elke waarde die de advertentie nodig heeft zelf, ook de
+schijnbaar vanzelfsprekende, en lees daarna terug of hij er echt staat. Kan een
+verplichte waarde er niet op, stop dan de plaatsing in plaats van door te gaan.
+Zie "succes-nooit-uit-uitsluitingslijst", "rode-regel-is-geen-oordeel" en
+"geen-vraagprijs-is-bieden".
+
+---
+
 ## delist-op-dubbele-regel
 
 *05-09-2026 — Twee artikelregels kunnen naar dezelfde advertentie wijzen; Delist op de dubbele haalt de echte advertentie weg, Delete is de veilige knop*
