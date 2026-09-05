@@ -4679,3 +4679,97 @@ echt aan begonnen was.
 
 Geen extensiewijziging, dus geen versiebump. 898 python-tests groen (was 898,
 twee nieuwe erbij), alle JS-proeven groen.
+
+## 05-09-2026 — Toon (dejuistetoon): de 39 zijn opnieuw ingediend, 29 aantoonbaar online
+
+Zijn antwoord op de mail van gisteravond: *"Zet jij die 39 maar weer actief. Zo
+schiet het wederom niets op."* Dus gedaan, en nagemeten in plaats van beloofd.
+
+**Hoe.** Niet met een los reparatiescript maar langs `publish_to_platforms`, het
+gewone publicatiepad, zodat elke bestaande controle meedeed: eigendom, ontbrekende
+velden, de verantwoordelijke partij, de tweelingcontrole en de "staat er al een
+levende advertentie" -controle. Vooraf droog gedraaid: 0 validatieproblemen op 39,
+1 pair geblokkeerd. Uitkomst: **38 opnieuw in de wachtrij, 1 overgeslagen** omdat
+"Soepele grand foulard kleed uit Thailand" om 08:21 al opnieuw live was gegaan
+(m2439164517). Die overslag is het bewijs dat de dubbelbeveiliging werkt; zonder
+die stap had hij daar twee advertenties gehad.
+
+**Twee rubrieken eerst rechtgezet.** "Grand Foulard Groot 264/128 cm" stond onder
+`sieraden damestassen` en "Unisex originele Lederhosen kniebroek" onder
+`unisex jassen`. Alle 14 gebruikte rubrieken zijn nagelopen tegen de
+Marktplaats-tabel in `extension/background.js`; deze twee waren de enige foute.
+
+**Uitkomst, gemeten op zijn openbare verkoperslijst** (`lrp/api/search`,
+sellerId 17981431), niet op onze eigen administratie:
+
+- vóór: 288 advertenties, ná: **317**.
+- **29 van de 39 gepubliceerd én teruggevonden** op die lijst, met de juiste
+  rubriek-id, prijs en datum "Vandaag".
+- 1 stond al live (zie boven).
+- 1 mislukte op 2dehands, zie hieronder.
+- 1 kreeg wél een advertentienummer (m2439189692, "Foulard plaid zeilschepen")
+  maar staat niet op zijn openbare lijst en zijn pagina geeft 404, 25 minuten na
+  plaatsing, terwijl advertenties van vóór én ná hetzelfde moment er wél staan.
+  Geen dubbele advertentie van hemzelf gevonden. Dit is aan de kant van
+  Marktplaats en alleen in zijn eigen overzicht te zien. **Openstaand.**
+- 7 stonden nog te wachten toen zijn extensie om 11:29 NL opnieuw stilviel.
+  Ze blijven staan en lopen vanzelf zodra Chrome weer aan is. Zijn
+  offline-waarschuwing komt rond 14:29 NL als hij wegblijft (drempel 3 uur stil
+  én 3 uur wachtend; beide worden gehaald).
+
+**Foto's: geen probleem, wél gecontroleerd.** De advertentiepagina toont er 5
+terwijl zijn artikelen er 6 tot 12 hebben. Tegenmeting op advertenties van juni,
+die al maanden goed staan: óók 5. Het is een grens van de pagina zelf, niet van
+onze upload.
+
+### Wat er onderweg is gerepareerd
+
+**1. 2dehands: "Geen postcode ingevuld".** De enige 2dehands-opdracht van de 39
+kwam terug met `contactInformation.postCode=LEEG`. Datzelfde account publiceerde
+daar al tien keer met succes met precies dezelfde code (10 done, tegen 2 keer
+deze fout: 03-09 en 05-09). Het contactblok wordt dus door de site zelf uit het
+account gevuld en was op die twee momenten alleen nog niet aangekomen.
+`submitListing` wacht nu tot acht seconden op dat veld voordat ze klikt, en
+blijft het leeg dan weigert ze te plaatsen met een zin die zegt wat de verkoper
+zelf moet doen. `tests/postcode-wachten-test.js`. Extensie 1.0.295 — **staat nog
+niet in de Web Store, dus dit helpt Toon vandaag niet.**
+
+**2. Een grand foulard is geen sjaal.** De classificatieprompt zegt over de
+sieraden-tak "pick it for anything worn or carried as an accessory", en een
+foulard is in gewoon Nederlands een sjaal. De keyword-terugval kende de
+combinatie niet en gaf niets terug, dus de foute keuze bleef staan. Nu op drie
+plekken geregeld, zelfde patroon als bij schoenen: woordenlijst, prompt, en een
+correctie achteraf die een keuze búiten de woontak terugzet naar
+`wonen plaids en woondekens`. Binnen de woontak blijven we eraf. Een losse
+"foulard" blijft een sjaal. `tests/test_grand_foulard_is_geen_sjaal.py`, mét
+tegenproef.
+
+**3. De wachtrijbalk zweeg over de looptijd zodra Calm mode uitstond.** Hij had
+vandaag 38 opdrachten in de rij en Calm mode UIT, en las alleen "the extension is
+about to start — within ~15 seconds". Dat is precies het beeld waar hij op 03-09
+op afknapte. Bovendien rekende de schatting met het gat tussen twee opdrachten in
+plaats van met de hele opdracht. Gemeten op zijn account, 39 monsters uit twaalf
+uur: **gat 16 s, werk 29 s, van start tot start 46 s** — bijna een factor drie
+verschil. De server meet nu ook `seconds_per_job`; de balk gebruikt dat voor de
+looptijd, met en zonder Calm mode, vanaf drie opdrachten in de rij.
+
+Het gat van 30 seconden is trouwens geen instelling van ons: `POLL_INTERVAL_SECONDS`
+staat op 15, maar Chrome legt `chrome.alarms` in MV3 een ondergrens van 30 seconden
+op. Eén advertentie per minuut is dus de bodem zolang we via alarms werken.
+
+### Wat NIET is opgelost
+
+- **Een uitgezette computer blijft een uitgezette computer.** Om 11:29 NL viel
+  zijn extensie opnieuw stil, met 9 opdrachten te gaan. De `background`-permissie
+  (1.0.288) wacht nog op de Web Store en helpt tegen een dichtgeklapt venster,
+  niet tegen een Chromebook die slaapt.
+- **m2439189692 is niet publiekelijk zichtbaar.** Zie boven.
+- **De Anthropic-tegoeden zijn op.** Elke vertaalaanroep gaf vandaag
+  `credit balance is too low`. Voor Toon maakte dat niets uit — Nederlands naar
+  Nederlands, gecontroleerd: titels identiek, tekst identiek op de vaste
+  slottekst na — maar op de server raakt het alles wat op Claude leunt:
+  vertalingen naar Engels voor Vinted en eBay, de categorie-indeling bij import,
+  de mailagent. Of Railway dezelfde sleutel gebruikt is van hier niet te lezen.
+  **Actie voor Daniel: tegoed bijvullen en het controleren.**
+
+898 → 915 python-tests groen, alle JS-proeven groen.
