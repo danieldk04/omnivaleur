@@ -1846,6 +1846,33 @@ window.CL = (() => {
   let _laatsteEchteKlik = "niet nodig";
   let _laatsteGratisKlik = "niet nodig";
 
+  // Hoe lang we op de postcode uit het account wachten voordat we het opgeven.
+  // Het contactblok komt bij het laden van het formulier binnen; is hij na het
+  // hele invullen plus deze marge nog leeg, dan staat hij niet in het account.
+  const POSTCODE_WACHT_MS = 8000;
+
+  function postcodeVeld() {
+    return qs('input[name="contactInformation.postCode"]');
+  }
+
+  async function wachtOpPostcode() {
+    // Formulieren zonder dit veld (Vinted) gaan hier meteen langs.
+    if (!postcodeVeld()) return true;
+    const eind = Date.now() + POSTCODE_WACHT_MS;
+    for (;;) {
+      const el = postcodeVeld();
+      if (!el || String(el.value || "").trim()) return true;
+      if (Date.now() >= eind) break;
+      await sleep(250);
+    }
+    clog("plaatsen: geweigerd — de postcode van het account is leeg gebleven");
+    throw new Error(
+      "Your postcode is still empty on the listing form, so nothing was published. " +
+      "Open your account settings on this marketplace, fill in your postcode once, " +
+      "and publish again — after that it fills itself."
+    );
+  }
+
   async function submitListing(idFromUrl) {
     // Brand FIRST — closing the brand modal triggers a React re-render that resets
     // the Lexical EditorState. Description must be filled AFTER brand to survive.
@@ -1873,6 +1900,21 @@ window.CL = (() => {
         "Add the photos yourself and click publish."
       );
     }
+
+    // DE POSTCODE VAN HET ACCOUNT IS ER SOMS NOG NIET.
+    //
+    // Marktplaats en 2dehands vullen het contactblok (postcode, plaats) zelf uit
+    // het account; wij typen daar niets in. Toon (dejuistetoon) publiceerde op
+    // 2dehands tien keer met succes en twee keer niet — 03-09 en 05-09 kwam het
+    // formulier terug met "Geen postcode ingevuld" en
+    // contactInformation.postCode=LEEG. Zelfde account, zelfde code, dus het
+    // veld wordt normaal wél gevuld en was op die twee momenten alleen nog niet
+    // aangekomen. Doorklikken heeft dan geen zin: er komt geen advertentie, en
+    // de verkoper leest een melding waar hij niets mee kan.
+    //
+    // Dus wachten we er kort op. Blijft hij leeg, dan zeggen we wat hij zélf
+    // moet doen in plaats van "vul de rode velden in".
+    await wachtOpPostcode();
 
     // Submit button differs per platform:
     //  - Marktplaats/2dehands: [data-testid="place-listing-submit-button"] wrapper.
