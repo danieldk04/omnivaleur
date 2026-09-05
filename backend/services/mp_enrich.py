@@ -49,6 +49,12 @@ BUDGET_SECONDEN = 75
 
 ZOEK = "https://www.marktplaats.nl/lrp/api/search"
 BASIS = "https://www.marktplaats.nl"
+# Dezelfde zoek-API draait op 2dehands, alleen op een ander adres (nagemeten
+# 05-09-2026: 200, met categoryId, vipUrl en priceInfo in het antwoord).
+ZOEK_PER_PLATFORM = {
+    "marktplaats": (ZOEK, BASIS),
+    "2dehands": ("https://www.2dehands.be/lrp/api/search", "https://www.2dehands.be"),
+}
 UA = ("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 "
       "(KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36")
 
@@ -110,7 +116,8 @@ async def _json(client: httpx.AsyncClient, url: str, params: dict | None = None)
 MAX_TITELPOGINGEN = 25
 
 
-async def zoek_verkoper_id(client: httpx.AsyncClient, titels: list[str]) -> int | None:
+async def zoek_verkoper_id(client: httpx.AsyncClient, titels: list[str],
+                           zoek_url: str = ZOEK) -> int | None:
     """Het verkopersnummer achterhalen door op de eigen titels te zoeken.
 
     De verkoper hoeft dat nummer dus niet te weten en wij hoeven er niet naar te
@@ -131,7 +138,7 @@ async def zoek_verkoper_id(client: httpx.AsyncClient, titels: list[str]) -> int 
             break
         geprobeerd += 1
         try:
-            data = await _json(client, ZOEK, {"query": titel[:80], "limit": 20, "offset": 0})
+            data = await _json(client, zoek_url, {"query": titel[:80], "limit": 20, "offset": 0})
         except Exception as e:  # noqa: BLE001
             logger.warning("mp_enrich: zoeken op titel mislukt: %s", e)
             continue
@@ -218,7 +225,7 @@ async def haal_advertenties(client: httpx.AsyncClient, verkoper_id: int,
     return {k: v for k, v in per_titel.items() if k not in botsing}
 
 
-def _naar_advertentie(l: dict) -> dict:
+def _naar_advertentie(l: dict, basis: str = BASIS) -> dict:
     cents = ((l.get("priceInfo") or {}).get("priceCents"))
     soort = ((l.get("priceInfo") or {}).get("priceType") or "")
     vip = l.get("vipUrl") or ""
@@ -229,13 +236,14 @@ def _naar_advertentie(l: dict) -> dict:
         "price": (round(cents / 100, 2)
                   if soort == "FIXED" and isinstance(cents, int) and cents > 1
                   else None),
-        "url": (BASIS + vip) if vip.startswith("/") else vip,
+        "url": (basis + vip) if vip.startswith("/") else vip,
         "kort": (l.get("categorySpecificDescription") or l.get("description") or "").strip(),
     }
 
 
 async def zoek_een_titel(client: httpx.AsyncClient, verkoper_id: int,
-                         titel: str) -> dict | None:
+                         titel: str, zoek_url: str = ZOEK,
+                         basis: str = BASIS) -> dict | None:
     """Eén advertentie opzoeken op titel, binnen het aanbod van deze verkoper.
 
     Nodig omdat de verkoperslijst bij 5.000 advertenties ophoudt terwijl iemand
@@ -248,14 +256,14 @@ async def zoek_een_titel(client: httpx.AsyncClient, verkoper_id: int,
         return None
     doel = _sleutel(schoon)
     try:
-        data = await _json(client, ZOEK, {"query": schoon[:80], "limit": 30, "offset": 0})
+        data = await _json(client, zoek_url, {"query": schoon[:80], "limit": 30, "offset": 0})
     except Exception as e:  # noqa: BLE001
         logger.warning("mp_enrich: zoeken op '%s' mislukt: %s", schoon[:40], e)
         return None
     for l in (data.get("listings") or []):
         sid = ((l.get("sellerInformation") or {}).get("sellerId"))
         if sid and int(sid) == int(verkoper_id) and _sleutel(l.get("title")) == doel:
-            return _naar_advertentie(l)
+            return _naar_advertentie(l, basis)
     return None
 
 
@@ -463,6 +471,84 @@ async def advertentie_kenmerken(url: str) -> dict:
         logger.warning("mp_enrich: advertentiepagina niet gelezen (%s): %s", url, e)
         return {}
     return {"mp_category": categorie_uit_html(ruwe), "mp_prijstype": prijstype_uit_html(ruwe)}
+
+
+# Het verkopersnummer per verkoper onthouden. Het opzoeken kost twee tot drie
+# zoekopdrachten en het verandert nooit; bij een nachtelijke ronde van zestig
+# advertenties zou dat anders honderd keer opnieuw gebeuren.
+_VERKOPERNUMMERS: dict[tuple[str, str], tuple[int | None, float]] = {}
+_NUMMER_GELDIG = 6 * 3600
+
+
+async def _verkopersnummer(db, user_id: str, platform: str,
+                           client: httpx.AsyncClient, zoek_url: str) -> int | None:
+    sleutel = (user_id, platform)
+    nu = time.monotonic()
+    bewaard = _VERKOPERNUMMERS.get(sleutel)
+    if bewaard and nu - bewaard[1] < _NUMMER_GELDIG:
+        return bewaard[0]
+    # Zoeken op de titels waaronder we ZELF hebben geplaatst. De titel in het
+    # item kan vertaald of afgekapt zijn; wat er op Marktplaats staat is precies
+    # wat er in de opdracht stond.
+    try:
+        rijen = (await naast_de_lus(lambda: db.table("jobs").select("payload")
+                 .eq("user_id", user_id).eq("platform", platform)
+                 .eq("action", "create").eq("status", "done")
+                 .order("created_at", desc=True).limit(60).execute())).data or []
+    except Exception as e:  # noqa: BLE001
+        logger.warning("mp_enrich: geen titels om het verkopersnummer te zoeken: %s", e)
+        return None
+    titels: list[str] = []
+    for r in rijen:
+        t = (r.get("payload") or {}).get("title")
+        if t and t not in titels:
+            titels.append(t)
+    nummer = await zoek_verkoper_id(client, titels[:MAX_TITELPOGINGEN], zoek_url) if titels else None
+    _VERKOPERNUMMERS[sleutel] = (nummer, nu)
+    return nummer
+
+
+async def kenmerken_via_zoeken(db, user_id: str, platform: str, titel: str) -> dict:
+    """Categorie en prijsvorm van een advertentie waarvan we het adres niet kennen.
+
+    WAAROM DIT ER IS (05-09-2026, Zilverwebsite). Van een advertentie die WIJ
+    hebben geplaatst kennen we alleen /seller/view/{nummer}, en die pagina is
+    alleen zichtbaar voor wie is ingelogd. `advertentie_kenmerken` hierboven
+    weigert zo'n adres, gaf een leeg blok terug, en dan viel het herplaatsen
+    terug op de categorie die ooit uit de titel is geráden.
+
+    Gemeten in zijn eigen gegevens (05-09-2026): van zijn 968 lopende
+    advertenties staan er 398 op zo'n adres. Van die 398 zouden er bij de
+    volgende verversing 82 in een ándere categorie terechtkomen dan waar ze nu
+    staan, en 3 zouden helemaal niet geplaatst kunnen worden. Dat is precies wat
+    hij en Amanda meldden: "hij zet deze dan in de verkeerde categorie".
+
+    De openbare zoek-API van Marktplaats kent die advertenties wél. Zoeken op de
+    titel binnen het aanbod van deze verkoper levert het echte adres (vipUrl) op,
+    en daarmee kunnen we alsnog gewoon de advertentiepagina lezen.
+
+    Mislukt er iets, dan komt er een leeg blok terug en blijft alles bij het
+    oude: een gemist kenmerk mag nooit een advertentie kosten.
+    """
+    adressen = ZOEK_PER_PLATFORM.get(platform)
+    if not adressen or not (titel or "").strip():
+        return {}
+    zoek_url, basis = adressen
+    try:
+        async with httpx.AsyncClient(timeout=20, follow_redirects=True,
+                                     headers={"User-Agent": UA}) as client:
+            nummer = await _verkopersnummer(db, user_id, platform, client, zoek_url)
+            if not nummer:
+                return {}
+            advertentie = await zoek_een_titel(client, nummer, titel, zoek_url, basis)
+    except Exception as e:  # noqa: BLE001
+        logger.warning("mp_enrich: advertentie niet opgezocht (%s): %s", titel[:40], e)
+        return {}
+    url = (advertentie or {}).get("url") or ""
+    if not url:
+        logger.info("mp_enrich: '%s' niet teruggevonden bij verkoper", titel[:40])
+        return {}
+    return await advertentie_kenmerken(url)
 
 
 async def volledige_advertentie(client: httpx.AsyncClient, url: str) -> dict:

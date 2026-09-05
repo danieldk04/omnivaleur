@@ -200,6 +200,11 @@ def test_elke_geinjecteerde_functie_staat_helemaal_op_zichzelf(label, regel, bod
     terwijl er in werkelijkheid niet eens gezocht wás. Deze test bewaakt dat
     voor álle geïnjecteerde functies, niet alleen die ene.
     """
+    # Commentaar telt niet mee. Een regel die uitlegt "zelfde reden als in
+    # _mwVintedKast" noemt die naam wel, maar roept hem niet aan; zonder deze
+    # stap wees de proef een uitleg aan als fout (05-09-2026).
+    body = re.sub(r"/\*.*?\*/", " ", body, flags=re.S)
+    body = re.sub(r"(?m)//.*$", "", body)
     top = set(re.findall(r"^(?:async\s+)?function\s+([A-Za-z_$][\w$]*)", BG, re.M))
     top |= set(re.findall(r"^(?:const|let|var)\s+([A-Za-z_$][\w$]*)", BG, re.M))
     lokaal = set(re.findall(r"\b(?:const|let|var)\s+([A-Za-z_$][\w$]*)", body))

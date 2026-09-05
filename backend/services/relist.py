@@ -674,6 +674,11 @@ async def refresh_listing(item_id: str, platform: str, user_id: str, strategy: s
     # Ook bij automatisch herplaatsen vraagt Marktplaats om de verantwoordelijke
     # partij. Zonder deze regel staat de nachtelijke ronde stil op drie rode
     # velden in een tabblad dat niemand ziet.
+    # De titel waaronder de advertentie ECHT online staat. Werd hieronder al
+    # opgehaald voor het verwijderen; nu ook nodig om de advertentie bij de
+    # verkoper terug te vinden als we haar adres niet kennen.
+    from backend.services.crosslist import _last_listed_title
+    gepubliceerde_titel = _last_listed_title(db, item_id, platform, item.get("title", ""))
     if platform in ("marktplaats", "2dehands"):
         from backend.services.instellingen import fabrikant as _fabrikant, verzendkeuzes
         create_payload.update(_fabrikant(user_id))
@@ -706,9 +711,25 @@ async def refresh_listing(item_id: str, platform: str, user_id: str, strategy: s
         # bleef dan open staan wachten op de verkoper, terwijl de oude
         # advertentie al weg was. Elf van haar advertenties stonden daardoor
         # nergens meer. Eén ophaalronde levert nu allebei op.
-        if listing.get("platform_listing_url"):
-            from backend.services.mp_enrich import advertentie_kenmerken
-            kenmerken = await advertentie_kenmerken(listing["platform_listing_url"])
+        #
+        # EN ALS WIJ DE ADVERTENTIE ZELF HEBBEN GEPLAATST (05-09-2026,
+        # Zilverwebsite). Dan kennen we alleen /seller/view/{nummer}, en die
+        # pagina is alleen zichtbaar voor wie is ingelogd — de regel hierboven
+        # gaf dus een leeg blok terug en het herplaatsen viel alsnog terug op de
+        # geraden categorie. Gemeten bij hem: 398 van zijn 968 lopende
+        # advertenties staan op zo'n adres, en 82 daarvan zouden bij de volgende
+        # verversing verhuizen. De openbare zoek-API kent ze wel; zie
+        # kenmerken_via_zoeken.
+        if listing.get("platform_listing_url") or gepubliceerde_titel:
+            from backend.services.mp_enrich import (advertentie_kenmerken,
+                                                    kenmerken_via_zoeken)
+            kenmerken = {}
+            if listing.get("platform_listing_url"):
+                kenmerken = await advertentie_kenmerken(listing["platform_listing_url"])
+            if not (kenmerken.get("mp_category") or {}).get("l1"):
+                alsnog = await kenmerken_via_zoeken(db, user_id, platform, gepubliceerde_titel)
+                if (alsnog.get("mp_category") or {}).get("l1"):
+                    kenmerken = alsnog
             mp_cat = kenmerken.get("mp_category") or {}
             if mp_cat:
                 create_payload["mp_category"] = mp_cat
@@ -731,10 +752,9 @@ async def refresh_listing(item_id: str, platform: str, user_id: str, strategy: s
     # persisted anywhere), so the delete automation must search for that
     # exact title, not item["title"] — otherwise it can't find the listing
     # on the overview page. Recover it from the last "create" job's payload.
-    from backend.services.crosslist import _last_listed_title
     delete_payload = {
         **item,
-        "title": _last_listed_title(db, item_id, platform, item.get("title", "")),
+        "title": gepubliceerde_titel,
         "platform_listing_id": listing["platform_listing_id"],
         "platform_listing_url": listing["platform_listing_url"],
         # If the delist fails the whole relist aborts (the paired create is
