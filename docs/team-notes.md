@@ -5085,3 +5085,64 @@ er wel in zaten werden er 4834 teruggevonden, alleen met een `a` ervoor
 (Admarkt-nummering: wij bewaren `1521375186`, Marktplaats noemt het
 `a1521375186`). Daardoor geeft `link.marktplaats.nl/<nummer>` bij hem altijd 404,
 ook voor advertenties die gewoon online staan.
+
+## 05-09-2026 (avond, tweede ronde) — Egbert had gelijk: hij was ingelogd, en 2dehands liep dood op de inlogpagina
+
+Egbert Brouwer (papas-plectrums) mailde terug dat hij wél was ingelogd op
+2dehands. Dat klopt, en het is nagemeten in plaats van aangenomen.
+
+**Wat er gemeten is**
+
+- 305 opdrachten voor 2dehands, nul geslaagd, nul voortgangsberichten. Elke
+  afgebroken opdracht duurde 195 tot 230 seconden: dat is de bewaker van drie
+  minuten, niet het werk. Bij andere verkopers duurt een geslaagde plaatsing op
+  2dehands 10 tot 50 seconden (68 geslaagde plaatsingen gemeten).
+- Zijn categorienummers bestaan gewoon op 2dehands. 728/748 (muziek,
+  elektrische gitaren) geeft daar 2259 zoekertjes, op Marktplaats 4743. De
+  categorieboom is op beide sites dezelfde. Categorie was dus niet de oorzaak.
+- Van de 68 geslaagde 2dehands-plaatsingen zit er geen enkele in een
+  muziekcategorie, maar dat komt doordat niemand anders muziek naar 2dehands
+  publiceert. Het is een toevalligheid, geen oorzaak.
+- In een echte browser (die van Daniel, niet ingelogd op 2dehands) komt
+  `https://www.2dehands.be/plaats/728/748` NIET uit op een foutpagina maar op
+  `https://www.2dehands.be/identity/v2/login?target=...`. Ons invulscript
+  luistert alleen op `/plaats/*`, dus daar draait het niet, meldt niemand zich
+  terug en loopt de bewaker drie minuten leeg. Dat is precies het waargenomen
+  beeld.
+- `/my-account/sell/api/listings` verwijst NIET door: zonder sessie 401 met
+  twaalf bytes "Unauthorized", met sessie 200. Drie keer nagemeten (kale curl,
+  uitgelogde echte browser, en Egberts eigen scan). Een 200 is dus een eerlijk
+  "ingelogd".
+
+**Twee eerdere beweringen rechtgezet**
+
+1. "www.2dehands.be antwoordt op het plaatsadres met 401 zolang je niet bent
+   ingelogd" klopt alleen voor een kale aanvraag zonder cookies, en verklaart
+   niets: www.marktplaats.nl doet op hetzelfde adres precies hetzelfde. In een
+   browser is het geen 401 maar een doorverwijzing.
+2. "Zijn Marktplaats-opdrachten uit dezelfde ronde liepen wél door (15
+   geplaatst)" was fout. Die 15 waren scans. Naar Marktplaats is er nooit één
+   plaatsopdracht aangemaakt.
+
+**Wat er is gebouwd (1.0.297)**
+
+- Voor Marktplaats en 2dehands wordt vóór het openen van een tabblad aan de
+  site zelf gevraagd of deze browser een sessie heeft, precies zoals dat voor
+  Vinted al gebeurde. Geen sessie: geen tabblad, meteen een melding die zegt
+  waar hij moet inloggen, en de rest van de wachtrij voor dat kanaal stopt.
+  Bij twijfel (5xx, geen netwerk) gaat het werk gewoon door.
+- Landt een werk-tabblad tóch op de inlogpagina, dan wordt dat meteen gemeld
+  mét het adres waar het uitkwam, in plaats van drie minuten stilte.
+- Bewijs: `tests/2dehands-loopt-dood-op-de-inlogpagina-test.js`, met `--oud`
+  tegen de vorige commit, waar hij faalt.
+
+**Openstaand**
+
+- Egbert draait 1.0.281. De Chrome Web Store staat op 1.0.294 (nagemeten via
+  de crx-doorverwijzing). Alles wat sinds 1.0.284 aan zijn klachten is
+  gerepareerd zit dus wél in de Store maar nog niet bij hem. Hij moet naar
+  chrome://extensions, Ontwikkelaarsmodus aan, en op "Extensies bijwerken"
+  klikken. 1.0.297 moet nog geüpload worden.
+- Blijft het na 1.0.294 misgaan terwijl hij is ingelogd, dan noemt de melding
+  vanaf nu zelf het adres waar het tabblad terechtkwam. Dat is het volgende
+  gegeven dat we nodig hebben.

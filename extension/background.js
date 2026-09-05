@@ -1647,6 +1647,11 @@ const _vroegGekoppeld = new Set();
 // Overal elders is de koppeling puur schade: Chrome zet dan de gele balk
 // "'Omnivaleur' is begonnen met foutopsporing voor deze browser" boven het
 // venster van de verkoper.
+// Het inlogadres van Marktplaats en 2dehands. Waargenomen op 05-09-2026:
+// /plaats/728/748 zonder sessie kwam uit op
+// https://www.2dehands.be/identity/v2/login?target=%2Fplaats%2F728%2F748
+const MP_LOGINPAGINA = /\/identity\/v\d+\/login|\/identity\/login|\/account\/login\b/i;
+
 const HEEFT_TOETSEN_NODIG = /^https:\/\/(?:www\.)?(?:marktplaats\.nl|2dehands\.be)\/plaats\b/i;
 
 async function koppelVroeg(tabId, url) {
@@ -1915,6 +1920,15 @@ async function processJob(job, serverUrl) {
     if (!klaar.ok) { await reportError(job.id, serverUrl, klaar.melding); return; }
   }
 
+  // Hetzelfde voor Marktplaats en 2dehands, en om dezelfde reden: zonder sessie
+  // stuurt de site het plaatsadres door naar haar inlogpagina, waar ons
+  // invulscript niet draait. Zie mpSessie voor de meting.
+  if ((job.platform === "marktplaats" || job.platform === "2dehands")
+      && (job.action === "create" || job.action === "content_refresh")) {
+    const klaar = await mpPlaatsenKlaarzetten(job, serverUrl);
+    if (!klaar.ok) { await reportError(job.id, serverUrl, klaar.melding); return; }
+  }
+
   let url;
   try {
     url = job.action === "delete" ? getDeleteUrl(job.platform, job.payload)
@@ -1977,7 +1991,8 @@ function armJobWatchdog(tabId) {
 // Van zijn 305 opdrachten voor 2dehands is er nooit één geslaagd: 26 werden er
 // door de bewaker hieronder afgebroken na exact drie minuten, telkens zonder
 // één teken van leven uit het tabblad, en 279 stonden er nog achter. Zijn
-// Marktplaats-opdrachten uit diezelfde ronde liepen wél door (15 geplaatst), en
+// Marktplaats-opdrachten uit diezelfde ronde liepen wél door (15 scans, geen
+// plaatsingen: naar Marktplaats is er nooit één opdracht aangemaakt), en
 // bij andere verkopers slaagde 2dehands in dezelfde periode 97 keer. Het
 // verschil zit dus niet in onze code en niet in de categorie, maar in de site:
 // www.2dehands.be antwoordt op het plaatsadres met HTTP 401 zolang je daar niet
@@ -2240,6 +2255,84 @@ async function vintedIngelogd(origin) {
   } catch (_) {
     return null;                                    // geen netwerk: laat het werk door
   }
+}
+
+// ── Ingelogd op Marktplaats / 2dehands? ────────────────────────────────────
+//
+// GEMETEN OP 05-09-2026, IN EEN ECHTE BROWSER (Egbert Brouwer, papas-plectrums).
+//
+// Zijn 305 opdrachten voor 2dehands zijn alle 305 mislukt, en steeds op dezelfde
+// manier: het tabblad ging open, er kwam nooit een teken van leven uit, en na
+// exact drie minuten sloeg de bewaker toe. Nul voortgangsberichten, altijd
+// 195 tot 230 seconden. Bij andere verkopers duurt een geslaagde plaatsing op
+// 2dehands 10 tot 50 seconden. Het lag dus niet aan traagheid en niet aan de
+// categorie: zijn categorienummers (728/748, muziek) bestaan op 2dehands.be
+// precies zoals op marktplaats.nl, nagemeten via de openbare zoek-API.
+//
+// WAT ER WEL GEBEURT. Vraag je https://www.2dehands.be/plaats/728/748 op zonder
+// sessie, dan krijg je in een browser GEEN foutpagina maar een doorverwijzing
+// naar https://www.2dehands.be/identity/v2/login?target=... Ons invulscript
+// luistert alleen op /plaats/*, dus op die inlogpagina draait het niet, meldt
+// niemand iets terug, en wacht de bewaker drie minuten op stilte.
+//
+// De vorige verklaring ("het plaatsadres geeft 401") klopte alleen voor een
+// kale aanvraag zonder cookies, en verklaarde niets: www.marktplaats.nl doet op
+// hetzelfde adres exact hetzelfde.
+//
+// DE CONTROLE ZELF. /my-account/sell/api/listings is afgeschermd en verwijst
+// NIET door: zonder sessie is het 401 met twaalf bytes "Unauthorized" (drie keer
+// nagemeten: kale curl, een uitgelogde echte browser, en de scan van Egbert
+// zelf), met sessie 200. Dat is dus een eerlijk ja of nee, en het is precies
+// dezelfde aanpak als de Vinted-controle hierboven.
+//
+// Weten we het niet zeker (netwerkfout, 5xx, onderhoud), dan gaat het werk
+// gewoon door. Een onzekere controle mag nooit een publicatie tegenhouden.
+const MP_SESSIE_URL = {
+  marktplaats: "https://www.marktplaats.nl/my-account/sell/api/listings?batchNumber=1&batchSize=1",
+  "2dehands": "https://www.2dehands.be/my-account/sell/api/listings?batchNumber=1&batchSize=1",
+};
+const MP_INLOG_URL = {
+  marktplaats: "https://www.marktplaats.nl",
+  "2dehands": "https://www.2dehands.be",
+};
+
+async function mpSessie(platform) {
+  const url = MP_SESSIE_URL[platform];
+  if (!url) return { ingelogd: null, status: null };
+  try {
+    const res = await fetch(url, {
+      headers: { Accept: "application/json" }, credentials: "include",
+    });
+    if (res.status === 401 || res.status === 403) return { ingelogd: false, status: res.status };
+    if (!res.ok) return { ingelogd: null, status: res.status };
+    return { ingelogd: true, status: res.status };
+  } catch (_) {
+    return { ingelogd: null, status: null };   // geen netwerk: laat het werk door
+  }
+}
+
+function mpNietIngelogdMelding(platform, status) {
+  const site = SITE_NAAM[platform] || platform;
+  return (
+    `You are not signed in to ${site} in this browser, so nothing was published and no tab `
+    + `was opened. We asked ${site} itself and it refused (HTTP ${status}). Marktplaats and `
+    + `2dehands are separate sites with separate logins, so being signed in to one does not `
+    + `sign you in to the other. Open ${MP_INLOG_URL[platform]}, sign in there, and publish again.`
+  );
+}
+
+// Mag deze plaatsopdracht een tabblad openen?
+//
+// Nee betekent: geen tabblad, geen drie minuten wachten, en de rest van de
+// wachtrij voor dit kanaal meteen stilgezet. Zonder dat laatste blijft hij
+// honderden keren hetzelfde proberen: bij Egbert stonden er 274 opdrachten
+// achter die stuk voor stuk kansloos waren.
+async function mpPlaatsenKlaarzetten(job, serverUrl) {
+  const { ingelogd, status } = await mpSessie(job.platform);
+  if (ingelogd !== false) return { ok: true };
+  const melding = mpNietIngelogdMelding(job.platform, status);
+  await stopPlatformWachtrij(serverUrl, job.platform, melding).catch(() => {});
+  return { ok: false, melding };
 }
 
 // Is advertentie {listingId} er een van deze verkoper zelf?
@@ -5116,6 +5209,28 @@ chrome.tabs.onUpdated.addListener(async (tabId, changeInfo) => {
   const stored = await chrome.storage.local.get(key);
   const meta = stored[key];
   if (!meta) return;
+  // OP DE INLOGPAGINA BELAND IN PLAATS VAN OP HET FORMULIER.
+  //
+  // Dan is er niets meer te wachten: ons invulscript luistert alleen op
+  // /plaats/*, dus daar meldt zich nooit iemand en loopt de bewaker drie
+  // minuten leeg. Dat is precies wat Egbert Brouwer 305 keer overkwam. Zeg het
+  // meteen, mét het adres waar het tabblad werkelijk terechtkwam, in plaats van
+  // stilte en daarna een gok.
+  if (!meta.scriptSeen && MP_LOGINPAGINA.test(changeInfo.url)
+      && (meta.platform === "marktplaats" || meta.platform === "2dehands")) {
+    const site = SITE_NAAM[meta.platform] || meta.platform;
+    clearJobWatchdog(tabId);
+    await chrome.storage.local.remove(key);
+    const melding =
+      `The ${site} listing form never opened: that tab was sent straight to the ${site} login `
+      + `page, so nothing was filled in and nothing was published. Sign in to ${site} in this `
+      + `browser and publish again. [tabblad kwam uit op ${String(changeInfo.url).split("?")[0]}]`;
+    await stopPlatformWachtrij(meta.serverUrl, meta.platform, melding).catch(() => {});
+    await reportError(meta.jobId, meta.serverUrl, melding).catch(() => {});
+    sluitWerkTabblad(tabId);
+    return;
+  }
+
   // This auto-detect is a safety net for a manual publish — only meaningful for
   // a create. A content_refresh (which now also has a jobtab entry) is completed
   // by its own content script, so never auto-complete it here.

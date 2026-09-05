@@ -17,6 +17,33 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ---
 
+## doorverwijzing-is-geen-foutpagina
+
+*05-09-2026 — Een kale curl zonder cookies liegt over wat een browser ziet; Marktplaats/2dehands sturen /plaats stil door naar hun inlogpagina*
+
+Een niet-ingelogde aanvraag op `https://www.2dehands.be/plaats/...` geeft met
+`curl` een kale 401 van twaalf bytes, maar in een echte browser een
+doorverwijzing naar `https://www.2dehands.be/identity/v2/login?target=...`
+(gemeten 05-09-2026). Marktplaats doet hetzelfde. Contentscripts die alleen op
+`/plaats/*` matchen draaien daar niet, dus komt er geen enkel teken van leven en
+loopt de bewaker drie minuten leeg. Elke opdracht ziet er dan uit als
+"vastgelopen" terwijl er nooit een formulier was.
+
+**Why:** de vorige verklaring ("het plaatsadres geeft 401 als je niet ingelogd
+bent") was gemeten met curl, klopte letterlijk, en verklaarde niets: hij gold
+net zo goed voor Marktplaats, waar het wél werkt. Egbert Brouwer kreeg daardoor
+305 keer "je bent niet ingelogd" terwijl hij dat wel was, en wij zochten een
+week in de verkeerde hoek.
+
+**How to apply:** meet een sessie aan een endpoint dat NIET doorverwijst.
+`/my-account/sell/api/listings` geeft zonder sessie 401 en met sessie 200, op
+allebei de sites. Vraag dat vóór je een tabblad opent (zoals
+`mpSessie`/`vintedIngelogd` in extension/background.js), en meet de browserkant
+altijd in een echte browser, niet met curl. Zie
+"stille-tab-is-geen-formulier" en "bewijs-moet-onderscheiden".
+
+---
+
 ## succes-nooit-uit-uitsluitingslijst
 
 *05-09-2026 — Het scherm bepaalde "gelukt" door fouten uit te sluiten, dus elke nieuwe serverstatus werd stilzwijgend een succesmelding*

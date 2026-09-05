@@ -11,11 +11,12 @@
  * 1. VASTGELOPEN. Van zijn 305 opdrachten voor 2dehands is er nooit één
  *    geslaagd. 26 werden er afgebroken door de bewaker na exact drie minuten,
  *    telkens zonder één teken van leven uit het tabblad; 279 stonden er nog
- *    achter. Zijn Marktplaats-opdrachten uit dezelfde ronde liepen wel door
- *    (15 geplaatst) en bij andere verkopers slaagde 2dehands in dezelfde
- *    periode 97 keer. www.2dehands.be antwoordt op het plaatsadres met
- *    HTTP 401 zolang je daar niet bent ingelogd (nagemeten: 12 bytes platte
- *    tekst, geen formulier). Op zo'n pagina draait ons invulscript niet.
+ *    achter. Zijn Marktplaats-opdrachten uit dezelfde ronde waren 15 SCANS,
+ *    geen plaatsingen: naar Marktplaats is er nooit één opdracht aangemaakt.
+ *    Nagemeten op 05-09-2026 in een echte browser: zonder sessie komt
+ *    /plaats/728/748 niet op een foutpagina uit maar op
+ *    /identity/v2/login?target=..., en daar draait ons invulscript niet.
+ *    Zie tests/2dehands-loopt-dood-op-de-inlogpagina-test.js.
  *
  * 2. SELECTEREN. Het vinkje in de kop pakte alleen de getekende bladzijde,
  *    vijftig rijen. Zijn zoekopdracht levert er 434 op: negen bladzijden.
