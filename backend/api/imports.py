@@ -460,6 +460,11 @@ async def _classify_with_claude(title: str | None, description: str | None,
             "  or words like mouwen/taille mean a dress). With nothing else to go on,\n"
             '  a Dutch listing means a rug: pick "wonen tapijten en kleden". It is never\n'
             "  a bag.\n"
+            '- A "grand foulard" (also written grandfoulard) is NOT a scarf and NOT an\n'
+            "  accessory: in the Dutch second-hand trade it is a large piece of home\n"
+            "  textile — a throw, bedspread, sofa or wall cloth, often 150-300 cm wide.\n"
+            '  It belongs in the "wonen" branch, normally "wonen plaids en woondekens".\n'
+            '  A plain "foulard" without "grand" IS a scarf and stays an accessory.\n'
             '- The "sieraden" branch covers jewellery, watches, bags, suitcases, wallets\n'
             "  and sunglasses. Pick it for anything worn or carried as an accessory.\n"
             '  When you pick a "sieraden" category, gender must be "sieraden" too.\n\n'
@@ -500,6 +505,24 @@ def _word_in(word: str, text: str) -> bool:
     """Whole-word match so a garment/colour word inside a brand name (e.g. 'suit'
     in 'Suitsupply') never triggers a false category."""
     return re.search(r"\b" + re.escape(word) + r"\b", text) is not None
+
+
+def _is_grand_foulard(title: str | None, description: str | None = None) -> bool:
+    """Een "grand foulard" is woontextiel, geen sjaal.
+
+    Toon (dejuistetoon), 05-09-2026: zijn "Grand Foulard Groot 264/128 cm" — een
+    kleed van ruim twee en een halve meter — stond in het dashboard onder
+    "sieraden damestassen". Het mechanisme is aanwijsbaar: de classificatieprompt
+    zegt over de sieraden-tak "pick it for anything worn or carried as an
+    accessory", en een foulard is in het gewone taalgebruik een sjaal. Het woord
+    "grand" ervoor maakt er in de tweedehandshandel juist een grote lap
+    woontextiel van: een plaid, sprei, bankkleed of wandkleed.
+
+    Alleen de combinatie telt. Een losse "foulard" is wél gewoon een sjaal, dus
+    daar blijven we vanaf.
+    """
+    tekst = f"{title or ''} {description or ''}".lower()
+    return re.search(r"\bgrand\s?foulards?\b", tekst) is not None
 
 
 def _infer_attributes(title: str | None, description: str | None = None) -> dict:
@@ -563,6 +586,10 @@ def _infer_attributes(title: str | None, description: str | None = None) -> dict
             out["category"] = "jongens kleding"
         elif any(_word_in(w, text) for w in ("girls", "girl", "meisjes", "meisje")):
             out["category"] = "meisjes kleding"
+    elif not gender and _is_grand_foulard(title, description):
+        # Zie _is_grand_foulard: de combinatie "grand foulard" is woontextiel.
+        out["gender"] = "wonen"
+        out["category"] = "wonen plaids en woondekens"
     elif not gender and any(_word_in(w, text) for w in
                             ("vloerkleed", "vloerkleden", "tapijt", "tapijten",
                              "karpet", "karpetten", "kleed", "kleden")):
@@ -630,6 +657,21 @@ async def _infer_attributes_smart(title: str | None, description: str | None,
     elif _is_footwear_category(merged.get("category")) and keyword_out.get("category"):
         # The mirror image: footwear picked with nothing in the text supporting it.
         merged["category"] = keyword_out["category"]
+
+    # EEN GRAND FOULARD IS GEEN SJAAL — zie _is_grand_foulard.
+    #
+    # Net als bij schoenen hierboven: staat het er met zoveel woorden, dan wint
+    # de tekst van het model. Alleen als het model búiten de woontak uitkomt,
+    # want binnen die tak (tapijten en kleden, plaids en woondekens,
+    # wanddecoraties) is de keuze een kwestie van smaak en niet van fout.
+    if _is_grand_foulard(title, description) and not str(
+            merged.get("category") or "").startswith("wonen"):
+        logger.warning(
+            "Category override: text says grand foulard but classifier picked "
+            f"{merged.get('category')!r}; using wonen plaids en woondekens instead."
+        )
+        merged["gender"] = "wonen"
+        merged["category"] = "wonen plaids en woondekens"
 
     return merged
 
