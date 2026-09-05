@@ -17,6 +17,31 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ---
 
+## delist-op-dubbele-regel
+
+*05-09-2026 — Twee artikelregels kunnen naar dezelfde advertentie wijzen; Delist op de dubbele haalt de echte advertentie weg, Delete is de veilige knop*
+
+Een import die twee keer liep maakt een tweede artikelregel met PRECIES hetzelfde
+`platform_listing_id`. Op Toons account gemeten: 2021 advertentieregels, 52
+advertenties met meer dan één artikel eraan, 104 betrokken artikelen. Delist gaat
+via `delist_all_platforms` en verwijdert de advertentie op het platform echt, dus
+wie de dubbele regel delist gooit de advertentie weg die de eerste regel nog nodig
+heeft. Delete (`backend/api/items.py` `delete_item`) raakt alleen de lokale rijen
+en is dus de veilige knop bij een dubbele import.
+
+**Why:** Lynn, de weekendhulp van Toon, stond op het punt precies dit te doen en
+vroeg het gelukkig eerst. Zonder waarschuwing was dat stil goed gegaan in de UI en
+waren er levende Vinted-advertenties verdwenen.
+
+**How to apply:** `sharedAdverts()` in `frontend/app.html` zet de waarschuwing vóór
+de gewone vraag bij losse en bulk-Delist. Let op de tegenproef: bijna gelijke
+titels zijn géén bewijs. Toon heeft zeven "Oosters tapijtkussen 40/40 cm" over zes
+verschillende advertentienummers; alleen het paar dat écht een nummer deelt telt.
+Bouw de index één keer op en geef hem mee, anders is een bulkselectie kwadratisch.
+Zie ook "import-dubbele-items-over-platforms" en "geen-doodlopende-straat-in-de-ui".
+
+---
+
 ## klantmail-kort-en-menselijk
 
 *05-09-2026 — Klantmails van Daniel: hooguit 120 woorden, schrijven zoals je praat, goed nieuws vooraan, geen boetekleed en geen slijmen*

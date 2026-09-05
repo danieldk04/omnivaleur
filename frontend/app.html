@@ -5110,7 +5110,19 @@ async function bulkDelist() {
   if (!ids.length) return;
   const names = ids.map(id => state.items.find(i => i.id === id)?.title || id).slice(0, 3).join(', ');
   const more = ids.length > 3 ? ` en ${ids.length - 3} meer` : '';
-  if (!confirm(`Delist ${ids.length} item(s) from all platforms?\n${names}${more}`)) return;
+  // Bulk is niet interactief, dus de waarschuwing moet vooraf compleet zijn:
+  // welke van de aangevinkte artikelen delen hun advertentie met een ander.
+  const idx = advertIndex();
+  const dubbel = ids.filter(id => sharedAdverts(id, idx).length);
+  const dubbelNamen = dubbel.slice(0, 5)
+    .map(id => `• ${state.items.find(i => i.id === id)?.title || id}`).join('\n');
+  const dubbelMeer = dubbel.length > 5 ? `\n• and ${dubbel.length - 5} more` : '';
+  const waarschuwing = dubbel.length
+    ? `\u26a0\ufe0f ${dubbel.length} of these share their advert with another item in your dashboard:\n${dubbelNamen}${dubbelMeer}\n\n`
+      + `Delisting removes those adverts from the platform for real, so they disappear for the other copy too.\n\n`
+      + `Imported the same items twice? Use Delete instead: that only clears the rows from this dashboard and leaves the adverts online.\n\n`
+    : '';
+  if (!confirm(`${waarschuwing}Delist ${ids.length} item(s) from all platforms?\n${names}${more}`)) return;
 
   setBusy(true, `Delisting 0 / ${ids.length}…`);
   let done = 0, errors = 0, needsLink = 0;
@@ -6045,6 +6057,67 @@ async function saveItem() {
   }
 }
 
+// ── Dezelfde advertentie onder twee artikelen ─────────────────────
+// Een import die twee keer liep maakt een tweede artikelregel die naar PRECIES
+// dezelfde advertentie wijst: zelfde platform, zelfde platform_listing_id.
+// Gemeten op een echt account: 52 advertenties met meer dan één artikel eraan.
+// Delist haalt de advertentie op het platform echt weg, dus wie de dubbele regel
+// delist gooit de advertentie weg die de eerste regel nog nodig heeft. Delete
+// raakt alleen de regels hier (backend/api/items.py delete_item) en is dus wél
+// veilig; daar wijst de waarschuwing naar.
+//
+// De index wordt in één doorloop opgebouwd en meegegeven, want deze controle
+// draait ook over een bulkselectie van duizenden artikelen. Per artikel opnieuw
+// door state.listings lopen is daar kwadratisch, en dat is precies het soort
+// werk dat een Chromebook laat vastlopen. Bewust NIET per kaartje berekend om
+// diezelfde reden: alleen op het moment dat er echt iets weggegooid wordt.
+function advertIndex() {
+  const owners = new Map(); // "platform|advertentienummer" → [item_id]
+  const byItem = new Map(); // item_id → [listing]
+  for (const l of state.listings) {
+    if (!l.platform_listing_id) continue;
+    const key = l.platform + '|' + l.platform_listing_id;
+    let arr = owners.get(key); if (!arr) owners.set(key, arr = []);
+    if (!arr.includes(l.item_id)) arr.push(l.item_id);
+    let mine = byItem.get(l.item_id); if (!mine) byItem.set(l.item_id, mine = []);
+    mine.push(l);
+  }
+  return { owners, byItem };
+}
+
+function sharedAdverts(itemId, idx) {
+  idx = idx || advertIndex();
+  const out = [], seen = new Set();
+  for (const l of (idx.byItem.get(itemId) || [])) {
+    const key = l.platform + '|' + l.platform_listing_id;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    const others = (idx.owners.get(key) || []).filter(id => id !== itemId);
+    if (others.length) out.push({ platform: l.platform, advert: l.platform_listing_id, others });
+  }
+  return out;
+}
+
+function sharedAdvertWarning(shared, ditTitel) {
+  const lines = shared.map(s => {
+    // Bij een dubbele import heet de andere regel precies hetzelfde. "ook
+    // gebruikt door <dezelfde titel>" leest dan als een verwijzing naar
+    // zichzelf, dus dat geval krijgt woorden die wél iets zeggen.
+    const names = s.others.map(id => {
+      const t = state.items.find(i => i.id === id)?.title;
+      if (t && ditTitel && t === ditTitel) return 'another copy of this item';
+      return t ? `"${t}"` : 'another item';
+    });
+    const shown = names.slice(0, 3).join(', ');
+    const extra = names.length > 3 ? ` and ${names.length - 3} more` : '';
+    const label = PLATFORM_LABELS[s.platform] || s.platform;
+    return `• ${label} advert ${s.advert} is also used by ${shown}${extra}`;
+  });
+  return `\u26a0\ufe0f Another item in your dashboard points at the same advert:\n\n${lines.join('\n')}\n\n`
+    + `Delisting removes that advert from the platform for real, so it disappears for both items.\n\n`
+    + `Imported the same item twice? Use Delete instead: that only clears the row from this dashboard and leaves the advert online.`;
+}
+
 // ── Delist single item ────────────────────────────────────────────
 async function delistItem(itemId, title) {
   // Mirror the backend's delistable set (crosslist.py _DELISTABLE_STATUSES).
@@ -6064,9 +6137,14 @@ async function delistItem(itemId, title) {
   const soldLine = soldPlatforms.size
     ? `\n\nAlready sold on ${[...soldPlatforms].map(p => PLATFORM_LABELS[p] || p).join(', ')} — left untouched.`
     : '';
-  const msg = activePlatforms.length
+  const basis = activePlatforms.length
     ? `Delist "${title}" from: ${activePlatforms.join(', ')}?${soldLine}`
     : `"${title}" has no active listings.${soldLine}\n\nContinue anyway?`;
+  // Deelt dit artikel zijn advertentie met een ander artikel, dan gaat die
+  // waarschuwing vóór de gewone vraag staan: de schade komt eerst, het akkoord
+  // daarna. Eén venster, niet twee, anders wordt de eerste weggeklikt.
+  const gedeeld = sharedAdverts(itemId);
+  const msg = gedeeld.length ? `${sharedAdvertWarning(gedeeld, title)}\n\n${basis}` : basis;
   if (!confirm(msg)) return;
 
   setBusy(true, `Delisting "${title}"…`);
