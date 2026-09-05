@@ -590,9 +590,40 @@ def _infer_attributes(title: str | None, description: str | None = None) -> dict
         # Zie _is_grand_foulard: de combinatie "grand foulard" is woontextiel.
         out["gender"] = "wonen"
         out["category"] = "wonen plaids en woondekens"
+    # WOONTEXTIEL DAT NET NAAST DE WOORDENLIJST VIEL.
+    #
+    # De regel hieronder kijkt op héle woorden, dus "kleed" ving wél "kleed" maar
+    # niet "kleedje", "wandkleed" of "sprei". Gemeten bij De Juiste Toon op
+    # 05-09-2026: van zijn 21 artikelen zonder rubriek waren er zeven zulke
+    # gevallen. Zonder rubriek kan er niets gepubliceerd worden, dus die zeven
+    # stonden stil zonder dat er iets rood werd.
+    #
+    # Deze drie staan vóór de algemene kleden-regel omdat ze een eigen rubriek op
+    # Marktplaats hebben: een wandkleed hoort niet op de vloer en een sprei niet
+    # op tafel. Allemaal achter dezelfde voorwaarde `not gender`: staat er een
+    # kledingsignaal in de tekst, dan beslist het model en niet deze lijst.
+    elif not gender and any(_word_in(w, text) for w in
+                            ("wandkleed", "wandkleden", "wandkleedje", "wandtapijt")):
+        out["gender"] = "wonen"
+        out["category"] = "wonen wanddecoraties"
+    elif not gender and any(_word_in(w, text) for w in
+                            # "plaid" staat er bewust NIET bij: dat is in het
+                            # Engels een ruitpatroon ("plaid shirt"), en zonder
+                            # geslachtssignaal zou een geruit overhemd hier als
+                            # woondeken eindigen.
+                            ("sprei", "spreien", "beddensprei", "bedsprei")):
+        out["gender"] = "wonen"
+        out["category"] = "wonen plaids en woondekens"
+    elif not gender and any(_word_in(w, text) for w in
+                            ("tafelkleed", "tafelkleden", "tafelkleedje", "tafelloper")):
+        out["gender"] = "wonen"
+        out["category"] = "wonen tafelkleden"
     elif not gender and any(_word_in(w, text) for w in
                             ("vloerkleed", "vloerkleden", "tapijt", "tapijten",
-                             "karpet", "karpetten", "kleed", "kleden")):
+                             "karpet", "karpetten", "kleed", "kleden",
+                             # "kleedje" is hetzelfde woord in het klein, en een
+                             # kelim is per definitie een geweven vloerkleed.
+                             "kleedje", "kleedjes", "kelim", "kelims")):
         # "Kleed" zonder enig kledingsignaal is in Nederland een vloerkleed —
         # bevestigd door De Juiste Toon op 30-08-2026, die er vintage kleden mee
         # bedoelde. Alleen als er verder niets op kleding wijst: staat er "dames"

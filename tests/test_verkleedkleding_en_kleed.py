@@ -56,7 +56,16 @@ def test_met_kledingsignaal_beslist_het_model(titel):
 
 
 def test_tafelkleed_is_geen_vloerkleed():
-    assert _infer_attributes("Linnen tafelkleed wit", "").get("category") is None
+    """Waar het hier om gaat is dat een tafelkleed niet op de vloer belandt.
+
+    Tot 05-09-2026 bleef de rubriek daarvoor leeg: "tafelkleed" is één woord en
+    viel dus buiten de kleden-lijst, en verder ving niets het op. Sinds De Juiste
+    Toon met 21 artikelen zonder rubriek bleef zitten (zie
+    tests/test_woontextiel_zonder_rubriek.py) krijgt hij zijn eigen rubriek. Dat
+    is wat deze proef altijd al wilde: níét op de vloer."""
+    uit = _infer_attributes("Linnen tafelkleed wit", "")
+    assert uit.get("category") != "wonen tapijten en kleden"
+    assert uit.get("category") == "wonen tafelkleden"
 
 
 def test_het_model_krijgt_beide_betekenissen_mee():
