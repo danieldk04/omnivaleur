@@ -5199,3 +5199,31 @@ Daarnaast stond er bij een mislukte verwijderstap alleen "Retry relist", en dat
 is bij een verdwenen advertentie een doodlopende straat: elke poging faalt weer.
 Er staat nu ook "Cancel relist & keep the current listing" onder. De server
 staat dat toe zolang de verwijderstap niet op 'done' staat, dus dit is veilig.
+
+## 05-09-2026 — "Verwijderknop niet gevonden" terwijl de advertentie wél weg was
+
+Daniels herplaatsing van (463) Grey Suitsupply Loafers meldde "Delete control
+not found on Vinted item page for ID 7606902151 — Vinted may have changed its
+layout", met eronder de tekst dat er niets was weggehaald en dat zijn artikel
+nog live stond. Dat klopte niet: gemeten op 05-09-2026 geven
+https://www.vinted.nl/items/7606902151 én .com allebei 404, dus de advertentie
+is weg. En aan het begin van diezelfde ronde stond hij nog gewoon in de kast,
+anders had er "not in your wardrobe" gestaan.
+
+Wat er fout aan was: de code nam de knop als bewijs. Vond hij de verwijderknop
+niet, dan stopte hij meteen met een fout, zonder na te meten wat er werkelijk
+gebeurd was. Gevolg is het ergste van twee werelden: de verkoper leest dat zijn
+advertentie nog online staat terwijl die net weg is, en de herplaatsing wordt
+afgebroken, dus er komt ook geen nieuwe voor terug.
+
+Sinds 1.0.299 is de kast het bewijs en de knop hooguit een aanwijzing. De
+nameting (staat de advertentie nog in de kast?) draait nu altijd. Is hij weg,
+dan geldt de verwijdering als geslaagd, gaat de momentopname gewoon mee naar de
+herplaatsing, en komt de knopfout alleen in het logboek. Staat hij er nog, dan
+komt precies dezelfde foutmelding als voorheen. Bewijs:
+`tests/vinted-verwijderen-knop-vs-kast-test.js`, met `--oud` tegen de vorige
+commit, waar twee van de vier gevallen falen.
+
+Waarom de knop gemist werd is niet vastgesteld; dat is een openstaand punt. De
+melding neemt de zichtbare knoppen mee, dus de volgende keer dat het gebeurt
+staat er in de log wat er wél op het scherm stond.

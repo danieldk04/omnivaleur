@@ -3861,8 +3861,20 @@ async function bgDeleteVinted(job, serverUrl) {
     // De knoppen die er wél stonden gaan mee in de melding. Anders is dit
     // achteraf niet na te lopen zonder toegang tot het account van de verkoper.
     const opScherm = clicked?.opScherm ? ` Zichtbaar op het scherm: ${clicked.opScherm}` : "";
-    if (!clicked?.clickedDelete) throw new Error(`Delete control not found on Vinted item page for ID ${listingId} — Vinted may have changed its layout.${opScherm}`);
-    if (!clicked.clickedConfirm) throw new Error(`Confirm-delete button not found on Vinted for ID ${listingId} — deletion was not confirmed.${opScherm}`);
+    // De knop is een aanwijzing, de kast is het bewijs. Op 05-09-2026 meldde
+    // een herplaatsing "Delete control not found" terwijl advertentie
+    // 7606902151 daarna aantoonbaar weg was (404 op vinted.nl én .com), en aan
+    // het begin van diezelfde ronde stond hij nog gewoon in de kast — anders
+    // was de melding "not in your wardrobe" geweest. Wie hier op de knop
+    // afgaat, zegt "er is niets weggehaald, je advertentie staat nog online"
+    // tegen iemand van wie de advertentie net weg is, en breekt de
+    // herplaatsing af: het artikel blijft dan van álle kanten af. Dus: eerst
+    // nameten, en pas klagen over de knop als hij er echt nog staat.
+    const knopMislukt = !clicked?.clickedDelete
+      ? `Delete control not found on Vinted item page for ID ${listingId} — Vinted may have changed its layout.${opScherm}`
+      : !clicked.clickedConfirm
+        ? `Confirm-delete button not found on Vinted for ID ${listingId} — deletion was not confirmed.${opScherm}`
+        : "";
 
     // 3) Give Vinted a moment to process + redirect, then verify the item is
     //    gone from the wardrobe. The tab is now on some page of the SAME
@@ -3894,6 +3906,7 @@ async function bgDeleteVinted(job, serverUrl) {
       if (present === false) { goneAfter = true; break; }
       await sleep(1800);
     }
+    if (!goneAfter && knopMislukt) throw new Error(knopMislukt);
     if (!goneAfter) {
       const rest = await execInTab(tabId, async () => {
         const v = document.querySelector('[role="dialog"], [role="alertdialog"], [data-testid*="modal"], .ReactModal__Content');
@@ -3910,6 +3923,7 @@ async function bgDeleteVinted(job, serverUrl) {
 
     // The captured listing snapshot lets the backend enrich the paired relist
     // recreate job (imported items otherwise lack this data).
+    if (knopMislukt) console.warn(`[Omnivaleur] bgDeleteVinted: ${knopMislukt} — maar ${listingId} is wél uit de kast verdwenen; als geslaagd afgemeld.`);
     await finaliseJob(serverUrl, job.id, "complete", { captured_listing: snapshot });
     console.log(`[Omnivaleur] bgDeleteVinted success: listing ${listingId}`, snapshot);
   } finally {
