@@ -41,8 +41,8 @@
     "mem-shopify_workflow-belangrijk--nooit-content-over": {
       "id": "mem-shopify_workflow-belangrijk--nooit-content-over",
       "category": "shopify_workflow",
-      "confidence": 0.1,
-      "accessCount": 1,
+      "confidence": 0.2,
+      "accessCount": 3,
       "createdAt": 1783151212563
     },
     "mem-feedback_always_push----": {

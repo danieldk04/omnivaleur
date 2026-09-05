@@ -31,13 +31,15 @@ const ok = (naam, v, extra) => {
 
 // Eén ronde spelen. `knopGevonden` = vond de code de verwijderknop,
 // `wegNa` = staat de advertentie na afloop nog in de kast.
-async function ronde({ knopGevonden, wegNa, eerste, kast }) {
+async function ronde({ knopGevonden, wegNa, eerste, kast, anderOrigin = null }) {
+  const kastAntwoorden = Array.isArray(kast) ? kast.slice() : [kast];
   const eersteAntwoord = eerste || { userId: "12345", present: true, closed: false };  // stond er nog
   const uitgevoerd = [];
   const gemeld = [];
   const omgeving = {
     openWorkerTab: (url, cb) => cb({ id: 7 }),
     stuurWerkTabbladNaar: async () => {},
+    vintedIngelogdOrigin: async () => anderOrigin,
     _mwVintedKast: () => {},
     waitForTabLoad: async () => {},
     sluitWerkTabblad: () => {},
@@ -47,8 +49,8 @@ async function ronde({ knopGevonden, wegNa, eerste, kast }) {
       uitgevoerd.push(fn);
       const n = uitgevoerd.length;
       if (n === 1) return eersteAntwoord;
-      if (n === 2) return eersteAntwoord.httpStatus === 404 ? kast
-                                                            : { photo_urls: ["a.jpg"], description: "tekst" };
+      if (eersteAntwoord.httpStatus === 404) return kastAntwoorden.shift();
+      if (n === 2) return { photo_urls: ["a.jpg"], description: "tekst" };
       if (n === 3) return knopGevonden                                          // de verwijderpoging
         ? { clickedDelete: true, clickedConfirm: true, venster: true }
         : { clickedDelete: false, opScherm: "menu | delen" };
@@ -103,6 +105,14 @@ async function ronde({ knopGevonden, wegNa, eerste, kast }) {
   r = await ronde({ eerste: WEG, kast: { userId: "12345", present: null } });
   ok("kast onleesbaar -> niets aannemen, geen afmelding",
      /Could not read your Vinted wardrobe/.test(r.fout || "") && r.gemeld.length === 0, r.fout);
+
+  r = await ronde({
+    eerste: WEG,
+    kast: [{ userId: null, present: null }, { userId: "12345", present: false }],
+    anderOrigin: "https://www.vinted.com",
+  });
+  ok("geen sessie op vinted.nl maar wel op .com -> daar kijken, dan pas oordelen",
+     !r.fout && r.gemeld[0]?.extra?.note === "already_absent", r);
 
   console.log(mislukt === 0 ? "\nAlles goed\n" : `\n${mislukt} mislukt\n`);
   process.exit(mislukt === 0 ? 0 : 1);

@@ -5251,3 +5251,27 @@ haalt daar het lidnummer op en leest de kast:
 
 Bewijs: `tests/vinted-verwijderen-knop-vs-kast-test.js` (9 gevallen), met
 `--oud` tegen de vorige commit, waar de vier 404-gevallen falen.
+
+## 05-09-2026 — Het lidnummer via Vinted zelf, niet via de pagina
+
+Met 1.0.300 kwam de melding "Could not determine your Vinted member id — make
+sure you're logged into this Vinted account" terwijl Daniel gewoon ingelogd was.
+De oorzaak zat in hóé we het lidnummer zochten: een /member/-link in de pagina,
+en anders het uitklapmenu rechtsboven aanklikken. Op de startpagina van
+vinted.nl stond die link niet, en een uitklapmenu in een verborgen werk-tabblad
+is nooit een zekerheid (Chrome knijpt daar de tijd af, zie het punt over
+verborgen tabbladen in de kennisbank).
+
+Sinds 1.0.301 vragen we het aan Vinted zelf: `/api/v2/users/current` geeft het
+lidnummer terug en hangt niet aan opmaak of aan een menu. De oude manier blijft
+er als vangnet achter staan. Dit geldt nu op beide plekken: de controle op de
+advertentiepagina en de kastcontrole na een 404.
+
+Daarbij komt: geen sessie op vinted.nl betekent niet dat hij uitgelogd is. De
+404-tak zoekt nu eerst het domein waar hij wél is ingelogd (dezelfde
+`vintedIngelogdOrigin` die het plaatsen al gebruikt) en kijkt daar nog een keer,
+voordat er iets over inloggen gezegd wordt.
+
+Bewijs: `tests/vinted-lidnummer-test.js` (5 gevallen, drie falen op de vorige
+commit) en de uitgebreide `tests/vinted-verwijderen-knop-vs-kast-test.js` (10
+gevallen).

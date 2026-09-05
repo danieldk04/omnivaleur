@@ -3601,6 +3601,18 @@ async function resolveVintedIdByTitle(title, sku) {
 async function _mwVintedKast(lid) {
   const slaap = ms => new Promise(r => setTimeout(r, ms));
   let userId = null;
+  // Eerst Vinted's eigen antwoord op "wie ben ik". Dat is één vraag, hij hangt
+  // niet aan de opmaak van de pagina en niet aan een uitklapmenu dat in een
+  // verborgen tabblad soms niet opengaat. Op 05-09-2026 liep het daar mis: de
+  // startpagina gaf geen /member/-link, en de verkoper kreeg te horen dat hij
+  // niet ingelogd was terwijl hij dat wel was.
+  try {
+    const res = await fetch("/api/v2/users/current", { headers: { Accept: "application/json" }, credentials: "include" });
+    if (res.ok) {
+      const data = await res.json().catch(() => null);
+      if (data && data.user && data.user.id) userId = String(data.user.id);
+    }
+  } catch (e) {}
   const zoek = () => {
     for (const a of document.querySelectorAll('a[href*="/member/"]')) {
       const m = (a.getAttribute("href") || "").match(/\/member\/(\d+)/);
@@ -3608,7 +3620,7 @@ async function _mwVintedKast(lid) {
     }
     return null;
   };
-  userId = zoek();
+  if (!userId) userId = zoek();
   if (!userId) {
     document.querySelector('#user-menu-button, [data-testid="user-menu-button"]')?.click();
     await slaap(700);
@@ -3682,6 +3694,17 @@ async function bgDeleteVinted(job, serverUrl) {
     const before = await execInTab(tabId, async (lid) => {
       async function findUserId() {
         let id = null;
+        // Vinted's eigen antwoord op "wie ben ik" gaat voor: dat hangt niet aan
+        // de opmaak van de pagina en niet aan een uitklapmenu dat in een
+        // verborgen tabblad soms niet opengaat. Zelfde reden als in
+        // _mwVintedKast; zie tests/vinted-lidnummer-test.js.
+        try {
+          const res = await fetch("/api/v2/users/current", { headers: { Accept: "application/json" }, credentials: "include" });
+          if (res.ok) {
+            const data = await res.json().catch(() => null);
+            if (data && data.user && data.user.id) return String(data.user.id);
+          }
+        } catch (e) {}
         for (const a of document.querySelectorAll('a[href*="/member/"]')) {
           const m = (a.getAttribute("href") || "").match(/\/member\/(\d+)/);
           if (m) { id = m[1]; break; }
@@ -3746,11 +3769,23 @@ async function bgDeleteVinted(job, serverUrl) {
       // land. Zonder deze stap is een 404 niet te onderscheiden van uitgelogd,
       // en liep de herplaatsing dood op een melding over inloggen (Daniel,
       // 05-09-2026, twee artikelen op rij).
-      const thuis = new URL(url).origin + "/";
-      await stuurWerkTabbladNaar(tabId, thuis);
+      const itemOrigin = new URL(url).origin;
+      await stuurWerkTabbladNaar(tabId, itemOrigin + "/");
       await waitForTabLoad(tabId);
       await sleep(2000);
-      const kast = await execInTab(tabId, _mwVintedKast, [listingId]);
+      let kast = await execInTab(tabId, _mwVintedKast, [listingId]);
+      // Geen sessie op dít domein hoeft niet te betekenen dat hij uitgelogd is:
+      // een sessie op vinted.nl weet niets van vinted.com en omgekeerd. Dus het
+      // domein zoeken waar hij wél is ingelogd, en daar nog één keer kijken.
+      if (!kast?.userId) {
+        const ander = await vintedIngelogdOrigin(itemOrigin).catch(() => null);
+        if (ander && ander !== itemOrigin) {
+          await stuurWerkTabbladNaar(tabId, ander + "/");
+          await waitForTabLoad(tabId);
+          await sleep(2000);
+          kast = await execInTab(tabId, _mwVintedKast, [listingId]);
+        }
+      }
       if (!kast?.userId) {
         throw new Error(`Could not determine your Vinted member id — make sure you're logged into this Vinted account.`);
       }
