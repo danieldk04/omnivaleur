@@ -82,9 +82,13 @@ RICH_KEYS = ("photo_urls", "description", "brand", "size", "condition",
 EXTENSION_ONLINE_WINDOW_SECONDS = 120
 
 
-# Eén keer per proces vaststellen of de kolom bestaat; anders levert elke
-# hartslag een mislukte schrijfpoging op.
-_HEARTBEAT_VERSIEKOLOM = [True]
+# Of de kolom ext_version bestaat. Niet één keer per proces vaststellen: dan
+# blijft een server die toevallig opstartte VOORDAT de kolom werd toegevoegd
+# eeuwig zonder versies schrijven, en dat is precies wat er op 05-09-2026
+# gebeurde — de kolom stond er, de hartslagen kwamen binnen, en het veld bleef
+# leeg tot de volgende deploy. Een mislukking geldt daarom maar een uur.
+_HEARTBEAT_VERSIEKOLOM_UIT_TOT = [0.0]
+_HEARTBEAT_VERSIEKOLOM_PAUZE = 3600.0
 
 
 def _record_extension_heartbeat(db, user_id: str, user_agent: str | None = None,
@@ -114,17 +118,18 @@ def _record_extension_heartbeat(db, user_id: str, user_agent: str | None = None,
         # ziet die iets kapot hadden). De kolom moet met de hand worden
         # toegevoegd; tot die tijd valt hij hieronder weg zonder dat de
         # aanwezigheidsstempel eronder lijdt.
-        if versie and _HEARTBEAT_VERSIEKOLOM[0]:
+        if versie and time.monotonic() >= _HEARTBEAT_VERSIEKOLOM_UIT_TOT[0]:
             row["ext_version"] = versie[:20]
         try:
             db.table("extension_heartbeat").upsert(row).execute()
         except Exception:
             if "ext_version" not in row:
                 raise
-            _HEARTBEAT_VERSIEKOLOM[0] = False
+            _HEARTBEAT_VERSIEKOLOM_UIT_TOT[0] = time.monotonic() + _HEARTBEAT_VERSIEKOLOM_PAUZE
             logger.info(
                 "Kolom ext_version ontbreekt nog in extension_heartbeat; de "
-                "versie wordt niet vastgelegd. Zet hem erbij met: ALTER TABLE "
+                "versie wordt niet vastgelegd; over een uur proberen we het "
+                "opnieuw. Zet hem erbij met: ALTER TABLE "
                 "extension_heartbeat ADD COLUMN ext_version text;")
             row.pop("ext_version")
             db.table("extension_heartbeat").upsert(row).execute()
