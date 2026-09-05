@@ -5,7 +5,7 @@
           fillBrand, fillBrandField, fillManufacturer, selectBundleFree, selectDelivery, selectPackageSize, typBeschrijvingEcht,
           uploadPhotos, submitListing, clickRadioByValue, smartTrunc, fillBidding,
           dutchColor, ensureDescriptionStillFilled, verifyMpGroupFields, repairMpGroupFields, selectCondition, selectIntendedFor, mpPrijs,
-          mpPrijsvorm, kiesPrijsvorm, MP_ZONDER_BEDRAG } = window.CL;
+          mpPrijsvorm, kiesPrijsvorm, MP_ZONDER_BEDRAG, zetPrijs } = window.CL;
 
   const job = await getJob();
   if (!job) return;
@@ -90,19 +90,10 @@
   async function fillForm(item) {
     await waitForEl('input[name="title_nl-BE"], input[name="title_nl-NL"]', 20000);
     await step("title",        () => fillInputHuman(titleInput(), smartTrunc(item.title || "", 60)));
-    // EERST DE ADVERTENTIEVORM, DAN PAS DE PRIJS (03-09-2026, Amanda Haas).
-    // 2dehands draait hetzelfde formulier als Marktplaats: een artikel zonder
-    // vraagprijs hoort op "Bieden" te staan, anders weigert het formulier en
-    // blijft het tabblad wachten op de verkoper. Zie mpPrijsvorm in shared.js.
-    let vormError = null;
-    const vorm = mpPrijsvorm(item);
-    if (vorm) {
-      try { await kiesPrijsvorm(vorm); }
-      catch (e) { vormError = e; clog(`advertentievorm: FOUT — ${e && e.message ? e.message : e}`); }
-    }
-    if (!(vorm && MP_ZONDER_BEDRAG.has(vorm))) {
-      await step("price",      () => { const el = qs('input[name="price.value"]'); return fillInputHuman(el, mpPrijs(item.price, el)); });
-    }
+    // 2dehands draait hetzelfde formulier als Marktplaats: eerst de
+    // advertentievorm, dan de prijs, dan nakijken of hij er echt staat. Alle
+    // drie zitten in zetPrijs (shared.js).
+    const vormError = await zetPrijs(item);
     // Mandatory fields — deliberately NOT inside step(), see marktplaats.js.
     // nudge: ook 2dehands rekent de tekst pas mee na een echte toetsaanslag.
     let descError = null;

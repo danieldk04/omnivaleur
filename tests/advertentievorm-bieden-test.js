@@ -126,8 +126,12 @@ function laadCL(formulier) {
   console.log("\n1. Welke advertentievorm hoort bij dit artikel?");
   const CL = laadCL(null);
   const vorm = (item) => CL.mpPrijsvorm(item);
-  ok(vorm({ price: 12.5 }) === null, "met vraagprijs blijft het formulier onaangeraakt (geen enkel verschil met vandaag)");
-  ok(vorm({ price: 12.5, mp_prijstype: { soort: "FAST_BID" } }) === null,
+  // BIJGEWERKT 05-09-2026 (Zilverwebsite). Hier stond: met een vraagprijs blijft
+  // het formulier onaangeraakt. Juist dat kostte hem zestig prijzen — het
+  // formulier stond voorgezet op "Zie omschrijving". Zie
+  // tests/prijs-blijft-op-het-formulier-test.js.
+  ok(vorm({ price: 12.5 }) === "Vraagprijs", "met vraagprijs zetten we de lijst zelf op Vraagprijs");
+  ok(vorm({ price: 12.5, mp_prijstype: { soort: "FAST_BID" } }) === "Vraagprijs",
      "een echte prijs wint: die gooien we nooit weg voor een oude vorm");
   ok(vorm({ price: 0 }) === "Bieden", "geen prijs en niets bekend → Bieden");
   ok(vorm({ price: null }) === "Bieden", "prijs ontbreekt helemaal → Bieden");
@@ -163,16 +167,17 @@ function laadCL(formulier) {
     ok(uit.geplaatst === true, "Marktplaats plaatst de advertentie");
   }
 
-  console.log("\n4. Een artikel mét prijs verandert niet");
+  console.log("\n4. Een artikel mét prijs komt online mét prijs");
   {
     const f = nieuwFormulier();
     const CL4 = laadCL(f);
     const item = { price: 12.5 };
     const gekozen = CL4.mpPrijsvorm(item);
-    ok(gekozen === null, "er wordt niets gekozen");
+    ok(gekozen === "Vraagprijs", "de vorm is Vraagprijs");
+    await CL4.kiesPrijsvorm(gekozen, { terugval: false });
     f.prijs.value = CL4.mpPrijs(item.price, f.prijs);
     ok(f.prijs.value === "12,50", "de prijs staat er nog precies zo in als eerst");
-    ok(f.select.events.length === 0, "de keuzelijst is niet eens aangeraakt");
+    ok(f.select.value === "FIXED", "en de lijst staat op Vraagprijs, waar hij ook al stond");
     ok(marktplaatsPlaatst(f).geplaatst === true, "en de advertentie gaat online");
   }
 

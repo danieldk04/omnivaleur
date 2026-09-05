@@ -339,15 +339,32 @@ window.CL = (() => {
 
   // WELKE VORM MOET DIT ARTIKEL KRIJGEN?
   //
-  // Is er een vraagprijs, dan blijft alles zoals het was: we raken de keuzelijst
-  // niet aan en het formulier houdt zijn eigen stand ("Vraagprijs"). Alleen als
-  // er GEEN vraagprijs is moet er iets gebeuren, want dan weigert het formulier.
-  // Wat het dan wordt weet de oude advertentie zelf (mp_prijstype komt van de
-  // advertentiepagina, vlak vóór het verwijderen opgehaald); weten we het niet,
-  // dan is "Bieden" de enige vorm die klopt bij een artikel zonder prijs.
+  // Is er een vraagprijs, dan is het antwoord "Vraagprijs" — en die zetten we
+  // ook echt, elke keer.
+  //
+  // WAAROM DAT MOET (05-09-2026, Zilverwebsite). Hier stond eerst: bij een
+  // vraagprijs raken we de keuzelijst niet aan, want die staat toch al op
+  // "Vraagprijs". Dat is niet waar. Marktplaats onthoudt de vorm van de vorige
+  // advertentie en zet die alvast klaar op het volgende plaatsformulier. Bij
+  // deze verkoper stond er één advertentie (een partij Delfts blauw) op "Zie
+  // omschrijving", en vanaf dat moment stond het formulier daar bij élke
+  // volgende plaatsing op. Bij "Zie omschrijving" bestaat het prijsveld niet
+  // eens, dus de prijs werd stil overgeslagen en zestig herplaatste
+  // advertenties stonden zonder prijs online; hij heeft ze met de hand hersteld.
+  //
+  // Nagemeten in de opdrachten van die ochtend: alle zestig hadden gewoon een
+  // prijs (44,27 tot 1474,32) en prijsvorm FIXED, en in zijn laatste duizend
+  // plaatsingen heeft de extensie zelf nooit "Zie omschrijving" gekozen. De
+  // vorm kwam dus niet van ons, maar van het formulier — en juist daarom moeten
+  // we hem zelf zetten in plaats van erop te vertrouwen.
+  //
+  // Zonder vraagprijs weet de oude advertentie zelf wat het moet worden
+  // (mp_prijstype komt van de advertentiepagina, vlak vóór het verwijderen
+  // opgehaald); weten we het niet, dan is "Bieden" de enige vorm die klopt bij
+  // een artikel zonder prijs.
   function mpPrijsvorm(item) {
     const prijs = Number(item && item.price);
-    if (isFinite(prijs) && prijs > 0) return null;
+    if (isFinite(prijs) && prijs > 0) return "Vraagprijs";
     const soort = String((item && item.mp_prijstype && item.mp_prijstype.soort) || "").toUpperCase();
     const vorm = MP_PRIJSVORM[soort];
     if (vorm && vorm !== "Vraagprijs") return vorm;
@@ -357,10 +374,15 @@ window.CL = (() => {
   // De keuzelijst omzetten, en daarna nakijken of hij ook echt om is. React zet
   // een waarde die hij niet aannam gewoon terug, en dan zou de advertentie
   // alsnog op een lege vraagprijs stranden zonder dat iemand weet waarom.
-  async function kiesPrijsvorm(vorm) {
+  async function kiesPrijsvorm(vorm, instel = {}) {
     if (!vorm) return false;
+    // terugval: "Bieden" mag alleen invallen voor een artikel ZONDER prijs. Voor
+    // een artikel mét prijs zou die terugval het prijsveld juist laten
+    // verdwijnen — precies de schade die dit hoort te voorkomen.
+    const terugval = instel.terugval !== false;
+    const pogingen = Number.isFinite(instel.pogingen) ? instel.pogingen : 15;
     let sel = null;
-    for (let i = 0; i < 15; i++) {
+    for (let i = 0; i < pogingen; i++) {
       sel = qs("select#Dropdown-prijstype")
          || qs('select[name="priceType"]')
          || qs('select[name="price.priceType"]')
@@ -388,7 +410,7 @@ window.CL = (() => {
     // "Gereserveerd" of "Ruilen" stond kan hier dus niet in zijn eigen vorm
     // terugkomen. Zonder vraagprijs is "Bieden" dan de enige vorm die klopt —
     // beter dan de hele advertentie laten stranden op een leeg prijsveld.
-    const optie = zoek(vorm) || (vorm !== "Bieden" ? zoek("Bieden") : null);
+    const optie = zoek(vorm) || (terugval && vorm !== "Bieden" ? zoek("Bieden") : null);
     if (!optie) {
       // De echte keuzes meesturen. Heet de knop bij Marktplaats anders dan wij
       // denken, dan staat dat in de eerstvolgende foutmelding in plaats van dat
@@ -406,6 +428,67 @@ window.CL = (() => {
     }
     clog(`advertentievorm: ${vorm} -> ${(optie.text || "").trim()} (${optie.value})`);
     return true;
+  }
+
+  // DE PRIJS OP HET FORMULIER ZETTEN — EN NAKIJKEN DAT HIJ ER ECHT STAAT.
+  //
+  // Eén plek voor Marktplaats en 2dehands samen, want ze draaien hetzelfde
+  // formulier en hadden hier tot nu toe twee losse kopieën van dezelfde regels.
+  //
+  // De volgorde is niet vrij: bij "Bieden" en "Zie omschrijving" verdwijnt het
+  // prijsveld uit het formulier, dus de vorm gaat vóór de prijs.
+  //
+  // En daarna de controle, want dit ging stil mis (05-09-2026, Zilverwebsite):
+  // stond het formulier op "Zie omschrijving", dan bestond input[name="price.value"]
+  // niet, gaf fillInputHuman netjes false terug, en publiceerde de extensie een
+  // advertentie zonder prijs alsof er niets aan de hand was. Een advertentie
+  // zonder prijs is voor een verkoper geen kleine schoonheidsfout maar een
+  // waardeloze advertentie. Liever een opdracht die zichtbaar mislukt, met het
+  // tabblad open, dan zestig advertenties die met de hand hersteld moeten worden.
+  async function zetPrijs(item) {
+    const vorm = mpPrijsvorm(item);
+    const prijs = Number(item && item.price);
+    const heeftPrijs = isFinite(prijs) && prijs > 0;
+    let vormError = null;
+    if (vorm) {
+      // Mét prijs is dit een voorzorg: lukt het niet, dan blijft het formulier
+      // staan zoals het stond en beslist de controle hieronder of het echt
+      // misging. Zónder prijs is de vorm het enige wat de advertentie nog redt.
+      try { await kiesPrijsvorm(vorm, heeftPrijs ? { terugval: false, pogingen: 5 } : {}); }
+      catch (e) {
+        if (!heeftPrijs) vormError = e;
+        clog(`advertentievorm: ${heeftPrijs ? "niet gezet" : "FOUT"} — ${e && e.message ? e.message : e}`);
+      }
+    }
+    if (vorm && MP_ZONDER_BEDRAG.has(vorm)) return vormError;
+
+    // Na het omzetten van de lijst bouwt React het prijsveld opnieuw op; even
+    // wachten tot het er is in plaats van één keer kijken en het missen.
+    let el = null;
+    for (let i = 0; i < 10; i++) {
+      el = qs('input[name="price.value"]');
+      if (el) break;
+      await sleep(200);
+    }
+    const gewild = mpPrijs(item.price, el);
+    await step("price", () => fillInputHuman(el, gewild));
+    if (!heeftPrijs) return vormError;
+
+    // Terug lezen. Alleen de cijfers vergelijken: het veld toont "550,00" waar
+    // wij "550" schreven, of andersom, en dat is geen fout.
+    const cijfers = (t) => String(t == null ? "" : t).replace(/[^0-9]/g, "");
+    const verwacht = cijfers(Math.trunc(prijs));
+    for (let i = 0; i < 10; i++) {
+      const nu = qs('input[name="price.value"]');
+      if (nu && cijfers(nu.value).startsWith(verwacht) && verwacht) return vormError;
+      await sleep(200);
+    }
+    const staat = qs('select#Dropdown-prijstype') || qs('select[name="priceType"]')
+               || qs('select[name="price.priceType"]');
+    const gekozen = staat ? (staat.options[staat.selectedIndex]?.text || staat.value || "").trim() : "";
+    throw new Error(`The asking price (${gewild}) did not end up on the form`
+      + (gekozen ? ` — the listing type is set to "${gekozen}", and that hides the price field` : "")
+      + `. Publishing was stopped so the listing does not go live without a price.`);
   }
 
   // Alles wat het formulier zelf zichtbaar als bezwaar toont. Eén lijst, zodat
@@ -2294,6 +2377,6 @@ window.CL = (() => {
     selectDelivery, gekozenLevering, selectPakketWaarde, vulHalswijdte, keuzeveldenKort, typBeschrijvingEcht,
     selectPackageSize, uploadPhotos, submitListing, step, closePopup, smartTrunc, fillBidding,
     clog, plaatsBlokkade, dutchColor, kleurKandidaten, kiesMetTerugval, lijstOpties, valueVariants, platteTekst, verifyMpGroupFields, repairMpGroupFields, ensureDescriptionStillFilled, selectCondition, selectIntendedFor, fillBrandField, logMpFields, mpPrijs,
-    mpPrijsvorm, kiesPrijsvorm, MP_ZONDER_BEDRAG,
+    mpPrijsvorm, kiesPrijsvorm, MP_ZONDER_BEDRAG, zetPrijs,
   };
 })();

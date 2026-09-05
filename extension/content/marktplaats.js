@@ -5,7 +5,7 @@
           fillBrand, fillBrandField, fillManufacturer, selectBundleFree, selectDelivery, selectPakketWaarde, typBeschrijvingEcht, vulHalswijdte, uploadPhotos, submitListing,
           clickRadioByValue, smartTrunc, fillBidding, dutchColor,
           ensureDescriptionStillFilled, verifyMpGroupFields, repairMpGroupFields, selectCondition, selectIntendedFor, mpPrijs,
-          mpPrijsvorm, kiesPrijsvorm, MP_ZONDER_BEDRAG } = window.CL;
+          mpPrijsvorm, kiesPrijsvorm, MP_ZONDER_BEDRAG, zetPrijs } = window.CL;
 
   const job = await getJob();
   if (!job) return;
@@ -268,24 +268,10 @@
   async function fillForm(item) {
     await waitForEl('input[name="title_nl-NL"]', 20000);
     await step("title",        () => fillInputHuman(qs('input[name="title_nl-NL"]'), smartTrunc(item.title || "", 60)));
-    // EERST DE ADVERTENTIEVORM, DAN PAS DE PRIJS (03-09-2026, Amanda Haas).
-    //
-    // Een artikel zonder vraagprijs is op Marktplaats geen fout maar een keuze:
-    // "Bieden". Stond de lijst op "Vraagprijs" en het prijsveld leeg, dan
-    // weigerde het formulier en bleef het tabblad open staan wachten op de
-    // verkoper — met de oude advertentie al weg. Zie mpPrijsvorm in shared.js.
-    //
-    // De volgorde is niet vrij: bij "Bieden" verdwijnt het prijsveld, dus een
-    // eerst ingevulde prijs is daarna weg.
-    let vormError = null;
-    const vorm = mpPrijsvorm(item);
-    if (vorm) {
-      try { await kiesPrijsvorm(vorm); }
-      catch (e) { vormError = e; clog(`advertentievorm: FOUT — ${e && e.message ? e.message : e}`); }
-    }
-    if (!(vorm && MP_ZONDER_BEDRAG.has(vorm))) {
-      await step("price",      () => { const el = qs('input[name="price.value"]'); return fillInputHuman(el, mpPrijs(item.price, el)); });
-    }
+    // EERST DE ADVERTENTIEVORM, DAN PAS DE PRIJS, EN DAARNA NAKIJKEN OF DE PRIJS
+    // ER ECHT STAAT. Alle drie zitten in zetPrijs (shared.js); daar staat ook
+    // waarom een advertentie anders zonder prijs online kan komen.
+    const vormError = await zetPrijs(item);
     // NOT wrapped in step(): description and photos are mandatory on Marktplaats,
     // and step() swallows the error — which is how listings ended up submitted
     // with an empty advertentietekst and no photos, with nothing to explain it.
