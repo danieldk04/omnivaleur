@@ -5227,3 +5227,27 @@ commit, waar twee van de vier gevallen falen.
 Waarom de knop gemist werd is niet vastgesteld; dat is een openstaand punt. De
 melding neemt de zichtbare knoppen mee, dus de volgende keer dat het gebeurt
 staat er in de log wat er wél op het scherm stond.
+
+## 05-09-2026 — Een verdwenen Vinted-advertentie mag de herplaatsing niet stoppen
+
+Vervolg op de twee meldingen hierboven. De melding klopte inmiddels ("deze
+advertentie bestaat niet meer"), maar het bleef een doodlopende straat: de
+herplaatsing werd afgebroken, dus het artikel stond nergens meer online en
+Daniel moest het met de hand opnieuw plaatsen.
+
+Sinds 1.0.300 zoekt de extensie bij een 404 eerst uit wat er gebeurd is, in
+plaats van te stoppen. Ze gaat naar de startpagina van hetzelfde Vinted-land,
+haalt daar het lidnummer op en leest de kast:
+
+- niet in de kast → de advertentie is weg, doel bereikt. De verwijderstap meldt
+  zich af als "already_absent" en de herplaatsing plaatst gewoon de nieuwe
+  advertentie. De server kende die melding al (Marktplaats/2dehands, 01-09-2026)
+  en laat hem voor Vinted doorlopen naar de herplaatsing.
+- wél in de kast met Vinted's eigen verkocht-vlag → verkoop boeken, niet
+  herplaatsen.
+- geen lidnummer te vinden → dán pas de melding over inloggen. Dat is nu het
+  enige geval waarin die tekst nog verschijnt, en dan klopt hij ook.
+- kast niet te lezen → niets aannemen, foutmelding.
+
+Bewijs: `tests/vinted-verwijderen-knop-vs-kast-test.js` (9 gevallen), met
+`--oud` tegen de vorige commit, waar de vier 404-gevallen falen.

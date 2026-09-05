@@ -3593,6 +3593,46 @@ async function resolveVintedIdByTitle(title, sku) {
   }
 }
 
+// Draait IN het tabblad: wie ben ik op deze Vinted, en wat zegt mijn kast over
+// deze advertentie? Alles wat deze functie gebruikt staat hierbinnen — Chrome
+// injecteert alleen deze functie, de rest van background.js bestaat daar niet.
+// Terug: { userId, present, closed }. present === null betekent "niet kunnen
+// lezen" en is nooit hetzelfde als "niet aanwezig".
+async function _mwVintedKast(lid) {
+  const slaap = ms => new Promise(r => setTimeout(r, ms));
+  let userId = null;
+  const zoek = () => {
+    for (const a of document.querySelectorAll('a[href*="/member/"]')) {
+      const m = (a.getAttribute("href") || "").match(/\/member\/(\d+)/);
+      if (m) return m[1];
+    }
+    return null;
+  };
+  userId = zoek();
+  if (!userId) {
+    document.querySelector('#user-menu-button, [data-testid="user-menu-button"]')?.click();
+    await slaap(700);
+    userId = zoek();
+  }
+  if (!userId) return { userId: null, present: null };
+  try {
+    for (let page = 1; page <= 60; page++) {
+      const res = await fetch(`/api/v2/wardrobe/${userId}/items?order=newest_first&page=${page}&per_page=96`, { headers: { Accept: "application/json" } });
+      if (!res.ok) return { userId, present: null };
+      const data = await res.json();
+      if (data.code && data.code !== 0) return { userId, present: null };
+      const items = data.items || [];
+      const mijn = items.find(it => String(it.id) === String(lid));
+      if (mijn) return { userId, present: true, closed: !!mijn.is_closed };
+      const pg = data.pagination || {};
+      if (items.length === 0) return { userId, present: false };
+      if (pg.total_pages && page >= pg.total_pages) return { userId, present: false };
+      if (!pg.total_pages && items.length < 96) return { userId, present: false };
+    }
+    return { userId, present: null };
+  } catch (e) { return { userId, present: null }; }
+}
+
 async function bgDeleteVinted(job, serverUrl) {
   const sleep = ms => new Promise(r => setTimeout(r, ms));
   const payload = job.payload || {};
@@ -3698,10 +3738,38 @@ async function bgDeleteVinted(job, serverUrl) {
     }, [listingId]);
 
     if (!before?.userId && before?.httpStatus === 404) {
-      throw new Error(
-        `This Vinted listing no longer exists (${url} gives "Page not found"), so there is nothing to remove. ` +
-        `It was probably already deleted on Vinted. Cancel the relist below; the item stays in Omnivaleur.`
-      );
+      // De advertentiepagina bestaat niet meer. Dat is nog geen antwoord op de
+      // vraag wát er gebeurd is, en het verschil is groot: verkocht hoort als
+      // verkoop geboekt te worden, weggehaald mag gewoon opnieuw geplaatst.
+      // Vinted's eigen kast weet het, maar die is alleen te lezen vanaf een
+      // pagina die wél bestaat — dus eerst naar de startpagina van hetzelfde
+      // land. Zonder deze stap is een 404 niet te onderscheiden van uitgelogd,
+      // en liep de herplaatsing dood op een melding over inloggen (Daniel,
+      // 05-09-2026, twee artikelen op rij).
+      const thuis = new URL(url).origin + "/";
+      await stuurWerkTabbladNaar(tabId, thuis);
+      await waitForTabLoad(tabId);
+      await sleep(2000);
+      const kast = await execInTab(tabId, _mwVintedKast, [listingId]);
+      if (!kast?.userId) {
+        throw new Error(`Could not determine your Vinted member id — make sure you're logged into this Vinted account.`);
+      }
+      if (kast.present === null) {
+        throw new Error(`Could not read your Vinted wardrobe to check item ${listingId} — aborting to avoid an unverified delete.`);
+      }
+      if (kast.present && kast.closed) {
+        console.log(`[Omnivaleur] bgDeleteVinted: item ${listingId} page is gone but the wardrobe says sold/ended — reporting the sale`);
+        await finaliseJob(serverUrl, job.id, "complete", { sold_on_platform: true, note: "vinted_is_closed" });
+        return;
+      }
+      if (kast.present) {
+        throw new Error(`Vinted listing ${listingId} gives "Page not found" but is still in your wardrobe — nothing was removed. Try again later.`);
+      }
+      // Weg is weg: het doel van deze stap is bereikt. Als geslaagd afmelden,
+      // zodat de herplaatsing gewoon doorloopt in plaats van dood te lopen.
+      console.log(`[Omnivaleur] bgDeleteVinted: item ${listingId} bestaat niet meer op Vinted en staat niet in de kast — als al weg afgemeld`);
+      await finaliseJob(serverUrl, job.id, "complete", { note: "already_absent" });
+      return;
     }
     if (!before?.userId) throw new Error(`Could not determine your Vinted member id on the item page — make sure you're logged into this Vinted account.`);
     if (before.present === null) throw new Error(`Could not read your Vinted wardrobe to verify item ${listingId} — aborting to avoid an unverified delete.`);

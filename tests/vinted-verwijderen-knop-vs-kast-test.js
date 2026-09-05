@@ -31,11 +31,14 @@ const ok = (naam, v, extra) => {
 
 // Eén ronde spelen. `knopGevonden` = vond de code de verwijderknop,
 // `wegNa` = staat de advertentie na afloop nog in de kast.
-async function ronde({ knopGevonden, wegNa }) {
+async function ronde({ knopGevonden, wegNa, eerste, kast }) {
+  const eersteAntwoord = eerste || { userId: "12345", present: true, closed: false };  // stond er nog
   const uitgevoerd = [];
   const gemeld = [];
   const omgeving = {
     openWorkerTab: (url, cb) => cb({ id: 7 }),
+    stuurWerkTabbladNaar: async () => {},
+    _mwVintedKast: () => {},
     waitForTabLoad: async () => {},
     sluitWerkTabblad: () => {},
     _mwVintedVerwijderen: () => {},
@@ -43,8 +46,9 @@ async function ronde({ knopGevonden, wegNa }) {
     execInTab: async (tabId, fn) => {
       uitgevoerd.push(fn);
       const n = uitgevoerd.length;
-      if (n === 1) return { userId: "12345", present: true, closed: false };   // stond er nog
-      if (n === 2) return { photo_urls: ["a.jpg"], description: "tekst" };      // momentopname
+      if (n === 1) return eersteAntwoord;
+      if (n === 2) return eersteAntwoord.httpStatus === 404 ? kast
+                                                            : { photo_urls: ["a.jpg"], description: "tekst" };
       if (n === 3) return knopGevonden                                          // de verwijderpoging
         ? { clickedDelete: true, clickedConfirm: true, venster: true }
         : { clickedDelete: false, opScherm: "menu | delen" };
@@ -80,6 +84,25 @@ async function ronde({ knopGevonden, wegNa }) {
 
   r = await ronde({ knopGevonden: true, wegNa: true });
   ok("gewoon gelukt blijft gelukt", !r.fout && r.gemeld[0]?.status === "complete", r);
+
+  console.log("\nAdvertentiepagina bestaat niet meer (404)");
+  const WEG = { userId: null, httpStatus: 404 };
+
+  r = await ronde({ eerste: WEG, kast: { userId: "12345", present: false } });
+  ok("weg én niet in de kast -> als 'al weg' afgemeld, herplaatsing loopt door",
+     !r.fout && r.gemeld[0]?.status === "complete" && r.gemeld[0]?.extra?.note === "already_absent", r);
+
+  r = await ronde({ eerste: WEG, kast: { userId: "12345", present: true, closed: true } });
+  ok("weg maar in de kast als verkocht -> verkoop melden, niet herplaatsen",
+     !r.fout && r.gemeld[0]?.extra?.sold_on_platform === true, r);
+
+  r = await ronde({ eerste: WEG, kast: { userId: null, present: null } });
+  ok("echt uitgelogd -> dan pas de inlogmelding",
+     /member id/.test(r.fout || "") && r.gemeld.length === 0, r.fout);
+
+  r = await ronde({ eerste: WEG, kast: { userId: "12345", present: null } });
+  ok("kast onleesbaar -> niets aannemen, geen afmelding",
+     /Could not read your Vinted wardrobe/.test(r.fout || "") && r.gemeld.length === 0, r.fout);
 
   console.log(mislukt === 0 ? "\nAlles goed\n" : `\n${mislukt} mislukt\n`);
   process.exit(mislukt === 0 ? 0 : 1);

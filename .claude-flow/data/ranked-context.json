@@ -7,9 +7,9 @@
       "content": "**Rule:** ALTIJD eerst het bestand lezen met Read tool voordat je iets aanpast. Gebruik ALTIJD de Edit tool (gerichte aanpassing) en NOOIT de Write tool op bestaande `.liquid` bestanden — Write overschrijft het hele bestand inclusief alle video-URLs en content die de gebruiker zelf heeft ingevuld via de Shopify admin.\n\n**Why:** De gebruiker voegt zelf video-URLs en content toe via de Shopify admin. Als ik een bestand volledig herschrijf met Write, verdwijnen alle ingevulde URLs en data. Dat is o",
       "summary": "BELANGRIJK: Nooit content overschrijven",
       "category": "shopify_workflow",
-      "confidence": 0.05,
+      "confidence": 0.1,
       "pageRank": 0.10118975125121034,
-      "accessCount": 0,
+      "accessCount": 1,
       "words": [
         "rule",
         "altijd",
