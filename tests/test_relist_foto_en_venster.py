@@ -93,7 +93,7 @@ def test_publiceren_gebruikt_een_achtergrond_tabblad_geen_eigen_venster():
     venster dat er toch al is, net als de scans. Het aparte venster is alleen nog
     het vangnet voor als er geen enkel gewoon venster open is.
     """
-    fn = BG.split("function openWorkerTab(")[1].split("\nfunction ")[0]
+    fn = BG.split("function openWorkerTab(")[1].split("\nasync function openWorkerTabInner(")[0]
     assert "openAchtergrondTabblad(url)" in fn, \
         "publiceren hoort eerst een achtergrond-tabblad te proberen"
     # het geminimaliseerde werkvenster is nog uitsluitend het vangnet
