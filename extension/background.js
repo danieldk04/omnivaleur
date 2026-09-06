@@ -1250,7 +1250,7 @@ async function pollJobsEenRonde() {
   // pending work — otherwise the backend hands us back a job we already did.
   await flushFinaliseQueue();
   const headers = await getAuthHeaders();
-  for (const platform of EXTENSION_PLATFORMS) {
+  for (const platform of await platformsOpBeurt()) {
     try {
       const res = await fetch(`${serverUrl}/api/jobs/pending?platform=${platform}`, { headers });
       if (!res.ok) continue;
