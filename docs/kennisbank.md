@@ -17,6 +17,63 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ---
 
+## werkvenster-en-afsluitvraag
+
+*06-09-2026 — "Publiceren draait sinds 06-09-2026 in een achtergrond-tabblad in het venster van de verkoper zelf, niet meer in een apart geminimaliseerd venster; werk-tabbladen worden ontwapend voor ze sluiten"*
+
+In `extension/background.js`:
+
+1. **Sinds 06-09-2026 (extensie 1.0.307)**: `openWorkerTab` — de route die ALLE
+   werk opent, ook publiceren — probeert eerst `openAchtergrondTabblad`: een
+   niet-actief tabblad in een gewoon venster dat er toch al is, precies zoals de
+   uurscans (verkoopcontrole, berichten tellen) al deden. Pas als er geen enkel
+   gewoon venster open is (Chrome draait onzichtbaar op de achtergrond) valt het
+   terug op `openWorkerTabInner`, dat nog steeds een apart geminimaliseerd
+   werkvenster maakt.
+
+   **Waarom veranderd:** van 28-08 tot 06-09 draaide publiceren in een apart
+   venster met `state: "minimized"`. Toon (Mac) meldde 06-09: "elke keer als ik
+   iets plaats valt mijn scherm weg." Op macOS pakt
+   `chrome.windows.update(id, {state:"minimized"})` geregeld het venster dat
+   vooraan staat in plaats van het venster met dat id — dat is net het venster
+   van de verkoper. De oude reden voor het aparte venster (bij elke advertentie
+   klapte een gewoon vénster open over het werk heen) gold voor een echt venster,
+   niet voor een achtergrond-tabblad: dat komt nooit naar voren. Daniel vroeg er
+   expliciet om. De hidden-tab-vertraging wordt geaccepteerd, zie
+   "verborgen-tabblad-vertraagt-wachttijden".
+
+2. **Rem tegen de macOS-bug**: `veiligOmWerkvensterTeMinimaliseren(werkId)` staat
+   voor elke `windows.update({state:"minimized"})` in `houdWerkvensterGeminimaliseerd`
+   en `scheduleWorkerWindowMinimise`. Staat er een gewoon, niet-geminimaliseerd
+   venster vooraan (`getLastFocused`), dan minimaliseren we het werkvenster NIET —
+   het is toch al onzichtbaar en de kans dat Chrome het scherm van de verkoper
+   wegklapt weegt zwaarder.
+
+3. **Bekende rest**: voor Marktplaats/2dehands `/plaats` koppelt `koppelVroeg` de
+   debugger aan het tabblad (verborgen omschrijvingsveld eist een echte
+   toetsaanslag, zie `typEchteToets`). Dat tabblad zit nu in het venster van de
+   verkoper, dus de gele balk "Omnivaleur is begonnen met foutopsporing" kan
+   tijdens een MP/2dehands-plaatsing kort bovenin zijn venster staan. Kleiner
+   kwaad dan het wegvallende scherm; in te korten door `koppelVroeg` niet vooraf
+   te laten koppelen maar `typEchteToets` laat te laten koppelen (risico: late
+   attach faalt op een volgeladen MP-pagina, targetId-terugval bestaat al).
+
+4. Geen enkel werk-tabblad wordt met een kale `chrome.tabs.remove` gesloten:
+   alles via `sluitWerkTabblad` / `stuurWerkTabbladNaar`, die eerst
+   `ontwapenAfsluitvraag` aanroepen. Het "Site verlaten?"-venstertje van een
+   Marktplaats-formulier bevriest ÓÓK het tabblad dat op dat moment een andere
+   advertentie invult (zelfde site = zelfde proces). `content/unload_guard.js`
+   (MAIN world, document_start) zet de melding pas uit als de extensie erom vraagt.
+
+**How to apply:** raakt een taak het openen/sluiten van werk-tabbladen of het
+minimaliseren van vensters, houd deze regels aan; tests in
+`tests/test_relist_foto_en_venster.py` en `tests/test_werkvensters.py`.
+Niet getest met een echte plaatsing op een Mac op 06-09-2026 (geen toegang tot
+Toons of Daniels ingelogde Chrome); de bg-tab-route zelf draait wel al weken voor
+de scans zonder klacht over wegvallende schermen.
+
+---
+
 ## leadgen-op-conversie-niet-volume
 
 *06-09-2026 — "Omnivaleur-leadgen: stem af op gemeten conversie naar betalend, niet op leadvolume; check eerst of de mailmachine draait"*
@@ -2309,34 +2366,6 @@ zonder het in de code te hebben gezien. Op 27-08-2026 stond er in een concept aa
 een lead "dat kijk ik na" voor twee dingen die gewoon in de code staan (varianten,
 WooCommerce), terwijl de echte blokkade — het vaste categoriemodel — ongenoemd
 bleef.
-
----
-
-## werkvenster-en-afsluitvraag
-
-*28-08-2026 — Publiceren draait sinds 28-08-2026 altijd in een ingeklapt werkvenster, en elk werk-tabblad wordt ontwapend voordat het sluit*
-
-Sinds 28-08-2026 (extensie 1.0.256) geldt in extension/background.js:
-
-1. `openWorkerTabInner` gebruikt ALTIJD `state: "minimized"`. Publiceren draaide
-   eerder in een gewoon venster "omdat verborgen tabbladen trager zijn"; dat
-   klapte bij elke advertentie het venster open over Daniels werk heen. De
-   vertraging wordt geaccepteerd — zie "verborgen-tabblad-vertraagt-wachttijden".
-   Niet terugdraaien zonder dat Daniel er expliciet om vraagt.
-
-2. Geen enkel werk-tabblad wordt nog met een kale `chrome.tabs.remove` gesloten:
-   alles loopt via `sluitWerkTabblad` / `stuurWerkTabbladNaar`, die eerst
-   `ontwapenAfsluitvraag` aanroepen. Reden: het "Site verlaten?"-venstertje van
-   een Marktplaats-formulier bevriest ÓÓK het tabblad dat op dat moment een
-   andere advertentie invult (zelfde site = zelfde proces). content/unload_guard.js
-   (MAIN world, document_start) doet uit zichzelf niets — hij zet de melding pas
-   uit als de extensie er zelf om vraagt.
-
-**Why:** allebei zijn ze onzichtbaar in de code maar direct zichtbaar voor de
-verkoper; een "opruimende" wijziging zou de klacht meteen terugbrengen.
-
-**How to apply:** raakt een taak het openen of sluiten van werk-tabbladen, houd
-deze twee regels aan; tests staan in tests/test_relist_foto_en_venster.py.
 
 ---
 
