@@ -112,7 +112,7 @@ def get_admin_db() -> Client:
     """
     global _admin_client
     if _admin_client is None:
-        _admin_client = create_client(settings.supabase_url, settings.supabase_key, _zonder_http2())
+        _admin_client = create_client(settings.supabase_url, settings.supabase_key)
     return _admin_client
 
 
