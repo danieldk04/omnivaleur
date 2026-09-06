@@ -1445,6 +1445,7 @@ function scheduleWorkerWindowMinimise() {
       if (tabs.some(t => !t.pinned || t.url !== KEEPER_URL)) return;
       const win = await chrome.windows.get(id);
       if (win.state === "minimized") return;
+      if (!(await veiligOmWerkvensterTeMinimaliseren(id))) return;
       await chrome.windows.update(id, { state: "minimized" }).catch(() => {});
     } catch (_) { /* niets aan de hand */ }
   }, 4000);
@@ -1654,12 +1655,33 @@ async function ontwapenAfsluitvraag(tabId) {
 // precies de twee momenten waarop de verkoper het scherm zag opklappen ("hij
 // opent nog steeds een venster, op het einde"). Deze functie kost niets als het
 // venster al klein staat en wordt daarom na elk van die momenten aangeroepen.
+// MINIMALISEREN MAG NOOIT HET VENSTER VAN DE VERKOPER RAKEN (Toon, 06-09-2026).
+//
+// Op macOS pakt chrome.windows.update(id, {state:"minimized"}) geregeld het
+// venster dat vooraan staat in plaats van het venster met dat id. Zolang ons
+// werkvenster het enige venster is (Chrome draait onzichtbaar op de achtergrond)
+// kan dat geen kwaad. Staat er wél een gewoon venster van de verkoper vooraan,
+// dan laten we ons werkvenster met rust: het is toch al onzichtbaar (het is
+// nooit gefocust) en de kans dat we per ongeluk zíjn scherm wegklappen weegt
+// niet op tegen een venster dat hij toch niet ziet.
+async function veiligOmWerkvensterTeMinimaliseren(werkId) {
+  try {
+    const laatst = await chrome.windows.getLastFocused().catch(() => null);
+    if (!laatst || laatst.id === werkId) return true;
+    if (laatst.state === "minimized") return true;
+    return false; // een gewoon venster staat vooraan — afblijven
+  } catch (_) {
+    return false;
+  }
+}
+
 async function houdWerkvensterGeminimaliseerd() {
   try {
     const id = await getWorkerWindowId();
     if (id == null) return;
     const win = await chrome.windows.get(id).catch(() => null);
     if (!win || win.state === "minimized") return;
+    if (!(await veiligOmWerkvensterTeMinimaliseren(id))) return;
     await chrome.windows.update(id, { state: "minimized", focused: false }).catch(() => {});
   } catch (_) { /* nooit een klus laten vallen om een venster */ }
 }
