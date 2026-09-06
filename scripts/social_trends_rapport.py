@@ -50,7 +50,11 @@ from social_trends_discover import (  # noqa: E402
 UITVOER = Path(__file__).parent / "output"
 ONTVANGER = "daniel@omnivaleur.nl"
 NOTION_OUDER = "3c3b0954-fb72-81e1-983a-c36ff2959359"  # pagina "Trendmotor"
-MODEL = "claude-opus-5"
+# Sonnet in plaats van Opus (06-09-2026): het wekelijkse rapport is synthese van
+# aangeleverde feiten naar een lijstje opdrachten, geen zwaar redeneerwerk. Sonnet
+# doet dat prima en is ~5x goedkoper per woord. Draait één keer per week, dus de
+# winst is klein in euro's maar het is gratis meegenomen.
+MODEL = "claude-sonnet-5"
 
 
 # ── Het archief ─────────────────────────────────────────────────────────────
