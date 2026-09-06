@@ -933,6 +933,7 @@ RUBRIEK_BEDIENBAAR = {
     "kleding-dames": "ja",
     "kleding-heren": "ja",
     "sieraden-tassen-en-uiterlijk": "ja",
+    "antiek-en-kunst": "ja",           # sinds 06-09-2026, verzendbare subrubrieken
     "spelcomputers-en-games": "ja",
     "muziek-en-instrumenten": "ja",
     "verzamelen": "ja",
