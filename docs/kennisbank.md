@@ -17,6 +17,36 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ---
 
+## mailmachine-alleen-koude-reeks
+
+*06-09-2026 — Omnivaleur-mailmachine schrijft sinds 06-09-2026 niets meer met AI; alleen koude reeks mail 1/2/3 uit sjablonen*
+
+Daniel heeft op 06-09-2026 alle AI uit `scripts/leadgen_mail.py` laten halen. De
+machine doet nog: koude reeks mail 1/2/3 uit vaste sjablonen versturen, inbox
+lezen om reacties/afmeldingen/bounces uit de reeks te halen (gratis, geen AI),
+Notion-logboek, dagbericht. Geen reply-concepten meer, geen warme opvolging, geen
+klantenservice-indeling, geen weekadvies.
+
+`_claude()` in dat script is het enige doorgeefluik naar het model (ook
+`mail_analyse` gebruikt het via `L._claude`) en gooit nu bewust een RuntimeError.
+Wil iemand AI terug, dan moet dat daar én in `tick()` teruggezet worden — niet
+zonder Daniel.
+
+**Aanleiding:** $20 API-tegoed in een paar uur leeg. De warme-opvolgronde liet
+elke 10 minuten voor tientallen leads met een al wachtend concept een Opus-tekst
+schrijven en gooide die weg (dubbelcheck stond ná het opstellen). Bovendien
+draaide alles op `claude-opus-5`, het duurste model.
+
+**Les:** een AI-aanroep in een lus die elke paar minuten draait is een
+token-tijdbom. De goedkope "hoeft dit wel?"-check hoort altijd vóór de
+modelaanroep. En sjabloonwerk hoort geen model te gebruiken.
+
+Gevolg voor de rolverdeling: het klantenservicedeel van "rolverdeling-ceo-va-developer"
+vervalt. `com.omnivaleur.devstarter` staat stil (geen buglijst). Zie ook
+"koude-mail-autonoom", "haiku-cache-ondergrens", "lean-tokengebruik".
+
+---
+
 ## werkvenster-en-afsluitvraag
 
 *06-09-2026 — "Publiceren draait sinds 06-09-2026 in een achtergrond-tabblad in het venster van de verkoper zelf, niet meer in een apart geminimaliseerd venster; werk-tabbladen worden ontwapend voor ze sluiten"*

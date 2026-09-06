@@ -5984,3 +5984,45 @@ benaderd). Gestuurd wordt op antwoordpercentage; betaald duurt maanden.
 Terug naar alleen versie A: `AB_ACTIEF = False`.
 
 Versie B door Daniel goedgekeurd op 06-09. Machine gedeployed en draait.
+
+## 06-09-2026 — mailmachine teruggebracht tot alleen de koude reeks (AI eruit)
+
+**Aanleiding.** Daniel vulde 's ochtends $20 API-tegoed aan en dat was binnen
+een paar uur op. Oorzaak: de warme-opvolgronde in `leadgen_mail.py` liet elke
+tien minuten voor tientallen leads met een al wachtend concept een Opus-tekst
+schrijven en gooide die daarna weg (dubbelcheck stond ná het opstellen). Los
+daarvan draaide alles op `claude-opus-5`, het duurste model: reply-concepten,
+stilte-opvolging, klantenservice-indeling (`mail_analyse.lezen`), herstelmails
+naar klanten en een wekelijks Opus-advies.
+
+**Besluit Daniel.** De machine hoeft geen antwoorden of concepten meer te
+schrijven, en de klantenservice-laag mag helemaal weg. Alleen mail 1, mail 2 en
+opvolgmail 3 blijven, uit vaste sjablonen, met het Notion-logboek. Tokengebruik
+zo laag mogelijk.
+
+**Wat er is veranderd (`scripts/leadgen_mail.py`, gedeployed + gepusht):**
+- `_claude()` (het enige doorgeefluik naar het model, ook voor `mail_analyse`)
+  gooit nu bewust een `RuntimeError`. Geen enkel codepad kan nog tokens opmaken.
+- `tick()` doet nog: koude reeks versturen, inbox lezen (wie antwoordt/afmeldt/
+  bounct valt uit de reeks — gratis, geen AI), jouw antwoorden verwerken, stille
+  leads afsluiten, dagbericht. Eruit: concept-opruimen, warme opvolging,
+  `mail_analyse`-blok, mailboxstand vastleggen, weekadvies, vangnetronde
+  (`wachtenden`), afsluitmails.
+- `_check_inbox` legt een binnengekomen reactie alleen nog vast en zet in Notion
+  de bal bij Daniel; het stelt geen concept meer op.
+- Dode functies (`_slim_concept`, `_stilte_concept`, `_advies_bijwerken`, enz.)
+  blijven staan maar zijn onbereikbaar; `MODEL` is niet meer in gebruik.
+
+**Gevolg voor de rolverdeling.** De eerdere afspraak "Daniel is CEO, de mailagent
+is klantenservice, Claude Code is developer, die twee praten onderling" vervalt
+voor het klantenservicedeel. Klanten mailen bugs rechtstreeks; Daniel leest de
+inbox zelf en brengt werk bij de developer. `CLAUDE.md` stap 3 is hierop
+aangepast. LaunchAgent `com.omnivaleur.devstarter` staat stil (geen buglijst).
+De koude-mailmachine (`com.omnivaleur.leadgen`, elke 10 min op de Mac) blijft
+gewoon draaien.
+
+**Zekerheid.** Testsuite groen op de twee storingen na die al vóór deze wijziging
+faalden (`test_storingen_doven_uit`, `test_stuck_publish_recovery`, allebei
+niet mail-gerelateerd). Niet gemeten met echt API-verkeer want het tegoed staat
+op nul; het mechanisme is wel bewezen uit het logboek (`tick.log`: dezelfde ~35
+adressen elke ronde, elk met een mislukte modelaanroep).
