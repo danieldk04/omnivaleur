@@ -17,6 +17,39 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ---
 
+## leadgen-op-conversie-niet-volume
+
+*06-09-2026 — "Omnivaleur-leadgen: stem af op gemeten conversie naar betalend, niet op leadvolume; check eerst of de mailmachine draait"*
+
+Meting 06-09-2026 (Notion-Leadlist ↔ Supabase auth + subscriptions, match op
+e-mail): van de 5 echte betalende Omnivaleur-klanten komen er 4 uit de leadgen,
+allemaal uit sieraden of kleding; de 5e (organisch) verkoopt ook kleding. Wat ze
+echt verkopen is kleding, sieraden en **antiek** (zilverwebsite: 144 antiek-items)
+en muziekinstrumenten (papas-plectrums). Samen ~250 leads uit audio-tv-foto,
+games, computers, verzamelen, boeken, telecom en sport gaven 0 aanmeldingen en 0
+betalend in een maand. Instagram + Facebook: 171 leads, 0 klanten (IG-account
+bovendien geblokkeerd).
+
+Gevolg in `scripts/leadgen_marktplaats.py`: `CATEGORIES` smal gezet op
+kleding/sieraden/muziek/antiek(+games/verzamelen op proef). Antiek-en-kunst (l1=1)
+draait zonder kale L1-sweep, alleen `SUBRUBRIEK_ALLEEN` (29 verzendbare
+subrubriek-id's, geen meubels). audio + telecom gepauzeerd; computers/boeken/sport
+geschrapt (geen dashboard-categorie → publiceren loopt altijd vast).
+
+**Belangrijkste les:** vóór je de leadgen bijstelt, controleer of de
+koude-mailmachine überhaupt draait. Op 06-09 bleek `com.omnivaleur.leadgen.plist`
+al sinds 20-08 hernoemd naar `.plist.uit` (`tick.log` stopt 20-08 11:03) — 17
+dagen lang werden leads gescrapet en in Notion gezet maar kreeg niemand mail.
+Categorieën tunen op een uitgezette machine verandert niets.
+
+Kosten: MP-scrape €0 (gratis interne zoek-API, geen Apify), classify ~$0,50/ronde
+Haiku, mail ~€0 via de bestaande Zoho-mailbox. Cash-CAC ≈ €1/klant. Churn is niet
+te meten want geen betalende klant bestaat lang genoeg. Zie
+"leadgen-marktplaats-beste-bron", "marktplaats-rubrieken-uitgeput",
+"instagram-ban-augustus-2026", "groepsoordeel-maakt-model-strenger".
+
+---
+
 ## scan-mag-lopende-herplaatsing-niet-afsluiten
 
 *06-09-2026 — Een scan-momentopname kan ouder zijn dan een lopende herplaatsing; dan sloot _store_scan_results de herplaatsopdracht af en verdween het artikel*
