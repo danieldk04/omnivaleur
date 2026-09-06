@@ -17,6 +17,116 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ---
 
+## marktplaats-rubrieken-uitgeput
+
+*06-09-2026 — Dieper sweepen in de bestaande rubrieken levert vrijwel niets meer op; alleen nieuwe rubrieken geven nog nieuwe verkopers*
+
+De leadgen-skill zegt: wil je meer volume, verhoog dan eerst `--depth` naar 5000.
+Op 06-09-2026 gemeten klopt dat niet meer. Steekproef in precies de diepte die nu
+wordt overgeslagen (offset 2000-4000, 3 subcategorieën per rubriek, alle elf
+rubrieken): **4.647 advertenties, 900 zakelijke verkopers, 3 nieuwe.** De elf
+rubrieken zijn uitgeput.
+
+Nieuwe rubrieken wél. Zelfde soort steekproef, ~1.200 advertenties elk:
+
+| rubriek | id | nieuwe verkopers |
+|---|---|---|
+| huis-en-inrichting | 504 | 47 |
+| tuin-en-terras | 1847 | 32 |
+| dieren-en-toebehoren | 395 | 26 |
+| hobby-en-vrije-tijd | 1099 | 16 |
+| postzegels-en-munten | 1784 | 10 |
+| antiek-en-kunst | 1 | 8 |
+| kinderen-en-baby-s | 565 | 5 |
+| cd-s-en-dvd-s | 1744 | 5 |
+
+Let op de spanning: huis-en-inrichting en tuin staan er bewust NIET in omdat banken
+en kasten niet verzendbaar zijn, en de classificatieprompt wijst meubel- en
+interieurhandel expliciet af. Ze toevoegen levert dus veel nieuwe verkopers op die
+daarna alsnog worden afgewezen. Dat is geld noch tijd waard tenzij het dashboard
+zijn tak "wonen, tuin en interieur" echt kan bedienen. Dat is een keuze voor Daniel,
+geen technische.
+
+De id's zijn geoogst uit `searchCategory` in de HTML van `/l/{slug}/`, nooit
+gegokt: de bekende 621 (kleding-dames) en 565 (kinderen) kwamen er als controle
+goed uit. Zie "marktplaats-category-ids".
+
+---
+
+## pixel-op-verzenddomein
+
+*06-09-2026 — De open-pixel in koude mail laadde van het productdomein en koppelde zo de reputatie van wachtwoord- en factuurmail aan koude acquisitie*
+
+Koude mail gaat bewust vanaf `daniel@omnivaleur.nl` via Zoho, en de transactionele
+mail van de app vanaf `info@omnivaleur.com` via Resend. Aparte domeinen, aparte
+aanbieders, precies zoals "railway-blokkeert-smtp" voorschrijft.
+
+Die scheiding lekte. Mail 2 en mail 3 dragen een onzichtbare open-pixel, en die
+stond op `https://omnivaleur.com/t/o/{code}`. Elke koude mail die geopend werd haalde
+dus een plaatje op bij het productdomein: 467 mails lang. Een spamfilter dat die
+koude mails laag waardeert, koppelt dat aan omnivaleur.com, en dat is het domein
+waarmee wachtwoord- en factuurmail wordt verstuurd.
+
+Een LINK naar de site is niet hetzelfde probleem: die wordt alleen geladen als
+iemand klikt. De pixel laadt vanzelf, bij iedere opening.
+
+Opgelost 06-09-2026: de pixel wijst nu naar `https://omnivaleur.nl`. Dat domein
+draait dezelfde route (gemeten: HTTP 200, image/gif), dus het meten van openingen
+werkt gewoon door en er hoefde niets gebouwd te worden.
+
+Les die breder geldt: bij het scheiden van domeinen tellen niet alleen de
+afzenderadressen maar élke bron die de mail automatisch ophaalt.
+
+---
+
+## groepsoordeel-maakt-model-strenger
+
+*06-09-2026 — Meerdere leads in één prompt beoordelen maakt het model vergelijkend en strenger; het wees een betalende klant af*
+
+Twintig verkopers achter één promptkop hangen is de goedkope manier om die kop niet
+twintig keer te betalen: 65% minder kosten, en het werkte technisch feilloos
+(alle twintig kwamen genummerd terug, nul terugval).
+
+Toch mag het niet. Gemeten tegen 60 verkopers die al los beoordeeld waren, week het
+groepsoordeel 17 keer af en altijd dezelfde kant op: strenger. Het model gaat de
+verkopers onderling vergelijken en verzint drempels die nergens in de prompt staan
+("te weinig advertenties (296)").
+
+De doorslag gaf de toets tegen de werkelijkheid: van de zes verkopers die echt een
+account aanmaakten wees het groepsoordeel er drie af, waaronder **De Juiste Toon,
+een betalende klant**. Een besparing van een paar euro die je beste klanttype uit de
+lijst gooit is geen besparing.
+
+**Werkwijze die dit ving:** niet "komt het oordeel overeen" als maatstaf nemen, maar
+"herkent het nog de mensen die klant zijn geworden". Voor elk filter dat je slimmer
+of goedkoper maakt is dát de proef. Zie ook "bewijs-moet-onderscheiden" en
+"haiku-cache-ondergrens".
+
+---
+
+## haiku-cache-ondergrens
+
+*06-09-2026 — Prompt caching doet niets bij Haiku als de vaste kop onder ~4096 tokens blijft; je merkt er niets van, het kost gewoon vol tarief*
+
+Bij de leadgen-classificatie is 90% van de prompt (3.090 van de 3.440 tokens) een
+vaste kop: de instructies plus de categorieboom. Die stond bij elke verkoper
+opnieuw in de rekening, dus `cache_control` erop leek gratis geld.
+
+Gemeten op 06-09-2026 met `claude-haiku-4-5-20251001`:
+
+    kop van 2.015 tokens → cache_creation=0, cache_read=0   (niets gebeurd)
+    kop van 7.604 tokens → cache_creation=7604, daarna read=7604
+
+De ondergrens ligt dus boven onze kop. Er komt géén foutmelding: de API accepteert
+`cache_control` netjes, zet stilletjes niets in de cache en rekent het volle tarief.
+Precies dezelfde soort stille mislukking als "anthropic-sdk-pin-valstrik".
+
+Wil je weten of caching écht werkt, kijk dan altijd naar
+`usage.cache_creation_input_tokens` en `usage.cache_read_input_tokens` in een
+echte aanroep. Blijven die op nul, dan doet je "besparing" niets.
+
+---
+
 ## kanalen-om-de-beurt
 
 *06-09-2026 — "Marktplaats stond altijd vooraan in de pollronde, dus 2dehands (en Vinted, Facebook) kwamen bij een volle rij nooit aan bod"*

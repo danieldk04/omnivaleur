@@ -1861,6 +1861,20 @@ def _is_afsluiting(tekst: str) -> bool:
     return bool(_AFSLUITZINNEN.search(_kern_tekst(tekst or "")))
 
 
+# De pixel laadt van het VERZENDdomein, niet van het productdomein.
+#
+# Hij stond op omnivaleur.com. Dat is het domein waarmee Resend de wachtwoord- en
+# factuurmails van de app verstuurt, en juist daarom mag koude mail daar niet aan
+# vastzitten: een spamfilter dat 467 koude mails ziet die allemaal een plaatje van
+# omnivaleur.com ophalen, koppelt dat domein aan die mails. Een lek in de scheiding
+# die er expres is. Een LINK naar de site is iets anders: die wordt alleen geladen
+# als iemand klikt, de pixel laadt bij elke opening vanzelf.
+#
+# omnivaleur.nl draait dezelfde route (gemeten: HTTP 200, image/gif), dus dit kost
+# geen enkele voorziening en het meten blijft gewoon werken.
+PIXEL_HOST = "https://omnivaleur.nl"
+
+
 def _open_pixel_html(adres: str, kern: str, laag: str = "opvolg") -> str:
     """HTML-versie van de tekst met een onzichtbare pixel erin. Regeleindes
     worden letterlijk overgenomen zodat het er in een mailprogramma hetzelfde
@@ -1878,7 +1892,7 @@ def _open_pixel_html(adres: str, kern: str, laag: str = "opvolg") -> str:
     veilig = (kern.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
                   .replace("\n", "<br>"))
     return (f'<html><body style="font-family:sans-serif;white-space:pre-wrap">{veilig}'
-            f'<img src="https://omnivaleur.com/t/o/{code}" width="1" height="1" '
+            f'<img src="{PIXEL_HOST}/t/o/{code}" width="1" height="1" '
             f'style="display:none" alt=""></body></html>')
 
 WARM_OPVOLG = [
