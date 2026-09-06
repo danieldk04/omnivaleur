@@ -2434,32 +2434,20 @@ MODEL = "claude-opus-5"
 
 
 def _claude(client, **kw):
-    """Eén doorgeefluik voor elke Claude-aanroep in dit script.
+    """AI STAAT UIT. Daniel, 06-09-2026.
 
-    WAAROM DIT BESTAAT. Op 27-08-2026 kregen alle drie de aanroepen er
-    `output_config={"effort": ...}` bij. Die parameter bestaat pas in een recente
-    SDK, en op de server stond `anthropic==0.34.2` vastgezet (september 2024).
-    Elke aanroep gooide daar een TypeError, die netjes werd opgevangen — en
-    vanaf dat moment kreeg iedere lead in stilte de standaard verkoopmail in
-    plaats van een echt antwoord. Niemand zag het, want een opgevangen fout
-    ziet er precies zo uit als "even geen antwoord".
+    De mailmachine schrijft geen antwoorden of concepten meer, alleen de koude
+    reeks mail 1/2/3 uit vaste sjablonen. Elke aanroep hierheen zou tokens kosten
+    zonder dat er iets mee gebeurt — precies wat het API-tegoed leeg liet lopen.
+    Daarom faalt hij hier bewust. Elke aanroeper vangt dit al op als "geen tekst"
+    en valt terug op het sjabloon of doet niets.
 
-    De pin is inmiddels bijgewerkt, maar dat mag niet het enige slot zijn: draait
-    dit script ergens met een oudere SDK, dan probeert hij het hier gewoon
-    opnieuw zónder de parameter die niet bestaat, en zegt luid wat er aan de hand
-    is. Beter een iets minder goed antwoord dan stilletjes geen antwoord.
+    De oude doorgeef-logica staat in de git-historie; wil je AI terug, zet die
+    hier terug én zet de aanroepen in tick() terug. Doe dat niet zonder Daniel.
     """
-    try:
-        return client.messages.create(**kw)
-    except TypeError as e:
-        onbekend = re.search(r"unexpected keyword argument '([^']+)'", str(e))
-        if not onbekend or onbekend.group(1) not in kw:
-            raise
-        naam = onbekend.group(1)
-        print(f"  !! de geïnstalleerde anthropic-SDK kent '{naam}' niet — "
-              f"opnieuw zonder. Werk de pin in requirements.txt bij.")
-        _LLM_REDEN.append(f"SDK te oud voor '{naam}'")
-        return client.messages.create(**{k: v for k, v in kw.items() if k != naam})
+    raise RuntimeError(
+        "AI-tekst staat uit — de mailmachine draait alleen nog de koude "
+        "sjabloonreeks (mail 1/2/3)")
 
 
 # ─────────────────────────────────────────────────────────────────────────────
