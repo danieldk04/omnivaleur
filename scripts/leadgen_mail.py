@@ -4653,30 +4653,21 @@ def tick(args) -> None:
             plan["gedaan"] = verlopen      # niemand beschikbaar: slot laten vervallen
             _save_plan(plan)
 
-    # EERST OPRUIMEN, DAN PAS SCHRIJVEN. Dit stond onderaan de ronde, en dat gaf
-    # twee problemen. Het opruimen werd niet meer bereikt als de ronde onderweg
-    # werd afgekapt — dat is waarom er op 29-08-2026 drie concepten voor dezelfde
-    # persoon bleven liggen. En sinds het slot weigert te schrijven zodra er al
-    # een concept ligt, zou een achterhaald concept (allang verstuurd, of weken
-    # oud) een nieuw en wél nodig antwoord voorgoed tegenhouden. Weg met wat niet
-    # meer telt, en pas daarna kijken wat er nog geschreven moet worden.
-    try:
-        opgeruimd = _ruim_concepten_op()
-        if opgeruimd:
-            print(f"{datetime.now():%d-%m %H:%M} — {opgeruimd} achterhaald concept opgeruimd")
-    except Exception as e:  # noqa: BLE001 — opruimen mag de ronde nooit stoppen
-        print(f"  (concepten niet opgeruimd: {e})")
+    # ALLEEN NOG DE KOUDE REEKS. Daniel, 06-09-2026: de machine schrijft geen
+    # antwoorden en geen concepten meer, en er is geen klantenservicelaag meer.
+    # Wat overblijft is mail 1, mail 2 en opvolgmail 3 uit vaste sjablonen, met
+    # Notion-logboek. Alle AI is eruit — dat kostte tokens en dat was de reden
+    # dat het API-tegoed leegliep. Wat hier nog draait is puur meelezen (geen
+    # kosten): wie antwoordt of zich afmeldt valt uit de reeks, bounces stoppen.
 
-    # Elke beurt de inbox nakijken. Dit stond eerst op één keer per dag om 13:00,
-    # maar dan blijft een reactie van 's avonds een etmaal liggen — en juist bij
-    # een warme reactie telt elk uur. Zo valt iemand die antwoordt ook meteen uit
-    # de opvolging in plaats van pas de volgende dag.
+    # Elke beurt de inbox nakijken. Zo valt iemand die antwoordt meteen uit de
+    # reeks in plaats van pas de volgende dag.
     if state:
         try:
-            # Veertien dagen terugkijken, niet vier. Elk antwoord wordt maar één keer
-            # verwerkt (de administratie onthoudt dat), dus verder terugkijken kost
-            # niets en vangt wél de antwoorden op die binnenkwamen terwijl de machine
-            # stilstond of terwijl er nog geen indeling in nee/concurrent bestond.
+            # Veertien dagen terugkijken: elk antwoord wordt maar één keer
+            # verwerkt (de administratie onthoudt dat), dus verder terugkijken
+            # kost niets en vangt wél antwoorden op die binnenkwamen terwijl de
+            # machine stilstond.
             nieuw, afgemeld, bounces = _check_inbox(state, boek, dagen=14)
             print(f"{datetime.now():%d-%m %H:%M} — inbox: {nieuw} antwoorden, "
                   f"{afgemeld} afmeldingen, {bounces} bounces")
@@ -4686,13 +4677,6 @@ def tick(args) -> None:
         if not plan.get("gecheckt"):
             plan["gecheckt"] = True
             _save_plan(plan)
-        try:
-            afsluit = _afsluitmails(state, boek)
-            if afsluit:
-                print(f"{datetime.now():%d-%m %H:%M} — {afsluit} afsluitmail(s) verstuurd")
-        except Exception as e:  # noqa: BLE001 — dit mag de ronde niet stoppen
-            print(f"  (afsluitmail niet verstuurd: {e})")
-            plan.setdefault("fouten", []).append(f"afsluitmail: {e}")
 
         try:
             eigen = _jouw_antwoorden_verwerken(state, boek)
@@ -4701,47 +4685,6 @@ def tick(args) -> None:
                       f"hebt geantwoord → bal bij hen")
         except Exception as e:  # noqa: BLE001 — mag de ronde niet stoppen
             print(f"  (jouw antwoorden niet gelezen: {e})")
-
-        try:
-            warm = _warme_opvolging(state, boek)
-            if warm:
-                print(f"{datetime.now():%d-%m %H:%M} — {warm} warme lead(s) stilgevallen "
-                      f"→ opvolging klaargezet in je concepten")
-        except Exception as e:  # noqa: BLE001
-            print(f"  (warme opvolging mislukt: {e})")
-
-        # DE KLANTENSERVICEMEDEWERKER HOUDT BIJ WAT ER SPEELT.
-        #
-        # Alle post, in- en uitgaand, wordt gelezen en ingedeeld; storingen worden
-        # gebundeld tot patronen; wat echt bij Daniel hoort komt op zijn lijst in
-        # het dashboard. En wie een storing meldde die inmiddels gerepareerd is,
-        # krijgt daar bericht over. Zie scripts/mail_analyse.py en de rolverdeling
-        # in docs/team-notes.md: Daniel hoort geen mail te lezen om te weten wat
-        # er speelt, en de klantenservice en de developer praten onderling.
-        try:
-            import mail_analyse
-            uitkomst = mail_analyse.lezen(argparse.Namespace())
-            if uitkomst.get("gelezen"):
-                print(f"{datetime.now():%d-%m %H:%M} — {uitkomst['gelezen']} bericht(en) "
-                      f"beoordeeld, {uitkomst['escalaties']} voor jou")
-            # EERST UITDOVEN, DAN TERUGKOPPELEN. Andersom zou een melding die al
-            # weken niet meer speelt alsnog een mail opleveren aan iemand die er
-            # niet meer op zit te wachten.
-            uitgedoofd = mail_analyse.laat_verlopen_uitdoven()
-            if uitgedoofd:
-                print(f"{datetime.now():%d-%m %H:%M} — {uitgedoofd} melding(en) "
-                      f"uitgedoofd: speelden niet meer")
-            terug = mail_analyse.bericht_over_reparaties()
-            if terug:
-                print(f"{datetime.now():%d-%m %H:%M} — {terug} klant(en) bericht over "
-                      f"een reparatie klaargezet")
-        except Exception as e:  # noqa: BLE001 — mag de ronde nooit stoppen
-            print(f"  (post niet beoordeeld: {e})")
-
-        try:
-            _leg_mailboxstand_vast()
-        except Exception as e:  # noqa: BLE001 — mag de ronde nooit stoppen
-            print(f"  (mailboxstand niet vastgelegd: {e})")
 
         try:
             _stapel_melden(plan)
@@ -4754,41 +4697,8 @@ def tick(args) -> None:
                   f"geen reactie na alle opvolgmails")
         _opruimen(state)
 
-    # Aan het eind van de dag één berichtje: wat er is gebeurd, of er iets mis
-    # ging, en of de machine tussendoor stil heeft gestaan. Zolang dit elke avond
-    # binnenkomt weet Daniel dat de machine leeft; blijft het uit, dan is dát het
-    # signaal. Volledig sluitend is het niet — staat de Mac uit, dan draait er
-    # niets en komt er ook geen bericht. Het gat wordt dan de volgende dag gemeld.
-        # Eén keer per week (of eerder bij een duidelijk patroon) de campagne
-        # doorrekenen. _advies_bijwerken bepaalt zelf of het aan de beurt is.
-        try:
-            _advies_bijwerken(state)
-        except Exception as e:  # noqa: BLE001 — analyse mag de ronde nooit stoppen
-            print(f"  (mailanalyse mislukt: {e})")
-
-    # Sinds er geen sjabloon-vangnet meer is, betekent elke storing hier: er ligt
-    # GEEN concept en dat bericht wacht in het postvak op Daniel zelf. Dat mag
-    # nooit stil blijven, dus de reden gaat mee — anders staat er alleen een
-    # aantal en begint het zoeken opnieuw.
-    if _LLM_TERUGVAL["aantal"]:
-        redenen = ", ".join(dict.fromkeys(_LLM_REDEN))[:200] or "onbekend"
-        plan.setdefault("fouten", []).append(
-            f"{_LLM_TERUGVAL['aantal']}x GEEN concept kunnen schrijven — die mails "
-            f"wachten op jou in het postvak. Reden: {redenen}")
-
-    # Eén keer per dag de vangnetronde: wie heeft het laatst geschreven en heeft
-    # nog steeds geen concept? `check` kijkt alleen naar NIEUWE post, dus wie daar
-    # één keer doorheen glipt komt er nooit meer in. Op 27-08-2026 waren dat er
-    # vier tegelijk, waaronder Borstelbeer — die stonden dagen te wachten zonder
-    # dat iets of iemand het merkte. Dit is bewust een aparte, tragere ronde: hij
-    # leest twee hele mappen door en dat hoeft niet elk half uur.
-    if not plan.get("wachtenden_gedaan") and nu >= "19:30":
-        try:
-            wachtenden(argparse.Namespace(dry_run=False))
-        except Exception as e:  # noqa: BLE001 — vangnet mag de ronde nooit stoppen
-            print(f"  (wachtendencontrole mislukt: {e})")
-        plan["wachtenden_gedaan"] = True
-        _save_plan(plan)
+    # Aan het eind van de dag één berichtje: wat er is gebeurd en of er iets mis
+    # ging. Zolang dit elke avond binnenkomt weet Daniel dat de machine leeft.
 
     if not plan.get("gerapporteerd") and nu >= "20:45":
         _dagbericht(state, plan)
