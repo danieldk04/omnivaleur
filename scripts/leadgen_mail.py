@@ -1044,8 +1044,8 @@ class Notion:
                   "De regels onder aan elke leadpagina zijn wel gewoon geschreven.")
 
 
-def _bericht(lead: dict, n: int, van: str) -> EmailMessage:
-    onderwerp, sjabloon = _onderwerp(lead, n), _beurten(lead)[n][2]
+def _bericht(lead: dict, n: int, van: str, st: dict | None = None) -> EmailMessage:
+    onderwerp, sjabloon = _onderwerp(lead, n, st), _beurten(lead, st)[n][2]
     msg = EmailMessage()
     msg["From"] = f"{AFZENDER_NAAM} <{van}>"
     msg["To"] = lead["email"]
