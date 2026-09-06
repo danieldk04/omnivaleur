@@ -5890,3 +5890,50 @@ tests), plus de 6 bestaande scan/herplaats-suites groen.
 **Daniels artikel hersteld:** de herplaatsopdracht (`f9a59d9c`) weer op `pending`
 gezet en de rij terug op `relisting`. Zijn extensie plaatst hem opnieuw zodra
 Chrome openstaat; dan krijgt hij een vers advertentienummer en klopt de link.
+
+## 06-09-2026 — Leadgen op conversie gezet, en de koude mail blijkt al 17 dagen uit
+
+Daniel: *"ik wil de leadgen laten draaien op de allerbestwerkende categorieën ...
+optimaliseren naar de allerhoogste kans per lead dat deze een betaald abonnement
+neemt. Kleding test ik zelf het meest, die wil ik er wel in."* Dit vervangt de
+insteek van Besluit 1 (rubrieken toevoegen voor volume).
+
+**Gemeten** (Notion-Leadlist gekoppeld aan Supabase auth + subscriptions, match op
+e-mail). Van de 5 échte betalende klanten (6 minus Daniels testaccount):
+- 4 komen aantoonbaar uit de leadgen, allemaal uit de scrape van 10-08: sieraden
+  ×2 (zilverwebsite, papas-plectrums), kleding-heren ×1 (dejuistetoon),
+  kleding-dames ×1 (amandahaas). De 5e (albinmooi, organisch) verkoopt óók kleding.
+- Wat ze in werkelijkheid verkopen: zilverwebsite is voor 144 van zijn artikelen
+  **antiek**, papas-plectrums muziekinstrumenten. De scrape-rubriek en de echte
+  voorraad lopen dus uiteen.
+- **0 aanmeldingen en 0 betalend** uit samen ~250 leads in audio-tv-foto (64!),
+  games (58), computers (45), verzamelen (25), boeken (23), telecom (18), sport (7).
+- Instagram + Facebook: 171 leads, 0 aanmeldingen, 0 betalend. IG-account is
+  geblokkeerd sinds ~09-08. Kost Apify-credits, levert niets.
+
+**Aangepast in `scripts/leadgen_marktplaats.py`:**
+- `CATEGORIES` teruggebracht tot kleding-dames/-heren, sieraden, muziek, verzamelen,
+  games (laatste twee op proef) en **nieuw antiek-en-kunst (l1=1)**.
+- Antiek draait zonder de kale L1-sweep, alleen een allowlist van 29 verzendbare
+  subrubriek-id's (`SUBRUBRIEK_ALLEEN`), id's nagelopen tegen de live breadcrump.
+- audio-tv-en-foto + telecommunicatie **gepauzeerd** (reversibel, met datum).
+- computers-en-software, boeken, sport-en-fitness **geschrapt** (de tool heeft er
+  geen dashboard-categorie voor; publiceren liep er altijd op vast).
+`tests/test_leadgen_filter.py` groen (15).
+
+**Belangrijkste vondst, los van de categorieën:** de koude-mailmachine op de Mac
+staat sinds **20-08** uit. `com.omnivaleur.leadgen.plist` is die dag hernoemd naar
+`.plist.uit` en nooit teruggezet; `tick.log` stopt op 20-08 11:03. De ~786 mails
+van 10 t/m 20 augustus leverden de 4 betalende leadgen-klanten op; sindsdien
+worden leads wel gescrapet en in Notion gezet maar krijgt niemand mail. Categorieën
+bijstellen verandert niets zolang die machine uit staat. Weer aanzetten is Daniels
+besluit (`launchctl load`); de pixel-domeinfout die een reden was om te pauzeren
+is vandaag gerepareerd.
+
+**Kosten / LTV-CAC** (aan Daniel gerapporteerd): MP-scrape kost €0 (gratis interne
+zoek-API), classify ~$0,50 per ronde Haiku, mail ~€0 via de bestaande Zoho-mailbox.
+Cash-CAC ≈ €1 per klant; met begeleidingstijd meegerekend ~€12–15. LTV bij €19,99
+incl. btw ≈ €90–100 contributie *als* je 6 maanden levensduur aanneemt — churn is
+niet te meten, geen enkele betalende klant heeft lang genoeg bestaan. LTV/CAC dus
+ergens tussen 6:1 en 75:1; de rem is niet het geld maar de uitgezette machine en
+de dunne voorraad goede leads in de juiste categorieën.
