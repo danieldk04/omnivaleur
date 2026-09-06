@@ -5496,3 +5496,165 @@ is dus al die tijd een 404 geweest: de uurlijkse controle op Vinted-verkopen
 heeft nooit gedraaid. Alleen scans na een mislukte publicatie of na een klik
 komen er door. Repareren betekent hourly scans voor iedereen, dus eerst met
 Daniel bespreken.
+
+## 06-09-2026 — Opdracht aan de tweede ontwikkelaar: nieuwe rubrieken, terughaalcampagne, valse inlogmelding
+
+Daniel heeft op 06-09-2026 drie besluiten genomen naar aanleiding van de meting
+hieronder. Hij wijst het werk toe aan de tweede ontwikkelaar. Dit blok is de
+opdracht: alles wat je nodig hebt staat erin, je hoeft het gesprek niet terug te
+lezen.
+
+### De metingen waar deze besluiten op rusten
+
+Gemeten op 06-09-2026 tegen de live database en de echte Marktplaats-API, niet
+geschat.
+
+**Dieper zoeken in de bestaande rubrieken is dood.** Precies de diepte die de
+huidige `--depth 2000` overslaat is doorzocht: 4.647 advertenties, 900 zakelijke
+verkopers, **3 nieuwe**. De leadgen-skill adviseert `--depth 5000` als eerste
+stap voor meer volume; dat advies klopt niet meer en is achterhaald door deze
+meting. De elf rubrieken in `CATEGORIES` zijn uitgeput.
+
+**Nieuwe rubrieken leveren wel op.** Per ongeveer 1.200 bemonsterde
+advertenties, nieuwe verkopers die nog niet in `mp_sellers.json` stonden:
+
+| rubriek | l1 | nieuw |
+|---|---|---|
+| huis-en-inrichting | 504 | 47 |
+| tuin-en-terras | 1847 | 32 |
+| dieren-en-toebehoren | 395 | 26 |
+| hobby-en-vrije-tijd | 1099 | 16 |
+| postzegels-en-munten | 1784 | 10 |
+| antiek-en-kunst | 1 | 8 |
+| kinderen-en-baby-s | 565 | 5 |
+| cd-s-en-dvd-s | 1744 | 5 |
+
+**Beoordelen kost €0,0036 per verkoper** (Haiku 4.5, 3.497 invoertokens, 180 tot
+240 uitvoertokens, één aanroep per verkoper). Alle andere stappen zijn gratis.
+Twee pogingen om dat goedkoper te maken zijn gemeten en **afgekeurd**, niet
+opnieuw proberen:
+
+1. *Prompt caching op de vaste kop.* Doet stil niets. Haiku weigert een prefix
+   van 2.015 tokens op te slaan en accepteert er één van 7.604; onze kop zit met
+   3.090 tokens ertussenin. Er komt geen foutmelding, `cache_creation_input_tokens`
+   blijft gewoon 0. Zie geheugenbestand `haiku-cache-ondergrens`.
+2. *Twintig verkopers in één prompt.* 65% goedkoper en technisch foutloos, maar
+   het model wordt vergelijkend en daardoor strenger: 17 van 60 oordelen kantelden,
+   allemaal naar afwijzen, waaronder djt@dejuistetoon.eu, een betalende klant. Zie
+   `groepsoordeel-maakt-model-strenger`.
+
+**Het product werkt aantoonbaar beter.** Mislukte opdrachten per week: 94,5%
+(week 26), 55,6% (24 t/m 30 aug), **11,7%** (31 aug t/m 6 sep). Per klant
+bevestigd, dus geen gemiddelde die iets verbergt: zilverwebsite 65% naar 2% over
+728 opdrachten, djt 37% naar 18%, amanda 23% naar 13%. Uitzondering:
+papas-plectrums ging van 68% naar 97% en zit vast op een 2dehands-inlogprobleem.
+
+**Van de 5.305 opdrachten mislukten er 1.728.** Oorzaken: 23,8% gekoppelde
+verwijdering mislukt, 14,5% computer stond meer dan 3 dagen uit, 12,5% leeg of
+rood veld, 5,0% formulier ging nooit open, **2,9% valse melding "je bent niet
+ingelogd"**. Die laatste is maar 51 opdrachten, maar verspreid over **13
+verschillende klanten**, en het is het eerste wat een nieuwe gebruiker tegenkomt.
+Breedte, niet aantal, maakt dit de belangrijkste.
+
+### Besluit 1: rubrieken toevoegen, maar alleen wat hij kan bedienen
+
+Daniel: *"ja, maar alleen degene die ik op dit moment kan bedienen."*
+
+Huis-en-inrichting en tuin staan er bewust niet in omdat een bank niet in een
+doos gaat. Dat is nog steeds waar op rubriekniveau, maar niet op
+subrubriekniveau: woondecoratie, verlichting, servies, textiel, gereedschap en
+tuindecoratie zijn wel verzendbaar. De hele l1 toevoegen levert honderden namen
+op die de beoordelaar daarna weggooit, en je betaalt voor elke afwijzing.
+
+Bouw dus geen extra regel in `CATEGORIES` bij, maar een **toegestane
+subrubriekenlijst per rubriek**, en sla voor die rubrieken de kale l1-sweep over
+(nu regel 143 in `scripts/leadgen_marktplaats.py`, die zonder l2 sweept). Zonder
+dat blijft de bankenhandel gewoon binnenlopen.
+
+De subrubriek-ID's mag je **niet gokken**. Haal ze uit `searchCategory` in de
+HTML van `https://www.marktplaats.nl/l/{slug}/`; `_subcategories()` doet dat al.
+Controleer daarna altijd het weergegeven kruimelpad, want HTTP 200 betekent niet
+dat je de goede rubriek te pakken hebt (1032 lijkt kleding maar is Huizen en
+Kamers). Zie geheugenbestand `marktplaats-category-ids`.
+
+Doe hetzelfde voor dieren-en-toebehoren (dierbenodigdheden wel, levende dieren
+niet) en hobby-en-vrije-tijd. Postzegels, antiek en cd-s-en-dvd-s zijn in hun
+geheel verzendbaar en kunnen gewoon als rubriek erbij.
+
+### Besluit 2: de terughaalcampagne mag gebouwd worden
+
+Daniel: *"ja."* Met daarbij de belangrijkste sturing van het hele gesprek:
+
+> *"ik wil mensen naar het platform halen waarvan ik het zekerst weet dat het
+> voor hen werkt. zelf verkoop ik kleding en loop ik zelden meer tegen echt
+> grote problemen aan."*
+
+Dat is een aanscherping die vóór het bouwen gemeten moet worden en niet
+aangenomen: **breek het mislukkingspercentage van de laatste week uit naar de
+categorie van het artikel** (`items` gekoppeld aan `jobs` via item_id) en kijk of
+kleding daar inderdaad bovenaan staat. Blijkt dat zo, dan is dat het argument
+voor de mail én het filter voor de nieuwe leads: eerst de kledinghandelaren,
+daarna de rest. Blijkt het niet zo, meld dat aan Daniel voordat je iets
+verstuurt, want dan is de aanname die onder de campagne ligt onjuist.
+
+Van de 44 slapende accounts zijn er 12 van Daniel zelf of testaccounts. De 25
+echte klanten vallen in drie groepen die elk iets anders nodig hebben, dus **niet
+één mail voor iedereen**:
+
+- **A, drie mensen die het serieus probeerden en toch weggingen.**
+  info@retrogameking.com voerde 1.167 artikelen in, kreeg bij 14 van zijn 18
+  opdrachten "je bent niet ingelogd bij Marktplaats", heeft nooit één advertentie
+  geplaatst gekregen en vertrok op 22 augustus. Daarnaast steentjesmeester (49
+  artikelen) en jordi.waning (34). Deze drie krijgen een persoonlijke mail met
+  hun eigen cijfer erin en een oprecht excuus.
+- **B, elf mensen bij wie op dag één alles misging.** Vijf daarvan hadden 100%
+  mislukte opdrachten en waren dezelfde dag weg. Zij hebben het product nooit
+  één keer zien werken. Voor hen is 55% naar 12% het verhaal.
+- **C, elf mensen die na aanmelden nul opdrachten hebben gedaan.** Waaronder
+  info@goudlief.nl (2.664 advertenties op Marktplaats). Die zijn niet afgehaakt
+  op storingen maar nooit begonnen. Geen excuusmail, maar een aanbod om samen de
+  eerste tien advertenties te doen.
+
+Elke variant met een verlengde proefperiode erbij. Een terughaalmail zonder
+herkansing is een reclamefolder.
+
+**Verstuur pas nadat besluit 3 live staat.** Mensen terughalen naar een storing
+die ze al eens hebben weggejaagd kost je ze twee keer, en drie MOET ZEKER-storingen
+van de huidige betalende klanten staan nog open op de lijst van
+`python3 scripts/mail_analyse.py bugs`.
+
+### Besluit 3: de valse melding "je bent niet ingelogd" repareren
+
+Daniel: *"ja"*, en dit gaat vóór de campagne.
+
+51 opdrachten over 13 klanten kregen deze melding terwijl er niets met de login
+mis was. De klassieke oorzaken staan al vast in het geheugen en zijn hier het
+eerste waar je kijkt: een verdwenen browsertoestemming meldt zich twintig keer
+als "niet ingelogd" (`admarkt-toestemming-verdwijnt`), Chrome-sitetoegang op
+"op klik" laat elke opdracht doodlopen in een lege pagina
+(`chrome-sitetoegang-op-klik`), een stille tab betekent dat het formulier nooit
+openging (`stille-tab-is-geen-formulier`), en Marktplaats en 2dehands hebben
+aparte sessies. Een 401 die op beide platforms hetzelfde is, verklaart het
+verschil niet (`bewijs-moet-onderscheiden`).
+
+Eis: voor-en-na-bewijs met een test die faalt op de versie van vóór de reparatie,
+en terugmelden aan de klantenservice met
+`python3 scripts/mail_analyse.py opgelost <sleutel> "..."`, anders hoort de klant
+nooit dat zijn melding iets heeft opgeleverd.
+
+### Wat er in deze sessie al gedaan is, niet overdoen
+
+De open-pixel in mail 2 en mail 3 laadde van omnivaleur.com, het productdomein
+waarmee Resend de wachtwoord- en factuurmails verstuurt. 467 koude mails knoopten
+daarmee de acquisitiereputatie aan de klantmail vast, precies de scheiding die er
+expres is. Staat sinds 06-09-2026 op omnivaleur.nl (gemeten: HTTP 200,
+image/gif). Zie `pixel-op-verzenddomein`.
+
+Verder gemeten aan de deliverability en in orde bevonden: SPF en DKIM geldig op
+omnivaleur.nl, niet op Spamhaus DBL of SURBL, 3 bounces op 786 mails (0,4%), 4
+afmeldingen (0,5%), 23% antwoordpercentage. Dat laatste is het harde bewijs dat
+de mail in de inbox landt. Open gebleven en aan Daniel voorgelegd: DMARC staat op
+`p=none` op beide domeinen, en er staat geen zichtbare afmeldregel in de mail,
+alleen een verborgen List-Unsubscribe-kop. Dat laatste is een bewuste keuze van
+Daniel geweest, maar wel een juridisch risico en de beste bescherming tegen
+spamklachten.
