@@ -932,6 +932,15 @@ async def verrijk(db, user_id: str, schrijf: bool = True,
                 if a:
                     koppels.append((item, a))
 
+        # Wat publiceren blokkeert eerst. De per-titel opgezochte items
+        # (`rest`) zijn hierboven ACHTER de rest aangeplakt, dus zonder deze
+        # sortering staat een item zonder omschrijving bij een grote catalogus
+        # op plek 3500 en wordt het binnen het tijdsbudget nooit bereikt —
+        # precies waarom Papa's Plectrums 11 onpubliceerbare items hield terwijl
+        # elke ronde wél duizenden foto-aanvullingen deed (gemeten 06-09-2026).
+        # `_urgentie` zet ontbrekende tekst vóór ontbrekende prijs vóór één foto.
+        koppels.sort(key=lambda p: _urgentie(p[0]))
+
         uit["gevonden"] = len(koppels)
         zeg(f"{len(koppels)} van {len(open_)} items teruggevonden")
 
