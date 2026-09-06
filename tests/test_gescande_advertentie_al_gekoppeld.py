@@ -147,3 +147,62 @@ def test_een_eerdere_beslissing_blijft_staan():
         {"platform_listing_id": "m1", "title": "iets", "price": 1},
     ])
     assert _kandidaat(db, "m1")["status"] == "ignored"
+
+
+def test_scan_laat_een_lopende_herplaatsing_met_rust():
+    """06-09-2026, Daniel. Een herplaatsing zet de rij op 'relisting', haalt de
+    oude advertentie weg en plant de nieuwe uren later. Een scan die vlak
+    daarvoor de garderobe las, ziet het oude nummer nog staan. Verwerkte de
+    scan dat, dan zette hij de rij terug op 'active' met het verwijderde nummer
+    én sloot hij de wachtende herplaatsopdracht af als "al online" — het artikel
+    stond nergens meer, terwijl het dashboard "nieuwe advertentie staat live"
+    meldde met een link naar een 404."""
+    db = _DB(
+        items=[ITEM],
+        listings=[{"id": "l1", "item_id": "it1", "platform": "vinted",
+                   "status": "relisting", "platform_listing_id": "8614559497",
+                   "platform_listing_url": "https://www.vinted.nl/items/8614559497-x"}],
+    )
+    db.jobs = [{
+        "id": "c1", "user_id": "u1", "item_id": "it1", "platform": "vinted",
+        "action": "create", "status": "pending",
+        "scheduled_for": "2026-09-06T09:57:00+00:00", "payload": {},
+    }]
+    api._store_scan_results(db, {**JOB, "platform": "vinted"}, [
+        {"platform_listing_id": "8614559497",
+         "title": "AH hamster knuffel kok nieuw", "price": 10,
+         "platform_listing_url": "https://www.vinted.nl/items/8614559497-x"},
+    ])
+    assert db.listings[0]["status"] == "relisting", \
+        "de scan mag een lopende herplaatsing niet terugzetten naar actief"
+    assert db.jobs[0]["status"] == "pending", \
+        "de geplande herplaatsopdracht moet blijven staan"
+
+
+def test_scan_sluit_nooit_een_geplande_herplaatsopdracht_af():
+    """Zelfs als de rij om wat voor reden dan ook niet op 'relisting' staat:
+    een 'create'-opdracht met een scheduled_for is een bewuste toekomstige
+    herplaatsing, geen vastgelopen directe publicatie. Alleen die laatste mag
+    de scan afsluiten."""
+    db = _DB(
+        items=[ITEM],
+        listings=[{"id": "l1", "item_id": "it1", "platform": "vinted",
+                   "status": "hidden", "platform_listing_id": "999"}],
+    )
+    db.jobs = [
+        {"id": "gepland", "user_id": "u1", "item_id": "it1", "platform": "vinted",
+         "action": "create", "status": "pending",
+         "scheduled_for": "2026-09-06T09:57:00+00:00", "payload": {}},
+        {"id": "direct", "user_id": "u1", "item_id": "it1", "platform": "vinted",
+         "action": "create", "status": "pending",
+         "scheduled_for": None, "payload": {}},
+    ]
+    api._store_scan_results(db, {**JOB, "platform": "vinted"}, [
+        {"platform_listing_id": "8614559497",
+         "title": "AH hamster knuffel kok nieuw", "price": 10},
+    ])
+    jobs = {j["id"]: j for j in db.jobs}
+    assert jobs["gepland"]["status"] == "pending", \
+        "een geplande herplaatsing mag de scan nooit afsluiten"
+    assert jobs["direct"]["status"] == "done", \
+        "een blijven-hangen directe publicatie mag de scan wel afsluiten"
