@@ -227,13 +227,25 @@ def test_de_administratie_wordt_meteen_vastgelegd():
     assert "_save_state(state)" in blok
 
 
-def test_opruimen_gaat_vooraf_aan_schrijven():
-    """Anders houdt een achterhaald concept een nieuw, wél nodig antwoord tegen —
-    en wordt het opruimen helemaal niet meer bereikt als de ronde wordt afgekapt."""
+def test_de_ronde_schrijft_niets_meer_met_ai():
+    """Daniel, 06-09-2026: alleen nog de koude reeks mail 1/2/3 uit sjablonen.
+    Geen concepten, geen warme opvolging, geen klantenservice-indeling, geen
+    weekadvies — dat kostte tokens en liet het API-tegoed leeglopen. De ronde
+    leest wel de inbox (gratis: wie antwoordt valt uit de reeks)."""
     bron = (Path(__file__).parent.parent / "scripts" / "leadgen_mail.py").read_text()
-    ronde = bron.split("def tick(args)")[1]
-    assert ronde.index("_ruim_concepten_op()") < ronde.index("_check_inbox(")
-    assert ronde.index("_ruim_concepten_op()") < ronde.index("_warme_opvolging(")
+    ronde = bron.split("def tick(args)")[1].split("\ndef ", 1)[0]
+    assert "_check_inbox(" in ronde
+    for verboden in ("_ruim_concepten_op(", "_warme_opvolging(", "_advies_bijwerken(",
+                     "mail_analyse.lezen(", "wachtenden("):
+        assert verboden not in ronde, f"{verboden} hoort niet meer in de ronde"
+
+
+def test_claude_doorgeefluik_weigert():
+    """Het enige doorgeefluik naar het model faalt bewust, zodat geen enkel
+    overgebleven of teruggezet codepad stil tokens kan opmaken."""
+    import pytest
+    with pytest.raises(RuntimeError):
+        L._claude(object(), model="x", max_tokens=10, messages=[])
 
 
 def test_de_nep_postbus_levert_echt_koppen_op(postbus):
