@@ -746,11 +746,11 @@ def _tekst(lead: dict, sjabloon: str) -> str:
     )
 
 
-def _onderwerp(lead: dict, n: int) -> str:
+def _onderwerp(lead: dict, n: int, st: dict | None = None) -> str:
     """Ook de onderwerpregel volgt je/jullie — anders staat er "je aanbod" boven
     een mail die verder de hele tijd "jullie" zegt. Onderwerp én tekst komen uit
     de A/B-versie die bij dit adres hoort (`_beurten`)."""
-    return _beurten(lead)[n][1].format(**_jij(lead))
+    return _beurten(lead, st)[n][1].format(**_jij(lead))
 
 
 def _netjes(tekst: str) -> str:
