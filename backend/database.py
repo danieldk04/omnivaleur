@@ -6,7 +6,7 @@ import time
 from datetime import datetime, timezone
 from typing import Optional
 import httpx
-from supabase import create_client, Client
+from supabase import create_client, Client, ClientOptions
 from backend.config import settings
 
 logger = logging.getLogger(__name__)
@@ -16,11 +16,35 @@ _admin_client: Optional[Client] = None
 _auth_client: Optional[Client] = None
 
 
+def _zonder_http2() -> ClientOptions:
+    """Voorkomt de racefout die "Publishing failed (HTTP 500)" en "Relist
+    failed" veroorzaakte (gemeld door Amanda, Zilverwebsite, Papas Plectrums,
+    laatst 04-09-2026).
+
+    postgrest-py zet standaard `http2=True` op zijn httpx-client. Wij delen
+    die ene client over alle gelijktijdige verzoeken (FastAPI draait de
+    synchrone routes in een threadpool), en httpx/httpcore houdt de openstaande
+    HTTP/2-streams van zo'n gedeelde verbinding bij in één dictionary die niet
+    thread-safe is. Twee threads die tegelijk een stream afsluiten laten hem
+    struikelen — gemeten in productie als `KeyError` middenin httpcore zelf, op
+    /api/jobs/relist-status (server_fouten, 05-09-2026 08:50 UTC). Nagebouwd
+    met 40 threads op de echte Supabase-URL: 1000 gelijktijdige verzoeken gaven
+    103 kapotte lezingen met `http2=True` en nul met `http2=False`. Bij een
+    schrijfactie (insert/update) wordt zo'n kapotte lezing nooit herhaald —
+    dat mag niet, want dat maakt dubbele rijen — dus komt hij als kale 500 bij
+    de klant terecht.
+
+    HTTP/1.1 geeft elke gelijktijdige aanroep zijn eigen verbinding uit de pool
+    in plaats van gedeelde multiplexed streams, dus de race bestaat dan niet.
+    """
+    return ClientOptions(httpx_client=httpx.Client(http2=False))
+
+
 def get_db() -> Client:
     """De gewone verbinding: gegevens lezen en schrijven."""
     global _client
     if _client is None:
-        _client = create_client(settings.supabase_url, settings.supabase_key)
+        _client = create_client(settings.supabase_url, settings.supabase_key, _zonder_http2())
     return _client
 
 
