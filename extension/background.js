@@ -1194,6 +1194,54 @@ async function pollJobs() {
   }
 }
 
+// ── OM DE BEURT, ANDERS KOMT DE ONDERSTE NOOIT AAN BOD ─────────────────────
+//
+// Lynn (De Juiste Toon), 05-09-2026: "Marktplaats ging vandaag helemaal super,
+// niks op aan te merken. Naar tweedehands pakt ie nog niet."
+//
+// Gemeten in haar eigen opdrachten. Op 04-09 stond er om 14:08:09 één
+// 2dehands-publicatie klaar. Die is NOOIT opgepakt — ze is om 18:23 met de hand
+// geannuleerd. In diezelfde vier uur werden er wél Marktplaats-publicaties
+// opgepakt, om 14:09:55, 14:14:30, 14:17:51, 14:25:01, 14:31:32, 14:35:02,
+// 14:42:33, 14:46:02 en 14:54:03. Over de hele week: op de dagen dat er een
+// Marktplaats-rij stond, ging er van de 75 en 98 publicaties telkens precies
+// één naar 2dehands.
+//
+// De oorzaak zat hier. Deze ronde liep de platforms in een VASTE volgorde af,
+// marktplaats altijd eerst, terwijl twee remmen die erachter zitten voor álle
+// platforms tegelijk gelden: calm mode heeft één klok voor de hele extensie, en
+// de server geeft niets uit zolang er ergens een publicatie loopt. Wie als
+// eerste in de rij staat, pakt dus elke keer de vrijgekomen plek. Met een volle
+// Marktplaats-wachtrij kwam 2dehands (en daarachter Vinted en Facebook)
+// nooit aan de beurt.
+//
+// Vandaar: de volgorde draait. Wie een publicatie heeft mogen doen, geeft de
+// beurt door aan het volgende platform. Een platform dat niets te doen heeft
+// houdt niemand op — de beurt schuift alleen op als er ook echt gepubliceerd is,
+// dus een kanaal dat wacht houdt zijn plek tot het aan bod komt.
+const PLATFORM_BEURT_SLEUTEL = "platformBeurt";
+
+async function platformsOpBeurt() {
+  let start = 0;
+  try {
+    const s = await chrome.storage.local.get(PLATFORM_BEURT_SLEUTEL);
+    start = Number(s[PLATFORM_BEURT_SLEUTEL]) || 0;
+  } catch (_) {}
+  const n = EXTENSION_PLATFORMS.length;
+  start = ((start % n) + n) % n;
+  return EXTENSION_PLATFORMS.slice(start).concat(EXTENSION_PLATFORMS.slice(0, start));
+}
+
+async function beurtDoorgeven(platform) {
+  const i = EXTENSION_PLATFORMS.indexOf(platform);
+  if (i < 0) return;
+  try {
+    await chrome.storage.local.set({
+      [PLATFORM_BEURT_SLEUTEL]: (i + 1) % EXTENSION_PLATFORMS.length,
+    });
+  } catch (_) {}
+}
+
 // Eén ronde langs alle platforms. Geeft terug of er werk is verzet.
 async function pollJobsEenRonde() {
   let verzet = false;
