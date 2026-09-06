@@ -13,42 +13,17 @@ controle — zoek je eerst uit wat er is veranderd sinds jouw vorige sessie:
 1. `git log --since="30 hours ago" --name-only`, en lees de diff van alles wat je
    onderwerp raakt. Bij een langere pauze: sinds je laatste sessie.
 2. De laatste toevoegingen onder aan `docs/team-notes.md`.
-3. Je eigen postvak van de klantenservice:
+3. Sinds 06-09-2026 is de klantenservice-laag eruit (zie `docs/team-notes.md`).
+   De mailmachine schrijft geen antwoorden of concepten meer en deelt geen post
+   meer in met AI — dat kostte tokens en liet het API-tegoed leeglopen. Wat nog
+   draait is de koude reeks mail 1/2/3 uit vaste sjablonen.
 
-   ```bash
-   python3 scripts/mail_analyse.py bugs
-   ```
-
-   Dat is geen extraatje. De rolverdeling ligt vast (zie `docs/team-notes.md`):
-   Daniel is CEO, de mailagent is de klantenservicemedewerker, jij bent de
-   developer. Wat klanten melden komt via die lijst bij jou terecht en niet via
-   Daniel. Staat er `MOET ZEKER` bij, dan is dat het seintje dat die storing met
-   zekerheid gerepareerd moet worden — een klant is er boos over, dreigt te
-   stoppen, of het overkomt meerdere mensen.
-
-   Heb je iets gerepareerd, meld dat dan terug in dezelfde lijn:
-
-   ```bash
-   python3 scripts/mail_analyse.py opgelost <sleutel> "wat er nu anders is, in gewone taal"
-   ```
-
-   Daarmee weet de klantenservice het: iedereen die het meldde krijgt bericht,
-   en elk nieuw concept over dat onderwerp zegt voortaan wat jij hebt vastgelegd
-   in plaats van te gokken. Overslaan betekent dat de klant nooit hoort dat zijn
-   melding iets heeft opgeleverd.
-
-   Blijkt iets géén storing, of gaan we het bewust niet repareren, meld dat dan
-   net zo goed terug — anders blijft de sleutel eeuwig op de lijst staan:
-
-   ```bash
-   python3 scripts/mail_analyse.py afgewezen <sleutel> "waarom niet, in één zin"
-   ```
-
-   Ben je hier vanzelf terechtgekomen zonder dat Daniel iets vroeg, dan is dat de
-   automatische starter (`scripts/dev_starter.py`, LaunchAgent
-   com.omnivaleur.devstarter). Die start één sessie per MOET ZEKER-storing en
-   verwacht dat je hem afmaakt: repareren, tests draaien, pushen als ze groen
-   zijn, en terugmelden met `opgelost` of `afgewezen`.
+   Klanten mailen bugs rechtstreeks; Daniel leest de inbox en brengt ze bij je.
+   `scripts/mail_analyse.py` bestaat nog als handmatig hulpmiddel (`bugs` toont
+   de oude lijst), maar niets vult die lijst meer automatisch en `lezen` /
+   `bericht_over_reparaties` falen bewust omdat de AI eruit is. De LaunchAgent
+   `com.omnivaleur.devstarter` staat daarmee stil: geen buglijst, geen
+   automatische sessies.
 
 Let op de commits met de tekst "auto: update ...": die komen van de auto-push-hook
 en bevatten echt werk achter een nietszeggende titel. De auteursnaam zegt niets
