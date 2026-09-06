@@ -6026,3 +6026,28 @@ faalden (`test_storingen_doven_uit`, `test_stuck_publish_recovery`, allebei
 niet mail-gerelateerd). Niet gemeten met echt API-verkeer want het tegoed staat
 op nul; het mechanisme is wel bewezen uit het logboek (`tick.log`: dezelfde ~35
 adressen elke ronde, elk met een mislukte modelaanroep).
+
+### 06-09-2026 (vervolg) — één runner: alleen Railway
+
+Bij het uitzetten bleek de koude-mailmachine op **drie** plekken tegelijk te
+draaien: de Mac-LaunchAgent (`com.omnivaleur.leadgen`, weer aangezet ondanks de
+`.uit`-afspraak), GitHub Actions (`leadgen-mail.yml`, elke ~2 uur) én de
+Railway-scheduler (`leadgen_tick=true`, elke 10 min). De gedeelde Supabase-plan
+met afvinkjes ving het meeste dubbel versturen op, maar dit hoort niet zo.
+
+Nu uit:
+- Mac: `launchctl unload` + hernoemd naar `com.omnivaleur.leadgen.plist.uit`.
+- GitHub Actions `leadgen-mail.yml` ("Leadmachine"): `gh workflow disable`.
+- GitHub Actions `support-mail-agent.yml` ("Support-mailagent", elke 5 min):
+  `gh workflow disable`. Draaide toch al te falen — `scripts/support_mail_agent.py`
+  bestaat niet in de repo, dus kostte niets, maar het is klantenservice en dat is
+  eruit.
+
+Blijft draaien: **alleen de Railway-scheduler**. Die heeft mailbox- (IMAP lezen),
+Resend- (versturen) en Supabase-toegang; Railway blokkeert alleen SMTP, niet IMAP.
+Nog actief en bewust met rust gelaten: "Programmatic content generation" (blog,
+Sonnet) en "Trendmotor" (wekelijks, draait nog op Opus — Daniel beslist nog of
+dat goedkoper of uit moet).
+
+"Draait hij nog?" check nu: `curl -s https://omnivaleur.com/health` → `leadgen_tick`,
+`leadgen_resend`, `leadgen_mailbox` moeten alle drie `true` zijn.

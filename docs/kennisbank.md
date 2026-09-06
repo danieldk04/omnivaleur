@@ -17,6 +17,206 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ---
 
+## koude-mail-autonoom
+
+*06-09-2026 — "De koude-mailmachine draait autonoom via een LaunchAgent; wachtwoorden in de sleutelhanger, wrapper buiten Documenten, alles gelogd in Notion"*
+
+Sinds 11-08-2026 verstuurt `scripts/leadgen_mail.py` zelfstandig koude mail naar
+de Marktplaats-leads uit "leadgen-marktplaats-beste-bron", vanaf
+daniel@omnivaleur.nl (nooit vanaf omnivaleur.com, zie "railway-blokkeert-smtp").
+
+**06-09-2026 — dit is deels achterhaald.** De machine draait nu ALLEEN op de
+Railway-scheduler (`leadgen_tick`, elke 10 min). De GitHub Actions-workflow
+hieronder is uitgezet (`gh workflow disable leadgen-mail.yml`), net als de
+Mac-LaunchAgent. En de machine schrijft geen AI-antwoorden of concepten meer,
+alleen de koude reeks mail 1/2/3 uit sjablonen — zie
+"mailmachine-alleen-koude-reeks". De rest van dit bestand blijft nuttig voor
+het gedrag van de reeks zelf (rooster, opvolgritme, Notion-fases).
+
+**Sinds 12-08-2026 draait de machine in de cloud, niet meer op de Mac.** GitHub
+Actions (`.github/workflows/leadgen-mail.yml`), elke 30 minuten tussen 08:00 en
+21:30 NL-tijd, `concurrency: leadmachine` zodat er nooit twee beurten tegelijk
+lopen. Gratis omdat de repo publiek is. `TZ: Europe/Amsterdam` in de workflow is
+niet optioneel — zonder dat rekent de runner in UTC en loopt het rooster twee uur
+voor. De LaunchAgent op de Mac staat uit (plist hernoemd naar `.uit`); zet die
+nooit tegelijk aan, dan mailt hij dubbel want die gebruikt lokale bestanden.
+
+**De repo is PUBLIEK.** Daarom staan de leadlijst en de verzendadministratie in
+Supabase, tabel `leadgen_opslag` (naam/inhoud/bijgewerkt, RLS aan, geen policy).
+Alleen de **service_role**-sleutel komt erbij; de anon-sleutel uit de frontend
+krijgt leesbaar niets (200 met lege lijst) en schrijven geeft 401. Nieuwe leads
+gescrapet? Dan `python3 scripts/leadgen_mail.py overzetten` draaien, anders ziet
+de cloud ze niet. Zonder SUPABASE_URL/KEY valt het script terug op lokale
+bestanden — handig om lokaal te testen.
+
+**De oude Mac-opstelling (uit, maar bewaard als terugval).** LaunchAgent `com.omnivaleur.leadgen` start elke tien minuten
+`~/Library/Application Support/omnivaleur/tick.sh`. **Niets wat de machine nodig
+heeft staat nog in ~/Documents** — code in `.../omnivaleur/code/`, gegevens in
+`.../omnivaleur/leads/`, logboek `tick.log` ernaast. De projectmap blijft de bron;
+na elke wijziging aan `leadgen_mail.py` of `leadgen_notion.py` moet je
+`scripts/leadgen_deploy.sh` draaien, anders draait de achtergrondtaak de oude code.
+
+**Waarom, en dit is de belangrijkste val.** ~/Documents is bij Daniel zowel
+TCC-beschermd als iCloud-gesynct. Een LaunchAgent krijgt er geen toegang
+("Operation not permitted", en `brctl download` faalt met NSCocoaErrorDomain 257),
+en met "Opslagruimte optimaliseren" haalt iCloud bestanden weg die even niet
+gebruikt zijn — een proces dat zo'n bestand leest krijgt dan
+`OSError [Errno 11] Resource deadlock avoided`. Beide fouten zijn stil: de mails
+gingen gewoon niet meer weg. Van 11-08 14:30 tot 12-08 11:34 stond alles stil
+zonder één signaal. Zet nooit een LaunchAgent op iets in ~/Documents.
+
+**Wachtwoorden staan in de sleutelhanger, niet in bestanden:**
+`security find-generic-password -a daniel@omnivaleur.nl -s omnivaleur-leadgen-mail -w`
+en `-a notion -s omnivaleur-notion-token -w`. Daardoor kan de wrapper gewoon mee
+in git.
+
+**`tick` beslist zelf.** Eén keer per dag maakt hij een rooster met willekeurige
+tijdstippen tussen 08:45 en 20:30 (minstens 9 minuten uit elkaar) en vinkt die
+daarna af; alles staat in `scripts/output/leads/mail_plan.json`, dus een slapende
+Mac of een herstart verstuurt niets dubbel. Opbouwschema `RAMP`: 5 op dag 1, 15 vanaf
+dag 2, 25 vanaf dag 6, 40 vanaf dag 11 (Daniels wens, 11-08-2026). Hoger heeft
+geen zin zolang de lijst ~320 adressen telt. `_dagnummer` telt vandaag als vandaag zodra
+er al gemaild is — een eerdere versie zag vandaag als "de volgende dag" en
+verstuurde daardoor 6 in plaats van 5 mails op dag 1.
+
+**Kijk voor "draait hij nog?" NOOIT naar de Mac.** Lokale `mail_state.json`,
+`tick.log` en de LaunchAgent zijn een dode schaduwkopie en zeggen niets; de
+`.uit`-plist is opzet, geen storing. De enige echte bronnen zijn
+`gh run list --workflow=leadgen-mail.yml` en de tabel in Supabase — en die tabel
+lees je alleen met de service_role-sleutel uit de GitHub-secrets, niet met de
+`SUPABASE_KEY` uit de lokale `.env` (ander project, geeft 200 met lege lijst).
+Op 14-08-2026 concludeerde ik uit die drie lokale sporen dat de machine stilstond,
+terwijl hij gewoon elke 30 minuten mailde.
+
+**Opvolgritme (Daniels wens, 14-08-2026): 2 en 4 dagen**, was 5 en 12.
+`STIL_NA_DAGEN = 10`: alles verstuurd en daarna tien dagen stil → Fase
+`Doodgelopen` + Afgesloten reden `Geen reactie na follow-ups`.
+
+**De Fase-kolom in Notion IS de werkvoorraad (afgesproken 17-08-2026).** Daniel
+verloor het overzicht omdat "heeft geantwoord" niets zegt over wie er aan zet is.
+Twee fases toegevoegd, direct achter `4. Gereageerd`: **`⚡ Jij bent aan zet`**
+(zij wachten op Daniel) en **`⏳ Bal bij hen`** (wij hebben geantwoord). Samen met
+`Gebruikt concurrent`, `Geen interesse`, `Klant` en `Doodgelopen` is dat de hele
+levende staat. Status heeft maar 4 opties en is via de API niet uit te breiden
+(zie "notion-api-beperkingen"), dus stuur op Fase, niet op Status.
+
+**Reconciliatie postbus ↔ Notion, 17-08-2026.** 18 bedrijven hadden geantwoord;
+14 stonden verkeerd in Notion. Drie stonden zelfs op **Interesse** terwijl ze
+letterlijk schreven dat ze Channable al gebruiken. De postbus is de waarheid, niet
+Notion: mappen `Beantwoord`/`Automatisch`/`Afval` + `Verzonden` samen geven het
+hele verhaal per lead. Doe dit opnieuw als de tellingen niet meer kloppen.
+
+**Gevonden lek: een antwoord vanaf een ander adres telde niet.** A. Dinkelaar
+kreeg mail op `info@afstandsbediening-online.nl` en antwoordde vanaf
+`info@afstandsbediening.nl` — voor de machine een vreemde, dus zijn "nee dank je"
+werd genegeerd en de opvolging liep door. `_zelfde_bedrijf()` koppelt nu op de
+kern van de domeinnaam (zonder subdomein, extensie en streepjes), **alleen** bij
+precies één kandidaat en **alleen** bij namen van 8+ tekens. Twee aangeschreven
+collega's bij hetzelfde bedrijf worden bewust niet gekoppeld. Inbox-terugblik van
+4 naar 14 dagen.
+
+**Wel geverifieerd:** niemand die antwoordde kreeg daarna nog een sjabloonmail.
+Onderscheid machine/handmatig gaat op de tekst, niet op de onderwerpregel — die
+is identiek omdat Daniel in dezelfde draad antwoordt.
+
+**Dagbudget 30 (Daniels wens, 15-08-2026), met `NIEUW_AANDEEL = 0.4`.**
+Opvolgmails gaan vóór, maar 40% van het budget blijft gereserveerd voor nieuwe
+eerste mails. Zonder die reservering drukt een opvolggolf het aanboren van
+nieuwe leads volledig weg: op 15-08 waren 12 van de 15 mails opvolging en werd
+er die dag vrijwel niemand nieuw aangeschreven.
+
+**Een reactie is een FEIT, interesse is een OORDEEL.** Elk antwoord zet Fase
+`4. Gereageerd`; Status `Interesse` wordt alleen nog gezet bij een warm antwoord.
+Daarvoor kreeg iedereen die antwoordde Interesse — inclusief "we gebruiken al
+Channable". Ook het seintje naar Daniel gaat nu alleen bij een warm antwoord.
+
+**Tussencategorie `Gebruikt concurrent`** (Fase-optie via de API toegevoegd op
+15-08-2026, staat direct achter `4. Gereageerd`), met Afgesloten reden
+`Gebruikt al een tool`. Dit is geen nee maar een **bezet ja**: die handelaar
+crosslist al, ziet de waarde en betaalt er al voor — de kansrijkste lijst die er
+is zodra die tool tegenvalt. `CONCURRENT` herkent Channable, Lengow,
+ChannelEngine, EffectConnect e.a. plus losse zinnen.
+
+**Val die dit blootlegde:** `AFMELD_WOORDEN` bevatte `geen interesse`, waardoor
+"wij gebruiken al Channable, dus geen interesse" als **afmelding** werd geboekt
+en het echte nieuws (ze crosslisten al) verdween. Eruit gehaald. Datzelfde
+patroon ving `niet meer TE mailen` niet — nu wel. Volgorde in de inbox:
+afmelding → concurrent → afwijzing → warm.
+
+**Een nette afwijzing is geen afmelding.** `AFWIJZING` herkent "geen interesse",
+"we gebruiken al zo'n tool", "niet wat wij zoeken", "not interested" → Fase
+`Geen interesse` + reden `Niet geinteresseerd`, opvolging stopt. Zonder dit
+landde een nee in Notion op Status `Interesse`, naast de mensen die wél wilden.
+Status blijft bij een nee bewust ongemoeid: er is geen nee-status in de database.
+
+**Daniel mailt ook zelf, buiten de machine om.** `_eigen_mail_meenemen` leest
+elke beurt de map Verzonden en neemt elk leadadres dat een niet-`Re:`-mail heeft
+gehad over als `met_de_hand`; die krijgen nooit meer een sjabloonmail. Dit vangt
+óók het geval waarin de administratie zoek is geraakt terwijl er al gemaild was —
+30 adressen zaten in die situatie. Antwoorden op een lopend gesprek (`Re:`) tellen
+niet mee, anders zou elk gesprek als "koud benaderd" worden geboekt.
+
+**Een leeggemaakte datum in Notion vraagt `date: null`**, niet `{"start": null}`.
+Afgesloten leads horen geen "Volgende actie op" meer te hebben, anders blijven ze
+in de takenlijst staan.
+
+**Alles wordt vastgelegd in Notion**, tegen de LIVE kolommen van de Leadlist
+(zie "notion-leadlist-kolomnamen"): Fase `2. Benaderd` → `T2. Tekst follow-up 1`
+→ `T3. Tekst follow-up 2 (laatste)` → `4. Gereageerd` / `Geen interesse` /
+`Doodgelopen`, plus Status, Eerste contact, Volgende actie op en Follow-ups
+verstuurd. Daarnaast komt elke gebeurtenis als tekstregel onder aan de leadpagina;
+blokken hebben geen kolomnamen en kunnen dus niet stukgaan door een hernoeming.
+
+**Daniel krijgt zelf een seintje** (`_alarm`, naar `ALARM_NAAR`: zijn Gmail en
+info@revaleur.com) zodra iemand écht antwoordt — getest en aangekomen op
+11-08-2026. Automatische ontvangstbevestigingen tellen niet als antwoord: die
+worden herkend aan de onderwerpregel én aan zinnen in de tekst ("bedankt voor je
+e-mail", "in goede orde ontvangen"). BoekenBalie stuurde er een terug ónder ons
+eigen onderwerp en werd eerst als reactie geteld; dat is gerepareerd. Zou je dit
+missen, dan valt zo iemand stil uit de opvolging.
+
+**Opgelost: IMAP stond uit in Zoho** ("You are yet to enable IMAP for your
+account"). Let op: het vinkje op organisatieniveau (mailadmin) is NIET genoeg —
+IMAP moet ook per postbus aan, in Zoho Mail zelf onder Instellingen →
+E-mailaccounts → IMAP. Aangezet op 11-08-2026.
+
+**Onzin-adressen.** Uit webshops komt af en toe iets als `-@mail.nl` mee. Dat is
+een gegarandeerde bounce en bounces zijn dodelijk voor een jong domein; `_bruikbaar`
+gooit alles met minder dan twee tekens voor de apenstaart eruit. Er is er één
+verstuurd voordat dit erin zat.
+
+**Toon van de mails (Daniels beslissing, 11-08-2026):** los en persoonlijk,
+"Hi <naam>" en "Groetjes, Daniel". Geen adresblok en geen afmeldregel onder de
+mail — hij weet dat dat wettelijk anders hoort en heeft het bewust zo gewild. De
+afmeldweg zit alleen nog in de List-Unsubscribe-header.
+
+---
+
+## mailagent-op-de-server
+
+*06-09-2026 — "koude-mailmachine draait sinds 20-08-2026 op Railway, niet meer op de Mac; versturen gaat via Resend vanaf omnivaleur.nl"*
+
+De mailagent draait op Railway (scheduler-taak `leadgen_tick`, elke 10 minuten).
+Sinds 06-09-2026 is dat de ENIGE runner: de Mac-LaunchAgent
+(`com.omnivaleur.leadgen.plist.uit`) én beide GitHub-workflows
+(`leadgen-mail.yml`, `support-mail-agent.yml`) zijn uit. Ze hadden op enig moment
+alle drie tegelijk gedraaid. Zie "mailmachine-alleen-koude-reeks": de machine
+schrijft ook geen AI-antwoorden meer, alleen koude reeks mail 1/2/3.
+
+Versturen gaat over https via Resend, want Railway blokkeert SMTP. Beide domeinen
+staan verified in Resend: omnivaleur.com (product) en omnivaleur.nl (koude mail,
+bewust apart zodat een spamklacht nooit de klantmail raakt). DNS van omnivaleur.nl
+staat bij **Namecheap**, niet bij Cloudflare — het domein staat wel in Cloudflare
+maar de nameservers wijzen nog naar registrar-servers.com, dus wat je daar invult
+doet niets.
+
+Controle zonder gokken: `/health` toont `leadgen_tick`, `leadgen_resend` en
+`leadgen_mailbox`; `/health/resend` toont welke domeinen geaccepteerd worden.
+Zie "mailagent-slimme-antwoorden", "klanten-zijn-geen-leads",
+"railway-blokkeert-smtp".
+
+---
+
 ## mailmachine-alleen-koude-reeks
 
 *06-09-2026 — Omnivaleur-mailmachine schrijft sinds 06-09-2026 niets meer met AI; alleen koude reeks mail 1/2/3 uit sjablonen*
@@ -2986,29 +3186,6 @@ kunnen gratis, zie "tiktok-gratis-schrapen".
 
 ---
 
-## mailagent-op-de-server
-
-*20-08-2026 — koude-mailmachine draait sinds 20-08-2026 op Railway, niet meer op de Mac; versturen gaat via Resend vanaf omnivaleur.nl*
-
-De mailagent draait sinds 20-08-2026 op Railway (scheduler-taak `leadgen_tick`,
-elke 10 minuten), niet meer via de LaunchAgent op de Mac. Die staat bewust uit
-(`com.omnivaleur.leadgen.plist.uit`) — hij mag NOOIT op twee plekken tegelijk
-draaien, anders krijgt dezelfde ontvanger twee keer dezelfde mail.
-
-Versturen gaat over https via Resend, want Railway blokkeert SMTP. Beide domeinen
-staan verified in Resend: omnivaleur.com (product) en omnivaleur.nl (koude mail,
-bewust apart zodat een spamklacht nooit de klantmail raakt). DNS van omnivaleur.nl
-staat bij **Namecheap**, niet bij Cloudflare — het domein staat wel in Cloudflare
-maar de nameservers wijzen nog naar registrar-servers.com, dus wat je daar invult
-doet niets.
-
-Controle zonder gokken: `/health` toont `leadgen_tick`, `leadgen_resend` en
-`leadgen_mailbox`; `/health/resend` toont welke domeinen geaccepteerd worden.
-Zie "mailagent-slimme-antwoorden", "klanten-zijn-geen-leads",
-"railway-blokkeert-smtp".
-
----
-
 ## klanten-zijn-geen-leads
 
 *20-08-2026 — de mailagent mag klanten nooit als lead behandelen — geen koude mail, geen video/prijs, geen afscheidsmail*
@@ -3172,173 +3349,6 @@ midden in een zin naar een klant. Geldt voor alles wat naar buiten gaat: koude
 mail, conceptantwoorden, afsluitberichten. Wil je nadruk, gebruik dan een
 kopregel op een eigen regel of gewoon de zin zelf. In het gesprek met Daniel in
 de terminal mag markdown wél.
-
----
-
-## koude-mail-autonoom
-
-*17-08-2026 — "De koude-mailmachine draait autonoom via een LaunchAgent; wachtwoorden in de sleutelhanger, wrapper buiten Documenten, alles gelogd in Notion"*
-
-Sinds 11-08-2026 verstuurt `scripts/leadgen_mail.py` zelfstandig koude mail naar
-de Marktplaats-leads uit "leadgen-marktplaats-beste-bron", vanaf
-daniel@omnivaleur.nl (nooit vanaf omnivaleur.com, zie "railway-blokkeert-smtp").
-
-**Sinds 12-08-2026 draait de machine in de cloud, niet meer op de Mac.** GitHub
-Actions (`.github/workflows/leadgen-mail.yml`), elke 30 minuten tussen 08:00 en
-21:30 NL-tijd, `concurrency: leadmachine` zodat er nooit twee beurten tegelijk
-lopen. Gratis omdat de repo publiek is. `TZ: Europe/Amsterdam` in de workflow is
-niet optioneel — zonder dat rekent de runner in UTC en loopt het rooster twee uur
-voor. De LaunchAgent op de Mac staat uit (plist hernoemd naar `.uit`); zet die
-nooit tegelijk aan, dan mailt hij dubbel want die gebruikt lokale bestanden.
-
-**De repo is PUBLIEK.** Daarom staan de leadlijst en de verzendadministratie in
-Supabase, tabel `leadgen_opslag` (naam/inhoud/bijgewerkt, RLS aan, geen policy).
-Alleen de **service_role**-sleutel komt erbij; de anon-sleutel uit de frontend
-krijgt leesbaar niets (200 met lege lijst) en schrijven geeft 401. Nieuwe leads
-gescrapet? Dan `python3 scripts/leadgen_mail.py overzetten` draaien, anders ziet
-de cloud ze niet. Zonder SUPABASE_URL/KEY valt het script terug op lokale
-bestanden — handig om lokaal te testen.
-
-**De oude Mac-opstelling (uit, maar bewaard als terugval).** LaunchAgent `com.omnivaleur.leadgen` start elke tien minuten
-`~/Library/Application Support/omnivaleur/tick.sh`. **Niets wat de machine nodig
-heeft staat nog in ~/Documents** — code in `.../omnivaleur/code/`, gegevens in
-`.../omnivaleur/leads/`, logboek `tick.log` ernaast. De projectmap blijft de bron;
-na elke wijziging aan `leadgen_mail.py` of `leadgen_notion.py` moet je
-`scripts/leadgen_deploy.sh` draaien, anders draait de achtergrondtaak de oude code.
-
-**Waarom, en dit is de belangrijkste val.** ~/Documents is bij Daniel zowel
-TCC-beschermd als iCloud-gesynct. Een LaunchAgent krijgt er geen toegang
-("Operation not permitted", en `brctl download` faalt met NSCocoaErrorDomain 257),
-en met "Opslagruimte optimaliseren" haalt iCloud bestanden weg die even niet
-gebruikt zijn — een proces dat zo'n bestand leest krijgt dan
-`OSError [Errno 11] Resource deadlock avoided`. Beide fouten zijn stil: de mails
-gingen gewoon niet meer weg. Van 11-08 14:30 tot 12-08 11:34 stond alles stil
-zonder één signaal. Zet nooit een LaunchAgent op iets in ~/Documents.
-
-**Wachtwoorden staan in de sleutelhanger, niet in bestanden:**
-`security find-generic-password -a daniel@omnivaleur.nl -s omnivaleur-leadgen-mail -w`
-en `-a notion -s omnivaleur-notion-token -w`. Daardoor kan de wrapper gewoon mee
-in git.
-
-**`tick` beslist zelf.** Eén keer per dag maakt hij een rooster met willekeurige
-tijdstippen tussen 08:45 en 20:30 (minstens 9 minuten uit elkaar) en vinkt die
-daarna af; alles staat in `scripts/output/leads/mail_plan.json`, dus een slapende
-Mac of een herstart verstuurt niets dubbel. Opbouwschema `RAMP`: 5 op dag 1, 15 vanaf
-dag 2, 25 vanaf dag 6, 40 vanaf dag 11 (Daniels wens, 11-08-2026). Hoger heeft
-geen zin zolang de lijst ~320 adressen telt. `_dagnummer` telt vandaag als vandaag zodra
-er al gemaild is — een eerdere versie zag vandaag als "de volgende dag" en
-verstuurde daardoor 6 in plaats van 5 mails op dag 1.
-
-**Kijk voor "draait hij nog?" NOOIT naar de Mac.** Lokale `mail_state.json`,
-`tick.log` en de LaunchAgent zijn een dode schaduwkopie en zeggen niets; de
-`.uit`-plist is opzet, geen storing. De enige echte bronnen zijn
-`gh run list --workflow=leadgen-mail.yml` en de tabel in Supabase — en die tabel
-lees je alleen met de service_role-sleutel uit de GitHub-secrets, niet met de
-`SUPABASE_KEY` uit de lokale `.env` (ander project, geeft 200 met lege lijst).
-Op 14-08-2026 concludeerde ik uit die drie lokale sporen dat de machine stilstond,
-terwijl hij gewoon elke 30 minuten mailde.
-
-**Opvolgritme (Daniels wens, 14-08-2026): 2 en 4 dagen**, was 5 en 12.
-`STIL_NA_DAGEN = 10`: alles verstuurd en daarna tien dagen stil → Fase
-`Doodgelopen` + Afgesloten reden `Geen reactie na follow-ups`.
-
-**De Fase-kolom in Notion IS de werkvoorraad (afgesproken 17-08-2026).** Daniel
-verloor het overzicht omdat "heeft geantwoord" niets zegt over wie er aan zet is.
-Twee fases toegevoegd, direct achter `4. Gereageerd`: **`⚡ Jij bent aan zet`**
-(zij wachten op Daniel) en **`⏳ Bal bij hen`** (wij hebben geantwoord). Samen met
-`Gebruikt concurrent`, `Geen interesse`, `Klant` en `Doodgelopen` is dat de hele
-levende staat. Status heeft maar 4 opties en is via de API niet uit te breiden
-(zie "notion-api-beperkingen"), dus stuur op Fase, niet op Status.
-
-**Reconciliatie postbus ↔ Notion, 17-08-2026.** 18 bedrijven hadden geantwoord;
-14 stonden verkeerd in Notion. Drie stonden zelfs op **Interesse** terwijl ze
-letterlijk schreven dat ze Channable al gebruiken. De postbus is de waarheid, niet
-Notion: mappen `Beantwoord`/`Automatisch`/`Afval` + `Verzonden` samen geven het
-hele verhaal per lead. Doe dit opnieuw als de tellingen niet meer kloppen.
-
-**Gevonden lek: een antwoord vanaf een ander adres telde niet.** A. Dinkelaar
-kreeg mail op `info@afstandsbediening-online.nl` en antwoordde vanaf
-`info@afstandsbediening.nl` — voor de machine een vreemde, dus zijn "nee dank je"
-werd genegeerd en de opvolging liep door. `_zelfde_bedrijf()` koppelt nu op de
-kern van de domeinnaam (zonder subdomein, extensie en streepjes), **alleen** bij
-precies één kandidaat en **alleen** bij namen van 8+ tekens. Twee aangeschreven
-collega's bij hetzelfde bedrijf worden bewust niet gekoppeld. Inbox-terugblik van
-4 naar 14 dagen.
-
-**Wel geverifieerd:** niemand die antwoordde kreeg daarna nog een sjabloonmail.
-Onderscheid machine/handmatig gaat op de tekst, niet op de onderwerpregel — die
-is identiek omdat Daniel in dezelfde draad antwoordt.
-
-**Dagbudget 30 (Daniels wens, 15-08-2026), met `NIEUW_AANDEEL = 0.4`.**
-Opvolgmails gaan vóór, maar 40% van het budget blijft gereserveerd voor nieuwe
-eerste mails. Zonder die reservering drukt een opvolggolf het aanboren van
-nieuwe leads volledig weg: op 15-08 waren 12 van de 15 mails opvolging en werd
-er die dag vrijwel niemand nieuw aangeschreven.
-
-**Een reactie is een FEIT, interesse is een OORDEEL.** Elk antwoord zet Fase
-`4. Gereageerd`; Status `Interesse` wordt alleen nog gezet bij een warm antwoord.
-Daarvoor kreeg iedereen die antwoordde Interesse — inclusief "we gebruiken al
-Channable". Ook het seintje naar Daniel gaat nu alleen bij een warm antwoord.
-
-**Tussencategorie `Gebruikt concurrent`** (Fase-optie via de API toegevoegd op
-15-08-2026, staat direct achter `4. Gereageerd`), met Afgesloten reden
-`Gebruikt al een tool`. Dit is geen nee maar een **bezet ja**: die handelaar
-crosslist al, ziet de waarde en betaalt er al voor — de kansrijkste lijst die er
-is zodra die tool tegenvalt. `CONCURRENT` herkent Channable, Lengow,
-ChannelEngine, EffectConnect e.a. plus losse zinnen.
-
-**Val die dit blootlegde:** `AFMELD_WOORDEN` bevatte `geen interesse`, waardoor
-"wij gebruiken al Channable, dus geen interesse" als **afmelding** werd geboekt
-en het echte nieuws (ze crosslisten al) verdween. Eruit gehaald. Datzelfde
-patroon ving `niet meer TE mailen` niet — nu wel. Volgorde in de inbox:
-afmelding → concurrent → afwijzing → warm.
-
-**Een nette afwijzing is geen afmelding.** `AFWIJZING` herkent "geen interesse",
-"we gebruiken al zo'n tool", "niet wat wij zoeken", "not interested" → Fase
-`Geen interesse` + reden `Niet geinteresseerd`, opvolging stopt. Zonder dit
-landde een nee in Notion op Status `Interesse`, naast de mensen die wél wilden.
-Status blijft bij een nee bewust ongemoeid: er is geen nee-status in de database.
-
-**Daniel mailt ook zelf, buiten de machine om.** `_eigen_mail_meenemen` leest
-elke beurt de map Verzonden en neemt elk leadadres dat een niet-`Re:`-mail heeft
-gehad over als `met_de_hand`; die krijgen nooit meer een sjabloonmail. Dit vangt
-óók het geval waarin de administratie zoek is geraakt terwijl er al gemaild was —
-30 adressen zaten in die situatie. Antwoorden op een lopend gesprek (`Re:`) tellen
-niet mee, anders zou elk gesprek als "koud benaderd" worden geboekt.
-
-**Een leeggemaakte datum in Notion vraagt `date: null`**, niet `{"start": null}`.
-Afgesloten leads horen geen "Volgende actie op" meer te hebben, anders blijven ze
-in de takenlijst staan.
-
-**Alles wordt vastgelegd in Notion**, tegen de LIVE kolommen van de Leadlist
-(zie "notion-leadlist-kolomnamen"): Fase `2. Benaderd` → `T2. Tekst follow-up 1`
-→ `T3. Tekst follow-up 2 (laatste)` → `4. Gereageerd` / `Geen interesse` /
-`Doodgelopen`, plus Status, Eerste contact, Volgende actie op en Follow-ups
-verstuurd. Daarnaast komt elke gebeurtenis als tekstregel onder aan de leadpagina;
-blokken hebben geen kolomnamen en kunnen dus niet stukgaan door een hernoeming.
-
-**Daniel krijgt zelf een seintje** (`_alarm`, naar `ALARM_NAAR`: zijn Gmail en
-info@revaleur.com) zodra iemand écht antwoordt — getest en aangekomen op
-11-08-2026. Automatische ontvangstbevestigingen tellen niet als antwoord: die
-worden herkend aan de onderwerpregel én aan zinnen in de tekst ("bedankt voor je
-e-mail", "in goede orde ontvangen"). BoekenBalie stuurde er een terug ónder ons
-eigen onderwerp en werd eerst als reactie geteld; dat is gerepareerd. Zou je dit
-missen, dan valt zo iemand stil uit de opvolging.
-
-**Opgelost: IMAP stond uit in Zoho** ("You are yet to enable IMAP for your
-account"). Let op: het vinkje op organisatieniveau (mailadmin) is NIET genoeg —
-IMAP moet ook per postbus aan, in Zoho Mail zelf onder Instellingen →
-E-mailaccounts → IMAP. Aangezet op 11-08-2026.
-
-**Onzin-adressen.** Uit webshops komt af en toe iets als `-@mail.nl` mee. Dat is
-een gegarandeerde bounce en bounces zijn dodelijk voor een jong domein; `_bruikbaar`
-gooit alles met minder dan twee tekens voor de apenstaart eruit. Er is er één
-verstuurd voordat dit erin zat.
-
-**Toon van de mails (Daniels beslissing, 11-08-2026):** los en persoonlijk,
-"Hi <naam>" en "Groetjes, Daniel". Geen adresblok en geen afmeldregel onder de
-mail — hij weet dat dat wettelijk anders hoort en heeft het bewust zo gewild. De
-afmeldweg zit alleen nog in de List-Unsubscribe-header.
 
 ---
 
