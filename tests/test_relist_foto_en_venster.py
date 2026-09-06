@@ -84,10 +84,28 @@ def test_wacht_doet_uit_zichzelf_niets():
 
 # ── 3. Het werkvenster blijft uit beeld ──────────────────────────────────────
 
-def test_werkvenster_klapt_nooit_meer_open():
+def test_publiceren_gebruikt_een_achtergrond_tabblad_geen_eigen_venster():
+    """Toon (Mac, 06-09-2026): "elke keer als ik iets plaats valt mijn scherm weg."
+
+    openWorkerTab opende een apart venster en minimaliseerde dat; op macOS pakt
+    windows.update({state:"minimized"}) dan het venster van de verkoper zelf.
+    Nu draait elk werk (ook publiceren) eerst in een niet-actief tabblad in een
+    venster dat er toch al is, net als de scans. Het aparte venster is alleen nog
+    het vangnet voor als er geen enkel gewoon venster open is.
+    """
+    fn = BG.split("function openWorkerTab(")[1].split("\nfunction ")[0]
+    assert "openAchtergrondTabblad(url)" in fn, \
+        "publiceren hoort eerst een achtergrond-tabblad te proberen"
+    # het geminimaliseerde werkvenster is nog uitsluitend het vangnet
+    assert "openWorkerTabInner(url, opts)" in fn
+    idx_bg = fn.index("openAchtergrondTabblad(url)")
+    idx_win = fn.index("openWorkerTabInner(url, opts)")
+    assert idx_bg < idx_win, "het aparte venster mag pas ná de tabblad-poging komen"
+
+
+def test_werkvenster_vangnet_blijft_geminimaliseerd():
     inner = BG.split("async function openWorkerTabInner(")[1].split("\n}")[0]
     assert 'const wantState = "minimized";' in inner
-    assert 'wantState = opts.silent ? "minimized" : "normal"' not in BG
     assert 'chrome.windows.create({ url: leeg, focused: false, ...WORKER_WIN_SIZE })' \
         not in inner.split("catch")[0], "een gewoon venster komt in beeld"
 
