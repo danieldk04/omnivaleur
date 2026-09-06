@@ -2554,6 +2554,11 @@ def _store_scan_results(db, job, scraped: list[dict]):
                 })
                 .eq("user_id", job["user_id"]).eq("item_id", item_id).eq("platform", platform)
                 .eq("action", "create").in_("status", ["pending", "claimed"])
+                # Alleen een blijven-hangen directe publicatie afsluiten, nooit
+                # een geplande herplaatsing (die draagt een scheduled_for). Die
+                # is een bewuste toekomstige actie, geen vastgelopen opdracht —
+                # afsluiten liet het artikel van het platform verdwijnen.
+                .is_("scheduled_for", "null")
                 .execute().data
             )
             if done:
