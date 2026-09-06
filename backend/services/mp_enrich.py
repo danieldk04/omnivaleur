@@ -256,7 +256,16 @@ async def zoek_een_titel(client: httpx.AsyncClient, verkoper_id: int,
         return None
     doel = _sleutel(schoon)
     try:
-        data = await _json(client, zoek_url, {"query": schoon[:80], "limit": 30, "offset": 0})
+        # `sellerIds[]` MOET mee. Zonder deze scoping zoekt dit door heel
+        # Marktplaats, en bij een verkoper met honderden bijna gelijk getitelde
+        # advertenties ("Miniatuur <merk> gitaar met gratis standaard") staat zijn
+        # eigen advertentie ver voorbij resultaat 30 — verdrongen door generieke
+        # miniatuurgitaren van andere verkopers. Gemeten 06-09-2026 bij Papa's
+        # Plectrums: 0 van 10 vastzittende items teruggevonden zonder scoping,
+        # 9 van 10 mét (elk met de volledige advertentietekst).
+        data = await _json(client, zoek_url, {
+            "query": schoon[:80], "limit": 30, "offset": 0,
+            "sellerIds[]": verkoper_id})
     except Exception as e:  # noqa: BLE001
         logger.warning("mp_enrich: zoeken op '%s' mislukt: %s", schoon[:40], e)
         return None
