@@ -5385,6 +5385,7 @@ def main() -> None:
             ("plan", plan, "wie is vandaag aan de beurt"),
             ("send", send, "de mails van vandaag versturen"),
             ("status", status, "hoe staat het ervoor"),
+            ("abtest", abtest, "hoe doen mailversie A en B het"),
             ("reacties", reacties, "elke lead die ooit reageerde, één regel per lead"),
             ("concepten", concepten, "wat er in Concepten ligt, dubbelen/verouderde ruimt hij meteen op")):
         p = sub.add_parser(naam, help=hulp)
