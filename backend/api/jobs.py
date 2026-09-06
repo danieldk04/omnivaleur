@@ -533,6 +533,39 @@ def _gemeten_tempo(db, user_id: str) -> dict:
     return uitkomst
 
 
+def _geeft_teken_van_leven(job: dict, now_dt: datetime) -> bool:
+    """Loopt deze geclaimde opdracht NU echt, of hangt hij alleen nog?
+
+    Een scan meldt elke paar seconden zijn vordering. Blijft dat teken uit, dan
+    is de opdracht blijven hangen en mag hij niets meer tegenhouden — anders zou
+    één vastgelopen scan het verversen dagenlang stil kunnen leggen.
+    """
+    res = job.get("result")
+    stempels = [_parse_ts(job.get("claimed_at"))]
+    if isinstance(res, dict):
+        stempels.append(_parse_ts((res.get("_progress") or {}).get("at")))
+    laatste = max([t for t in stempels if t], default=None)
+    return bool(laatste and laatste >= now_dt - timedelta(minutes=STALE_CLAIM_MINUTES))
+
+
+def _is_verversing(job: dict) -> bool:
+    """Hoort deze opdracht bij het verversen/herplaatsen en niet bij een klik?
+
+    Verversen is onderhoud dat best een half uur kan wachten. Een publicatie
+    waar de verkoper zelf op drukte hoort nooit te wachten (zie
+    docs/kennisbank.md, "eigen klik gaat voor de nachtronde").
+    """
+    if job.get("action") == "content_refresh":
+        return True
+    payload = job.get("payload") if isinstance(job.get("payload"), dict) else {}
+    if job.get("action") == "delete" and "_refresh_rollback" in payload:
+        return True
+    # De herplaatsing zelf: de enige create met een tijdstip in de toekomst.
+    if job.get("action") == "create" and job.get("scheduled_for"):
+        return True
+    return False
+
+
 @router.get("/pending")
 def get_pending_jobs(request: Request, platform: str = None, user_id: str = Depends(require_active_subscription)):
     db = get_db()
@@ -613,14 +646,30 @@ def get_pending_jobs(request: Request, platform: str = None, user_id: str = Depe
     # stip. Precies wat een gebruiker als "hij doet het niet" ervaart. Een scan
     # tegelijk met één publicatie kan geen kwaad: elk tabblad heeft zijn eigen
     # opdracht (jobtab_<tabId>), dus ze kunnen elkaars gegevens niet overschrijven.
+    #
+    # EEN UITZONDERING OP DIE NUANCE: VINTED + VERVERSEN. Vinted knijpt een
+    # sessie af die te veel verzoeken achter elkaar doet ("you are rate
+    # limited"). Een scan van een grote garderobe loopt daar minutenlang tegenaan
+    # het plafond, en een verversing die daar dwars doorheen begint, krijgt de
+    # dichte deur. Gemeten op 06-09-2026: scan van 365 advertenties bezig van
+    # 06:50 tot na 07:14, verversing gestart om 07:11:39, tabblad weg, oude
+    # advertentie bleef staan. Publiceren waar de verkoper zélf op drukte blijft
+    # gewoon doorgaan (zie _is_verversing) — die mag nooit stilvallen omdat er
+    # toevallig een leesronde loopt.
     is_extension_dispatch = platform is not None
+    vinted_scan_bezig = False
     if is_extension_dispatch:
         for c in (
-            db.table("jobs").select("claimed_at,action")
+            db.table("jobs").select("claimed_at,action,platform,result")
             .eq("user_id", user_id).eq("status", "claimed").execute().data
         ):
             if c.get("action") not in SCHRIJVEND:
-                continue  # een lopende scan houdt niemand tegen
+                # Een lopende scan houdt niemand tegen. Alleen onthouden we van
+                # een Vinted-scan DAT hij loopt, voor de verversrem hieronder.
+                if (c.get("action") == "scan" and c.get("platform") == "vinted"
+                        and _geeft_teken_van_leven(c, now_dt)):
+                    vinted_scan_bezig = True
+                continue
             ct = _parse_ts(c.get("claimed_at"))
             if ct and ct >= now_dt - timedelta(minutes=STALE_CLAIM_MINUTES):
                 return []  # er wordt nu echt gepubliceerd — nooit een 2e tabblad
@@ -729,6 +778,15 @@ def get_pending_jobs(request: Request, platform: str = None, user_id: str = Depe
 
     ready = []
     for j in due:
+        # Niet verversen op Vinted zolang de leesronde daar bezig is: samen zijn
+        # het twee stromen verzoeken naar dezelfde Vinted-sessie, en dan knijpt
+        # Vinted af. De opdracht blijft gewoon staan en komt bij de volgende
+        # poll (15 seconden) opnieuw langs; zodra de scan klaar is, gaat hij door.
+        if (vinted_scan_bezig and j.get("platform") == "vinted"
+                and _is_verversing(j)):
+            logger.info("Verversing %s (%s) wacht: er loopt een Vinted-scan "
+                        "voor gebruiker %s", j["id"], j["action"], user_id)
+            continue
         if j["action"] == "create" and verkocht_op.get(j.get("item_id")):
             kanalen = ", ".join(sorted(set(verkocht_op[j["item_id"]])))
             db.table("jobs").update({
