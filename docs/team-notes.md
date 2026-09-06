@@ -5787,3 +5787,41 @@ fout. `tests/test_geen_http2_race_supabase.py` → 4 groen. Inloggen is nu gezon
 Dode regel, maar het is het enige stukje van de inlogroute dat een onbewaakte
 500-met-code kan geven als de clientopbouw ooit hapert. Weghalen bij de
 volgende aanraking.
+
+## 06-09-2026 — Besluit 3 (valse "je bent niet ingelogd"): de aanname in de opdracht klopt niet
+
+De opdracht `aa47ccc` zegt: "51 opdrachten over 13 verschillende klanten ...
+het eerste wat een nieuwe gebruiker tegenkomt. Breedte, niet aantal, maakt dit
+de belangrijkste." Dat is doorgemeten tegen de live database (alle 1.729
+mislukte opdrachten, met `auth.admin.list_users` voor de e-mailadressen) en
+houdt geen stand.
+
+**Gemeten, niet aangenomen:**
+
+- Het speelt bij **5 klanten**, niet 13: info@papas-plectrums.nl (27),
+  info@retrogameking.com (16), dkresellacademy@gmail.com (6),
+  djt@dejuistetoon.eu (3), info@zilverwebsite.nl (2).
+- **48 van de 55** zitten in de scan/importstap, niet in het publiceren. Maar
+  7 `create`-opdrachten ooit, en 6 daarvan zijn één klant (dkresellacademy) op
+  Vinted.
+- **41 van de 48** scan-treffers zijn van augustus, op oude extensieversies
+  (1.0.200 t/m 1.0.281).
+- retrogameking vertrok 22-08 (v1.0.217). dkresellacademy is `trial_expired`
+  sinds 05-08, geen betalende klant. Van de betalende klanten: zilverwebsite
+  2 oude treffers, dejuistetoon 3x "2dehands weigert (401)" (aparte sessie,
+  waarschijnlijk terecht), papas-plectrums grotendeels de echte
+  2dehands-sessiestoring die al gedocumenteerd is.
+- De vier oorzaken die de opdracht noemt zijn grotendeels al gerepareerd:
+  Admarkt-toestemming vast in het manifest (1.0.258), 2dehands dat naar de
+  inlogpagina doorstuurt (cca2c77, 05-09), Vinted dat maar één landdomein
+  checkte (nu alle vijf), Chrome-sitetoegang "op klik".
+
+**Enige nog levende kandidaat:** dkresellacademy, 6 mislukte Vinted-plaatsingen
+in september (v1.0.290 en v1.0.305, payload `_create_origin: vinted.nl`). Ook
+op de nieuwste extensie meldt `vintedIngelogd()` "niet ingelogd" terwijl hij
+op alle vijf domeinen kijkt. Mogelijk leest die controle een 403 van een
+anti-robotlaag als "uitgelogd" (`vintedIngelogd` in background.js:
+`if (res.status === 401 || res.status === 403) return false`). Niet naspeelbaar
+zonder zijn browser, en het is een verlopen proef. Aan Daniel voorgelegd: de
+prioriteit die de opdracht aan Besluit 3 gaf, rust op een getal dat niet klopt.
+Hij koos: eerst de drie MOET ZEKER-storingen van betalende klanten.
