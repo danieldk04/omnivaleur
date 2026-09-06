@@ -1302,6 +1302,13 @@ async function pollJobsEenRonde() {
             console.error("Omnivaleur: failed to report job error:", e2);
           }
         }
+        // Eén publicatie per kanaal per ronde, dan is het volgende kanaal aan de
+        // beurt. Zonder deze rem draaide de hele Marktplaats-wachtrij leeg
+        // voordat 2dehands ook maar één keer werd gevraagd.
+        if (schrijvend) {
+          await beurtDoorgeven(platform);
+          break;
+        }
       }
     } catch (e) {
       console.error(`Omnivaleur poll error (${platform}):`, e);
