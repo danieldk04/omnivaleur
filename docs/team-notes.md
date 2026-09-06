@@ -5467,3 +5467,32 @@ in een willekeurige Belgische gemeente.
 **Los hiervan gevonden:** `tests/test_stuck_publish_recovery.py::
 test_closing_the_tab_reports_the_job` faalde al vóór deze sessie (de
 tabs.onRemoved-afhandeling werkt sinds het werkvenster anders). Niet aangeraakt.
+
+## 06-09-2026 — Vinted knijpt af als er twee dingen tegelijk lopen
+
+Daniel kreeg "you are rate limited" op Vinted en een verversing mislukte. Geen
+account-maatregel: Vinted rembt een sessie die te veel verzoeken achter elkaar
+doet, en die rem is na een minuut weg (gemeten patroon staat in
+backend/services/vinted_enrich.py).
+
+Wat er wél misging, gemeten in zijn eigen opdrachten: om 06:49:11 zette de
+server automatisch een Vinted-scan klaar (dat gebeurt na een mislukte
+publicatie, `_queue_scan` in backend/api/jobs.py; twee Vinted-publicaties van
+05-09 werden die ochtend pas als mislukt afgesloten). Die scan liep van 06:50
+tot na 07:14 door 365 advertenties. Om 07:11:39 begon daar dwars doorheen een
+verversing. Twee stromen naar dezelfde Vinted-sessie, dus de rem. Resultaat:
+"No tab with id", oude advertentie bleef staan, geen dubbele advertentie (het
+vangnet voor een mislukte verwijdering deed zijn werk).
+
+Gerepareerd in de uitgifte: een lopende Vinted-scan houdt nu de verversingen op
+dat kanaal tegen. Publiceren waar de verkoper zelf op drukte gaat door, en een
+scan die minuten niets meldt geldt als vastgelopen. Bewijs met voor-en-na in
+tests/test_verversen_wacht_op_vinted_scan.py.
+
+**Openstaand punt.** De extensie zet elk uur zelf een Vinted-scan klaar
+(`triggerVintedAutoScan`, extension/background.js), maar roept
+`/api/scan/vinted` aan terwijl de route `/api/imports/scan/{platform}` heet. Dat
+is dus al die tijd een 404 geweest: de uurlijkse controle op Vinted-verkopen
+heeft nooit gedraaid. Alleen scans na een mislukte publicatie of na een klik
+komen er door. Repareren betekent hourly scans voor iedereen, dus eerst met
+Daniel bespreken.
