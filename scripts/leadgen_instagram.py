@@ -610,6 +610,15 @@ def main() -> None:
     r.set_defaults(func=run)
 
     args = ap.parse_args()
+    # Gestopt 06-09-2026. De classify-helpers worden nog geïmporteerd door
+    # leadgen_marktplaats.py, maar de eigen scrape-/mailstappen kosten alleen
+    # Apify-credits. Wie dit bewust weer wil draaien: zet OMNIVALEUR_IG_LEADGEN=1.
+    import os
+    if args.func.__name__ in {"discover", "enrich", "run", "push"} \
+            and os.environ.get("OMNIVALEUR_IG_LEADGEN") != "1":
+        sys.exit("Instagram/Facebook-leadgen is gestopt (06-09-2026): 0 klanten uit "
+                 "171 leads, IG-account geblokkeerd. Zie docs/team-notes.md. "
+                 "Bewust toch draaien: OMNIVALEUR_IG_LEADGEN=1.")
     args.func(args)
 
 
