@@ -5937,3 +5937,19 @@ incl. btw ≈ €90–100 contributie *als* je 6 maanden levensduur aanneemt —
 niet te meten, geen enkele betalende klant heeft lang genoeg bestaan. LTV/CAC dus
 ergens tussen 6:1 en 75:1; de rem is niet het geld maar de uitgezette machine en
 de dunne voorraad goede leads in de juiste categorieën.
+
+**Besluit van Daniel (06-09-2026, later die dag): koude mail weer aan, IG/FB eruit.**
+- `com.omnivaleur.leadgen.plist.uit` hernoemd naar `.plist` en `launchctl load`.
+  De machine draait weer elke 10 minuten. `scripts/leadgen_deploy.sh` gedraaid
+  zodat de kopie in `~/Library/Application Support/omnivaleur/code/` de huidige
+  `leadgen_mail.py` en `leadgen_notion.py` gebruikt (die stond nog op 12-08).
+- `_leads()` in `leadgen_mail.py` laadt alleen nog `mp_leads`, niet meer
+  `IG_LEADS` (leads.json). IG- en FB-leads krijgen dus geen koude mail meer.
+- `leadgen_instagram.py` weigert `discover/enrich/run/push` tenzij
+  `OMNIVALEUR_IG_LEADGEN=1`. De classify-helpers erin blijven bruikbaar voor
+  `leadgen_marktplaats.py`.
+- De terughaalcampagne (25 slapende klanten) wacht nog op Daniels expliciete
+  akkoord. Niet uit eigen beweging versturen — zo gevraagd.
+- Let op: de `mp_leads`-rij in Supabase is voor het laatst bijgewerkt rond
+  17-08. Nieuwe leads uit de bijgestelde categorieën komen er pas in na een
+  `leadgen_marktplaats.py run` + `leadgen_mail.py overzetten` op de Mac.
