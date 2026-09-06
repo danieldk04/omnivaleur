@@ -5858,3 +5858,35 @@ sitetoegang-fout.
 `tests/extensie-sitetoegang-test.js` (site-toegang) en
 `tests/test_relist_foto_en_venster.py` (Site verlaten-venster), allebei groen.
 Teruggemeld als `opgelost` naar beide melders.
+
+## 06-09-2026 — de scan sloot een lopende herplaatsing af (vervolg op "Vinted knijpt af")
+
+Zelfde ketting als de notitie hierboven. Daniel drukte om 08:01 op "Retry
+relist" voor zijn Vinted-artikel "(1017) Grey Ralph Lauren Zip Vest". Het kaartje
+sprong meteen op "nieuwe advertentie staat live", maar "view listing" gaf een
+Vinted-404.
+
+**Gemeten in zijn opdrachten (item c805e6e6):** de herkansing draaide een verse
+verwijdering (08:02:41 klaar, advertentie 8614559497 echt van Vinted af) plus een
+herplaatsing gepland voor 09:57. Om 08:02:58, 17 seconden na de verwijdering,
+sloot een scan-opslag die herplaatsopdracht af met `result.note = "already live
+on the platform (seen by scan)"` en het intussen verwijderde advertentienummer.
+Die scan had de garderobe gelezen vóór de verwijdering — een oudere momentopname.
+Gevolg: artikel nergens meer op Vinted, herplaatsing dood, dashboard meldt "live"
+met een dode link.
+
+De ochtendreparatie ving de *uitgifte*-kant (een lopende scan blokkeert het
+uitdelen van verversingen). Dit is de *opslag*-kant.
+
+**Gerepareerd in `backend/api/jobs.py`, `_store_scan_results`:**
+1. Een listing-rij op `relisting` laat de scan volledig met rust — een
+   herplaatsing heeft zijn eigen afhandeling.
+2. De scan sluit alleen nog een directe publicatie af die is blijven hangen,
+   nooit een `create` met een `scheduled_for` (een geplande herplaatsing).
+
+Voor-en-na in `tests/test_gescande_advertentie_al_gekoppeld.py` (twee nieuwe
+tests), plus de 6 bestaande scan/herplaats-suites groen.
+
+**Daniels artikel hersteld:** de herplaatsopdracht (`f9a59d9c`) weer op `pending`
+gezet en de rij terug op `relisting`. Zijn extensie plaatst hem opnieuw zodra
+Chrome openstaat; dan krijgt hij een vers advertentienummer en klopt de link.
