@@ -56,7 +56,8 @@ class _Q:
             return type("R", (), {"data": list(self.rijen_in)})()
         bron = getattr(self.db, self.tabel, [])
         rijen = [r for r in bron
-                 if all(r.get(k) == v for k, v in self.filters.items())]
+                 if all(r.get(k) == v for k, v in self.filters.items())
+                 and all(r.get(k) is None for k in getattr(self, "null_filters", []))]
         if self.op == "update":
             for r in rijen:
                 r.update(self.velden)
