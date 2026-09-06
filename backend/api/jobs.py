@@ -625,6 +625,48 @@ def get_pending_jobs(request: Request, platform: str = None, user_id: str = Depe
             if ct and ct >= now_dt - timedelta(minutes=STALE_CLAIM_MINUTES):
                 return []  # er wordt nu echt gepubliceerd — nooit een 2e tabblad
 
+    # ── OM DE BEURT TUSSEN DE KANALEN ─────────────────────────────────────────
+    #
+    # Lynn (De Juiste Toon), 05-09-2026: "Marktplaats ging vandaag helemaal
+    # super. Naar tweedehands pakt ie nog niet." Gemeten: op 04-09 stond er om
+    # 14:08:09 één 2dehands-publicatie klaar die nooit is opgepakt (ze heeft hem
+    # om 18:23 zelf geannuleerd), terwijl er in diezelfde vier uur negen
+    # Marktplaats-publicaties doorheen gingen. Op haar drukke dagen ging er van
+    # de 75 en 98 publicaties telkens precies één naar 2dehands.
+    #
+    # De extensie vraagt de kanalen in een vaste volgorde, marktplaats altijd
+    # eerst, terwijl de rem hierboven voor álle kanalen tegelijk geldt: er mag er
+    # maar één tegelijk publiceren. Wie vooraan staat pakt dus elke vrijgekomen
+    # plek, en met een volle Marktplaats-rij kwam 2dehands nooit aan bod.
+    #
+    # De extensie deelt de beurt sinds 1.0.306 zelf eerlijk rond, maar een
+    # nieuwe versie is er pas na de Web Store en niet iedereen werkt bij. Daarom
+    # ook hier: heeft dit kanaal zojuist nog gepubliceerd en staat er op een
+    # ánder kanaal werk te wachten, dan is dat andere kanaal nu aan de beurt.
+    # De extensie vraagt elke ronde alle kanalen langs, dus die pakt hem meteen.
+    if is_extension_dispatch and any(j.get("action") in SCHRIJVEND for j in result.data):
+        try:
+            laatste = (db.table("jobs").select("platform,claimed_at,action")
+                       .eq("user_id", user_id).in_("action", list(SCHRIJVEND))
+                       .not_.is_("claimed_at", "null")
+                       .gte("claimed_at", (now_dt - timedelta(hours=2)).isoformat())
+                       .order("claimed_at", desc=True).limit(1).execute().data or [])
+            if laatste and laatste[0].get("platform") == platform:
+                anderen = (db.table("jobs").select("id")
+                           .eq("user_id", user_id).eq("status", "pending")
+                           .in_("action", list(SCHRIJVEND))
+                           .neq("platform", platform)
+                           .or_(f"scheduled_for.is.null,scheduled_for.lte.{now}")
+                           .limit(1).execute().data or [])
+                if anderen:
+                    logger.info("Beurt doorgegeven: %s wacht even, een ander kanaal "
+                                "heeft werk klaarstaan (gebruiker %s)", platform, user_id)
+                    return []
+        except Exception as e:  # noqa: BLE001
+            # Kunnen we de beurt niet bepalen, dan delen we gewoon uit. Een
+            # oneerlijke volgorde is vervelend; niets uitdelen is erger.
+            logger.warning("Beurtverdeling overgeslagen (%s)", e)
+
     # Jobs with a future scheduled_for (used to jitter relist recreates) aren't due yet.
     due = [j for j in result.data if not j.get("scheduled_for") or j["scheduled_for"] <= now]
 
