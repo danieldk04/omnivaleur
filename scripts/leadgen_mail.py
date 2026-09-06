@@ -1256,7 +1256,7 @@ def _verstuur(rij: list, gebruiker: str, host: str, state: dict,
                 return verstuurd + 1
             verstuurd += 1
             boek.verstuurd(lead, n, _onderwerp(lead, n))
-            print(f"  → {BEURTEN[n][0]} {lead['email']}", flush=True)
+            print(f"  → [{_variant(sleutel)}] {BEURTEN[n][0]} {lead['email']}", flush=True)
             if i < len(rij) - 1:
                 time.sleep(random.uniform(*PAUZE))
     return verstuurd
