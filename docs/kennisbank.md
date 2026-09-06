@@ -17,6 +17,32 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ---
 
+## leadgen-status-leest-anon-sleutel
+
+*06-09-2026 — leadgen_mail.py status zegt lokaal "0 leads" omdat de .env de anon-sleutel bevat; RLS geeft een lege lijst met code 200*
+
+De administratie van de koude-mailmachine staat in Supabase, tabel `leadgen_opslag`
+(rijen: mail_state, mp_leads, leads, leerlog, mail_reacties, mail_advies, mail_plan).
+`scripts/leadgen_mail.py` leest die met `SUPABASE_URL` + `SUPABASE_KEY`.
+
+In de lokale `.env` staat onder `SUPABASE_KEY` de **anon**-sleutel. Row Level
+Security geeft daarop geen foutmelding maar een lege lijst met status 200, dus
+`python3 scripts/leadgen_mail.py status` meldt doodleuk "0 leads met e-mailadres,
+0 benaderd". Dat lijkt op een kapotte machine terwijl er 319 leads en 786
+verstuurde mails in staan.
+
+Lees de echte stand met de servicesleutel die er los naast staat:
+
+    set -a && . ./.env && set +a
+    SUPABASE_KEY="$SUPABASE_SERVICE_KEY" python3 scripts/leadgen_mail.py status
+
+Bij GitHub Actions gaat het goed: daar is de secret `SUPABASE_KEY` wel de
+servicesleutel. Zie ook "railway-draait-op-anon-sleutel" en
+"scan-mag-nooit-leeghalen": een lege uitkomst is eerst een reden om de meting
+te wantrouwen.
+
+---
+
 ## eigen-advertentie-heeft-geen-leesbaar-adres
 
 *05-09-2026 — Van advertenties die de extensie zelf plaatste bewaren we /seller/view/{id}, en die pagina is voor de server onleesbaar; de openbare zoek-API is de weg terug*
