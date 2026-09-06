@@ -1611,12 +1611,10 @@ async function magStilScannenNu() {
 }
 
 // Eerst een achtergrond-tabblad in een bestaand venster; lukt dat niet, dan pas
-// het oude, geminimaliseerde werkvenster.
+// het oude, geminimaliseerde werkvenster. Sinds 06-09-2026 doet openWorkerTab
+// precies hetzelfde, dus dit is nog maar een naam voor die ene route.
 function stilTabblad(url, callback) {
-  openAchtergrondTabblad(url).then((tab) => {
-    if (tab) { callback(tab); return; }
-    openStilWerkTabblad(url, callback);
-  }).catch(() => openStilWerkTabblad(url, callback));
+  openWorkerTab(url, callback, { silent: true });
 }
 
 
