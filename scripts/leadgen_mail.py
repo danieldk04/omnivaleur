@@ -1239,6 +1239,7 @@ def _verstuur(rij: list, gebruiker: str, host: str, state: dict,
                 continue
             st = state.setdefault(sleutel, {"verstuurd": [],
                                             "bedrijf": _bedrijfsnaam(lead)})
+            st["variant"] = _variant(sleutel)      # A/B-versie, vast per adres
             st["verstuurd"].append({"beurt": BEURTEN[n][0],
                                     "op": datetime.now().isoformat(timespec="seconds")})
             st["laatste"] = datetime.now().isoformat(timespec="seconds")
