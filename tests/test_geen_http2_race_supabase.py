@@ -40,10 +40,14 @@ def _http2_van(client: httpx.Client) -> bool:
 
 
 def test_postgrest_standaard_is_de_racende_http2():
-    """Vastleggen wat er zou gebeuren zonder deze reparatie: de kale
-    postgrest/httpx-standaard is http2=True — precies de instelling die de
-    race veroorzaakte."""
-    assert _http2_van(httpx.Client()) is True
+    """Vastleggen wat er zou gebeuren zonder deze reparatie: postgrest-py zet
+    zelf expliciet http2=True zodra er geen eigen httpx-client wordt
+    meegegeven (postgrest/_sync/client.py) — precies de instelling die de
+    race veroorzaakte. Kale httpx.Client() staat standaard al op http2=False,
+    dus die stille standaard is niet het probleem; de expliciete keuze in
+    postgrest-py wel."""
+    assert _http2_van(httpx.Client(http2=True)) is True
+    assert _http2_van(httpx.Client()) is False
 
 
 def test_zonder_http2_bouwt_een_http1_client():
