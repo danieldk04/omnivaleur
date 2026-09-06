@@ -5658,3 +5658,56 @@ de mail in de inbox landt. Open gebleven en aan Daniel voorgelegd: DMARC staat o
 alleen een verborgen List-Unsubscribe-kop. Dat laatste is een bewuste keuze van
 Daniel geweest, maar wel een juridisch risico en de beste bescherming tegen
 spamklachten.
+
+## 06-09-2026 — "publiceren-mislukt" heropend: een andere race, niet de oude vier
+
+Met voorrang doorgegeven (amandahaas1979, zilverwebsite.nl, papas-plectrums,
+MOET ZEKER, laatst gemeld 04-09). De sleutel was op 01-09 al eens dichtgezet:
+de vier oorspronkelijke oorzaken van 30-08 (bedrijfsgegevens meegestuurd,
+Vinted standaard in kinderkleding, dubbele foto's, de oude 500) bleken toen
+al gerepareerd. `mail_analyse.py` had hem op 03-09 automatisch heropend omdat
+een nieuwe klacht qua trefwoorden op dezelfde sleutel matchte
+(`_bestaande_sleutel`) — niet omdat een van de vier dingen terugkwam.
+
+**Nagekeken, niet aangenomen.** Alle drie de accounts opgevraagd in `jobs`
+sinds 01-09 (300+ opdrachten elk). Geen spoor van de oude vier klachten. Wel
+allemaal al bekende, losse problemen: lege prijs en geen advertentievorm
+gekozen bij Amanda (`formulier-onthoudt-vorige-keuze`,
+`geen-vraagprijs-is-bieden`), 2dehands niet ingelogd en een timeout bij
+Papas Plectrums (`stille-tab-is-geen-formulier`), Chrome die dichtklapte
+tijdens het publiceren. Geen van drieën heeft dus recent een échte 500 van
+onze server gehad — op één ding na.
+
+**Wél nieuw gevonden in `server_fouten`:** 05-09-2026 08:50 UTC, een kale
+`KeyError` middenin httpcore zelf, op `/api/jobs/relist-status` — dezelfde
+route als de oorspronkelijke 500 van 30-08. Rond diezelfde uren (04-09 avond
+en 05-09 ochtend) staat er een hele reeks `RemoteProtocolError`,
+`LocalProtocolError` en `WriteError` op bijna elk `/api/jobs/*`-pad, telkens
+in bursts.
+
+**Oorzaak, aangewezen en nagebouwd.** postgrest-py (de laag onder onze
+Supabase-client) zet zelf `http2=True` op zijn httpx-client, en die ene
+client wordt over alle gelijktijdige verzoeken heen gedeeld — FastAPI draait
+de synchrone routes in een threadpool. httpcore houdt de openstaande
+HTTP/2-streams van zo'n gedeelde verbinding bij in één woordenboek dat niet
+thread-safe is; twee threads die tegelijk een stream sluiten laten hem
+struikelen. Nagebouwd tegen de echte Supabase-URL: 40 threads, 1000
+gelijktijdige verzoeken op een gedeelde client — 103 kapotte lezingen met
+`http2=True`, nul met `http2=False`. Een lezing wordt bij zo'n fout
+automatisch herhaald (`_lezen_met_herkansing`), maar een schrijfactie nooit
+(dat zou dubbele advertenties geven), dus komt die als kale 500 bij de klant
+terecht. Dat verklaart waarom het willekeurige, niet-reproduceerbare
+opdrachten treft: puur een kwestie van welke twee threads elkaar net raken.
+
+**Reparatie.** Alle vier Supabase-verbindingen in `backend/database.py`
+(`get_db`, `get_admin_db`, `get_auth_db`, `verse_auth_client`) krijgen nu een
+eigen httpx-client met `http2=False` mee. Bewijs in
+`tests/test_geen_http2_race_supabase.py`, met de stress-meting hierboven als
+onderbouwing (niet als geautomatiseerde test, want die hangt af van een live
+Supabase-verbinding).
+
+**Open punt, niet meegenomen:** dezelfde burst-uren laten ook
+`/api/billing/webhook` een `KeyError` geven (5x, 06-09 04:12) en
+`/api/items/sync` een `TypeError` (04-09 12:28–12:33, twintig keer achter
+elkaar). Die liggen buiten deze sleutel — geen van de drie melders raakte die
+routes — en verdienen een eigen blik.
