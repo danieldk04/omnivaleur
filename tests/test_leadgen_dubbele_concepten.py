@@ -333,9 +333,11 @@ def test_een_kapotte_postbus_ook_niet(postbus, monkeypatch):
     assert L._concept_verdwenen("frank@klant.nl") is False
 
 
-def test_er_komt_hooguit_een_tweede_concept_en_geen_derde():
-    """Anders staat er elke tien minuten een nieuwe en wordt weggooien dweilen."""
-    ronde = Path(L.__file__).read_text()
-    kop = ronde[ronde.index("            opnieuw = bool("):]
-    assert 'float(st.get("concept_opnieuw") or 0) < binnen_op' in kop[:600]
-    assert 'st["concept_opnieuw"] = binnen_op' in ronde
+def test_inbox_lezen_schrijft_geen_concept():
+    """Een binnenkomende reactie wordt vastgelegd en de bal gaat in Notion naar
+    Daniel, maar de machine stelt niets op — hij schrijft geen antwoorden meer
+    (Daniel, 06-09-2026)."""
+    bron = Path(L.__file__).read_text()
+    inbox = bron.split("def _check_inbox(")[1].split("\ndef ", 1)[0]
+    assert "_zet_concept_klaar(" not in inbox
+    assert "boek.wacht_op_daniel(lead)" in inbox
