@@ -42,11 +42,30 @@ al sinds 20-08 hernoemd naar `.plist.uit` (`tick.log` stopt 20-08 11:03) — 17
 dagen lang werden leads gescrapet en in Notion gezet maar kreeg niemand mail.
 Categorieën tunen op een uitgezette machine verandert niets.
 
-Kosten: MP-scrape €0 (gratis interne zoek-API, geen Apify), classify ~$0,50/ronde
+Kosten: MP-scrape €0 (gratis interne zoek-API, geen Apify), classify ~$1-2/ronde
 Haiku, mail ~€0 via de bestaande Zoho-mailbox. Cash-CAC ≈ €1/klant. Churn is niet
-te meten want geen betalende klant bestaat lang genoeg. Zie
-"leadgen-marktplaats-beste-bron", "marktplaats-rubrieken-uitgeput",
-"instagram-ban-augustus-2026", "groepsoordeel-maakt-model-strenger".
+te meten want geen betalende klant bestaat lang genoeg.
+
+**Opbrengst verse ronde (06-09-2026):** 1M advertenties → 308 nieuwe zakelijke
+verkopers → 242 door classify (541 afgewezen) → **91 echt nieuw**. Laag omdat de
+goede rubrieken al afgezocht waren; antiek was de enige verse ader. ~91/maand is
+het realistische bijvultempo. Grootste hefboom voor meer: 2dehands.be (België,
+zelfde methode), daarna `--min-ads` 20→10 of eBay.nl. `leadgen_mail.py overzetten`
+NOOIT gebruiken om leads toe te voegen: het overschrijft de hele `mp_leads`-rij.
+Merge op e-mail via een los scriptje (pool ging 381 → 468).
+
+**A/B-test op de koude mailcopy** sinds 06-09 in `leadgen_mail.py`: `BEURTEN` (A,
+"overtikken kost tijd") naast `BEURTEN_B` (B, "je bereikt alleen
+Marktplaats-kopers"). `_variant(email, st)` kiest vast per lead (genoteerd > "al
+gemaild vóór de test = A" > hash 50/50), `_verstuur` bevriest op mail 1.
+`leadgen_mail.py abtest` toont per versie benaderd/geopend/beantwoord/aangemeld/
+betaald. Nulmeting A: 47% open, 23% antwoord, 2% aanmelding, 1% betaald. Sturen op
+antwoordpercentage, niet op betaald (te weinig volume). `AB_ACTIEF=False` = terug
+naar A.
+
+Zie "leadgen-marktplaats-beste-bron", "marktplaats-rubrieken-uitgeput",
+"instagram-ban-augustus-2026", "groepsoordeel-maakt-model-strenger",
+"haiku-cache-ondergrens".
 
 ---
 
