@@ -451,8 +451,11 @@ def _bruikbaar(adres: str) -> bool:
 
 
 def _leads() -> list[dict]:
-    """Marktplaats-leads eerst; die hebben een e-mailadres en de meeste voorraad."""
-    alles = [l for l in _load(MP_LEADS) + _load(IG_LEADS)
+    """Alleen Marktplaats-leads. Instagram en Facebook zijn 06-09-2026 uit de
+    leadgen gehaald: 171 IG/FB-leads gaven 0 aanmeldingen en 0 betalende klanten,
+    en het IG-account is sinds ~09-08 geblokkeerd. IG_LEADS (leads.json) wordt
+    daarom niet meer meegenomen. Zie docs/team-notes.md 06-09-2026."""
+    alles = [l for l in _load(MP_LEADS)
              if _bruikbaar(l.get("email") or "")]
     uniek: dict[str, dict] = {}
     for lead in alles:
