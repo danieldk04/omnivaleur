@@ -648,6 +648,80 @@ BEURTEN = [
     ("mail3", "Laatste bericht", MAIL3),
 ]
 
+# ── A/B-test op de koude mailcopy ────────────────────────────────────────────
+# Versie A (BEURTEN hierboven) opent met "handmatig overtikken kost tijd".
+# Versie B opent met "je bereikt alleen Marktplaats-kopers" en heeft een
+# onderwerpregel die de winst noemt. Zelfde lengte, toon en bewijs.
+#
+# Elke lead krijgt vast één versie op basis van een hash van het e-mailadres:
+# de hele reeks (mail 1, 2, 3) blijft consistent en een tweede run kiest
+# hetzelfde. 50/50. `leadgen_mail.py abtest` toont per versie geopend,
+# beantwoord, aangemeld en betaald. Zet AB_ACTIEF op False om alles terug naar
+# versie A te zetten zonder de teksten te verwijderen.
+AB_ACTIEF = True
+
+MAIL1_B = """{aanhef},
+
+{haakje}
+
+Alles staat nu alleen op Marktplaats. Diezelfde advertenties ook op Vinted, eBay
+en 2dehands zetten betekent een veel grotere groep kopers, en spullen die er
+sneller weg zijn. Daar heb ik {bedrijf} voor gebouwd: {jij} zet een artikel een
+keer klaar en het staat overal, in plaats van het overal apart over te tikken.
+Zelf verkoop ik ook tweedehands, 700+ reviews met Revaleur. Inmiddels gebruiken
+38 andere resellers het.
+
+De eerste 7 dagen zijn gratis, en als het {jou} niks oplevert {jij_stopt} gewoon
+weer.
+
+Zal ik {jou} een filmpje van een minuutje sturen? Dan {zie_jij} zo of het wat
+voor {jou} is.
+
+{ondertekening}"""
+
+MAIL2_B = """{aanhef},
+
+Nog even over mijn mailtje van vorige week, geen idee of het is aangekomen.
+
+Waar ik benieuwd naar ben: staat {jouw} aanbod al ergens anders dan op
+Marktplaats? De meeste verkopers die ik spreek zitten op een platform terwijl
+hun spullen op Vinted of eBay net zo goed weg zouden gaan, vaak sneller.
+
+Als {jij_wil} stuur ik dat filmpje van een minuut, dan {zie_jij} zelf of het wat
+oplevert. Geen verplichtingen, gewoon even kijken.
+
+{ondertekening}"""
+
+MAIL3_B = """{aanhef},
+
+Ik ga {jou} niet langer lastigvallen, dit is mijn laatste mailtje.
+
+{mocht_jij} ooit meer kopers willen bereiken dan alleen die op Marktplaats, dan
+{weet_jij} me te vinden: {site}. Stuur gerust een berichtje, ook als het alleen
+is om te sparren over waar {jouw} spullen nog meer zouden kunnen staan.
+
+Succes met de zaak, en veel verkoop!
+
+{ondertekening}"""
+
+BEURTEN_B = [
+    ("mail1", "{jouw} advertenties ook op Vinted en eBay?", MAIL1_B),
+    ("mail2", "Re: {jouw} advertenties ook op Vinted en eBay?", MAIL2_B),
+    ("mail3", "Laatste bericht", MAIL3_B),
+]
+
+
+def _variant(email: str) -> str:
+    """Vaste A/B-keuze per e-mailadres. Stabiel over runs, 50/50."""
+    if not AB_ACTIEF:
+        return "A"
+    h = hashlib.sha1(("koudemail-ab:" + (email or "").strip().lower()).encode()).hexdigest()
+    return "B" if int(h[:8], 16) % 2 else "A"
+
+
+def _beurten(lead: dict) -> list:
+    return BEURTEN_B if _variant(lead.get("email", "")) == "B" else BEURTEN
+
 
 def _tekst(lead: dict, sjabloon: str) -> str:
     return sjabloon.format(
