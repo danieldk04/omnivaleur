@@ -712,16 +712,27 @@ BEURTEN_B = [
 ]
 
 
-def _variant(email: str) -> str:
-    """Vaste A/B-keuze per e-mailadres. Stabiel over runs, 50/50."""
+def _variant(email: str, st: dict | None = None) -> str:
+    """Vaste A/B-keuze per lead. Eenmaal genoteerd verandert hij nooit meer, zodat
+    de hele reeks één versie is en de meting zuiver blijft.
+
+      * al genoteerd (`st["variant"]`)         -> die
+      * al eens gemaild vóór de A/B-test bestond -> A (B bestond toen nog niet)
+      * anders                                  -> hash van het adres, 50/50
+    """
     if not AB_ACTIEF:
         return "A"
+    if st:
+        if st.get("variant"):
+            return st["variant"]
+        if st.get("verstuurd"):
+            return "A"
     h = hashlib.sha1(("koudemail-ab:" + (email or "").strip().lower()).encode()).hexdigest()
     return "B" if int(h[:8], 16) % 2 else "A"
 
 
-def _beurten(lead: dict) -> list:
-    return BEURTEN_B if _variant(lead.get("email", "")) == "B" else BEURTEN
+def _beurten(lead: dict, st: dict | None = None) -> list:
+    return BEURTEN_B if _variant(lead.get("email", ""), st) == "B" else BEURTEN
 
 
 def _tekst(lead: dict, sjabloon: str) -> str:
