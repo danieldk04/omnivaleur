@@ -110,6 +110,21 @@ def test_werkvenster_vangnet_blijft_geminimaliseerd():
         not in inner.split("catch")[0], "een gewoon venster komt in beeld"
 
 
+def test_minimaliseren_blijft_van_het_venster_van_de_verkoper_af():
+    """De macOS-bug: windows.update({state:"minimized"}) pakt soms het venster dat
+    vooraan staat. Staat er een gewoon venster van de verkoper voor, dan raken we
+    ons werkvenster niet aan."""
+    assert "async function veiligOmWerkvensterTeMinimaliseren(" in BG
+    guard = BG.split("async function veiligOmWerkvensterTeMinimaliseren(")[1].split("\n}")[0]
+    assert "getLastFocused" in guard
+    assert "return false" in guard, "een gewoon venster vooraan hoort ons te laten stoppen"
+    # beide minimaliseer-plekken gebruiken de rem
+    houd = BG.split("async function houdWerkvensterGeminimaliseerd(")[1].split("\n}")[0]
+    sched = BG.split("function scheduleWorkerWindowMinimise(")[1].split("\n}")[0]
+    assert "veiligOmWerkvensterTeMinimaliseren" in houd
+    assert "veiligOmWerkvensterTeMinimaliseren" in sched
+
+
 # ── 4. Geen HTML in een plat tekstveld ───────────────────────────────────────
 
 def test_beschrijving_wordt_platgeslagen_voor_elk_formulier():
