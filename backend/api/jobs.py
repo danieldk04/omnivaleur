@@ -642,8 +642,15 @@ def get_pending_jobs(request: Request, platform: str = None, user_id: str = Depe
     # De extensie deelt de beurt sinds 1.0.306 zelf eerlijk rond, maar een
     # nieuwe versie is er pas na de Web Store en niet iedereen werkt bij. Daarom
     # ook hier: heeft dit kanaal zojuist nog gepubliceerd en staat er op een
-    # ánder kanaal werk te wachten, dan is dat andere kanaal nu aan de beurt.
-    # De extensie vraagt elke ronde alle kanalen langs, dus die pakt hem meteen.
+    # ánder kanaal werk te wachten, dan geven we DAT werk terug. De extensie
+    # kijkt niet naar het kanaal dat ze vroeg maar naar het kanaal in de opdracht
+    # zelf (nagekeken tot en met de versies die nu bij klanten draaien), dus dit
+    # werkt ook op een kopie van weken oud.
+    #
+    # Bewust teruggeven en niet "even niets": een opdracht die om welke reden dan
+    # ook nooit kan lopen zou anders de hele wachtrij stil kunnen leggen. Wat we
+    # teruggeven wordt geclaimd, en daarmee lost het zichzelf op — het lukt, of
+    # het mislukt met een melding, en in beide gevallen is de rij weer vrij.
     if is_extension_dispatch and any(j.get("action") in SCHRIJVEND for j in result.data):
         try:
             laatste = (db.table("jobs").select("platform,claimed_at,action")
@@ -652,19 +659,21 @@ def get_pending_jobs(request: Request, platform: str = None, user_id: str = Depe
                        .gte("claimed_at", (now_dt - timedelta(hours=2)).isoformat())
                        .order("claimed_at", desc=True).limit(1).execute().data or [])
             if laatste and laatste[0].get("platform") == platform:
-                anderen = (db.table("jobs").select("id")
+                anderen = (db.table("jobs").select("*")
                            .eq("user_id", user_id).eq("status", "pending")
                            .in_("action", list(SCHRIJVEND))
                            .neq("platform", platform)
                            .or_(f"scheduled_for.is.null,scheduled_for.lte.{now}")
-                           .limit(1).execute().data or [])
+                           .order("created_at").limit(WACHTRIJ_KOP).execute().data or [])
                 if anderen:
-                    logger.info("Beurt doorgegeven: %s wacht even, een ander kanaal "
-                                "heeft werk klaarstaan (gebruiker %s)", platform, user_id)
-                    return []
+                    logger.info("Beurt doorgegeven aan %s: %s had de vorige "
+                                "publicatie (gebruiker %s)",
+                                anderen[0].get("platform"), platform, user_id)
+                    result = SimpleNamespace(data=anderen)
         except Exception as e:  # noqa: BLE001
-            # Kunnen we de beurt niet bepalen, dan delen we gewoon uit. Een
-            # oneerlijke volgorde is vervelend; niets uitdelen is erger.
+            # Kunnen we de beurt niet bepalen, dan delen we gewoon uit wat er voor
+            # dit kanaal klaarstond. Een oneerlijke volgorde is vervelend; niets
+            # uitdelen is erger.
             logger.warning("Beurtverdeling overgeslagen (%s)", e)
 
     # Jobs with a future scheduled_for (used to jitter relist recreates) aren't due yet.
