@@ -2114,17 +2114,27 @@ def _warme_opvolging(state: dict, boek: "Notion") -> int:
                     st["warm_opvolg"] = len(WARM_OPVOLG_DAGEN)   # klaar, niet nog eens kijken
                     continue
 
+                inkomend = {"Subject": (draad or {}).get("Subject", ""),
+                            "Message-ID": (draad or {}).get("Message-ID", ""),
+                            "References": (draad or {}).get("References", ""),
+                            "From": (draad or {}).get("From", ""),
+                            "Date": (draad or {}).get("Date", "")}
+
+                # Eerst kijken of dit zetje er überhaupt mag komen — er kan al
+                # een concept liggen, of Daniel kan zelf al geantwoord hebben.
+                # Doen we dat pas ná _stilte_concept, dan heeft het model (dure
+                # Opus-aanroep) al een heel bericht geschreven dat we weggooien.
+                # Dat gebeurde elke tien minuten voor tientallen leads en liet
+                # het API-tegoed op één dag leeglopen (06-09-2026).
+                if _waarom_geen_concept(adres, inkomend):
+                    continue
+
                 tekst = (_stilte_concept(draad.get("tekst", ""),
                                         beurt == len(WARM_OPVOLG_DAGEN) - 1)
                          if draad else None)
                 if not tekst:
                     tekst = WARM_OPVOLG[beurt].format(link=REGISTREREN,
                                                       ondertekening=ONDERTEKENING)
-                inkomend = {"Subject": (draad or {}).get("Subject", ""),
-                            "Message-ID": (draad or {}).get("Message-ID", ""),
-                            "References": (draad or {}).get("References", ""),
-                            "From": (draad or {}).get("From", ""),
-                            "Date": (draad or {}).get("Date", "")}
                 if _zet_concept_klaar(lead, inkomend, (draad or {}).get("tekst", ""), "warm",
                                       eigen_tekst=tekst, met_pixel=True):
                     st["warm_opvolg"] = beurt + 1
