@@ -6,7 +6,7 @@ import time
 from datetime import datetime, timezone
 from typing import Optional
 import httpx
-from supabase import create_client, Client, ClientOptions
+from supabase import create_client, Client
 from backend.config import settings
 
 logger = logging.getLogger(__name__)
@@ -16,35 +16,79 @@ _admin_client: Optional[Client] = None
 _auth_client: Optional[Client] = None
 
 
-def _zonder_http2() -> ClientOptions:
-    """Voorkomt de racefout die "Publishing failed (HTTP 500)" en "Relist
-    failed" veroorzaakte (gemeld door Amanda, Zilverwebsite, Papas Plectrums,
-    laatst 04-09-2026).
+def _forceer_http1() -> None:
+    """Zet HTTP/2 uit op elke httpx-client die de Supabase-bibliotheek deelt.
 
-    postgrest-py zet standaard `http2=True` op zijn httpx-client. Wij delen
-    die ene client over alle gelijktijdige verzoeken (FastAPI draait de
-    synchrone routes in een threadpool), en httpx/httpcore houdt de openstaande
-    HTTP/2-streams van zo'n gedeelde verbinding bij in één dictionary die niet
-    thread-safe is. Twee threads die tegelijk een stream afsluiten laten hem
-    struikelen — gemeten in productie als `KeyError` middenin httpcore zelf, op
-    /api/jobs/relist-status (server_fouten, 05-09-2026 08:50 UTC). Nagebouwd
-    met 40 threads op de echte Supabase-URL: 1000 gelijktijdige verzoeken gaven
-    103 kapotte lezingen met `http2=True` en nul met `http2=False`. Bij een
-    schrijfactie (insert/update) wordt zo'n kapotte lezing nooit herhaald —
-    dat mag niet, want dat maakt dubbele rijen — dus komt hij als kale 500 bij
-    de klant terecht.
+    WAAROM DIT ER IS (06-09-2026, storing "publiceren-mislukt", site-breed plat).
+
+    postgrest 0.16.11 en gotrue 2.12.4 (de versies achter de pin
+    supabase==2.7.4 op Railway) zetten in hun eigen broncode `http2=True` op de
+    httpx-client die ze aanmaken, en die ene client wordt over alle
+    gelijktijdige verzoeken heen gedeeld: FastAPI draait de synchrone routes in
+    een threadpool. De HTTP/2-verbindingsstaat in httpcore is niet thread-safe.
+    Twee threads die tegelijk een stream afsluiten laten de HPACK-tabel
+    struikelen. Gemeten in productie als `RuntimeError: deque mutated during
+    iteration` in hpack, als `RemoteProtocolError: <ConnectionTerminated>` en
+    als `LocalProtocolError: Received pseudo-header in trailer`. Een lezing
+    wordt daarna automatisch herhaald (`_lezen_met_herkansing`), een
+    schrijfactie nooit — dat zou dubbele rijen geven — dus kwam die als kale
+    "Publishing failed (HTTP 500)" bij de klant.
 
     HTTP/1.1 geeft elke gelijktijdige aanroep zijn eigen verbinding uit de pool
     in plaats van gedeelde multiplexed streams, dus de race bestaat dan niet.
+    Nagemeten tegen de echte Supabase-URL: met http2 kapotte lezingen onder
+    gelijktijdige belasting, met http1 nul.
+
+    WAAROM EEN MONKEYPATCH EN GEEN EIGEN CLIENT. supabase==2.7.4 kent geen
+    manier om een eigen httpx-client mee te geven: `ClientOptions` heeft geen
+    veld `httpx_client` en `_init_postgrest_client` geeft er geen door. De
+    vorige poging (`ClientOptions(httpx_client=...)`) gooide daardoor
+    `TypeError: unexpected keyword argument 'httpx_client'` op élke
+    databaseverbinding en legde de hele site plat. Daarom hier: we zetten de
+    vlag om op de constructor die de bibliotheek zelf gebruikt.
+
+    Faalt een patch (andere versie, hernoemde module), dan loggen we het en
+    gaat de server gewoon door. Dan is er hooguit de zeldzame race terug, geen
+    stilstand.
     """
-    return ClientOptions(httpx_client=httpx.Client(http2=False))
+    _origineel = httpx.Client.__init__
+
+    def _http1_init(self, *args, **kwargs):
+        kwargs["http2"] = False
+        _origineel(self, *args, **kwargs)
+
+    for modulepad in (
+        "postgrest.utils",
+        "gotrue.http_clients",
+        "supabase_auth.http_clients",
+        "storage3.utils",
+        "supabase_functions.utils",
+    ):
+        try:
+            module = __import__(modulepad, fromlist=["SyncClient"])
+        except Exception:  # noqa: BLE001 — module bestaat niet in deze versie
+            continue
+        klasse = getattr(module, "SyncClient", None)
+        if not isinstance(klasse, type) or not issubclass(klasse, httpx.Client):
+            continue
+        if getattr(klasse, "_omnivaleur_http1", False):
+            continue
+        try:
+            klasse.__init__ = _http1_init
+            klasse._omnivaleur_http1 = True
+            logger.info("HTTP/1.1 afgedwongen op %s.SyncClient", modulepad)
+        except Exception:  # noqa: BLE001 — nooit de start van de server blokkeren
+            logger.exception("Kon HTTP/1.1 niet afdwingen op %s", modulepad)
+
+
+_forceer_http1()
 
 
 def get_db() -> Client:
     """De gewone verbinding: gegevens lezen en schrijven."""
     global _client
     if _client is None:
-        _client = create_client(settings.supabase_url, settings.supabase_key, _zonder_http2())
+        _client = create_client(settings.supabase_url, settings.supabase_key)
     return _client
 
 
