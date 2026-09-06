@@ -164,7 +164,7 @@ def verse_auth_client() -> Client:
     Een verse verbinding heeft een lege sessie en wordt na het verzoek
     weggegooid. Dan kan geen enkele gebruiker de sessie van een ander raken.
     """
-    return create_client(settings.supabase_url, settings.supabase_key, _zonder_http2())
+    return create_client(settings.supabase_url, settings.supabase_key)
 
 
 # Supabase houdt verbindingen open om ze te hergebruiken. Sluit de andere kant
