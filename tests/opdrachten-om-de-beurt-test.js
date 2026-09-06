@@ -27,9 +27,19 @@ const vm = require("vm");
 const { execSync } = require("child_process");
 
 const OUD = process.argv.includes("--oud");
+const WORTEL = path.join(__dirname, "..");
+// De auto-push-hook commit tussendoor, dus "HEAD" is niet de versie van vóór de
+// reparatie. Zoek de commit die de beurtverdeling invoerde en neem zijn ouder.
+const voorReparatie = () => {
+  const eerste = execSync(
+    'git log -S"platformsOpBeurt" --reverse --format=%h -- extension/background.js',
+    { cwd: WORTEL }).toString().trim().split("\n")[0];
+  if (!eerste) throw new Error("kan de commit met de beurtverdeling niet vinden");
+  return `${eerste}^`;
+};
 const BG = OUD
-  ? execSync("git show HEAD:extension/background.js", { cwd: path.join(__dirname, ".."), maxBuffer: 1 << 28 }).toString()
-  : fs.readFileSync(path.join(__dirname, "..", "extension", "background.js"), "utf8");
+  ? execSync(`git show ${voorReparatie()}:extension/background.js`, { cwd: WORTEL, maxBuffer: 1 << 28 }).toString()
+  : fs.readFileSync(path.join(WORTEL, "extension", "background.js"), "utf8");
 
 const stuk = (naam) => {
   const start = BG.indexOf(`async function ${naam}(`) >= 0
@@ -67,6 +77,7 @@ async function draai({ mp, tweedehands, rondes, calm = true }) {
     SCHRIJVENDE_ACTIES: new Set(["create", "delete", "content_refresh"]),
     MIN_GAP_MS: 0,
     _lopendeScans: new Set(),
+    PLATFORM_BEURT_SLEUTEL: "platformBeurt",
     chrome: {
       storage: {
         local: {
@@ -131,11 +142,13 @@ async function draai({ mp, tweedehands, rondes, calm = true }) {
   ok("Marktplaats blijft gewoon doorlopen", a.gedaan.filter((p) => p === "marktplaats").length >= 3,
      { volgorde: a.gedaan });
 
-  // 2. Zonder calm mode geldt hetzelfde: de server geeft één publicatie tegelijk
-  //    uit, dus wie vooraan staat pakt anders alles.
+  // 2. Zonder calm mode geldt hetzelfde. Hier telt niet het aantal rondes maar
+  //    hoeveel Marktplaats-advertenties er eerst nog doorheen moeten: elke
+  //    publicatie kost in het echt ongeveer een minuut.
   const b = await draai({ mp: 20, tweedehands: 1, rondes: 3, calm: false });
-  ok("ook zonder calm mode komt 2dehands snel aan bod", b.gedaan.includes("2dehands"),
-     { volgorde: b.gedaan });
+  const ervoor = b.gedaan.indexOf("2dehands");
+  ok("2dehands hoeft niet achter de hele Marktplaats-rij aan te sluiten",
+     ervoor >= 0 && ervoor <= 2, { plek: ervoor, volgorde: b.gedaan.slice(0, 6) });
 
   // 3. Niemand wordt overgeslagen: de hele rij gaat er uiteindelijk doorheen.
   const c = await draai({ mp: 5, tweedehands: 2, rondes: 30 });

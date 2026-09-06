@@ -5415,3 +5415,55 @@ zonder versie, want hun laatste hartslag was van vóór de deploy.
 
 Er staat een geplande taak voor 07-09-2026 die de meting herhaalt en de uitkomst
 hier vastlegt, goed nieuws of niet.
+
+## 05-09-2026 — Lynn: "naar tweedehands pakt ie nog niet" (en dat klopte)
+
+Lynn meldde dat Marktplaats die dag perfect liep en 2dehands niet, terwijl haar
+2dehands.be-account gewoon herkend wordt op de Platforms-pagina. Nagemeten in
+haar eigen opdrachten, en het was geen gevoel:
+
+- 04-09: één 2dehands-publicatie klaargezet om 14:08:09, nooit opgepakt, om
+  18:23 door haar zelf geannuleerd. In diezelfde vier uur gingen er negen
+  Marktplaats-publicaties wél doorheen (14:09:55, 14:14:30, 14:17:51, 14:25:01,
+  14:31:32, 14:35:02, 14:42:33, 14:46:02, 14:54:03).
+- 03-09: elke Marktplaats-opdracht had een 2dehands-tweeling, maar die tweelingen
+  werden pas geclaimd nadat zij om 13:29 de hele Marktplaats-rij had geannuleerd.
+- Op haar drukste dagen ging er van de 75 (04-09) en 98 (05-09) publicaties
+  telkens precies één naar 2dehands.
+
+**Oorzaak.** De extensie vraagt de kanalen in een vaste volgorde af, marktplaats
+altijd eerst. De twee remmen erachter gelden voor alle kanalen tegelijk: calm
+mode heeft één klok voor de hele extensie, en de server geeft niets uit zolang er
+ergens een publicatie loopt. Wie vooraan staat pakt dus elke vrijgekomen plek.
+Met een volle Marktplaats-rij kwam 2dehands nooit aan bod, en Vinted en Facebook
+daarachter al helemaal niet.
+
+**Gerepareerd op twee plekken.** In de extensie (1.0.306) draait de volgorde mee
+en doet elk kanaal er één per ronde. En in de server, omdat een nieuwe
+extensieversie pas na de Web Store bij klanten is en van de acht actieve
+computers er nu twee achterlopen en vier hun versie niet melden: deed dit kanaal
+de vorige publicatie en staat er werk op een ander kanaal, dan geeft de uitgifte
+dát werk terug. Dat kan, want de extensie kijkt naar het kanaal in de opdracht
+zelf en niet naar het kanaal dat ze vroeg (nagekeken tot en met de versies die nu
+bij klanten draaien). Bewust ander werk teruggeven en niet "even niets", anders
+kan één opdracht die nooit kan lopen de hele wachtrij stilleggen.
+
+Bewijs: `tests/opdrachten-om-de-beurt-test.js` (extensie) en
+`tests/test_kanalen_om_de_beurt.py` (server), beide met een voor-en-na tegen de
+versie van vóór deze reparatie, waar ze falen.
+
+**Wat er nog boven de markt hangt.** Haar enige 2dehands-poging van 05-09 (09:04)
+strandde niet op de wachtrij maar op een leeg postcodeveld. Gemeten op het echte
+formulier: 2dehands.be vraagt een Belgische postcode van vier cijfers en biedt
+daarnaast "Buitenland" met land plus woonplaats. De waarden komen mee met de
+pagina zelf (`contactInfo` in de paginastaat), dus wachten helpt niet: is het bij
+het laden leeg, dan blijft het leeg. Toon woont in Etten-Leur, dus voor hem is
+"Buitenland" de juiste keuze. Van zijn twaalf pogingen slaagden er tien, dus het
+staat meestal wél goed; sinds 05-09 weigert de extensie te plaatsen zodra het
+veld leeg is, met de melding wat hij zelf moet doen. Wij vullen daar bewust geen
+adres in dat we niet van hem hebben: een verzonnen postcode zet zijn advertentie
+in een willekeurige Belgische gemeente.
+
+**Los hiervan gevonden:** `tests/test_stuck_publish_recovery.py::
+test_closing_the_tab_reports_the_job` faalde al vóór deze sessie (de
+tabs.onRemoved-afhandeling werkt sinds het werkvenster anders). Niet aangeraakt.

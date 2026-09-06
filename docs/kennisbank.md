@@ -17,6 +17,40 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ---
 
+## kanalen-om-de-beurt
+
+*06-09-2026 — "Marktplaats stond altijd vooraan in de pollronde, dus 2dehands (en Vinted, Facebook) kwamen bij een volle rij nooit aan bod"*
+
+De extensie liep de kanalen in een VASTE volgorde af (marktplaats, 2dehands,
+vinted, facebook), terwijl de twee remmen erachter voor álle kanalen tegelijk
+gelden: calm mode heeft één klok voor de hele extensie, en de server geeft niets
+uit zolang er ergens een publicatie loopt. Wie vooraan staat pakt dus elke
+vrijgekomen plek.
+
+Gemeten bij Lynn (De Juiste Toon, 05-09-2026): op 04-09 stond er om 14:08:09 één
+2dehands-publicatie klaar die nooit is opgepakt (om 18:23 zelf geannuleerd),
+terwijl er in diezelfde vier uur negen Marktplaats-publicaties doorheen gingen.
+Op haar drukste dagen ging er van de 75 en 98 publicaties telkens precies één
+naar 2dehands. Haar woorden: "Marktplaats ging vandaag helemaal super. Naar
+tweedehands pakt ie nog niet."
+
+**Why:** een kanaal dat nooit aan de beurt komt ziet er voor de verkoper uit
+alsof het kapot is, niet alsof het wacht. Hij annuleert de opdrachten en zet dat
+kanaal daarna niet meer aan.
+
+**How to apply:** de volgorde draait nu mee (`platformsOpBeurt` /
+`beurtDoorgeven` in extension/background.js, vanaf 1.0.306): wie een publicatie
+heeft mogen doen geeft de beurt door, en per ronde doet elk kanaal er één. De
+server doet hetzelfde nog eens, omdat een nieuwe extensieversie pas na de Web
+Store bij klanten is: deed dit kanaal de vorige publicatie en wacht er werk op
+een ander kanaal, dan geeft `get_pending_jobs` dát werk terug. Dat mag, want de
+extensie kijkt naar het kanaal ín de opdracht en niet naar het kanaal dat ze
+vroeg. Geef nooit "even niets" terug in plaats van ander werk: een opdracht die
+nooit kan lopen zou dan de hele wachtrij stilleggen. Zie
+"verborgen-tabblad-vertraagt-wachttijden" en "calm-mode".
+
+---
+
 ## leadgen-status-leest-anon-sleutel
 
 *06-09-2026 — leadgen_mail.py status zegt lokaal "0 leads" omdat de .env de anon-sleutel bevat; RLS geeft een lege lijst met code 200*
