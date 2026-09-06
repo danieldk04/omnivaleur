@@ -1268,8 +1268,8 @@ def _verstuur(rij: list, gebruiker: str, host: str, state: dict,
                                f"maar niet genoteerd; controleer die ene met de hand.")
                 return verstuurd + 1
             verstuurd += 1
-            boek.verstuurd(lead, n, _onderwerp(lead, n))
-            print(f"  → [{_variant(sleutel)}] {BEURTEN[n][0]} {lead['email']}", flush=True)
+            boek.verstuurd(lead, n, _onderwerp(lead, n, st))
+            print(f"  → [{st['variant']}] {BEURTEN[n][0]} {lead['email']}", flush=True)
             if i < len(rij) - 1:
                 time.sleep(random.uniform(*PAUZE))
     return verstuurd
