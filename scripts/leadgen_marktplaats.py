@@ -69,21 +69,75 @@ SELLER_PAGE = "https://www.marktplaats.nl/u/x/{sid}/"
 UA = ("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 "
       "(KHTML, like Gecko) Chrome/122.0 Safari/537.36")
 
-# Alleen rubrieken met VERZENDBARE spullen. Huis-en-inrichting (1,6 miljoen
-# advertenties) en antiek staan er bewust niet bij: banken en kasten gaan niet in
-# een doos, en dat is precies de groep die de classificatie toch weer wegfiltert.
+# Alleen rubrieken met VERZENDBARE spullen. Huis-en-inrichting (1,7 miljoen
+# advertenties) staat er bewust niet bij: banken en kasten gaan niet in een doos.
+#
+# Bijgesteld 06-09-2026 na een conversiemeting: alle 4 betalende klanten die uit
+# de leadgen komen zitten in kleding of sieraden, en de betalende klant die er
+# NIET uit komt verkoopt ook kleding. Samen ~145 leads uit audio, telecom,
+# computers, games, boeken, sport en verzamelen leverden 0 aanmeldingen en 0
+# betalende klanten in een maand. Elektronica-wederverkopers draaien bovendien
+# variantenvoorraad (één model, tien maten) die de tool per definitie afwijst.
+# Daarom nu smal: bewezen categorieën + antiek (de echte voorraad van de enige
+# betalende antiekklant), en de rest gepauzeerd of geschrapt.
 CATEGORIES = {
+    # bewezen — hier komen de betalende leadgen-klanten vandaan
     "kleding-dames": 621,
     "kleding-heren": 1776,
     "sieraden-tassen-en-uiterlijk": 1826,
-    "spelcomputers-en-games": 356,
-    "audio-tv-en-foto": 31,
-    "telecommunicatie": 820,
-    "computers-en-software": 322,
-    "sport-en-fitness": 784,
+    # sterke fit, nog nauwelijks afgezocht: papas-plectrums (betalend) verkoopt
+    # muziekinstrumenten; er stonden pas 5 leads uit deze rubriek
     "muziek-en-instrumenten": 728,
+    # nieuw: zilverwebsite (betalend) verkoopt in werkelijkheid vooral antiek.
+    # Alleen de verzendbare subrubrieken, GEEN meubels — zie SUBRUBRIEK_ALLEEN.
+    "antiek-en-kunst": 1,
+    # op proef, nog één ronde: losse verzamel/vintage-stukken passen qua tool,
+    # maar leverden in een maand niets op
+    "spelcomputers-en-games": 356,
     "verzamelen": 895,
-    "boeken": 201,
+}
+
+# Gepauzeerd 06-09-2026 (0 aanmeldingen / 0 betalend uit samen ~80 leads,
+# variantenvoorraad-probleem): "audio-tv-en-foto": 31, "telecommunicatie": 820.
+# Geschrapt — de tool heeft er geen dashboard-categorie voor, publiceren loopt
+# altijd vast: "computers-en-software": 322, "boeken": 201, "sport-en-fitness": 784.
+
+# Rubrieken waar de kale L1-sweep wordt overgeslagen en alleen deze subrubriek-id's
+# worden afgezocht. Voor antiek: de kale L1 zou vol meubels lopen, precies de groep
+# die daarna toch wordt weggefilterd. Id's nagelopen tegen de live breadcrumb
+# (searchCategoryOptions van l1=1) op 06-09-2026.
+SUBRUBRIEK_ALLEEN = {
+    "antiek-en-kunst": {
+        2,     # Bestek
+        1100,  # Emaille
+        1648,  # Glas en Kristal
+        2614,  # Goud en Zilver
+        2661,  # Kandelaars
+        1502,  # Keramiek en Aardewerk
+        2118,  # Kleden en Textiel
+        1503,  # Kleding en Accessoires
+        6,     # Klokken
+        1647,  # Koper en Brons
+        7,     # Lampen
+        10,    # Porselein
+        1103,  # Schalen
+        2662,  # Schoolplaten
+        1843,  # Servies compleet
+        12,    # Servies los
+        1507,  # Speelgoed
+        2663,  # Spiegels
+        2664,  # Tin
+        14,    # Vazen
+        1104,  # Wandborden en Tegels
+        1500,  # Woonaccessoires
+        9,     # Overige Antiek
+        15,    # Curiosa en Brocante
+        23,    # Beelden, Houtsnijwerken
+        1508,  # Designobjecten
+        1105,  # Etsen en Gravures
+        27,    # Litho's en Zeefdrukken
+        1844,  # Niet-Westerse kunst
+    },
 }
 
 PAGE = 100
