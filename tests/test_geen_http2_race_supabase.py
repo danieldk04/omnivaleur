@@ -9,19 +9,19 @@ een reeks kale protocolfouten tegen Supabase: `RuntimeError: deque mutated
 during iteration` in hpack, `RemoteProtocolError: <ConnectionTerminated>`,
 `LocalProtocolError: Received pseudo-header in trailer`. Allemaal HTTP/2.
 
-postgrest 0.16.11 en gotrue 2.12.4 (de versies achter de pin supabase==2.7.4
-op Railway) zetten in hun eigen broncode `http2=True` op de httpx-client die ze
-aanmaken. Die ene client wordt over alle gelijktijdige verzoeken gedeeld
-(FastAPI draait de synchrone routes in een threadpool), en de
-HTTP/2-verbindingsstaat in httpcore is niet thread-safe. Een lezing wordt bij
-zo'n fout automatisch herhaald, een schrijfactie nooit — dat zou dubbele rijen
-geven — dus komt die als kale 500 bij de klant terecht.
+postgrest en gotrue (de versies achter de pin supabase==2.7.4 op Railway)
+zetten in hun eigen broncode `http2=True` op de httpx-client die ze aanmaken.
+Die ene client wordt over alle gelijktijdige verzoeken gedeeld (FastAPI draait
+de synchrone routes in een threadpool), en de HTTP/2-verbindingsstaat in
+httpcore is niet thread-safe. Een lezing wordt bij zo'n fout automatisch
+herhaald, een schrijfactie nooit — dat zou dubbele rijen geven — dus komt die
+als kale 500 bij de klant terecht.
 
 supabase==2.7.4 kent geen `httpx_client`-optie (`ClientOptions` heeft het veld
 niet, `_init_postgrest_client` geeft niets door). De vorige poging dat toch te
 doen gooide `TypeError: unexpected keyword argument 'httpx_client'` op élke
 verbinding en legde de hele site plat. `backend.database._forceer_http1` zet
-daarom de vlag om op de constructor die de bibliotheek zelf gebruikt.
+daarom `http2=False` af op `httpx.Client` zelf.
 """
 import sys
 from pathlib import Path
@@ -39,34 +39,12 @@ def _http2_van(client: httpx.Client) -> bool:
     return client._transport._pool._http2
 
 
-def test_de_racende_standaard_bestaat_echt():
-    """Een httpx-client met http2=True staat ook echt op http2 — dat is precies
-    wat postgrest/gotrue in hun broncode doen. Kale httpx.Client() staat al op
-    http2=False; de expliciete keuze in de bibliotheken is het probleem."""
-    assert _http2_van(httpx.Client(http2=True)) is True
+def test_de_racende_standaard_is_uitgezet():
+    """postgrest/gotrue bouwen hun client met http2=True. Na import van
+    backend.database levert diezelfde aanroep tóch een HTTP/1.1-verbinding —
+    dat is precies wat de race wegneemt. AsyncClient blijft ongemoeid."""
+    assert _http2_van(httpx.Client(http2=True)) is False
     assert _http2_van(httpx.Client()) is False
-
-
-def test_patch_zet_http2_uit_op_de_bibliotheekclients():
-    """Na import van backend.database levert elke SyncClient die de
-    Supabase-bibliotheek aanmaakt een HTTP/1.1-verbinding, ook al vraagt de
-    bibliotheek zelf om http2=True."""
-    geraakt = 0
-    for modulepad in ("postgrest.utils", "gotrue.http_clients",
-                      "supabase_auth.http_clients", "storage3.utils"):
-        try:
-            module = __import__(modulepad, fromlist=["SyncClient"])
-        except Exception:
-            continue
-        klasse = getattr(module, "SyncClient", None)
-        if not isinstance(klasse, type) or not issubclass(klasse, httpx.Client):
-            continue
-        geraakt += 1
-        # exact zoals de bibliotheek hem bouwt: met http2=True erbij
-        client = klasse(base_url="https://x.invalid", headers={}, timeout=5, http2=True)
-        assert _http2_van(client) is False, f"{modulepad} kreeg toch HTTP/2"
-        client.close()
-    assert geraakt >= 1, "geen enkele Supabase-SyncClient gevonden om te controleren"
 
 
 def test_create_client_geeft_http1_voor_data_en_auth():
@@ -77,6 +55,14 @@ def test_create_client_geeft_http1_voor_data_en_auth():
     assert _http2_van(cl.auth._http_client) is False
 
 
+def test_patch_is_idempotent():
+    """Twee keer draaien mag niets stukmaken (de wrapper mag zichzelf niet
+    om zichzelf heen wikkelen)."""
+    D._forceer_http1()
+    D._forceer_http1()
+    assert _http2_van(httpx.Client(http2=True)) is False
+
+
 def test_geen_kapotte_clientoptions_meer():
     """De regressie die de site plat legde: _zonder_http2 bouwde een
     ClientOptions met een veld dat supabase==2.7.4 niet kent."""
@@ -85,6 +71,5 @@ def test_geen_kapotte_clientoptions_meer():
         D._client = None
         D.get_db()
         D._client = None
-    # get_db roept create_client aan met alleen url + key, geen opties-object
     args, kwargs = fake.call_args
     assert len(args) == 2 and not kwargs, f"onverwachte aanroep: {args} {kwargs}"
