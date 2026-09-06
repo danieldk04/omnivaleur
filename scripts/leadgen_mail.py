@@ -667,8 +667,8 @@ MAIL1_B = """{aanhef},
 Alles staat nu alleen op Marktplaats. Diezelfde advertenties ook op Vinted, eBay
 en 2dehands zetten betekent een veel grotere groep kopers, en spullen die er
 sneller weg zijn. Daar heb ik {bedrijf} voor gebouwd: {jij} {zet_werkwoord} een
-artikel een keer klaar en het staat overal, in plaats van het overal apart over
-te tikken.
+artikel klaar en het staat in een keer overal, in plaats van het overal apart
+over te tikken.
 Zelf verkoop ik ook tweedehands, 700+ reviews met Revaleur. Inmiddels gebruiken
 38 andere resellers het.
 
