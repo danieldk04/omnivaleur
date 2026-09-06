@@ -2,6 +2,15 @@
 """
 Leadgen voor de Instagram-outreach van Omnivaleur.
 
+GESTOPT 06-09-2026 — NIET MEER DRAAIEN.
+Instagram en Facebook zijn uit de leadgen gehaald. Reden: 171 IG/FB-leads gaven in
+totaal 0 aanmeldingen en 0 betalende klanten, terwijl kleding/sieraden/antiek uit
+Marktplaats dat wél doen. Bovendien is het IG-account sinds ~09-08-2026
+geblokkeerd. 'discover'/'enrich'/'run' hieronder kosten Apify-credits en leveren
+niets op. De koude mail (leadgen_mail.py) neemt IG-leads sinds 06-09 niet meer
+mee. Dit bestand blijft staan omdat leadgen_marktplaats.py de classify-helpers
+eruit hergebruikt. Weer aanzetten is Daniels besluit; zie docs/team-notes.md.
+
 HET PROBLEEM
 Zoeken op hashtags (#vinted, #tweedehands) levert vooral kopers, reviewers,
 haul-accounts en buitenlandse verkopers. Die hashtag zegt "ik heb iets met
