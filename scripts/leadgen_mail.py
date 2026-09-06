@@ -1244,14 +1244,15 @@ def _verstuur(rij: list, gebruiker: str, host: str, state: dict,
     with _postbode(gebruiker, host) as stuur:
         for i, (lead, n, _) in enumerate(rij):
             sleutel = lead["email"].lower()
+            vooraf = state.get(sleutel)            # None bij een nieuwe lead
             try:
-                stuur(_bericht(lead, n, gebruiker))
+                stuur(_bericht(lead, n, gebruiker, vooraf))
             except Exception as e:  # noqa: BLE001 — één weigering stopt de rest niet
                 print(f"  ! {lead['email']}: {e}")
                 continue
             st = state.setdefault(sleutel, {"verstuurd": [],
                                             "bedrijf": _bedrijfsnaam(lead)})
-            st["variant"] = _variant(sleutel)      # A/B-versie, vast per adres
+            st.setdefault("variant", _variant(sleutel, st))   # bevriest op mail 1
             st["verstuurd"].append({"beurt": BEURTEN[n][0],
                                     "op": datetime.now().isoformat(timespec="seconds")})
             st["laatste"] = datetime.now().isoformat(timespec="seconds")
