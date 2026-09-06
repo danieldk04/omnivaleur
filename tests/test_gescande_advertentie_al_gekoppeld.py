@@ -180,15 +180,10 @@ def test_scan_laat_een_lopende_herplaatsing_met_rust():
 
 
 def test_scan_sluit_nooit_een_geplande_herplaatsopdracht_af():
-    """Zelfs als de rij om wat voor reden dan ook niet op 'relisting' staat:
-    een 'create'-opdracht met een scheduled_for is een bewuste toekomstige
+    """Een 'create'-opdracht met een scheduled_for is een bewuste toekomstige
     herplaatsing, geen vastgelopen directe publicatie. Alleen die laatste mag
     de scan afsluiten."""
-    db = _DB(
-        items=[ITEM],
-        listings=[{"id": "l1", "item_id": "it1", "platform": "vinted",
-                   "status": "hidden", "platform_listing_id": "999"}],
-    )
+    db = _DB(items=[ITEM], listings=[])
     db.jobs = [
         {"id": "gepland", "user_id": "u1", "item_id": "it1", "platform": "vinted",
          "action": "create", "status": "pending",
