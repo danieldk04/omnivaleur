@@ -65,64 +65,22 @@ def test_afwijzing_houdt_wel_zijn_eigen_korte_tekst(monkeypatch):
     assert "19,99" not in tekst
 
 
-# ------------------------------------------------------- oude SDK mag niet stil breken
-class _NepAntwoord:
-    stop_reason = "end_turn"
-    content: list = []
-
-
-class _OudeSDK:
-    """Bootst een anthropic-SDK na die `output_config` nog niet kent.
-
-    Precies wat er op de server draaide: anthropic 0.34.2 uit september 2024.
-    De aanroep gooide een TypeError, die netjes werd opgevangen, en vanaf dat
-    moment kreeg iedere lead in stilte het sjabloon.
-    """
-
-    def __init__(self):
-        self.aanroepen = []
-
-    class _Messages:
-        def __init__(self, ouder):
-            self.ouder = ouder
-
-        def create(self, **kw):
-            self.ouder.aanroepen.append(kw)
-            if "output_config" in kw:
-                raise TypeError(
-                    "Messages.create() got an unexpected keyword argument 'output_config'")
-            return _NepAntwoord()
-
-    @property
-    def messages(self):
-        return self._Messages(self)
-
-
-def test_te_oude_sdk_probeert_opnieuw_zonder_de_onbekende_parameter():
-    client = _OudeSDK()
-    antwoord = L._claude(client, model="claude-opus-5", max_tokens=100,
-                         output_config={"effort": "low"},
-                         messages=[{"role": "user", "content": "hoi"}])
-    assert antwoord is not None
-    assert len(client.aanroepen) == 2, "hij hoort het één keer opnieuw te proberen"
-    assert "output_config" not in client.aanroepen[1]
-    # De rest van de aanvraag blijft ongemoeid.
-    assert client.aanroepen[1]["model"] == "claude-opus-5"
-
-
-def test_een_echte_fout_wordt_niet_stilgehouden():
-    """Alleen een onbekende parameter mag een tweede poging krijgen."""
-    class _Stuk:
+# ------------------------------------------------------- AI staat uit (06-09-2026)
+def test_claude_aanroep_weigert_want_ai_staat_uit():
+    """De mailmachine schrijft geen antwoorden of concepten meer. Elke route naar
+    het model hoort te falen zodat er nooit tokens weglekken; de aanroepers
+    vangen dat op als 'geen tekst'."""
+    class _Client:
         class _M:
-            def create(self, **kw):
-                raise TypeError("create() missing 1 required positional argument: 'model'")
+            def create(self, **kw):  # pragma: no cover - mag nooit bereikt worden
+                raise AssertionError("er is een model aangeroepen terwijl AI uit staat")
 
         @property
         def messages(self):
             return self._M()
 
-    with pytest.raises(TypeError):
-        L._claude(_Stuk(), max_tokens=100, messages=[])
+    with pytest.raises(RuntimeError):
+        L._claude(_Client(), model="x", max_tokens=100, messages=[])
 
 
 # ------------------------------------------------------------------ de aanhef
