@@ -1078,12 +1078,14 @@ def send(args) -> None:
           f"{' (dry-run)' if args.dry_run else ''}.\n")
     if args.dry_run:
         lead, n, _ = rij[0]
-        print(f"Voorbeeld — [{_variant(lead['email'])}] {_onderwerp(lead, n)}\n"
+        stt = state.get(lead["email"].lower())
+        print(f"Voorbeeld — [{_variant(lead['email'], stt)}] {_onderwerp(lead, n, stt)}\n"
               f"aan: {lead['email']}\n")
-        print(_netjes(_tekst(lead, _beurten(lead)[n][2])))
+        print(_netjes(_tekst(lead, _beurten(lead, stt)[n][2])))
         print("\n" + "-" * 60)
         for lead, n, waarom in rij:
-            print(f"  [{_variant(lead['email'])}] {BEURTEN[n][0]}  "
+            stt = state.get(lead["email"].lower())
+            print(f"  [{_variant(lead['email'], stt)}] {BEURTEN[n][0]}  "
                   f"{lead['email']:38s} {waarom}")
         return
 
