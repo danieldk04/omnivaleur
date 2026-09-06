@@ -130,7 +130,7 @@ def get_auth_db() -> Client:
     """
     global _auth_client
     if _auth_client is None:
-        _auth_client = create_client(settings.supabase_url, settings.supabase_key, _zonder_http2())
+        _auth_client = create_client(settings.supabase_url, settings.supabase_key)
     return _auth_client
 
 
