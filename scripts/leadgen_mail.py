@@ -3756,6 +3756,18 @@ def _zet_concept_klaar(lead: dict, inkomend, body: str, soort: str = "warm",
     # verzenden gewoon staan. Zeven blijven hangen op 17-08-2026 waren hierdoor.
     msg["Date"] = formatdate(localtime=True)
     msg["Message-ID"] = make_msgid(domain=(os.environ.get("MAIL_USER", "@x").split("@")[-1]))
+
+    # Het slot (hieronder toegelicht) staat bewust VÓÓR het opstellen van de
+    # tekst. Stond het erna, dan schreef het model — een dure Opus-aanroep —
+    # eerst een heel antwoord voor iemand die al een wachtend concept had, om
+    # het daarna weg te gooien. De warme-opvolgronde deed dat elke tien minuten
+    # voor tientallen leads tegelijk; dat liet het API-tegoed op één dag
+    # leeglopen (06-09-2026). De controle zelf is ongewijzigd, alleen de plek.
+    _vroege_weigering = _waarom_geen_concept(lead.get("email", ""), inkomend)
+    if _vroege_weigering:
+        print(f"  ⊘ geen concept voor {lead.get('email')}: {_vroege_weigering}")
+        return False
+
     kern = eigen_tekst if eigen_tekst is not None else _concept_tekst(lead, body, soort)
     # Bewust leeg gelaten (zie _concept_tekst voor klanten): dan liever geen
     # concept dan een verkeerd concept.
