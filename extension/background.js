@@ -1771,12 +1771,37 @@ chrome.debugger.onDetach.addListener((bron) => {
 });
 
 function openWorkerTab(url, callback, opts = {}) {
-  _workerWindowChain = _workerWindowChain
-    .then(() => openWorkerTabInner(url, opts))
-    .then(
-      tab => callback(tab),
-      err => { console.error("[Omnivaleur] openWorkerTab failed:", err); callback(null); }
-    );
+  // EERST EEN ACHTERGROND-TABBLAD IN HET VENSTER WAAR HIJ TOCH AL ZIT.
+  //
+  // Toon (Mac, 06-09-2026): "elke keer als ik iets plaats valt mijn scherm weg."
+  // Oorzaak: publiceren opende een apart venster en minimaliseerde dat daarna.
+  // Op macOS pakt chrome.windows.update({state:"minimized"}) geregeld het venster
+  // dat op dat moment vooraan staat — dat is net het venster van de verkoper. Ook
+  // op Windows en ChromeOS is dat aparte venster een flits die de aandacht pakt.
+  //
+  // De scans (verkoopcontrole, berichten tellen) draaiden dit probleem al weg door
+  // hun werk te doen in een niet-actief tabblad in een venster dat er toch al is:
+  // dat flitst niet, komt nooit naar voren, en er wordt nergens een venster
+  // geminimaliseerd. Publiceren gaat nu net zo. Alleen als er echt geen enkel
+  // gewoon venster is (Chrome draait dan onzichtbaar op de achtergrond, niemand
+  // kijkt) valt het terug op het oude geminimaliseerde werkvenster.
+  openAchtergrondTabblad(url).then((tab) => {
+    if (tab) { callback(tab); return; }
+    _workerWindowChain = _workerWindowChain
+      .then(() => openWorkerTabInner(url, opts))
+      .then(
+        t => callback(t),
+        err => { console.error("[Omnivaleur] openWorkerTab failed:", err); callback(null); }
+      );
+  }).catch((err) => {
+    console.error("[Omnivaleur] openAchtergrondTabblad failed:", err);
+    _workerWindowChain = _workerWindowChain
+      .then(() => openWorkerTabInner(url, opts))
+      .then(
+        t => callback(t),
+        e => { console.error("[Omnivaleur] openWorkerTab failed:", e); callback(null); }
+      );
+  });
 }
 
 async function openWorkerTabInner(url, opts = {}) {
