@@ -17,6 +17,32 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ---
 
+## scan-mag-lopende-herplaatsing-niet-afsluiten
+
+*06-09-2026 — Een scan-momentopname kan ouder zijn dan een lopende herplaatsing; dan sloot _store_scan_results de herplaatsopdracht af en verdween het artikel*
+
+Bij Omnivaleur (`backend/api/jobs.py`, `_store_scan_results`) las een Vinted-scan
+de garderobe vóór de verwijdering van een herplaatsing, maar sloeg het resultaat
+pas erna op. De "live-koppel"-lus zette de listing-rij toen terug op `active` met
+het zojuist verwijderde advertentienummer én sloot de wachtende `create`-opdracht
+(de geplande herplaatsing) af met `note: "already live on the platform (seen by
+scan)"`. Gevolg: artikel nergens meer op Vinted, dashboard meldde "nieuwe
+advertentie staat live" met een link naar een 404 (06-09-2026, Daniels eigen
+item c805e6e6).
+
+**Waarom:** een achtergrondscan levert een momentopname die ouder kan zijn dan
+een schrijfactie die er dwars doorheen loopt. "Ik zag dit nummer live" bewijst
+niet dat het nu nog live is.
+
+**How to apply:** een scan/achtergrondronde mag een rij die in een eigen
+toestandsmachine zit (`status == "relisting"`) niet aanraken, en mag nooit een
+opdracht met een `scheduled_for` (bewuste toekomstige actie) afsluiten — alleen
+een blijven-hangen directe publicatie. Zie ook
+"achtergrondronde-mag-de-lijst-niet-herbouwen", "scan-mag-nooit-leeghalen",
+"eigen-klik-gaat-voor-de-nachtronde", "herplaatslus-op-verkochte-artikelen".
+
+---
+
 ## marktplaats-rubrieken-uitgeput
 
 *06-09-2026 — Dieper sweepen in de bestaande rubrieken levert vrijwel niets meer op; alleen nieuwe rubrieken geven nog nieuwe verkopers*
