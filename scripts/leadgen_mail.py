@@ -1033,7 +1033,7 @@ class Notion:
 
 
 def _bericht(lead: dict, n: int, van: str) -> EmailMessage:
-    onderwerp, sjabloon = _onderwerp(lead, n), BEURTEN[n][2]
+    onderwerp, sjabloon = _onderwerp(lead, n), _beurten(lead)[n][2]
     msg = EmailMessage()
     msg["From"] = f"{AFZENDER_NAAM} <{van}>"
     msg["To"] = lead["email"]
