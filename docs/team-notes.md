@@ -5825,3 +5825,36 @@ anti-robotlaag als "uitgelogd" (`vintedIngelogd` in background.js:
 zonder zijn browser, en het is een verlopen proef. Aan Daniel voorgelegd: de
 prioriteit die de opdracht aan Besluit 3 gaf, rust op een getal dat niet klopt.
 Hij koos: eerst de drie MOET ZEKER-storingen van betalende klanten.
+
+## 06-09-2026 — "automatisch-verversen-mislukt-popup" was al gerepareerd, twee andere oorzaken gebundeld
+
+MOET ZEKER, gemeld door info@zilverwebsite.nl (27-08) en amandahaas1979@gmail.com
+(02-09). `mail_analyse.py` had beide onder één sleutel gezet omdat ze allebei
+over een vastlopende verversing gingen, maar het waren twee losse, allebei al
+bekende en al gerepareerde oorzaken — geen van beiden had met een "pop-up
+invullen" te maken in de zin van een advertentieformulier.
+
+**Zilverwebsite (Jaap, `26cf5471`).** Zijn klacht van 27-08 valt samen met wat
+al in [[jaap-plaatsen-ligt-stil]] stond: het "Site verlaten?"-venstertje van één
+Marktplaats-tabblad bevroor ook het tabblad ernaast dat op dat moment aan het
+invullen was, zodat foto's en tekst leeg bleven. Dat is gerepareerd op 28-08 in
+extensie 1.0.256 (`ontwapenAfsluitvraag`, zie [[werkvenster-en-afsluitvraag]]).
+Nagekeken in `jobs`: hij liep op 1.0.218 tot en met zijn klacht, sprong daarna
+naar 1.0.251/1.0.273, en heeft sindsdien tot 05-09 19:22 gewoon 292 delete's en
+301 create's voltooid. Zijn extensie staat nu offline (los onderwerp, zie de
+klacht "advertenties-verwijderen-mislukt" van dezelfde dag).
+
+**Amanda Haas.** Haar klacht van 02-09 ("moet steeds handmatig toestemming
+geven") is de Chrome-sitetoegang-op-"Als je erop klikt", zie
+[[chrome-sitetoegang-op-klik]]. Gerepareerd op 05-09 in extensie 1.0.296
+(commit `06ef855`, `siteToegangOntbreekt` in background.js): de extensie
+herkent nu dat Chrome de site niet vrijgeeft en meldt dat meteen in plaats van
+drie minuten te wachten op een lege pagina. Nagekeken in `jobs`: sinds die
+reparatie (05-09 11:44 tot vanochtend) draaide ze tientallen geslaagde Vinted-
+en Marktplaats-opdrachten, geen enkele met de oude tijdsoverschrijding of een
+sitetoegang-fout.
+
+**Niets aan de code gewijzigd.** Beide voor-en-na-bewijzen staan al in de repo:
+`tests/extensie-sitetoegang-test.js` (site-toegang) en
+`tests/test_relist_foto_en_venster.py` (Site verlaten-venster), allebei groen.
+Teruggemeld als `opgelost` naar beide melders.
