@@ -194,8 +194,12 @@ def discover(args) -> None:
         for slug, l1 in CATEGORIES.items():
             if args.categories and slug not in args.categories:
                 continue
-            jobs += [(l1, None, off, slug) for off in range(0, API_CAP, PAGE)]
+            alleen = SUBRUBRIEK_ALLEEN.get(slug)
+            if not alleen:
+                jobs += [(l1, None, off, slug) for off in range(0, API_CAP, PAGE)]
             for l2, name in _subcategories(client, l1):
+                if alleen and l2 not in alleen:
+                    continue
                 jobs += [(l1, l2, off, f"{slug}/{name}")
                          for off in range(0, min(args.depth, API_CAP), PAGE)]
         print(f"{len(jobs)} verzoeken over "
