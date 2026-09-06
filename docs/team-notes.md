@@ -5711,3 +5711,44 @@ Supabase-verbinding).
 `/api/items/sync` een `TypeError` (04-09 12:28–12:33, twintig keer achter
 elkaar). Die liggen buiten deze sleutel — geen van de drie melders raakte die
 routes — en verdienen een eigen blik.
+
+## 06-09-2026 — "advertenties-verwijderen-mislukt" was al gerepareerd op 4 september
+
+MOET ZEKER, gemeld door info@zilverwebsite.nl en info@papas-plectrums.nl, laatst
+04-09. De letterlijke foutmelding in de tracker ("Cleared 0. These did not
+clear: 2dehands: Something went wrong on our side (code F1F7E7)") komt van de
+knop "Clear all failed publishes" in `frontend/app.html`, die
+`/api/listings/clear-error` aanroept (`backend/api/listings.py`).
+
+**Geen nieuwe reparatie nodig, nagerekend in plaats van aangenomen.** De
+melding op 04-09 om 13:08 (`heropend_op`) viel vóór de twee commits van
+diezelfde dag die precies dit stuk repareerden: `02aac88`/`27ea51c`/`e8b9a4c`
+(13:03–21:47). Die vervingen de naamloze 500 (Egberts "code F1F7E7") door een
+foutmelding die zegt wát er stukging, bundelden de 29 losse opzoekvragen tot
+één, en herkansen elke schrijfactie. Alle 22 tests in
+`tests/test_foutmelding_opruimen.py` en `tests/test_publiceren_zonder_serverfout.py`
+slagen, inclusief de twee die dit exacte scenario dekken
+(`test_nooit_een_502_of_503_terug`, `test_gaat_het_toch_mis_dan_staat_er_wat`).
+Origin/main staat al op deze commit, dus de fix draait al op Railway. Er kwam
+na de fix geen nieuwe klacht meer binnen op deze sleutel. Teruggemeld als
+`opgelost`, niets aan de code gewijzigd.
+
+**Wat wél nog openstaat bij deze twee accounts, maar niet onder deze sleutel
+valt.** Nagekeken in `jobs` en `extension_heartbeat`, niet aangenomen:
+
+- **Zilverwebsite** had tot 05-09 19:22 gewoon succes (292 delete's, 301
+  create's voltooid). Sindsdien is de extensie offline (`last_seen`
+  05-09 21:26) en liggen er sinds 06-09 03:09 zestig delete/create-paren als
+  `pending` te wachten, nooit geclaimd. Dat is een uitgeschakelde computer of
+  gesloten browser, geen serverfout.
+- **Papa's Plectrums** heeft sinds 20-08 helemaal geen enkele delete-opdracht
+  gehad; alleen create's (274 cancelled, 31 error) en scans, met herhaaldelijk
+  "2dehands weigert je advertentieoverzicht (401)" / "you don't appear to be
+  signed in". De 2dehands-sessie in zijn browser is ongeldig, dus komt hij nooit
+  bij de stap waar iets verwijderd zou worden. Extensie ook hier offline sinds
+  05-09 23:58.
+
+Bij beiden staat `offline_mail_sent_at` nog op leeg, dus is er geen
+automatische waarschuwing verstuurd terwijl er werk in de wachtrij staat.
+Niet onderzocht waarom niet — dat hoort bij `offline-waarschuwing-per-mail`,
+niet bij deze sleutel.
