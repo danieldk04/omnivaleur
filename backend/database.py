@@ -47,38 +47,32 @@ def _forceer_http1() -> None:
     databaseverbinding en legde de hele site plat. Daarom hier: we zetten de
     vlag om op de constructor die de bibliotheek zelf gebruikt.
 
-    Faalt een patch (andere versie, hernoemde module), dan loggen we het en
-    gaat de server gewoon door. Dan is er hooguit de zeldzame race terug, geen
-    stilstand.
+    WAAROM OP httpx.Client ZELF EN NIET PER BIBLIOTHEEK. postgrest 0.16.11
+    (de pin) bouwt zijn sessie via een `SyncClient(httpx.Client)`-subklasse;
+    postgrest 2.31 bouwt hem met een kale `httpx.Client(http2=True)`. Eén patch
+    op de gedeelde basis dekt beide, en ook een toekomstige pin-bump. Het is
+    veilig: in deze codebase zet niemand anders `http2=True` op een synchrone
+    `httpx.Client` (de platform-koppelingen gebruiken allemaal `AsyncClient`
+    met de standaard, en dat is al HTTP/1.1). `AsyncClient` is een zusterklasse
+    en blijft onaangeraakt.
+
+    Faalt de patch, dan loggen we het en gaat de server gewoon door. Dan is er
+    hooguit de zeldzame race terug, geen stilstand.
     """
-    _origineel = httpx.Client.__init__
+    try:
+        if getattr(httpx.Client, "_omnivaleur_http1", False):
+            return
+        _origineel = httpx.Client.__init__
 
-    def _http1_init(self, *args, **kwargs):
-        kwargs["http2"] = False
-        _origineel(self, *args, **kwargs)
+        def _http1_init(self, *args, **kwargs):
+            kwargs["http2"] = False
+            _origineel(self, *args, **kwargs)
 
-    for modulepad in (
-        "postgrest.utils",
-        "gotrue.http_clients",
-        "supabase_auth.http_clients",
-        "storage3.utils",
-        "supabase_functions.utils",
-    ):
-        try:
-            module = __import__(modulepad, fromlist=["SyncClient"])
-        except Exception:  # noqa: BLE001 — module bestaat niet in deze versie
-            continue
-        klasse = getattr(module, "SyncClient", None)
-        if not isinstance(klasse, type) or not issubclass(klasse, httpx.Client):
-            continue
-        if getattr(klasse, "_omnivaleur_http1", False):
-            continue
-        try:
-            klasse.__init__ = _http1_init
-            klasse._omnivaleur_http1 = True
-            logger.info("HTTP/1.1 afgedwongen op %s.SyncClient", modulepad)
-        except Exception:  # noqa: BLE001 — nooit de start van de server blokkeren
-            logger.exception("Kon HTTP/1.1 niet afdwingen op %s", modulepad)
+        httpx.Client.__init__ = _http1_init
+        httpx.Client._omnivaleur_http1 = True
+        logger.info("HTTP/1.1 afgedwongen op httpx.Client (Supabase-race)")
+    except Exception:  # noqa: BLE001 — nooit de start van de server blokkeren
+        logger.exception("Kon HTTP/1.1 niet afdwingen op httpx.Client")
 
 
 _forceer_http1()
