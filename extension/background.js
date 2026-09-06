@@ -1280,9 +1280,10 @@ async function pollJobsEenRonde() {
         if (SCHRIJVENDE_ACTIES.has(job.action) && !(await calmMagNu())) continue;
 
         verzet = true;
+        const schrijvend = SCHRIJVENDE_ACTIES.has(job.action);
         try {
           await processJob(job, serverUrl);
-          if (SCHRIJVENDE_ACTIES.has(job.action)) {
+          if (schrijvend) {
             await calmVolgendeInplannen();
             await new Promise(r => setTimeout(r, MIN_GAP_MS));
           }
