@@ -5953,3 +5953,34 @@ de dunne voorraad goede leads in de juiste categorieën.
 - Let op: de `mp_leads`-rij in Supabase is voor het laatst bijgewerkt rond
   17-08. Nieuwe leads uit de bijgestelde categorieën komen er pas in na een
   `leadgen_marktplaats.py run` + `leadgen_mail.py overzetten` op de Mac.
+
+## 06-09-2026 — verse scrape gedraaid + A/B-test op de koude mailcopy
+
+**Scrape** (`discover --depth 5000` t/m `classify --only-email`, 7 rubrieken):
+1.059.253 advertenties bekeken → 308 nieuwe zakelijke verkopers (1970 totaal) →
+242 door de classify-filter (541 afgewezen: meubels, militaria, mineralen,
+speelgoed, auto-onderdelen) → **91 echt nieuw** (de andere 151 zaten al in de
+pijplijn). Verdeling van de 91: antiek 27, sieraden 18, kleding 16, muziek 10,
+audio 10 (vooral antiek/vintage-handelaren die daar opdoken), games 8,
+verzamelen 2. 41 hebben 100+ advertenties. Kosten ~$1,60 Haiku.
+91 naar Notion gepusht, samengevoegd in de Supabase `mp_leads`-pool (381 → 468,
+geen dubbelingen, `overzetten` NIET gebruikt want dat overschrijft).
+
+De lage opbrengst (91 uit een miljoen advertenties) is verwacht: kleding/sieraden/
+games/muziek waren in augustus al afgezocht, antiek was de enige verse ader, en
+de tool-categorieën zijn smal. Dit is ongeveer het maandtempo. Grotere hefbomen
+voor later: 2dehands.be (België, zelfde methode, grootste losse hefboom),
+`--min-ads` van 20 naar 10, of eBay.nl-verkopers.
+
+**A/B-test** in `scripts/leadgen_mail.py`: `BEURTEN` (versie A, "overtikken kost
+tijd") naast `BEURTEN_B` (versie B, "je bereikt alleen Marktplaats-kopers",
+onderwerp "je advertenties ook op Vinted en eBay?"). `_variant(email, st)` kiest
+vast per lead: genoteerde versie > "al gemaild vóór de test = A" > hash 50/50.
+`_verstuur` bevriest de versie op mail 1 met `st.setdefault("variant", ...)`.
+Augustus-leads in een lopende reeks blijven dus A. Nieuw commando
+`leadgen_mail.py abtest`: per versie benaderd/geopend/beantwoord/aangemeld/betaald.
+Nulmeting versie A: 47% geopend, 23% beantwoord, 2% aangemeld, 1% betaald (308
+benaderd). Gestuurd wordt op antwoordpercentage; betaald duurt maanden.
+Terug naar alleen versie A: `AB_ACTIEF = False`.
+
+Versie B door Daniel goedgekeurd op 06-09. Machine gedeployed en draait.
