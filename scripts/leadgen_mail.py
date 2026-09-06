@@ -1693,13 +1693,12 @@ def _check_inbox(state: dict, boek: "Notion", dagen: int) -> tuple[int, int, int
                     and is_laatste and not wij_aan_zet
                     and (binnen_op > al_gedaan or opnieuw)
                     and not (beantwoord_door_daniel and beantwoord_door_daniel > binnen_op)):
-                if _zet_concept_klaar(lead, msg, body,
-                                      soort if soort in ("concurrent", "afwijzing") else "warm"):
-                    st["laatste_inkomend"] = binnen_op
-                    st["concept_klaar"] = datetime.now().isoformat(timespec="seconds")
-                    if opnieuw:
-                        st["concept_opnieuw"] = binnen_op
-                    _save_state(state)   # zie _warme_opvolging: meteen, niet aan het eind
+                # De machine schrijft geen concepten of antwoorden meer
+                # (Daniel, 06-09-2026). Alleen vastleggen dát er een reactie
+                # ligt, zodat we hem niet nog eens verwerken, en in Notion de
+                # bal bij Daniel leggen. Hij beantwoordt zelf.
+                st["laatste_inkomend"] = binnen_op
+                _save_state(state)
                 if soort in ("warm", "onbekend"):
                     boek.wacht_op_daniel(lead)
 
