@@ -4880,6 +4880,89 @@ def status(args) -> None:
     print(f"{wacht} staan er nog in de wachtrij")
 
 
+def abtest(args) -> None:
+    """`python3 leadgen_mail.py abtest` — hoe doen versie A en B het.
+
+    A = "handmatig overtikken kost tijd", B = "je bereikt alleen
+    Marktplaats-kopers". Per versie: benaderd, geopend, beantwoord, aangemeld,
+    betaald. Een adres zonder genoteerde versie kreeg versie A (B bestond nog
+    niet). Aanmelden en betalen komen uit Supabase, op e-mailadres gematcht.
+    """
+    state = _state()
+    opens = _db_lees("mail_opens", {}) or {}
+    geopend = {a.lower() for a, v in opens.items() if v}
+
+    aangemeld: set = set()
+    betaald: set = set()
+    verbinding = _supabase()
+    if verbinding:
+        import httpx
+        url, sleutel = verbinding
+        h = {"apikey": sleutel, "Authorization": f"Bearer {sleutel}"}
+        try:
+            id_van_mail = {}
+            for bl in range(1, 12):
+                r = httpx.get(f"{url}/auth/v1/admin/users",
+                              params={"page": bl, "per_page": 200}, headers=h, timeout=25)
+                r.raise_for_status()
+                rij = r.json().get("users", [])
+                for u in rij:
+                    if u.get("email"):
+                        m = u["email"].strip().lower()
+                        aangemeld.add(m)
+                        id_van_mail[u["id"]] = m
+                if len(rij) < 200:
+                    break
+            r = httpx.get(f"{url}/rest/v1/subscriptions",
+                          params={"select": "user_id,stripe_subscription_id"},
+                          headers=h, timeout=25)
+            r.raise_for_status()
+            for s in r.json():
+                if s.get("stripe_subscription_id") and s["user_id"] in id_van_mail:
+                    betaald.add(id_van_mail[s["user_id"]])
+        except Exception as e:  # noqa: BLE001
+            print(f"  (Supabase niet gelezen, aanmeld/betaald blijft leeg: {e})\n")
+    else:
+        print("  (geen Supabase-verbinding: aanmeld/betaald blijft leeg)\n")
+
+    groepen: dict[str, dict] = {"A": collections.Counter(), "B": collections.Counter()}
+    for adres, st in state.items():
+        if not st.get("verstuurd") or st.get("met_de_hand"):
+            continue
+        v = st.get("variant") or "A"
+        if v not in groepen:
+            continue
+        g = groepen[v]
+        g["benaderd"] += 1
+        g["mails"] += len(st.get("verstuurd", []))
+        if adres.lower() in geopend:
+            g["geopend"] += 1
+        if st.get("beantwoord"):
+            g["beantwoord"] += 1
+        if adres.lower() in aangemeld:
+            g["aangemeld"] += 1
+        if adres.lower() in betaald:
+            g["betaald"] += 1
+
+    def pct(a, b):
+        return f"{100 * a / b:.0f}%" if b else "n.v.t."
+
+    print(f"\n{'':12}{'benaderd':>10}{'mails':>8}{'geopend':>10}{'beantw.':>10}"
+          f"{'aangem.':>10}{'betaald':>9}")
+    for naam in ("A", "B"):
+        g = groepen[naam]
+        b = g["benaderd"]
+        print(f"  versie {naam:<4}{b:>10}{g['mails']:>8}"
+              f"{g['geopend']:>7} {pct(g['geopend'], b):>4}"
+              f"{g['beantwoord']:>6} {pct(g['beantwoord'], b):>4}"
+              f"{g['aangemeld']:>6} {pct(g['aangemeld'], b):>4}"
+              f"{g['betaald']:>5} {pct(g['betaald'], b):>4}")
+    tot = groepen["A"]["benaderd"] + groepen["B"]["benaderd"]
+    print(f"\n{tot} benaderd in totaal. Geopend telt alleen mail 2 en 3 (mail 1 "
+          f"draagt geen meetpixel). Antwoordpercentage is de snelste maat; "
+          f"aanmelden en betalen duren weken tot maanden.")
+
+
 def reacties(args) -> None:
     """`python3 leadgen_mail.py reacties` — één regel per lead die ooit
     reageerde: waar staat het gesprek, en bij wie ligt de bal nu."""
