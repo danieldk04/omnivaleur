@@ -36,6 +36,12 @@ class _Q:
     def update(self, velden): self.op, self.velden = "update", velden; return self
     def eq(self, k, v): self.filters[k] = v; return self
     def in_(self, *_a): return self
+    def is_(self, k, v):
+        # Alleen "null" nabootsen — de enige vorm die de code gebruikt.
+        if v == "null":
+            self.null_filters = getattr(self, "null_filters", [])
+            self.null_filters.append(k)
+        return self
     def order(self, *_a, **_k): return self
     def limit(self, *_a): return self
 
