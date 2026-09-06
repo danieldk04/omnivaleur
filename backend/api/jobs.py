@@ -2495,6 +2495,22 @@ def _store_scan_results(db, job, scraped: list[dict]):
             if existing:
                 if existing.get("status") == "sold":
                     continue
+                # EEN LOPENDE HERPLAATSING NIET AANRAKEN (06-09-2026, Daniel).
+                #
+                # Een herplaatsing zet de rij op 'relisting', haalt de oude
+                # advertentie weg en plant de nieuwe 45 min tot 4 uur later. Een
+                # scan die vlak daarvoor de garderobe las, ziet het oude
+                # advertentienummer nog wél staan — die momentopname is ouder
+                # dan de verwijdering. Verwerkte de scan dat hieronder, dan zette
+                # hij de rij terug op 'active' met het intussen verwijderde
+                # nummer én sloot hij de wachtende herplaatsopdracht af als "al
+                # online". Gevolg: het artikel stond nergens meer op Vinted,
+                # terwijl het dashboard "nieuwe advertentie staat live" meldde
+                # met een link naar een 404. De herplaatsing heeft zijn eigen
+                # afhandeling (de recreate-opdracht plus de reddingsronde in
+                # relist.py); de scan blijft eraf.
+                if existing.get("status") == "relisting":
+                    continue
                 if (existing.get("status") == "active"
                         and str(existing.get("platform_listing_id") or "") == link["platform_listing_id"]):
                     continue
