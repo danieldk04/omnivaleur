@@ -927,7 +927,15 @@ async def verrijk(db, user_id: str, schrijf: bool = True,
                 await asyncio.sleep(0.25)
                 return item, a
 
-            gevonden_rest, _ = await _in_batches(rest, zoek, deadline)
+            # Het per-titel opzoeken mag hooguit de helft van het tijdsbudget
+            # opeten. Bij een grote catalogus die elke ronde honderden items in
+            # `rest` heeft (foto-aanvullingen die in `open_` blijven staan) at
+            # deze stap anders het HELE budget op, waarna de echte verrijkstap
+            # hieronder nul items haalde — drie weken lang bij Papa's Plectrums.
+            # `rest` staat op dringendheid gesorteerd, dus de items zonder
+            # omschrijving worden sowieso als eerste opgezocht.
+            zoek_deadline = min(deadline, time.monotonic() + BUDGET_SECONDEN * 0.5)
+            gevonden_rest, _ = await _in_batches(rest, zoek, zoek_deadline)
             for item, a in gevonden_rest:
                 if a:
                     koppels.append((item, a))
