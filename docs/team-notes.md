@@ -5752,3 +5752,38 @@ Bij beiden staat `offline_mail_sent_at` nog op leeg, dus is er geen
 automatische waarschuwing verstuurd terwijl er werk in de wachtrij staat.
 Niet onderzocht waarom niet — dat hoort bij `offline-waarschuwing-per-mail`,
 niet bij deze sleutel.
+
+## 06-09-2026 — de random 500 op het inlogscherm, en twee kapotte tussenversies
+
+Daniel kreeg "heel random" bij het inloggen de generieke serverfout met een code
+(0F1DB5, later F39C7A). Bron: de vangnet-handler in `backend/main.py`
+(`@app.exception_handler(Exception)`). Die codes stonden nooit in
+`server_fouten`, want `_bewaar_serverfout` schrijft over diezelfde
+Supabase-verbinding die tijdens de storing kapot is, en vangt zijn eigen fout
+stil op. Vandaar "geen spoor".
+
+**Wat er echt speelde: de HTTP/1.1-reparatie is vanmorgen drie keer opnieuw
+gedaan, en twee tussenversies waren zelf stuk.**
+
+- ~09:37 (`8385518`/`0ccad3d`): `ClientOptions(httpx_client=...)`. De pin
+  `supabase==2.7.4` kent dat veld niet → `TypeError` op élke databaseaanroep →
+  hele site 500. Vrijwel zeker Daniels `0F1DB5`.
+- ~09:54 (`c8f1d57`): monkeypatch op `SyncClient.__init__` per bibliotheek. Die
+  verving de subclass-`__init__` volledig en sloeg de setup van de
+  gotrue-client over. Gevolg: `sign_in_with_password` viel om, inloggen gaf
+  consequent 503 "We couldn't reach the sign-in service". `register` bleef wel
+  werken. Kandidaat voor `F39C7A`.
+- ~09:57 (`592cc70`): patch nu op `httpx.Client.__init__` zelf, de gedeelde
+  basis. `super().__init__()` van de subclass komt er wél langs, dus de
+  clients worden normaal opgebouwd én krijgen `http2=False`.
+
+**Nagemeten op de live-deploy `592cc70f`:** 6 van 6 inlogpogingen met een fout
+wachtwoord → nette 401. 60 gelijktijdige inlogpogingen → alleen 401 en 429
+(gotrue-rate-limit), nul 500/503. 90 gemengde verzoeken (blog + login) → nul
+fout. `tests/test_geen_http2_race_supabase.py` → 4 groen. Inloggen is nu gezond.
+
+**Open punt:** `login()` in `backend/api/auth.py` heeft op regel 107 nog een
+`db = get_db()` buiten de `try`, waarvan de uitkomst nergens wordt gebruikt.
+Dode regel, maar het is het enige stukje van de inlogroute dat een onbewaakte
+500-met-code kan geven als de clientopbouw ooit hapert. Weghalen bij de
+volgende aanraking.
