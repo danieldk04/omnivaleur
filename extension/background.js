@@ -1511,6 +1511,9 @@ function openStilWerkTabblad(url, callback) {
 // zodra Marktplaats geladen is weigert Chrome de koppeling (zie koppelVroeg).
 async function maakWerkTabblad(opties, url) {
   const tab = await chrome.tabs.create({ ...opties, url: "about:blank" });
+  // Chrome mag dit tabblad niet wegbezuinigen (Memory Saver / discard) terwijl
+  // de klus nog loopt: dan sterft het content-script halverwege het invullen.
+  chrome.tabs.update(tab.id, { autoDiscardable: false }).catch(() => {});
   await koppelVroeg(tab.id, url);
   await chrome.tabs.update(tab.id, { url });
   // Een nieuw tabblad haalt het venster op macOS terug in beeld.
