@@ -2825,13 +2825,14 @@ def fail_job(job_id: str, body: dict, user_id: str = Depends(get_current_user)):
                         MAX_HERKANSING_OUDE_EXTENSIE)
             return {"ok": True, "requeued": True, "reason": "outdated_extension"}
 
-    # Alleen navragen als het er echt toe doet: een tijdsoverschrijding op een
-    # publicatie. Anders is dit een extra databasevraag bij elke foutmelding.
+    # Alleen navragen als het er echt toe doet: een ondoorgronde mislukking op een
+    # publicatie (tijdsoverschrijding, inlogverwijt, wachtrij gestopt). Anders is
+    # dit een extra databasevraag bij elke foutmelding.
     kansloos = False
     if (job and job.get("action") == "create"
-            and _TIJDSOVERSCHRIJDING.search(str((body or {}).get("error") or ""))):
+            and _ONDOORGROND.search(str((body or {}).get("error") or ""))):
         try:
-            kansloos = _kansloze_reeks(db, user_id, job.get("platform") or "")
+            kansloos = _kanaal_kansloos(db, user_id, job.get("platform") or "")
         except Exception:
             logger.warning("kansloze reeks niet vast te stellen voor %s", job_id)
     body = _rechtgezette_foutmelding(job, body, versie, kansloos)
