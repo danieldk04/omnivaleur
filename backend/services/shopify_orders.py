@@ -93,8 +93,7 @@ async def _bestellingen(shop: str, token: str, sinds: str) -> list[dict]:
 
 async def controleer_shopify_verkopen() -> dict:
     """Alle gekoppelde Shopify-winkels langslopen en verkopen afhandelen."""
-    from backend.platforms.shopify import (extract_skus_from_order,
-                                           extract_sku_prices_from_order)
+    from backend.platforms.shopify import extract_line_refs_from_order
     from backend.services.crosslist import handle_item_sold
 
     db = get_db()
