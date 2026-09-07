@@ -1349,7 +1349,7 @@ async def handle_item_sold(item_id: str, sold_on_platform: str, sold_price: floa
     other_rows = [
         l for l in (all_rows.data or [])
         if l["platform"] not in sold_platforms
-        and l["status"] in ("active", "relisting", "error", "delisted", "hidden")
+        and l["status"] in ("active", "relisting", "error", "delisted", "hidden", "pending")
     ]
 
     logger.info(
