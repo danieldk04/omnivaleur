@@ -2203,9 +2203,11 @@ async function bekijkVastgelopenTabblad(tabId) {
   }
 }
 
-async function meldNooitBegonnen(tabId, meta) {
+async function meldNooitBegonnen(tabId, meta, snapshot) {
   const site = SITE_NAAM[meta.platform] || meta.platform;
-  const f = await bekijkVastgelopenTabblad(tabId);
+  // Al gekeken (de bewaker geeft zijn momentopname door)? Dan die gebruiken: het
+  // tabblad kan inmiddels dicht zijn en een tweede blik levert dan niets op.
+  const f = snapshot || await bekijkVastgelopenTabblad(tabId);
 
   const feiten = f
     ? ` [pagina: ${f.url}, titel ${JSON.stringify(f.titel)}, ${f.velden} invulveld(en), `
