@@ -134,8 +134,24 @@ async def billing_status(user=Depends(get_current_user_full)):
     try:
         sub = _get_or_create_subscription(user_id)
         access = evaluate_access(sub)
+        status = sub["status"]
+        # Valt de toegang dicht terwijl er een SEPA-incasso loopt, dan zetten we de
+        # rij zelf op 'payment_processing' zodat de app de rustige melding toont in
+        # plaats van het slot, ook als de Stripe-webhook nog niet is aangekomen.
+        if not access["allowed"] and sub.get("stripe_subscription_id"):
+            from backend.services.billing import _subscription_awaiting_incasso
+            if await asyncio.to_thread(_subscription_awaiting_incasso, sub["stripe_subscription_id"]):
+                status = "payment_processing"
+                access = {"allowed": True, "grace_ends_at": None, "grace_days_left": None}
+                try:
+                    get_db().table("subscriptions").update({
+                        "status": "payment_processing", "updated_at": _now(),
+                    }).eq("user_id", user_id).execute()
+                    invalidate_access_cache(user_id)
+                except Exception:
+                    logger.exception("Kon status payment_processing niet opslaan voor %s", user_id)
         return {
-            "status": sub["status"],
+            "status": status,
             "plan": sub.get("plan", "pro"),
             "trial_ends_at": sub.get("trial_ends_at"),
             "current_period_end": sub.get("current_period_end"),
