@@ -6450,3 +6450,36 @@ Suite: 1052 pytests groen, 2 falen los hiervan (stonden al op een schone tree).
 `tests/lijst-blijft-staan-test.js` draaide sinds een eerdere commit helemaal niet
 meer (ReferenceError op `advertIndex`); dat is hersteld en er staat nu een
 voor-en-na op de rij-tekening in.
+
+### 07-09-2026 (vervolg) — klantenservice-brein voor een gratis Gemini Gem
+
+Daniel wil klantmails snel kunnen beantwoorden in zijn stijl, met vaste
+antwoorden, zonder Claude-limiet te gebruiken. De AI-klantenservice is er sinds
+06-09 uit (tegoed), dus dit draait volledig buiten Claude om.
+
+**Opzet.** `docs/klantenservice-brein.md` is de bron: schrijfstijl (uit Daniels
+eerdere correcties, zie de memory's klantmail-kort-en-menselijk e.d.) plus vaste
+feiten (prijs 19,99, de vijf kanalen, /mp-video, proef- en incassotermijnen,
+opzeggen via Account-sectie) en acht modelantwoorden. Er staat een kopie in
+Daniels Google Drive (account danieldekoning66@gmail.com, file-id
+1UrANLN5Qvnj-pp27wkRw9hiScXL5X_lT) die als kennisbestand aan een gratis Gemini
+Gem hangt. Daniel plakt een klantmail in de Gem, krijgt een kant en klaar
+antwoord.
+
+**Actueel houden.** De ontwikkelaar werkt bij een productwijziging zowel de
+repo-versie als de Drive-kopie bij, in dezelfde beurt (staat als regel in
+`CLAUDE.md`). De Drive-kopie kan rechtstreeks overschreven worden met
+`update_drive_file`; getest en werkt. Daniel hoeft niets te doen. Kanttekening:
+Gemini leest het Drive-bestand opnieuw in bij het openen van de Gem of periodiek,
+niet op de seconde.
+
+**Eerste echte test.** Een lead met LitCommerce/Channable vroeg om acht kanalen
+(o.a. Google Shopping, Meta, Reverb, Refurbed). De Gem antwoordde correct en
+eerlijk dat we die niet dekken. Twee bijstellingen daarna: geen `[NOG INVULLEN]`
+in de aanhef (gewoon "Hoi," bij een onbekende naam), en het onderscheid
+bestaande klant versus lead expliciet gemaakt zodat verkooppraat en de demolink
+bij leads wel mogen.
+
+**Nog open:** echte verstuurde mails van Daniel als voorbeeld toevoegen; hij
+levert er vijf tot tien aan. De Zoho-verzonden map is vanuit deze omgeving niet
+bereikbaar.
