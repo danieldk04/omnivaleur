@@ -193,6 +193,24 @@ def test_een_jonge_verdwenen_advertentie_wordt_een_verkoopvraag():
     assert db.jobs[0]["status"] == "cancelled"
 
 
+def test_al_verkocht_elders_wordt_gearchiveerd_zonder_nieuwe_vraag():
+    """De reconciliatie-ronde: het artikel is al bevestigd verkocht op Vinted, en
+    op Marktplaats staat nog een oude 'active'-rij. Die hoort naar het archief,
+    niet naar een tweede 'is dit verkocht?'-vraag aan de verkoper."""
+    db = _DB(
+        [{"id": "l1", "item_id": "it1", "platform": "marktplaats",
+          "status": "active", "listed_at": _dagen_geleden(2)},
+         {"id": "lv", "item_id": "it1", "platform": "vinted", "status": "sold",
+          "listed_at": _dagen_geleden(20)}],
+        [{"id": "create-1", "item_id": "it1", "platform": "marktplaats",
+          "action": "create", "status": "pending", "created_at": _dagen_geleden(0)}],
+    )
+    assert _al_weg(db, _verwijderopdracht(rij_id="l1")) is True
+    assert db.listings[0]["status"] == "delisted"
+    assert db.listings[0]["error_message"] is None
+    assert db.jobs[0]["status"] == "cancelled"      # geen dubbele advertentie
+
+
 def test_een_oude_verdwenen_advertentie_wordt_gewoon_herplaatst():
     """Ouder dan de termijn van Marktplaats: verlopen is dan de waarschijnlijke
     verklaring, en herplaatsen is precies waar het automatisme voor bestaat."""
