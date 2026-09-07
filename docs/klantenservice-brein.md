@@ -1,14 +1,14 @@
 # Klantenservice-brein Omnivaleur
 
-Dit is de bron voor de klantenservice. Plak de inhoud van dit bestand als
-instructie in een gratis Gemini Gem (gemini.google.com). Daarna plak je een
-klantmail in de Gem en krijg je een kant en klaar antwoord terug dat je kunt
-kopieren.
+Dit is de bron voor de klantenservice. Er staat een kopie in Daniels Google
+Drive; die kopie is als kennisbestand gekoppeld aan een gratis Gemini Gem
+(gemini.google.com). Daniel plakt een klantmail in de Gem en krijgt een kant en
+klaar antwoord terug om te kopieren.
 
 Dit bestand kost geen Claude-limiet. Het verandert alleen als er iets aan het
-product verandert, en dan werkt de ontwikkelaar het hier bij in dezelfde beurt.
-De Gem hoef je dan opnieuw te vullen met de nieuwe tekst, of je koppelt de
-Google Doc-kopie als kennisbestand aan de Gem zodat dat niet meer hoeft.
+product verandert. De ontwikkelaar werkt dan zowel dit bestand in de repo als de
+kopie in Drive bij, in dezelfde beurt. Daniel hoeft niets te doen; de Gem leest
+de Drive-kopie de volgende keer opnieuw in.
 
 Laatst bijgewerkt: 07-09-2026.
 
