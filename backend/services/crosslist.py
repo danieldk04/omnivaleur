@@ -1050,19 +1050,35 @@ async def delist_all_platforms(item_id: str, user_id: str) -> list[dict]:
     # so a slow eBay call hung the whole request: the dashboard spinner never
     # cleared AND these jobs were never created, so Vinted/MP never opened.
     for listing in ext_active:
+        # Staat er al een verwijderopdracht klaar voor dit item+platform? Dan geen
+        # tweede. Zonder deze rem stapelt de reconciliatieronde (elke 20 min) een
+        # nieuwe opdracht op dezelfde advertentie, en een dubbele klik op Delist
+        # deed dat ook. Zie verkoop_reconciliatie.py.
+        bestaat = (await naast_de_lus(lambda l=listing: db.table("jobs").select("id")
+                   .eq("user_id", user_id).eq("item_id", item_id).eq("platform", l["platform"])
+                   .eq("action", "delete").in_("status", ["pending", "claimed"])
+                   .limit(1).execute())).data
+        if bestaat:
+            results.append({
+                "platform": listing["platform"],
+                "status": "queued",
+                "job_id": bestaat[0]["id"],
+                "message": "Delete job already queued — Chrome extension will process this",
+            })
+            continue
         payload = {
             **item,
             "title": _last_listed_title(db, item_id, listing["platform"], item.get("title", "")),
             "platform_listing_id": listing["platform_listing_id"],
             "platform_listing_url": listing["platform_listing_url"],
         }
-        job = (await naast_de_lus(lambda: db.table("jobs").insert({
+        job = (await naast_de_lus(lambda l=listing, p=payload: db.table("jobs").insert({
             "user_id": user_id,
             "item_id": item_id,
-            "platform": listing["platform"],
+            "platform": l["platform"],
             "action": "delete",
             "status": "pending",
-            "payload": payload,
+            "payload": p,
         }).execute())).data[0]
         results.append({
             "platform": listing["platform"],
