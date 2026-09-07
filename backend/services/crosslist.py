@@ -1005,37 +1005,47 @@ async def delist_all_platforms(item_id: str, user_id: str) -> list[dict]:
     # 'pending' covers a create that never finished — the product can exist on
     # the platform even though we never recorded its id.
     #
-    # Deduplicate by platform — keep the one with a platform_listing_id if both
-    # exist, otherwise any.
     # 'hidden' counts too: a listing hidden on Vinted still exists on the
     # platform, so "delist" must actually remove it rather than skip it.
-    _DELISTABLE_STATUSES = ("active", "error", "delisted", "pending", "relisting", "hidden")
+    _LEVEND = ("active", "error", "pending", "relisting", "hidden")
     # A platform where this item already SOLD is off limits, whatever other rows
     # exist for it. Deleting a sold ad is pointless (the buyer's transaction lives
     # on it), it fails half the time, and it made the app open a Vinted tab for
     # something the seller had already sold there. One sold row therefore blocks
     # the whole platform, not just its own row.
     sold_platforms = {l["platform"] for l in listings_resp.data if l["status"] == "sold"}
+
     # Eén verwijdering per ADVERTENTIE, niet per platform. Bij een dubbele import
-    # of meerdere herplaatsingen staan er soms twee verschillende advertenties op
-    # hetzelfde platform (verschillend platform_listing_id) en die moeten allebei
-    # weg — de oude "één per platform" liet de tweede staan, dus bleef een
-    # verkocht artikel te koop. Rijen met hetzelfde id, of zonder id, vallen samen.
-    delistbaar = [l for l in listings_resp.data
-                  if l["status"] in _DELISTABLE_STATUSES and l["platform"] not in sold_platforms]
-    platforms_met_id = {l["platform"] for l in delistbaar if l.get("platform_listing_id")}
+    # of meerdere herplaatsingen staan er twee VERSCHILLENDE advertenties op
+    # hetzelfde platform (verschillend platform_listing_id); de oude "één per
+    # platform" liet de tweede staan, dus bleef een verkocht artikel te koop.
     seen_ads: dict[tuple, dict] = {}
-    for l in delistbaar:
-        p = l["platform"]
-        pid = l.get("platform_listing_id")
-        # Op een platform waar we al een advertentie mét nummer kennen, negeren we
-        # de nummerloze rijen: dat is vrijwel altijd dezelfde advertentie
-        # halverwege het publiceren, geen aparte.
-        if not pid and p in platforms_met_id:
+    platforms_met_levende_rij = set()
+    for l in listings_resp.data:
+        if l["status"] not in _LEVEND or l["platform"] in sold_platforms:
             continue
-        sleutel = (p, pid or "")
-        if sleutel not in seen_ads:
-            seen_ads[sleutel] = l
+        platforms_met_levende_rij.add(l["platform"])
+        pid = l.get("platform_listing_id")
+        sleutel = (l["platform"], pid or "")
+        # Nummerloze rij op een platform waar we al een advertentie mét nummer
+        # zagen: vrijwel altijd dezelfde advertentie halverwege het publiceren.
+        if not pid and any(k[0] == l["platform"] and k[1] for k in seen_ads):
+            continue
+        seen_ads.setdefault(sleutel, l)
+
+    # 'delisted' telt alleen mee als VANGNET: op een platform waar géén levende
+    # rij meer staat maar wél een 'delisted'-rij, kan een eerdere verwijdering
+    # alleen in de database geslaagd zijn terwijl de advertentie live bleef (de
+    # oude Marktplaats-bevestigdialoog, de Shopify id/SKU-bugs). Dan één poging
+    # per platform. Niet per archiefrij: dat opent tabblad na tabblad voor
+    # advertenties die allang weg zijn.
+    for l in listings_resp.data:
+        p = l["platform"]
+        if (l["status"] == "delisted" and p not in sold_platforms
+                and p not in platforms_met_levende_rij
+                and not any(k[0] == p for k in seen_ads)):
+            seen_ads[(p, l.get("platform_listing_id") or "")] = l
+
     active_listings = list(seen_ads.values())
 
     skipped_sold = [
