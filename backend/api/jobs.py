@@ -2776,7 +2776,7 @@ def _rechtgezette_foutmelding(job: dict | None, body: dict, versie, kansloos: bo
     #    Bewust vóór de rest: dit is de enige rechtzetting die weet dat het
     #    kanaal bij deze verkoper nog nooit heeft gewerkt, en dat weegt zwaarder
     #    dan elke gok over wat er in het formulier is misgegaan.
-    if kansloos and (job or {}).get("action") == "create" and _TIJDSOVERSCHRIJDING.search(fout):
+    if kansloos and (job or {}).get("action") == "create" and _ONDOORGROND.search(fout):
         return {**(body or {}), "error_oorspronkelijk": fout,
                 "error": _melding_formulier_ging_niet_open((job or {}).get("platform") or "")}
     if versie and versie < MINIMALE_SCANVERSIE:
