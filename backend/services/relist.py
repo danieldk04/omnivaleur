@@ -735,8 +735,16 @@ async def refresh_listing(item_id: str, platform: str, user_id: str, strategy: s
                 create_payload["mp_category"] = mp_cat
                 logger.info("[relist] item %s komt terug in zijn eigen categorie: %s",
                             item_id, mp_cat.get("l2_naam") or mp_cat)
+            # De advertentievorm ALLEEN overnemen als dit artikel geen echte
+            # vraagprijs heeft. Met een prijs > 0 is "Vraagprijs" de enige vorm
+            # die klopt, en de vorm die we van de oude advertentie teruglezen kan
+            # onze eigen fout van vroeger zijn: Zilverwebsite had advertenties die
+            # vóór de fix van 05-09 als "Zie omschrijving" waren geplaatst, en bij
+            # elke verversing lazen we die vorm terug en stuurden hem weer mee.
+            # Dezelfde les als in de extensie (mpPrijsvorm): de prijs bepaalt de
+            # vorm, niet wat er toevallig online staat.
             mp_vorm = kenmerken.get("mp_prijstype") or {}
-            if mp_vorm:
+            if mp_vorm and not (relist_price and relist_price > 0):
                 create_payload["mp_prijstype"] = mp_vorm
                 logger.info("[relist] item %s komt terug als %s", item_id, mp_vorm.get("soort"))
     if platform == "vinted" and listing.get("platform_listing_url"):
