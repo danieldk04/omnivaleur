@@ -2980,7 +2980,12 @@ function priceCell(item) {
 // crosslist.py _NON_CLOTHING_PLATFORM_REQUIRED.
 const CROSSLIST_NON_CLOTHING_PLATFORM_REQUIRED = ['category'];
 function missingFieldsForPlatform(item, platform) {
-  const platReq = (isNonClothingItem(item) && CROSSLIST_PLATFORM_REQUIRED[platform])
+  // Zonder categorie weten we de tak niet, dus vragen we alleen om de categorie.
+  // Anders viel het item terug op kleding en las de verkoper "voeg categorie,
+  // geslacht, merk, maat, kleur toe" terwijl vier daarvan misschien nergens voor
+  // nodig zijn. Spiegelt _missing_fields_per_platform in crosslist.py.
+  const geenCategorie = !String(item?.category || '').trim();
+  const platReq = ((isNonClothingItem(item) || geenCategorie) && CROSSLIST_PLATFORM_REQUIRED[platform])
     ? CROSSLIST_NON_CLOTHING_PLATFORM_REQUIRED
     : (CROSSLIST_PLATFORM_REQUIRED[platform] || []);
   const required = [...CROSSLIST_UNIVERSAL_REQUIRED, ...platReq];
@@ -8679,9 +8684,19 @@ const CATEGORIES = {
 // tv- en fotocategorieën (Budgetheld, 01-09-2026); tests/audio-categorie-test.js
 // bewaakt het nu.
 const NON_CLOTHING_PREFIXES = { 'games ': 'games', 'electronics ': 'electronics', 'audio ': 'audio', 'sieraden ': 'sieraden', 'muziek ': 'muziek', 'antiek ': 'antiek', 'kunst ': 'antiek', 'wonen ': 'wonen' };
+// Accessoires staan in de kledingboom, maar hebben geen maat en geen merk: een
+// bandana, een patch, een speld, een sleutelhanger. Gemeten op 07-09-2026: van
+// de geslaagde plaatsingen in "unisex accessoires" hadden er 13 van de 14 geen
+// maat, en Marktplaats nam ze gewoon aan. Zonder deze uitzondering kregen 2.343
+// artikelen van één verkoper eeuwig "voeg merk, maat, kleur toe" en waren ze
+// niet te publiceren. Spiegelt _GEEN_MAAT_CATEGORIEEN in crosslist.py.
+// Bewust NIET in NON_CLOTHING_PREFIXES: die map bepaalt óók het soort in het
+// bewerkscherm, en daar hoort een accessoire wel degelijk bij kleding.
+const GEEN_MAAT_CATEGORIEEN = new Set(['unisex accessoires', 'accessoires dames', 'kinderen accessoires']);
 function isNonClothingItem(item) {
   const cat = String(item?.category || '').trim().toLowerCase();
-  return Object.keys(NON_CLOTHING_PREFIXES).some(p => cat.startsWith(p));
+  return Object.keys(NON_CLOTHING_PREFIXES).some(p => cat.startsWith(p))
+      || GEEN_MAAT_CATEGORIEEN.has(cat);
 }
 // Derive the item-type select value from a stored category (for editItem).
 function itemTypeForCategory(category) {

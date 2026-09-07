@@ -211,6 +211,7 @@ const meta = { jobId: "j1", serverUrl: "https://omnivaleur.com", platform: "2deh
 
   const hulp = [
     APP.slice(APP.indexOf("const NON_CLOTHING_PREFIXES"), APP.indexOf("\n", APP.indexOf("const NON_CLOTHING_PREFIXES")) + 1),
+    APP.slice(APP.indexOf("const GEEN_MAAT_CATEGORIEEN"), APP.indexOf("\n", APP.indexOf("const GEEN_MAAT_CATEGORIEEN")) + 1),
     functieUit(APP, "isNonClothingItem"),
     functieUit(APP, "mistMarktplaatsGegevens"),
     "return mistMarktplaatsGegevens;",

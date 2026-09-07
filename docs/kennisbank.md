@@ -17,6 +17,65 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ---
 
+## accessoires-hebben-geen-maat
+
+*07-09-2026 — "unisex accessoires" viel onder kleding en eiste merk/maat/kleur; 2.342 artikelen waren daardoor niet te publiceren*
+
+Bandana's, patches, pins en sleutelhangers staan in de categorie
+"unisex accessoires". Die tak viel in onze indeling onder kleding, dus vroeg het
+dashboard om merk, maat en kleur en blokkeerde publiceren naar Marktplaats en
+2dehands. Die velden bestaan niet voor zulke artikelen.
+
+Gemeten op 07-09-2026 in het opdrachtenlogboek: van de geslaagde plaatsingen in
+"unisex accessoires" hadden er **13 van de 14 geen maat**, in "kinderen
+accessoires" 16 van de 21. Marktplaats neemt ze gewoon aan; de eis kwam van ons.
+Effect van de reparatie op de echte voorraad: bij Egbert 2.485 geblokkeerde
+artikelen terug naar 143, over alle gebruikers 4.051 naar 1.647.
+
+Twee regels, in `_GEEN_MAAT_CATEGORIEEN` (crosslist.py) en `GEEN_MAAT_CATEGORIEEN`
+(app.html):
+1. accessoirestakken tellen als maatloos, net als muziek/sieraden/antiek;
+2. **zonder categorie** weten we de tak niet, dus vragen we alleen om de
+   categorie in plaats van om vijf velden die misschien nergens voor nodig zijn.
+
+Dit is de tweede ronde op dezelfde fout: op 03-09-2026 is hij al uit de knopteller
+gehaald ("tel-alleen-wat-er-echt-ontbreekt"), maar niet uit de eis zelf. Let er
+bij zulke reparaties op dat validatie, knopteller én badge dezelfde regel volgen.
+
+---
+
+## achtergrondmeting-ziet-de-sessie-niet
+
+*07-09-2026 — Een fetch uit de service worker van de extensie kan 401 krijgen waar dezelfde URL vanuit een tabblad op de site 200 geeft; een inlogoordeel mag daar nooit op rusten*
+
+Gemeten bij Egbert Brouwer (papas-plectrums) op 06-09-2026, twee keer binnen vier
+minuten, op precies dezelfde URL `https://www.2dehands.be/my-account/sell/api/listings`:
+
+- 21:07:35 vanuit een tabblad OP www.2dehands.be: **HTTP 200**
+- 21:07:48 dertien seconden later vanuit de service worker: **HTTP 401**
+- 21:11:22 weer 200 vanuit het tabblad, 21:11:27 weer 401 vanuit de worker
+
+Zelfde browser, zelfde cookies, zelfde minuut, tegengesteld antwoord. HTTP 200 op
+dat afgeschermde adres krijg je alleen met een geldige sessie, dus hij WAS
+ingelogd. Op grond van de 401 is zijn wachtrij van 346 opdrachten teruggenomen met
+"je bent niet ingelogd". Derde keer voor dezelfde klant.
+
+Op www.marktplaats.nl gaat diezelfde achtergrondmeting bij andere verkopers wél
+goed (tientallen geslaagde plaatsingen per dag), dus "bij ons werkt het" bewijst
+niets over de volgende site. Waarom 2dehands een verzoek uit een extensie anders
+behandelt weten we niet, en dat hoeft ook niet: het punt is dat wij het van
+buitenaf niet kunnen zien aankomen.
+
+**Regel:** een weigering uit de achtergrond is een vermoeden, nooit een oordeel.
+Wie werk tegenhoudt of iemand een verwijt maakt, meet eerst in een echt tabblad op
+de site zelf (`eerstepartijStatus` in background.js). Kan die meting niet, dan
+gaat het werk gewoon door. De server heeft dezelfde rem
+(`_reden_zonder_vals_verwijt` in jobs.py), want een extensiereparatie duurt weken
+via de Web Store. Zie ook "bewijs-moet-onderscheiden", "rode-regel-is-geen-oordeel"
+en "rem-op-de-server-bij-een-extensiefout".
+
+---
+
 ## koude-mail-autonoom
 
 *06-09-2026 — "De koude-mailmachine draait autonoom via een LaunchAgent; wachtwoorden in de sleutelhanger, wrapper buiten Documenten, alles gelogd in Notion"*

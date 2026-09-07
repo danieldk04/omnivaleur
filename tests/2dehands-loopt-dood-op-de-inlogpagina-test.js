@@ -43,7 +43,8 @@ function check(naam, voorwaarde, uitleg) {
 
 /** Haal een blok op naam uit background.js, met accolades tellen. */
 function blokUit(naam, woord = "function") {
-  const start = BG.indexOf(`${woord} ${naam}`);
+  // Op naam MET haakje: anders vindt "mpSessie" ook "mpSessieEerstepartij".
+  const start = BG.indexOf(`${woord} ${naam}(`);
   if (start < 0) return null;
   let diepte = 0, i = BG.indexOf("{", start);
   for (; i < BG.length; i++) {

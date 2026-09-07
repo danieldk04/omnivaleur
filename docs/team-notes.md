@@ -6051,3 +6051,47 @@ dat goedkoper of uit moet).
 
 "Draait hij nog?" check nu: `curl -s https://omnivaleur.com/health` → `leadgen_tick`,
 `leadgen_resend`, `leadgen_mailbox` moeten alle drie `true` zijn.
+
+### 07-09-2026 — Egbert kreeg voor de derde keer ten onrechte "je bent niet ingelogd"
+
+**Zijn mail.** "Ik kom nog steeds gaten tegen in mijn listings" plus "ik krijg weer
+de melding dat ik niet ingelogd zou zijn terwijl dit niet zo is."
+
+**Het bewijs, uit zijn eigen opdrachtenlogboek.** Twee metingen op precies
+dezelfde URL, dezelfde browser, dezelfde minuut:
+
+    21:07:35  vanuit een tabblad OP www.2dehands.be    HTTP 200
+    21:07:48  vanuit de service worker van de extensie  HTTP 401
+    21:11:22  weer vanuit het tabblad                   HTTP 200
+    21:11:27  weer vanuit de service worker             HTTP 401
+
+HTTP 200 op `/my-account/sell/api/listings` krijg je alleen met een geldige sessie
+en dat is precies de aanname waarop de controle van 05-09 gebouwd is. Hij was dus
+ingelogd. Op grond van die 401 is zijn wachtrij van 346 opdrachten teruggenomen.
+Op www.marktplaats.nl gaat diezelfde achtergrondmeting bij andere verkopers wél
+goed, dus dit was van buitenaf niet te zien aankomen.
+
+**Gerepareerd.**
+- Extensie 1.0.308: de achtergrondmeting mag alleen nog "misschien niet" zeggen.
+  Het oordeel valt in een echt tabblad op de site zelf (`eerstepartijStatus`),
+  ook voor Vinted. Kost één tabblad, alleen op het moment dat we iemand zijn
+  wachtrij zouden afnemen. Kan die tweede meting niet, dan gaat het werk door.
+- Server (`_reden_zonder_vals_verwijt` in jobs.py): weigert een verwijt dat hij
+  zelf kan weerleggen met een geslaagde scan van dezelfde verkoper. Nodig omdat
+  een nieuwe extensie pas na de Web Store bij klanten komt.
+- 319 valse foutrijen bij Egbert verwijderd; die artikelen staan weer gewoon als
+  niet-geplaatst op 2dehands.
+
+**De "gaten".** 2.343 van zijn 5.533 artikelen staan in "unisex accessoires":
+bandana's, patches, pins, sleutelhangers. Die tak gold als kleding, dus eisten we
+merk, maat en kleur. Gemeten: van de geslaagde plaatsingen in die categorie hadden
+er 13 van de 14 geen maat, dus Marktplaats vraagt er niet om. Nu maatloos, net als
+muziek en sieraden. Ook: zonder categorie vragen we alleen nog om de categorie.
+Effect op de echte voorraad: bij hem 2.485 geblokkeerde artikelen terug naar 143,
+over alle gebruikers 4.051 naar 1.647.
+
+**Openstaand.** Waaróm zijn 2dehands-plaatsformulier nooit opengaat (305 stille
+tabbladen in augustus/september) is nog niet bewezen; hij is een zakelijke
+Admarkt-verkoper en heeft op 2dehands nul advertenties. De extensie legt nu bij
+elke mislukking het adres vast waar het tabblad belandde, dus de volgende poging
+levert dat bewijs.

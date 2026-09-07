@@ -3068,8 +3068,82 @@ def stop_platform(body: dict, user_id: str = Depends(get_current_user)):
     platform = str(body.get("platform") or "").strip()
     if not platform:
         raise HTTPException(status_code=400, detail="platform is required")
+    db = get_db()
     reden = str(body.get("reason") or "").strip() or _melding_formulier_ging_niet_open(platform)
-    return {"ok": True, "cancelled": _stop_wachtrij(get_db(), user_id, platform, reden)}
+    reden = _reden_zonder_vals_verwijt(db, user_id, platform, reden)
+    return {"ok": True, "cancelled": _stop_wachtrij(db, user_id, platform, reden)}
+
+
+# Een "je bent niet ingelogd" dat de extensie meestuurt is een oordeel uit haar
+# eigen achtergrond, en dat oordeel is aantoonbaar fout geweest.
+_CLAIM_NIET_INGELOGD = re.compile(r"you are not signed in to|je bent niet ingelogd", re.I)
+
+
+def _laatste_eigen_meting(db, user_id: str, platform: str) -> str | None:
+    """Wanneer de browser van deze verkoper zélf bij zijn advertentieoverzicht kon.
+
+    De scan draait in een echt tabblad OP de site en vraagt daar het
+    afgeschermde /my-account/sell/api/listings op. HTTP 200 daar krijg je alleen
+    met een geldige sessie — dat is precies de aanname waar de inlogcontrole van
+    de extensie op gebouwd is. Geeft de tijd van de laatste 200 terug, of None.
+    """
+    try:
+        rijen = execute_with_retry(
+            db.table("jobs").select("result,done_at,created_at")
+            .eq("user_id", user_id).eq("platform", platform)
+            .eq("action", "scan").eq("status", "done")
+            .order("created_at", desc=True).limit(10)
+        ).data or []
+    except Exception as e:  # noqa: BLE001 — geen meting is geen storing
+        logger.warning("Kon de eigen inlogmeting niet lezen voor %s/%s: %s", user_id, platform, e)
+        return None
+    grens = (datetime.now(timezone.utc) - timedelta(hours=48)).isoformat()
+    for r in rijen:
+        meta = ((r.get("result") or {}).get("scan_meta") or {})
+        wanneer = r.get("done_at") or r.get("created_at") or ""
+        if meta.get("api_status") == 200 and wanneer >= grens:
+            return wanneer
+    return None
+
+
+def _reden_zonder_vals_verwijt(db, user_id: str, platform: str, reden: str) -> str:
+    """Laat de server geen verwijt doorgeven dat hij zelf kan weerleggen.
+
+    WAAROM DIT ER IS (07-09-2026, gemeten bij Egbert Brouwer).
+
+    De extensie kreeg op 06-09 om 21:07:48 vanuit haar service worker HTTP 401
+    van 2dehands, en nam daarop zijn hele wachtrij van 346 opdrachten terug met
+    de tekst dat hij niet was ingelogd. Dertien seconden eerder, om 21:07:35,
+    had zijn eigen browser vanuit een tabblad OP www.2dehands.be op precies
+    dezelfde URL HTTP 200 gekregen. Om 21:11 gebeurde hetzelfde nog een keer.
+    Hij was ingelogd, en het was de derde keer dat hij dit verwijt kreeg.
+
+    De extensie is gerepareerd (zij vraagt het nu na in een tabblad op de site
+    zelf), maar een nieuwe extensie is er pas na de Web Store en niet iedereen
+    werkt tegelijk bij. Deze rem staat daarom hier: de server weet uit de scans
+    van dezelfde verkoper of zijn browser wél bij zijn account kon, en weigert
+    dan het verwijt door te geven. De wachtrij stoppen doen we wél — anders
+    loopt hij opnieuw uren tegen dezelfde muur — maar met wat we echt weten.
+    """
+    if not _CLAIM_NIET_INGELOGD.search(reden or ""):
+        return reden
+    wanneer = _laatste_eigen_meting(db, user_id, platform)
+    if not wanneer:
+        return reden
+    site = {"marktplaats": "Marktplaats (marktplaats.nl)",
+            "2dehands": "2dehands (2dehands.be)"}.get(platform, platform)
+    logger.warning(
+        "stop-platform: verwijt 'niet ingelogd' geweigerd voor %s/%s — eigen scan gaf HTTP 200 op %s",
+        user_id, platform, wanneer)
+    return (
+        f"We stopped the {site} queue, but not for the reason the extension gave. It blamed your "
+        f"login. We do not believe that: your own browser reached your {site} account page on "
+        f"{wanneer[:16].replace('T', ' ')} (HTTP 200), and that only works with a valid session. "
+        f"So this is a fault on our side, not with your account.\n\n"
+        f"Nothing was published and nothing was changed on {site}. We have already fixed the check "
+        f"that got this wrong, and it reaches your browser with the next extension update. Until "
+        f"then the queue may stop again with this message, so please tell us if it does."
+    )
 
 
 @router.post("/{job_id}/cancel")

@@ -2342,6 +2342,42 @@ async function vintedIngelogdOrigin(voorkeur) {
   return ergensOnzeker ? null : false;
 }
 
+// Hetzelfde, maar dan gemeten vanuit een tabblad op Vinted zelf. Wordt alleen
+// gebruikt als de achtergrondmeting op élk domein "nee" zegt, dus vlak voordat
+// we iemand zijn plaatsing zouden weigeren. Uitslag kort onthouden: dit kost
+// tabbladen en het antwoord verandert niet per opdracht.
+let _vintedEerstepartij = null;                 // { origin: string|false, at }
+
+async function vintedEerstepartijOrigin(voorkeur) {
+  if (_vintedEerstepartij && Date.now() - _vintedEerstepartij.at < EERSTEPARTIJ_TTL_MS) {
+    return _vintedEerstepartij.origin;
+  }
+  const kandidaten = [];
+  const zet = (o) => { if (o && !kandidaten.includes(o)) kandidaten.push(o); };
+  zet(voorkeur);
+  for (const o of VINTED_ORIGINS) zet(o);
+
+  let ergensOnzeker = false;
+  for (const origin of kandidaten) {
+    const uit = await eerstepartijStatus(`${origin}/`, "/api/v2/users/current");
+    if (!uit || uit.status == null || (uit.status !== 200 && uit.status !== 401 && uit.status !== 403)) {
+      ergensOnzeker = true;                               // tabblad ging niet open, of onderhoud
+      continue;
+    }
+    if (uit.status === 200 && uit.body && uit.body.user && uit.body.user.id) {
+      _vintedEerstepartij = { origin, at: Date.now() };
+      _vintedOriginCache = { origin, at: Date.now() };
+      return origin;
+    }
+  }
+  // Konden we het ergens niet vaststellen, dan is dit geen "nee". Een onzekere
+  // controle mag nooit een publicatie tegenhouden, en al helemaal geen verwijt
+  // opleveren.
+  if (ergensOnzeker) return null;
+  _vintedEerstepartij = { origin: false, at: Date.now() };
+  return false;
+}
+
 // Zet de opdracht klaar op het domein waar de verkoper echt is ingelogd, en
 // zeg het alleen dan af als geen enkel domein een sessie kent. Het gevonden
 // origin gaat in _create_origin, want daar leest getMpSyiUrl het uit: zo opent
@@ -2351,11 +2387,21 @@ async function vintedOriginKlaarzetten(job) {
   if (!voorkeur && job.payload && job.payload.platform_listing_url) {
     try { voorkeur = new URL(job.payload.platform_listing_url).origin; } catch (_) {}
   }
-  const gevonden = await vintedIngelogdOrigin(voorkeur);
+  let gevonden = await vintedIngelogdOrigin(voorkeur);
+  if (gevonden === false) {
+    // Dezelfde blinde hoek als bij Marktplaats/2dehands (zie MP_OVERZICHT_URL):
+    // een weigering die uit deze service worker komt is een vermoeden, geen
+    // oordeel. Vinted is er nog nooit op betrapt, maar de meting zit in precies
+    // dezelfde context, en de prijs van een fout oordeel is iemands hele
+    // wachtrij plus het verwijt dat hij niet is ingelogd terwijl hij dat wel is.
+    // Daarom eerst nog een ronde vanuit een echt tabblad op Vinted zelf.
+    gevonden = await vintedEerstepartijOrigin(voorkeur);
+  }
   if (gevonden === false) {
     return { ok: false, melding:
       "You are not signed in to Vinted in this browser, so nothing was published. " +
-      "We checked " + VINTED_ORIGINS.map(vintedKaalDomein).join(", ") + ". " +
+      "We checked " + VINTED_ORIGINS.map(vintedKaalDomein).join(", ") + ", both in the " +
+      "background and in a tab on Vinted itself. " +
       "Open Vinted, log in there, and publish again." };
   }
   if (typeof gevonden === "string") {
@@ -2422,6 +2468,94 @@ const MP_INLOG_URL = {
   marktplaats: "https://www.marktplaats.nl",
   "2dehands": "https://www.2dehands.be",
 };
+const MP_OVERZICHT_URL = {
+  marktplaats: "https://www.marktplaats.nl/my-account/sell/index.html",
+  "2dehands": "https://www.2dehands.be/my-account/sell/index.html",
+};
+
+// EEN "JE BENT NIET INGELOGD" MAG NOOIT UIT DE ACHTERGROND KOMEN.
+//
+// GEMETEN OP 06-09-2026 IN DE BROWSER VAN EGBERT BROUWER, TWEE KEER BINNEN
+// VIER MINUTEN, OP DEZELFDE URL:
+//
+//   21:07:35  vanuit een tabblad OP www.2dehands.be:  HTTP 200
+//   21:07:48  dertien seconden later, vanuit deze service worker:  HTTP 401
+//   21:11:22  weer 200 vanuit het tabblad
+//   21:11:27  vijf seconden later weer 401 vanuit de service worker
+//
+// Zelfde browser, zelfde koekjes, zelfde minuut, tegengesteld antwoord. Die 200
+// is precies de meting waar deze controle op gebouwd is ("zonder sessie 401, met
+// sessie 200"), dus hij WAS ingelogd — en op grond van de 401 is zijn hele
+// wachtrij van 346 opdrachten teruggenomen met de tekst dat hij niet ingelogd
+// was. Dat was de derde keer dat deze man dat verwijt kreeg terwijl hij gelijk
+// had.
+//
+// Waarom 2dehands een verzoek uit een extensie anders behandelt dan hetzelfde
+// verzoek uit haar eigen pagina weten we niet, en dat hoeft ook niet: het punt
+// is dat wij het van buitenaf niet kunnen zien aankomen. Op www.marktplaats.nl
+// gaat diezelfde achtergrondmeting bij andere verkopers wél goed (gemeten:
+// tientallen geslaagde plaatsingen per dag), dus "bij ons werkt het" bewijst
+// niets over de volgende site of de volgende maand.
+//
+// Daarom mag de achtergrondmeting alleen nog "misschien niet" zeggen. Het
+// oordeel valt in een echt tabblad op de site zelf: de enige context waarvan
+// gemeten is dat hij de sessie ziet. Alleen als díe weigert houden we werk
+// tegen. Kost dat een tabblad? Ja, maar alleen op het moment dat we op het punt
+// staan iemand zijn hele wachtrij af te nemen.
+const EERSTEPARTIJ_TTL_MS = 10 * 60 * 1000;
+const _eerstepartijOordeel = {};        // platform -> { ingelogd, status, url, at }
+
+// Vraagt het de site vanuit een tabblad op die site zelf, met de cookies die
+// haar eigen pagina's ook krijgen. `null` als we het niet konden vaststellen —
+// en dat is nooit een reden om werk tegen te houden.
+async function eerstepartijStatus(startUrl, pad) {
+  let tabId = null;
+  try {
+    tabId = await new Promise((res, rej) =>
+      openWorkerTab(startUrl, t => t ? res(t.id) : rej(new Error("geen tabblad")), { silent: true })
+    );
+    await waitForTabLoad(tabId);
+    return await execInTab(tabId, async (p) => {
+      let status = null, body = null;
+      try {
+        const res = await fetch(p, { headers: { Accept: "application/json" }, credentials: "include" });
+        status = res.status;
+        if (res.ok) body = await res.json().catch(() => null);
+      } catch (_) { /* netwerk: status blijft null, dus "weet niet" */ }
+      // Waar de browser uiteindelijk belandde. Bij een uitgelogde bezoeker is dat
+      // de inlogpagina, en dat is het bewijs dat we tot nu toe nooit hadden.
+      return { status, body, url: String(location.href).split("?")[0] };
+    }, [pad]);
+  } catch (e) {
+    console.warn("[Omnivaleur] Eerstepartij-inlogcontrole mislukt:", e);
+    return null;
+  } finally {
+    if (tabId != null) sluitWerkTabblad(tabId);
+  }
+}
+
+// Ingelogd op Marktplaats / 2dehands, gemeten op de site zelf.
+async function mpIngelogdOpDeSiteZelf(platform) {
+  const bewaard = _eerstepartijOordeel[platform];
+  if (bewaard && Date.now() - bewaard.at < EERSTEPARTIJ_TTL_MS) return bewaard;
+
+  const start = MP_OVERZICHT_URL[platform];
+  const pad = String(MP_SESSIE_URL[platform] || "").replace(/^https:\/\/[^/]+/, "");
+  if (!start || !pad) return { ingelogd: null, status: null, url: null, at: Date.now() };
+
+  const uit = await eerstepartijStatus(start, pad);
+  const status = uit && uit.status != null ? uit.status : null;
+  const oordeel = {
+    ingelogd: status === 200 ? true : (status === 401 || status === 403) ? false : null,
+    status,
+    url: (uit && uit.url) || null,
+    at: Date.now(),
+  };
+  // Alleen een uitslag onthouden, geen "weet niet": anders zwijgen we tien
+  // minuten lang over een netwerkhikje.
+  if (oordeel.ingelogd !== null) _eerstepartijOordeel[platform] = oordeel;
+  return oordeel;
+}
 
 async function mpSessie(platform) {
   const url = MP_SESSIE_URL[platform];
@@ -2438,11 +2572,16 @@ async function mpSessie(platform) {
   }
 }
 
-function mpNietIngelogdMelding(platform, status) {
+function mpNietIngelogdMelding(platform, meting) {
   const site = SITE_NAAM[platform] || platform;
+  const status = meting && meting.status != null ? meting.status : "?";
+  const waar = meting && meting.url
+    ? ` We opened your ${site} account page in this browser and it ended up at ${meting.url}.`
+    : "";
   return (
-    `You are not signed in to ${site} in this browser, so nothing was published and no tab `
-    + `was opened. We asked ${site} itself and it refused (HTTP ${status}). Marktplaats and `
+    `You are not signed in to ${site} in this browser, so nothing was published. `
+    + `We checked twice: once in the background and once in a tab on ${site} itself, `
+    + `and the site refused both times (HTTP ${status}).${waar} Marktplaats and `
     + `2dehands are separate sites with separate logins, so being signed in to one does not `
     + `sign you in to the other. Open ${MP_INLOG_URL[platform]}, sign in there, and publish again.`
   );
@@ -2455,9 +2594,23 @@ function mpNietIngelogdMelding(platform, status) {
 // honderden keren hetzelfde proberen: bij Egbert stonden er 274 opdrachten
 // achter die stuk voor stuk kansloos waren.
 async function mpPlaatsenKlaarzetten(job, serverUrl) {
-  const { ingelogd, status } = await mpSessie(job.platform);
-  if (ingelogd !== false) return { ok: true };
-  const melding = mpNietIngelogdMelding(job.platform, status);
+  const achtergrond = await mpSessie(job.platform);
+  if (achtergrond.ingelogd !== false) return { ok: true };
+
+  // De achtergrond zegt "nee". Dat is een vermoeden, geen oordeel: laat de site
+  // het nog een keer zeggen vanuit haar eigen pagina. Zie de meting bij
+  // MP_OVERZICHT_URL — daar liepen deze twee antwoorden dertien seconden uit
+  // elkaar en was de achtergrond degene die het mis had.
+  const echt = await mpIngelogdOpDeSiteZelf(job.platform);
+  if (echt.ingelogd !== false) {
+    console.warn(
+      `[Omnivaleur] ${job.platform}: de achtergrondmeting kreeg HTTP ${achtergrond.status}, `
+      + `maar op de site zelf ${echt.status == null ? "kregen we geen antwoord" : `HTTP ${echt.status}`}. `
+      + `De achtergrondmeting telt niet mee; de opdracht gaat gewoon door.`
+    );
+    return { ok: true };
+  }
+  const melding = mpNietIngelogdMelding(job.platform, echt);
   await stopPlatformWachtrij(serverUrl, job.platform, melding).catch(() => {});
   return { ok: false, melding };
 }

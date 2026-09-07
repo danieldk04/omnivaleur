@@ -57,12 +57,23 @@ function maakZand(sessieOp, kapot = []) {
     }
     return { ok: false, status: 401, json: async () => ({}) };
   };
+  // De tweede ronde vraagt het vanuit een tabblad op Vinted zelf. Dat tabblad
+  // bestaat hier niet, dus bootsen we na wat de site daar zou antwoorden: op het
+  // domein waar de sessie leeft 200 met een gebruiker, elders 401.
+  zand.eerstepartijStatus = async (startUrl) => {
+    const origin = new URL(startUrl).origin;
+    if (kapot.includes(origin)) return null;
+    return origin === sessieOp
+      ? { status: 200, body: { user: { id: 42 } }, url: `${origin}/` }
+      : { status: 401, body: null, url: `${origin}/member/general` };
+  };
   vm.createContext(zand);
   return zand;
 }
 
-const CODE = stukUit(BG, "const VINTED_ORIGINS = [",
-  ["vintedIngelogd", "vintedIngelogdOrigin", "vintedOriginKlaarzetten"]);
+const CODE = "let _vintedEerstepartij = null;\nconst EERSTEPARTIJ_TTL_MS = 600000;\n"
+  + stukUit(BG, "const VINTED_ORIGINS = [",
+      ["vintedIngelogd", "vintedIngelogdOrigin", "vintedEerstepartijOrigin", "vintedOriginKlaarzetten"]);
 
 (async () => {
   // ── 1. De voor-proef: de oude code zei aantoonbaar "niet ingelogd" ──────

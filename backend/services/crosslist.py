@@ -348,12 +348,25 @@ _PLATFORM_REQUIRED = {
 # only the category itself is platform-required.
 _NON_CLOTHING_PREFIXES = ("games ", "electronics ", "sieraden ", "muziek ",
                           "antiek ", "kunst ", "wonen ", "audio ")
+# Accessoires staan in de kledingboom, maar een bandana, een patch, een speld of
+# een sleutelhanger heeft geen maat en geen merk.
+#
+# GEMETEN OP 07-09-2026, NIET AANGENOMEN. Van de geslaagde plaatsingen in
+# "unisex accessoires" hadden er 13 van de 14 GEEN maat, en in "kinderen
+# accessoires" 16 van de 21. Marktplaats accepteert ze dus gewoon; de eis kwam
+# van ons. Bij Egbert Brouwer (papas-plectrums) staan 2.343 van zijn 5.533
+# artikelen in "unisex accessoires", en die kregen daardoor allemaal de
+# waarschuwing "voeg merk, maat, kleur toe" en waren niet te publiceren. Dat is
+# wat hij "gaten in mijn listings" noemt, en het is de tweede keer: op
+# 03-09-2026 is dezelfde fout al uit de knopteller gehaald (zie _mist_iets in
+# mp_enrich.py), maar niet uit de eis zelf.
+_GEEN_MAAT_CATEGORIEEN = ("unisex accessoires", "accessoires dames", "kinderen accessoires")
 _NON_CLOTHING_PLATFORM_REQUIRED = ["category"]
 
 
 def _is_non_clothing(item: dict) -> bool:
     cat = str(item.get("category") or "").strip().lower()
-    return cat.startswith(_NON_CLOTHING_PREFIXES)
+    return cat.startswith(_NON_CLOTHING_PREFIXES) or cat in _GEEN_MAAT_CATEGORIEEN
 
 
 async def _fill_inferred_gaps(db, item: dict) -> dict:
@@ -394,11 +407,17 @@ class CrosslistValidationError(Exception):
 
 def _missing_fields_per_platform(item: dict, platforms: list[str]) -> dict[str, list[str]]:
     missing: dict[str, list[str]] = {}
+    # ZONDER CATEGORIE WETEN WE NIET WELKE TAK HET IS, DUS VRAGEN WE ALLEEN DIE.
+    # Anders viel een item zonder categorie terug op kleding en kreeg de verkoper
+    # "voeg categorie, geslacht, merk, maat, kleur toe" te zien terwijl vier van
+    # die vijf misschien helemaal niet nodig zijn. Vul hij de categorie in, dan
+    # vertelt de volgende ronde vanzelf wat er dán nog ontbreekt.
+    geen_categorie = not str(item.get("category") or "").strip()
     non_clothing = _is_non_clothing(item)
     for platform in platforms:
         platform_required = (
             _NON_CLOTHING_PLATFORM_REQUIRED
-            if non_clothing and platform in _PLATFORM_REQUIRED
+            if (non_clothing or geen_categorie) and platform in _PLATFORM_REQUIRED
             else _PLATFORM_REQUIRED.get(platform, [])
         )
         required = _UNIVERSAL_REQUIRED + platform_required
