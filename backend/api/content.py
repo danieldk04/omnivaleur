@@ -525,9 +525,9 @@ def _require_dashboard_token(token: str | None) -> None:
 # ── De vaste links per kanaal + de merkkoppeling ─────────────────────────
 # KANAAL_LINKS, WEBSTORE_URL en merk_profielen() staan sinds 07-09-2026 in
 # backend/content/branding.py (een bestandje zonder FastAPI-import), zodat de
-# content-cron ze kan gebruiken zonder de hele weblaag mee te slepen. Hier
-# alleen her-geëxporteerd; de betekenis en de afspraken staan daar.
-__all_branding__ = (KANAAL_LINKS, WEBSTORE_URL, merk_profielen)
+# content-cron ze kan gebruiken zonder de hele weblaag mee te slepen. Ze worden
+# hierboven geïmporteerd en blijven zo ook via backend.api.content bereikbaar;
+# de betekenis en de afspraken staan in dat bestand.
 
 
 def merk_json_ld() -> dict:
