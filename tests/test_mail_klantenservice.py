@@ -170,11 +170,13 @@ def test_zonder_uitleg_van_de_developer_gaat_er_niets_uit(opslag, monkeypatch):
     assert M.bericht_over_reparaties() == 0
 
 
-def test_de_developer_leest_dit_postvak_bij_elke_sessie():
-    """Zonder deze afspraak in CLAUDE.md komt er nooit iemand kijken."""
+def test_claude_md_legt_uit_dat_de_klantenservicelaag_eruit_is():
+    """Sinds 06-09-2026 schrijft de mailmachine geen antwoorden meer en deelt
+    niets meer in met AI (kostte tokens). CLAUDE.md moet dat vertellen, anders
+    gaat een volgende sessie ervan uit dat de buglijst nog automatisch vult."""
     afspraken = (Path(__file__).parent.parent / "CLAUDE.md").read_text()
-    assert "mail_analyse.py bugs" in afspraken
-    assert "mail_analyse.py opgelost" in afspraken
+    assert "klantenservice-laag eruit" in afspraken
+    assert "rechtstreeks" in afspraken
 
 
 def test_onze_eigen_seintjes_tellen_niet_als_binnengekomen_post(monkeypatch):
