@@ -98,7 +98,13 @@ def parse_ontvangers(raw: str) -> list[dict]:
     seen: set[str] = set()
     out: list[dict] = []
     for regel in raw.splitlines():
-        for stuk in re.split(r"[,;]+", regel):
+        # Eerst op het streepje splitsen: staat er een eigen zin achter (groep A),
+        # dan is de hele regel een ontvanger en blijft de zin met komma's heel.
+        if "|" in regel:
+            stukken = [regel]
+        else:
+            stukken = re.split(r"[,;]+", regel)
+        for stuk in stukken:
             deel = stuk.strip()
             if not deel:
                 continue
