@@ -595,6 +595,31 @@ async def publish_to_platforms(item_id: str, platforms: list[str], user_id: str)
     api_platforms = [p for p in platforms if p in API_PLATFORMS]
     ext_platforms = [p for p in platforms if p in EXTENSION_PLATFORMS]
 
+    # EEN KANAAL DAT NOG NOOIT HEEFT GEWERKT, NIET OPNIEUW VOLPROPPEN.
+    #
+    # GEMETEN (07-09-2026, Egbert Brouwer). 671 plaatsopdrachten voor 2dehands,
+    # nul geslaagd, drie weken lang. 2dehands.be laat dit account niet plaatsen
+    # via /plaats. Elke nieuwe poging is drie minuten stilte en een rode balk
+    # erbij. Zolang er niet één 2dehands-advertentie door is, zetten we hier geen
+    # nieuwe opdracht meer klaar en zeggen we in één zin waaróm niet. Zodra één
+    # plaatsing lukt is `_kanaal_kansloos` weer False en loopt alles gewoon.
+    kansloos_geblokkeerd: dict[str, str] = {}
+    if ext_platforms:
+        from backend.api.jobs import _kanaal_kansloos, _melding_formulier_ging_niet_open
+        for p in ext_platforms:
+            try:
+                if await naast_de_lus(lambda p=p: _kanaal_kansloos(db, user_id, p)):
+                    kansloos_geblokkeerd[p] = _melding_formulier_ging_niet_open(p)
+            except Exception as e:  # noqa: BLE001 — een rem mag nooit publiceren blokkeren op een fout
+                logger.warning("kansloos-check mislukt voor %s/%s: %s", user_id, p, e)
+    if kansloos_geblokkeerd:
+        results.extend([
+            {"platform": p, "status": "blocked", "error": reden}
+            for p, reden in kansloos_geblokkeerd.items()
+        ])
+        ext_platforms = [p for p in ext_platforms if p not in kansloos_geblokkeerd]
+        platforms = [p for p in platforms if p not in kansloos_geblokkeerd]
+
     # Pre-translate concurrently for platforms that need a different language
     english_item = None
     dutch_item = None
