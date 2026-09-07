@@ -428,6 +428,22 @@ def evaluate_access(sub: dict | None) -> dict:
                         "grace_ends_at": grace_ends.isoformat(), "grace_days_left": 0}
         return {"allowed": True, "reason": "active", "grace_ends_at": None, "grace_days_left": None}
 
+    if status == "payment_processing":
+        # Stripe heeft een betaling in behandeling: de eerste SEPA-incasso na de
+        # proef, die dagenlang "processing" blijft. Dat is geen weigering, dus de
+        # toegang blijft aan. De bovengrens is er alleen voor het geval de
+        # afloop-webhook wegvalt en de rij anders eeuwig zou blijven hangen.
+        started = _parse_ts(sub.get("updated_at")) or now
+        if now < started + timedelta(days=PROCESSING_GRACE_DAYS):
+            return {"allowed": True, "reason": "payment_processing",
+                    "grace_ends_at": None, "grace_days_left": None}
+        grace_ends = started + timedelta(days=GRACE_DAYS)
+        allowed = now < grace_ends
+        days_left = max(0, -(-(grace_ends - now).total_seconds() // 86400)) if allowed else 0
+        return {"allowed": allowed, "reason": "past_due",
+                "grace_ends_at": grace_ends.isoformat(),
+                "grace_days_left": int(days_left)}
+
     if status == "trialing":
         # The hourly job flips expired trials, but don't wait for it: a trial
         # whose clock has run out starts its grace period right away.
