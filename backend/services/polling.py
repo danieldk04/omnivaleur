@@ -167,13 +167,30 @@ async def _check_one(listing: dict, credentials: dict):
     velden: dict = {"last_checked": datetime.now(timezone.utc).isoformat()}
     naderhand = None
 
+    # Marktplaats en 2dehands melden een handverkoop niet betrouwbaar: een
+    # verkochte advertentie ziet er voor de server vaak net zo uit als een
+    # verlopen of tijdelijk gepauzeerde. Daarom is een "sold" van díe twee een
+    # AANWIJZING die de verkoper zelf bevestigt, geen conclusie. eBay en Etsy
+    # zeggen het via hun eigen API met een echte order erachter — daar wordt het
+    # meteen afgehandeld.
+    ZACHT_SIGNAAL = {"marktplaats", "2dehands"}
+
     try:
         platform = get_platform(platform_name)
         status = await platform.get_listing_status(
             listing["platform_listing_id"], credentials
         )
 
-        if status == "sold":
+        if status == "sold" and platform_name in ZACHT_SIGNAAL:
+            if listing.get("status") != "sold_unconfirmed":
+                logger.info(f"Item {listing['item_id']} lijkt verkocht op {platform_name} — ter bevestiging aan de verkoper")
+                velden["status"] = "sold_unconfirmed"
+                velden["error_message"] = (
+                    "Mogelijk verkocht: de advertentiepagina toont zelf 'verkocht' "
+                    "of 'gereserveerd'."
+                )
+
+        elif status == "sold":
             logger.info(f"Item {listing['item_id']} sold on {platform_name} — triggering delist")
             naderhand = listing["item_id"]
 
