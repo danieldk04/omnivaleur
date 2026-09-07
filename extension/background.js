@@ -5668,15 +5668,26 @@ chrome.tabs.onUpdated.addListener(async (tabId, changeInfo) => {
   // minuten leeg. Dat is precies wat Egbert Brouwer 305 keer overkwam. Zeg het
   // meteen, mét het adres waar het tabblad werkelijk terechtkwam, in plaats van
   // stilte en daarna een gok.
-  if (!meta.scriptSeen && MP_LOGINPAGINA.test(changeInfo.url)
+  //
+  // GEEN `!meta.scriptSeen` MEER (07-09-2026, gemeten bij Egbert Brouwer). Zijn
+  // 2dehands is een one-page app: het formulier laadt, ons invulscript injecteert
+  // (scriptSeen wordt true), en PAS DAARNA stuurt 2dehands.be de pagina door naar
+  // /identity/v2/login. Met de oude voorwaarde werd die doorverwijzing genegeerd
+  // zodra het script geladen was, en liep de opdracht alsnog drie minuten leeg.
+  // Een sprong naar de inlogpagina is beslissend, of ons script er nu al stond of
+  // niet: een geslaagde plaatsing landt op /v/.../m123 of /seller/view, nooit op
+  // een inlog-URL.
+  if (MP_LOGINPAGINA.test(changeInfo.url)
       && (meta.platform === "marktplaats" || meta.platform === "2dehands")) {
     const site = SITE_NAAM[meta.platform] || meta.platform;
     clearJobWatchdog(tabId);
     await chrome.storage.local.remove(key);
     const melding =
-      `The ${site} listing form never opened: that tab was sent straight to the ${site} login `
-      + `page, so nothing was filled in and nothing was published. Sign in to ${site} in this `
-      + `browser and publish again. [tabblad kwam uit op ${String(changeInfo.url).split("?")[0]}]`;
+      `The ${site} listing form never opened: that tab was sent to the ${site} login `
+      + `page, so nothing was filled in and nothing was published. ${site} and the other `
+      + `Marktplaats-family sites have separate logins, so being signed in to one does not `
+      + `sign you in here. Open ${site}, sign in, and publish again. `
+      + `[tabblad kwam uit op ${String(changeInfo.url).split("?")[0]}]`;
     await stopPlatformWachtrij(meta.serverUrl, meta.platform, melding).catch(() => {});
     await reportError(meta.jobId, meta.serverUrl, melding).catch(() => {});
     sluitWerkTabblad(tabId);
