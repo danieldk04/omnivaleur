@@ -474,6 +474,38 @@ def evaluate_access(sub: dict | None) -> dict:
     }
 
 
+_processing_cache: dict[str, tuple[float, bool]] = {}
+_PROCESSING_TTL = 120
+
+
+def _subscription_awaiting_incasso(stripe_subscription_id: str | None) -> bool:
+    """True als de laatste factuur van dit abonnement wacht op een betaling die
+    bij Stripe op 'processing' staat (een SEPA-incasso is werkdagen onderweg).
+
+    Puur een Stripe-navraag. Kort gecachet, want hij zit op het weiger-pad van
+    check_access en dat draait bij elke opdracht en elke job-poll. In de normale
+    situatie (toegang gewoon toegestaan) wordt hij nooit aangeroepen.
+    """
+    if not stripe_subscription_id or not settings.stripe_secret_key:
+        return False
+    hit = _processing_cache.get(stripe_subscription_id)
+    if hit and hit[0] > time.monotonic():
+        return hit[1]
+    result = False
+    try:
+        import stripe
+        sub = stripe.Subscription.retrieve(
+            stripe_subscription_id, expand=["latest_invoice.payment_intent"]
+        )
+        invoice = sub.get("latest_invoice") if hasattr(sub, "get") else None
+        pi = invoice.get("payment_intent") if hasattr(invoice, "get") else None
+        result = bool(hasattr(pi, "get") and pi.get("status") == "processing")
+    except Exception:
+        logger.exception("Kon niet nagaan of er een incasso loopt voor %s", stripe_subscription_id)
+    _processing_cache[stripe_subscription_id] = (time.monotonic() + _PROCESSING_TTL, result)
+    return result
+
+
 async def check_access(user_id: str, email: str | None = None) -> dict:
     """Access verdict for this user. Owners always pass."""
     if is_owner_email(email):
@@ -484,4 +516,19 @@ async def check_access(user_id: str, email: str | None = None) -> dict:
         # A Supabase hiccup must not lock paying customers out of their own work.
         logger.exception(f"Kon abonnement niet ophalen voor {user_id}")
         return {"allowed": True, "reason": "lookup_failed", "grace_ends_at": None, "grace_days_left": None}
-    return evaluate_access(sub)
+
+    verdict = evaluate_access(sub)
+    # Zou de toegang dichtvallen terwijl er wél een geldige incasso loopt (de
+    # afloop-webhook van de proef is nog niet aangekomen, of de bedenktijd is
+    # korter dan een SEPA-incasso duurt), dan één keer bij Stripe navragen.
+    if not verdict["allowed"] and sub and sub.get("stripe_subscription_id"):
+        try:
+            loopt = await asyncio.to_thread(
+                _subscription_awaiting_incasso, sub["stripe_subscription_id"]
+            )
+        except Exception:
+            loopt = False
+        if loopt:
+            return {"allowed": True, "reason": "payment_processing",
+                    "grace_ends_at": None, "grace_days_left": None}
+    return verdict
