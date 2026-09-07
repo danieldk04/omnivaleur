@@ -67,10 +67,12 @@ Opmaak:
 - Nooit een gedachtestreepje of een los streepje als leesteken. Splits de zin of
   gebruik een komma, dubbele punt of punt.
 
-Klant is geen lead:
+Bestaande klant versus lead:
 
-- Iemand met een account is klant. Geen verkooppraat, geen prijs pushen, geen
-  afscheidsgroet, geen "veel succes met de winkel".
+- Iemand met een Omnivaleur-account is klant. Geen verkooppraat, geen prijs
+  pushen, geen afscheidsgroet, geen "veel succes met de winkel".
+- Iemand die nog geen account heeft en informeert is een lead. Verkooppraat en de
+  demolink mogen dan wel.
 
 ---
 
