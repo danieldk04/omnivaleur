@@ -268,6 +268,42 @@ def extract_sku_prices_from_order(order: dict) -> dict[str, float]:
     return prices
 
 
+def extract_line_refs_from_order(order: dict) -> list[dict]:
+    """Elke bestelregel met álle identificatie erbij, plus het echt betaalde bedrag.
+
+    Alleen op SKU matchen brak steeds: veel winkels zetten nooit een SKU op een
+    variant, en een product dat de winkelier zelf heeft aangemaakt draagt onze
+    REV-xxxx-code niet. Een Shopify-bestelregel bevat óók het product_id en
+    variant_id, en het product_id is precies wat wij als platform_listing_id op
+    de advertentierij bewaren — dat is de stevige match. SKU blijft als terugval
+    voor geïmporteerde advertenties waarvan we het product-id kwijt zijn.
+
+    Geeft terug: [{product_id, variant_id, sku, price}] — waarden zijn strings of
+    None. `price` is None als het bedrag ontbreekt (nooit 0 boeken).
+    """
+    refs: list[dict] = []
+    for li in order.get("line_items", []):
+        pid = li.get("product_id")
+        vid = li.get("variant_id")
+        sku = (li.get("sku") or "").strip()
+        raw = li.get("price")
+        try:
+            unit = float(raw) if raw not in (None, "") else None
+            qty = int(li.get("quantity") or 1)
+        except (ValueError, TypeError):
+            unit, qty = None, 1
+        price = round(unit * qty, 2) if (unit is not None and unit > 0) else None
+        if pid is None and vid is None and not sku:
+            continue
+        refs.append({
+            "product_id": str(pid) if pid is not None else None,
+            "variant_id": str(vid) if vid is not None else None,
+            "sku": sku or None,
+            "price": price,
+        })
+    return refs
+
+
 class ShopifyClient:
     """Minimal Shopify Admin API client."""
 
