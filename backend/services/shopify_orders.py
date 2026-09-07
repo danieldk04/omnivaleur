@@ -141,33 +141,32 @@ async def controleer_shopify_verkopen() -> dict:
             continue
 
         for order in orders:
-            skus = extract_skus_from_order(order)
-            if not skus:
+            refs = extract_line_refs_from_order(order)
+            if not refs:
                 continue
-            prijzen = extract_sku_prices_from_order(order)
             # De ECHTE besteldatum. Deze ronde kijkt bewust terug in de tijd (bij
             # een nieuwe koppeling 24 uur, na een storing langer), dus zonder deze
             # datum zou elke ingehaalde bestelling als "vandaag verkocht" in de
             # omzet belanden.
             besteld_op = order.get("processed_at") or order.get("created_at")
-            for sku in skus:
+            gezien: set[str] = set()
+            for ref in refs:
                 try:
                     # LET OP: altijd op user_id filteren. Twee winkeliers kunnen
                     # dezelfde SKU gebruiken (1, 001, een artikelnummer), en dan
                     # zou een verkoop bij de een de advertenties van de ander
-                    # overal weghalen.
-                    treffer = ((await naast_de_lus(
-                        lambda: db.table("items").select("id")
-                        .eq("user_id", rij["user_id"]).eq("sku", sku)
-                        .limit(1).execute(), herkans=True)).data or [])
-                    if not treffer:
+                    # overal weghalen. match_shopify_sale scoopt zelf op user_id.
+                    item_id = await match_shopify_sale(db, rij["user_id"], ref)
+                    if not item_id or item_id in gezien:
                         continue
-                    await handle_item_sold(treffer[0]["id"], "shopify",
-                                           sold_price=prijzen.get(sku),
+                    gezien.add(item_id)
+                    await handle_item_sold(item_id, "shopify",
+                                           sold_price=ref.get("price"),
                                            sold_at=besteld_op)
                     verwerkt += 1
                 except Exception as e:  # noqa: BLE001
-                    logger.warning("shopify-verkoopcontrole: %s / sku %s: %s", shop, sku, e)
+                    logger.warning("shopify-verkoopcontrole: %s / regel %s: %s",
+                                   shop, ref.get("product_id") or ref.get("sku"), e)
 
         # Merkteken pas bijwerken als deze winkel helemaal gelukt is. Brak er
         # iets af, dan kijken we volgende ronde dezelfde periode nog eens na —
