@@ -14,6 +14,12 @@ logger = logging.getLogger(__name__)
 # fix a card or think it over, short enough that it isn't a free plan.
 GRACE_DAYS = 2
 
+# Een eerste SEPA-incasso na de proef is werkdagen onderweg (Stripe schat 5 tot 9
+# werkdagen tussen "gestart" en "geslaagd"). Zolang die betaling bij Stripe op
+# "processing" staat houden we toegang aan; deze bovengrens vangt alleen het
+# geval af waarin we de afloop-webhook missen en de status blijft hangen.
+PROCESSING_GRACE_DAYS = 21
+
 # How long before the trial ends the reminder mail goes out.
 REMINDER_DAYS_BEFORE = 2
 
