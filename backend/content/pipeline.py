@@ -54,10 +54,13 @@ STATIC_LINK_CANDIDATES = [
 
 
 def _merk_profielen() -> list[str]:
-    """De openbare profielen van het merk, uit de tabel die het dashboard ook
-    gebruikt. Bewust binnen de functie geïmporteerd: bovenin zou het een
-    kringetje geven met backend.api.content."""
-    from backend.api.content import merk_profielen
+    """De openbare profielen van het merk voor het sameAs-veld in de JSON-LD.
+
+    Uit backend/content/branding.py, niet uit backend.api.content: dat laatste
+    sleept de hele FastAPI-stack mee, en die is in de dagelijkse content-cron
+    (alleen requirements-content.txt) niet geïnstalleerd. Sinds 30-08-2026 liet
+    dat de pijplijn elke dag stil crashen op deze laatste stap (07-09-2026)."""
+    from backend.content.branding import merk_profielen
 
     return merk_profielen()
 
