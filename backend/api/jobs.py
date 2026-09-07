@@ -2597,6 +2597,27 @@ def _queue_scan(db, user_id: str, platform: str):
 # openging was het plaatsformulier niet".
 _TIJDSOVERSCHRIJDING = re.compile(r"timed out waiting for this .* job to finish", re.I)
 
+# Alle fouten die NIETS over dit ene artikel zeggen: het formulier ging niet open,
+# de sessie werd afgewezen, of de wachtrij is al gestopt. Een "vul de foto's in"
+# is een uitgelegde fout en hoort hier NIET bij — die zegt wél iets, en drie keer
+# dezelfde uitgelegde fout mag geen wachtrij wissen (zie test_kansloze_wachtrij).
+#
+# GEMETEN (07-09-2026, Egbert Brouwer). Van zijn 671 plaatsopdrachten voor
+# 2dehands is er nooit één geslaagd. De laatste tientallen wisselen tussen
+# "timed out", "not signed in" en "queue stopped" — drie verschijningsvormen van
+# hetzelfde: 2dehands.be laat dit account niet plaatsen via /plaats. De oude rem
+# keek alleen naar drie identieke "timed out" op rij en sloeg daardoor over.
+_ONDOORGROND = re.compile(
+    r"timed out waiting for this .* job to finish"
+    r"|not signed in to|je bent niet ingelogd"
+    r"|listing form never opened|form never opened|never opened"
+    r"|queue stopped|wachtrij .*gestopt|we stopped the .* queue",
+    re.I,
+)
+# Zoveel ondoorgronde mislukkingen zonder ooit één succes: dan is het kanaal
+# aantoonbaar kansloos voor dit account, ongeacht de exacte fouttekst.
+_KANSLOOS_DREMPEL = 10
+
 
 def _nooit_gelukt_op(db, user_id: str, platform: str) -> bool:
     """Heeft deze verkoper op dit kanaal ooit iets geplaatst gekregen?
@@ -2638,6 +2659,35 @@ def _kansloze_reeks(db, user_id: str, platform: str) -> bool:
         if op_rij >= 3:
             break
     return op_rij >= 3 and _nooit_gelukt_op(db, user_id, platform)
+
+
+def _kanaal_kansloos(db, user_id: str, platform: str) -> bool:
+    """Is dit kanaal aantoonbaar kansloos voor dit account?
+
+    Twee ingangen, allebei vereisen dat er NOOIT één plaatsing is geslaagd:
+
+    1. Drie identieke tijdsoverschrijdingen op rij (`_kansloze_reeks`, ongewijzigd).
+    2. NIEUW: tien of meer ondoorgronde mislukkingen (`_ONDOORGROND`) bij elkaar,
+       ook als ze van vorm wisselen. Egbert Brouwer: 671 pogingen voor 2dehands,
+       nul geslaagd, met "timed out", "not signed in" en "queue stopped" door
+       elkaar. Ingang 1 keek naar drie identieke op rij en zag dit patroon niet.
+
+    Een uitgelegde fout ("vul de foto's in") telt nooit mee: die zegt wél iets
+    over dit artikel, en drie ervan mogen geen wachtrij wissen.
+    """
+    if _kansloze_reeks(db, user_id, platform):
+        return True
+    if not _nooit_gelukt_op(db, user_id, platform):
+        return False
+    recent = (db.table("jobs").select("status,result").eq("user_id", user_id)
+              .eq("platform", platform).eq("action", "create")
+              .in_("status", ["error", "cancelled"])
+              .order("created_at", desc=True).limit(40).execute().data or [])
+    ondoorgrond = sum(
+        1 for j in recent
+        if _ONDOORGROND.search(str((j.get("result") or {}).get("error") or ""))
+    )
+    return ondoorgrond >= _KANSLOOS_DREMPEL
 
 
 # Het adres waarop de verkoper zelf, in een klik, kan zien of hij is ingelogd.
