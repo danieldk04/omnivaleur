@@ -154,5 +154,22 @@
   "action": {
     "default_popup": "popup.html",
     "default_title": "Omnivaleur"
-  }
+  },
+  "web_accessible_resources": [
+    {
+      "resources": [
+        "content/timer-worker.js"
+      ],
+      "matches": [
+        "https://www.marktplaats.nl/*",
+        "https://www.2dehands.be/*",
+        "https://www.vinted.com/*",
+        "https://www.vinted.nl/*",
+        "https://www.vinted.be/*",
+        "https://www.vinted.de/*",
+        "https://www.vinted.fr/*",
+        "https://www.facebook.com/*"
+      ]
+    }
+  ]
 }
