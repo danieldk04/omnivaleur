@@ -17,6 +17,57 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ---
 
+## dubbele-advertentie-titel-en-foto
+
+*07-09-2026 — Twee artikelrijen zijn hetzelfde voorwerp als titel én foto-adres gelijk zijn; de titel alleen blokkeert echte losse voorraad*
+
+07-09-2026, Toon (dejuistetoon): "ik zie continue dubbele advertenties
+verschijnen." Nagemeten op zijn openbare verkoperspagina: elf titels stonden
+dubbel, samen vijftien advertenties te veel, waarvan er één diezelfde dag was
+bijgekomen en zes de dag ervoor.
+
+**Why:** de bestaande dubbelcontrole (`tweelingen.familie_ids`) herkent tweelingen
+aan de nummering die de verkoper zelf vóór de titel zet ("(1032) …") of aan een
+gedeelde sku. Zijn artikelen hebben geen van beide: elke import geeft een eigen
+sku (`IMP-6CB890D8`) en zijn titels zijn kaal. De controle vond dus niets en
+allebei de rijen werden gepubliceerd. Zie "import-dubbele-items-over-platforms".
+
+**How to apply:** matchen op de titel alleen is fout. Toon heeft **acht
+verschillende dameslederhosen** die allemaal "Lederhosen dames" heten en die
+allemaal los te koop moeten kunnen staan; op de titel alleen hadden we er zeven
+geblokkeerd. Alle acht hebben eigen foto's. De echte dubbelen delen juist een
+foto-adres letterlijk, want ze komen uit dezelfde bron. De regel is dus: **zelfde
+titel ÉN minstens één gedeeld foto-adres**. Gemeten op zijn 1.319 artikelen:
+45 paren, geen van de acht lederhosen erbij, 12 paren die op dat moment allebei
+live stonden. Geen foto's op het artikel betekent geen bewijs, dus dan blokkeren
+we niet.
+
+Let daarbij op dat de administratie zélf al scheef kan staan: hij had 434 rijen op
+"live op Marktplaats" tegen 366 echte advertenties. 58 rijen wezen naar een
+advertentienummer dat niet meer bestond terwijl dezelfde advertentie er onder een
+nieuw nummer wél stond. Zijn advertenties worden nooit echt nagekeken omdat hij
+geen Marktplaats-koppeling heeft (`polling.POLL_PLATFORMS` slaat hem over) en zijn
+zakelijke "Mijn advertenties" leeg is. Zie
+"een-bron-is-geen-bewijs-bij-weg" en "admarkt-zakelijke-marktplaats".
+
+**Aanvulling 07-09-2026 (avond), bij het echt opruimen.** Onze eigen kolom
+`status = active` is géén bewijs dat er een advertentie staat. Van de 57
+artikelen die de database als "twee actieve advertenties" telde had er in het
+openbare aanbod **geen enkele** er twee online; 56 hadden er nog één. Het
+bestaande `scripts/herstel_dubbele_advertenties.py` zou dus 57 verwijderopdrachten
+naar niet-bestaande advertentienummers hebben gestuurd. Meet daarom altijd het
+openbare aanbod van de verkoper, en twee keer los van elkaar — dezelfde regel als
+`polling.py`: pas wat twee keer ontbreekt geldt als weg. Zie
+"een-bron-is-geen-bewijs-bij-weg".
+
+En omgekeerd: van de 14 titels die meer dan één keer live stonden waren er 13
+gewoon verschillende voorwerpen. Opruimen op titel had echte advertenties
+vernietigd. Het opruimen zelf staat nu in
+`scripts/ruim_dubbele_advertenties_uit_import.py` (titel + gedeeld foto-adres,
+nieuwste advertentie blijft staan, groepen met verkoopgeschiedenis overgeslagen).
+
+---
+
 ## tekst-zoeken-op-het-juiste-kanaal
 
 *07-09-2026 — De aanvulronde voor prijs en omschrijving zocht altijd op marktplaats.nl; wie vanaf 2dehands importeerde hield lege teksten en verstopte bovendien zijn eigen ronde*
@@ -52,41 +103,6 @@ op 2dehands** (m2065499767 en m2222635983, allebei live in zijn openbare aanbod,
 allebei 40 euro) met verschillende foto-adressen, want elke import spiegelt de
 foto opnieuw. De dubbelcontrole op titel+foto-adres
 ("dubbele-advertentie-titel-en-foto") ziet die dus niet, en dat is terecht.
-
----
-
-## dubbele-advertentie-titel-en-foto
-
-*07-09-2026 — Twee artikelrijen zijn hetzelfde voorwerp als titel én foto-adres gelijk zijn; de titel alleen blokkeert echte losse voorraad*
-
-07-09-2026, Toon (dejuistetoon): "ik zie continue dubbele advertenties
-verschijnen." Nagemeten op zijn openbare verkoperspagina: elf titels stonden
-dubbel, samen vijftien advertenties te veel, waarvan er één diezelfde dag was
-bijgekomen en zes de dag ervoor.
-
-**Why:** de bestaande dubbelcontrole (`tweelingen.familie_ids`) herkent tweelingen
-aan de nummering die de verkoper zelf vóór de titel zet ("(1032) …") of aan een
-gedeelde sku. Zijn artikelen hebben geen van beide: elke import geeft een eigen
-sku (`IMP-6CB890D8`) en zijn titels zijn kaal. De controle vond dus niets en
-allebei de rijen werden gepubliceerd. Zie "import-dubbele-items-over-platforms".
-
-**How to apply:** matchen op de titel alleen is fout. Toon heeft **acht
-verschillende dameslederhosen** die allemaal "Lederhosen dames" heten en die
-allemaal los te koop moeten kunnen staan; op de titel alleen hadden we er zeven
-geblokkeerd. Alle acht hebben eigen foto's. De echte dubbelen delen juist een
-foto-adres letterlijk, want ze komen uit dezelfde bron. De regel is dus: **zelfde
-titel ÉN minstens één gedeeld foto-adres**. Gemeten op zijn 1.319 artikelen:
-45 paren, geen van de acht lederhosen erbij, 12 paren die op dat moment allebei
-live stonden. Geen foto's op het artikel betekent geen bewijs, dus dan blokkeren
-we niet.
-
-Let daarbij op dat de administratie zélf al scheef kan staan: hij had 434 rijen op
-"live op Marktplaats" tegen 366 echte advertenties. 58 rijen wezen naar een
-advertentienummer dat niet meer bestond terwijl dezelfde advertentie er onder een
-nieuw nummer wél stond. Zijn advertenties worden nooit echt nagekeken omdat hij
-geen Marktplaats-koppeling heeft (`polling.POLL_PLATFORMS` slaat hem over) en zijn
-zakelijke "Mijn advertenties" leeg is. Zie
-"een-bron-is-geen-bewijs-bij-weg" en "admarkt-zakelijke-marktplaats".
 
 ---
 
