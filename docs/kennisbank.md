@@ -17,6 +17,47 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ---
 
+## sepa-incasso-bedenktijd-te-kort
+
+*07-09-2026 — "Eerste SEPA-incasso na de proef duurt ~9 werkdagen; de bedenktijd van 2 dagen sloot betalende klanten buiten. Nu status 'payment_processing'."*
+
+Een klant die met iDEAL afrekent en een proefperiode had, betaalt de eerste maand
+via een SEPA-incasso (iDEAL zet automatisch een SEPA-machtiging). Zo'n eerste
+incasso staat bij Stripe dagenlang op "processing": gemeten geval Amanda
+(amandahaas1979@gmail.com), gestart 5 sep, verwachte succesdatum 14 sep. Onze
+bedenktijd (`GRACE_DAYS = 2` in `backend/services/billing.py`) is korter dan dat,
+dus haar account viel op slot terwijl de betaling gewoon liep. Ze zag "trial
+verlopen" en kon niet crosslisten.
+
+**Why:** Daniel verkoopt zekerheid. Een betalende klant die "je proef is voorbij,
+account op slot" te zien krijgt terwijl het geld al onderweg is, is precies het
+soort ervaring dat de klant kost. En dit raakt elke trial-klant die met iDEAL
+betaalt, niet alleen Amanda.
+
+**How to apply:** Er is nu een eigen abonnementsstatus `payment_processing`.
+- `evaluate_access` laat die door zolang `updated_at` binnen `PROCESSING_GRACE_DAYS`
+  (21) ligt; daarna valt hij terug op de gewone bedenktijd.
+- De Stripe-webhook (`customer.subscription.updated`) zet `past_due`/`incomplete`
+  om naar `payment_processing` als de laatste factuur een payment_intent met
+  status `processing` heeft (`_incasso_loopt_nog` in `backend/api/billing.py`).
+- `invoice.paid` / `invoice.payment_succeeded` zet de rij terug op de echte
+  Stripe-status zodra de incasso rond is. `invoice.payment_failed` blijft
+  `past_due` zetten bij een echte weigering.
+- `check_access` en `billing_status` hebben een zelfhelende terugval: zou de
+  toegang dichtvallen terwijl er een `stripe_subscription_id` is, dan één keer
+  (kort gecachet) bij Stripe navragen of er een incasso op `processing` staat.
+  Zo werkt het ook voor klanten die al vastzaten toen de fix live ging.
+- Frontend `app.html`: blauwe geruststellende banner + "Payment processing" op de
+  abonnementskaart, geen paywall.
+
+Stripe-lib op Railway is gepind op 10.12.0; daar bestaat `invoice.payment_intent`
+nog als top-level veld. Zie "anthropic-sdk-pin-valstrik" voor waarom pins hier
+stil kunnen breken. Verwant: "proefperiode-en-toegangsslot",
+"stripe-checkout-live-config", "railway-draait-op-anon-sleutel",
+"klanten-zijn-geen-leads".
+
+---
+
 ## nl-landingspagina
 
 *07-09-2026 — "Nederlandse homepage op /nl is een losse vaste kopie van index.html, geen i18n; dashboard bewust nog niet vertaald"*

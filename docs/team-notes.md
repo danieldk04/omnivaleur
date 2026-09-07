@@ -6167,3 +6167,49 @@ apart om te vragen; het hoort standaard bij elke homepage-wijziging. Geldt ook
 voor `mp-video.html` waar de nav of gedeelde teksten meebewegen. Zodra het
 dashboard wél vertaald wordt, vervalt deze losse-kopie-aanpak mogelijk voor een
 echte vertaallaag; tot die tijd is dit de regel.
+
+## 07-09-2026 — Amanda: betalende klant viel op slot terwijl haar SEPA-incasso liep
+
+**Haar mail.** "Ik ga graag verder met Omnivaleur, maar hij zegt dat de trial is
+verlopen en bepaalde dingen werken niet. Bij betaling zie ik staan dat deze wordt
+verwerkt, moet ik wachten?"
+
+**Wat er speelde.** Amanda (amandahaas1979@gmail.com) rekende af met iDEAL na een
+proefperiode. iDEAL zet voor de maandbetaling automatisch een SEPA-machtiging, en
+de eerste SEPA-incasso staat bij Stripe dagenlang op "in behandeling":
+payment_intent pi_3UCGT8..., gestart 5 sep 12:05, verwachte succesdatum 14 sep,
+"Reden van weigering" leeg. Onze bedenktijd na de proef is 2 dagen
+(`GRACE_DAYS`), korter dan een incasso duurt, dus haar account viel op slot met
+de melding "trial verlopen". Bewijs: de Stripe-transactie zelf (betaalmethode
+SEPA-incasso, bank SNSB, mandaat aanwezig) plus de factuur LZHAXQOU-0011 die
+"in behandeling" staat.
+
+Dit raakt niet alleen Amanda: elke trial-klant die met iDEAL betaalt valt in
+ditzelfde gat tussen "proef voorbij" en "geld binnen".
+
+**Gerepareerd (deze sessie).**
+- Nieuwe abonnementsstatus `payment_processing`. `evaluate_access` laat die door
+  tot `PROCESSING_GRACE_DAYS` (21) na `updated_at`, daarna terugval op de gewone
+  bedenktijd zodat een echt hangende betaling niet eeuwig gratis toegang geeft.
+- Stripe-webhook: `customer.subscription.updated` zet `past_due`/`incomplete` om
+  naar `payment_processing` als de laatste factuur een payment_intent met status
+  `processing` heeft (`_incasso_loopt_nog`). Nieuw: `invoice.paid` /
+  `invoice.payment_succeeded` zet de rij terug op de echte status zodra de
+  incasso rond is. `invoice.payment_failed` blijft `past_due` zetten.
+- Zelfheling in `check_access` en `billing_status`: zou de toegang dichtvallen
+  terwijl er een `stripe_subscription_id` is, dan één keer (kort gecachet) bij
+  Stripe navragen of er een incasso op `processing` staat. Daardoor kwam Amanda's
+  account automatisch weer open op het moment van deployen, zonder handmatige
+  Supabase-ingreep.
+- `app.html`: blauwe geruststellende banner ("Your first payment is on its way")
+  en "Payment processing" op de abonnementskaart, geen paywall.
+- Test: `tests/test_betaling_in_behandeling.py`.
+
+**Antwoord aan Amanda.** Ze hoeft niks te doen en niet opnieuw te betalen; de
+incasso is onderweg en staat naar verwachting rond 14 september rond. Dat haar
+account ondertussen op slot leek te zitten lag aan ons en is opgelost.
+
+**Openstaand.** De naam op de SEPA-machtiging (I.H.J. Ciechorski) wijkt af van de
+accountnaam (Haas); voor SEPA is dat toegestaan, maar als de incasso op 14 sep
+alsnog wordt geweigerd valt ze terug op het normale `past_due`-pad met 2 dagen
+bedenktijd en de gewone betaalherinnering.
