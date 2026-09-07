@@ -32,8 +32,16 @@ DE TRECHTER — zelfde vorm als leadgen_instagram.py
   enrich    bedrijfsprofiel erbij: KvK, telefoon, e-mail, adres, over-ons, aantal advertenties
   crosslist verkoopt hij al op meer plekken? eigen webshop, webshopsysteem, bol.com
   classify  Haiku beoordeelt op tweedehands, verzendbaar, winstmotief en NL/BE
-  push      naar dezelfde Notion-Leadlist, met Platform "MP"
+  push      naar dezelfde Notion-Leadlist, met Platform "MP" of "2dehands"
   run       alle vijf achter elkaar
+
+TWEE BRONNEN, ÉÉN TRECHTER
+Marktplaats (NL) en 2dehands (BE) draaien op exact dezelfde zoek-API en dezelfde
+categorie-ID's (live vergeleken 07-09-2026). Alleen de host, de bedrijfsprofiel-
+pagina (BE toont "KBO-nummer" i.p.v. "KVK-nummer", telefoon +32) en het Platform-
+label in Notion verschillen. Kies met  --site marktplaats  of  --site 2dehands ;
+elke bron heeft een eigen cache (mp_*.json / 2dh_*.json) zodat ze elkaar niet
+overschrijven.
 
 Gebruik:
     export NOTION_TOKEN=...
