@@ -13,8 +13,8 @@
     "mem-feedback_push_to_live----": {
       "id": "mem-feedback_push_to_live----",
       "category": "feedback_push_to_live",
-      "confidence": 0.5,
-      "accessCount": 0,
+      "confidence": 0.5800000000000001,
+      "accessCount": 2,
       "createdAt": 1783151212563
     },
     "mem-project_zenbtw----": {
@@ -41,8 +41,8 @@
     "mem-shopify_workflow-belangrijk--nooit-content-over": {
       "id": "mem-shopify_workflow-belangrijk--nooit-content-over",
       "category": "shopify_workflow",
-      "confidence": 0.55,
-      "accessCount": 1,
+      "confidence": 0.6000000000000001,
+      "accessCount": 2,
       "createdAt": 1783151212563
     },
     "mem-feedback_always_push----": {

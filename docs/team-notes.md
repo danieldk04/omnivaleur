@@ -6597,3 +6597,31 @@ met `NOTION_TOKEN` gezet, daarna `python3 scripts/leadgen_mail.py overzetten`.
 Elke werkdag één blok van 15 min: alle leads die in Notion op fase
 "4. Gereageerd" staan persoonlijk beantwoorden met een democall-aanbod. De
 mailmachine seint Daniel al per mail zodra iemand echt antwoordt (`_alarm`).
+
+## 07-09-2026 (avond) — klantbugs nagelopen + lead-ritme bevestigd
+
+Daniel akkoord op het lead-ritme: elke werkdag 15 min de Notion-fase
+"4. Gereageerd" langs, persoonlijk beantwoorden + democall-aanbod.
+
+**De open klantbugs.** `mail_analyse.py bugs` toont er nog 2, geen enkele met
+"MOET ZEKER". De drie MOET-ZEKER-storingen uit 06-09 zijn sinds die datum gedoofd
+of gerepareerd; de terughaalcampagne wordt er niet meer door geblokkeerd.
+
+1. `prijs-niet-geimporteerd` (papas-plectrums, 02-09). De code in
+   `mp_enrich.py` zegt met zoveel woorden dat precies dit ("drie weken lang bij
+   Papa's Plectrums", "11 onpubliceerbare items, gemeten 06-09") op 06-09 is
+   opgelost met de `_urgentie`-sortering + het 50%-tijdbudget. Melding is ouder
+   dan de fix.
+2. `prijs-niet-overgenomen-bij-verversen` (zilverwebsite, 05-09). `cb1358c`
+   (05-09 22:14) forceert "Vraagprijs" zodra er een prijs is, in het gedeelde
+   plaatspad dat ook verversen gebruikt. Melding is van diezelfde dag,
+   waarschijnlijk net vóór de fix.
+
+**Extra hardening in `relist.py`:** de advertentievorm die we van de oude
+(mogelijk fout geplaatste) advertentie teruglazen werd altijd meegestuurd naar
+de nieuwe plaatsing. Nu alleen nog als het artikel geen echte vraagprijs heeft.
+Was inert door de extensie-check, maar het gaf een bekend-foute vorm door.
+1064 pytests groen (dezelfde 2 losse failures als op een schone tree).
+
+**Actie Daniel:** vraag bij papas-plectrums en zilverwebsite na of het bij hen
+echt weg is; zo ja, `mail_analyse.py opgelost <sleutel> "..."`.
