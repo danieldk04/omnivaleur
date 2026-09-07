@@ -2884,8 +2884,13 @@ def fail_job(job_id: str, body: dict, user_id: str = Depends(get_current_user)):
         # en Chrome hem heeft opgehaald — bij Egbert duurde dat drie weken.
         # Hier werkt hij vandaag, ook op de kopie die nu bij hem draait.
         if kansloos:
-            _stop_wachtrij(db, user_id, job["platform"],
-                           _melding_formulier_ging_niet_open(job["platform"]))
+            reden = _melding_formulier_ging_niet_open(job["platform"])
+            _stop_wachtrij(db, user_id, job["platform"], reden)
+            # De wachtrij stoppen raakt alleen wat nóg wacht. Wie al tientallen
+            # rode balken had (Egbert: tien zichtbaar, honderden eerder) keek
+            # daarna tegen een muur van verschillende onbegrijpelijke teksten aan.
+            # Zet die allemaal op deze ene, uitgelegde reden.
+            _gelijk_de_kansloze_muur(db, user_id, job["platform"], reden)
         # Een mislukte publicatie betekent vaak dat de gebruiker het formulier
         # zelf heeft afgemaakt. Plan meteen een scan in, zodat de app binnen
         # enkele minuten zelf ziet dat de advertentie tóch online staat in
