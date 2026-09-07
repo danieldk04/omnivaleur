@@ -4585,9 +4585,12 @@ function renderSoldConfirmBar() {
     // "verlopen": Marktplaats haalt een gratis advertentie na 30 dagen zelf weg.
     const start = listing.listed_at || listing.created_at;
     const dagen = start ? Math.floor((Date.now() - new Date(start).getTime()) / 86400000) : null;
-    const label = (listing.error_message || '').includes('toont zelf')
+    const reden = listing.error_message || '';
+    const label = reden.includes('toont zelf')
       ? `<span style="color:#b45309;font-weight:600">The advert itself says sold</span>`
-      : `Not found on the platform any more`;
+      : reden.includes('Verkocht!')
+        ? `<span style="color:#b45309;font-weight:600">Marktplaats flagged your chat "Sold!"</span>`
+        : `Not found on the platform any more`;
     const ouderdom = dagen === null ? ''
       : (dagen >= 28 && (p === 'marktplaats' || p === '2dehands')
           ? ` &middot; online for ${dagen} days &mdash; adverts expire after 30, so this may just have run out`
@@ -4604,10 +4607,14 @@ function renderSoldConfirmBar() {
   }).join('');
 
   const meer = rows.length > TOON ? `<div style="font-size:11.5px;color:var(--muted);padding-top:8px">and ${rows.length - TOON} more &mdash; answer these first</div>` : '';
-  const html = `<div style="margin:0 0 4px;padding:12px 14px;border:1px solid #f59e0b55;background:rgba(245,158,11,.08);border-radius:10px">
-    <div style="font-weight:700;font-size:14px;margin-bottom:2px">❔ Did ${rows.length === 1 ? 'this item' : `these ${rows.length} items`} sell?</div>
-    <div style="font-size:12px;color:var(--muted)">Nothing has been removed anywhere yet, and none of this counts towards your revenue until you answer. Marktplaats and 2dehands don't tell us when you sell by hand, so we ask instead of guessing. <b>Yes, sold</b> takes it off every other platform and counts it in Analytics; <b>No</b> moves it to Archived.</div>
-    ${regels}${meer}
+  const kop = rows.length === 1 ? 'Did this item sell?' : `Did these ${rows.length} items sell?`;
+  const html = `<div style="margin:0 0 6px;border:2px solid #f59e0b;background:rgba(245,158,11,.08);border-radius:10px;overflow:hidden">
+    <div style="background:#f59e0b;color:#1a1a1a;font-weight:800;font-size:13.5px;padding:8px 14px">❔ ${kop}  &nbsp;·&nbsp;  waiting for your confirmation</div>
+    <div style="padding:10px 14px">
+      <div style="font-size:12.5px;color:var(--text);line-height:1.55"><b>Nothing has been removed from any platform, and none of this counts as revenue yet.</b> Omnivaleur only takes a listing down from your other channels once <i>you</i> confirm the sale here. Marktplaats and 2dehands don't reliably tell us about a hand sale, so we ask instead of guessing.</div>
+      <div style="font-size:11.5px;color:var(--muted);margin-top:4px"><b>Yes, sold</b> &rarr; removed from every other platform, counted in Analytics. &nbsp; <b>No</b> &rarr; stays for sale everywhere else, moved to Archived here.</div>
+      ${regels}${meer}
+    </div>
   </div>`;
   for (const b of balken) { b.style.display = 'block'; b.innerHTML = html; }
 }
