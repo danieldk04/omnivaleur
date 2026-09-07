@@ -5103,7 +5103,7 @@ async function doBulkCrosslist() {
       // het artikel er al op staat onder een dubbele rij. Stil overslaan zou
       // lezen als "gelukt", en dan blijft de dubbeling ongemerkt staan.
       const resultaten = data.results || [];
-      resultaten.filter(r => r.status === 'error' || r.status === 'duplicate')
+      resultaten.filter(r => ['error', 'duplicate', 'blocked'].includes(r.status))
         .forEach(r => apiErrors.add(`${PLATFORM_LABELS[r.platform] || r.platform}: ${r.error || 'failed'}`));
       // Staat het er al op, dan is er voor dat kanaal niets in de wachtrij gezet.
       // Meetellen als "queued" maakt van honderden overgeslagen artikelen een
