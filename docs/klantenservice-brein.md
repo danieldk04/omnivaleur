@@ -233,7 +233,8 @@ overschrijf daarna de kopie in Daniels Drive met `update_drive_file` zodat de Ge
 de nieuwe tekst oppikt. De ontwikkelaar doet dit als onderdeel van de wijziging
 die het veroorzaakt.
 
-Drive-bestand (danieldekoning66@gmail.com): [NOG INVULLEN: file-id na aanmaken]
+Drive-bestand (danieldekoning66@gmail.com): file-id 1UrANLN5Qvnj-pp27wkRw9hiScXL5X_lT
+https://drive.google.com/file/d/1UrANLN5Qvnj-pp27wkRw9hiScXL5X_lT/view
 
 Nog open: er staan nog geen echte verstuurde mails van Daniel in dit bestand als
 voorbeeld. De toonregels hierboven komen uit eerdere correcties van hem en zijn
