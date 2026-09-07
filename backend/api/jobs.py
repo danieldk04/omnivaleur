@@ -3049,7 +3049,7 @@ def _stop_wachtrij(db, user_id: str, platform: str, reden: str) -> int:
 
 
 @router.post("/stop-platform")
-def stop_platform(body: dict, user_id: str = Depends(get_current_user)):
+def stop_platform(body: dict, request: Request, user_id: str = Depends(get_current_user)):
     """Neem in één keer alles terug wat nog voor één kanaal in de wachtrij staat.
 
     WAAROM DIT BESTAAT (03-09-2026, gemeten bij Egbert Brouwer). Hij zette 152
@@ -3070,13 +3070,18 @@ def stop_platform(body: dict, user_id: str = Depends(get_current_user)):
         raise HTTPException(status_code=400, detail="platform is required")
     db = get_db()
     reden = str(body.get("reason") or "").strip() or _melding_formulier_ging_niet_open(platform)
-    reden = _reden_zonder_vals_verwijt(db, user_id, platform, reden)
+    reden = _reden_zonder_vals_verwijt(
+        db, user_id, platform, reden, request.headers.get("x-omnivaleur-ext"))
     return {"ok": True, "cancelled": _stop_wachtrij(db, user_id, platform, reden)}
 
 
 # Een "je bent niet ingelogd" dat de extensie meestuurt is een oordeel uit haar
 # eigen achtergrond, en dat oordeel is aantoonbaar fout geweest.
 _CLAIM_NIET_INGELOGD = re.compile(r"you are not signed in to|je bent niet ingelogd", re.I)
+# Vanaf deze versie vraagt de extensie het na in een tabblad op de site zelf.
+# Alles daaronder oordeelt uitsluitend op de achtergrondmeting, en die is
+# aantoonbaar blind geweest, dus zo'n oordeel geven we nooit door.
+_VERSIE_MET_EIGEN_INLOGMETING = (1, 0, 308)
 
 
 def _laatste_eigen_meting(db, user_id: str, platform: str) -> str | None:
@@ -3106,7 +3111,8 @@ def _laatste_eigen_meting(db, user_id: str, platform: str) -> str | None:
     return None
 
 
-def _reden_zonder_vals_verwijt(db, user_id: str, platform: str, reden: str) -> str:
+def _reden_zonder_vals_verwijt(db, user_id: str, platform: str, reden: str,
+                               kopstuk_versie=None) -> str:
     """Laat de server geen verwijt doorgeven dat hij zelf kan weerleggen.
 
     WAAROM DIT ER IS (07-09-2026, gemeten bij Egbert Brouwer).
@@ -3127,14 +3133,32 @@ def _reden_zonder_vals_verwijt(db, user_id: str, platform: str, reden: str) -> s
     """
     if not _CLAIM_NIET_INGELOGD.search(reden or ""):
         return reden
+    versie = _kopstuk_versie(kopstuk_versie)
+    oude_kopie = versie is not None and versie < _VERSIE_MET_EIGEN_INLOGMETING
     wanneer = _laatste_eigen_meting(db, user_id, platform)
-    if not wanneer:
+    if not wanneer and not oude_kopie:
         return reden
     site = {"marktplaats": "Marktplaats (marktplaats.nl)",
             "2dehands": "2dehands (2dehands.be)"}.get(platform, platform)
     logger.warning(
-        "stop-platform: verwijt 'niet ingelogd' geweigerd voor %s/%s — eigen scan gaf HTTP 200 op %s",
-        user_id, platform, wanneer)
+        "stop-platform: verwijt 'niet ingelogd' geweigerd voor %s/%s (versie %s, eigen scan 200 op %s)",
+        user_id, platform, versie, wanneer)
+    if not wanneer:
+        # Geen recente eigen meting, maar wel een kopie waarvan we WETEN dat ze
+        # dit alleen uit haar achtergrond kan hebben. Dan doen we geen uitspraak
+        # en laten we hem het in één klik zelf zien.
+        controle = _CONTROLEPAGINA.get(platform, "")
+        return (
+            f"We stopped the {site} queue. The extension blamed your login, but the version you "
+            f"are running cannot tell that apart from a check of ours failing on its own, so we "
+            f"are not passing that on as the reason.\n\n"
+            f"One click tells you which of the two it is. Open this page in this browser:\n"
+            f"{controle}\n\n"
+            f"1. You see your own adverts page. Then you are signed in and the fault is ours. "
+            f"Please tell us, because we cannot see that from here.\n"
+            f"2. You see a login screen. Then sign in there and publish again.\n\n"
+            f"Nothing was published and nothing was changed on {site}."
+        )
     return (
         f"We stopped the {site} queue, but not for the reason the extension gave. It blamed your "
         f"login. We do not believe that: your own browser reached your {site} account page on "

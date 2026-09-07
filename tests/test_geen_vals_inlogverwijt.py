@@ -109,3 +109,35 @@ def test_de_vervangende_tekst_zegt_wat_er_niet_gebeurd_is():
     assert "Nothing was published" in uit
     # Geen gedachtestreepjes: deze tekst komt zo in het dashboard te staan.
     assert " — " not in uit and " – " not in uit
+
+
+# ── De rem hangt óók aan het versiestempel ────────────────────────────────
+#
+# Zonder dit vervalt de rem 48 uur na de laatste geslaagde scan, terwijl de
+# blinde meting in die oude kopie gewoon blijft zitten. De extensie stuurt haar
+# versie bij elk verzoek mee (X-Omnivaleur-Ext), dus dat hoeven we niet te raden.
+
+
+def test_een_oude_kopie_krijgt_het_verwijt_nooit_doorgegeven():
+    uit = api._reden_zonder_vals_verwijt(_NepDb([]), "u", "2dehands", VERWIJT, "1.0.307")
+    assert "not signed in" not in uit
+    assert "my-account/sell" in uit          # de controle die hij zelf kan doen
+    assert "Nothing was published" in uit
+
+
+def test_een_oude_kopie_met_een_geslaagde_scan_krijgt_het_harde_bewijs():
+    uit = api._reden_zonder_vals_verwijt(_NepDb([_scan(200)]), "u", "2dehands", VERWIJT, "1.0.307")
+    assert "HTTP 200" in uit
+
+
+def test_de_gerepareerde_versie_mag_het_wel_zeggen():
+    # 1.0.308 vraagt het na in een tabblad op de site zelf. Zonder tegenbewijs
+    # is dat oordeel wél te vertrouwen, anders zou een echt uitgelogde verkoper
+    # nooit meer te horen krijgen dat hij moet inloggen.
+    assert api._reden_zonder_vals_verwijt(_NepDb([]), "u", "2dehands", VERWIJT, "1.0.308") == VERWIJT
+
+
+def test_zonder_versiestempel_valt_hij_terug_op_de_meting():
+    assert api._reden_zonder_vals_verwijt(_NepDb([]), "u", "2dehands", VERWIJT, None) == VERWIJT
+    uit = api._reden_zonder_vals_verwijt(_NepDb([_scan(200)]), "u", "2dehands", VERWIJT, None)
+    assert "fault on our side" in uit
