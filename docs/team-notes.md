@@ -6257,3 +6257,102 @@ poging ook automatisch vast.
 
 **Actiepunt Daniel:** `dist/omnivaleur-extension-1.0.310.zip` uploaden naar de
 Chrome Web Store, en concept-mail aan Egbert nakijken (staat in de chat).
+
+## 07-09-2026 — Delist over alle kanalen: bevestiging verplicht bij zachte signalen
+
+**Wat Daniel wilde.** De Delist-functie over Marktplaats, 2dehands, Vinted en
+Shopify waterdicht: verkoopt iets ergens, dan hoort het overal anders weg — maar
+alleen als de verkoper dat zelf bevestigt, zodat er nooit iets verdwijnt dat niet
+echt verkocht is. En de Shopify verkoop-detectie werkte beide kanten op niet
+betrouwbaar (MP-verkoop haalde Shopify niet weg, Shopify-verkoop haalde MP/Vinted
+niet weg).
+
+**Beslissing Daniel (in de chat, 3 vragen):**
+- Betaalde bestelling op Shopify/eBay en de Vinted-bestellingenpagina blijven
+  automatisch afmelden (echte koper, echte bon).
+- Alle zachte signalen worden eerst een ja/nee-vraag: advertentie verdwenen, een
+  "verkocht"-label op MP/2dehands, de "Verkocht!"-badge op het gesprek, en de
+  5-minuten statuscheck van MP/2dehands.
+- Bij een onbevestigde verkoop die blijft staan: na een paar uur één
+  herinneringsmail.
+
+**Wat er is veranderd.**
+- `backend/services/polling.py`: een "sold" van marktplaats/2dehands zet de rij
+  op `sold_unconfirmed` (reden "label") in plaats van meteen `handle_item_sold`.
+  eBay/Etsy blijven via hun API meteen afgehandeld.
+- `backend/api/listings.py` `sold_from_messages`: de berichtenbadge boekt niet
+  meer, maar zet `sold_unconfirmed` (nieuwe reden "badge"). Antwoord is nu
+  `{"asked": n}` i.p.v. `{"booked": n}`.
+- `backend/api/listings.py` `mark_sold`: draagt het verzoek het
+  `X-Omnivaleur-Ext`-kopstuk (dus: van de extensie, niet de dashboard-knop) én
+  gaat het om MP/2dehands, dan `sold_unconfirmed` i.p.v. afmelden. Zo is de poort
+  ook dicht voor extensies die 1.0.311 nog niet hebben.
+- `extension/background.js` `checkSoldListings` (1.0.311): een "verkocht"-label in
+  het overzicht gaat via `meldMogelijkeVerkopen` → `/api/listings/possibly-sold`
+  in plaats van `/api/listings/sold`.
+- **Shopify-detectie** (`backend/platforms/shopify.py` +
+  `backend/services/shopify_orders.py` + `backend/api/webhooks.py`): matchen nu
+  op het `product_id` van de bestelregel tegen `listings.platform_listing_id`
+  (SKU als terugval), en de webhook scoopt op de winkel via
+  `X-Shopify-Shop-Domain`. Veel winkels zetten nooit een variant-SKU, dus de
+  oude SKU-only-match miste stil de halve verkopen.
+- **`handle_item_sold` / `delist_all_platforms`** (`crosslist.py`): een
+  Shopify-rij zonder `platform_listing_id` wordt bij het afmelden opgezocht via
+  de SKU in de winkel van díe verkoper (`_find_shopify_product_id_by_sku` neemt
+  nu een `(shop, token)`); `pending` telt mee als "nog levend"; extensie-delete
+  krijgt een dedup-rem zodat het vangnet geen dubbele opdrachten stapelt.
+- **Vangnet** `backend/services/verkoop_reconciliatie.py` (elke 20 min): artikel
+  verkocht op kanaal A maar nog te koop op kanaal B → `delist_all_platforms`
+  opnieuw. Veilig want er is al een bevestigde `sold`-rij.
+- **Herinnering** `backend/services/verkoop_herinnering.py` (elk uur, overdag):
+  onbevestigde verkoop > 4 uur → één mail per dag per verkoper.
+
+**Zekerheid.** Logica getest met 1024 pytests (2 falen los hiervan, zie hun
+namen; die gingen al stuk op een schone tree — `background.js` watchdog van een
+recente commit). End-to-end op de echte stack niet gedraaid: geen Supabase-env
+lokaal, Shopify vergt een echte winkel, eBay 401't lokaal, de extensie vergt
+Chrome. De reconciliatie- en herinneringsrondes zijn nog nooit tegen echte data
+gelopen.
+
+**Actiepunten Daniel:**
+1. `dist/omnivaleur-extension-1.0.311.zip` naar de Chrome Web Store.
+2. Supabase: `ALTER TABLE listings ADD COLUMN IF NOT EXISTS
+   sold_unconfirmed_notified_at timestamptz;` (anders draait de herinnering op
+   servergeheugen en kan hij na een herstart herhalen).
+3. Na de deploy: kijk of de Railway-logs `verkoop-reconciliatie` en
+   `verkoop-herinnering` netjes tonen, en of er geen stroom valse
+   `sold_unconfirmed` ontstaat.
+
+### 07-09-2026 (vervolg) — reconciliatie getest tegen echte data, en aangescherpt
+
+**Test.** De reconciliatie-ronde is tegen de productie-database gedraaid (alleen
+lezen voor de detectie, één echte actie op één artikel). Bevinding: 9 artikelen
+op 3 klantaccounts stonden op dat moment verkocht op Vinted én nog te koop op
+Marktplaats/2dehands. De deploy ging live en de geplande ronde draaide om 11:58
+vanzelf: 12 verwijderopdrachten over 8 artikelen. Uitkomst: 2 advertenties echt
+verwijderd (`deleted_via_ad_page`), 8 waren al weg (`already_absent`), 1 fout
+("kon overzicht niet lezen", wordt volgende ronde herkanst).
+
+**Fout van mij:** ik dacht dat account `0b28c1ce` van Daniel was en zette daar
+tijdens de test één echte verwijderopdracht op. Was een klant. Effect: één
+artikel kort op "is dit verkocht?" in zijn dashboard, meteen teruggezet naar
+gearchiveerd (het is verkocht op Vinted). Niets onherstelbaars.
+
+**Aangescherpt naar aanleiding van de test:**
+- `_al_weg_voor_wij_er_waren` (`jobs.py`): staat het artikel al ELDERS bevestigd
+  op verkocht, dan gaat een verdwenen jonge advertentie rechtstreeks naar het
+  archief in plaats van nóg een "is dit verkocht?"-vraag. Voorkomt een golf
+  dubbele vragen bij klanten.
+- `delist_all_platforms` (`crosslist.py`): dedup nu per ADVERTENTIE, niet per
+  platform. Twee verschillende advertenties op één kanaal (dubbele import,
+  meerdere herplaatsingen) kregen maar één verwijderopdracht, dus de tweede bleef
+  staan. `delisted`-rijen tellen alleen nog als vangnet (geen tabblad per
+  archiefrij). Idem `_enqueue_extension_delete` en de dedup-rem in de ext-lus.
+- `verkoop_reconciliatie.py`: pakt nu ook artikelen op met alleen een
+  `sold_unconfirmed`-rij op een ander kanaal, en archiveert die als de verkoop
+  elders al vaststaat.
+
+**Nog open (07-09 ~14:00):** 2 artikelen (`d86f2efc` Marktplaats, `c12624a5`
+2dehands) hebben nog een levende advertentie; die had de oude dedup gemist. De
+volgende ronde (na deze crosslist-deploy) hoort ze op te pakken. Loopt onder een
+monitor.
