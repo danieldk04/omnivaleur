@@ -53,6 +53,15 @@ die iemand anders al een keer heeft gemaakt. Leer je zelf iets nieuws, leg het
 vast in je geheugen en draai daarna `python3 scripts/export_kennisbank.py`, en
 commit het bestand.
 
+## Het klantenservice-brein bijwerken
+
+[docs/klantenservice-brein.md](docs/klantenservice-brein.md) is de bron die
+Daniel in een Gemini Gem plakt om klantmails te beantwoorden. Verandert je
+wijziging iets aan prijs, ondersteunde kanalen, proef- of betaaltermijnen, de
+demolink, of ontstaat er een nieuwe veelvoorkomende klantvraag of bug, werk dan
+in dezelfde beurt de betreffende regel in dat bestand bij en zet de datum
+bovenaan opnieuw. Zo blijft het actueel zonder dat het Daniel iets kost.
+
 ## Before touching anything people/business/decision-related
 
 Read [docs/team-notes.md](docs/team-notes.md) first. It's an append-only log
