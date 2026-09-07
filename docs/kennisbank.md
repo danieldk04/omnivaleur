@@ -31,7 +31,11 @@ Taalknop `EN | NL` is een gewone link in de nav van `index.html`, `nl.html` en
 `mp-video.html`. hreflang + sitemap-regel toegevoegd. Zelfde patroon als de blog
 ("nl-blogindex-en-vertaalinhaalronde").
 
-**Onderhoudslast:** elke tekstwijziging aan `index.html` moet nu ook in `nl.html`.
+**Vaste werkafspraak (Daniel, 07-09-2026):** `index.html` en `nl.html` zijn twee
+losse bestanden. Telkens als Daniel een tekstwijziging aan `frontend/index.html`
+doorgeeft of doorvoert, breng ik diezelfde wijziging in dezelfde sessie ook
+vertaald aan in `frontend/nl.html` (en `mp-video.html` waar de nav meebeweegt).
+Hij hoeft er niet apart om te vragen. Staat ook in `docs/team-notes.md`.
 
 **Dashboard (`app.html`) is bewust NOG NIET vertaald.** Reden: nog volop in
 ontwikkeling, nieuwe functies komen er in het Engels bij, dus vertalen nu wordt
