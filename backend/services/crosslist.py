@@ -1827,6 +1827,36 @@ async def _delist_one(listing: dict):
         delete_id = (
             listing.get("platform_offer_id") if listing["platform"] == "ebay" else None
         ) or listing.get("platform_listing_id")
+
+        # Shopify-rij zonder product-id: eerst opzoeken in de winkel van DEZE
+        # verkoper via de SKU. Zonder deze stap gooide delete_product meteen
+        # "No Shopify product id" en bleef het artikel na een verkoop elders
+        # gewoon in de webshop staan — precies wat Daniel meldde.
+        if listing["platform"] == "shopify" and not delete_id:
+            sku = None
+            try:
+                it = (await naast_de_lus(lambda: db.table("items").select("sku")
+                      .eq("id", listing["item_id"]).single().execute())).data
+                sku = (it or {}).get("sku")
+            except Exception:  # noqa: BLE001
+                sku = None
+            if sku:
+                from backend.platforms.shopify import _shop_creds
+                try:
+                    shop_token = await _shop_creds(credentials)
+                except Exception:  # noqa: BLE001
+                    shop_token = None
+                pid = await _find_shopify_product_id_by_sku(sku, shop_token)
+                if pid:
+                    delete_id = pid
+                    try:
+                        (await naast_de_lus(lambda: db.table("listings")
+                         .update({"platform_listing_id": pid}).eq("id", listing["id"]).execute()))
+                    except Exception:  # noqa: BLE001
+                        pass
+                    logger.info("Shopify product opgezocht via SKU %s → %s (item %s)",
+                                sku, pid, listing["item_id"])
+
         deleted = await platform.delete_listing(delete_id, credentials)
         if deleted is False:
             raise RuntimeError(f"delete_listing returned False for {listing['platform']} listing {listing['platform_listing_id']}")
