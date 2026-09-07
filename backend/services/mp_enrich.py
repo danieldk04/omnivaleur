@@ -55,6 +55,10 @@ ZOEK_PER_PLATFORM = {
     "marktplaats": (ZOEK, BASIS),
     "2dehands": ("https://www.2dehands.be/lrp/api/search", "https://www.2dehands.be"),
 }
+# Waar deze module vanouds vanuit ging. Alleen als er niets bekend is over het
+# kanaal van een artikel wordt hierop teruggevallen, zodat een account zonder
+# advertentierijen zich precies gedraagt zoals voorheen.
+STANDAARD_KANAAL = "marktplaats"
 UA = ("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 "
       "(KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36")
 
@@ -168,7 +172,9 @@ async def zoek_verkoper_id(client: httpx.AsyncClient, titels: list[str],
 
 
 async def haal_advertenties(client: httpx.AsyncClient, verkoper_id: int,
-                            deadline: float | None = None) -> dict[str, dict]:
+                            deadline: float | None = None,
+                            zoek_url: str = ZOEK,
+                            basis: str = BASIS) -> dict[str, dict]:
     """Alle advertenties van deze verkoper, op genormaliseerde titel.
 
     Komt een titel twee keer voor, dan houden we de eerste aan. Dat is bij één
@@ -190,7 +196,7 @@ async def haal_advertenties(client: httpx.AsyncClient, verkoper_id: int,
 
     async def _pagina(pagina: int) -> list[dict]:
         try:
-            data = await _json(client, ZOEK, {
+            data = await _json(client, zoek_url, {
                 "sellerIds[]": verkoper_id, "limit": PAGINA, "offset": pagina * PAGINA})
         except Exception as e:  # noqa: BLE001
             logger.warning("mp_enrich: advertentielijst pagina %s mislukt: %s", pagina, e)
@@ -211,7 +217,7 @@ async def haal_advertenties(client: httpx.AsyncClient, verkoper_id: int,
                 s = _sleutel(l.get("title"))
                 if not s:
                     continue
-                nieuw = _naar_advertentie(l)
+                nieuw = _naar_advertentie(l, basis)
                 if s in per_titel:
                     if per_titel[s]["price"] != nieuw["price"]:
                         botsing.add(s)
@@ -786,12 +792,90 @@ def _deze_ronde(open_: list, user_id: str, maximaal: int) -> list:
     return (op_volgorde + op_volgorde)[start:start + maximaal]
 
 
+async def _kanaal_per_item(db, ids: list[str]) -> dict[str, set[str]] | None:
+    """Op welk kanaal staat elk van deze artikelen?
+
+    WAAROM DIT ER IS (07-09-2026, De Juiste Toon): "waarom vult hij de
+    omschrijving niet automatisch in?" Nagemeten op zijn echte voorraad: 197
+    artikelen zonder tekst, waarvan er 194 een 2dehands-advertentie hebben en 8
+    een Marktplaats-advertentie. Deze module zocht uitsluitend op
+    marktplaats.nl. De aanvulronde vond dus 0 van de 20 dringendste artikelen
+    terug ("0 van 20 items teruggevonden", gemeten in de echte ronde) en die
+    stonden sinds de import van 05-09 onaangeroerd: aangemaakt en gewijzigd op
+    dezelfde seconde.
+
+    Erger nog: de ronde raakte er helemaal door verstopt. De artikelen zonder
+    tekst staan vooraan (`_urgentie`), dus de hele beurt ging op aan zoeken naar
+    2dehands-advertenties op Marktplaats, en zijn acht Marktplaats-artikelen
+    kwamen daardoor óók nooit aan de beurt.
+
+    Geeft None terug als het lezen mislukt. Dat is iets anders dan een lege
+    uitkomst: bij een leesfout mag een ronde voor een ander kanaal dan het
+    standaardkanaal niet doorgaan, want dan zou hij op goed geluk het verkeerde
+    aanbod afzoeken.
+    """
+    if not ids:
+        return {}
+    uit: dict[str, set[str]] = {}
+    for i in range(0, len(ids), IN_BROK):
+        stuk = ids[i:i + IN_BROK]
+        try:
+            gehaald = await naast_de_lus(
+                lambda s=stuk: db.table("listings").select("item_id,platform")
+                .in_("item_id", s).execute())
+            for r in (gehaald.data or []):
+                if r.get("item_id") and r.get("platform"):
+                    uit.setdefault(r["item_id"], set()).add(r["platform"])
+        except Exception as e:  # noqa: BLE001
+            logger.warning("mp_enrich: kon het kanaal van de artikelen niet lezen: %s", e)
+            return None
+    return uit
+
+
+async def kanaal_met_meeste_gaten(db, user_id: str) -> str:
+    """Welk kanaal moet deze beurt aan de beurt komen?
+
+    Eén ronde doet één kanaal, want elk kanaal kost het volle tijdsbudget en
+    twee achter elkaar loopt tegen de harde grens van Cloudflare aan. De keuze
+    valt op het kanaal waar de meeste artikelen zónder omschrijving staan: dat
+    is wat publiceren blokkeert. Zijn er nergens lege teksten, dan blijft het
+    het standaardkanaal en verandert er niets aan hoe het altijd al ging.
+    """
+    try:
+        leeg = await naast_de_lus(lambda: fetch_all(
+            lambda: db.table("items").select("id").eq("user_id", user_id)
+            .or_("description.is.null,description.eq.")))
+    except Exception as e:  # noqa: BLE001
+        logger.warning("mp_enrich: kon de lege teksten niet tellen: %s", e)
+        return STANDAARD_KANAAL
+    ids = [r["id"] for r in (leeg or []) if r.get("id")]
+    if not ids:
+        return STANDAARD_KANAAL
+    kanalen = await _kanaal_per_item(db, ids)
+    if not kanalen:
+        return STANDAARD_KANAAL
+    telling: dict[str, int] = {}
+    for van_item in kanalen.values():
+        for kanaal in van_item:
+            if kanaal in ZOEK_PER_PLATFORM:
+                telling[kanaal] = telling.get(kanaal, 0) + 1
+    if not telling:
+        return STANDAARD_KANAAL
+    return max(telling.items(), key=lambda kv: kv[1])[0]
+
+
 async def verrijk(db, user_id: str, schrijf: bool = True,
-                 maximaal: int = 0, melden=None) -> dict:
+                 maximaal: int = 0, melden=None,
+                 platform: str = STANDAARD_KANAAL) -> dict:
     """Vul prijs en omschrijving aan voor items die ze missen.
 
     Overschrijft nooit: een prijs of tekst die de verkoper zelf heeft ingevuld
     blijft staan. Alleen lege velden worden gevuld.
+
+    `platform` zegt waar gezocht wordt: marktplaats.nl of 2dehands.be. Dezelfde
+    zoekfunctie, hetzelfde soort advertentiepagina, alleen een ander adres.
+    Alleen artikelen die op dát kanaal een advertentie hebben doen mee; zie
+    `_kanaal_per_item` voor waarom dat nodig is.
 
     Werkt binnen een tijdsbudget (BUDGET_SECONDEN): Cloudflare knipt een
     verzoek van meer dan ~100 seconden zelf af met een 524, en dat gaf de
@@ -801,6 +885,11 @@ async def verrijk(db, user_id: str, schrijf: bool = True,
     """
     start = time.monotonic()
     deadline = start + BUDGET_SECONDEN
+    zoek_url, basis = ZOEK_PER_PLATFORM.get(platform, ZOEK_PER_PLATFORM[STANDAARD_KANAAL])
+    # De startplek van de vorige ronde is per kanaal, anders schuift de ene
+    # ronde de teller op voor de andere. Voor het standaardkanaal blijft de
+    # sleutel de kale user_id, zodat er niets verandert aan wat er al draaide.
+    beurt_sleutel = user_id if platform == STANDAARD_KANAAL else f"{user_id}@{platform}"
 
     def zeg(tekst):
         logger.info("mp_enrich: %s", tekst)
@@ -851,7 +940,23 @@ async def verrijk(db, user_id: str, schrijf: bool = True,
     for r in rijen:
         r["heeft_tekst"] = r["id"] not in zonder_tekst
 
-    open_ = _deze_ronde([r for r in rijen if _mist_iets(r)], user_id, maximaal)
+    kandidaten = [r for r in rijen if _mist_iets(r)]
+    kanalen = await _kanaal_per_item(db, [r["id"] for r in kandidaten])
+    if kanalen is None:
+        # Niet te achterhalen waar de advertenties staan. Op het standaardkanaal
+        # doen we het dan zoals vroeger; voor een ander kanaal stoppen we, want
+        # dat zou blind het verkeerde aanbod afzoeken.
+        if platform != STANDAARD_KANAAL:
+            uit_vroeg = {"items": len(rijen), "te_doen": 0, "gevonden": 0,
+                         "prijs": 0, "omschrijving": 0, "geen_tekst": 0, "fotos": 0,
+                         "kenmerken": 0, "verkoper_id": None, "platform": platform,
+                         "reden": "could not tell which adverts live on this marketplace"}
+            return uit_vroeg
+    else:
+        kandidaten = [r for r in kandidaten
+                      if platform in kanalen.get(r["id"], set())
+                      or (not kanalen.get(r["id"]) and platform == STANDAARD_KANAAL)]
+    open_ = _deze_ronde(kandidaten, beurt_sleutel, maximaal)
 
     # Nu pas de echte teksten, en alleen van wat we aanpakken. `_is_afgekapt`
     # verderop vergelijkt de tekst die wij hebben met die op de advertentie, dus
@@ -874,7 +979,7 @@ async def verrijk(db, user_id: str, schrijf: bool = True,
             r["description"] = teksten.get(r["id"])
     uit = {"items": len(rijen), "te_doen": len(open_), "gevonden": 0,
            "prijs": 0, "omschrijving": 0, "geen_tekst": 0, "fotos": 0, "kenmerken": 0,
-           "verkoper_id": None, "reden": ""}
+           "verkoper_id": None, "platform": platform, "reden": ""}
     if not open_:
         uit["reden"] = "nothing to do"
         return uit
@@ -899,15 +1004,17 @@ async def verrijk(db, user_id: str, schrijf: bool = True,
     limiet = httpx.Limits(max_connections=TEGELIJK, max_keepalive_connections=TEGELIJK)
     async with httpx.AsyncClient(timeout=30, headers={"User-Agent": UA},
                                  follow_redirects=True, limits=limiet) as client:
-        vid = await zoek_verkoper_id(client, zoektitels)
+        vid = await zoek_verkoper_id(client, zoektitels, zoek_url=zoek_url)
         uit["verkoper_id"] = vid
         if not vid:
-            uit["reden"] = ("could not find your adverts on Marktplaats — "
+            naam = "2dehands" if platform == "2dehands" else "Marktplaats"
+            uit["reden"] = (f"could not find your adverts on {naam} — "
                             "are they still online under the same titles?")
             return uit
         zeg(f"verkoper {vid} gevonden, advertenties ophalen")
 
-        adv = await haal_advertenties(client, vid, deadline=deadline)
+        adv = await haal_advertenties(client, vid, deadline=deadline,
+                                      zoek_url=zoek_url, basis=basis)
         zeg(f"{len(adv)} advertenties met een unieke titel")
 
         koppels = [(r, adv[_sleutel(r["title"])]) for r in open_
@@ -923,7 +1030,8 @@ async def verrijk(db, user_id: str, schrijf: bool = True,
         # de beurt — beter dan de hele aanvraag laten timen.
         if rest:
             async def zoek(item):
-                a = await zoek_een_titel(client, vid, item["title"])
+                a = await zoek_een_titel(client, vid, item["title"],
+                                         zoek_url=zoek_url, basis=basis)
                 await asyncio.sleep(0.25)
                 return item, a
 
@@ -1014,7 +1122,7 @@ async def verrijk(db, user_id: str, schrijf: bool = True,
     # schuift de volgende ronde door — zo kan een kop die niet te vullen is de
     # rest nooit blijvend tegenhouden.
     if uit["prijs"] or uit["omschrijving"] or uit["fotos"] or uit["kenmerken"]:
-        _beurt_per_verkoper.pop(user_id, None)
+        _beurt_per_verkoper.pop(beurt_sleutel, None)
     return uit
 
 
@@ -1113,7 +1221,10 @@ async def vul_ontbrekende_teksten_aan() -> dict:
     user_id = verkopers[_volgende_verkoper]
     _volgende_verkoper += 1
 
-    uit = await verrijk(db, user_id, schrijf=True, maximaal=AANVUL_PER_VERKOPER)
-    logger.info("mp_enrich automatisch: %s -> %s teksten, %s prijzen (van %s open)",
-                user_id, uit.get("omschrijving"), uit.get("prijs"), uit.get("te_doen"))
+    kanaal = await kanaal_met_meeste_gaten(db, user_id)
+    uit = await verrijk(db, user_id, schrijf=True, maximaal=AANVUL_PER_VERKOPER,
+                        platform=kanaal)
+    logger.info("mp_enrich automatisch: %s op %s -> %s teksten, %s prijzen (van %s open)",
+                user_id, kanaal, uit.get("omschrijving"), uit.get("prijs"),
+                uit.get("te_doen"))
     return {"verkopers": len(verkopers), "verkoper": user_id, **uit}

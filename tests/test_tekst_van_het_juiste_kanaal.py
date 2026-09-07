@@ -165,6 +165,10 @@ def _nep_net(monkeypatch):
     async def _geen_pauze(*_a, **_k):
         return None
 
+    async def een_titel(*_a, **_k):
+        return None
+
+    monkeypatch.setattr(mp_enrich, "zoek_een_titel", een_titel)
     monkeypatch.setattr(mp_enrich, "zoek_verkoper_id", verkoper)
     monkeypatch.setattr(mp_enrich, "haal_advertenties", lijst)
     monkeypatch.setattr(mp_enrich, "volledige_advertentie", pagina)
@@ -250,14 +254,14 @@ def test_een_leesfout_stopt_het_andere_kanaal_maar_niet_het_standaardkanaal(_nep
 
 
 def test_de_beurtteller_van_de_twee_kanalen_loopt_niet_door_elkaar(_nep_net):
+    """Waar de ene ronde gebleven was mag de andere niet verzetten, anders slaat
+    het ene kanaal stukken over die het andere net gedaan heeft."""
     items, listings = _voorraad()
     db = NepDb(items, listings)
+    mp_enrich._beurt_per_verkoper["toon"] = 999      # waar Marktplaats gebleven was
     asyncio.run(mp_enrich.verrijk(db, "toon", schrijf=False, maximaal=5,
                                   platform="2dehands"))
-    # Het standaardkanaal houdt de kale user_id als sleutel: daar mag niets aan
-    # veranderd zijn voor de accounts die al draaiden.
-    assert "toon@2dehands" in mp_enrich._beurt_per_verkoper
-    assert "toon" not in mp_enrich._beurt_per_verkoper
+    assert mp_enrich._beurt_per_verkoper.get("toon") == 999
 
 
 def test_de_planner_en_de_knop_kiezen_allebei_het_kanaal():

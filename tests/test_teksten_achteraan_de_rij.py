@@ -122,7 +122,7 @@ def _schone_beurt():
 @pytest.fixture
 def _geen_marktplaats(monkeypatch):
     """Marktplaats nabootsen: elke advertentie bestaat en heeft een tekst."""
-    async def verkoper(_client, _titels):
+    async def verkoper(_client, _titels, **kw):
         return 12058863
 
     async def lijst(_client, _vid, deadline=0, **kw):

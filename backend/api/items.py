@@ -263,13 +263,22 @@ async def fill_from_marktplaats(limit: int = 150,
     verkoper een foutpagina te zien terwijl het werk gewoon doorliep. Het scherm
     roept dit dus net zo vaak aan tot er niets meer te doen is.
     """
-    from backend.services.mp_enrich import verrijk
+    from backend.services.mp_enrich import verrijk, kanaal_met_meeste_gaten
 
     db = get_db()
     try:
+        # Welk kanaal deze lading krijgt hangt af van waar de lege teksten staan:
+        # wie vanaf 2dehands importeerde heeft zijn advertenties dáár staan, en
+        # op Marktplaats zoeken levert dan niets op (gemeten 07-09-2026: 0 van 20
+        # teruggevonden bij een verkoper met 194 van zijn 197 lege teksten op
+        # 2dehands). Eén kanaal per aanroep, want twee achter elkaar past niet
+        # binnen de tijd die de gateway een verbinding openhoudt; het scherm
+        # roept net zo vaak aan tot er niets meer te doen is.
+        kanaal = await kanaal_met_meeste_gaten(db, user_id)
         # De aanroepen naar Marktplaats zijn traag; buiten de request-lus houden
         # zodat de rest van het dashboard ondertussen blijft reageren.
-        uit = await verrijk(db, user_id, schrijf=True, maximaal=max(1, min(limit, 400)))
+        uit = await verrijk(db, user_id, schrijf=True, maximaal=max(1, min(limit, 400)),
+                            platform=kanaal)
     except Exception as e:  # noqa: BLE001
         logger.exception("fill-from-marktplaats mislukt voor %s", user_id)
         raise HTTPException(status_code=502, detail=f"Marktplaats lookup failed: {e}")

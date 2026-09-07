@@ -74,7 +74,7 @@ def _geen_planner_state():
 def _draai(db, monkeypatch, gedaan):
     monkeypatch.setattr("backend.database.get_db", lambda: db)
 
-    async def nep_verrijk(_db, user_id, schrijf=True, maximaal=0, melden=None):
+    async def nep_verrijk(_db, user_id, schrijf=True, maximaal=0, melden=None, **kw):
         gedaan.append((user_id, maximaal))
         return {"te_doen": 1, "omschrijving": 1, "prijs": 0}
 
