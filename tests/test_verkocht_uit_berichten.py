@@ -180,10 +180,13 @@ def test_een_verkoop_telt_maar_een_keer_bij_meerdere_advertentierijen(monkeypatc
     monkeypatch.setattr(cl, "get_db", lambda: db)
 
     import asyncio
+    # Alleen het boeken zelf beproeven. Wat daarna komt — het opruimen van de
+    # andere kanalen — heeft een veel rijkere database nodig en heeft zijn eigen
+    # proeven; hier stopt het op de nagebootste bouwer (in_, order of single).
     try:
         asyncio.run(cl.handle_item_sold("it1", "marktplaats"))
     except AttributeError as e:
-        assert "in_" in str(e) or "order" in str(e), f"onverwachte fout: {e}"
+        assert any(w in str(e) for w in ("in_", "order", "single")), f"onverwachte fout: {e}"
 
     verkocht = [l for l in listings if l["status"] == "sold"]
     assert len(verkocht) == 1, f"{len(verkocht)} rijen op 'verkocht' — dat is {len(verkocht)}x omzet"
