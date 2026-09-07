@@ -1757,7 +1757,7 @@ async def relist_expiring_marktplaats():
             logger.error(f"Failed to queue relist for listing {listing['id']}: {e}")
 
 
-async def _find_shopify_product_id_by_sku(sku: str) -> str | None:
+async def _find_shopify_product_id_by_sku(sku: str, shop_token: tuple | None = None) -> str | None:
     """
     Locate a Shopify product by variant SKU, walking every page of the catalog.
 
@@ -1766,14 +1766,27 @@ async def _find_shopify_product_id_by_sku(sku: str) -> str | None:
     simply never found, so the delist reported "couldn't delete" (or nothing at
     all) while the product stayed live in the shop. Shopify caps a page at 250
     and hands out the next page via a cursor in the Link header.
+
+    `shop_token` = (shop_domain, access_token) for the seller's OWN store. Pass it
+    whenever you have per-seller credentials: without it this falls back to the
+    single store in the server settings, which is wrong once there are customers
+    with their own linked stores.
     """
+    if not sku:
+        return None
     import httpx
     import re as _re
-    from backend.config import settings
-    from backend.platforms.shopify_importer import _get_token
 
-    token = await _get_token()
-    url = f"https://{settings.shopify_store}/admin/api/2024-10/products.json"
+    if shop_token and shop_token[0] and shop_token[1]:
+        shop, token = shop_token
+    else:
+        from backend.config import settings
+        from backend.platforms.shopify_importer import _get_token
+        shop, token = settings.shopify_store, await _get_token()
+    if not shop or not token or token == "session":
+        return None
+
+    url = f"https://{shop}/admin/api/2024-10/products.json"
     params: dict = {"limit": 250, "fields": "id,variants"}
     headers = {"X-Shopify-Access-Token": token}
 
