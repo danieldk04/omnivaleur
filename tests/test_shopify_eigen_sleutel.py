@@ -164,10 +164,40 @@ def test_verkoopcontrole_staat_in_de_planner():
 
 def test_verkoop_wordt_altijd_op_de_juiste_verkoper_gezocht():
     """Twee winkeliers kunnen dezelfde SKU gebruiken. Zonder user_id zou een
-    verkoop bij de een de advertenties van de ander overal weghalen."""
-    blok = ORDERS.split('db.table("items")')[1][:300]
-    assert '.eq("user_id"' in blok
-    assert '.eq("sku", sku)' in blok
+    verkoop bij de een de advertenties van de ander overal weghalen. Zowel de
+    SKU-terugval als de product_id-match moet daarom op de eigenaar toetsen."""
+    blok = ORDERS.split("async def match_shopify_sale(")[1].split("\nasync def ")[0]
+    # SKU-terugval: op user_id gescoopt
+    sku_blok = blok.split('.eq("sku", sku)')[0][-200:]
+    assert '.eq("user_id", user_id)' in sku_blok
+    # product_id-match: het gevonden item moet van deze winkelier zijn
+    assert 'eigen' in blok and '.eq("user_id", user_id)' in blok.split("product_id")[-1]
+    # en de aanroeper geeft altijd de winkelier mee
+    assert "match_shopify_sale(db, rij[\"user_id\"], ref)" in ORDERS
+
+
+def test_shopify_verkoop_matcht_op_productid_niet_alleen_sku():
+    """Veel winkels zetten nooit een SKU op een variant. De bestelregel draagt
+    ook het product_id, en dat bewaren wij als platform_listing_id."""
+    from backend.platforms.shopify import extract_line_refs_from_order
+    order = {"line_items": [
+        {"product_id": 111, "variant_id": 222, "sku": "", "price": "24.95", "quantity": 1},
+        {"product_id": 333, "variant_id": 444, "sku": "REV-ABC", "price": "10.00", "quantity": 2},
+    ]}
+    refs = extract_line_refs_from_order(order)
+    assert refs[0]["product_id"] == "111" and refs[0]["sku"] is None
+    assert refs[0]["price"] == 24.95
+    assert refs[1]["sku"] == "REV-ABC" and refs[1]["price"] == 20.0
+
+
+def test_shopify_bestelregel_zonder_bedrag_boekt_geen_nul():
+    from backend.platforms.shopify import extract_line_refs_from_order
+    refs = extract_line_refs_from_order({"line_items": [
+        {"product_id": 9, "sku": "X", "price": "", "quantity": 1},
+        {"product_id": 8, "sku": "Y", "price": "0.00", "quantity": 1},
+    ]})
+    assert refs[0]["price"] is None
+    assert refs[1]["price"] is None
 
 
 def test_merkteken_schuift_pas_op_na_een_geslaagde_ronde():
