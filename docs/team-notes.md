@@ -6157,3 +6157,13 @@ geen consolefouten, alle tekst Nederlands, geen Engels blijven staan. De route
 lokaal); het is drie regels `FileResponse` identiek aan `/mp-video` ernaast.
 De rondleiding-JS is niet aangeraakt (alleen tekstknopen), dus die werkt zoals
 op de bestaande `index.html`.
+
+**Vaste werkafspraak (Daniel, 07-09-2026).** `index.html` en `nl.html` zijn twee
+losse bestanden zonder gedeelde tekstbron. Afspraak: telkens als Daniel een
+tekst- of inhoudswijziging aan de Engelse homepage (`frontend/index.html`)
+doorgeeft of doorvoert, brengt de developer (Claude Code) diezelfde wijziging in
+dezelfde sessie ook aan in `frontend/nl.html`, vertaald. Daniel hoeft er niet
+apart om te vragen; het hoort standaard bij elke homepage-wijziging. Geldt ook
+voor `mp-video.html` waar de nav of gedeelde teksten meebewegen. Zodra het
+dashboard wél vertaald wordt, vervalt deze losse-kopie-aanpak mogelijk voor een
+echte vertaallaag; tot die tijd is dit de regel.
