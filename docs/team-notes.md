@@ -6356,3 +6356,97 @@ gearchiveerd (het is verkocht op Vinted). Niets onherstelbaars.
 2dehands) hebben nog een levende advertentie; die had de oude dedup gemist. De
 volgende ronde (na deze crosslist-deploy) hoort ze op te pakken. Loopt onder een
 monitor.
+
+## 07-09-2026 — Toon (dejuistetoon): één oorzaak onder drie van zijn vier klachten
+
+Zijn bericht via Daniel: het beeld springt wederom weg, 2dehands lukt niet (adres
+"niet in Essen maar in Nederland"), rubrieken blijven oranje/rood, en er
+verschijnen continu dubbele advertenties. Plus de vraag wanneer we fysiek
+afspreken om het goed in te stellen.
+
+### De meting die alles verklaart
+
+Zijn Chromebook draaide vandaag om 14:42 nog **extensie 1.0.260, van 28
+augustus**, terwijl er **1.0.311** in de Chrome Web Store staat. Eenenvijftig
+versies en tien dagen achterstand. De vier andere computers die deze week werk
+deden stonden op 1.0.308, 1.0.309 en twee keer 1.0.311 — Chrome werkt een kopie
+uit de Web Store dus gewoon bij, en de zijne niet. Op 01 en 02-09 stonden er
+bovendien twee versiestempels door elkaar in zijn foutmeldingen (1.0.260 en
+1.0.273): er draaien twee kopieën en de stilstaande doet sinds 03-09 al het werk.
+
+Dat verklaart zijn rubriekmeldingen letterlijk. De drie rubrieken waarop hij
+vastliep — `verkleedkleding`, `heren verkleedkleding`, `unisex verkleedkleding` —
+zijn precies de drie die ná 1.0.260 aan de Marktplaats-tabel zijn toegevoegd. Van
+zijn 1.319 artikelen loopt er met de huidige tabel géén enkele meer vast op een
+rubriek; alleen 119 hebben helemaal geen rubriek en die moet hij zelf zetten.
+
+### Wat er veranderd is
+
+1. **Een kopie die zichzelf niet bijwerkt krijgt geen werk meer.** Nieuwe grens
+   `ACHTERSTAND_GRENS` (20 versies) in `backend/api/jobs.py`, gemeten tegen wat er
+   op dat moment in de Web Store staat in plaats van tegen een vaste ondergrens
+   die met de hand mee omhoog moet. Het dashboard toont hetzelfde blokkerende
+   venster als bij een te oude kopie, met de echte reden erin en **zonder** "toch
+   doorgaan" — die knop zou een lege belofte zijn nu de server toch niets uitdeelt.
+   Komt de Web Store-versie niet binnen, dan blokkeren we niets.
+2. **Dubbele advertenties bij de bron.** Gemeten op zijn openbare
+   verkoperspagina: elf titels stonden dubbel, vijftien advertenties te veel,
+   waarvan één diezelfde dag bijgekomen. Oorzaak: twee imports van dezelfde
+   advertentie werden twee artikelen, en `tweelingen.familie_ids` herkent
+   tweelingen alleen aan een "(1032)"-nummering of een gedeelde sku — hij heeft
+   geen van beide. Nieuw in `crosslist.publish_to_platforms`: dezelfde titel ÉN
+   minstens één gedeeld foto-adres telt als hetzelfde voorwerp. Zijn acht
+   verschillende dameslederhosen (allemaal "Lederhosen dames", allemaal eigen
+   foto's) blijven gewoon los te koop; op de titel alleen hadden we er zeven
+   geblokkeerd.
+3. **De lijst wordt per rij getekend.** De reparatie van 02-09 vergeleek de hele
+   tabel-HTML, en tijdens publiceren verandert er elke ronde wel iets (een
+   ⏳-merkje, een badge). Dan ging alsnog de hele tabel eraan: vijftig rijen met
+   vijftig foto's, elke vijftien seconden, op een Chromebook met 1.319 artikelen.
+   Nu wordt alleen de gewijzigde rij hertekend; de hele tabel alleen bij een
+   andere volgorde of samenstelling.
+4. **Het lege adresveld op 2dehands** krijgt een melding die zegt wat hij zelf
+   moet doen: bij zijn adres op 2dehands.be niet een Belgische postcode maar de
+   optie "Buitenland", daarachter Nederland plus woonplaats. Wij vullen daar
+   bewust niets in — een verzonnen postcode zet zijn advertentie in een
+   willekeurige Belgische gemeente.
+5. `tests/conftest.py` houdt de Chrome Web Store buiten de testsuite. Tien tests
+   met een vaste versie in de hand vielen anders vanzelf om zodra er een nieuwe
+   versie uitging.
+
+### Wat NIET is opgelost, met zoveel woorden
+
+- **De vijftien dubbele advertenties die nu online staan gaan hier niet vanzelf
+  van weg.** Ze weghalen is een onomkeerbare actie op advertenties van een klant;
+  dat doen we niet ongevraagd. Lijst staat klaar.
+- **Zijn administratie staat scheef.** 434 rijen op "live op Marktplaats" tegen
+  366 echte advertenties: 58 rijen wijzen naar een advertentienummer dat niet meer
+  bestaat terwijl dezelfde advertentie er onder een nieuw nummer wél staat, en 12
+  advertenties zijn echt weg. Oorzaak: zijn advertenties worden nooit écht
+  nagekeken. `polling.POLL_PLATFORMS` slaat hem over omdat hij geen
+  Marktplaats-koppeling heeft, en de controle die de extensie zelf doet leest
+  "Mijn advertenties", dat bij een zakelijk account leeg is. De openbare zoek-API
+  heeft die bezwaren geen van beide (`scripts/controleer_advertenties_online.py`
+  gebruikt hem al, maar leest alleen). Dit is de volgende reparatie.
+- **119 artikelen zonder rubriek** kunnen niet naar Marktplaats. Dat is invoerwerk
+  van hem.
+- **Waarom zijn kopie niet bijwerkt is niet met zekerheid gemeten.** Alles wijst
+  op een met de hand geladen kopie (alle anderen werken wél bij), maar de extensie
+  meldt haar installatiewijze niet. Een kopie uit de Web Store herkennen kan
+  gratis via `chrome.runtime.id`; dat zit er nog niet in, en het zou Toon vandaag
+  toch niet bereiken.
+
+### De fysieke afspraak
+
+Bergen op Zoom naar Etten-Leur is ongeveer 25 km, drie kwartier heen en terug plus
+de tijd ter plekke. De reparatie die hij nodig heeft is: chrome://extensions open,
+elke Omnivaleur weghalen, opnieuw installeren uit de Web Store. Dat is een
+schermdeel-sessie van tien minuten, geen rit. Advies aan Daniel: eerst bellen met
+schermdelen, en de rit reserveren voor het done-for-you-gesprek (zie de notitie
+van 05-09), waar wél een reden voor langsgaan is. Niets rekenen: hij betaalt
+EUR 19,99 per maand en dit is onze storing, geen dienst.
+
+Suite: 1052 pytests groen, 2 falen los hiervan (stonden al op een schone tree).
+`tests/lijst-blijft-staan-test.js` draaide sinds een eerdere commit helemaal niet
+meer (ReferenceError op `advertIndex`); dat is hersteld en er staat nu een
+voor-en-na op de rij-tekening in.

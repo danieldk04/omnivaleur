@@ -17,6 +17,135 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ---
 
+## dubbele-advertentie-titel-en-foto
+
+*07-09-2026 — Twee artikelrijen zijn hetzelfde voorwerp als titel én foto-adres gelijk zijn; de titel alleen blokkeert echte losse voorraad*
+
+07-09-2026, Toon (dejuistetoon): "ik zie continue dubbele advertenties
+verschijnen." Nagemeten op zijn openbare verkoperspagina: elf titels stonden
+dubbel, samen vijftien advertenties te veel, waarvan er één diezelfde dag was
+bijgekomen en zes de dag ervoor.
+
+**Why:** de bestaande dubbelcontrole (`tweelingen.familie_ids`) herkent tweelingen
+aan de nummering die de verkoper zelf vóór de titel zet ("(1032) …") of aan een
+gedeelde sku. Zijn artikelen hebben geen van beide: elke import geeft een eigen
+sku (`IMP-6CB890D8`) en zijn titels zijn kaal. De controle vond dus niets en
+allebei de rijen werden gepubliceerd. Zie "import-dubbele-items-over-platforms".
+
+**How to apply:** matchen op de titel alleen is fout. Toon heeft **acht
+verschillende dameslederhosen** die allemaal "Lederhosen dames" heten en die
+allemaal los te koop moeten kunnen staan; op de titel alleen hadden we er zeven
+geblokkeerd. Alle acht hebben eigen foto's. De echte dubbelen delen juist een
+foto-adres letterlijk, want ze komen uit dezelfde bron. De regel is dus: **zelfde
+titel ÉN minstens één gedeeld foto-adres**. Gemeten op zijn 1.319 artikelen:
+45 paren, geen van de acht lederhosen erbij, 12 paren die op dat moment allebei
+live stonden. Geen foto's op het artikel betekent geen bewijs, dus dan blokkeren
+we niet.
+
+Let daarbij op dat de administratie zélf al scheef kan staan: hij had 434 rijen op
+"live op Marktplaats" tegen 366 echte advertenties. 58 rijen wezen naar een
+advertentienummer dat niet meer bestond terwijl dezelfde advertentie er onder een
+nieuw nummer wél stond. Zijn advertenties worden nooit echt nagekeken omdat hij
+geen Marktplaats-koppeling heeft (`polling.POLL_PLATFORMS` slaat hem over) en zijn
+zakelijke "Mijn advertenties" leeg is. Zie
+"een-bron-is-geen-bewijs-bij-weg" en "admarkt-zakelijke-marktplaats".
+
+---
+
+## extensiekopie-die-niet-meebeweegt
+
+*07-09-2026 — "Een kopie die dagen achterloopt op de Web Store werkt zichzelf niet bij; meet het af tegen de andere klanten, niet tegen een vaste ondergrens"*
+
+07-09-2026, Toon (dejuistetoon): "het beeld blijft wederom wegspringen", dezelfde
+rode rubriekmeldingen, dubbele advertenties. Zijn Chromebook draaide op dat moment
+**1.0.260 van 28 augustus** terwijl er **1.0.311** in de Chrome Web Store stond.
+De drie rubrieken waar hij op vastliep (`verkleedkleding`, `heren
+verkleedkleding`, `unisex verkleedkleding`) zijn precies de drie die ná 1.0.260
+zijn toegevoegd. Elke reparatie van tien dagen bestond bij hem niet.
+
+**Why:** de harde ondergrens (`MINIMALE_SCANVERSIE`, 1.0.244) moet met de hand mee
+omhoog en staat daardoor altijd te laag; hij liet 1.0.260 gewoon door. Het
+wegklikbare "er is een update"-balkje gaat ervan uit dat Chrome het wel oplost, en
+dat is precies wat bij een met de hand geladen kopie nooit gebeurt. Dat er twee
+versiestempels door elkaar in zijn foutmeldingen stonden (1.0.260 én 1.0.273 op
+02-09) is het extra teken dat er twee kopieën draaiden; zie
+"tweede-extensiekopie".
+
+**How to apply:** meet de achterstand tegen wat er vandaag in de Web Store staat,
+niet tegen een vaste grens, en ijk op de andere klanten van diezelfde dag. Toen
+Toon 51 versies achterliep stonden de vier andere actieve computers op 1, 2, 3 en
+0 versies achterstand: Chrome doet zijn werk dus wel. Boven `ACHTERSTAND_GRENS`
+(20, ruim vier dagen bij ~5 uitgaven per dag) geeft de uitgifte geen werk meer en
+toont het dashboard een venster zonder "toch doorgaan" — die knop zou een lege
+belofte zijn. Zie ook "extension-version-floor" en
+"rem-op-de-server-bij-een-extensiefout".
+
+En: houd de Web Store buiten de testsuite (`tests/conftest.py`). Tien tests met
+een vaste versie in de hand (1.0.286, 1.0.294) vielen anders vanzelf om zodra er
+een nieuwe versie uitging.
+
+---
+
+## verkoop-signaal-hard-vs-zacht
+
+*07-09-2026 — Een verkoop meldt alleen automatisch overal af op een HARD signaal (betaalde bestelling); zachte signalen worden eerst een ja/nee-vraag in het dashboard*
+
+`handle_item_sold(item_id, platform, ...)` doet twee dingen tegelijk: de verkoop
+boeken in Analytics én het artikel van álle andere kanalen afhalen. Dat afhalen
+is onherstelbaar (opnieuw plaatsen is handwerk), dus het mag alleen op een
+signaal dat écht klopt. Daniel heeft de scheidslijn getrokken (07-09-2026).
+
+**Hard — meteen `handle_item_sold`:** een betaalde bestelling op Shopify
+(`orders/paid`-webhook + de 5-minuten `controleer_shopify_verkopen`) of eBay
+(webhook + API-poll), en de Vinted-bestellingenpagina
+(`reconcile-vinted-orders`). Daar staat een koper met een bon achter.
+
+**Zacht — eerst `sold_unconfirmed` + ja/nee-vraag in het dashboard:** advertentie
+verdwenen van MP/2dehands, een "verkocht"/"gereserveerd"-label op de advertentie,
+de "Verkocht!"-badge op het gesprek, en een "sold" uit de 5-minuten statuscheck
+van MP/2dehands. Marktplaats laat een handverkoop niet betrouwbaar zien: een
+verkochte advertentie is niet te onderscheiden van een verlopen.
+
+De poort zit op meerdere plekken omdat de signalen via meerdere wegen
+binnenkomen: `polling.py` (`ZACHT_SIGNAAL`-set), `listings.py` `sold_from_messages`,
+`listings.py` `mark_sold` (kijkt naar het `X-Omnivaleur-Ext`-kopstuk om de
+extensie van de dashboard-knop te onderscheiden), en `extension/background.js`
+`checkSoldListings` (meldt via `possibly-sold`). De reden-teksten staan in
+`VERDENKING_REDENEN` in `listings.py` en mogen de woorden "relist"/"delist"/"still
+live" niet bevatten, anders leest het herplaats-overzicht ze als kapotte
+herplaatsing.
+
+**Twee vangnetten** vangen op wat er stil misgaat: `verkoop_reconciliatie.py`
+(elke 20 min: verkocht op A, nog te koop op B → `delist_all_platforms` opnieuw;
+archiveert ook `sold_unconfirmed`-rijen als de verkoop elders al vaststaat) en
+`verkoop_herinnering.py` (elk uur overdag: onbevestigde verkoop > 4 uur → één
+mail/dag per verkoper, vergt kolom `listings.sold_unconfirmed_notified_at`). De
+reconciliatie hangt aan een bevestigde `sold`-rij, dus hij raadt niets.
+
+**Afmelden telt per ADVERTENTIE, niet per platform.** Bij een dubbele import of
+meerdere herplaatsingen staan er twee verschillende advertenties (verschillend
+`platform_listing_id`) op één kanaal; `delist_all_platforms` dedupte op platform
+en liet de tweede staan, dus bleef een verkocht artikel te koop. Nu dedup op
+`(platform, platform_listing_id)`. `delisted`-rijen tellen alleen nog als vangnet
+(één poging per platform waar geen levende rij meer staat), niet per archiefrij.
+Idem `_enqueue_extension_delete` en de dedup-rem in de extensie-lus. Gemeten op
+echte data 07-09: reconciliatie draaide vanzelf na de deploy, 2 advertenties
+echt verwijderd, 8 al weg, 1 herkanst; 2 tweede-advertenties waren gemist door de
+oude dedup. Zie ook "delist-op-dubbele-regel" en "herplaatslus-op-verkochte-artikelen".
+
+**Shopify-verkoop matchen: nooit alleen op SKU.** Veel winkels zetten geen
+variant-SKU. De bestelregel draagt ook `product_id`/`variant_id`, en `product_id`
+== `listings.platform_listing_id`. Match daarop eerst, SKU als terugval, altijd
+gescoopt op de winkelier (`match_shopify_sale` in `shopify_orders.py`, de webhook
+scoopt via `X-Shopify-Shop-Domain`). `_find_shopify_product_id_by_sku` neemt
+sinds nu een `(shop, token)` mee zodat het in de winkel van díe verkoper zoekt,
+niet in de vaste `settings.shopify_store`.
+
+Zie ook "verkocht-badge-in-berichtenlijst", "herplaatsen-verliest-advertenties"
+en "klantenslot-valt-dicht".
+
+---
+
 ## stille-tab-is-geen-formulier
 
 *07-09-2026 — "Een opdracht die zonder één teken van leven afloopt betekent \"het formulier ging nooit open\", niet \"de pagina is veranderd\"; 2dehands en Marktplaats hebben aparte logins"*
@@ -4679,25 +4808,5 @@ Production (omnivaleur.com) is a single **Railway** service running the FastAPI 
 **Auto-commit/push** happens via a Claude Code PostToolUse hook in `/Users/Danie/.claude/settings.json` that runs `git add`+commit (`auto: update <file>`) and pushes on every file edit.
 
 **2026-07-14 incident + fix:** the hook's push was `git push origin HEAD 2>/dev/null` — it swallowed errors and had `timeout: 30` (ms). When `origin/main` diverged (GA PRs #1–#7 + content-bot commits merged on GitHub, never pulled locally), every auto-push was silently rejected ("fetch first"), so ~20 commits piled up locally and production ran stale code for days. Fixed the hook to `git push … || { git pull --rebase --autostash origin <branch> && git push … } || git rebase --abort` and bumped timeout to 60000ms, so a diverged remote self-heals instead of blocking deploys. If deploys ever look stuck again, check `git log origin/main..HEAD` for an unpushed backlog.
-
----
-
-## verkoop-signaal-hard-vs-zacht
-
-*07-09-2026 — Wanneer een verkoop automatisch overal afmeldt en wanneer hij eerst een vraag wordt*
-
-`handle_item_sold(item_id, platform, ...)` doet twee dingen tegelijk: de verkoop boeken in Analytics én het artikel van álle andere kanalen afhalen. Dat afhalen is onherstelbaar (opnieuw plaatsen is handwerk), dus het mag alleen op een signaal dat écht klopt. Daniel heeft de scheidslijn getrokken (07-09-2026):
-
-**Hard — meteen `handle_item_sold`:** een betaalde bestelling op Shopify (`orders/paid`-webhook + de 5-minuten `controleer_shopify_verkopen`) of eBay (webhook + API-poll), en de Vinted-bestellingenpagina (`reconcile-vinted-orders`). Daar staat een koper met een bon achter.
-
-**Zacht — eerst `sold_unconfirmed` + ja/nee-vraag in het dashboard:** advertentie verdwenen van MP/2dehands, een "verkocht"/"gereserveerd"-label op de advertentie, de "Verkocht!"-badge op het gesprek, en een "sold" uit de 5-minuten statuscheck van MP/2dehands. Marktplaats laat een handverkoop niet betrouwbaar zien — een verkochte advertentie is niet te onderscheiden van een verlopen — dus dit is een aanwijzing, geen bewijs.
-
-De poort zit op meerdere plekken omdat de signalen via meerdere wegen binnenkomen: `polling.py` (`ZACHT_SIGNAAL`-set), `listings.py` `sold_from_messages`, `listings.py` `mark_sold` (kijkt naar `X-Omnivaleur-Ext` om de extensie van de dashboard-knop te onderscheiden), en `extension/background.js` `checkSoldListings` (meldt via `possibly-sold`). De reden-teksten staan in `VERDENKING_REDENEN` in `listings.py` en mogen de woorden "relist"/"delist"/"still live" niet bevatten (anders leest het herplaats-overzicht ze als kapotte herplaatsing).
-
-**Twee vangnetten** vangen op wat er stil misgaat: `verkoop_reconciliatie.py` (elke 20 min: verkocht op A, nog te koop op B → opnieuw afmelden) en `verkoop_herinnering.py` (elk uur overdag: onbevestigde verkoop > 4 uur → één mail/dag). De reconciliatie hangt aan een bevestigde `sold`-rij, dus hij raadt niets.
-
-**Shopify-verkoop matchen: nooit alleen op SKU.** Veel winkels zetten geen variant-SKU. De bestelregel draagt ook `product_id`/`variant_id`, en `product_id` == `listings.platform_listing_id`. Match daarop eerst, SKU als terugval, altijd gescoopt op de winkelier (`match_shopify_sale` in `shopify_orders.py`). `_find_shopify_product_id_by_sku` neemt sinds nu een `(shop, token)` mee zodat het in de winkel van díe verkoper zoekt, niet in de vaste `settings.shopify_store`.
-
-Zie ook "deploy-pipeline" en "verkocht-badge-in-berichtenlijst".
 
 ---
