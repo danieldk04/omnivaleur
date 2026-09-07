@@ -6531,3 +6531,36 @@ openbare 2dehands-aanbod en staan daar niet meer; hun advertentie is weg, dus er
 valt geen tekst meer op te halen. Onze `listings` noemt ze nog "active", wat weer
 het bekende gat is: bij een verkoper zonder Marktplaats-koppeling wordt niets
 nagekeken (zie de notitie van eerder vandaag).
+
+## 07-09-2026 (avond, vervolg) — de dubbele advertenties van Toon opgeruimd
+
+Daniel gaf akkoord om de dubbele advertenties weg te halen. De lijst van eerder
+vandaag ("elf titels, vijftien advertenties te veel") is eerst opnieuw
+nagemeten, en die hield geen stand:
+
+* Onze eigen administratie noemde **57 artikelen met twee actieve advertenties**.
+  In het echte openbare aanbod had **geen enkele** er twee online staan: 56 keer
+  stond er nog één, één keer geen. Die 57 verwijderopdrachten zouden allemaal
+  naar een advertentienummer zijn gegaan dat niet meer bestaat. Het bestaande
+  `scripts/herstel_dubbele_advertenties.py` zou dat blind hebben gedaan.
+* Van de **14 titels die meer dan één keer live staan** blijken er 13 gewoon
+  verschillende voorwerpen: andere foto's, vaak een andere prijs. Denk aan zijn
+  acht dameslederhosen met dezelfde titel. Op titel opruimen had echte
+  advertenties vernietigd.
+
+Wat wél bewijsbaar dubbel was: artikelrijen met **dezelfde titel én letterlijk
+dezelfde foto-adressen**. Het duidelijkste geval is "Oosters tapijt klein 60/38
+cm": vier artikelrijen, vier keer 20 euro, vier keer dezelfde vijf foto's, en
+vier live advertenties, geplaatst op 05-09 (twee), 06-09 en 07-09. Er kwam er
+elke dag één bij, precies zoals hij beschreef.
+
+Nieuw hulpmiddel: `scripts/ruim_dubbele_advertenties_uit_import.py`. Groepeert op
+titel + gedeeld foto-adres, meet het openbare aanbod twee keer los van elkaar
+(dezelfde regel als de gewone controleronde: pas wat twee keer ontbreekt geldt
+als weg), houdt per groep de nieuwste live advertentie aan en slaat groepen met
+verkoopgeschiedenis over.
+
+Uitkomst: **9 verwijderopdrachten klaargezet** over 7 groepen, op Marktplaats en
+2dehands. Ze staan in de wachtrij en gaan pas lopen zodra Toon de extensie
+opnieuw installeert, want de server geeft zijn vastgelopen kopie (1.0.260, sinds
+14:42 UTC offline) bewust geen werk meer.
