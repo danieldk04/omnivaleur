@@ -6625,3 +6625,55 @@ Was inert door de extensie-check, maar het gaf een bekend-foute vorm door.
 
 **Actie Daniel:** vraag bij papas-plectrums en zilverwebsite na of het bij hen
 echt weg is; zo ja, `mail_analyse.py opgelost <sleutel> "..."`.
+
+## 07-09-2026 (laat) — bugmeldingen gesloten, lead-herinnering, terughaalcampagne gemeten
+
+Daniel: *"sluit die meldingen. ja stuur een terugkerende agenda-herinnering. ja
+terughaalcampagne."*
+
+### Bugmeldingen dicht
+Beide open meldingen op `opgelost` gezet in de live database (`mail_analyse.py
+bugs` zegt nu "geen openstaande storingen"):
+- `prijs-niet-geimporteerd` (papas-plectrums)
+- `prijs-niet-overgenomen-bij-verversen` (zilverwebsite)
+De klantenservice-laag is eruit, dus er gaat hier géén mail naar de klant. Daniel
+laat het ze zelf weten.
+
+### Lead-herinnering
+Google-agenda kon niet: de Workspace-koppeling is niet geautoriseerd in deze
+omgeving. In plaats daarvan een `.ics`-bestand aan Daniel gestuurd (elke werkdag
+09:00, 15 min, "Leads beantwoorden", met melding op het moment zelf). Eén klik om
+toe te voegen, werkt op elk apparaat.
+
+### Terughaalcampagne: de aanname onder besluit 2 houdt geen stand
+Besluit 2 (06-09) zei: eerst de kledinghandelaren terughalen, want daar werkt het
+product het zekerst. Dat moest gemeten worden vóór versturen, niet aangenomen.
+
+**Gemeten 07-09-2026, live `jobs` + `items` (anon-sleutel, 3.115 opdrachten in 7
+dagen, mislukt = status `error`, `cancelled` niet meegerekend):**
+
+| categorie (huidige taxonomie) | opdrachten | mislukt |
+|---|---|---|
+| antiek goud en zilver | 357 | **1%** |
+| antiek bestek | 134 | 1% |
+| muziek drumstellen | 134 | 0% |
+| sieraden (kettingen/armbanden/ringen/broches) | ~370 | 0–2% |
+| **heren truien** | 114 | **19%** |
+| heren wielrenkleding / sportbroeken / verkleedkleding | ~25 | 33–50% |
+| muziek gitaren elektrisch (papas-plectrums, 2dehands-login) | 262 | 10% |
+| geheel overzicht | 3.115 | 7% |
+
+Kleding is dus **niet** de veiligste categorie op de huidige data; sieraden en
+antiek zilver/bestek zijn dat, met groot volume en 0–2% mislukt. De taxonomie
+kent twee lagen: de oude Vinted-achtige ("Truien", "Jassen" — allemaal 0%, maar
+bijna dood qua volume) en de huidige MP-laag ("heren truien" — 19%). Voor het
+filter telt de huidige laag.
+
+Caveat: gemeten met de anon-sleutel; `jobs` telt maar 6.081 rijen totaal terwijl
+er 3.115 in de laatste week zitten, dus de tabel wordt vermoedelijk opgeschoond
+en oudere weken zijn niet vergelijkbaar. De verhouding tussen categorieën binnen
+deze week is wel bruikbaar.
+
+**Gevolg:** de campagne is niet verstuurd. Wacht op Daniels keuze: (a) filter op
+sieraden + antiek zilver i.p.v. kleding, (b) toch kleding, (c) anders. Pas daarna
+bouw ik de 3 mailvarianten (groep A/B/C uit besluit 2) met verlengde proef.
