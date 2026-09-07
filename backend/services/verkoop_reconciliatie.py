@@ -135,10 +135,25 @@ async def reconcileer_verkochte_artikelen() -> dict:
         uid = eigenaar.get(iid)
         if not uid:
             continue
-        levend = [
-            r["platform"] for r in rijen_per_item.get(iid, [])
-            if r["platform"] not in verkoop_van[iid]["platforms"] and r.get("status") in _NOG_LEVEND
-        ]
+        andere = [r for r in rijen_per_item.get(iid, [])
+                  if r["platform"] not in verkoop_van[iid]["platforms"]]
+        levend = [r["platform"] for r in andere if r.get("status") in _NOG_LEVEND]
+
+        # Onbevestigde-verkoop-rijen op een ander kanaal: de verkoop staat al
+        # elders vast (harde bron of eerder bevestigd), dus de vraag hoeft niet
+        # meer. Rechtstreeks archiveren.
+        for r in andere:
+            if r.get("status") == "sold_unconfirmed":
+                try:
+                    (await naast_de_lus(lambda rr=r: db.table("listings").update(
+                        {"status": "delisted", "error_message": None}).eq("id", rr["id"]).execute()))
+                    logger.info("verkoop-reconciliatie: item %s %s stond op 'mogelijk verkocht' "
+                                "terwijl het elders al verkocht is — gearchiveerd", iid, r["platform"])
+                except Exception:  # noqa: BLE001
+                    pass
+
+        if not levend:
+            continue
         try:
             res = await delist_all_platforms(iid, uid)
             opnieuw += 1
