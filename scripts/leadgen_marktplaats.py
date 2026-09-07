@@ -852,7 +852,7 @@ def classify(args) -> None:
             row["verdict"]["prompt_versie"] = PROMPT_VERSIE
 
     for lead in leads:
-        lead["platform"] = "MP"
+        lead["platform"] = PLATFORM
         lead["full_name"] = lead.get("handelsnaam") or lead.get("name")
         # Niet aan het model gevraagd maar gemeten: van de webshopsystemen die we
         # herkennen koppelt alleen Shopify. Staat dit op False, dan mag de mail
