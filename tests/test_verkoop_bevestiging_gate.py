@@ -206,3 +206,28 @@ def test_reconciliatie_en_herinnering_staan_in_de_planner():
     assert 'id="verkoop_herinnering"' in sched
     assert "reconcileer_verkochte_artikelen" in sched
     assert "herinner_onbevestigde_verkopen" in sched
+
+
+# ── 5. Afmelden telt per advertentie, niet per platform ────────────────────
+
+def test_delist_dedupt_per_advertentie_niet_per_platform():
+    """Dubbele import of meerdere herplaatsingen = twee verschillende
+    advertenties op één platform. Beide moeten weg; de oude 'één per platform'
+    liet de tweede staan en het verkochte artikel bleef te koop."""
+    cl = (ROOT / "backend/services/crosslist.py").read_text(encoding="utf-8")
+    blok = cl.split("async def delist_all_platforms(", 1)[1].split("\nasync def ", 1)[0]
+    assert "seen_ads" in blok and "(l[\"platform\"], pid or \"\")" in blok
+    # 'delisted' alleen nog als vangnet: geen tabblad per archiefrij
+    assert "als VANGNET" in blok
+
+
+def test_extensie_verwijderopdracht_dedupt_op_advertentienummer():
+    cl = (ROOT / "backend/services/crosslist.py").read_text(encoding="utf-8")
+    fn = cl.split("def _enqueue_extension_delete(", 1)[1].split("\ndef ", 1)[0]
+    assert "ad_id" in fn and "j_pid == ad_id" in fn
+
+
+def test_al_verkocht_elders_zet_onbevestigde_rij_in_het_archief():
+    recon = (ROOT / "backend/services/verkoop_reconciliatie.py").read_text(encoding="utf-8")
+    assert 'r.get("status") == "sold_unconfirmed"' in recon
+    assert '"status": "delisted"' in recon
