@@ -235,7 +235,7 @@ def test_de_vraag_staat_ook_bij_analytics():
     kop = APP.split("function renderAnalytics(force) {", 1)[1][:900]
     assert "renderSoldConfirmBar();" in kop
     # Wel zichtbaar, niet meegeteld: de omzet hierboven blijft bevestigde verkopen.
-    assert "none of this counts towards your revenue until you answer" in APP
+    assert "none of this counts as revenue yet" in APP
     tabel = APP.split("// ── Sales breakdown table", 1)[1][:1200]
     assert "sold_unconfirmed" not in tabel
 
