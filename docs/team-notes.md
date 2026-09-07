@@ -6677,3 +6677,19 @@ deze week is wel bruikbaar.
 **Gevolg:** de campagne is niet verstuurd. Wacht op Daniels keuze: (a) filter op
 sieraden + antiek zilver i.p.v. kleding, (b) toch kleding, (c) anders. Pas daarna
 bouw ik de 3 mailvarianten (groep A/B/C uit besluit 2) met verlengde proef.
+
+### Vervolg 07-09 (nog later) — keuze gemaakt, concepten in de maak
+Daniel koos **"allebei, sieraden eerst"**: de terughaalcampagne én de nieuwe
+leadgen richten zich eerst op sieraden + antiek zilver als bewijscategorie;
+kleding komt in een tweede ronde als de eerste goed loopt.
+
+Agenda-herinnering is toegevoegd, en papas-plectrums en zilverwebsite zijn door
+Daniel op de hoogte gebracht dat hun bug weg is.
+
+Toon van de drie mails, na Daniels correctie: aanhef wordt **"Daniel hier, van
+Omnivaleur."** (niet "ik schrijf dit zelf"). Groep C krijgt geen concreet
+tien-advertenties-aanbod maar een lichte vraag: *"Heb je behoefte om even hier
+samen naar te kijken?"* Nog niet gebouwd of verstuurd: de verzendknop
+(eigenaar-only, dry-run eerst) en de proefverlenging (vereist de service-sleutel
+van Supabase, die staat niet op Railway of in de lokale `.env`; wordt met de hand
+in het Supabase-dashboard of per persoon via de comp-account knop).
