@@ -674,14 +674,37 @@ async def stripe_webhook(request: Request, stripe_signature: str = Header(None))
     elif event["type"] in ("customer.subscription.updated", "customer.subscription.deleted"):
         stripe_sub = event["data"]["object"]
         stripe_sub_id = stripe_sub["id"]
+        nieuwe_status = stripe_sub["status"]
+        # 'past_due'/'incomplete' dekt zowel een echte weigering als een incasso
+        # die nog loopt. De eerste SEPA-afschrijving na de proef staat werkdagen
+        # op "processing"; die willen we niet als wanbetaling behandelen.
+        if nieuwe_status in ("past_due", "incomplete") and _incasso_loopt_nog(stripe_sub):
+            nieuwe_status = "payment_processing"
         result = (await naast_de_lus(lambda: db.table("subscriptions").select("user_id").eq("stripe_subscription_id", stripe_sub_id).execute()))
         if result.data:
             (await naast_de_lus(lambda: db.table("subscriptions").update({
-                "status": stripe_sub["status"],
+                "status": nieuwe_status,
                 "current_period_end": _ts(stripe_sub["current_period_end"]),
                 "updated_at": _now(),
             }).eq("stripe_subscription_id", stripe_sub_id).execute()))
             invalidate_access_cache(result.data[0]["user_id"])
+
+    elif event["type"] in ("invoice.paid", "invoice.payment_succeeded"):
+        # De incasso is rond. Zet de rij weer op de echte Stripe-status (active)
+        # zodat 'payment_processing' niet blijft hangen.
+        invoice = event["data"]["object"]
+        stripe_sub_id = invoice.get("subscription")
+        if stripe_sub_id and invoice.get("paid"):
+            try:
+                s = stripe.Subscription.retrieve(stripe_sub_id)
+                velden = {"status": s["status"], "updated_at": _now(),
+                          "current_period_end": _ts(s["current_period_end"])}
+            except Exception:
+                logger.exception("Kon abonnement niet ophalen na geslaagde betaling %s", stripe_sub_id)
+                velden = {"status": "active", "updated_at": _now()}
+            (await naast_de_lus(lambda: db.table("subscriptions").update(velden)
+                .eq("stripe_subscription_id", stripe_sub_id).execute()))
+            invalidate_access_cache()
 
     elif event["type"] == "invoice.payment_failed":
         invoice = event["data"]["object"]
@@ -697,6 +720,25 @@ async def stripe_webhook(request: Request, stripe_signature: str = Header(None))
             invalidate_access_cache()
 
     return {"ok": True}
+
+
+def _incasso_loopt_nog(stripe_sub) -> bool:
+    """True als de laatste factuur van dit abonnement wacht op een betaling met
+    status 'processing' (een SEPA-incasso duurt werkdagen). Dan is 'past_due' de
+    verkeerde conclusie: er is niets mis, het geld is onderweg."""
+    inv = stripe_sub.get("latest_invoice") if hasattr(stripe_sub, "get") else None
+    if not inv:
+        return False
+    try:
+        if not hasattr(inv, "get"):
+            inv = stripe.Invoice.retrieve(inv, expand=["payment_intent"])
+        pi = inv.get("payment_intent")
+        if isinstance(pi, str):
+            pi = stripe.PaymentIntent.retrieve(pi)
+        return bool(hasattr(pi, "get") and pi.get("status") == "processing")
+    except Exception:
+        logger.exception("Kon de lopende incasso niet inschatten")
+        return False
 
 
 def _trial_end_ts(trial_ends_at: str | None) -> int | None:
