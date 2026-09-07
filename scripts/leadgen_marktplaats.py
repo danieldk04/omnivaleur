@@ -306,9 +306,11 @@ def _profile(client: httpx.Client, sid: int) -> tuple[dict | None, bool]:
     if r.status_code != 200:
         return None, r.status_code >= 500
     t = _text(r.text)
-    kvk = re.search(r"KVK[- ]?nummer\s*:?\s*(\d{6,10})", t, re.I)
+    # BE-profielen op 2dehands tonen "KBO-nummer" (10 cijfers, soms met punten)
+    # en Belgische telefoonnummers (+32); verder is de pagina identiek aan MP.
+    kvk = re.search(r"(?:KVK|KBO)[- ]?nummer\s*:?\s*([\d.]{6,14})", t, re.I)
     btw = re.search(r"BTW[- ]?nummer\s*:?\s*([A-Z]{2}[\dA-Z]{9,14})", t, re.I)
-    tel = re.search(r"(\+31\s?\d[\d\s\-]{7,12})", t)
+    tel = re.search(r"(\+3[12]\s?\d[\d\s\-]{7,12})", t)
     mail = re.search(r"[\w.+-]+@[\w.-]+\.\w{2,}", t)
     # Achter de plaatsnaam komt op de profielpagina meteen de openingstijden, en
     # een gulzige regex maakte daar "Rotterdam Vandaag open van" van.
