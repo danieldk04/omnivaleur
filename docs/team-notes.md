@@ -6564,3 +6564,36 @@ Uitkomst: **9 verwijderopdrachten klaargezet** over 7 groepen, op Marktplaats en
 2dehands. Ze staan in de wachtrij en gaan pas lopen zodra Toon de extensie
 opnieuw installeert, want de server geeft zijn vastgelopen kopie (1.0.260, sinds
 14:42 UTC offline) bewust geen werk meer.
+
+## 07-09-2026 (avond) — 2dehands.be als tweede leadbron, en twee werkafspraken
+
+### Kortere antwoorden, voor altijd
+Daniel: *"ik wil dat je vanaf nu korter gaat antwoorden, voor altijd, je teksten
+zijn te lang."* Geldt voor alle sessies, alle onderwerpen. Rapportage blijft de
+vier blokjes maar strak: geen uitleg over hoe iets is opgelost, geen opsomming
+van afwegingen die niet gekozen zijn, geen herhaling. Ook vastgelegd als
+geheugenbestand `antwoorden-kort-houden`.
+
+### 2dehands.be toegevoegd aan de leadgen
+`scripts/leadgen_marktplaats.py` heeft nu `--site marktplaats|2dehands`. Live
+vergeleken: 2dehands draait op exact dezelfde zoek-API en dezelfde categorie-ID's
+als Marktplaats. Alleen de host, de bedrijfsprofielpagina (BE toont "KBO-nummer"
+i.p.v. "KVK", telefoon +32) en het Platform-label in Notion ("2dehands")
+verschillen. Eigen cache per bron: `2dh_sellers.json` / `2dh_leads.json`.
+`leadgen_mail.py` (`_leads` en `overzetten`) pakt `2dh_leads` er automatisch bij,
+gededupliceerd op e-mailadres met Marktplaats vóór.
+
+**Gemeten op een kleine echte run** (kleding-dames + sieraden, depth 300):
+32.000 advertenties → 54 zakelijke verkopers → 38 profielen, **29 met
+e-mailadres (76%)**. Belgische KBO- en +32-parsing werkt. Wat niet meekomt: de
+plaatsnaam (Belgische postcodes hebben geen letters, de regex mist ze) — alleen
+een personalisatieveld, geen filter. classify + push niet gedraaid: kost
+Anthropic-tegoed en een Notion-token, dat is Daniels `run`.
+
+Volgende stap voor Daniel: `python3 scripts/leadgen_marktplaats.py run --site 2dehands`
+met `NOTION_TOKEN` gezet, daarna `python3 scripts/leadgen_mail.py overzetten`.
+
+### Vast ritme voor antwoordende leads (voorstel, wacht op akkoord)
+Elke werkdag één blok van 15 min: alle leads die in Notion op fase
+"4. Gereageerd" staan persoonlijk beantwoorden met een democall-aanbod. De
+mailmachine seint Daniel al per mail zodra iemand echt antwoordt (`_alarm`).

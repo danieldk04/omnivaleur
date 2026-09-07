@@ -17,6 +17,52 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ---
 
+## leadgen-2dehands-tweede-bron
+
+*07-09-2026 — 2dehands.be leadgen via leadgen_marktplaats.py --site 2dehands; zelfde API en categorieën als Marktplaats*
+
+Sinds 07-09-2026 heeft `scripts/leadgen_marktplaats.py` een `--site`-schakelaar:
+`marktplaats` (NL, standaard) of `2dehands` (BE).
+
+Live vergeleken 07-09-2026: 2dehands.be draait op exact dezelfde
+`/lrp/api/search` en dezelfde categorie-ID's als marktplaats.nl. Verschillen:
+host, bedrijfsprofielpagina (BE toont "KBO-nummer" i.p.v. "KVK", telefoon +32),
+Platform-label in Notion ("2dehands"). Eigen cache: `2dh_sellers.json` /
+`2dh_leads.json`. `leadgen_mail.py` `_leads()` en `overzetten()` nemen
+`2dh_leads` automatisch mee, gededupliceerd op e-mail met Marktplaats vóór.
+
+Niet geparsed: Belgische plaatsnaam (postcode zonder letters). Alleen een
+personalisatieveld, geen filter.
+
+Testrun (kleding-dames + sieraden, depth 300): 32k advertenties → 54 zakelijke
+verkopers → 38 profielen, 29 met e-mail (76%, hoger dan MP's 37%).
+
+Volledige run: `NOTION_TOKEN=... python3 scripts/leadgen_marktplaats.py run
+--site 2dehands` daarna `python3 scripts/leadgen_mail.py overzetten`.
+
+Waarom dit de grootste onbenutte hefboom was: zie "leadgen-op-conversie-niet-volume"
+en "leadgen-marktplaats-beste-bron". NL was afgezocht in de converterende
+categorieën (~91 nieuwe leads/maand); BE is verse markt, zelfde methode, €0 extra.
+
+---
+
+## antwoorden-kort-houden
+
+*07-09-2026 — Daniel wil vanaf 07-09-2026 blijvend kortere antwoorden; teksten waren te lang*
+
+Daniel, 07-09-2026: "ik wil dat je vanaf nu korter gaat antwoorden, voor altijd,
+je teksten zijn te lang." Geldt voor alle sessies en alle onderwerpen.
+
+**Why:** lange antwoorden kosten hem leestijd en tokens; hij wil gevolgen en
+acties, niet het verhaal eromheen.
+
+**How to apply:** rapportage blijft de vier blokjes uit "rapportage-in-gewone-taal"
+maar strak ingedikt. Geen uitleg over hoe iets is opgelost, geen opsomming van
+niet-gekozen afwegingen, geen herhaling van wat al gezegd is. Bij advies: kop +
+bullets, geen inleiding. Ook in `docs/team-notes.md` 07-09-2026.
+
+---
+
 ## dubbele-advertentie-titel-en-foto
 
 *07-09-2026 — Twee artikelrijen zijn hetzelfde voorwerp als titel én foto-adres gelijk zijn; de titel alleen blokkeert echte losse voorraad*
