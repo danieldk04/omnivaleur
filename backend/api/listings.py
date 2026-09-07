@@ -498,6 +498,9 @@ async def relist_ended_ebay(body: dict, user_id: str = Depends(require_active_su
 # mislukte herplaatsing tonen.
 VERDENKING_REDENEN = {
     "label": "Mogelijk verkocht: de advertentiepagina toont zelf 'verkocht' of 'gereserveerd'.",
+    "badge": "Mogelijk verkocht: Marktplaats zette een 'Verkocht!'-melding op je gesprek "
+             "met de koper. Bevestig het hier, dan gaat het artikel ook van je andere "
+             "kanalen af.",
     "weg": "Mogelijk verkocht: de advertentie is niet meer op het platform te vinden. "
            "Let op — op Marktplaats verdwijnt een gratis advertentie ook vanzelf na 30 dagen.",
     "verdwenen_te_jong":
