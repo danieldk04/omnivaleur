@@ -1712,9 +1712,10 @@ async def _al_weg_voor_wij_er_waren(db, job: dict) -> bool:
     # van de verkoper opnieuw "is dit verkocht?" te vragen. Dit is precies het
     # geval dat de reconciliatie-ronde oplevert: verkocht op A, nog een oude
     # 'active'-rij op B.
-    al_verkocht_elders = ((await naast_de_lus(lambda: db.table("listings")
+    verkochte_rijen = ((await naast_de_lus(lambda: db.table("listings")
         .select("platform").eq("item_id", job["item_id"]).eq("status", "sold")
-        .neq("platform", job["platform"]).limit(1).execute())).data or [])
+        .execute())).data or [])
+    al_verkocht_elders = [r for r in verkochte_rijen if r.get("platform") != job["platform"]]
     if al_verkocht_elders:
         for rij in jong:
             (await naast_de_lus(lambda r=rij: db.table("listings").update({
