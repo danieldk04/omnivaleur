@@ -2818,19 +2818,25 @@ async function fireJobWatchdog(tabId) {
   // meldNooitBegonnen doet, en zeg het adres erbij. Zit het tabblad op een inlog-
   // of verificatiepagina, dan is dat de echte oorzaak: behandel het als "formulier
   // ging nooit open" (stopt ook de rest van de wachtrij).
-  const snap = await bekijkVastgelopenTabblad(tabId);
+  //
+  // Alleen voor Marktplaats/2dehands: dat zijn de kanalen met het /plaats-formulier
+  // dat naar de inlogpagina kan doorspringen. Vinted en Facebook hebben hun eigen
+  // afhandeling hierboven en hieronder.
+  const magKijken = meta.platform === "marktplaats" || meta.platform === "2dehands";
+  const snap = magKijken ? await bekijkVastgelopenTabblad(tabId) : null;
   const opInlog = snap && (snap.wachtwoordveld
       || MP_LOGINPAGINA.test(snap.url || "")
       || /unauthorized|inloggen|log ?in|sign ?in|verifieer je|verify your (account|business|identity)/i.test(snap.begin || ""));
-  if (opInlog && (meta.platform === "marktplaats" || meta.platform === "2dehands")) {
+  if (opInlog) {
     console.warn(`[Omnivaleur] Watchdog: job ${meta.jobId} (${meta.platform}) — tabblad staat op een inlog/verificatiepagina (${snap.url}); behandeld als "formulier ging nooit open".`);
     await meldNooitBegonnen(tabId, meta, snap);
     return;
   }
-  const feiten = snap
-    ? ` [tab op ${snap.url}, titel ${JSON.stringify((snap.titel || "").slice(0, 60))}, `
-      + `${snap.velden} invulveld(en), invulscript geladen: ${snap.stempel || "nee"}]`
-    : " [het tabblad was al weg voordat we konden kijken]";
+  const feiten = !magKijken ? ""
+    : snap
+      ? ` [tab op ${snap.url}, titel ${JSON.stringify((snap.titel || "").slice(0, 60))}, `
+        + `${snap.velden} invulveld(en), invulscript geladen: ${snap.stempel || "nee"}]`
+      : " [het tabblad was al weg voordat we konden kijken]";
   try {
     await reportError(meta.jobId, meta.serverUrl,
       `Extension timed out waiting for this ${meta.platform} job to finish (no response after ${JOB_TAB_TIMEOUT_MIN} minutes). ` +
