@@ -6031,7 +6031,15 @@ async function checkSoldListings() {
 
       if (!soldAds.length) continue;
 
-      let triggered = 0;
+      // SINDS 07-09-2026 (Daniel): een "verkocht"-label op de Marktplaats-/
+      // 2dehands-advertentie MELDEN we ter bevestiging, we boeken en verwijderen
+      // niet meteen. Een handverkoop is voor die platforms geen harde melding —
+      // een verkochte advertentie ziet er vaak net zo uit als een verlopen — en
+      // het artikel van álle andere kanalen afhalen is onherstelbaar. De
+      // verkoper bevestigt het zelf in het dashboard (zelfde ja/nee-vraag als
+      // bij een verdwenen advertentie). Een echte order op Shopify/eBay blijft
+      // wél automatisch, want daar staat een koper met een bon achter.
+      const teMelden = [];
       for (const listing of active) {
         // Match a sold ad either by exact platform id, or — for listings without
         // an id — by a resilient title match against a POSITIVELY sold ad. We
@@ -6056,16 +6064,17 @@ async function checkSoldListings() {
           if (isSold) console.log(`[Omnivaleur][sold] ${platform}: matched sold ad by TITLE for "${listing.title}" (no platform id)`);
         }
         if (isSold) {
-          triggered++;
-          console.log(`[Omnivaleur][sold] ${platform}: SOLD confirmed (positive label) item_id=${listing.item_id} id=${listing.platform_listing_id || "—"} → triggering cross-platform delist`);
-          const r = await fetch(`${serverUrl}/api/listings/sold?item_id=${listing.item_id}&platform=${platform}`, {
-            method: "POST",
-            headers: authHeaders,
-          }).catch(e => { console.error("[Omnivaleur][sold] sold POST failed:", e); return null; });
-          console.log(`[Omnivaleur][sold] ${platform}: POST /api/listings/sold → HTTP ${r?.status ?? "no response"}`);
+          teMelden.push({
+            item_id: listing.item_id, platform,
+            platform_listing_id: listing.platform_listing_id || null,
+            title: listing.title, reden: "label",
+          });
         }
       }
-      console.log(`[Omnivaleur][sold] ${platform}: ${triggered} listing(s) triggered delist this cycle`);
+      if (teMelden.length) {
+        console.log(`[Omnivaleur][sold] ${platform}: ${teMelden.length} advertentie(s) met verkocht-label → ter bevestiging aan de verkoper`);
+        await meldMogelijkeVerkopen(serverUrl, teMelden);
+      }
     } catch (e) {
       console.error(`[Omnivaleur][sold] sold-check error (${platform}):`, e);
     }
