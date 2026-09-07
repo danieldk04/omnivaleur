@@ -461,6 +461,26 @@ def _met_slot(tekst: str, slot: str) -> str:
     return (schoon + "\n\n" + slot).strip() if schoon else slot
 
 
+# Een bulk-crosslist roept publish_to_platforms per artikel aan. Zonder cache zou
+# de kansloos-check bij 5.533 aangevinkte artikelen 5.533 keer drie databasevragen
+# doen. De uitkomst verandert binnen zo'n ronde niet, dus twee minuten vasthouden.
+_KANSLOOS_CACHE: dict[tuple, tuple] = {}
+_KANSLOOS_CACHE_TTL = 120  # seconden
+
+
+def _kanaal_kansloos_gecached(db, user_id: str, platform: str) -> bool:
+    import time
+    from backend.api.jobs import _kanaal_kansloos
+    sleutel = (user_id, platform)
+    nu = time.monotonic()
+    trof = _KANSLOOS_CACHE.get(sleutel)
+    if trof and nu - trof[1] < _KANSLOOS_CACHE_TTL:
+        return trof[0]
+    uit = bool(_kanaal_kansloos(db, user_id, platform))
+    _KANSLOOS_CACHE[sleutel] = (uit, nu)
+    return uit
+
+
 async def publish_to_platforms(item_id: str, platforms: list[str], user_id: str) -> list[dict]:
     """
     Route each platform to the right handler:
