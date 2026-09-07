@@ -17,6 +17,58 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ---
 
+## klantmail-kort-en-menselijk
+
+*07-09-2026 — Klantmails van Daniel: hooguit 120 woorden, schrijven zoals je praat, goed nieuws vooraan, geen boetekleed en geen slijmen*
+
+Elke mail aan een klant is hooguit 120 woorden en staat vanuit zijn kant
+geschreven: wat er nu anders is en hoe dat zijn probleem oplost. Dat is het
+belangrijkste. De oorzaak mag hooguit in een halve zin mee, waar die helpt om
+het te snappen. Is er goed nieuws, dan staat dat in de eerste zin.
+
+Schrijf zoals je praat. Korte zinnen, gewone woorden, je en jij. Lees het hardop
+terug: klinkt het als een collega die even iets uitlegt, dan is het goed. Klinkt
+het als een bedrijf dat een klant informeert, dan moet het korter en losser.
+
+De vorm die Daniel zelf gebruikt:
+
+- Aanhef ALTIJD "Hoi <voornaam>," en afsluiten met "Groetjes," en op de regel
+  daaronder "Daniel". Geen "Hi", geen "Beste", geen "Groet".
+- Eén menselijke openingszin die erkent wat de klant merkte, in zijn eigen
+  woorden, plus dat je hebt gekeken. Eén keer, niet meer.
+- Per punt: onderwerp, dubbele punt, dan in een of twee zinnen het gevolg dat
+  hij merkt. Concreet wat hij kan doen: waar hij klikt, wat hij intypt.
+- Afsluiten met een korte vraag of vervolgstap, niet met een samenvatting.
+- Geen techniek, geen bestandsnamen, geen versienummers tenzij hij er zelf iets
+  mee moet. Geen opmaaktekens, want de mail gaat als platte tekst de deur uit.
+
+Op 07-09-2026 nog een keer, op een concept over een storing die aantoonbaar aan
+ons lag: "trek minder het boetekleed aan, reageer gewoon op zijn mail dat dit is
+opgelost (dat het niet perse aan mij lag bijv.)". Dus geen zinnen die de fout
+naar ons toe halen en geen "je had gelijk". Meld wat er nu anders is en waar de
+klant iets aan heeft; wie schuld had is voor hem niet interessant.
+
+Op 05-09-2026 vond Daniel een mail van ruim 200 woorden nog steeds te lang en
+te zakelijk: "verkort en vermenselijk die mail. ik wil dat je voortaan altijd
+kortere en menselijkere mails stuurt." De grens ging daarmee van 200 naar 120
+woorden, en dat staat nu ook zo in de code.
+
+**Why:** het concept dat hij op 03-09-2026 afkeurde was 250 woorden, opende met
+een compliment over hoe goed de klant het had opgeschreven, en legde per punt
+eerst uit wat er fout ging voordat het zei wat de klant eraan heeft. Zijn
+correctie: "trek niet teveel het boetekleed aan... niet teveel BS, niet teveel
+slijmen, hou het menselijk vriendelijk en duidelijk." Excuses en uitleg over onze
+storing kosten woorden en lossen niets voor hem op.
+
+**How to apply:** de regels staan als code in `TOON_KORT_EN_MENSELIJK` in
+`scripts/leadgen_mail.py` en hangen aan `_KLANT_REGELS` daar en aan
+`HERSTELBERICHT_REGELS` in `scripts/mail_analyse.py`, zodat elk concept van de
+mailagent ze meekrijgt. Schrijf je met de hand een mail voor Daniel, hou je dan
+aan dezelfde vorm. Zie "mails-kort-houden", "klantmails-meer-empathie" en
+"rapportage-in-gewone-taal".
+
+---
+
 ## accessoires-hebben-geen-maat
 
 *07-09-2026 — "unisex accessoires" viel onder kleding en eiste merk/maat/kleur; 2.342 artikelen waren daardoor niet te publiceren*
@@ -680,50 +732,6 @@ titels zijn géén bewijs. Toon heeft zeven "Oosters tapijtkussen 40/40 cm" over
 verschillende advertentienummers; alleen het paar dat écht een nummer deelt telt.
 Bouw de index één keer op en geef hem mee, anders is een bulkselectie kwadratisch.
 Zie ook "import-dubbele-items-over-platforms" en "geen-doodlopende-straat-in-de-ui".
-
----
-
-## klantmail-kort-en-menselijk
-
-*05-09-2026 — Klantmails van Daniel: hooguit 120 woorden, schrijven zoals je praat, goed nieuws vooraan, geen boetekleed en geen slijmen*
-
-Elke mail aan een klant is hooguit 120 woorden en staat vanuit zijn kant
-geschreven: wat er nu anders is en hoe dat zijn probleem oplost. Dat is het
-belangrijkste. De oorzaak mag hooguit in een halve zin mee, waar die helpt om
-het te snappen. Is er goed nieuws, dan staat dat in de eerste zin.
-
-Schrijf zoals je praat. Korte zinnen, gewone woorden, je en jij. Lees het hardop
-terug: klinkt het als een collega die even iets uitlegt, dan is het goed. Klinkt
-het als een bedrijf dat een klant informeert, dan moet het korter en losser.
-
-De vorm die Daniel zelf gebruikt:
-
-- Eén menselijke openingszin die erkent wat de klant merkte, in zijn eigen
-  woorden, plus dat je hebt gekeken. Eén keer, niet meer.
-- Per punt: onderwerp, dubbele punt, dan in een of twee zinnen het gevolg dat
-  hij merkt. Concreet wat hij kan doen: waar hij klikt, wat hij intypt.
-- Afsluiten met een korte vraag of vervolgstap, niet met een samenvatting.
-- Geen techniek, geen bestandsnamen, geen versienummers tenzij hij er zelf iets
-  mee moet. Geen opmaaktekens, want de mail gaat als platte tekst de deur uit.
-
-Op 05-09-2026 vond Daniel een mail van ruim 200 woorden nog steeds te lang en
-te zakelijk: "verkort en vermenselijk die mail. ik wil dat je voortaan altijd
-kortere en menselijkere mails stuurt." De grens ging daarmee van 200 naar 120
-woorden, en dat staat nu ook zo in de code.
-
-**Why:** het concept dat hij op 03-09-2026 afkeurde was 250 woorden, opende met
-een compliment over hoe goed de klant het had opgeschreven, en legde per punt
-eerst uit wat er fout ging voordat het zei wat de klant eraan heeft. Zijn
-correctie: "trek niet teveel het boetekleed aan... niet teveel BS, niet teveel
-slijmen, hou het menselijk vriendelijk en duidelijk." Excuses en uitleg over onze
-storing kosten woorden en lossen niets voor hem op.
-
-**How to apply:** de regels staan als code in `TOON_KORT_EN_MENSELIJK` in
-`scripts/leadgen_mail.py` en hangen aan `_KLANT_REGELS` daar en aan
-`HERSTELBERICHT_REGELS` in `scripts/mail_analyse.py`, zodat elk concept van de
-mailagent ze meekrijgt. Schrijf je met de hand een mail voor Daniel, hou je dan
-aan dezelfde vorm. Zie "mails-kort-houden", "klantmails-meer-empathie" en
-"rapportage-in-gewone-taal".
 
 ---
 
