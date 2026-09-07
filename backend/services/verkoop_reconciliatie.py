@@ -168,6 +168,6 @@ async def reconcileer_verkochte_artikelen() -> dict:
         except Exception as e:  # noqa: BLE001
             logger.warning("verkoop-reconciliatie: item %s afmelden mislukte: %s", iid, e)
 
-    logger.info("verkoop-reconciliatie: %d artikel(en) bekeken, %d opnieuw ingezet",
-                len(item_ids), opnieuw)
-    return {"bekeken": len(item_ids), "opnieuw_ingezet": opnieuw}
+    logger.info("verkoop-reconciliatie: %d artikel(en) bekeken, %d opnieuw ingezet, %d gearchiveerd",
+                len(item_ids), opnieuw, gearchiveerd)
+    return {"bekeken": len(item_ids), "opnieuw_ingezet": opnieuw, "gearchiveerd": gearchiveerd}
