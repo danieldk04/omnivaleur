@@ -466,6 +466,60 @@ def send_announcement(dry_run: bool = True, emails: str = "", user=Depends(get_c
     return {"dry_run": False, "sent": len(sent), "failed": failed, "recipients": sent}
 
 
+@router.post("/admin/terughaalcampagne")
+def send_terughaalcampagne(groep: str, emails: str, dry_run: bool = True, user=Depends(get_current_user_full)):
+    """Eenmalige terughaalmail naar oud-klanten, per groep A/B/C.
+    Standaard een proefronde die alleen toont wie hem zou krijgen en met welke
+    tekst; pas met dry_run=false gaat hij echt weg. Eigenaar-only.
+
+    `groep` is "A", "B" of "C" (zie backend/services/terughaalcampagne.py).
+    `emails` is een handmatige lijst, een adres per regel. Voor groep A mag er een
+    eigen zin achter met een liggend streepje: `henk@x.nl | 14 van 18 vastgelopen`.
+
+    LET OP: elke mail belooft een verlengde proefperiode. Deze code zet die NIET
+    (de server mag geen klantrijen schrijven). Zet de proef eerst met de hand in
+    Supabase of via /admin/comp-account, daarna pas dry_run=false."""
+    if not _is_owner_email(user.email):
+        raise HTTPException(status_code=403, detail="Not allowed")
+
+    from backend.services import terughaalcampagne as tc
+    from backend.services.billing import CONTACT_EMAIL
+    from backend.services.email import send_email_checked
+
+    groep = (groep or "").strip().upper()
+    if groep not in tc.GROEPEN:
+        raise HTTPException(status_code=400, detail="groep moet A, B of C zijn")
+
+    ontvangers = tc.parse_ontvangers(emails or "")
+    if not ontvangers:
+        raise HTTPException(status_code=400, detail="Geen geldig e-mailadres in die lijst")
+
+    if dry_run:
+        voorbeeld_subject, voorbeeld_body = tc.render(groep, ontvangers[0])
+        return {
+            "dry_run": True,
+            "groep": groep,
+            "count": len(ontvangers),
+            "recipients": [o["email"] for o in ontvangers],
+            "zonder_eigen_zin": [o["email"] for o in ontvangers if groep == "A" and not o["detail"]],
+            "voorbeeld": {"aan": ontvangers[0]["email"], "onderwerp": voorbeeld_subject, "tekst": voorbeeld_body},
+            "let_op": "Zet de proefperiode van deze mensen eerst handmatig verlengd voordat je dry_run=false doet.",
+        }
+
+    sent, failed = [], []
+    for o in ontvangers:
+        subject, body = tc.render(groep, o)
+        try:
+            send_email_checked(subject, body, to=o["email"], reply_to=CONTACT_EMAIL)
+            sent.append(o["email"])
+        except Exception as e:
+            # Een geweigerd adres mag de rest niet stoppen.
+            logger.exception(f"Terughaalmail mislukt voor {o['email']}")
+            failed.append({"email": o["email"], "error": f"{type(e).__name__}: {e}"})
+    logger.info(f"Terughaalcampagne groep {groep}: verstuurd {len(sent)}, mislukt {len(failed)}")
+    return {"dry_run": False, "groep": groep, "sent": len(sent), "failed": failed, "recipients": sent}
+
+
 @router.post("/admin/test-reminder-mail")
 def test_reminder_mail(kind: str = "reminder", user=Depends(get_current_user_full)):
     """Stuurt de herinneringsmail naar de eigenaar zelf, zodat de tekst en de
