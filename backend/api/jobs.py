@@ -3104,6 +3104,40 @@ def _stop_wachtrij(db, user_id: str, platform: str, reden: str) -> int:
     return len(ids)
 
 
+def _gelijk_de_kansloze_muur(db, user_id: str, platform: str, reden: str) -> int:
+    """Zet elke mislukte advertentie op dit kanaal op dezelfde uitgelegde reden.
+
+    WAAROM (07-09-2026, Egbert Brouwer). Zijn 671 mislukte plaatsopdrachten voor
+    2dehands lieten evenveel rode balken achter, met wisselende teksten: "timed
+    out", "not signed in", "queue stopped". Elke ronde een andere. Dat leest als
+    tien verschillende storingen terwijl het er één is: 2dehands laat dit account
+    niet plaatsen. `_stop_wachtrij` raakt alleen wat nóg wacht; deze functie zet
+    ook de al bestaande foutregels recht.
+
+    Alleen rijen zonder advertentienummer: die hebben nooit een advertentie gehad
+    en zijn dus echt kansloos. Een rij mét nummer is een levende advertentie en
+    blijft met rust.
+    """
+    try:
+        rijen = fetch_all(lambda: db.table("listings")
+                          .select("id,platform_listing_id,items!inner(user_id)")
+                          .eq("items.user_id", user_id)
+                          .eq("platform", platform).eq("status", "error"),
+                          page_size=1000)
+    except Exception as e:  # noqa: BLE001 — recht­zetten mag nooit fataal zijn
+        logger.warning("kansloze muur niet te lezen voor %s/%s: %s", user_id, platform, e)
+        return 0
+    ids = [r["id"] for r in rijen if not r.get("platform_listing_id")]
+    for i in range(0, len(ids), 200):
+        execute_with_retry(db.table("listings").update({
+            "error_message": reden,
+        }).in_("id", ids[i:i + 200]))
+    if ids:
+        logger.warning("kansloze muur gelijkgetrokken: %d rijen voor %s bij %s",
+                       len(ids), platform, user_id)
+    return len(ids)
+
+
 @router.post("/stop-platform")
 def stop_platform(body: dict, request: Request, user_id: str = Depends(get_current_user)):
     """Neem in één keer alles terug wat nog voor één kanaal in de wachtrij staat.
