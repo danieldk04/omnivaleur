@@ -258,7 +258,7 @@ def discover(args) -> None:
                     # anders staat die code later letterlijk in een mail.
                     row = {"seller_id": sid,
                            "name": unescape(s.get("sellerName") or ""),
-                           "method": "marktplaats", "source": src, "ads_seen": 1,
+                           "method": SITE, "source": src, "ads_seen": 1,
                            # Doorklik-link van Marktplaats naar de eigen webshop.
                            # Bewaren loont: bij verkopers zonder e-mail in hun
                            # profiel staat het adres wél op hun contactpagina.
