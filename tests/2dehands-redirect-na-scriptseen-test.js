@@ -68,8 +68,8 @@ check("de melding zet ook de rest van de wachtrij stil",
 
 // ── 2. De bewaker kijkt WAAR het tabblad staat i.p.v. te gokken ────────────
 const bewaker = blok("async function fireJobWatchdog(");
-check("de bewaker kijkt in het tabblad voor hij 'timed out' meldt",
-  /const snap = await bekijkVastgelopenTabblad\(tabId\)/.test(bewaker));
+check("de bewaker kijkt in het tabblad (MP/2dehands) voor hij 'timed out' meldt",
+  /magKijken \? await bekijkVastgelopenTabblad\(tabId\) : null/.test(bewaker));
 check("een tabblad op een inlog/verificatiepagina gaat alsnog naar meldNooitBegonnen",
   /if \(opInlog[\s\S]{0,400}meldNooitBegonnen\(tabId, meta, snap\)/.test(bewaker));
 check("de gewone tijdsoverschrijding-melding krijgt nu de feiten van het tabblad mee",
