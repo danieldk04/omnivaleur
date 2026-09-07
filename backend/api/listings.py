@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, BackgroundTasks, Depends
+from fastapi import APIRouter, HTTPException, BackgroundTasks, Depends, Request
 from backend.models import ListingCreate
 from backend.database import get_db, fetch_all, naast_de_lus, execute_with_retry, IN_BROK
 from backend.services.crosslist import publish_to_platforms, handle_item_sold, CrosslistValidationError
