@@ -91,6 +91,28 @@ def start_scheduler():
         id="relist_marktplaats",
         replace_existing=True,
     )
+    # Vangnet tegen dubbelverkoop: een artikel dat op één kanaal verkocht is maar
+    # op een ander kanaal nog te koop staat, omdat de afmelding daar stil is
+    # mislukt (verwijderopdracht op 'error', browser stond uit, geen product-id).
+    # Elke 20 minuten opnieuw in gang zetten. Zie verkoop_reconciliatie.py.
+    _scheduler.add_job(
+        _off_the_request_loop(reconcileer_verkochte_artikelen),
+        "interval",
+        minutes=20,
+        id="verkoop_reconciliatie",
+        replace_existing=True,
+        max_instances=1,
+        coalesce=True,
+    )
+    # Herinneringsmail als een mogelijke verkoop op bevestiging blijft wachten.
+    # Elk uur; de functie kijkt zelf of het overdag is en of er iets openstaat.
+    _scheduler.add_job(
+        _off_the_request_loop(herinner_onbevestigde_verkopen),
+        "interval",
+        hours=1,
+        id="verkoop_herinnering",
+        replace_existing=True,
+    )
     # Werk dat halverwege bleef steken weer vlot trekken. Elke zes uur is vaak
     # genoeg: een advertentie die tussen verwijderen en terugplaatsen hangt is
     # weg bij het platform, dus dat mag geen dagen duren.
