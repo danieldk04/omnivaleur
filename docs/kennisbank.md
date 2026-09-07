@@ -17,6 +17,27 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ---
 
+## verborgen-tabblad-worker-timer
+
+*07-09-2026 — sleep() in de extensie draait via een Web Worker omdat Chrome setTimeout in een verborgen tabblad afknijpt tot stilstand*
+
+Chrome knijpt `setTimeout` op de main thread van een niet-zichtbaar tabblad af:
+eerst ~1s, en na 5 minuten verborgen zwaar ("intensive throttling", richting
+1x/minuut, oplopend). Gemeten in een echt verborgen tabblad, 367s: Worker-timer
+205ms/tick, pagina-timer ~750ms/tick en verslechterend. Vinted-klussen bestaan
+uit tientallen naakte `await sleep()`-pauzes en langer dan 5 min, dus die
+stalden volledig zodra de verkoper wegklikte. MP/2dehands hadden er minder last
+van: die hebben de debugger aangehecht (throttling uit, net als open DevTools)
+en gebruiken `waitUntil` op een MutationObserver.
+
+Fix (1.0.309): `sleep()` in `content/shared.js` draait via
+`content/timer-worker.js` (Worker-timers vallen niet onder intensive
+throttling), met terugval op `setTimeout`. Worker staat in
+`web_accessible_resources`. Werk-tabblad krijgt `autoDiscardable:false` tegen
+Memory Saver / discard. Zie ook "verborgen-tabblad-vertraagt-wachttijden".
+
+---
+
 ## sepa-incasso-bedenktijd-te-kort
 
 *07-09-2026 — "Eerste SEPA-incasso na de proef duurt ~9 werkdagen; de bedenktijd van 2 dagen sloot betalende klanten buiten. Nu status 'payment_processing'."*
