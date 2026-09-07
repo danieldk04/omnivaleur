@@ -95,7 +95,8 @@ async def reconcileer_verkochte_artikelen() -> dict:
         for row in rows:
             rijen_per_item.setdefault(row["item_id"], []).append(row)
 
-    # Kandidaten: verkocht op kanaal A, nog levend op kanaal B, verkoop oud genoeg.
+    # Kandidaten: verkocht op kanaal A, nog levend (of nog onbevestigd) op kanaal
+    # B, verkoop oud genoeg.
     kandidaten: list[tuple[str, str]] = []  # (sold_at, item_id) voor sortering
     for iid, info in verkoop_van.items():
         try:
@@ -104,11 +105,10 @@ async def reconcileer_verkochte_artikelen() -> dict:
             verkocht_op_dt = respijt - timedelta(minutes=1)  # geen datum: behandel als oud
         if verkocht_op_dt > respijt:
             continue
-        nog_levend = [
-            r for r in rijen_per_item.get(iid, [])
-            if r["platform"] not in info["platforms"] and r.get("status") in _NOG_LEVEND
-        ]
-        if nog_levend:
+        andere = [r for r in rijen_per_item.get(iid, []) if r["platform"] not in info["platforms"]]
+        nog_levend = [r for r in andere if r.get("status") in _NOG_LEVEND]
+        onbevestigd = [r for r in andere if r.get("status") == "sold_unconfirmed"]
+        if nog_levend or onbevestigd:
             kandidaten.append((info["sold_at"] or "", iid))
 
     kandidaten.sort()
