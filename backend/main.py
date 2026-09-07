@@ -269,6 +269,16 @@ async def mp_video_page():
     return FileResponse(FRONTEND / "mp-video.html")
 
 
+@app.get("/nl")
+async def landing_nl():
+    """Nederlandse versie van de homepage. Losse hand-vertaalde pagina i.p.v.
+    een taalknop in index.html: die pagina is groot en handgeschreven, en een
+    tweede vaste kopie is nu goedkoper te onderhouden dan een i18n-laag.
+    De taalwissel EN <-> NL staat in de nav van beide pagina's; hreflang koppelt
+    ze voor Google."""
+    return FileResponse(FRONTEND / "nl.html")
+
+
 # ── Korte links met vaste UTM-tags ────────────────────────────────────────
 # omnivaleur.com/ig, /tt, /yt, /pin, /th (+ de -nl varianten) en /mp sturen door
 # naar dezelfde pagina mét meet-tags erachter.
