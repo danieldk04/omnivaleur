@@ -441,6 +441,7 @@ async def blog_index_lang(request: Request, language: str):
 
 STATIC_SITEMAP_URLS = [
     ("/", "weekly", "1.0"),
+    ("/nl", "weekly", "0.9"),
     ("/blog", "daily", "0.9"),
     ("/nl/blog", "daily", "0.8"),
     ("/marketplaces", "monthly", "0.8"),
