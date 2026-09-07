@@ -1131,6 +1131,7 @@ def main() -> None:
     r.set_defaults(func=run)
 
     args = ap.parse_args()
+    _activate(getattr(args, "site", "marktplaats"))
     args.func(args)
 
 
