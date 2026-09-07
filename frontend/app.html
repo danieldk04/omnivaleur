@@ -5110,7 +5110,10 @@ async function doBulkCrosslist() {
       // groen getal waar niets achter zit.
       resultaten.filter(r => r.status === 'already_live')
         .forEach(r => alLive.set(r.platform, (alLive.get(r.platform) || 0) + 1));
-      if (!resultaten.length || resultaten.some(r => r.status !== 'already_live')) done++;
+      // 'blocked' en 'already_live' zijn allebei "er is niets in de wachtrij
+      // gezet" — niet meetellen als geplaatst.
+      const stil = ['already_live', 'blocked', 'error', 'duplicate'];
+      if (!resultaten.length || resultaten.some(r => !stil.includes(r.status))) done++;
     } catch (e) {
       errors++;
       // De reden werd hier weggegooid: je zag alleen "3 error(s)" en nooit
