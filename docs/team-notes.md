@@ -6095,3 +6095,26 @@ tabbladen in augustus/september) is nog niet bewezen; hij is een zakelijke
 Admarkt-verkoper en heeft op 2dehands nul advertenties. De extensie legt nu bij
 elke mislukking het adres vast waar het tabblad belandde, dus de volgende poging
 levert dat bewijs.
+
+### 07-09-2026 (vervolg) — 1.0.308 gemeten in een echte browser met een echte sessie
+
+Op Daniels eigen Chrome (account Revaleur, 51 advertenties op 2dehands), tegen de
+live site, in precies de situatie van Egbert (achtergrondmeting geeft 401):
+
+- `/my-account/sell/api/listings` vanuit het tabblad: **HTTP 200**, 51 advertenties.
+- De code van 1.0.308 letterlijk uitgevoerd: `ingelogd: true`, opdracht gaat door,
+  wachtrij blijft staan. De logica van 1.0.307 met dezelfde invoer: geweigerd en
+  wachtrij gestopt. Voor en na in dezelfde browser, hetzelfde moment.
+
+Ook nagemeten, want dat was nog open: `https://www.2dehands.be/plaats/728/748`
+opent bij een ingelogde verkoper gewoon het formulier ("Muziek en Instrumenten >
+Gitaren | Elektrisch", 49 invulvelden, geen inlogpagina). Het plaatsadres en de
+categorienummers kloppen dus. Egberts 305 stille tabbladen liggen niet aan de URL
+en niet aan de categorie, maar aan de staat van zijn account of sessie op dat
+moment. Zijn 2dehands-account heeft nul advertenties en hij is zakelijk
+Admarkt-verkoper op Marktplaats; dat is het spoor voor de volgende ronde.
+
+De extensie was niet geïnstalleerd in die Chrome, dus de achtergrondmeting zelf
+is daar niet nagespeeld. Dat hoefde ook niet: die 401 is bij Egbert al twee keer
+gemeten, en de reparatie hangt niet af van of de achtergrond het fout heeft, maar
+van wie het laatste woord krijgt.
