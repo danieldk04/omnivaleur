@@ -17,6 +17,44 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ---
 
+## tekst-zoeken-op-het-juiste-kanaal
+
+*07-09-2026 — De aanvulronde voor prijs en omschrijving zocht altijd op marktplaats.nl; wie vanaf 2dehands importeerde hield lege teksten en verstopte bovendien zijn eigen ronde*
+
+07-09-2026, Toon (dejuistetoon): "Waarom vult hij de discription niet
+automatisch in?" Gemeten op zijn 1.319 artikelen: 197 zonder omschrijving,
+waarvan **194 een 2dehands-advertentie** hebben en 8 een Marktplaats-advertentie.
+De 196 uit de import van 05-09 stonden twee dagen later nog exact zoals ze
+binnenkwamen (`created_at` == `updated_at`). De echte ronde erop losgelaten
+meldde "0 van 20 items teruggevonden".
+
+**Why:** `mp_enrich.verrijk` zocht altijd op marktplaats.nl. `ZOEK_PER_PLATFORM`
+kende 2dehands al, maar werd alleen door `kenmerken_via_zoeken` gebruikt, niet
+door de aanvulronde. Daar komt bij dat de ronde zichzelf verstopte: artikelen
+zonder tekst staan vooraan (`_urgentie`), dus de hele beurt van 150 ging op aan
+2dehands-advertenties zoeken op Marktplaats en kwamen de acht die daar wél
+stonden evenmin aan de beurt. Zie "admarkt-omschrijving-via-openbaar-mp".
+
+**How to apply:** het kanaal van een artikel staat in `listings`, niet in het
+artikel zelf. `verrijk` neemt nu een `platform` mee, pakt alleen artikelen met
+een advertentie op dat kanaal, en houdt een eigen beurtteller (`user@platform`).
+De planner en de knop kiezen met `kanaal_met_meeste_gaten` het kanaal waar de
+meeste lege teksten staan; één kanaal per beurt, want twee keer 75 seconden past
+niet binnen de 100 seconden van Cloudflare. Artikelen zonder advertentierij
+blijven bij Marktplaats, anders verandert er gedrag voor accounts die al draaiden.
+
+Gemeten voor en na op zijn echte gegevens: 0 van 20 teruggevonden en 0
+omschrijvingen op de oude weg, 20 van 20 en 20 omschrijvingen op de nieuwe.
+
+En let op bij "dubbele advertenties": niet elke dubbel is van ons. Twee
+artikelen met dezelfde titel én dezelfde prijs bleken **twee echte advertenties
+op 2dehands** (m2065499767 en m2222635983, allebei live in zijn openbare aanbod,
+allebei 40 euro) met verschillende foto-adressen, want elke import spiegelt de
+foto opnieuw. De dubbelcontrole op titel+foto-adres
+("dubbele-advertentie-titel-en-foto") ziet die dus niet, en dat is terecht.
+
+---
+
 ## dubbele-advertentie-titel-en-foto
 
 *07-09-2026 — Twee artikelrijen zijn hetzelfde voorwerp als titel én foto-adres gelijk zijn; de titel alleen blokkeert echte losse voorraad*

@@ -1000,7 +1000,7 @@ input[type="checkbox"].row-check { width: 15px; height: 15px; cursor: pointer; a
           </div>
           <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
             <button class="btn btn-sm btn-outline" id="mp-fill-btn" style="display:none" onclick="fillFromMarktplaats()"
-                    title="Fetch the price and description from your own public Marktplaats adverts">Fill from Marktplaats</button>
+                    title="Fetch the price and description from your own public Marktplaats or 2dehands adverts">Fill from Marktplaats/2dehands</button>
             <button class="btn btn-sm btn-outline" id="vinted-fill-btn" style="display:none" onclick="fillFromVinted()"
                     title="Fetch the missing description from your own Vinted adverts">Fill from Vinted</button>
             <button class="btn btn-primary btn-sm" onclick="openAddItem()">
@@ -4419,7 +4419,11 @@ function applyFilters(resetPage) {
   const mpKnop = document.getElementById('mp-fill-btn');
   if (mpKnop) {
     mpKnop.style.display = teVullen ? '' : 'none';
-    mpKnop.textContent = `Fill ${teVullen} from Marktplaats`;
+    // Marktplaats OF 2dehands: waar de advertenties van deze verkoper staan
+    // bepaalt de server per lading (kanaal_met_meeste_gaten in mp_enrich.py).
+    // "Fill from Marktplaats" bij iemand die alles op 2dehands heeft staan leest
+    // als een knop die niet voor hem bedoeld is.
+    mpKnop.textContent = `Fill ${teVullen} from Marktplaats/2dehands`;
   }
   // Zelfde afweging voor Vinted, maar smaller: alleen de omschrijving, en alleen
   // als de advertentie er nog staat — anders valt er niets te halen.

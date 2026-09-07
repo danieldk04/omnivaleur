@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "computedAt": 1788779012627,
+  "computedAt": 1788805278753,
   "entries": [
     {
       "id": "mem-shopify_workflow-belangrijk--nooit-content-over",
@@ -977,9 +977,9 @@
       "content": "name: feedback-language\ndescription: \"All UI, copy, and code comments must be in English — except actual listing content posted to Marktplaats and 2dehands which is in Dutch\"\nmetadata: \n  node_type: memory\n  type: feedback\n  originSessionId: 0498816a-31dc-434b-a192-b9eb3bcfef08\n---\n\nAll frontend copy, backend code, comments, labels, buttons, and error messages must be in **English**.\n\n**Why:** CrossList EU targets international/EU sellers, not just Dutch speakers. Dutch in the UI feels local and",
       "summary": "---",
       "category": "feedback_language",
-      "confidence": 0.53,
+      "confidence": 0.5,
       "pageRank": 0.03933524013937596,
-      "accessCount": 1,
+      "accessCount": 0,
       "words": [
         "name",
         "feedback-language",

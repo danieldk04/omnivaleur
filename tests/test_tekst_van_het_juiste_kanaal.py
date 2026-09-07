@@ -228,6 +228,20 @@ def test_de_marktplaats_ronde_pakt_alleen_marktplaats_artikelen(_nep_net):
     assert len(gevuld) == OP_MARKTPLAATS + ZONDER_ADVERTENTIE
 
 
+def test_een_artikel_zonder_advertentie_doet_in_elke_ronde_mee(_nep_net):
+    """Gemeten 07-09-2026: twee van zijn artikelen zonder tekst stonden gewoon
+    live op 2dehands terwijl er bij ons geen advertentierij bij hoorde. Zouden
+    die alleen in de Marktplaats-ronde meedoen, dan bleven ze eeuwig leeg."""
+    items, listings = _voorraad()
+    onbekend = {f"i{i:04d}" for i in range(OP_2DEHANDS + OP_MARKTPLAATS,
+                                           OP_2DEHANDS + OP_MARKTPLAATS + ZONDER_ADVERTENTIE)}
+    db = NepDb(items, listings)
+    asyncio.run(mp_enrich.verrijk(db, "toon", schrijf=True, maximaal=200,
+                                  platform="2dehands"))
+    gevuld = {r["id"] for r in db.items.values() if (r.get("description") or "").strip()}
+    assert onbekend <= gevuld
+
+
 def test_een_artikel_zonder_advertentie_blijft_bij_het_standaardkanaal(_nep_net):
     """Wie geen advertentierijen heeft moet zich precies gedragen zoals
     voorheen, anders repareert deze wijziging het ene account en breekt ze het

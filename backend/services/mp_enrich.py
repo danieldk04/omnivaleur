@@ -953,9 +953,16 @@ async def verrijk(db, user_id: str, schrijf: bool = True,
                          "reden": "could not tell which adverts live on this marketplace"}
             return uit_vroeg
     else:
+        # Van een artikel zonder advertentierij weten we het kanaal niet. Dat
+        # doet in élke ronde mee, niet alleen in de standaardronde: gemeten
+        # 07-09-2026 stonden twee van zijn overgebleven artikelen zonder tekst
+        # gewoon live op 2dehands terwijl er bij ons geen advertentierij bij
+        # hoorde, en die zouden op Marktplaats eeuwig onvindbaar blijven. De
+        # kosten zijn begrensd: de 2dehands-ronde start alleen bij een verkoper
+        # die aantoonbaar 2dehands-advertenties heeft.
         kandidaten = [r for r in kandidaten
                       if platform in kanalen.get(r["id"], set())
-                      or (not kanalen.get(r["id"]) and platform == STANDAARD_KANAAL)]
+                      or not kanalen.get(r["id"])]
     open_ = _deze_ronde(kandidaten, beurt_sleutel, maximaal)
 
     # Nu pas de echte teksten, en alleen van wat we aanpakken. `_is_afgekapt`

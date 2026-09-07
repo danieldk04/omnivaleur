@@ -61,10 +61,10 @@ async def reconcileer_verkochte_artikelen() -> dict:
             .execute(), herkans=True)).data or [])
     except Exception as e:  # noqa: BLE001
         logger.warning("verkoop-reconciliatie: kon de verkopen niet lezen: %s", e)
-        return {"bekeken": 0, "opnieuw_ingezet": 0}
+        return {"bekeken": 0, "opnieuw_ingezet": 0, "gearchiveerd": 0}
 
     if not verkocht:
-        return {"bekeken": 0, "opnieuw_ingezet": 0}
+        return {"bekeken": 0, "opnieuw_ingezet": 0, "gearchiveerd": 0}
 
     # Per artikel: wanneer was de (vroegste) verkoop, en op welke kanalen.
     verkoop_van: dict[str, dict] = {}
@@ -115,7 +115,7 @@ async def reconcileer_verkochte_artikelen() -> dict:
     kandidaten = kandidaten[:PER_RONDE]
 
     if not kandidaten:
-        return {"bekeken": len(item_ids), "opnieuw_ingezet": 0}
+        return {"bekeken": len(item_ids), "opnieuw_ingezet": 0, "gearchiveerd": 0}
 
     # Eigenaren erbij zoeken (delist_all_platforms wil het user_id).
     doel_ids = [iid for _, iid in kandidaten]

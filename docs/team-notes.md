@@ -6483,3 +6483,44 @@ bij leads wel mogen.
 **Nog open:** echte verstuurde mails van Daniel als voorbeeld toevoegen; hij
 levert er vijf tot tien aan. De Zoho-verzonden map is vanuit deze omgeving niet
 bereikbaar.
+
+## 07-09-2026 (avond) — Toon: "waarom vult hij de omschrijving niet automatisch in?"
+
+Tweede vraag van Toon dezelfde avond, met een schermafdruk van drie artikelen met
+"No description yet — needed on every platform".
+
+**Gemeten, niet aangenomen.** 197 van zijn 1.319 artikelen hebben geen
+omschrijving. Van die 197 heeft er 194 een 2dehands-advertentie, 8 een
+Marktplaats-advertentie en 2 geen enkele. De 196 die op 05-09 zijn geïmporteerd
+stonden twee dagen later nog precies zoals ze binnenkwamen: aangemaakt en
+gewijzigd op dezelfde seconde. De aanvulronde die elk kwartier draait had ze dus
+nooit aangeraakt. De echte ronde er lokaal op losgelaten meldde: "0 van 20 items
+teruggevonden".
+
+**Oorzaak.** De ronde die prijs en omschrijving ophaalt zocht altijd op
+marktplaats.nl. Zijn advertenties staan op 2dehands.be. Bovendien verstopte de
+ronde zichzelf: artikelen zonder tekst gaan voor, dus de hele beurt van 150 ging
+op aan 2dehands-advertenties zoeken op Marktplaats, en zijn acht
+Marktplaats-artikelen kwamen daardoor ook nooit aan de beurt.
+
+**Wat er is veranderd** (commit "Omschrijving ook ophalen bij 2dehands"):
+de aanvulronde werkt nu per kanaal, pakt alleen artikelen die op dat kanaal ook
+echt een advertentie hebben, en kiest per beurt het kanaal met de meeste lege
+teksten. Eén kanaal per beurt, want twee keer 75 seconden past niet binnen de
+100 seconden die Cloudflare een verbinding openhoudt. Artikelen zonder
+advertentierij blijven bij Marktplaats, zodat er niets verandert voor accounts
+die al draaiden. Knoplabel in het dashboard heet nu "Fill N from
+Marktplaats/2dehands".
+
+**Bewijs.** Dezelfde ronde op zijn echte gegevens: oude weg 0 van 20
+teruggevonden en 0 omschrijvingen, nieuwe weg 20 van 20 en 20 omschrijvingen,
+met teksten van 818 tot 932 tekens van zijn eigen advertentiepagina's.
+
+**Over "continue dubbele advertenties".** Niet elke dubbel is van ons. Het paar
+uit zijn schermafdruk ("Tapijtje semi abstract / klassiek dessin 98/47", twee
+keer 40 euro) blijkt **twee echte advertenties op 2dehands**: m2065499767 en
+m2222635983, allebei nog live in zijn eigen openbare aanbod. Wij hebben ze
+allebei netjes geïmporteerd. De dubbelcontrole van vanmiddag (titel + gedeeld
+foto-adres) ziet deze niet, en dat hoort ook zo: het zijn twee bestaande
+advertenties, geen door ons gemaakte tweeling. Wat hij daaraan wil doen is een
+keuze op 2dehands zelf.
