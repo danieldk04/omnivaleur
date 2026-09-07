@@ -456,7 +456,7 @@ def _leads() -> list[dict]:
     leadgen gehaald: 171 IG/FB-leads gaven 0 aanmeldingen en 0 betalende klanten,
     en het IG-account is sinds ~09-08 geblokkeerd. IG_LEADS (leads.json) wordt
     daarom niet meer meegenomen. Zie docs/team-notes.md 06-09-2026."""
-    alles = [l for l in _load(MP_LEADS)
+    alles = [l for l in (_load(MP_LEADS) + _load(TWEEDEHANDS_LEADS))
              if _bruikbaar(l.get("email") or "")]
     uniek: dict[str, dict] = {}
     for lead in alles:
