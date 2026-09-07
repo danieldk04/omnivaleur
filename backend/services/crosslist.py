@@ -1061,20 +1061,32 @@ async def delist_all_platforms(item_id: str, user_id: str) -> list[dict]:
     # API-platform delete below — a previous ordering awaited eBay/Shopify first,
     # so a slow eBay call hung the whole request: the dashboard spinner never
     # cleared AND these jobs were never created, so Vinted/MP never opened.
+    # Verwijderopdrachten die al klaarstaan voor dit item, per advertentienummer.
+    # Zonder deze rem stapelt de reconciliatieronde (elke 20 min) een nieuwe
+    # opdracht op dezelfde advertentie, en een dubbele klik op Delist deed dat ook.
+    # Wél per ADVERTENTIE: bij twee advertenties op één platform (dubbele import,
+    # meerdere herplaatsingen) moet de tweede alsnog een eigen opdracht krijgen.
+    open_deletes = (await naast_de_lus(lambda: db.table("jobs")
+                    .select("id,platform,payload")
+                    .eq("user_id", user_id).eq("item_id", item_id).eq("action", "delete")
+                    .in_("status", ["pending", "claimed"]).limit(50).execute())).data or []
+
+    def _al_in_wachtrij(platform: str, ad_id):
+        for j in open_deletes:
+            if j.get("platform") != platform:
+                continue
+            j_pid = (j.get("payload") or {}).get("platform_listing_id")
+            if (j_pid or "") == (ad_id or "") or (not ad_id and not j_pid):
+                return j["id"]
+        return None
+
     for listing in ext_active:
-        # Staat er al een verwijderopdracht klaar voor dit item+platform? Dan geen
-        # tweede. Zonder deze rem stapelt de reconciliatieronde (elke 20 min) een
-        # nieuwe opdracht op dezelfde advertentie, en een dubbele klik op Delist
-        # deed dat ook. Zie verkoop_reconciliatie.py.
-        bestaat = (await naast_de_lus(lambda l=listing: db.table("jobs").select("id")
-                   .eq("user_id", user_id).eq("item_id", item_id).eq("platform", l["platform"])
-                   .eq("action", "delete").in_("status", ["pending", "claimed"])
-                   .limit(1).execute())).data
-        if bestaat:
+        bestaand_id = _al_in_wachtrij(listing["platform"], listing.get("platform_listing_id"))
+        if bestaand_id:
             results.append({
                 "platform": listing["platform"],
                 "status": "queued",
-                "job_id": bestaat[0]["id"],
+                "job_id": bestaand_id,
                 "message": "Delete job already queued — Chrome extension will process this",
             })
             continue
