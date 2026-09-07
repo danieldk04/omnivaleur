@@ -136,6 +136,12 @@ ALTER TABLE listings ADD COLUMN IF NOT EXISTS last_refresh_strategy VARCHAR(20);
 -- then falls back to the asking price and flags it as an estimate to confirm.
 ALTER TABLE listings ADD COLUMN IF NOT EXISTS sold_price NUMERIC(10,2);
 
+-- When we last emailed the seller that this listing is waiting for a "did it
+-- sell?" confirmation. Keeps the reminder (verkoop_herinnering.py) to one mail
+-- per day per seller. Without the column the reminder falls back to server
+-- memory and can repeat after a restart.
+ALTER TABLE listings ADD COLUMN IF NOT EXISTS sold_unconfirmed_notified_at TIMESTAMPTZ;
+
 -- Jobs can be scheduled for the future (used to jitter the "recreate" half of
 -- a relist so delete→create doesn't fire back-to-back like a script).
 ALTER TABLE jobs ADD COLUMN IF NOT EXISTS scheduled_for TIMESTAMPTZ;
