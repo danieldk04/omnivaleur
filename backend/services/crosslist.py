@@ -608,7 +608,7 @@ async def publish_to_platforms(item_id: str, platforms: list[str], user_id: str)
         from backend.api.jobs import _kanaal_kansloos, _melding_formulier_ging_niet_open
         for p in ext_platforms:
             try:
-                if await naast_de_lus(lambda p=p: _kanaal_kansloos(db, user_id, p)):
+                if await naast_de_lus(lambda p=p: _kanaal_kansloos_gecached(db, user_id, p)):
                     kansloos_geblokkeerd[p] = _melding_formulier_ging_niet_open(p)
             except Exception as e:  # noqa: BLE001 — een rem mag nooit publiceren blokkeren op een fout
                 logger.warning("kansloos-check mislukt voor %s/%s: %s", user_id, p, e)
