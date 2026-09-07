@@ -1016,15 +1016,27 @@ async def delist_all_platforms(item_id: str, user_id: str) -> list[dict]:
     # something the seller had already sold there. One sold row therefore blocks
     # the whole platform, not just its own row.
     sold_platforms = {l["platform"] for l in listings_resp.data if l["status"] == "sold"}
-    seen_platforms: dict[str, dict] = {}
-    for l in listings_resp.data:
-        if l["status"] not in _DELISTABLE_STATUSES or l["platform"] in sold_platforms:
-            continue
+    # Eén verwijdering per ADVERTENTIE, niet per platform. Bij een dubbele import
+    # of meerdere herplaatsingen staan er soms twee verschillende advertenties op
+    # hetzelfde platform (verschillend platform_listing_id) en die moeten allebei
+    # weg — de oude "één per platform" liet de tweede staan, dus bleef een
+    # verkocht artikel te koop. Rijen met hetzelfde id, of zonder id, vallen samen.
+    delistbaar = [l for l in listings_resp.data
+                  if l["status"] in _DELISTABLE_STATUSES and l["platform"] not in sold_platforms]
+    platforms_met_id = {l["platform"] for l in delistbaar if l.get("platform_listing_id")}
+    seen_ads: dict[tuple, dict] = {}
+    for l in delistbaar:
         p = l["platform"]
-        existing = seen_platforms.get(p)
-        if existing is None or (l.get("platform_listing_id") and not existing.get("platform_listing_id")):
-            seen_platforms[p] = l
-    active_listings = list(seen_platforms.values())
+        pid = l.get("platform_listing_id")
+        # Op een platform waar we al een advertentie mét nummer kennen, negeren we
+        # de nummerloze rijen: dat is vrijwel altijd dezelfde advertentie
+        # halverwege het publiceren, geen aparte.
+        if not pid and p in platforms_met_id:
+            continue
+        sleutel = (p, pid or "")
+        if sleutel not in seen_ads:
+            seen_ads[sleutel] = l
+    active_listings = list(seen_ads.values())
 
     skipped_sold = [
         {"platform": p, "status": "already_sold",
