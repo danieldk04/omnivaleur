@@ -1706,14 +1706,35 @@ async def _al_weg_voor_wij_er_waren(db, job: dict) -> bool:
     if not jong:
         return False
 
-    from backend.api.listings import VERDENKING_REDENEN
-    reden = VERDENKING_REDENEN["verdwenen_te_jong"]
-    for rij in jong:
-        (await naast_de_lus(lambda r=rij: db.table("listings").update({
-            "status": "sold_unconfirmed",
-            "error_message": reden,
-            "last_checked": datetime.now(timezone.utc).isoformat(),
-        }).eq("id", r["id"]).execute()))
+    # Staat dit artikel al ELDERS bevestigd op 'verkocht' (Vinted-order,
+    # Shopify/eBay-bestelling), dan is de verkoop geen vraag meer. De verdwenen
+    # advertentie op dit kanaal gaat dan rechtstreeks naar het archief in plaats
+    # van de verkoper opnieuw "is dit verkocht?" te vragen. Dit is precies het
+    # geval dat de reconciliatie-ronde oplevert: verkocht op A, nog een oude
+    # 'active'-rij op B.
+    al_verkocht_elders = ((await naast_de_lus(lambda: db.table("listings")
+        .select("platform").eq("item_id", job["item_id"]).eq("status", "sold")
+        .neq("platform", job["platform"]).limit(1).execute())).data or [])
+    if al_verkocht_elders:
+        for rij in jong:
+            (await naast_de_lus(lambda r=rij: db.table("listings").update({
+                "status": "delisted",
+                "error_message": None,
+                "last_checked": datetime.now(timezone.utc).isoformat(),
+            }).eq("id", r["id"]).execute()))
+        logger.info("[sold] item %s op %s: advertentie was al weg en het artikel is elders al "
+                    "verkocht (%s) — %d rij(en) gearchiveerd, geen vraag gesteld",
+                    job["item_id"], job["platform"],
+                    al_verkocht_elders[0]["platform"], len(jong))
+    else:
+        from backend.api.listings import VERDENKING_REDENEN
+        reden = VERDENKING_REDENEN["verdwenen_te_jong"]
+        for rij in jong:
+            (await naast_de_lus(lambda r=rij: db.table("listings").update({
+                "status": "sold_unconfirmed",
+                "error_message": reden,
+                "last_checked": datetime.now(timezone.utc).isoformat(),
+            }).eq("id", r["id"]).execute()))
 
     # De nieuwe advertentie mag niet geplaatst worden zolang niet vaststaat dat
     # het artikel nog te koop is. Zonder dit blijft de lus gewoon draaien: de
