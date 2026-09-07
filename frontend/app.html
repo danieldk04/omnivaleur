@@ -3453,6 +3453,20 @@ function renderBilling(data) {
     document.getElementById('nav-prijs-label').textContent = 'Account';
     loadInvoices();
 
+  } else if (status === 'payment_processing') {
+    // De eerste bankincasso loopt nog. Geen slot, geen paywall: een rustige
+    // melding en een account dat gewoon werkt.
+    hidePaywall();
+    upgradeCard.style.display = 'none';
+    activeCard.style.display  = 'block';
+    const until = current_period_end ? new Date(current_period_end).toLocaleDateString('en-GB') : '—';
+    document.getElementById('billing-active-detail').textContent = 'Payment processing — your bank is confirming your first direct debit. This normally takes a few business days.';
+    document.getElementById('billing-next-date').textContent = until;
+    document.getElementById('billing-status-badge').textContent = 'Payment processing';
+    document.getElementById('billing-status-badge').className = 'status-pill payment_processing';
+    document.getElementById('nav-prijs-label').textContent = 'Account';
+    loadInvoices();
+
   } else if (status === 'past_due') {
     if (graceBlock) {
       showPaywall('Your payment failed and the grace period has ended. Update your payment details to restore access.', 'Update payment →');
