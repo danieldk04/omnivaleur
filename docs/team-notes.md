@@ -6213,3 +6213,47 @@ account ondertussen op slot leek te zitten lag aan ons en is opgelost.
 accountnaam (Haas); voor SEPA is dat toegestaan, maar als de incasso op 14 sep
 alsnog wordt geweigerd valt ze terug op het normale `past_due`-pad met 2 dagen
 bedenktijd en de gewone betaalherinnering.
+
+## 07-09-2026 — Egbert (Papa's Plectrums): 2dehands publiceren is 671 keer mislukt, nul keer gelukt
+
+**Zijn mail.** "Voordat ik verder kan zal eerst dit probleem opgelost moeten
+worden" — met een schermafbeelding: rode balk "10 publishes failed · 10 on
+2dehands · Extension timed out waiting for this 2dehands job to finish".
+
+**Gemeten aan zijn opdrachtenlogboek (live database).** Egbert
+(info@papas-plectrums.nl, zakelijk Admarkt-verkoper) probeert zijn 5.533
+geïmporteerde Marktplaats-advertenties te crosslisten naar 2dehands. **671
+plaatsopdrachten voor 2dehands, nul geslaagd, drie weken lang.** Zijn 5.533
+Marktplaats-rijen staan allemaal `active` maar zijn geïmporteerd, niet door ons
+geplaatst (nul Marktplaats-plaatsopdrachten). Naar Vinted/Facebook nooit iets
+geprobeerd.
+
+De 2dehands-mislukkingen vallen in twee vormen, allebei symptoom van hetzelfde:
+1. **Time-out** (duur claim→afgemeld steeds 200-227 s): het invulscript laadt op
+   `/plaats/*`, en 2dehands.be stuurt de pagina daarna naar `/identity/v2/login`.
+   De JS-context sterft, niemand meldt iets, de bewaker slaat na 3 minuten toe.
+2. **"You are not signed in to 2dehands"**: de achtergrondmeting krijgt 401.
+
+**Wat 100% zeker is en is gerepareerd:**
+- Server (`_kanaal_kansloos` in jobs.py): de rem tegen een kansloos kanaal keek
+  naar "3 identieke time-outs op rij" en telde een geslaagde SCAN als "werkte
+  ooit". Allebei lieten Egberts 671/0 door. Nu: ≥10 ondoorgronde mislukkingen +
+  nooit één echte plaatsing → kanaal geblokkeerd. Bewezen op zijn echte log
+  (oud=False, nieuw=True). Marktplaats blijft ongemoeid.
+- `publish_to_platforms` weigert nu nieuwe 2dehands-opdrachten voor hem
+  (`status: "blocked"` met uitleg) tot er één lukt. Zelfhelend.
+- Zijn 10 rode balken staan nu op de uitgelegde reden i.p.v. "timed out".
+- Extensie 1.0.310: de inlogpagina-detectie werkte niet meer zodra het script
+  geladen was (`!meta.scriptSeen`-voorwaarde); nu wél. De bewaker legt bij een
+  time-out vast waar het tabblad terechtkwam.
+
+**Wat NIET zeker is (vergt Egberts 2dehands-inlog, die ik niet heb):** waaróm
+2dehands zijn `/plaats` weigert. Vermoedelijk (a) hij is niet op 2dehands.be zelf
+ingelogd — aparte site en login van marktplaats.nl, en hij importeerde alleen ván
+Marktplaats — of (b) zijn zakelijke account kan de particuliere `/plaats`-flow
+niet gebruiken. De mail vraagt hem `https://www.2dehands.be/plaats/728/748` zelf
+te openen en te zeggen wat hij ziet. Extensie 1.0.310 legt dat bij zijn volgende
+poging ook automatisch vast.
+
+**Actiepunt Daniel:** `dist/omnivaleur-extension-1.0.310.zip` uploaden naar de
+Chrome Web Store, en concept-mail aan Egbert nakijken (staat in de chat).
