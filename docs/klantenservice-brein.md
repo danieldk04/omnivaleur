@@ -85,9 +85,12 @@ Prijs en proef:
 - Na de proef zijn er nog 2 dagen respijt, daarna gaat publiceren op slot.
   Inloggen, je overzicht bekijken en betalen blijft altijd werken.
 
-Ondersteunde kanalen:
+Ondersteunde kanalen (dit is de volledige lijst):
 
 - Marktplaats, 2dehands, Vinted, eBay en Shopify.
+- Verder niets. Google Shopping, Meta, Reverb, Refurbed, Bol, Amazon en
+  dergelijke worden NIET ondersteund. Zeg dat eerlijk en direct; verzin geen
+  "binnenkort".
 - Facebook Marketplace is nog in test. Noem dat niet uit jezelf; vraagt iemand
   er expliciet naar, zeg dan dat het er is maar nog in een testfase.
 
