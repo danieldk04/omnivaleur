@@ -6,9 +6,9 @@
     "lastMatchedPatterns": [
       "mem-shopify_workflow-auto-push-workflow-for-shopify",
       "mem-revaleur-blog-system----",
-      "mem-shopify_workflow-belangrijk--nooit-content-over",
       "mem-revaleur-blog-no-test-publishing----",
-      "mem-MEMORY-memory-index"
+      "mem-MEMORY-memory-index",
+      "mem-shopify_workflow-belangrijk--nooit-content-over"
     ]
   },
   "metrics": {
@@ -17,5 +17,5 @@
     "tasks": 0,
     "errors": 0
   },
-  "updatedAt": "2026-09-07T18:35:43.167Z"
+  "updatedAt": "2026-09-07T18:38:34.987Z"
 }

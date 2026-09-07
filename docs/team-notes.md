@@ -6524,3 +6524,10 @@ allebei netjes geïmporteerd. De dubbelcontrole van vanmiddag (titel + gedeeld
 foto-adres) ziet deze niet, en dat hoort ook zo: het zijn twee bestaande
 advertenties, geen door ons gemaakte tweeling. Wat hij daaraan wil doen is een
 keuze op 2dehands zelf.
+
+**Uitkomst diezelfde avond.** De ronde ook meteen echt gedraaid op zijn account:
+197 artikelen zonder tekst terug naar 14. Die laatste 14 zijn nagemeten in zijn
+openbare 2dehands-aanbod en staan daar niet meer; hun advertentie is weg, dus er
+valt geen tekst meer op te halen. Onze `listings` noemt ze nog "active", wat weer
+het bekende gat is: bij een verkoper zonder Marktplaats-koppeling wordt niets
+nagekeken (zie de notitie van eerder vandaag).
