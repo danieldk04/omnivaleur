@@ -38,6 +38,42 @@ EERSTE_TERUGBLIK_UREN = 24
 OVERLAP_MINUTEN = 5
 
 
+async def match_shopify_sale(db, user_id: str, ref: dict) -> str | None:
+    """Welk item hoort bij deze Shopify-bestelregel? None als het niet zeker is.
+
+    1. product_id → de Shopify-advertentierij die het als platform_listing_id
+       draagt (en het item moet van deze winkelier zijn).
+    2. SKU → het item van deze winkelier met die SKU.
+
+    Alles wat niet ondubbelzinnig oplost wordt overgeslagen, nooit geraden: een
+    verkeerde match haalt het artikel van álle andere kanalen af.
+    """
+    pid = ref.get("product_id")
+    if pid:
+        rows = ((await naast_de_lus(
+            lambda: db.table("listings").select("item_id")
+            .eq("platform", "shopify").eq("platform_listing_id", str(pid))
+            .limit(10).execute(), herkans=True)).data or [])
+        item_ids = {r["item_id"] for r in rows if r.get("item_id")}
+        if len(item_ids) == 1:
+            iid = next(iter(item_ids))
+            eigen = ((await naast_de_lus(
+                lambda: db.table("items").select("id")
+                .eq("id", iid).eq("user_id", user_id).limit(1).execute(),
+                herkans=True)).data or [])
+            if eigen:
+                return iid
+    sku = (ref.get("sku") or "").strip()
+    if sku:
+        got = ((await naast_de_lus(
+            lambda: db.table("items").select("id")
+            .eq("user_id", user_id).eq("sku", sku).limit(2).execute(),
+            herkans=True)).data or [])
+        if len(got) == 1:
+            return got[0]["id"]
+    return None
+
+
 async def _bestellingen(shop: str, token: str, sinds: str) -> list[dict]:
     import httpx
 
