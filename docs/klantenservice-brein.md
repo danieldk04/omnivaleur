@@ -226,8 +226,12 @@ Daniel
 ## Onderhoud
 
 Verandert er iets aan prijs, kanalen, termijnen of een veelvoorkomende bug, werk
-dan de betreffende regel hierboven bij en zet de datum bovenaan opnieuw. De
-ontwikkelaar doet dit als onderdeel van de wijziging die het veroorzaakt.
+dan de betreffende regel hierboven bij, zet de datum bovenaan opnieuw, en
+overschrijf daarna de kopie in Daniels Drive met `update_drive_file` zodat de Gem
+de nieuwe tekst oppikt. De ontwikkelaar doet dit als onderdeel van de wijziging
+die het veroorzaakt.
+
+Drive-bestand (danieldekoning66@gmail.com): [NOG INVULLEN: file-id na aanmaken]
 
 Nog open: er staan nog geen echte verstuurde mails van Daniel in dit bestand als
 voorbeeld. De toonregels hierboven komen uit eerdere correcties van hem en zijn
