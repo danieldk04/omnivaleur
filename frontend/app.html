@@ -3722,6 +3722,17 @@ function renderTrialBanner(data) {
         Activate now →
       </button>`;
 
+  } else if (status === 'payment_processing') {
+    banner.style.cssText = 'display:flex;background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;padding:12px 18px;margin-bottom:20px;align-items:center;justify-content:space-between;gap:12px';
+    banner.innerHTML = `
+      <div style="display:flex;align-items:center;gap:10px">
+        <span style="font-size:18px">⏳</span>
+        <div>
+          <div style="font-weight:600;font-size:13px;color:#1e40af">Your first payment is on its way</div>
+          <div style="font-size:12px;color:#3b82f6;margin-top:1px">Your bank is processing it — a direct debit takes a few business days to clear. Your account stays fully active, and there is nothing you need to do.</div>
+        </div>
+      </div>`;
+
   } else if (status === 'past_due') {
     banner.style.cssText = 'display:flex;background:#fef2f2;border:1px solid #fca5a5;border-radius:8px;padding:12px 18px;margin-bottom:20px;align-items:center;justify-content:space-between;gap:12px';
     banner.innerHTML = `
