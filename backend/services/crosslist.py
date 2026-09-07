@@ -1425,18 +1425,22 @@ async def handle_item_sold(item_id: str, sold_on_platform: str, sold_price: floa
 def _enqueue_extension_delete(db, user_id: str, item_id: str, listing: dict, item_row: dict | None) -> None:
     """
     Queue a delete job for the extension to remove `listing` in the user's Chrome.
-    Skips if a delete is already pending/claimed for this item+platform, so a
-    repeated sale detection can't spawn duplicate delete tabs.
+    Skips if a delete is already pending/claimed for this exact ADVERT, so a
+    repeated sale detection can't spawn duplicate delete tabs — but a second
+    advert on the same platform (double import, extra relist) still gets its own.
     """
     platform = listing["platform"]
-    existing = (
-        db.table("jobs").select("id")
+    ad_id = listing.get("platform_listing_id") or ""
+    open_deletes = (
+        db.table("jobs").select("id,payload")
         .eq("user_id", user_id).eq("item_id", item_id).eq("platform", platform)
         .eq("action", "delete").in_("status", ["pending", "claimed"])
-        .limit(1).execute().data
+        .limit(50).execute().data or []
     )
-    if existing:
-        return
+    for j in open_deletes:
+        j_pid = (j.get("payload") or {}).get("platform_listing_id") or ""
+        if j_pid == ad_id or (not ad_id and not j_pid):
+            return
     payload = {
         **(item_row or {}),
         # MP/2dh delete searches the overview by the exact (Dutch-translated)
