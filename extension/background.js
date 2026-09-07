@@ -2807,11 +2807,33 @@ async function fireJobWatchdog(tabId) {
       return;
     }
   }
+  // WAT STOND ER OP HET TABBLAD OP HET MOMENT VAN AFBREKEN? (07-09-2026)
+  //
+  // scriptSeen zegt alleen dat ons script óóit is geladen, niet dat het formulier
+  // er nog is. Bij Egbert Brouwer laadde het script en stuurde 2dehands de pagina
+  // daarna naar de inlogpagina; de melding zei dan "de pagina is misschien
+  // veranderd" en niemand wist waarheen. Kijk hier daarom hetzelfde als
+  // meldNooitBegonnen doet, en zeg het adres erbij. Zit het tabblad op een inlog-
+  // of verificatiepagina, dan is dat de echte oorzaak: behandel het als "formulier
+  // ging nooit open" (stopt ook de rest van de wachtrij).
+  const snap = await bekijkVastgelopenTabblad(tabId);
+  const opInlog = snap && (snap.wachtwoordveld
+      || MP_LOGINPAGINA.test(snap.url || "")
+      || /unauthorized|inloggen|log ?in|sign ?in|verifieer je|verify your (account|business|identity)/i.test(snap.begin || ""));
+  if (opInlog && (meta.platform === "marktplaats" || meta.platform === "2dehands")) {
+    console.warn(`[Omnivaleur] Watchdog: job ${meta.jobId} (${meta.platform}) — tabblad staat op een inlog/verificatiepagina (${snap.url}); behandeld als "formulier ging nooit open".`);
+    await meldNooitBegonnen(tabId, meta, snap);
+    return;
+  }
+  const feiten = snap
+    ? ` [tab op ${snap.url}, titel ${JSON.stringify((snap.titel || "").slice(0, 60))}, `
+      + `${snap.velden} invulveld(en), invulscript geladen: ${snap.stempel || "nee"}]`
+    : " [het tabblad was al weg voordat we konden kijken]";
   try {
     await reportError(meta.jobId, meta.serverUrl,
       `Extension timed out waiting for this ${meta.platform} job to finish (no response after ${JOB_TAB_TIMEOUT_MIN} minutes). ` +
       `The page may have changed, needs a manual step, or the extension lost track of the tab. ` +
-      `Check the tab if it's still open, then publish again.`);
+      `Check the tab if it's still open, then publish again.` + feiten);
   } catch (e) {
     console.error("[Omnivaleur] Watchdog: failed to report timeout error:", e);
   }
