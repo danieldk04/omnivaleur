@@ -221,7 +221,8 @@ def test_de_vraag_staat_boven_de_itemlijst_met_beide_knoppen():
     assert "answerPossiblySold('${item.id}','${p}',true" in APP
     assert "answerPossiblySold('${item.id}','${p}',false" in APP
     # En hij zegt erbij dat er nog niets is weggehaald.
-    assert "Nothing has been removed anywhere yet" in APP
+    assert "Nothing has been removed from any platform" in APP
+    assert "only takes a listing down from your other channels once" in APP
 
 
 def test_de_vraag_staat_ook_bij_analytics():
