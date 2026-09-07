@@ -592,17 +592,20 @@ def sold_from_messages(body: dict, background_tasks: BackgroundTasks,
     Daniel het zelf nakijkt. De extensie opent die pagina toch al elk kwartier
     voor het tellen van berichten, dus dit kost geen extra bezoek.
 
-    Dit is bewijs, geen aanwijzing: hier wordt dus wél geboekt en niet gevraagd.
-    Drie grenzen houden dat veilig:
+    SINDS 07-09-2026 (Daniel): niet meer meteen boeken en afmelden, maar VRAGEN.
+    De badge is een sterke aanwijzing, maar afmelden bij andere kanalen is
+    onherstelbaar en Daniel wil dat de verkoper dat zelf bevestigt. De rij gaat
+    dus op 'sold_unconfirmed' met reden "badge" en verschijnt in het dashboard
+    als ja/nee-vraag. Bevestigt hij, dan draait de gewone afhandeling.
+
+    Drie grenzen houden de aanwijzing zuiver:
 
     1. De extensie meldt alleen een LOS labeltje dat exact "verkocht" is, nooit
        het woord uit een berichtvoorbeeld.
     2. De sleutel is het nummer voor de titel — "(1308)" — en dat moet bij precies
-       één artikel van deze verkoper horen. Twee treffers betekent overslaan:
-       liever niets boeken dan de verkeerde verkoop.
+       één artikel van deze verkoper horen. Twee treffers betekent overslaan.
     3. Alleen artikelen die nog ergens te koop staan. Een badge blijft eeuwig op
-       een oud gesprek staan; zonder deze grens zou elke ronde de hele
-       verkoopgeschiedenis opnieuw als omzet van vandaag boeken.
+       een oud gesprek staan.
 
     Body: {platform, sold: [{sku, title}]}
     """
@@ -619,7 +622,9 @@ def sold_from_messages(body: dict, background_tasks: BackgroundTasks,
         if sku:
             per_sku.setdefault(sku, []).append(it["id"])
 
-    geboekt, overgeslagen = 0, 0
+    gevraagd, overgeslagen = 0, 0
+    nu = datetime.now(timezone.utc).isoformat()
+    reden = VERDENKING_REDENEN["badge"]
     for regel in regels[:200]:
         sku = str((regel or {}).get("sku") or "").strip()
         kandidaten = per_sku.get(sku) or []
@@ -635,21 +640,30 @@ def sold_from_messages(body: dict, background_tasks: BackgroundTasks,
 
         rijen = (db.table("listings").select("status,platform")
                  .eq("item_id", item_id).execute().data or [])
-        if any(r.get("status") == "sold" for r in rijen):
-            overgeslagen += 1            # al geboekt, badge blijft eeuwig staan
+        if any(r.get("status") in ("sold", "sold_unconfirmed") for r in rijen):
+            overgeslagen += 1            # al geboekt of al gevraagd
             continue
         if not any(r.get("status") in IN_DE_VERKOOP for r in rijen):
             overgeslagen += 1            # staat nergens meer te koop
             continue
 
-        logger.info("[sold] berichten: verkocht-badge op %s (%s) → boeken op %s",
+        logger.info("[sold] berichten: verkocht-badge op %s (%s) → ter bevestiging op %s",
                     sku, item_id, platform)
-        background_tasks.add_task(handle_item_sold, item_id, platform, None)
-        geboekt += 1
+        try:
+            (db.table("listings").update({
+                "status": "sold_unconfirmed", "error_message": reden, "last_checked": nu,
+            }).eq("item_id", item_id).eq("platform", platform)
+              .in_("status", ["active", "hidden", "relisting", "pending"]).execute())
+        except Exception as e:  # noqa: BLE001
+            logger.warning("[sold] badge-reden niet meegeschreven voor %s/%s: %s", item_id, platform, e)
+            (db.table("listings").update({"status": "sold_unconfirmed"})
+              .eq("item_id", item_id).eq("platform", platform)
+              .in_("status", ["active", "hidden", "relisting", "pending"]).execute())
+        gevraagd += 1
 
-    logger.info("[sold] berichten (%s): %d geboekt, %d overgeslagen van %d melding(en)",
-                platform, geboekt, overgeslagen, len(regels))
-    return {"booked": geboekt, "skipped": overgeslagen}
+    logger.info("[sold] berichten (%s): %d ter bevestiging, %d overgeslagen van %d melding(en)",
+                platform, gevraagd, overgeslagen, len(regels))
+    return {"asked": gevraagd, "skipped": overgeslagen}
 
 
 @router.post("/possibly-sold/answer")
