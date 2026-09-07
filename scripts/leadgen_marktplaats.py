@@ -1096,6 +1096,10 @@ def main() -> None:
             p.add_argument("--update", action="store_true",
                            help="bestaande rijen bijwerken in plaats van overslaan")
         p.add_argument("--workers", type=int, default=8)
+        p.add_argument("--site", choices=list(SITES), default="marktplaats",
+                       help="welke bron: marktplaats (NL) of 2dehands (BE)")
+
+    m.add_argument("--site", choices=list(SITES), default="marktplaats")
 
     d = sub.add_parser("discover", help="zakelijke verkopers uit de rubrieken halen")
     common(d, disc=True)
