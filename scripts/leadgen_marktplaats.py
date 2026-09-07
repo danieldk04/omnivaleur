@@ -68,12 +68,34 @@ from scripts import leadgen_instagram as ig  # noqa: E402
 from scripts import leadgen_notion as notion  # noqa: E402
 
 OUT = Path(__file__).parent / "output" / "leads"
-SELLERS = OUT / "mp_sellers.json"
-MP_LEADS = OUT / "mp_leads.json"
+SITES = {
+    "marktplaats": {"host": "https://www.marktplaats.nl", "platform": "MP",
+                    "sellers": "mp_sellers.json", "leads": "mp_leads.json"},
+    "2dehands": {"host": "https://www.2dehands.be", "platform": "2dehands",
+                 "sellers": "2dh_sellers.json", "leads": "2dh_leads.json"},
+}
 
-API = "https://www.marktplaats.nl/lrp/api/search"
-PROFILE = "https://www.marktplaats.nl/smb-profile/profile/{sid}"
-SELLER_PAGE = "https://www.marktplaats.nl/u/x/{sid}/"
+# Wordt door main() gezet aan de hand van --site; standaard Marktplaats zodat een
+# los aangeroepen functie (of een test) altijd een geldige bron heeft.
+SITE = "marktplaats"
+API = PROFILE = SELLER_PAGE = ""
+SELLERS = MP_LEADS = OUT / "_ongezet"
+PLATFORM = "MP"
+
+
+def _activate(site: str) -> None:
+    global SITE, API, PROFILE, SELLER_PAGE, SELLERS, MP_LEADS, PLATFORM
+    cfg = SITES[site]
+    SITE = site
+    API = cfg["host"] + "/lrp/api/search"
+    PROFILE = cfg["host"] + "/smb-profile/profile/{sid}"
+    SELLER_PAGE = cfg["host"] + "/u/x/{sid}/"
+    SELLERS = OUT / cfg["sellers"]
+    MP_LEADS = OUT / cfg["leads"]
+    PLATFORM = cfg["platform"]
+
+
+_activate("marktplaats")
 UA = ("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 "
       "(KHTML, like Gecko) Chrome/122.0 Safari/537.36")
 
