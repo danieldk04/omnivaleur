@@ -17,6 +17,33 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ---
 
+## nl-landingspagina
+
+*07-09-2026 — "Nederlandse homepage op /nl is een losse vaste kopie van index.html, geen i18n; dashboard bewust nog niet vertaald"*
+
+Sinds 07-09-2026 staat er een Nederlandse landingspagina op `https://omnivaleur.com/nl`.
+
+**Vorm:** `frontend/nl.html` is een 1-op-1 handvertaalde kopie van `frontend/index.html`
+(zelfde CSS en JS, alleen tekst / meta / `lang`). Bewust GEEN i18n-laag of live
+taal-switch in `index.html`: dat bestand is ~1.300 regels HTML+CSS+JS door elkaar,
+een tweede vaste kopie is goedkoper. Route: `landing_nl` in `backend/main.py`.
+Taalknop `EN | NL` is een gewone link in de nav van `index.html`, `nl.html` en
+`mp-video.html`. hreflang + sitemap-regel toegevoegd. Zelfde patroon als de blog
+("nl-blogindex-en-vertaalinhaalronde").
+
+**Onderhoudslast:** elke tekstwijziging aan `index.html` moet nu ook in `nl.html`.
+
+**Dashboard (`app.html`) is bewust NOG NIET vertaald.** Reden: nog volop in
+ontwikkeling, nieuwe functies komen er in het Engels bij, dus vertalen nu wordt
+telkens ingehaald. Afspraak met Daniel: dashboard in één ronde vertalen zodra er
+een week alleen kleine bugs zijn geweest en geen schermen zijn omgegooid. Dat is
+het sein dat de oppervlakte stabiel genoeg is voor één schone vertaalronde.
+
+Zie "eerst-recente-wijzigingen-lezen" want dit raakt drie partijen die naast
+elkaar werken.
+
+---
+
 ## klantmail-kort-en-menselijk
 
 *07-09-2026 — Klantmails van Daniel: hooguit 120 woorden, schrijven zoals je praat, goed nieuws vooraan, geen boetekleed en geen slijmen*

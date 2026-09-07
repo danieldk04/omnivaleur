@@ -6118,3 +6118,42 @@ De extensie was niet geïnstalleerd in die Chrome, dus de achtergrondmeting zelf
 is daar niet nagespeeld. Dat hoefde ook niet: die 401 is bij Egbert al twee keer
 gemeten, en de reparatie hangt niet af van of de achtergrond het fout heeft, maar
 van wie het laatste woord krijgt.
+
+## 07-09-2026 — Nederlandse landingspagina live op /nl, met taalknop
+
+**Wat Daniel wilde.** De website naar het Nederlands, te beginnen met de
+landingspagina, met een knop waarmee bezoekers wisselen tussen Engels en
+Nederlands. Het dashboard (`app.html`) blijft voorlopig Engels: dat is nog volop
+in ontwikkeling en elke nieuwe functie komt er in het Engels bij, dus een
+vertaalslag daar nu kost dubbel werk en wordt telkens ingehaald. Afspraak: het
+dashboard doen we in één ronde zodra er een week alleen kleine bugs zijn geweest
+en geen schermen zijn omgegooid.
+
+**Aanpak.** Geen i18n-laag of live taal-switch in de grote handgeschreven
+`index.html`, maar een tweede vaste bestand `frontend/nl.html` dat een 1-op-1
+Nederlandse kopie is (zelfde CSS en JS, alleen tekst, meta en `lang` anders).
+Reden: `index.html` is ~1.300 regels met HTML, CSS en JS door elkaar; een tweede
+vaste kopie is nu goedkoper te onderhouden dan een vertaalmachinerie, en dit is
+precies hoe de site het al doet voor de blog (`/blog` en `/nl/blog`).
+
+**Wat er nu staat:**
+- `https://omnivaleur.com/nl` serveert de Nederlandse homepage. Route in
+  `backend/main.py` (`landing_nl`), naast de bestaande losse routes.
+- Taalknop `EN | NL` in de nav van `index.html`, `nl.html` en `mp-video.html`.
+  Het is een gewone link tussen de twee pagina's, geen JS.
+- `hreflang`-koppeling (en / nl / x-default) in de kop van beide homepages, zodat
+  Google ze als vertaling van elkaar ziet. `/nl` toegevoegd aan `sitemap.xml`.
+- `mp-video.html` (de Nederlandse videopagina uit de koude mail) had nog een
+  Engelse nav die naar de Engelse homepage wees. Nu Nederlands en wijst naar
+  `/nl`; de `/nl`-nav heeft omgekeerd een link "Video" naar `/mp-video`. Zo
+  vormen de twee Nederlandse pagina's één geheel. `mp-video` blijft `noindex`.
+- Elke zichtbare tekst is vertaald: hero, de hele "In de app"-rondleiding,
+  probleemkaarten, functies, ingebouwde bescherming, "hoe het werkt", prijsblok
+  (€19,99 met komma), footer en JSON-LD-beschrijvingen.
+
+**Zekerheid.** De pagina is lokaal in de browser gecontroleerd: rendert goed,
+geen consolefouten, alle tekst Nederlands, geen Engels blijven staan. De route
+`/nl` zelf is niet end-to-end gedraaid (vergt de backend met Supabase-env
+lokaal); het is drie regels `FileResponse` identiek aan `/mp-video` ernaast.
+De rondleiding-JS is niet aangeraakt (alleen tekstknopen), dus die werkt zoals
+op de bestaande `index.html`.
