@@ -716,7 +716,7 @@ def answer_possibly_sold(body: dict, background_tasks: BackgroundTasks,
 
 
 @router.post("/sold")
-def mark_sold(item_id: str, platform: str, background_tasks: BackgroundTasks, sold_price: float | None = None, dry_run: bool = False, user_id: str = Depends(get_current_user)):
+def mark_sold(item_id: str, platform: str, background_tasks: BackgroundTasks, request: Request, sold_price: float | None = None, dry_run: bool = False, user_id: str = Depends(get_current_user)):
     db = get_db()
     item = db.table("items").select("id").eq("id", item_id).eq("user_id", user_id).execute()
     if not item.data:
@@ -737,6 +737,32 @@ def mark_sold(item_id: str, platform: str, background_tasks: BackgroundTasks, so
         would_delist = sorted({l["platform"] for l in (others.data or [])})
         logger.info("[sold] DRY-RUN item_id=%s platform=%s would_delist=%s", item_id, platform, would_delist)
         return {"status": "dry_run", "would_mark_sold": platform, "would_delist": would_delist}
+
+    # Komt deze melding van de EXTENSIE (draagt het versiekopstuk) én gaat het om
+    # Marktplaats/2dehands, dan is een "verkocht"-label geen bewijs maar een
+    # aanwijzing: niet boeken en overal afmelden, maar de verkoper laten
+    # bevestigen. Zo is de bevestigingsstap ook waterdicht voor extensies die de
+    # nieuwe melding-route nog niet hebben. De handmatige Sold-knop in het
+    # dashboard draagt dit kopstuk niet en werkt dus gewoon door.
+    van_extensie = bool(request.headers.get("x-omnivaleur-ext"))
+    if van_extensie and platform in ("marktplaats", "2dehands"):
+        rij = (db.table("listings").select("id,status")
+               .eq("item_id", item_id).eq("platform", platform)
+               .in_("status", ["active", "hidden", "relisting", "pending"])
+               .limit(1).execute().data or [])
+        if rij:
+            try:
+                (db.table("listings").update({
+                    "status": "sold_unconfirmed",
+                    "error_message": VERDENKING_REDENEN["label"],
+                    "last_checked": datetime.now(timezone.utc).isoformat(),
+                }).eq("id", rij[0]["id"]).execute())
+            except Exception:  # noqa: BLE001
+                (db.table("listings").update({"status": "sold_unconfirmed"})
+                 .eq("id", rij[0]["id"]).execute())
+        logger.info("[sold] extensie-melding op %s voor item %s → ter bevestiging (niet automatisch afgemeld)",
+                    platform, item_id)
+        return {"status": "awaiting_confirmation"}
 
     logger.info("[sold] POST /sold item_id=%s platform=%s sold_price=%s -> delist triggered", item_id, platform, sold_price)
     background_tasks.add_task(handle_item_sold, item_id, platform, sold_price)
