@@ -41,6 +41,10 @@ nav { position: sticky; top: 0; z-index: 100; background: rgba(255,255,255,.95);
 .nav-links a { font-size: 14px; font-weight: 500; color: var(--muted); transition: color .15s; text-decoration: none; }
 .nav-links a:hover, .nav-links a.active { color: var(--text); }
 .nav-actions { display: flex; gap: 10px; align-items: center; flex-shrink: 0; }
+.lang-switch { display: flex; gap: 4px; align-items: center; font-size: 13px; font-weight: 600; }
+.lang-switch a { color: var(--muted); padding: 3px 7px; border-radius: 6px; text-decoration: none; }
+.lang-switch a:hover { color: var(--text); background: rgba(0,0,0,.04); }
+.lang-switch .on { color: var(--text); padding: 3px 7px; border: 1px solid var(--border); border-radius: 6px; }
 .btn { display: inline-flex; align-items: center; gap: 6px; padding: 9px 20px; border-radius: 100px; font-size: 14px; font-weight: 600; cursor: pointer; border: none; transition: all .2s; white-space: nowrap; text-decoration: none; }
 .btn-outline { background: transparent; border: 1.5px solid var(--border); color: var(--text); }
 .btn-outline:hover { border-color: var(--blue); color: var(--blue); }
