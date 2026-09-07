@@ -149,13 +149,27 @@ Kom je er niet uit, stuur me dan even een berichtje.
 Groetjes,
 Daniel
 
+### Vraagt naar kanalen die wij niet allemaal dekken
+
+Hoi,
+
+Dank voor je bericht. Omnivaleur werkt met Marktplaats, 2dehands, Vinted, eBay en
+Shopify. Kanalen als Google Shopping, Meta, Reverb en Refurbed doen wij niet, dus
+alles vanuit een plek beheren gaat in jouw geval niet lukken.
+
+Verandert dat aan onze kant, dan laat ik het je weten. Wil je in de tussentijd
+toch zien hoe het werkt: https://omnivaleur.com/mp-video
+
+Groetjes,
+Daniel
+
 ### Vraagt naar de prijs of welke marketplaces
 
 Hoi <voornaam>,
 
-Omnivaleur kost 19,99 euro per maand, met alle marketplaces inbegrepen:
-Marktplaats, 2dehands, Vinted, eBay en Shopify. De eerste 7 dagen zijn gratis en
-daarna is het maandelijks opzegbaar.
+Omnivaleur kost 19,99 euro per maand, met alle ondersteunde marketplaces
+inbegrepen: Marktplaats, 2dehands, Vinted, eBay en Shopify. De eerste 7 dagen
+zijn gratis en daarna is het maandelijks opzegbaar.
 
 Wil je het eerst zien, hier staat een korte demo: https://omnivaleur.com/mp-video
 
