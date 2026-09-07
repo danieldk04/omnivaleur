@@ -3169,7 +3169,18 @@ def stop_platform(body: dict, request: Request, user_id: str = Depends(get_curre
     reden = str(body.get("reason") or "").strip() or _melding_formulier_ging_niet_open(platform)
     reden = _reden_zonder_vals_verwijt(
         db, user_id, platform, reden, request.headers.get("x-omnivaleur-ext"))
-    return {"ok": True, "cancelled": _stop_wachtrij(db, user_id, platform, reden)}
+    gestopt = _stop_wachtrij(db, user_id, platform, reden)
+    # Is het kanaal aantoonbaar kansloos, trek dan ook de al bestaande rode balken
+    # gelijk — anders blijft er een muur van oude, wisselende teksten staan naast
+    # de ene uitgelegde reden. Alleen bij bewezen kansloos: een eenmalige stop
+    # (tijdelijke storing) mag niet het hele overzicht herschrijven.
+    try:
+        if _kanaal_kansloos(db, user_id, platform):
+            _gelijk_de_kansloze_muur(db, user_id, platform,
+                                     _melding_formulier_ging_niet_open(platform))
+    except Exception:  # noqa: BLE001
+        logger.warning("stop-platform: kansloze-muur gelijktrekken mislukt voor %s/%s", user_id, platform)
+    return {"ok": True, "cancelled": gestopt}
 
 
 # Een "je bent niet ingelogd" dat de extensie meestuurt is een oordeel uit haar
