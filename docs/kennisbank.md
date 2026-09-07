@@ -17,6 +17,146 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ---
 
+## stille-tab-is-geen-formulier
+
+*07-09-2026 — "Een opdracht die zonder één teken van leven afloopt betekent \"het formulier ging nooit open\", niet \"de pagina is veranderd\"; 2dehands en Marktplaats hebben aparte logins"*
+
+Loopt een publicatie-opdracht af op de bewaker van drie minuten **zonder dat het
+invulscript zich ooit heeft gemeld**, dan is de pagina die openging niet het
+plaatsformulier geweest. Dat is een andere storing dan "het formulier liep vast"
+en vraagt om een ander antwoord.
+
+Gemeten 03-09-2026 bij Egbert Brouwer (papas-plectrums): 305 opdrachten voor
+2dehands, nooit één geslaagd, 26 afgebroken na exact 3m20s, 279 in de wachtrij.
+Zijn Marktplaats-opdrachten uit dezelfde ronde liepen wél door, en bij andere
+verkopers slaagde 2dehands in dezelfde periode 97 keer. www.2dehands.be antwoordt
+op `/plaats/{l1}/{l2}` met HTTP 401 (12 bytes platte tekst) zolang je daar niet
+bent ingelogd; op zo'n pagina draait ons invulscript niet.
+
+**marktplaats.nl en 2dehands.be zijn twee aparte sites met twee aparte
+inlogsessies.** Ingelogd op de een is niet ingelogd op de ander. De categorie-
+nummers zijn wél identiek (nagemeten via hun eigen zoek-API: 728/748 geeft op
+allebei "Muziek en Instrumenten > Gitaren | Elektrisch").
+
+**Why:** de extensie doet met opzet één opdracht tegelijk. 279 × 3,5 minuut is
+zestien uur waarin de verkoper verder niets kan publiceren, met 279 keer dezelfde
+onbegrijpelijke melding. Zie ook "verborgen-tabblad-vertraagt-wachttijden".
+
+**How to apply:** een kanaal dat bij deze verkoper nog nóóit een geslaagde
+plaatsing had én drie keer op rij op de bewaker afliep, is kansloos: neem de rest
+van de wachtrij terug en zeg waaróm. Bouw die rem op de server (`_kansloze_reeks`
+in `backend/api/jobs.py`), niet alleen in de extensie — een extensiereparatie
+bereikt de verkoper pas na goedkeuring door de Web Store, bij hem eerder drie
+weken. Zie "extension-release-bump-version" en "anthropic-sdk-pin-valstrik"
+voor hetzelfde patroon.
+
+**Vervolg 07-09-2026.** Egberts 2dehands is drie weken later nog steeds 671/0.
+Twee nieuwe bevindingen: (1) zijn tabblad komt op `/plaats/*` en springt PAS DAARNA
+naar de inlogpagina, dus `scriptSeen` is `true` en de "stille tab"-tak dekte dit
+niet af — zie "spa-redirect-verslaat-de-inlogdetectie". (2) de server-rem hierboven
+sloeg nooit aan omdat hij "3 identieke time-outs" eiste én een geslaagde scan als
+succes telde — zie "kansloze-kanaal-rem-telt-alleen-plaatsingen". Waaróm 2dehands
+zijn account weert is nog open; hij is zakelijk Admarkt-verkoper.
+
+---
+
+## kansloze-kanaal-rem-telt-alleen-plaatsingen
+
+*07-09-2026 — "De server-rem tegen een kansloos kanaal keek naar \"3 identieke time-outs op rij\" en telde een geslaagde SCAN als \"het kanaal heeft ooit gewerkt\"; allebei lieten Egberts 671/0 door"*
+
+De rem in `backend/api/jobs.py` die een wachtrij stopt als een kanaal bij een
+verkoper aantoonbaar kansloos is (`_kansloze_reeks` → nu `_kanaal_kansloos`) had
+twee gaten, allebei gemeten 07-09-2026 op het echte log van Egbert Brouwer
+(671 plaatsopdrachten voor 2dehands, nul geslaagd, drie weken):
+
+**1. "Drie identieke time-outs op rij" is te smal.** Egberts 671 mislukkingen
+wisselen van vorm: "timed out", "not signed in", "queue stopped" — drie
+verschijningen van hetzelfde (2dehands laat dit account niet plaatsen). De oude
+`_kansloze_reeks` eiste drie identieke `_TIJDSOVERSCHRIJDING` achter elkaar en
+sloeg daardoor nooit aan. Nieuw: regex `_ONDOORGROND` (time-out | inlogverwijt |
+"never opened" | "queue stopped") en een telling — ≥ 10 ondoorgronde
+mislukkingen zonder ooit één succes = kansloos. Een uitgelegde fout ("vul de
+foto's in") telt nooit mee: die zegt wél iets over het artikel.
+
+**2. Een geslaagde SCAN telde als "het kanaal heeft ooit gewerkt".**
+`_nooit_gelukt_op` deed `.eq("status","done")` zonder actiefilter. Egbert heeft
+twee geslaagde 2dehands-scans, dus de rem concludeerde "werkte ooit" en stopte —
+terwijl geen van zijn 671 PLAATSingen ooit is geslaagd. Een scan is geen
+plaatsing. Nu: `.in_("action", ["create","content_refresh"])`.
+
+Bewezen op zijn echte gegevens: `_kansloze_reeks` = False (oud), `_kanaal_kansloos`
+= True (nieuw). Marktplaats blijft False (geen create-fouten daar).
+
+**Wat er nu gebeurt bij een kansloos kanaal:**
+- `publish_to_platforms` (crosslist.py) zet er geen nieuwe opdracht meer voor
+  klaar; het kanaal komt terug als `status: "blocked"` met de uitleg van
+  `_melding_formulier_ging_niet_open`. Zelfhelend: zodra één plaatsing lukt is
+  `_kanaal_kansloos` weer False. Gecachet (`_kanaal_kansloos_gecached`, 120 s)
+  omdat een bulk-crosslist per artikel aanroept.
+- `fail_job` roept bij kansloos náást `_stop_wachtrij` ook
+  `_gelijk_de_kansloze_muur`: elke al bestaande rode foutregel op dat kanaal
+  (zonder advertentienummer) krijgt dezelfde uitgelegde reden, in plaats van een
+  muur van tien verschillende onbegrijpelijke teksten.
+- Frontend (`app.html`): `status: "blocked"` wordt behandeld als een fout met
+  reden, niet als "queued".
+
+Zie "stille-tab-is-geen-formulier" (waar deze rem vandaan komt),
+"spa-redirect-verslaat-de-inlogdetectie" (de extensiekant) en
+"rem-op-de-server-bij-een-extensiefout".
+
+---
+
+## spa-redirect-verslaat-de-inlogdetectie
+
+*07-09-2026 — "2dehands laadt het formulier, ons script injecteert (scriptSeen=true), en PAS DAARNA springt de pagina naar de inlogpagina; een detectie achter !scriptSeen mist dat en de opdracht loopt drie minuten leeg"*
+
+Gemeten 07-09-2026 aan het opdrachtenlogboek van Egbert Brouwer (papas-plectrums,
+info@papas-plectrums.nl): **671 plaatsopdrachten voor 2dehands, nul geslaagd, drie
+weken lang.** De laatste tientallen falen allemaal met "Extension timed out
+waiting for this 2dehands job to finish (no response after 3 minutes)", duur
+claim→afgemeld steeds 200 tot 227 seconden (de bewaker van 3 minuten plus opstart),
+en NUL voortgangsberichten.
+
+`scriptSeen` was `true`: het invulscript (`tweedehands.js`) is wél geladen op een
+`/plaats/*`-URL en heeft `GET_JOB` gedaan. Daarna volledige stilte. `waitForEl`
+voor het titelveld verwierp niet eens na 20 seconden. Dat kan maar één ding
+betekenen: **de pagina navigeerde weg van het formulier nadat het script was
+geladen.** 2dehands is een one-page app: `/plaats/728/748` rendert het formulier,
+ons script injecteert bij `document_idle`, en dan stuurt 2dehands.be de sessie
+door naar `/identity/v2/login`. De JS-context sterft, geen promise settelt, geen
+`clog()`, en de bewaker slaat 3 minuten later toe.
+
+**De fout in de code.** De doorverwijzing-detectie in `chrome.tabs.onUpdated`
+(`extension/background.js`) stond achter `if (!meta.scriptSeen && MP_LOGINPAGINA.test(...))`.
+Zodra het script geladen was werd een sprong naar de inlogpagina dus genegeerd.
+Ook `meldNooitBegonnen` liep alleen bij `!scriptSeen`; de `scriptSeen`-tak van de
+bewaker gokte "the page may have changed" zonder ooit te kijken waar het tabblad
+stond.
+
+**Hersteld (1.0.310).**
+- De `!meta.scriptSeen`-voorwaarde is weg: een sprong naar `/identity/v*/login` is
+  beslissend, of ons script er nu al stond of niet. Een geslaagde plaatsing landt
+  op `/v/.../m123` of `/seller/view`, nóóit op een inlog-URL.
+- De bewaker neemt in de `scriptSeen`-tak nu een momentopname van het tabblad
+  (`bekijkVastgelopenTabblad`) vóór hij "timed out" meldt. Wachtwoordveld,
+  inlog-URL of verificatietekst → alsnog via `meldNooitBegonnen` (stopt ook de
+  wachtrij). Anders komt het adres bij de foutmelding te staan.
+- Alleen voor marktplaats/2dehands; Vinted en Facebook hebben hun eigen afhandeling.
+
+**Waarom dit hier staat en niet alleen in de extensie:** een extensiereparatie
+bereikt de verkoper pas na de Chrome Web Store, bij Egbert eerder drie weken. De
+echte rem staat daarom op de server, zie "kansloze-kanaal-rem-telt-alleen-plaatsingen".
+
+**Nog niet vastgesteld** (vergt zijn 2dehands-inlog, die ik niet heb): WAAROM
+2dehands zijn `/plaats` doorstuurt terwijl een tabblad op 2dehands.be soms HTTP
+200 op het advertentie-overzicht geeft. Vermoedelijk: hij is zakelijk
+Admarkt-verkoper en zakelijke accounts kunnen de particuliere `/plaats`-flow niet
+gebruiken, óf hij is simpelweg niet op 2dehands.be zelf ingelogd (aparte site en
+login van marktplaats.nl, en hij importeerde alleen ván marktplaats.nl). Zie
+"stille-tab-is-geen-formulier".
+
+---
+
 ## verborgen-tabblad-worker-timer
 
 *07-09-2026 — sleep() in de extensie draait via een Web Worker omdat Chrome setTimeout in een verborgen tabblad afknijpt tot stilstand*
@@ -1737,41 +1877,6 @@ vóór je hem live zet, en sluit velden uit die in die categorie niet bestaan
 app.html). Let op: staat `category` niet in de `select()`, dan leest de
 uitzondering altijd "leeg" en verandert er stilletjes niets. Zie
 "omnivaleur-niet-kledingcategorieen" en "geen-doodlopende-straat-in-de-ui".
-
----
-
-## stille-tab-is-geen-formulier
-
-*03-09-2026 — Een opdracht die zonder één teken van leven afloopt betekent "het formulier ging nooit open", niet "de pagina is veranderd"; 2dehands en Marktplaats hebben aparte logins*
-
-Loopt een publicatie-opdracht af op de bewaker van drie minuten **zonder dat het
-invulscript zich ooit heeft gemeld**, dan is de pagina die openging niet het
-plaatsformulier geweest. Dat is een andere storing dan "het formulier liep vast"
-en vraagt om een ander antwoord.
-
-Gemeten 03-09-2026 bij Egbert Brouwer (papas-plectrums): 305 opdrachten voor
-2dehands, nooit één geslaagd, 26 afgebroken na exact 3m20s, 279 in de wachtrij.
-Zijn Marktplaats-opdrachten uit dezelfde ronde liepen wél door, en bij andere
-verkopers slaagde 2dehands in dezelfde periode 97 keer. www.2dehands.be antwoordt
-op `/plaats/{l1}/{l2}` met HTTP 401 (12 bytes platte tekst) zolang je daar niet
-bent ingelogd; op zo'n pagina draait ons invulscript niet.
-
-**marktplaats.nl en 2dehands.be zijn twee aparte sites met twee aparte
-inlogsessies.** Ingelogd op de een is niet ingelogd op de ander. De categorie-
-nummers zijn wél identiek (nagemeten via hun eigen zoek-API: 728/748 geeft op
-allebei "Muziek en Instrumenten > Gitaren | Elektrisch").
-
-**Why:** de extensie doet met opzet één opdracht tegelijk. 279 × 3,5 minuut is
-zestien uur waarin de verkoper verder niets kan publiceren, met 279 keer dezelfde
-onbegrijpelijke melding. Zie ook "verborgen-tabblad-vertraagt-wachttijden".
-
-**How to apply:** een kanaal dat bij deze verkoper nog nóóit een geslaagde
-plaatsing had én drie keer op rij op de bewaker afliep, is kansloos: neem de rest
-van de wachtrij terug en zeg waaróm. Bouw die rem op de server (`_kansloze_reeks`
-in `backend/api/jobs.py`), niet alleen in de extensie — een extensiereparatie
-bereikt de verkoper pas na goedkeuring door de Web Store, bij hem eerder drie
-weken. Zie "extension-release-bump-version" en "anthropic-sdk-pin-valstrik"
-voor hetzelfde patroon.
 
 ---
 
