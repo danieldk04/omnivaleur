@@ -15,7 +15,11 @@ from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 
 from backend.config import settings
-from backend.content.branding import KANAAL_LINKS, WEBSTORE_URL, merk_profielen
+from backend.content.branding import (  # noqa: F401  (her-geëxporteerd voor de rest van de codebase)
+    KANAAL_LINKS,
+    WEBSTORE_URL,
+    merk_profielen,
+)
 from backend.content.pipeline import run_pipeline
 from backend.database import get_db
 
