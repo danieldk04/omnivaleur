@@ -131,6 +131,7 @@ async def reconcileer_verkochte_artikelen() -> dict:
     from backend.services.crosslist import delist_all_platforms
 
     opnieuw = 0
+    gearchiveerd = 0
     for _, iid in kandidaten:
         uid = eigenaar.get(iid)
         if not uid:
@@ -147,6 +148,7 @@ async def reconcileer_verkochte_artikelen() -> dict:
                 try:
                     (await naast_de_lus(lambda rr=r: db.table("listings").update(
                         {"status": "delisted", "error_message": None}).eq("id", rr["id"]).execute()))
+                    gearchiveerd += 1
                     logger.info("verkoop-reconciliatie: item %s %s stond op 'mogelijk verkocht' "
                                 "terwijl het elders al verkocht is — gearchiveerd", iid, r["platform"])
                 except Exception:  # noqa: BLE001
