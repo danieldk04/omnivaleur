@@ -433,6 +433,22 @@
       "slug": "cosmetics-and-beauty-reselling-automation",
       "status": "published",
       "priority": 53
+    },
+    {
+      "keyword": "used furniture reselling automation",
+      "region": "nl",
+      "pillar": "B",
+      "slug": "used-furniture-reselling-automation",
+      "status": "published",
+      "priority": 54
+    },
+    {
+      "keyword": "vintage postcards and ephemera reselling automation",
+      "region": "nl",
+      "pillar": "B",
+      "slug": "vintage-postcards-and-ephemera-reselling-automation",
+      "status": "pending",
+      "priority": 55
     }
   ],
   "published": [
@@ -912,6 +928,15 @@
       "action": "created",
       "url_path": "/reseller-tools/cosmetics-and-beauty-reselling-automation",
       "published_at": "2026-08-29T13:33:09.045296+00:00"
+    },
+    {
+      "keyword": "used furniture reselling automation",
+      "slug": "used-furniture-reselling-automation",
+      "region": "nl",
+      "pillar": "B",
+      "action": "created",
+      "url_path": "/reseller-tools/used-furniture-reselling-automation",
+      "published_at": "2026-09-07T13:53:15.591685+00:00"
     }
   ]
 }
