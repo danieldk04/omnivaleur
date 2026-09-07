@@ -43,6 +43,57 @@ MINIMALE_SCANVERSIE = (1, 0, 244)
 # blijven rondzingen bij iemand die alleen die oude kopie heeft.
 MAX_HERKANSING_OUDE_EXTENSIE = 2
 
+# HOEVEEL VERSIES EEN KOPIE MAG ACHTERLOPEN VOORDAT ZE AANTOONBAAR NIET MEEBEWEEGT.
+#
+# GEMETEN (07-09-2026, De Juiste Toon). Zijn Chromebook draaide 1.0.260 van
+# 28 augustus terwijl er 1.0.311 in de Chrome Web Store stond: 51 versies en
+# tien dagen achterstand. Alle andere computers die die week werk deden stonden
+# op 1.0.308 t/m 1.0.311, dus Chrome werkt de extensie bij zoals het hoort — een
+# kopie die dat niet doet is met de hand geladen en zal NOOIT bijwerken.
+#
+# Waarom niet gewoon de harde ondergrens verhogen: die moet met de hand mee
+# omhoog en staat daardoor altijd te laag. Deze grens meet zichzelf tegen wat er
+# vandaag in de Web Store staat.
+#
+# Waarom 20 en niet minder: er gaan ongeveer vijf versies per dag uit, dus twintig
+# is ruim vier dagen. Chrome controleert elke paar uur op updates. Wie meer dan
+# vier dagen achterloopt, loopt niet achter maar staat stil. De drie andere
+# actieve computers stonden op 1, 2 en 3 versies achterstand.
+ACHTERSTAND_GRENS = 20
+
+
+def _achterstand(gemeld, gepubliceerd) -> int | None:
+    """Hoeveel versies deze kopie achterloopt, of None als dat niet te zeggen is.
+
+    Alleen binnen dezelfde hoofd- en tussenversie (1.0.x) is het verschil een
+    getal met betekenis. Springt de nummering naar 1.1.0, dan telt elke stap
+    daar als "ver achter", want dan is er iets fundamenteels veranderd.
+    """
+    if not gemeld or not gepubliceerd:
+        return None
+    if gemeld >= gepubliceerd:
+        return 0
+    if gemeld[:2] != gepubliceerd[:2]:
+        return ACHTERSTAND_GRENS   # andere reeks: altijd te ver weg
+    return gepubliceerd[2] - gemeld[2]
+
+
+def _kopie_staat_stil(gemeld) -> tuple[int, str] | None:
+    """(achterstand, gepubliceerde versie) als deze kopie zichzelf niet bijwerkt.
+
+    None bij twijfel: komt de Web Store-versie niet binnen, dan houden we niets
+    tegen. Een kopie ten onrechte stilzetten is erger dan er een keer eentje
+    doorlaten — precies dezelfde afweging als bij _kopstuk_versie.
+    """
+    if not gemeld:
+        return None
+    tekst = _gepubliceerde_extensieversie()
+    gepubliceerd = _kopstuk_versie(tekst)
+    achter = _achterstand(gemeld, gepubliceerd)
+    if achter is None or achter < ACHTERSTAND_GRENS:
+        return None
+    return achter, tekst
+
 _EXT_VERSIE = re.compile(r"\[extensie\s+(\d+)\.(\d+)\.(\d+)\]")
 
 
@@ -599,6 +650,24 @@ def get_pending_jobs(request: Request, platform: str = None, user_id: str = Depe
                 ".".join(map(str, MINIMALE_SCANVERSIE)),
             )
             return []
+        # EN EEN KOPIE DIE ZICHZELF NIET MEER BIJWERKT KRIJGT OOK NIETS.
+        #
+        # De harde ondergrens hierboven vangt alleen wat we ooit met de hand te
+        # laag hebben gezet. Toon (07-09-2026) zat er ruim bóven — 1.0.260 — en
+        # kreeg dus gewoon werk, terwijl elke reparatie van de tien dagen daarna
+        # bij hem niet bestond: de drie rubrieken waar hij op vastliep waren
+        # precies de drie die na 1.0.260 zijn toegevoegd. Zo'n kopie neemt werk
+        # aan en levert het half af, en de verkoper ziet alleen dat het "weer"
+        # niet werkt. Zie ACHTERSTAND_GRENS.
+        stil = _kopie_staat_stil(gemeld)
+        if stil:
+            achter, gepubliceerd = stil
+            logger.warning(
+                "Geen werk uitgedeeld: extensie %s bij gebruiker %s loopt %s "
+                "versies achter op %s en werkt zichzelf niet bij",
+                ".".join(map(str, gemeld)), user_id, achter, gepubliceerd,
+            )
+            return []
     # First, rescue anything stuck 'claimed' from an interrupted run.
     _recover_stale_claims(db, user_id, platform, now_dt)
 
@@ -981,6 +1050,11 @@ def extension_version(user_id: str = Depends(get_current_user)):
     return {
         "published": _gepubliceerde_extensieversie(),
         "minimum": ".".join(str(x) for x in MINIMALE_SCANVERSIE),
+        # Vanaf hoeveel versies achterstand het dashboard niet meer "er is een
+        # update" zegt maar "deze kopie werkt zichzelf niet bij". Meegegeven en
+        # niet in het scherm hard gezet, zodat er één grens is die klopt met wat
+        # de server doet: daarboven deelt hij geen werk meer uit.
+        "blokkeer_achterstand": ACHTERSTAND_GRENS,
     }
 
 
@@ -2818,6 +2892,43 @@ def _rechtgezette_foutmelding(job: dict | None, body: dict, versie, kansloos: bo
             f"chrome://extensions, zet \"Ontwikkelaarsmodus\" aan en verwijder elke "
             f"met de hand geladen kopie van Omnivaleur; laat alleen de versie uit "
             f"de Chrome Web Store staan en herstart Chrome.")}
+    _stil = _kopie_staat_stil(versie) if versie else None
+    if _stil:
+        achter, gepubliceerd = _stil
+        return {**(body or {}), "error_oorspronkelijk": fout, "error": (
+            f"Deze opdracht is opgepakt door een kopie van de Omnivaleur-extensie "
+            f"die zichzelf niet bijwerkt: versie {'.'.join(map(str, versie))}, terwijl "
+            f"{gepubliceerd} in de Chrome Web Store staat ({achter} versies "
+            f"achterstand). Chrome werkt een kopie uit de Web Store elke paar uur "
+            f"bij, dus deze is met de hand geladen. Open chrome://extensions, "
+            f"verwijder elke Omnivaleur die er staat, en installeer hem opnieuw uit "
+            f"de Chrome Web Store. Alles wat hierna misgaat is met die kopie niet "
+            f"te verhelpen.")}
+    # EEN LEEG ADRESVELD OP 2DEHANDS IS EEN ACCOUNTINSTELLING, GEEN STORING.
+    #
+    # 2dehands.be vult postcode en woonplaats zelf uit het account; wij typen
+    # daar bewust niets in, want een verzonnen postcode zet de advertentie in een
+    # willekeurige Belgische gemeente. Is het veld leeg, dan weigert de extensie
+    # te plaatsen — terecht, maar de melding die zij geeft ("open your account
+    # settings") zegt een Nederlandse verkoper niet waar hij moet zijn. Voor wie
+    # in Nederland woont is de juiste keuze op dat formulier "Buitenland", en dat
+    # staat nergens.
+    #
+    # Toon (dejuistetoon, 05-09 en 07-09-2026) vroeg er twee keer naar: "adres
+    # niet in Essen maar in Nederland". Zijn advertenties die het wél haalden
+    # staan gemeten op "Etten-Leur, Nederland" met abroad=true, dus de instelling
+    # kán goed staan; ze was op die momenten alleen leeg.
+    if ("postcode" in fout.lower()
+            and (job or {}).get("platform") in ("2dehands", "marktplaats")):
+        return {**(body or {}), "error_oorspronkelijk": fout, "error": (
+            "Er stond geen adres op het formulier, dus er is niets geplaatst. "
+            "2dehands en Marktplaats halen postcode en woonplaats uit je account, "
+            "niet uit Omnivaleur; wij vullen daar bewust niets in, want een "
+            "verzonnen postcode zet je advertentie in een willekeurige gemeente. "
+            "Woon je in Nederland en plaats je op 2dehands.be, kies dan bij je "
+            "adres NIET een Belgische postcode maar de optie \"Buitenland\", en "
+            "daarachter Nederland plus je woonplaats. Zet dat een keer goed in je "
+            "account op die site, dan vult het formulier zich daarna vanzelf.")}
     if ((job or {}).get("action") == "scan"
             and (job or {}).get("platform") == "marktplaats"
             and "appear to be signed in" in fout):

@@ -2505,7 +2505,7 @@ input[type="checkbox"].row-check { width: 15px; height: 15px; cursor: pointer; a
   <div style="background:#fff;border-radius:20px;max-width:520px;width:100%;padding:36px;box-shadow:0 20px 60px rgba(0,0,0,.2)">
     <div style="width:64px;height:64px;border-radius:16px;background:linear-gradient(135deg,#f59e0b,#ef4444);display:flex;align-items:center;justify-content:center;font-size:28px;margin:0 auto 20px">⚠️</div>
     <h2 style="font-size:22px;font-weight:800;margin-bottom:10px;letter-spacing:-.3px;text-align:center">Your extension is out of date</h2>
-    <p style="font-size:14px;color:#64748b;line-height:1.6;margin-bottom:20px;text-align:center">
+    <p id="ext-outdated-why" style="font-size:14px;color:#64748b;line-height:1.6;margin-bottom:20px;text-align:center">
       This browser is running Omnivaleur <b id="ext-outdated-version">?</b>, which is too old to publish, relist or scan correctly.
       Newer versions fix the "Did you sell it on Marktplaats?" pop-up that used to block every relist, and refuse to publish a listing without photos or description instead of leaving it half-finished.
     </p>
@@ -2534,7 +2534,7 @@ input[type="checkbox"].row-check { width: 15px; height: 15px; cursor: pointer; a
     </div>
     <div style="display:flex;flex-direction:column;gap:10px">
       <button onclick="pingExtension()" style="padding:13px;background:linear-gradient(135deg,#2563eb,#34d399);color:#fff;border:none;border-radius:100px;font-size:15px;font-weight:700;cursor:pointer">I've updated — check again</button>
-      <button onclick="dismissExtOutdated()" style="padding:11px;background:transparent;border:1.5px solid #e2e8f0;border-radius:100px;font-size:14px;font-weight:600;color:#64748b;cursor:pointer">Continue anyway (things may fail)</button>
+      <button id="ext-outdated-skip" onclick="dismissExtOutdated()" style="padding:11px;background:transparent;border:1.5px solid #e2e8f0;border-radius:100px;font-size:14px;font-weight:600;color:#64748b;cursor:pointer">Continue anyway (things may fail)</button>
     </div>
     <p style="font-size:12px;color:#94a3b8;margin-top:14px;line-height:1.5;text-align:center">This closes by itself as soon as an up-to-date copy answers.</p>
   </div>
@@ -2577,6 +2577,10 @@ window.addEventListener('message', (event) => {
 // wat het scherm toont — liever geen melding dan een verkeerde.
 let _gepubliceerdeVersie = '';
 let _gepubliceerdeVersieTs = 0;
+// Vanaf hoeveel versies achterstand een kopie niet "achter" is maar STILSTAAT.
+// Komt van de server mee (ACHTERSTAND_GRENS in backend/api/jobs.py), zodat het
+// scherm nooit iets anders zegt dan wat de uitgifte doet.
+let _blokkeerAchterstand = 20;
 async function laadGepubliceerdeVersie() {
   if (_gepubliceerdeVersieTs && Date.now() - _gepubliceerdeVersieTs < 3600000) return;
   _gepubliceerdeVersieTs = Date.now();
@@ -2585,6 +2589,7 @@ async function laadGepubliceerdeVersie() {
     const d = await parseJsonSafe(r);
     if (!r.ok || !d || !d.published) return;
     _gepubliceerdeVersie = d.published;
+    if (Number(d.blokkeer_achterstand) > 0) _blokkeerAchterstand = Number(d.blokkeer_achterstand);
     renderExtSetup();
     if (typeof renderExtStatus === 'function') renderExtStatus();
   } catch (_) { /* geen antwoord = geen melding */ }
@@ -2739,10 +2744,26 @@ function renderExtSetup() {
   // want ze neemt werk aan en levert het half af. Het weggeklikte "toch doorgaan"
   // geldt per versie, zodat de melding bij de volgende achterstand terugkomt.
   const verouderd = extVersionIsOld();
+  const staatStil = extVersionStaatStil();
   const oudModal = document.getElementById('ext-outdated-overlay');
   if (oudModal) {
-    const genegeerd = localStorage.getItem('cl_ext_oud_ok') === extState.version;
+    // Een kopie die stilstaat mag NIET weggeklikt worden. De server geeft haar
+    // toch geen werk meer, dus "toch doorgaan" zou een lege belofte zijn — en
+    // precies daarmee is Toon tien dagen doorgelopen. Zie extVersionStaatStil().
+    const genegeerd = !staatStil && localStorage.getItem('cl_ext_oud_ok') === extState.version;
     if (verouderd) document.getElementById('ext-outdated-version').textContent = 'v' + extState.version;
+    const uitleg = document.getElementById('ext-outdated-why');
+    const overslaan = document.getElementById('ext-outdated-skip');
+    if (uitleg) {
+      uitleg.innerHTML = staatStil
+        ? `This browser is running Omnivaleur <b>v${extState.version}</b> while <b>v${_gepubliceerdeVersie}</b> is live in the Chrome Web Store &mdash; ${versieAchterstand()} versions behind.
+           Chrome updates a Web Store copy by itself every few hours, so this copy is a hand-loaded one that will never update.
+           Everything fixed since then simply does not exist on this computer, which is why the same errors keep coming back.
+           Until it is reinstalled it will not be given any work.`
+        : `This browser is running Omnivaleur <b>v${extState.version}</b>, which is too old to publish, relist or scan correctly.
+           Newer versions fix the "Did you sell it on Marktplaats?" pop-up that used to block every relist, and refuse to publish a listing without photos or description instead of leaving it half-finished.`;
+    }
+    if (overslaan) overslaan.style.display = staatStil ? 'none' : 'block';
     oudModal.style.display = (verouderd && !genegeerd) ? 'flex' : 'none';
   }
 
@@ -4880,6 +4901,9 @@ function renderItemsTable(items) {
   // advertenties) en aan elke rij meegegeven. Per kaartje opnieuw rekenen zou
   // kwadratisch zijn, en dat is precies wat een Chromebook laat vastlopen.
   const advIdx = advertIndex();
+  // Per rij apart bijhouden wat we tekenden, zodat een ronde die niets aan een
+  // rij verandert die rij ook niet aanraakt. Zie de uitleg bij _tekenRijen.
+  const stukken = [];
   const rows = items.map(item => {
     const checked = selectedIds.has(item.id) ? 'checked' : '';
     const rowClass = selectedIds.has(item.id) ? 'selected' : '';
@@ -4906,7 +4930,7 @@ function renderItemsTable(items) {
       lastBucket = bucket;
       header = `<tr class="items-section-row"><td colspan="8" class="items-section-label">${bucket}</td></tr>`;
     }
-    return header + `<tr class="${rowClass}" id="row-${item.id}">
+    const rijHtml = `<tr class="${rowClass}" id="row-${item.id}">
       <td class="col-check"><input type="checkbox" class="row-check" ${checked} onchange="toggleRowSelect('${item.id}',this.checked)"></td>
       <td><div class="item-info">
         <div class="item-photo">${itemPhotoThumb(item)}</div>
@@ -4919,6 +4943,8 @@ function renderItemsTable(items) {
       <td><div class="platform-badges">${renderListingBadges(item.id)}</div></td>
       <td style="white-space:nowrap">${itemActions(item)}</td>
     </tr>`;
+    stukken.push({ id: item.id, header, html: rijHtml });
+    return header + rijHtml;
   }).join('');
   const emptyHtml = (!state.listingsLoaded || state.listingsLoadError)
     ? `<tr><td colspan="8"><div class="empty">
@@ -4966,9 +4992,48 @@ function renderItemsTable(items) {
   const html = rows || emptyHtml;
   if (_itemsTabelStempel !== html) {
     _itemsTabelStempel = html;
-    document.getElementById('items-body').innerHTML = html;
+    _tekenRijen(document.getElementById('items-body'), rows ? stukken : null, html);
   }
   updateBulkBar();
+}
+
+// Alleen de rijen aanraken die echt veranderd zijn.
+//
+// TOON (dejuistetoon), 02-09 en 07-09-2026: "regelmatig valt het beeldscherm
+// totaal weg", en een week later opnieuw "het beeld bleef wederom wegspringen".
+// De eerste ronde reparaties zorgde ervoor dat de tabel alleen nog opnieuw werd
+// getekend als de HTML echt anders was. Dat was te grof: terwijl er gepubliceerd
+// wordt verandert er élke ronde iets — een ⏳-merkje, een advertentiebadge, een
+// datum — en dan verving hij alsnog de hele tabel. Vijftig rijen met vijftig
+// foto's, elke vijftien seconden, op een Chromebook met 1.319 artikelen. De
+// browser gooit dan het tabblad weg, en wie iets aan het intikken was raakt zijn
+// plek kwijt.
+//
+// Verandert er één merkje, dan hoort er één rij opnieuw getekend te worden.
+// Alleen als de volgorde of de samenstelling van de lijst verandert (filteren,
+// bladeren, sorteren, iets erbij) gaat de hele tabel eraan.
+let _itemsRijStempels = null;   // id -> de HTML die er nu staat
+let _itemsRijVolgorde = '';     // de id's op volgorde, plus hun tussenkopjes
+
+function _tekenRijen(doel, stukken, volledigeHtml) {
+  if (!doel) return;
+  if (!stukken) { _itemsRijStempels = null; _itemsRijVolgorde = ''; doel.innerHTML = volledigeHtml; return; }
+  const volgorde = stukken.map(s => s.id + '|' + s.header).join(',');
+  if (!_itemsRijStempels || volgorde !== _itemsRijVolgorde) {
+    doel.innerHTML = volledigeHtml;
+  } else {
+    for (const stuk of stukken) {
+      if (_itemsRijStempels.get(stuk.id) === stuk.html) continue;
+      const rij = document.getElementById('row-' + stuk.id);
+      // Staat de rij er niet (nog niet getekend, of iets ertussen weggehaald),
+      // dan is de aanname "de lijst is gelijk gebleven" niet waar meer en tekenen
+      // we alsnog alles. Liever een dure ronde dan een half scherm.
+      if (!rij) { doel.innerHTML = volledigeHtml; break; }
+      rij.outerHTML = stuk.html;
+    }
+  }
+  _itemsRijVolgorde = volgorde;
+  _itemsRijStempels = new Map(stukken.map(s => [s.id, s.html]));
 }
 
 // ── Selection & Bulk actions ─────────────────────────────────────
@@ -5780,6 +5845,11 @@ function renderExtStatus() {
     // van de extensie slaapt nog. Geen rood: er is niets kapot.
     dot.classList.add('ext-dot-warn');
     label.textContent = `Extension v${extState.version} — starting up…`;
+  } else if (extVersionStaatStil()) {
+    // Rood, niet oranje: deze kopie krijgt geen werk meer en er verandert niets
+    // tot hij opnieuw is geïnstalleerd.
+    dot.classList.add('ext-dot-error');
+    label.textContent = `Extension v${extState.version} — reinstall needed`;
   } else if (extVersionIsOld()) {
     // Zonder dit kon een oude extensie stilletjes blijven draaien terwijl de
     // fout allang verholpen was — en leek het alsof de fix niet werkte.
@@ -5819,9 +5889,35 @@ function versieLager(a, b) {
   return false;
 }
 
+// Hoeveel versies deze kopie achterloopt op de Web Store. null als dat niet te
+// zeggen is (geen versie binnen, of een andere hoofdreeks).
+function versieAchterstand() {
+  if (!extState.version || !_gepubliceerdeVersie) return null;
+  const x = String(extState.version).split('.').map(Number);
+  const y = String(_gepubliceerdeVersie).split('.').map(Number);
+  if (x.length < 3 || y.length < 3 || x.some(isNaN) || y.some(isNaN)) return null;
+  if (x[0] !== y[0] || x[1] !== y[1]) return _blokkeerAchterstand;  // andere reeks
+  return Math.max(0, y[2] - x[2]);
+}
+
+// EEN KOPIE DIE ZICHZELF NIET MEER BIJWERKT.
+//
+// Toon (dejuistetoon), 07-09-2026: zijn Chromebook draaide tien dagen lang
+// 1.0.260 terwijl er 1.0.311 in de Web Store stond, en hij kreeg daar alleen een
+// wegklikbaar balkje over te zien. Ondertussen bestond elke reparatie van die
+// tien dagen bij hem niet en bleef hij dezelfde rode meldingen zien. Chrome werkt
+// een kopie uit de Web Store elke paar uur bij; wie twintig versies achterloopt
+// werkt niet bij en zal dat ook nooit doen. Zie ACHTERSTAND_GRENS in
+// backend/api/jobs.py — daar krijgt zo'n kopie ook geen werk meer.
+function extVersionStaatStil() {
+  if (extState.status !== 'ready' || !extState.version) return false;
+  const achter = versieAchterstand();
+  return achter !== null && achter >= _blokkeerAchterstand;
+}
+
 function extVersionIsOld() {
   if (extState.status !== 'ready' || !extState.version) return false;
-  return versieLager(extState.version, EXT_MIN_VERSION);
+  return versieLager(extState.version, EXT_MIN_VERSION) || extVersionStaatStil();
 }
 
 // Loopt achter op de Web Store, maar boven de harde ondergrens: melden, niet

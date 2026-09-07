@@ -481,6 +481,58 @@ def _kanaal_kansloos_gecached(db, user_id: str, platform: str) -> bool:
     return uit
 
 
+# De statussen waarin een advertentierij "staat er nog" betekent. `delisted` en
+# `sold` horen er bewust niet bij: dan is de advertentie juist weg.
+_LEVENDE_STATUS = ["active", "hidden", "pending", "relisting"]
+
+
+def _zelfde_artikel_al_online(db, item: dict, platforms: list[str],
+                              al_bekeken: list[str] | None = None) -> dict[str, dict]:
+    """Kanalen waar dit artikel al staat onder een ANDER artikel met dezelfde
+    titel en minstens één gedeelde foto.
+
+    Synchroon en zonder eigen foutafvang: de aanroeper draait hem naast de lus en
+    laat publiceren gewoon doorgaan als het lezen mislukt. Een dubbele advertentie
+    is vervelend; niets kunnen publiceren is erger.
+
+    Waarom foto's en niet alleen de titel: zie de uitleg bij de aanroep. Een
+    gedeeld foto-adres is letterlijk hetzelfde bestand bij dezelfde verkoper, dus
+    hetzelfde voorwerp. Verschillende foto's bij dezelfde titel zijn losse
+    artikelen die allebei te koop horen te kunnen staan.
+    """
+    titel = (item or {}).get("title")
+    fotos = {u for u in ((item or {}).get("photo_urls") or []) if u}
+    eigen = (item or {}).get("id")
+    user_id = (item or {}).get("user_id")
+    if not (titel and fotos and eigen and user_id and platforms):
+        return {}
+
+    overslaan = set(al_bekeken or []) | {eigen}
+    # Exacte titel. Twee imports van dezelfde advertentie leveren letterlijk
+    # dezelfde tekst op (nagemeten), dus hier is geen patroon nodig — en een
+    # patroon met haakjes of procenttekens erin is precies waar PostgREST stil
+    # een lege lijst op teruggeeft. Zie de opmerking in tweelingen.familie_ids.
+    rijen = (db.table("items").select("id,photo_urls")
+             .eq("user_id", user_id).eq("title", titel)
+             .limit(50).execute().data or [])
+    zelfde = [r["id"] for r in rijen
+              if r.get("id") and r["id"] not in overslaan
+              and fotos & {u for u in (r.get("photo_urls") or []) if u}]
+    if not zelfde:
+        return {}
+
+    listings = (db.table("listings")
+                .select("item_id,platform,status,platform_listing_id,platform_listing_url")
+                .in_("item_id", zelfde)
+                .in_("status", _LEVENDE_STATUS)
+                .execute().data or [])
+    uit: dict[str, dict] = {}
+    for rij in listings:
+        if rij.get("platform") in platforms:
+            uit.setdefault(rij["platform"], rij)
+    return uit
+
+
 async def publish_to_platforms(item_id: str, platforms: list[str], user_id: str) -> list[dict]:
     """
     Route each platform to the right handler:
@@ -579,6 +631,7 @@ async def publish_to_platforms(item_id: str, platforms: list[str], user_id: str)
     # Dus kijken we naar de hele familie. Staat er al een levende advertentie op
     # dit kanaal, dan publiceren we niet en zeggen we waaróm niet.
     bezet: dict[str, dict] = {}
+    familie: list[str] = []   # ook nodig als het lezen hieronder mislukt
     try:
         from backend.services.tweelingen import familie_ids
         familie = [i for i in await naast_de_lus(lambda: familie_ids(db, item))
@@ -597,6 +650,34 @@ async def publish_to_platforms(item_id: str, platforms: list[str], user_id: str)
         # Kunnen we de familie niet lezen, dan publiceren we gewoon. Een
         # dubbele advertentie is vervelend; niets kunnen publiceren is erger.
         logger.warning("Kon de zusterrijen van %s niet lezen: %s", item_id, e)
+
+    # ...EN ONDER EEN ARTIKEL DAT NIET DEZELFDE NUMMERING DRAAGT (07-09-2026).
+    #
+    # GEMETEN bij De Juiste Toon. De familiecontrole hierboven herkent tweelingen
+    # aan het nummer dat de verkoper zelf voor de titel zet — "(1032) …" — of aan
+    # een gedeelde sku. Zijn artikelen hebben geen van beide: elke import geeft
+    # een eigen sku (IMP-3D1EC8DB, IMP-6CB890D8) en de titels zijn kaal. Twee
+    # imports van dezelfde advertentie werden daardoor twee losse artikelen, en
+    # allebei publiceren gaf twee advertenties voor één voorwerp. Op zijn
+    # openbare verkoperspagina stonden zo elf titels dubbel, waarvan één die
+    # dezelfde dag nog was bijgekomen.
+    #
+    # WAAROM TITEL ÉN FOTO, EN NIET DE TITEL ALLEEN. Hij heeft acht verschillende
+    # dameslederhosen die allemaal "Lederhosen dames" heten; die MOETEN los te
+    # koop kunnen staan. Op de titel alleen hadden we er zeven geblokkeerd. Alle
+    # acht hebben hun eigen foto's. De echte dubbelen delen juist een foto-adres
+    # letterlijk, want ze komen uit dezelfde bron. Gemeten op zijn 1.319
+    # artikelen: 45 paren met dezelfde titel én een gedeelde foto, en geen enkel
+    # van de acht lederhosen erbij.
+    if platforms:
+        try:
+            zelfde = await naast_de_lus(
+                lambda: _zelfde_artikel_al_online(db, item, platforms, familie))
+            for p, rij in zelfde.items():
+                bezet.setdefault(p, rij)
+        except Exception as e:  # noqa: BLE001 — zelfde afweging als hierboven
+            logger.warning("Kon de dubbelcontrole op titel+foto niet doen voor %s: %s",
+                           item_id, e)
 
     if bezet:
         results.extend([

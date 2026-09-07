@@ -61,12 +61,25 @@ const zand = {
 };
 zand.window = zand;
 let laatsteHtml = "";
+// Een nagebootste tabel die bijhoudt wat er per rij gebeurt. Zonder dit meet de
+// test alleen "is de hele tabel herschreven" en juist dat is wat we nu willen
+// vermijden: één merkje hoort één rij te kosten, niet vijftig foto's.
+const rijen = new Map();
+zand.rijbeurten = 0;
+function registreer(html) {
+  rijen.clear();
+  for (const m of String(html).matchAll(/id="row-([^"]+)"/g)) {
+    const id = m[1];
+    rijen.set(id, { set outerHTML(v) { zand.rijbeurten++; }, get outerHTML() { return ""; } });
+  }
+}
 const body = {
-  set innerHTML(v) { laatsteHtml = v; zand.schrijfbeurten++; },
+  set innerHTML(v) { laatsteHtml = v; zand.schrijfbeurten++; registreer(v); },
   get innerHTML() { return laatsteHtml; },
 };
 zand.document = {
-  getElementById: (id) => (id === "items-body" ? body : null),
+  getElementById: (id) => (id === "items-body" ? body
+    : (id.startsWith("row-") ? (rijen.get(id.slice(4)) || null) : null)),
   querySelectorAll: () => [],
 };
 
@@ -81,6 +94,11 @@ const stubs = `
   function publishErrorBadge() { return ""; }
   function renderListingBadges() { return ""; }
   function itemActions() { return ""; }
+  // Erbij gekomen ná de eerste versie van deze test (het merkje "deze twee rijen
+  // wijzen naar dezelfde advertentie"). Zonder deze twee viel de test om op een
+  // ReferenceError in plaats van iets te meten.
+  function advertIndex() { return new Map(); }
+  function sharedAdvertBadge() { return ""; }
   function priceCell(i) { return String(i.price); }
   function conditionLabel() { return "Goed"; }
   function fmtDate() { return "1 sep"; }
@@ -98,6 +116,8 @@ const stubs = `
 const vm = require("vm");
 vm.createContext(zand);
 vm.runInContext(stubs + functieUit("itemPhotoThumb") + "\nlet _itemsTabelStempel = null;\n" +
+  "let _itemsRijStempels = null; let _itemsRijVolgorde = '';\n" +
+  functieUit("_tekenRijen") + "\n" +
   functieUit("renderItemsTable"), zand, { filename: "app.html" });
 
 const items = [];
@@ -117,15 +137,31 @@ check("drie identieke rondes daarna raken de tabel niet aan",
   zand.schrijfbeurten === 1,
   `${zand.schrijfbeurten} schrijfbeurten in plaats van 1 — de foto's worden dus opnieuw geladen`);
 
+// EEN WIJZIGING IN ÉÉN RIJ KOST ÉÉN RIJ (07-09-2026).
+// Toon meldde het beeld opnieuw als wegspringend. Reden: tijdens het publiceren
+// verandert er elke ronde iets aan één rij (een ⏳-merkje, een badge), en de
+// tabelbrede vergelijking verving dan alsnog alle vijftig rijen mét foto's.
 items[7].price = 30;
 zand.renderItemsTable(items);
-check("een echte wijziging wordt wél getekend", zand.schrijfbeurten === 2,
+check("een echte wijziging wordt wél getekend", zand.rijbeurten === 1,
+  `${zand.rijbeurten} rijbeurten`);
+check("en dat kost NIET de hele tabel", zand.schrijfbeurten === 1,
+  `${zand.schrijfbeurten} keer de hele tabel herschreven — dat zijn 50 foto's opnieuw`);
+
+// Verandert de lijst zelf (filteren, bladeren, iets erbij), dan mag de hele
+// tabel er wél aan: de rijen staan dan niet meer op dezelfde plek.
+zand.renderItemsTable(items.slice(0, 40));
+check("een andere lijst wordt wél in zijn geheel getekend", zand.schrijfbeurten === 2,
+  `${zand.schrijfbeurten} schrijfbeurten`);
+zand.renderItemsTable(items);
+check("en terug naar de volledige lijst ook", zand.schrijfbeurten === 3,
   `${zand.schrijfbeurten} schrijfbeurten`);
 
 // De voor-proef: zonder de stempel schrijft dezelfde ronde elke keer opnieuw.
 const zonderStempel = functieUit("renderItemsTable")
   .replace(/if \(_itemsTabelStempel !== html\) \{[\s\S]*?\n  \}/,
-           "document.getElementById('items-body').innerHTML = html;");
+           "document.getElementById('items-body').innerHTML = html;")
+  .replace(/stukken\.push\([^;]*\);/, "");
 const zand2 = Object.assign(Object.create(null), { console: zand.console, schrijfbeurten: 0 });
 zand2.window = zand2;
 let h2 = "";
@@ -135,6 +171,26 @@ vm.runInContext(stubs + functieUit("itemPhotoThumb") + "\nlet _itemsTabelStempel
 for (let n = 0; n < 4; n++) zand2.renderItemsTable(items);
 check("de oude opzet schreef aantoonbaar elke ronde opnieuw", zand2.schrijfbeurten === 4,
   `${zand2.schrijfbeurten} schrijfbeurten — dan bewijst deze test niets`);
+
+// De voor-proef bij de rij-vergelijking: met alléén de tabelbrede stempel kostte
+// één gewijzigd merkje de hele tabel.
+const alleenTabel = functieUit("renderItemsTable")
+  .replace(/_tekenRijen\(document\.getElementById\('items-body'\)[^;]*\);/,
+           "document.getElementById('items-body').innerHTML = html;")
+  .replace(/stukken\.push\([^;]*\);/, "");
+const zand3 = Object.assign(Object.create(null), { console: zand.console, schrijfbeurten: 0 });
+zand3.window = zand3;
+let h3 = "";
+zand3.document = { getElementById: () => ({ set innerHTML(v) { h3 = v; zand3.schrijfbeurten++; }, get innerHTML() { return h3; } }), querySelectorAll: () => [] };
+vm.createContext(zand3);
+vm.runInContext(stubs + functieUit("itemPhotoThumb") + "\nlet _itemsTabelStempel = null;\n" + alleenTabel, zand3, { filename: "alleen-tabel" });
+const items3 = items.map(i => ({ ...i }));
+zand3.renderItemsTable(items3);
+items3[7].price = 31;
+zand3.renderItemsTable(items3);
+check("de vorige opzet verving bij één gewijzigde rij de hele tabel",
+  zand3.schrijfbeurten === 2,
+  `${zand3.schrijfbeurten} schrijfbeurten — dan bewijst deze proef niets`);
 
 // ── 3. Foto's pas ophalen als ze in beeld komen ──────────────────────────
 console.log("\nDe foto's in de lijst");
