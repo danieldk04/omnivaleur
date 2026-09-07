@@ -2620,14 +2620,21 @@ _KANSLOOS_DREMPEL = 10
 
 
 def _nooit_gelukt_op(db, user_id: str, platform: str) -> bool:
-    """Heeft deze verkoper op dit kanaal ooit iets geplaatst gekregen?
+    """Heeft deze verkoper op dit kanaal ooit iets GEPLAATST gekregen?
 
     Dit is het verschil tussen "deze ene advertentie liep vast" en "dit kanaal
     heeft bij hem nog nooit gewerkt". Alleen in het tweede geval mogen we de
     hele wachtrij terugnemen.
+
+    ALLEEN create/content_refresh telt (07-09-2026, gemeten bij Egbert Brouwer).
+    Hij heeft twee geslaagde 2dehands-SCANS, en op grond daarvan zei deze functie
+    "het kanaal heeft ooit gewerkt" — waardoor de rem nooit aansloeg terwijl geen
+    van zijn 671 plaatsopdrachten ooit is geslaagd. Een scan is geen plaatsing.
     """
     return not (db.table("jobs").select("id").eq("user_id", user_id)
-                .eq("platform", platform).eq("status", "done").limit(1).execute().data or [])
+                .eq("platform", platform).eq("status", "done")
+                .in_("action", ["create", "content_refresh"])
+                .limit(1).execute().data or [])
 
 
 def _kansloze_reeks(db, user_id: str, platform: str) -> bool:
