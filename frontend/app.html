@@ -7970,14 +7970,17 @@ async function doCrosslist() {
     // surface those instead of always claiming success.
     // 'duplicate' telt hier mee als "niet gepubliceerd, en dit is waarom":
     // het artikel staat er al op onder een dubbele rij van hetzelfde item.
-    const errored = (data.results || []).filter(r => r.status === 'error' || r.status === 'duplicate');
+    // 'blocked' = dit kanaal is voor dit account op pauze gezet omdat het nog
+    // nooit heeft gewerkt (zie _kanaal_kansloos op de server). Geen opdracht
+    // aangemaakt, en de reden staat in r.error.
+    const errored = (data.results || []).filter(r => ['error', 'duplicate', 'blocked'].includes(r.status));
     // 'already_live' is geen succes en geen fout: er is bewust niets gebeurd.
     // Zonder deze regel viel het onder `ok` en zei het scherm "Queued", terwijl
     // er nooit een opdracht is aangemaakt. Papa's Plectrums keek daardoor vijf
     // minuten naar een advertentie die niet kon komen: al zijn 5533 artikelen
     // staan al op Marktplaats, dus dit gold daar voor elke publicatie.
     const alLive = (data.results || []).filter(r => r.status === 'already_live');
-    const ok = (data.results || []).filter(r => !['error', 'duplicate', 'already_live'].includes(r.status))
+    const ok = (data.results || []).filter(r => !['error', 'duplicate', 'blocked', 'already_live'].includes(r.status))
                                    .map(r => PLATFORM_LABELS[r.platform] || r.platform);
     if (errored.length || alLive.length) {
       const lines = [
