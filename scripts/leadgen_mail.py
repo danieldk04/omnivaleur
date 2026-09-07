@@ -63,6 +63,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 REPO = Path(__file__).resolve().parent.parent   # de broncode zelf, als bewijsmateriaal
 OUT = Path(__file__).parent / "output" / "leads"
 MP_LEADS = OUT / "mp_leads.json"
+TWEEDEHANDS_LEADS = OUT / "2dh_leads.json"   # 2dehands.be, zelfde trechter, BE-markt
 IG_LEADS = OUT / "leads.json"
 STATE = OUT / "mail_state.json"
 PLAN = OUT / "mail_plan.json"
