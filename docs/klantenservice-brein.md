@@ -172,8 +172,8 @@ Daniel
 
 Hoi <voornaam>,
 
-Dat kan, het abonnement is maandelijks opzegbaar. [NOG INVULLEN: waar de klant
-zelf opzegt in het dashboard, of dat Daniel het voor hem doet]
+Dat kan, het abonnement is maandelijks opzegbaar. Opzeggen doe je zelf via de
+Account-sectie in je dashboard.
 
 Mag ik vragen wat de reden is? Dan weet ik of er iets aan onze kant beter kan.
 
