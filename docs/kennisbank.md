@@ -4681,3 +4681,23 @@ Production (omnivaleur.com) is a single **Railway** service running the FastAPI 
 **2026-07-14 incident + fix:** the hook's push was `git push origin HEAD 2>/dev/null` — it swallowed errors and had `timeout: 30` (ms). When `origin/main` diverged (GA PRs #1–#7 + content-bot commits merged on GitHub, never pulled locally), every auto-push was silently rejected ("fetch first"), so ~20 commits piled up locally and production ran stale code for days. Fixed the hook to `git push … || { git pull --rebase --autostash origin <branch> && git push … } || git rebase --abort` and bumped timeout to 60000ms, so a diverged remote self-heals instead of blocking deploys. If deploys ever look stuck again, check `git log origin/main..HEAD` for an unpushed backlog.
 
 ---
+
+## verkoop-signaal-hard-vs-zacht
+
+*07-09-2026 — Wanneer een verkoop automatisch overal afmeldt en wanneer hij eerst een vraag wordt*
+
+`handle_item_sold(item_id, platform, ...)` doet twee dingen tegelijk: de verkoop boeken in Analytics én het artikel van álle andere kanalen afhalen. Dat afhalen is onherstelbaar (opnieuw plaatsen is handwerk), dus het mag alleen op een signaal dat écht klopt. Daniel heeft de scheidslijn getrokken (07-09-2026):
+
+**Hard — meteen `handle_item_sold`:** een betaalde bestelling op Shopify (`orders/paid`-webhook + de 5-minuten `controleer_shopify_verkopen`) of eBay (webhook + API-poll), en de Vinted-bestellingenpagina (`reconcile-vinted-orders`). Daar staat een koper met een bon achter.
+
+**Zacht — eerst `sold_unconfirmed` + ja/nee-vraag in het dashboard:** advertentie verdwenen van MP/2dehands, een "verkocht"/"gereserveerd"-label op de advertentie, de "Verkocht!"-badge op het gesprek, en een "sold" uit de 5-minuten statuscheck van MP/2dehands. Marktplaats laat een handverkoop niet betrouwbaar zien — een verkochte advertentie is niet te onderscheiden van een verlopen — dus dit is een aanwijzing, geen bewijs.
+
+De poort zit op meerdere plekken omdat de signalen via meerdere wegen binnenkomen: `polling.py` (`ZACHT_SIGNAAL`-set), `listings.py` `sold_from_messages`, `listings.py` `mark_sold` (kijkt naar `X-Omnivaleur-Ext` om de extensie van de dashboard-knop te onderscheiden), en `extension/background.js` `checkSoldListings` (meldt via `possibly-sold`). De reden-teksten staan in `VERDENKING_REDENEN` in `listings.py` en mogen de woorden "relist"/"delist"/"still live" niet bevatten (anders leest het herplaats-overzicht ze als kapotte herplaatsing).
+
+**Twee vangnetten** vangen op wat er stil misgaat: `verkoop_reconciliatie.py` (elke 20 min: verkocht op A, nog te koop op B → opnieuw afmelden) en `verkoop_herinnering.py` (elk uur overdag: onbevestigde verkoop > 4 uur → één mail/dag). De reconciliatie hangt aan een bevestigde `sold`-rij, dus hij raadt niets.
+
+**Shopify-verkoop matchen: nooit alleen op SKU.** Veel winkels zetten geen variant-SKU. De bestelregel draagt ook `product_id`/`variant_id`, en `product_id` == `listings.platform_listing_id`. Match daarop eerst, SKU als terugval, altijd gescoopt op de winkelier (`match_shopify_sale` in `shopify_orders.py`). `_find_shopify_product_id_by_sku` neemt sinds nu een `(shop, token)` mee zodat het in de winkel van díe verkoper zoekt, niet in de vaste `settings.shopify_store`.
+
+Zie ook "deploy-pipeline" en "verkocht-badge-in-berichtenlijst".
+
+---
