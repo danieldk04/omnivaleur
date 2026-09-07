@@ -112,6 +112,72 @@ def test_een_andere_fout_telt_niet_mee():
     assert api._kansloze_reeks(db, "u", "2dehands") is False
 
 
+# ── De bredere rem: veel wisselende mislukkingen, nooit één succes ───────────
+#
+# GEMETEN (07-09-2026, Egbert Brouwer). 671 plaatsopdrachten voor 2dehands, nul
+# geslaagd. De laatste tientallen wisselen tussen "timed out", "not signed in" en
+# "queue stopped" — de oude rem keek naar drie identieke op rij en zag dit niet.
+
+_NIET_INGELOGD = ("You are not signed in to 2dehands (2dehands.be) in this browser, "
+                  "so nothing was published.")
+_WACHTRIJ_GESTOPT = "queue stopped"
+
+
+def _wisselend(n, platform="2dehands"):
+    """n mislukkingen die van vorm wisselen, allemaal ondoorgrond, nooit een succes."""
+    vormen = [TIMEOUT, _NIET_INGELOGD, {"cancelled": _WACHTRIJ_GESTOPT, "error": _WACHTRIJ_GESTOPT}]
+    rijen = []
+    for i in range(n):
+        v = vormen[i % 3]
+        if isinstance(v, dict):
+            rijen.append({"id": f"w{i}", "user_id": "u", "platform": platform, "action": "create",
+                          "status": "cancelled", "item_id": f"i{i}", "result": v})
+        else:
+            rijen.append({"id": f"w{i}", "user_id": "u", "platform": platform, "action": "create",
+                          "status": "error", "item_id": f"i{i}", "result": {"error": v}})
+    return rijen
+
+
+def test_kanaal_kansloos_bij_veel_wisselende_mislukkingen():
+    db = _DB(jobs=_wisselend(12))
+    assert api._kanaal_kansloos(db, "u", "2dehands") is True
+
+
+def test_kanaal_kansloos_onder_de_drempel_is_nog_geen_patroon():
+    """Vijf keer 'niet ingelogd' is vervelend, maar nog geen bewijs dat het
+    kanaal kansloos is — en het zijn geen drie identieke tijdsoverschrijdingen."""
+    jobs = [{"id": f"n{i}", "user_id": "u", "platform": "2dehands", "action": "create",
+             "status": "error", "item_id": f"i{i}", "result": {"error": _NIET_INGELOGD}}
+            for i in range(5)]
+    db = _DB(jobs=jobs)
+    assert api._kanaal_kansloos(db, "u", "2dehands") is False
+
+
+def test_kanaal_kansloos_zwijgt_zodra_er_ooit_iets_lukte():
+    jobs = _wisselend(12)
+    jobs.append({"id": "ok", "user_id": "u", "platform": "2dehands", "action": "create",
+                 "status": "done", "item_id": "i99", "result": {}})
+    db = _DB(jobs=jobs)
+    assert api._kanaal_kansloos(db, "u", "2dehands") is False
+
+
+def test_kanaal_kansloos_negeert_uitgelegde_fouten():
+    """Twaalf keer 'vul de foto's in' met nul successen: dat zegt wél iets over
+    de artikelen (foto's ontbreken), dus geen kanaalbrede rem."""
+    db = _DB(jobs=_mislukt(12, fout="Photos could not be uploaded"))
+    assert api._kanaal_kansloos(db, "u", "2dehands") is False
+
+
+def test_de_bredere_rem_herschrijft_ook_bij_een_inlogverwijt():
+    """VOOR: alleen 'timed out' werd rechtgezet naar 'formulier ging niet open'.
+    NA: een inlogverwijt op een kansloos kanaal ook."""
+    job = {"action": "create", "platform": "2dehands"}
+    uit = api._rechtgezette_foutmelding(job, {"error": _NIET_INGELOGD}, None, kansloos=True)
+    assert "never opened" in uit["error"]
+    assert "2dehands.be" in uit["error"]
+    assert uit["error_oorspronkelijk"] == _NIET_INGELOGD
+
+
 # ── Wat de verkoper te lezen krijgt ─────────────────────────────────────────
 
 def test_de_melding_wijst_hem_naar_de_juiste_site():
