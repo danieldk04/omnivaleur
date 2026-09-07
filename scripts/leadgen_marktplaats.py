@@ -325,7 +325,7 @@ def _profile(client: httpx.Client, sid: int) -> tuple[dict | None, bool]:
                   r"(?:Vertel anderen|Contactgegevens|Bedrijfsinformatie)", t)
     if m:
         over = m.group(1).strip()[:900]
-    naam = re.search(r"Handelsnaam\s+(.+?)\s+(?:BTW|KVK)", t)
+    naam = re.search(r"Handelsnaam\s+(.+?)\s+(?:BTW|KVK|KBO)", t, re.I)
     return {
         "kvk": kvk and kvk.group(1),
         "btw": btw and btw.group(1),
