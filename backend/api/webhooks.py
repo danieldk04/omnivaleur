@@ -93,10 +93,11 @@ async def ebay_webhook(request: Request):
 async def shopify_order_paid(request: Request):
     """
     Shopify sends this when an order is paid.
-    We find the item by SKU and delist from all other platforms.
-    Register in Shopify Partner Dashboard > Webhooks > orders/paid.
+    We find the item by product id (SKU as fallback) and delist from all other
+    platforms. Register in Shopify Partner Dashboard > Webhooks > orders/paid.
     """
-    from backend.platforms.shopify import verify_webhook, extract_skus_from_order, extract_sku_prices_from_order
+    from backend.platforms.shopify import verify_webhook, extract_line_refs_from_order
+    from backend.services.shopify_orders import match_shopify_sale
     raw = await request.body()
     hmac_header = request.headers.get("X-Shopify-Hmac-Sha256", "")
     if not verify_webhook(raw, hmac_header):
@@ -104,24 +105,42 @@ async def shopify_order_paid(request: Request):
 
     import json
     order = json.loads(raw)
-    skus = extract_skus_from_order(order)
-    if not skus:
-        return {"status": "no_skus"}
-    # Shopify tells us the real amount paid per line item — record it as the sold price.
-    sku_prices = extract_sku_prices_from_order(order)
+    refs = extract_line_refs_from_order(order)
+    if not refs:
+        return {"status": "no_line_items"}
 
     # Shopify weet precies wanneer de bestelling betaald is. Die datum meegeven,
     # anders krijgt een bestelling die wij later verwerken de dag van vandaag.
     besteld_op = order.get("processed_at") or order.get("created_at")
 
     db = get_db()
-    for sku in skus:
-        item = (await naast_de_lus(lambda: db.table("items").select("id").eq("sku", sku).execute()))
-        if item.data:
-            await handle_item_sold(item.data[0]["id"], "shopify",
-                                   sold_price=sku_prices.get(sku), sold_at=besteld_op)
+    # Welke winkelier is dit? Zonder die scoping zou een SKU-botsing tussen twee
+    # winkels een verkoop bij de een de advertenties van de ander laten weghalen.
+    shop_domain = request.headers.get("X-Shopify-Shop-Domain", "")
+    user_id = None
+    if shop_domain:
+        rows = (await naast_de_lus(
+            lambda: db.table("platform_credentials").select("user_id,extra_data")
+            .eq("platform", "shopify").limit(500).execute())).data or []
+        for r in rows:
+            if (r.get("extra_data") or {}).get("shop_domain") == shop_domain:
+                user_id = r["user_id"]
+                break
+    if not user_id:
+        logger.warning("shopify orders/paid: onbekende winkel %r — bestelling overgeslagen", shop_domain)
+        return {"status": "unknown_shop"}
 
-    return {"status": "ok", "skus_processed": skus}
+    verwerkt, gezien = [], set()
+    for ref in refs:
+        item_id = await match_shopify_sale(db, user_id, ref)
+        if not item_id or item_id in gezien:
+            continue
+        gezien.add(item_id)
+        await handle_item_sold(item_id, "shopify",
+                               sold_price=ref.get("price"), sold_at=besteld_op)
+        verwerkt.append(item_id)
+
+    return {"status": "ok", "items_processed": verwerkt}
 
 
 @router.post("/marktplaats")
