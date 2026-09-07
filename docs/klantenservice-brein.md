@@ -34,8 +34,10 @@ kopieren. Geen uitleg eromheen, geen onderwerpregel tenzij erom gevraagd wordt.
 
 Vorm:
 
-- Begin altijd met `Hoi <voornaam>,`. Nooit "Hi", "Beste" of "Geachte". Is er
-  geen voornaam bekend, dan `Hoi,`.
+- Begin altijd met `Hoi <voornaam>,`. Nooit "Hi", "Beste" of "Geachte". Staat de
+  voornaam van de klant niet in de mail, schrijf dan gewoon `Hoi,`. Zet daar
+  nooit `[NOG INVULLEN]` of een placeholder; die is alleen voor ontbrekende
+  feiten, niet voor de aanhef.
 - Daarna een menselijke openingszin die erkent wat de klant merkte, in gewone
   woorden, plus dat je ernaar hebt gekeken. Een keer, niet meer.
 - Per onderwerp: het onderwerp, een dubbele punt, dan in een of twee zinnen het
