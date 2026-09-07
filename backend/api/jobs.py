@@ -1753,9 +1753,10 @@ async def _al_weg_voor_wij_er_waren(db, job: dict) -> bool:
                 "Bevestig eerst in het dashboard of dit artikel verkocht is.")},
         }).eq("id", b["id"]).execute()))
 
-    logger.info("[sold] item %s op %s: advertentie was al weg en te jong om te verlopen "
-                "— %d rij(en) op 'mogelijk verkocht', %d herplaatsing(en) geannuleerd",
-                job["item_id"], job["platform"], len(jong), len(wachtend))
+    if wachtend:
+        logger.info("[sold] item %s op %s: %d herplaatsing(en) geannuleerd "
+                    "(advertentie was al weg en te jong om te verlopen)",
+                    job["item_id"], job["platform"], len(wachtend))
     return True
 
 
