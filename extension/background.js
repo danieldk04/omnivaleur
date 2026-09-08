@@ -1014,8 +1014,11 @@ chrome.storage.onChanged.addListener((changes, area) => {
 const TOKEN_REFRESH_MARGIN_S = 120;
 let _refreshInFlight = null;
 
+// Leest uitsluitend het inlogbewijs — dat staat sinds deze versie in
+// storage.local (zie de uitleg hoger). De naam bleef _sget om de aanroepen
+// hieronder ongemoeid te laten.
 function _sget(keys) {
-  return new Promise((resolve) => chrome.storage.sync.get(keys, resolve));
+  return new Promise((resolve) => chrome.storage.local.get(keys, resolve));
 }
 
 // Decode a JWT's `exp` (seconds since epoch) without verifying — we only need to
