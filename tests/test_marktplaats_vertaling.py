@@ -316,3 +316,58 @@ def test_publiceren_stempelt_zijn_payload_ook():
     assert tak.count(f"{crosslist.TAAL_VELD}") == 0, "gebruik de constante, niet de tekst"
     assert tak.count("TAAL_VELD: \"en\"") == 1
     assert tak.count("TAAL_VELD: \"nl\"") == 1
+
+
+# ── 3. Een vertaalstoring mag de wachtrij niet dichtzetten ───────────────────
+
+def test_een_onvertaalbare_opdracht_gaat_niet_de_deur_uit(monkeypatch):
+    """Liever wachten dan een Engelse advertentie op Marktplaats.
+
+    Zie tests/test_vertaalstoring_plaatst_niets_verkeerd.py voor de meting
+    waarop dit berust: op 08-09-2026 stonden er twee zulke advertenties live.
+    """
+    job = _job("c9", "create", "pending")
+    job["payload"] = {"title": ENGELSE_TITEL, "description": ENGELSE_TEKST}
+    db = _DB([], [dict(job)], [])
+
+    def kapot(payload, platform):
+        raise crosslist.VertalingOnbeschikbaar("de vertaling lukte niet")
+
+    monkeypatch.setattr(crosslist, "localiseer_sync", kapot)
+    monkeypatch.setattr(api, "_meld_vertaalstoring", lambda reden: None)
+    assert api._zet_taal_goed(db, [job]) == [], (
+        "een opdracht die niet vertaald kan worden hoort te blijven staan")
+    assert job["status"] == "pending", "hij mag niet op fout gezet worden; hij komt later gewoon"
+
+
+def test_de_rest_van_de_wachtrij_loopt_gewoon_door(monkeypatch):
+    """Eén onvertaalbare advertentie vooraan mag alles erachter niet stilzetten."""
+    stuk = _job("c1", "create", "pending")
+    stuk["payload"] = {"title": ENGELSE_TITEL, "description": ENGELSE_TEKST}
+    goed = _job("c2", "create", "pending")
+    goed["payload"] = {"title": NEDERLANDSE_TITEL, "description": NEDERLANDSE_TEKST,
+                       crosslist.TAAL_VELD: "nl"}
+    db = _DB([], [dict(stuk), dict(goed)], [])
+
+    def kapot(payload, platform):
+        raise crosslist.VertalingOnbeschikbaar("de vertaling lukte niet")
+
+    monkeypatch.setattr(crosslist, "localiseer_sync", kapot)
+    monkeypatch.setattr(api, "_meld_vertaalstoring", lambda reden: None)
+    assert api._zet_taal_goed(db, [stuk]) == []
+    assert api._zet_taal_goed(db, [goed]) == [goed], (
+        "een advertentie die al Nederlands is en gestempeld is, gaat gewoon door")
+
+
+def test_de_eigenaar_wordt_hooguit_een_keer_per_uur_gewaarschuwd(monkeypatch):
+    """Een lege rekening raakt elke wachtende advertentie tegelijk; zonder rem
+    stond de mailbox vol."""
+    verstuurd = []
+    monkeypatch.setattr(api, "_vertaalstoring_gemeld_op", 0.0, raising=False)
+    monkeypatch.setattr(api, "send_email", lambda *a, **kw: verstuurd.append(a), raising=False)
+    import backend.services.email as mail
+    monkeypatch.setattr(mail, "send_email", lambda *a, **kw: verstuurd.append(a))
+    api._meld_vertaalstoring("tegoed op")
+    api._meld_vertaalstoring("tegoed op")
+    api._meld_vertaalstoring("tegoed op")
+    assert len(verstuurd) <= 2, f"hooguit een mail per eigenaar per uur, kreeg er {len(verstuurd)}"
