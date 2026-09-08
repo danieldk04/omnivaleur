@@ -198,13 +198,21 @@ def kandidaten() -> dict:
 
     grens = datetime.now(timezone.utc) - timedelta(days=10)
 
-    def _te_vers(iso: str | None) -> bool:
-        if not iso:
-            return False
+    def _naar_dt(waarde) -> "datetime | None":
+        # gotrue geeft created_at soms als datetime terug, PostgREST als string.
+        if waarde is None:
+            return None
+        if isinstance(waarde, datetime):
+            return waarde if waarde.tzinfo else waarde.replace(tzinfo=timezone.utc)
         try:
-            return datetime.fromisoformat(iso.replace("Z", "+00:00")) > grens
+            d = datetime.fromisoformat(str(waarde).replace("Z", "+00:00"))
+            return d if d.tzinfo else d.replace(tzinfo=timezone.utc)
         except ValueError:
-            return False
+            return None
+
+    def _te_vers(waarde) -> bool:
+        d = _naar_dt(waarde)
+        return bool(d and d > grens)
 
     kandidaat_ids: list[str] = []
     for uid, info in users.items():
