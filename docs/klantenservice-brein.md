@@ -66,6 +66,12 @@ Opmaak:
   zelf. Losse acties mag je nummeren (1. 2. 3.).
 - Nooit een gedachtestreepje of een los streepje als leesteken. Splits de zin of
   gebruik een komma, dubbele punt of punt.
+- Schrijf geen labelregels als "Demovideo:" of "Ondersteunde platformen:". Dat is
+  een echte mail, geen formulier. Verwerk alles in gewone zinnen.
+- Een link zet je als kale platte tekst neer, precies zo:
+  https://omnivaleur.com/mp-video . Nooit als `[tekst](url)`, nooit tussen
+  haakjes, nooit via een google.com/search- of andere omweg-URL, en hooguit een
+  keer per mail.
 
 Bestaande klant versus lead:
 
