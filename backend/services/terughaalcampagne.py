@@ -287,7 +287,11 @@ def kandidaten() -> dict:
 
     for lijst in groepen.values():
         lijst.sort(key=lambda r: (not r["sieraden"], -r["opdrachten"]))
-    return {"aantal": len(kandidaat_ids), "groepen": groepen}
+    return {
+        "aantal": len(kandidaat_ids),
+        "groepen": groepen,
+        "overgeslagen": sorted(overgeslagen),
+    }
 
 
 def verleng_proef(emails: list[str], dagen: int) -> dict:
