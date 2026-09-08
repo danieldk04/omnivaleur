@@ -970,7 +970,7 @@ migrateTokensFromSync();
 // is ever picked up — silently. The popup shows this, but only if you think to
 // open it, so surface it on the toolbar icon itself instead.
 function refreshAuthBadge() {
-  chrome.storage.sync.get(["authToken"], (s) => {
+  migrateTokensFromSync().then(() => chrome.storage.local.get(["authToken"], (s) => {
     if (s.authToken) {
       chrome.action.setBadgeText({ text: "" });
       chrome.action.setTitle({ title: "Omnivaleur" });
