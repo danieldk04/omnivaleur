@@ -10,6 +10,11 @@
   const job = await getJob();
   if (!job) return;
   const { id: jobId, serverUrl, payload: item } = job;
+  // EERSTE LEVENSTEKEN, VÓÓR HET EERSTE WACHTEN.
+  // Zonder dit was "de opdracht is opgehaald" en "het formulier stond er niet"
+  // van buitenaf niet te onderscheiden: allebei leverden ze drie minuten stilte
+  // op. Zie meldStapAanServer in background.js.
+  clog(`start ${job.action || "create"} — formulierpagina geladen`);
 
   try {
     if (job.action === "delete") {
@@ -89,6 +94,7 @@
 
   async function fillForm(item) {
     await waitForEl('input[name="title_nl-BE"], input[name="title_nl-NL"]', 20000);
+    clog("titelveld staat er");
     await step("title",        () => fillInputHuman(titleInput(), smartTrunc(item.title || "", 60)));
     // 2dehands draait hetzelfde formulier als Marktplaats: eerst de
     // advertentievorm, dan de prijs, dan nakijken of hij er echt staat. Alle

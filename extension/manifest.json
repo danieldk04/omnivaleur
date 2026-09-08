@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "Omnivaleur",
-  "version": "1.0.311",
-  "description": "Omnivaleur — publiceer je items automatisch op Marktplaats, 2dehands, Vinted en meer",
+  "version": "1.0.312",
+  "description": "Omnivaleur \u2014 publiceer je items automatisch op Marktplaats, 2dehands, Vinted en meer",
   "permissions": [
     "storage",
     "tabs",

@@ -1132,6 +1132,42 @@ async function reportProgress(serverUrl, jobId, progress) {
   } catch (e) { /* progress is best-effort */ }
 }
 
+// ── Elke stap van het invulformulier naar de server ────────────────────────
+//
+// GEMETEN, EN DIT IS WAAROM (08-09-2026, Egbert Brouwer / papas-plectrums).
+// 671 plaatsopdrachten voor 2dehands, nul geslaagd, en na afloop was er geen
+// enkel gegeven over waar het misging: alle 51 bewaarde foutmeldingen zeggen
+// letterlijk hetzelfde ("no response after 3 minutes") en in geen van die
+// opdrachten staat één stap opgeschreven. De stappen gingen namelijk alleen
+// naar de console van een venster dat niemand openhad. Een scan meldt zijn
+// voortgang wél; een plaatsing deed dat niet, en juist daar liep het vast.
+//
+// Vanaf nu schrijft elke stap zich weg bij de opdracht zelf. Dan is "hij liep
+// vast" niet langer het eindpunt van het onderzoek maar het begin: we zien of
+// hij bij de titel, de foto's of het plaatsen bleef staan.
+const _laatsteStapKlok = new Map();     // tabId -> tijdstip laatste verzending
+function meldStapAanServer(tabId, tekst) {
+  if (tabId == null) return;
+  const sleutel = `jobtab_${tabId}`;
+  chrome.storage.local.get(sleutel, (s) => {
+    const meta = s[sleutel];
+    if (!meta || !meta.jobId || !meta.serverUrl) return;
+    const stap = String(tekst || "").slice(0, 200);
+    // In de opdracht zelf bewaren, zodat de bewaker straks kan zeggen wáár het
+    // ophield in plaats van alleen dát het ophield.
+    chrome.storage.local.set({ [sleutel]: { ...meta, laatsteStap: stap, laatsteStapAt: Date.now() } });
+    // Naar de server hoeft niet elke regel: bij een vastloper is de laatste
+    // regel de interessante, en die komt hier vanzelf als laatste langs.
+    const nu = Date.now();
+    if (nu - (_laatsteStapKlok.get(tabId) || 0) < 1200) return;
+    _laatsteStapKlok.set(tabId, nu);
+    reportProgress(meta.serverUrl, meta.jobId, {
+      stap, platform: meta.platform, actie: meta.action || "create",
+      versie: chrome.runtime.getManifest().version,
+    });
+  });
+}
+
 // De klussen lopen bewust één voor één (één tabblad tegelijk — twee tegelijk
 // haalde de gegevens van twee advertenties door elkaar). Maar zodra er één klaar
 // was, wachtte de volgende tot de eerstvolgende ronde: bij drie platforms waren
@@ -2209,10 +2245,11 @@ async function meldNooitBegonnen(tabId, meta, snapshot) {
   // tabblad kan inmiddels dicht zijn en een tweede blik levert dan niets op.
   const f = snapshot || await bekijkVastgelopenTabblad(tabId);
 
-  const feiten = f
+  const feiten = (f
     ? ` [pagina: ${f.url}, titel ${JSON.stringify(f.titel)}, ${f.velden} invulveld(en), `
       + `invulscript geladen: ${f.stempel ? f.stempel : "nee"}${f.begin ? `, begint met ${JSON.stringify(f.begin.slice(0, 80))}` : ""}]`
-    : " [het tabblad was al weg voordat we konden kijken]";
+    : " [het tabblad was al weg voordat we konden kijken]")
+    + (meta.laatsteStap ? ` [laatste stap: ${JSON.stringify(String(meta.laatsteStap).slice(0, 120))}]` : "");
 
   let tekst;
   if (f && f.stempel) {
@@ -2832,11 +2869,18 @@ async function fireJobWatchdog(tabId) {
     await meldNooitBegonnen(tabId, meta, snap);
     return;
   }
-  const feiten = !magKijken ? ""
+  // WAAR HIELD HET OP? Zonder dit was elke tijdsoverschrijding letterlijk
+  // dezelfde zin, 671 keer bij één verkoper, zonder één aanwijzing. Zie
+  // meldStapAanServer.
+  const stap = meta.laatsteStap
+    ? ` [laatste stap: ${JSON.stringify(String(meta.laatsteStap).slice(0, 120))}`
+      + `${meta.laatsteStapAt ? `, ${Math.round((Date.now() - meta.laatsteStapAt) / 1000)}s geleden` : ""}]`
+    : " [er is geen enkele stap gemeld: het invulscript is nooit aan het formulier begonnen]";
+  const feiten = (!magKijken ? ""
     : snap
       ? ` [tab op ${snap.url}, titel ${JSON.stringify((snap.titel || "").slice(0, 60))}, `
         + `${snap.velden} invulveld(en), invulscript geladen: ${snap.stempel || "nee"}]`
-      : " [het tabblad was al weg voordat we konden kijken]";
+      : " [het tabblad was al weg voordat we konden kijken]") + stap;
   try {
     await reportError(meta.jobId, meta.serverUrl,
       `Extension timed out waiting for this ${meta.platform} job to finish (no response after ${JOB_TAB_TIMEOUT_MIN} minutes). ` +
@@ -7905,6 +7949,7 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   if (msg.type === "LOG") {
     console.log(`[Omnivaleur][formulier] ${msg.text}`);
     keepJobAlive(sender.tab?.id);
+    meldStapAanServer(sender.tab?.id, msg.text);
     sendResponse(true);
     return true;
   }

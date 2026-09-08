@@ -483,6 +483,22 @@ _KANSLOOS_CACHE_TTL = 120  # seconden
 
 
 def _kanaal_kansloos_gecached(db, user_id: str, platform: str) -> bool:
+    """Kansloos volgens de rem, maar altijd één proefopdracht per ronde.
+
+    WAAROM DIE PROEF ER IS (08-09-2026, Egbert Brouwer). De rem hield zijn hele
+    2dehands tegen zolang er nog nooit één plaatsing was geslaagd — en hield
+    daarmee ook de enige poging tegen die dat had kunnen veranderen. Vanaf
+    06-09 21:14 is er voor hem geen enkele 2dehands-opdracht meer aangemaakt;
+    elke klik op publiceren gaf de foutmelding van dagen eerder terug. Zonder
+    uitweg is een pauze een muur.
+
+    De eerste vraag in een ronde krijgt daarom altijd groen licht, ook als het
+    kanaal kansloos is; de rest van diezelfde ronde niet. Dat is precies één
+    advertentie in plaats van vijfhonderd, en het is genoeg: lukt hij, dan is
+    `_nooit_gelukt_op` voorgoed onwaar en valt de rem vanzelf weg. Lukt hij
+    niet, dan neemt de extensie de rij zelf weer terug (stopPlatformWachtrij)
+    en staat er één nieuwe foutmelding in plaats van honderden.
+    """
     import time
     from backend.api.jobs import _kanaal_kansloos
     sleutel = (user_id, platform)
@@ -491,8 +507,10 @@ def _kanaal_kansloos_gecached(db, user_id: str, platform: str) -> bool:
     if trof and nu - trof[1] < _KANSLOOS_CACHE_TTL:
         return trof[0]
     uit = bool(_kanaal_kansloos(db, user_id, platform))
+    # Het antwoord dat we ONTHOUDEN is het echte oordeel; het antwoord dat we
+    # NU teruggeven laat de proef door. Zo blijft het bij één.
     _KANSLOOS_CACHE[sleutel] = (uit, nu)
-    return uit
+    return False if uit else uit
 
 
 # De statussen waarin een advertentierij "staat er nog" betekent. `delisted` en
@@ -720,11 +738,11 @@ async def publish_to_platforms(item_id: str, platforms: list[str], user_id: str)
     # plaatsing lukt is `_kanaal_kansloos` weer False en loopt alles gewoon.
     kansloos_geblokkeerd: dict[str, str] = {}
     if ext_platforms:
-        from backend.api.jobs import _kanaal_kansloos, _melding_formulier_ging_niet_open
+        from backend.api.jobs import _kanaal_kansloos, _melding_kanaal_op_pauze
         for p in ext_platforms:
             try:
                 if await naast_de_lus(lambda p=p: _kanaal_kansloos_gecached(db, user_id, p)):
-                    kansloos_geblokkeerd[p] = _melding_formulier_ging_niet_open(p)
+                    kansloos_geblokkeerd[p] = _melding_kanaal_op_pauze(p)
             except Exception as e:  # noqa: BLE001 — een rem mag nooit publiceren blokkeren op een fout
                 logger.warning("kansloos-check mislukt voor %s/%s: %s", user_id, p, e)
     if kansloos_geblokkeerd:

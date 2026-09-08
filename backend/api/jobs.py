@@ -2765,33 +2765,99 @@ def _kansloze_reeks(db, user_id: str, platform: str) -> bool:
     return op_rij >= 3 and _nooit_gelukt_op(db, user_id, platform)
 
 
+def _draaiende_extensieversie(db, user_id: str) -> tuple[int, int, int] | None:
+    """Welke kopie van de extensie draait er NU bij deze verkoper.
+
+    Uit de aanwezigheidsstempel, die elke ronde wordt bijgewerkt. None als we
+    het niet weten (kolom ontbreekt, nooit gepolst) — en "weet niet" mag nooit
+    een reden zijn om iets tegen te houden.
+    """
+    try:
+        rij = (db.table("extension_heartbeat").select("ext_version")
+               .eq("user_id", user_id).limit(1).execute().data or [])
+    except Exception:  # noqa: BLE001 — een onbekende versie is geen storing
+        return None
+    return _kopstuk_versie((rij[0] or {}).get("ext_version")) if rij else None
+
+
+def _verdient_nieuwe_kans(db, user_id: str, platform: str) -> bool:
+    """Mag dit kanaal ondanks de rem tóch weer open?
+
+    WAAROM DIT ER IS (08-09-2026, Egbert Brouwer). De rem hieronder was een deur
+    die alleen dichtging. Hij slaat aan zolang er nog nooit één plaatsing is
+    geslaagd, en hij houdt precies de poging tegen waarmee dat zou kunnen
+    veranderen. Gemeten gevolg: na 06-09 21:14 is er voor zijn 2dehands geen
+    enkele opdracht meer aangemaakt, ook niet nadat zijn kopie was bijgewerkt van
+    1.0.306 naar 1.0.311 — de versie waarin de twee gemeten oorzaken (een
+    doorverwijzing naar de inlogpagina die pas ná het injecteren kwam, en pauzes
+    die in een verborgen venster stilvielen) juist waren verholpen. Hij klikte
+    op publiceren en kreeg de melding van drie dagen eerder terug.
+
+    Een rem die zichzelf nooit meer kan opheffen is geen rem maar een muur.
+
+    De uitweg: elke foutmelding draagt het versiestempel van de extensie die hem
+    schreef. Draait er nu een nieuwere kopie dan die alle gestapelde
+    mislukkingen maakte, dan zeggen die mislukkingen niets over wat deze kopie
+    kan, en krijgt het kanaal een schone start. Weten we de draaiende versie
+    niet, of komen de stempels ermee overeen, dan blijft de rem staan.
+    """
+    draait = _draaiende_extensieversie(db, user_id)
+    if not draait:
+        return False
+    # VRAAG GERICHT OM DE GESTEMPELDE MELDINGEN (08-09-2026, gemeten bij Egbert
+    # Brouwer). Een door de rem teruggenomen opdracht draagt de tekst die de
+    # SERVER schreef, en daar staat geen versiestempel in. Bij hem waren dat er
+    # 622 op rij, dus in elk normaal venster (40, zelfs 200 rijen) was geen
+    # enkele versie te zien en greep deze uitweg niet. De stempels zitten op de
+    # meldingen die de extensie zelf schreef; die halen we hier expliciet op.
+    try:
+        rijen = (db.table("jobs").select("result").eq("user_id", user_id)
+                 .eq("platform", platform).eq("action", "create")
+                 .in_("status", ["error", "cancelled"])
+                 .filter("result->>error", "ilike", "%[extensie %")
+                 .order("created_at", desc=True).limit(10).execute().data or [])
+    except Exception:  # noqa: BLE001 — kan de database het filter niet, dan geen uitweg
+        return False
+    stempels = [v for v in (
+        _extensie_versie((j.get("result") or {}).get("error")) for j in rijen
+    ) if v]
+    # Geen enkel stempel gevonden: dan weten we niets over de kopie die dit
+    # veroorzaakte, en blijft de rem staan (de proefopdracht in crosslist zorgt
+    # dat dat nooit een muur wordt).
+    return bool(stempels) and draait > max(stempels)
+
+
 def _kanaal_kansloos(db, user_id: str, platform: str) -> bool:
     """Is dit kanaal aantoonbaar kansloos voor dit account?
 
     Twee ingangen, allebei vereisen dat er NOOIT één plaatsing is geslaagd:
 
     1. Drie identieke tijdsoverschrijdingen op rij (`_kansloze_reeks`, ongewijzigd).
-    2. NIEUW: tien of meer ondoorgronde mislukkingen (`_ONDOORGROND`) bij elkaar,
-       ook als ze van vorm wisselen. Egbert Brouwer: 671 pogingen voor 2dehands,
+    2. Tien of meer ondoorgronde mislukkingen (`_ONDOORGROND`) bij elkaar, ook
+       als ze van vorm wisselen. Egbert Brouwer: 671 pogingen voor 2dehands,
        nul geslaagd, met "timed out", "not signed in" en "queue stopped" door
        elkaar. Ingang 1 keek naar drie identieke op rij en zag dit patroon niet.
 
     Een uitgelegde fout ("vul de foto's in") telt nooit mee: die zegt wél iets
     over dit artikel, en drie ervan mogen geen wachtrij wissen.
+
+    En over alles heen: is de kopie die nu draait niet de kopie die deze
+    mislukkingen maakte, dan tellen ze niet meer mee. Zie _verdient_nieuwe_kans.
     """
-    if _kansloze_reeks(db, user_id, platform):
-        return True
     if not _nooit_gelukt_op(db, user_id, platform):
         return False
     recent = (db.table("jobs").select("status,result").eq("user_id", user_id)
               .eq("platform", platform).eq("action", "create")
               .in_("status", ["error", "cancelled"])
               .order("created_at", desc=True).limit(40).execute().data or [])
-    ondoorgrond = sum(
-        1 for j in recent
+    ondoorgrond = [
+        j for j in recent
         if _ONDOORGROND.search(str((j.get("result") or {}).get("error") or ""))
-    )
-    return ondoorgrond >= _KANSLOOS_DREMPEL
+    ]
+    if not (len(ondoorgrond) >= _KANSLOOS_DREMPEL
+            or _kansloze_reeks(db, user_id, platform)):
+        return False
+    return not _verdient_nieuwe_kans(db, user_id, platform)
 
 
 # Het adres waarop de verkoper zelf, in een klik, kan zien of hij is ingelogd.
@@ -2838,11 +2904,35 @@ def _melding_formulier_ging_niet_open(platform: str) -> str:
         f"One click tells you which of the two causes it is. Open this page in this browser:\n"
         f"{controle}\n\n"
         f"1. You see your own adverts page. Then you are signed in and the fault is on our side. "
-        f"Please tell us, because we cannot see that from here.\n"
+        f"You do not have to wait for us: press publish again. We always send one single test "
+        f"listing through, even while this channel is paused, and the extension now records "
+        f"every step it takes, so the next message names the exact step it stopped on instead "
+        f"of leaving us both guessing.\n"
         f"2. You see the word \"Unauthorized\", or a login screen. Then you are not signed in to "
         f"{site} in this browser. Marktplaats and 2dehands are separate sites with separate "
         f"logins, so being signed in to one does not sign you in to the other. Go there, "
         f"sign in, and publish again."
+    )
+
+
+def _melding_kanaal_op_pauze(platform: str) -> str:
+    """Wat de verkoper leest als de rem dit kanaal op pauze heeft gezet.
+
+    WAAROM DIT EEN EIGEN TEKST IS (08-09-2026). Hier werd de melding van de
+    laatste mislukking hergebruikt, dus las Egbert Brouwer bij elke nieuwe klik
+    de fout van drie dagen eerder terug, met een controle die hij toen al had
+    gedaan. Dat leest als "er is niets veranderd", terwijl er wél iets is
+    veranderd: er staat nu een pauze, en er gaat één test doorheen.
+    """
+    site = {"marktplaats": "Marktplaats (marktplaats.nl)",
+            "2dehands": "2dehands (2dehands.be)"}.get(platform, platform)
+    return (
+        f"{site} is on hold for your account: every publish so far has failed there and not one "
+        f"has ever gone through, so we are not queueing hundreds more. This is not a rejection of "
+        f"this item.\n\n"
+        f"One test listing IS being sent to {site} right now. If it goes through, the hold lifts "
+        f"by itself and everything else follows. If it fails, the message on that one item names "
+        f"the step it stopped on."
     )
 
 

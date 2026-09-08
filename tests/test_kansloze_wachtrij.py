@@ -41,10 +41,14 @@ TIMEOUT = ("Extension timed out waiting for this 2dehands job to finish (no resp
 class _Q:
     def __init__(self, db, tabel):
         self.db, self.tabel = db, tabel
-        self.filters, self.in_filters = {}, {}
+        self.filters, self.in_filters, self.tekstfilter = {}, {}, None
         self.op, self.velden, self.omgekeerd, self.grens = None, None, False, None
 
     def select(self, *_a, **_k): self.op = "select"; return self
+    def filter(self, kolom, _op, patroon):
+        # Alleen wat we echt gebruiken: result->>error ilike '%[extensie %'
+        self.tekstfilter = (kolom, patroon.strip("%"))
+        return self
     def update(self, velden): self.op, self.velden = "update", velden; return self
     def eq(self, k, v): self.filters[k] = v; return self
     def in_(self, k, v): self.in_filters[k] = list(v); return self
@@ -52,10 +56,15 @@ class _Q:
     def limit(self, n): self.grens = n; return self
 
     def execute(self):
-        bron = self.db.listings if self.tabel == "listings" else self.db.jobs
+        bron = ({"listings": self.db.listings,
+                 "extension_heartbeat": self.db.heartbeat}.get(self.tabel, self.db.jobs))
         rijen = [r for r in bron
                  if all(r.get(k) == v for k, v in self.filters.items())
                  and all(r.get(k) in v for k, v in self.in_filters.items())]
+        if self.tekstfilter:
+            kolom, naald = self.tekstfilter
+            if kolom == "result->>error":
+                rijen = [r for r in rijen if naald in str((r.get("result") or {}).get("error") or "")]
         if self.omgekeerd:
             rijen = list(reversed(rijen))
         if self.op == "update":
@@ -67,8 +76,9 @@ class _Q:
 
 
 class _DB:
-    def __init__(self, jobs=None, listings=None):
+    def __init__(self, jobs=None, listings=None, heartbeat=None):
         self.jobs, self.listings = jobs or [], listings or []
+        self.heartbeat = heartbeat or []
 
     def table(self, naam): return _Q(self, naam)
 
@@ -269,3 +279,40 @@ def test_de_hele_rij_wordt_teruggenomen_met_de_reden_erbij():
 def test_lege_rij_is_geen_fout():
     db = _DB(jobs=[], listings=[])
     assert api._stop_wachtrij(db, "u", "2dehands", "reden") == 0
+
+
+# ── De rem mag geen muur zijn ──────────────────────────────────────────────
+
+def _muur_mislukt(n, versie=None, status="cancelled"):
+    stempel = f" [extensie {versie}]" if versie else ""
+    return [{"user_id": "u", "platform": "2dehands", "action": "create",
+             "status": status, "result": {"error": TIMEOUT + stempel}} for _ in range(n)]
+
+
+def test_een_bijgewerkte_kopie_krijgt_het_kanaal_terug():
+    """WAAROM DIT ER IS (08-09-2026, Egbert Brouwer).
+
+    De rem sloeg aan zolang er nog nooit één plaatsing was geslaagd, en hield
+    precies de poging tegen waarmee dat had kunnen veranderen. Gemeten in het
+    opdrachtenlogboek: na 06-09 21:14 is er voor zijn 2dehands geen enkele
+    opdracht meer aangemaakt, ook niet nadat Chrome zijn kopie had bijgewerkt
+    van 1.0.306 naar 1.0.311 — de versie waarin de gemeten oorzaken juist waren
+    verholpen. Elke klik op publiceren gaf de foutmelding van dagen eerder
+    terug. Een rem die zichzelf nooit meer kan opheffen is geen rem.
+    """
+    db = _DB(jobs=_muur_mislukt(40) + _muur_mislukt(20, "1.0.306", status="error"),
+             heartbeat=[{"user_id": "u", "ext_version": "1.0.311"}])
+    assert api._kanaal_kansloos(db, "u", "2dehands") is False
+
+
+def test_dezelfde_kopie_blijft_wel_geremd():
+    """De uitweg is "er draait iets anders", niet "probeer het gewoon nog eens"."""
+    db = _DB(jobs=_muur_mislukt(40) + _muur_mislukt(20, "1.0.311", status="error"),
+             heartbeat=[{"user_id": "u", "ext_version": "1.0.311"}])
+    assert api._kanaal_kansloos(db, "u", "2dehands") is True
+
+
+def test_zonder_bekende_versie_verandert_er_niets():
+    """Weten we niet welke kopie draait, dan houden we de rem zoals hij was."""
+    db = _DB(jobs=_muur_mislukt(40) + _muur_mislukt(20, "1.0.306", status="error"))
+    assert api._kanaal_kansloos(db, "u", "2dehands") is True

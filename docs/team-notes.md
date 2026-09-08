@@ -6805,3 +6805,52 @@ Daniel heeft `overzetten --alleen 2dh_leads` gedraaid (service-sleutel uit de
 keychain): "39 regels overgezet". De rij staat in `leadgen_opslag`, de
 Railway-tick pikt de 2dehands-leads nu mee in de koude reeks. `mail_state`
 onaangeroerd.
+
+### 08-09-2026 — Egbert / 2dehands: de rem was een muur geworden
+
+Egbert Brouwer meldde dat publiceren naar 2dehands nog steeds niet lukt en
+stuurde de melding mee. Nagemeten in het opdrachtenlogboek met de servicesleutel:
+
+- 726 opdrachten in totaal, waarvan **geen enkele geslaagde plaatsing op welk
+  kanaal dan ook** (alleen scans: 15 op Marktplaats, 2 op 2dehands). 2dehands:
+  51 fout, 620 teruggenomen, 0 geslaagd.
+- Andere verkopers plaatsten in dezelfde periode wél op 2dehands (25, 10 en 3
+  geslaagde plaatsingen). Het ligt dus niet aan het kanaal zelf.
+- Zijn 42 tijdsoverschrijdingen zijn geschreven door de bewaker van de extensie,
+  niet door de opruimronde van de server. Die tak wordt alleen bereikt als
+  `scriptSeen` waar is. **Het plaatsformulier ging dus wél open en ons
+  invulscript laadde en vroeg zijn opdracht op** — daarna kwam er niets meer.
+  Dat is het tegendeel van wat hem drie keer is verteld ("formulier ging nooit
+  open" / "je bent niet ingelogd").
+- Er kwam ook nooit één LOG-regel binnen (die zet de bewaker opnieuw op scherp,
+  en de fout viel telkens op ~3m47s na het claimen). Het script bleef dus staan
+  tussen "opdracht opgehaald" en "titelveld ingevuld".
+- Hij draait inmiddels 1.0.311 (aanwezigheidsstempel, Windows, Chrome 152). Alle
+  mislukkingen dragen stempel 1.0.306 of ouder — dus van vóór de twee fixes die
+  hier precies over gaan (doorverwijzing naar de inlogpagina ná het injecteren,
+  en pauzes die in een verborgen venster stilvallen, de Worker-timer van 1.0.309).
+
+**De echte blokkade nu:** de kansloos-rem in `_kanaal_kansloos` slaat aan zolang
+er nog nooit één plaatsing is geslaagd, en verhindert precies de poging die dat
+zou kunnen veranderen. Sinds 06-09 21:14 is er voor zijn 2dehands geen enkele
+opdracht meer aangemaakt; elke klik gaf de melding van dagen eerder terug, met
+een controle ("open je advertentiepagina") die hij al had gedaan en die eindigde
+in "dan ligt het aan ons, laat het ons weten". Doodlopend.
+
+Wat er is veranderd:
+
+1. De rem telt geen mislukkingen meer mee van een kopie die niet meer draait.
+   Voor-en-na op de echte gegevens: oud `_kanaal_kansloos` = True, nieuw = False;
+   Marktplaats blijft in beide gevallen False.
+2. Er gaat altijd één proefopdracht door een pauze heen (`_kanaal_kansloos_gecached`),
+   dus een pauze kan nooit meer een muur worden.
+3. Elke stap van het invulformulier gaat nu naar de server (`meldStapAanServer`),
+   en de bewaker noemt de laatste stap in de foutmelding. Bij een plaatsing werd
+   voorheen niets vastgelegd: 51 foutmeldingen die alle 51 letterlijk hetzelfde
+   zeiden. Het invulscript meldt zich nu ook meteen bij het laden en zodra het
+   titelveld er staat, zodat "nooit begonnen" en "vastgelopen bij X" uit elkaar
+   te houden zijn.
+4. Aparte tekst voor een gepauzeerd kanaal, die zegt dat er een test doorgaat.
+
+Extensie 1.0.312 gebouwd. Openstaand: 1.0.312 moet naar de Chrome Web Store,
+anders bereikt punt 3 hem niet. Punt 1 en 2 staan op de server en werken meteen.

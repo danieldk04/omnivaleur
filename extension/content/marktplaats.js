@@ -9,6 +9,8 @@
 
   const job = await getJob();
   if (!job) return;
+  // Eerste levensteken vóór het eerste wachten; zie tweedehands.js.
+  clog(`start ${job.action || "create"} — formulierpagina geladen`);
   const { id: jobId, serverUrl, payload: item } = job;
 
   try {
@@ -267,6 +269,7 @@
 
   async function fillForm(item) {
     await waitForEl('input[name="title_nl-NL"]', 20000);
+    clog("titelveld staat er");
     await step("title",        () => fillInputHuman(qs('input[name="title_nl-NL"]'), smartTrunc(item.title || "", 60)));
     // EERST DE ADVERTENTIEVORM, DAN PAS DE PRIJS, EN DAARNA NAKIJKEN OF DE PRIJS
     // ER ECHT STAAT. Alle drie zitten in zetPrijs (shared.js); daar staat ook
