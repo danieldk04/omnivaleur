@@ -1005,7 +1005,7 @@ chrome.runtime.onInstalled.addListener(() => {
 });
 // Covers the popup's own login/logout, which writes the token directly.
 chrome.storage.onChanged.addListener((changes, area) => {
-  if (area === "sync" && changes.authToken) refreshAuthBadge();
+  if (area === "local" && changes.authToken) refreshAuthBadge();
 });
 
 // Seconds before a JWT's own expiry at which we proactively refresh. A slow
