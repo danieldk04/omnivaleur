@@ -1011,7 +1011,10 @@ async function haalTerughaal() {
   const doel = el('th-lijst');
   doel.innerHTML = '<div class="uitleg">Bezig met ophalen…</div>';
   try {
-    const d = await vraag('/api/billing/admin/terughaal/kandidaten');
+    const r = await fetch(API + '/api/billing/admin/terughaal/kandidaten',
+      { headers: { Authorization: 'Bearer ' + TOKEN } });
+    const d = await r.json().catch(() => ({}));
+    if (!r.ok) { doel.innerHTML = '<div class="leeg">Ophalen mislukt: ' + veilig(d.detail || ('server ' + r.status)) + '</div>'; return; }
     const g = d.groepen || {};
     const blok = (titel, rijen) => `<h3 style="margin:14px 0 4px">${veilig(titel)} — ${rijen.length}</h3>` + (rijen.length
       ? `<table><thead><tr><th>E-mail</th><th class="num">Opdr.</th><th class="num">Mislukt</th><th class="num">Geplaatst</th><th>Verkoopt</th></tr></thead><tbody>`
