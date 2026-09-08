@@ -1239,7 +1239,11 @@ function meldStapAanServer(tabId, tekst) {
     // Naar de server hoeft niet elke regel: bij een vastloper is de laatste
     // regel de interessante, en die komt hier vanzelf als laatste langs.
     const nu = Date.now();
-    if (nu - (_laatsteStapKlok.get(tabId) || 0) < 1200) return;
+    // De EERSTE stap van een tabblad gaat er altijd door. Die is de
+    // waardevolste van allemaal: hij bewijst dat het invulscript niet alleen
+    // geladen is maar ook echt begonnen. Pas daarna knijpen we af.
+    const vorig = _laatsteStapKlok.get(tabId);
+    if (vorig != null && nu - vorig < 1200) return;
     _laatsteStapKlok.set(tabId, nu);
     reportProgress(meta.serverUrl, meta.jobId, {
       stap, platform: meta.platform, actie: meta.action || "create",
