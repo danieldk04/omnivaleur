@@ -514,7 +514,6 @@ def terughaal_verstuur(
             "groep": groep,
             "aantal": len(ontvangers),
             "ontvangers": [o["email"] for o in ontvangers],
-            "zonder_eigen_zin": [o["email"] for o in ontvangers if groep == "A" and not o["detail"]],
             "verleng_dagen": verleng_dagen,
             "voorbeeld": {"aan": ontvangers[0]["email"], "onderwerp": subject, "tekst": body},
         }
