@@ -7577,6 +7577,16 @@ function renderRefreshView() {
     )
   );
   if (refreshPlatformFilter) vinted = vinted.filter(l => l.platform === refreshPlatformFilter);
+  if (refreshAgeFilter) {
+    vinted = vinted.filter(l => {
+      const d = refreshListingAgeDays(l);
+      if (d == null) return false;
+      if (refreshAgeFilter === 'lt30') return d < 30;
+      if (refreshAgeFilter === '30to90') return d >= 30 && d <= 90;
+      if (refreshAgeFilter === 'gt90') return d > 90;
+      return true;
+    });
+  }
   vinted = vinted.slice().sort((a, b) =>
     (state.items.find(i => i.id === a.item_id)?.title || '')
       .localeCompare(state.items.find(i => i.id === b.item_id)?.title || ''));
