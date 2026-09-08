@@ -17,6 +17,68 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ---
 
+## railway-draait-op-anon-sleutel
+
+*08-09-2026 — De live server draait op de Supabase anon-sleutel; alles wat auth.admin gebruikt faalt daardoor stilletjes — waaronder alle proefherinneringen*
+
+Gemeten op 13-08-2026 via `https://omnivaleur.com/health` →
+`config.supabase_key_role: "anon"` (die rol staat er sindsdien in; een JWT draagt
+zijn claims onversleuteld, dus dit lekt niets).
+
+**Gevolg:** elke aanroep van `db.auth.admin.*` krijgt "User not allowed". Met de
+anon-sleutel werkt de rest van de app gewoon, omdat RLS op de meeste tabellen
+uit staat — daardoor viel dit nooit op.
+
+**Wat er hierdoor stil kapot was:**
+- `services/billing.py` — proefherinneringen. Bewijs: 27 abonnementen, 22
+  verlopen, **0** verstuurde mails. De fout werd opgevangen met een stille
+  `continue`; die logt nu hard. Zie "proefperiode-en-toegangsslot".
+- `api/auth.py` — je e-mailadres wijzigen.
+- `services/analytics_report.py` en `services/announcement.py` — gebruikers
+  opsommen voor het weekrapport en voor aankondigingsmails.
+- `api/billing.py` — dit had de checkout al een keer gesloopt; daar is het
+  omzeild door het adres uit het token te halen in plaats van de oorzaak te
+  verhelpen. Dat is de reden dat het elders bleef liggen.
+
+**Fix 1 (14-08-2026 gedaan):** `SUPABASE_KEY` op Railway is nu de
+**service_role**-sleutel. Controleer op `/health`. Let op: de sleutel in de
+lokale `.env` is óók anon, dus lokaal testen bewijst hier niets.
+
+**Fix 2 — en dit was de échte reden dat fix 1 niet genoeg was.** De hele app
+liep over ÉÉN gedeelde `create_client`. Een Supabase-client onthoudt zijn laatste
+sessie: zodra er ergens `sign_in_with_password`, `set_session` of
+`refresh_session` op gebeurt, stuurt diezelfde client daarna het token van díé
+gebruiker mee in plaats van de servicesleutel. Alle `auth.admin`-aanroepen kregen
+daarna "User not allowed", ook met de juiste sleutel.
+
+`backend/database.py` heeft nu drie gescheiden verbindingen: `get_db()`
+(gegevens), `get_admin_db()` (alleen `auth.admin.*`, wordt nooit ingelogd) en
+`get_auth_db()` (registreren/inloggen/wachtwoord — die mág vervuild raken).
+Zet nooit een `auth.admin`-aanroep terug op `get_db()`.
+
+`change_email` in api/auth.py logt de gebruiker in om zijn wachtwoord te
+controleren en deed daarna direct de beheerdersactie op dezelfde client — die
+kon dus per definitie nooit werken.
+
+Controleren zonder te wachten op de dagelijkse taak: knop **"Who would get a
+trial mail?"** in Owner tools (`POST /api/billing/admin/reminder-dryrun`).
+Verstuurt niets.
+
+**ACHTERHAALD sinds 27-08-2026.** `/health` op omnivaleur.com toont
+`"supabase_key_role": "service_role"` — de server draait dus op de goede sleutel
+en auth.admin werkt weer. Controleer die regel voordat je een storing hierop
+gokt; hij staat er juist om dit te kunnen zien. Wat er van deze notitie overblijft
+is het patroon: een verkeerde sleutel geeft geen foutmelding maar een leeg
+antwoord, en dat leest als "er is niets". Zie "klantenslot-valt-dicht".
+
+**08-09-2026:** `get_admin_db()` gebruikt nu `settings.supabase_service_key`
+(env `SUPABASE_SERVICE_KEY`) met terugval op `supabase_key`. Op prod is
+`SUPABASE_KEY` nog steeds service_role (zie `/health`), dus dit is een vangnet:
+raakt `SUPABASE_KEY` ooit terug op anon, dan blijft auth.admin werken zolang
+`SUPABASE_SERVICE_KEY` gezet is. De lokale `.env` is nog steeds anon.
+
+---
+
 ## leadgen-2dehands-tweede-bron
 
 *07-09-2026 — 2dehands.be leadgen via leadgen_marktplaats.py --site 2dehands; zelfde API en categorieën als Marktplaats*
@@ -3116,62 +3178,6 @@ prospect. Dat is het pad waarlangs Jaap een afscheidsmail kreeg terwijl hij beta
   worden voordat je naar het rooster kijkt.
 - Deze vorm — fout opvangen, lege waarde teruggeven, resultaat cachen — is in dit
   project vaker de oorzaak dan de oplossing.
-
----
-
-## railway-draait-op-anon-sleutel
-
-*27-08-2026 — De live server draait op de Supabase anon-sleutel; alles wat auth.admin gebruikt faalt daardoor stilletjes — waaronder alle proefherinneringen*
-
-Gemeten op 13-08-2026 via `https://omnivaleur.com/health` →
-`config.supabase_key_role: "anon"` (die rol staat er sindsdien in; een JWT draagt
-zijn claims onversleuteld, dus dit lekt niets).
-
-**Gevolg:** elke aanroep van `db.auth.admin.*` krijgt "User not allowed". Met de
-anon-sleutel werkt de rest van de app gewoon, omdat RLS op de meeste tabellen
-uit staat — daardoor viel dit nooit op.
-
-**Wat er hierdoor stil kapot was:**
-- `services/billing.py` — proefherinneringen. Bewijs: 27 abonnementen, 22
-  verlopen, **0** verstuurde mails. De fout werd opgevangen met een stille
-  `continue`; die logt nu hard. Zie "proefperiode-en-toegangsslot".
-- `api/auth.py` — je e-mailadres wijzigen.
-- `services/analytics_report.py` en `services/announcement.py` — gebruikers
-  opsommen voor het weekrapport en voor aankondigingsmails.
-- `api/billing.py` — dit had de checkout al een keer gesloopt; daar is het
-  omzeild door het adres uit het token te halen in plaats van de oorzaak te
-  verhelpen. Dat is de reden dat het elders bleef liggen.
-
-**Fix 1 (14-08-2026 gedaan):** `SUPABASE_KEY` op Railway is nu de
-**service_role**-sleutel. Controleer op `/health`. Let op: de sleutel in de
-lokale `.env` is óók anon, dus lokaal testen bewijst hier niets.
-
-**Fix 2 — en dit was de échte reden dat fix 1 niet genoeg was.** De hele app
-liep over ÉÉN gedeelde `create_client`. Een Supabase-client onthoudt zijn laatste
-sessie: zodra er ergens `sign_in_with_password`, `set_session` of
-`refresh_session` op gebeurt, stuurt diezelfde client daarna het token van díé
-gebruiker mee in plaats van de servicesleutel. Alle `auth.admin`-aanroepen kregen
-daarna "User not allowed", ook met de juiste sleutel.
-
-`backend/database.py` heeft nu drie gescheiden verbindingen: `get_db()`
-(gegevens), `get_admin_db()` (alleen `auth.admin.*`, wordt nooit ingelogd) en
-`get_auth_db()` (registreren/inloggen/wachtwoord — die mág vervuild raken).
-Zet nooit een `auth.admin`-aanroep terug op `get_db()`.
-
-`change_email` in api/auth.py logt de gebruiker in om zijn wachtwoord te
-controleren en deed daarna direct de beheerdersactie op dezelfde client — die
-kon dus per definitie nooit werken.
-
-Controleren zonder te wachten op de dagelijkse taak: knop **"Who would get a
-trial mail?"** in Owner tools (`POST /api/billing/admin/reminder-dryrun`).
-Verstuurt niets.
-
-**ACHTERHAALD sinds 27-08-2026.** `/health` op omnivaleur.com toont
-`"supabase_key_role": "service_role"` — de server draait dus op de goede sleutel
-en auth.admin werkt weer. Controleer die regel voordat je een storing hierop
-gokt; hij staat er juist om dit te kunnen zien. Wat er van deze notitie overblijft
-is het patroon: een verkeerde sleutel geeft geen foutmelding maar een leeg
-antwoord, en dat leest als "er is niets". Zie "klantenslot-valt-dicht".
 
 ---
 
