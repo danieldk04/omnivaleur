@@ -7675,11 +7675,17 @@ function rfLastRefreshCell(l) {
   if (!l.last_refreshed_at) {
     return `<span class="rf-mode rf-mode-none">— not refreshed yet</span>`;
   }
-  const badge = l.last_refresh_strategy === 'relist'
+  // last_refresh_strategy komt soms leeg terug (kolom ontbrak toen die verversing
+  // liep). Marktplaats en 2dehands kennen alleen de relist-modus, dus daar is de
+  // modus af te leiden. Vinted kan beide; dan tonen we een neutraal "refreshed"
+  // in plaats van "mode unknown".
+  let strat = l.last_refresh_strategy;
+  if (!strat && l.platform && l.platform !== 'vinted') strat = 'relist';
+  const badge = strat === 'relist'
     ? `<span class="rf-mode rf-mode-relist">🔄 Mode 2 · relist</span>`
-    : l.last_refresh_strategy === 'content'
+    : strat === 'content'
       ? `<span class="rf-mode rf-mode-content">✨ Mode 1 · content</span>`
-      : `<span class="rf-mode rf-mode-none">mode unknown</span>`;
+      : `<span class="rf-mode rf-mode-content">✓ refreshed</span>`;
   const count = (l.refresh_count || 0) > 0
     ? ` · ${l.refresh_count}× total` : '';
   return `${badge}<div class="rf-sub">${fmtDate(l.last_refreshed_at)}${count}</div>`;
