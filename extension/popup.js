@@ -6,7 +6,18 @@ async function checkLoginState() {
   // Ook het vernieuwbewijs meewegen: zonder dat kan de extensie na een uur geen
   // vers inlogbewijs meer halen en ligt hij stil, terwijl dit scherm "actief"
   // bleef melden. Precies zo stond hij een uur lang groen zonder iets te doen.
-  const { authToken, refreshToken, userEmail } = await chrome.storage.sync.get(["authToken", "refreshToken", "userEmail"]);
+  // Het inlogbewijs staat sinds deze versie in storage.local (device-gebonden).
+  // Zolang de achtergrond de eenmalige verhuizing nog niet deed, kan het nog in
+  // sync staan — dan die waarde gebruiken.
+  let { authToken, refreshToken, userEmail } = await chrome.storage.local.get(["authToken", "refreshToken", "userEmail"]);
+  if (!authToken) {
+    const oud = await chrome.storage.sync.get(["authToken", "refreshToken", "userEmail"]);
+    if (oud.authToken) {
+      ({ authToken, refreshToken, userEmail } = oud);
+      await chrome.storage.local.set(oud);
+      await chrome.storage.sync.remove(["authToken", "refreshToken", "userEmail"]);
+    }
+  }
   if (authToken && refreshToken) {
     document.getElementById("loggedOut").style.display = "none";
     document.getElementById("loggedIn").style.display = "flex";
