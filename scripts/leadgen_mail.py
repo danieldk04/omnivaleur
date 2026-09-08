@@ -5372,6 +5372,11 @@ def main() -> None:
 
     u = sub.add_parser("overzetten",
                        help="leadlijst en administratie naar Supabase zetten")
+    u.add_argument("--alleen", nargs="+", metavar="NAAM",
+                   help="alleen deze rijen wegschrijven (bv. 2dh_leads); de rest "
+                        "wordt niet aangeraakt. Zonder dit gaan alle rijen mee, "
+                        "inclusief mail_state — dat overschrijft de "
+                        "verzendadministratie van de server.")
     u.set_defaults(func=overzetten)
 
     r = sub.add_parser("dagbericht", help="het avondbericht nu versturen (test)")
