@@ -121,8 +121,11 @@ Hoe de kanalen gekoppeld worden:
 
 Demovideo en uitleg:
 
-- Stuur altijd deze link: https://omnivaleur.com/mp-video
-- Nooit een YouTube-link, nooit het videobestand als bijlage.
+- Stuur altijd exact deze link, als kale platte tekst: https://omnivaleur.com/mp-video
+- Een keer per mail. Nooit een YouTube-link, nooit het videobestand als bijlage,
+  nooit de link inpakken in opmaak of in een zoek-URL.
+- De video is een aanvulling, geen vervanging van het antwoord. Vraagt iemand hoe
+  iets werkt, leg dat kort in de mail uit en zet de video erbij.
 
 Eerste incasso duurt langer:
 
