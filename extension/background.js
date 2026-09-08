@@ -7887,7 +7887,10 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     // an older dashboard build syncs just the access token, and we must not wipe
     // a good refresh token we already have.
     if (msg.refresh) patch.refreshToken = msg.refresh;
-    chrome.storage.sync.set(patch, () => {
+    // Vers token van het dashboard: de verversteller resetten zodat de cooldown
+    // een echte refresh met dit nieuwe token niet tegenhoudt.
+    patch._refreshAt = 0;
+    chrome.storage.local.set(patch, () => {
       sendResponse({ ok: true });
       pollJobs();
     });
