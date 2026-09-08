@@ -17,6 +17,72 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ---
 
+## rubriekkeuze-vroeg-eerst-om-kleding
+
+*08-09-2026 — "— choose gender first —" was een doodlopende straat voor woontextiel; de rubriekenlijst toont nu alles en trekt het soort mee*
+
+Toon (dejuistetoon), 07-09-2026: "waarom moet ik Choose gender first kiezen en is
+de categorie gebaseerd op kleding?" Hij verkoopt vloerkleden, vachten, tapijten en
+kussens.
+
+Die rubrieken bestónden allemaal (de tak "wonen", sinds 21-08-2026), maar ze zaten
+achter de eerste keuzelijst van het invulscherm: "Item type". Wie die op de
+standaardwaarde Clothing & Shoes liet staan, kreeg bij Categorie alleen
+"— choose gender first —" en daarna uitsluitend kledingrubrieken. Erger nog: een
+artikel zónder rubriek (zie "rubriek-valt-stil-bij-massa-import") opent altijd op
+Clothing & Shoes, dus juist de artikelen die hij moest repareren stuurden hem naar
+dat ene scherm zonder uitweg.
+
+Nu toont de rubriekenlijst zonder gekozen doelgroep de héle taxonomie, met de tak
+ervoor ("Home & garden · Rugs & Carpets"), en `onCategoryPicked` zet het soort en
+de doelgroep achteraf goed. Kiezen kan dus altijd, waar je ook begint.
+
+Toepassing van "geen-doodlopende-straat-in-de-ui": een grijs vakje dat zegt wat
+je níet mag, zonder de weg te wijzen, kost een klant een week. En let op de proef:
+`tests/budgetheld-fixes-test.js` draait de echte functies uit app.html tegen een
+nagebootst scherm, dus een nieuwe hulpfunctie erin moet daar meegeevald worden.
+
+---
+
+## rubriek-valt-stil-bij-massa-import
+
+*08-09-2026 — Een geweigerde modelvraag tijdens importeren werd stil "geen rubriek", en zonder rubriek publiceert er niets; 959 artikelen stonden zo stil*
+
+Toon (dejuistetoon), 07-09-2026. Van de 294 artikelen die hij op 05-09 importeerde
+kwamen er 103 zonder rubriek binnen, bij een tweede verkoper 42 van de 59, en over
+alle accounts stonden er 959 zo in de voorraad (één account 661 stuks sinds 22-08).
+Zonder rubriek weigert het publicatiepad het artikel, en dat gebeurt stil: in het
+overzicht is niet te zien dat ze nergens heen kunnen.
+
+**Het mechanisme, gemeten en niet geraden.** Dezelfde titels leveren, één voor één
+gevraagd, 20 van de 20 keer wél een rubriek op. De gegevens waren dus prima. Wat ze
+liet vallen was de lopende band: `bulk-import` vuurt met `asyncio.gather` de hele
+lading in één klap af (tot 100 tegelijk) en elke vraag draagt de volledige taxonomie
+mee, bijna 5.000 tokens. Vijfentwintig tegelijk is ruim 100.000 invoertokens in één
+seconde, en daar zet Anthropic een snelheidslimiet op. Een geweigerde vraag werd
+stil `{}` en viel terug op de woordenlijst — en die leest de omschrijving, die bij
+een verse Marktplaats- of 2dehands-import nog niet binnen is. Op alleen de titel
+vindt de woordenlijst 0 van de 114; het model 20 van de 20.
+
+Drie remmen, alle drie met een proef in `tests/test_rubriek_valt_niet_stil.py`:
+hoogstens vijf vragen tegelijk, drie pogingen met wachttijd ertussen, en een
+foutregel in het log in plaats van stilte. Plus twee vangnetten: bij publiceren
+wordt een lege rubriek alsnog met het model gevuld (`crosslist._fill_inferred_gaps`),
+en een dagelijkse ronde haalt de achterstand in (`services/categorie_herstel.py`).
+
+**Bijvangst die net zoveel opleverde:** een antwoord waarvan de rubriek klopte maar
+het etiket ernaast niet ("unisex" bij "wonen plaids en woondekens") ging vroeger
+hélemaal weg. Elke rubriek hoort bij precies één tak (247 rubrieken, 247 keer
+uniek), dus die tak is af te leiden. Eén op de vijf artikelen in de eerste
+herstelronde hing hierop.
+
+Zelfde familie als "anthropic-credit-silent-translation-fallback" en
+"anthropic-sdk-pin-valstrik": een modelaanroep die stil niets doet, en een
+terugval die er goedaardig uitziet maar het echte werk niet levert. Zie ook
+"scan-mag-nooit-leeghalen" — herstelrondes vullen alleen wat leeg is.
+
+---
+
 ## railway-draait-op-anon-sleutel
 
 *08-09-2026 — De live server draait op de Supabase anon-sleutel; alles wat auth.admin gebruikt faalt daardoor stilletjes — waaronder alle proefherinneringen*

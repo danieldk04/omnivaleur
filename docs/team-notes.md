@@ -6714,3 +6714,44 @@ Gebouwd en live op main (Railway auto-deploy, health 200):
 Daniel doet de rest zelf in beheer: kandidaten bekijken, groepen samenstellen
 (sieraden eerst), proefronde controleren, versturen. Groep A wil per persoon een
 eigen zin (`adres | zoveel van zoveel opdrachten vastgelopen`).
+
+## 08-09-2026 — Toon: twee vragen, één oorzaak eronder
+
+Toon (dejuistetoon) vroeg op 07-09 via WhatsApp twee dingen: wanneer de
+advertenties die hij zaterdag op Vinted zette "geladen" worden, en waarom hij bij
+het invullen eerst een doelgroep moet kiezen terwijl hij kleden, vachten,
+tapijten en kussens verkoopt.
+
+**Gemeten in de echte gegevens (service-sleutel, niet geraden):**
+
+- Zijn Vinted-advertenties zijn er wél: de scan liep zaterdag om 14:02 en de
+  artikelen stonden om 14:34 in zijn voorraad. Er stond niets te wachten in de
+  importlijst.
+- Maar van de 294 artikelen die hij die middag importeerde kwamen er 103 binnen
+  **zonder rubriek**, en zonder rubriek weigert het publicatiepad ze. Ze stonden
+  dus stil zonder dat er iets rood werd. Bij een tweede verkoper 42 van de 59
+  diezelfde middag; over alle accounts 959 artikelen, waarvan 661 bij één account
+  sinds 22-08.
+- Oorzaak: bij het importeren gaan alle vragen aan het model in één klap de deur
+  uit, elke vraag draagt de volledige rubriekenlijst mee (bijna 5.000 tokens), en
+  een geweigerde vraag werd stil "geen rubriek". De woordenlijst die dan invalt
+  leest de omschrijving, en die komt bij een verse Marktplaats-import pas in een
+  tweede ronde binnen. Dezelfde titels leveren, één voor één gevraagd, 20 van de
+  20 keer wél een rubriek op.
+- Zijn tweede vraag hangt daaraan vast: een artikel zonder rubriek opent altijd
+  op "Clothing & Shoes", en dat scherm vroeg eerst om een doelgroep en bood
+  verder alleen kledingrubrieken. De woonrubrieken bestaan sinds 21-08, maar
+  zaten achter de keuzelijst "Item type" bovenaan.
+
+**Wat er nu anders is:** hoogstens vijf vragen tegelijk met drie pogingen, een
+antwoord met de juiste rubriek maar het verkeerde etiket wordt niet meer
+weggegooid, bij publiceren wordt een lege rubriek alsnog gevuld, en een
+dagelijkse ronde (05:00) haalt de achterstand in, 200 per dag. De rubriekenlijst
+toont zonder doelgroep alles wat er is, met de groep ervoor, en trekt het soort
+mee zodra je kiest.
+
+**Voor Toon zelf al gedaan:** 110 van zijn 114 artikelen zonder rubriek zijn
+ingedeeld. De vier die overblijven zijn kleding waarvan de doelgroep echt niet
+uit de tekst te halen is (een leren jas, twee kinder-lederhosen); die vult hij in
+één keer zelf in. De overige 849 bij andere accounts loopt de dagelijkse ronde
+in ongeveer vier dagen weg.

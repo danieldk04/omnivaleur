@@ -2137,8 +2137,8 @@ input[type="checkbox"].row-check { width: 15px; height: 15px; cursor: pointer; a
         </div>
         <div class="form-group">
           <label>Category</label>
-          <select id="f-category" onchange="onContextInputForEbay()">
-            <option value="">— choose gender first —</option>
+          <select id="f-category" onchange="onCategoryPicked()">
+            <option value="">— choose category —</option>
           </select>
         </div>
       </div>
@@ -8812,6 +8812,17 @@ const CATEGORIES = {
   ],
 };
 
+// De naam van elke tak, voor de volledige lijst in updateCategoryOptions. Dit is
+// wat de verkoper leest ("Home & garden · Rugs & Carpets"), niet de interne code.
+const CATEGORIE_TAK_LABEL = {
+  dames: "Women's", heren: "Men's", kinderen: 'Kids', unisex: 'Unisex',
+  wonen: 'Home & garden', antiek: 'Antiques & art', muziek: 'Music',
+  sieraden: 'Jewellery, watches & bags', games: 'Games',
+  electronics: 'Electronics', audio: 'Audio, TV & photo',
+};
+// Kleding eerst (dat is het standaard soort), daarna de rest van de takken.
+const CATEGORIE_TAK_VOLGORDE = ['dames', 'heren', 'kinderen', 'unisex'];
+
 // Non-clothing items are recognised purely by their category prefix (mirrors
 // backend crosslist.py _is_non_clothing), so no extra field has to be stored.
 // Each prefix maps to the matching item-type value in the form's type select.
@@ -8924,7 +8935,30 @@ function updateCategoryOptions(selectedCategory) {
   }
   const gender = document.getElementById('f-gender').value;
   if (!gender || !CATEGORIES[gender]) {
-    sel.innerHTML = '<option value="">— choose gender first —</option>';
+    // GEEN DOODLOPENDE STRAAT (07-09-2026, De Juiste Toon).
+    //
+    // Hier stond alleen "— choose gender first —". Wie een vloerkleed, een
+    // schapenvacht of een kussen wilde invoeren zag dus een keuzelijst die
+    // helemaal over kleding ging en niets anders aanbood — terwijl die rubrieken
+    // wel bestaan, één keuzelijst hoger onder "Item type". Bij een artikel
+    // zonder rubriek (een import waarvan de indeling niet lukte) opent het
+    // scherm bovendien altijd op Clothing & Shoes, dus dit was precies het
+    // scherm waar hij op uitkwam.
+    //
+    // Nu staat elke rubriek er, met zijn tak ervoor. Kiest hij er een uit een
+    // andere tak, dan zet onCategoryPicked het soort en de doelgroep goed.
+    sel.innerHTML = '<option value="">— choose category —</option>';
+    const takken = [...CATEGORIE_TAK_VOLGORDE,
+                    ...Object.keys(CATEGORIES).filter(k => !CATEGORIE_TAK_VOLGORDE.includes(k))];
+    for (const tak of takken) {
+      for (const [val, label] of (CATEGORIES[tak] || [])) {
+        const opt = document.createElement('option');
+        opt.value = val;
+        opt.textContent = `${CATEGORIE_TAK_LABEL[tak] || tak} · ${label}`;
+        if (selectedCategory && val === selectedCategory) opt.selected = true;
+        sel.appendChild(opt);
+      }
+    }
     _bewaarOnbekendeCategorie(sel, selectedCategory);
     return;
   }
@@ -8936,6 +8970,31 @@ function updateCategoryOptions(selectedCategory) {
     sel.appendChild(opt);
   }
   _bewaarOnbekendeCategorie(sel, selectedCategory);
+}
+
+// De keuze uit de volledige lijst hierboven kan uit een andere tak komen dan het
+// soort dat bovenaan staat. Dan volgt de rest: bij een niet-kledingrubriek springt
+// "Item type" mee (en verdwijnen doelgroep, maat en materiaal), bij een
+// kledingrubriek wordt de doelgroep ingevuld. Zonder dit zou de gekozen rubriek
+// bij de volgende herbouw van de lijst weer wegvallen.
+function onCategoryPicked() {
+  const gekozen = document.getElementById('f-category').value;
+  if (gekozen) {
+    const type = itemTypeForCategory(gekozen);
+    if (type !== currentItemType()) {
+      document.getElementById('f-item-type').value = type;
+      onItemTypeChange();
+      updateCategoryOptions(gekozen);
+    } else if (type === 'clothing') {
+      const tak = CATEGORIE_TAK_VOLGORDE.find(
+        k => (CATEGORIES[k] || []).some(([v]) => v === gekozen));
+      if (tak && document.getElementById('f-gender').value !== tak) {
+        document.getElementById('f-gender').value = tak;
+        updateCategoryOptions(gekozen);
+      }
+    }
+  }
+  onContextInputForEbay();
 }
 
 // ── Photo upload ──────────────────────────────────────────────────

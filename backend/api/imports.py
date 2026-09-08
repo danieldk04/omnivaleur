@@ -4,6 +4,7 @@ from backend.database import (get_db, fetch_all, fetch_all_in, naast_de_lus,
 from backend.api.deps import get_current_user, require_active_subscription
 from backend.models import ItemCreate
 from datetime import datetime, timezone
+import asyncio
 import json
 import logging
 import re
@@ -380,6 +381,65 @@ _TAXONOMY = {
     ],
 }
 _ALL_CATEGORIES = {c for cats in _TAXONOMY.values() for c in cats}
+# Elke rubriek hoort bij precies één tak (gemeten: 247 rubrieken, 247 keer
+# uniek), dus de tak is uit de rubriek zelf af te leiden.
+_TAK_VAN_RUBRIEK = {c: g for g, cats in _TAXONOMY.items() for c in cats}
+
+
+# HOEVEEL CLASSIFICATIES TEGELIJK, EN WAAROM DAT EEN REM NODIG HEEFT.
+#
+# Toon (dejuistetoon), 05-09-2026: van de 294 artikelen die hij die middag
+# importeerde kwamen er 103 zonder rubriek binnen, en bij een tweede verkoper
+# 42 van de 59. Gemeten: dezelfde titels leveren vandaag, één voor één, 20 van
+# de 20 keer wél een rubriek op. De gegevens waren dus prima; de lopende band
+# liet ze vallen.
+#
+# Het mechanisme: bulk-import vuurt met asyncio.gather de hele lading in één
+# klap af (tot 100 tegelijk), en elke vraag draagt de volledige taxonomie mee —
+# een kleine 5.000 tokens. Vijfentwintig tegelijk is dus een uitbarsting van
+# ruim 100.000 invoertokens in één seconde, en daar zet Anthropic een
+# snelheidslimiet op. Een geweigerde vraag werd stil {} en viel terug op de
+# woordenlijst, die zonder omschrijving niets vindt: rubriek leeg.
+#
+# Twee remmen: hoogstens een handvol vragen tegelijk, en een geweigerde vraag
+# krijgt herkansingen in plaats van meteen op te geven.
+_CLASSIFY_GELIJKTIJDIG = asyncio.Semaphore(5)
+_CLASSIFY_POGINGEN = 3
+_CLASSIFY_WACHT_S = (1.0, 3.0)
+
+
+async def _haiku_classificatie(client, prompt: str):
+    """Eén classificatievraag, met rem en herkansingen.
+
+    Gooit de laatste fout door als het na alle pogingen niet lukt, zodat de
+    aanroeper het kan loggen in plaats van het stil als "geen rubriek" te
+    verwerken.
+    """
+    laatste = None
+    for poging in range(_CLASSIFY_POGINGEN):
+        try:
+            async with _CLASSIFY_GELIJKTIJDIG:
+                # client.messages.create is a *blocking* sync call. Run it in a worker
+                # thread so the surrounding asyncio.gather in bulk-import actually runs the
+                # classifications concurrently instead of one-at-a-time on the event loop
+                # (which stalled large imports and made them look frozen).
+                return await asyncio.to_thread(
+                    client.messages.create,
+                    model="claude-haiku-4-5-20251001",
+                    max_tokens=200,
+                    messages=[{"role": "user", "content": prompt}],
+                )
+        except Exception as e:
+            laatste = e
+            if poging == _CLASSIFY_POGINGEN - 1:
+                break
+            wacht = _CLASSIFY_WACHT_S[min(poging, len(_CLASSIFY_WACHT_S) - 1)]
+            logger.warning(
+                f"Classificatie mislukt ({type(e).__name__}: {e}); "
+                f"poging {poging + 2} van {_CLASSIFY_POGINGEN} over {wacht}s"
+            )
+            await asyncio.sleep(wacht)
+    raise laatste
 
 
 async def _classify_with_claude(title: str | None, description: str | None,
@@ -470,17 +530,7 @@ async def _classify_with_claude(title: str | None, description: str | None,
             '  When you pick a "sieraden" category, gender must be "sieraden" too.\n\n'
             'Respond with ONLY JSON: {"gender":"...","category":"...","confidence":"high|medium|low"}'
         )
-        # client.messages.create is a *blocking* sync call. Run it in a worker
-        # thread so the surrounding asyncio.gather in bulk-import actually runs the
-        # classifications concurrently instead of one-at-a-time on the event loop
-        # (which stalled large imports and made them look frozen).
-        import asyncio as _asyncio
-        resp = await _asyncio.to_thread(
-            client.messages.create,
-            model="claude-haiku-4-5-20251001",
-            max_tokens=200,
-            messages=[{"role": "user", "content": prompt}],
-        )
+        resp = await _haiku_classificatie(client, prompt)
         raw = resp.content[0].text.strip()
         m = re.search(r"\{.*\}", raw, re.S)
         if not m:
@@ -492,12 +542,28 @@ async def _classify_with_claude(title: str | None, description: str | None,
         # mapped to MP_DEFAULT downstream, recreating the exact bug this fixes.
         if data.get("confidence") == "low":
             return {}
-        if gender not in _TAXONOMY or category not in _TAXONOMY.get(gender, []):
+        if category not in _ALL_CATEGORIES:
             logger.warning(f"Claude returned category outside taxonomy: {gender}/{category}")
             return {}
-        return {"gender": gender, "category": category}
+        # EEN GOEDE RUBRIEK MET DE VERKEERDE TAK IS GEEN AFGEKEURD ANTWOORD.
+        #
+        # Hier stond dat gender én rubriek allebei moesten kloppen, anders ging
+        # het hele antwoord de prullenbak in. Gemeten op de eerste vijf artikelen
+        # van de hersteldraaiing: één van de vijf was "unisex" +
+        # "wonen plaids en woondekens" — de rubriek klopte, alleen het etiket
+        # ernaast niet, en het artikel bleef daardoor zonder rubriek staan.
+        # Elke rubriek hoort bij precies één tak, dus die is af te leiden.
+        tak = _TAK_VAN_RUBRIEK[category]
+        if gender != tak:
+            logger.info(f"Doelgroep bijgesteld: {gender!r} -> {tak!r} bij {category!r}")
+        return {"gender": tak, "category": category}
     except Exception as e:
-        logger.warning(f"Claude classification failed, falling back to keywords: {e}")
+        # Foutniveau, niet waarschuwing: dit is precies de stille val waardoor
+        # 959 artikelen zonder rubriek in de voorraad kwamen te staan.
+        logger.error(
+            f"Classificatie definitief mislukt na {_CLASSIFY_POGINGEN} pogingen "
+            f"({type(e).__name__}: {e}) — terug naar de woordenlijst"
+        )
         return {}
 
 

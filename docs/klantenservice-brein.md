@@ -10,7 +10,7 @@ product verandert. De ontwikkelaar werkt dan zowel dit bestand in de repo als de
 kopie in Drive bij, in dezelfde beurt. Daniel hoeft niets te doen; de Gem leest
 de Drive-kopie de volgende keer opnieuw in.
 
-Laatst bijgewerkt: 07-09-2026.
+Laatst bijgewerkt: 08-09-2026.
 
 ---
 
@@ -238,6 +238,22 @@ oude versie doet soms maar een deel van het werk.
 
 Werkt het daarna nog niet, stuur me dan een schermafbeelding van wat je ziet,
 dan zoek ik het uit.
+
+Groetjes,
+Daniel
+
+### Vraagt naar rubrieken voor spullen die geen kleding zijn
+
+Hoi <voornaam>,
+
+Die rubrieken zitten er wel, ze staan alleen achter de eerste keuzelijst van het
+invulscherm: "Item type". Zet die op Home, Garden & Christmas en je krijgt
+vloerkleden, kussens, vachten, plaids en tafelkleden. Doelgroep en maat vallen
+dan vanzelf weg, want die horen bij kleding.
+
+Je kunt de rubriek nu ook meteen kiezen: staat er nog geen doelgroep, dan toont
+de rubriekenlijst alles wat er is, met de groep ervoor. Kies je daar een
+woonrubriek, dan springt het soort er vanzelf achteraan.
 
 Groetjes,
 Daniel

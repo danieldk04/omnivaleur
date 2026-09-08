@@ -378,8 +378,22 @@ async def _fill_inferred_gaps(db, item: dict) -> dict:
     and validation tells the user to fill it in.
     """
     try:
-        from backend.api.imports import _infer_attributes
+        from backend.api.imports import _infer_attributes, _infer_attributes_smart
         inferred = _infer_attributes(item.get("title"), item.get("description"))
+        # DE WOORDENLIJST ALLEEN IS HIER NIET GENOEG (07-09-2026).
+        #
+        # De woordenlijst leest de omschrijving, en juist die ontbreekt bij een
+        # pas geïmporteerde advertentie: Marktplaats en 2dehands leveren hem pas
+        # in een tweede ronde na. Gemeten bij Toon: op alleen de titel vindt de
+        # woordenlijst 0 van de 114 rubrieken, het model 20 van de 20. Zonder
+        # rubriek weigert de controle hieronder te publiceren, dus dan staat de
+        # verkoper stil bij een artikel dat prima in te delen was.
+        #
+        # Alleen bij een lege rubriek, alleen op dit moment (hij drukt op
+        # publiceren, dus één modelvraag mag), en het antwoord wordt opgeslagen.
+        if not (item.get("category") or "").strip() and not inferred.get("category"):
+            inferred = {**inferred, **(await _infer_attributes_smart(
+                item.get("title"), item.get("description"), item.get("brand")) or {})}
     except Exception as e:
         logger.warning(f"Attribute inference failed for item {item.get('id')}: {e}")
         return item

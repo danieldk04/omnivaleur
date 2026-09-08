@@ -224,6 +224,22 @@ def start_scheduler():
         id="daily_foto_ontdubbelen",
         replace_existing=True,
     )
+    # Artikelen zonder rubriek alsnog indelen — dagelijks 05:00 (NL-tijd).
+    # Zonder rubriek weigert het publicatiepad een artikel, en dat gebeurt stil:
+    # 959 stuks over negen accounts bij het inschakelen. Zie
+    # services/categorie_herstel voor de meting. Tweehonderd per ronde, één
+    # modelvraag per artikel, en alleen lege velden worden gevuld.
+    from backend.services.categorie_herstel import herstel_rubrieken
+
+    _scheduler.add_job(
+        _off_the_request_loop(herstel_rubrieken),
+        "cron",
+        hour=5,
+        minute=0,
+        timezone="Europe/Amsterdam",
+        id="daily_rubriekherstel",
+        replace_existing=True,
+    )
     # ── De koude-mailmachine ──────────────────────────────────────────────
     #
     # Draaide tot 20-08-2026 op Daniels eigen Mac, via een LaunchAgent. Dat werkt

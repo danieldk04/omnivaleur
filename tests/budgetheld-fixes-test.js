@@ -34,6 +34,13 @@ const catStart = APP.indexOf("const CATEGORIES = {");
 const CATEGORIES = eval("(" + APP.slice(catStart + "const CATEGORIES = ".length,
                                        APP.indexOf("\n};", catStart) + 2) + ")");
 
+const labelStart = APP.indexOf("const CATEGORIE_TAK_LABEL = {");
+const CATEGORIE_TAK_LABEL = eval("(" + APP.slice(
+  labelStart + "const CATEGORIE_TAK_LABEL = ".length,
+  APP.indexOf("\n};", labelStart) + 2) + ")");
+const CATEGORIE_TAK_VOLGORDE = eval(
+  APP.match(/const CATEGORIE_TAK_VOLGORDE = (\[[^\]]*\])/)[1]);
+
 const prefixRegel = APP.match(/const NON_CLOTHING_PREFIXES = (\{[^;]*\});/);
 const NON_CLOTHING_PREFIXES = eval("(" + prefixRegel[1] + ")");
 
@@ -117,6 +124,82 @@ _itemType = "clothing"; _gender = "";
 updateCategoryOptions("dames jassen");
 ok("ook zonder gekozen doelgroep blijft de opgeslagen categorie staan",
    opties.some(o => o.value === "dames jassen" && o.selected));
+
+// ── 2b. Zonder doelgroep is de keuzelijst geen doodlopende straat ───────────
+// De Juiste Toon (07-09-2026): kleden, vachten, tapijten en kussens waren niet
+// te kiezen omdat de lijst om een doelgroep vroeg en verder alleen kleding gaf.
+console.log("\nZonder doelgroep staat de hele taxonomie in de lijst");
+
+_itemType = "clothing"; _gender = "";
+updateCategoryOptions();
+ok("elke tak heeft een leesbare naam",
+   Object.keys(CATEGORIES).every(k => CATEGORIE_TAK_LABEL[k]),
+   `zonder naam: ${Object.keys(CATEGORIES).filter(k => !CATEGORIE_TAK_LABEL[k]).join(", ")}`);
+const alleWaarden = opties.map(o => o.value);
+const alleCategorieen = Object.values(CATEGORIES).flat().map(([v]) => v);
+ok("alle rubrieken staan erin, niet alleen kleding",
+   alleCategorieen.every(v => alleWaarden.includes(v)),
+   `${alleCategorieen.filter(v => !alleWaarden.includes(v)).length} ontbreken`);
+ok("woontextiel is bereikbaar zonder eerst een doelgroep te kiezen",
+   ["wonen tapijten en kleden", "wonen vachten", "wonen kussens"]
+     .every(v => alleWaarden.includes(v)));
+ok("de tak staat voor de rubriek zodat de lijst leesbaar blijft",
+   opties.some(o => o.value === "wonen tapijten en kleden"
+                 && o.textContent.startsWith("Home & garden · ")),
+   opties.find(o => o.value === "wonen tapijten en kleden")?.textContent);
+ok("kleding staat vooraan",
+   CATEGORIE_TAK_VOLGORDE.every(k => Object.keys(CATEGORIES).includes(k))
+     && alleWaarden.indexOf(CATEGORIES.dames[0][0]) < alleWaarden.indexOf(CATEGORIES.wonen[0][0]));
+ok("de oude doodlopende keuzelijst is weg",
+   !APP.includes(">— choose gender first —<"));
+ok("een rubriek uit een andere tak trekt het soort mee",
+   /function onCategoryPicked\(\)/.test(APP)
+   && /onchange="onCategoryPicked\(\)"/.test(APP));
+
+// En dat ook echt uitvoeren: een vloerkleed kiezen terwijl het soort nog op
+// kleding staat, en kijken of het scherm zichzelf goed zet.
+const velden = { "fg-gender": {}, "fg-size": {}, "fg-material": {} };
+for (const v of Object.values(velden)) v.style = { display: "" };
+const waarden = { "f-gender": "", "f-size": "", "f-material": "", "f-category": "" };
+const opties2 = [];
+const nepSelect2 = {
+  set innerHTML(_) { opties2.length = 0; },
+  get options() { return opties2; },
+  appendChild(o) { opties2.push(o); },
+  get value() { return waarden["f-category"]; },
+  set value(v) { waarden["f-category"] = v; },
+};
+const document2 = {
+  getElementById: (id) => (id === "f-category" ? nepSelect2
+    : id === "f-item-type" ? { get value() { return _itemType; }, set value(v) { _itemType = v; } }
+    : velden[id] ? velden[id]
+    : id in waarden ? { get value() { return waarden[id]; }, set value(v) { waarden[id] = v; } }
+    : null),
+  createElement: () => ({ value: "", textContent: "", selected: false }),
+};
+(function () {
+  const document = document2;                       // schaduwt de stub hierboven
+  const onContextInputForEbay = () => {};
+  eval(functieUit("currentItemType") + functieUit("_bewaarOnbekendeCategorie")
+       + functieUit("updateCategoryOptions") + functieUit("onItemTypeChange")
+       + functieUit("onCategoryPicked"));
+  _itemType = "clothing"; waarden["f-gender"] = "";
+  waarden["f-category"] = "wonen tapijten en kleden";
+  onCategoryPicked();
+  ok("een vloerkleed zet het soort op Home, Garden & Christmas", _itemType === "wonen",
+     `soort is nu ${_itemType}`);
+  ok("doelgroep, maat en materiaal verdwijnen daarbij",
+     velden["fg-gender"].style.display === "none" && velden["fg-size"].style.display === "none");
+  ok("en de gekozen rubriek blijft geselecteerd staan",
+     opties2.some(o => o.value === "wonen tapijten en kleden" && o.selected));
+
+  _itemType = "clothing"; waarden["f-gender"] = "";
+  waarden["f-category"] = "heren jassen";
+  onCategoryPicked();
+  ok("een herenjas vult de doelgroep zelf in", waarden["f-gender"] === "heren",
+     `doelgroep is nu ${waarden["f-gender"]}`);
+  ok("en blijft geselecteerd", opties2.some(o => o.value === "heren jassen" && o.selected));
+})();
 
 // ── 3. Extensie-detectie geeft niet op na één poging ────────────────────────
 console.log("\nExtensie-detectie blijft het proberen");
