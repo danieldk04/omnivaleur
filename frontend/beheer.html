@@ -1043,7 +1043,7 @@ async function terughaalPost(dry) {
     dry_run: dry ? 'true' : 'false',
   });
   try {
-    const r = await fetch(API + '/admin/terughaal/verstuur?' + q.toString(),
+    const r = await fetch(API + '/api/billing/admin/terughaal/verstuur?' + q.toString(),
       { method: 'POST', headers: { Authorization: 'Bearer ' + TOKEN } });
     const d = await r.json();
     if (!r.ok) { uit.innerHTML = '<div class="leeg">' + veilig(d.detail || ('server ' + r.status)) + '</div>'; return; }
