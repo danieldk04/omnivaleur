@@ -7663,7 +7663,7 @@ function renderRefreshView() {
 
   document.getElementById('refresh-body').innerHTML = vintedRows ||
     `<tr><td colspan="5"><div class="empty"><h3>Nothing to refresh</h3><p>${
-      refreshStatusFilter || refreshPlatformFilter || searchTerm
+      refreshStatusFilter || refreshPlatformFilter || refreshAgeFilter || searchTerm
         ? 'No listings match this filter — clear it to see everything.'
         : 'Publish an item to Vinted or Marktplaats first, then bump it back to the top from here.'
     }</p></div></td></tr>`;
