@@ -2,14 +2,13 @@
   "context": {
     "lastMatchedPatterns": [
       "mem-shopify_workflow-auto-push-workflow-for-shopify",
-      "mem-revaleur-blog-no-test-publishing----",
       "mem-revaleur-blog-system----",
-      "mem-shopify_workflow-belangrijk--nooit-content-over",
-      "mem-MEMORY-memory-index"
+      "mem-revaleur-blog-no-test-publishing----",
+      "mem-MEMORY-memory-index",
+      "mem-user_profile----"
     ]
   },
-  "updatedAt": "2026-09-07T17:46:52.729Z",
-  "restoredAt": "2026-09-07T17:50:51.415Z",
-  "endedAt": "2026-09-07T17:50:58.966Z",
+  "updatedAt": "2026-09-08T06:34:25.549Z",
+  "endedAt": "2026-09-08T06:34:36.017Z",
   "duration": null
 }
