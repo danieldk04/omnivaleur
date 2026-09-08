@@ -27,7 +27,7 @@ logger = logging.getLogger(__name__)
 # Geen kortingspercentage, euroteken of uitroepteken in de onderwerpregel: daar
 # sorteert Gmail op, en dan belandt de mail in Promoties in plaats van de inbox.
 SUBJECT_A = "Het lag aan ons, van Daniel"
-SUBJECT_B = "Omnivaleur werkt nu wel, van Daniel"
+SUBJECT_B = "Omnivaleur werkt nu wel / Omnivaleur works now, van Daniel"
 SUBJECT_C = "Zal ik even met je meekijken? Van Daniel"
 
 # In groep A komt de zin over wat er bij die persoon misging op {detail}. Lever je
