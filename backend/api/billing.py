@@ -466,19 +466,33 @@ def send_announcement(dry_run: bool = True, emails: str = "", user=Depends(get_c
     return {"dry_run": False, "sent": len(sent), "failed": failed, "recipients": sent}
 
 
-@router.post("/admin/terughaalcampagne")
-def send_terughaalcampagne(groep: str, emails: str, dry_run: bool = True, user=Depends(get_current_user_full)):
-    """Eenmalige terughaalmail naar oud-klanten, per groep A/B/C.
-    Standaard een proefronde die alleen toont wie hem zou krijgen en met welke
-    tekst; pas met dry_run=false gaat hij echt weg. Eigenaar-only.
+@router.get("/admin/terughaal/kandidaten")
+def terughaal_kandidaten(user=Depends(get_current_user_full)):
+    """Slapende oud-klanten, ingedeeld in vermoedelijke groep A/B/C (en 'rest' =
+    grijs gebied). Leest alleen, schrijft niets. Eigenaar-only."""
+    if not _is_owner_email(user.email):
+        raise HTTPException(status_code=403, detail="Not allowed")
+    from backend.services import terughaalcampagne as tc
+    try:
+        return tc.kandidaten()
+    except Exception as e:
+        logger.exception("Kandidaten ophalen mislukt")
+        raise HTTPException(status_code=503, detail=f"{type(e).__name__}: {e}")
 
-    `groep` is "A", "B" of "C" (zie backend/services/terughaalcampagne.py).
-    `emails` is een handmatige lijst, een adres per regel. Voor groep A mag er een
-    eigen zin achter met een liggend streepje: `henk@x.nl | 14 van 18 vastgelopen`.
 
-    LET OP: elke mail belooft een verlengde proefperiode. Deze code zet die NIET
-    (de server mag geen klantrijen schrijven). Zet de proef eerst met de hand in
-    Supabase of via /admin/comp-account, daarna pas dry_run=false."""
+@router.post("/admin/terughaal/verstuur")
+def terughaal_verstuur(
+    groep: str, emails: str, verleng_dagen: int = 21, dry_run: bool = True,
+    user=Depends(get_current_user_full),
+):
+    """Terughaalmail naar oud-klanten van één groep (A/B/C). Standaard een
+    proefronde die alleen toont wie hem krijgt en met welke tekst. Met
+    dry_run=false: eerst de proefperiode van iedereen op de lijst verlengen met
+    `verleng_dagen`, daarna de mail versturen. Eigenaar-only.
+
+    `emails` is een lijst, één adres per regel. Voor groep A mag er een eigen zin
+    achter met een liggend streepje: `henk@x.nl | 14 van 18 opdrachten vastgelopen`.
+    """
     if not _is_owner_email(user.email):
         raise HTTPException(status_code=403, detail="Not allowed")
 
@@ -495,16 +509,18 @@ def send_terughaalcampagne(groep: str, emails: str, dry_run: bool = True, user=D
         raise HTTPException(status_code=400, detail="Geen geldig e-mailadres in die lijst")
 
     if dry_run:
-        voorbeeld_subject, voorbeeld_body = tc.render(groep, ontvangers[0])
+        subject, body = tc.render(groep, ontvangers[0])
         return {
             "dry_run": True,
             "groep": groep,
-            "count": len(ontvangers),
-            "recipients": [o["email"] for o in ontvangers],
+            "aantal": len(ontvangers),
+            "ontvangers": [o["email"] for o in ontvangers],
             "zonder_eigen_zin": [o["email"] for o in ontvangers if groep == "A" and not o["detail"]],
-            "voorbeeld": {"aan": ontvangers[0]["email"], "onderwerp": voorbeeld_subject, "tekst": voorbeeld_body},
-            "let_op": "Zet de proefperiode van deze mensen eerst handmatig verlengd voordat je dry_run=false doet.",
+            "verleng_dagen": verleng_dagen,
+            "voorbeeld": {"aan": ontvangers[0]["email"], "onderwerp": subject, "tekst": body},
         }
+
+    verlenging = tc.verleng_proef([o["email"] for o in ontvangers], verleng_dagen)
 
     sent, failed = [], []
     for o in ontvangers:
@@ -517,7 +533,10 @@ def send_terughaalcampagne(groep: str, emails: str, dry_run: bool = True, user=D
             logger.exception(f"Terughaalmail mislukt voor {o['email']}")
             failed.append({"email": o["email"], "error": f"{type(e).__name__}: {e}"})
     logger.info(f"Terughaalcampagne groep {groep}: verstuurd {len(sent)}, mislukt {len(failed)}")
-    return {"dry_run": False, "groep": groep, "sent": len(sent), "failed": failed, "recipients": sent}
+    return {
+        "dry_run": False, "groep": groep, "verstuurd": len(sent),
+        "mislukt": failed, "ontvangers": sent, "proef_verlengd": verlenging,
+    }
 
 
 @router.post("/admin/test-reminder-mail")
