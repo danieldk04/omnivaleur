@@ -7229,25 +7229,21 @@ function switchRefreshTab(tab) {
   if (tab === 'inprogress') renderRelistInProgress();
 }
 
-// Filters the table by refresh status: never refreshed / on cooldown / ready.
-// LET OP de selector: sinds er ook kanaalknopjes zijn met dezelfde opmaak zou
-// een kale .refresh-status-chip ook die aanpassen, en dan doofde het actieve
-// kanaalknopje zodra je op een statusfilter klikte.
+// Filters voor de tabel: refresh-status, kanaal en hoe lang de advertentie al
+// online staat. Zijn nu dropdowns (.filter-bar), dus alleen de waarde bewaren
+// en opnieuw tekenen.
 function setRefreshPlatformFilter(plat) {
   refreshPlatformFilter = plat;
-  document.querySelectorAll('.refresh-status-chip[data-plat]').forEach(b => b.classList.toggle('active', b.dataset.plat === plat));
   renderRefreshView();
 }
 
 function setRefreshStatusFilter(status) {
   refreshStatusFilter = status;
-  document.querySelectorAll('.refresh-status-chip[data-status]').forEach(b => b.classList.toggle('active', b.dataset.status === status));
   renderRefreshView();
 }
 
 function setRefreshAgeFilter(age) {
   refreshAgeFilter = age;
-  document.querySelectorAll('.refresh-status-chip[data-age]').forEach(b => b.classList.toggle('active', b.dataset.age === age));
   renderRefreshView();
 }
 
