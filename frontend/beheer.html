@@ -1054,10 +1054,7 @@ async function terughaalPost(dry) {
     const d = await r.json();
     if (!r.ok) { uit.innerHTML = '<div class="leeg">' + veilig(d.detail || ('server ' + r.status)) + '</div>'; return; }
     if (d.dry_run) {
-      const zonder = (d.zonder_eigen_zin || []).length
-        ? `<div class="uitleg">${d.zonder_eigen_zin.length} zonder eigen zin, die krijgen de neutrale formulering.</div>` : '';
       uit.innerHTML = `<div class="uitleg" style="margin-top:8px">${d.aantal} ontvangers, proef +${d.verleng_dagen} dagen. Voorbeeldmail:</div>`
-        + zonder
         + `<div style="margin-top:6px"><b>${veilig(d.voorbeeld.onderwerp)}</b></div>`
         + `<pre style="white-space:pre-wrap;border:1px solid var(--rand,#ddd);padding:8px;border-radius:6px">${veilig(d.voorbeeld.tekst)}</pre>`
         + `<div class="uitleg">Aan: ${(d.ontvangers || []).map(veilig).join(', ')}</div>`;
