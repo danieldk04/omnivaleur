@@ -6801,6 +6801,7 @@ rij niet.
 `overzetten` overschrijft `mail_state` met de oude lokale kopie en veroorzaakt
 dubbele mail; dat mag niet meer per ongeluk.
 
-Actie Daniel: met SUPABASE_URL + service-SUPABASE_KEY in de omgeving één keer
-`python3 scripts/leadgen_mail.py overzetten --alleen 2dh_leads` draaien. Daarna
-lopen de 2dehands-leads mee in de koude reeks.
+Daniel heeft `overzetten --alleen 2dh_leads` gedraaid (service-sleutel uit de
+keychain): "39 regels overgezet". De rij staat in `leadgen_opslag`, de
+Railway-tick pikt de 2dehands-leads nu mee in de koude reeks. `mail_state`
+onaangeroerd.
