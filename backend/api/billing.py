@@ -490,8 +490,7 @@ def terughaal_verstuur(
     dry_run=false: eerst de proefperiode van iedereen op de lijst verlengen met
     `verleng_dagen`, daarna de mail versturen. Eigenaar-only.
 
-    `emails` is een lijst, één adres per regel. Voor groep A mag er een eigen zin
-    achter met een liggend streepje: `henk@x.nl | 14 van 18 opdrachten vastgelopen`.
+    `emails` is een lijst, één adres per regel.
     """
     if not _is_owner_email(user.email):
         raise HTTPException(status_code=403, detail="Not allowed")
