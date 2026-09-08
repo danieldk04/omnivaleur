@@ -56,8 +56,9 @@ document.getElementById("loginBtn").addEventListener("click", async () => {
     // "ingelogd" wanneer ZOWEL authToken als refreshToken in de opslag staan,
     // dus zonder deze regel bleef het scherm na een geslaagde login gewoon op
     // "niet ingelogd" staan — precies zo gemeld door meerdere verkopers.
-    await chrome.storage.sync.set({
+    await chrome.storage.local.set({
       authToken: data.access_token, refreshToken: data.refresh_token, userEmail: data.user.email,
+      _refreshAt: 0,
     });
     statusEl.textContent = "";
     btn.textContent = "Log in";
