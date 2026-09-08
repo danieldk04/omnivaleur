@@ -151,7 +151,7 @@ def _is_sieraden(categorie: str) -> bool:
 # aan plus-adressering, aan de eigen domeinen, of aan een woord als test/demo/
 # reviewer in het adres.
 _TEST_DOMEINEN = ("omnivaleur.nl", "omnivaleur.com", "omnivaleur.eu", "crosslisteu.com", "crosslist.eu")
-_TEST_WOORDEN = ("test", "demo", "reviewer", "rebrandtest", "checkout-test", "ga4test", "+demo", "+ga")
+_TEST_WOORDEN = ("test", "demo", "reviewer", "rebrandtest", "checkout-test", "ga4test", "omnivaleur")
 
 
 def _is_testaccount(email: str) -> bool:
