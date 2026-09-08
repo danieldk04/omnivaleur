@@ -41,7 +41,7 @@ BODY_A = """Hi,
 
 Daniel hier, van Omnivaleur.
 
-Toen jij Omnivaleur probeerde, kreeg je meldingen als; “Je bent niet ingelogd, geen advertenties geplaatst.” . Dat was geen instelling aan jouw kant, dat lag aan ons.
+Toen jij Omnivaleur probeerde, kreeg je meldingen als “Je bent niet ingelogd, geen advertenties geplaatst.” Dat was geen instelling aan jouw kant, dat lag aan ons.
 
 Die valse inlogmelding is opgespoord en gerepareerd. Het mislukkingspercentage over alle klanten is deze week 7 procent, van 55 procent een maand terug. Ik verkoop zelf kleding en sieraden en loop er zelden meer tegenaan.
 
