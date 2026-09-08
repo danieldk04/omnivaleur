@@ -912,6 +912,60 @@ async function getServerUrl() {
   });
 }
 
+// ── Inlogbewijs: opslag is device-gebonden, nooit gesynct ────────────────────
+//
+// authToken + refreshToken stonden in chrome.storage.sync. Dat leek handig
+// ("log één keer in"), maar Supabase geeft een refresh-token dat exact één keer
+// mag: bij elk gebruik komt er een nieuw token terug en wordt het oude
+// ongeldig. storage.sync deelt datzelfde token met ELKE Chrome waar Daniel is
+// ingelogd (andere computer, ander profiel). Ververst de ene kopie, dan zit de
+// andere kopie meteen met een dood token, en Supabase' beveiliging trekt bij
+// dat "hergebruik" de HELE sessie in — beide kopieën vliegen eruit. Datzelfde
+// gebeurt op één machine als Chrome de service worker afknijpt tussen "nieuw
+// token opgehaald" en "opgeslagen".
+//
+// Daarom: het inlogbewijs hoort in storage.local (blijft op deze machine), met
+// een eenmalige verhuizing van wat er nog in sync staat. Voorkeuren als
+// calmMode/deliveryMode blijven wél in sync — die mogen mee reizen.
+const TOKEN_KEYS = ["authToken", "refreshToken", "userEmail"];
+
+function _tget(keys) {
+  return new Promise((resolve) => chrome.storage.local.get(keys, resolve));
+}
+function _tset(patch) {
+  return new Promise((resolve) => chrome.storage.local.set(patch, resolve));
+}
+function _tremove(keys) {
+  return new Promise((resolve) => chrome.storage.local.remove(keys, resolve));
+}
+
+// Eenmalig: haal een bestaand inlogbewijs uit sync naar local en wis het uit
+// sync, zodat de fan-out naar andere machines stopt. Draait bij elke start; is
+// een no-op zodra local het bewijs heeft.
+let _tokenMigratieKlaar = null;
+function migrateTokensFromSync() {
+  if (_tokenMigratieKlaar) return _tokenMigratieKlaar;
+  _tokenMigratieKlaar = new Promise((resolve) => {
+    chrome.storage.local.get(["authToken"], (local) => {
+      chrome.storage.sync.get(TOKEN_KEYS, (synced) => {
+        const heeftSync = synced && (synced.authToken || synced.refreshToken);
+        if (!local.authToken && heeftSync) {
+          chrome.storage.local.set(synced, () => {
+            chrome.storage.sync.remove(TOKEN_KEYS, () => resolve());
+          });
+        } else if (heeftSync) {
+          // local is leidend; ruim de oude synckopie hoe dan ook op.
+          chrome.storage.sync.remove(TOKEN_KEYS, () => resolve());
+        } else {
+          resolve();
+        }
+      });
+    });
+  });
+  return _tokenMigratieKlaar;
+}
+migrateTokensFromSync();
+
 // Without a token every request goes out unauthenticated, gets a 401 and no job
 // is ever picked up — silently. The popup shows this, but only if you think to
 // open it, so surface it on the toolbar icon itself instead.
