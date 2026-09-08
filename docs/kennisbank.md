@@ -17,6 +17,33 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ---
 
+## extensie-inlogbewijs-in-storage-local
+
+*08-09-2026 — extensie loggde vaak uit doordat het roterende Supabase-refreshtoken in chrome.storage.sync stond en over machines werd gedeeld*
+
+De Omnivaleur-extensie logde steeds uit. Oorzaak: `authToken` en `refreshToken`
+stonden in `chrome.storage.sync`, dat propageert naar elke Chrome waar Daniel is
+ingelogd (andere machine, ander profiel, tweede ontwikkelaar). Een Supabase-
+refreshtoken mag exact één keer: bij gebruik komt een nieuw token terug en wordt
+het oude ongeldig. Ververste kopie A, dan zat kopie B met een dood token, en
+Supabase' hergebruikdetectie trok de hele sessiefamilie in → alle kopieën eruit.
+Ook op één machine: MV3 kilt de service worker; gebeurt dat tussen "vers token
+opgehaald" en "opgeslagen", dan probeert de volgende wake het oude dode token.
+
+Opgelost in 1.0.313: inlogbewijs naar `chrome.storage.local` (device-gebonden,
+synct nooit), met eenmalige verhuizing uit sync. Plus een refresh-cooldown van
+20s (`_refreshAt` in local) tegen de worker-kill-race, en: een 401 op een
+verouderd token logt niet meer uit als er inmiddels een nieuwer token in de
+opslag staat. Voorkeuren (calmMode, deliveryMode, magTypen) blijven wél in sync.
+
+Les: roterende credentials horen nooit in `storage.sync`. Zie ook
+"tweede-extensiekopie" en "auth-fouten-lijken-op-verkeerd-wachtwoord".
+
+Openstaand: Daniel kan in Supabase de "refresh token reuse interval" verruimen
+naar ~30s als extra marge voor legitieme races.
+
+---
+
 ## rubriekkeuze-vroeg-eerst-om-kleding
 
 *08-09-2026 — "— choose gender first —" was een doodlopende straat voor woontextiel; de rubriekenlijst toont nu alles en trekt het soort mee*
