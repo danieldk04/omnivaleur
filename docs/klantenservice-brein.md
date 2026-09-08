@@ -156,6 +156,15 @@ Contact:
 
 ---
 
+- Blijft de computer aan met Chrome en de uitbreiding erop, dan pakt hij een
+  opdracht meestal binnen een paar minuten op. Niet binnen vijftien seconden:
+  gemeten is de helft binnen vijf minuten. Staat Calm mode aan, dan zit er
+  bewust drie tot acht minuten tussen twee acties.
+- Je blijft ingelogd op het dashboard, ook als je het tabblad of Chrome sluit.
+  Moest iemand vóór 8 september steeds opnieuw inloggen, dan is dat opgelost.
+- Loopt de proefperiode af, dan krijg je daar twee dagen van tevoren een mail
+  over, en daarna nog een laatste herinnering.
+
 ## Modelantwoorden
 
 Pas de voornaam aan en knip wat niet past. Dit zijn voorbeelden van toon en
@@ -305,6 +314,18 @@ oude versie doet soms maar een deel van het werk.
 
 Werkt het daarna nog niet, stuur me dan een schermafbeelding van wat je ziet,
 dan zoek ik het uit.
+
+Groetjes,
+Daniel
+
+### Advertentie blijft in de wachtrij staan en gaat niet online
+
+Hoi <voornaam>,
+
+Je advertentie staat klaar en er is niets misgegaan aan jouw kant. Bij ons wacht
+hij op de vertaling naar het Nederlands, en zolang die niet werkt zetten we hem
+liever niet online dan in de verkeerde taal. Zodra dat is opgelost gaat hij
+vanzelf alsnog de deur uit; je hoeft niets opnieuw te doen.
 
 Groetjes,
 Daniel
