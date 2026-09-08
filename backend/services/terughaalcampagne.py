@@ -61,6 +61,21 @@ Sindsdien is er veel gerepareerd: de gekoppelde verwijdering, lege velden, de va
 Je proefperiode staat weer open, verlengd, zodat je rustig opnieuw kunt kijken. Werkt iets niet, antwoord dan op deze mail, dan kijk ik even met je mee.
 
 Daniel van Omnivaleur
+
+
+In English
+
+Hi,
+
+Daniel here, from Omnivaleur.
+
+A while ago you tried the platform. It did not go well. On the day you signed up a lot of listings failed, and after that you did not open it again. Understandable.
+
+A lot has been fixed since then: the linked removal, empty fields, the false message that you were not logged in. This week 7 percent of jobs fail, against 55 percent when you tried it.
+
+Your trial is open again, extended, so you can take another look without any rush. If something does not work, reply to this email and I will look at it with you.
+
+Daniel from Omnivaleur
 """
 
 BODY_C = """Hi,
