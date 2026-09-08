@@ -6854,3 +6854,15 @@ Wat er is veranderd:
 
 Extensie 1.0.312 gebouwd. Openstaand: 1.0.312 moet naar de Chrome Web Store,
 anders bereikt punt 3 hem niet. Punt 1 en 2 staan op de server en werken meteen.
+
+**Zelfde dag, live bewezen.** Op Daniels eigen account (dkresellacademy) is via
+de echte publiceerroute één 2dehands-opdracht klaargezet en gevolgd: geclaimd
+19:57:43, klaar 19:59:42, advertentie m2440575827 staat online. De keten
+publiceren > opdracht > extensie > formulier > geplaatst werkt dus vandaag,
+met extensie 1.0.311. De rem-fix draait sinds vanavond live op Railway
+(gecontroleerd via /health tegen commit ac98ec70).
+
+Twee bijvangsten uit die proef, allebei terecht gedrag maar goed om te weten:
+een artikel dat al op Vinted verkocht is wordt geweigerd, en kleding zonder merk
+of maat ook. En één echt probleem: het Anthropic-tegoed is op, dus de vertaling
+naar het Nederlands faalt op dit moment stil (zie kennisbank, "Anthropic credit").
