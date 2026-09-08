@@ -1,7 +1,8 @@
 from fastapi import APIRouter, HTTPException, BackgroundTasks, Depends, Request
 from backend.models import ListingCreate
 from backend.database import get_db, fetch_all, naast_de_lus, execute_with_retry, IN_BROK
-from backend.services.crosslist import publish_to_platforms, handle_item_sold, CrosslistValidationError
+from backend.services.crosslist import (publish_to_platforms, handle_item_sold,
+                                        CrosslistValidationError, VertalingOnbeschikbaar)
 from backend.services.relist import (
     refresh_listing, refresh_stale_listings, renew_etsy_listing, relist_ended_ebay_listing,
     RefreshError, REFRESH_CAPABLE_PLATFORMS,
@@ -202,6 +203,11 @@ async def publish_listing(
         results = await publish_to_platforms(body.item_id, body.platforms, user_id)
     except CrosslistValidationError as e:
         raise HTTPException(status_code=422, detail={"missing_fields": e.missing})
+    except VertalingOnbeschikbaar as e:
+        # 503: het ligt niet aan de advertentie maar aan ons, en het gaat vanzelf
+        # over. Zonder deze tak werd het een kale 500 en zag de verkoper
+        # "Unexpected error" bij een knop die morgen gewoon weer werkt.
+        raise HTTPException(status_code=503, detail=str(e))
     return {"results": results}
 
 

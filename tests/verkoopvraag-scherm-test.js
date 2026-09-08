@@ -80,8 +80,13 @@ for (const id of ["sold-confirm-bar", "an-sold-confirm-bar"]) {
       `${id} toont de titels`);
   eis(vak.innerHTML.includes("Yes, sold") && vak.innerHTML.includes(">No<"),
       `${id} heeft beide knoppen`);
-  eis(vak.innerHTML.includes("none of this counts towards your revenue until you answer"),
-      `${id} zegt dat het nog niet meetelt in de omzet`);
+  // Op de BOODSCHAP toetsen, niet op de exacte zin (bijgewerkt 08-09-2026). De
+  // tekst is sindsdien herschreven naar "none of this counts as revenue yet";
+  // dezelfde geruststelling, andere woorden. Een test die op één formulering
+  // staat, valt om bij elke redactieronde en verbergt dan de echte fouten.
+  eis(/counts (towards your revenue|as revenue)/i.test(vak.innerHTML)
+      && /nothing has been removed/i.test(vak.innerHTML),
+      `${id} zegt dat er niets is weggehaald en dat het nog niet meetelt in de omzet`);
 }
 // De oudere advertentie krijgt de nuance dat hij ook verlopen kán zijn.
 eis(vakken["an-sold-confirm-bar"].innerHTML.includes("adverts expire after 30"),

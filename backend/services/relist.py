@@ -894,6 +894,8 @@ async def refresh_stale_listings(user_id: str, platform: str, older_than_days: i
         if not l.get("last_refreshed_at") or l["last_refreshed_at"] < cooldown_cutoff
     ]
 
+    from backend.services.crosslist import VertalingOnbeschikbaar
+
     results = []
     for listing in candidates:
         try:
@@ -902,6 +904,12 @@ async def refresh_stale_listings(user_id: str, platform: str, older_than_days: i
         except RefreshError as e:
             results.append({"item_id": listing["item_id"], "status": "skipped", "reason": str(e)})
             break  # quota hit — stop trying the rest
+        except VertalingOnbeschikbaar as e:
+            # Ligt de vertaling plat, dan geldt dat voor alle advertenties in deze
+            # ronde. Stoppen en het morgen opnieuw proberen; er is niets weggehaald,
+            # dus er staat ook niets offline.
+            results.append({"item_id": listing["item_id"], "status": "skipped", "reason": str(e)})
+            break
     return results
 
 

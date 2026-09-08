@@ -125,7 +125,7 @@ def _uitgifte(monkeypatch, db):
     monkeypatch.setattr(J, "_recover_stale_claims", lambda *a, **kw: None)
     monkeypatch.setattr(J, "execute_with_retry", lambda q, *a, **k: q.execute())
     monkeypatch.setattr(J, "_zet_kleur_goed", lambda rijen: None)
-    monkeypatch.setattr(J, "_zet_taal_goed", lambda db, rijen: None)
+    monkeypatch.setattr(J, "_zet_taal_goed", lambda db, rijen: rijen)
     monkeypatch.setattr(J, "_herplaatsing_kansloos", lambda *a, **kw: None)
     return J.get_pending_jobs(
         request=type("R", (), {"headers": {"x-omnivaleur-ext": "1.0.306"}})(),
@@ -184,7 +184,7 @@ def test_marktplaats_verversen_blijft_ongemoeid(monkeypatch):
     monkeypatch.setattr(J, "_recover_stale_claims", lambda *a, **kw: None)
     monkeypatch.setattr(J, "execute_with_retry", lambda q, *a, **k: q.execute())
     monkeypatch.setattr(J, "_zet_kleur_goed", lambda rijen: None)
-    monkeypatch.setattr(J, "_zet_taal_goed", lambda db, rijen: None)
+    monkeypatch.setattr(J, "_zet_taal_goed", lambda db, rijen: rijen)
     monkeypatch.setattr(J, "_herplaatsing_kansloos", lambda *a, **kw: None)
     uit = J.get_pending_jobs(
         request=type("R", (), {"headers": {"x-omnivaleur-ext": "1.0.306"}})(),

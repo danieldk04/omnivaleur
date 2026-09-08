@@ -28,7 +28,15 @@ sys.path.insert(0, str(ROOT / "scripts"))
 
 import mail_analyse as M  # noqa: E402
 
-NU = datetime(2026, 8, 31, 12, 0, tzinfo=timezone.utc)
+# BEWUST DE ECHTE KLOK (08-09-2026).
+#
+# Hier stond een vaste datum, terwijl laat_verlopen_uitdoven() zelf
+# datetime.now() gebruikt. Zodra de echte kalender voorbij die datum liep, was
+# de "verse" melding in deze test in werkelijkheid weken oud en doofde hij ook
+# uit — dus zakte de test vanzelf, zonder dat er iets aan de code was veranderd.
+# Een test die op een dag omvalt zonder oorzaak verbergt de echte fouten die er
+# op dat moment wél zijn.
+NU = datetime.now(timezone.utc)
 ZW = "info@zilverwebsite.nl"
 EG = "info@papas-plectrums.nl"
 

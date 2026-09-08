@@ -369,34 +369,82 @@ def _zet_taal_goed(db, jobs: list) -> int:
     vertaling heen te gaan.
     """
     try:
-        from backend.services.crosslist import (TAAL_VELD, localiseer_sync,
-                                                taal_van_platform)
+        from backend.services.crosslist import (TAAL_VELD, VertalingOnbeschikbaar,
+                                                localiseer_sync, taal_van_platform)
     except Exception as e:  # noqa: BLE001 — het uitdelen gaat hoe dan ook door
         logger.warning("taalzeef niet beschikbaar: %s", e)
-        return 0
+        return list(jobs or [])
 
-    aangepast = 0
+    door = []
     for j in jobs or []:
         if j.get("action") != "create" or not isinstance(j.get("payload"), dict):
+            door.append(j)
             continue
         try:
             platform = j.get("platform")
             if taal_van_platform(platform) != "nl":
+                door.append(j)
                 continue
             payload = j["payload"]
             if payload.get(TAAL_VELD) == "nl":
+                door.append(j)
                 continue
             nieuw = localiseer_sync(payload, platform)
             if nieuw.get("title") != payload.get("title"):
                 logger.info("job %s: titel alsnog vertaald voor %s (%r -> %r)",
                             j.get("id"), platform,
                             str(payload.get("title"))[:60], str(nieuw.get("title"))[:60])
-                aangepast += 1
             j["payload"] = nieuw
             db.table("jobs").update({"payload": nieuw}).eq("id", j["id"]).execute()
-        except Exception as e:  # noqa: BLE001 — liever de oude tekst dan geen advertentie
+            door.append(j)
+        except VertalingOnbeschikbaar as e:
+            # DE VERTAALDIENST LIGT PLAT — DEZE OPDRACHT BLIJFT STAAN.
+            #
+            # Hij gaat NIET de deur uit met de onvertaalde tekst en wordt ook
+            # niet op fout gezet: hij blijft gewoon 'pending' en gaat vanzelf
+            # alsnog lopen zodra de vertaling het weer doet. Zo komt er nooit
+            # een Engelse advertentie op een Nederlandse site te staan, en raakt
+            # de verkoper zijn werk ook niet kwijt. Zie VertalingOnbeschikbaar
+            # in backend/services/crosslist.py voor de meting die hierachter zit.
+            logger.error("job %s (%s) blijft wachten: %s", j.get("id"), j.get("platform"), e)
+            _meld_vertaalstoring(str(e))
+        except Exception as e:  # noqa: BLE001 — een andere hapering mag de uitgifte niet stoppen
             logger.warning("job %s: taal niet kunnen goedzetten: %s", j.get("id"), e)
-    return aangepast
+            door.append(j)
+    return door
+
+
+# Eén waarschuwing per uur, niet één per opdracht. Een lege API-rekening raakt
+# elke wachtende advertentie tegelijk; zonder deze rem stond de mailbox vol.
+_vertaalstoring_gemeld_op: float = 0.0
+
+
+def _meld_vertaalstoring(reden: str) -> None:
+    """De eigenaar moet dit binnen het uur weten: alles wat vertaald moet worden staat stil."""
+    global _vertaalstoring_gemeld_op
+    import time
+    if time.time() - _vertaalstoring_gemeld_op < 3600:
+        return
+    _vertaalstoring_gemeld_op = time.time()
+    try:
+        from backend.services.email import send_email
+        from backend.config import settings
+        ontvangers = [a.strip() for a in (settings.owner_email or "").split(",") if a.strip()]
+        for adres in ontvangers:
+            send_email(
+                "Omnivaleur: vertaling ligt stil, advertenties wachten",
+                "De vertaling naar het Nederlands werkt op dit moment niet.\n\n"
+                "Advertenties die vertaald moeten worden gaan NIET de deur uit; ze "
+                "blijven in de wachtrij staan en lopen vanzelf door zodra dit is "
+                "opgelost. Er komt dus geen Engelse tekst op Marktplaats of "
+                "2dehands te staan.\n\n"
+                "Meestal is dit het Anthropic-tegoed. Vul het aan, dan lost de "
+                "wachtrij zichzelf op.\n\n"
+                f"Melding van de server: {reden}",
+                to=adres,
+            )
+    except Exception as e:  # noqa: BLE001 — een mislukte waarschuwing mag niets blokkeren
+        logger.warning("kon vertaalstoring niet melden: %s", e)
 
 
 # ── Wie is er als eerste aan de beurt? ────────────────────────────────────────
@@ -976,13 +1024,19 @@ def get_pending_jobs(request: Request, platform: str = None, user_id: str = Depe
     # Extension: exactly one job at a time. Dashboard: the whole queue, to count.
     if not is_extension_dispatch:
         return ready
-    uit = ready[:1]
     # Pas hier, en niet een regel eerder: vertalen kost een gesprek met een
     # dienst buiten de deur. Het dashboard telt alleen en krijgt niets vertaald,
     # en van de wachtrij gaat er precies één opdracht doorheen — die ene die de
     # extensie nu ook echt gaat uitvoeren.
-    _zet_taal_goed(db, uit)
-    return uit
+    #
+    # Ligt de vertaling plat, dan blijft die ene opdracht staan en proberen we de
+    # volgende. Anders zou één onvertaalbare advertentie vooraan de hele wachtrij
+    # blokkeren: alles erachter (ook wat al in het Nederlands staat) zou stilvallen.
+    for kandidaat in ready[:5]:
+        uit = _zet_taal_goed(db, [kandidaat])
+        if uit:
+            return uit
+    return []
 
 
 # ── Welke extensieversie staat er in de Chrome Web Store? ────────────────────
@@ -1389,7 +1443,7 @@ async def relist_retry(body: dict, user_id: str = Depends(require_active_subscri
     # Only pending/claimed/error jobs — never a job that already completed ("done").
     stale = (
         (await naast_de_lus(lambda: db.table("jobs")
-        .select("id")
+        .select("id,status,result")
         .eq("user_id", user_id)
         .eq("item_id", item_id)
         .eq("platform", platform)
@@ -1399,10 +1453,24 @@ async def relist_retry(body: dict, user_id: str = Depends(require_active_subscri
         .data
         or []
     )
+    # MET REDEN, EN ZONDER DE OUDE FOUTMELDING TE WISSEN (08-09-2026).
+    #
+    # Hier stond een kale statuswijziging. Twee gevolgen, allebei gemeten: in het
+    # logboek stonden 77 afgebroken opdrachten met een leeg vakje "reden" — de
+    # verkoper zag "Cancelled" en niets erbij. En erger: een opdracht die op
+    # 'error' stond werd óók meegenomen, dus zodra iemand op "Retry" drukte was
+    # de uitleg waaróm het de vorige keer misging voorgoed weg. Precies de
+    # informatie die je nodig hebt als het een tweede keer misgaat.
     for j in stale:
-        (await naast_de_lus(lambda: db.table("jobs").update({
+        was_fout = j.get("status") == "error"
+        oude_reden = (j.get("result") or {}).get("error") if isinstance(j.get("result"), dict) else None
+        (await naast_de_lus(lambda j=j, was_fout=was_fout, oude_reden=oude_reden: db.table("jobs").update({
             "status": "cancelled",
             "done_at": datetime.now(timezone.utc).isoformat(),
+            "result": {
+                "cancelled": "Replaced by a new attempt you started from the dashboard.",
+                **({"eerdere_fout": oude_reden} if was_fout and oude_reden else {}),
+            },
         }).eq("id", j["id"]).execute()))
 
     # De advertentie staat nog gewoon live (een mislukte verwijdering haalt niets
@@ -1415,10 +1483,13 @@ async def relist_retry(body: dict, user_id: str = Depends(require_active_subscri
     }).eq("item_id", item_id).eq("platform", platform).execute()))
 
     from backend.services.relist import refresh_listing, RefreshError
+    from backend.services.crosslist import VertalingOnbeschikbaar
     try:
         result = await refresh_listing(item_id, platform, user_id, "relist")
     except RefreshError as e:
         raise HTTPException(status_code=400, detail=str(e))
+    except VertalingOnbeschikbaar as e:
+        raise HTTPException(status_code=503, detail=str(e))
 
     # Pas nu weg met de oude foutmelding: er staat een nieuwe poging klaar.
     (await naast_de_lus(lambda: db.table("listings").update({
@@ -1482,7 +1553,7 @@ def relist_cancel(body: dict, user_id: str = Depends(get_current_user)):
     # Cancel every outstanding job from this relist so nothing fires later.
     outstanding = (
         db.table("jobs")
-        .select("id")
+        .select("id,status,result")
         .eq("user_id", user_id)
         .eq("item_id", item_id)
         .eq("platform", platform)
@@ -1492,10 +1563,19 @@ def relist_cancel(body: dict, user_id: str = Depends(get_current_user)):
         .data
         or []
     )
+    # Zelfde reden als bij relist_retry hierboven: een afgebroken opdracht zonder
+    # uitleg is in het logboek niet te onderscheiden van een storing, en een
+    # eerdere foutmelding mag niet verdwijnen omdat iemand op Cancel drukt.
     for j in outstanding:
+        was_fout = j.get("status") == "error"
+        oude_reden = (j.get("result") or {}).get("error") if isinstance(j.get("result"), dict) else None
         db.table("jobs").update({
             "status": "cancelled",
             "done_at": datetime.now(timezone.utc).isoformat(),
+            "result": {
+                "cancelled": "Cancelled by you from the dashboard.",
+                **({"eerdere_fout": oude_reden} if was_fout and oude_reden else {}),
+            },
         }).eq("id", j["id"]).execute()
 
     # Give back the cooldown + daily-quota slot the refresh spent up front, so a

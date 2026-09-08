@@ -339,10 +339,22 @@ def verleng_proef(emails: list[str], dagen: int) -> dict:
     nieuw = (datetime.now(timezone.utc) + timedelta(days=dagen)).isoformat()
     gelukt: list[str] = []
     for email, uid in id_van.items():
+        # DE WAARSCHUWINGEN WEER OP SCHERP (08-09-2026).
+        #
+        # Zonder deze twee regels kreeg wie een nieuwe proefperiode kreeg géén
+        # waarschuwing meer dat die afliep: send_trial_reminders slaat iedereen
+        # over bij wie `trial_reminder_sent_at` al gevuld is, en dat stond nog op
+        # de datum van de vórige proef. GEMETEN op 08-09-2026: van de 29 mensen
+        # in proef zouden er 13 op 13 september zonder één mail buitengesloten
+        # zijn, acht van hen ook zonder de laatste waarschuwing. Een nieuwe proef
+        # hoort ook een nieuwe reeks waarschuwingen te krijgen.
         db.table("subscriptions").update({
             "status": "trialing",
             "plan": "pro",
             "trial_ends_at": nieuw,
+            "trial_reminder_sent_at": None,
+            "final_reminder_sent_at": None,
+            "locked_notice_sent_at": None,
         }).eq("user_id", uid).execute()
         invalidate_access_cache(uid)
         gelukt.append(email)

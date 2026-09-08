@@ -42,7 +42,36 @@ p { font-size: 14px; color: var(--muted); line-height: 1.5; }
 
 <script>
 const API = window.location.hostname === 'localhost' ? 'http://localhost:8001' : '';
-const TOKEN = sessionStorage.getItem('cl_token') || '';
+// ── HET INLOGBEWIJS OVERLEEFT HET TABBLAD (08-09-2026) ───────────────────────
+//
+// Stond in sessionStorage. Dat is per tabblad: een tweede tabblad opende op de
+// inlogpagina, en zodra Chrome dichtging was je uitgelogd. Voor een dienst waar
+// je de computer juist áán laat staan met de extensie erop is dat elke dag
+// opnieuw inloggen. beheer.html gebruikte al localStorage, met precies deze
+// uitleg erbij; het klantendashboard was daar simpelweg nooit langs gegaan.
+//
+// Lezen kijkt ook nog in sessionStorage, zodat wie op dit moment is ingelogd
+// niet door deze wijziging wordt uitgelogd.
+const SESSIE = {
+  lees(sleutel) {
+    try { const v = localStorage.getItem(sleutel); if (v !== null) return v; } catch (e) {}
+    try { return sessionStorage.getItem(sleutel); } catch (e) { return null; }
+  },
+  zet(sleutel, waarde) {
+    try { localStorage.setItem(sleutel, waarde); } catch (e) {
+      try { sessionStorage.setItem(sleutel, waarde); } catch (e2) {}
+    }
+  },
+  wis(sleutel) {
+    try { localStorage.removeItem(sleutel); } catch (e) {}
+    try { sessionStorage.removeItem(sleutel); } catch (e) {}
+  },
+  wisAlles() {
+    ['cl_auth', 'cl_token', 'cl_refresh', 'cl_email'].forEach((s) => this.wis(s));
+  },
+};
+
+const TOKEN = SESSIE.lees('cl_token') || '';
 
 function render(icon, title, sub, showBtn) {
   document.getElementById('card').innerHTML = `

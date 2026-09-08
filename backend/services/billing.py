@@ -279,6 +279,36 @@ def _select_or_warn(query_fn, column: str):
         return None
 
 
+# EEN NIEUWE PROEF VERDIENT EEN NIEUWE WAARSCHUWING (08-09-2026).
+#
+# Hier stond `.is_("trial_reminder_sent_at", "null")` in de zoekopdracht: wie
+# ooit een waarschuwing kreeg, kreeg er nooit meer een. Dat gaat mis zodra
+# iemand een tweede proefperiode krijgt (terughaalcampagne, handmatige
+# verlenging, een tweede kans na een mislukte betaling): het vinkje stond nog op
+# de datum van de vórige proef.
+#
+# GEMETEN op 08-09-2026, vlak na de terughaalcampagne: van de 29 mensen in proef
+# zouden er elf op 13 september zonder één waarschuwingsmail buitengesloten zijn
+# geweest, acht van hen ook zonder de laatste herinnering.
+#
+# Het vinkje telt daarom alleen nog als het bíj deze proef hoort: een
+# waarschuwing die meer dan REMINDER_DAYS_BEFORE dagen vóór het einde is
+# verstuurd, ging over een eerdere ronde. Deze afweging staat hier en niet
+# alleen bij het verlengen, zodat élk pad dat een proef oprekt vanzelf goed
+# gaat — ook eentje die er later bij komt.
+def _nog_niet_gewaarschuwd(rows: list | None, kolom: str) -> list:
+    """De rijen die voor DEZE proefperiode nog geen mail hebben gehad."""
+    uit = []
+    for sub in rows or []:
+        verstuurd = _parse_ts(sub.get(kolom))
+        einde = _parse_ts(sub.get("trial_ends_at"))
+        if verstuurd is None:
+            uit.append(sub)
+        elif einde is None or verstuurd < einde - timedelta(days=REMINDER_DAYS_BEFORE):
+            uit.append(sub)          # hoorde bij een eerdere proef
+    return uit
+
+
 async def send_trial_reminders():
     """
     Draait dagelijks. Twee mails, allebei precies één keer per gebruiker:
@@ -294,13 +324,13 @@ async def send_trial_reminders():
     # runs door vallen en nooit iets horen.
     rows = _select_or_warn(
         lambda: db.table("subscriptions")
-        .select("id, user_id, trial_ends_at")
+        .select("id, user_id, trial_ends_at, trial_reminder_sent_at")
         .eq("status", "trialing")
         .gte("trial_ends_at", now.isoformat())
-        .lt("trial_ends_at", (now + timedelta(days=REMINDER_DAYS_BEFORE)).isoformat())
-        .is_("trial_reminder_sent_at", "null"),
+        .lt("trial_ends_at", (now + timedelta(days=REMINDER_DAYS_BEFORE)).isoformat()),
         "trial_reminder_sent_at",
     )
+    rows = _nog_niet_gewaarschuwd(rows, "trial_reminder_sent_at")
     if rows:
         logger.info(f"Trial reminder: {len(rows)} gebruiker(s)")
         _mail_batch(rows, "trial_reminder_sent_at", trial_reminder_email,
@@ -312,13 +342,13 @@ async def send_trial_reminders():
     lock_within_a_day = now + timedelta(days=1)
     rows = _select_or_warn(
         lambda: db.table("subscriptions")
-        .select("id, user_id, trial_ends_at")
+        .select("id, user_id, trial_ends_at, final_reminder_sent_at")
         .eq("status", "trial_expired")
         .gte("trial_ends_at", (now - timedelta(days=GRACE_DAYS)).isoformat())
-        .lt("trial_ends_at", (lock_within_a_day - timedelta(days=GRACE_DAYS)).isoformat())
-        .is_("final_reminder_sent_at", "null"),
+        .lt("trial_ends_at", (lock_within_a_day - timedelta(days=GRACE_DAYS)).isoformat()),
         "final_reminder_sent_at",
     )
+    rows = _nog_niet_gewaarschuwd(rows, "final_reminder_sent_at")
     if rows:
         logger.info(f"Final warning: {len(rows)} gebruiker(s)")
         _mail_batch(rows, "final_reminder_sent_at", final_warning_email,

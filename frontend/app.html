@@ -732,7 +732,7 @@ input[type="checkbox"].row-check { width: 15px; height: 15px; cursor: pointer; a
       <div class="ext-dot" id="ext-dot"></div>
       <span id="ext-label">Loading...</span>
     </div>
-    <button id="logout-btn" onclick="sessionStorage.removeItem('cl_auth'); window.location.href='/'" style="background:transparent;border:none;color:rgba(255,255,255,.3);font-size:11px;cursor:pointer;padding:4px 0;margin-top:6px;text-align:left;width:100%;">← Log out</button>
+    <button id="logout-btn" onclick="SESSIE.wisAlles(); window.location.href='/'" style="background:transparent;border:none;color:rgba(255,255,255,.3);font-size:11px;cursor:pointer;padding:4px 0;margin-top:6px;text-align:left;width:100%;">← Log out</button>
   </div>
 </div>
 
@@ -763,7 +763,7 @@ input[type="checkbox"].row-check { width: 15px; height: 15px; cursor: pointer; a
         <div style="font-size:12px;color:#047857;margin-top:3px" id="paywall-promo-detail"></div>
       </div>
       <button onclick="startCheckout()" style="width:100%;padding:14px;background:var(--grad);color:#fff;border:none;border-radius:12px;font-size:16px;font-weight:700;cursor:pointer;margin-bottom:10px" id="paywall-cta">Start 7-day free trial →</button>
-      <button onclick="sessionStorage.clear(); window.location.href='/'" style="width:100%;padding:10px;background:transparent;border:none;color:var(--muted);font-size:13px;cursor:pointer">Log out</button>
+      <button onclick="SESSIE.wisAlles(); sessionStorage.clear(); window.location.href='/'" style="width:100%;padding:10px;background:transparent;border:none;color:var(--muted);font-size:13px;cursor:pointer">Log out</button>
     </div>
   </div>
 
@@ -1772,7 +1772,7 @@ input[type="checkbox"].row-check { width: 15px; height: 15px; cursor: pointer; a
               </div>
               <div style="display:flex;gap:18px;align-items:flex-start;padding:18px 0;border-bottom:1px solid var(--border)">
                 <div style="width:32px;height:32px;border-radius:50%;background:var(--grad);color:#fff;font-size:13px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px;box-shadow:0 2px 8px rgba(37,99,235,.3)">4</div>
-                <div><div style="font-weight:700;font-size:14px;margin-bottom:4px;color:var(--text)">Extension publishes automatically</div><div style="font-size:13px;color:var(--muted);line-height:1.65">Within 15 seconds the Chrome extension picks up the job, opens the marketplace in a background tab, fills in all fields, uploads your photos and submits the listing. Fully automated — the tab closes when done.</div></div>
+                <div><div style="font-weight:700;font-size:14px;margin-bottom:4px;color:var(--text)">Extension publishes automatically</div><div style="font-size:13px;color:var(--muted);line-height:1.65">Usually within a few minutes the Chrome extension picks up the job, opens the marketplace in a background tab, fills in all fields, uploads your photos and submits the listing. Fully automated — the tab closes when done. With Calm mode on it deliberately waits longer between listings.</div></div>
               </div>
               <div style="display:flex;gap:18px;align-items:flex-start;padding:18px 0">
                 <div style="width:32px;height:32px;border-radius:50%;background:var(--grad);color:#fff;font-size:13px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px;box-shadow:0 2px 8px rgba(37,99,235,.3)">5</div>
@@ -1888,7 +1888,7 @@ input[type="checkbox"].row-check { width: 15px; height: 15px; cursor: pointer; a
                   Why is my listing stuck in "Queued"?
                   <svg style="flex-shrink:0;color:var(--muted);transition:transform .2s" width="16" height="16" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"/></svg>
                 </div>
-                <div style="display:none;font-size:13px;color:var(--muted);line-height:1.65;padding-bottom:15px">The Chrome extension is either not installed, not logged in, or Chrome isn't running. Click the extension icon and make sure it shows "Extension active — ready to publish". Once active, it picks up the job within 15 seconds.</div>
+                <div style="display:none;font-size:13px;color:var(--muted);line-height:1.65;padding-bottom:15px">The Chrome extension is either not installed, not logged in, or Chrome isn't running. Click the extension icon and make sure it shows "Extension active — ready to publish". Once active, it picks up the job — usually within a few minutes, and longer between listings if Calm mode is on.</div>
               </div>
 
               <div style="border-bottom:1px solid var(--border)">
@@ -2548,7 +2548,36 @@ input[type="checkbox"].row-check { width: 15px; height: 15px; cursor: pointer; a
 </div>
 
 <script>
-if (!sessionStorage.getItem('cl_auth')) { window.location.href = '/login.html'; }
+// ── HET INLOGBEWIJS OVERLEEFT HET TABBLAD (08-09-2026) ───────────────────────
+//
+// Stond in sessionStorage. Dat is per tabblad: een tweede tabblad opende op de
+// inlogpagina, en zodra Chrome dichtging was je uitgelogd. Voor een dienst waar
+// je de computer juist áán laat staan met de extensie erop is dat elke dag
+// opnieuw inloggen. beheer.html gebruikte al localStorage, met precies deze
+// uitleg erbij; het klantendashboard was daar simpelweg nooit langs gegaan.
+//
+// Lezen kijkt ook nog in sessionStorage, zodat wie op dit moment is ingelogd
+// niet door deze wijziging wordt uitgelogd.
+const SESSIE = {
+  lees(sleutel) {
+    try { const v = localStorage.getItem(sleutel); if (v !== null) return v; } catch (e) {}
+    try { return sessionStorage.getItem(sleutel); } catch (e) { return null; }
+  },
+  zet(sleutel, waarde) {
+    try { localStorage.setItem(sleutel, waarde); } catch (e) {
+      try { sessionStorage.setItem(sleutel, waarde); } catch (e2) {}
+    }
+  },
+  wis(sleutel) {
+    try { localStorage.removeItem(sleutel); } catch (e) {}
+    try { sessionStorage.removeItem(sleutel); } catch (e) {}
+  },
+  wisAlles() {
+    ['cl_auth', 'cl_token', 'cl_refresh', 'cl_email'].forEach((s) => this.wis(s));
+  },
+};
+
+if (!SESSIE.lees('cl_auth')) { window.location.href = '/login.html'; }
 
 // ── Extension detection ───────────────────────────────────────────
 // The extension's content script (webapp_sync.js) answers our ping with
@@ -2799,7 +2828,7 @@ document.addEventListener('visibilitychange', () => {
 setTimeout(pingExtension, 400);
 
 const API = window.location.hostname === 'localhost' ? 'http://localhost:8001' : '';
-let TOKEN = sessionStorage.getItem('cl_token') || '';
+let TOKEN = SESSIE.lees('cl_token') || '';
 
 // PWA: register the service worker so the dashboard can be installed to the
 // phone's homescreen and open like a native app. Only on https/localhost.
@@ -2836,7 +2865,7 @@ async function triggerPwaInstall() {
 let _tokenVernieuwing = null;
 
 async function vernieuwToken() {
-  const sleutel = sessionStorage.getItem('cl_refresh') || '';
+  const sleutel = SESSIE.lees('cl_refresh') || '';
   if (!sleutel) return false;
   // Eén keer tegelijk: tien gelijktijdige verzoeken die alle tien vernieuwen,
   // maken van elkaars verse sleutel een ongeldige.
@@ -2851,8 +2880,8 @@ async function vernieuwToken() {
         const d = await r.json();
         if (!d.access_token) return false;
         TOKEN = d.access_token;
-        sessionStorage.setItem('cl_token', d.access_token);
-        if (d.refresh_token) sessionStorage.setItem('cl_refresh', d.refresh_token);
+        SESSIE.zet('cl_token', d.access_token);
+        if (d.refresh_token) SESSIE.zet('cl_refresh', d.refresh_token);
         return true;
       } catch { return false; }
       finally { setTimeout(() => { _tokenVernieuwing = null; }, 0); }
@@ -2870,8 +2899,7 @@ async function apiFetch(url, opts = {}, _tweedePoging = false) {
   // overdoen; lukt dat niet, dan is er echt opnieuw inloggen nodig.
   if (res.status === 401 && !_tweedePoging) {
     if (await vernieuwToken()) return apiFetch(url, opts, true);
-    sessionStorage.removeItem('cl_token');
-    sessionStorage.removeItem('cl_refresh');
+    SESSIE.wisAlles();
     location.href = 'login.html?verlopen=1';
   }
   // 402 = the server refused because the subscription lapsed. The billing panel
@@ -3431,7 +3459,7 @@ function renderBilling(data) {
   function hidePaywall() { paywall.style.display = 'none'; }
 
   // Populate account email (both active card and trial card)
-  const email = sessionStorage.getItem('cl_email') || '—';
+  const email = SESSIE.lees('cl_email') || '—';
   const emailEl = document.getElementById('account-email');
   if (emailEl) emailEl.textContent = email;
   const emailTrialEl = document.getElementById('account-email-trial');
@@ -7778,14 +7806,14 @@ function openRefreshBriefing(strategy, label) {
     title.textContent = 'Relisting — here\'s what happens next';
     intro.innerHTML = `This is a <b>relist</b>: the old ${label} listing is deleted now and automatically republished later with a fresh date, so it climbs back to "Newest".`;
     steps.innerHTML =
-      step(1, '🗑️', `Extension opens ${label} to delete the old listing`, `Within ~15 seconds a ${label} tab opens on its own and removes the current listing. This is why the item briefly shows as not live — that's expected.`) +
+      step(1, '🗑️', `Extension opens ${label} to delete the old listing`, `A ${label} tab opens on its own, usually within a few minutes, and removes the current listing. This is why the item briefly shows as not live — that's expected.`) +
       step(2, '🙅', `Leave that tab alone`, `Don't click, type in, or close it. The extension drives it automatically and closes it by itself. Interfering makes the relist fail.`) +
       step(3, '⏳', `New listing is republished automatically`, `After a randomised delay it re-posts the item with all its photos and details. <b>Keep Chrome open</b> (a background window is fine) so this can fire. You can follow it live under "Relists in progress".`);
   } else {
     title.textContent = 'Refreshing — here\'s what happens next';
     intro.innerHTML = `This is a <b>content refresh</b>: a light, in-place edit of your existing ${label} listing — your price, title and description stay exactly the same.`;
     steps.innerHTML =
-      step(1, '✏️', `Extension opens the ${label} edit page`, `Within ~15 seconds a ${label} tab opens on its own and edits the existing listing (it re-orders your photos, keeping photo 1 first).`) +
+      step(1, '✏️', `Extension opens the ${label} edit page`, `A ${label} tab opens on its own, usually within a few minutes, and edits the existing listing (it re-orders your photos, keeping photo 1 first).`) +
       step(2, '🙅', `Leave that tab alone`, `Don't click, type in, or close it. The extension drives it automatically and closes it by itself when the save is confirmed.`) +
       step(3, '✓', `Nothing else to do`, `The listing is re-saved so ${label} registers a fresh edit — no delete, no new listing, no price change.`);
   }
@@ -9211,7 +9239,11 @@ function fmtStartBelofte() {
   if (pace && pace.calm && pace.seconds_between) {
     return `within ~${Math.max(1, Math.round(pace.seconds_between / 60))} minutes (Calm mode is on)`;
   }
-  return 'within ~15 seconds';
+  // GEMETEN (08-09-2026) op 416 opdrachten waar iemand zelf op klikte: mediaan
+  // 3,6 minuten, 27% binnen 15 seconden, 53% binnen vijf minuten. "Binnen ~15
+  // seconden" was dus in bijna driekwart van de gevallen een onwaarheid, en een
+  // belofte die niet uitkomt leest als een storing.
+  return 'usually within a few minutes';
 }
 
 // Hoe lang duurt het nog voor deze wachtrij leeg is, in gewone woorden?

@@ -108,6 +108,66 @@ def _claude_client():
     return _CLAUDE_CLIENT
 
 
+class VertalingOnbeschikbaar(RuntimeError):
+    """De vertaaldienst deed het niet. Dit is GEEN reden om de tekst maar te plaatsen.
+
+    WAAROM DIT ER IS (08-09-2026, Daniel). `_vertaal` ving elke fout op en gaf de
+    brontekst terug. Bij een lege API-rekening betekende dat: de Engelse tekst
+    ging ongewijzigd naar Marktplaats en 2dehands, de opdracht werd gestempeld
+    als "vertaald" (TAAL_VELD) en werd dus ook nooit meer opnieuw vertaald.
+    Niemand kreeg een foutmelding, want er ging technisch niets mis.
+
+    Gemeten op 08-09-2026: "(1346) Black MyProtein Shorts - Men XL - New" met een
+    Engelse omschrijving stond op marktplaats.nl, en "(1071) Light Blue Massimo
+    Dutti Turtleneck - Women XS - Very Good" op 2dehands.be, allebei met
+    `_taal: nl` in de opdracht.
+
+    Een storing hoort de advertentie te laten wachten, niet verkeerd te plaatsen.
+    """
+
+
+# ── STAAT DEZE TEKST AL IN DE DOELTAAL? ──────────────────────────────────────
+#
+# Alleen nodig als de vertaaldienst plat ligt. Dan moeten we kiezen tussen
+# "plaatsen zoals het er staat" en "laten wachten", en dat mag geen gok zijn.
+#
+# Bewust streng: bij twijfel luidt het antwoord False. Een onterechte False kost
+# uitstel tot de dienst weer draait; een onterechte True zet een Engelse
+# advertentie op een Nederlandse site, en dat is precies de fout die dit hoort te
+# voorkomen.
+#
+# Gemeten op 1.350 echt gepubliceerde Marktplaats- en 2dehands-teksten van de
+# laatste drie weken: 1.296 (96%) worden als Nederlands herkend en zouden dus
+# ook tijdens een storing gewoon doorgaan. De 54 die blijven wachten zijn korte
+# trefwoordteksten zonder stopwoorden ("Kelim kleedje rood 73/40 cm") plus de
+# echt Engelse teksten, en dat is precies de bedoeling.
+_STOPWOORDEN_NL = {
+    "de", "het", "een", "van", "voor", "met", "niet", "zijn", "deze", "dit", "wordt",
+    "goede", "staat", "maat", "kleur", "nieuw", "gebruikt", "aan", "naar", "zeer",
+    "mooi", "ook", "bij", "uit", "door", "tot", "zonder", "nog", "geen", "heeft",
+    "kan", "je", "u", "we", "wij", "er", "hij", "ze", "om", "dat", "als", "maar",
+    "want", "dus", "al", "onze", "mijn", "hun", "waar",
+}
+_STOPWOORDEN_EN = {
+    "the", "and", "with", "for", "this", "from", "size", "colour", "color",
+    "condition", "great", "brand", "are", "was", "were", "have", "has", "been",
+    "you", "your", "our", "their", "please", "shipping", "item", "items",
+    "measurements", "available", "authentic", "designer", "very", "without",
+    "because", "which", "that", "they", "them", "some", "more", "only", "also",
+}
+
+
+def lijkt_al_in_taal(text: str, taal: str) -> bool:
+    """True als de tekst overtuigend al in `taal` staat. Bij twijfel False."""
+    woorden = re.findall(r"[a-z\u00e0-\u00ff']+", (text or "").lower())
+    if len(woorden) < 6:
+        return False
+    nl = sum(1 for w in woorden if w in _STOPWOORDEN_NL)
+    en = sum(1 for w in woorden if w in _STOPWOORDEN_EN)
+    doel, ander = (nl, en) if taal == "nl" else (en, nl)
+    return doel >= 3 and doel >= ander * 2
+
+
 def _vertaal(text: str, target_lang: str, brand: str | None = None) -> str:
     """Translate text using Claude. Preserves brand names, formatting and paragraph structure.
 
@@ -196,8 +256,18 @@ def _vertaal(text: str, target_lang: str, brand: str | None = None) -> str:
         logger.info("translate→%s out: repr=%r", target_lang, result[:200])
         return result
     except Exception as e:
-        logger.warning(f"Claude translation to {target_lang} failed: {e}")
-        return text
+        # De vertaaldienst zelf deed het niet (lege rekening, storing, tijdslimiet).
+        # Wel of niet toch plaatsen wordt NIET hier beslist. Dit is één veld —
+        # een titel van drie woorden is te weinig tekst om een taal aan af te
+        # lezen. De afweging staat in localiseer_sync / localize_item_for_platform,
+        # die titel en omschrijving samen kunnen wegen.
+        logger.error("Vertaling naar %s mislukt: %s", target_lang, e)
+        raise VertalingOnbeschikbaar(
+            "De vertaling naar het "
+            + ("Nederlands" if target_lang == "nl" else "Engels")
+            + " lukte niet, dus er is niets geplaatst. Zodra de vertaling weer "
+              "werkt gaat deze advertentie vanzelf alsnog de deur uit."
+        ) from e
 
 
 async def _translate_with_claude(text: str, target_lang: str, brand: str | None = None) -> str:
@@ -261,9 +331,35 @@ def localiseer_sync(item: dict, platform: str) -> dict:
     brand = item.get("brand") or None
     # Shopify-only override — Vinted/eBay keep the item's own translated title.
     manual_title = (item.get("shopify_title") or "").strip() if platform == "shopify" else ""
-    title = manual_title or _vertaal(item.get("title", ""), taal, brand)
-    desc = _vertaal(item.get("description", ""), taal, brand)
+    try:
+        title = manual_title or _vertaal(item.get("title", ""), taal, brand)
+        desc = _vertaal(item.get("description", ""), taal, brand)
+    except VertalingOnbeschikbaar:
+        return _zonder_vertaling(item, taal)
     return {**item, "title": title, "description": desc, TAAL_VELD: taal}
+
+
+def _zonder_vertaling(item: dict, taal: str) -> dict:
+    """De vertaaldienst ligt plat. Mag deze advertentie tóch de deur uit?
+
+    Alleen als titel en omschrijving SAMEN al overtuigend in de doeltaal staan;
+    dan valt er niets te vertalen en verandert een werkende vertaling er ook
+    niets aan. Anders gaat de fout door naar boven en blijft de opdracht wachten.
+
+    Titel en omschrijving worden samen gewogen en niet los: "Vintage tafellamp
+    hoogte 44 cm" is te kort om een taal aan af te lezen, terwijl de omschrijving
+    eronder glashelder Nederlands is.
+    """
+    samen = f"{item.get('title') or ''}\n{item.get('description') or ''}"
+    if lijkt_al_in_taal(samen, taal):
+        logger.warning("Vertaling ligt plat, maar deze advertentie staat al in het %s "
+                       "— ongewijzigd doorgelaten.", taal)
+        return {**item, TAAL_VELD: taal}
+    raise VertalingOnbeschikbaar(
+        "De vertaling naar het " + ("Nederlands" if taal == "nl" else "Engels")
+        + " lukte niet, dus er is niets geplaatst. Zodra de vertaling weer werkt "
+          "gaat deze advertentie vanzelf alsnog de deur uit."
+    )
 
 
 async def localize_item_for_platform(item: dict, platform: str) -> dict:
@@ -276,7 +372,9 @@ async def localize_item_for_platform(item: dict, platform: str) -> dict:
     published in Dutch — the item reads as translated on first publish and
     untranslated after every relist.
 
-    Non-localized platforms (and translation failures) return the item unchanged.
+    Non-localized platforms return the item unchanged. Ligt de vertaaldienst plat,
+    dan komt er een VertalingOnbeschikbaar naar boven, tenzij de advertentie al in
+    de doeltaal staat — zie _zonder_vertaling.
     """
     taal = taal_van_platform(platform)
     if not taal:
@@ -284,14 +382,17 @@ async def localize_item_for_platform(item: dict, platform: str) -> dict:
     brand = item.get("brand") or None
     # Shopify-only override — Vinted/eBay keep the item's own translated title.
     manual_title = (item.get("shopify_title") or "").strip() if platform == "shopify" else ""
-    if manual_title:
-        title = manual_title
-        desc = await _translate_with_claude(item.get("description", ""), taal, brand)
-    else:
-        title, desc = await asyncio.gather(
-            _translate_with_claude(item.get("title", ""), taal, brand),
-            _translate_with_claude(item.get("description", ""), taal, brand),
-        )
+    try:
+        if manual_title:
+            title = manual_title
+            desc = await _translate_with_claude(item.get("description", ""), taal, brand)
+        else:
+            title, desc = await asyncio.gather(
+                _translate_with_claude(item.get("title", ""), taal, brand),
+                _translate_with_claude(item.get("description", ""), taal, brand),
+            )
+    except VertalingOnbeschikbaar:
+        return _zonder_vertaling(item, taal)
     return {**item, "title": title, "description": desc, TAAL_VELD: taal}
 
 
@@ -761,21 +862,32 @@ async def publish_to_platforms(item_id: str, platforms: list[str], user_id: str)
 
     brand = item.get("brand") or None
 
+    # Ligt de vertaaldienst plat, dan gaat de advertentie alleen door als hij al
+    # in de doeltaal staat (_zonder_vertaling weegt titel en omschrijving samen).
+    # Zo niet, dan komt er een VertalingOnbeschikbaar naar boven en zegt het
+    # scherm dat er níéts is geplaatst — in plaats van een Engelse advertentie op
+    # Marktplaats te zetten en dat "gelukt" te noemen.
     async def _build_english():
         # Always the item's OWN translated title. `shopify_title` is a Shopify-only
         # override and is applied per-platform in _pick() — baking it in here gave
         # Vinted and eBay the Shopify title too.
-        title_en, desc_en = await asyncio.gather(
-            _translate_to_english(item.get("title", ""), brand),
-            _translate_to_english(item.get("description", ""), brand),
-        )
+        try:
+            title_en, desc_en = await asyncio.gather(
+                _translate_to_english(item.get("title", ""), brand),
+                _translate_to_english(item.get("description", ""), brand),
+            )
+        except VertalingOnbeschikbaar:
+            return _zonder_vertaling(item, "en")
         return {**item, "title": title_en, "description": desc_en, TAAL_VELD: "en"}
 
     async def _build_dutch():
-        title_nl, desc_nl = await asyncio.gather(
-            _translate_to_dutch(item.get("title", ""), brand),
-            _translate_to_dutch(item.get("description", ""), brand),
-        )
+        try:
+            title_nl, desc_nl = await asyncio.gather(
+                _translate_to_dutch(item.get("title", ""), brand),
+                _translate_to_dutch(item.get("description", ""), brand),
+            )
+        except VertalingOnbeschikbaar:
+            return _zonder_vertaling(item, "nl")
         return {**item, "title": title_nl, "description": desc_nl, TAAL_VELD: "nl"}
 
     translations = await asyncio.gather(

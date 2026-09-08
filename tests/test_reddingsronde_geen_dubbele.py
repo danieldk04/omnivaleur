@@ -31,6 +31,7 @@ sys.path.insert(0, str(ROOT))
 
 from backend.api import jobs as api  # noqa: E402
 from backend.services import relist  # noqa: E402
+import backend.services.crosslist as crosslist
 import backend.database as database  # noqa: E402
 
 
@@ -112,6 +113,10 @@ def opzet(monkeypatch):
         monkeypatch.setattr(api, "get_db", lambda: db)
         monkeypatch.setattr(api, "execute_with_retry", lambda q, *a, **k: q.execute())
         monkeypatch.setattr(relist, "_met_fabrikant", lambda item, platform, uid: dict(item))
+        # De vertaling hoort hier niet echt over de lijn te gaan. Zonder deze
+        # regel deed deze test een echt gesprek met Anthropic, en zakte hij zodra
+        # het tegoed op was — een uitslag die niets zei over de reddingsronde.
+        monkeypatch.setattr(crosslist, "_vertaal", lambda tekst, taal, merk=None: tekst)
         return db
     return maak
 
@@ -193,3 +198,20 @@ def test_annuleren_van_verwijdering_zet_advertentie_meteen_terug(opzet):
     assert statussen == {"d1": "cancelled", "c1": "cancelled"}
     assert _rij(db)["status"] == "active"
     assert _rij(db)["last_refreshed_at"] == ROLLBACK["prior_last_refreshed_at"]
+
+
+def test_geen_kale_plaatsing_als_de_vertaling_plat_ligt(opzet, monkeypatch):
+    """Een storing in de vertaling mag geen onvertaalde advertentie klaarzetten.
+
+    Zonder deze rem zette de reddingsronde de kale databaserij klaar, en die kwam
+    in het Engels op Marktplaats te staan. De rij blijft nu gewoon op 'relisting'
+    en wordt in een volgende ronde opnieuw geprobeerd.
+    """
+    def kapot(*a, **kw):
+        raise crosslist.VertalingOnbeschikbaar("de vertaling lukte niet")
+    db = opzet([_job("d1", "delete", "done", rollback=True),
+                _job("c1", "create", "error", sched=True)])
+    monkeypatch.setattr(crosslist, "_vertaal", kapot)
+    asyncio.run(relist.herstel_vastgelopen_werk())
+    assert _plaatsingen(db) == [], "er mag niets klaargezet worden zolang er niet vertaald kan worden"
+    assert _rij(db)["status"] == "relisting", "de rij blijft staan voor een volgende ronde"

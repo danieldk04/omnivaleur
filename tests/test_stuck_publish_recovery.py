@@ -49,11 +49,32 @@ def _background_js() -> str:
 
 
 def test_closing_the_tab_reports_the_job():
-    """tabs.onRemoved moet de opdracht afmelden, niet stil weggooien."""
+    """Een gesloten tabblad mag nooit een opdracht stil laten verdwijnen.
+
+    HET GAAT OM DE UITKOMST, NIET OM ÉÉN REGEL CODE (bijgewerkt 08-09-2026).
+    Deze test eiste `finaliseJob` letterlijk in de onRemoved-listener. Dat werk
+    is intussen over twee plekken verdeeld, en beter:
+
+      * onRemoved pakt het geval waarin de verkoper het formulier zelf zou
+        afmaken (`awaitingManualFinish`) — daar moet meteen gekeken worden of hij
+        het gedaan heeft;
+      * `reconcileOrphanJobTabs` draait vóór élke pollronde en meldt alles af
+        waarvan het tabblad weg is. Die vangt óók een crash van Chrome en een
+        herstart van de extensie op, en daar komt onRemoved helemaal niet aan te
+        pas.
+
+    Samen dekken ze meer dan de oude regel deed. De test bewaakt daarom allebei
+    de wegen in plaats van de precieze plaats van één aanroep.
+    """
     src = _background_js()
     handler = src.split("chrome.tabs.onRemoved.addListener((tabId) => {")[1].split("\n});")[0]
-    assert "finaliseJob" in handler
-    assert "awaitingManualFinish" in handler  # handmatige afronding niet kapotmaken
+    assert "awaitingManualFinish" in handler  # handmatige afronding wordt nagekeken
+    assert "fireJobWatchdog" in handler
+
+    weesronde = src.split("async function reconcileOrphanJobTabs() {")[1].split("\n}")[0]
+    assert "finaliseJob" in weesronde, (
+        "een opdracht waarvan het tabblad weg is moet worden afgemeld, "
+        "anders ligt de wachtrij stil tot de driedagenveger langskomt")
 
 
 def test_orphan_job_tabs_are_reconciled_before_polling():

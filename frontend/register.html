@@ -102,6 +102,23 @@ input:focus { border-color: var(--blue); background: #fff; }
 <script>
 const API = window.location.hostname === 'localhost' ? 'http://localhost:8001' : '';
 
+// Een storing tussen browser en server (502/504 van de gateway) geeft een
+// HTML-foutpagina terug, geen JSON. Kaal res.json() maakte daar
+// "Unexpected token '<', "<!DOCTYPE"… is not valid JSON" van — op het aller-
+// eerste scherm dat een nieuwe gebruiker ziet. Dit zegt wat er echt aan de hand
+// is, en vooral: dat het aan ons ligt en dat het zo weer werkt.
+async function leesAntwoord(res) {
+  const tekst = await res.text();
+  try {
+    return tekst ? JSON.parse(tekst) : {};
+  } catch (e) {
+    if ([502, 503, 504].includes(res.status)) {
+      throw new Error('De server reageert even niet. Probeer het over een halve minuut opnieuw.');
+    }
+    throw new Error(`De server gaf een onverwacht antwoord (${res.status}). Probeer het zo nog eens.`);
+  }
+}
+
 async function doRegister(e) {
   e.preventDefault();
   const email = document.getElementById('email').value.trim();
@@ -131,7 +148,7 @@ async function doRegister(e) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email, password })
     });
-    const data = await res.json();
+    const data = await leesAntwoord(res);
     if (!res.ok) throw new Error(data.detail || 'Registration failed');
     // Stuur het sign_up-event naar GA4 zodat je het als key event (conversie) kunt
     // markeren. GA4 koppelt de conversie automatisch aan de sessiebron (TikTok/Reddit/

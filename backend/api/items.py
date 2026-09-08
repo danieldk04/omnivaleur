@@ -647,9 +647,12 @@ async def crosslist_item(item_id: str, body: dict, user_id: str = Depends(requir
     platforms = [p for p in platforms if p not in geblokkeerd]
     if not platforms:
         raise HTTPException(status_code=422, detail={"blocked_platforms": geblokkeerd})
-    from backend.services.crosslist import publish_to_platforms, CrosslistValidationError
+    from backend.services.crosslist import (publish_to_platforms, CrosslistValidationError,
+                                            VertalingOnbeschikbaar)
     try:
         results = await publish_to_platforms(item_id, platforms, user_id)
     except CrosslistValidationError as e:
         raise HTTPException(status_code=422, detail={"missing_fields": e.missing})
+    except VertalingOnbeschikbaar as e:
+        raise HTTPException(status_code=503, detail=str(e))
     return {"item_id": item_id, "results": results, "blocked_platforms": geblokkeerd}
