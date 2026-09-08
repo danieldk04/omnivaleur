@@ -6866,3 +6866,74 @@ Twee bijvangsten uit die proef, allebei terecht gedrag maar goed om te weten:
 een artikel dat al op Vinted verkocht is wordt geweigerd, en kleding zonder merk
 of maat ook. En één echt probleem: het Anthropic-tegoed is op, dus de vertaling
 naar het Nederlands faalt op dit moment stil (zie kennisbank, "Anthropic credit").
+
+### 08-09-2026 — De hele gebruikersflow doorlopen, vier gaten dicht
+
+Daniel: "doorlopen, de complete flow die gebruikers op dit moment kunnen lopen,
+waar lopen ze tegenaan". Gemeten op de echte gegevens (servicesleutel, 46
+gebruikers, 5.749 opdrachten van de laatste 30 dagen, 12.396 advertentierijen).
+
+**1. De vertaling viel stil om en niemand merkte het.** Het Anthropic-tegoed is
+op. `_vertaal` ving elke fout op met `return text`, dus de Engelse tekst ging
+ongewijzigd naar Marktplaats en 2dehands — mét `_taal: nl` in de opdracht, alsof
+hij vertaald was, dus ook nooit meer opnieuw aangeboden. Aangetroffen op 08-09:
+"(1346) Black MyProtein Shorts - Men XL - New" met Engelse omschrijving live op
+marktplaats.nl (19:06, status done) en "(1071) Light Blue Massimo Dutti
+Turtleneck - Women XS - Very Good" op 2dehands.be (20:38, status done).
+
+Nu: `VertalingOnbeschikbaar` in plaats van de brontekst. De opdracht blijft
+`pending` en loopt vanzelf door zodra het tegoed er is; de uitgifte pakt intussen
+de volgende op, dus één onvertaalbare advertentie blokkeert de wachtrij niet. De
+eigenaar krijgt één mail per uur. Advertenties die al in het Nederlands staan
+gaan gewoon door — gemeten op 1.350 echt gepubliceerde teksten is dat 96%; de
+overige 4% zijn korte trefwoordteksten ("Kelim kleedje rood 73/40 cm") die
+wachten tot de vertaling weer loopt. Voor-en-na gedraaid tegen de echte lege
+API-rekening: oud = Engels online met stempel nl, nieuw = tegengehouden, en de
+Nederlandse advertentie gaat in beide gevallen gewoon door.
+
+**Openstaand voor Daniel: het Anthropic-tegoed aanvullen.** Tot dan gaat er niets
+verkeerd online, maar blijft er ook werk staan.
+
+**2. Elf mensen zouden op 13 september zonder waarschuwing buitengesloten zijn.**
+`send_trial_reminders` sloeg iedereen over bij wie `trial_reminder_sent_at` al
+gevuld was, ook als dat van een vórige proef was. Na de terughaalcampagne van
+vandaag staan er 29 mensen in proef; 13 daarvan hadden het vinkje nog van hun
+eerdere ronde staan, waarvan 11 met een proef die pas op 13-09 afloopt (acht ook
+zonder laatste herinnering). Een waarschuwing telt nu alleen als hij bij DEZE
+proef hoort, en de terughaalcampagne zet de vinkjes zelf terug. Voor-en-na op de
+echte abonnementen: 16 mensen kregen een mail, nu 27; de twee die hun mail al
+voor deze proef kregen (ted.conroy, theholisticface) krijgen er geen tweede.
+
+**3. Elk nieuw tabblad was opnieuw inloggen.** Het inlogbewijs stond in
+`sessionStorage`. Chrome dicht = uitgelogd, tweede tabblad = inlogscherm. Voor een
+dienst waar je de computer juist aan laat staan is dat elke dag opnieuw inloggen.
+`beheer.html` gebruikte al localStorage met precies deze uitleg erbij; het
+klantendashboard was daar nooit langs gegaan. Nu localStorage, met sessionStorage
+als terugval zodat niemand door de wijziging wordt uitgelogd, en uitloggen wist
+beide. Dit staat in geen enkele klantmail — mensen loggen gewoon nog een keer in.
+
+**4. "Retry" wiste het bewijs.** De knoppen Retry en Cancel op een herplaatsing
+zetten oude opdrachten op 'cancelled' zonder reden, en overschreven daarmee de
+oorspronkelijke foutmelding. Gemeten: 77 afgebroken opdrachten met een leeg vakje
+'reden'. Nu staat de reden erbij en blijft de eerdere fout bewaard.
+
+Verder rechtgezet: register en login lazen het serverantwoord kaal met `.json()`,
+dus een 502 van de gateway gaf letterlijk "Unexpected token '<'" op het
+allereerste scherm dat een nieuwe gebruiker ziet. En het beloofde tempo: op vier
+plekken stond "within 15 seconds", terwijl dat op 416 echte eigen klikken in 27%
+van de gevallen klopte (mediaan 3,6 minuten). Nu "usually within a few minutes".
+
+**Wat NIET stuk bleek, ter geruststelling:** de Web Store-link doet het (301 naar
+chromewebstore.google.com, 200). Aanmelden en bevestigen werkt — de negen
+accounts die nooit inlogden zijn allemaal test-accounts, plus één klant die zijn
+eigen adres verkeerd typte en het een minuut later goed deed. Zilverwebsite draait
+weer goed: laatste zeven dagen 865 geslaagd tegen 8 fout (was 833 fout in totaal).
+En prijs 0 bij Amanda Haas is geen fout maar "Bieden": 195 van die 212 staan live.
+
+**Nog steeds open, ongewijzigd:** Egbert (papas-plectrums) haalt de reparaties
+pas binnen als 1.0.312 door de Web Store is; zijn laatste zeven dagen zijn nog
+626 teruggenomen en 2 geslaagd. En twee JS-tests staan al langer rood
+(`extensie-stempel-test.js` roept een functie aan die niet meer bestaat,
+`prijs-blijft-op-het-formulier-test.js` toetst tegen een oude kopie van de code
+die er niet meer is). Die zijn niet gebruikersgericht, maar ze verbergen wel
+echte fouten zolang ze rood staan.

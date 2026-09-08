@@ -17,6 +17,88 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ---
 
+## sessie-overleeft-het-tabblad
+
+*08-09-2026 — Het inlogbewijs stond in sessionStorage, dus elk nieuw tabblad en elke herstart van Chrome betekende opnieuw inloggen*
+
+Het klantendashboard bewaarde `cl_auth`, `cl_token`, `cl_refresh` en `cl_email`
+in `sessionStorage`. Dat is per tabblad: een tweede tabblad opende op de
+inlogpagina, en zodra Chrome dichtging was je uitgelogd. Voor een dienst waar je
+de computer juist áán laat staan met de extensie erop, is dat elke dag opnieuw
+inloggen. `beheer.html` gebruikte al localStorage, mét een commentaar dat precies
+dit uitlegt; het klantendashboard was daar simpelweg nooit langs gegaan.
+
+**Waarom:** dit is geen storing die iemand meldt. Mensen loggen gewoon nog een
+keer in en denken dat het zo hoort — dus het staat in geen enkele klantmail, en
+je vindt het alleen door de flow zelf te lopen.
+
+**Hoe toe te passen:** het `SESSIE`-hulpje (in app.html, login.html en de twee
+callbackpagina's) schrijft naar localStorage en leest óók nog uit
+sessionStorage, zodat een wijziging niemand uitlogt die op dat moment binnen is.
+Uitloggen wist beide. Alle drie de opslagacties staan in een try/catch, want in
+een privévenster gooit `localStorage` zelf. Zie "extensie-inlogbewijs-in-storage-local"
+voor dezelfde afweging aan de kant van de extensie.
+
+---
+
+## nieuwe-proef-nieuwe-waarschuwing
+
+*08-09-2026 — Een tweede proefperiode kreeg geen waarschuwingsmail meer omdat het vinkje van de vorige proef bleef staan*
+
+`send_trial_reminders` (backend/services/billing.py) sloeg iedereen over bij wie
+`trial_reminder_sent_at` gevuld was. Dat werkt zolang niemand ooit een tweede
+proef krijgt. Zodra dat wel gebeurt — terughaalcampagne, handmatige verlenging,
+tweede kans na een mislukte betaling — staat het vinkje nog op de datum van de
+vórige proef en krijgt die persoon geen enkele mail meer. Hij wordt op de dag
+zelf buitengesloten zonder dat er ooit iets is gezegd.
+
+GEMETEN op 08-09-2026, vlak na de terughaalcampagne: van de 29 mensen in proef
+zouden er 11 op 13 september zonder één waarschuwing zijn buitengesloten, acht
+van hen ook zonder de laatste herinnering. Onder wie info@steentjesmeester.nl,
+davethefirst@hotmail.com en info@retrogameking.com.
+
+**Waarom:** een "is dit al eens verstuurd"-vinkje dat voor het leven geldt, gaat
+stuk op elke herhaling van datgene waar het bij hoort.
+
+**Hoe toe te passen:** zo'n vinkje moet altijd aan de rónde gekoppeld zijn, niet
+aan de gebruiker. `_nog_niet_gewaarschuwd` telt een waarschuwing alleen mee als
+hij binnen `REMINDER_DAYS_BEFORE` dagen vóór het einde van DEZE proef viel. De
+afweging staat bewust in het versturen en niet alleen bij het verlengen, zodat
+elk pad dat een proef oprekt vanzelf goed gaat. Zie "proefperiode-en-toegangsslot".
+
+---
+
+## anthropic-credit-silent-translation-fallback
+
+*08-09-2026 — Leeg Anthropic-tegoed liet de vertaling stil terugvallen op de brontekst; sinds 08-09-2026 wacht de advertentie in plaats van fout online te gaan*
+
+Raakt het Anthropic-tegoed op, dan faalt elke vertaalaanroep in de backend. Tot
+08-09-2026 ving `_vertaal` (backend/services/crosslist.py) dat op met
+`return text` en ging de brontekst ongewijzigd de deur uit. Erger: de opdracht
+kreeg `_taal: nl` mee alsof hij vertaald wás, dus hij werd ook nooit meer
+opnieuw aangeboden. Symptomen: eBay-categorieën blijven Nederlands, en
+Marktplaats/2dehands-advertenties gaan in het Engels online.
+
+GEMETEN op 08-09-2026 in het opdrachtenlogboek: "(1346) Black MyProtein Shorts -
+Men XL - New" stond in het Engels op marktplaats.nl, "(1071) Light Blue Massimo
+Dutti Turtleneck - Women XS - Very Good" op 2dehands.be. Allebei status done,
+allebei payload-stempel `_taal: nl`.
+
+**Waarom:** de terugval was met opzet stil (dan gaat de advertentie tenminste
+online), en daardoor ziet een rekeningprobleem eruit als een vertaalfout.
+
+**Hoe toe te passen:** stopt "de vertaling" over de hele linie, kijk dan EERST
+naar het Anthropic-tegoed. Sinds 08-09-2026 gooit `_vertaal` een
+`VertalingOnbeschikbaar` in plaats van de brontekst terug te geven. De opdracht
+blijft dan gewoon `pending` staan en loopt vanzelf door zodra het tegoed er weer
+is; de uitgifte pakt intussen de volgende opdracht op, en de eigenaar krijgt één
+mail per uur. Staat de tekst al aantoonbaar in de doeltaal
+(`lijkt_al_in_taal`, titel en omschrijving samen gewogen), dan gaat hij gewoon
+door: gemeten op 1.350 echt gepubliceerde advertenties is dat 96%. Zie
+"zekerheid-is-geen-stopplek" en "omnivaleur-altijd-bewijzen".
+
+---
+
 ## extensie-inlogbewijs-in-storage-local
 
 *08-09-2026 — extensie loggde vaak uit doordat het roterende Supabase-refreshtoken in chrome.storage.sync stond en over machines werd gedeeld*
@@ -4827,18 +4909,6 @@ daarom veilig herhaalbaar en is al toegepast op 36/46 artikelen.
 **Why `--workers N` was rejected as the fix:** `backend/scheduler.py`'s `start_scheduler()` runs in the FastAPI lifespan, i.e. once per worker PROCESS. Multiple uvicorn workers would duplicate polling jobs, relist checks, trial expiry, and — worst — the weekly marketing email, once per worker.
 
 **How to apply:** fixed the two hottest paths so far — `get_current_user_full` (deps.py, runs on nearly every authenticated request) and `/api/auth/login` (auth.py) — by wrapping the blocking Supabase call in `asyncio.to_thread(...)`. The SAME blocking pattern (`db.table(...).execute()`) still exists throughout items.py, jobs.py, listings.py, crosslist.py, etc. — this was NOT a full fix, just the highest-impact spots. If stalls/empty-response symptoms return, the next place to look is those other route files, following the same `asyncio.to_thread` pattern, OR migrating to `supabase-py`'s async client if one becomes available/stable.
-
----
-
-## anthropic-credit-silent-translation-fallback
-
-*23-07-2026 — Depleted Anthropic API credit makes all Omnivaleur translation silently fall back to source text*
-
-When the Anthropic API credit runs out, every Claude translation call in the backend errors and `_translate_with_claude` (backend/services/crosslist.py) catches it and returns the ORIGINAL text unchanged. Symptoms in the dashboard: eBay category suggestions stay Dutch, and Marktplaats/2dehands listings publish in English (title + description) instead of translated Dutch, sometimes as one block. Same root cause as the eBay category language complaint.
-
-**Why:** the fallback is silent by design (so a listing still publishes), so a billing/credit problem looks like a translation *bug*.
-
-**How to apply:** if translation "stops working" across the board, check Anthropic API credit / billing FIRST before touching translation code. Confirmed 2026-07-23: topping up credit restored it. A static NL→EN eBay category map ("marktplaats-category-ids" area, in ebay.py `_EBAY_SEGMENT_NL_EN`) was added as a resilience vangnet so at least categories stay English even with no working LLM.
 
 ---
 
