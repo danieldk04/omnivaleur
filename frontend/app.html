@@ -1533,31 +1533,31 @@ input[type="checkbox"].row-check { width: 15px; height: 15px; cursor: pointer; a
         </div>
       </details>
 
-      <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;flex-wrap:wrap">
-        <input id="refresh-search" type="text" placeholder="Search item…" oninput="renderRefreshView()" style="flex:1;max-width:280px">
-        <div style="display:flex;gap:6px;flex-wrap:wrap">
-          <button class="refresh-status-chip active" data-status="" onclick="setRefreshStatusFilter('')">All</button>
-          <button class="refresh-status-chip" data-status="never" onclick="setRefreshStatusFilter('never')">Never refreshed</button>
-          <button class="refresh-status-chip" data-status="cooldown" onclick="setRefreshStatusFilter('cooldown')">On cooldown</button>
-          <button class="refresh-status-chip" data-status="ready" onclick="setRefreshStatusFilter('ready')">Ready to refresh</button>
-        </div>
-        <!-- Kanaalfilter. Met twee kanalen in dezelfde tabel wil je kunnen zeggen
-             "laat me alleen Marktplaats zien" zonder te zoeken op titel. -->
-        <div style="display:flex;gap:6px;flex-wrap:wrap">
-          <button class="refresh-status-chip active" data-plat="" onclick="setRefreshPlatformFilter('')">All channels</button>
-          <button class="refresh-status-chip" data-plat="vinted" onclick="setRefreshPlatformFilter('vinted')">Vinted</button>
-          <button class="refresh-status-chip" data-plat="marktplaats" onclick="setRefreshPlatformFilter('marktplaats')">Marktplaats</button>
-          <button class="refresh-status-chip" data-plat="2dehands" onclick="setRefreshPlatformFilter('2dehands')">2dehands</button>
-        </div>
-        <!-- Leeftijdsfilter: hoe lang staat de advertentie al online. Geteld vanaf
-             listed_at (of created_at als die ontbreekt). Advertenties zonder beide
-             datums vallen buiten elk leeftijdsfilter behalve "Any age". -->
-        <div style="display:flex;gap:6px;flex-wrap:wrap">
-          <button class="refresh-status-chip active" data-age="" onclick="setRefreshAgeFilter('')">Any age</button>
-          <button class="refresh-status-chip" data-age="lt30" onclick="setRefreshAgeFilter('lt30')">Online &lt; 30 days</button>
-          <button class="refresh-status-chip" data-age="30to90" onclick="setRefreshAgeFilter('30to90')">30 to 90 days</button>
-          <button class="refresh-status-chip" data-age="gt90" onclick="setRefreshAgeFilter('gt90')">Online &gt; 90 days</button>
-        </div>
+      <!-- Filters als dropdowns, zoals op de Items-pagina. Waren losse knopjes
+           (4 status + 4 kanaal + 4 leeftijd = 12 op één rij), dat werd rommelig.
+           Leeftijd telt vanaf listed_at, of created_at als die ontbreekt;
+           advertenties zonder beide datums vallen buiten elk leeftijdsfilter. -->
+      <div class="filter-bar" style="border:1px solid var(--border);border-radius:12px;margin-bottom:14px">
+        <span class="filter-label">Filter</span>
+        <input id="refresh-search" type="text" placeholder="Search item…" oninput="renderRefreshView()">
+        <select id="refresh-filter-status" onchange="setRefreshStatusFilter(this.value)" title="Filter by refresh status">
+          <option value="">Any status</option>
+          <option value="never">Never refreshed</option>
+          <option value="cooldown">On cooldown</option>
+          <option value="ready">Ready to refresh</option>
+        </select>
+        <select id="refresh-filter-plat" onchange="setRefreshPlatformFilter(this.value)" title="Filter by channel">
+          <option value="">All channels</option>
+          <option value="vinted">Vinted</option>
+          <option value="marktplaats">Marktplaats</option>
+          <option value="2dehands">2dehands</option>
+        </select>
+        <select id="refresh-filter-age" onchange="setRefreshAgeFilter(this.value)" title="How long the listing has been online">
+          <option value="">Any time online</option>
+          <option value="lt30">Online less than 30 days</option>
+          <option value="30to90">Online 30 to 90 days</option>
+          <option value="gt90">Online more than 90 days</option>
+        </select>
       </div>
 
       <table class="rf-table">
