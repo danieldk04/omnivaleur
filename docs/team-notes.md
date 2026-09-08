@@ -6755,3 +6755,26 @@ ingedeeld. De vier die overblijven zijn kleding waarvan de doelgroep echt niet
 uit de tekst te halen is (een leren jas, twee kinder-lederhosen); die vult hij in
 één keer zelf in. De overige 849 bij andere accounts loopt de dagelijkse ronde
 in ongeveer vier dagen weg.
+
+### Vervolg 08-09 — terughaalcampagne verstuurd
+
+Groep A, B en C zijn allemaal de deur uit, via het paneel in beheer.html (tab
+Marketing, blok Terughaalcampagne). Elke ontvanger kreeg 21 dagen extra proef
+(status terug op 'trialing', trial_ends_at opgeschoven), daarna pas de mail, via
+Resend. Groep A gecontroleerd in Supabase (datum echt verschoven) en in het
+Resend-logboek (delivered) voordat B en C volgden.
+
+- Kandidatenlijst kwam uit auth.users + subscriptions: geen stripe_subscription_id
+  en langer dan 10 dagen geleden aangemeld. Eigen test/beoordelaar-accounts
+  (plus-adressen, omnivaleur*/crosslisteu-domeinen, test/demo/reviewer in het
+  adres) vallen automatisch weg. 26 echte oud-klanten.
+- Teksten staan leesbaar in backend/services/terughaalcampagne.py (BODY_A/B/C),
+  Daniels definitieve versie. Groep A heeft geen persoonlijke zin per persoon
+  meer, iedereen dezelfde tekst. Groep B is tweetalig: Nederlands met de Engelse
+  vertaling eronder, onderwerp ook tweetalig.
+- Onderwerpen: A "Het lag aan ons, van Daniel", B "Omnivaleur werkt nu wel /
+  Omnivaleur works now, van Daniel", C "Zal ik even met je meekijken? Van Daniel".
+
+Openstaand: tweede ronde voor de kledingverkopers (deze ronde was sieraden +
+antiek zilver eerst). Antwoorden op de mails komen bij revaleur binnen, Daniel
+leest en volgt op.
