@@ -106,7 +106,14 @@ def get_admin_db() -> Client:
     """
     global _admin_client
     if _admin_client is None:
-        _admin_client = create_client(settings.supabase_url, settings.supabase_key)
+        # De service-role sleutel als hij er is, anders de gewone. Zonder de
+        # service-sleutel antwoordt Supabase op `auth.admin.*` met "User not
+        # allowed" en dat werd stil een lege lijst: 27 abonnementen, 22 verlopen
+        # proeven, nul verstuurde herinneringen.
+        _admin_client = create_client(
+            settings.supabase_url,
+            settings.supabase_service_key or settings.supabase_key,
+        )
     return _admin_client
 
 
