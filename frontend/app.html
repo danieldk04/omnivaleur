@@ -7245,6 +7245,22 @@ function setRefreshStatusFilter(status) {
   renderRefreshView();
 }
 
+function setRefreshAgeFilter(age) {
+  refreshAgeFilter = age;
+  document.querySelectorAll('.refresh-status-chip[data-age]').forEach(b => b.classList.toggle('active', b.dataset.age === age));
+  renderRefreshView();
+}
+
+// Hoe lang staat deze advertentie al online, in dagen. listed_at ontbreekt vaak
+// bij geïmporteerde advertenties; dan valt hij terug op created_at. Is er geen
+// van beide, dan geeft dit null en valt de advertentie buiten elk leeftijdsfilter.
+function refreshListingAgeDays(l) {
+  const s = l.listed_at || l.created_at;
+  if (!s) return null;
+  const d = Math.floor((Date.now() - new Date(s).getTime()) / 864e5);
+  return isNaN(d) ? null : d;
+}
+
 // Live countdown tick — re-renders the in-progress panel every second while visible.
 let _relistTicker = null, _relistTick = 0;
 function ensureRelistTicker() {
