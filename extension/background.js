@@ -1033,12 +1033,30 @@ function _jwtExp(token) {
 // Exchange the stored refresh token for a fresh access token via the backend.
 // Deduped so a burst of parallel calls triggers a single refresh. Returns the
 // new access token, or null if we can't refresh (no refresh token / rejected).
+// Een refresh-token mag bij Supabase precies één keer. Knijpt Chrome de service
+// worker af net nadat we een vers token ophaalden maar vóór we het opsloegen,
+// dan probeert de volgende wake het met het oude, nu dode token — en dat trekt
+// de sessie in. Daarom leggen we vlak vóór de aanroep vast dát we verversen, en
+// slaan we een tweede ronde binnen dit venster over: het verse token staat dan
+// al in local.
+const REFRESH_COOLDOWN_MS = 20000;
+
 async function refreshAccessToken() {
   if (_refreshInFlight) return _refreshInFlight;
   _refreshInFlight = (async () => {
-    const { refreshToken } = await _sget(["refreshToken"]);
+    const { refreshToken, _refreshAt } = await _tget(["refreshToken", "_refreshAt"]);
     if (!refreshToken) return null;
+
+    // Kort geleden al ververst (mogelijk door een worker die daarna gekild is)?
+    // Niet opnieuw met wat inmiddels een dood token kan zijn; geef terug wat er
+    // nu staat.
+    if (_refreshAt && Date.now() - _refreshAt < REFRESH_COOLDOWN_MS) {
+      const { authToken } = await _tget(["authToken"]);
+      if (authToken) return authToken;
+    }
+
     try {
+      await _tset({ _refreshAt: Date.now() });
       const serverUrl = await getServerUrl();
       const res = await fetch(`${serverUrl}/api/auth/refresh`, {
         method: "POST",
@@ -1047,13 +1065,18 @@ async function refreshAccessToken() {
       });
       if (!res.ok) {
         console.warn(`[Omnivaleur] token refresh failed HTTP ${res.status}`);
-        // 401 = dit inlogbewijs is definitief ongeldig; opnieuw proberen heeft
-        // geen zin. Het bewijs moet dan weg, anders blijft het menu vrolijk
-        // "Extension active" melden terwijl er niets meer gebeurt. Gemeten geval
-        // (21-08-2026): de extensie stond groen, meldde zich al een uur niet meer
-        // bij de server en liet elke opdracht liggen — van buitenaf niet te zien.
+        // 503 = alleen een verbindingshik; token laten staan en later opnieuw.
         if (res.status === 401 || res.status === 403) {
-          await new Promise((r) => chrome.storage.sync.remove(["authToken", "refreshToken"], r));
+          // Voordat we het bewijs weggooien: staat er inmiddels een ANDER
+          // refresh-token (een parallelle context heeft net geroteerd)? Dan is
+          // niet de sessie dood maar hebben wij een verouderd token gebruikt —
+          // niet uitloggen.
+          const nu = await _tget(["refreshToken"]);
+          if (nu.refreshToken && nu.refreshToken !== refreshToken) {
+            console.log("[Omnivaleur] refresh 401 op oud token; nieuwer token aanwezig, niet uitloggen");
+            return nu.authToken || null;
+          }
+          await _tremove(["authToken", "refreshToken", "_refreshAt"]);
           try {
             await chrome.action.setBadgeText({ text: "!" });
             await chrome.action.setBadgeBackgroundColor({ color: "#dc2626" });
@@ -1064,9 +1087,9 @@ async function refreshAccessToken() {
       }
       const data = await res.json();
       if (!data.access_token) return null;
-      const patch = { authToken: data.access_token };
+      const patch = { authToken: data.access_token, _refreshAt: Date.now() };
       if (data.refresh_token) patch.refreshToken = data.refresh_token; // rotation
-      await new Promise((r) => chrome.storage.sync.set(patch, r));
+      await _tset(patch);
       try { await chrome.action.setBadgeText({ text: "" }); } catch (_) {}
       console.log("[Omnivaleur] access token refreshed");
       return data.access_token;
