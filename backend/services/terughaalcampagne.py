@@ -41,11 +41,11 @@ BODY_A = """Hi,
 
 Daniel hier, van Omnivaleur.
 
-Toen jij het probeerde, werkte het niet. Bij jou specifiek: {detail}. Dat was geen instelling aan jouw kant, dat lag aan ons.
+Toen jij Omnivaleur probeerde, kreeg je meldingen als; “Je bent niet ingelogd, geen advertenties geplaatst.” . Dat was geen instelling aan jouw kant, dat lag aan ons.
 
 Die valse inlogmelding is opgespoord en gerepareerd. Het mislukkingspercentage over alle klanten is deze week 7 procent, van 55 procent een maand terug. Ik verkoop zelf kleding en sieraden en loop er zelden meer tegenaan.
 
-Ik wil je vragen het nog een keer te proberen, met een verlengde proefperiode zodat het je niks kost. Antwoord op deze mail als je wilt dat ik meekijk terwijl je je eerste tien advertenties doet.
+Ik wil je vragen het nog één keer te proberen, met een verlengde proefperiode zodat het je niks kost. Antwoord op deze mail als je wilt dat ik meekijk, dan plannen we even wat in.
 
 Daniel van Omnivaleur
 """
@@ -54,11 +54,11 @@ BODY_B = """Hi,
 
 Daniel hier, van Omnivaleur.
 
-Jij hebt het product nooit een keer zien werken. Op de dag dat je je aanmeldde ging vrijwel elke publicatie mis, en daarna heb je het niet meer geopend. Logisch.
+Een tijd geleden heb je het platform geprobeerd. Dat ging niet helemaal goed. Op de dag dat je je aanmeldde gingen veel publicaties mis, en daarna heb je het niet meer geopend. Logisch.
 
 Sindsdien is er veel gerepareerd: de gekoppelde verwijdering, lege velden, de valse melding dat je niet was ingelogd. Deze week mislukt 7 procent van de opdrachten, tegen 55 procent toen jij het probeerde.
 
-Je proefperiode staat weer open, verlengd, zodat je rustig opnieuw kunt kijken. Werkt iets niet, antwoord dan op deze mail, die komt bij mij.
+Je proefperiode staat weer open, verlengd, zodat je rustig opnieuw kunt kijken. Werkt iets niet, antwoord dan op deze mail, dan kijk ik even met je mee.
 
 Daniel van Omnivaleur
 """
@@ -67,17 +67,17 @@ BODY_C = """Hi,
 
 Daniel hier, van Omnivaleur.
 
-Je hebt een account aangemaakt maar bent nooit begonnen. Geen verwijt, het eerste zetje is het lastigste, zeker met een grote voorraad.
+Je hebt de afgelopen tijd een account aangemaakt, maar bent nooit begonnen met crosslisten. Het kan overweldigend zijn, dat snap ik, zeker met een grote voorraad.
 
 Heb je behoefte om even hier samen naar te kijken? Daarna weet je of het bij jou past. Je proefperiode is verlengd zodat je de tijd hebt.
 
-Antwoord op deze mail met een dag en tijd die je schikt.
+Stuur gerust je vragen of verzoeken, die beantwoord ik allemaal zelf :).
 
 Daniel van Omnivaleur
 """
 
 GROEPEN = {
-    "A": {"subject": SUBJECT_A, "body": BODY_A, "heeft_detail": True},
+    "A": {"subject": SUBJECT_A, "body": BODY_A, "heeft_detail": False},
     "B": {"subject": SUBJECT_B, "body": BODY_B, "heeft_detail": False},
     "C": {"subject": SUBJECT_C, "body": BODY_C, "heeft_detail": False},
 }
