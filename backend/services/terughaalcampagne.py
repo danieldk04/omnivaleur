@@ -232,12 +232,16 @@ def kandidaten() -> dict:
         return bool(d and d > grens)
 
     kandidaat_ids: list[str] = []
+    overgeslagen: list[str] = []
     for uid, info in users.items():
         s = sub_van.get(uid)
         if s and s.get("stripe_subscription_id"):
             continue  # betaalt
         if not info["email"] or _te_vers(info.get("aangemeld")):
             continue  # net aangemeld, nog in de gewone proef
+        if _is_testaccount(info["email"]):
+            overgeslagen.append(info["email"])
+            continue  # eigen test- of beoordelaarsaccount
         kandidaat_ids.append(uid)
 
     # 3. Opdrachtgeschiedenis per kandidaat.
