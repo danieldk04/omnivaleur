@@ -319,6 +319,31 @@ button.stil { background: transparent; border: 1px solid var(--rand); color: var
         <button class="knop stil" onclick="haalSocial(true)">Ophalen</button>
         <div id="social-posts"></div></div>
     </div>
+
+    <h2>Terughaalcampagne</h2>
+    <div class="kaart">
+      <div class="uitleg">Oud-klanten die stopten of nooit begonnen, opnieuw uitnodigen nu de grootste
+        storingen weg zijn. Eerst kijken wie het zijn, dan per groep versturen. Wie de mail krijgt,
+        krijgt automatisch zijn proefperiode verlengd.</div>
+      <button class="knop stil" onclick="haalTerughaal()">Toon kandidaten</button>
+      <div id="th-lijst"></div>
+    </div>
+    <div class="kaart">
+      <div class="label">Versturen</div>
+      <div class="uitleg">Plak de adressen voor één groep, één per regel. Bij groep A mag er per regel
+        een eigen zin achter een liggend streepje staan, bijvoorbeeld
+        <code>naam@x.nl | 14 van 18 opdrachten liepen vast, niets geplaatst</code>.</div>
+      <div style="margin:8px 0">
+        Groep <select id="th-groep"><option>A</option><option>B</option><option>C</option></select>
+        &nbsp; proef verlengen met <input id="th-dagen" type="number" value="21" style="width:4em"> dagen
+      </div>
+      <textarea id="th-emails" rows="6" style="width:100%;box-sizing:border-box"></textarea>
+      <div style="margin-top:8px">
+        <button class="knop stil" onclick="terughaalProef()">Proefronde, niets versturen</button>
+        <button class="knop" onclick="terughaalEcht()">Verlengen en versturen</button>
+      </div>
+      <div id="th-uitslag"></div>
+    </div>
   </section>
 
   <!-- ─────────────────────────────── SYSTEEM -->
