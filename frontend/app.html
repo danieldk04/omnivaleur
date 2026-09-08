@@ -1549,6 +1549,15 @@ input[type="checkbox"].row-check { width: 15px; height: 15px; cursor: pointer; a
           <button class="refresh-status-chip" data-plat="marktplaats" onclick="setRefreshPlatformFilter('marktplaats')">Marktplaats</button>
           <button class="refresh-status-chip" data-plat="2dehands" onclick="setRefreshPlatformFilter('2dehands')">2dehands</button>
         </div>
+        <!-- Leeftijdsfilter: hoe lang staat de advertentie al online. Geteld vanaf
+             listed_at (of created_at als die ontbreekt). Advertenties zonder beide
+             datums vallen buiten elk leeftijdsfilter behalve "Any age". -->
+        <div style="display:flex;gap:6px;flex-wrap:wrap">
+          <button class="refresh-status-chip active" data-age="" onclick="setRefreshAgeFilter('')">Any age</button>
+          <button class="refresh-status-chip" data-age="lt30" onclick="setRefreshAgeFilter('lt30')">Online &lt; 30 days</button>
+          <button class="refresh-status-chip" data-age="30to90" onclick="setRefreshAgeFilter('30to90')">30 to 90 days</button>
+          <button class="refresh-status-chip" data-age="gt90" onclick="setRefreshAgeFilter('gt90')">Online &gt; 90 days</button>
+        </div>
       </div>
 
       <table class="rf-table">
