@@ -6930,9 +6930,37 @@ eigen adres verkeerd typte en het een minuut later goed deed. Zilverwebsite draa
 weer goed: laatste zeven dagen 865 geslaagd tegen 8 fout (was 833 fout in totaal).
 En prijs 0 bij Amanda Haas is geen fout maar "Bieden": 195 van die 212 staan live.
 
-**Nog steeds open, ongewijzigd:** Egbert (papas-plectrums) haalt de reparaties
-pas binnen als 1.0.312 door de Web Store is; zijn laatste zeven dagen zijn nog
-626 teruggenomen en 2 geslaagd. En twee JS-tests staan al langer rood
+**CORRECTIE, zelfde avond.** Hierboven stond eerst dat 1.0.312 nog naar de Web
+Store moest. Dat klopte niet: Daniel wees erop, en nameten geeft **1.0.313, live
+in de Chrome Web Store, bijgewerkt 8 september 2026**. De "openstaand"-regel uit
+de notitie van eerder die dag was overgenomen zonder controle.
+
+Wat de meting wél laat zien (uit `extension_heartbeat`, plus de `[extensie x.y.z]`
+stempels in de foutmeldingen):
+
+- Niemand draait 1.0.313 nog. Alle actieve computers staan op 1.0.311; Chrome
+  haalt dat vanzelf op, meestal binnen een paar uur. Egbert zit dus twee versies
+  achter en krijgt zijn reparaties zonder dat iemand iets hoeft te doen.
+- **De Juiste Toon draait een handmatig geladen kopie die zichzelf nooit
+  bijwerkt.** Zijn heartbeat meldt 1.0.260, maar het werk van vandaag is gedaan
+  door een kopie die zich stempelt als **1.0.294** (meest recent 08-09 11:33;
+  1.0.260 laatst op 05-09). Er staan dus twee kopieën op die machine, precies het
+  patroon uit [[tweede-extensiekopie]].
+- 1.0.294 loopt **negentien** versies achter, en de rem slaat aan bij twintig
+  (ACHTERSTAND_GRENS). Hij glipt er dus met één versie onderdoor: hij krijgt werk
+  en levert het half af — 78 fout en 202 teruggenomen — en zodra er 1.0.314
+  uitkomt valt zijn hele wachtrij van 59 opdrachten stil. Hij ziet nu alleen het
+  wegklikbare gele balkje, niet het blokkerende scherm.
+
+Actie voor Daniel: De Juiste Toon vragen zijn handmatig geladen kopie te
+verwijderen en Omnivaleur uit de Chrome Web Store te installeren.
+
+Te overwegen: de rem herkent een stilstaande kopie nu aan een vast aantal
+versies. Negentien versies zonder één update is net zo goed bewijs van een
+handmatige kopie als eenentwintig. "Deze kopie is dagenlang niet meegegaan
+terwijl de Web Store wél opschoof" is een sterker signaal dan een drempel.
+
+**Nog steeds open:** twee JS-tests staan al langer rood
 (`extensie-stempel-test.js` roept een functie aan die niet meer bestaat,
 `prijs-blijft-op-het-formulier-test.js` toetst tegen een oude kopie van de code
 die er niet meer is). Die zijn niet gebruikersgericht, maar ze verbergen wel
