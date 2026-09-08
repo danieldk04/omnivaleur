@@ -72,7 +72,8 @@ document.getElementById("loginBtn").addEventListener("click", async () => {
 });
 
 document.getElementById("logoutBtn").addEventListener("click", async () => {
-  await chrome.storage.sync.remove(["authToken", "userEmail"]);
+  await chrome.storage.local.remove(["authToken", "refreshToken", "userEmail", "_refreshAt"]);
+  await chrome.storage.sync.remove(["authToken", "refreshToken", "userEmail"]);
   checkLoginState();
 });
 
