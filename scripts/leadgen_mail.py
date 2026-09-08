@@ -4785,9 +4785,12 @@ def overzetten(args) -> None:
     zodra er nieuwe leads bij komen."""
     if not _supabase():
         sys.exit("Zet SUPABASE_URL en SUPABASE_KEY in je omgeving.")
+    alleen = set(getattr(args, "alleen", None) or [])
     for pad, naam in ((MP_LEADS, "mp_leads"), (TWEEDEHANDS_LEADS, "2dh_leads"),
                       (IG_LEADS, "leads"),
                       (STATE, "mail_state"), (PLAN, "mail_plan")):
+        if alleen and naam not in alleen:
+            continue
         if not pad.exists():
             print(f"  {naam}: niets te doen")
             continue
