@@ -222,6 +222,27 @@ Wil je het eerst rustig bekijken: https://omnivaleur.com/mp-video
 Groetjes,
 Daniel
 
+### Lead vraagt om de video en om uitleg over Shopify en de kanalen
+
+Hoi <voornaam>,
+
+Leuk dat je meekijkt. Omnivaleur werkt met Marktplaats, 2dehands, Vinted, eBay en
+Shopify, en dat is de hele lijst.
+
+Shopify koppel je een keer in je dashboard. Een venster loodst je in drie stapjes
+door: je winkeladres, een kleine app die je zelf in je Shopify-beheer aanmaakt,
+en twee codes die je daaruit overneemt. Daarna zet je een advertentie een keer
+klaar en plaatst Omnivaleur hem overal, en verkoop je iets in je winkel dan haalt
+hij het op de andere kanalen weg.
+
+In deze demo van twee minuten zie je het van begin tot eind:
+https://omnivaleur.com/mp-video
+
+Zal ik een keer met je meekijken?
+
+Groetjes,
+Daniel
+
 ### Betaald maar ziet nog een slot
 
 Hoi <voornaam>,
