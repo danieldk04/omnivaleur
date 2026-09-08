@@ -7652,7 +7652,7 @@ function renderRefreshView() {
     return `<tr>
       <td><div class="item-info">
         <div class="item-photo">${itemPhotoThumb(item)}</div>
-        <div><div class="item-title">${esc(item.title)}</div><div class="item-meta">${item.brand || ''}${item.size ? ' · ' + item.size : ''}</div></div>
+        <div><div class="item-title">${esc(item.title)}</div><div class="item-meta">${item.brand || ''}${item.size ? ' · ' + item.size : ''}${(() => { const d = refreshListingAgeDays(l); return d == null ? '' : ` · ${d} day${d === 1 ? '' : 's'} online`; })()}</div></div>
       </div></td>
       <td><span class="rf-pill">${PLATFORM_LABEL[l.platform] || l.platform}</span></td>
       <td>${statusCell}</td>
