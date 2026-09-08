@@ -981,7 +981,7 @@ function refreshAuthBadge() {
         title: "Omnivaleur — not logged in. Nothing will be published until you log in.",
       });
     }
-  });
+  }));
 }
 
 refreshAuthBadge();
