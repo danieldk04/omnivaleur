@@ -6778,3 +6778,29 @@ Resend-logboek (delivered) voordat B en C volgden.
 Openstaand: tweede ronde voor de kledingverkopers (deze ronde was sieraden +
 antiek zilver eerst). Antwoorden op de mails komen bij revaleur binnen, Daniel
 leest en volgt op.
+
+## 08-09-2026 — 2dehands.be eerste productieronde leadgen
+
+`leadgen_marktplaats.py discover/enrich/crosslist/classify --site 2dehands`
+gedraaid. 6.560 zoekverzoeken over 7 rubrieken, ~109 zakelijke verkopers, 87 door
+enrich, **39 door classify** (45 geen lead, 3 varianten). 10 daarvan hebben een
+niet-Shopify webshop: die geen koppeling beloven. Mix: kleding, muziek, games,
+antiek/verzamelen. Verschillende grote NL-gamehandelaren (RetroGameKing,
+DutchGameBoys, Gameshop050) zaten erbij; 2dehands.be trekt ook NL-verkopers.
+
+De 39 zijn naar de Notion-Leadlist gepusht (Platform "2dehands", fase "1. Te
+benaderen"). 0 dubbel.
+
+**Nog niet in de mailmachine.** De pool die de Railway-tick leest (`leadgen_opslag`
+rij `2dh_leads`) staat op de service-sleutel; die zit alleen in Daniels keychain,
+niet in de repo-`.env` (die is anon, gaf 401). Daarom schrijft deze sessie die
+rij niet.
+
+`overzetten` heeft nu `--alleen NAAM`: `python3 scripts/leadgen_mail.py overzetten
+--alleen 2dh_leads` schrijft alleen die rij en laat `mail_state` met rust. Kaal
+`overzetten` overschrijft `mail_state` met de oude lokale kopie en veroorzaakt
+dubbele mail; dat mag niet meer per ongeluk.
+
+Actie Daniel: met SUPABASE_URL + service-SUPABASE_KEY in de omgeving één keer
+`python3 scripts/leadgen_mail.py overzetten --alleen 2dh_leads` draaien. Daarna
+lopen de 2dehands-leads mee in de koude reeks.
