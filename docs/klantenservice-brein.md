@@ -195,6 +195,24 @@ Wil je het eerst zien, hier staat een korte demo: https://omnivaleur.com/mp-vide
 Groetjes,
 Daniel
 
+### Vraagt hoe de Shopify-koppeling werkt
+
+Hoi <voornaam>,
+
+Je koppelt Shopify een keer in je dashboard, bij Platforms. Je klikt op Connect
+Shopify en het scherm loodst je in drie stapjes door: je winkeladres, een kleine
+app die je in je eigen Shopify-beheer aanmaakt, en twee codes die je daaruit
+terugzet. Duurt een paar minuten, en kom je er niet uit dan doen we het samen.
+
+Daarna zet je een advertentie een keer klaar en plaatst Omnivaleur hem ook als
+product in je Shopify-winkel. Verkoop je iets in je winkel, dan haalt hij het op
+Marktplaats, 2dehands, Vinted en eBay meteen weg.
+
+Wil je het eerst rustig bekijken: https://omnivaleur.com/mp-video
+
+Groetjes,
+Daniel
+
 ### Betaald maar ziet nog een slot
 
 Hoi <voornaam>,
