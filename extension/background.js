@@ -7911,7 +7911,7 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   // instead of assuming everything is fine. Deliberately reports only whether a
   // token exists and which account it belongs to — never the token itself.
   if (msg.type === "GET_AUTH_STATE") {
-    chrome.storage.sync.get(["authToken", "userEmail"], (s) => {
+    chrome.storage.local.get(["authToken", "userEmail"], (s) => {
       sendResponse({ signedIn: !!s.authToken, email: s.userEmail || "" });
     });
     return true;
