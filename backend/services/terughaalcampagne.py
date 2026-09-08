@@ -130,3 +130,177 @@ def render(groep: str, ontvanger: dict) -> tuple[str, str]:
     if g["heeft_detail"]:
         body = body.replace("{detail}", ontvanger.get("detail") or DETAIL_FALLBACK)
     return g["subject"], body
+
+
+# Categorieën die als "sieraden of antiek zilver" tellen voor de eerste ronde.
+# De import raadt de categorie en schrijft hem in kleine letters in items.category;
+# de taxonomie kent twee lagen (oude Vinted-achtige en de huidige MP-laag), dus
+# hier op deelwoord matchen, niet op exacte naam.
+SIERADEN_PATRONEN = (
+    "sieraden", "ketting", "armband", "ring", "broche", "oorbel", "oorbell",
+    "horloge", "antiek", "zilver", "goud", "bestek", "munt",
+)
+
+
+def _is_sieraden(categorie: str) -> bool:
+    c = (categorie or "").lower()
+    return any(p in c for p in SIERADEN_PATRONEN)
+
+
+def _suggereer_groep(jobs_totaal: int, geplaatst: int, mislukt: int) -> str:
+    """Ruwe indeling; de eigenaar corrigeert hem met de hand.
+    C = nooit begonnen. A = het serieus geprobeerd maar niets geplaatst gekregen.
+    B = wel opdrachten, grotendeels mislukt. rest = grijs gebied, eigenaar beslist.
+    """
+    if jobs_totaal == 0:
+        return "C"
+    if geplaatst == 0 and jobs_totaal >= 8:
+        return "A"
+    if jobs_totaal and mislukt / jobs_totaal >= 0.6:
+        return "B"
+    return "rest"
+
+
+def kandidaten() -> dict:
+    """Slapende oud-klanten opzoeken en per vermoedelijke groep indelen.
+
+    Leest uitsluitend met de service-sleutel (get_admin_db): de server mag jobs en
+    items met de publieke sleutel niet lezen en dat wordt stil een lege lijst.
+    Schrijft niets.
+    """
+    from datetime import datetime, timedelta, timezone
+
+    from backend.database import get_admin_db
+
+    db = get_admin_db()
+
+    # 1. Alle gebruikers: id -> e-mail en aanmelddatum.
+    users: dict[str, dict] = {}
+    page = 1
+    while True:
+        batch = db.auth.admin.list_users(page=page, per_page=200)
+        if not batch:
+            break
+        for u in batch:
+            users[u.id] = {
+                "email": (getattr(u, "email", None) or "").strip().lower(),
+                "aangemeld": getattr(u, "created_at", None),
+            }
+        if len(batch) < 200:
+            break
+        page += 1
+
+    # 2. Abonnementen: wie betaalt niet en zit dus in de doelgroep.
+    subs = db.table("subscriptions").select(
+        "user_id,status,plan,stripe_subscription_id,trial_ends_at"
+    ).execute().data or []
+    sub_van = {s["user_id"]: s for s in subs}
+
+    grens = datetime.now(timezone.utc) - timedelta(days=10)
+
+    def _te_vers(iso: str | None) -> bool:
+        if not iso:
+            return False
+        try:
+            return datetime.fromisoformat(iso.replace("Z", "+00:00")) > grens
+        except ValueError:
+            return False
+
+    kandidaat_ids: list[str] = []
+    for uid, info in users.items():
+        s = sub_van.get(uid)
+        if s and s.get("stripe_subscription_id"):
+            continue  # betaalt
+        if not info["email"] or _te_vers(info.get("aangemeld")):
+            continue  # net aangemeld, nog in de gewone proef
+        kandidaat_ids.append(uid)
+
+    # 3. Opdrachtgeschiedenis per kandidaat.
+    jobs_agg: dict[str, dict] = {uid: {"totaal": 0, "mislukt": 0, "geplaatst": 0} for uid in kandidaat_ids}
+    for i in range(0, len(kandidaat_ids), 200):
+        brok = kandidaat_ids[i:i + 200]
+        rijen = db.table("jobs").select("user_id,action,status").in_("user_id", brok).execute().data or []
+        for r in rijen:
+            a = jobs_agg.get(r["user_id"])
+            if a is None:
+                continue
+            a["totaal"] += 1
+            if r.get("status") == "error":
+                a["mislukt"] += 1
+            if r.get("action") == "create" and r.get("status") == "done":
+                a["geplaatst"] += 1
+
+    # 4. Wat verkopen ze: categorieën uit items.
+    cats: dict[str, set] = {uid: set() for uid in kandidaat_ids}
+    for i in range(0, len(kandidaat_ids), 200):
+        brok = kandidaat_ids[i:i + 200]
+        rijen = db.table("items").select("user_id,category").in_("user_id", brok).execute().data or []
+        for r in rijen:
+            c = (r.get("category") or "").strip()
+            if c and r["user_id"] in cats:
+                cats[r["user_id"]].add(c)
+
+    groepen: dict[str, list] = {"A": [], "B": [], "C": [], "rest": []}
+    for uid in kandidaat_ids:
+        a = jobs_agg[uid]
+        categorien = sorted(cats[uid])
+        rij = {
+            "email": users[uid]["email"],
+            "aangemeld": users[uid]["aangemeld"],
+            "opdrachten": a["totaal"],
+            "mislukt": a["mislukt"],
+            "geplaatst": a["geplaatst"],
+            "categorien": categorien,
+            "sieraden": any(_is_sieraden(c) for c in categorien),
+            "proef_tot": (sub_van.get(uid) or {}).get("trial_ends_at"),
+        }
+        groepen[_suggereer_groep(a["totaal"], a["geplaatst"], a["mislukt"])].append(rij)
+
+    for lijst in groepen.values():
+        lijst.sort(key=lambda r: (not r["sieraden"], -r["opdrachten"]))
+    return {"aantal": len(kandidaat_ids), "groepen": groepen}
+
+
+def verleng_proef(emails: list[str], dagen: int) -> dict:
+    """Zet de proefperiode van deze mensen op nu + `dagen` en hun status weer op
+    'trialing'. Met de service-sleutel, want dit schrijft in andermans rij.
+    Retour: welke adressen gelukt zijn en welke niet gevonden.
+    """
+    from datetime import datetime, timedelta, timezone
+
+    from backend.database import get_admin_db
+    from backend.services.billing import invalidate_access_cache
+
+    db = get_admin_db()
+    wil = {e.strip().lower() for e in emails if e.strip()}
+
+    id_van: dict[str, str] = {}
+    page = 1
+    while wil and True:
+        batch = db.auth.admin.list_users(page=page, per_page=200)
+        if not batch:
+            break
+        for u in batch:
+            e = (getattr(u, "email", None) or "").strip().lower()
+            if e in wil:
+                id_van[e] = u.id
+        if len(batch) < 200 or len(id_van) == len(wil):
+            break
+        page += 1
+
+    nieuw = (datetime.now(timezone.utc) + timedelta(days=dagen)).isoformat()
+    gelukt: list[str] = []
+    for email, uid in id_van.items():
+        db.table("subscriptions").update({
+            "status": "trialing",
+            "plan": "pro",
+            "trial_ends_at": nieuw,
+        }).eq("user_id", uid).execute()
+        invalidate_access_cache(uid)
+        gelukt.append(email)
+
+    return {
+        "verlengd_tot": nieuw,
+        "gelukt": gelukt,
+        "niet_gevonden": sorted(wil - set(gelukt)),
+    }
