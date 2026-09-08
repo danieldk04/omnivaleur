@@ -1062,9 +1062,11 @@ async function terughaalPost(dry) {
       const mislukt = (d.mislukt || []).length
         ? `<div class="leeg">Mislukt: ${d.mislukt.map(m => veilig(m.email)).join(', ')}</div>` : '';
       const vl = d.proef_verlengd || {};
-      uit.innerHTML = `<div class="uitleg" style="margin-top:8px">Verstuurd naar ${d.verstuurd}.
+      const naar = (d.ontvangers || []).length
+        ? `<div class="uitleg">Aan: ${d.ontvangers.map(veilig).join(', ')}</div>` : '';
+      uit.innerHTML = `<div class="uitleg" style="margin-top:8px">Verstuurd naar ${d.verstuurd} via Resend (staat niet in je Verzonden-map, wel in het Resend-logboek).
           Proef verlengd tot ${veilig((vl.verlengd_tot || '').slice(0, 10))} voor ${(vl.gelukt || []).length}.
-          ${(vl.niet_gevonden || []).length ? 'Niet gevonden: ' + vl.niet_gevonden.map(veilig).join(', ') : ''}</div>` + mislukt;
+          ${(vl.niet_gevonden || []).length ? 'Niet gevonden: ' + vl.niet_gevonden.map(veilig).join(', ') : ''}</div>` + naar + mislukt;
     }
   } catch (e) {
     uit.innerHTML = '<div class="leeg">Mislukt: ' + veilig(e.message) + '</div>';
