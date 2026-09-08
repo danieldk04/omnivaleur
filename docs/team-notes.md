@@ -6693,3 +6693,24 @@ samen naar te kijken?"* Nog niet gebouwd of verstuurd: de verzendknop
 (eigenaar-only, dry-run eerst) en de proefverlenging (vereist de service-sleutel
 van Supabase, die staat niet op Railway of in de lokale `.env`; wordt met de hand
 in het Supabase-dashboard of per persoon via de comp-account knop).
+
+### Vervolg 08-09 — service-sleutel op Railway, campagne gebouwd
+Daniel heeft de Supabase **service_role**-sleutel als `SUPABASE_SERVICE_KEY` op
+Railway gezet. `get_admin_db()` gebruikt die nu (met terugval op de anon-sleutel).
+Dat repareert meteen de oude kwaal uit [[railway-draait-op-anon-sleutel]]: alles
+met `auth.admin.*` gaf stil een lege lijst (0 van 27 proefherinneringen). Nog niet
+end-to-end getest; dat kan pas als Daniel in beheer inlogt.
+
+Gebouwd en live op main (Railway auto-deploy, health 200):
+- `backend/services/terughaalcampagne.py` — 3 mailteksten (NL, groep A/B/C),
+  `kandidaten()` (slapende oud-klanten indelen), `verleng_proef()`.
+- `GET /api/billing/admin/terughaal/kandidaten` en
+  `POST /api/billing/admin/terughaal/verstuur` (eigenaar-only, dry-run standaard;
+  echt versturen verlengt eerst de proef met 21 dagen).
+- Paneel in `frontend/beheer.html` onder Marketing: "Toon kandidaten" geeft de
+  lijst met vermoedelijke groep A/B/C, vetgedrukt = sieraden/antiek zilver. Per
+  groep adressen plakken, proefronde bekijken, dan versturen.
+
+Daniel doet de rest zelf in beheer: kandidaten bekijken, groepen samenstellen
+(sieraden eerst), proefronde controleren, versturen. Groep A wil per persoon een
+eigen zin (`adres | zoveel van zoveel opdrachten vastgelopen`).
