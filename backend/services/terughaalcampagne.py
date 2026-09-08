@@ -147,6 +147,23 @@ def _is_sieraden(categorie: str) -> bool:
     return any(p in c for p in SIERADEN_PATRONEN)
 
 
+# Eigen test- en beoordelaarsaccounts horen niet in een terughaalmail. Herkenbaar
+# aan plus-adressering, aan de eigen domeinen, of aan een woord als test/demo/
+# reviewer in het adres.
+_TEST_DOMEINEN = ("omnivaleur.nl", "omnivaleur.com", "omnivaleur.eu", "crosslisteu.com", "crosslist.eu")
+_TEST_WOORDEN = ("test", "demo", "reviewer", "rebrandtest", "checkout-test", "ga4test", "+demo", "+ga")
+
+
+def _is_testaccount(email: str) -> bool:
+    e = (email or "").lower()
+    if "+" in e.split("@")[0]:
+        return True
+    domein = e.split("@")[-1]
+    if any(domein == d or domein.endswith("." + d) for d in _TEST_DOMEINEN):
+        return True
+    return any(w in e for w in _TEST_WOORDEN)
+
+
 def _suggereer_groep(jobs_totaal: int, geplaatst: int, mislukt: int) -> str:
     """Ruwe indeling; de eigenaar corrigeert hem met de hand.
     C = nooit begonnen. A = het serieus geprobeerd maar niets geplaatst gekregen.
