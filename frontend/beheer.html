@@ -1024,9 +1024,13 @@ async function haalTerughaal() {
             + `<td>${veilig((r.categorien || []).join(', ')) || '—'}</td></tr>`).join('')
         + `</tbody></table>`
       : '<div class="leeg">Geen.</div>');
+    const over = (d.overgeslagen || []).length
+      ? `<div class="uitleg">${d.overgeslagen.length} eigen test/beoordelaar-accounts overgeslagen: ${d.overgeslagen.map(veilig).join(', ')}</div>`
+      : '';
     doel.innerHTML = `<div class="uitleg" style="margin-top:8px">${d.aantal} slapende klanten.
         Vetgedrukt = verkoopt sieraden of antiek zilver, dat is de eerste ronde.
         De indeling A/B/C is een gok op basis van hun opdrachten, corrigeer hem met de hand.</div>`
+      + over
       + blok('A, serieus geprobeerd maar niets geplaatst', g.A || [])
       + blok('B, opdrachten grotendeels mislukt', g.B || [])
       + blok('C, nooit begonnen', g.C || [])
