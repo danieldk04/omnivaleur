@@ -11,8 +11,8 @@ Gebruik:
 
 Schrijft scripts/output/leads/creators_tiktok.json en print de top.
 """
+import csv
 import json
-import re
 import sys
 import urllib.request
 from collections import defaultdict
