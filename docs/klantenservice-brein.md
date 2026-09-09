@@ -153,6 +153,12 @@ Dubbele advertenties of een advertentie die verdwenen lijkt:
 Contact:
 
 - Antwoorden gaan naar info@revaleur.com.
+- Klanten kunnen ook een gratis videogesprek met Daniel boeken voor vragen, hulp
+  bij de setup of feedback: https://calendly.com/omivaleur/supportcall-omnivaleur
+  (30 minuten, bevestiging volgt zodra Daniel de afspraak goedkeurt). In het
+  dashboard staat daar rechtsonder een vaste knop voor en er staat er een in het
+  Help-tabblad. Noem deze link als iemand vastloopt in de setup of er per mail
+  niet uitkomt.
 
 ---
 
