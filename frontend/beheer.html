@@ -844,6 +844,55 @@ async function haalSocial(ververs) {
   catch (e) { doel.innerHTML = '<div class="leeg">Ophalen mislukt.</div>'; }
 }
 
+// ── Koude mail: week op week ─────────────────────────────────────────────
+// Uit week_metingen (via /api/beheer/historie). Eén rij per week, oudste eerst.
+// Open rate en bounce zijn met opzet leeg als een week nog niet gemeten kon
+// worden — mail 1 draagt nooit een pixel, en de bezorging begint pas zodra de
+// Resend-webhook loopt.
+function _weekLabel(iso) {
+  return iso ? iso.slice(8, 10) + '-' + iso.slice(5, 7) : '';
+}
+function _laatsteTwee(rijen, veld) {
+  const g = rijen.filter(r => r[veld] != null);
+  if (g.length >= 2) return [g[g.length - 2][veld], g[g.length - 1][veld]];
+  if (g.length === 1) return [null, g[0][veld]];
+  return [null, null];
+}
+function toonHistorie(d) {
+  const rijen = ((d && d.weken) || []).map(r => ({ ...r, label: _weekLabel(r.week_maandag) }));
+  const metResend = rijen.filter(r => r.km_bounced != null);
+  el('wk-status').textContent = !rijen.length
+    ? 'Nog geen weken vastgelegd.'
+    : metResend.length
+      ? `${rijen.length} weken vastgelegd, bezorging gemeten vanaf week ${metResend[0].label}.`
+      : `${rijen.length} weken vastgelegd. Bezorging en bounce vullen zich zodra de Resend-webhook gebeurtenissen binnenkrijgt.`;
+
+  const [aOud, aNu] = _laatsteTwee(rijen, 'signups_nieuw');
+  const [oOud, oNu] = _laatsteTwee(rijen, 'km_open_pct_mail2');
+  const [vOud, vNu] = _laatsteTwee(rijen, 'km_verstuurd');
+  const [bOud, bNu] = _laatsteTwee(rijen, 'km_bounce_pct');
+  el('wk-delta').innerHTML =
+      kaart('Aanmeldingen deze week', getalOfStreep(aNu), verschil(aNu, aOud), (aNu || 0) >= (aOud || 0) ? 'op' : 'af')
+    + kaart('Open rate mail 2', oNu == null ? '—' : oNu + '%', verschil(oNu, oOud))
+    + kaart('Mails verstuurd', getalOfStreep(vNu), verschil(vNu, vOud))
+    + kaart('Bounce', bNu == null ? '—' : bNu + '%',
+            bNu == null ? 'nog geen Resend-data' : '', bNu > 4 ? 'af' : (bNu != null ? 'op' : ''));
+
+  staafjes('wk-open', rijen.filter(r => r.km_open_pct_mail2 != null), 'label', 'km_open_pct_mail2', v => v + '%');
+  staafjes('wk-signups', rijen, 'label', 'signups_nieuw');
+  staafjes('wk-verstuurd', rijen, 'label', 'km_verstuurd');
+
+  tabel('wk-bezorging', ['Week', 'Afgeleverd', 'Bounce', 'Klachten'],
+    metResend.slice(-8).reverse(),
+    (r) => `<tr><td>${veilig(r.label)}</td>
+      <td class="num">${getalOfStreep(r.km_afgeleverd)}</td>
+      <td class="num ${(r.km_bounce_pct || 0) > 4 ? 'af' : ''}">${r.km_bounce_pct == null ? '—' : r.km_bounce_pct + '%'}</td>
+      <td class="num">${getalOfStreep(r.km_geklaagd)}</td></tr>`);
+}
+async function haalHistorie() {
+  try { toonHistorie(await vraag('/api/beheer/historie')); } catch (e) {}
+}
+
 // ── Werkplaats ───────────────────────────────────────────────────────────
 // Eén vorm voor elke storing, of hij nu wacht of klaar is: wie het meldde,
 // waarom het voorrang kreeg, en wat eruit is gekomen.
