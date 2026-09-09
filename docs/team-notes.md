@@ -7248,4 +7248,65 @@ Gerepareerd (1.0.314 + frontend):
 Frontend staat live na deploy. `dist/omnivaleur-extension-1.0.314.zip` is gebouwd;
 uploaden naar de Chrome Web Store kan wachten, de frontend-spiegel dekt het gat.
 
+### 09-09-2026 — Omnivaleur is Daniels focus-business voor het komende jaar
+
+Daniel heeft expliciet bevestigd: Omnivaleur (crosslisting-SaaS) is de business
+waar hij zich het komende jaar volledig op richt, na zijn afstuderen Finance &
+Control in augustus 2026. Dit stond nergens vastgelegd; de mentor-context noemde
+nog "ZENBTW als hoofdfocus na afstuderen". Omnivaleur en ZENBTW zijn twee losse
+producten, Omnivaleur is geen pivot van ZENBTW. Status van ZENBTW en AxonGear na
+deze keuze: onduidelijk, waarschijnlijk geparkeerd.
+
+Aanleiding: gesprek over hoe de klantengroei sneller kan. Besluit in dezelfde
+sessie: Daniel investeert in influencer marketing (betaalde micro-plaatsingen bij
+NL/BE reselling-creators), daarna een affiliate-programma dat de daaruit gewonnen
+klanten weer als werver inzet, plus "invite and earn" voor elke betalende klant.
+Eerste testbudget grofweg €1.500 tot €2.500 over 6 weken, stopcriterium vooraf,
+retentiemeting loopt parallel (retentie is de noemer van de succesmaat).
+
+Bouwvolgorde afgesproken: (1) doellijst van creators, gescopet op de best
+converterende niche, (2) meetlaag (ref-codes tot en met de Stripe-betaling,
+dashboard per creator), (3) affiliate-programma pas als de test groen is.
+
+### 09-09-2026 — Meting: welke niche werkt het beste voor Omnivaleur
+
+Gemeten op de echte database (service-sleutel, 46 auth-gebruikers, 4 active / 27
+trialing / 11 trial_expired / 1 payment_processing) plus de lokale leadbestanden
+(259 leads met e-mail en categorie_fit) en `items.category` per gebruiker.
+
+Betalende klanten (4): danieldekoning66 (Daniel zelf), djt@dejuistetoon.eu (De
+Juiste Toon, wonen/tapijten), albinmooi1009 (truien/kleding), info@zilverwebsite.nl
+(sieraden). Zilverwebsite matchte een koude lead: de leadmachine heeft dus
+minstens één betalende klant opgeleverd, in de niche **sieraden**.
+
+Genuinely actieve gebruikers (>=5 items, n=10): truien x3, jassen, ondergoed,
+accessoires x2, unisex accessoires (plectrums), antiek goud en zilver, wonen
+tapijten. Overweldigend **tweedehands kleding**, daarna sieraden/antiek, muziek,
+wonen.
+
+Trials met een herkenbare niche: kleding (accessoires dames, heren jassen, heren
+laarzen, laarzen dames), games x2 (retrogameking, iperfectionstore), muziek
+(papas-plectrums). 19 van de 27 trials hebben nul items = niet geactiveerd (dat is
+het echte lek, niet de niche). De 11 verlopen trials zijn op 3 na testaccounts,
+en die 3 hadden ook nul items.
+
+Leads beschikbaar per niche: games 48, sieraden 46, antiek 38, audio 38, dames 37,
+muziek 28, heren 13.
+
+Conclusie, 3 onafhankelijke sneden wijzen dezelfde kant op (betalers, actieve
+gebruikers, eerdere leadgen-metingen in het geheugen):
+- **Werkt:** tweedehands kleding (dames + heren), sieraden/goud/zilver, antiek/
+  vintage, muziek/instrumenten.
+- **Nul, niet op inzetten:** games, audio, tv/foto, computers/electronics.
+- Voor influencer marketing is de keuze **kledingresellers / Vinted-flippers /
+  thrift-creators (NL + BE)** als kern, want dat is de enige van de vier
+  werkende niches met een echt creator-ecosysteem. Sieraden en antiek converteren
+  goed maar hebben nauwelijks creators; die worden een kleine tweede veeg.
+- Zekerheid richting ~80% (kleine steekproef: 2 tot 3 echte externe betalers).
+  De volgorde binnen de top 4 is zachter dan de scheiding werkt/werkt-niet.
+
+Openstaand om de lijst te kunnen bouwen: `APIFY_TOKEN` (staat niet in de lokale
+`.env`; maandlimiet was op 21-08, mogelijk gereset in september) of akkoord op de
+tragere gratis stealth-browserroute per hashtag.
+
 Les vastgelegd: kennisbank "dashboard-verhuist-opslag-extensie-leest-mee".
