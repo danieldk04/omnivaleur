@@ -7042,9 +7042,45 @@ gemeten — er is geen `list_products`-achtige functie in platforms/ebay.py en d
 eBay sandbox-credentials werken lokaal toch niet (zie
 [[ebay-local-sandbox-creds]]). Los oppakken als het zich voordoet.
 
-**Ook gevonden, niet gerepareerd:** item "(1327) Navy Suitsupply Suit Pants -
-Men W36" heeft twee actieve shopify-listingsrijen naar twee verschillende
-Shopify-producten (24-07 en 02-08-2026, allebei vóór vandaag) — een oude
-herplaatsing die een tweede product naast het eerste zette in plaats van het te
-vervangen. Niet veroorzaakt door de reconciliatie van vandaag (dat item was al
-gekoppeld en is dus overgeslagen); apart te onderzoeken.
+**Ook gevonden — en nu gerepareerd (zelfde dag, tweede beurt):** item "(1327)
+Navy Suitsupply Suit Pants - Men W36" had twee actieve shopify-listingsrijen
+naar twee verschillende Shopify-producten (24-07 en 02-08-2026) — een oude
+herplaatsing die een tweede product naast het eerste had gezet in plaats van
+het te vervangen.
+
+Daniel vroeg meteen door: "los ook de dubbele en verweesde Shopify-koppelingen
+op." Nieuw in `shopify_reconcile.py`: `reconcile_verweesde_shopify_listings`.
+Voor elke actieve shopify-rij van een artikel wordt gecontroleerd of het
+Shopify-product er nog staat (met dezelfde rate-limit-voorzichtigheid als de
+koppelronde). Drie uitkomsten, elk met een andere, veilige afhandeling:
+
+  1. Is er nog een ANDERE rij van hetzelfde artikel die wél bestaat? Dan is de
+     verweesde rij overbodig — rechtstreeks naar 'delisted', geen vraag nodig.
+     Dit was precies het geval bij de suit pants.
+  2. Bestaat geen enkele rij meer, maar staat het artikel al bevestigd 'sold'
+     op een ANDER kanaal? Dan is de vraag al beantwoord — ook rechtstreeks naar
+     'delisted'. Zelfde afweging als "al_verkocht_elders" in jobs.py.
+  3. Geen van beide? Dan weten we het niet, en dat is geen beslissing voor een
+     geautomatiseerde ronde. Naar 'sold_unconfirmed' — dezelfde "Is dit
+     verkocht?"-vraag die het dashboard al toont voor Marktplaats en 2dehands.
+
+Het hardste vangnet: een transiënte fout (429, 5xx, een netwerkhik) mag een
+listing NOOIT laten kelderen. Alleen een expliciete 404 telt als "weg"; bij
+twijfel over één rij van een artikel wordt de HELE groep die ronde met rust
+gelaten, anders trekt een halve controle een verkeerde conclusie.
+
+**Live gedraaid tegen Revaleur.** 4 verweesde rijen gevonden:
+  - "(1327) Navy Suitsupply Suit Pants" → had een levende opvolger →
+    rechtstreeks opgeruimd.
+  - "(1323) Grey Suitsupply Cardigan", "(1288) Beige Profuomo Fleece Jacket",
+    "B'TWIN Cycling Set" (deze laatste had nooit een platform_listing_id
+    gekregen — een mislukte publicatie van 11-08-2026 die op 'active' bleef
+    staan) → geen van drie had een bevestigde verkoop elders → alle drie naar
+    'sold_unconfirmed'. Ze staan nu in de bestaande "Is dit verkocht?"-balk op
+    het dashboard.
+
+Draait mee in dezelfde twee momenten als de koppelronde: meteen na het
+koppelen van Shopify (op de achtergrond, ná de koppelronde — de opruimronde
+moet weten welke rij al de levende opvolger is) en elke nacht om 05:30.
+`reconcile_alle_shopify_winkels` doet nu beide rondes voor elke gekoppelde
+winkel.
