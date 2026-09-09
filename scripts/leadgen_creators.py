@@ -149,18 +149,21 @@ def main(dataset_ids: list) -> None:
     csv_pad = UIT / "creators_tiktok.csv"
     op_bereik = sorted(
         [r for r in resultaat if r["soort"] == "verkoper"],
-        key=lambda r: -r["views_gemiddeld"],
+        key=lambda r: (not r["nederlandstalig"], -r["views_gemiddeld"]),
     )
     with csv_pad.open("w", newline="", encoding="utf-8") as f:
         schrijver = csv.writer(f)
-        schrijver.writerow(["username", "naam", "tiktok_url", "gem_views", "totaal_views",
-                            "likes", "videos_in_sweep", "verkoopscore", "benaderd_op",
-                            "reactie", "code"])
+        schrijver.writerow(["username", "naam", "tiktok_url", "nederlandstalig", "gem_views",
+                            "totaal_views", "likes", "videos_in_sweep", "verkoopscore",
+                            "benaderd_op", "reactie", "code"])
         for r in op_bereik:
-            schrijver.writerow([r["username"], r["nickname"], r["url"], r["views_gemiddeld"],
-                                r["views_totaal"], r["likes_totaal"], r["videos_in_sweep"],
-                                r["score"], "", "", ""])
+            schrijver.writerow([r["username"], r["nickname"], r["url"],
+                                "ja" if r["nederlandstalig"] else "nee",
+                                r["views_gemiddeld"], r["views_totaal"], r["likes_totaal"],
+                                r["videos_in_sweep"], r["score"], "", "", ""])
+    nl = sum(1 for r in op_bereik if r["nederlandstalig"])
     print(f"geschreven naar {csv_pad}")
+    print(f"  waarvan Nederlandstalig: {nl} van de {len(op_bereik)}")
 
     verkopers = [r for r in resultaat if r["soort"] == "verkoper"]
     kopers = [r for r in resultaat if r["soort"] == "koper"]
