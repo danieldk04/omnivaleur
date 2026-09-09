@@ -7,9 +7,16 @@
 <title>Beheer — Omnivaleur</title>
 <style>
 :root {
-  --bg: #0b1020; --kaart: #141a2e; --rand: #232b45; --tekst: #e7ecf7;
-  --zacht: #9aa6c2; --blauw: #4d8bff; --groen: #34d399; --geel: #fbbf24;
-  --rood: #f87171;
+  --bg: #f5f6f8; --kaart: #ffffff; --rand: #e4e7ec; --tekst: #1c2024;
+  --zacht: #667085; --blauw: #2563eb; --groen: #047857; --geel: #b45309;
+  --rood: #dc2626; --randzacht: rgba(16,24,40,.06); --kop: rgba(16,24,40,.86);
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0b1020; --kaart: #141a2e; --rand: #232b45; --tekst: #e7ecf7;
+    --zacht: #9aa6c2; --blauw: #4d8bff; --groen: #34d399; --geel: #fbbf24;
+    --rood: #f87171; --randzacht: rgba(255,255,255,.06); --kop: rgba(255,255,255,.9);
+  }
 }
 * { box-sizing: border-box; }
 body {
