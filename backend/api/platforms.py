@@ -154,7 +154,9 @@ async def shopify_auth_url(shop: str, user_id: str = Depends(get_current_user)):
 
 
 @router.get("/shopify/callback")
-async def shopify_callback(shop: str, code: str, request: Request, user_id: str = Depends(get_current_user)):
+async def shopify_callback(shop: str, code: str, request: Request,
+                           background_tasks: BackgroundTasks,
+                           user_id: str = Depends(get_current_user)):
     shop = shop.strip().lower()
     if not is_valid_shop_domain(shop):
         raise HTTPException(status_code=400, detail="Invalid shop domain")
@@ -165,11 +167,13 @@ async def shopify_callback(shop: str, code: str, request: Request, user_id: str 
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Shopify authorization failed: {e}")
     _save_credentials(user_id, "shopify", tokens)
+    _koppel_bestaande_shopify_catalogus(background_tasks, user_id)
     return {"status": "connected", "platform": "shopify"}
 
 
 @router.post("/shopify/connect-app")
-async def shopify_connect_app(body: dict, user_id: str = Depends(get_current_user)):
+async def shopify_connect_app(body: dict, background_tasks: BackgroundTasks,
+                              user_id: str = Depends(get_current_user)):
     """Koppelen met een app die de winkelier zelf in zijn Dev Dashboard maakt.
 
     Body: {"shop": "...", "client_id": "...", "client_secret": "..."}
