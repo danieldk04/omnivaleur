@@ -44,6 +44,20 @@ KOOP = {
 # Onderwerpen die niet in de kledingniche vallen; die gooien we eruit.
 BUITEN_NICHE = {"boeken", "booksoftiktok", "acotar", "makeup", "skincare", "recept"}
 
+# De hashtags zijn internationaal, dus er komen ook Britse en Amerikaanse
+# resellers mee. Omnivaleur bedient NL en BE, dus die moeten eruit. Losse
+# woorden zijn betrouwbaarder dan een hashtag: #vintednederland zetten
+# buitenlanders er ook onder om Nederlands publiek te bereiken.
+NL_WOORDEN = {
+    " de ", " het ", " een ", " en ", " van ", " ik ", " je ", " jij ", " niet ",
+    " met ", " voor ", " op ", " dat ", " dit ", " zijn ", " heb ", " ook ",
+    " maar ", " mijn ", " jouw ", " wat ", " hoe ", " kan ", " gaat ", " weer ",
+    " echt ", " even ", " gewoon ", " alles ", " moet ", " wil ", " naar ",
+    " deze ", " uit ", " nog ", " veel ", " zo ", " als ", " door ", " werd ",
+    " tweedehands", " kleding", " verkopen", " kopen", " prijs", " duur",
+    " goedkoop", " spullen", " winkel", " zoek",
+}
+
 
 def haal_dataset(dataset_id: str) -> list:
     url = f"https://api.apify.com/v2/datasets/{dataset_id}/items?clean=true&format=json"
