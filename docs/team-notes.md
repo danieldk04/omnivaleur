@@ -7193,3 +7193,27 @@ tests/stilstaande-kopie-balk-test.js, die de echte balk rendert met zijn stand.
 
 Openstaand voor Daniel: Toon moet die kopie zelf vervangen. Zolang dat niet
 gebeurt loopt er niets, ook niet na een deploy.
+
+### 09-09-2026 — Founder-call: vaste knop in het klantdashboard
+
+Daniels keuze: klanten actief aansporen om een videogesprek met hem te boeken,
+voor vragen, hulp bij de setup en feedback. Dit is een bewuste
+klantenservice-keuze, geen automatisering; de mailagent staat sinds 06-09 stil
+en dit vervangt een stuk van dat directe contact.
+
+Aangebracht in `frontend/app.html` (alleen het klantdashboard, niet `/beheer`):
+een altijd zichtbare knop rechtsonder ("Talk to the founder") die de
+Calendly-boekingspopup opent, met het e-mailadres van de klant alvast ingevuld.
+Ook een knop in het Help-tabblad onder "Still need help?". De pagina laadt
+daarvoor Calendly's widget.js/widget.css. Valt terug op een nieuw tabblad als
+dat script niet laadt.
+
+De boekings-URL staat op één plek in `openFounderCall()`:
+`https://calendly.com/dk-socials/supportcall-omnivaleur`. Die link geeft op dit
+moment nog een 404 (ook `calendly.com/dk-socials` zelf), gemeten met curl en in
+de browser. Het event bestaat wel in Daniels Calendly maar staat nog niet
+publiek. Zolang dat zo is opent de knop een Calendly-foutpagina.
+
+Openstaand voor Daniel: het Calendly-event publiek en actief zetten (of de juiste
+publieke link doorgeven). Daarna in de klantenservice-brein-kopie het contact-
+en kanalenstuk bijwerken met de belmogelijkheid.
