@@ -10822,7 +10822,7 @@ function renderAnalytics(force) {
   function openFounderCall() {
     var url = 'https://calendly.com/dk-socials/supportcall-omnivaleur';
     var email = '';
-    try { email = (window.SESSIE && SESSIE.lees && SESSIE.lees('cl_email')) || ''; } catch (e) {}
+    try { email = (typeof SESSIE !== 'undefined' && SESSIE.lees && SESSIE.lees('cl_email')) || ''; } catch (e) {}
     try {
       if (window.Calendly && Calendly.initPopupWidget) {
         Calendly.initPopupWidget({ url: url, prefill: email ? { email: email } : {} });
