@@ -145,7 +145,8 @@ def _item(iid, title, brand=None, sku=None, user_id="u1"):
 def test_een_al_bestaand_shopify_product_wordt_gekoppeld(monkeypatch):
     """Precies het geval van (1274): al op Shopify, nog geen listings-rij."""
     items = [_item("i1", "(1274) Beige Suitsupply Shirt - Men S - Very Good", "Suitsupply")]
-    producten = [_product(15685268799818, "Beige Suitsupply Shirt - Men S - Very Good", "1274")]
+    producten = [_product(15685268799818, "Beige Suitsupply Shirt - Men S - Very Good", "1274",
+                          handle="beige-suitsupply-shirt-men-s-very-good")]
     db = _opzet(monkeypatch, items, producten)
 
     uit = asyncio.run(sr.reconcile_shopify_catalog("u1"))
@@ -157,7 +158,7 @@ def test_een_al_bestaand_shopify_product_wordt_gekoppeld(monkeypatch):
     assert rij["platform"] == "shopify"
     assert rij["status"] == "active"
     assert rij["platform_listing_id"] == "15685268799818"
-    assert rij["platform_listing_url"].endswith("/products/beige-suitsupply-shirt-men-s-very-good")
+    assert rij["platform_listing_url"] == "https://test-shop.myshopify.com/products/beige-suitsupply-shirt-men-s-very-good"
 
 
 def test_een_al_gekoppeld_artikel_blijft_met_rust(monkeypatch):
