@@ -207,6 +207,7 @@ async def shopify_connect_app(body: dict, background_tasks: BackgroundTasks,
             "koppeling": "eigen_app",
         },
     })
+    _koppel_bestaande_shopify_catalogus(background_tasks, user_id)
     return {
         "status": "connected",
         "platform": "shopify",
@@ -217,7 +218,8 @@ async def shopify_connect_app(body: dict, background_tasks: BackgroundTasks,
 
 
 @router.post("/shopify/connect-token")
-async def shopify_connect_token(body: dict, user_id: str = Depends(get_current_user)):
+async def shopify_connect_token(body: dict, background_tasks: BackgroundTasks,
+                                user_id: str = Depends(get_current_user)):
     """Koppelen met een sleutel die de winkelier zelf aanmaakt.
 
     Body: {"shop": "mijn-winkel.myshopify.com", "access_token": "shpat_..."}
