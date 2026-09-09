@@ -7209,11 +7209,10 @@ daarvoor Calendly's widget.js/widget.css. Valt terug op een nieuw tabblad als
 dat script niet laadt.
 
 De boekings-URL staat op één plek in `openFounderCall()`:
-`https://calendly.com/dk-socials/supportcall-omnivaleur`. Die link geeft op dit
-moment nog een 404 (ook `calendly.com/dk-socials` zelf), gemeten met curl en in
-de browser. Het event bestaat wel in Daniels Calendly maar staat nog niet
-publiek. Zolang dat zo is opent de knop een Calendly-foutpagina.
+`https://calendly.com/omivaleur/supportcall-omnivaleur`. Let op: het
+Calendly-account heet `omivaleur` zonder n, niet `omnivaleur`. De eerst
+doorgegeven link (`calendly.com/dk-socials/...`) gaf een 404; die van nu geeft
+HTTP 200 en toont de echte boekingspagina, gemeten met curl en in de browser.
 
-Openstaand voor Daniel: het Calendly-event publiek en actief zetten (of de juiste
-publieke link doorgeven). Daarna in de klantenservice-brein-kopie het contact-
-en kanalenstuk bijwerken met de belmogelijkheid.
+Klantenservice-brein bijgewerkt: het contact- en kanalenstuk noemt nu de
+belmogelijkheid met deze link.
