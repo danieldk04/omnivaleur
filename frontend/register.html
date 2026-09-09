@@ -146,7 +146,13 @@ async function doRegister(e) {
     const res = await fetch(`${API}/api/auth/register`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, password })
+      body: JSON.stringify({
+        email,
+        password,
+        // Wie deze aanmelding heeft opgeleverd, als de bezoeker via een
+        // creatorlink binnenkwam.
+        ref: (window.omnivaleurRef && window.omnivaleurRef()) || null
+      })
     });
     const data = await leesAntwoord(res);
     if (!res.ok) throw new Error(data.detail || 'Registration failed');
