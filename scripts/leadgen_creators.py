@@ -119,7 +119,11 @@ def main(dataset_ids: list) -> None:
             soort = "koper"
         else:
             soort = "onduidelijk"
+        # Drie verschillende Nederlandse woorden is genoeg bewijs; bij één of
+        # twee kan het een losse leenwoord-treffer zijn.
+        nederlandstalig = len(c["nl_woorden"]) >= 3
         resultaat.append({
+            "nederlandstalig": nederlandstalig,
             "username": uid,
             "url": f"https://www.tiktok.com/@{uid}",
             "nickname": c["nickname"],
