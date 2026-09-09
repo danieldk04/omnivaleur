@@ -765,39 +765,9 @@ function toonKlantenservice(k) {
     el('ks-cijfers').innerHTML = `<div class="leeg">${k.reden || 'Nog geen post beoordeeld.'}</div>`;
     return;
   }
-  const uitleg = { geld: 'gaat over geld', vertrek: 'dreigt te stoppen',
-                   storing_bij_meerderen: 'meerdere mensen, zelfde storing',
-                   kan_niet_onderbouwen: 'hier heb ik geen antwoord op' };
-  const ouder = k.escalaties_ouder || 0;
-  el('ks-escalaties').innerHTML = (k.escalaties || []).length
-    ? '<div class="attentie let"><b>Dit ligt bij jou:</b><ul>'
-      + k.escalaties.map(e => `<li>${veilig(e.adres)} — ${veilig(uitleg[e.escalatie] || e.escalatie)}<br>`
-                              + `<span class="uitleg">${veilig(e.samenvatting || '')}</span></li>`).join('')
-      + '</ul>'
-      + (ouder ? `<span class="uitleg">Daarnaast ${getal(ouder)} ouder dan twee weken. `
-                 + `Die zijn hier weggelaten: wat zo lang blijft liggen is geen taak meer.</span>` : '')
-      + '</div>'
-    : '<div class="attentie op">Niets wat jouw aandacht nodig heeft.'
-      + (ouder ? `<br><span class="uitleg">${getal(ouder)} ouder dan twee weken, hier weggelaten.</span>` : '')
-      + '</div>';
-
-  // De automatische developer-starter. Alleen zichtbaar als hij stil is terwijl
-  // er werk klaarstaat — anders is het ruis. Zonder deze regel kan hij dagen
-  // stilliggen zonder dat iemand het merkt (macOS blokkeert achtergrondtaken de
-  // toegang tot de projectmap, en meldt dat nergens).
-  const st = k.starter || {};
-  el('ks-starter').innerHTML = st.waarschuwing
-    ? `<div class="attentie let"><b>De developer wordt niet meer vanzelf gestart.</b><br>`
-      + `<span class="uitleg">${veilig(st.waarschuwing)} `
-      + `Er ${st.wacht_op_sessie === 1 ? 'wacht 1 storing' : 'wachten ' + getal(st.wacht_op_sessie) + ' storingen'} `
-      + `op een sessie; laatste ronde: ${veilig(st.laatste_ronde || 'nooit')}.</span></div>`
-    : '';
-
   el('ks-cijfers').innerHTML =
       kaart('Post (14 dgn)', getal(k.berichten_14d), `${getal(k.binnen_14d)} in, ${getal(k.uit_14d)} uit`)
     + kaart('Van klanten', getal(k.van_klanten), 'de rest zijn leads')
-    + kaart('Ligt bij jou', getal((k.escalaties || []).length), 'alleen wat ik niet zelf kan',
-            (k.escalaties || []).length ? 'let' : 'op')
     + kaart('Open storingen', getal((k.storingen_totaal || {}).open || 0),
             `${getal((k.storingen_totaal || {}).opgelost || 0)} gerepareerd, `
             + `${getal((k.storingen_totaal || {}).verlopen || 0)} uitgedoofd`,
