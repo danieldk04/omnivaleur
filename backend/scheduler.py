@@ -240,6 +240,22 @@ def start_scheduler():
         id="daily_rubriekherstel",
         replace_existing=True,
     )
+    # Nieuwe Shopify-producten die buiten Omnivaleur om worden toegevoegd —
+    # bulkimport, handmatig in het winkelbeheer — zelf herkennen. Zonder deze
+    # ronde blijft de koppeling die net na het verbinden gebeurt (zie
+    # backend/api/platforms.py, _koppel_bestaande_shopify_catalogus) een
+    # eenmalige momentopname. Dagelijks 05:30 (NL-tijd), net na de rubriekherstel.
+    from backend.services.shopify_reconcile import reconcile_alle_shopify_winkels
+
+    _scheduler.add_job(
+        _off_the_request_loop(reconcile_alle_shopify_winkels),
+        "cron",
+        hour=5,
+        minute=30,
+        timezone="Europe/Amsterdam",
+        id="daily_shopify_reconciliatie",
+        replace_existing=True,
+    )
     # ── De koude-mailmachine ──────────────────────────────────────────────
     #
     # Draaide tot 20-08-2026 op Daniels eigen Mac, via een LaunchAgent. Dat werkt
