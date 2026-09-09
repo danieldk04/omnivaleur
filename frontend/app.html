@@ -807,17 +807,24 @@ input[type="checkbox"].row-check { width: 15px; height: 15px; cursor: pointer; a
            WAAROM (01-09-2026, Egbert): hij draaide 1.0.258 terwijl de Web Store op
            1.0.279 stond. De harde ondergrens (1.0.244) blokkeert alleen wat
            aantoonbaar niet kán werken; daarboven zei het scherm gewoon groen
-           "Extension active" en hoorde hij nooit dat er iets nieuws was. Chrome
-           werkt een extensie vanzelf bij, maar alleen elke paar uur en alleen
-           terwijl hij draait — een handmatig geladen kopie nooit. -->
+           "Extension active" en hoorde hij nooit dat er iets nieuws was.
+           TEKST BIJGEWERKT (09-09-2026, Daniel): hier stond een instructie om
+           chrome://extensions te openen, "Developer mode" aan te zetten en zelf op
+           Update te klikken — dat is de stap voor een ONTWIKKELAAR die een eigen
+           kopie test, niet voor een klant. Een gewone Chrome Web Store-installatie
+           werkt zichzelf vanzelf bij, zonder dat iemand iets hoeft aan te raken;
+           die knoppen zouden een klant alleen naar een scherm sturen dat niets voor
+           hem doet. Wat wél waar is en hier moet staan: het is geen storing bij ons,
+           het wachten zit 'm bij Chrome zelf (elke paar uur, alleen terwijl de
+           browser open is) en bij Google's eigen goedkeuring van elke nieuwe versie
+           voordat hij naar iemand uitrolt. -->
       <div id="ext-update-banner" class="trial-banner" style="display:none;background:#fffbeb;border:1px solid #fcd34d;color:#78350f">
         <div style="display:flex;align-items:center;gap:8px">
           <span>⬆️</span>
-          <span>Your Chrome extension is <strong>v<span id="ext-update-current">?</span></strong> &mdash;
-            <strong>v<span id="ext-update-latest">?</span></strong> is available.
-            Open <span style="font-family:monospace">chrome://extensions</span>, switch on
-            &ldquo;Developer mode&rdquo; and click <strong>Update</strong>. Chrome only does this
-            by itself every few hours.</span>
+          <span>A newer version of the Omnivaleur extension (<strong>v<span id="ext-update-latest">?</span></strong>) is on its way to you &mdash;
+            you're still on <strong>v<span id="ext-update-current">?</span></strong>. You don't need to do anything:
+            Chrome checks for updates by itself every few hours while your browser is open, and installs it automatically.
+            If this takes a while, that's not something going wrong on our side &mdash; every new version has to be reviewed and approved by Google first before Chrome will offer it to anyone.</span>
         </div>
         <button class="btn btn-sm btn-outline" onclick="dismissExtUpdateBanner()" style="flex-shrink:0">Dismiss</button>
       </div>
