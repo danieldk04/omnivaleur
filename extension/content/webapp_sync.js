@@ -12,13 +12,23 @@
   const EXT = "omnivaleur-extension";
   const PAGE = "omnivaleur-page";
 
+  // Het dashboard bewaart dit inlogbewijs sinds 08-09-2026 in localStorage (dan
+  // overleeft het het sluiten van een tabblad). Oudere pagina's zetten het in
+  // sessionStorage. Lees allebei, localStorage eerst, zodat het niet uitmaakt
+  // welke kant van die wijziging draait — anders vindt de extensie geen token
+  // meer, kan ze haar sessie niet verversen en valt ze na een uur stil.
+  function leesSessie(sleutel) {
+    try { const v = localStorage.getItem(sleutel); if (v !== null) return v; } catch (e) {}
+    try { return sessionStorage.getItem(sleutel); } catch (e) { return null; }
+  }
+
   function syncToken() {
-    const token = sessionStorage.getItem("cl_token");
-    const email = sessionStorage.getItem("cl_email") || "";
+    const token = leesSessie("cl_token");
+    const email = leesSessie("cl_email") || "";
     // The refresh token lets the extension mint fresh access tokens on its own,
     // so background jobs don't die on "Sessie verlopen" once the ~1h access
     // token expires with no dashboard tab open to re-push one.
-    const refresh = sessionStorage.getItem("cl_refresh") || "";
+    const refresh = leesSessie("cl_refresh") || "";
     if (!token) return Promise.resolve(false);
     return new Promise((resolve) => {
       chrome.runtime.sendMessage({ type: "SYNC_TOKEN", token, email, refresh }, () => {
