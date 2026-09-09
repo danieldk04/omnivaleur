@@ -20,8 +20,8 @@
     "mem-project_zenbtw----": {
       "id": "mem-project_zenbtw----",
       "category": "project_zenbtw",
-      "confidence": 0.5,
-      "accessCount": 0,
+      "confidence": 0.53,
+      "accessCount": 1,
       "createdAt": 1783151212563
     },
     "mem-shopify_workflow----": {
@@ -90,8 +90,8 @@
     "mem-feedback_language----": {
       "id": "mem-feedback_language----",
       "category": "feedback_language",
-      "confidence": 0.5,
-      "accessCount": 0,
+      "confidence": 0.53,
+      "accessCount": 1,
       "createdAt": 1783151212567
     },
     "mem-feedback_manual_images----": {
@@ -111,8 +111,8 @@
     "mem-feedback_verify_thoroughly----": {
       "id": "mem-feedback_verify_thoroughly----",
       "category": "feedback_verify_thoroughly",
-      "confidence": 0.5,
-      "accessCount": 0,
+      "confidence": 0.53,
+      "accessCount": 1,
       "createdAt": 1783151212568
     },
     "mem-project_competitive_gaps----": {

@@ -17,6 +17,36 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ---
 
+## marktplaats-2dehands-link-kost-negen-euro
+
+*09-09-2026 — Een webadres in de advertentietekst maakt van een gratis 2dehands-zoekertje een bestelregel van EUR 9; het tabblad landt op /payments/orderOverview en de plaatsing lijkt "vastgelopen"*
+
+Marktplaats en 2dehands rekenen geld voor een advertentie met een link erin
+("Websitevermelding", EUR 9,00). Dat geldt ook als de link alleen in de
+omschrijving staat: de site herkent hem, meldt "er is een URL gevonden" en zet
+de advertentie op een openstaande bestelling in plaats van haar te plaatsen.
+
+**Hoe het eruitziet als je het niet weet:** de plaatsing loopt "vast". Het
+tabblad springt na de plaatsklik naar `/payments/orderOverview/index.html`, waar
+ons invulscript niet draait, dus komt er niets terug en slaat de bewaker na drie
+minuten toe met "het formulier ging nooit open, misschien ben je niet ingelogd".
+Dat verwijt is dan aantoonbaar onjuist, en de klant gaat dagen zijn inlog
+controleren. Bij Egbert Brouwer (papas-plectrums) 806 opdrachten, nul online, en
+een winkelmandje van EUR 153,00 dat groeide bij elke proefadvertentie die onze
+eigen rem er bewust doorheen liet.
+
+**Wat er nu staat:** `_zonder_links` in `crosslist.py` haalt web- en
+e-mailadressen uit titel en tekst voor die twee kanalen, en een sprong naar
+`/payments/` is een eigen uitkomst die de rij meteen stopt, zowel in de extensie
+als vanaf de server in `fail_job`.
+
+**De les die breder geldt:** een rem die geld kost mag geen proefpoging
+doorlaten, en een rem mag alleen tellen wat niet al verklaard en verholpen is.
+Zie "kansloze-kanaal-rem-telt-alleen-plaatsingen" en
+"een-bron-is-geen-bewijs-bij-weg".
+
+---
+
 ## apify-gratis-limiet-op
 
 *09-09-2026 — "Apify gratis tier is $5/mnd en dat is ruim genoeg; kies actors die per resultaat afrekenen, niet per zoekopdracht"*
