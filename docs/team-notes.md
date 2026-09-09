@@ -7367,3 +7367,14 @@ Railway draait op service_role (via /health bevestigd), lokaal staat anon in de
 op de server gewoon werkt.
 
 Codes klaargezet voor de tien grootste Nederlandstalige verkopers uit de lijst.
+
+**Notion: aparte pagina "Influencer Marketing"** (09-09-2026), bewust los van de
+Leadlist onder "Instagram & FB Outreach", want dat is koude mail en dit is een
+ander kanaal met een andere afspraak. De pagina bevat de afspraak, hoe de meting
+werkt, en de database "Creator Outreach (TikTok)" met alle 98 Nederlandstalige
+verkopers, gesorteerd op bereik, met Status-kolom (Nieuw / Benaderd / Reactie /
+Doet mee / Nee) en de verwijslink bij de tien die al een code hebben.
+Pagina: https://app.notion.com/p/3d6b0954fb7281f2af9dd034be57cf26
+
+Er is lokaal geen NOTION_TOKEN en de Railway-CLI is hier niet gekoppeld; vullen
+ging via de Notion-connector. Die werkt zonder token.
