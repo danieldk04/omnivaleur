@@ -328,3 +328,61 @@ BEGIN;
 ALTER TABLE items DROP CONSTRAINT IF EXISTS items_sku_key;
 ALTER TABLE items ADD CONSTRAINT items_user_sku_key UNIQUE (user_id, sku);
 COMMIT;
+
+-- ---------------------------------------------------------------------------
+-- Marketing-meting: bezorging (Resend) + wekelijkse momentopname
+-- ---------------------------------------------------------------------------
+-- WAAROM. De open-, bounce- en bezorgcijfers van de koude mail leefden alleen
+-- in het Resend-dashboard (dat je moet openen) en in mail_state/mail_opens (die
+-- worden opgeschoond). Er was dus geen historie en geen vergelijking met vorige
+-- weken. Deze twee tabellen leggen dat vast.
+--
+-- Handmatige stap: draai dit blok in de Supabase SQL-editor. Deploys voeren
+-- schema.sql niet uit.
+
+-- Ruwe gebeurtenissen van de Resend-webhook. Append-only. Eén e-mail levert
+-- meerdere rijen (sent, delivered, opened, ...), elk met een eigen svix-id.
+CREATE TABLE IF NOT EXISTS mail_events (
+    svix_id     TEXT PRIMARY KEY,
+    email_id    TEXT,
+    type        TEXT NOT NULL,           -- email.delivered / email.bounced / ...
+    domein      TEXT,                    -- omnivaleur.nl (koude mail) / omnivaleur.com (app)
+    ontvanger   TEXT,
+    onderwerp   TEXT,
+    bounce_soort TEXT,                   -- Permanent / Transient, alleen bij een bounce
+    gebeurd_op  TIMESTAMPTZ,             -- created_at uit de payload
+    payload     JSONB,
+    ontvangen_op TIMESTAMPTZ DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_mail_events_gebeurd ON mail_events(gebeurd_op);
+CREATE INDEX IF NOT EXISTS idx_mail_events_type ON mail_events(type);
+ALTER TABLE mail_events DISABLE ROW LEVEL SECURITY;
+
+-- Eén rij per week (maandag t/m zondag) met de kerncijfers. De losse kolommen
+-- zijn er om er zonder JSON-gepuzzel een grafiek van te tekenen; `details` houdt
+-- de volledige uitsplitsing vast voor later.
+CREATE TABLE IF NOT EXISTS week_metingen (
+    week_maandag        DATE PRIMARY KEY,
+    signups_nieuw       INT,
+    signups_bevestigd   INT,
+    km_verstuurd        INT,
+    km_mail1            INT,
+    km_mail2            INT,
+    km_mail3            INT,
+    km_geopend_mail2    INT,
+    km_geopend_mail3    INT,
+    km_open_pct_mail2   NUMERIC(5,1),
+    km_open_pct_mail3   NUMERIC(5,1),
+    km_antwoorden       INT,
+    km_positief         INT,
+    km_afgeleverd       INT,
+    km_bounced          INT,
+    km_geklaagd         INT,
+    km_bounce_pct       NUMERIC(5,1),
+    app_verstuurd       INT,
+    app_afgeleverd      INT,
+    app_bounced         INT,
+    details             JSONB,
+    bijgewerkt_op       TIMESTAMPTZ DEFAULT NOW()
+);
+ALTER TABLE week_metingen DISABLE ROW LEVEL SECURITY;
