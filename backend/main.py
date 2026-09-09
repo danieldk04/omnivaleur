@@ -17,7 +17,7 @@ from pathlib import Path
 import asyncio
 import traceback
 import uuid
-from backend.api import items, listings, platforms, webhooks, jobs, uploads, shopify, auth, billing, imports, content, notifications, beheer, tracking
+from backend.api import items, listings, platforms, webhooks, jobs, uploads, shopify, auth, billing, imports, content, notifications, beheer, tracking, referrals
 from backend.scheduler import start_scheduler, stop_scheduler
 
 FRONTEND = Path(__file__).parent.parent / "frontend"
