@@ -7114,3 +7114,49 @@ dus `antwoorden`/`positief` per week zijn bevroren op de stand van begin
 september tot IMAP weer aangaat. De aanmeld-, open- en bouncecijfers lopen wel
 door. De aanmeldbevestigingsmail loopt via Supabase Auth, niet via Resend, dus
 die staat niet in `mail_events` tenzij Supabase-SMTP naar Resend wordt gezet.
+
+### 09-09-2026 — Klantenservice-blok uit het marketingdashboard gehaald
+
+Het Klantenservice-blok bovenaan de Marketing-tab van `/beheer` was niet meer
+actueel (de klantenservice-AI is er sinds 06-09 uit) en gaf geen bepalende data.
+Daniels keuze: het "Dit ligt bij jou"-deel helemaal weg, de rest ingeklapt
+onderaan de tab, zelfde patroon als de Terughaalcampagne. Weg: de attentiebox
+"Dit ligt bij jou", de "developer wordt niet vanzelf gestart"-melding en de
+teller "Ligt bij jou". Blijft, nu in een uitklapper onderaan: Post (14 dgn),
+Van klanten, Open storingen, de themalijst en de lijst terugkerende storingen.
+
+Snapshot van wat er op dat moment in dat blok stond, voor de historie:
+
+Cijfers: Post 14 dagen 456 (122 in, 334 uit), Van klanten 59, Ligt bij jou 12,
+Open storingen 0 (25 gerepareerd, 23 uitgedoofd).
+
+Dit ligt bij jou (12 openstaand, plus 36 ouder dan twee weken die het blok
+weglaat):
+- info@papas-plectrums.nl, dreigt te stoppen: Egbert komt er niet uit, wil bellen en vindt de nieuwe banner verwarrend.
+- herbos@xs4all.nl, dreigt te stoppen: Robert haakt af vanwege zorgen over inloggegevens en ongeschikte platforms.
+- info@papas-plectrums.nl, dreigt te stoppen: klant is modeloos, import blijft onvolledig en de staat van artikelen klopt niet.
+- info@zilverwebsite.nl, dreigt te stoppen: automatisch verversen werkt niet, foto's, tekst en kenmerken ontbreken, klant loopt achter.
+- info@zilverwebsite.nl, gaat over geld: vraagt of de computer aan moet blijven en meldt dat het abonnement twee keer is afgeschreven.
+- info@zilverwebsite.nl, gaat over geld: verwijderen op 2dehands mislukt, klant wil gratis gebruik in ruil voor testen.
+- info@zilverwebsite.nl + amandahaas1979@gmail.com, zelfde storing: advertenties komen onder verkeerde categorieën, zilver ontbreekt in de lijst.
+- amandahaas1979@gmail.com + info@zilverwebsite.nl, zelfde storing: advertentietekst verkeerd toegevoegd, klant blijft positief.
+- info@papas-plectrums.nl + info@zilverwebsite.nl, zelfde storing: gebruiker werd steeds uitgelogd en kan nu helemaal niet meer inloggen.
+- amandahaas1979@gmail.com + info@zilverwebsite.nl, zelfde storing: advertenties geïmporteerd zonder teksten, plus een browserfoutmelding.
+- amandahaas1979@gmail.com + info@zilverwebsite.nl, zelfde storing: bedrijfsgegevens komen mee, Vinted zet alles in kinderkleding, dubbele foto's en publiceerfout 500.
+- info@zilverwebsite.nl + info@papas-plectrums.nl, zelfde storing: advertenties worden niet verwijderd en daardoor soms opnieuw geplaatst.
+
+Waar de post over ging (14 dagen): geen interesse 27, interesse 22, importeren
+mislukt 14, publiceren mislukt 10, hulp nodig 8, verversen mislukt 7, bedankje 6,
+nieuwsbrief 4, geen inhoud 4, afmelding 3, publiceren gelukt 3, prijsvraag 3.
+
+Terugkerende storingen op dat moment: publiceren mislukt 3x (klaar, lag aan een
+verbindingsprobleem met de database, dat lek is dicht), verkeerde standaardstaat
+en categorie 2x (uitgedoofd, na 17-08 geen contact), marktplaats niet ingelogd
+2x (klaar, extensie vraagt de sitetoestemming opnieuw aan), verkeerde categorie
+toegewezen 2x (klaar, server zoekt de advertentie nu bij de verkoper op),
+advertentietekst onjuist overgenomen 2x (niet doen, het is de eigen
+Marktplaats-tekst van de klant), inloggen mislukt 2x (klaar, database zat
+tijdelijk tegen een limiet aan, drie processen aangepast), marktplaats verversen
+start niet 2x (uitgedoofd, na 20-08 geen contact), advertentietekst niet
+geïmporteerd 2x (klaar, ophaalronde begon steeds bij advertenties die al klaar
+waren).
