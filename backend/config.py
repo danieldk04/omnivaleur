@@ -118,6 +118,10 @@ class Settings(BaseSettings):
     leadgen_tick: str = ""
     resend_api_key: str = ""
     resend_from: str = ""
+    # Ondertekengeheim van de Resend-webhook (Resend > Webhooks > Signing Secret,
+    # begint met "whsec_"). Zonder dit weigert /api/webhooks/resend elk verzoek:
+    # een open webhook laat iedereen nepgebeurtenissen in mail_events schrijven.
+    resend_webhook_secret: str = ""
     # Waar antwoorden van klanten binnenkomen. Uitgaand heet alles Omnivaleur,
     # maar de postbus die Daniel daadwerkelijk leest is een andere.
     reply_to_email: str = "info@revaleur.com"
