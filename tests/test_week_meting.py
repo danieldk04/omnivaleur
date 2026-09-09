@@ -95,7 +95,7 @@ def test_alleen_deze_week_telt_mee(monkeypatch):
     ]
     users = [
         {"created_at": "2026-09-01T00:00:01Z", "email_confirmed_at": "2026-09-01T01:00:00Z"},
-        {"created_at": "2026-09-07T23:59:00Z", "email_confirmed_at": None},
+        {"created_at": "2026-09-06T23:59:00Z", "email_confirmed_at": None},
         {"created_at": "2026-08-25T00:00:00Z", "email_confirmed_at": "x"},  # buiten
     ]
     _zet(monkeypatch, state, opens, reacties, users)
