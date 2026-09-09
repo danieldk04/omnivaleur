@@ -7310,3 +7310,44 @@ Openstaand om de lijst te kunnen bouwen: `APIFY_TOKEN` (staat niet in de lokale
 tragere gratis stealth-browserroute per hashtag.
 
 Les vastgelegd: kennisbank "dashboard-verhuist-opslag-extensie-leest-mee".
+
+### 09-09-2026 — Influencerdeal op prestatiebasis + doellijst gebouwd
+
+Daniel heeft het budget verlaagd en omgezet naar prestatiebasis. Vastgelegde
+afspraak, vervangt de eerdere EUR 1.500-2.500:
+
+- **Gratis Omnivaleur-account** voor elke deelnemende creator, zolang ze actief
+  zijn. Kost vrijwel niets, is voor een reseller EUR 19,99/mnd waard.
+- **EUR 25 per klant die 60 dagen betaald heeft**, uitbetaling ná die 60 dagen
+  en alleen als de klant op dat moment nog betaalt. Dat is de bescherming tegen
+  uitval: de retentie is nog steeds niet gemeten, dus de bounty mag pas vallen
+  als de klant zichzelf al heeft terugverdiend.
+- **Vast bedrag alleen waar het moet**: EUR 50-75 per video, maximaal 5
+  creators. Hard risico dus maximaal EUR 375, de rest betaalt zichzelf.
+- **Stopcriterium**: na 6 weken stoppen als minder dan 3 creators geplaatst
+  hebben of er nul betalende klanten uit kwamen.
+
+Gevolg voor de bouwvolgorde: prestatie-uitbetaling kan niet zonder telling, dus
+de **meetlaag moest vóór de eerste creator benaderd wordt**, niet erna.
+
+**Apify-vraag beslecht met opgezochte prijzen.** Het gratis tegoed van $5/mnd is
+ruim genoeg; dat was nooit de bottleneck. De ronde die de hele doellijst
+opleverde kostte ongeveer $0,75. De uitputting van 21-08 kwam door een dure
+zoek-actor met een limiet van 5 draaibeurten, niet door het tegoed zelf. Gebruik
+actors die per resultaat afrekenen (`funny_ground/tiktok-scraper`, $0,0005 per
+resultaat). Apify-datasets zijn publiek leesbaar zonder token, dus verwerken kan
+altijd lokaal.
+
+**Doellijst gebouwd** (`scripts/leadgen_creators.py`, 18 hashtags, 1.458 video's):
+750 unieke creators, waarvan 219 verkopers en 98 Nederlandstalige verkopers. De
+rest is koop-content (haul, unboxing) of buitenlands. Uitvoer in
+`scripts/output/leads/creators_tiktok.csv`, gesorteerd op bereik met lege
+kolommen voor benaderd_op/reactie/code.
+
+**Meetlaag gebouwd**: `/r/CODE` telt de klik en stuurt door naar /nl.html?ref=,
+`frontend/assets/ref.js` onthoudt de code in localStorage, `/api/auth/register`
+koppelt hem aan de nieuwe gebruiker, en de Stripe-webhook stempelt first_paid_at
+zodra er echt betaald wordt. Bewuste keuze: de verwijzingstabel legt alleen vast
+wie door wie kwam; de status komt altijd vers uit `subscriptions`, zodat de
+meting niet uit de pas kan lopen. Tabellen moeten handmatig aangemaakt worden met
+`scripts/sql/referrals.sql`.

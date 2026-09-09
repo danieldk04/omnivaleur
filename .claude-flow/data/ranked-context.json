@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "computedAt": 1788897206308,
+  "computedAt": 1788979300870,
   "entries": [
     {
       "id": "mem-shopify_workflow-belangrijk--nooit-content-over",
@@ -86,9 +86,9 @@
       "content": "**Rule:** After every edit to files in the Shopify theme directory (`/Users/Danie/Documents/Claude AXONGEARShopify Editor`), automatically run the push command to push changes live immediately.\n\n**Why:** User wants all changes to go live instantly without manual intervention.\n\n**How to apply:**\n- After using Edit tool on any `.liquid`, `.css`, `.js` files in the theme\n- Store details: store = `axongear-2.myshopify.com`, theme_id = `199013728598`\n- Command: `cd \"/Users/Danie/Documents/Claude AXON",
       "summary": "Auto-push workflow for Shopify theme",
       "category": "shopify_workflow",
-      "confidence": 0.5,
+      "confidence": 0.53,
       "pageRank": 0.07277020582189424,
-      "accessCount": 0,
+      "accessCount": 1,
       "words": [
         "rule",
         "edit",
@@ -510,9 +510,9 @@
       "content": "name: NEXUS Market Terminal Project\ndescription: Self-learning investor bot (niet trader) — multi-tier aandelenanalyse met deep fundamentals\ntype: project\noriginSessionId: 0dc95705-e3f7-4708-a400-be059523f345\n---\nBuilding a two-tier investor analysis system called \"NEXUS MARKET TERMINAL\" (v3 investor mode).\n\n**Architecture:**\n- Tier 1 (`tier1_scanner.py`): scant 400 tickers, filtert op ROE >12%, voegt ROIC, P/FCF, 5-jaars CAGR, analistentarget toe. Top 20 naar data.json.\n- Tier 2 (`tier2_analyse",
       "summary": "---",
       "category": "project_nexus",
-      "confidence": 0.53,
+      "confidence": 0.5,
       "pageRank": 0.03933524013937596,
-      "accessCount": 1,
+      "accessCount": 0,
       "words": [
         "name",
         "nexus",
@@ -977,9 +977,9 @@
       "content": "name: feedback-language\ndescription: \"All UI, copy, and code comments must be in English — except actual listing content posted to Marktplaats and 2dehands which is in Dutch\"\nmetadata: \n  node_type: memory\n  type: feedback\n  originSessionId: 0498816a-31dc-434b-a192-b9eb3bcfef08\n---\n\nAll frontend copy, backend code, comments, labels, buttons, and error messages must be in **English**.\n\n**Why:** CrossList EU targets international/EU sellers, not just Dutch speakers. Dutch in the UI feels local and",
       "summary": "---",
       "category": "feedback_language",
-      "confidence": 0.53,
+      "confidence": 0.5,
       "pageRank": 0.03933524013937596,
-      "accessCount": 1,
+      "accessCount": 0,
       "words": [
         "name",
         "feedback-language",

@@ -2,14 +2,14 @@
   "context": {
     "lastMatchedPatterns": [
       "mem-shopify_workflow-belangrijk--nooit-content-over",
-      "mem-project_zenbtw----",
-      "mem-MEMORY-memory-index",
-      "mem-feedback_verify_thoroughly----",
-      "mem-feedback_push_to_live----"
+      "mem-shopify_workflow-auto-push-workflow-for-shopify",
+      "mem-revaleur-blog-system----",
+      "mem-revaleur-blog-no-test-publishing----",
+      "mem-MEMORY-memory-index"
     ]
   },
-  "updatedAt": "2026-09-08T19:33:56.460Z",
-  "restoredAt": "2026-09-08T19:39:34.108Z",
-  "endedAt": "2026-09-08T19:39:34.609Z",
+  "updatedAt": "2026-09-09T06:40:05.822Z",
+  "restoredAt": "2026-09-09T06:41:04.233Z",
+  "endedAt": "2026-09-09T06:41:04.813Z",
   "duration": null
 }
