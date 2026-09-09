@@ -139,6 +139,18 @@ async def ebay_set_ship_from(body: dict, user_id: str = Depends(get_current_user
     return {"status": "saved", "ship_from": extra["ship_from"]}
 
 
+# NA HET KOPPELEN: WAT ER AL OP SHOPIFY STAAT ZELF LATEN HERKENNEN (09-09-2026).
+#
+# Vrijwel niemand koppelt Shopify met een lege winkel. Zonder deze stap zag elk
+# artikel dat toevallig ook op Shopify staat er meteen als "niet gelist" uit —
+# gemeten op Revaleur's eigen winkel 241 van de 259 al-aanwezige artikelen. Draait
+# op de achtergrond (kan bij een grote catalogus een minuut of wat duren) zodat de
+# koppelknop niet op deze ronde hoeft te wachten. Zie backend/services/shopify_reconcile.py.
+def _koppel_bestaande_shopify_catalogus(background_tasks: BackgroundTasks, user_id: str) -> None:
+    from backend.services.shopify_reconcile import reconcile_shopify_catalog
+    background_tasks.add_task(reconcile_shopify_catalog, user_id)
+
+
 @router.get("/shopify/auth-url")
 async def shopify_auth_url(shop: str, user_id: str = Depends(get_current_user)):
     shop = shop.strip().lower()
