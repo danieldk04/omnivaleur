@@ -17,6 +17,32 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ---
 
+## stille-extensie-is-niet-altijd-uitgezet
+
+*09-09-2026 — Een extensie die zich niet meldt kan ook een kopie zijn die tóch geen werk zou krijgen; zeg dat, stuur niet naar de schakelaar*
+
+Als de extensie zich niet meldt, is "zet hem aan bij chrome://extensions, dan
+pakt de wachtrij het vanzelf op" niet automatisch het juiste advies. Bij De
+Juiste Toon (09-09-2026) stond in de aanwezigheidsstempel al twee dagen versie
+1.0.260 terwijl de Web Store op 1.0.313 stond: de uitgifte gaf die kopie sinds
+07-09 niets meer te doen. Aanzetten kon dus niets oplossen, en hij zocht een
+dag lang naar een schakelaar die al goed stond.
+
+**Why:** de versie staat in `extension_heartbeat.ext_version` en blijft daar
+staan als de kopie al uren zwijgt. Dat is precies het moment waarop de verkoper
+zit te wachten en de melding moet kloppen. Een waarschuwing die alleen werkt
+zolang de kopie leeft, zwijgt juist als het misgaat.
+
+**How to apply:** meldingen over een verouderde kopie afleiden uit de
+hartslagversie, niet alleen uit versiestempels in foutmeldingen, en nooit een
+vast versienummer in de tekst zetten: de winkelversie komt van de server mee.
+Verwijst het scherm naar een handeling, controleer eerst of die handeling het
+probleem kán oplossen. Zie "extensiekopie-die-niet-meebeweegt",
+"aanwezigheid-niet-vragen-maar-stempelen" en
+"geen-doodlopende-straat-in-de-ui".
+
+---
+
 ## wekelijkse-marketingmeting
 
 *09-09-2026 — "mail_events + week_metingen leggen open rate, bounce, bezorging en aanmeldingen week op week vast; Resend-webhook voedt het"*
@@ -36,10 +62,37 @@ staat stil sinds de AI-laag eruit is (06-09), dus antwoorden/positief per week z
 bevroren tot IMAP weer aangaat. Aanmeldbevestigingsmail loopt via Supabase Auth,
 niet Resend, dus niet in mail_events.
 
-Dashboard-herindeling (beheer.html licht maken, Marketing opnieuw, visuals eerst,
-"Wat de AI je aanraadt" + "Wat ik leer van jouw aanpassingen" + Terughaalcampagne
-eruit) is de volgende stap, nog niet gedaan. Zie "leadgen-op-conversie-niet-volume"
-en "anthropic-credit-silent-translation-fallback".
+Dashboard-herindeling grotendeels gedaan (09-09): beheer.html overal licht thema
+(geen dark-mode), Marketing-tab opnieuw met sectie "Week op week" op
+`/api/beheer/historie`. Eruit: "Wat de AI je aanraadt", "Wat ik leer van jouw
+aanpassingen". Ingeklapt onderaan de Marketing-tab: Terughaalcampagne, Social-posts,
+en het Klantenservice-blok (het "Dit ligt bij jou"-deel is helemaal weg; snapshot
+van die lijst staat in docs/team-notes.md 09-09). De andere vier tabs hebben wel
+de lichte kleuren maar nog dezelfde indeling (bewust: alleen Marketing echt
+opnieuw). Zie "leadgen-op-conversie-niet-volume" en
+"anthropic-credit-silent-translation-fallback".
+
+---
+
+## klantcalls-incentive-idee
+
+*09-09-2026 — "Toekomstplan van Daniel: klantcalls belonen met 5-7 dagen extra Omnivaleur-toegang om feedback te verzamelen"*
+
+Daniel wil later (geen prio nu, genoemd 09-09-2026) een systeem waarbij een
+klant of proefgebruiker die een call met het team boekt, 5 of 7 dagen extra
+toegang tot Omnivaleur krijgt als beloning. Doel: veel klantcalls, om te vragen
+hoe ze Omnivaleur ontdekten, waar ze tegenaan lopen, wat nog niet lekker werkt.
+
+Sluit aan op het toegangsslot ("proefperiode-en-toegangsslot") en de
+"nieuwe-proef-nieuwe-waarschuwing"-valkuil: extra dagen toekennen moet via
+dezelfde Supabase-kolommen en mag de waarschuwingsvinkjes niet hergebruiken.
+
+**Waarom:** feedback van echte gebruikers is nu schaars; de mailagent-laag ligt
+stil, klanten mailen bugs los. Directe calls geven rijkere signalen.
+
+**How to apply:** niet bouwen tot Daniel het oppakt. Bij bouwen: koppel aan een
+boekingstool (bv. Cal.com/Calendly), ken dagen toe op de bestaande
+toegangsslot-kolommen, en scheid het klantpad strikt ("klanten-zijn-geen-leads").
 
 ---
 

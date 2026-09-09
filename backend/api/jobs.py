@@ -1168,7 +1168,32 @@ def _verouderde_extensie(db, user_id: str) -> dict:
 
     De extensie stempelt haar versie in elke foutmelding, dus we kunnen dit
     aflezen uit werk dat al gedaan is. Geen extra tabel, geen migratie.
+
+    EN OOK ALS DIE KOPIE ZICH NIET MEER MELDT (09-09-2026, De Juiste Toon).
+    Hierboven stond alleen de harde ondergrens (1.0.244). Toons kopie zat daar
+    ruim boven — 1.0.260 — dus zei het dashboard hier niets, terwijl de uitgifte
+    diezelfde kopie al twee dagen géén werk meer gaf omdat ze 53 versies achter
+    de Web Store liep. Zijn wachtrij liep vol en het enige wat hij las was "je
+    extensie heeft zich niet gemeld, zet Chrome aan, dan pakt hij het vanzelf
+    op". Chrome aanzetten hielp niet en kon niet helpen: een met de hand
+    geladen kopie werkt zichzelf nooit bij.
+
+    Daarom kijken we eerst naar de versie uit de aanwezigheidsstempel. Die staat
+    er ook nog als de kopie al uren stil is, dus dit werkt juist wél op het
+    moment dat de verkoper zit te wachten.
     """
+    draait = _draaiende_extensieversie(db, user_id)
+    stilstaand = _kopie_staat_stil(draait)
+    if stilstaand:
+        achter, gepubliceerd = stilstaand
+        return {
+            "outdated_extension": ".".join(map(str, draait)),
+            "published_extension": gepubliceerd,
+            "outdated_versies_achter": achter,
+            # Deze kopie krijgt van de uitgifte niets meer te doen. Het scherm
+            # mag dus niet zeggen dat de wachtrij vanzelf op gang komt.
+            "outdated_krijgt_geen_werk": True,
+        }
     try:
         grens = (datetime.now(timezone.utc) - timedelta(days=7)).isoformat()
         rijen = (db.table("jobs").select("result")
@@ -1185,7 +1210,12 @@ def _verouderde_extensie(db, user_id: str) -> dict:
             oudste = v
     if not oudste:
         return {}
-    return {"outdated_extension": ".".join(map(str, oudste))}
+    return {
+        "outdated_extension": ".".join(map(str, oudste)),
+        "published_extension": _gepubliceerde_extensieversie(),
+        # Onder de harde ondergrens deelt de uitgifte ook niets meer uit.
+        "outdated_krijgt_geen_werk": True,
+    }
 
 
 @router.get("/relist-status")

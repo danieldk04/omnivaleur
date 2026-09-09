@@ -7487,7 +7487,7 @@ function renderExtensionStatus() {
       if (!oud) { el.style.display = 'none'; return; }
       el.style.display = 'flex';
       el.className = 'comp-status comp-status-offline';
-      el.innerHTML = extraOudeExtensieMelding(oud);
+      el.innerHTML = extraOudeExtensieMelding(data);
       return;
     }
     el.style.display = 'flex';
@@ -7514,12 +7514,19 @@ function renderExtensionStatus() {
       const langWeg = stilSeconden > 600;
       if (langWeg && (queued || stilSeconden > 3600)) {
         el.classList.add('comp-toon-op-desktop');
+        // "Zet hem weer aan" is het goede advies zolang de kopie ons werk MAG
+        // doen. Weten we dat ze te ver achterloopt, dan is aanzetten zinloos —
+        // dan staat het echte antwoord in het blok eronder en mogen we er hier
+        // niet overheen praten (De Juiste Toon, 09-09-2026).
         el.innerHTML = `<span class="comp-dot"></span><div><b>Nothing is running: your extension has not checked in${ago}.</b> `
           + (queued ? `${queued} action${queued === 1 ? ' is' : 's are'} waiting. ` : `Scans, publishing and sold-checks are all on hold until it does. `)
-          + `Open <b>chrome://extensions</b> on the computer you use for Omnivaleur: after an update Chrome `
-          + `switches the extension off until you approve it again, and it stays off — silently — until you do. `
-          + `Turn it back on there, then open Omnivaleur once in that browser so the extension signs back in.</div>`;
-        if (oud) el.innerHTML += extraOudeExtensieMelding(oud);
+          + (data.outdated_krijgt_geen_werk
+             ? `And it would not run even if you switched it on: see below.`
+             : `Open <b>chrome://extensions</b> on the computer you use for Omnivaleur: after an update Chrome `
+               + `switches the extension off until you approve it again, and it stays off — silently — until you do. `
+               + `Turn it back on there, then open Omnivaleur once in that browser so the extension signs back in.`)
+          + `</div>`;
+        if (oud) el.innerHTML += extraOudeExtensieMelding(data);
         return;
       }
       el.classList.remove('comp-toon-op-desktop');
@@ -7529,17 +7536,36 @@ function renderExtensionStatus() {
           : 'Anything you queue from your phone will run'
       } as soon as you open Chrome — with the Omnivaleur extension — on your computer.</div>`;
     }
-    if (oud) el.innerHTML += extraOudeExtensieMelding(oud);
+    if (oud) el.innerHTML += extraOudeExtensieMelding(data);
   });
 }
 
-function extraOudeExtensieMelding(versie) {
+// DE MELDING MOET DE VERSIE NOEMEN DIE ER VANDAAG HOORT TE STAAN.
+//
+// WAAROM (09-09-2026, De Juiste Toon). Hier stond "remove any Omnivaleur entry
+// that is not version 1.0.249 or newer". Zijn kopie was 1.0.260 — nieuwer dan
+// dat — dus wie deze zin las kon precies niets fout vinden, terwijl er 1.0.313
+// in de winkel stond en de server die kopie al geen werk meer gaf. Een vast
+// nummer in een tekst veroudert; de winkelversie komt nu van de server mee.
+function extraOudeExtensieMelding(status) {
+  const st = status || {};
+  const versie = st.outdated_extension;
+  const winkel = st.published_extension || _gepubliceerdeVersie;
+  const achter = st.outdated_versies_achter;
+  const geenWerk = !!st.outdated_krijgt_geen_werk;
+  const hoeveel = achter ? ` — ${achter} versions behind` : '';
+  const kop = geenWerk
+    ? `<b>The extension on your computer is v${esc(versie)}${winkel ? `, while v${esc(winkel)} is the current one` : ''}${hoeveel}.</b>
+       A copy that far behind was installed by hand and will never update itself, so we stopped handing it work:
+       it starts listings it cannot finish. <b>Nothing will run until you replace it</b> — your queued actions are kept.`
+    : `<b>An outdated copy of the extension (v${esc(versie)}) is running on one of your computers.</b>
+       It picks up jobs from the same queue as the up-to-date one but can't finish them, so scans fail at random.`;
   return `<div style="margin-top:8px;padding:10px 12px;border-radius:8px;background:#fef3c7;color:#92400e;font-size:13px;line-height:1.55">
-    <b>An outdated copy of the extension (${esc(versie)}) is running on one of your computers.</b>
-    It picks up jobs from the same queue as the up-to-date one but can't finish them,
-    so scans fail at random. Open <b>chrome://extensions</b> on each computer you use,
-    remove any Omnivaleur entry that is not version 1.0.249 or newer, and
-    <a href="https://chrome.google.com/webstore/detail/gfaogapbhaacfbpdppdcmnkjndlphleh" target="_blank" rel="noopener">reinstall it from the Chrome Web Store</a>.
+    ${kop}
+    <br>On the computer you use for Omnivaleur: open <b>chrome://extensions</b>, remove <b>every</b> Omnivaleur entry
+    you see there${winkel ? ` that is not v${esc(winkel)}` : ''},
+    <a href="https://chrome.google.com/webstore/detail/gfaogapbhaacfbpdppdcmnkjndlphleh" target="_blank" rel="noopener">install it from the Chrome Web Store</a>,
+    and open Omnivaleur once in that browser so it signs back in.
   </div>`;
 }
 
@@ -9333,11 +9359,33 @@ function renderActivityBar() {
     const offline = ext && ext.online === false;
     if (offline) {
       const geleden = ext.seconds_ago != null ? ` (last seen ${fmtSeenAgo(ext.seconds_ago)})` : '';
+      // NOOIT BELOVEN DAT DE RIJ VANZELF OP GANG KOMT ALS DAT NIET KAN.
+      //
+      // WAAROM (09-09-2026, De Juiste Toon). Hij zette 's avonds een stapel
+      // klaar, zag de volgende ochtend "50 jobs queued — nothing is running,
+      // open Chrome and the queue picks up by itself", deed dat, en er gebeurde
+      // niets. Kon ook niet: op die Chromebook stond een met de hand geladen
+      // 1.0.260 terwijl de winkel op 1.0.313 stond, en de uitgifte geeft zo'n
+      // kopie sinds 07-09 geen werk meer. De server weet dat — het staat in de
+      // aanwezigheidsstempel — dus dit scherm hoort het te zeggen in plaats van
+      // hem naar chrome://extensions te sturen voor een schakelaar die al goed
+      // staat.
+      if (ext.outdated_krijgt_geen_werk) {
+        title.textContent = `${nQueued} job${nQueued === 1 ? '' : 's'} queued — your extension is too old to run them`;
+        text.innerHTML = `The copy on your computer is <b>v${esc(ext.outdated_extension)}</b>`
+          + (ext.published_extension ? ` while <b>v${esc(ext.published_extension)}</b> is the current one` : '')
+          + `, so we stopped handing it work — it starts listings it cannot finish. `
+          + `Nothing will run until you replace it (${describeJobs(queued)}). `
+          + `On that computer: open <b>chrome://extensions</b>, remove <b>every</b> Omnivaleur entry, `
+          + `<a href="https://chrome.google.com/webstore/detail/gfaogapbhaacfbpdppdcmnkjndlphleh" target="_blank" rel="noopener">install it from the Chrome Web Store</a>, `
+          + `and open Omnivaleur once in that browser. <b>Nothing is lost</b> — the queue starts on its own after that.`;
+      } else {
       title.textContent = `${nQueued} job${nQueued === 1 ? '' : 's'} queued — nothing is running`;
       text.innerHTML = `Your extension has not checked in${geleden}, so nothing will start `
         + `(${describeJobs(queued)}). Open Chrome on the computer you use for Omnivaleur and make sure `
         + `the Omnivaleur extension is switched on at <b>chrome://extensions</b> — the queue picks up by itself after that. `
         + `Nothing is lost while it waits.`;
+      }
     } else if (pace && pace.calm && pace.seconds_between) {
       const minuten = Math.max(1, Math.round(pace.seconds_between / 60));
       title.textContent = `${nQueued} job${nQueued === 1 ? '' : 's'} queued — Calm mode is spacing them out`;

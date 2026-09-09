@@ -7160,3 +7160,36 @@ tijdelijk tegen een limiet aan, drie processen aangepast), marktplaats verversen
 start niet 2x (uitgedoofd, na 20-08 geen contact), advertentietekst niet
 geïmporteerd 2x (klaar, ophaalronde begon steeds bij advertenties die al klaar
 waren).
+
+### 09-09-2026 — De Juiste Toon: stille extensie die tóch geen werk kreeg
+
+Toon meldde dat alles wat hij 8 september had klaargezet nog steeds niet op
+Marktplaats stond. Gemeten in zijn account: zijn extensie meldde zich voor het
+laatst op 08-09 om 15:31 (NL) met versie 1.0.260, terwijl er 1.0.313 in de
+Chrome Web Store stond. De vier andere actieve verkopers stonden diezelfde
+ochtend op 1.0.311 of 1.0.313, dus Chrome werkt een kopie uit de winkel wel
+degelijk bij: die van hem is met de hand geladen en zal nooit bijwerken. De
+uitgifte gaf die kopie sinds 07-09 terecht geen werk meer (ACHTERSTAND_GRENS).
+De stapel die hij 's avonds klaarzette (19:41-19:46) is aangemaakt ná het
+laatste levensteken van zijn extensie; die kon dus nooit lopen. 61 opdrachten
+staan te wachten, het abonnement is gewoon actief tot 04-10.
+
+Wat er misging aan ONZE kant: het scherm zei alleen "your extension has not
+checked in — open Chrome, the queue picks up by itself after that." De server
+wist de versie al twee dagen, maar de waarschuwing over een verouderde kopie
+keek alleen naar foutmeldingen met een versiestempel ónder de harde ondergrens
+(1.0.244). Toon zat daarboven, dus kwam er geen woord. Bovendien stond er in
+die waarschuwing een vast nummer ("not version 1.0.249 or newer") waar zijn
+1.0.260 netjes aan voldeed.
+
+Aangepast: `_verouderde_extensie` leest nu eerst de versie uit
+`extension_heartbeat` en meldt een kopie die te ver achterloopt, ook als ze
+zwijgt. De wachtrijbalk en het statusblok zeggen dan niet meer dat het vanzelf
+op gang komt, maar noemen de draaiende versie, de winkelversie en de drie
+stappen (chrome://extensions leegmaken, uit de Web Store installeren, Omnivaleur
+een keer openen). Bewijs: tests/test_stilstaande_kopie_ook_als_hij_zwijgt.py
+(oude code zakt op vier controles, nieuwe niet) en
+tests/stilstaande-kopie-balk-test.js, die de echte balk rendert met zijn stand.
+
+Openstaand voor Daniel: Toon moet die kopie zelf vervangen. Zolang dat niet
+gebeurt loopt er niets, ook niet na een deploy.

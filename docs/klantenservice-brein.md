@@ -10,7 +10,7 @@ product verandert. De ontwikkelaar werkt dan zowel dit bestand in de repo als de
 kopie in Drive bij, in dezelfde beurt. Daniel hoeft niets te doen; de Gem leest
 de Drive-kopie de volgende keer opnieuw in.
 
-Laatst bijgewerkt: 08-09-2026.
+_Laatst bijgewerkt: 09-09-2026_
 
 ---
 
@@ -308,9 +308,13 @@ Daniel
 
 Hoi <voornaam>,
 
-Vervelend dat het plaatsen niet goed loopt. Wil je eerst even kijken of je de
-nieuwste versie van de Omnivaleur-uitbreiding hebt via de Chrome Web Store? Een
-oude versie doet soms maar een deel van het werk.
+Vervelend dat het plaatsen niet goed loopt. Wil je op de computer die je voor
+Omnivaleur gebruikt even chrome://extensions openen? Als daar een Omnivaleur
+staat die je ooit met de hand hebt geladen, werkt die zichzelf nooit bij en
+blijft hij achter. Haal alle Omnivaleur-regels daar weg en installeer hem
+opnieuw via de Chrome Web Store. Open Omnivaleur daarna een keer in diezelfde
+browser, dan meldt hij zich weer aan en start je wachtrij vanzelf. Er gaat
+niets verloren.
 
 Werkt het daarna nog niet, stuur me dan een schermafbeelding van wat je ziet,
 dan zoek ik het uit.
