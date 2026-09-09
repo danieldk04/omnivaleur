@@ -23,7 +23,7 @@ const { execFileSync } = require("child_process");
 
 const WORTEL = path.join(__dirname, "..");
 const PAD = "extension/content/webapp_sync.js";
-const VOOR = "321a8460"; // HEAD vóór de fix: webapp_sync.js las alleen sessionStorage
+const VOOR = "05acb68a"; // laatste webapp_sync.js vóór de fix: las alleen sessionStorage
 const NIEUW = fs.readFileSync(path.join(WORTEL, PAD), "utf8");
 const OUD = execFileSync("git", ["show", `${VOOR}:${PAD}`], { cwd: WORTEL }).toString();
 
