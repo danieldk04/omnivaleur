@@ -742,6 +742,10 @@ async def stripe_webhook(request: Request, stripe_signature: str = Header(None))
                 "updated_at": _now(),
             }).eq("user_id", user_id).execute()))
             invalidate_access_cache(user_id)
+            # Start de commissieklok pas als er echt betaald wordt, niet bij het
+            # afronden van de proef.
+            if stripe_sub["status"] == "active":
+                stempel_eerste_betaling(user_id)
 
     elif event["type"] in ("customer.subscription.updated", "customer.subscription.deleted"):
         stripe_sub = event["data"]["object"]
