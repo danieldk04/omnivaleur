@@ -17,6 +17,10 @@ _EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
 class AuthRequest(BaseModel):
     email: str
     password: str
+    # Code van de creator die deze aanmelding opleverde, meegegeven door de
+    # landingspagina. Optioneel: zonder code is het gewoon een gebruiker die
+    # zelf de weg vond.
+    ref: str | None = None
 
 
 @router.post("/register")
@@ -30,6 +34,7 @@ async def register(body: AuthRequest):
         })
         if res.user is None:
             raise HTTPException(status_code=400, detail="Registration failed")
+        registreer_verwijzing(res.user.id, body.ref)
         return {"ok": True, "message": "Account created. Check your email to confirm."}
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
