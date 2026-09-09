@@ -6965,3 +6965,86 @@ terwijl de Web Store wél opschoof" is een sterker signaal dan een drempel.
 `prijs-blijft-op-het-formulier-test.js` toetst tegen een oude kopie van de code
 die er niet meer is). Die zijn niet gebruikersgericht, maar ze verbergen wel
 echte fouten zolang ze rood staan.
+
+### 09-09-2026 — Shopify herkende zijn eigen catalogus niet
+
+Daniel, over "(1274) Beige Suitsupply Shirt": het staat gewoon Active op Shopify
+(1 in stock, Revaleur), maar het dashboard toont geen groen vinkje bij SHOP.
+Zijn vraag: kan dat zonder handmatig aanvinken, en is dat dan ook waterdicht bij
+een verkoop, want zonder koppeling herkende `match_shopify_sale` een verkoop op
+Shopify sowieso niet als hetzelfde artikel.
+
+**Oorzaak, gemeten.** Marktplaats en 2dehands hebben een scan die een bestaande
+advertentie herkent en aanbiedt om te koppelen (import_candidates). Shopify
+heeft dat niet. Wie zijn winkel koppelt terwijl er al een catalogus staat — en
+dat is de normale situatie, niemand begint met een lege Shopify-winkel — krijgt
+voor elk artikel dat toevallig ook op Shopify staat gewoon "niet gelist".
+
+Op Revaleur's eigen winkel (315 actieve Shopify-producten): **241 artikelen**
+stonden al Active op Shopify zonder listings-rij in Omnivaleur. Het Suitsupply-
+shirt zelf stond al sinds 31-05-2026 op Shopify, ruim vóór het op 03-07-2026
+vanuit Marktplaats werd geïmporteerd en vóór Shopify op 28-08-2026 werd
+gekoppeld. `platform_credentials.extra_data.koppeling = "eigen_app"` bevestigt:
+dit is Revaleur's eigen, langlopende catalogus, niet iets wat via Omnivaleur is
+gepubliceerd.
+
+**Het echte probleem zat dieper dan het scherm.** `match_shopify_sale`
+(shopify_orders.py) zoekt eerst op `platform_listing_id`, dan pas op SKU. Zonder
+listings-rij vindt geen van beide iets — en `items.sku` is bij een import altijd
+een intern nummer ("IMP-0e8ab24a"), nooit de Shopify-SKU. Handmatig aanvinken
+"staat al gelist" had dus alleen het scherm gerepareerd, niet de
+verkoopherkenning. Bewezen met een voor-en-na op de echte database:
+`match_shopify_sale` gaf `None` zonder de koppeling, en het juiste item mét.
+
+**De koppeling die wél werkt: het eigen nummer.** Het nummer dat de verkoper
+zelf voor de titel zet — "(1274)" — staat óók als variant-SKU in Shopify. Dat is
+precies het nummer dat tweelingen.py (`nummer_van`) al gebruikt om dezelfde
+advertentie tussen twéé eigen kanalen te herkennen; nu ook tussen Omnivaleur en
+Shopify. Twee vangnetten tegen een verkeerde koppeling, dezelfde afweging als
+`familie_ids`:
+  1. het nummer moet bij precies één Shopify-product horen;
+  2. staat er een merk bij beide kanten (item.brand vs. Shopify vendor), dan
+     moet dat overeenkomen.
+
+Bij twijfel wordt niets gekoppeld — een verkeerde koppeling zet een verkoop op
+het verkeerde artikel af, en dat is erger dan handmatig blijven aanvinken.
+GEMETEN: de merkcontrole ving 3 van de 244 kandidaten af, onder meer "(1277)
+Red/White Suitsupply Shirt" dat qua nummer overeenkwam met een Ralph
+Lauren-artikel.
+
+**Nieuw: `backend/services/shopify_reconcile.py`.** `reconcile_shopify_catalog`
+haalt de hele actieve Shopify-catalogus op en koppelt wat ondubbelzinnig
+hetzelfde artikel is; `reconcile_alle_shopify_winkels` doet dat voor elke
+gekoppelde winkel. Draait op twee momenten, allebei zonder dat de verkoper er
+iets voor hoeft te doen:
+  - meteen (op de achtergrond) na het koppelen van Shopify, in alle drie de
+    koppelroutes (OAuth, eigen app, eigen sleutel);
+  - elke nacht om 05:30 (NL-tijd), zodat een product dat buiten Omnivaleur om
+    wordt toegevoegd — bulkimport, handmatig in het winkelbeheer — ook zonder
+    opnieuw koppelen wordt herkend.
+
+**Live gedraaid tegen Revaleur:** 241 gekoppeld, 3 terecht overgeslagen
+(merkverschil), 0 dubbel gekoppeld. Het Suitsupply-shirt toont nu
+`platform_listing_id: 15685268799818`, en `match_shopify_sale` vindt het item
+via diezelfde ID.
+
+**Bijvangst, niet meegenomen vandaag.** Bij het narekenen bleken ook 4 van de 23
+bestaande "active"-rijen naar een Shopify-product te wijzen dat er niet meer is
+(404) — het omgekeerde probleem: het dashboard zegt "gelist" terwijl het weg is.
+Marktplaats, 2dehands en Vinted hebben allemaal een periodieke controle die dat
+soort verdwijningen opmerkt (verkoop_reconciliatie.py); Shopify heeft alleen een
+verkoopcontrole (`shopify_orders.py`), geen "bestaat dit nog"-controle. Dat is
+een aparte, kleinere klus en staat open.
+
+**Ook niet meegenomen: eBay.** Dezelfde structurele opening bestaat daar
+vermoedelijk ook (ook een API-platform zonder importscan), maar is vandaag niet
+gemeten — er is geen `list_products`-achtige functie in platforms/ebay.py en de
+eBay sandbox-credentials werken lokaal toch niet (zie
+[[ebay-local-sandbox-creds]]). Los oppakken als het zich voordoet.
+
+**Ook gevonden, niet gerepareerd:** item "(1327) Navy Suitsupply Suit Pants -
+Men W36" heeft twee actieve shopify-listingsrijen naar twee verschillende
+Shopify-producten (24-07 en 02-08-2026, allebei vóór vandaag) — een oude
+herplaatsing die een tweede product naast het eerste zette in plaats van het te
+vervangen. Niet veroorzaakt door de reconciliatie van vandaag (dat item was al
+gekoppeld en is dus overgeslagen); apart te onderzoeken.
