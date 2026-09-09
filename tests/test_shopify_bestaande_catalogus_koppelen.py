@@ -136,8 +136,8 @@ def _opzet(monkeypatch, items, producten, bestaande_listings=None):
     return db
 
 
-def _item(iid, title, brand=None, sku=None):
-    return {"id": iid, "title": title, "brand": brand, "sku": sku}
+def _item(iid, title, brand=None, sku=None, user_id="u1"):
+    return {"id": iid, "title": title, "brand": brand, "sku": sku, "user_id": user_id}
 
 
 # ── 1. De kern: koppelen wat ondubbelzinnig hetzelfde is ────────────────────
