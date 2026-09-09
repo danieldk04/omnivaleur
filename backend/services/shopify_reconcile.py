@@ -313,16 +313,16 @@ async def reconcile_verweesde_shopify_listings(user_id: str) -> dict:
 
     for item_id, rijen in per_item.items():
         beoordeeld = []
-        onzeker = False
+        onzeker_hier = 0
         for rij in rijen:
             staat = await _product_bestaat_nog(shop, token, rij.get("platform_listing_id"))
             if staat == "onbekend":
-                onzeker = True
+                onzeker_hier += 1
                 continue
             beoordeeld.append((rij, staat == "levend"))
             await asyncio.sleep(_PAUZE_TUSSEN_PAGINAS)
-        if onzeker:
-            overgeslagen += sum(1 for _r, alive in beoordeeld if not alive)
+        if onzeker_hier:
+            overgeslagen += onzeker_hier
             # Bij twijfel over ÉÉN rij van dit artikel raken we de rest van dit
             # artikel deze ronde ook niet aan — de volgende ronde komt terug.
             continue
