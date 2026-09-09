@@ -341,6 +341,60 @@ def _zet_kleur_goed(jobs: list) -> int:
     return aangepast
 
 
+def _haal_links_eruit(db, jobs: list) -> int:
+    """Geen web- of e-mailadres in een advertentie voor Marktplaats of 2dehands,
+    vlak voordat de opdracht de deur uitgaat. Geeft terug hoeveel er zijn
+    aangepast.
+
+    WAAROM DIT ER IS (09-09-2026, Egbert Brouwer). Een zoekertje met een link in
+    de omschrijving publiceren die sites niet: ze zetten hem klaar als bestelregel
+    "Websitevermelding" van EUR 9,00. Zijn winkelmandje bij 2dehands liep zo op
+    tot EUR 153,00 aan advertenties die nooit online kwamen, terwijl wij hem
+    357 keer vertelden dat hij niet ingelogd zou zijn.
+
+    De filter zelf (`_zonder_links` in crosslist.py) zat op het publicatiepad, in
+    `_pick`. Dat is niet het enige pad dat een 'create' klaarzet: de reddingsronde
+    in relist.py bouwde haar eigen payload, en `captured_listing` hierboven vult
+    een lege omschrijving aan met de tekst die letterlijk van de advertentiepagina
+    komt — bij hem dus mét link. Precies dezelfde soort lek als waar
+    `_zet_taal_goed` hieronder voor bestaat, en daarom staat het op dezelfde plek:
+    hier gaat er precies één opdracht naar de extensie, en pas hier is zeker dat
+    hij ook echt gebruikt wordt. Wat voor pad die opdracht ook heeft afgelegd.
+
+    We schrijven het terug in de opdracht, zodat in het dashboard en in de
+    geschiedenis staat wat er werkelijk naar de site is gegaan.
+    """
+    try:
+        from backend.services.crosslist import _zonder_links
+    except Exception as e:  # noqa: BLE001 — het uitdelen gaat hoe dan ook door
+        logger.warning("linkzeef niet beschikbaar: %s", e)
+        return 0
+
+    aangepast = 0
+    for j in jobs or []:
+        if j.get("platform") not in ("marktplaats", "2dehands"):
+            continue
+        pl = j.get("payload")
+        if not isinstance(pl, dict):
+            continue
+        nieuw = dict(pl)
+        for veld in ("title", "description"):
+            waarde = pl.get(veld)
+            if isinstance(waarde, str) and waarde:
+                nieuw[veld] = _zonder_links(waarde)
+        if nieuw == pl:
+            continue
+        logger.info("job %s (%s): web-/e-mailadres uit de advertentie gehaald "
+                    "— dat kost EUR 9,00 per plaatsing", j.get("id"), j.get("platform"))
+        j["payload"] = nieuw
+        aangepast += 1
+        try:
+            db.table("jobs").update({"payload": nieuw}).eq("id", j["id"]).execute()
+        except Exception as e:  # noqa: BLE001 — de opdracht die uitgaat is al schoon
+            logger.warning("job %s: schone tekst niet kunnen opslaan: %s", j.get("id"), e)
+    return aangepast
+
+
 def _zet_taal_goed(db, jobs: list) -> int:
     """De advertentie in de taal van het platform, vlak voordat hij de deur uitgaat.
 
