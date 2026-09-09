@@ -169,6 +169,80 @@ async def marktplaats_webhook(request: Request):
     return {"status": "ok"}
 
 
+# ---------------------------------------------------------------------------
+# Resend — bezorgstatus van elke uitgaande mail (koude mail + app-mail)
+# ---------------------------------------------------------------------------
+# Resend tekent zijn webhooks met het Svix-schema: de handtekening is een
+# HMAC-SHA256 over "{svix-id}.{svix-timestamp}.{body}", met als sleutel het deel
+# na "whsec_" van het ondertekengeheim, base64-gedecodeerd. De handtekeningkop
+# kan meerdere spaties-gescheiden "v1,<sig>"-waarden bevatten (sleutelrotatie).
+
+def _resend_handtekening_klopt(body: bytes, headers) -> bool:
+    geheim = settings.resend_webhook_secret.strip()
+    if not geheim:
+        return False
+    svix_id = headers.get("svix-id") or headers.get("webhook-id") or ""
+    svix_ts = headers.get("svix-timestamp") or headers.get("webhook-timestamp") or ""
+    svix_sig = headers.get("svix-signature") or headers.get("webhook-signature") or ""
+    if not (svix_id and svix_ts and svix_sig):
+        return False
+    try:
+        if abs(time.time() - int(svix_ts)) > 300:
+            return False  # buiten het tijdvenster: mogelijk een herhaalaanval
+    except ValueError:
+        return False
+    sleutel = base64.b64decode(geheim.split("_", 1)[1] if "_" in geheim else geheim)
+    ondertekend = b"%s.%s.%s" % (svix_id.encode(), svix_ts.encode(), body)
+    verwacht = base64.b64encode(hmac.new(sleutel, ondertekend, hashlib.sha256).digest()).decode()
+    for stuk in svix_sig.split(" "):
+        _, _, waarde = stuk.partition(",")
+        if waarde and hmac.compare_digest(waarde, verwacht):
+            return True
+    return False
+
+
+@router.post("/resend")
+async def resend_webhook(request: Request):
+    """Bezorg-, bounce-, klacht- en open-gebeurtenissen van Resend. Elke rij gaat
+    in mail_events; de wekelijkse meting rolt ze op tot open- en bouncecijfers.
+    Configureer in Resend > Webhooks met endpoint https://omnivaleur.com/api/webhooks/resend
+    en zet RESEND_WEBHOOK_SECRET op het signing secret."""
+    raw = await request.body()
+    if not _resend_handtekening_klopt(raw, request.headers):
+        raise HTTPException(status_code=401, detail="Invalid webhook signature")
+
+    payload = json.loads(raw)
+    data = payload.get("data") or {}
+    ontvangers = data.get("to") or []
+    ontvanger = (ontvangers[0] if isinstance(ontvangers, list) and ontvangers
+                 else (ontvangers if isinstance(ontvangers, str) else ""))
+    afzender = data.get("from") or ""
+    domein = afzender.split("@")[-1].strip(">").lower() if "@" in afzender else ""
+    gebeurd = data.get("created_at") or payload.get("created_at")
+    try:
+        gebeurd_iso = datetime.fromisoformat(str(gebeurd).replace("Z", "+00:00")).isoformat()
+    except (ValueError, TypeError):
+        gebeurd_iso = datetime.now(timezone.utc).isoformat()
+
+    rij = {
+        "svix_id": request.headers.get("svix-id") or request.headers.get("webhook-id"),
+        "email_id": data.get("email_id") or data.get("id"),
+        "type": payload.get("type") or "onbekend",
+        "domein": domein,
+        "ontvanger": ontvanger,
+        "onderwerp": data.get("subject"),
+        "bounce_soort": (data.get("bounce") or {}).get("type") if isinstance(data.get("bounce"), dict) else None,
+        "gebeurd_op": gebeurd_iso,
+        "payload": payload,
+    }
+    try:
+        await naast_de_lus(lambda: get_admin_db().table("mail_events")
+                           .upsert(rij, on_conflict="svix_id").execute())
+    except Exception as e:  # noqa: BLE001 — de meting mag de mail niet ophouden
+        logger.warning("Resend-webhook niet opgeslagen: %s", e)
+    return {"status": "ok"}
+
+
 @router.post("/shopify/customers/data_request")
 async def shopify_customers_data_request(request: Request):
     """
