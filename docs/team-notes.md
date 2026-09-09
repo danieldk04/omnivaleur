@@ -7084,3 +7084,33 @@ koppelen van Shopify (op de achtergrond, ná de koppelronde — de opruimronde
 moet weten welke rij al de levende opvolger is) en elke nacht om 05:30.
 `reconcile_alle_shopify_winkels` doet nu beide rondes voor elke gekoppelde
 winkel.
+
+### 09-09-2026 — Marketingcijfers worden nu week op week bewaard
+
+Daniel wilde de mailcijfers (open rate mail 2/3, bounce, bezorging, aanmeldingen)
+op weekniveau kunnen volgen en vergelijken met vorige periodes. Tot nu leefde dat
+alleen live in `mail_state`/`mail_opens` (wordt opgeschoond) en in het
+Resend-dashboard. Geen historie.
+
+Wat gebouwd (commit met "mail_events + week_metingen"):
+- `mail_events` (Supabase): ruwe Resend-webhookgebeurtenissen. Endpoint
+  `/api/webhooks/resend`, Svix-handtekening tegen `RESEND_WEBHOOK_SECRET`.
+- `week_metingen` (Supabase): één rij per week (ma..zo). `backend/services/week_meting.py`
+  rolt op: aanmeldingen + bevestigd, mail 1/2/3 verstuurd + geopend + open%,
+  antwoorden/positief, en bezorging/bounce/klachten uit `mail_events` per domein.
+- Cron zondag 08:20 legt de afgelopen week vast. `scripts/backfill_week_metingen.py`
+  voor de historie (aanmeldingen en verstuurd/geopend zijn retroactief; Resend
+  pas vanaf het moment dat de webhook loopt).
+- `/api/beheer/historie` geeft de weken terug. Dashboard-herindeling komt daarna
+  (Daniels keuze: eerst meten, dan het dashboard licht + Marketing opnieuw).
+
+Openstaand voor Daniel: schema.sql-blok in Supabase draaien, Resend-webhook
+aanzetten (events: sent/delivered/delivery_delayed/bounced/complained/opened/clicked),
+`RESEND_WEBHOOK_SECRET` op Railway, dan het backfill-script.
+
+Twee meetgrenzen, bewust vastgelegd: mail 1 draagt nooit een pixel (open rate
+alleen op mail 2/3), en `mail_reacties` staat sinds 06-09 stil (AI-laag eruit),
+dus `antwoorden`/`positief` per week zijn bevroren op de stand van begin
+september tot IMAP weer aangaat. De aanmeld-, open- en bouncecijfers lopen wel
+door. De aanmeldbevestigingsmail loopt via Supabase Auth, niet via Resend, dus
+die staat niet in `mail_events` tenzij Supabase-SMTP naar Resend wordt gezet.
