@@ -17,6 +17,43 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ---
 
+## shopify-catalogus-koppeling
+
+*09-09-2026 — Shopify-producten die al bestonden voor de koppeling werden nooit herkend als gelist; nummer+merk-match lost dit op en repareert ook de verkoopherkenning*
+
+Marktplaats en 2dehands herkennen een bestaande advertentie via een scan
+(import_candidates). Shopify had dat niet: wie zijn winkel koppelt terwijl er
+al een catalogus staat — de normale situatie — zag elk artikel dat óók op
+Shopify staat gewoon als "niet gelist". Op Revaleur's eigen winkel (315 actieve
+Shopify-producten) stonden 241 artikelen al Active op Shopify zonder
+listings-rij in Omnivaleur.
+
+**Waarom dit meer was dan een scherm-probleem:** `match_shopify_sale`
+(backend/services/shopify_orders.py) zoekt eerst op `platform_listing_id`, dan
+pas op SKU. Zonder listings-rij vindt geen van beide iets, en `items.sku` is
+bij een import altijd een intern nummer ("IMP-xxxx"), nooit de Shopify-SKU.
+Handmatig "staat al gelist" aanvinken had dus alleen het scherm gerepareerd,
+niet de verkoopherkenning.
+
+**Hoe toe te passen:** het nummer dat de verkoper zelf voor de titel zet
+("(1274)") staat óók als variant-SKU in Shopify — hetzelfde nummer dat
+tweelingen.py (`nummer_van`) gebruikt om dezelfde advertentie tussen twee eigen
+kanalen te herkennen. `backend/services/shopify_reconcile.py` matcht daarop,
+met dezelfde twee vangnetten als `familie_ids`: het nummer moet bij precies
+één Shopify-product horen, en staat er een merk bij beide kanten dan moet dat
+overeenkomen. Draait meteen na het koppelen van Shopify (op de achtergrond, in
+alle drie de koppelroutes) en elke nacht om 05:30 voor alle gekoppelde winkels,
+zodat een later toegevoegd Shopify-product ook zonder opnieuw koppelen wordt
+herkend.
+
+**Nog open:** hetzelfde structurele gat bestaat vermoedelijk ook bij eBay (ook
+een API-platform zonder importscan), niet gemeten. En 4 van Revaleur's 23
+actieve shopify-rijen wezen naar een inmiddels verwijderd Shopify-product — het
+omgekeerde probleem, waar nog geen periodieke controle voor is (Marktplaats,
+2dehands en Vinted hebben die wel, zie verkoop_reconciliatie.py).
+
+---
+
 ## sessie-overleeft-het-tabblad
 
 *08-09-2026 — Het inlogbewijs stond in sessionStorage, dus elk nieuw tabblad en elke herstart van Chrome betekende opnieuw inloggen*
