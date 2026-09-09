@@ -17,6 +17,40 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ---
 
+## dashboard-verhuist-opslag-extensie-leest-mee
+
+*09-09-2026 — "Verhuist het dashboard waar het inlogbewijs staat, dan moet content/webapp_sync.js in dezelfde commit mee, anders valt de extensie stil"*
+
+Op 08-09-2026 verhuisde het klantendashboard (`frontend/app.html`,
+`frontend/login.html`) `cl_token` / `cl_refresh` / `cl_email` van
+`sessionStorage` naar `localStorage`, zodat je ingelogd blijft na het sluiten
+van een tabblad. `extension/content/webapp_sync.js`, het content script dat
+datzelfde bewijs aan de service worker van de extensie doorgeeft, bleef
+`sessionStorage` lezen. Gevolg: sinds 08-09 kreeg de extensie geen token meer
+van het dashboard; zodra haar eigen token na ~1 uur verliep lag ze stil, geen
+polls, dashboard "your extension has not checked in", koude wachtrij. Gevonden
+09-09-2026 (Daniel: extensie-icoon opende niet na een auto-update, en daarna
+"steeds weer inactief").
+
+**Why:** frontend en extensie leven in aparte mappen zonder gedeelde constante
+of test die ze aan elkaar knoopt. De breuk is stil: `syncToken()` doet
+`Promise.resolve(false)` en stuurt gewoon geen `SYNC_TOKEN`, zonder fout. Andere
+verkopers merkten het pas toen hún extensietoken toevallig verliep, dus het kwam
+druppelsgewijs binnen als "doet het soms wel en soms niet".
+
+**How to apply:** elke wijziging aan wáár of hóe het dashboard het inlogbewijs
+bewaart, in dezelfde commit spiegelen in `webapp_sync.js`. Sinds 1.0.314 leest
+dat script `localStorage` eerst, dan `sessionStorage`. Het dashboard schrijft nu
+óók naar `sessionStorage` (in `SESSIE.zet` plus een spiegel bij het laden van
+`/app`) als vangnet voor extensiekopieën ouder dan 1.0.314; die regels mogen pas
+weg als elke Web Store-kopie op 1.0.314+ zit. Bewijs:
+`tests/extensie-token-uit-localstorage-test.js` (oude webapp_sync zakt, nieuwe
+niet). Zie "extensie-inlogbewijs-in-storage-local",
+"sessie-overleeft-het-tabblad", "stille-extensie-is-niet-altijd-uitgezet" en
+"frontend-parse-json-safe".
+
+---
+
 ## stille-extensie-is-niet-altijd-uitgezet
 
 *09-09-2026 — Een extensie die zich niet meldt kan ook een kopie zijn die tóch geen werk zou krijgen; zeg dat, stuur niet naar de schakelaar*

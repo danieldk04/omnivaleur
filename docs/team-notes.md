@@ -7216,3 +7216,36 @@ HTTP 200 en toont de echte boekingspagina, gemeten met curl en in de browser.
 
 Klantenservice-brein bijgewerkt: het contact- en kanalenstuk noemt nu de
 belmogelijkheid met deze link.
+
+### 09-09-2026 — Extensie viel stil: dashboard verhuisde het inlogbewijs, het content script bleef op de oude plek kijken
+
+Daniel: het Omnivaleur-extensie-icoon opende eerst niets (na de auto-update naar
+1.0.313 zat Chrome's uitklapmechanisme vast, opgelost met Cmd+Q), en daarna bleef
+de extensie "steeds weer inactief" met op het dashboard tegelijk "Extension active
+(v1.0.313)" links onderin én "your extension has not checked in (last online 4h
+ago)" bovenaan.
+
+Oorzaak, gemeten in zijn browser (`localStorage.cl_token` = aanwezig,
+`sessionStorage.cl_token` = leeg): op 08-09-2026 verhuisde het klantendashboard
+`cl_token`/`cl_refresh`/`cl_email` van sessionStorage naar localStorage (zodat je
+ingelogd blijft na het sluiten van een tabblad, commit "tweede proef krijgt weer
+een waarschuwing"). `extension/content/webapp_sync.js` geeft datzelfde bewijs door
+aan de service worker maar bleef sessionStorage lezen. Sinds 08-09 kreeg de
+extensie dus geen token meer van het dashboard; zodra haar eigen token na ~1 uur
+verliep lag alles stil (scannen, publiceren, verkoopcontrole) en zag Daniel de
+"not checked in"-banner. Andere verkopers liepen er druppelsgewijs tegenaan zodra
+hún extensietoken toevallig verliep.
+
+Gerepareerd (1.0.314 + frontend):
+- `webapp_sync.js` leest nu localStorage eerst, dan sessionStorage.
+- Het dashboard schrijft het bewijs óók naar sessionStorage (in `SESSIE.zet` plus
+  een spiegel bij het laden van `/app`), zodat elke al geïnstalleerde
+  extensiekopie meteen weer een token krijgt zonder Web Store-update. Die
+  frontend-regels mogen pas weg als elke Web Store-kopie op 1.0.314+ zit.
+- Bewijs: `tests/extensie-token-uit-localstorage-test.js` (webapp_sync van vóór
+  de fix stuurt geen token door op het dashboard van nu, de nieuwe wel).
+
+Frontend staat live na deploy. `dist/omnivaleur-extension-1.0.314.zip` is gebouwd;
+uploaden naar de Chrome Web Store kan wachten, de frontend-spiegel dekt het gat.
+
+Les vastgelegd: kennisbank "dashboard-verhuist-opslag-extensie-leest-mee".
