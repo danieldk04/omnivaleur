@@ -1851,6 +1851,67 @@ const _vroegGekoppeld = new Set();
 // https://www.2dehands.be/identity/v2/login?target=%2Fplaats%2F728%2F748
 const MP_LOGINPAGINA = /\/identity\/v\d+\/login|\/identity\/login|\/account\/login\b/i;
 
+// DE BETAALPAGINA VAN MARKTPLAATS / 2DEHANDS.
+//
+// GEMETEN OP 09-09-2026 (Egbert Brouwer / papas-plectrums), en dit was drie
+// weken lang de echte oorzaak achter een melding die iets heel anders zei.
+// Zijn plaatsopdrachten liepen NIET vast op het formulier. Het formulier ging
+// open, werd volledig ingevuld, en na de plaatsklik stuurde 2dehands.be het
+// tabblad naar https://www.2dehands.be/payments/orderOverview/index.html.
+// Letterlijk uit zijn eigen opdrachten:
+//   [tab op https://www.2dehands.be/payments/orderOverview/index.html,
+//    4 invulveld(en), invulscript geladen: nee]
+//   [laatste stap: "plaatsen: op de knop geklikt, wachten op de advertentie"]
+// De advertentie ging dus niet online maar werd een bestelregel van EUR 9,00
+// ("Websitevermelding") in een openstaande bestelling. Wij stonden ondertussen
+// drie minuten te wachten op een advertentie-adres dat nooit komt, meldden
+// daarna "het formulier ging nooit open, je bent misschien niet ingelogd" en
+// stuurden hem naar zijn inlogpagina. Hij was gewoon ingelogd.
+//
+// Erger nog: de rem die het kanaal op pauze zette liet elke ronde bewust één
+// proefadvertentie door. Elke proef was weer EUR 9,00 in diezelfde bestelling.
+// Hij mailde een winkelmandje met 17 regels, EUR 153,00 in totaal.
+//
+// Een betaalpagina is daarom geen vastloper en geen inlogprobleem. Het is een
+// antwoord: dit account plaatst hier niet gratis. Dat is meteen beslissend, en
+// het kanaal gaat hard dicht in plaats van op pauze met proefadvertenties.
+const MP_BETAALPAGINA = /^https:\/\/(?:www\.)?(?:marktplaats\.nl|2dehands\.be)\/payments\//i;
+
+// Alleen een plaatsing kan op de betaalpagina uitkomen; verwijderen en scannen
+// niet. Zo kan een toevallige betaalpagina nooit een scan om zeep helpen.
+function betaalmuurRaaktDezeOpdracht(meta) {
+  if (!meta) return false;
+  if (meta.platform !== "marktplaats" && meta.platform !== "2dehands") return false;
+  const actie = meta.action || "create";
+  return actie === "create" || actie === "content_refresh";
+}
+
+// Wat de verkoper leest als het kanaal om geld vraagt, en wat er met de
+// wachtrij gebeurt. Eén plek, want de bewaker en de adresbewaking komen er
+// allebei op uit.
+async function meldBetaalmuur(tabId, meta, ruwAdres) {
+  const site = SITE_NAAM[meta.platform] || meta.platform;
+  const adres = String(ruwAdres || "").split("?")[0];
+  const geklikt = !!meta.submitClicked;
+  const melding =
+    `${site} does not let this account place adverts for free. `
+    + (geklikt
+        ? `The form was filled in and published, but instead of going online the advert was `
+          + `added to an unpaid ${site} order. `
+        : `${site} sent that tab straight to its payment page instead of to the listing form. `)
+    + `Nothing went online, and nothing has been paid.\n\n`
+    + `${site} is now switched off for your account, so no further adverts are added to that `
+    + `order. Open this page and remove the unpaid lines with the bin icon:\n${adres}\n\n`
+    + `Your other channels keep working, and your items stay ready here. As soon as ${site} `
+    + `lets your account place adverts for free, tell us and we switch the channel back on. `
+    + `[tabblad kwam uit op ${adres}] [extensie ${chrome.runtime.getManifest().version}]`;
+  clearJobWatchdog(tabId);
+  await chrome.storage.local.remove(`jobtab_${tabId}`);
+  await stopPlatformWachtrij(meta.serverUrl, meta.platform, melding).catch(() => {});
+  await reportError(meta.jobId, meta.serverUrl, melding).catch(() => {});
+  sluitWerkTabblad(tabId);
+}
+
 const HEEFT_TOETSEN_NODIG = /^https:\/\/(?:www\.)?(?:marktplaats\.nl|2dehands\.be)\/plaats\b/i;
 
 async function koppelVroeg(tabId, url) {
@@ -2951,6 +3012,18 @@ async function fireJobWatchdog(tabId) {
   if (opInlog) {
     console.warn(`[Omnivaleur] Watchdog: job ${meta.jobId} (${meta.platform}) — tabblad staat op een inlog/verificatiepagina (${snap.url}); behandeld als "formulier ging nooit open".`);
     await meldNooitBegonnen(tabId, meta, snap);
+    return;
+  }
+  // EN STAAT HET TABBLAD OP DE BETAALPAGINA? (09-09-2026)
+  //
+  // De adresbewaking hierboven vangt de sprong normaal live op, maar een
+  // slapende service worker mist chrome.tabs.onUpdated. Dan is dit het vangnet:
+  // de bewaker kijkt zelf in het tabblad, en een betaalpagina is daar net zo
+  // beslissend als een inlogpagina. Zonder dit vangnet werd het alsnog "de
+  // pagina is misschien veranderd".
+  if (snap && MP_BETAALPAGINA.test(snap.url || "") && betaalmuurRaaktDezeOpdracht(meta)) {
+    console.warn(`[Omnivaleur] Watchdog: job ${meta.jobId} (${meta.platform}) — tabblad staat op de betaalpagina (${snap.url}); het account plaatst hier niet gratis.`);
+    await meldBetaalmuur(tabId, meta, snap.url);
     return;
   }
   // WAAR HIELD HET OP? Zonder dit was elke tijdsoverschrijding letterlijk
@@ -5849,6 +5922,21 @@ chrome.tabs.onUpdated.addListener(async (tabId, changeInfo) => {
     await stopPlatformWachtrij(meta.serverUrl, meta.platform, melding).catch(() => {});
     await reportError(meta.jobId, meta.serverUrl, melding).catch(() => {});
     sluitWerkTabblad(tabId);
+    return;
+  }
+
+  // NAAR DE BETAALPAGINA GESTUURD IN PLAATS VAN NAAR DE ADVERTENTIE.
+  //
+  // Zie MP_BETAALPAGINA. Dit moet hier gebeuren en niet in het invulscript: de
+  // plaatsklik navigeert de pagina weg, en daarmee is het invulscript dood
+  // voordat het iets kan melden. De adresbewaking hier is het enige dat de
+  // sprong nog ziet. Meteen melden scheelt bovendien drie minuten stilte per
+  // artikel, en die drie minuten waren precies de tijd waarin de volgende
+  // proefadvertentie alweer in de bestelling belandde.
+  if (MP_BETAALPAGINA.test(changeInfo.url) && betaalmuurRaaktDezeOpdracht(meta)) {
+    console.warn(`[Omnivaleur] ${meta.platform}: tabblad ging naar de betaalpagina `
+      + `(${changeInfo.url}) — het account plaatst hier niet gratis. Kanaal gestopt.`);
+    await meldBetaalmuur(tabId, meta, changeInfo.url);
     return;
   }
 

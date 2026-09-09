@@ -34,11 +34,12 @@ def test_strip_text_tags(raw, expected):
 def test_payload_is_stripped_before_publishing():
     src = (ROOT / "backend/services/crosslist.py").read_text(encoding="utf-8")
     pick = src.split("def _pick(platform: str) -> dict:")[1].split("\n    # API platforms")[0]
-    assert '"title": _strip_text_tags' in pick
+    assert "titel = _strip_text_tags(base.get(\"title\")" in pick
     # De omschrijving gaat sinds 29-08-2026 door _met_slot heen (de vaste tekst
     # onder elke advertentie), maar de <text>-zeef moet daar binnenin blijven
     # staan — anders reist een vertaal-omhulling alsnog mee de advertentie in.
-    assert '"description": _met_slot(_strip_text_tags(' in pick
+    assert "_met_slot(_strip_text_tags(" in pick
+    assert 'return {**base, "title": titel, "description": beschrijving}' in pick
 
 
 # ── 2. Vinted-prijs via de pagina zelf ───────────────────────────────────

@@ -1,13 +1,13 @@
 {
   "version": 1,
-  "updatedAt": 1788979300868,
+  "updatedAt": 1788982497820,
   "nodeCount": 23,
   "nodes": {
     "mem-MEMORY-memory-index": {
       "id": "mem-MEMORY-memory-index",
       "category": "core",
-      "confidence": 0.6800000000000002,
-      "accessCount": 4,
+      "confidence": 0.5,
+      "accessCount": 0,
       "createdAt": 1783151212569
     },
     "mem-feedback_push_to_live----": {
@@ -20,8 +20,8 @@
     "mem-project_zenbtw----": {
       "id": "mem-project_zenbtw----",
       "category": "project_zenbtw",
-      "confidence": 0.53,
-      "accessCount": 1,
+      "confidence": 0.5,
+      "accessCount": 0,
       "createdAt": 1783151212563
     },
     "mem-shopify_workflow----": {
@@ -34,15 +34,15 @@
     "mem-shopify_workflow-auto-push-workflow-for-shopify": {
       "id": "mem-shopify_workflow-auto-push-workflow-for-shopify",
       "category": "shopify_workflow",
-      "confidence": 0.7100000000000002,
-      "accessCount": 5,
+      "confidence": 0.5,
+      "accessCount": 0,
       "createdAt": 1783151212563
     },
     "mem-shopify_workflow-belangrijk--nooit-content-over": {
       "id": "mem-shopify_workflow-belangrijk--nooit-content-over",
       "category": "shopify_workflow",
-      "confidence": 0.6500000000000001,
-      "accessCount": 3,
+      "confidence": 0.5,
+      "accessCount": 0,
       "createdAt": 1783151212563
     },
     "mem-feedback_always_push----": {
@@ -146,15 +146,15 @@
     "mem-revaleur-blog-no-test-publishing----": {
       "id": "mem-revaleur-blog-no-test-publishing----",
       "category": "revaleur-blog-no-test-publishing",
-      "confidence": 0.6800000000000002,
-      "accessCount": 4,
+      "confidence": 0.5,
+      "accessCount": 0,
       "createdAt": 1783151212569
     },
     "mem-revaleur-blog-system----": {
       "id": "mem-revaleur-blog-system----",
       "category": "revaleur-blog-system",
-      "confidence": 0.6800000000000002,
-      "accessCount": 4,
+      "confidence": 0.5,
+      "accessCount": 0,
       "createdAt": 1783151212569
     },
     "insight-1783155000983-xaii": {

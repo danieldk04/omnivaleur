@@ -2836,6 +2836,71 @@ _ONDOORGROND = re.compile(
 _KANSLOOS_DREMPEL = 10
 
 
+# DE BETAALMUUR VAN MARKTPLAATS / 2DEHANDS.
+#
+# GEMETEN OP 09-09-2026 in de opdrachten van Egbert Brouwer (papas-plectrums).
+# Zijn 2dehands liep niet vast op het formulier en niet op zijn inlog. Het
+# formulier ging open, werd ingevuld, en na de plaatsklik sprong het tabblad
+# naar https://www.2dehands.be/payments/orderOverview/index.html: de advertentie
+# werd een bestelregel van EUR 9,00 in plaats van een advertentie. Drie van zijn
+# opdrachten dragen dat adres letterlijk in hun foutmelding.
+#
+# Dit is een andere soort fout dan alle andere hier, en wel om deze reden: elke
+# nieuwe poging kost de verkoper geld. De gewone rem zet een kanaal op pauze en
+# laat er bewust één proefadvertentie per ronde doorheen, want alleen zo kan een
+# pauze zichzelf opheffen. Bij een betaalmuur is die proef juist het probleem:
+# hij is niet gratis. Zijn winkelmandje stond op 17 regels, EUR 153,00.
+#
+# Daarom telt één waarneming, en gaat het kanaal hard dicht in plaats van op
+# pauze. Alleen 2dehands of Marktplaats zelf kan dit veranderen, geen nieuwe
+# versie van onze extensie.
+_BETAALMUUR = re.compile(
+    r"(?:marktplaats\.nl|2dehands\.be)/payments/"
+    r"|does not let (?:this|your) account place adverts for free",
+    re.I,
+)
+
+
+def _kanaal_hard_dicht(db, user_id: str, platform: str) -> bool:
+    """Vraagt dit kanaal dit account geld voor een advertentie?
+
+    Eén waarneming is genoeg. Anders dan bij de gewone rem hoeven we hier niets
+    af te wegen: een kanaal dat om geld vraagt gaat niet vanzelf weer gratis
+    plaatsen, en elke extra poging is een extra bestelregel.
+    """
+    try:
+        rijen = (db.table("jobs").select("result,payload").eq("user_id", user_id)
+                 .eq("platform", platform).eq("action", "create")
+                 .in_("status", ["error", "cancelled"])
+                 .order("created_at", desc=True).limit(120).execute().data or [])
+    except Exception:  # noqa: BLE001 — een rem mag nooit op een storing dichtvallen
+        return False
+    from backend.services.crosslist import _zonder_links  # laat: kringverwijzing
+    for j in rijen:
+        res = j.get("result") or {}
+        tekst = f"{res.get('error') or ''} {res.get('error_oorspronkelijk') or ''}"
+        if not _BETAALMUUR.search(tekst):
+            continue
+        # EEN MISLUKKING MET EEN VERKLAARDE OORZAAK TELT NIET MEE.
+        #
+        # Elke betaalmuur die we tot nu toe hebben gezien kwam van een
+        # advertentie met een webadres in de tekst, en dáár rekende 2dehands
+        # voor (zie _zonder_links in crosslist.py). Dat webadres halen we er nu
+        # uit vóór we plaatsen, dus die mislukkingen zeggen niets meer over wat
+        # we nu zouden versturen. Zouden ze wél meetellen, dan bleef het kanaal
+        # dicht om een reden die er niet meer is: precies de muur die we bij de
+        # vorige rem al eens hebben moeten slopen.
+        #
+        # Blijft er een betaalmuur staan bij een advertentie die al schoon was,
+        # dan is er iets anders aan de hand (een limiet, een rubriek, een
+        # zakelijk account) en gaat het kanaal wél dicht.
+        tekstVanAdvertentie = str((j.get("payload") or {}).get("description") or "")
+        if tekstVanAdvertentie and _zonder_links(tekstVanAdvertentie) != tekstVanAdvertentie:
+            continue
+        return True
+    return False
+
+
 def _nooit_gelukt_op(db, user_id: str, platform: str) -> bool:
     """Heeft deze verkoper op dit kanaal ooit iets GEPLAATST gekregen?
 
@@ -2964,6 +3029,13 @@ def _kanaal_kansloos(db, user_id: str, platform: str) -> bool:
     En over alles heen: is de kopie die nu draait niet de kopie die deze
     mislukkingen maakte, dan tellen ze niet meer mee. Zie _verdient_nieuwe_kans.
     """
+    # DE BETAALMUUR GAAT VOOR, EN GAAT VOOR ALLES.
+    #
+    # Bewust vóór _nooit_gelukt_op en vóór _verdient_nieuwe_kans. Een nieuwere
+    # kopie van onze extensie is hier geen argument: 2dehands vraagt geld, en
+    # daar verandert onze versie niets aan. Zie _kanaal_hard_dicht.
+    if _kanaal_hard_dicht(db, user_id, platform):
+        return True
     if not _nooit_gelukt_op(db, user_id, platform):
         return False
     recent = (db.table("jobs").select("status,result").eq("user_id", user_id)
@@ -3035,6 +3107,55 @@ def _melding_formulier_ging_niet_open(platform: str) -> str:
     )
 
 
+def _melding_link_uit_advertentie(platform: str) -> str:
+    """Wat er op een advertentie staat die op de betaalmuur strandde door een link.
+
+    Dit is een andere boodschap dan _melding_kanaal_vraagt_geld: daar kan de
+    verkoper niets aan doen, hier is het opgelost en hoeft hij alleen opnieuw op
+    publiceren te klikken. Het verschil hardop zeggen is het hele punt: bij
+    Egbert Brouwer stonden er 116 rode regels die naar zijn inlog wezen terwijl
+    de oorzaak in zijn advertentietekst zat.
+    """
+    site = {"marktplaats": "Marktplaats (marktplaats.nl)",
+            "2dehands": "2dehands (2dehands.be)"}.get(platform, platform)
+    betaalpagina = ("https://www.2dehands.be/payments/orderOverview/index.html"
+                    if platform == "2dehands"
+                    else "https://www.marktplaats.nl/payments/orderOverview/index.html")
+    return (
+        f"This one did not go online because the advert text contained your website address. "
+        f"{site} charges EUR 9 for an advert with a link in it, so instead of publishing it, it "
+        f"put the advert on an order to be paid. Nothing went online and nothing was paid.\n\n"
+        f"That is fixed: we now leave the website address and the email address out of adverts "
+        f"for {site}. The rest of your text stays exactly as it is, and your other channels are "
+        f"not touched. Press publish again and it goes through.\n\n"
+        f"One thing left for you: the adverts that ended up on that unpaid order are still there. "
+        f"Open this page and remove them with the bin icon, so nothing can be charged:\n"
+        f"{betaalpagina}"
+    )
+
+
+def _melding_kanaal_vraagt_geld(platform: str) -> str:
+    """Wat de verkoper leest als het kanaal geld vraagt voor elke advertentie.
+
+    Bewust een andere tekst dan de pauze hieronder, want het is een ander
+    verhaal: er komt geen proefadvertentie meer, en wachten heeft geen zin.
+    """
+    site = {"marktplaats": "Marktplaats (marktplaats.nl)",
+            "2dehands": "2dehands (2dehands.be)"}.get(platform, platform)
+    betaalpagina = ("https://www.2dehands.be/payments/orderOverview/index.html"
+                    if platform == "2dehands"
+                    else "https://www.marktplaats.nl/payments/orderOverview/index.html")
+    return (
+        f"{site} does not let your account place adverts for free: it puts every advert on an "
+        f"order to be paid instead of publishing it. That is why nothing has ever gone online "
+        f"there. This is not a rejection of this item, and nothing has been paid.\n\n"
+        f"{site} is switched off for your account, so we do not add anything else to that order. "
+        f"Open this page and remove the unpaid lines with the bin icon:\n{betaalpagina}\n\n"
+        f"Your other channels keep working and your items stay ready here. As soon as {site} "
+        f"lets your account place adverts for free, tell us and we switch the channel back on."
+    )
+
+
 def _melding_kanaal_op_pauze(platform: str) -> str:
     """Wat de verkoper leest als de rem dit kanaal op pauze heeft gezet.
 
@@ -3086,6 +3207,14 @@ def _rechtgezette_foutmelding(job: dict | None, body: dict, versie, kansloos: bo
        we die tekst hier recht voor iedereen die nog een oudere kopie draait.
     """
     fout = str((body or {}).get("error") or "")
+    # 0. DE BETAALMUUR BLIJFT STAAN ZOALS HIJ IS.
+    #
+    # Deze melding is de enige hier die op een GEMETEN adres berust: het
+    # tabblad kwam aantoonbaar uit op /payments/. Elke rechtzetting hieronder is
+    # een gok die het beter denkt te weten, en precies zo'n gok maakte hier drie
+    # weken lang "je bent misschien niet ingelogd" van. Niet meer aankomen.
+    if _BETAALMUUR.search(fout):
+        return dict(body or {})
     # 3. HET FORMULIER GING NOOIT OPEN — zie _kansloze_reeks.
     #    Bewust vóór de rest: dit is de enige rechtzetting die weet dat het
     #    kanaal bij deze verkoper nog nooit heeft gewerkt, en dat weegt zwaarder
@@ -3187,6 +3316,33 @@ def fail_job(job_id: str, body: dict, user_id: str = Depends(get_current_user)):
         except Exception:
             logger.warning("kansloze reeks niet vast te stellen voor %s", job_id)
     body = _rechtgezette_foutmelding(job, body, versie, kansloos)
+
+    # DE BETAALMUUR STOPT DE RIJ METEEN, EN VANAF DE SERVER.
+    #
+    # Dit hoort hier en niet alleen in de extensie. Een nieuwe extensie is bij
+    # deze verkoper pas over weken binnen (de Chrome Web Store deed er eerder
+    # drie weken over), en tot die tijd is dit de enige plek die het kán zien.
+    # Het bewijs zit al in de melding die zijn huidige kopie stuurt: die zet het
+    # adres van het tabblad erbij, en dat adres was /payments/orderOverview.
+    #
+    # En het moet meteen gebeuren, niet na een drempel van drie of tien. Elke
+    # volgende opdracht in die rij is opnieuw EUR 9,00 in een bestelling waar
+    # niemand om heeft gevraagd. Zie _kanaal_hard_dicht.
+    if (job and job.get("action") in ("create", "content_refresh")
+            and job.get("platform") in ("marktplaats", "2dehands")
+            and _BETAALMUUR.search(str((body or {}).get("error") or ""))):
+        try:
+            reden = _melding_kanaal_vraagt_geld(job.get("platform") or "")
+            body = {**body,
+                    "error_oorspronkelijk": body.get("error_oorspronkelijk") or body.get("error"),
+                    "error": reden}
+            aantal = _stop_wachtrij(db, user_id, job["platform"], reden)
+            _gelijk_de_kansloze_muur(db, user_id, job["platform"], reden)
+            logger.warning("Betaalmuur op %s bij %s: %d wachtende opdrachten teruggenomen",
+                           job["platform"], user_id, aantal)
+        except Exception:  # noqa: BLE001 — een fout hier mag de foutmelding niet opeten
+            logger.warning("Betaalmuur: wachtrij niet teruggenomen voor %s/%s",
+                           user_id, job.get("platform"))
 
     # Deze vier bijwerkingen MOETEN aankomen. Viel de verbinding met de database
     # weg, dan kreeg de extensie een 500 terug en bleef de opdracht op "claimed"

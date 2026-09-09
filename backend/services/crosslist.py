@@ -24,6 +24,111 @@ logger = logging.getLogger(__name__)
 STALE_CLAIM_SECONDS = 60
 
 
+# ── Geen webadres in een Marktplaats- of 2dehands-advertentie ──────────────
+#
+# WAAROM DIT ER IS (09-09-2026, Egbert Brouwer / papas-plectrums), en dit is de
+# echte oorzaak achter drie weken "2dehands doet het niet".
+#
+# In zijn advertentietekst staat, onder elk artikel:
+#     https://www.papas-plectrums.nl
+#     info@papas-plectrums.nl
+# 2dehands.be herkent dat webadres en verkoopt de advertentie dan als
+# "Websitevermelding" van EUR 9,00 in plaats van haar te plaatsen. Gemeten in
+# zijn opdrachten: na de plaatsklik sprong het tabblad naar
+# /payments/orderOverview/index.html, en zijn winkelmandje liep op tot 17 regels
+# en EUR 153,00. Nul van zijn 787 plaatsopdrachten is ooit online gekomen.
+#
+# 2dehands zegt het zelf ook: een link in het URL-veld kost geld, en zet je hem
+# in de omschrijving, dan meldt de site "er is een URL gevonden" en wil ze
+# alsnog betaald worden. Op Marktplaats geldt dezelfde regel; het is dezelfde
+# site met dezelfde voorwaarden.
+#
+# Een advertentie die geld kost is geen advertentie die wij namens iemand mogen
+# plaatsen. Dus halen we het webadres eruit voordat we hem versturen, en alleen
+# op die twee kanalen: op Vinted, eBay en Shopify hoort de tekst gewoon heel te
+# blijven.
+_EMAIL_IN_TEKST = re.compile(r"[\w.+-]+@[\w-]+(?:\.[\w-]+)*\.[a-z]{2,}", re.I)
+_URL_IN_TEKST = re.compile(r"(?:https?://|www\.)\S+", re.I)
+# Een kaal webadres zonder http of www: papas-plectrums.nl. Bewust een korte,
+# vaste lijst met eindes, en het stuk ervoor moet minstens twee tekens zijn en
+# niet alleen cijfers. Zo blijven "z.o.z.", "t.w.v." en "€ 35,00" met rust.
+#
+# HET EINDE MOET KLEIN GESCHREVEN ZIJN, en dat is geen schoonheidsfoutje.
+# Gemeten over 5.009 advertenties van andere klanten: met een hoofdletter-
+# ongevoelige lijst sneuvelde "...zie later.De maat is..." — een zin zonder
+# spatie na de punt, waarin "De" toevallig ook een landcode is. Datzelfde geldt
+# voor "nu", "be" en "fr". Een echt webadres schrijft niemand met een
+# hoofdletter aan het eind; een Nederlandse zin wel.
+_KAAL_DOMEIN = re.compile(
+    r"\b(?![0-9]+\.)[A-Za-z0-9][A-Za-z0-9-]{1,}(?:\.[A-Za-z0-9-]{2,})*"
+    r"\.(?:nl|be|com|net|org|eu|de|fr|uk|shop|store|info|biz|nu|io)\b(?:/\S*)?"
+)
+
+
+def _zonder_links(tekst: str) -> str:
+    """Webadressen en e-mailadressen uit een advertentietekst halen.
+
+    Zie de toelichting hierboven. E-mailadressen gaan mee omdat het domein
+    daarin (papas-plectrums.nl) precies hetzelfde is als het webadres, en omdat
+    een marktplaats sowieso niet wil dat je kopers buiten de site om benadert.
+
+    ZONDER RUINE. Blijft er na het schrappen bijna niets over, dan is het geen
+    advertentietekst met een link erin maar een link met wat woorden eromheen.
+    Dan laten we hem staan: een lege omschrijving laat het formulier hangen, en
+    de betaalmuur-detectie in de extensie vangt zo'n geval alsnog op.
+    """
+    if not tekst:
+        return tekst
+    # ZIT ER GEEN ADRES IN, DAN BLIJFT DE TEKST LETTERLIJK ZOALS HIJ IS.
+    #
+    # Zonder deze regel liep elke advertentie door de molen en verloor ze
+    # onderweg haar spaties aan het eind van een regel. Onschuldig, maar het
+    # veranderde de tekst van 18% van alle klanten zonder dat er iets te halen
+    # viel. Wat niets te maken heeft met een link, raken we niet aan.
+    if not (_EMAIL_IN_TEKST.search(tekst) or _URL_IN_TEKST.search(tekst)
+            or _KAAL_DOMEIN.search(tekst)):
+        return tekst
+    # REGEL VOOR REGEL, EN ALLEEN WEGGOOIEN WAT WIJ ZELF LEEG MAAKTEN.
+    #
+    # De eerste versie hiervan haalde in één keer alle lege regels uit de tekst.
+    # Nagemeten over 5.009 advertenties van andere klanten: 55% werd daardoor
+    # aangeraakt, vrijwel allemaal alinea-indeling die niets met een link te
+    # maken had. Een filter dat de advertentie van iedereen verbouwt om er bij
+    # één klant een link uit te halen is erger dan de kwaal.
+    geschrapt = False
+    uit: list[str] = []
+    for regel in tekst.split("\n"):
+        schoon = _EMAIL_IN_TEKST.sub("", regel)
+        schoon = _URL_IN_TEKST.sub("", schoon)
+        schoon = _KAAL_DOMEIN.sub("", schoon)
+        schoon = re.sub(r"[ \t]{2,}", " ", schoon).rstrip()
+        if regel.strip() and not schoon.strip():
+            geschrapt = True       # deze regel was alleen het adres
+            continue
+        if schoon != regel.rstrip():
+            geschrapt = True
+        uit.append(schoon)
+    # Een aankondiging die nergens meer heen wijst: "... met onderstaande link:"
+    # gevolgd door niets. Alleen als er echt iets is weggehaald, en alleen als
+    # de zin zelf naar die link verwijst — anders sneuvelt een onschuldige
+    # "Afmetingen:" onderaan iemands advertentie.
+    _WIJST_NAAR_LINK = re.compile(
+        r"link|website|webshop|site|url|bestel|klik|volg ons|shop", re.I)
+    while geschrapt and uit:
+        laatste = uit[-1].rstrip()
+        if not laatste:
+            uit.pop()
+            continue
+        if laatste.endswith(":") and _WIJST_NAAR_LINK.search(laatste):
+            uit.pop()
+            continue
+        break
+    schoon = "\n".join(uit).strip()
+    if len(schoon) < 10 < len(tekst.strip()):
+        return tekst
+    return schoon
+
+
 def _strip_text_tags(result: str) -> str:
     """
     Haal de <text>-omhulling weg die het model soms meeteruggeeft.
@@ -614,6 +719,34 @@ def _kanaal_kansloos_gecached(db, user_id: str, platform: str) -> bool:
     return False if uit else uit
 
 
+_HARD_DICHT_CACHE: dict[tuple, tuple] = {}
+
+
+def _kanaal_hard_dicht_gecached(db, user_id: str, platform: str) -> bool:
+    """Vraagt dit kanaal geld voor elke advertentie? Dan géén proefopdracht.
+
+    HET VERSCHIL MET DE PAUZE HIERBOVEN (09-09-2026, Egbert Brouwer). Die laat
+    per ronde bewust één advertentie door, want een pauze zonder uitweg is een
+    muur. Dat klopt zolang een mislukte poging alleen tijd kost.
+
+    Bij een betaalmuur kost ze geld. Gemeten: 2dehands.be stuurde zijn tabblad
+    na de plaatsklik naar /payments/orderOverview en zette de advertentie als
+    bestelregel van EUR 9,00 klaar. Elke proefadvertentie die wij er daarna nog
+    doorheen lieten was dus opnieuw EUR 9,00. Hij mailde een winkelmandje met 17
+    regels, EUR 153,00 in totaal. Hier hoort de deur dus wél helemaal dicht.
+    """
+    import time
+    from backend.api.jobs import _kanaal_hard_dicht
+    sleutel = (user_id, platform)
+    nu = time.monotonic()
+    trof = _HARD_DICHT_CACHE.get(sleutel)
+    if trof and nu - trof[1] < _KANSLOOS_CACHE_TTL:
+        return trof[0]
+    uit = bool(_kanaal_hard_dicht(db, user_id, platform))
+    _HARD_DICHT_CACHE[sleutel] = (uit, nu)
+    return uit
+
+
 # De statussen waarin een advertentierij "staat er nog" betekent. `delisted` en
 # `sold` horen er bewust niet bij: dan is de advertentie juist weg.
 _LEVENDE_STATUS = ["active", "hidden", "pending", "relisting"]
@@ -839,10 +972,15 @@ async def publish_to_platforms(item_id: str, platforms: list[str], user_id: str)
     # plaatsing lukt is `_kanaal_kansloos` weer False en loopt alles gewoon.
     kansloos_geblokkeerd: dict[str, str] = {}
     if ext_platforms:
-        from backend.api.jobs import _kanaal_kansloos, _melding_kanaal_op_pauze
+        from backend.api.jobs import (_kanaal_kansloos, _melding_kanaal_op_pauze,
+                                      _melding_kanaal_vraagt_geld)
         for p in ext_platforms:
             try:
-                if await naast_de_lus(lambda p=p: _kanaal_kansloos_gecached(db, user_id, p)):
+                # Eerst de betaalmuur: die kent geen proefadvertentie, want die
+                # is niet gratis. Zie _kanaal_hard_dicht_gecached.
+                if await naast_de_lus(lambda p=p: _kanaal_hard_dicht_gecached(db, user_id, p)):
+                    kansloos_geblokkeerd[p] = _melding_kanaal_vraagt_geld(p)
+                elif await naast_de_lus(lambda p=p: _kanaal_kansloos_gecached(db, user_id, p)):
                     kansloos_geblokkeerd[p] = _melding_kanaal_op_pauze(p)
             except Exception as e:  # noqa: BLE001 — een rem mag nooit publiceren blokkeren op een fout
                 logger.warning("kansloos-check mislukt voor %s/%s: %s", user_id, p, e)
@@ -927,11 +1065,15 @@ async def publish_to_platforms(item_id: str, platforms: list[str], user_id: str)
         # Laatste zeef vlak voor publicatie: nooit een <text>-omhulling in de
         # advertentie. De vertaling haalt hem er al af, maar deze regel geldt voor
         # élk pad hierheen (ook een item dat de tags al opgeslagen had staan).
-        return {
-            **base,
-            "title": _strip_text_tags(base.get("title") or ""),
-            "description": _met_slot(_strip_text_tags(base.get("description") or ""), _slot),
-        }
+        titel = _strip_text_tags(base.get("title") or "")
+        beschrijving = _met_slot(_strip_text_tags(base.get("description") or ""), _slot)
+        # Marktplaats en 2dehands rekenen voor een advertentie met een webadres
+        # erin. Zie _zonder_links: dat kostte Egbert Brouwer drie weken en een
+        # winkelmandje van EUR 153,00 aan advertenties die nooit online kwamen.
+        if platform in ("marktplaats", "2dehands"):
+            titel = _zonder_links(titel)
+            beschrijving = _zonder_links(beschrijving)
+        return {**base, "title": titel, "description": beschrijving}
 
     # Eerst de extensieplatforms in de wachtrij, dán de API-platforms.
     #
