@@ -17,6 +17,40 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ---
 
+## apify-gratis-limiet-op
+
+*09-09-2026 — "Apify gratis tier is $5/mnd en dat is ruim genoeg; kies actors die per resultaat afrekenen, niet per zoekopdracht"*
+
+Het Apify-account draait op het **gratis tier: $5 per maand**. Op 21-08-2026 gaf
+elke actor-aanroep "Monthly usage hard limit exceeded". Dat leek een tegoedprobleem
+maar was een **keuzeprobleem**: er werd een dure discovery-actor gebruikt met een
+limiet van 5 draaibeurten.
+
+Gemeten op 09-09-2026: met actors die **per resultaat** afrekenen is $5 juist heel
+veel. Een hashtagronde over 18 hashtags, 1.458 video's, kostte ongeveer $0,75.
+
+- `funny_ground/tiktok-scraper` — $0,0005 per resultaat, doet hashtags, zoekwoorden
+  én profielen in één actor. De beste standaardkeuze.
+- `apidojo/tiktok-profile-scraper-api` — $0,006 per profiel, dus ~800 profielen
+  voor $5.
+- `scraper-mind/tiktok-profile-email-scraper` — $0,00249 per profiel met e-mail.
+
+Twee dingen die veel werk schelen:
+
+1. **Apify-datasets zijn publiek leesbaar zonder token.** `https://api.apify.com/v2/datasets/<id>/items`
+   geeft gewoon 200. Verwerken kan dus altijd lokaal, ook als APIFY_TOKEN alleen
+   in Railway staat. `x-apify-pagination-total` in de header vertelt de voortgang
+   van een lopende ronde.
+2. Zacht falen blijft het risico: raakt het tegoed tóch op, dan valt de wekelijkse
+   social-scrape (`backend/services/social_scrape.py`) stil als lege sectie in het
+   zondagsrapport, niet als foutmelding.
+
+Instagram is het enige platform waarvoor Apify echt nodig is; TikTok en YouTube
+kunnen ook gratis, zie "tiktok-gratis-schrapen". Verwant:
+"leadgen-vier-bronnen", "omnivaleur-focus-business".
+
+---
+
 ## omnivaleur-focus-business
 
 *09-09-2026 — Omnivaleur is Daniels focus-business voor het jaar na afstuderen; ZENBTW/AxonGear geparkeerd; groei via betaalde influencers + affiliate*
@@ -4025,24 +4059,6 @@ YouTube heeft niets van dit alles nodig: `ytInitialData` in de zoekpagina bevat
 de views, dus een gewone GET volstaat — geen API-sleutel.
 
 Code: `scripts/social_trends_discover.py`. Zie "apify-gratis-limiet-op".
-
----
-
-## apify-gratis-limiet-op
-
-*21-08-2026 — Apify staat op het gratis tier; de maandlimiet was op 21-08-2026 uitgeput*
-
-Het Apify-account draait op het **gratis tier**. Op 21-08-2026 gaf elke
-actor-aanroep "Monthly usage hard limit exceeded" — geen enkele scrape lukte
-meer tot de maandreset.
-
-Gevolg: alles wat op Apify leunt ligt dan stil, ook de bestaande wekelijkse
-social-scrape van de eigen profielen (`backend/services/social_scrape.py`).
-Dat faalt zacht, dus je ziet het niet als foutmelding maar als een lege sectie
-in het zondagse marketingrapport.
-
-Instagram is het enige platform waarvoor Apify echt nodig is; TikTok en YouTube
-kunnen gratis, zie "tiktok-gratis-schrapen".
 
 ---
 
