@@ -1105,7 +1105,7 @@ function start() {
     const knop = document.querySelector(`#tabs button[data-tab="${bewaard}"]`);
     if (knop) knop.click();
   }
-  haalKern(); haalGroei(); haalWebsite(); haalSocial(false); haalKlantenservice(); haalWerkplaats();
+  haalKern(); haalGroei(); haalWebsite(); haalSocial(false); haalKlantenservice(); haalWerkplaats(); haalHistorie();
   // Elke minuut de snelle cijfers, elk kwartier de Google-cijfers. Die laatste
   // hebben server-side toch tien minuten cache en dagquota.
   setInterval(haalKern, 60000);
