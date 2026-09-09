@@ -2574,9 +2574,14 @@ const SESSIE = {
     try { return sessionStorage.getItem(sleutel); } catch (e) { return null; }
   },
   zet(sleutel, waarde) {
-    try { localStorage.setItem(sleutel, waarde); } catch (e) {
-      try { sessionStorage.setItem(sleutel, waarde); } catch (e2) {}
-    }
+    try { localStorage.setItem(sleutel, waarde); } catch (e) {}
+    // Ook in sessionStorage. De browserextensie (content/webapp_sync.js) leest
+    // haar inlogbewijs daaruit. Toen dit bewijs naar localStorage verhuisde
+    // (08-09-2026) vond ze daar niets meer, kon ze haar sessie niet meer
+    // verversen en viel de extensie na een uur stil ("your extension has not
+    // checked in"). Deze regel mag pas weg als elke extensiekopie in de Chrome
+    // Web Store localStorage-first leest (webapp_sync.js vanaf 1.0.314).
+    try { sessionStorage.setItem(sleutel, waarde); } catch (e) {}
   },
   wis(sleutel) {
     try { localStorage.removeItem(sleutel); } catch (e) {}
@@ -2586,6 +2591,18 @@ const SESSIE = {
     ['cl_auth', 'cl_token', 'cl_refresh', 'cl_email'].forEach((s) => this.wis(s));
   },
 };
+
+// Al ingelogd uit een eerdere sessie? Dan staat het bewijs in localStorage maar
+// niet in sessionStorage, en zonder een verse login of tokenvernieuwing roept
+// niemand SESSIE.zet aan. Spiegel het één keer bij het laden van de pagina, zodat
+// content/webapp_sync.js de extensie meteen weer kan inloggen. Zelfde reden als
+// bij SESSIE.zet hierboven.
+try {
+  ['cl_auth', 'cl_token', 'cl_refresh', 'cl_email'].forEach((s) => {
+    const v = localStorage.getItem(s);
+    if (v !== null && sessionStorage.getItem(s) === null) sessionStorage.setItem(s, v);
+  });
+} catch (e) {}
 
 if (!SESSIE.lees('cl_auth')) { window.location.href = '/login.html'; }
 
