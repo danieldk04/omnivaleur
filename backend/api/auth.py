@@ -6,6 +6,7 @@ from pydantic import BaseModel
 from backend.database import (AuthTijdelijkOnbereikbaar, auth_met_herkansing,
                                get_admin_db, get_db, verse_auth_client)
 from backend.api.deps import get_current_user_full, vergeet_inlogbewijs
+from backend.api.referrals import registreer_verwijzing
 
 logger = logging.getLogger(__name__)
 
