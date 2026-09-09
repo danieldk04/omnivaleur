@@ -1125,21 +1125,26 @@ def extension_status(user_id: str = Depends(get_current_user)):
     "offline". online=False means we've never seen it, or not recently.
     """
     db = get_db()
-    # De waarschuwing over een verouderde kopie hoort óók zichtbaar te zijn als
-    # de hartslagtabel nog niet bestaat — dat is precies een account waar dit
-    # soort dingen ongemerkt misgaat.
-    oud = _verouderde_extensie(db, user_id)
+    # Eén vraag voor allebei. Dit scherm klopt elke 20 seconden aan bij iedereen
+    # die de app open heeft, en de server draait op één werker met een
+    # blokkerende databaseclient: een tweede vraag hier is een tweede wachtrij
+    # voor de hele site.
     try:
         row = (
             db.table("extension_heartbeat")
-            .select("last_seen")
+            .select("last_seen,ext_version")
             .eq("user_id", user_id)
             .limit(1)
             .execute()
             .data
         )
     except Exception:
-        return {"online": None, **oud}  # table not migrated yet — hide the indicator
+        # De waarschuwing over een verouderde kopie hoort óók zichtbaar te zijn
+        # als de hartslagtabel nog niet bestaat — dat is precies een account
+        # waar dit soort dingen ongemerkt misgaat.
+        return {"online": None, **_verouderde_extensie(db, user_id)}
+    oud = _verouderde_extensie(
+        db, user_id, hartslag_versie=(row or [{}])[0].get("ext_version"))
 
     if not row or not row[0].get("last_seen"):
         return {"online": False, "last_seen": None, "seconds_ago": None, **oud}
@@ -1157,7 +1162,10 @@ def extension_status(user_id: str = Depends(get_current_user)):
     }
 
 
-def _verouderde_extensie(db, user_id: str) -> dict:
+_ZELF_LEZEN = object()
+
+
+def _verouderde_extensie(db, user_id: str, hartslag_versie=_ZELF_LEZEN) -> dict:
     """Draait er ergens nog een oude kopie van de extensie mee?
 
     Een tweede, met de hand geladen kopie beweegt niet mee met de Chrome Web
@@ -1182,7 +1190,9 @@ def _verouderde_extensie(db, user_id: str) -> dict:
     er ook nog als de kopie al uren stil is, dus dit werkt juist wél op het
     moment dat de verkoper zit te wachten.
     """
-    draait = _draaiende_extensieversie(db, user_id)
+    draait = (_draaiende_extensieversie(db, user_id)
+              if hartslag_versie is _ZELF_LEZEN
+              else _kopstuk_versie(hartslag_versie))
     stilstaand = _kopie_staat_stil(draait)
     if stilstaand:
         achter, gepubliceerd = stilstaand
