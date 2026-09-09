@@ -815,6 +815,48 @@ async function haalKlantenservice() {
 }
 async function haalGroei() { try { toonGroei(await vraag('/api/beheer/groei')); } catch (e) {} }
 async function haalWebsite() { try { toonWebsite(await vraag('/api/beheer/website')); } catch (e) {} }
+
+function toonCreators(d) {
+  const t = d.totaal;
+  el('cr-cijfers').innerHTML =
+      kaart('Kliks', getal(t.klikken), 'op alle creatorlinks samen')
+    + kaart('Aanmeldingen', getal(t.aanmeldingen),
+            t.klikken ? Math.round(100 * t.aanmeldingen / t.klikken) + '% van de kliks' : 'nog geen kliks')
+    + kaart('Betalend', getal(t.betalend), 'op dit moment', t.betalend ? 'op' : '')
+    + kaart('Commissie te betalen', '€' + t.commissie_eur,
+            `${getal(t.commissie_rijp)} klant(en) betalen langer dan ${d.commissie_na_dagen} dagen`)
+    + kaart('Uitgegeven', '€' + t.uitgegeven_eur,
+            t.cac_eur ? '€' + t.cac_eur + ' per betalende klant' : 'nog geen betalende klant');
+
+  tabel('cr-tabel',
+    ['Creator', 'Kliks', 'Aanmeldingen', 'In proef', 'Betalend', 'Commissie rijp', 'Uitgegeven', 'Per klant'],
+    d.creators,
+    (r) => `<tr><td>${veilig(r.creator_name || r.code)}</td>
+      <td class="num">${getal(r.klikken)}</td>
+      <td class="num">${getal(r.aanmeldingen)}</td>
+      <td class="num">${getal(r.in_proef)}</td>
+      <td class="num">${getal(r.betalend)}</td>
+      <td class="num">${getal(r.commissie_rijp)}</td>
+      <td class="num">€${r.uitgegeven_eur}</td>
+      <td class="num">${r.cac_eur ? '€' + r.cac_eur : ''}</td></tr>`);
+
+  tabel('cr-links', ['Creator', 'Link die je deelt', 'Profiel'], d.creators,
+    (r) => `<tr><td>${veilig(r.creator_name || r.code)}</td>
+      <td>${veilig(r.link)}</td>
+      <td>${r.profile_url
+            ? `<a href="${veilig(r.profile_url)}" target="_blank" rel="noopener">${veilig(r.profile_url.replace('https://www.tiktok.com/', ''))}</a>`
+            : ''}</td></tr>`);
+}
+
+async function haalCreators() {
+  try { toonCreators(await vraag('/api/referrals/admin/overzicht')); }
+  catch (e) {
+    // Geen lege tabel tonen: dan lijkt het alsof de campagne niets doet terwijl
+    // er in werkelijkheid niets gemeten kón worden.
+    el('cr-cijfers').innerHTML = `<div class="kaart"><div class="label">Creators</div>
+      <div class="bij">Kon het overzicht niet ophalen: ${veilig(e.message)}</div></div>`;
+  }
+}
 async function haalSocial(ververs) {
   const doel = el('social-posts');
   if (ververs) doel.innerHTML = '<div class="leeg">Ophalen… dit duurt een halve minuut.</div>';
