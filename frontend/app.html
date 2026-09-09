@@ -10787,39 +10787,156 @@ function renderAnalytics(force) {
 <!-- ── "Talk to the founder": altijd zichtbare knop rechtsonder ──────────
      Opent de Calendly-boekingspagina als popup, e-mailadres alvast
      ingevuld. Valt terug op een nieuw tabblad als Calendly's script
-     niet laadt. Alleen in het klantdashboard (app.html). -->
+     niet laadt. Alleen in het klantdashboard (app.html).
+
+     Ligt boven het betaalscherm en het extensievenster (die twijfelaars
+     mogen juist bellen), maar verdwijnt zacht zodra er een echte
+     werk-popup opengaat, zodat hij daar niet in de weg zit. -->
 <link href="https://assets.calendly.com/assets/external/widget.css" rel="stylesheet">
 <script src="https://assets.calendly.com/assets/external/widget.js" async></script>
 <style>
-  #founder-call-fab {
-    position: fixed; right: 20px; bottom: 20px; z-index: 150;
-    display: inline-flex; align-items: center; gap: 8px;
-    padding: 12px 18px; border: none; border-radius: 999px;
-    background: var(--grad); color: #fff; cursor: pointer;
-    font-family: inherit; font-size: 13px; font-weight: 700; line-height: 1; white-space: nowrap;
-    box-shadow: 0 8px 24px rgba(37,99,235,.38), 0 2px 6px rgba(0,0,0,.12);
-    transition: transform .15s ease, box-shadow .15s ease;
-    animation: fabPulse 2.6s ease-out 3;
+  #founder-call-widget {
+    position: fixed; right: 22px; bottom: 22px; z-index: 530;
+    display: flex; flex-direction: column; align-items: flex-end; gap: 12px;
+    font-family: inherit;
+    transition: opacity .22s ease, transform .22s ease;
   }
-  #founder-call-fab:hover { transform: translateY(-2px); box-shadow: 0 12px 30px rgba(37,99,235,.5), 0 3px 8px rgba(0,0,0,.16); }
-  #founder-call-fab:active { transform: translateY(0); }
-  #founder-call-fab svg { width: 16px; height: 16px; flex-shrink: 0; }
-  @keyframes fabPulse {
-    0%   { box-shadow: 0 8px 24px rgba(37,99,235,.38), 0 0 0 0 rgba(37,99,235,.45); }
-    70%  { box-shadow: 0 8px 24px rgba(37,99,235,.38), 0 0 0 16px rgba(37,99,235,0); }
-    100% { box-shadow: 0 8px 24px rgba(37,99,235,.38), 0 0 0 0 rgba(37,99,235,0); }
+  html.founder-fab-hide #founder-call-widget {
+    opacity: 0; pointer-events: none; transform: translateY(14px) scale(.97);
+  }
+
+  /* ---- de knop ---- */
+  #founder-call-fab {
+    position: relative; display: inline-flex; align-items: center; gap: 12px;
+    padding: 8px 20px 8px 8px; border: 1px solid rgba(255,255,255,.09);
+    border-radius: 999px; cursor: pointer; white-space: nowrap;
+    background: linear-gradient(135deg, #111d33, #0c1424);
+    box-shadow: 0 14px 34px rgba(12,20,36,.34), 0 4px 12px rgba(37,99,235,.22),
+                inset 0 1px 0 rgba(255,255,255,.06);
+    color: #fff; font-family: inherit;
+    animation: fcfIn .55s cubic-bezier(.16,.84,.44,1) .9s both;
+    transition: transform .16s ease, box-shadow .16s ease;
+  }
+  #founder-call-fab:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 22px 46px rgba(12,20,36,.42), 0 8px 20px rgba(37,99,235,.34),
+                inset 0 1px 0 rgba(255,255,255,.09);
+  }
+  #founder-call-fab:active { transform: translateY(-1px); }
+  #founder-call-fab:focus-visible { outline: 2px solid var(--mint); outline-offset: 3px; }
+  /* zachte, trage "beschikbaar"-gloed, bewust laag in opaciteit */
+  #founder-call-fab::after {
+    content: ""; position: absolute; inset: -3px; border-radius: 999px;
+    box-shadow: 0 0 0 0 rgba(52,211,153,.45); pointer-events: none;
+    animation: fcfGlow 3.6s ease-out 2s infinite;
+  }
+
+  .fcf-badge {
+    position: relative; width: 38px; height: 38px; border-radius: 50%; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    background: var(--grad); color: #fff; font-weight: 800; font-size: 15px;
+    box-shadow: 0 2px 8px rgba(37,99,235,.45);
+  }
+  .fcf-badge svg { width: 17px; height: 17px; }
+  .fcf-dot {
+    position: absolute; right: -1px; bottom: -1px; width: 11px; height: 11px;
+    border-radius: 50%; background: #22c55e; border: 2px solid #0c1424;
+    animation: fcfDot 2.4s ease-in-out infinite;
+  }
+  .fcf-labels { display: flex; flex-direction: column; gap: 2px; line-height: 1.15; text-align: left; }
+  .fcf-l1 { font-size: 10.5px; font-weight: 600; letter-spacing: .04em;
+            text-transform: uppercase; color: rgba(255,255,255,.5); }
+  .fcf-l2 { font-size: 14px; font-weight: 700; letter-spacing: -.01em; }
+
+  /* ---- eenmalige intro-ballon ---- */
+  #founder-call-bubble {
+    position: relative; width: 290px; max-width: calc(100vw - 44px);
+    background: #fff; color: var(--text); border: 1px solid var(--border);
+    border-radius: 16px; padding: 16px 16px 14px;
+    box-shadow: 0 18px 44px rgba(15,23,42,.2), 0 4px 12px rgba(15,23,42,.08);
+    animation: fcfBubbleIn .5s cubic-bezier(.16,.84,.44,1) both;
+  }
+  #founder-call-bubble::after {
+    content: ""; position: absolute; right: 32px; bottom: -7px; width: 13px; height: 13px;
+    background: #fff; border-right: 1px solid var(--border); border-bottom: 1px solid var(--border);
+    transform: rotate(45deg);
+  }
+  #founder-call-bubble .fcb-head { display: flex; align-items: center; gap: 10px; margin-bottom: 9px; }
+  #founder-call-bubble .fcf-badge { width: 32px; height: 32px; font-size: 13px; }
+  #founder-call-bubble .fcf-dot { width: 9px; height: 9px; border-color: #fff; }
+  #founder-call-bubble .fcb-name { font-size: 13px; font-weight: 800; }
+  #founder-call-bubble .fcb-sub { font-size: 11px; color: var(--muted); }
+  #founder-call-bubble .fcb-text { font-size: 12.5px; color: var(--muted); line-height: 1.55; margin-bottom: 12px; }
+  #founder-call-bubble .fcb-cta {
+    width: 100%; padding: 9px 14px; border: none; border-radius: 9px; cursor: pointer;
+    background: var(--grad); color: #fff; font-family: inherit; font-size: 12.5px; font-weight: 700;
+  }
+  #founder-call-bubble .fcb-cta:hover { filter: brightness(1.05); }
+  #founder-call-bubble-close {
+    position: absolute; top: 8px; right: 8px; width: 22px; height: 22px; border: none;
+    background: transparent; color: var(--muted); font-size: 17px; line-height: 1; cursor: pointer;
+    border-radius: 6px;
+  }
+  #founder-call-bubble-close:hover { background: var(--bg); color: var(--text); }
+
+  @keyframes fcfIn { from { opacity: 0; transform: translateY(26px) scale(.9); } to { opacity: 1; transform: none; } }
+  @keyframes fcfBubbleIn { from { opacity: 0; transform: translateY(14px) scale(.96); } to { opacity: 1; transform: none; } }
+  @keyframes fcfGlow {
+    0%   { box-shadow: 0 0 0 0 rgba(52,211,153,.4); }
+    70%  { box-shadow: 0 0 0 13px rgba(52,211,153,0); }
+    100% { box-shadow: 0 0 0 0 rgba(52,211,153,0); }
+  }
+  @keyframes fcfDot {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(34,197,94,.5); }
+    50%      { box-shadow: 0 0 0 5px rgba(34,197,94,0); }
   }
   @media (max-width: 560px) {
-    #founder-call-fab { right: 12px; bottom: 12px; padding: 11px 15px; font-size: 12px; }
+    #founder-call-widget { right: 14px; bottom: 14px; }
+    #founder-call-fab { padding: 7px 16px 7px 7px; gap: 10px; }
+    .fcf-badge { width: 34px; height: 34px; }
+    .fcf-l2 { font-size: 13px; }
   }
-  @media print { #founder-call-fab { display: none !important; } }
+  @media print { #founder-call-widget { display: none !important; } }
+  @media (prefers-reduced-motion: reduce) {
+    #founder-call-fab, #founder-call-bubble { animation: none !important; }
+    #founder-call-fab::after, .fcf-dot { animation: none !important; }
+  }
 </style>
-<button id="founder-call-fab" onclick="return openFounderCall()" aria-label="Book a free call with the founder">
-  <svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path d="M2 3.5A1.5 1.5 0 013.5 2h1.9a1.5 1.5 0 011.46 1.13l.62 2.5a1.5 1.5 0 01-.4 1.44L7.1 8.35a11.5 11.5 0 004.55 4.55l1.28-1.6a1.5 1.5 0 011.44-.4l2.5.62A1.5 1.5 0 0118 13v1.5a1.5 1.5 0 01-1.5 1.5C8.6 16 2 9.4 2 3.5z"/></svg>
-  Talk to the founder
-</button>
+<div id="founder-call-widget">
+  <div id="founder-call-bubble" hidden>
+    <button id="founder-call-bubble-close" aria-label="Dismiss">&times;</button>
+    <div class="fcb-head">
+      <span class="fcf-badge" aria-hidden="true">D<span class="fcf-dot"></span></span>
+      <div>
+        <div class="fcb-name">Daniel</div>
+        <div class="fcb-sub">Founder of Omnivaleur</div>
+      </div>
+    </div>
+    <div class="fcb-text">Stuck on the setup or got feedback? Book a short video call and I'll walk you through it myself.</div>
+    <button class="fcb-cta" onclick="return openFounderCall()">Pick a time &rarr;</button>
+  </div>
+  <button id="founder-call-fab" onclick="return openFounderCall()" aria-label="Book a free call with the founder">
+    <span class="fcf-badge" aria-hidden="true">
+      <svg viewBox="0 0 20 20" fill="currentColor"><path d="M2 3.5A1.5 1.5 0 013.5 2h1.9a1.5 1.5 0 011.46 1.13l.62 2.5a1.5 1.5 0 01-.4 1.44L7.1 8.35a11.5 11.5 0 004.55 4.55l1.28-1.6a1.5 1.5 0 011.44-.4l2.5.62A1.5 1.5 0 0118 13v1.5a1.5 1.5 0 01-1.5 1.5C8.6 16 2 9.4 2 3.5z"/></svg>
+      <span class="fcf-dot"></span>
+    </span>
+    <span class="fcf-labels">
+      <span class="fcf-l1">Questions or feedback?</span>
+      <span class="fcf-l2">Talk to the founder</span>
+    </span>
+  </button>
+</div>
 <script>
+  var FOUNDER_BUBBLE_KEY = 'omnivaleur_founder_bubble_v1';
+
+  function dismissFounderBubble() {
+    var b = document.getElementById('founder-call-bubble');
+    if (b && !b.hidden) b.hidden = true;
+    try { localStorage.setItem(FOUNDER_BUBBLE_KEY, '1'); } catch (e) {}
+  }
+
   function openFounderCall() {
+    try { dismissFounderBubble(); } catch (e) {}
     var url = 'https://calendly.com/omivaleur/supportcall-omnivaleur';
     var email = '';
     try { email = (typeof SESSIE !== 'undefined' && SESSIE.lees && SESSIE.lees('cl_email')) || ''; } catch (e) {}
@@ -10832,6 +10949,48 @@ function renderAnalytics(force) {
     window.open(url, '_blank', 'noopener');
     return false;
   }
+
+  (function () {
+    var widget = document.getElementById('founder-call-widget');
+    var fab = document.getElementById('founder-call-fab');
+    var bubble = document.getElementById('founder-call-bubble');
+    var closeBtn = document.getElementById('founder-call-bubble-close');
+    if (!widget || !fab) return;
+
+    // Zacht verbergen zodra er een echte werk-popup openstaat. De paywall
+    // en het extensievenster hebben een eigen id (geen .modal-overlay),
+    // dus daar blijft de knop staan.
+    function anyModalOpen() {
+      var m = document.querySelectorAll('.modal-overlay');
+      for (var i = 0; i < m.length; i++) {
+        var d = window.getComputedStyle(m[i]).display;
+        if (d && d !== 'none') return true;
+      }
+      return false;
+    }
+    function sync() { document.documentElement.classList.toggle('founder-fab-hide', anyModalOpen()); }
+    try {
+      new MutationObserver(sync).observe(document.body,
+        { attributes: true, attributeFilter: ['style', 'class'], subtree: true });
+    } catch (e) {}
+    sync();
+
+    // Eenmalige intro-ballon: één keer per browser, gaat vanzelf weer dicht.
+    if (closeBtn) closeBtn.addEventListener('click', dismissFounderBubble);
+    var seen = true;
+    try { seen = localStorage.getItem(FOUNDER_BUBBLE_KEY) === '1'; } catch (e) {}
+    if (!seen && bubble && window.innerWidth >= 480) {
+      setTimeout(function () {
+        if (anyModalOpen()) return;
+        bubble.hidden = false;
+        setTimeout(function () { if (!bubble.hidden) dismissFounderBubble(); }, 13000);
+      }, 2600);
+      window.addEventListener('scroll', function onScroll() {
+        dismissFounderBubble();
+        window.removeEventListener('scroll', onScroll);
+      }, { passive: true });
+    }
+  })();
 </script>
 </body>
 </html>
