@@ -7471,3 +7471,62 @@ Bredere les die hier speelt: een test die functies met de naam uit een HTML-
 bestand knipt breekt stil zodra dat scherm verandert. Dat is een prijs die we
 bewust betalen (er is geen bouwstap voor de frontend), maar het betekent dat een
 rode test hier eerst een vraag is en pas daarna een storing.
+
+### 09-09-2026 — De stempeltest weer groen, en de linkfilter naar de laatste zeef
+
+**De twee kapotte tests.**
+
+`tests/extensie-stempel-test.js` (de openstaande uit de entry hierboven) is
+gerepareerd. Het was inderdaad de lijst functies in `bouwScherm()`, maar niet met
+één naam erbij: `renderExtSetup` roept `extVersionStaatStil()` aan, en die roept
+`versieAchterstand()` aan en leest `_blokkeerAchterstand`. Alle drie erbij, en
+`_blokkeerAchterstand: 20` in de sandbox. Zestien proeven groen.
+
+`tests/prijs-blijft-op-het-formulier-test.js` lag óók om, met vier rode regels,
+en die stond nergens gemeld. Oorzaak: hij haalde de oude code op met
+`git show HEAD:extension/content/shared.js`. Dat werkt precies zolang de
+reparatie nog niet gecommit is; daarna ís HEAD de nieuwe code en vergelijkt de
+voor-proef de reparatie met zichzelf. Nu gepind op `cb1358c0^`, de commit vlak
+vóór de reparatie. Herkenningsteken van dit soort rood: alleen het VOOR-blok
+faalt, het NA-blok is groen.
+
+De andere tests met `git show HEAD:` zijn veilig, want die zitten achter de vlag
+`--oud` en draaien niet vanzelf. Beide lessen staan in de kennisbank.
+
+**Zekerheid omhoog op het 2dehands-werk van vandaag: er was nog een lek.**
+
+`_zonder_links` was op één plek gezet: `_pick` in `crosslist.py`, het gewone
+publicatiepad. Nagelopen welke paden er nog meer een `create` klaarzetten, en dat
+zijn er drie:
+
+- de reddingsronde in `relist.py` bouwt haar eigen payload (`_met_slot`, geen
+  linkfilter). Ditzelfde pad had op 04-09 al eens exact hetzelfde lek, toen met
+  de taal — dus dit is geen theorie.
+- `captured_listing` in `jobs.py` vult een lege omschrijving aan met de tekst die
+  letterlijk van de advertentiepagina is gelezen. Bij Egbert dus mét zijn link.
+- `_zet_taal_goed` levert bij de uitgifte een compleet nieuwe tekst op. Wat
+  daaruit komt is nooit door `_pick` geweest.
+
+Elk van die drie was bij hem EUR 9,00 per advertentie geweest.
+
+Daarom staat de filter er nu ook als laatste zeef: `_haal_links_eruit` in
+`backend/api/jobs.py`, náást `_zet_kleur_goed` en `_zet_taal_goed` en ná die
+laatste (een vertaling vervangt de tekst, dus ervoor filteren is zinloos). Dat is
+de enige plek waar élke opdracht langskomt, welk pad hem ook bouwde. De
+reddingsronde in `relist.py` is daarnaast bij de bron gerepareerd, zodat in het
+dashboard en de geschiedenis hetzelfde staat als wat er naar de site ging.
+
+**Bewijs:** `tests/test_geen_link_in_advertentie.py`, 14 proeven. Twee daarvan
+draaien de échte uitgifte (`get_pending_jobs`) met een payload zoals de
+reddingsronde hem bouwt: mét zeef geen adres in wat de extensie krijgt, en met de
+zeef uitgezet staat de link er aantoonbaar wél in. Zonder die tegenmeting bewijst
+de proef niets. Verder getoetst: een tekst zonder adres blijft byte-voor-byte
+zoals hij is (geen collateral damage bij de andere 46 accounts), Vinted, Shopify
+en eBay blijven er helemaal buiten, en een kapotte database houdt de publicatie
+niet tegen. Hele suite: 1163 python-proeven en alle JS-tests groen.
+
+**Openstaand:** niet gemeten hoeveel van Egberts opdrachten er nu nog met een
+link in de wachtrij staan. Daar is de service_role-sleutel voor nodig en die
+staat lokaal niet in de .env; op Railway werkt het wel. Zodra hij weer opdrachten
+aanmaakt gaan ze hoe dan ook door de zeef, dus dit is een controle achteraf en
+geen risico vooraf.

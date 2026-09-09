@@ -1,1157 +1,5 @@
 [
   {
-    "timestamp": 1788801738971,
-    "nodes": 23,
-    "edges": 2,
-    "pageRankSum": 0.9999999999999996,
-    "confidences": [
-      0.175,
-      0.175,
-      0.175,
-      0.175,
-      0.175,
-      0.175,
-      0.175,
-      0.175,
-      0.175,
-      0.175,
-      0.175,
-      0.175,
-      0.175,
-      0.175,
-      0.175,
-      0.175,
-      0.175,
-      0.175,
-      0.175,
-      0.175,
-      0.175,
-      0.175,
-      0.175
-    ],
-    "accessCounts": [
-      0,
-      0,
-      0,
-      0,
-      0,
-      0,
-      0,
-      0,
-      0,
-      0,
-      0,
-      0,
-      0,
-      0,
-      0,
-      0,
-      0,
-      0,
-      0,
-      0,
-      0,
-      0,
-      0
-    ],
-    "topPatterns": [
-      {
-        "id": "mem-shopify_workflow-belangrijk--nooit-content-over",
-        "summary": "BELANGRIJK: Nooit content overschrijven",
-        "confidence": 0.175,
-        "pageRank": 0.10118975125121034,
-        "accessCount": 0
-      },
-      {
-        "id": "mem-shopify_workflow-auto-push-workflow-for-shopify",
-        "summary": "Auto-push workflow for Shopify theme",
-        "confidence": 0.175,
-        "pageRank": 0.07277020582189424,
-        "accessCount": 0
-      },
-      {
-        "id": "mem-MEMORY-memory-index",
-        "summary": "Memory Index",
-        "confidence": 0.175,
-        "pageRank": 0.03933524013937596,
-        "accessCount": 0
-      },
-      {
-        "id": "mem-feedback_push_to_live----",
-        "summary": "---",
-        "confidence": 0.175,
-        "pageRank": 0.03933524013937596,
-        "accessCount": 0
-      },
-      {
-        "id": "mem-project_zenbtw----",
-        "summary": "---",
-        "confidence": 0.175,
-        "pageRank": 0.03933524013937596,
-        "accessCount": 0
-      },
-      {
-        "id": "mem-shopify_workflow----",
-        "summary": "---",
-        "confidence": 0.175,
-        "pageRank": 0.03933524013937596,
-        "accessCount": 0
-      },
-      {
-        "id": "mem-MEMORY-memory-index",
-        "summary": "Memory Index",
-        "confidence": 0.175,
-        "pageRank": 0.03933524013937596,
-        "accessCount": 0
-      },
-      {
-        "id": "mem-feedback_always_push----",
-        "summary": "---",
-        "confidence": 0.175,
-        "pageRank": 0.03933524013937596,
-        "accessCount": 0
-      },
-      {
-        "id": "mem-project_nexus----",
-        "summary": "---",
-        "confidence": 0.175,
-        "pageRank": 0.03933524013937596,
-        "accessCount": 0
-      },
-      {
-        "id": "mem-user_profile----",
-        "summary": "---",
-        "confidence": 0.175,
-        "pageRank": 0.03933524013937596,
-        "accessCount": 0
-      }
-    ]
-  },
-  {
-    "timestamp": 1788803458956,
-    "nodes": 23,
-    "edges": 2,
-    "pageRankSum": 0.9999999999999996,
-    "confidences": [
-      0.175,
-      0.175,
-      0.175,
-      0.175,
-      0.175,
-      0.175,
-      0.175,
-      0.175,
-      0.175,
-      0.175,
-      0.175,
-      0.175,
-      0.175,
-      0.175,
-      0.175,
-      0.175,
-      0.175,
-      0.175,
-      0.175,
-      0.175,
-      0.175,
-      0.175,
-      0.175
-    ],
-    "accessCounts": [
-      0,
-      0,
-      0,
-      0,
-      0,
-      0,
-      0,
-      0,
-      0,
-      0,
-      0,
-      0,
-      0,
-      0,
-      0,
-      0,
-      0,
-      0,
-      0,
-      0,
-      0,
-      0,
-      0
-    ],
-    "topPatterns": [
-      {
-        "id": "mem-shopify_workflow-belangrijk--nooit-content-over",
-        "summary": "BELANGRIJK: Nooit content overschrijven",
-        "confidence": 0.175,
-        "pageRank": 0.10118975125121034,
-        "accessCount": 0
-      },
-      {
-        "id": "mem-shopify_workflow-auto-push-workflow-for-shopify",
-        "summary": "Auto-push workflow for Shopify theme",
-        "confidence": 0.175,
-        "pageRank": 0.07277020582189424,
-        "accessCount": 0
-      },
-      {
-        "id": "mem-MEMORY-memory-index",
-        "summary": "Memory Index",
-        "confidence": 0.175,
-        "pageRank": 0.03933524013937596,
-        "accessCount": 0
-      },
-      {
-        "id": "mem-feedback_push_to_live----",
-        "summary": "---",
-        "confidence": 0.175,
-        "pageRank": 0.03933524013937596,
-        "accessCount": 0
-      },
-      {
-        "id": "mem-project_zenbtw----",
-        "summary": "---",
-        "confidence": 0.175,
-        "pageRank": 0.03933524013937596,
-        "accessCount": 0
-      },
-      {
-        "id": "mem-shopify_workflow----",
-        "summary": "---",
-        "confidence": 0.175,
-        "pageRank": 0.03933524013937596,
-        "accessCount": 0
-      },
-      {
-        "id": "mem-MEMORY-memory-index",
-        "summary": "Memory Index",
-        "confidence": 0.175,
-        "pageRank": 0.03933524013937596,
-        "accessCount": 0
-      },
-      {
-        "id": "mem-feedback_always_push----",
-        "summary": "---",
-        "confidence": 0.175,
-        "pageRank": 0.03933524013937596,
-        "accessCount": 0
-      },
-      {
-        "id": "mem-project_nexus----",
-        "summary": "---",
-        "confidence": 0.175,
-        "pageRank": 0.03933524013937596,
-        "accessCount": 0
-      },
-      {
-        "id": "mem-user_profile----",
-        "summary": "---",
-        "confidence": 0.175,
-        "pageRank": 0.03933524013937596,
-        "accessCount": 0
-      }
-    ]
-  },
-  {
-    "timestamp": 1788805109809,
-    "nodes": 23,
-    "edges": 2,
-    "pageRankSum": 0.9999999999999996,
-    "confidences": [
-      0.6800000000000002,
-      0.175,
-      0.5800000000000001,
-      0.175,
-      0.7600000000000002,
-      0.7800000000000002,
-      0.175,
-      0.175,
-      0.175,
-      0.6300000000000001,
-      0.175,
-      0.175,
-      0.5800000000000001,
-      0.6300000000000001,
-      0.175,
-      0.5800000000000001,
-      0.175,
-      0.175,
-      0.175,
-      0.175,
-      0.5800000000000001,
-      0.5800000000000001,
-      0.175
-    ],
-    "accessCounts": [
-      4,
-      0,
-      2,
-      0,
-      6,
-      6,
-      0,
-      0,
-      0,
-      3,
-      0,
-      0,
-      2,
-      3,
-      0,
-      2,
-      0,
-      0,
-      0,
-      0,
-      2,
-      2,
-      0
-    ],
-    "topPatterns": [
-      {
-        "id": "mem-shopify_workflow-belangrijk--nooit-content-over",
-        "summary": "BELANGRIJK: Nooit content overschrijven",
-        "confidence": 0.7800000000000002,
-        "pageRank": 0.10118975125121034,
-        "accessCount": 6
-      },
-      {
-        "id": "mem-shopify_workflow-auto-push-workflow-for-shopify",
-        "summary": "Auto-push workflow for Shopify theme",
-        "confidence": 0.7600000000000002,
-        "pageRank": 0.07277020582189424,
-        "accessCount": 6
-      },
-      {
-        "id": "mem-MEMORY-memory-index",
-        "summary": "Memory Index",
-        "confidence": 0.6800000000000002,
-        "pageRank": 0.03933524013937596,
-        "accessCount": 4
-      },
-      {
-        "id": "mem-MEMORY-memory-index",
-        "summary": "Memory Index",
-        "confidence": 0.6800000000000002,
-        "pageRank": 0.03933524013937596,
-        "accessCount": 4
-      },
-      {
-        "id": "mem-MEMORY-memory-index",
-        "summary": "Memory Index",
-        "confidence": 0.6800000000000002,
-        "pageRank": 0.03933524013937596,
-        "accessCount": 4
-      },
-      {
-        "id": "mem-MEMORY-memory-index",
-        "summary": "Memory Index",
-        "confidence": 0.6800000000000002,
-        "pageRank": 0.03933524013937596,
-        "accessCount": 4
-      },
-      {
-        "id": "mem-MEMORY-memory-index",
-        "summary": "Memory Index",
-        "confidence": 0.6800000000000002,
-        "pageRank": 0.03933524013937596,
-        "accessCount": 4
-      },
-      {
-        "id": "mem-MEMORY-memory-index",
-        "summary": "Memory Index",
-        "confidence": 0.6800000000000002,
-        "pageRank": 0.03933524013937596,
-        "accessCount": 4
-      },
-      {
-        "id": "mem-feedback_blog_factual_accuracy----",
-        "summary": "---",
-        "confidence": 0.6300000000000001,
-        "pageRank": 0.03933524013937596,
-        "accessCount": 3
-      },
-      {
-        "id": "mem-feedback_manual_images----",
-        "summary": "---",
-        "confidence": 0.6300000000000001,
-        "pageRank": 0.03933524013937596,
-        "accessCount": 3
-      }
-    ]
-  },
-  {
-    "timestamp": 1788807243505,
-    "nodes": 23,
-    "edges": 2,
-    "pageRankSum": 0.9999999999999996,
-    "confidences": [
-      0.5800000000000001,
-      0.175,
-      0.53,
-      0.175,
-      0.5800000000000001,
-      0.6000000000000001,
-      0.175,
-      0.53,
-      0.175,
-      0.175,
-      0.175,
-      0.175,
-      0.175,
-      0.175,
-      0.175,
-      0.53,
-      0.175,
-      0.175,
-      0.175,
-      0.175,
-      0.5800000000000001,
-      0.5800000000000001,
-      0.175
-    ],
-    "accessCounts": [
-      2,
-      0,
-      1,
-      0,
-      2,
-      2,
-      0,
-      1,
-      0,
-      0,
-      0,
-      0,
-      0,
-      0,
-      0,
-      1,
-      0,
-      0,
-      0,
-      0,
-      2,
-      2,
-      0
-    ],
-    "topPatterns": [
-      {
-        "id": "mem-shopify_workflow-belangrijk--nooit-content-over",
-        "summary": "BELANGRIJK: Nooit content overschrijven",
-        "confidence": 0.6000000000000001,
-        "pageRank": 0.10118975125121034,
-        "accessCount": 2
-      },
-      {
-        "id": "mem-shopify_workflow-auto-push-workflow-for-shopify",
-        "summary": "Auto-push workflow for Shopify theme",
-        "confidence": 0.5800000000000001,
-        "pageRank": 0.07277020582189424,
-        "accessCount": 2
-      },
-      {
-        "id": "mem-MEMORY-memory-index",
-        "summary": "Memory Index",
-        "confidence": 0.5800000000000001,
-        "pageRank": 0.03933524013937596,
-        "accessCount": 2
-      },
-      {
-        "id": "mem-MEMORY-memory-index",
-        "summary": "Memory Index",
-        "confidence": 0.5800000000000001,
-        "pageRank": 0.03933524013937596,
-        "accessCount": 2
-      },
-      {
-        "id": "mem-MEMORY-memory-index",
-        "summary": "Memory Index",
-        "confidence": 0.5800000000000001,
-        "pageRank": 0.03933524013937596,
-        "accessCount": 2
-      },
-      {
-        "id": "mem-MEMORY-memory-index",
-        "summary": "Memory Index",
-        "confidence": 0.5800000000000001,
-        "pageRank": 0.03933524013937596,
-        "accessCount": 2
-      },
-      {
-        "id": "mem-MEMORY-memory-index",
-        "summary": "Memory Index",
-        "confidence": 0.5800000000000001,
-        "pageRank": 0.03933524013937596,
-        "accessCount": 2
-      },
-      {
-        "id": "mem-MEMORY-memory-index",
-        "summary": "Memory Index",
-        "confidence": 0.5800000000000001,
-        "pageRank": 0.03933524013937596,
-        "accessCount": 2
-      },
-      {
-        "id": "mem-revaleur-blog-no-test-publishing----",
-        "summary": "---",
-        "confidence": 0.5800000000000001,
-        "pageRank": 0.03933524013937596,
-        "accessCount": 2
-      },
-      {
-        "id": "mem-revaleur-blog-system----",
-        "summary": "---",
-        "confidence": 0.5800000000000001,
-        "pageRank": 0.03933524013937596,
-        "accessCount": 2
-      }
-    ]
-  },
-  {
-    "timestamp": 1788807243831,
-    "nodes": 23,
-    "edges": 2,
-    "pageRankSum": 0.9999999999999996,
-    "confidences": [
-      0.5800000000000001,
-      0.05,
-      0.53,
-      0.05,
-      0.5800000000000001,
-      0.6000000000000001,
-      0.05,
-      0.53,
-      0.05,
-      0.05,
-      0.05,
-      0.05,
-      0.05,
-      0.05,
-      0.05,
-      0.53,
-      0.05,
-      0.05,
-      0.05,
-      0.05,
-      0.5800000000000001,
-      0.5800000000000001,
-      0.05
-    ],
-    "accessCounts": [
-      2,
-      0,
-      1,
-      0,
-      2,
-      2,
-      0,
-      1,
-      0,
-      0,
-      0,
-      0,
-      0,
-      0,
-      0,
-      1,
-      0,
-      0,
-      0,
-      0,
-      2,
-      2,
-      0
-    ],
-    "topPatterns": [
-      {
-        "id": "mem-shopify_workflow-belangrijk--nooit-content-over",
-        "summary": "BELANGRIJK: Nooit content overschrijven",
-        "confidence": 0.6000000000000001,
-        "pageRank": 0.10118975125121034,
-        "accessCount": 2
-      },
-      {
-        "id": "mem-shopify_workflow-auto-push-workflow-for-shopify",
-        "summary": "Auto-push workflow for Shopify theme",
-        "confidence": 0.5800000000000001,
-        "pageRank": 0.07277020582189424,
-        "accessCount": 2
-      },
-      {
-        "id": "mem-MEMORY-memory-index",
-        "summary": "Memory Index",
-        "confidence": 0.5800000000000001,
-        "pageRank": 0.03933524013937596,
-        "accessCount": 2
-      },
-      {
-        "id": "mem-MEMORY-memory-index",
-        "summary": "Memory Index",
-        "confidence": 0.5800000000000001,
-        "pageRank": 0.03933524013937596,
-        "accessCount": 2
-      },
-      {
-        "id": "mem-MEMORY-memory-index",
-        "summary": "Memory Index",
-        "confidence": 0.5800000000000001,
-        "pageRank": 0.03933524013937596,
-        "accessCount": 2
-      },
-      {
-        "id": "mem-MEMORY-memory-index",
-        "summary": "Memory Index",
-        "confidence": 0.5800000000000001,
-        "pageRank": 0.03933524013937596,
-        "accessCount": 2
-      },
-      {
-        "id": "mem-MEMORY-memory-index",
-        "summary": "Memory Index",
-        "confidence": 0.5800000000000001,
-        "pageRank": 0.03933524013937596,
-        "accessCount": 2
-      },
-      {
-        "id": "mem-MEMORY-memory-index",
-        "summary": "Memory Index",
-        "confidence": 0.5800000000000001,
-        "pageRank": 0.03933524013937596,
-        "accessCount": 2
-      },
-      {
-        "id": "mem-revaleur-blog-no-test-publishing----",
-        "summary": "---",
-        "confidence": 0.5800000000000001,
-        "pageRank": 0.03933524013937596,
-        "accessCount": 2
-      },
-      {
-        "id": "mem-revaleur-blog-system----",
-        "summary": "---",
-        "confidence": 0.5800000000000001,
-        "pageRank": 0.03933524013937596,
-        "accessCount": 2
-      }
-    ]
-  },
-  {
-    "timestamp": 1788807243852,
-    "nodes": 23,
-    "edges": 2,
-    "pageRankSum": 0.9999999999999996,
-    "confidences": [
-      0.5800000000000001,
-      0.05,
-      0.53,
-      0.05,
-      0.5800000000000001,
-      0.6000000000000001,
-      0.05,
-      0.53,
-      0.05,
-      0.05,
-      0.05,
-      0.05,
-      0.05,
-      0.05,
-      0.05,
-      0.53,
-      0.05,
-      0.05,
-      0.05,
-      0.05,
-      0.5800000000000001,
-      0.5800000000000001,
-      0.05
-    ],
-    "accessCounts": [
-      2,
-      0,
-      1,
-      0,
-      2,
-      2,
-      0,
-      1,
-      0,
-      0,
-      0,
-      0,
-      0,
-      0,
-      0,
-      1,
-      0,
-      0,
-      0,
-      0,
-      2,
-      2,
-      0
-    ],
-    "topPatterns": [
-      {
-        "id": "mem-shopify_workflow-belangrijk--nooit-content-over",
-        "summary": "BELANGRIJK: Nooit content overschrijven",
-        "confidence": 0.6000000000000001,
-        "pageRank": 0.10118975125121034,
-        "accessCount": 2
-      },
-      {
-        "id": "mem-shopify_workflow-auto-push-workflow-for-shopify",
-        "summary": "Auto-push workflow for Shopify theme",
-        "confidence": 0.5800000000000001,
-        "pageRank": 0.07277020582189424,
-        "accessCount": 2
-      },
-      {
-        "id": "mem-MEMORY-memory-index",
-        "summary": "Memory Index",
-        "confidence": 0.5800000000000001,
-        "pageRank": 0.03933524013937596,
-        "accessCount": 2
-      },
-      {
-        "id": "mem-MEMORY-memory-index",
-        "summary": "Memory Index",
-        "confidence": 0.5800000000000001,
-        "pageRank": 0.03933524013937596,
-        "accessCount": 2
-      },
-      {
-        "id": "mem-MEMORY-memory-index",
-        "summary": "Memory Index",
-        "confidence": 0.5800000000000001,
-        "pageRank": 0.03933524013937596,
-        "accessCount": 2
-      },
-      {
-        "id": "mem-MEMORY-memory-index",
-        "summary": "Memory Index",
-        "confidence": 0.5800000000000001,
-        "pageRank": 0.03933524013937596,
-        "accessCount": 2
-      },
-      {
-        "id": "mem-MEMORY-memory-index",
-        "summary": "Memory Index",
-        "confidence": 0.5800000000000001,
-        "pageRank": 0.03933524013937596,
-        "accessCount": 2
-      },
-      {
-        "id": "mem-MEMORY-memory-index",
-        "summary": "Memory Index",
-        "confidence": 0.5800000000000001,
-        "pageRank": 0.03933524013937596,
-        "accessCount": 2
-      },
-      {
-        "id": "mem-revaleur-blog-no-test-publishing----",
-        "summary": "---",
-        "confidence": 0.5800000000000001,
-        "pageRank": 0.03933524013937596,
-        "accessCount": 2
-      },
-      {
-        "id": "mem-revaleur-blog-system----",
-        "summary": "---",
-        "confidence": 0.5800000000000001,
-        "pageRank": 0.03933524013937596,
-        "accessCount": 2
-      }
-    ]
-  },
-  {
-    "timestamp": 1788807243902,
-    "nodes": 23,
-    "edges": 2,
-    "pageRankSum": 0.9999999999999996,
-    "confidences": [
-      0.5800000000000001,
-      0.05,
-      0.53,
-      0.05,
-      0.5800000000000001,
-      0.6000000000000001,
-      0.05,
-      0.53,
-      0.05,
-      0.05,
-      0.05,
-      0.05,
-      0.05,
-      0.05,
-      0.05,
-      0.53,
-      0.05,
-      0.05,
-      0.05,
-      0.05,
-      0.5800000000000001,
-      0.5800000000000001,
-      0.05
-    ],
-    "accessCounts": [
-      2,
-      0,
-      1,
-      0,
-      2,
-      2,
-      0,
-      1,
-      0,
-      0,
-      0,
-      0,
-      0,
-      0,
-      0,
-      1,
-      0,
-      0,
-      0,
-      0,
-      2,
-      2,
-      0
-    ],
-    "topPatterns": [
-      {
-        "id": "mem-shopify_workflow-belangrijk--nooit-content-over",
-        "summary": "BELANGRIJK: Nooit content overschrijven",
-        "confidence": 0.6000000000000001,
-        "pageRank": 0.10118975125121034,
-        "accessCount": 2
-      },
-      {
-        "id": "mem-shopify_workflow-auto-push-workflow-for-shopify",
-        "summary": "Auto-push workflow for Shopify theme",
-        "confidence": 0.5800000000000001,
-        "pageRank": 0.07277020582189424,
-        "accessCount": 2
-      },
-      {
-        "id": "mem-MEMORY-memory-index",
-        "summary": "Memory Index",
-        "confidence": 0.5800000000000001,
-        "pageRank": 0.03933524013937596,
-        "accessCount": 2
-      },
-      {
-        "id": "mem-MEMORY-memory-index",
-        "summary": "Memory Index",
-        "confidence": 0.5800000000000001,
-        "pageRank": 0.03933524013937596,
-        "accessCount": 2
-      },
-      {
-        "id": "mem-MEMORY-memory-index",
-        "summary": "Memory Index",
-        "confidence": 0.5800000000000001,
-        "pageRank": 0.03933524013937596,
-        "accessCount": 2
-      },
-      {
-        "id": "mem-MEMORY-memory-index",
-        "summary": "Memory Index",
-        "confidence": 0.5800000000000001,
-        "pageRank": 0.03933524013937596,
-        "accessCount": 2
-      },
-      {
-        "id": "mem-MEMORY-memory-index",
-        "summary": "Memory Index",
-        "confidence": 0.5800000000000001,
-        "pageRank": 0.03933524013937596,
-        "accessCount": 2
-      },
-      {
-        "id": "mem-MEMORY-memory-index",
-        "summary": "Memory Index",
-        "confidence": 0.5800000000000001,
-        "pageRank": 0.03933524013937596,
-        "accessCount": 2
-      },
-      {
-        "id": "mem-revaleur-blog-no-test-publishing----",
-        "summary": "---",
-        "confidence": 0.5800000000000001,
-        "pageRank": 0.03933524013937596,
-        "accessCount": 2
-      },
-      {
-        "id": "mem-revaleur-blog-system----",
-        "summary": "---",
-        "confidence": 0.5800000000000001,
-        "pageRank": 0.03933524013937596,
-        "accessCount": 2
-      }
-    ]
-  },
-  {
-    "timestamp": 1788807243955,
-    "nodes": 23,
-    "edges": 2,
-    "pageRankSum": 0.9999999999999996,
-    "confidences": [
-      0.5800000000000001,
-      0.05,
-      0.53,
-      0.05,
-      0.5800000000000001,
-      0.6000000000000001,
-      0.05,
-      0.53,
-      0.05,
-      0.05,
-      0.05,
-      0.05,
-      0.05,
-      0.05,
-      0.05,
-      0.53,
-      0.05,
-      0.05,
-      0.05,
-      0.05,
-      0.5800000000000001,
-      0.5800000000000001,
-      0.05
-    ],
-    "accessCounts": [
-      2,
-      0,
-      1,
-      0,
-      2,
-      2,
-      0,
-      1,
-      0,
-      0,
-      0,
-      0,
-      0,
-      0,
-      0,
-      1,
-      0,
-      0,
-      0,
-      0,
-      2,
-      2,
-      0
-    ],
-    "topPatterns": [
-      {
-        "id": "mem-shopify_workflow-belangrijk--nooit-content-over",
-        "summary": "BELANGRIJK: Nooit content overschrijven",
-        "confidence": 0.6000000000000001,
-        "pageRank": 0.10118975125121034,
-        "accessCount": 2
-      },
-      {
-        "id": "mem-shopify_workflow-auto-push-workflow-for-shopify",
-        "summary": "Auto-push workflow for Shopify theme",
-        "confidence": 0.5800000000000001,
-        "pageRank": 0.07277020582189424,
-        "accessCount": 2
-      },
-      {
-        "id": "mem-MEMORY-memory-index",
-        "summary": "Memory Index",
-        "confidence": 0.5800000000000001,
-        "pageRank": 0.03933524013937596,
-        "accessCount": 2
-      },
-      {
-        "id": "mem-MEMORY-memory-index",
-        "summary": "Memory Index",
-        "confidence": 0.5800000000000001,
-        "pageRank": 0.03933524013937596,
-        "accessCount": 2
-      },
-      {
-        "id": "mem-MEMORY-memory-index",
-        "summary": "Memory Index",
-        "confidence": 0.5800000000000001,
-        "pageRank": 0.03933524013937596,
-        "accessCount": 2
-      },
-      {
-        "id": "mem-MEMORY-memory-index",
-        "summary": "Memory Index",
-        "confidence": 0.5800000000000001,
-        "pageRank": 0.03933524013937596,
-        "accessCount": 2
-      },
-      {
-        "id": "mem-MEMORY-memory-index",
-        "summary": "Memory Index",
-        "confidence": 0.5800000000000001,
-        "pageRank": 0.03933524013937596,
-        "accessCount": 2
-      },
-      {
-        "id": "mem-MEMORY-memory-index",
-        "summary": "Memory Index",
-        "confidence": 0.5800000000000001,
-        "pageRank": 0.03933524013937596,
-        "accessCount": 2
-      },
-      {
-        "id": "mem-revaleur-blog-no-test-publishing----",
-        "summary": "---",
-        "confidence": 0.5800000000000001,
-        "pageRank": 0.03933524013937596,
-        "accessCount": 2
-      },
-      {
-        "id": "mem-revaleur-blog-system----",
-        "summary": "---",
-        "confidence": 0.5800000000000001,
-        "pageRank": 0.03933524013937596,
-        "accessCount": 2
-      }
-    ]
-  },
-  {
-    "timestamp": 1788807243991,
-    "nodes": 23,
-    "edges": 2,
-    "pageRankSum": 0.9999999999999996,
-    "confidences": [
-      0.5800000000000001,
-      0.05,
-      0.53,
-      0.05,
-      0.5800000000000001,
-      0.6000000000000001,
-      0.05,
-      0.53,
-      0.05,
-      0.05,
-      0.05,
-      0.05,
-      0.05,
-      0.05,
-      0.05,
-      0.53,
-      0.05,
-      0.05,
-      0.05,
-      0.05,
-      0.5800000000000001,
-      0.5800000000000001,
-      0.05
-    ],
-    "accessCounts": [
-      2,
-      0,
-      1,
-      0,
-      2,
-      2,
-      0,
-      1,
-      0,
-      0,
-      0,
-      0,
-      0,
-      0,
-      0,
-      1,
-      0,
-      0,
-      0,
-      0,
-      2,
-      2,
-      0
-    ],
-    "topPatterns": [
-      {
-        "id": "mem-shopify_workflow-belangrijk--nooit-content-over",
-        "summary": "BELANGRIJK: Nooit content overschrijven",
-        "confidence": 0.6000000000000001,
-        "pageRank": 0.10118975125121034,
-        "accessCount": 2
-      },
-      {
-        "id": "mem-shopify_workflow-auto-push-workflow-for-shopify",
-        "summary": "Auto-push workflow for Shopify theme",
-        "confidence": 0.5800000000000001,
-        "pageRank": 0.07277020582189424,
-        "accessCount": 2
-      },
-      {
-        "id": "mem-MEMORY-memory-index",
-        "summary": "Memory Index",
-        "confidence": 0.5800000000000001,
-        "pageRank": 0.03933524013937596,
-        "accessCount": 2
-      },
-      {
-        "id": "mem-MEMORY-memory-index",
-        "summary": "Memory Index",
-        "confidence": 0.5800000000000001,
-        "pageRank": 0.03933524013937596,
-        "accessCount": 2
-      },
-      {
-        "id": "mem-MEMORY-memory-index",
-        "summary": "Memory Index",
-        "confidence": 0.5800000000000001,
-        "pageRank": 0.03933524013937596,
-        "accessCount": 2
-      },
-      {
-        "id": "mem-MEMORY-memory-index",
-        "summary": "Memory Index",
-        "confidence": 0.5800000000000001,
-        "pageRank": 0.03933524013937596,
-        "accessCount": 2
-      },
-      {
-        "id": "mem-MEMORY-memory-index",
-        "summary": "Memory Index",
-        "confidence": 0.5800000000000001,
-        "pageRank": 0.03933524013937596,
-        "accessCount": 2
-      },
-      {
-        "id": "mem-MEMORY-memory-index",
-        "summary": "Memory Index",
-        "confidence": 0.5800000000000001,
-        "pageRank": 0.03933524013937596,
-        "accessCount": 2
-      },
-      {
-        "id": "mem-revaleur-blog-no-test-publishing----",
-        "summary": "---",
-        "confidence": 0.5800000000000001,
-        "pageRank": 0.03933524013937596,
-        "accessCount": 2
-      },
-      {
-        "id": "mem-revaleur-blog-system----",
-        "summary": "---",
-        "confidence": 0.5800000000000001,
-        "pageRank": 0.03933524013937596,
-        "accessCount": 2
-      }
-    ]
-  },
-  {
     "timestamp": 1788807244204,
     "nodes": 23,
     "edges": 2,
@@ -6273,6 +5121,1158 @@
   },
   {
     "timestamp": 1788982402834,
+    "nodes": 23,
+    "edges": 2,
+    "pageRankSum": 0.9999999999999996,
+    "confidences": [
+      0.16499999999999998,
+      0.16499999999999998,
+      0.16499999999999998,
+      0.16499999999999998,
+      0.16499999999999998,
+      0.16499999999999998,
+      0.16499999999999998,
+      0.16499999999999998,
+      0.16499999999999998,
+      0.16499999999999998,
+      0.16499999999999998,
+      0.16499999999999998,
+      0.16499999999999998,
+      0.16499999999999998,
+      0.16499999999999998,
+      0.16499999999999998,
+      0.16499999999999998,
+      0.16499999999999998,
+      0.16499999999999998,
+      0.16499999999999998,
+      0.16499999999999998,
+      0.16499999999999998,
+      0.16499999999999998
+    ],
+    "accessCounts": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+    ],
+    "topPatterns": [
+      {
+        "id": "mem-shopify_workflow-belangrijk--nooit-content-over",
+        "summary": "BELANGRIJK: Nooit content overschrijven",
+        "confidence": 0.16499999999999998,
+        "pageRank": 0.10118975125121034,
+        "accessCount": 0
+      },
+      {
+        "id": "mem-shopify_workflow-auto-push-workflow-for-shopify",
+        "summary": "Auto-push workflow for Shopify theme",
+        "confidence": 0.16499999999999998,
+        "pageRank": 0.07277020582189424,
+        "accessCount": 0
+      },
+      {
+        "id": "mem-MEMORY-memory-index",
+        "summary": "Memory Index",
+        "confidence": 0.16499999999999998,
+        "pageRank": 0.03933524013937596,
+        "accessCount": 0
+      },
+      {
+        "id": "mem-feedback_push_to_live----",
+        "summary": "---",
+        "confidence": 0.16499999999999998,
+        "pageRank": 0.03933524013937596,
+        "accessCount": 0
+      },
+      {
+        "id": "mem-project_zenbtw----",
+        "summary": "---",
+        "confidence": 0.16499999999999998,
+        "pageRank": 0.03933524013937596,
+        "accessCount": 0
+      },
+      {
+        "id": "mem-shopify_workflow----",
+        "summary": "---",
+        "confidence": 0.16499999999999998,
+        "pageRank": 0.03933524013937596,
+        "accessCount": 0
+      },
+      {
+        "id": "mem-MEMORY-memory-index",
+        "summary": "Memory Index",
+        "confidence": 0.16499999999999998,
+        "pageRank": 0.03933524013937596,
+        "accessCount": 0
+      },
+      {
+        "id": "mem-feedback_always_push----",
+        "summary": "---",
+        "confidence": 0.16499999999999998,
+        "pageRank": 0.03933524013937596,
+        "accessCount": 0
+      },
+      {
+        "id": "mem-project_nexus----",
+        "summary": "---",
+        "confidence": 0.16499999999999998,
+        "pageRank": 0.03933524013937596,
+        "accessCount": 0
+      },
+      {
+        "id": "mem-user_profile----",
+        "summary": "---",
+        "confidence": 0.16499999999999998,
+        "pageRank": 0.03933524013937596,
+        "accessCount": 0
+      }
+    ]
+  },
+  {
+    "timestamp": 1788984767275,
+    "nodes": 23,
+    "edges": 2,
+    "pageRankSum": 0.9999999999999996,
+    "confidences": [
+      0.5800000000000001,
+      0.16499999999999998,
+      0.53,
+      0.16499999999999998,
+      0.5800000000000001,
+      0.6000000000000001,
+      0.16499999999999998,
+      0.16499999999999998,
+      0.16499999999999998,
+      0.16499999999999998,
+      0.16499999999999998,
+      0.16499999999999998,
+      0.53,
+      0.16499999999999998,
+      0.16499999999999998,
+      0.53,
+      0.16499999999999998,
+      0.16499999999999998,
+      0.16499999999999998,
+      0.16499999999999998,
+      0.5800000000000001,
+      0.5800000000000001,
+      0.16499999999999998
+    ],
+    "accessCounts": [
+      2,
+      0,
+      1,
+      0,
+      2,
+      2,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      1,
+      0,
+      0,
+      1,
+      0,
+      0,
+      0,
+      0,
+      2,
+      2,
+      0
+    ],
+    "topPatterns": [
+      {
+        "id": "mem-shopify_workflow-belangrijk--nooit-content-over",
+        "summary": "BELANGRIJK: Nooit content overschrijven",
+        "confidence": 0.6000000000000001,
+        "pageRank": 0.10118975125121034,
+        "accessCount": 2
+      },
+      {
+        "id": "mem-shopify_workflow-auto-push-workflow-for-shopify",
+        "summary": "Auto-push workflow for Shopify theme",
+        "confidence": 0.5800000000000001,
+        "pageRank": 0.07277020582189424,
+        "accessCount": 2
+      },
+      {
+        "id": "mem-MEMORY-memory-index",
+        "summary": "Memory Index",
+        "confidence": 0.5800000000000001,
+        "pageRank": 0.03933524013937596,
+        "accessCount": 2
+      },
+      {
+        "id": "mem-MEMORY-memory-index",
+        "summary": "Memory Index",
+        "confidence": 0.5800000000000001,
+        "pageRank": 0.03933524013937596,
+        "accessCount": 2
+      },
+      {
+        "id": "mem-MEMORY-memory-index",
+        "summary": "Memory Index",
+        "confidence": 0.5800000000000001,
+        "pageRank": 0.03933524013937596,
+        "accessCount": 2
+      },
+      {
+        "id": "mem-MEMORY-memory-index",
+        "summary": "Memory Index",
+        "confidence": 0.5800000000000001,
+        "pageRank": 0.03933524013937596,
+        "accessCount": 2
+      },
+      {
+        "id": "mem-MEMORY-memory-index",
+        "summary": "Memory Index",
+        "confidence": 0.5800000000000001,
+        "pageRank": 0.03933524013937596,
+        "accessCount": 2
+      },
+      {
+        "id": "mem-MEMORY-memory-index",
+        "summary": "Memory Index",
+        "confidence": 0.5800000000000001,
+        "pageRank": 0.03933524013937596,
+        "accessCount": 2
+      },
+      {
+        "id": "mem-revaleur-blog-no-test-publishing----",
+        "summary": "---",
+        "confidence": 0.5800000000000001,
+        "pageRank": 0.03933524013937596,
+        "accessCount": 2
+      },
+      {
+        "id": "mem-revaleur-blog-system----",
+        "summary": "---",
+        "confidence": 0.5800000000000001,
+        "pageRank": 0.03933524013937596,
+        "accessCount": 2
+      }
+    ]
+  },
+  {
+    "timestamp": 1788984768725,
+    "nodes": 23,
+    "edges": 2,
+    "pageRankSum": 0.9999999999999996,
+    "confidences": [
+      0.5800000000000001,
+      0.05,
+      0.53,
+      0.05,
+      0.5800000000000001,
+      0.6000000000000001,
+      0.05,
+      0.05,
+      0.05,
+      0.05,
+      0.05,
+      0.05,
+      0.53,
+      0.05,
+      0.05,
+      0.53,
+      0.05,
+      0.05,
+      0.05,
+      0.05,
+      0.5800000000000001,
+      0.5800000000000001,
+      0.05
+    ],
+    "accessCounts": [
+      2,
+      0,
+      1,
+      0,
+      2,
+      2,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      1,
+      0,
+      0,
+      1,
+      0,
+      0,
+      0,
+      0,
+      2,
+      2,
+      0
+    ],
+    "topPatterns": [
+      {
+        "id": "mem-shopify_workflow-belangrijk--nooit-content-over",
+        "summary": "BELANGRIJK: Nooit content overschrijven",
+        "confidence": 0.6000000000000001,
+        "pageRank": 0.10118975125121034,
+        "accessCount": 2
+      },
+      {
+        "id": "mem-shopify_workflow-auto-push-workflow-for-shopify",
+        "summary": "Auto-push workflow for Shopify theme",
+        "confidence": 0.5800000000000001,
+        "pageRank": 0.07277020582189424,
+        "accessCount": 2
+      },
+      {
+        "id": "mem-MEMORY-memory-index",
+        "summary": "Memory Index",
+        "confidence": 0.5800000000000001,
+        "pageRank": 0.03933524013937596,
+        "accessCount": 2
+      },
+      {
+        "id": "mem-MEMORY-memory-index",
+        "summary": "Memory Index",
+        "confidence": 0.5800000000000001,
+        "pageRank": 0.03933524013937596,
+        "accessCount": 2
+      },
+      {
+        "id": "mem-MEMORY-memory-index",
+        "summary": "Memory Index",
+        "confidence": 0.5800000000000001,
+        "pageRank": 0.03933524013937596,
+        "accessCount": 2
+      },
+      {
+        "id": "mem-MEMORY-memory-index",
+        "summary": "Memory Index",
+        "confidence": 0.5800000000000001,
+        "pageRank": 0.03933524013937596,
+        "accessCount": 2
+      },
+      {
+        "id": "mem-MEMORY-memory-index",
+        "summary": "Memory Index",
+        "confidence": 0.5800000000000001,
+        "pageRank": 0.03933524013937596,
+        "accessCount": 2
+      },
+      {
+        "id": "mem-MEMORY-memory-index",
+        "summary": "Memory Index",
+        "confidence": 0.5800000000000001,
+        "pageRank": 0.03933524013937596,
+        "accessCount": 2
+      },
+      {
+        "id": "mem-revaleur-blog-no-test-publishing----",
+        "summary": "---",
+        "confidence": 0.5800000000000001,
+        "pageRank": 0.03933524013937596,
+        "accessCount": 2
+      },
+      {
+        "id": "mem-revaleur-blog-system----",
+        "summary": "---",
+        "confidence": 0.5800000000000001,
+        "pageRank": 0.03933524013937596,
+        "accessCount": 2
+      }
+    ]
+  },
+  {
+    "timestamp": 1788984769044,
+    "nodes": 23,
+    "edges": 2,
+    "pageRankSum": 0.9999999999999996,
+    "confidences": [
+      0.16499999999999998,
+      0.16499999999999998,
+      0.16499999999999998,
+      0.16499999999999998,
+      0.16499999999999998,
+      0.16499999999999998,
+      0.16499999999999998,
+      0.16499999999999998,
+      0.16499999999999998,
+      0.16499999999999998,
+      0.16499999999999998,
+      0.16499999999999998,
+      0.16499999999999998,
+      0.16499999999999998,
+      0.16499999999999998,
+      0.16499999999999998,
+      0.16499999999999998,
+      0.16499999999999998,
+      0.16499999999999998,
+      0.16499999999999998,
+      0.16499999999999998,
+      0.16499999999999998,
+      0.16499999999999998
+    ],
+    "accessCounts": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+    ],
+    "topPatterns": [
+      {
+        "id": "mem-shopify_workflow-belangrijk--nooit-content-over",
+        "summary": "BELANGRIJK: Nooit content overschrijven",
+        "confidence": 0.16499999999999998,
+        "pageRank": 0.10118975125121034,
+        "accessCount": 0
+      },
+      {
+        "id": "mem-shopify_workflow-auto-push-workflow-for-shopify",
+        "summary": "Auto-push workflow for Shopify theme",
+        "confidence": 0.16499999999999998,
+        "pageRank": 0.07277020582189424,
+        "accessCount": 0
+      },
+      {
+        "id": "mem-MEMORY-memory-index",
+        "summary": "Memory Index",
+        "confidence": 0.16499999999999998,
+        "pageRank": 0.03933524013937596,
+        "accessCount": 0
+      },
+      {
+        "id": "mem-feedback_push_to_live----",
+        "summary": "---",
+        "confidence": 0.16499999999999998,
+        "pageRank": 0.03933524013937596,
+        "accessCount": 0
+      },
+      {
+        "id": "mem-project_zenbtw----",
+        "summary": "---",
+        "confidence": 0.16499999999999998,
+        "pageRank": 0.03933524013937596,
+        "accessCount": 0
+      },
+      {
+        "id": "mem-shopify_workflow----",
+        "summary": "---",
+        "confidence": 0.16499999999999998,
+        "pageRank": 0.03933524013937596,
+        "accessCount": 0
+      },
+      {
+        "id": "mem-MEMORY-memory-index",
+        "summary": "Memory Index",
+        "confidence": 0.16499999999999998,
+        "pageRank": 0.03933524013937596,
+        "accessCount": 0
+      },
+      {
+        "id": "mem-feedback_always_push----",
+        "summary": "---",
+        "confidence": 0.16499999999999998,
+        "pageRank": 0.03933524013937596,
+        "accessCount": 0
+      },
+      {
+        "id": "mem-project_nexus----",
+        "summary": "---",
+        "confidence": 0.16499999999999998,
+        "pageRank": 0.03933524013937596,
+        "accessCount": 0
+      },
+      {
+        "id": "mem-user_profile----",
+        "summary": "---",
+        "confidence": 0.16499999999999998,
+        "pageRank": 0.03933524013937596,
+        "accessCount": 0
+      }
+    ]
+  },
+  {
+    "timestamp": 1788984769082,
+    "nodes": 23,
+    "edges": 2,
+    "pageRankSum": 0.9999999999999996,
+    "confidences": [
+      0.05,
+      0.05,
+      0.05,
+      0.05,
+      0.05,
+      0.05,
+      0.05,
+      0.05,
+      0.05,
+      0.05,
+      0.05,
+      0.05,
+      0.05,
+      0.05,
+      0.05,
+      0.05,
+      0.05,
+      0.05,
+      0.05,
+      0.05,
+      0.05,
+      0.05,
+      0.05
+    ],
+    "accessCounts": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+    ],
+    "topPatterns": [
+      {
+        "id": "mem-shopify_workflow-belangrijk--nooit-content-over",
+        "summary": "BELANGRIJK: Nooit content overschrijven",
+        "confidence": 0.05,
+        "pageRank": 0.10118975125121034,
+        "accessCount": 0
+      },
+      {
+        "id": "mem-shopify_workflow-auto-push-workflow-for-shopify",
+        "summary": "Auto-push workflow for Shopify theme",
+        "confidence": 0.05,
+        "pageRank": 0.07277020582189424,
+        "accessCount": 0
+      },
+      {
+        "id": "mem-MEMORY-memory-index",
+        "summary": "Memory Index",
+        "confidence": 0.05,
+        "pageRank": 0.03933524013937596,
+        "accessCount": 0
+      },
+      {
+        "id": "mem-feedback_push_to_live----",
+        "summary": "---",
+        "confidence": 0.05,
+        "pageRank": 0.03933524013937596,
+        "accessCount": 0
+      },
+      {
+        "id": "mem-project_zenbtw----",
+        "summary": "---",
+        "confidence": 0.05,
+        "pageRank": 0.03933524013937596,
+        "accessCount": 0
+      },
+      {
+        "id": "mem-shopify_workflow----",
+        "summary": "---",
+        "confidence": 0.05,
+        "pageRank": 0.03933524013937596,
+        "accessCount": 0
+      },
+      {
+        "id": "mem-MEMORY-memory-index",
+        "summary": "Memory Index",
+        "confidence": 0.05,
+        "pageRank": 0.03933524013937596,
+        "accessCount": 0
+      },
+      {
+        "id": "mem-feedback_always_push----",
+        "summary": "---",
+        "confidence": 0.05,
+        "pageRank": 0.03933524013937596,
+        "accessCount": 0
+      },
+      {
+        "id": "mem-project_nexus----",
+        "summary": "---",
+        "confidence": 0.05,
+        "pageRank": 0.03933524013937596,
+        "accessCount": 0
+      },
+      {
+        "id": "mem-user_profile----",
+        "summary": "---",
+        "confidence": 0.05,
+        "pageRank": 0.03933524013937596,
+        "accessCount": 0
+      }
+    ]
+  },
+  {
+    "timestamp": 1788984769094,
+    "nodes": 23,
+    "edges": 2,
+    "pageRankSum": 0.9999999999999996,
+    "confidences": [
+      0.05,
+      0.05,
+      0.05,
+      0.05,
+      0.05,
+      0.05,
+      0.05,
+      0.05,
+      0.05,
+      0.05,
+      0.05,
+      0.05,
+      0.05,
+      0.05,
+      0.05,
+      0.05,
+      0.05,
+      0.05,
+      0.05,
+      0.05,
+      0.05,
+      0.05,
+      0.05
+    ],
+    "accessCounts": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+    ],
+    "topPatterns": [
+      {
+        "id": "mem-shopify_workflow-belangrijk--nooit-content-over",
+        "summary": "BELANGRIJK: Nooit content overschrijven",
+        "confidence": 0.05,
+        "pageRank": 0.10118975125121034,
+        "accessCount": 0
+      },
+      {
+        "id": "mem-shopify_workflow-auto-push-workflow-for-shopify",
+        "summary": "Auto-push workflow for Shopify theme",
+        "confidence": 0.05,
+        "pageRank": 0.07277020582189424,
+        "accessCount": 0
+      },
+      {
+        "id": "mem-MEMORY-memory-index",
+        "summary": "Memory Index",
+        "confidence": 0.05,
+        "pageRank": 0.03933524013937596,
+        "accessCount": 0
+      },
+      {
+        "id": "mem-feedback_push_to_live----",
+        "summary": "---",
+        "confidence": 0.05,
+        "pageRank": 0.03933524013937596,
+        "accessCount": 0
+      },
+      {
+        "id": "mem-project_zenbtw----",
+        "summary": "---",
+        "confidence": 0.05,
+        "pageRank": 0.03933524013937596,
+        "accessCount": 0
+      },
+      {
+        "id": "mem-shopify_workflow----",
+        "summary": "---",
+        "confidence": 0.05,
+        "pageRank": 0.03933524013937596,
+        "accessCount": 0
+      },
+      {
+        "id": "mem-MEMORY-memory-index",
+        "summary": "Memory Index",
+        "confidence": 0.05,
+        "pageRank": 0.03933524013937596,
+        "accessCount": 0
+      },
+      {
+        "id": "mem-feedback_always_push----",
+        "summary": "---",
+        "confidence": 0.05,
+        "pageRank": 0.03933524013937596,
+        "accessCount": 0
+      },
+      {
+        "id": "mem-project_nexus----",
+        "summary": "---",
+        "confidence": 0.05,
+        "pageRank": 0.03933524013937596,
+        "accessCount": 0
+      },
+      {
+        "id": "mem-user_profile----",
+        "summary": "---",
+        "confidence": 0.05,
+        "pageRank": 0.03933524013937596,
+        "accessCount": 0
+      }
+    ]
+  },
+  {
+    "timestamp": 1788984769131,
+    "nodes": 23,
+    "edges": 2,
+    "pageRankSum": 0.9999999999999996,
+    "confidences": [
+      0.05,
+      0.05,
+      0.05,
+      0.05,
+      0.05,
+      0.05,
+      0.05,
+      0.05,
+      0.05,
+      0.05,
+      0.05,
+      0.05,
+      0.05,
+      0.05,
+      0.05,
+      0.05,
+      0.05,
+      0.05,
+      0.05,
+      0.05,
+      0.05,
+      0.05,
+      0.05
+    ],
+    "accessCounts": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+    ],
+    "topPatterns": [
+      {
+        "id": "mem-shopify_workflow-belangrijk--nooit-content-over",
+        "summary": "BELANGRIJK: Nooit content overschrijven",
+        "confidence": 0.05,
+        "pageRank": 0.10118975125121034,
+        "accessCount": 0
+      },
+      {
+        "id": "mem-shopify_workflow-auto-push-workflow-for-shopify",
+        "summary": "Auto-push workflow for Shopify theme",
+        "confidence": 0.05,
+        "pageRank": 0.07277020582189424,
+        "accessCount": 0
+      },
+      {
+        "id": "mem-MEMORY-memory-index",
+        "summary": "Memory Index",
+        "confidence": 0.05,
+        "pageRank": 0.03933524013937596,
+        "accessCount": 0
+      },
+      {
+        "id": "mem-feedback_push_to_live----",
+        "summary": "---",
+        "confidence": 0.05,
+        "pageRank": 0.03933524013937596,
+        "accessCount": 0
+      },
+      {
+        "id": "mem-project_zenbtw----",
+        "summary": "---",
+        "confidence": 0.05,
+        "pageRank": 0.03933524013937596,
+        "accessCount": 0
+      },
+      {
+        "id": "mem-shopify_workflow----",
+        "summary": "---",
+        "confidence": 0.05,
+        "pageRank": 0.03933524013937596,
+        "accessCount": 0
+      },
+      {
+        "id": "mem-MEMORY-memory-index",
+        "summary": "Memory Index",
+        "confidence": 0.05,
+        "pageRank": 0.03933524013937596,
+        "accessCount": 0
+      },
+      {
+        "id": "mem-feedback_always_push----",
+        "summary": "---",
+        "confidence": 0.05,
+        "pageRank": 0.03933524013937596,
+        "accessCount": 0
+      },
+      {
+        "id": "mem-project_nexus----",
+        "summary": "---",
+        "confidence": 0.05,
+        "pageRank": 0.03933524013937596,
+        "accessCount": 0
+      },
+      {
+        "id": "mem-user_profile----",
+        "summary": "---",
+        "confidence": 0.05,
+        "pageRank": 0.03933524013937596,
+        "accessCount": 0
+      }
+    ]
+  },
+  {
+    "timestamp": 1788984769186,
+    "nodes": 23,
+    "edges": 2,
+    "pageRankSum": 0.9999999999999996,
+    "confidences": [
+      0.05,
+      0.05,
+      0.05,
+      0.05,
+      0.05,
+      0.05,
+      0.05,
+      0.05,
+      0.05,
+      0.05,
+      0.05,
+      0.05,
+      0.05,
+      0.05,
+      0.05,
+      0.05,
+      0.05,
+      0.05,
+      0.05,
+      0.05,
+      0.05,
+      0.05,
+      0.05
+    ],
+    "accessCounts": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+    ],
+    "topPatterns": [
+      {
+        "id": "mem-shopify_workflow-belangrijk--nooit-content-over",
+        "summary": "BELANGRIJK: Nooit content overschrijven",
+        "confidence": 0.05,
+        "pageRank": 0.10118975125121034,
+        "accessCount": 0
+      },
+      {
+        "id": "mem-shopify_workflow-auto-push-workflow-for-shopify",
+        "summary": "Auto-push workflow for Shopify theme",
+        "confidence": 0.05,
+        "pageRank": 0.07277020582189424,
+        "accessCount": 0
+      },
+      {
+        "id": "mem-MEMORY-memory-index",
+        "summary": "Memory Index",
+        "confidence": 0.05,
+        "pageRank": 0.03933524013937596,
+        "accessCount": 0
+      },
+      {
+        "id": "mem-feedback_push_to_live----",
+        "summary": "---",
+        "confidence": 0.05,
+        "pageRank": 0.03933524013937596,
+        "accessCount": 0
+      },
+      {
+        "id": "mem-project_zenbtw----",
+        "summary": "---",
+        "confidence": 0.05,
+        "pageRank": 0.03933524013937596,
+        "accessCount": 0
+      },
+      {
+        "id": "mem-shopify_workflow----",
+        "summary": "---",
+        "confidence": 0.05,
+        "pageRank": 0.03933524013937596,
+        "accessCount": 0
+      },
+      {
+        "id": "mem-MEMORY-memory-index",
+        "summary": "Memory Index",
+        "confidence": 0.05,
+        "pageRank": 0.03933524013937596,
+        "accessCount": 0
+      },
+      {
+        "id": "mem-feedback_always_push----",
+        "summary": "---",
+        "confidence": 0.05,
+        "pageRank": 0.03933524013937596,
+        "accessCount": 0
+      },
+      {
+        "id": "mem-project_nexus----",
+        "summary": "---",
+        "confidence": 0.05,
+        "pageRank": 0.03933524013937596,
+        "accessCount": 0
+      },
+      {
+        "id": "mem-user_profile----",
+        "summary": "---",
+        "confidence": 0.05,
+        "pageRank": 0.03933524013937596,
+        "accessCount": 0
+      }
+    ]
+  },
+  {
+    "timestamp": 1788984770079,
+    "nodes": 23,
+    "edges": 2,
+    "pageRankSum": 0.9999999999999996,
+    "confidences": [
+      0.05,
+      0.05,
+      0.05,
+      0.05,
+      0.05,
+      0.05,
+      0.05,
+      0.05,
+      0.05,
+      0.05,
+      0.05,
+      0.05,
+      0.05,
+      0.05,
+      0.05,
+      0.05,
+      0.05,
+      0.05,
+      0.05,
+      0.05,
+      0.05,
+      0.05,
+      0.05
+    ],
+    "accessCounts": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+    ],
+    "topPatterns": [
+      {
+        "id": "mem-shopify_workflow-belangrijk--nooit-content-over",
+        "summary": "BELANGRIJK: Nooit content overschrijven",
+        "confidence": 0.05,
+        "pageRank": 0.10118975125121034,
+        "accessCount": 0
+      },
+      {
+        "id": "mem-shopify_workflow-auto-push-workflow-for-shopify",
+        "summary": "Auto-push workflow for Shopify theme",
+        "confidence": 0.05,
+        "pageRank": 0.07277020582189424,
+        "accessCount": 0
+      },
+      {
+        "id": "mem-MEMORY-memory-index",
+        "summary": "Memory Index",
+        "confidence": 0.05,
+        "pageRank": 0.03933524013937596,
+        "accessCount": 0
+      },
+      {
+        "id": "mem-feedback_push_to_live----",
+        "summary": "---",
+        "confidence": 0.05,
+        "pageRank": 0.03933524013937596,
+        "accessCount": 0
+      },
+      {
+        "id": "mem-project_zenbtw----",
+        "summary": "---",
+        "confidence": 0.05,
+        "pageRank": 0.03933524013937596,
+        "accessCount": 0
+      },
+      {
+        "id": "mem-shopify_workflow----",
+        "summary": "---",
+        "confidence": 0.05,
+        "pageRank": 0.03933524013937596,
+        "accessCount": 0
+      },
+      {
+        "id": "mem-MEMORY-memory-index",
+        "summary": "Memory Index",
+        "confidence": 0.05,
+        "pageRank": 0.03933524013937596,
+        "accessCount": 0
+      },
+      {
+        "id": "mem-feedback_always_push----",
+        "summary": "---",
+        "confidence": 0.05,
+        "pageRank": 0.03933524013937596,
+        "accessCount": 0
+      },
+      {
+        "id": "mem-project_nexus----",
+        "summary": "---",
+        "confidence": 0.05,
+        "pageRank": 0.03933524013937596,
+        "accessCount": 0
+      },
+      {
+        "id": "mem-user_profile----",
+        "summary": "---",
+        "confidence": 0.05,
+        "pageRank": 0.03933524013937596,
+        "accessCount": 0
+      }
+    ]
+  },
+  {
+    "timestamp": 1788984773036,
     "nodes": 23,
     "edges": 2,
     "pageRankSum": 0.9999999999999996,

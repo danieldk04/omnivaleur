@@ -17,6 +17,96 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ---
 
+## filter-op-een-publicatiepad-is-geen-filter
+
+*09-09-2026 — "Er zijn meerdere paden die een 'create' klaarzetten; een regel die maar op één pad staat lekt via de andere — zet hem in de laatste zeef in get_pending_jobs"*
+
+`publish_to_platforms` in `crosslist.py` is niet het enige pad dat een
+`create`-opdracht klaarzet. Er zijn er minstens vier:
+
+1. `publish_to_platforms` → `_pick` (het gewone publiceren)
+2. `refresh_listing` in `relist.py` (verversen = weghalen en opnieuw plaatsen)
+3. de reddingsronde in `relist.py` (bouwt haar eigen payload)
+4. `captured_listing` in `jobs.py`, dat een lege omschrijving aanvult met tekst
+   die letterlijk van de advertentiepagina komt
+
+En daar bovenop levert `_zet_taal_goed` bij de uitgifte een compleet nieuwe tekst
+op, die dus nooit door `_pick` is geweest.
+
+Een regel die alleen in `_pick` staat, geldt daarom voor een deel van de
+advertenties niet. Dat is twee keer aantoonbaar misgegaan: op 04-09-2026 kwamen
+er Engelse advertenties op Marktplaats via pad 3, en op 09-09-2026 was
+`_zonder_links` (het webadres eruit, want dat kost EUR 9,00 per plaatsing bij
+Egbert) alleen in `_pick` gezet.
+
+**Hoe hiermee om te gaan:** zet zo'n regel in de laatste zeef in
+`get_pending_jobs` in `backend/api/jobs.py`, waar `_zet_kleur_goed`,
+`_zet_taal_goed` en sinds 09-09-2026 `_haal_links_eruit` staan. Dat is de enige
+plek waar élke opdracht langskomt, ongeacht welk pad hem bouwde, en pas daar is
+zeker dat hij ook echt uitgevoerd wordt. Repareer daarnaast de bron, zodat in het
+dashboard hetzelfde staat als wat er naar de site ging. Let op de volgorde: een
+tekstregel hoort ná `_zet_taal_goed`, want die vervangt de tekst.
+Zie ook "marktplaats-2dehands-link-kost-negen-euro".
+
+---
+
+## extensie-stempel-test-loopt-achter-op-het-scherm
+
+*09-09-2026 — "Tests die functies op naam uit app.html knippen breken stil zodra dat scherm een functie erbij aanroept; eerst een vraag, dan pas een storing"*
+
+Er is geen bouwstap voor de frontend, dus `tests/extensie-stempel-test.js` knipt
+de échte functies op naam uit `frontend/app.html` en draait ze in een sandbox. Dat
+is bewust: het bewijst iets over de code die de klant draait, niet over een kopie.
+
+De prijs daarvan: de test noemt de functies met de hand op in een lijst. Roept
+`renderExtSetup` er morgen één bij aan die niet in die lijst staat, dan valt de
+test om met `ReferenceError: <naam> is not defined` terwijl het scherm gewoon
+werkt.
+
+Zo gebeurde het op 09-09-2026: `renderExtSetup` ging `extVersionStaatStil()`
+aanroepen, en die riep op zijn beurt `versieAchterstand()` aan en las
+`_blokkeerAchterstand`. Eén naam bijzetten was niet genoeg; de fout schuift dan
+gewoon een regel op.
+
+**Hoe hiermee om te gaan:** loopt zo'n test om, volg de aanroepketen helemaal uit
+voor je iets aan de code verandert. Zet alle functies in de lijst en alle losse
+variabelen (`_gepubliceerdeVersie`, `_blokkeerAchterstand`) in de sandbox. Een
+rode test is hier eerst een vraag: is het scherm veranderd, of is er echt iets
+kapot? Zie ook "voor-en-na-proef-mag-geen-head-gebruiken".
+
+---
+
+## voor-en-na-proef-mag-geen-head-gebruiken
+
+*09-09-2026 — "Een voor-en-na-test die de oude code uit `git show HEAD:` haalt bewijst na de eerste commit niets meer en wordt rood"*
+
+De huisregel is: haal de oude versie erbij en laat die onder dezelfde
+omstandigheden falen, anders weet je alleen dat de nieuwe code werkt. Verschillende
+tests doen dat met `git show HEAD:<bestand>`.
+
+**Dat werkt precies één keer.** Zolang de reparatie nog niet gecommit is, is HEAD
+inderdaad de oude code. Zodra ze gecommit is — en met de auto-push-hook is dat
+binnen seconden, onder een titel als "auto: update shared.js" — is HEAD de nieuwe
+code en vergelijkt de voor-proef de reparatie met zichzelf. Alle "oude code:
+…"-regels worden dan rood terwijl er niets kapot is.
+
+Zo lag `tests/prijs-blijft-op-het-formulier-test.js` om met vier rode regels,
+terwijl blok 2 tot en met 4 gewoon groen waren. Dat is het herkenningsteken:
+alleen het VOOR-blok faalt, het NA-blok niet.
+
+**Hoe hiermee om te gaan:** zet in de voor-proef een vast commitnummer, niet HEAD.
+De commit die de reparatie deed is `X`, dus de code van vlak ervoor is `X^`. Dat
+nummer verandert nooit meer. `tests/vinted-inlogdomein-test.js` doet het al zo en
+legt het ook uit.
+
+Loopt een van deze tests om, dan is dat dus eerst een vraag en pas daarna een
+storing — net als bij "extensie-stempel-test-loopt-achter-op-het-scherm".
+De tests met `--oud` als vlag (`process.argv.includes("--oud")`) zijn hier veilig:
+die draaien de HEAD-variant alleen als je er zelf om vraagt.
+Zie ook "omnivaleur-altijd-bewijzen".
+
+---
+
 ## marktplaats-2dehands-link-kost-negen-euro
 
 *09-09-2026 — Een webadres in de advertentietekst maakt van een gratis 2dehands-zoekertje een bestelregel van EUR 9; het tabblad landt op /payments/orderOverview en de plaatsing lijkt "vastgelopen"*
