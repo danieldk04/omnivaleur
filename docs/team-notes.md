@@ -7436,3 +7436,38 @@ dicht bij een betaalmuur, en dat is het zijne. Niemand anders wordt geraakt.
 **Openstaand:** hij heeft 5.533 artikelen en publiceren gaat met opzet 3 tot 8
 minuten uit elkaar (calm mode). Alles naar 2dehands duwen is daarmee geen
 avondje werk. Als 2dehands zijn kanaal wordt, moet daar een gesprek over komen.
+
+### 09-09-2026 — Extensie 1.0.315 staat in de Web Store, en één test ligt klaar voor de tweede ontwikkelaar
+
+Daniel heeft `dist/omnivaleur-extension-1.0.315.zip` diezelfde avond bij de
+Chrome Web Store ingediend. Die versie draagt de betaalmuur-detectie uit de
+entry hierboven: een sprong naar `/payments/` is nu een eigen uitkomst met een
+eigen melding, meteen in plaats van na drie minuten stilte.
+
+Let op bij het beoordelen van meldingen in de komende dagen: de reparatie werkt
+ook zónder die versie. De grendel zit óók in `fail_job` op de server, juist
+omdat de Web Store er eerder drie weken over deed. Ziet iemand het gedrag nog
+bij een klant met 1.0.314, dan is dat dus geen bewijs dat de fix niet werkt.
+
+**Openstaand, en dit pakt de tweede ontwikkelaar op:**
+`tests/extensie-stempel-test.js` valt om, en dat stond al los van het
+2dehands-werk (nagemeten met `git stash`: hij faalde vóór en na de wijziging
+precies hetzelfde). Het is geen kapotte functionaliteit maar een testopstelling
+die achterloopt op het scherm.
+
+    ReferenceError: extVersionStaatStil is not defined
+        at renderExtSetup
+
+De test zet in `bouwScherm()` een vaste lijst functies uit `frontend/app.html`
+in een sandbox (regel 61 en 62): `extStempel`, `_extGeefOp`, `renderExtSetup`,
+`renderExtStatus`, `extVersionIsOld`, `extVersionAchter`, `versieLager`.
+`renderExtSetup` roept inmiddels ook `extVersionStaatStil()` aan
+(`frontend/app.html:2810`, de functie zelf staat op `:5978`), en die staat niet
+in de lijst. Het lijkt dus één naam bijzetten. Kijk wel even of
+`extVersionStaatStil` zelf nog iets nodig heeft dat er ook niet in staat, want
+dan schuift dezelfde fout gewoon een regel op.
+
+Bredere les die hier speelt: een test die functies met de naam uit een HTML-
+bestand knipt breekt stil zodra dat scherm verandert. Dat is een prijs die we
+bewust betalen (er is geen bouwstap voor de frontend), maar het betekent dat een
+rode test hier eerst een vraag is en pas daarna een storing.

@@ -4,10 +4,6 @@
   "cwd": "/Users/Danie/Documents/omnivaleur",
   "context": {
     "lastMatchedPatterns": [
-      "mem-shopify_workflow-auto-push-workflow-for-shopify",
-      "mem-revaleur-blog-system----",
-      "mem-revaleur-blog-no-test-publishing----",
-      "mem-MEMORY-memory-index",
       "mem-shopify_workflow-belangrijk--nooit-content-over"
     ]
   },
@@ -17,5 +13,5 @@
     "tasks": 0,
     "errors": 0
   },
-  "updatedAt": "2026-09-09T20:08:13.918Z"
+  "updatedAt": "2026-09-09T20:11:21.511Z"
 }
