@@ -109,9 +109,11 @@ const SESSIE = {
     try { return sessionStorage.getItem(sleutel); } catch (e) { return null; }
   },
   zet(sleutel, waarde) {
-    try { localStorage.setItem(sleutel, waarde); } catch (e) {
-      try { sessionStorage.setItem(sleutel, waarde); } catch (e2) {}
-    }
+    try { localStorage.setItem(sleutel, waarde); } catch (e) {}
+    // Ook in sessionStorage: de browserextensie (content/webapp_sync.js) leest
+    // haar inlogbewijs daaruit. Mag pas weg als elke extensiekopie in de Chrome
+    // Web Store localStorage-first leest (webapp_sync.js vanaf 1.0.314).
+    try { sessionStorage.setItem(sleutel, waarde); } catch (e) {}
   },
   wis(sleutel) {
     try { localStorage.removeItem(sleutel); } catch (e) {}
