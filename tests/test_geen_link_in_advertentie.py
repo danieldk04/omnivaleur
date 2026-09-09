@@ -180,5 +180,42 @@ def test_geen_lege_opdracht_of_rare_payload_laat_dit_omvallen():
                                        "payload": {"title": None, "description": ""}}]) == 0
 
 
+# ── 6. De ECHTE uitgifte, van wachtrij tot wat de extensie in handen krijgt ──
+#
+# Alles hierboven roept de zeef zelf aan. Deze twee draaien `get_pending_jobs`,
+# dus precies de weg die zijn opdracht aflegt, met de zeef als enige verschil.
+
+from tests.test_kanalen_om_de_beurt import _bouw_db, _job as _rij, _uitgifte  # noqa: E402
+
+
+def _egbert_wachtrij():
+    rij = _rij("td0", "2dehands", 30)
+    # `_taal` staat er al op, zoals bij elke gelokaliseerde payload — dan laat de
+    # taalzeef hem met rust en gaat er geen vertaaldienst aan te pas.
+    rij["payload"] = {"price": 9.5, "_taal": "nl",
+                      "title": "Fender plectrum 1978",
+                      "description": _met_slot(TEKST, SLOT)}
+    return [rij]
+
+
+def test_wat_de_extensie_krijgt_bevat_geen_webadres(monkeypatch):
+    uit = _uitgifte(monkeypatch, _bouw_db(_egbert_wachtrij(), laatst_bediend="marktplaats"),
+                    "2dehands")
+    assert uit, "er moet werk uitgedeeld worden"
+    tekst = uit[0]["payload"]["description"]
+    assert "papas-plectrums.nl" not in tekst, f"dit gaat EUR 9,00 kosten: {tekst!r}"
+    assert "Zeldzaam plectrum uit 1978" in tekst
+
+
+def test_zonder_de_zeef_ging_datzelfde_webadres_er_gewoon_doorheen(monkeypatch):
+    """VOOR-EN-NA in de echte uitgifte: zet de zeef uit en het lek is er weer.
+    Zo weten we dat het de zeef is die dit tegenhoudt en niets anders."""
+    monkeypatch.setattr(api, "_haal_links_eruit", lambda db, jobs: 0)
+    uit = _uitgifte(monkeypatch, _bouw_db(_egbert_wachtrij(), laatst_bediend="marktplaats"),
+                    "2dehands")
+    assert uit and "papas-plectrums.nl" in uit[0]["payload"]["description"], (
+        "deze proef bewijst niets meer: zonder zeef zou de link er nog in moeten staan")
+
+
 if __name__ == "__main__":
     sys.exit(pytest.main([__file__, "-q"]))
