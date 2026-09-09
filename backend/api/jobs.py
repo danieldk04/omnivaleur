@@ -1035,6 +1035,9 @@ def get_pending_jobs(request: Request, platform: str = None, user_id: str = Depe
     for kandidaat in ready[:5]:
         uit = _zet_taal_goed(db, [kandidaat])
         if uit:
+            # NA de vertaling, want die levert een nieuwe tekst op waar het
+            # webadres gewoon weer in kan staan. Zie _haal_links_eruit.
+            _haal_links_eruit(db, uit)
             return uit
     return []
 
