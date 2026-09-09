@@ -61,6 +61,7 @@ def start_scheduler():
     from backend.services.verkoop_reconciliatie import reconcileer_verkochte_artikelen
     from backend.services.verkoop_herinnering import herinner_onbevestigde_verkopen
     from backend.services.analytics_report import send_weekly_report
+    from backend.services.week_meting import snapshot_vorige_week
     from backend.content.evaluator import run_evaluation_cycle_sync
     from backend.content.pipeline import translate_missing_pages
 
