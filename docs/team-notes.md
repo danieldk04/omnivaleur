@@ -7530,3 +7530,36 @@ link in de wachtrij staan. Daar is de service_role-sleutel voor nodig en die
 staat lokaal niet in de .env; op Railway werkt het wel. Zodra hij weer opdrachten
 aanmaakt gaan ze hoe dan ook door de zeef, dus dit is een controle achteraf en
 geen risico vooraf.
+
+### 09-09-2026 — De betaalregel heet echt "Websitevermelding" (bewijs, niet afleiding)
+
+Nagevraagd bij Daniel, want de naam van de bestelregel stond nergens als
+waarneming: hij zat in één zin in de entry hierboven en was daarna
+overgeschreven naar vijf codecommentaren en drie tests, waardoor hij eruitzag
+als vastgesteld terwijl hij nergens op terug te voeren was.
+
+Daniel leverde de schermafbeelding van Egberts mandje. **Elke regel draagt onder
+de advertentietitel het woord "Websitevermelding", elk EUR 9,00. Totaal EUR
+153,00, bestellingsnummer 2957072004.** Zichtbaar zijn onder meer
+"Miniatuurreplica Fender basgitaar - Paul Simonon The Clash" en "Miniatuur Love
+Symbol gitaar met gratis standaard".
+
+Dat is 2dehands die de kosten zelf naar de oorzaak noemt. Daarmee vallen de drie
+alternatieven af die het codecommentaar bij `_kanaal_hard_dicht` nog openliet:
+een zakelijk account, een limiet en een rubriek zouden alle drie een regel
+opleveren die "advertentie" of "pakket" heet, niet "websitevermelding".
+
+**Let op bij het herlezen van de entry hierboven.** Daar staat een
+tegenmeting die er geen is: "precies één kanaal gaat hard dicht bij een
+betaalmuur, en dat is het zijne" meet hoe ver de nieuwe rem uitslaat, niet of de
+link de oorzaak is. En er ligt een echt tegenvoorbeeld dat wél uitleg verdient:
+zijn 5.533 Marktplaats-advertenties staan live en actief met precies dezelfde
+link erin. Die zijn niet door ons geplaatst maar geïmporteerd, en hij is daar
+zakelijk Admarkt-verkoper. Onze extensie plaatst via het gewone
+`/plaats`-formulier, en daar rekent men er dus wél voor. Vandaar dat we de link
+ook op Marktplaats weghalen: onbewezen dat het daar nodig is, maar het gaat om
+hetzelfde formulier bij hetzelfde bedrijf.
+
+**Wat hierna nog openstaat:** er is nog steeds nul geslaagde plaatsing voor hem,
+op geen enkel kanaal. De oorzaak is nu aangewezen en weggenomen, maar we hebben
+hem niet zien slagen. Eén artikel naar 2dehands is de proef.
