@@ -314,13 +314,18 @@ Daniel
 
 Hoi <voornaam>,
 
-Vervelend dat het plaatsen niet goed loopt. Wil je op de computer die je voor
-Omnivaleur gebruikt even chrome://extensions openen? Als daar een Omnivaleur
-staat die je ooit met de hand hebt geladen, werkt die zichzelf nooit bij en
-blijft hij achter. Haal alle Omnivaleur-regels daar weg en installeer hem
-opnieuw via de Chrome Web Store. Open Omnivaleur daarna een keer in diezelfde
-browser, dan meldt hij zich weer aan en start je wachtrij vanzelf. Er gaat
-niets verloren.
+Vervelend dat het plaatsen niet goed loopt. Er zat tot begin deze week een fout
+in het inloggen van de uitbreiding: die verloor na een uur zijn verbinding met
+je account en lag dan stil, terwijl je dashboard nog "actief" kon tonen. Dat is
+opgelost. Open Omnivaleur een keer op de computer die je ervoor gebruikt, met
+Chrome open, dan meldt de uitbreiding zich weer aan en gaat je wachtrij vanzelf
+lopen. Er gaat niets verloren.
+
+Blijft het misgaan, wil je dan even chrome://extensions openen? Als daar een
+Omnivaleur staat die je ooit met de hand hebt geladen, werkt die zichzelf nooit
+bij en blijft hij achter. Haal alle Omnivaleur-regels daar weg en installeer hem
+opnieuw via de Chrome Web Store, en open Omnivaleur daarna nog een keer in
+diezelfde browser.
 
 Werkt het daarna nog niet, stuur me dan een schermafbeelding van wat je ziet,
 dan zoek ik het uit.
