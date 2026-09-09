@@ -94,14 +94,14 @@ def test_alleen_deze_week_telt_mee(monkeypatch):
         {"op": "2026-08-20T08:00:00", "soort": "warm"},   # vorige periode
     ]
     users = [
-        {"created_at": "2026-09-01T00:00:01Z", "email_confirmed_at": "2026-09-01T01:00:00Z"},
+        {"created_at": "2026-08-31T00:00:01Z", "email_confirmed_at": "2026-08-31T01:00:00Z"},
         {"created_at": "2026-09-06T23:59:00Z", "email_confirmed_at": None},
         {"created_at": "2026-08-25T00:00:00Z", "email_confirmed_at": "x"},  # buiten
     ]
     _zet(monkeypatch, state, opens, reacties, users)
 
     r = W.meet_week(WK)
-    assert r["week_maandag"] == "2026-09-01"
+    assert r["week_maandag"] == "2026-08-31"
     assert r["signups_nieuw"] == 2 and r["signups_bevestigd"] == 1
     assert r["km_mail1"] == 1 and r["km_mail2"] == 1 and r["km_mail3"] == 0
     assert r["km_verstuurd"] == 2
@@ -138,4 +138,4 @@ def test_sla_op_schrijft_een_rij(monkeypatch):
     tabellen = _zet(monkeypatch, users=[])
     uit = W.sla_op(WK)
     assert uit["ok"] is True
-    assert tabellen["week_metingen"][0]["week_maandag"] == "2026-09-01"
+    assert tabellen["week_metingen"][0]["week_maandag"] == "2026-08-31"
