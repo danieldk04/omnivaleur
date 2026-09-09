@@ -23,7 +23,8 @@ from pydantic import BaseModel
 
 from backend.config import settings
 from backend.database import execute_with_retry, get_db
-from backend.api.deps import get_current_user_full, is_owner_email as _is_owner_email
+from backend.api.deps import get_current_user_full
+from backend.services.billing import is_owner_email as _is_owner_email
 
 logger = logging.getLogger(__name__)
 
