@@ -274,83 +274,69 @@ button.stil { background: transparent; border: 1px solid var(--rand); color: var
         <table id="ks-storingen"></table></div>
     </div>
 
-    <h2>Koude mail</h2>
+    <h2>Koude mail — nu</h2>
     <div class="raster" id="mail-cijfers"></div>
     <div id="mail-fouten"></div>
 
-    <h2>Wat de AI je aanraadt</h2>
-    <div class="twee">
-      <div class="kaart"><div class="label">Wat mensen antwoorden</div>
-        <div class="uitleg">De meest genoemde bezwaren en vragen, geteld uit de reacties zelf.</div>
-        <div id="mail-patronen"></div></div>
-      <div class="kaart"><div id="mail-advies"></div></div>
+    <h2>Week op week</h2>
+    <div class="uitleg" id="wk-status" style="margin-bottom:12px"></div>
+    <div class="raster" id="wk-delta"></div>
+    <div class="twee" style="margin-top:14px">
+      <div class="kaart"><div class="label">Open rate opvolgmails per week</div>
+        <div class="uitleg">Mail 2. Mail 1 draagt bewust geen meetpixel.</div>
+        <div class="staafjes" id="wk-open"></div></div>
+      <div class="kaart"><div class="label">Nieuwe aanmeldingen per week</div>
+        <div class="staafjes" id="wk-signups"></div></div>
+    </div>
+    <div class="twee" style="margin-top:14px">
+      <div class="kaart"><div class="label">Mails verstuurd per week</div>
+        <div class="staafjes" id="wk-verstuurd"></div></div>
+      <div class="kaart"><div class="label">Bezorging (Resend)</div>
+        <div class="uitleg">Vult zich zodra de webhook gebeurtenissen binnenkrijgt.</div>
+        <table id="wk-bezorging"></table></div>
     </div>
 
-    <h2>Welke mail werkt</h2>
+    <h2>Welke mail opent het gesprek</h2>
     <div class="kaart">
-      <div class="uitleg">Een reactie hoort bij de mail die er als laatste tegenover stond. Zo zie je welke tekst het gesprek opent.</div>
       <table id="mail-lagen"></table>
     </div>
-
     <div class="twee" style="margin-top:14px">
       <div class="kaart"><div class="label">Verstuurd per dag (14 dagen)</div>
-        <div class="uitleg">Gestapeld per mail: hoeveel eerste contacten en hoeveel opvolgingen.</div>
         <div class="staafjes" id="mail-grafiek"></div>
         <div class="legenda" id="mail-legenda"></div></div>
       <div class="kaart"><div class="label">Hoe reacties uitvallen</div>
-        <div class="uitleg">Van iedereen die ooit terugschreef.</div>
         <div class="taart-rij"><div id="mail-taart"></div><div id="mail-taart-uitleg"></div></div></div>
     </div>
 
-    <h2>Wat ik leer van jouw aanpassingen</h2>
-    <div class="twee">
-      <div class="kaart">
-        <div class="label">Hoeveel van mijn tekst je overneemt</div>
-        <div class="uitleg">Hoe hoger, hoe beter mijn voorstel al past bij hoe jij schrijft.</div>
-        <div id="mail-leren-cijfer"></div>
-      </div>
-      <div class="kaart">
-        <div class="label">Laatst aangepast door jou</div>
-        <div class="uitleg">Wat jij eraan veranderde is de beste les — dit zijn de nieuwste voorbeelden.</div>
-        <div id="mail-leren-lijst"></div>
-      </div>
-    </div>
-
     <h2>Social</h2>
-    <div class="twee">
-      <div class="kaart"><div class="label">Bezoekers via social (7 dagen)</div>
-        <div class="uitleg">Uit Analytics — gratis, en het enige wat telt: wie er doorklikt.</div>
-        <table id="social-verkeer"></table></div>
-      <div class="kaart">
-        <div class="label">Berichten en bereik</div>
-        <div class="uitleg">Haalt Apify aan en kost tegoed. Alleen op verzoek.</div>
-        <button class="knop stil" onclick="haalSocial(true)">Ophalen</button>
-        <div id="social-posts"></div></div>
+    <div class="kaart"><div class="label">Bezoekers via social (7 dagen)</div>
+      <table id="social-verkeer"></table>
+      <details style="margin-top:10px"><summary style="cursor:pointer;color:var(--zacht)">Berichten en bereik ophalen (kost Apify-tegoed)</summary>
+        <button class="knop stil" style="margin-top:8px" onclick="haalSocial(true)">Ophalen</button>
+        <div id="social-posts"></div></details>
     </div>
 
-    <h2>Terughaalcampagne</h2>
-    <div class="kaart">
-      <div class="uitleg">Oud-klanten die stopten of nooit begonnen, opnieuw uitnodigen nu de grootste
-        storingen weg zijn. Eerst kijken wie het zijn, dan per groep versturen. Wie de mail krijgt,
-        krijgt automatisch zijn proefperiode verlengd.</div>
-      <button class="knop stil" onclick="haalTerughaal()">Toon kandidaten</button>
-      <div id="th-lijst"></div>
-    </div>
-    <div class="kaart">
-      <div class="label">Versturen</div>
-      <div class="uitleg">Plak de adressen voor één groep, één per regel. Alle drie de groepen krijgen
-        hun eigen vaste tekst, en de proefperiode wordt bij het versturen met het aantal dagen hieronder verlengd.</div>
-      <div style="margin:8px 0">
-        Groep <select id="th-groep"><option>A</option><option>B</option><option>C</option></select>
-        &nbsp; proef verlengen met <input id="th-dagen" type="number" value="21" style="width:4em"> dagen
+    <details style="margin-top:28px">
+      <summary style="cursor:pointer;font-size:12px;text-transform:uppercase;letter-spacing:.8px;color:var(--zacht);font-weight:700">Terughaalcampagne</summary>
+      <div class="kaart" style="margin-top:12px">
+        <div class="uitleg">Oud-klanten die stopten of nooit begonnen, opnieuw uitnodigen. Eerst kijken wie het zijn,
+          dan per groep versturen. Wie de mail krijgt, krijgt automatisch zijn proefperiode verlengd.</div>
+        <button class="knop stil" onclick="haalTerughaal()">Toon kandidaten</button>
+        <div id="th-lijst"></div>
+        <div class="label" style="margin-top:16px">Versturen</div>
+        <div class="uitleg">Plak de adressen voor één groep, één per regel.</div>
+        <div style="margin:8px 0">
+          Groep <select id="th-groep"><option>A</option><option>B</option><option>C</option></select>
+          &nbsp; proef verlengen met <input id="th-dagen" type="number" value="21" style="width:4em"> dagen
+        </div>
+        <textarea id="th-emails" rows="6" style="width:100%;box-sizing:border-box"></textarea>
+        <div style="margin-top:8px">
+          <button class="knop stil" onclick="terughaalProef()">Proefronde, niets versturen</button>
+          <button class="knop" onclick="terughaalEcht()">Verlengen en versturen</button>
+        </div>
+        <div id="th-uitslag"></div>
       </div>
-      <textarea id="th-emails" rows="6" style="width:100%;box-sizing:border-box"></textarea>
-      <div style="margin-top:8px">
-        <button class="knop stil" onclick="terughaalProef()">Proefronde, niets versturen</button>
-        <button class="knop" onclick="terughaalEcht()">Verlengen en versturen</button>
-      </div>
-      <div id="th-uitslag"></div>
-    </div>
+    </details>
   </section>
 
   <!-- ─────────────────────────────── SYSTEEM -->
