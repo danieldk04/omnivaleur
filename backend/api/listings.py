@@ -515,6 +515,15 @@ VERDENKING_REDENEN = {
         "verlopen. Er is dus niets opnieuw geplaatst. Verkocht? Bevestig het hier — "
         "dan gaat hij ook van de andere kanalen af. Niet verkocht? Dan gaat deze "
         "advertentie naar het archief en kun je hem met één klik opnieuw plaatsen.",
+    # Shopify-producten verdwijnen nooit vanzelf (geen verloopdatum, anders dan
+    # Marktplaats). Staat het product er niet meer, dan heeft iemand het zelf
+    # verwijderd — vaak omdat het net verkocht is. Zie
+    # backend/services/shopify_reconcile.py.
+    "shopify_weg":
+        "Mogelijk verkocht: dit product staat niet meer in je Shopify-winkel. "
+        "Shopify-producten verdwijnen nooit vanzelf, dus is het met de hand "
+        "verwijderd — vaak omdat het net verkocht is. Verkocht? Bevestig het hier, "
+        "dan gaat het artikel ook van je andere kanalen af.",
 }
 VERDENKING_STANDAARD = VERDENKING_REDENEN["weg"]
 
