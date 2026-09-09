@@ -2,7 +2,7 @@
 Platform auth endpoints — login endpoints for all platforms.
 """
 import re
-from fastapi import APIRouter, HTTPException, Depends, Request
+from fastapi import APIRouter, HTTPException, Depends, Request, BackgroundTasks
 from backend.database import get_db, naast_de_lus
 from backend.platforms.marktplaats import MarktplaatsPlatform, TweedehandsPlatform
 from backend.platforms.ebay import EbayPlatform
