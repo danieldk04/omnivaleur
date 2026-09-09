@@ -220,11 +220,19 @@ async def herstel_vastgelopen_werk() -> dict:
             # gaan. Zie ook _zet_taal_goed in backend/api/jobs.py: dat is het
             # vangnet voor het geval er ooit nog zo'n pad bijkomt.
             from backend.services.crosslist import (localize_item_for_platform,
-                                                    slottekst_van, _met_slot)
+                                                    slottekst_van, _met_slot, _zonder_links)
             gelokaliseerd = await localize_item_for_platform(item, rij["platform"])
-            gelokaliseerd = {**gelokaliseerd,
-                             "description": _met_slot(gelokaliseerd.get("description") or "",
-                                                      slottekst_van(item["user_id"]))}
+            beschrijving = _met_slot(gelokaliseerd.get("description") or "",
+                                     slottekst_van(item["user_id"]))
+            titel = gelokaliseerd.get("title") or ""
+            # Ook hier geen webadres in de tekst: op Marktplaats en 2dehands is
+            # dat EUR 9,00 per plaatsing in plaats van een advertentie. Zie
+            # _zonder_links, en _haal_links_eruit in backend/api/jobs.py voor de
+            # laatste zeef die dit hoe dan ook opvangt.
+            if rij["platform"] in ("marktplaats", "2dehands"):
+                beschrijving = _zonder_links(beschrijving)
+                titel = _zonder_links(titel)
+            gelokaliseerd = {**gelokaliseerd, "title": titel, "description": beschrijving}
             (await naast_de_lus(lambda: db.table("jobs").insert({
                 "user_id": item["user_id"],
                 "item_id": rij["item_id"],
