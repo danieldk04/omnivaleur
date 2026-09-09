@@ -123,6 +123,24 @@ def main(dataset_ids: list) -> None:
     pad = UIT / "creators_tiktok.json"
     pad.write_text(json.dumps(resultaat, ensure_ascii=False, indent=2))
 
+    # Voor het benaderen zelf telt bereik zwaarder dan de verkoopscore: iemand
+    # die 50 keer "te koop" zegt tegen 400 kijkers levert niets op.
+    csv_pad = UIT / "creators_tiktok.csv"
+    op_bereik = sorted(
+        [r for r in resultaat if r["soort"] == "verkoper"],
+        key=lambda r: -r["views_gemiddeld"],
+    )
+    with csv_pad.open("w", newline="", encoding="utf-8") as f:
+        schrijver = csv.writer(f)
+        schrijver.writerow(["username", "naam", "tiktok_url", "gem_views", "totaal_views",
+                            "likes", "videos_in_sweep", "verkoopscore", "benaderd_op",
+                            "reactie", "code"])
+        for r in op_bereik:
+            schrijver.writerow([r["username"], r["nickname"], r["url"], r["views_gemiddeld"],
+                                r["views_totaal"], r["likes_totaal"], r["videos_in_sweep"],
+                                r["score"], "", "", ""])
+    print(f"geschreven naar {csv_pad}")
+
     verkopers = [r for r in resultaat if r["soort"] == "verkoper"]
     kopers = [r for r in resultaat if r["soort"] == "koper"]
     onduidelijk = [r for r in resultaat if r["soort"] == "onduidelijk"]
