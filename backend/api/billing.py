@@ -13,6 +13,7 @@ from backend.services.billing import (
     invalidate_access_cache,
     is_owner_email as _is_owner_email,
 )
+from backend.api.referrals import stempel_eerste_betaling
 
 logger = logging.getLogger(__name__)
 
