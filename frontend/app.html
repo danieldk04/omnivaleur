@@ -10892,9 +10892,10 @@ function renderAnalytics(force) {
   }
   @media (max-width: 560px) {
     #founder-call-widget { right: 14px; bottom: 14px; }
-    #founder-call-fab { padding: 7px 16px 7px 7px; gap: 10px; }
+    #founder-call-fab { padding: 6px 16px 6px 6px; gap: 9px; }
     .fcf-badge { width: 34px; height: 34px; }
-    .fcf-l2 { font-size: 13px; }
+    .fcf-l1 { display: none; }          /* compact op mobiel: alleen de knoptekst */
+    .fcf-l2 { font-size: 13.5px; }
   }
   @media print { #founder-call-widget { display: none !important; } }
   @media (prefers-reduced-motion: reduce) {
