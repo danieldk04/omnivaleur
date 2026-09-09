@@ -177,6 +177,20 @@ def start_scheduler():
         id="weekly_marketing_report",
         replace_existing=True,
     )
+    # Wekelijkse momentopname van de marketing- en bezorgcijfers — zondag 08:20,
+    # ná het rapport. Legt de zojuist afgelopen week vast in week_metingen zodat
+    # het dashboard open-, bounce- en aanmeldcijfers week op week kan vergelijken.
+    _scheduler.add_job(
+        _off_the_request_loop(snapshot_vorige_week),
+        "cron",
+        day_of_week="sun",
+        hour=8,
+        minute=20,
+        timezone="Europe/Amsterdam",
+        id="week_meting_snapshot",
+        replace_existing=True,
+        misfire_grace_time=6 * 3600,
+    )
     # Blog-evaluator — elke maandagochtend 07:00 (NL-tijd): beoordeelt alle
     # gepubliceerde content_pages op Search Console-data en herschrijft de
     # slechtst presterende pagina op dezelfde URL. Bewust vóór het wekelijkse
