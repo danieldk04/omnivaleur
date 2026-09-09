@@ -113,6 +113,7 @@ app.include_router(billing.router)
 app.include_router(content.router)
 app.include_router(beheer.router)
 app.include_router(tracking.router)
+app.include_router(referrals.router)
 
 
 def _supabase_key_role() -> str:
