@@ -131,9 +131,17 @@ function laadCL(formulier, bron) {
 const NU = fs.readFileSync(path.join(__dirname, "..", "extension", "content", "shared.js"), "utf8");
 // De vorige versie erbij halen: anders bewijst deze proef alleen dat de nieuwe
 // code werkt, niet dat ze iets repareert.
+//
+// VAST COMMITNUMMER, EN MET OPZET. Hier stond `HEAD:`, en dat werkte precies
+// één keer: zolang de reparatie nog niet gecommit was. Daarna wás HEAD de
+// nieuwe code en vergeleek blok 1 de reparatie met zichzelf — vier rode
+// regels, terwijl er niets kapot was. cb1358c0 is de commit die dit
+// repareerde, dus cb1358c0^ is de code van vlak ervoor. Die verandert nooit
+// meer, en dat is hier de bedoeling.
+const VOOR_DE_REPARATIE = "cb1358c0^:extension/content/shared.js";
 let OUD = null;
 try {
-  OUD = execFileSync("git", ["show", "HEAD:extension/content/shared.js"],
+  OUD = execFileSync("git", ["show", VOOR_DE_REPARATIE],
                      { cwd: path.join(__dirname, ".."), encoding: "utf8", maxBuffer: 8e6 });
 } catch (e) {
   console.log("  (de vorige versie kon niet uit git gehaald worden:", e.message, ")");
