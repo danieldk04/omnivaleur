@@ -55,11 +55,13 @@ function bouwScherm(stempel) {
     sessionStorage: opslag(),
     state: { jobs: [] },
     _gepubliceerdeVersie: "",
+    _blokkeerAchterstand: 20,
     extState: { status: "checking", version: "", email: "" },
   };
   vm.createContext(sandbox);
   for (const naam of ["extStempel", "_extGeefOp", "renderExtSetup", "renderExtStatus",
-                      "extVersionIsOld", "extVersionAchter", "versieLager"]) {
+                      "extVersionIsOld", "extVersionAchter", "versieLager",
+                      "versieAchterstand", "extVersionStaatStil"]) {
     vm.runInContext(functieUit(naam), sandbox);
   }
   vm.runInContext("const EXT_MIN_VERSION = '1.0.244';", sandbox);
