@@ -17,6 +17,34 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ---
 
+## omnivaleur-focus-business
+
+*09-09-2026 — Omnivaleur is Daniels focus-business voor het jaar na afstuderen; ZENBTW/AxonGear geparkeerd; groei via betaalde influencers + affiliate*
+
+Bevestigd 09-09-2026: Omnivaleur (crosslisting-SaaS) is de business waar Daniel
+zich het komende jaar volledig op richt, na zijn afstuderen Finance & Control in
+augustus 2026. ZENBTW en AxonGear zijn aparte producten en waarschijnlijk
+geparkeerd. Omnivaleur is geen pivot van ZENBTW.
+
+Gekozen groeikoers (besloten 09-09): betaalde influencer marketing bij NL/BE
+reselling-creators, daarna een affiliate-programma plus "invite and earn" voor
+elke betalende klant. Eerste testbudget EUR 1.500 tot 2.500 over 6 weken,
+stopcriterium vooraf, retentiemeting loopt parallel. Bouwvolgorde: doellijst,
+dan meetlaag (ref-codes tot en met de Stripe-betaling), dan affiliate pas als de
+test groen is.
+
+Best converterende niches, gemeten 09-09 op de echte database (4 active, 27
+trialing) plus de leadbestanden: tweedehands kleding, sieraden/goud/zilver,
+antiek, muziek. Nul en niet op inzetten: games, audio, electronics. De
+influencer-doellijst neemt daarom kledingresellers en Vinted-flippers als kern,
+want dat is de enige werkende niche met een echt creator-ecosysteem.
+
+Meting en onderbouwing staan in docs/team-notes.md onder 09-09-2026. Verwant:
+"monaim-50-50-partnership", "leadgen-op-conversie-niet-volume",
+"rolverdeling-ceo-va-developer", "eerst-recente-wijzigingen-lezen".
+
+---
+
 ## dashboard-verhuist-opslag-extensie-leest-mee
 
 *09-09-2026 — "Verhuist het dashboard waar het inlogbewijs staat, dan moet content/webapp_sync.js in dezelfde commit mee, anders valt de extensie stil"*
