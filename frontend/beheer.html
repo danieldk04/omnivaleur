@@ -653,41 +653,9 @@ function toonKern(d) {
 
   taart('mail-taart', 'mail-taart-uitleg', m.soorten || []);
 
-  const advies = m.advies || {};
-  const pat = advies.patronen || [];
-  const patTop = Math.max(...pat.map(p => p.aantal), 1);
-  el('mail-patronen').innerHTML = pat.length
-    ? pat.map((p, i) => `<div class="patroon" title="${veilig(p.uitleg)}">
-        <div class="patroon-kop"><span>${veilig(p.naam)}</span><b>${getal(p.aantal)}x</b></div>
-        <div class="balk"><i class="l${(i % 3) + 1}" style="width:${Math.round(100 * p.aantal / patTop)}%"></i></div>
-        <div class="uitleg">${veilig(p.uitleg)}</div></div>`).join('')
-    : `<div class="leeg">Nog geen patronen — die verschijnen bij de volgende analyse.</div>`;
-
-  el('mail-advies').innerHTML = advies.tekst
-    ? `<div class="uitleg">Bijgewerkt ${geleden(advies.op)} geleden — opnieuw berekend na een week of zodra er veel nieuwe reacties binnen zijn.</div>
-       <div class="advies">${opmaakAdvies(advies.tekst)}</div>`
-    : `<div class="leeg">Nog geen analyse. Die wordt automatisch geschreven zodra er genoeg reacties binnen zijn (of na een week).</div>`;
-
   el('mail-fouten').innerHTML = (m.fouten_vandaag && m.fouten_vandaag.length)
     ? `<div class="kaart" style="margin-top:14px"><div class="label let">Fouten vandaag</div>
         <ul>${m.fouten_vandaag.map(f => `<li>${veilig(f)}</li>`).join('')}</ul></div>` : '';
-
-  const leren = m.leren || {};
-  el('mail-leren-cijfer').innerHTML = leren.totaal
-    ? `<div class="cijfer">${leren.ongewijzigd_pct}%</div>
-       <div class="voortgang"><div style="width:${leren.ongewijzigd_pct}%"></div></div>
-       <div class="bij">van mijn tekst bleef gemiddeld staan, over ${getal(leren.totaal)} concepten.
-         ${getal(leren.aangepast)} daarvan echt herschreven.</div>`
-    : `<div class="leeg">Nog geen concepten afgerond.</div>`;
-  el('mail-leren-lijst').innerHTML = (leren.recent && leren.recent.length)
-    ? leren.recent.map(r => `<div class="leerrij">
-        <b>${veilig(r.adres)}</b> — ${geleden(r.op)} geleden —
-        ${r.aangepast ? `<span class="let">herschreven</span>`
-                      : `<span class="op">${r.gelijk}% overgenomen</span>`}
-        ${r.aangepast ? `<div class="diff"><b>Voorstel</b><span>${veilig(r.voorstel)}</span></div>
-                         <div class="diff"><b>Verstuurd</b><span>${veilig(r.verstuurd)}</span></div>` : ''}
-      </div>`).join('')
-    : `<div class="leeg">Nog geen concepten afgerond.</div>`;
 
   el('techniek').innerHTML =
       kaart('Mislukte taken (24u)', getalOfStreep(t.banen_mislukt_24u), '', t.banen_mislukt_24u ? 'af' : 'op')
