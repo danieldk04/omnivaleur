@@ -7351,3 +7351,19 @@ zodra er echt betaald wordt. Bewuste keuze: de verwijzingstabel legt alleen vast
 wie door wie kwam; de status komt altijd vers uit `subscriptions`, zodat de
 meting niet uit de pas kan lopen. Tabellen moeten handmatig aangemaakt worden met
 `scripts/sql/referrals.sql`.
+
+**Getest 09-09 op de echte database** (Daniels eigen account als proefkonijn,
+alles achteraf opgeruimd): klik geteld en doorgestuurd met code, aanmelding
+gekoppeld, eerste betaling gestempeld, tweede stempel laat de klok staan. Vers
+betaald geeft commissie 0; met first_paid_at 61 dagen terug geeft het EUR 25 en
+CAC EUR 75; zet je de klant op 'canceled', dan valt de commissie terug naar 0.
+Die laatste is de hele bescherming en die werkt dus aantoonbaar.
+
+Let op: het overzicht zit achter `owner_email`, dat is
+dkresellacademy@gmail.com (en aertssen.pleun@gmail.com). Inloggen op /beheer met
+danieldekoning66@gmail.com geeft geen toegang tot het Creators-tabblad.
+Railway draait op service_role (via /health bevestigd), lokaal staat anon in de
+.env; RLS op deze tabellen betekent dus dat lokaal lezen leeg lijkt terwijl het
+op de server gewoon werkt.
+
+Codes klaargezet voor de tien grootste Nederlandstalige verkopers uit de lijst.
