@@ -82,6 +82,7 @@ def main(dataset_ids: list) -> None:
     per_creator = defaultdict(lambda: {
         "videos": 0, "views": 0, "likes": 0, "verkoop": 0, "koop": 0,
         "buiten_niche": 0, "nickname": "", "voorbeelden": [], "hashtags": set(),
+        "nl_woorden": set(),
     })
 
     for v in videos:
