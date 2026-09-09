@@ -7378,3 +7378,61 @@ Pagina: https://app.notion.com/p/3d6b0954fb7281f2af9dd034be57cf26
 
 Er is lokaal geen NOTION_TOKEN en de Railway-CLI is hier niet gekoppeld; vullen
 ging via de Notion-connector. Die werkt zonder token.
+
+### 09-09-2026 — 2dehands rekende Egbert EUR 9 per advertentie, om de link in zijn tekst
+
+Egbert Brouwer (papas-plectrums) mailde drie keer op één avond: nul advertenties
+op 2dehands, en ineens drie tabbladen met openstaande facturen. Zijn winkelmandje
+bij 2dehands stond op 17 regels, EUR 153,00, bestelnummer 2957072004.
+
+**Gemeten oorzaak**, letterlijk uit zijn eigen opdrachten (18:59, 19:08 en 19:13
+UTC):
+
+    [tab op https://www.2dehands.be/payments/orderOverview/index.html,
+     4 invulveld(en), invulscript geladen: nee]
+    [laatste stap: "plaatsen: op de knop geklikt, wachten op de advertentie"]
+
+Het formulier ging dus wél open en werd wél ingevuld. 2dehands publiceerde de
+advertentie alleen niet: het zette haar als bestelregel van EUR 9,00 klaar,
+onder de naam "Websitevermelding". De reden staat in zijn advertentietekst,
+onder elk artikel: `https://www.papas-plectrums.nl` en `info@papas-plectrums.nl`.
+2dehands rekent geld voor een zoekertje met een link erin, en zegt dat zelf ook:
+zet je de link in de omschrijving in plaats van in het URL-veld, dan meldt de
+site "er is een URL gevonden" en wil ze alsnog betaald worden.
+
+Wij wachtten daarna drie minuten op een advertentie-adres dat nooit komt, en
+maakten daar "het formulier ging nooit open, je bent misschien niet ingelogd"
+van. Hij was ingelogd; zijn eigen scan van diezelfde minuut gaf HTTP 200 op het
+afgeschermde overzicht. Dat verwijt kreeg hij 357 keer.
+
+En de rem maakte het duurder in plaats van goedkoper. Die zette het kanaal op
+pauze maar liet bewust één proefadvertentie per ronde door, omdat een pauze
+zonder uitweg een muur is. Bij een betaalmuur is die proef juist het probleem:
+elke proef was weer EUR 9,00.
+
+**Wat er is gebouwd:**
+
+- `_zonder_links` in `crosslist.py` haalt web- en e-mailadressen uit titel en
+  tekst, alleen voor Marktplaats en 2dehands. Gemeten over zijn 5.533 artikelen:
+  5.515 teksten droegen een adres, na de filter nul, niets leeggehaald. Over
+  5.009 artikelen van andere klanten verandert 0,9%, en elk verwijderd stukje is
+  een echt web- of e-mailadres.
+- Een sprong naar `/payments/` is in de extensie een eigen uitkomst geworden met
+  een eigen melding, meteen in plaats van na drie minuten, plus een vangnet in
+  de bewaker voor een slapende service worker.
+- `fail_job` op de server neemt bij de eerste betaalpagina de hele rij voor dat
+  kanaal terug. Dat moest op de server, want een nieuwe extensie is bij hem pas
+  over weken binnen en zijn huidige kopie (1.0.314) zet het tabbladadres al in
+  haar foutmelding.
+- De betaalmuur telt alleen mee als de advertentie al schoon was. Anders zou het
+  kanaal dichtblijven om een oorzaak die is weggenomen, en dat is precies de
+  muur die we bij de vorige rem al eens hebben moeten slopen.
+- `scripts/herstel_2dehands_meldingen.py` heeft zijn 116 rode regels en 786
+  opdrachten rechtgezet naar wat er echt aan de hand was.
+
+Tegenmeting over alle 46 accounts en vier kanalen: precies één kanaal gaat hard
+dicht bij een betaalmuur, en dat is het zijne. Niemand anders wordt geraakt.
+
+**Openstaand:** hij heeft 5.533 artikelen en publiceren gaat met opzet 3 tot 8
+minuten uit elkaar (calm mode). Alles naar 2dehands duwen is daarmee geen
+avondje werk. Als 2dehands zijn kanaal wordt, moet daar een gesprek over komen.
