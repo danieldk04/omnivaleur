@@ -764,6 +764,8 @@ async def stripe_webhook(request: Request, stripe_signature: str = Header(None))
                 "updated_at": _now(),
             }).eq("stripe_subscription_id", stripe_sub_id).execute()))
             invalidate_access_cache(result.data[0]["user_id"])
+            if nieuwe_status == "active":
+                stempel_eerste_betaling(result.data[0]["user_id"])
 
     elif event["type"] in ("invoice.paid", "invoice.payment_succeeded"):
         # De incasso is rond. Zet de rij weer op de echte Stripe-status (active)
