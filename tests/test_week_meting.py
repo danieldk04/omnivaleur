@@ -75,11 +75,11 @@ WK = date(2026, 8, 31)  # maandag; week loopt t/m zo 2026-09-06
 def test_alleen_deze_week_telt_mee(monkeypatch):
     state = {
         "a@x.nl": {"verstuurd": [
-            {"op": "2026-09-07T23:50:00", "beurt": "mail1"},   # binnen
-            {"op": "2026-09-08T00:10:00", "beurt": "mail1"},   # volgende week
+            {"op": "2026-09-06T23:50:00", "beurt": "mail1"},   # binnen (zo 23:50)
+            {"op": "2026-09-07T00:10:00", "beurt": "mail1"},   # volgende week
         ]},
         "b@x.nl": {"verstuurd": [
-            {"op": "2026-08-31T12:00:00", "beurt": "mail2"},   # vorige week
+            {"op": "2026-08-30T12:00:00", "beurt": "mail2"},   # vorige week
             {"op": "2026-09-03T09:00:00", "beurt": "mail2"},   # binnen
         ]},
     }
