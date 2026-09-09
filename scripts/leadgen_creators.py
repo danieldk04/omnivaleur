@@ -98,6 +98,8 @@ def main(dataset_ids: list) -> None:
         c["verkoop"] += tel(tekst, VERKOOP)
         c["koop"] += tel(tekst, KOOP)
         c["buiten_niche"] += tel(tekst, {w: 1 for w in BUITEN_NICHE})
+        # Spaties eromheen zodat "op" niet matcht binnen "shop".
+        c["nl_woorden"] |= {w for w in NL_WOORDEN if w in f" {tekst} "}
         c["nickname"] = auteur.get("nickname") or c["nickname"]
         for h in (v.get("hashtags") or []):
             naam = h.get("name") if isinstance(h, dict) else h
