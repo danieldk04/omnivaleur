@@ -253,6 +253,7 @@ async def shopify_connect_token(body: dict, background_tasks: BackgroundTasks,
             "koppeling": "eigen_sleutel",
         },
     })
+    _koppel_bestaande_shopify_catalogus(background_tasks, user_id)
     return {
         "status": "connected",
         "platform": "shopify",
