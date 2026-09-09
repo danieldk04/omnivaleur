@@ -746,6 +746,21 @@ def kern(user=Depends(get_current_user_full)):
     }
 
 
+@router.get("/historie")
+def historie(weken: int = 14, user=Depends(get_current_user_full)):
+    """Wekelijkse momentopnames uit week_metingen: aanmeldingen, de mailtrechter
+    per mail 1/2/3 en de bezorging (Resend). De bron voor de week-op-week
+    vergelijking op het dashboard. Leeg tot de tabel bestaat en de eerste
+    snapshot of backfill is gedraaid."""
+    _eigenaar(user)
+    klaar = _uit_cache("historie", 300)
+    if klaar:
+        return klaar
+    from backend.services.week_meting import historie as _historie
+    weken = max(2, min(weken, 52))
+    return _in_cache("historie", {"tijd": _nu().isoformat(), "weken": _historie(weken)})
+
+
 @router.get("/groei")
 def groei(user=Depends(get_current_user_full)):
     """Gaat het de goede kant op? Eén week zegt niets; dit zet acht weken en zes
