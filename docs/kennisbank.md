@@ -17,6 +17,32 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ---
 
+## wekelijkse-marketingmeting
+
+*09-09-2026 — "mail_events + week_metingen leggen open rate, bounce, bezorging en aanmeldingen week op week vast; Resend-webhook voedt het"*
+
+Sinds 09-09-2026 worden de marketingcijfers per week bewaard in Supabase, zodat
+er historie en periodevergelijking is (daarvoor alleen live in mail_state /
+Resend-dashboard, dus weg zodra opgeschoond).
+
+- `mail_events`: ruwe Resend-webhookgebeurtenissen. Endpoint `/api/webhooks/resend`,
+  Svix-handtekening tegen `RESEND_WEBHOOK_SECRET`.
+- `week_metingen`: één rij per week (ma..zo). `backend/services/week_meting.py`
+  (`meet_week`, `sla_op`, `backfill`, `historie`). Cron zondag 08:20.
+- Lezen: `GET /api/beheer/historie`. `scripts/backfill_week_metingen.py` voor terug in de tijd.
+
+Meetgrenzen: mail 1 draagt nooit een pixel (open% alleen mail 2/3). `mail_reacties`
+staat stil sinds de AI-laag eruit is (06-09), dus antwoorden/positief per week zijn
+bevroren tot IMAP weer aangaat. Aanmeldbevestigingsmail loopt via Supabase Auth,
+niet Resend, dus niet in mail_events.
+
+Dashboard-herindeling (beheer.html licht maken, Marketing opnieuw, visuals eerst,
+"Wat de AI je aanraadt" + "Wat ik leer van jouw aanpassingen" + Terughaalcampagne
+eruit) is de volgende stap, nog niet gedaan. Zie "leadgen-op-conversie-niet-volume"
+en "anthropic-credit-silent-translation-fallback".
+
+---
+
 ## shopify-catalogus-koppeling
 
 *09-09-2026 — Shopify-producten die al bestonden voor de koppeling werden nooit herkend als gelist; nummer+merk-match lost dit op en repareert ook de verkoopherkenning*
