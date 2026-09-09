@@ -69,7 +69,7 @@ def _zet(monkeypatch, mail_state=None, mail_opens=None, mail_reacties=None,
     return tabellen
 
 
-WK = date(2026, 9, 1)  # maandag; week loopt t/m zo 2026-09-07
+WK = date(2026, 8, 31)  # maandag; week loopt t/m zo 2026-09-06
 
 
 def test_alleen_deze_week_telt_mee(monkeypatch):
