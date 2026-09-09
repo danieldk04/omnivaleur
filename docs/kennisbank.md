@@ -46,11 +46,18 @@ alle drie de koppelroutes) en elke nacht om 05:30 voor alle gekoppelde winkels,
 zodat een later toegevoegd Shopify-product ook zonder opnieuw koppelen wordt
 herkend.
 
+**Het omgekeerde probleem is ook opgelost (zelfde dag, tweede beurt):**
+`reconcile_verweesde_shopify_listings` in dezelfde module controleert of een
+'active' shopify-rij nog een bestaand product is. Is er een levende opvolger
+van hetzelfde artikel (een oude relist zette een tweede product naast het
+eerste), dan gaat de verweesde rij rechtstreeks naar 'delisted'. Is het artikel
+al bevestigd verkocht op een ander kanaal, ook rechtstreeks 'delisted'. Anders
+naar 'sold_unconfirmed' — de bestaande "Is dit verkocht?"-vraag. Een transiënte
+fout (429, 5xx) mag dit nooit laten kelderen; alleen een expliciete 404 telt.
+Draait in dezelfde twee momenten als de koppelronde.
+
 **Nog open:** hetzelfde structurele gat bestaat vermoedelijk ook bij eBay (ook
-een API-platform zonder importscan), niet gemeten. En 4 van Revaleur's 23
-actieve shopify-rijen wezen naar een inmiddels verwijderd Shopify-product — het
-omgekeerde probleem, waar nog geen periodieke controle voor is (Marktplaats,
-2dehands en Vinted hebben die wel, zie verkoop_reconciliatie.py).
+een API-platform zonder importscan), niet gemeten.
 
 ---
 
