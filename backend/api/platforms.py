@@ -147,8 +147,13 @@ async def ebay_set_ship_from(body: dict, user_id: str = Depends(get_current_user
 # op de achtergrond (kan bij een grote catalogus een minuut of wat duren) zodat de
 # koppelknop niet op deze ronde hoeft te wachten. Zie backend/services/shopify_reconcile.py.
 def _koppel_bestaande_shopify_catalogus(background_tasks: BackgroundTasks, user_id: str) -> None:
-    from backend.services.shopify_reconcile import reconcile_shopify_catalog
+    from backend.services.shopify_reconcile import (reconcile_shopify_catalog,
+                                                    reconcile_verweesde_shopify_listings)
+    # Eerst koppelen wat er al staat, dan pas opruimen wat er niet meer is — in
+    # die volgorde, want de opruimronde kijkt naar "is er nog een levende rij
+    # voor dit artikel" en die levende rij moet er dan al staan.
     background_tasks.add_task(reconcile_shopify_catalog, user_id)
+    background_tasks.add_task(reconcile_verweesde_shopify_listings, user_id)
 
 
 @router.get("/shopify/auth-url")
