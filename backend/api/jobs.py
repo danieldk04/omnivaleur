@@ -713,7 +713,7 @@ def _is_verversing(job: dict) -> bool:
     waar de verkoper zelf op drukte hoort nooit te wachten (zie
     docs/kennisbank.md, "eigen klik gaat voor de nachtronde").
     """
-    if job.get("action") == "content_refresh":
+    if job.get("action") in ("content_refresh", "extend"):
         return True
     payload = job.get("payload") if isinstance(job.get("payload"), dict) else {}
     if job.get("action") == "delete" and "_refresh_rollback" in payload:
