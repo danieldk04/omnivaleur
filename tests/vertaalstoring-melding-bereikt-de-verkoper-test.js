@@ -119,9 +119,23 @@ const ECHTE_REDEN = oud
   //    scherm te staan, niet "de server was druk".
   const m503 = melding(503, { detail: ECHTE_REDEN });
   check("503 met reden: de echte reden staat op het scherm",
-        m503.includes("vertaling"), `stond er: ${JSON.stringify(m503)}`);
+        m503.includes(ECHTE_REDEN), `stond er: ${JSON.stringify(m503)}`);
   check("503 met reden: geen verzonnen tijdverloop meer",
         !/didn't answer in time/.test(m503), `stond er: ${JSON.stringify(m503)}`);
+
+  // 1b. En die reden moet ook kloppen. Bij een verse publicatie staat er nog
+  //     geen opdracht in de wachtrij, dus "gaat vanzelf alsnog de deur uit"
+  //     laat de verkoper voor niets wachten.
+  if (!oud) {
+    check("de melding belooft geen wachtrij die er niet is",
+          /nothing (was published|is waiting)/i.test(ECHTE_REDEN) &&
+          !/vanzelf alsnog/.test(ECHTE_REDEN),
+          `melding: ${JSON.stringify(ECHTE_REDEN)}`);
+    for (const bestand of ["backend/api/items.py", "backend/api/listings.py", "backend/api/jobs.py"]) {
+      check(`${bestand}: stuurt die melding, niet de wachtrij-belofte`,
+            /NIETS_GEPLAATST_VERTALING/.test(bron(bestand)));
+    }
+  }
 
   // 2. Een echte gateway-storing heeft geen reden — dan blijft de oude tekst
   //    staan, inclusief de waarschuwing dat het misschien tóch al loopt.
