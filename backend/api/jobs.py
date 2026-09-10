@@ -289,7 +289,9 @@ def _recover_stale_claims(db, user_id: str, platform: str, now_dt: datetime) -> 
 
         reclaims = (res.get("_reclaims", 0) if isinstance(res, dict) else 0)
         is_relist_create = j["action"] == "create" and j.get("scheduled_for")
-        retry_safe = j["action"] in ("delete", "scan", "content_refresh")
+        # 'extend' opnieuw draaien kan geen kwaad: is het zoekertje al verlengd,
+        # dan is de verlengknop weg en meldt de extensie "niets te doen" terug.
+        retry_safe = j["action"] in ("delete", "scan", "content_refresh", "extend")
 
         if retry_safe and reclaims < MAX_RECLAIMS:
             db.table("jobs").update({
