@@ -232,6 +232,14 @@ def _refresh_cache_put(oud_token: str, resultaat: dict) -> None:
     nieuw = resultaat.get("refresh_token")
     if nieuw:
         _refresh_cache[nieuw] = (verval, resultaat)
+    # Sloten van dode tokens opruimen zodat de dict niet eindeloos groeit.
+    nu = _mono()
+    for k in [k for k, (v, _) in list(_refresh_cache.items()) if v < nu]:
+        _refresh_cache.pop(k, None)
+    for k in [k for k in list(_refresh_locks) if k not in _refresh_cache]:
+        slot = _refresh_locks.get(k)
+        if slot and not slot.locked():
+            _refresh_locks.pop(k, None)
 
 
 @router.post("/refresh")
