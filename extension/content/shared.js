@@ -1990,6 +1990,32 @@ window.CL = (() => {
     );
   }
 
+  // Zie de toelichting bij de aanroep in submitListing: nooit op "Naar betalen"
+  // klikken. Los gezet zodat er een proef op kan (tests/betalende-rubriek-test.js)
+  // in plaats van de hele plaatsroutine na te moeten bouwen.
+  function betaalrubriekBezwaar(btn) {
+    const knoptekst = ((btn && btn.textContent) || "").trim();
+    const paginaTekst = ((document.body && document.body.innerText) || "");
+    const betaaldeRubriek = /betalende (?:categorie|rubriek)|cat[ée]gorie payante/i.test(paginaTekst);
+    const betaalknop = /^(?:naar betalen|betalen|doorgaan naar betalen|vers le paiement|payer)$/i
+      .test(knoptekst);
+    if (!betaalknop && !(betaaldeRubriek && !qs('[data-testid="bundle-option-FREE"]'))) return null;
+    const site = /2dehands\.be/.test((location && location.hostname) || "")
+      ? "2dehands (2dehands.be)" : "Marktplaats (marktplaats.nl)";
+    const rubriek = (paginaTekst.match(/Gekozen categorie\s+(.{2,80}?)\s+Wijzigen/i) || [])[1]
+      || (paginaTekst.match(/betalende (?:categorie|rubriek)\s+([^\n]{0,60})/i) || [])[1] || "";
+    return {
+      reden: `betalende rubriek, knop heet "${knoptekst}"`,
+      melding:
+        `${site} charges for an advert in this category`
+        + (rubriek ? ` (${rubriek.trim()})` : "")
+        + `: there is no free option left and the publish button now reads "${knoptekst}". `
+        + `Nothing was published and nothing was ordered — we never click a payment button for you. `
+        + `Either place this one yourself on ${site} and pay for it, or move the item to a category `
+        + `that is free there.`,
+    };
+  }
+
   async function submitListing(idFromUrl) {
     // Brand FIRST — closing the brand modal triggers a React re-render that resets
     // the Lexical EditorState. Description must be filled AFTER brand to survive.
@@ -2054,6 +2080,33 @@ window.CL = (() => {
              .test((b.textContent || "").trim()));
     if (!btn) throw new Error("The publish button could not be found on the page");
     clog(`plaatsen: knop gevonden ("${(btn.textContent || "").trim()}")`);
+
+    // NOOIT OP "NAAR BETALEN" KLIKKEN.
+    //
+    // WAAROM (10-09-2026, Egbert Brouwer / Papa's Plectrums). Van zijn bulk naar
+    // 2dehands mislukten er 24 met "Je hebt geen zoekertjesvorm gekozen". Dat
+    // leest als een leeg veld op het formulier, maar dat was het niet. Gemeten
+    // in zijn eigen opdrachten: alle 24 stonden in dezelfde drie gitaarrubrieken
+    // (/plaats/728/746, /747, /748), de pagina meldde "Dit is een betalende
+    // categorie", de gratis keuze (bundle-option-FREE) bestond daar niet, en de
+    // plaatsknop heette "Naar betalen". In diezelfde rubrieken lukten de eerste
+    // twee zoekertjes wel; daarna is het gratis tegoed van die rubriek op.
+    //
+    // De "zoekertjesvorm" die het formulier mist is dus geen prijsvorm maar een
+    // BETAALD pakket. Er is niets in te vullen wat het gratis maakt. Doorklikken
+    // is hier bovendien niet alleen zinloos maar duur: elke klik is een regel in
+    // een bestelling. Zijn winkelmandje stond eerder al op EUR 153,00 door een
+    // andere betaalmuur (een webadres in de tekst).
+    //
+    // Dus stoppen we vóór de klik, met een reden die de server herkent zodat de
+    // rest van de rij voor diezelfde rubriek niet ook nog een voor een mislukt.
+    {
+      const bezwaar = betaalrubriekBezwaar(btn);
+      if (bezwaar) {
+        clog(`plaatsen: geweigerd — ${bezwaar.reden}`);
+        throw new Error(bezwaar.melding);
+      }
+    }
     btn.scrollIntoView({ block: "center" });
     await sleep(800); // Lexical commit is async — give it time before submit fires
 
@@ -2387,6 +2440,100 @@ window.CL = (() => {
     return true;
   }
 
+  // "BIEDEN TOESTAAN" IS EEN KEUZE, EN DIE KEUZE IS VAN DE VERKOPER.
+  //
+  // WAAROM DIT ER IS (10-09-2026, Egbert Brouwer / Papa's Plectrums). Zijn
+  // woorden: "Alles staat op bieden toestaan, ik werk met vaste prijzen en ga
+  // niet onderhandelen over de prijs." Nagemeten op zijn eigen openbare
+  // zoekertjes via de zoek-API van 2dehands: elf van de elf hadden
+  // priceType MIN_BID — dat is "vraagprijs MET bieden vanaf". Zijn 3.000
+  // Marktplaats-advertenties staan wel gewoon op FIXED.
+  //
+  // De oorzaak is niet dat wij bieden aanzetten, maar dat wij het nooit
+  // UITzetten. De schakelaar input#syi-bidding-switch-input ("Bieden toestaan")
+  // staat op het plaatsformulier standaard AAN — dat staat al sinds de bouw van
+  // fillBidding in de toelichting hierboven, nagemeten op het echte formulier.
+  // fillBidding werd alleen aangeroepen als de verkoper zelf een minimumbod had
+  // ingevuld; deed hij dat niet, dan raakten we die schakelaar helemaal niet aan.
+  //
+  // Niet aankomen is hier dus geen neutrale keuze maar een keuze VOOR bieden.
+  // Het vinkje "Allow bidding" in het dashboard staat standaard uit, dus zetten
+  // we de schakelaar voortaan altijd zelf: aan als hij hem aanvinkte, uit als
+  // hij dat niet deed. Precies dezelfde les als bij de advertentievorm: het
+  // formulier onthoudt zijn vorige stand, dus moet je hem zetten in plaats van
+  // erop te vertrouwen.
+  //
+  // Een advertentie ZONDER vraagprijs blijft met rust: die is zelf een
+  // bied-advertentie, daar hoort de schakelaar niet bij en het prijsveld
+  // bestaat er niet eens.
+  function biedSchakelaar() {
+    return qs("input#syi-bidding-switch-input")
+        || qs("#syi-bidding-switch input[type=\"checkbox\"]")
+        || qs('input[name="price.biddingEnabled"]')
+        || (() => {
+             for (const naam of ["Bieden toestaan", "Bieden toelaten", "Bieden vanaf",
+                                 "Laat bieden toe", "Sta bieden toe"]) {
+               const el = findFieldByLabel(naam);
+               if (el && el.tagName === "INPUT" && el.type === "checkbox") return el;
+             }
+             return null;
+           })();
+  }
+
+  // Het bolletje omzetten. Eerst onze eigen klik op het invoerveld, dan op het
+  // label ernaast, en pas als laatste een echte muisklik via de achtergrond —
+  // dezelfde volgorde als bij de plaatsknop, want ook hier negeert het
+  // formulier soms een klik die van een script komt.
+  async function _zetSchakelaarUit(sw) {
+    sw.click();
+    await sleep(350);
+    if (!biedSchakelaar()?.checked) return true;
+
+    // De zichtbare schakelaar is meestal een <label for="..."> over een
+    // weggestopt invoerveld heen. Klikken op dat label is voor React hetzelfde
+    // als klikken op de schakelaar.
+    try {
+      const lab = sw.id ? document.querySelector(`label[for="${sw.id}"]`) : null;
+      if (lab) { lab.click(); await sleep(350); }
+    } catch (_) { /* een mislukte terugval mag nooit het plaatsen breken */ }
+    if (!biedSchakelaar()?.checked) return true;
+
+    await new Promise((res) => {
+      try {
+        chrome.runtime.sendMessage(
+          { type: "KLIK_ECHT", selector: sw.id ? `label[for="${sw.id}"]` : "#syi-bidding-switch" },
+          () => res());
+      } catch (_) { res(); }
+    });
+    await sleep(400);
+    return !biedSchakelaar()?.checked;
+  }
+
+  async function zetBieden(item) {
+    const prijs = Number(item && item.price);
+    if (!(isFinite(prijs) && prijs > 0)) return null;   // bied-advertentie: met rust laten
+    if (item && item.bid_percentage) return fillBidding(prijs, item.bid_percentage);
+
+    // Het blok met de prijs wordt door React opnieuw opgebouwd na het kiezen van
+    // de advertentievorm, dus even wachten in plaats van een keer kijken en het
+    // missen.
+    let sw = null;
+    for (let i = 0; i < 12 && !sw; i++) {
+      sw = biedSchakelaar();
+      if (!sw) await sleep(200);
+    }
+    if (!sw) { clog("bieden toestaan: geen schakelaar op dit formulier"); return null; }
+    if (!sw.checked) { clog("bieden toestaan: stond al uit"); return true; }
+
+    const uit = await _zetSchakelaarUit(sw);
+    // BEWUST GEEN REDEN OM HET PLAATSEN TE STOPPEN. Een advertentie die open
+    // staat voor biedingen is vervelend; geen advertentie is erger. De uitkomst
+    // staat wel in het log, zodat "hij staat toch weer op bieden" na te meten is
+    // zonder te gissen.
+    clog(`bieden toestaan: ${uit ? "uitgezet" : "BLIJFT AAN — het formulier nam de klik niet aan"}`);
+    return uit;
+  }
+
   // Truncate to maxLen chars without cutting mid-word. Trims at last space before limit.
   function smartTrunc(str, maxLen) {
     if (str.length <= maxLen) return str;
@@ -2409,8 +2556,8 @@ window.CL = (() => {
     sleep, waitUntil, qs, waitForEl, fillInput, fillInputHuman, fillNativeSelect, clickRadioByValue, fillDescription,
     findFieldByLabel, selectDropdown, fillBrand, fillManufacturer, selectBundleFree,
     selectDelivery, gekozenLevering, selectPakketWaarde, vulHalswijdte, keuzeveldenKort, typBeschrijvingEcht,
-    selectPackageSize, uploadPhotos, submitListing, step, closePopup, smartTrunc, fillBidding,
+    selectPackageSize, uploadPhotos, submitListing, step, closePopup, smartTrunc, fillBidding, zetBieden,
     clog, plaatsBlokkade, dutchColor, kleurKandidaten, kiesMetTerugval, lijstOpties, valueVariants, platteTekst, verifyMpGroupFields, repairMpGroupFields, ensureDescriptionStillFilled, selectCondition, selectIntendedFor, fillBrandField, logMpFields, mpPrijs,
-    mpPrijsvorm, kiesPrijsvorm, MP_ZONDER_BEDRAG, zetPrijs,
+    mpPrijsvorm, kiesPrijsvorm, MP_ZONDER_BEDRAG, zetPrijs, betaalrubriekBezwaar,
   };
 })();

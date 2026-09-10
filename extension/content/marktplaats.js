@@ -3,7 +3,7 @@
   const PLATFORM = "marktplaats";
   const { step, clog, qs, sleep, waitForEl, fillInput, fillInputHuman, fillDescription, selectDropdown,
           fillBrand, fillBrandField, fillManufacturer, selectBundleFree, selectDelivery, selectPakketWaarde, typBeschrijvingEcht, vulHalswijdte, uploadPhotos, submitListing,
-          clickRadioByValue, smartTrunc, fillBidding, dutchColor,
+          clickRadioByValue, smartTrunc, fillBidding, zetBieden, dutchColor,
           ensureDescriptionStillFilled, verifyMpGroupFields, repairMpGroupFields, selectCondition, selectIntendedFor, mpPrijs,
           mpPrijsvorm, kiesPrijsvorm, MP_ZONDER_BEDRAG, zetPrijs } = window.CL;
 
@@ -323,7 +323,9 @@
     await step("package",      () => item.pakket && selectPakketWaarde(item.pakket));
     // "Bieden vanaf" hoort bij een vraagprijs. Zonder prijs is het minimumbod 0,
     // en dat is geen bod maar een leeg veld dat de advertentie tegenhoudt.
-    await step("bidding",      () => item.bid_percentage && Number(item.price) > 0 && fillBidding(item.price, item.bid_percentage));
+    // Altijd zetten, ook als de verkoper GEEN bieden wil: de schakelaar
+    // "Bieden toestaan" staat op het formulier standaard aan. Zie zetBieden.
+    await step("bidding",      () => zetBieden(item));
 
     await sleep(600);
     await repairMpGroupFields(item);

@@ -1044,11 +1044,57 @@ def get_pending_jobs(request: Request, platform: str = None, user_id: str = Depe
     # item's current price right before handing the job to the extension so
     # the recreate always reflects what the user set, not what was true when
     # the delay started.
+    #
+    # EN OM DEZELFDE REDEN DE STAAT VAN DE GOEDEREN, BIJ ÉLKE PUBLICATIE.
+    #
+    # WAAROM DIT ERBIJ MOEST (10-09-2026, Egbert Brouwer / Papa's Plectrums).
+    # Hij zette 561 zoekertjes klaar voor 2dehands. In de wachtrij staat een
+    # kopie van het artikel zoals het op het moment van klikken was, en dat is
+    # bij een grote bulk urenlang geleden: zijn rij was na twee uur nog 402 lang.
+    # Corrigeert hij in die tijd in het dashboard de staat — precies wat hij
+    # moest doen, want alles stond op "Zo goed als nieuw" — dan verandert dat aan
+    # de wachtende opdrachten niets en gaat elke volgende advertentie tóch met de
+    # oude, onjuiste staat online. Voor de verkoper is dat niet te onderscheiden
+    # van "hij luistert niet naar wat ik instel".
+    #
+    # Alleen de velden die de goederen beschrijven en die in het dashboard te
+    # wijzigen zijn. Titel, tekst, prijs en categorie blijven met rust: die
+    # kennen bewuste afwijkingen per opdracht (een prijs per kanaal, een
+    # vertaalde tekst, een categorie die van de advertentiepagina zelf is
+    # gelezen). Dezelfde vijf velden die de herplaatsroute al als waarheid van
+    # het artikel behandelt.
+    _UIT_HET_ARTIKEL = ("condition", "brand", "size", "color", "material")
+    verse_items = {}
+    te_verversen = sorted({j["item_id"] for j in ready
+                           if j["action"] == "create" and j.get("item_id")})
+    if te_verversen:
+        try:
+            for i in range(0, len(te_verversen), 200):
+                for rij in (db.table("items")
+                            .select("id," + ",".join(_UIT_HET_ARTIKEL))
+                            .in_("id", te_verversen[i:i + 200]).execute().data or []):
+                    verse_items[rij["id"]] = rij
+        except Exception as e:  # noqa: BLE001
+            # Lukt het niet, dan gaat de opdracht met zijn eigen kopie de deur
+            # uit. Een verouderd kenmerk is vervelend; niets uitdelen is erger.
+            logger.warning("Kenmerken niet ververst voor uitgifte (%s)", e)
+
     for j in ready:
-        if j["action"] == "create" and j.get("scheduled_for") and isinstance(j.get("payload"), dict):
+        if j["action"] != "create" or not isinstance(j.get("payload"), dict):
+            continue
+        if j.get("scheduled_for"):
             current = db.table("items").select("price").eq("id", j["item_id"]).execute().data
             if current and current[0].get("price") not in (None, ""):
                 j["payload"]["price"] = current[0]["price"]
+        vers = verse_items.get(j.get("item_id")) or {}
+        for veld in _UIT_HET_ARTIKEL:
+            waarde = vers.get(veld)
+            if isinstance(waarde, str):
+                waarde = waarde.strip()
+            # Een leeg veld in het artikel overschrijft nooit iets wat de
+            # opdracht wél heeft: dat zou een advertentie juist armer maken.
+            if waarde and str(j["payload"].get(veld) or "") != str(waarde):
+                j["payload"][veld] = waarde
 
     # DE KLEUR GOEDZETTEN VLAK VOOR UITGIFTE.
     #
@@ -2924,6 +2970,36 @@ _BETAALMUUR = re.compile(
 )
 
 
+# EEN BETALENDE RUBRIEK IS IETS ANDERS DAN EEN BETAALMUUR OP HET HELE KANAAL.
+#
+# GEMETEN OP 10-09-2026 in de opdrachten van Egbert Brouwer (papas-plectrums).
+# Van zijn bulk naar 2dehands mislukten er 24 met "Je hebt geen zoekertjesvorm
+# gekozen". Alle 24 stonden in dezelfde drie gitaarrubrieken (/plaats/728/746,
+# /747 en /748), de pagina meldde letterlijk "Dit is een betalende categorie",
+# de gratis keuze bestond daar niet ("Free option: knop niet gevonden") en de
+# plaatsknop heette "Naar betalen". In diezelfde drie rubrieken lukten de eerste
+# twee zoekertjes wél — elektrisch 13:06 en 13:07, akoestisch 13:09 en 13:17,
+# bas 13:10 en 13:56 — en pas daarna sloeg het om. Het gratis tegoed van die
+# rubriek was op.
+#
+# HET KANAAL ZELF WERKT DUS GEWOON. Op hetzelfde moment gingen zijn zoekertjes
+# in Behuizingen en koffers, Standaards en Toebehoren wél gratis online. Het
+# hele kanaal dichtzetten (_BETAALMUUR) zou hier 127 zoekertjes tegenhouden die
+# niets kosten. Daarom een eigen rem op alleen die ene rubriek.
+#
+# Dit herkent ook wat de kopie herkent die NU bij hem draait. Een nieuwe
+# extensie is bij een verkoper pas weken later binnen (de Chrome Web Store deed
+# er eerder drie weken over), en zijn huidige melding draagt de bewijzen al:
+# de zin van de pagina zelf en de naam van de knop.
+_BETAALDE_RUBRIEK = re.compile(
+    r"betalende (?:categorie|rubriek)"
+    r"|cat[ée]gorie payante"
+    r"|knop \"(?:Naar betalen|Betalen|Vers le paiement)\""
+    r"|charges for an advert in this category",
+    re.I,
+)
+
+
 def _kanaal_hard_dicht(db, user_id: str, platform: str) -> bool:
     """Vraagt dit kanaal dit account geld voor een advertentie?
 
@@ -3108,6 +3184,13 @@ def _kanaal_kansloos(db, user_id: str, platform: str) -> bool:
     ondoorgrond = [
         j for j in recent
         if _ONDOORGROND.search(str((j.get("result") or {}).get("error") or ""))
+        # EEN BETALENDE RUBRIEK IS EEN UITGELEGDE FOUT, GEEN RAADSEL.
+        # Zonder deze uitzondering zou een verkoper die met tien zoekertjes in
+        # één betalende rubriek begint zijn hele kanaal dicht zien gaan, terwijl
+        # elke gratis rubriek daarnaast het gewoon doet.
+        and not _BETAALDE_RUBRIEK.search(
+            f"{(j.get('result') or {}).get('error') or ''} "
+            f"{(j.get('result') or {}).get('error_oorspronkelijk') or ''}")
     ]
     if not (len(ondoorgrond) >= _KANSLOOS_DREMPEL
             or _kansloze_reeks(db, user_id, platform)):
@@ -3219,6 +3302,44 @@ def _melding_kanaal_vraagt_geld(platform: str) -> str:
     )
 
 
+def _rubrieknaam(fouttekst: str, rubriek: str | None) -> str:
+    """De rubriek zoals de VERKOPER hem kent, niet zoals wij hem opslaan.
+
+    Onze eigen naam is een sleutel ("muziek snaarinstrumenten gitaren
+    elektrisch"); dat leest als een foutcode. Het plaatsformulier zet zijn eigen
+    naam boven aan de pagina ("Gekozen categorie Muziek en Instrumenten Gitaren |
+    Elektrisch Wijzigen") en die staat al in de melding die de extensie meestuurt.
+    Die heeft dus altijd voorrang.
+    """
+    m = re.search(r"Gekozen categorie\s+(.{2,80}?)\s+Wijzigen", fouttekst or "")
+    if m:
+        return " ".join(m.group(1).split())
+    slug = " ".join(str(rubriek or "").split())
+    return slug[:1].upper() + slug[1:] if slug else ""
+
+
+def _melding_rubriek_vraagt_geld(platform: str, rubriek: str | None) -> str:
+    """Wat de verkoper leest als één rubriek geld vraagt en de rest gratis blijft.
+
+    Bewust een andere tekst dan _melding_kanaal_vraagt_geld: daar staat het hele
+    kanaal uit, hier gaat alles buiten deze rubriek gewoon door. Dat verschil
+    moet erin staan, anders leest hij "2dehands doet het niet" terwijl er op
+    hetzelfde moment zoekertjes van hem online gaan.
+    """
+    site = {"marktplaats": "Marktplaats (marktplaats.nl)",
+            "2dehands": "2dehands (2dehands.be)"}.get(platform, platform)
+    naam = f'"{rubriek}"' if rubriek else "this category"
+    return (
+        f"{site} charges for adverts in {naam}: the site says this is a paid category, and it now "
+        f"puts every next advert there on an order to be paid instead of publishing it. Nothing "
+        f"was published, nothing was ordered, and we never click a payment button for you.\n\n"
+        f"We have taken the rest of your queue for {naam} back, so it does not fail one item at a "
+        f"time. Everything you have queued for other categories on {site} keeps going as normal.\n\n"
+        f"Want these online anyway? Either place them yourself on {site} and pay per advert, or "
+        f"move the items to a category that is free there."
+    )
+
+
 def _melding_kanaal_op_pauze(platform: str) -> str:
     """Wat de verkoper leest als de rem dit kanaal op pauze heeft gezet.
 
@@ -3276,7 +3397,7 @@ def _rechtgezette_foutmelding(job: dict | None, body: dict, versie, kansloos: bo
     # tabblad kwam aantoonbaar uit op /payments/. Elke rechtzetting hieronder is
     # een gok die het beter denkt te weten, en precies zo'n gok maakte hier drie
     # weken lang "je bent misschien niet ingelogd" van. Niet meer aankomen.
-    if _BETAALMUUR.search(fout):
+    if _BETAALMUUR.search(fout) or _BETAALDE_RUBRIEK.search(fout):
         return dict(body or {})
     # 3. HET FORMULIER GING NOOIT OPEN — zie _kansloze_reeks.
     #    Bewust vóór de rest: dit is de enige rechtzetting die weet dat het
@@ -3405,6 +3526,39 @@ def fail_job(job_id: str, body: dict, user_id: str = Depends(get_current_user)):
                            job["platform"], user_id, aantal)
         except Exception:  # noqa: BLE001 — een fout hier mag de foutmelding niet opeten
             logger.warning("Betaalmuur: wachtrij niet teruggenomen voor %s/%s",
+                           user_id, job.get("platform"))
+
+    # EEN BETALENDE RUBRIEK STOPT ALLEEN DIE RUBRIEK.
+    #
+    # Zie _BETAALDE_RUBRIEK voor de meting. Dit moet hier op de server staan en
+    # niet alleen in de extensie: de kopie die nu bij deze verkoper draait meldt
+    # de bewijzen al ("Dit is een betalende categorie", knop "Naar betalen"),
+    # en een nieuwe extensie is bij hem pas weken later binnen.
+    #
+    # Bewust NA de betaalmuur-controle en met een uitsluiting erop: staat het
+    # hele kanaal al op slot, dan is dat het zwaardere en juistere antwoord.
+    fouttekst_nu = str((body or {}).get("error") or "")
+    if (job and job.get("action") in ("create", "content_refresh")
+            and job.get("platform") in ("marktplaats", "2dehands")
+            and not _BETAALMUUR.search(fouttekst_nu)
+            and _BETAALDE_RUBRIEK.search(fouttekst_nu)):
+        try:
+            rubriek = str(((job.get("payload") or {}).get("category") or "")).strip()
+            reden = _melding_rubriek_vraagt_geld(
+                job["platform"], _rubrieknaam(fouttekst_nu, rubriek) or None)
+            body = {**body,
+                    "error_oorspronkelijk": body.get("error_oorspronkelijk") or body.get("error"),
+                    "error": reden}
+            # Zonder rubriek valt er niets gericht te stoppen. Dan blijft het bij
+            # deze ene uitgelegde melding: de hele rij terugnemen op grond van
+            # één zoekertje in een onbekende rubriek zou meer kapotmaken dan het
+            # oplost.
+            aantal = (_stop_wachtrij(db, user_id, job["platform"], reden, rubriek=rubriek)
+                      if rubriek else 0)
+            logger.warning("Betalende rubriek op %s (%s) bij %s: %d wachtende opdrachten teruggenomen",
+                           job["platform"], rubriek or "onbekend", user_id, aantal)
+        except Exception:  # noqa: BLE001 — een rem mag de foutmelding niet opeten
+            logger.warning("Betalende rubriek: wachtrij niet teruggenomen voor %s/%s",
                            user_id, job.get("platform"))
 
     # Deze vier bijwerkingen MOETEN aankomen. Viel de verbinding met de database
@@ -3630,10 +3784,21 @@ def _meld_mislukte_herplaatsing(db, user_id: str, job: dict, melding: str) -> in
     return geraakt
 
 
-def _stop_wachtrij(db, user_id: str, platform: str, reden: str) -> int:
-    """Neem alles terug wat nog voor dit kanaal in de wachtrij staat."""
+def _stop_wachtrij(db, user_id: str, platform: str, reden: str,
+                   rubriek: str | None = None) -> int:
+    """Neem alles terug wat nog voor dit kanaal in de wachtrij staat.
+
+    `rubriek` maakt er een gerichte rem van: dan blijft alleen wat in DIE
+    rubriek staat achterwege en gaat de rest van het kanaal gewoon door. Zie
+    _BETAALDE_RUBRIEK — een rubriek die geld kost zegt niets over de rubrieken
+    die gratis zijn, en die van iemand afnemen is schade in plaats van hulp.
+    """
     wachtend = db.table("jobs").select("id,item_id,action,payload").eq(
         "user_id", user_id).eq("platform", platform).eq("status", "pending").execute().data or []
+    if rubriek is not None:
+        doel = str(rubriek or "").strip().lower()
+        wachtend = [j for j in wachtend
+                    if str(((j.get("payload") or {}).get("category") or "")).strip().lower() == doel]
     if not wachtend:
         return 0
     now = datetime.now(timezone.utc).isoformat()

@@ -10,7 +10,7 @@ product verandert. De ontwikkelaar werkt dan zowel dit bestand in de repo als de
 kopie in Drive bij, in dezelfde beurt. Daniel hoeft niets te doen; de Gem leest
 de Drive-kopie de volgende keer opnieuw in.
 
-_Laatst bijgewerkt: 09-09-2026_
+_Laatst bijgewerkt: 10-09-2026_
 
 ---
 
@@ -170,6 +170,20 @@ Contact:
   Moest iemand vóór 8 september steeds opnieuw inloggen, dan is dat opgelost.
 - Loopt de proefperiode af, dan krijg je daar twee dagen van tevoren een mail
   over, en daarna nog een laatste herinnering.
+- Sommige rubrieken op Marktplaats en 2dehands zijn betaalde rubrieken. Je krijgt
+  daar een klein aantal gratis advertenties; daarna vraagt de site zelf geld per
+  advertentie. Omnivaleur betaalt daar nooit voor: de opdracht stopt vóór de
+  betaalknop, er wordt niets besteld, en de rest van de wachtrij voor die ene
+  rubriek wordt teruggenomen zodat het niet honderd keer achter elkaar misgaat.
+  Alle andere rubrieken lopen gewoon door. Wil de klant die advertenties tóch
+  online, dan plaatst hij ze zelf en betaalt hij per advertentie, of hij zet de
+  artikelen in een rubriek die daar wel gratis is. Herkenbaar bij de klant aan
+  "Dit is een betalende categorie" of een knop die "Naar betalen" heet.
+- De staat van een artikel ("Nieuw", "Zo goed als nieuw") komt bij een import van
+  het platform zelf. Klopt hij niet, dan is hij met één knop voor alle artikelen
+  tegelijk te wijzigen; hij hoeft dat niet per artikel te doen.
+- Bieden staat standaard UIT. Wil de klant wel biedingen, dan zet hij per artikel
+  "Allow bidding" aan en vult hij een minimumbod in.
 
 ## Modelantwoorden
 

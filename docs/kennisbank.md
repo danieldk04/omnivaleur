@@ -17,6 +17,106 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ---
 
+## wachtrij-draagt-een-oude-kopie
+
+*10-09-2026 — Een wachtende opdracht draagt het artikel van het moment van klikken; wat de verkoper daarna corrigeert bereikt hem niet*
+
+Een publicatieopdracht krijgt bij het inplannen een kopie van het artikel mee.
+Bij een bulk staat die uren in de rij: Egbert Brouwer zette 561 zoekertjes klaar
+en had er na twee uur nog 402 wachten. Corrigeert hij in die tijd iets in het
+dashboard — precies wat je hem vraagt te doen — dan verandert er aan de wachtende
+opdrachten niets en gaat elke volgende advertentie tóch fout online. Voor een
+verkoper is dat niet te onderscheiden van "hij luistert niet naar wat ik instel".
+
+**How to apply:** sinds 10-09-2026 leest `get_pending_jobs` vlak vóór uitgifte de
+velden die de goederen beschrijven opnieuw uit het artikel: condition, brand,
+size, color, material. Eén gebundelde vraag, dus geen extra verkeer. Titel, tekst,
+prijs en categorie blijven met rust — die kennen bewuste afwijkingen per opdracht
+(prijs per kanaal, vertaalde tekst, categorie van de advertentiepagina zelf, zie
+"herplaatsen-verliest-advertenties"). Een leeg veld in het artikel overschrijft
+nooit iets wat de opdracht wél heeft.
+
+---
+
+## verzonnen-standaard-is-erger-dan-leeg
+
+*10-09-2026 — Een standaardwaarde bij import ("condition = good") is een uitspraak die niemand heeft gedaan, en hij maakt zichzelf onherstelbaar*
+
+Bij het importeren vulde `_map_condition` "good" in als het platform geen staat
+meegaf. "good" is bij ons "Zo goed als nieuw" — een uitspraak over de goederen die
+de verkoper nooit heeft gedaan.
+
+**Waarom dit erger is dan leeg laten:** vanaf dat moment is het veld GEVULD, en
+elke verrijkronde werkt op "alleen aanvullen wat leeg is". De gok maakt zichzelf
+dus onherstelbaar. Bij Egbert Brouwer stonden zo 1.284 van zijn 5.533 artikelen op
+"Zo goed als nieuw" terwijl zijn eigen 3.000 openbare Marktplaats-advertenties
+allemaal "Nieuw" zeggen. Zijn woorden: "dit klopt natuurlijk niet."
+
+**How to apply:** de zoek-API geeft de staat gratis mee in élk zoekresultaat
+(`attributes: [{key:"condition", value:"Nieuw"}]`), honderd advertenties per
+aanvraag — die lazen we niet. Sinds 10-09-2026 doet `_naar_advertentie` dat wel en
+zet `_conditie_correctie` de gok recht; alleen de standaardwaarde wordt overruled,
+een bewust gezette staat nooit. Voor bestaande rommel:
+`scripts/herstel_conditie_uit_platform.py`. Zelfde soort val als
+"succes-nooit-uit-uitsluitingslijst": een waarde die "niet leeg" is geldt
+daarna als waarheid.
+
+---
+
+## betalende-rubriek-is-geen-formulierfout
+
+*10-09-2026 — "Je hebt geen zoekertjesvorm gekozen" op 2dehands betekent meestal: deze rubriek kost geld, niet dat er een veld leeg is*
+
+2dehands (en Marktplaats) hebben **betalende rubrieken**. Zit je gratis tegoed
+daar op, dan meldt het formulier "Je hebt geen zoekertjesvorm gekozen", verdwijnt
+`[data-testid="bundle-option-FREE"]`, zegt de pagina "Dit is een betalende
+categorie" en heet de plaatsknop **"Naar betalen"**. Er is dan niets in te vullen
+wat het gratis maakt.
+
+**Waarom:** Egbert Brouwer, 10-09-2026: 24 mislukkingen, alle 24 in dezelfde drie
+gitaarrubrieken (/plaats/728/746, /747, /748). Per rubriek gingen de eerste twee
+zoekertjes wél gratis online, daarna sloeg het om. Op hetzelfde moment publiceerde
+hij probleemloos in Behuizingen en koffers, Standaards en Toebehoren. Het kanaal
+werkt dus; alleen die rubrieken kosten geld. Er stonden nog 274 opdrachten in die
+drie rubrieken te wachten.
+
+**How to apply:** nooit op "Naar betalen" klikken — elke klik is een bestelregel
+(zie "marktplaats-2dehands-link-kost-negen-euro", daar liep zijn winkelmandje op
+tot EUR 153). De rem hoort op **rubriekniveau**, niet op kanaalniveau: de
+kanaalbrede betaalmuur (`_BETAALMUUR`, `_stop_wachtrij`) zou zijn gratis rubrieken
+óók dichtzetten. Sinds 10-09-2026: `_BETAALDE_RUBRIEK` + `_stop_wachtrij(...,
+rubriek=)` in jobs.py, en `betaalrubriekBezwaar()` in shared.js (1.0.317). De
+server herkent ook de melding van oudere kopieën, want die dragen de bewijzen al
+in hun foutmelding — zie "rem-op-de-server-bij-een-extensiefout".
+
+---
+
+## bieden-toestaan-staat-standaard-aan
+
+*10-09-2026 — Op het MP/2dehands-plaatsformulier staat "Bieden toestaan" standaard aan; niet aankomen is een keuze vóór bieden*
+
+De schakelaar `input#syi-bidding-switch-input` ("Bieden toestaan") staat op het
+plaatsformulier van Marktplaats en 2dehands standaard AAN. Wij riepen `fillBidding`
+alleen aan als de verkoper zelf een minimumbod had ingevuld, dus bij iedereen die
+géén bieden wilde raakten we die schakelaar helemaal niet aan.
+
+**Waarom:** Egbert Brouwer (Papa's Plectrums, 10-09-2026) werkt met vaste prijzen.
+Live gemeten via de openbare zoek-API van 2dehands: 11 van zijn 11 zoekertjes op
+priceType MIN_BID (= vraagprijs mét bieden vanaf), terwijl zijn 3.000
+Marktplaats-advertenties op FIXED staan. Het vinkje "Allow bidding" in het
+dashboard staat standaard uit, dus de standaard van het formulier is precies
+verkeerd om.
+
+**How to apply:** een formulierveld dat standaard iets aanstaat moet je zelf
+zetten, in beide richtingen. `zetBieden(item)` in shared.js doet dat nu: aan met
+minimumbod als de verkoper het aanvinkte, anders hard uit, en het leest terug of
+de schakelaar echt om is. Zelfde les als bij de advertentievorm, zie
+"formulier-onthoudt-vorige-keuze". Een advertentie zónder vraagprijs blijft met
+rust: die ís een bied-advertentie. Meten kan zonder inlog: priceType in de
+openbare zoek-API, zie "eigen-advertentie-heeft-geen-leesbaar-adres".
+
+---
+
 ## admarkt-pro-mag-niet-geautomatiseerd
 
 *10-09-2026 — Admarkt heet nu Pro; automatisch plaatsen mag alleen via een erkende API-partner, en zakelijk zijn blokkeert het gewone plaatsformulier niet*

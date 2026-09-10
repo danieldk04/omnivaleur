@@ -231,6 +231,22 @@ async def haal_advertenties(client: httpx.AsyncClient, verkoper_id: int,
     return {k: v for k, v in per_titel.items() if k not in botsing}
 
 
+def _kenmerk(l: dict, sleutel: str) -> str:
+    """Eén kenmerk uit een zoekresultaat, bijvoorbeeld de staat van het artikel.
+
+    De zoek-API geeft die kenmerken gratis mee in elk zoekresultaat — honderd
+    advertenties per aanvraag, dus zonder één extra ophaalronde:
+        "attributes":[{"key":"condition","value":"Nieuw","values":["Nieuw"]},
+                      {"key":"delivery","value":"Ophalen of Verzenden", ...}]
+    Nagemeten 10-09-2026 op de openbare advertenties van Papa's Plectrums, op
+    marktplaats.nl en op 2dehands.be.
+    """
+    for a in (l.get("attributes") or []):
+        if str(a.get("key") or "").lower() == sleutel:
+            return str(a.get("value") or "").strip()
+    return ""
+
+
 def _naar_advertentie(l: dict, basis: str = BASIS) -> dict:
     cents = ((l.get("priceInfo") or {}).get("priceCents"))
     soort = ((l.get("priceInfo") or {}).get("priceType") or "")
@@ -239,11 +255,22 @@ def _naar_advertentie(l: dict, basis: str = BASIS) -> dict:
         "item_id": l.get("itemId"),
         # Alleen een echte vraagprijs overnemen. "Bieden", "Gereserveerd" en
         # "Op aanvraag" komen als 0 of 1 cent binnen en zijn geen prijs.
+        #
+        # MIN_BID HOORT ER WÉL BIJ (10-09-2026). Dat is geen bied-advertentie
+        # maar een gewone vraagprijs met de schakelaar "Bieden toestaan" aan:
+        # het bedrag in priceCents is de vraagprijs die op de advertentie staat.
+        # Hier stond alleen FIXED, en daarmee gooiden we bij elke verkoper die
+        # bieden toestaat de prijs weg. Bij Papa's Plectrums stonden op
+        # 10-09-2026 elf van de elf 2dehands-zoekertjes op MIN_BID; een
+        # verrijkronde zou daar dus elf keer "geen prijs" van hebben gemaakt.
         "price": (round(cents / 100, 2)
-                  if soort == "FIXED" and isinstance(cents, int) and cents > 1
+                  if soort in ("FIXED", "MIN_BID") and isinstance(cents, int) and cents > 1
                   else None),
         "url": (basis + vip) if vip.startswith("/") else vip,
         "kort": (l.get("categorySpecificDescription") or l.get("description") or "").strip(),
+        # De staat zoals het platform hem zelf toont ("Nieuw", "Zo goed als
+        # nieuw", "Gebruikt"). Zie _vul_conditie_aan.
+        "conditie": _kenmerk(l, "condition"),
     }
 
 
@@ -370,6 +397,44 @@ def _onze_conditie(waarde: str) -> str:
     if "gebruikt" in t or "gedragen" in t:
         return "fair"
     return ""
+
+
+# Wat een import invult als het platform geen staat meegaf. Zie
+# backend/api/imports.py (_map_condition geeft "good" terug bij een lege bron).
+_CONDITIE_STANDAARD = "good"
+
+
+def _conditie_correctie(item: dict, advertentie: dict) -> dict:
+    """De staat rechtzetten als wij hem hebben geraden en het platform hem weet.
+
+    WAAROM DIT ER IS (10-09-2026, Egbert Brouwer / Papa's Plectrums). Zijn
+    woorden: "Alle listings die gelukt zijn staan nu te boek als bijna nieuw,
+    dit klopt natuurlijk niet." Hij verkoopt nieuwe plectrums en miniatuur-
+    gitaren.
+
+    Waar dat vandaan kwam. Bij het importeren komt de staat van het platform;
+    is die er niet, dan vulde de import "good" in, en "good" is bij ons "Zo goed
+    als nieuw". Dat is geen leeg veld maar een verzonnen uitspraak over de
+    goederen, en niemand zag het: vanaf dat moment is het veld GEVULD, dus sloeg
+    elke verrijkronde het over ("alleen aanvullen wat leeg is"). Bij hem stonden
+    er zo 1.284 artikelen op "Zo goed als nieuw" terwijl zijn eigen 3.000
+    Marktplaats-advertenties allemaal "Nieuw" zeggen — nagemeten via de openbare
+    zoek-API op 10-09-2026.
+
+    De staat op zijn eigen advertentie is zijn eigen uitspraak; onze "good" was
+    een gok van ons. Daarom wint het platform, maar alléén van die gok: staat er
+    bij ons iets anders dan de standaardwaarde, dan heeft iemand hem bewust
+    gezet en blijft hij staan.
+    """
+    van_platform = _onze_conditie(str(advertentie.get("conditie") or ""))
+    if not van_platform:
+        return {}
+    nu = str(item.get("condition") or "").strip().lower()
+    if nu and nu != _CONDITIE_STANDAARD:
+        return {}
+    if van_platform == nu:
+        return {}
+    return {"condition": van_platform}
 
 
 def _onze_maat(waarde: str) -> str:
@@ -1074,6 +1139,9 @@ async def verrijk(db, user_id: str, schrijf: bool = True,
             patch = {}
             if not item.get("price") and a["price"]:
                 patch["price"] = a["price"]
+            # Gratis meegekomen in ditzelfde zoekresultaat, dus geen extra
+            # ophaalronde. Zie _conditie_correctie.
+            patch.update(_conditie_correctie(item, a))
             # Eén ophaalronde per advertentie, en daar komt alles uit: de tekst,
             # de hele fotoreeks en de kenmerken.
             mist_tekst = not str(item.get("description") or "").strip()

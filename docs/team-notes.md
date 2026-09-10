@@ -7811,3 +7811,80 @@ Gevolg voor Omnivaleur: wij kunnen Pro/Admarkt niet met de extensie bedienen,
 niet omdat het technisch niet lukt maar omdat het volgens hun voorwaarden niet
 mag. Wil Daniel dit echt aanbieden, dan is de route erkend API-partner worden bij
 Marktplaats BV. Dat is een zakelijke beslissing, geen bouwklus.
+
+### 10-09-2026 — Egberts bulk naar 2dehands: drie klachten, drie verschillende oorzaken
+
+Egbert Brouwer (Papa's Plectrums) mailde na zijn eerste grote bulk: alles staat
+als "bijna nieuw", alles staat op "bieden toestaan", en er zijn er 23 mislukt met
+een rode balk. "Voor mij is het hem nog niet." Alles hieronder is gemeten in zijn
+eigen account (5.533 artikelen) en op zijn eigen, openbare advertenties.
+
+**1. "Bijna nieuw" — een gok van ons die zichzelf onherstelbaar maakte.**
+Bij het importeren vult `_map_condition` "good" in als het platform geen staat
+meegeeft, en "good" is bij ons "Zo goed als nieuw". Dat is geen leeg veld maar een
+uitspraak over de goederen die hij nooit heeft gedaan. En juist daardoor zag
+niemand het: vanaf dat moment is het veld gevuld, dus sloeg elke verrijkronde het
+over ("alleen aanvullen wat leeg is"). Bij hem stonden zo **1.284 van de 5.533**
+artikelen op "good", terwijl zijn eigen 3.000 openbare Marktplaats-advertenties
+**allemaal "Nieuw"** zeggen — nagemeten via de zoek-API, condition
+Counter({'Nieuw': 3000}).
+
+Het platform geeft die staat gewoon gratis mee in elk zoekresultaat
+(`attributes: [{key:"condition", value:"Nieuw"}]`), honderd advertenties per
+aanvraag. Die lazen we niet. Nu wel: `_naar_advertentie` neemt hem mee en
+`_conditie_correctie` zet de gok recht — alléén de standaardwaarde, nooit een
+bewust gezette staat. Zijn bestaande gegevens zijn met
+`scripts/herstel_conditie_uit_platform.py` rechtgezet tegen zijn eigen
+advertenties: **1.280 keer good → new**, geen enkele de andere kant op. Hij staat
+nu op 5.529 "new" en 4 "good" (die vier hebben geen advertentie om tegen te
+meten).
+
+**2. "Bieden toestaan" — wij zetten het niet aan, wij zetten het nooit uit.**
+Live gemeten op zijn 2dehands-zoekertjes (sellerIds[]=27364566): **11 van de 11 op
+priceType MIN_BID**, dat is een vraagprijs mét "bieden vanaf". Zijn 3.000
+Marktplaats-advertenties staan op FIXED. De schakelaar
+`input#syi-bidding-switch-input` staat op het plaatsformulier standaard AAN, en
+`fillBidding` werd alleen aangeroepen als de verkoper zélf een minimumbod had
+ingevuld. Deed hij dat niet — zijn vinkje "Allow bidding" staat standaard uit —
+dan raakten we die schakelaar helemaal niet aan. Niet aankomen is dus geen
+neutrale keuze maar een keuze vóór bieden. `zetBieden()` zet hem nu altijd zelf,
+beide kanten op, en leest terug of hij echt om is.
+
+**3. De 23 rode balken — 2dehands vraagt geld voor die rubriek.**
+Alle 24 (hij telde er 23 terwijl hij nog bezig was) mislukten met "Je hebt geen
+zoekertjesvorm gekozen". Dat leest als een leeg veld, maar dat was het niet. Alle
+24 stonden in dezelfde drie gitaarrubrieken (/plaats/728/746, /747, /748), de
+pagina meldde letterlijk "Dit is een betalende categorie", de gratis keuze
+(`bundle-option-FREE`) bestond er niet, en de plaatsknop heette **"Naar betalen"**.
+Per rubriek gingen de eerste twee zoekertjes wél gratis online — elektrisch 13:06
+en 13:07, akoestisch 13:09 en 13:17, bas 13:10 en 13:56 — en daarna sloeg het om.
+
+Het kanaal werkt dus gewoon: op datzelfde moment publiceerde hij probleemloos in
+Behuizingen en koffers, Standaards en Toebehoren. De bestaande betaalmuur-rem zet
+het HELE kanaal dicht en zou dus ook zijn gratis rubrieken hebben afgenomen.
+Daarom een aparte rem op rubriekniveau: `_BETAALDE_RUBRIEK` +
+`_stop_wachtrij(..., rubriek=)`. Er stonden nog **274 opdrachten** in die drie
+rubrieken te wachten — 274 rode balken, één per twee minuten, ruim negen uur lang.
+Die zijn teruggenomen met één uitgelegde reden; zijn 128 overige wachtende
+opdrachten lopen gewoon door. De 24 bestaande rode balken dragen nu diezelfde
+reden in plaats van een muur Engelse techniek.
+
+De extensie (1.0.317) weigert vanaf nu vóór de klik: nooit op "Naar betalen"
+klikken, want elke klik is een bestelregel. Zijn winkelmandje stond er eerder al
+op EUR 153,00 door de andere betaalmuur (een webadres in de tekst). De server
+herkent het óók aan de melding die zijn huidige kopie stuurt, dus dit werkt
+vandaag en niet pas na de Chrome Web Store.
+
+**En één val eronder: de wachtrij draagt een oude kopie.** Zijn rij was na twee
+uur nog 402 lang. Corrigeerde hij in die tijd de staat in het dashboard — precies
+wat hij moest doen — dan veranderde dat aan de wachtende opdrachten niets.
+`get_pending_jobs` leest die kenmerken (condition, brand, size, color, material)
+nu opnieuw uit het artikel vlak vóór uitgifte. Zijn 128 wachtende opdrachten zijn
+ook meteen bijgewerkt: alle 128 dragen nu "new".
+
+**Openstaand.** Of "muziek drumstellen en slagwerk" (67 wachtende opdrachten) ook
+een betalende rubriek is, is niet gemeten — dat blijkt bij de eerste poging, en de
+rem vangt het dan zelf op. Zijn 11 al geplaatste 2dehands-zoekertjes staan nog op
+MIN_BID; die worden pas FIXED als ze opnieuw geplaatst worden. En of er in zijn
+2dehands-winkelmandje onbetaalde bestelregels staan is van buitenaf niet te zien:
+dat moet hij zelf nakijken op /payments/orderOverview.
