@@ -8118,3 +8118,49 @@ docs/kennisbank.md, lees ze voor je begint):
 de vervaldatum aantoonbaar vier weken is opgeschoven, er geen tweede advertentie
 is ontstaan, er niets is betaald, en er een proef in `tests/` staat die de oude
 code onder dezelfde omstandigheden laat falen tegen een vast commitnummer.
+
+## 10-09-2026 — Vinted-update 8 oktober 2026: geen nieuw botverbod, wél scherper toezicht
+
+Nagevraagd naar aanleiding van een bericht dat Vinted per 8-10-2026 strenger zou
+gaan controleren op crosslisting-tools en bots.
+
+**Wat er 8 oktober echt verandert** (twee onafhankelijke vergelijkingen van de
+oude en nieuwe voorwaarden, valueaddedresource.net): saldo verhuist van Mangopay
+naar Vinted Pay, "Buyer Protection fee" heet voortaan "Vinted fee",
+namaak-termijn van 24 naar 48 uur, en de handhavings- en bezwaartekst is korter
+en vager. **Niets** over bots, externe software, scraping of API's. Die clausule
+(sectie 6: geen "external software tools including bots, scraping programs,
+crawling programs, spiders") staat er al sinds minstens de voorwaarden van
+10-08-2026 en verandert 8 oktober niet.
+
+**Wat wél waar is en losstaat van die datum:** Vinted heeft in 2026 de detectie
+flink aangezet. Meerdere bronnen (SEO-blogs van concurrerende tools plus een
+BBC-stuk) melden: beeld-hashing die identieke foto's bij herplaatsen direct
+herkent, patroonherkenning op "machine-achtige" herplaatsrotatie, sinds
+21-07-2026 accounts 24 uur op slot bij verdachte automatisering, duizenden bans
+waarvan veel permanent. Server-side crosslist-tools met een eigen API-vingerafdruk
+(Vendoo, Crosslist) worden als makkelijk detecteerbaar genoemd.
+
+**Blootstelling van Omnivaleur, gemeten in de code:**
+* Publiceren, delisten en herplaatsen op Vinted lopen volledig via de extensie in
+  de eigen Chrome van de verkoper (`EXTENSION_PLATFORMS`, `relist.py`
+  `EXTENSION_RELIST_PLATFORMS`). Geen server die het Vinted-account bestuurt. Dat
+  is de veiligste opzet en precies niet wat de detectie pakt.
+* `backend/platforms/vinted.py` (interne `/api/v2`-aanroepen met Playwright
+  Stealth + curl-cffi) is nog aanwezig maar wordt nergens voor create/delete
+  aangeroepen; alleen het endpoint `/vinted/bootstrap` raakt het nog. Dode code
+  die wel het risicoprofiel draagt als iemand het weer aanzet.
+* Het echte aandachtspunt: `relist.py` doet op Vinted zowel "content" (bewerken
+  met fotovolgorde wisselen) als "relist" (verwijderen + opnieuw plaatsen), en
+  regel 381 gaat er expliciet van uit dat "acht keer opnieuw plaatsen op één dag
+  op Vinted onopvallend is". Juist die aanname is wat het toezicht van 2026
+  onderuithaalt: identieke foto's bij opnieuw plaatsen + herplaatsritme zijn nu
+  de twee sterkste signalen. Calm mode (3 tot 8 min ertussen) dempt het tempo
+  maar niet de foto-hash.
+
+**Conclusie:** 8 oktober is geen acuut gevaar, geen actie nodig vóór die datum.
+Het bredere toezicht is wel een reëel risico voor klant-Vinted-accounts. Twee
+dingen verdienen een aparte sessie: (1) de herplaats-aanname op Vinted opnieuw
+tegen het licht houden, liefst "content"-edit i.p.v. delete+recreate en bij
+opnieuw plaatsen andere/bijgesneden foto's; (2) `vinted.py` en
+`/vinted/bootstrap` weghalen als ze echt nergens meer voor dienen.
