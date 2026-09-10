@@ -1385,8 +1385,16 @@ def _last_listed_title(db, item_id: str, platform: str, fallback: str) -> str:
     return fallback
 
 
-async def delist_all_platforms(item_id: str, user_id: str) -> list[dict]:
-    """Delist an item from every platform it is currently active on."""
+async def delist_all_platforms(item_id: str, user_id: str,
+                               alleen_platforms: set[str] | None = None) -> list[dict]:
+    """Delist an item from every platform it is currently active on.
+
+    `alleen_platforms` beperkt de ronde tot die kanalen. Alleen het vangnet in
+    verkoop_reconciliatie.py geeft dat mee: dat draait elke 20 minuten opnieuw,
+    en een kanaal waar de afmelding blijft mislukken moet het kunnen overslaan
+    zonder de andere kanalen van hetzelfde artikel mee te slepen. None betekent
+    "alle kanalen", precies zoals het altijd werkte.
+    """
     db = get_db()
     listings_resp = (
         (await naast_de_lus(lambda: db.table("listings").select("*").eq("item_id", item_id).execute()))
@@ -1423,7 +1431,12 @@ async def delist_all_platforms(item_id: str, user_id: str) -> list[dict]:
     # platform" liet de tweede staan, dus bleef een verkocht artikel te koop.
     seen_ads: dict[tuple, dict] = {}
     platforms_met_levende_rij = set()
-    for l in listings_resp.data:
+    # De verkochte kanalen zijn hierboven uit ALLE rijen bepaald, ook als de
+    # aanroeper zich tot een paar kanalen beperkt: één verkochte rij sluit dat
+    # kanaal af, wat de aanroeper ook vraagt.
+    rijen = [l for l in listings_resp.data
+             if alleen_platforms is None or l.get("platform") in alleen_platforms]
+    for l in rijen:
         if l["status"] not in _LEVEND or l["platform"] in sold_platforms:
             continue
         platforms_met_levende_rij.add(l["platform"])
@@ -1441,7 +1454,7 @@ async def delist_all_platforms(item_id: str, user_id: str) -> list[dict]:
     # oude Marktplaats-bevestigdialoog, de Shopify id/SKU-bugs). Dan één poging
     # per platform. Niet per archiefrij: dat opent tabblad na tabblad voor
     # advertenties die allang weg zijn.
-    for l in listings_resp.data:
+    for l in rijen:
         p = l["platform"]
         if (l["status"] == "delisted" and p not in sold_platforms
                 and p not in platforms_met_levende_rij

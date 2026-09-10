@@ -44,6 +44,30 @@ PER_RONDE = 40
 # Statussen waarin een advertentie nog op het platform kan staan.
 _NOG_LEVEND = ("active", "error", "relisting", "hidden", "pending")
 
+# HET VANGNET MOET ZICH ZIJN EIGEN POGINGEN HERINNEREN.
+#
+# GEMETEN 10-09-2026 (De Juiste Toon). Zijn artikel "Lederhosen maat 54" was op
+# Vinted verkocht. De Marktplaats-advertentie ervan is voor de extensie niet te
+# vinden — hij heeft een zakelijk account en zijn "Mijn advertenties" is leeg —
+# dus kwam de verwijderopdracht op 'error' en bleef de rij op 'active' staan.
+# Deze ronde zag dat als "nog niet afgemeld" en zette de afmelding elke twintig
+# minuten opnieuw in gang: van 09-09 19:52 tot 10-09 17:26 elke keer twee
+# opdrachten, elke keer dezelfde fout. Systeembreed waren 462 van de 1.790
+# verwijderopdrachten sinds 25-08 een herhaling van een eerdere, verdeeld over
+# vier verkopers.
+#
+# Dat is niet gratis: elke herhaling opent een tabblad in de browser van de
+# verkoper, en schrijvende opdrachten gaan één voor één, dus zijn echte werk
+# schuift elke twintig minuten naar achteren. Een vangnet dat blijft proberen is
+# geen vangnet meer maar een lopende band; zie de les bij een status die niemand
+# afsluit (herplaatsing-laat-oude-rij-staan).
+MAX_POGINGEN = 4
+# Wachttijd vóór een volgende poging, naar het aantal pogingen dat er al is
+# geweest: de eerste mag meteen, daarna een uur, dan vier uur, dan een dag.
+# Na MAX_POGINGEN laten we het kanaal met rust; de advertentierij houdt zijn
+# foutmelding, dus het staat in het dashboard en de verkoper kan zelf herkansen.
+WACHT_UREN = (0, 1, 4, 24)
+
 
 async def reconcileer_verkochte_artikelen() -> dict:
     db = get_db()
@@ -111,11 +135,80 @@ async def reconcileer_verkochte_artikelen() -> dict:
         if nog_levend or onbevestigd:
             kandidaten.append((info["sold_at"] or "", iid))
 
+    # Wat er al geprobeerd is, per (artikel, kanaal). Eén vraag per brok, niet
+    # per artikel: deze ronde draait elke twintig minuten.
+    pogingen: dict[tuple[str, str], list[str]] = {}
+    kandidaat_ids = [iid for _, iid in kandidaten]
+    for i in range(0, len(kandidaat_ids), IN_BROK):
+        brok = kandidaat_ids[i:i + IN_BROK]
+        try:
+            rows = ((await naast_de_lus(
+                lambda b=brok: db.table("jobs")
+                .select("item_id,platform,created_at")
+                .eq("action", "delete").in_("item_id", b)
+                .gte("created_at", grens).execute(), herkans=True)).data or [])
+        except Exception as e:  # noqa: BLE001
+            logger.warning("verkoop-reconciliatie: kon eerdere pogingen niet lezen: %s", e)
+            rows = []
+        for r in rows:
+            if r.get("item_id") and r.get("platform"):
+                pogingen.setdefault((r["item_id"], r["platform"]), []).append(
+                    r.get("created_at") or "")
+
+    nu = datetime.now(timezone.utc)
+
+    def _tijd(waarde) -> datetime | None:
+        try:
+            t = datetime.fromisoformat(str(waarde).replace("Z", "+00:00"))
+        except (TypeError, ValueError):
+            return None
+        return t if t.tzinfo else t.replace(tzinfo=timezone.utc)
+
+    def _mag_opnieuw(iid: str, platform: str) -> bool:
+        # Alleen de pogingen NA de verkoop tellen mee. Een verwijderopdracht van
+        # daarvoor hoort bij iets anders (een herplaatsing, een handmatige
+        # afmelding) en mag dit vangnet niet vooraf opgebruiken.
+        verkocht_op = _tijd((verkoop_van.get(iid) or {}).get("sold_at"))
+        eerder = sorted(
+            t for t in (_tijd(x) for x in pogingen.get((iid, platform), []))
+            if t is not None and (verkocht_op is None or t >= verkocht_op)
+        )
+        if len(eerder) >= MAX_POGINGEN:
+            return False
+        if not eerder:
+            return True
+        wacht = WACHT_UREN[min(len(eerder), len(WACHT_UREN) - 1)]
+        if wacht <= 0:
+            return True
+        return nu - eerder[-1] >= timedelta(hours=wacht)
+
+    def _levende_kanalen(iid: str) -> set[str]:
+        return {r["platform"] for r in rijen_per_item.get(iid, [])
+                if r.get("status") in _NOG_LEVEND
+                and r["platform"] not in verkoop_van[iid]["platforms"]}
+
+    # Artikelen waar élk nog-levend kanaal zijn pogingen erop heeft zitten (of
+    # nog moet wachten) gaan er hier uit, zodat ze de PER_RONDE-plekken niet
+    # opeten van artikelen die wél een poging verdienen.
+    binnen_budget: list[tuple[str, str]] = []
+    overgeslagen = 0
+    for sold_at, iid in kandidaten:
+        kanalen = _levende_kanalen(iid)
+        if not kanalen or any(_mag_opnieuw(iid, p) for p in kanalen):
+            binnen_budget.append((sold_at, iid))
+        else:
+            overgeslagen += 1
+    kandidaten = binnen_budget
+
     kandidaten.sort()
     kandidaten = kandidaten[:PER_RONDE]
 
     if not kandidaten:
-        return {"bekeken": len(item_ids), "opnieuw_ingezet": 0, "gearchiveerd": 0}
+        if overgeslagen:
+            logger.info("verkoop-reconciliatie: %d artikel(en) overgeslagen, hun kanalen "
+                        "hebben hun pogingen erop zitten", overgeslagen)
+        return {"bekeken": len(item_ids), "opnieuw_ingezet": 0, "gearchiveerd": 0,
+                "overgeslagen": overgeslagen}
 
     # Eigenaren erbij zoeken (delist_all_platforms wil het user_id).
     doel_ids = [iid for _, iid in kandidaten]
@@ -156,8 +249,13 @@ async def reconcileer_verkochte_artikelen() -> dict:
 
         if not levend:
             continue
+        toegestaan = {r["platform"] for r in andere
+                      if _mag_opnieuw(iid, r["platform"])}
+        if not (set(levend) & toegestaan):
+            overgeslagen += 1
+            continue
         try:
-            res = await delist_all_platforms(iid, uid)
+            res = await delist_all_platforms(iid, uid, alleen_platforms=toegestaan)
             opnieuw += 1
             logger.info(
                 "verkoop-reconciliatie: item %s was verkocht op %s maar stond nog op %s "
@@ -168,6 +266,8 @@ async def reconcileer_verkochte_artikelen() -> dict:
         except Exception as e:  # noqa: BLE001
             logger.warning("verkoop-reconciliatie: item %s afmelden mislukte: %s", iid, e)
 
-    logger.info("verkoop-reconciliatie: %d artikel(en) bekeken, %d opnieuw ingezet, %d gearchiveerd",
-                len(item_ids), opnieuw, gearchiveerd)
-    return {"bekeken": len(item_ids), "opnieuw_ingezet": opnieuw, "gearchiveerd": gearchiveerd}
+    logger.info("verkoop-reconciliatie: %d artikel(en) bekeken, %d opnieuw ingezet, "
+                "%d gearchiveerd, %d overgeslagen (pogingen op)",
+                len(item_ids), opnieuw, gearchiveerd, overgeslagen)
+    return {"bekeken": len(item_ids), "opnieuw_ingezet": opnieuw,
+            "gearchiveerd": gearchiveerd, "overgeslagen": overgeslagen}

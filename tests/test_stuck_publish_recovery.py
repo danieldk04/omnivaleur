@@ -150,7 +150,16 @@ def test_een_scan_blokkeert_publiceren_niet():
     jobs = (ROOT / "backend/api/jobs.py").read_text(encoding="utf-8")
     poort = jobs.split("is_extension_dispatch = platform is not None")[1].split("# Jobs with a future")[0]
     assert 'c.get("action") not in SCHRIJVEND' in poort, "alleen schrijvende opdrachten mogen blokkeren"
-    assert 'SCHRIJVEND = ("create", "delete", "content_refresh")' in jobs
+    # Op de inhoud toetsen en niet op de letterlijke regel: er komen
+    # schrijvende soorten bij ('extend' sinds 10-09-2026), en dan zakte deze
+    # test op een dag dat niemand aan de wachtrij had gezeten.
+    import re as _re
+    _rij = _re.search(r"^SCHRIJVEND = \(([^)]*)\)", jobs, _re.M)
+    assert _rij, "SCHRIJVEND hoort een vaste lijst te zijn"
+    _soorten = set(_re.findall(r'"([a-z_]+)"', _rij.group(1)))
+    assert {"create", "delete", "content_refresh"} <= _soorten, (
+        f"elke schrijvende soort hoort te blokkeren, gevonden: {sorted(_soorten)}")
+    assert "scan" not in _soorten, "een scan leest alleen en mag nooit blokkeren"
     # en publiceren gaat vóór een scan die toevallig eerder in de rij stond
     assert 'ready.sort(key=lambda j: 0 if j.get("action") in SCHRIJVEND else 1)' in jobs
 

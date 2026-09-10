@@ -17,6 +17,72 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ---
 
+## dubbele-rij-is-geen-dubbele-advertentie
+
+*10-09-2026 — Twee actieve rijen op één kanaal betekenen bijna altijd één advertentie plus een niet-afgesloten herplaatsing; meet het openbare aanbod voor je iets weghaalt*
+
+10-09-2026, De Juiste Toon vroeg met een schermafdruk "hoe zit dit?" bij drie
+lederhosen van 25 euro die op elkaar lijken. Gemeten op zijn openbare
+verkoperspagina (twee losse metingen, 449 advertenties): van de **57 artikelen
+die onze administratie als "twee actieve advertenties" telde stond er geen
+enkele echt twee keer online**. In 56 van de 57 gevallen staat de NIEUWSTE
+advertentie online en is het oude nummer weg. 39 van die oude rijen dragen een
+`refresh_count > 0`: het spoor van een herplaatsing waarvan alleen de oude rij
+nooit is afgesloten (zie "herplaatsing-laat-oude-rij-staan", gerepareerd
+05-09-2026; er zijn sindsdien geen nieuwe paren bijgekomen).
+
+Van de 7 titels die wél meer dan één keer live stonden was er geen enkele een
+echte dubbele: andere foto's, andere prijs, ander voorwerp. Zijn drie lederhosen
+van 25 euro zijn drie verschillende broeken (maat M, 38 en 36), visueel
+nagelopen op de advertentiefoto's.
+
+**Why:** onze eigen kolom `status = active` is geen bewijs dat er een advertentie
+staat, en gelijkende foto's zijn geen bewijs van een dubbele. Wie op de
+administratie opruimt stuurt verwijderopdrachten naar nummers die niet bestaan;
+wie op titel opruimt vernietigt echte losse voorraad. Zie
+"dubbele-advertentie-titel-en-foto" en "een-bron-is-geen-bewijs-bij-weg".
+
+**How to apply:** de openbare zoek-API per verkoper (`sellerIds[]=<id>`) heeft
+geen login nodig en toont ook een zakelijk account volledig. Meet twee keer met
+een andere paginagrootte. Een oude rij mag alleen dicht (`delisted`) als een
+ándere rij van hetzelfde artikel op hetzelfde kanaal in béíde metingen online
+staat; dan is de herplaatsing gewoon gelukt. Op 10-09-2026 zijn zo 56 rijen bij
+Toon afgesloten, zonder één advertentie aan te raken. Zijn resterende gat blijft
+bestaan: 479 actieve rijen tegen 457 echt online.
+
+---
+
+## vangnet-zonder-geheugen-wordt-een-lus
+
+*10-09-2026 — Een herstelronde die niet onthoudt wat ze al probeerde, probeert het eeuwig; de reparatie is een pogingenbudget per artikel en kanaal*
+
+10-09-2026, De Juiste Toon. Zijn artikel "Lederhosen maat 54" was op Vinted
+verkocht. De Marktplaats-advertentie ervan is voor de extensie niet te vinden
+(zakelijk account, "Mijn advertenties" is leeg), dus kwam de verwijderopdracht op
+'error' en bleef de advertentierij op 'active' staan. `reconcileer_verkochte_artikelen`
+leest 'active' als "nog niet afgemeld" en zette de afmelding elke 20 minuten
+opnieuw in gang: van 09-09 19:52 tot 10-09 17:26 elke keer twee opdrachten, elke
+keer dezelfde fout. Systeembreed waren 462 van de 1.790 verwijderopdrachten sinds
+25-08 een herhaling, verdeeld over vier verkopers.
+
+**Why:** een vangnet dat zijn eigen pogingen niet onthoudt is geen vangnet maar
+een lopende band. Elke herhaling opent een tabblad bij de verkoper, en schrijvende
+opdrachten gaan één voor één, dus zijn echte werk schuift elke 20 minuten naar
+achteren. Zelfde patroon als "herplaatsing-laat-oude-rij-staan": een status die
+niemand afsluit vermenigvuldigt elke ronde die erop reageert.
+
+**How to apply:** geef zo'n ronde een budget per (artikel, kanaal), gemeten aan de
+opdrachten die er al staan: `MAX_POGINGEN` en een oplopende wachttijd
+(`WACHT_UREN = (0, 1, 4, 24)`) in `backend/services/verkoop_reconciliatie.py`.
+Tel alleen pogingen NA het moment waar het om gaat (hier: de verkoop), anders
+gebruikt een herplaatsing van vorige week het budget vooraf op. En geef de
+ronde een manier om één kanaal over te slaan zonder de andere mee te sleuren:
+`delist_all_platforms(..., alleen_platforms={...})`. Bewijs het met een
+voor-en-na-proef tegen een GEPINDE commit, niet tegen HEAD, zie
+"voor-en-na-proef-mag-geen-head-gebruiken".
+
+---
+
 ## outreach-schrijven-als-mens
 
 *10-09-2026 — Hoe koude mail en creator-DM's van Omnivaleur geschreven worden: kort, menselijk ritme, probleem voor pitch, één vraag*

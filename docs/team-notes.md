@@ -8258,3 +8258,70 @@ groen.
 (alle drie van Daniel zijn net verlengd, de volgende is over ~3 weken) en (b) de
 Chrome Web Store 1.0.318 heeft goedgekeurd. Geen coderisico, wel een meting die
 nu niet te doen is.
+
+### 10-09-2026 (avond) — Toon: "kan ik MP-advertenties ook naar Vinted?" en "hoe zit dit?"
+
+Twee vragen via WhatsApp, met een schermafdruk van zijn Marktplaats-profiel: drie
+lederhosen van 25 euro die op elkaar lijken en een kleedje van 15 euro.
+
+**Vraag 1: doorzetten naar Vinted.** Ja, dat kan, en dat is ook precies wat hij
+vandaag heeft geprobeerd. Gemeten op zijn account: **102 artikelen staan live op
+Marktplaats en niet op Vinted** (91 wonen, 5 antiek, 4 unisex, 2 heren). Wonen en
+antiek vallen onder `_NON_CLOTHING_PREFIXES`, dus daar is alleen een rubriek
+verplicht en geen maat/merk/kleur: publiceerbaar. Zijn twee Vinted-pogingen van
+vandaag 17:06 en 17:07 mislukten om twee losse redenen:
+
+1. *"You are not signed in to Vinted in this browser"* — de extensie heeft
+   vinted.nl/.be/.de/.fr/.com nagekeken en was op geen enkel domein ingelogd.
+2. Vinted weigerde de titel zelf: *"Je titel bevat te veel hoofdletters."* Dat
+   raakt 7 van zijn titels (ORIGINELE LEDERHOSEN NU VANAF 20 EURO en dergelijke).
+   Niet gerepareerd in code: de enige andere verkoper met hoofdlettertitels heeft
+   26 spellen (XBOX, FIFA, NBA) waar hoofdletters wél horen, en Vinteds echte
+   grens is niet nagemeten. Toon kan die 7 titels in gewone letters zetten.
+
+**Vraag 2: de schermafdruk.** Geen dubbele advertenties. Gemeten op zijn openbare
+verkoperspagina, twee losse metingen: **449 advertenties online, 7 titels die meer
+dan één keer voorkomen (16 advertenties), en geen enkele met een gedeelde foto of
+gelijke prijs** — allemaal verschillende voorwerpen. De drie lederhosen van 25
+euro zijn drie verschillende broeken (m2439221319 maat M, m2439193996 maat 38,
+m2438277569 maat 36), visueel nagelopen op de advertentiefoto's.
+
+Wat wél scheef stond: onze administratie telde **57 artikelen met twee actieve
+Marktplaats-rijen**, en daarvan stond er **geen enkele** twee keer online. In 56
+gevallen staat de nieuwste advertentie online en is het oude nummer weg; 39 van
+die oude rijen dragen `refresh_count > 0`. Dat is het spoor van de herplaatsing
+waarvan alleen de oude rij nooit werd afgesloten (gerepareerd 05-09-2026, en er
+zijn sinds 05-09 14:02 geen nieuwe paren bijgekomen). **56 van die oude rijen zijn
+afgesloten** op de enige veilige regel: een ándere rij van hetzelfde artikel staat
+in béíde metingen online. Geen advertentie aangeraakt, geen opdracht in de
+wachtrij. Het 57e paar (Kelim loper lang) staat helemaal niet meer online en is
+met rust gelaten.
+
+**Wat er onderweg boven kwam en gerepareerd is: een lus die elke 20 minuten liep.**
+Zijn artikel "Lederhosen maat 54" was op Vinted verkocht, de
+Marktplaats-advertentie is voor de extensie niet te vinden (leeg zakelijk
+overzicht), dus bleef de rij op 'active'. `reconcileer_verkochte_artikelen` zag
+dat als "nog niet afgemeld" en zette de afmelding elke 20 minuten opnieuw in gang:
+van 09-09 19:52 tot 10-09 17:26, elke keer twee opdrachten, elke keer dezelfde
+fout. Systeembreed waren 462 van de 1.790 verwijderopdrachten sinds 25-08 een
+herhaling, over vier verkopers. Elke herhaling opent een tabblad bij de verkoper
+en dringt voor bij zijn echte werk, want schrijvende opdrachten gaan één voor één.
+
+De ronde heeft nu een pogingenbudget per (artikel, kanaal): `MAX_POGINGEN = 4` en
+een oplopende wachttijd `WACHT_UREN = (0, 1, 4, 24)`, en telt alleen pogingen ná de
+verkoop, zodat een herplaatsing van vorige week het budget niet vooraf opgebruikt.
+`delist_all_platforms` kan sinds nu tot een paar kanalen beperkt worden
+(`alleen_platforms`), zodat een kanaal dat op is de andere niet meesleept.
+`tests/test_verkoop_reconciliatie_pogingen.py` bewijst het met een voor-proef tegen
+commit 15506b9f: die oude code doet in tien rondes tien pogingen, de nieuwe één.
+
+**Openstaand.**
+1. Toon moet ingelogd zijn op vinted.nl in de browser waar de extensie draait,
+   anders komt er geen enkele Vinted-advertentie door.
+2. Die 7 hoofdlettertitels omzetten naar gewone letters.
+3. Zijn advertenties worden nog steeds nooit echt nagekeken: hij heeft geen
+   Marktplaats-koppeling (`polling.POLL_PLATFORMS` slaat hem over) en zijn zakelijke
+   "Mijn advertenties" is leeg. Daardoor staan er nu nog 479 actieve rijen tegen
+   457 advertenties die echt online staan. De openbare zoek-API per verkoper heeft
+   geen login nodig en werkt bij hem prima; een controleronde daarop zou dat gat
+   dichten. Niet gebouwd, aparte beslissing.
