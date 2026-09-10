@@ -526,7 +526,9 @@ def _meld_vertaalstoring(reden: str) -> None:
 # De nachtronde verhongert niet: zodra het eigen werk op is komt groep 2/3 aan
 # de beurt, en een verwijdering die lang genoeg heeft gewacht schuift boven de
 # verse nachtronde en boven de scans uit.
-SCHRIJVEND = ("create", "delete", "content_refresh")
+# 'extend' (2dehands verlengen) klikt een echte knop op de site: het telt als
+# schrijvend, dus één tegelijk en meegeteld in het ritme (calm mode).
+SCHRIJVEND = ("create", "delete", "content_refresh", "extend")
 NACHTRONDE_GEDULD = timedelta(hours=6)
 # Hoeveel opdrachten we volledig inlezen nadat de volgorde bepaald is. De
 # volgorde wordt over de HELE wachtrij bepaald (alleen de lichte velden), de
