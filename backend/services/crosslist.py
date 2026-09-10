@@ -49,19 +49,40 @@ STALE_CLAIM_SECONDS = 60
 # blijven.
 _EMAIL_IN_TEKST = re.compile(r"[\w.+-]+@[\w-]+(?:\.[\w-]+)*\.[a-z]{2,}", re.I)
 _URL_IN_TEKST = re.compile(r"(?:https?://|www\.)\S+", re.I)
-# Een kaal webadres zonder http of www: papas-plectrums.nl. Bewust een korte,
-# vaste lijst met eindes, en het stuk ervoor moet minstens twee tekens zijn en
-# niet alleen cijfers. Zo blijven "z.o.z.", "t.w.v." en "€ 35,00" met rust.
+# Een kaal webadres zonder http of www: papas-plectrums.nl. Bewust een vaste
+# lijst met eindes, en het stuk ervoor moet minstens twee tekens zijn en niet
+# alleen cijfers. Zo blijven "z.o.z.", "t.w.v." en "€ 35,00" met rust.
 #
-# HET EINDE MOET KLEIN GESCHREVEN ZIJN, en dat is geen schoonheidsfoutje.
-# Gemeten over 5.009 advertenties van andere klanten: met een hoofdletter-
-# ongevoelige lijst sneuvelde "...zie later.De maat is..." — een zin zonder
-# spatie na de punt, waarin "De" toevallig ook een landcode is. Datzelfde geldt
-# voor "nu", "be" en "fr". Een echt webadres schrijft niemand met een
-# hoofdletter aan het eind; een Nederlandse zin wel.
+# TWEE LETTERS MOETEN KLEIN, LANGERE EINDES NIET, en dat is geen
+# schoonheidsfoutje. Gemeten over 5.009 advertenties: met een volledig
+# hoofdletter-ongevoelige lijst sneuvelde "...zie later.De maat is..." — een zin
+# zonder spatie na de punt, waarin "De" toevallig ook een landcode is. Datzelfde
+# geldt voor "nu", "be" en "fr". Bij ".com" of ".shop" speelt dat niet, want dat
+# zijn geen Nederlandse woorden; die mogen dus wél in hoofdletters.
+#
+# EN DAN DE SCHREEUWERS. Nagemeten 10-09-2026 over 1.000 echte advertenties van
+# willekeurige verkopers: twee schrijven hun domein voluit in hoofdletters
+# (SOUMAN.NL, WEAR2WORK.NL) en glipten er zo langs. Dat is 0,2%, oftewel bij
+# Egberts 5.533 advertenties zo'n elf keer EUR 9,00. Daarom mag een kort einde
+# tóch in hoofdletters, mits het stuk ervoor overduidelijk een domeinnaam is:
+# met een streepje of cijfer erin, of zelf helemaal in hoofdletters. "later.De"
+# valt daar niet onder en blijft dus staan. Diezelfde proef: de oude lijst zag
+# 38 adressen, deze ziet er 40, en die twee extra zijn allebei echt.
+_LABEL = r"(?![0-9]+\.)[A-Za-z0-9][A-Za-z0-9-]{1,}(?:\.[A-Za-z0-9-]{2,})*"
+# MINSTENS DRIE LETTERS, anders is het een maat en geen merk. Zonder die eis
+# sloopte de streepje-tak "Maat 38-40.Nu voor 20 euro" tot "Maat voor 20 euro",
+# en "S-M.Nu" idem: precies de zin-zonder-spatie waar de regel hierboven voor
+# waarschuwt, via de achterdeur terug.
+_LABEL_DUIDELIJK = (r"(?![0-9]+\.)(?=(?:[A-Za-z0-9-]*[A-Za-z]){3})"
+                    r"(?:[A-Za-z0-9][A-Za-z0-9-]*[-0-9][A-Za-z0-9-]*"
+                    r"|[A-Z][A-Z0-9-]+)")
+_EINDE_LANG = (r"(?:com|net|org|shop|store|info|biz|online|site|club|link|art"
+               r"|today|webshop|company)")
+_EINDE_KORT = (r"(?:nl|be|de|fr|uk|eu|nu|io|co|es|it|pl|dk|se|no|fi|at|ch|pt"
+               r"|ie|lu|cz)")
 _KAAL_DOMEIN = re.compile(
-    r"\b(?![0-9]+\.)[A-Za-z0-9][A-Za-z0-9-]{1,}(?:\.[A-Za-z0-9-]{2,})*"
-    r"\.(?:nl|be|com|net|org|eu|de|fr|uk|shop|store|info|biz|nu|io)\b(?:/\S*)?"
+    rf"\b{_LABEL}\.(?:(?i:{_EINDE_LANG})|{_EINDE_KORT})\b(?:/\S*)?"
+    rf"|\b{_LABEL_DUIDELIJK}\.(?i:{_EINDE_KORT})\b(?:/\S*)?"
 )
 
 

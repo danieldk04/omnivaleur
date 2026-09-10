@@ -217,5 +217,46 @@ def test_zonder_de_zeef_ging_datzelfde_webadres_er_gewoon_doorheen(monkeypatch):
         "deze proef bewijst niets meer: zonder zeef zou de link er nog in moeten staan")
 
 
+# ── De vormen die de eerste zeef nog doorliet ────────────────────────────
+#
+# Nagemeten 10-09-2026 over 1.000 echte advertenties van willekeurige verkopers:
+# twee schrijven hun domein voluit in hoofdletters (SOUMAN.NL, WEAR2WORK.NL).
+# Dat is 0,2%, bij Egbert zo'n elf advertenties, oftewel elf keer EUR 9,00. De
+# eerste versie van de zeef zag die niet, omdat een kort einde per se klein moest
+# om "...zie later.De maat is..." niet te slopen.
+@pytest.mark.parametrize("tekst", [
+    "Mooie gitaar. Kijk op PAPAS-PLECTRUMS.NL voor meer.",
+    "Mooie gitaar. Kijk op Papas-Plectrums.NL voor meer.",
+    "Werkbroeken vanaf EUR 34,95 | WEAR2WORK.NL",
+    "Ben je gitarist? SOUMAN.NL heeft alles.",
+    "Mooie gitaar. Kijk op papasplectrums.online voor meer.",
+    "Mooie gitaar. Kijk op papasplectrums.co voor meer.",
+    "Mooie gitaar. Kijk op papasplectrums.es voor meer.",
+])
+def test_deze_vormen_gaan_er_ook_uit(tekst):
+    from backend.services.crosslist import _zonder_links
+    schoon = _zonder_links(tekst)
+    assert schoon != tekst, f"dit gaat EUR 9,00 kosten: {tekst!r}"
+    assert ".nl" not in schoon.lower() and ".co" not in schoon.lower()
+
+
+# ── En wat er juist NIET uit mag ─────────────────────────────────────────
+#
+# Een zeef die te ver gaat verbouwt de advertentie van iedereen om er bij een
+# enkeling een link uit te halen. Dat is erger dan de kwaal: deze teksten dragen
+# geen adres en moeten er letterlijk hetzelfde uitkomen.
+@pytest.mark.parametrize("tekst", [
+    "Mooie gitaar.Zie later.De maat is 25 cm en nieuw.",
+    "Mooie jas, z.o.z. voor de maten. Prijs t.w.v. 35 euro.",
+    "Prijs 35.00 euro, nieuw in doos.",
+    "Maat 38-40.Nu voor 20 euro.",
+    "Maat S-M.Nu voor 20 euro.",
+    "In goede staat.Beige kleur, nauwelijks gedragen.",
+])
+def test_een_gewone_advertentie_blijft_letterlijk_staan(tekst):
+    from backend.services.crosslist import _zonder_links
+    assert _zonder_links(tekst) == tekst
+
+
 if __name__ == "__main__":
     sys.exit(pytest.main([__file__, "-q"]))
