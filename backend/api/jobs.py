@@ -1589,7 +1589,9 @@ async def relist_retry(body: dict, user_id: str = Depends(require_active_subscri
         # 500, geen 503 — Cloudflare vervangt een 503 door zijn eigen
         # storingspagina en dan leest de verkoper "de server was druk" in plaats
         # van de echte reden. Zie crosslist_item in backend/api/items.py.
-        raise HTTPException(status_code=500, detail=str(e))
+        from backend.services.crosslist import NIETS_GEPLAATST_VERTALING
+        logger.warning("Vertaalstoring hield herplaatsing van %s tegen: %s", item_id, e)
+        raise HTTPException(status_code=500, detail=NIETS_GEPLAATST_VERTALING)
 
     # Pas nu weg met de oude foutmelding: er staat een nieuwe poging klaar.
     (await naast_de_lus(lambda: db.table("listings").update({
