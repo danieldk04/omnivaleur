@@ -2166,6 +2166,19 @@ async function processJob(job, serverUrl) {
     return;
   }
 
+  // 2dehands verlengen: één klik op de verlengknop van het eigen overzicht.
+  // NOOIT weghalen, nooit opnieuw plaatsen — verlengen is gratis, opnieuw
+  // plaatsen kost in een betalende rubriek geld. Volledig vanuit de achtergrond,
+  // net als delete/scan.
+  if (job.action === "extend" && job.platform === "2dehands") {
+    try {
+      await bgExtend2dh(job, serverUrl);
+    } catch (e) {
+      await reportError(job.id, serverUrl, String(e));
+    }
+    return;
+  }
+
   // Vinted delete: also background-driven. Vinted redirects the seller away
   // from the item page right after confirming delete, which destroys any
   // content-script mid-verification (leaving the job stuck "claimed" and the
