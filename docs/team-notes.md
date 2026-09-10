@@ -7692,3 +7692,41 @@ moet bijstorten. Verder staat in het foutenlogboek een storing die 331 keer
 optrad, laatste keer 10-09 06:32: `POST /api/jobs/{id}/complete` geeft
 `PGRST116 - The result contains 0 rows`. Die is niet onderzocht en hoort bij
 een andere klacht.
+
+### 10-09-2026 — Admarkt-lezer nu ook voor 2dehands (extensie 1.0.316)
+
+Gebouwd op verzoek van Daniel, na de vraag van Egbert of zijn spullen niet
+zakelijk op 2dehands.be konden. De Belgische console bestaat (zie de entry
+hierboven), wij keken er alleen nooit.
+
+**Wat er in de extensie veranderd is.** De Admarkt-kant is per kanaal geworden:
+`ADMARKT_ORIGINS` met beide tenants, `admarktOrigin(platform)`, en `admarktUrl`,
+`admarktToegestaan`, `admarktMeenemen`, `zorgVoorAdmarktMeekijker` en
+`bgScanAdmarkt` nemen allemaal het kanaal mee. De aanroep in de scan is niet
+langer afgeschermd met `platform === "marktplaats"`. De onjuiste zin
+"2dehands, dat geen Admarkt heeft" is uit `mpEmptyScanReason` weg.
+
+**De Marktplaats-weg is bewust byte-voor-byte gelijk gebleven.** Daar is
+`permissions.contains` niet alleen een toestemming maar ook het opt-in-sein van
+de schakelaar in de popup, en daar hangt Egberts hele import aan. De korte weg
+via het manifest (`manifestDektOrigin`) geldt daarom alleen voor 2dehands.
+
+**Twee valkuilen die er expliciet in zitten.** Het id van de Marktplaats-
+meekijker blijft `omnivaleur-admarkt`; hernoemen zou bij iedereen die hem al
+heeft een tweede kopie opleveren die tegelijk meekijkt. En wie de schakelaar met
+de hand uitzette wordt met rust gelaten: op 2dehands ligt de toestemming vast in
+het manifest, dus `admarktUitgezet()` is daar de enige plek waar een "nee" nog
+telt.
+
+**Proef:** `tests/admarkt-ook-op-2dehands-test.js`, met de echte functies uit
+background.js, een nep-Chrome die voor Belgie altijd "nee" antwoordt (zegt de
+code toch ja, dan kan dat alleen via het manifest) en het echte manifest. De
+voor-en-na draait tegen het vaste commitnummer b4df1861 en niet tegen HEAD; die
+versie mist zes van de dertien stukken en faalt zoals het hoort. Verder alle
+js-proeven en 1.180 python-proeven groen.
+
+**Openstaand, en dit is het enige echte gat:** of `campaign.getAllCampaigns` en
+`ad.getAds` op de Belgische tenant net zo heten. Zonder inlog niet te meten, want
+daar zit de authenticatie voor de routering en geeft ook een verzonnen procedure
+401. Wijkt het af, dan meldt de scan wel welke procedure faalde en met welke code,
+dus het faalt luid en niet stil. Egberts eerste scan op 2dehands is de proef.
