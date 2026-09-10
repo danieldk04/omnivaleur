@@ -817,7 +817,7 @@ function mpKidsSizeCat3(size, sizeMap) {
 const CALM_MIN_MS = 3 * 60 * 1000;
 const CALM_MAX_MS = 8 * 60 * 1000;
 const CALM_SLEUTEL = "calmVolgendeNa";
-const SCHRIJVENDE_ACTIES = new Set(["create", "delete", "content_refresh"]);
+const SCHRIJVENDE_ACTIES = new Set(["create", "delete", "content_refresh", "extend"]);
 // Zonder Calm mode stond hier helemaal geen rem: een grote stapel te herplaatsen
 // advertenties liep in één ronde achter elkaar door, en dan wisselt het werkvenster
 // tientallen keren per minuut van tabblad. Dat venster is wel unfocused, maar niet
