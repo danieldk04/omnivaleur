@@ -7578,3 +7578,27 @@ BTW blijven staan; ook de afsluitende zin "kan je met onderstaande link
 bestellen" verdwijnt mee, dus er blijft geen verwijzing naar een link staan die
 er niet meer is. Daarmee is de hele keten gemeten: zijn tekst droeg het adres,
 2dehands rekende er onder die naam voor, en onze zeef haalt het er uit.
+
+### 10-09-2026 — "Steeds uitgelogd op de extensie" op Daniels eigen pc
+
+Daniel: de Chrome-extensie logt hem telkens uit. Diagnose: het dashboard-tabblad
+en de extensie verversen elk hun eigen kopie van het Supabase-refreshtoken.
+Supabase roteert bij elke vernieuwing en verklaart het vorige token meteen dood.
+Ververst de een, dan biedt de ander kort daarna het dode token aan, en Supabase'
+hergebruikdetectie trekt de hele sessiefamilie in: dashboard en extensie vliegen
+er tegelijk uit. Op zijn eigen pc het waarschijnlijkst, want daar draaien
+dashboard en extensie naast elkaar en laat elke reload van omnivaleur.com een
+SYNC_TOKEN en een refresh samenvallen.
+
+Opgelost server-side: `/api/auth/refresh` in `backend/api/auth.py` onthoudt 90
+seconden het antwoord per refreshtoken. Wordt hetzelfde oude token binnen dat
+venster nog eens aangeboden, dan komt exact hetzelfde verse paar terug zonder
+Supabase opnieuw te bellen. Alle partijen landen zo op hetzelfde nieuwe token en
+er wordt nooit een geroteerd token gepresenteerd. Bewijs in
+`tests/test_auth_sessies_gescheiden.py` met tegenmeting (cache uit → sessie sneeft
+wél). Hele suite 1178 groen.
+
+Openstaand: divergentie langer dan 90s blijft mogelijk (dashboard roteerde uren
+eerder, geen omnivaleur-tab open om de extensie bij te praten). Zeldzamer. Daniel
+kan in Supabase de "refresh token reuse interval" naar ~30s zetten als extra
+marge. Niet op de live server gemeten, alleen met nagemaakte Supabase.

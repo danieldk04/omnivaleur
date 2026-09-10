@@ -17,6 +17,42 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ---
 
+## refresh-token-race-tussen-dashboard-en-extensie
+
+*10-09-2026 — Dashboard-tabblad en extensie verversen elk hun eigen Supabase-refreshtoken; de tweede met een geroteerd token trekt de hele sessiefamilie in. Server dedupt nu /api/auth/refresh 90s.*
+
+De Omnivaleur-extensie logde nog steeds "steeds" uit, ook na de storage.local-fix
+(zie "extensie-inlogbewijs-in-storage-local") en de webapp_sync-fix (zie
+"dashboard-verhuist-opslag-extensie-leest-mee"). Overgebleven oorzaak: het
+dashboard-tabblad (`vernieuwToken` in app.html) en de extensie
+(`refreshAccessToken` in background.js) verversen élk hun eigen kopie van het
+refresh-token bij Supabase. Supabase roteert bij elke vernieuwing en verklaart
+het vorige token meteen dood. Ververst partij A (token A→B), dan biedt partij B
+kort daarna het dode token A aan → Supabase' hergebruikdetectie trekt de HELE
+sessiefamilie in → dashboard én extensie tegelijk eruit. Op Daniels eigen pc het
+waarschijnlijkst omdat daar dashboard + extensie naast elkaar draaien en elke
+reload van omnivaleur.com een SYNC_TOKEN + refresh kan laten samenvallen.
+
+Opgelost server-side in `backend/api/auth.py`: `/api/auth/refresh` houdt 90s een
+geheugentje (`_refresh_cache`, per-token `_refresh_locks`). Wordt hetzelfde oude
+refresh-token binnen dat venster nog eens aangeboden, dan komt exact hetzelfde
+verse paar terug dat Supabase de eerste keer gaf, zónder Supabase opnieuw te
+bellen. Alle partijen landen zo op hetzelfde nieuwe token; er wordt nooit een
+geroteerd token gepresenteerd. Eén plek, dekt elke client (dashboard, extensie,
+tweede computer). Bewijs: `tests/test_auth_sessies_gescheiden.py`, met tegenmeting
+(cache uit → sessiefamilie sneuvelt wél, 401).
+
+Openstaand:
+- Divergentie langer dan 90s blijft mogelijk (dashboard roteerde uren geleden,
+  extensie loopt pas nu tegen het dode token aan omdat er geen omnivaleur-tab
+  open was om SYNC_TOKEN te pushen). Zeldzamer dan de samenval-race maar niet nul.
+- Daniel kan in Supabase de "refresh token reuse interval" verruimen (~30s) als
+  extra marge; stond al open in "extensie-inlogbewijs-in-storage-local", nog
+  niet bevestigd gedaan.
+- Niet gemeten op de live server; alleen met nagemaakte Supabase getest.
+
+---
+
 ## filter-op-een-publicatiepad-is-geen-filter
 
 *09-09-2026 — "Er zijn meerdere paden die een 'create' klaarzetten; een regel die maar op één pad staat lekt via de andere — zet hem in de laatste zeef in get_pending_jobs"*
