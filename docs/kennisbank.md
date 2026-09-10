@@ -17,6 +17,38 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ---
 
+## 2dehands-verlengen-niet-herplaatsen
+
+*10-09-2026 — "2dehands heeft een gratis verlengknop; bijna verlopen zoekertjes verleng je, je haalt ze niet weg en plaatst ze niet opnieuw"*
+
+Sinds 10-09-2026 heeft Omnivaleur een eigen opdrachtsoort `extend` voor 2dehands,
+naast create/delete/content_refresh/scan. Een 2dehands-zoekertje is 4 weken
+zichtbaar en kan daarna GRATIS verlengd worden; opnieuw plaatsen kost in een
+betalende rubriek geld of eet het gratis tegoed op. Dus verlengen, nooit het
+Marktplaats-pad (weghalen + opnieuw plaatsen) kopiëren. Er mag bij een `extend`
+nooit iets op 'relisting' of 'delisted', alleen `listed_at` opschuiven, en alleen
+met bewijs.
+
+Gemeten op account Revaleur:
+- overzicht-API: `/my-account/sell/api/listings?batchNumber=1&batchSize=200` geeft
+  per ad `{itemId, status, closeDate, reserved}`. `status:"EXPIRING"` ⟺ er staat
+  een verlengknop.
+- knop: `a[href="#verlengen"][data-ad-id="m…"]`. Klik verlengt meteen, geen
+  bevestiging; daarna een venster met een BETAALDE knop "Plaats bovenaan" (€0,24)
+  die je nooit aanraakt.
+- na verlengen: `closeDate` exact +28 dagen, status ACTIVE.
+- endpoint `POST /my-account/sell/extend.json {"itemId":"m…"}` bestaat maar geeft
+  403 bij een kale fetch (CSRF/WAF) — daarom de DOM-klik.
+
+Code: `extend_expiring_2dehands()` in `backend/services/crosslist.py`,
+`bgExtend2dh` in `extension/background.js` (1.0.318+), `complete_job`-tak in
+`backend/api/jobs.py`, test `tests/verlengen-2dehands-test.js`.
+
+Zie "eerst-recente-wijzigingen-lezen", "always-push-to-live",
+"extension-release-bump-version".
+
+---
+
 ## wachtrij-draagt-een-oude-kopie
 
 *10-09-2026 — Een wachtende opdracht draagt het artikel van het moment van klikken; wat de verkoper daarna corrigeert bereikt hem niet*

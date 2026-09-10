@@ -8164,3 +8164,67 @@ dingen verdienen een aparte sessie: (1) de herplaats-aanname op Vinted opnieuw
 tegen het licht houden, liefst "content"-edit i.p.v. delete+recreate en bij
 opnieuw plaatsen andere/bijgesneden foto's; (2) `vinted.py` en
 `/vinted/bootstrap` weghalen als ze echt nergens meer voor dienen.
+
+### 10-09-2026 — Automatisch verlengen op 2dehands: gebouwd en op een echt account bewezen
+
+De openstaande opdracht hierboven is af. Verlengen, niet herplaatsen: er wordt
+niets weggehaald en er verandert niets aan de advertentierij, alleen `listed_at`
+schuift mee zodra het verlengen bewezen is.
+
+**Wat er live gemeten is (account Revaleur, ingelogd):**
+
+* Het eigen overzicht `/my-account/sell/index.html` heeft een JSON-bron
+  `/my-account/sell/api/listings?batchNumber=1&batchSize=200` met per zoekertje
+  `{ itemId, status, closeDate, reserved, priceType, ... }`. `status: "EXPIRING"`
+  is precies het zoekertje dat een "Verlengen"-knop toont (3 van Daniels 49).
+* De knop is `a[href="#verlengen"][data-ad-id="m…"]` in de statuskolom. Op het
+  ad-id kun je hem rechtstreeks pakken, geen titelvergelijking nodig.
+* Klikken verlengt METEEN, zonder bevestiging. Daarna opent een venster
+  "Zoekertje is verlengd" met een BETAALDE knop "Plaats bovenaan" (€ 0,24) en een
+  knop "Sluiten". De betaalde knop raken we nooit aan; we sluiten het tabblad
+  gewoon.
+* Na het verlengen staat `closeDate` exact 28 dagen verder en `status` op ACTIVE.
+* Het endpoint erachter is `POST /my-account/sell/extend.json` met
+  `{"itemId":"m…"}`, maar een rechtstreekse fetch geeft 403 (CSRF/WAF). De
+  DOM-klik is dus de weg, en dat is wat we doen.
+
+**Bewijs dat het werkt.** Drie echte EXPIRING-zoekertjes van Daniel verlengd:
+m2431571489 (13 sep → 11 okt), m2423019926 (17 sep → 15 okt) en m2414127137
+(17 sep → 15 okt) — dat laatste met exact de `execInTab`-payload uit
+`bgExtend2dh`. Alle drie +28 dagen, status ACTIVE, winkelmandje bleef € 0,00,
+zijn overzicht bleef 49 zoekertjes zonder één dubbele. Er zijn nu geen EXPIRING
+zoekertjes meer op zijn account, dus de volgende demo kan pas als er weer eentje
+in het venster komt.
+
+**Waar het staat.**
+
+* `backend/services/crosslist.py` → `extend_expiring_2dehands()`, ingepland in
+  `backend/scheduler.py` (elke 6 uur, naast de Marktplaats-relist). Kiest
+  2dehands-listings van 22 tot 45 dagen oud, `auto_relist` aan, niet verkocht,
+  max 40 per verkoper per dag, gespreid met `scheduled_for`, en nooit een tweede
+  opdracht voor een advertentie waar er al een loopt of net een geprobeerd is.
+* Nieuwe opdrachtsoort `extend`, naast create/delete/content_refresh/scan. In
+  `backend/api/jobs.py` toegevoegd aan `SCHRIJVEND` (één tegelijk + calm mode),
+  aan de retry-veilige lijst, aan `_is_verversing` (wijkt voor een eigen klik van
+  de verkoper), en aan `complete_job`: alléén met bewijs (`verlengd: true` +
+  `new_close`) schuift `listed_at` mee.
+* `extension/background.js` 1.0.318 → `bgExtend2dh`: opent het overzicht,
+  controleert via de listings-API of het zoekertje EXPIRING is, klikt de
+  verlengknop, leest de nieuwe `closeDate` terug en meldt pas "klaar" als die
+  ≥ 21 dagen verder ligt. "Geen foutmelding" telt nergens als succes.
+* `tests/verlengen-2dehands-test.js` — draait `bgExtend2dh` uit de echte
+  background.js tegen een nagebootst 2dehands, met een voor-proef tegen commit
+  `a3d3083c` (de oude code kende `extend` niet en zou de opdracht naar het
+  plaatsformulier hebben gestuurd = een tweede advertentie).
+
+**Openstaand.**
+1. De extensie bereikt klanten pas nadat de Chrome Web Store 1.0.318 heeft
+   goedgekeurd. Daniel moet `scripts/build-extension.sh` draaien en het zipbestand
+   uploaden.
+2. De volledige keten (scheduler zet een `extend`-job klaar → extensie pakt hem →
+   `complete_job` schuift `listed_at`) is per onderdeel bewezen maar niet in één
+   doorloop met een echte wachtrij-job. De onderdelen zijn los getest en de
+   platformkant is op drie echte advertenties bewezen.
+3. Marktplaats: niet gebouwd. Of Marktplaats dezelfde gratis verlengknop heeft is
+   niet nagemeten (zakelijk account gaf "Mijn advertenties (0)"). Aparte
+   beslissing, zoals in de vorige notitie afgesproken.
