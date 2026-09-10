@@ -51,7 +51,7 @@ def _off_the_request_loop(coro_fn):
 def start_scheduler():
     global _scheduler
     from backend.services.polling import poll_platform_statuses
-    from backend.services.crosslist import relist_expiring_marktplaats
+    from backend.services.crosslist import relist_expiring_marktplaats, extend_expiring_2dehands
     from backend.services.relist import herstel_vastgelopen_werk
     from backend.services.mp_enrich import vul_ontbrekende_teksten_aan
     from backend.services.shopify_orders import controleer_shopify_verkopen
