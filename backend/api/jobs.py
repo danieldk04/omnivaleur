@@ -2243,6 +2243,39 @@ async def complete_job(job_id: str, body: dict, user_id: str = Depends(get_curre
         # Listing stays active — this is an in-place edit, not a new listing.
         pass
 
+    elif job["action"] == "extend":
+        # 2dehands verlengen. Er is GEEN nieuwe advertentie en er is niets
+        # weggehaald, dus de status van de advertentierij blijft met rust.
+        #
+        # ALLEEN met bewijs schuift listed_at mee. De extensie stuurt de oude en
+        # de nieuwe vervaldatum mee; die moet echt ~4 weken verder liggen
+        # (`verlengd: true`). Zonder dat bewijs veranderen we niks — een
+        # "klaar"-melding zonder opgeschoven datum is geen verlenging (zie
+        # docs/kennisbank.md, "succes-nooit-uit-uitsluitingslijst"). listed_at
+        # blijft dan staan, zodat de volgende ronde het opnieuw probeert.
+        if body.get("verlengd") is True and body.get("new_close"):
+            rid = (job.get("payload") or {}).get("_listing_row_id")
+
+            def _schuif():
+                q = db.table("listings").update({
+                    "listed_at": datetime.now(timezone.utc).isoformat(),
+                    "error_message": None,
+                })
+                if rid:
+                    q = q.eq("id", rid)
+                else:
+                    q = (q.eq("item_id", job["item_id"]).eq("platform", "2dehands")
+                          .eq("status", "active"))
+                return q.execute()
+
+            (await naast_de_lus(_schuif))
+            logger.info("[extend] 2dehands zoekertje %s verlengd tot %s — listed_at bijgezet",
+                        job["item_id"], body.get("new_close"))
+        else:
+            logger.warning("[extend] job %s meldde klaar zonder bewijs dat de "
+                           "vervaldatum opschoof (%s) — listed_at ongemoeid",
+                           job_id, body.get("note"))
+
     elif job["action"] == "scan":
         # De kandidaten zijn hierboven al opgeslagen (vóór 'done'). Wat hier
         # overblijft is de Vinted-nabewerking; die mag de scan niet laten
