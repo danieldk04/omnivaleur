@@ -204,10 +204,12 @@ async def publish_listing(
     except CrosslistValidationError as e:
         raise HTTPException(status_code=422, detail={"missing_fields": e.missing})
     except VertalingOnbeschikbaar as e:
-        # 503: het ligt niet aan de advertentie maar aan ons, en het gaat vanzelf
-        # over. Zonder deze tak werd het een kale 500 en zag de verkoper
-        # "Unexpected error" bij een knop die morgen gewoon weer werkt.
-        raise HTTPException(status_code=503, detail=str(e))
+        # Het ligt niet aan de advertentie maar aan ons, en het gaat vanzelf
+        # over — maar dat moet de verkoper wél kunnen lezen. Daarom 500 en geen
+        # 503: Cloudflare vervangt een 502/503 door zijn eigen storingspagina en
+        # dan komt deze zin nooit aan (gemeten 04-09-2026). Zie de uitleg bij
+        # crosslist_item in backend/api/items.py.
+        raise HTTPException(status_code=500, detail=str(e))
     return {"results": results}
 
 
