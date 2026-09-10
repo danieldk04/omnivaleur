@@ -260,7 +260,7 @@ async def refresh(body: RefreshRequest):
 
     db = get_db()
     try:
-        async with _refresh_lock:
+        async with _lock_voor(token):
             # Nog een keer kijken: een parallelle aanvraag met hetzelfde token
             # kan het net hebben gevuld terwijl wij op het slot wachtten.
             gecachet = _refresh_cache_get(token)
