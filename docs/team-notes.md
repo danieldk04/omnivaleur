@@ -8389,3 +8389,56 @@ van vóór 30-08-2026 op 9 van de 10.
 **Openstaand.** Andere geïnjecteerde MAIN-world routines (publiceren, scannen)
 hebben nog wél losse `setTimeout`-pauzes en lopen in een verborgen tabblad dus nog
 steeds traag. Niet gemeten hoeveel dat daar kost, aparte klus.
+
+### 10-09-2026 (avond, derde vraag) — Toon: "op 2dehands komen ze niet door, op MP wel"
+
+Gemeten in zijn opdrachten. Tussen 18:00 en 18:03 mislukten zes plaatsingen op
+2dehands achter elkaar met dezelfde reden, en er stonden er nog tien te wachten
+die op precies dezelfde regel zouden vastlopen:
+
+> "Your postcode is still empty on the listing form, so nothing was published."
+
+Dat is onze eigen weigering (`wachtOpPostcode` in extension/content/shared.js,
+sinds 05-09-2026): het adresblok op het formulier bleef acht seconden leeg, en
+wij vullen daar bewust niets in, want een verzonnen postcode zet het zoekertje in
+een willekeurige gemeente.
+
+**Waarom het op Marktplaats wel gaat en op 2dehands niet.** Gemeten op zijn
+openbare 2dehands-aanbod (verkoper 44572806, 458 zoekertjes online):
+
+| plaats op de advertentie | aantal |
+|---|---|
+| Etten-Leur, Nederland (buitenland) | 402 |
+| Essen +Deel Kalmthout, België | 37 |
+| etten-leur / Etten Leur / Etten-leur / etten leur / Ettenleur | 18 |
+| Etten-Leur, **Mauritanië** | 1 |
+
+Acht spellingen van één woonplaats en één verkeerd land: dat is de vingerafdruk
+van een adres dat per zoekertje met de hand wordt ingetypt. Zijn 2dehands-account
+staat op een Belgisch adres (Essen); kiest hij op het formulier "Buitenland" voor
+Etten-Leur, dan is het Belgische postcodeveld leeg en gaat de plaatsing bij ons
+niet door. Op Marktplaats komt het adres wél uit zijn account, dus daar loopt
+alles gewoon.
+
+Sinds de postcodestap bestaat (05-09) zijn er op 2dehands 2 plaatsingen gelukt en
+14 hierop afgeketst. Vóór die stap 10 gelukt.
+
+**Wat er gerepareerd is: één uitgelegde melding in plaats van tien vastlopers.**
+`fail_job` in backend/api/jobs.py herkent een leeg adresblok nu aan de melding
+zelf (`_GEEN_ADRES`, dekt zowel onze eigen tekst als "Geen postcode ingevuld" en
+`contactInformation.postCode=LEEG`) en zet de rest van de wachtrij voor dát kanaal
+op pauze, zoals de betaalmuur dat al deed. Marktplaats blijft ongemoeid. De tekst
+staat nu op één plek (`_melding_geen_adres`) en zegt waar hij moet zijn: bij zijn
+adres op 2dehands.be niet een Belgische postcode maar "Buitenland", daarachter
+Nederland plus woonplaats én postcode, één keer in zijn account. Publiceren zet de
+rij weer aan. `tests/test_leeg_adres_stopt_de_rij.py`, met een voor-proef tegen
+commit 1c2fb488: daar bleven de tien wachtenden staan.
+
+Op de server, niet in de extensie, om de bekende reden: een nieuwe extensie is bij
+een verkoper pas weken later binnen.
+
+**Openstaand.** Of het postcodeveld op het buitenland-formulier van 2dehands een
+ander veld is dan `contactInformation.postCode` is niet nagemeten; daarvoor is een
+ingelogde sessie op zijn account nodig. Zolang hij het adres één keer goed in zijn
+account zet, doet dat niet meer mee. Blijkt het later tóch een ander veld te zijn,
+dan moet de postcodestap dat veld erbij nemen in plaats van te weigeren.
