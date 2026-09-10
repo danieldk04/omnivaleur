@@ -103,10 +103,14 @@ function melding(status, body) {
   return vm.runInContext("publishFailureMessage(_res, _data, _rauw)", ctx);
 }
 
-// De zin die de server echt meestuurt (backend/services/crosslist.py).
-const ECHTE_REDEN =
-  "De vertaling naar het Nederlands lukte niet, dus er is niets geplaatst. " +
-  "Zodra de vertaling weer werkt gaat deze advertentie vanzelf alsnog de deur uit.";
+// De zin die de server echt meestuurt. Niet overgetypt maar uit de code
+// gehaald: wijzigt de tekst daar, dan wijzigt hij hier mee.
+const cross = bron("backend/services/crosslist.py");
+const ECHTE_REDEN = oud
+  ? "De vertaling naar het Nederlands lukte niet, dus er is niets geplaatst. " +
+    "Zodra de vertaling weer werkt gaat deze advertentie vanzelf alsnog de deur uit."
+  : (cross.match(/NIETS_GEPLAATST_VERTALING = \(([\s\S]*?)\n\)/) || [])[1]
+      .split("\n").map(r => r.trim().replace(/^"|"$/g, "")).join("");
 
 (async () => {
   console.log(oud ? "VORIGE VERSIE (hier hoort het fout te gaan)" : "HUIDIGE VERSIE");
