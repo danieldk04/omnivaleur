@@ -654,5 +654,18 @@ async def crosslist_item(item_id: str, body: dict, user_id: str = Depends(requir
     except CrosslistValidationError as e:
         raise HTTPException(status_code=422, detail={"missing_fields": e.missing})
     except VertalingOnbeschikbaar as e:
-        raise HTTPException(status_code=503, detail=str(e))
+        # 500 en NIET 503, hoe verleidelijk 503 hier ook is. Cloudflare vervangt
+        # een 502/503 door zijn eigen HTML-storingspagina, dus de uitleg in
+        # `detail` bereikt de browser nooit — gemeten 04-09-2026, zie
+        # `create_item` hierboven en docs/kennisbank.md.
+        #
+        # WAT DAT KOSTTE (De Juiste Toon, 09-09-2026). Het Anthropic-tegoed was
+        # op, dus de vertaalstap viel om. Bij "Perzisch tapijtje versleten
+        # sleets rood taupe 128/79" staan minder dan drie Nederlandse
+        # stopwoorden in titel en omschrijving samen, dus lijkt_al_in_taal kon
+        # niet vaststellen dat de tekst al Nederlands was en hield de publicatie
+        # tegen — terecht. Alleen las hij op zijn scherm "The server didn't
+        # answer in time (503) — it was busy or restarting", en dus wachtte hij
+        # op iets wat vanzelf nooit overging.
+        raise HTTPException(status_code=500, detail=str(e))
     return {"item_id": item_id, "results": results, "blocked_platforms": geblokkeerd}
