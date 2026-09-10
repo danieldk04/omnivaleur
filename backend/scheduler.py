@@ -92,6 +92,18 @@ def start_scheduler():
         id="relist_marktplaats",
         replace_existing=True,
     )
+    # 2dehands: bijna verlopen zoekertjes GRATIS verlengen (niet herplaatsen).
+    # Zie extend_expiring_2dehands — er wordt niets weggehaald, alleen de
+    # verlengknop op het eigen overzicht aangeklikt.
+    _scheduler.add_job(
+        _off_the_request_loop(extend_expiring_2dehands),
+        "interval",
+        hours=6,
+        id="extend_2dehands",
+        replace_existing=True,
+        max_instances=1,
+        coalesce=True,
+    )
     # Vangnet tegen dubbelverkoop: een artikel dat op één kanaal verkocht is maar
     # op een ander kanaal nog te koop staat, omdat de afmelding daar stil is
     # mislukt (verwijderopdracht op 'error', browser stond uit, geen product-id).
