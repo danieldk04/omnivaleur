@@ -648,7 +648,8 @@ async def crosslist_item(item_id: str, body: dict, user_id: str = Depends(requir
     if not platforms:
         raise HTTPException(status_code=422, detail={"blocked_platforms": geblokkeerd})
     from backend.services.crosslist import (publish_to_platforms, CrosslistValidationError,
-                                            VertalingOnbeschikbaar)
+                                            VertalingOnbeschikbaar,
+                                            NIETS_GEPLAATST_VERTALING)
     try:
         results = await publish_to_platforms(item_id, platforms, user_id)
     except CrosslistValidationError as e:
@@ -667,5 +668,6 @@ async def crosslist_item(item_id: str, body: dict, user_id: str = Depends(requir
         # tegen — terecht. Alleen las hij op zijn scherm "The server didn't
         # answer in time (503) — it was busy or restarting", en dus wachtte hij
         # op iets wat vanzelf nooit overging.
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.warning("Vertaalstoring hield publicatie van %s tegen: %s", item_id, e)
+        raise HTTPException(status_code=500, detail=NIETS_GEPLAATST_VERTALING)
     return {"item_id": item_id, "results": results, "blocked_platforms": geblokkeerd}
