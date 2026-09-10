@@ -232,6 +232,73 @@ def test_complete_job_schuift_listed_at_alleen_met_bewijs():
     assert rij["status"] == "active", "de status blijft active — nooit delisted/relisting"
 
 
+# ── 6. Een 'extend'-job gaat alleen naar een kopie die 'extend' kent ──────
+#
+# Zolang de Chrome Web Store 1.0.318 niet heeft goedgekeurd draait bij klanten
+# nog 1.0.317. Die kent 'extend' niet en zou er een tweede advertentie van
+# maken. De opdracht hoort dan te blijven wachten, niet uitgedeeld te worden.
+
+def _pending_db(job):
+    class _B:
+        def __init__(self, t): self.t, self.soort, self.f, self.ong = t, "select", {}, {}
+        def select(self, *a, **k): self.soort = "select"; return self
+        def update(self, v): self.soort = "update"; return self
+        def eq(self, k, v): self.f[k] = v; return self
+        def neq(self, k, v): self.ong[k] = v; return self
+        def in_(self, k, v): self.f[k] = list(v); return self
+        def lte(self, *a, **k): return self
+        def gte(self, *a, **k): return self
+        def lt(self, *a, **k): return self
+        def or_(self, *a, **k): return self
+        def order(self, *a, **k): return self
+        def limit(self, *a, **k): return self
+        @property
+        def not_(self):
+            b = self
+            class _N:
+                def is_(self, *_a): return b
+            return _N()
+        def execute(self):
+            data = []
+            if self.t == "jobs" and self.soort == "select":
+                if self.f.get("status") == "claimed":
+                    data = []
+                elif "id" in self.f:
+                    data = [job] if job["id"] in self.f["id"] else []
+                elif self.f.get("status") == "pending":
+                    data = [job]
+                else:
+                    data = []
+            elif self.t == "items":
+                data = [{"id": job["item_id"], "user_id": "u1", "title": "t",
+                         "sku": None, "brand": None}]
+            elif self.t == "listings":
+                data = []
+            return type("R", (), {"data": data})()
+    return type("Db", (), {"table": lambda self, n: _B(n)})()
+
+
+@pytest.mark.parametrize("versie,uitgedeeld", [("1.0.317", False), ("1.0.318", True)])
+def test_extend_alleen_naar_een_kopie_die_het_kent(monkeypatch, versie, uitgedeeld):
+    job = {"id": "j1", "user_id": "u1", "item_id": "it1", "platform": "2dehands",
+           "action": "extend", "status": "pending", "payload": {"platform_listing_id": "m1"},
+           "created_at": _oud(0), "claimed_at": None, "done_at": None, "scheduled_for": None}
+    db = _pending_db(job)
+    monkeypatch.setattr(jobsapi, "get_db", lambda: db)
+    monkeypatch.setattr(jobsapi, "_record_extension_heartbeat", lambda *a, **k: None)
+    monkeypatch.setattr(jobsapi, "_recover_stale_claims", lambda *a, **k: None)
+    monkeypatch.setattr(jobsapi, "execute_with_retry", lambda q, *a, **k: q.execute())
+    monkeypatch.setattr(jobsapi, "_zet_kleur_goed", lambda r: None)
+    monkeypatch.setattr(jobsapi, "_zet_taal_goed", lambda db, js: list(js))
+    monkeypatch.setattr(jobsapi, "_haal_links_eruit", lambda db, js: 0)
+
+    uit = jobsapi.get_pending_jobs(
+        request=type("R", (), {"headers": {"x-omnivaleur-ext": versie}})(),
+        platform="2dehands", user_id="u1")
+
+    assert bool(uit) == uitgedeeld, f"versie {versie}: {uit}"
+
+
 def test_complete_job_zonder_bewijs_laat_listed_at_staan():
     oud = _oud(27)
     db = _DB(
