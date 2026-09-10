@@ -8036,3 +8036,85 @@ laatste hartslag is van 14:41 UTC, ruim een uur geleden — zijn computer of Chr
 staat nu uit, dus de 128 wachtende zoekertjes staan stil tot hij hem weer aanzet.
 Daarmee is ook niet te meten of zijn gratis tegoed in Drumstellen en Toebehoren
 nog toereikend is; dat blijkt pas als de rij weer loopt.
+
+### 10-09-2026 — OPENSTAAND WERK voor de tweede ontwikkelaar: automatisch verlengen op 2dehands
+
+Dit is een opdracht, geen verslag. Egbert Brouwer vroeg ernaar, Daniel wil het,
+en het is bewust niet in dezelfde sessie gebouwd omdat het de gevaarlijkste
+machinerie van de repo raakt.
+
+**Wat er moet komen.** Een zoekertje op 2dehands dat bijna verloopt moet
+automatisch **verlengd** worden. Niet herplaatst.
+
+**Waarom dat verschil het hele punt is.** Ons `relist_expiring_marktplaats`
+(backend/services/crosslist.py) haalt een advertentie wég en plaatst een nieuwe.
+Op 2dehands is verlengen **gratis** en opnieuw plaatsen niet altijd: in een
+betalende rubriek kost een nieuwe plaatsing geld of eet hij het gratis tegoed op
+(zie de notitie van vandaag over Egberts 24 mislukte gitaarzoekertjes). Wie hier
+klakkeloos het Marktplaats-pad kopieert verandert een gratis handeling in een
+rekening bij de klant. Verlengen moet dus echt verlengen zijn.
+
+**Wat er al gemeten is, zodat je dat niet opnieuw hoeft te doen** (10-09-2026, op
+het ingelogde account Revaleur):
+
+* Plaatsformulier, bundelkeuze: "Gratis € 0,00 — Standaard zichtbaarheid — 4 weken
+  zichtbaar op 2dehands", en eronder letterlijk: "Deze prijs geldt voor de eerste
+  4 weken. Daarna kan het zoekertje, met standaard zichtbaarheid, gratis worden
+  verlengd."
+* De verlengknop staat op het eigen overzicht:
+  `https://www.2dehands.be/my-account/sell/index.html`
+* Per zoekertje is de rij `div[data-testid="ad-selector"].row.ad-listing`.
+* Daarbinnen: `div.AdStatus-module-listingStatus` → `div.AdStatus-module-extend` →
+  `a.hz-Link[href="#verlengen"]` met de tekst "Verlengen".
+* In diezelfde statuskolom staat de vervaldatum als tekst: `Loopt af op 13 sep. '26`.
+* Het advertentienummer haal je van de eerste `a[href]` op die rij:
+  `/v/kleding-heren/overhemden/m2431571489-...` → `m2431571489`.
+* **De knop staat er niet altijd.** Van 49 zoekertjes hadden er op dat moment 3 een
+  "Verlengen", en dat waren precies de zoekertjes die binnen ongeveer een week
+  aflopen. Het werk moet dus in dat venster draaien; buiten dat venster is er
+  niets te verlengen en hoort de opdracht niet aangemaakt te worden.
+* Op datzelfde overzicht staat ook een knop "Naar Betalen" (van de
+  "Sneller verkopen"-verkoopactie). Niet aanklikken, en let op dat je hem niet
+  verwart met de betaalmuur-herkenning uit `betaalrubriekBezwaar` — die hoort
+  alleen op het plaatsformulier te draaien, niet op dit overzicht.
+* Wat de knop precies opent (`href="#verlengen"` is een anker, dus vermoedelijk
+  een venster) is NIET nagemeten: er is bewust niet geklikt op een echte
+  advertentie van Daniel. Dat is stap één van het werk.
+* Marktplaats is niet vergeleken: het overzicht daar meldde "Mijn advertenties
+  (0)", wat bij een zakelijk account normaal is (zie de kennisbank,
+  "admarkt-zakelijke-marktplaats"). Kijk zelf of Marktplaats dezelfde verlengknop
+  heeft; zo ja, dan is ons huidige weghalen-en-opnieuw-plaatsen daar mogelijk
+  onnodig zwaar. Dat is een aparte beslissing, geen onderdeel van deze opdracht.
+
+**Waar het in de code landt.**
+
+* Een nieuwe opdrachtsoort naast `create`, `delete`, `content_refresh` en `scan`,
+  bijvoorbeeld `extend`. Alle vier lopen door `get_pending_jobs` in
+  `backend/api/jobs.py`; dat is de enige plek waar alles langskomt (zie de
+  kennisbank, "filter-op-een-publicatiepad-is-geen-filter").
+* Een ronde die hem inplant, naar het model van `relist_expiring_marktplaats`,
+  maar dan zonder delete. Let op de bestaande rem: nooit een hele voorraad op één
+  dag, spreiden per verkoper.
+* De uitvoering in `extension/content/tweedehands.js`. Die krijgt nu alleen
+  `create` en `delete`; `extend` opent het overzicht, zoekt de rij op
+  advertentienummer en klikt de verlengknop.
+* De advertentierij in `listings` houdt zijn `platform_listing_id`. Er komt geen
+  nieuwe advertentie, dus er mag ook NIETS op 'relisting' of 'delisted' gezet
+  worden. Alleen `listed_at` opschuiven zodra het verlengen bevestigd is.
+
+**Valkuilen die al een keer geld of advertenties hebben gekost** (allemaal in
+docs/kennisbank.md, lees ze voor je begint):
+
+* "herplaatsen-verliest-advertenties" — eerst weghalen dan plaatsen kost de
+  advertentie. Bij verlengen mag er sowieso nooit iets weg.
+* "succes-nooit-uit-uitsluitingslijst" — "geen foutmelding" is geen bewijs dat het
+  gelukt is. Lees de nieuwe vervaldatum terug van het overzicht; die moet vier
+  weken verder liggen. Dat is het enige bewijs dat telt.
+* "herplaatslus-op-verkochte-artikelen" — een verkocht artikel nooit verlengen.
+* "calm-mode" — het ritme verraadt automatisering; volg dezelfde spreiding.
+* "een-bron-is-geen-bewijs-bij-weg" en "voor-en-na-proef-mag-geen-head-gebruiken".
+
+**Klaar is het pas als:** een echte advertentie op een echt account is verlengd,
+de vervaldatum aantoonbaar vier weken is opgeschoven, er geen tweede advertentie
+is ontstaan, er niets is betaald, en er een proef in `tests/` staat die de oude
+code onder dezelfde omstandigheden laat falen tegen een vast commitnummer.
