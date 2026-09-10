@@ -322,9 +322,17 @@ def test_tweede_verversing_met_hetzelfde_token_trekt_de_sessie_niet_in(monkeypat
     assert nep.supabase_calls == 1, "de tweede vraag mag Supabase niet opnieuw bellen"
     assert not nep.familie_dood, "de sessiefamilie is ingetrokken — precies de klacht"
 
-    # En het nieuwe token werkt daarna gewoon om verder te verversen.
+    # Binnen het venster geeft ook het nieuwe token hetzelfde paar terug (geen
+    # tweede rotatie), zodat een partij die al doorschoof niks kapotmaakt.
     derde = asyncio.run(auth_api.refresh(auth_api.RefreshRequest(refresh_token=tweede["refresh_token"])))
-    assert derde["refresh_token"] != tweede["refresh_token"]
+    assert derde["refresh_token"] == tweede["refresh_token"]
+    assert nep.supabase_calls == 1
+
+    # Na het venster mag er weer echt geroteerd worden.
+    auth_api._refresh_cache.clear()
+    vierde = asyncio.run(auth_api.refresh(auth_api.RefreshRequest(refresh_token=tweede["refresh_token"])))
+    assert vierde["refresh_token"] != tweede["refresh_token"]
+    assert nep.supabase_calls == 2
 
 
 def test_zonder_de_cache_zou_dezelfde_situatie_de_sessie_wel_intrekken(monkeypatch):
