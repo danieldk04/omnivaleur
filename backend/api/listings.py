@@ -209,7 +209,9 @@ async def publish_listing(
         # 503: Cloudflare vervangt een 502/503 door zijn eigen storingspagina en
         # dan komt deze zin nooit aan (gemeten 04-09-2026). Zie de uitleg bij
         # crosslist_item in backend/api/items.py.
-        raise HTTPException(status_code=500, detail=str(e))
+        from backend.services.crosslist import NIETS_GEPLAATST_VERTALING
+        logger.warning("Vertaalstoring hield publicatie van %s tegen: %s", body.item_id, e)
+        raise HTTPException(status_code=500, detail=NIETS_GEPLAATST_VERTALING)
     return {"results": results}
 
 
