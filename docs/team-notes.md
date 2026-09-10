@@ -8006,3 +8006,33 @@ hebben.
 3. Bieden is pas uit zodra de Chrome Web Store 1.0.317 heeft goedgekeurd.
 4. Eén wachtend zoekertje staat in "unisex accessoires"; die rubriekboom is niet
    nagemeten.
+
+### 10-09-2026 — Egberts verlopen-vraag ging over 2dehands, en daar doen wij het niet
+
+Daniel wees erop dat Egberts vraag "gaat Omnivaleur hem opnieuw plaatsen vlak
+voordat de advertentie verloopt" over 2dehands ging, niet over Marktplaats. Het
+antwoord dat klaarlag was dus voor het verkeerde kanaal.
+
+**Wat 2dehands zelf zegt**, gelezen op het plaatsformulier (bundelkeuze,
+728/1717): een zoekertje is **4 weken zichtbaar**, en daarna, letterlijk: "Deze
+prijs geldt voor de eerste 4 weken. Daarna kan het zoekertje, met standaard
+zichtbaarheid, gratis worden verlengd." Verlengen is daar dus gratis.
+
+**Wat wij doen.** `relist_expiring_marktplaats` in `backend/services/crosslist.py`
+filtert op `.eq("platform", "marktplaats")`. Automatisch herplaatsen vóór het
+verlopen bestaat dus **alleen voor Marktplaats** (na de door de verkoper ingestelde
+dagen, standaard 27, vóór Marktplaats' eigen 30). Op 2dehands doen wij dit niet.
+
+**Waarom dit geen kleine uitbreiding is, en dus een beslissing van Daniel.**
+Herplaatsen is bij ons weghalen en opnieuw plaatsen, niet verlengen. Op 2dehands
+zou dat in een betalende rubriek het gratis tegoed opeten of geld kosten, terwijl
+2dehands verlengen juist gratis aanbiedt. Een verlengknop indrukken is iets heel
+anders dan een advertentie opnieuw plaatsen. Dit doorzetten zonder dat verschil te
+bouwen zou van een gratis handeling een betaalde maken. Niet gebouwd, bewust.
+
+**Bijvangst uit dezelfde ronde**: Egberts uitbreiding draait op 1.0.316, de
+nieuwste gepubliceerde versie, dus er zit geen versieverschil in de weg. Maar zijn
+laatste hartslag is van 14:41 UTC, ruim een uur geleden — zijn computer of Chrome
+staat nu uit, dus de 128 wachtende zoekertjes staan stil tot hij hem weer aanzet.
+Daarmee is ook niet te meten of zijn gratis tegoed in Drumstellen en Toebehoren
+nog toereikend is; dat blijkt pas als de rij weer loopt.
