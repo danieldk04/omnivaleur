@@ -7730,3 +7730,84 @@ js-proeven en 1.180 python-proeven groen.
 daar zit de authenticatie voor de routering en geeft ook een verzonnen procedure
 401. Wijkt het af, dan meldt de scan wel welke procedure faalde en met welke code,
 dus het faalt luid en niet stil. Egberts eerste scan op 2dehands is de proef.
+
+### 10-09-2026 — 331 keer dezelfde storing: een opdracht die er niet meer was
+
+In het foutenlogboek stond één regel met teller **331**, en die teller liep nog:
+`POST /api/jobs/9ac23805-4549-4d09-811d-1dc922a80015/complete`, laatste keer
+10-09 om 06:32 UTC, met `APIError PGRST116 — The result contains 0 rows`. Eén en
+dezelfde opdracht, 331 keer, want het logboek klapt gelijke fouten samen tot één
+regel met een teller.
+
+**Wat er gebeurde, schakel voor schakel.** Die opdracht staat niet in de tabel;
+nagemeten, nul rijen. Hij is meeverwijderd toen het artikel in het dashboard
+werd weggegooid: `delete_item` in `backend/api/items.py` wist ook
+`jobs.item_id = <artikel>`. De extensie was op dat moment nog aan het werk, maakte
+het karwei af en meldde daarna netjes "klaar". Toen kwam de val.
+
+`.single()` geeft bij nul rijen geen leeg antwoord maar gooit een `APIError`. De
+regel eronder, `if not job: raise HTTPException(404)`, werd dus nooit bereikt:
+dode code. De extensie kreeg een kale 500. En dat is voor haar iets heel anders
+dan een 404: `_postFinalise` in `extension/background.js` ziet een 404 als
+afgehandeld ("treat as settled, not a failure, so we don't retry forever") en al
+het andere als een hik. Vier pogingen, dan de bewaarrij `pendingFinalisations` in
+`chrome.storage.local`, en `flushFinaliseQueue()` biedt die bij élke poll opnieuw
+aan. Op een opdracht die nooit meer terugkomt is dat oneindig. Vandaar 331.
+
+**Wat er veranderd is.** Nieuwe hulpfunctie `eerste_rij()` in
+`backend/database.py`, en alle **17** `.single()`-aanroepen in de repo zijn
+vervangen door `.limit(1)` plus die functie. Alle zeventien hadden hetzelfde
+dode `if not rij:` erachter, dus het was overal dezelfde landmijn: `/jobs/{id}/
+complete`, `/error`, `/cancel`, `/status/{id}`, `GET /items/{id}`, twee
+importkandidaat-paden, de Marktplaats-koppeling, en zeven plekken in
+`crosslist.py` plus één in `relist.py`.
+
+**Let op bij `maybe_single()`.** Dat lijkt het voor de hand liggende alternatief
+maar is het niet: in postgrest 2.31 geeft `.maybe_single().execute()` bij nul
+rijen **None als antwoordobject**, dus `.data` erachter gooit alsnog. Nagemeten
+tegen de echte database. Vandaar `.limit(1)`, dat in elke versie hetzelfde doet.
+
+**Proef:** `tests/test_verdwenen_opdracht_geeft_geen_500.py`, met een
+nepdatabase die zich net zo gedraagt als de echte (`.single()` gooit PGRST116,
+`.limit(1)` geeft een lege lijst). De voor-en-na haalt `backend/api/jobs.py` uit
+commit **f64b30a1** en draait die oude `complete_job` onder exact dezelfde
+omstandigheden: die komt met de APIError, de nieuwe met een nette 404. Verder
+1.184 python-proeven groen.
+
+Eén bestaande proef moest mee: de nepdatabase in
+`tests/test_dubbele_advertentie_bij_herplaatsen.py` gaf voor de tabel `items`
+altijd één rij terug in plaats van een lijst, dus die bootste stiekem `.single()`
+na. Nu doet hij het echte werk, inclusief de uitzondering bij nul rijen.
+
+**Openstaand.** De bewaarrij van die ene extensie loopt pas leeg zodra hij weer
+een poll doet en dan een 404 krijgt; dat gaat vanzelf, maar is nog niet gezien.
+En waaróm het artikel werd verwijderd terwijl er nog werk voor liep is niet
+onderzocht: dat is normaal gedrag van een verkoper, geen storing.
+
+### 10-09-2026 — Wat er zakelijk op 2dehands wel en niet kan (uit hun eigen pagina's, zonder inlog)
+
+Egbert vroeg om "de Belgische Admarkt variant". Gemeten op de openbare zakelijke
+site van 2dehands (2dehandszakelijk.be, eigendom van Marktplaats BV):
+
+1. Een zakelijke verkoper kan op twee manieren zoekertjes plaatsen: Standaard en
+   Pro. Letterlijk op business-portaal: "Je kan op 2 manieren zoekertjes
+   plaatsen." Standaard is het gewone plaatsformulier, gratis of betalen per
+   zoekertje in betalende rubrieken. Daarmee is de hypothese "zijn zakelijke
+   account mag het gewone /plaats-formulier niet gebruiken" van tafel. Zakelijk
+   zijn blokkeert plaatsen niet.
+2. Pro is de nieuwe naam van Admarkt. Het is CPC-adverteren met eigen budget.
+   Aanmelden gaat via een registratieformulier, daarna verifieert 2dehands de
+   bedrijfsgegevens en neemt contact op; pas na goedkeuring kun je aan de slag.
+   Een Pro-zoekertje heeft wel titel, foto's, beschrijving en contactgegevens,
+   plus CPC en budget. Eerdere aanname dat Admarkt geen omschrijving heeft is
+   dus niet juist voor de plaatskant.
+3. Geautomatiseerd Pro-zoekertjes plaatsen mag alleen via een door Marktplaats
+   erkende API-partner. De Admarkt-voorwaarden verbieden gebruik via scripts of
+   bots en staan alleen geautomatiseerde toegang toe via een door Marktplaats
+   aangeboden of goedgekeurde toepassing. De erkende partners zijn onder meer
+   Channable, ZoekertjesPlanet, E-SS, DataFeedWatch en Webelephant.
+
+Gevolg voor Omnivaleur: wij kunnen Pro/Admarkt niet met de extensie bedienen,
+niet omdat het technisch niet lukt maar omdat het volgens hun voorwaarden niet
+mag. Wil Daniel dit echt aanbieden, dan is de route erkend API-partner worden bij
+Marktplaats BV. Dat is een zakelijke beslissing, geen bouwklus.

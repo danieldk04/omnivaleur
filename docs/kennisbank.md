@@ -17,6 +17,66 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ---
 
+## admarkt-pro-mag-niet-geautomatiseerd
+
+*10-09-2026 — Admarkt heet nu Pro; automatisch plaatsen mag alleen via een erkende API-partner, en zakelijk zijn blokkeert het gewone plaatsformulier niet*
+
+Gemeten 10-09-2026 op de openbare zakelijke site van Marktplaats BV
+(2dehandszakelijk.be), zonder inlog:
+
+- Een zakelijk account kan gewoon via het normale plaatsformulier zoekertjes
+  plaatsen (product "Standaard"). Zakelijk zijn is dus nooit de verklaring als
+  plaatsen mislukt. Zoek de oorzaak elders. Zie "stille-tab-is-geen-formulier".
+- Admarkt heet tegenwoordig Pro. Aanmelden via registratieformulier, daarna
+  verificatie en goedkeuring door 2dehands.
+- Een Pro-zoekertje heeft wel degelijk titel, foto's, beschrijving en
+  contactgegevens, plus CPC en budget.
+- Geautomatiseerd plaatsen in Pro mag uitsluitend via een door Marktplaats
+  erkende API-partner (Channable, ZoekertjesPlanet, E-SS, DataFeedWatch,
+  Webelephant). De Admarkt-voorwaarden verbieden scripts en bots met zoveel
+  woorden.
+
+**Why:** de vraag "kunnen we niet gewoon de Belgische Admarkt-variant doen" is
+geen technische vraag. Het antwoord is nee zolang Omnivaleur geen erkende
+API-partner is, en dat blijft zo hoe goed de extensie ook wordt.
+
+**How to apply:** beloof een klant nooit automatisch plaatsen op Admarkt/Pro.
+Verwijs naar Standaard, dat wij wel kunnen bedienen. Wil Daniel Pro echt
+aanbieden, dan is de eerste stap partneraanvraag bij Marktplaats BV, niet bouwen.
+Zie "admarkt-zakelijke-marktplaats".
+
+---
+
+## single-gooit-bij-nul-rijen
+
+*10-09-2026 — PostgREST .single() gooit PGRST116 bij nul rijen, dus elke "if not rij, raise 404" erachter is dode code en de klant krijgt een 500*
+
+`.single()` op een Supabase/PostgREST-vraag geeft bij **nul** rijen geen leeg
+antwoord terug maar gooit een `APIError` met code `PGRST116` ("Cannot coerce the
+result to a single JSON object"). Elke `if not rij: raise HTTPException(404)`
+die erachter staat wordt dus nooit bereikt: dode code, en de aanroeper krijgt
+een kale 500.
+
+In deze repo stond dat patroon op 17 plekken. Gebruik in plaats daarvan
+`.limit(1)` met `eerste_rij()` uit `backend/database.py`. Let op: `maybe_single()`
+is geen veilig alternatief, want in postgrest 2.31 geeft `.maybe_single().execute()`
+bij nul rijen **None als antwoordobject**, dus `.data` erachter gooit alsnog.
+
+**Waarom het duur is:** een 500 in plaats van een 404 zet de Chrome-extensie aan
+het herhalen. `_postFinalise` in background.js ziet een 404 als afgehandeld en
+al het andere als een hik: vier pogingen, dan de bewaarrij
+`pendingFinalisations`, en `flushFinaliseQueue()` biedt die bij elke poll opnieuw
+aan. Gemeten 10-09-2026: 331 keer dezelfde `POST /api/jobs/{id}/complete`, voor
+een opdracht die was meeverwijderd toen het artikel uit het dashboard werd
+gegooid. Zie "foutenlogboek-wist-zichzelf" en
+"schrijfacties-zonder-herkansing".
+
+**Hoe toe te passen:** schrijf nooit `.single()` in nieuwe code. Zie je een
+storing die alleen bij een verwijderd of niet-bestaand item optreedt, kijk dan
+eerst of er een `.single()` in het spoor staat.
+
+---
+
 ## admarkt-zakelijke-marktplaats
 
 *10-09-2026 — Zakelijke Marktplaats-verkopers beheren hun advertenties in Admarkt; het persoonlijke overzicht is dan leeg en de scan vindt nul*
