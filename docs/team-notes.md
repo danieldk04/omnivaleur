@@ -7926,3 +7926,36 @@ categorie" en `knop "Naar betalen"`.
 "het formulier zegt geen bieden" is bewezen en "de gepubliceerde advertentie komt
 er als FIXED uit" niet. En de extensie bereikt Egbert pas na de Chrome Web Store;
 tot die tijd staat bieden bij hem nog aan.
+
+### 10-09-2026 — De biedreparatie bewezen op een echt gepubliceerde advertentie
+
+Laatste open punt van de vorige notitie gesloten, met toestemming van Daniel: één
+testadvertentie op zijn eigen Marktplaats (Revaleur), geplaatst en binnen een paar
+minuten weer verwijderd.
+
+Formulier /plaats/621/636 (Kleding Dames, Spijkerbroeken en Jeans), met de hand
+gevuld zodat het enige wat er getoetst werd `zetBieden` uit shared.js 1.0.317 was.
+Vlak vóór de plaatsklik: schakelaar uit in de DOM én in React's eigen state,
+prijstype FIXED, prijs 25,00. Gratis gekozen, totaal EUR 0,00.
+
+**De uitkomst, teruggelezen van de OPENBARE advertentie via de zoek-API:**
+
+```
+itemId    m2441218095
+verkoper  Revaleur
+priceInfo {"priceCents": 2500, "priceType": "FIXED"}
+condition "Gedragen"
+```
+
+`priceType: FIXED` is het bewijs. Egberts elf zoekertjes staan op MIN_BID; dit is
+wat er nu uit komt. De conditie kwam er ook precies uit zoals gekozen, dus dat pad
+is meteen mee bewezen.
+
+**Weer weg, langs drie bronnen** (want één bron is geen bewijs bij "weg", zie de
+kennisbank): de zoek-API geeft hem niet meer terug, hij staat niet meer in de
+verkoperslijst van Revaleur, en zijn eigen advertentiepagina zegt "Deze
+advertentie is helaas verlopen".
+
+Wat hierna nog openstaat is geen onzekerheid meer over de code maar een
+wachttijd: de extensie bereikt Egbert pas nadat de Chrome Web Store 1.0.317 heeft
+goedgekeurd. Tot die tijd staat bieden bij hem aan.
