@@ -3544,6 +3544,150 @@ async function mpAdvertentieSnapshot(tabId) {
   }
 }
 
+// ── 2DEHANDS: EEN BIJNA VERLOPEN ZOEKERTJE VERLENGEN ───────────────────────
+//
+// Gemeten op het ingelogde account Revaleur, 10-09-2026:
+//  - het eigen overzicht is https://www.2dehands.be/my-account/sell/index.html
+//  - dat overzicht heeft een JSON-bron /my-account/sell/api/listings met per
+//    zoekertje { itemId, status, closeDate, reserved }. status "EXPIRING" is
+//    precies het zoekertje dat een "Verlengen"-knop toont (3 van 49 bij Daniel).
+//  - die knop is <a href="#verlengen" data-ad-id="m..."> in de statuskolom.
+//  - klikken verlengt METEEN, zonder bevestiging. Daarna opent een venster
+//    "Zoekertje is verlengd" met een BETAALDE knop "Plaats bovenaan" (EUR 0,24)
+//    en een knop "Sluiten". De betaalde knop raken we NOOIT aan.
+//  - ná het verlengen staat closeDate exact 28 dagen verder en is status ACTIVE.
+//    Twee echte advertenties zo verlengd, allebei +28 dagen, EUR 0,00.
+//
+// NOOIT weghalen, nooit opnieuw plaatsen (zie "herplaatsen-verliest-advertenties"
+// en docs/team-notes.md 10-09-2026). Het bewijs dat telt is de nieuwe closeDate,
+// niet "geen foutmelding" (zie "succes-nooit-uit-uitsluitingslijst").
+async function bgExtend2dh(job, serverUrl) {
+  const sleep = ms => new Promise(r => setTimeout(r, ms));
+  const payload = job.payload || {};
+  const itemId = String(payload.platform_listing_id || "").trim();
+  const overviewUrl = "https://www.2dehands.be/my-account/sell/index.html";
+
+  if (!/^m\d{6,}$/.test(itemId)) {
+    throw new Error(`No 2dehands listing id on this extend job (got "${itemId}") — nothing to extend.`);
+  }
+
+  const tabId = await new Promise((res, rej) =>
+    openWorkerTab(overviewUrl, t =>
+      t ? res(t.id) : rej(new Error("could not open worker tab")), { silent: true }
+    )
+  );
+
+  try {
+    await waitForTabLoad(tabId);
+    await sleep(3000);                 // let React render the list
+    await expandMp2dhOverview(tabId);  // load every row, not just the first 50
+
+    const uit = await execInTab(tabId, async (wantId) => {
+      const nap = ms => new Promise(r => setTimeout(r, ms));
+      const readOne = async () => {
+        try {
+          const r = await fetch("/my-account/sell/api/listings?batchNumber=1&batchSize=200",
+            { headers: { Accept: "application/json" }, credentials: "include" });
+          if (!r.ok) return { httpError: r.status };
+          const d = await r.json();
+          const ads = d.ads || [];
+          return { total: ads.length, ad: ads.find(a => String(a.itemId) === wantId) || null };
+        } catch (e) { return { fetchError: String(e && e.message || e) }; }
+      };
+
+      const before = await readOne();
+      if (before.httpError) return { step: "read", httpError: before.httpError };
+      if (before.fetchError) return { step: "read", fetchError: before.fetchError };
+      // Leeg overzicht bewijst niets (uitgelogd? markup veranderd?). Nooit
+      // "al verlengd" gokken op een lege lijst.
+      if (!before.total) return { step: "read", empty: true };
+      if (!before.ad) return { step: "read", notFound: true, total: before.total };
+
+      const ad = before.ad;
+      const closeBefore = ad.closeDate || null;
+      if (ad.reserved) return { reserved: true, closeDate: closeBefore };
+
+      // Niet in het verlengvenster: 2dehands laat pas ~7 dagen voor het einde
+      // verlengen, en dan pas staat er een knop. Geen fout, niets te doen.
+      if (ad.status !== "EXPIRING") {
+        return { notExpiring: true, status: ad.status, closeDate: closeBefore };
+      }
+
+      // Alleen de verlengknop van DIT zoekertje (data-ad-id), en verder niets —
+      // zeker niet de betaalde knop in het venster dat daarna opent.
+      const link = document.querySelector(`a[href="#verlengen"][data-ad-id="${wantId}"]`);
+      if (!link) return { noButton: true, status: ad.status };
+      link.scrollIntoView({ block: "center" });
+      link.click();
+      await nap(3500);
+
+      const after = await readOne();
+      const closeAfter = (after && after.ad && after.ad.closeDate) || null;
+      let shiftDays = null;
+      if (closeBefore && closeAfter) {
+        shiftDays = Math.round((new Date(closeAfter) - new Date(closeBefore)) / 86400000);
+      }
+      return {
+        clicked: true, closeBefore, closeAfter, shiftDays,
+        statusAfter: (after && after.ad && after.ad.status) || null,
+      };
+    }, [itemId]);
+
+    if (uit && uit.step === "read" && (uit.empty || uit.httpError || uit.fetchError)) {
+      throw new Error(
+        `Couldn't read your 2dehands listings overview ` +
+        `(${uit.httpError ? "HTTP " + uit.httpError : uit.fetchError || "no ads rendered"}). ` +
+        `Make sure you're still logged in on 2dehands. Nothing was changed.`
+      );
+    }
+    if (uit && uit.notFound) {
+      throw new Error(
+        `Listing ${itemId} is not in your 2dehands overview (${uit.total} listings read). ` +
+        `Nothing was changed — it may have been removed or sold.`
+      );
+    }
+    if (uit && uit.reserved) {
+      await finaliseJob(serverUrl, job.id, "complete", { note: "reserved_not_extended" });
+      return;
+    }
+    if (uit && uit.notExpiring) {
+      await finaliseJob(serverUrl, job.id, "complete",
+        { note: "not_in_extend_window", status: uit.status || null });
+      return;
+    }
+    if (uit && uit.noButton) {
+      throw new Error(
+        `Listing ${itemId} shows as expiring on 2dehands but the "Verlengen" button could not be found. ` +
+        `Nothing was changed — try again.`
+      );
+    }
+    if (!uit || !uit.clicked) {
+      throw new Error(`2dehands extend for ${itemId} did not run (${JSON.stringify(uit || {})}).`);
+    }
+
+    // HET BEWIJS: de nieuwe vervaldatum ligt echt ~4 weken verder. 28 is normaal;
+    // 21 als ondergrens laat wat speling voor een zoekertje dat al een paar
+    // dagen "verlopen" was.
+    if (uit.shiftDays == null || uit.shiftDays < 21) {
+      throw new Error(
+        `Clicked "Verlengen" on 2dehands listing ${itemId} but its expiry date did not move ` +
+        `(${uit.closeBefore || "?"} -> ${uit.closeAfter || "?"}, ` +
+        `${uit.shiftDays == null ? "unknown" : uit.shiftDays + " days"}). ` +
+        `Treating this as a failure — nothing is confirmed extended.`
+      );
+    }
+
+    console.log(`[Omnivaleur] bgExtend2dh: ${itemId} verlengd ${uit.closeBefore} -> ${uit.closeAfter} (+${uit.shiftDays}d)`);
+    await finaliseJob(serverUrl, job.id, "complete", {
+      verlengd: true, note: "extended",
+      old_close: uit.closeBefore, new_close: uit.closeAfter, shift_days: uit.shiftDays,
+    });
+  } finally {
+    sluitWerkTabblad(tabId, 2500);
+  }
+}
+
+
 async function bgDeleteMp2dh(job, serverUrl) {
   const sleep = ms => new Promise(r => setTimeout(r, ms));
   const platform = job.platform;
