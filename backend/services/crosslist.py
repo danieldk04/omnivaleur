@@ -234,6 +234,20 @@ def _claude_client():
     return _CLAUDE_CLIENT
 
 
+# Wat de verkoper leest als hij zelf op Publish drukt en de vertaling plat ligt.
+#
+# De tekst van VertalingOnbeschikbaar zelf ("gaat deze advertentie vanzelf
+# alsnog de deur uit") klopt alleen op het uitgiftepad, waar de opdracht al in
+# de wachtrij staat en vanzelf opnieuw wordt aangeboden. Bij een verse
+# publicatie is er nog geen opdracht: het vertalen gebeurt vóór het aanmaken
+# ervan. Wie dan leest dat het vanzelf goedkomt, zit voor niets te wachten.
+NIETS_GEPLAATST_VERTALING = (
+    "Publishing is on hold: we couldn't translate this listing, so nothing was "
+    "published and nothing is waiting in the queue. That keeps your ad from "
+    "going out in the wrong language. Please try again later."
+)
+
+
 class VertalingOnbeschikbaar(RuntimeError):
     """De vertaaldienst deed het niet. Dit is GEEN reden om de tekst maar te plaatsen.
 
