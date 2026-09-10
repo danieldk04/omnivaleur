@@ -1,6 +1,7 @@
 import asyncio
 import logging
 import re
+from time import monotonic as _mono
 from fastapi import APIRouter, HTTPException, Header, Depends
 from pydantic import BaseModel
 from backend.database import (AuthTijdelijkOnbereikbaar, auth_met_herkansing,
@@ -205,7 +206,7 @@ _refresh_lock = asyncio.Lock()
 
 
 def _refresh_cache_get(sleutel: str) -> dict | None:
-    nu = asyncio.get_event_loop().time()
+    nu = _mono()
     for k in [k for k, (verval, _) in _refresh_cache.items() if verval < nu]:
         _refresh_cache.pop(k, None)
     hit = _refresh_cache.get(sleutel)
@@ -213,7 +214,7 @@ def _refresh_cache_get(sleutel: str) -> dict | None:
 
 
 def _refresh_cache_put(oud_token: str, resultaat: dict) -> None:
-    verval = asyncio.get_event_loop().time() + _REFRESH_CACHE_TTL_S
+    verval = _mono() + _REFRESH_CACHE_TTL_S
     _refresh_cache[oud_token] = (verval, resultaat)
     # Ook op het nieuwe token, zodat een partij die al doorgeschoven was maar
     # daarna alsnog opnieuw vraagt (worker-herstart, tweede tabblad) ook raak
