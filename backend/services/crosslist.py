@@ -2195,6 +2195,136 @@ async def relist_expiring_marktplaats():
             logger.error(f"Failed to queue relist for listing {listing['id']}: {e}")
 
 
+# ── 2DEHANDS: VERLENGEN, NIET HERPLAATSEN ────────────────────────────────────
+#
+# Een 2dehands-zoekertje is 4 weken zichtbaar en kan daarna GRATIS worden
+# verlengd (gemeten op het ingelogde plaatsformulier, 10-09-2026). Anders dan bij
+# Marktplaats halen we hier NIETS weg: verlengen is één klik op het eigen
+# overzicht. Opnieuw plaatsen zou in een betalende rubriek geld kosten of het
+# gratis tegoed opeten (zie docs/team-notes.md, Egberts 24 mislukte
+# gitaarzoekertjes) terwijl verlengen altijd gratis is. Daarom een eigen
+# opdrachtsoort 'extend' die de advertentierij volledig met rust laat — alleen
+# listed_at schuift mee zodra de extensie kan aantonen dat de vervaldatum echt
+# vier weken verder ligt.
+_EXTEND_MIN_LEEFTIJD_DAGEN = 22   # 2dehands toont "Verlengen" ~7 dagen voor de 28e dag
+_EXTEND_MAX_LEEFTIJD_DAGEN = 45   # ouder: waarschijnlijk al verlopen; de extensie kijkt zelf
+_EXTEND_MAX_PER_VERKOPER_PER_DAG = 40
+_EXTEND_HERKANS_NA_DAGEN = 3      # niet elke 6-uursronde opnieuw inplannen vóór het venster
+
+
+async def extend_expiring_2dehands():
+    """Zet een 'extend'-opdracht klaar voor elk 2dehands-zoekertje dat bijna
+    afloopt. Verlengen, niet herplaatsen: er wordt niets weggehaald, de
+    advertentierij houdt zijn platform_listing_id en zijn status 'active'.
+    """
+    import random
+    db = get_db()
+    from backend.services.instellingen import lees as _lees_instellingen
+
+    nu = datetime.now(timezone.utc)
+    ondergrens = (nu - timedelta(days=_EXTEND_MAX_LEEFTIJD_DAGEN)).isoformat()
+    bovengrens = (nu - timedelta(days=_EXTEND_MIN_LEEFTIJD_DAGEN)).isoformat()
+
+    rijen = ((await naast_de_lus(lambda: db.table("listings")
+             .select("id,item_id,platform_listing_id,platform_listing_url,listed_at")
+             .eq("platform", "2dehands")
+             .eq("status", "active")
+             .gte("listed_at", ondergrens)
+             .lte("listed_at", bovengrens)
+             # Oudste eerst: die staat het dichtst bij de dag waarop 2dehands hem
+             # zelf laat vervallen.
+             .order("listed_at")
+             .execute())).data or [])
+    if not rijen:
+        return
+
+    _auto_aan: dict[str, bool] = {}
+
+    def auto_aan(uid: str) -> bool:
+        if uid not in _auto_aan:
+            _auto_aan[uid] = bool(_lees_instellingen(uid).get("auto_relist", True))
+        return _auto_aan[uid]
+
+    vandaag = nu.date().isoformat()
+    per_verkoper: dict[str, int] = {}
+    for row in ((await naast_de_lus(lambda: db.table("jobs")
+                .select("user_id")
+                .eq("platform", "2dehands").eq("action", "extend")
+                .gte("created_at", vandaag).execute())).data or []):
+        per_verkoper[row["user_id"]] = per_verkoper.get(row["user_id"], 0) + 1
+
+    herkans_grens = (nu - timedelta(days=_EXTEND_HERKANS_NA_DAGEN)).isoformat()
+    ingepland = 0
+    for listing in rijen:
+        try:
+            item = eerste_rij(await naast_de_lus(lambda: db.table("items").select("id,user_id")
+                    .eq("id", listing["item_id"]).limit(1).execute()))
+            if not item:
+                continue
+            eigenaar = item["user_id"]
+            if not auto_aan(eigenaar):
+                continue
+
+            # Verkocht op welk kanaal dan ook? Dan nooit verlengen. Een verkoop
+            # is een eindpunt (zie "herplaatslus-op-verkochte-artikelen").
+            verkocht = ((await naast_de_lus(lambda: db.table("listings")
+                        .select("platform").eq("item_id", listing["item_id"])
+                        .in_("status", ["sold", "sold_unconfirmed"]).limit(1).execute())).data or [])
+            if verkocht:
+                continue
+
+            # Al een extend-opdracht voor deze advertentie? Loopt er nog een, of
+            # is er net een geprobeerd, dan niets nieuws — anders zet elke
+            # 6-uursronde er een bij zolang de advertentie nog niet in het
+            # verlengvenster van 2dehands zit.
+            bestaat = ((await naast_de_lus(lambda: db.table("jobs")
+                       .select("id,status,created_at")
+                       .eq("item_id", listing["item_id"]).eq("platform", "2dehands")
+                       .eq("action", "extend")
+                       .order("created_at", desc=True).limit(1).execute())).data or [])
+            if bestaat:
+                b = bestaat[0]
+                if b.get("status") in ("pending", "claimed", "running"):
+                    continue
+                if str(b.get("created_at") or "") > herkans_grens:
+                    continue
+
+            if per_verkoper.get(eigenaar, 0) >= _EXTEND_MAX_PER_VERKOPER_PER_DAG:
+                continue
+            n = per_verkoper.get(eigenaar, 0)
+            per_verkoper[eigenaar] = n + 1
+
+            # Spreiden. Het ritme verraadt automatisering (zie "calm-mode"): geen
+            # veertig verlengingen achter elkaar. Elke volgende opdracht van
+            # dezelfde verkoper staat vijf tot negen minuten later klaar; de
+            # extensie voert er sowieso maar één tegelijk uit.
+            scheduled_for = (nu + timedelta(minutes=n * random.randint(5, 9))).isoformat()
+
+            payload = {
+                "platform_listing_id": listing.get("platform_listing_id"),
+                "platform_listing_url": listing.get("platform_listing_url"),
+                "_listing_row_id": listing["id"],
+            }
+            (await naast_de_lus(lambda p=payload, s=scheduled_for, u=eigenaar, it=listing["item_id"]:
+                db.table("jobs").insert({
+                    "user_id": u,
+                    "item_id": it,
+                    "platform": "2dehands",
+                    "action": "extend",
+                    "status": "pending",
+                    "scheduled_for": s,
+                    "payload": p,
+                }).execute()))
+            ingepland += 1
+            logger.info("Queued 2dehands extend for item %s (listing %s)",
+                        listing["item_id"], listing["id"])
+        except Exception as e:  # noqa: BLE001
+            logger.error("Kon 2dehands-verlenging niet inplannen voor listing %s: %s",
+                         listing["id"], e)
+    if ingepland:
+        logger.info("Auto-extend 2dehands: %s opdrachten ingepland", ingepland)
+
+
 async def _find_shopify_product_id_by_sku(sku: str, shop_token: tuple | None = None) -> str | None:
     """
     Locate a Shopify product by variant SKU, walking every page of the catalog.
