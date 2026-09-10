@@ -7602,3 +7602,36 @@ Openstaand: divergentie langer dan 90s blijft mogelijk (dashboard roteerde uren
 eerder, geen omnivaleur-tab open om de extensie bij te praten). Zeldzamer. Daniel
 kan in Supabase de "refresh token reuse interval" naar ~30s zetten als extra
 marge. Niet op de live server gemeten, alleen met nagemaakte Supabase.
+
+### 10-09-2026 — Egbert vraagt om de Belgische Admarkt-variant (gemeten wat kan)
+
+Egbert vraagt of zijn artikelen niet zakelijk op 2dehands.be geplaatst kunnen
+worden, zoals zijn Admarkt op marktplaats.nl, zodat zijn link gewoon mag blijven
+staan.
+
+**Gemeten, niet aangenomen (credential-vrij, 10-09-2026):**
+`https://admarkt.2dehands.be/` bestaat en stuurt door naar de 2dehands-login met
+een eigen OAuth-console voor de Belgische tenant (`client_id=twhbe_console`,
+scopes `console_ro console_rw`). `admarkt.2ememain.be` landt op dezelfde login.
+De Belgische variant bestaat dus echt en is een aparte site met een aparte login,
+los van zijn marktplaats.nl-account.
+
+**Wat wij ermee kunnen is alleen LEZEN.** De import draait op `ad.getAds` en
+`campaign.getAllCampaigns` via de sessie van de verkoper zelf; er is nooit een
+schrijfweg gebouwd of waargenomen. De officiele schrijfweg is de iCAS
+Sellside-API en die vergt een client id en secret die Marktplaats persoonlijk
+uitgeeft ("ask your contact at the respective tenant"), zie
+"admarkt-zakelijke-marktplaats".
+
+**De 404-orakel werkt hier niet zonder inlog.** Op beide tenants geeft elke
+tRPC-procedure 401, ook `ditbestaatniet.foo`: de authenticatie zit voor de
+routering. Of er een `ad.create`-achtige procedure bestaat is dus credential-vrij
+niet vast te stellen. Alleen een ingelogde sessie van Egbert kan dat beantwoorden.
+
+**Belangrijk verschil in het product zelf:** een Admarkt-advertentie draagt geen
+prijs en geen omschrijving en wijst naar de eigen webwinkel, en je betaalt per
+klik met een budget. Het is dus geen gratis zoekertje met een link erin, maar
+betaalde advertentieruimte. Zijn link is daar juist het hele punt.
+
+**Openstaand:** of zijn bestaande NL-Admarkt-campagne uberhaupt op de Belgische
+tenant kan draaien. Dat is een vraag aan zijn Admarkt-contact, geen technische.
