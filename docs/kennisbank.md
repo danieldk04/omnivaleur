@@ -17,6 +17,40 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ---
 
+## outreach-schrijven-als-mens
+
+*10-09-2026 — Hoe koude mail en creator-DM's van Omnivaleur geschreven worden: kort, menselijk ritme, probleem voor pitch, één vraag*
+
+Daniel wil dat outreach klinkt alsof een mens het tikte, niet een model. Regels,
+onderbouwd met data uit cold-email-onderzoek (Gong 85M mails, Lavender 28M,
+Belkins 5,5M, Woodpecker 20M) en influencer-outreach-benchmarks:
+
+- Lengte: openingsbericht 25 tot 100 woorden, drie tot vier zinnen. Een DM naar
+  een creator mag richting 120 tot 180 woorden, dat is daar het gemeten optimum.
+- Niet meteen de oplossing pitchen: dat kost tot 57% van de antwoorden. Eerst het
+  probleem of de bezigheid van de ander, dan pas wat jij hebt (+20%).
+- Personalisatie die naar concreet gedrag verwijst (een specifieke video, een
+  zichtbare bezigheid) haalt 17-18% respons tegen 7-9% generiek.
+- Bedrag meteen noemen bij creators. Duidelijkheid over geld verhoogt de respons
+  en bespaart een ronde.
+- Eén vraag aan het eind, en een makkelijke. Niet twee.
+- Eén opvolgbericht na vier of vijf dagen levert ~65% meer antwoorden. Twee regels,
+  geen herhaling van de pitch.
+- Kleine lijsten winnen: onder de 50 ontvangers 5,8% respons, boven de 1.000 nog
+  2,1%.
+
+Menselijk ritme, dit is wat verraadt dat een model schreef:
+- Zinnen van gelijke lengte achter elkaar. Wissel kort en lang af.
+- Rijtjes van precies drie. Maak er twee van, of één.
+- Gedachtestreepjes. Die gebruikt Daniel sowieso nooit, zie "rapportage-in-gewone-taal".
+- Woorden als cruciaal, naadloos, benutten, in de wereld van. Gewone woorden.
+- Beleefde openingsformules ("ik hoop dat dit je goed bereikt"). Meteen ter zake.
+
+Geen naam in de aanhef bij koude mail blijft staan, zie "koude-mail-geen-naam-in-aanhef".
+Zelfde toon als "klantmail-kort-en-menselijk": schrijven zoals je praat.
+
+---
+
 ## 2dehands-verlengen-niet-herplaatsen
 
 *10-09-2026 — "2dehands heeft een gratis verlengknop; bijna verlopen zoekertjes verleng je, je haalt ze niet weg en plaatst ze niet opnieuw"*
