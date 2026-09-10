@@ -8325,3 +8325,30 @@ commit 15506b9f: die oude code doet in tien rondes tien pogingen, de nieuwe éé
    457 advertenties die echt online staan. De openbare zoek-API per verkoper heeft
    geen login nodig en werkt bij hem prima; een controleronde daarop zou dat gat
    dichten. Niet gebouwd, aparte beslissing.
+
+**Correctie, zelfde avond.** Bovenstaande beantwoordt vraag 2 verkeerd. Onder de
+schermafdruk stond een tekst die niet was meegelezen: *"Zaterdag aantal
+advertenties op Vinted gezet waaronder de Lederhosen wanneer worden deze
+geladen?"* Hij vroeg dus niet naar dubbele advertenties. De meting daarover staat
+en de 56 opgeruimde regels blijven goed, maar het antwoord aan hem moet dit zijn:
+
+* Zaterdag 05-09 heeft hij 294 artikelen geïmporteerd: 249 van 2dehands, 22 van
+  Marktplaats en **22 van Vinted**, die laatste tussen 14:33 en 14:57. Inladen
+  ging dus dezelfde middag, binnen het half uur. Daar zaten vijf lederhosen bij
+  (XXXL, bruin maat xxl, grote maat 60, maat 54, 3/4 model maat 58).
+* Van die 22 staat er nu 17 ook op Marktplaats en 2 op 2dehands. **Vijf staan nog
+  alleen op Vinted**: vier lederhosen plus Mandala Granny groen. Voor die vijf
+  bestaat geen enkele opdracht, niet nu en niet eerder: `jobs` is leeg voor alle
+  vijf. Er is dus niets op weg en er komt niets.
+* Inladen is niet publiceren. Omnivaleur zet zelf nooit een advertentie op een
+  ander kanaal; alleen herplaatsen en verlengen van bestaande advertenties gaat
+  automatisch. `publish_to_platforms` wordt alleen aangeroepen vanuit
+  `/items/{id}/crosslist` en `/listings/publish`, dus uitsluitend na een klik.
+* Die vijf zijn compleet (rubriek, prijs, tekst, 7 tot 13 foto's), dus ze kunnen
+  meteen weg zodra hij ze aanvinkt en op "Publish to…" drukt.
+
+Van de hele zaterdaglichting staan er **182 van de 294 op één kanaal**. Dat is de
+vraag achter zijn vraag: hij verwacht dat wat hij importeert doorstroomt. Voorstel
+voor Daniel, niet gebouwd: in het dashboard één regel bovenaan met "X artikelen
+staan maar op één kanaal" en een klik die er precies die selecteert. Zie
+[[geen-doodlopende-straat-in-de-ui]].

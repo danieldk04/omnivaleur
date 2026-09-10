@@ -17,12 +17,40 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ---
 
+## lees-de-hele-vraag-voor-je-gaat-meten
+
+*10-09-2026 — Een schermafdruk van een klant heeft vaak een tekst eronder; wie die overslaat meet perfect het verkeerde ding*
+
+10-09-2026. Toon stuurde een schermafdruk van vier van zijn Marktplaats-advertenties
+met daaronder de tekst "Zaterdag aantal advertenties op Vinted gezet waaronder de
+Lederhosen wanneer worden deze geladen?". Die tekst zat in de afbeelding en werd
+niet gelezen; alleen "En hoe zit dit?" uit de losse WhatsApp-regel wel. Daarop is
+een half uur gemeten of er dubbele advertenties waren (er waren er geen) en is
+Daniel een kant-en-klaar antwoord gegeven op een vraag die Toon niet had gesteld.
+Hij moest het zelf terugsturen: "is dit echt antwoord op zijn vraag?"
+
+**Why:** een verkeerd begrepen vraag maakt élke meting daarna waardeloos, hoe
+zorgvuldig ook. En het is erger dan geen antwoord: Daniel had het bijna naar zijn
+klant gestuurd, en dan gaat er een uitleg de deur uit over iets waar de klant niet
+over belde.
+
+**How to apply:** lees eerst alles wat er staat, ook de tekst IN een schermafdruk,
+en zeg in één regel terug welke vraag je gaat beantwoorden voordat je begint te
+meten. Zijn er twee lezingen mogelijk, beantwoord ze dan allebei met de cijfers
+erbij in plaats van er één te kiezen. Zie ook "antwoorden-kort-houden" en
+"omnivaleur-altijd-bewijzen".
+
+---
+
 ## dubbele-rij-is-geen-dubbele-advertentie
 
 *10-09-2026 — Twee actieve rijen op één kanaal betekenen bijna altijd één advertentie plus een niet-afgesloten herplaatsing; meet het openbare aanbod voor je iets weghaalt*
 
-10-09-2026, De Juiste Toon vroeg met een schermafdruk "hoe zit dit?" bij drie
-lederhosen van 25 euro die op elkaar lijken. Gemeten op zijn openbare
+10-09-2026. Naar aanleiding van een schermafdruk van De Juiste Toon met drie
+lederhosen van 25 euro die op elkaar lijken. (Zijn vraag ging niet over dubbele
+advertenties; die was verkeerd gelezen omdat de tekst onder de foto niet was
+meegenomen. Zie "lees-de-hele-vraag-voor-je-gaat-meten". De meting zelf staat.)
+Gemeten op zijn openbare
 verkoperspagina (twee losse metingen, 449 advertenties): van de **57 artikelen
 die onze administratie als "twee actieve advertenties" telde stond er geen
 enkele echt twee keer online**. In 56 van de 57 gevallen staat de NIEUWSTE
