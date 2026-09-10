@@ -256,3 +256,89 @@ def test_onbereikbaar_bij_verversen_wist_het_inlogbewijs_niet(monkeypatch):
     with pytest.raises(HTTPException) as e:
         asyncio.run(auth_api.refresh(auth_api.RefreshRequest(refresh_token="rt-egbert@example.com")))
     assert e.value.status_code == 503
+
+
+# ---------------------------------------------------------------------------
+# "Ik word steeds uitgelogd op de extensie"
+#
+# Eén account, meerdere partijen die het inlogbewijs verversen: het
+# dashboard-tabblad, de extensie op diezelfde pc, soms een tweede computer.
+# Supabase roteert bij elke vernieuwing het refresh-token en verklaart het
+# vorige meteen dood. Ververst het dashboard (token A -> B), dan zit de extensie
+# een tel later met het dode token A; Supabase' hergebruikdetectie trekt daarop
+# de HELE sessiefamilie in en alles vliegt er tegelijk uit.
+#
+# De server geeft nu binnen een kort venster hetzelfde verse paar terug als
+# hetzelfde oude token nog een keer wordt aangeboden, zonder Supabase opnieuw te
+# bellen. Zo presenteert niemand ooit een geroteerd token.
+# ---------------------------------------------------------------------------
+class RoterendeAuth:
+    """Bootst Supabase' token-rotatie mét hergebruikdetectie na."""
+
+    def __init__(self):
+        self.geldig = {"rt-start"}      # levende refresh-tokens
+        self.familie_dood = False
+        self.teller = 0
+        self.supabase_calls = 0
+
+    def refresh_session(self, refresh_token):
+        self.supabase_calls += 1
+        if self.familie_dood or refresh_token not in self.geldig:
+            # Een geroteerd/onbekend token: hele sessiefamilie eruit.
+            self.familie_dood = True
+            self.geldig.clear()
+            raise RuntimeError("Invalid Refresh Token: Already Used")
+        self.geldig.discard(refresh_token)
+        self.teller += 1
+        nieuw = f"rt-{self.teller}"
+        self.geldig.add(nieuw)
+        return type("R", (), {
+            "session": type("S", (), {"access_token": f"at-{self.teller}",
+                                      "refresh_token": nieuw})(),
+        })()
+
+
+@pytest.fixture
+def schone_refresh_cache():
+    auth_api._refresh_cache.clear()
+    auth_api._refresh_locks.clear()
+    yield
+    auth_api._refresh_cache.clear()
+    auth_api._refresh_locks.clear()
+
+
+def test_tweede_verversing_met_hetzelfde_token_trekt_de_sessie_niet_in(monkeypatch, schone_refresh_cache):
+    nep = RoterendeAuth()
+    monkeypatch.setattr(auth_api, "verse_auth_client", lambda: type("C", (), {"auth": nep})())
+    monkeypatch.setattr(auth_api, "get_db", lambda: None)
+
+    # Het dashboard ververst eerst.
+    eerste = asyncio.run(auth_api.refresh(auth_api.RefreshRequest(refresh_token="rt-start")))
+    # De extensie ververst kort daarna met hetzelfde oude token.
+    tweede = asyncio.run(auth_api.refresh(auth_api.RefreshRequest(refresh_token="rt-start")))
+
+    assert eerste["refresh_token"] == tweede["refresh_token"], "beide partijen horen op hetzelfde nieuwe token te landen"
+    assert eerste["access_token"] == tweede["access_token"]
+    assert nep.supabase_calls == 1, "de tweede vraag mag Supabase niet opnieuw bellen"
+    assert not nep.familie_dood, "de sessiefamilie is ingetrokken — precies de klacht"
+
+    # En het nieuwe token werkt daarna gewoon om verder te verversen.
+    derde = asyncio.run(auth_api.refresh(auth_api.RefreshRequest(refresh_token=tweede["refresh_token"])))
+    assert derde["refresh_token"] != tweede["refresh_token"]
+
+
+def test_zonder_de_cache_zou_dezelfde_situatie_de_sessie_wel_intrekken(monkeypatch):
+    """Tegenmeting: exact hetzelfde scenario, cache uitgeschakeld, laat de oude
+    fout zien. Zonder dit bewijst de test hierboven niets."""
+    nep = RoterendeAuth()
+    monkeypatch.setattr(auth_api, "verse_auth_client", lambda: type("C", (), {"auth": nep})())
+    monkeypatch.setattr(auth_api, "get_db", lambda: None)
+    monkeypatch.setattr(auth_api, "_refresh_cache_get", lambda _s: None)
+    monkeypatch.setattr(auth_api, "_refresh_cache_put", lambda *_a: None)
+
+    from fastapi import HTTPException
+    asyncio.run(auth_api.refresh(auth_api.RefreshRequest(refresh_token="rt-start")))
+    with pytest.raises(HTTPException) as e:
+        asyncio.run(auth_api.refresh(auth_api.RefreshRequest(refresh_token="rt-start")))
+    assert e.value.status_code == 401
+    assert nep.familie_dood
