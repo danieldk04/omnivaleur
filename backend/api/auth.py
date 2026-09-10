@@ -184,6 +184,45 @@ class RefreshRequest(BaseModel):
     refresh_token: str
 
 
+# ── Waarom dit een geheugentje heeft ────────────────────────────────────────
+#
+# Eén Omnivaleur-account wordt door meerdere partijen tegelijk ververst: het
+# dashboard-tabblad, de browserextensie op diezelfde pc, en soms nog een tweede
+# computer of telefoon. Supabase roteert bij élke vernieuwing het refresh-token
+# en verklaart het vorige meteen ongeldig. Ververst partij A, dan zit partij B
+# een tel later met een dood token; Supabase' hergebruikdetectie trekt daarop de
+# HELE sessiefamilie in en iedereen vliegt er tegelijk uit. Dat is de klacht
+# "ik word steeds uitgelogd op de extensie".
+#
+# Oplossing: als hetzelfde refresh-token binnen een kort venster nog een keer
+# wordt aangeboden, geven we exact hetzelfde verse paar terug dat we de eerste
+# keer van Supabase kregen, zonder Supabase opnieuw te bellen. Alle partijen die
+# vanaf datzelfde token vertrokken landen zo op hetzelfde nieuwe token en er
+# wordt nooit een geroteerd token aan Supabase gepresenteerd.
+_REFRESH_CACHE_TTL_S = 90.0
+_refresh_cache: dict[str, tuple[float, dict]] = {}
+_refresh_lock = asyncio.Lock()
+
+
+def _refresh_cache_get(sleutel: str) -> dict | None:
+    nu = asyncio.get_event_loop().time()
+    for k in [k for k, (verval, _) in _refresh_cache.items() if verval < nu]:
+        _refresh_cache.pop(k, None)
+    hit = _refresh_cache.get(sleutel)
+    return hit[1] if hit else None
+
+
+def _refresh_cache_put(oud_token: str, resultaat: dict) -> None:
+    verval = asyncio.get_event_loop().time() + _REFRESH_CACHE_TTL_S
+    _refresh_cache[oud_token] = (verval, resultaat)
+    # Ook op het nieuwe token, zodat een partij die al doorgeschoven was maar
+    # daarna alsnog opnieuw vraagt (worker-herstart, tweede tabblad) ook raak
+    # heeft in plaats van Supabase te triggeren.
+    nieuw = resultaat.get("refresh_token")
+    if nieuw:
+        _refresh_cache[nieuw] = (verval, resultaat)
+
+
 @router.post("/refresh")
 async def refresh(body: RefreshRequest):
     """
@@ -192,24 +231,39 @@ async def refresh(body: RefreshRequest):
     without the dashboard having to be open. Keeps the Supabase anon key on the
     server rather than shipping it into the extension.
     """
-    if not (body.refresh_token or "").strip():
+    token = (body.refresh_token or "").strip()
+    if not token:
         raise HTTPException(status_code=401, detail="Your session expired — please sign in again")
+
+    gecachet = _refresh_cache_get(token)
+    if gecachet is not None:
+        return gecachet
+
     db = get_db()
     try:
-        # Ook dit zet een sessie op de client waarop het gebeurt. Elke extensie
-        # ververst zelf, dus dit is verreweg de drukste sessie-schrijver van de
-        # hele server — precies wat de gedeelde verbinding onbruikbaar maakte.
-        res = await asyncio.to_thread(
-            lambda: auth_met_herkansing(
-                lambda: verse_auth_client().auth.refresh_session(body.refresh_token))
-        )
-        if not res.session:
-            raise HTTPException(status_code=401, detail="Your session expired — please sign in again")
-        return {
-            "ok": True,
-            "access_token": res.session.access_token,
-            "refresh_token": res.session.refresh_token,
-        }
+        async with _refresh_lock:
+            # Nog een keer kijken: een parallelle aanvraag met hetzelfde token
+            # kan het net hebben gevuld terwijl wij op het slot wachtten.
+            gecachet = _refresh_cache_get(token)
+            if gecachet is not None:
+                return gecachet
+
+            # Ook dit zet een sessie op de client waarop het gebeurt. Elke extensie
+            # ververst zelf, dus dit is verreweg de drukste sessie-schrijver van de
+            # hele server — precies wat de gedeelde verbinding onbruikbaar maakte.
+            res = await asyncio.to_thread(
+                lambda: auth_met_herkansing(
+                    lambda: verse_auth_client().auth.refresh_session(token))
+            )
+            if not res.session:
+                raise HTTPException(status_code=401, detail="Your session expired — please sign in again")
+            resultaat = {
+                "ok": True,
+                "access_token": res.session.access_token,
+                "refresh_token": res.session.refresh_token,
+            }
+            _refresh_cache_put(token, resultaat)
+            return resultaat
     except HTTPException:
         raise
     except AuthTijdelijkOnbereikbaar as e:
