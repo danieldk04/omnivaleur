@@ -1586,7 +1586,10 @@ async def relist_retry(body: dict, user_id: str = Depends(require_active_subscri
     except RefreshError as e:
         raise HTTPException(status_code=400, detail=str(e))
     except VertalingOnbeschikbaar as e:
-        raise HTTPException(status_code=503, detail=str(e))
+        # 500, geen 503 — Cloudflare vervangt een 503 door zijn eigen
+        # storingspagina en dan leest de verkoper "de server was druk" in plaats
+        # van de echte reden. Zie crosslist_item in backend/api/items.py.
+        raise HTTPException(status_code=500, detail=str(e))
 
     # Pas nu weg met de oude foutmelding: er staat een nieuwe poging klaar.
     (await naast_de_lus(lambda: db.table("listings").update({
