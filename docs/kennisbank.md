@@ -2108,8 +2108,27 @@ optrad op het scherm een tijdverloop, en was de echte reden onvindbaar.
 `backend/api/items.py` waarschuwde hier al voor bij `create_item`, en ik trapte
 er alsnog in. **500 komt wél ongewijzigd door.** Er staan nog meer 502/503's in
 `backend/api/shopify.py`, `content.py`, `billing.py`, `deps.py` en
-`listings.py:432`; die verbergen hun boodschap dus net zo goed. Nog niet
-aangepakt.
+`listings.py:432`; die verbergen hun boodschap dus net zo goed.
+
+**En het kostte 10-09-2026 opnieuw een klant een dag.** De Juiste Toon kreeg bij
+elke publicatiepoging "The server didn't answer in time (503) — it was busy or
+restarting", terwijl de server in een fractie van een seconde antwoordde met de
+échte reden: het Anthropic-tegoed was op, dus de vertaalstap viel om en zijn
+kernwoord-omschrijving haalde `lijkt_al_in_taal` niet. De drie publicatiepaden
+(`items.py` crosslist, `listings.py` publish, `jobs.py` herplaats-herkansing)
+sturen nu 500. **Twee dingen om te onthouden bovenop de regel zelf:**
+
+* Het scherm gooide de reden óók weg als hij er wél door kwam:
+  `publishFailureMessage` had een vaste tekst voor 502/503/504 en keek niet naar
+  `detail`. Een statuscode-tak die de meegestuurde reden negeert is net zo erg
+  als een reden die de browser niet haalt.
+* Een melding moet ook kloppen over de wachtrij. "Zodra de vertaling weer werkt
+  gaat deze advertentie vanzelf alsnog de deur uit" geldt alleen op het
+  uitgiftepad. Bij een verse publicatie wordt er vertaald vóór het aanmaken van
+  de opdracht, dus er stond niets te wachten en hij wachtte voor niets.
+
+Nog niet aangepakt: `deps.py` (die 503 draait op zo goed als élk verzoek),
+`shopify.py`, `content.py`, `billing.py`.
 Zie ook "sync-events-blokkeert-verwijderen".
 
 ---

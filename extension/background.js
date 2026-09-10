@@ -5079,8 +5079,9 @@ function mpEmptyScanReason(meta, platform) {
       + `account, controleer dan of je op ${site} zelf bent ingelogd.` + feiten;
   }
 
-  // Pas hier mag "je bent niet ingelogd" klinken: Admarkt staat aan (of het is
-  // 2dehands, dat geen Admarkt heeft) én ${site} weigerde ons echt.
+  // Pas hier mag "je bent niet ingelogd" klinken: Admarkt staat aan (op 2dehands
+  // ligt die toestemming vast in het manifest, dus daar staat hij altijd aan) én
+  // ${site} weigerde ons echt.
   if (meta.api_status === 401 || meta.api_status === 403) {
     return `${site} weigert je advertentieoverzicht (foutcode ${meta.api_status}). `
       + `Open ${site}, log opnieuw in en start de scan nog een keer.` + feiten;
@@ -5115,7 +5116,7 @@ function mpEmptyScanReason(meta, platform) {
   }
   return `Signed in fine, but ${site} shows no adverts on your personal "my listings" page. `
     + `If you do have adverts running, they are almost certainly managed through Admarkt — `
-    + `${site}' separate platform for business sellers.` + feiten;
+    + `${site}' separate console for business sellers.` + feiten;
 }
 
 // ── Admarkt ────────────────────────────────────────────────────────────────
@@ -5138,16 +5139,61 @@ function mpEmptyScanReason(meta, platform) {
 //   1. Een update die een nieuwe VASTE host-toestemming toevoegt, zet Chrome bij
 //      iedere bestaande gebruiker de extensie stil tot hij hem accepteert.
 //   2. Alleen zakelijke verkopers hebben Admarkt nodig.
-const ADMARKT_ORIGIN = "https://admarkt.marktplaats.nl";
+// TWEE TENANTS, NIET EEN (gemeten 10-09-2026). In deze code stond jarenlang de
+// aanname dat alleen Marktplaats een Admarkt heeft; in mpEmptyScanReason stond
+// dat er zelfs met zoveel woorden. Dat klopt niet. `https://admarkt.2dehands.be/`
+// bestaat en stuurt door naar de 2dehands-login met een EIGEN OAuth-console voor
+// de Belgische tenant (client_id=twhbe_console, scope console_ro console_rw).
+// Gevolg van de oude aanname: een zakelijke verkoper op 2dehands heeft daar een
+// leeg persoonlijk overzicht, precies zoals op Marktplaats, en kreeg van ons
+// "je bent niet ingelogd" terwijl er niets mis was.
+const ADMARKT_ORIGINS = {
+  marktplaats: "https://admarkt.marktplaats.nl",
+  "2dehands": "https://admarkt.2dehands.be",
+};
+function admarktOrigin(platform) {
+  return ADMARKT_ORIGINS[platform] || ADMARKT_ORIGINS.marktplaats;
+}
+
+// Dekt een match-patroon uit het manifest dit adres?
+//
+// WAAROM DIT ERBIJ MOET. Voor Marktplaats is de Admarkt-toestemming optioneel en
+// vraagt de schakelaar in de popup hem op. Voor 2dehands is dat niet nodig: het
+// manifest heeft `https://*.2dehands.be/*` al vast staan en dat dekt
+// admarkt.2dehands.be. Toch mag deze code niet alleen op
+// `chrome.permissions.contains` leunen: geeft die om wat voor reden dan ook
+// `false` terug op een adres dat het manifest wel degelijk dekt, dan slaan we de
+// Belgische Admarkt stil over en is er niets aan te zien. Deze functie is de
+// tweede, controleerbare bron.
+function patroonDektOrigin(patroon, origin) {
+  const m = /^(\*|https?):\/\/([^\/]+)\/(.*)$/.exec(String(patroon || ""));
+  if (!m) return false;
+  const [, schema, host] = m;
+  const u = new URL(origin);
+  if (schema !== "*" && `${schema}:` !== u.protocol) return false;
+  if (host === "*") return true;
+  if (host.startsWith("*.")) {
+    const kaal = host.slice(2);
+    return u.hostname === kaal || u.hostname.endsWith(`.${kaal}`);
+  }
+  return u.hostname === host;
+}
+
+function manifestDektOrigin(origin) {
+  try {
+    const m = chrome.runtime.getManifest() || {};
+    return (m.host_permissions || []).some(p => patroonDektOrigin(p, origin));
+  } catch (_) { return false; }
+}
 // Exact de vorm die een zakelijk account zelf gebruikt (waargenomen bij Egbert
 // Brouwer, 15-08-2026). De datumgrenzen staan er BEWUST in: zonder start- en
 // einddatum weet ik niet welke standaardperiode de pagina kiest, en een lijst
 // die stilletjes maar één maand beslaat lijkt op "bijna niks gevonden".
-function admarktUrl() {
+function admarktUrl(platform) {
   const eind = new Date();
   const start = new Date(eind.getTime() - 365 * 86400000);
   const d = x => x.toISOString().slice(0, 10);
-  return `${ADMARKT_ORIGIN}/advertisements?startDate=${d(start)}&endDate=${d(eind)}`
+  return `${admarktOrigin(platform)}/advertisements?startDate=${d(start)}&endDate=${d(eind)}`
        + `&dateOption=last-365-days`;
 }
 
@@ -5157,9 +5203,17 @@ function admarktUrl() {
 // dus dit is een lading per keer en niet een plafond.
 const ADMARKT_MAX = 2000;
 
-async function admarktToegestaan() {
+async function admarktToegestaan(platform) {
+  const origin = admarktOrigin(platform);
+  // ALLEEN VOOR 2DEHANDS de korte weg. Daar ligt de toestemming vast in het
+  // manifest (via https://*.2dehands.be/*) en is er geen schakelaar, dus valt er
+  // niets te vragen. Op MARKTPLAATS blijft alles precies zoals het was: daar is
+  // `permissions.contains` niet alleen een toestemming maar ook het opt-in-sein
+  // van de schakelaar in de popup, en daar hangt de hele Admarkt-import van
+  // Egbert Brouwer aan. Die weg raak ik hier niet aan.
+  if (platform === "2dehands" && manifestDektOrigin(origin)) return true;
   try {
-    const mag = await chrome.permissions.contains({ origins: [`${ADMARKT_ORIGIN}/*`] });
+    const mag = await chrome.permissions.contains({ origins: [`${origin}/*`] });
     // Onthouden DAT hij ooit aan stond. Een optionele toestemming kan in Chrome
     // stilletjes verdwijnen (update van de extensie, ander profiel, tweede
     // kopie). Zonder dit geheugen is "uit" niet te onderscheiden van "nooit
@@ -5198,8 +5252,21 @@ async function admarktVoorkeurAan() {
   } catch (_) { return false; }
 }
 
-async function admarktMeenemen(persoonlijkGevonden) {
-  if (!await admarktToegestaan()) return false;
+// Wie de schakelaar met de hand UIT zette, meent dat.
+//
+// Op Marktplaats regelde de toestemming dat vanzelf: uitzetten haalt hem weg en
+// dan mogen we er sowieso niet kijken. Op 2dehands ligt de toestemming vast in
+// het manifest, dus daar is dit de enige plek waar een "nee" nog telt. Zonder
+// deze regel zou het vangnet hieronder ("persoonlijk overzicht leeg, dan maar in
+// Admarkt kijken") die keuze overrulen.
+async function admarktUitgezet() {
+  try { return (await chrome.storage.local.get("admarkt_aan")).admarkt_aan === false; }
+  catch (_) { return false; }
+}
+
+async function admarktMeenemen(persoonlijkGevonden, platform) {
+  if (!await admarktToegestaan(platform)) return false;
+  if (await admarktUitgezet()) return false;
   if (persoonlijkGevonden === 0) return true;
   return await admarktVoorkeurAan();
 }
@@ -5209,17 +5276,24 @@ async function admarktMeenemen(persoonlijkGevonden) {
 // haar gegevens al binnen. Aanmelden kan pas als de toestemming er is, dus dit
 // gebeurt bij het opstarten en meteen nadat de gebruiker de schakelaar omzet.
 const ADMARKT_SCRIPT_ID = "omnivaleur-admarkt";
+// Het id van de Marktplaats-meekijker blijft ONGEWIJZIGD. Chrome bewaart
+// aangemelde scripts over herstarts heen; hernoemen zou bij iedereen die hem al
+// heeft een tweede kopie opleveren die tegelijk meekijkt.
+function admarktScriptId(platform) {
+  return platform === "2dehands" ? `${ADMARKT_SCRIPT_ID}-2dehands` : ADMARKT_SCRIPT_ID;
+}
 
-async function zorgVoorAdmarktMeekijker() {
-  if (!await admarktToegestaan()) return false;
+async function zorgVoorAdmarktMeekijker(platform) {
+  if (!await admarktToegestaan(platform)) return false;
+  const scriptId = admarktScriptId(platform);
   try {
-    const al = await chrome.scripting.getRegisteredContentScripts({ ids: [ADMARKT_SCRIPT_ID] });
+    const al = await chrome.scripting.getRegisteredContentScripts({ ids: [scriptId] });
     if (al && al.length) return true;
   } catch (_) {}
   try {
     await chrome.scripting.registerContentScripts([{
-      id: ADMARKT_SCRIPT_ID,
-      matches: [`${ADMARKT_ORIGIN}/*`],
+      id: scriptId,
+      matches: [`${admarktOrigin(platform)}/*`],
       js: ["content/admarkt_sniffer.js"],
       runAt: "document_start",
       world: "MAIN",
@@ -5232,26 +5306,39 @@ async function zorgVoorAdmarktMeekijker() {
   }
 }
 
-chrome.runtime.onStartup.addListener(() => { zorgVoorAdmarktMeekijker(); });
-chrome.runtime.onInstalled.addListener(() => { zorgVoorAdmarktMeekijker(); });
+async function zorgVoorAlleAdmarktMeekijkers() {
+  for (const platform of Object.keys(ADMARKT_ORIGINS)) {
+    await zorgVoorAdmarktMeekijker(platform);
+  }
+}
+
+chrome.runtime.onStartup.addListener(() => { zorgVoorAlleAdmarktMeekijkers(); });
+chrome.runtime.onInstalled.addListener(() => { zorgVoorAlleAdmarktMeekijkers(); });
 // De schakelaar in de popup vraagt de toestemming; dit vangt het moment daarna.
 if (chrome.permissions && chrome.permissions.onAdded) {
-  chrome.permissions.onAdded.addListener(() => { zorgVoorAdmarktMeekijker(); });
+  chrome.permissions.onAdded.addListener(() => { zorgVoorAlleAdmarktMeekijkers(); });
 }
 if (chrome.permissions && chrome.permissions.onRemoved) {
   chrome.permissions.onRemoved.addListener(async () => {
-    try { await chrome.scripting.unregisterContentScripts({ ids: [ADMARKT_SCRIPT_ID] }); } catch (_) {}
+    // Alleen afmelden wat echt niet meer mag. De Belgische meekijker hangt aan
+    // een VASTE toestemming uit het manifest; die hier blind mee afmelden zou
+    // hem stilzetten omdat iemand de Marktplaats-schakelaar uitzette.
+    for (const platform of Object.keys(ADMARKT_ORIGINS)) {
+      if (await admarktToegestaan(platform)) continue;
+      try { await chrome.scripting.unregisterContentScripts({ ids: [admarktScriptId(platform)] }); } catch (_) {}
+    }
   });
 }
 
 async function bgScanAdmarkt(job, serverUrl) {
   const sleep = ms => new Promise(r => setTimeout(r, ms));
+  const platform = job.platform === "2dehands" ? "2dehands" : "marktplaats";
   // Zeker weten dat de meekijker klaarstaat vóór het tabblad opengaat; anders
   // heeft de pagina haar gegevens al binnen tegen de tijd dat wij kijken.
-  await zorgVoorAdmarktMeekijker();
+  await zorgVoorAdmarktMeekijker(platform);
 
   const tabId = await new Promise((res, rej) =>
-    openWorkerTab(admarktUrl(), t =>
+    openWorkerTab(admarktUrl(platform), t =>
       t ? res(t.id) : rej(new Error("could not open worker tab")), { silent: true }
     )
   );
@@ -5580,7 +5667,7 @@ async function bgScanMp2dh(job, serverUrl) {
     // samenvoegen op advertentienummer kan hier geen dubbele opleveren.
     let admarktFout = null;
     let admarktKlaar = false;
-    if (platform === "marktplaats" && await admarktMeenemen(result.items.length)) {
+    if (await admarktMeenemen(result.items.length, platform)) {
       await reportProgress(serverUrl, job.id, {
         stage: "scanning",
         message: result.items.length
@@ -5625,8 +5712,19 @@ async function bgScanMp2dh(job, serverUrl) {
       return;
     }
     if (!result.items.length) {
-      if (admarktFout) throw new Error(`Admarkt: ${admarktFout}`);
-      const admarktAan = await admarktMeenemen(0);
+      const echtLeeg = result.meta?.api_status === 200 && !result.meta?.total_entries;
+      // Een mislukte Admarkt-ronde is op MARKTPLAATS de beste aanwijzing die we
+      // hebben, want daar zette de verkoper de schakelaar zelf aan: hij verwacht
+      // dat daar iets staat. Op 2DEHANDS kijken we er sinds 1.0.316 ongevraagd,
+      // omdat de toestemming vastligt in het manifest. Dan mag een lege
+      // Admarkt-console geen rode fout worden bij iemand die daar simpelweg
+      // particulier verkoopt en van wie 2dehands zelf al zei dat hij nul
+      // advertenties heeft. Dat zou de stille afronding van 03-09-2026 weer
+      // ongedaan maken.
+      if (admarktFout && !(platform === "2dehands" && echtLeeg)) {
+        throw new Error(`Admarkt: ${admarktFout}`);
+      }
+      const admarktAan = await admarktMeenemen(0, platform);
       // EEN LEEG ACCOUNT IS GEEN STORING (03-09-2026).
       //
       // Wie op 2dehands nog nooit iets heeft geplaatst, hééft daar geen
@@ -5635,8 +5733,7 @@ async function bgScanMp2dh(job, serverUrl) {
       // af te ronden: de site gaf een 200 (dus de inlog werd geaccepteerd) én
       // zegt zelf dat er niets staat. Zegt hij een aantal en lezen wij er nul,
       // dan is er wél iets stuk en blijft het een fout — zie mpEmptyScanReason.
-      const echtLeeg = result.meta?.api_status === 200 && !result.meta?.total_entries;
-      const admarktKanNogWat = platform === "marktplaats" && !admarktAan;
+      const admarktKanNogWat = !admarktAan;
       if (echtLeeg && !admarktKanNogWat) {
         await finaliseJob(serverUrl, job.id, "complete", {
           listings: [], scan_meta: { ...(result.meta || {}), klaar: true, leeg_account: true },

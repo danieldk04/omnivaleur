@@ -7635,3 +7635,60 @@ betaalde advertentieruimte. Zijn link is daar juist het hele punt.
 
 **Openstaand:** of zijn bestaande NL-Admarkt-campagne uberhaupt op de Belgische
 tenant kan draaien. Dat is een vraag aan zijn Admarkt-contact, geen technische.
+
+### 10-09-2026 — De Juiste Toon kon niet publiceren: het Anthropic-tegoed is op
+
+Hij stuurde op 09-09 's avonds een foto van zijn scherm: het publiceervenster
+met Marktplaats aangevinkt, "Adding to queue...", en daarboven een wit blok met
+"The server didn't answer in time (503). This usually means it was busy or
+restarting." Artikel: "Perzisch tapijtje versleten sleets rood taupe 128/79".
+
+**De server was niet druk. Elke schakel is nagemeten, niet beredeneerd.**
+
+1. Het Anthropic-tegoed is op. De echte `_vertaal` uit `crosslist.py` op zijn
+   eigen tekst draaien geeft `anthropic.BadRequestError: 400 - "Your credit
+   balance is too low to access the Anthropic API"` (request_id
+   req_011CeuLeAwdUepCeb8EHmzUY). Dat is een grens van het account, niet van de
+   sleutel, dus Railway loopt tegen dezelfde muur.
+2. Sinds 08-09 maakt `_vertaal` daar terecht een `VertalingOnbeschikbaar` van,
+   zodat er geen onvertaalde tekst de deur uit gaat.
+3. `_zonder_vertaling` laat een advertentie tóch door als de tekst aantoonbaar
+   al in de doeltaal staat. Gemeten op zijn eigen artikelen in Supabase gaf
+   `lijkt_al_in_taal(titel + omschrijving, "nl")` **true voor alle zeven
+   artikelen die die avond wél een opdracht kregen** (vijf Lederhosen, een
+   Trachten broek, een Oosters tapijt) en **false voor precies het tapijtje van
+   de schermafbeelding**. Van dat tapijtje bestaat er nul opdracht, nooit. Zijn
+   omschrijving is kernwoorden zonder Nederlandse stopwoorden ("Perzisch
+   tapijtje / Versleten Sleets / Rood taupe / Tweezijdig franje / Afmetingen"),
+   dus de taal is er niet aan af te lezen. Tegenhouden is hier goed.
+4. Alleen ging die reden als HTTP 503 de deur uit. Cloudflare vervangt een
+   502/503 door zijn eigen storingspagina (gemeten 04-09-2026), en het scherm
+   gooide de meegestuurde reden sowieso weg: de 503-tak in
+   `publishFailureMessage` keek er niet naar. Vandaar de leugen op zijn scherm.
+5. En de tekst zelf klopte ook niet: "zodra de vertaling weer werkt gaat deze
+   advertentie vanzelf alsnog de deur uit" geldt alleen op het uitgiftepad,
+   waar de opdracht al in de wachtrij staat. Bij een verse publicatie wordt er
+   vertaald vóór het aanmaken van de opdracht, dus er stond niets te wachten.
+
+**Wat er veranderd is.** `VertalingOnbeschikbaar` levert op de drie
+dashboardpaden (`items.py` crosslist, `listings.py` publish, `jobs.py`
+herplaats-herkansing) een 500 op in plaats van een 503, met één vaste Engelse
+tekst (`NIETS_GEPLAATST_VERTALING`) die zegt dat er niets is geplaatst én niets
+staat te wachten. Het scherm toont voortaan de meegestuurde reden bij een
+502/503/504 en valt alleen terug op "de server antwoordde niet op tijd" als er
+echt geen reden in het antwoord staat. Een leeg antwoordlichaam telt niet als
+reden meer; dat zette letterlijk "{}" op het scherm.
+
+**Bewijs.** `tests/vertaalstoring-melding-bereikt-de-verkoper-test.js` (13
+controles, met `--oud` tegen commit 4fe253cf: daar valt hij op zes om) en
+`tests/test_vertaalstoring_melding_op_het_scherm.py`, dat het echte
+crosslist-eindpunt aanroept met een omgevallen vertaalstap. Tegen de oude
+`items.py` geeft die test `assert 503 not in (502, 503, 504)` — dus de proef
+onderscheidt. Hele suite: 1180 python-proeven en alle JS-tests groen.
+
+**Openstaand, en dit is het echte werk.** Zolang het tegoed leeg is kan hij dat
+tapijtje niet publiceren en blijft alles hangen wat op vertalen leunt. Daniel
+moet bijstorten. Verder staat in het foutenlogboek een storing die 331 keer
+optrad, laatste keer 10-09 06:32: `POST /api/jobs/{id}/complete` geeft
+`PGRST116 - The result contains 0 rows`. Die is niet onderzocht en hoort bij
+een andere klacht.
