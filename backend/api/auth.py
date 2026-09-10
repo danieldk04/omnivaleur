@@ -202,7 +202,17 @@ class RefreshRequest(BaseModel):
 # wordt nooit een geroteerd token aan Supabase gepresenteerd.
 _REFRESH_CACHE_TTL_S = 90.0
 _refresh_cache: dict[str, tuple[float, dict]] = {}
-_refresh_lock = asyncio.Lock()
+_refresh_locks: dict[str, asyncio.Lock] = {}
+
+
+def _lock_voor(token: str) -> asyncio.Lock:
+    # Per token: twee verschillende accounts mogen elkaar niet blokkeren, maar
+    # dezelfde sleutel die vijf keer tegelijk binnenkomt moet één keer langs
+    # Supabase en vier keer uit de cache.
+    slot = _refresh_locks.get(token)
+    if slot is None:
+        slot = _refresh_locks.setdefault(token, asyncio.Lock())
+    return slot
 
 
 def _refresh_cache_get(sleutel: str) -> dict | None:
