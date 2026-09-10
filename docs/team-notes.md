@@ -8228,3 +8228,33 @@ in het venster komt.
 3. Marktplaats: niet gebouwd. Of Marktplaats dezelfde gratis verlengknop heeft is
    niet nagemeten (zakelijk account gaf "Mijn advertenties (0)"). Aparte
    beslissing, zoals in de vorige notitie afgesproken.
+
+### 10-09-2026 — Verlengen: veiligheidsslot tegen de Web Store-wachttijd, en de serverkant getest
+
+Twee dingen toegevoegd om de zekerheid omhoog te brengen na Daniels vraag.
+
+**Veiligheidsslot.** `get_pending_jobs` deelt een `extend`-opdracht alleen uit aan
+een kopie van 1.0.318 of nieuwer (`MINIMALE_EXTEND_VERSIE`). Reden: zolang de
+Chrome Web Store 1.0.318 nog niet heeft goedgekeurd draait bij klanten 1.0.317,
+en die kent `extend` niet — zonder slot zou zo'n kopie de opdracht als een gewone
+publicatie behandelen en er een tweede advertentie naast zetten. Met het slot
+blijft de opdracht gewoon `pending` tot een bijgewerkte kopie polt. Getest op
+1.0.317 (wachten) en 1.0.318 (doorlaten).
+
+**Serverkant getest.** `tests/test_verlengen_2dehands_backend.py`:
+`extend_expiring_2dehands` zet een `extend` klaar en nooit een `delete`, laat een
+verkocht of uitgezet zoekertje met rust, en maakt geen tweede opdracht als er al
+een loopt; `complete_job` schuift `listed_at` alléén met bewijs en zet de
+advertentierij nooit op `delisted`/`relisting`.
+
+**Wat nu bewezen is:** de verlengactie zelf op drie echte advertenties, de
+extensielogica (alle takken, JS-test tegen de echte background.js), de
+serverkant (twee Python-tests), het versieslot, en de hele testsuite eromheen
+groen.
+
+**Wat nog niet in één onafgebroken doorloop is gezien:** scheduler zet een echte
+`extend`-job klaar → de geïnstalleerde extensie pakt hem → `complete_job` schuift
+`listed_at`. Dat kan pas als (a) er weer een zoekertje in het verlengvenster komt
+(alle drie van Daniel zijn net verlengd, de volgende is over ~3 weken) en (b) de
+Chrome Web Store 1.0.318 heeft goedgekeurd. Geen coderisico, wel een meting die
+nu niet te doen is.
