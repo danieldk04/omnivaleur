@@ -191,7 +191,7 @@ def test_geen_dubbele_extend_opdracht():
         listings=[{"id": "L1", "item_id": "it1", "platform": "2dehands",
                    "status": "active", "listed_at": _oud(26)}],
         items=[{"id": "it1", "user_id": "u1"}],
-        jobs=[{"id": "bestaand", "item_id": "it1", "platform": "2dehands",
+        jobs=[{"id": "bestaand", "user_id": "u1", "item_id": "it1", "platform": "2dehands",
                "action": "extend", "status": "pending",
                "created_at": datetime.now(timezone.utc).isoformat()}],
     )
