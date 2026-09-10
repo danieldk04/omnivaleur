@@ -449,6 +449,14 @@
       "slug": "vintage-postcards-and-ephemera-reselling-automation",
       "status": "published",
       "priority": 55
+    },
+    {
+      "keyword": "used book reselling automation",
+      "region": "nl",
+      "pillar": "B",
+      "slug": "used-book-reselling-automation",
+      "status": "published",
+      "priority": 56
     }
   ],
   "published": [
@@ -946,6 +954,15 @@
       "action": "created",
       "url_path": "/reseller-tools/vintage-postcards-and-ephemera-reselling-automation",
       "published_at": "2026-09-08T12:27:43.223984+00:00"
+    },
+    {
+      "keyword": "used book reselling automation",
+      "slug": "used-book-reselling-automation",
+      "region": "nl",
+      "pillar": "B",
+      "action": "created",
+      "url_path": "/reseller-tools/used-book-reselling-automation",
+      "published_at": "2026-09-10T12:34:27.131736+00:00"
     }
   ]
 }
