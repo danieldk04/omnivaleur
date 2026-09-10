@@ -7563,3 +7563,18 @@ hetzelfde formulier bij hetzelfde bedrijf.
 **Wat hierna nog openstaat:** er is nog steeds nul geslaagde plaatsing voor hem,
 op geen enkel kanaal. De oorzaak is nu aangewezen en weggenomen, maar we hebben
 hem niet zien slagen. Eén artikel naar 2dehands is de proef.
+
+**Nagemeten 10-09-2026 aan de live advertenties, niet aan onze database.** De
+titels uit het mandje opgezocht via de openbare zoek-API (Papa's Plectrums,
+verkoper-id 6999351) en de echte advertentiepagina's gelezen. Vier van de zes
+titels waren zo terug te vinden; alle vier dragen in de omschrijving zowel
+`https://www.papas-plectrums.nl` als `info@papas-plectrums.nl`. Nul zonder.
+De twee andere titels gaf de gescopete zoekactie niet terug, wat een grens van
+de zoek-API is en geen tegenmeting.
+
+Voor-en-na op diezelfde echte tekst: 672 tekens met drie adressen erin, na
+`_zonder_links` 514 tekens en nul adressen. Zijn adres, telefoonnummer, KVK en
+BTW blijven staan; ook de afsluitende zin "kan je met onderstaande link
+bestellen" verdwijnt mee, dus er blijft geen verwijzing naar een link staan die
+er niet meer is. Daarmee is de hele keten gemeten: zijn tekst droeg het adres,
+2dehands rekende er onder die naam voor, en onze zeef haalt het er uit.
