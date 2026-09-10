@@ -7959,3 +7959,50 @@ advertentie is helaas verlopen".
 Wat hierna nog openstaat is geen onzekerheid meer over de code maar een
 wachttijd: de extensie bereikt Egbert pas nadat de Chrome Web Store 1.0.317 heeft
 goedgekeurd. Tot die tijd staat bieden bij hem aan.
+
+### 10-09-2026 — Wat er nog vóór Egberts 128 wachtende zoekertjes ligt, nagemeten
+
+Daniel vroeg of heel 2dehands nu goed gaat lopen. Dat is een andere vraag dan of
+de drie klachten weg zijn, dus apart nagemeten in plaats van aangenomen.
+
+**Zijn hele mislukkingsgeschiedenis op 2dehands, op oorzaak geteld: er zijn er
+maar vier.** Webadres in de tekst (54, EUR 9), betalende rubriek (24), inlog/401
+(7), tabblad dicht (4). Geen enkele andere. De eerste twee zijn structureel dicht,
+de andere twee zijn zijn browser en een gesloten tabblad.
+
+**De 128 die nog wachten, tegen de eisen van hun eigen rubriek gelegd.** De
+verplichte velden zijn live van het 2dehands-plaatsformulier gelezen op Daniels
+account:
+
+| rubriek | keuzevelden | markeert 2dehands als verplicht |
+|---|---|---|
+| 728/742 Drumstellen en Slagwerk (67) | condition, brand | alleen Titel, Beschrijving, Postcode |
+| 728/1717 Instrumenten Toebehoren (52) | condition, intendedFor | alleen Titel, Beschrijving, Postcode |
+| 728/730 Behuizingen en Koffers (7) | condition, intendedFor | alleen Titel, Beschrijving, Postcode |
+
+Alle 67 drumartikelen hebben géén merk. Dat blokkeert niets: 2dehands markeert
+Merk daar niet als verplicht, de lijst kent bovendien "Overige merken", en onze
+eigen eindcontrole klaagt alleen over merk als het artikel er wél een heeft
+(`if (item.brand && ...)`). Voor Toebehoren en Koffers eist onze eindcontrole
+`intendedFor` wél onvoorwaardelijk, maar `selectIntendedFor` heeft een eerlijke
+terugval en beide lijsten kennen "Overige instrumenten" (nagemeten: 29 en 23
+opties, allebei met die optie erin). Dus die 59 komen daar niet op vast te staan.
+
+**En de EUR 9-val**: `_zonder_links` over alle 128 advertentieteksten gedraaid.
+**Nul** dragen nog een webadres. De aanscherping van vanochtend houdt dus stand op
+zijn echte teksten.
+
+De 128ste "opdracht zonder inhoud" bleek een scan; die hoort een lege payload te
+hebben.
+
+**Wat hier NIET mee gemeten is, en dus openstaat.**
+1. Zijn gratis tegoed bij 2dehands. Deze drie rubrieken zijn niet uit zichzelf
+   betaald (op Daniels account staat de gratis keuze er gewoon), maar zijn
+   gitaartegoed was wél op, dus ergens loopt een teller die wij niet kunnen zien.
+   Loopt hij leeg, dan stopt de nieuwe rem die rubriek met één uitleg in plaats
+   van 128 rode balken.
+2. Zijn computer moet aan staan met Chrome en de uitbreiding. Sinds de opschoning
+   is er niets gelopen, dus hij staat op dit moment niet te pollen.
+3. Bieden is pas uit zodra de Chrome Web Store 1.0.317 heeft goedgekeurd.
+4. Eén wachtend zoekertje staat in "unisex accessoires"; die rubriekboom is niet
+   nagemeten.
