@@ -1464,17 +1464,43 @@
     // delete") alongside item-delete-cancelation-button ("Cancel"). Prefer the
     // exact confirm testid; only fall back to text matching, and NEVER match the
     // cancel button or a per-photo remove button. Wait briefly for it to render.
+    //
+    // Zoek NOOIT in "het eerste venster op de pagina". Het cookiescherm van
+    // OneTrust draagt op vinted.nl exact dezelfde kenmerken (role="dialog",
+    // aria-modal="true"), hangt als 179e blok in de body en blijft er na
+    // wegklikken onzichtbaar in staan — dus vóór het verwijdervenster, dat
+    // React er pas daarna onderaan bij hangt. Op 10-09-2026 strandde daardoor
+    // elke Vinted-herplaatsing terwijl "Confirm and delete" gewoon op het
+    // scherm stond. Vandaar: eerst het exacte kenmerk in de hele pagina, dan
+    // pas per venster van achteren naar voren, en toestemmingsschermen eruit.
+    const TOESTEMMING = '#onetrust-consent-sdk, #onetrust-banner-sdk, #onetrust-pc-sdk, '
+                      + '#didomi-host, #usercentrics-root, [id*="cookie" i], [class*="cookie" i], '
+                      + '[id*="consent" i], [class*="consent" i], [id*="didomi" i]';
+    const bruikbaar = el => {
+      if (!el || el.disabled || el.closest(TOESTEMMING)) return false;
+      const t = el.textContent.trim();
+      const tid = el.dataset.testid || "";
+      if (/annuleer|cancel|terug|back/i.test(t) || /cancel/i.test(tid) || isPhotoDeleteTestid(tid)) return false;
+      return true;
+    };
+    const zichtbaarEl = el => el.offsetParent !== null || el.getClientRects().length > 0;
+    const zoekConfirm = () => {
+      const exact = [...document.querySelectorAll('[data-testid="item-delete-confirmation-button"]')]
+        .find(el => bruikbaar(el) && zichtbaarEl(el));
+      if (exact) return exact;
+      const vensters = [...document.querySelectorAll('[role="dialog"], [role="alertdialog"], [aria-modal="true"], [data-testid*="modal"], .ReactModal__Content')]
+        .filter(v => !v.closest(TOESTEMMING)).reverse();
+      const past = el => bruikbaar(el) && zichtbaarEl(el)
+        && /confirm|delete|verwijder|remove|\byes\b|\bja\b/i.test(el.textContent.trim());
+      for (const v of vensters) {
+        const k = [...v.querySelectorAll('button, a[role="button"]')].reverse().find(past);
+        if (k) return k;
+      }
+      return [...document.querySelectorAll('button, a[role="button"]')].reverse().find(past) || null;
+    };
     let confirmBtn = null;
     for (let i = 0; i < 6 && !confirmBtn; i++) {
-      const confirmScope = document.querySelector('[role="dialog"], [role="alertdialog"], [data-testid*="modal"], .ReactModal__Content') || document;
-      confirmBtn = confirmScope.querySelector('[data-testid="item-delete-confirmation-button"]')
-        || [...confirmScope.querySelectorAll('button, a[role="button"]')]
-          .find(el => {
-            const t = el.textContent.trim();
-            const tid = el.dataset.testid || "";
-            if (/annuleer|cancel|terug|back/i.test(t) || /cancel/i.test(tid) || isPhotoDeleteTestid(tid)) return false;
-            return /confirm|delete|verwijder|remove|\byes\b|\bja\b/i.test(t) || tid === "item-delete-confirmation-button";
-          });
+      confirmBtn = zoekConfirm();
       if (!confirmBtn) await sleep(500);
     }
     if (!confirmBtn) throw new Error("Confirm-delete button not found on Vinted for ID " + listingId + " — deletion was not confirmed");

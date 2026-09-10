@@ -70,7 +70,45 @@ def test_zonder_venster_wordt_van_achteren_gezocht():
     """Een venster wordt onderaan de body gehangen; de knop van de pagina staat
     erboven. Van achteren zoeken is dus het verschil tussen de goede en de
     verkeerde knop."""
-    assert "kandidaten[kandidaten.length - 1]" in BG
+    assert "knoppen(document).reverse()" in BG
+
+
+def test_het_cookiescherm_telt_nooit_als_venster():
+    """DE STORING VAN 10-09-2026, account dkresellacademy.
+
+    Het venster "Confirm and delete" stond op het scherm en er werd niet op
+    geklikt. Gemeten op de echte pagina van advertentie 9419472843: het
+    cookiescherm van OneTrust hangt als 179e blok in de body met role="dialog"
+    en aria-modal="true", terwijl React het verwijdervenster er PAS DAARNA
+    onderaan bij hangt. "Het eerste venster op de pagina" was dus altijd het
+    cookiescherm, en daar staat geen bevestigknop in. Bij wie de cookies al
+    heeft weggeklikt staat dat blok er onzichtbaar nog steeds — vandaar dat de
+    foutmelding ook geen enkele knop kon opnoemen."""
+    for merk in ("onetrust", "didomi", "consent", "cookie"):
+        assert merk in BG.lower(), f"{merk}-schermen moeten uitgesloten worden"
+    assert "isToestemming" in BG
+    for stuk in (
+        'const exact = [...document.querySelectorAll(\'[data-testid="item-delete-confirmation-button"]\')]',
+        "for (const v of echteVensters())",
+    ):
+        assert stuk in BG, f"ontbreekt: {stuk}"
+
+
+def test_er_wordt_niet_op_klokjes_gewacht():
+    """Deze routine draait in een tabblad dat de verkoper niet ziet. Chrome rekt
+    daar elke setTimeout op tot minstens een seconde (gemeten 10-09-2026: tien
+    pauzes van 300 ms kostten 3,0 s zichtbaar en 10,0 s verborgen), en na vijf
+    minuten nog maar één per minuut. Vandaar dat de verkoper zag dat er pas iets
+    gebeurde zodra hij naar dat tabblad ging. Een MutationObserver wordt niet
+    geknepen."""
+    start = BG.index("async function _mwVintedVerwijderen()")
+    eind = BG.index("\nfunction execInTab(", start)
+    # Commentaar telt niet mee: daar mag het woord gewoon in staan.
+    code = "\n".join(r for r in BG[start:eind].splitlines()
+                     if not r.lstrip().startswith("//"))
+    assert "new MutationObserver" in code
+    assert code.count("setTimeout") == 1 and "const limiet = setTimeout" in code, \
+        "alleen de uiterste grens mag nog een klokje zijn"
 
 
 def test_het_namaakscherm_bestaat_en_zet_de_oude_code_ernaast():
@@ -80,8 +118,11 @@ def test_het_namaakscherm_bestaat_en_zet_de_oude_code_ernaast():
         "zonder de oude code ernaast toont die proef niets aan"
     # De acht schermen die Vinted echt uitserveert.
     for geval in ("vinted.nl", "vinted.fr", "vinted.de", "vinted.com",
-                  "zonder role=dialog", "achter het menu", "haar geval"):
+                  "zonder role=dialog", "achter het menu", "haar geval",
+                  "cookiescherm weggeklikt", "cookiebanner nog zichtbaar"):
         assert geval in tekst
+    assert "_vorigVintedVerwijderen" in tekst, \
+        "zonder de versie van gisteren ernaast bewijst de proef niet dat er iets gerepareerd is"
 
 
 def test_de_routine_staat_los_zodat_de_proef_de_echte_code_draait():
@@ -134,4 +175,4 @@ def test_de_geinjecteerde_routine_staat_helemaal_op_zichzelf():
 def test_er_wordt_gewacht_tot_de_pagina_is_opgebouwd():
     """Vinted bouwt de pagina met JavaScript op. Te vroeg kijken betekent geen
     enkele knop, en dat heet dan ten onrechte "Delete control not found"."""
-    assert "knoppen(document).some(zichtbaar)" in BG
+    assert "knoppen(document).some(e => zichtbaar(e) && !isToestemming(e))" in BG

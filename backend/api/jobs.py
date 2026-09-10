@@ -3022,6 +3022,23 @@ _BETAALMUUR = re.compile(
 )
 
 
+# EEN LEEG ADRESBLOK OP HET FORMULIER, HERKEND AAN DE MELDING ZELF.
+#
+# Zowel de tekst van de site ("Geen postcode ingevuld",
+# "contactInformation.postCode=LEEG") als die van onze eigen weigering
+# (wachtOpPostcode in extension/content/shared.js) draagt het woord postcode.
+# Meer is er niet nodig, en meer moet het ook niet worden: dit patroon mag niet
+# aanslaan op een gewone tekst waarin het woord toevallig voorkomt, daarom
+# staat het aan een van deze vaste zinnen vast.
+_GEEN_ADRES = re.compile(
+    r"postcode is still empty"
+    r"|geen postcode ingevuld"
+    r"|contactInformation\.postCode"
+    r"|geen adres op het formulier",
+    re.I,
+)
+
+
 # EEN BETALENDE RUBRIEK IS IETS ANDERS DAN EEN BETAALMUUR OP HET HELE KANAAL.
 #
 # GEMETEN OP 10-09-2026 in de opdrachten van Egbert Brouwer (papas-plectrums).
@@ -3262,6 +3279,49 @@ _CONTROLEPAGINA = {
 }
 
 
+def _melding_geen_adres(platform: str) -> str:
+    """Wat de verkoper leest als het adresblok op het formulier leeg bleef.
+
+    EEN LEEG ADRESVELD IS EEN ACCOUNTINSTELLING, GEEN STORING.
+
+    Marktplaats en 2dehands vullen postcode en woonplaats zelf uit het account
+    van de verkoper. Wij typen daar bewust niets in: een verzonnen postcode zet
+    de advertentie in een willekeurige gemeente. Blijft het veld leeg, dan
+    weigert de extensie te plaatsen (`wachtOpPostcode` in
+    extension/content/shared.js wacht er acht seconden op).
+
+    GEMETEN BIJ DE JUISTE TOON, 10-09-2026. Van zijn 458 zoekertjes op 2dehands
+    staan er 402 op "Etten-Leur, Nederland" (buitenland-adres), 37 op "Essen
+    +Deel Kalmthout, België" (de stand van zijn account) en de rest op acht
+    verschillende spellingen van zijn woonplaats, waaronder "Ettenleur" en één
+    keer "Etten-Leur, Mauritanië". Dat is de vingerafdruk van een adres dat per
+    zoekertje met de hand wordt ingetypt in plaats van uit het account te komen.
+    Zijn account staat op een Belgisch adres; kiest hij op het formulier
+    "Buitenland", dan is het Belgische postcodeveld leeg en gaat de plaatsing
+    niet door.
+
+    Dus zeggen we hier waar hij moet zijn, en niet "open your account settings":
+    voor wie in Nederland woont en op 2dehands.be plaatst is de juiste keuze
+    "Buitenland", en dat staat nergens op dat formulier.
+    """
+    site = {"marktplaats": "Marktplaats (marktplaats.nl)",
+            "2dehands": "2dehands (2dehands.be)"}.get(platform, platform)
+    return (
+        "Er stond geen adres op het formulier, dus er is niets geplaatst. "
+        f"{site} haalt postcode en woonplaats uit je account op die site, niet uit "
+        "Omnivaleur; wij vullen daar bewust niets in, want een verzonnen postcode "
+        "zet je advertentie in een willekeurige gemeente.\n\n"
+        "Woon je in Nederland en plaats je op 2dehands.be, kies dan bij je adres "
+        "NIET een Belgische postcode maar de optie \"Buitenland\", en daarachter "
+        "Nederland plus je woonplaats en je postcode. Zet dat een keer goed in je "
+        "account op die site, dan vult het formulier zich daarna vanzelf en staat "
+        "je woonplaats op al je advertenties hetzelfde.\n\n"
+        "De rest van je wachtrij voor dit kanaal is gepauzeerd, want elke volgende "
+        "advertentie loopt op precies dezelfde lege regel vast. Zodra het adres in "
+        "je account staat, druk je gewoon opnieuw op publiceren."
+    )
+
+
 def _melding_formulier_ging_niet_open(platform: str) -> str:
     """Wat de verkoper leest als het plaatsformulier zich nooit meldde.
 
@@ -3493,17 +3553,9 @@ def _rechtgezette_foutmelding(job: dict | None, body: dict, versie, kansloos: bo
     # niet in Essen maar in Nederland". Zijn advertenties die het wél haalden
     # staan gemeten op "Etten-Leur, Nederland" met abroad=true, dus de instelling
     # kán goed staan; ze was op die momenten alleen leeg.
-    if ("postcode" in fout.lower()
-            and (job or {}).get("platform") in ("2dehands", "marktplaats")):
-        return {**(body or {}), "error_oorspronkelijk": fout, "error": (
-            "Er stond geen adres op het formulier, dus er is niets geplaatst. "
-            "2dehands en Marktplaats halen postcode en woonplaats uit je account, "
-            "niet uit Omnivaleur; wij vullen daar bewust niets in, want een "
-            "verzonnen postcode zet je advertentie in een willekeurige gemeente. "
-            "Woon je in Nederland en plaats je op 2dehands.be, kies dan bij je "
-            "adres NIET een Belgische postcode maar de optie \"Buitenland\", en "
-            "daarachter Nederland plus je woonplaats. Zet dat een keer goed in je "
-            "account op die site, dan vult het formulier zich daarna vanzelf.")}
+    if _GEEN_ADRES.search(fout) and (job or {}).get("platform") in ("2dehands", "marktplaats"):
+        return {**(body or {}), "error_oorspronkelijk": fout,
+                "error": _melding_geen_adres((job or {}).get("platform") or "")}
     if ((job or {}).get("action") == "scan"
             and (job or {}).get("platform") == "marktplaats"
             and "appear to be signed in" in fout):
@@ -3611,6 +3663,38 @@ def fail_job(job_id: str, body: dict, user_id: str = Depends(get_current_user)):
                            job["platform"], rubriek or "onbekend", user_id, aantal)
         except Exception:  # noqa: BLE001 — een rem mag de foutmelding niet opeten
             logger.warning("Betalende rubriek: wachtrij niet teruggenomen voor %s/%s",
+                           user_id, job.get("platform"))
+
+    # EEN LEEG ADRESBLOK STOPT DE RIJ VOOR DAT KANAAL.
+    #
+    # GEMETEN 10-09-2026, De Juiste Toon: "ik ben nu ook op tweedehands aan het
+    # plaatsen, die komen niet door zoals die van mp wel doen". Tussen 18:00 en
+    # 18:03 mislukten zes plaatsingen op 2dehands achter elkaar met dezelfde
+    # reden (het adresblok bleef leeg), en er stonden er nog tien te wachten die
+    # allemaal op precies dezelfde regel zouden vastlopen. Elke poging houdt zijn
+    # browser twee minuten bezig en schrijvende opdrachten gaan één voor één, dus
+    # dat is een half uur waarin er niets anders kan.
+    #
+    # Het adres komt uit zijn account op die site en verandert niet doordat wij
+    # het nog een keer proberen. Eén uitgelegde melding en de rij op pauze is dus
+    # het hele juiste antwoord; publiceren zet hem weer aan. Zelfde afweging als
+    # bij de betaalmuur hierboven, en om dezelfde reden op de server: een nieuwe
+    # extensie is bij een verkoper pas weken later binnen.
+    if (job and job.get("action") in ("create", "content_refresh")
+            and job.get("platform") in ("marktplaats", "2dehands")
+            and not _BETAALMUUR.search(fouttekst_nu)
+            and _GEEN_ADRES.search(
+                f"{fouttekst_nu} {(body or {}).get('error_oorspronkelijk') or ''}")):
+        try:
+            reden = _melding_geen_adres(job.get("platform") or "")
+            body = {**body,
+                    "error_oorspronkelijk": body.get("error_oorspronkelijk") or body.get("error"),
+                    "error": reden}
+            aantal = _stop_wachtrij(db, user_id, job["platform"], reden)
+            logger.warning("Leeg adresblok op %s bij %s: %d wachtende opdrachten teruggenomen",
+                           job["platform"], user_id, aantal)
+        except Exception:  # noqa: BLE001 — een rem mag de foutmelding niet opeten
+            logger.warning("Leeg adres: wachtrij niet teruggenomen voor %s/%s",
                            user_id, job.get("platform"))
 
     # Deze vier bijwerkingen MOETEN aankomen. Viel de verbinding met de database

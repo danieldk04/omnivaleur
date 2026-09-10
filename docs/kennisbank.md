@@ -17,6 +17,56 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ---
 
+## klokjes-in-verborgen-tab-injectie
+
+*10-09-2026 — Geinjecteerde MAIN-world functies missen de Worker-timer van de content scripts; setTimeout wordt in een verborgen tabblad 3x tot 60x trager*
+
+De content scripts van de extensie hebben sinds 1.0.309 een Worker-timer
+(`content/shared.js`), maar functies die via `chrome.scripting.executeScript` met
+`world: "MAIN"` worden ingespoten hebben die niet: die dragen hun eigen
+`const sleep = ms => new Promise(r => setTimeout(r, ms))` bij zich, en dat klokje
+wordt door Chrome geknepen.
+
+Gemeten 10-09-2026 in een verborgen tabblad: tien pauzes van 300 ms kostten de
+eerste 30 seconden nog 3,0 s, daarna structureel 10,0 s (de klem van 1 seconde),
+en na vijf minuten onzichtbaar zakt Chrome naar één wakkere beurt per minuut.
+Dat is wat de verkoper ziet als "hij doet pas iets zodra ik naar dat tabblad ga".
+
+**How to apply:** in geïnjecteerde functies niet op de klok wachten maar op de
+pagina: een MutationObserver wordt niet geknepen (dezelfde meting: venster
+gevonden na 3 ms in plaats van 303 ms). Laat setTimeout alleen de uiterste grens
+bewaken. Zie "verborgen-tabblad-worker-timer" en
+"verborgen-tabblad-vertraagt-wachttijden".
+
+---
+
+## cookiescherm-telt-als-venster
+
+*10-09-2026 — "Cookie/consent-schermen dragen role=\"dialog\" en aria-modal en staan vóór het echte venster in de body; \"het eerste venster op de pagina\" pakt dus altijd het verkeerde"*
+
+Op 10-09-2026 strandde elke Vinted-herplaatsing op het account dkresellacademy met
+"Confirm-delete button not found", terwijl het venster "Confirm and delete" gewoon
+zichtbaar op het scherm stond.
+
+Gemeten op de echte pagina van advertentie 9419472843: OneTrust hangt zijn
+cookiescherm als 179e blok in de body, met `role="dialog"` én `aria-modal="true"`.
+React hangt het echte verwijdervenster er pas dáárna onderaan bij. Een
+`document.querySelector('[role="dialog"], [aria-modal="true"], [data-testid*="modal"]')`
+levert dus altijd het cookiescherm op, nooit het venster waar het om gaat. En bij
+wie de cookies al heeft weggeklikt staat dat blok er onzichtbaar nog steeds, dus
+ook het schermbeeld in de foutmelding was leeg: geen enkele knop op te noemen.
+
+**Waarom:** consent-SDK's zijn los van de app en laden bij pageload; ze zijn qua
+kenmerken niet van een echt venster te onderscheiden.
+
+**How to apply:** zoek een knop nooit in "het eerste venster op de pagina". Eerst
+het exacte kenmerk van de knop zelf document-breed (`[data-testid=...]`), dan pas
+per venster van achteren naar voren, en sluit altijd
+`#onetrust-consent-sdk, #didomi-host, [id*=cookie], [id*=consent]` uit. Zie ook
+"stille-tab-is-geen-formulier" en "rode-regel-is-geen-oordeel".
+
+---
+
 ## lees-de-hele-vraag-voor-je-gaat-meten
 
 *10-09-2026 — Een schermafdruk van een klant heeft vaak een tekst eronder; wie die overslaat meet perfect het verkeerde ding*

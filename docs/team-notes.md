@@ -8352,3 +8352,40 @@ vraag achter zijn vraag: hij verwacht dat wat hij importeert doorstroomt. Voorst
 voor Daniel, niet gebouwd: in het dashboard één regel bovenaan met "X artikelen
 staan maar op één kanaal" en een klik die er precies die selecteert. Zie
 [[geen-doodlopende-straat-in-de-ui]].
+
+## 10-09-2026 — Vinted-herplaatsing strandde op het cookiescherm
+
+Daniel meldde dat de extensie op zijn account dkresellacademy niet op "Confirm and
+delete" drukte: het venster stond zichtbaar open, de herplaatsing eindigde in
+"Relist failed — Confirm-delete button not found ... [extensie 1.0.318]", en er
+gebeurde pas iets zodra hij naar dat tabblad ging.
+
+**Oorzaak 1, gemeten op de echte pagina van advertentie 9419472843.** OneTrust
+hangt zijn cookiescherm als 179e blok in de body, met `role="dialog"` en
+`aria-modal="true"`. React hangt het verwijdervenster er pas daarna onderaan bij.
+De routine pakte "het eerste venster op de pagina" en dat is dus altijd het
+cookiescherm; daar staat geen bevestigknop in. Bij wie de cookies al heeft
+weggeklikt staat dat blok er onzichtbaar nog steeds, en daarom kon de foutmelding
+ook geen enkele knop opnoemen.
+
+**Oorzaak 2, gemeten in een verborgen tabblad.** De geïnjecteerde routine draagt
+zijn eigen `setTimeout` bij zich en mist de Worker-timer van de content scripts.
+Tien pauzes van 300 ms kostten daar de eerste 30 seconden 3,0 s en daarna 10,0 s;
+na vijf minuten onzichtbaar knijpt Chrome naar één beurt per minuut. Vandaar het
+"pas als ik erheen ga".
+
+**Wat er nu staat (1.0.319).** De bevestigknop wordt gezocht op zijn eigen exacte
+kenmerk in de hele pagina, dan per venster van achteren naar voren, met
+cookie- en toestemmingsschermen uitgesloten. Het wachten gaat via een
+MutationObserver; de klok bewaakt alleen nog de uiterste grens (3 ms in plaats
+van 303 ms in dezelfde verborgen tab). Dezelfde reparatie zit in
+`extension/content/vinted.js`.
+
+**Bewijs.** `tests/vinted-mock/vinted-delete.html` draait de echte routine tegen
+tien namaakschermen, met de verscheepte versie 1.0.318 ernaast: nieuw 10 van de 10
+goed, 1.0.318 faalt op precies de twee cookieschermen en nergens anders, de code
+van vóór 30-08-2026 op 9 van de 10.
+
+**Openstaand.** Andere geïnjecteerde MAIN-world routines (publiceren, scannen)
+hebben nog wél losse `setTimeout`-pauzes en lopen in een verborgen tabblad dus nog
+steeds traag. Niet gemeten hoeveel dat daar kost, aparte klus.

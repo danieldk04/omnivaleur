@@ -61,12 +61,46 @@ const GEVALLEN = [
   // venster dicht, niets verwijderd. En daarna terecht: "still in your wardrobe".
   { naam: "haar geval: testid + geen rol", knop: "Verwijderen", bevestig: "Ja, verwijderen",
     annuleer: "Annuleren", rol: false, testid: "item-delete-button" },
+  // WAT ER OP 10-09-2026 GEBEURDE, op het account dkresellacademy.
+  //
+  // Het venster "Confirm and delete" stond gewoon op het scherm en er werd niet
+  // op geklikt. Oorzaak, gemeten op de echte pagina van advertentie 9419472843:
+  // het cookiescherm van OneTrust hangt als 179e blok in de body en draagt
+  // role="dialog" én aria-modal="true". Het echte verwijdervenster wordt er PAS
+  // DAARNA onderaan bij gehangen. "Het eerste venster op de pagina" is dus
+  // altijd het cookiescherm, en daar staat geen bevestigknop in. Bij wie de
+  // cookies al heeft weggeklikt staat dat blok er nog steeds, onzichtbaar —
+  // vandaar dat ook de foutmelding geen enkele knop kon opnoemen.
+  { naam: "cookiescherm weggeklikt (dkresellacademy)", knop: "Confirm-vest", bevestig: "Confirm and delete",
+    annuleer: "Cancel", rol: true, testid: "item-delete-button", bevestigTestid: "item-delete-confirmation-button",
+    annuleerTestid: "item-delete-cancelation-button", cookies: "verborgen" },
+  { naam: "cookiebanner nog zichtbaar", knop: "Verwijderen", bevestig: "Bevestigen en verwijderen",
+    annuleer: "Annuleren", rol: true, cookies: "zichtbaar" },
 ];
 
 function bouw(geval) {
   document.querySelectorAll(".venster").forEach(v => v.remove());
+  document.querySelectorAll("#onetrust-consent-sdk").forEach(v => v.remove());
   const p = document.getElementById("pagina");
   p.innerHTML = "";
+
+  // Het cookiescherm zoals het echt op vinted.nl staat: een eigen blok in de
+  // body met role="dialog" en aria-modal="true", VOOR het verwijdervenster.
+  if (geval.cookies) {
+    const sdk = document.createElement("div");
+    sdk.id = "onetrust-consent-sdk";
+    const laag = document.createElement("div");
+    laag.setAttribute("role", "dialog");
+    laag.setAttribute("aria-modal", "true");
+    if (geval.cookies === "verborgen") laag.style.display = "none";
+    for (const label of ["Alle toestaan", "Alleen essentiële cookies", "Cookies beheren"]) {
+      const b = document.createElement("button");
+      b.textContent = label;
+      laag.appendChild(b);
+    }
+    sdk.appendChild(laag);
+    document.body.insertBefore(sdk, document.body.firstChild);
+  }
   const telling = { pagina: 0, bevestig: 0, annuleer: 0 };
 
   const paginaKnop = document.createElement("button");
@@ -104,9 +138,11 @@ function bouw(geval) {
     if (geval.titel) { const h = document.createElement("h3"); h.textContent = geval.titel; doos.appendChild(h); }
     const ja = document.createElement("button");
     ja.textContent = geval.bevestig;
+    if (geval.bevestigTestid) ja.setAttribute("data-testid", geval.bevestigTestid);
     ja.onclick = () => { telling.bevestig++; laag.remove(); };
     const nee = document.createElement("button");
     nee.textContent = geval.annuleer;
+    if (geval.annuleerTestid) nee.setAttribute("data-testid", geval.annuleerTestid);
     nee.onclick = () => { telling.annuleer++; laag.remove(); };
     doos.append(nee, ja);          // annuleren staat als eerste, net als bij Vinted
     laag.appendChild(doos);
@@ -118,6 +154,110 @@ function bouw(geval) {
 // DE CODE VAN VÓÓR 30-08-2026, letterlijk. Staat hier als TEGENPROEF: zonder
 // dit is niet te zien dát deze pagina iets aantoont. Hij hoort te falen op elk
 // land dat geen Engels spreekt, en op een venster zonder role="dialog".
+// DE CODE VAN 09-09-2026, letterlijk zoals hij verscheept werd (versie 1.0.318).
+// Tweede tegenproef: die faalde alleen op het cookiescherm, en dat is precies
+// wat de verkoper meldde. Zonder deze functie ernaast bewijst de proef niet dat
+// de reparatie van vandaag iets repareert.
+async function _vorigVintedVerwijderen() {
+  const sleep = ms => new Promise(r => setTimeout(r, ms));
+  const WEG = ["verwijderen", "supprimer", "löschen", "loschen", "delete",
+               "eliminar", "elimina", "usuń", "usun", "ištrinti", "smazat"];
+  const BEVESTIG = [
+    "bevestigen en verwijderen", "ja, verwijderen",
+    "confirmer et supprimer", "supprimer",
+    "bestätigen und löschen", "bestatigen und loschen", "löschen", "loschen",
+    "confirm and delete", "delete", "verwijderen",
+    "confirmar y eliminar", "eliminar", "conferma ed elimina", "elimina",
+    "ja", "yes", "oui",
+  ];
+  const ANNULEER = ["annuleren", "annuler", "abbrechen", "cancel", "cancelar",
+                    "annulla", "terug", "back", "sluiten", "close", "nee", "no", "non"];
+  const TITELS = ["artikel verwijderen", "advertentie verwijderen",
+                  "supprimer l'article", "artikel löschen", "artikel loschen",
+                  "delete item", "eliminar artículo", "elimina l'oggetto"];
+
+  // ALLES WAT DEZE FUNCTIE GEBRUIKT MOET HIERBINNEN STAAN.
+  //
+  // Chrome injecteert alleen déze functie in de pagina; de rest van
+  // background.js bestaat daar niet. Stond de hulpfunctie hieronder los, dan
+  // gooide de pagina meteen een ReferenceError en kreeg de verkoper altijd
+  // "Delete control not found" te zien, ongeacht wat er op het scherm stond.
+  // Dat is op 30-08-2026 precies zo misgegaan. tests/test_vinted_verwijderknop.py
+  // bewaakt dat er niets van buiten wordt aangeroepen.
+  const tekst = e => (e.textContent || "").replace(/\s+/g, " ").trim().toLowerCase();
+  const kaal = t => t.replace(/[?!.]+$/, "").trim();
+  const zichtbaar = e => e.offsetParent !== null || e.getClientRects().length > 0;
+  const knoppen = w => [...w.querySelectorAll('button, a, [role="menuitem"], [role="button"]')];
+  const isWeg = e => WEG.includes(kaal(tekst(e))) || (e.dataset && e.dataset.testid || "").includes("delete");
+  const schermbeeld = () => {
+    const w = document.querySelector('[role="dialog"], [role="alertdialog"], [aria-modal="true"], '
+                                     + '[data-testid*="modal"], .ReactModal__Content') || document;
+    return knoppen(w).filter(zichtbaar).slice(0, 25)
+      .map(e => tekst(e).slice(0, 30) + (e.dataset && e.dataset.testid ? `#${e.dataset.testid}` : ""))
+      .filter(Boolean).join(" | ").slice(0, 400);
+  };
+
+  // 0) WACHTEN TOT DE PAGINA ER ECHT STAAT.
+  //
+  // Vinted bouwt de artikelpagina met JavaScript op. Kijken we te vroeg, dan is
+  // er nog geen enkele knop en heet dat ten onrechte "Delete control not found".
+  // Wachten tot er iets staat kost hooguit een paar seconden en scheelt een
+  // mislukte verversing.
+  for (let i = 0; i < 20; i++) {
+    if (knoppen(document).some(zichtbaar)) break;
+    await sleep(250);
+  }
+
+  // 1) De knop op de pagina zelf, eventueel achter het menu met de drie puntjes.
+  let del = knoppen(document).find(e => zichtbaar(e) && isWeg(e));
+  if (!del) {
+    const menuknop = document.querySelector(
+      '[data-testid="item-actions-button"], [data-testid="item-menu-button"], ' +
+      '[data-testid="item-page-actions-dropdown-button"], [data-testid*="kebab"], ' +
+      'button[aria-label*="more" i], button[aria-label*="actions" i], button[aria-label*="options" i]'
+    );
+    if (menuknop) {
+      menuknop.click();
+      await sleep(700);
+      const menu = document.querySelector('[role="menu"], [role="listbox"], [data-testid*="dropdown"]') || document;
+      del = knoppen(menu).find(isWeg) || knoppen(document).find(e => zichtbaar(e) && isWeg(e));
+    }
+  }
+  if (!del) return { clickedDelete: false, opScherm: schermbeeld() };
+  del.click();
+
+  // 2) Wachten tot het bevestigingsvenster er echt staat. Herkenning op drie
+  //    manieren, want Vinted wisselt van opmaak: de rol, of de titel uit hun
+  //    eigen tekstenboek.
+  let venster = null;
+  for (let i = 0; i < 10 && !venster; i++) {
+    await sleep(300);
+    venster = document.querySelector('[role="dialog"], [role="alertdialog"], [aria-modal="true"], '
+                                     + '[data-testid*="modal"], [data-testid*="dialog"], .ReactModal__Content');
+    if (!venster) {
+      const kop = [...document.querySelectorAll("h1,h2,h3,h4,[class*='title' i]")]
+        .find(e => zichtbaar(e) && TITELS.includes(kaal(tekst(e))));
+      if (kop) venster = kop.closest("div[class],section,form") || kop.parentElement;
+    }
+  }
+
+  // 3) Bevestigen. NOOIT hetzelfde element nog een keer, en nooit "Annuleren".
+  //    Zonder venster zoeken we in de hele pagina, maar dan van ACHTEREN naar
+  //    voren: een venster wordt onderaan de body gehangen, de knop van de
+  //    pagina staat erboven.
+  const kandidaten = knoppen(venster || document)
+    .filter(e => e !== del && zichtbaar(e) && !e.disabled)
+    .filter(e => { const t = kaal(tekst(e)); return t && !ANNULEER.includes(t) && BEVESTIG.includes(t); });
+  const bevestig = venster ? kandidaten[0] : kandidaten[kandidaten.length - 1];
+  if (!bevestig) return { clickedDelete: true, clickedConfirm: false, venster: !!venster,
+                          opScherm: schermbeeld() };
+  bevestig.click();
+  await sleep(1200);
+  return { clickedDelete: true, clickedConfirm: true, venster: !!venster,
+           bevestigd: kaal(tekst(bevestig)) };
+}
+
+
 async function _oudVintedVerwijderen() {
   const sleep = ms => new Promise(r => setTimeout(r, ms));
   let del = [...document.querySelectorAll('button, a, [role="menuitem"], [role="button"]')]
@@ -171,17 +311,22 @@ async function draai(routine) {
 
 (async () => {
   const nieuwe = await draai(_mwVintedVerwijderen);
+  const vorige = await draai(_vorigVintedVerwijderen);
   const oude = await draai(_oudVintedVerwijderen);
   const el = document.getElementById("uitslag");
   el.textContent =
     "NU (extension/background.js)\n" + nieuwe.regels.join("\n")
     + `\n  → ${nieuwe.stuk === 0 ? "alle " + GEVALLEN.length + " goed" : nieuwe.stuk + " stuk"}\n\n`
+    + "TER VERGELIJKING — de code van 09-09-2026 (versie 1.0.318)\n" + vorige.regels.join("\n")
+    + `\n  → ${vorige.stuk} van de ${GEVALLEN.length} stuk\n\n`
     + "TER VERGELIJKING — de code van vóór 30-08-2026\n" + oude.regels.join("\n")
     + `\n  → ${oude.stuk} van de ${GEVALLEN.length} stuk\n\n`
     + (nieuwe.stuk === 0 && oude.stuk > 0
         ? "ALLES GOED — en de oude code faalt aantoonbaar op dezelfde schermen"
         : "LET OP: deze proef toont niets aan");
   el.className = (nieuwe.stuk === 0 && oude.stuk > 0) ? "goed" : "fout";
-  window.__uitslag = { nieuw: nieuwe.stuk, oud: oude.stuk, gevallen: GEVALLEN.length };
+  window.__uitslag = { nieuw: nieuwe.stuk, vorig: vorige.stuk, oud: oude.stuk,
+                      gevallen: GEVALLEN.length,
+                      regelsNieuw: nieuwe.regels, regelsVorig: vorige.regels };
 })();
 </script>
