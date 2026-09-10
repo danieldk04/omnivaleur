@@ -17,6 +17,44 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ---
 
+## adresblok-2dehands-buitenland
+
+*10-09-2026 — Een Nederlandse verkoper op 2dehands.be heeft een leeg postcodeveld zodra hij "Buitenland" kiest, en dan weigert onze plaatsstap*
+
+10-09-2026, De Juiste Toon: "ik ben nu ook op tweedehands aan het plaatsen, die
+komen niet door zoals die van mp wel doen." Zes plaatsingen achter elkaar mislukt
+met onze eigen weigering uit `wachtOpPostcode` (extension/content/shared.js,
+sinds 05-09-2026): het adresblok bleef acht seconden leeg.
+
+Gemeten op zijn openbare 2dehands-aanbod (verkoper 44572806, 458 zoekertjes):
+402 staan op "Etten-Leur, Nederland" (buitenland-adres), 37 op "Essen +Deel
+Kalmthout, België" (de stand van zijn account) en de rest op acht verschillende
+spellingen van zijn woonplaats, waaronder één keer "Etten-Leur, **Mauritanië**".
+Acht spellingen en een verkeerd land betekent: het adres wordt per zoekertje met
+de hand ingetypt, niet uit het account gevuld.
+
+**Why:** 2dehands.be is een Belgische site. Een account met een Belgisch adres
+vult het veld `contactInformation.postCode` zelf; kiest de verkoper "Buitenland"
+voor een Nederlandse woonplaats, dan blijft juist dat veld leeg. Onze stap kijkt
+alleen naar dat ene veld en weigert dus precies bij de verkopers voor wie de site
+het anders doet. Op Marktplaats speelt het niet: daar komt het adres wél uit het
+account. Sinds de stap bestaat: 2 geslaagde 2dehands-plaatsingen tegen 14 die
+hierop afketsten; daarvoor 10 geslaagd.
+
+**How to apply:** zeg tegen zo'n verkoper dat hij het adres één keer goed in zijn
+account op die site zet (Buitenland, dan Nederland, woonplaats én postcode); dan
+vult het formulier zich vanzelf en staat de woonplaats op alle advertenties
+hetzelfde. Sinds 10-09-2026 pauzeert `fail_job` bij deze melding de wachtrij voor
+dát kanaal (`_GEEN_ADRES` + `_melding_geen_adres` in backend/api/jobs.py), want
+elke volgende opdracht loopt op dezelfde lege regel vast en kost twee minuten
+browser. Marktplaats blijft ongemoeid. Nog niet nagemeten: of het
+buitenland-formulier een ánder postcodeveld heeft; daarvoor is een ingelogde
+sessie nodig. Zo ja, dan moet de stap dat veld erbij nemen in plaats van te
+weigeren. Zie "rem-op-de-server-bij-een-extensiefout" en
+"betalende-rubriek-is-geen-formulierfout".
+
+---
+
 ## klokjes-in-verborgen-tab-injectie
 
 *10-09-2026 — Geinjecteerde MAIN-world functies missen de Worker-timer van de content scripts; setTimeout wordt in een verborgen tabblad 3x tot 60x trager*
