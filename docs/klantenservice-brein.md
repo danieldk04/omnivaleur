@@ -179,6 +179,12 @@ Contact:
   online, dan plaatst hij ze zelf en betaalt hij per advertentie, of hij zet de
   artikelen in een rubriek die daar wel gratis is. Herkenbaar bij de klant aan
   "Dit is een betalende categorie" of een knop die "Naar betalen" heet.
+- Een zoekertje op 2dehands is vier weken zichtbaar. Loopt het bijna af, dan
+  verlengt Omnivaleur het automatisch en gratis, mits de computer aanstaat met
+  Chrome en de uitbreiding. Er wordt niets weggehaald en niets opnieuw geplaatst,
+  dus de advertentie houdt haar reacties en haar plek. Op Marktplaats gebeurt het
+  net iets anders (daar wordt de advertentie vlak voor de 30e dag opnieuw
+  geplaatst), maar het doel is hetzelfde: geen gaten in je advertenties.
 - De staat van een artikel ("Nieuw", "Zo goed als nieuw") komt bij een import van
   het platform zelf. Klopt hij niet, dan is hij met één knop voor alle artikelen
   tegelijk te wijzigen; hij hoeft dat niet per artikel te doen.
