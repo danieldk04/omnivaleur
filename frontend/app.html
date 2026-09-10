@@ -8250,7 +8250,10 @@ function publishFailureMessage(res, data, rawText) {
     // scherm "[object Object]".
     reden = d.map(x => (x && (x.msg || x.detail)) || JSON.stringify(x)).join('; ');
   } else if (d && typeof d === 'object') reden = JSON.stringify(d);
-  else if (rawText && rawText.trim() && !/^\s*</.test(rawText)) reden = rawText.trim().slice(0, 300);
+  // Een leeg antwoordlichaam ("{}", "[]", "null") is géén reden. Zonder deze
+  // uitzondering stond er letterlijk "{}" op het scherm als melding.
+  else if (rawText && rawText.trim() && !/^\s*</.test(rawText)
+           && !/^\s*(\{\s*\}|\[\s*\]|null)\s*$/.test(rawText)) reden = rawText.trim().slice(0, 300);
 
   if (res && res.status === 402) return reden || 'Your subscription no longer allows publishing.';
   if (res && res.status === 401) return 'Your session expired — sign in again and retry.';
