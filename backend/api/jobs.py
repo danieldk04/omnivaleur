@@ -961,6 +961,14 @@ def get_pending_jobs(request: Request, platform: str = None, user_id: str = Depe
 
     ready = []
     for j in due:
+        # Een 'extend'-opdracht gaat alleen naar een kopie die hem kent (1.0.318+).
+        # Een oudere kopie zou er een tweede advertentie van maken. De opdracht
+        # blijft 'pending' tot een bijgewerkte kopie polt.
+        if j.get("action") == "extend" and platform is not None:
+            if versie_van_de_kopie is None or versie_van_de_kopie < MINIMALE_EXTEND_VERSIE:
+                logger.info("Extend %s niet uitgedeeld: kopie %s kent 'extend' nog niet",
+                            j["id"], versie_van_de_kopie)
+                continue
         # Niet verversen op Vinted zolang de leesronde daar bezig is: samen zijn
         # het twee stromen verzoeken naar dezelfde Vinted-sessie, en dan knijpt
         # Vinted af. De opdracht blijft gewoon staan en komt bij de volgende
