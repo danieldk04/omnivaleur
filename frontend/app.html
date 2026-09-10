@@ -8255,10 +8255,17 @@ function publishFailureMessage(res, data, rawText) {
   if (res && res.status === 402) return reden || 'Your subscription no longer allows publishing.';
   if (res && res.status === 401) return 'Your session expired — sign in again and retry.';
   if (res && (res.status === 502 || res.status === 503 || res.status === 504)) {
-    // Nooit beweren dat er niets gebeurd is: bij een 502 is het verzoek vaak wél
-    // aangekomen en ging alleen het antwoord verloren. Opnieuw proberen is veilig
-    // — de server weigert een tweede opdracht voor hetzelfde item — maar de
-    // gebruiker hoort te weten dat het misschien al loopt.
+    // Stuurt de server zélf een reden mee, dan is die altijd waar en is de
+    // gok hieronder een leugen. Dat is De Juiste Toon op 09-09-2026 overkomen:
+    // de server zei "de vertaling lukte niet, er is niets geplaatst" en het
+    // scherm maakte daarvan "de server was druk of startte opnieuw op" — dus
+    // wachtte hij op iets wat vanzelf nooit overging.
+    if (reden) return reden;
+    // Geen reden in het antwoord: dan is dit echt een storing tussen browser en
+    // server. Nooit beweren dat er niets gebeurd is — bij een 502 is het verzoek
+    // vaak wél aangekomen en ging alleen het antwoord verloren. Opnieuw proberen
+    // is veilig (de server weigert een tweede opdracht voor hetzelfde item),
+    // maar de gebruiker hoort te weten dat het misschien al loopt.
     return `The server didn't answer in time (${res.status}). This usually means it was busy or restarting. `
          + `Your item may already be on its way — refresh the page and check before you try again.`;
   }
