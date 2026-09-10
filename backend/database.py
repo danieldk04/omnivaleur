@@ -592,3 +592,23 @@ async def naast_de_lus(aanroep, herkans: bool = False):
                 "Verbinding viel weg (%s) — poging %d opnieuw", type(e).__name__, poging + 2)
             await asyncio.sleep(0.25 * (poging + 1))
     raise laatste  # type: ignore[misc]
+
+
+def eerste_rij(antwoord):
+    """De enige rij uit een PostgREST-antwoord, of None als hij er niet is.
+
+    Hoort bij `.limit(1)`, en met opzet NIET bij `.single()`. `.single()` geeft
+    bij nul rijen geen leeg antwoord terug maar gooit een APIError (PGRST116,
+    "Cannot coerce the result to a single JSON object"). Elke `if not rij:
+    raise 404` áchter een `.single()` is daardoor dode code: de uitzondering is
+    er eerder, en de aanroeper krijgt een kale 500 in plaats van "bestaat niet".
+
+    Gemeten 10-09-2026: /api/jobs/{id}/complete liep hier 331 keer op stuk, voor
+    één en dezelfde opdracht. Het artikel was in het dashboard verwijderd (dat
+    wist ook zijn opdrachten), de extensie was nog bezig en meldde daarna "klaar".
+    De extensie ziet een 404 als afgehandeld, maar een 500 als een hik: vier
+    pogingen, dan in de bewaarrij, en die wordt bij élke poll opnieuw aangeboden.
+    Dus voor altijd.
+    """
+    rijen = getattr(antwoord, "data", antwoord) or []
+    return rijen[0] if rijen else None

@@ -40,7 +40,7 @@ import logging
 import random
 import uuid
 from datetime import datetime, timezone, timedelta
-from backend.database import get_db, fetch_all, naast_de_lus, IN_BROK
+from backend.database import get_db, fetch_all, naast_de_lus, eerste_rij, IN_BROK
 from backend.platforms import get_platform
 from backend.services.crosslist import _exec
 
@@ -200,8 +200,8 @@ async def herstel_vastgelopen_werk() -> dict:
                 afgesloten += 1
                 continue
 
-            item = ((await naast_de_lus(lambda: db.table("items").select("*").eq("id", rij["item_id"])
-                    .single().execute())).data)
+            item = eerste_rij(await naast_de_lus(lambda: db.table("items").select("*").eq("id", rij["item_id"])
+                    .limit(1).execute()))
             if not item:
                 continue
             # DEZELFDE ADVERTENTIE ALS DE OORSPRONKELIJKE, DUS OOK IN DEZELFDE

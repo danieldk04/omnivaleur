@@ -9,7 +9,7 @@ import re
 from datetime import datetime, timedelta, timezone
 import uuid
 
-from backend.database import execute_with_retry, fetch_all, get_db, naast_de_lus
+from backend.database import execute_with_retry, fetch_all, get_db, naast_de_lus, eerste_rij
 from backend.platforms import get_platform
 
 _ENGLISH_PLATFORMS = {"vinted", "shopify", "ebay", "etsy"}
@@ -1459,8 +1459,7 @@ async def delist_all_platforms(item_id: str, user_id: str) -> list[dict]:
     if not active_listings:
         return skipped_sold or [{"status": "nothing_to_delist", "message": "No active listings found"}]
 
-    item_resp = (await naast_de_lus(lambda: db.table("items").select("*").eq("id", item_id).single().execute()))
-    item = item_resp.data
+    item = eerste_rij(await naast_de_lus(lambda: db.table("items").select("*").eq("id", item_id).limit(1).execute()))
 
     results = []
 
@@ -1799,7 +1798,7 @@ async def handle_item_sold(item_id: str, sold_on_platform: str, sold_price: floa
         logger.info("[sold] item_id=%s: NOTHING to delist (no other listing rows found)", item_id)
         return
 
-    item_row = (await naast_de_lus(lambda: db.table("items").select("*").eq("id", item_id).single().execute())).data
+    item_row = eerste_rij(await naast_de_lus(lambda: db.table("items").select("*").eq("id", item_id).limit(1).execute()))
     user_id = (item_row or {}).get("user_id")
 
     # Dedup to one delete per platform (a platform can have both an 'error' and a
@@ -1970,8 +1969,8 @@ async def _echte_datums_ophalen(db) -> None:
     per_verkoper: dict[str, list[dict]] = {}
     for r in rijen:
         try:
-            item = ((await naast_de_lus(lambda: db.table("items").select("user_id,title")
-                    .eq("id", r["item_id"]).single().execute())).data or {})
+            item = (eerste_rij(await naast_de_lus(lambda: db.table("items").select("user_id,title")
+                    .eq("id", r["item_id"]).limit(1).execute())) or {})
         except Exception:  # noqa: BLE001
             continue
         if item.get("user_id"):
@@ -2064,10 +2063,9 @@ async def relist_expiring_marktplaats():
 
     for listing in listings_resp.data:
         try:
-            item_resp = (await naast_de_lus(lambda: db.table("items").select("*").eq("id", listing["item_id"]).single().execute()))
-            if not item_resp.data:
+            item = eerste_rij(await naast_de_lus(lambda: db.table("items").select("*").eq("id", listing["item_id"]).limit(1).execute()))
+            if not item:
                 continue
-            item = item_resp.data
 
             eigenaar = item["user_id"]
 
@@ -2248,8 +2246,8 @@ async def _find_shopify_product_id_by_sku(sku: str, shop_token: tuple | None = N
 
 async def _delist_one(listing: dict):
     db = get_db()
-    item_resp = (await naast_de_lus(lambda: db.table("items").select("user_id").eq("id", listing["item_id"]).single().execute()))
-    item_user_id = item_resp.data["user_id"] if item_resp.data else None
+    item_van_de_advertentie = eerste_rij(await naast_de_lus(lambda: db.table("items").select("user_id").eq("id", listing["item_id"]).limit(1).execute()))
+    item_user_id = (item_van_de_advertentie or {}).get("user_id")
     creds_resp = (
         (await naast_de_lus(lambda: db.table("platform_credentials")
         .select("*")
@@ -2275,8 +2273,8 @@ async def _delist_one(listing: dict):
         if listing["platform"] == "shopify" and not delete_id:
             sku = None
             try:
-                it = (await naast_de_lus(lambda: db.table("items").select("sku")
-                      .eq("id", listing["item_id"]).single().execute())).data
+                it = eerste_rij(await naast_de_lus(lambda: db.table("items").select("sku")
+                      .eq("id", listing["item_id"]).limit(1).execute()))
                 sku = (it or {}).get("sku")
             except Exception:  # noqa: BLE001
                 sku = None
@@ -2333,7 +2331,7 @@ async def sync_price_to_platforms(item_id: str, user_id: str) -> list[dict]:
     the price change or block the others.
     """
     db = get_db()
-    item = (await naast_de_lus(lambda: db.table("items").select("*").eq("id", item_id).eq("user_id", user_id).single().execute())).data
+    item = eerste_rij(await naast_de_lus(lambda: db.table("items").select("*").eq("id", item_id).eq("user_id", user_id).limit(1).execute()))
     if not item:
         return []
 

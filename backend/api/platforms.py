@@ -3,7 +3,7 @@ Platform auth endpoints — login endpoints for all platforms.
 """
 import re
 from fastapi import APIRouter, HTTPException, Depends, Request, BackgroundTasks
-from backend.database import get_db, naast_de_lus
+from backend.database import get_db, naast_de_lus, eerste_rij
 from backend.platforms.marktplaats import MarktplaatsPlatform, TweedehandsPlatform
 from backend.platforms.ebay import EbayPlatform
 from backend.platforms.shopify import ShopifyPlatform, is_valid_shop_domain, verify_install_hmac
@@ -308,10 +308,10 @@ async def marktplaats_debug(user_id: str = Depends(get_current_user)):
     """Navigate SYI form with stored session and capture the submit API call."""
     from playwright.async_api import async_playwright
     db = get_db()
-    creds = (await naast_de_lus(lambda: db.table("platform_credentials").select("*").eq("user_id", user_id).eq("platform", "marktplaats").single().execute()))
-    if not creds.data:
+    creds = eerste_rij(await naast_de_lus(lambda: db.table("platform_credentials").select("*").eq("user_id", user_id).eq("platform", "marktplaats").limit(1).execute()))
+    if not creds:
         return {"error": "not connected"}
-    extra = creds.data.get("extra_data") or {}
+    extra = creds.get("extra_data") or {}
     cookies = extra.get("cookies", {})
     ua = extra.get("user_agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36")
 

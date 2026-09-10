@@ -34,6 +34,7 @@ sys.path.insert(0, str(ROOT))
 
 from backend.api import jobs as api          # noqa: E402
 from backend.services import relist as rl    # noqa: E402
+from postgrest.exceptions import APIError
 
 
 # ── Een minimale nabootsing van de Supabase-bouwer ───────────────────────────
@@ -43,6 +44,7 @@ class _Q:
         self.db, self.tabel = db, tabel
         self.filters, self.in_filters, self.lte_filters = {}, {}, {}
         self.op, self.velden, self.rijen_in = None, None, None
+        self.enkel = False
 
     def select(self, *_a, **_k):
         self.op = "select"; return self
@@ -74,7 +76,9 @@ class _Q:
         return self
 
     def single(self):
-        return self
+        # Net als de echte: één rij, en een uitzondering als hij er niet is.
+        # Zie backend/database.eerste_rij — dit was een 500 bij de klant.
+        self.enkel = True; return self
 
     def _bron(self):
         return getattr(self.db, self.tabel)
@@ -95,8 +99,12 @@ class _Q:
         if self.op == "update":
             for r in rijen:
                 r.update(self.velden)
-        if self.op == "select" and self.tabel == "items":
-            return type("R", (), {"data": rijen[0] if rijen else None})()
+        if self.op == "select" and self.enkel:
+            if not rijen:
+                raise APIError({"code": "PGRST116", "details": "The result contains 0 rows",
+                                "hint": None,
+                                "message": "Cannot coerce the result to a single JSON object"})
+            return type("R", (), {"data": rijen[0]})()
         return type("R", (), {"data": rijen})()
 
 

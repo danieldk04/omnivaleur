@@ -1,6 +1,6 @@
 from fastapi import APIRouter, HTTPException, Depends
 from backend.models import ItemCreate, ItemOut
-from backend.database import get_db, execute_with_retry, fetch_all, IN_BROK
+from backend.database import get_db, execute_with_retry, fetch_all, eerste_rij, IN_BROK
 from backend.api.deps import get_current_user, require_active_subscription
 from backend.services.tweelingen import (
     groepeer, zelfde_artikel, advertentiecode, bekende_merken_van,
@@ -495,10 +495,10 @@ def _botsende_kanalen(van_keep: set, van_ander: set) -> set:
 @router.get("/{item_id}")
 def get_item(item_id: str, user_id: str = Depends(get_current_user)):
     db = get_db()
-    result = db.table("items").select("*").eq("id", item_id).eq("user_id", user_id).single().execute()
-    if not result.data:
+    item = eerste_rij(db.table("items").select("*").eq("id", item_id).eq("user_id", user_id).limit(1).execute())
+    if not item:
         raise HTTPException(status_code=404, detail="Item not found")
-    return result.data
+    return item
 
 
 @router.patch("/{item_id}")

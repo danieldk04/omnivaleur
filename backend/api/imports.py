@@ -1542,7 +1542,7 @@ async def link_candidate(candidate_id: str, body: dict, user_id: str = Depends(g
     if not item_id:
         raise HTTPException(status_code=400, detail="item_id required")
     db = get_db()
-    cand = (await naast_de_lus(lambda: db.table("import_candidates").select("*").eq("id", candidate_id).eq("user_id", user_id).single().execute())).data
+    cand = eerste_rij(await naast_de_lus(lambda: db.table("import_candidates").select("*").eq("id", candidate_id).eq("user_id", user_id).limit(1).execute()))
     if not cand:
         raise HTTPException(status_code=404, detail="Import candidate not found")
     item = (await naast_de_lus(lambda: db.table("items").select("id").eq("id", item_id).eq("user_id", user_id).execute()))
@@ -1590,7 +1590,7 @@ async def create_item_from_candidate(candidate_id: str, body: dict, user_id: str
     plus optional overrides for title/price/photo_urls that were pre-filled from the scrape.
     """
     db = get_db()
-    cand = (await naast_de_lus(lambda: db.table("import_candidates").select("*").eq("id", candidate_id).eq("user_id", user_id).single().execute())).data
+    cand = eerste_rij(await naast_de_lus(lambda: db.table("import_candidates").select("*").eq("id", candidate_id).eq("user_id", user_id).limit(1).execute()))
     if not cand:
         raise HTTPException(status_code=404, detail="Import candidate not found")
 

@@ -1,5 +1,6 @@
 from fastapi import APIRouter, HTTPException, Depends, Request
-from backend.database import get_db, fetch_all, fetch_all_in, update_in, naast_de_lus, execute_with_retry
+from backend.database import (get_db, fetch_all, fetch_all_in, update_in, naast_de_lus,
+                              execute_with_retry, eerste_rij)
 from backend.api.deps import get_current_user, require_active_subscription
 from backend.api.imports import _backfill_item_from_candidate
 from backend.services.crosslist import handle_item_sold
@@ -2021,7 +2022,7 @@ async def _al_weg_voor_wij_er_waren(db, job: dict) -> bool:
 async def complete_job(job_id: str, body: dict, user_id: str = Depends(get_current_user)):
     db = get_db()
     _record_extension_heartbeat(db, user_id)  # only the extension completes jobs
-    job = (await naast_de_lus(lambda: db.table("jobs").select("*").eq("id", job_id).eq("user_id", user_id).single().execute())).data
+    job = eerste_rij(await naast_de_lus(lambda: db.table("jobs").select("*").eq("id", job_id).eq("user_id", user_id).limit(1).execute()))
     if not job:
         raise HTTPException(status_code=404, detail="Job not found")
 
@@ -2167,9 +2168,9 @@ async def complete_job(job_id: str, body: dict, user_id: str = Depends(get_curre
             # melding die bij elke geïmporteerde advertentie stond.
             cap_photos = captured.get("photo_urls") or []
             try:
-                huidig = ((await naast_de_lus(lambda: db.table("items")
+                huidig = (eerste_rij(await naast_de_lus(lambda: db.table("items")
                           .select("photo_urls,brand,size,color,condition")
-                          .eq("id", job["item_id"]).single().execute())).data or {})
+                          .eq("id", job["item_id"]).limit(1).execute())) or {})
                 patch = {}
                 if len(cap_photos) > 1 and len(huidig.get("photo_urls") or []) <= 1:
                     patch["photo_urls"] = cap_photos
@@ -3347,7 +3348,7 @@ def _rechtgezette_foutmelding(job: dict | None, body: dict, versie, kansloos: bo
 def fail_job(job_id: str, body: dict, user_id: str = Depends(get_current_user)):
     db = get_db()
     _record_extension_heartbeat(db, user_id)  # only the extension reports job errors
-    job = db.table("jobs").select("item_id,platform,action,payload").eq("id", job_id).eq("user_id", user_id).single().execute().data
+    job = eerste_rij(db.table("jobs").select("item_id,platform,action,payload").eq("id", job_id).eq("user_id", user_id).limit(1).execute())
 
     # Een scan die door een verouderde kopie van de extensie is opgepakt telt
     # niet als mislukt: die kopie kán het werk gewoon niet. Terug in de wachtrij,
@@ -3850,7 +3851,7 @@ def cancel_job(job_id: str, user_id: str = Depends(get_current_user)):
     banner clears and the item correctly reads as not-listed.
     """
     db = get_db()
-    job = db.table("jobs").select("*").eq("id", job_id).eq("user_id", user_id).single().execute().data
+    job = eerste_rij(db.table("jobs").select("*").eq("id", job_id).eq("user_id", user_id).limit(1).execute())
     if not job:
         raise HTTPException(status_code=404, detail="Job not found")
     # Already finished — nothing to cancel; report where it landed.
@@ -3912,7 +3913,7 @@ def cancel_job(job_id: str, user_id: str = Depends(get_current_user)):
 @router.get("/status/{job_id}")
 def get_job_status(job_id: str, user_id: str = Depends(get_current_user)):
     db = get_db()
-    result = db.table("jobs").select("*").eq("id", job_id).eq("user_id", user_id).single().execute()
-    if not result.data:
+    job = eerste_rij(db.table("jobs").select("*").eq("id", job_id).eq("user_id", user_id).limit(1).execute())
+    if not job:
         raise HTTPException(status_code=404, detail="Job not found")
-    return result.data
+    return job
