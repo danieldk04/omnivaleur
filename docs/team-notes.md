@@ -7888,3 +7888,41 @@ rem vangt het dan zelf op. Zijn 11 al geplaatste 2dehands-zoekertjes staan nog o
 MIN_BID; die worden pas FIXED als ze opnieuw geplaatst worden. En of er in zijn
 2dehands-winkelmandje onbetaalde bestelregels staan is van buitenaf niet te zien:
 dat moet hij zelf nakijken op /payments/orderOverview.
+
+### 10-09-2026 — De biedreparatie nagemeten op het echte, ingelogde plaatsformulier
+
+Daniel vroeg of de zekerheid naar 100% kon. Het open punt was dat `zetBieden`
+alleen tegen een nagemaakt formulier was beproefd. Nu gemeten op zijn eigen
+account (Revaleur), op beide platforms, met de code letterlijk uit shared.js
+1.0.317 in de pagina gedraaid. Er is niets gepubliceerd.
+
+**Marktplaats, /plaats/621/636 (kleding):**
+vóór: `input#syi-bidding-switch-input` checked **true**, React's eigen prop
+checked **true**, het veld "Bieden vanaf" (`price.minimumBidPrice`) staat op het
+formulier. Dat is de oorzaak van Egberts klacht, nu op het echte formulier
+vastgesteld in plaats van uit een oude codetoelichting overgenomen.
+ná `zetBieden({price: 25})`: DOM checked **false**, **React's eigen prop checked
+false**, en het veld "Bieden vanaf" is uit het formulier **verdwenen**. Het
+prijsveld staat er nog, dus het blijft een vraagprijs. Het formulier heeft de
+klik dus echt aangenomen, niet alleen de DOM.
+
+**2dehands, /plaats/728/748 — exact de rubriek waar Egbert vastliep:**
+zelfde uitkomst, vóór true/true met biedveld, ná false/false zonder biedveld.
+
+**En de valse-alarmproef, die net zo belangrijk is.** Op datzelfde adres
+728/748 gaf `betaalrubriekBezwaar()` **null** terug: op Daniels account staat er
+géén "Dit is een betalende categorie", `bundle-option-FREE` bestaat er wél, en de
+knop heet "Plaats je zoekertje". De rubriek is dus niet uit zichzelf betaald —
+Egberts gratis tegoed in die rubriek was op. De rem slaat alleen aan als de
+gratis keuze er echt niet meer is, en houdt andere verkopers in dezelfde rubriek
+niet tegen.
+
+De twee ingangen van die rem zijn allebei uit Egberts echte pagina bewezen:
+shared.js bouwt "Page says" uit `document.body.innerText` en de knopnaam uit
+`btn.textContent`, en in zijn foutmelding staan letterlijk "Dit is een betalende
+categorie" en `knop "Naar betalen"`.
+
+**Wat hierna nog niet gemeten is.** Er is geen echte advertentie gepubliceerd, dus
+"het formulier zegt geen bieden" is bewezen en "de gepubliceerde advertentie komt
+er als FIXED uit" niet. En de extensie bereikt Egbert pas na de Chrome Web Store;
+tot die tijd staat bieden bij hem nog aan.
