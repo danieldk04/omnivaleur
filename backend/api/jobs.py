@@ -3284,41 +3284,63 @@ def _melding_geen_adres(platform: str) -> str:
 
     EEN LEEG ADRESVELD IS EEN ACCOUNTINSTELLING, GEEN STORING.
 
-    Marktplaats en 2dehands vullen postcode en woonplaats zelf uit het account
-    van de verkoper. Wij typen daar bewust niets in: een verzonnen postcode zet
-    de advertentie in een willekeurige gemeente. Blijft het veld leeg, dan
-    weigert de extensie te plaatsen (`wachtOpPostcode` in
-    extension/content/shared.js wacht er acht seconden op).
+    Marktplaats en 2dehands vullen de postcode zelf uit het account van de
+    verkoper. Wij typen daar bewust niets in: een verzonnen postcode zet de
+    advertentie in een willekeurige gemeente. Blijft het veld leeg, dan weigert
+    de extensie te plaatsen (`wachtOpPostcode` in extension/content/shared.js).
 
-    GEMETEN BIJ DE JUISTE TOON, 10-09-2026. Van zijn 458 zoekertjes op 2dehands
-    staan er 402 op "Etten-Leur, Nederland" (buitenland-adres), 37 op "Essen
-    +Deel Kalmthout, België" (de stand van zijn account) en de rest op acht
-    verschillende spellingen van zijn woonplaats, waaronder "Ettenleur" en één
-    keer "Etten-Leur, Mauritanië". Dat is de vingerafdruk van een adres dat per
-    zoekertje met de hand wordt ingetypt in plaats van uit het account te komen.
-    Zijn account staat op een Belgisch adres; kiest hij op het formulier
-    "Buitenland", dan is het Belgische postcodeveld leeg en gaat de plaatsing
-    niet door.
+    HIER STOND EERST EEN ADVIES DAT NERGENS HEEN LEIDDE (10-09-2026). De vorige
+    tekst zei: zet in je account op 2dehands niet een Belgische postcode maar
+    "Buitenland", met Nederland en je woonplaats erachter. Die instelling
+    bestaat niet. Nagemeten op een ingelogd 2dehands-account (10-09-2026): het
+    hele accountmenu heeft zeven onderdelen en geen instellingenscherm voor een
+    adres; Profiel > Contactgegevens kent precies drie velden, Naam, Postcode
+    (voorbeeld "1234", dus Belgisch) en Telefoonnummer. Marktplaats heeft exact
+    hetzelfde scherm, alleen met een Nederlandse postcode erin.
 
-    Dus zeggen we hier waar hij moet zijn, en niet "open your account settings":
-    voor wie in Nederland woont en op 2dehands.be plaatst is de juiste keuze
-    "Buitenland", en dat staat nergens op dat formulier.
+    De keuze tussen binnen- en buitenland zit alleen op het zoekertje zelf. Op
+    het plaatsformulier staat "Je locatie: Belgie | Buitenland". Bij Belgie
+    staat er een veld contactInformation.postCode dat uit het account wordt
+    voorgevuld; klik je Buitenland, dan verdwijnt dat veld en komen er twee
+    lege verplichte velden voor terug: select#country en
+    contactInformation.foreignCity. Er is bij buitenland geen postcode.
+
+    Dat verklaart ook de vingerafdruk in het aanbod van De Juiste Toon: van zijn
+    458 zoekertjes staan er 402 op "Etten-Leur, Nederland", verdeeld over acht
+    spellingen van diezelfde woonplaats en een keer Mauritanie. Werd het adres
+    onthouden, dan was de spelling elke keer dezelfde geweest. Het wordt per
+    zoekertje opnieuw ingetypt, omdat het formulier het elke keer opnieuw vraagt.
     """
-    site = {"marktplaats": "Marktplaats (marktplaats.nl)",
-            "2dehands": "2dehands (2dehands.be)"}.get(platform, platform)
+    if platform == "2dehands":
+        return (
+            "Er stond geen adres op het formulier, dus er is niets geplaatst. "
+            "2dehands haalt de postcode uit je account op die site, niet uit "
+            "Omnivaleur; wij vullen daar bewust niets in, want een verzonnen "
+            "postcode zet je advertentie in een willekeurige gemeente.\n\n"
+            "Vul die postcode een keer in bij Profiel > Contactgegevens > "
+            "Postcode op 2dehands.be. Let op: daar past alleen een Belgische "
+            "postcode. Woon je in Nederland, dan is er in je account geen plek "
+            "voor je echte adres; de keuze \"Buitenland\" met land en woonplaats "
+            "bestaat alleen op het zoekertje zelf, en 2dehands onthoudt die niet. "
+            "Zolang wij dat blok niet kunnen invullen, kun je op 2dehands kiezen "
+            "tussen een Belgische postcode in je profiel, of dit kanaal uit "
+            "laten en daar met de hand plaatsen.\n\n"
+            "De rest van je wachtrij voor dit kanaal is gepauzeerd, want elke "
+            "volgende advertentie loopt op precies dezelfde lege regel vast. "
+            "Zodra er een postcode in je profiel staat, druk je gewoon opnieuw "
+            "op publiceren."
+        )
     return (
         "Er stond geen adres op het formulier, dus er is niets geplaatst. "
-        f"{site} haalt postcode en woonplaats uit je account op die site, niet uit "
-        "Omnivaleur; wij vullen daar bewust niets in, want een verzonnen postcode "
-        "zet je advertentie in een willekeurige gemeente.\n\n"
-        "Woon je in Nederland en plaats je op 2dehands.be, kies dan bij je adres "
-        "NIET een Belgische postcode maar de optie \"Buitenland\", en daarachter "
-        "Nederland plus je woonplaats en je postcode. Zet dat een keer goed in je "
-        "account op die site, dan vult het formulier zich daarna vanzelf en staat "
+        "Marktplaats haalt de postcode uit je account op die site, niet uit "
+        "Omnivaleur; wij vullen daar bewust niets in, want een verzonnen "
+        "postcode zet je advertentie in een willekeurige gemeente.\n\n"
+        "Vul je postcode een keer in bij Profiel > Contactgegevens > Postcode "
+        "op marktplaats.nl, dan vult het formulier zich daarna vanzelf en staat "
         "je woonplaats op al je advertenties hetzelfde.\n\n"
-        "De rest van je wachtrij voor dit kanaal is gepauzeerd, want elke volgende "
-        "advertentie loopt op precies dezelfde lege regel vast. Zodra het adres in "
-        "je account staat, druk je gewoon opnieuw op publiceren."
+        "De rest van je wachtrij voor dit kanaal is gepauzeerd, want elke "
+        "volgende advertentie loopt op precies dezelfde lege regel vast. Zodra "
+        "de postcode er staat, druk je gewoon opnieuw op publiceren."
     )
 
 
@@ -3541,18 +3563,25 @@ def _rechtgezette_foutmelding(job: dict | None, body: dict, versie, kansloos: bo
             f"te verhelpen.")}
     # EEN LEEG ADRESVELD OP 2DEHANDS IS EEN ACCOUNTINSTELLING, GEEN STORING.
     #
-    # 2dehands.be vult postcode en woonplaats zelf uit het account; wij typen
-    # daar bewust niets in, want een verzonnen postcode zet de advertentie in een
+    # 2dehands.be vult alleen de postcode uit het account; wij typen daar bewust
+    # niets in, want een verzonnen postcode zet de advertentie in een
     # willekeurige Belgische gemeente. Is het veld leeg, dan weigert de extensie
-    # te plaatsen — terecht, maar de melding die zij geeft ("open your account
-    # settings") zegt een Nederlandse verkoper niet waar hij moet zijn. Voor wie
-    # in Nederland woont is de juiste keuze op dat formulier "Buitenland", en dat
-    # staat nergens.
+    # te plaatsen.
+    #
+    # LET OP, DIT IS NAGEMETEN OP 10-09-2026 EN NIET WAT HIER EERST STOND: het
+    # account biedt geen buitenland-adres aan. Profiel > Contactgegevens kent
+    # drie velden (Naam, Postcode met voorbeeld "1234", Telefoonnummer) en het
+    # accountmenu heeft verder geen instellingenscherm. De keuze
+    # "Belgie | Buitenland" bestaat alleen op het zoekertje: bij Belgie het veld
+    # contactInformation.postCode uit het account, bij Buitenland verdwijnt dat
+    # veld en komen select#country en contactInformation.foreignCity ervoor in de
+    # plaats, allebei leeg en verplicht. Wie in Nederland woont kan dus niets in
+    # zijn account zetten dat hier helpt; verwijs hem daar niet naar toe.
     #
     # Toon (dejuistetoon, 05-09 en 07-09-2026) vroeg er twee keer naar: "adres
-    # niet in Essen maar in Nederland". Zijn advertenties die het wél haalden
-    # staan gemeten op "Etten-Leur, Nederland" met abroad=true, dus de instelling
-    # kán goed staan; ze was op die momenten alleen leeg.
+    # niet in Essen maar in Nederland". Zijn 402 zoekertjes op "Etten-Leur,
+    # Nederland" staan in acht spellingen: het formulier onthoudt het
+    # buitenlandblok niet, hij typt het elke keer opnieuw.
     if _GEEN_ADRES.search(fout) and (job or {}).get("platform") in ("2dehands", "marktplaats"):
         return {**(body or {}), "error_oorspronkelijk": fout,
                 "error": _melding_geen_adres((job or {}).get("platform") or "")}

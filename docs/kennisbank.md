@@ -19,39 +19,73 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ## adresblok-2dehands-buitenland
 
-*10-09-2026 — Een Nederlandse verkoper op 2dehands.be heeft een leeg postcodeveld zodra hij "Buitenland" kiest, en dan weigert onze plaatsstap*
+*10-09-2026 — Een 2dehands-account kent alleen een Belgische postcode; het buitenlandadres bestaat alleen op het zoekertje zelf, dus verwijs een Nederlandse verkoper nooit naar zijn accountinstellingen*
 
 10-09-2026, De Juiste Toon: "ik ben nu ook op tweedehands aan het plaatsen, die
-komen niet door zoals die van mp wel doen." Zes plaatsingen achter elkaar mislukt
-met onze eigen weigering uit `wachtOpPostcode` (extension/content/shared.js,
-sinds 05-09-2026): het adresblok bleef acht seconden leeg.
+komen niet door zoals die van mp wel doen." Zijn plaatsingen ketsten af op onze
+eigen weigering uit `wachtOpPostcode` (extension/content/shared.js, sinds
+05-09-2026): het veld `contactInformation.postCode` bleef acht seconden leeg.
 
-Gemeten op zijn openbare 2dehands-aanbod (verkoper 44572806, 458 zoekertjes):
-402 staan op "Etten-Leur, Nederland" (buitenland-adres), 37 op "Essen +Deel
-Kalmthout, België" (de stand van zijn account) en de rest op acht verschillende
-spellingen van zijn woonplaats, waaronder één keer "Etten-Leur, **Mauritanië**".
-Acht spellingen en een verkeerd land betekent: het adres wordt per zoekertje met
-de hand ingetypt, niet uit het account gevuld.
+**Nagemeten op een ingelogd 2dehands-account (Revaleur, 10-09-2026), en dit
+weerlegt wat hier eerst stond.** Het account biedt geen buitenlandadres aan:
 
-**Why:** 2dehands.be is een Belgische site. Een account met een Belgisch adres
-vult het veld `contactInformation.postCode` zelf; kiest de verkoper "Buitenland"
-voor een Nederlandse woonplaats, dan blijft juist dat veld leeg. Onze stap kijkt
-alleen naar dat ene veld en weigert dus precies bij de verkopers voor wie de site
-het anders doet. Op Marktplaats speelt het niet: daar komt het adres wél uit het
-account. Sinds de stap bestaat: 2 geslaagde 2dehands-plaatsingen tegen 14 die
-hierop afketsten; daarvoor 10 geslaagd.
+- Het accountmenu heeft zeven onderdelen (Profiel, Zoekertjes, Favorieten,
+  Biedingen, Bewaarde zoekopdrachten, Favoriete verkopers, Recent bekeken) en
+  verder geen instellingenscherm.
+- `/my-account/profile/edit.html` > Contactgegevens kent precies drie velden:
+  Naam, Postcode (voorbeeld "1234", dus Belgisch formaat) en Telefoonnummer,
+  plus particulier/zakelijk. Geen land, geen woonplaats, geen straat.
+- Marktplaats heeft exact hetzelfde scherm (Naam, Postcode, Telefoonnummer). Het
+  verschil is niet het scherm maar de postcode die erin past.
+- Op het plaatsformulier (`/plaats/728/748`) staat wél "Je locatie: België |
+  Buitenland". Bij België: `input[name="contactInformation.postCode"]`,
+  voorgevuld uit het account. Klik je Buitenland, dan verdwijnt dat veld
+  helemaal en komen `select#country` en
+  `input[name="contactInformation.foreignCity"]` ervoor in de plaats, allebei
+  leeg en verplicht. Bij buitenland is er geen postcode.
 
-**How to apply:** zeg tegen zo'n verkoper dat hij het adres één keer goed in zijn
-account op die site zet (Buitenland, dan Nederland, woonplaats én postcode); dan
-vult het formulier zich vanzelf en staat de woonplaats op alle advertenties
-hetzelfde. Sinds 10-09-2026 pauzeert `fail_job` bij deze melding de wachtrij voor
-dát kanaal (`_GEEN_ADRES` + `_melding_geen_adres` in backend/api/jobs.py), want
-elke volgende opdracht loopt op dezelfde lege regel vast en kost twee minuten
-browser. Marktplaats blijft ongemoeid. Nog niet nagemeten: of het
-buitenland-formulier een ánder postcodeveld heeft; daarvoor is een ingelogde
-sessie nodig. Zo ja, dan moet de stap dat veld erbij nemen in plaats van te
-weigeren. Zie "rem-op-de-server-bij-een-extensiefout" en
+**Why:** Toons 402 zoekertjes op "Etten-Leur, Nederland" staan in acht
+spellingen, met één keer Mauritanië. Werd het buitenlandblok onthouden, dan was
+de spelling elke keer dezelfde geweest; het formulier vraagt het per zoekertje
+opnieuw. Een Nederlandse verkoper op 2dehands.be kan dus niets in zijn account
+zetten dat de plaatsing redt. Zolang onze extensie het blok niet zelf invult,
+zijn er maar twee uitwegen: een Belgische postcode in zijn profiel (zijn
+zoekertjes tonen dan die Belgische plaats), of 2dehands als kanaal uit laten en
+daar met de hand plaatsen.
+
+**How to apply:** verwijs zo'n verkoper nooit naar "zet het adres goed in je
+account"; dat is een doodlopende straat, zie "geen-doodlopende-straat-in-de-ui".
+`fail_job` pauzeert bij deze melding de wachtrij voor dát kanaal (`_GEEN_ADRES` +
+`_melding_geen_adres` in backend/api/jobs.py) en legt beide uitwegen uit. De
+echte reparatie is de extensie het blok laten invullen: label "Buitenland"
+aanklikken, `select#country` op Nederland, `contactInformation.foreignCity` op de
+woonplaats — dat vraagt wel een plek in Omnivaleur waar de verkoper land en
+woonplaats invult, plus een Web Store-release van weken, zie
+"rem-op-de-server-bij-een-extensiefout". Zie ook
 "betalende-rubriek-is-geen-formulierfout".
+
+---
+
+## wacht-op-de-knop-niet-op-de-pagina
+
+*10-09-2026 — "Wachten tot er 'een knop' op de pagina staat is meteen waar door de kopregel; wacht op het element dat je nodig hebt"*
+
+Op 10-09-2026 meldde Vinted-herplaatsing 9419472843 "Delete control not found",
+met als zichtbare knoppen uitsluitend de kopregel: logo, berichten, meldingen,
+"sell now", favoriet. Dezelfde pagina uitgelogd nagemeten gaf hetzelfde beeld: de
+pagina stond er, de knoppen van het artikel nog niet.
+
+De routine wachtte op `knoppen(document).some(zichtbaar)` en keek dan één keer.
+Die voorwaarde is bij Vinted (en bij elke site met een kopregel) onmiddellijk
+waar, dus in de praktijk werd er niet gewacht. De versie ervóór had per ongeluk
+meer geduld door een lus van 20 × 250 ms.
+
+**How to apply:** wacht altijd op het element dat je écht nodig hebt
+(`wachtOp(() => !!zoekKnop(), 15000)`), nooit op "er staat iets". En zet er een
+tweede route naast die niet aan de opmaak hangt: Vinted verwijdert via
+`POST /api/v2/items/{id}/delete` (bestaat aantoonbaar: 403 access_denied zonder
+sessie, een verzonnen adres geeft 404 met foutpagina). Zie
+"klokjes-in-verborgen-tab-injectie" en "cookiescherm-telt-als-venster".
 
 ---
 

@@ -8442,3 +8442,83 @@ ander veld is dan `contactInformation.postCode` is niet nagemeten; daarvoor is e
 ingelogde sessie op zijn account nodig. Zolang hij het adres één keer goed in zijn
 account zet, doet dat niet meer mee. Blijkt het later tóch een ander veld te zijn,
 dan moet de postcodestap dat veld erbij nemen in plaats van te weigeren.
+
+## 10-09-2026 (later) — De verwijderknop werd te vroeg gezocht
+
+Na 1.0.319 kwam de herplaatsing van hetzelfde vest (Vinted 9419472843) terug met
+een ándere melding: niet meer "Confirm-delete button not found" maar "Delete
+control not found", met als zichtbare knoppen alleen `skip to content`,
+`#header-logo-id`, `#header-conversations-button-fallback`,
+`#header-notification-button`, `sell now`, `#favourite-button`, `+ 3`.
+
+**Wat dat lijstje bewijst.** Dat zijn de kopregel van Vinted plus het fotoblok,
+en verder niets van het artikel zelf. Ter controle dezelfde pagina uitgelogd
+opgehaald (10-09-2026): `overslaan en naar inhoud`, `#header-logo-id`,
+`#favourite-button`, `+ 3` — hetzelfde beeld, dus de pagina stond er wel maar de
+knoppen van het artikel nog niet. De advertentie is nog gewoon online (HTTP 200),
+er is niets weggehaald.
+
+**Oorzaak.** 1.0.319 wachtte tot er "een zichtbare knop" op de pagina stond en
+keek dan één keer. De kopregel staat er meteen, dus die voorwaarde was direct
+waar en de verwijderknop bestond op dat moment nog niet. De versie ervóór
+(1.0.318) had per ongeluk meer geduld, omdat hij in stapjes van 250 ms tot 20 keer
+opnieuw keek. Kortom: de reparatie van vanmiddag maakte het wachten wél
+ongevoelig voor een verborgen tabblad, maar liet hem tegelijk te vroeg kijken.
+
+**Gerepareerd (1.0.320).** Er wordt nu gewacht op de verwijderknop zelf (of het
+menu met de drie puntjes), tot 15 seconden, nog steeds via de pagina en niet via
+een klokje. Daarnaast is er een tweede route: lukt de knop niet, dan gaat er een
+`POST /api/v2/items/{id}/delete` naartoe — Vinted's eigen verwijder-adres, op
+10-09-2026 nagemeten (403 `access_denied` zonder sessie, terwijl een verzonnen
+adres 404 met een foutpagina geeft). De kast blijft het bewijs: alleen als de
+advertentie daar echt uit verdwenen is heet het gelukt.
+
+**Bewijs.** `tests/vinted-mock/vinted-delete.html` heeft er twee schermen bij
+waar de artikelknoppen 1,2 seconde na de kopregel verschijnen, en draait nu drie
+oude versies ernaast. Uitslag: nieuw 12/12 goed, 1.0.319 faalt op precies die
+twee nieuwe schermen en nergens anders, 1.0.318 op vier, de code van vóór
+30-08 op elf.
+
+**Openstaand.** Of de tweede route bij een ingelogde sessie ook echt doorgaat is
+niet te meten zonder in te loggen op zijn account: het CSRF-teken dat Vinted
+daarbij verwacht is uitgelogd niet te zien. Lukt hij niet, dan verandert er niets
+aan de melding en blijft de knop de weg. Eerste echte herplaatsing na installatie
+van 1.0.320 zegt het.
+
+## 10-09-2026 (avond) — Toon had gelijk: het buitenlandadres bestaat niet in het account
+
+Toon meldde dat hij bij 2dehands in de instellingen geen Nederland/buitenland kan
+invullen, terwijl dat bij Marktplaats wel lukt, en dat het alleen gaat bij het
+plaatsen van een zoekertje. Nagemeten op een ingelogd 2dehands-account (Revaleur,
+10-09-2026) en dat klopt:
+
+- Het accountmenu heeft zeven onderdelen en geen instellingenscherm voor een adres.
+- Profiel > Contactgegevens kent drie velden: Naam, Postcode (voorbeeld "1234",
+  Belgisch formaat) en Telefoonnummer. Geen land, geen woonplaats.
+- Marktplaats heeft exact hetzelfde scherm. Het verschil is niet het scherm maar
+  de postcode die erin past: een Nederlander vult daar zijn eigen postcode in.
+- Op het plaatsformulier staat wél "Je locatie: België | Buitenland". Bij België
+  het veld `contactInformation.postCode` uit het account; bij Buitenland
+  verdwijnt dat veld en komen `select#country` plus
+  `contactInformation.foreignCity` ervoor in de plaats, allebei leeg en verplicht.
+
+**Daarmee was het advies van vanmiddag fout.** De melding die de rij pauzeert
+stuurde hem naar een instelling die niet bestaat. Die tekst is vervangen: hij
+zegt nu dat 2dehands alleen een Belgische postcode uit het profiel haalt, en
+noemt de twee uitwegen die er vandaag zijn. De kennisbankles
+`adresblok-2dehands-buitenland` is op dezelfde manier rechtgezet.
+
+**Wat Toon nu kan.** Ofwel een Belgische postcode in zijn 2dehands-profiel zetten
+(dan lopen de plaatsingen meteen weer, maar zijn zoekertjes tonen die Belgische
+plaats), ofwel 2dehands als kanaal uit laten en daar met de hand plaatsen. Zijn
+402 zoekertjes op "Etten-Leur, Nederland" staan in acht spellingen: het formulier
+onthoudt het buitenlandblok niet, hij typt het elke keer opnieuw.
+
+**De echte reparatie** is de extensie het blok zelf laten invullen: "Buitenland"
+aanklikken, land op Nederland, woonplaats invullen. Dat vraagt een plek in
+Omnivaleur waar de verkoper land en woonplaats zet, plus een Web Store-release
+van weken. Nog niet gebouwd, wacht op Daniels beslissing.
+
+**Openstaand.** Of het Belgische postcodeveld bij opslaan ook echt een
+Nederlandse postcode weigert is niet nagemeten: dat kan alleen door op een echt
+account op te slaan of te publiceren, en dat is niet gedaan.
