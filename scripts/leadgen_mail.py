@@ -4764,8 +4764,15 @@ def _dagbericht(state: dict, plan: dict) -> None:
     if plan.get("fouten"):
         regels += ["", "Fouten vandaag:"] + [f"  {f}" for f in plan["fouten"][:10]]
     if vandaag_uit < gepland:
-        regels += ["", f"Er zijn {gepland - vandaag_uit} mails niet verstuurd. "
-                       "Meestal betekent dat dat de Mac uit stond of sliep."]
+        regels += ["", f"Er zijn {gepland - vandaag_uit} mails niet verstuurd."]
+        if not plan.get("fouten"):
+            # De machine draait sinds 20-08-2026 op Railway, niet meer op de Mac —
+            # dit gaf tot 11-09-2026 nog het oude, inmiddels foute vermoeden ("Mac
+            # stond uit") terwijl de echte oorzaak (klantenlijst niet te lezen)
+            # alleen op stdout stond, dat Daniel nooit ziet. Zonder een fout in
+            # "Fouten vandaag" hierboven is de oorzaak nu echt onbekend, dus zeg dat.
+            regels[-1] += (" Geen bekende oorzaak hierboven — check de Railway-logs "
+                            "van vandaag voor wat er precies misging.")
     if bounces > max(3, totaal // 10):
         regels += ["", "Veel bounces. Dat is slecht voor je domein — laat de lijst "
                        "nakijken voordat je verder mailt."]
