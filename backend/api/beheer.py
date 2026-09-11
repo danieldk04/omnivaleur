@@ -318,6 +318,8 @@ def _klanten() -> dict:
         klant = a["user_id"]
         info = adressen.get(klant, {})
         online = _tijd(hartslag.get(klant))
+        groepen = groepen_per_klant.get(klant) or {}
+        top_groepen = sorted(groepen, key=lambda g: -groepen[g])
         lijst.append({
             "user_id": klant,
             "email": info.get("email") or "(adres onbekend)",
