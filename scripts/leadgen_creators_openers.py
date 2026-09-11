@@ -152,7 +152,28 @@ def _genereer(client, naam: str, cijfers: dict) -> tuple[str, str] | None:
     if not m_opener or not m_fit:
         print(f"  !! onverwacht antwoordformaat voor {naam}: {tekst[:200]!r}")
         return None
-    return m_opener.group(1).strip(), m_fit.group(1).strip()
+    opener = _opschonen_opener(m_opener.group(1).strip())
+    fit_reason = _opschonen_fit(m_fit.group(1).strip())
+    return opener, fit_reason
+
+
+def _opschonen_opener(opener: str) -> str:
+    """Haalt een eventuele aanhef weg die het model er toch voor plakte."""
+    opener = re.sub(r"^(hi|hoi|hey)\s+[\w' ]{1,25},\s*", "", opener, flags=re.I).strip()
+    if opener and not opener[0].isupper():
+        opener = opener[0].upper() + opener[1:]
+    if opener and opener[-1] not in ".!?":
+        opener += "."
+    return opener
+
+
+def _opschonen_fit(fit_reason: str) -> str:
+    """Fragment na 'omdat': kleine letter, geen punt, geen dubbele 'fit'-vermelding."""
+    fit_reason = re.sub(r",?\s*en dat maakt je een perfecte fit[^.]*\.?$", "", fit_reason, flags=re.I).strip()
+    fit_reason = fit_reason.rstrip(".")
+    if fit_reason:
+        fit_reason = fit_reason[0].lower() + fit_reason[1:]
+    return fit_reason
 
 
 def _zet_concept(page_id: str, tekst: str) -> None:
