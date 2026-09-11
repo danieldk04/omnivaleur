@@ -340,6 +340,17 @@ def _klanten() -> dict:
         })
     lijst.sort(key=lambda r: (volgorde.get(r["status"], 9), -r["live"]))
 
+    # Wat verkopen je échte klanten (proef + betalend), niet alle accounts.
+    # Eén klant telt mee bij elke groep waar hij iets in heeft staan, dus de
+    # som van deze tellingen kan hoger zijn dan het klantenaantal — dat is
+    # geen fout, dat zijn klanten die in meerdere categorieën zitten.
+    categorie_klanten: dict[str, int] = {}
+    for r in lijst:
+        if r["status"] not in ("trialing", "active"):
+            continue
+        for g in (groepen_per_klant.get(r["user_id"]) or {}):
+            categorie_klanten[g] = categorie_klanten.get(g, 0) + 1
+
     return {
         "totaal": len(abos),
         "accounts_zonder_abo": max(0, len(adressen) - len(abos)),
@@ -349,6 +360,10 @@ def _klanten() -> dict:
         "actief_7d": len(actief),
         "extensies_online": sum(1 for r in lijst if r["extensie_online"]),
         "klanten": lijst,
+        "categorieen": sorted(
+            ({"groep": g, "klanten": n} for g, n in categorie_klanten.items()),
+            key=lambda x: -x["klanten"],
+        ),
     }
 
 
