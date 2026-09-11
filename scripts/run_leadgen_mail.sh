@@ -9,6 +9,12 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
+if [ -f .env ]; then
+  set -a
+  source .env
+  set +a
+fi
+
 export NOTION_TOKEN="$(security find-generic-password -a notion -s omnivaleur-notion-token -w 2>/dev/null || true)"
 export MAIL_PASS="$(security find-generic-password -a daniel@omnivaleur.nl -s omnivaleur-leadgen-mail -w 2>/dev/null || true)"
 export MAIL_HOST="${MAIL_HOST:-smtp.zoho.eu}"
