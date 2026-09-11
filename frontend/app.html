@@ -4601,6 +4601,40 @@ const CATEGORIE_GROEP_LABEL = { antiek: 'Antiques & Art', muziek: 'Music', dames
   heren: "Men's", kinderen: 'Kids', unisex: 'Unisex', games: 'Games',
   electronics: 'Electronics', sieraden: 'Jewellery', wonen: 'Home & Garden' };
 let _categorieNamen = null;
+let _categorieGroepMap = null;
+let _laatsteVerkoopcategorieNaarGA = null;
+
+// Welke hoofdgroep (Jewellery, Antiques & Art, ...) een itemcategorie is,
+// voor het GA-gebruikersprofiel hieronder.
+function categorieGroep(code) {
+  if (!_categorieGroepMap) {
+    _categorieGroepMap = new Map();
+    for (const [groep, lijst] of Object.entries(CATEGORIES || {})) {
+      for (const [val] of lijst) _categorieGroepMap.set(val, groep);
+    }
+  }
+  return _categorieGroepMap.get(String(code || '').trim()) || null;
+}
+
+// GA weet uit zichzelf niets over wat een klant verkoopt — dat staat alleen in
+// zijn artikelen. Eén keer per wijziging in de itemlijst sturen we de hoofdgroep
+// waar hij de meeste artikelen in heeft als gebruikerseigenschap mee, zodat het
+// dashboard "Omnivaleur gebruik" daarop kan filteren.
+function meldVerkoopcategorieAanGA(items) {
+  if (typeof gtag !== 'function') return;
+  const telling = {};
+  for (const item of items) {
+    const groep = categorieGroep(item.category);
+    if (groep) telling[groep] = (telling[groep] || 0) + 1;
+  }
+  const groepen = Object.keys(telling);
+  if (!groepen.length) return;
+  groepen.sort((a, b) => telling[b] - telling[a]);
+  const label = CATEGORIE_GROEP_LABEL[groepen[0]] || groepen[0];
+  if (label === _laatsteVerkoopcategorieNaarGA) return;
+  _laatsteVerkoopcategorieNaarGA = label;
+  gtag('set', 'user_properties', { verkoopt_categorie: label });
+}
 
 function categorieNaam(code) {
   if (!_categorieNamen) {
