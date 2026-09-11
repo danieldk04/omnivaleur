@@ -4638,6 +4638,15 @@ def tick(args) -> None:
             plan["gedaan"] += gedaan
             _save_plan(plan)
         else:
+            if klantenlijst_kapot:
+                # Dit is precies het lek dat op 9 en 10 september twee dagen op rij
+                # nul mails opleverde zonder dat het avondbericht ooit zei waarom:
+                # is_klant() blokkeert dan IEDEREEN (terecht, zie is_klant), maar
+                # _wachtrij() komt dan gewoon leeg terug en dat ziet er identiek uit
+                # als "niemand was aan de beurt". Voortaan staat de echte reden erbij.
+                plan.setdefault("fouten", []).append(
+                    "klantenlijst niet te lezen, dus is_klant() behandelt iedereen "
+                    f"als klant en ging er expres niets uit: {klantenlijst_kapot}")
             plan["gedaan"] = verlopen      # niemand beschikbaar: slot laten vervallen
             _save_plan(plan)
 
