@@ -43,16 +43,22 @@ geen content). Baseer je tekst uitsluitend op die cijfers. Verzin NOOIT iets ove
 een specifieke video, post, merk, product of levensverhaal — dat mag alleen als het
 letterlijk in de input staat, en dat staat het hier nooit.
 
-Schrijf twee zinnen:
-1. OPENER: één zin die de creator aanspreekt op basis van de cijfers (bijvoorbeeld
-   het bereik of het aantal video's), in een losse, persoonlijke toon — geen
-   marketingtaal, geen "dat is precies het soort bewijs dat overtuigt"-achtige zinnen.
-2. FIT: één zin die invult waarom deze creator "een perfecte fit" is voor een
-   betaalde samenwerking, gebaseerd op diezelfde cijfers.
+Schrijf twee stukken tekst die in een vaste sjabloonmail worden geplakt, dus
+schrijf GEEN volledige, zelfstandige zinnen met hoofdletter en punt — het zijn
+losse fragmenten die al in een grotere zin vallen.
+
+1. OPENER wordt gevolgd door: "Ik werk aan Omnivaleur, ..." — schrijf dus één
+   fragment dat op zichzelf kan staan vóór die zin, zonder aanhef ("Hi ..."),
+   zonder hoofdletter nodig, over het bereik of aantal video's van de creator.
+   Losse, persoonlijke toon, geen marketingtaal.
+2. FIT vult de zin aan: "ik denk dat je een perfecte fit bent omdat ___." —
+   schrijf dus een fragment dat na "omdat" past, met kleine letter beginnend,
+   ZONDER punt aan het einde, en herhaal het woord "fit" of "perfecte fit"
+   niet nog eens (dat staat al in de zin ervoor).
 
 Antwoord EXACT in dit formaat, niets ervoor of erna:
-OPENER: <zin>
-FIT: <zin>"""
+OPENER: <fragment>
+FIT: <fragment>"""
 
 TEMPLATE = """Hi {voornaam},
 
