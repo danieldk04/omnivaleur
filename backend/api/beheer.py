@@ -332,6 +332,7 @@ def _klanten() -> dict:
             "laatste_login": info.get("laatste_login"),
             "aangemeld": info.get("aangemeld"),
             "artikelen": items_per_klant.get(klant, 0),
+            "categorie": ", ".join(top_groepen[:2]) if top_groepen else "—",
             "live": live_per_klant.get(klant, 0),
             "verkocht_7d": verkocht_per_klant.get(klant, 0),
             "laatst_actief": actief.get(klant),
