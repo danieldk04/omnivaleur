@@ -615,13 +615,22 @@ function toonKern(d) {
     ? 'De server mag deze tellingen met zijn huidige sleutel niet lezen — daarom streepjes in plaats van nullen. Zet SUPABASE_SERVICE_KEY op Railway om ze terug te krijgen.'
     : 'Uit de database, elke minuut ververst.';
 
+  // Bij dertien klanten is een taartdiagram misleidend precies — een rij tekst
+  // met de aantallen zegt hetzelfde zonder een trend te suggereren die er niet is.
+  const cats = k.categorieen || [];
+  el('klanten-categorieen').innerHTML = cats.length
+    ? `<div class="bij" style="margin:4px 0 12px">Wat proef- en betalende klanten verkopen: `
+      + cats.map(c => `<b>${veilig(c.groep)}</b> (${c.klanten})`).join(', ') + '</div>'
+    : '';
+
   tabel('klanten-tabel',
-    ['Klant', 'Status', 'Proef', 'Artikelen', 'Live', 'Verkocht 7d', 'Laatst actief', 'Laatste login'],
+    ['Klant', 'Status', 'Proef', 'Verkoopt', 'Artikelen', 'Live', 'Verkocht 7d', 'Laatst actief', 'Laatste login'],
     k.klanten || [],
     (r) => `<tr>
       <td>${veilig(r.email)}${r.extensie_online ? ' <span class="stip" style="margin:0" title="extensie online"></span>' : ''}</td>
       <td><span class="merk m-${veilig(r.status)}">${veilig(r.status)}</span></td>
       <td class="num">${r.dagen_over == null ? '—' : (r.dagen_over + ' dgn')}</td>
+      <td>${veilig(r.categorie)}</td>
       <td class="num">${getal(r.artikelen)}</td>
       <td class="num">${getal(r.live)}</td>
       <td class="num">${getal(r.verkocht_7d)}</td>
