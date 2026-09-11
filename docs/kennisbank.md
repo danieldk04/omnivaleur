@@ -17,6 +17,43 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ---
 
+## locatie-uit-preferences
+
+*11-09-2026 — Land en woonplaats van de verkoper komen uit Preferences en worden door de extensie op het zoekertje gezet; de veldnamen zijn live gemeten en per site verschilt alleen het label van de thuisknop*
+
+Sinds 11-09-2026 (extensie 1.0.321) vult Omnivaleur het locatieblok op
+Marktplaats en 2dehands zelf. In Preferences staat "Your location on Marktplaats
+& 2dehands": land, woonplaats, optioneel postcode. Leeg = alles blijft zoals het
+was. De opdracht draagt `location_country`, `location_city` en
+`location_postcode` mee (`locatie()` in backend/services/instellingen.py, gezet
+in alle drie de publicatiepaden), en `vulLocatie()` in
+extension/content/shared.js zet het op het formulier.
+
+**De namen, live afgelezen op 11-09-2026** (zelfde op beide sites, alleen het
+label van de thuisknop verschilt: "België" op 2dehands, "Nederland" op
+Marktplaats):
+
+- `input#syi-address-radio-home` / `input#syi-address-radio-abroad`
+- thuis: `input[name="contactInformation.postCode"]`, voorgevuld uit het account
+- buitenland: `select#country` (249 landen, numerieke values, Nederland = 528)
+  plus `input[name="contactInformation.foreignCity"]`; het postcodeveld
+  verdwijnt dan helemaal uit het formulier
+
+**Why:** daarom kijkt de stap naar het LABEL van de thuisknop en niet naar het
+domein, en daarom is "Buitenland" fout als het ingestelde land het thuisland is:
+dat land staat niet eens in de buitenlandlijst. Zie
+"adresblok-2dehands-buitenland".
+
+**How to apply:** verandert er iets aan deze namen, meet ze dan opnieuw op het
+echte formulier voor je de code aanpast; anders vult de stap stilletjes niets in
+en valt de verkoper terug op de oude weigering. De proef die dat bewaakt is
+`tests/locatie-op-het-formulier-test.js` (zes gevallen plus een voor-en-na tegen
+08db2331). Een volledige proefplaatsing met de hand in een bestuurde browser
+lukt niet: het formulier submit dan niets, ook niet in de gewone stand, dus
+gebruik daarvoor de extensie zelf. Zie "extension-release-bump-version".
+
+---
+
 ## adresblok-2dehands-buitenland
 
 *10-09-2026 — Een 2dehands-account kent alleen een Belgische postcode; het buitenlandadres bestaat alleen op het zoekertje zelf, dus verwijs een Nederlandse verkoper nooit naar zijn accountinstellingen*

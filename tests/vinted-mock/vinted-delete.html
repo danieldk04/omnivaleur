@@ -76,6 +76,19 @@ const GEVALLEN = [
     annuleerTestid: "item-delete-cancelation-button", cookies: "verborgen" },
   { naam: "cookiebanner nog zichtbaar", knop: "Verwijderen", bevestig: "Bevestigen en verwijderen",
     annuleer: "Annuleren", rol: true, cookies: "zichtbaar" },
+  // WAT ER OP 10-09-2026 GEBEURDE NA VERSIE 1.0.319, op dezelfde advertentie.
+  //
+  // De melding somde alleen kopregelknoppen op (logo, berichten, meldingen,
+  // "sell now", favoriet): de artikelpagina stond er, maar de knoppen van het
+  // artikel zelf nog niet. 1.0.319 wachtte tot er "een knop" stond en dat was
+  // meteen waar, dus keek hij te vroeg. Hier komen de artikelknoppen 1,2 sec
+  // na de kopregel, precies zoals Vinted ze opbouwt.
+  { naam: "artikelknoppen komen later", knop: "Verwijderen", bevestig: "Confirm and delete",
+    annuleer: "Cancel", rol: true, testid: "item-delete-button",
+    bevestigTestid: "item-delete-confirmation-button", annuleerTestid: "item-delete-cancelation-button",
+    cookies: "verborgen", laatMs: 1200 },
+  { naam: "menuknop komt later", knop: "Verwijderen", bevestig: "Ja, verwijderen",
+    annuleer: "Annuleren", rol: true, kebab: true, laatMs: 1200 },
 ];
 
 function bouw(geval) {
@@ -114,19 +127,30 @@ function bouw(geval) {
     if (open) open.remove(); else opuit();
   };
 
-  if (geval.kebab) {
-    const menu = document.createElement("button");
-    menu.setAttribute("data-testid", "item-actions-button");
-    menu.textContent = "···";
-    const lade = document.createElement("div");
-    lade.setAttribute("role", "menu");
-    lade.style.display = "none";
-    lade.appendChild(paginaKnop);
-    menu.onclick = () => { lade.style.display = "block"; };
-    p.append(menu, lade);
-  } else {
-    p.append(document.createTextNode("Favoriet  "), paginaKnop);
-  }
+  // De kopregel van Vinted staat er ALTIJD meteen: logo, berichten, meldingen.
+  // Daarom telt "er staat een knop op de pagina" niets: dat is meteen waar,
+  // ook als het artikel zelf nog niet is opgebouwd.
+  const kop = document.createElement("button");
+  kop.setAttribute("data-testid", "header-logo-id");
+  p.appendChild(kop);
+
+  const acties = () => {
+    if (geval.kebab) {
+      const menu = document.createElement("button");
+      menu.setAttribute("data-testid", "item-actions-button");
+      menu.textContent = "···";
+      const lade = document.createElement("div");
+      lade.setAttribute("role", "menu");
+      lade.style.display = "none";
+      lade.appendChild(paginaKnop);
+      menu.onclick = () => { lade.style.display = "block"; };
+      p.append(menu, lade);
+    } else {
+      p.append(document.createTextNode("Favoriet  "), paginaKnop);
+    }
+  };
+  // Vinted bouwt de knoppen van het artikel zelf pas na de kopregel op.
+  if (geval.laatMs) setTimeout(acties, geval.laatMs); else acties();
 
   function opuit() {
     // Het venster wordt — net als bij Vinted — ONDERAAN de body gehangen.
@@ -288,6 +312,170 @@ async function _oudVintedVerwijderen() {
   return { clickedDelete: true, clickedConfirm: true };
 }
 
+// DE CODE VAN 10-09-2026, letterlijk zoals hij verscheept werd (versie 1.0.319).
+// Derde tegenproef. Die repareerde het cookiescherm, maar wachtte alleen nog
+// tot er "een knop" op de pagina stond — en de kopregel van Vinted staat er
+// meteen. Op een artikelpagina die zijn eigen knoppen een tel later opbouwt
+// keek hij dus te vroeg en meldde "Delete control not found". Dat is precies
+// wat de verkoper op 10-09-2026 kreeg, mét de kopregelknoppen in de melding.
+async function _versie319VintedVerwijderen() {
+  const WEG = ["verwijderen", "supprimer", "löschen", "loschen", "delete",
+               "eliminar", "elimina", "usuń", "usun", "ištrinti", "smazat"];
+  const BEVESTIG = [
+    "bevestigen en verwijderen", "ja, verwijderen",
+    "confirmer et supprimer", "supprimer",
+    "bestätigen und löschen", "bestatigen und loschen", "löschen", "loschen",
+    "confirm and delete", "delete", "verwijderen",
+    "confirmar y eliminar", "eliminar", "conferma ed elimina", "elimina",
+    "ja", "yes", "oui",
+  ];
+  const ANNULEER = ["annuleren", "annuler", "abbrechen", "cancel", "cancelar",
+                    "annulla", "terug", "back", "sluiten", "close", "nee", "no", "non"];
+  const TITELS = ["artikel verwijderen", "advertentie verwijderen",
+                  "supprimer l'article", "artikel löschen", "artikel loschen",
+                  "delete item", "eliminar artículo", "elimina l'oggetto"];
+  const VENSTERKEUS = '[role="dialog"], [role="alertdialog"], [aria-modal="true"], '
+                    + '[data-testid*="modal"], [data-testid*="dialog"], .ReactModal__Content';
+  // Cookie- en toestemmingsschermen dragen exact dezelfde kenmerken als een
+  // echt venster (role="dialog", aria-modal="true") en blijven ná wegklikken
+  // gewoon in de pagina staan, onzichtbaar. Op vinted.nl hangt OneTrust als
+  // 179e blok in de body, dus vóór het verwijdervenster dat React er pas later
+  // onderaan bij hangt: "het eerste venster op de pagina" was daardoor ALTIJD
+  // het cookiescherm en nooit het scherm met "Bevestigen en verwijderen".
+  // Daarin staat geen enkele bevestigknop, dus de verwijdering strandde terwijl
+  // de verkoper het venster gewoon open zag staan (gemeten 10-09-2026).
+  const TOESTEMMING = '#onetrust-consent-sdk, #onetrust-banner-sdk, #onetrust-pc-sdk, '
+                    + '#didomi-host, #usercentrics-root, [id*="cookie" i], [class*="cookie" i], '
+                    + '[id*="consent" i], [class*="consent" i], [id*="didomi" i]';
+
+  // ALLES WAT DEZE FUNCTIE GEBRUIKT MOET HIERBINNEN STAAN.
+  //
+  // Chrome injecteert alleen déze functie in de pagina; de rest van
+  // background.js bestaat daar niet. Stond de hulpfunctie hieronder los, dan
+  // gooide de pagina meteen een ReferenceError en kreeg de verkoper altijd
+  // "Delete control not found" te zien, ongeacht wat er op het scherm stond.
+  // Dat is op 30-08-2026 precies zo misgegaan. tests/test_vinted_verwijderknop.py
+  // bewaakt dat er niets van buiten wordt aangeroepen.
+  const tekst = e => (e.textContent || "").replace(/\s+/g, " ").trim().toLowerCase();
+  const kaal = t => t.replace(/[?!.]+$/, "").trim();
+  const zichtbaar = e => e.offsetParent !== null || e.getClientRects().length > 0;
+  const knoppen = w => [...w.querySelectorAll('button, a, [role="menuitem"], [role="button"]')];
+  const isToestemming = e => !!(e.closest && e.closest(TOESTEMMING));
+  const isFotoKnop = t => /media-select|photo|image/i.test(t || "");
+  const isAnnuleer = e => {
+    const t = kaal(tekst(e));
+    const id = (e.dataset && e.dataset.testid) || "";
+    return ANNULEER.includes(t) || /cancel|cancelation|cancellation/i.test(id);
+  };
+  const isWeg = e => {
+    const id = (e.dataset && e.dataset.testid) || "";
+    if (isAnnuleer(e) || isFotoKnop(id)) return false;
+    return WEG.includes(kaal(tekst(e))) || id.includes("delete");
+  };
+
+  // Wachten zonder klokje.
+  //
+  // Deze functie draait in een tabblad dat de verkoper niet op het scherm heeft.
+  // Chrome rekt daar élke setTimeout op tot minstens een seconde, en zodra dat
+  // tabblad vijf minuten onzichtbaar is nog maar één keer per minuut. Een reeks
+  // korte pauzes werd zo minuten lang: het venster stond op het scherm te
+  // wachten en er gebeurde pas iets zodra de verkoper naar dat tabblad ging.
+  // Een MutationObserver wordt niet geknepen: die meldt zich zodra de pagina
+  // echt verandert. Het klokje bewaakt hier alleen nog de uiterste grens.
+  const wachtOp = (voorwaarde, limietMs = 6000) => new Promise((klaar) => {
+    let af = false;
+    const check = () => { try { return !!voorwaarde(); } catch (_) { return false; } };
+    const stop = (v) => {
+      if (af) return;
+      af = true;
+      try { obs.disconnect(); } catch (_) {}
+      clearTimeout(limiet);
+      klaar(v);
+    };
+    if (check()) return klaar(true);
+    const obs = new MutationObserver(() => { if (check()) stop(true); });
+    try {
+      obs.observe(document.documentElement, { childList: true, subtree: true, attributes: true, characterData: true });
+    } catch (_) {}
+    const limiet = setTimeout(() => stop(check()), limietMs);
+  });
+
+  // Alle vensters die écht van Vinted zijn, jongste eerst: een echt venster
+  // wordt onderaan de body gehangen, dus achteraan in de pagina.
+  const echteVensters = () => [...document.querySelectorAll(VENSTERKEUS)]
+    .filter(v => !isToestemming(v))
+    .reverse();
+
+  const schermbeeld = () => {
+    const uitVensters = echteVensters().flatMap(v => knoppen(v));
+    const lijst = (uitVensters.length ? uitVensters : knoppen(document))
+      .filter(e => zichtbaar(e) && !isToestemming(e));
+    return lijst.slice(-25)
+      .map(e => tekst(e).slice(0, 30) + (e.dataset && e.dataset.testid ? `#${e.dataset.testid}` : ""))
+      .filter(Boolean).join(" | ").slice(0, 400);
+  };
+
+  // De bevestigknop, in volgorde van betrouwbaarheid: eerst het exacte
+  // kenmerk dat Vinted zijn eigen knop geeft, dan pas op tekst binnen een echt
+  // venster, en als laatste de hele pagina van achteren naar voren.
+  const zoekBevestig = (del) => {
+    const bruikbaar = e => e && e !== del && !e.disabled && !isToestemming(e)
+      && !isAnnuleer(e) && !isFotoKnop((e.dataset && e.dataset.testid) || "");
+    const exact = [...document.querySelectorAll('[data-testid="item-delete-confirmation-button"]')]
+      .find(e => bruikbaar(e) && zichtbaar(e));
+    if (exact) return exact;
+    for (const v of echteVensters()) {
+      const k = knoppen(v).reverse()
+        .find(e => bruikbaar(e) && zichtbaar(e) && BEVESTIG.includes(kaal(tekst(e))));
+      if (k) return k;
+    }
+    return knoppen(document).reverse()
+      .find(e => bruikbaar(e) && zichtbaar(e) && BEVESTIG.includes(kaal(tekst(e)))) || null;
+  };
+
+  // 0) WACHTEN TOT DE PAGINA ER ECHT STAAT.
+  //
+  // Vinted bouwt de artikelpagina met JavaScript op. Kijken we te vroeg, dan is
+  // er nog geen enkele knop en heet dat ten onrechte "Delete control not found".
+  await wachtOp(() => knoppen(document).some(e => zichtbaar(e) && !isToestemming(e)), 8000);
+
+  // 1) De knop op de pagina zelf, eventueel achter het menu met de drie puntjes.
+  let del = knoppen(document).find(e => zichtbaar(e) && isWeg(e));
+  if (!del) {
+    const menuknop = document.querySelector(
+      '[data-testid="item-actions-button"], [data-testid="item-menu-button"], ' +
+      '[data-testid="item-page-actions-dropdown-button"], [data-testid*="kebab"], ' +
+      'button[aria-label*="more" i], button[aria-label*="actions" i], button[aria-label*="options" i]'
+    );
+    if (menuknop) {
+      menuknop.click();
+      await wachtOp(() => knoppen(document).some(e => zichtbaar(e) && isWeg(e)), 5000);
+      del = knoppen(document).find(e => zichtbaar(e) && isWeg(e));
+    }
+  }
+  if (!del) return { clickedDelete: false, opScherm: schermbeeld() };
+  del.scrollIntoView({ block: "center" });
+  del.click();
+
+  // 2) Wachten tot de bevestigknop er echt staat. De melding komt van de
+  //    pagina zelf, niet van een klokje, dus dit gaat in een verborgen tabblad
+  //    even snel als op het scherm.
+  await wachtOp(() => !!zoekBevestig(del), 8000);
+  const bevestig = zoekBevestig(del);
+  const venster = echteVensters().find(v => zichtbaar(v)
+    || knoppen(v).some(zichtbaar)
+    || [...v.querySelectorAll("h1,h2,h3,h4,[class*='title' i]")].some(k => TITELS.includes(kaal(tekst(k)))));
+  if (!bevestig) return { clickedDelete: true, clickedConfirm: false, venster: !!venster,
+                          opScherm: schermbeeld() };
+  bevestig.scrollIntoView({ block: "center" });
+  bevestig.click();
+  // Het venster verdwijnt zodra Vinted de verwijdering aanneemt; dat is het
+  // teken om terug te geven, niet een vaste pauze.
+  await wachtOp(() => !zoekBevestig(del), 6000);
+  return { clickedDelete: true, clickedConfirm: true, venster: !!venster,
+           bevestigd: kaal(tekst(bevestig)) };
+}
+
 async function draai(routine) {
   const regels = [];
   let stuk = 0;
@@ -311,12 +499,15 @@ async function draai(routine) {
 
 (async () => {
   const nieuwe = await draai(_mwVintedVerwijderen);
+  const v319 = await draai(_versie319VintedVerwijderen);
   const vorige = await draai(_vorigVintedVerwijderen);
   const oude = await draai(_oudVintedVerwijderen);
   const el = document.getElementById("uitslag");
   el.textContent =
     "NU (extension/background.js)\n" + nieuwe.regels.join("\n")
     + `\n  → ${nieuwe.stuk === 0 ? "alle " + GEVALLEN.length + " goed" : nieuwe.stuk + " stuk"}\n\n`
+    + "TER VERGELIJKING — de code van 10-09-2026 (versie 1.0.319)\n" + v319.regels.join("\n")
+    + `\n  → ${v319.stuk} van de ${GEVALLEN.length} stuk\n\n`
     + "TER VERGELIJKING — de code van 09-09-2026 (versie 1.0.318)\n" + vorige.regels.join("\n")
     + `\n  → ${vorige.stuk} van de ${GEVALLEN.length} stuk\n\n`
     + "TER VERGELIJKING — de code van vóór 30-08-2026\n" + oude.regels.join("\n")
@@ -325,8 +516,9 @@ async function draai(routine) {
         ? "ALLES GOED — en de oude code faalt aantoonbaar op dezelfde schermen"
         : "LET OP: deze proef toont niets aan");
   el.className = (nieuwe.stuk === 0 && oude.stuk > 0) ? "goed" : "fout";
-  window.__uitslag = { nieuw: nieuwe.stuk, vorig: vorige.stuk, oud: oude.stuk,
+  window.__uitslag = { nieuw: nieuwe.stuk, v319: v319.stuk, vorig: vorige.stuk, oud: oude.stuk,
                       gevallen: GEVALLEN.length,
-                      regelsNieuw: nieuwe.regels, regelsVorig: vorige.regels };
+                      regelsNieuw: nieuwe.regels, regelsV319: v319.regels,
+                      regelsVorig: vorige.regels };
 })();
 </script>

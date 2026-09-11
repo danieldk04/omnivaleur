@@ -8522,3 +8522,46 @@ van weken. Nog niet gebouwd, wacht op Daniels beslissing.
 **Openstaand.** Of het Belgische postcodeveld bij opslaan ook echt een
 Nederlandse postcode weigert is niet nagemeten: dat kan alleen door op een echt
 account op te slaan of te publiceren, en dat is niet gedaan.
+
+## 11-09-2026 — Land en woonplaats komen nu uit Omnivaleur zelf
+
+Naar aanleiding van Toon: het adres kan op 2dehands alleen per zoekertje, dus
+vult de extensie het voortaan zelf in. In Preferences staat een nieuw blok "Your
+location on Marktplaats & 2dehands" met land, woonplaats en (optioneel)
+postcode. Leeg laten betekent: alles blijft zoals het was.
+
+Wat er gebeurt op het formulier, met de namen zoals ze live zijn afgelezen
+(11-09-2026, www.2dehands.be/plaats/728/748 en www.marktplaats.nl/plaats/728/748,
+identiek op het label na):
+
+- Woon je in het land van de site, dan blijft de thuisknop staan en vullen we
+  alleen `contactInformation.postCode` als dat veld leeg blijft.
+- Woon je erbuiten, dan klikt de stap `#syi-address-radio-abroad` aan, kiest het
+  land in `select#country` op naam en typt de woonplaats in
+  `contactInformation.foreignCity`. Het postcodeveld verdwijnt dan uit het
+  formulier, dus de oude weigering "postcode leeg" komt niet meer.
+- Staat het land niet in de lijst van die site (België ontbreekt bijvoorbeeld in
+  de buitenlandlijst van 2dehands, want dat is daar het thuisland), dan gaat de
+  knop terug naar thuis: half ingevuld is erger dan niets doen.
+
+**Wat gemeten is.** De echte functie uit shared.js is op het echte 2dehands-
+formulier gedraaid en zette Buitenland + Nederland + Bergen op Zoom, met het
+verborgen veld `contactInformation.country` op 528 (Nederland) — dus React nam
+het over. `tests/locatie-op-het-formulier-test.js` doet zes proeven plus een
+voor-en-na tegen commit 08db2331 (die versie kende de stap niet en weigerde te
+plaatsen). `tests/test_locatie_van_de_verkoper.py` bewaakt de keten van scherm
+tot opdracht, inclusief alle drie de publicatiepaden.
+
+**Wat NIET gelukt is, en waarom dat los staat van deze reparatie.** Een echte
+proefplaatsing afmaken lukte niet: het met de hand samengestelde formulier
+stuurt niets weg als je op "Plaats je zoekertje" drukt. Het klik- en
+submit-event vuren allebei, het voorbeeldscherm toont alles correct (titel,
+prijs, kenmerken, foto), het formulier is HTML5-geldig en er gaat geen enkel
+verzoek uit; React stopt er stil mee. Ter controle hetzelfde geprobeerd met de
+gewone Belgische postcode en zonder buitenlandblok: precies hetzelfde gedrag.
+Het ligt dus niet aan de locatiestap. Het sluitende bewijs is één echte
+plaatsing door de extensie zelf, met 1.0.321 geïnstalleerd.
+
+**Openstaand.** 1.0.321 moet naar de Chrome Web Store
+(dist/omnivaleur-extension-1.0.321.zip), en daarna één echte 2dehands-plaatsing
+bij Toon of bij Revaleur met het buitenlandblok aan.

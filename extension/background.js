@@ -3225,27 +3225,38 @@ async function _mwVintedVerwijderen() {
       .find(e => bruikbaar(e) && zichtbaar(e) && BEVESTIG.includes(kaal(tekst(e)))) || null;
   };
 
-  // 0) WACHTEN TOT DE PAGINA ER ECHT STAAT.
+  // 0) WACHTEN OP DE VERWIJDERKNOP ZELF, niet op "er staat íets".
   //
-  // Vinted bouwt de artikelpagina met JavaScript op. Kijken we te vroeg, dan is
-  // er nog geen enkele knop en heet dat ten onrechte "Delete control not found".
-  await wachtOp(() => knoppen(document).some(e => zichtbaar(e) && !isToestemming(e)), 8000);
+  // Vinted bouwt de artikelpagina met JavaScript op, maar niet in één keer: de
+  // kopregel (logo, berichten, meldingen, "Verkopen") staat er meteen, de
+  // knoppen van het artikel zelf pas een tel later. Wachten tot er "een knop"
+  // staat is daardoor onmiddellijk klaar en zegt niets. Op 10-09-2026 kwam de
+  // melding "Delete control not found" terug met precies en alleen die
+  // kopregelknoppen erin, terwijl advertentie 9419472843 gewoon te verwijderen
+  // was: er werd te vroeg gekeken. Dus wachten op de knop waar het om gaat.
+  // Staat hij er al, dan kost dit niets; staat hij er niet, dan meldt de pagina
+  // zelf wanneer hij komt (geen klokje, dat wordt in een verborgen tabblad
+  // afgeknepen).
+  const menuKeus = '[data-testid="item-actions-button"], [data-testid="item-menu-button"], '
+                 + '[data-testid="item-page-actions-dropdown-button"], [data-testid*="kebab"], '
+                 + 'button[aria-label*="more" i], button[aria-label*="actions" i], '
+                 + 'button[aria-label*="options" i]';
+  const zoekWeg = () => knoppen(document).find(e => zichtbaar(e) && isWeg(e));
+  const zoekMenu = () => document.querySelector(menuKeus);
 
   // 1) De knop op de pagina zelf, eventueel achter het menu met de drie puntjes.
-  let del = knoppen(document).find(e => zichtbaar(e) && isWeg(e));
+  await wachtOp(() => !!zoekWeg() || !!zoekMenu(), 15000);
+  let del = zoekWeg();
   if (!del) {
-    const menuknop = document.querySelector(
-      '[data-testid="item-actions-button"], [data-testid="item-menu-button"], ' +
-      '[data-testid="item-page-actions-dropdown-button"], [data-testid*="kebab"], ' +
-      'button[aria-label*="more" i], button[aria-label*="actions" i], button[aria-label*="options" i]'
-    );
+    const menuknop = zoekMenu();
     if (menuknop) {
       menuknop.click();
-      await wachtOp(() => knoppen(document).some(e => zichtbaar(e) && isWeg(e)), 5000);
-      del = knoppen(document).find(e => zichtbaar(e) && isWeg(e));
+      await wachtOp(() => !!zoekWeg(), 8000);
+      del = zoekWeg();
     }
   }
-  if (!del) return { clickedDelete: false, opScherm: schermbeeld() };
+  if (!del) return { clickedDelete: false, opScherm: schermbeeld(),
+                     aantalKnoppen: knoppen(document).filter(zichtbaar).length };
   del.scrollIntoView({ block: "center" });
   del.click();
 
@@ -4736,10 +4747,48 @@ async function bgDeleteVinted(job, serverUrl) {
     // tegen iemand van wie de advertentie net weg is, en breekt de
     // herplaatsing af: het artikel blijft dan van álle kanten af. Dus: eerst
     // nameten, en pas klagen over de knop als hij er echt nog staat.
+    // TWEEDE ROUTE ALS DE KNOP HET NIET DOET.
+    //
+    // Klikken hangt aan de opmaak van Vinted, en die verandert zonder
+    // aankondiging: elke keer dat hij verschuift staat de herplaatsing stil tot
+    // er weken later een nieuwe extensie bij de verkoper is. Vinted verwijdert
+    // zelf via een eigen adres, POST /api/v2/items/{id}/delete. Dat adres is op
+    // 10-09-2026 nagemeten: het bestaat (403 "access_denied" zonder sessie,
+    // terwijl een verzonnen adres 404 met een foutpagina geeft). Vanuit de
+    // ingelogde pagina gaat de sessie gewoon mee.
+    //
+    // Dit is een tweede kans, geen bewijs: of de advertentie écht weg is beslist
+    // de kast hieronder, net als bij de knop. Lukt het adres niet, dan verandert
+    // er niets aan de melding.
+    let apiPoging = null;
+    if (!clicked?.clickedConfirm) {
+      apiPoging = await execInTab(tabId, async (lid) => {
+        const uitCookie = (naam) => {
+          const m = document.cookie.match(new RegExp("(?:^|; )" + naam + "=([^;]*)"));
+          return m ? decodeURIComponent(m[1]) : "";
+        };
+        const meta = document.querySelector('meta[name="csrf-token"]');
+        const token = (meta && meta.getAttribute("content"))
+          || uitCookie("csrf_token") || uitCookie("XSRF-TOKEN") || "";
+        const kop = { Accept: "application/json", "Content-Type": "application/json" };
+        if (token) kop["X-CSRF-Token"] = token;
+        const anon = uitCookie("anon_id");
+        if (anon) kop["X-Anon-Id"] = anon;
+        try {
+          const r = await fetch(`/api/v2/items/${lid}/delete`,
+                                { method: "POST", headers: kop, credentials: "include", body: "{}" });
+          return { status: r.status, ok: r.ok, token: !!token };
+        } catch (e) { return { status: 0, ok: false, fout: String(e).slice(0, 120) }; }
+      }, [listingId]);
+      console.log(`[Omnivaleur] bgDeleteVinted: de knop lukte niet, tweede route via Vinted's eigen verwijder-adres →`, apiPoging);
+      await sleep(1500);
+    }
+    const tweedeRoute = apiPoging ? ` Tweede route (Vinted's eigen verwijder-adres) gaf ${apiPoging.status}.` : "";
+
     const knopMislukt = !clicked?.clickedDelete
-      ? `Delete control not found on Vinted item page for ID ${listingId} — Vinted may have changed its layout.${opScherm}`
+      ? `Delete control not found on Vinted item page for ID ${listingId} — Vinted may have changed its layout.${opScherm}${tweedeRoute}`
       : !clicked.clickedConfirm
-        ? `Confirm-delete button not found on Vinted for ID ${listingId} — deletion was not confirmed.${opScherm}`
+        ? `Confirm-delete button not found on Vinted for ID ${listingId} — deletion was not confirmed.${opScherm}${tweedeRoute}`
         : "";
 
     // 3) Give Vinted a moment to process + redirect, then verify the item is

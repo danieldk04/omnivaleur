@@ -1366,6 +1366,87 @@ input[type="checkbox"].row-check { width: 15px; height: 15px; cursor: pointer; a
           Marktplaats may still ask for them itself in some categories — then you fill them in there.
         </div>
       </div>
+      <h2 style="font-size:13px;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);margin:26px 0 10px;font-weight:800">Where your listings say you are</h2>
+      <!-- WAAR DE VERKOPER STAAT (11-09-2026).
+           Marktplaats en 2dehands vullen dit blok normaal uit je account op die
+           site, maar dat account kent maar één adresgegeven: een postcode in
+           het formaat van dát land. Nagemeten op een ingelogd 2dehands-account:
+           Profiel > Contactgegevens heeft Naam, Postcode ("1234") en
+           Telefoonnummer, verder niets. Een Nederlandse verkoper op 2dehands.be
+           kan daar dus niets invullen dat klopt, en zijn plaatsing liep vast op
+           een leeg postcodeveld.
+           Op het zoekertje zelf zit de keuze wél: "Je locatie" met België (of
+           op Marktplaats Nederland) tegenover Buitenland, met daarachter een
+           land en een woonplaats. De site onthoudt die keuze niet. Daarom hier:
+           één keer invullen, en wij zetten het op elk formulier. -->
+      <div style="background:var(--card,#fff);border:1px solid var(--border,#e5e7eb);border-radius:12px;padding:16px 18px;margin-bottom:16px">
+        <div style="font-weight:700;margin-bottom:4px">Your location on Marktplaats &amp; 2dehands</div>
+        <div style="font-size:12.5px;color:var(--muted);line-height:1.6;margin-bottom:12px">
+          Both sites put your location on every listing, and they take it from your account there.
+          That account only holds a postcode in that country's own format, so a Dutch seller on
+          2dehands.be has nowhere to put a real address — and the listing gets stuck on an empty postcode.
+          Fill it in once here and we set it on every listing: the country and town when you live abroad
+          from that site, your postcode when you live in the same country.
+          <b>Leave it empty and nothing changes</b> — the form keeps using your account as before.
+        </div>
+        <div style="display:grid;gap:10px;max-width:520px">
+          <div>
+            <label for="locatie-land" style="font-size:13px;font-weight:600">Country</label>
+            <select id="locatie-land" style="width:100%">
+            <option value="">Not set — use my account on the site</option>
+            <option value="Nederland">Nederland</option>
+            <option value="België">België</option>
+            <option value="Duitsland">Duitsland</option>
+            <option value="Frankrijk">Frankrijk</option>
+            <option value="Luxemburg">Luxemburg</option>
+            <option value="Verenigd Koninkrijk">Verenigd Koninkrijk</option>
+            <option value="Spanje">Spanje</option>
+            <option value="Italië">Italië</option>
+            <option value="Portugal">Portugal</option>
+            <option value="Oostenrijk">Oostenrijk</option>
+            <option value="Polen">Polen</option>
+            <option value="Denemarken">Denemarken</option>
+            <option value="Zweden">Zweden</option>
+            <option value="Noorwegen">Noorwegen</option>
+            <option value="Finland">Finland</option>
+            <option value="Ierland">Ierland</option>
+            <option value="Tsjechië">Tsjechië</option>
+            <option value="Zwitserland">Zwitserland</option>
+            <option value="Griekenland">Griekenland</option>
+            <option value="Hongarije">Hongarije</option>
+            <option value="Roemenië">Roemenië</option>
+            <option value="Bulgarije">Bulgarije</option>
+            <option value="Kroatië">Kroatië</option>
+            <option value="Slovenië">Slovenië</option>
+            <option value="Slowakije">Slowakije</option>
+            <option value="Estland">Estland</option>
+            <option value="Letland">Letland</option>
+            <option value="Litouwen">Litouwen</option>
+            <option value="Malta">Malta</option>
+            <option value="Cyprus">Cyprus</option>
+            <option value="IJsland">IJsland</option>
+            </select>
+          </div>
+          <div>
+            <label for="locatie-plaats" style="font-size:13px;font-weight:600">Town or city</label>
+            <input type="text" id="locatie-plaats" maxlength="100" placeholder="Etten-Leur" style="width:100%">
+            <div style="font-size:12px;color:var(--muted);margin-top:3px">
+              Used when your country is not the site's own country — 2dehands then asks for a town instead of a postcode.
+            </div>
+          </div>
+          <div>
+            <label for="locatie-postcode" style="font-size:13px;font-weight:600">Postcode (optional)</label>
+            <input type="text" id="locatie-postcode" maxlength="100" placeholder="4871 AB" style="width:100%">
+            <div style="font-size:12px;color:var(--muted);margin-top:3px">
+              Only used on a site in your own country, and only if that field comes up empty.
+            </div>
+          </div>
+        </div>
+        <div style="display:flex;gap:10px;align-items:center;margin-top:12px">
+          <button class="btn btn-sm btn-primary" onclick="saveLocatie()">Save</button>
+          <span id="locatie-status" style="font-size:12px;color:var(--muted)"></span>
+        </div>
+      </div>
       <h2 style="font-size:13px;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);margin:26px 0 10px;font-weight:800">How you deliver</h2>
       <!-- Verzenden. Stond alleen in de extensie-instellingen, achter een
            rechtermuisknop, en werd daar door niemand gevonden: een verkoper die
@@ -9905,6 +9986,7 @@ async function loadRelistDagen() {
     }
     state.settings = { ...state.settings, ...data };
     toonFabrikant(data);
+    toonLocatie(data);
     const lev = document.getElementById('levering-keuze');
     if (lev) lev.value = data.levering || 'beide';
     const grens = document.getElementById('pakket-grens');
@@ -9987,6 +10069,50 @@ function toonFabrikant(data) {
   // Wie het blok niet meestuurt heeft ook geen ontbrekende velden — dan is de
   // waarschuwing "publiceren staat stil" gewoon niet waar.
   if (waarschuwing) waarschuwing.style.display = (leeg && meesturen) ? 'block' : 'none';
+}
+
+// Waar de verkoper staat. Zie de toelichting bij de kaart in het scherm: dit
+// blok bestaat omdat het account op 2dehands.be alleen een Belgische postcode
+// kent, en een Nederlandse verkoper daar dus niets kwijt kan dat klopt.
+function toonLocatie(data) {
+  const land = document.getElementById('locatie-land');
+  if (land) land.value = data.locatie_land || '';
+  const plaats = document.getElementById('locatie-plaats');
+  if (plaats) plaats.value = data.locatie_plaats || '';
+  const pc = document.getElementById('locatie-postcode');
+  if (pc) pc.value = data.locatie_postcode || '';
+}
+
+async function saveLocatie() {
+  const melding = document.getElementById('locatie-status');
+  const body = {
+    locatie_land: document.getElementById('locatie-land').value.trim(),
+    locatie_plaats: document.getElementById('locatie-plaats').value.trim(),
+    locatie_postcode: document.getElementById('locatie-postcode').value.trim(),
+  };
+  // Een land zonder woonplaats laat het formulier op 2dehands halverwege staan:
+  // "Woonplaats" is daar verplicht zodra je Buitenland kiest. Dan liever hier
+  // zeggen wat er mist dan een advertentie die blijft hangen.
+  if (body.locatie_land && !body.locatie_plaats && !body.locatie_postcode) {
+    melding.textContent = 'Add your town as well — the site asks for it whenever you are abroad.';
+    return;
+  }
+  melding.textContent = 'Saving…';
+  try {
+    const r = await apiFetchRetry(`${API}/api/items/settings`, {
+      method: 'PUT', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+    const data = await parseJsonSafe(r);
+    if (!r.ok) throw new Error(data.detail || `HTTP ${r.status}`);
+    state.settings = { ...state.settings, ...data };
+    toonLocatie(data);
+    melding.textContent = data.locatie_land
+      ? `Saved — every new listing says ${data.locatie_plaats || data.locatie_postcode}, ${data.locatie_land}.`
+      : 'Saved — we leave the location on the form alone.';
+  } catch (e) {
+    melding.textContent = `Could not save: ${e.message}`;
+  }
 }
 
 async function saveFabrikantMeesturen() {

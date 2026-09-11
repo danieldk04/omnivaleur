@@ -73,6 +73,31 @@ FABRIKANT_VELDEN = ("fabrikant_naam", "fabrikant_adres", "fabrikant_email")
 # ingevuld en niets meer geblokkeerd.
 FABRIKANT_MEESTUREN = "fabrikant_meesturen"
 
+# WAAR DE VERKOPER STAAT, ZOALS HET OP HET ZOEKERTJE KOMT (11-09-2026).
+#
+# Marktplaats en 2dehands vullen het contactblok uit het account van de
+# verkoper, maar dat account kent maar één adresgegeven: een postcode in het
+# formaat van dat land. Nagemeten op een ingelogd 2dehands-account (10-09-2026):
+# Profiel > Contactgegevens heeft Naam, Postcode ("1234") en Telefoonnummer,
+# verder niets. Wie in Nederland woont en op 2dehands.be plaatst kan daar dus
+# niets invullen dat klopt.
+#
+# Op het zoekertje zelf zit die keuze wél: "Je locatie" met België (of, op
+# Marktplaats, Nederland) tegenover Buitenland, en bij Buitenland een land uit
+# een lijst plus een woonplaats. 2dehands onthoudt die keuze niet — De Juiste
+# Toon heeft 402 zoekertjes op "Etten-Leur, Nederland" in acht verschillende
+# spellingen, omdat hij het elke keer opnieuw intikt.
+#
+# Daarom staat het hier: de verkoper vult land en woonplaats één keer in, en de
+# extensie zet ze op elk formulier. De postcode is voor het andere geval: woont
+# hij in hetzelfde land als het kanaal, dan hoort er een postcode in plaats van
+# een land en woonplaats, en die vult het formulier normaal zelf uit het
+# account. Is dat veld leeg, dan gebruiken we deze.
+#
+# Leeg laten mag: dan verandert er niets en blijft het formulier doen wat het
+# altijd deed.
+LOCATIE_VELDEN = ("locatie_land", "locatie_plaats", "locatie_postcode")
+
 # Hoe deze verkoper levert. Stond alleen in de extensie-instellingen, waar
 # vrijwel niemand komt: Jaap verzendt uitsluitend, en kreeg bij elke advertentie
 # "Ophalen of Verzenden" — een belofte die hij niet kan waarmaken. Hoort bij het
@@ -107,6 +132,7 @@ STANDAARD = {"relist_dagen": RELIST_DAGEN_STANDAARD, "vinted_groepen": [],
              "auto_relist": True,
              "fabrikant_naam": "", "fabrikant_adres": "", "fabrikant_email": "",
              FABRIKANT_MEESTUREN: True,
+             "locatie_land": "", "locatie_plaats": "", "locatie_postcode": "",
              "levering": "beide", "pakket_grens": 0, "slottekst": ""}
 
 
@@ -134,6 +160,13 @@ def _schoon(rauw: dict | None) -> dict:
             uit[veld] = str(rauw.get(veld) or "").strip()[:255]
     if FABRIKANT_MEESTUREN in rauw:
         uit[FABRIKANT_MEESTUREN] = bool(rauw.get(FABRIKANT_MEESTUREN))
+    # Land, woonplaats en postcode: korte velden, en wat erin staat moet één op
+    # één op het formulier passen. Het land wordt op de site op naam gezocht
+    # ("Nederland"), dus spaties eraf en verder niets veranderen — een
+    # hoofdletterkuur zou "Verenigd Koninkrijk" onvindbaar maken.
+    for veld in LOCATIE_VELDEN:
+        if veld in rauw:
+            uit[veld] = str(rauw.get(veld) or "").strip()[:100]
     if "slottekst" in rauw:
         uit["slottekst"] = str(rauw.get("slottekst") or "").strip()[:SLOTTEKST_MAX]
     lev = str(rauw.get("levering") or "").strip().lower()
@@ -212,6 +245,20 @@ def fabrikant(user_id: str) -> dict:
         "manufacturer_name": s.get("fabrikant_naam") or "",
         "manufacturer_address": s.get("fabrikant_adres") or "",
         "manufacturer_email": s.get("fabrikant_email") or "",
+    }
+
+
+def locatie(user_id: str) -> dict:
+    """Waar deze verkoper staat, in de namen die de extensie op het formulier zet.
+
+    Leeg blok = niets doen. Dat is bewust: wie hier niets invult houdt precies
+    het gedrag dat hij altijd had, namelijk het contactblok zoals het uit zijn
+    account komt. Zie LOCATIE_VELDEN."""
+    s = lees(user_id)
+    return {
+        "location_country": s.get("locatie_land") or "",
+        "location_city": s.get("locatie_plaats") or "",
+        "location_postcode": s.get("locatie_postcode") or "",
     }
 
 

@@ -119,8 +119,11 @@ def test_het_namaakscherm_bestaat_en_zet_de_oude_code_ernaast():
     # De acht schermen die Vinted echt uitserveert.
     for geval in ("vinted.nl", "vinted.fr", "vinted.de", "vinted.com",
                   "zonder role=dialog", "achter het menu", "haar geval",
-                  "cookiescherm weggeklikt", "cookiebanner nog zichtbaar"):
+                  "cookiescherm weggeklikt", "cookiebanner nog zichtbaar",
+                  "artikelknoppen komen later", "menuknop komt later"):
         assert geval in tekst
+    assert "_versie319VintedVerwijderen" in tekst, \
+        "de verscheepte 1.0.319 hoort als tegenproef in het namaakscherm te staan"
     assert "_vorigVintedVerwijderen" in tekst, \
         "zonder de versie van gisteren ernaast bewijst de proef niet dat er iets gerepareerd is"
 
@@ -172,7 +175,17 @@ def test_de_geinjecteerde_routine_staat_helemaal_op_zichzelf():
         f"zet ze erbinnen neer")
 
 
-def test_er_wordt_gewacht_tot_de_pagina_is_opgebouwd():
-    """Vinted bouwt de pagina met JavaScript op. Te vroeg kijken betekent geen
-    enkele knop, en dat heet dan ten onrechte "Delete control not found"."""
-    assert "knoppen(document).some(e => zichtbaar(e) && !isToestemming(e))" in BG
+def test_er_wordt_op_de_verwijderknop_zelf_gewacht():
+    """Wachten tot er "een knop" op de pagina staat zegt niets: de kopregel van
+    Vinted staat er meteen, de knoppen van het artikel pas een tel later. Op
+    10-09-2026 kwam "Delete control not found" terug met alleen kopregelknoppen
+    erin. Er moet dus op de verwijderknop zelf gewacht worden."""
+    assert "await wachtOp(() => !!zoekWeg() || !!zoekMenu(), 15000)" in BG
+    assert "knoppen(document).some(e => zichtbaar(e) && !isToestemming(e))" not in BG
+
+
+def test_er_is_een_tweede_route_als_de_knop_niet_lukt():
+    """Klikken hangt aan de opmaak van Vinted. Lukt de knop niet, dan wordt
+    Vinted's eigen verwijder-adres geprobeerd — de kast blijft het bewijs."""
+    assert "/api/v2/items/${lid}/delete" in BG
+    assert 'method: "POST"' in BG

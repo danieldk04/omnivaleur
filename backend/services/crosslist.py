@@ -1138,8 +1138,13 @@ async def publish_to_platforms(item_id: str, platforms: list[str], user_id: str)
                 # artikel. Zonder deze regel kreeg iemand die uitsluitend
                 # verzendt bij elke advertentie "Ophalen of Verzenden" — een
                 # belofte die hij niet kan waarmaken.
-                from backend.services.instellingen import verzendkeuzes
+                from backend.services.instellingen import verzendkeuzes, locatie
                 payload.update(verzendkeuzes(user_id, payload.get("price")))
+                # Waar de verkoper staat. Zonder dit blok neemt het formulier
+                # het contactblok uit zijn account op die site, en dat kan een
+                # Nederlander op 2dehands.be niet goed zetten: daar past alleen
+                # een Belgische postcode in. Zie LOCATIE_VELDEN.
+                payload.update(locatie(user_id))
             # Create pending listing record first so failed jobs are visible in dashboard
             existing_listing = await _exec(
                 db.table("listings").select("id,status,platform_listing_id,platform_listing_url")

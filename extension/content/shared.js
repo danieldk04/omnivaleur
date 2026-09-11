@@ -1596,6 +1596,110 @@ window.CL = (() => {
     }
   }
 
+  // WAAR DE VERKOPER STAAT (11-09-2026).
+  //
+  // Marktplaats en 2dehands zetten op elk zoekertje een locatie, en die halen ze
+  // uit het account van de verkoper op die site. Dat account kent maar één
+  // adresgegeven: een postcode in het formaat van dát land. Nagemeten op een
+  // ingelogd 2dehands-account: Profiel > Contactgegevens heeft Naam, Postcode
+  // (voorbeeld "1234") en Telefoonnummer, en verder heeft het hele accountmenu
+  // geen adresscherm. Een Nederlandse verkoper op 2dehands.be kan daar dus niets
+  // kwijt dat klopt, en zijn plaatsing liep hier vast op een leeg postcodeveld
+  // (De Juiste Toon, 14 keer tussen 05-09 en 10-09-2026).
+  //
+  // Op het formulier zelf zit die keuze wél, en zo ziet hij eruit (live gemeten
+  // op www.2dehands.be/plaats/728/748 en www.marktplaats.nl/plaats/728/748,
+  // 11-09-2026, allebei identiek op het label na):
+  //   input#syi-address-radio-home    label "België" resp. "Nederland"
+  //   input#syi-address-radio-abroad  label "Buitenland"
+  // Bij thuis: input[name="contactInformation.postCode"], voorgevuld uit het
+  // account. Klik je Buitenland, dan VERDWIJNT dat postcodeveld en komen er twee
+  // lege verplichte velden voor terug: select#country (249 landen, op naam) en
+  // input[name="contactInformation.foreignCity"]. Bij buitenland is er dus geen
+  // postcode, en in de landenlijst van 2dehands ontbreekt België — dat is daar
+  // immers het thuisland.
+  //
+  // Daarom kijken we naar het LABEL van de thuis-knop en niet naar het domein:
+  // dat is wat de site zelf zegt, en het klopt op allebei de kanalen.
+  const LOC_HOME = "syi-address-radio-home";
+  const LOC_ABROAD = "syi-address-radio-abroad";
+
+  function locatieLabel(id) {
+    const lab = document.querySelector(`label[for="${id}"]`);
+    return ((lab && lab.textContent) || "").trim();
+  }
+
+  // "Italie" en "Italië" zijn hetzelfde land. Accenten eraf en kleine letters,
+  // zodat een instelling die door een ander toetsenbord is getikt niet stil in
+  // een verkeerd land eindigt.
+  function zelfdeLand(a, b) {
+    const norm = (x) => String(x || "").trim().toLowerCase()
+      .normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+    return !!norm(a) && norm(a) === norm(b);
+  }
+
+  async function wachtOpElement(selector, ms = 4000) {
+    const eind = Date.now() + ms;
+    for (;;) {
+      const el = qs(selector);
+      if (el) return el;
+      if (Date.now() >= eind) return null;
+      await sleep(150);
+    }
+  }
+
+  // Zet het locatieblok volgens de instelling van de verkoper. Geen instelling =
+  // niets aanraken: dan houdt hij precies het gedrag dat hij altijd had.
+  async function vulLocatie(item) {
+    const land = String((item && item.location_country) || "").trim();
+    const plaats = String((item && item.location_city) || "").trim();
+    const postcode = String((item && item.location_postcode) || "").trim();
+    if (!land && !postcode) return "niet ingesteld";
+
+    const home = document.getElementById(LOC_HOME);
+    const abroad = document.getElementById(LOC_ABROAD);
+    if (!home || !abroad) return "dit formulier heeft geen locatieblok";
+
+    // Woont hij in het land van deze site, dan is Buitenland juist fout: zijn
+    // eigen land staat niet eens in die landenlijst. Dan hoort er een postcode
+    // te staan, en die komt normaal uit het account — alleen als dat veld leeg
+    // blijft vullen we de zijne in.
+    if (!land || zelfdeLand(land, locatieLabel(LOC_HOME))) {
+      if (!home.checked) { home.click(); await sleep(400); }
+      const pc = await wachtOpElement('input[name="contactInformation.postCode"]', 2000);
+      if (pc && !String(pc.value || "").trim() && postcode) {
+        fillInput(pc, postcode);
+        return `eigen land, postcode ${postcode} ingevuld`;
+      }
+      return "eigen land, formulier vult het zelf";
+    }
+
+    if (!abroad.checked) { abroad.click(); await sleep(600); }
+    const sel = await wachtOpElement("select#country", 4000);
+    if (!sel) return "buitenland gekozen, maar de landenlijst kwam niet";
+    // Eerst op de naam precies, en pas daarna op de beste gelijkenis: "Nederland"
+    // lijkt genoeg op "Nederlandse Antillen" om daar per ongeluk in te belanden.
+    const optie = [...sel.options].find((o) => zelfdeLand(o.text, land));
+    if (optie) {
+      const setter = Object.getOwnPropertyDescriptor(window.HTMLSelectElement.prototype, "value").set;
+      setter.call(sel, optie.value);
+      sel.dispatchEvent(new Event("change", { bubbles: true }));
+    } else if (!fillNativeSelect(sel, land)) {
+      // Halverwege blijven staan is erger dan niets doen: "Buitenland" zonder
+      // land is een verplicht veld dat leeg blijft, en dan komt er helemaal geen
+      // advertentie. Terug naar de thuisknop, dan doet het formulier weer wat
+      // het uit zichzelf deed.
+      home.click();
+      await sleep(300);
+      return `"${land}" staat niet in de landenlijst van deze site — locatie ongemoeid gelaten`;
+    }
+    await sleep(300);
+    const stad = await wachtOpElement('input[name="contactInformation.foreignCity"]', 3000);
+    if (stad && plaats) fillInput(stad, plaats);
+    const gekozen = sel.options[sel.selectedIndex] ? sel.options[sel.selectedIndex].text : "?";
+    return `buitenland: ${plaats || "(geen woonplaats)"}, ${gekozen}`;
+  }
+
   // De verzendwijze die de verkoper in de extensie heeft ingesteld. Dit stond
   // hard op "Ophalen of Verzenden": prima voor wie kleding verkoopt en laat
   // ophalen, fout voor wie alleen verzendt. Gemeten geval: een verkoper van
@@ -2554,7 +2658,7 @@ window.CL = (() => {
 
   return {
     sleep, waitUntil, qs, waitForEl, fillInput, fillInputHuman, fillNativeSelect, clickRadioByValue, fillDescription,
-    findFieldByLabel, selectDropdown, fillBrand, fillManufacturer, selectBundleFree,
+    findFieldByLabel, selectDropdown, fillBrand, fillManufacturer, vulLocatie, selectBundleFree,
     selectDelivery, gekozenLevering, selectPakketWaarde, vulHalswijdte, keuzeveldenKort, typBeschrijvingEcht,
     selectPackageSize, uploadPhotos, submitListing, step, closePopup, smartTrunc, fillBidding, zetBieden,
     clog, plaatsBlokkade, dutchColor, kleurKandidaten, kiesMetTerugval, lijstOpties, valueVariants, platteTekst, verifyMpGroupFields, repairMpGroupFields, ensureDescriptionStillFilled, selectCondition, selectIntendedFor, fillBrandField, logMpFields, mpPrijs,

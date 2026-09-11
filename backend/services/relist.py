@@ -52,8 +52,8 @@ def _met_fabrikant(payload: dict, platform: str, user_id: str) -> dict:
     if platform not in ("marktplaats", "2dehands"):
         return payload
     try:
-        from backend.services.instellingen import fabrikant, verzendkeuzes
-        return {**payload, **fabrikant(user_id),
+        from backend.services.instellingen import fabrikant, verzendkeuzes, locatie
+        return {**payload, **fabrikant(user_id), **locatie(user_id),
                 **verzendkeuzes(user_id, payload.get("price"))}
     except Exception:  # noqa: BLE001 — liever plaatsen zonder dan niet plaatsen
         return payload
@@ -688,8 +688,10 @@ async def refresh_listing(item_id: str, platform: str, user_id: str, strategy: s
     from backend.services.crosslist import _last_listed_title
     gepubliceerde_titel = _last_listed_title(db, item_id, platform, item.get("title", ""))
     if platform in ("marktplaats", "2dehands"):
-        from backend.services.instellingen import fabrikant as _fabrikant, verzendkeuzes
+        from backend.services.instellingen import (fabrikant as _fabrikant,
+                                                   verzendkeuzes, locatie as _locatie)
         create_payload.update(_fabrikant(user_id))
+        create_payload.update(_locatie(user_id))
         create_payload.update(verzendkeuzes(user_id, create_payload.get("price")))
         # DE ADVERTENTIE KOMT TERUG IN ZIJN EIGEN CATEGORIE.
         #
