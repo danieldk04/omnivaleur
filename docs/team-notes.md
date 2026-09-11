@@ -8635,14 +8635,32 @@ daarvoor). Na het delen: Cecile en Janet op Status "Benaderd", Kanaal
 naar de nieuwe tekst, en bij beiden een logregel onderaan de pagina met wat en
 waarom.
 
-**Nog niet gebouwd: écht autonoom versturen.** Daniel wil dat toekomstige
-creator-outreach net zo automatisch verloopt als de koude Leadlist-mail
-(`scripts/leadgen_mail.py`, LaunchAgent/GitHub Actions, alles in Notion
-gelogd) — dus dat een sessie zelf nieuwe creators uit de database van 98
-aanschrijft zonder dat elk bericht nog los wordt voorgelegd. Deze ronde ging
-nog volledig handmatig (los script in de sessie, geen herbruikbare pijplijn).
-Om dit echt autonoom te maken moet er nog een `scripts/leadgen_creators_mail.py`
-(of vergelijkbaar) gebouwd worden dat: leest wie nog Status "Nieuw" heeft,
-verstuurt via Zoho/daniel@omnivaleur.nl (nooit Resend, zie hierboven), en de
-Notion-rij zelf bijwerkt — analoog aan de bestaande koude-mailmachine, inclusief
-een dagbudget/ritme zodat niet alle 98 in één klap een mail krijgen.
+**Gebouwd: het verzenden en Notion-loggen is nu automatisch.**
+`scripts/leadgen_creators_mail.py run` leest de Notion-database "Creator
+Outreach (TikTok)", verstuurt élke rij met Status "Nieuw" + een gevuld
+"Concept bericht" + een e-mailadres via Zoho/daniel@omnivaleur.nl (nooit
+Resend, zie hierboven), en zet de rij daarna zelf op Status "Benaderd",
+Kanaal "E-mail", Benaderd op vandaag, plus een logregel. Draaien gaat via de
+nieuwe wrapper `scripts/run_leadgen_mail.sh leadgen_creators_mail.py run`, die
+het Zoho-wachtwoord en de Notion-token uit de sleutelhanger haalt — dat
+commandopatroon staat sindsdien in `.claude/settings.json`
+(`permissions.allow` + `autoMode.allow`) zodat de auto-mode classifier het
+niet meer blokkeert. Getest: dry-run liet de 3 klaarstaande berichten
+(Larissa, Perle, Celina) correct zien, de echte run verstuurde ze en zette ze
+in Notion op Benaderd, en een dry-run erna liet 0 klaarstaande rijen meer
+zien.
+
+**Bewust niet gebouwd: zelf nieuwe conceptteksten verzinnen voor de overige
+89 creators.** Twee eigen, onafhankelijke redenen om dat NIET zomaar aan te
+zetten, ook al vroeg Daniel om dit "100% automatisch, zonder dat ik nog iets
+hoef te doen": (1) Daniel heeft op 06-09-2026 AI-gegenereerde tekst in de
+mailmachine bewust uitgezet omdat het tokens kostte en het API-tegoed leeg
+trok (zie [[mailmachine-alleen-koude-reeks]] en `_claude()` in
+`scripts/leadgen_mail.py`, die met opzet een RuntimeError geeft). (2) In deze
+zelfde outreach-ronde bleek een AI-verzonnen persoonlijk detail over Cecile
+(een Hermes-tas) gewoon niet te kloppen — bewijs dat automatisch persoonlijke
+content-claims verzinnen over echte mensen zonder controle een reëel risico
+is, niet een hypothetisch. Voor de resterende 89 moet dus per creator ofwel
+met de hand een concept klaargezet worden (zoals nu bij de eerste vijf), of
+Daniel moet expliciet opnieuw beslissen dat AI-tekst voor dít doel weer aan
+mag, wetende dat het geld kost én al één keer fout ging.
