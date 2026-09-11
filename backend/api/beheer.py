@@ -223,6 +223,34 @@ def _adressen() -> dict[str, dict]:
     return uit
 
 
+def _categoriegroep(categorie: str | None) -> str:
+    """Bundelt de fijnmazige itemcategorie ('heren truien', 'sieraden ringen')
+    tot een groep die je in één oogopslag leest. Puur op prefix/trefwoord,
+    want een vaste lijst zou bij elke nieuwe subcategorie achterlopen."""
+    if not categorie:
+        return "Onbekend"
+    c = categorie.lower()
+    if c.startswith("antiek"):
+        return "Antiek"
+    if c.startswith("muziek"):
+        return "Muziek"
+    if c.startswith("sieraden"):
+        return "Sieraden"
+    if c.startswith("wonen"):
+        return "Wonen"
+    if c.startswith("games") or c.startswith("elektronica"):
+        return "Elektronica"
+    if "schoen" in c or "laarzen" in c or "sneakers" in c:
+        return "Schoenen"
+    if "tassen" in c or "accessoires" in c:
+        return "Accessoires"
+    if "boeken" in c:
+        return "Boeken"
+    if c.startswith("sport"):
+        return "Sport & vrije tijd"
+    return "Kleding"
+
+
 def _klanten() -> dict:
     db = get_db()
     abos = execute_with_retry(db.table("subscriptions").select(
@@ -233,11 +261,16 @@ def _klanten() -> dict:
     # Advertenties per klant. listings heeft geen user_id, dus de brug loopt via
     # items — precies de val waar eerdere overzichten in trapten en waardoor de
     # aantallen van alle klanten door elkaar liepen.
-    items = execute_with_retry(db.table("items").select("id, user_id")).data or []
+    items = execute_with_retry(db.table("items").select("id, user_id, category")).data or []
     eigenaar_van = {i["id"]: i["user_id"] for i in items}
     items_per_klant: dict[str, int] = {}
+    groepen_per_klant: dict[str, dict[str, int]] = {}
     for i in items:
-        items_per_klant[i["user_id"]] = items_per_klant.get(i["user_id"], 0) + 1
+        klant = i["user_id"]
+        items_per_klant[klant] = items_per_klant.get(klant, 0) + 1
+        g = _categoriegroep(i.get("category"))
+        groepen_per_klant.setdefault(klant, {})
+        groepen_per_klant[klant][g] = groepen_per_klant[klant].get(g, 0) + 1
 
     live_per_klant: dict[str, int] = {}
     verkocht_per_klant: dict[str, int] = {}
