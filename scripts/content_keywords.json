@@ -457,6 +457,14 @@
       "slug": "used-book-reselling-automation",
       "status": "published",
       "priority": 56
+    },
+    {
+      "keyword": "vintage poster reselling automation",
+      "region": "nl",
+      "pillar": "B",
+      "slug": "vintage-poster-reselling-automation",
+      "status": "published",
+      "priority": 57
     }
   ],
   "published": [
@@ -963,6 +971,15 @@
       "action": "created",
       "url_path": "/reseller-tools/used-book-reselling-automation",
       "published_at": "2026-09-10T12:34:27.131736+00:00"
+    },
+    {
+      "keyword": "vintage poster reselling automation",
+      "slug": "vintage-poster-reselling-automation",
+      "region": "nl",
+      "pillar": "B",
+      "action": "created",
+      "url_path": "/reseller-tools/vintage-poster-reselling-automation",
+      "published_at": "2026-09-11T12:32:29.148589+00:00"
     }
   ]
 }
