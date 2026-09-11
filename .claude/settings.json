@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(scripts/run_leadgen_mail.sh *)"
+    ]
+  },
+  "autoMode": {
+    "allow": [
+      "$defaults",
+      "Bash(scripts/run_leadgen_mail.sh *)"
+    ]
+  }
+}
