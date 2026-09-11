@@ -8782,3 +8782,22 @@ met de hand geschreven — deze sessie heeft geen toegang tot de geheugenmap op
 Daniels Mac. `scripts/export_kennisbank.py` bouwt dat bestand opnieuw uit die
 map op, dus zonder een geheugenbestand met dezelfde inhoud verdwijnt de les bij
 de volgende export.
+
+**Aanvulling diezelfde dag — de wachtrij die er al stond.** Egbert vroeg terug:
+"Zijn er acties die ik nog moet doen of klopt zo alles al?" Twee dingen die daar
+horen te staan:
+
+1. Een opdracht die AL in de wachtrij stond draagt nog de kopie van het moment
+   van klikken. `get_pending_jobs` ververst met opzet alleen condition, brand,
+   size, color en material (`_UIT_HET_ARTIKEL`), niet de categorie — zie
+   "wachtrij-draagt-een-oude-kopie". Die oude opdrachten gaan dus nog steeds naar
+   de geraden rubriek. Daarvoor is `scripts/herstel_wachtrij_rubriek.py`: het
+   zoekt per wachtende create-opdracht voor Marktplaats/2dehands zonder
+   `mp_category` de echte rubriek op en zet die erin, en neemt daarna terug wat
+   in een rubriek staat die bij deze verkoper al eens om geld vroeg. Droge proef
+   standaard, `--schrijf` om door te voeren, per gebruiker.
+2. De reparatie staat op de tak `claude/miniatuurgitaar-categorie-if3zug` en NIET
+   op main. Deze sessie mocht alleen naar die tak pushen. Zolang die tak niet in
+   main zit draait er bij Egbert niets van dit alles — de mail die hij gisteren
+   kreeg loopt dus vooruit op de deploy. Samenvoegen met main en daarna de
+   herstelronde draaien is de volgorde.

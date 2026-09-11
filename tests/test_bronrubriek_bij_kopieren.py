@@ -375,5 +375,28 @@ def test_de_melding_vooraf_belooft_geen_teruggenomen_wachtrij():
     assert "We have taken the rest of your queue" in achteraf
 
 
+# ── 6. De herstelronde voor opdrachten die al in de wachtrij stonden ───────
+HERSTEL = (ROOT / "scripts/herstel_wachtrij_rubriek.py").read_text(encoding="utf-8")
+
+
+def test_de_herstelronde_is_standaard_een_droge_proef():
+    """Een ronde die meteen schrijft is precies hoe je een wachtrij sloopt."""
+    assert '"--schrijf", action="store_true"' in HERSTEL
+    for schrijvend in ('db.table("jobs").update({"payload": payload})',
+                       "_stop_wachtrij(db, args.user, platform,"):
+        assert schrijvend in HERSTEL
+        vlak_ervoor = HERSTEL[:HERSTEL.index(schrijvend)][-260:]
+        assert "if args.schrijf:" in vlak_ervoor, (
+            f"{schrijvend} staat niet achter --schrijf")
+
+
+def test_de_herstelronde_raakt_alleen_wachtende_plaatsopdrachten():
+    assert '.eq("status", "pending")' in HERSTEL
+    assert '.eq("action", "create")' in HERSTEL
+    # En vult alleen wat leeg is: een opdracht die de rubriek al draagt blijft
+    # met rust, net als overal elders in deze codebase.
+    assert 'if not (j.get("payload") or {}).get("mp_category")' in HERSTEL
+
+
 if __name__ == "__main__":  # handig bij het sleutelen
     raise SystemExit(pytest.main([__file__, "-q"]))
