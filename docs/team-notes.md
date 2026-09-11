@@ -8664,3 +8664,30 @@ is, niet een hypothetisch. Voor de resterende 89 moet dus per creator ofwel
 met de hand een concept klaargezet worden (zoals nu bij de eerste vijf), of
 Daniel moet expliciet opnieuw beslissen dat AI-tekst voor dít doel weer aan
 mag, wetende dat het geld kost én al één keer fout ging.
+
+**11-09-2026, later diezelfde sessie — Daniel besliste alsnog, met een
+voorwaarde: Sonnet 5, niet Opus, en NOOIT content verzinnen.** Terechte
+correctie: het echte risico was nooit het duurdere model, maar dat het model
+iets over iemands video/bio verzon. Opgelost door de generator informatie te
+ontzeggen in plaats van te vertrouwen op een instructie: `scripts/leadgen_creators_openers.py`
+geeft het model ALLEEN de cijfers die al in Notion staan (gem. views, totaal
+views, verkoopscore, aantal video's) — geen bio, geen video-inhoud — dus kan
+het structureel niets over content verzinnen, met welk model dan ook. Model
+`claude-sonnet-5`, effort low. Voor de 88 van de 89 zonder e-mailadres eerst
+`scripts/leadgen_creators_email.py` gebouwd: TikTok rendert de bio
+server-side in een JSON-blok (`__UNIVERSAL_DATA_FOR_REHYDRATION__`), een
+gewone HTTP GET zonder login volstaat, een e-mailregex op die bio vond 16
+echte adressen uit 89 profielen (de rest heeft geen e-mail in de bio, dus
+blijft onbereikbaar via mail — DM is de enige weg voor hen, en dat is bewust
+niet gebouwd, zie hierboven).
+
+Voor die 16 zijn nu concepten gegenereerd en in Notion gezet (Status blijft
+"Nieuw", "Concept bericht" is gevuld) — NOG NIET verstuurd. Daniel wilde deze
+eerste AI-gegenereerde batch, in tegenstelling tot de eerste vijf handmatige,
+zelf even zien in Notion voor ze de deur uit gaan. Zodra hij akkoord geeft:
+`scripts/run_leadgen_mail.sh leadgen_creators_mail.py run` verstuurt en
+logt ze, precies zoals bij Janet/Cecile/Larissa/Perle/Celina.
+
+Kosten: verwaarloosbaar, ruim onder een euro voor deze 16, en voor alle
+resterende honderd-en-nog-wat zou het in de dollars lopen, niet in de
+tientjes — dat was dus nooit de echte drempel, de contentclaim was het.
