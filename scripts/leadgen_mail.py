@@ -1160,11 +1160,17 @@ def _resend_stuur(msg: EmailMessage) -> None:
     # naar twee adressen (ALARM_NAAR), dus precies de seintjes over wat er
     # klaarligt kwamen zo nooit aan — en de fout stond alleen in het serverlog.
     ontvangers = [a.strip() for a in str(msg["To"] or "").split(",") if a.strip()]
+    # Vanaf opvolgmail 2 is msg multipart/alternative (zie _bericht: add_alternative
+    # voor de open-pixel), en msg.get_content() op zo'n bericht gooit altijd
+    # KeyError('multipart/alternative') — get_content() kent geen multipart-type.
+    # get_body() werkt op beide vormen: het pakt het tekstdeel uit een multipart-
+    # bericht en geeft zichzelf terug als het al gewoon tekst is (mail 1).
+    plat = msg.get_body(preferencelist=("plain",))
     lading = {
         "from": msg["From"],
         "to": ontvangers,
         "subject": msg["Subject"],
-        "text": msg.get_content(),
+        "text": (plat if plat is not None else msg).get_content(),
     }
     koppen = {k: msg[k] for k in ("List-Unsubscribe", "In-Reply-To", "References")
               if msg[k]}
