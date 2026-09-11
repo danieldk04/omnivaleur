@@ -8574,3 +8574,31 @@ echte opdrachten van dezelfde verkoper.
 **Openstaand.** Alleen nog 1.0.321 naar de Chrome Web Store
 (dist/omnivaleur-extension-1.0.321.zip); tot die versie bij Toon binnen is,
 verandert er voor hem niets.
+
+### 11-09-2026 — Creator-deal gewijzigd: lifetime gratis + 20% recurring, oude bounty is uit
+
+Daniel heeft de afspraak met TikTok-creators (zie "09-09-2026 — Influencerdeal
+op prestatiebasis") vervangen. Nieuw, geldig vanaf vandaag:
+
+- **Lifetime gratis en volledige toegang** tot Omnivaleur voor de creator,
+  ongeacht of die zelf nog actief is. Was eerst "gratis zolang ze meedoen".
+- **20% recurring commissie** op elke klant die via hun link betalend klant
+  wordt, zolang die klant blijft betalen. Was eerst een eenmalige bounty van
+  25 euro, pas uitgekeerd na 60 dagen.
+- Het vaste bedrag per video (50-75 euro, max 5 creators, max 375 euro risico)
+  en het stopcriterium na 6 weken blijven ongewijzigd.
+
+**Let op, nog niet gebouwd:** `backend/api/referrals.py` berekent nu alleen de
+oude eenmalige vaste bounty (`rijp * bounty_cents`, zie `overzicht()`). Er is
+geen code die 20% van de doorlopende Stripe-omzet per verwezen klant bijhoudt
+of uitbetaalt. Vóór er een creator écht op deze voorwaarden binnenkomt en gaat
+verdienen, moet dat stuk nog gebouwd worden: per referral de maandelijkse
+Stripe-betaling volgen, 20% berekenen, en een manier om uit te betalen. Tot die
+tijd is de 20%-belofte in de outreach-mails een commitment zonder meetlaag
+erachter.
+
+De zes conceptberichten die al klaarstonden in de Notion "Creator Outreach
+(TikTok)"-database (Perle, Cecile, Larissa, Celina, Janet, XD Vintage) zijn
+bijgewerkt naar de nieuwe voorwaarden en naar Daniels format (aanhef met
+voornaam, expliciet "betaalde campagne", twee bullets, afsluitende vraag). Ook
+de afspraaktekst op de Notion-pagina "Influencer Marketing" is aangepast.
