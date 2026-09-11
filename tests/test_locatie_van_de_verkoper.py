@@ -96,3 +96,22 @@ def test_het_scherm_vraagt_erom_en_slaat_het_op():
     # uit de landenlijst van het 2dehands-formulier gecontroleerd.
     for land in ("Nederland", "België", "Duitsland", "Verenigd Koninkrijk", "Tsjechië"):
         assert f'<option value="{land}">{land}</option>' in APP, land
+
+
+def test_de_payload_krijgt_de_velden_er_echt_bij(monkeypatch):
+    """Niet alleen "de regel staat er", maar: wat er uit de functie komt draagt
+    de locatie. Het herstelpad bouwt zijn opdracht via _met_fabrikant."""
+    import backend.services.instellingen as I
+    import backend.services.relist as R
+
+    monkeypatch.setattr(I, "lees", lambda uid: {**STANDAARD, **TOON})
+    uit = R._met_fabrikant({"title": "Trui", "price": 10}, "2dehands", "wie-dan-ook")
+    assert uit["location_country"] == "Nederland"
+    assert uit["location_city"] == "Etten-Leur"
+    assert uit["location_postcode"] == "4871 AB"
+    assert uit["title"] == "Trui", "de rest van de opdracht mag niet veranderen"
+
+    # Vinted en de andere kanalen kennen dit blok niet; daar hoort het ook niet
+    # in de opdracht te staan.
+    zonder = R._met_fabrikant({"title": "Trui"}, "vinted", "wie-dan-ook")
+    assert "location_country" not in zonder
