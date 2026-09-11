@@ -671,7 +671,8 @@ def _is_afgekapt(kort: str, lang: str) -> bool:
     return bool(k) and l.startswith(k[: max(1, len(k) - 3)])
 
 
-async def vul_item_aan_uit_advertentie(db, item: dict, url: str) -> dict:
+async def vul_item_aan_uit_advertentie(db, item: dict, url: str,
+                                       gelezen_uit: dict | None = None) -> dict:
     """Eén item bijwerken met wat er op zijn eigen advertentiepagina staat.
 
     Bedoeld voor het moment vlak voor een herplaatsing: de advertentie staat dan
@@ -683,6 +684,13 @@ async def vul_item_aan_uit_advertentie(db, item: dict, url: str) -> dict:
 
     Vult NOOIT iets dat al gevuld is, en schrijft niets als de pagina niets
     prijsgeeft. Geeft het bijgewerkte item terug.
+
+    `gelezen_uit` is een lege dict die de aanroeper meegeeft om ALLES te krijgen
+    wat deze ophaalronde heeft gezien, ook wat hier niet in het item past. De
+    categorie is daar het geval van: `items` heeft er geen kolom voor, maar de
+    publicatie erna heeft hem wél nodig. Zonder deze uitgang zou die publicatie
+    dezelfde pagina een tweede keer moeten ophalen — bij een bulk van vijfduizend
+    artikelen vijfduizend keer voor niets.
     """
     if not (url or "").strip():
         return item
@@ -693,6 +701,8 @@ async def vul_item_aan_uit_advertentie(db, item: dict, url: str) -> dict:
     except Exception as e:  # noqa: BLE001 — een mislukte aanvulling mag niets breken
         logger.warning("mp_enrich: aanvullen vanaf %s mislukt: %s", url, e)
         return item
+    if gelezen_uit is not None:
+        gelezen_uit.update(gevonden or {})
     if not gevonden:
         return item
 

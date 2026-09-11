@@ -3069,6 +3069,81 @@ _BETAALDE_RUBRIEK = re.compile(
 )
 
 
+def rubriek_sleutel(payload: dict | None) -> str:
+    """In WELKE rubriek gaat deze opdracht terechtkomen?
+
+    Dit is de naam waarop de rem hierboven groepeert, en hij moet de rubriek van
+    het PLAATSFORMULIER zijn, niet onze eigen indeling. Sinds we vóór het
+    publiceren opzoeken in welke categorie de advertentie van de verkoper zelf
+    staat (zie `rubriek_van_de_bronadvertentie` in crosslist.py), bepaalt die
+    opgezochte categorie het adres: /plaats/{l1}/{l2}. Twee artikelen met
+    dezelfde eigen categorie kunnen daardoor in verschillende rubrieken landen,
+    en twee met een verschillende eigen categorie in dezelfde.
+
+    Zouden we op onze eigen naam blijven groeperen, dan zou een rem op de dure
+    rubriek zowel te veel als te weinig raken. Draagt de opdracht geen
+    opgezochte categorie, dan blijft het bij onze eigen naam — precies zoals het
+    tot nu toe werkte.
+    """
+    cat = (payload or {}).get("mp_category") or {}
+    if cat.get("l1") and cat.get("l2"):
+        return f"mp:{cat['l1']}/{cat['l2']}"
+    return str((payload or {}).get("category") or "").strip().lower()
+
+
+def betaalde_rubrieken(db, user_id: str, platform: str) -> dict[str, str]:
+    """Rubrieken waarvan bij DEZE verkoper bewezen is dat ze geld vragen.
+
+    WAAROM DIT VOORAF MOET (11-09-2026, Egbert Brouwer). De rem op een betalende
+    rubriek werkte tot nu toe alleen achteraf: er moest eerst een zoekertje op
+    "Naar betalen" stranden voordat de rest van die rubriek werd teruggenomen.
+    Bij hem kostte dat per rubriek een mislukking en een rode balk, en bij de
+    volgende bulk begon dat gewoon opnieuw — de wachtrij was leeg, dus er was
+    niets meer om terug te nemen, en de eerste opdracht van die ronde liep weer
+    tegen dezelfde muur.
+
+    Zijn eigen voorstel is het juiste: kijk er van tevoren naar. Wat we al eens
+    hebben zien stranden in een rubriek hoeven we nooit meer te proberen, want
+    een rubriek die geld kost wordt niet vanzelf weer gratis.
+
+    Geeft {sleutel: naam zoals de site hem toont} terug. Bij twijfel leeg: een
+    rem die op een storing dichtvalt houdt gratis zoekertjes tegen.
+    """
+    try:
+        rijen = (db.table("jobs").select("result,payload").eq("user_id", user_id)
+                 .eq("platform", platform).in_("action", ["create", "content_refresh"])
+                 .in_("status", ["error", "cancelled"])
+                 .order("created_at", desc=True).limit(200).execute().data or [])
+    except Exception:  # noqa: BLE001 — een rem mag nooit op een storing dichtvallen
+        return {}
+    uit: dict[str, str] = {}
+    for j in rijen:
+        res = j.get("result") or {}
+        tekst = f"{res.get('error') or ''} {res.get('error_oorspronkelijk') or ''}"
+        # De kanaalbrede betaalmuur is iets anders en heeft zijn eigen rem; die
+        # zegt niets over deze ene rubriek.
+        if _BETAALMUUR.search(tekst) or not _BETAALDE_RUBRIEK.search(tekst):
+            continue
+        payload = j.get("payload") or {}
+        naam = _rubrieknaam(tekst, payload.get("category"))
+        sleutels = {rubriek_sleutel(payload)}
+        # OOK HET ADRES UIT DE FOUTMELDING ZELF (11-09-2026).
+        #
+        # De extensie zet erbij op welke pagina ze bleef staan: 'Still on
+        # /plaats/728/748?title=, knop "Naar betalen"'. Dat is de rubriek waar
+        # het écht op stukliep, en die staat er ook in opdrachten van vóór we de
+        # categorie van de bronadvertentie gingen opzoeken. Zonder deze regel
+        # zou de rem pas gaan werken na de eerste nieuwe mislukking, en dat is
+        # precies de mislukking die we willen voorkomen.
+        adres = re.search(r"/plaats/(\d{1,6})/(\d{1,6})", tekst)
+        if adres:
+            sleutels.add(f"mp:{int(adres.group(1))}/{int(adres.group(2))}")
+        for sleutel in sleutels:
+            if sleutel:
+                uit.setdefault(sleutel, naam)
+    return uit
+
+
 def _kanaal_hard_dicht(db, user_id: str, platform: str) -> bool:
     """Vraagt dit kanaal dit account geld voor een advertentie?
 
@@ -3452,23 +3527,39 @@ def _rubrieknaam(fouttekst: str, rubriek: str | None) -> str:
     return slug[:1].upper() + slug[1:] if slug else ""
 
 
-def _melding_rubriek_vraagt_geld(platform: str, rubriek: str | None) -> str:
+def _melding_rubriek_vraagt_geld(platform: str, rubriek: str | None,
+                                 vooraf: bool = False) -> str:
     """Wat de verkoper leest als één rubriek geld vraagt en de rest gratis blijft.
 
     Bewust een andere tekst dan _melding_kanaal_vraagt_geld: daar staat het hele
     kanaal uit, hier gaat alles buiten deze rubriek gewoon door. Dat verschil
     moet erin staan, anders leest hij "2dehands doet het niet" terwijl er op
     hetzelfde moment zoekertjes van hem online gaan.
+
+    `vooraf` is het geval waarin er nog helemaal niets is geprobeerd: we weten
+    het van een eerdere keer en zetten het zoekertje niet in de rij. Dan mag er
+    niet staan dat we een wachtrij hebben teruggenomen — er wás er geen.
     """
     site = {"marktplaats": "Marktplaats (marktplaats.nl)",
             "2dehands": "2dehands (2dehands.be)"}.get(platform, platform)
     naam = f'"{rubriek}"' if rubriek else "this category"
-    return (
-        f"{site} charges for adverts in {naam}: the site says this is a paid category, and it now "
-        f"puts every next advert there on an order to be paid instead of publishing it. Nothing "
-        f"was published, nothing was ordered, and we never click a payment button for you.\n\n"
+    tweede = (
+        f"We did not queue this one, so it cannot fail on a payment screen and nothing can end up "
+        f"in a shopping basket. Everything you queue for other categories on {site} keeps going as "
+        f"normal."
+    ) if vooraf else (
         f"We have taken the rest of your queue for {naam} back, so it does not fail one item at a "
-        f"time. Everything you have queued for other categories on {site} keeps going as normal.\n\n"
+        f"time. Everything you have queued for other categories on {site} keeps going as normal."
+    )
+    eerste = (
+        f"{site} charges for adverts in {naam}: the site says this is a paid category, and it "
+        + ("put your earlier adverts there on an order to be paid instead of publishing them. "
+           if vooraf else
+           "now puts every next advert there on an order to be paid instead of publishing it. ")
+        + "Nothing was published, nothing was ordered, and we never click a payment button for you."
+    )
+    return (
+        f"{eerste}\n\n{tweede}\n\n"
         f"Want these online anyway? Either place them yourself on {site} and pay per advert, or "
         f"move the items to a category that is free there."
     )
@@ -3676,9 +3767,11 @@ def fail_job(job_id: str, body: dict, user_id: str = Depends(get_current_user)):
             and not _BETAALMUUR.search(fouttekst_nu)
             and _BETAALDE_RUBRIEK.search(fouttekst_nu)):
         try:
-            rubriek = str(((job.get("payload") or {}).get("category") or "")).strip()
+            rubriek = rubriek_sleutel(job.get("payload"))
             reden = _melding_rubriek_vraagt_geld(
-                job["platform"], _rubrieknaam(fouttekst_nu, rubriek) or None)
+                job["platform"],
+                _rubrieknaam(fouttekst_nu,
+                             (job.get("payload") or {}).get("category")) or None)
             body = {**body,
                     "error_oorspronkelijk": body.get("error_oorspronkelijk") or body.get("error"),
                     "error": reden}
@@ -3961,9 +4054,13 @@ def _stop_wachtrij(db, user_id: str, platform: str, reden: str,
     wachtend = db.table("jobs").select("id,item_id,action,payload").eq(
         "user_id", user_id).eq("platform", platform).eq("status", "pending").execute().data or []
     if rubriek is not None:
+        # Op de rubriek van het PLAATSFORMULIER, niet op onze eigen indeling.
+        # Zie rubriek_sleutel: sinds de opgezochte categorie van de verkoper het
+        # adres bepaalt, zeggen twee gelijke eigen namen niet meer dat het om
+        # dezelfde rubriek gaat.
         doel = str(rubriek or "").strip().lower()
         wachtend = [j for j in wachtend
-                    if str(((j.get("payload") or {}).get("category") or "")).strip().lower() == doel]
+                    if rubriek_sleutel(j.get("payload")) == doel]
     if not wachtend:
         return 0
     now = datetime.now(timezone.utc).isoformat()

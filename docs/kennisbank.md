@@ -17,6 +17,66 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ---
 
+## kopieren-kijkt-eerst-waar-de-advertentie-staat
+
+*11-09-2026 — "Bij het kopiëren naar een ander kanaal wordt de categorie van de BRONadvertentie opgezocht; onze geraden categorie is alleen nog de terugval"*
+
+**LET OP, HANDMATIG GESCHREVEN.** Deze les is toegevoegd door een sessie zonder
+toegang tot de geheugenmap op Daniels Mac. `scripts/export_kennisbank.py` bouwt
+dit bestand opnieuw uit die map, dus zonder een geheugenbestand met dezelfde
+inhoud verdwijnt deze les bij de volgende export. Zie team-notes 11-09-2026.
+
+Egbert Brouwer (Papa's Plectrums), 11-09-2026: "De miniatuur gitaartje moeten
+niet in de rubriek gitaren geplaatst worden, maar in: Verzamelen > Muziek,
+Artiesten en Beroemdheden. Het zou beter zijn als er op voorhand gekeken wordt
+met het kopiëren van MP naar 2eHands in welke categorieën de betreffende
+artikelen staan, hiermee voorkom je dat Omnivaleur probeert ze te listen in een
+betaalde categorie."
+
+**Waarom hij gelijk heeft.** Bij het importeren raden we de categorie uit de
+titel, uit onze eigen lijst. Die lijst kent kleding, wonen, antiek, muziek,
+audio, games en sieraden — "Verzamelen" niet. Een miniatuurgitaartje belandt dan
+in Muziek en Instrumenten > Gitaren, en dat is bij hem juist een BETALENDE
+rubriek (zie "betalende-rubriek-is-geen-formulierfout"). De verkeerde rubriek
+kostte hem dus niet alleen vindbaarheid maar zijn hele wachtrij.
+
+Het HERPLAATSEN keek al op de advertentiepagina wat de echte categorie is (sinds
+30-08-2026, na dezelfde klacht van Amanda Haas). Het KOPIËREN naar een ander
+kanaal deed dat niet — daar bleef de geraden categorie staan. Dat is het gat.
+
+**How to apply.** `rubriek_van_de_bronadvertentie()` in
+backend/services/crosslist.py zoekt vóór het klaarzetten van een
+Marktplaats/2dehands-opdracht op in welke categorie de advertentie van de
+verkoper zelf staat, en zet die als `mp_category` in de opdracht. Eerst het
+openbare `/v/`-adres van een lopende advertentie, anders de omweg via de
+openbare zoek-API (`kenmerken_via_zoeken`). Eén ophaalronde per artikel: de
+foto-aanvulling die er toch al was geeft de categorie nu mee terug
+(`gelezen_uit=` op `vul_item_aan_uit_advertentie`). Lukt het niet, dan blijft
+alles bij het oude — een gemiste categorie mag nooit een advertentie kosten.
+
+**De extensie hoefde hier niet voor bijgewerkt te worden.** `mp_category` in de
+opdracht wordt al sinds 1.0.317 gelezen (`mpCategorieVoorPlatform` in
+background.js), en 1.0.317 staat bij klanten geïnstalleerd. Dit is dus een
+serverreparatie die meteen bij iedereen werkt, zonder de Chrome Web Store.
+
+**Twee dingen die hierdoor mee veranderden:**
+
+1. `rubriek_sleutel()` in backend/api/jobs.py: de rem op een betalende rubriek
+   groepeert nu op de rubriek van het PLAATSFORMULIER (`mp:{l1}/{l2}`) en niet
+   meer op onze eigen naam. Twee artikelen met dezelfde geraden naam kunnen na
+   het opzoeken in verschillende rubrieken landen; op onze eigen naam remmen zou
+   dan te veel én te weinig raken.
+2. `betaalde_rubrieken()`, óók in jobs.py: een rubriek die al eens om geld vroeg
+   wordt vooraf herkend, zodat er niets meer in de rij komt dat gegarandeerd op
+   "Naar betalen" strandt. Die lijst leest ook het adres uit de foutmelding zelf
+   ("Still on /plaats/728/748?title="), dus opdrachten van vóór deze reparatie
+   tellen gewoon mee.
+
+Zie "betalende-rubriek-is-geen-formulierfout", "herplaatsen-verliest-advertenties",
+"eerst-recente-wijzigingen-lezen".
+
+---
+
 ## locatie-uit-preferences
 
 *11-09-2026 — Land en woonplaats van de verkoper komen uit Preferences en worden door de extensie op het zoekertje gezet; de veldnamen zijn live gemeten en per site verschilt alleen het label van de thuisknop*

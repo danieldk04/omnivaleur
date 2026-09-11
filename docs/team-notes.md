@@ -8691,3 +8691,94 @@ logt ze, precies zoals bij Janet/Cecile/Larissa/Perle/Celina.
 Kosten: verwaarloosbaar, ruim onder een euro voor deze 16, en voor alle
 resterende honderd-en-nog-wat zou het in de dollars lopen, niet in de
 tientjes — dat was dus nooit de echte drempel, de contentclaim was het.
+
+### 11-09-2026 — Miniatuurgitaren in de verkeerde (en betalende) rubriek: het kopieerpad kijkt nu eerst waar de advertentie staat
+
+Egbert Brouwer (Papa's Plectrums), via Daniel:
+
+> "De miniatuur gitaartje moeten niet in de rubriek gitaren geplaatst worden,
+> maar in: Verzamelen > Muziek, Artiesten en Beroemdheden. Het zou beter zijn
+> als er op voorhand gekeken wordt met het kopiëren van MP naar 2eHands in welke
+> categorieën de betreffende artikelen staan, hiermee voorkom je dat Omnivaleur
+> probeert ze te listen in een betaalde categorie."
+
+Hij heeft bij allebei gelijk, en de tweede zin is meteen de oplossing.
+
+**Wat er misging.** Bij het importeren raden we de categorie uit de titel, uit
+onze eigen lijst. Die lijst kent kleding, wonen, antiek, muziek, audio, games en
+sieraden; "Verzamelen" komt er niet in voor. Een miniatuurgitaartje belandde dus
+in Muziek en Instrumenten > Gitaren — en dat is bij hem precies een van de drie
+rubrieken die geld vragen (zie de notitie van 10-09-2026 over de betalende
+rubriek: 24 mislukkingen, alle 24 in /plaats/728/746, /747 en /748). De geraden
+rubriek kostte hem dus niet alleen vindbaarheid maar zijn hele wachtrij.
+
+Het herplaatsen keek al sinds 30-08-2026 op de advertentiepagina wat de echte
+categorie is (ingebouwd na dezelfde klacht van Amanda Haas). Het kopiëren naar
+een ánder kanaal deed dat niet. Dat gat is nu dicht.
+
+**Wat er nu gebeurt.** `rubriek_van_de_bronadvertentie()` in
+`backend/services/crosslist.py` zoekt vóór het klaarzetten van een
+Marktplaats/2dehands-opdracht op in welke categorie de advertentie van de
+verkoper zelf staat, en zet die als `mp_category` in de opdracht. Eerst via het
+openbare `/v/`-adres van een lopende advertentie, anders via de openbare
+zoek-API (`kenmerken_via_zoeken`). Eén ophaalronde per artikel: de
+foto-aanvulling die er toch al was geeft de categorie nu mee terug
+(`gelezen_uit=` op `vul_item_aan_uit_advertentie`). Mislukt het opzoeken, dan
+blijft alles bij het oude — een gemiste categorie mag nooit een advertentie
+kosten.
+
+Daarbovenop twee remmen die hiermee samenhangen:
+
+* `rubriek_sleutel()` in `backend/api/jobs.py` groepeert de rem op een betalende
+  rubriek nu op de rubriek van het PLAATSFORMULIER (`mp:{l1}/{l2}`) in plaats
+  van op onze eigen naam. Na het opzoeken kunnen twee artikelen met dezelfde
+  geraden naam in verschillende rubrieken landen; op onze naam remmen zou dan
+  zowel te veel als te weinig raken.
+* `betaalde_rubrieken()` maakt de rem vooraf in plaats van achteraf: een rubriek
+  die bij deze verkoper al eens om geld vroeg krijgt geen nieuwe opdracht meer,
+  met een eigen melding die niet doet alsof er een wachtrij is teruggenomen. Die
+  lijst leest óók het adres uit de foutmelding zelf ("Still on
+  /plaats/728/748?title="), dus Egberts mislukkingen van 10-09 tellen gewoon
+  mee en de rem werkt bij hem meteen.
+
+**Belangrijk voor de verwachting: hier is GEEN nieuwe extensie voor nodig.**
+`mp_category` wordt al sinds 1.0.317 uit de opdracht gelezen
+(`mpCategorieVoorPlatform` in `background.js`), en 1.0.317 staat bij klanten
+geïnstalleerd. Dit werkt dus zodra de server live staat, niet pas na de Chrome
+Web Store.
+
+**Wat NIET is gebeurd, met opzet.** Er is geen categorie "Verzamelen > Muziek,
+Artiesten en Beroemdheden" aan onze eigen lijst toegevoegd. De nummers daarvan
+zijn in deze sessie niet te verifiëren (de omgeving heeft geen uitgaand verkeer
+naar marktplaats.nl) en een niet-geverifieerd categorienummer is aantoonbaar
+gevaarlijk: een verkeerd-maar-leesbaar paar rendert een ándere echte categorie
+in plaats van een fout, en dat heeft eerder tot een betalende categorie geleid
+(zie de kennisbank, "HTTP 200 is NOT proof the category is right"). Het hele
+punt van deze reparatie is dat we die nummers niet hoeven te kennen: ze komen
+van de advertentiepagina van Marktplaats zelf.
+
+**Wat de verkoper wél blijft zien.** In het dashboard staat bij zo'n artikel nog
+steeds de geraden rubriek (Gitaren), want daar is geen kolom voor de echte
+categorie. Het zoekertje komt wél in de rubriek van zijn Marktplaats-advertentie.
+Dat verschil rechttrekken vraagt een migratie op `items` en is bewust niet in
+deze beurt gedaan.
+
+**Proeven.** `tests/test_bronrubriek_bij_kopieren.py` (14 stuks): de pagina zelf,
+het opzoeken, het hergebruik van de ophaalronde, de terugval bij een mislukking,
+de volgorde in `publish_to_platforms`, het groeperen op de echte rubriek, de rem
+vooraf en de melding die erbij hoort. Met een tegenbewijs gepind op `f54cbb33`.
+
+**Twee dingen over de omgeving van deze sessie, geen bevindingen over de code:**
+de repo is hier ondiep gekloond (50 commits), dus elke proef die `git show` op
+een ouder commitnummer doet faalt — dat waren 26 mislukkingen vóór én na deze
+wijziging, precies dezelfde. En `backend/content/generator.py` gebruikt een
+drievoudig aangehaalde tekst binnen een f-string; dat mag pas vanaf Python 3.12
+en de container hier draait 3.11, dus vier testbestanden komen er niet doorheen.
+Op de server draait het gewoon, anders zou de app niet starten.
+
+**Voor de kennisbank:** de les staat als
+`kopieren-kijkt-eerst-waar-de-advertentie-staat` in `docs/kennisbank.md`, maar is
+met de hand geschreven — deze sessie heeft geen toegang tot de geheugenmap op
+Daniels Mac. `scripts/export_kennisbank.py` bouwt dat bestand opnieuw uit die
+map op, dus zonder een geheugenbestand met dezelfde inhoud verdwijnt de les bij
+de volgende export.

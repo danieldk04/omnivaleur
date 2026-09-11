@@ -787,6 +787,100 @@ def _kanaal_hard_dicht_gecached(db, user_id: str, platform: str) -> bool:
 _LEVENDE_STATUS = ["active", "hidden", "pending", "relisting"]
 
 
+# Rubrieken die bij deze verkoper geld blijken te vragen, kort onthouden. Een
+# bulk roept publish_to_platforms per artikel aan; zonder cache zou dit bij
+# 5.533 aangevinkte artikelen 5.533 keer dezelfde vraag aan de database zijn.
+_BETAALDE_RUBRIEKEN_CACHE: dict[tuple, tuple] = {}
+
+
+def _betaalde_rubrieken_gecached(db, user_id: str, platform: str) -> dict[str, str]:
+    import time
+    from backend.api.jobs import betaalde_rubrieken
+    sleutel = (user_id, platform)
+    nu = time.monotonic()
+    trof = _BETAALDE_RUBRIEKEN_CACHE.get(sleutel)
+    if trof and nu - trof[1] < _KANSLOOS_CACHE_TTL:
+        return trof[0]
+    uit = betaalde_rubrieken(db, user_id, platform)
+    _BETAALDE_RUBRIEKEN_CACHE[sleutel] = (uit, nu)
+    return uit
+
+
+# Hoe lang het opzoeken van de bronrubriek hoogstens mag duren, per artikel.
+BRONRUBRIEK_SECONDEN = 12
+
+
+async def rubriek_van_de_bronadvertentie(db, item: dict, user_id: str,
+                                         al_gelezen: dict | None = None) -> dict:
+    """In welke categorie staat dit artikel volgens Marktplaats/2dehands ZELF?
+
+    WAAROM DIT ER IS (11-09-2026, Egbert Brouwer / Papa's Plectrums). Hij
+    verkoopt miniatuurgitaartjes. Die horen op Marktplaats in "Verzamelen >
+    Muziek, Artiesten en Beroemdheden", en daar staan ze bij hem ook. Wij zetten
+    ze bij het kopiëren naar 2dehands in Muziek en Instrumenten > Gitaren, omdat
+    de categorie bij het importeren uit de titel was GERADEN. Dat is niet alleen
+    de verkeerde rubriek, het is ook nog een BETALENDE rubriek: zijn zoekertjes
+    strandden daar op "Naar betalen" (zie _BETAALDE_RUBRIEK in jobs.py).
+
+    Zijn eigen woorden: "Het zou beter zijn als er op voorhand gekeken wordt met
+    het kopiëren van MP naar 2eHands in welke categorieën de betreffende
+    artikelen staan." Dat is precies goed, en het is breder dan gitaartjes: onze
+    eigen lijst dekt kleding, wonen, antiek, muziek, audio, games en sieraden, en
+    verkopers zitten daarnaast in Verzamelen, Boeken, Postzegels en Munten. Voor
+    die takken bestaat er bij ons geen goede doos, dus werd het altijd de
+    verkeerde — en op Marktplaats is de categorie achteraf niet te wijzigen.
+
+    Het herplaatsen deed dit al vlak vóór het verwijderen (zie relist.py); het
+    KOPIËREN naar een ander kanaal deed het niet. Dat gat wordt hier gedicht.
+
+    Mislukt het opzoeken, dan komt er een leeg blok terug en blijft alles bij het
+    oude: een gemiste categorie mag nooit een advertentie kosten.
+    """
+    if (al_gelezen or {}).get("l1") and (al_gelezen or {}).get("l2"):
+        return dict(al_gelezen)
+    from backend.services.mp_enrich import advertentie_kenmerken, kenmerken_via_zoeken
+    try:
+        rijen = (await _exec(
+            db.table("listings").select("platform,platform_listing_url,status")
+            .eq("item_id", item["id"])
+            .in_("platform", ["marktplaats", "2dehands"])
+            .in_("status", _LEVENDE_STATUS)
+        )).data or []
+    except Exception as e:  # noqa: BLE001
+        logger.warning("Bronrubriek: advertentierijen van %s niet gelezen: %s", item["id"], e)
+        return {}
+    if not rijen:
+        return {}
+    # Eerst een openbaar advertentieadres (/v/…): dat is één ophaalronde en
+    # niemand hoeft ervoor ingelogd te zijn. Lukt dat niet, dan de omweg via de
+    # openbare zoek-API — een advertentie die WIJ hebben geplaatst kennen we
+    # alleen als /seller/view/{nummer} en die pagina is niet openbaar. Zie
+    # kenmerken_via_zoeken; bij Zilverwebsite stond 398 van de 968 zo.
+    met_adres = [r for r in rijen if "/v/" in (r.get("platform_listing_url") or "")]
+    for rij in met_adres:
+        gevonden = (await advertentie_kenmerken(rij["platform_listing_url"])
+                    ).get("mp_category") or {}
+        if gevonden.get("l1") and gevonden.get("l2"):
+            logger.info("Bronrubriek van %s volgens %s: %s", item["id"],
+                        rij.get("platform"), gevonden.get("l2_naam") or gevonden)
+            return gevonden
+    # Geen openbaar adres, of de pagina gaf niets prijs. Dan de omweg via de
+    # zoek-API, één keer, op het kanaal waar dit artikel het langst staat.
+    for rij in rijen:
+        bron = rij.get("platform") or "marktplaats"
+        titel = await naast_de_lus(
+            lambda b=bron: _last_listed_title(db, item["id"], b, item.get("title") or ""))
+        if not titel:
+            continue
+        gevonden = (await kenmerken_via_zoeken(db, user_id, bron, titel)
+                    ).get("mp_category") or {}
+        if gevonden.get("l1") and gevonden.get("l2"):
+            logger.info("Bronrubriek van %s opgezocht bij %s: %s", item["id"], bron,
+                        gevonden.get("l2_naam") or gevonden)
+            return gevonden
+    return {}
+
+
 def _zelfde_artikel_al_online(db, item: dict, platforms: list[str],
                               al_bekeken: list[str] | None = None) -> dict[str, dict]:
     """Kanalen waar dit artikel al staat onder een ANDER artikel met dezelfde
@@ -881,6 +975,8 @@ async def publish_to_platforms(item_id: str, platforms: list[str], user_id: str)
     #
     # Dus halen we het hier alsnog op, op het moment dat het ertoe doet, en
     # alleen als er iets te halen valt. Bestaande waarden blijven staan.
+    # Ook de categorie waarin de advertentie ECHT staat komt uit deze ronde mee.
+    van_de_advertentie: dict = {}
     if len(item.get("photo_urls") or []) <= 1:
         try:
             bron = (await _exec(
@@ -893,7 +989,8 @@ async def publish_to_platforms(item_id: str, platforms: list[str], user_id: str)
             if bron and bron[0].get("platform_listing_url"):
                 from backend.services.mp_enrich import vul_item_aan_uit_advertentie
                 item = await vul_item_aan_uit_advertentie(
-                    db, item, bron[0]["platform_listing_url"])
+                    db, item, bron[0]["platform_listing_url"],
+                    gelezen_uit=van_de_advertentie)
         except Exception as e:  # noqa: BLE001
             # Lukt het niet, dan publiceren we met wat we hebben. Een advertentie
             # met één foto is beter dan geen advertentie.
@@ -1110,6 +1207,47 @@ async def publish_to_platforms(item_id: str, platforms: list[str], user_id: str)
             beschrijving = _zonder_links(beschrijving)
         return {**base, "title": titel, "description": beschrijving}
 
+    # EERST OPZOEKEN WAAR DE ADVERTENTIE AL STAAT, DAN PAS KOPIEREN.
+    #
+    # Zie rubriek_van_de_bronadvertentie voor het waarom (Egbert Brouwer,
+    # 11-09-2026: miniatuurgitaartjes in Gitaren in plaats van Verzamelen >
+    # Muziek, Artiesten en Beroemdheden — en Gitaren is bij hem een betalende
+    # rubriek). Eén keer per artikel, ook als er twee kanalen op de lijst staan.
+    #
+    # Het opzoeken mag het publiceren nooit tegenhouden: bij een leeg antwoord
+    # gaat alles door zoals voorheen, met onze eigen categorie.
+    mp_rubriek: dict = {}
+    if any(p in ("marktplaats", "2dehands") for p in ext_platforms):
+        try:
+            # Met een harde tijdgrens. Gaat Marktplaats throttelen, dan doet
+            # _pagina drie beleefde herkansingen van samen achttien seconden —
+            # keer vijfduizend artikelen in een bulk is dat een dag wachten. Bij
+            # een tijdgrens valt het terug op onze eigen categorie, precies zoals
+            # het hiervoor werkte, en de rem op een betalende rubriek blijft
+            # gewoon staan.
+            mp_rubriek = await asyncio.wait_for(
+                rubriek_van_de_bronadvertentie(
+                    db, item, user_id, al_gelezen=van_de_advertentie.get("mp_category")),
+                timeout=BRONRUBRIEK_SECONDEN)
+        except asyncio.TimeoutError:
+            logger.warning("Bronrubriek opzoeken duurde te lang voor %s", item_id)
+        except Exception as e:  # noqa: BLE001
+            logger.warning("Bronrubriek opzoeken mislukt voor %s: %s", item_id, e)
+
+    # Rubrieken waarvan bij deze verkoper al is gebleken dat ze geld vragen. Daar
+    # zetten we niets meer in de rij: elke poging kost hem een mislukking en een
+    # rode balk, en een rubriek die geld kost wordt niet vanzelf weer gratis.
+    betaalde_rubriek: dict[str, dict[str, str]] = {}
+    if ext_platforms:
+        for p in ext_platforms:
+            if p not in ("marktplaats", "2dehands"):
+                continue
+            try:
+                betaalde_rubriek[p] = await naast_de_lus(
+                    lambda p=p: _betaalde_rubrieken_gecached(db, user_id, p))
+            except Exception as e:  # noqa: BLE001 — een rem mag publiceren niet breken
+                logger.warning("Betaalde rubrieken niet gelezen voor %s/%s: %s", user_id, p, e)
+
     # Eerst de extensieplatforms in de wachtrij, dán de API-platforms.
     #
     # Andersom kostte het een keer een halve publicatie: Shopify was traag (het
@@ -1134,6 +1272,13 @@ async def publish_to_platforms(item_id: str, platforms: list[str], user_id: str)
             # extensie vult die drie velden in als ze in de opdracht staan.
             if platform in ("marktplaats", "2dehands"):
                 payload.update(fab)
+                # De categorie van de advertentie zelf wint van onze geraden
+                # categorie. Dezelfde afweging als bij het herplaatsen: wat
+                # Marktplaats op de pagina zet is per definitie beter dan wat wij
+                # uit een titel afleiden. De extensie gebruikt dit blok als
+                # /plaats/{l1}/{l2} — zie mpCategorieVoorPlatform.
+                if mp_rubriek:
+                    payload["mp_category"] = mp_rubriek
                 # Levering en pakketgrootte horen bij de verkoper, niet bij het
                 # artikel. Zonder deze regel kreeg iemand die uitsluitend
                 # verzendt bij elke advertentie "Ophalen of Verzenden" — een
@@ -1145,6 +1290,24 @@ async def publish_to_platforms(item_id: str, platforms: list[str], user_id: str)
                 # Nederlander op 2dehands.be niet goed zetten: daar past alleen
                 # een Belgische postcode in. Zie LOCATIE_VELDEN.
                 payload.update(locatie(user_id))
+                # EEN RUBRIEK DIE AL EENS OM GELD VROEG, NIET OPNIEUW PROBEREN.
+                #
+                # De rem hierop werkte alleen achteraf: er moest eerst een
+                # zoekertje stranden op "Naar betalen" voordat de rest van die
+                # rubriek werd teruggenomen. Bij een volgende bulk begon dat
+                # gewoon opnieuw. Hier kijken we er van tevoren naar, precies
+                # zoals Egbert Brouwer voorstelde. Zie betaalde_rubrieken.
+                from backend.api.jobs import (rubriek_sleutel,
+                                              _melding_rubriek_vraagt_geld)
+                duur = betaalde_rubriek.get(platform) or {}
+                sleutel = rubriek_sleutel(payload)
+                if sleutel and sleutel in duur:
+                    results.append({
+                        "platform": platform, "status": "blocked",
+                        "error": _melding_rubriek_vraagt_geld(
+                            platform, duur.get(sleutel) or None, vooraf=True),
+                    })
+                    continue
             # Create pending listing record first so failed jobs are visible in dashboard
             existing_listing = await _exec(
                 db.table("listings").select("id,status,platform_listing_id,platform_listing_url")

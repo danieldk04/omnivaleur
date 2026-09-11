@@ -10,7 +10,7 @@ product verandert. De ontwikkelaar werkt dan zowel dit bestand in de repo als de
 kopie in Drive bij, in dezelfde beurt. Daniel hoeft niets te doen; de Gem leest
 de Drive-kopie de volgende keer opnieuw in.
 
-_Laatst bijgewerkt: 10-09-2026 (2dehands verlengt bijna verlopen zoekertjes nu automatisch)_
+_Laatst bijgewerkt: 11-09-2026 (bij het kopiëren wordt eerst opgezocht in welke categorie de advertentie op Marktplaats staat)_
 
 ---
 
@@ -170,11 +170,21 @@ Contact:
   Moest iemand vóór 8 september steeds opnieuw inloggen, dan is dat opgelost.
 - Loopt de proefperiode af, dan krijg je daar twee dagen van tevoren een mail
   over, en daarna nog een laatste herinnering.
+- De categorie van een zoekertje wordt niet meer geraden. Kopieert Omnivaleur een
+  artikel van Marktplaats naar 2dehands (of andersom), dan wordt eerst opgezocht
+  in welke categorie die advertentie bij de klant zelf staat, en dáár komt het
+  zoekertje ook terecht. Ook als het een categorie is die in het dashboard niet
+  als keuze bestaat, zoals Verzamelen. Lukt dat opzoeken een keer niet, dan valt
+  Omnivaleur terug op de categorie die in het dashboard staat. Let op: in het
+  dashboard blijft die dashboardcategorie staan — die kan dus afwijken van waar
+  het zoekertje echt terechtkomt, en dat is niet erg.
 - Sommige rubrieken op Marktplaats en 2dehands zijn betaalde rubrieken. Je krijgt
   daar een klein aantal gratis advertenties; daarna vraagt de site zelf geld per
   advertentie. Omnivaleur betaalt daar nooit voor: de opdracht stopt vóór de
   betaalknop, er wordt niets besteld, en de rest van de wachtrij voor die ene
   rubriek wordt teruggenomen zodat het niet honderd keer achter elkaar misgaat.
+  Een rubriek die bij deze klant al eens om geld heeft gevraagd, wordt daarna
+  niet meer geprobeerd: daar komt geen nieuwe opdracht meer in de rij.
   Alle andere rubrieken lopen gewoon door. Wil de klant die advertenties tóch
   online, dan plaatst hij ze zelf en betaalt hij per advertentie, of hij zet de
   artikelen in een rubriek die daar wel gratis is. Herkenbaar bij de klant aan
