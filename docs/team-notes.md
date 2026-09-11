@@ -8562,6 +8562,15 @@ gewone Belgische postcode en zonder buitenlandblok: precies hetzelfde gedrag.
 Het ligt dus niet aan de locatiestap. Het sluitende bewijs is één echte
 plaatsing door de extensie zelf, met 1.0.321 geïnstalleerd.
 
-**Openstaand.** 1.0.321 moet naar de Chrome Web Store
-(dist/omnivaleur-extension-1.0.321.zip), en daarna één echte 2dehands-plaatsing
-bij Toon of bij Revaleur met het buitenlandblok aan.
+**Afgerond, met een echte plaatsing (11-09-2026, 07:21 UTC).** De extensie
+plaatste "(873) Rood Ralph Lauren Ritsvest - Jongens XL" op 2dehands
+(m2441354102) en de advertentie staat online met "Bergen op Zoom, Nederland".
+De opdracht in de database droeg `location_country='Nederland'` en
+`location_city='Bergen op Zoom'`; status done. De vier 2dehands-opdrachten
+daarvóór (10-09) hebben `location: None` en zijn allemaal gestrand op "Er stond
+geen adres op het formulier". Dat is de voor-en-na in het echte systeem, met
+echte opdrachten van dezelfde verkoper.
+
+**Openstaand.** Alleen nog 1.0.321 naar de Chrome Web Store
+(dist/omnivaleur-extension-1.0.321.zip); tot die versie bij Toon binnen is,
+verandert er voor hem niets.

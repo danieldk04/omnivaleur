@@ -50,7 +50,10 @@ en valt de verkoper terug op de oude weigering. De proef die dat bewaakt is
 `tests/locatie-op-het-formulier-test.js` (zes gevallen plus een voor-en-na tegen
 08db2331). Een volledige proefplaatsing met de hand in een bestuurde browser
 lukt niet: het formulier submit dan niets, ook niet in de gewone stand, dus
-gebruik daarvoor de extensie zelf. Zie "extension-release-bump-version".
+gebruik daarvoor de extensie zelf. Zo is het ook bewezen: op 11-09-2026 plaatste
+de extensie m2441354102 op 2dehands met "Bergen op Zoom, Nederland" erop, terwijl
+de vier opdrachten van de dag ervóór (zonder locatie in de payload) allemaal
+strandden op "geen adres op het formulier". Zie "extension-release-bump-version".
 
 ---
 
