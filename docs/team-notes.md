@@ -8602,3 +8602,47 @@ De zes conceptberichten die al klaarstonden in de Notion "Creator Outreach
 bijgewerkt naar de nieuwe voorwaarden en naar Daniels format (aanhef met
 voornaam, expliciet "betaalde campagne", twee bullets, afsluitende vraag). Ook
 de afspraaktekst op de Notion-pagina "Influencer Marketing" is aangepast.
+
+### 11-09-2026 — Creator-outreach: eerste twee mails echt verstuurd, Daniel wil dit voortaan autonoom
+
+Daniel keurde Janets conceptbericht goed en verving de Cecile-opener: de oude
+opener ("Vinted-inkomsten die richting een Hermes-tas gingen... precies het
+soort bewijs dat overtuigt") voelde geforceerd en verwees naar een detail dat
+niet overtuigend uit haar content kwam. Vervangen door een verwijzing naar iets
+dat wel klopt: haar TikTok toont een lopende reeks "dag X/365" naar 25.000 euro
+omzet op Vinted. Nieuwe opener: "Dag 170 van je 365 naar 25.000 euro op Vinted
+zag ik voorbijkomen, dat volhouden zie je niet vaak zo openlijk gedeeld."
+
+**Echt verstuurd** (met Daniels expliciete toestemming, na overleg over de weg):
+Janet (info@janetvanmilligen.nl) en Cecile (cecilevindthet@gmail.com), vanaf
+`daniel@omnivaleur.nl` via Zoho SMTP (`smtp.zoho.eu`, wachtwoord uit de
+sleutelhanger, zelfde account als [[koude-mail-autonoom]]).
+
+**Bewust niet via Resend**, ook al gaf Daniel eerst de Resend-sleutel. Zie
+[[railway-blokkeert-smtp]]: Resend verbiedt koude/ongevraagde mail in zijn
+voorwaarden en sluit het account bij klachten zonder waarschuwing, en dat
+account verstuurt ook de wachtwoord- en factuurmail van de hele app. Een
+creator die deze mail als spam markeert mag dus nooit het product raken.
+Koude of eerste-contact-mail hoort altijd via Zoho/daniel@omnivaleur.nl te
+lopen, transactionele appmail via Resend/info@omnivaleur.com.
+
+**Notion bijgewerkt.** De Notion-integratie (dezelfde API-sleutel als de
+Leadlist) had geen toegang tot de pagina "Influencer Marketing" en de database
+"Creator Outreach (TikTok)" — die moesten apart gedeeld worden met de
+integratie voor er iets geschreven kon worden (404 en een lege zoekopdracht
+daarvoor). Na het delen: Cecile en Janet op Status "Benaderd", Kanaal
+"E-mail", Benaderd op 11-09-2026, Cecile's "Concept bericht"-veld bijgewerkt
+naar de nieuwe tekst, en bij beiden een logregel onderaan de pagina met wat en
+waarom.
+
+**Nog niet gebouwd: écht autonoom versturen.** Daniel wil dat toekomstige
+creator-outreach net zo automatisch verloopt als de koude Leadlist-mail
+(`scripts/leadgen_mail.py`, LaunchAgent/GitHub Actions, alles in Notion
+gelogd) — dus dat een sessie zelf nieuwe creators uit de database van 98
+aanschrijft zonder dat elk bericht nog los wordt voorgelegd. Deze ronde ging
+nog volledig handmatig (los script in de sessie, geen herbruikbare pijplijn).
+Om dit echt autonoom te maken moet er nog een `scripts/leadgen_creators_mail.py`
+(of vergelijkbaar) gebouwd worden dat: leest wie nog Status "Nieuw" heeft,
+verstuurt via Zoho/daniel@omnivaleur.nl (nooit Resend, zie hierboven), en de
+Notion-rij zelf bijwerkt — analoog aan de bestaande koude-mailmachine, inclusief
+een dagbudget/ritme zodat niet alle 98 in één klap een mail krijgen.
