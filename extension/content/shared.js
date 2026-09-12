@@ -1038,11 +1038,18 @@ window.CL = (() => {
     }
 
     // Onze eigen maat: eerst een getal (dat is het nauwkeurigst), anders de letter.
+    //
+    // Alleen getallen vanaf 20 tellen mee. Vinted schrijft een damesmaat als
+    // "M / 38 / 10": 38 is de confectiemaat, 10 het Engelse nummer. Wie die 10
+    // meerekent ziet een maat onder de 34 en zet "Maat 34 (XS) of kleiner" bij
+    // een maat 38. Dat is geen leeg veld maar een verkeerd gevuld veld, en dat
+    // is erger. Vandaar ook: pas uitwijken als ÉLK plausibel getal buiten de
+    // lijst valt, niet als er eentje toevallig buiten de boot valt.
     const eigen = _maatSleutels(waarde);
-    if (eigen.getallen.length && laagsteGetal < Infinity) {
-      const g = Math.min(...eigen.getallen);
-      if (g < laagsteGetal) return kleiner ? kleiner.text : "";
-      if (Math.max(...eigen.getallen) > hoogsteGetal) return groter ? groter.text : "";
+    const getallen = eigen.getallen.filter((g) => g >= 20);
+    if (getallen.length && laagsteGetal < Infinity) {
+      if (Math.max(...getallen) < laagsteGetal) return kleiner ? kleiner.text : "";
+      if (Math.min(...getallen) > hoogsteGetal) return groter ? groter.text : "";
       return "";
     }
     if (eigen.letters.length && laagsteLetter < Infinity) {
