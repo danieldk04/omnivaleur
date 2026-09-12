@@ -8787,16 +8787,34 @@ langer dan 4 uur niet gescand is en zet daar een scanopdracht klaar. De extensie
 haalt die op zoals elke andere opdracht, dus er hoeft niets nieuws geïnstalleerd
 te worden.
 
-**Wat er nu gebeurt.** Verdwijnt een advertentie uit de Vinted-kast terwijl het
-artikel elders nog te koop staat, dan gaat de rij op `sold_unconfirmed`: de
-bestaande ja/nee-vraag in het dashboard plus de herinneringsmail. Ja betekent
-overal afmelden via `handle_item_sold`; nee betekent archief. Staat het nergens
-anders meer te koop, dan verandert er niets en gaat het net als vroeger het
-archief in. Van afwezigheid zelf een verkoop maken blijft verboden.
+**Eerst gebouwd als ja/nee-vraag, daarna op verzoek van Daniel autonoom.** De
+eerste versie zette een verdwenen advertentie op `sold_unconfirmed`, met de
+bestaande vraag in het dashboard. Daniel wil geen tussenstap: verkoopt iemand
+iets op Vinted en haalt hij de advertentie daar weg, dan hoort hij zonder
+tussenkomst van Marktplaats en 2dehands af te gaan. Weg uit de kast is dus een
+echte verkoop geworden (`handle_item_sold`).
 
-Proef: `tests/test_vinted_weg_wordt_een_vraag.py`, zakt op de oude code met
-"was: delisted". De scanplanner is droog gedraaid op de echte database: 4
-verkopers zouden een scan krijgen, 1 was al bezig.
+**De rem die daarbij hoort is even belangrijk als de reparatie.** Dit is precies
+de conclusie die ooit levende advertenties overal weghaalde, omdat de scan
+alleen de 96 nieuwste advertenties las en al het oudere "weg" leek. Twee sloten:
+alleen een als volledig gemelde momentopname telt (stond er al), en verdwijnt er
+in één ronde meer dan een tiende van de kast (ondergrens tien), dan gelooft de
+code de momentopname niet, meldt ze niets af en wordt het alsnog de ja/nee-vraag
+(`VERDWIJN_AANDEEL` / `VERDWIJN_ONDERGRENS` in `backend/api/jobs.py`).
+
+Gemeten op Toons echte kast van 1.140 advertenties: drie eruit halen geeft drie
+automatische afmeldingen en nul vragen; dezelfde kast afgeknepen tot de 96
+nieuwste, die zichzelf volledig noemt, geeft 909 verdwenen advertenties, nul
+afmeldingen en geen enkele aangeraakte Marktplaats-advertentie. Proef:
+`tests/test_vinted_weg_wordt_een_vraag.py` (4 gevallen). De scanplanner is droog
+gedraaid op de echte database: 4 verkopers zouden een scan krijgen, 1 was bezig.
+
+**Wat al vastzat is met de hand rechtgezet.** Systeembreed 13 artikelen bij drie
+verkopers waarvan de Vinted-advertentie ooit stil verdween terwijl het artikel
+elders gewoon te koop stond, en waar wij die advertentie niet zelf hadden
+weggehaald. Die zijn alsnog als verkocht geboekt: 27 verwijderopdrachten
+klaargezet voor Marktplaats en 2dehands, plus de Shopify-producten meteen via de
+API. Ze lopen zodra de browser van de verkoper aanstaat.
 
 Openstaand: `tests/test_marktplaats_vertaling.py::test_publiceren_stempelt_zijn_payload_ook`
 en `tests/test_postcode_melding_2dehands.py::test_marktplaats_krijgt_hem_ook`

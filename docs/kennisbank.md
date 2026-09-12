@@ -17,6 +17,30 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ---
 
+## vinted-weg-is-geen-archief
+
+*12-09-2026 — Een advertentie die van Vinted verdwijnt is met de hand weggehaald, meestal na verkoop; stil archiveren liet hem op Marktplaats staan*
+
+Op Vinted verloopt niets vanzelf en een verkochte advertentie blijft gewoon in de
+kast staan (Vinted zet er alleen "gesloten" op). Is een advertentie tóch uit de
+kast verdwenen, dan heeft de verkoper hem zelf weggehaald, en dat doet vrijwel
+iedereen meteen na een verkoop.
+
+Tot 12-09-2026 ging zo'n verdwenen advertentie stil naar `delisted` en gebeurde
+er verder niets. Gemeten bij Toon: 23 op Vinted verkochte en daar verwijderde
+artikelen bleven op Marktplaats staan, en zouden daar voor altijd zijn blijven
+staan. Weg uit de kast telt nu als verkoop en meldt het artikel overal af.
+
+Dat is dezelfde conclusie die ooit levende advertenties overal weghaalde, dus er
+horen twee sloten bij: alleen een als volledig gemelde momentopname telt, en
+verdwijnt er in één ronde meer dan een tiende van de kast (ondergrens tien), dan
+wordt het alsnog een ja/nee-vraag in plaats van een afmelding. Vinted is de
+uitzondering op "verkoop-signaal-hard-vs-zacht": op Marktplaats verdwijnt een
+advertentie ook vanzelf na 30 dagen, op Vinted nooit. Het enige signaal dat er
+is, is de garderobescan, zie "vinted-scan-wordt-vanaf-de-server-gepland".
+
+---
+
 ## vinted-scan-wordt-vanaf-de-server-gepland
 
 *12-09-2026 — De uurwekker in de extensie plande vrijwel nooit een Vinted-scan; die planning staat sinds 12-09-2026 op de server*
@@ -35,27 +59,6 @@ oppikt zoals elke andere opdracht. Geen nieuwe extensieversie nodig.
 
 Bij een volgend "waarom merkt hij die verkoop niet op": kijk eerst of er
 überhaupt een scan gedraaid heeft, niet naar de herkenning zelf.
-
----
-
-## vinted-weg-is-geen-archief
-
-*12-09-2026 — Een advertentie die van Vinted verdwijnt is met de hand weggehaald, meestal na verkoop; stil archiveren liet hem op Marktplaats staan*
-
-Op Vinted verloopt niets vanzelf en een verkochte advertentie blijft gewoon in de
-kast staan (Vinted zet er alleen "gesloten" op). Is een advertentie tóch uit de
-kast verdwenen, dan heeft de verkoper hem zelf weggehaald, en dat doet vrijwel
-iedereen meteen na een verkoop.
-
-Tot 12-09-2026 ging zo'n verdwenen advertentie stil naar `delisted` en gebeurde
-er verder niets. Gemeten bij Toon: 23 op Vinted verkochte en daar verwijderde
-artikelen bleven op Marktplaats staan, en zouden daar voor altijd zijn blijven
-staan. Nu wordt het `sold_unconfirmed` zodra het artikel elders nog te koop
-staat: de ja/nee-vraag in het dashboard, en pas bij "ja" gaat het overal af.
-
-Van afwezigheid zelf een verkoop maken blijft verboden, zie
-"verkoop-signaal-hard-vs-zacht". Voor Vinted is de garderobescan het enige
-signaal dat er is, zie "vinted-scan-wordt-vanaf-de-server-gepland".
 
 ---
 

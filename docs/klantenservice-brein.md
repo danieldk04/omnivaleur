@@ -10,7 +10,7 @@ product verandert. De ontwikkelaar werkt dan zowel dit bestand in de repo als de
 kopie in Drive bij, in dezelfde beurt. Daniel hoeft niets te doen; de Gem leest
 de Drive-kopie de volgende keer opnieuw in.
 
-_Laatst bijgewerkt: 12-09-2026 (verkocht op Vinted: advertentie daar laten staan, dan gaat hij overal vanzelf af)_
+_Laatst bijgewerkt: 12-09-2026 (verkocht op Vinted en daar verwijderd: gaat nu vanzelf van de andere kanalen af)_
 
 ---
 
@@ -374,15 +374,13 @@ iets verkocht is; wij lezen zelf je Vinted-kast uit en zien het daaraan. Haal je
 een verkochte advertentie zelf meteen van Vinted af, dan is er voor ons niets
 meer te zien en blijft hij op Marktplaats staan.
 
-Dat is nu anders. Zodra een advertentie van je Vinted-kast verdwijnt terwijl het
-artikel bij ons nog ergens te koop staat, krijg je er in je dashboard een vraag
-over: verkocht of niet. Zeg je verkocht, dan gaat hij meteen van je andere
-kanalen af. De advertenties van de afgelopen dagen komen bij de eerstvolgende
-controle langs, dus daar hoef je niets voor te doen.
+Dat is nu opgelost. Verdwijnt een advertentie uit je Vinted-kast, dan gaat het
+artikel vanzelf van Marktplaats en je andere kanalen af. Je hoeft er niets voor
+te doen en niets te bevestigen. Ook de advertenties die er nu nog staan komen bij
+de eerstvolgende controle langs.
 
-Nog makkelijker is het om een verkochte advertentie gewoon op Vinted te laten
-staan. Vinted zet er zelf "gesloten" op en dan halen wij hem zonder vragen
-overal weg.
+Eén ding blijft nodig: je browser moet aanstaan met de Omnivaleur-uitbreiding
+erin, want het weghalen bij Marktplaats gebeurt vanuit jouw eigen sessie.
 
 Groetjes,
 Daniel
