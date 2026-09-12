@@ -758,44 +758,53 @@ def _stille_uren(db, user_id: str) -> dict:
     waarom hij al vier keer meldde dat er "niets gebeurt". Dus meten we de stille
     uren er apart bij: hoeveel tijd ging er verloren terwijl er werk lag.
 
-    Alleen een gat telt waarvan we ZEKER weten dat er werk stond te wachten: de
-    opdracht die ná het gat werd opgepakt moet al vóór het gat hebben
-    klaargestaan. Een rustige nacht met een lege rij telt dus niet mee.
+    Alleen een gat telt waarvan we ZEKER weten dat er werk stond te wachten: er
+    moet een opdracht zijn die al vóór het gat klaarstond en pas ná het gat aan
+    de beurt kwam (of nu nog wacht). Een rustige nacht met een lege rij telt dus
+    niet mee.
+
+    Kijk daarvoor NIET naar de opdracht die ná het gat werd opgepakt. Dat lijkt
+    logisch maar is fout: de wachtrij zet een verse klik vooraan (zie
+    _wachtrij_volgorde), dus wat er na een stilstand als eerste doorheen gaat is
+    juist vaak iets wat de verkoper zojuist zelf aanklikte. Op Toons echte rij
+    gaf die kortere weg 0 stille uren terwijl er ruim vier waren.
     """
     leeg = {"idle_seconds": 0, "idle_gaps": 0, "idle_since": None,
             "done_last_hour": 0}
     nu_dt = datetime.now(timezone.utc)
     grens = nu_dt - timedelta(hours=STIL_VENSTER_UREN)
     try:
+        # Ruimer ophalen dan het venster waarover we meten: een opdracht die om
+        # één uur 's nachts klaargezet werd en om elf uur 's ochtends pas liep,
+        # is juist het bewijs dat er werk lag te wachten.
         rijen = (db.table("jobs").select("created_at,claimed_at,done_at,status")
                  .eq("user_id", user_id).in_("action", list(SCHRIJVEND))
-                 .gte("created_at", grens.isoformat())
+                 .gte("created_at", (nu_dt - timedelta(hours=2 * STIL_VENSTER_UREN)).isoformat())
                  .order("created_at").limit(STIL_MONSTERS).execute().data or [])
     except Exception as e:  # noqa: BLE001 — een schatting mag nooit een scherm slopen
         logger.warning("stille uren niet te meten voor %s: %s", user_id, e)
         return leeg
 
-    opgepakt = sorted(
-        [(_parse_ts(r["claimed_at"]), _parse_ts(r["created_at"])) for r in rijen
-         if r.get("claimed_at") and r.get("created_at")],
-        key=lambda t: t[0],
-    )
+    werk = [(_parse_ts(r["created_at"]), _parse_ts(r.get("claimed_at")))
+            for r in rijen if r.get("created_at")]
+
+    def lag_er_werk(van: datetime, tot: Optional[datetime]) -> bool:
+        return any(gemaakt <= van and (opgepakt is None or opgepakt >= (tot or nu_dt))
+                   for gemaakt, opgepakt in werk)
+
+    claims = sorted(t for _, t in werk if t and t >= grens)
     stil, gaten, sinds = 0.0, 0, None
-    for (vorige, _), (start, gemaakt) in zip(opgepakt, opgepakt[1:]):
+    for vorige, start in zip(claims, claims[1:]):
         gat = (start - vorige).total_seconds()
-        if gat > TEMPO_ONDERBREKING and gemaakt <= vorige:
+        if gat > TEMPO_ONDERBREKING and lag_er_werk(vorige, start):
             stil += gat
             gaten += 1
-    # De staart: staat er nú werk te wachten dat al klaarstond toen de laatste
-    # opdracht werd opgepakt, dan loopt het stille gat op dit moment nog door.
-    if opgepakt:
-        laatste = opgepakt[-1][0]
+    # De staart: ligt er nú nog werk dat al klaarstond toen de laatste opdracht
+    # werd opgepakt, dan loopt het stille gat op dit moment nog door.
+    if claims:
+        laatste = claims[-1]
         loopt = (nu_dt - laatste).total_seconds()
-        wacht_al = any(
-            r["status"] == "pending" and _parse_ts(r["created_at"]) <= laatste
-            for r in rijen
-        )
-        if loopt > TEMPO_ONDERBREKING and wacht_al:
+        if loopt > TEMPO_ONDERBREKING and lag_er_werk(laatste, None):
             stil += loopt
             gaten += 1
             sinds = laatste.isoformat()
