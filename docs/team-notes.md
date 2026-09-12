@@ -8756,3 +8756,49 @@ enkel publicatiepad kan er nog omheen. Proef:
 `tests/test_nederlands_blijft_nederlands.py::test_laatste_zeef_vertrouwt_het_stempel_niet`,
 zakt op de oude code met "Engelse advertentie is toch naar Marktplaats
 gestuurd".
+
+## 12-09-2026 — Verkocht op Vinted, daar weggehaald, bleef op Marktplaats staan
+
+Toon meldde het: gisteren 23 verkochte advertenties van Vinted verwijderd, ze
+staan nog gewoon op Marktplaats. Vraag was wanneer die er automatisch af gaan.
+
+**Bewezen antwoord: nooit.** Niet door een storing maar door het ontwerp. Vinted
+kent geen webhook en we pollen er bewust niet op (een verlopen serversessie
+heeft ooit levende advertenties massaal afgemeld), dus het enige signaal is de
+garderobescan vanuit zijn eigen browser. Die scan kent twee gevallen: `is_closed`
+(Vinted's eigen "gesloten"-vlag, telt als verkoop en meldt overal af) en
+"verdwenen". Verdwenen ging stil naar `delisted` op de Vinted-rij, en verder
+gebeurde er niets: geen afmelding, geen vraag, geen mail. Wie een verkochte
+advertentie zelf van Vinted afhaalt, en dat doet vrijwel iedereen, viel dus
+precies in het gat.
+
+Gemeten in de database: bij Toon staan 15 Vinted-rijen op `delisted`, waarvan er
+7 een Marktplaats-advertentie hebben die nog gewoon `active` is. Zijn 23 van
+gisteren staan er nog niet eens tussen, want zijn laatste Vinted-scan is van
+10-09 17:10.
+
+**Tweede bevinding: de scan liep vrijwel nooit.** De extensie heeft een wekker
+die elk uur een scan zou inplannen. Over 02-09 t/m 12-09 kwamen er bij zes
+verkopers samen 32 scanopdrachten binnen; bij Toon drie in negen dagen (04-09,
+05-09, 10-09). Zolang er niet gescand wordt is een Vinted-verkoop sowieso
+onzichtbaar. De wekker zelf repareren kan alleen via de Web Store en dat duurt
+weken, dus de planning is naar de server verhuisd: elke 30 minuten kijkt hij wie
+langer dan 4 uur niet gescand is en zet daar een scanopdracht klaar. De extensie
+haalt die op zoals elke andere opdracht, dus er hoeft niets nieuws geïnstalleerd
+te worden.
+
+**Wat er nu gebeurt.** Verdwijnt een advertentie uit de Vinted-kast terwijl het
+artikel elders nog te koop staat, dan gaat de rij op `sold_unconfirmed`: de
+bestaande ja/nee-vraag in het dashboard plus de herinneringsmail. Ja betekent
+overal afmelden via `handle_item_sold`; nee betekent archief. Staat het nergens
+anders meer te koop, dan verandert er niets en gaat het net als vroeger het
+archief in. Van afwezigheid zelf een verkoop maken blijft verboden.
+
+Proef: `tests/test_vinted_weg_wordt_een_vraag.py`, zakt op de oude code met
+"was: delisted". De scanplanner is droog gedraaid op de echte database: 4
+verkopers zouden een scan krijgen, 1 was al bezig.
+
+Openstaand: `tests/test_marktplaats_vertaling.py::test_publiceren_stempelt_zijn_payload_ook`
+en `tests/test_postcode_melding_2dehands.py::test_marktplaats_krijgt_hem_ook`
+zakken allebei ook op de code van vóór deze wijziging. Die gaan over de
+extensie- en app.html-teksten, niet over verkopen.

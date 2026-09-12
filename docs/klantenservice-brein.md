@@ -10,7 +10,7 @@ product verandert. De ontwikkelaar werkt dan zowel dit bestand in de repo als de
 kopie in Drive bij, in dezelfde beurt. Daniel hoeft niets te doen; de Gem leest
 de Drive-kopie de volgende keer opnieuw in.
 
-_Laatst bijgewerkt: 10-09-2026 (2dehands verlengt bijna verlopen zoekertjes nu automatisch)_
+_Laatst bijgewerkt: 12-09-2026 (verkocht op Vinted: advertentie daar laten staan, dan gaat hij overal vanzelf af)_
 
 ---
 
@@ -361,6 +361,28 @@ Je advertentie staat klaar en er is niets misgegaan aan jouw kant. Bij ons wacht
 hij op de vertaling naar het Nederlands, en zolang die niet werkt zetten we hem
 liever niet online dan in de verkeerde taal. Zodra dat is opgelost gaat hij
 vanzelf alsnog de deur uit; je hoeft niets opnieuw te doen.
+
+Groetjes,
+Daniel
+
+### Verkocht op Vinted, maar staat nog op Marktplaats
+
+Hoi <voornaam>,
+
+Dat klopt en het ligt aan ons, niet aan jou. Vinted laat ons niet weten dat er
+iets verkocht is; wij lezen zelf je Vinted-kast uit en zien het daaraan. Haal je
+een verkochte advertentie zelf meteen van Vinted af, dan is er voor ons niets
+meer te zien en blijft hij op Marktplaats staan.
+
+Dat is nu anders. Zodra een advertentie van je Vinted-kast verdwijnt terwijl het
+artikel bij ons nog ergens te koop staat, krijg je er in je dashboard een vraag
+over: verkocht of niet. Zeg je verkocht, dan gaat hij meteen van je andere
+kanalen af. De advertenties van de afgelopen dagen komen bij de eerstvolgende
+controle langs, dus daar hoef je niets voor te doen.
+
+Nog makkelijker is het om een verkochte advertentie gewoon op Vinted te laten
+staan. Vinted zet er zelf "gesloten" op en dan halen wij hem zonder vragen
+overal weg.
 
 Groetjes,
 Daniel

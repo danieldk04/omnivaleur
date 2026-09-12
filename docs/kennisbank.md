@@ -17,6 +17,48 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ---
 
+## vinted-scan-wordt-vanaf-de-server-gepland
+
+*12-09-2026 — De uurwekker in de extensie plande vrijwel nooit een Vinted-scan; die planning staat sinds 12-09-2026 op de server*
+
+Vinted heeft geen webhook en we pollen er bewust niet op, dus de garderobescan
+vanuit de browser van de verkoper is het enige verkoopsignaal. De extensie had
+daar een `chrome.alarms`-wekker voor die elk uur zou afgaan. Gemeten 02-09 t/m
+12-09-2026: bij zes verkopers samen 32 scanopdrachten, bij Toon drie in negen
+dagen. Een Vinted-verkoop kon daardoor dagen onzichtbaar blijven.
+
+Een wekker in de extensie repareren betekent wachten op de Web Store, zie
+"rem-op-de-server-bij-een-extensiefout". Daarom plant `plan_vinted_scans` in
+`backend/services/polling.py` het nu elke 30 minuten vanaf de server: wie langer
+dan 4 uur niet gescand is krijgt een scanopdracht in de wachtrij, die de extensie
+oppikt zoals elke andere opdracht. Geen nieuwe extensieversie nodig.
+
+Bij een volgend "waarom merkt hij die verkoop niet op": kijk eerst of er
+überhaupt een scan gedraaid heeft, niet naar de herkenning zelf.
+
+---
+
+## vinted-weg-is-geen-archief
+
+*12-09-2026 — Een advertentie die van Vinted verdwijnt is met de hand weggehaald, meestal na verkoop; stil archiveren liet hem op Marktplaats staan*
+
+Op Vinted verloopt niets vanzelf en een verkochte advertentie blijft gewoon in de
+kast staan (Vinted zet er alleen "gesloten" op). Is een advertentie tóch uit de
+kast verdwenen, dan heeft de verkoper hem zelf weggehaald, en dat doet vrijwel
+iedereen meteen na een verkoop.
+
+Tot 12-09-2026 ging zo'n verdwenen advertentie stil naar `delisted` en gebeurde
+er verder niets. Gemeten bij Toon: 23 op Vinted verkochte en daar verwijderde
+artikelen bleven op Marktplaats staan, en zouden daar voor altijd zijn blijven
+staan. Nu wordt het `sold_unconfirmed` zodra het artikel elders nog te koop
+staat: de ja/nee-vraag in het dashboard, en pas bij "ja" gaat het overal af.
+
+Van afwezigheid zelf een verkoop maken blijft verboden, zie
+"verkoop-signaal-hard-vs-zacht". Voor Vinted is de garderobescan het enige
+signaal dat er is, zie "vinted-scan-wordt-vanaf-de-server-gepland".
+
+---
+
 ## mailtekst-niet-afbreken
 
 *12-09-2026 — Teksten om te kopiëren nooit op ~75 tekens afbreken; één alinea is één doorlopende regel*
