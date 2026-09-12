@@ -1870,7 +1870,42 @@ input[type="checkbox"].row-check { width: 15px; height: 15px; cursor: pointer; a
           </div>
         </div>
 
-        <!-- Two-column row -->
+        <!-- Extension setup: full-width and right after "How it works", because
+             nothing publishes without this — it doesn't belong squeezed next to
+             a reference card of equal visual weight. -->
+        <div class="card">
+          <div class="card-header"><h2>🧩 Extension setup</h2></div>
+          <div style="padding:16px 24px 22px;display:flex;flex-direction:column;gap:14px">
+            <div style="background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:12px 14px;font-size:13px;color:#92400e;line-height:1.55;display:flex;gap:10px;align-items:flex-start">
+              <span style="font-size:16px;flex-shrink:0;margin-top:1px">⚠️</span>
+              <span>The extension must be installed <em>and</em> logged in. Without this, nothing gets published.</span>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:9px 24px" class="help-two-col">
+              <div style="display:flex;gap:10px;align-items:flex-start;font-size:13px;color:var(--muted)">
+                <div style="width:20px;height:20px;border-radius:50%;background:#dbeafe;color:var(--blue);font-size:11px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px">1</div>
+                <span>Install the extension from the Chrome Web Store</span>
+              </div>
+              <div style="display:flex;gap:10px;align-items:flex-start;font-size:13px;color:var(--muted)">
+                <div style="width:20px;height:20px;border-radius:50%;background:#dbeafe;color:var(--blue);font-size:11px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px">2</div>
+                <span>Click the extension icon → log in with your Omnivaleur email &amp; password</span>
+              </div>
+              <div style="display:flex;gap:10px;align-items:flex-start;font-size:13px;color:var(--muted)">
+                <div style="width:20px;height:20px;border-radius:50%;background:#dbeafe;color:var(--blue);font-size:11px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px">3</div>
+                <span>Verify you see <em style="color:var(--text)">"Extension active — ready to publish"</em></span>
+              </div>
+              <div style="display:flex;gap:10px;align-items:flex-start;font-size:13px;color:var(--muted)">
+                <div style="width:20px;height:20px;border-radius:50%;background:#dbeafe;color:var(--blue);font-size:11px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px">4</div>
+                <span>Log in to Marktplaats / 2dehands / Vinted once in Chrome</span>
+              </div>
+            </div>
+            <div style="font-size:12px;color:var(--muted);line-height:1.6;padding-top:2px">You can close every Chrome window — publishing keeps running in the background. Just keep the computer itself on and awake; a sleeping or shut-down computer pauses everything until it's back.</div>
+            <a href="https://chrome.google.com/webstore/detail/gfaogapbhaacfbpdppdcmnkjndlphleh" target="_blank" class="btn btn-primary btn-sm" style="text-decoration:none;text-align:center;display:block;max-width:280px">Download extension →</a>
+          </div>
+        </div>
+
+        <!-- Reference row: dashboard glossary and phone install carry the same
+             "look this up when you need it" weight, so they're paired together
+             instead of one of them competing with Extension setup above. -->
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px" class="help-two-col">
 
           <!-- Dashboard explained -->
@@ -1901,69 +1936,29 @@ input[type="checkbox"].row-check { width: 15px; height: 15px; cursor: pointer; a
             </div>
           </div>
 
-          <!-- Extension setup -->
+          <!-- Install on phone -->
           <div class="card">
-            <div class="card-header"><h2>🧩 Extension setup</h2></div>
-            <div style="padding:16px 22px 20px;display:flex;flex-direction:column;gap:14px">
-              <div style="background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:12px 14px;font-size:13px;color:#92400e;line-height:1.55;display:flex;gap:10px;align-items:flex-start">
-                <span style="font-size:16px;flex-shrink:0;margin-top:1px">⚠️</span>
-                <span>The extension must be installed <em>and</em> logged in. Without this, nothing gets published.</span>
+            <div class="card-header"><h2>📱 Install on your phone</h2></div>
+            <div style="padding:16px 22px 20px;display:flex;flex-direction:column;gap:10px">
+              <div style="font-size:13px;color:var(--muted);line-height:1.6">
+                A <strong style="color:var(--text)">web app</strong> — not in the App Store or Google Play. Open Omnivaleur in your phone's browser, then:
               </div>
-              <div style="display:flex;flex-direction:column;gap:9px">
-                <div style="display:flex;gap:10px;align-items:flex-start;font-size:13px;color:var(--muted)">
-                  <div style="width:20px;height:20px;border-radius:50%;background:#dbeafe;color:var(--blue);font-size:11px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px">1</div>
-                  <span>Install the extension from the Chrome Web Store</span>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+                <div style="background:#f8fafc;border:1px solid var(--border);border-radius:8px;padding:12px 14px">
+                  <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);margin-bottom:5px">iPhone / iPad — Safari</div>
+                  <div style="font-size:13px;color:var(--text);line-height:1.5">Tap <strong>Share</strong> → <strong>Add to Home Screen</strong>.</div>
                 </div>
-                <div style="display:flex;gap:10px;align-items:flex-start;font-size:13px;color:var(--muted)">
-                  <div style="width:20px;height:20px;border-radius:50%;background:#dbeafe;color:var(--blue);font-size:11px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px">2</div>
-                  <span>Click the extension icon → log in with your Omnivaleur email &amp; password</span>
-                </div>
-                <div style="display:flex;gap:10px;align-items:flex-start;font-size:13px;color:var(--muted)">
-                  <div style="width:20px;height:20px;border-radius:50%;background:#dbeafe;color:var(--blue);font-size:11px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px">3</div>
-                  <span>Verify you see <em style="color:var(--text)">"Extension active — ready to publish"</em></span>
-                </div>
-                <div style="display:flex;gap:10px;align-items:flex-start;font-size:13px;color:var(--muted)">
-                  <div style="width:20px;height:20px;border-radius:50%;background:#dbeafe;color:var(--blue);font-size:11px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px">4</div>
-                  <span>Log in to Marktplaats / 2dehands / Vinted once in Chrome</span>
+                <div style="background:#f8fafc;border:1px solid var(--border);border-radius:8px;padding:12px 14px">
+                  <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);margin-bottom:5px">Android — Chrome</div>
+                  <div style="font-size:13px;color:var(--text);line-height:1.5">Tap <strong>⋮</strong> → <strong>Install app</strong>.</div>
                 </div>
               </div>
-              <div style="font-size:12px;color:var(--muted);line-height:1.6;padding-top:2px">You can close every Chrome window — publishing keeps running in the background. Just keep the computer itself on and awake; a sleeping or shut-down computer pauses everything until it's back.</div>
-              <a href="https://chrome.google.com/webstore/detail/gfaogapbhaacfbpdppdcmnkjndlphleh" target="_blank" class="btn btn-primary btn-sm" style="text-decoration:none;text-align:center;display:block">Download extension →</a>
+              <div style="font-size:13px;color:var(--muted);line-height:1.6;padding-top:4px">
+                On your phone you can view and manage everything — items, messages &amp; offers, relisting. The automatic Vinted actions still run through the Chrome extension on your computer.
+              </div>
             </div>
           </div>
 
-        </div>
-
-        <!-- Install on phone -->
-        <div class="card">
-          <div class="card-header"><h2>📱 Install Omnivaleur on your phone</h2></div>
-          <div style="padding:16px 24px 22px;display:flex;flex-direction:column;gap:14px">
-            <div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;padding:12px 14px;font-size:13px;color:#1e40af;line-height:1.55;display:flex;gap:10px;align-items:flex-start">
-              <span style="font-size:16px;flex-shrink:0;margin-top:1px">ℹ️</span>
-              <span>Omnivaleur is a <strong>web app</strong> — you won't find it in the App Store or Google Play. You install it straight from your browser. Once added it sits on your home screen with its own icon, just like a normal app.</span>
-            </div>
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px" class="help-two-col">
-              <div style="background:#f8fafc;border:1px solid var(--border);border-radius:8px;padding:14px 16px">
-                <div style="font-weight:700;font-size:13px;color:var(--text);margin-bottom:8px"> iPhone / iPad — Safari</div>
-                <div style="display:flex;flex-direction:column;gap:8px">
-                  <div style="display:flex;gap:10px;align-items:flex-start;font-size:13px;color:var(--muted)"><div style="width:20px;height:20px;border-radius:50%;background:#dbeafe;color:var(--blue);font-size:11px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px">1</div><span>Open Omnivaleur in <strong style="color:var(--text)">Safari</strong></span></div>
-                  <div style="display:flex;gap:10px;align-items:flex-start;font-size:13px;color:var(--muted)"><div style="width:20px;height:20px;border-radius:50%;background:#dbeafe;color:var(--blue);font-size:11px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px">2</div><span>Tap the <strong style="color:var(--text)">Share</strong> icon (square with an arrow up)</span></div>
-                  <div style="display:flex;gap:10px;align-items:flex-start;font-size:13px;color:var(--muted)"><div style="width:20px;height:20px;border-radius:50%;background:#dbeafe;color:var(--blue);font-size:11px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px">3</div><span>Choose <strong style="color:var(--text)">Add to Home Screen</strong></span></div>
-                </div>
-              </div>
-              <div style="background:#f8fafc;border:1px solid var(--border);border-radius:8px;padding:14px 16px">
-                <div style="font-weight:700;font-size:13px;color:var(--text);margin-bottom:8px"> Android — Chrome</div>
-                <div style="display:flex;flex-direction:column;gap:8px">
-                  <div style="display:flex;gap:10px;align-items:flex-start;font-size:13px;color:var(--muted)"><div style="width:20px;height:20px;border-radius:50%;background:#dbeafe;color:var(--blue);font-size:11px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px">1</div><span>Open Omnivaleur in <strong style="color:var(--text)">Chrome</strong></span></div>
-                  <div style="display:flex;gap:10px;align-items:flex-start;font-size:13px;color:var(--muted)"><div style="width:20px;height:20px;border-radius:50%;background:#dbeafe;color:var(--blue);font-size:11px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px">2</div><span>Tap the <strong style="color:var(--text)">⋮</strong> menu (top right)</span></div>
-                  <div style="display:flex;gap:10px;align-items:flex-start;font-size:13px;color:var(--muted)"><div style="width:20px;height:20px;border-radius:50%;background:#dbeafe;color:var(--blue);font-size:11px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px">3</div><span>Choose <strong style="color:var(--text)">Install app</strong> / Add to Home screen</span></div>
-                </div>
-              </div>
-            </div>
-            <div style="font-size:13px;color:var(--muted);line-height:1.6">
-              On your phone you can view and manage everything — items, messages &amp; bids, relisting. The automatic Vinted actions still run through the Chrome extension on your computer.
-            </div>
-          </div>
         </div>
 
         <!-- FAQ -->
