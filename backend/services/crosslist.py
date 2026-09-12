@@ -832,6 +832,44 @@ def _kanaal_hard_dicht_gecached(db, user_id: str, platform: str) -> bool:
 _LEVENDE_STATUS = ["active", "hidden", "pending", "relisting"]
 
 
+FOTO_OVERLAP_DREMPEL = 0.6
+
+
+def _zelfde_fotos(a: set, b: set) -> bool:
+    """Wijzen deze twee fotosets op hetzelfde voorwerp?
+
+    ÉÉN GEDEELDE FOTO IS GEEN BEWIJS (12-09-2026, De Juiste Toon).
+
+    Hij zette het hele weekend lederhosen klaar voor oktober en kreeg bij elke
+    poging "Already listed here under a duplicate copy of this item. Merge them
+    first." Ze waren geen dubbelen. Vier artikelen die allemaal "Lederhosen
+    Dames" heten zijn vier verschillende broeken: 40 cm, 35 cm, 47 cm en een
+    groene suède, elk met eigen prijs, eigen tekst en negen tot elf eigen
+    foto's. Wat ze delen is één plaatje: zijn eigen info-/maatfoto, die in 17
+    van zijn artikelen zit. Op "minstens één gedeelde foto" gold dat als bewijs
+    en kon hij ze niet publiceren, terwijl samenvoegen (wat de melding hem
+    opdroeg) twee echte broeken tot één zou hebben geplakt.
+
+    GEMETEN op zijn 1.318 artikelen, alle 43 paren met dezelfde titel én een
+    gedeelde foto. De scheiding is scherp, zonder twijfelgevallen ertussen:
+
+      * 26 echte dubbelen — de kleinere fotoset zit hélemaal in de grotere
+        (4 van 4, 5 van 5, 9 van 9, 10 van 10, 11 van 11, en twee paren van
+        1 van 1 die allebei dezelfde enige foto dragen). Twee imports van
+        dezelfde advertentie leveren immers dezelfde foto's op.
+      * 17 valse — precies één gedeelde foto van de zeven tot elf, telkens zijn
+        info-plaatje, telkens verschillende prijzen en teksten.
+
+    Vandaar een aandeel en geen aantal: een dubbele deelt vrijwel al zijn
+    foto's, een sjabloonplaatje deelt er één van de tien. De drempel ligt op
+    0,6 en niet op 1,0 zodat een import die één foto meer of minder ophaalde er
+    nog steeds onder valt.
+    """
+    if not a or not b:
+        return False
+    return len(a & b) / min(len(a), len(b)) >= FOTO_OVERLAP_DREMPEL
+
+
 def _zelfde_artikel_al_online(db, item: dict, platforms: list[str],
                               al_bekeken: list[str] | None = None) -> dict[str, dict]:
     """Kanalen waar dit artikel al staat onder een ANDER artikel met dezelfde
