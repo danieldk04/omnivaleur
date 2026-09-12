@@ -2402,6 +2402,14 @@ def _sync_vinted_hidden(db, job, scraped: list[dict]):
         )
 
 
+# De rem op "weg uit de kast is verkocht". Verdwijnt er in één ronde meer dan dit
+# aandeel van de kast, dan gelooft de code de momentopname niet meer en vraagt ze
+# het aan de verkoper in plaats van overal af te melden. De ondergrens is er voor
+# kleine kasten, waar een tiende al bij twee advertenties bereikt is.
+VERDWIJN_AANDEEL = 0.10
+VERDWIJN_ONDERGRENS = 10
+
+
 async def _reconcile_vinted_sales(db, job, scraped: list[dict], scan_meta: dict | None = None):
     """
     Vinted has no webhook and (deliberately, after a past incident with a stale
@@ -2530,7 +2538,8 @@ async def _reconcile_vinted_sales(db, job, scraped: list[dict], scan_meta: dict 
     #                revenue and cross-delist live listings). Instead we just take
     #                it off "Live" → 'delisted', so it lands in Archived for the
     #                user to confirm and mark sold themselves if it really sold.
-    newly_sold, set_aside, matched_without_id, gevraagd = 0, 0, 0, 0
+    newly_sold, set_aside, matched_without_id, gevraagd, weg_en_verkocht = 0, 0, 0, 0, 0
+    verdwenen: list[dict] = []
     for l in active:
         pid = l.get("platform_listing_id")
         if pid is None:
@@ -2571,42 +2580,74 @@ async def _reconcile_vinted_sales(db, job, scraped: list[dict], scan_meta: dict 
             except Exception as e:
                 logger.warning(f"Vinted sale reconcile failed for item {l['item_id']}: {e}")
         elif pid not in seen_ids:
-            # WEG VAN VINTED TERWIJL HET ELDERS NOG TE KOOP STAAT = EEN VRAAG,
-            # GEEN ARCHIEF.
-            #
-            # GEMETEN 12-09-2026 (De Juiste Toon). Hij verkocht 23 artikelen op
-            # Vinted en haalde die advertenties daar zelf weg, zoals iedereen
-            # doet. Op Marktplaats bleven ze staan. Dat was geen storing maar
-            # deze regel: een verdwenen advertentie ging stil naar 'delisted',
-            # er werd niets afgemeld en niets gevraagd, dus het antwoord op
-            # "wanneer gaan ze automatisch van Marktplaats af" was: nooit.
-            #
-            # Van absentie een verkoop maken blijft verboden (dat haalde ooit
-            # levende advertenties overal weg). Maar op Vinted verloopt niets
-            # vanzelf: weg is met de hand weggehaald. Dat is een zacht signaal,
-            # en een zacht signaal hoort een ja/nee-vraag te worden. Zegt de
-            # verkoper ja, dan meldt handle_item_sold het overal af; zegt hij
-            # nee, dan gaat de rij alsnog naar het archief. Precies dezelfde
-            # route als een verdwenen Shopify-product.
-            vraag = l["item_id"] in elders_levend
-            velden = ({"status": "sold_unconfirmed",
-                       "error_message": VERDENKING_REDENEN["vinted_weg"],
-                       "last_checked": datetime.now(timezone.utc).isoformat()}
-                      if vraag else {"status": "delisted"})
+            verdwenen.append(l)
+
+    # ── WEG UIT DE KAST IS VERKOCHT ─────────────────────────────────────────
+    #
+    # GEMETEN 12-09-2026 (De Juiste Toon). Hij verkocht 23 artikelen op Vinted
+    # en haalde die advertenties daar zelf weg, zoals vrijwel iedereen doet. Op
+    # Marktplaats bleven ze staan. Dat was geen storing maar het ontwerp: een
+    # verdwenen advertentie ging stil naar 'delisted' en verder gebeurde er
+    # niets, dus het antwoord op "wanneer gaan ze automatisch van Marktplaats
+    # af" was: nooit.
+    #
+    # Op Vinted verloopt niets vanzelf en een verkochte advertentie blijft
+    # gewoon in de kast staan. Weg uit de kast betekent dus: de verkoper heeft
+    # hem met eigen hand verwijderd, en dat doet vrijwel iedereen meteen na een
+    # verkoop. Dat handelen we voortaan zelf af, zonder iets te vragen.
+    #
+    # DE REM DIE ERBIJ HOORT. Deze conclusie is precies de conclusie die ooit
+    # levende advertenties overal weghaalde: de scan las toen alleen de 96
+    # nieuwste advertenties, waardoor alles daaronder "weg" leek. Daar liggen nu
+    # twee sloten op:
+    #   1. Alleen een als VOLLEDIG gemelde momentopname telt (hierboven).
+    #   2. En een volledige momentopname kan alsnog liegen, dus: verdwijnt er in
+    #      één ronde meer dan een tiende van de kast (met een ondergrens van
+    #      tien), dan is dat geen dag verkopen maar een kapotte scan. Dan wordt
+    #      er niets afgemeld en krijgt de verkoper de ja/nee-vraag, zoals
+    #      hiervoor. Bij Toon: 23 van de bijna duizend, ruim onder de rem.
+    grens = max(VERDWIJN_ONDERGRENS, int(len(active) * VERDWIJN_AANDEEL))
+    te_veel_ineens = len(verdwenen) > grens
+    if te_veel_ineens:
+        logger.warning(
+            "Vinted reconcile voor %s: %d van de %d advertenties ineens weg (rem staat op %d). "
+            "Dat telt niet als verkopen; de verkoper krijgt de vraag.",
+            job["user_id"], len(verdwenen), len(active), grens)
+
+    for l in verdwenen:
+        if not te_veel_ineens:
+            # Gewoon verkocht: handle_item_sold boekt de verkoop en zet de
+            # verwijderopdrachten klaar voor Marktplaats, 2dehands en de rest.
             try:
-                (await naast_de_lus(lambda: db.table("listings").update(velden) \
-                    .eq("item_id", l["item_id"]).eq("platform", "vinted")
-                    .in_("status", ["active", "relisting", "hidden"]).execute()))
-                if vraag:
-                    gevraagd += 1
-                else:
-                    set_aside += 1
-            except Exception as e:
-                logger.warning(f"Vinted reconcile: could not archive vanished listing {l['item_id']}: {e}")
+                await handle_item_sold(l["item_id"], "vinted")
+                weg_en_verkocht += 1
+                continue
+            except Exception as e:  # noqa: BLE001
+                logger.warning("Vinted reconcile: afmelden van item %s mislukt, wordt een vraag: %s",
+                               l["item_id"], e)
+        # De rem staat erop (of het afmelden ging mis): vragen in plaats van doen.
+        # Staat het artikel nergens anders meer te koop, dan valt er niets te
+        # vragen en gaat de rij gewoon het archief in.
+        vraag = l["item_id"] in elders_levend
+        velden = ({"status": "sold_unconfirmed",
+                   "error_message": VERDENKING_REDENEN["vinted_weg"],
+                   "last_checked": datetime.now(timezone.utc).isoformat()}
+                  if vraag else {"status": "delisted"})
+        try:
+            (await naast_de_lus(lambda v=velden, i=l["item_id"]: db.table("listings").update(v) \
+                .eq("item_id", i).eq("platform", "vinted")
+                .in_("status", ["active", "relisting", "hidden"]).execute()))
+            if vraag:
+                gevraagd += 1
+            else:
+                set_aside += 1
+        except Exception as e:  # noqa: BLE001
+            logger.warning(f"Vinted reconcile: could not archive vanished listing {l['item_id']}: {e}")
     logger.info(
         "[sold] Vinted reconcile for user %s: %d marked sold (is_closed, of which %d matched by SKU/title), "
-        "%d vanished → asked the seller (still live elsewhere), %d vanished → archived",
-        job["user_id"], newly_sold, matched_without_id, gevraagd, set_aside,
+        "%d vanished → booked as sold and delisted elsewhere, %d vanished → asked the seller, "
+        "%d vanished → archived",
+        job["user_id"], newly_sold, matched_without_id, weg_en_verkocht, gevraagd, set_aside,
     )
 
 
