@@ -321,6 +321,22 @@ def _vertaal(text: str, target_lang: str, brand: str | None = None) -> str:
     """
     if not text or not text.strip():
         return text
+    # STAAT DE TEKST AL IN DE DOELTAAL, DAN GAAT HIJ NIET NAAR HET MODEL.
+    #
+    # GEMETEN (12-09-2026, Toon van De Juiste Toon). Zijn Nederlandse
+    # omschrijving ging bij het herplaatsen opnieuw door "vertaal naar het
+    # Nederlands", en kwam er in 3 van de 6 pogingen in het ENGELS uit — het
+    # model draait de richting om als de opdracht zelf in het Engels staat en de
+    # tekst al Nederlands is. Zo stond er een Engelse advertentie op Marktplaats
+    # ("Characterized by geometric patterns and vibrant colors") terwijl de
+    # database gewoon Nederlands bevatte, en gold hij intern als vertaald.
+    #
+    # Een tekst die al in de doeltaal staat heeft niets aan een vertaling: het
+    # beste resultaat is letterlijk dezelfde tekst. Niet sturen is dus niet
+    # alleen veiliger maar ook gratis.
+    if lijkt_al_in_taal(text, target_lang):
+        logger.info("translate→%s: tekst staat al in de doeltaal, ongewijzigd gelaten", target_lang)
+        return text
     try:
         _client = _claude_client()
 
@@ -393,6 +409,17 @@ def _vertaal(text: str, target_lang: str, brand: str | None = None) -> str:
                 f"({len(text)} chars in, {len(result)} out) — keeping original text"
             )
             return text
+        # DE VERTALING KWAM IN DE VERKEERDE TAAL TERUG.
+        #
+        # Zelfde meting als hierboven: het model draait de richting soms om. De
+        # voorcontrole vangt teksten die al in de doeltaal staan; dit vangt het
+        # geval waarin het model een Nederlandse zin alsnog naar het Engels
+        # omzet. Dan is de brontekst beter dan het antwoord.
+        andere = "en" if target_lang == "nl" else "nl"
+        if lijkt_al_in_taal(result, andere) and not lijkt_al_in_taal(result, target_lang):
+            logger.warning(
+                "Vertaling naar %s kwam in de andere taal terug — brontekst behouden", target_lang)
+            return text
         logger.info("translate→%s out: repr=%r", target_lang, result[:200])
         return result
     except Exception as e:
@@ -456,6 +483,20 @@ def taal_van_platform(platform: str) -> str | None:
     return _PLATFORM_TAAL.get(platform)
 
 
+def _al_in_doeltaal(item: dict, taal: str) -> bool:
+    """Staan titel en omschrijving van dit artikel samen al in `taal`?
+
+    Samen wegen, niet los: een titel als "Handgeknoopt Perzisch Shiraz wollen
+    tapijt 135/80 cm" is te kort om een taal aan af te lezen, terwijl de
+    omschrijving eronder glashelder Nederlands is. Staat het geheel al goed, dan
+    hoeft er niets vertaald te worden — en dat is precies wat de fout van
+    12-09-2026 voorkomt: het model draaide de richting om en zette een
+    Nederlandse advertentie alsnog in het Engels op Marktplaats.
+    """
+    samen = f"{item.get('title') or ''}\n{item.get('description') or ''}"
+    return lijkt_al_in_taal(samen, taal)
+
+
 def localiseer_sync(item: dict, platform: str) -> dict:
     """`localize_item_for_platform` zonder event-lus.
 
@@ -468,6 +509,8 @@ def localiseer_sync(item: dict, platform: str) -> dict:
     taal = taal_van_platform(platform)
     if not taal:
         return item
+    if _al_in_doeltaal(item, taal) and platform != "shopify":
+        return {**item, TAAL_VELD: taal}
     brand = item.get("brand") or None
     # Shopify-only override — Vinted/eBay keep the item's own translated title.
     manual_title = (item.get("shopify_title") or "").strip() if platform == "shopify" else ""
@@ -519,6 +562,8 @@ async def localize_item_for_platform(item: dict, platform: str) -> dict:
     taal = taal_van_platform(platform)
     if not taal:
         return item
+    if _al_in_doeltaal(item, taal) and platform != "shopify":
+        return {**item, TAAL_VELD: taal}
     brand = item.get("brand") or None
     # Shopify-only override — Vinted/eBay keep the item's own translated title.
     manual_title = (item.get("shopify_title") or "").strip() if platform == "shopify" else ""
@@ -1040,7 +1085,12 @@ async def publish_to_platforms(item_id: str, platforms: list[str], user_id: str)
     # Zo niet, dan komt er een VertalingOnbeschikbaar naar boven en zegt het
     # scherm dat er níéts is geplaatst — in plaats van een Engelse advertentie op
     # Marktplaats te zetten en dat "gelukt" te noemen.
+    # Staat het artikel al in de doeltaal, dan gaat er niets naar het model —
+    # zie _al_in_doeltaal voor het waarom (een "vertaling" van nl naar nl kwam
+    # in 3 van de 6 gevallen in het Engels terug).
     async def _build_english():
+        if _al_in_doeltaal(item, "en"):
+            return {**item, TAAL_VELD: "en"}
         # Always the item's OWN translated title. `shopify_title` is a Shopify-only
         # override and is applied per-platform in _pick() — baking it in here gave
         # Vinted and eBay the Shopify title too.
@@ -1054,6 +1104,8 @@ async def publish_to_platforms(item_id: str, platforms: list[str], user_id: str)
         return {**item, "title": title_en, "description": desc_en, TAAL_VELD: "en"}
 
     async def _build_dutch():
+        if _al_in_doeltaal(item, "nl"):
+            return {**item, TAAL_VELD: "nl"}
         try:
             title_nl, desc_nl = await asyncio.gather(
                 _translate_to_dutch(item.get("title", ""), brand),

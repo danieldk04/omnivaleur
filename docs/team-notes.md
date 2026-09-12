@@ -8691,3 +8691,31 @@ logt ze, precies zoals bij Janet/Cecile/Larissa/Perle/Celina.
 Kosten: verwaarloosbaar, ruim onder een euro voor deze 16, en voor alle
 resterende honderd-en-nog-wat zou het in de dollars lopen, niet in de
 tientjes — dat was dus nooit de echte drempel, de contentclaim was het.
+
+## 12-09-2026 — Nederlandse advertenties kwamen in het Engels op Marktplaats
+
+Toon (De Juiste Toon) meldde vanochtend een Marktplaats-advertentie met een
+Engelse omschrijving terwijl hij alles in het Nederlands invoert.
+
+**Oorzaak, bewezen en gereproduceerd.** In de database stond de tekst gewoon in
+het Nederlands. Bij het herplaatsen gaat elke tekst opnieuw door "vertaal naar
+het Nederlands" — en het model draait die richting om als er niets te vertalen
+valt: 3 van de 6 pogingen op exact deze tekst kwamen in het Engels terug. Het
+resultaat kreeg `_taal: nl` mee, dus de taalzeef in `backend/api/jobs.py` zag
+er niets verdachts aan en alle bestaande controles (§BR§-markers, lengte,
+storing) keken naar alles behalve de taal van het antwoord.
+
+**Omvang gemeten:** 4.569 create-opdrachten voor marktplaats/2dehands sinds
+01-08-2026 doorgemeten; 93 gingen in het Engels de deur uit, bij 7 verkopers.
+Bij Toon zelf 2 advertenties die nu nog online staan (Shiraz-tapijt en de wollen
+woondeken) plus 1 opdracht die vanochtend nog in de wachtrij stond — die is met
+de hand teruggezet naar de Nederlandse tekst voordat hij de deur uit ging.
+
+**Reparatie** in `backend/services/crosslist.py`: staat het artikel al in de
+doeltaal (titel en omschrijving samen gewogen, `_al_in_doeltaal`), dan gaat er
+niets meer naar het model. Komt een vertaling tóch in de andere taal terug, dan
+wint de brontekst. Voor-en-na op dezelfde tekst: oude code 3 fout van 6, nieuwe
+code 0 van 6. Regressieproef: `tests/test_nederlands_blijft_nederlands.py`
+(zakt op de oude code, slaagt op de nieuwe).
+
+Bijvangst: elke advertentie die al goed staat kost nu geen vertaalaanroep meer.

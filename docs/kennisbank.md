@@ -17,6 +17,30 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ---
 
+## vertaling-draait-de-richting-om
+
+*12-09-2026 — Een tekst die al in de doeltaal staat opnieuw laten vertalen levert in de helft van de gevallen de ANDERE taal op; sla het model over*
+
+Nederlandse advertentietekst die opnieuw door "vertaal naar het Nederlands" gaat
+komt er in 3 van de 6 pogingen in het ENGELS uit (gemeten 12-09-2026 op Toons
+tapijt, `_vertaal` met haiku-4-5). Het model draait de richting om omdat de
+opdracht zelf in het Engels staat en er niets te vertalen valt. Het resultaat
+kreeg gewoon `_taal: nl` mee, dus geen enkele rode regel: 93 advertenties bij 7
+verkopers gingen zo in het Engels de deur uit sinds 01-08-2026.
+
+**Waarom:** de hele vertaalketen ging ervan uit dat een vertaling naar taal X
+nooit taal Y kan opleveren. Elke andere zeef (§BR§-markers, lengte, storing)
+controleerde alles behálve de taal van het antwoord.
+
+**How to apply:** vertaal nooit een tekst die al in de doeltaal staat, en weeg
+titel en omschrijving daarvoor SAMEN (`_al_in_doeltaal` in
+backend/services/crosslist.py) want een titel alleen is te kort om een taal aan
+af te lezen. Controleer daarnaast altijd de taal van het ANTWOORD: leest het als
+de andere taal, dan wint de brontekst. Zie ook "zekerheid-is-geen-stopplek" en
+"bewijs-moet-onderscheiden".
+
+---
+
 ## locatie-uit-preferences
 
 *11-09-2026 — Land en woonplaats van de verkoper komen uit Preferences en worden door de extensie op het zoekertje gezet; de veldnamen zijn live gemeten en per site verschilt alleen het label van de thuisknop*
