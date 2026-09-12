@@ -964,7 +964,13 @@ window.CL = (() => {
   // uiteindelijk gekozen is, of "" als de lijst niets bruikbaars bood.
   function kiesMetTerugval(el, label, waarde) {
     if (!el || el.tagName !== "SELECT" || !waarde) return "";
-    if (fillNativeSelect(el, waarde)) return String(waarde);
+    // Dezelfde stukjes als de gewone vulroute: "S / 36 / 8" staat nergens als
+    // geheel in een lijst, "36" wel. Zonder deze stap deed de reparatieronde
+    // minder dan de eerste poging, en viel een samengestelde maat door naar de
+    // terugval terwijl hij gewoon in de lijst stond.
+    for (const v of valueVariants(waarde)) {
+      if (fillNativeSelect(el, v)) return String(v);
+    }
     for (const alt of _alternatievenVoor(label, waarde)) {
       if (fillNativeSelect(el, alt)) {
         clog(`${label}: "${waarde}" staat niet in de lijst — "${alt}" gekozen`);
