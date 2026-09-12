@@ -668,6 +668,8 @@ def _ruim_dubbele_scans_op(db, licht: list[dict], now: str) -> list[dict]:
 TEMPO_KALM_DREMPEL = 150       # 2,5 min; zonder Calm mode is de tussentijd < 30s
 TEMPO_ONDERBREKING = 20 * 60   # groter gat = de computer stond uit, niet meetellen
 TEMPO_MONSTERS = 12
+STIL_VENSTER_UREN = 12         # waarover we de stille uren optellen
+STIL_MONSTERS = 500            # ruim boven een drukke dag (Toon: 503 in 3 dagen)
 # Het dashboard vraagt /active elke vier seconden op. Een extra databasevraag in
 # dat ritme is vijftien per minuut per open scherm, en de Supabase-client blokkeert
 # de lus terwijl hij wacht. Het tempo verandert langzaam, dus een minuut onthouden
