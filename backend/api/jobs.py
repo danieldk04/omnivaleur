@@ -728,8 +728,77 @@ def _gemeten_tempo(db, user_id: str) -> dict:
                 "seconds_per_job": int(cycli[len(cycli) // 2]) if len(cycli) >= 3 else None,
                 "calm": midden >= TEMPO_KALM_DREMPEL,
                 "samples": len(gaten)}
+    uitkomst.update(_stille_uren(db, user_id))
     _tempo_cache[user_id] = (nu, uitkomst)
     return uitkomst
+
+
+def _stille_uren(db, user_id: str) -> dict:
+    """Hoe lang stond er werk te wachten terwijl er niets liep?
+
+    WAAROM (12-09-2026, De Juiste Toon). "Deze pc staat de hele dag aan en toch
+    zie ik nog steeds 50 stuks staan." Gemeten op zijn eigen rij: tussen 07:51
+    en 11:12 UTC werd er geen enkele opdracht opgepakt terwijl er honderd
+    klaarstonden, en daarna nog eens 54 minuten niet. In diezelfde uren liepen
+    er bij twee andere verkopers 46 en 24 opdrachten per uur door, dus de server
+    deelde gewoon uit. Zijn Chromebook sliep: de opdracht van 07:51 meldde zich
+    om 11:12 alsnog klaar, precies negen seconden na de eerstvolgende poll, en
+    ook het dashboard zelf had al die tijd niet gepolld (anders had de
+    opruimronde die vastzittende claim allang afgesloten).
+
+    Het tempo hierboven gooit zulke gaten er bewust uit — anders zou één nacht
+    de gemeten snelheid verzieken. Maar daarmee belooft de balk "deze 50 duren
+    een uur" terwijl het bij hem een hele dag werd. Die belofte is precies
+    waarom hij al vier keer meldde dat er "niets gebeurt". Dus meten we de stille
+    uren er apart bij: hoeveel tijd ging er verloren terwijl er werk lag.
+
+    Alleen een gat telt waarvan we ZEKER weten dat er werk stond te wachten: de
+    opdracht die ná het gat werd opgepakt moet al vóór het gat hebben
+    klaargestaan. Een rustige nacht met een lege rij telt dus niet mee.
+    """
+    leeg = {"idle_seconds": 0, "idle_gaps": 0, "idle_since": None,
+            "done_last_hour": 0}
+    nu_dt = datetime.now(timezone.utc)
+    grens = nu_dt - timedelta(hours=STIL_VENSTER_UREN)
+    try:
+        rijen = (db.table("jobs").select("created_at,claimed_at,done_at,status")
+                 .eq("user_id", user_id).in_("action", list(SCHRIJVEND))
+                 .gte("created_at", grens.isoformat())
+                 .order("created_at").limit(STIL_MONSTERS).execute().data or [])
+    except Exception as e:  # noqa: BLE001 — een schatting mag nooit een scherm slopen
+        logger.warning("stille uren niet te meten voor %s: %s", user_id, e)
+        return leeg
+
+    opgepakt = sorted(
+        [(_parse_ts(r["claimed_at"]), _parse_ts(r["created_at"])) for r in rijen
+         if r.get("claimed_at") and r.get("created_at")],
+        key=lambda t: t[0],
+    )
+    stil, gaten, sinds = 0.0, 0, None
+    for (vorige, _), (start, gemaakt) in zip(opgepakt, opgepakt[1:]):
+        gat = (start - vorige).total_seconds()
+        if gat > TEMPO_ONDERBREKING and gemaakt <= vorige:
+            stil += gat
+            gaten += 1
+    # De staart: staat er nú werk te wachten dat al klaarstond toen de laatste
+    # opdracht werd opgepakt, dan loopt het stille gat op dit moment nog door.
+    if opgepakt:
+        laatste = opgepakt[-1][0]
+        loopt = (nu_dt - laatste).total_seconds()
+        wacht_al = any(
+            r["status"] == "pending" and _parse_ts(r["created_at"]) <= laatste
+            for r in rijen
+        )
+        if loopt > TEMPO_ONDERBREKING and wacht_al:
+            stil += loopt
+            gaten += 1
+            sinds = laatste.isoformat()
+
+    uur_terug = nu_dt - timedelta(hours=1)
+    klaar = sum(1 for r in rijen
+                if r.get("done_at") and (_parse_ts(r["done_at"]) or grens) >= uur_terug)
+    return {"idle_seconds": int(stil), "idle_gaps": gaten,
+            "idle_since": sinds, "done_last_hour": klaar}
 
 
 def _geeft_teken_van_leven(job: dict, now_dt: datetime) -> bool:
