@@ -8742,3 +8742,17 @@ veel enters" in plaats van volle breedte, en moest hij met de hand weghalen.
 
 Beide staan ook als geheugenbestand (`antwoorden-kort-houden`,
 `mailtekst-niet-afbreken`), maar die zijn accountgebonden, vandaar hier.
+
+**12-09-2026, later diezelfde dag — de laatste zeef kijkt nu naar de tekst, niet
+naar het stempel.** De reparatie hierboven haalt de oorzaak weg, maar hij liet
+één aanname staan: `_zet_taal_goed` in `backend/api/jobs.py` liet elke opdracht
+door zodra er `_taal: nl` op stond. Dat stempel was nou juist het enige wat er
+in dit geval nog klopte. Vanaf nu telt alleen wat er in de tekst staat: leest
+titel en omschrijving samen overtuigend als Engels, dan gaat de opdracht hoe dan
+ook nog een keer door de localisatie, en komt hij er dan nóg Engels uit, dan
+gaat hij NIET de deur uit maar blijft hij wachten, met een mail naar de
+eigenaar. Dit is het enige punt waar élke extensie-opdracht langskomt, dus geen
+enkel publicatiepad kan er nog omheen. Proef:
+`tests/test_nederlands_blijft_nederlands.py::test_laatste_zeef_vertrouwt_het_stempel_niet`,
+zakt op de oude code met "Engelse advertentie is toch naar Marktplaats
+gestuurd".

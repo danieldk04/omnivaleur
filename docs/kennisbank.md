@@ -17,6 +17,50 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ---
 
+## mailtekst-niet-afbreken
+
+*12-09-2026 — Teksten om te kopiëren nooit op ~75 tekens afbreken; één alinea is één doorlopende regel*
+
+Daniel, 12-09-2026: als hij een mailtekst uit het codeblok kopieert en in Zoho
+plakt, staat er "soort van heel veel enters" in plaats van volle breedte. Komt
+doordat ik de regels zelf afbreek rond 75 tekens.
+
+**Why:** die harde regeleindes reizen mee naar de mailclient, die daarna zelf
+niets meer kan uitvullen. Hij moet ze met de hand weghalen voor hij kan
+versturen.
+
+**How to apply:** in elke tekst die hij kopieert (mail, chatbericht,
+advertentietekst) is één alinea één doorlopende regel, hoe lang ook. Enters
+alleen tussen alinea's. Geldt voor codeblokken, want daar wordt niets
+teruggevouwen. Zie ook "antwoorden-kort-houden" en
+"klantmail-kort-en-menselijk".
+
+---
+
+## antwoorden-kort-houden
+
+*12-09-2026 — Daniel wil vanaf 07-09-2026 blijvend kortere antwoorden; teksten waren te lang*
+
+Daniel, 07-09-2026: "ik wil dat je vanaf nu korter gaat antwoorden, voor altijd,
+je teksten zijn te lang." Geldt voor alle sessies en alle onderwerpen.
+
+**Why:** lange antwoorden kosten hem leestijd en tokens; hij wil gevolgen en
+acties, niet het verhaal eromheen.
+
+**How to apply:** rapportage blijft de vier blokjes uit "rapportage-in-gewone-taal"
+maar strak ingedikt. Geen uitleg over hoe iets is opgelost, geen opsomming van
+niet-gekozen afwegingen, geen herhaling van wat al gezegd is. Bij advies: kop +
+bullets, geen inleiding. Ook in `docs/team-notes.md` 07-09-2026.
+
+**Herhaald op 12-09-2026**, na een rapportage over een commit die al gepusht
+bleek: "berichten moeten altijd zo kort, duidelijk en compact mogelijk zijn,
+dit is te veel tekst voor hetgeen wat je wil zeggen." De vier blokjes zijn een
+maximum, geen verplicht formulier: bij een klein of leeg resultaat is één of
+twee zinnen het hele antwoord. Weeg elk bericht af tegen wat er feitelijk te
+melden valt, niet tegen de hoeveelheid werk die je eraan deed.
+
+---
+
 ## vertaling-draait-de-richting-om
 
 *12-09-2026 — Een tekst die al in de doeltaal staat opnieuw laten vertalen levert in de helft van de gevallen de ANDERE taal op; sla het model over*
@@ -1300,23 +1344,6 @@ Volledige run: `NOTION_TOKEN=... python3 scripts/leadgen_marktplaats.py run
 Waarom dit de grootste onbenutte hefboom was: zie "leadgen-op-conversie-niet-volume"
 en "leadgen-marktplaats-beste-bron". NL was afgezocht in de converterende
 categorieën (~91 nieuwe leads/maand); BE is verse markt, zelfde methode, €0 extra.
-
----
-
-## antwoorden-kort-houden
-
-*07-09-2026 — Daniel wil vanaf 07-09-2026 blijvend kortere antwoorden; teksten waren te lang*
-
-Daniel, 07-09-2026: "ik wil dat je vanaf nu korter gaat antwoorden, voor altijd,
-je teksten zijn te lang." Geldt voor alle sessies en alle onderwerpen.
-
-**Why:** lange antwoorden kosten hem leestijd en tokens; hij wil gevolgen en
-acties, niet het verhaal eromheen.
-
-**How to apply:** rapportage blijft de vier blokjes uit "rapportage-in-gewone-taal"
-maar strak ingedikt. Geen uitleg over hoe iets is opgelost, geen opsomming van
-niet-gekozen afwegingen, geen herhaling van wat al gezegd is. Bij advies: kop +
-bullets, geen inleiding. Ook in `docs/team-notes.md` 07-09-2026.
 
 ---
 

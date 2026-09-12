@@ -57,3 +57,38 @@ def test_een_omgedraaide_vertaling_wordt_geweigerd(monkeypatch):
     bron = ("Dit kleed is van wol en heeft een mooie kleur, het is niet "
             "beschadigd en wordt met zorg verstuurd naar u")
     assert cl._vertaal(bron, "nl") == bron
+
+
+def test_laatste_zeef_vertrouwt_het_stempel_niet(monkeypatch):
+    """Engelse tekst met `_taal: nl` erop mag de deur niet uit.
+
+    Precies wat er op 11-09-2026 gebeurde: het model draaide de richting om, de
+    opdracht kreeg toch het stempel "nl", en de zeef liet hem daarop door.
+    """
+    import backend.api.jobs as jobs
+
+    engels = {
+        "title": "Handgeknoopt Perzisch Shiraz wollen tapijt 135/80 cm",
+        "description": (
+            "TL07\n\nCharacterized by geometric patterns and vibrant colors\n\n"
+            "In muted red color with blue ecru and orange accents\n\n"
+            "Size: 135/80 cm\n\nThe item will be shipped with care for you"
+        ),
+        "_taal": "nl",
+    }
+    baan = {"id": "j1", "action": "create", "platform": "marktplaats", "payload": dict(engels)}
+
+    # De vertaling doet het niet beter: ze geeft dezelfde Engelse tekst terug.
+    monkeypatch.setattr(cl, "_vertaal", lambda text, taal, brand=None: text)
+
+    gemeld = []
+    monkeypatch.setattr(jobs, "_meld_vertaalstoring", lambda reden: gemeld.append(reden))
+
+    class _Db:
+        def table(self, *a, **kw):
+            raise AssertionError("mag niets wegschrijven")
+
+    door = jobs._zet_taal_goed(_Db(), [baan])
+
+    assert door == [], "Engelse advertentie is toch naar Marktplaats gestuurd"
+    assert gemeld, "niemand is gewaarschuwd"

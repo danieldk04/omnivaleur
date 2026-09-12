@@ -405,6 +405,17 @@ def _haal_links_eruit(db, jobs: list) -> int:
     return aangepast
 
 
+def _leest_als_engels(payload: dict, lijkt_al_in_taal) -> bool:
+    """Leest deze advertentie overtuigend als Engels? Titel en omschrijving samen.
+
+    Samen wegen en niet los: een titel als "Vintage pijpenstandaard" is te kort
+    om een taal aan af te lezen, terwijl de omschrijving eronder glashelder is.
+    Bij twijfel False — dit mag alleen ingrijpen als het duidelijk mis is.
+    """
+    samen = f"{(payload or {}).get('title') or ''}\n{(payload or {}).get('description') or ''}"
+    return lijkt_al_in_taal(samen, "en")
+
+
 def _zet_taal_goed(db, jobs: list) -> int:
     """De advertentie in de taal van het platform, vlak voordat hij de deur uitgaat.
 
@@ -434,7 +445,8 @@ def _zet_taal_goed(db, jobs: list) -> int:
     """
     try:
         from backend.services.crosslist import (TAAL_VELD, VertalingOnbeschikbaar,
-                                                localiseer_sync, taal_van_platform)
+                                                lijkt_al_in_taal, localiseer_sync,
+                                                taal_van_platform)
     except Exception as e:  # noqa: BLE001 — het uitdelen gaat hoe dan ook door
         logger.warning("taalzeef niet beschikbaar: %s", e)
         return list(jobs or [])
@@ -450,10 +462,32 @@ def _zet_taal_goed(db, jobs: list) -> int:
                 door.append(j)
                 continue
             payload = j["payload"]
-            if payload.get(TAAL_VELD) == "nl":
+            # HET STEMPEL IS GEEN BEWIJS — WIJ KIJKEN NAAR DE TEKST ZELF.
+            #
+            # GEMETEN (12-09-2026, Toon van De Juiste Toon). Een Nederlandse
+            # tekst die opnieuw door "vertaal naar het Nederlands" ging kwam er
+            # in 3 van de 6 pogingen in het ENGELS uit: het model draait de
+            # richting om als er niets te vertalen valt. Die tekst kreeg gewoon
+            # TAAL_VELD "nl" mee, en deze zeef liet hem daarop door. Zo gingen
+            # 93 advertenties bij 7 verkopers in het Engels de deur uit zonder
+            # dat er ergens iets rood werd.
+            #
+            # Vanaf nu telt alleen wat er in de tekst staat. Ziet de tekst er
+            # overtuigend Engels uit, dan gaat hij hoe dan ook nog een keer door
+            # de localisatie, wat er ook op het stempel staat.
+            if payload.get(TAAL_VELD) == "nl" and not _leest_als_engels(payload, lijkt_al_in_taal):
                 door.append(j)
                 continue
             nieuw = localiseer_sync(payload, platform)
+            # EN DAARNA KIJKEN WE NOG EEN KEER.
+            #
+            # Komt het er alsnog Engels uit, dan is de vertaling niet te
+            # vertrouwen en gaat deze advertentie NIET de deur uit. Hij blijft
+            # gewoon 'pending' en loopt vanzelf door zodra het wel lukt —
+            # dezelfde keuze als bij een vertaalstoring, om dezelfde reden.
+            if _leest_als_engels(nieuw, lijkt_al_in_taal):
+                raise VertalingOnbeschikbaar(
+                    "De tekst blijft na vertaling Engels, dus er is niets geplaatst.")
             if nieuw.get("title") != payload.get("title"):
                 logger.info("job %s: titel alsnog vertaald voor %s (%r -> %r)",
                             j.get("id"), platform,
