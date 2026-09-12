@@ -77,21 +77,35 @@ GEBRUIKER = "96e30080-ab81-47ac-8626-e8637f1e2a9e"
 
 
 def _tapijten():
-    """Vier importrijen van hetzelfde kleedje: zelfde titel, zelfde foto."""
+    """Vier importrijen van hetzelfde kleedje: zelfde titel, zelfde foto's.
+
+    Nagemeten in zijn voorraad op 12-09-2026: van de zes artikelen die
+    "Oosters tapijt klein 60/38 cm" heten dragen er vier LETTERLIJK dezelfde
+    vijf foto-adressen (856414e9, 4ee0bcf8, dc3a75be, da553dc6, 232742b5). Dat
+    zijn de dubbelen. De twee andere hebben elk zes eigen foto's en zijn twee
+    andere kleedjes. Eerder stond hier één gedeelde foto van de twee; dat was
+    ingekort en het gaf een verkeerd beeld van wat een dubbele is.
+    """
     return [
         {"id": f"tap{i}", "user_id": GEBRUIKER, "sku": f"IMP-6CB890D{i}",
          "title": "Oosters tapijt klein 60/38 cm", "brand": None, "price": 20.0,
-         "photo_urls": [FOTO_TAPIJT, f"https://img/detail{i}.jpg"]}
+         "photo_urls": [FOTO_TAPIJT] + [f"https://img/tapijt-{n}.jpg" for n in range(4)]}
         for i in range(4)
     ]
 
 
 def _lederhosen():
-    """Acht ECHT verschillende dameslederhosen met dezelfde titel."""
+    """Acht ECHT verschillende dameslederhosen met dezelfde titel.
+
+    Met zijn info-/maatplaatje erbij, want dat zet hij onder élke advertentie:
+    het zit in 17 van zijn artikelen. Eén gedeeld plaatje van de tien maakt van
+    acht broeken geen acht keer dezelfde broek.
+    """
     return [
         {"id": f"led{i}", "user_id": GEBRUIKER, "sku": f"IMP-0170{i}F1D",
          "title": "Lederhosen dames", "brand": None, "price": prijs,
-         "photo_urls": [f"https://img/lederhosen-{i}.jpg"]}
+         "photo_urls": [FOTO_INFO] + [f"https://img/lederhosen-{i}-{n}.jpg"
+                                      for n in range(9)]}
         for i, prijs in enumerate([40.0, 30.0, 25.0, 25.0, 35.0, 25.0, 30.0, 20.0])
     ]
 
