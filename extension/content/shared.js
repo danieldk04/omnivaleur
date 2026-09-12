@@ -971,6 +971,79 @@ window.CL = (() => {
         return alt;
       }
     }
+    const uiterste = /maat/i.test(label) ? _maatBuitenDeLadder(el, waarde) : "";
+    if (uiterste && fillNativeSelect(el, uiterste)) {
+      clog(`${label}: "${waarde}" valt buiten de ladder — "${uiterste}" gekozen`);
+      return uiterste;
+    }
+    return "";
+  }
+
+  // ── EEN MAAT DIE ONDER OF BOVEN DE LIJST VALT ─────────────────────────────
+  //
+  // WAAROM (12-09-2026, De Juiste Toon). "These fields were left empty on the
+  // form: size" op een artikel waar de maat gewoon ingevuld stond: XXS / 32 / 4.
+  // Marktplaats biedt bij dameskleding vijf keuzes, en de kleinste heet "Maat 34
+  // (XS) of kleiner". 32 staat daar niet in, XXS ook niet, en dus bleef het veld
+  // leeg en ging de advertentie niet de deur uit. Aan de bovenkant hetzelfde:
+  // XXL, XXXL en 4XL bij heren, waar de lijst op XL eindigt met "of groter".
+  // Geteld in zijn eigen opdrachten sinds 25-08: 17 publicaties die hierop
+  // strandden.
+  //
+  // De optie die "of kleiner" of "of groter" heet IS het goede antwoord voor een
+  // maat buiten de ladder; dat zegt de optie zelf. Daarom kiezen we alleen zo'n
+  // optie, en alleen als onze maat aantoonbaar buiten de gevonden reeks valt.
+  // Biedt de categorie zo'n uiterste niet, dan gebeurt er niets: liever een
+  // duidelijke melding dan stilletjes de verkeerde maat.
+  //
+  // De ladder wordt uit de lijst zelf gelezen en niet uit een tabel hier, want
+  // dames tellen in 34 tot 48 en heren in 46 tot 60. Een vaste schaal zou bij
+  // het ene geslacht altijd fout zitten.
+  const MAAT_RANG = { xxxs: -3, xxs: -2, xs: -1, s: 0, m: 1, l: 2, xl: 3,
+                      xxl: 4, "2xl": 4, xxxl: 5, "3xl": 5, "4xl": 6, "5xl": 7 };
+
+  function _maatSleutels(tekst) {
+    const t = String(tekst || "");
+    const getallen = [...t.matchAll(/\d{2,3}/g)].map((m) => Number(m[0]));
+    const letters = [...t.matchAll(/(?:^|[\s(/,-])([2-5]xl|x{0,3}s|x{0,3}l|m)(?=[\s)/,-]|$)/gi)]
+      .map((m) => MAAT_RANG[m[1].toLowerCase()])
+      .filter((r) => r !== undefined);
+    return { getallen, letters };
+  }
+
+  function _maatBuitenDeLadder(el, waarde) {
+    const opties = [...el.options].filter((o) => o.value !== "" && !o.disabled);
+    const kleiner = opties.find((o) => /\b(of\s+)?(kleiner|smaller)\b/i.test(o.text));
+    const groter = opties.find((o) => /\b(of\s+)?(groter|larger|meer)\b/i.test(o.text));
+    if (!kleiner && !groter) return "";
+
+    let laagsteGetal = Infinity, hoogsteGetal = -Infinity;
+    let laagsteLetter = Infinity, hoogsteLetter = -Infinity;
+    for (const o of opties) {
+      const { getallen, letters } = _maatSleutels(o.text);
+      for (const g of getallen) {
+        laagsteGetal = Math.min(laagsteGetal, g);
+        hoogsteGetal = Math.max(hoogsteGetal, g);
+      }
+      for (const r of letters) {
+        laagsteLetter = Math.min(laagsteLetter, r);
+        hoogsteLetter = Math.max(hoogsteLetter, r);
+      }
+    }
+
+    // Onze eigen maat: eerst een getal (dat is het nauwkeurigst), anders de letter.
+    const eigen = _maatSleutels(waarde);
+    if (eigen.getallen.length && laagsteGetal < Infinity) {
+      const g = Math.min(...eigen.getallen);
+      if (g < laagsteGetal) return kleiner ? kleiner.text : "";
+      if (Math.max(...eigen.getallen) > hoogsteGetal) return groter ? groter.text : "";
+      return "";
+    }
+    if (eigen.letters.length && laagsteLetter < Infinity) {
+      const r = Math.min(...eigen.letters);
+      if (r < laagsteLetter) return kleiner ? kleiner.text : "";
+      if (Math.max(...eigen.letters) > hoogsteLetter) return groter ? groter.text : "";
+    }
     return "";
   }
 
