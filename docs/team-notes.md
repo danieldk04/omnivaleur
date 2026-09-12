@@ -8865,3 +8865,49 @@ marktplaats listings"). Bewust laten staan: dat die oude rijen meelopen is een
 expres genomen voorzorg tegen een advertentie die na een mislukte verwijdering
 tóch nog live staat, en daar sleutelen raakt de bescherming tegen dubbel
 verkopen.
+
+## 12-09-2026 — "Waarom krijg ik elke keer dit blok?" bij de lederhosen
+
+Toon, 15:12 en 15:20. Hij zet het hele weekend lederhosen klaar voor oktober en
+kreeg bij elke poging: "Already listed here under a duplicate copy of this item.
+Merge them first, otherwise you get two adverts for one article."
+
+**Ze waren geen dubbelen.** Vier artikelen die allemaal "Lederhosen Dames" heten
+zijn vier verschillende broeken: 40 cm, 35 cm, 47 cm en een groene suède, elk met
+eigen prijs, eigen tekst en negen tot elf eigen foto's. Wat ze delen is één
+plaatje: zijn eigen info-/maatfoto, die in 17 van zijn 1.318 artikelen zit. De
+controle van 07-09 eiste "dezelfde titel én minstens één gedeelde foto", en dat
+ene plaatje gold als bewijs. Erger nog: de melding stuurde hem naar samenvoegen,
+wat twee echte broeken tot één zou hebben geplakt, en samenvoegen was voor hem
+niet eens mogelijk (dat scherm groepeert op het artikelnummer in de titel, en dat
+heeft hij niet). Een doodlopende straat dus.
+
+**Gemeten, niet geredeneerd.** Alle 43 paren in zijn voorraad met dezelfde titel
+én een gedeelde foto, en de scheiding is scherp zonder twijfelgevallen: 26 echte
+dubbelen delen de héle kleinere fotoset (4 van 4, 5 van 5, 9 van 9, 10 van 10,
+11 van 11, plus twee paren van 1 van 1), 17 valse delen precies één foto van
+zeven tot elf. Twee imports van dezelfde advertentie leveren immers dezelfde
+foto's op. Daarom telt nu een aandeel en geen aantal: minstens 0,6 van de
+kleinste fotoset moet overlappen (`_zelfde_fotos` in
+`backend/services/crosslist.py`). De 0,6 en niet 1,0 zodat een import die één
+foto meer of minder ophaalde er nog onder valt.
+
+Over alle verkopers samen: 32 artikelen vrijgegeven (19 bij Toon, 13 bij Papa's
+Plectrums, die ook een sjabloonfoto onder elke advertentie zet), nul nieuw
+geblokkeerd. Proeven: `tests/test_een_gedeelde_foto_is_geen_dubbele.py` en de
+bijgewerkte `tests/test_dubbele_advertentie_zelfde_foto.py`. Dat laatste bestand
+had een fixture die niet klopte met de werkelijkheid: vier "dubbele" tapijtrijen
+deelden daar één foto van de twee, terwijl die rijen in de database letterlijk
+dezelfde vijf foto's dragen. Nu staat de echte stand erin, en zakt
+`test_acht_verschillende_lederhosen_blijven_los_te_koop` op commit 3db24936.
+
+**Zijn lederhosen op dit moment:** 233 artikelen, 39 staan live op Marktplaats,
+47 staan in de rij (plek 51 tot 101, dus ongeveer twee uur wakker draaien), 1 is
+een echte dubbele. De zes die het blok raakte moet hij opnieuw aanklikken; een
+geweigerde publicatie zet geen opdracht klaar.
+
+**Wat het NIET was, nagekeken:** de categoriefouten ("verkleedkleding maps to no
+marktplaats category") dateren van 03 t/m 05-09, van vóór de kaart die dat paar
+kent; sindsdien geen enkele meer. Zijn kopie is 1.0.316 tegen 1.0.321 in de repo,
+ruim binnen de achterstandsgrens, dus hij krijgt gewoon werk (alleen 'extend'
+niet, dat vraagt 318).
