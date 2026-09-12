@@ -863,7 +863,7 @@ def _zelfde_artikel_al_online(db, item: dict, platforms: list[str],
              .limit(50).execute().data or [])
     zelfde = [r["id"] for r in rijen
               if r.get("id") and r["id"] not in overslaan
-              and fotos & {u for u in (r.get("photo_urls") or []) if u}]
+              and _zelfde_fotos(fotos, {u for u in (r.get("photo_urls") or []) if u})]
     if not zelfde:
         return {}
 
