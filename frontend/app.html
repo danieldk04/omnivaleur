@@ -9555,7 +9555,8 @@ function renderActivityBar() {
       text.innerHTML = `Calm mode is on, so the extension does about <b>one every ${minuten} minutes</b> `
         + `instead of back to back. These ${nQueued} will take ${fmtQueueEta(nQueued, pace.seconds_per_job || pace.seconds_between)} `
         + `(${describeJobs(queued)}). <b>Nothing is stuck</b> — long quiet gaps are what Calm mode does. `
-        + `To run them straight through, click the Omnivaleur extension icon and switch Calm mode off.`;
+        + `To run them straight through, click the Omnivaleur extension icon and switch Calm mode off.`
+        + voortgang + stilZin;
     } else {
       // OOK ZONDER CALM MODE IS EEN LANGE RIJ EEN LANGE RIJ.
       //
