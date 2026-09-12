@@ -27,7 +27,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
-from backend.services.crosslist import _zelfde_fotos  # noqa: E402
+from backend.services.crosslist import _zelfde_artikel_al_online, _zelfde_fotos  # noqa: E402
 
 INFO = "https://img.omnivaleur.com/toon/a13db2d0d574470e35573e5f.jpg"
 
