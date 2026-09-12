@@ -8719,3 +8719,26 @@ code 0 van 6. Regressieproef: `tests/test_nederlands_blijft_nederlands.py`
 (zakt op de oude code, slaagt op de nieuwe).
 
 Bijvangst: elke advertentie die al goed staat kost nu geen vertaalaanroep meer.
+
+## 12-09-2026 — Twee vaste afspraken over hoe we communiceren
+
+Beide komen van Daniel, op dezelfde dag, en gelden voor iedere sessie en iedere
+ontwikkelaar die op dit project werkt.
+
+**1. Berichten zo kort en compact mogelijk.** De vier rapportageblokjes uit
+`CLAUDE.md` (wat was er mis, wat is er nu anders, zekerheid, actiepunten) zijn
+een maximum, geen invulformulier. Is het resultaat klein of leeg, dan is één of
+twee zinnen het hele antwoord. Weeg de lengte af tegen wat er te melden valt,
+nooit tegen de hoeveelheid werk die eraan is besteed. Aanleiding: een volledige
+rapportage in vier blokjes over een commit die al bleek te zijn gepusht, dus
+waar feitelijk niets te melden was.
+
+**2. Tekst die Daniel kopieert, breekt nooit zelf af.** In elke tekst die hij
+overneemt en doorstuurt (klantmail, chatbericht, advertentietekst) is één alinea
+één doorlopende regel, hoe lang die ook wordt. Enters staan alleen tussen
+alinea's. Aanleiding: mailteksten uit een codeblok werden rond 75 tekens
+afgebroken; die harde regeleindes reizen mee naar Zoho en staan daar als "heel
+veel enters" in plaats van volle breedte, en moest hij met de hand weghalen.
+
+Beide staan ook als geheugenbestand (`antwoorden-kort-houden`,
+`mailtekst-niet-afbreken`), maar die zijn accountgebonden, vandaar hier.
