@@ -8820,3 +8820,48 @@ Openstaand: `tests/test_marktplaats_vertaling.py::test_publiceren_stempelt_zijn_
 en `tests/test_postcode_melding_2dehands.py::test_marktplaats_krijgt_hem_ook`
 zakken allebei ook op de code van vóór deze wijziging. Die gaan over de
 extensie- en app.html-teksten, niet over verkopen.
+
+## 12-09-2026 — "Deze pc staat de hele dag aan en toch staan er 50"
+
+Toon (De Juiste Toon), 14:30. Vijfde melding van dezelfde strekking, en voor het
+eerst met het antwoord erbij gemeten in plaats van beredeneerd.
+
+**Er was niets stuk.** Gemeten in zijn opdrachten: 119 open, en tussen 07:51 en
+11:12 UTC werd er geen enkele opgepakt terwijl er honderd klaarstonden, daarna
+nog eens 54 minuten niet. Dat is 4,2 van de 12 uur niets. De uitgifte deed het
+gewoon: bij twee andere verkopers liepen in diezelfde uren 46 en 24 opdrachten
+per uur door. Zijn eigen opdracht van 07:51 meldde zich om 11:12 alsnog klaar,
+negen seconden na de eerstvolgende poll, en zijn dashboard had al die tijd
+evenmin gepolld (anders had de opruimronde die vastzittende claim allang
+afgesloten). Twee onafhankelijke tekens dat de hele Chromebook sliep. Als hij
+wél draait doet hij één advertentie per ruim een minuut, ongeveer 45 per uur.
+
+**Tweede reden dat het getal niet zakt:** een verversing is twee opdrachten
+(weghalen plus terugplaatsen, de tweede een paar minuten later gepland). Elke
+afgeronde verwijdering laat dus een plaatsing zichtbaar worden. Hij zag 43
+opdrachten in een uur af komen en de teller stond nog steeds rond de 50.
+
+**Gebouwd:** `_stille_uren` in `backend/api/jobs.py` telt hoeveel tijd er in de
+laatste twaalf uur verloren ging terwijl er werk lag, en de balk in het dashboard
+zegt dat nu, samen met hoeveel er het afgelopen uur klaar kwamen. Valkuil die
+onderweg twee keer toesloeg: kijken naar de opdracht die ná het gat werd
+opgepakt geeft 0 stille uren, want een verse klik van de verkoper gaat vóór de
+nachtronde. Proeven: `tests/test_stille_uren_in_de_wachtrij.py` (4 gevallen) en
+`tests/wachtrij-staat-stil-omdat-de-computer-slaapt-test.js`, beide zakken op
+commit 3db24936.
+
+**Kopersbescherming (zijn tweede vraag) kunnen wij niet uitzetten.** Marktplaats
+zet die er niet als schakelaar bij de advertentie in: hij geldt zodra de kóper
+kiest voor verzenden met PostNL, DHL of Brenger. De enige knop aan onze kant is
+"How you deliver" in de instellingen; op "Collection only" is er geen verzending
+en dus geen kopersbescherming, maar dan verliest hij ook alle verzendkopers. Zijn
+instelling staat nu op "beide". Openstaand: aan hem vragen wat hij precies wil.
+
+**Openstaand, niet aangeraakt:** tien dubbele verwijderopdrachten in zijn rij.
+De verkoop-afmelding zet er één per advertentierij klaar, en bij een herplaatsing
+staat er naast de levende rij nog een oude 'delisted' rij van de vorige
+advertentie. Die tweede opdracht kan alleen mislukken ("cannot be found in your
+marktplaats listings"). Bewust laten staan: dat die oude rijen meelopen is een
+expres genomen voorzorg tegen een advertentie die na een mislukte verwijdering
+tóch nog live staat, en daar sleutelen raakt de bescherming tegen dubbel
+verkopen.

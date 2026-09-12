@@ -17,6 +17,45 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ---
 
+## computer-aan-is-niet-browser-werkt
+
+*12-09-2026 — "Wachtrij die de hele dag stilstaat terwijl de pc 'aan' is: meet stille uren en leg andere verkopers ernaast om server en machine te onderscheiden"*
+
+Een verkoper die zegt "deze pc staat de hele dag aan" zegt niet dat de browser
+werkte. Op een Chromebook (en op elke laptop met een dichte klep) slaapt het
+apparaat, en dan doet de extensie niets: geen poll, geen tabblad, geen voortgang.
+
+**Why:** 12-09-2026 meldde De Juiste Toon voor de vijfde keer dat er "50 stuks"
+bleven staan. Gemeten in zijn eigen opdrachten: tussen 07:51 en 11:12 UTC werd er
+geen enkele opdracht opgepakt terwijl er honderd klaarstonden, daarna nog eens 54
+minuten niet. In diezelfde uren liepen bij twee andere verkopers 46 en 24
+opdrachten per uur door, dus de uitgifte deelde gewoon uit. Zijn opdracht van
+07:51 meldde zich om 11:12 alsnog klaar, negen seconden na de eerstvolgende poll,
+en ook zijn dashboard had al die tijd niet gepolld (anders had de opruimronde die
+vastzittende claim allang afgesloten). Twee onafhankelijke tekens dat de hele
+machine sliep.
+
+**How to apply:** bij elke melding "er gebeurt niets" eerst de claims van andere
+verkopers in hetzelfde tijdvak ernaast leggen. Liepen die door, dan is het de
+machine van de melder en niet de server (zie "bewijs-moet-onderscheiden").
+Reken daarna nooit een looptijd voor met het gemeten tempo alleen: dat tempo
+gooit slaapgaten er bewust uit, dus "deze 50 duren een uur" klopt alleen als de
+computer wakker blijft (zie "beloofd-tempo-moet-gemeten-tempo-zijn").
+
+De balk in het dashboard meet die stille uren nu apart (`idle_seconds` uit
+`_stille_uren` in `backend/api/jobs.py`) en noemt ze. Let bij die meting op de
+valkuil: kijken naar de opdracht die ná het gat werd opgepakt is fout, want een
+verse klik van de verkoper gaat vóór de nachtronde. Op Toons echte rij gaf die
+kortere weg 0 stille uren waar er ruim vier waren.
+
+Tweede reden dat het getal niet daalt: een verversing is twee opdrachten
+(weghalen plus terugplaatsen, de tweede met een `scheduled_for` een paar minuten
+later). Elke afgeronde verwijdering laat dus een plaatsing zichtbaar worden, en
+de teller blijft staan terwijl er wél werk af komt. Daarom staat er nu ook bij
+hoeveel er het afgelopen uur klaar kwamen.
+
+---
+
 ## vinted-weg-is-geen-archief
 
 *12-09-2026 — Een advertentie die van Vinted verdwijnt is met de hand weggehaald, meestal na verkoop; stil archiveren liet hem op Marktplaats staan*
