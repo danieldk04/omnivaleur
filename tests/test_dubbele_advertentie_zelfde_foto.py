@@ -73,6 +73,8 @@ class NepDb:
 
 
 FOTO_TAPIJT = "https://img/9e-4bd6-8496-639bd127233f.jpg"
+# Zijn vaste info-/maatplaatje, dat in 17 van zijn artikelen zit.
+FOTO_INFO = "https://img/a13db2d0d574470e35573e5f.jpg"
 GEBRUIKER = "96e30080-ab81-47ac-8626-e8637f1e2a9e"
 
 
