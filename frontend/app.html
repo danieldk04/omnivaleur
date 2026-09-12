@@ -9497,6 +9497,29 @@ function renderActivityBar() {
     const pace = _activityState.pace || null;
     const ext = state.extStatus || null;
     const offline = ext && ext.online === false;
+    // WAT ER ÉCHT GEBEURDE, NAAST WAT ER ZOU MOETEN GEBEUREN.
+    //
+    // WAAROM (12-09-2026, De Juiste Toon). "Deze pc staat de hele dag aan en
+    // toch zie ik nog steeds 50 stuks staan." Gemeten op zijn rij: ruim vier
+    // van de twaalf uur werd er geen enkele opdracht opgepakt terwijl er
+    // honderd klaarstonden — zijn Chromebook sliep, want bij twee andere
+    // verkopers liep in diezelfde uren alles door. De balk beloofde ondertussen
+    // "deze 50 duren een uur", want het gemeten tempo gooit slaapgaten er
+    // bewust uit. Die belofte klopt alleen als de computer wakker blijft, dus
+    // dat zeggen we er nu bij. En we zeggen hoeveel er in het afgelopen uur
+    // wél af kwamen: het aantal in de rij daalt niet zichtbaar (een verversing
+    // is een verwijdering plus een nieuwe plaatsing), dus zonder dat getal
+    // lijkt stilstand het enige wat er te zien is.
+    const stilSec = pace && pace.idle_seconds || 0;
+    const stilUur = stilSec / 3600;
+    const voortgang = pace && pace.done_last_hour
+      ? ` <b>${pace.done_last_hour}</b> finished in the last hour — the number above barely drops because putting a listing back is a second job.`
+      : '';
+    const stilZin = stilUur >= 0.75
+      ? ` Your computer did nothing for <b>${stilUur < 1.5 ? 'about an hour' : `about ${Math.round(stilUur)} hours`}</b> `
+        + `of the last 12 while this queue was waiting. Nothing runs while that computer sleeps or Chrome is closed — `
+        + `that, not a fault, is what makes a queue last all day.`
+      : '';
     if (offline) {
       const geleden = ext.seconds_ago != null ? ` (last seen ${fmtSeenAgo(ext.seconds_ago)})` : '';
       // NOOIT BELOVEN DAT DE RIJ VANZELF OP GANG KOMT ALS DAT NIET KAN.
