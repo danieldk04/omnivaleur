@@ -788,7 +788,7 @@ def _stille_uren(db, user_id: str) -> dict:
     werk = [(_parse_ts(r["created_at"]), _parse_ts(r.get("claimed_at")))
             for r in rijen if r.get("created_at")]
 
-    def lag_er_werk(van: datetime, tot: Optional[datetime]) -> bool:
+    def lag_er_werk(van, tot) -> bool:
         return any(gemaakt <= van and (opgepakt is None or opgepakt >= (tot or nu_dt))
                    for gemaakt, opgepakt in werk)
 
