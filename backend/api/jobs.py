@@ -2491,6 +2491,28 @@ async def _reconcile_vinted_sales(db, job, scraped: list[dict], scan_meta: dict 
     if not item_ids:
         return
 
+    # Plaatselijke import: listings.py leunt op dit bestand, dus bovenaan zou
+    # dit een kringetje worden (zelfde reden als bij 'verdwenen_te_jong').
+    from backend.api.listings import VERDENKING_REDENEN
+
+    # Waar staat dit artikel NOG te koop? Een advertentie die van Vinted af is
+    # maar elders gewoon online staat, is precies het geval waarin de verkoper
+    # iets moet beslissen; staat hij nergens anders meer, dan valt er niets te
+    # vragen en gaat hij zonder omhaal het archief in.
+    elders_levend: set[str] = set()
+    try:
+        for r in (await naast_de_lus(lambda: fetch_all_in(
+                lambda: db.table("listings").select("item_id")
+                .neq("platform", "vinted")
+                .in_("status", ["active", "relisting", "hidden", "pending"]),
+                "item_id", item_ids))):
+            elders_levend.add(r["item_id"])
+    except Exception as e:  # noqa: BLE001
+        # Niet fataal, maar wel bepalend: zonder deze lijst zouden we iedereen
+        # een vraag stellen die niets oplevert. Dan liever doen wat we altijd
+        # deden en archiveren.
+        logger.warning("Vinted reconcile: kon 'staat elders nog te koop' niet bepalen: %s", e)
+
     active = await naast_de_lus(lambda: fetch_all_in(
         lambda: db.table("listings")
         .select("id,item_id,platform_listing_id")
@@ -2508,7 +2530,7 @@ async def _reconcile_vinted_sales(db, job, scraped: list[dict], scan_meta: dict 
     #                revenue and cross-delist live listings). Instead we just take
     #                it off "Live" → 'delisted', so it lands in Archived for the
     #                user to confirm and mark sold themselves if it really sold.
-    newly_sold, set_aside, matched_without_id = 0, 0, 0
+    newly_sold, set_aside, matched_without_id, gevraagd = 0, 0, 0, 0
     for l in active:
         pid = l.get("platform_listing_id")
         if pid is None:
@@ -2549,16 +2571,42 @@ async def _reconcile_vinted_sales(db, job, scraped: list[dict], scan_meta: dict 
             except Exception as e:
                 logger.warning(f"Vinted sale reconcile failed for item {l['item_id']}: {e}")
         elif pid not in seen_ids:
+            # WEG VAN VINTED TERWIJL HET ELDERS NOG TE KOOP STAAT = EEN VRAAG,
+            # GEEN ARCHIEF.
+            #
+            # GEMETEN 12-09-2026 (De Juiste Toon). Hij verkocht 23 artikelen op
+            # Vinted en haalde die advertenties daar zelf weg, zoals iedereen
+            # doet. Op Marktplaats bleven ze staan. Dat was geen storing maar
+            # deze regel: een verdwenen advertentie ging stil naar 'delisted',
+            # er werd niets afgemeld en niets gevraagd, dus het antwoord op
+            # "wanneer gaan ze automatisch van Marktplaats af" was: nooit.
+            #
+            # Van absentie een verkoop maken blijft verboden (dat haalde ooit
+            # levende advertenties overal weg). Maar op Vinted verloopt niets
+            # vanzelf: weg is met de hand weggehaald. Dat is een zacht signaal,
+            # en een zacht signaal hoort een ja/nee-vraag te worden. Zegt de
+            # verkoper ja, dan meldt handle_item_sold het overal af; zegt hij
+            # nee, dan gaat de rij alsnog naar het archief. Precies dezelfde
+            # route als een verdwenen Shopify-product.
+            vraag = l["item_id"] in elders_levend
+            velden = ({"status": "sold_unconfirmed",
+                       "error_message": VERDENKING_REDENEN["vinted_weg"],
+                       "last_checked": datetime.now(timezone.utc).isoformat()}
+                      if vraag else {"status": "delisted"})
             try:
-                (await naast_de_lus(lambda: db.table("listings").update({"status": "delisted"}) \
-                    .eq("item_id", l["item_id"]).eq("platform", "vinted").execute()))
-                set_aside += 1
+                (await naast_de_lus(lambda: db.table("listings").update(velden) \
+                    .eq("item_id", l["item_id"]).eq("platform", "vinted")
+                    .in_("status", ["active", "relisting", "hidden"]).execute()))
+                if vraag:
+                    gevraagd += 1
+                else:
+                    set_aside += 1
             except Exception as e:
                 logger.warning(f"Vinted reconcile: could not archive vanished listing {l['item_id']}: {e}")
     logger.info(
         "[sold] Vinted reconcile for user %s: %d marked sold (is_closed, of which %d matched by SKU/title), "
-        "%d vanished → archived for review",
-        job["user_id"], newly_sold, matched_without_id, set_aside,
+        "%d vanished → asked the seller (still live elsewhere), %d vanished → archived",
+        job["user_id"], newly_sold, matched_without_id, gevraagd, set_aside,
     )
 
 

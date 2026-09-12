@@ -50,7 +50,7 @@ def _off_the_request_loop(coro_fn):
 
 def start_scheduler():
     global _scheduler
-    from backend.services.polling import poll_platform_statuses
+    from backend.services.polling import poll_platform_statuses, plan_vinted_scans
     from backend.services.crosslist import relist_expiring_marktplaats, extend_expiring_2dehands
     from backend.services.relist import herstel_vastgelopen_werk
     from backend.services.mp_enrich import vul_ontbrekende_teksten_aan
@@ -84,6 +84,21 @@ def start_scheduler():
         minutes=5,
         id="shopify_verkopen",
         replace_existing=True,
+    )
+    # Vinted heeft geen webhook en geen server-polling: de enige veilige manier
+    # om een Vinted-verkoop te zien is de garderobe uitlezen vanuit de sessie van
+    # de verkoper zelf. De wekker in de extensie deed dat vrijwel nooit (gemeten
+    # 12-09-2026: drie scans in negen dagen bij een verkoper met 997 advertenties
+    # op Vinted). Vanaf hier zet de server het werk klaar; de extensie pikt het op
+    # zodra de browser aanstaat. Zie plan_vinted_scans.
+    _scheduler.add_job(
+        _off_the_request_loop(plan_vinted_scans),
+        "interval",
+        minutes=30,
+        id="vinted_scan_planner",
+        replace_existing=True,
+        max_instances=1,
+        coalesce=True,
     )
     _scheduler.add_job(
         _off_the_request_loop(relist_expiring_marktplaats),

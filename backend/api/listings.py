@@ -523,6 +523,17 @@ VERDENKING_REDENEN = {
     # Marktplaats). Staat het product er niet meer, dan heeft iemand het zelf
     # verwijderd — vaak omdat het net verkocht is. Zie
     # backend/services/shopify_reconcile.py.
+    # Een Vinted-advertentie verloopt nooit vanzelf: hij blijft staan tot de
+    # verkoper hem zelf weghaalt, en een verkochte advertentie blijft zelfs
+    # staan (Vinted zet er alleen "gesloten" op). Is hij tóch uit de garderobe
+    # verdwenen, dan heeft de verkoper hem met eigen hand weggehaald — en dat
+    # doet vrijwel iedereen meteen nadat het artikel verkocht is. Zie de
+    # Vinted-reconciliatie in backend/api/jobs.py.
+    "vinted_weg":
+        "Mogelijk verkocht: deze advertentie staat niet meer in je Vinted-kast. "
+        "Op Vinted verloopt een advertentie nooit vanzelf, dus is hij met de hand "
+        "weggehaald, meestal omdat het artikel net verkocht is. Verkocht? "
+        "Bevestig het hier, dan gaat het artikel ook van je andere kanalen af.",
     "shopify_weg":
         "Mogelijk verkocht: dit product staat niet meer in je Shopify-winkel. "
         "Shopify-producten verdwijnen nooit vanzelf, dus is het met de hand "

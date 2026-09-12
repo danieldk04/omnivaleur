@@ -225,3 +225,85 @@ async def _check_one(listing: dict, credentials: dict):
             await handle_item_sold(naderhand, platform_name)
         except Exception as e:  # noqa: BLE001
             logger.error(f"Poll: afmelden van item {naderhand} mislukt: {e}")
+
+
+# ---------------------------------------------------------------------------
+# VINTED-SCANS PLANNEN VANAF DE SERVER
+#
+# WAAROM DIT ER IS (12-09-2026, gemeten bij De Juiste Toon).
+# Een Vinted-verkoop is alleen te zien door de garderobe uit te lezen vanuit de
+# eigen sessie van de verkoper. Dat doet de extensie, en die had daar een eigen
+# wekker voor die elk uur zou afgaan. In de praktijk ging die wekker vrijwel
+# nooit af: gemeten over 02-09 t/m 12-09 kwamen er bij zes verkopers samen 32
+# scanopdrachten binnen, bij Toon drie in negen dagen (04-09, 05-09, 10-09).
+# Een verkoop die hij vandaag doet kan daardoor dagen onopgemerkt blijven, en
+# zolang dat duurt staat het artikel elders gewoon te koop.
+#
+# De wekker zelf repareren kan alleen via de Web Store, en dat duurt weken. De
+# server kan het werk net zo goed klaarzetten: de extensie haalt elke 15
+# seconden zijn opdrachten op, dus een scanopdracht die hier klaargezet wordt
+# loopt vanzelf zodra de browser aanstaat. Geen nieuwe extensie nodig.
+VINTED_SCAN_NA_UREN = 4        # zo lang mag de laatste voltooide scan geleden zijn
+VINTED_HEARTBEAT_DAGEN = 3     # browsers die zo lang niet zijn gezien slaan we over
+
+
+async def plan_vinted_scans() -> dict:
+    """Zet een Vinted-scan klaar voor iedereen bij wie de laatste te lang geleden is."""
+    db = get_db()
+    nu = datetime.now(timezone.utc)
+    grens = (nu - timedelta(hours=VINTED_SCAN_NA_UREN)).isoformat()
+    levend = (nu - timedelta(days=VINTED_HEARTBEAT_DAGEN)).isoformat()
+    gepland, overgeslagen = 0, 0
+
+    try:
+        kloppend = (await _exec(db.table("extension_heartbeat")
+                                .select("user_id,last_seen").gte("last_seen", levend))).data or []
+    except Exception as e:  # noqa: BLE001
+        logger.warning("Vinted-scanplanner: kon de hartslagen niet lezen: %s", e)
+        return {"gepland": 0}
+
+    for rij in kloppend:
+        uid = rij["user_id"]
+        try:
+            # Heeft deze verkoper überhaupt iets op Vinted staan? Eén gekoppelde
+            # vraag, geen lijst met duizenden item-id's in de URL.
+            heeft = (await _exec(db.table("listings").select("id,items!inner(user_id)")
+                                 .eq("platform", "vinted")
+                                 .in_("status", ["active", "relisting", "hidden"])
+                                 .eq("items.user_id", uid).limit(1))).data
+            if not heeft:
+                continue
+            # Staat er al een scan te wachten of te draaien, dan niets doen: een
+            # tweede opdracht opent alleen een tweede tabblad.
+            bezig = (await _exec(db.table("jobs").select("id")
+                                 .eq("user_id", uid).eq("platform", "vinted").eq("action", "scan")
+                                 .in_("status", ["pending", "claimed"]).limit(1))).data
+            if bezig:
+                overgeslagen += 1
+                continue
+            recent = (await _exec(db.table("jobs").select("id")
+                                  .eq("user_id", uid).eq("platform", "vinted").eq("action", "scan")
+                                  .eq("status", "done").gte("done_at", grens).limit(1))).data
+            if recent:
+                continue
+            # Dezelfde lading als de knop in het dashboard: de nummers waarvan we
+            # de tekst al hebben, zodat de scan zijn budget bij Vinted niet
+            # verspilt aan pagina's die we al kennen.
+            payload: dict = {}
+            try:
+                from backend.api.imports import _vinted_ids_met_tekst
+                payload["tekst_bekend"] = await asyncio.to_thread(_vinted_ids_met_tekst, db, uid)
+            except Exception as e:  # noqa: BLE001
+                logger.warning("Vinted-scanplanner: 'tekst al bekend' mislukt voor %s: %s", uid, e)
+            await _exec(db.table("jobs").insert({
+                "user_id": uid, "item_id": None, "platform": "vinted",
+                "action": "scan", "status": "pending", "payload": payload,
+            }))
+            gepland += 1
+        except Exception as e:  # noqa: BLE001
+            logger.warning("Vinted-scanplanner: overgeslagen voor %s: %s", uid, e)
+
+    if gepland:
+        logger.info("Vinted-scanplanner: %d scan(s) klaargezet, %d verkoper(s) waren al bezig",
+                    gepland, overgeslagen)
+    return {"gepland": gepland, "bezig": overgeslagen}
