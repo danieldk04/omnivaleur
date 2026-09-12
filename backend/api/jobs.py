@@ -721,8 +721,12 @@ def _gemeten_tempo(db, user_id: str) -> dict:
                 if cyclus > 0:
                     cycli.append(cyclus)
     if len(gaten) < 3:
+        # Te weinig om iets over de snelheid te beweren. De stille uren tellen
+        # we wél: juist een computer die de halve dag slaapt levert nauwelijks
+        # monsters op, en dát is nu net wat de verkoper wil weten.
+        leeg.update(_stille_uren(db, user_id))
         _tempo_cache[user_id] = (nu, leeg)
-        return leeg               # te weinig om iets over te beweren
+        return leeg
     gaten.sort()
     cycli.sort()
     midden = gaten[len(gaten) // 2]
