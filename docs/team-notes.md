@@ -8911,3 +8911,40 @@ marktplaats category") dateren van 03 t/m 05-09, van vóór de kaart die dat paa
 kent; sindsdien geen enkele meer. Zijn kopie is 1.0.316 tegen 1.0.321 in de repo,
 ruim binnen de achterstandsgrens, dus hij krijgt gewoon werk (alleen 'extend'
 niet, dat vraagt 318).
+
+## 12-09-2026, avond — maat buiten de ladder, en de zes alsnog klaargezet
+
+**De zes lederhosen die op het dubbel-blok liepen staan klaar.** Via de echte
+publiceerroute (`publish_to_platforms`), dus met alle controles erlangs: alle zes
+kwamen terug als 'queued' waar ze vanmiddag nog geweigerd werden. Daarmee is de
+reparatie van vanmiddag ook in productie bewezen, niet alleen in een proef.
+
+**Maat buiten de ladder.** Marktplaats biedt bij dameskleding vijf keuzes, van
+"Maat 34 (XS) of kleiner" tot "Maat 46/48 (XL) of groter". Een artikel met maat
+XXS / 32 / 4 past in geen van de vijf, het veld bleef leeg en de advertentie ging
+niet de deur uit. Aan de bovenkant hetzelfde met XXL, XXXL en 4XL. Geteld in zijn
+opdrachten sinds 25-08: 17 publicaties die hierop strandden.
+
+De optie die "of kleiner" of "of groter" heet IS het goede antwoord voor zo'n
+maat. `_maatBuitenDeLadder` in `extension/content/shared.js` kiest die nu, en
+alleen die: bestaat er geen uiterste in de lijst, dan gebeurt er niets. De ladder
+wordt uit de lijst zelf gelezen, want dames tellen in 34 tot 48 en heren in 46 tot
+60; een vaste schaal zou bij het ene geslacht altijd fout zitten.
+
+Twee valkuilen onderweg, allebei door de proef gevangen:
+
+1. Vinted schrijft een damesmaat als "M / 38 / 10". Wie die 10 meerekent ziet een
+   maat onder de 34 en zet er "Maat 34 (XS) of kleiner" bij: geen leeg veld maar
+   een verkeerd gevuld veld, en dat is erger. Alleen getallen vanaf 20 tellen mee,
+   en er wordt pas uitgeweken als élk plausibel getal buiten de lijst valt.
+2. `kiesMetTerugval` probeerde alleen de hele waarde, terwijl de gewone vulroute
+   de stukken los probeert. Daardoor deed de reparatieronde mínder dan de eerste
+   poging en viel "S / 36 / 8" door naar de terugval terwijl "36" gewoon in de
+   lijst staat. Hij gaat nu eerst dezelfde stukken langs.
+
+Proef: `tests/maat-buiten-de-ladder-test.js` (7 gevallen, met de echte lijst uit
+zijn foutmelding), zakt op commit 3db24936. Extensie op 1.0.322 gezet en gebouwd
+naar `dist/omnivaleur-extension-1.0.322.zip`. De ondergrens in jobs.py en app.html
+is bewust NIET opgehoogd: Toon draait 1.0.316 en die moet gewoon door kunnen
+werken. Openstaand: het zipje nog uploaden naar de Chrome Web Store, tot die tijd
+blijft de maatfout bij iedereen staan.
