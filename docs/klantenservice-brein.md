@@ -10,7 +10,7 @@ product verandert. De ontwikkelaar werkt dan zowel dit bestand in de repo als de
 kopie in Drive bij, in dezelfde beurt. Daniel hoeft niets te doen; de Gem leest
 de Drive-kopie de volgende keer opnieuw in.
 
-_Laatst bijgewerkt: 13-09-2026 (plaatsen stopt bij slaapstand, en advertenties zonder foto's: oorzaak weg, en de server repareert wat er stond)_
+_Laatst bijgewerkt: 13-09-2026 (uitgelogd raken bij stilzitten, plaatsen stopt bij slaapstand, en advertenties zonder foto's: oorzaak weg, en de server repareert wat er stond)_
 
 ---
 
@@ -372,6 +372,21 @@ uitbreiding plaatst niet meer zonder foto's.
 Je hoeft zelf niets te doen. We hebben nagekeken welke advertenties het raakt en
 die worden automatisch opnieuw geplaatst, mét je foto's erbij. Dat kan een dag
 duren, want het gaat rustig aan zodat Marktplaats er niet van schrikt.
+
+Groetjes,
+Daniel
+
+### Ik word uitgelogd als ik een tijdje niets doe
+
+Hoi <voornaam>,
+
+Terecht dat je dat meldt, en het lag aan ons. Je inlog werd gedeeld tussen het
+dashboard en de uitbreiding in Chrome, en die twee raakten elkaar kwijt zodra je
+een tijdje niets deed. Je werd dan uitgelogd terwijl er niets aan de hand was.
+
+Dat is opgelost. Je blijft nu gewoon ingelogd, ook als je een dag niets doet, en
+een haperende verbinding gooit je er niet meer uit. Je hoeft zelf niets te doen
+behalve één keer opnieuw inloggen, daarna blijft het staan.
 
 Groetjes,
 Daniel

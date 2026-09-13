@@ -9091,3 +9091,22 @@ Sinds 1.0.325 vraagt de extensie Chrome om de computer wakker te houden zolang e
 werk klaarstaat dat nu aan de beurt is (chrome.power, niveau system: het scherm
 mag gewoon uit). Tempo blijft ongeveer één advertentie per minuut; dat is de tijd
 die het formulier zelf kost, niet een rem van ons.
+
+## 13-09-2026 — Uitgelogd raken als je een tijdje niets doet
+
+Egberts "timeout" bleek niet over het plaatsen te gaan maar over uitgelogd raken
+uit zijn account, iets wat Daniel zelf ook had. Oorzaak: de vernieuwsleutel van
+Supabase mag precies één keer gebruikt worden, en het dashboard geeft hem bij het
+inloggen door aan de extensie. Zodra de extensie hem doordraait draagt het
+dashboard een dode sleutel, en dat merk je pas als het toegangsbewijs na een uur
+verloopt. Dat is precies het moment dat iemand terugkomt na een pauze.
+
+Daarnaast gold elke mislukte vernieuwing als "sessie voorbij", ook een 503. Eén
+hik tijdens een deploy logde dus iedereen uit die op dat moment iets aanklikte.
+Hetzelfde stond in beheer.html.
+
+Sinds 1.0.326 en deze frontend-versie: de extensie schuift het verse bewijs terug
+naar elk openstaand dashboard, uitloggen gebeurt alleen nog bij een echte
+afwijzing, en het dashboard vernieuwt voordat het bewijs verloopt in plaats van
+erna. Proef: tests/sessie-blijft-staan-test.js, 11 van 11 goed en 9 daarvan vielen
+om op de versie ervoor.

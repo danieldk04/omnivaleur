@@ -17,6 +17,48 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ---
 
+## uitgelogd-door-de-gedeelde-vernieuwsleutel
+
+*13-09-2026 — Dashboard en extensie delen één Supabase-vernieuwsleutel die maar één keer mag; wie hem als tweede gebruikt wordt uitgelogd, en elke mislukte vernieuwing gold als "sessie voorbij"*
+
+13-09-2026, Egbert Brouwer en Daniel zelf: "als ik een tijdje niets doe word ik
+uitgelogd, dat moet verlengd worden." Er bestaat geen uitlogklok, dus de
+verleiding is om te zeggen dat het niet kan. Het kon wel, om twee redenen.
+
+**De sleutel is van twee partijen tegelijk.** Supabase geeft bij het inloggen een
+vernieuwsleutel die precies één keer gebruikt mag worden: bij gebruik komt er een
+nieuwe terug en is de oude dood. Het dashboard geeft die sleutel door aan de
+extensie (`content/webapp_sync.js`), want die moet ook kunnen werken zonder
+openstaand tabblad. Vanaf de eerste vernieuwing door de extensie draagt het
+dashboard een sleutel die niet meer bestaat. Je merkt dat niet zolang je klikt,
+want het toegangsbewijs is nog een uur geldig. Kom je terug na een pauze, dan is
+dat verlopen, wordt er vernieuwd met de dode sleutel en vlieg je eruit. Precies
+"ik doe even niets en dan ben ik uitgelogd".
+
+De server verzachtte dat al met een cache van 90 seconden op het oude token
+(`_REFRESH_CACHE_TTL_S` in `backend/api/auth.py`), maar dat dekt alleen twee
+partijen die binnen anderhalve minuut vernieuwen.
+
+Reparatie (1.0.326): de extensie schuift na elke vernieuwing het verse bewijs
+terug naar elk openstaand dashboard, en het dashboard kijkt bij een 401 nog één
+keer of er inmiddels een nieuwere sleutel in localStorage staat voor het iemand
+naar het inlogscherm stuurt.
+
+**Elke mislukte vernieuwing gold als "sessie voorbij".** Ook een 503, die de
+server juist teruggeeft om te zeggen dat het een verbindingshik is. Eén hik
+tijdens een deploy logde iedereen uit die op dat moment iets aanklikte, en in
+`beheer.html` gold hetzelfde. Uitloggen mag alleen bij 401 of 403; al het andere
+laat de sessie staan.
+
+Les die breder geldt: **een gedeeld eenmalig geheim heeft één eigenaar nodig, of
+een weg terug.** Twee kopieën van een roterende sleutel werken altijd een tijdje
+en breken daarna stil, op het slechtst denkbare moment.
+
+Zie ook "extensie-inlogbewijs-in-storage-local" en
+"auth-fouten-lijken-op-verkeerd-wachtwoord".
+
+---
+
 ## plaatsen-stopt-als-de-computer-slaapt
 
 *13-09-2026 — "Het stopt als ik wegloop" is bijna altijd Windows dat slaapt; bewijs het met een bevroren opdracht die uren later alsnog afmeldt, en houd de machine wakker met chrome.power*
