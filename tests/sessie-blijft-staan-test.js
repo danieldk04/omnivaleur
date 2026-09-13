@@ -55,7 +55,7 @@ function bewijs(geldigSeconden) {
 
 function dashboard({ sleutel, token, antwoord }) {
   const opslag = { cl_token: token, cl_refresh: sleutel, cl_auth: "1", cl_email: "x@y.nl" };
-  const staat = { gewist: false, naarLogin: false, verzoeken: [], intervallen: 0 };
+  const staat = { gewist: false, naarLogin: false, verzoeken: [], intervallen: 0, seintjes: [] };
   const sandbox = {
     console: { log() {}, warn() {}, error() {} },
     atob: (s) => Buffer.from(s, "base64").toString("binary"),
@@ -64,6 +64,7 @@ function dashboard({ sleutel, token, antwoord }) {
     API: "https://omnivaleur.com",
     TOKEN: token,
     EXT_SOURCE: "omnivaleur-extension",
+    EXT_PAGE_SOURCE: "omnivaleur-page",
     loadBillingStatus() {},
     SESSIE: {
       lees: (k) => (k in opslag ? opslag[k] : null),
@@ -73,7 +74,11 @@ function dashboard({ sleutel, token, antwoord }) {
     },
     location: { set href(v) { staat.naarLogin = true; }, get href() { return ""; } },
     document: { addEventListener() {}, hidden: false },
-    window: { addEventListener() {} },
+    window: {
+      addEventListener() {},
+      location: { origin: "https://omnivaleur.com" },
+      postMessage: (m) => { staat.seintjes.push(m); },
+    },
     fetch: async (url, opts) => {
       const lading = opts && opts.body ? JSON.parse(opts.body) : {};
       staat.verzoeken.push({ url: String(url), refresh: lading.refresh_token });
@@ -116,6 +121,9 @@ const FOUT = (status) => ({ ok: false, status, json: async () => ({ detail: "nee
           "de sessie werd gewist en er werd naar het inlogscherm gestuurd");
     check("en er is met de nieuwe sleutel vernieuwd", opslag.cl_refresh === "R2",
           `cl_refresh is ${opslag.cl_refresh}`);
+    check("en de extensie krijgt een seintje om hem op te halen",
+          staat.seintjes.some((m) => m && m.type === "EXT_SYNC_TOKEN"),
+          "zonder dat seintje valt de extensie een uur later stil");
   }
 
   // 2. De server heeft een hik (503). Dat is geen reden om iemand uit te loggen.

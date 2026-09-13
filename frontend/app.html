@@ -3015,6 +3015,13 @@ async function vernieuwToken() {
             TOKEN = d.access_token;
             SESSIE.zet('cl_token', d.access_token);
             if (d.refresh_token) SESSIE.zet('cl_refresh', d.refresh_token);
+            // Dezelfde sleutel, andere kant op: draaien WIJ hem door, dan is die
+            // van de extensie dood en valt zij na een uur stil met "sign in again
+            // to keep publishing". Eén seintje is genoeg, zij leest hem zelf op.
+            try {
+              window.postMessage({ source: EXT_PAGE_SOURCE, type: 'EXT_SYNC_TOKEN' },
+                                 window.location.origin);
+            } catch (e) {}
             return VERNIEUWD;
           }
           // Alleen een echte afwijzing is een reden om uit te loggen. Al de rest

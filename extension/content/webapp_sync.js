@@ -73,6 +73,10 @@
     // (die Chrome niet vaker dan elke halve minuut laat lopen) voordat ze ook
     // maar keek — pure stiltetijd na elke publicatie. Het token gaat mee, want
     // een net gewekte service worker kan een verlopen sessie hebben.
+    // Het dashboard heeft de vernieuwsleutel doorgedraaid. Die van ons is
+    // daarmee dood; zonder dit valt de extensie een uur later stil met "sign in
+    // again to keep publishing" terwijl de verkoper gewoon ingelogd is.
+    if (d.type === "EXT_SYNC_TOKEN") syncToken().catch(() => {});
     if (d.type === "EXT_POLL_NOW") {
       syncToken()
         .then(() => chrome.runtime.sendMessage({ type: "POLL_NOW" }, () => chrome.runtime.lastError))
