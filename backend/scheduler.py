@@ -143,6 +143,9 @@ def start_scheduler():
     # verkoperslijst en plant hij zo'n advertentie opnieuw in. Vier keer per dag
     # is ruim genoeg; de ronde heeft zelf een plafond en het dagquotum van de
     # verkoper eronder. Zie backend/services/foto_controle.py.
+    # De eerste ronde niet pas over zes uur: op het moment van invoeren staan er
+    # vier advertenties kaal online en die verkopen tot dan niets.
+    from datetime import datetime as _dt, timedelta as _td
     _scheduler.add_job(
         _off_the_request_loop(controleer_fotos_op_advertenties),
         "interval",
@@ -151,6 +154,7 @@ def start_scheduler():
         replace_existing=True,
         max_instances=1,
         coalesce=True,
+        next_run_time=_dt.now() + _td(minutes=10),
     )
     # Herinneringsmail als een mogelijke verkoop op bevestiging blijft wachten.
     # Elk uur; de functie kijkt zelf of het overdag is en of er iets openstaat.
