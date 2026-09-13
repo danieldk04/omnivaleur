@@ -28,9 +28,11 @@ WAT ER GEBEURT ALS ER EEN GEVONDEN WORDT
 Herplaatsen langs refresh_listing: eerst weg, dan opnieuw, met de rem en het
 dagquotum die daar al op zitten. Nooit zelf iets weghalen.
 
-DE VIER REMMEN
+DE REMMEN
 1. Een lege lijst is een storing, geen uitspraak. Komt de lijst leeg terug of is
-   het verkopersnummer niet te bewijzen, dan gebeurt er niets.
+   het verkopersnummer niet te bewijzen, dan gebeurt er niets. Net zo goed: lijkt
+   ineens een groot deel van één account zonder foto, dan is de meting kapot
+   (veld hernoemd) en niet het account, en wordt er niets herplaatst.
 2. Alleen advertenties die we ECHT op zijn lijst terugvinden tellen mee. Staat
    een advertentie er niet tussen, dan is dat een ander verhaal (verwijderd,
    hernummerd) en niet aan deze ronde.
@@ -62,6 +64,8 @@ logger = logging.getLogger(__name__)
 ADVERTENTIENUMMER = re.compile(r"^m\d{6,}$")
 
 MAX_HERSTEL_PER_RONDE = 10      # per ronde, over alle verkopers samen
+VERDACHT_AANTAL = 5             # zoveel kale advertenties bij één verkoper is al veel
+VERDACHT_AANDEEL = 0.05         # ... en boven dit aandeel meten we verkeerd, zie hieronder
 MAX_POGINGEN = 2                # reparaties per advertentienummer
 LUS_GRENS = 3                   # plaatsingen in POGING_VENSTER: daarboven is het een lus
 POGING_VENSTER = timedelta(days=14)
@@ -286,8 +290,13 @@ async def controleer_fotos_op_advertenties():
                         continue
                     from backend.services.relist import refresh_listing, RefreshError
                     try:
+                        # negeer_afkoeling: dit is een reparatie, geen oppepper.
+                        # De afkoeling van 21 dagen zou Toons konijnenvacht nog
+                        # achttien dagen kaal hebben laten staan omdat hij twee
+                        # dagen eerder herplaatst was. Zie refresh_listing.
                         await refresh_listing(rij["item_id"], platform, user_id,
-                                              "relist", eigen_quotum=True)
+                                              "relist", eigen_quotum=True,
+                                              negeer_afkoeling=True)
                         hersteld += 1
                         logger.warning("fotocontrole: %s (%s) opnieuw ingepland — stond "
                                        "zonder foto online terwijl wij er %s hebben",
