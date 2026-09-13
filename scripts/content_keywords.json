@@ -465,6 +465,22 @@
       "slug": "vintage-poster-reselling-automation",
       "status": "published",
       "priority": 57
+    },
+    {
+      "keyword": "second hand book reselling automation",
+      "region": "nl",
+      "pillar": "B",
+      "slug": "second-hand-book-reselling-automation",
+      "status": "published",
+      "priority": 58
+    },
+    {
+      "keyword": "retro gaming reselling automation",
+      "region": "nl",
+      "pillar": "B",
+      "slug": "retro-gaming-reselling-automation",
+      "status": "pending",
+      "priority": 59
     }
   ],
   "published": [
@@ -980,6 +996,15 @@
       "action": "created",
       "url_path": "/reseller-tools/vintage-poster-reselling-automation",
       "published_at": "2026-09-11T12:32:29.148589+00:00"
+    },
+    {
+      "keyword": "second hand book reselling automation",
+      "slug": "second-hand-book-reselling-automation",
+      "region": "nl",
+      "pillar": "B",
+      "action": "created",
+      "url_path": "/reseller-tools/second-hand-book-reselling-automation",
+      "published_at": "2026-09-13T13:03:37.524519+00:00"
     }
   ]
 }
