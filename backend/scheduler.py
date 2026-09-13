@@ -133,6 +133,25 @@ def start_scheduler():
         max_instances=1,
         coalesce=True,
     )
+    # STAAT ER IETS VAN ONS ONLINE ZONDER FOTO? (13-09-2026, De Juiste Toon)
+    #
+    # Een advertentie zonder foto wordt niet aangeklikt, dus die verkoopt niets,
+    # en niemand merkt het: het dashboard zegt gewoon "live". De oorzaak zit in
+    # de extensie en is daar gerepareerd (1.0.323), maar een nieuwe versie moet
+    # eerst weken door de Chrome Web Store, en zolang draait bij elke verkoper
+    # nog de oude kopie. Tot die tijd kijkt de server het zelf na op de openbare
+    # verkoperslijst en plant hij zo'n advertentie opnieuw in. Vier keer per dag
+    # is ruim genoeg; de ronde heeft zelf een plafond en het dagquotum van de
+    # verkoper eronder. Zie backend/services/foto_controle.py.
+    _scheduler.add_job(
+        _off_the_request_loop(controleer_fotos_op_advertenties),
+        "interval",
+        hours=6,
+        id="foto_controle",
+        replace_existing=True,
+        max_instances=1,
+        coalesce=True,
+    )
     # Herinneringsmail als een mogelijke verkoop op bevestiging blijft wachten.
     # Elk uur; de functie kijkt zelf of het overdag is en of er iets openstaat.
     _scheduler.add_job(
