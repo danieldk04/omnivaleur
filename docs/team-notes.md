@@ -9196,3 +9196,27 @@ horen bij precies één categorie, en de 19 die dat niet doen zijn allemaal
 kleding. Bewust niet nu gedaan, want dat vraagt een nieuwe extensieversie en
 1.0.327 ligt nog bij de Web Store met de slaapstandreparatie erin; die mag niet
 achteraan aansluiten.
+
+## 13-09-2026 — Partnervoorstel naar vintage-groothandels
+
+Facebook-groepen bleken het juiste publiek maar het verkeerde tempo, dus is er
+een tweede spoor bij gekomen: groothandels die aan resellers leveren hebben het
+publiek al. Vintagebulk claimt ruim 5100 resellers en heeft een eigen
+WhatsApp-groep. Daarnaast ONEvintage (Stadskanaal) en Wildebras (Zaltbommel,
+privemailadressen van de eigenaren). Verder in beeld maar zonder mailadres:
+Vintage City (Amsterdam), Vintage Wholesale Market, RV Vintage (Belgie), Big Bag
+(Utrecht), Vintage Wholesale Europe (Oostenrijk).
+
+Daniel heeft de eerste drie mails verstuurd. Het aanbod dat erin staat:
+**eerste maand gratis voor hun leden, daarna 20% terugkerende commissie zolang
+die klant blijft.** Dat is een toezegging, geen doorgerekende marge.
+
+Twee dingen zijn nog niet gebouwd en blokkeren de uitvoering zodra iemand ja
+zegt: de proef staat hard op 7 dagen (backend/api/billing.py, trial_ends_at), en
+er is geen manier om vast te leggen via welke partner een klant binnenkwam. Zonder
+dat tweede kan de 20% niet uitbetaald worden.
+
+Meetpunt van die dag: Google leverde de laatste 30 dagen 5 klikken en 199
+vertoningen op 124 pagina's, terwijl GA4 247 bezoeken per week telde. Het verkeer
+komt dus vrijwel volledig uit koude mail, niet uit de contentmotor die sinds
+3 juli draait.
