@@ -631,6 +631,76 @@ async def kenmerken_via_zoeken(db, user_id: str, platform: str, titel: str) -> d
     return await advertentie_kenmerken(url)
 
 
+async def rubriek_op_advertentienummer(client: httpx.AsyncClient, verkoper_id: int,
+                                      titel: str, nummer, zoek_url: str = ZOEK) -> dict:
+    """De rubriek waar deze verkoper deze advertentie ZELF in heeft gezet.
+
+    WAAROM DIT ER IS (13-09-2026, Egbert Brouwer / Papa's Plectrums). Hij zette
+    34 miniatuurgitaartjes klaar voor 2dehands en er ging er niet één online:
+    2dehands vraagt geld in Gitaren | Elektrisch, Akoestisch en Bas. Op
+    Marktplaats staan precies die artikelen in Verzamelen | Muziek, Artiesten en
+    Beroemdheden, gekozen door hemzelf. Onze import had de rubriek uit de titel
+    geraden. Gemeten over zijn hele voorraad: van 5.533 artikelen had er maar
+    947 bij ons dezelfde rubriek als op Marktplaats; 2.377 buttons en patches
+    zouden op 2dehands als damesblouse zijn geplaatst.
+
+    Gezocht wordt binnen het aanbod van de verkoper, en er telt alleen de
+    advertentie met precies ons advertentienummer. Een gelijkende titel is geen
+    bewijs: bij hem staan honderden bijna gelijke titels naast elkaar. Marktplaats
+    zet de hoofdrubriek niet in de advertentie zelf, wel in het rubriekenblok van
+    hetzelfde antwoord (`RelevantCategories`, met `parentId`).
+
+    Een leeg blok als het niet zeker is; half raden is precies wat dit oplost.
+    """
+    doel = re.sub(r"\D", "", str(nummer or ""))
+    schoon = " ".join(html.unescape(str(titel or "")).split())
+    if not doel or not schoon:
+        return {}
+    # Tweede vraag met alleen de eerste woorden: Admarkt schrijft titels soms
+    # net anders terug dan wij ze bewaren, en dan vindt de hele titel niets.
+    vragen = [schoon[:80]]
+    kort = " ".join(schoon.split()[:4])
+    if kort and kort != vragen[0]:
+        vragen.append(kort)
+    for vraag in vragen:
+        try:
+            data = await _json(client, zoek_url, {
+                "query": vraag, "limit": 100, "offset": 0, "sellerIds[]": verkoper_id})
+        except Exception as e:  # noqa: BLE001
+            logger.warning("mp_enrich: rubriek niet opgezocht (%s): %s", schoon[:40], e)
+            continue
+        for l in (data.get("listings") or []):
+            if re.sub(r"\D", "", str(l.get("itemId") or "")) != doel:
+                continue
+            l2 = l.get("categoryId")
+            rubrieken = next((f.get("categories") or [] for f in (data.get("facets") or [])
+                              if f.get("key") == "RelevantCategories"), [])
+            per_id = {c.get("id"): c for c in rubrieken}
+            sub = per_id.get(l2) or {}
+            l1 = sub.get("parentId")
+            if not (isinstance(l2, int) and isinstance(l1, int)):
+                return {}
+            return {"l1": l1, "l1_naam": (per_id.get(l1) or {}).get("label") or "",
+                    "l2": l2, "l2_naam": sub.get("label") or ""}
+    return {}
+
+
+async def rubriek_van_eigen_advertentie(db, user_id: str, titel: str, nummer) -> dict:
+    """`rubriek_op_advertentienummer` voor een verkoper van wie we het
+    verkopersnummer nog moeten achterhalen. Leeg blok als dat niet lukt."""
+    zoek_url, _ = ZOEK_PER_PLATFORM["marktplaats"]
+    try:
+        async with httpx.AsyncClient(timeout=20, follow_redirects=True,
+                                     headers={"User-Agent": UA}) as client:
+            verkoper = await _verkopersnummer(db, user_id, "marktplaats", client, zoek_url)
+            if not verkoper:
+                return {}
+            return await rubriek_op_advertentienummer(client, verkoper, titel, nummer, zoek_url)
+    except Exception as e:  # noqa: BLE001 — een gemiste rubriek mag nooit iets breken
+        logger.warning("mp_enrich: rubriek van advertentie %s niet opgehaald: %s", nummer, e)
+        return {}
+
+
 async def volledige_advertentie(client: httpx.AsyncClient, url: str) -> dict:
     """Alles wat één advertentiepagina prijsgeeft, in één ophaalronde."""
     ruwe = await _pagina(client, url)
