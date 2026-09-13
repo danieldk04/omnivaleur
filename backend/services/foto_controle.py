@@ -245,9 +245,9 @@ async def controleer_fotos_op_advertenties():
                     continue
 
                 op_nummer = {a.get("itemId"): a for a in lijst}
-                zonder = [r for r in onze
-                          if r["platform_listing_id"] in op_nummer
-                          and not _fotos(op_nummer[r["platform_listing_id"]])]
+                teruggevonden = [r for r in onze if r["platform_listing_id"] in op_nummer]
+                zonder = [r for r in teruggevonden
+                          if not _fotos(op_nummer[r["platform_listing_id"]])]
                 if not zonder:
                     continue
 
@@ -263,12 +263,12 @@ async def controleer_fotos_op_advertenties():
                 # 13-09-2026 waren het er vier op 9.160 advertenties, en bij de
                 # zwaarst getroffen verkoper twee op 645. Slaat het ineens om
                 # naar een groot deel van zijn lijst, dan meten we verkeerd.
-                aandeel = len(zonder) / max(1, len(van_ons))
+                aandeel = len(zonder) / max(1, len(teruggevonden))
                 if len(zonder) > VERDACHT_AANTAL and aandeel > VERDACHT_AANDEEL:
                     logger.error("fotocontrole: %s van %s advertenties van %s lijken zonder "
                                  "foto op %s. Dat is geen uitval maar een verkeerde meting "
                                  "(veld hernoemd?) — er wordt niets herplaatst.",
-                                 len(zonder), len(van_ons), user_id, platform)
+                                 len(zonder), len(teruggevonden), user_id, platform)
                     continue
 
                 logger.warning("fotocontrole: %s advertentie(s) van %s staan zonder foto "

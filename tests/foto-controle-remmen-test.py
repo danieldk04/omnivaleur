@@ -58,6 +58,62 @@ def plaatsing(dagen, nummer=None):
 async def tel(opdrachten, nummer):
     return await fc._pogingen_op(NepDb(opdrachten), "item", "marktplaats", nummer)
 
+class RondeDb:
+    """Levert per tabel een vast antwoord; genoeg voor één ronde."""
+    def __init__(self, listings): self.listings, self.naam = listings, None
+    def table(self, naam): self.naam = naam; return self
+    def select(self, *a, **k): return self
+    def eq(self, *a, **k): return self
+    def gt(self, *a, **k): return self
+    def order(self, *a, **k): return self
+    def range(self, start, eind):
+        self._brok = self.listings[start:eind + 1] if self.naam == "listings" else []
+        return self
+    def execute(self):
+        class R: pass
+        r = R(); r.data = getattr(self, "_brok", [] if self.naam != "jobs" else []); return r
+
+
+async def _droge_ronde():
+    """De echte controleronde, zonder database, zonder Marktplaats, zonder herplaatsen."""
+    kaal = {"itemId": "m2442004486", "title": "Kale advertentie"}                  # geen pictures
+    heel = {"itemId": "m2441350864", "title": "Gewone advertentie", "pictures": [{"url": "x"}]}
+    rijen = [
+        {"item_id": "i1", "platform_listing_id": "m2442004486",
+         "items": {"user_id": "u1", "title": "Kale advertentie", "photo_urls": ["a", "b"]}},
+        {"item_id": "i2", "platform_listing_id": "m2441350864",
+         "items": {"user_id": "u1", "title": "Gewone advertentie", "photo_urls": ["a"]}},
+        # Admarkt-nummer: hoort overgeslagen te worden, staat niet op de lijst.
+        {"item_id": "i3", "platform_listing_id": "1502022894",
+         "items": {"user_id": "u1", "title": "Admarkt", "photo_urls": ["a"]}},
+    ]
+    db = RondeDb(rijen)
+    fc.get_db = lambda: db
+    fc.fetch_all = lambda bouw, order_by="id": rijen
+    fc._verkopersnummer = lambda *a, **k: _klaar(12345)
+    fc._verkoperslijst = lambda *a, **k: _klaar([kaal, heel])
+    fc._pogingen_op = lambda *a, **k: _klaar(0)
+
+    gepland = []
+    import backend.services.relist as relist_mod
+    async def nep(item_id, platform, user_id, strategy, new_price=None,
+                  eigen_quotum=False, negeer_afkoeling=False):
+        gepland.append((item_id, platform, negeer_afkoeling))
+        return {}
+    relist_mod.refresh_listing = nep
+
+    n = await fc.controleer_fotos_op_advertenties()
+    check("droge ronde: alleen de kale advertentie opgepakt",
+          [g[0] for g in gepland], ["i1", "i1"])     # marktplaats en 2dehands
+    check("droge ronde: de afkoeling wordt bewust overgeslagen",
+          bool(gepland) and all(g[2] for g in gepland), True)
+    check("droge ronde: telt wat hij deed", n, 2)
+
+
+async def _klaar(waarde):
+    return waarde
+
+
 async def main():
     print("De remmen van de fotocontrole:")
 
@@ -99,6 +155,46 @@ async def main():
     #    stilletjes alles doorlaten.
     check("nummer niet terug te vinden: venster beslist",
           await tel([plaatsing(1), plaatsing(0)], "mX"), 2)
+
+    # 8. DE VERKEERDE METING. Lijkt een groot deel van een account zonder foto,
+    #    dan is het veld hernoemd en niet het account leeggehaald. Er mag dan
+    #    niets worden herplaatst. Hier getoetst op dezelfde drempels die de
+    #    ronde gebruikt, met de gemeten werkelijkheid ernaast.
+    def verdacht(zonder, van_ons):
+        return zonder > fc.VERDACHT_AANTAL and zonder / max(1, van_ons) > fc.VERDACHT_AANDEEL
+
+    check("gemeten werkelijkheid (2 van 645) telt gewoon mee", verdacht(2, 645), False)
+    check("2 van 5 bij een piepklein account telt ook mee", verdacht(2, 5), False)
+    check("een heel account ineens kaal: geblokkeerd", verdacht(600, 645), True)
+    check("40 van 645 is al te veel om te geloven", verdacht(40, 645), True)
+
+    # 9. DE AFKOELING. Een advertentie die twee dagen geleden is herplaatst mag
+    #    normaal niet opnieuw, maar een reparatie moet er wel langs. Precies
+    #    Toons konijnenvacht.
+    from datetime import datetime as _dt
+    from backend.services.relist import _check_cooldown, RefreshError
+    import inspect
+    from backend.services.relist import refresh_listing
+    twee_dagen = {"last_refreshed_at": t(2), "platform": "marktplaats"}
+    try:
+        _check_cooldown(twee_dagen, "marktplaats"); geblokkeerd = False
+    except RefreshError:
+        geblokkeerd = True
+    check("gewoon verversen blijft geblokkeerd na 2 dagen", geblokkeerd, True)
+    check("refresh_listing kent negeer_afkoeling",
+          "negeer_afkoeling" in inspect.signature(refresh_listing).parameters, True)
+    bron = inspect.getsource(fc.controleer_fotos_op_advertenties)
+    check("de fotocontrole gebruikt hem ook", "negeer_afkoeling=True" in bron, True)
+
+    # 10. DE HELE RONDE ÉÉN KEER DROOG DRAAIEN.
+    #
+    #     De controles hierboven raken losse stukken. Bij het bouwen verwees de
+    #     nieuwe meetrem naar een variabele die in die functie niet bestond, en
+    #     dat is pas gebleken toen de ronde echt werd gedraaid: op de server was
+    #     de geplande taak elke zes uur stil gestorven met een NameError. Daarom
+    #     draait hier de ECHTE ronde, met een nagemaakte database, een nagemaakte
+    #     zoek-API en het herplaatsen afgevangen.
+    await _droge_ronde()
 
     print(f"\n{mislukt} controle(s) mislukt" if mislukt else "\nAlles in orde")
     sys.exit(1 if mislukt else 0)
