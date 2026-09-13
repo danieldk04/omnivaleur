@@ -487,7 +487,8 @@ def _update_listing_refresh_state(db, listing_id: str, fields: dict) -> None:
 
 async def refresh_listing(item_id: str, platform: str, user_id: str, strategy: str,
                           new_price: float | None = None,
-                          eigen_quotum: bool = False) -> dict:
+                          eigen_quotum: bool = False,
+                          negeer_afkoeling: bool = False) -> dict:
     """
     Queue a refresh for one listing.
     strategy: "content" (safe edit-in-place, Vinted only) or
@@ -496,6 +497,19 @@ async def refresh_listing(item_id: str, platform: str, user_id: str, strategy: s
                10-15% price-drop suggestion. Ignored for "content" (that strategy is
                documented as never touching price). When given, it also becomes the
                item's new base price, so it sticks instead of reverting on the next refresh.
+    negeer_afkoeling: alleen voor een REPARATIE, niet voor gewoon verversen.
+
+        De afkoeling van 21 dagen beschermt tegen te vaak verversen van een
+        advertentie die het gewoon doet — dat is wat opvalt bij Marktplaats.
+        Een advertentie die zonder foto online staat doet het niet: die wordt
+        niet aangeklikt en verkoopt niets. Gemeten 13-09-2026 bij De Juiste
+        Toon: zijn "Konijnenvacht Setje bruin" was twee dagen eerder herplaatst,
+        dus de afkoeling zou hem nog achttien dagen kaal laten staan.
+
+        Alleen backend/services/foto_controle.py zet dit aan, en die heeft er
+        eigen remmen omheen (hoogstens twee reparaties per advertentienummer,
+        plus een lusrem op drie plaatsingen in veertien dagen). Zet dit nooit
+        aan op het gewone verversen.
     """
     allowed = PLATFORM_STRATEGIES.get(platform, set())
     if strategy not in allowed:
