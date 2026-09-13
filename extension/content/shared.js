@@ -2275,6 +2275,8 @@ window.CL = (() => {
     // is — en anders weigeren we te plaatsen, met een melding die zegt wat er is.
     if (_pendingDescription && _descriptionSelector) await ensureDescriptionReady();
 
+    await borgFotosOpFormulier();
+
     // Het formulier houdt de geüploade foto's bij in een verborgen veld. Dat is
     // een hardere waarheid dan miniaturen tellen, die per categorie anders heten.
     const fotoIds = qs('input[name="images.ids"]');
