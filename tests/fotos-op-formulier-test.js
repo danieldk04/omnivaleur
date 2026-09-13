@@ -57,6 +57,7 @@ function laad(scenario, host = "www.marktplaats.nl") {
       else if (scenario === "tweedekeer") staat.veld = staat.aanbiedingen >= 2 ? ids : "";
       else if (scenario === "deel") staat.veld = ids.split(",").slice(0, 3).join(",");
       else if (scenario === "druppel") staat.druppel = ids.split(",");
+      else if (scenario === "hernoemd") { staat.veld = null; staat.miniaturen = n; }
       return true;
     },
   };
@@ -78,7 +79,8 @@ function laad(scenario, host = "www.marktplaats.nl") {
   zand.self = zand;
   zand.document = {
     body: { click() {}, contains: () => false, innerText: "" },
-    querySelectorAll: (sel) => (sel === "img" ? [] : []),
+    querySelectorAll: (sel) => (staat.miniaturen && /img|thumb|photo|image/i.test(sel)
+      ? Array.from({ length: staat.miniaturen }, () => ({ tagName: "IMG" })) : []),
     querySelector: (sel) => {
       if (sel === 'input[name="images.ids"]') {
         if (staat.druppel) {
@@ -139,6 +141,16 @@ const hadGeplaatst = (r) => /publish button could not be found/.test(r.fout);
   const dr = await plaats("druppel", 13);
   const laatste = dr.staat.log.filter((r) => /op het formulier:/.test(r)).pop() || "";
   check("foto's druppelen binnen: pas plaatsen als alle 13 er zijn", hadGeplaatst(dr) && /13 van 13/.test(laatste), laatste);
+
+  // Doopt Marktplaats images.ids ooit om, dan zou deze controle ELKE plaatsing
+  // tegenhouden. Staan er miniaturen, dan zijn er foto's en gaan we door.
+  const hern = await plaats("hernoemd", 13);
+  check("veld hernoemd maar miniaturen zichtbaar: wél geplaatst", hadGeplaatst(hern), `fout was: ${hern.fout.slice(0, 90)}`);
+
+  // Maar een LEEG veld is geen hernoeming: dan zegt het platform zelf dat het
+  // er nul ontving, en dan mogen miniaturen die uitspraak niet overstemmen.
+  const faalt2 = await plaats("faalt", 13);
+  check("leeg veld blijft weigeren, ook los van miniaturen", !hadGeplaatst(faalt2), `fout was: ${faalt2.fout.slice(0, 90)}`);
 
   const dh = await plaats("faalt", 4, "www.2dehands.be");
   check("2dehands, mislukte upload: niet geplaatst", !hadGeplaatst(dh), `fout was: ${dh.fout.slice(0, 90)}`);
