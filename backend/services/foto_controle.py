@@ -245,9 +245,9 @@ async def controleer_fotos_op_advertenties():
                     continue
 
                 op_nummer = {a.get("itemId"): a for a in lijst}
-                zonder = [r for r in onze
-                          if r["platform_listing_id"] in op_nummer
-                          and not _fotos(op_nummer[r["platform_listing_id"]])]
+                teruggevonden = [r for r in onze if r["platform_listing_id"] in op_nummer]
+                zonder = [r for r in teruggevonden
+                          if not _fotos(op_nummer[r["platform_listing_id"]])]
                 if not zonder:
                     continue
 
