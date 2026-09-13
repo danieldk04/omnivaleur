@@ -2006,6 +2006,7 @@ window.CL = (() => {
       );
     }
 
+    _aangebodenFotos = files;
     const dt = new DataTransfer();
     files.forEach((f) => dt.items.add(f));
     fileInput.files = dt.files;
