@@ -9051,3 +9051,43 @@ verdwenen voorraad, en dat staat nog open.
 Eerste meting zat er trouwens naast omdat een gewone Supabase-select stil bij 1.000
 rijen stopt: die zei "nul zonder foto" over 1.000 van de 9.160. Les in de kennisbank:
 "openbare-verkoperslijst-toont-de-fotos".
+
+## 13-09-2026 — De 16 "verdwenen" advertenties van De Juiste Toon
+
+Uitgezocht na de fotomelding. Van de 664 advertenties die wij voor Toon "live op
+Marktplaats" noemen staan er 646 echt op zijn openbare verkoperspagina. De 16 die
+ontbreken zijn ook los op Marktplaats nergens te vinden, dus ze bestaan niet meer.
+
+Drie oorzaken, gescheiden gemeten:
+
+- 13 komen uit de import. Zijn aanbod is op 28 en 29 augustus ingelezen, maar het
+  koppelen aan artikelen liep pas op 5 september af. De import schrijft elke
+  gekoppelde rij op "active" met de datum van dat moment, dus alles wat in die week
+  tussendoor verkocht of weggehaald was kwam alsnog als live in de boeken. Eén
+  daarvan (Vintage wandkleed) staat wél online onder een nieuw nummer: bij het
+  herplaatsen bleef de oude rij ernaast staan, dus dat artikel telt dubbel.
+- 2 zijn door ons op 11 september geplaatst en binnen twee dagen verdwenen zonder
+  dat wij een verwijderopdracht hebben. Wie ze weghaalde is van onze kant niet te
+  zien: Toon heeft geen Marktplaats-koppeling.
+- 1 hebben wij op 5 september twee keer achter elkaar geplaatst, onder twee
+  nummers; beide zijn weg.
+
+Waarom niemand dit merkte: de verkoopcontrole slaat advertenties van verkopers
+zonder platformkoppeling over, maar stempelt ze wel als "nagekeken" zodat ze niet
+elke ronde vooraan blijven staan. In het dashboard staat dus dat ze zojuist
+gecontroleerd zijn terwijl er nooit iets is gecontroleerd. Openstaand voorstel:
+de zeshourlijkse fotocontrole ook laten opruimen wat twee rondes achter elkaar
+niet op de openbare verkoperspagina staat.
+
+## 13-09-2026 — Egbert Brouwer: "het stopt als ik wegloop"
+
+Zijn klacht was dat het plaatsen kort na zijn vertrek stopt en pas weer doorgaat
+als hij opnieuw inlogt, en dat onze timeout langer moest. Wij hebben geen timeout
+die daarop lijkt. Nagemeten in zijn opdrachten: werk tot 08:05:58, daarna stil tot
+09:21:53, en precies dan meldde zich een opdracht klaar die om 07:40:43 begon. Dat
+is een bevroren tabblad dat bij het wakker worden afmaakt, dus de machine sliep.
+
+Sinds 1.0.325 vraagt de extensie Chrome om de computer wakker te houden zolang er
+werk klaarstaat dat nu aan de beurt is (chrome.power, niveau system: het scherm
+mag gewoon uit). Tempo blijft ongeveer één advertentie per minuut; dat is de tijd
+die het formulier zelf kost, niet een rem van ons.

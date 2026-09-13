@@ -17,6 +17,49 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ---
 
+## plaatsen-stopt-als-de-computer-slaapt
+
+*13-09-2026 — "Het stopt als ik wegloop" is bijna altijd Windows dat slaapt; bewijs het met een bevroren opdracht die uren later alsnog afmeldt, en houd de machine wakker met chrome.power*
+
+13-09-2026, Egbert Brouwer (Papa's Plectrums): "Als ik even van de computer
+wegloop stopt het plaatsen vrij snel daarna, en het gaat pas weer verder als ik
+opnieuw inlog. Maak de timeout een heel stuk langer."
+
+Er bestaat bij ons geen enkele klok die daarop lijkt, dus de verleiding is groot
+om te antwoorden "dat kan niet". Dat is het verkeerde antwoord: meet het.
+
+**Hoe je het bewijst zonder bij de klant te kunnen kijken.** Zet van zijn
+opdrachten `claimed_at` naast `done_at`. Een opdracht die om 07:40:43 begon en
+zich pas om 09:21:53 klaar meldt, terwijl er in de tussentijd niets gebeurde en
+het werk daarna meteen weer op tempo doorloopt, is een bevroren tabblad dat bij
+het wakker worden gewoon afmaakt. Dat patroon hoort bij slaapstand. Was Chrome
+afgesloten, dan had het tabblad bestaan niet overleefd en had de opdracht
+gefaald met "the tab this job was working in disappeared". Onderscheid die twee,
+want het advies verschilt: slaapstand uitzetten tegenover Chrome open laten.
+
+**De reparatie** (1.0.325): `chrome.power.requestKeepAwake("system")` zolang
+`/api/jobs/pending` opdrachten teruggeeft die nu aan de beurt zijn, en
+`releaseKeepAwake()` zodra de rij leeg is. Niveau "system" houdt alleen de
+machine aan; het scherm mag gewoon uit. De permissie `power` geeft geen
+waarschuwing bij het bijwerken, dus bestaande gebruikers merken er niets van.
+
+Twee vallen:
+- De service worker wordt na ~30 seconden stilte weggegooid en begint zonder
+  geheugen. Een "ik heb het al aangevraagd"-vlag in een modulevariabele is
+  daarna weg en dan wordt er nooit meer losgelaten. Vraag het daarom elke ronde
+  opnieuw aan en laat het elke lege ronde weer los; beide aanroepen kosten
+  niets.
+- Het moet aan de échte wachtrij hangen, niet aan "er staat ergens nog iets
+  ingepland". `/pending` geeft alleen werk dat nu aan de beurt is, dus een
+  herplaatsing die voor vanmiddag staat houdt de machine niet de hele nacht
+  wakker.
+
+Zie ook "chrome-ruimt-profiel-op-bij-venster-dicht" en
+"computer-aan-is-niet-browser-werkt": dit is dezelfde familie klachten, en de
+oorzaak is elke keer de machine of de browser, nooit onze wachtrij.
+
+---
+
 ## plaatsen-zonder-fotos-op-het-formulier
 
 *13-09-2026 — Een mislukte of hangende foto-upload liet het formulier leeg achter en de extensie klikte toch op Plaatsen; images.ids is de harde waarheid*

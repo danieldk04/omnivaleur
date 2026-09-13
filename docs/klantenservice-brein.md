@@ -10,7 +10,7 @@ product verandert. De ontwikkelaar werkt dan zowel dit bestand in de repo als de
 kopie in Drive bij, in dezelfde beurt. Daniel hoeft niets te doen; de Gem leest
 de Drive-kopie de volgende keer opnieuw in.
 
-_Laatst bijgewerkt: 13-09-2026 (advertenties zonder foto's: oorzaak weg, en de server repareert wat er stond)_
+_Laatst bijgewerkt: 13-09-2026 (plaatsen stopt bij slaapstand, en advertenties zonder foto's: oorzaak weg, en de server repareert wat er stond)_
 
 ---
 
@@ -372,6 +372,26 @@ uitbreiding plaatst niet meer zonder foto's.
 Je hoeft zelf niets te doen. We hebben nagekeken welke advertenties het raakt en
 die worden automatisch opnieuw geplaatst, mét je foto's erbij. Dat kan een dag
 duren, want het gaat rustig aan zodat Marktplaats er niet van schrikt.
+
+Groetjes,
+Daniel
+
+### Het plaatsen stopt zodra ik bij de computer wegloop
+
+Hoi <voornaam>,
+
+Dat komt doordat je computer in slaap valt. Zolang hij slaapt kan Chrome niets
+doen, dus staat het plaatsen stil tot je weer terug bent. Er zit bij ons geen
+tijdslimiet op, het werk blijft gewoon klaarstaan.
+
+Sinds de laatste update houdt Omnivaleur je computer zelf wakker zolang er nog
+advertenties in de rij staan. Je scherm mag daarbij gewoon uitgaan. Blijft het
+toch stoppen, zet dan in Windows bij Instellingen, Systeem, Energie de slaapstand
+op Nooit, en laat Chrome open staan als je weggaat.
+
+Eén ding blijft zoals het is: elke advertentie kost ongeveer een minuut. Dat is
+de tijd die het formulier van Marktplaats en 2dehands zelf nodig heeft. Bij een
+grote voorraad kun je hem dus het beste een nacht laten doorwerken.
 
 Groetjes,
 Daniel
