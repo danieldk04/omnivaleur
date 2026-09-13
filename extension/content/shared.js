@@ -1923,14 +1923,21 @@ window.CL = (() => {
     return veld ? String(veld.value || "").split(",").filter((s) => s.trim()).length : null;
   }
 
-  async function borgFotosOpFormulier({ wachtMs = 90000, herkansNaMs = 30000 } = {}) {
+  // Een deel binnen is nog geen eindstand: live kwam het eerste nummer al binnen
+  // terwijl de tweede foto nog onderweg was. Daarom wachten tot alles binnen is,
+  // of tot het aantal rustMs niet meer verandert. Een deel opnieuw aanbieden doen
+  // we bewust niet: we weten niet welke foto ontbrak, en dan komt de rest dubbel.
+  async function borgFotosOpFormulier({ wachtMs = 90000, herkansNaMs = 30000, rustMs = 15000 } = {}) {
     if (!_aangebodenFotos.length) return;
     if (!/(^|\.)(marktplaats\.nl|2dehands\.be)$/.test((location && location.hostname) || "")) return;
     const start = Date.now();
     let herkansAt = null;
+    let vorige, sindsWijziging = start;
     for (;;) {
       const n = fotosOpFormulier();
-      if (n !== null && n > 0) {
+      if (n !== vorige) { vorige = n; sindsWijziging = Date.now(); }
+      if (n !== null && n > 0
+          && (n >= _aangebodenFotos.length || Date.now() - sindsWijziging >= rustMs || Date.now() - start >= wachtMs)) {
         clog(`foto's op het formulier: ${n} van ${_aangebodenFotos.length}`);
         return;
       }
