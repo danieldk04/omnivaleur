@@ -100,6 +100,36 @@ async def main():
     check("nummer niet terug te vinden: venster beslist",
           await tel([plaatsing(1), plaatsing(0)], "mX"), 2)
 
+    # 8. DE VERKEERDE METING. Lijkt een groot deel van een account zonder foto,
+    #    dan is het veld hernoemd en niet het account leeggehaald. Er mag dan
+    #    niets worden herplaatst. Hier getoetst op dezelfde drempels die de
+    #    ronde gebruikt, met de gemeten werkelijkheid ernaast.
+    def verdacht(zonder, van_ons):
+        return zonder > fc.VERDACHT_AANTAL and zonder / max(1, van_ons) > fc.VERDACHT_AANDEEL
+
+    check("gemeten werkelijkheid (2 van 645) telt gewoon mee", verdacht(2, 645), False)
+    check("2 van 5 bij een piepklein account telt ook mee", verdacht(2, 5), False)
+    check("een heel account ineens kaal: geblokkeerd", verdacht(600, 645), True)
+    check("40 van 645 is al te veel om te geloven", verdacht(40, 645), True)
+
+    # 9. DE AFKOELING. Een advertentie die twee dagen geleden is herplaatst mag
+    #    normaal niet opnieuw, maar een reparatie moet er wel langs. Precies
+    #    Toons konijnenvacht.
+    from datetime import datetime as _dt
+    from backend.services.relist import _check_cooldown, RefreshError
+    import inspect
+    from backend.services.relist import refresh_listing
+    twee_dagen = {"last_refreshed_at": t(2), "platform": "marktplaats"}
+    try:
+        _check_cooldown(twee_dagen, "marktplaats"); geblokkeerd = False
+    except RefreshError:
+        geblokkeerd = True
+    check("gewoon verversen blijft geblokkeerd na 2 dagen", geblokkeerd, True)
+    check("refresh_listing kent negeer_afkoeling",
+          "negeer_afkoeling" in inspect.signature(refresh_listing).parameters, True)
+    bron = inspect.getsource(fc.controleer_fotos_op_advertenties)
+    check("de fotocontrole gebruikt hem ook", "negeer_afkoeling=True" in bron, True)
+
     print(f"\n{mislukt} controle(s) mislukt" if mislukt else "\nAlles in orde")
     sys.exit(1 if mislukt else 0)
 
