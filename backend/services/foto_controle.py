@@ -246,6 +246,27 @@ async def controleer_fotos_op_advertenties():
                           and not _fotos(op_nummer[r["platform_listing_id"]])]
                 if not zonder:
                     continue
+
+                # EEN FOUT DIE OVERAL HETZELFDE IS, IS EEN STORING.
+                #
+                # Deze hele ronde leunt op het veld `pictures` in de zoek-API.
+                # Doopt Marktplaats dat ooit om, dan lijkt élke advertentie
+                # zonder foto en zou dit een heel account gaan leeghalen en
+                # terugzetten. Dat is onherstelbaar veel duurder dan de kale
+                # advertentie waar het tegen beschermt.
+                #
+                # Kapotte foto-uploads zijn zeldzaam en verspreid: gemeten
+                # 13-09-2026 waren het er vier op 9.160 advertenties, en bij de
+                # zwaarst getroffen verkoper twee op 645. Slaat het ineens om
+                # naar een groot deel van zijn lijst, dan meten we verkeerd.
+                aandeel = len(zonder) / max(1, len(van_ons))
+                if len(zonder) > VERDACHT_AANTAL and aandeel > VERDACHT_AANDEEL:
+                    logger.error("fotocontrole: %s van %s advertenties van %s lijken zonder "
+                                 "foto op %s. Dat is geen uitval maar een verkeerde meting "
+                                 "(veld hernoemd?) — er wordt niets herplaatst.",
+                                 len(zonder), len(van_ons), user_id, platform)
+                    continue
+
                 logger.warning("fotocontrole: %s advertentie(s) van %s staan zonder foto "
                                "op %s", len(zonder), user_id, platform)
 
