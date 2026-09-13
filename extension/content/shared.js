@@ -1954,6 +1954,20 @@ window.CL = (() => {
       }
       const nu = Date.now();
       if (nu - start >= wachtMs || (n === 0 && herkansAt !== null && nu - herkansAt >= herkansNaMs)) {
+        // EEN HERNOEMD VELD MAG NIET ALLES STILZETTEN.
+        //
+        // Deze hele controle hangt aan de naam images.ids. Doopt Marktplaats dat
+        // veld ooit om, dan is n voor altijd null en zou geen enkele verkoper
+        // nog iets kunnen plaatsen — een storing die veel duurder is dan de
+        // kale advertentie waar dit tegen beschermt. Staan er miniaturen op het
+        // formulier, dan zijn er foto's, ook zonder dat veld. Alleen bij een
+        // leeg veld (het platform zégt: nul ontvangen) telt dit niet mee: dan
+        // is de upload aantoonbaar mislukt.
+        const miniaturen = countPhotoThumbs();
+        if (n === null && miniaturen > 0) {
+          clog(`foto's: veld images.ids niet gevonden, maar ${miniaturen} miniatuur(en) op het formulier — doorgegaan`);
+          return;
+        }
         clog(`plaatsen: geweigerd — foto's op het formulier: ${n === null ? "upload loopt nog" : 0}`);
         throw new Error(n === null
           ? `The photos were still uploading to ${location.hostname} after ${Math.round(wachtMs / 1000)} seconds, so nothing was published. Publish it again.`
