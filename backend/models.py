@@ -14,6 +14,10 @@ class ItemCreate(BaseModel):
     bid_percentage: Optional[int] = None
     sku: Optional[str] = None
     price: float
+    # De advertentievorm op Marktplaats en 2dehands: FIXED, FAST_BID,
+    # SEE_DESCRIPTION of FREE. Leeg betekent gewoon een vraagprijs. Zie
+    # PRIJSVORMEN in backend/services/crosslist.py.
+    price_type: Optional[str] = None
     purchase_price: Optional[float] = None
     compare_at_price: Optional[float] = None
     brand: Optional[str] = None

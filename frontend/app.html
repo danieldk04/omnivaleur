@@ -2131,6 +2131,16 @@ input[type="checkbox"].row-check { width: 15px; height: 15px; cursor: pointer; a
           <input id="f-compare" type="number" step="0.01" min="0" placeholder="e.g. original price">
         </div>
       </div>
+      <div class="form-group">
+        <label>Listing type <span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--muted)">(Marktplaats / 2dehands)</span></label>
+        <select id="f-price-type" onchange="onPriceTypeChange()">
+          <option value="">Asking price (the amount above)</option>
+          <option value="FAST_BID">Bidding: buyers make an offer, no price shown</option>
+          <option value="SEE_DESCRIPTION">See description: the price is in your text</option>
+          <option value="FREE">Free</option>
+        </select>
+        <div id="price-type-hint" style="display:none;font-size:12px;color:var(--muted);margin-top:6px;line-height:1.45"></div>
+      </div>
       <div class="form-group" style="background:var(--card-bg,#f8f8f8);border:1px solid var(--border);border-radius:10px;padding:12px 14px;margin-bottom:0">
         <div style="display:flex;align-items:center;gap:10px;margin-bottom:0">
           <input type="checkbox" id="f-bid-enabled" style="width:16px;height:16px;margin:0;cursor:pointer;accent-color:var(--accent)" onchange="toggleBidField()">
@@ -6239,6 +6249,8 @@ function openAddItem() {
   document.getElementById('modal-title').textContent = 'New item';
   document.getElementById('edit-id').value = '';
   ['f-title','f-sku','f-desc','f-price','f-compare','f-purchase','f-brand','f-color','f-material','f-shopify-title','f-price-mp','f-price-2dh','f-price-vinted'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('f-price-type').value = '';
+  onPriceTypeChange();
   resetEbayCategory('');
   document.getElementById('f-size').value = '';
   document.getElementById('f-gender').value = '';
@@ -6269,6 +6281,8 @@ function editItem(id) {
   document.getElementById('f-sku').value = item.sku || '';
   document.getElementById('f-desc').value = item.description || '';
   document.getElementById('f-price').value = item.price;
+  document.getElementById('f-price-type').value = item.price_type || '';
+  onPriceTypeChange();
   document.getElementById('f-compare').value = item.compare_at_price || '';
   // != null, not `||` — a stored purchase price of 0 (free item) must show as "0",
   // otherwise re-saving the form silently wipes it back to unknown.
@@ -6314,6 +6328,38 @@ function numOrNull(raw) {
   return isNaN(n) ? null : n;
 }
 
+// ── DE ADVERTENTIEVORM (Marktplaats en 2dehands) ─────────────────────────────
+//
+// Niet elke advertentie heeft een vraagprijs. "Zie omschrijving" en "Bieden"
+// staan gewoon in de keuzelijst van het plaatsformulier, en een geïmporteerde
+// Admarkt-advertentie komt vaak zonder bedrag binnen. Kiest iemand zo'n vorm,
+// dan bestaat het prijsveld op dat formulier niet eens — dus hoort het hier ook
+// niet meer ingevuld te worden, en mag "bieden vanaf" er niet bij, want dat is
+// een vraagprijs met een schakelaar.
+const PRIJSVORM_UITLEG = {
+  FAST_BID: 'Buyers place a bid instead of paying an asking price. No amount is shown on Marktplaats or 2dehands. On other channels your price above is still used.',
+  SEE_DESCRIPTION: 'Marktplaats and 2dehands show no amount. Put the prices in your description, for example "from €35 to €50". On other channels your price above is still used.',
+  FREE: 'Listed as free on Marktplaats and 2dehands. On other channels your price above is still used.',
+};
+
+function onPriceTypeChange() {
+  const vorm = document.getElementById('f-price-type').value;
+  const zonderBedrag = !!vorm;
+  const prijs = document.getElementById('f-price');
+  const hint = document.getElementById('price-type-hint');
+  prijs.disabled = zonderBedrag;
+  prijs.style.opacity = zonderBedrag ? '.5' : '';
+  hint.style.display = zonderBedrag ? 'block' : 'none';
+  hint.textContent = PRIJSVORM_UITLEG[vorm] || '';
+  const bieden = document.getElementById('f-bid-enabled');
+  if (zonderBedrag && bieden.checked) {
+    bieden.checked = false;
+    toggleBidField();
+  }
+  bieden.disabled = zonderBedrag;
+  bieden.parentElement.style.opacity = zonderBedrag ? '.5' : '';
+}
+
 let alLiveNaOpslaan = [];   // kanalen die bij het opslaan zijn overgeslagen omdat het er al op staat
 async function saveItem() {
   if (_uploadsInFlight > 0) return alert('Photos are still uploading — please wait for them to finish before saving.');
@@ -6325,6 +6371,7 @@ async function saveItem() {
     shopify_title: document.getElementById('f-shopify-title').value.trim() || null,
     bid_percentage: document.getElementById('f-bid-enabled').checked ? (parseInt(document.getElementById('f-bid-pct').value) || null) : null,
     price: parseFloat(document.getElementById('f-price').value) || 0,
+    price_type: document.getElementById('f-price-type').value || null,
     compare_at_price: parseFloat(document.getElementById('f-compare').value) || null,
     // NOT `|| null` — a free item has a purchase price of exactly 0, and `0 || null`
     // is null. That silently threw the cost away, so the item kept showing

@@ -608,6 +608,40 @@ ALREADY_LIVE_MESSAGE = (
 # risico: een Admarkt-import levert nooit een prijs mee, en er stonden 240 items
 # op 0 klaar om te publiceren. `not value` vangt 0, None en "" allemaal, dus
 # hieronder is geen extra controle nodig.
+# ── DE PRIJSVORM: NIET ELKE ADVERTENTIE HEEFT EEN VRAAGPRIJS ─────────────────
+#
+# WAAROM DIT ER IS (13-09-2026, De Juiste Toon). Zijn advertentie "Schapenvachten
+# diverse maten Luxe modellen" staat op Marktplaats als "Zie omschrijving": in de
+# tekst staat "Prijzen 35 tot 50 euro" en de vacht bepaalt het bedrag. Bij ons
+# kwam die binnen met prijs 0, en omdat een prijs verplicht is konden we hem niet
+# meer publiceren. Er één verzinnen is erger dan hem niet plaatsen: met 35 euro
+# erop heeft elke koper recht op de duurste vacht voor de laagste prijs.
+#
+# Amanda Haas had er 179 van de 479, waarvan er 161 op Marktplaats als "Bieden"
+# stonden. Dit is dus geen randgeval.
+#
+# Deze vier staan in de keuzelijst van het echte, ingelogde plaatsformulier
+# (nagemeten 03-09-2026 in twee verschillende categorieën, zie MP_PRIJSVORM in
+# extension/content/shared.js) en verder geen. Een vorm aanbieden die daar niet
+# in staat betekent een publicatie die blijft hangen op een formulier dat niemand
+# ziet, dus de lijst hier is precies die vier.
+PRIJSVORM_PLATFORMS = ("marktplaats", "2dehands")
+PRIJSVORMEN = ("FIXED", "FAST_BID", "SEE_DESCRIPTION", "FREE")
+# Vormen waarbij het prijsveld op het formulier helemaal verdwijnt.
+PRIJSVORMEN_ZONDER_BEDRAG = ("FAST_BID", "SEE_DESCRIPTION", "FREE")
+
+
+def prijsvorm_van(item: dict) -> str:
+    """De gekozen prijsvorm, genormaliseerd. Leeg = niets gekozen (vraagprijs)."""
+    vorm = str((item or {}).get("price_type") or "").strip().upper()
+    return vorm if vorm in PRIJSVORMEN else ""
+
+
+def zonder_bedrag(item: dict) -> bool:
+    """Hoort deze advertentie zonder bedrag op Marktplaats en 2dehands?"""
+    return prijsvorm_van(item) in PRIJSVORMEN_ZONDER_BEDRAG
+
+
 _UNIVERSAL_REQUIRED = ["price", "description", "photo_urls"]
 # Marktplaats/2dehands render category-specific attribute dropdowns (maat,
 # merk, kleur...) and pick the category itself from `category`/`gender` — those
@@ -724,6 +758,13 @@ def _missing_fields_per_platform(item: dict, platforms: list[str]) -> dict[str, 
         gaps = []
         for field in required:
             value = item.get(field)
+            # Een bied- of "zie omschrijving"-advertentie hééft geen bedrag, en
+            # het formulier heeft er dan niet eens een veld voor. Alleen op
+            # Marktplaats en 2dehands: Vinted en eBay kennen deze vormen niet, en
+            # daar blijft een prijs dus gewoon verplicht.
+            if (field == "price" and platform in PRIJSVORM_PLATFORMS
+                    and zonder_bedrag(item)):
+                continue
             if field == "photo_urls":
                 if not value or len(value) == 0:
                     gaps.append("photos")
@@ -917,6 +958,42 @@ def _zelfde_artikel_al_online(db, item: dict, platforms: list[str],
     return uit
 
 
+async def _prijsvorm_uit_eigen_advertentie(db, item: dict) -> dict:
+    """De prijsvorm overnemen van een advertentie van dit artikel die nog draait.
+
+    Schrijft hem ook weg als de kolom bestaat, zodat het de volgende keer niet
+    opnieuw hoeft — en zodat de verkoper in het scherm ziet staan wat het is.
+    """
+    try:
+        rijen = (await _exec(
+            db.table("listings").select("platform,platform_listing_url,status")
+            .eq("item_id", item["id"])
+            .in_("platform", list(PRIJSVORM_PLATFORMS))
+            .not_.is_("platform_listing_url", "null")
+        )).data or []
+    except Exception:  # noqa: BLE001
+        return item
+    # Een advertentie die nog online staat weet het; een afgemelde rij wijst naar
+    # een pagina die er niet meer is.
+    levend = [r for r in rijen if r.get("status") == "active"] or rijen
+    from backend.services.mp_enrich import advertentie_kenmerken
+    for rij in levend[:3]:
+        kenmerken = await advertentie_kenmerken(rij["platform_listing_url"])
+        soort = str(((kenmerken or {}).get("mp_prijstype") or {}).get("soort") or "").upper()
+        if soort not in PRIJSVORMEN_ZONDER_BEDRAG:
+            continue
+        logger.info("prijsvorm van item %s overgenomen uit de eigen %s-advertentie: %s",
+                    item.get("id"), rij["platform"], soort)
+        from backend.database import kolom_bestaat
+        if kolom_bestaat("items", "price_type"):
+            try:
+                await _exec(db.table("items").update({"price_type": soort}).eq("id", item["id"]))
+            except Exception as e:  # noqa: BLE001
+                logger.warning("prijsvorm niet opgeslagen voor %s: %s", item.get("id"), e)
+        return {**item, "price_type": soort}
+    return item
+
+
 async def publish_to_platforms(item_id: str, platforms: list[str], user_id: str) -> list[dict]:
     """
     Route each platform to the right handler:
@@ -981,6 +1058,21 @@ async def publish_to_platforms(item_id: str, platforms: list[str], user_id: str)
             # Lukt het niet, dan publiceren we met wat we hebben. Een advertentie
             # met één foto is beter dan geen advertentie.
             logger.warning("Kon item %s niet aanvullen uit de advertentiepagina: %s", item_id, e)
+
+    # STAAT ER GEEN PRIJS, KIJK DAN EERST WAT DE ADVERTENTIE ZELF IS.
+    #
+    # Een Admarkt-import levert nooit een prijs mee, en een bied- of "zie
+    # omschrijving"-advertentie hééft er geen. Dan is de vraag niet "welk bedrag
+    # verzinnen we" maar "welke vorm had deze advertentie". Draait er van
+    # hetzelfde artikel nog een advertentie op Marktplaats of 2dehands, dan staat
+    # het antwoord daar gewoon op de pagina. Zo is het bij De Juiste Toon ook met
+    # de hand vastgesteld: zijn 2dehands-advertentie zei SEE_DESCRIPTION.
+    #
+    # Lukt het niet, dan verandert er niets en loopt hij tegen de gewone melding
+    # aan dat er een prijs ontbreekt.
+    if (not item.get("price") and not prijsvorm_van(item)
+            and any(p in PRIJSVORM_PLATFORMS for p in platforms)):
+        item = await _prijsvorm_uit_eigen_advertentie(db, item)
 
     missing = _missing_fields_per_platform(item, platforms)
     # De EU-verplichte "verantwoordelijke partij" hoort bij de verkoper, niet bij
@@ -1223,6 +1315,16 @@ async def publish_to_platforms(item_id: str, platforms: list[str], user_id: str)
             # Marktplaats en 2dehands vragen om de verantwoordelijke partij; de
             # extensie vult die drie velden in als ze in de opdracht staan.
             if platform in ("marktplaats", "2dehands"):
+                # De prijsvorm hoort mee in de opdracht, want de extensie zet
+                # hem zelf op het formulier (mpPrijsvorm in content/shared.js) en
+                # Marktplaats onthoudt anders de vorm van de vorige advertentie.
+                # Prijs uitdrukkelijk op 0: bij een bedrag groter dan nul kiest de
+                # extensie altijd "Vraagprijs", en dan zou de vorm alsnog
+                # sneuvelen.
+                vorm = prijsvorm_van(item)
+                if vorm in PRIJSVORMEN_ZONDER_BEDRAG:
+                    payload["mp_prijstype"] = {"soort": vorm, "cents": 0}
+                    payload["price"] = 0
                 payload.update(fab)
                 # Levering en pakketgrootte horen bij de verkoper, niet bij het
                 # artikel. Zonder deze regel kreeg iemand die uitsluitend

@@ -1,6 +1,7 @@
 from fastapi import APIRouter, HTTPException, Depends
 from backend.models import ItemCreate, ItemOut
-from backend.database import get_db, execute_with_retry, fetch_all, eerste_rij, IN_BROK
+from backend.database import (get_db, execute_with_retry, fetch_all, eerste_rij,
+                              kolom_bestaat, IN_BROK)
 from backend.api.deps import get_current_user, require_active_subscription
 from backend.services.tweelingen import (
     groepeer, zelfde_artikel, advertentiecode, bekende_merken_van,
@@ -16,8 +17,19 @@ _PENDING_COLUMNS = set()
 router = APIRouter(prefix="/items", tags=["items"])
 
 
+# Kolommen die pas bestaan nadat de migratie met de hand in Supabase is gedraaid.
+# Zolang dat niet is gebeurd horen ze uit élke opslagactie: anders breekt niet
+# alleen de nieuwe functie maar ook het gewoon bewaren van een artikel, met
+# "column items.x does not exist".
+_MIGRATIE_KOLOMMEN = ("price_type",)
+
+
 def _strip_missing(data: dict) -> dict:
-    return {k: v for k, v in data.items() if k not in _PENDING_COLUMNS}
+    schoon = {k: v for k, v in data.items() if k not in _PENDING_COLUMNS}
+    for kolom in _MIGRATIE_KOLOMMEN:
+        if kolom in schoon and not kolom_bestaat("items", kolom):
+            schoon.pop(kolom)
+    return schoon
 
 
 def _raise_if_duplicate_sku(db, exc: Exception, sku: str | None, user_id: str) -> None:

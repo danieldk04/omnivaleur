@@ -612,3 +612,33 @@ def eerste_rij(antwoord):
     """
     rijen = getattr(antwoord, "data", antwoord) or []
     return rijen[0] if rijen else None
+
+
+# ── Bestaat deze kolom al? ───────────────────────────────────────────────────
+#
+# WAAROM DIT ER IS (13-09-2026). Migraties gaan in dit project met de hand: een
+# nieuwe kolom bestaat pas als iemand hem in het Supabase-scherm heeft
+# aangemaakt. Code die de kolom alvast meestuurt, breekt dan élke opslagactie
+# met "column items.x does not exist" — dus niet alleen de nieuwe functie maar
+# ook het gewoon opslaan van een artikel.
+#
+# Eén keer kijken en onthouden. Een kolom verschijnt hooguit één keer, en een
+# herstart is genoeg om het opnieuw vast te stellen.
+_KOLOM_BEKEND: dict[tuple[str, str], bool] = {}
+
+
+def kolom_bestaat(tabel: str, kolom: str) -> bool:
+    sleutel = (tabel, kolom)
+    if sleutel in _KOLOM_BEKEND:
+        return _KOLOM_BEKEND[sleutel]
+    try:
+        get_db().table(tabel).select(kolom).limit(1).execute()
+        _KOLOM_BEKEND[sleutel] = True
+    except Exception as e:  # noqa: BLE001
+        # 42703 = undefined_column. Alles ánders (netwerk, rechten) is geen
+        # uitspraak over de kolom, en dan onthouden we niets.
+        if "42703" in str(e) or "does not exist" in str(e):
+            _KOLOM_BEKEND[sleutel] = False
+        else:
+            return True
+    return _KOLOM_BEKEND[sleutel]
