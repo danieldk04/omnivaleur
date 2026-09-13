@@ -41,7 +41,9 @@ DE VIER REMMEN
    zonder de plaatsing die de advertentie zelf maakte. Een vangnet zonder
    geheugen wordt een lus, en dat is hier duur: elke poging haalt een echte
    advertentie weg. Blijft hij daarna kaal, dan zegt het logboek "met de hand
-   nakijken" in plaats van het nog eens te proberen.
+   nakijken" in plaats van het nog eens te proberen. Daarnaast een tweede rem
+   die een hernummering overleeft: drie of meer plaatsingen van hetzelfde
+   artikel op hetzelfde kanaal binnen veertien dagen is een lus, geen onderhoud.
 """
 from __future__ import annotations
 
