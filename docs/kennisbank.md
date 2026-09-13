@@ -17,6 +17,46 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ---
 
+## advertentie-zonder-vraagprijs
+
+*13-09-2026 — "Bieden, Zie omschrijving en Gratis zijn echte advertentievormen op Marktplaats en 2dehands; een ontbrekende prijs is dus niet altijd een gebrek en een verzonnen bedrag is schade"*
+
+13-09-2026, De Juiste Toon. Zijn advertentie "Schapenvachten diverse maten Luxe
+modellen" stond op Marktplaats als **Zie omschrijving**: in de tekst staat
+"Prijzen 35 tot 50 euro" en de vacht bepaalt het bedrag. Bij ons kwam die binnen
+met prijs 0, en omdat een prijs verplicht was konden we hem niet meer plaatsen.
+
+Ik had er eerst zelf 35 euro op gezet omdat dat in zijn tekst stond. Dat was
+fout, en dat is de les: **een verzonnen prijs is geen nette terugval maar
+schade.** Met 35 euro erop heeft elke koper recht op de duurste vacht voor de
+laagste prijs. Bij zoiets nooit gokken maar kijken wat de advertentie zelf is.
+
+**Waar je het wél kunt aflezen**, in deze volgorde:
+1. De advertentiepagina van hetzelfde artikel op het andere kanaal, als die nog
+   draait. `advertentie_kenmerken(url)` in `backend/services/mp_enrich.py` geeft
+   `{"soort": "SEE_DESCRIPTION", "cents": 0}`. Zo is het hier vastgesteld.
+2. De openbare zoek-API, veld `priceInfo`: `priceCents` plus `priceType`.
+3. NIET uit `import_candidates`: een Admarkt-import levert nooit een prijs mee,
+   die staat daar op 0.00 ook bij advertenties die gewoon 35 euro kosten.
+
+**Wat het formulier kent.** Precies vier vormen, nagemeten op het echte
+ingelogde plaatsformulier: Vraagprijs (FIXED), Bieden (FAST_BID), Zie
+omschrijving (SEE_DESCRIPTION) en Gratis (FREE). Meer aanbieden in het dashboard
+zou een publicatie laten stranden op een keuzelijst waar die vorm niet in staat.
+
+Sinds 13-09-2026 kiest de verkoper dit zelf in het artikelvenster
+(`price_type`), is de prijs op Marktplaats en 2dehands niet meer verplicht bij
+een vorm zonder bedrag (op Vinted en eBay wél, die kennen deze vormen niet), en
+draagt de opdracht `mp_prijstype` mee met prijs 0 — anders kiest de extensie
+alsnog "Vraagprijs", want een bedrag groter dan nul wint altijd.
+
+Zie ook "verzonnen-standaard-is-erger-dan-leeg" en
+"marktplaats-publiceren-valkuilen". Migratie: de kolom `items.price_type`
+moest met de hand worden aangemaakt, zie "sold-price-actual"; tot die tijd
+filtert `_strip_missing` het veld eruit zodat opslaan niet breekt.
+
+---
+
 ## uitgelogd-door-de-gedeelde-vernieuwsleutel
 
 *13-09-2026 — Dashboard en extensie delen één Supabase-vernieuwsleutel die maar één keer mag; wie hem als tweede gebruikt wordt uitgelogd, en elke mislukte vernieuwing gold als "sessie voorbij"*

@@ -9110,3 +9110,22 @@ naar elk openstaand dashboard, uitloggen gebeurt alleen nog bij een echte
 afwijzing, en het dashboard vernieuwt voordat het bewijs verloopt in plaats van
 erna. Proef: tests/sessie-blijft-staan-test.js, 11 van 11 goed en 9 daarvan vielen
 om op de versie ervoor.
+
+## 13-09-2026 — Advertenties zonder vraagprijs
+
+Toons "Schapenvachten diverse maten Luxe modellen" staat op Marktplaats als Zie
+omschrijving: de prijzen staan in de tekst en de vacht bepaalt het bedrag. Bij ons
+kwam die binnen met prijs 0 en was daardoor niet meer te publiceren. Ik had er
+eerst zelf 35 euro op gezet omdat dat in zijn tekst stond; dat was fout, want dan
+heeft elke koper recht op de duurste vacht voor de laagste prijs. De juiste bron
+is zijn eigen nog draaiende 2dehands-advertentie, en die zei SEE_DESCRIPTION.
+
+Sindsdien kiest de verkoper de advertentievorm zelf in het artikelvenster: de vier
+vormen die echt op het plaatsformulier staan (vraagprijs, bieden, zie
+omschrijving, gratis). Bij een vorm zonder bedrag gaat het prijsveld op slot, is
+de prijs op Marktplaats en 2dehands niet meer verplicht, en draagt de opdracht de
+vorm mee. Vinted en eBay kennen deze vormen niet, daar blijft een prijs verplicht.
+
+De kolom items.price_type moet met de hand in Supabase worden aangemaakt. Zolang
+dat niet is gebeurd filtert de opslag het veld eruit, dus er breekt niets, maar de
+keuze wordt dan ook niet bewaard.
