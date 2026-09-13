@@ -405,6 +405,192 @@ def _haal_links_eruit(db, jobs: list) -> int:
     return aangepast
 
 
+# ── De rubriek waar de verkoper het artikel ZELF in heeft gezet ──────────────
+#
+# GEMETEN 13-09-2026, Egbert Brouwer (Papa's Plectrums). "Ik heb vandaag
+# geprobeerd er 35 online te zetten, daar zijn er 34 niet van gelukt." Alle 34
+# waren miniatuurgitaartjes, en 2dehands vraagt geld in Gitaren | Elektrisch,
+# Akoestisch en Bas (twee gratis per rubriek, daarna betalen). Op Marktplaats
+# staan die 34 in Verzamelen | Muziek, Artiesten en Beroemdheden, gekozen door
+# hemzelf. Onze import had de rubriek uit de titel geraden: van zijn 5.533
+# artikelen had er maar 947 bij ons dezelfde rubriek als op Marktplaats.
+#
+# Marktplaats en 2dehands delen dezelfde rubriekenboom met dezelfde nummers
+# (nagemeten op alle tien rubrieken die hij gebruikt), en de extensie plaatst al
+# sinds 1.0.273 op die nummers als ze in de opdracht staan (getMpSyiUrl, zie
+# "mp_category"). Dat gebeurde alleen bij een herplaatsing op Marktplaats. Hier,
+# vlak voor uitgifte, geldt het nu ook voor een nieuw zoekertje op 2dehands van
+# een artikel dat op Marktplaats staat. Dus zonder nieuwe extensie.
+_RUBRIEK_ZOEK_GEDULD = timedelta(minutes=20)
+_BETAALDE_RUBRIEK_GEHEUGEN = timedelta(days=28)
+
+
+def _rubriek_sleutel(payload) -> str:
+    """De rubriek die deze opdracht op het formulier kiest, als vergelijkbare sleutel.
+
+    De echte Marktplaats-rubriek gaat voor, want die kiest de extensie ook.
+    Twee opdrachten met dezelfde geraden categorie kunnen dus in verschillende
+    rubrieken landen, en een rem op de een zegt dan niets over de ander.
+    """
+    pl = payload if isinstance(payload, dict) else {}
+    mc = pl.get("mp_category")
+    if isinstance(mc, dict) and mc.get("l1") and mc.get("l2"):
+        return f"mp:{mc['l1']}/{mc['l2']}"
+    return str(pl.get("category") or "").strip().lower()
+
+
+def _rubriek_leesbaar(payload) -> str | None:
+    pl = payload if isinstance(payload, dict) else {}
+    mc = pl.get("mp_category")
+    if isinstance(mc, dict) and mc.get("l2_naam"):
+        return " ".join(x for x in (mc.get("l1_naam"), mc.get("l2_naam")) if x)
+    return str(pl.get("category") or "").strip() or None
+
+
+def _draai_los(coro):
+    """Een coroutine uitvoeren vanuit gewone code, ook als er al een lus draait."""
+    import asyncio
+    try:
+        asyncio.get_running_loop()
+    except RuntimeError:
+        return asyncio.run(coro)
+    from concurrent.futures import ThreadPoolExecutor
+    with ThreadPoolExecutor(max_workers=1) as uitvoerder:
+        return uitvoerder.submit(asyncio.run, coro).result()
+
+
+def _zet_rubriek_van_marktplaats(db, user_id: str, job: dict) -> bool:
+    """Zet de echte Marktplaats-rubriek in een 2dehands-plaatsing. Zie hierboven.
+
+    Geeft False als deze opdracht nu even moet blijven staan: het artikel staat
+    op Marktplaats maar de rubriek was niet op te vragen. Dan niet gokken met de
+    geraden rubriek, want die kost bij Egbert geld en zet via de rem ook de rest
+    van de rij stil. Na _RUBRIEK_ZOEK_GEDULD gaat hij alsnog met de geraden
+    rubriek, zodat een storing bij Marktplaats de wachtrij nooit blijvend stopt.
+    """
+    if job.get("action") != "create" or job.get("platform") != "2dehands":
+        return True
+    pl = job.get("payload")
+    if (not isinstance(pl, dict) or _rubriek_sleutel(pl).startswith("mp:")
+            or pl.get("_rubriek_niet_op_marktplaats")):
+        return True
+    try:
+        rij = eerste_rij(db.table("listings")
+                         .select("platform_listing_id,items(title)")
+                         .eq("item_id", job.get("item_id")).eq("platform", "marktplaats")
+                         .eq("status", "active").not_.is_("platform_listing_id", "null")
+                         .limit(1).execute())
+    except Exception as e:  # noqa: BLE001 — uitdelen gaat voor
+        logger.warning("job %s: Marktplaats-advertentie niet te lezen: %s", job.get("id"), e)
+        return True
+    if not rij or not rij.get("platform_listing_id"):
+        return True
+
+    from backend.services.mp_enrich import rubriek_van_eigen_advertentie
+    titel = (rij.get("items") or {}).get("title") or pl.get("title") or ""
+    try:
+        rubriek = _draai_los(rubriek_van_eigen_advertentie(
+            db, user_id, titel, rij["platform_listing_id"]))
+    except Exception as e:  # noqa: BLE001
+        logger.warning("job %s: rubriek opvragen mislukt: %s", job.get("id"), e)
+        rubriek = None
+
+    nieuw = dict(pl)
+    uitdelen = True
+    if rubriek:
+        nieuw["mp_category"] = rubriek
+        nieuw.pop("_rubriek_zoeken_sinds", None)
+        logger.info("job %s: 2dehands in de eigen Marktplaats-rubriek %s (was %r)",
+                    job.get("id"), _rubriek_leesbaar(nieuw), pl.get("category"))
+    elif rubriek == {}:
+        # Gezocht en niet gevonden: dan is er geen eigen rubriek om te volgen.
+        nieuw["_rubriek_niet_op_marktplaats"] = True
+    else:
+        nu = datetime.now(timezone.utc)
+        sinds = _parse_ts(pl.get("_rubriek_zoeken_sinds"))
+        if not sinds:
+            nieuw["_rubriek_zoeken_sinds"] = nu.isoformat()
+            sinds = nu
+        uitdelen = nu - sinds >= _RUBRIEK_ZOEK_GEDULD
+    if nieuw != pl:
+        job["payload"] = nieuw
+        try:
+            db.table("jobs").update({"payload": nieuw}).eq("id", job["id"]).execute()
+        except Exception as e:  # noqa: BLE001
+            logger.warning("job %s: rubriek niet kunnen opslaan: %s", job.get("id"), e)
+    return uitdelen
+
+
+def _betaalde_rubriek_bekend(db, user_id: str, platform: str, sleutel: str) -> bool:
+    """Weten we al dat deze rubriek bij deze verkoper geld kost?
+
+    WAAROM (13-09-2026, Egbert Brouwer). De rem in fail_job nam de wachtende
+    opdrachten in een betalende rubriek terug, maar alleen wat er op dat moment
+    stond. Hij klikte door: 8 van zijn 34 zetten werden ná die rem aangemaakt en
+    liepen er opnieuw op, en twee dagen na de eerste keer ging hij met dezelfde
+    rubrieken weer van voren af aan. Wat 2dehands al tegen hem had gezegd werd
+    dus vergeten.
+
+    Kost-geld is het laatste wat we in die rubriek zagen: een geslaagde plaatsing
+    daarna (er is weer een gratis plek) heft het op, net als tijd.
+    """
+    if not sleutel:
+        return False
+    grens = (datetime.now(timezone.utc) - _BETAALDE_RUBRIEK_GEHEUGEN).isoformat()
+    rijen = (db.table("jobs")
+             .select("status,created_at,result,payload->category,payload->mp_category")
+             .eq("user_id", user_id).eq("platform", platform).eq("action", "create")
+             .in_("status", ["done", "error"]).gte("created_at", grens)
+             .order("created_at", desc=True).limit(1000).execute().data or [])
+    for r in rijen:
+        if _rubriek_sleutel({"category": r.get("category"),
+                             "mp_category": r.get("mp_category")}) != sleutel:
+            continue
+        if r.get("status") == "done":
+            return False
+        res = r.get("result") if isinstance(r.get("result"), dict) else {}
+        if _BETAALDE_RUBRIEK.search(f"{res.get('error') or ''} {res.get('error_oorspronkelijk') or ''}"):
+            return True
+    return False
+
+
+def _weiger_bekende_betaalde_rubriek(db, user_id: str, job: dict) -> bool:
+    """Neem een 2dehands-plaatsing terug in een rubriek die al geld bleek te kosten.
+
+    Geeft True als de opdracht is teruggenomen. Alleen 2dehands: daar is elke
+    plaatsing een nieuw zoekertje. Op Marktplaats kan een 'create' de tweede
+    helft van een herplaatsing zijn, en die hier tegenhouden kost een advertentie.
+    """
+    if job.get("action") != "create" or job.get("platform") != "2dehands":
+        return False
+    pl = job.get("payload") if isinstance(job.get("payload"), dict) else {}
+    if pl.get("_refresh_rollback"):
+        return False
+    try:
+        if not _betaalde_rubriek_bekend(db, user_id, "2dehands", _rubriek_sleutel(pl)):
+            return False
+    except Exception as e:  # noqa: BLE001 — een rem mag nooit op een storing dichtvallen
+        logger.warning("job %s: betaalde rubriek niet na te gaan: %s", job.get("id"), e)
+        return False
+    reden = _melding_rubriek_vraagt_geld("2dehands", _rubrieknaam("", _rubriek_leesbaar(pl)) or None)
+    now = datetime.now(timezone.utc).isoformat()
+    try:
+        db.table("jobs").update({
+            "status": "cancelled",
+            "result": {"cancelled": "paid category", "error": reden},
+            "done_at": now,
+        }).eq("id", job["id"]).eq("status", "pending").execute()
+        if job.get("item_id"):
+            db.table("listings").update({"status": "error", "error_message": reden}).eq(
+                "item_id", job["item_id"]).eq("platform", "2dehands").eq("status", "pending").execute()
+    except Exception as e:  # noqa: BLE001
+        logger.warning("job %s: betaalde rubriek niet kunnen terugnemen: %s", job.get("id"), e)
+        return False
+    logger.warning("job %s: 2dehands-rubriek %s kost al geld bij %s, niet uitgedeeld",
+                   job.get("id"), _rubriek_sleutel(pl), user_id)
+    return True
+
+
 def _leest_als_engels(payload: dict, lijkt_al_in_taal) -> bool:
     """Leest deze advertentie overtuigend als Engels? Titel en omschrijving samen.
 
