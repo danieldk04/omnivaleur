@@ -9148,3 +9148,51 @@ Openstaand: Windows is hier niet na te meten. Toon en Egbert draaien beiden
 Windows, en de wakker-houdfunctie voorkomt bovendien geen slaapstand door een
 dichtgeklapte laptop of een afgemelde sessie. Zolang de Web Store 1.0.327 nog
 niet heeft goedgekeurd moeten klanten de slaapstand zelf op Nooit zetten.
+
+## 13-09-2026 — Johan Kist (Blackbird Guitars), supportcall 17-09 10:30
+
+Nieuwe klant, aangemeld 13-09 om 21:01, proef loopt tot 20-09. Zakelijke
+gitaarhandel, verkoopt via Marktplaats Pro (Admarkt). Hij heeft een supportcall
+geboekt met als vraag "hoe ik effectief items kan uploaden", en verkoopt nu nog
+alleen op Marktplaats.
+
+Wat er op zijn account staat, nagemeten in de database en tegen zijn eigen
+openbare Marktplaats-lijst (verkopersnummer 6250337):
+
+- 24 artikelen, alle 24 met foto's en tekst, en alle 24 staan ook echt online op
+  Marktplaats. Niets verdwenen, niets dubbel geadministreerd.
+- De prijzen kloppen tot op de cent met zijn advertenties, en de staat
+  (nieuw / zo goed als nieuw / gebruikt) klopt bij alle 24 ook.
+- Eén uitzondering: "Fender, Gibson, Martin, Eastman Inkoop en verkoop" stond bij
+  ons op EUR 0,01. Op Marktplaats is dat een "Zie omschrijving"-advertentie zonder
+  bedrag. Hij heeft die cent om 21:22 zelf ingetypt, waarschijnlijk om langs de
+  verplichte prijs te komen. Zonder ingrijpen was die advertentie voor één cent
+  op elk ander kanaal verschenen. Rechtgezet naar prijsvorm "Zie omschrijving",
+  bedrag leeg. Voor-en-na gemeten met de echte publicatiecontrole: vóór liet die
+  hem op alle vijf kanalen door, ná gaat hij alleen naar Marktplaats en 2dehands
+  en weigeren Vinted, eBay en Facebook hem, precies zoals bedoeld.
+- De kolom items.price_type bestaat inmiddels in Supabase; de update erop slaagde.
+  Dat openstaande punt van eerder vandaag is dus afgehandeld.
+
+Wat hem tegenhoudt en wat hij zelf moet doen:
+
+1. Zijn verantwoordelijke partij (GPSR) is leeg: handelsnaam, postadres en
+   e-mailadres. Marktplaats en 2dehands eisen dat blok, en de server weigert
+   daardoor op dit moment élke publicatie naar die twee kanalen. Dit staat
+   standaard aan bij iedere nieuwe klant en is dus de eerste horde die elke
+   nieuwe verkoper tegenkomt. Het dashboard meldt het netjes met de weg ernaartoe
+   (Protections, "Responsible party"), maar pas nadat hij op publiceren drukt.
+2. Zijn locatie (land, woonplaats, postcode) is leeg. Op 2dehands blijft het
+   adresblok daardoor leeg.
+3. Hij heeft nog geen enkel tweede kanaal gekoppeld. Zolang dat zo is valt er
+   niets te crosslisten en ziet hij van het product alleen zijn eigen voorraad.
+
+Openstaand punt in de code, niet nu gerepareerd: bij een Admarkt-scan stuurt de
+extensie het categorienummer van Marktplaats wel mee (`category_id`), maar de
+server bewaart dat niet en raadt de categorie alsnog uit de titel. Bij Johan
+raadde hij er 23 van de 24 goed en bleef "Ferns Custom" leeg (later alsnog
+aangevuld). Het nummer is bruikbaar: 301 van de 320 nummers in MP_CATEGORIES
+horen bij precies één categorie, en de 19 die dat niet doen zijn allemaal
+kleding. Bewust niet nu gedaan, want dat vraagt een nieuwe extensieversie en
+1.0.327 ligt nog bij de Web Store met de slaapstandreparatie erin; die mag niet
+achteraan aansluiten.
