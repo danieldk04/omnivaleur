@@ -17,40 +17,6 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ---
 
-## openbare-verkoperslijst-toont-de-fotos
-
-*13-09-2026 — "De MP/2dehands zoek-API toont per advertentie de foto's, en het verkopersnummer bewijs je met je eigen advertentienummer, niet met stemmen"*
-
-Wil je weten wat een bezoeker écht ziet van onze advertenties, dan is de
-openbare zoek-API de bron: `https://www.marktplaats.nl/lrp/api/search` met
-`sellerIds[]`, 100 per pagina. Geen login nodig. Per advertentie staat er
-`pictures` (of `imageUrls`); ontbreekt dat helemaal, dan heeft de advertentie
-geen foto.
-
-Twee dingen die 13-09-2026 misgingen bij het meten:
-
-1. **Een gewone Supabase-select geeft stil 1000 rijen.** De eerste meting zei
-   "9 verkopers, 1000 advertenties, nul zonder foto" terwijl er 9.160 actief
-   waren en er twee kaal online stonden. Pagineren met `fetch_all`, altijd.
-   Zie "bewijs-moet-onderscheiden".
-
-2. **`zoek_verkoper_id` stemt, en stemmen kan misleiden.** Die functie zoekt op
-   je titels en neemt een nummer aan zodra meerdere titels hetzelfde nummer
-   aanwijzen. Dat leverde een verkoper op met 3.700 advertenties waarvan er nul
-   van ons waren: het was iemand anders. Bewijs het nummer in plaats daarvan met
-   je eigen advertentienummer: zoek op je eigen titel en neem `sellerId` alleen
-   over als de gevonden advertentie hét nummer draagt dat bij ons in de boeken
-   staat.
-
-Let op wie hier buiten valt: verkopers met Admarkt- of webwinkelnummers
-(`1502022894` in plaats van `m2442004486`) staan niet op de openbare
-verkoperslijst. Op 13-09-2026 waren dat 6.726 van de 9.160 actieve
-MP-advertenties. Over die advertenties doet zo'n meting dus geen uitspraak, en
-dat is iets anders dan "er is niets aan de hand".
-Zie "admarkt-zakelijke-marktplaats" en "een-bron-is-geen-bewijs-bij-weg".
-
----
-
 ## plaatsen-zonder-fotos-op-het-formulier
 
 *13-09-2026 — Een mislukte of hangende foto-upload liet het formulier leeg achter en de extensie klikte toch op Plaatsen; images.ids is de harde waarheid*
@@ -85,6 +51,59 @@ Zie ook "extension-release-bump-version" en "rem-op-de-server-bij-een-extensiefo
 de extensiefix (1.0.323) helpt pas als de Chrome Web Store hem heeft, dus de
 server kijkt sinds dezelfde dag zelf na of er iets van ons zonder foto online
 staat (`backend/services/foto_controle.py`, elke 6 uur).
+
+Twee dingen die bij het vangnet naar boven kwamen en breder gelden:
+
+- **Een rem tegen te vaak verversen mag een kápotte advertentie niet gijzelen.**
+  `refresh_listing` weigert alles wat binnen 21 dagen al herplaatst is, en dat
+  klopt voor een advertentie die het gewoon doet. Een advertentie zonder foto
+  doet het niet, dus daar beschermt die rem niets en houdt hij alleen de schade
+  in stand: Toons konijnenvacht zou tot 1 oktober kaal blijven. Reparatie en
+  oppepper zijn twee verschillende dingen en horen niet dezelfde rem te delen.
+- **Een vangnet dat op één veld leunt moet weten wanneer dat veld weg is.**
+  De controle leest `pictures` uit de zoek-API. Verdwijnt dat veld, dan lijkt
+  élke advertentie kaal en zou het vangnet hele accounts gaan leeghalen en
+  terugzetten. Echte uitval is zeldzaam en verspreid (vier op 9.160), dus een
+  groot aandeel is per definitie een kapotte meting. Zie
+  "bewijs-moet-onderscheiden".
+
+---
+
+## openbare-verkoperslijst-toont-de-fotos
+
+*13-09-2026 — "De MP/2dehands zoek-API toont per advertentie de foto's, en het verkopersnummer bewijs je met je eigen advertentienummer, niet met stemmen"*
+
+Wil je weten wat een bezoeker écht ziet van onze advertenties, dan is de
+openbare zoek-API de bron: `https://www.marktplaats.nl/lrp/api/search` met
+`sellerIds[]`, 100 per pagina. Geen login nodig. Per advertentie staat er
+`pictures` (of `imageUrls`); ontbreekt dat helemaal, dan heeft de advertentie
+geen foto.
+
+Twee dingen die 13-09-2026 misgingen bij het meten:
+
+1. **Een gewone Supabase-select geeft stil 1000 rijen.** De eerste meting zei
+   "9 verkopers, 1000 advertenties, nul zonder foto" terwijl er 9.160 actief
+   waren en er twee kaal online stonden. Pagineren met `fetch_all`, altijd.
+   Zie "bewijs-moet-onderscheiden".
+
+2. **`zoek_verkoper_id` stemt, en stemmen kan misleiden.** Die functie zoekt op
+   je titels en neemt een nummer aan zodra meerdere titels hetzelfde nummer
+   aanwijzen. Dat leverde een verkoper op met 3.700 advertenties waarvan er nul
+   van ons waren: het was iemand anders. Bewijs het nummer in plaats daarvan met
+   je eigen advertentienummer: zoek op je eigen titel en neem `sellerId` alleen
+   over als de gevonden advertentie hét nummer draagt dat bij ons in de boeken
+   staat.
+
+Let op wie hier buiten valt: verkopers met Admarkt- of webwinkelnummers
+(`1502022894` in plaats van `m2442004486`) staan niet op de openbare
+verkoperslijst. Op 13-09-2026 waren dat 6.726 van de 9.160 actieve
+MP-advertenties. Over die advertenties doet zo'n meting dus geen uitspraak, en
+dat is iets anders dan "er is niets aan de hand".
+Zie "admarkt-zakelijke-marktplaats" en "een-bron-is-geen-bewijs-bij-weg".
+
+**Hetzelfde onderwerp, eigen bestand** (samengevoegd in de index op 13-09-2026):
+- "een-bron-is-geen-bewijs-bij-weg" — verkoperspagina noemde 21 advertenties weg, 2 stonden er nog
+- "eigen-advertentie-heeft-geen-leesbaar-adres" — /seller/view is voor de server dicht
 
 ---
 
@@ -140,6 +159,10 @@ vergelijken op `_rubriek_sleutel` (mp:l1/l2 gaat voor de geraden naam), en
 zodat een nieuwe klik niet opnieuw faalt. Zie "betalende-rubriek-is-geen-formulierfout"
 en "rubriek-valt-stil-bij-massa-import". Meet een seller-lijst nooit op "lege
 pagina = einde": de zoek-API geeft soms een lege pagina middenin.
+
+**Hetzelfde onderwerp, eigen bestand** (samengevoegd in de index op 13-09-2026):
+- "rubriek-valt-stil-bij-massa-import" — geweigerde modelvraag werd stil 'geen rubriek' bij massa-import
+- "rubriekkeuze-vroeg-eerst-om-kleding" — 'choose gender first' was doodlopend voor woontextiel
 
 ---
 
@@ -356,6 +379,9 @@ gebruik daarvoor de extensie zelf. Zo is het ook bewezen: op 11-09-2026 plaatste
 de extensie m2441354102 op 2dehands met "Bergen op Zoom, Nederland" erop, terwijl
 de vier opdrachten van de dag ervóór (zonder locatie in de payload) allemaal
 strandden op "geen adres op het formulier". Zie "extension-release-bump-version".
+
+**Hetzelfde onderwerp, eigen bestand** (samengevoegd in de index op 13-09-2026):
+- "adresblok-2dehands-buitenland" — NL-verkoper op 2dehands.be: "Buitenland" laat het postcodeveld leeg en de plaatsstap weigert
 
 ---
 
@@ -607,6 +633,9 @@ Menselijk ritme, dit is wat verraadt dat een model schreef:
 Geen naam in de aanhef bij koude mail blijft staan, zie "koude-mail-geen-naam-in-aanhef".
 Zelfde toon als "klantmail-kort-en-menselijk": schrijven zoals je praat.
 
+**Hetzelfde onderwerp, eigen bestand** (samengevoegd in de index op 13-09-2026):
+- "koude-mail-geen-naam-in-aanhef" — "Hi," is standaard, geen naam in de aanhef
+
 ---
 
 ## 2dehands-verlengen-niet-herplaatsen
@@ -713,6 +742,9 @@ rubriek=)` in jobs.py, en `betaalrubriekBezwaar()` in shared.js (1.0.317). De
 server herkent ook de melding van oudere kopieën, want die dragen de bewijzen al
 in hun foutmelding — zie "rem-op-de-server-bij-een-extensiefout".
 
+**Hetzelfde onderwerp, eigen bestand** (samengevoegd in de index op 13-09-2026):
+- "marktplaats-2dehands-link-kost-negen-euro" — een advertentie mét webadres wordt een betaalde bestelregel; tabblad landt op /payments/
+
 ---
 
 ## bieden-toestaan-staat-standaard-aan
@@ -798,6 +830,10 @@ gegooid. Zie "foutenlogboek-wist-zichzelf" en
 **Hoe toe te passen:** schrijf nooit `.single()` in nieuwe code. Zie je een
 storing die alleen bij een verwijderd of niet-bestaand item optreedt, kijk dan
 eerst of er een `.single()` in het spoor staat.
+
+**Hetzelfde onderwerp, eigen bestand** (samengevoegd in de index op 13-09-2026):
+- "schrijfacties-zonder-herkansing" — lezen wordt overal herkanst, delete en statuswijziging niet
+- "sync-events-blokkeert-verwijderen" — advertentierij met gebeurtenissen is niet te wissen
 
 ---
 
@@ -938,6 +974,10 @@ geeft 401, ook een verzonnen naam. Het 404-orakel uit deze notitie werkt daar du
 alleen met een ingelogde sessie. Wijkt de naam af, dan meldt de scan wel precies
 welke procedure faalde en met welke code.
 
+**Hetzelfde onderwerp, eigen bestand** (samengevoegd in de index op 13-09-2026):
+- "admarkt-pro-mag-niet-geautomatiseerd" — Pro automatiseren mag uitsluitend via een erkende API-partner; beloof het een klant nooit
+- "admarkt-omschrijving-via-openbaar-mp" — Admarkt geeft geen prijs of tekst, de openbare zoek-API wel
+
 ---
 
 ## refresh-token-race-tussen-dashboard-en-extensie
@@ -1064,6 +1104,9 @@ De tests met `--oud` als vlag (`process.argv.includes("--oud")`) zijn hier veili
 die draaien de HEAD-variant alleen als je er zelf om vraagt.
 Zie ook "omnivaleur-altijd-bewijzen".
 
+**Hetzelfde onderwerp, eigen bestand** (samengevoegd in de index op 13-09-2026):
+- "extensie-stempel-test-loopt-achter-op-het-scherm" — functies op naam uit app.html knippen breekt zodra dat scherm er een aanroept
+
 ---
 
 ## marktplaats-2dehands-link-kost-negen-euro
@@ -1156,6 +1199,9 @@ Meting en onderbouwing staan in docs/team-notes.md onder 09-09-2026. Verwant:
 "monaim-50-50-partnership", "leadgen-op-conversie-niet-volume",
 "rolverdeling-ceo-va-developer", "eerst-recente-wijzigingen-lezen".
 
+**Hetzelfde onderwerp, eigen bestand** (samengevoegd in de index op 13-09-2026):
+- "omnivaleur-positionering-vs-channable" — Omnivaleur blijft tweedehands-only en Europa-only, anders dan Channable
+
 ---
 
 ## dashboard-verhuist-opslag-extensie-leest-mee
@@ -1246,6 +1292,10 @@ van die lijst staat in docs/team-notes.md 09-09). De andere vier tabs hebben wel
 de lichte kleuren maar nog dezelfde indeling (bewust: alleen Marketing echt
 opnieuw). Zie "leadgen-op-conversie-niet-volume" en
 "anthropic-credit-silent-translation-fallback".
+
+**Hetzelfde onderwerp, eigen bestand** (samengevoegd in de index op 13-09-2026):
+- "weekrapport-opmaak" — zondagsmail is HTML met tabelcel-grafieken; trends retroactief uit GSC/GA4
+- "pixel-op-verzenddomein" — open-pixel laadt van omnivaleur.nl (verzenddomein), niet het productdomein
 
 ---
 
@@ -1421,6 +1471,11 @@ Les: roterende credentials horen nooit in `storage.sync`. Zie ook
 
 Openstaand: Daniel kan in Supabase de "refresh token reuse interval" verruimen
 naar ~30s als extra marge voor legitieme races.
+
+**Hetzelfde onderwerp, eigen bestand** (samengevoegd in de index op 13-09-2026):
+- "refresh-token-race-tussen-dashboard-en-extensie" — dashboard en extensie verversen allebei hun eigen Supabase-token
+- "dashboard-verhuist-opslag-extensie-leest-mee" — dashboard naar localStorage (08-09), webapp_sync bleef sessionStorage lezen
+- "sessie-overleeft-het-tabblad" — inlogbewijs stond in sessionStorage; elk nieuw tabblad was opnieuw inloggen
 
 ---
 
@@ -1630,6 +1685,11 @@ vernietigd. Het opruimen zelf staat nu in
 `scripts/ruim_dubbele_advertenties_uit_import.py` (titel + gedeeld foto-adres,
 nieuwste advertentie blijft staan, groepen met verkoopgeschiedenis overgeslagen).
 
+**Hetzelfde onderwerp, eigen bestand** (samengevoegd in de index op 13-09-2026):
+- "dubbele-rij-is-geen-dubbele-advertentie" — 57 "dubbele" bij Toon, nul echt twee keer online; oude rij van een herplaatsing
+- "delist-op-dubbele-regel" — twee artikelen op één advertentienummer
+- "import-dubbele-items-over-platforms" — vertaalde tweelingen herkend maar nooit automatisch samengevoegd
+
 ---
 
 ## tekst-zoeken-op-het-juiste-kanaal
@@ -1702,6 +1762,10 @@ En: houd de Web Store buiten de testsuite (`tests/conftest.py`). Tien tests met
 een vaste versie in de hand (1.0.286, 1.0.294) vielen anders vanzelf om zodra er
 een nieuwe versie uitging.
 
+**Hetzelfde onderwerp, eigen bestand** (samengevoegd in de index op 13-09-2026):
+- "tweede-extensiekopie" — handmatig geladen extensie bevriest en pikt tóch opdrachten; herkenbaar aan versiestempel
+- "stille-extensie-is-niet-altijd-uitgezet" — hartslagversie zegt of aanzetten überhaupt helpt
+
 ---
 
 ## verkoop-signaal-hard-vs-zacht
@@ -1762,6 +1826,10 @@ niet in de vaste `settings.shopify_store`.
 Zie ook "verkocht-badge-in-berichtenlijst", "herplaatsen-verliest-advertenties"
 en "klantenslot-valt-dicht".
 
+**Hetzelfde onderwerp, eigen bestand** (samengevoegd in de index op 13-09-2026):
+- "verkocht-badge-in-berichtenlijst" — MP zet "Verkocht!" op het gesprek, niet op de advertentie
+- "vinted-weg-is-geen-archief" — zelf verwijderde Vinted-advertentie is een zacht verkoopsignaal, geen archief
+
 ---
 
 ## stille-tab-is-geen-formulier
@@ -1804,6 +1872,9 @@ niet af — zie "spa-redirect-verslaat-de-inlogdetectie". (2) de server-rem hier
 sloeg nooit aan omdat hij "3 identieke time-outs" eiste én een geslaagde scan als
 succes telde — zie "kansloze-kanaal-rem-telt-alleen-plaatsingen". Waaróm 2dehands
 zijn account weert is nog open; hij is zakelijk Admarkt-verkoper.
+
+**Hetzelfde onderwerp, eigen bestand** (samengevoegd in de index op 13-09-2026):
+- "spa-redirect-verslaat-de-inlogdetectie" — 2dehands springt PAS NA scriptinjectie naar de inlogpagina
 
 ---
 
@@ -1850,6 +1921,9 @@ Bewezen op zijn echte gegevens: `_kansloze_reeks` = False (oud), `_kanaal_kanslo
 Zie "stille-tab-is-geen-formulier" (waar deze rem vandaan komt),
 "spa-redirect-verslaat-de-inlogdetectie" (de extensiekant) en
 "rem-op-de-server-bij-een-extensiefout".
+
+**Hetzelfde onderwerp, eigen bestand** (samengevoegd in de index op 13-09-2026):
+- "rem-op-de-server-bij-een-extensiefout" — de rem hoort op de server want een Web Store-release duurt weken
 
 ---
 
@@ -1923,6 +1997,10 @@ throttling), met terugval op `setTimeout`. Worker staat in
 `web_accessible_resources`. Werk-tabblad krijgt `autoDiscardable:false` tegen
 Memory Saver / discard. Zie ook "verborgen-tabblad-vertraagt-wachttijden".
 
+**Hetzelfde onderwerp, eigen bestand** (samengevoegd in de index op 13-09-2026):
+- "verborgen-tabblad-vertraagt-wachttijden" — Chrome maakt van elke korte pauze 1 seconde
+- "klokjes-in-verborgen-tab-injectie" — geïnjecteerde functies missen de Worker-timer; wacht op de pagina, niet op de klok
+
 ---
 
 ## sepa-incasso-bedenktijd-te-kort
@@ -1964,6 +2042,9 @@ stil kunnen breken. Verwant: "proefperiode-en-toegangsslot",
 "stripe-checkout-live-config", "railway-draait-op-anon-sleutel",
 "klanten-zijn-geen-leads".
 
+**Hetzelfde onderwerp, eigen bestand** (samengevoegd in de index op 13-09-2026):
+- "stripe-checkout-live-config" — betalen lukte nooit door 3 configfouten; /health toont nu per sleutel ja/nee
+
 ---
 
 ## nl-landingspagina
@@ -1994,6 +2075,9 @@ het sein dat de oppervlakte stabiel genoeg is voor één schone vertaalronde.
 
 Zie "eerst-recente-wijzigingen-lezen" want dit raakt drie partijen die naast
 elkaar werken.
+
+**Hetzelfde onderwerp, eigen bestand** (samengevoegd in de index op 13-09-2026):
+- "nl-blogindex-en-vertaalinhaalronde" — /nl/blog bestaat, mislukte vertalingen worden dagelijks ingehaald
 
 ---
 
@@ -2046,6 +2130,11 @@ storing kosten woorden en lossen niets voor hem op.
 mailagent ze meekrijgt. Schrijf je met de hand een mail voor Daniel, hou je dan
 aan dezelfde vorm. Zie "mails-kort-houden", "klantmails-meer-empathie" en
 "rapportage-in-gewone-taal".
+
+**Hetzelfde onderwerp, eigen bestand** (samengevoegd in de index op 13-09-2026):
+- "klantmails-meer-empathie" — eerst erkennen wat de klant erin stak, dan pas de uitleg
+- "mails-kort-houden" — klantmails rond de 200 woorden; uitleg indikken tot gevolgen en acties
+- "mailtekst-niet-afbreken" — één alinea is één doorlopende regel; harde regeleindes reizen mee naar de mailclient
 
 ---
 
@@ -2281,6 +2370,10 @@ verstuurd voordat dit erin zat.
 mail — hij weet dat dat wettelijk anders hoort en heeft het bewust zo gewild. De
 afmeldweg zit alleen nog in de List-Unsubscribe-header.
 
+**Hetzelfde onderwerp, eigen bestand** (samengevoegd in de index op 13-09-2026):
+- "mailmachine-alleen-koude-reeks" — sinds 06-09-2026 alle AI eruit; alleen mail 1/2/3 uit vaste sjablonen
+- "mailagent-slimme-antwoorden" — achterhaald sinds 06-09-2026: de LLM-concepten uit augustus zijn eruit gehaald
+
 ---
 
 ## mailagent-op-de-server
@@ -2305,6 +2398,10 @@ Controle zonder gokken: `/health` toont `leadgen_tick`, `leadgen_resend` en
 `leadgen_mailbox`; `/health/resend` toont welke domeinen geaccepteerd worden.
 Zie "mailagent-slimme-antwoorden", "klanten-zijn-geen-leads",
 "railway-blokkeert-smtp".
+
+**Hetzelfde onderwerp, eigen bestand** (samengevoegd in de index op 13-09-2026):
+- "offline-waarschuwing-per-mail" — mail als de computer uren stil is met werk in de rij
+- "foutenlogboek-wist-zichzelf" — één herhalende storing duwde alle andere klantcodes eruit
 
 ---
 
@@ -2444,6 +2541,9 @@ naar A.
 Zie "leadgen-marktplaats-beste-bron", "marktplaats-rubrieken-uitgeput",
 "instagram-ban-augustus-2026", "groepsoordeel-maakt-model-strenger",
 "haiku-cache-ondergrens".
+
+**Hetzelfde onderwerp, eigen bestand** (samengevoegd in de index op 13-09-2026):
+- "leadgen-doelgroep-kleding" — filter op tweedehands kleding, sieraden, accessoires
 
 ---
 
@@ -2615,6 +2715,9 @@ vroeg. Geef nooit "even niets" terug in plaats van ander werk: een opdracht die
 nooit kan lopen zou dan de hele wachtrij stilleggen. Zie
 "verborgen-tabblad-vertraagt-wachttijden" en "calm-mode".
 
+**Hetzelfde onderwerp, eigen bestand** (samengevoegd in de index op 13-09-2026):
+- "eigen-klik-gaat-voor-de-nachtronde" — uitgifte pakte de oudste 20, dus een verse klik stond achter 50 verversopdrachten
+
 ---
 
 ## leadgen-status-leest-anon-sleutel
@@ -2775,6 +2878,9 @@ gebruiken, want zodra die twee uiteenlopen valt het geval stil terug in
 "gelukt". Zie ook "beloofd-tempo-moet-gemeten-tempo-zijn" en
 "geen-doodlopende-straat-in-de-ui".
 
+**Hetzelfde onderwerp, eigen bestand** (samengevoegd in de index op 13-09-2026):
+- "rode-regel-is-geen-oordeel" — een melding die weggaat van een teken dat niets verandert, zegt niets
+
 ---
 
 ## een-bron-is-geen-bewijs-bij-weg
@@ -2838,6 +2944,9 @@ er al een andere levende advertentie voor hetzelfde artikel op hetzelfde kanaal
 staat: dan was de herplaatsing gewoon gelukt en gaat de oude rij op `delisted`.
 Zie ook "herplaatslus-op-verkochte-artikelen" en
 "reddingsronde-kale-plaatsing-dubbele-advertentie".
+
+**Hetzelfde onderwerp, eigen bestand** (samengevoegd in de index op 13-09-2026):
+- "scan-mag-lopende-herplaatsing-niet-afsluiten" — scan-momentopname ouder dan de verwijdering sloot de opdracht af, artikel weg met 404
 
 ---
 
@@ -3018,6 +3127,9 @@ er alsnog in. **500 komt wél ongewijzigd door.** Er staan nog meer 502/503's in
 aangepakt.
 Zie ook "sync-events-blokkeert-verwijderen".
 
+**Hetzelfde onderwerp, eigen bestand** (samengevoegd in de index op 13-09-2026):
+- "geen-doodlopende-straat-in-de-ui" — elk grijs vakje hoort een klik te zijn die naar de oplossing brengt
+
 ---
 
 ## schrijfacties-zonder-herkansing
@@ -3117,6 +3229,10 @@ dus stonden de tests groen terwijl productie stuk was. Een nabootsing moet de
 handtekening van de GEPINDE client hebben, niet die van de nieuwste.
 Zie ook "schrijfacties-zonder-herkansing" en "foutenlogboek-wist-zichzelf".
 
+**Hetzelfde onderwerp, eigen bestand** (samengevoegd in de index op 13-09-2026):
+- "anthropic-credit-silent-translation-fallback" — leeg tegoed = vertaling geeft stil de brontekst terug
+- "haiku-cache-ondergrens" — prompt caching doet stil niets onder ~4096 tokens; check usage, niet de code
+
 ---
 
 ## vinted-voorstel-verslaat-vangblad
@@ -3146,6 +3262,9 @@ damesafdeling omdat de foto daarop leek. Sla een omhulsel met meer dan één
 `Cell__title` over, anders knoop je de naam van de ene regel aan het pad van de
 andere. Zie "rode-regel-is-geen-oordeel" en
 "omnivaleur-niet-kledingcategorieen".
+
+**Hetzelfde onderwerp, eigen bestand** (samengevoegd in de index op 13-09-2026):
+- "vinted-zoekterugval-stopt-op-tak" — "Kies een subcategorie" bij alles buiten kleding
 
 ---
 
@@ -3345,6 +3464,9 @@ installatie en doorverwijzing, en het idee om de extensie zelf op een server met
 klantwachtwoorden te draaien is bewust afgewezen. Zie docs/team-notes.md,
 03-09-2026.
 
+**Hetzelfde onderwerp, eigen bestand** (samengevoegd in de index op 13-09-2026):
+- "klantcalls-incentive-idee" — call boeken = 5-7 dagen extra toegang, om feedback te verzamelen; geen prio
+
 ---
 
 ## chrome-ruimt-profiel-op-bij-venster-dicht
@@ -3379,6 +3501,9 @@ Testtruc die je nodig hebt: sinds Chrome 137 wordt `--load-extension` genegeerd.
 Laden gaat via CDP `Extensions.loadUnpacked` met de vlag
 `--enable-unsafe-extension-debugging`. Zo geladen extensies zijn wel vluchtig:
 ze staan niet in het profiel en komen na een profielopruiming niet terug.
+
+**Hetzelfde onderwerp, eigen bestand** (samengevoegd in de index op 13-09-2026):
+- "chrome-sitetoegang-op-klik" — elke opdracht loopt stil dood in een lege pagina; permissions.contains verraadt het
 
 ---
 
@@ -3543,6 +3668,9 @@ De regel erachter: **vraag aanwezigheid nooit aan iets dat kan slapen.** Alleen
 wat de achtergrond echt als enige weet (is ze ingelogd, welke opdrachten staan
 klaar) blijft een vraag met een antwoord.
 
+**Hetzelfde onderwerp, eigen bestand** (samengevoegd in de index op 13-09-2026):
+- "achtergrondmeting-ziet-de-sessie-niet" — 401 uit de service worker terwijl een tabblad 200 geeft
+
 ---
 
 ## bewijs-moet-onderscheiden
@@ -3678,6 +3806,9 @@ het moment dat de opdracht uitgaat: een extensiereparatie bereikt de verkoper pa
 na goedkeuring door de Chrome Web Store, de server bij de eerstvolgende opdracht. Zie ook
 "marktplaats-publiceren-valkuilen" en "omnivaleur-altijd-bewijzen".
 
+**Hetzelfde onderwerp, eigen bestand** (samengevoegd in de index op 13-09-2026):
+- "accessoires-hebben-geen-maat" — "unisex accessoires" eiste merk/maat/kleur; 2.342 artikelen weer publiceerbaar
+
 ---
 
 ## zekerheid-is-geen-stopplek
@@ -3770,6 +3901,9 @@ kan dit patroon veroorzaken.
 
 Zie ook "vinted-tekst-alleen-op-de-pagina" en "omnivaleur-altijd-bewijzen".
 
+**Hetzelfde onderwerp, eigen bestand** (samengevoegd in de index op 13-09-2026):
+- "tekst-zoeken-op-het-juiste-kanaal" — de aanvulronde zocht altijd op marktplaats.nl, ook voor andere kanalen
+
 ---
 
 ## vinted-tekst-alleen-op-de-pagina
@@ -3797,6 +3931,9 @@ advertenties die het nodig hebben aan de beurt zijn. De server stuurt daarom
 `tekst_bekend` mee in de scanopdracht.
 
 Zie ook "scan-mag-nooit-leeghalen" en "omnivaleur-altijd-bewijzen".
+
+**Hetzelfde onderwerp, eigen bestand** (samengevoegd in de index op 13-09-2026):
+- "vinted-sessie-per-landdomein" — vinted.com weet niets van je sessie op vinted.nl
 
 ---
 
@@ -3942,6 +4079,11 @@ omgezet in een meting:
 
 Zie ook "rapportage-in-gewone-taal" en "eerst-recente-wijzigingen-lezen".
 
+**Hetzelfde onderwerp, eigen bestand** (samengevoegd in de index op 13-09-2026):
+- "zekerheid-is-geen-stopplek" — percentage onder 100 is een opdracht; eerst alles doen wat het omhoog brengt
+- "bewijs-moet-onderscheiden" — een fout die overal hetzelfde is verklaart het verschil niet
+- "lees-de-hele-vraag-voor-je-gaat-meten" — ook de tekst IN een schermafdruk; zeg terug welke vraag je beantwoordt
+
 ---
 
 ## gekoppelde-vraag-ipv-brokken
@@ -3969,6 +4111,10 @@ plaats van met wat er gevraagd wordt. Vervang hem door een gekoppelde vraag, en
 laat de oude weg als vangnet staan voor het geval de sleutel ooit verdwijnt.
 Meet altijd op het grootste echte account voor en na — schatten heeft hier nog
 nooit geklopt.
+
+**Hetzelfde onderwerp, eigen bestand** (samengevoegd in de index op 13-09-2026):
+- "postgrest-in-filter-url-limiet" — boven ~639 id's breekt het verzoek stil door de URL-limiet
+- "parallelle-supabase-leesacties" — 8 tegelijk = 45 van de 55 mislukt; lees serieel
 
 ---
 
@@ -4140,6 +4286,9 @@ dashboard van klanten. Gemeten bij Daniel: 18 combinaties in de lus.
 
 Zie "herplaatsen-verliest-advertenties" en "klantenslot-valt-dicht".
 
+**Hetzelfde onderwerp, eigen bestand** (samengevoegd in de index op 13-09-2026):
+- "vangnet-zonder-geheugen-wordt-een-lus" — reconciliatie probeerde elke 20 min opnieuw; pogingenbudget per artikel en kanaal
+
 ---
 
 ## supabase-gratis-plan-egress
@@ -4283,6 +4432,9 @@ Non-clothing items are recognised app-wide by the `games ` category-key prefix (
 
 Carnaval/verkleedkleding (geverifieerd 30-08-2026 in een ingelogde browser, broodkruimel gelezen): dames `/plaats/621/623?bucketId=162`, heren `/plaats/1776/2031?bucketId=169` → "Carnavalskleding en Feestkleding". De categorieboom is op te vragen met `GET marktplaats.nl/lrp/api/search?l1CategoryId=<id>&limit=1` → `searchCategoryOptions`.
 
+**Hetzelfde onderwerp, eigen bestand** (samengevoegd in de index op 13-09-2026):
+- "omnivaleur-niet-kledingcategorieen" — kleding, muziek, antiek, sieraden geverifieerd voor publiceren
+
 ---
 
 ## seintje-concept-klaar
@@ -4328,6 +4480,9 @@ Staat ook in `docs/team-notes.md`, want dit mag niet aan één account hangen.
 Zie "mailbox-eigenaarschap", "mailagent-op-de-server",
 "klanten-zijn-geen-leads" en "rapportage-in-gewone-taal".
 
+**Hetzelfde onderwerp, eigen bestand** (samengevoegd in de index op 13-09-2026):
+- "tweede-ontwikkelaar-partner" — tweede ontwikkelaar springt in als Daniels limiet op is; Daniel heeft de leiding
+
 ---
 
 ## shopify-app-store-geweigerd
@@ -4364,6 +4519,9 @@ bestellingen na. Dat vereist `read_orders`; zonder dat recht geeft Shopify 403 e
 slaat de ronde die winkel over.
 
 Vastgelegd in `tests/test_shopify_eigen_sleutel.py`.
+
+**Hetzelfde onderwerp, eigen bestand** (samengevoegd in de index op 13-09-2026):
+- "shopify-catalogus-koppeling" — 241 bestaande producten werden niet herkend als gelist
 
 ---
 
@@ -4410,6 +4568,9 @@ de database staan: `jobs.py` zoekt hem op `created_at <=` die van de herplaatsin
 
 Vastgelegd in `tests/test_herplaatsen_verbindingshik.py`.
 Zie ook "herplaatsen-verliest-advertenties" en "parallelle-supabase-leesacties".
+
+**Hetzelfde onderwerp, eigen bestand** (samengevoegd in de index op 13-09-2026):
+- "time-out-is-geen-dood-tabblad" — na slaap rondt het oude tabblad alsnog af; de herkansing gaf Egbert een dubbele
 
 ---
 
@@ -4463,6 +4624,9 @@ als een klant die zegt dat zijn wachtwoord niet meer werkt.
 de admin-API voordat je iets aanneemt. Bewaakt door
 `tests/test_auth_sessies_gescheiden.py`.
 
+**Hetzelfde onderwerp, eigen bestand** (samengevoegd in de index op 13-09-2026):
+- "admarkt-toestemming-verdwijnt" — verdwenen browsertoestemming werd 20x gemeld als "je bent niet ingelogd"
+
 ---
 
 ## koude-mail-geen-naam-in-aanhef
@@ -4482,37 +4646,6 @@ nul treffers die klopten.
 `contactpersoon`-veld is. Namen die van buiten binnenkomen altijd ontcoderen
 (`unescape`) vóór ze worden bewaard. Zie "mailbox-eigenaarschap" en
 "mp-video-leadpage".
-
----
-
-## jaap-plaatsen-ligt-stil
-
-*28-08-2026 — "Openstaand op 28-08-2026 — bij Jaap lukt geen enkele Marktplaats-plaatsing sinds 21-08; 26 opdrachten gepauzeerd, 1.0.258 moet nog naar de Web Store"*
-
-Stand 28-08-2026. Bij Jaap (`26cf5471`) mislukt élke plaatsing op Marktplaats met
-"Not published — complete the fields marked in red" terwijl het formulier compleet
-is: tekst 205–1936 tekens, prijs gevuld, gratis-keuze aangeklikt, geen rood veld.
-Op 21-08 plaatste hij nog 60 advertenties foutloos, toen op extensie **1.0.218**;
-sindsdien nul. Bij klant `3bfbed2c` lukt plaatsen wel. Sterkste verdachte: zijn
-~50 openstaande Marktplaats-tabbladen — één "Site verlaten?"-venster daarin zet
-alle tabbladen van dezelfde site stil, ook het publicerende tabblad. Dat is de fix
-uit 1.0.256; hij draait 1.0.251.
-
-Openstaand:
-1. `dist/omnivaleur-extension-1.0.258.zip` uploaden in de Chrome Web Store.
-2. Jaap alle Marktplaats-tabbladen laten sluiten en de versie laten controleren.
-3. 26 herstelopdrachten staan via `scheduled_for` gepauzeerd tot 28-08 15:49 UTC.
-4. 58 items hebben nog geen omschrijving — die tekst bestaat nergens meer.
-
-1.0.258 meldt bij een mislukte plaatsing hoeveel foto's het formulier vasthoudt;
-dat getal wijst de volgende ronde uit of het aan de foto's ligt.
-
-**Why:** dit is niet afgerond werk, en het staat los van de tekstfix van dezelfde
-dag — zonder deze aantekening lijkt het probleem opgelost.
-
-**How to apply:** begin een volgende sessie hierover met de laatste job-fouten van
-deze gebruiker, niet met de code. Zie "herplaatsen-verliest-advertenties",
-"extension-release-bump-version" en "werkvenster-en-afsluitvraag".
 
 ---
 
@@ -4538,6 +4671,9 @@ nodig.
 **How to apply:** verwijder nooit iets van een platform zolang niet vaststaat dat
 het opnieuw geplaatst kan worden. Zie ook "marktplaats-publiceren-valkuilen" en
 "import-dubbele-items-over-platforms".
+
+**Hetzelfde onderwerp, eigen bestand** (samengevoegd in de index op 13-09-2026):
+- "reddingsronde-kale-plaatsing-dubbele-advertentie" — alleen een delete met status 'done' rechtvaardigt een nieuwe plaatsing
 
 ---
 
@@ -5046,6 +5182,10 @@ Zie "tiktok-gratis-schrapen" en "apify-gratis-limiet-op".
   week volledig geweigerd terwijl de rest klopte. Log altijd `response.text` bij
   Notion-fouten; "HTTPStatusError" alleen zegt niets.
 
+**Hetzelfde onderwerp, eigen bestand** (samengevoegd in de index op 13-09-2026):
+- "trendmotor-gesproken-hooks" — TikTok levert ondertiteling mee, YouTube niet; YT-datums uit de zoekpagina
+- "videoknipper" — stille video's automatisch inkorten; script + dashboard in ~/Documents/Handige Scripts Mac
+
 ---
 
 ## mp-video-leadpage
@@ -5116,6 +5256,9 @@ geen sjabloon-vangnet (liever GEEN concept dan een verkeerd concept), en een eig
 set schrijfregels (`_KLANT_REGELS`) zonder verkoop. Dit geldt ook voor alles wat ik
 zelf schrijf: check bij elk concept eerst wat de geschiedenis met die persoon is.
 Zie "mailagent-slimme-antwoorden" en "mailbox-eigenaarschap".
+
+**Hetzelfde onderwerp, eigen bestand** (samengevoegd in de index op 13-09-2026):
+- "klantenslot-valt-dicht" — bij twijfel geldt iedereen als klant; lege Supabase-lijst is een storing, geen antwoord
 
 ---
 
@@ -5204,6 +5347,10 @@ beantwoord is — een net aangemaakt fout concept 'bewijst' dan zichzelf.
 
 Zie "koude-mail-autonoom" en "rapportage-in-gewone-taal".
 
+**Hetzelfde onderwerp, eigen bestand** (samengevoegd in de index op 13-09-2026):
+- "seintje-concept-klaar" — elk concept stuurt meteen een mailtje; label zegt of de developer eraan te pas kwam
+- "concept-verwijderen-op-uid" — Zoho hernummert de conceptenmap na append; verwijder op UID
+
 ---
 
 ## admarkt-omschrijving-via-openbaar-mp
@@ -5260,6 +5407,10 @@ midden in een zin naar een klant. Geldt voor alles wat naar buiten gaat: koude
 mail, conceptantwoorden, afsluitberichten. Wil je nadruk, gebruik dan een
 kopregel op een eigen regel of gewoon de zin zelf. In het gesprek met Daniel in
 de terminal mag markdown wél.
+
+**Hetzelfde onderwerp, eigen bestand** (samengevoegd in de index op 13-09-2026):
+- "antwoorden-kort-houden" — strak indikken, geen uitleg over de oplossing, geen niet-gekozen afwegingen
+- "geen-gedachtestreepjes" — nooit een gedachtestreepje als leesteken, ook niet in uitgaande mail
 
 ---
 
@@ -5370,6 +5521,10 @@ wijziging zelf. Kolommen zijn dienst / waarvoor / belangrijk om te weten, in
 gewone taal en in gevolgen, niet in techniek (zie "rapportage-in-gewone-taal").
 Ook de datumregel bovenaan meenemen. Zie "omnivaleur-r2-fotoopslag".
 
+**Hetzelfde onderwerp, eigen bestand** (samengevoegd in de index op 13-09-2026):
+- "notion-api-beperkingen" — status-opties niet zetbaar, Assignee niet verwijderbaar, SQL gelimiteerd
+- "notion-leadlist-kolomnamen" — één onbekende kolomnaam laat de hele pagina falen
+
 ---
 
 ## marktplaats-publiceren-valkuilen
@@ -5408,6 +5563,10 @@ te koop staat, is de slechtste van de drie uitkomsten.
 **Verwijderen met de hand** (voor als het ooit weer nodig is): open
 `/seller/view/{id}`, klik Verwijder, en kies daarna "Niet verkocht via
 Marktplaats" of "Verkocht via Marktplaats" — er is altijd een tweede stap.
+
+**Hetzelfde onderwerp, eigen bestand** (samengevoegd in de index op 13-09-2026):
+- "formulier-onthoudt-vorige-keuze" — MP zet de vorige advertentievorm voor; 60 advertenties zonder prijs
+- "geen-vraagprijs-is-bieden" — prijs 0 is een advertentievorm, geen fout; lege vraagprijs laat het formulier hangen
 
 ---
 
@@ -5552,6 +5711,9 @@ plaats van verminkt. Bestaande pagina's opnieuw tekenen:
 `scripts/blog_repair_afgekapt.py --infographics --repareer` — die strippt de oude
 `<figure class="infographic">`-blokken en laat ze opnieuw genereren.
 
+**Hetzelfde onderwerp, eigen bestand** (samengevoegd in de index op 13-09-2026):
+- "blog-evaluator-and-infographics" — GSC-evaluator herschrijft op dezelfde slug (slaapt tot ~sep 2026)
+
 ---
 
 ## omnivaleur-demovideo-en-prijs
@@ -5603,6 +5765,9 @@ SMTP-gegevens. Nieuwe mailfuncties altijd via `send_email` / `send_email_checked
 
 Zie ook "deploy-pipeline" en "proefperiode-en-toegangsslot".
 
+**Hetzelfde onderwerp, eigen bestand** (samengevoegd in de index op 13-09-2026):
+- "railway-draait-op-anon-sleutel" — sinds 06-09-2026 service_role op Railway in plaats van anon
+
 ---
 
 ## leadgen-marktplaats-beste-bron
@@ -5631,6 +5796,9 @@ De vijver is niet uitgeput: een tweede sweep over 132 subcategorieën leverde 45
 **Crosslisten aantoonbaar maken (`crosslist`-stap, gemeten over 792 verkopers).** 61% verkoopt al op meer dan één kanaal. Wat wél te meten valt: de eigen webshop (uit de doorklik-link van Marktplaats of anders uit het e-maildomein), het webshopsysteem (WooCommerce 154, Shopify 48, Magento 34, Lightspeed 33, CCVshop 25) en bol.com (zoeken op handelsnaam, alleen een exacte match in "Verkoop door ..." telt — bol geeft ook bij onzin altijd verkopers terug; 37 treffers). Wat **niet** te meten valt: eBay (winkeladressen zijn niet uit een handelsnaam af te leiden, 40 pogingen gaven 40 lege pagina's), Vinted (Cloudflare) en 2dehands (zelfde techniek, eigen verkoper-nummers — hetzelfde nummer geeft daar nul advertenties). Facebook- en Instagram-links op de site zijn bewust niet meegeteld: bijna iedereen heeft die.
 
 **Waarschuwing bij uitvoering:** de gemarkeerde verkopers bevatten ook niet-doelgroep (Catawiki, verhuurbedrijven, retailers van nieuwe spullen) — de bestaande Haiku-classificatie is nodig. En koude mail nooit vanaf omnivaleur.nl: dat domein stuurt de transactionele mail via Resend, zie "railway-blokkeert-smtp".
+
+**Hetzelfde onderwerp, eigen bestand** (samengevoegd in de index op 13-09-2026):
+- "marktplaats-rubrieken-uitgeput" — dieper sweepen geeft ~3 nieuwe verkopers per 4.647 advertenties
 
 ---
 
@@ -5674,6 +5842,9 @@ Drie dingen die de run traag en zinloos maakten, alle drie verholpen:
 - `discover` stapelt in `handles.json` in plaats van te overschrijven; `enrich` muteert diezelfde dicts, zodat `--limit` niet de rest van het bestand wegsnijdt.
 
 Er staat geen `APIFY_TOKEN` in de lokale `.env` (alleen op Railway) — lokaal draaien vereist een `export`.
+
+**Hetzelfde onderwerp, eigen bestand** (samengevoegd in de index op 13-09-2026):
+- "apify-gratis-limiet-op" — $5/mnd volstaat mits per-resultaat-actors; datasets publiek leesbaar zonder token
 
 ---
 
@@ -5786,6 +5957,9 @@ teksten na te lopen — die noemen het aantal dagen letterlijk.
 
 Zie ook "railway-blokkeert-smtp" en "extension-heartbeat-migration".
 
+**Hetzelfde onderwerp, eigen bestand** (samengevoegd in de index op 13-09-2026):
+- "nieuwe-proef-nieuwe-waarschuwing" — vinkje van de vorige proef sloot 11 mensen zonder mail buiten
+
 ---
 
 ## notion-api-beperkingen
@@ -5890,6 +6064,9 @@ een verkeerd of kapot beeld live.
 promoveert; de scripts zetten nieuwe platform-shots daarom in `_review/`.
 Zie ook "deploy-pipeline" en "frontend-parse-json-safe".
 
+**Hetzelfde onderwerp, eigen bestand** (samengevoegd in de index op 13-09-2026):
+- "blog-linking-corrupts-img-src" — interne-link-engine linkte platformnamen binnen <img src>
+
 ---
 
 ## mp-2dehands-hidden-description-field
@@ -5918,6 +6095,9 @@ de echte bron van waarheid een verborgen input was.
 
 **How to apply:** vul bij elke beschrijvingswijziging óók het verborgen veld, en
 lees het terug vlak voor het plaatsen. Zie "extension-release-bump-version".
+
+**Hetzelfde onderwerp, eigen bestand** (samengevoegd in de index op 13-09-2026):
+- "zoekertjestekst-zit-in-react-hook-form" — de controle leest _formValues.description bij Vinted
 
 ---
 
@@ -5990,6 +6170,10 @@ Voor de Instagram-outreach van Omnivaleur (`scripts/leadgen_instagram.py`) zijn 
 Categorie-ID's van `haketa/marktplaats-scraper` zijn grotendeels dood: alleen **621 (Kleding|Dames), 504 (Huis en Inrichting), 1099 (Hobby en Vrije Tijd), 728 (Muziek), 91 (Auto's)** geven resultaten. De andere veertien in de enum accepteert hij wel maar leveren stil nul items — een geaccepteerde input is hier geen bewijs, zie ook "marktplaats-category-ids".
 
 Koude DM's mogen niet via de officiële Instagram-API (alleen antwoorden binnen 24 uur nadat iemand jou schrijft). Het script automatiseert daarom alles tot en met de kant-en-klare tekst in de "leadlist-outreach-formula", maar verstuurt zelf niets.
+
+**Hetzelfde onderwerp, eigen bestand** (samengevoegd in de index op 13-09-2026):
+- "instagram-ban-augustus-2026" — IG geblokkeerd via gekoppeld FB-profiel sinds ~09-08-2026; IG-leadgen staat stil
+- "tiktok-gratis-schrapen" — kan zonder Apify, maar alleen met stealth + verse browsersessie per hashtag
 
 ---
 
@@ -6083,6 +6267,9 @@ The dashboard "Your computer is online / No computer online" indicator (Optie A,
 
 **Testing note:** cannot be verified end-to-end locally — see "ebay-local-sandbox-creds" (local .env = sandbox, code hits production → always 401 locally). Confirm on Railway or via a real customer retry after deploy. See "deploy-pipeline".
 
+**Hetzelfde onderwerp, eigen bestand** (samengevoegd in de index op 13-09-2026):
+- "ebay-local-sandbox-creds" — lokale .env is sandbox, code roept productie; eBay-calls altijd 401 lokaal
+
 ---
 
 ## sold-price-actual
@@ -6094,6 +6281,9 @@ Items rarely sell at their asking price (bids/offers, esp. Vinted/Marktplaats). 
 - Column added in schema.sql via `ALTER TABLE listings ADD COLUMN IF NOT EXISTS sold_price NUMERIC(10,2)` — but schema.sql is NOT auto-run, so this **must be applied manually on Supabase** (as of 2026-07-20). Until then, writes fall back gracefully (crosslist.handle_item_sold catches the missing-column error) and the API just omits the field.
 - Capture points: Shopify webhook (real line-item total), eBay webhook (best-effort), and manual `POST /api/listings/sold-price` {item_id, platform, sold_price}. Vinted sales are scan-detected with NO price → left NULL, user confirms via Analytics "Sales breakdown" (✎ / "confirm" / "Set actual price").
 - Frontend: `renderAnalytics()` uses helper `saleAmt`/`isEstimate`; blue "still using the asking price" callout (`an-estimate-card`) lists sales to confirm. See "frontend-parse-json-safe".
+
+**Hetzelfde onderwerp, eigen bestand** (samengevoegd in de index op 13-09-2026):
+- "extension-heartbeat-migration" — "computer online?"-indicator vereist handmatige CREATE TABLE extension_heartbeat
 
 ---
 
@@ -6161,6 +6351,9 @@ Whenever I change anything under `extension/`, I must **bump `version` in `exten
 
 **How to apply:** treat "bump version + run build script" as part of the edit, not a follow-up step. Then point him at the exact `dist/…zip` path. Ignore the loose `extension*.zip` files in the repo root — they are stale Finder exports, not build output. Related: "deploy-pipeline" (backend auto-deploys via Railway; the extension never does — it always needs a Web Store upload).
 
+**Hetzelfde onderwerp, eigen bestand** (samengevoegd in de index op 13-09-2026):
+- "extension-version-floor" — ondergrens in app.html én jobs.py; een oude kopie levert stil half werk af
+
 ---
 
 ## ebay-local-sandbox-creds
@@ -6202,5 +6395,8 @@ Production (omnivaleur.com) is a single **Railway** service running the FastAPI 
 **Auto-commit/push** happens via a Claude Code PostToolUse hook in `/Users/Danie/.claude/settings.json` that runs `git add`+commit (`auto: update <file>`) and pushes on every file edit.
 
 **2026-07-14 incident + fix:** the hook's push was `git push origin HEAD 2>/dev/null` — it swallowed errors and had `timeout: 30` (ms). When `origin/main` diverged (GA PRs #1–#7 + content-bot commits merged on GitHub, never pulled locally), every auto-push was silently rejected ("fetch first"), so ~20 commits piled up locally and production ran stale code for days. Fixed the hook to `git push … || { git pull --rebase --autostash origin <branch> && git push … } || git rebase --abort` and bumped timeout to 60000ms, so a diverged remote self-heals instead of blocking deploys. If deploys ever look stuck again, check `git log origin/main..HEAD` for an unpushed backlog.
+
+**Hetzelfde onderwerp, eigen bestand** (samengevoegd in de index op 13-09-2026):
+- "always-push-to-live" — commit + push naar origin/main standaard na codewijziging, geen bevestiging vragen
 
 ---
