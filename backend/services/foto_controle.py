@@ -145,10 +145,11 @@ async def _pogingen_op(db, item_id: str, platform: str, nummer: str) -> int:
     for j in opdrachten:
         res = j.get("result") if isinstance(j.get("result"), dict) else {}
         if str(res.get("platform_listing_id") or "") == str(nummer):
-            ijkpunt = j.get("done_at") or j.get("created_at")
-    if not ijkpunt:
-        ijkpunt = (datetime.now(timezone.utc) - POGING_VENSTER).isoformat()
-    return len([j for j in opdrachten if str(j.get("created_at") or "") > str(ijkpunt)])
+            ijkpunt = _tijd(j.get("done_at") or j.get("created_at"))
+    if ijkpunt is None:
+        ijkpunt = datetime.now(timezone.utc) - POGING_VENSTER
+    return len([j for j in opdrachten
+                if (_tijd(j.get("created_at")) or ijkpunt) > ijkpunt])
 
 
 async def controleer_fotos_op_advertenties():
