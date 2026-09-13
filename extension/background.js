@@ -1090,6 +1090,9 @@ async function refreshAccessToken() {
       const patch = { authToken: data.access_token, _refreshAt: Date.now() };
       if (data.refresh_token) patch.refreshToken = data.refresh_token; // rotation
       await _tset(patch);
+      // En terug naar het dashboard, want die sleutel is van ons samen. Zie de
+      // uitleg bij stuurTokenNaarDashboard.
+      stuurTokenNaarDashboard(data.access_token, data.refresh_token);
       try { await chrome.action.setBadgeText({ text: "" }); } catch (_) {}
       console.log("[Omnivaleur] access token refreshed");
       return data.access_token;
@@ -1099,6 +1102,38 @@ async function refreshAccessToken() {
     }
   })().finally(() => { _refreshInFlight = null; });
   return _refreshInFlight;
+}
+
+// ── DE VERSE SLEUTEL MOET TERUG NAAR HET DASHBOARD ───────────────────────────
+//
+// WAAROM DIT ER IS (13-09-2026, Egbert Brouwer en Daniel zelf: "als ik een
+// tijdje niks doe word ik uitgelogd").
+//
+// De vernieuwsleutel van Supabase mag precies één keer gebruikt worden: bij elk
+// gebruik komt er een nieuwe terug en is de oude dood. Het dashboard geeft die
+// sleutel bij het inloggen aan ons door (content/webapp_sync.js) zodat wij ook
+// kunnen werken als er geen tabblad openstaat. Vanaf onze eerste vernieuwing
+// draagt het dashboard dus een sleutel die niet meer bestaat. Dat valt daar pas
+// op als het toegangsbewijs verloopt, en dan vliegt de verkoper eruit — precies
+// het "ik word uitgelogd als ik even niets doe".
+//
+// Dus: elke keer dat wij hem doordraaien, schuiven we het verse bewijs terug
+// naar elk openstaand dashboard. Er is geen tabblad open, geen probleem: dan
+// leest de pagina bij het laden gewoon weer wat er staat, en die sleutel is dan
+// de onze — die blijft geldig zolang wij de enige zijn die hem gebruikt.
+async function stuurTokenNaarDashboard(token, refresh) {
+  if (!token) return;
+  try {
+    const tabbladen = await chrome.tabs.query({
+      url: ["https://omnivaleur.com/*", "https://www.omnivaleur.com/*"],
+    });
+    for (const tab of tabbladen) {
+      try {
+        chrome.tabs.sendMessage(tab.id, { type: "TOKEN_VERNIEUWD", token, refresh },
+                                () => chrome.runtime.lastError);
+      } catch (_) { /* tabblad sluit net */ }
+    }
+  } catch (_) { /* geen tabs-recht of geen venster: niets aan de hand */ }
 }
 
 async function getAuthHeaders() {

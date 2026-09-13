@@ -531,26 +531,34 @@ function tabel(id, kolommen, rijen, cel) {
 // ---------------------------------------------------------------- verbinding
 async function vraag(pad) {
   const r = await fetch(API + pad, { headers: { Authorization: 'Bearer ' + TOKEN } });
-  if (r.status === 401 && await vernieuw()) return vraag(pad);
+  if (r.status === 401) {
+    // Eén hik in de verbinding is geen verlopen sessie. De server geeft daar
+    // bewust 503 voor terug (backend/api/auth.py); uitloggen mag alleen als het
+    // inlogbewijs echt is afgewezen.
+    const uitkomst = await vernieuw();
+    if (uitkomst === 'ok') return vraag(pad);
+    if (uitkomst === 'hik') throw new Error('server even niet bereikbaar, probeer zo nog eens');
+  }
   if (r.status === 401 || r.status === 403) { uitloggen(); throw new Error('niet ingelogd'); }
   if (!r.ok) throw new Error('server ' + r.status);
   return r.json();
 }
 
+// 'ok' = vernieuwd, 'uit' = echt afgewezen, 'hik' = de server kon even niet.
 async function vernieuw() {
-  if (!VERVERS) return false;
+  if (!VERVERS) return 'uit';
   try {
     const r = await fetch(API + '/api/auth/refresh', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ refresh_token: VERVERS }),
     });
-    if (!r.ok) return false;
+    if (!r.ok) return (r.status === 401 || r.status === 403) ? 'uit' : 'hik';
     const d = await r.json();
-    if (!d.access_token) return false;
+    if (!d.access_token) return 'hik';
     TOKEN = d.access_token; localStorage.setItem('ov_beheer_token', TOKEN);
     if (d.refresh_token) { VERVERS = d.refresh_token; localStorage.setItem('ov_beheer_refresh', VERVERS); }
-    return true;
-  } catch { return false; }
+    return 'ok';
+  } catch { return 'hik'; }
 }
 
 async function inloggen() {

@@ -80,5 +80,24 @@
     }
   });
 
+  // De service worker heeft de vernieuwsleutel doorgedraaid. Die van deze pagina
+  // is daarmee dood, en zonder dit zou de verkoper bij zijn volgende bezoek
+  // worden uitgelogd terwijl er niets aan de hand is. Zie de uitleg bij
+  // stuurTokenNaarDashboard in background.js.
+  function schrijfSessie(sleutel, waarde) {
+    try { localStorage.setItem(sleutel, waarde); } catch (e) {}
+    try { sessionStorage.setItem(sleutel, waarde); } catch (e) {}
+  }
+
+  chrome.runtime.onMessage.addListener((msg) => {
+    if (!msg || msg.type !== "TOKEN_VERNIEUWD" || !msg.token) return;
+    schrijfSessie("cl_token", msg.token);
+    if (msg.refresh) schrijfSessie("cl_refresh", msg.refresh);
+    // Ook meteen aan de draaiende pagina vertellen, zodat die niet eerst een
+    // mislukt verzoek hoeft te doen om erachter te komen.
+    window.postMessage({ source: EXT, type: "EXT_TOKEN", token: msg.token },
+                       window.location.origin);
+  });
+
   announce();
 })();

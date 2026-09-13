@@ -2965,33 +2965,109 @@ async function triggerPwaInstall() {
 // De vernieuwsleutel lag al klaar sinds het inloggen; die wordt nu gebruikt.
 let _tokenVernieuwing = null;
 
+// ── WAAROM HIER DRIE UITKOMSTEN ZIJN EN NIET TWEE ────────────────────────────
+//
+// (13-09-2026, Egbert Brouwer en Daniel zelf: "als ik een tijdje niks doe word
+// ik uitgelogd, dat wil ik verlengd hebben".)
+//
+// Er zit geen klok op die uitlogt. Wat er gebeurde: de vernieuwsleutel van
+// Supabase mag precies één keer gebruikt worden, en er zijn twee partijen die
+// hem gebruiken. Het dashboard geeft hem bij het inloggen door aan de extensie
+// (content/webapp_sync.js), en die vernieuwt daarna op eigen houtje, want ze
+// moet ook kunnen werken als er geen tabblad openstaat. Vanaf die eerste
+// vernieuwing draagt het dashboard een sleutel die niet meer bestaat. Zolang je
+// klikt merk je dat niet, want het toegangsbewijs is nog een uur geldig. Loop
+// je weg en kom je terug, dan is dat verlopen, wordt er vernieuwd met de dode
+// sleutel, en vloog je eruit.
+//
+// Twee dingen gingen daar mis en allebei zijn ze hier opgelost:
+//   1. Elke mislukte vernieuwing gold als "sessie voorbij". Ook een 503, die de
+//      server juist teruggeeft om te zeggen dat het maar een verbindingshik is
+//      (zie backend/api/auth.py). Eén hik tijdens een deploy logde iedereen uit
+//      die op dat moment iets aanklikte.
+//   2. Er werd niet gekeken of er inmiddels een NIEUWERE sleutel klaarligt. De
+//      extensie schrijft die sinds 1.0.326 terug in localStorage, en een tweede
+//      tabblad doet dat ook. Bij een 401 kijken we daarom nog één keer naar wat
+//      er nu staat voor we iemand naar het inlogscherm sturen.
+const VERNIEUWD = 'ok';
+const OPNIEUW_INLOGGEN = 'uit';
+const VERBINDINGSHIK = 'hik';
+
 async function vernieuwToken() {
-  const sleutel = SESSIE.lees('cl_refresh') || '';
-  if (!sleutel) return false;
   // Eén keer tegelijk: tien gelijktijdige verzoeken die alle tien vernieuwen,
   // maken van elkaars verse sleutel een ongeldige.
   if (!_tokenVernieuwing) {
     _tokenVernieuwing = (async () => {
       try {
-        const r = await fetch(`${API}/api/auth/refresh`, {
-          method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ refresh_token: sleutel }),
-        });
-        if (!r.ok) return false;
-        const d = await r.json();
-        if (!d.access_token) return false;
-        TOKEN = d.access_token;
-        SESSIE.zet('cl_token', d.access_token);
-        if (d.refresh_token) SESSIE.zet('cl_refresh', d.refresh_token);
-        return true;
-      } catch { return false; }
-      finally { setTimeout(() => { _tokenVernieuwing = null; }, 0); }
+        let sleutel = SESSIE.lees('cl_refresh') || '';
+        if (!sleutel) return OPNIEUW_INLOGGEN;
+        for (let poging = 0; poging < 2; poging++) {
+          let r;
+          try {
+            r = await fetch(`${API}/api/auth/refresh`, {
+              method: 'POST', headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ refresh_token: sleutel }),
+            });
+          } catch { return VERBINDINGSHIK; }   // netwerk weg: niets weggooien
+          if (r.ok) {
+            const d = await r.json().catch(() => null);
+            if (!d || !d.access_token) return VERBINDINGSHIK;
+            TOKEN = d.access_token;
+            SESSIE.zet('cl_token', d.access_token);
+            if (d.refresh_token) SESSIE.zet('cl_refresh', d.refresh_token);
+            return VERNIEUWD;
+          }
+          // Alleen een echte afwijzing is een reden om uit te loggen. Al de rest
+          // (500, 502, 503, 504) is de server die even niet kan, en dan hoort de
+          // sessie gewoon te blijven staan.
+          if (r.status !== 401 && r.status !== 403) return VERBINDINGSHIK;
+          const nu = SESSIE.lees('cl_refresh') || '';
+          if (!nu || nu === sleutel) return OPNIEUW_INLOGGEN;
+          sleutel = nu;                       // iemand anders was ons net voor
+        }
+        return OPNIEUW_INLOGGEN;
+      } finally { setTimeout(() => { _tokenVernieuwing = null; }, 0); }
     })();
   }
   return _tokenVernieuwing;
 }
 
+// Hoeveel seconden het huidige toegangsbewijs nog geldig is. null = onleesbaar,
+// en dan doen we niets: gokken is hier erger dan afwachten.
+function tokenRestSeconden() {
+  try {
+    const deel = (TOKEN || '').split('.')[1];
+    if (!deel) return null;
+    const lading = JSON.parse(atob(deel.replace(/-/g, '+').replace(/_/g, '/')));
+    if (!lading.exp) return null;
+    return lading.exp - Math.floor(Date.now() / 1000);
+  } catch { return null; }
+}
+
+// Vernieuwen VOOR het verloopt in plaats van erna. Wie terugkomt bij een tabblad
+// dat een nacht heeft opengestaan, hoort niet eerst een mislukt verzoek te doen.
+async function zorgVoorVersToken() {
+  const rest = tokenRestSeconden();
+  if (rest === null || rest > 300) return;
+  await vernieuwToken();
+}
+document.addEventListener('visibilitychange', () => { if (!document.hidden) zorgVoorVersToken(); });
+window.addEventListener('focus', () => { zorgVoorVersToken(); });
+setInterval(zorgVoorVersToken, 5 * 60 * 1000);
+zorgVoorVersToken();
+
+// De extensie heeft de sleutel doorgedraaid en geeft het verse bewijs terug.
+// Zonder dit blijft deze pagina met een dode sleutel zitten tot de volgende
+// mislukte vernieuwing. Zie content/webapp_sync.js.
+window.addEventListener('message', (event) => {
+  if (event.source !== window) return;
+  const d = event.data;
+  if (!d || d.source !== EXT_SOURCE || d.type !== 'EXT_TOKEN' || !d.token) return;
+  TOKEN = d.token;
+});
+
 async function apiFetch(url, opts = {}, _tweedePoging = false) {
+  if (!_tweedePoging) await zorgVoorVersToken();
   const res = await fetch(url, {
     ...opts,
     headers: { 'Authorization': `Bearer ${TOKEN}`, ...(opts.headers || {}) },
@@ -2999,9 +3075,14 @@ async function apiFetch(url, opts = {}, _tweedePoging = false) {
   // 401 = het inlogbewijs is verlopen. Eén keer vernieuwen en het verzoek
   // overdoen; lukt dat niet, dan is er echt opnieuw inloggen nodig.
   if (res.status === 401 && !_tweedePoging) {
-    if (await vernieuwToken()) return apiFetch(url, opts, true);
-    SESSIE.wisAlles();
-    location.href = 'login.html?verlopen=1';
+    const uitkomst = await vernieuwToken();
+    if (uitkomst === VERNIEUWD) return apiFetch(url, opts, true);
+    // Alleen bij een echte afwijzing het inlogbewijs weggooien. Bij een
+    // verbindingshik blijft de sessie staan en mislukt hooguit dit ene verzoek.
+    if (uitkomst === OPNIEUW_INLOGGEN) {
+      SESSIE.wisAlles();
+      location.href = 'login.html?verlopen=1';
+    }
   }
   // 402 = the server refused because the subscription lapsed. The billing panel
   // is no longer the thing that blocks people, so it must also be told when the
