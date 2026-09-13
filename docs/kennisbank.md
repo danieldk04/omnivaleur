@@ -17,6 +17,31 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ---
 
+## time-out-is-geen-dood-tabblad
+
+*13-09-2026 — "Een plaatsing met \"timed out\" kan uren later alsnog afronden (computer sliep); nooit opnieuw klaarzetten omdat hij \"nu niet online staat\""*
+
+Een opdracht die de server op "Extension timed out ... no response after 3
+minutes" zet, is niet per se dood. Het tabblad kan nog open staan en de plaatsing
+afmaken zodra de computer uit de slaap komt; complete_job zet de opdracht dan
+alsnog van error naar done.
+
+**Why:** 13-09-2026, Egbert Brouwer. Opdracht 55636c4e bleef om 09:41 hangen op
+"foto's: 4 ophalen", werd om 09:56 time-out. Ik keek of hij live stond (nee) en zette
+hem opnieuw klaar. Zijn computer sliep van ~09:58 tot 11:21; toen rondde het oude
+tabblad af (11:21:53) én de herkansing (11:22:03). Resultaat: twee keer dezelfde
+advertentie live. Over alle klanten sinds 25-08 was dit het enige artikel met twee
+actieve advertenties op één kanaal, dus het product doet dit zelf niet; mijn
+herkansing wel. De melding zegt ook letterlijk "Check the tab if it's still open".
+
+**How to apply:** na een time-out niet opnieuw klaarzetten op grond van "staat
+niet online". Eerst: is de hartslag van de extensie na de time-out doorgelopen
+zonder gat, en zijn er na die opdracht andere opdrachten normaal afgerond? Pas dan
+is het oude tabblad echt weg. Een "tab closed"-fout na enkele seconden is wel
+veilig. Zie "herkansen-mag-geen-dubbele-opdracht" en "een-bron-is-geen-bewijs-bij-weg".
+
+---
+
 ## geraden-rubriek-is-niet-de-rubriek-van-de-verkoper
 
 *13-09-2026 — Onze importcategorie is uit de titel geraden; bij Egbert klopte 947 van 5.533. 2dehands-plaatsingen volgen nu de echte Marktplaats-rubriek (zelfde nummers)*

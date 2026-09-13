@@ -8984,3 +8984,20 @@ zoekertjes in die rubriek live (carwill 80, my shop 72). Proef:
 is pas zeker na zijn eerstvolgende plaatsingen daar. De 34 staan als foutregel in
 zijn dashboard en moeten opnieuw worden klaargezet. Twee oudere proeven waren al
 rood vóór deze wijziging (test_marktplaats_vertaling, test_postcode_melding_2dehands).
+
+**Vervolg 13-09-2026, ochtend: de echte plaatsing.** Met akkoord van Daniel de 34
+opnieuw klaargezet. Egberts computer ging om 09:18 aan; om 11:22 stonden alle 34
+live op 2dehands, alle 34 in Verzamelen | Muziek, Artiesten en Beroemdheden (926),
+nul keer "betalende categorie". Nagemeten via de openbare zoek-API, per
+advertentienummer. Daarmee is de limiet van twee gratis in de gitaarrubrieken in
+Verzamelen bij zijn account in elk geval tot 34 niet aanwezig. Het formulier ook op
+Daniels eigen 2dehands geopend (niet geplaatst): gratis optie aanwezig, alleen titel,
+beschrijving en postcode verplicht.
+
+Twee haperingen die niets met de rubriek te maken hebben: de eerste opdracht na het
+opstarten van Chrome kreeg "tab closed" na 6 seconden (niet geplaatst, opnieuw
+klaargezet, staat nu live), en één opdracht bleef hangen op foto's ophalen terwijl
+zijn computer ging slapen. Die heb ik te vroeg opnieuw klaargezet: het oude tabblad
+rondde na de slaap alsnog af, dus stond de Gibson SG Angus Young twee keer live. Met
+akkoord van Daniel één verwijderopdracht voor alleen m2442133128. Les in de
+kennisbank: "time-out-is-geen-dood-tabblad".
