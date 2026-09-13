@@ -39,7 +39,9 @@ function check(naam, voorwaarde, uitleg) {
 //   "faalt"     : "Fout opgetreden", veld blijft leeg, ook bij opnieuw aanbieden
 //   "hangt"     : upload komt nooit terug, veld blijft weg
 //   "tweedekeer": eerste keer mislukt, opnieuw aanbieden lukt
-function laad(scenario) {
+//   "druppel"   : foto's komen één voor één binnen, tussendoor is het veld weg
+//   "deel"      : een deel komt binnen, de rest mislukt blijvend
+function laad(scenario, host = "www.marktplaats.nl") {
   let klok = 1_000_000;
   const staat = { veld: "", aanbiedingen: 0, log: [] };
   const invoer = {
@@ -53,6 +55,8 @@ function laad(scenario) {
       else if (scenario === "faalt") staat.veld = "";
       else if (scenario === "hangt") staat.veld = null;
       else if (scenario === "tweedekeer") staat.veld = staat.aanbiedingen >= 2 ? ids : "";
+      else if (scenario === "deel") staat.veld = ids.split(",").slice(0, 3).join(",");
+      else if (scenario === "druppel") staat.druppel = ids.split(",");
       return true;
     },
   };
@@ -67,7 +71,7 @@ function laad(scenario) {
     DataTransfer: function () { const l = []; this.items = { add: (f) => l.push(f) }; this.files = l; },
     File: function (delen, naam, opt) { this.name = naam; this.type = opt && opt.type; },
     fetch: async () => ({ ok: true, blob: async () => ({ type: "image/jpeg" }) }),
-    location: { hostname: "www.marktplaats.nl", href: "https://www.marktplaats.nl/plaats/1776/646" },
+    location: { hostname: host, href: `https://${host}/plaats/1776/646` },
     chrome: { runtime: { sendMessage: (m, cb) => { staat.log.push(m.text || m.type); if (cb) cb(undefined); }, lastError: null } },
   };
   zand.window = zand;
@@ -76,7 +80,14 @@ function laad(scenario) {
     body: { click() {}, contains: () => false, innerText: "" },
     querySelectorAll: (sel) => (sel === "img" ? [] : []),
     querySelector: (sel) => {
-      if (sel === 'input[name="images.ids"]') return staat.veld === null ? null : { value: staat.veld };
+      if (sel === 'input[name="images.ids"]') {
+        if (staat.druppel) {
+          // elke keer dat er gekeken wordt is er een foto meer binnen
+          staat.gezien = (staat.gezien || 0) + 1;
+          return { value: staat.druppel.slice(0, Math.min(staat.druppel.length, Math.floor(staat.gezien / 3))).join(",") };
+        }
+        return staat.veld === null ? null : { value: staat.veld };
+      }
       if (sel === '#imageUploader-hiddenInput' || /input\[type="file"\]/.test(sel)) return invoer;
       return null;
     },
@@ -89,8 +100,8 @@ function laad(scenario) {
   return { CL: zand.window.CL, staat };
 }
 
-async function plaats(scenario, aantal) {
-  const { CL, staat } = laad(scenario);
+async function plaats(scenario, aantal, host) {
+  const { CL, staat } = laad(scenario, host);
   const urls = Array.from({ length: aantal }, (_, i) => `https://img.omnivaleur.com/x/imported/${i}.jpg`);
   await CL.uploadPhotos(urls);
   try {
@@ -122,12 +133,19 @@ const hadGeplaatst = (r) => /publish button could not be found/.test(r.fout);
   check("gewone upload: geplaatst", hadGeplaatst(lukt), `fout was: ${lukt.fout.slice(0, 90)}`);
   check("gewone upload: niet opnieuw aangeboden", lukt.staat.aanbiedingen === 1, `aanbiedingen: ${lukt.staat.aanbiedingen}`);
 
-  // Vinted heeft dit veld niet: daar mag de controle niets tegenhouden.
-  {
-    const { CL, staat } = laad("hangt");
-    vm.runInContext('location.hostname = "www.vinted.nl"', CL.constructor ? {} : {}, {});
-    staat.veld = null;
-  }
+  const deel = await plaats("deel", 13);
+  check("deels gelukt: wel geplaatst, zonder opnieuw aanbieden (anders dubbele foto's)", hadGeplaatst(deel) && deel.staat.aanbiedingen === 1, `fout: ${deel.fout.slice(0, 60)}, aanbiedingen ${deel.staat.aanbiedingen}`);
+
+  const dr = await plaats("druppel", 13);
+  const laatste = dr.staat.log.filter((r) => /op het formulier:/.test(r)).pop() || "";
+  check("foto's druppelen binnen: pas plaatsen als alle 13 er zijn", hadGeplaatst(dr) && /13 van 13/.test(laatste), laatste);
+
+  const dh = await plaats("faalt", 4, "www.2dehands.be");
+  check("2dehands, mislukte upload: niet geplaatst", !hadGeplaatst(dh), `fout was: ${dh.fout.slice(0, 90)}`);
+
+  // Vinted heeft dit veld niet: daar mag deze controle niets tegenhouden.
+  const vi = await plaats("hangt", 4, "www.vinted.nl");
+  check("Vinted: deze controle houdt niets tegen", !/still uploading|did not accept/i.test(vi.fout), vi.fout.slice(0, 90));
 
   console.log(mislukt ? `\n${mislukt} controle(s) mislukt` : "\nAlles in orde");
   process.exit(mislukt ? 1 : 0);
