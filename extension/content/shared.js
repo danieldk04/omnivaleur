@@ -2802,5 +2802,6 @@ window.CL = (() => {
     selectPackageSize, uploadPhotos, submitListing, step, closePopup, smartTrunc, fillBidding, zetBieden,
     clog, plaatsBlokkade, dutchColor, kleurKandidaten, kiesMetTerugval, lijstOpties, valueVariants, platteTekst, verifyMpGroupFields, repairMpGroupFields, ensureDescriptionStillFilled, selectCondition, selectIntendedFor, fillBrandField, logMpFields, mpPrijs,
     mpPrijsvorm, kiesPrijsvorm, MP_ZONDER_BEDRAG, zetPrijs, betaalrubriekBezwaar,
+    borgFotosOpFormulier, _zetAangebodenFotos: (f) => { _aangebodenFotos = f; },
   };
 })();
