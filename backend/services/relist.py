@@ -569,7 +569,8 @@ async def refresh_listing(item_id: str, platform: str, user_id: str, strategy: s
         if mist:
             raise RefreshError(f"Relist skipped — {mist}")
 
-    _check_cooldown(listing, platform)
+    if not negeer_afkoeling:
+        _check_cooldown(listing, platform)
     # `eigen_quotum` betekent: de aanroeper bewaakt zelf hoeveel er per dag mag.
     # Dat is het automatisch herplaatsen, dat zijn eigen, veel ruimere grens per
     # verkoper hanteert (~voorraad gedeeld door de cyclus). Het dagquotum
