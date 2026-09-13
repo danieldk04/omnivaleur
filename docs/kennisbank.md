@@ -17,6 +17,36 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ---
 
+## geraden-rubriek-is-niet-de-rubriek-van-de-verkoper
+
+*13-09-2026 — Onze importcategorie is uit de titel geraden; bij Egbert klopte 947 van 5.533. 2dehands-plaatsingen volgen nu de echte Marktplaats-rubriek (zelfde nummers)*
+
+De `category` van een geïmporteerd artikel is door ons uit de titel geraden, niet
+overgenomen. Gemeten 13-09-2026 bij Egbert Brouwer (Papa's Plectrums): van 5.533
+artikelen stond er 947 bij ons in dezelfde rubriek als op Marktplaats. Zijn
+miniatuurgitaartjes waren "gitaren elektrisch" (op 2dehands betalend na twee
+gratis, 34 van 35 mislukt op 12-09), zijn 2.377 buttons en patches waren "unisex
+accessoires" = Dames | Blouses en Tunieken (621/628). Op Marktplaats staan ze in
+Verzamelen | Muziek, Artiesten en Beroemdheden (895/926).
+
+**Why:** Marktplaats en 2dehands delen dezelfde rubriekenboom met dezelfde
+nummers (nagemeten op tien rubrieken), en de extensie plaatst sinds 1.0.273 op
+`payload.mp_category` {l1,l2} (getMpSyiUrl, sindsdien byte-gelijk). Dat werd
+alleen bij MP-herplaatsen gevuld.
+
+**How to apply:** vlak voor uitgifte zet `_zet_rubriek_van_marktplaats` (jobs.py)
+de echte rubriek in elke 2dehands-plaatsing van een artikel dat live op
+Marktplaats staat. Opzoeken via de openbare zoek-API binnen `sellerIds[]`, match
+op het advertentienummer (niet de titel), L1 uit facet `RelevantCategories`
+(`parentId`); zie `rubriek_op_advertentienummer` in mp_enrich.py. Rubriek-remmen
+vergelijken op `_rubriek_sleutel` (mp:l1/l2 gaat voor de geraden naam), en
+`_weiger_bekende_betaalde_rubriek` onthoudt 28 dagen dat een rubriek geld kost,
+zodat een nieuwe klik niet opnieuw faalt. Zie "betalende-rubriek-is-geen-formulierfout"
+en "rubriek-valt-stil-bij-massa-import". Meet een seller-lijst nooit op "lege
+pagina = einde": de zoek-API geeft soms een lege pagina middenin.
+
+---
+
 ## offline-waarschuwing-per-mail
 
 *13-09-2026 — Klant krijgt mail als zijn computer uren stil is met werk in de wachtrij; vereist één handmatige Supabase-kolom*

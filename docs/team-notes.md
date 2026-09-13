@@ -8948,3 +8948,39 @@ naar `dist/omnivaleur-extension-1.0.322.zip`. De ondergrens in jobs.py en app.ht
 is bewust NIET opgehoogd: Toon draait 1.0.316 en die moet gewoon door kunnen
 werken. Openstaand: het zipje nog uploaden naar de Chrome Web Store, tot die tijd
 blijft de maatfout bij iedereen staan.
+
+## 13-09-2026 — Egbert: 34 van 35 niet online, oorzaak onze geraden rubriek
+
+**Klacht (12-09, 22:35):** "Ik heb vandaag geprobeerd er 35 online te zetten, daar
+zijn er 34 niet van gelukt." Gemeten: 34 plaatsingen naar 2dehands om 21:44 tot
+21:46, 4 mislukt en 30 teruggenomen, allemaal "betalende categorie" in Gitaren
+Elektrisch, Akoestisch en Bas. Alle 34 zijn miniatuurgitaartjes.
+
+**De echte oorzaak zat een laag dieper.** Op Marktplaats staan precies die
+artikelen in Verzamelen | Muziek, Artiesten en Beroemdheden, door hemzelf gekozen.
+Onze import had de rubriek uit de titel geraden. Over zijn hele voorraad: 5.533
+artikelen live op Marktplaats (allemaal teruggevonden, nul verschil), maar maar 947
+met dezelfde rubriek als bij ons. Zo zouden 2.377 buttons en patches op 2dehands
+als damesblouse zijn geplaatst (er staat er nu al één zo online).
+
+**Wat er nu gebeurt:** vlak voor uitgifte krijgt elke 2dehands-plaatsing van een
+artikel dat op Marktplaats staat de rubriek die daar echt gebruikt wordt
+(`_zet_rubriek_van_marktplaats`). Marktplaats en 2dehands gebruiken dezelfde
+rubrieknummers, nagemeten op zijn tien rubrieken, en de extensie kan dit al sinds
+1.0.273: werkt dus meteen, zonder Web Store. Daarnaast onthoudt de server 28 dagen
+dat een rubriek geld kostte (`_weiger_bekende_betaalde_rubriek`); op 12-09 werden
+8 van de 34 ná de bestaande rem aangemaakt en liepen er alsnog op.
+
+**Bewijs:** de echte code op zijn 34 opdrachten (lezen echt, schrijven niets): 34
+van 34 naar Verzamelen | Muziek, Artiesten en Beroemdheden, geen enkele geweigerd.
+De opzoekfunctie op 200 van zijn artikelen: 200 van 200 dezelfde rubriek als op
+Marktplaats, gemiddeld 0,45 s. Op 2dehands hebben particulieren tientallen gratis
+zoekertjes in die rubriek live (carwill 80, my shop 72). Proef:
+`tests/test_2dehands_volgt_de_marktplaats_rubriek.py`, met voor-en-na tegen
+09583430 tot en met het adres dat de extensie opent (was /plaats/728/748, nu
+/plaats/895/926).
+
+**Openstaand:** of 2dehands in Verzamelen bij zíjn account ooit een limiet heeft,
+is pas zeker na zijn eerstvolgende plaatsingen daar. De 34 staan als foutregel in
+zijn dashboard en moeten opnieuw worden klaargezet. Twee oudere proeven waren al
+rood vóór deze wijziging (test_marktplaats_vertaling, test_postcode_melding_2dehands).

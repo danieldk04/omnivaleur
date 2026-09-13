@@ -10,7 +10,7 @@ product verandert. De ontwikkelaar werkt dan zowel dit bestand in de repo als de
 kopie in Drive bij, in dezelfde beurt. Daniel hoeft niets te doen; de Gem leest
 de Drive-kopie de volgende keer opnieuw in.
 
-_Laatst bijgewerkt: 12-09-2026 (verkocht op Vinted en daar verwijderd: gaat nu vanzelf van de andere kanalen af)_
+_Laatst bijgewerkt: 13-09-2026 (2dehands volgt de rubriek die de klant op Marktplaats koos)_
 
 ---
 
@@ -179,6 +179,13 @@ Contact:
   online, dan plaatst hij ze zelf en betaalt hij per advertentie, of hij zet de
   artikelen in een rubriek die daar wel gratis is. Herkenbaar bij de klant aan
   "Dit is een betalende categorie" of een knop die "Naar betalen" heet.
+- Staat een artikel al op Marktplaats, dan komt het op 2dehands in precies
+  dezelfde rubriek als op Marktplaats (sinds 13-09-2026). Daarvoor koos Omnivaleur
+  soms zelf een rubriek op basis van de titel, en die kon betalend zijn terwijl de
+  rubriek van de klant gratis is (bijvoorbeeld miniatuurgitaartjes in Gitaren in
+  plaats van Verzamelen). Wat eerder op "betalende categorie" strandde, kan de
+  klant nu gewoon opnieuw klaarzetten. Blijkt een rubriek toch geld te kosten, dan
+  onthoudt Omnivaleur dat vier weken en probeert het daar niet steeds opnieuw.
 - Een zoekertje op 2dehands is vier weken zichtbaar. Loopt het bijna af, dan
   verlengt Omnivaleur het automatisch en gratis, mits de computer aanstaat met
   Chrome en de uitbreiding. Er wordt niets weggehaald en niets opnieuw geplaatst,

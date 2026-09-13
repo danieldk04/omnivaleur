@@ -228,9 +228,9 @@ def test_een_storing_bij_marktplaats_houdt_de_opdracht_even_vast_maar_niet_voor_
     assert J._zet_rubriek_van_marktplaats(db, USER, job) is False
     assert job["payload"].get("_rubriek_zoeken_sinds")
     job["payload"]["_rubriek_zoeken_sinds"] = (
-        datetime.now(timezone.utc) - timedelta(minutes=21)).isoformat()
+        datetime.now(timezone.utc) - timedelta(minutes=11)).isoformat()
     assert J._zet_rubriek_van_marktplaats(db, USER, job) is True, (
-        "na twintig minuten moet hij alsnog de deur uit, anders staat de rij stil")
+        "na tien minuten moet hij alsnog de deur uit, anders staat de rij stil")
 
 
 def test_niet_op_marktplaats_of_een_marktplaats_opdracht_blijft_zoals_hij_was(monkeypatch):

@@ -668,12 +668,15 @@ async def rubriek_op_advertentienummer(client: httpx.AsyncClient, verkoper_id: i
     zet de hoofdrubriek niet in de advertentie zelf, wel in het rubriekenblok van
     hetzelfde antwoord (`RelevantCategories`, met `parentId`).
 
-    Een leeg blok als het niet zeker is; half raden is precies wat dit oplost.
+    Een leeg blok als er gezocht is en het niet zeker is; half raden is precies
+    wat dit oplost. None als er niet gezocht kón worden (storing): dat is geen
+    antwoord, en de aanroeper hoort het dan later opnieuw te proberen.
     """
     doel = re.sub(r"\D", "", str(nummer or ""))
     schoon = " ".join(html.unescape(str(titel or "")).split())
     if not doel or not schoon:
         return {}
+    gezocht = False
     # Tweede vraag met alleen de eerste woorden: Admarkt schrijft titels soms
     # net anders terug dan wij ze bewaren, en dan vindt de hele titel niets.
     vragen = [schoon[:80]]
@@ -687,6 +690,7 @@ async def rubriek_op_advertentienummer(client: httpx.AsyncClient, verkoper_id: i
         except Exception as e:  # noqa: BLE001
             logger.warning("mp_enrich: rubriek niet opgezocht (%s): %s", schoon[:40], e)
             continue
+        gezocht = True
         for l in (data.get("listings") or []):
             if re.sub(r"\D", "", str(l.get("itemId") or "")) != doel:
                 continue
@@ -700,23 +704,29 @@ async def rubriek_op_advertentienummer(client: httpx.AsyncClient, verkoper_id: i
                 return {}
             return {"l1": l1, "l1_naam": (per_id.get(l1) or {}).get("label") or "",
                     "l2": l2, "l2_naam": sub.get("label") or ""}
-    return {}
+    return {} if gezocht else None
 
 
-async def rubriek_van_eigen_advertentie(db, user_id: str, titel: str, nummer) -> dict:
+async def rubriek_van_eigen_advertentie(db, user_id: str, titel: str, nummer) -> dict | None:
     """`rubriek_op_advertentienummer` voor een verkoper van wie we het
-    verkopersnummer nog moeten achterhalen. Leeg blok als dat niet lukt."""
+    verkopersnummer nog moeten achterhalen. None als er niet gezocht kon worden."""
     zoek_url, _ = ZOEK_PER_PLATFORM["marktplaats"]
     try:
         async with httpx.AsyncClient(timeout=20, follow_redirects=True,
                                      headers={"User-Agent": UA}) as client:
             verkoper = await _verkopersnummer(db, user_id, "marktplaats", client, zoek_url)
             if not verkoper:
+                # Leeg blok en niet None: wachten helpt niet als zijn titels hem
+                # niet opleveren, en dan zou élke plaatsing blijven hangen. Wel
+                # over twee minuten opnieuw zoeken in plaats van na zes uur, want
+                # een storing ziet er hier precies zo uit.
+                _VERKOPERNUMMERS[(user_id, "marktplaats")] = (
+                    None, time.monotonic() - _NUMMER_GELDIG + 120)
                 return {}
             return await rubriek_op_advertentienummer(client, verkoper, titel, nummer, zoek_url)
     except Exception as e:  # noqa: BLE001 — een gemiste rubriek mag nooit iets breken
         logger.warning("mp_enrich: rubriek van advertentie %s niet opgehaald: %s", nummer, e)
-        return {}
+        return None
 
 
 async def volledige_advertentie(client: httpx.AsyncClient, url: str) -> dict:

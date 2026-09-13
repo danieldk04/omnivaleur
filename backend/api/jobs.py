@@ -421,7 +421,7 @@ def _haal_links_eruit(db, jobs: list) -> int:
 # "mp_category"). Dat gebeurde alleen bij een herplaatsing op Marktplaats. Hier,
 # vlak voor uitgifte, geldt het nu ook voor een nieuw zoekertje op 2dehands van
 # een artikel dat op Marktplaats staat. Dus zonder nieuwe extensie.
-_RUBRIEK_ZOEK_GEDULD = timedelta(minutes=20)
+_RUBRIEK_ZOEK_GEDULD = timedelta(minutes=10)
 _BETAALDE_RUBRIEK_GEHEUGEN = timedelta(days=28)
 
 
@@ -1457,6 +1457,13 @@ def get_pending_jobs(request: Request, platform: str = None, user_id: str = Depe
     # volgende. Anders zou één onvertaalbare advertentie vooraan de hele wachtrij
     # blokkeren: alles erachter (ook wat al in het Nederlands staat) zou stilvallen.
     for kandidaat in ready[:5]:
+        # EERST DE RUBRIEK, dan pas vertalen: vertalen kost een gesprek met een
+        # dienst buiten de deur, en een opdracht die hier blijft staan of wordt
+        # teruggenomen hoeft dat niet. Zie _zet_rubriek_van_marktplaats.
+        if not _zet_rubriek_van_marktplaats(db, user_id, kandidaat):
+            continue
+        if _weiger_bekende_betaalde_rubriek(db, user_id, kandidaat):
+            continue
         uit = _zet_taal_goed(db, [kandidaat])
         if uit:
             # NA de vertaling, want die levert een nieuwe tekst op waar het
@@ -3457,7 +3464,10 @@ _BETAALDE_RUBRIEK = re.compile(
     r"betalende (?:categorie|rubriek)"
     r"|cat[ée]gorie payante"
     r"|knop \"(?:Naar betalen|Betalen|Vers le paiement)\""
-    r"|charges for an advert in this category",
+    r"|charges for an advert in this category"
+    # Onze eigen uitleg (_melding_rubriek_vraagt_geld). Die komt in result.error
+    # te staan; wie later terugkijkt wat een rubriek kostte, moet hem herkennen.
+    r"|the site says this is a paid category",
     re.I,
 )
 
@@ -4069,9 +4079,13 @@ def fail_job(job_id: str, body: dict, user_id: str = Depends(get_current_user)):
             and not _BETAALMUUR.search(fouttekst_nu)
             and _BETAALDE_RUBRIEK.search(fouttekst_nu)):
         try:
-            rubriek = str(((job.get("payload") or {}).get("category") or "")).strip()
+            # De rubriek die het formulier ECHT koos: staat de eigen
+            # Marktplaats-rubriek in de opdracht, dan die en niet de geraden
+            # categorie. Zie _rubriek_sleutel.
+            rubriek = _rubriek_sleutel(job.get("payload"))
             reden = _melding_rubriek_vraagt_geld(
-                job["platform"], _rubrieknaam(fouttekst_nu, rubriek) or None)
+                job["platform"],
+                _rubrieknaam(fouttekst_nu, _rubriek_leesbaar(job.get("payload"))) or None)
             body = {**body,
                     "error_oorspronkelijk": body.get("error_oorspronkelijk") or body.get("error"),
                     "error": reden}
@@ -4355,8 +4369,22 @@ def _stop_wachtrij(db, user_id: str, platform: str, reden: str,
         "user_id", user_id).eq("platform", platform).eq("status", "pending").execute().data or []
     if rubriek is not None:
         doel = str(rubriek or "").strip().lower()
-        wachtend = [j for j in wachtend
-                    if str(((j.get("payload") or {}).get("category") or "")).strip().lower() == doel]
+        wachtend = [j for j in wachtend if _rubriek_sleutel(j.get("payload")) == doel]
+        # Een 2dehands-plaatsing van een artikel dat op Marktplaats staat krijgt
+        # pas bij uitgifte zijn eigen rubriek (_zet_rubriek_van_marktplaats). Een
+        # rem op een GERADEN rubriek zegt daar niets over: bij Egbert zou één
+        # mislukte "gitaar" anders honderden miniaturen terugnemen die in
+        # Verzamelen gewoon gratis online gaan. Die blijven staan; bij uitgifte
+        # wordt hun echte rubriek alsnog getoetst (_weiger_bekende_betaalde_rubriek).
+        if platform == "2dehands" and not doel.startswith("mp:") and wachtend:
+            ids = sorted({j["item_id"] for j in wachtend if j.get("item_id")})
+            op_marktplaats: set = set()
+            for i in range(0, len(ids), 200):
+                op_marktplaats |= {r["item_id"] for r in (db.table("listings")
+                                   .select("item_id").in_("item_id", ids[i:i + 200])
+                                   .eq("platform", "marktplaats").eq("status", "active")
+                                   .execute().data or [])}
+            wachtend = [j for j in wachtend if j.get("item_id") not in op_marktplaats]
     if not wachtend:
         return 0
     now = datetime.now(timezone.utc).isoformat()
