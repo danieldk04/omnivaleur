@@ -583,6 +583,24 @@ async def _verkopersnummer(db, user_id: str, platform: str,
         t = (r.get("payload") or {}).get("title")
         if t and t not in titels:
             titels.append(t)
+    # Wie nooit via ons op dit kanaal plaatste maar er wel advertenties heeft
+    # staan (Egbert: 5.533 geïmporteerde Marktplaats-advertenties, nul eigen
+    # plaatsingen), heeft hier geen opdrachten. Dan de titels van die
+    # geïmporteerde advertenties: die zijn letterlijk van het kanaal overgenomen.
+    if not titels:
+        try:
+            rijen = (await naast_de_lus(lambda: db.table("listings")
+                     .select("items!inner(title,user_id)")
+                     .eq("items.user_id", user_id).eq("platform", platform)
+                     .eq("status", "active").not_.is_("platform_listing_id", "null")
+                     .limit(60).execute())).data or []
+        except Exception as e:  # noqa: BLE001
+            logger.warning("mp_enrich: geen advertentietitels voor het verkopersnummer: %s", e)
+            rijen = []
+        for r in rijen:
+            t = (r.get("items") or {}).get("title")
+            if t and t not in titels:
+                titels.append(t)
     nummer = await zoek_verkoper_id(client, titels[:MAX_TITELPOGINGEN], zoek_url) if titels else None
     _VERKOPERNUMMERS[sleutel] = (nummer, nu)
     return nummer
