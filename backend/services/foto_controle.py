@@ -159,8 +159,25 @@ async def _pogingen_op(db, item_id: str, platform: str, nummer: str) -> int:
             ijkpunt = _tijd(j.get("done_at") or j.get("created_at"))
     if ijkpunt is None:
         ijkpunt = datetime.now(timezone.utc) - POGING_VENSTER
-    return len([j for j in opdrachten
-                if (_tijd(j.get("created_at")) or ijkpunt) > ijkpunt])
+    sinds_dit_nummer = len([j for j in opdrachten
+                            if (_tijd(j.get("created_at")) or ijkpunt) > ijkpunt])
+
+    # DE TWEEDE REM, DIE EEN HERNUMMERING OVERLEEFT.
+    #
+    # De teller hierboven telt vanaf het huidige advertentienummer. Slaagt een
+    # reparatie, dan krijgt de advertentie een NIEUW nummer en begint die teller
+    # dus weer bij nul. Komt de nieuwe advertentie opnieuw kaal online — precies
+    # het geval waar dit vangnet voor is — dan zou deze ronde elke zes uur
+    # opnieuw een echte advertentie weghalen en terugzetten, zonder eind.
+    #
+    # Daarom telt dit er een tweede keer overheen, zonder ijkpunt: hoeveel
+    # plaatsingen heeft dit artikel op dit kanaal in veertien dagen gehad? Bij
+    # normaal gedrag is dat er hooguit één (automatisch herplaatsen staat op
+    # ordes van weken). Drie of meer is geen onderhoud meer maar een lus.
+    venster = datetime.now(timezone.utc) - POGING_VENSTER
+    in_venster = len([j for j in opdrachten
+                      if (_tijd(j.get("created_at")) or venster) > venster])
+    return max(sinds_dit_nummer, MAX_POGINGEN if in_venster >= LUS_GRENS else 0)
 
 
 async def controleer_fotos_op_advertenties():
