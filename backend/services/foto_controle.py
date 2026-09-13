@@ -116,27 +116,39 @@ async def _verkoperslijst(client, zoek_url: str, verkoper_id: int) -> list[dict]
     return uit
 
 
-async def _pogingen_op(db, item_id: str, platform: str, sinds: str | None) -> int:
-    """Hoe vaak is DEZE advertentie al opnieuw geplaatst nadat hij online kwam?
+async def _pogingen_op(db, item_id: str, platform: str, nummer: str) -> int:
+    """Hoe vaak is er al een reparatie geprobeerd sinds DIT advertentienummer er is?
 
-    Tellen vanaf het moment dat de huidige advertentierij ontstond, niet over een
-    vast venster. Een venster van veertien dagen telt namelijk ook de plaatsing
-    mee die de advertentie überhaupt online zette, en bij een advertentie die na
-    een eerste hapering al eens opnieuw was geplaatst was het budget daarmee op
-    vóór er ook maar één reparatie was geprobeerd. Precies dat overkwam de
-    lederhosen in de proefronde: "blijft zonder foto na 2 pogingen" terwijl er
-    nul reparaties waren gedaan.
+    TEL NIET DE PLAATSING DIE DE ADVERTENTIE ZELF MAAKTE.
 
-    Een herplaatsing werkt de bestaande rij bij (_vervangt_listing_id) in plaats
-    van er een nieuwe naast te zetten, dus deze teller loopt netjes op.
+    Eerst stond hier een vast venster van veertien dagen. Dat telde ook de
+    opdracht mee die de advertentie überhaupt online zette, plus een eventueel
+    afgebroken poging daarvoor — en dan was het budget op vóór er ook maar één
+    reparatie was gedaan. De proefronde liet dat meteen zien: de lederhosen kreeg
+    "blijft zonder foto na 2 pogingen" terwijl er nul reparaties waren geweest.
+    Het startmoment van de advertentierij helpt ook niet: die rij wordt al
+    aangemaakt als de opdracht wordt weggeschreven, dus hij valt op de
+    microseconde samen met de opdracht die hem vult.
+
+    Het ijkpunt dat wél klopt is het moment waarop DIT nummer binnenkwam: de
+    afronding van de plaatsopdracht die dit advertentienummer opleverde. Alles
+    wat daarna is klaargezet is een reparatie. Is die opdracht niet meer te
+    vinden (opgeruimd), dan valt de teller terug op het venster.
     """
-    grens = sinds or (datetime.now(timezone.utc) - POGING_VENSTER).isoformat()
-    rijen = ((await naast_de_lus(lambda: db.table("jobs")
-              .select("id")
-              .eq("item_id", item_id).eq("platform", platform)
-              .eq("action", "create").gt("created_at", grens)
-              .execute())).data or [])
-    return len(rijen)
+    opdrachten = ((await naast_de_lus(lambda: db.table("jobs")
+                   .select("created_at,done_at,result")
+                   .eq("item_id", item_id).eq("platform", platform)
+                   .eq("action", "create")
+                   .order("created_at")
+                   .execute())).data or [])
+    ijkpunt = None
+    for j in opdrachten:
+        res = j.get("result") if isinstance(j.get("result"), dict) else {}
+        if str(res.get("platform_listing_id") or "") == str(nummer):
+            ijkpunt = j.get("done_at") or j.get("created_at")
+    if not ijkpunt:
+        ijkpunt = (datetime.now(timezone.utc) - POGING_VENSTER).isoformat()
+    return len([j for j in opdrachten if str(j.get("created_at") or "") > str(ijkpunt)])
 
 
 async def controleer_fotos_op_advertenties():
