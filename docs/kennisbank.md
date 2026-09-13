@@ -17,6 +17,30 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ---
 
+## offline-waarschuwing-per-mail
+
+*13-09-2026 — Klant krijgt mail als zijn computer uren stil is met werk in de wachtrij; vereist één handmatige Supabase-kolom*
+
+Sinds 03-09-2026 draait er elk uur een controle
+(`backend/services/extension_offline.py`): staat de extensie van een klant meer
+dan drie uur stil terwijl er minstens drie uur werk wacht, dan krijgt hij één
+mail. Alleen tussen 10:00 en 20:00 NL, hoogstens één per 24 uur, en alleen bij
+een lopende proef of abonnement.
+
+Het tijdvenster is geen detail: de nachtelijke herplaatsronde zet bij iedereen
+rond 02:30 werk klaar, dus zonder dat venster kreeg elke klant met een uitgezette
+computer midden in de nacht een mail.
+
+Geverifieerd 13-09-2026 rechtstreeks tegen productie-Supabase: de kolom
+`offline_mail_sent_at` op `extension_heartbeat` bestaat inmiddels (en ook
+`ext_version`). Deze migratie is dus niet langer openstaand.
+
+Aanleiding: Toon (dejuistetoon) meldde "50 jobs, er gebeurt eigenlijk niets"
+terwijl zijn extensie 196 minuten stil was met 62 wachtende opdrachten. Zie ook
+"chrome-ruimt-profiel-op-bij-venster-dicht".
+
+---
+
 ## computer-aan-is-niet-browser-werkt
 
 *12-09-2026 — "Wachtrij die de hele dag stilstaat terwijl de pc 'aan' is: meet stille uren en leg andere verkopers ernaast om server en machine te onderscheiden"*
@@ -3194,33 +3218,6 @@ Uit hetzelfde gesprek: Naoufal (websitebouwer van Toon) is een kanaal voor
 installatie en doorverwijzing, en het idee om de extensie zelf op een server met
 klantwachtwoorden te draaien is bewust afgewezen. Zie docs/team-notes.md,
 03-09-2026.
-
----
-
-## offline-waarschuwing-per-mail
-
-*03-09-2026 — Klant krijgt mail als zijn computer uren stil is met werk in de wachtrij; vereist één handmatige Supabase-kolom*
-
-Sinds 03-09-2026 draait er elk uur een controle
-(`backend/services/extension_offline.py`): staat de extensie van een klant meer
-dan drie uur stil terwijl er minstens drie uur werk wacht, dan krijgt hij één
-mail. Alleen tussen 10:00 en 20:00 NL, hoogstens één per 24 uur, en alleen bij
-een lopende proef of abonnement.
-
-Het tijdvenster is geen detail: de nachtelijke herplaatsronde zet bij iedereen
-rond 02:30 werk klaar, dus zonder dat venster kreeg elke klant met een uitgezette
-computer midden in de nacht een mail.
-
-OPENSTAAND zolang niemand het doet:
-`ALTER TABLE extension_heartbeat ADD COLUMN offline_mail_sent_at timestamptz;`
-Ontbreekt die kolom, dan onthoudt de server zelf wie al gemaild is en kan de mail
-zich na een deploy herhalen. Bewust geen stille uitschakeling zoals bij
-"extension-heartbeat-migration" en "sold-price-actual", want dan blijft de
-melding maanden onzichtbaar.
-
-Aanleiding: Toon (dejuistetoon) meldde "50 jobs, er gebeurt eigenlijk niets"
-terwijl zijn extensie 196 minuten stil was met 62 wachtende opdrachten. Zie ook
-"chrome-ruimt-profiel-op-bij-venster-dicht".
 
 ---
 
