@@ -17,6 +17,95 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ---
 
+## plaatsen-stopt-als-de-computer-slaapt
+
+*13-09-2026 — "Het stopt als ik wegloop" is bijna altijd Windows dat slaapt; bewijs het met een bevroren opdracht die uren later alsnog afmeldt, en houd de machine wakker met chrome.power*
+
+13-09-2026, Egbert Brouwer (Papa's Plectrums): "Als ik even van de computer
+wegloop stopt het plaatsen vrij snel daarna, en het gaat pas weer verder als ik
+opnieuw inlog. Maak de timeout een heel stuk langer."
+
+Er bestaat bij ons geen enkele klok die daarop lijkt, dus de verleiding is groot
+om te antwoorden "dat kan niet". Dat is het verkeerde antwoord: meet het.
+
+**Hoe je het bewijst zonder bij de klant te kunnen kijken.** Zet van zijn
+opdrachten `claimed_at` naast `done_at`. Een opdracht die om 07:40:43 begon en
+zich pas om 09:21:53 klaar meldt, terwijl er in de tussentijd niets gebeurde en
+het werk daarna meteen weer op tempo doorloopt, is een bevroren tabblad dat bij
+het wakker worden gewoon afmaakt. Dat patroon hoort bij slaapstand. Was Chrome
+afgesloten, dan had het tabblad bestaan niet overleefd en had de opdracht
+gefaald met "the tab this job was working in disappeared". Onderscheid die twee,
+want het advies verschilt: slaapstand uitzetten tegenover Chrome open laten.
+
+**De reparatie** (1.0.325): `chrome.power.requestKeepAwake("system")` zolang
+`/api/jobs/pending` opdrachten teruggeeft die nu aan de beurt zijn, en
+`releaseKeepAwake()` zodra de rij leeg is. Niveau "system" houdt alleen de
+machine aan; het scherm mag gewoon uit. De permissie `power` geeft geen
+waarschuwing bij het bijwerken, dus bestaande gebruikers merken er niets van.
+
+Twee vallen:
+- De service worker wordt na ~30 seconden stilte weggegooid en begint zonder
+  geheugen. Een "ik heb het al aangevraagd"-vlag in een modulevariabele is
+  daarna weg en dan wordt er nooit meer losgelaten. Vraag het daarom elke ronde
+  opnieuw aan en laat het elke lege ronde weer los; beide aanroepen kosten
+  niets.
+- Het moet aan de échte wachtrij hangen, niet aan "er staat ergens nog iets
+  ingepland". `/pending` geeft alleen werk dat nu aan de beurt is, dus een
+  herplaatsing die voor vanmiddag staat houdt de machine niet de hele nacht
+  wakker.
+
+Zie ook "chrome-ruimt-profiel-op-bij-venster-dicht" en
+"computer-aan-is-niet-browser-werkt": dit is dezelfde familie klachten, en de
+oorzaak is elke keer de machine of de browser, nooit onze wachtrij.
+
+**Nagemeten op 13-09-2026, in een echte Chrome.** Met 1.0.327 laat de echte
+`pollJobsEenRonde` bij werk in de wachtrij een slaapblokkade achter bij macOS
+(`NoIdleSleepAssertion named: "extension"`), en bij een lege rij is die weer weg.
+Dezelfde proef op 1.0.324, van vlak voor de reparatie, levert geen enkele
+blokkade op: die computer mag gewoon in slaap vallen. Hoe je dat draait staat in
+"extensie-echt-draaien-in-chrome".
+
+---
+
+## extensie-echt-draaien-in-chrome
+
+*13-09-2026 — "Hoe je de echte extensie in een echte Chrome laadt en aan het besturingssysteem afleest wat ze doet; --load-extension werkt sinds Chrome 152 niet meer"*
+
+13-09-2026. Om te bewijzen dat de wakker-houdfunctie werkt moest de extensie
+echt draaien, niet in een nagebouwde omgeving. Wat er niet werkt en wat wel:
+
+**Werkt niet meer.** `--load-extension` op de opdrachtregel wordt door Chrome 152
+stil genegeerd, ook met `--disable-extensions-except` en ook met
+`--disable-features=DisableLoadExtensionCommandLineSwitch`. Je ziet geen fout: de
+extensie staat simpelweg niet in `chrome://extensions-internals` en haar pagina's
+geven `chrome-error://chromewebdata`. Headless maakt niets uit.
+
+**Werkt wel.** Chrome starten met `--remote-debugging-pipe` plus
+`--enable-unsafe-extension-debugging`, en dan over die pijp (fd 3 en 4, berichten
+gescheiden door een nulbyte) `Extensions.loadUnpacked` aanroepen. Over
+`--remote-debugging-port` geeft Chrome het Extensions-domein niet vrij: de
+aanroep lijkt te lukken en geeft zelfs een extensie-id terug, maar er wordt niets
+geïnstalleerd. Daarna `Target.getTargets` pollen tot de service worker verschijnt
+en met `Target.attachToTarget` + `Runtime.evaluate` in de worker meten. Functies
+uit background.js staan daar gewoon in het bereik, want het is geen module-worker.
+
+**Bewijs bij macOS ophalen:** `pmset -g assertions`. Een extensie die
+`chrome.power.requestKeepAwake("system")` aanroept levert een regel
+`pid N(Google Chrome): ... NoIdleSleepAssertion named: "extension"`. Na
+`releaseKeepAwake()` is die regel weg. Op Windows is dit niet na te meten vanaf
+een Mac; dat blijft dus een openstaand punt bij klanten die Windows draaien.
+
+**Valkuil in de proef zelf.** Een instelling wegschrijven wekt via
+`chrome.storage.onChanged` een eigen ronde. Draait die met het échte net, dan
+vindt hij geen werk en laat hij de blokkade meteen weer los, waardoor je meting
+leeg lijkt. Eerst `fetch` nabouwen, dan pas instellingen zetten, dan even wachten.
+
+Zie `tests/wakker-houden-echt-test.mjs`. Hoort bij
+"plaatsen-stopt-als-de-computer-slaapt" en
+"voor-en-na-proef-mag-geen-head-gebruiken".
+
+---
+
 ## advertentie-zonder-vraagprijs
 
 *13-09-2026 — "Bieden, Zie omschrijving en Gratis zijn echte advertentievormen op Marktplaats en 2dehands; een ontbrekende prijs is dus niet altijd een gebrek en een verzonnen bedrag is schade"*
@@ -96,49 +185,6 @@ en breken daarna stil, op het slechtst denkbare moment.
 
 Zie ook "extensie-inlogbewijs-in-storage-local" en
 "auth-fouten-lijken-op-verkeerd-wachtwoord".
-
----
-
-## plaatsen-stopt-als-de-computer-slaapt
-
-*13-09-2026 — "Het stopt als ik wegloop" is bijna altijd Windows dat slaapt; bewijs het met een bevroren opdracht die uren later alsnog afmeldt, en houd de machine wakker met chrome.power*
-
-13-09-2026, Egbert Brouwer (Papa's Plectrums): "Als ik even van de computer
-wegloop stopt het plaatsen vrij snel daarna, en het gaat pas weer verder als ik
-opnieuw inlog. Maak de timeout een heel stuk langer."
-
-Er bestaat bij ons geen enkele klok die daarop lijkt, dus de verleiding is groot
-om te antwoorden "dat kan niet". Dat is het verkeerde antwoord: meet het.
-
-**Hoe je het bewijst zonder bij de klant te kunnen kijken.** Zet van zijn
-opdrachten `claimed_at` naast `done_at`. Een opdracht die om 07:40:43 begon en
-zich pas om 09:21:53 klaar meldt, terwijl er in de tussentijd niets gebeurde en
-het werk daarna meteen weer op tempo doorloopt, is een bevroren tabblad dat bij
-het wakker worden gewoon afmaakt. Dat patroon hoort bij slaapstand. Was Chrome
-afgesloten, dan had het tabblad bestaan niet overleefd en had de opdracht
-gefaald met "the tab this job was working in disappeared". Onderscheid die twee,
-want het advies verschilt: slaapstand uitzetten tegenover Chrome open laten.
-
-**De reparatie** (1.0.325): `chrome.power.requestKeepAwake("system")` zolang
-`/api/jobs/pending` opdrachten teruggeeft die nu aan de beurt zijn, en
-`releaseKeepAwake()` zodra de rij leeg is. Niveau "system" houdt alleen de
-machine aan; het scherm mag gewoon uit. De permissie `power` geeft geen
-waarschuwing bij het bijwerken, dus bestaande gebruikers merken er niets van.
-
-Twee vallen:
-- De service worker wordt na ~30 seconden stilte weggegooid en begint zonder
-  geheugen. Een "ik heb het al aangevraagd"-vlag in een modulevariabele is
-  daarna weg en dan wordt er nooit meer losgelaten. Vraag het daarom elke ronde
-  opnieuw aan en laat het elke lege ronde weer los; beide aanroepen kosten
-  niets.
-- Het moet aan de échte wachtrij hangen, niet aan "er staat ergens nog iets
-  ingepland". `/pending` geeft alleen werk dat nu aan de beurt is, dus een
-  herplaatsing die voor vanmiddag staat houdt de machine niet de hele nacht
-  wakker.
-
-Zie ook "chrome-ruimt-profiel-op-bij-venster-dicht" en
-"computer-aan-is-niet-browser-werkt": dit is dezelfde familie klachten, en de
-oorzaak is elke keer de machine of de browser, nooit onze wachtrij.
 
 ---
 

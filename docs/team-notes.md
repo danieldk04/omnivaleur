@@ -9129,3 +9129,22 @@ vorm mee. Vinted en eBay kennen deze vormen niet, daar blijft een prijs verplich
 De kolom items.price_type moet met de hand in Supabase worden aangemaakt. Zolang
 dat niet is gebeurd filtert de opslag het veld eruit, dus er breekt niets, maar de
 keuze wordt dan ook niet bewaard.
+
+## 13-09-2026 — De wakker-houdfunctie echt nagemeten
+
+Toons computer stopte om 16:10 met plaatsen, zeven minuten nadat hij bij de pc
+wegliep in Etten; de laatste opdracht bleef halverwege hangen. Dat is hetzelfde
+beeld als bij Egbert (Papa's Plectrums) en het bevestigt de slaapstand als
+oorzaak. Hij draait 1.0.320 uit de Web Store, dus zonder de reparatie.
+
+Daarna is de reparatie voor het eerst in een echte Chrome gemeten, niet alleen in
+een nagebouwde omgeving: de echte extensie geladen, de echte publicatieronde
+gedraaid met één wachtende opdracht, en bij macOS uitgelezen of de computer
+werkelijk wakker gehouden wordt. Met 1.0.327 staat de blokkade er en verdwijnt
+hij zodra de rij leeg is; met 1.0.324, van vlak voor de reparatie, staat er onder
+dezelfde omstandigheden niets. De proef staat in `tests/wakker-houden-echt-test.mjs`.
+
+Openstaand: Windows is hier niet na te meten. Toon en Egbert draaien beiden
+Windows, en de wakker-houdfunctie voorkomt bovendien geen slaapstand door een
+dichtgeklapte laptop of een afgemelde sessie. Zolang de Web Store 1.0.327 nog
+niet heeft goedgekeurd moeten klanten de slaapstand zelf op Nooit zetten.
