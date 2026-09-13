@@ -114,12 +114,25 @@ async def _verkoperslijst(client, zoek_url: str, verkoper_id: int) -> list[dict]
     return uit
 
 
-async def _pogingen_op(db, item_id: str, platform: str) -> int:
-    grens = (datetime.now(timezone.utc) - POGING_VENSTER).isoformat()
+async def _pogingen_op(db, item_id: str, platform: str, sinds: str | None) -> int:
+    """Hoe vaak is DEZE advertentie al opnieuw geplaatst nadat hij online kwam?
+
+    Tellen vanaf het moment dat de huidige advertentierij ontstond, niet over een
+    vast venster. Een venster van veertien dagen telt namelijk ook de plaatsing
+    mee die de advertentie überhaupt online zette, en bij een advertentie die na
+    een eerste hapering al eens opnieuw was geplaatst was het budget daarmee op
+    vóór er ook maar één reparatie was geprobeerd. Precies dat overkwam de
+    lederhosen in de proefronde: "blijft zonder foto na 2 pogingen" terwijl er
+    nul reparaties waren gedaan.
+
+    Een herplaatsing werkt de bestaande rij bij (_vervangt_listing_id) in plaats
+    van er een nieuwe naast te zetten, dus deze teller loopt netjes op.
+    """
+    grens = sinds or (datetime.now(timezone.utc) - POGING_VENSTER).isoformat()
     rijen = ((await naast_de_lus(lambda: db.table("jobs")
               .select("id")
               .eq("item_id", item_id).eq("platform", platform)
-              .eq("action", "create").gte("created_at", grens)
+              .eq("action", "create").gt("created_at", grens)
               .execute())).data or [])
     return len(rijen)
 
