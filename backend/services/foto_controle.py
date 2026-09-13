@@ -47,7 +47,7 @@ import logging
 import re
 from datetime import datetime, timedelta, timezone
 
-from backend.database import get_db, naast_de_lus
+from backend.database import get_db, fetch_all, naast_de_lus
 
 logger = logging.getLogger(__name__)
 
