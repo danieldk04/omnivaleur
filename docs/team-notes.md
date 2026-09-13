@@ -9001,3 +9001,53 @@ zijn computer ging slapen. Die heb ik te vroeg opnieuw klaargezet: het oude tabb
 rondde na de slaap alsnog af, dus stond de Gibson SG Angus Young twee keer live. Met
 akkoord van Daniel één verwijderopdracht voor alleen m2442133128. Les in de
 kennisbank: "time-out-is-geen-dood-tabblad".
+
+## 13-09-2026 — Advertenties die kaal online kwamen (De Juiste Toon)
+
+Toon stuurde "Originele Lederhosen XXXL maat 60" door met één zin: "Bovenstaande
+link heeft geen foto's". Het artikel had er dertien.
+
+**Oorzaak, aangewezen en niet aangenomen.** Live nagemeten op het /plaats-formulier
+van Marktplaats: mislukt de upload naar het platform ("Fout opgetreden") of blijft
+hij hangen, dan houdt het formulier nul foto's vast en verschijnt er geen miniatuur.
+`uploadPhotos` behandelde "geen miniatuur herkend" bewust als niet-fataal — die
+melding klopt namelijk vaak, miniaturen heten per categorie anders — ging door, en
+wapende daarmee ook de laatste controle vóór Plaatsen niet. Die controle greep
+alleen in als er éérder wél miniaturen waren gezien. Gevolg: klikken op Plaatsen met
+een leeg formulier.
+
+Het verborgen veld `input[name="images.ids"]` is de harde waarheid: per foto die het
+platform echt ontvangen heeft staat daar een nummer. Tijdens een lopende upload
+bestaat het veld niet, na een mislukte upload is het leeg.
+
+**Wat er nu staat.** Extensie 1.0.323 wacht vlak voor Plaatsen tot alle foto's in dat
+veld staan, biedt bij nul één keer opnieuw aan, en weigert anders te plaatsen met een
+melding die zegt wat er is. Bij een deels gelukte upload wordt bewust níét opnieuw
+aangeboden: we weten niet welke foto ontbrak, dus de rest zou dubbel komen.
+`tests/fotos-op-formulier-test.js` draait de echte routines: 12 van 12 goed nu,
+7 van 12 fout tegen cbae5876.
+
+**En een net eronder, want de Web Store duurt weken.** `backend/services/foto_controle.py`
+kijkt elke zes uur op de openbare verkoperslijst of er iets van ons zonder foto online
+staat, en plant zo'n advertentie opnieuw in langs `refresh_listing`. Vier remmen: lege
+lijst is een storing en geen uitspraak, alleen advertenties die we echt terugvinden,
+alleen als wij zelf foto's hebben, en hoogstens twee reparaties per advertentienummer
+met daarnaast een lusrem die een hernummering overleeft
+(`tests/foto-controle-remmen-test.py`, 7 van 7).
+
+**Wat de meting opleverde (13-09-2026).** Over alle verkopers gemeten bij de bron:
+vier advertenties stonden zonder foto online. Toons lederhosen en konijnenvacht op
+Marktplaats, en twee kledingstukken van een andere verkoper op 2dehands. Alle vier
+worden nu automatisch opnieuw ingepland.
+
+**Wat deze meting NIET dekt, met zoveel woorden.** 6.726 van de 9.160 actieve
+Marktplaats-advertenties dragen een Admarkt- of webwinkelnummer (`1502022894` in
+plaats van `m2442004486`). Die staan niet op de openbare verkoperslijst, dus daarover
+doet zowel de meting als de nieuwe ronde geen uitspraak. Los daarvan: van één
+verkoper (a65cf085) waren acht van acht advertentietitels niet terug te vinden op
+Marktplaats terwijl wij ze live noemen — dat is geen fotoprobleem maar mogelijk
+verdwenen voorraad, en dat staat nog open.
+
+Eerste meting zat er trouwens naast omdat een gewone Supabase-select stil bij 1.000
+rijen stopt: die zei "nul zonder foto" over 1.000 van de 9.160. Les in de kennisbank:
+"openbare-verkoperslijst-toont-de-fotos".

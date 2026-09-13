@@ -17,6 +17,77 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ---
 
+## openbare-verkoperslijst-toont-de-fotos
+
+*13-09-2026 — "De MP/2dehands zoek-API toont per advertentie de foto's, en het verkopersnummer bewijs je met je eigen advertentienummer, niet met stemmen"*
+
+Wil je weten wat een bezoeker écht ziet van onze advertenties, dan is de
+openbare zoek-API de bron: `https://www.marktplaats.nl/lrp/api/search` met
+`sellerIds[]`, 100 per pagina. Geen login nodig. Per advertentie staat er
+`pictures` (of `imageUrls`); ontbreekt dat helemaal, dan heeft de advertentie
+geen foto.
+
+Twee dingen die 13-09-2026 misgingen bij het meten:
+
+1. **Een gewone Supabase-select geeft stil 1000 rijen.** De eerste meting zei
+   "9 verkopers, 1000 advertenties, nul zonder foto" terwijl er 9.160 actief
+   waren en er twee kaal online stonden. Pagineren met `fetch_all`, altijd.
+   Zie "bewijs-moet-onderscheiden".
+
+2. **`zoek_verkoper_id` stemt, en stemmen kan misleiden.** Die functie zoekt op
+   je titels en neemt een nummer aan zodra meerdere titels hetzelfde nummer
+   aanwijzen. Dat leverde een verkoper op met 3.700 advertenties waarvan er nul
+   van ons waren: het was iemand anders. Bewijs het nummer in plaats daarvan met
+   je eigen advertentienummer: zoek op je eigen titel en neem `sellerId` alleen
+   over als de gevonden advertentie hét nummer draagt dat bij ons in de boeken
+   staat.
+
+Let op wie hier buiten valt: verkopers met Admarkt- of webwinkelnummers
+(`1502022894` in plaats van `m2442004486`) staan niet op de openbare
+verkoperslijst. Op 13-09-2026 waren dat 6.726 van de 9.160 actieve
+MP-advertenties. Over die advertenties doet zo'n meting dus geen uitspraak, en
+dat is iets anders dan "er is niets aan de hand".
+Zie "admarkt-zakelijke-marktplaats" en "een-bron-is-geen-bewijs-bij-weg".
+
+---
+
+## plaatsen-zonder-fotos-op-het-formulier
+
+*13-09-2026 — Een mislukte of hangende foto-upload liet het formulier leeg achter en de extensie klikte toch op Plaatsen; images.ids is de harde waarheid*
+
+13-09-2026, De Juiste Toon: "Originele Lederhosen XXXL maat 60" (13 foto's) en
+"Konijnenvacht Setje bruin" (5 foto's) stonden op Marktplaats zonder één foto.
+Een kale advertentie wordt niet aangeklikt, dus die staat er wel maar verkoopt
+niets, en het dashboard zegt gewoon "live".
+
+Mechanisme, live nagemeten op het /plaats-formulier: mislukt de upload naar
+Marktplaats ("Fout opgetreden") of blijft hij hangen, dan houdt het formulier
+nul foto's vast en verschijnt er geen miniatuur. `uploadPhotos` behandelde
+"geen miniatuur herkend" bewust als niet-fataal (die melding klopt vaak: per
+categorie heten miniaturen anders), ging door, en wapende daarmee ook de
+controle vlak vóór Plaatsen niet. Die controle greep alleen in als er éérder
+wél miniaturen waren gezien. Gevolg: klikken op Plaatsen met een leeg formulier.
+
+De harde waarheid is het verborgen veld `input[name="images.ids"]`: daar staat
+per foto die het platform echt ontvangen heeft een nummer. Tijdens een lopende
+upload bestaat het veld niet, na een mislukte upload is het leeg. Marktplaats en
+2dehands draaien hetzelfde formulier; Vinted heeft dit veld niet en mag er niet
+op worden tegengehouden.
+
+Twee valkuilen bij het repareren:
+- Een deel binnen is nog geen eindstand. Het eerste nummer komt binnen terwijl
+  de tweede foto nog onderweg is, dus wachten tot alles er is of tot het aantal
+  15 seconden stilstaat. Anders plaats je met 1 van de 13.
+- Bij een deels gelukte upload niet opnieuw aanbieden: je weet niet wélke foto
+  ontbrak, dus de rest komt dubbel. Alleen bij nul opnieuw aanbieden.
+
+Zie ook "extension-release-bump-version" en "rem-op-de-server-bij-een-extensiefout":
+de extensiefix (1.0.323) helpt pas als de Chrome Web Store hem heeft, dus de
+server kijkt sinds dezelfde dag zelf na of er iets van ons zonder foto online
+staat (`backend/services/foto_controle.py`, elke 6 uur).
+
+---
+
 ## time-out-is-geen-dood-tabblad
 
 *13-09-2026 — "Een plaatsing met \"timed out\" kan uren later alsnog afronden (computer sliep); nooit opnieuw klaarzetten omdat hij \"nu niet online staat\""*

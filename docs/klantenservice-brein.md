@@ -10,7 +10,7 @@ product verandert. De ontwikkelaar werkt dan zowel dit bestand in de repo als de
 kopie in Drive bij, in dezelfde beurt. Daniel hoeft niets te doen; de Gem leest
 de Drive-kopie de volgende keer opnieuw in.
 
-_Laatst bijgewerkt: 13-09-2026 (2dehands volgt de rubriek die de klant op Marktplaats koos)_
+_Laatst bijgewerkt: 13-09-2026 (advertenties zonder foto's: oorzaak weg, en de server repareert wat er stond)_
 
 ---
 
@@ -356,6 +356,22 @@ diezelfde browser.
 
 Werkt het daarna nog niet, stuur me dan een schermafbeelding van wat je ziet,
 dan zoek ik het uit.
+
+Groetjes,
+Daniel
+
+### Advertentie staat online zonder foto's
+
+Hoi <voornaam>,
+
+Goed dat je het doorgeeft, en sorry dat je het zelf moest zien. Er ging iets mis
+bij het uploaden van de foto's naar Marktplaats: lukte dat niet, dan ging de
+advertentie er tot nu toe alsnog op, alleen kaal. Dat is nu geregeld, de
+uitbreiding plaatst niet meer zonder foto's.
+
+Je hoeft zelf niets te doen. We hebben nagekeken welke advertenties het raakt en
+die worden automatisch opnieuw geplaatst, mét je foto's erbij. Dat kan een dag
+duren, want het gaat rustig aan zodat Marktplaats er niet van schrikt.
 
 Groetjes,
 Daniel
