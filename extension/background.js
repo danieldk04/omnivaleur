@@ -1363,8 +1363,39 @@ async function beurtDoorgeven(platform) {
 }
 
 // Eén ronde langs alle platforms. Geeft terug of er werk is verzet.
+// ── DE COMPUTER MAG NIET GAAN SLAPEN ZOLANG ER WERK KLAARSTAAT ────────────
+//
+// WAAROM DIT ER IS (13-09-2026, Egbert Brouwer, Papa's Plectrums)
+//
+// "Als ik even van de computer wegloop stopt het plaatsen vrij snel daarna, en
+// het gaat pas weer verder als ik opnieuw inlog." Er bestond bij ons geen enkele
+// klok die daarop lijkt, dus is het nagemeten in zijn eigen opdrachten van
+// 13-09: hij publiceerde door tot 08:05:58 en daarna stond alles stil tot
+// 09:21:53. Precies op dat tijdstip meldde zich een opdracht klaar die om
+// 07:40:43 was begonnen. Een tabblad dat ruim anderhalf uur bevroren staat en
+// bij de eerste seconde daarna gewoon afmaakt, is geen tijdslimiet en geen
+// storing: dat is Windows dat in slaap valt en weer wakker wordt.
+//
+// Chrome mag dat tegenhouden. "system" houdt alleen de machine aan en laat het
+// scherm gewoon uitgaan, en we vragen het uitsluitend zolang de server ook echt
+// opdrachten klaar heeft staan die NU aan de beurt zijn — een herplaatsing die
+// voor vanmiddag staat ingepland telt niet mee, want /pending geeft die pas
+// terug als hij aan de beurt is. Zodra de rij leeg is mag hij binnen vijftien
+// seconden alsnog gaan slapen.
+//
+// Zonder de aanvraag telkens te herhalen zou dit niet werken: de service worker
+// wordt na ~30 seconden stilte weggegooid en begint daarna zonder geheugen. Hij
+// kost niets, dus hij gaat elke ronde opnieuw mee.
+function wakkerHouden(aan) {
+  try {
+    if (aan) chrome.power.requestKeepAwake("system");
+    else chrome.power.releaseKeepAwake();
+  } catch (_) {}
+}
+
 async function pollJobsEenRonde() {
   let verzet = false;
+  let werkKlaar = false;
   const serverUrl = await getServerUrl();
   // Deliver any completions a previous run couldn't confirm BEFORE asking for
   // pending work — otherwise the backend hands us back a job we already did.
@@ -1375,6 +1406,7 @@ async function pollJobsEenRonde() {
       const res = await fetch(`${serverUrl}/api/jobs/pending?platform=${platform}`, { headers });
       if (!res.ok) continue;
       const jobs = await res.json();
+      if (Array.isArray(jobs) && jobs.length) werkKlaar = true;
       for (const job of jobs) {
         // Een scan leest je hele garderobe uit en duurt minuten. Zolang de ronde
         // dáárop stond te wachten, werd er in die tijd niets gepubliceerd: je
@@ -1434,6 +1466,7 @@ async function pollJobsEenRonde() {
       console.error(`Omnivaleur poll error (${platform}):`, e);
     }
   }
+  wakkerHouden(werkKlaar);
   return verzet;
 }
 
