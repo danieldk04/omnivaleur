@@ -60,7 +60,8 @@ logger = logging.getLogger(__name__)
 ADVERTENTIENUMMER = re.compile(r"^m\d{6,}$")
 
 MAX_HERSTEL_PER_RONDE = 10      # per ronde, over alle verkopers samen
-MAX_POGINGEN = 2                # per artikel per kanaal
+MAX_POGINGEN = 2                # reparaties per advertentienummer
+LUS_GRENS = 3                   # plaatsingen in POGING_VENSTER: daarboven is het een lus
 POGING_VENSTER = timedelta(days=14)
 PAGINAS_PER_VERKOPER = 60       # 100 advertenties per pagina
 
