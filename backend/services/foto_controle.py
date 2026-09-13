@@ -64,6 +64,16 @@ POGING_VENSTER = timedelta(days=14)
 PAGINAS_PER_VERKOPER = 60       # 100 advertenties per pagina
 
 
+def _tijd(waarde) -> datetime | None:
+    if not waarde:
+        return None
+    try:
+        d = datetime.fromisoformat(str(waarde).replace("Z", "+00:00"))
+    except ValueError:
+        return None
+    return d if d.tzinfo else d.replace(tzinfo=timezone.utc)
+
+
 def _fotos(advertentie: dict) -> list:
     return (advertentie.get("pictures")
             or advertentie.get("imageUrls")
