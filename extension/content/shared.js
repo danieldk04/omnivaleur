@@ -1903,6 +1903,58 @@ window.CL = (() => {
   // Set once photos were actually requested, so the pre-submit check only guards
   // listings that are supposed to have images.
   let _expectPhotos = false;
+  let _aangebodenFotos = [];
+
+  // GEEN PLAATSING ZONDER FOTO'S OP HET FORMULIER (13-09-2026, De Juiste Toon).
+  //
+  // "Originele Lederhosen XXXL maat 60" en "Konijnenvacht Setje bruin" kwamen
+  // online zonder één foto, terwijl het artikel er 13 en 5 had. Live nagemeten op
+  // het /plaats-formulier: mislukt de upload naar Marktplaats ("Fout opgetreden")
+  // of blijft hij hangen, dan houdt het formulier nul foto's vast en verschijnt er
+  // geen miniatuur. uploadPhotos ging dan "toch door" zonder de controle hieronder
+  // te wapenen, en Marktplaats plaatst gewoon zonder foto's.
+  //
+  // De harde waarheid is het verborgen veld images.ids: daar staat per foto die
+  // Marktplaats echt ontvangen heeft een nummer. Tijdens een lopende upload
+  // bestaat dat veld niet (gemeten), dus afwezig = nog bezig, leeg = mislukt.
+  // Marktplaats en 2dehands draaien hetzelfde formulier, beide nagemeten.
+  function fotosOpFormulier() {
+    const veld = qs('input[name="images.ids"]');
+    return veld ? String(veld.value || "").split(",").filter((s) => s.trim()).length : null;
+  }
+
+  async function borgFotosOpFormulier({ wachtMs = 90000, herkansNaMs = 30000 } = {}) {
+    if (!_aangebodenFotos.length) return;
+    if (!/(^|\.)(marktplaats\.nl|2dehands\.be)$/.test((location && location.hostname) || "")) return;
+    const start = Date.now();
+    let herkansAt = null;
+    for (;;) {
+      const n = fotosOpFormulier();
+      if (n !== null && n > 0) {
+        clog(`foto's op het formulier: ${n} van ${_aangebodenFotos.length}`);
+        return;
+      }
+      if (n === 0 && herkansAt === null) {
+        const invoer = qs('#imageUploader-hiddenInput') || qs('input[type="file"][accept*="image"]');
+        if (invoer) {
+          clog("foto's: het formulier houdt er geen vast — opnieuw aangeboden");
+          const dt = new DataTransfer();
+          _aangebodenFotos.forEach((f) => dt.items.add(f));
+          invoer.files = dt.files;
+          invoer.dispatchEvent(new Event("change", { bubbles: true }));
+        }
+        herkansAt = Date.now();
+      }
+      const nu = Date.now();
+      if (nu - start >= wachtMs || (n === 0 && herkansAt !== null && nu - herkansAt >= herkansNaMs)) {
+        clog(`plaatsen: geweigerd — foto's op het formulier: ${n === null ? "upload loopt nog" : 0}`);
+        throw new Error(n === null
+          ? `The photos were still uploading to ${location.hostname} after ${Math.round(wachtMs / 1000)} seconds, so nothing was published. Publish it again.`
+          : `${location.hostname} did not accept any of the ${_aangebodenFotos.length} photo(s), so nothing was published. Publish it again.`);
+      }
+      await sleep(500);
+    }
+  }
 
   // THROWS on failure — never returns quietly. Photos are mandatory on every
   // platform here, and a silent `return false` meant the form was submitted with
