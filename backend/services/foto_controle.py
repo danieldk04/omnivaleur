@@ -36,9 +36,11 @@ DE VIER REMMEN
    hernummerd) en niet aan deze ronde.
 3. Alleen als wij zelf foto's hebben om mee terug te komen. Zonder foto's bij
    ons levert herplaatsen dezelfde kale advertentie op.
-4. Hoogstens twee pogingen per artikel per kanaal binnen veertien dagen,
-   geteld aan de plaatsopdrachten zelf. Een vangnet zonder geheugen wordt een
-   lus, en dat is hier duur: elke poging haalt een echte advertentie weg.
+4. Hoogstens twee reparaties per advertentie, geteld aan de plaatsopdrachten
+   die ná het ontstaan van die advertentierij zijn gemaakt. Een vangnet zonder
+   geheugen wordt een lus, en dat is hier duur: elke poging haalt een echte
+   advertentie weg. Blijft hij daarna kaal, dan zegt het logboek "met de hand
+   nakijken" in plaats van het nog eens te proberen.
 """
 from __future__ import annotations
 
@@ -159,7 +161,7 @@ async def controleer_fotos_op_advertenties():
         # lijkt. Zie fetch_all in backend/database.py.
         rijen = await naast_de_lus(lambda p=platform: fetch_all(
             lambda: db.table("listings")
-            .select("item_id,platform_listing_id,items(user_id,title,photo_urls)")
+            .select("item_id,platform_listing_id,created_at,items(user_id,title,photo_urls)")
             .eq("platform", p).eq("status", "active")
             .not_.is_("platform_listing_id", "null"),
             order_by="id"))
@@ -173,6 +175,7 @@ async def controleer_fotos_op_advertenties():
                 "platform_listing_id": r["platform_listing_id"],
                 "titel": item.get("title"),
                 "fotos_bij_ons": len(item.get("photo_urls") or []),
+                "rij_sinds": r.get("created_at"),
             })
         per_verkoper.pop(None, None)
         if not per_verkoper:
@@ -211,7 +214,8 @@ async def controleer_fotos_op_advertenties():
                                     "foto's, herplaatsen levert dezelfde kale advertentie",
                                     rij["platform_listing_id"])
                         continue
-                    if await _pogingen_op(db, rij["item_id"], platform) >= MAX_POGINGEN:
+                    if await _pogingen_op(db, rij["item_id"], platform,
+                                          rij["rij_sinds"]) >= MAX_POGINGEN:
                         logger.warning("fotocontrole: %s (%s) blijft zonder foto na %s "
                                        "pogingen — met de hand nakijken",
                                        rij["platform_listing_id"], rij["titel"], MAX_POGINGEN)
