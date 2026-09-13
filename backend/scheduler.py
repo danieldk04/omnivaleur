@@ -60,6 +60,7 @@ def start_scheduler():
     from backend.services.extension_offline import waarschuw_offline_extensies
     from backend.services.verkoop_reconciliatie import reconcileer_verkochte_artikelen
     from backend.services.verkoop_herinnering import herinner_onbevestigde_verkopen
+    from backend.services.foto_controle import controleer_fotos_op_advertenties
     from backend.services.analytics_report import send_weekly_report
     from backend.services.week_meting import snapshot_vorige_week
     from backend.content.evaluator import run_evaluation_cycle_sync
