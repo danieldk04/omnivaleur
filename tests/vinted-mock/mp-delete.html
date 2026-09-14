@@ -98,18 +98,24 @@ function bouwFrame(state, herladen) {
   d.body.innerHTML = weg ? "<p>Log in om je advertenties te zien.</p>"
                          : overzichtHtml(zichtbaar, state);
   // fetch() zoals de code hem gebruikt om de advertentiepagina na te kijken.
-  // VÓÓR er geklikt is, staat de advertentie gewoon te koop. NÁ het klikken
-  // beslist state.fetchNaKlik wat de rauwe HTML/status teruggeeft — dat mag
-  // van het echte scherm afwijken (state.domNaKlik), want dat verschil is
-  // precies wat deze proef test.
+  // Standaard is dat de WAARHEID: staat het advertentienummer nog in
+  // state.ads, dan leeft hij; anders is hij weg. Dat dekt de gewone
+  // vinklijst-route, waar een geslaagde verwijdering de rij uit state.ads
+  // haalt. Alleen de advertentiepagina-route (verwijderViaAdvertentiepagina,
+  // ná een geslaagde klik+bevestiging) mag hiervan afwijken via
+  // state.fetchNaKlik — dat is precies het scenario dat deze proef test: een
+  // fetch die iets anders zegt dan de echte pagina (state.domNaKlik).
   f.contentWindow.fetch = async (u) => {
-    if (!state.klikGelukt) {
+    const id = (String(u).match(/seller\/view\/(m\d+)/) || [])[1];
+    if (state.klikGelukt && state.fetchNaKlik) {
+      if (state.fetchNaKlik === "weg") return { ok: false, status: 404, text: async () => "" };
+      if (state.fetchNaKlik === "vals-weg") return { ok: true, status: 200, text: async () => "<p>niet meer beschikbaar</p>" };
       return { ok: true, status: 200, text: async () => "<h1>" + state.ads.map(a => a.titel).join(" ") + "</h1> te koop" };
     }
-    const uitkomst = state.fetchNaKlik || "leeft";
-    if (uitkomst === "weg") return { ok: false, status: 404, text: async () => "" };
-    if (uitkomst === "vals-weg") return { ok: true, status: 200, text: async () => "<p>niet meer beschikbaar</p>" };
-    return { ok: true, status: 200, text: async () => "<h1>" + state.ads.map(a => a.titel).join(" ") + "</h1> te koop" };
+    const nogAanwezig = id ? state.ads.some(a => a.id === id) : state.ads.length > 0;
+    return nogAanwezig
+      ? { ok: true, status: 200, text: async () => "<h1>" + state.ads.map(a => a.titel).join(" ") + "</h1> te koop" }
+      : { ok: false, status: 404, text: async () => "" };
   };
   bedraad(f, state);
   return f;
