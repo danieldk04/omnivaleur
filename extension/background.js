@@ -3513,6 +3513,7 @@ async function verwijderViaAdvertentiepagina(tabId, adUrl, platform) {
     // een eventueel vervolgscherm afhandelen.
     await sleep(1200);
     const CONFIRM_STEPS = 3;
+    const diag = [];
     for (let stap = 0; stap < CONFIRM_STEPS; stap++) {
       const res = await execInTab(tabId, async () => {
         const zichtbaar = el => el && el.offsetParent !== null && !el.disabled;
@@ -3525,34 +3526,66 @@ async function verwijderViaAdvertentiepagina(tabId, adUrl, platform) {
         const knop =
           knoppen.find(b => /niet\s+verkocht/i.test(tekst(b))) ||
           knoppen.find(b => /^(verwijder(en)?|ja,? verwijder(en)?|bevestig(en)?|yes,? delete|delete|confirm|doorgaan|ok)\b/i.test(tekst(b)));
-        if (!knop) return { open: !!modal, clicked: false };
+        // Ook zonder klik vastleggen wat er stond: als een verplichte stap (een
+        // reden-keuze bijvoorbeeld) hier ooit wél openstaat maar geen van onze
+        // woorden draagt, is dit de enige plek waar dat ooit zichtbaar wordt.
+        const gezien = knoppen.map(tekst).slice(0, 12);
+        if (!knop) return { open: !!modal, clicked: false, gezien };
         knop.click();
-        return { open: true, clicked: true };
-      });
+        return { open: true, clicked: true, knop: tekst(knop), gezien };
+      }).catch(e => ({ open: null, clicked: false, error: String(e) }));
+      diag.push({ fase: "bevestigen", stap, ...res });
       if (!res || !res.open) break;
       if (!res.clicked) break; // geen herkenbare knop meer — niets forceren
       await sleep(1500);
     }
     await sleep(1500);
 
-    // Nakijken, niet aannemen. Pas als de advertentie aantoonbaar weg is melden
-    // we succes.
+    // Nakijken, niet aannemen. Eén fetch() haalt de ruwe HTML op VÓÓR React
+    // draait — een tekstcontrole daarop kan alles missen wat de pagina pas na
+    // JavaScript toont. Daarom telt een "weg" van de fetch niet als bewijs op
+    // zichzelf: pas als een echte tabbladnavigatie (met JS, dus de gerenderde
+    // pagina zoals de verkoper hem zelf zou zien) dat bevestigt, boeken we
+    // succes. Twee onafhankelijke signalen die het eens zijn, geen enkele.
     for (let poging = 0; poging < 3; poging++) {
-      const weg = await execInTab(tabId, async (u) => {
+      const fetchRes = await execInTab(tabId, async (u) => {
         try {
           const r = await fetch(u, { credentials: "include", redirect: "follow" });
-          if (r.status === 404 || r.status === 410) return true;
-          if (!r.ok) return null;
+          if (r.status === 404 || r.status === 410) return { weg: true, status: r.status, via: "status" };
+          if (!r.ok) return { weg: false, status: r.status, via: "not-ok" };
           const html = (await r.text()).toLowerCase();
-          return /niet meer beschikbaar|is verwijderd|verlopen advertentie|no longer available/.test(html);
-        } catch (e) { return null; }
-      }, [adUrl]).catch(() => null);
-      if (weg === true) return true;
+          const m = /niet meer beschikbaar|is verwijderd|verlopen advertentie|no longer available/.exec(html);
+          return { weg: !!m, status: r.status, via: m ? `text:${m[0]}` : "no-match", htmlLen: html.length };
+        } catch (e) { return { weg: false, via: "error", error: String(e) }; }
+      }, [adUrl]).catch(e => ({ weg: false, via: "exec-error", error: String(e) }));
+      diag.push({ fase: "fetch-check", poging, ...fetchRes });
+
+      if (fetchRes && fetchRes.weg) {
+        await stuurWerkTabbladNaar(tabId, adUrl);
+        await waitForTabLoad(tabId);
+        await sleep(1500);
+        const domRes = await execInTab(tabId, (u) => {
+          const tekst = (document.body.innerText || "").toLowerCase();
+          const m = /niet meer beschikbaar|is verwijderd|verlopen advertentie|no longer available|pagina niet gevonden|niet gevonden/.exec(tekst);
+          return { url: location.href, textHit: m ? m[0] : null };
+        }, [adUrl]).catch(e => ({ error: String(e) }));
+        diag.push({ fase: "dom-tegencontrole", poging, ...domRes });
+
+        if (domRes && domRes.textHit) {
+          console.log("[Omnivaleur] verwijderen bevestigd, fetch en DOM eens:", JSON.stringify(diag));
+          _laatsteVerwijderDiag = diag;
+          return true;
+        }
+        console.log("[Omnivaleur] fetch zei 'weg', echte pagina sprak tegen — genegeerd:", JSON.stringify(diag));
+      }
       await sleep(2000);
     }
+    console.log("[Omnivaleur] verwijderen niet aantoonbaar gelukt:", JSON.stringify(diag));
+    _laatsteVerwijderDiag = diag;
     return false;
   } catch (e) {
     console.error("[Omnivaleur] verwijderen via advertentiepagina mislukt:", e);
+    _laatsteVerwijderDiag = [{ fase: "exception", error: String(e) }];
     return false;
   }
 }
