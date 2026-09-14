@@ -152,8 +152,8 @@ def test_wie_er_geen_opvolging_krijgt(postbus, waarom, instellen):
 
 
 def test_jij_schreef_na_de_video_zelf_nog_iets(postbus):
-    video_op = time.time() - 8 * DAG
-    postbus.verzonden_op = time.time() - 2 * DAG          # jouw nieuwere mail
+    video_op = time.time() - 9 * DAG
+    postbus.verzonden_op = time.time() - 8 * DAG          # jouw nieuwere mail, een dag na de video
     assert _draai({ADRES: {"video_opvolg": 1, "video_op": video_op}}) == 0
 
 
