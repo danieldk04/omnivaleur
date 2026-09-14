@@ -9409,3 +9409,34 @@ zet het tabblad in dezelfde proef wél in het incognitovenster.
 Let op: dat Egbert een incognitovenster open had is NIET bewezen. Wat bewezen is:
 zijn tabblad zag geen sessie, en dit is de enige plek in onze code die dat kan
 veroorzaken. `dist/omnivaleur-extension-1.0.328.zip` staat klaar voor de Web Store.
+
+### Correctie: dit is de tweede keer, en incognito verklaart de eerste keer niet
+
+Daniel wees erop dat we dit eerder hebben gehad. Dat klopt, en het haalt mijn
+verklaring onderuit als enige oorzaak.
+
+Op 05-09-2026 stond hier al: "Egbert had gelijk: hij was ingelogd, en 2dehands
+liep dood op de inlogpagina". Zelfde beeld als vandaag: een werktabblad dat
+uitkomt op `/identity/v2/login`, en een verkoper die zegt dat hij ingelogd is.
+Toen is gebouwd dat we het van tevoren vragen en het adres in de melding zetten;
+waarom dat tabblad geen sessie had is nooit beantwoord.
+
+En dat is precies het probleem met mijn incognitoverklaring: publiceren ging pas
+vanaf 06-09-2026 in een bestaand venster (commit f12d3bba, na de klacht van Toon
+dat zijn scherm wegviel). Op 05-09 opende publiceren nog ons eigen venster, en
+dat is nooit incognito. Op 05-09 kán incognito het dus niet geweest zijn, en
+toch kwam het tabblad op de inlogpagina uit.
+
+Wat over beide keren heen wél vaststaat: op dat moment had het browserprofiel
+waarin de extensie draait geen 2dehands-sessie. Dat is iets anders dan "hij liegt
+over zijn inlog": Marktplaats en 2dehands zijn aparte inlogs van dezelfde
+eigenaar, hij werkt vrijwel alleen op Marktplaats, en zijn 2dehands-sessie is nu
+twee keer verdwenen tussen twee werkdagen door.
+
+1.0.328 blijft staan, maar met de juiste omschrijving: een werktabblad hoort
+nooit in een incognitovenster te landen en een weigering daar is geen oordeel
+over zijn inlog. Dat is een verharding, geen bewezen oorzaak.
+
+Openstaand en de moeite waard: hij hoort te zien dat zijn 2dehands-sessie weg is
+vóórdat hij 288 artikelen klaarzet, niet erna. Die wetenschap hebben we al
+(`scan_meta.signed_in`), het dashboard doet er niets mee.
