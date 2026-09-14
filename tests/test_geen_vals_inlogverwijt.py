@@ -141,3 +141,28 @@ def test_zonder_versiestempel_valt_hij_terug_op_de_meting():
     assert api._reden_zonder_vals_verwijt(_NepDb([]), "u", "2dehands", VERWIJT, None) == VERWIJT
     uit = api._reden_zonder_vals_verwijt(_NepDb([_scan(200)]), "u", "2dehands", VERWIJT, None)
     assert "fault on our side" in uit
+
+
+def test_de_kopie_die_het_zelf_mat_krijgt_het_laatste_woord():
+    """14-09-2026: 291 zoekertjes teruggenomen met "de fout ligt bij ons".
+
+    Zijn extensie (1.0.327) had het op dat moment twee keer op 2dehands.be zelf
+    gemeten en kreeg twee keer een weigering. Onze eigen meting was er een van
+    33 uur eerder. Die van ons kreeg het laatste woord, en dus las Egbert dat er
+    aan zijn kant niets aan de hand was terwijl zijn sessie verlopen kon zijn.
+    """
+    db = _NepDb([_scan(200, uren_geleden=33)])
+    uit = api._reden_zonder_vals_verwijt(db, "u", "2dehands", VERWIJT, "1.0.327")
+    assert uit.startswith(VERWIJT), "wat zijn eigen browser NU mat, staat vooraan"
+    assert "HTTP 200" in uit, "en wat wij weten staat eronder, als tegenspraak"
+    assert "fault is ours" in uit
+
+    # Zonder tegenspraak van onze kant blijft het precies zijn eigen melding.
+    assert api._reden_zonder_vals_verwijt(
+        _NepDb([]), "u", "2dehands", VERWIJT, "1.0.327") == VERWIJT
+
+    # Een kopie van vóór de eigen meting verandert niet: die mag dit nog steeds
+    # niet zeggen, want zij oordeelt alleen uit haar achtergrond.
+    oud = api._reden_zonder_vals_verwijt(
+        _NepDb([_scan(200, uren_geleden=33)]), "u", "2dehands", VERWIJT, "1.0.307")
+    assert "not signed in" not in oud and "fault on our side" in oud

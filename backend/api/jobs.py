@@ -4620,10 +4620,32 @@ def _reden_zonder_vals_verwijt(db, user_id: str, platform: str, reden: str,
     versie = _kopstuk_versie(kopstuk_versie)
     oude_kopie = versie is not None and versie < _VERSIE_MET_EIGEN_INLOGMETING
     wanneer = _laatste_eigen_meting(db, user_id, platform)
-    if not wanneer and not oude_kopie:
-        return reden
     site = {"marktplaats": "Marktplaats (marktplaats.nl)",
             "2dehands": "2dehands (2dehands.be)"}.get(platform, platform)
+
+    # EEN KOPIE DIE HET ZELF METTE KRIJGT HET LAATSTE WOORD (14-09-2026).
+    # Vanaf 1.0.308 meet de extensie het op het moment zelf en op de site zelf:
+    # eerst in de achtergrond en daarna nog eens in een tabblad op de site, en
+    # pas als beide 401/403 geven zegt ze "niet ingelogd". Onze eigen scan is
+    # een momentopname van uren geleden, en die eroverheen leggen stuurde Egbert
+    # Brouwer precies de verkeerde kant op: 291 zoekertjes teruggenomen met de
+    # tekst "de fout ligt bij ons", terwijl onze laatste eigen meting van 33 uur
+    # eerder was en zijn 2dehands-sessie sindsdien gewoon verlopen kan zijn.
+    # De waarneming van zijn eigen browser gaat dus voor. Weten we iets wat er
+    # tegenin gaat, dan zeggen we dat erbij in plaats van in zijn plaats te
+    # concluderen.
+    if versie is not None and not oude_kopie:
+        if not wanneer:
+            return reden
+        return reden + "\n\n" + (
+            f"One thing on our side does not match that: your own browser did reach your {site} "
+            f"account page on {wanneer[:16].replace('T', ' ')} (HTTP 200). So if you open the page "
+            f"above and your own adverts are simply there, the fault is ours and not your account. "
+            f"Tell us if that is what you see, because we cannot tell from here."
+        )
+
+    if not wanneer and not oude_kopie:
+        return reden
     logger.warning(
         "stop-platform: verwijt 'niet ingelogd' geweigerd voor %s/%s (versie %s, eigen scan 200 op %s)",
         user_id, platform, versie, wanneer)
