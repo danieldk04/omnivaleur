@@ -343,15 +343,19 @@ async function draaiWegCheck(routine, staat) {
     FRAME.remove();
   }
 }
+// state.ads bevat hier NOOIT het advertentienummer zelf (m2423718603) — anders
+// zou de "staat gewoon in het overzicht"-waarheid in de fetch-mock het scenario
+// overstemmen. Een losse vulling houdt __origIds leeg voor dat nummer, zodat
+// alleen state.adPageStatus (en state.fetchNaKlik erbovenop) tellen.
 const wegCheckScenarios = [
   { naam: "fetch en de echte pagina zijn het eens: weg",
-    staat: { fetchNaKlik: "weg", domNaKlik: "weg", ads: [AD("m2423718603", HET_VEST)] },
+    staat: { fetchNaKlik: "weg", domNaKlik: "weg", ads: [AD("m2999999999", "Blauwe trui")] },
     verwacht: "complete" },
   { naam: "fetch en de echte pagina zijn het eens: nog online",
-    staat: { fetchNaKlik: "leeft", domNaKlik: "leeft", ads: [AD("m2423718603", HET_VEST)] },
+    staat: { fetchNaKlik: "leeft", domNaKlik: "leeft", ads: [AD("m2999999999", "Blauwe trui")] },
     verwacht: "error" },
   { naam: "fetch zegt weg, de echte pagina niet — vals-positief genegeerd",
-    staat: { fetchNaKlik: "vals-weg", domNaKlik: "leeft", ads: [AD("m2423718603", HET_VEST)] },
+    staat: { fetchNaKlik: "vals-weg", domNaKlik: "leeft", ads: [AD("m2999999999", "Blauwe trui")] },
     verwacht: "error" },
 ];
 
