@@ -9336,3 +9336,25 @@ weer ingelogd is op 2dehands.be zet één commando ze terug in de rij, zonder da
 hij 288 artikelen opnieuw hoeft aan te klikken:
 
     python3 scripts/herstel_betalende_rubriek.py --gestopte-wachtrij --apply
+
+### Correctie diezelfde avond: wij concluderen dit niet, we vragen het
+
+Daniel kende de voorgeschiedenis beter dan de meting suggereerde: Egbert heeft
+het verwijt "niet ingelogd" eerder ten onrechte gekregen. Nageteld in zijn
+opdrachten sinds 20-08-2026:
+
+- de OUDE controle (alleen uit de achtergrond van de extensie) beschuldigde hem
+  27 keer, verspreid over 22-08 tot en met 09-09. Dat zijn de keren dat hij
+  gelijk had.
+- de NIEUWE controle (achtergrond plus een tabblad op de site zelf, vanaf
+  1.0.308) sloeg tot nu toe nul keer aan. Vandaag voor het eerst, terwijl er in
+  de vijf dagen ertussen 201 zoekertjes van hem gewoon online gingen.
+
+Het blijft dus een waarneming en geen bewijs. De melding in zijn scherm zegt nu
+geen van beide dingen als waarheid: hij noemt wat zijn eigen browser zag (HTTP
+401, en de accountpagina kwam uit op de inlogpagina), wat wij zagen (13-09 om
+09:24 diezelfde pagina wel, HTTP 200), en vraagt hem één ding: open die pagina en
+zeg wat je ziet. Ziet hij zijn eigen advertenties, dan ligt het aan ons en horen
+we dat. Ziet hij een inlogscherm, dan zetten wij zijn wachtrij daarna zelf terug.
+
+De 288 rijen in zijn scherm dragen die nieuwe tekst al.
