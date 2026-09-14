@@ -141,6 +141,7 @@ def test_opvolging_2_wacht_tot_dag_7(postbus):
     ("zei nee", lambda p, st: st.update(afgewezen=True)),
     ("gebruikt een concurrent", lambda p, st: st.update(concurrent=True)),
     ("bounce", lambda p, st: st.update(bounce=True)),
+    ("alleen een vakantiemelding terug, nooit echt geantwoord", lambda p, st: st.update(auto_antwoord=True)),
     ("jouw mail sloot het gesprek af", lambda p, st: setattr(
         p, "tekst", VIDEOMAIL.replace("Laat maar weten", "Mocht het anders liggen, dan hoor ik het wel."))),
 ])

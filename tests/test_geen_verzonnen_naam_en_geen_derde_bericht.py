@@ -119,16 +119,17 @@ def test_een_openstaande_vraag_mag_wel_een_zetje_krijgen(L, tekst):
 
 
 def test_de_opvolging_kijkt_daar_ook_echt_naar():
-    blok = BRON.split("def _warme_opvolging(", 1)[1].split("\ndef ", 1)[0]
+    # Sinds 14-09-2026 heet de opvolging _video_opvolging en verstuurt hij zelf.
+    blok = BRON.split("def _video_opvolging(", 1)[1].split("\ndef ", 1)[0]
     assert "_is_afsluiting(" in blok
     # en zet de teller door, zodat er niet elke ronde opnieuw naar gekeken wordt
     volgt = blok.split("_is_afsluiting(", 1)[1][:220]
-    assert 'st["warm_opvolg"] = len(WARM_OPVOLG_DAGEN)' in volgt
+    assert 'st["video_opvolg"] = len(VIDEO_OPVOLG_DAGEN)' in volgt
 
 
 def test_een_vakantiemelding_telt_niet_als_gesprek():
     """Het enige wat Frank ooit terugstuurde was zijn afwezigheidsassistent.
     Dat werd gelezen als "hij heeft gereageerd, dus dit gesprek is stilgevallen"
     — terwijl er nooit iemand heeft meegelezen."""
-    blok = BRON.split("def _warme_opvolging(", 1)[1].split("\ndef ", 1)[0]
+    blok = BRON.split("def _video_opvolging(", 1)[1].split("\ndef ", 1)[0]
     assert 'st.get("auto_antwoord") and not st.get("beantwoord")' in blok

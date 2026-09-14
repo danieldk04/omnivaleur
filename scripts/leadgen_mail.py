@@ -572,7 +572,10 @@ def _haakje(lead: dict) -> str:
     # De classificatie zet hier soms "Alles" of "Antieke vintage" neer. Alleen een
     # rubriek die als los zelfstandig naamwoord in een zin past mag erin; de rest
     # wordt weggelaten, want een rare zin valt meer op dan een vage zin.
-    zin = f"Zag {v['jouw']} advertenties op Marktplaats voorbijkomen"
+    # Het platform waar de lead echt zit. Tot 14-09-2026 stond hier vast
+    # "Marktplaats", en kregen Belgische 2dehands-verkopers dus te lezen dat we hun
+    # advertenties op Marktplaats hadden zien staan.
+    zin = f"Zag {v['jouw']} advertenties op {_platformnaam(lead)} voorbijkomen"
     if ads >= 100 and rubriek in RUBRIEKEN:
         zin += f", {_rond(ads)} stuks in {rubriek}."
     elif ads >= 100:
@@ -748,10 +751,9 @@ def _tekst(lead: dict, sjabloon: str) -> str:
 
 
 def _onderwerp(lead: dict, n: int, st: dict | None = None) -> str:
-    """Ook de onderwerpregel volgt je/jullie — anders staat er "je aanbod" boven
-    een mail die verder de hele tijd "jullie" zegt. Onderwerp én tekst komen uit
-    de A/B-versie die bij dit adres hoort (`_beurten`)."""
-    return _beurten(lead, st)[n][1].format(**_jij(lead))
+    """Ook de onderwerpregel volgt je/jullie en de A/B-versie van dit adres. Sinds
+    14-09-2026 uit de tab Mailteksten, zie _mailtekst."""
+    return _mailtekst(lead, n, st)[0]
 
 
 def _netjes(tekst: str) -> str:
@@ -829,13 +831,16 @@ def _beurt(lead: dict, st: dict | None) -> tuple[int, str] | None:
     return verstuurd, f"opvolgmail {verstuurd} (na {wacht} dagen)"
 
 
-def _wachtrij(state: dict, budget: int) -> list[tuple[dict, int, str]]:
+def _wachtrij(state: dict, budget: int,
+              gestopt: set[str] | frozenset = frozenset()) -> list[tuple[dict, int, str]]:
     # Opvolgmails gaan vóór nieuwe eerste mails: een gesprek dat loopt is meer
     # waard dan een gesprek dat nog moet beginnen. Maar niet ten koste van álles
     # — zie NIEUW_AANDEEL: er blijft altijd ruimte voor nieuwe leads, anders
     # droogt de bovenkant van de trechter op zodra er een opvolggolf loopt.
     opvolg, nieuw = [], []
     for lead in _leads():
+        if lead["email"].lower() in gestopt:     # Daniel vinkte "Niet meer mailen" aan
+            continue
         beurt = _beurt(lead, state.get(lead["email"].lower()))
         if not beurt:
             continue
@@ -875,178 +880,225 @@ def _controleer_afzender(met_verbinding: bool = True) -> str:
     return _need("MAIL_HOST") if met_verbinding else ""
 
 
-# ------------------------------------------------------------------- Notion
+# ------------------------------------------------------------ werkoverzicht
 
 
-class Notion:
-    """Houdt in de Leadlist bij wat er is verstuurd en wat er terugkwam.
+def _sheets_module():
+    """leadgen_sheets, of het script nu los draait of als scripts.leadgen_mail."""
+    try:
+        import leadgen_sheets as module
+    except ImportError:
+        from scripts import leadgen_sheets as module
+    return module
 
-    Twee lagen, omdat Notion een hele update weigert zodra er één kolomnaam of
-    keuze in staat die niet bestaat:
-      1. een regel onder aan de leadpagina, met datum. Blokken hebben geen
-         kolomnamen en kunnen dus nooit breken. Dit is de echte administratie.
-      2. de kolommen Fase, Status, Eerste contact, Volgende actie op en
-         Follow-ups verstuurd, voor zover die aantoonbaar bestaan.
 
-    De keuzes hieronder zijn overgenomen uit de LIVE database (2026-08-11). Zonder
-    NOTION_TOKEN doet dit niets en gaat het verzenden gewoon door: mail versturen
-    mag nooit stukgaan omdat een administratie niet bereikbaar is.
+class Leadboek:
+    """Houdt in de spreadsheet "Omnivaleur E-mail outreach" bij wat er is
+    verstuurd en wat er terugkwam.
+
+    Tot 14-09-2026 deed de klasse Notion dit in de Notion-Leadlist. De methodes en
+    de fases zijn bewust hetzelfde gebleven, zodat de rest van de machine niets
+    merkt van de verhuizing.
+
+    Is de spreadsheet niet bereikbaar, dan gaat het verzenden gewoon door: de echte
+    administratie staat in Supabase, dit is het overzicht. Wat niet weggeschreven
+    kon worden komt in `fouten` en daarmee in het avondbericht. De twee dingen die
+    Daniel hier zelf bedient, de mailteksten en het stopvinkje, lezen we wel streng:
+    zie tick().
     """
 
-    # per beurt: (fase, status, aantal follow-ups verstuurd)
+    # per beurt: (fase, status)
     NA_MAIL = {
-        0: ("2. Benaderd", "Reached Out", 0),
-        1: ("T2. Tekst follow-up 1", "Reached Out", 1),
-        2: ("T3. Tekst follow-up 2 (laatste)", "Reached Out", 2),
+        0: ("2. Benaderd", "Reached Out"),
+        1: ("T2. Tekst follow-up 1", "Reached Out"),
+        2: ("T3. Tekst follow-up 2 (laatste)", "Reached Out"),
     }
 
     def __init__(self) -> None:
-        self.token = os.environ.get("NOTION_TOKEN", "")
-        self.paginas: dict[str, str] = {}
-        self.props: dict = {}
-        self.gemist: set[str] = set()
-        self.zonder_pagina = 0
+        self.blad = None
+        self.fouten: list[str] = []
         self.klaar = False
 
     def _start(self) -> bool:
         if self.klaar:
-            return bool(self.token)
+            return self.blad is not None
         self.klaar = True
-        if not self.token:
-            print("  (geen NOTION_TOKEN — niets bijgehouden in Notion)")
-            return False
+        m = _sheets_module()
         try:
-            import leadgen_notion as notion
-            self.paginas = notion.existing_pages(self.token)
-            self.props = notion.schema(self.token)
-        except Exception as e:  # noqa: BLE001
-            print(f"  (Notion niet bereikbaar: {e})")
-            self.token = ""
-            return False
-        return True
+            self.blad = m.Leadblad(m.Sheets(), naam=_bedrijfsnaam)
+        except m.SheetsFout as e:
+            self._fout(f"niet bereikbaar: {e}")
+        return self.blad is not None
+
+    def _fout(self, tekst: str) -> None:
+        print(f"  (spreadsheet: {tekst})")
+        self.fouten.append(tekst)
+
+    def gestopt(self) -> set[str]:
+        """Wie Daniel met "Niet meer mailen" uit de reeks heeft gehaald. Streng:
+        gooit SheetsFout als dat niet te lezen is."""
+        m = _sheets_module()
+        if not self._start():
+            raise m.SheetsFout(self.fouten[-1] if self.fouten else "spreadsheet niet bereikbaar")
+        return self.blad.gestopt()
 
     def _schrijf(self, lead: dict, regel: str, wensen: dict) -> None:
         if not self._start():
             return
-        pagina = self.paginas.get((lead.get("ig_url") or "").rstrip("/").lower())
-        if not pagina:
-            self.zonder_pagina += 1
-            return
-        import leadgen_notion as notion
         try:
-            notion.append_log(pagina, self.token,
-                              f"{datetime.now().strftime('%d-%m-%Y %H:%M')} — {regel}")
-            self.gemist |= set(notion.set_props(pagina, self.token, wensen, self.props))
-        except Exception as e:  # noqa: BLE001
-            print(f"  (Notion: {lead.get('email')} niet bijgewerkt: {e})")
+            self.blad.noteer(lead, regel, wensen)
+        except _sheets_module().SheetsFout as e:
+            self._fout(f"{lead.get('email')} niet bijgewerkt: {e}")
 
-    def verstuurd(self, lead: dict, n: int, onderwerp: str) -> None:
-        fase, status, gedaan = self.NA_MAIL[n]
-        wensen = {"Fase": ("select", fase), "Status": ("status", status),
-                  "Follow-ups verstuurd": ("number", gedaan)}
+    def wegschrijven(self) -> None:
+        if self.blad is None:
+            return
+        try:
+            self.blad.wegschrijven()
+        except _sheets_module().SheetsFout as e:
+            self._fout(f"niet weggeschreven, volgende poging neemt het mee: {e}")
+
+    def verstuurd(self, lead: dict, n: int, onderwerp: str, reeks: str = "") -> None:
+        fase, status = self.NA_MAIL[n]
+        wensen = {"Fase": fase, "Status": status, "Mails verstuurd": n + 1}
+        if reeks:
+            wensen["Reeks"] = reeks
         if n == 0:
-            wensen["Eerste contact"] = ("date", date.today().isoformat())
+            wensen["Eerste contact"] = date.today().isoformat()
         if n < len(FOLLOWUP_DAGEN):
-            volgende = date.today() + timedelta(days=FOLLOWUP_DAGEN[n])
-            wensen["Volgende actie op"] = ("date", volgende.isoformat())
-        self._schrijf(lead, f"mail {n + 1} verstuurd naar {lead['email']} — "
-                            f"onderwerp: {onderwerp}", wensen)
+            wensen["Volgende actie op"] = (date.today() + timedelta(days=FOLLOWUP_DAGEN[n])).isoformat()
+        self._schrijf(lead, f"mail {n + 1} verstuurd, onderwerp: {onderwerp}", wensen)
+        self.wegschrijven()     # meteen zichtbaar in de lijst, niet pas aan het eind van de beurt
 
     def geantwoord(self, lead: dict, soort: str = "onbekend") -> None:
         """Iemand heeft geantwoord. Dat is een FEIT en gaat altijd naar Fase
-        '4. Gereageerd'. Of het ook interesse is, is een OORDEEL — en dat mag je
+        '4. Gereageerd'. Of het ook interesse is, is een OORDEEL, en dat mag je
         niet automatisch aannemen: "we gebruiken al Channable" is een antwoord
-        maar geen interesse, en die landde eerder gewoon tussen de warme leads.
-        Status Interesse zetten we daarom alleen als er niets op tegenspreekt."""
-        wensen = {"Fase": ("select", "4. Gereageerd"),
-                  "Volgende actie op": ("date", date.today().isoformat())}
+        maar geen interesse. Status Interesse alleen bij een warm antwoord."""
+        wensen = {"Fase": "4. Gereageerd", "Volgende actie op": date.today().isoformat()}
         if soort == "warm":
-            wensen["Status"] = ("status", "Interesse")
+            wensen["Status"] = "Interesse"
         self._schrijf(lead, "heeft geantwoord op de mail", wensen)
 
     def wacht_op_daniel(self, lead: dict) -> None:
-        """Warme reactie: de bal ligt bij Daniel. Dit is de enige lijst die hij
-        elke dag hoeft te openen, dus die moet kloppen."""
-        self._schrijf(lead, "warme reactie — concept klaargezet in je postbus",
-                      {"Fase": ("select", FASE_AAN_ZET),
-                       "Status": ("status", "Interesse"),
-                       "Volgende actie op": ("date", date.today().isoformat())})
+        """Warme reactie: de bal ligt bij Daniel."""
+        self._schrijf(lead, "warme reactie: jij bent aan zet",
+                      {"Fase": FASE_AAN_ZET, "Status": "Interesse",
+                       "Volgende actie op": date.today().isoformat()})
 
     def bal_bij_hen(self, lead: dict, dagen: int = 4) -> None:
-        """Daniel heeft geantwoord; nu is het aan hen. Zonder deze stap bleef een
-        lead op 'jij bent aan zet' staan nadat hij allang gereageerd had."""
-        self._schrijf(lead, "jij hebt geantwoord — bal ligt bij hen",
-                      {"Fase": ("select", FASE_BAL_BIJ_HEN),
-                       "Volgende actie op": ("date",
-                                             (date.today() + timedelta(days=dagen)).isoformat())})
+        """Daniel heeft geantwoord; nu is het aan hen."""
+        self._schrijf(lead, "jij hebt geantwoord, de bal ligt bij hen",
+                      {"Fase": FASE_BAL_BIJ_HEN,
+                       "Volgende actie op": (date.today() + timedelta(days=dagen)).isoformat()})
 
     def afgesloten_bericht(self, lead: dict, soort: str) -> None:
-        """Vastleggen dat er een afsluitend berichtje uit is. Zonder deze regel
-        lijkt het in Notion alsof er nooit op hun antwoord gereageerd is, en dan
-        gaat Daniel het alsnog met de hand doen — dubbelop."""
         wat = "gebruikt al iets" if soort == "concurrent" else "geen interesse"
-        self._schrijf(lead, f"afsluitend bedankje gestuurd ({wat}) — niets meer te doen", {})
+        self._schrijf(lead, f"afsluitend bedankje gestuurd ({wat}), niets meer te doen", {})
 
     def gebruikt_concurrent(self, lead: dict) -> None:
-        """Crosslist al, maar met iemand anders. Bewaren als eigen groep: dit is
-        geen nee maar een bezet ja, en de meest kansrijke lijst die je hebt zodra
-        die andere tool tegenvalt."""
-        self._schrijf(lead, "gebruikt al een andere tool — bezet, geen nee",
-                      {"Fase": ("select", FASE_CONCURRENT),
-                       "Afgesloten reden": ("select", "Gebruikt al een tool"),
-                       "Volgende actie op": ("date", None)})
+        """Crosslist al, maar met iemand anders: geen nee maar een bezet ja."""
+        self._schrijf(lead, "gebruikt al een andere tool: bezet, geen nee",
+                      {"Fase": FASE_CONCURRENT, "Afgesloten reden": "Gebruikt al een tool",
+                       "Volgende actie op": None})
 
     def afgewezen(self, lead: dict) -> None:
-        """Een nee. Wel gereageerd, dus geen doodgelopen spoor — maar ook geen
-        interesse, en dat moet je in de lijst kunnen zien zonder elke mail te
-        openen. Status blijft met opzet ongemoeid: er is geen 'nee'-status in de
-        database, en een verkeerde is erger dan geen."""
+        """Een nee. Status blijft met opzet ongemoeid: er is geen nee-status."""
         self._schrijf(lead, "heeft geantwoord: geen interesse",
-                      {"Fase": ("select", "Geen interesse"),
-                       "Afgesloten reden": ("select", "Niet geinteresseerd"),
-                       "Volgende actie op": ("date", None)})
+                      {"Fase": "Geen interesse", "Afgesloten reden": "Niet geinteresseerd",
+                       "Volgende actie op": None})
 
     def doodgelopen(self, lead: dict) -> None:
-        """Alle mails eruit, nooit iets teruggehoord. Dit is het eindpunt van de
-        automatische kant; wat hier belandt is klaar voor de machine."""
-        self._schrijf(lead, f"geen reactie na alle opvolgmails "
-                            f"({STIL_NA_DAGEN} dagen stil) — afgesloten",
-                      {"Fase": ("select", "Doodgelopen"),
-                       "Afgesloten reden": ("select", "Geen reactie na follow-ups"),
-                       "Volgende actie op": ("date", None)})
+        self._schrijf(lead, f"geen reactie na alle opvolgmails ({STIL_NA_DAGEN} dagen stil), "
+                            f"afgesloten",
+                      {"Fase": "Doodgelopen", "Afgesloten reden": "Geen reactie na follow-ups",
+                       "Volgende actie op": None})
 
     def met_de_hand(self, lead: dict, datum: str) -> None:
-        """Al gemaild vanaf dit adres, maar niet volgens de administratie: Daniel
-        deed het zelf, of het was een oudere ronde waarvan de administratie weg is.
-        Beide gevallen betekenen hetzelfde — deze persoon is al benaderd en krijgt
-        geen tweede koude mail."""
-        self._schrijf(lead, f"al benaderd op {datum} buiten de machine om — "
+        """Al gemaild vanaf dit adres, maar niet door de machine."""
+        self._schrijf(lead, f"al benaderd op {datum} buiten de machine om, "
                             f"geen automatische mail meer",
-                      {"Fase": ("select", "2. Benaderd"),
-                       "Status": ("status", "Reached Out"),
-                       "Eerste contact": ("date", datum)})
+                      {"Fase": "2. Benaderd", "Status": "Reached Out", "Eerste contact": datum})
 
     def afgemeld(self, lead: dict) -> None:
-        self._schrijf(lead, "heeft zich afgemeld — niet meer mailen",
-                      {"Fase": ("select", "Geen interesse"),
-                       "Afgesloten reden": ("select", "Niet geinteresseerd")})
+        self._schrijf(lead, "heeft zich afgemeld, niet meer mailen",
+                      {"Fase": "Geen interesse", "Afgesloten reden": "Niet geinteresseerd"})
 
     def gebounced(self, lead: dict) -> None:
-        self._schrijf(lead, "mail kwam niet aan (bounce) — adres klopt niet",
-                      {"Fase": ("select", "Doodgelopen")})
+        self._schrijf(lead, "mail kwam niet aan (bounce), adres klopt niet",
+                      {"Fase": "Doodgelopen"})
+
+    def video_opvolging(self, lead: dict, beurt: int, video_op: float) -> None:
+        """Een opvolging na Daniels video is de deur uit."""
+        wensen = {"Fase": "5. Video verstuurd"}
+        if beurt + 1 < len(VIDEO_OPVOLG_DAGEN):
+            volgende = datetime.fromtimestamp(video_op).date() + \
+                timedelta(days=VIDEO_OPVOLG_DAGEN[beurt + 1])
+            wensen["Volgende actie op"] = volgende.isoformat()
+        else:
+            wensen["Volgende actie op"] = None
+        laatste = ", de laatste" if beurt + 1 == len(VIDEO_OPVOLG_DAGEN) else ""
+        self._schrijf(lead, f"video-opvolging {beurt + 1} verstuurd "
+                            f"({VIDEO_OPVOLG_DAGEN[beurt]} dagen na je video{laatste})", wensen)
+        self.wegschrijven()
 
     def afsluiten(self) -> None:
-        if self.zonder_pagina:
-            print(f"  ({self.zonder_pagina} leads staan nog niet in de Leadlist — "
-                  f"draai leadgen_marktplaats.py push)")
-        if self.gemist:
-            print("\nNotion: deze kolommen of keuzes bestaan niet in de Leadlist en\n"
-                  "zijn overgeslagen — " + ", ".join(sorted(self.gemist)) + ".\n"
-                  "De regels onder aan elke leadpagina zijn wel gewoon geschreven.")
+        self.wegschrijven()
+        if self.blad is not None and self.blad.nieuw:
+            print(f"  ({self.blad.nieuw} nieuwe lead(s) onderaan de spreadsheet gezet)")
+        if self.blad is not None and self.blad.gemist:
+            print("\nSpreadsheet: deze kolommen bestaan niet (meer) in de tab Leads en zijn "
+                  "overgeslagen: " + ", ".join(sorted(self.blad.gemist)) + ".\n"
+                  "Het Logboek is wel gewoon bijgewerkt.")
+
+
+# ── De mailteksten komen uit de spreadsheet ───────────────────────────────
+# Daniel, 14-09-2026: hij wil de teksten zelf kunnen aanpassen, op een plek die hij
+# begrijpt. De tab Mailteksten in de spreadsheet is daarom de bron. MAIL1 t/m
+# MAIL3_B en WARM_OPVOLG hierboven zijn alleen nog de begintekst waarmee die tab
+# gevuld is; ze worden NIET meer verstuurd.
+_TEKSTEN: dict | None = None
+
+
+def _teksten() -> dict:
+    """De mailteksten, één keer per beurt gelezen en gecontroleerd. Gooit
+    TekstenFout; dan hoort er niets verstuurd te worden."""
+    global _TEKSTEN
+    if _TEKSTEN is None:
+        m = _sheets_module()
+        try:
+            _TEKSTEN = m.lees_teksten(m.Sheets())
+        except m.SheetsFout as e:
+            raise m.TekstenFout(str(e)) from e
+    return _TEKSTEN
+
+
+def _platformnaam(lead: dict) -> str:
+    return "2dehands" if lead.get("platform") == "2dehands" else "Marktplaats"
+
+
+def _vorm(lead: dict) -> str:
+    return "jullie" if (lead.get("je_jullie") or "Je") == "Jullie" else "je"
+
+
+def _invulling(lead: dict) -> dict[str, str]:
+    return {"[aanhef]": _aanhef(lead), "[openingszin]": _haakje(lead),
+            "[platform]": _platformnaam(lead)}
+
+
+def _mailtekst(lead: dict, n: int, st: dict | None = None) -> tuple[str, str]:
+    """Onderwerp en tekst van mail n+1 voor deze lead, uit de tab Mailteksten.
+    De tekst is al door _netjes gehaald en klaar om te versturen."""
+    m, t = _sheets_module(), _teksten()
+    rij = t[f"{_variant(lead.get('email', ''), st)}{n + 1}"]
+    vorm, waarden = _vorm(lead), _invulling(lead)
+    onderwerp = m.vul_in(rij[f"onderwerp_{vorm}"], waarden)
+    kern = m.vul_in(rij[f"tekst_{vorm}"], waarden)
+    return onderwerp, _netjes(kern + "\n\n\x00" + t["HANDTEKENING"]["tekst_je"])
 
 
 def _bericht(lead: dict, n: int, van: str, st: dict | None = None) -> EmailMessage:
-    onderwerp, sjabloon = _onderwerp(lead, n, st), _beurten(lead, st)[n][2]
+    onderwerp, tekst = _mailtekst(lead, n, st)
     msg = EmailMessage()
     msg["From"] = f"{AFZENDER_NAAM} <{van}>"
     msg["To"] = lead["email"]
@@ -1054,7 +1106,6 @@ def _bericht(lead: dict, n: int, van: str, st: dict | None = None) -> EmailMessa
     # Zonder deze kop ziet een mailprogramma geen nette afmeldweg en telt het
     # eerder als spam. Met een mailto hoef je er geen webpagina voor te bouwen.
     msg["List-Unsubscribe"] = f"<mailto:{van}?subject=stop>"
-    tekst = _netjes(_tekst(lead, sjabloon))
     msg.set_content(tekst)
     # Vanaf mail 2 meten we of er geopend wordt; mail 1 blijft schone tekst.
     # Zie _open_pixel_html voor het waarom van die grens.
@@ -1082,7 +1133,7 @@ def send(args) -> None:
         stt = state.get(lead["email"].lower())
         print(f"Voorbeeld — [{_variant(lead['email'], stt)}] {_onderwerp(lead, n, stt)}\n"
               f"aan: {lead['email']}\n")
-        print(_netjes(_tekst(lead, _beurten(lead, stt)[n][2])))
+        print(_mailtekst(lead, n, stt)[1])
         print("\n" + "-" * 60)
         for lead, n, waarom in rij:
             stt = state.get(lead["email"].lower())
@@ -1090,7 +1141,7 @@ def send(args) -> None:
                   f"{lead['email']:38s} {waarom}")
         return
 
-    boek = Notion()
+    boek = Leadboek()
     verstuurd = _verstuur(rij, gebruiker, host, state, boek)
     boek.afsluiten()
     if klantenlijst_kapot:
@@ -1198,7 +1249,8 @@ ALARM_STILTE_UREN = 6
 _ALARMKLOK = Path.home() / ".omnivaleur-storingsalarm"
 
 
-def _storingsalarm(reden: str) -> None:
+def _storingsalarm(reden: str, onderwerp: str = "De klantenservice ligt stil",
+                   uitleg: str = "") -> None:
     """Meld dat de machine zelf niet kan draaien. Faalt dit ook, dan zwijgt het."""
     try:
         vorige = float(_ALARMKLOK.read_text().strip()) if _ALARMKLOK.exists() else 0.0
@@ -1213,17 +1265,21 @@ def _storingsalarm(reden: str) -> None:
     msg = EmailMessage()
     msg["From"] = f"Klantenservice <{van}>"
     msg["To"] = ", ".join(ALARM_NAAR)
-    msg["Subject"] = "De klantenservice ligt stil"
-    msg.set_content(
-        "De mailagent kan zijn eigen administratie niet lezen of schrijven en "
-        "heeft daarom NIETS gedaan deze beurt: geen concepten, geen opvolging, "
-        "geen antwoorden.\n\n"
-        f"Wat er misgaat:\n  {reden}\n\n"
-        "Er wordt bewust niets verstuurd zolang dit speelt. Doorwerken zonder "
-        "administratie betekent dat mensen dezelfde mail twee keer krijgen, en "
-        "dat is niet terug te halen.\n\n"
-        f"Zolang dit duurt komt er hooguit elke {ALARM_STILTE_UREN} uur een "
-        "herinnering.\n")
+    msg["Subject"] = onderwerp
+    if uitleg:
+        msg.set_content(f"{uitleg}\n\nWat er misgaat:\n{reden}\n\nZolang dit duurt komt er "
+                        f"hooguit elke {ALARM_STILTE_UREN} uur een herinnering.\n")
+    else:
+        msg.set_content(
+            "De mailagent kan zijn eigen administratie niet lezen of schrijven en "
+            "heeft daarom NIETS gedaan deze beurt: geen concepten, geen opvolging, "
+            "geen antwoorden.\n\n"
+            f"Wat er misgaat:\n  {reden}\n\n"
+            "Er wordt bewust niets verstuurd zolang dit speelt. Doorwerken zonder "
+            "administratie betekent dat mensen dezelfde mail twee keer krijgen, en "
+            "dat is niet terug te halen.\n\n"
+            f"Zolang dit duurt komt er hooguit elke {ALARM_STILTE_UREN} uur een "
+            "herinnering.\n")
     try:
         with _postbode(van, host) as stuur:
             stuur(msg)
@@ -1246,7 +1302,7 @@ def _postbode(gebruiker: str, host: str):
 
 
 def _verstuur(rij: list, gebruiker: str, host: str, state: dict,
-              boek: "Notion") -> int:
+              boek: "Leadboek") -> int:
     """Het eigenlijke verzenden. Zowel `send` als de autonome `tick` lopen hier
     doorheen, zodat er maar één plek is waar de administratie wordt bijgewerkt."""
     verstuurd = 0
@@ -1277,7 +1333,7 @@ def _verstuur(rij: list, gebruiker: str, host: str, state: dict,
                                f"maar niet genoteerd; controleer die ene met de hand.")
                 return verstuurd + 1
             verstuurd += 1
-            boek.verstuurd(lead, n, _onderwerp(lead, n, st))
+            boek.verstuurd(lead, n, _onderwerp(lead, n, st), reeks=st["variant"])
             print(f"  → [{st['variant']}] {BEURTEN[n][0]} {lead['email']}", flush=True)
             if i < len(rij) - 1:
                 time.sleep(random.uniform(*PAUZE))
@@ -1291,7 +1347,7 @@ def check(args) -> None:
     state = _state()
     if not state:
         sys.exit("Nog niets verstuurd.")
-    boek = Notion()
+    boek = Leadboek()
     nieuw, afgemeld, bounces = _check_inbox(state, boek, args.dagen)
     boek.afsluiten()
     print(f"{nieuw} nieuwe antwoorden, {afgemeld} afmeldingen, {bounces} bounces.")
@@ -1529,7 +1585,7 @@ def _wij_spraken_het_laatst(afzender: str, binnen_op: float | None,
     return False
 
 
-def _check_inbox(state: dict, boek: "Notion", dagen: int) -> tuple[int, int, int]:
+def _check_inbox(state: dict, boek: "Leadboek", dagen: int) -> tuple[int, int, int]:
     """Antwoorden, afmeldingen en bounces ophalen. Wie antwoordt krijgt geen
     opvolgmail meer; dat is het verschil tussen opvolgen en zeuren."""
     host, gebruiker = _need("IMAP_HOST"), _need("MAIL_USER")
@@ -1740,7 +1796,7 @@ def _check_inbox(state: dict, boek: "Notion", dagen: int) -> tuple[int, int, int
     return nieuw, afgemeld, bounces
 
 
-def _jouw_antwoorden_verwerken(state: dict, boek: "Notion") -> int:
+def _jouw_antwoorden_verwerken(state: dict, boek: "Leadboek") -> int:
     """Leest wat Daniel zélf heeft teruggeschreven en zet die leads op 'bal bij hen'.
 
     Zonder dit blijft een lead op "jij bent aan zet" staan nadat hij allang
@@ -1794,7 +1850,7 @@ def _jouw_antwoorden_verwerken(state: dict, boek: "Notion") -> int:
     return bijgewerkt
 
 
-def _afsluiten_stille_leads(state: dict, boek: "Notion") -> int:
+def _afsluiten_stille_leads(state: dict, boek: "Leadboek") -> int:
     """Wie alle mails heeft gehad en daarna STIL_NA_DAGEN niets liet horen, gaat
     naar de eindfase. Zonder dit blijft iedereen eeuwig op 'Benaderd' staan en
     zegt de lijst niets meer over wie er nog leeft."""
@@ -1818,7 +1874,7 @@ def _afsluiten_stille_leads(state: dict, boek: "Notion") -> int:
     return gesloten
 
 
-def _eigen_mail_meenemen(state: dict, boek: "Notion") -> int:
+def _eigen_mail_meenemen(state: dict, boek: "Leadboek") -> int:
     """Wat Daniel zelf verstuurt telt mee.
 
     Hij mailt leads ook buiten de machine om. Wist de machine dat niet, dan kon
@@ -1868,7 +1924,7 @@ def _eigen_mail_meenemen(state: dict, boek: "Notion") -> int:
     return nieuw
 
 
-def _afsluitmails(state: dict, boek: "Notion") -> int:
+def _afsluitmails(state: dict, boek: "Leadboek") -> int:
     """Verstuurt de ingeplande afsluitmailtjes waarvan de tijd om is.
 
     Aparte stap, en niet direct bij het lezen van de inbox: dan zou het antwoord
@@ -2021,145 +2077,198 @@ doorheen.
 ]
 
 
-def _warme_opvolging(state: dict, boek: "Notion") -> int:
-    """Zet een opvolging klaar voor warme leads die stil zijn gevallen.
+# ── Opvolging na de video ─────────────────────────────────────────────────
+# Daniel stuurt zelf de video naar wie erom vraagt. Wie daarna stil bleef kreeg tot
+# 06-09-2026 een klaargezet concept; sinds de AI eruit is gebeurde er niets meer,
+# terwijl dat de warmste groep is die er is.
+#
+# Daniel, 14-09-2026: de machine verstuurt ze voortaan zelf, na 3 en na 7 dagen,
+# met de teksten V1 en V2 uit de spreadsheet. Omdat dit in een gesprek gaat dat hij
+# zelf voert, is de poort bewust smal:
+#   * alleen leads uit de e-maillijst: partners en groothandels vallen erbuiten;
+#   * alleen als JOUW laatste mail aan dit adres de videolink bevat;
+#   * niets van hen of hun bedrijf erna, geen concept aan hen klaar, en jij stuurde
+#     zelf niets nieuws (_waarom_geen_concept, dezelfde vier vragen als altijd);
+#   * nooit naar een klant, een afmelding, een nee, een concurrent of een bounce,
+#     en nooit als jij "Niet meer mailen" hebt aangevinkt;
+#   * geen eerste opvolging op een video van meer dan tien dagen oud: "heb je nog
+#     gekeken?" na drie weken is geen opvolging meer maar ruis;
+#   * alleen overdag, en hooguit VIDEO_PER_BEURT per beurt.
+VIDEO_LINK = re.compile(r"omnivaleur\.(?:com|nl)/mp(?:-video)?\b|youtube\.com/shorts/|youtu\.be/",
+                        re.I)
+VIDEO_OPVOLG_DAGEN = (3, 7)       # na de video, niet na elkaar
+VIDEO_HOOGUIT_DAGEN = 10
+VIDEO_PER_BEURT = 5
+VIDEO_VENSTER = ("08:30", "20:30")
 
-    De tijden komen uit de postbus zelf, niet uit de administratie: Daniel
-    antwoordt vaak vanaf zijn telefoon buiten de machine om, en dan klopt alleen
-    wat er werkelijk verstuurd en ontvangen is."""
-    host, gebruiker = os.environ.get("IMAP_HOST"), os.environ.get("MAIL_USER")
-    wachtwoord = os.environ.get("MAIL_PASS")
-    if not (host and gebruiker and wachtwoord):
-        return 0
-    per_adres = {l["email"].lower(): l for l in _leads()}
+
+def _laatste_per_adres(imap, mappen: list[str], veld: str) -> dict[str, float]:
+    """Per adres het tijdstip van het laatste bericht in deze mappen, uit de koppen."""
+    uit: dict[str, float] = {}
+    for map_ in mappen:
+        if imap.select(f'"{map_}"', readonly=True)[0] != "OK":
+            continue
+        _, d = imap.search(None, f"(SINCE {_sinds(LAATST_DAGEN)})")
+        for msg in _koppen_in_bulk(imap, (d[0] or b"").split()).values():
+            adres = parseaddr(msg.get(veld, ""))[1].lower()
+            try:
+                ts = parsedate_to_datetime(msg.get("Date", "")).timestamp()
+            except Exception:  # noqa: BLE001
+                continue
+            if adres and (adres not in uit or ts > uit[adres]):
+                uit[adres] = ts
+    return uit
+
+
+def _video_opvolging(state: dict, boek: "Leadboek", gebruiker: str, host: str,
+                     droog: bool = False) -> int:
+    """Verstuurt de opvolgingen na Daniels video. Met droog=True wordt alleen
+    getoond wie wat zou krijgen. Geeft het aantal (zou-)verstuurde terug."""
     nu = datetime.now()
-    klaar = 0
+    if not droog and not (VIDEO_VENSTER[0] <= nu.strftime("%H:%M") <= VIDEO_VENSTER[1]):
+        return 0
+    imap_host, wachtwoord = os.environ.get("IMAP_HOST"), os.environ.get("MAIL_PASS")
+    if not (imap_host and gebruiker and wachtwoord):
+        return 0
+    m = _sheets_module()
     try:
-        with imaplib.IMAP4_SSL(host, 993) as imap:
-            imap.login(gebruiker, wachtwoord)
+        teksten = _teksten()
+        gestopt = boek.gestopt()
+    except (m.TekstenFout, m.SheetsFout) as e:
+        print(f"  (video-opvolging overgeslagen, spreadsheet niet bruikbaar: {e})")
+        return 0
 
-            def _laatst(mappen, veld):
-                uit: dict[str, float] = {}
-                for m_ in mappen:
-                    if imap.select(f'"{m_}"', readonly=True)[0] != "OK":
-                        continue
-                    _, d = imap.search(None, f"(SINCE {_sinds(LAATST_DAGEN)})")
-                    for msg in _koppen_in_bulk(imap, (d[0] or b"").split()).values():
-                        a = parseaddr(msg.get(veld, ""))[1].lower()
-                        try:
-                            ts = parsedate_to_datetime(msg.get("Date", "")).timestamp()
-                        except Exception:  # noqa: BLE001
-                            continue
-                        if a and (a not in uit or ts > uit[a]):
-                            uit[a] = ts
-                return uit
+    per_adres = {l["email"].lower(): l for l in _leads()}
+    gedaan = 0
+    bijgewerkt = False
+    with imaplib.IMAP4_SSL(imap_host, 993) as imap:
+        imap.login(gebruiker, wachtwoord)
+        verstuurd = _laatste_per_adres(imap, ["Verzonden"], "To")
+        ontvangen = _laatste_per_adres(imap, ["INBOX", MAP_BEANTWOORD, "Afval"], "From")
 
-            verstuurd = _laatst(["Verzonden"], "To")
-            ontvangen = _laatst(["INBOX", "Beantwoord", "Afval"], "From")
-
-            for adres, st in list(state.items()):
-                # Warme gesprekken (zij reageerden ooit) ÉN "met de hand"
-                # benaderde leads (Daniel mailde zelf — bijvoorbeeld het
-                # filmpje — maar ze reageerden nooit): allebei een gesprek dat
-                # Daniel zelf voert en dat stilgevallen is. Eerder kregen alleen
-                # de warme gevallen een opvolging; wie nooit had gereageerd
-                # (dus geen "soort" heeft) viel hier altijd buiten, en dat was
-                # precies de groep die om deze opvolging vroeg. Een nee, een
-                # concurrent of een afmelding laat je met rust.
-                if not (st.get("soort") in ("warm", "onbekend") or st.get("met_de_hand")):
+        for adres, st in list(state.items()):
+            if gedaan >= VIDEO_PER_BEURT:
+                break
+            if adres not in per_adres or adres in gestopt:
+                continue
+            if st.get("afgemeld") or st.get("afgewezen") or st.get("concurrent") or st.get("bounce"):
+                continue
+            # Een vakantiemelding is geen gesprek (31-08-2026, Frank de Veer): wie
+            # alleen een afwezigheidsassistent terugstuurde, heeft nooit meegelezen.
+            if st.get("auto_antwoord") and not st.get("beantwoord"):
+                continue
+            beurt = int(st.get("video_opvolg", 0))
+            if beurt >= len(VIDEO_OPVOLG_DAGEN):
+                continue
+            ons, hun = verstuurd.get(adres), ontvangen.get(adres)
+            if ons is None or (hun is not None and hun > ons):
+                continue
+            dagen = (nu.timestamp() - ons) / 86400
+            if dagen < VIDEO_OPVOLG_DAGEN[beurt]:
+                continue
+            if beurt == 0:
+                if dagen > VIDEO_HOOGUIT_DAGEN or st.get("video_geen_link") == ons:
                     continue
-                # EEN VAKANTIEMELDING IS GEEN GESPREK (31-08-2026, Frank de Veer).
-                # Het enige wat Frank ooit terugstuurde was "Ben momenteel met
-                # vakantie, waardoor ik niet altijd direct zal reageren". Dat
-                # wordt hier gelezen als "hij heeft gereageerd, dus dit is een
-                # lopend gesprek dat is stilgevallen" — terwijl er nooit iemand
-                # heeft meegelezen. Iemand porren omdat zijn afwezigheidsassistent
-                # antwoordde is precies één mail te veel.
-                if st.get("auto_antwoord") and not st.get("beantwoord"):
-                    continue
-                if st.get("afgemeld") or st.get("afgewezen") or st.get("concurrent"):
-                    continue
-                ons, hun = verstuurd.get(adres), ontvangen.get(adres)
-                # ons ontbreekt: we schreven vanaf dit adres nooit iets, dus niets
-                # om op te volgen. hun > ons: zij spraken het laatst, de bal ligt
-                # bij Daniel. Ontbreekt hun (ze reageerden nog nooit), dan ligt de
-                # bal juist bij ONS — exact het geval van een stilgevallen "met de
-                # hand"-lead. Die "hun is None" mocht hier niet meetellen als
-                # skip-reden, anders viel precies deze groep er alsnog uit.
-                if ons is None or (hun is not None and hun > ons):
-                    continue
-                beurt = int(st.get("warm_opvolg", 0))
-                if beurt >= len(WARM_OPVOLG_DAGEN):
-                    continue                       # twee zetjes gehad, klaar
-                stil = (nu.timestamp() - ons) / 86400
-                if stil < WARM_OPVOLG_DAGEN[beurt]:
-                    continue
+            elif st.get("video_op") != ons:
+                continue                    # jij schreef na de video zelf nog iets
+            if is_klant(adres):
+                continue
 
-                lead = per_adres.get(adres) or {"email": adres, "je_jullie": "Je"}
-                lead = {**lead, "email": adres}
+            draad = _laatste_verzonden_bericht(imap, adres)
+            if not draad:
+                continue
+            if not VIDEO_LINK.search(draad.get("tekst") or ""):
+                st["video_geen_link"] = ons       # deze mail niet elke beurt opnieuw openen
+                bijgewerkt = True
+                continue
+            if _is_afsluiting(draad["tekst"]):
+                st["video_opvolg"] = len(VIDEO_OPVOLG_DAGEN)
+                bijgewerkt = True
+                continue
+            waarom_niet = _waarom_geen_concept(adres, draad)
+            if waarom_niet:
+                print(f"  video-opvolging {beurt + 1} niet naar {adres}: {waarom_niet}")
+                continue
 
-                # Reageren op het laatste bericht dat Daniel zelf stuurde, in
-                # dezelfde draad — geen losse nieuwe mail. En liever een tekst
-                # die aansluit op wat daar echt in stond dan een vast sjabloon
-                # dat nergens naar verwijst; het sjabloon blijft het vangnet als
-                # er geen sleutel is of het antwoord niet lukt.
-                draad = _laatste_verzonden_bericht(imap, adres)
+            lead = per_adres[adres]
+            rij = teksten[f"V{beurt + 1}"]
+            kern = m.vul_in(rij[f"tekst_{_vorm(lead)}"] or rij["tekst_je"], _invulling(lead))
+            tekst = _netjes(kern + "\n\n\x00" + teksten["HANDTEKENING"]["tekst_je"])
+            plat = lambda v: re.sub(r"\s+", " ", str(v or "")).strip()
+            onderwerp = plat(draad.get("Subject"))
+            if not onderwerp.lower().startswith("re:"):
+                onderwerp = "Re: " + onderwerp
+            msg = EmailMessage()
+            msg["From"] = f"{AFZENDER_NAAM} <{gebruiker}>"
+            msg["To"] = adres
+            msg["Subject"] = onderwerp
+            msg["List-Unsubscribe"] = f"<mailto:{gebruiker}?subject=stop>"
+            mid = plat(draad.get("Message-ID"))
+            if mid:
+                msg["In-Reply-To"] = mid
+                msg["References"] = (plat(draad.get("References")) + " " + mid).strip()
+            msg.set_content(tekst)
+            msg.add_alternative(_open_pixel_html(adres, tekst, "opvolg"), subtype="html")
 
-                # WIJ HEBBEN HET GESPREK ZELF AL AFGESLOTEN (31-08-2026, Frank
-                # de Veer). Frank kreeg op 20-08 om 10:49 een bericht dat eindigde
-                # met "Mocht dat op enig moment anders liggen, dan hoor ik het
-                # wel" — een afsluiting. Negen dagen later stond er een opvolging
-                # klaar die begon met "Ik laat het hierbij, ik ga je er niet
-                # langer mee lastigvallen", en dat was zijn derde bericht van ons.
-                #
-                # De stiltemeting kan dit niet zien: er is stilte, en dat klopt
-                # ook — wij hebben het gesprek dichtgedaan. Na een afsluiting
-                # hoort er geen zetje meer te komen. Dat is precies het verschil
-                # tussen "ik wacht op je" en "ik laat je met rust".
-                if _is_afsluiting((draad or {}).get("tekst", "")):
-                    st["warm_opvolg"] = len(WARM_OPVOLG_DAGEN)   # klaar, niet nog eens kijken
-                    continue
+            if droog:
+                print(f"\n  ZOU VERSTUREN: video-opvolging {beurt + 1} aan {adres} "
+                      f"({dagen:.1f} dagen na je video)\n  Onderwerp: {onderwerp}\n\n{tekst}")
+                gedaan += 1
+                continue
 
-                inkomend = {"Subject": (draad or {}).get("Subject", ""),
-                            "Message-ID": (draad or {}).get("Message-ID", ""),
-                            "References": (draad or {}).get("References", ""),
-                            "From": (draad or {}).get("From", ""),
-                            "Date": (draad or {}).get("Date", "")}
+            with _postbode(gebruiker, host) as stuur:
+                stuur(msg)
+            st["video_opvolg"] = beurt + 1
+            st["video_opvolg_op"] = nu.isoformat(timespec="seconds")
+            st["video_op"] = ons
+            try:
+                _save_state(state)        # meteen, zodat een afgebroken beurt niets dubbel doet
+            except OpslagOnbereikbaar as e:
+                _storingsalarm(f"{e}\n\nDe video-opvolging aan {adres} is wel verstuurd maar "
+                               f"niet genoteerd; controleer die ene met de hand.")
+                return gedaan + 1
+            gedaan += 1
+            bijgewerkt = False
+            boek.video_opvolging(lead, beurt, ons)
+            print(f"  → video-opvolging {beurt + 1} aan {adres}", flush=True)
 
-                # Eerst kijken of dit zetje er überhaupt mag komen — er kan al
-                # een concept liggen, of Daniel kan zelf al geantwoord hebben.
-                # Doen we dat pas ná _stilte_concept, dan heeft het model (dure
-                # Opus-aanroep) al een heel bericht geschreven dat we weggooien.
-                # Dat gebeurde elke tien minuten voor tientallen leads en liet
-                # het API-tegoed op één dag leeglopen (06-09-2026).
-                if _waarom_geen_concept(adres, inkomend):
-                    continue
-
-                tekst = (_stilte_concept(draad.get("tekst", ""),
-                                        beurt == len(WARM_OPVOLG_DAGEN) - 1)
-                         if draad else None)
-                if not tekst:
-                    tekst = WARM_OPVOLG[beurt].format(link=REGISTREREN,
-                                                      ondertekening=ONDERTEKENING)
-                if _zet_concept_klaar(lead, inkomend, (draad or {}).get("tekst", ""), "warm",
-                                      eigen_tekst=tekst, met_pixel=True):
-                    st["warm_opvolg"] = beurt + 1
-                    st["warm_opvolg_op"] = nu.isoformat(timespec="seconds")
-                    # METEEN vastleggen, niet aan het eind van de ronde. Het
-                    # concept ligt er nu al; wordt de beurt hierna afgebroken
-                    # (de server kapt hem af na 25 minuten), dan begint de
-                    # volgende met het oude beeld en legt hij er nog een naast.
-                    # Zo is er nooit een moment waarop het concept bestaat en de
-                    # administratie dat niet weet.
-                    _save_state(state)
-                    klaar += 1
-                    if per_adres.get(adres):
-                        boek.wacht_op_daniel(per_adres[adres])
-    except Exception as e:  # noqa: BLE001 — mag de ronde nooit stoppen
-        print(f"  (warme opvolging niet gelukt: {e})")
-    if klaar:
+    if bijgewerkt and not droog:
         _save_state(state)
-    return klaar
+    return gedaan
+
+
+def video_opvolging_opdracht(args) -> None:
+    """`leadgen_mail.py video-opvolging [--echt]`: zonder --echt alleen kijken."""
+    boek = Leadboek()
+    n = _video_opvolging(_state(), boek, _need("MAIL_USER"), os.environ.get("MAIL_HOST", ""),
+                         droog=not args.echt)
+    boek.afsluiten()
+    print(f"\n{n} video-opvolging(en) {'verstuurd' if args.echt else 'zouden nu uitgaan'}.")
+
+
+def toon_teksten(args) -> None:
+    """`leadgen_mail.py teksten [adres]`: controleert de tab Mailteksten en laat
+    zien wat een lead precies zou krijgen."""
+    m = _sheets_module()
+    try:
+        _teksten()
+    except m.TekstenFout as e:
+        sys.exit(f"De mailteksten zijn NIET bruikbaar, er gaat niets uit tot dit klopt:\n{e}")
+    state, leads = _state(), _leads()
+    if args.adres:
+        leads = [l for l in leads if l["email"].lower() == args.adres.lower()]
+        if not leads:
+            sys.exit(f"{args.adres} staat niet in de leadlijst")
+    else:
+        leads = [next(l for l in leads if l.get("platform") != "2dehands"),
+                 next(l for l in leads if l.get("platform") == "2dehands")]
+    print("De mailteksten zijn in orde.\n")
+    for lead in leads:
+        st = state.get(lead["email"].lower())
+        for n in range(3):
+            onderwerp, tekst = _mailtekst(lead, n, st)
+            print(f"{'=' * 70}\n[{_variant(lead['email'], st)}] mail {n + 1} aan {lead['email']}\n"
+                  f"Onderwerp: {onderwerp}\n\n{tekst}")
 
 
 # ── Klaargezet antwoord op een warme reactie ──────────────────────────────
@@ -4617,7 +4726,7 @@ def tick(args) -> None:
 
     verlopen = sum(1 for t in plan["tijden"] if t <= nu)
     te_doen = min(verlopen - plan["gedaan"], args.max_per_beurt)
-    boek = Notion()
+    boek = Leadboek()
 
     # Eerst kijken wat Daniel zelf heeft verstuurd, pas daarna mailen. Andersom
     # zou de machine iemand koud kunnen aanschrijven die hij een uur eerder al
@@ -4635,8 +4744,30 @@ def tick(args) -> None:
     if te_doen > 0 and not resend_mag_versturen():
         te_doen = 0                       # lezen en concepten schrijven mag wel
 
+    # DE TWEE DINGEN DIE DANIEL ZELF BEDIENT, STRENG GELEZEN (14-09-2026).
+    # De mailteksten en het vinkje "Niet meer mailen" staan in de spreadsheet. Is
+    # een van beide niet te lezen, of klopt een tekst niet, dan gaat er deze beurt
+    # niets uit. Mailen met een halve tekst of zonder stoplijst is precies de fout
+    # die niet terug te draaien is; de gemiste tijdstippen haalt een volgende beurt
+    # vanzelf in zodra het weer klopt.
+    gestopt: set[str] = set()
     if te_doen > 0:
-        rij = _wachtrij(state, te_doen)
+        m = _sheets_module()
+        try:
+            _teksten()
+            gestopt = boek.gestopt()
+        except (m.TekstenFout, m.SheetsFout) as e:
+            print(f"!! de spreadsheet is niet bruikbaar, er gaat deze beurt niets uit:\n{e}")
+            plan.setdefault("fouten", []).append(f"niets verstuurd, spreadsheet niet bruikbaar: {e}")
+            _storingsalarm(str(e), onderwerp="De mailmachine verstuurt niets",
+                           uitleg="De mailmachine kan de mailteksten of de vinkjes 'Niet meer "
+                                  "mailen' in de spreadsheet Omnivaleur E-mail outreach niet "
+                                  "gebruiken. Daarom is er niets verstuurd. Zodra het klopt, "
+                                  "haalt de machine de gemiste mails vanzelf in.")
+            te_doen = 0
+
+    if te_doen > 0:
+        rij = _wachtrij(state, te_doen, gestopt)
         if rij:
             print(f"{datetime.now():%d-%m %H:%M} — {len(rij)} mail(s) aan de beurt "
                   f"(rooster vandaag: {len(plan['tijden'])} stuks)")
@@ -4689,6 +4820,15 @@ def tick(args) -> None:
         except Exception as e:  # noqa: BLE001 — mag de ronde niet stoppen
             print(f"  (jouw antwoorden niet gelezen: {e})")
 
+        if resend_mag_versturen():
+            try:
+                video = _video_opvolging(state, boek, gebruiker, host)
+                if video:
+                    print(f"{datetime.now():%d-%m %H:%M} — {video} opvolging(en) na je video verstuurd")
+            except Exception as e:  # noqa: BLE001 — mag de ronde niet stoppen
+                print(f"  (video-opvolging niet gelukt: {e})")
+                plan.setdefault("fouten", []).append(f"video-opvolging niet gelukt: {e}")
+
         try:
             _stapel_melden(plan)
         except Exception as e:  # noqa: BLE001
@@ -4702,6 +4842,14 @@ def tick(args) -> None:
 
     # Aan het eind van de dag één berichtje: wat er is gebeurd en of er iets mis
     # ging. Zolang dit elke avond binnenkomt weet Daniel dat de machine leeft.
+
+    boek.wegschrijven()
+    for fout in boek.fouten:
+        regel = f"spreadsheet: {fout}"
+        if regel not in plan.setdefault("fouten", []):
+            plan["fouten"].append(regel)
+    if boek.fouten:
+        _save_plan(plan)
 
     if not plan.get("gerapporteerd") and nu >= "20:45":
         _dagbericht(state, plan)
@@ -5387,6 +5535,15 @@ def main() -> None:
     g.add_argument("vlag", choices=_TOEGESTANE_VLAGGEN)
     g.add_argument("waarde", choices=("aan", "uit"))
     g.set_defaults(func=corrigeer)
+
+    vo = sub.add_parser("video-opvolging",
+                        help="wie krijgt nu een opvolging na de video (zonder --echt: alleen kijken)")
+    vo.add_argument("--echt", action="store_true", help="ook echt versturen")
+    vo.set_defaults(func=video_opvolging_opdracht)
+
+    tk = sub.add_parser("teksten", help="mailteksten uit de spreadsheet controleren en tonen")
+    tk.add_argument("adres", nargs="?", help="laat de mails aan dit adres zien")
+    tk.set_defaults(func=toon_teksten)
 
     t = sub.add_parser("tick", help="autonome beurt; elke tien minuten draaien")
     t.add_argument("--per-dag", type=int, default=0,

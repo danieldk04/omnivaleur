@@ -196,3 +196,17 @@ def test_zonder_stopkolom_is_er_geen_stoplijst_maar_een_fout():
 
 def test_kolomletters():
     assert [ls.kolomletter(i) for i in (0, 18, 25, 26, 51)] == ["A", "S", "Z", "AA", "AZ"]
+
+
+def test_nieuwe_leads_komen_klaar_te_staan_zonder_bestaande_aan_te_raken():
+    nep = NepSheets([KOP, _leadrij("Anna", "anna@x.nl", "al gebeld")])
+    toegevoegd, al = ls.Leadblad(nep).zet_klaar([
+        {"email": "ANNA@x.nl", "handelsnaam": "Anna"},              # stond er al
+        {"email": "piet@y.nl", "handelsnaam": "Piet", "ads": 40},
+        {"email": "piet@y.nl", "handelsnaam": "Piet dubbel"},       # twee keer gevonden
+        {"tel": "0612345678", "handelsnaam": "Zonder mail"},        # niet te mailen
+    ])
+    assert (toegevoegd, al) == (1, 1)
+    assert [r[KOP.index("E-mail")] for r in nep.tabs[ls.TAB_LEADS][1:]] == ["anna@x.nl", "piet@y.nl"]
+    assert _cel(nep, "piet@y.nl", "Fase") == "1. Te benaderen"
+    assert _cel(nep, "anna@x.nl", "Notities") == "al gebeld"

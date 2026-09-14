@@ -266,7 +266,7 @@ def _opmaak(sheets: ls.Sheets, bestand: str, tabs: dict[str, int], kolommen: lis
     ]
     if "Fase" in kolommen:
         verzoeken.append({"setDataValidation": {
-            "range": {"sheetId": leads, "startRowIndex": 1, "endRowIndex": aantal + 2000,
+            "range": {"sheetId": leads, "startRowIndex": 1, "endRowIndex": aantal + 1,
                       "startColumnIndex": kolommen.index("Fase"), "endColumnIndex": kolommen.index("Fase") + 1},
             "rule": {"condition": {"type": "ONE_OF_LIST",
                                    "values": [{"userEnteredValue": f} for f in FASE_VOLGORDE]},
@@ -274,7 +274,7 @@ def _opmaak(sheets: ls.Sheets, bestand: str, tabs: dict[str, int], kolommen: lis
     if ls.STOP_KOLOM in kolommen:
         s = kolommen.index(ls.STOP_KOLOM)
         verzoeken.append({"setDataValidation": {
-            "range": {"sheetId": leads, "startRowIndex": 1, "endRowIndex": aantal + 2000,
+            "range": {"sheetId": leads, "startRowIndex": 1, "endRowIndex": aantal + 1,
                       "startColumnIndex": s, "endColumnIndex": s + 1},
             "rule": {"condition": {"type": "BOOLEAN"}}}})
     for naam in ("Laatste gebeurtenis", "Notities", "AI Generated Tekst", "Voice memo tekst"):

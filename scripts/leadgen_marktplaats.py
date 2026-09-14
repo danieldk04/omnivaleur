@@ -32,19 +32,19 @@ DE TRECHTER — zelfde vorm als leadgen_instagram.py
   enrich    bedrijfsprofiel erbij: KvK, telefoon, e-mail, adres, over-ons, aantal advertenties
   crosslist verkoopt hij al op meer plekken? eigen webshop, webshopsysteem, bol.com
   classify  Haiku beoordeelt op tweedehands, verzendbaar, winstmotief en NL/BE
-  push      naar dezelfde Notion-Leadlist, met Platform "MP" of "2dehands"
+  push      naar de spreadsheet "Omnivaleur E-mail outreach", Platform "MP" of "2dehands"
   run       alle vijf achter elkaar
 
 TWEE BRONNEN, ÉÉN TRECHTER
 Marktplaats (NL) en 2dehands (BE) draaien op exact dezelfde zoek-API en dezelfde
 categorie-ID's (live vergeleken 07-09-2026). Alleen de host, de bedrijfsprofiel-
 pagina (BE toont "KBO-nummer" i.p.v. "KVK-nummer", telefoon +32) en het Platform-
-label in Notion verschillen. Kies met  --site marktplaats  of  --site 2dehands ;
+label in de spreadsheet verschillen. Kies met  --site marktplaats  of  --site 2dehands ;
 elke bron heeft een eigen cache (mp_*.json / 2dh_*.json) zodat ze elkaar niet
 overschrijven.
 
 Gebruik:
-    export NOTION_TOKEN=...
+    export GOOGLE_SHEETS_SLEUTEL="$(cat sleutel.json)"   # sinds 14-09-2026, was Notion
     python3 scripts/leadgen_marktplaats.py run --dry-run
     python3 scripts/leadgen_marktplaats.py run
 """
@@ -55,7 +55,6 @@ import json
 import re
 from html import unescape
 import sys
-import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from functools import lru_cache
 from pathlib import Path
@@ -65,7 +64,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 import httpx  # noqa: E402
 
 from scripts import leadgen_instagram as ig  # noqa: E402
-from scripts import leadgen_notion as notion  # noqa: E402
+from scripts import leadgen_sheets as ls  # noqa: E402
 
 OUT = Path(__file__).parent / "output" / "leads"
 SITES = {
@@ -905,10 +904,12 @@ def push(args) -> None:
             print(f"     {lead.get('reden', '')}")
         return
 
-    created, skipped = notion.push_leads(leads, ig._need("NOTION_TOKEN"),
-                                         update=args.update)
-    print(f"\n{created} leads toegevoegd, {skipped} "
-          f"{'bijgewerkt' if args.update else 'bestonden al'}.")
+    # Sinds 14-09-2026 de spreadsheet in plaats van de Notion-Leadlist. Alleen leads
+    # met een e-mailadres: dit is de lijst van de e-mailoutreach, en wie alleen een
+    # telefoonnummer heeft kan de machine niet benaderen.
+    toegevoegd, al = ls.Leadblad(ls.Sheets()).zet_klaar(met_mail)
+    print(f"\n{toegevoegd} leads onderaan de spreadsheet gezet, {al} stonden er al.\n"
+          f"Draai nu: python3 scripts/leadgen_mail.py overzetten, anders ziet de machine ze niet.")
 
 
 def export(args) -> None:
@@ -1009,47 +1010,27 @@ def markeer(args) -> None:
             print(f"  {n:>4} × {rubriek}: geen tak voor {reden}")
 
     if args.dry_run:
-        print("\ndry-run, er wordt niets naar Notion geschreven")
+        print("\ndry-run, er wordt niets naar de spreadsheet geschreven")
         return
     if not doel:
         return
 
-    token = ig._need("NOTION_TOKEN")
-    props = notion.schema(token)
-    paginas = notion.existing_pages(token)
-    vandaag = time.strftime("%Y-%m-%d")
-
-    gedaan = gemist = 0
-    overgeslagen_kolommen: set[str] = set()
+    blad = ls.Leadblad(ls.Sheets())
     for lead in doel:
-        page_id = paginas.get((lead.get("ig_url") or "").rstrip("/").lower())
-        if not page_id:
-            gemist += 1
-            continue
         rubriek = (lead.get("source") or "").split("/")[0]
         reden = GEEN_TAK_REDEN.get(rubriek, rubriek)
-        try:
-            notion.append_log(page_id, token,
-                              f"{vandaag} — niet te bedienen: wij hebben geen categorie voor "
-                              f"{reden}. Niet benaderen tot die tak er is.")
-            overgeslagen_kolommen.update(notion.set_props(page_id, token, {
-                "Fase": ("select", "0. Kan (nog) niet"),
-                "Volgende actie op": ("date", None),
-            }, props))
-            gedaan += 1
-        except Exception as e:  # noqa: BLE001 — één rij mag de rest niet stoppen
-            print(f"  ! {lead.get('full_name') or lead.get('name')}: {e}")
-
-    print(f"\n{gedaan} leads gemarkeerd, {gemist} stonden niet in Notion")
-    if overgeslagen_kolommen:
-        print("niet gezet omdat de kolom of de optie niet bestaat: "
-              + ", ".join(sorted(overgeslagen_kolommen))
-              + "\n  → maak in Notion de Fase-optie \"0. Kan (nog) niet\" aan en draai opnieuw")
+        blad.noteer(lead, f"niet te bedienen: wij hebben geen categorie voor {reden}. "
+                          f"Niet benaderen tot die tak er is.",
+                    {"Fase": "0. Kan (nog) niet", "Volgende actie op": None})
+    blad.wegschrijven()
+    print(f"\n{len(doel)} leads gemarkeerd in de spreadsheet")
+    if blad.gemist:
+        print("niet gezet omdat de kolom niet bestaat: " + ", ".join(sorted(blad.gemist)))
 
 
 def run(args) -> None:
     if not args.dry_run:
-        ig._need("NOTION_TOKEN")
+        ig._need(ls.SLEUTEL_ENV)
 
     print("── 1/5 zoeken ─────────────────────────────────────────────")
     discover(args)
@@ -1059,7 +1040,7 @@ def run(args) -> None:
     crosslist(args)
     print("\n── 4/5 beoordelen ─────────────────────────────────────────")
     classify(args)
-    print("\n── 5/5 naar Notion ────────────────────────────────────────")
+    print("\n── 5/5 naar de spreadsheet ────────────────────────────────")
     push(args)
 
 
@@ -1118,7 +1099,7 @@ def main() -> None:
     common(c, cls=True)
     c.set_defaults(func=classify)
 
-    p = sub.add_parser("push", help="naar de Notion-Leadlist")
+    p = sub.add_parser("push", help="naar de spreadsheet Omnivaleur E-mail outreach")
     common(p, psh=True)
     p.set_defaults(func=push)
 

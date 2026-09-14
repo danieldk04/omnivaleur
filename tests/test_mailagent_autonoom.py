@@ -111,10 +111,16 @@ def test_de_terugkoppeling_van_de_developer_blijft_ook_een_concept():
     assert "zelf_versturen" not in blok
 
 
-def test_de_opvolging_op_stilte_blijft_ook_een_concept():
-    blok = BRON.split("def _warme_opvolging(", 1)[1].split("\ndef ", 1)[0]
-    assert "_zet_concept_klaar" in blok
-    assert "zelf_versturen" not in blok
+def test_de_video_opvolging_verstuurt_zelf_maar_alleen_na_jouw_eigen_video():
+    """Tot 14-09-2026 werd dit een concept. Daniel koos toen bewust: de machine
+    verstuurt de opvolging na zijn video zelf. De grens blijft dat het alleen
+    gebeurt in een gesprek waarin hij zelf de videolink stuurde, en nooit als
+    de postbus een bezwaar ziet (al een concept, al een derde bericht)."""
+    blok = BRON.split("def _video_opvolging(", 1)[1].split("\ndef ", 1)[0]
+    assert "_postbode(" in blok
+    assert "VIDEO_LINK.search(" in blok
+    assert "_waarom_geen_concept(" in blok
+    assert "_zet_concept_klaar" not in blok
 
 
 # ── 3. nooit twee keer hetzelfde seintje ─────────────────────────────────────

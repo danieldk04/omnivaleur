@@ -215,6 +215,7 @@ def test_elke_weg_naar_een_concept_komt_langs_het_slot(monkeypatch, postbus):
     postbus(Concept=[_kop(To="frank@klant.nl", Date=_tijd(30))])
     monkeypatch.setattr(L, "_concept_tekst", lambda *a, **k: "Hoi, dit is een "
                         "voldoende lange tekst om als concept te tellen.")
+    monkeypatch.setattr(L, "_onderwerp", lambda *a, **k: "Vraagje")   # tekst staat in de spreadsheet
     gelukt = L._zet_concept_klaar({"email": "frank@klant.nl"}, HUN, "hun tekst")
     assert gelukt is False
 
@@ -223,7 +224,7 @@ def test_de_administratie_wordt_meteen_vastgelegd():
     """Niet aan het eind van de ronde: die kan afgekapt worden, en dan ligt het
     concept er wel maar weet de administratie het niet."""
     bron = (Path(__file__).parent.parent / "scripts" / "leadgen_mail.py").read_text()
-    blok = bron.split('st["warm_opvolg"] = beurt + 1')[1].split("klaar += 1")[0]
+    blok = bron.split('st["video_opvolg"] = beurt + 1')[1].split("gedaan += 1")[0]
     assert "_save_state(state)" in blok
 
 
