@@ -17,6 +17,41 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ---
 
+## ebay-offer-id-versus-advertentienummer
+
+*14-09-2026 — eBay heeft twee nummers per advertentie; de verkoopcontrole bevroeg het verkeerde en archiveerde elke levende eBay-advertentie binnen het uur*
+
+14-09-2026. eBay kent twee nummers voor dezelfde advertentie: het openbare
+advertentienummer (`platform_listing_id`, staat in de link ebay.nl/itm/...) en
+het interne offer-nummer (`platform_offer_id`). De Inventory API antwoordt
+uitsluitend op het tweede; `GET /sell/inventory/v1/offer/{openbaar nummer}` geeft
+altijd 404.
+
+`backend/services/polling.py` gaf het openbare nummer door aan
+`EbayPlatform.get_listing_status`. Twee rondes 404 achter elkaar betekent
+'delisted', dus verdween elke echte eBay-advertentie binnen het uur uit het
+Live-overzicht van de klant. **Gemeten:** alle 8 ooit echt gepubliceerde
+eBay-advertenties in de database stonden op 'delisted', terwijl
+ebay.nl/itm/168685598778 op dat moment gewoon te koop stond. Tweede gevolg, erger
+dan het eerste: een echte eBay-verkoop werd nooit opgemerkt, dus bleef het
+artikel op Marktplaats en Vinted te koop staan.
+
+**Why:** publiceren naar eBay werkte al maanden aantoonbaar goed, dus leek het
+kanaal in orde. De storing zat volledig in de controle erna, en die is stil: er
+komt geen foutmelding, de advertentie schuift alleen naar Archief.
+
+**How to apply:** bij eBay altijd `platform_offer_id` gebruiken voor
+statuscontrole, verwijderen en prijswijzigingen; het openbare nummer alleen voor
+de link naar de klant. Is het offer-nummer onbekend, dan niets concluderen:
+terugvallen op het openbare nummer levert precies dezelfde valse 404 op.
+`resolve_offer_by_sku()` in `backend/platforms/ebay.py` haalt het alsnog op via
+de SKU. Zie ook "verkoop-signaal-hard-vs-zacht" en
+"scan-mag-nooit-leeghalen": een controle die "weg" zegt is eerst een reden om
+de meting te wantrouwen. curl helpt hier niet, eBay geeft een blokkeerpagina van
+1831 bytes; meet met een echte browser, zie "doorverwijzing-is-geen-foutpagina".
+
+---
+
 ## leadlist-in-google-sheets
 
 *14-09-2026 — "Sinds 14-09-2026 staan leadlijst, logboek en mailteksten in Google Sheets (Drive-map Omnivaleur), niet meer in Notion; valkuilen van de Sheets-API en van de omschakeling"*

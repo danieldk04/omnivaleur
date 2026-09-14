@@ -136,7 +136,10 @@ def _check(monkeypatch, platform, status, listing_status="active"):
     monkeypatch.setattr(pol, "handle_item_sold", _fake_handle)
 
     listing = {"id": "l1", "item_id": "it1", "platform": platform, "status": listing_status,
-               "platform_listing_id": "x1"}
+               "platform_listing_id": "x1",
+               # eBay wordt bevraagd op het interne offer-nummer, niet op het
+               # openbare advertentienummer — zie test_ebay_statuscontrole_offer_id.
+               "platform_offer_id": "o1" if platform == "ebay" else None}
     updates = {}
 
     class _Q2:

@@ -80,7 +80,7 @@ async def poll_platform_statuses():
     # `nullsfirst`: een advertentie die nog nooit is nagekeken gaat voor. Zonder
     # dat zou een nieuwe advertentie achter de hele bestaande voorraad aansluiten.
     rijen = ((await _exec(db.table("listings")
-              .select("id,item_id,platform,platform_listing_id,not_found_count,last_checked")
+              .select("id,item_id,platform,platform_listing_id,platform_offer_id,not_found_count,last_checked")
               .eq("status", "active")
               .in_("platform", list(POLL_PLATFORMS))
               .or_(f"last_checked.is.null,last_checked.lt.{grens}")
@@ -175,11 +175,37 @@ async def _check_one(listing: dict, credentials: dict):
     # meteen afgehandeld.
     ZACHT_SIGNAAL = {"marktplaats", "2dehands"}
 
+    # eBay kent TWEE nummers voor dezelfde advertentie: het openbare
+    # advertentienummer (staat in de link) en het interne offer-nummer. De
+    # Inventory API antwoordt alleen op het tweede; met het eerste geeft eBay
+    # altijd 404. Dat 404 las deze ronde als "advertentie weg", dus ging elke
+    # echte eBay-advertentie binnen het uur op 'delisted'.
+    #
+    # GEMETEN (14-09-2026): alle 8 ooit echt gepubliceerde eBay-advertenties
+    # stonden op 'delisted', terwijl ebay.nl/itm/168685598778 op dat moment
+    # gewoon te koop stond. Gevolg: weg uit het Live-overzicht van de klant, en
+    # een eBay-verkoop werd nooit opgemerkt, dus bleef het artikel elders staan.
+    #
+    # Is het offer-nummer niet bekend (oude rijen), dan wordt er NIETS
+    # geconcludeerd. Terugvallen op het openbare nummer zou precies dezelfde
+    # valse "niet gevonden" opleveren.
+    extern_id = listing["platform_listing_id"]
+    if platform_name == "ebay":
+        extern_id = listing.get("platform_offer_id")
+        if not extern_id:
+            logger.warning(
+                "Poll: eBay-advertentie %s heeft geen offer-nummer — "
+                "overgeslagen (een 404 op het openbare nummer zegt niets)",
+                listing["id"])
+            try:
+                await _exec(db.table("listings").update(velden).eq("id", listing["id"]))
+            except Exception as e:  # noqa: BLE001
+                logger.error(f"Poll: listing {listing['id']} niet bijgewerkt: {e}")
+            return
+
     try:
         platform = get_platform(platform_name)
-        status = await platform.get_listing_status(
-            listing["platform_listing_id"], credentials
-        )
+        status = await platform.get_listing_status(extern_id, credentials)
 
         if status == "sold" and platform_name in ZACHT_SIGNAAL:
             if listing.get("status") != "sold_unconfirmed":

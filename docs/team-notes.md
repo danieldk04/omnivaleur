@@ -9249,3 +9249,33 @@ twee uur te vroeg omdat de server op UTC draait.
 Open: de Notion-integratiesleutel is in de chat geplakt en hoort ingetrokken te
 worden nu de machine hem niet meer gebruikt. Het Google-sleutelbestand hoort uit
 Downloads weg.
+
+## 14-09-2026 — eBay werkte, maar elke advertentie verdween stil naar Archief
+
+Toon (djt@dejuistetoon.eu) maakte een eBay-account aan en vroeg wat er nodig is
+om het aan te zetten. Bij de controle van het eBay-kanaal bleek een storing die
+niemand had gezien, omdat hij geen foutmelding geeft.
+
+eBay kent twee nummers per advertentie: het openbare advertentienummer en het
+interne offer-nummer. De verkoopcontrole vroeg de status op met het openbare
+nummer, waar eBay altijd 404 op antwoordt. Twee rondes 404 betekent "advertentie
+weg", dus ging elke echte eBay-advertentie binnen het uur op 'delisted'.
+
+Gemeten: alle 8 ooit echt gepubliceerde eBay-advertenties stonden op 'delisted'.
+Twee daarvan, van dealbeter (info@dealbeter.nl, gepubliceerd 13-09), stonden op
+dat moment gewoon te koop op ebay.nl. Die twee zijn teruggezet op 'active'; de
+zes uit juli zijn op eBay zelf echt beëindigd en blijven gearchiveerd.
+
+Het ergste gevolg was niet het verdwijnen uit het overzicht, maar dat een
+eBay-verkoop nooit werd opgemerkt: het artikel bleef daardoor op Marktplaats en
+Vinted te koop staan.
+
+Verder gecontroleerd en in orde: de koppellink naar eBay (productiesleutels,
+scopes sell.inventory en sell.account), het ship-from-formulier, en het
+publiceren zelf (dealbeter publiceerde 13-09 twee advertenties met echte
+eBay-nummers, inclusief categorie, kenmerken en retourbeleid).
+
+Toon heeft nog geen eBay-koppeling in Omnivaleur staan, alleen een account (1318
+artikelen). Wat hij zelf moet doen: zijn eBay-account als verkoper afronden
+(identiteit en bankrekening bij eBay), daarna in Omnivaleur bij Kanalen op
+"eBay koppelen" klikken en zijn postcode invullen.
