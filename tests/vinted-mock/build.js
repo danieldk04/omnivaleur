@@ -85,26 +85,28 @@ for (const name of wanted) {
 // "HEAD" staan, dan vergelijkt de proef zichzelf zodra dit gecommit is en
 // wordt het tegenbewijs stilletjes betekenisloos.
 const VOOR_DE_REPARATIE = "0536966";
+// Vastgezet op de laatste commit VÓÓR de "weg"-check een DOM-tegencontrole
+// kreeg (14-09-2026). Ook hier: nooit "HEAD" gebruiken, om dezelfde reden.
+const VOOR_DE_WEG_CHECK_FIX = "49f0086f";
 
-// TEGENBEWIJS. De versie van vóór de reparatie draait in dezelfde proef mee,
-// onder de naam _oudBgDeleteMp2dh. Valt die niet om waar de nieuwe blijft
-// staan, dan meet de proef niet wat hij beweert te meten.
-try {
-  const oud = require("child_process")
-    .execSync("git show " + VOOR_DE_REPARATIE + ":extension/background.js", { cwd: path.join(__dirname, "../..") , maxBuffer: 1 << 26 })
-    .toString();
-  const bewaar = bg;
-  const m = oud.match(/^async function bgDeleteMp2dh\s*\(/m);
-  if (m) {
-    // sliceBody leest uit de module-brede `bg`; even omleggen naar de oude tekst.
-    const body = (function () {
-      const echt = bg; // eslint-disable-line
-      return sliceOut(oud, oud.indexOf("{", m.index));
-    })();
+function plakOudeVersieErbij(sha, functieNaam, nieuweNaam) {
+  try {
+    const oud = require("child_process")
+      .execSync("git show " + sha + ":extension/background.js", { cwd: path.join(__dirname, "../.."), maxBuffer: 1 << 26 })
+      .toString();
+    const m = oud.match(new RegExp("^async function " + functieNaam + "\\s*\\(", "m"));
+    if (!m) { console.warn("oude functie niet gevonden:", functieNaam, "in", sha); return; }
+    const body = sliceOut(oud, oud.indexOf("{", m.index));
     const kop = oud.slice(m.index, oud.indexOf("{", m.index));
-    out += kop.replace("bgDeleteMp2dh", "_oudBgDeleteMp2dh") + body + "\n\n";
-  }
-} catch (e) { console.warn("oude versie niet opgehaald:", e.message); }
+    out += kop.replace(functieNaam, nieuweNaam) + body + "\n\n";
+  } catch (e) { console.warn("oude versie niet opgehaald:", functieNaam, e.message); }
+}
+
+// TEGENBEWIJS. Beide oude versies draaien in dezelfde proef mee. Valt zo'n
+// oude versie niet om waar de nieuwe blijft staan, dan meet de proef niet wat
+// hij beweert te meten.
+plakOudeVersieErbij(VOOR_DE_REPARATIE, "bgDeleteMp2dh", "_oudBgDeleteMp2dh");
+plakOudeVersieErbij(VOOR_DE_WEG_CHECK_FIX, "verwijderViaAdvertentiepagina", "_oudVerwijderViaAdvertentiepagina");
 
 fs.writeFileSync(path.join(OUT, "mw-functions.js"), out);
 console.log("harness built:", wanted.length, "main-world helpers +", 2, "content scripts");
