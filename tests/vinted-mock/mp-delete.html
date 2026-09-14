@@ -179,7 +179,23 @@ function execInTab(tabId, func, args = []) {
 }
 function openWorkerTab(url, cb) { cb({ id: 1 }); }
 function waitForTabLoad() { return Promise.resolve(); }
-function stuurWerkTabbladNaar() { return Promise.resolve(); }
+// Een ECHTE navigatie: alles behalve het overzicht zelf is de losse
+// advertentiepagina. Zonder dit blijft het iframe altijd het overzicht tonen,
+// en kan de DOM-tegencontrole nooit iets anders zien dan wat fetch() al zei —
+// waarmee de proef zichzelf voor de gek zou houden.
+function stuurWerkTabbladNaar(tabId, url) {
+  if (!FRAME || !STAAT) return Promise.resolve();
+  const overview = "https://www.marktplaats.nl/my-account/sell/index.html";
+  const d = FRAME.contentDocument;
+  if (url === overview) {
+    d.body.innerHTML = overzichtHtml(STAAT.ads, STAAT);
+    bedraad(FRAME, STAAT);
+  } else {
+    d.body.innerHTML = adPaginaHtml(STAAT);
+    bedraadAdPagina(FRAME, STAAT);
+  }
+  return Promise.resolve();
+}
 function sluitWerkTabblad() {}
 function mpAdvertentieSnapshot() { return Promise.resolve({}); }
 let GEMELD = null;
