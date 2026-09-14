@@ -311,6 +311,27 @@ class Leadblad:
                 "Website": lead.get("site") or lead.get("website") or "",
                 "Plaats": lead.get("plaats") or "", STOP_KOLOM: False}
 
+    def zet_klaar(self, leads: list[dict]) -> tuple[int, int]:
+        """Nieuw gevonden leads onderaan de tab Leads, met Fase 1. Te benaderen.
+        Wie er al staat (op e-mailadres) blijft ongemoeid: daar kan Daniel al in
+        gewerkt hebben. Geeft (toegevoegd, stond er al) terug."""
+        kop, rijen = self._lees()
+        e = kop.index("E-mail")
+        bekend = {str(r[e]).strip().lower() for r in rijen if e < len(r)}
+        nieuw: dict[str, dict] = {}
+        al = 0
+        for lead in leads:
+            adres = (lead.get("email") or "").strip().lower()
+            if not adres:
+                continue
+            if adres in bekend:
+                al += 1
+            elif adres not in nieuw:
+                nieuw[adres] = {**self.leadvelden(lead), "Fase": "1. Te benaderen"}
+        self.sheets.voeg_toe(self.bestand, TAB_LEADS,
+                             [[rij.get(k, "") for k in kop] for rij in nieuw.values()])
+        return len(nieuw), al
+
     def noteer(self, lead: dict, regel: str, wensen: dict) -> None:
         self._wachtend.append((lead, regel, wensen, datetime.now().strftime("%d-%m-%Y %H:%M")))
         if len(self._wachtend) >= self.buffer:
