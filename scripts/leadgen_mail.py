@@ -2180,6 +2180,18 @@ def _video_opvolging(state: dict, boek: "Leadboek", gebruiker: str, host: str,
                     continue
             elif st.get("video_op") != ons:
                 continue                    # jij schreef na de video zelf nog iets
+            else:
+                # Nooit twee opvolgingen vlak na elkaar. SDB (14-09-2026): na een
+                # stille periode was de video al 9,6 dagen oud, dus stonden dag 3
+                # en dag 7 allebei open en volgde opvolging 2 tien minuten na
+                # opvolging 1. Tussen de twee horen dezelfde dagen als in het
+                # rooster. Onbekend wanneer de vorige ging: dan niet blind sturen.
+                try:
+                    sinds = (nu - datetime.fromisoformat(st["video_opvolg_op"])).total_seconds() / 86400
+                except (KeyError, TypeError, ValueError):
+                    continue
+                if sinds < VIDEO_OPVOLG_DAGEN[beurt] - VIDEO_OPVOLG_DAGEN[beurt - 1]:
+                    continue
             if is_klant(adres):
                 continue
 

@@ -89,6 +89,11 @@ def postbus(monkeypatch):
     return stand
 
 
+def _dagen_geleden(n):
+    from datetime import datetime, timedelta
+    return (datetime.now() - timedelta(days=n)).isoformat(timespec="seconds")
+
+
 def _draai(state, boek=None, droog=False):
     return lm._video_opvolging(state, boek or NepBoek(), "daniel@omnivaleur.nl", "smtp.test", droog=droog)
 
@@ -118,7 +123,8 @@ def test_de_machine_draait_twee_keer_maar_mailt_maar_een_keer(postbus):
 
 def test_zeven_dagen_na_de_video_komt_opvolging_2(postbus):
     postbus.verzonden_op = time.time() - 8 * DAG
-    state = {ADRES: {"video_opvolg": 1, "video_op": postbus.verzonden_op}}
+    state = {ADRES: {"video_opvolg": 1, "video_op": postbus.verzonden_op,
+                     "video_opvolg_op": _dagen_geleden(5)}}
     assert _draai(state) == 1
     assert "Laatste berichtje van mij" in postbus.verstuurd[0].get_body(("plain",)).get_content()
     assert state[ADRES]["video_opvolg"] == 2
@@ -257,3 +263,22 @@ def test_wachtrij_slaat_aangevinkte_leads_over(monkeypatch):
     monkeypatch.setattr(lm, "_leads", lambda: leads)
     monkeypatch.setattr(lm, "_beurt", lambda lead, st: (0, "nieuw"))
     assert [l["email"] for l, _, _ in lm._wachtrij({}, 10, {"stop@x.nl"})] == ["a@x.nl"]
+
+
+def test_na_een_stille_periode_komen_beide_opvolgingen_niet_vlak_na_elkaar(postbus):
+    """SDB, 14-09-2026. De machine stond sinds 06-09 stil; bij het weer aanzetten
+    was de video 9,6 dagen oud. Opvolging 1 ging om 13:03 weg, en de proefronde
+    liet zien dat opvolging 2 ("laatste berichtje") tien minuten later zou volgen.
+    Tussen de twee horen dezelfde vier dagen als tussen dag 3 en dag 7."""
+    postbus.verzonden_op = time.time() - 9.6 * DAG
+    state = {ADRES: {"soort": "warm"}}
+    assert _draai(state) == 1
+    assert _draai(state) == 0
+    assert len(postbus.verstuurd) == 1
+    state[ADRES]["video_opvolg_op"] = _dagen_geleden(4.1)     # vier dagen later mag het wel
+    assert _draai(state) == 1
+
+
+def test_opvolging_2_zonder_bekend_moment_van_opvolging_1_gaat_niet_blind_weg(postbus):
+    postbus.verzonden_op = time.time() - 9 * DAG
+    assert _draai({ADRES: {"video_opvolg": 1, "video_op": postbus.verzonden_op}}) == 0
