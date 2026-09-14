@@ -17,6 +17,42 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ---
 
+## storing-mag-nooit-als-antwoord-tellen
+
+*14-09-2026 — Een opzoeking die niet lukt gaf hetzelfde lege antwoord als "niet gevonden"; bij Egbert annuleerde dat 50 zoekertjes in één minuut*
+
+Als een opzoeking bepaalt of iets duurs gebeurt, moet "ik kon het niet opvragen"
+een andere waarde zijn dan "ik heb gekeken en het is er niet". Gemeten
+14-09-2026 bij Egbert Brouwer: hij zette om 17:04 vijftig artikelen klaar voor
+2dehands, en binnen één minuut waren ze alle vijftig geannuleerd met "2dehands
+charges for adverts in Muziek snaarinstrumenten gitaren". De dag ervoor lukte
+dezelfde ronde 127 keer achter elkaar. Alle vijftig kregen in hun payload
+`_rubriek_niet_op_marktplaats: true`, terwijl dezelfde opzoeking later 10 van 10
+gewoon `Verzamelen | Muziek, Artiesten en Beroemdheden` teruggaf.
+
+**Why:** `rubriek_van_eigen_advertentie` gaf een leeg blok `{}` als het
+verkopersnummer niet te bepalen was, en `rubriek_op_advertentienummer` gaf `{}`
+zodra een vraag HTTP 200 gaf, ook met een lege lijst (Marktplaats antwoordt onder
+druk zo). De aanroeper leest `{}` als "staat niet op Marktplaats", stempelt dat
+permanent in de opdracht en gaat verder met de uit de titel geraden rubriek. Die
+geraden rubriek is precies wat op 2dehands geld kost. Het verkopersnummer wordt
+bovendien per proces gecachet, dus één mislukking van twee minuten raakte de hele
+bulk. Een geduld van 10 minuten voor "alsnog met de geraden rubriek" is dan geen
+vangnet maar een aftelklok.
+
+**How to apply:** storing = `None`, antwoord = `{}`; alleen `{}` mag een stempel
+zetten. "Gezocht" betekent dat er echt advertenties van deze verkoper terugkwamen,
+niet dat de vraag 200 gaf. Geduld op 6 uur, een storingsrust van 3 minuten per
+gebruiker zodat vijftig opdrachten geen vijftig verzoeken worden, een rubriek die
+we voor dit artikel al eens vonden hergebruiken uit een eerdere opdracht
+(`_rubriek_uit_eerdere_opdracht`), en wachtende opdrachten achteraan sorteren
+zodat ze de rij niet blokkeren. Herstellen kan met
+`scripts/herstel_betalende_rubriek.py`. Zie
+"geraden-rubriek-is-niet-de-rubriek-van-de-verkoper",
+"betalende-rubriek-is-geen-formulierfout" en "succes-nooit-uit-uitsluitingslijst".
+
+---
+
 ## ebay-offer-id-versus-advertentienummer
 
 *14-09-2026 — eBay heeft twee nummers per advertentie; de verkoopcontrole bevroeg het verkeerde en archiveerde elke levende eBay-advertentie binnen het uur*

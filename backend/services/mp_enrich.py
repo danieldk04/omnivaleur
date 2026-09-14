@@ -671,12 +671,19 @@ async def rubriek_op_advertentienummer(client: httpx.AsyncClient, verkoper_id: i
     Een leeg blok als er gezocht is en het niet zeker is; half raden is precies
     wat dit oplost. None als er niet gezocht kón worden (storing): dat is geen
     antwoord, en de aanroeper hoort het dan later opnieuw te proberen.
+
+    "Gezocht" is meer dan "de vraag gaf HTTP 200" (14-09-2026). Marktplaats
+    antwoordt onder druk met een keurige 200 en een LEGE lijst. Dat is geen
+    "deze advertentie bestaat niet", en het als antwoord aannemen kostte Egbert
+    vijftig zoekertjes: ze kregen het stempel "staat niet op Marktplaats" en
+    gingen daarna met de geraden, betalende gitaarrubriek de deur uit. Er is dus
+    pas gezocht als we werkelijk advertenties van deze verkoper terugkregen.
     """
     doel = re.sub(r"\D", "", str(nummer or ""))
     schoon = " ".join(html.unescape(str(titel or "")).split())
     if not doel or not schoon:
         return {}
-    gezocht = False
+    iets_gezien = False
     # Tweede vraag met alleen de eerste woorden: Admarkt schrijft titels soms
     # net anders terug dan wij ze bewaren, en dan vindt de hele titel niets.
     vragen = [schoon[:80]]
@@ -690,8 +697,9 @@ async def rubriek_op_advertentienummer(client: httpx.AsyncClient, verkoper_id: i
         except Exception as e:  # noqa: BLE001
             logger.warning("mp_enrich: rubriek niet opgezocht (%s): %s", schoon[:40], e)
             continue
-        gezocht = True
-        for l in (data.get("listings") or []):
+        lijst = data.get("listings") or []
+        iets_gezien = iets_gezien or bool(lijst)
+        for l in lijst:
             if re.sub(r"\D", "", str(l.get("itemId") or "")) != doel:
                 continue
             l2 = l.get("categoryId")
@@ -704,7 +712,7 @@ async def rubriek_op_advertentienummer(client: httpx.AsyncClient, verkoper_id: i
                 return {}
             return {"l1": l1, "l1_naam": (per_id.get(l1) or {}).get("label") or "",
                     "l2": l2, "l2_naam": sub.get("label") or ""}
-    return {} if gezocht else None
+    return {} if iets_gezien else None
 
 
 async def rubriek_van_eigen_advertentie(db, user_id: str, titel: str, nummer) -> dict | None:
@@ -716,13 +724,15 @@ async def rubriek_van_eigen_advertentie(db, user_id: str, titel: str, nummer) ->
                                      headers={"User-Agent": UA}) as client:
             verkoper = await _verkopersnummer(db, user_id, "marktplaats", client, zoek_url)
             if not verkoper:
-                # Leeg blok en niet None: wachten helpt niet als zijn titels hem
-                # niet opleveren, en dan zou élke plaatsing blijven hangen. Wel
-                # over twee minuten opnieuw zoeken in plaats van na zes uur, want
+                # None en geen leeg blok (14-09-2026). Een leeg blok betekent bij
+                # de aanroeper "dit artikel staat niet op Marktplaats", en dat
+                # weten we hier juist niet: we konden niet eens vaststellen wie de
+                # verkoper is. Dat verschil kostte Egbert vijftig zoekertjes.
+                # Over twee minuten opnieuw zoeken in plaats van na zes uur, want
                 # een storing ziet er hier precies zo uit.
                 _VERKOPERNUMMERS[(user_id, "marktplaats")] = (
                     None, time.monotonic() - _NUMMER_GELDIG + 120)
-                return {}
+                return None
             return await rubriek_op_advertentienummer(client, verkoper, titel, nummer, zoek_url)
     except Exception as e:  # noqa: BLE001 — een gemiste rubriek mag nooit iets breken
         logger.warning("mp_enrich: rubriek van advertentie %s niet opgehaald: %s", nummer, e)

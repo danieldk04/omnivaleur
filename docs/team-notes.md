@@ -9284,3 +9284,35 @@ Toon heeft nog geen eBay-koppeling in Omnivaleur staan, alleen een account (1318
 artikelen). Wat hij zelf moet doen: zijn eBay-account als verkoper afronden
 (identiteit en bankrekening bij eBay), daarna in Omnivaleur bij Kanalen op
 "eBay koppelen" klikken en zijn postcode invullen.
+
+## 14-09-2026 — Egberts vijftig zoekertjes: een storing die als antwoord telde
+
+Om 17:04 zette Egbert Brouwer vijftig artikelen klaar voor 2dehands. Binnen één
+minuut waren ze alle vijftig geannuleerd met "2dehands charges for adverts in
+Muziek snaarinstrumenten gitaren". De dag ervoor liep precies dezelfde ronde 127
+keer achter elkaar goed.
+
+De reparatie van 13-09 (2dehands volgt de rubriek die hij op Marktplaats zelf
+koos) deed het dus wél, maar had een gat. Als die opzoeking bij Marktplaats geen
+antwoord gaf, kwam dat terug als een leeg blok, en een leeg blok betekent bij de
+aanroeper "dit artikel staat niet op Marktplaats". Dat stempel is permanent, en
+daarna geldt de uit de titel geraden rubriek: gitaren, en die kost op 2dehands
+geld. Het verkopersnummer wordt bovendien twee minuten onthouden, dus één
+mislukking raakte de hele bulk in één keer.
+
+Nagemeten op 14-09-2026: alle vijftig staan gewoon op Marktplaats in Verzamelen |
+Muziek, Artiesten en Beroemdheden, en de opzoeking die op de server faalde gaf
+tien van tien keer meteen het goede antwoord terug.
+
+Wat er is veranderd: een storing komt nu binnen als "geen antwoord" en niet als
+"niet gevonden", en alleen een echt antwoord mag dat stempel zetten. Een lege
+lijst van Marktplaats telt niet meer als antwoord (onder druk geeft de zoek-API
+een keurige 200 met niets erin). Het geduld voor "dan maar met de geraden
+rubriek" ging van tien minuten naar zes uur, er zit drie minuten rust tussen twee
+mislukte opzoekingen, een rubriek die we voor een artikel al eens vonden wordt
+hergebruikt in plaats van opnieuw opgevraagd, en opdrachten die op hun rubriek
+wachten schuiven achteraan zodat ze de rij niet ophouden.
+
+`scripts/herstel_betalende_rubriek.py` zet de zoekertjes terug in de wachtrij die
+hierop sneuvelden, met hun echte Marktplaats-rubriek erin. Rubrieken die bij hem
+zelf ook geld kostten blijven staan.

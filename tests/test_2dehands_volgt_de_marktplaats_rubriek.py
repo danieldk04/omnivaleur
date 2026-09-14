@@ -33,6 +33,7 @@ import backend.api.jobs as J  # noqa: E402
 import backend.services.mp_enrich as M  # noqa: E402
 
 VOOR_DE_REPARATIE = "09583430"   # vast nummer: HEAD vergelijkt zichzelf na de commit
+VOOR_14_SEPTEMBER = "c232f2ee"   # de versie die zijn vijftig zoekertjes annuleerde
 USER = "bcdf9aa4-314d-49a2-9573-8818ad61073d"
 GITAREN = "muziek snaarinstrumenten gitaren elektrisch"
 TITEL = "Miniatuur replica Gibson SG gitaar - Angus Young - AC/DC"
@@ -80,11 +81,25 @@ class _Client:
         return False
 
 
-def _zet_marktplaats_nep(monkeypatch, client):
+def _zet_marktplaats_nep(monkeypatch, client, mod=None):
+    mod = mod or M
+
     async def verkoper(*_a, **_kw):
         return 6999351
-    monkeypatch.setattr(M, "_verkopersnummer", verkoper)
-    monkeypatch.setattr(M.httpx, "AsyncClient", lambda *a, **kw: client)
+    monkeypatch.setattr(mod, "_verkopersnummer", verkoper)
+    monkeypatch.setattr(mod.httpx, "AsyncClient", lambda *a, **kw: client)
+
+
+def _verkoper_onvindbaar(monkeypatch, client, mod=None):
+    """Precies wat er op 14-09-2026 om 17:07 gebeurde: wie de verkoper is was
+    even niet vast te stellen. Vijftig opdrachten binnen één minuut kregen
+    daardoor het stempel "staat niet op Marktplaats"."""
+    mod = mod or M
+
+    async def geen(*_a, **_kw):
+        return None
+    monkeypatch.setattr(mod, "_verkopersnummer", geen)
+    monkeypatch.setattr(mod.httpx, "AsyncClient", lambda *a, **kw: client)
 
 
 # ── een database met net genoeg om de uitgifte te laten draaien ──────────────
@@ -98,6 +113,10 @@ class _Vraag:
 
     def eq(self, k, v):
         self.f[k] = v
+        return self
+
+    def is_(self, k, v):
+        self.f[f"is:{k}"] = v
         return self
 
     def in_(self, k, v):
@@ -116,10 +135,11 @@ class _Vraag:
 
 
 class _DB:
-    def __init__(self, jobs, op_marktplaats=None, geschiedenis=None):
+    def __init__(self, jobs, op_marktplaats=None, geschiedenis=None, eerder=None):
         self.jobs = jobs
         self.op_marktplaats = op_marktplaats or {}      # item_id -> advertentienummer
         self.geschiedenis = geschiedenis or []
+        self.eerder = eerder or {}                      # item_id -> eerder gevonden rubriek
         self.updates = []
 
     def table(self, naam):
@@ -134,6 +154,9 @@ class _DB:
             ids = ids if isinstance(ids, list) else [ids]
             return [{"item_id": i, "platform_listing_id": self.op_marktplaats[i],
                      "items": {"title": TITEL}} for i in ids if i in self.op_marktplaats]
+        if v.tabel == "jobs" and v.f.get("is:payload->mp_category") == "null":
+            mc = self.eerder.get(v.f.get("item_id"))
+            return [{"mp_category": mc}] if mc else []
         if v.tabel == "jobs" and v.f.get("status") == "pending":
             return [j for j in self.jobs if j["status"] == "pending"
                     and j["platform"] == v.f.get("platform", j["platform"])]
@@ -151,17 +174,25 @@ def _echte_opdracht(jid="d7e1fc68-6d09-4887-8616-336d3611640b", item="f47f50da-a
                         "description": "Miniatuur replica van de Gibson SG van Angus Young."}}
 
 
-def _oude_jobs():
-    bron = subprocess.run(["git", "show", f"{VOOR_DE_REPARATIE}:backend/api/jobs.py"],
+def _oude_module(pad_in_repo: str, commit: str, naam: str, moet_bevatten=(), moet_missen=()):
+    bron = subprocess.run(["git", "show", f"{commit}:{pad_in_repo}"],
                           cwd=ROOT, capture_output=True, text=True, check=True).stdout
-    assert "_zet_rubriek_van_marktplaats" not in bron, "verkeerd commitnummer gepind"
+    for tekst in moet_bevatten:
+        assert tekst in bron, f"verkeerd commitnummer gepind: {tekst} ontbreekt"
+    for tekst in moet_missen:
+        assert tekst not in bron, f"verkeerd commitnummer gepind: {tekst} zit er al in"
     with tempfile.TemporaryDirectory() as map_:
-        pad = Path(map_) / "oude_jobs.py"
+        pad = Path(map_) / f"{naam}.py"
         pad.write_text(bron)
-        spec = importlib.util.spec_from_file_location("oude_jobs_rubriek", pad)
+        spec = importlib.util.spec_from_file_location(naam, pad)
         oud = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(oud)
     return oud
+
+
+def _oude_jobs():
+    return _oude_module("backend/api/jobs.py", VOOR_DE_REPARATIE, "oude_jobs_rubriek",
+                        moet_missen=("_zet_rubriek_van_marktplaats",))
 
 
 def _extensie_opent(item: dict) -> str:
@@ -221,16 +252,110 @@ def test_egberts_gitaartje_gaat_nu_naar_verzamelen_en_vroeger_naar_de_betaalde_g
     assert _extensie_opent(vroeger[0]["payload"]) == "https://www.2dehands.be/plaats/728/748?title="
 
 
-def test_een_storing_bij_marktplaats_houdt_de_opdracht_even_vast_maar_niet_voor_altijd(monkeypatch):
+def test_een_storing_bij_marktplaats_houdt_de_opdracht_vast_maar_niet_voor_altijd(monkeypatch):
+    J._RUBRIEK_STORING.clear()
     _zet_marktplaats_nep(monkeypatch, _Client(fout=True))
     job = _echte_opdracht()
     db = _DB([job], op_marktplaats={job["item_id"]: NUMMER})
     assert J._zet_rubriek_van_marktplaats(db, USER, job) is False
     assert job["payload"].get("_rubriek_zoeken_sinds")
+    assert not job["payload"].get("_rubriek_niet_op_marktplaats"), (
+        "een storing is geen bewijs dat het artikel niet op Marktplaats staat")
+
+    # Binnen de storingsrust wordt er niet opnieuw gebeld: dat salvo is juist
+    # waar Marktplaats op dichtklapt.
+    stil = _Client(fout=True)
+    _zet_marktplaats_nep(monkeypatch, stil)
+    assert J._zet_rubriek_van_marktplaats(db, USER, job) is False
+    assert stil.vragen == []
+
+    J._RUBRIEK_STORING.clear()
     job["payload"]["_rubriek_zoeken_sinds"] = (
         datetime.now(timezone.utc) - timedelta(minutes=11)).isoformat()
+    assert J._zet_rubriek_van_marktplaats(db, USER, job) is False, (
+        "elf minuten is geen reden om alsnog met de geraden, betalende rubriek te gaan")
+
+    J._RUBRIEK_STORING.clear()
+    job["payload"]["_rubriek_zoeken_sinds"] = (
+        datetime.now(timezone.utc) - timedelta(hours=7)).isoformat()
     assert J._zet_rubriek_van_marktplaats(db, USER, job) is True, (
-        "na tien minuten moet hij alsnog de deur uit, anders staat de rij stil")
+        "na zes uur moet hij alsnog de deur uit, anders staat de rij stil")
+
+
+def test_de_vijftig_van_14_september_blijven_staan_in_plaats_van_geannuleerd(monkeypatch):
+    """Zijn echte ronde van 14-09-2026, voor en na.
+
+    Om 17:04 zette hij er vijftig klaar. Binnen één minuut waren ze alle vijftig
+    geannuleerd met "2dehands charges for adverts in Muziek snaarinstrumenten
+    gitaren", terwijl diezelfde opzoeking de dag ervoor 127 keer achter elkaar
+    wél lukte. Nagemeten op 14-09-2026: alle vijftig staan gewoon in Verzamelen |
+    Muziek, Artiesten en Beroemdheden op Marktplaats.
+    """
+    betaald = {"status": "error", "category": GITAREN, "mp_category": None,
+               "result": {"error": J._melding_rubriek_vraagt_geld("2dehands", "Gitaren")}}
+    op_mp = {"f47f50da-a1ee-498a-b531-b93a290e0e22": NUMMER}
+
+    # ZOALS HET WAS: wie de verkoper is was even niet vast te stellen, en dat
+    # gold als antwoord. De opdracht ging met de geraden gitaarrubriek de rij in
+    # en werd door de rem meteen teruggenomen.
+    oud_mp = _oude_module("backend/services/mp_enrich.py", VOOR_14_SEPTEMBER, "oud_mp_enrich",
+                          moet_bevatten=("rubriek_van_eigen_advertentie",))
+    oud = _oude_module("backend/api/jobs.py", VOOR_14_SEPTEMBER, "oud_jobs_14sep",
+                       moet_bevatten=("_zet_rubriek_van_marktplaats",))
+    _verkoper_onvindbaar(monkeypatch, _Client(), oud_mp)
+    monkeypatch.setitem(sys.modules, "backend.services.mp_enrich", oud_mp)
+    oud_job = _echte_opdracht()
+    oud_db = _DB([oud_job], op_marktplaats=op_mp, geschiedenis=[betaald])
+    assert _uitgifte(oud, monkeypatch, oud_db) == []
+    assert oud_job["payload"].get("_rubriek_niet_op_marktplaats") is True
+    assert any(t == "jobs" and w.get("status") == "cancelled" for t, _f, w in oud_db.updates), (
+        "dit is wat Egbert vijftig keer las"
+    )
+    monkeypatch.setitem(sys.modules, "backend.services.mp_enrich", M)
+
+    # ZOALS HET NU IS: geen antwoord is geen stempel. De opdracht blijft staan
+    # en wordt opnieuw geprobeerd zodra de opzoeking het weer doet.
+    J._RUBRIEK_STORING.clear()
+    _verkoper_onvindbaar(monkeypatch, _Client())
+    job = _echte_opdracht()
+    db = _DB([job], op_marktplaats=op_mp, geschiedenis=[betaald])
+    assert _uitgifte(J, monkeypatch, db) == []
+    assert not job["payload"].get("_rubriek_niet_op_marktplaats")
+    assert not any(t == "jobs" and w.get("status") == "cancelled" for t, _f, w in db.updates), (
+        "een storing mag geen zoekertje annuleren"
+    )
+    assert job["status"] == "pending"
+
+    # En zodra Marktplaats weer antwoordt gaat hij alsnog naar Verzamelen.
+    J._RUBRIEK_STORING.clear()
+    _zet_marktplaats_nep(monkeypatch, _Client())
+    uit = _uitgifte(J, monkeypatch, _DB([job], op_marktplaats=op_mp, geschiedenis=[betaald]))
+    assert len(uit) == 1 and uit[0]["payload"]["mp_category"]["l2"] == 926
+
+
+def test_een_lege_lijst_is_geen_antwoord():
+    """Marktplaats antwoordt onder druk met een keurige 200 en niets erin."""
+    leeg = _Client({"listings": [], "facets": []})
+    assert asyncio.run(M.rubriek_op_advertentienummer(leeg, 6999351, TITEL, NUMMER)) is None
+    oud_mp = _oude_module("backend/services/mp_enrich.py", VOOR_14_SEPTEMBER, "oud_mp_leeg",
+                          moet_bevatten=("rubriek_van_eigen_advertentie",))
+    assert asyncio.run(oud_mp.rubriek_op_advertentienummer(
+        _Client({"listings": [], "facets": []}), 6999351, TITEL, NUMMER)) == {}, (
+        "vroeger gold een leeg antwoord als 'staat niet op Marktplaats'")
+
+
+def test_een_rubriek_die_we_al_kennen_wordt_niet_opnieuw_opgezocht(monkeypatch):
+    """Vijftig zoekertjes waren vijftig vragen aan Marktplaats binnen een minuut."""
+    J._RUBRIEK_STORING.clear()
+    client = _Client(fout=True)
+    _zet_marktplaats_nep(monkeypatch, client)
+    job = _echte_opdracht()
+    db = _DB([job], op_marktplaats={job["item_id"]: NUMMER},
+             eerder={job["item_id"]: {"l1": 895, "l1_naam": "Verzamelen",
+                                      "l2": 926, "l2_naam": "Muziek, Artiesten en Beroemdheden"}})
+    assert J._zet_rubriek_van_marktplaats(db, USER, job) is True
+    assert job["payload"]["mp_category"]["l2"] == 926
+    assert client.vragen == [], "hier hoort geen enkel verzoek naar buiten te gaan"
 
 
 def test_niet_op_marktplaats_of_een_marktplaats_opdracht_blijft_zoals_hij_was(monkeypatch):

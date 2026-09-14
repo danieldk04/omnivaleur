@@ -421,7 +421,19 @@ def _haal_links_eruit(db, jobs: list) -> int:
 # "mp_category"). Dat gebeurde alleen bij een herplaatsing op Marktplaats. Hier,
 # vlak voor uitgifte, geldt het nu ook voor een nieuw zoekertje op 2dehands van
 # een artikel dat op Marktplaats staat. Dus zonder nieuwe extensie.
-_RUBRIEK_ZOEK_GEDULD = timedelta(minutes=10)
+# TIEN MINUTEN WAS GEEN VANGNET MAAR EEN AFTELKLOK (gemeten 14-09-2026).
+# Na dit geduld gaat de opdracht alsnog met de GERADEN rubriek de deur uit, en
+# juist die geraden rubriek is wat op 2dehands geld kost: bij Egbert klopte hij
+# bij 947 van zijn 5.533 artikelen. Een kortdurende storing bij de opzoeking
+# werd zo binnen tien minuten omgezet in een plaatsing in een betalende rubriek.
+# Zes uur: lang genoeg dat geen enkele storing hem haalt, kort genoeg dat een
+# artikel dat echt niet op Marktplaats te vinden is nog dezelfde dag online gaat.
+_RUBRIEK_ZOEK_GEDULD = timedelta(hours=6)
+# Ligt de opzoeking plat, dan niet bij elke opdracht opnieuw bellen: dat is
+# precies het salvo waar Marktplaats op dichtklapt. Binnen deze rust blijft een
+# wachtende opdracht gewoon wachten, zonder één verzoek naar buiten.
+_RUBRIEK_STORING_RUST = timedelta(minutes=3)
+_RUBRIEK_STORING: dict[str, datetime] = {}
 _BETAALDE_RUBRIEK_GEHEUGEN = timedelta(days=28)
 
 
@@ -459,6 +471,29 @@ def _draai_los(coro):
         return uitvoerder.submit(asyncio.run, coro).result()
 
 
+def _rubriek_uit_eerdere_opdracht(db, user_id: str, item_id) -> dict | None:
+    """De Marktplaats-rubriek die we voor DIT artikel eerder al vonden.
+
+    WAAROM (14-09-2026). De gevonden rubriek stond alleen in de opdracht zelf,
+    dus elke nieuwe plaatsing van hetzelfde artikel ging opnieuw bij Marktplaats
+    langs. Vijftig zoekertjes tegelijk zijn dan vijftig vragen binnen een minuut,
+    en precies in zo'n salvo ging het mis. Een rubriek die we al kennen is
+    bovendien niet afhankelijk van of Marktplaats op dat moment antwoordt.
+    """
+    if not item_id:
+        return None
+    try:
+        rij = eerste_rij(db.table("jobs").select("payload->mp_category")
+                         .eq("user_id", user_id).eq("item_id", item_id)
+                         .not_.is_("payload->mp_category", "null")
+                         .order("created_at", desc=True).limit(1).execute())
+    except Exception as e:  # noqa: BLE001 — dit is een snelkoppeling, geen eis
+        logger.warning("item %s: eerdere rubriek niet te lezen: %s", item_id, e)
+        return None
+    mc = (rij or {}).get("mp_category")
+    return mc if isinstance(mc, dict) and mc.get("l1") and mc.get("l2") else None
+
+
 def _zet_rubriek_van_marktplaats(db, user_id: str, job: dict) -> bool:
     """Zet de echte Marktplaats-rubriek in een 2dehands-plaatsing. Zie hierboven.
 
@@ -486,14 +521,27 @@ def _zet_rubriek_van_marktplaats(db, user_id: str, job: dict) -> bool:
     if not rij or not rij.get("platform_listing_id"):
         return True
 
-    from backend.services.mp_enrich import rubriek_van_eigen_advertentie
-    titel = (rij.get("items") or {}).get("title") or pl.get("title") or ""
-    try:
-        rubriek = _draai_los(rubriek_van_eigen_advertentie(
-            db, user_id, titel, rij["platform_listing_id"]))
-    except Exception as e:  # noqa: BLE001
-        logger.warning("job %s: rubriek opvragen mislukt: %s", job.get("id"), e)
+    nu = datetime.now(timezone.utc)
+    rubriek = _rubriek_uit_eerdere_opdracht(db, user_id, job.get("item_id"))
+    rust = _RUBRIEK_STORING.get(user_id)
+    if rubriek:
+        pass
+    elif rust and nu - rust < _RUBRIEK_STORING_RUST:
+        # De vorige opzoeking liep stuk. Wachten zonder te bellen.
         rubriek = None
+    else:
+        from backend.services.mp_enrich import rubriek_van_eigen_advertentie
+        titel = (rij.get("items") or {}).get("title") or pl.get("title") or ""
+        try:
+            rubriek = _draai_los(rubriek_van_eigen_advertentie(
+                db, user_id, titel, rij["platform_listing_id"]))
+        except Exception as e:  # noqa: BLE001
+            logger.warning("job %s: rubriek opvragen mislukt: %s", job.get("id"), e)
+            rubriek = None
+        if rubriek is None:
+            _RUBRIEK_STORING[user_id] = nu
+        else:
+            _RUBRIEK_STORING.pop(user_id, None)
 
     nieuw = dict(pl)
     uitdelen = True
@@ -503,15 +551,22 @@ def _zet_rubriek_van_marktplaats(db, user_id: str, job: dict) -> bool:
         logger.info("job %s: 2dehands in de eigen Marktplaats-rubriek %s (was %r)",
                     job.get("id"), _rubriek_leesbaar(nieuw), pl.get("category"))
     elif rubriek == {}:
-        # Gezocht en niet gevonden: dan is er geen eigen rubriek om te volgen.
+        # Zijn eigen advertenties kwamen terug en die van dit artikel zat er niet
+        # bij: dan is er geen eigen rubriek om te volgen. Dit is een ANTWOORD, en
+        # het is het enige geval dat hier een stempel mag zetten. Een storing ziet
+        # er van buiten hetzelfde uit en komt daarom als None binnen (zie
+        # mp_enrich.rubriek_op_advertentienummer) — dat stempel zetten op een
+        # storing is precies wat op 14-09-2026 vijftig zoekertjes de betalende
+        # gitaarrubriek in duwde.
         nieuw["_rubriek_niet_op_marktplaats"] = True
     else:
-        nu = datetime.now(timezone.utc)
         sinds = _parse_ts(pl.get("_rubriek_zoeken_sinds"))
         if not sinds:
             nieuw["_rubriek_zoeken_sinds"] = nu.isoformat()
             sinds = nu
         uitdelen = nu - sinds >= _RUBRIEK_ZOEK_GEDULD
+        if not uitdelen:
+            logger.info("job %s: rubriek nog niet op te vragen, blijft wachten", job.get("id"))
     if nieuw != pl:
         job["payload"] = nieuw
         try:
@@ -1442,8 +1497,15 @@ def get_pending_jobs(request: Request, platform: str = None, user_id: str = Depe
     # de wachtrij kwam (bijvoorbeeld de uurlijkse controle) ging vóór een publicatie
     # waar iemand net op geklikt heeft — en dan lijkt de knop kapot. Publiceren en
     # verwijderen gaan nu altijd voor; scans vullen de rustige momenten op.
+    # En binnen de publicaties achteraan: wie op zijn Marktplaats-rubriek staat
+    # te wachten (_zet_rubriek_van_marktplaats). Anders houdt één artikel waarvan
+    # de rubriek even niet op te vragen is de hele rij achter zich tegen, want er
+    # worden er maar vijf per ronde bekeken.
     if is_extension_dispatch:
-        ready.sort(key=lambda j: 0 if j.get("action") in SCHRIJVEND else 1)
+        ready.sort(key=lambda j: (
+            0 if j.get("action") in SCHRIJVEND else 1,
+            1 if (isinstance(j.get("payload"), dict)
+                  and j["payload"].get("_rubriek_zoeken_sinds")) else 0))
 
     # Extension: exactly one job at a time. Dashboard: the whole queue, to count.
     if not is_extension_dispatch:
