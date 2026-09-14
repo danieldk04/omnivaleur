@@ -9380,3 +9380,32 @@ vóór de pauze ernaast: die ruimt in dezelfde proef alle vijf de opdrachten op.
 Open punt dat hier niets mee te maken heeft: `tests/test_extensie_permissies.py`
 valt om op de vaste permissie `power` in het manifest. Een nieuwe vaste permissie
 zet Chrome de extensie bij elke bestaande klant uit tot hij hem goedkeurt.
+
+### De vinger op de zere plek: zijn werktabblad zag helemaal geen sessie
+
+Nagemeten op 14-09-2026, met een kale aanvraag zonder cookies:
+
+    GET https://www.2dehands.be/my-account/sell/index.html
+      Accept: application/json  ->  401 "Unauthorized" (12 bytes)
+      Accept: text/html         ->  302 naar /identity/v2/login?target=...
+
+Dat tweede is letterlijk wat zijn browser meldde. Een browser die wél een sessie
+heeft, komt daar niet terecht. Zijn werktabblad had dus geen enkele cookie mee,
+en dat is iets anders dan "hij is uitgelogd".
+
+In onze eigen code zit precies één plek waar dat kan gebeuren. `openAchtergrondTabblad`
+koos het eerste normale venster dat niet geminimaliseerd was, zonder te kijken of
+dat venster incognito is. Staat de extensie aan in incognito (dat zet de verkoper
+zelf aan) en heeft hij zo'n venster open, dan landt élk werktabblad daarin: een
+eigen koekjespot, altijd leeg. Publiceren lukt dan nooit en het meldt zich als
+"je bent niet ingelogd".
+
+Gerepareerd in 1.0.328: een incognitovenster telt niet meer als bruikbaar
+venster, en komt het toch zo ver, dan levert een weigering daar geen oordeel meer
+op over zijn inlog (de melding zegt het er dan bij). Bewaakt door
+`tests/werktabblad-nooit-incognito-test.js`, met de vorige versie ernaast: die
+zet het tabblad in dezelfde proef wél in het incognitovenster.
+
+Let op: dat Egbert een incognitovenster open had is NIET bewezen. Wat bewezen is:
+zijn tabblad zag geen sessie, en dit is de enige plek in onze code die dat kan
+veroorzaken. `dist/omnivaleur-extension-1.0.328.zip` staat klaar voor de Web Store.

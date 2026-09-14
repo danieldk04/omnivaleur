@@ -1709,9 +1709,26 @@ async function maakWerkTabblad(opties, url) {
   return tab;
 }
 
+// NOOIT IN EEN INCOGNITOVENSTER WERKEN.
+//
+// GEMETEN 14-09-2026 (Egbert Brouwer). Zijn werktabblad kreeg van 2dehands een
+// 302 naar /identity/v2/login en een 401 op het verkopersoverzicht. Precies dat
+// krijgt een browser ZONDER cookies: nagemeten met een kale aanvraag geeft
+// dezelfde 302 naar dezelfde pagina. Zijn tabblad zag dus geen sessie, terwijl
+// hij gewoon ingelogd was.
+//
+// Hier stond `vensters.find(...)` zonder te kijken of het venster incognito is.
+// Staat de extensie aan in incognito (de verkoper zet dat zelf aan) en heeft hij
+// zo'n venster open, dan landt elk werktabblad daarin: een eigen koekjespot,
+// altijd leeg. Publiceren lukt dan nooit, en het meldt zich als "je bent niet
+// ingelogd" — het verwijt dat deze man al 27 keer ten onrechte kreeg.
+//
+// Een incognitovenster is dus geen bruikbaar venster. Is er geen enkel gewoon
+// venster, dan valt het terug op ons eigen werkvenster (dat is nooit incognito).
 async function openAchtergrondTabblad(url) {
   try {
-    const vensters = await chrome.windows.getAll({ windowTypes: ["normal"] });
+    const vensters = (await chrome.windows.getAll({ windowTypes: ["normal"] }))
+      .filter(w => !w.incognito);
     const bruikbaar = vensters.find(w => w.state !== "minimized") || vensters[0];
     if (bruikbaar) {
       return await maakWerkTabblad({ windowId: bruikbaar.id, active: false }, url);
@@ -2793,7 +2810,16 @@ async function eerstepartijStatus(startUrl, pad) {
       // Waar de browser uiteindelijk belandde. Bij een uitgelogde bezoeker is dat
       // de inlogpagina, en dat is het bewijs dat we tot nu toe nooit hadden.
       return { status, body, url: String(location.href).split("?")[0] };
-    }, [pad]);
+    }, [pad]).then(async (uit) => {
+      // En in WAT VOOR venster we keken. Een incognitotabblad heeft zijn eigen,
+      // altijd lege koekjespot: dan zegt een 401 niets over zijn inlog. Sinds
+      // 14-09-2026 wordt zo'n venster niet meer gekozen, maar als het toch
+      // gebeurt moet het in de melding staan en niet te raden zijn.
+      try {
+        const t = await chrome.tabs.get(tabId);
+        return { ...(uit || {}), incognito: !!(t && t.incognito) };
+      } catch (_) { return uit; }
+    });
   } catch (e) {
     console.warn("[Omnivaleur] Eerstepartij-inlogcontrole mislukt:", e);
     return null;
@@ -2813,10 +2839,15 @@ async function mpIngelogdOpDeSiteZelf(platform) {
 
   const uit = await eerstepartijStatus(start, pad);
   const status = uit && uit.status != null ? uit.status : null;
+  // In een incognitovenster zegt een weigering niets over zijn inlog: die pot is
+  // per definitie leeg. Dan geen oordeel, en het werk gaat gewoon door.
+  const blind = !!(uit && uit.incognito);
   const oordeel = {
-    ingelogd: status === 200 ? true : (status === 401 || status === 403) ? false : null,
+    ingelogd: blind ? null
+      : status === 200 ? true : (status === 401 || status === 403) ? false : null,
     status,
     url: (uit && uit.url) || null,
+    incognito: blind,
     at: Date.now(),
   };
   // Alleen een uitslag onthouden, geen "weet niet": anders zwijgen we tien
@@ -2846,12 +2877,17 @@ function mpNietIngelogdMelding(platform, meting) {
   const waar = meting && meting.url
     ? ` We opened your ${site} account page in this browser and it ended up at ${meting.url}.`
     : "";
+  const venster = meting && meting.incognito
+    ? " NOTE: that check ran in an incognito window, which has its own empty cookie jar,"
+      + " so it says nothing about your account."
+    : "";
   return (
     `You are not signed in to ${site} in this browser, so nothing was published. `
     + `We checked twice: once in the background and once in a tab on ${site} itself, `
     + `and the site refused both times (HTTP ${status}).${waar} Marktplaats and `
     + `2dehands are separate sites with separate logins, so being signed in to one does not `
     + `sign you in to the other. Open ${MP_INLOG_URL[platform]}, sign in there, and publish again.`
+    + venster
   );
 }
 
