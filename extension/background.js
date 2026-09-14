@@ -4125,13 +4125,20 @@ async function bgDeleteMp2dh(job, serverUrl) {
         console.log(`[Omnivaleur] bgDelete: "${title}" niet in het overzicht maar wel online — via ${adUrl}`);
         const gelukt = await verwijderViaAdvertentiepagina(tabId, adUrl, platform);
         if (gelukt) {
-          await finaliseJob(serverUrl, job.id, "complete", { note: "deleted_via_ad_page" });
+          // De diagnostiek reist mee, ook bij succes: een gemeld succes dat
+          // later toch niet klopte, liet tot nu toe geen spoor na — elke
+          // mislukking zag er identiek uit ("deleted_via_ad_page").
+          await finaliseJob(serverUrl, job.id, "complete", {
+            note: "deleted_via_ad_page",
+            verify_diag: _laatsteVerwijderDiag,
+          });
           return;
         }
         throw new Error(
           `"${title}" cannot be found in your ${platform} listings overview, and the delete button on its ` +
           `own page (${adUrl}) could not be used either. Nothing was removed — delete it by hand, or check ` +
-          `that you are signed in to the right account. | Buttons on that page: ${_laatsteVerwijderpagina}`
+          `that you are signed in to the right account. | Buttons on that page: ${_laatsteVerwijderpagina} ` +
+          `| Diag: ${JSON.stringify(_laatsteVerwijderDiag)}`
         );
       }
       if (live !== false) {
