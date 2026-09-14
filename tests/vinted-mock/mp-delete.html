@@ -268,15 +268,17 @@ const scenarios = [
     verwacht: "complete" },
 
   { naam: "groot account: klik lukt, maar de advertentie blijft echt online",
+    // Deze advertentie staat NOOIT in het overzicht (groot zakelijk account,
+    // zie de 1.221-advertenties-casus) — alleen de losse pagina is getuige.
     payload: { title: HET_VEST, platform_listing_id: "m2423718603" },
-    staat: { verstopNaHerladen: true, fetchNaKlik: "leeft", domNaKlik: "leeft",
-             ads: [AD("m2423718603", HET_VEST), AD("m2999999999", "Blauwe trui")] },
+    staat: { fetchNaKlik: "leeft", domNaKlik: "leeft",
+             ads: [AD("m2999999999", "Blauwe trui")] },
     verwacht: "error" },
 
   { naam: "advertentiepagina: fetch én de echte pagina zijn het eens dat hij weg is",
     payload: { title: HET_VEST, platform_listing_id: "m2423718603" },
-    staat: { verstopNaHerladen: true, fetchNaKlik: "weg", domNaKlik: "weg",
-             ads: [AD("m2423718603", HET_VEST), AD("m2999999999", "Blauwe trui")] },
+    staat: { fetchNaKlik: "weg", domNaKlik: "weg",
+             ads: [AD("m2999999999", "Blauwe trui")] },
     verwacht: "complete" },
 
   { naam: "fetch zegt weg (verouderd cache-antwoord), de echte pagina niet — vals-positief genegeerd",
