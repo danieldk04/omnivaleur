@@ -153,9 +153,11 @@ def test_de_kopie_die_het_zelf_mat_krijgt_het_laatste_woord():
     """
     db = _NepDb([_scan(200, uren_geleden=33)])
     uit = api._reden_zonder_vals_verwijt(db, "u", "2dehands", VERWIJT, "1.0.327")
-    assert uit.startswith(VERWIJT), "wat zijn eigen browser NU mat, staat vooraan"
-    assert "HTTP 200" in uit, "en wat wij weten staat eronder, als tegenspraak"
-    assert "fault is ours" in uit
+    assert VERWIJT in uit, "wat zijn eigen browser NU mat, staat er woordelijk in"
+    assert "HTTP 200" in uit, "en onze eigen meting staat ernaast"
+    assert "NOT saying your account is signed out" in uit, (
+        "twee metingen die elkaar tegenspreken zijn geen oordeel over zijn account")
+    assert "which of the two you see" in uit, "we stellen een vraag in plaats van te concluderen"
 
     # Zonder tegenspraak van onze kant blijft het precies zijn eigen melding.
     assert api._reden_zonder_vals_verwijt(

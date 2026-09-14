@@ -4637,11 +4637,22 @@ def _reden_zonder_vals_verwijt(db, user_id: str, platform: str, reden: str,
     if versie is not None and not oude_kopie:
         if not wanneer:
             return reden
-        return reden + "\n\n" + (
-            f"One thing on our side does not match that: your own browser did reach your {site} "
-            f"account page on {wanneer[:16].replace('T', ' ')} (HTTP 200). So if you open the page "
-            f"above and your own adverts are simply there, the fault is ours and not your account. "
-            f"Tell us if that is what you see, because we cannot tell from here."
+        # De twee metingen spreken elkaar tegen, en dan doen we geen uitspraak.
+        # Deze verkoper kreeg dit verwijt al drie keer ten onrechte; we leggen
+        # alleen naast elkaar wat we zien en stellen er een vraag bij.
+        controle = _CONTROLEPAGINA.get(platform, "")
+        return (
+            f"We stopped the {site} queue because your browser could not reach your {site} account "
+            f"page just now. We are NOT saying your account is signed out: our own check on "
+            f"{wanneer[:16].replace('T', ' ')} reached that same page fine (HTTP 200), and we have "
+            f"had this wrong before. So we would rather ask than guess.\n\n"
+            f"Open this page in this browser and tell us which of the two you see:\n{controle}\n\n"
+            f"1. Your own adverts page. Then you are signed in and the fault is ours, and we need "
+            f"to hear that, because we cannot see it from here.\n"
+            f"2. A login screen. Then sign in there and tell us; we put your queue back ourselves, "
+            f"so you do not have to click your items again.\n\n"
+            f"Nothing was published and nothing was changed on {site}. This is what we measured, "
+            f"word for word:\n\n{reden}"
         )
 
     if not wanneer and not oude_kopie:
