@@ -1761,6 +1761,11 @@ def _check_inbox(state: dict, boek: "Leadboek", dagen: int) -> tuple[int, int, i
                 # ligt, zodat we hem niet nog eens verwerken, en in Notion de
                 # bal bij Daniel leggen. Hij beantwoordt zelf.
                 st["laatste_inkomend"] = binnen_op
+                if opnieuw:
+                    # Die ene extra kans is nu gebruikt. Dit vastleggen verdween op
+                    # 06-09 met de concepten, en toen kwam spaansesloffen-winkel.nl
+                    # elke tien minuten opnieuw als warme reactie in het logboek.
+                    st["concept_opnieuw"] = binnen_op
                 _save_state(state)
                 if soort in ("warm", "onbekend"):
                     boek.wacht_op_daniel(lead)
@@ -1829,8 +1834,12 @@ def _jouw_antwoorden_verwerken(state: dict, boek: "Leadboek") -> int:
         if st.get("concurrent") or st.get("afgewezen") or st.get("afgemeld"):
             st["daniel_antwoordde"] = datum      # wel vastleggen, niets omzetten
             continue
-        if st.get("daniel_antwoordde") == datum:
-            continue                       # al verwerkt
+        # Alleen een NIEUWER antwoord telt. Borstelbeer (14-09-2026) kreeg antwoord
+        # op twee adressen die bij dezelfde lead horen; met "is het anders" sprong
+        # dit tijdstip elke ronde van het ene naar het andere en terug, en kwam er
+        # elke tien minuten twee keer "bal ligt bij hen" in het logboek.
+        if float(st.get("daniel_antwoordde") or 0) >= datum:
+            continue                       # al verwerkt, of een ouder antwoord
         st["daniel_antwoordde"] = datum
         bijgewerkt += 1
         # Wat stuurde hij écht? Naast mijn voorstel leggen, zodat het verschil

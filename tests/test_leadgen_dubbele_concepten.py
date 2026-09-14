@@ -342,3 +342,60 @@ def test_inbox_lezen_schrijft_geen_concept():
     inbox = bron.split("def _check_inbox(")[1].split("\ndef ", 1)[0]
     assert "_zet_concept_klaar(" not in inbox
     assert "boek.wacht_op_daniel(lead)" in inbox
+
+
+# ----------------------------------------- elke ronde dezelfde logregel (14-09-2026)
+class _Boek:
+    """Telt wat de machine in de leadlijst zou zetten."""
+
+    def __init__(self):
+        self.zetten: list[tuple[str, str]] = []
+
+    def __getattr__(self, naam):
+        return lambda lead, *a, **k: self.zetten.append((naam, lead["email"]))
+
+
+def test_een_al_verwerkte_reactie_komt_niet_elke_ronde_opnieuw_in_het_logboek(postbus, monkeypatch):
+    """spaansesloffen-winkel.nl, 14-09-2026: elke tien minuten "warme reactie"
+    in het logboek. De regel "een weggegooid concept krijgt nog één kans"
+    onthield die ene kans in concept_opnieuw, maar dat vastleggen verdween op
+    06-09 samen met de concepten. Sindsdien was de kans er elke ronde weer."""
+    binnen = time.time() - 3 * 86400
+    postbus(INBOX=[_kop(From="frank@klant.nl", Date=formatdate(binnen, localtime=True),
+                        Message_ID="<hun@klant.nl>", Subject="Re: Vraagje")])
+    state = {"frank@klant.nl": {"beantwoord": "2026-09-01T23:45:30", "soort": "warm",
+                                "concept_klaar": "2026-09-06T06:54:05",
+                                "laatste_inkomend": float(int(binnen))}}
+    monkeypatch.setattr(L, "_leads", lambda: [{"email": "frank@klant.nl"}])
+    monkeypatch.setattr(L, "_laatst_verstuurd_per_adres", lambda: {})
+    monkeypatch.setattr(L, "_beantwoorde_berichten", lambda: set())
+    monkeypatch.setattr(L, "_save_state", lambda s: None)
+    monkeypatch.setattr(L, "_CONCEPT_ONTVANGERS", [])
+    boek = _Boek()
+    for _ in range(3):
+        L._check_inbox(state, boek, 14)
+    assert len([z for z in boek.zetten if z[0] == "wacht_op_daniel"]) <= 1
+
+
+def test_twee_adressen_van_hetzelfde_bedrijf_zetten_de_bal_niet_elke_ronde_om(postbus, monkeypatch):
+    """Borstelbeer, 14-09-2026: Daniel antwoordde naar info@ en later naar
+    marktplaats@. Allebei horen bij dezelfde lead, en de machine zette het
+    tijdstip elke ronde van het ene naar het andere en terug. Twee keer
+    "bal ligt bij hen" per tien minuten. Alleen een nieuwer antwoord telt."""
+    postbus()
+    antwoorden = {"info@borstelbeer.nl": 100.0, "marktplaats@borstelbeer.nl": 200.0}
+    state = {"marktplaats@borstelbeer.nl": {"beantwoord": "2026-08-27T14:27:21",
+                                            "daniel_antwoordde": 200.0}}
+    monkeypatch.setattr(L, "_antwoorden_van_daniel", lambda imap, g: dict(antwoorden))
+    monkeypatch.setattr(L, "_leads", lambda: [{"email": "marktplaats@borstelbeer.nl"}])
+    monkeypatch.setattr(L, "_verzonden_tekst", lambda imap, adres: None)
+    monkeypatch.setattr(L, "_save_state", lambda s: None)
+    boek = _Boek()
+    for _ in range(3):
+        L._jouw_antwoorden_verwerken(state, boek)
+    assert boek.zetten == []
+
+    antwoorden["info@borstelbeer.nl"] = 300.0          # een echt nieuw antwoord telt wel
+    for _ in range(3):
+        L._jouw_antwoorden_verwerken(state, boek)
+    assert boek.zetten == [("bal_bij_hen", "marktplaats@borstelbeer.nl")]
