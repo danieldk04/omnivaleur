@@ -10,7 +10,7 @@ product verandert. De ontwikkelaar werkt dan zowel dit bestand in de repo als de
 kopie in Drive bij, in dezelfde beurt. Daniel hoeft niets te doen; de Gem leest
 de Drive-kopie de volgende keer opnieuw in.
 
-_Laatst bijgewerkt: 13-09-2026 (uitgelogd raken bij stilzitten, plaatsen stopt bij slaapstand, en advertenties zonder foto's: oorzaak weg, en de server repareert wat er stond)_
+_Laatst bijgewerkt: 14-09-2026 (wat je bij eBay zelf nog moet regelen, en de eBay-advertenties die onterecht in je archief stonden)_
 
 ---
 
@@ -107,6 +107,12 @@ Hoe de kanalen gekoppeld worden:
   te koppelen.
 - eBay en Shopify koppel je een keer in je dashboard, bij Platforms. Dat gaat via
   de officiele koppeling van het platform zelf.
+- Bij eBay horen er twee dingen bij die je bij eBay zelf regelt, niet bij ons.
+  Je account moet eerst helemaal als verkoper klaarstaan: eBay vraagt je
+  identiteit en je bankrekening voordat je iets mag aanbieden. En na het
+  koppelen vraagt het scherm om je postcode. Die heeft eBay nodig om te weten
+  vanaf welk land je verzendt; zonder postcode weigert eBay elke advertentie.
+  Een eBay-account alleen aanmaken is dus nog niet genoeg.
 - Shopify koppelen gaat in drie stapjes die het scherm je voorzegt: eerst je
   winkeladres dat eindigt op .myshopify.com, dan maak je in je eigen
   Shopify-beheer een kleine app aan (Instellingen, Apps en verkoopkanalen, Apps
