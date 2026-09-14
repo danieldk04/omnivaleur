@@ -283,8 +283,8 @@ const scenarios = [
 
   { naam: "fetch zegt weg (verouderd cache-antwoord), de echte pagina niet — vals-positief genegeerd",
     payload: { title: HET_VEST, platform_listing_id: "m2423718603" },
-    staat: { verstopNaHerladen: true, fetchNaKlik: "vals-weg", domNaKlik: "leeft",
-             ads: [AD("m2423718603", HET_VEST), AD("m2999999999", "Blauwe trui")] },
+    staat: { fetchNaKlik: "vals-weg", domNaKlik: "leeft",
+             ads: [AD("m2999999999", "Blauwe trui")] },
     verwacht: "error" },
 
   { naam: "onbekend venster — eerlijk stoppen met de knopteksten erbij",
