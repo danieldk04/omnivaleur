@@ -48,6 +48,41 @@ function overzichtHtml(ads, opties = {}) {
   `;
 }
 
+// De echte, losse advertentiepagina (/seller/view/{id}) — met een klikbare
+// verwijderknop en een bevestigingsvenster, precies zoals de echte code ze
+// zoekt. state.domNaKlik bepaalt wat een ECHTE navigatie naar deze pagina laat
+// zien NA het bevestigen — onafhankelijk van wat fetch() beweert. Dat
+// onderscheid is de kern van de proef: een vals-positieve fetch (bijvoorbeeld
+// een verouderd cache-antwoord) mag niet als bewijs tellen zolang de echte
+// pagina het tegenspreekt.
+function adPaginaHtml(state) {
+  if (state.klikGelukt && state.domNaKlik === "weg") {
+    return "<p>Deze advertentie is niet meer beschikbaar.</p>";
+  }
+  return `<h1>${state.ads[0]?.titel || "advertentie"}</h1>` +
+    (state.klikGelukt ? "" : '<button id="verwijderKnop">Verwijderen</button>');
+}
+function bedraadAdPagina(f, state) {
+  const d = f.contentDocument;
+  const knop = d.querySelector("#verwijderKnop");
+  if (!knop) return;
+  knop.addEventListener("click", () => {
+    knop.remove();
+    const portal = d.createElement("div");
+    portal.className = "ReactModalPortal";
+    portal.setAttribute("role", "dialog");
+    portal.innerHTML = state.onbekendVensterOpAdPagina
+      ? '<p>Even geduld</p><button>Sluiten</button>'
+      : '<p>Weet je het zeker?</p><button class="ja">Ja, verwijderen</button>';
+    d.body.appendChild(portal);
+    const ja = portal.querySelector(".ja");
+    if (ja) ja.addEventListener("click", () => {
+      portal.remove();
+      state.klikGelukt = true;
+    });
+  });
+}
+
 function bouwFrame(state, herladen) {
   const f = document.createElement("iframe");
   document.body.appendChild(f);
@@ -62,13 +97,19 @@ function bouwFrame(state, herladen) {
     ? state.ads.filter(a => a.id !== "m2423718603") : state.ads;
   d.body.innerHTML = weg ? "<p>Log in om je advertenties te zien.</p>"
                          : overzichtHtml(zichtbaar, state);
-  // De advertentiepagina zelf. Die wordt met fetch opgevraagd en is bij een
-  // grote verkoper de enige betrouwbare getuige: het overzicht laat maar
-  // vijftig advertenties per keer zien.
+  // fetch() zoals de code hem gebruikt om de advertentiepagina na te kijken.
+  // VÓÓR er geklikt is, staat de advertentie gewoon te koop. NÁ het klikken
+  // beslist state.fetchNaKlik wat de rauwe HTML/status teruggeeft — dat mag
+  // van het echte scherm afwijken (state.domNaKlik), want dat verschil is
+  // precies wat deze proef test.
   f.contentWindow.fetch = async (u) => {
-    if (state.adPagina === "weg") return { ok: false, status: 404, text: async () => "" };
-    if (state.adPagina === "leeft") return { ok: true, status: 200, text: async () => "<h1>" + state.ads.map(a => a.titel).join("") + "</h1> te koop" };
-    throw new Error("netwerk onbereikbaar");   // geen uitsluitsel
+    if (!state.klikGelukt) {
+      return { ok: true, status: 200, text: async () => "<h1>" + state.ads.map(a => a.titel).join(" ") + "</h1> te koop" };
+    }
+    const uitkomst = state.fetchNaKlik || "leeft";
+    if (uitkomst === "weg") return { ok: false, status: 404, text: async () => "" };
+    if (uitkomst === "vals-weg") return { ok: true, status: 200, text: async () => "<p>niet meer beschikbaar</p>" };
+    return { ok: true, status: 200, text: async () => "<h1>" + state.ads.map(a => a.titel).join(" ") + "</h1> te koop" };
   };
   bedraad(f, state);
   return f;
