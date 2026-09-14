@@ -210,3 +210,21 @@ def test_nieuwe_leads_komen_klaar_te_staan_zonder_bestaande_aan_te_raken():
     assert [r[KOP.index("E-mail")] for r in nep.tabs[ls.TAB_LEADS][1:]] == ["anna@x.nl", "piet@y.nl"]
     assert _cel(nep, "piet@y.nl", "Fase") == "1. Te benaderen"
     assert _cel(nep, "anna@x.nl", "Notities") == "al gebeld"
+
+
+def test_het_logboek_toont_nederlandse_tijd_ook_op_een_server_in_utc(monkeypatch):
+    """14-09-2026: de server draait op UTC, dus een mail van 12:27 stond als
+    10:27 in het logboek. Daniel leest die tijden als Nederlandse tijd."""
+    import time as _time
+    from datetime import datetime
+    from zoneinfo import ZoneInfo
+    monkeypatch.setenv("TZ", "UTC")
+    _time.tzset()
+    try:
+        blad = ls.Leadblad(NepSheets([KOP, _leadrij("Anna", "anna@x.nl")]))
+        blad.noteer({"email": "anna@x.nl"}, "mail 1 verstuurd", {})
+        verwacht = datetime.now(ZoneInfo("Europe/Amsterdam")).strftime("%d-%m-%Y %H:%M")
+        assert blad._wachtend[0][3] == verwacht
+    finally:
+        monkeypatch.delenv("TZ")
+        _time.tzset()

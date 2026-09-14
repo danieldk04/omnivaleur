@@ -33,6 +33,7 @@ import os
 import re
 import time
 from datetime import datetime
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 from typing import Callable
 from urllib.parse import quote
 
@@ -262,6 +263,17 @@ def vul_in(tekst: str, waarden: dict[str, str]) -> str:
 # ── De tab Leads ──────────────────────────────────────────────────────────
 
 
+
+def nu_nl() -> datetime:
+    """De klok zoals Daniel hem leest. De server draait op UTC, en dan stond een
+    mail van 12:27 als 10:27 in het logboek (14-09-2026). Ontbreekt de
+    tijdzonetabel op de server, dan liever de serverklok dan een ronde die
+    omvalt op een tijdstempel."""
+    try:
+        return datetime.now(ZoneInfo("Europe/Amsterdam"))
+    except ZoneInfoNotFoundError:
+        return datetime.now()
+
 class Leadblad:
     """Schrijft per lead wat er gebeurde naar de tab Leads en het Logboek.
 
@@ -333,7 +345,7 @@ class Leadblad:
         return len(nieuw), al
 
     def noteer(self, lead: dict, regel: str, wensen: dict) -> None:
-        self._wachtend.append((lead, regel, wensen, datetime.now().strftime("%d-%m-%Y %H:%M")))
+        self._wachtend.append((lead, regel, wensen, nu_nl().strftime("%d-%m-%Y %H:%M")))
         if len(self._wachtend) >= self.buffer:
             self.wegschrijven()
 
