@@ -232,7 +232,7 @@ def bouw(rijen: list[dict], logs: dict[str, list], leads: list[dict], state: dic
                            "Link": rij.get("URL") or "", "Aangemaakt": rij["_aangemaakt"]})
             social_log += [[d, rij.get("Name") or "", rij.get("URL") or "", t] for d, t in regels]
     for lead in per_url.values():            # in de machine, maar nooit in Notion gezet
-        if lead.get("platform") in ("2dehands", "MP", None) and lead.get("email"):
+        if lead.get("email"):
             blad = ls.Leadblad(None, naam=lm._bedrijfsnaam)
             mail.append({**blad.leadvelden(lead), "Fase": "1. Te benaderen"})
 
