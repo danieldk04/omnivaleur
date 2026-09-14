@@ -179,6 +179,9 @@ async def health():
             "leadgen_tick": bool(str(_s.leadgen_tick or "").strip() in ("1", "true", "True")),
             "leadgen_resend": bool(_s.resend_api_key),
             "leadgen_mailbox": bool(os.environ.get("MAIL_USER") and os.environ.get("MAIL_PASS")),
+            # Sinds 14-09-2026 leest de machine zijn mailteksten en stopvinkjes uit
+            # Google Sheets. Zonder deze sleutel gaat er bewust niets uit.
+            "leadgen_sheets": bool(os.environ.get("GOOGLE_SHEETS_SLEUTEL", "").strip()),
             # Shopify koppelen faalde bij een klant met "deze installatielink kan
             # niet worden gebruikt". Zonder deze regels was niet te zien of de
             # sleutels er überhaupt zijn, of dat het aan de app-instelling bij
