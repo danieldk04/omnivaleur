@@ -389,3 +389,44 @@ class Leadblad:
             self._wachtend = wachtend + self._wachtend   # volgende poging neemt ze mee
             raise
         return len(wachtend)
+
+
+# ── Instagram & FB ──────────────────────────────────────────────────────────
+
+
+def _link(url) -> str:
+    return str(url or "").strip().rstrip("/").lower()
+
+
+def social_links(sheets: Sheets) -> set[str]:
+    """Elke link die al in de Instagram & FB-lijst staat, ook met de hand gezet."""
+    waarden = sheets.lees(SOCIAL_SHEET, f"{TAB_LEADS}!A1:AZ")
+    if not waarden or "Link" not in waarden[0]:
+        raise SheetsFout(f"de kolom Link ontbreekt in {TAB_LEADS} van Instagram & FB")
+    i = [str(k).strip() for k in waarden[0]].index("Link")
+    return {_link(r[i]) for r in waarden[1:] if i < len(r) and _link(r[i])}
+
+
+def voeg_social_leads_toe(sheets: Sheets, rijen: list[dict]) -> tuple[int, int]:
+    """Nieuwe leads onderaan de Instagram & FB-lijst, op kolomnaam, met Fase
+    1. Te benaderen. Wie er al staat blijft ongemoeid: dat is het verschil tussen
+    één DM en twee. Geeft (toegevoegd, stond er al) terug."""
+    waarden = sheets.lees(SOCIAL_SHEET, f"{TAB_LEADS}!A1:AZ")
+    if not waarden or "Link" not in waarden[0]:
+        raise SheetsFout(f"de kolom Link ontbreekt in {TAB_LEADS} van Instagram & FB")
+    kop = [str(k).strip() for k in waarden[0]]
+    i = kop.index("Link")
+    bekend = {_link(r[i]) for r in waarden[1:] if i < len(r)}
+    nieuw, al = [], 0
+    for rij in rijen:
+        link = _link(rij.get("Link"))
+        if not link:
+            continue
+        if link in bekend:
+            al += 1
+            continue
+        bekend.add(link)
+        volledig = {"Fase": "1. Te benaderen", "Aangemaakt": nu_nl().date().isoformat(), **rij}
+        nieuw.append([volledig.get(k, "") for k in kop])
+    sheets.voeg_toe(SOCIAL_SHEET, TAB_LEADS, nieuw)
+    return len(nieuw), al

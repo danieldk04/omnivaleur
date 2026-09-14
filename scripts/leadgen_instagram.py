@@ -45,7 +45,7 @@ DE TRECHTER
   discover  handles verzamelen uit vier bronnen (zie leadgen_sources.py)
   enrich    bio, volgers en website erbij halen — de bron levert alleen een handle
   classify  Haiku beoordeelt op winstmotief, verzendbaarheid en NL/BE
-  push      als lead in de Notion-Leadlist zetten, status "Reach out"
+  push      als lead in de spreadsheet Instagram & FB zetten, status "Reach out"
   run       alle vier bovenstaande in één commando
 
 Elke stap schrijft naar scripts/output/leads/ en leest de vorige van schijf, zodat je
@@ -58,9 +58,9 @@ doen worden gedetecteerd — met je eigen merkaccount als inzet. Alles tot en me
 kant-en-klare tekst is geautomatiseerd, op de verzendknop na.
 
 Gebruik:
-    export APIFY_TOKEN=... NOTION_TOKEN=...
+    export APIFY_TOKEN=... GOOGLE_SHEETS_SLEUTEL=...
     python3 scripts/leadgen_instagram.py run                 # alles in één keer
-    python3 scripts/leadgen_instagram.py run --dry-run       # idem, zonder Notion
+    python3 scripts/leadgen_instagram.py run --dry-run       # idem, zonder de spreadsheet
 
     python3 scripts/leadgen_instagram.py bench      # welke bron levert het meest op
 """
@@ -77,7 +77,8 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from scripts import leadgen_notion as notion  # noqa: E402
+from scripts import leadgen_notion as notion  # noqa: E402  (alleen nog de rij-opbouw)
+from scripts import leadgen_sheets as sheets  # noqa: E402
 from scripts import leadgen_sources as src  # noqa: E402
 
 OUT = Path(__file__).parent / "output" / "leads"
@@ -163,11 +164,10 @@ def discover(args) -> None:
 
 
 def _existing_handles_or_empty() -> list[str]:
-    token = os.environ.get("NOTION_TOKEN", "")
-    if not token:
+    if not os.environ.get("GOOGLE_SHEETS_SLEUTEL", "").strip():
         return []
     try:
-        return [u.rstrip("/").rsplit("/", 1)[-1] for u in notion.existing_urls(token)]
+        return [u.rstrip("/").rsplit("/", 1)[-1] for u in sheets.social_links(sheets.Sheets())]
     except Exception:  # noqa: BLE001 — dedupe is een optimalisatie, geen vereiste
         return []
 
@@ -521,10 +521,11 @@ def push(args) -> None:
             print(f"     {l.get('reden', '')}")
         return
 
-    created, skipped = notion.push_leads(leads, _need("NOTION_TOKEN"))
-    print(f"\n{created} leads toegevoegd, {skipped} bestonden al.")
-    print("De AI-autofill in Notion schrijft de outreach-tekst zelf. "
-          "Versturen doe je met de hand — zie de kop van dit bestand.")
+    _need("GOOGLE_SHEETS_SLEUTEL")
+    created, skipped = sheets.voeg_social_leads_toe(
+        sheets.Sheets(), [notion.social_rij(l) for l in leads])
+    print(f"\n{created} leads toegevoegd aan Instagram & FB, {skipped} stonden er al.")
+    print("Versturen doe je met de hand, zie de kop van dit bestand.")
 
 
 def run(args) -> None:
@@ -536,7 +537,7 @@ def run(args) -> None:
     """
     _need("APIFY_TOKEN")
     if not args.dry_run:
-        _need("NOTION_TOKEN")   # liever nu falen dan na alle Apify-kosten
+        _need("GOOGLE_SHEETS_SLEUTEL")   # liever nu falen dan na alle Apify-kosten
 
     print("── 1/4 zoeken ─────────────────────────────────────────────")
     discover(args)
@@ -544,7 +545,7 @@ def run(args) -> None:
     enrich(args)
     print("\n── 3/4 beoordelen ─────────────────────────────────────────")
     classify(args)
-    print("\n── 4/4 naar Notion ────────────────────────────────────────")
+    print("\n── 4/4 naar de spreadsheet ───────────────────────────────")
     push(args)
 
     leads = _load(LEADS)
@@ -590,11 +591,11 @@ def main() -> None:
     b.add_argument("--only", nargs="*", help="alleen deze methoden")
     b.set_defaults(func=bench)
 
-    p = sub.add_parser("push", help="naar de Notion-Leadlist")
+    p = sub.add_parser("push", help="naar de spreadsheet Instagram & FB")
     p.add_argument("--dry-run", action="store_true")
     p.set_defaults(func=push)
 
-    r = sub.add_parser("run", help="ALLES in één keer: zoeken → verrijken → beoordelen → Notion")
+    r = sub.add_parser("run", help="ALLES in één keer: zoeken → verrijken → beoordelen → spreadsheet")
     r.add_argument("--method", nargs="+", default=DEFAULT_METHODS,
                    choices=[*src.SOURCES, "all"])
     r.add_argument("--per-tag", type=int, default=40)
@@ -606,7 +607,7 @@ def main() -> None:
     r.add_argument("--limit", type=int, default=0)
     r.add_argument("--min-confidence", type=int, default=60)
     r.add_argument("--dry-run", action="store_true",
-                   help="alles draaien maar niets naar Notion schrijven")
+                   help="alles draaien maar niets naar de spreadsheet schrijven")
     r.set_defaults(func=run)
 
     args = ap.parse_args()

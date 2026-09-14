@@ -78,8 +78,8 @@ def _multi(prop: str, value: str) -> dict | None:
     return {"multi_select": names} if names else None
 
 
-def _properties(lead: dict) -> dict:
-    notes = " · ".join(str(x) for x in [
+def notities(lead: dict) -> str:
+    return " · ".join(str(x) for x in [
         f"{lead['followers']} volgers" if lead.get("followers") else "",
         f"{lead['ads']} advertenties" if lead.get("ads") else "",
         lead.get("verkopertype"),
@@ -99,6 +99,27 @@ def _properties(lead: dict) -> dict:
         "LET OP: webshop niet koppelbaar (geen Shopify)"
         if lead.get("webshop_koppelbaar") is False else "",
     ] if x)
+
+
+def social_rij(lead: dict) -> dict:
+    """Dezelfde lead als rij voor de spreadsheet Instagram & FB (sinds 14-09-2026)."""
+    kanalen = ", ".join(lead["kanalen"]) if lead.get("kanalen") else lead.get("verkoop_op", "")
+    return {
+        "Naam": lead.get("full_name") or lead.get("handle") or "?",
+        "Link": lead["ig_url"],
+        "Platform": lead.get("platform", "IG"),
+        "Status": "Reach out",
+        "Language": lead.get("language", "NL"),
+        "Je/Jullie": lead.get("je_jullie", "Je"),
+        "Verkoopt": lead.get("verkoopt_vooral", ""),
+        "Verkoopt op": kanalen,
+        "Bron / hashtag": str(lead.get("source") or lead.get("method") or "")[:200],
+        "Notities": notities(lead),
+    }
+
+
+def _properties(lead: dict) -> dict:
+    notes = notities(lead)
     props = {
         "Name": {"title": [{"text": {"content":
                  lead.get("full_name") or lead.get("handle") or "?"}}]},

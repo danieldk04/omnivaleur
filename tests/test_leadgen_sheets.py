@@ -228,3 +228,33 @@ def test_het_logboek_toont_nederlandse_tijd_ook_op_een_server_in_utc(monkeypatch
     finally:
         monkeypatch.delenv("TZ")
         _time.tzset()
+
+
+# ── Instagram & FB: nieuwe leads uit het zoekscript ─────────────────────────
+
+
+SOCIAL_KOP = ["Naam", "Link", "Platform", "Fase", "Notities", "Aangemaakt"]   # Daniel mag kolommen verschuiven
+
+
+def test_instagram_leads_landen_in_de_social_spreadsheet_en_nooit_dubbel():
+    """Sinds 14-09-2026 staat Instagram & FB in een eigen spreadsheet. Het
+    zoekscript schreef nog naar Notion; wie er al staat mag geen tweede DM
+    krijgen, ook niet met een andere schrijfwijze van de link."""
+    nep = NepSheets([SOCIAL_KOP, ["Anna", "https://www.instagram.com/anna", "IG", "2. Benaderd", "belt", ""]])
+    nieuw = [{"Naam": "Anna", "Link": "https://www.instagram.com/Anna/"},
+             {"Naam": "Bram", "Link": "https://www.instagram.com/bram/", "Platform": "IG"},
+             {"Naam": "Bram", "Link": "https://www.instagram.com/bram"}]
+    assert ls.voeg_social_leads_toe(nep, nieuw) == (1, 2)
+    rijen = nep.tabs[ls.TAB_LEADS]
+    assert len(rijen) == 3
+    bram = dict(zip(SOCIAL_KOP, rijen[2]))
+    assert bram["Naam"] == "Bram" and bram["Platform"] == "IG"
+    assert bram["Fase"] == "1. Te benaderen" and bram["Aangemaakt"]
+    assert dict(zip(SOCIAL_KOP, rijen[1]))["Notities"] == "belt"
+    assert ls.social_links(nep) == {"https://www.instagram.com/anna", "https://www.instagram.com/bram"}
+
+
+def test_het_instagramscript_schrijft_niet_meer_naar_notion():
+    bron = (ROOT / "scripts" / "leadgen_instagram.py").read_text()
+    assert "push_leads(" not in bron and "existing_urls(" not in bron
+    assert "voeg_social_leads_toe(" in bron and "social_links(" in bron
