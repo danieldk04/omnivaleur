@@ -17,6 +17,53 @@ memory can still be written on top for fast recall, but never as the only
 record: anything here has to survive a switch to a different Claude account
 without Daniel repeating himself.
 
+## 2026-09-14 — Verwijderen via de advertentiepagina: waarom het soms loog
+
+Een verkoper met een zakelijk 2dehands-account (user_id
+3bfbed2c-e8a7-4b28-8870-f3581d48afc5) had bij de laatste 39 voltooide
+delete-jobs met `result.note == "deleted_via_ad_page"` 10 gevallen (26%) waarbij
+de advertentie in werkelijkheid nog gewoon online stond. Item m2414278086
+("Beige Profuomo Half Zip - Heren L") kreeg zo minstens zes losse delete-jobs,
+allemaal "geslaagd" gemeld, en stond nog steeds live.
+
+Nagemeten op 14-09-2026, onafhankelijk van onze eigen database: de openbare
+zoek-API van 2dehands (`https://www.2dehands.be/lrp/api/search`) gaf m2414278086
+nog gewoon terug, en een directe fetch op de echte advertentiepagina kwam met
+HTTP 200 en geen van de "weg"-tekstpatronen terug. Dat sluit uit dat die
+tekstpatronen toevallig ook op een levende advertentie voorkomen: de check zelf
+is scherp genoeg, hij kreeg alleen ooit een fout signaal binnen.
+
+**Wat wél hard aangetoond is, met een proef tegen de oude code ernaast**
+(`tests/vinted-mock/mp-delete.html`, scenario "fetch zegt weg (verouderd
+cache-antwoord), de echte pagina niet"): de oude `verwijderViaAdvertentiepagina`
+geloofde één kale `fetch()` van de advertentiepagina blindelings. Een `fetch()`
+haalt de rauwe server-HTML op vóór de client-side React draait; komt er ooit een
+404, een 410, of een tekst die op "niet meer beschikbaar" lijkt terug zonder dat
+de advertentie er DAADWERKELIJK af is (bijvoorbeeld door een verouderd
+cache-antwoord), dan boekte de oude code dat zonder tegencontrole als succes.
+Gerepareerd: de "weg"-check telt een fetch nu pas als bewijs nadat een ECHTE
+tabbladnavigatie (met JavaScript, dus de pagina zoals de verkoper hem zelf zou
+zien) dat bevestigt. In de proef faalt de oude code op dit scenario ("complete"
+terwijl de advertentie leeft) en houdt de nieuwe stand ("error").
+
+**Wat nog NIET hard bewezen is**: het exacte mechanisme waardoor 2dehands'
+`/seller/view/{id}` ooit die valse 404/tekstmatch teruggaf, is niet gereproduceerd
+tegen een echt ingelogde sessie van deze verkoper — die toegang was er niet in
+deze sessie. Kandidaten (cache/CDN-vertraging bij 2dehands, of een gemiste
+verplichte bevestigingsstap) blijven daarom een open punt, geen conclusie.
+
+**Om dat de volgende keer wél te kunnen zien**: elke stap in zowel de
+bevestigingslus als de "weg"-check logt nu wat hij zag (welke knop, welke
+HTTP-status, welke tekst matchte, welke poging). Die diagnostiek (`verify_diag`)
+reist voortaan mee in `result`, ook bij een gemeld succes — dus als dit ooit nog
+een keer misgaat, staat het mechanisme zelf op het dashboard in plaats van
+alleen "deleted_via_ad_page". Extensieversie 1.0.329.
+
+Open actiepunt voor Daniel: als deze verkoper zich nog eens meldt met een
+advertentie die "verwijderd" heet maar nog online staat, is `verify_diag` op die
+job het eerste om te lezen; dat vertelt ons wat er in het echt gebeurde in plaats
+van dat we weer moeten gissen.
+
 ## 2026-08-31 — Storing "niet ingelogd bij Marktplaats" was al gerepareerd
 
 MOET ZEKER-storing van de klantenservice: Dennis (retrogameking) en Egbert
