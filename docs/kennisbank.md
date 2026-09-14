@@ -17,6 +17,40 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ---
 
+## tabblad-op-de-inlogpagina
+
+*14-09-2026 — Een werktabblad dat op /identity/v2/login uitkomt betekent "dit profiel heeft geen sessie", niet "de verkoper liegt"; bij Egbert twee keer, oorzaak nog open*
+
+Komt een werktabblad van Marktplaats of 2dehands uit op `/identity/v2/login`,
+dan had dat browserprofiel op dat moment geen sessie. Nagemeten 14-09-2026 met
+een kale aanvraag zonder cookies: `GET /my-account/sell/index.html` met
+`Accept: text/html` geeft 302 naar precies die pagina, met
+`Accept: application/json` 401 "Unauthorized" (12 bytes). Dat is dus het beeld
+van een bezoeker zonder cookies, en niets anders.
+
+Bij Egbert Brouwer is dat nu twee keer gebeurd terwijl hij zei dat hij ingelogd
+was: 05-09-2026 (305 opdrachten) en 14-09-2026 (288 opdrachten). Beide keren is
+de oorzaak van die lege sessie niet gevonden. Incognito verklaart het niet:
+publiceren ging pas vanaf 06-09-2026 in een bestaand venster (f12d3bba), daarvoor
+in ons eigen venster, en dat is nooit incognito.
+
+**Why:** "hij is niet ingelogd" is een conclusie, en die is bij deze man 27 keer
+fout geweest (oude achtergrondcontrole, 22-08 tot 09-09). Marktplaats en 2dehands
+zijn aparte inlogs van dezelfde eigenaar en hij werkt vrijwel alleen op
+Marktplaats, dus "ik ben ingelogd" kan waar zijn en de 2dehands-sessie toch weg.
+
+**How to apply:** noem de waarneming (HTTP-code plus waar het tabblad uitkwam),
+niet het oordeel, en stel één vraag: open die pagina en zeg wat je ziet. Zo'n
+melding mag nooit een wachtrij wissen; sinds 14-09-2026 gaat het kanaal twintig
+minuten op pauze en draagt één opdracht de uitleg
+(`_pauzeer_op_inlogverwijt` in jobs.py). Openstaand: de verkoper hoort te zien
+dat zijn sessie weg is vóórdat hij honderden artikelen klaarzet;
+`scan_meta.signed_in` weet het al, het dashboard doet er niets mee. Zie
+"storing-mag-nooit-als-antwoord-tellen", "auth-fouten-lijken-op-verkeerd-wachtwoord"
+en "uitgelogd-door-de-gedeelde-vernieuwsleutel".
+
+---
+
 ## storing-mag-nooit-als-antwoord-tellen
 
 *14-09-2026 — Een opzoeking die niet lukt gaf hetzelfde lege antwoord als "niet gevonden"; bij Egbert annuleerde dat 50 zoekertjes in één minuut*
