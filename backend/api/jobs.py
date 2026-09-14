@@ -1200,6 +1200,11 @@ def get_pending_jobs(request: Request, platform: str = None, user_id: str = Depe
     # toevallig een leesronde loopt.
     is_extension_dispatch = platform is not None
     vinted_scan_bezig = False
+    # Staat dit kanaal op pauze na een onbewezen inlogverwijt, dan gaat er even
+    # niets uit. Alleen bij een echte poll van de extensie: het dashboard telt
+    # hier alleen, en een wachtrij die er staat hoort gewoon geteld te worden.
+    if is_extension_dispatch and _inlog_pauze_actief(db, user_id, platform, now_dt):
+        return []
     if is_extension_dispatch:
         for c in (
             db.table("jobs").select("claimed_at,action,platform,result")
@@ -4542,9 +4547,13 @@ def stop_platform(body: dict, request: Request, user_id: str = Depends(get_curre
     if not platform:
         raise HTTPException(status_code=400, detail="platform is required")
     db = get_db()
-    reden = str(body.get("reason") or "").strip() or _melding_formulier_ging_niet_open(platform)
+    ruw = str(body.get("reason") or "").strip() or _melding_formulier_ging_niet_open(platform)
     reden = _reden_zonder_vals_verwijt(
-        db, user_id, platform, reden, request.headers.get("x-omnivaleur-ext"))
+        db, user_id, platform, ruw, request.headers.get("x-omnivaleur-ext"))
+    # Een inlogverwijt wist geen wachtrij meer. Zie _pauzeer_op_inlogverwijt.
+    if _CLAIM_NIET_INGELOGD.search(ruw):
+        return {"ok": True, "cancelled": _pauzeer_op_inlogverwijt(db, user_id, platform, reden),
+                "paused": True}
     gestopt = _stop_wachtrij(db, user_id, platform, reden)
     # Is het kanaal aantoonbaar kansloos, trek dan ook de al bestaande rode balken
     # gelijk — anders blijft er een muur van oude, wisselende teksten staan naast
@@ -4562,6 +4571,64 @@ def stop_platform(body: dict, request: Request, user_id: str = Depends(get_curre
 # Een "je bent niet ingelogd" dat de extensie meestuurt is een oordeel uit haar
 # eigen achtergrond, en dat oordeel is aantoonbaar fout geweest.
 _CLAIM_NIET_INGELOGD = re.compile(r"you are not signed in to|je bent niet ingelogd", re.I)
+
+# EEN INLOGVERWIJT WIST NOOIT MEER EEN WACHTRIJ.
+#
+# GEMETEN 14-09-2026 bij Egbert Brouwer. Zijn extensie meldde "niet ingelogd" en
+# daarop gingen 288 zoekertjes in vier seconden op geannuleerd. Daniel weet vrij
+# zeker dat hij gewoon ingelogd was, en de geschiedenis geeft hem gelijk: de oude
+# controle beschuldigde deze man 27 keer ten onrechte tussen 22-08 en 09-09.
+#
+# Wie er ook gelijk heeft, de straf klopt niet. Dit oordeel komt uit een meting
+# die wij van buitenaf niet kunnen natrekken, en zo'n meting mag geen 288
+# opdrachten opruimen. Daarom: het kanaal gaat op pauze en er sneuvelt één
+# opdracht, die de uitleg draagt. Na de pauze gaat er vanzelf weer één de deur
+# uit. Klopte het verwijt niet, dan loopt de hele rij daarna gewoon door zonder
+# dat hij iets hoeft aan te klikken; klopte het wel, dan kost het hem één
+# opdracht per twintig minuten in plaats van zijn hele voorraad in vier seconden.
+_INLOG_PAUZE = timedelta(minutes=20)
+_PAUZE_STEMPEL = "login unproven"
+
+
+def _inlog_pauze_actief(db, user_id: str, platform: str, nu: datetime) -> bool:
+    """Staat dit kanaal op pauze na een onbewezen inlogverwijt?"""
+    try:
+        rijen = (db.table("jobs").select("done_at,result")
+                 .eq("user_id", user_id).eq("platform", platform).eq("action", "create")
+                 .eq("status", "cancelled").order("done_at", desc=True)
+                 .limit(3).execute().data or [])
+    except Exception as e:  # noqa: BLE001 — een pauze mag nooit de uitgifte breken
+        logger.warning("inlogpauze niet na te gaan voor %s/%s: %s", user_id, platform, e)
+        return False
+    for r in rijen:
+        if ((r.get("result") or {}).get("cancelled") or "") != _PAUZE_STEMPEL:
+            continue
+        toen = _parse_ts(r.get("done_at"))
+        return bool(toen and nu - toen < _INLOG_PAUZE)
+    return False
+
+
+def _pauzeer_op_inlogverwijt(db, user_id: str, platform: str, reden: str) -> int:
+    """Eén opdracht draagt de uitleg, de rest blijft gewoon staan."""
+    now = datetime.now(timezone.utc).isoformat()
+    kop = (db.table("jobs").select("id,item_id")
+           .eq("user_id", user_id).eq("platform", platform).eq("action", "create")
+           .eq("status", "pending").order("created_at").limit(1).execute().data or [])
+    if not kop:
+        return 0
+    j = kop[0]
+    execute_with_retry(db.table("jobs").update({
+        "status": "cancelled",
+        "result": {"cancelled": _PAUZE_STEMPEL, "error": reden},
+        "done_at": now,
+    }).eq("id", j["id"]).eq("status", "pending"))
+    if j.get("item_id"):
+        execute_with_retry(db.table("listings").update({
+            "status": "error", "error_message": reden,
+        }).eq("item_id", j["item_id"]).eq("platform", platform).eq("status", "pending"))
+    logger.warning("inlogverwijt: %s/%s twintig minuten op pauze, rest blijft staan",
+                   user_id, platform)
+    return 1
 # Vanaf deze versie vraagt de extensie het na in een tabblad op de site zelf.
 # Alles daaronder oordeelt uitsluitend op de achtergrondmeting, en die is
 # aantoonbaar blind geweest, dus zo'n oordeel geven we nooit door.

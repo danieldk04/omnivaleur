@@ -9358,3 +9358,25 @@ zeg wat je ziet. Ziet hij zijn eigen advertenties, dan ligt het aan ons en horen
 we dat. Ziet hij een inlogscherm, dan zetten wij zijn wachtrij daarna zelf terug.
 
 De 288 rijen in zijn scherm dragen die nieuwe tekst al.
+
+### En de echte reparatie: zo'n verwijt mag geen wachtrij meer kosten
+
+Daniel bleef bij zijn punt dat Egbert wél ingelogd was, en dat is het betere
+uitgangspunt, want dan valt op dat de straf sowieso niet klopt. Dit oordeel komt
+uit een meting in zijn browser die wij van buitenaf niet kunnen natrekken, en zo
+een meting hoort geen 288 opdrachten op te ruimen.
+
+Vanaf nu gaat het kanaal bij een inlogverwijt twintig minuten op pauze en sneuvelt
+er één opdracht, die de uitleg draagt. Daarna gaat er vanzelf weer een de deur
+uit. Klopte het verwijt niet, dan loopt zijn hele rij door zonder dat hij iets
+hoeft aan te klikken. Klopte het wel, dan kost het hem één opdracht per twintig
+minuten in plaats van zijn hele voorraad in vier seconden. Een echte
+formulierfout stopt de rij nog steeds wel; de pauze geldt alleen voor het
+inlogverwijt.
+
+Bewaakt door `tests/test_inlogverwijt_wist_geen_wachtrij.py`, met de versie van
+vóór de pauze ernaast: die ruimt in dezelfde proef alle vijf de opdrachten op.
+
+Open punt dat hier niets mee te maken heeft: `tests/test_extensie_permissies.py`
+valt om op de vaste permissie `power` in het manifest. Een nieuwe vaste permissie
+zet Chrome de extensie bij elke bestaande klant uit tot hij hem goedkeurt.
