@@ -50,16 +50,17 @@ function overzichtHtml(ads, opties = {}) {
 
 // De echte, losse advertentiepagina (/seller/view/{id}) — met een klikbare
 // verwijderknop en een bevestigingsvenster, precies zoals de echte code ze
-// zoekt. state.domNaKlik bepaalt wat een ECHTE navigatie naar deze pagina laat
-// zien NA het bevestigen — onafhankelijk van wat fetch() beweert. Dat
-// onderscheid is de kern van de proef: een vals-positieve fetch (bijvoorbeeld
+// zoekt. state.adPageStatus ("leeft"/"weg") is de WAARHEID van deze pagina —
+// wat een echte navigatie laat zien. state.domNaKlik zet die waarheid ná het
+// bevestigen. fetch() kan daar apart van afwijken via state.fetchNaKlik: dat
+// onderscheid is de kern van de proef — een vals-positieve fetch (bijvoorbeeld
 // een verouderd cache-antwoord) mag niet als bewijs tellen zolang de echte
 // pagina het tegenspreekt.
 function adPaginaHtml(state) {
-  if (state.klikGelukt && state.domNaKlik === "weg") {
+  if (state.adPageStatus === "weg") {
     return "<p>Deze advertentie is niet meer beschikbaar.</p>";
   }
-  return `<h1>${state.ads[0]?.titel || "advertentie"}</h1>` +
+  return `<h1>${HET_VEST}</h1>` +
     (state.klikGelukt ? "" : '<button id="verwijderKnop">Verwijderen</button>');
 }
 function bedraadAdPagina(f, state) {
@@ -79,6 +80,9 @@ function bedraadAdPagina(f, state) {
     if (ja) ja.addEventListener("click", () => {
       portal.remove();
       state.klikGelukt = true;
+      // De klik zelf is de waarheid: wat er DAADWERKELIJK gebeurt na het
+      // bevestigen, los van wat fetch() straks beweert.
+      state.adPageStatus = state.domNaKlik || "leeft";
     });
   });
 }
@@ -92,30 +96,34 @@ function bouwFrame(state, herladen) {
   d.close();
   const weg = state.uitgelogd || (herladen && state.uitgelogdNaHerladen);
   // Bij een grote verkoper rendert Marktplaats onze advertentie simpelweg niet
-  // mee: hij staat voorbij de vijftig die getoond worden.
-  const zichtbaar = herladen && state.verstopNaHerladen
-    ? state.ads.filter(a => a.id !== "m2423718603") : state.ads;
+  // mee: hij staat voorbij de vijftig die getoond worden. Het scenario zet dat
+  // nu vast door de advertentie helemaal niet in state.ads op te nemen (zie
+  // __origIds hieronder), niet via een filter-bij-herladen die vóór elke
+  // eerste render toch nooit aansloeg.
   d.body.innerHTML = weg ? "<p>Log in om je advertenties te zien.</p>"
-                         : overzichtHtml(zichtbaar, state);
+                         : overzichtHtml(state.ads, state);
+  if (!state.__origIds) state.__origIds = new Set(state.ads.map(a => a.id));
+  if (!state.adPageStatus) state.adPageStatus = "leeft";
   // fetch() zoals de code hem gebruikt om de advertentiepagina na te kijken.
-  // Standaard is dat de WAARHEID: staat het advertentienummer nog in
-  // state.ads, dan leeft hij; anders is hij weg. Dat dekt de gewone
-  // vinklijst-route, waar een geslaagde verwijdering de rij uit state.ads
-  // haalt. Alleen de advertentiepagina-route (verwijderViaAdvertentiepagina,
-  // ná een geslaagde klik+bevestiging) mag hiervan afwijken via
-  // state.fetchNaKlik — dat is precies het scenario dat deze proef test: een
-  // fetch die iets anders zegt dan de echte pagina (state.domNaKlik).
+  // Staat het nummer nog in het overzicht, dan leeft hij: waarheid. Stond hij
+  // er ooit in en is hij er nu uit (de vinklijst-route verwijderde hem), dan
+  // is hij weg: ook waarheid. Stond hij er NOOIT in (het "groot account"-
+  // scenario) dan is de losse advertentiepagina de enige getuige — en normaal
+  // is dat state.adPageStatus, tenzij dit scenario test wat fetch() beweert
+  // vlak ná een klik+bevestiging op die pagina (state.fetchNaKlik).
+  const stillThere = () => ({ ok: true, status: 200, text: async () => "<h1>" + state.ads.map(a => a.titel).join(" ") + " " + HET_VEST + "</h1> te koop" });
+  const gone = () => ({ ok: false, status: 404, text: async () => "" });
   f.contentWindow.fetch = async (u) => {
     const id = (String(u).match(/seller\/view\/(m\d+)/) || [])[1];
+    const inOverview = id ? state.ads.some(a => a.id === id) : state.ads.length > 0;
+    if (inOverview) return stillThere();
+    if (id && state.__origIds.has(id)) return gone(); // via de vinklijst weg
     if (state.klikGelukt && state.fetchNaKlik) {
-      if (state.fetchNaKlik === "weg") return { ok: false, status: 404, text: async () => "" };
+      if (state.fetchNaKlik === "weg") return gone();
       if (state.fetchNaKlik === "vals-weg") return { ok: true, status: 200, text: async () => "<p>niet meer beschikbaar</p>" };
-      return { ok: true, status: 200, text: async () => "<h1>" + state.ads.map(a => a.titel).join(" ") + "</h1> te koop" };
+      return stillThere();
     }
-    const nogAanwezig = id ? state.ads.some(a => a.id === id) : state.ads.length > 0;
-    return nogAanwezig
-      ? { ok: true, status: 200, text: async () => "<h1>" + state.ads.map(a => a.titel).join(" ") + "</h1> te koop" }
-      : { ok: false, status: 404, text: async () => "" };
+    return state.adPageStatus === "weg" ? gone() : stillThere();
   };
   bedraad(f, state);
   return f;
