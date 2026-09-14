@@ -9270,6 +9270,11 @@ Het ergste gevolg was niet het verdwijnen uit het overzicht, maar dat een
 eBay-verkoop nooit werd opgemerkt: het artikel bleef daardoor op Marktplaats en
 Vinted te koop staan.
 
+Bevestigd op de draaiende server, niet alleen in een test: om 17:54 UTC, nog op
+de oude versie, zette de controleronde de teller "niet gevonden" van beide
+advertenties op 1. Om 17:58 UTC, op de nieuwe versie, zag dezelfde ronde ze als
+actief en zette de teller terug op 0.
+
 Verder gecontroleerd en in orde: de koppellink naar eBay (productiesleutels,
 scopes sell.inventory en sell.account), het ship-from-formulier, en het
 publiceren zelf (dealbeter publiceerde 13-09 twee advertenties met echte
