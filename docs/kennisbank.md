@@ -17,6 +17,323 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ---
 
+## leadlist-outreach-formula
+
+*14-09-2026 — "Notion Leadlist outreach column is now an LLM AI-autofill Text property; old formula hidden as backup"*
+
+**Achterhaald sinds 14-09-2026:** de Leadlist is archief; de spreadsheet Instagram & FB heeft geen AI-autofill, dus die kolom vult zich niet meer vanzelf. Zie "leadlist-in-google-sheets".
+
+In the Notion "Leadlist" database (Instagram & FB Outreach), the main outreach column **"AI Generated Tekst"** is (as of 2026-07-19) a **Text property with Notion AI autofill ("Basic" agent)** — a real LLM that writes correct Dutch per row from a custom base prompt. The prompt references Name, Je/Jullie, Verkoopt vooral..., Verkoop op..., enforces je/jullie consistency, a natural sentence around Verkoop op (no "actief op fysieke winkel"), the Omnivaleur pitch (Marktplaats/eBay/Shopify), a demo-video CTA, "Groetjes, Daniel", and "leave empty if key fields not filled". Trigger: On page update → only when Name / Je-Jullie / Verkoopt vooral / Verkoop op change (limits credit burn, avoids overwriting manual edits).
+
+The **old deterministic formula** that used to fill this column was renamed to **"AI formule (oud, backup)"** and hidden in the view (Σ formula, not AI). It produced grammatically-off Dutch ("actief op fysieke winkel", mixed je/jullie), which is why Daniel switched to the LLM.
+
+**Why:** Daniel wanted real LLM-quality Dutch, generated centrally in Notion from one base prompt, for all existing and new leads.
+
+**How to apply:** To change wording, edit the AI-autofill prompt (column header "AI Generated Tekst" → Autofill Text). AI autofill can't run on a formula, so the backup column stays formula-only. Notion AI autofill costs credits (~1 AI response per generated row); bulk-filling existing leads via "Run AI Autofill now" spends ~1 per lead. Availability: this workspace has custom AI autofill on Text props (Basic + Custom Agent); the property-type picker only pre-lists Summarise/Translate, so reach custom autofill via Edit property → AI Autofill. See "omnivaleur-brand-never-a-verb".
+
+---
+
+## notion-leadlist-kolomnamen
+
+*14-09-2026 — Notion weigert een hele pagina bij één onbekende kolomnaam — de leadgen-push was daardoor stilletjes stuk na een hernoeming*
+
+**Achterhaald sinds 14-09-2026:** de machine schrijft niet meer naar Notion, zie "leadlist-in-google-sheets". Alleen nog nuttig als je het archief uitleest.
+
+De Notion-API weigert een **volledige** pagina zodra er één kolomnaam in de payload staat die niet in de database bestaat. Een hernoemde kolom betekent dus niet "dat ene veld blijft leeg" maar "er komt helemaal niets binnen" — en `push_leads` vangt die fout per lead af, dus het faalt zonder alarm.
+
+Dat is precies gebeurd: `scripts/leadgen_notion.py` schreef naar `Notes (Optional)`, `Verkoopt vooral...` en `Verkoop op...`, terwijl de Leadlist die kolommen inmiddels `Notities`, `Verkoopt` (multi_select) en `Verkoopt op` (multi_select) noemt. Hersteld op 2026-08-10.
+
+**Controleer na elke wijziging in de Leadlist** of de kolomnamen nog kloppen — offline te doen, zonder één rij te schrijven: bouw `_properties(lead)` voor een lead en trek de sleutels af van de `properties` uit `GET /databases/{id}`. Wat overblijft zijn de kolommen die de push zullen laten mislukken.
+
+Let ook op het type: `Verkoopt` en `Verkoopt op` zijn **multi_select**, geen select. Onbekende waarden worden bewust weggelaten in plaats van aangemaakt, anders groeit de kolom vol met varianten ("Vinted en eigen website" is één modelantwoord maar twee opties).
+
+Zie "leadgen-marktplaats-beste-bron" en "leadgen-vier-bronnen".
+
+---
+
+## koude-mail-autonoom
+
+*14-09-2026 — "De koude-mailmachine draait autonoom via een LaunchAgent; wachtwoorden in de sleutelhanger, wrapper buiten Documenten, alles gelogd in Notion"*
+
+Sinds 11-08-2026 verstuurt `scripts/leadgen_mail.py` zelfstandig koude mail naar
+de Marktplaats-leads uit "leadgen-marktplaats-beste-bron", vanaf
+daniel@omnivaleur.nl (nooit vanaf omnivaleur.com, zie "railway-blokkeert-smtp").
+
+**14-09-2026: Notion is eruit.** Fases, logboek en de mailteksten staan nu in Google Sheets en
+de teksten worden daar live gelezen, zie "leadlist-in-google-sheets". Waar hieronder "Notion"
+staat, lees de tab Leads of Logboek. De opvolging na Daniels eigen video verstuurt zichzelf weer.
+
+**06-09-2026 — dit is deels achterhaald.** De machine draait nu ALLEEN op de
+Railway-scheduler (`leadgen_tick`, elke 10 min). De GitHub Actions-workflow
+hieronder is uitgezet (`gh workflow disable leadgen-mail.yml`), net als de
+Mac-LaunchAgent. En de machine schrijft geen AI-antwoorden of concepten meer,
+alleen de koude reeks mail 1/2/3 uit sjablonen — zie
+"mailmachine-alleen-koude-reeks". De rest van dit bestand blijft nuttig voor
+het gedrag van de reeks zelf (rooster, opvolgritme, Notion-fases).
+
+**Sinds 12-08-2026 draait de machine in de cloud, niet meer op de Mac.** GitHub
+Actions (`.github/workflows/leadgen-mail.yml`), elke 30 minuten tussen 08:00 en
+21:30 NL-tijd, `concurrency: leadmachine` zodat er nooit twee beurten tegelijk
+lopen. Gratis omdat de repo publiek is. `TZ: Europe/Amsterdam` in de workflow is
+niet optioneel — zonder dat rekent de runner in UTC en loopt het rooster twee uur
+voor. De LaunchAgent op de Mac staat uit (plist hernoemd naar `.uit`); zet die
+nooit tegelijk aan, dan mailt hij dubbel want die gebruikt lokale bestanden.
+
+**De repo is PUBLIEK.** Daarom staan de leadlijst en de verzendadministratie in
+Supabase, tabel `leadgen_opslag` (naam/inhoud/bijgewerkt, RLS aan, geen policy).
+Alleen de **service_role**-sleutel komt erbij; de anon-sleutel uit de frontend
+krijgt leesbaar niets (200 met lege lijst) en schrijven geeft 401. Nieuwe leads
+gescrapet? Dan `python3 scripts/leadgen_mail.py overzetten` draaien, anders ziet
+de cloud ze niet. Zonder SUPABASE_URL/KEY valt het script terug op lokale
+bestanden — handig om lokaal te testen.
+
+**De oude Mac-opstelling (uit, maar bewaard als terugval).** LaunchAgent `com.omnivaleur.leadgen` start elke tien minuten
+`~/Library/Application Support/omnivaleur/tick.sh`. **Niets wat de machine nodig
+heeft staat nog in ~/Documents** — code in `.../omnivaleur/code/`, gegevens in
+`.../omnivaleur/leads/`, logboek `tick.log` ernaast. De projectmap blijft de bron;
+na elke wijziging aan `leadgen_mail.py` of `leadgen_notion.py` moet je
+`scripts/leadgen_deploy.sh` draaien, anders draait de achtergrondtaak de oude code.
+
+**Waarom, en dit is de belangrijkste val.** ~/Documents is bij Daniel zowel
+TCC-beschermd als iCloud-gesynct. Een LaunchAgent krijgt er geen toegang
+("Operation not permitted", en `brctl download` faalt met NSCocoaErrorDomain 257),
+en met "Opslagruimte optimaliseren" haalt iCloud bestanden weg die even niet
+gebruikt zijn — een proces dat zo'n bestand leest krijgt dan
+`OSError [Errno 11] Resource deadlock avoided`. Beide fouten zijn stil: de mails
+gingen gewoon niet meer weg. Van 11-08 14:30 tot 12-08 11:34 stond alles stil
+zonder één signaal. Zet nooit een LaunchAgent op iets in ~/Documents.
+
+**Wachtwoorden staan in de sleutelhanger, niet in bestanden:**
+`security find-generic-password -a daniel@omnivaleur.nl -s omnivaleur-leadgen-mail -w`
+en `-a notion -s omnivaleur-notion-token -w`. Daardoor kan de wrapper gewoon mee
+in git.
+
+**`tick` beslist zelf.** Eén keer per dag maakt hij een rooster met willekeurige
+tijdstippen tussen 08:45 en 20:30 (minstens 9 minuten uit elkaar) en vinkt die
+daarna af; alles staat in `scripts/output/leads/mail_plan.json`, dus een slapende
+Mac of een herstart verstuurt niets dubbel. Opbouwschema `RAMP`: 5 op dag 1, 15 vanaf
+dag 2, 25 vanaf dag 6, 40 vanaf dag 11 (Daniels wens, 11-08-2026). Hoger heeft
+geen zin zolang de lijst ~320 adressen telt. `_dagnummer` telt vandaag als vandaag zodra
+er al gemaild is — een eerdere versie zag vandaag als "de volgende dag" en
+verstuurde daardoor 6 in plaats van 5 mails op dag 1.
+
+**Kijk voor "draait hij nog?" NOOIT naar de Mac.** Lokale `mail_state.json`,
+`tick.log` en de LaunchAgent zijn een dode schaduwkopie en zeggen niets; de
+`.uit`-plist is opzet, geen storing. De enige echte bronnen zijn
+`gh run list --workflow=leadgen-mail.yml` en de tabel in Supabase — en die tabel
+lees je alleen met de service_role-sleutel uit de GitHub-secrets, niet met de
+`SUPABASE_KEY` uit de lokale `.env` (ander project, geeft 200 met lege lijst).
+Op 14-08-2026 concludeerde ik uit die drie lokale sporen dat de machine stilstond,
+terwijl hij gewoon elke 30 minuten mailde.
+
+**Opvolgritme (Daniels wens, 14-08-2026): 2 en 4 dagen**, was 5 en 12.
+`STIL_NA_DAGEN = 10`: alles verstuurd en daarna tien dagen stil → Fase
+`Doodgelopen` + Afgesloten reden `Geen reactie na follow-ups`.
+
+**De Fase-kolom in Notion IS de werkvoorraad (afgesproken 17-08-2026).** Daniel
+verloor het overzicht omdat "heeft geantwoord" niets zegt over wie er aan zet is.
+Twee fases toegevoegd, direct achter `4. Gereageerd`: **`⚡ Jij bent aan zet`**
+(zij wachten op Daniel) en **`⏳ Bal bij hen`** (wij hebben geantwoord). Samen met
+`Gebruikt concurrent`, `Geen interesse`, `Klant` en `Doodgelopen` is dat de hele
+levende staat. Status heeft maar 4 opties en is via de API niet uit te breiden
+(zie "notion-api-beperkingen"), dus stuur op Fase, niet op Status.
+
+**Reconciliatie postbus ↔ Notion, 17-08-2026.** 18 bedrijven hadden geantwoord;
+14 stonden verkeerd in Notion. Drie stonden zelfs op **Interesse** terwijl ze
+letterlijk schreven dat ze Channable al gebruiken. De postbus is de waarheid, niet
+Notion: mappen `Beantwoord`/`Automatisch`/`Afval` + `Verzonden` samen geven het
+hele verhaal per lead. Doe dit opnieuw als de tellingen niet meer kloppen.
+
+**Gevonden lek: een antwoord vanaf een ander adres telde niet.** A. Dinkelaar
+kreeg mail op `info@afstandsbediening-online.nl` en antwoordde vanaf
+`info@afstandsbediening.nl` — voor de machine een vreemde, dus zijn "nee dank je"
+werd genegeerd en de opvolging liep door. `_zelfde_bedrijf()` koppelt nu op de
+kern van de domeinnaam (zonder subdomein, extensie en streepjes), **alleen** bij
+precies één kandidaat en **alleen** bij namen van 8+ tekens. Twee aangeschreven
+collega's bij hetzelfde bedrijf worden bewust niet gekoppeld. Inbox-terugblik van
+4 naar 14 dagen.
+
+**Wel geverifieerd:** niemand die antwoordde kreeg daarna nog een sjabloonmail.
+Onderscheid machine/handmatig gaat op de tekst, niet op de onderwerpregel — die
+is identiek omdat Daniel in dezelfde draad antwoordt.
+
+**Dagbudget 30 (Daniels wens, 15-08-2026), met `NIEUW_AANDEEL = 0.4`.**
+Opvolgmails gaan vóór, maar 40% van het budget blijft gereserveerd voor nieuwe
+eerste mails. Zonder die reservering drukt een opvolggolf het aanboren van
+nieuwe leads volledig weg: op 15-08 waren 12 van de 15 mails opvolging en werd
+er die dag vrijwel niemand nieuw aangeschreven.
+
+**Een reactie is een FEIT, interesse is een OORDEEL.** Elk antwoord zet Fase
+`4. Gereageerd`; Status `Interesse` wordt alleen nog gezet bij een warm antwoord.
+Daarvoor kreeg iedereen die antwoordde Interesse — inclusief "we gebruiken al
+Channable". Ook het seintje naar Daniel gaat nu alleen bij een warm antwoord.
+
+**Tussencategorie `Gebruikt concurrent`** (Fase-optie via de API toegevoegd op
+15-08-2026, staat direct achter `4. Gereageerd`), met Afgesloten reden
+`Gebruikt al een tool`. Dit is geen nee maar een **bezet ja**: die handelaar
+crosslist al, ziet de waarde en betaalt er al voor — de kansrijkste lijst die er
+is zodra die tool tegenvalt. `CONCURRENT` herkent Channable, Lengow,
+ChannelEngine, EffectConnect e.a. plus losse zinnen.
+
+**Val die dit blootlegde:** `AFMELD_WOORDEN` bevatte `geen interesse`, waardoor
+"wij gebruiken al Channable, dus geen interesse" als **afmelding** werd geboekt
+en het echte nieuws (ze crosslisten al) verdween. Eruit gehaald. Datzelfde
+patroon ving `niet meer TE mailen` niet — nu wel. Volgorde in de inbox:
+afmelding → concurrent → afwijzing → warm.
+
+**Een nette afwijzing is geen afmelding.** `AFWIJZING` herkent "geen interesse",
+"we gebruiken al zo'n tool", "niet wat wij zoeken", "not interested" → Fase
+`Geen interesse` + reden `Niet geinteresseerd`, opvolging stopt. Zonder dit
+landde een nee in Notion op Status `Interesse`, naast de mensen die wél wilden.
+Status blijft bij een nee bewust ongemoeid: er is geen nee-status in de database.
+
+**Daniel mailt ook zelf, buiten de machine om.** `_eigen_mail_meenemen` leest
+elke beurt de map Verzonden en neemt elk leadadres dat een niet-`Re:`-mail heeft
+gehad over als `met_de_hand`; die krijgen nooit meer een sjabloonmail. Dit vangt
+óók het geval waarin de administratie zoek is geraakt terwijl er al gemaild was —
+30 adressen zaten in die situatie. Antwoorden op een lopend gesprek (`Re:`) tellen
+niet mee, anders zou elk gesprek als "koud benaderd" worden geboekt.
+
+**Een leeggemaakte datum in Notion vraagt `date: null`**, niet `{"start": null}`.
+Afgesloten leads horen geen "Volgende actie op" meer te hebben, anders blijven ze
+in de takenlijst staan.
+
+**Alles wordt vastgelegd in Notion**, tegen de LIVE kolommen van de Leadlist
+(zie "notion-leadlist-kolomnamen"): Fase `2. Benaderd` → `T2. Tekst follow-up 1`
+→ `T3. Tekst follow-up 2 (laatste)` → `4. Gereageerd` / `Geen interesse` /
+`Doodgelopen`, plus Status, Eerste contact, Volgende actie op en Follow-ups
+verstuurd. Daarnaast komt elke gebeurtenis als tekstregel onder aan de leadpagina;
+blokken hebben geen kolomnamen en kunnen dus niet stukgaan door een hernoeming.
+
+**Daniel krijgt zelf een seintje** (`_alarm`, naar `ALARM_NAAR`: zijn Gmail en
+info@revaleur.com) zodra iemand écht antwoordt — getest en aangekomen op
+11-08-2026. Automatische ontvangstbevestigingen tellen niet als antwoord: die
+worden herkend aan de onderwerpregel én aan zinnen in de tekst ("bedankt voor je
+e-mail", "in goede orde ontvangen"). BoekenBalie stuurde er een terug ónder ons
+eigen onderwerp en werd eerst als reactie geteld; dat is gerepareerd. Zou je dit
+missen, dan valt zo iemand stil uit de opvolging.
+
+**Opgelost: IMAP stond uit in Zoho** ("You are yet to enable IMAP for your
+account"). Let op: het vinkje op organisatieniveau (mailadmin) is NIET genoeg —
+IMAP moet ook per postbus aan, in Zoho Mail zelf onder Instellingen →
+E-mailaccounts → IMAP. Aangezet op 11-08-2026.
+
+**Onzin-adressen.** Uit webshops komt af en toe iets als `-@mail.nl` mee. Dat is
+een gegarandeerde bounce en bounces zijn dodelijk voor een jong domein; `_bruikbaar`
+gooit alles met minder dan twee tekens voor de apenstaart eruit. Er is er één
+verstuurd voordat dit erin zat.
+
+**Toon van de mails (Daniels beslissing, 11-08-2026):** los en persoonlijk,
+"Hi <naam>" en "Groetjes, Daniel". Geen adresblok en geen afmeldregel onder de
+mail — hij weet dat dat wettelijk anders hoort en heeft het bewust zo gewild. De
+afmeldweg zit alleen nog in de List-Unsubscribe-header.
+
+**Hetzelfde onderwerp, eigen bestand** (samengevoegd in de index op 13-09-2026):
+- "mailmachine-alleen-koude-reeks" — sinds 06-09-2026 alle AI eruit; alleen mail 1/2/3 uit vaste sjablonen
+- "mailagent-slimme-antwoorden" — achterhaald sinds 06-09-2026: de LLM-concepten uit augustus zijn eruit gehaald
+
+---
+
+## elke-ronde-dezelfde-logregel
+
+*14-09-2026 — "Een logregel die elke tien minuten terugkomt: tijdstip vergeleken met == terwijl twee adressen van één lead elkaar afwisselen, of een 'nog één kans' die zijn kans niet vastlegt"*
+
+Op 14-09-2026 schreef de mailmachine elke ronde dezelfde regels in het logboek:
+Borstelbeer twee keer "bal ligt bij hen", spaansesloffen-winkel.nl "warme reactie".
+
+1. `_jouw_antwoorden_verwerken` sloeg over bij `daniel_antwoordde == datum`. Daniel
+   had naar info@ én marktplaats@borstelbeer.nl geantwoord; beide horen via
+   `_zelfde_bedrijf` bij één lead, dus de waarde sprong elke ronde heen en weer.
+   Nu: alleen een nieuwer tijdstip telt (`>=`).
+2. De regel "een weggegooid concept krijgt nog één kans" legde die kans vast in
+   `concept_opnieuw`. Dat vastleggen zat in de conceptcode die op 06-09 verdween,
+   de controle bleef staan. Zonder concepten is de conceptmap altijd leeg, dus
+   was de kans er elke ronde weer.
+
+**Why:** in Notion stonden die regels verstopt onder een leadpagina; in de
+spreadsheet is het een tab die elke dag 400 regels ruis krijgt.
+
+**How to apply:** vergelijk "al verwerkt" op tijdstippen altijd met `>=`, nooit
+met `==`, zodra meerdere adressen naar dezelfde administratie kunnen wijzen. Haal
+je code weg, zoek dan ook naar de controles die leunden op wat die code
+vastlegde. Zie "leadlist-in-google-sheets".
+
+---
+
+## leadlist-in-google-sheets
+
+*14-09-2026 — "Sinds 14-09-2026 staan leadlijst, logboek en mailteksten in Google Sheets (Drive-map Omnivaleur), niet meer in Notion; valkuilen van de Sheets-API en van de omschakeling"*
+
+Op 14-09-2026 is de Notion-Leadlist verhuisd naar twee spreadsheets in Daniels
+Drive-map Omnivaleur (Daniels besluit, zie docs/team-notes.md):
+
+- **E-mail outreach** `1O3RjWgNWVNzmpe9M3jmJ07yI-DGK3C7F7dOfQNR3-Jc`: tabbladen
+  Leads, Logboek, Mailteksten, Uitleg. Marktplaats en 2dehands.
+- **Instagram & FB** `1gVzzE4lVKTMnM4qgp_ghn0Mn8g_-Q_owH3ED07h-QXs`: Leads, Logboek, Uitleg.
+  `scripts/leadgen_instagram.py` schrijft hier nu naartoe (dedupe op Link).
+
+Toegang via serviceaccount `omnivaleur-leadmachine@advance-casing-508610-t9.iam.gserviceaccount.com`
+(beide sheets gedeeld als bewerker). Sleutel als compacte JSON in Railway-variabele
+`GOOGLE_SHEETS_SLEUTEL` en lokaal in de sleutelhanger `omnivaleur-google-sheets`.
+`/health` toont `config.leadgen_sheets`. Code: `scripts/leadgen_sheets.py`.
+
+**Rolverdeling.** Supabase (`leadgen_opslag`) blijft de waarheid van de machine.
+De sheet is het menselijke overzicht, de bron van de mailteksten (live, Daniel
+past ze zelf aan) en het stopvinkje "Niet meer mailen". Onleesbare teksten of
+stoplijst: geen koude mail en `_storingsalarm` (fail closed).
+
+**Gemeten valkuilen:**
+- Een BOOLEAN-validatie (vinkje) schrijft FALSE in lege cellen. Validatie tot rij
+  2000 gaf 487 spookrijen, en dan komt een append pas op rij 1001 terecht. Validatie
+  alleen over de echte rijen; `values.append` met INSERT_ROWS erft dropdown én
+  vinkje van de rij erboven.
+- De server draait op UTC. Tijden in het logboek via `nu_nl()`, anders staat
+  alles twee uur te vroeg.
+- Elke push naar main herstart de scheduler, en daarmee begint de
+  10-minutenklok van `leadgen_tick` opnieuw. Vier pushes kort na elkaar = een half
+  uur geen ronde. Controleer de eerste ronde pas na de laatste push.
+- Lokaal draaien: de administratie leest `SUPABASE_KEY` (met service_role-waarde),
+  niet `SUPABASE_SERVICE_KEY`. Verkeerde naam = stil het oude lokale bestand
+  (6 adressen in plaats van 424).
+
+De Notion-Leadlist en "Instagram Leadlist" zijn archief met een verwijzing
+bovenaan. Zie "koude-mail-autonoom", "notion-leadlist-kolomnamen",
+"elke-ronde-dezelfde-logregel".
+
+---
+
+## antwoorden-kort-houden
+
+*13-09-2026 — Daniel wil vanaf 07-09-2026 blijvend kortere antwoorden; teksten waren te lang*
+
+Daniel, 07-09-2026: "ik wil dat je vanaf nu korter gaat antwoorden, voor altijd,
+je teksten zijn te lang." Geldt voor alle sessies en alle onderwerpen.
+
+**Why:** lange antwoorden kosten hem leestijd en tokens; hij wil gevolgen en
+acties, niet het verhaal eromheen.
+
+**How to apply:** rapportage blijft de vier blokjes uit "rapportage-in-gewone-taal"
+maar strak ingedikt. Geen uitleg over hoe iets is opgelost, geen opsomming van
+niet-gekozen afwegingen, geen herhaling van wat al gezegd is. Bij advies: kop +
+bullets, geen inleiding. Ook in `docs/team-notes.md` 07-09-2026.
+
+**Herhaald op 12-09-2026**, na een rapportage over een commit die al gepusht
+bleek: "berichten moeten altijd zo kort, duidelijk en compact mogelijk zijn,
+dit is te veel tekst voor hetgeen wat je wil zeggen." De vier blokjes zijn een
+maximum, geen verplicht formulier: bij een klein of leeg resultaat is één of
+twee zinnen het hele antwoord. Weeg elk bericht af tegen wat er feitelijk te
+melden valt, niet tegen de hoeveelheid werk die je eraan deed.
+
+**Herhaald op 13-09-2026, scherper:** Daniel noemde mijn adviesantwoorden
+"extreem lang" en vroeg om vanaf nu voor altijd korter. Dit geldt dus niet alleen
+voor rapportage na een codewijziging maar ook voor advies-, strategie- en
+onderzoeksantwoorden. Richtlijn: het antwoord zelf hooguit een scherm vol.
+Onderbouwing indikken tot de cijfers die de keuze bepalen, geen bronnenlijst
+tenzij hij erom vraagt, geen kopjes voor elk deelargument. Is de deliverable een
+tekst of prompt, zet die dan in een bestand en houd het chatantwoord kort.
+
+---
+
 ## plaatsen-stopt-als-de-computer-slaapt
 
 *13-09-2026 — "Het stopt als ik wegloop" is bijna altijd Windows dat slaapt; bewijs het met een bevroren opdracht die uren later alsnog afmeldt, en houd de machine wakker met chrome.power*
@@ -462,30 +779,6 @@ advertentietekst) is één alinea één doorlopende regel, hoe lang ook. Enters
 alleen tussen alinea's. Geldt voor codeblokken, want daar wordt niets
 teruggevouwen. Zie ook "antwoorden-kort-houden" en
 "klantmail-kort-en-menselijk".
-
----
-
-## antwoorden-kort-houden
-
-*12-09-2026 — Daniel wil vanaf 07-09-2026 blijvend kortere antwoorden; teksten waren te lang*
-
-Daniel, 07-09-2026: "ik wil dat je vanaf nu korter gaat antwoorden, voor altijd,
-je teksten zijn te lang." Geldt voor alle sessies en alle onderwerpen.
-
-**Why:** lange antwoorden kosten hem leestijd en tokens; hij wil gevolgen en
-acties, niet het verhaal eromheen.
-
-**How to apply:** rapportage blijft de vier blokjes uit "rapportage-in-gewone-taal"
-maar strak ingedikt. Geen uitleg over hoe iets is opgelost, geen opsomming van
-niet-gekozen afwegingen, geen herhaling van wat al gezegd is. Bij advies: kop +
-bullets, geen inleiding. Ook in `docs/team-notes.md` 07-09-2026.
-
-**Herhaald op 12-09-2026**, na een rapportage over een commit die al gepusht
-bleek: "berichten moeten altijd zo kort, duidelijk en compact mogelijk zijn,
-dit is te veel tekst voor hetgeen wat je wil zeggen." De vier blokjes zijn een
-maximum, geen verplicht formulier: bij een klein of leeg resultaat is één of
-twee zinnen het hele antwoord. Weeg elk bericht af tegen wat er feitelijk te
-melden valt, niet tegen de hoeveelheid werk die je eraan deed.
 
 ---
 
@@ -2365,185 +2658,6 @@ gaat het werk gewoon door. De server heeft dezelfde rem
 (`_reden_zonder_vals_verwijt` in jobs.py), want een extensiereparatie duurt weken
 via de Web Store. Zie ook "bewijs-moet-onderscheiden", "rode-regel-is-geen-oordeel"
 en "rem-op-de-server-bij-een-extensiefout".
-
----
-
-## koude-mail-autonoom
-
-*06-09-2026 — "De koude-mailmachine draait autonoom via een LaunchAgent; wachtwoorden in de sleutelhanger, wrapper buiten Documenten, alles gelogd in Notion"*
-
-Sinds 11-08-2026 verstuurt `scripts/leadgen_mail.py` zelfstandig koude mail naar
-de Marktplaats-leads uit "leadgen-marktplaats-beste-bron", vanaf
-daniel@omnivaleur.nl (nooit vanaf omnivaleur.com, zie "railway-blokkeert-smtp").
-
-**06-09-2026 — dit is deels achterhaald.** De machine draait nu ALLEEN op de
-Railway-scheduler (`leadgen_tick`, elke 10 min). De GitHub Actions-workflow
-hieronder is uitgezet (`gh workflow disable leadgen-mail.yml`), net als de
-Mac-LaunchAgent. En de machine schrijft geen AI-antwoorden of concepten meer,
-alleen de koude reeks mail 1/2/3 uit sjablonen — zie
-"mailmachine-alleen-koude-reeks". De rest van dit bestand blijft nuttig voor
-het gedrag van de reeks zelf (rooster, opvolgritme, Notion-fases).
-
-**Sinds 12-08-2026 draait de machine in de cloud, niet meer op de Mac.** GitHub
-Actions (`.github/workflows/leadgen-mail.yml`), elke 30 minuten tussen 08:00 en
-21:30 NL-tijd, `concurrency: leadmachine` zodat er nooit twee beurten tegelijk
-lopen. Gratis omdat de repo publiek is. `TZ: Europe/Amsterdam` in de workflow is
-niet optioneel — zonder dat rekent de runner in UTC en loopt het rooster twee uur
-voor. De LaunchAgent op de Mac staat uit (plist hernoemd naar `.uit`); zet die
-nooit tegelijk aan, dan mailt hij dubbel want die gebruikt lokale bestanden.
-
-**De repo is PUBLIEK.** Daarom staan de leadlijst en de verzendadministratie in
-Supabase, tabel `leadgen_opslag` (naam/inhoud/bijgewerkt, RLS aan, geen policy).
-Alleen de **service_role**-sleutel komt erbij; de anon-sleutel uit de frontend
-krijgt leesbaar niets (200 met lege lijst) en schrijven geeft 401. Nieuwe leads
-gescrapet? Dan `python3 scripts/leadgen_mail.py overzetten` draaien, anders ziet
-de cloud ze niet. Zonder SUPABASE_URL/KEY valt het script terug op lokale
-bestanden — handig om lokaal te testen.
-
-**De oude Mac-opstelling (uit, maar bewaard als terugval).** LaunchAgent `com.omnivaleur.leadgen` start elke tien minuten
-`~/Library/Application Support/omnivaleur/tick.sh`. **Niets wat de machine nodig
-heeft staat nog in ~/Documents** — code in `.../omnivaleur/code/`, gegevens in
-`.../omnivaleur/leads/`, logboek `tick.log` ernaast. De projectmap blijft de bron;
-na elke wijziging aan `leadgen_mail.py` of `leadgen_notion.py` moet je
-`scripts/leadgen_deploy.sh` draaien, anders draait de achtergrondtaak de oude code.
-
-**Waarom, en dit is de belangrijkste val.** ~/Documents is bij Daniel zowel
-TCC-beschermd als iCloud-gesynct. Een LaunchAgent krijgt er geen toegang
-("Operation not permitted", en `brctl download` faalt met NSCocoaErrorDomain 257),
-en met "Opslagruimte optimaliseren" haalt iCloud bestanden weg die even niet
-gebruikt zijn — een proces dat zo'n bestand leest krijgt dan
-`OSError [Errno 11] Resource deadlock avoided`. Beide fouten zijn stil: de mails
-gingen gewoon niet meer weg. Van 11-08 14:30 tot 12-08 11:34 stond alles stil
-zonder één signaal. Zet nooit een LaunchAgent op iets in ~/Documents.
-
-**Wachtwoorden staan in de sleutelhanger, niet in bestanden:**
-`security find-generic-password -a daniel@omnivaleur.nl -s omnivaleur-leadgen-mail -w`
-en `-a notion -s omnivaleur-notion-token -w`. Daardoor kan de wrapper gewoon mee
-in git.
-
-**`tick` beslist zelf.** Eén keer per dag maakt hij een rooster met willekeurige
-tijdstippen tussen 08:45 en 20:30 (minstens 9 minuten uit elkaar) en vinkt die
-daarna af; alles staat in `scripts/output/leads/mail_plan.json`, dus een slapende
-Mac of een herstart verstuurt niets dubbel. Opbouwschema `RAMP`: 5 op dag 1, 15 vanaf
-dag 2, 25 vanaf dag 6, 40 vanaf dag 11 (Daniels wens, 11-08-2026). Hoger heeft
-geen zin zolang de lijst ~320 adressen telt. `_dagnummer` telt vandaag als vandaag zodra
-er al gemaild is — een eerdere versie zag vandaag als "de volgende dag" en
-verstuurde daardoor 6 in plaats van 5 mails op dag 1.
-
-**Kijk voor "draait hij nog?" NOOIT naar de Mac.** Lokale `mail_state.json`,
-`tick.log` en de LaunchAgent zijn een dode schaduwkopie en zeggen niets; de
-`.uit`-plist is opzet, geen storing. De enige echte bronnen zijn
-`gh run list --workflow=leadgen-mail.yml` en de tabel in Supabase — en die tabel
-lees je alleen met de service_role-sleutel uit de GitHub-secrets, niet met de
-`SUPABASE_KEY` uit de lokale `.env` (ander project, geeft 200 met lege lijst).
-Op 14-08-2026 concludeerde ik uit die drie lokale sporen dat de machine stilstond,
-terwijl hij gewoon elke 30 minuten mailde.
-
-**Opvolgritme (Daniels wens, 14-08-2026): 2 en 4 dagen**, was 5 en 12.
-`STIL_NA_DAGEN = 10`: alles verstuurd en daarna tien dagen stil → Fase
-`Doodgelopen` + Afgesloten reden `Geen reactie na follow-ups`.
-
-**De Fase-kolom in Notion IS de werkvoorraad (afgesproken 17-08-2026).** Daniel
-verloor het overzicht omdat "heeft geantwoord" niets zegt over wie er aan zet is.
-Twee fases toegevoegd, direct achter `4. Gereageerd`: **`⚡ Jij bent aan zet`**
-(zij wachten op Daniel) en **`⏳ Bal bij hen`** (wij hebben geantwoord). Samen met
-`Gebruikt concurrent`, `Geen interesse`, `Klant` en `Doodgelopen` is dat de hele
-levende staat. Status heeft maar 4 opties en is via de API niet uit te breiden
-(zie "notion-api-beperkingen"), dus stuur op Fase, niet op Status.
-
-**Reconciliatie postbus ↔ Notion, 17-08-2026.** 18 bedrijven hadden geantwoord;
-14 stonden verkeerd in Notion. Drie stonden zelfs op **Interesse** terwijl ze
-letterlijk schreven dat ze Channable al gebruiken. De postbus is de waarheid, niet
-Notion: mappen `Beantwoord`/`Automatisch`/`Afval` + `Verzonden` samen geven het
-hele verhaal per lead. Doe dit opnieuw als de tellingen niet meer kloppen.
-
-**Gevonden lek: een antwoord vanaf een ander adres telde niet.** A. Dinkelaar
-kreeg mail op `info@afstandsbediening-online.nl` en antwoordde vanaf
-`info@afstandsbediening.nl` — voor de machine een vreemde, dus zijn "nee dank je"
-werd genegeerd en de opvolging liep door. `_zelfde_bedrijf()` koppelt nu op de
-kern van de domeinnaam (zonder subdomein, extensie en streepjes), **alleen** bij
-precies één kandidaat en **alleen** bij namen van 8+ tekens. Twee aangeschreven
-collega's bij hetzelfde bedrijf worden bewust niet gekoppeld. Inbox-terugblik van
-4 naar 14 dagen.
-
-**Wel geverifieerd:** niemand die antwoordde kreeg daarna nog een sjabloonmail.
-Onderscheid machine/handmatig gaat op de tekst, niet op de onderwerpregel — die
-is identiek omdat Daniel in dezelfde draad antwoordt.
-
-**Dagbudget 30 (Daniels wens, 15-08-2026), met `NIEUW_AANDEEL = 0.4`.**
-Opvolgmails gaan vóór, maar 40% van het budget blijft gereserveerd voor nieuwe
-eerste mails. Zonder die reservering drukt een opvolggolf het aanboren van
-nieuwe leads volledig weg: op 15-08 waren 12 van de 15 mails opvolging en werd
-er die dag vrijwel niemand nieuw aangeschreven.
-
-**Een reactie is een FEIT, interesse is een OORDEEL.** Elk antwoord zet Fase
-`4. Gereageerd`; Status `Interesse` wordt alleen nog gezet bij een warm antwoord.
-Daarvoor kreeg iedereen die antwoordde Interesse — inclusief "we gebruiken al
-Channable". Ook het seintje naar Daniel gaat nu alleen bij een warm antwoord.
-
-**Tussencategorie `Gebruikt concurrent`** (Fase-optie via de API toegevoegd op
-15-08-2026, staat direct achter `4. Gereageerd`), met Afgesloten reden
-`Gebruikt al een tool`. Dit is geen nee maar een **bezet ja**: die handelaar
-crosslist al, ziet de waarde en betaalt er al voor — de kansrijkste lijst die er
-is zodra die tool tegenvalt. `CONCURRENT` herkent Channable, Lengow,
-ChannelEngine, EffectConnect e.a. plus losse zinnen.
-
-**Val die dit blootlegde:** `AFMELD_WOORDEN` bevatte `geen interesse`, waardoor
-"wij gebruiken al Channable, dus geen interesse" als **afmelding** werd geboekt
-en het echte nieuws (ze crosslisten al) verdween. Eruit gehaald. Datzelfde
-patroon ving `niet meer TE mailen` niet — nu wel. Volgorde in de inbox:
-afmelding → concurrent → afwijzing → warm.
-
-**Een nette afwijzing is geen afmelding.** `AFWIJZING` herkent "geen interesse",
-"we gebruiken al zo'n tool", "niet wat wij zoeken", "not interested" → Fase
-`Geen interesse` + reden `Niet geinteresseerd`, opvolging stopt. Zonder dit
-landde een nee in Notion op Status `Interesse`, naast de mensen die wél wilden.
-Status blijft bij een nee bewust ongemoeid: er is geen nee-status in de database.
-
-**Daniel mailt ook zelf, buiten de machine om.** `_eigen_mail_meenemen` leest
-elke beurt de map Verzonden en neemt elk leadadres dat een niet-`Re:`-mail heeft
-gehad over als `met_de_hand`; die krijgen nooit meer een sjabloonmail. Dit vangt
-óók het geval waarin de administratie zoek is geraakt terwijl er al gemaild was —
-30 adressen zaten in die situatie. Antwoorden op een lopend gesprek (`Re:`) tellen
-niet mee, anders zou elk gesprek als "koud benaderd" worden geboekt.
-
-**Een leeggemaakte datum in Notion vraagt `date: null`**, niet `{"start": null}`.
-Afgesloten leads horen geen "Volgende actie op" meer te hebben, anders blijven ze
-in de takenlijst staan.
-
-**Alles wordt vastgelegd in Notion**, tegen de LIVE kolommen van de Leadlist
-(zie "notion-leadlist-kolomnamen"): Fase `2. Benaderd` → `T2. Tekst follow-up 1`
-→ `T3. Tekst follow-up 2 (laatste)` → `4. Gereageerd` / `Geen interesse` /
-`Doodgelopen`, plus Status, Eerste contact, Volgende actie op en Follow-ups
-verstuurd. Daarnaast komt elke gebeurtenis als tekstregel onder aan de leadpagina;
-blokken hebben geen kolomnamen en kunnen dus niet stukgaan door een hernoeming.
-
-**Daniel krijgt zelf een seintje** (`_alarm`, naar `ALARM_NAAR`: zijn Gmail en
-info@revaleur.com) zodra iemand écht antwoordt — getest en aangekomen op
-11-08-2026. Automatische ontvangstbevestigingen tellen niet als antwoord: die
-worden herkend aan de onderwerpregel én aan zinnen in de tekst ("bedankt voor je
-e-mail", "in goede orde ontvangen"). BoekenBalie stuurde er een terug ónder ons
-eigen onderwerp en werd eerst als reactie geteld; dat is gerepareerd. Zou je dit
-missen, dan valt zo iemand stil uit de opvolging.
-
-**Opgelost: IMAP stond uit in Zoho** ("You are yet to enable IMAP for your
-account"). Let op: het vinkje op organisatieniveau (mailadmin) is NIET genoeg —
-IMAP moet ook per postbus aan, in Zoho Mail zelf onder Instellingen →
-E-mailaccounts → IMAP. Aangezet op 11-08-2026.
-
-**Onzin-adressen.** Uit webshops komt af en toe iets als `-@mail.nl` mee. Dat is
-een gegarandeerde bounce en bounces zijn dodelijk voor een jong domein; `_bruikbaar`
-gooit alles met minder dan twee tekens voor de apenstaart eruit. Er is er één
-verstuurd voordat dit erin zat.
-
-**Toon van de mails (Daniels beslissing, 11-08-2026):** los en persoonlijk,
-"Hi <naam>" en "Groetjes, Daniel". Geen adresblok en geen afmeldregel onder de
-mail — hij weet dat dat wettelijk anders hoort en heeft het bewust zo gewild. De
-afmeldweg zit alleen nog in de List-Unsubscribe-header.
-
-**Hetzelfde onderwerp, eigen bestand** (samengevoegd in de index op 13-09-2026):
-- "mailmachine-alleen-koude-reeks" — sinds 06-09-2026 alle AI eruit; alleen mail 1/2/3 uit vaste sjablonen
-- "mailagent-slimme-antwoorden" — achterhaald sinds 06-09-2026: de LLM-concepten uit augustus zijn eruit gehaald
 
 ---
 
@@ -5973,22 +6087,6 @@ De vijver is niet uitgeput: een tweede sweep over 132 subcategorieën leverde 45
 
 ---
 
-## notion-leadlist-kolomnamen
-
-*10-08-2026 — Notion weigert een hele pagina bij één onbekende kolomnaam — de leadgen-push was daardoor stilletjes stuk na een hernoeming*
-
-De Notion-API weigert een **volledige** pagina zodra er één kolomnaam in de payload staat die niet in de database bestaat. Een hernoemde kolom betekent dus niet "dat ene veld blijft leeg" maar "er komt helemaal niets binnen" — en `push_leads` vangt die fout per lead af, dus het faalt zonder alarm.
-
-Dat is precies gebeurd: `scripts/leadgen_notion.py` schreef naar `Notes (Optional)`, `Verkoopt vooral...` en `Verkoop op...`, terwijl de Leadlist die kolommen inmiddels `Notities`, `Verkoopt` (multi_select) en `Verkoopt op` (multi_select) noemt. Hersteld op 2026-08-10.
-
-**Controleer na elke wijziging in de Leadlist** of de kolomnamen nog kloppen — offline te doen, zonder één rij te schrijven: bouw `_properties(lead)` voor een lead en trek de sleutels af van de `properties` uit `GET /databases/{id}`. Wat overblijft zijn de kolommen die de push zullen laten mislukken.
-
-Let ook op het type: `Verkoopt` en `Verkoopt op` zijn **multi_select**, geen select. Onbekende waarden worden bewust weggelaten in plaats van aangemaakt, anders groeit de kolom vol met varianten ("Vinted en eigen website" is één modelantwoord maar twee opties).
-
-Zie "leadgen-marktplaats-beste-bron" en "leadgen-vier-bronnen".
-
----
-
 ## leadgen-vier-bronnen
 
 *10-08-2026 — "Architectuur van de Instagram-leadgen — vier bronnen achter één uitvoervorm, met discover/enrich gesplitst om Apify's gratis-limiet te omzeilen"*
@@ -6467,20 +6565,6 @@ Daniel's standing instruction (2026-07-20): after making code changes, **always 
 **Why:** He runs a continuous-deploy setup and treats main as live; he doesn't want a confirmation gate on every push.
 
 **How to apply:** When work is done and verified, commit the relevant source files and push to origin/main. Note the repo has an auto-commit hook that often already commits changes (commits named `auto: update ...`), and origin frequently diverges — the working fix is `git stash -u` → `git pull --rebase origin main` → `git push` → `git stash pop`. `dist/` is gitignored (build zips aren't committed). See "deploy-pipeline" and "extension-release-bump-version".
-
----
-
-## leadlist-outreach-formula
-
-*19-07-2026 — "Notion Leadlist outreach column is now an LLM AI-autofill Text property; old formula hidden as backup"*
-
-In the Notion "Leadlist" database (Instagram & FB Outreach), the main outreach column **"AI Generated Tekst"** is (as of 2026-07-19) a **Text property with Notion AI autofill ("Basic" agent)** — a real LLM that writes correct Dutch per row from a custom base prompt. The prompt references Name, Je/Jullie, Verkoopt vooral..., Verkoop op..., enforces je/jullie consistency, a natural sentence around Verkoop op (no "actief op fysieke winkel"), the Omnivaleur pitch (Marktplaats/eBay/Shopify), a demo-video CTA, "Groetjes, Daniel", and "leave empty if key fields not filled". Trigger: On page update → only when Name / Je-Jullie / Verkoopt vooral / Verkoop op change (limits credit burn, avoids overwriting manual edits).
-
-The **old deterministic formula** that used to fill this column was renamed to **"AI formule (oud, backup)"** and hidden in the view (Σ formula, not AI). It produced grammatically-off Dutch ("actief op fysieke winkel", mixed je/jullie), which is why Daniel switched to the LLM.
-
-**Why:** Daniel wanted real LLM-quality Dutch, generated centrally in Notion from one base prompt, for all existing and new leads.
-
-**How to apply:** To change wording, edit the AI-autofill prompt (column header "AI Generated Tekst" → Autofill Text). AI autofill can't run on a formula, so the backup column stays formula-only. Notion AI autofill costs credits (~1 AI response per generated row); bulk-filling existing leads via "Run AI Autofill now" spends ~1 per lead. Availability: this workspace has custom AI autofill on Text props (Basic + Custom Agent); the property-type picker only pre-lists Summarise/Translate, so reach custom autofill via Edit property → AI Autofill. See "omnivaleur-brand-never-a-verb".
 
 ---
 

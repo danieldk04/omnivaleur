@@ -9220,3 +9220,32 @@ Meetpunt van die dag: Google leverde de laatste 30 dagen 5 klikken en 199
 vertoningen op 124 pagina's, terwijl GA4 247 bezoeken per week telde. Het verkeer
 komt dus vrijwel volledig uit koude mail, niet uit de contentmotor die sinds
 3 juli draait.
+
+## 14-09-2026 — Leadlijst van Notion naar Google Sheets
+
+Daniel wilde alles rond de koude mail op één plek die hij zelf kan aanpassen. De
+Notion-Leadlist is verhuisd naar twee spreadsheets in de Drive-map Omnivaleur:
+**E-mail outreach** (Marktplaats en 2dehands: Leads, Logboek, Mailteksten, Uitleg)
+en **Instagram & FB** (de social leads, eigen spreadsheet). 512 mailleads met 8.969
+logregels en 171 social leads overgezet.
+
+Zijn keuzes:
+- De mailteksten in de spreadsheet zijn meteen live. De machine leest ze elke
+  ronde; een kapotte tekst betekent geen koude mail en een alarm, geen
+  terugval op een oude tekst.
+- De opvolging na zijn eigen video verstuurt de machine weer zelf (gratis,
+  zonder AI), alleen na een video die hij zelf stuurde en nooit na een afwijzing,
+  afmelding of alleen een vakantiemelding.
+- Niets anders uit Notion overzetten. Op de oude plek staat een verwijzing naar
+  de spreadsheets; de Leadlist blijft als archief staan.
+
+Toegang loopt via een Google-serviceaccount met de sleutel in Railway
+(`GOOGLE_SHEETS_SLEUTEL`). Supabase blijft de administratie van de machine.
+
+Bij de omschakeling gevonden en gerepareerd: twee leads kregen elke tien minuten
+dezelfde logregel (Borstelbeer, spaansesloffen-winkel.nl), en de tijden stonden
+twee uur te vroeg omdat de server op UTC draait.
+
+Open: de Notion-integratiesleutel is in de chat geplakt en hoort ingetrokken te
+worden nu de machine hem niet meer gebruikt. Het Google-sleutelbestand hoort uit
+Downloads weg.
