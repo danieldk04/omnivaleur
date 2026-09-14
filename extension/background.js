@@ -3462,6 +3462,11 @@ async function expandMp2dhOverview(tabId) {
 // Wat er op de advertentiepagina stond toen het verwijderen niet lukte. Reist
 // mee in de foutmelding, want zonder dat is elke mislukking dezelfde ene zin.
 let _laatsteVerwijderpagina = "niet gekeken";
+// Wat elke bevestigings- en weg-check stap precies zag: welke knop, welke
+// HTTP-status, welke tekst matchte. Reist mee naar het dashboard, ook bij een
+// gemeld succes — want de mislukkingen die we nog niet begrijpen zagen er tot
+// nu toe ALLEMAAL hetzelfde uit ("deleted_via_ad_page"), en dat vertelt niets.
+let _laatsteVerwijderDiag = [];
 
 async function verwijderViaAdvertentiepagina(tabId, adUrl, platform) {
   const sleep = ms => new Promise(r => setTimeout(r, ms));
