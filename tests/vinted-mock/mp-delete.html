@@ -302,6 +302,39 @@ async function draai(sc, routine) {
   }
 }
 
+// ── Direct op verwijderViaAdvertentiepagina zelf: fetch tegen DOM ─────────
+//
+// De scenario's hierboven lopen via bgDeleteMp2dh, en de "oude code"-kolom
+// daar test een OUDERE architectuur (van vóór de advertentiepagina-route
+// bestond) — niet deze specifieke reparatie. Hier draait de functie zelf,
+// nieuw én oud (van vlak vóór de DOM-tegencontrole, commit 49f0086f), zodat
+// het vals-positiefscenario aantoonbaar het verschil maakt: de oude versie
+// vertrouwde fetch() blindelings, de nieuwe controleert de echte pagina erbij.
+async function draaiWegCheck(routine, staat) {
+  STAAT = JSON.parse(JSON.stringify(staat));
+  FRAME = bouwFrame(STAAT, false);
+  const adUrl = "https://www.marktplaats.nl/seller/view/m2423718603";
+  try {
+    const gelukt = await routine(1, adUrl, "marktplaats");
+    return { uitkomst: gelukt ? "complete" : "error" };
+  } catch (e) {
+    return { uitkomst: "error", detail: String(e.message || e).slice(0, 160) };
+  } finally {
+    FRAME.remove();
+  }
+}
+const wegCheckScenarios = [
+  { naam: "fetch en de echte pagina zijn het eens: weg",
+    staat: { fetchNaKlik: "weg", domNaKlik: "weg", ads: [AD("m2423718603", HET_VEST)] },
+    verwacht: "complete" },
+  { naam: "fetch en de echte pagina zijn het eens: nog online",
+    staat: { fetchNaKlik: "leeft", domNaKlik: "leeft", ads: [AD("m2423718603", HET_VEST)] },
+    verwacht: "error" },
+  { naam: "fetch zegt weg, de echte pagina niet — vals-positief genegeerd",
+    staat: { fetchNaKlik: "vals-weg", domNaKlik: "leeft", ads: [AD("m2423718603", HET_VEST)] },
+    verwacht: "error" },
+];
+
 (async () => {
   const tb = document.querySelector("#tabel tbody");
   let nieuwFout = 0;
@@ -319,9 +352,29 @@ async function draai(sc, routine) {
       <td class="${okOud ? "goed" : "fout"}">${o.uitkomst}</td>`;
     tb.appendChild(tr);
   }
-  window.__uitslag = { nieuw: nieuwFout, oud: oudFout, gevallen: scenarios.length };
+
+  const tb2 = document.createElement("table");
+  tb2.innerHTML = "<thead><tr><th>weg-check scenario</th><th>verwacht</th><th>nieuw (met DOM-tegencontrole)</th><th>oud (fetch alleen)</th></tr></thead><tbody></tbody>";
+  document.body.appendChild(document.createElement("h2")).textContent = "verwijderViaAdvertentiepagina rechtstreeks — fetch tegen DOM";
+  document.body.appendChild(tb2);
+  for (const sc of wegCheckScenarios) {
+    const r = await draaiWegCheck(verwijderViaAdvertentiepagina, sc.staat);
+    const o = typeof _oudVerwijderViaAdvertentiepagina === "function"
+      ? await draaiWegCheck(_oudVerwijderViaAdvertentiepagina, sc.staat) : { uitkomst: "?" };
+    const ok = r.uitkomst === sc.verwacht;
+    const okOud = o.uitkomst === sc.verwacht;
+    if (!ok) nieuwFout++;
+    if (!okOud) oudFout++;
+    const tr = document.createElement("tr");
+    tr.innerHTML = `<td>${sc.naam}</td><td>${sc.verwacht}</td>
+      <td class="${ok ? "goed" : "fout"}">${r.uitkomst}<br><small>${String(r.detail || "").replace(/</g, "&lt;")}</small></td>
+      <td class="${okOud ? "goed" : "fout"}">${o.uitkomst}</td>`;
+    tb2.querySelector("tbody").appendChild(tr);
+  }
+
+  window.__uitslag = { nieuw: nieuwFout, oud: oudFout, gevallen: scenarios.length + wegCheckScenarios.length };
   document.querySelector("#uitslag").textContent =
-    nieuwFout === 0 ? `ALLES GOED — ${scenarios.length} scenario's` : `${nieuwFout} van ${scenarios.length} FOUT`;
+    nieuwFout === 0 ? `ALLES GOED — ${scenarios.length + wegCheckScenarios.length} scenario's` : `${nieuwFout} FOUT`;
   document.querySelector("#uitslag").className = nieuwFout ? "fout" : "goed";
 })();
 </script>
