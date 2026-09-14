@@ -9316,3 +9316,23 @@ wachten schuiven achteraan zodat ze de rij niet ophouden.
 `scripts/herstel_betalende_rubriek.py` zet de zoekertjes terug in de wachtrij die
 hierop sneuvelden, met hun echte Marktplaats-rubriek erin. Rubrieken die bij hem
 zelf ook geld kostten blijven staan.
+
+## 14-09-2026 — En daaronder zat: hij is uitgelogd bij 2dehands
+
+Toen de 291 zoekertjes met hun echte rubriek terug in de wachtrij stonden, ging
+er alsnog niet één online. Zijn extensie (1.0.327) meldde "niet ingelogd" en de
+server nam de hele rij terug. Gemeten om 18:14 uur, uit zijn eigen browser:
+2dehands gaf twee keer HTTP 401 en de accountpagina kwam uit op
+`https://www.2dehands.be/identity/v2/login`. Hij is dus echt uitgelogd bij
+2dehands; op 13-09 om 09:24 werkte die sessie nog (109 advertenties opgehaald).
+
+Tot vandaag zei de server bij zo'n melding: "de fout ligt bij ons", op grond van
+onze eigen scan van 33 uur eerder. Dat is nu omgedraaid: een kopie vanaf 1.0.308
+meet het op het moment zelf en op de site zelf, en die waarneming gaat voor. Wat
+wij weten staat er als tegenspraak onder.
+
+De 288 teruggenomen opdrachten dragen hun echte Marktplaats-rubriek al. Zodra hij
+weer ingelogd is op 2dehands.be zet één commando ze terug in de rij, zonder dat
+hij 288 artikelen opnieuw hoeft aan te klikken:
+
+    python3 scripts/herstel_betalende_rubriek.py --gestopte-wachtrij --apply

@@ -58,7 +58,7 @@ async def _rubrieken(db, user_id: str, werk: list[dict]) -> dict:
     return gevonden
 
 
-def main(apply: bool, user_id: str, dagen: int) -> None:
+def main(apply: bool, user_id: str, dagen: int, gestopt: bool = False) -> None:
     from backend.database import get_db
     from backend.api.jobs import _BETAALDE_RUBRIEK
 
@@ -70,14 +70,31 @@ def main(apply: bool, user_id: str, dagen: int) -> None:
             .order("created_at", desc=True).limit(1000).execute().data or [])
     # Alleen wat op de betalende rubriek sneuvelde, en alleen als er geen echte
     # rubriek in stond: met een eigen Marktplaats-rubriek was het geen vergissing.
-    sneuvelde = []
+    sneuvelde, hervat = [], []
     for j in jobs:
         res = j.get("result") if isinstance(j.get("result"), dict) else {}
         tekst = f"{res.get('error') or ''} {res.get('error_oorspronkelijk') or ''}"
         pl = j.get("payload") if isinstance(j.get("payload"), dict) else {}
         if _BETAALDE_RUBRIEK.search(tekst) and not pl.get("mp_category"):
             sneuvelde.append(j)
+        elif gestopt and pl.get("mp_category") and res.get("cancelled") == "queue stopped":
+            # Al een keer teruggezet, en daarna meegesleept toen het hele kanaal
+            # werd stilgezet. De rubriek staat er al in, dus hier hoeft niets
+            # opgezocht te worden: gewoon terug in de rij.
+            hervat.append(j)
     print(f"opdrachten die op een betalende rubriek sneuvelden: {len(sneuvelde)}")
+    if hervat:
+        print(f"opdrachten die daarna met het hele kanaal zijn stilgezet: {len(hervat)}")
+        if apply:
+            terug = 0
+            for j in hervat:
+                db.table("jobs").update({
+                    "status": "pending", "result": None, "done_at": None, "claimed_at": None,
+                }).eq("id", j["id"]).execute()
+                db.table("listings").update({"status": "pending", "error_message": None}).eq(
+                    "item_id", j["item_id"]).eq("platform", "2dehands").execute()
+                terug += 1
+            print(f"  hervat: {terug}")
     if not sneuvelde:
         return
 
@@ -165,5 +182,7 @@ if __name__ == "__main__":
     p.add_argument("--apply", action="store_true")
     p.add_argument("--user", default=EGBERT)
     p.add_argument("--dagen", type=int, default=7)
+    p.add_argument("--gestopte-wachtrij", action="store_true",
+                   help="ook opdrachten hervatten die met het hele kanaal zijn stilgezet")
     a = p.parse_args()
-    main(a.apply, a.user, a.dagen)
+    main(a.apply, a.user, a.dagen, a.gestopte_wachtrij)
