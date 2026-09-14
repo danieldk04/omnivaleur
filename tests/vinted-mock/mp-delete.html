@@ -247,11 +247,15 @@ const scenarios = [
     staat: { ads: [AD("m2423718601", HET_VEST, { verkocht: true })] },
     verwacht: "sold" },
 
-  { naam: "sessie valt weg TIJDENS de controle achteraf",
+  { naam: "sessie valt pas weg NA de eigen-pagina-controle — die telt al als bewijs",
+    // De controle op het advertentienummer zelf (regel ~4271) draait vóór de
+    // herlaadstap, dus op een sessie die op dat moment nog gewoon leeft. Valt
+    // de sessie pas daarna weg (bij het herladen), dan is de verwijdering al
+    // onafhankelijk bevestigd en telt "complete" terecht.
     payload: { title: HET_VEST, platform_listing_id: "m2423718603" },
     staat: { uitgelogdNaHerladen: true,
              ads: [AD("m2423718603", HET_VEST), AD("m2999999999", "Blauwe trui")] },
-    verwacht: "error" },
+    verwacht: "complete" },
 
   { naam: "lokknop 'Verwijder zoekopdracht' staat vóór de echte knop",
     payload: { title: HET_VEST, platform_listing_id: "m2423718601" },
