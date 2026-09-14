@@ -17,6 +17,53 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ---
 
+## leadlist-in-google-sheets
+
+*14-09-2026 — "Sinds 14-09-2026 staan leadlijst, logboek en mailteksten in Google Sheets (Drive-map Omnivaleur), niet meer in Notion; valkuilen van de Sheets-API en van de omschakeling"*
+
+Op 14-09-2026 is de Notion-Leadlist verhuisd naar twee spreadsheets in Daniels
+Drive-map Omnivaleur (Daniels besluit, zie docs/team-notes.md):
+
+- **E-mail outreach** `1O3RjWgNWVNzmpe9M3jmJ07yI-DGK3C7F7dOfQNR3-Jc`: tabbladen
+  Leads, Logboek, Mailteksten, Uitleg. Marktplaats en 2dehands.
+- **Instagram & FB** `1gVzzE4lVKTMnM4qgp_ghn0Mn8g_-Q_owH3ED07h-QXs`: Leads, Logboek, Uitleg.
+  `scripts/leadgen_instagram.py` schrijft hier nu naartoe (dedupe op Link).
+
+Toegang via serviceaccount `omnivaleur-leadmachine@advance-casing-508610-t9.iam.gserviceaccount.com`
+(beide sheets gedeeld als bewerker). Sleutel als compacte JSON in Railway-variabele
+`GOOGLE_SHEETS_SLEUTEL` en lokaal in de sleutelhanger `omnivaleur-google-sheets`.
+`/health` toont `config.leadgen_sheets`. Code: `scripts/leadgen_sheets.py`.
+
+**Rolverdeling.** Supabase (`leadgen_opslag`) blijft de waarheid van de machine.
+De sheet is het menselijke overzicht, de bron van de mailteksten (live, Daniel
+past ze zelf aan) en het stopvinkje "Niet meer mailen". Onleesbare teksten of
+stoplijst: geen koude mail en `_storingsalarm` (fail closed).
+
+**Gemeten valkuilen:**
+- Een BOOLEAN-validatie (vinkje) schrijft FALSE in lege cellen. Validatie tot rij
+  2000 gaf 487 spookrijen, en dan komt een append pas op rij 1001 terecht. Validatie
+  alleen over de echte rijen; `values.append` met INSERT_ROWS erft dropdown én
+  vinkje van de rij erboven.
+- De server draait op UTC. Tijden in het logboek via `nu_nl()`, anders staat
+  alles twee uur te vroeg.
+- Elke push naar main herstart de scheduler, en daarmee begint de
+  10-minutenklok van `leadgen_tick` opnieuw. Vier pushes kort na elkaar = een half
+  uur geen ronde. Controleer de eerste ronde pas na de laatste push.
+- Lokaal draaien: de administratie leest `SUPABASE_KEY` (met service_role-waarde),
+  niet `SUPABASE_SERVICE_KEY`. Verkeerde naam = stil het oude lokale bestand
+  (6 adressen in plaats van 424).
+- Een rooster dat telt vanaf één moment ("dag 3 en dag 7 na de video") stuurt na
+  een stilstand alle achterstallige stappen in opeenvolgende rondes. Bij het weer
+  aanzetten op 14-09 zou SDB opvolging 2 tien minuten na opvolging 1 krijgen; de
+  proefronde (`video-opvolging` zonder `--echt`) direct NA de eerste echte ronde
+  liet het zien. Nu geldt ook de afstand tot de vorige opvolging.
+
+De Notion-Leadlist en "Instagram Leadlist" zijn archief met een verwijzing
+bovenaan. Zie "koude-mail-autonoom", "notion-leadlist-kolomnamen",
+"elke-ronde-dezelfde-logregel".
+
+---
+
 ## leadlist-outreach-formula
 
 *14-09-2026 — "Notion Leadlist outreach column is now an LLM AI-autofill Text property; old formula hidden as backup"*
@@ -257,48 +304,6 @@ spreadsheet is het een tab die elke dag 400 regels ruis krijgt.
 met `==`, zodra meerdere adressen naar dezelfde administratie kunnen wijzen. Haal
 je code weg, zoek dan ook naar de controles die leunden op wat die code
 vastlegde. Zie "leadlist-in-google-sheets".
-
----
-
-## leadlist-in-google-sheets
-
-*14-09-2026 — "Sinds 14-09-2026 staan leadlijst, logboek en mailteksten in Google Sheets (Drive-map Omnivaleur), niet meer in Notion; valkuilen van de Sheets-API en van de omschakeling"*
-
-Op 14-09-2026 is de Notion-Leadlist verhuisd naar twee spreadsheets in Daniels
-Drive-map Omnivaleur (Daniels besluit, zie docs/team-notes.md):
-
-- **E-mail outreach** `1O3RjWgNWVNzmpe9M3jmJ07yI-DGK3C7F7dOfQNR3-Jc`: tabbladen
-  Leads, Logboek, Mailteksten, Uitleg. Marktplaats en 2dehands.
-- **Instagram & FB** `1gVzzE4lVKTMnM4qgp_ghn0Mn8g_-Q_owH3ED07h-QXs`: Leads, Logboek, Uitleg.
-  `scripts/leadgen_instagram.py` schrijft hier nu naartoe (dedupe op Link).
-
-Toegang via serviceaccount `omnivaleur-leadmachine@advance-casing-508610-t9.iam.gserviceaccount.com`
-(beide sheets gedeeld als bewerker). Sleutel als compacte JSON in Railway-variabele
-`GOOGLE_SHEETS_SLEUTEL` en lokaal in de sleutelhanger `omnivaleur-google-sheets`.
-`/health` toont `config.leadgen_sheets`. Code: `scripts/leadgen_sheets.py`.
-
-**Rolverdeling.** Supabase (`leadgen_opslag`) blijft de waarheid van de machine.
-De sheet is het menselijke overzicht, de bron van de mailteksten (live, Daniel
-past ze zelf aan) en het stopvinkje "Niet meer mailen". Onleesbare teksten of
-stoplijst: geen koude mail en `_storingsalarm` (fail closed).
-
-**Gemeten valkuilen:**
-- Een BOOLEAN-validatie (vinkje) schrijft FALSE in lege cellen. Validatie tot rij
-  2000 gaf 487 spookrijen, en dan komt een append pas op rij 1001 terecht. Validatie
-  alleen over de echte rijen; `values.append` met INSERT_ROWS erft dropdown én
-  vinkje van de rij erboven.
-- De server draait op UTC. Tijden in het logboek via `nu_nl()`, anders staat
-  alles twee uur te vroeg.
-- Elke push naar main herstart de scheduler, en daarmee begint de
-  10-minutenklok van `leadgen_tick` opnieuw. Vier pushes kort na elkaar = een half
-  uur geen ronde. Controleer de eerste ronde pas na de laatste push.
-- Lokaal draaien: de administratie leest `SUPABASE_KEY` (met service_role-waarde),
-  niet `SUPABASE_SERVICE_KEY`. Verkeerde naam = stil het oude lokale bestand
-  (6 adressen in plaats van 424).
-
-De Notion-Leadlist en "Instagram Leadlist" zijn archief met een verwijzing
-bovenaan. Zie "koude-mail-autonoom", "notion-leadlist-kolomnamen",
-"elke-ronde-dezelfde-logregel".
 
 ---
 
