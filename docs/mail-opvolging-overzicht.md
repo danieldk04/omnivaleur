@@ -40,11 +40,12 @@ overzicht.
 | Systeem | Bevestigd | Hoe bevestigd |
 |---|---|---|
 | Koude reeks + video-opvolging | Ja, draait | `/health` toont leadgen_tick, leadgen_resend en leadgen_sheets alle op "aan", en in de sheet staat vandaag (15-09-2026) nog een echte binnengekomen reactie van een lead |
-| Proefperiode-opvolging | Config bevestigd, verzending niet | De taak staat aangemeld in de planner (dagelijks 09:00) en gebruikt dezelfde Resend-sleutel die voor de koude reeks al werkend is bevestigd. Ik heb geen toegang tot de database of het Resend-postvak om een echt verstuurde proefmail aan een gebruiker te laten zien |
+| Proefperiode-opvolging | Ja, draait | Rechtstreeks nagekeken in Supabase: van 48 abonnementen hebben 34 een gezette `trial_reminder_sent_at` en 31 een gezette `final_reminder_sent_at`, allemaal om 07:00 UTC (09:00 NL-tijd), precies het moment waarop de dagelijkse taak draait. De code zet die tijdstempel pas ná een geslaagde verzending, dus dit zijn echte verstuurde mails, geen pogingen |
 
-**Openstaand punt:** dat de proefperiode-mail ook echt aankomt bij iemand kon
-ik nu niet met eigen ogen bevestigen, alleen dat hij correct staat ingepland
-en dezelfde verzendweg gebruikt als de koude reeks.
+**Openstaand punt:** ik zag dat Resend de mail heeft geaccepteerd om te
+versturen, niet of hij ook echt in iemands inbox is aangekomen (geen bounce).
+De Resend-sleutel staat alleen op de server, niet lokaal, dus dat laatste kon
+ik hier niet natrekken.
 
 ## Wat er van jou verwacht wordt
 
