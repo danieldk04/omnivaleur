@@ -10,7 +10,7 @@ product verandert. De ontwikkelaar werkt dan zowel dit bestand in de repo als de
 kopie in Drive bij, in dezelfde beurt. Daniel hoeft niets te doen; de Gem leest
 de Drive-kopie de volgende keer opnieuw in.
 
-_Laatst bijgewerkt: 15-09-2026 (zakelijk account lijkt op uitgelogd, zie de eerste bullet bij Veelvoorkomende vragen; eBay: advertenties nu in het Nederlands, vaste eBay-rubriek per categorie, verzendkosten en controleblok bij Platforms, slottekst niet op eBay; wachtrij die stilstaat omdat de browser niet is ingelogd op het kanaal; Vinted plaatst nu door zonder dat je het tabblad open hoeft te houden; rode 'Relist failed' meldingen van 15-09: advertenties waren wel verwijderd maar kwamen niet terug, hersteld en gerepareerd in 1.0.333)_
+_Laatst bijgewerkt: 15-09-2026 (zakelijk account lijkt op uitgelogd, zie de eerste bullet bij Veelvoorkomende vragen; eBay: advertenties nu in het Nederlands, vaste eBay-rubriek per categorie, verzendkosten en controleblok bij Platforms, slottekst niet op eBay; wachtrij die stilstaat omdat de browser niet is ingelogd op het kanaal; Vinted plaatst nu door zonder dat je het tabblad open hoeft te houden; rode 'Relist failed' meldingen van 15-09: advertenties waren wel verwijderd maar kwamen niet terug, hersteld en gerepareerd in 1.0.334, plus een beveiliging op de server)_
 
 ---
 
@@ -509,11 +509,14 @@ gevolg was precies wat jij ziet: rode regels bij Refresh, en in Omnivaleur meer
 advertenties dan er echt op Marktplaats staan.
 
 Je advertenties zijn niet verloren. Ze staan weer in de wachtrij en gaan er
-vanzelf opnieuw op; de tellers in Omnivaleur kloppen daarna weer met wat je op
-Marktplaats ziet. Je hoeft zelf niets aan te klikken.
+vanzelf opnieuw op, ongeveer een advertentie per minuut; de tellers in Omnivaleur
+kloppen daarna weer met wat je op Marktplaats ziet. Je hoeft zelf niets aan te
+klikken.
 
-De oorzaak is verholpen in uitbreiding 1.0.333. Chrome werkt hem meestal vanzelf
-bij; je kunt het controleren op chrome://extensions.
+De oorzaak is verholpen in uitbreiding 1.0.334, en daarnaast is er een
+beveiliging op onze server bijgekomen die dit tegenhoudt ook als jouw uitbreiding
+nog niet is bijgewerkt. Chrome werkt hem meestal vanzelf bij; je kunt het
+controleren op chrome://extensions.
 
 Groetjes,
 Daniel

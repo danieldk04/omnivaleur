@@ -83,3 +83,21 @@ def test_zonder_diagnostiek_geen_conclusie():
 
 def test_onleesbare_diagnostiek_geeft_false():
     assert bevestigd(_klus("x | Diag: [dit is geen json")) is False
+
+
+def test_de_uitdeellus_raadpleegt_dit_ook_echt_en_op_tijd():
+    """Een helper die klopt maar nergens wordt aangeroepen repareert niets.
+
+    Hier gaat het bovendien om de VOLGORDE: het vangnet moet vóór de tak staan
+    die de plaatsing overslaat, anders is de plaatsing al afgeschoten voor het
+    aan bod komt.
+    """
+    bron = (Path(__file__).parent.parent / "backend/api/jobs.py").read_text(encoding="utf-8")
+    blok = bron[bron.index('if j["action"] == "create" and j.get("scheduled_for"):'):]
+    vangnet = blok.index("_kanaal_bevestigde_verwijdering")
+    overslaan = blok.index("Skipped — the paired delist failed")
+    assert vangnet < overslaan, "het vangnet moet vóór het overslaan van de plaatsing staan"
+    # En de opdracht moet zijn resultaat wel meekrijgen: zonder `result` in de
+    # select is er geen diagnostiek om naar te kijken en doet het vangnet niets.
+    kop = blok[:blok.index("_kanaal_bevestigde_verwijdering")]
+    assert '.select("id,status,payload,result")' in kop
