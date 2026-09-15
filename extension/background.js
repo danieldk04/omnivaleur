@@ -3687,6 +3687,32 @@ async function expandMp2dhOverview(tabId) {
   }
 }
 
+// WAT EEN ADVERTENTIEPAGINA ZEGT ALS DE ADVERTENTIE ER NIET MEER IS.
+//
+// Gemeten op 15-09-2026 op de échte pagina's van beide kanalen, omdat het raden
+// hier een verkoper 57 advertenties heeft gekost. Marktplaats zet er "Deze
+// advertentie is helaas verlopen" neer, 2dehands "Dit zoekertje is helaas
+// verlopen". De controle hieronder zocht tot vandaag naar "verlopen
+// advertentie" — dezelfde twee woorden andersom — en vond dus nooit iets. Elke
+// gelukte verwijdering werd daardoor als mislukking geboekt, de bijbehorende
+// nieuwe plaatsing werd overgeslagen ("de oude staat nog live"), en de
+// advertentie stond daarna nergens meer: niet op Marktplaats en niet in de
+// wachtrij. Op 15-09-2026 gebeurde dat 57 keer op één account; van die 57 stond
+// er nul nog op Marktplaats.
+//
+// Eén bron, als tekst doorgegeven aan elke controle: deze controles draaien in
+// de pagina zelf (chrome.scripting) en kunnen niet bij variabelen van de
+// achtergrondpagina, dus zonder doorgeven groeien er opnieuw vier kopieën die
+// uit elkaar lopen.
+const WEG_TEKST_BRON =
+  "(advertentie|zoekertje)\\s*(is)?\\s*(helaas)?\\s*" +
+  "(verlopen|verwijderd|niet meer beschikbaar|niet gevonden|bestaat niet)" +
+  "|niet meer beschikbaar|pagina niet gevonden|no longer available|not available|not found";
+// Alleen bruikbaar op de ruwe HTML: het blok dat Marktplaats én 2dehands om een
+// verlopen advertentie heen zetten. Taalonafhankelijk, en nagemeten op allebei
+// de kanten: het staat op een verlopen pagina en niet op een levende.
+const WEG_MARKER_BRON = "expired-listing-root|expiredlisting-module";
+
 // Een advertentie verwijderen vanaf haar EIGEN pagina (/seller/view/{id}).
 //
 // Nodig voor verkopers van wie de advertenties niet op de gewone "Mijn
@@ -3779,34 +3805,55 @@ async function verwijderViaAdvertentiepagina(tabId, adUrl, platform) {
     }
     await sleep(1500);
 
-    // Nakijken, niet aannemen. Eén fetch() haalt de ruwe HTML op VÓÓR React
-    // draait — een tekstcontrole daarop kan alles missen wat de pagina pas na
-    // JavaScript toont. Daarom telt een "weg" van de fetch niet als bewijs op
-    // zichzelf: pas als een echte tabbladnavigatie (met JS, dus de gerenderde
-    // pagina zoals de verkoper hem zelf zou zien) dat bevestigt, boeken we
-    // succes. Twee onafhankelijke signalen die het eens zijn, geen enkele.
+    // Nakijken, niet aannemen — maar wel het juiste signaal geloven.
+    //
+    // Een fetch() haalt de ruwe HTML op VÓÓR React draait, dus een TEKSTcontrole
+    // daarop kan alles missen wat de pagina pas na JavaScript toont. Dat was de
+    // reden om er een tweede, gerenderde controle naast te zetten. Maar een
+    // HTTP-STATUS is geen tekst uit een half geladen pagina: 404 of 410 komt van
+    // de server van Marktplaats zelf en betekent dat deze advertentie er niet
+    // meer is. Die eiste hier tot vandaag alsnog een tekstbevestiging, en als
+    // die tekst dan niet herkend werd (zie WEG_TEKST_BRON hierboven) werd een
+    // gelukte verwijdering als mislukking geboekt.
+    //
+    // Dus: statuscode = bewijs, meteen klaar. Een tekstmatch in de ruwe HTML
+    // blijft wat hij was: een aanwijzing die de gerenderde pagina moet bevestigen.
     for (let poging = 0; poging < 3; poging++) {
-      const fetchRes = await execInTab(tabId, async (u) => {
+      const fetchRes = await execInTab(tabId, async (u, wegBron, markerBron) => {
+        const WEG = new RegExp(wegBron);
+        const MARKER = new RegExp(markerBron);
         try {
           const r = await fetch(u, { credentials: "include", redirect: "follow" });
           if (r.status === 404 || r.status === 410) return { weg: true, status: r.status, via: "status" };
           if (!r.ok) return { weg: false, status: r.status, via: "not-ok" };
           const html = (await r.text()).toLowerCase();
-          const m = /niet meer beschikbaar|is verwijderd|verlopen advertentie|no longer available/.exec(html);
+          const marker = MARKER.exec(html);
+          if (marker) return { weg: true, status: r.status, via: `marker:${marker[0]}`, htmlLen: html.length };
+          const m = WEG.exec(html);
           return { weg: !!m, status: r.status, via: m ? `text:${m[0]}` : "no-match", htmlLen: html.length };
         } catch (e) { return { weg: false, via: "error", error: String(e) }; }
-      }, [adUrl]).catch(e => ({ weg: false, via: "exec-error", error: String(e) }));
+      }, [adUrl, WEG_TEKST_BRON, WEG_MARKER_BRON]).catch(e => ({ weg: false, via: "exec-error", error: String(e) }));
       diag.push({ fase: "fetch-check", poging, ...fetchRes });
+
+      // De server zegt zelf dat deze advertentie weg is (404/410), of de pagina
+      // draagt het verlopen-blok dat alleen op een verdwenen advertentie staat.
+      // Daar hoeft niets meer naast: doorvragen kan het antwoord alleen nog
+      // maar bederven.
+      if (fetchRes && fetchRes.weg && /^(status|marker:)/.test(String(fetchRes.via || ""))) {
+        console.log("[Omnivaleur] verwijderen bevestigd door de server zelf:", JSON.stringify(diag));
+        _laatsteVerwijderDiag = diag;
+        return true;
+      }
 
       if (fetchRes && fetchRes.weg) {
         await stuurWerkTabbladNaar(tabId, adUrl);
         await waitForTabLoad(tabId);
         await sleep(1500);
-        const domRes = await execInTab(tabId, (u) => {
+        const domRes = await execInTab(tabId, (u, wegBron) => {
           const tekst = (document.body.innerText || "").toLowerCase();
-          const m = /niet meer beschikbaar|is verwijderd|verlopen advertentie|no longer available|pagina niet gevonden|niet gevonden/.exec(tekst);
+          const m = new RegExp(wegBron).exec(tekst);
           return { url: location.href, textHit: m ? m[0] : null };
-        }, [adUrl]).catch(e => ({ error: String(e) }));
+        }, [adUrl, WEG_TEKST_BRON]).catch(e => ({ error: String(e) }));
         diag.push({ fase: "dom-tegencontrole", poging, ...domRes });
 
         if (domRes && domRes.textHit) {
@@ -4336,16 +4383,17 @@ async function bgDeleteMp2dh(job, serverUrl) {
       const opgeslagen = payload.platform_listing_url || "";
       const adUrl = listingId ? `${origin}/seller/view/${listingId}`
                   : (/\/v\//.test(opgeslagen) ? opgeslagen : "");
-      const live = adUrl ? await execInTab(tabId, async (u) => {
+      const live = adUrl ? await execInTab(tabId, async (u, wegBron, markerBron) => {
         try {
           const r = await fetch(u, { credentials: "include", redirect: "follow" });
           if (r.status === 404 || r.status === 410) return false;
           if (!r.ok) return null; // niets bewezen
           const html = (await r.text()).toLowerCase();
-          if (/niet meer beschikbaar|is verwijderd|verlopen advertentie|not available|no longer available/.test(html)) return false;
+          if (new RegExp(markerBron).test(html)) return false;
+          if (new RegExp(wegBron).test(html)) return false;
           return true;
         } catch (e) { return null; }
-      }, [adUrl]).catch(() => null) : null;
+      }, [adUrl, WEG_TEKST_BRON, WEG_MARKER_BRON]).catch(() => null) : null;
 
       if (live === true) {
         // NIET IN HET OVERZICHT, MAAR WEL ONLINE: VERWIJDER HEM DAN OP ZIJN
@@ -4510,16 +4558,17 @@ async function bgDeleteMp2dh(job, serverUrl) {
       const origin = new URL(overviewUrl).origin;
       const eigenUrl = `${origin}/seller/view/${listingId}`;
       for (let poging = 0; poging < 3; poging++) {
-        const weg = await execInTab(tabId, async (u) => {
+        const weg = await execInTab(tabId, async (u, wegBron, markerBron) => {
           try {
             const r = await fetch(u, { credentials: "include", redirect: "follow" });
             if (r.status === 404 || r.status === 410) return true;
             if (!r.ok) return null;
             const html = (await r.text()).toLowerCase();
-            if (/niet meer beschikbaar|is verwijderd|verlopen advertentie|not available|no longer available/.test(html)) return true;
+            if (new RegExp(markerBron).test(html)) return true;
+            if (new RegExp(wegBron).test(html)) return true;
             return false;
           } catch (e) { return null; }
-        }, [eigenUrl]).catch(() => null);
+        }, [eigenUrl, WEG_TEKST_BRON, WEG_MARKER_BRON]).catch(() => null);
         if (weg === true) {
           const iets0 = snapshot && ((snapshot.photo_urls || []).length || snapshot.brand ||
                                      snapshot.size || snapshot.description);
@@ -7110,7 +7159,10 @@ async function meldMogelijkeVerkopen(serverUrl, regels) {
 //   "onbekend"  401/403 (zakelijk account zonder sessie), serverfout, of geen
 //               verbinding. Niets bewezen, dus niets doen — en vooral geen
 //               verdenking laten staan die op een storing berust.
-const NIET_MEER_BESCHIKBAAR = /(deze\s+)?advertentie\s+(is\s+)?(niet\s+meer\s+beschikbaar|niet\s+gevonden|verwijderd|bestaat niet)|pagina niet gevonden|no longer available|not found/;
+// Zelfde meting als bij WEG_TEKST_BRON: "advertentie is helaas verlopen" (en op
+// 2dehands "zoekertje is helaas verlopen") viel hier buiten, dus een verlopen
+// advertentie gold als "leeft".
+const NIET_MEER_BESCHIKBAAR = new RegExp(WEG_MARKER_BRON + "|" + WEG_TEKST_BRON);
 
 async function bekijkEigenPagina(platform, advertentieId) {
   if (!advertentieId) return "onbekend";

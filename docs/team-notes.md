@@ -9734,3 +9734,32 @@ die regel niet gelezen worden, dan houdt de extensie niets tegen, dus die
 onzekerheid kost geen wachtrij. En of hij als zakelijke verkoper nog via het
 gewone plaatsformulier mag publiceren weten we pas als zijn 231 opdrachten weer
 gaan lopen.
+
+## 15-09-2026 (vervolg) — een meter op de klok, want 1.0.331 was niet genoeg bewijs
+
+Daniel na het uitbrengen van 1.0.331: "hij loopt gewoon niet door, alleen als ik
+actief ben op dat tabblad." Zijn foto (15:47) toont het Vinted-formulier met
+titel en omschrijving ingevuld, de foto's aan het laden, categorie en prijs nog
+leeg, en de gele foutopsporingsbalk staat er, dus de koppeling uit 1.0.331 was
+actief.
+
+Wat de opdracht zelf zegt: die plaatsing (1131 White Cavallaro Napoli Tracksuit)
+is om 13:50:58 UTC afgerond mét advertentienummer 10011400994, 5 minuten 42 na de
+claim. Hij liep dus door, niet vast. De laatste voortgangsmelding bleef staan op
+"gratis-keuze: knop niet gevonden" (op Vinted bestaat die knop niet) omdat
+meldStapAanServer twee regels binnen 1,2 seconden samenknijpt: de regel erna,
+"plaatsen: op de knop geklikt", haalde de server niet. Daarna zat hij drie
+minuten in het wachten op de advertentie.
+
+Wat we daarmee NIET weten: of hij doorliep omdat Daniel op dat tabblad klikte.
+Vanaf een andere computer is dat niet te zien, en dat is precies waarom "hij loopt
+niet door" een verhaal blijft in plaats van een meting.
+
+Daarom draagt vanaf 1.0.332 elke stap zijn eigen klokmeting mee, en die gaat mee
+in de voortgangsmelding naar de server: "[klok 9.8/s visible+focus]". 10/s is vol
+tempo, 1/s is afgeknepen, 0/s is stilstand. De volgende Vinted-plaatsing waarbij
+hij niet naar het tabblad klikt beslist het dus zelf, in zijn eigen browser.
+
+Chrome's koppeling via de pijp brak tussendoor twee keer af in de echte proef
+(service worker herstart, "chrome is not defined"); de proef hecht zich nu
+opnieuw aan tot de motor antwoordt.

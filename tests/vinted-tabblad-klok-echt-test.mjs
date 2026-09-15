@@ -83,14 +83,27 @@ try {
   if (!worker) throw new Error("geen service worker");
 
   const s = await stuur("Target.attachToTarget", { targetId: worker.targetId, flatten: true });
-  const sid = s.result.sessionId;
+  let sid = s.result.sessionId;
   const doe = async (expr) => {
     const u = await stuur("Runtime.evaluate",
       { expression: expr, awaitPromise: true, returnByValue: true }, sid);
     const r = u.result?.result;
     return r && "value" in r ? r.value : (r?.description || JSON.stringify(u.result));
   };
-  console.log("\nExtensieversie:", await doe("chrome.runtime.getManifest().version"));
+  // De service worker wordt door Chrome tussendoor afgebroken en opnieuw gestart;
+  // hecht je aan de oude, dan bestaat `chrome` daar niet meer. Opnieuw zoeken tot
+  // de motor antwoordt.
+  let versie = await doe("chrome.runtime.getManifest().version");
+  for (let i = 0; i < 6 && String(versie).includes("not defined"); i++) {
+    await pauze(1000);
+    const t = await stuur("Target.getTargets", { filter: [{}] });
+    const w = t.result.targetInfos.find((x) => x.type === "service_worker" && x.url.includes(extId));
+    if (!w) continue;
+    const ns = await stuur("Target.attachToTarget", { targetId: w.targetId, flatten: true });
+    sid = ns.result.sessionId;
+    versie = await doe("chrome.runtime.getManifest().version");
+  }
+  console.log("\nExtensieversie:", versie);
 
   // Precies wat een echte Vinted-opdracht doet: een achtergrondtabblad in het
   // venster waar de verkoper toch al werkt.
@@ -131,6 +144,7 @@ try {
   };
 
   const zichtbaarheid = await inPagina("document.visibilityState");
+  console.log("Heeft de pagina focus?", await inPagina("document.hasFocus()"));
   console.log("De pagina zelf zegt:", zichtbaarheid);
   check("de pagina denkt dat ze in beeld staat", zichtbaarheid === "visible",
         `document.visibilityState = ${zichtbaarheid}`);
@@ -144,8 +158,12 @@ try {
     (function lus(){ setTimeout(() => { n++; Date.now() < eind ? lus() : res(n); }, 100); })();
   })`);
   console.log("Tikken in 10 seconden:", tikken);
-  check("de klok van de pagina loopt op vol tempo", Number(tikken) >= 60,
-        `${tikken} tikken in 10 sec; verborgen zonder reparatie zijn dat er ~10, na 5 minuten ~0`);
+  // Een echte Vinted-pagina doet zelf ook werk, dus de 100 van een lege pagina
+  // wordt hier niet gehaald: gemeten 48 tot 91. Zonder de reparatie zijn het er
+  // precies 10 (één per seconde), en na vijf minuten verborgen 0. Alles boven de
+  // 25 kan dus alleen een tabblad zijn dat niet meer afgeknepen wordt.
+  check("de klok van de pagina is niet afgeknepen", Number(tikken) >= 25,
+        `${tikken} tikken in 10 sec; afgeknepen zijn dat er 10 of minder`);
 } catch (e) {
   mislukt++;
   console.log("  FOUT proef afgebroken —", e && e.message);

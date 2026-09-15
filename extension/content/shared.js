@@ -53,6 +53,27 @@ window.CL = (() => {
     try { w.postMessage({ id, ms }); }
     catch (_) { _timerWaiters.delete(id); setTimeout(r, ms); }
   });
+  // EEN METER OP DE KLOK VAN DE PAGINA (15-09-2026).
+  //
+  // Chrome knijpt de klok van een tabblad dat niet in beeld staat af, en dan valt
+  // het formulier van het kanaal stil terwijl onze eigen pauzes (die via de
+  // Worker lopen) gewoon doortikken. Dat verschil is vanaf een andere computer
+  // niet te zien, dus tot nu toe bleef "hij loopt niet door" een verhaal in
+  // plaats van een meting. Deze teller loopt mee met elke stap en gaat mee in de
+  // voortgangsmelding naar de server: 10/s is vol tempo, 1/s is afgeknepen en
+  // 0/s betekent dat het formulier stilstaat.
+  let _klokTikken = 0;
+  let _klokVanaf = Date.now();
+  (function klokMeter() { setTimeout(() => { _klokTikken++; klokMeter(); }, 100); })();
+  function klokRapport() {
+    const sec = (Date.now() - _klokVanaf) / 1000;
+    const per = sec > 0.2 ? _klokTikken / sec : 0;
+    _klokTikken = 0; _klokVanaf = Date.now();
+    let staat = document.visibilityState;
+    try { if (document.hasFocus()) staat += "+focus"; } catch (_) {}
+    return `${per.toFixed(1)}/s ${staat}`;
+  }
+
   const qs = (sel) => document.querySelector(sel);
 
   // Wachten op een verandering in het formulier, in plaats van klokjes.
@@ -2655,9 +2676,9 @@ window.CL = (() => {
   async function step(name, fn) {
     try {
       const ok = await fn();
-      clog(`stap ${name}: ${ok === false ? "NIET gelukt" : "ok"}`);
+      clog(`stap ${name}: ${ok === false ? "NIET gelukt" : "ok"} [klok ${klokRapport()}]`);
     } catch (e) {
-      clog(`stap ${name}: FOUT — ${e && e.message ? e.message : e}`);
+      clog(`stap ${name}: FOUT — ${e && e.message ? e.message : e} [klok ${klokRapport()}]`);
     }
   }
 
@@ -2819,6 +2840,7 @@ window.CL = (() => {
   }
 
   return {
+    klokRapport,
     sleep, waitUntil, qs, waitForEl, fillInput, fillInputHuman, fillNativeSelect, clickRadioByValue, fillDescription,
     findFieldByLabel, selectDropdown, fillBrand, fillManufacturer, vulLocatie, selectBundleFree,
     selectDelivery, gekozenLevering, selectPakketWaarde, vulHalswijdte, keuzeveldenKort, typBeschrijvingEcht,
