@@ -17,6 +17,123 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ---
 
+## kanaalsessie-moet-zichtbaar-zijn
+
+*15-09-2026 — Een verlopen sessie op Marktplaats of 2dehands zet de hele wachtrij stil; de extensie meet het al, dus het hoort zichtbaar te zijn vóór hij artikelen klaarzet*
+
+Omnivaleur publiceert met de sessie van de verkoper in zijn eigen browser.
+Marktplaats en 2dehands zijn aparte sites met aparte inlogs. Wie dagelijks op
+Marktplaats werkt en zelf nooit op 2dehands komt, laat die tweede sessie
+verlopen zonder iets te merken — en dan gebeurt er niets meer op dat kanaal.
+
+LET OP: een 401 op `/my-account/sell/api/listings` bewijst dit NIET. Bij Egbert
+Brouwer is die uitslag twee keer op deze manier verkeerd gelezen, en beide keren
+was hij gewoon ingelogd: 05-09-2026 (achtergrondmeting die loog) en 14-09-2026
+(zijn account was zakelijk geworden, zie
+"zakelijk-account-lijkt-op-uitgelogd"). Sinds 1.0.332 komt het oordeel uit de
+kopbalk van de site zelf en mag het overzicht alleen nog JA zeggen.
+
+**Why:** de extensie WIST het bij elke poging, maar het oordeel leefde in een
+variabele die met de service worker meestierf. Ondertussen zei het
+uitklapvenster "Extension active — ready to publish" en beloofde het dashboard
+"about to start, within ~15 seconds" met een slapende computer als schuldige.
+Twee schermen die allebei de verkeerde kant op wezen, terwijl het antwoord in
+één zin te geven was.
+
+**How to apply:** sinds 1.0.330 staat de uitslag in `storage.local` onder
+`kanaalSessie` (zie `KANAAL_SESSIE_SLEUTEL` in background.js), met de
+HTTP-code, waar het tabblad uitkwam en sinds wanneer. Alleen bewezen uitslagen:
+alleen de kopbalk in een tabblad op de site mag "nee" zeggen, de
+achtergrondmeting en het persoonlijke overzicht mogen alleen "ja" zeggen (06-09-2026: binnen dertien seconden 401 uit de service
+worker en 200 uit een tabblad). Het rode uitroepteken op het icoon, het
+uitklapvenster en de balk in het dashboard lezen alle drie diezelfde plek.
+Bewaakt door `tests/kanaalsessie-zichtbaar-test.js` en
+`tests/zakelijk-account-is-geen-uitlog-test.js`.
+
+Blijft open: of een ingelogde ZAKELIJKE verkoper via het gewone plaatsformulier
+mag blijven publiceren.
+Zie "tabblad-op-de-inlogpagina", "storing-mag-nooit-als-antwoord-tellen",
+"beloofd-tempo-moet-gemeten-tempo-zijn" en
+"aanwezigheid-niet-vragen-maar-stempelen".
+
+---
+
+## tabblad-op-de-inlogpagina
+
+*15-09-2026 — Een werktabblad dat op /identity/v2/login uitkomt bewijst alleen dat DIT verzoek geen particuliere sessie meedroeg; een zakelijk account krijgt hetzelfde beeld*
+
+Komt een werktabblad van Marktplaats of 2dehands uit op `/identity/v2/login`,
+dan droeg DAT verzoek geen geldige particuliere sessie mee. Dat is iets anders
+dan "de verkoper is uitgelogd": een ZAKELIJK account krijgt op zijn persoonlijke
+advertentieoverzicht exact hetzelfde beeld, zie
+"zakelijk-account-lijkt-op-uitgelogd" (Egbert, 15-09-2026, bewezen met
+`"sellerType":"TRADER"` op zijn eigen advertentiepagina). Nagemeten 14-09-2026 met
+een kale aanvraag zonder cookies: `GET /my-account/sell/index.html` met
+`Accept: text/html` geeft 302 naar precies die pagina, met
+`Accept: application/json` 401 "Unauthorized" (12 bytes). Dat is dus het beeld
+van een bezoeker zonder cookies, en niets anders.
+
+Bij Egbert Brouwer is dat twee keer gebeurd terwijl hij zei dat hij ingelogd
+was: 05-09-2026 (305 opdrachten) en 14-09-2026 (288 opdrachten). Hij had beide
+keren gelijk. De tweede is opgelost: zijn account was zakelijk geworden. De
+eerste is de leugenachtige achtergrondmeting uit de service worker (06-09-2026:
+401 uit de achtergrond en 200 uit een tabblad, dertien seconden ertussen). Incognito verklaart het niet:
+publiceren ging pas vanaf 06-09-2026 in een bestaand venster (f12d3bba), daarvoor
+in ons eigen venster, en dat is nooit incognito.
+
+**Why:** "hij is niet ingelogd" is een conclusie, en die is bij deze man 27 keer
+fout geweest (oude achtergrondcontrole, 22-08 tot 09-09). Marktplaats en 2dehands
+zijn aparte inlogs van dezelfde eigenaar en hij werkt vrijwel alleen op
+Marktplaats, dus "ik ben ingelogd" kan waar zijn en de 2dehands-sessie toch weg.
+
+**How to apply:** noem de waarneming (HTTP-code plus waar het tabblad uitkwam),
+niet het oordeel, en stel één vraag: open die pagina en zeg wat je ziet. Zo'n
+melding mag nooit een wachtrij wissen; sinds 14-09-2026 gaat het kanaal twintig
+minuten op pauze en draagt één opdracht de uitleg
+(`_pauzeer_op_inlogverwijt` in jobs.py). Openstaand: de verkoper hoort te zien
+dat zijn sessie weg is vóórdat hij honderden artikelen klaarzet;
+`scan_meta.signed_in` weet het al, het dashboard doet er niets mee. Zie
+"storing-mag-nooit-als-antwoord-tellen", "auth-fouten-lijken-op-verkeerd-wachtwoord"
+en "uitgelogd-door-de-gedeelde-vernieuwsleutel".
+
+---
+
+## zakelijk-account-lijkt-op-uitgelogd
+
+*15-09-2026 — Een zakelijk account op Marktplaats of 2dehands krijgt 401 op zijn persoonlijke advertentieoverzicht, precies zoals een uitgelogde bezoeker; oordeel daarom nooit op die pagina*
+
+Het persoonlijke advertentieoverzicht (`/my-account/sell/...`) bestaat alleen
+voor een PARTICULIER account. Wordt een verkoper door Marktplaats of 2dehands
+omgezet naar een zakelijk account, dan is diezelfde pagina voor hem dicht: 302
+naar `/identity/v2/login` en 401 op de API. Exact het beeld van een bezoeker
+zonder cookies. Zijn advertenties staan dan in Admarkt.
+
+Gemeten bij Egbert Brouwer, 15-09-2026. Zijn scan van 13-09 09:24 UTC las dat
+overzicht nog met HTTP 200 en 109 advertenties; vanaf 14-09 18:08 UTC elke keer
+401. Zijn openbare advertentiepagina op 2dehands zegt sindsdien
+`"sellerType":"TRADER"`, een particuliere verkoper ernaast `"CONSUMER"`. Hij was
+de hele tijd ingelogd; wij namen 231 opdrachten van hem terug met de tekst dat
+hij dat niet was. Ertussen zat één ochtend waarin hij 129 advertenties plaatste
+en op ongeveer 200 live zoekertjes kwam.
+
+**Why:** die 401 is geen antwoord op de vraag "ben je ingelogd", maar op de vraag
+"is dit overzicht van jou". Twee heel verschillende dingen met dezelfde
+foutcode, en het kost een klant zijn hele wachtrij. Zie
+"succes-nooit-uit-uitsluitingslijst" en "auth-fouten-lijken-op-verkeerd-wachtwoord".
+
+**How to apply:** de neutrale bron is de kopbalk van de site zelf. In de HTML van
+www.marktplaats.nl en www.2dehands.be staat precies één keer
+`"userDetails":{"isLoggedIn":true|false}`, en dat is voor beide soorten accounts
+hetzelfde: het is letterlijk wat de verkoper in zijn scherm ziet. Sinds 1.0.332
+leest `eerstepartijStatus` dat mee vanuit het werktabblad en wint de kopbalk van
+het overzicht. Het overzicht mag alleen nog JA zeggen; kan de kopbalk niet
+gelezen worden, dan is er geen oordeel en gaat het werk door. Account-type check
+van buitenaf: `https://www.2dehands.be/lrp/api/search?sellerIds[]=<id>` geeft de
+`vipUrl`, en op die pagina staat `"sellerType"`. Zie
+"zakelijke-verkoper-account" en "admarkt-zakelijke-marktplaats".
+
+---
+
 ## verborgen-tabblad-worker-timer
 
 *15-09-2026 — sleep() in de extensie draait via een Web Worker omdat Chrome setTimeout in een verborgen tabblad afknijpt tot stilstand*
@@ -94,45 +211,6 @@ vinted.nl: oud `hidden` en 10 tikken in 10 sec, nieuw `visible` en 89 tot 91
 tikken in 10 sec.
 
 Zie ook "extensie-echt-draaien-in-chrome" en "beloofd-tempo-moet-gemeten-tempo-zijn".
-
----
-
-## kanaalsessie-moet-zichtbaar-zijn
-
-*15-09-2026 — Een verlopen sessie op Marktplaats of 2dehands zet de hele wachtrij stil; de extensie meet het al, dus het hoort zichtbaar te zijn vóór hij artikelen klaarzet*
-
-Omnivaleur publiceert met de sessie van de verkoper in zijn eigen browser.
-Marktplaats en 2dehands zijn aparte sites met aparte inlogs. Wie dagelijks op
-Marktplaats werkt en zelf nooit op 2dehands komt, laat die tweede sessie
-verlopen zonder iets te merken — en dan gebeurt er niets meer op dat kanaal.
-
-Bij Egbert Brouwer twee keer: 05-09-2026 (305 opdrachten) en 13-09-2026
-(231 opdrachten, ontdekt 14-09). Beide keren zei hij dat hij ingelogd was, en
-beide keren klopte dat voor Marktplaats en voor de Omnivaleur-extensie, niet
-voor 2dehands. Meetbaar aan: HTTP 401 op `/my-account/sell/api/listings` én een
-werktabblad dat uitkomt op `/identity/v2/login`, terwijl zijn advertenties
-openbaar gewoon online staan (dus geen blokkade).
-
-**Why:** de extensie WIST het bij elke poging, maar het oordeel leefde in een
-variabele die met de service worker meestierf. Ondertussen zei het
-uitklapvenster "Extension active — ready to publish" en beloofde het dashboard
-"about to start, within ~15 seconds" met een slapende computer als schuldige.
-Twee schermen die allebei de verkeerde kant op wezen, terwijl het antwoord in
-één zin te geven was.
-
-**How to apply:** sinds 1.0.330 staat de uitslag in `storage.local` onder
-`kanaalSessie` (zie `KANAAL_SESSIE_SLEUTEL` in background.js), met de
-HTTP-code, waar het tabblad uitkwam en sinds wanneer. Alleen bewezen uitslagen:
-de meting in een tabblad op de site telt beide kanten op, de achtergrondmeting
-mag alleen "ja" zeggen (06-09-2026: binnen dertien seconden 401 uit de service
-worker en 200 uit een tabblad). Het rode uitroepteken op het icoon, het
-uitklapvenster en de balk in het dashboard lezen alle drie diezelfde plek.
-Bewaakt door `tests/kanaalsessie-zichtbaar-test.js`.
-
-Blijft open: waaróm zo'n sessie verloopt is niet gemeten, alleen dát ze weg is.
-Zie "tabblad-op-de-inlogpagina", "storing-mag-nooit-als-antwoord-tellen",
-"beloofd-tempo-moet-gemeten-tempo-zijn" en
-"aanwezigheid-niet-vragen-maar-stempelen".
 
 ---
 
@@ -263,40 +341,6 @@ weg, de echte pagina niet") die de oude, fetch-only code op dit scenario laat
 falen. Voeg bij zo'n controle ook diagnostiek toe die per poging logt wat er
 precies gezien werd (status, tekst, geklikte knop) — anders zien alle
 mislukkingen er identiek uit en kun je het mechanisme nooit meer achterhalen.
-
----
-
-## tabblad-op-de-inlogpagina
-
-*14-09-2026 — Een werktabblad dat op /identity/v2/login uitkomt betekent "dit profiel heeft geen sessie", niet "de verkoper liegt"; bij Egbert twee keer, oorzaak nog open*
-
-Komt een werktabblad van Marktplaats of 2dehands uit op `/identity/v2/login`,
-dan had dat browserprofiel op dat moment geen sessie. Nagemeten 14-09-2026 met
-een kale aanvraag zonder cookies: `GET /my-account/sell/index.html` met
-`Accept: text/html` geeft 302 naar precies die pagina, met
-`Accept: application/json` 401 "Unauthorized" (12 bytes). Dat is dus het beeld
-van een bezoeker zonder cookies, en niets anders.
-
-Bij Egbert Brouwer is dat nu twee keer gebeurd terwijl hij zei dat hij ingelogd
-was: 05-09-2026 (305 opdrachten) en 14-09-2026 (288 opdrachten). Beide keren is
-de oorzaak van die lege sessie niet gevonden. Incognito verklaart het niet:
-publiceren ging pas vanaf 06-09-2026 in een bestaand venster (f12d3bba), daarvoor
-in ons eigen venster, en dat is nooit incognito.
-
-**Why:** "hij is niet ingelogd" is een conclusie, en die is bij deze man 27 keer
-fout geweest (oude achtergrondcontrole, 22-08 tot 09-09). Marktplaats en 2dehands
-zijn aparte inlogs van dezelfde eigenaar en hij werkt vrijwel alleen op
-Marktplaats, dus "ik ben ingelogd" kan waar zijn en de 2dehands-sessie toch weg.
-
-**How to apply:** noem de waarneming (HTTP-code plus waar het tabblad uitkwam),
-niet het oordeel, en stel één vraag: open die pagina en zeg wat je ziet. Zo'n
-melding mag nooit een wachtrij wissen; sinds 14-09-2026 gaat het kanaal twintig
-minuten op pauze en draagt één opdracht de uitleg
-(`_pauzeer_op_inlogverwijt` in jobs.py). Openstaand: de verkoper hoort te zien
-dat zijn sessie weg is vóórdat hij honderden artikelen klaarzet;
-`scan_meta.signed_in` weet het al, het dashboard doet er niets mee. Zie
-"storing-mag-nooit-als-antwoord-tellen", "auth-fouten-lijken-op-verkeerd-wachtwoord"
-en "uitgelogd-door-de-gedeelde-vernieuwsleutel".
 
 ---
 

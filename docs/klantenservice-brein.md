@@ -10,7 +10,7 @@ product verandert. De ontwikkelaar werkt dan zowel dit bestand in de repo als de
 kopie in Drive bij, in dezelfde beurt. Daniel hoeft niets te doen; de Gem leest
 de Drive-kopie de volgende keer opnieuw in.
 
-_Laatst bijgewerkt: 15-09-2026 (eBay: advertenties nu in het Nederlands, vaste eBay-rubriek per categorie, verzendkosten en controleblok bij Platforms, slottekst niet op eBay; wachtrij die stilstaat omdat de browser niet is ingelogd op het kanaal; Vinted plaatst nu door zonder dat je het tabblad open hoeft te houden)_
+_Laatst bijgewerkt: 15-09-2026 (zakelijk account lijkt op uitgelogd, zie de eerste bullet bij Veelvoorkomende vragen; eBay: advertenties nu in het Nederlands, vaste eBay-rubriek per categorie, verzendkosten en controleblok bij Platforms, slottekst niet op eBay; wachtrij die stilstaat omdat de browser niet is ingelogd op het kanaal; Vinted plaatst nu door zonder dat je het tabblad open hoeft te houden)_
 
 ---
 
@@ -210,7 +210,17 @@ Contact:
   online, dan plaatst hij ze zelf en betaalt hij per advertentie, of hij zet de
   artikelen in een rubriek die daar wel gratis is. Herkenbaar bij de klant aan
   "Dit is een betalende categorie" of een knop die "Naar betalen" heet.
-- Staat een wachtrij stil zonder foutmelding, vraag dan altijd eerst of de klant
+- Krijgt een klant "je bent niet ingelogd op 2dehands" of "op Marktplaats" en
+  zegt hij dat hij wel degelijk ingelogd is, geloof hem dan. Gemeten op
+  15-09-2026: wordt een account door Marktplaats of 2dehands omgezet naar een
+  ZAKELIJK account, dan is het persoonlijke advertentieoverzicht voor hem dicht,
+  en dat ziet er van buitenaf precies zo uit als uitgelogd zijn. Zijn
+  advertenties staan dan in Admarkt. Sinds versie 1.0.332 leest Omnivaleur de
+  kopbalk van de site zelf en maakt dat verschil wel; wie nog een oudere versie
+  heeft kan dit verwijt nog krijgen. Vraag in dat geval of hij zakelijk verkoopt
+  op dat kanaal, en zet in het uitklapvenster "Business account (Admarkt)" aan.
+  Zijn wachtrij blijft gewoon staan.
+- Staat een wachtrij stil zonder foutmelding, vraag dan of de klant
   op dat kanaal zelf is ingelogd in de browser waar de uitbreiding staat.
   Marktplaats en 2dehands zijn aparte sites met aparte inlogs. Wie elke dag op
   Marktplaats werkt en zelf nooit op 2dehands komt, laat die tweede sessie

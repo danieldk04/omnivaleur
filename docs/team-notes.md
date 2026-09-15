@@ -9672,3 +9672,65 @@ sessiemelding van vandaag; deze wijziging is 1.0.331. We werkten vanmiddag
 tegelijk in dezelfde map, en commit 2f06b5d9 heeft mijn halfafgemaakte
 Vinted-wijziging meegenomen. Niets verloren gegaan, maar het is een reden om
 vóór een commit te kijken wat er nog meer in de map ligt.
+
+## 15-09-2026 (later op de dag) — Egbert was wél ingelogd: zijn account is zakelijk geworden
+
+Correctie op de notitie van vanmiddag hierboven. Daar stond dat zijn browser sinds
+13-09 geen 2dehands-sessie meer had. Dat was de verkeerde conclusie, getrokken uit
+een meting die dat niet kan bewijzen. Daniel hield vol dat Egbert ingelogd was.
+Hij had gelijk.
+
+Wat er echt gemeten is:
+
+- Andere klanten publiceerden op 14 en 15 september gewoon door op 2dehands
+  (3 verkopers, 15 geslaagde plaatsingen). Aan de site lag het dus niet.
+- Eén extensiekopie, geen tweede: de versies in zijn afgemelde opdrachten lopen
+  netjes op van 1.0.200 (16-08) tot 1.0.329 (vandaag), nooit terug.
+- Zijn 2dehands-scan van 13-09 09:24 UTC las zijn persoonlijke overzicht met
+  HTTP 200 en 109 advertenties. Vanaf 14-09 18:08 UTC elke keer 401, en het
+  werktabblad kwam uit op /identity/v2/login. Een uitgelogde bezoeker krijgt
+  exact hetzelfde (nagemeten: 302 naar /identity/v2/login, API 401).
+- Zijn openbare advertentiepagina op 2dehands zegt `"sellerType":"TRADER"`. Een
+  particuliere verkoper ernaast (sellerId 28108986) zegt `"CONSUMER"`. Op
+  Marktplaats wisten we al sinds 28-08 dat hij zakelijk is: onze eigen scan gaf
+  daar "Je persoonlijke advertentieoverzicht is leeg, bij een zakelijk account
+  hoort dat zo".
+- Zijn 2dehands-scan schakelde op 14-09 18:09 voor het eerst over op de
+  Admarkt-kant. Precies hetzelfde moment.
+
+Dus: 2dehands heeft zijn account zakelijk gemaakt, ergens tussen 13-09 11:40 en
+14-09 18:08 UTC, nadat hij die ochtend 129 advertenties had geplaatst en op
+ongeveer 200 live zoekertjes kwam. Voor een zakelijk account bestaat het
+persoonlijke advertentieoverzicht niet meer. Wij gebruikten juist die pagina als
+inlogcontrole, lazen de 401 als "niet ingelogd" en namen zijn hele wachtrij terug.
+Dat is de derde keer dat deze man dat verwijt kreeg terwijl hij gelijk had
+(16-08 Admarkt, 06-09 achtergrondmeting, nu dit).
+
+Gerepareerd in 1.0.332:
+
+- Het oordeel komt nu uit de kopbalk van de site zelf. Die staat als
+  `"userDetails":{"isLoggedIn":true|false}` in de HTML van www.marktplaats.nl en
+  www.2dehands.be, precies één keer per pagina, en is voor een particulier en een
+  zakelijk account hetzelfde. Dat is letterlijk wat de verkoper in zijn scherm ziet.
+- Het persoonlijke overzicht mag alleen nog JA zeggen. Een 401 daar is geen bewijs
+  meer van uitloggen.
+- Is de kopbalk niet te lezen, dan is er geen oordeel en gaat het werk gewoon door.
+  Een kanaal dat werkelijk doodloopt wordt nog steeds gevangen door de rem op de
+  server (tien ondoorgronde mislukkingen).
+- De scan stempelt geen "uitgelogd" meer op een 401: hij kan die twee gevallen niet
+  uit elkaar houden.
+- De scanmelding en het klantenservice-brein noemen nu het zakelijke account eerst.
+
+Voor-en-na met 1.0.331 ernaast: tests/zakelijk-account-is-geen-uitlog-test.js,
+24 controles. Onder exact dezelfde omstandigheden zegt 1.0.331 "uitgelogd" en zet
+hij de wachtrij stil; 1.0.332 laat hem doorlopen. Wie echt uitgelogd is wordt nog
+steeds gevonden en stilgezet.
+
+**Openstaand.** Dat een ingelogd ZAKELIJK account 401 krijgt op dat overzicht is
+afgeleid uit Egberts eigen meetreeks plus de bekende Marktplaats-kant, niet
+rechtstreeks nagemeten: we hebben zelf geen zakelijk 2dehands-account. Ook
+ongemeten: of `"isLoggedIn":true` er bij een ingelogde verkoper echt staat. Kan
+die regel niet gelezen worden, dan houdt de extensie niets tegen, dus die
+onzekerheid kost geen wachtrij. En of hij als zakelijke verkoper nog via het
+gewone plaatsformulier mag publiceren weten we pas als zijn 231 opdrachten weer
+gaan lopen.

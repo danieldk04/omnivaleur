@@ -2888,11 +2888,19 @@ async function vintedIngelogd(origin) {
 // kale aanvraag zonder cookies, en verklaarde niets: www.marktplaats.nl doet op
 // hetzelfde adres exact hetzelfde.
 //
-// DE CONTROLE ZELF. /my-account/sell/api/listings is afgeschermd en verwijst
-// NIET door: zonder sessie is het 401 met twaalf bytes "Unauthorized" (drie keer
-// nagemeten: kale curl, een uitgelogde echte browser, en de scan van Egbert
-// zelf), met sessie 200. Dat is dus een eerlijk ja of nee, en het is precies
-// dezelfde aanpak als de Vinted-controle hierboven.
+// DE CONTROLE ZELF. /my-account/sell/api/listings is afgeschermd: zonder sessie
+// 401 met twaalf bytes "Unauthorized", met sessie 200.
+//
+// LET OP, EN DIT IS DE DUURSTE LES VAN DEZE HELE MAAND: die 401 is GEEN eerlijk
+// nee. Hij betekent ook "dit overzicht is niet van jou", en dat is precies wat
+// een ZAKELIJK account krijgt — daar staan de advertenties in Admarkt. Gemeten
+// bij Egbert Brouwer: op 13-09-2026 gaf dit adres hem nog 200 met 109
+// advertenties, vanaf 14-09 401, en zijn openbare advertentiepagina zegt
+// sindsdien "sellerType":"TRADER" waar een particuliere verkoper "CONSUMER"
+// zegt. Zijn inlog was al die tijd in orde; wij namen 231 opdrachten terug.
+//
+// Dit adres mag daarom alleen nog JA zeggen. Het NEE komt uit de kopbalk van de
+// site zelf, zie eerstepartijStatus.
 //
 // Weten we het niet zeker (netwerkfout, 5xx, onderhoud), dan gaat het werk
 // gewoon door. Een onzekere controle mag nooit een publicatie tegenhouden.
@@ -2958,9 +2966,48 @@ async function eerstepartijStatus(startUrl, pad) {
         status = res.status;
         if (res.ok) body = await res.json().catch(() => null);
       } catch (_) { /* netwerk: status blijft null, dus "weet niet" */ }
+      // DE KOPBALK VAN DE SITE ZELF. DIT IS DE ENIGE NEUTRALE INLOGBRON.
+      //
+      // WAAROM DIT ERBIJ MOEST (15-09-2026, gemeten, Egbert Brouwer).
+      // Het persoonlijke advertentieoverzicht hierboven is GEEN eerlijke
+      // inlogvraag. Het bestaat alleen voor een particulier account. Wordt een
+      // verkoper door Marktplaats of 2dehands omgezet naar een ZAKELIJK account,
+      // dan is datzelfde adres voor hem dicht: /my-account/sell/index.html
+      // verwijst door naar /identity/v2/login en de API geeft 401 — precies wat
+      // een uitgelogde bezoeker ook krijgt. Wij lazen dat als "je bent niet
+      // ingelogd", namen zijn hele wachtrij terug en stuurden hem naar een
+      // inlogscherm waar niets mis mee was.
+      //
+      // Gemeten bij hem: op 13-09 om 09:24 gaf dat overzicht nog HTTP 200 met 109
+      // advertenties, en vanaf 14-09 18:08 elke keer 401. Zijn advertentiepagina
+      // op 2dehands zegt sindsdien "sellerType":"TRADER" (een particuliere
+      // verkoper ernaast zegt "CONSUMER"). Er is dus niets met zijn inlog
+      // gebeurd: zijn account is zakelijk geworden.
+      //
+      // De kopbalk van de homepagina is wél neutraal: die is voor beide soorten
+      // accounts hetzelfde en staat als "userDetails":{"isLoggedIn":true|false}
+      // in de HTML van de pagina (gemeten op www.marktplaats.nl en www.2dehands.be,
+      // beide precies één keer per pagina). Dat is letterlijk wat de verkoper
+      // zelf in zijn scherm ziet staan. Deze fetch gaat vanuit een tabblad op de
+      // site zelf en is dus gewoon eigen verkeer met zijn eigen koekjes.
+      let header = null;
+      try {
+        const hres = await fetch("/", { credentials: "include" });
+        if (hres.ok) {
+          const html = await hres.text();
+          // Niet vastpinnen op de volgorde van de sleutels: bij een ingelogde
+          // verkoper staan er in dat blokje meer velden (naam, ongelezen
+          // berichten) en die kunnen er vóór staan. Gemeten staat "isLoggedIn"
+          // precies één keer op de hele pagina, op allebei de sites. Staan er
+          // toch meer en spreken ze elkaar tegen, dan zeggen we liever niets.
+          const treffers = Array.from(html.matchAll(/"isLoggedIn"\s*:\s*(true|false)/g))
+            .map((m) => m[1] === "true");
+          if (treffers.length && treffers.every((v) => v === treffers[0])) header = treffers[0];
+        }
+      } catch (_) { /* dan blijft het "weet niet", en dat houdt nooit werk tegen */ }
       // Waar de browser uiteindelijk belandde. Bij een uitgelogde bezoeker is dat
       // de inlogpagina, en dat is het bewijs dat we tot nu toe nooit hadden.
-      return { status, body, url: String(location.href).split("?")[0] };
+      return { status, body, header, url: String(location.href).split("?")[0] };
     }, [pad]).then(async (uit) => {
       // En in WAT VOOR venster we keken. Een incognitotabblad heeft zijn eigen,
       // altijd lege koekjespot: dan zegt een 401 niets over zijn inlog. Sinds
@@ -2993,9 +3040,20 @@ async function mpIngelogdOpDeSiteZelf(platform) {
   // In een incognitovenster zegt een weigering niets over zijn inlog: die pot is
   // per definitie leeg. Dan geen oordeel, en het werk gaat gewoon door.
   const blind = !!(uit && uit.incognito);
+  // De kopbalk wint van het overzicht, altijd. Zegt de site zelf dat hij is
+  // ingelogd, dan IS hij ingelogd en betekent een 401 op het persoonlijke
+  // overzicht alleen dat dat overzicht niet van hem is: zakelijk account.
+  // Zegt de kopbalk niets (oude pagina-opbouw, netwerkhikje), dan mag een 401
+  // hier geen oordeel meer worden — dan weten we het gewoon niet.
+  const header = uit && typeof uit.header === "boolean" ? uit.header : null;
+  const geweigerd = status === 401 || status === 403;
   const oordeel = {
     ingelogd: blind ? null
-      : status === 200 ? true : (status === 401 || status === 403) ? false : null,
+      : header === true ? true
+      : header === false ? false
+      : status === 200 ? true : null,
+    zakelijk: header === true && geweigerd,
+    header,
     status,
     url: (uit && uit.url) || null,
     incognito: blind,
@@ -3068,6 +3126,20 @@ async function mpPlaatsenKlaarzetten(job, serverUrl) {
   // MP_OVERZICHT_URL — daar liepen deze twee antwoorden dertien seconden uit
   // elkaar en was de achtergrond degene die het mis had.
   const echt = await mpIngelogdOpDeSiteZelf(job.platform);
+  // ZAKELIJK ACCOUNT: INGELOGD, MAAR ZIJN OVERZICHT IS EEN ANDER OVERZICHT.
+  // De site zegt in haar eigen kopbalk dat hij is ingelogd en weigert tegelijk
+  // het persoonlijke advertentieoverzicht. Dat is geen inlogprobleem en mag
+  // nooit een wachtrij kosten; de poging gaat gewoon door en wat er dan echt
+  // misgaat staat daarna in de opdracht zelf. Loopt een kanaal werkelijk dood,
+  // dan pakt de rem op de server dat na tien ondoorgronde mislukkingen alsnog.
+  if (echt.zakelijk) {
+    console.warn(
+      `[Omnivaleur] ${job.platform}: de kopbalk zegt ingelogd, het persoonlijke `
+      + `overzicht geeft HTTP ${echt.status}. Dat is het beeld van een zakelijk `
+      + `account, niet van een uitgelogde verkoper. De opdracht gaat door.`
+    );
+    return { ok: true };
+  }
   if (echt.ingelogd !== false) {
     console.warn(
       `[Omnivaleur] ${job.platform}: de achtergrondmeting kreeg HTTP ${achtergrond.status}, `
@@ -5663,8 +5735,16 @@ function mpEmptyScanReason(meta, platform) {
   // ligt die toestemming vast in het manifest, dus daar staat hij altijd aan) én
   // ${site} weigerde ons echt.
   if (meta.api_status === 401 || meta.api_status === 403) {
-    return `${site} weigert je advertentieoverzicht (foutcode ${meta.api_status}). `
-      + `Open ${site}, log opnieuw in en start de scan nog een keer.` + feiten;
+    // VOLGORDE IS HIER HET HELE PUNT (15-09-2026). Deze foutcode betekent twee
+    // dingen tegelijk: je bent uitgelogd, OF je account is zakelijk geworden en
+    // dan bestaat dit persoonlijke overzicht niet meer voor jou. Het tweede is
+    // het geval waar we drie keer overheen zijn gelopen, dus het staat vooraan.
+    return `${site} geeft je persoonlijke advertentieoverzicht niet vrij `
+      + `(foutcode ${meta.api_status}). Dat hoort zo bij een zakelijk account: die `
+      + `advertenties staan in Admarkt, niet in het persoonlijke overzicht. Ben je `
+      + `zakelijk geworden op ${site}, dan is er niets mis en halen we ze daar op. `
+      + `Heb je een gewoon particulier account, controleer dan of je op ${site} `
+      + `bent ingelogd en start de scan opnieuw.` + feiten;
   }
   // EEN 200 IS HET BEWIJS DAT DE INLOG WERD GEACCEPTEERD (03-09-2026).
   //
@@ -6225,15 +6305,17 @@ async function bgScanMp2dh(job, serverUrl) {
 
     if (!result || !result.items) throw new Error("Could not read your listings overview — page structure may have changed.");
 
-    // Deze meting komt uit een tabblad OP de site zelf, dus ze telt allebei de
-    // kanten op: een 200 bewijst de sessie, een 401/403 bewijst dat ze weg is.
-    // Zo weet het uitklapvenster het al bij de scan, en niet pas als er honderd
-    // zoekertjes klaarstaan. Zie KANAAL_SESSIE_SLEUTEL.
+    // Alleen het JA komt hiervandaan. Een 200 op het persoonlijke overzicht
+    // bewijst de sessie, en dan weet het uitklapvenster het al bij de scan.
+    //
+    // HET NEE IS HIER WEGGEHAALD (15-09-2026). Een 401 op dit overzicht betekent
+    // twee heel verschillende dingen: uitgelogd, of een ZAKELIJK account waarvoor
+    // dit overzicht niet bestaat. Van buitenaf zijn die twee hier niet uit elkaar
+    // te houden, en het verschil kostte Egbert Brouwer zijn hele wachtrij. Wie
+    // wel uitgelogd is wordt gevonden door mpIngelogdOpDeSiteZelf: die leest de
+    // kopbalk van de site, en die is voor beide soorten accounts hetzelfde.
     const _apiStatus = result.meta && result.meta.api_status;
     if (_apiStatus === 200) onthoudKanaalSessie(job.platform, true, { status: 200 });
-    else if (_apiStatus === 401 || _apiStatus === 403) {
-      onthoudKanaalSessie(job.platform, false, { status: _apiStatus, url: overviewUrl });
-    }
 
     // Niets op het persoonlijke overzicht? Dan kijken we in Admarkt.
     //
