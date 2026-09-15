@@ -502,21 +502,47 @@ class EbayPlatform(PlatformBase):
             "platform_offer_id": offer_id,
         }
 
+    async def _offer_voor_sku(self, client: httpx.AsyncClient, sku: str,
+                              credentials: dict) -> dict | None:
+        resp = await client.get(f"{INVENTORY_API}/offer", params={"sku": sku},
+                                headers=self._auth_headers(credentials))
+        if not resp.is_success:
+            return None
+        offers = [o for o in (resp.json().get("offers") or [])
+                  if o.get("marketplaceId") in (None, settings.ebay_marketplace_id)]
+        if not offers:
+            return None
+        return next((o for o in offers if str(o.get("status", "")).upper() == "PUBLISHED"),
+                    offers[0])
+
     async def get_listing_status(self, offer_id: str, credentials: dict) -> str:
+        """'active', 'sold', 'not_found' (niet meer live, niet verkocht) of 'error'.
+
+        DE STATUS VAN DE OFFER ZEGT NIETS OVER EEN VERKOOP (15-09-2026).
+        Deze functie keek naar `status` en wachtte op "ENDED" of "SOLD". Volgens
+        eBay's eigen specificatie kent dat veld maar twee waarden: PUBLISHED en
+        UNPUBLISHED. Gemeten op de levende advertenties van dealbeter: "status":
+        "PUBLISHED" met daaronder "listing": {"listingStatus": "ACTIVE",
+        "soldQuantity": 0}. Een verkoop op eBay werd dus nooit gezien en het
+        artikel bleef overal elders te koop staan.
+
+        De verkoop staat in `listing.soldQuantity`. Bij dit account staat
+        OutOfStockControl uit (GetUserPreferences), dus een verkochte advertentie
+        van één stuk eindigt: listingStatus ENDED met soldQuantity 1. Met
+        OutOfStockControl aan wordt het OUT_OF_STOCK. Aan soldQuantity zien we het
+        in beide gevallen.
+        """
         credentials = await self._ensure_fresh_token(credentials)
         async with httpx.AsyncClient() as client:
             resp = await client.get(
                 f"{INVENTORY_API}/offer/{offer_id}",
                 headers=self._auth_headers(credentials),
             )
-            if resp.status_code == 404:
-                return "not_found"
-            if not resp.is_success:
-                return "error"
-            status = resp.json().get("status", "").upper()
-            if status in ("ENDED", "SOLD"):
-                return "sold"
-            return "active"
+        if resp.status_code == 404:
+            return "not_found"
+        if not resp.is_success:
+            return "error"
+        return _status_uit_offer(resp.json())
 
 
 _MARKETPLACE_DOMAINS = {
