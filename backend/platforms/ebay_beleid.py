@@ -83,21 +83,34 @@ def controleer_instellingen(body: dict) -> dict:
 
 def _verzend_beleid(inst: dict, marktplaats: str) -> dict:
     kosten = float(inst["kosten"])
+    diensten = [{
+        "sortOrder": 1,
+        "shippingServiceCode": _VERZENDDIENST.get(marktplaats, "NL_StandardDelivery"),
+        "shippingCost": {"value": f"{kosten:.2f}", "currency": "EUR"},
+        "freeShipping": kosten == 0,
+    }]
+    if inst.get("ophalen"):
+        # OPHALEN IS OP EBAY.NL EEN VERZENDDIENST, GEEN VINKJE (15-09-2026).
+        # Gemeten op het eigenaarsaccount: localPickup true gaf "Ongeldige
+        # aanvraag", met of zonder extra dienst. NL_PickUp ("Ophalen bij de
+        # verkoper", uit GeteBayDetails) als tweede dienst van EUR 0 werd wel
+        # geaccepteerd.
+        diensten.append({
+            "sortOrder": 2,
+            "shippingServiceCode": "NL_PickUp",
+            "shippingCost": {"value": "0.00", "currency": "EUR"},
+            "freeShipping": False,
+        })
     return {
         "name": BELEIDSNAAM,
         "marketplaceId": marktplaats,
         "categoryTypes": _CATEGORIE,
         "handlingTime": {"unit": "DAY", "value": int(inst["verzenddagen"])},
-        "localPickup": bool(inst.get("ophalen")),
+        "localPickup": False,
         "shippingOptions": [{
             "optionType": "DOMESTIC",
             "costType": "FLAT_RATE",
-            "shippingServices": [{
-                "sortOrder": 1,
-                "shippingServiceCode": _VERZENDDIENST.get(marktplaats, "NL_StandardDelivery"),
-                "shippingCost": {"value": f"{kosten:.2f}", "currency": "EUR"},
-                "freeShipping": kosten == 0,
-            }],
+            "shippingServices": diensten,
         }],
     }
 
@@ -159,6 +172,41 @@ async def meld_aan(client: httpx.AsyncClient, headers: dict) -> None:
     raise RuntimeError(f"eBay did not accept the sign-up for seller policies: {_fouttekst(resp)}")
 
 
+def _niet_toegelaten(resp: httpx.Response) -> bool:
+    """Is de verkoper (nog) niet aangemeld voor verkopersbeleid?
+
+    NIET AFLEIDEN UIT DE FOUTCODE ALLEEN (15-09-2026). 20403 is eBay's algemene
+    code voor "ongeldig veld". Gemeten op het eigenaarsaccount: bijwerken van het
+    verzendbeleid gaf 20403 "Global shipping field is null", en een ongewijzigd
+    betaalbeleid opnieuw sturen gaf 20403 "De informatie ... is hetzelfde als in
+    het systeem". Die werden allebei gelezen als "eBay is nog bezig", en een
+    verkoper die zijn verzendkosten aanpaste kon daardoor niet meer plaatsen.
+    Alleen de tekst "not eligible" betekent echt: nog niet aangemeld."""
+    try:
+        return any("eligible" in str(e.get("longMessage") or e.get("message") or "").lower()
+                   for e in (resp.json().get("errors") or []))
+    except Exception:  # noqa: BLE001
+        return False
+
+
+def _komt_overeen(gewenst, bestaand) -> bool:
+    """Staat alles wat wij willen al zo bij eBay? eBay voegt zelf velden toe
+    (shippingCarrierCode, additionalShippingCost, default), die tellen niet."""
+    if isinstance(gewenst, dict):
+        return isinstance(bestaand, dict) and all(
+            _komt_overeen(v, bestaand.get(k)) for k, v in gewenst.items())
+    if isinstance(gewenst, list):
+        return (isinstance(bestaand, list) and len(gewenst) == len(bestaand)
+                and all(_komt_overeen(a, b) for a, b in zip(gewenst, bestaand)))
+    if isinstance(gewenst, bool) or gewenst is None:
+        return bool(gewenst) == bool(bestaand)
+    try:
+        # eBay geeft "7.5" terug waar wij "7.50" sturen.
+        return float(gewenst) == float(bestaand)
+    except (TypeError, ValueError):
+        return str(gewenst) == str(bestaand)
+
+
 async def _zet_beleid(client: httpx.AsyncClient, headers: dict, soort: str,
                       lading: dict, marktplaats: str) -> str | None:
     """Maak het beleid aan, of werk het bij als het er al is. Geeft het nummer
@@ -167,19 +215,35 @@ async def _zet_beleid(client: httpx.AsyncClient, headers: dict, soort: str,
     zoek = await client.get(f"{ACCOUNT_API}/{soort}_policy/get_by_policy_name",
                             params={"marketplace_id": marktplaats, "name": BELEIDSNAAM},
                             headers=headers)
-    if 20403 in _fout_ids(zoek):
+    if _niet_toegelaten(zoek):
         return None
-    if zoek.is_success and zoek.json().get(veld):
-        nummer = zoek.json()[veld]
+    bestaand = zoek.json() if zoek.is_success else {}
+    nummer = str(bestaand.get(veld) or "")
+    if nummer:
+        if _komt_overeen(lading, bestaand):
+            return nummer
+        # Bijwerken vraagt het héle beleid terug, niet alleen wat verandert.
+        volledig = {k: v for k, v in bestaand.items() if k not in (veld, "warnings")}
+        volledig.update(lading)
         resp = await client.put(f"{ACCOUNT_API}{werk_bij.format(id=nummer)}",
-                                json=lading, headers=headers)
+                                json=volledig, headers=headers)
     else:
         resp = await client.post(f"{ACCOUNT_API}{maak}", json=lading, headers=headers)
-    if 20403 in _fout_ids(resp):
+    if _niet_toegelaten(resp):
         return None
+    if not resp.is_success and nummer and _al_zo_bij_ebay(resp):
+        return nummer
     if not resp.is_success:
         raise RuntimeError(f"eBay rejected the {soort} policy: {_fouttekst(resp)}")
-    return str(resp.json().get(veld) or "") or None
+    return str(resp.json().get(veld) or nummer or "") or None
+
+
+def _al_zo_bij_ebay(resp: httpx.Response) -> bool:
+    """eBay weigert een bijwerking die niets verandert (gemeten, in de taal van
+    het account: "De informatie voor het zakelijk profiel in de aanvraag is
+    hetzelfde als in het systeem"). Dan staat het beleid er dus al goed."""
+    tekst = _fouttekst(resp).lower()
+    return "hetzelfde als in het systeem" in tekst or "same as" in tekst
 
 
 async def richt_in(headers: dict, inst: dict,

@@ -59,6 +59,7 @@ class NepEbay:
         self.aanroepen: list[tuple[str, str, dict | None]] = []
         self.aangemeld = False
         self.beleid_toegestaan = True
+        self.beleid: dict[str, dict] = {}
         self.volgnummer = 500
 
     def handler(self, request: httpx.Request) -> httpx.Response:
@@ -121,10 +122,21 @@ class NepEbay:
                 return httpx.Response(400, json={"errors": [{
                     "errorId": 20403, "message": "Invalid .",
                     "longMessage": "User is not eligible for Business Policy."}]})
-            if pad.endswith("get_by_policy_name"):
-                return httpx.Response(404, json={"errors": [{"errorId": 20404}]})
+            soort = pad.split("/")[4].split("_")[0]
             veld = {"fulfillment": "fulfillmentPolicyId", "payment": "paymentPolicyId",
-                    "return": "returnPolicyId"}[pad.split("/")[4].split("_")[0]]
+                    "return": "returnPolicyId"}[soort]
+            if pad.endswith("get_by_policy_name"):
+                if soort in self.beleid:
+                    return httpx.Response(200, json=self.beleid[soort])
+                return httpx.Response(404, json={"errors": [{"errorId": 20404}]})
+            if m == "PUT":
+                # Gemeten 15-09-2026: zonder het volledige beleid weigert eBay.
+                if soort == "fulfillment" and "globalShipping" not in body:
+                    return httpx.Response(400, json={"errors": [{"errorId": 20403,
+                        "longMessage": "Global shipping field is null"}]})
+                self.beleid[soort].update(body)
+                return httpx.Response(200, json=self.beleid[soort])
+            self.beleid[soort] = {**body, veld: f"{veld[:3]}-1", "globalShipping": False}
             return httpx.Response(201, json={veld: f"{veld[:3]}-1"})
         return httpx.Response(500, json={"onverwacht": f"{m} {pad}"})
 
@@ -312,11 +324,13 @@ def test_aangemelde_verkoper_krijgt_drie_beleidsregels(ebay):
     assert uit["status"] == "klaar"
     assert set(uit["beleid"]) == {"fulfillment", "payment", "return"}
     verzend = next(b for m, p, b in ebay.aanroepen if m == "POST" and "fulfillment_policy" in p)
-    dienst = verzend["shippingOptions"][0]["shippingServices"][0]
+    dienst, ophalen = verzend["shippingOptions"][0]["shippingServices"]
     assert dienst["shippingCost"] == {"value": "6.95", "currency": "EUR"}
     assert dienst["shippingServiceCode"] == "NL_StandardDelivery"
     assert verzend["handlingTime"] == {"unit": "DAY", "value": 2}
-    assert verzend["localPickup"] is True
+    # localPickup true weigert ebay.nl; ophalen is daar een eigen dienst.
+    assert verzend["localPickup"] is False
+    assert ophalen["shippingServiceCode"] == "NL_PickUp"
     assert not [a for a in ebay.aanroepen if a[1].endswith("/opt_in")], "onnodig opnieuw aangemeld"
 
 
@@ -396,3 +410,17 @@ def test_verificatie_van_ebay_staat_in_de_accountcontrole(monkeypatch):
     uit = asyncio.run(B.lees_account({"Authorization": "Bearer t"}))
     assert uit["registratie_klaar"] is True
     assert uit["verificatie"][0]["melding"] == "Accountgegevens bijwerken"
+
+
+def test_verzendkosten_wijzigen_blijft_werken(ebay):
+    """Tweede keer opslaan: bijwerken met het volledige beleid, niet 'wacht op eBay'."""
+    from backend.platforms import ebay_beleid as B
+    ebay.aangemeld = True
+    h = {"Authorization": "Bearer t"}
+    eerst = asyncio.run(B.richt_in(h, B.controleer_instellingen({"kosten": 6.95}), "EBAY_NL"))
+    daarna = asyncio.run(B.richt_in(h, B.controleer_instellingen({"kosten": 7.50}), "EBAY_NL"))
+    assert daarna == eerst and daarna["status"] == "klaar"
+    dienst = ebay.beleid["fulfillment"]["shippingOptions"][0]["shippingServices"][0]
+    assert dienst["shippingCost"]["value"] == "7.50"
+    ongewijzigd = [a for a in ebay.aanroepen if a[0] == "PUT" and "payment_policy" in a[1]]
+    assert ongewijzigd == [], "ongewijzigd beleid hoort niet opnieuw verstuurd te worden"
