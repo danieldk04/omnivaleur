@@ -56,7 +56,7 @@ def start_scheduler():
     from backend.services.mp_enrich import vul_ontbrekende_teksten_aan
     from backend.services.shopify_orders import controleer_shopify_verkopen
 
-    from backend.services.billing import expire_trials, send_trial_reminders
+    from backend.services.billing import expire_trials, send_trial_reminders, sync_proefperiode_sheet
     from backend.services.extension_offline import waarschuw_offline_extensies
     from backend.services.verkoop_reconciliatie import reconcileer_verkochte_artikelen
     from backend.services.verkoop_herinnering import herinner_onbevestigde_verkopen
