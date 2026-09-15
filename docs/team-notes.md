@@ -9463,3 +9463,16 @@ apart naar te kijken, want dat patroon kennen we
 
 232 opdrachten staan opnieuw klaar, nu met een verse datum. Zijn inlog bij
 2dehands is nog steeds de open vraag; het laatste verwijt was om 03:57.
+
+### De annuleerknop was het niet
+
+Nagemeten: 49 opdrachten, alle 49 voor 2dehands, geannuleerd tussen 03:58:05 en
+03:58:06 UTC (05:58 zijn tijd). In het dashboard is er precies één plek die dit
+adres aanroept, en die vraagt eerst om bevestiging met het aantal erin: "Remove
+all 49 queued publications from the queue?". Hij annuleert ook exact die 49 en
+niets eromheen. De knop deed dus wat hij zegt.
+
+Waarom het er 49 waren en niet 287: de veger had er tussen 02:30 en 03:57 al 224
+opgeruimd. Wat hij om zes uur 's ochtends wegklikte was de rest van een wachtrij
+die onze eigen opruiming die nacht al had gesloopt. De oorzaak van de nacht blijft
+dus mijn terugzetactie met oude datums, niet de knop.
