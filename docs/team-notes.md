@@ -9899,3 +9899,23 @@ is hier niet aangeraakt.
 al aan deze reparatie had gegeven, en nam mijn bestanden opnieuw mee in haar
 commit. De uit te leveren versie is daarom **1.0.334**, gebouwd uit de werkmap
 met beide wijzigingen erin. Oudere zips in `dist/` niet uploaden.
+
+## 15-09-2026 (vervolg) — bewezen: met Chrome geminimaliseerd loopt hij door
+
+Daniel plaatste (1322) Navy Gymshark Gym Shirt met Chrome geminimaliseerd, op
+1.0.333. Opgepakt 14:09:15 UTC, klaar 14:15:26, advertentie 10011692788 staat
+online. Zes minuten elf, volledig zelfstandig, zonder dat hij het tabblad heeft
+aangeraakt. Dat is het bewijs dat het onderliggende probleem weg is.
+
+Duur is niet verbeterd (mediaan van de 94 plaatsingen ervoor was 3 min 54, deze
+6 min 11); wat veranderd is, is dat het doorloopt zonder dat hij erbij blijft. Van
+die zes minuten is ongeveer twee minuten het uploaden van de foto's en drie
+minuten Vinted dat het artikel verwerkt voor het in de garderobe verschijnt.
+
+Twee meetfouten van mijn kant, allebei het noteren waard. De volger startte zeven
+seconden ná het aanmaken van de opdracht en beschouwde die daardoor als "de
+vorige": begin een meting dus bij een expliciet tijdstip, niet bij "de laatste rij
+die er nu staat". En bij het afronden overschreef `complete_job` het hele
+`result`, inclusief `_progress` — de klokmetingen van die klus waren daarmee weg
+voor ik ze kon uitlezen. Dat is nu gerepareerd: de laatste voortgangsregel blijft
+bewaard naast het eindresultaat.

@@ -2535,9 +2535,21 @@ async def complete_job(job_id: str, body: dict, user_id: str = Depends(get_curre
                 status_code=500,
                 detail="The scan was fetched but saving it failed. Nothing was lost — run the scan again.")
 
+    # DE LAATSTE VOORTGANGSREGEL BEWAREN.
+    #
+    # Hier stond alleen `body`, en dat wist `_progress` uit. Gevolg: zodra een
+    # opdracht klaar was, was ook het spoor weg — wélke stap hoe lang duurde en
+    # hoe hard de klok van dat tabblad liep. Op 15-09-2026 kostte dat een hele
+    # meetronde: de plaatsing was klaar voor we hem konden uitlezen en het
+    # antwoord op "loopt hij door?" was daarmee verdwenen. Het is één regel om
+    # te bewaren en het is de enige plek waar dit spoor bestaat.
+    oud_progress = (job.get("result") or {}).get("_progress") if isinstance(job.get("result"), dict) else None
+    nieuw_result = {**body} if isinstance(body, dict) else {"result": body}
+    if oud_progress and "_progress" not in nieuw_result:
+        nieuw_result["_progress"] = oud_progress
     (await naast_de_lus(lambda: db.table("jobs").update({
         "status": "done",
-        "result": body,
+        "result": nieuw_result,
         "done_at": datetime.now(timezone.utc).isoformat(),
     }).eq("id", job_id).execute()))
 
