@@ -1283,6 +1283,16 @@ async def publish_to_platforms(item_id: str, platforms: list[str], user_id: str)
         # advertentie. De vertaling haalt hem er al af, maar deze regel geldt voor
         # élk pad hierheen (ook een item dat de tags al opgeslagen had staan).
         titel = _strip_text_tags(base.get("title") or "")
+        if platform == "ebay":
+            # eBay verbiedt contactgegevens en verwijzingen naar kopen buiten eBay
+            # in een advertentie ("offers to buy or sell outside of eBay") en haalt
+            # zulke advertenties weg. Een slottekst is precies dat: bij De Juiste
+            # Toon een telefoonnummer, een adres en "kijk op onze webshop". Op eBay
+            # dus zonder slottekst en zonder webadressen.
+            beschrijving = _zonder_links(_zonder_slot(
+                _strip_text_tags(base.get("description") or ""), _slot))
+            titel = _zonder_links(titel)
+            return {**base, "title": titel, "description": beschrijving}
         beschrijving = _met_slot(_strip_text_tags(base.get("description") or ""), _slot)
         # Marktplaats en 2dehands rekenen voor een advertentie met een webadres
         # erin. Zie _zonder_links: dat kostte Egbert Brouwer drie weken en een
