@@ -1295,7 +1295,8 @@ async def _raw_category_suggestions(search_text: str) -> list[dict]:
     for s in data.get("categorySuggestions", [])[:10]:
         ancestors = [a["categoryName"] for a in reversed(s.get("categoryTreeNodeAncestors", []))]
         path = " > ".join(ancestors + [s["category"]["categoryName"]])
-        results.append({"category_id": s["category"]["categoryId"], "name": path})
+        results.append({"category_id": s["category"]["categoryId"], "name": path,
+                        "voorouders": [a.get("categoryId") for a in s.get("categoryTreeNodeAncestors", [])]})
     return results
 
 
