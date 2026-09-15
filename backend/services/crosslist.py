@@ -802,6 +802,14 @@ def _met_slot(tekst: str, slot: str) -> str:
     return (schoon + "\n\n" + slot).strip() if schoon else slot
 
 
+def _zonder_slot(tekst: str, slot: str) -> str:
+    """De omschrijving zonder de slottekst, ook als een scan hem al had ingelezen."""
+    schoon = str(tekst or "")
+    if slot and slot.strip():
+        schoon = schoon.replace(slot.strip(), "")
+    return schoon.strip()
+
+
 # Een bulk-crosslist roept publish_to_platforms per artikel aan. Zonder cache zou
 # de kansloos-check bij 5.533 aangevinkte artikelen 5.533 keer drie databasevragen
 # doen. De uitkomst verandert binnen zo'n ronde niet, dus twee minuten vasthouden.
