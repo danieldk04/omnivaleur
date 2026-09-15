@@ -75,7 +75,13 @@ window.CL = (() => {
   let _klokVanaf = Date.now();
   (function klokMeter() { setTimeout(() => { _klokTikken++; klokMeter(); }, 100); })();
   function klokOpnieuw() { _klokTikken = 0; _klokVanaf = Date.now(); }
-  function klokRapport() {
+  // De laatste hartslag-uitslag. Een stap die toevallig een fractie van een
+  // seconde duurt zou anders "0.0/s" melden zonder dat er iets aan de hand is —
+  // precies wat op 15-09-2026 een verkeerde conclusie opleverde. Nu draagt elke
+  // stap de uitslag over het laatste hele venster van vijftien seconden.
+  let _laatsteKlok = "nog niet gemeten";
+  function klokRapport() { return _laatsteKlok; }
+  function _meetKlok() {
     const sec = (Date.now() - _klokVanaf) / 1000;
     const per = sec > 0.2 ? _klokTikken / sec : 0;
     _klokTikken = 0; _klokVanaf = Date.now();
@@ -83,6 +89,26 @@ window.CL = (() => {
     try { if (document.hasFocus()) staat += "+focus"; } catch (_) {}
     return `${per.toFixed(1)}/s +${Math.max(0, Math.round(_sleepAfwijking))}ms ${staat}`;
   }
+
+  // EEN HARTSLAG, ELKE VIJFTIEN SECONDEN.
+  //
+  // Een stap zegt alleen iets op het moment dat hij klaar is, en tussen twee
+  // stappen kan minuten zitten — juist de minuten waarin een verkoper zegt "er
+  // gebeurt niks". Deze regel tikt gewoon door, dus in de voortgang van de
+  // opdracht is straks te zien óf er een gat valt en hoe hard de klok liep toen
+  // het gebeurde. Ligt de pagina helemaal stil (Chrome bevriest een tabblad dat
+  // niet in beeld is), dan stopt deze hartslag ook: dat gat ís de meting.
+  (async function hartslag() {
+    for (;;) {
+      await sleep(15000);
+      _laatsteKlok = _meetKlok();
+      // Alleen melden als er iets te melden is. Loopt de klok op tempo, dan
+      // hoeft daar geen regel per kwartier seconde de deur uit; de stappen
+      // dragen de uitslag toch al mee. Zakt hij weg, dan is dat precies de regel
+      // die we straks willen terugzien.
+      if (parseFloat(_laatsteKlok) < 5) clog(`klokstand: ${_laatsteKlok}`);
+    }
+  })();
 
   const qs = (sel) => document.querySelector(sel);
 

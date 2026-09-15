@@ -870,10 +870,60 @@ chrome.storage.onChanged.addListener((wijzigingen, gebied) => {
   }
 });
 
+// HET WERK-TABBLAD UIT DE VRIES HALEN.
+//
+// GEMETEN OP 15-09-2026, in Daniels eigen browser, met de klokmeting die elke
+// stap meestuurt. Bij de eerste stap van een plaatsing stond er:
+//
+//   stap title: ok [klok 0.0/s +1973ms visible+focus]
+//
+// Nul tikken van de pagina-klok, én een pauze via de Web Worker die bijna twee
+// seconden uitliep. Dat tweede is beslissend: een afgeknepen klok laat de Worker
+// ongemoeid, dus hier lag de pagina zélf stil. Chrome bevriest een tabblad dat
+// niet in beeld is (Page Lifecycle "frozen"), en dan staat álles stil: onze
+// pauzes, Vinteds formulier, de foto-upload. Daniel: "ik moest weer switchen,
+// anders gebeurde er niks." Zodra hij het tabblad aanklikte sprong de meting
+// naar 9,8 tikken per seconde en liep de rest van de plaatsing vlot door.
+//
+// Doen alsof de pagina zichtbaar is (setFocusEmulationEnabled) verandert alleen
+// wat de pagina rapporteert, niet dat Chrome haar invriest. Het commando dat dat
+// wél terugdraait is Page.setWebLifecycleState "active". Eén keer is niet
+// genoeg: Chrome mag opnieuw invriezen, dus dit klopt elke halve minuut aan
+// zolang er een werk-tabblad met een klus in staat.
+//
+// De wekker is met opzet een chrome.alarm en geen setInterval: bevriest de
+// pagina, dan komt er ook geen bericht meer binnen dat de service worker wakker
+// houdt, en dan zou een setInterval juist stilvallen op het moment dat hij
+// nodig is.
+const ONTDOOI_WEKKER = "ontdooi-werktabbladen";
+chrome.alarms.create(ONTDOOI_WEKKER, { periodInMinutes: 0.5 });
+
+async function ontdooiWerkTabbladen() {
+  let tabIds = [];
+  try {
+    const alles = await chrome.storage.local.get(null);
+    tabIds = Object.keys(alles)
+      .filter((k) => k.startsWith("jobtab_"))
+      .map((k) => Number(k.slice("jobtab_".length)))
+      .filter((n) => Number.isFinite(n));
+  } catch (_) { return; }
+  for (const tabId of tabIds) {
+    if (!_vroegGekoppeld.has(tabId)) continue;   // zonder koppeling geen commando
+    const tab = await chrome.tabs.get(tabId).catch(() => null);
+    if (!tab) continue;
+    if (tab.active) continue;                    // in beeld: Chrome bevriest niets
+    try {
+      chrome.debugger.sendCommand({ tabId }, "Page.setWebLifecycleState",
+        { state: "active" }, () => { void chrome.runtime.lastError; });
+    } catch (_) { /* koppeling weg: dan werkt het zoals vroeger, alleen trager */ }
+  }
+}
+
 chrome.alarms.create("poll", { periodInMinutes: POLL_INTERVAL_SECONDS / 60 });
 
 chrome.alarms.onAlarm.addListener((alarm) => {
   if (alarm.name === "poll") pollJobs();
+  if (alarm.name === ONTDOOI_WEKKER) ontdooiWerkTabbladen();
 });
 
 // Also poll immediately on install/startup
@@ -2145,6 +2195,12 @@ async function zetDoorlopendeKlok(tabId, url) {
           } else {
             _klokAangezet.set(tabId, "aan");
           }
+          // En meteen uit de vries: wachten op de eerste wekker zou de eerste
+          // dertig seconden van de klus alsnog stil laten liggen.
+          try {
+            chrome.debugger.sendCommand({ tabId }, "Page.setWebLifecycleState",
+              { state: "active" }, () => { void chrome.runtime.lastError; });
+          } catch (_) { /* niet fataal */ }
           res();
         });
     } catch (e) {

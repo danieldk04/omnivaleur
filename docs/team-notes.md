@@ -9990,3 +9990,41 @@ ronde (zie `_pauzeer_op_inlogverwijt`).
 
 **Al rood vóór dit werk:** tests/test_postcode_melding_2dehands.py::test_marktplaats_krijgt_hem_ook
 faalt ook op b7097dbd. Niet van deze wijziging.
+
+## 15-09-2026 (vervolg) — de omslagfoto is terug, en het tabblad wordt nu ontdooid
+
+**Fotoreparatie bewezen.** (1114) Dark Green Ralph Lauren, geplaatst op 1.0.334:
+alle 8 foto's staan op advertentie 10012214403, foto 1 vooraan, volgorde 1 tot en
+met 8 kloppend. Nagemeten met dezelfde beeldvergelijking die het verlies aantoonde.
+De omslagfoto apart aanbieden en wachten tot Vinted hem aanneemt werkt dus.
+
+**Wat de klokmeting zei, en waarom die nog niet klopte.** Bij die plaatsing stond
+er bij de eerste stap "klok 0.0/s +1973ms" en bij de fotostap "klok 9.8/s +0ms".
+Die eerste is ruis: de meter rapporteerde over het venster tussen twee stappen, en
+dat was hier een fractie van een seconde. Vanaf 1.0.335 meet een hartslag elke
+vijftien seconden en draagt elke stap die uitslag mee; de hartslag meldt zichzelf
+alleen als de klok onder de 5 per seconde zakt, zodat het geen ruis wordt.
+
+**Bevriezing is echt, en te repareren.** Daniel moest opnieuw naar het tabblad
+klikken. Bewezen in een echte Chrome met een testpagina die elke 15 seconden haar
+tikken doorgeeft: na `Page.setWebLifecycleState {state:"frozen"}` kwam er 56
+seconden lang geen enkele melding meer binnen, óók niet van de Web Worker, en na
+`{state:"active"}` liep alles meteen weer (15 pagina-tikken en 147 worker-tikken
+per 15 seconden). Dat is precies het beeld van een tabblad waarin niets gebeurt
+tot je het aanklikt. Doen alsof de pagina zichtbaar is helpt daar niet tegen,
+want dat verandert alleen wat de pagina rapporteert.
+
+1.0.335 stuurt daarom "active" naar elk gekoppeld werk-tabblad: meteen bij het
+koppelen en daarna elke dertig seconden via een chrome.alarm, zolang er een klus
+in staat. Bewust een alarm en geen setInterval: bevriest de pagina, dan komt er
+ook geen bericht meer binnen dat de service worker wakker houdt.
+
+**Openstaand:** dat Chrome hét tabblad bij Daniel werkelijk bevroor is niet
+rechtstreeks gemeten, alleen het beeld komt overeen. Zijn browser moet het
+uitwijzen: zakt de klok weg of valt de hartslag stil, dan staat dat vanaf nu in de
+voortgang van de opdracht.
+
+**Los punt uit zijn melding:** hij verwachtte het werk in een apart venster. Sinds
+06-09-2026 gebeurt het bewust in een achtergrondtabblad van een venster dat er
+toch al is (zie die dag: een apart venster pakte op macOS de aandacht en haalde
+zijn scherm weg). Dat is dus geen storing maar een keuze.
