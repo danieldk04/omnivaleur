@@ -17,6 +17,86 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ---
 
+## verborgen-tabblad-worker-timer
+
+*15-09-2026 — sleep() in de extensie draait via een Web Worker omdat Chrome setTimeout in een verborgen tabblad afknijpt tot stilstand*
+
+Chrome knijpt `setTimeout` op de main thread van een niet-zichtbaar tabblad af:
+eerst ~1s, en na 5 minuten verborgen zwaar ("intensive throttling", richting
+1x/minuut, oplopend). Gemeten in een echt verborgen tabblad, 367s: Worker-timer
+205ms/tick, pagina-timer ~750ms/tick en verslechterend. Vinted-klussen bestaan
+uit tientallen naakte `await sleep()`-pauzes en langer dan 5 min, dus die
+stalden volledig zodra de verkoper wegklikte. MP/2dehands hadden er minder last
+van doordat ze `waitUntil` op een MutationObserver gebruiken en hun klus ruim
+binnen vijf minuten klaar is.
+
+**Correctie 15-09-2026:** hier stond dat MP minder last had omdat de debugger
+aangehecht is ("throttling uit, net als open DevTools"). Dat is gemeten en het
+klopt niet: kaal aanhechten laat de klok op 0 tot 1 tik per 15 seconden staan.
+Wat de rem wél lost is `Emulation.setFocusEmulationEnabled` over die koppeling.
+Zie "vinted-tabblad-klok-stilstand".
+
+Fix (1.0.309): `sleep()` in `content/shared.js` draait via
+`content/timer-worker.js` (Worker-timers vallen niet onder intensive
+throttling), met terugval op `setTimeout`. Worker staat in
+`web_accessible_resources`. Werk-tabblad krijgt `autoDiscardable:false` tegen
+Memory Saver / discard. Zie ook "verborgen-tabblad-vertraagt-wachttijden".
+
+**Hetzelfde onderwerp, eigen bestand** (samengevoegd in de index op 13-09-2026):
+- "verborgen-tabblad-vertraagt-wachttijden" — Chrome maakt van elke korte pauze 1 seconde
+- "klokjes-in-verborgen-tab-injectie" — geïnjecteerde functies missen de Worker-timer; wacht op de pagina, niet op de klok
+
+---
+
+## vinted-tabblad-klok-stilstand
+
+*15-09-2026 — Een verborgen werk-tabblad staat bijna stil; alleen Emulation.setFocusEmulationEnabled zet de klok weer op vol tempo, de debugger aanhechten doet niets*
+
+15-09-2026. Daniel: "iedere keer als ik iets op Vinted probeer te publiceren
+gebeurt er niks in dat tabblad totdat ik er zelf naartoe klik, dan gaat ie weer
+verder."
+
+**Gemeten in een echte Chrome** (testpagina die elke 15 sec haar tikken doorgeeft,
+zie `tests/vinted-tabblad-klok-echt-test.mjs`):
+
+| tabblad | tikken pagina-klok / 15 sec | requestAnimationFrame |
+|---|---|---|
+| in beeld | 150 | 436 |
+| verborgen | 15 | 0 |
+| verborgen, na 5 min | 0 tot 1 | 0 |
+| verborgen + focus-emulatie | 147 | 1117 |
+
+Onze eigen `sleep()` loopt via een Web Worker en tikte de hele tijd ~145 per 15
+sec door ("verborgen-tabblad-worker-timer"). Het is Vinted's eigen formulier dat
+op de pagina-klok draait en dus stilvalt. Uit de echte opdrachtentabel: plaatsen
+duurt op Marktplaats 38 sec (mediaan van 120), op Vinted 234 sec (mediaan van 94),
+uitschieters tot 80 minuten.
+
+**Wat NIET werkt, allemaal gemeten**: de debugger kaal aanhechten (0 tot 1 tik,
+dus de oude aanname dat aanhechten de rem uitzet klopt niet), `Page.enable`,
+`Page.startScreencast`, een stil geluidje via WebAudio, een open WebSocket, een
+Web Lock. `Emulation.setPageVisibilityOverride` bestaat niet meer in Chrome.
+
+**Wat wel werkt**: `Emulation.setFocusEmulationEnabled {enabled:true}` over de
+debugger-koppeling. De pagina meldt zich daarna als `visible` en draait op vol
+tempo, terwijl het tabblad gewoon op de achtergrond blijft staan. Gemeten blijft
+dat staan over een navigatie heen, dus het mag al op `about:blank` vóór het
+tabblad naar het formulier gaat — precies waar `koppelVroeg` toch al zit.
+
+Zit in 1.0.331 (`zetDoorlopendeKlok` in background.js), alleen voor het
+Vinted-plaatsformulier en de bewerkpagina. Prijs: Chrome's gele
+foutopsporingsbalk staat tijdens een Vinted-plaatsing boven dat venster, net als
+bij elke Marktplaats-plaatsing al gebeurt. Blijft het tabblad open zodat de
+verkoper het zelf afmaakt, dan koppelen we los zodat die balk weg is.
+
+Voor-en-na met de échte extensie in een echte Chrome, achtergrondtabblad op
+vinted.nl: oud `hidden` en 10 tikken in 10 sec, nieuw `visible` en 89 tot 91
+tikken in 10 sec.
+
+Zie ook "extensie-echt-draaien-in-chrome" en "beloofd-tempo-moet-gemeten-tempo-zijn".
+
+---
+
 ## kanaalsessie-moet-zichtbaar-zijn
 
 *15-09-2026 — Een verlopen sessie op Marktplaats of 2dehands zet de hele wachtrij stil; de extensie meet het al, dus het hoort zichtbaar te zijn vóór hij artikelen klaarzet*
@@ -2718,31 +2798,6 @@ Admarkt-verkoper en zakelijke accounts kunnen de particuliere `/plaats`-flow nie
 gebruiken, óf hij is simpelweg niet op 2dehands.be zelf ingelogd (aparte site en
 login van marktplaats.nl, en hij importeerde alleen ván marktplaats.nl). Zie
 "stille-tab-is-geen-formulier".
-
----
-
-## verborgen-tabblad-worker-timer
-
-*07-09-2026 — sleep() in de extensie draait via een Web Worker omdat Chrome setTimeout in een verborgen tabblad afknijpt tot stilstand*
-
-Chrome knijpt `setTimeout` op de main thread van een niet-zichtbaar tabblad af:
-eerst ~1s, en na 5 minuten verborgen zwaar ("intensive throttling", richting
-1x/minuut, oplopend). Gemeten in een echt verborgen tabblad, 367s: Worker-timer
-205ms/tick, pagina-timer ~750ms/tick en verslechterend. Vinted-klussen bestaan
-uit tientallen naakte `await sleep()`-pauzes en langer dan 5 min, dus die
-stalden volledig zodra de verkoper wegklikte. MP/2dehands hadden er minder last
-van: die hebben de debugger aangehecht (throttling uit, net als open DevTools)
-en gebruiken `waitUntil` op een MutationObserver.
-
-Fix (1.0.309): `sleep()` in `content/shared.js` draait via
-`content/timer-worker.js` (Worker-timers vallen niet onder intensive
-throttling), met terugval op `setTimeout`. Worker staat in
-`web_accessible_resources`. Werk-tabblad krijgt `autoDiscardable:false` tegen
-Memory Saver / discard. Zie ook "verborgen-tabblad-vertraagt-wachttijden".
-
-**Hetzelfde onderwerp, eigen bestand** (samengevoegd in de index op 13-09-2026):
-- "verborgen-tabblad-vertraagt-wachttijden" — Chrome maakt van elke korte pauze 1 seconde
-- "klokjes-in-verborgen-tab-injectie" — geïnjecteerde functies missen de Worker-timer; wacht op de pagina, niet op de klok
 
 ---
 

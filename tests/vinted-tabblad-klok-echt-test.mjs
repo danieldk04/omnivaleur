@@ -94,8 +94,15 @@ try {
 
   // Precies wat een echte Vinted-opdracht doet: een achtergrondtabblad in het
   // venster waar de verkoper toch al werkt.
+  // Een eigen venster met een actief tabblad ervoor, zodat het werk-tabblad er
+  // écht achter staat — net als bij een verkoper die in zijn eigen venster werkt.
+  // (Een extensie die via de pijp is geladen ziet het venster waarmee Chrome
+  //  startte niet, vandaar dat we er zelf een maken.)
   const tabId = await doe(
-    `maakWerkTabblad({ active: false }, ${JSON.stringify(FORMULIER)}).then(t => t.id)`);
+    `chrome.windows.create({ url: "about:blank" })
+       .then(w => maakWerkTabblad({ windowId: w.id, active: false }, ${JSON.stringify(FORMULIER)}))
+       .then(t => t.id)
+       .catch(e => "fout: " + (e && e.message))`);
   check("er is een werk-tabblad geopend", typeof tabId === "number", String(tabId));
   if (typeof tabId !== "number") throw new Error("geen tabblad");
   console.log("Tabblad:", tabId, "(staat op de achtergrond)");

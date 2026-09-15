@@ -9630,3 +9630,45 @@ zijn wachtrij van 231 vanzelf weer door; hij hoeft niets opnieuw aan te klikken.
 **Openstaand:** waaróm die sessie verloopt is niet gemeten, alleen dát ze weg is.
 Het gat tussen 13-09 11:40 en 14-09 18:08 UTC is een periode waarin zijn
 uitbreiding helemaal niets deed, dus er is geen meting die het moment vastlegt.
+
+## 15-09-2026 (vervolg) — Vinted stond stil zolang je niet naar het tabblad keek
+
+Daniel: "iedere keer als ik iets op Vinted probeer te publiceren gebeurt er niks
+in dat tabblad totdat ik er zelf naartoe klik, dan gaat ie weer verder."
+
+Gemeten in een echte Chrome met een testpagina die haar eigen tikken doorgeeft.
+Een tabblad dat niet in beeld staat: 15 tikken per 15 seconden in plaats van 150,
+en na vijf minuten verborgen 0 tot 1 per 15 seconden. Beeldvernieuwing staat dan
+helemaal stil. Onze eigen pauzes lopen sinds 1.0.309 via een Web Worker en tikten
+gewoon door (~145 per 15 sec); het is het formulier van Vinted zelf dat op de
+klok van de pagina draait en dus stilvalt. Uit de opdrachtentabel: publiceren
+duurt op Marktplaats 38 seconden (mediaan van 120) en op Vinted 234 seconden
+(mediaan van 94), met uitschieters tot 80 minuten.
+
+Wat niet hielp, allemaal gemeten: de debugger kaal aanhechten, Page.enable,
+Page.startScreencast, een stil geluidje, een open websocket, een Web Lock. Let
+op: de kennisbank beweerde tot vandaag dat een aangehechte debugger de rem uitzet
+("net als open DevTools") — dat is dus onjuist en is gecorrigeerd. Wat wel werkt
+is Emulation.setFocusEmulationEnabled over die koppeling: de pagina meldt zich
+dan als "visible" en draait op vol tempo terwijl het tabblad op de achtergrond
+blijft.
+
+Zit in 1.0.331, alleen voor het Vinted-plaatsformulier en de bewerkpagina.
+Voor-en-na met de échte extensie in een echte Chrome (tests/vinted-tabblad-klok-
+echt-test.mjs): oud "hidden" en 10 tikken in 10 seconden, nieuw "visible" en 89
+tot 91. Prijs: Chrome's gele foutopsporingsbalk staat tijdens een Vinted-
+plaatsing boven dat venster, zoals bij elke Marktplaats-plaatsing al gebeurde;
+blijft het tabblad open zodat de verkoper het zelf afmaakt, dan koppelen we los
+zodat de balk weg is.
+
+**Openstaand:** een echte Vinted-publicatie van begin tot eind met deze versie is
+niet gedraaid — daarvoor moet er een echte advertentie online. De meting bewijst
+dat de klok van dat tabblad nu doorloopt, niet dat elke stap van het formulier
+daarmee vlekkeloos is. Facebook Marketplace (beta) publiceert ook via een tabblad
+en heeft dezelfde rem; dat is bewust niet meegenomen.
+
+**Let op voor de andere sessie:** 1.0.330 was al vergeven aan de 2dehands-
+sessiemelding van vandaag; deze wijziging is 1.0.331. We werkten vanmiddag
+tegelijk in dezelfde map, en commit 2f06b5d9 heeft mijn halfafgemaakte
+Vinted-wijziging meegenomen. Niets verloren gegaan, maar het is een reden om
+vóór een commit te kijken wat er nog meer in de map ligt.

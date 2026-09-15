@@ -436,3 +436,43 @@ def test_verzendkosten_wijzigen_blijft_werken(ebay):
     assert dienst["shippingCost"]["value"] == "7.50"
     ongewijzigd = [a for a in ebay.aanroepen if a[0] == "PUT" and "payment_policy" in a[1]]
     assert ongewijzigd == [], "ongewijzigd beleid hoort niet opnieuw verstuurd te worden"
+
+
+# ── 6. ebay.nl: Nederlandse tekst en een vaste rubriek ──────────────────────
+
+def test_ebay_krijgt_de_nederlandse_tekst_zonder_vertaling(monkeypatch):
+    """ebay.nl, verzending alleen binnen Nederland: de koper is Nederlands."""
+    async def nooit(*a, **k):
+        raise AssertionError("een al-Nederlandse tekst ging toch naar de vertaler")
+    monkeypatch.setattr(C, "_translate_with_claude", nooit)
+    item = {"title": "Handgeknoopt Perzisch Shiraz wollen tapijt 135/80 cm",
+            "description": "Mooi handgeknoopt wollen tapijt uit Iran, in goede staat. "
+                           "Afmeting 135 bij 80 centimeter, ophalen in Etten-Leur kan ook."}
+    uit = asyncio.run(C.localize_item_for_platform(item, "ebay"))
+    assert C.taal_van_platform("ebay") == "nl"
+    assert uit["title"] == item["title"] and uit["description"] == item["description"]
+
+
+def test_vaste_rubriek_wint_van_een_verkeerde_gok(ebay):
+    """Gemeten 15-09-2026: eBay's zoeker gaf voor Toons schapenvacht 'Laarzen'
+    (53557) en bewaarde dat op het artikel. De vaste rubriek gaat voor."""
+    item = _item(category="wonen vachten", gender="wonen", ebay_category_id="53557")
+    uit = asyncio.run(E.EbayPlatform().create_listing(item, _creds(ebay_beleid=BELEID)))
+    assert ebay.offers[uit["platform_offer_id"]]["categoryId"] == "91421"
+
+
+def test_gok_buiten_de_eigen_tak_wordt_niet_gebruikt(monkeypatch):
+    """Echte volgorde voor 'Leuke net kinder lederhose': boeken en wandkleden
+    eerst. Zonder kinderkleding in het lijstje liever geen rubriek dan een foute."""
+    monkeypatch.setattr(E.settings, "ebay_app_id", "x")
+    lijst = [{"category_id": "171228", "name": "Boeken", "voorouders": ["267", "171228"]},
+             {"category_id": "38237", "name": "Wandtapijten", "voorouders": ["11700", "10033"]}]
+
+    async def zoeker(_tekst):
+        return lijst
+    monkeypatch.setattr(E, "_raw_category_suggestions", zoeker)
+    assert asyncio.run(E.resolve_category_id("Leuke net kinder lederhose", None,
+                                             "jongens kleding", "kinderen")) is None
+    lijst.append({"category_id": "15615", "name": "Shorts", "voorouders": ["11450", "171146", "147317"]})
+    assert asyncio.run(E.resolve_category_id("Leuke net kinder lederhose", None,
+                                             "jongens kleding", "kinderen")) == "15615"

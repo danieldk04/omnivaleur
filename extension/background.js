@@ -2103,6 +2103,48 @@ function koppelingNodig(url) {
   return HEEFT_TOETSEN_NODIG.test(u) || VINTED_FORMULIER_KLOK.test(u);
 }
 
+// DE KLOK VAN EEN VERBORGEN TABBLAD WEER LATEN LOPEN.
+//
+// GEMETEN OP 15-09-2026 in een echte Chrome, met een testpagina die elke 15
+// seconden doorgeeft hoe vaak haar klok tikte. Een tabblad dat niet in beeld
+// staat (zoals ál onze werk-tabbladen):
+//
+//   in beeld                     : 150 tikken per 15 sec
+//   verborgen                    :  15 tikken per 15 sec
+//   verborgen, na 5 minuten      :   0 tot 1 tik per 15 sec  ← hier gebeurt niks meer
+//   verborgen + deze opdracht    : 147 tikken per 15 sec
+//
+// Dat laatste is de reparatie. `Emulation.setFocusEmulationEnabled` vertelt de
+// pagina dat ze in beeld staat; Chrome haalt dan de rem eraf en tekent weer.
+// Het tabblad zelf blijft gewoon op de achtergrond, de verkoper ziet er niets
+// van. Gemeten blijft dit staan over een navigatie heen, dus het mag hier al —
+// vóór het tabblad naar het formulier gaat.
+//
+// Wat NIET hielp, ook gemeten: alleen de debugger aanhechten (0 tot 1 tik),
+// Page.enable (0 tot 1), Page.startScreencast (0 tot 1), een stil geluidje, een
+// open websocket, een Web Lock. En Emulation.setPageVisibilityOverride bestaat
+// niet meer in Chrome.
+async function zetDoorlopendeKlok(tabId, url) {
+  if (!VINTED_FORMULIER_KLOK.test(String(url || ""))) return;
+  await new Promise((res) => {
+    try {
+      chrome.debugger.sendCommand({ tabId }, "Emulation.setFocusEmulationEnabled",
+        { enabled: true }, () => {
+          if (chrome.runtime.lastError) {
+            // Een Chrome die deze opdracht niet kent hoort de klus niet te laten
+            // vallen: dan werkt het zoals vroeger, alleen trager.
+            console.warn("[Omnivaleur] klok aanzetten mislukt:",
+                         chrome.runtime.lastError.message);
+          }
+          res();
+        });
+    } catch (e) {
+      console.warn("[Omnivaleur] klok aanzetten mislukt:", e && e.message);
+      res();
+    }
+  });
+}
+
 async function koppelVroeg(tabId, url) {
   try {
     // GEEN GELE BALK WAAR HIJ NIETS OPLOST (30-08-2026).
@@ -2122,6 +2164,9 @@ async function koppelVroeg(tabId, url) {
       chrome.runtime.lastError ? rej(new Error(chrome.runtime.lastError.message)) : res();
     }));
     _vroegGekoppeld.add(tabId);
+    // Een fout hier mag de koppeling zelf nooit ongedaan maken: die is al gelukt
+    // en Marktplaats heeft haar nodig om te kunnen typen.
+    try { await zetDoorlopendeKlok(tabId, url); } catch (_) { /* dan alleen trager */ }
     return true;
   } catch (e) {
     console.warn("[Omnivaleur] vroeg koppelen mislukt:", e.message);

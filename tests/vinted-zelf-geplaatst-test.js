@@ -52,6 +52,7 @@ async function bewaker({ meta, gevonden }) {
       clear: (naam) => { delete wekkers[naam]; },
     },
   };
+  const losgekoppeld = [];
   const omgeving = {
     chrome,
     console: { log() {}, warn() {}, error() {} },
@@ -62,6 +63,9 @@ async function bewaker({ meta, gevonden }) {
     reportError: async () => {},
     meldNooitBegonnen: async () => {},
     sluitWerkTabblad: () => {},
+    // Het opengelaten tabblad wordt losgekoppeld zodat Chrome's gele
+    // foutopsporingsbalk weg is voor de verkoper er weer naar kijkt.
+    ontkoppelVroeg: () => { losgekoppeld.push(7); },
   };
   const extra = BG.includes("function armManueleControle(")
     ? "const MANUELE_CONTROLE_MIN = 2, MANUELE_CONTROLES_MAX = 15;\n" + stuk("armManueleControle") + "\n"
@@ -69,7 +73,7 @@ async function bewaker({ meta, gevonden }) {
   const fn = new Function(...Object.keys(omgeving),
     `${extra}${stuk("fireJobWatchdog")}; return fireJobWatchdog;`)(...Object.values(omgeving));
   await fn(7);
-  return { opslag, wekkers, gemeld };
+  return { opslag, wekkers, gemeld, losgekoppeld };
 }
 
 const KLAAR = { platform: "vinted", action: "create", jobId: "j1", serverUrl: "https://s",

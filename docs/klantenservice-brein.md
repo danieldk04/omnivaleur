@@ -10,7 +10,7 @@ product verandert. De ontwikkelaar werkt dan zowel dit bestand in de repo als de
 kopie in Drive bij, in dezelfde beurt. Daniel hoeft niets te doen; de Gem leest
 de Drive-kopie de volgende keer opnieuw in.
 
-_Laatst bijgewerkt: 15-09-2026 (eBay: advertenties nu in het Nederlands, vaste eBay-rubriek per categorie, verzendkosten en controleblok bij Platforms, slottekst niet op eBay; wachtrij die stilstaat omdat de browser niet is ingelogd op het kanaal)_
+_Laatst bijgewerkt: 15-09-2026 (eBay: advertenties nu in het Nederlands, vaste eBay-rubriek per categorie, verzendkosten en controleblok bij Platforms, slottekst niet op eBay; wachtrij die stilstaat omdat de browser niet is ingelogd op het kanaal; Vinted plaatst nu door zonder dat je het tabblad open hoeft te houden)_
 
 ---
 
@@ -460,6 +460,28 @@ Je advertentie staat klaar en er is niets misgegaan aan jouw kant. Bij ons wacht
 hij op de vertaling naar het Nederlands, en zolang die niet werkt zetten we hem
 liever niet online dan in de verkeerde taal. Zodra dat is opgelost gaat hij
 vanzelf alsnog de deur uit; je hoeft niets opnieuw te doen.
+
+Groetjes,
+Daniel
+
+### Plaatsen op Vinted blijft hangen tot ik naar dat tabblad klik
+
+Hoi <voornaam>,
+
+Dat klopte, en het lag aan Chrome. Een tabblad dat niet in beeld staat wordt door
+de browser stilgezet om stroom te sparen: na een paar minuten gebeurt er
+praktisch niets meer. Bij Vinted duurt het invullen langer dan die paar minuten,
+dus daar viel het precies stil, en zodra jij op dat tabblad klikte liep het weer
+door.
+
+Vanaf uitbreiding 1.0.331 zetten we dat tabblad tijdens het plaatsen op vol
+tempo, ook als het op de achtergrond staat. Je hoeft er dus niet meer bij te
+blijven. Wat je wel kunt zien tijdens het plaatsen is een gele balk bovenin je
+browser over foutopsporing; dat hoort erbij en verdwijnt vanzelf zodra de
+advertentie klaar is. Niet wegklikken, want dan valt het weer stil.
+
+Zorg dat de uitbreiding op 1.0.331 of hoger staat; Chrome werkt hem meestal
+vanzelf bij.
 
 Groetjes,
 Daniel

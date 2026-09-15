@@ -82,6 +82,10 @@ vm.createContext(ctx);
 vm.runInContext("var _vroegGekoppeld = new Set();", ctx);
 vm.runInContext(`var HEEFT_TOETSEN_NODIG = ${
   BG.match(/const HEEFT_TOETSEN_NODIG = (.+);/)[1]};`, ctx);
+vm.runInContext(`var VINTED_FORMULIER_KLOK = ${
+  BG.match(/const VINTED_FORMULIER_KLOK = (.+);/)[1]};`, ctx);
+vm.runInContext(BG.match(/function koppelingNodig\(url\) \{[\s\S]*?\n\}/)[0], ctx);
+vm.runInContext(BG.match(/async function zetDoorlopendeKlok\(tabId, url\) \{[\s\S]*?\n\}/)[0], ctx);
 vm.runInContext(stukVanaf("async function koppelVroeg("), ctx);
 vm.runInContext("async function heeftDebugger() { return true; }", ctx);
 const detachStuk = BG.match(/chrome\.debugger\.onDetach\.addListener\([\s\S]*?\n\}\);/);
