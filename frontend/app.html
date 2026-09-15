@@ -5670,7 +5670,7 @@ async function loadEbayGereedheid() {
     const g = await res.json().catch(() => ({}));
     if (!res.ok) throw new Error(g.detail || 'Could not check your eBay account');
     const regel = (goed, tekst) => `<div style="margin:3px 0;color:${goed === true ? '#166534' : goed === false ? '#b45309' : 'var(--muted)'}">${goed === true ? '✓' : goed === false ? '⚠️' : '•'} ${tekst}</div>`;
-    if (!g.verbonden) { lijst.innerHTML = regel(false, escapeHtml(g.fout || 'eBay connection lost. Reconnect eBay.')); return; }
+    if (!g.verbonden) { lijst.innerHTML = regel(false, esc(g.fout || 'eBay connection lost. Reconnect eBay.')); return; }
     const vz = g.verzending || {};
     const rijen = [
       regel(true, 'eBay connected'),
@@ -5680,7 +5680,7 @@ async function loadEbayGereedheid() {
       regel(g.adres, g.adres ? 'Ship-from address set' : 'Ship-from address missing (below)'),
       vz.status === 'klaar' ? regel(true, 'Shipping &amp; returns active on eBay')
         : vz.status === 'wacht_op_ebay' ? regel(null, '⏳ eBay is switching on your shipping settings. This can take up to 24 hours; publishing to eBay starts working by itself once it is done.')
-        : vz.status === 'fout' ? regel(false, 'eBay rejected your shipping settings: ' + escapeHtml(vz.fout || ''))
+        : vz.status === 'fout' ? regel(false, 'eBay rejected your shipping settings: ' + esc(vz.fout || ''))
         : regel(false, 'Shipping &amp; returns not set (below)'),
     ];
     if (g.limiet && g.limiet.aantal != null) {
