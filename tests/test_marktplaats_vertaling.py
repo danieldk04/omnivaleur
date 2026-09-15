@@ -257,9 +257,10 @@ def test_een_al_gestempelde_opdracht_blijft_met_rust(monkeypatch):
 
 
 def test_vinted_en_shopify_gaan_hier_niet_doorheen(monkeypatch):
-    """Daar gaat de tekst uit zoals de verkoper hem zelf schreef."""
+    """Daar gaat de tekst uit zoals de verkoper hem zelf schreef. eBay is sinds
+    15-09-2026 Nederlands, maar komt nooit via de extensie en dus nooit hier."""
     jobs = []
-    for platform in ("vinted", "shopify", "ebay"):
+    for platform in ("vinted", "shopify"):
         job = _job("c9", "create", "pending")
         job["platform"] = platform
         job["payload"] = {"title": ENGELSE_TITEL}
