@@ -2179,6 +2179,18 @@ def _video_opvolging(state: dict, boek: "Leadboek", gebruiker: str, host: str,
             ons, hun = verstuurd.get(adres), ontvangen.get(adres)
             if ons is None or (hun is not None and hun > ons):
                 continue
+
+            # Meteen melden dat de video de deur uit is, niet pas bij opvolging 1.
+            if beurt == 0 and st.get("video_gemeld") != ons and st.get("video_geen_link") != ons:
+                draad_nu = _laatste_verzonden_bericht(imap, adres)
+                if draad_nu and VIDEO_LINK.search(draad_nu.get("tekst") or ""):
+                    boek.video_gestart(per_adres[adres], ons)
+                    st["video_gemeld"] = ons
+                    bijgewerkt = True
+                elif draad_nu:
+                    st["video_geen_link"] = ons
+                    bijgewerkt = True
+
             dagen = (nu.timestamp() - ons) / 86400
             if dagen < VIDEO_OPVOLG_DAGEN[beurt]:
                 continue
