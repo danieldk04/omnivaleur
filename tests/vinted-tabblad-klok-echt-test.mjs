@@ -111,14 +111,21 @@ try {
   // écht achter staat — net als bij een verkoper die in zijn eigen venster werkt.
   // (Een extensie die via de pijp is geladen ziet het venster waarmee Chrome
   //  startte niet, vandaar dat we er zelf een maken.)
+  // De échte weg die een opdracht ook neemt, inclusief de keuze voor een eigen
+  // venster bij het Vinted-formulier. Er staat eerst een gewoon venster open,
+  // zodat de keuze iets te kiezen heeft.
   const tabId = await doe(
     `chrome.windows.create({ url: "about:blank" })
-       .then(w => maakWerkTabblad({ windowId: w.id, active: false }, ${JSON.stringify(FORMULIER)}))
-       .then(t => t.id)
+       .then(() => new Promise((res) => openWorkerTab(${JSON.stringify(FORMULIER)}, (t) => res(t ? t.id : "fout: geen tabblad"))))
        .catch(e => "fout: " + (e && e.message))`);
   check("er is een werk-tabblad geopend", typeof tabId === "number", String(tabId));
   if (typeof tabId !== "number") throw new Error("geen tabblad");
   console.log("Tabblad:", tabId, "(staat op de achtergrond)");
+
+  // In wat voor venster is hij terechtgekomen, en staat hij daar vooraan?
+  console.log("Venster:", await doe(
+    `chrome.tabs.get(${tabId}).then(t => chrome.windows.get(t.windowId, {populate:true})
+       .then(w => \`state=\${w.state} focused=\${w.focused} tabbladen=\${w.tabs.length} actief=\${t.active}\`))`));
 
   // Wachten tot Vinted geladen is (zonder sessie: de inlogpagina).
   for (let i = 0; i < 40; i++) {

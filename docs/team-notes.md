@@ -10028,3 +10028,36 @@ voortgang van de opdracht.
 06-09-2026 gebeurt het bewust in een achtergrondtabblad van een venster dat er
 toch al is (zie die dag: een apart venster pakte op macOS de aandacht en haalde
 zijn scherm weg). Dat is dus geen storing maar een keuze.
+
+## 15-09-2026 (vervolg) — het is geen bevriezing maar lage prioriteit; eigen venster terug voor Vinted
+
+Drie metingen uit Daniels eigen browser, met de hartslag uit 1.0.335/336:
+
+    17:09  klokstand 0.1/s  +45582ms  visible+focus   (1.0.335)
+    17:22  klokstand 0.4/s   +3685ms  visible+focus   (1.0.336, "ontdooid 5x")
+    17:24  klokstand 0.2/s  +26038ms  visible+focus   (1.0.336, "ontdooid 26x")
+
+Dat sluit twee verklaringen uit. Het is geen zichtbaarheid: de pagina meldt zich
+als visible+focus. En het is geen bevriezing die met Page.setWebLifecycleState te
+verhelpen is: dat commando komt aan (26 keer) en de klok blijft op 0,2 staan. Wat
+overblijft is de lage prioriteit die een achtergrondtabblad krijgt — alles draait,
+maar tien tot honderd keer trager, en dat is precies "er gebeurt niks tot ik erop
+klik".
+
+Gevolg diezelfde ronde: het ophalen van één foto lukte binnen twee pogingen van
+twintig seconden niet, terwijl diezelfde foto van buitenaf in 0,4 seconde
+binnenkomt. De opdracht stopte nu netjes met "the photos could not be loaded" in
+plaats van een advertentie zonder beeld in te dienen (dat was de winst van
+1.0.336).
+
+Daarom gaat het Vinted-formulier vanaf 1.0.337 weer naar een eigen venster, dat
+meteen geminimaliseerd wordt. Gemeten met de echte extensie in een echte Chrome
+via openWorkerTab: het tabblad komt in een venster met state=minimized,
+focused=false, actief=true, en haalt daar 73 tikken in 10 seconden (66 na
+minimaliseren) tegen 10 in een achtergrondtabblad. Een tabblad dat in zijn eigen
+venster vooraan staat wordt dus niet afgeknepen, ook niet als dat venster weg is.
+
+Let op het risico dat hier ooit toe leidde (Toon, Mac, 06-09-2026: "elke keer als
+ik iets plaats valt mijn scherm weg"): het venster blijft dankzij het ankertabblad
+bestaan in plaats van per klus op te poppen, wordt met focused:false aangemaakt en
+meteen geminimaliseerd. Scannen en verwijderen blijven een achtergrondtabblad.

@@ -2320,6 +2320,38 @@ function openWorkerTab(url, callback, opts = {}) {
   // geminimaliseerd. Publiceren gaat nu net zo. Alleen als er echt geen enkel
   // gewoon venster is (Chrome draait dan onzichtbaar op de achtergrond, niemand
   // kijkt) valt het terug op het oude geminimaliseerde werkvenster.
+  // HET VINTED-FORMULIER KRIJGT ZIJN EIGEN VENSTER.
+  //
+  // GEMETEN OP 15-09-2026, drie keer achter elkaar in Daniels eigen browser met
+  // de hartslag uit 1.0.335/336. Een achtergrondtabblad in zijn gewone venster
+  // haalt 0,1 tot 0,4 kloktikken per seconde in plaats van tien, en pauzes lopen
+  // seconden tot bijna een minuut uit. Ontdooien helpt niet: de voortgang meldde
+  // "aan, ontdooid 5x" en de klok bleef op 0,4 staan. Het is dus geen bevriezing
+  // maar de lage prioriteit die een achtergrondtabblad van het systeem krijgt.
+  //
+  // Wat wél werkt, gemeten met de echte extensie in een echte Chrome: een
+  // tabblad dat in zijn EIGEN venster vooraan staat houdt vol tempo, ook als dat
+  // venster geminimaliseerd is (92 tikken in 10 seconden, tegen 10 zonder). Voor
+  // het Vinted-formulier nemen we die weg dus weer; scannen en verwijderen
+  // blijven een achtergrondtabblad, want die zijn kort en merken er niets van.
+  //
+  // De prijs is bekend en is precies waarom dit er ooit uit ging (Toon, Mac,
+  // 06-09-2026: "elke keer als ik iets plaats valt mijn scherm weg"). Daarom
+  // blijft het venster dankzij het ankertabblad bestaan in plaats van elke klus
+  // opnieuw op te poppen, en wordt het meteen en met focused:false weggeduwd.
+  if (VINTED_FORMULIER_KLOK.test(String(url || ""))) {
+    _workerWindowChain = _workerWindowChain
+      .then(() => openWorkerTabInner(url, opts))
+      .then(
+        (t) => callback(t),
+        (err) => {
+          console.error("[Omnivaleur] eigen venster mislukt, terug naar een achtergrondtabblad:", err);
+          openAchtergrondTabblad(url).then((t) => callback(t || null)).catch(() => callback(null));
+        }
+      );
+    return;
+  }
+
   openAchtergrondTabblad(url).then((tab) => {
     if (tab) { callback(tab); return; }
     _workerWindowChain = _workerWindowChain
