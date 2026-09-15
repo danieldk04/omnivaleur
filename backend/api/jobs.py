@@ -4051,7 +4051,110 @@ def _melding_kanaal_op_pauze(platform: str) -> str:
     )
 
 
-def _rechtgezette_foutmelding(job: dict | None, body: dict, versie, kansloos: bool = False) -> dict:
+# ── IS DEZE VERKOPER ZAKELIJK? DAT STAAT OPENBAAR OP ZIJN EIGEN ADVERTENTIE ──
+#
+# WAAROM DIT ER IS (15-09-2026, gemeten bij Egbert Brouwer, Papa's Plectrums).
+#
+# Het persoonlijke advertentieoverzicht (/my-account/sell/...) bestaat alleen voor
+# een PARTICULIER account. Is een verkoper zakelijk, dan is die pagina voor hem
+# dicht: 302 naar /identity/v2/login en 401 op de API, exact het beeld van een
+# uitgelogde bezoeker. Juist die pagina gebruikt de extensie als inlogcontrole,
+# dus kreeg hij "je bent niet ingelogd" terwijl hij gewoon was ingelogd. Voor de
+# derde keer.
+#
+# De extensie is gerepareerd (1.0.332 leest de kopbalk van de site zelf), maar die
+# is bij hem pas na de Web Store binnen en dat duurde eerder drie weken. Tot die
+# tijd is dit de enige plek die het verschil kan zien, en dat kan hier ook: het
+# verkoperstype staat OPENBAAR op zijn eigen advertentiepagina, zonder inlog.
+# Gemeten: bij hem "sellerType":"TRADER", bij een particuliere verkoper ernaast
+# "CONSUMER". Zo hoeven we het hem niet te vragen.
+#
+# Nooit raden: we zoeken op de titel van een advertentie die WIJ hebben geplaatst
+# en nemen alleen de treffer waarvan het advertentienummer klopt met wat wij
+# hebben opgeslagen. Vinden we die niet, dan is het antwoord "weet niet" en
+# verandert er niets aan de melding.
+_VERKOPERSOORT: dict = {}
+_SOORT_GELDIG = 6 * 3600          # een accountsoort verandert zelden
+_SOORT_ONBEKEND_GELDIG = 15 * 60  # maar "weet niet" mag snel opnieuw geprobeerd
+_SOORT_UA = ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
+             "(KHTML, like Gecko) Chrome/152.0.0.0 Safari/537.36")
+
+
+def _verkoper_soort(db, user_id: str, platform: str) -> str | None:
+    """"TRADER" (zakelijk), "CONSUMER" (particulier) of None als we het niet zagen."""
+    sleutel = (user_id, platform)
+    bewaard = _VERKOPERSOORT.get(sleutel)
+    if bewaard:
+        soort, toen = bewaard
+        geldig = _SOORT_GELDIG if soort else _SOORT_ONBEKEND_GELDIG
+        if time.monotonic() - toen < geldig:
+            return soort
+    soort = None
+    try:
+        from backend.services.mp_enrich import ZOEK_PER_PLATFORM
+        import httpx
+        adres = ZOEK_PER_PLATFORM.get(platform)
+        if adres:
+            zoek_url, basis = adres
+            rijen = (db.table("jobs").select("payload,result")
+                     .eq("user_id", user_id).eq("platform", platform)
+                     .eq("action", "create").eq("status", "done")
+                     .order("done_at", desc=True).limit(8).execute().data or [])
+            with httpx.Client(timeout=8, follow_redirects=True,
+                              headers={"User-Agent": _SOORT_UA}) as client:
+                for r in rijen:
+                    titel = ((r.get("payload") or {}).get("title") or "").strip()
+                    nummer = str(((r.get("result") or {}).get("platform_listing_id") or "")).strip()
+                    if not titel or not nummer:
+                        continue
+                    data = client.get(zoek_url, params={"query": titel, "limit": 30},
+                                      headers={"Accept": "application/json"}).json()
+                    treffer = next((l for l in (data.get("listings") or [])
+                                    if str(l.get("itemId") or "") == nummer), None)
+                    if not treffer or not treffer.get("vipUrl"):
+                        continue
+                    pagina = client.get(basis + treffer["vipUrl"]).text
+                    gevonden = re.search(r'"sellerType"\s*:\s*"(\w+)"', pagina)
+                    if gevonden:
+                        soort = gevonden.group(1)
+                        break
+    except Exception as e:  # noqa: BLE001 — dit mag nooit een foutmelding opeten
+        logger.warning("verkoperstype niet vast te stellen voor %s/%s: %s", user_id, platform, e)
+        soort = None
+    _VERKOPERSOORT[sleutel] = (soort, time.monotonic())
+    if soort:
+        logger.info("verkoperstype %s op %s voor %s", soort, platform, user_id)
+    return soort
+
+
+def _is_zakelijk(db, job: dict | None, body: dict, user_id: str) -> bool | None:
+    """Alleen navragen als het ertoe doet: een inlogverwijt op Marktplaats/2dehands."""
+    if not job or job.get("platform") not in ("marktplaats", "2dehands"):
+        return None
+    fout = str((body or {}).get("error") or "")
+    if not (_CLAIM_NIET_INGELOGD.search(fout) or "appear to be signed in" in fout):
+        return None
+    soort = _verkoper_soort(db, user_id, job.get("platform") or "")
+    return True if soort == "TRADER" else (False if soort else None)
+
+
+def _melding_zakelijk_account(platform: str, reden: str) -> str:
+    site = {"marktplaats": "Marktplaats (marktplaats.nl)",
+            "2dehands": "2dehands (2dehands.be)"}.get(platform, platform)
+    return (
+        f"Your {site} account is a business account. For a business account the personal "
+        f"\"My adverts\" page does not exist, and that is exactly the page our extension opens "
+        f"to check whether you are signed in. So it read your business account as a signed-out "
+        f"browser. You were signed in the whole time. This one is on us, not on you.\n\n"
+        f"Nothing was published and nothing was changed on {site}, and your queue is still there. "
+        f"It is fixed in extension version 1.0.332, which reads the site's own header instead, and "
+        f"your queue starts again by itself as soon as Chrome has picked that version up. You do "
+        f"not have to click your items again.\n\nThis is what we measured, word for word:\n\n{reden}"
+    )
+
+
+def _rechtgezette_foutmelding(job: dict | None, body: dict, versie, kansloos: bool = False,
+                              zakelijk: bool | None = None) -> dict:
     """Welke foutmelding de verkoper te zien krijgt bij een mislukte opdracht.
 
     Los van de database gehouden zodat hij te testen is — deze tekst is precies
@@ -4141,6 +4244,14 @@ def _rechtgezette_foutmelding(job: dict | None, body: dict, versie, kansloos: bo
     if _GEEN_ADRES.search(fout) and (job or {}).get("platform") in ("2dehands", "marktplaats"):
         return {**(body or {}), "error_oorspronkelijk": fout,
                 "error": _melding_geen_adres((job or {}).get("platform") or "")}
+    # HET ANTWOORD DAT WE ZELF HEBBEN OPGEZOCHT GAAT VOOR (15-09-2026).
+    # Weten we uit zijn eigen openbare advertentie dat dit een zakelijk account
+    # is, dan is elk inlogverwijt hierboven onzin en hoeven we hem niets te
+    # vragen. Zie _verkoper_soort.
+    if zakelijk and (job or {}).get("platform") in ("marktplaats", "2dehands") and (
+            _CLAIM_NIET_INGELOGD.search(fout) or "appear to be signed in" in fout):
+        return {**(body or {}), "error_oorspronkelijk": fout,
+                "error": _melding_zakelijk_account((job or {}).get("platform") or "", fout)}
     if ((job or {}).get("action") == "scan"
             and (job or {}).get("platform") == "marktplaats"
             and "appear to be signed in" in fout):
@@ -4188,7 +4299,8 @@ def fail_job(job_id: str, body: dict, user_id: str = Depends(get_current_user)):
             kansloos = _kanaal_kansloos(db, user_id, job.get("platform") or "")
         except Exception:
             logger.warning("kansloze reeks niet vast te stellen voor %s", job_id)
-    body = _rechtgezette_foutmelding(job, body, versie, kansloos)
+    zakelijk = _is_zakelijk(db, job, body, user_id)
+    body = _rechtgezette_foutmelding(job, body, versie, kansloos, zakelijk)
 
     # DE BETAALMUUR STOPT DE RIJ METEEN, EN VANAF DE SERVER.
     #
@@ -4660,6 +4772,15 @@ def stop_platform(body: dict, request: Request, user_id: str = Depends(get_curre
         raise HTTPException(status_code=400, detail="platform is required")
     db = get_db()
     ruw = str(body.get("reason") or "").strip() or _melding_formulier_ging_niet_open(platform)
+    # Zakelijk account? Dan is het verwijt aantoonbaar onzin en stellen we geen
+    # vraag meer aan de verkoper. Zie _verkoper_soort.
+    if (_CLAIM_NIET_INGELOGD.search(ruw)
+            and _verkoper_soort(db, user_id, platform) == "TRADER"):
+        logger.warning("stop-platform: inlogverwijt genegeerd, %s is zakelijk op %s",
+                       user_id, platform)
+        return {"ok": True, "paused": True, "zakelijk": True,
+                "cancelled": _pauzeer_op_inlogverwijt(
+                    db, user_id, platform, _melding_zakelijk_account(platform, ruw))}
     reden = _reden_zonder_vals_verwijt(
         db, user_id, platform, ruw, request.headers.get("x-omnivaleur-ext"))
     # Een inlogverwijt wist geen wachtrij meer. Zie _pauzeer_op_inlogverwijt.

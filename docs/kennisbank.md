@@ -17,6 +17,52 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ---
 
+## zakelijk-account-lijkt-op-uitgelogd
+
+*15-09-2026 — Een zakelijk account op Marktplaats of 2dehands krijgt 401 op zijn persoonlijke advertentieoverzicht, precies zoals een uitgelogde bezoeker; oordeel daarom nooit op die pagina*
+
+Het persoonlijke advertentieoverzicht (`/my-account/sell/...`) bestaat alleen
+voor een PARTICULIER account. Wordt een verkoper door Marktplaats of 2dehands
+omgezet naar een zakelijk account, dan is diezelfde pagina voor hem dicht: 302
+naar `/identity/v2/login` en 401 op de API. Exact het beeld van een bezoeker
+zonder cookies. Zijn advertenties staan dan in Admarkt.
+
+Gemeten bij Egbert Brouwer, 15-09-2026. Zijn scan van 13-09 09:24 UTC las dat
+overzicht nog met HTTP 200 en 109 advertenties; vanaf 14-09 18:08 UTC elke keer
+401. Zijn openbare advertentiepagina op 2dehands zegt sindsdien
+`"sellerType":"TRADER"`, een particuliere verkoper ernaast `"CONSUMER"`. Hij was
+de hele tijd ingelogd; wij namen 231 opdrachten van hem terug met de tekst dat
+hij dat niet was. Ertussen zat één ochtend waarin hij 129 advertenties plaatste
+en op ongeveer 200 live zoekertjes kwam.
+
+**Why:** die 401 is geen antwoord op de vraag "ben je ingelogd", maar op de vraag
+"is dit overzicht van jou". Twee heel verschillende dingen met dezelfde
+foutcode, en het kost een klant zijn hele wachtrij. Zie
+"succes-nooit-uit-uitsluitingslijst" en "auth-fouten-lijken-op-verkeerd-wachtwoord".
+
+**How to apply:** de neutrale bron is de kopbalk van de site zelf. In de HTML van
+www.marktplaats.nl en www.2dehands.be staat precies één keer
+`"userDetails":{"isLoggedIn":true|false}`, en dat is voor beide soorten accounts
+hetzelfde: het is letterlijk wat de verkoper in zijn scherm ziet. Sinds 1.0.332
+leest `eerstepartijStatus` dat mee vanuit het werktabblad en wint de kopbalk van
+het overzicht. En omdat een nieuwe extensie pas na de Web Store binnen is, doet de
+server hetzelfde werk langs de andere kant: `_verkoper_soort` in
+backend/api/jobs.py zoekt het type op via een advertentie die wij zelf hebben
+geplaatst en laat een inlogverwijt vallen zodra dat TRADER zegt. Het overzicht mag alleen nog JA zeggen; kan de kopbalk niet
+gelezen worden, dan is er geen oordeel en gaat het werk door. Account-type check
+van buitenaf, drie bronnen (nagemeten 15-09-2026): (1)
+`https://www.2dehands.be/lrp/api/search?sellerIds[]=<id>` geeft de `vipUrl`, en in
+die pagina staat `"sellerType":"TRADER"` of `"CONSUMER"`, in het verkopersblok
+naast `activeYears` en `phoneNumberHidden`; leg er altijd een bekende
+particuliere verkoper naast. (2) Op Marktplaats staat er bij zo iemand ook
+`"isVerified":true` en een `sellerWebsiteUrl` die naar
+`admarkt.marktplaats.nl/bside/url/...` wijst, en zo'n link heeft alleen een
+Admarkt-adverteerder. (3) Onze eigen scan zegt het al: "Je persoonlijke
+advertentieoverzicht is leeg, bij een zakelijk account hoort dat zo". Zie
+"zakelijke-verkoper-account" en "admarkt-zakelijke-marktplaats".
+
+---
+
 ## vinted-tabblad-klok-stilstand
 
 *15-09-2026 — Een verborgen werk-tabblad staat bijna stil; alleen Emulation.setFocusEmulationEnabled zet de klok weer op vol tempo, de debugger aanhechten doet niets*
@@ -117,49 +163,6 @@ levend). Naast de zin is er vrijwel altijd een structuurkenmerk dat niet met de
 taal meebeweegt, hier `expired-listing-root` / `expiredlisting-module`, dat op
 Marktplaats en 2dehands allebei werkt. Zie ook
 "storing-mag-nooit-als-antwoord-tellen" en "succes-nooit-uit-uitsluitingslijst".
-
----
-
-## zakelijk-account-lijkt-op-uitgelogd
-
-*15-09-2026 — Een zakelijk account op Marktplaats of 2dehands krijgt 401 op zijn persoonlijke advertentieoverzicht, precies zoals een uitgelogde bezoeker; oordeel daarom nooit op die pagina*
-
-Het persoonlijke advertentieoverzicht (`/my-account/sell/...`) bestaat alleen
-voor een PARTICULIER account. Wordt een verkoper door Marktplaats of 2dehands
-omgezet naar een zakelijk account, dan is diezelfde pagina voor hem dicht: 302
-naar `/identity/v2/login` en 401 op de API. Exact het beeld van een bezoeker
-zonder cookies. Zijn advertenties staan dan in Admarkt.
-
-Gemeten bij Egbert Brouwer, 15-09-2026. Zijn scan van 13-09 09:24 UTC las dat
-overzicht nog met HTTP 200 en 109 advertenties; vanaf 14-09 18:08 UTC elke keer
-401. Zijn openbare advertentiepagina op 2dehands zegt sindsdien
-`"sellerType":"TRADER"`, een particuliere verkoper ernaast `"CONSUMER"`. Hij was
-de hele tijd ingelogd; wij namen 231 opdrachten van hem terug met de tekst dat
-hij dat niet was. Ertussen zat één ochtend waarin hij 129 advertenties plaatste
-en op ongeveer 200 live zoekertjes kwam.
-
-**Why:** die 401 is geen antwoord op de vraag "ben je ingelogd", maar op de vraag
-"is dit overzicht van jou". Twee heel verschillende dingen met dezelfde
-foutcode, en het kost een klant zijn hele wachtrij. Zie
-"succes-nooit-uit-uitsluitingslijst" en "auth-fouten-lijken-op-verkeerd-wachtwoord".
-
-**How to apply:** de neutrale bron is de kopbalk van de site zelf. In de HTML van
-www.marktplaats.nl en www.2dehands.be staat precies één keer
-`"userDetails":{"isLoggedIn":true|false}`, en dat is voor beide soorten accounts
-hetzelfde: het is letterlijk wat de verkoper in zijn scherm ziet. Sinds 1.0.332
-leest `eerstepartijStatus` dat mee vanuit het werktabblad en wint de kopbalk van
-het overzicht. Het overzicht mag alleen nog JA zeggen; kan de kopbalk niet
-gelezen worden, dan is er geen oordeel en gaat het werk door. Account-type check
-van buitenaf, drie bronnen (nagemeten 15-09-2026): (1)
-`https://www.2dehands.be/lrp/api/search?sellerIds[]=<id>` geeft de `vipUrl`, en in
-die pagina staat `"sellerType":"TRADER"` of `"CONSUMER"`, in het verkopersblok
-naast `activeYears` en `phoneNumberHidden`; leg er altijd een bekende
-particuliere verkoper naast. (2) Op Marktplaats staat er bij zo iemand ook
-`"isVerified":true` en een `sellerWebsiteUrl` die naar
-`admarkt.marktplaats.nl/bside/url/...` wijst, en zo'n link heeft alleen een
-Admarkt-adverteerder. (3) Onze eigen scan zegt het al: "Je persoonlijke
-advertentieoverzicht is leeg, bij een zakelijk account hoort dat zo". Zie
-"zakelijke-verkoper-account" en "admarkt-zakelijke-marktplaats".
 
 ---
 

@@ -9950,3 +9950,43 @@ keer zichtbaar of er eentje sneuvelt in plaats van dat het stil één minder wor
 **Openstaand:** dit is een reparatie op een gemeten symptoom, niet op een bewezen
 oorzaak, en ze is nog niet in het echt gedraaid. De eerstvolgende Vinted-plaatsing
 op 1.0.334 moet het bewijzen; de nieuwe logregel zegt het meteen.
+
+### Aanvulling dezelfde dag: de server ziet het nu ook, en vraagt niets meer
+
+Egbert antwoordde dat hij er twee heeft op 2dehands, zakelijk en gewoon. Dat maakt
+de datum van de omslag onzeker (hij kan ook van account gewisseld zijn), maar niet
+dát hij zakelijk is: de 109 advertenties die zijn scan van 13-09 09:24 las zijn
+stuk voor stuk dezelfde als die nu openbaar onder Papa's Plectrums staan, 108 van
+de 109 op advertentienummer, en dat account is TRADER. Er is op 2dehands ook maar
+één openbare verkoper met die naam.
+
+Daniel wil hem niet nog meer vragen stellen. Dat hoeft ook niet meer: de server
+kan het verkoperstype zelf opzoeken, openbaar en zonder inlog. Nieuw in
+backend/api/jobs.py:
+
+- `_verkoper_soort(db, user_id, platform)` zoekt op de titel van een advertentie
+  die WIJ hebben geplaatst, neemt alleen de treffer waarvan het advertentienummer
+  klopt met wat wij hebben opgeslagen, en leest `"sellerType"` van die pagina.
+  Geen treffer is geen oordeel. Zes uur onthouden, "weet niet" een kwartier.
+- `_rechtgezette_foutmelding` en `/stop-platform` gebruiken dat: is de verkoper
+  TRADER, dan verdwijnt het inlogverwijt en komt er een melding die zegt wat er
+  echt aan de hand is, dat het aan ons ligt en dat zijn wachtrij blijft staan.
+  De oude tekst stelde hem een vraag ("open deze pagina en zeg wat je ziet"); die
+  vraag is voor een zakelijk account niet meer nodig.
+
+Waarom dit op de server moet en niet alleen in de extensie: 1.0.332 is bij hem pas
+na de Web Store binnen en dat duurde eerder drie weken. Tot die tijd kan alleen de
+server het verschil zien.
+
+Echt nagemeten tegen de openbare API met zijn eigen databaserijen: Egbert TRADER,
+een particuliere controleverkoper CONSUMER. Test: tests/test_zakelijk_account_melding.py,
+13 controles, met de versie ervoor ernaast.
+
+**Let op:** wat de server NIET kan is zijn wachtrij weer laten lopen. Zijn huidige
+extensie weigert zelf het tabblad te openen, dus publiceren begint pas als 1.0.332
+bij hem binnen is. De winkelupload is dus het kritieke pad, de rest is
+schadebeperking. Er sneuvelt ondertussen één opdracht in totaal, niet één per
+ronde (zie `_pauzeer_op_inlogverwijt`).
+
+**Al rood vóór dit werk:** tests/test_postcode_melding_2dehands.py::test_marktplaats_krijgt_hem_ook
+faalt ook op b7097dbd. Niet van deze wijziging.
