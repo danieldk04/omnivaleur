@@ -2624,6 +2624,29 @@ async def _delist_one(listing: dict):
             listing.get("platform_offer_id") if listing["platform"] == "ebay" else None
         ) or listing.get("platform_listing_id")
 
+        # eBay werkt uitsluitend met het offer-nummer; het openbare
+        # advertentienummer geeft op withdraw altijd 404. Ontbreekt het
+        # offer-nummer, dan opzoeken via de SKU, net als bij handmatig
+        # verwijderen (delist_all_platforms). Zonder deze stap bleef een artikel
+        # dat elders verkocht was op eBay gewoon te koop staan.
+        if listing["platform"] == "ebay" and not listing.get("platform_offer_id"):
+            delete_id = None
+            it = eerste_rij(await naast_de_lus(lambda: db.table("items").select("sku,id")
+                  .eq("id", listing["item_id"]).limit(1).execute()))
+            sku = (it or {}).get("sku") or (it or {}).get("id")
+            gevonden = await platform.resolve_offer_by_sku(sku, credentials) if (sku and credentials) else None
+            if gevonden:
+                delete_id = gevonden["platform_offer_id"]
+                try:
+                    (await naast_de_lus(lambda: db.table("listings").update(
+                        {k: v for k, v in gevonden.items() if v}).eq("id", listing["id"]).execute()))
+                except Exception:  # noqa: BLE001
+                    pass
+            if not delete_id:
+                raise RuntimeError(
+                    "This eBay listing has no eBay offer number and could not be found "
+                    "by SKU, so it cannot be ended automatically. Remove it on eBay yourself.")
+
         # Shopify-rij zonder product-id: eerst opzoeken in de winkel van DEZE
         # verkoper via de SKU. Zonder deze stap gooide delete_product meteen
         # "No Shopify product id" en bleef het artikel na een verkoop elders
