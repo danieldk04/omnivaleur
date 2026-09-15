@@ -9564,3 +9564,69 @@ veroorzaken. De extensie leest op Vinted alleen (ongelezen berichten tellen elke
 10 minuten, garderobe en artikelen) en verwijdert alleen advertenties die elders
 verkocht zijn. Er is geen code die berichten stuurt. Niet te meten vanaf hier
 wat de app op zijn telefoon doet.
+
+## 15-09-2026 — Egbert: incognito was het niet, zijn 2dehands-sessie is weg
+
+Egbert antwoordde op de drie vragen: geen incognitovenster open, "Toestaan in
+incognitomodus" stond uit, en zijn Omnivaleur-uitbreiding is ingelogd. Daarmee
+valt de verklaring van 14-09 (werktabblad in een incognitovenster) definitief af,
+en dat wordt bevestigd door zijn eigen browser: hij draait al op 1.0.329, die
+geen incognitovenster meer kiest, en vandaag om 12:02 UTC kwam er wéér een
+inlogverwijt op 2dehands.
+
+Gemeten in zijn opdrachten:
+
+- 12-09 t/m 13-09 11:40 UTC: **127 zoekertjes gewoon online** op 2dehands. De
+  scan van 13-09 09:24 las zijn 109 advertenties met HTTP 200.
+- Vanaf 14-09 18:08 UTC: elke poging strandt. Twee onafhankelijke metingen, de
+  tweede in een echt tabblad op de site zelf: HTTP 401 op
+  /my-account/sell/api/listings en het tabblad komt uit op
+  https://www.2dehands.be/identity/v2/login. Ook de Admarkt-kant van 2dehands
+  loopt dood ("page=?, steps=[none]").
+- Zijn 2dehands-advertenties staan gewoon openbaar online (nagekeken via de
+  zoek-API), dus zijn account is niet geblokkeerd.
+- Nu: 231 opdrachten in de wachtrij, allemaal 2dehands, allemaal wachtend.
+
+Conclusie: zijn browserprofiel heeft sinds 13-09 geen sessie meer op 2dehands.
+Marktplaats en 2dehands zijn aparte inlogs; hij werkt dagelijks op Marktplaats
+en komt zelf nooit op 2dehands, dus die tweede sessie verliep zonder dat hij iets
+merkte. Hetzelfde beeld als op 05-09. Zijn antwoord "ja, ingelogd" ging over de
+Omnivaleur-uitbreiding, want dat was de vraag; niemand heeft hem gevraagd
+2dehands.be zelf te openen.
+
+### De echte fout aan onze kant: we wisten het en zeiden het nergens
+
+De uitbreiding meet dit bij elke poging, maar het oordeel leefde in een variabele
+die met de service worker meestierf. Ondertussen zei het uitklapvenster
+"Extension active — ready to publish" (Egbert stuurde daar een foto van als
+bewijs dat alles goed stond) en beloofde de balk in het dashboard "50 jobs
+queued — the extension is about to start, within ~15 seconds", met zijn slapende
+computer als schuldige. Allebei onwaar, en allebei wezen ze de verkeerde kant op.
+
+Gerepareerd in 1.0.330:
+
+- Het oordeel gaat naar storage.local, met de waargenomen feiten (HTTP-code,
+  waar het tabblad uitkwam) en sinds wanneer het zo staat. Alleen bewezen
+  uitslagen: de meting in een tabblad op de site telt beide kanten op, de
+  achtergrondmeting mag alleen "ja" zeggen (op 06-09 gaf die binnen dertien
+  seconden 401 waar een tabblad 200 gaf).
+- Rood uitroepteken op het Omnivaleur-icoon met het kanaal erin.
+- Het uitklapvenster toont "Not signed in to 2dehands in this browser (for 2
+  days)" met een knop om in te loggen, en het groene "ready to publish"
+  verdwijnt zolang er een kanaal stilligt.
+- Het dashboard krijgt het mee via EXT_HELLO en zet er een balk bovenaan, met
+  het aantal wachtende artikelen erin. De wachtrijbalk belooft geen start meer
+  als álles wat wacht op zo'n kanaal staat.
+- Bij het openen van het uitklapvenster wordt het opnieuw gemeten (zonder
+  tabblad, dus gratis), zodat de waarschuwing weggaat zodra hij weer ingelogd is.
+
+Bewaakt door `tests/kanaalsessie-zichtbaar-test.js`: 18 controles, met de versie
+van vóór de reparatie (f9b50ac5) ernaast, die onder dezelfde omstandigheden een
+schone knop en een groen vinkje laat zien.
+
+**Wat Egbert moet doen:** www.2dehands.be openen en daar inloggen. Daarna loopt
+zijn wachtrij van 231 vanzelf weer door; hij hoeft niets opnieuw aan te klikken.
+
+**Openstaand:** waaróm die sessie verloopt is niet gemeten, alleen dát ze weg is.
+Het gat tussen 13-09 11:40 en 14-09 18:08 UTC is een periode waarin zijn
+uitbreiding helemaal niets deed, dus er is geen meting die het moment vastlegt.

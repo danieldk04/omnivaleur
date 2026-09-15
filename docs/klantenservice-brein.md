@@ -10,7 +10,7 @@ product verandert. De ontwikkelaar werkt dan zowel dit bestand in de repo als de
 kopie in Drive bij, in dezelfde beurt. Daniel hoeft niets te doen; de Gem leest
 de Drive-kopie de volgende keer opnieuw in.
 
-_Laatst bijgewerkt: 15-09-2026 (eBay: advertenties nu in het Nederlands, vaste eBay-rubriek per categorie, verzendkosten en controleblok bij Platforms, slottekst niet op eBay)_
+_Laatst bijgewerkt: 15-09-2026 (eBay: advertenties nu in het Nederlands, vaste eBay-rubriek per categorie, verzendkosten en controleblok bij Platforms, slottekst niet op eBay; wachtrij die stilstaat omdat de browser niet is ingelogd op het kanaal)_
 
 ---
 
@@ -210,6 +210,16 @@ Contact:
   online, dan plaatst hij ze zelf en betaalt hij per advertentie, of hij zet de
   artikelen in een rubriek die daar wel gratis is. Herkenbaar bij de klant aan
   "Dit is een betalende categorie" of een knop die "Naar betalen" heet.
+- Staat een wachtrij stil zonder foutmelding, vraag dan altijd eerst of de klant
+  op dat kanaal zelf is ingelogd in de browser waar de uitbreiding staat.
+  Marktplaats en 2dehands zijn aparte sites met aparte inlogs. Wie elke dag op
+  Marktplaats werkt en zelf nooit op 2dehands komt, laat die tweede sessie
+  verlopen zonder iets te merken; Omnivaleur werkt met de inlog van de klant en
+  kan dan niets plaatsen. Sinds 15-09-2026 zegt de uitbreiding het zelf: een rood
+  uitroepteken op het Omnivaleur-icoon, een regel "Not signed in to 2dehands in
+  this browser" in het uitklapvenster met een knop om in te loggen, en een balk
+  bovenaan het dashboard. De wachtrij blijft ondertussen staan en loopt vanzelf
+  weer door zodra hij ingelogd is; hij hoeft niets opnieuw aan te klikken.
 - Staat een artikel al op Marktplaats, dan komt het op 2dehands in precies
   dezelfde rubriek als op Marktplaats (sinds 13-09-2026). Daarvoor koos Omnivaleur
   soms zelf een rubriek op basis van de titel, en die kon betalend zijn terwijl de

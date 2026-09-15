@@ -59,6 +59,10 @@
       version,
       signedIn: !!(state && state.signedIn),
       email: (state && state.email) || "",
+      // Per kanaal: heeft deze browser daar nog een sessie? Zonder dit kan het
+      // dashboard niet uitleggen waarom een wachtrij stilstaat, en zag Egbert
+      // Brouwer twee dagen lang alleen dat er niets gebeurde.
+      kanalen: (state && state.kanalen) || {},
     }, window.location.origin);
   }
 

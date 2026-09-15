@@ -166,13 +166,20 @@
 
     <!-- LOGGED IN STATE -->
     <div id="loggedIn" style="display:none;flex-direction:column;gap:12px">
-      <div class="status-badge connected">
+      <div class="status-badge connected" id="readyBadge">
         <div class="status-dot green"></div>
         <div>
           <div>Extension active — ready to publish</div>
           <div class="user-email" id="userInfo"></div>
         </div>
       </div>
+
+      <!-- EEN KANAAL WAAR DEZE BROWSER GEEN SESSIE HEEFT.
+           Hier stond niets, en dat is wat Egbert Brouwer twee dagen lang zag:
+           een groen "ready to publish" terwijl 231 zoekertjes voor 2dehands
+           stilstonden omdat zijn browser daar geen sessie meer had. Zie
+           KANAAL_SESSIE_SLEUTEL in background.js. -->
+      <div id="kanaalUit" style="display:none;flex-direction:column;gap:8px"></div>
 
       <div class="info-row">
         <span>Server</span>

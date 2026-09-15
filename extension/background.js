@@ -966,21 +966,95 @@ function migrateTokensFromSync() {
 }
 migrateTokensFromSync();
 
+// DE SESSIE VAN HET KANAAL ZELF: ONTHOUDEN, EN LATEN ZIEN.
+//
+// GEMETEN 15-09-2026 (Egbert Brouwer / Papa's Plectrums). Zijn 231 zoekertjes
+// voor 2dehands stonden sinds 13-09 stil. Zijn browser heeft daar geen sessie
+// meer: het werktabblad kwam op https://www.2dehands.be/identity/v2/login uit
+// en /my-account/sell/api/listings gaf 401 — op 14-09 elf keer en op 15-09 om
+// 12:02 UTC nog een keer, op versie 1.0.329, dus met incognito uitgesloten
+// (hij heeft geen incognitovenster open en de extensie mag daar niet eens
+// draaien). Tussen 13-09 07:00 en 11:40 UTC gingen op datzelfde kanaal 127
+// advertenties gewoon online, dus de sessie is daarna verlopen.
+//
+// WAAROM HIJ HET NIET WIST. Dit uitklapvenster zei al die tijd "Extension
+// active — ready to publish" en het dashboard zei niets over 2dehands. Hij
+// stuurde er een foto van als bewijs dat alles goed stond. Het oordeel leefde
+// alleen in een variabele die met de service worker meestierf, dus wat de
+// extensie wist kwam nergens terecht. Nu staat het in storage.local en kunnen
+// het uitklapvenster, de knop in de balk en het dashboard het tonen vóórdat hij
+// honderden artikelen klaarzet.
+//
+// ALLEEN BEWEZEN UITSLAGEN KOMEN HIER BINNEN. Een 200 uit de achtergrond
+// bewijst een sessie (dat adres is afgeschermd), maar een 401 uit de
+// achtergrond bewijst niets: op 06-09-2026 gaf dezelfde URL binnen dertien
+// seconden 200 vanuit een tabblad en 401 vanuit de service worker. "Niet
+// ingelogd" mag dus alleen uit de meting in een tabblad op de site zelf komen.
+const KANAAL_SESSIE_SLEUTEL = "kanaalSessie";
+
+function kanaalNaam(platform) {
+  try { return SITE_NAAM[platform] || platform; } catch (_) { return platform; }
+}
+
+async function onthoudKanaalSessie(platform, ingelogd, extra = {}) {
+  if (ingelogd !== true && ingelogd !== false) return;   // "weet niet" is geen uitslag
+  try {
+    const s = await chrome.storage.local.get(KANAAL_SESSIE_SLEUTEL);
+    const alles = { ...(s[KANAAL_SESSIE_SLEUTEL] || {}) };
+    const vorige = alles[platform] || {};
+    alles[platform] = {
+      ingelogd,
+      status: extra.status == null ? null : extra.status,
+      url: extra.url || null,
+      at: Date.now(),
+      // Sinds wanneer het zo staat. Zonder dit leest "niet ingelogd" hetzelfde
+      // of het nu vijf minuten of twee dagen duurt, en juist dat verschil is
+      // wat de verkoper moet zien.
+      sinds: (vorige.ingelogd === ingelogd && vorige.sinds) ? vorige.sinds : Date.now(),
+    };
+    await chrome.storage.local.set({ [KANAAL_SESSIE_SLEUTEL]: alles });
+  } catch (_) { /* niet bewaard = niets getoond; nooit een fout naar de verkoper */ }
+  refreshAuthBadge();
+}
+
+async function leesKanaalSessies() {
+  try {
+    const s = await chrome.storage.local.get(KANAAL_SESSIE_SLEUTEL);
+    return s[KANAAL_SESSIE_SLEUTEL] || {};
+  } catch (_) { return {}; }
+}
+
 // Without a token every request goes out unauthenticated, gets a 401 and no job
 // is ever picked up — silently. The popup shows this, but only if you think to
 // open it, so surface it on the toolbar icon itself instead.
 function refreshAuthBadge() {
-  migrateTokensFromSync().then(() => chrome.storage.local.get(["authToken"], (s) => {
-    if (s.authToken) {
-      chrome.action.setBadgeText({ text: "" });
-      chrome.action.setTitle({ title: "Omnivaleur" });
-    } else {
+  migrateTokensFromSync().then(() => chrome.storage.local.get(
+    ["authToken", KANAAL_SESSIE_SLEUTEL], (s) => {
+    if (!s.authToken) {
       chrome.action.setBadgeText({ text: "!" });
       chrome.action.setBadgeBackgroundColor({ color: "#dc2626" });
       chrome.action.setTitle({
         title: "Omnivaleur — not logged in. Nothing will be published until you log in.",
       });
+      return;
     }
+    // Ingelogd bij Omnivaleur, maar niet bij het kanaal waar het werk heen moet.
+    // Dat is precies de toestand waarin Egbert Brouwer twee dagen lang een groen
+    // vinkje zag terwijl er 231 zoekertjes stilstonden.
+    const uit = Object.entries(s[KANAAL_SESSIE_SLEUTEL] || {})
+      .filter(([, v]) => v && v.ingelogd === false)
+      .map(([p]) => kanaalNaam(p));
+    if (uit.length) {
+      chrome.action.setBadgeText({ text: "!" });
+      chrome.action.setBadgeBackgroundColor({ color: "#dc2626" });
+      chrome.action.setTitle({
+        title: `Omnivaleur — you are not signed in to ${uit.join(" and ")} in this browser. `
+          + `Nothing is published there until you sign in. Click for details.`,
+      });
+      return;
+    }
+    chrome.action.setBadgeText({ text: "" });
+    chrome.action.setTitle({ title: "Omnivaleur" });
   }));
 }
 
@@ -1999,6 +2073,36 @@ async function meldBetaalmuur(tabId, meta, ruwAdres) {
 
 const HEEFT_TOETSEN_NODIG = /^https:\/\/(?:www\.)?(?:marktplaats\.nl|2dehands\.be)\/plaats\b/i;
 
+// HET VINTED-FORMULIER LOOPT STIL ZODRA JE HET TABBLAD NIET IN BEELD HEBT.
+//
+// GEMETEN OP 15-09-2026, in een echte Chrome, na Daniels melding: "er gebeurt
+// niks in dat tabblad totdat ik er zelf naartoe klik, dan gaat ie weer verder".
+// In een tabblad dat niet in beeld staat knijpt Chrome elke setTimeout van de
+// PAGINA af tot één per seconde, en na vijf minuten verborgen nog veel verder.
+// Onze eigen pauzes lopen sinds 1.0.309 via een Web Worker en hebben daar geen
+// last van, maar Vinted's eigen formulier draait volledig op die pagina-klok:
+// elke keuzelijst, elke suggestie en elke controle wacht op een timer die bijna
+// stilstaat. Vandaar "er gebeurt niks".
+//
+// Marktplaats had dit nooit, om één reden: daar hangt de debugger van Chrome al
+// aan het tabblad (voor de echte toetsaanslag), en dat zet de rem uit — precies
+// zoals een open DevTools dat doet. Uit de echte opdrachten van klanten:
+// plaatsen op Marktplaats duurt 38 seconden (mediaan van 120), op Vinted 234
+// seconden (mediaan van 94), met uitschieters tot 80 minuten.
+//
+// Daarom koppelen we ook aan het Vinted-formulier. Niet om te typen, maar om de
+// rem eraf te halen. De prijs is Chrome's gele balk boven dat venster, dezelfde
+// die bij elke Marktplaats-plaatsing al verschijnt; die verdwijnt zodra de
+// opdracht klaar is. Scannen en verwijderen blijven ongekoppeld: die doen hun
+// werk via Vinted's eigen API en hebben geen formulierklok nodig.
+const VINTED_FORMULIER_KLOK = /^https:\/\/(?:www\.)?vinted\.[a-z]{2,3}(?:\.[a-z]{2})?\/items\/(?:new|\d+\/edit)\b/i;
+
+// Alles wat een debugger-koppeling nodig heeft, om wat voor reden ook.
+function koppelingNodig(url) {
+  const u = String(url || "");
+  return HEEFT_TOETSEN_NODIG.test(u) || VINTED_FORMULIER_KLOK.test(u);
+}
+
 async function koppelVroeg(tabId, url) {
   try {
     // GEEN GELE BALK WAAR HIJ NIETS OPLOST (30-08-2026).
@@ -2008,8 +2112,10 @@ async function koppelVroeg(tabId, url) {
     // storing, mét een knop "Annuleren" die de koppeling verbreekt. Amanda
     // stuurde er een foto van als "een foutmelding wat betreft de browser" —
     // terwijl er niets aan de hand was. Nu koppelen we alleen nog waar het
-    // écht nodig is: het plaatsformulier van Marktplaats en 2dehands.
-    if (url && !HEEFT_TOETSEN_NODIG.test(String(url))) return false;
+    // écht nodig is: het plaatsformulier van Marktplaats en 2dehands, en het
+    // Vinted-formulier (zie VINTED_FORMULIER_KLOK — daar is de koppeling het
+    // enige wat de klok van de pagina aan de praat houdt).
+    if (url && !koppelingNodig(url)) return false;
     if (_vroegGekoppeld.has(tabId)) return true;
     if (!(await heeftDebugger())) return false;
     await new Promise((res, rej) => chrome.debugger.attach({ tabId }, "1.3", () => {
@@ -2852,7 +2958,14 @@ async function mpIngelogdOpDeSiteZelf(platform) {
   };
   // Alleen een uitslag onthouden, geen "weet niet": anders zwijgen we tien
   // minuten lang over een netwerkhikje.
-  if (oordeel.ingelogd !== null) _eerstepartijOordeel[platform] = oordeel;
+  if (oordeel.ingelogd !== null) {
+    _eerstepartijOordeel[platform] = oordeel;
+    // En buiten deze service worker om, want die wordt na een halve minuut
+    // stilte afgeschoten en neemt _eerstepartijOordeel mee. Dit is de meting in
+    // een tabblad op de site zelf, dus de enige die "je bent niet ingelogd" mag
+    // zeggen; zie KANAAL_SESSIE_SLEUTEL.
+    onthoudKanaalSessie(platform, oordeel.ingelogd, { status, url: oordeel.url });
+  }
   return oordeel;
 }
 
@@ -2865,6 +2978,10 @@ async function mpSessie(platform) {
     });
     if (res.status === 401 || res.status === 403) return { ingelogd: false, status: res.status };
     if (!res.ok) return { ingelogd: null, status: res.status };
+    // Dit adres is afgeschermd: zonder geldige sessie is het 401. Een 200 is dus
+    // hard bewijs dat de sessie er is, ook al is de 401 uit deze zelfde meting
+    // aantoonbaar onbetrouwbaar (06-09-2026). Daarom alleen het ja vastleggen.
+    onthoudKanaalSessie(platform, true, { status: res.status });
     return { ingelogd: true, status: res.status };
   } catch (_) {
     return { ingelogd: null, status: null };   // geen netwerk: laat het werk door
@@ -3169,6 +3286,10 @@ async function fireJobWatchdog(tabId) {
   // a listing they finished themselves would stay "not posted" in the dashboard.
   if ((meta.action || "create") === "create") {
     chrome.storage.local.set({ [key]: { ...meta, awaitingManualFinish: true, manueleControles: 0 } });
+    // Vanaf hier is dit tabblad van de verkoper. Onze koppeling heeft haar werk
+    // gedaan, dus de gele foutopsporingsbalk hoort weg te zijn op het moment dat
+    // hij ernaar gaat kijken.
+    ontkoppelVroeg(tabId);
     armManueleControle(tabId);
     return;
   }
@@ -6059,6 +6180,16 @@ async function bgScanMp2dh(job, serverUrl) {
 
     if (!result || !result.items) throw new Error("Could not read your listings overview — page structure may have changed.");
 
+    // Deze meting komt uit een tabblad OP de site zelf, dus ze telt allebei de
+    // kanten op: een 200 bewijst de sessie, een 401/403 bewijst dat ze weg is.
+    // Zo weet het uitklapvenster het al bij de scan, en niet pas als er honderd
+    // zoekertjes klaarstaan. Zie KANAAL_SESSIE_SLEUTEL.
+    const _apiStatus = result.meta && result.meta.api_status;
+    if (_apiStatus === 200) onthoudKanaalSessie(job.platform, true, { status: 200 });
+    else if (_apiStatus === 401 || _apiStatus === 403) {
+      onthoudKanaalSessie(job.platform, false, { status: _apiStatus, url: overviewUrl });
+    }
+
     // Niets op het persoonlijke overzicht? Dan kijken we in Admarkt.
     //
     // HIER STOND EERST "en wel ingelogd", en dat maakte deze hele stap
@@ -8514,8 +8645,38 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   // instead of assuming everything is fine. Deliberately reports only whether a
   // token exists and which account it belongs to — never the token itself.
   if (msg.type === "GET_AUTH_STATE") {
-    chrome.storage.local.get(["authToken", "userEmail"], (s) => {
-      sendResponse({ signedIn: !!s.authToken, email: s.userEmail || "" });
+    chrome.storage.local.get(["authToken", "userEmail", KANAAL_SESSIE_SLEUTEL], (s) => {
+      sendResponse({
+        signedIn: !!s.authToken,
+        email: s.userEmail || "",
+        // Per kanaal: heeft DEZE browser daar een sessie? Het dashboard heeft
+        // geen andere manier om dat te weten, en het is het antwoord op
+        // "waarom staat mijn wachtrij voor 2dehands stil".
+        kanalen: s[KANAAL_SESSIE_SLEUTEL] || {},
+      });
+    });
+    return true;
+  }
+
+  // Opnieuw kijken of de sessie er inmiddels weer is. Dit is de goedkope
+  // achtergrondmeting zonder tabblad: die mag alleen "ja" zeggen (een 200 op een
+  // afgeschermd adres bewijst de sessie), en dat is hier precies genoeg — we
+  // willen de waarschuwing kunnen wegnemen zodra hij weer ingelogd is, niet
+  // twintig minuten wachten tot de volgende poging. Een "nee" verandert niets.
+  if (msg.type === "HERMEET_KANAAL_SESSIE") {
+    leesKanaalSessies().then(async (kanalen) => {
+      for (const [platform, stand] of Object.entries(kanalen)) {
+        if (stand && stand.ingelogd === false) await mpSessie(platform).catch(() => {});
+      }
+      sendResponse({ kanalen: await leesKanaalSessies() });
+    });
+    return true;
+  }
+
+  // Het uitklapvenster vraagt hetzelfde, maar zonder de rest.
+  if (msg.type === "GET_KANAAL_SESSIE") {
+    chrome.storage.local.get(KANAAL_SESSIE_SLEUTEL, (s) => {
+      sendResponse({ kanalen: s[KANAAL_SESSIE_SLEUTEL] || {} });
     });
     return true;
   }
@@ -8866,7 +9027,9 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
               [`jobtab_${sender.tab.id}`]: { ...meta, awaitingManualFinish: true },
             }, () => {
               // Zie hierboven: vanaf hier mag de bewaker alleen nog kijken of de
-              // verkoper het zelf heeft afgemaakt.
+              // verkoper het zelf heeft afgemaakt. En het tabblad is nu van hem:
+              // geen gele foutopsporingsbalk meer boven zijn scherm.
+              ontkoppelVroeg(sender.tab.id);
               if ((meta.action || "create") === "create") armJobWatchdog(sender.tab.id);
             });
           }

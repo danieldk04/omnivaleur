@@ -17,6 +17,45 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ---
 
+## kanaalsessie-moet-zichtbaar-zijn
+
+*15-09-2026 — Een verlopen sessie op Marktplaats of 2dehands zet de hele wachtrij stil; de extensie meet het al, dus het hoort zichtbaar te zijn vóór hij artikelen klaarzet*
+
+Omnivaleur publiceert met de sessie van de verkoper in zijn eigen browser.
+Marktplaats en 2dehands zijn aparte sites met aparte inlogs. Wie dagelijks op
+Marktplaats werkt en zelf nooit op 2dehands komt, laat die tweede sessie
+verlopen zonder iets te merken — en dan gebeurt er niets meer op dat kanaal.
+
+Bij Egbert Brouwer twee keer: 05-09-2026 (305 opdrachten) en 13-09-2026
+(231 opdrachten, ontdekt 14-09). Beide keren zei hij dat hij ingelogd was, en
+beide keren klopte dat voor Marktplaats en voor de Omnivaleur-extensie, niet
+voor 2dehands. Meetbaar aan: HTTP 401 op `/my-account/sell/api/listings` én een
+werktabblad dat uitkomt op `/identity/v2/login`, terwijl zijn advertenties
+openbaar gewoon online staan (dus geen blokkade).
+
+**Why:** de extensie WIST het bij elke poging, maar het oordeel leefde in een
+variabele die met de service worker meestierf. Ondertussen zei het
+uitklapvenster "Extension active — ready to publish" en beloofde het dashboard
+"about to start, within ~15 seconds" met een slapende computer als schuldige.
+Twee schermen die allebei de verkeerde kant op wezen, terwijl het antwoord in
+één zin te geven was.
+
+**How to apply:** sinds 1.0.330 staat de uitslag in `storage.local` onder
+`kanaalSessie` (zie `KANAAL_SESSIE_SLEUTEL` in background.js), met de
+HTTP-code, waar het tabblad uitkwam en sinds wanneer. Alleen bewezen uitslagen:
+de meting in een tabblad op de site telt beide kanten op, de achtergrondmeting
+mag alleen "ja" zeggen (06-09-2026: binnen dertien seconden 401 uit de service
+worker en 200 uit een tabblad). Het rode uitroepteken op het icoon, het
+uitklapvenster en de balk in het dashboard lezen alle drie diezelfde plek.
+Bewaakt door `tests/kanaalsessie-zichtbaar-test.js`.
+
+Blijft open: waaróm zo'n sessie verloopt is niet gemeten, alleen dát ze weg is.
+Zie "tabblad-op-de-inlogpagina", "storing-mag-nooit-als-antwoord-tellen",
+"beloofd-tempo-moet-gemeten-tempo-zijn" en
+"aanwezigheid-niet-vragen-maar-stempelen".
+
+---
+
 ## ebay-verkoop-en-verzending
 
 *15-09-2026 — "eBay-verkoop staat in listing.soldQuantity (niet in offer-status); zonder verkopersbeleid is elke advertentie \"alleen ophalen\"; één offer per SKU blijft bestaan"*

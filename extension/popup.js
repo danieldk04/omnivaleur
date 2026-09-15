@@ -28,6 +28,88 @@ async function checkLoginState() {
   }
 }
 
+// NIET INGELOGD OP HET KANAAL ZELF.
+//
+// GEMETEN 15-09-2026 (Egbert Brouwer). Zijn browser had sinds 13-09 geen sessie
+// meer op 2dehands: het werktabblad kwam elf keer op de inlogpagina van
+// 2dehands uit en het advertentieoverzicht gaf 401, terwijl dit scherm
+// "Extension active — ready to publish" liet zien en er 231 zoekertjes voor dat
+// kanaal stilstonden. Hij stuurde een foto van dit scherm als bewijs dat alles
+// goed stond, en hij las hier precies wat er stond.
+//
+// Marktplaats en 2dehands zijn aparte sites met aparte inlogs. Wie elke dag op
+// Marktplaats werkt en nooit op 2dehands komt, laat die tweede sessie verlopen
+// zonder dat hij iets merkt — tot zijn wachtrij stilstaat.
+const SITES = {
+  marktplaats: { naam: "Marktplaats", url: "https://www.marktplaats.nl" },
+  "2dehands": { naam: "2dehands", url: "https://www.2dehands.be" },
+};
+
+function sindsWanneer(ms) {
+  if (!ms) return "";
+  const uren = Math.floor((Date.now() - ms) / 3600000);
+  if (uren < 1) return " (just now)";
+  if (uren < 24) return ` (for ${uren} hour${uren === 1 ? "" : "s"})`;
+  const dagen = Math.round(uren / 24);
+  return ` (for ${dagen} day${dagen === 1 ? "" : "s"})`;
+}
+
+async function toonKanaalSessies() {
+  const vak = document.getElementById("kanaalUit");
+  if (!vak) return;
+  const res = await new Promise((r) =>
+    chrome.runtime.sendMessage({ type: "GET_KANAAL_SESSIE" }, (a) =>
+      r(chrome.runtime.lastError ? null : a)));
+  const kanalen = (res && res.kanalen) || {};
+  const uit = Object.entries(kanalen).filter(([, v]) => v && v.ingelogd === false);
+  vak.innerHTML = "";
+  vak.style.display = uit.length ? "flex" : "none";
+  // Het groene vinkje mag niet blijven staan als er een kanaal stilligt: dat is
+  // precies de tegenstrijdigheid die deze verkoper op het verkeerde been zette.
+  const groen = document.getElementById("readyBadge");
+  if (groen) groen.style.display = uit.length ? "none" : "flex";
+  for (const [platform, stand] of uit) {
+    const site = SITES[platform] || { naam: platform, url: "" };
+    const rij = document.createElement("div");
+    rij.className = "status-badge disconnected";
+    rij.style.alignItems = "flex-start";
+    const stip = document.createElement("div");
+    stip.className = "status-dot red";
+    stip.style.marginTop = "5px";
+    const tekst = document.createElement("div");
+    const kop = document.createElement("div");
+    kop.textContent = `Not signed in to ${site.naam} in this browser${sindsWanneer(stand.sinds)}`;
+    const uitleg = document.createElement("div");
+    uitleg.className = "user-email";
+    uitleg.textContent = `Nothing is published to ${site.naam} until you sign in there. `
+      + `Marktplaats and 2dehands have separate logins. Your queue stays as it is and `
+      + `starts again on its own once you are back in.`;
+    tekst.appendChild(kop);
+    tekst.appendChild(uitleg);
+    if (site.url) {
+      const knop = document.createElement("button");
+      knop.className = "btn btn-primary";
+      knop.style.marginTop = "8px";
+      knop.textContent = `Sign in to ${site.naam}`;
+      knop.addEventListener("click", () => chrome.tabs.create({ url: site.url }));
+      tekst.appendChild(knop);
+    }
+    rij.appendChild(stip);
+    rij.appendChild(tekst);
+    vak.appendChild(rij);
+  }
+}
+
+toonKanaalSessies().catch(() => { /* niets tonen is beter dan een kapot scherm */ });
+
+// En meteen nakijken of de sessie er inmiddels weer is, zodat de waarschuwing
+// verdwijnt op het moment dat hij hem opgelost heeft in plaats van pas bij de
+// volgende poging. Kost geen tabblad: zie HERMEET_KANAAL_SESSIE.
+chrome.runtime.sendMessage({ type: "HERMEET_KANAAL_SESSIE" }, () => {
+  void chrome.runtime.lastError;
+  toonKanaalSessies().catch(() => {});
+});
+
 document.getElementById("loginBtn").addEventListener("click", async () => {
   const email = document.getElementById("email").value.trim();
   const password = document.getElementById("password").value;

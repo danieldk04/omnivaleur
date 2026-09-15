@@ -769,6 +769,21 @@ input[type="checkbox"].row-check { width: 15px; height: 15px; cursor: pointer; a
 
   <div class="content">
 
+    <!-- ── NIET INGELOGD OP EEN KANAAL ──────────────────────────────
+         GEMETEN 15-09-2026 (Egbert Brouwer). Zijn browser had sinds 13-09 geen
+         sessie meer op 2dehands. Zijn wachtrij van 231 zoekertjes stond daardoor
+         stil, en nergens in dit scherm stond dat. Hij zag alleen dat er niets
+         gebeurde, en het uitklapvenster van de extensie zei "ready to publish".
+         De extensie meet dit in een tabblad op de site zelf en geeft het mee in
+         EXT_HELLO; zie KANAAL_SESSIE_SLEUTEL in background.js. -->
+    <div id="kanaal-sessie-bar" class="activity-bar working" style="display:none">
+      <span class="activity-icon">🔒</span>
+      <div class="activity-body">
+        <div class="activity-title" id="kanaal-sessie-title"></div>
+        <div id="kanaal-sessie-text"></div>
+      </div>
+    </div>
+
     <!-- ── Global activity bar: extension busy, user must stay hands-off ─ -->
     <div id="ext-activity-bar" class="activity-bar" style="display:none">
       <span class="activity-dot"></span>
@@ -2713,8 +2728,10 @@ window.addEventListener('message', (event) => {
     status: d.signedIn ? 'ready' : 'signed-out',
     version: d.version || '',
     email: d.email || '',
+    kanalen: d.kanalen || {},
   };
   renderExtSetup();
+  renderKanaalSessie();
   if (typeof renderExtStatus === 'function') renderExtStatus();
   laadGepubliceerdeVersie();
 });
@@ -9687,6 +9704,57 @@ function describeJobs(jobs) {
   return parts.join(', ') + (extra > 0 ? ` +${extra} more` : '');
 }
 
+// WAT ER STAAT ALS DE BROWSER GEEN SESSIE MEER HEEFT OP EEN KANAAL.
+//
+// Marktplaats en 2dehands zijn aparte sites met aparte inlogs. Wie elke dag op
+// Marktplaats werkt en nooit zelf op 2dehands komt, laat die tweede sessie
+// verlopen zonder iets te merken — en dan gebeurt er hier niets meer, zonder
+// uitleg. Dit is het enige scherm waar hij zijn wachtrij klaarzet, dus hier
+// hoort het te staan vóórdat hij honderden artikelen aanklikt.
+//
+// Alleen een bewezen "nee" komt hier binnen: de meting uit een tabblad op de
+// site zelf. De achtergrondmeting is aantoonbaar blind geweest (06-09-2026) en
+// levert alleen nog een "ja". Zie KANAAL_SESSIE_SLEUTEL in background.js.
+const KANAAL_SITE = {
+  marktplaats: { naam: 'Marktplaats', url: 'https://www.marktplaats.nl' },
+  '2dehands': { naam: '2dehands', url: 'https://www.2dehands.be' },
+};
+
+function _kanaalSinds(ms) {
+  if (!ms) return '';
+  const uren = Math.floor((Date.now() - ms) / 3600000);
+  if (uren < 1) return '';
+  if (uren < 24) return ` for ${uren} hour${uren === 1 ? '' : 's'}`;
+  const dagen = Math.round(uren / 24);
+  return ` for ${dagen} day${dagen === 1 ? '' : 's'}`;
+}
+
+function renderKanaalSessie() {
+  const bar = document.getElementById('kanaal-sessie-bar');
+  if (!bar) return;
+  const kanalen = (extState && extState.kanalen) || {};
+  const uit = Object.entries(kanalen).filter(([, v]) => v && v.ingelogd === false);
+  if (!uit.length) { bar.style.display = 'none'; return; }
+  const namen = uit.map(([p]) => (KANAAL_SITE[p] || { naam: p }).naam);
+  const sinds = _kanaalSinds(Math.min(...uit.map(([, v]) => v.sinds || v.at || 0)));
+  const wachtend = (state.jobs || []).filter(j => uit.some(([p]) => p === j.platform)).length;
+  document.getElementById('kanaal-sessie-title').textContent =
+    `You are not signed in to ${namen.join(' and ')} in this browser${sinds}.`;
+  document.getElementById('kanaal-sessie-text').innerHTML =
+    (wachtend ? `<b>${wachtend} item${wachtend === 1 ? '' : 's'} are waiting</b> for ${namen.join(' and ')} and nothing goes out until you sign in. `
+              : `Nothing will be published there until you sign in. `)
+    + `Marktplaats and 2dehands are separate sites with separate logins, so being signed in to one `
+    + `does not sign you in to the other. `
+    + uit.map(([p]) => {
+        const site = KANAAL_SITE[p] || { naam: p, url: '' };
+        return site.url
+          ? `<a href="${site.url}" target="_blank" rel="noopener"><b>Open ${site.naam} and sign in →</b></a>`
+          : '';
+      }).filter(Boolean).join(' &nbsp; ')
+    + ` Your queue stays exactly as it is and starts again by itself once you are back in.`;
+  bar.style.display = 'flex';
+}
+
 function renderActivityBar() {
   const bar = document.getElementById('ext-activity-bar');
   if (!bar) return;
@@ -9699,6 +9767,27 @@ function renderActivityBar() {
   const title = document.getElementById('ext-activity-title');
   const text = document.getElementById('ext-activity-text');
   const icon = document.getElementById('ext-activity-icon');
+
+  // NOOIT EEN START BELOVEN OP EEN KANAAL WAAR DE BROWSER GEEN SESSIE HEEFT.
+  //
+  // GEMETEN 15-09-2026 (Egbert Brouwer). Deze balk zei "50 jobs queued — the
+  // extension is about to start. Within ~15 seconds the extension opens a tab",
+  // en wees zijn slapende computer aan als reden. Er begon niets en er kón niets
+  // beginnen: zijn browser had sinds 13-09 geen sessie meer op 2dehands, en elke
+  // poging strandde op de inlogpagina. Een belofte die niet uitkomt leest als
+  // een storing, en hier wees ze bovendien de verkeerde kant op.
+  const dood = Object.entries((extState && extState.kanalen) || {})
+    .filter(([, v]) => v && v.ingelogd === false).map(([p]) => p);
+  if (nWorking === 0 && dood.length && queued.every(j => dood.includes(j.platform))) {
+    const namen = dood.map(p => (KANAAL_SITE[p] || { naam: p }).naam);
+    bar.className = 'activity-bar working';
+    icon.textContent = '🔒';
+    title.textContent = `${nQueued} item${nQueued === 1 ? '' : 's'} waiting — nothing can start yet`;
+    text.innerHTML = `They are all for ${namen.join(' and ')}, and you are not signed in there in this browser. `
+      + `Sign in above and the queue starts again by itself. Nothing is lost while you do.`;
+    bar.style.display = 'flex';
+    return;
+  }
 
   // Een scan LEEST alleen je advertenties. Die mag rustig doorlopen terwijl je
   // verder werkt, en publiceren hoeft er niet op te wachten. De strenge
@@ -9871,9 +9960,10 @@ async function cancelActiveJobs() {
     ids = [...new Set(queued.map(j => j.id).filter(Boolean))];
   } else {
     renderActivityBar();
+    renderKanaalSessie();
     return;
   }
-  if (!ids.length) { renderActivityBar(); return; }
+  if (!ids.length) { renderActivityBar(); renderKanaalSessie(); return; }
   const btn = document.getElementById('ext-activity-cancel');
   if (btn) { btn.disabled = true; btn.textContent = 'Cancelling…'; }
   try {
@@ -9890,6 +9980,7 @@ async function cancelActiveJobs() {
       queued: (_activityState.queued || []).filter(j => !weg.has(j.id)),
     };
     renderActivityBar();
+    renderKanaalSessie();
     await loadAll();
     showToast(ids.length === 1 ? 'Cancelled.' : `Cancelled ${ids.length}.`);
   } catch (e) {
@@ -9899,6 +9990,7 @@ async function cancelActiveJobs() {
     // nog te annuleren valt en zet het bijschrift daarop.
     if (btn) btn.disabled = false;
     renderActivityBar();
+    renderKanaalSessie();
   }
 }
 
@@ -9910,6 +10002,7 @@ async function pollActivity() {
     const prevWorking = (_activityState.working || []).length;
     _activityState = { working: data.working || [], queued: data.queued || [], pace: data.pace || null };
     renderActivityBar();
+    renderKanaalSessie();
     // When the extension finishes an active job, pull fresh data promptly so
     // statuses/badges update without waiting for the next 15s reload.
     if (prevWorking > 0 && _activityState.working.length === 0) loadAll();
