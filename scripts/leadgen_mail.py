@@ -1028,6 +1028,13 @@ class Leadboek:
         self._schrijf(lead, "mail kwam niet aan (bounce), adres klopt niet",
                       {"Fase": "Doodgelopen"})
 
+    def video_gestart(self, lead: dict, video_op: float) -> None:
+        """Daniel heeft de video net verstuurd: dat staat nu meteen in de sheet,
+        niet pas als opvolging 1 drie dagen later de deur uitgaat (Daniel,
+        15-09-2026: wil in één oogopslag zien wie op de video wacht)."""
+        datum = datetime.fromtimestamp(video_op).strftime("%d-%m-%Y")
+        self._schrijf(lead, f"video verstuurd op {datum}", {"Video verstuurd op": datum})
+
     def video_opvolging(self, lead: dict, beurt: int, video_op: float) -> None:
         """Een opvolging na Daniels video is de deur uit."""
         wensen = {"Fase": "5. Video verstuurd"}
