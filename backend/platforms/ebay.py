@@ -44,6 +44,13 @@ class EbayCategoryRequiredError(Exception):
 # One stable key per account is enough; we create it lazily on first publish.
 MERCHANT_LOCATION_KEY = "OMNIVALEUR_MAIN"
 
+# Hoe lang we op eBay wachten. Stond op httpx' standaard van 5 seconden, en dat
+# is te kort: op 15-09-2026 liep de eerste echte plaatsing met verkopersbeleid
+# (proefartikel op het eigenaarsaccount) na 8 seconden vast op ReadTimeout bij
+# het aanmaken van de offer. Het artikel stond daarna half bij eBay: voorraad
+# wel, advertentie niet, en in het dashboard een onbegrijpelijke fout.
+_EBAY_TIMEOUT = httpx.Timeout(60.0, connect=10.0)
+
 
 def _with_expiry(token_response: dict) -> dict:
     """eBay returns `expires_in` (seconds), but credentials are refreshed based on
@@ -78,7 +85,7 @@ class EbayPlatform(PlatformBase):
         return base64.b64encode(raw.encode()).decode()
 
     async def exchange_code(self, code: str) -> dict:
-        async with httpx.AsyncClient() as client:
+        async with httpx.AsyncClient(timeout=_EBAY_TIMEOUT) as client:
             resp = await client.post(
                 TOKEN_URL,
                 headers={
@@ -95,7 +102,7 @@ class EbayPlatform(PlatformBase):
             return _with_expiry(resp.json())
 
     async def refresh_credentials(self, credentials: dict) -> dict:
-        async with httpx.AsyncClient() as client:
+        async with httpx.AsyncClient(timeout=_EBAY_TIMEOUT) as client:
             resp = await client.post(
                 TOKEN_URL,
                 headers={
@@ -201,7 +208,7 @@ class EbayPlatform(PlatformBase):
         if not credentials.get("access_token"):
             raise RuntimeError("eBay is not connected.")
         credentials = await self._ensure_fresh_token(credentials)
-        async with httpx.AsyncClient() as client:
+        async with httpx.AsyncClient(timeout=_EBAY_TIMEOUT) as client:
             get_resp = await client.get(
                 f"{INVENTORY_API}/location/{MERCHANT_LOCATION_KEY}",
                 headers=self._auth_headers(credentials),
@@ -299,7 +306,7 @@ class EbayPlatform(PlatformBase):
             },
         }
 
-        async with httpx.AsyncClient() as client:
+        async with httpx.AsyncClient(timeout=_EBAY_TIMEOUT) as client:
             await self._ensure_location(client, credentials)
 
             inv_resp = await client.put(
@@ -391,7 +398,7 @@ class EbayPlatform(PlatformBase):
         API operates on offers, and a published offer can only be ended via /withdraw,
         not DELETE (which only works for never-published offers)."""
         credentials = await self._ensure_fresh_token(credentials)
-        async with httpx.AsyncClient() as client:
+        async with httpx.AsyncClient(timeout=_EBAY_TIMEOUT) as client:
             resp = await client.post(
                 f"{INVENTORY_API}/offer/{offer_id}/withdraw",
                 headers=self._auth_headers(credentials),
@@ -450,7 +457,7 @@ class EbayPlatform(PlatformBase):
             return None
         try:
             credentials = await self._ensure_fresh_token(credentials)
-            async with httpx.AsyncClient() as client:
+            async with httpx.AsyncClient(timeout=_EBAY_TIMEOUT) as client:
                 resp = await client.get(
                     f"{INVENTORY_API}/offer",
                     params={"sku": sku},
@@ -492,7 +499,7 @@ class EbayPlatform(PlatformBase):
         from backend.platforms import ebay_beleid
         listing_policies = await ebay_beleid.beleid_voor_plaatsing(
             self._auth_headers(credentials, write=True), credentials)
-        async with httpx.AsyncClient() as client:
+        async with httpx.AsyncClient(timeout=_EBAY_TIMEOUT) as client:
             # Een offer uit de tijd zonder verkopersbeleid zou weer "alleen
             # ophalen" worden. Eerst het beleid eraan hangen, dan publiceren.
             huidig = await client.get(f"{INVENTORY_API}/offer/{offer_id}",
@@ -547,7 +554,7 @@ class EbayPlatform(PlatformBase):
         in beide gevallen.
         """
         credentials = await self._ensure_fresh_token(credentials)
-        async with httpx.AsyncClient() as client:
+        async with httpx.AsyncClient(timeout=_EBAY_TIMEOUT) as client:
             resp = await client.get(
                 f"{INVENTORY_API}/offer/{offer_id}",
                 headers=self._auth_headers(credentials),
@@ -643,7 +650,7 @@ async def _get_app_token() -> str:
     now = time.time()
     if _app_token_cache["token"] and now < _app_token_cache["expires_at"] - 60:
         return _app_token_cache["token"]
-    async with httpx.AsyncClient() as client:
+    async with httpx.AsyncClient(timeout=_EBAY_TIMEOUT) as client:
         resp = await client.post(
             TOKEN_URL,
             headers={
@@ -666,7 +673,7 @@ async def _get_category_tree_id() -> str:
     if _category_tree_cache["tree_id"]:
         return _category_tree_cache["tree_id"]
     token = await _get_app_token()
-    async with httpx.AsyncClient() as client:
+    async with httpx.AsyncClient(timeout=_EBAY_TIMEOUT) as client:
         resp = await client.get(
             f"{TAXONOMY_API}/get_default_category_tree_id",
             params={"marketplace_id": settings.ebay_marketplace_id},
@@ -690,7 +697,7 @@ async def _get_required_aspects(category_id: str) -> list[dict]:
     try:
         token = await _get_app_token()
         tree_id = await _get_category_tree_id()
-        async with httpx.AsyncClient() as client:
+        async with httpx.AsyncClient(timeout=_EBAY_TIMEOUT) as client:
             resp = await client.get(
                 f"{TAXONOMY_API}/category_tree/{tree_id}/get_item_aspects_for_category",
                 params={"category_id": category_id},
@@ -1230,7 +1237,7 @@ async def _raw_category_suggestions(search_text: str) -> list[dict]:
     gedeeld door de UI-suggestie en de listing-tijd fallback-resolver."""
     token = await _get_app_token()
     tree_id = await _get_category_tree_id()
-    async with httpx.AsyncClient() as client:
+    async with httpx.AsyncClient(timeout=_EBAY_TIMEOUT) as client:
         resp = await client.get(
             f"{TAXONOMY_API}/category_tree/{tree_id}/get_category_suggestions",
             params={"q": search_text},
