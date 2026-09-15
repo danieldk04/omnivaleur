@@ -89,8 +89,83 @@ async def ebay_callback(code: str, user_id: str = Depends(get_current_user)):
         tokens = await EbayPlatform().exchange_code(code)
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"eBay authorization failed: {e}")
+    # Opnieuw koppelen mag het verzendadres en de verzendinstellingen niet wissen:
+    # _save_credentials schrijft extra_data weg, en de tokens hebben er geen.
+    db = get_db()
+    oud = (await naast_de_lus(lambda: db.table("platform_credentials").select("extra_data")
+           .eq("user_id", user_id).eq("platform", "ebay").limit(1).execute())).data
+    if oud and oud[0].get("extra_data"):
+        tokens = {**tokens, "extra_data": oud[0]["extra_data"]}
     _save_credentials(user_id, "ebay", tokens)
     return {"status": "connected", "platform": "ebay"}
+
+
+def _ebay_rij(user_id: str) -> dict:
+    rij = (get_db().table("platform_credentials").select("*")
+           .eq("user_id", user_id).eq("platform", "ebay").limit(1).execute()).data
+    if not rij:
+        raise HTTPException(status_code=404, detail="Connect eBay first")
+    return {**rij[0], "user_id": user_id}
+
+
+@router.get("/ebay/gereedheid")
+async def ebay_gereedheid(user_id: str = Depends(get_current_user)):
+    """Staat alles klaar om op eBay te verkopen? Rechtstreeks nagevraagd bij eBay:
+    verkopersregistratie, verkooplimiet, verzendadres en verzendinstellingen."""
+    from backend.platforms import ebay_beleid
+    rij = await naast_de_lus(lambda: _ebay_rij(user_id))
+    platform = EbayPlatform()
+    try:
+        credentials = await platform._ensure_fresh_token(rij)
+    except Exception as e:  # noqa: BLE001
+        return {"verbonden": False, "fout": f"eBay no longer accepts this connection ({e}). Reconnect eBay."}
+    headers = platform._auth_headers(credentials, write=True)
+    extra = credentials.get("extra_data") or {}
+    account = await ebay_beleid.lees_account(headers)
+    verzending = {"instellingen": extra.get("verzending"), "status": "niet_ingesteld", "fout": None}
+    if extra.get("verzending"):
+        try:
+            await ebay_beleid.beleid_voor_plaatsing(headers, credentials)
+            verzending["status"] = "klaar"
+        except ebay_beleid.EbayVerzendingNietKlaar:
+            verzending["status"] = "wacht_op_ebay"
+        except Exception as e:  # noqa: BLE001
+            verzending["status"] = "fout"
+            verzending["fout"] = str(e)
+    return {
+        "verbonden": True,
+        "registratie_klaar": account["registratie_klaar"],
+        "limiet": account["limiet"],
+        "adres": bool((extra.get("ship_from") or {}).get("postal_code")),
+        "verzending": verzending,
+    }
+
+
+@router.post("/ebay/verzending")
+async def ebay_zet_verzending(body: dict, background_tasks: BackgroundTasks,
+                              user_id: str = Depends(get_current_user)):
+    """Verzendkosten, verzendtijd, retourtermijn en ophalen: opslaan, verkopersbeleid
+    bij eBay aanzetten en de drie beleidsregels klaarzetten. Body: {kosten,
+    verzenddagen, retourdagen, ophalen}."""
+    from backend.platforms import ebay_beleid
+    try:
+        inst = ebay_beleid.controleer_instellingen(body)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    rij = await naast_de_lus(lambda: _ebay_rij(user_id))
+    platform = EbayPlatform()
+    credentials = await platform._ensure_fresh_token(rij)
+    # Eerst bewaren, en oude beleidsnummers wissen: de volgende plaatsing moet de
+    # nieuwe kosten gebruiken, ook als eBay nu nog niet klaar is.
+    await naast_de_lus(lambda: ebay_beleid.bewaar_extra(user_id, {"verzending": inst, "ebay_beleid": None}))
+    try:
+        uitkomst = await ebay_beleid.richt_in(platform._auth_headers(credentials, write=True), inst)
+    except Exception as e:  # noqa: BLE001
+        raise HTTPException(status_code=502, detail=f"Saved, but eBay did not accept it: {e}")
+    if uitkomst["status"] == "klaar":
+        await naast_de_lus(lambda: ebay_beleid.bewaar_extra(user_id, {"ebay_beleid": uitkomst["beleid"]}))
+        background_tasks.add_task(ebay_beleid.hang_beleid_aan_live_advertenties, platform, user_id)
+    return {"status": uitkomst["status"], "instellingen": inst}
 
 
 @router.get("/ebay/ship-from")
