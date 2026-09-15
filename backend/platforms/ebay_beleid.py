@@ -259,23 +259,36 @@ async def beleid_voor_plaatsing(headers: dict, credentials: dict) -> dict:
 
 async def lees_account(headers: dict) -> dict:
     """Registratie en verkooplimiet, rechtstreeks van eBay. Nooit een fout."""
+    uit: dict = {"registratie_klaar": None, "limiet": None, "verificatie": None}
     try:
         async with httpx.AsyncClient(timeout=20.0) as client:
             resp = await client.get(f"{ACCOUNT_API}/privilege", headers=headers)
-        if not resp.is_success:
-            return {"registratie_klaar": None, "limiet": None}
-        j = resp.json()
-        limiet = j.get("sellingLimit") or {}
-        return {
-            "registratie_klaar": j.get("sellerRegistrationCompleted"),
-            "limiet": {
+            # REGISTRATIE KLAAR ZEGT NIET DAT JE MAG PLAATSEN (15-09-2026).
+            # Gemeten op het eigenaarsaccount: sellerRegistrationCompleted true en
+            # een limiet van 75.000 artikelen, en toch weigerde eBay elke
+            # publicatie met 25019 omdat identiteit of bankgegevens niet bevestigd
+            # waren. /kyc gaf daar een melding ("Accountgegevens bijwerken"), bij
+            # dealbeter (die wel plaatst) een lege 204.
+            kyc = await client.get(f"{ACCOUNT_API}/kyc", headers=headers)
+        if resp.is_success:
+            j = resp.json()
+            limiet = j.get("sellingLimit") or {}
+            uit["registratie_klaar"] = j.get("sellerRegistrationCompleted")
+            uit["limiet"] = {
                 "aantal": limiet.get("quantity"),
                 "bedrag": (limiet.get("amount") or {}).get("value"),
-            } if limiet else None,
-        }
+            } if limiet else None
+        if kyc.status_code == 204:
+            uit["verificatie"] = []
+        elif kyc.is_success:
+            uit["verificatie"] = [{
+                "melding": c.get("alert") or "",
+                "uitleg": c.get("detailMessage") or "",
+                "link": c.get("remedyUrl") or "",
+            } for c in (kyc.json().get("kycChecks") or [])]
     except Exception as e:  # noqa: BLE001
         logger.warning("eBay-account niet uit te lezen: %s", e)
-        return {"registratie_klaar": None, "limiet": None}
+    return uit
 
 
 # Velden die PUT /offer/{id} accepteert (EbayOfferDetailsWithId in eBay's spec).

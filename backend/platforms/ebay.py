@@ -6,6 +6,7 @@ Uses OAuth2 with long-lived refresh tokens (18 months).
 from __future__ import annotations
 import asyncio
 import base64
+import html
 import logging
 import re
 import time
@@ -610,6 +611,25 @@ def _status_uit_offer(offer: dict) -> str:
     return "not_found"
 
 
+def _uitleg_uit_parameters(errors: list[dict]) -> str:
+    """eBay's echte reden staat soms alleen in `parameters`.
+
+    Gemeten 15-09-2026: publiceren gaf 25019 met als bericht "de titel en/of
+    beschrijving bevat wellicht ongepaste taal", terwijl in de parameters stond
+    dat de identiteit of bankgegevens van de verkoper niet bevestigd waren. Wie
+    alleen het bericht leest, gaat zijn titel herschrijven."""
+    for e in errors:
+        for p in e.get("parameters") or []:
+            waarde = str(p.get("value") or "")
+            if len(waarde) < 40 or waarde.startswith("TRISK"):
+                continue
+            schoon = re.sub(r"<font[^>]*>.*?</font>", "", waarde, flags=re.S | re.I)
+            schoon = html.unescape(re.sub(r"<[^>]+>", "", schoon)).strip()
+            if schoon:
+                return schoon
+    return ""
+
+
 # Per verkoper het moment waarop eBay "Selling limit exceeded" (25026) gaf.
 _LIMIET_BEREIKT: dict[str, float] = {}
 _LIMIET_TEKST = (
@@ -627,6 +647,9 @@ def _raise_with_ebay_error(resp: httpx.Response, action: str) -> None:
         errors = resp.json().get("errors", [])
         if errors:
             detail = "; ".join(e.get("longMessage") or e.get("message", "") for e in errors)
+            uitleg = _uitleg_uit_parameters(errors)
+            if uitleg:
+                detail = f"eBay blocked this: {uitleg} ({detail})"
             if any(str(e.get("errorId")) == "25026" for e in errors):
                 detail = f"{_LIMIET_TEKST} ({detail})"
     except Exception:

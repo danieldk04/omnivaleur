@@ -136,6 +136,7 @@ async def ebay_gereedheid(user_id: str = Depends(get_current_user)):
         "verbonden": True,
         "registratie_klaar": account["registratie_klaar"],
         "limiet": account["limiet"],
+        "verificatie": account.get("verificatie"),
         "adres": bool((extra.get("ship_from") or {}).get("postal_code")),
         "verzending": verzending,
     }

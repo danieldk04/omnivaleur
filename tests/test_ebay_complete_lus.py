@@ -355,3 +355,44 @@ def test_ontbrekende_kenmerken_worden_niet_verzonnen():
     assert aspects["Buitenmateriaal"] == ["Onbekend"]
     assert aspects["Patroon"] == ["Overige"], "neutrale waarde uit eBay's eigen lijst"
     assert aspects["Pasvorm"] == ["Normaal"], "alleen vaste waarden: dan toch de eerste"
+
+
+# ── 7. eBay's echte reden komt bij de verkoper ───────────────────────────────
+
+def test_verstopte_uitleg_van_ebay_komt_in_de_foutmelding():
+    """Letterlijk het antwoord op de publicatie van 15-09-2026 (eigenaarsaccount)."""
+    tekst = ("Het lijkt erop dat je niet de vereiste informatie hebt verstrekt om je "
+             "identiteit of financi&euml;le gegevens te bevestigen.")
+    resp = httpx.Response(400, json={"errors": [{
+        "errorId": 25019, "message": "Cannot revise listing. Object kan niet worden aangeboden "
+        "of gewijzigd. De titel en/of beschrijving bevat wellicht ongepaste taal.",
+        "parameters": [
+            {"name": "0", "value": tekst + "<font color=#757575 size=1>{e299627-1212400x}</font>"},
+            {"name": "2", "value": "TRISK_pmts2_Issue_617_Block_BuyingandSellingandm2m"},
+        ]}]})
+    with pytest.raises(RuntimeError) as fout:
+        E._raise_with_ebay_error(resp, "publishing offer")
+    assert "identiteit of financiële gegevens te bevestigen" in str(fout.value)
+    assert "e299627" not in str(fout.value) and "TRISK" not in str(fout.value)
+
+
+def test_verificatie_van_ebay_staat_in_de_accountcontrole(monkeypatch):
+    from backend.platforms import ebay_beleid as B
+
+    def handler(request):
+        if request.url.path.endswith("/privilege"):
+            return httpx.Response(200, json={"sellingLimit": {"quantity": 75000},
+                                             "sellerRegistrationCompleted": True})
+        if request.url.path.endswith("/kyc"):
+            return httpx.Response(200, json={"kycChecks": [{
+                "remedyUrl": "https://www.ebay.nl/sellerhub", "alert": "Accountgegevens bijwerken",
+                "detailMessage": "We konden sommige van de verstrekte gegevens niet verifiëren."}]})
+        return httpx.Response(500)
+
+    echte_client = httpx.AsyncClient
+    monkeypatch.setattr(httpx, "AsyncClient",
+                        lambda *a, **k: echte_client(*a, transport=httpx.MockTransport(handler),
+                                                     **{x: y for x, y in k.items() if x != "transport"}))
+    uit = asyncio.run(B.lees_account({"Authorization": "Bearer t"}))
+    assert uit["registratie_klaar"] is True
+    assert uit["verificatie"][0]["melding"] == "Accountgegevens bijwerken"

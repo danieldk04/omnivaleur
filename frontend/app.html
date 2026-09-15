@@ -5672,9 +5672,12 @@ async function loadEbayGereedheid() {
     const regel = (goed, tekst) => `<div style="margin:3px 0;color:${goed === true ? '#166534' : goed === false ? '#b45309' : 'var(--muted)'}">${goed === true ? '✓' : goed === false ? '⚠️' : '•'} ${tekst}</div>`;
     if (!g.verbonden) { lijst.innerHTML = regel(false, esc(g.fout || 'eBay connection lost. Reconnect eBay.')); return; }
     const vz = g.verzending || {};
+    const verificatie = (g.verificatie || []).map(v => regel(false,
+      `eBay needs something from you before you can list: <strong>${esc(v.melding)}</strong>. ${esc(v.uitleg)}${v.link ? ` <a href="${esc(v.link)}" target="_blank" rel="noopener">Open eBay</a>` : ''}`));
     const rijen = [
       regel(true, 'eBay connected'),
-      g.registratie_klaar === false
+      ...verificatie,
+      verificatie.length ? '' : g.registratie_klaar === false
         ? regel(false, 'Your eBay seller account is not finished yet. Complete it on eBay (identity and bank account) before you can list: <a href="https://www.ebay.nl/sh/ovw" target="_blank" rel="noopener">eBay Seller Hub</a>')
         : regel(g.registratie_klaar, g.registratie_klaar ? 'eBay seller account complete' : 'Could not read your eBay seller status'),
       regel(g.adres, g.adres ? 'Ship-from address set' : 'Ship-from address missing (below)'),
