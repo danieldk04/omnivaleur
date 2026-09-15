@@ -56,6 +56,14 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
    Alleen `GET /sell/account/v1/kyc` toont het (200 met kycChecks; 204 = in orde).
    De echte reden van een weigering staat soms alleen in `errors[].parameters`.
 9. **httpx-standaard van 5 seconden is te kort** voor eBay-plaatsen; nu 60.
+10. **listingOnHold blijft staan op beëindigde advertenties.** Gemeten op 13 echte
+   offers: eBay beëindigde er 4 tegelijk (07-08-2026) en gaf UNPUBLISHED + ENDED +
+   listingOnHold true. "On hold" telt dus alleen als actief bij PUBLISHED en niet
+   ENDED. Een geblokkeerd account (kyc) weigert ook VerifyAddFixedPriceItem (fout
+   240), dus daarmee is een plaatsing niet na te bootsen.
+11. **Bewijs uit de geschiedenis.** Weghalen via /withdraw werkte live in juli
+   (Vinted verkocht 15:01:12, eBay-advertentie 178340977314 beëindigd 15:01:17),
+   met dezelfde functie als nu. Terugvinden: GetItem EndTime naast sold_at elders.
 
 **Why:** alle vier waren stil: geen foutmelding, alleen een verkoop die elders
 te koop bleef, een advertentie die niemand kon laten opsturen, of een artikel

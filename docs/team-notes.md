@@ -9523,3 +9523,22 @@ live advertenties op alleen ophalen; die krijgen verzending zodra dealbeter bij
 Platforms zijn verzendkosten invult, en tot die tijd plaatst dealbeter niets
 nieuws op eBay. Proefartikel "Grey Suitsupply bodywarmer men size M" (EUR 349)
 staat nog op het eigenaarsaccount, met een nep-verkoop op Marktplaats.
+
+## 15-09-2026 (vervolg) — eBay: bewijs zonder het geblokkeerde eigenaarsaccount
+
+Het eigenaarsaccount blijft door eBay's identiteitscontrole geblokkeerd: eBay
+accepteert Daniels bankrekening niet. Ook eBay's proefcontrole zonder plaatsen
+(VerifyAddFixedPriceItem) weigert dan, dus daar is geen live plaatsing mee na te
+bootsen.
+
+Wel bewezen uit echte gegevens: in juli zette Omnivaleur 6 advertenties live op
+dit account en haalde ze weer weg. Advertentie 178340977314 ging 5 seconden na de
+Vinted-verkoop offline, met dezelfde weghaalfunctie als nu. Alle 13 echte offers
+(eigenaar en dealbeter) teruggelezen: nooit een eBay-verkoop via Omnivaleur, dus
+een echte verkoop zien is nog steeds niet live bewezen, en een live advertentie
+met verzending ook niet. Dat bewijs komt bij Toons eerste plaatsing (verzending
+nalezen met GetItem) en zijn eerste verkoop.
+
+Onderweg een fout in de nieuwe statusregel gevonden: 4 advertenties die eBay zelf
+beëindigde droegen nog "on hold" en telden daardoor als actief. Gerepareerd en met
+een proef vastgelegd.
