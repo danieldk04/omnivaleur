@@ -189,6 +189,18 @@ def test_verkochte_advertentie_telt_als_verkocht(ebay, listing_status):
     assert status == "sold", f"een eBay-verkoop werd gelezen als '{status}'"
 
 
+def test_door_ebay_beeindigd_met_blokkade_telt_niet_als_actief(ebay):
+    """Echte vorm van 15-09-2026 (offer 215295556011): eBay beëindigde de
+    advertentie en zette listingOnHold erbij. Die is weg, niet actief."""
+    ebay.offers["264930679011"] = {
+        "offerId": "264930679011", "status": "UNPUBLISHED",
+        "listing": {"listingId": "178340224235", "listingStatus": "ENDED",
+                    "soldQuantity": 0, "listingOnHold": True},
+    }
+    status = asyncio.run(E.EbayPlatform().get_listing_status("264930679011", _creds()))
+    assert status == "not_found", f"een beëindigde eBay-advertentie bleef '{status}'"
+
+
 def test_zelf_beeindigd_zonder_verkoop_is_niet_verkocht(ebay):
     offer = _levende_offer()
     offer["status"] = "UNPUBLISHED"
