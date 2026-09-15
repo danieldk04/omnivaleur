@@ -9440,3 +9440,26 @@ over zijn inlog. Dat is een verharding, geen bewezen oorzaak.
 Openstaand en de moeite waard: hij hoort te zien dat zijn 2dehands-sessie weg is
 vóórdat hij 288 artikelen klaarzet, niet erna. Die wetenschap hebben we al
 (`scan_meta.signed_in`), het dashboard doet er niets mee.
+
+## 15-09-2026 — Mijn eigen reparatie at zichzelf op in de nacht
+
+Van de 287 zoekertjes die ik gisteravond voor Egbert terugzette, stonden er
+vanochtend nul meer. Niet door zijn inlog: 224 zijn om 02:30 opgeruimd door de
+veger in `relist.py` met "stond meer dan 3 dagen te wachten". Die veger kijkt
+naar `created_at`, en ik had ze teruggezet op 'pending' met hun oude datum van
+10, 12 en 13 september. Ze waren dus te oud op het moment dat ik ze terugzette.
+
+Daarnaast bleek de pauze zelf te duur. Elke ronde annuleerde hij opnieuw een
+opdracht voor de uitleg, en de proefplaatsing die daarna op hetzelfde verwijt
+strandde kostte er nog een: 7 pauzes en 6 mislukkingen tussen 18:47 en 03:57.
+Nu draagt één opdracht de uitleg en schuift alleen zijn tijdstempel op, en een
+proefplaatsing die op de inlog strandt gaat terug in de rij in plaats van op
+mislukt. Kosten van een pauze die dagen duurt: één opdracht, in totaal.
+
+Verder vannacht: 48 opdrachten zijn om 03:58 geannuleerd met "by user". Dat is de
+annuleerknop in het dashboard, 48 stuks binnen een seconde. De moeite waard om
+apart naar te kijken, want dat patroon kennen we
+(zie "annuleerknop-wist-de-hele-wachtrij").
+
+232 opdrachten staan opnieuw klaar, nu met een verse datum. Zijn inlog bij
+2dehands is nog steeds de open vraag; het laatste verwijt was om 03:57.

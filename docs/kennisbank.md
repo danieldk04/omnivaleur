@@ -17,6 +17,67 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ---
 
+## terugzetten-is-een-verse-plek-in-de-rij
+
+*15-09-2026 — Een opdracht terug op 'pending' zetten zonder created_at te verversen laat de driedagenveger hem dezelfde nacht opruimen; bij Egbert 224 van 287*
+
+Zet je een oude opdracht terug in de wachtrij, ververs dan ook `created_at`. De
+veger in `backend/services/relist.py` zoekt op `status in (pending, claimed)` en
+`created_at < nu - 3 dagen`, en kijkt naar niets anders. Een opdracht van vorige
+week die je vandaag terugzet is op datzelfde moment al te oud.
+
+Gemeten 15-09-2026: van de 287 zoekertjes die ik de avond ervoor voor Egbert
+Brouwer had teruggezet waren er de volgende nacht 224 weer weg, met "Deze
+opdracht stond meer dan 3 dagen te wachten en is niet uitgevoerd". Dat leek op
+een nieuwe storing maar was mijn eigen reparatie die zichzelf opat.
+
+**Why:** de statuskolom en de datumkolom vertellen twee verschillende verhalen.
+'pending' zegt "moet nog", `created_at` zegt "sinds wanneer", en alleen die
+tweede telt voor de veger. Hetzelfde geldt voor elke rem die op ouderdom werkt.
+
+**How to apply:** in elke herstelronde die `status` terugzet op 'pending' hoort
+`created_at` op nu te staan (`scripts/herstel_betalende_rubriek.py` doet dat
+sinds 15-09-2026), plus `result`, `done_at` en `claimed_at` leeg. Controleer na
+zo'n ronde de volgende ochtend of ze er nog staan: een reparatie die 's nachts
+stilletjes ongedaan wordt gemaakt ziet er voor de klant uit als een nieuwe fout.
+Zie "tabblad-op-de-inlogpagina" en "herkansen-mag-geen-dubbele-opdracht".
+
+---
+
+## fetch-bewijst-niets-op-react-pagina
+
+*14-09-2026 — "Een kale fetch() zag \"advertentie weg\" op een echt nog levende 2dehands-advertentie; 10 van 39 verwijderjobs waren vals-positief"*
+
+Bij een zakelijk 2dehands-account (user_id 3bfbed2c-e8a7-4b28-8870-f3581d48afc5)
+stond 26% van de laatste 39 "geslaagde" delete-jobs via de advertentiepagina-route
+(`result.note == "deleted_via_ad_page"`) in werkelijkheid nog gewoon online.
+Item m2414278086 kreeg zo zes losse "geslaagde" verwijderjobs en bleef live.
+
+**Why:** `verwijderViaAdvertentiepagina` (extension/background.js) bewees "hij is
+weg" met één kale `fetch(adUrl, {credentials:"include"})` op de status en de
+rauwe HTML-tekst. Dat werkt niet betrouwbaar tegen een client-side gerenderde
+(React) pagina: `fetch()` haalt de server-HTML op vóór React draait, dus mist hij
+alles wat de pagina pas ná JavaScript toont, en is gevoelig voor een verouderd
+cache-antwoord. Nagemeten op 14-09-2026: de echte, nog levende advertentiepagina
+gaf bij een gewone fetch keurig 200 met de juiste tekst terug (de tekstpatronen
+zelf zijn dus scherp genoeg), dus het probleem zit in het moment/de laag van de
+controle, niet in de patronen. Het exacte mechanisme achter de oorspronkelijke
+valse 404/tekstmatch is niet hard gereproduceerd (geen toegang tot een ingelogde
+sessie van deze verkoper) en blijft een open punt.
+
+**How to apply:** als een "is het echt weg/gelukt/veranderd"-controle op een
+React/SPA-achtige pagina draait, tel een kale `fetch()` nooit als enig bewijs.
+Bevestig met een ECHTE tabbladnavigatie (met JavaScript) en lees de gerenderde
+DOM, pas dán boeken als succes. Zie de reparatie in
+`extension/background.js` (`verwijderViaAdvertentiepagina`, commit na 49f0086f)
+en de bijbehorende proef `tests/vinted-mock/mp-delete.html` (scenario "fetch zegt
+weg, de echte pagina niet") die de oude, fetch-only code op dit scenario laat
+falen. Voeg bij zo'n controle ook diagnostiek toe die per poging logt wat er
+precies gezien werd (status, tekst, geklikte knop) — anders zien alle
+mislukkingen er identiek uit en kun je het mechanisme nooit meer achterhalen.
+
+---
+
 ## tabblad-op-de-inlogpagina
 
 *14-09-2026 — Een werktabblad dat op /identity/v2/login uitkomt betekent "dit profiel heeft geen sessie", niet "de verkoper liegt"; bij Egbert twee keer, oorzaak nog open*
