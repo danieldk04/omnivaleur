@@ -504,6 +504,98 @@ def evaluate_access(sub: dict | None) -> dict:
     }
 
 
+# Hoe lang een gepauzeerd account nog in het overzicht blijft staan nadat de
+# respijtperiode voorbij is. Zonder afkapping groeit de tab voor altijd door
+# met iedereen die ooit is buitengesloten; Daniel vroeg juist om lean te
+# blijven (15-09-2026).
+PROEFPERIODE_TAB = "Proefperiode"
+PROEFPERIODE_ZICHTBAAR_NA_PAUZE_DAGEN = 14
+
+
+def _dag_nl(waarde) -> str:
+    dt = _parse_ts(waarde) if not isinstance(waarde, datetime) else waarde
+    if dt is None:
+        return ""
+    from zoneinfo import ZoneInfo
+    return dt.astimezone(ZoneInfo("Europe/Amsterdam")).strftime("%d-%m-%Y")
+
+
+def _proefperiode_status_label(sub: dict, toegang: dict) -> str | None:
+    """Mens-leesbaar label voor één abonnement, of None als het niet meer
+    relevant is voor het overzicht (al langer betalend, of al lang genoeg
+    geleden gepauzeerd)."""
+    status = (sub.get("status") or "trialing").lower()
+    if status in ("active", "complimentary"):
+        return None
+    if toegang["allowed"]:
+        if sub.get("final_reminder_sent_at"):
+            return "Respijt, laatste waarschuwing verstuurd"
+        if sub.get("trial_reminder_sent_at"):
+            return "Respijt, herinnerd"
+        if status == "trialing":
+            return "In proef"
+        return "Respijt"
+    grace_ends = _parse_ts(toegang.get("grace_ends_at"))
+    if grace_ends and datetime.now(timezone.utc) - grace_ends > timedelta(
+        days=PROEFPERIODE_ZICHTBAAR_NA_PAUZE_DAGEN
+    ):
+        return None
+    return "Gepauzeerd"
+
+
+async def sync_proefperiode_sheet() -> None:
+    """Zet de actuele proefperiode/respijt-status van elk abonnement in de tab
+    Proefperiode van de leadgen-spreadsheet, zodat Daniel dit naast de
+    koude-mail- en video-opvolging kan zien zonder in Supabase te hoeven
+    kijken. Alleen wie nog niet betaalt en nog niet te lang geleden is
+    gepauzeerd staat erin: less is more, geen eeuwig groeiend archief.
+    """
+    import sys
+    sys.path.insert(0, str(__import__("pathlib").Path(__file__).resolve().parents[2] / "scripts"))
+    import leadgen_sheets as s
+
+    def werk():
+        db = get_db()
+        rows = db.table("subscriptions").select("*").execute().data or []
+        regels = []
+        for sub in rows:
+            toegang = evaluate_access(sub)
+            label = _proefperiode_status_label(sub, toegang)
+            if label is None:
+                continue
+            try:
+                user = get_admin_db().auth.admin.get_user_by_id(sub["user_id"])
+                email = user.user.email if user and user.user else None
+            except Exception:
+                email = None
+            regels.append([
+                email or sub["user_id"],
+                label,
+                _dag_nl(sub.get("trial_ends_at")),
+                _dag_nl(sub.get("trial_reminder_sent_at")),
+                _dag_nl(sub.get("final_reminder_sent_at")),
+            ])
+        return regels
+
+    regels = await naast_de_lus(werk)
+
+    sheets = s.Sheets()
+    kop = ["E-mail", "Status", "Proef eindigt op", "Herinnering verstuurd", "Laatste waarschuwing verstuurd"]
+    if PROEFPERIODE_TAB not in sheets.tabs(s.MAIL_SHEET):
+        sheets.wijzig(s.MAIL_SHEET, [{"addSheet": {"properties": {"title": PROEFPERIODE_TAB}}}])
+        sheets.schrijf(s.MAIL_SHEET, [{"range": f"{PROEFPERIODE_TAB}!A1", "values": [kop]}])
+
+    # Elke ronde de hele tab herschrijven (geen dedupe/append nodig, het is een
+    # momentopname): eerst leegvegen tot ruim voorbij de langste lijst tot nu
+    # toe, dan de nieuwe rijen erin.
+    sheets.schrijf(s.MAIL_SHEET, [
+        {"range": f"{PROEFPERIODE_TAB}!A2:E1000", "values": [["" for _ in kop]] * 999},
+    ])
+    if regels:
+        sheets.schrijf(s.MAIL_SHEET, [{"range": f"{PROEFPERIODE_TAB}!A2", "values": regels}])
+    logger.info(f"Proefperiode-tab bijgewerkt: {len(regels)} rijen")
+
+
 _processing_cache: dict[str, tuple[float, bool]] = {}
 _PROCESSING_TTL = 120
 
