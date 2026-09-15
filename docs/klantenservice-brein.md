@@ -10,7 +10,7 @@ product verandert. De ontwikkelaar werkt dan zowel dit bestand in de repo als de
 kopie in Drive bij, in dezelfde beurt. Daniel hoeft niets te doen; de Gem leest
 de Drive-kopie de volgende keer opnieuw in.
 
-_Laatst bijgewerkt: 14-09-2026 (wat je bij eBay zelf nog moet regelen, en de eBay-advertenties die onterecht in je archief stonden)_
+_Laatst bijgewerkt: 15-09-2026 (eBay: verzendkosten instellen in het dashboard, controleblok bij Platforms, en waarom je slottekst niet op eBay komt)_
 
 ---
 
@@ -107,12 +107,31 @@ Hoe de kanalen gekoppeld worden:
   te koppelen.
 - eBay en Shopify koppel je een keer in je dashboard, bij Platforms. Dat gaat via
   de officiele koppeling van het platform zelf.
-- Bij eBay horen er twee dingen bij die je bij eBay zelf regelt, niet bij ons.
-  Je account moet eerst helemaal als verkoper klaarstaan: eBay vraagt je
-  identiteit en je bankrekening voordat je iets mag aanbieden. En na het
-  koppelen vraagt het scherm om je postcode. Die heeft eBay nodig om te weten
-  vanaf welk land je verzendt; zonder postcode weigert eBay elke advertentie.
-  Een eBay-account alleen aanmaken is dus nog niet genoeg.
+- Bij eBay regel je een paar dingen bij eBay zelf, niet bij ons. Je account moet
+  eerst helemaal als verkoper klaarstaan: eBay vraagt je identiteit en je
+  bankrekening voordat je iets mag aanbieden. Een eBay-account alleen aanmaken is
+  dus nog niet genoeg.
+- Na het koppelen staat bij Platforms onder eBay een controleblok "Ready to sell
+  on eBay?". Dat vraagt het rechtstreeks aan eBay. Staat daar een oranje melding
+  van eBay (bijvoorbeeld "Accountgegevens bijwerken"), dan klik je op "Open eBay"
+  en regel je het daar. Zolang die melding er staat weigert eBay elke advertentie.
+- Onder het controleblok vul je een keer je verzendkosten, verzendtijd,
+  retourtermijn en eventueel ophalen in, en je postcode. Zonder verzendkosten zet
+  eBay je artikelen op "alleen ophalen" en kan niemand ze laten opsturen; daarom
+  plaatst Omnivaleur dan niets op eBay en zegt het scherm dat je dit eerst moet
+  invullen. De eerste keer kan eBay er tot 24 uur over doen; daarna gaat plaatsen
+  vanzelf. Het verzendbedrag geldt voor al je eBay-artikelen.
+- Het scherm laat ook je verkooplimiet bij eBay zien. Nieuwe eBay-accounts mogen
+  eerst maar een beperkt aantal artikelen aanbieden; eBay verhoogt dat als je
+  verkoopt. Artikelen boven de limiet komen niet online.
+- Je vaste slottekst (onder je advertenties) gaat niet mee naar eBay, en
+  webadressen worden eruit gehaald. eBay verbiedt telefoonnummers, adressen en
+  verwijzingen naar je eigen webshop in een advertentie en haalt zulke
+  advertenties weg.
+- eBay-advertenties staan in het Engels.
+- Verkocht op eBay: Omnivaleur ziet dat meestal binnen een uur en haalt het
+  artikel dan van je andere kanalen. Verkocht op een ander kanaal: de
+  eBay-advertentie gaat automatisch offline.
 - Shopify koppelen gaat in drie stapjes die het scherm je voorzegt: eerst je
   winkeladres dat eindigt op .myshopify.com, dan maak je in je eigen
   Shopify-beheer een kleine app aan (Instellingen, Apps en verkoopkanalen, Apps

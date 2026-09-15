@@ -9476,3 +9476,50 @@ Waarom het er 49 waren en niet 287: de veger had er tussen 02:30 en 03:57 al 224
 opgeruimd. Wat hij om zes uur 's ochtends wegklikte was de rest van een wachtrij
 die onze eigen opruiming die nacht al had gesloopt. De oorzaak van de nacht blijft
 dus mijn terugzetactie met oude datums, niet de knop.
+
+## 15-09-2026 — eBay helemaal nagelopen voor De Juiste Toon: vier stille storingen
+
+Daniel vroeg de hele eBay-lus na te lopen voordat Toon (djt@dejuistetoon.eu) op
+eBay begint. Gemeten op de echte koppelingen van dealbeter en het
+eigenaarsaccount, en op ebay.nl zelf. Vier dingen werkten niet, geen van alle met
+een foutmelding:
+
+1. Een verkoop op eBay werd nooit gezien. De controle wachtte op offer-status
+   "ENDED" of "SOLD"; eBay kent daar alleen PUBLISHED en UNPUBLISHED. De verkoop
+   staat in listing.soldQuantity. Het artikel bleef dus elders te koop.
+2. Elke eBay-advertentie stond op "Alleen ophalen" (openbare pagina van
+   ebay.nl/itm/168685598778, en GetItem ShipToLocations None). De Inventory API
+   stuurt geen verzending mee zonder verkopersbeleid. Nu vult de verkoper bij
+   Platforms een keer verzendkosten, verzendtijd, retour en ophalen in; wij zetten
+   verkopersbeleid bij eBay aan en maken drie beleidsregels "Omnivaleur". Zonder
+   die instellingen plaatst Omnivaleur niets meer op eBay. Op het eigenaarsaccount
+   stond het direct actief, geen 24 uur wachten.
+3. Een tweede poging voor hetzelfde artikel liep altijd vast op "Offer entity
+   already exists" (dealbeters RYOBI-set sinds 13-09). Nu wordt de bestaande
+   offer bijgewerkt en gepubliceerd.
+4. Na een verkoop elders werd een eBay-rij zonder offer-nummer met het openbare
+   nummer weggehaald, en dat geeft altijd 404. Nu eerst opzoeken via de SKU. Live
+   nagelopen: proefartikel als verkocht op Marktplaats gemeld, eBay-kant via de
+   SKU gevonden en opgeruimd.
+
+Onderweg gevonden en gerepareerd: 5 seconden wachten op eBay was te kort (eerste
+echte plaatsing: ReadTimeout); ontbrekende kenmerken werden verzonnen (grijze
+bodywarmer kreeg Type Blazer, Buitenmateriaal Acetaat), nu Onbekend of een
+neutrale waarde; opnieuw koppelen wiste het verzendadres; de slottekst gaat niet
+meer mee naar eBay (Toons slottekst bevat telefoonnummer, adres en webshop, dat
+verbiedt eBay); en eBay's echte weigerreden stond verstopt in de parameters.
+
+Nieuw bij Platforms onder eBay: "Ready to sell on eBay?", rechtstreeks aan eBay
+gevraagd. Belangrijk: "registratie klaar" zegt niet dat je mag plaatsen. Het
+eigenaarsaccount had registratie klaar en een limiet van 75.000, en toch weigerde
+eBay elke publicatie omdat identiteit of bankgegevens niet bevestigd waren.
+Alleen /sell/account/v1/kyc liet dat zien ("Accountgegevens bijwerken"); bij
+dealbeter gaf dezelfde vraag niets terug. Het scherm toont die melding nu.
+
+Nog niet live bewezen, omdat het eigenaarsaccount door die eBay-controle niet
+mag plaatsen: een echte advertentie met verzending online zetten, een live
+advertentie weghalen, en het zien van een echte verkoop. Dealbeter heeft nog 2
+live advertenties op alleen ophalen; die krijgen verzending zodra dealbeter bij
+Platforms zijn verzendkosten invult, en tot die tijd plaatst dealbeter niets
+nieuws op eBay. Proefartikel "Grey Suitsupply bodywarmer men size M" (EUR 349)
+staat nog op het eigenaarsaccount, met een nep-verkoop op Marktplaats.

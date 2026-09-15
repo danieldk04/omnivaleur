@@ -17,6 +17,56 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ---
 
+## ebay-verkoop-en-verzending
+
+*15-09-2026 — "eBay-verkoop staat in listing.soldQuantity (niet in offer-status); zonder verkopersbeleid is elke advertentie \"alleen ophalen\"; één offer per SKU blijft bestaan"*
+
+15-09-2026, gemeten op de echte eBay-koppeling van dealbeter en op ebay.nl.
+
+1. **Verkoop zien.** `GET /sell/inventory/v1/offer/{id}` geeft `status`
+   PUBLISHED of UNPUBLISHED, niets anders (eBay's eigen OpenAPI-spec). De code
+   wachtte op "ENDED"/"SOLD" en zag dus nooit een eBay-verkoop. De verkoop staat
+   in `listing.soldQuantity`; `listing.listingStatus` is ACTIVE, ENDED,
+   OUT_OF_STOCK enz. OutOfStockControl stond uit (GetUserPreferences), dus een
+   verkochte advertentie van één stuk wordt ENDED met soldQuantity 1.
+2. **Verzending.** De Inventory API heeft geen verzendvelden. Zonder
+   verkopersbeleid (programma SELLING_POLICY_MANAGEMENT) wordt een advertentie
+   "Alleen ophalen" (openbare pagina) en ShipToLocations None (GetItem). Niet
+   aangemeld = 20403 "User is not eligible for Business Policy". Aanmelden via
+   `POST /sell/account/v1/program/opt_in` kan tot 24 uur duren. Code:
+   `backend/platforms/ebay_beleid.py`; plaatsen weigert nu zonder beleid.
+3. **Tweede poging.** Een offer blijft bestaan na een mislukte publicatie en na
+   withdraw. `POST /offer` geeft dan 25002 "Offer entity already exists". Nu:
+   bestaande offer via `GET /offer?sku=` opzoeken, PUT, publiceren.
+4. **Trading API werkt met ons OAuth-token** (`X-EBAY-API-IAF-TOKEN`), handig om
+   read-only na te meten: GetItem, GetUserPreferences, GeteBayDetails.
+5. **Productie-eBay is lokaal niet te bevragen met app-sleutels** (lokaal =
+   sandbox), maar een recent ververst gebruikerstoken in platform_credentials
+   werkt tot token_expires_at. eBay-docs zijn niet te curlen (blokkeerpagina);
+   lees de OpenAPI-JSON via de browser op developer.ebay.com.
+
+6. **20403 is eBay's algemene "ongeldig veld"**, niet alleen "not eligible". Bijwerken
+   van een beleid eist het volledige beleid terug ("Global shipping field is
+   null"), een ongewijzigd beleid opnieuw sturen geeft 20403 "hetzelfde als in het
+   systeem". Alleen de tekst "eligible" betekent: nog niet aangemeld.
+7. **Ophalen op ebay.nl is de dienst NL_PickUp** (EUR 0, tweede dienst);
+   `localPickup: true` geeft "Ongeldige aanvraag".
+8. **Registratie klaar is niet mogen plaatsen.** Eigenaarsaccount: registratie
+   klaar, limiet 75.000, toch 25019 bij publiceren door niet-bevestigde identiteit.
+   Alleen `GET /sell/account/v1/kyc` toont het (200 met kycChecks; 204 = in orde).
+   De echte reden van een weigering staat soms alleen in `errors[].parameters`.
+9. **httpx-standaard van 5 seconden is te kort** voor eBay-plaatsen; nu 60.
+
+**Why:** alle vier waren stil: geen foutmelding, alleen een verkoop die elders
+te koop bleef, een advertentie die niemand kon laten opsturen, of een artikel
+dat nooit meer online kwam.
+
+**How to apply:** bij elke eBay-wijziging `tests/test_ebay_complete_lus.py`
+draaien. Zie ook "ebay-offer-id-versus-advertentienummer",
+"ebay-listing-requirements", "voor-en-na-proef-mag-geen-head-gebruiken".
+
+---
+
 ## terugzetten-is-een-verse-plek-in-de-rij
 
 *15-09-2026 — Een opdracht terug op 'pending' zetten zonder created_at te verversen laat de driedagenveger hem dezelfde nacht opruimen; bij Egbert 224 van 287*
