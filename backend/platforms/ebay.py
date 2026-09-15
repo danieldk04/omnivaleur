@@ -601,8 +601,9 @@ def _status_uit_offer(offer: dict) -> str:
     listing_status = str(live.get("listingStatus") or "").upper()
     if status == "PUBLISHED" and listing_status in ("", "ACTIVE"):
         return "active"
-    if live.get("listingOnHold"):
-        # Tijdelijk verborgen door eBay; de verkoper kan het herstellen.
+    if live.get("listingOnHold") and status == "PUBLISHED" and listing_status != "ENDED":
+        # Tijdelijk verborgen door eBay; de verkoper kan het herstellen. Een
+        # beëindigde advertentie houdt de vlag soms (gemeten 15-09-2026) en is weg.
         return "active"
     # UNPUBLISHED, ENDED, EBAY_ENDED, INACTIVE, NOT_LISTED of OUT_OF_STOCK zonder
     # verkoop: niet meer te koop. De verkoopcontrole wil dat twee rondes achter
