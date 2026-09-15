@@ -10061,3 +10061,23 @@ Let op het risico dat hier ooit toe leidde (Toon, Mac, 06-09-2026: "elke keer al
 ik iets plaats valt mijn scherm weg"): het venster blijft dankzij het ankertabblad
 bestaan in plaats van per klus op te poppen, wordt met focused:false aangemaakt en
 meteen geminimaliseerd. Scannen en verwijderen blijven een achtergrondtabblad.
+
+## 15-09-2026 (afronding) — alle 57 aantoonbaar terug online
+
+Wachtrij Zilverwebsite leeg om 17:11 UTC: 57 van de 57 plaatsingen geslaagd, nul
+mislukt, nul afgebroken. Haar teller staat weer op 1231 actief en er staat geen
+rode regel meer op het Refresh-scherm.
+
+De openbare lijst van Marktplaats liep achter en dat is uitgemeten in plaats van
+weggeredeneerd: om 17:13 waren er 31 van de 57 zichtbaar met een scherpe knip op
+de klok (alles tot 14:37 wel, alles vanaf 14:39 niet). Daarna kroop het omhoog,
+1208 naar 1209 naar 1210, en om 17:49 stond de teller op 1234 met alle 57
+zichtbaar. 1177 plus 57 is 1234, dus het klopt tot op de advertentie. Het was dus
+indexvertraging bij Marktplaats, bewezen door de beweging.
+
+**Openstaand:** het vangnet op de server heeft in productie nog niet hoeven
+ingrijpen — sinds de deploy is er geen enkele mislukte verwijdering langsgekomen,
+want herplaatsen gebeurt vooral 's nachts. Het is bewezen tegen de 83 echte
+foutmeldingen van vandaag en in `tests/test_verwijdering_toch_gelukt.py`, maar
+niet in het wild. Wie morgen kijkt: zoek naar verwijderopdrachten met status
+'done' die het veld `correctie` in hun resultaat dragen.
