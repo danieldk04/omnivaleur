@@ -224,6 +224,21 @@ class EbayPlatform(PlatformBase):
             )
         credentials = await self._ensure_fresh_token(credentials)
         sku = item.get("sku") or item["id"]
+        gebruiker = credentials.get("user_id")
+
+        # Verkooplimiet al geraakt? Dan niet nog eens vijf eBay-aanroepen per
+        # artikel doen om hetzelfde nee te horen. Een bulk van 1.300 artikelen op
+        # een nieuw account met een limiet van tien wordt anders 1.290 keer het
+        # hele plaatsingsritueel.
+        if gebruiker and time.time() - _LIMIET_BEREIKT.get(gebruiker, 0) < 3600:
+            raise RuntimeError(_LIMIET_TEKST)
+
+        # Zonder verkopersbeleid wordt de advertentie "alleen ophalen". Liever
+        # niet plaatsen dan een advertentie die niemand kan laten opsturen.
+        # Zie backend/platforms/ebay_beleid.py.
+        from backend.platforms import ebay_beleid
+        listing_policies = await ebay_beleid.beleid_voor_plaatsing(
+            self._auth_headers(credentials, write=True), credentials)
 
         # Categorie-keten: 1) expliciet op het item, 2) auto-resolutie via de
         # Taxonomy API op basis van de titel (gegarandeerd geldige leaf), 3) het
