@@ -207,6 +207,18 @@ def start_scheduler():
         id="trial_reminders",
         replace_existing=True,
     )
+    # Overzicht van de proefperiode/respijt-status in de spreadsheet — 10
+    # minuten na de herinneringsronde, zodat een net verstuurde herinnering
+    # meteen zichtbaar is.
+    _scheduler.add_job(
+        _off_the_request_loop(sync_proefperiode_sheet),
+        "cron",
+        hour=9,
+        minute=10,
+        timezone="Europe/Amsterdam",
+        id="proefperiode_sheet_sync",
+        replace_existing=True,
+    )
     # Staat de computer van een klant uit terwijl er werk klaarstaat, dan weet
     # hij dat niet: hij kijkt niet op het dashboard. Elk uur overdag kijken we of
     # er iemand al uren stil is met een volle wachtrij, en mailen we dat één keer.
