@@ -1,0 +1,151 @@
+/**
+ * De échte proef: loopt de klok van een Vinted-werktabblad ook als het niet in
+ * beeld staat?
+ *
+ * Daniel, 15-09-2026: "iedere keer als ik iets op Vinted probeer te publiceren
+ * gebeurt er niks in dat tabblad totdat ik er zelf naartoe klik." Chrome knijpt
+ * de klok van een verborgen tabblad af tot één tik per seconde, en na vijf
+ * minuten verborgen tot ongeveer één per minuut. Onze eigen pauzes lopen via een
+ * Web Worker en merken dat niet, maar het formulier van Vinted zelf draait op
+ * die klok en staat dan stil.
+ *
+ * Deze proef laadt de échte extensie in een echte Chrome, laat haar een echt
+ * werk-tabblad openen op het Vinted-plaatsformulier (achtergrondtabblad, precies
+ * zoals bij een echte opdracht) en leest daarna in dat tabblad uit wat de pagina
+ * zelf denkt: staat ze in beeld, en hoe vaak tikt haar klok?
+ *
+ * Er wordt niets gepubliceerd: zonder Vinted-sessie komt het tabblad op de
+ * inlogpagina uit, en dat is voor deze meting genoeg — het gaat om de klok van
+ * het tabblad, niet om het formulier.
+ *
+ * Draaien: node tests/vinted-tabblad-klok-echt-test.mjs [pad naar extensie]
+ * Voor-en-na-proef met de versie van vóór de reparatie:
+ *   git archive <commit>:extension | tar -x -C /tmp/oud
+ *   node tests/vinted-tabblad-klok-echt-test.mjs /tmp/oud
+ * Zonder de reparatie hoort er "hidden" uit te komen en een klok die stilstaat.
+ */
+import { spawn } from "node:child_process";
+import { mkdtempSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+
+const EXT = process.argv[2] || new URL("../extension", import.meta.url).pathname;
+const CHROME = "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome";
+const FORMULIER = "https://www.vinted.nl/items/new";
+
+const profiel = mkdtempSync(join(tmpdir(), "omnivaleur-klok-"));
+let mislukt = 0;
+const check = (naam, goed, uitleg) => {
+  if (goed) return console.log(`  ok   ${naam}`);
+  mislukt++;
+  console.log(`  FOUT ${naam}${uitleg ? " — " + uitleg : ""}`);
+};
+
+// Chrome geeft het Extensions-domein alleen vrij over de pijp, en alleen met
+// --enable-unsafe-extension-debugging (zie tests/wakker-houden-echt-test.mjs).
+const chrome = spawn(CHROME, [
+  "--remote-debugging-pipe", "--enable-unsafe-extension-debugging",
+  `--user-data-dir=${profiel}`, "--no-first-run", "--no-default-browser-check",
+  "--window-size=800,600", "about:blank",
+], { stdio: ["ignore", "ignore", "ignore", "pipe", "pipe"] });
+const [inp, uitp] = [chrome.stdio[3], chrome.stdio[4]];
+let nr = 0; const wacht = new Map(); let buf = Buffer.alloc(0);
+uitp.on("data", (d) => {
+  buf = Buffer.concat([buf, d]);
+  let i;
+  while ((i = buf.indexOf(0)) >= 0) {
+    let m = null;
+    try { m = JSON.parse(buf.subarray(0, i).toString()); } catch (_) { /* gebeurtenis, geen antwoord */ }
+    buf = buf.subarray(i + 1);
+    if (m && m.id && wacht.has(m.id)) { wacht.get(m.id)(m); wacht.delete(m.id); }
+  }
+});
+const stuur = (method, params = {}, sessionId) => new Promise((res) => {
+  const n = ++nr; wacht.set(n, res);
+  inp.write(JSON.stringify({ id: n, method, params, sessionId }) + "\0");
+});
+const pauze = (ms) => new Promise((r) => setTimeout(r, ms));
+
+try {
+  await pauze(2500);
+  const geladen = await stuur("Extensions.loadUnpacked", { path: EXT });
+  const extId = geladen.result?.id;
+  check("de extensie laadt in een echte Chrome", !!extId, JSON.stringify(geladen.error || ""));
+  if (!extId) throw new Error("extensie niet geladen");
+
+  let worker = null;
+  for (let i = 0; i < 40 && !worker; i++) {
+    const t = await stuur("Target.getTargets", { filter: [{}] });
+    worker = t.result.targetInfos.find((x) => x.type === "service_worker" && x.url.includes(extId));
+    if (!worker) await pauze(300);
+  }
+  check("de achtergrondmotor draait", !!worker);
+  if (!worker) throw new Error("geen service worker");
+
+  const s = await stuur("Target.attachToTarget", { targetId: worker.targetId, flatten: true });
+  const sid = s.result.sessionId;
+  const doe = async (expr) => {
+    const u = await stuur("Runtime.evaluate",
+      { expression: expr, awaitPromise: true, returnByValue: true }, sid);
+    const r = u.result?.result;
+    return r && "value" in r ? r.value : (r?.description || JSON.stringify(u.result));
+  };
+  console.log("\nExtensieversie:", await doe("chrome.runtime.getManifest().version"));
+
+  // Precies wat een echte Vinted-opdracht doet: een achtergrondtabblad in het
+  // venster waar de verkoper toch al werkt.
+  const tabId = await doe(
+    `maakWerkTabblad({ active: false }, ${JSON.stringify(FORMULIER)}).then(t => t.id)`);
+  check("er is een werk-tabblad geopend", typeof tabId === "number", String(tabId));
+  if (typeof tabId !== "number") throw new Error("geen tabblad");
+  console.log("Tabblad:", tabId, "(staat op de achtergrond)");
+
+  // Wachten tot Vinted geladen is (zonder sessie: de inlogpagina).
+  for (let i = 0; i < 40; i++) {
+    const klaar = await doe(`chrome.tabs.get(${tabId}).then(t => t.status + " " + (t.active ? "actief" : "achtergrond"))`);
+    if (String(klaar).startsWith("complete")) { console.log("Status:", klaar); break; }
+    await pauze(500);
+  }
+
+  // Nu in het tabblad zelf kijken. Niet via de extensie vragen maar rechtstreeks
+  // meten: wat denkt de pagina, en hoe vaak tikt haar klok werkelijk?
+  const targets = await stuur("Target.getTargets", { filter: [{}] });
+  const pagina = targets.result.targetInfos.find((t) => t.type === "page" && /vinted\./.test(t.url));
+  check("het tabblad staat op Vinted", !!pagina, targets.result.targetInfos.map(t => t.url).join(" | ").slice(0, 200));
+  if (!pagina) throw new Error("geen Vinted-tabblad");
+
+  const ps = await stuur("Target.attachToTarget", { targetId: pagina.targetId, flatten: true });
+  const psid = ps.result.sessionId;
+  const inPagina = async (expr) => {
+    const u = await stuur("Runtime.evaluate",
+      { expression: expr, awaitPromise: true, returnByValue: true }, psid);
+    const r = u.result?.result;
+    return r && "value" in r ? r.value : (r?.description || JSON.stringify(u.result));
+  };
+
+  const zichtbaarheid = await inPagina("document.visibilityState");
+  console.log("De pagina zelf zegt:", zichtbaarheid);
+  check("de pagina denkt dat ze in beeld staat", zichtbaarheid === "visible",
+        `document.visibilityState = ${zichtbaarheid}`);
+
+  // De harde meting: een ketting van pauzes van 100 ms, tien seconden lang.
+  // Ongeremd horen dat er ongeveer 100 te zijn; een verborgen tabblad haalt er
+  // ongeveer 10 en een zwaar geremd tabblad nul.
+  console.log("Tien seconden lang de klok van de pagina tellen…");
+  const tikken = await inPagina(`new Promise((res) => {
+    let n = 0; const eind = Date.now() + 10000;
+    (function lus(){ setTimeout(() => { n++; Date.now() < eind ? lus() : res(n); }, 100); })();
+  })`);
+  console.log("Tikken in 10 seconden:", tikken);
+  check("de klok van de pagina loopt op vol tempo", Number(tikken) >= 60,
+        `${tikken} tikken in 10 sec; verborgen zonder reparatie zijn dat er ~10, na 5 minuten ~0`);
+} catch (e) {
+  mislukt++;
+  console.log("  FOUT proef afgebroken —", e && e.message);
+} finally {
+  chrome.kill();
+  await pauze(1500);
+  try { rmSync(profiel, { recursive: true, force: true }); } catch (_) { /* Chrome ruimt zelf nog op */ }
+}
+console.log(mislukt ? `\n${mislukt} controle(s) mislukt` : "\nAlles in orde");
+process.exit(mislukt ? 1 : 0);
