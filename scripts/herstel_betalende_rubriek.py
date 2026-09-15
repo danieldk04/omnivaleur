@@ -58,6 +58,10 @@ async def _rubrieken(db, user_id: str, werk: list[dict]) -> dict:
     return gevonden
 
 
+def nu_iso() -> str:
+    return datetime.now(timezone.utc).isoformat()
+
+
 def main(apply: bool, user_id: str, dagen: int, gestopt: bool = False) -> None:
     from backend.database import get_db
     from backend.api.jobs import _BETAALDE_RUBRIEK
@@ -77,10 +81,12 @@ def main(apply: bool, user_id: str, dagen: int, gestopt: bool = False) -> None:
         pl = j.get("payload") if isinstance(j.get("payload"), dict) else {}
         if _BETAALDE_RUBRIEK.search(tekst) and not pl.get("mp_category"):
             sneuvelde.append(j)
-        elif gestopt and pl.get("mp_category") and res.get("cancelled") == "queue stopped":
-            # Al een keer teruggezet, en daarna meegesleept toen het hele kanaal
-            # werd stilgezet. De rubriek staat er al in, dus hier hoeft niets
-            # opgezocht te worden: gewoon terug in de rij.
+        elif gestopt and pl.get("mp_category") and (
+                res.get("cancelled") in ("queue stopped", "login unproven")
+                or "dagen te wachten" in str(res.get("error") or "")):
+            # Al een keer teruggezet, en daarna alsnog gesneuveld: meegesleept
+            # toen het kanaal werd stilgezet, of opgeruimd door de driedagenveger.
+            # De rubriek staat er al in, dus hier hoeft niets opgezocht te worden.
             hervat.append(j)
     print(f"opdrachten die op een betalende rubriek sneuvelden: {len(sneuvelde)}")
     if hervat:
@@ -88,8 +94,16 @@ def main(apply: bool, user_id: str, dagen: int, gestopt: bool = False) -> None:
         if apply:
             terug = 0
             for j in hervat:
+                # ÓÓK created_at, en dat is geen detail (gemeten 15-09-2026).
+                # De driedagenveger in relist.py kijkt naar created_at en niets
+                # anders. Zette je een opdracht van vorige week terug op
+                # 'pending' met zijn oude datum, dan was hij op datzelfde moment
+                # al te oud: 224 van Egberts 287 teruggezette zoekertjes waren de
+                # volgende nacht weer weg, met "stond meer dan 3 dagen te
+                # wachten". Terug in de rij is een NIEUWE plek in de rij.
                 db.table("jobs").update({
                     "status": "pending", "result": None, "done_at": None, "claimed_at": None,
+                    "created_at": nu_iso(),
                 }).eq("id", j["id"]).execute()
                 db.table("listings").update({"status": "pending", "error_message": None}).eq(
                     "item_id", j["item_id"]).eq("platform", "2dehands").execute()
@@ -169,7 +183,7 @@ def main(apply: bool, user_id: str, dagen: int, gestopt: bool = False) -> None:
         pl.pop("_rubriek_zoeken_sinds", None)
         db.table("jobs").update({
             "payload": pl, "status": "pending", "result": None,
-            "done_at": None, "claimed_at": None,
+            "done_at": None, "claimed_at": None, "created_at": nu_iso(),
         }).eq("id", j["id"]).execute()
         db.table("listings").update({"status": "pending", "error_message": None}).eq(
             "item_id", w["item_id"]).eq("platform", "2dehands").execute()

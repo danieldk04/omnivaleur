@@ -161,3 +161,29 @@ def test_een_echte_formulierfout_stopt_de_rij_nog_steeds_wel(monkeypatch):
     monkeypatch.setattr(J, "_stop_wachtrij", lambda *a, **kw: 4)
     uit = _stop(J, _DB(jobs), monkeypatch, reden=formulier)
     assert uit["cancelled"] == 4 and "paused" not in uit
+
+
+def test_de_pauze_kost_een_opdracht_in_totaal_en_niet_een_per_ronde(monkeypatch):
+    """Gemeten 15-09-2026: de eerste versie at zijn rij alsnog op.
+
+    Elke twintig minuten werd er opnieuw een opdracht geannuleerd, en de
+    proefplaatsing die daarna mislukte kostte er nog een. Bestaat de uitleg al,
+    dan hoort alleen zijn tijdstempel op te schuiven.
+    """
+    from datetime import datetime as _dt
+    jobs = _rij(5)
+    db = _DB(jobs)
+
+    # Eerste verwijt: de oudste draagt de uitleg.
+    uit = _stop(J, db, monkeypatch)
+    assert uit["cancelled"] == 1
+    uitleg = next(j for j in jobs if j["status"] == "cancelled")
+    eerste_stempel = uitleg["done_at"]
+    assert sum(1 for j in jobs if j["status"] == "pending") == 4
+
+    # Tweede verwijt, twintig minuten later: geen tweede slachtoffer.
+    uit2 = _stop(J, db, monkeypatch)
+    assert uit2["cancelled"] == 0, "een tweede ronde mag geen tweede opdracht kosten"
+    assert sum(1 for j in jobs if j["status"] == "pending") == 4
+    assert uitleg["done_at"] != eerste_stempel, "de pauze schuift op met een nieuw tijdstempel"
+    assert _dt.fromisoformat(uitleg["done_at"]) > _dt.fromisoformat(eerste_stempel)

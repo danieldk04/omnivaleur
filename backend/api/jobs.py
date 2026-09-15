@@ -4200,6 +4200,32 @@ def fail_job(job_id: str, body: dict, user_id: str = Depends(get_current_user)):
             logger.warning("Leeg adres: wachtrij niet teruggenomen voor %s/%s",
                            user_id, job.get("platform"))
 
+    # EEN MISLUKKING OP DE INLOG KOST DE OPDRACHT NIET.
+    #
+    # GEMETEN 15-09-2026. De pauze hierboven laat elke twintig minuten één
+    # proefplaatsing door. Liep die op hetzelfde inlogverwijt vast, dan werd hij
+    # 'error' — dus kostte elke ronde een tweede opdracht. Er is niets gebeurd op
+    # het kanaal en er is niets aan dit artikel mis: de opdracht hoort gewoon
+    # terug in de rij. De uitleg staat op de ene opdracht die de pauze draagt.
+    if (job and job.get("action") == "create"
+            and job.get("platform") in ("marktplaats", "2dehands")
+            and _CLAIM_NIET_INGELOGD.search(
+                f"{fouttekst_nu} {(body or {}).get('error_oorspronkelijk') or ''}")):
+        try:
+            execute_with_retry(db.table("jobs").update({
+                "status": "pending", "claimed_at": None, "result": None, "done_at": None,
+            }).eq("id", job_id))
+            _pauzeer_op_inlogverwijt(
+                db, user_id, job["platform"],
+                _reden_zonder_vals_verwijt(
+                    db, user_id, job["platform"], fouttekst_nu,
+                    ".".join(map(str, versie)) if versie else None))
+            logger.warning("Inlogverwijt op %s bij %s: opdracht %s terug in de rij, kanaal op pauze",
+                           job["platform"], user_id, job_id)
+            return {"ok": True, "paused": True}
+        except Exception:  # noqa: BLE001 — lukt dat niet, dan de gewone weg
+            logger.warning("Inlogverwijt: opdracht %s niet kunnen terugzetten", job_id)
+
     # Deze vier bijwerkingen MOETEN aankomen. Viel de verbinding met de database
     # weg, dan kreeg de extensie een 500 terug en bleef de opdracht op "claimed"
     # staan — waarna de hele wachtrij stilstond en de verkoper zag dat "hij niks
@@ -4609,8 +4635,29 @@ def _inlog_pauze_actief(db, user_id: str, platform: str, nu: datetime) -> bool:
 
 
 def _pauzeer_op_inlogverwijt(db, user_id: str, platform: str, reden: str) -> int:
-    """Eén opdracht draagt de uitleg, de rest blijft gewoon staan."""
+    """Eén opdracht draagt de uitleg, de rest blijft gewoon staan.
+
+    EEN OPDRACHT IN TOTAAL, NIET EEN PER RONDE (gemeten 15-09-2026). De eerste
+    versie annuleerde elke twintig minuten opnieuw een opdracht, en de mislukte
+    proefplaatsing erbij kostte er nog een. Bij Egbert liep dat de hele nacht
+    door. Bestaat de uitleg al, dan wordt alleen zijn tijdstempel bijgewerkt:
+    de pauze schuift op en er sneuvelt niets nieuws.
+    """
     now = datetime.now(timezone.utc).isoformat()
+    grens = (datetime.now(timezone.utc) - timedelta(hours=24)).isoformat()
+    try:
+        staat_er = (db.table("jobs").select("id,result,done_at")
+                    .eq("user_id", user_id).eq("platform", platform).eq("action", "create")
+                    .eq("status", "cancelled").gte("done_at", grens)
+                    .order("done_at", desc=True).limit(5).execute().data or [])
+    except Exception:  # noqa: BLE001
+        staat_er = []
+    for r in staat_er:
+        if ((r.get("result") or {}).get("cancelled") or "") == _PAUZE_STEMPEL:
+            execute_with_retry(db.table("jobs").update({
+                "result": {"cancelled": _PAUZE_STEMPEL, "error": reden}, "done_at": now,
+            }).eq("id", r["id"]))
+            return 0
     kop = (db.table("jobs").select("id,item_id")
            .eq("user_id", user_id).eq("platform", platform).eq("action", "create")
            .eq("status", "pending").order("created_at").limit(1).execute().data or [])

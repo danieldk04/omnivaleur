@@ -160,8 +160,13 @@ def test_een_scan_blokkeert_publiceren_niet():
     assert {"create", "delete", "content_refresh"} <= _soorten, (
         f"elke schrijvende soort hoort te blokkeren, gevonden: {sorted(_soorten)}")
     assert "scan" not in _soorten, "een scan leest alleen en mag nooit blokkeren"
-    # en publiceren gaat vóór een scan die toevallig eerder in de rij stond
-    assert 'ready.sort(key=lambda j: 0 if j.get("action") in SCHRIJVEND else 1)' in jobs
+    # en publiceren gaat vóór een scan die toevallig eerder in de rij stond.
+    # Op de inhoud van de sorteersleutel toetsen en niet op de hele regel, om
+    # dezelfde reden als hierboven: er komen sorteertermen bij (15-09-2026 een
+    # tweede, die opdrachten die op hun rubriek wachten achteraan zet). Waar het
+    # om gaat is dat schrijven vóór lezen blijft komen.
+    assert "ready.sort(" in jobs
+    assert '0 if j.get("action") in SCHRIJVEND else 1' in jobs
 
     bg = _background_js()
     ronde = bg.split("async function pollJobsEenRonde()")[1].split("\n}")[0]
