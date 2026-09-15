@@ -914,9 +914,39 @@ async function ontdooiWerkTabbladen() {
     if (tab.active) continue;                    // in beeld: Chrome bevriest niets
     try {
       chrome.debugger.sendCommand({ tabId }, "Page.setWebLifecycleState",
-        { state: "active" }, () => { void chrome.runtime.lastError; });
+        { state: "active" }, () => {
+          // De uitkomst NIET wegslikken. Een commando dat stil weigert is
+          // hetzelfde als geen reparatie, en dat mag niet onzichtbaar blijven:
+          // het gaat mee in de voortgang van de opdracht.
+          const fout = chrome.runtime.lastError;
+          const staat = _klokAangezet.get(tabId) || "aan";
+          const n = (String(staat).match(/ontdooid (\d+)/) || [])[1];
+          _klokAangezet.set(tabId, fout
+            ? `ontdooien weigert: ${fout.message}`.slice(0, 80)
+            : `aan, ontdooid ${(Number(n) || 0) + 1}x`);
+        });
     } catch (_) { /* koppeling weg: dan werkt het zoals vroeger, alleen trager */ }
   }
+}
+
+// EEN ALARM MAG NIET VAKER DAN ELKE DERTIG SECONDEN, EN DAT IS TE TRAAG.
+//
+// Gemeten bij Daniel op 15-09-2026, met de hartslag uit 1.0.335: een pauze van
+// vijftien seconden liep 45 seconden uit, dus het tabblad lag tussendoor bijna
+// een minuut stil. Wie pas na dertig seconden komt ontdooien is dan de helft van
+// de tijd te laat. Daarom loopt er tijdens een klus ook een gewone teller van
+// tien seconden. Die stopt zodra de service worker wordt afgebroken; het alarm
+// hierboven is precies daarvoor het vangnet en wekt hem weer.
+let _ontdooiTeller = null;
+function startOntdooiTeller() {
+  if (_ontdooiTeller != null) return;
+  _ontdooiTeller = setInterval(() => {
+    chrome.storage.local.get(null).then((alles) => {
+      const heeftWerk = Object.keys(alles).some((k) => k.startsWith("jobtab_"));
+      if (!heeftWerk) { clearInterval(_ontdooiTeller); _ontdooiTeller = null; return; }
+      ontdooiWerkTabbladen();
+    }).catch(() => {});
+  }, 10000);
 }
 
 chrome.alarms.create("poll", { periodInMinutes: POLL_INTERVAL_SECONDS / 60 });
@@ -2571,6 +2601,7 @@ async function processJob(job, serverUrl) {
     chrome.storage.local.set({
       [`jobtab_${tab.id}`]: { ...job, jobId: job.id, serverUrl, startedAt: Date.now() },
     });
+    startOntdooiTeller();
     armJobWatchdog(tab.id);
   });
 }

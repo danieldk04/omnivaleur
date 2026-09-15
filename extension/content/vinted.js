@@ -1554,7 +1554,26 @@
     // images, so the suggestions don't exist until the photos finish loading.
     // eersteApart: zie uploadPhotos — in een achtergrondtabblad raakte Vinted
     // precies het eerste bestand van de stapel kwijt, en dat is de omslagfoto.
-    await step("photos",      () => item.photo_urls?.length && uploadPhotos(item.photo_urls.slice(0, 20), { jitter: true, eersteApart: true }));
+    //
+    // ZONDER FOTO'S NIET DOORGAAN. step() vangt elke fout op en gaat verder, en
+    // daardoor werd er op 15-09-2026 een advertentie zonder één foto ingediend:
+    // Vinted weigerde met "Please upload at least 1 photo" en de verkoper kreeg
+    // een melding over het formulier terwijl het probleem het ophalen van de
+    // foto was. Mislukken ze allemaal, dan stopt de opdracht hier met een
+    // melding die zegt wat er werkelijk aan de hand is.
+    let fotosMislukt = null;
+    await step("photos", async () => {
+      if (!item.photo_urls?.length) return;
+      try {
+        return await uploadPhotos(item.photo_urls.slice(0, 20), { jitter: true, eersteApart: true });
+      } catch (e) {
+        fotosMislukt = e && e.message ? e.message : String(e);
+        throw e;
+      }
+    });
+    if (fotosMislukt) {
+      throw new Error(`Nothing was published: the photos could not be loaded. ${fotosMislukt}`);
+    }
     await sleep(1500); // let Vinted run image recognition and render the suggestions
     await step("category",    () => fillCategoryVinted(item));
     await sleep(500); // category drives which attribute fields (size/brand/condition) render

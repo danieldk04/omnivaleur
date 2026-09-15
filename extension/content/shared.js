@@ -2073,7 +2073,19 @@ window.CL = (() => {
       // Zonder tijdslimiet kan één foto die nooit antwoordt het hele formulier
       // laten hangen: alles ná de foto's — conditie, maat, kleur, merk — werd
       // dan nooit meer ingevuld, zonder enige melding.
-      const f = await Promise.race([fetchFile(u, opts), sleep(20000).then(() => null)]);
+      // ÉÉN HERKANSING PER FOTO.
+      //
+      // GEMETEN 15-09-2026: bij een artikel met één foto stond er "0 van 1
+      // opgehaald" en plaatste Vinted niets ("Please upload at least 1 photo"),
+      // terwijl diezelfde foto van buitenaf in 0,4 seconde binnenkwam. Het
+      // tabblad lag op dat moment tientallen seconden stil, dus de tijdslimiet
+      // van twintig seconden verliep zonder dat de foto iets te verwijten viel.
+      // Een tweede poging kost niets als de eerste gewoon lukt.
+      let f = await Promise.race([fetchFile(u, opts), sleep(20000).then(() => null)]);
+      if (!f) {
+        clog(`foto: eerste poging mislukt, nog een keer — ${String(u).slice(-40)}`);
+        f = await Promise.race([fetchFile(u, opts), sleep(20000).then(() => null)]);
+      }
       if (f) files.push(f); else failures.push(u);
     }
     clog(`foto's: ${files.length} van ${urls.length} opgehaald`);
