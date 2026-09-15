@@ -4,6 +4,7 @@ Requires free developer account at developer.ebay.com.
 Uses OAuth2 with long-lived refresh tokens (18 months).
 """
 from __future__ import annotations
+import asyncio
 import base64
 import logging
 import re
@@ -488,7 +489,20 @@ class EbayPlatform(PlatformBase):
         status = await self.get_listing_status(offer_id, credentials)
         if status == "active":
             raise RuntimeError("Offer is still live on eBay — relist only applies to ended listings")
+        from backend.platforms import ebay_beleid
+        listing_policies = await ebay_beleid.beleid_voor_plaatsing(
+            self._auth_headers(credentials, write=True), credentials)
         async with httpx.AsyncClient() as client:
+            # Een offer uit de tijd zonder verkopersbeleid zou weer "alleen
+            # ophalen" worden. Eerst het beleid eraan hangen, dan publiceren.
+            huidig = await client.get(f"{INVENTORY_API}/offer/{offer_id}",
+                                      headers=self._auth_headers(credentials))
+            _raise_with_ebay_error(huidig, "reading the ended offer")
+            lading = ebay_beleid.offer_voor_put(huidig.json())
+            lading["listingPolicies"] = {**(lading.get("listingPolicies") or {}), **listing_policies}
+            put_resp = await client.put(f"{INVENTORY_API}/offer/{offer_id}", json=lading,
+                                        headers=self._auth_headers(credentials, write=True))
+            _raise_with_ebay_error(put_resp, "updating the ended offer")
             resp = await client.post(
                 f"{INVENTORY_API}/offer/{offer_id}/publish",
                 headers=self._auth_headers(credentials),
