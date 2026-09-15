@@ -481,6 +481,22 @@
       "slug": "retro-gaming-reselling-automation",
       "status": "published",
       "priority": 59
+    },
+    {
+      "keyword": "vintage jewelry reselling automation",
+      "region": "nl",
+      "pillar": "B",
+      "slug": "vintage-jewelry-reselling-automation",
+      "status": "published",
+      "priority": 60
+    },
+    {
+      "keyword": "used clothing reselling automation",
+      "region": "nl",
+      "pillar": "B",
+      "slug": "used-clothing-reselling-automation",
+      "status": "pending",
+      "priority": 61
     }
   ],
   "published": [
@@ -1014,6 +1030,15 @@
       "action": "created",
       "url_path": "/reseller-tools/retro-gaming-reselling-automation",
       "published_at": "2026-09-14T14:38:02.980403+00:00"
+    },
+    {
+      "keyword": "vintage jewelry reselling automation",
+      "slug": "vintage-jewelry-reselling-automation",
+      "region": "nl",
+      "pillar": "B",
+      "action": "created",
+      "url_path": "/reseller-tools/vintage-jewelry-reselling-automation",
+      "published_at": "2026-09-15T13:03:53.881539+00:00"
     }
   ]
 }
