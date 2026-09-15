@@ -1310,7 +1310,45 @@ async def resolve_category_id(query: str, brand: str | None = None,
         return None
     search_text = _build_ebay_query(query, brand, category, gender)
     results = await _raw_category_suggestions(search_text)
+    tak = _EBAY_TAK.get((gender or "").lower().strip())
+    if tak:
+        # Alleen een gok binnen de eigen tak: liever geen rubriek (dan vraagt het
+        # scherm erom) dan een kinderlederhose tussen de boeken.
+        results = [r for r in results if tak in (r.get("voorouders") or ())]
     return results[0]["category_id"] if results else None
+
+
+# Vaste eBay.nl-rubriek per dashboardrubriek. eBay's eigen zoeker raadt op ebay.nl
+# vaak mis, in het Nederlands én in het Engels: gemeten 15-09-2026 op 13 artikelen
+# van De Juiste Toon kwam hij 5 keer goed uit (schapenvacht werd "Laarzen", een
+# lederhose "Fietsbroeken", een tafelkleed "Kruissteek"). Ook de rubriek die het
+# dashboard daarmee op het artikel bewaarde was vaak zo'n gok, daarom gaat deze
+# lijst voor. Elke id is nagelopen in de echte EBAY_NL-boom (146) via
+# /api/platforms/ebay/rubriekenboom.
+_VASTE_RUBRIEK = {
+    "wonen tapijten en kleden": "45510",    # Huis > Tapijten en vloerkleden > Tapijten
+    "antiek kleden en textiel": "45510",    # idem; "19e eeuw" zou een leeftijd verzinnen
+    "wonen vachten": "91421",               # Huis > Tapijten en vloerkleden > Tapijten: nepbont en huiden
+    "wonen plaids en woondekens": "20549",  # Huis > Interieurinrichting > Plaids, lakens, lopers
+    "wonen tafelkleden": "20663",           # Huis > Koken en tafelen > Keukendoeken > Tafelkleden
+    "wonen kussens": "20563",               # Huis > Interieurinrichting > Kussens, stoelzitjes
+    "wonen wanddecoraties": "38237",        # Huis > Interieurinrichting > Wandtapijten/Wall Art
+    # Kleding en accessoires > Dames: kleding
+    "jeans": "11554", "broeken": "63863", "shorts": "11555", "rokken": "63864",
+    "jurken casual": "63861", "jurken feest": "63861", "blouses": "53159", "tops": "53159",
+    "truien": "63866", "hoodies": "155226", "jassen": "63862", "zwemkleding": "63867",
+    "verkleedkleding": "53369",             # Verkleedkleding > Damesverkleedkleding
+    # Kleding en accessoires > Heren: kleding
+    "heren jeans": "11483", "heren chinos": "57989", "heren shorts": "15689",
+    "heren t-shirts": "15687", "heren polo's": "185101", "heren overhemden": "57990",
+    "heren truien": "11484", "heren hoodies": "155183", "heren jassen": "57988",
+    "heren pakken": "3001", "heren zwembroeken": "15690",
+    "heren verkleedkleding": "52762",       # Verkleedkleding > Herenverkleedkleding
+}
+
+# De eBay-tak waar een gok voor deze groep (het veld gender) binnen moet vallen.
+_EBAY_TAK = {"dames": "260010", "heren": "260012", "kinderen": "171146",
+             "wonen": "11700", "antiek": "353"}
 
 
 # eBay NL taxonomy segments → English. eBay ignores Accept-Language for the
