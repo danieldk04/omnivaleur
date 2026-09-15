@@ -17,6 +17,41 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ---
 
+## tweede-bevestiging-mag-bewijs-niet-overrulen
+
+*15-09-2026 — "Een HTTP-statuscode is bewijs; een tekstcontrole ernaast die de tekst niet kent maakt van elk succes een mislukking (83 advertenties, 15-09-2026)"*
+
+Een controle die *bevestiging* eist van een signaal dat al bewijs is, maakt het
+systeem niet zekerder maar kapotter. Op 15-09-2026 verdwenen bij vier verkopers
+83 advertenties omdat extensie 1.0.329 na een verwijdering twee dingen eiste:
+de statuscode van het kanaal (HTTP 410 = weg, van de server zelf) én een tekst op
+de gerenderde pagina. Die tekst werd gezocht als "verlopen advertentie", terwijl
+Marktplaats "Deze advertentie is helaas verlopen" schrijft en 2dehands "Dit
+zoekertje is helaas verlopen". Woorden andersom, dus nul treffers: 83 van de 83.
+Gevolg: de verwijdering gold als mislukt, de bijbehorende nieuwe plaatsing werd
+overgeslagen ("de oude staat nog live, een nieuwe zou dubbelen"), en het artikel
+stond nergens meer. Bij Zilverwebsite 57 stuks op één ochtend.
+
+**Why:** de tegencontrole was er met reden — zie "fetch-bewijst-niets-op-react-pagina":
+een TEKSTcontrole op de ruwe HTML vóór React draait bewijst niets, dat gaf 26%
+valse "verwijderd"-meldingen. Maar bij het repareren daarvan is het onderscheid
+weggevallen tussen de twee dingen die diezelfde fetch teruggeeft. Een tekstmatch
+op half geladen HTML is een aanwijzing. Een statuscode 404/410 komt van de server
+en is geen gerenderde tekst. Die twee onder één "weg"-vlag zetten en er daarna
+dezelfde bevestiging bij eisen is hoe een terechte reparatie een nieuwe storing
+werd.
+
+**How to apply:** scheid de soorten bewijs voordat je er een regel omheen zet.
+Statuscode = klaar, geen tegencontrole. Tekstmatch = aanwijzing, laat de
+gerenderde pagina het bevestigen. En bouw een tekstcontrole nooit uit je hoofd:
+open de echte pagina en lees wat er staat, aan beide kanten (verwijderd én
+levend). Naast de zin is er vrijwel altijd een structuurkenmerk dat niet met de
+taal meebeweegt, hier `expired-listing-root` / `expiredlisting-module`, dat op
+Marktplaats en 2dehands allebei werkt. Zie ook
+"storing-mag-nooit-als-antwoord-tellen" en "succes-nooit-uit-uitsluitingslijst".
+
+---
+
 ## zakelijk-account-lijkt-op-uitgelogd
 
 *15-09-2026 — Een zakelijk account op Marktplaats of 2dehands krijgt 401 op zijn persoonlijke advertentieoverzicht, precies zoals een uitgelogde bezoeker; oordeel daarom nooit op die pagina*

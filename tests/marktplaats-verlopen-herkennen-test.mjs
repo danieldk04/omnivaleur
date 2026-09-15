@@ -19,7 +19,10 @@ import { execSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import vm from "node:vm";
 
-const VORIGE_COMMIT = process.env.VORIGE_COMMIT || "HEAD";
+// De versie van VÓÓR de reparatie, met de hand vastgezet. Niet "HEAD": zodra de
+// reparatie gecommit is vergelijkt HEAD zich met zichzelf en bewijst de proef
+// niets meer. 9d30fbca is 1.0.331, de laatste versie waarin deze fout zat.
+const VORIGE_COMMIT = process.env.VORIGE_COMMIT || "9d30fbca";
 let fouten = 0, gedaan = 0;
 const ok = (naam, waar, extra = "") => {
   gedaan++;

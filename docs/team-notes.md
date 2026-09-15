@@ -9763,3 +9763,58 @@ hij niet naar het tabblad klikt beslist het dus zelf, in zijn eigen browser.
 Chrome's koppeling via de pijp brak tussendoor twee keer af in de echte proef
 (service worker herstart, "chrome is not defined"); de proef hecht zich nu
 opnieuw aan tot de motor antwoordt.
+
+## 15-09-2026 (avond) — 83 advertenties verdwenen omdat een gelukte verwijdering als mislukt werd geboekt
+
+Henriette (Zilverwebsite) mailde: 's ochtends kwamen er maar twee advertenties
+door op Marktplaats, Omnivaleur telde 1231 Marktplaats-advertenties terwijl er
+1172 op Marktplaats stonden, en bij Refresh stond een rij regels in het rood.
+
+**Wat het was.** Extensie 1.0.329 (commit 9b77fe9d) voegde na een verwijdering
+een tweede, gerenderde controle toe, omdat een tekstcontrole op de ruwe HTML
+vóór React 26% valse "verwijderd"-meldingen gaf. Daarbij is het onderscheid
+weggevallen tussen de twee dingen die diezelfde fetch teruggeeft: een tekstmatch
+op half geladen HTML (aanwijzing) en een HTTP-statuscode 404/410 (bewijs, van de
+server zelf). Allebei kregen ze de vlag "weg" en allebei moesten ze bevestigd
+worden door een tekst op de gerenderde pagina. Die tekst werd gezocht als
+"verlopen advertentie", terwijl Marktplaats "Deze advertentie is helaas verlopen"
+schrijft en 2dehands "Dit zoekertje is helaas verlopen" — dezelfde woorden
+andersom, dus nul treffers.
+
+Gevolg: verwijdering gelukt (HTTP 410), geboekt als mislukt, en de bijbehorende
+nieuwe plaatsing werd overgeslagen met "de oude staat nog live, een nieuwe zou
+dubbelen". De advertentie stond daarna nergens meer: niet op Marktplaats en niet
+in de wachtrij.
+
+**Gemeten, niet aangenomen.** 83 van de 83 verwijderingen die deze controle op
+15-09 bereikten zijn zo gesneuveld, bij vier verkopers (Zilverwebsite 57, en
+22 / 3 / 1 bij drie anderen). Van Henriettes 57 stond er nul nog op Marktplaats:
+haar openbare verkoperslijst gaf 1177 advertenties en geen van de 57 zat erin.
+Dat verklaart ook het gat 1231 tegen 1172 dat zij zag.
+
+**De reparatie** zit in 1.0.333: een statuscode 404/410 (en het
+`expired-listing-root`-blok in de HTML) is bewijs op zichzelf en vraagt geen
+tekstbevestiging meer; de tekstcontrole zelf kent nu de echte zinnen van beide
+kanalen en staat nog op één plek in plaats van vier kopieën. Voor-en-na met de
+échte functie uit background.js en de échte pagina's van Marktplaats en 2dehands:
+`tests/marktplaats-verlopen-herkennen-test.mjs`, 11 controles, waarvan de oude
+versie (HEAD, 1.0.331) er onder dezelfde omstandigheden één laat falen zoals hij
+in productie faalde.
+
+**De 82 verdwenen advertenties zijn teruggezet** met
+`scripts/herstel_valse_verwijderfout.py`. Dat script raadt niets: het herstelt
+alleen waar én de diagnostiek van de opdracht 404/410 bevat, én het
+advertentienummer ontbreekt in de openbare advertentielijst van die verkoper.
+Eén advertentie werd daardoor overgeslagen. Daarna zette de gewone opruimronde er
+83 plaatsopdrachten achteraan. Henriettes teller staat nu op 1174 actief, gelijk
+aan wat Marktplaats zelf laat zien.
+
+**Let op voor de andere sessie:** `extension/manifest.json` stond in HEAD al op
+1.0.332 terwijl de commitregel 1.0.331 zei, dus deze reparatie is 1.0.333
+geworden. In `extension/content/shared.js` lag ongecommit werk van iemand anders
+(een klokmeter); dat is bewust niet meegenomen en niet meegebouwd — de zip is uit
+een schone kopie van de commit gemaakt.
+
+**Openstaand:** waaróm die 83 advertenties op 15-09 allemaal tegelijk verlopen
+waren is niet uitgezocht, alleen dát ze het waren. De reparatie gaat over het
+verkeerd boeken van de verwijdering, niet over het verlopen zelf.
