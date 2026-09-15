@@ -45,13 +45,22 @@ window.CL = (() => {
     }
     return _timerWorker;
   }
+  // Hoeveel langer duurde de laatste pauze dan gevraagd? Dat is de tweede maat
+  // naast de klokteller hieronder, en samen geven ze antwoord op de vraag waar
+  // een vastloper vandaan komt. Wordt alleen de klok van de pagina afgeknepen,
+  // dan blijft deze afwijking klein. Staat de pagina zélf vol werk (of ligt ze
+  // stil), dan loopt ook deze op, want het antwoord van de Worker moet nog
+  // steeds door de pagina worden afgehandeld.
+  let _sleepAfwijking = 0;
   const sleep = (ms) => new Promise((r) => {
+    const begin = Date.now();
+    const klaar = () => { _sleepAfwijking = Date.now() - begin - ms; r(); };
     const w = _getTimerWorker();
-    if (!w) { setTimeout(r, ms); return; }
+    if (!w) { setTimeout(klaar, ms); return; }
     const id = ++_timerSeq;
-    _timerWaiters.set(id, r);
+    _timerWaiters.set(id, klaar);
     try { w.postMessage({ id, ms }); }
-    catch (_) { _timerWaiters.delete(id); setTimeout(r, ms); }
+    catch (_) { _timerWaiters.delete(id); setTimeout(klaar, ms); }
   });
   // EEN METER OP DE KLOK VAN DE PAGINA (15-09-2026).
   //
@@ -65,13 +74,14 @@ window.CL = (() => {
   let _klokTikken = 0;
   let _klokVanaf = Date.now();
   (function klokMeter() { setTimeout(() => { _klokTikken++; klokMeter(); }, 100); })();
+  function klokOpnieuw() { _klokTikken = 0; _klokVanaf = Date.now(); }
   function klokRapport() {
     const sec = (Date.now() - _klokVanaf) / 1000;
     const per = sec > 0.2 ? _klokTikken / sec : 0;
     _klokTikken = 0; _klokVanaf = Date.now();
     let staat = document.visibilityState;
     try { if (document.hasFocus()) staat += "+focus"; } catch (_) {}
-    return `${per.toFixed(1)}/s ${staat}`;
+    return `${per.toFixed(1)}/s +${Math.max(0, Math.round(_sleepAfwijking))}ms ${staat}`;
   }
 
   const qs = (sel) => document.querySelector(sel);
@@ -2840,7 +2850,7 @@ window.CL = (() => {
   }
 
   return {
-    klokRapport,
+    klokRapport, klokOpnieuw,
     sleep, waitUntil, qs, waitForEl, fillInput, fillInputHuman, fillNativeSelect, clickRadioByValue, fillDescription,
     findFieldByLabel, selectDropdown, fillBrand, fillManufacturer, vulLocatie, selectBundleFree,
     selectDelivery, gekozenLevering, selectPakketWaarde, vulHalswijdte, keuzeveldenKort, typBeschrijvingEcht,

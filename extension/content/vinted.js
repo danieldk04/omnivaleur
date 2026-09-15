@@ -1544,6 +1544,10 @@
 
   async function fillForm(item) {
     await waitForEl('input[data-testid="title--input"]', 20000);
+    // Vanaf hier pas tellen: de tijd dáárvoor is het laden van Vinted zelf, en
+    // dat zou de eerste klokmeting onterecht laten lijken op een afgeknepen
+    // tabblad.
+    window.CL.klokOpnieuw();
     await step("title",       () => fillInput(qs('input[data-testid="title--input"]'), (item.title || "").slice(0, 100)));
     await step("description", () => fillDescription(['textarea[data-testid="description--input"]'], item.description));
     // Photos FIRST: Vinted generates the "Suggested" categories from the uploaded

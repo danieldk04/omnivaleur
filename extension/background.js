@@ -1357,6 +1357,7 @@ function meldStapAanServer(tabId, tekst) {
     reportProgress(meta.serverUrl, meta.jobId, {
       stap, platform: meta.platform, actie: meta.action || "create",
       versie: chrome.runtime.getManifest().version,
+      klok: _klokAangezet.get(tabId) || "niet gevraagd",
     });
   });
 }
@@ -2124,6 +2125,11 @@ function koppelingNodig(url) {
 // Page.enable (0 tot 1), Page.startScreencast (0 tot 1), een stil geluidje, een
 // open websocket, een Web Lock. En Emulation.setPageVisibilityOverride bestaat
 // niet meer in Chrome.
+// Is de opdracht hierboven ook echt aangekomen? Dat hoort in de voortgang te
+// staan, anders is "het werkt niet bij mij" weer een verhaal zonder meting.
+const _klokAangezet = new Map();
+chrome.tabs.onRemoved.addListener((tabId) => _klokAangezet.delete(tabId));
+
 async function zetDoorlopendeKlok(tabId, url) {
   if (!VINTED_FORMULIER_KLOK.test(String(url || ""))) return;
   await new Promise((res) => {
@@ -2135,6 +2141,9 @@ async function zetDoorlopendeKlok(tabId, url) {
             // vallen: dan werkt het zoals vroeger, alleen trager.
             console.warn("[Omnivaleur] klok aanzetten mislukt:",
                          chrome.runtime.lastError.message);
+            _klokAangezet.set(tabId, "mislukt: " + chrome.runtime.lastError.message);
+          } else {
+            _klokAangezet.set(tabId, "aan");
           }
           res();
         });

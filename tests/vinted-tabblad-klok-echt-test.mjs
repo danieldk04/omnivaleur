@@ -164,6 +164,24 @@ try {
   // 25 kan dus alleen een tabblad zijn dat niet meer afgeknepen wordt.
   check("de klok van de pagina is niet afgeknepen", Number(tikken) >= 25,
         `${tikken} tikken in 10 sec; afgeknepen zijn dat er 10 of minder`);
+
+  // FASE 2: hetzelfde tabblad, maar nu met het venster geminimaliseerd. Dat is
+  // wat er bij een verkoper gebeurt zodra hij zijn browser wegklikt of er een
+  // ander venster overheen legt: het tabblad is dan niet alleen onzichtbaar maar
+  // het hele venster is weg. Daniel mat op 15-09-2026 in zijn eigen browser
+  // 0,2 tikken per seconde terwijl de pagina "visible+focus" meldde — precies
+  // het teken dat de focus-emulatie alleen het rapport verandert en niet de rem.
+  console.log("\nVenster minimaliseren en opnieuw meten…");
+  await doe(`chrome.tabs.get(${tabId}).then(t => chrome.windows.update(t.windowId, { state: "minimized" })).then(() => "ok")`);
+  await pauze(3000);
+  const zicht2 = await inPagina("document.visibilityState + (document.hasFocus() ? \"+focus\" : \"\")");
+  const tikken2 = await inPagina(`new Promise((res) => {
+    let n = 0; const eind = Date.now() + 10000;
+    (function lus(){ setTimeout(() => { n++; Date.now() < eind ? lus() : res(n); }, 100); })();
+  })`);
+  console.log("Met geminimaliseerd venster:", zicht2, "|", tikken2, "tikken in 10 sec");
+  check("ook met een geminimaliseerd venster loopt de klok door", Number(tikken2) >= 25,
+        `${tikken2} tikken in 10 sec terwijl de pagina "${zicht2}" meldt`);
 } catch (e) {
   mislukt++;
   console.log("  FOUT proef afgebroken —", e && e.message);

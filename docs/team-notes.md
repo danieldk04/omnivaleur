@@ -9818,3 +9818,38 @@ een schone kopie van de commit gemaakt.
 **Openstaand:** waaróm die 83 advertenties op 15-09 allemaal tegelijk verlopen
 waren is niet uitgezocht, alleen dát ze het waren. De reparatie gaat over het
 verkeerd boeken van de verwijdering, niet over het verlopen zelf.
+
+## 15-09-2026 (vervolg) — de meting uit zijn eigen browser
+
+Daniel laadde 1.0.332 en plaatste (1317) Navy Denham Half Zip. De voortgang uit
+zijn eigen browser, met de nieuwe klokmeting erbij:
+
+    15:59:54  opdracht opgepakt
+    16:00:00  titel ok              [klok 0.2/s visible+focus]
+    16:00:10  omschrijving MISLUKT  [klok 0.3/s visible+focus]
+    16:02:26  foto's zichtbaar
+    16:02:35  categorie gekozen (tekst won van Vinteds voorstel)
+    16:02:46  op plaatsen geklikt
+    16:05:53  advertentie 10011577629 online
+
+Drie dingen die dit beslist. Eén: de stappen liepen zonder onderbreking door,
+dus van stilstand was hier geen sprake. Twee: de 0,2 tikken per seconde bij de
+eerste twee stappen zijn niet de rem maar de laadtijd van Vinted zelf — de meter
+telde vanaf het laden van het content script, dus de hele opstart van hun
+React-app zat erin. Vanaf 1.0.333 begint hij pas te tellen zodra het titelveld er
+staat. Drie: de drie minuten tussen de plaatsklik en de bevestiging zijn Vinted
+die het artikel verwerkt; resolveCreatedVintedItem pollt de garderobe elke drie
+seconden en het item verscheen daar pas na die tijd.
+
+De omschrijvingsstap meldde "could not be placed into the editor", maar de
+openbare advertentie bevat gewoon de volledige tekst (517 tekens): de
+reparatiestap heeft hem alsnog gevuld. Geen actie, wel het noteren waard, want
+die melding leest als een storing terwijl er niets mis is.
+
+**Nog niet beslist:** of deze plaatsing doorliep dánkzij 1.0.331 of doordat hij
+deze keer niet wegklikte, is niet te scheiden. Totale duur 5 minuten 59, tegen
+een mediaan van 3 minuten 54 over de 94 plaatsingen ervoor; sneller is het dus
+niet aantoonbaar. Wat 1.0.333 daarvoor toevoegt: elke stap draagt nu ook mee hoe
+lang een Worker-pauze werkelijk duurde (kleine afwijking = alleen de klok wordt
+geknepen, grote afwijking = de pagina zelf ligt stil) en of de klok-opdracht bij
+het tabblad is aangekomen.
