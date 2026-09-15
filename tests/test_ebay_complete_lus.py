@@ -334,3 +334,24 @@ def test_slottekst_gaat_niet_mee_naar_ebay():
     uit = C._zonder_links(C._zonder_slot(tekst, slot))
     assert "0664" not in uit and "webshop" not in uit
     assert uit == "Mooie lederhose, maat 52."
+
+
+# ── 6. Geen verzonnen kenmerken ──────────────────────────────────────────────
+
+def test_ontbrekende_kenmerken_worden_niet_verzonnen():
+    """Gemeten 15-09-2026: bodywarmer kreeg Type Blazer, Stijl 3-in-1, Acetaat."""
+    item = {"title": "Grey Suitsupply bodywarmer men size M", "brand": "Suitsupply",
+            "size": "M", "gender": "heren"}
+    aspects = {"Brand": ["Suitsupply"], "Size": ["M"]}
+    E._fill_required_aspects(aspects, item, [
+        {"name": "Type", "values": ["Blazer", "Bodywarmers", "Jas"], "vrij": True},
+        {"name": "Stijl", "values": ["3-in-1", "Bomber"], "vrij": True},
+        {"name": "Buitenmateriaal", "values": ["Acetaat", "Katoen"], "vrij": True},
+        {"name": "Patroon", "values": ["Effen", "Overige"], "vrij": False},
+        {"name": "Pasvorm", "values": ["Normaal", "Slim"], "vrij": False},
+    ])
+    assert aspects["Type"] == ["Bodywarmers"], "het woord uit de titel hoort te winnen"
+    assert aspects["Stijl"] == ["Onbekend"]
+    assert aspects["Buitenmateriaal"] == ["Onbekend"]
+    assert aspects["Patroon"] == ["Overige"], "neutrale waarde uit eBay's eigen lijst"
+    assert aspects["Pasvorm"] == ["Normaal"], "alleen vaste waarden: dan toch de eerste"

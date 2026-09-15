@@ -713,7 +713,10 @@ async def _get_required_aspects(category_id: str) -> list[dict]:
         if not a.get("aspectConstraint", {}).get("aspectRequired"):
             continue
         values = [v.get("localizedValue") for v in a.get("aspectValues", []) if v.get("localizedValue")]
-        out.append({"name": a.get("localizedAspectName"), "values": values})
+        # FREE_TEXT: de waarden zijn suggesties, geen gesloten lijst. Dan mogen
+        # we zelf een eerlijke waarde invullen in plaats van de eerste suggestie.
+        vrij = a.get("aspectConstraint", {}).get("aspectMode") == "FREE_TEXT"
+        out.append({"name": a.get("localizedAspectName"), "values": values, "vrij": vrij})
     _required_aspects_cache[category_id] = out
     return out
 
@@ -843,7 +846,9 @@ def _fill_required_aspects(aspects: dict, item: dict, required: list[dict]) -> N
             # aspect's own allowed values (titles typically contain the actual
             # garment word, e.g. "... Cardigan ...").
             title_low = (item.get("title") or "").lower()
-            title_match = next((a for a in allowed if a.lower() in title_low), None)
+            title_match = next((a for a in allowed
+                                if a.lower() in title_low
+                                or (len(a) > 4 and a.lower().rstrip("s") in title_low)), None)
             if title_match:
                 aspects[name] = [title_match]
                 continue
@@ -853,16 +858,34 @@ def _fill_required_aspects(aspects: dict, item: dict, required: list[dict]) -> N
 
         # Legacy fallbacks for aspect names outside the synonym map, or where
         # we genuinely have no real item data for the concept.
+        #
+        # GEEN VERZONNEN KENMERKEN (15-09-2026). De eerste waarde uit eBay's
+        # lijst is een gok die als feit in de advertentie komt. Gemeten op een
+        # echte plaatsing: een grijze bodywarmer kreeg "Type: Blazer",
+        # "Stijl: 3-in-1" en "Buitenmateriaal: Acetaat". Bij een leren lederhose
+        # is dat een koper die terecht "niet zoals beschreven" meldt. Daarom eerst
+        # een neutrale waarde uit eBay's eigen lijst, bij vrije tekst "Onbekend",
+        # en pas als eBay echt alleen vaste waarden toestaat de eerste daarvan.
         fallback = None
         if low == "size type":
             fallback = "Regular"
         if fallback is None and allowed:
+            fallback = next((a for a in allowed if a.strip().lower() in _NEUTRALE_WAARDEN), None)
+        if fallback is None and req.get("vrij"):
+            fallback = "Onbekend"
+        if fallback is None and allowed:
             fallback = allowed[0]
         if fallback is None:
             continue  # free-text required aspect we can't infer — let eBay report it
-        if allowed and fallback not in allowed:
+        if allowed and fallback not in allowed and not req.get("vrij"):
             fallback = allowed[0]
         aspects[name] = [fallback]
+
+
+_NEUTRALE_WAARDEN = {
+    "onbekend", "niet van toepassing", "n.v.t.", "nvt", "overig", "overige", "anders",
+    "unknown", "does not apply", "not applicable", "other", "unbranded", "merkloos",
+}
 
 
 def _clean_ebay_query(query: str) -> str:
