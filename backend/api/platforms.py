@@ -83,6 +83,34 @@ async def ebay_category_suggest(q: str, brand: str = None, category: str = None,
         raise HTTPException(status_code=502, detail=f"eBay category lookup failed: {e}")
 
 
+@router.get("/ebay/rubriekenboom")
+async def ebay_rubriekenboom(user_id: str = Depends(get_current_user)):
+    """De hele eBay-rubriekenboom van de ingestelde marktplaats, plat: id, naam,
+    ouder, blad. Nodig om vaste rubrieken te kiezen, want eBay's zoeker raadt
+    Toons schapenvacht als laarzen (gemeten 15-09-2026). Alleen een app-sleutel
+    kan dit lezen, en die staat alleen op de server."""
+    import httpx
+    from backend.platforms.ebay import (TAXONOMY_API, _EBAY_TIMEOUT,
+                                        _get_app_token, _get_category_tree_id)
+    token = await _get_app_token()
+    tree_id = await _get_category_tree_id()
+    async with httpx.AsyncClient(timeout=_EBAY_TIMEOUT) as client:
+        resp = await client.get(f"{TAXONOMY_API}/category_tree/{tree_id}",
+                                headers={"Authorization": f"Bearer {token}",
+                                         "Accept-Encoding": "gzip"})
+    if resp.status_code != 200:
+        raise HTTPException(status_code=502, detail=resp.text[:300])
+    plat = []
+    stapel = [(resp.json()["rootCategoryNode"], None)]
+    while stapel:
+        knoop, ouder = stapel.pop()
+        cat = knoop["category"]
+        plat.append({"id": cat["categoryId"], "naam": cat["categoryName"], "ouder": ouder,
+                     "blad": bool(knoop.get("leafCategoryTreeNode"))})
+        stapel.extend((k, cat["categoryId"]) for k in knoop.get("childCategoryTreeNodes") or [])
+    return {"boom": tree_id, "rubrieken": plat}
+
+
 @router.get("/ebay/callback")
 async def ebay_callback(code: str, user_id: str = Depends(get_current_user)):
     try:
