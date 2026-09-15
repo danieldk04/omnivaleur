@@ -1346,9 +1346,11 @@ _VASTE_RUBRIEK = {
     "heren verkleedkleding": "52762",       # Verkleedkleding > Herenverkleedkleding
 }
 
-# De eBay-tak waar een gok voor deze groep (het veld gender) binnen moet vallen.
-_EBAY_TAK = {"dames": "260010", "heren": "260012", "kinderen": "171146",
-             "wonen": "11700", "antiek": "353"}
+# De eBay-takken waar een gok voor deze groep (het veld gender) binnen moet vallen.
+# Wonen ook Tuin en terras (hangmatten, parasols) en antiek ook Huis (wandkleden):
+# zo deelt eBay.nl ze in, gemeten op Toons artikelen.
+_EBAY_TAK = {"dames": ("260010",), "heren": ("260012",), "kinderen": ("171146",),
+             "wonen": ("11700", "159912"), "antiek": ("353", "11700")}
 
 
 # eBay NL taxonomy segments → English. eBay ignores Accept-Language for the
