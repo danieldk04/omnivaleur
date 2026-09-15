@@ -1314,7 +1314,7 @@ async def resolve_category_id(query: str, brand: str | None = None,
     if tak:
         # Alleen een gok binnen de eigen tak: liever geen rubriek (dan vraagt het
         # scherm erom) dan een kinderlederhose tussen de boeken.
-        results = [r for r in results if tak in (r.get("voorouders") or ())]
+        results = [r for r in results if set(tak) & set(r.get("voorouders") or ())]
     return results[0]["category_id"] if results else None
 
 
