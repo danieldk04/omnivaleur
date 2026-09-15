@@ -5657,7 +5657,90 @@ function renderPlatforms() {
     Use this deliberately and at your own risk — preferably with a separate account. Sold? Remove your Facebook listing yourself if the automatic removal fails.
   </div>`;
   document.getElementById('platforms-body').innerHTML = html + facebookNote;
-  if (state.connected.includes('ebay')) loadEbayShipFrom();
+  if (state.connected.includes('ebay')) { loadEbayShipFrom(); loadEbayGereedheid(); }
+}
+
+// Wat er bij eBay nog ontbreekt, rechtstreeks nagevraagd bij eBay. Zie
+// backend/api/platforms.py > ebay_gereedheid en backend/platforms/ebay_beleid.py.
+async function loadEbayGereedheid() {
+  const lijst = document.getElementById('ebay-gereed-lijst');
+  if (!lijst) return;
+  try {
+    const res = await apiFetch(`${API}/api/platforms/ebay/gereedheid`);
+    const g = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(g.detail || 'Could not check your eBay account');
+    const regel = (goed, tekst) => `<div style="margin:3px 0;color:${goed === true ? '#166534' : goed === false ? '#b45309' : 'var(--muted)'}">${goed === true ? '✓' : goed === false ? '⚠️' : '•'} ${tekst}</div>`;
+    if (!g.verbonden) { lijst.innerHTML = regel(false, escapeHtml(g.fout || 'eBay connection lost. Reconnect eBay.')); return; }
+    const vz = g.verzending || {};
+    const rijen = [
+      regel(true, 'eBay connected'),
+      g.registratie_klaar === false
+        ? regel(false, 'Your eBay seller account is not finished yet. Complete it on eBay (identity and bank account) before you can list: <a href="https://www.ebay.nl/sh/ovw" target="_blank" rel="noopener">eBay Seller Hub</a>')
+        : regel(g.registratie_klaar, g.registratie_klaar ? 'eBay seller account complete' : 'Could not read your eBay seller status'),
+      regel(g.adres, g.adres ? 'Ship-from address set' : 'Ship-from address missing (below)'),
+      vz.status === 'klaar' ? regel(true, 'Shipping &amp; returns active on eBay')
+        : vz.status === 'wacht_op_ebay' ? regel(null, '⏳ eBay is switching on your shipping settings. This can take up to 24 hours; publishing to eBay starts working by itself once it is done.')
+        : vz.status === 'fout' ? regel(false, 'eBay rejected your shipping settings: ' + escapeHtml(vz.fout || ''))
+        : regel(false, 'Shipping &amp; returns not set (below)'),
+    ];
+    if (g.limiet && g.limiet.aantal != null) {
+      const klein = Number(g.limiet.aantal) < 100;
+      rijen.push(regel(klein ? null : true, `eBay currently lets you list up to ${Number(g.limiet.aantal).toLocaleString()} items${g.limiet.bedrag ? ` (€${Number(g.limiet.bedrag).toLocaleString()} in total)` : ''}.${klein ? ' New eBay accounts start low; eBay raises the limit as you sell. Items above the limit will not publish.' : ''}`));
+    }
+    lijst.innerHTML = rijen.join('');
+    if (vz.instellingen) {
+      const i = vz.instellingen;
+      document.getElementById('ebay-vz-kosten').value = i.kosten;
+      document.getElementById('ebay-vz-dagen').value = String(i.verzenddagen);
+      document.getElementById('ebay-vz-retour').value = String(i.retourdagen);
+      document.getElementById('ebay-vz-ophalen').checked = !!i.ophalen;
+      markEbayVerzending(vz.status);
+    }
+  } catch (e) {
+    lijst.textContent = e.message;
+  }
+}
+
+function markEbayVerzending(status) {
+  const title = document.getElementById('ebay-vz-title');
+  const warn = document.getElementById('ebay-vz-warn');
+  if (!title || !warn) return;
+  if (status === 'klaar') {
+    title.textContent = '📦 Shipping & returns'; title.style.color = 'var(--text)';
+    warn.style.color = '#166534'; warn.style.background = '#dcfce7';
+    warn.innerHTML = '<strong>✓ Active on eBay.</strong> Every eBay listing gets these shipping and return settings.';
+  } else if (status === 'wacht_op_ebay') {
+    title.textContent = '⏳ Shipping & returns'; title.style.color = 'var(--text)';
+    warn.style.color = '#1e40af'; warn.style.background = '#dbeafe';
+    warn.innerHTML = '<strong>Saved. eBay is switching this on for your account.</strong> This can take up to 24 hours. Publishing to eBay starts working by itself once it is done; you do not need to save again.';
+  }
+}
+
+async function saveEbayVerzending(btn) {
+  const status = document.getElementById('ebay-vz-status');
+  const kosten = document.getElementById('ebay-vz-kosten').value.trim();
+  if (kosten === '') { status.textContent = 'Enter a shipping cost (0 for free shipping)'; status.style.color = 'var(--red,#dc2626)'; return; }
+  btn.disabled = true; status.style.color = 'var(--muted)'; status.textContent = 'Setting up on eBay…';
+  try {
+    const res = await apiFetch(`${API}/api/platforms/ebay/verzending`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        kosten,
+        verzenddagen: document.getElementById('ebay-vz-dagen').value,
+        retourdagen: document.getElementById('ebay-vz-retour').value,
+        ophalen: document.getElementById('ebay-vz-ophalen').checked,
+      }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.detail || 'Could not save');
+    status.style.color = 'var(--green,#16a34a)'; status.textContent = data.status === 'klaar' ? '✓ Active on eBay' : '✓ Saved';
+    markEbayVerzending(data.status);
+    loadEbayGereedheid();
+  } catch (e) {
+    status.style.color = 'var(--red,#dc2626)'; status.textContent = e.message;
+  } finally {
+    btn.disabled = false;
+  }
 }
 
 async function loadEbayShipFrom() {
