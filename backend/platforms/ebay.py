@@ -252,7 +252,8 @@ class EbayPlatform(PlatformBase):
         # Categorie-keten: 1) expliciet op het item, 2) auto-resolutie via de
         # Taxonomy API op basis van de titel (gegarandeerd geldige leaf), 3) het
         # geconfigureerde EBAY_DEFAULT_CATEGORY_ID als laatste backstop.
-        category_id = item.get("ebay_category_id")
+        category_id = _VASTE_RUBRIEK.get((item.get("category") or "").lower().strip()) \
+            or item.get("ebay_category_id")
         if not category_id:
             try:
                 category_id = await resolve_category_id(
