@@ -12,9 +12,12 @@ import uuid
 from backend.database import execute_with_retry, fetch_all, get_db, naast_de_lus, eerste_rij
 from backend.platforms import get_platform
 
-_ENGLISH_PLATFORMS = {"vinted", "shopify", "ebay", "etsy"}
+_ENGLISH_PLATFORMS = {"vinted", "shopify", "etsy"}
 # marktplaats/2dehands require Dutch — user now enters English, so translate EN→NL.
-_DUTCH_PLATFORMS: set[str] = {"marktplaats", "2dehands"}
+# eBay ook (15-09-2026): we plaatsen op ebay.nl en verzenden alleen binnen
+# Nederland, dus de koper zoekt in het Nederlands. Engels stond er sinds de eerste
+# versie zonder vastgelegde reden.
+_DUTCH_PLATFORMS: set[str] = {"marktplaats", "2dehands", "ebay"}
 
 logger = logging.getLogger(__name__)
 
