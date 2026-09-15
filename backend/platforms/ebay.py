@@ -268,10 +268,8 @@ class EbayPlatform(PlatformBase):
             category_id = settings.ebay_default_category_id
         if not category_id:
             raise EbayCategoryRequiredError(
-                f"Item '{item.get('title', sku)}' has no eBay category and auto-resolution "
-                "returned nothing. Set an eBay category ID on the item (look it up at "
-                "https://www.ebay.com/sch/allcategories/all-categories) or configure "
-                "EBAY_DEFAULT_CATEGORY_ID as a fallback."
+                f"eBay could not find a fitting category for '{item.get('title', sku)}'. "
+                "Open the item, pick an eBay category and publish again."
             )
 
         # Step 1: Create inventory item
