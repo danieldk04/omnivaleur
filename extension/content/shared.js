@@ -2059,10 +2059,41 @@ window.CL = (() => {
     }
 
     _aangebodenFotos = files;
-    const dt = new DataTransfer();
-    files.forEach((f) => dt.items.add(f));
-    fileInput.files = dt.files;
-    fileInput.dispatchEvent(new Event("change", { bubbles: true }));
+    const bied = (lijst) => {
+      const dt = new DataTransfer();
+      lijst.forEach((f) => dt.items.add(f));
+      fileInput.files = dt.files;
+      fileInput.dispatchEvent(new Event("change", { bubbles: true }));
+    };
+
+    // DE EERSTE FOTO APART AANBIEDEN.
+    //
+    // GEMETEN OP 15-09-2026, met beeldvergelijking tussen wat wij aanboden en
+    // wat er op de advertentie kwam te staan. Twee Vinted-advertenties die in
+    // een tabblad op de achtergrond werden gemaakt misten allebei precies foto
+    // 1: op plek 1 stond onze foto 2, op plek 2 onze foto 3, enzovoort, en foto
+    // 1 stond nergens. Een advertentie van dezelfde middag waar de verkoper wél
+    // bij het tabblad zat kreeg alle vijftien foto's netjes in volgorde, net als
+    // die van de dag ervoor. Het verlies hoort dus bij het eerste bestand van de
+    // stapel, niet bij een bepaalde foto.
+    //
+    // Dat is voor een verkoper de duurste foto van allemaal: de eerste is de
+    // omslagfoto waar kopers op klikken. Daarom bieden we hem apart aan en
+    // wachten we tot Vinted hem echt heeft aangenomen voordat de rest volgt.
+    // Lukt dat niet, dan zegt de logregel hieronder precies hoeveel er stonden
+    // in plaats van dat het stilletjes één minder wordt.
+    if (opts.eersteApart && files.length > 1) {
+      const voorEerste = countPhotoThumbs(thumbSel);
+      bied([files[0]]);
+      const aangenomen = await waitUntil(
+        () => countPhotoThumbs(thumbSel) > voorEerste, 30000);
+      clog(`foto's: omslagfoto ${aangenomen ? "aangenomen" : "NIET herkend"} `
+           + `(${countPhotoThumbs(thumbSel)} miniatuur/miniaturen)`);
+      await sleep(800);
+      bied(files.slice(1));
+    } else {
+      bied(files);
+    }
 
     // Uploading N photos to the platform's CDN takes real time — the old 8s
     // wait for ONE thumbnail was both too short and too weak a check.
@@ -2087,7 +2118,7 @@ window.CL = (() => {
     // Only arm the pre-submit photo guard once thumbnails were actually observed
     // here. If a platform's thumbnails don't match PHOTO_THUMB_SELECTOR at all we
     // must not block a submit that would otherwise have succeeded.
-    clog("foto's: miniaturen zichtbaar");
+    clog(`foto's: ${countPhotoThumbs(thumbSel)} miniaturen van ${files.length} aangeboden`);
     _expectPhotos = true;
     // Give the remaining uploads time to finish before anything clicks submit.
     await sleep(1500);

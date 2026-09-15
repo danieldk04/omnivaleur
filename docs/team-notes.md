@@ -9919,3 +9919,34 @@ die er nu staat". En bij het afronden overschreef `complete_job` het hele
 `result`, inclusief `_progress` — de klokmetingen van die klus waren daarmee weg
 voor ik ze kon uitlezen. Dat is nu gerepareerd: de laatste voortgangsregel blijft
 bewaard naast het eindresultaat.
+
+## 15-09-2026 (vervolg) — de omslagfoto ontbrak op Vinted, en dat was te meten
+
+Daniel: "waarom heeft ie bij deze twee publicaties de eerste foto niet
+meegenomen?" Nagemeten met beeldvergelijking (dHash) tussen de foto's die de
+opdracht meekreeg en de foto's die op de advertentie staan:
+
+| advertentie | versie | tabblad | uitkomst |
+|---|---|---|---|
+| Russell Athletic 9999837070 (14-09) | 1.0.329 | onbekend | 6 van 6, op volgorde |
+| Cavallaro 10011400994 (15:45) | 1.0.331 | Daniel zat erbij | 15 van 15, op volgorde |
+| Denham 10011577629 (16:00) | 1.0.332 | achtergrond | foto 1 weg |
+| Gymshark 10011692788 (16:09) | 1.0.333 | geminimaliseerd | foto 1 weg |
+
+Het patroon is niet "de volgorde klopt niet" maar "het eerste bestand van de
+stapel verdwijnt": op plek 1 staat onze foto 2, op plek 2 onze foto 3, en foto 1
+staat er nergens op. Bij de Gymshark stonden 8 van de 9 foto's online.
+
+Het hangt samen met een tabblad dat écht op de achtergrond staat, niet met een
+versie: 1.0.331 (met dezelfde snelheidsingreep) leverde compleet werk toen de
+verkoper bij het tabblad zat. Waaróm Vinted juist het eerste bestand van een
+`DataTransfer` laat vallen zodra het tabblad niet in beeld is, is niet gemeten.
+
+1.0.334 biedt de omslagfoto daarom apart aan en wacht tot Vinted hem heeft
+aangenomen voordat de rest volgt, en logt voortaan "X miniaturen van Y
+aangeboden" in plaats van alleen "miniaturen zichtbaar". Zo wordt een volgende
+keer zichtbaar of er eentje sneuvelt in plaats van dat het stil één minder wordt.
+
+**Openstaand:** dit is een reparatie op een gemeten symptoom, niet op een bewezen
+oorzaak, en ze is nog niet in het echt gedraaid. De eerstvolgende Vinted-plaatsing
+op 1.0.334 moet het bewijzen; de nieuwe logregel zegt het meteen.

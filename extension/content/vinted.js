@@ -1552,7 +1552,9 @@
     await step("description", () => fillDescription(['textarea[data-testid="description--input"]'], item.description));
     // Photos FIRST: Vinted generates the "Suggested" categories from the uploaded
     // images, so the suggestions don't exist until the photos finish loading.
-    await step("photos",      () => item.photo_urls?.length && uploadPhotos(item.photo_urls.slice(0, 20), { jitter: true }));
+    // eersteApart: zie uploadPhotos — in een achtergrondtabblad raakte Vinted
+    // precies het eerste bestand van de stapel kwijt, en dat is de omslagfoto.
+    await step("photos",      () => item.photo_urls?.length && uploadPhotos(item.photo_urls.slice(0, 20), { jitter: true, eersteApart: true }));
     await sleep(1500); // let Vinted run image recognition and render the suggestions
     await step("category",    () => fillCategoryVinted(item));
     await sleep(500); // category drives which attribute fields (size/brand/condition) render
