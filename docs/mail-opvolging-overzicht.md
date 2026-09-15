@@ -25,15 +25,19 @@ overzicht.
 
 ## 3. Proefperiode-opvolging
 
-- **Voor wie:** echte aangemelde gebruikers in de app, geen leads. Zit dus
-  niet in de spreadsheet en is daar ook niet te zien.
-- **Waar:** in de code van de site zelf (`backend/services/billing.py`), niet
-  in Google Sheets.
+- **Voor wie:** echte aangemelde gebruikers in de app, geen leads.
+- **Waar draait het:** in de code van de site zelf (`backend/services/billing.py`),
+  niet in Google Sheets.
 - **Ritme:** 2 dagen voor het einde van de proefperiode een herinneringsmail,
   daarna 2 dagen respijt, daarna een melding dat het account op pauze staat.
   Draait elke dag om 09:00 Nederlandse tijd.
-- **Wie past de tekst aan:** alleen ik, in de code. Jij ziet dit nergens in
-  een spreadsheet.
+- **Wie past de tekst aan:** alleen ik, in de code.
+- **Overzicht (sinds 15-09-2026):** dezelfde spreadsheet als de leads heeft nu
+  ook een tab **Proefperiode**. Elke dag om 09:10 (net na de herinneringsronde)
+  wordt die tab herschreven met wie er nog in de proef of respijt zit, en wie
+  net gepauzeerd is. Betalende klanten staan er expres niet in, en wie langer
+  dan 14 dagen geleden is gepauzeerd valt er ook weer af: dit is een
+  momentopname van wie nog opvolging nodig heeft, geen archief.
 
 ## Zekerheid per systeem
 
