@@ -566,6 +566,38 @@ def _content_language() -> str:
     return _MARKETPLACE_LANGUAGES.get(settings.ebay_marketplace_id, "en-US")
 
 
+def _status_uit_offer(offer: dict) -> str:
+    """Zie EbayPlatform.get_listing_status voor het waarom."""
+    live = offer.get("listing") or {}
+    try:
+        verkocht = int(live.get("soldQuantity") or 0)
+    except (TypeError, ValueError):
+        verkocht = 0
+    if verkocht > 0:
+        return "sold"
+    status = str(offer.get("status") or "").upper()
+    listing_status = str(live.get("listingStatus") or "").upper()
+    if status == "PUBLISHED" and listing_status in ("", "ACTIVE"):
+        return "active"
+    if live.get("listingOnHold"):
+        # Tijdelijk verborgen door eBay; de verkoper kan het herstellen.
+        return "active"
+    # UNPUBLISHED, ENDED, EBAY_ENDED, INACTIVE, NOT_LISTED of OUT_OF_STOCK zonder
+    # verkoop: niet meer te koop. De verkoopcontrole wil dat twee rondes achter
+    # elkaar zien voordat hij de advertentie archiveert, en kijkt in die tweede
+    # ronde opnieuw naar soldQuantity.
+    return "not_found"
+
+
+# Per verkoper het moment waarop eBay "Selling limit exceeded" (25026) gaf.
+_LIMIET_BEREIKT: dict[str, float] = {}
+_LIMIET_TEKST = (
+    "eBay selling limit reached: your eBay account may not list more items or "
+    "value right now. New eBay accounts start with a low limit that eBay raises "
+    "as you sell. Check your limit in eBay Seller Hub."
+)
+
+
 def _raise_with_ebay_error(resp: httpx.Response, action: str) -> None:
     if resp.is_success:
         return
@@ -573,7 +605,9 @@ def _raise_with_ebay_error(resp: httpx.Response, action: str) -> None:
     try:
         errors = resp.json().get("errors", [])
         if errors:
-            detail = "; ".join(e.get("message", "") for e in errors)
+            detail = "; ".join(e.get("longMessage") or e.get("message", "") for e in errors)
+            if any(str(e.get("errorId")) == "25026" for e in errors):
+                detail = f"{_LIMIET_TEKST} ({detail})"
     except Exception:
         pass
     logger.error(f"eBay error while {action}: {resp.status_code} {detail}")
