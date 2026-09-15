@@ -320,24 +320,64 @@ class EbayPlatform(PlatformBase):
                 "listingDescription": item.get("description", ""),
                 "quantityLimitPerBuyer": 1,
                 "merchantLocationKey": MERCHANT_LOCATION_KEY,
+                "listingPolicies": listing_policies,
             }
             offer_resp = await client.post(
                 f"{INVENTORY_API}/offer",
                 json=offer_payload,
                 headers=self._auth_headers(credentials, write=True),
             )
-            _raise_with_ebay_error(offer_resp, "creating offer")
-            offer_id = offer_resp.json()["offerId"]
+            domain = _MARKETPLACE_DOMAINS.get(settings.ebay_marketplace_id, "ebay.com")
+            if offer_resp.is_success:
+                offer_id = offer_resp.json()["offerId"]
+            else:
+                # EEN OFFER PER SKU, EN DIE BLIJFT BESTAAN.
+                #
+                # Mislukt het publiceren, of halen we een advertentie weg (withdraw
+                # laat de offer staan), dan bestaat de offer nog. Elke volgende
+                # poging kreeg daardoor "Offer entity already exists" en kwam nooit
+                # meer online. Gemeten 15-09-2026: de RYOBI-set van dealbeter staat
+                # sinds 13-09 als UNPUBLISHED offer 264926465011 vast. Dus: bestaat
+                # er al een offer voor deze SKU, dan werken we die bij en
+                # publiceren we díe.
+                bestaand = await self._offer_voor_sku(client, sku, credentials)
+                if not bestaand:
+                    _raise_with_ebay_error(offer_resp, "creating offer")
+                offer_id = str(bestaand["offerId"])
+                put_resp = await client.put(
+                    f"{INVENTORY_API}/offer/{offer_id}",
+                    json=ebay_beleid.offer_voor_put(offer_payload),
+                    headers=self._auth_headers(credentials, write=True),
+                )
+                _raise_with_ebay_error(put_resp, "updating the existing offer")
+                live = bestaand.get("listing") or {}
+                if (str(bestaand.get("status", "")).upper() == "PUBLISHED"
+                        and str(live.get("listingStatus", "")).upper() == "ACTIVE"
+                        and live.get("listingId")):
+                    # Stond al live (bijvoorbeeld na een afgebroken verzoek): de
+                    # PUT hierboven heeft hem bijgewerkt, niet nog eens plaatsen.
+                    return {
+                        "platform_listing_id": str(live["listingId"]),
+                        "platform_listing_url": f"https://www.{domain}/itm/{live['listingId']}",
+                        "platform_offer_id": offer_id,
+                    }
 
             # Step 3: Publish offer
             pub_resp = await client.post(
                 f"{INVENTORY_API}/offer/{offer_id}/publish",
                 headers=self._auth_headers(credentials),
             )
+            if not pub_resp.is_success:
+                fouten = ebay_beleid._fout_ids(pub_resp)
+                if 25026 in fouten and gebruiker:
+                    _LIMIET_BEREIKT[gebruiker] = time.time()
+                if fouten & ebay_beleid.BELEID_ONGELDIG and gebruiker:
+                    # Beleid bij eBay weggehaald of veranderd: de volgende poging
+                    # zet het opnieuw klaar met de bewaarde instellingen.
+                    await asyncio.to_thread(ebay_beleid.bewaar_extra, gebruiker,
+                                            {"ebay_beleid": None})
             _raise_with_ebay_error(pub_resp, "publishing offer")
             listing_id = pub_resp.json().get("listingId", offer_id)
-
-        domain = _MARKETPLACE_DOMAINS.get(settings.ebay_marketplace_id, "ebay.com")
         return {
             "platform_listing_id": listing_id,
             "platform_listing_url": f"https://www.{domain}/itm/{listing_id}",
