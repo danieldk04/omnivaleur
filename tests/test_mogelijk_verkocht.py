@@ -260,6 +260,16 @@ _GEVALLEN = [
     ("het menu-item 'Verkochte artikelen' is geen verkoop",
      {"html": "m123 <a>Verkochte artikelen</a> blazer 39,50"}, "leeft"),
     ("tekst 'niet meer beschikbaar'", {"html": "Deze advertentie is niet meer beschikbaar"}, "weg"),
+    # 15-09-2026: dit is de zin die Marktplaats er echt neerzet. Hij matchte niet
+    # en dus gold een verlopen advertentie als "leeft".
+    ("tekst 'is helaas verlopen' (Marktplaats)",
+     {"html": "m123 Deze advertentie is helaas verlopen"}, "weg"),
+    ("tekst 'is helaas verlopen' (2dehands)",
+     {"html": "m123 Dit zoekertje is helaas verlopen"}, "weg"),
+    ("het verlopen-blok in de HTML, zonder dat de zin leesbaar is",
+     {"html": '<div id="expired-listing-root"></div><div class="expiredlisting-module-root">m123</div>'}, "weg"),
+    ("de knop 'Advertentie verwijderen' op een levende pagina is geen bewijs",
+     {"html": "<h1>Blazer</h1> m123 39,50 <button>Advertentie verwijderen</button>"}, "leeft"),
     ("gewone levende advertentie", {"html": "<h1>Blazer</h1> m123 39,50 Bieden"}, "leeft"),
     ("een pagina die ons advertentienummer niet noemt", {"html": "<h1>Zoekresultaten</h1>"}, "onbekend"),
 ]
@@ -267,7 +277,12 @@ _GEVALLEN = [
 _HARNAS = """
 import fs from 'fs';
 const src = fs.readFileSync(process.argv[2], 'utf8');
-const code = src.slice(src.indexOf('const NIET_MEER_BESCHIKBAAR'),
+// NIET_MEER_BESCHIKBAAR wordt sinds 15-09-2026 opgebouwd uit de twee bronnen
+// die ook de verwijdercontroles gebruiken (één bron in plaats van vier kopieers
+// die uit elkaar liepen), dus die moeten hier mee naar binnen.
+const bronnen = [...src.matchAll(/^const WEG_(?:TEKST|MARKER)_BRON =[\\s\\S]*?;$/gm)].map(m => m[0]).join(' ');
+if (!bronnen) throw new Error('WEG_*_BRON niet gevonden in background.js');
+const code = bronnen + ' ' + src.slice(src.indexOf('const NIET_MEER_BESCHIKBAAR'),
                       src.indexOf('// \u2500\u2500 Verdenkingen die twee rondes'));
 const gevallen = JSON.parse(fs.readFileSync(process.argv[3], 'utf8'));
 const uit = [];

@@ -9853,3 +9853,49 @@ niet aantoonbaar. Wat 1.0.333 daarvoor toevoegt: elke stap draagt nu ook mee hoe
 lang een Worker-pauze werkelijk duurde (kleine afwijking = alleen de klok wordt
 geknepen, grote afwijking = de pagina zelf ligt stil) en of de klok-opdracht bij
 het tabblad is aangekomen.
+
+## 15-09-2026 (later) — vangnet op de server, zodat een oude extensie dit niet nog eens kan
+
+De reparatie in de extensie (1.0.333) helpt pas als Chrome bijwerkt. Henriette
+draait op dit moment nog 1.0.329, en de nachtronde herplaatst gewoon door. Daarom
+staat er nu ook een vangnet in `backend/api/jobs.py`, op de plek waar de server
+besluit een plaatsing over te slaan omdat de bijbehorende verwijdering mislukte
+("Skipped — the paired delist failed"). Draagt die mislukte verwijdering het
+bewijs dat het kanaal zelf 404 of 410 gaf, dan was de advertentie weg en gaat de
+plaatsing gewoon door. Dat werkt bij elke verkoper zodra Railway deployt,
+ongeacht welke kopie van de extensie hij draait.
+
+`_kanaal_bevestigde_verwijdering` leest de diagnostiek echt in (`raw_decode`) in
+plaats van er een zoekterm doorheen te halen, en kijkt alleen naar de LAATSTE
+fetch-controle. Getest tegen de 83 echte productie-opdrachten van vandaag: 83 van
+de 83 herkend. Eerste versie herkende er nul omdat hij de laatste blokhaak zocht
+en daarmee "[extensie 1.0.329]" meenam — gevonden door tegen de echte gegevens te
+meten in plaats van tegen een bedacht voorbeeld. Tegenproeven in
+`tests/test_verwijdering_toch_gelukt.py`: kanaal zei 200, alleen de eerste poging
+410, een advertentienummer met 410 erin, geen diagnostiek, onleesbare
+diagnostiek — allemaal false.
+
+Verder nagemeten voordat er een mail uitging:
+- Henriette heeft nu 0 rode regels op het Refresh-scherm. Haar twee resterende
+  foutmeldingen staan op rijen met status 'delisted', en dat scherm toont alleen
+  'active', 'error' en een lopende herplaatsing.
+- De teruggezette advertenties kloppen inhoudelijk: m2442994817 staat online met
+  alle 6 foto's ("1/6"), Nederlandse titel, prijs 25,00 gelijk aan het dashboard,
+  en de kenmerken en fabrikantgegevens ingevuld.
+- Gemeten tempo van de wachtrij: 1,2 minuut per advertentie. Haar 52 resterende
+  zijn dus in ongeveer een uur klaar, niet "vandaag en vannacht".
+- De rode regels die bij andere verkopers overblijven zijn andere oorzaken
+  (advertentie staat echt nog live, Vinted-verwijderknop, overzicht onleesbaar,
+  tabblad gesloten). Geen daarvan draagt 404/410 in zijn diagnostiek.
+- Hele testronde: 13 tests falen, exact dezelfde 13 als op de commit vóór dit
+  werk (gecontroleerd in een schone worktree). Voorbestaand, niet hierdoor.
+
+**Openstaand:** `tests/test_extensie_permissies.py` faalt al sinds de permissie
+`power` erbij kwam (1.0.325, commit 2a4296bf) zonder dat de goedkeuringslijst in
+die test is bijgewerkt. Dat is een bewuste keuze van toen of een vergissing; het
+is hier niet aangeraakt.
+
+**Versienummer:** de andere sessie gaf 1.0.333 aan haar klokmeting terwijl ik het
+al aan deze reparatie had gegeven, en nam mijn bestanden opnieuw mee in haar
+commit. De uit te leveren versie is daarom **1.0.334**, gebouwd uit de werkmap
+met beide wijzigingen erin. Oudere zips in `dist/` niet uploaden.

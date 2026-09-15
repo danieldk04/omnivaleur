@@ -10,6 +10,7 @@ from types import SimpleNamespace
 import logging
 import time
 import re
+import json
 import unicodedata
 
 logger = logging.getLogger(__name__)
@@ -1355,7 +1356,7 @@ def get_pending_jobs(request: Request, platform: str = None, user_id: str = Depe
         if j["action"] == "create" and j.get("scheduled_for"):
             paired_delete = (
                 db.table("jobs")
-                .select("status,payload")
+                .select("id,status,payload,result")
                 .eq("user_id", user_id)
                 .eq("item_id", j["item_id"])
                 .eq("platform", j["platform"])
@@ -1373,6 +1374,41 @@ def get_pending_jobs(request: Request, platform: str = None, user_id: str = Depe
             # Zo stond bij Pleun Aertssen (30-08-2026) een herplaatsing van
             # 12:35 uur nog steeds te wachten op een verwijdering die al om
             # 12:48 was afgebroken.
+            # WAS DIE "MISLUKKING" IN WERKELIJKHEID EEN GESLAAGDE VERWIJDERING?
+            #
+            # 15-09-2026. Extensie 1.0.329 eiste na een verwijdering naast de
+            # statuscode van het kanaal ook een tekst op de gerenderde pagina, en
+            # zocht die als "verlopen advertentie" terwijl Marktplaats "Deze
+            # advertentie is helaas verlopen" schrijft. Dus: kanaal geeft HTTP
+            # 410, advertentie is echt weg, opdracht komt binnen als mislukt, en
+            # hieronder werd de plaatsing daarop overgeslagen. 83 advertenties bij
+            # vier verkopers stonden daarna nergens meer.
+            #
+            # De extensie is gerepareerd (1.0.333), maar een verkoper werkt pas
+            # bij wanneer Chrome dat doet, en tot dat moment zou elke nachtronde
+            # het opnieuw doen. Daarom ook hier, waar wij het zelf in de hand
+            # hebben: draagt de mislukte verwijdering het bewijs dat het kanaal
+            # zelf 404/410 gaf, dan is de advertentie weg en gaat de plaatsing
+            # gewoon door.
+            if (paired_delete and paired_delete[0]["status"] == "error"
+                    and _kanaal_bevestigde_verwijdering(paired_delete[0])):
+                db.table("jobs").update({
+                    "status": "done",
+                    "result": {
+                        "note": "already_absent",
+                        "correctie": ("De verwijdering was gelukt: het kanaal gaf zelf 404/410. "
+                                      "Een oudere kopie van de uitbreiding herkende de tekst op "
+                                      "de verlopen pagina niet en meldde het als mislukt."),
+                        "oorspronkelijke_fout": (paired_delete[0].get("result") or {}).get("error"),
+                    },
+                }).eq("id", paired_delete[0]["id"]).eq("status", "error").execute()
+                logger.info("Verwijdering %s alsnog als gelukt geboekt (kanaal gaf 404/410); "
+                            "plaatsing %s gaat door", paired_delete[0]["id"], j["id"])
+                db.table("listings").update({
+                    "error_message": None,
+                }).eq("item_id", j["item_id"]).eq("platform", j["platform"]).execute()
+                paired_delete[0]["status"] = "done"
+
             if paired_delete and paired_delete[0]["status"] in ("error", "cancelled"):
                 mislukt = paired_delete[0]["status"] == "error"
                 db.table("jobs").update({
@@ -3452,6 +3488,44 @@ _TIJDSOVERSCHRIJDING = re.compile(r"timed out waiting for this .* job to finish"
 # "timed out", "not signed in" en "queue stopped" — drie verschijningsvormen van
 # hetzelfde: 2dehands.be laat dit account niet plaatsen via /plaats. De oude rem
 # keek alleen naar drie identieke "timed out" op rij en sloeg daardoor over.
+def _kanaal_bevestigde_verwijdering(job: dict) -> bool:
+    """Zegt de diagnostiek van deze mislukte verwijdering dat het kanaal zelf 404/410 gaf?
+
+    Alleen dán is de advertentie aantoonbaar weg en mag de bijbehorende plaatsing
+    doorgaan. Bij twijfel false: een plaatsing naast een advertentie die nog live
+    staat is de duurste uitkomst die er is.
+
+    De extensie hangt haar diagnostiek achter de foutmelding als
+    `... | Diag: [ ... ] [extensie 1.0.329]`. We lezen die echt in plaats van er
+    een zoekterm doorheen te halen, zodat een advertentienummer dat toevallig
+    "410" bevat hier niets kan veroorzaken. Lukt het inlezen niet, dan doen we
+    niets.
+    """
+    fout = str((job.get("result") or {}).get("error") or "")
+    merk = "| Diag: "
+    i = fout.find(merk)
+    if i < 0:
+        return False
+    staart = fout[i + len(merk):]
+    # raw_decode leest precies één JSON-waarde en laat de rest staan. Dat moet
+    # ook: achter de diagnostiek staat nog " [extensie 1.0.329]", en zoeken naar
+    # de laatste blokhaak pakte die erbij — waarna het inlezen stilletjes faalde
+    # en dit vangnet nul van de 83 echte gevallen herkende.
+    try:
+        diag, _rest = json.JSONDecoder().raw_decode(staart)
+    except Exception:  # noqa: BLE001
+        return False
+    if not isinstance(diag, list):
+        return False
+    # De LAATSTE fetch-controle telt. Een eerdere poging kan nog van vóór het
+    # verwijderen komen; het gaat om wat het kanaal als laatste zei.
+    laatste = None
+    for stap in diag:
+        if isinstance(stap, dict) and stap.get("fase") == "fetch-check":
+            laatste = stap
+    return bool(laatste and laatste.get("status") in (404, 410))
+
+
 _ONDOORGROND = re.compile(
     r"timed out waiting for this .* job to finish"
     r"|not signed in to|je bent niet ingelogd"
