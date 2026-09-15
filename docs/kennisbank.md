@@ -72,6 +72,16 @@ dat nooit meer online kwam.
 **How to apply:** bij elke eBay-wijziging `tests/test_ebay_complete_lus.py`
 draaien. Zie ook "ebay-offer-id-versus-advertentienummer",
 "ebay-listing-requirements", "voor-en-na-proef-mag-geen-head-gebruiken".
+12. **eBay's rubriekzoeker op ebay.nl is onbruikbaar als enige bron.** Gemeten op
+   13 artikelen van De Juiste Toon: 5 keer goed, in het Nederlands en Engels even
+   slecht (schapenvacht "Laarzen", lederhose "Fietsbroeken", "boys clothing"
+   "Veiligheidsharnassen"). De rubriek die het dashboard op het artikel bewaarde
+   was vaak dezelfde gok. Nu: `_VASTE_RUBRIEK` per dashboardcategorie gaat voor,
+   daarbuiten alleen een gok binnen de eigen tak (`_EBAY_TAK`; wonen ook Tuin en
+   terras, antiek ook Huis). De boom lezen kan alleen met de app-sleutel (server):
+   `/api/platforms/ebay/rubriekenboom`. Trading GetCategories geeft 410.
+13. **eBay is Nederlands sinds 15-09-2026** (`_DUTCH_PLATFORMS`). Engels stond er
+   sinds de eerste commit zonder reden, terwijl we op ebay.nl met nl-NL plaatsen.
 
 ---
 

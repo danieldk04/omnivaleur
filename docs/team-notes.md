@@ -9542,3 +9542,25 @@ nalezen met GetItem) en zijn eerste verkoop.
 Onderweg een fout in de nieuwe statusregel gevonden: 4 advertenties die eBay zelf
 beëindigde droegen nog "on hold" en telden daardoor als actief. Gerepareerd en met
 een proef vastgelegd.
+
+## 15-09-2026 (vervolg) — eBay in het Nederlands en een vaste rubriek
+
+Daniel vroeg waarom Toons Nederlandse artikelen op eBay Engels zouden worden. Geen
+reden te vinden: eBay stond sinds de eerste commit bij de Engelse kanalen, terwijl
+we op ebay.nl plaatsen met Content-Language nl-NL en alleen binnen Nederland
+verzenden. Nu Nederlands; een al-Nederlandse tekst gaat niet meer langs de vertaler.
+
+Bij het nameten bleek eBay's rubriekzoeker op ebay.nl het echte probleem: van 13
+echte artikelen van Toon 5 goed, in beide talen even slecht. Nu gaat een vaste
+eBay-rubriek per dashboardcategorie voor (dekt 922 van Toons 1000 artikelen),
+ook boven de rubriek die het dashboard eerder op het artikel bewaarde (vaak
+dezelfde gok). Bij de overige categorieën telt alleen een gok binnen de eigen
+eBay-tak; op 14 echte artikelen 6 keer beter, nergens slechter, 3 keer geen
+rubriek (dan vraagt het scherm erom). Open: Toons eigen indeling is soms
+rommelig (foulard onder damestassen), dat kan een vaste lijst niet rechtzetten.
+
+Vinted: Daniel zag dubbele berichten in de Vinted-app en vroeg of wij dat
+veroorzaken. De extensie leest op Vinted alleen (ongelezen berichten tellen elke
+10 minuten, garderobe en artikelen) en verwijdert alleen advertenties die elders
+verkocht zijn. Er is geen code die berichten stuurt. Niet te meten vanaf hier
+wat de app op zijn telefoon doet.

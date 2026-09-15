@@ -10,7 +10,7 @@ product verandert. De ontwikkelaar werkt dan zowel dit bestand in de repo als de
 kopie in Drive bij, in dezelfde beurt. Daniel hoeft niets te doen; de Gem leest
 de Drive-kopie de volgende keer opnieuw in.
 
-_Laatst bijgewerkt: 15-09-2026 (eBay: verzendkosten instellen in het dashboard, controleblok bij Platforms, en waarom je slottekst niet op eBay komt)_
+_Laatst bijgewerkt: 15-09-2026 (eBay: advertenties nu in het Nederlands, vaste eBay-rubriek per categorie, verzendkosten en controleblok bij Platforms, slottekst niet op eBay)_
 
 ---
 
@@ -128,7 +128,13 @@ Hoe de kanalen gekoppeld worden:
   webadressen worden eruit gehaald. eBay verbiedt telefoonnummers, adressen en
   verwijzingen naar je eigen webshop in een advertentie en haalt zulke
   advertenties weg.
-- eBay-advertenties staan in het Engels.
+- eBay-advertenties staan in het Nederlands (we plaatsen op ebay.nl en verzenden
+  binnen Nederland). Tot 15-09-2026 was dat Engels; al geplaatste advertenties
+  blijven zoals ze zijn.
+- De eBay-rubriek volgt vast uit je Omnivaleur-categorie (tapijten, plaids,
+  tafelkleden, kussens, vachten, wandkleden en de gewone dames- en herenkleding).
+  Bij andere categorieën zoekt eBay zelf; vindt het niets passends, dan zegt het
+  scherm "pick an eBay category" en kies je die bij het artikel.
 - Verkocht op eBay: Omnivaleur ziet dat meestal binnen een uur en haalt het
   artikel dan van je andere kanalen. Verkocht op een ander kanaal: de
   eBay-advertentie gaat automatisch offline.
