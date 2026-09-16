@@ -6628,9 +6628,7 @@ async function saveItem() {
     // (a purchase price, say) gave no visible sign anything had happened.
     showToast(id ? 'Item saved — figures updated.' : 'Item created.');
     if (alLiveNaOpslaan.length) {
-      alert(`Not published:\n`
-        + alLiveNaOpslaan.map(r => `• ${PLATFORM_LABELS[r.platform] || r.platform}: `
-            + `${r.message || 'already live there, so nothing was published'}`).join('\n'));
+      await meldAlLive(itemId, alLiveNaOpslaan, '');
     }
   } catch(e) {
     alert('Error: ' + e.message);
@@ -8540,6 +8538,57 @@ function resetCrosslistButton() {
   btn.textContent = 'Publish';
 }
 
+// STAAT HET ER AL OP, DAN KAN HIJ HET HIER METEEN VERVANGEN (16-09-2026).
+// Toon (De Juiste Toon) bewerkte zijn lederhosen en drukte op publiceren.
+// Marktplaats ging de rij in, en 2dehands zei "Use Relist": een knop die op een
+// heel ander scherm staat. Wie net iets heeft aangepast wil juist die versie op
+// het kanaal. Dus vragen we het hier, en gebruiken we precies dezelfde
+// herplaatsroute als de Relist-knop, met dezelfde remmen (wachttijd per
+// advertentie, maximum per dag, eerst oogsten wat er op de oude advertentie staat).
+// Weigert de server, dan staat zijn reden letterlijk in de melding.
+const VERVANGBAAR_KANAAL = ['marktplaats', '2dehands', 'vinted'];
+
+async function meldAlLive(itemId, alLive, kop) {
+  const naam = r => PLATFORM_LABELS[r.platform] || r.platform;
+  const kan = itemId ? alLive.filter(r => VERVANGBAAR_KANAAL.includes(r.platform)) : [];
+  const rest = alLive.filter(r => !kan.includes(r));
+  if (rest.length) {
+    alert(kop + `Not published:\n`
+      + rest.map(r => `• ${naam(r)}: ${r.message || 'already live there, so nothing was published'}`).join('\n'));
+    kop = '';
+  }
+  if (!kan.length) return;
+  const kanalen = kan.map(naam).join(' and ');
+  const ja = confirm(kop
+    + `This item is already live on ${kanalen}, so nothing new was published there.\n\n`
+    + `Replace that advert with the version you have now? The old advert is removed and `
+    + `placed again with your latest title, text, photos and price.\n\n`
+    + `OK = replace it.  Cancel = leave the advert as it is.`);
+  if (!ja) return;
+  const uitkomst = [];
+  for (const r of kan) {
+    try {
+      const res = await apiFetch(`${API}/api/listings/refresh`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ item_id: itemId, platform: r.platform, strategy: 'relist' }),
+      });
+      const tekst = await res.text();
+      let d = {};
+      try { d = tekst ? JSON.parse(tekst) : {}; } catch { d = {}; }
+      if (!res.ok) throw new Error((typeof d.detail === 'string' && d.detail) || `HTTP ${res.status}`);
+      const eta = d.recreate_scheduled_for
+        ? ` The new advert goes live in about ${fmtEta(new Date(d.recreate_scheduled_for).getTime() - Date.now())}.`
+        : '';
+      uitkomst.push(`• ${naam(r)}: replacing it.${eta}`);
+    } catch (e) {
+      uitkomst.push(`• ${naam(r)}: not replaced, the advert stays as it is. ${e.message || ''}`.trim());
+    }
+  }
+  nudgeExtension();
+  alert(uitkomst.join('\n'));
+  await loadAll();
+}
+
 async function doCrosslist() {
   const selected = [...document.querySelectorAll('#crosslist-platform-checkboxes input:checked')].map(c => c.value);
   if (!selected.length) return alert(geenPlatformGekozen('crosslist-platform-checkboxes'));
@@ -8575,13 +8624,14 @@ async function doCrosslist() {
     const alLive = (data.results || []).filter(r => r.status === 'already_live');
     const ok = (data.results || []).filter(r => !['error', 'duplicate', 'blocked', 'already_live'].includes(r.status))
                                    .map(r => PLATFORM_LABELS[r.platform] || r.platform);
-    if (errored.length || alLive.length) {
-      const lines = [
-        ...errored.map(r => `• ${PLATFORM_LABELS[r.platform] || r.platform}: ${r.error || 'failed'}`),
-        ...alLive.map(r => `• ${PLATFORM_LABELS[r.platform] || r.platform}: ${r.message || 'already live there, so nothing was published'}`),
-      ].join('\n');
-      alert((ok.length ? `Queued: ${ok.join(', ')}.\n\n` : '') + `Not published:\n${lines}`);
-    } else {
+    const queuedKop = ok.length ? `Queued: ${ok.join(', ')}.\n\n` : '';
+    if (errored.length) {
+      const lines = errored.map(r => `• ${PLATFORM_LABELS[r.platform] || r.platform}: ${r.error || 'failed'}`).join('\n');
+      alert(queuedKop + `Not published:\n${lines}`);
+    }
+    if (alLive.length) {
+      await meldAlLive(state.crosslistItemId, alLive, errored.length ? '' : queuedKop);
+    } else if (!errored.length) {
       showToast(`Queued for ${selected.map(p => PLATFORM_LABELS[p]).join(', ')} — the extension starts right away`);
     }
     nudgeExtension();

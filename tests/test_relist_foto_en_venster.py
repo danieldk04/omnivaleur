@@ -189,3 +189,28 @@ def test_shopify_import_bewaart_platte_tekst():
     assert "def _platte_tekst(" in SHOPIFY
     assert '"description": _platte_tekst(desc_raw),' in SHOPIFY, \
         "body_html rechtstreeks opslaan zet <br/> in elke advertentie"
+
+
+def test_2dehands_fotos_met_mapje_en_json_streepjes_worden_gelezen():
+    # 16-09-2026, De Juiste Toon: zijn Tiroler lederhose heeft zestien foto's op
+    # 2dehands, en de aanvulling voor een herplaatsing las er nul. Letterlijk de
+    # vorm van die pagina: eerst de omslag als gewone src, daarna de hele reeks
+    # als JSON met /. Het mapje (ea/) hoort bij het adres, zonder is het 404.
+    import importlib.util
+    spec = importlib.util.spec_from_file_location(
+        "mp_enrich_test3", ROOT / "backend/services/mp_enrich.py")
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    pagina = (
+        'src="https://images.2dehands.com/api/v1/hz-twh-pro-listing/images/ea/'
+        'ea4d73d3-b995-44d5-873d-4f1664b8083b?rule=ecg_mp_eps$_83"'
+        '"imageUrls":["\\u002F\\u002Fimages.2dehands.com\\u002Fapi\\u002Fv1\\u002F'
+        'hz-twh-pro-listing\\u002Fimages\\u002Fea\\u002Fea4d73d3-b995-44d5-873d-4f1664b8083b'
+        '?rule=ecg_mp_eps$_#.jpg","\\u002F\\u002Fimages.2dehands.com\\u002Fapi\\u002Fv1'
+        '\\u002Fhz-twh-pro-listing\\u002Fimages\\u002Fe8\\u002Fe8a35b92-72cb-4141-a8bc-'
+        '5873a84dd497?rule=ecg_mp_eps$_#.jpg"]')
+    assert mod._fotos_uit_html(pagina) == [
+        "https://images.2dehands.com/api/v1/hz-twh-pro-listing/images/ea/"
+        "ea4d73d3-b995-44d5-873d-4f1664b8083b?rule=ecg_mp_eps$_86",
+        "https://images.2dehands.com/api/v1/hz-twh-pro-listing/images/e8/"
+        "e8a35b92-72cb-4141-a8bc-5873a84dd497?rule=ecg_mp_eps$_86"]

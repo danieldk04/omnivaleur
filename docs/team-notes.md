@@ -10081,3 +10081,64 @@ want herplaatsen gebeurt vooral 's nachts. Het is bewezen tegen de 83 echte
 foutmeldingen van vandaag en in `tests/test_verwijdering_toch_gelukt.py`, maar
 niet in het wild. Wie morgen kijkt: zoek naar verwijderopdrachten met status
 'done' die het veld `correctie` in hun resultaat dragen.
+
+## 16-09-2026 — De Juiste Toon: lederhosen bewerken en op 2dehands zetten
+
+Toon stuurde een foto van het publiceervenster bij "Originele Tiroler Lederhose
+(echt leer)": Marktplaats in de rij, 2dehands "Already live on this channel ...
+Use Relist". Zijn zin erbij: "We gaan nu aantal Lederhosen na bewerken en plaatsen
+op tweedehands. Deze gaat nog niet zoals nu mp gaat."
+
+**Wat er gemeten is, drie dingen tegelijk:**
+
+1. **Geen enkele 2dehands-plaatsing kon lukken.** Zijn locatieblok in Preferences
+   (sinds 11-09, 1.0.321) stond leeg. Van zijn 106 2dehands-opdrachten ooit strandden
+   alle sinds 11-09 op "Er stond geen adres op het formulier", op twee na op 11-09
+   11:11 en 11:12. Vandaag weer: "Originele Lederhosen maat 54" en "Lederhosen lang
+   model heren maat 56", en daarna ging de rij op pauze. Marktplaats liep wel (52
+   plaatsingen vandaag), daar komt de postcode uit zijn account. De melding zelf
+   stuurde hem de verkeerde kant op: "zolang wij dat blok niet kunnen invullen",
+   plus het advies een Belgische postcode te nemen. Dat blok kunnen we sinds 11-09
+   juist wel invullen.
+2. **"Use Relist" wees naar een knop op een ander scherm.** De Tiroler staat echt
+   live op 2dehands (m2024997340, HTTP 200, "Etten-Leur, Nederland"), dus de weigering
+   klopte, maar zijn bewerking kwam er zo nooit op.
+3. **Vervangen had op 2dehands foto's weggegooid.** Die advertentie heeft 16 foto's,
+   het artikel in Omnivaleur 1 (import uit de zoeklijst). Vlak voor een herplaatsing
+   vullen we foto's aan vanaf de oude advertentie, maar `_fotos_uit_html` las op
+   2dehands nul: 2dehands zet een mapje in het adres (`/images/ea/ea4d73d3-...`) en
+   de reeks staat als JSON met `/`. Zonder mapje is dezelfde foto HTTP 404. Na
+   het weghalen is de pagina 410, dus die 15 foto's waren dan definitief weg. Over
+   zijn hele voorraad: 178 van 1.318 artikelen hebben 0 of 1 foto, 175 daarvan staan
+   live op 2dehands met 4 tot 16 foto's (steekproef). De Marktplaats-plaatsing van de
+   Tiroler van vandaag ging daardoor met 1 foto de deur uit.
+
+**Wat er nu staat:**
+
+- Toons locatie staat op Nederland, Etten-Leur (afgelezen van zijn eigen live
+  2dehands-advertentie; ook `tests/test_postcode_melding_2dehands.py` noemde al
+  Etten-Leur met abroad=true). Nieuwe opdrachten dragen `location_country`.
+- `_melding_geen_adres` in `backend/api/jobs.py` wijst nu naar Preferences > Your
+  location, en zegt iets anders als de locatie al wél is ingevuld. Twee proeven,
+  allebei rood tegen de oude code.
+- `_fotos_uit_html` in `backend/services/mp_enrich.py` leest het mapje en de
+  JSON-schrijfwijze. Op zijn echte pagina: 16 van 16 foto's gelezen, 16 van 16
+  adressen geven een beeld. Proef rood tegen de oude code.
+- Publiceervenster (`meldAlLive` in `frontend/app.html`): staat een artikel al op
+  Marktplaats, 2dehands of Vinted, dan vraagt het meteen of die advertentie vervangen
+  moet worden door de huidige versie. Dat loopt via dezelfde `/api/listings/refresh`
+  als de Relist-knop, met dezelfde remmen (21 dagen, 3 per dag per site, eerst
+  oogsten). De echte functie is gedraaid tegen nagebootste serverantwoorden: OK,
+  Annuleren, dagmaximum, en eBay ernaast.
+- Foto's teruggezet op zijn dunne artikelen vanaf hun live 2dehands-advertentie,
+  gekopieerd naar onze eigen opslag, alleen `photo_urls` (tekst blijft van hem).
+  Logboek van voor en na per artikel: zie de sessie van 16-09.
+
+**Openstaand:** het bewijs dat de locatie op zijn 2dehands-plaatsingen werkt is één
+echte geslaagde opdracht na deze wijziging. Die hangt af van zijn browser. Wie
+kijkt: zoek 2dehands-opdrachten van user 96e30080 met `location_country` =
+Nederland en status done. Los punt, niet gerepareerd: een NIEUWE publicatie naar
+een ander kanaal vult geen foto's aan vanaf een advertentie die al live staat; dat
+doet alleen herplaatsen. Vooraf al rood en los van dit werk: 14 proeven, waaronder
+`test_marktplaats_krijgt_hem_ook`, `test_de_balk_vertelt_het_gemeten_tempo` en de
+reeks in `test_video_opvolging.py`.

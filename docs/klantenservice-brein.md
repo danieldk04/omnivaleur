@@ -10,7 +10,7 @@ product verandert. De ontwikkelaar werkt dan zowel dit bestand in de repo als de
 kopie in Drive bij, in dezelfde beurt. Daniel hoeft niets te doen; de Gem leest
 de Drive-kopie de volgende keer opnieuw in.
 
-_Laatst bijgewerkt: 15-09-2026 (zakelijk account lijkt op uitgelogd, zie de eerste bullet bij Veelvoorkomende vragen; eBay: advertenties nu in het Nederlands, vaste eBay-rubriek per categorie, verzendkosten en controleblok bij Platforms, slottekst niet op eBay; wachtrij die stilstaat omdat de browser niet is ingelogd op het kanaal; Vinted plaatst nu door zonder dat je het tabblad open hoeft te houden; rode 'Relist failed' meldingen van 15-09: advertenties waren wel verwijderd maar kwamen niet terug, hersteld en gerepareerd in 1.0.334, plus een beveiliging op de server)_
+_Laatst bijgewerkt: 16-09-2026 (2dehands voor verkopers die in Nederland wonen: land en woonplaats invullen bij Preferences; al op een kanaal en net bewerkt: vervangen kan nu direct vanuit het publiceervenster. Eerder, 15-09: zakelijk account lijkt op uitgelogd; eBay in het Nederlands; wachtrij die stilstaat omdat de browser niet is ingelogd; Vinted plaatst door zonder open tabblad; rode 'Relist failed' meldingen hersteld in 1.0.334)_
 
 ---
 
@@ -237,6 +237,19 @@ Contact:
   plaats van Verzamelen). Wat eerder op "betalende categorie" strandde, kan de
   klant nu gewoon opnieuw klaarzetten. Blijkt een rubriek toch geld te kosten, dan
   onthoudt Omnivaleur dat vier weken en probeert het daar niet steeds opnieuw.
+- Woont de klant in Nederland en plaatst hij op 2dehands, dan moet hij één keer zijn
+  land en woonplaats invullen in Omnivaleur: Preferences, blok "Your location on
+  Marktplaats & 2dehands". 2dehands kent in het account alleen een Belgische
+  postcode, en vraagt "Buitenland" met land en woonplaats op elk zoekertje
+  opnieuw. Staat dat blok leeg, dan komt er niets op 2dehands en krijgt hij "Er
+  stond geen adres op het formulier". Na invullen gewoon opnieuw op publiceren
+  drukken. Marktplaats verandert er niet door.
+- Staat een artikel al op een kanaal en drukt de klant na het bewerken opnieuw op
+  publiceren, dan vraagt Omnivaleur sinds 16-09-2026 meteen of die advertentie
+  vervangen moet worden door de bewerkte versie. OK haalt de oude weg en plaatst
+  hem opnieuw met de nieuwe titel, tekst, foto's en prijs. Dat kan hoogstens drie
+  keer per dag per site (Marktplaats en 2dehands), en niet vaker dan eens per 21
+  dagen per advertentie; dat is een bewuste rem zodat het account niet opvalt.
 - Een zoekertje op 2dehands is vier weken zichtbaar. Loopt het bijna af, dan
   verlengt Omnivaleur het automatisch en gratis, mits de computer aanstaat met
   Chrome en de uitbreiding. Er wordt niets weggehaald en niets opnieuw geplaatst,

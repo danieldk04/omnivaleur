@@ -366,13 +366,23 @@ def _fotos_uit_html(ruwe: str) -> list[str]:
     laatste miniaturen worden pas in een echte browser bijgeladen). Wat we hier
     krijgen is dus "alles wat de pagina meestuurt" — bij een advertentie met één
     foto in ons systeem is dat vrijwel altijd een verbetering.
+
+    2DEHANDS ZET ER EEN MAPJE TUSSEN (gemeten 16-09-2026, De Juiste Toon). Zijn
+    "Originele Tiroler Lederhose" heeft op 2dehands zestien foto's, op adressen als
+    .../images/ea/ea4d73d3-b995-...; de reeks staat in de pagina als JSON met
+    \\u002F in plaats van een schuine streep. Deze functie verwachtte het getal
+    direct na /images/ en las daarom nul foto's. Het mapje hoort bij het adres:
+    zonder mapje geeft dezelfde foto HTTP 404. Gevolg was dat herplaatsen op
+    2dehands van een artikel met één foto in ons systeem de andere vijftien
+    definitief kon weggooien, want na het weghalen is de pagina 410.
     """
     basis = {"marktplaats": "https://images.marktplaats.com",
              "2dehands": "https://images.2dehands.com"}
     uit, gezien = [], set()
+    ruwe = (ruwe or "").replace("\\u002F", "/").replace("\\u002f", "/")
     for m in re.finditer(
             r'(?:https?:)?//images\.(marktplaats|2dehands)\.com(/api/v1/[a-z0-9\-]+/images/'
-            r'[0-9a-f\-]{16,})', ruwe or "", re.I):
+            r'(?:[0-9a-f]{2}/)?[0-9a-f\-]{16,})', ruwe, re.I):
         sleutel = m.group(2).lower()
         if sleutel in gezien:
             continue

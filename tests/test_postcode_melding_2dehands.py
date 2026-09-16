@@ -57,3 +57,30 @@ def test_vinted_valt_hier_niet_onder():
     # Vinted heeft dit veld niet; een toevallige "postcode" in een Vinted-fout
     # mag geen 2dehands-uitleg opleveren.
     assert _zeg("iets met postcode erin", platform="vinted") == "iets met postcode erin"
+
+
+# 16-09-2026 (De Juiste Toon). Sinds 1.0.321 kan de extensie "Buitenland" met land
+# en woonplaats zelf invullen, uit Preferences. De melding bleef zeggen "zolang wij
+# dat blok niet kunnen invullen" en stuurde naar een Belgische postcode, terwijl
+# Toons locatieblok gewoon leeg stond. Al zijn 2dehands-plaatsingen van 11 tot en
+# met 16 september strandden daarop.
+
+def _zeg_met(fout, payload, platform="2dehands"):
+    job = {"platform": platform, "action": "create", "payload": payload}
+    return _rechtgezette_foutmelding(job, {"error": fout}, versie=None)["error"]
+
+
+def test_zonder_locatie_wijst_hij_naar_de_plek_in_omnivaleur():
+    for payload in ({}, {"location_country": "", "location_city": ""}):
+        uit = _zeg_met(LEEG_FORMULIER, payload)
+        assert "Preferences > Your location on Marktplaats & 2dehands" in uit
+        assert "niet kunnen invullen" not in uit
+        assert "verzonnen postcode" in uit
+
+
+def test_met_ingestelde_locatie_vraagt_hij_niet_om_wat_er_al_staat():
+    uit = _zeg_met(LEEG_FORMULIER, {"location_country": "Nederland",
+                                     "location_city": "Etten-Leur"})
+    assert "Etten-Leur, Nederland" in uit
+    assert "vul dan in Omnivaleur één keer" not in uit
+    assert "Preferences > Your location on Marktplaats & 2dehands" in uit

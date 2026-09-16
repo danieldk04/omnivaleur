@@ -3835,7 +3835,7 @@ _CONTROLEPAGINA = {
 }
 
 
-def _melding_geen_adres(platform: str) -> str:
+def _melding_geen_adres(platform: str, job: dict | None = None) -> str:
     """Wat de verkoper leest als het adresblok op het formulier leeg bleef.
 
     EEN LEEG ADRESVELD IS EEN ACCOUNTINSTELLING, GEEN STORING.
@@ -3866,25 +3866,51 @@ def _melding_geen_adres(platform: str) -> str:
     spellingen van diezelfde woonplaats en een keer Mauritanie. Werd het adres
     onthouden, dan was de spelling elke keer dezelfde geweest. Het wordt per
     zoekertje opnieuw ingetypt, omdat het formulier het elke keer opnieuw vraagt.
+
+    DE UITWEG BESTAAT SINDS 11-09-2026, EN DE MELDING WIST HET NIET (16-09-2026).
+    Sinds 1.0.321 zet de extensie "Buitenland" met land en woonplaats zelf op het
+    zoekertje, uit Preferences > "Your location on Marktplaats & 2dehands". Deze
+    tekst bleef zeggen "zolang wij dat blok niet kunnen invullen" en stuurde naar
+    een Belgische postcode. Toon (De Juiste Toon) had dat blok leeg, dus al zijn
+    2dehands-plaatsingen van 11 tot en met 16 september strandden hierop, en de
+    melding wees hem nergens heen. Nu noemt hij de plek in Omnivaleur, en weet hij
+    of die al is ingevuld (dan is het advies anders).
     """
     if platform == "2dehands":
+        payload = (job or {}).get("payload") or {}
+        land = str(payload.get("location_country") or "").strip()
+        plaats = str(payload.get("location_city") or "").strip()
+        if land:
+            return (
+                "Er stond geen adres op het formulier, dus er is niets geplaatst. "
+                f"In Omnivaleur staat je locatie op {plaats or '(geen woonplaats)'}, "
+                f"{land}, maar het adresblok op 2dehands bleef toch leeg. Wij "
+                "verzinnen zelf nooit een adres, want een verzonnen postcode zet je "
+                "advertentie in een willekeurige gemeente.\n\n"
+                "Kijk bij Preferences > Your location on Marktplaats & 2dehands of "
+                "land en woonplaats kloppen en allebei zijn ingevuld. Woon je in "
+                "België, kies daar dan België en zet je postcode in je account op "
+                "2dehands.be; \"Buitenland\" is alleen voor wie buiten België woont.\n\n"
+                "De rest van je wachtrij voor dit kanaal is gepauzeerd, want elke "
+                "volgende advertentie loopt op precies dezelfde lege regel vast. "
+                "Druk daarna gewoon opnieuw op publiceren."
+            )
         return (
             "Er stond geen adres op het formulier, dus er is niets geplaatst. "
-            "2dehands haalt de postcode uit je account op die site, niet uit "
-            "Omnivaleur; wij vullen daar bewust niets in, want een verzonnen "
-            "postcode zet je advertentie in een willekeurige gemeente.\n\n"
-            "Vul die postcode een keer in bij Profiel > Contactgegevens > "
-            "Postcode op 2dehands.be. Let op: daar past alleen een Belgische "
-            "postcode. Woon je in Nederland, dan is er in je account geen plek "
-            "voor je echte adres; de keuze \"Buitenland\" met land en woonplaats "
-            "bestaat alleen op het zoekertje zelf, en 2dehands onthoudt die niet. "
-            "Zolang wij dat blok niet kunnen invullen, kun je op 2dehands kiezen "
-            "tussen een Belgische postcode in je profiel, of dit kanaal uit "
-            "laten en daar met de hand plaatsen.\n\n"
+            "2dehands vraagt op elk zoekertje waar je woont: een Belgische postcode "
+            "uit je account op die site, of \"Buitenland\" met land en woonplaats. "
+            "Dat laatste onthoudt 2dehands niet, en in je account is geen plek voor "
+            "een adres buiten België.\n\n"
+            "Woon je niet in België, vul dan in Omnivaleur één keer je land en "
+            "woonplaats in bij Preferences > Your location on Marktplaats & "
+            "2dehands. Dan zetten wij op elk zoekertje zelf \"Buitenland\" met jouw "
+            "land en woonplaats. Woon je wel in België, zet dan je postcode in je "
+            "profiel op 2dehands.be (Profiel > Contactgegevens > Postcode). Wij "
+            "verzinnen zelf nooit een adres, want een verzonnen postcode zet je "
+            "advertentie in een willekeurige gemeente.\n\n"
             "De rest van je wachtrij voor dit kanaal is gepauzeerd, want elke "
             "volgende advertentie loopt op precies dezelfde lege regel vast. "
-            "Zodra er een postcode in je profiel staat, druk je gewoon opnieuw "
-            "op publiceren."
+            "Zodra je locatie is ingevuld, druk je gewoon opnieuw op publiceren."
         )
     return (
         "Er stond geen adres op het formulier, dus er is niets geplaatst. "
@@ -4243,7 +4269,7 @@ def _rechtgezette_foutmelding(job: dict | None, body: dict, versie, kansloos: bo
     # buitenlandblok niet, hij typt het elke keer opnieuw.
     if _GEEN_ADRES.search(fout) and (job or {}).get("platform") in ("2dehands", "marktplaats"):
         return {**(body or {}), "error_oorspronkelijk": fout,
-                "error": _melding_geen_adres((job or {}).get("platform") or "")}
+                "error": _melding_geen_adres((job or {}).get("platform") or "", job)}
     # HET ANTWOORD DAT WE ZELF HEBBEN OPGEZOCHT GAAT VOOR (15-09-2026).
     # Weten we uit zijn eigen openbare advertentie dat dit een zakelijk account
     # is, dan is elk inlogverwijt hierboven onzin en hoeven we hem niets te
@@ -4387,7 +4413,7 @@ def fail_job(job_id: str, body: dict, user_id: str = Depends(get_current_user)):
             and _GEEN_ADRES.search(
                 f"{fouttekst_nu} {(body or {}).get('error_oorspronkelijk') or ''}")):
         try:
-            reden = _melding_geen_adres(job.get("platform") or "")
+            reden = _melding_geen_adres(job.get("platform") or "", job)
             body = {**body,
                     "error_oorspronkelijk": body.get("error_oorspronkelijk") or body.get("error"),
                     "error": reden}

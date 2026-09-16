@@ -17,6 +17,92 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ---
 
+## herplaatsen-verliest-advertenties
+
+*16-09-2026 — "Herplaatsen verwijdert eerst; een item zonder omschrijving raakte daardoor de advertentie definitief kwijt (Jaap, 60 stuks, 28-08-2026)"*
+
+Herplaatsen op Marktplaats is twee stappen: eerst weg, dan opnieuw plaatsen. Bij
+Jaap (info@zilverwebsite.nl) hadden 532 van 1.222 items geen omschrijving — die
+kwamen uit de zoeklijst van Marktplaats, die alleen titel, prijs en één foto
+geeft. Het plaatsformulier eist een tekst, dus stap twee brak af nog vóór de
+foto's. Op 28-08-2026: 60 advertenties verwijderd, 0 teruggeplaatst, en omdat
+Marktplaats een verwijderde advertentie meteen op 410 zet was de tekst ook weg.
+
+Sinds commit f7090b6 weigert `refresh_listing` te verwijderen wat niet terug kan
+(`ontbreekt_voor_herplaatsen`) en wordt ontbrekende tekst eerst van de nog live
+advertentiepagina gehaald.
+
+**Why:** dit is de enige plek in het systeem waar een fout niet "mislukt" maar
+"weg" betekent. Elke nieuwe strategie die eerst verwijdert heeft dezelfde rem
+nodig.
+
+**How to apply:** verwijder nooit iets van een platform zolang niet vaststaat dat
+het opnieuw geplaatst kan worden. Zie ook "marktplaats-publiceren-valkuilen" en
+"import-dubbele-items-over-platforms".
+
+**Hetzelfde onderwerp, eigen bestand** (samengevoegd in de index op 13-09-2026):
+- "reddingsronde-kale-plaatsing-dubbele-advertentie" — alleen een delete met status 'done' rechtvaardigt een nieuwe plaatsing
+
+**2dehands-foto's hebben een mapje in het adres (16-09-2026).** De oogststap vóór
+een herplaatsing (`_fotos_uit_html`) las op 2dehands nul foto's: de adressen zijn
+`.../images/ea/ea4d73d3-...` en de reeks staat als JSON met `/`. Zonder mapje
+geeft dezelfde foto 404. Een artikel met 1 foto in ons systeem en 16 op 2dehands
+was bij herplaatsen dus 15 foto's kwijt. Wantrouw een oogst die nul teruggeeft:
+tel de `imageUrls` in de ruwe pagina ernaast.
+
+---
+
+## locatie-uit-preferences
+
+*16-09-2026 — Land en woonplaats van de verkoper komen uit Preferences en worden door de extensie op het zoekertje gezet; de veldnamen zijn live gemeten en per site verschilt alleen het label van de thuisknop*
+
+Sinds 11-09-2026 (extensie 1.0.321) vult Omnivaleur het locatieblok op
+Marktplaats en 2dehands zelf. In Preferences staat "Your location on Marktplaats
+& 2dehands": land, woonplaats, optioneel postcode. Leeg = alles blijft zoals het
+was. De opdracht draagt `location_country`, `location_city` en
+`location_postcode` mee (`locatie()` in backend/services/instellingen.py, gezet
+in alle drie de publicatiepaden), en `vulLocatie()` in
+extension/content/shared.js zet het op het formulier.
+
+**De namen, live afgelezen op 11-09-2026** (zelfde op beide sites, alleen het
+label van de thuisknop verschilt: "België" op 2dehands, "Nederland" op
+Marktplaats):
+
+- `input#syi-address-radio-home` / `input#syi-address-radio-abroad`
+- thuis: `input[name="contactInformation.postCode"]`, voorgevuld uit het account
+- buitenland: `select#country` (249 landen, numerieke values, Nederland = 528)
+  plus `input[name="contactInformation.foreignCity"]`; het postcodeveld
+  verdwijnt dan helemaal uit het formulier
+
+**Why:** daarom kijkt de stap naar het LABEL van de thuisknop en niet naar het
+domein, en daarom is "Buitenland" fout als het ingestelde land het thuisland is:
+dat land staat niet eens in de buitenlandlijst. Zie
+"adresblok-2dehands-buitenland".
+
+**How to apply:** verandert er iets aan deze namen, meet ze dan opnieuw op het
+echte formulier voor je de code aanpast; anders vult de stap stilletjes niets in
+en valt de verkoper terug op de oude weigering. De proef die dat bewaakt is
+`tests/locatie-op-het-formulier-test.js` (zes gevallen plus een voor-en-na tegen
+08db2331). Een volledige proefplaatsing met de hand in een bestuurde browser
+lukt niet: het formulier submit dan niets, ook niet in de gewone stand, dus
+gebruik daarvoor de extensie zelf. Zo is het ook bewezen: op 11-09-2026 plaatste
+de extensie m2441354102 op 2dehands met "Bergen op Zoom, Nederland" erop, terwijl
+de vier opdrachten van de dag ervóór (zonder locatie in de payload) allemaal
+strandden op "geen adres op het formulier". Zie "extension-release-bump-version".
+
+**Hetzelfde onderwerp, eigen bestand** (samengevoegd in de index op 13-09-2026):
+- "adresblok-2dehands-buitenland" — NL-verkoper op 2dehands.be: "Buitenland" laat het postcodeveld leeg en de plaatsstap weigert
+
+**Leeg blok = alles strandt op 2dehands (16-09-2026, De Juiste Toon).** De stap
+bestond, maar zijn Preferences-blok was nooit ingevuld, en de melding bij een leeg
+adres zei nog "zolang wij dat blok niet kunnen invullen". Vijf dagen lang dus elke
+2dehands-plaatsing mislukt met een advies dat nergens heen leidde. Bij een
+Nederlandse verkoper met "geen adres op het formulier": kijk eerst of
+`location_country` in de payload van de opdracht staat. Zijn woonplaats staat op
+zijn eigen openbare 2dehands-advertentie (`cityName`/`countryName` in de HTML).
+
+---
+
 ## zakelijk-account-lijkt-op-uitgelogd
 
 *15-09-2026 — Een zakelijk account op Marktplaats of 2dehands krijgt 401 op zijn persoonlijke advertentieoverzicht, precies zoals een uitgelogde bezoeker; oordeel daarom nooit op die pagina*
@@ -1270,49 +1356,6 @@ backend/services/crosslist.py) want een titel alleen is te kort om een taal aan
 af te lezen. Controleer daarnaast altijd de taal van het ANTWOORD: leest het als
 de andere taal, dan wint de brontekst. Zie ook "zekerheid-is-geen-stopplek" en
 "bewijs-moet-onderscheiden".
-
----
-
-## locatie-uit-preferences
-
-*11-09-2026 — Land en woonplaats van de verkoper komen uit Preferences en worden door de extensie op het zoekertje gezet; de veldnamen zijn live gemeten en per site verschilt alleen het label van de thuisknop*
-
-Sinds 11-09-2026 (extensie 1.0.321) vult Omnivaleur het locatieblok op
-Marktplaats en 2dehands zelf. In Preferences staat "Your location on Marktplaats
-& 2dehands": land, woonplaats, optioneel postcode. Leeg = alles blijft zoals het
-was. De opdracht draagt `location_country`, `location_city` en
-`location_postcode` mee (`locatie()` in backend/services/instellingen.py, gezet
-in alle drie de publicatiepaden), en `vulLocatie()` in
-extension/content/shared.js zet het op het formulier.
-
-**De namen, live afgelezen op 11-09-2026** (zelfde op beide sites, alleen het
-label van de thuisknop verschilt: "België" op 2dehands, "Nederland" op
-Marktplaats):
-
-- `input#syi-address-radio-home` / `input#syi-address-radio-abroad`
-- thuis: `input[name="contactInformation.postCode"]`, voorgevuld uit het account
-- buitenland: `select#country` (249 landen, numerieke values, Nederland = 528)
-  plus `input[name="contactInformation.foreignCity"]`; het postcodeveld
-  verdwijnt dan helemaal uit het formulier
-
-**Why:** daarom kijkt de stap naar het LABEL van de thuisknop en niet naar het
-domein, en daarom is "Buitenland" fout als het ingestelde land het thuisland is:
-dat land staat niet eens in de buitenlandlijst. Zie
-"adresblok-2dehands-buitenland".
-
-**How to apply:** verandert er iets aan deze namen, meet ze dan opnieuw op het
-echte formulier voor je de code aanpast; anders vult de stap stilletjes niets in
-en valt de verkoper terug op de oude weigering. De proef die dat bewaakt is
-`tests/locatie-op-het-formulier-test.js` (zes gevallen plus een voor-en-na tegen
-08db2331). Een volledige proefplaatsing met de hand in een bestuurde browser
-lukt niet: het formulier submit dan niets, ook niet in de gewone stand, dus
-gebruik daarvoor de extensie zelf. Zo is het ook bewezen: op 11-09-2026 plaatste
-de extensie m2441354102 op 2dehands met "Bergen op Zoom, Nederland" erop, terwijl
-de vier opdrachten van de dag ervóór (zonder locatie in de payload) allemaal
-strandden op "geen adres op het formulier". Zie "extension-release-bump-version".
-
-**Hetzelfde onderwerp, eigen bestand** (samengevoegd in de index op 13-09-2026):
-- "adresblok-2dehands-buitenland" — NL-verkoper op 2dehands.be: "Buitenland" laat het postcodeveld leeg en de plaatsstap weigert
 
 ---
 
@@ -5376,34 +5419,6 @@ nul treffers die klopten.
 
 ---
 
-## herplaatsen-verliest-advertenties
-
-*28-08-2026 — "Herplaatsen verwijdert eerst; een item zonder omschrijving raakte daardoor de advertentie definitief kwijt (Jaap, 60 stuks, 28-08-2026)"*
-
-Herplaatsen op Marktplaats is twee stappen: eerst weg, dan opnieuw plaatsen. Bij
-Jaap (info@zilverwebsite.nl) hadden 532 van 1.222 items geen omschrijving — die
-kwamen uit de zoeklijst van Marktplaats, die alleen titel, prijs en één foto
-geeft. Het plaatsformulier eist een tekst, dus stap twee brak af nog vóór de
-foto's. Op 28-08-2026: 60 advertenties verwijderd, 0 teruggeplaatst, en omdat
-Marktplaats een verwijderde advertentie meteen op 410 zet was de tekst ook weg.
-
-Sinds commit f7090b6 weigert `refresh_listing` te verwijderen wat niet terug kan
-(`ontbreekt_voor_herplaatsen`) en wordt ontbrekende tekst eerst van de nog live
-advertentiepagina gehaald.
-
-**Why:** dit is de enige plek in het systeem waar een fout niet "mislukt" maar
-"weg" betekent. Elke nieuwe strategie die eerst verwijdert heeft dezelfde rem
-nodig.
-
-**How to apply:** verwijder nooit iets van een platform zolang niet vaststaat dat
-het opnieuw geplaatst kan worden. Zie ook "marktplaats-publiceren-valkuilen" en
-"import-dubbele-items-over-platforms".
-
-**Hetzelfde onderwerp, eigen bestand** (samengevoegd in de index op 13-09-2026):
-- "reddingsronde-kale-plaatsing-dubbele-advertentie" — alleen een delete met status 'done' rechtvaardigt een nieuwe plaatsing
-
----
-
 ## eerst-recente-wijzigingen-lezen
 
 *28-08-2026 — "Begin ELKE sessie met uitzoeken wat er sinds je vorige keer veranderd is, vóór je ook maar iets doet"*
@@ -7095,47 +7110,5 @@ Production (omnivaleur.com) is a single **Railway** service running the FastAPI 
 
 **Hetzelfde onderwerp, eigen bestand** (samengevoegd in de index op 13-09-2026):
 - "always-push-to-live" — commit + push naar origin/main standaard na codewijziging, geen bevestiging vragen
-
----
-
-## voorwaarden-verbieden-automatisch-plaatsen-op-alle-vier
-
-*16-09-2026 — Niet alleen Admarkt/Pro: de gewone algemene voorwaarden van Marktplaats.nl, 2dehands.be, Vinted en Meta verbieden allemaal geautomatiseerd plaatsen zonder toestemming van het platform zelf*
-
-Live nagelezen op 16-09-2026 (geen aanname op basis van eerdere kennis):
-
-- **Marktplaats.nl** — Algemene Gebruiksvoorwaarden art. 7.4: "Het is niet
-  toegestaan om Advertenties op het Platform te plaatsen via een geautomatiseerd
-  systeem, of op enige andere wijze anders dan via de 'Plaats Advertentie'
-  knop." Art. 1.2(d) verbiedt bovendien identieke advertenties via meer dan één
-  account.
-- **2dehands.be** — zelfde artikelnummer, met de toestemmingsclausule er expliciet
-  bij: art. 7.4 "...tenzij 2dehands daarvoor toestemming heeft gegeven." Art. 7.5
-  verbiedt bovendien plaatsen namens derden zonder toestemming.
-- **Vinted** — User Terms §6: verbiedt "external software tools (including but
-  not limited to: bots, scraping programs, crawling programs, spiders)" tenzij
-  Vinted het autoriseert, plus een apart verbod op "delete and re-list the same
-  Item multiple times or multiple Items in bulk."
-- **Facebook/Meta** — algemene Terms of Service: "You may not access or collect
-  data from our Products using automated means (without our prior permission)."
-  Geldt platformbreed, dus ook voor Marketplace-plaatsingen via de extensie.
-
-**Why:** "admarkt-pro-mag-niet-geautomatiseerd" (10-09-2026) beschreef alleen het
-zakelijke Pro-kanaal van Marktplaats. Het gewone plaatsformulier — waar Omnivaleur
-op Marktplaats.nl/2dehands.be daadwerkelijk op werkt — heeft in dezelfde
-gebruiksvoorwaarden óók een verbodsartikel, niet apart voor Pro. Vinted en
-Facebook hebben geen los "Pro"-uitzonderingsartikel: het verbod staat gewoon in
-de hoofdvoorwaarden voor iedere gebruiker. Op de letter van elk van de vier
-platformen is geautomatiseerd plaatsen dus alleen toegestaan mét voorafgaande
-toestemming van het platform — die toestemming heeft Omnivaleur bij geen van de
-vier.
-
-**How to apply:** beloof een klant nooit dat automatisch plaatsen "volgens de
-voorwaarden" is bij Marktplaats, 2dehands, Vinted of Facebook — dat is het bij
-geen van de vier. Het businessmodel draait op de praktijk dat handhaving zelden
-gebeurt zolang het ritme menselijk oogt (zie "calmModeToggle" hierboven), niet op
-toestemming. Dat risico hoort in elk gesprek met een (potentiële) klant of
-partner over Omnivaleur, en past bij "geautomatiseerd account verraadt is ritme,
-niet aantal" — dezelfde les, nu met de juridische onderbouwing erbij.
 
 ---
