@@ -7097,3 +7097,45 @@ Production (omnivaleur.com) is a single **Railway** service running the FastAPI 
 - "always-push-to-live" — commit + push naar origin/main standaard na codewijziging, geen bevestiging vragen
 
 ---
+
+## voorwaarden-verbieden-automatisch-plaatsen-op-alle-vier
+
+*16-09-2026 — Niet alleen Admarkt/Pro: de gewone algemene voorwaarden van Marktplaats.nl, 2dehands.be, Vinted en Meta verbieden allemaal geautomatiseerd plaatsen zonder toestemming van het platform zelf*
+
+Live nagelezen op 16-09-2026 (geen aanname op basis van eerdere kennis):
+
+- **Marktplaats.nl** — Algemene Gebruiksvoorwaarden art. 7.4: "Het is niet
+  toegestaan om Advertenties op het Platform te plaatsen via een geautomatiseerd
+  systeem, of op enige andere wijze anders dan via de 'Plaats Advertentie'
+  knop." Art. 1.2(d) verbiedt bovendien identieke advertenties via meer dan één
+  account.
+- **2dehands.be** — zelfde artikelnummer, met de toestemmingsclausule er expliciet
+  bij: art. 7.4 "...tenzij 2dehands daarvoor toestemming heeft gegeven." Art. 7.5
+  verbiedt bovendien plaatsen namens derden zonder toestemming.
+- **Vinted** — User Terms §6: verbiedt "external software tools (including but
+  not limited to: bots, scraping programs, crawling programs, spiders)" tenzij
+  Vinted het autoriseert, plus een apart verbod op "delete and re-list the same
+  Item multiple times or multiple Items in bulk."
+- **Facebook/Meta** — algemene Terms of Service: "You may not access or collect
+  data from our Products using automated means (without our prior permission)."
+  Geldt platformbreed, dus ook voor Marketplace-plaatsingen via de extensie.
+
+**Why:** "admarkt-pro-mag-niet-geautomatiseerd" (10-09-2026) beschreef alleen het
+zakelijke Pro-kanaal van Marktplaats. Het gewone plaatsformulier — waar Omnivaleur
+op Marktplaats.nl/2dehands.be daadwerkelijk op werkt — heeft in dezelfde
+gebruiksvoorwaarden óók een verbodsartikel, niet apart voor Pro. Vinted en
+Facebook hebben geen los "Pro"-uitzonderingsartikel: het verbod staat gewoon in
+de hoofdvoorwaarden voor iedere gebruiker. Op de letter van elk van de vier
+platformen is geautomatiseerd plaatsen dus alleen toegestaan mét voorafgaande
+toestemming van het platform — die toestemming heeft Omnivaleur bij geen van de
+vier.
+
+**How to apply:** beloof een klant nooit dat automatisch plaatsen "volgens de
+voorwaarden" is bij Marktplaats, 2dehands, Vinted of Facebook — dat is het bij
+geen van de vier. Het businessmodel draait op de praktijk dat handhaving zelden
+gebeurt zolang het ritme menselijk oogt (zie "calmModeToggle" hierboven), niet op
+toestemming. Dat risico hoort in elk gesprek met een (potentiële) klant of
+partner over Omnivaleur, en past bij "geautomatiseerd account verraadt is ritme,
+niet aantal" — dezelfde les, nu met de juridische onderbouwing erbij.
+
+---
