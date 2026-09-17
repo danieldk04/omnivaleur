@@ -217,7 +217,6 @@
         state.category = label;
         T(triggerOf.catalog).value = label;
         close("catalog");
-        if (MODE === "staatlaat") setTimeout(() => { staatRij().style.display = ""; }, 4000);
       }
       return;
     }
