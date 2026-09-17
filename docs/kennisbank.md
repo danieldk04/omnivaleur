@@ -17,6 +17,34 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ---
 
+## kanaalicoon-aanvinken-is-geen-publiceren
+
+*17-09-2026 — "Nieuwe klanten klikken de kanaaliconen aan in de veronderstelling dat dat plaatst; het vinkt alleen \"staat online\" aan zonder advertentie, en dat blokkeert daarna het echte plaatsen"*
+
+Johan Kist (Blackbird Guitars) klikte op 14-09-2026 in een kwartier bij 23 gitaren
+elk kanaalicoon aan en bevestigde telkens "Mark listing on X as actively
+published?". Resultaat: 83 rijen op 'active' zonder advertentienummer op 2dehands,
+Vinted, Facebook, eBay en Shopify, terwijl hij daar niets had staan (2dehands-scan:
+leeg account; Vinted: nooit ingelogd; eBay/Shopify: nooit gekoppeld).
+
+Gevolgen die je dan ziet: het dashboard toont het artikel als live op elk kanaal,
+publiceren naar die kanalen gebeurt niet meer, elke verkoop geeft nachtelijke
+verwijderopdrachten die falen, en `plan_vinted_scans` zet elk half uur een
+Vinted-scan klaar die faalt (die planner kijkt alleen of er een actieve Vinted-rij is).
+
+**Why:** een klant die "hoe upload ik effectief" vraagt, heeft dit waarschijnlijk
+gedaan. Het herkenningsteken: listed_at-tijden per artikel enkele seconden na
+elkaar over alle kanalen, en geen enkele create-opdracht op die kanalen.
+
+**How to apply:** bij een nieuwe klant eerst tellen: listings zonder
+platform_listing_id op kanalen zonder koppeling of zonder geslaagde create. Opruimen
+zoals `listings.py` het zelf doet: eerst `sync_events` van die rijen, dan de rijen.
+Tweede valkuil bij dezelfde klant: het bewerkscherm stuurt `price_type` altijd mee
+(`value || null`); een scherm dat openstond vóór een reparatie zet de prijsvorm bij
+opslaan terug. Zie "advertentie-zonder-vraagprijs" en "zakelijk-account-lijkt-op-uitgelogd".
+
+---
+
 ## verkoop-signaal-hard-vs-zacht
 
 *17-09-2026 — Een verkoop meldt alleen automatisch overal af op een HARD signaal (betaalde bestelling); zachte signalen worden eerst een ja/nee-vraag in het dashboard*

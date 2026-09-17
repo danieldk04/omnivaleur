@@ -10251,3 +10251,39 @@ opnieuw klaar; die advertentie stond al niet meer in zijn Vinted-kast.
 Voor Toon is de eerste telronde met de hand gedraaid (21 Marktplaats, 72 2dehands op
 `not_found_count` 1), zodat de tweede ronde van de server direct na de deploy zijn
 vragen zet in plaats van over zes uur.
+
+## 17-09-2026: Johan Kist (Blackbird Guitars), account klaargezet voor de call van 10:30
+
+Stand vóór de call, gemeten in de database en tegen zijn openbare Marktplaats-lijst:
+22 gitaren live op Marktplaats Pro (sellerType TRADER), allemaal echt online en met
+foto's. Gibson Les Paul Studio Session en Padeltrain Nano Max heeft hij op 14-09 zelf
+op verkocht gezet; beide staan ook echt niet meer op Marktplaats. Extensie 1.0.336 in
+Chrome op Mac, laatst gezien 16-09 18:50. Proef loopt tot 20-09 21:01, geen betaling.
+
+Wat er mis was en is rechtgezet:
+- Op 14-09 tussen 21:07 en 21:23 heeft hij bij 23 artikelen elk kanaalicoon
+  aangeklikt en "markeer als gepubliceerd" bevestigd: 83 rijen op actief zonder
+  advertentie (2dehands 23, Vinted 23, Facebook 23, eBay 7, Shopify 7). Niets
+  daarvan stond echt online: 2dehands-account leeg, Vinted nooit ingelogd, Facebook
+  gaf een inlogscherm, eBay en Shopify nooit gekoppeld, zijn webshop is geen Shopify.
+  Gevolg was: dashboard toonde alles als live, publiceren naar die kanalen ging niet
+  meer, elke nacht faalden verwijderopdrachten voor de Padeltrain en elk half uur een
+  Vinted-scan. Weggehaald met hun 165 foutgebeurtenissen; wachtende Vinted-scan
+  geannuleerd.
+- Inkoopadvertentie stond weer op EUR 0,01 zonder prijsvorm. De reparatie van 13-09
+  (commit 21:26) is om 21:32 overschreven, vrijwel zeker door zijn eigen opslaan in
+  een bewerkscherm dat al openstond: dat scherm stuurt price_type altijd mee. Opnieuw
+  op SEE_DESCRIPTION, bedrag leeg (zijn MP-advertentie zegt ook SEE_DESCRIPTION).
+  Voor-en-na met `_missing_fields_per_platform`: vóór overal door, ná weigeren Vinted,
+  eBay en Facebook hem.
+- Locatie ingesteld op Nederland, Fochteloo, 8428 HA, zoals op zijn advertenties.
+- Fabrikantblok uitgezet. Aan en leeg blokkeerde het elke plaatsing naar 2dehands.
+  Zijn eigen MP-advertenties dragen geen bedrijfsgegevens, alleen het merk
+  ("Handelsnaam fabrikant": Gibson). Eist 2dehands het blok toch, dan aanzetten met
+  Blackbird Guitars, Stienekamp 16, 8428 HA Fochteloo, info@blackbirdguitars.nl.
+
+**Openstaand:** nog geen enkele echte plaatsing op een tweede kanaal. Automatisch
+verwijderen van een zakelijke Marktplaats-advertentie na verkoop elders is voor hem
+niet bewezen (zijn twee pogingen op 14-09 faalden, extensie 1.0.327). Automatisch
+vernieuwen staat aan (27 dagen, eerste rond 10-10) en is bij een zakelijk
+Marktplaats-account niet getest.
