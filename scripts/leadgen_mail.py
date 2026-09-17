@@ -1709,7 +1709,18 @@ def _check_inbox(state: dict, boek: "Leadboek", dagen: int) -> tuple[int, int, i
                 # welke van de drie mails het gesprek opent. Alleen de EERSTE
                 # reactie: dat is de reactie op de koude tekst, daarna gaat het
                 # over het gesprek en niet meer over de mail.
-                _onthoud_reactie(afzender, soort, _welke_beurt(st, _kop_tijd(msg)), body)
+                #
+                # Dit mag de ronde nooit stilleggen. Tot en met 13-09-2026 deed
+                # een mislukte schrijfactie hier precies dat: de state-save staat
+                # pas na deze hele lus, dus een fout die hier omhoog kwam gooide
+                # ook st["beantwoord"] en de Sheets-update van deze en van alle
+                # latere berichten in die beurt weg, zonder dat het ooit in het
+                # dagoverzicht verscheen. Gemeten: het reactielogboek stond sinds
+                # die dag stil terwijl er gewoon volop werd geantwoord.
+                try:
+                    _onthoud_reactie(afzender, soort, _welke_beurt(st, _kop_tijd(msg)), body)
+                except Exception as e:  # noqa: BLE001
+                    boek._fout(f"reactielog {afzender} niet bijgewerkt: {e}")
 
             # ── Een concept voor ELK nieuw bericht, niet alleen het eerste ──
             #
