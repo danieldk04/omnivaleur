@@ -1365,6 +1365,11 @@ def get_pending_jobs(request: Request, platform: str = None, user_id: str = Depe
                 logger.info("Extend %s niet uitgedeeld: kopie %s kent 'extend' nog niet",
                             j["id"], versie_van_de_kopie)
                 continue
+        if platform is not None and _oude_kopie_leest_zakelijk_als_uitgelogd(
+                db, user_id, j, versie_van_de_kopie):
+            logger.info("%s %s niet uitgedeeld: kopie %s leest een zakelijk account als uitgelogd",
+                        j["action"], j["id"], versie_van_de_kopie)
+            continue
         # Niet verversen op Vinted zolang de leesronde daar bezig is: samen zijn
         # het twee stromen verzoeken naar dezelfde Vinted-sessie, en dan knijpt
         # Vinted af. De opdracht blijft gewoon staan en komt bij de volgende
