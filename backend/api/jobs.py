@@ -1748,6 +1748,7 @@ def get_pending_jobs(request: Request, platform: str = None, user_id: str = Depe
             # NA de vertaling, want die levert een nieuwe tekst op waar het
             # webadres gewoon weer in kan staan. Zie _haal_links_eruit.
             _haal_links_eruit(db, uit)
+            _vinted_tekst_binnen_grens(db, uit)
             return uit
     return []
 
