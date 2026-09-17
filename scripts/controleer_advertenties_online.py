@@ -28,6 +28,7 @@ losse controle thuis.
 Gebruik:
     python scripts/controleer_advertenties_online.py --email djt@dejuistetoon.eu
     python scripts/controleer_advertenties_online.py --email ... --alles
+    python scripts/controleer_advertenties_online.py --email ... --platform 2dehands
 """
 from __future__ import annotations
 
@@ -80,13 +81,31 @@ def vergelijk(actief: list[dict], lijst: dict[str, str],
     return verdwenen, hernummerd, los
 
 
-async def openbare_lijst(client: httpx.AsyncClient, verkoper_id: int) -> dict[str, str]:
+def adressen_voor(platform: str) -> tuple[str, str]:
+    """(zoekadres, basisadres) van de openbare zoek-API van dit kanaal.
+
+    WAAROM GEEN STANDAARD (17-09-2026, Johan Kist): het script las bij
+    --platform 2dehands toch de Marktplaats-lijst, omdat het zoekadres en de
+    basis vast op het Marktplaats-adres stonden. Zijn vier echte 2dehands-advertenties
+    (m-nummers) kwamen daardoor terug als "staat er wel, maar onder een ander
+    nummer" met een Marktplaats a-nummer ernaast. Een kanaal dat we niet kennen
+    geeft daarom een fout, nooit stil de Marktplaats-lijst.
+    """
+    from backend.services.mp_enrich import ZOEK_PER_PLATFORM
+    if platform not in ZOEK_PER_PLATFORM:
+        raise ValueError(f"onbekend platform '{platform}': dit script kan alleen "
+                         f"{', '.join(sorted(ZOEK_PER_PLATFORM))} nakijken")
+    return ZOEK_PER_PLATFORM[platform]
+
+
+async def openbare_lijst(client: httpx.AsyncClient, verkoper_id: int,
+                         zoek_url: str) -> dict[str, str]:
     """Alle advertenties van deze verkoper: {advertentienummer: titel}."""
-    from backend.services.mp_enrich import ZOEK, PAGINA, MAX_PAGINAS, _json
+    from backend.services.mp_enrich import PAGINA, MAX_PAGINAS, _json
     uit: dict[str, str] = {}
     for pagina in range(MAX_PAGINAS):
-        data = await _json(client, ZOEK, {"sellerIds[]": verkoper_id,
-                                          "limit": PAGINA, "offset": pagina * PAGINA})
+        data = await _json(client, zoek_url, {"sellerIds[]": verkoper_id,
+                                              "limit": PAGINA, "offset": pagina * PAGINA})
         rijen = data.get("listings") or []
         for r in rijen:
             if r.get("itemId"):
@@ -103,13 +122,19 @@ async def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--email", help="het e-mailadres van de verkoper")
     ap.add_argument("--user-id", help="of meteen zijn account-id, als het opzoeken niet mag")
-    ap.add_argument("--platform", default="marktplaats")
+    ap.add_argument("--platform", default="marktplaats", help="marktplaats of 2dehands")
     ap.add_argument("--alles", action="store_true",
                     help="ook tonen wat er op zijn lijst staat zonder koppeling bij ons")
     args = ap.parse_args()
 
+    try:
+        zoek_url, basis = adressen_voor(args.platform)
+    except ValueError as e:
+        print(f"Fout: {e}.")
+        return 1
+
     from backend.database import get_db
-    from backend.services.mp_enrich import BASIS, UA, zoek_verkoper_id
+    from backend.services.mp_enrich import UA, zoek_verkoper_id
     db = get_db()
 
     uid = args.user_id
@@ -159,18 +184,19 @@ async def main() -> int:
     print(f"{args.email or uid}: {len(items)} artikelen, {len(actief)} advertenties die wij "
           f"'live op {args.platform}' noemen.")
 
-    async with httpx.AsyncClient(base_url=BASIS, headers={"User-Agent": UA},
+    async with httpx.AsyncClient(base_url=basis, headers={"User-Agent": UA},
                                  timeout=30, follow_redirects=True) as client:
         titels = [titel_van[r["item_id"]] for r in actief[:40] if titel_van.get(r["item_id"])]
-        verkoper_id = await zoek_verkoper_id(client, titels)
+        verkoper_id = await zoek_verkoper_id(client, titels, zoek_url=zoek_url)
         if not verkoper_id:
-            print("Zijn verkopersnummer is niet te vinden op de openbare zoekpagina. "
-                  "Zonder dat nummer is er niets te vergelijken; dit is geen uitspraak "
-                  "over zijn advertenties.")
+            print(f"Zijn verkopersnummer is niet te vinden op de openbare zoekpagina van "
+                  f"{args.platform}. Zonder dat nummer is er niets te vergelijken; dit is "
+                  "geen uitspraak over zijn advertenties.")
             return 2
-        lijst = await openbare_lijst(client, verkoper_id)
+        lijst = await openbare_lijst(client, verkoper_id, zoek_url)
 
-    print(f"Openbare verkoperspagina (nummer {verkoper_id}): {len(lijst)} advertenties.\n")
+    print(f"Openbare verkoperspagina op {args.platform} (nummer {verkoper_id}): "
+          f"{len(lijst)} advertenties.\n")
     if not lijst:
         print("De lijst kwam leeg terug. Dat is een reden om de meting te wantrouwen, "
               "geen reden om te denken dat er niets meer online staat.")

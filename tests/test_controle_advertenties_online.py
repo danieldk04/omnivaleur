@@ -93,3 +93,61 @@ def test_het_script_schrijft_niets():
     for verboden in (".update(", ".insert(", ".delete(", ".upsert("):
         treffers = [r.strip() for r in regels if verboden in r]
         assert not treffers, f"dit script hoort alleen te kijken, maar doet {verboden}: {treffers}"
+
+
+# --- Johan Kist, 17-09-2026: --platform 2dehands las stil de Marktplaats-lijst ---
+#
+# Het zoekadres en de basis stonden vast op marktplaats.nl. Zijn vier echte
+# 2dehands-advertenties (m-nummers) kwamen daardoor terug als "staat er wel, maar
+# onder een ander nummer", met een Marktplaats a-nummer ernaast.
+
+import asyncio
+import re
+import sys
+
+import httpx
+import pytest
+
+sys.path.insert(0, str(WORTEL))
+
+
+def test_elk_kanaal_krijgt_zijn_eigen_zoekadres():
+    assert C.adressen_voor("2dehands") == (
+        "https://www.2dehands.be/lrp/api/search", "https://www.2dehands.be")
+    assert C.adressen_voor("marktplaats") == (
+        "https://www.marktplaats.nl/lrp/api/search", "https://www.marktplaats.nl")
+
+
+def test_een_onbekend_kanaal_is_een_fout_en_geen_stille_marktplaatslijst():
+    with pytest.raises(ValueError, match="onbekend platform 'vinted'"):
+        C.adressen_voor("vinted")
+
+
+def test_main_stopt_bij_een_onbekend_kanaal_voordat_er_iets_gelezen_wordt(monkeypatch, capsys):
+    monkeypatch.setattr(sys, "argv", ["x", "--user-id", "u1", "--platform", "2dehand"])
+    assert asyncio.run(C.main()) == 1
+    assert "onbekend platform '2dehand'" in capsys.readouterr().out
+
+
+def test_de_verkoperslijst_wordt_op_het_gekozen_kanaal_gelezen():
+    gezien = []
+
+    def antwoord(request):
+        gezien.append(request.url.host)
+        return httpx.Response(200, json={
+            "listings": [{"itemId": "m2443585691", "title": "Martin D-28 Custom Ambertone 2003"}],
+            "totalResultCount": 1})
+
+    async def draai():
+        zoek_url, basis = C.adressen_voor("2dehands")
+        async with httpx.AsyncClient(base_url=basis, transport=httpx.MockTransport(antwoord)) as client:
+            return await C.openbare_lijst(client, 6250337, zoek_url)
+
+    assert asyncio.run(draai()) == {"m2443585691": "Martin D-28 Custom Ambertone 2003"}
+    assert gezien == ["www.2dehands.be"]
+
+
+def test_geen_vast_marktplaatsadres_meer_in_het_script():
+    bron = (WORTEL / "scripts" / "controleer_advertenties_online.py").read_text()
+    assert not re.search(r"\b(ZOEK|BASIS)\b", bron)
+    assert "marktplaats.nl" not in bron
