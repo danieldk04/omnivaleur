@@ -2460,6 +2460,17 @@ async def _al_weg_voor_wij_er_waren(db, job: dict) -> bool:
     """
     if job["platform"] not in ("marktplaats", "2dehands"):
         return False
+    # DE VERKOPER VROEG ZELF OM DEZE VERVANGING (17-09-2026, De Juiste Toon).
+    # Hij haalt oude zoekertjes met de hand weg op 2dehands (63 gemeten, allemaal
+    # HTTP 410) en zet daarna de bewerkte versie erop via "vervangen". Bij ons
+    # stonden die rijen nog op actief, met de importdatum als plaatsingsdatum, dus
+    # "te jong om te verlopen": de nieuwe plaatsing werd geannuleerd en hij kreeg
+    # "is dit verkocht?". Wie daar per ongeluk ja zegt, haalt het artikel van elk
+    # kanaal af. Deze vraag is er voor de automatische herplaatsronde, die niet
+    # weet of er iets verkocht is. Een vervanging die de verkoper zelf aanklikt
+    # (refresh_listing zonder eigen_quotum) weet dat wel.
+    if (job.get("payload") or {}).get("_handmatige_verversing") is True:
+        return False
     doelen = await naast_de_lus(lambda: _verwijderdoelen(db, job))
     jong = []
     for rij in doelen:
