@@ -38,7 +38,19 @@
   const MODE = new URLSearchParams(location.search).get("mode") || "";
   window.__mode = MODE;
   const staatRij = () => T('[data-testid="category-condition-single-list-input"]').closest(".row");
-  if (MODE === "staatlaat") staatRij().style.display = "none";
+  // Het moment ligt vast op de prijs, niet op de categorie: de namaakcategorie
+  // slaagt hier niet altijd, en dan zou het veld nooit verschijnen. De extensie
+  // vult de prijs vlak voor de staat, dus 4 seconden na de prijs is te laat voor
+  // haar ene poging van 3 seconden, en ruim op tijd voor een tweede ronde.
+  if (MODE === "staatlaat") {
+    staatRij().style.display = "none";
+    let gepland = false;
+    T('[data-testid="price-input--input"]').addEventListener("input", () => {
+      if (gepland) return;
+      gepland = true;
+      setTimeout(() => { staatRij().style.display = ""; }, 4000);
+    });
+  }
 
   const panelOf = {
     colour: "#colour-panel", material: "#material-panel", condition: "#condition-panel",
