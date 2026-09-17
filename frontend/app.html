@@ -6593,8 +6593,11 @@ async function saveItem() {
   try {
     let itemId = id;
     if (id) {
-      const res = await apiFetchRetry(`${API}/api/items/${id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) });
-      await requireOk(res, 'Saving failed');
+      const wijzigingen = gewijzigdeVelden(data, _bewerkBeginstand);
+      if (Object.keys(wijzigingen).length) {
+        const res = await apiFetchRetry(`${API}/api/items/${id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(wijzigingen) });
+        await requireOk(res, 'Saving failed');
+      }
     } else {
       const res = await apiFetchRetry(`${API}/api/items/`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) });
       const created = await requireOk(res, 'Creating the item failed');
