@@ -10307,3 +10307,26 @@ Ook dat is weg. Voor-en-na: `tests/bewerkscherm-overschrijft-geen-reparatie-test
 **Openstaand:** het dashboard herlaadt zichzelf niet na een uitrol. Wie het al open
 had, draait de oude opslagcode tot hij ververst. Na een datareparatie bij een klant
 dus laten verversen en de rij later nog eens nakijken.
+
+## 17-09-2026: kanaalicoon zet niets meer zomaar op live (naar aanleiding van Johan Kist)
+
+Johans 83 nep-advertenties kwamen van het grijze kanaalicoon in de artikelrij: een
+klik plus "Mark this item as listed on X?" zette het kanaal op actief, zonder
+advertentie en zonder koppeling. Dat kan nu niet meer per ongeluk:
+- Grijs icoon opent een keuze: Publish (publiceervenster met dat kanaal aangevinkt)
+  of "Already on X? Paste the link". Bij eBay/Shopify zonder koppeling alleen
+  "Connect". Rood icoon opent de reden van de mislukte publicatie.
+- De server weigert "live" op eBay/Shopify zonder koppeling, en op elk kanaal zonder
+  herkenbare advertentielink als er nooit een plaatsing is geprobeerd. Dat geldt ook
+  voor wie nog een oude kopie van het dashboard open heeft.
+- Vastgelopen publicatie afsluiten, "het staat er wél" na een mislukte publicatie
+  en zelf herplaatsen werken zoals voorheen.
+- Het oude, al ongebruikte "Mark as published"-venster is weggehaald.
+
+Voor-en-na gemeten met de echte oude functie (c7119a04) op Johans situatie: oud 83
+rijen op actief (23/23/23/7/7), nieuw 0 en geen enkele scanopdracht.
+
+**Openstaand:** het keuzevenster is niet in een echte browser bekeken (de
+ingebouwde browser weigerde localhost); wel met de echte functies uit app.html
+doorlopen. Kopie van het klantenservice-brein in Drive is niet bijgewerkt: de
+Google-koppeling verbond niet.

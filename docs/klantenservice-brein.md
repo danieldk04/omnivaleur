@@ -10,7 +10,7 @@ product verandert. De ontwikkelaar werkt dan zowel dit bestand in de repo als de
 kopie in Drive bij, in dezelfde beurt. Daniel hoeft niets te doen; de Gem leest
 de Drive-kopie de volgende keer opnieuw in.
 
-_Laatst bijgewerkt: 17-09-2026 (opslaan in het bewerkscherm zet niets meer terug wat de klant zelf niet veranderde, en een artikel met Bieden, Zie omschrijving of Gratis kan weer worden opgeslagen zonder bedrag; verkocht op Marktplaats of 2dehands met een zakelijk account wordt nu ook opgemerkt als vraag in het dashboard; 2dehands voor verkopers die in Nederland wonen: land en woonplaats invullen bij Preferences; al op een kanaal en net bewerkt: vervangen kan nu direct vanuit het publiceervenster. Eerder, 15-09: zakelijk account lijkt op uitgelogd; eBay in het Nederlands; wachtrij die stilstaat omdat de browser niet is ingelogd; Vinted plaatst door zonder open tabblad; rode 'Relist failed' meldingen hersteld in 1.0.334)_
+_Laatst bijgewerkt: 17-09-2026 (een klik op een grijs kanaalicoon plaatst nu of vraagt de link, en zet niets meer zomaar op live; opslaan in het bewerkscherm zet niets meer terug wat de klant zelf niet veranderde, en een artikel met Bieden, Zie omschrijving of Gratis kan weer worden opgeslagen zonder bedrag; verkocht op Marktplaats of 2dehands met een zakelijk account wordt nu ook opgemerkt als vraag in het dashboard; 2dehands voor verkopers die in Nederland wonen: land en woonplaats invullen bij Preferences; al op een kanaal en net bewerkt: vervangen kan nu direct vanuit het publiceervenster. Eerder, 15-09: zakelijk account lijkt op uitgelogd; eBay in het Nederlands; wachtrij die stilstaat omdat de browser niet is ingelogd; Vinted plaatst door zonder open tabblad; rode 'Relist failed' meldingen hersteld in 1.0.334)_
 
 ---
 
@@ -440,6 +440,25 @@ diezelfde browser.
 
 Werkt het daarna nog niet, stuur me dan een schermafbeelding van wat je ziet,
 dan zoek ik het uit.
+
+Groetjes,
+Daniel
+
+### Heeft de kanaaliconen aangeklikt: alles staat op live, maar er is niets geplaatst
+
+Hoi <voornaam>,
+
+Dank je voor het melden. De icoontjes bij een artikel legden tot 17 september bij
+een klik alleen vast dat een advertentie al op dat kanaal stond. Zelf plaatsten ze
+niets. Dat was niet duidelijk genoeg, en zo stond je artikel op kanalen als live
+waar nog geen advertentie was. Ik kijk mee en haal die markeringen bij je weg.
+
+Klik je nu op een grijs icoontje, dan kies je zelf: Publish, dan maakt Omnivaleur
+de advertentie op dat kanaal voor je aan, of je plakt de link als het artikel er
+al staat. eBay en Shopify koppel je eerst onder Platforms.
+
+Plaatsen doe je dus met Publish, bij een artikel of bij een selectie. Laat Chrome
+daarbij openstaan op de computer met de uitbreiding.
 
 Groetjes,
 Daniel

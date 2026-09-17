@@ -86,7 +86,9 @@ def test_orphan_job_tabs_are_reconciled_before_polling():
 
 @pytest.mark.parametrize("needle", [
     # De oranje "publishing…" stip moet klikbaar zijn om alsnog listed te zetten.
-    "markPlatformListed('${itemId}','${p}','${PLATFORM_LABELS[p]}',${isBusy})",
+    # Sinds 17-09-2026 alleen de oranje: grijs opent een keuze (kanaalKeuze), zie
+    # tests/kanaalicoon-is-geen-publiceren-test.js.
+    "markPlatformListed('${itemId}','${p}','${PLATFORM_LABELS[p]}',true)",
 ])
 def test_busy_platform_dot_can_be_marked_listed(needle):
     src = (ROOT / "frontend/app.html").read_text(encoding="utf-8")

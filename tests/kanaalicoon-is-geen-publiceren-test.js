@@ -33,9 +33,8 @@ function check(naam, voorwaarde, uitleg) {
 function pakFunctie(naam) {
   const start = html.search(new RegExp(`(async )?function ${naam}\\(`));
   if (start < 0) return null;
-  let diepte = 0, i = html.indexOf("{", html.indexOf(`function ${naam}(`));
-  // Sla de standaardwaarden in de parameterlijst over: pas na ") {" begint de body.
-  i = html.indexOf(") {", html.indexOf(`function ${naam}(`)) + 2;
+  // Pas na ") {" begint de body; de parameterlijst kan standaardwaarden hebben.
+  let diepte = 0, i = html.indexOf(") {", start) + 2;
   for (; i < html.length; i++) {
     if (html[i] === "{") diepte++;
     else if (html[i] === "}") { diepte--; if (!diepte) break; }

@@ -4449,11 +4449,23 @@ function renderPlatformMatrix(itemId) {
     // eindeloos oranje en was er geen enkele manier om dat recht te zetten. Eén
     // klik zet hem op listed én sluit de vastgelopen opdracht af, zodat de
     // wachtrij weer loopt.
+    //
+    // Een grijs of rood icoon zet NIETS meer met één bevestiging op listed. Johan
+    // Kist klikte op 14-09-2026 bij 23 gitaren elk grijs icoon aan in de
+    // veronderstelling dat hij plaatste: 83 advertenties "live" die nergens
+    // bestonden. Grijs opent nu de keuze plaatsen of link plakken (kanaalKeuze),
+    // rood opent de reden van de mislukte publicatie met zijn eigen knoppen.
     const canMark = !(l && l.status === 'active') && !(l && l.status === 'hidden') && !bySister[p];
     const isBusy = !!(l && (l.status === 'pending' || l.status === 'queued'));
+    const isError = !!(l && l.status === 'error');
+    const klik = isBusy ? `markPlatformListed('${itemId}','${p}','${PLATFORM_LABELS[p]}',true)`
+      : isError ? `showPublishError('${itemId}')`
+      : `kanaalKeuze('${itemId}','${p}')`;
+    const klikTip = isBusy ? tip + ' — click if it is already live, to mark it listed and clear this'
+      : isError ? tip + '. Click to see what you can do'
+      : `${PLATFORM_LABELS[p]}: not listed — click to publish it here`;
     const clickAttrs = canMark
-      ? ` onclick="markPlatformListed('${itemId}','${p}','${PLATFORM_LABELS[p]}',${isBusy})" style="cursor:pointer"`
-        + ` title="${isBusy ? tip + ' — click if it is already live, to mark it listed and clear this' : PLATFORM_LABELS[p] + ': not detected as listed — click to mark it listed manually'}"`
+      ? ` onclick="event.stopPropagation();${klik}" style="cursor:pointer" title="${esc(klikTip)}"`
       : ` title="${tip}"`;
     return `<div class="pm-dot"${clickAttrs}>
       <div class="pm-dot-icon ${cls}">${icon}${badgeEl}</div>
@@ -4492,6 +4504,79 @@ async function markPlatformListed(itemId, platform, label, isBusy = false) {
         : `Marked as listed on ${label}. No listing link yet, so auto-delist can't remove this one automatically.`);
   } catch (e) {
     alert('Could not mark as listed: ' + e.message);
+  }
+}
+
+// EEN GRIJS KANAALICOON IS GEEN "STAAT ONLINE"-KNOP (17-09-2026).
+//
+// Johan Kist (Blackbird Guitars) klikte op 14-09 bij 23 gitaren elk grijs icoon
+// aan en bevestigde telkens "Mark this item as listed on X?". Hij dacht dat hij
+// plaatste. Het zette alleen "staat online" aan: 83 advertenties die nergens
+// bestonden, ook op eBay en Shopify die niet gekoppeld waren. Daarna toonde het
+// dashboard alles als live en gebeurde echt plaatsen naar die kanalen niet meer.
+//
+// Wie op een grijs icoon klikt wil plaatsen, dus dat is de eerste knop. "Staat
+// er al" kan alleen met de link naar die advertentie; zonder link weet
+// Omnivaleur ook niet wélke advertentie het bij verkoop moet weghalen. Bij een
+// niet-gekoppeld eBay of Shopify is er alleen de weg naar koppelen. De server
+// weigert hetzelfde (mark_listing_active in backend/api/listings.py), zodat
+// een oude kopie van deze pagina het niet alsnog kan.
+function kanaalKeuze(itemId, platform) {
+  const label = PLATFORM_LABELS[platform] || platform;
+  const item = state.items.find(i => i.id === itemId);
+  const nietGekoppeld = API_PLATFORMS_FE.has(platform) && !state.connected.includes(platform);
+  document.getElementById('modal-kanaal-keuze')?.remove();
+  const inhoud = nietGekoppeld
+    ? `<p style="margin-bottom:14px;font-size:14px">${esc(label)} isn't connected to Omnivaleur yet, so nothing can be listed there.</p>
+       <button class="btn btn-primary" style="width:100%" onclick="document.getElementById('modal-kanaal-keuze').remove();showView('platforms')">Connect ${esc(label)} →</button>`
+    : `<button class="btn btn-primary" style="width:100%" onclick="document.getElementById('modal-kanaal-keuze').remove();openCrosslist('${itemId}','${platform}')">Publish to ${esc(label)}</button>
+       <p style="margin:6px 0 0;font-size:12px;color:var(--muted)">Omnivaleur creates the advert on ${esc(label)} for you.</p>
+       <div style="border-top:1px solid var(--border);margin-top:16px;padding-top:14px">
+         <div style="font-weight:600;font-size:14px;margin-bottom:4px">Already on ${esc(label)}?</div>
+         <p style="margin-bottom:8px;font-size:12px;color:var(--muted)">Paste the link to that advert. Without it, Omnivaleur can't take it down when the item sells.</p>
+         <input type="url" id="kanaal-keuze-link" placeholder="https://…" autocomplete="off">
+         <button class="btn btn-outline" id="kanaal-keuze-opslaan" style="width:100%;margin-top:8px" onclick="kanaalAlOnline('${itemId}','${platform}')">Link this advert</button>
+       </div>`;
+  const html = `
+    <div class="modal-overlay" id="modal-kanaal-keuze" style="display:flex" onclick="if(event.target===this)this.remove()">
+      <div class="modal" style="max-width:420px">
+        <div class="modal-header">
+          <h3>${PLATFORM_ICONS[platform] || ''} ${esc(label)}</h3>
+          <button class="close-btn" onclick="document.getElementById('modal-kanaal-keuze').remove()">×</button>
+        </div>
+        <div class="modal-body">
+          <p style="margin-bottom:14px;color:var(--muted);font-size:13px">${esc(item?.title || '')}</p>
+          ${inhoud}
+        </div>
+      </div>
+    </div>`;
+  document.body.insertAdjacentHTML('beforeend', html);
+}
+
+async function kanaalAlOnline(itemId, platform) {
+  const label = PLATFORM_LABELS[platform] || platform;
+  const veld = document.getElementById('kanaal-keuze-link');
+  const url = (veld?.value || '').trim();
+  if (!url) {
+    alert(`Paste the link to your advert on ${label} first.\n\nNot on ${label} yet? Use "Publish to ${label}" instead.`);
+    veld?.focus();
+    return;
+  }
+  const knop = document.getElementById('kanaal-keuze-opslaan');
+  if (knop) { knop.disabled = true; knop.textContent = 'Saving…'; }
+  try {
+    const r = await apiFetch(`${API}/api/listings/mark-active`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ item_id: itemId, platform, platform_listing_url: url }),
+    });
+    const data = await parseJsonSafe(r);
+    if (!r.ok) throw new Error(data.detail || 'Could not save');
+    document.getElementById('modal-kanaal-keuze')?.remove();
+    await loadAll();
+    showToast(`Linked to your advert on ${label}.`);
+  } catch (e) {
+    alert('Could not link: ' + e.message);
+    if (knop) { knop.disabled = false; knop.textContent = 'Link this advert'; }
   }
 }
 
@@ -8493,72 +8578,17 @@ async function relistEndedEbayItem(itemId, title) {
 }
 
 // ── Omnivaleur ────────────────────────────────────────────────────
-async function markListingActive(itemId, platform, event) {
-  event?.stopPropagation();
-  const label = PLATFORM_LABELS[platform] || platform;
-  if (!confirm(`Mark listing on ${label} as actively published?`)) return;
-  setBusy(true, `Marking ${label} as published…`);
-  try {
-    const r = await apiFetch(`${API}/api/listings/mark-active`, {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ item_id: itemId, platform }),
-    });
-    if (!r.ok) throw new Error(await r.text());
-    await loadAll();
-  } catch(e) { alert('Error: ' + e.message); } finally { setBusy(false); }
-}
-
-function openMarkActiveModal(itemId, event) {
-  event?.stopPropagation();
-  const item = state.items.find(i => i.id === itemId);
-  const platforms = ['marktplaats', '2dehands', 'vinted', 'facebook', 'shopify', 'ebay'];
-  const checkboxes = platforms.map(p =>
-    `<label style="display:flex;align-items:center;gap:8px;padding:6px 0;cursor:pointer">
-      <input type="checkbox" value="${p}" style="width:15px;height:15px">
-      <span>${PLATFORM_LABELS[p] || p}</span>
-    </label>`
-  ).join('');
-  const html = `
-    <div class="modal-overlay" id="modal-mark-active" style="display:flex" onclick="if(event.target===this)this.remove()">
-      <div class="modal" style="max-width:360px">
-        <div class="modal-header">
-          <h3>Mark as published</h3>
-          <button class="close-btn" onclick="document.getElementById('modal-mark-active').remove()">×</button>
-        </div>
-        <div class="modal-body">
-          <p style="margin-bottom:12px;color:var(--muted);font-size:13px">Select the platforms where <strong>${item?.title || itemId}</strong> is already published:</p>
-          <div id="mark-active-checkboxes">${checkboxes}</div>
-        </div>
-        <div class="modal-footer">
-          <button class="btn btn-outline" onclick="document.getElementById('modal-mark-active').remove()">Cancel</button>
-          <button class="btn btn-primary" onclick="doMarkActive('${itemId}')">Save</button>
-        </div>
-      </div>
-    </div>`;
-  document.body.insertAdjacentHTML('beforeend', html);
-}
-
-async function doMarkActive(itemId) {
-  const selected = [...document.querySelectorAll('#mark-active-checkboxes input:checked')].map(c => c.value);
-  if (!selected.length) return alert(geenPlatformGekozen('mark-active-checkboxes'));
-  setBusy(true, 'Marking as published…');
-  try {
-    await Promise.all(selected.map(platform =>
-      apiFetch(`${API}/api/listings/mark-active`, {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ item_id: itemId, platform }),
-      })
-    ));
-    document.getElementById('modal-mark-active')?.remove();
-    await loadAll();
-  } catch(e) { alert('Error: ' + e.message); } finally { setBusy(false); }
-}
-
-function openCrosslist(itemId) {
+function openCrosslist(itemId, voorkeur) {
   state.crosslistItemId = itemId;
   const item = state.items.find(i => i.id === itemId);
   document.getElementById('crosslist-item-name').textContent = item?.title || itemId;
   renderPlatformCheckboxes('crosslist-platform-checkboxes', itemId);
+  // Vanuit een kanaalicoon: dat kanaal staat al aangevinkt. Kan het daar niet,
+  // dan blijft het vakje uit en staat de reden er gewoon bij.
+  if (voorkeur) {
+    const vak = document.querySelector(`#crosslist-platform-checkboxes input[value="${voorkeur}"]`);
+    if (vak && !vak.disabled) vak.checked = true;
+  }
   // Zet de knop terug op zijn beginstand: het venster wordt hergebruikt, dus
   // zonder dit blijft "Adding to queue…" van de vorige keer staan en is de knop
   // nog uitgeschakeld — tot een harde herlaadbeurt.

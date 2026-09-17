@@ -2,7 +2,8 @@ from fastapi import APIRouter, HTTPException, BackgroundTasks, Depends, Request
 from backend.models import ListingCreate
 from backend.database import get_db, fetch_all, naast_de_lus, execute_with_retry, IN_BROK
 from backend.services.crosslist import (publish_to_platforms, handle_item_sold,
-                                        CrosslistValidationError, VertalingOnbeschikbaar)
+                                        CrosslistValidationError, VertalingOnbeschikbaar,
+                                        API_PLATFORMS)
 from backend.services.relist import (
     refresh_listing, refresh_stale_listings, renew_etsy_listing, relist_ended_ebay_listing,
     RefreshError, REFRESH_CAPABLE_PLATFORMS,
@@ -272,7 +273,6 @@ def mark_listing_active(body: dict, user_id: str = Depends(get_current_user)):
     #      Dan blijven een vastgelopen publicatie afsluiten, "het staat er wél"
     #      bij een mislukte publicatie en zelf herplaatsen gewoon werken.
     naam = _KANAALNAAM.get(platform, platform)
-    from backend.services.crosslist import API_PLATFORMS
     if platform in API_PLATFORMS:
         gekoppeld = (db.table("platform_credentials").select("id")
                      .eq("user_id", user_id).eq("platform", platform).limit(1).execute().data)
