@@ -10330,3 +10330,28 @@ rijen op actief (23/23/23/7/7), nieuw 0 en geen enkele scanopdracht.
 ingebouwde browser weigerde localhost); wel met de echte functies uit app.html
 doorlopen. Kopie van het klantenservice-brein in Drive is niet bijgewerkt: de
 Google-koppeling verbond niet.
+
+## 17-09-2026: call met Johan Kist (Blackbird Guitars), 10:30
+
+Gesprek tussen Daniel en Johan. Wat eruit kwam:
+- Johan dacht dat hij al op 2dehands en Facebook stond en zocht daar vergeefs. Oorzaak
+  staat in de notities hierboven: hij klikte op 14-09 de kanaaliconen aan en drukte
+  nooit op Publish. In de call werd dat gelezen als "de koppeling ontbrak". Bij
+  Platforms staan 2dehands en Facebook nu op Auto-detected met No active listings, en
+  dat klopt. Gemeten na de call: extensie actief om 11:04, nul plaatsopdrachten, 22
+  advertenties nog online op Marktplaats.
+- Zijn website draait niet op Shopify. Hij vroeg om import vanaf zijn eigen site.
+  Daniel: import werkt nu alleen vanaf Marktplaats en Vinted, website-import "komt
+  eraan". Voor Johan zelf niet nodig: zijn 24 advertenties staan via Marktplaats al in
+  Omnivaleur.
+- Feedback: hij wil de app in het Nederlands, Engels lezen kost hem moeite. Daniel:
+  staat op de lijst. Niet duidelijk voor hem: dat je op elk kanaal een eigen account
+  nodig hebt en daar ingelogd moet zijn, wat Auto-detected betekent, en waarom er
+  "beta, use at your own risk" bij Facebook staat.
+- Daniel zei: Vinted is ook zakelijk gratis, 2dehands Pro hoeft niet, en bood aan
+  persoonlijk mee te kijken en iets op maat voor hem te bouwen.
+- Daniel zei dat de andere kanalen "met zekerheid" goed lopen. Voor Johan niet
+  bewezen: een verkoop elders haalt de advertentie niet aantoonbaar van zijn zakelijke
+  Marktplaats af (zijn pogingen op 14-09 mislukten). In de vervolgmail staat dat hij
+  die zelf weghaalt.
+- Proef loopt tot zondag 20-09 21:01. Nog geen betaalgegevens.
