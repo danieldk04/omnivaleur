@@ -47,6 +47,10 @@ MINIMALE_SCANVERSIE = (1, 0, 244)
 # extend-werk; de opdracht blijft gewoon 'pending' tot een bijgewerkte kopie
 # hem oppakt.
 MINIMALE_EXTEND_VERSIE = (1, 0, 318)
+# Vanaf deze versie leest de extensie een zakelijk account niet meer als
+# uitgelogd (kopbalk van de site in plaats van het persoonlijke overzicht). Zie
+# _oude_kopie_leest_zakelijk_als_uitgelogd.
+MINIMALE_ZAKELIJK_VERSIE = (1, 0, 332)
 # Hoe vaak een scan die door een te oude kopie is opgepakt terug in de wachtrij
 # mag. Twee: genoeg om de bijgewerkte kopie een kans te geven, te weinig om te
 # blijven rondzingen bij iemand die alleen die oude kopie heeft.
