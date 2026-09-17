@@ -1690,6 +1690,10 @@
         }
         if (field === "price") await step("price (herstel)", () => fillPriceVinted(item.price));
         if (field === "size") await step("size (herstel)", () => fillAttributeVinted(["size"], String(item.size)));
+        if (field === "condition") {
+          await step("condition (herstel)", () => fillAttributeVinted(["condition", "status"],
+            CONDITION_MAP[(item.condition || "").toLowerCase()] || CONDITION_MAP["good"]));
+        }
         // Kleur maar één keer opnieuw proberen. Lukt het dan niet, dan lukt het
         // in ronde drie ook niet en kost het alleen de tijd die we nodig hebben
         // om te plaatsen.
