@@ -10173,3 +10173,33 @@ account: Edge 1.0.327 krijgt de lederhose niet, 1.0.336 wel. Proef:
 **Openstaand:** Edge bij Toon bijwerken of Omnivaleur daaruit verwijderen; de
 reparatie hierboven voorkomt schade, maar die kopie doet verder niets nuttigs voor
 2dehands. En nog steeds: één echte geslaagde 2dehands-plaatsing met zijn locatie.
+
+## 17-09-2026 — Toon: "worden zelf weggehaalde 2dehands-advertenties dan overal verwijderd?"
+
+Nee, en dat is nu ook in het echt nagemeten. Van de 420 zoekertjes die wij voor hem
+als live op 2dehands kennen, staan er 63 niet meer online (steekproef 6 van 6: HTTP
+410). Diezelfde artikelen staan nog gewoon op Marktplaats (57) en Vinted (18), en
+sinds 16-09 is er voor geen van hen een verwijderopdracht op een ander kanaal
+ontstaan, afgezien van twee gewone Marktplaats-herplaatsingen.
+
+Waarom niet, route voor route: een artikel gaat alleen overal weg via
+`handle_item_sold`, en die wordt alleen aangeroepen bij een harde verkoop (Vinted
+is_closed in een volledige scan, eBay/Shopify-bestelling), een "Verkocht"-label dat
+onze eigen verwijderopdracht ziet, of een bevestiging door de verkoper. De
+verkoopcontrole op 2dehands (`polling.py`) slaat hem over, want hij heeft geen
+2dehands-koppeling, en een 2dehands-"verkocht" is daar sowieso maar een vraag
+(ZACHT_SIGNAAL). Een 2dehands-scan maakt alleen importvoorstellen. Verlengen boekt
+nooit een verkoop.
+
+**De ene valkuil, nu dicht.** Na zelf weghalen staat de rij bij ons nog op actief.
+Kiest hij daarna "vervangen", dan vindt de verwijderopdracht de advertentie al weg.
+Met de importdatum (05-09) als plaatsingsdatum gold dat als "te jong om te verlopen",
+dus werd de nieuwe plaatsing geannuleerd en kreeg hij "is dit verkocht?". Een ja daar
+had het artikel wél overal weggehaald. `_al_weg_voor_wij_er_waren` slaat die vraag nu
+over als de verkoper de vervanging zelf aanklikte (`_handmatige_verversing`); de
+automatische herplaatsronde houdt hem. Proef in `tests/test_herplaatslus.py`, rood
+tegen 65d89cc1.
+
+**Keerzijde voor hem:** haalt hij een 2dehands-advertentie weg omdat het artikel daar
+verkocht is, dan ziet Omnivaleur dat niet. Dan moet hij zelf op Sold drukken, anders
+blijft het op Marktplaats en Vinted te koop.

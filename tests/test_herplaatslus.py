@@ -193,6 +193,27 @@ def test_een_jonge_verdwenen_advertentie_wordt_een_verkoopvraag():
     assert db.jobs[0]["status"] == "cancelled"
 
 
+def test_zelf_gevraagde_vervanging_van_een_zelf_weggehaalde_advertentie_gaat_door():
+    """17-09-2026, De Juiste Toon: oude zoekertjes met de hand weggehaald op
+    2dehands, daarna "vervangen" door de bewerkte versie. Dat mag geen
+    verkoopvraag worden en de nieuwe plaatsing niet annuleren."""
+    db = _DB(
+        [{"id": "l1", "item_id": "it1", "platform": "2dehands",
+          "status": "active", "listed_at": _dagen_geleden(12)}],
+        [{"id": "create-1", "item_id": "it1", "platform": "2dehands",
+          "action": "create", "status": "pending", "created_at": _dagen_geleden(0)}],
+    )
+    job = _verwijderopdracht(rij_id="l1", platform="2dehands")
+    job["payload"]["_handmatige_verversing"] = True
+    assert _al_weg(db, job) is False
+    assert db.listings[0]["status"] == "active"      # de gewone tak meldt hem daarna af
+    assert db.jobs[0]["status"] == "pending"         # de bewerkte versie gaat erop
+    # De automatische ronde (vlag uit) houdt zijn vraag.
+    job["payload"]["_handmatige_verversing"] = False
+    assert _al_weg(db, job) is True
+    assert db.listings[0]["status"] == "sold_unconfirmed"
+
+
 def test_al_verkocht_elders_wordt_gearchiveerd_zonder_nieuwe_vraag():
     """De reconciliatie-ronde: het artikel is al bevestigd verkocht op Vinted, en
     op Marktplaats staat nog een oude 'active'-rij. Die hoort naar het archief,

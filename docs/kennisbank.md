@@ -17,6 +17,78 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ---
 
+## verkoop-signaal-hard-vs-zacht
+
+*17-09-2026 — Een verkoop meldt alleen automatisch overal af op een HARD signaal (betaalde bestelling); zachte signalen worden eerst een ja/nee-vraag in het dashboard*
+
+`handle_item_sold(item_id, platform, ...)` doet twee dingen tegelijk: de verkoop
+boeken in Analytics én het artikel van álle andere kanalen afhalen. Dat afhalen
+is onherstelbaar (opnieuw plaatsen is handwerk), dus het mag alleen op een
+signaal dat écht klopt. Daniel heeft de scheidslijn getrokken (07-09-2026).
+
+**Hard — meteen `handle_item_sold`:** een betaalde bestelling op Shopify
+(`orders/paid`-webhook + de 5-minuten `controleer_shopify_verkopen`) of eBay
+(webhook + API-poll), en de Vinted-bestellingenpagina
+(`reconcile-vinted-orders`). Daar staat een koper met een bon achter.
+
+**Zacht — eerst `sold_unconfirmed` + ja/nee-vraag in het dashboard:** advertentie
+verdwenen van MP/2dehands, een "verkocht"/"gereserveerd"-label op de advertentie,
+de "Verkocht!"-badge op het gesprek, en een "sold" uit de 5-minuten statuscheck
+van MP/2dehands. Marktplaats laat een handverkoop niet betrouwbaar zien: een
+verkochte advertentie is niet te onderscheiden van een verlopen.
+
+De poort zit op meerdere plekken omdat de signalen via meerdere wegen
+binnenkomen: `polling.py` (`ZACHT_SIGNAAL`-set), `listings.py` `sold_from_messages`,
+`listings.py` `mark_sold` (kijkt naar het `X-Omnivaleur-Ext`-kopstuk om de
+extensie van de dashboard-knop te onderscheiden), en `extension/background.js`
+`checkSoldListings` (meldt via `possibly-sold`). De reden-teksten staan in
+`VERDENKING_REDENEN` in `listings.py` en mogen de woorden "relist"/"delist"/"still
+live" niet bevatten, anders leest het herplaats-overzicht ze als kapotte
+herplaatsing.
+
+**Twee vangnetten** vangen op wat er stil misgaat: `verkoop_reconciliatie.py`
+(elke 20 min: verkocht op A, nog te koop op B → `delist_all_platforms` opnieuw;
+archiveert ook `sold_unconfirmed`-rijen als de verkoop elders al vaststaat) en
+`verkoop_herinnering.py` (elk uur overdag: onbevestigde verkoop > 4 uur → één
+mail/dag per verkoper, vergt kolom `listings.sold_unconfirmed_notified_at`). De
+reconciliatie hangt aan een bevestigde `sold`-rij, dus hij raadt niets.
+
+**Afmelden telt per ADVERTENTIE, niet per platform.** Bij een dubbele import of
+meerdere herplaatsingen staan er twee verschillende advertenties (verschillend
+`platform_listing_id`) op één kanaal; `delist_all_platforms` dedupte op platform
+en liet de tweede staan, dus bleef een verkocht artikel te koop. Nu dedup op
+`(platform, platform_listing_id)`. `delisted`-rijen tellen alleen nog als vangnet
+(één poging per platform waar geen levende rij meer staat), niet per archiefrij.
+Idem `_enqueue_extension_delete` en de dedup-rem in de extensie-lus. Gemeten op
+echte data 07-09: reconciliatie draaide vanzelf na de deploy, 2 advertenties
+echt verwijderd, 8 al weg, 1 herkanst; 2 tweede-advertenties waren gemist door de
+oude dedup. Zie ook "delist-op-dubbele-regel" en "herplaatslus-op-verkochte-artikelen".
+
+**Shopify-verkoop matchen: nooit alleen op SKU.** Veel winkels zetten geen
+variant-SKU. De bestelregel draagt ook `product_id`/`variant_id`, en `product_id`
+== `listings.platform_listing_id`. Match daarop eerst, SKU als terugval, altijd
+gescoopt op de winkelier (`match_shopify_sale` in `shopify_orders.py`, de webhook
+scoopt via `X-Shopify-Shop-Domain`). `_find_shopify_product_id_by_sku` neemt
+sinds nu een `(shop, token)` mee zodat het in de winkel van díe verkoper zoekt,
+niet in de vaste `settings.shopify_store`.
+
+Zie ook "verkocht-badge-in-berichtenlijst", "herplaatsen-verliest-advertenties"
+en "klantenslot-valt-dicht".
+
+**Hetzelfde onderwerp, eigen bestand** (samengevoegd in de index op 13-09-2026):
+- "verkocht-badge-in-berichtenlijst" — MP zet "Verkocht!" op het gesprek, niet op de advertentie
+- "vinted-weg-is-geen-archief" — zelf verwijderde Vinted-advertentie is een zacht verkoopsignaal, geen archief
+
+**Zelf weghalen is geen signaal, en een zelf aangeklikte vervanging geen verdenking
+(17-09-2026, Toon).** Een advertentie die de verkoper met de hand weghaalt verandert
+bij ons niets tot er iets mee gebeurt. Maar "vervangen" daarna vond hem al weg, en met
+de importdatum als listed_at werd dat "is dit verkocht?", met de nieuwe plaatsing
+geannuleerd. `_al_weg_voor_wij_er_waren` stelt die vraag nu alleen nog bij de
+automatische ronde. Let op: listed_at van een geïmporteerde rij is de importdatum,
+niet de leeftijd van de advertentie; elke leeftijdsregel daarop zit bij imports mis.
+
+---
+
 ## extensiekopie-die-niet-meebeweegt
 
 *17-09-2026 — "Een kopie die dagen achterloopt op de Web Store werkt zichzelf niet bij; meet het af tegen de andere klanten, niet tegen een vaste ondergrens"*
@@ -2748,70 +2820,6 @@ op 2dehands** (m2065499767 en m2222635983, allebei live in zijn openbare aanbod,
 allebei 40 euro) met verschillende foto-adressen, want elke import spiegelt de
 foto opnieuw. De dubbelcontrole op titel+foto-adres
 ("dubbele-advertentie-titel-en-foto") ziet die dus niet, en dat is terecht.
-
----
-
-## verkoop-signaal-hard-vs-zacht
-
-*07-09-2026 — Een verkoop meldt alleen automatisch overal af op een HARD signaal (betaalde bestelling); zachte signalen worden eerst een ja/nee-vraag in het dashboard*
-
-`handle_item_sold(item_id, platform, ...)` doet twee dingen tegelijk: de verkoop
-boeken in Analytics én het artikel van álle andere kanalen afhalen. Dat afhalen
-is onherstelbaar (opnieuw plaatsen is handwerk), dus het mag alleen op een
-signaal dat écht klopt. Daniel heeft de scheidslijn getrokken (07-09-2026).
-
-**Hard — meteen `handle_item_sold`:** een betaalde bestelling op Shopify
-(`orders/paid`-webhook + de 5-minuten `controleer_shopify_verkopen`) of eBay
-(webhook + API-poll), en de Vinted-bestellingenpagina
-(`reconcile-vinted-orders`). Daar staat een koper met een bon achter.
-
-**Zacht — eerst `sold_unconfirmed` + ja/nee-vraag in het dashboard:** advertentie
-verdwenen van MP/2dehands, een "verkocht"/"gereserveerd"-label op de advertentie,
-de "Verkocht!"-badge op het gesprek, en een "sold" uit de 5-minuten statuscheck
-van MP/2dehands. Marktplaats laat een handverkoop niet betrouwbaar zien: een
-verkochte advertentie is niet te onderscheiden van een verlopen.
-
-De poort zit op meerdere plekken omdat de signalen via meerdere wegen
-binnenkomen: `polling.py` (`ZACHT_SIGNAAL`-set), `listings.py` `sold_from_messages`,
-`listings.py` `mark_sold` (kijkt naar het `X-Omnivaleur-Ext`-kopstuk om de
-extensie van de dashboard-knop te onderscheiden), en `extension/background.js`
-`checkSoldListings` (meldt via `possibly-sold`). De reden-teksten staan in
-`VERDENKING_REDENEN` in `listings.py` en mogen de woorden "relist"/"delist"/"still
-live" niet bevatten, anders leest het herplaats-overzicht ze als kapotte
-herplaatsing.
-
-**Twee vangnetten** vangen op wat er stil misgaat: `verkoop_reconciliatie.py`
-(elke 20 min: verkocht op A, nog te koop op B → `delist_all_platforms` opnieuw;
-archiveert ook `sold_unconfirmed`-rijen als de verkoop elders al vaststaat) en
-`verkoop_herinnering.py` (elk uur overdag: onbevestigde verkoop > 4 uur → één
-mail/dag per verkoper, vergt kolom `listings.sold_unconfirmed_notified_at`). De
-reconciliatie hangt aan een bevestigde `sold`-rij, dus hij raadt niets.
-
-**Afmelden telt per ADVERTENTIE, niet per platform.** Bij een dubbele import of
-meerdere herplaatsingen staan er twee verschillende advertenties (verschillend
-`platform_listing_id`) op één kanaal; `delist_all_platforms` dedupte op platform
-en liet de tweede staan, dus bleef een verkocht artikel te koop. Nu dedup op
-`(platform, platform_listing_id)`. `delisted`-rijen tellen alleen nog als vangnet
-(één poging per platform waar geen levende rij meer staat), niet per archiefrij.
-Idem `_enqueue_extension_delete` en de dedup-rem in de extensie-lus. Gemeten op
-echte data 07-09: reconciliatie draaide vanzelf na de deploy, 2 advertenties
-echt verwijderd, 8 al weg, 1 herkanst; 2 tweede-advertenties waren gemist door de
-oude dedup. Zie ook "delist-op-dubbele-regel" en "herplaatslus-op-verkochte-artikelen".
-
-**Shopify-verkoop matchen: nooit alleen op SKU.** Veel winkels zetten geen
-variant-SKU. De bestelregel draagt ook `product_id`/`variant_id`, en `product_id`
-== `listings.platform_listing_id`. Match daarop eerst, SKU als terugval, altijd
-gescoopt op de winkelier (`match_shopify_sale` in `shopify_orders.py`, de webhook
-scoopt via `X-Shopify-Shop-Domain`). `_find_shopify_product_id_by_sku` neemt
-sinds nu een `(shop, token)` mee zodat het in de winkel van díe verkoper zoekt,
-niet in de vaste `settings.shopify_store`.
-
-Zie ook "verkocht-badge-in-berichtenlijst", "herplaatsen-verliest-advertenties"
-en "klantenslot-valt-dicht".
-
-**Hetzelfde onderwerp, eigen bestand** (samengevoegd in de index op 13-09-2026):
-- "verkocht-badge-in-berichtenlijst" — MP zet "Verkocht!" op het gesprek, niet op de advertentie
-- "vinted-weg-is-geen-archief" — zelf verwijderde Vinted-advertentie is een zacht verkoopsignaal, geen archief
 
 ---
 
