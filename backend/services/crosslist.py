@@ -1425,14 +1425,22 @@ async def publish_to_platforms(item_id: str, platforms: list[str], user_id: str)
                 # "Queued" terwijl er geen opdracht werd aangemaakt. Zijn 5533
                 # artikelen staan allemaal al op Marktplaats, dus elke publicatie
                 # daarheen verdween geruisloos in dit tak.
-                results.append({
+                al_live = {
                     "platform": platform,
                     "status": "already_live",
                     "listing_id": row["id"],
                     "platform_listing_id": row.get("platform_listing_id"),
                     "platform_listing_url": row.get("platform_listing_url"),
                     "message": ALREADY_LIVE_MESSAGE,
-                })
+                }
+                # Bij een zakelijk account kan vervangen niet (zie refresh_listing in
+                # services/relist.py). Dan bieden we het ook niet aan: Johan Kist
+                # kreeg de vraag en klikte drie keer op OK voor niets.
+                from backend.services.relist import zakelijk_account, melding_zakelijk_vervangen
+                if await zakelijk_account(db, user_id, platform):
+                    al_live["vervangbaar"] = False
+                    al_live["message"] = melding_zakelijk_vervangen(platform)
+                results.append(al_live)
                 continue
             if not existing_listing.data:
                 await _exec(db.table("listings").insert({
