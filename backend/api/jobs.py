@@ -4195,17 +4195,39 @@ def _verkoper_soort(db, user_id: str, platform: str) -> str | None:
                      .eq("user_id", user_id).eq("platform", platform)
                      .eq("action", "create").eq("status", "done")
                      .order("done_at", desc=True).limit(8).execute().data or [])
+            kandidaten = [(((r.get("payload") or {}).get("title") or "").strip(),
+                           str(((r.get("result") or {}).get("platform_listing_id") or "")).strip())
+                          for r in rijen]
+            # OOK WAT HIJ ZELF AL ONLINE HAD (17-09-2026, Johan Kist). Hierboven
+            # staan alleen advertenties die WIJ plaatsten. Johan importeerde zijn
+            # 24 advertenties van zijn zakelijke Marktplaats en had er nog niet één
+            # via ons geplaatst, dus was het antwoord hier "weet niet". Daardoor
+            # mocht hij drie keer "vervangen" aanklikken, en elke verwijdering
+            # sneuvelde op het lege persoonlijke overzicht van een zakelijk account.
+            # Een geïmporteerde advertentie met nummer is net zo goed van hem.
+            if len([k for k in kandidaten if k[0] and k[1]]) < 3:
+                items = (db.table("items").select("id,title").eq("user_id", user_id)
+                         .limit(200).execute().data or [])
+                titel_van = {i["id"]: (i.get("title") or "").strip() for i in items}
+                if titel_van:
+                    eigen = (db.table("listings").select("item_id,platform_listing_id")
+                             .in_("item_id", list(titel_van)).eq("platform", platform)
+                             .eq("status", "active").not_.is_("platform_listing_id", "null")
+                             .limit(8).execute().data or [])
+                    kandidaten += [(titel_van.get(l["item_id"], ""), str(l["platform_listing_id"]).strip())
+                                   for l in eigen]
+            # Marktplaats schrijft hetzelfde nummer soms met een lettertje ervoor:
+            # "a1530276630" in de zoek-API tegenover "1530276630" bij de import.
+            kaal = lambda n: re.sub(r"^[a-z]", "", str(n or "").strip().lower())
             with httpx.Client(timeout=8, follow_redirects=True,
                               headers={"User-Agent": _SOORT_UA}) as client:
-                for r in rijen:
-                    titel = ((r.get("payload") or {}).get("title") or "").strip()
-                    nummer = str(((r.get("result") or {}).get("platform_listing_id") or "")).strip()
+                for titel, nummer in kandidaten[:8]:
                     if not titel or not nummer:
                         continue
                     data = client.get(zoek_url, params={"query": titel, "limit": 30},
                                       headers={"Accept": "application/json"}).json()
                     treffer = next((l for l in (data.get("listings") or [])
-                                    if str(l.get("itemId") or "") == nummer), None)
+                                    if kaal(l.get("itemId")) == kaal(nummer)), None)
                     if not treffer or not treffer.get("vipUrl"):
                         continue
                     pagina = client.get(basis + treffer["vipUrl"]).text
