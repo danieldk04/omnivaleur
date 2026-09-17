@@ -6366,8 +6366,64 @@ function setSizeValue(value) {
   sel.value = size;
 }
 
+// ── OPSLAAN STUURT ALLEEN WAT DE VERKOPER VERANDERDE (17-09-2026) ─────────────
+//
+// Het bewerkscherm stuurde bij opslaan het hele formulier mee, zoals het eruitzag
+// toen het openging. Alles wat intussen op de server was rechtgezet, werd daarmee
+// teruggeschreven. Bij Johan Kist ging zo de prijsvorm van zijn inkoopadvertentie
+// om 21:26 op "Zie omschrijving" en stond hij om 21:32 weer leeg met EUR 0,01,
+// klaar om voor een cent naar Vinted, eBay en Facebook te gaan. Hetzelfde gold
+// voor elk veld: een omschrijving van de scan, verhuisde foto's, een rechtgezette
+// rubriek. Daarom onthoudt editItem wat het scherm liet zien, en stuurt opslaan
+// alleen de velden die daarvan afwijken.
+let _bewerkBeginstand = null;
+
+function leesItemFormulier() {
+  return {
+    title: document.getElementById('f-title').value.trim(),
+    sku: document.getElementById('f-sku').value.trim() || null,
+    description: document.getElementById('f-desc').value,
+    shopify_title: document.getElementById('f-shopify-title').value.trim() || null,
+    bid_percentage: document.getElementById('f-bid-enabled').checked ? (parseInt(document.getElementById('f-bid-pct').value) || null) : null,
+    price: parseFloat(document.getElementById('f-price').value) || 0,
+    price_type: document.getElementById('f-price-type').value || null,
+    compare_at_price: parseFloat(document.getElementById('f-compare').value) || null,
+    // NOT `|| null` — a free item has a purchase price of exactly 0, and `0 || null`
+    // is null. That silently threw the cost away, so the item kept showing
+    // "＋ Add cost" in the analytics and never counted towards profit.
+    purchase_price: numOrNull(document.getElementById('f-purchase').value),
+    price_marktplaats: parseFloat(document.getElementById('f-price-mp').value) || null,
+    price_2dehands: parseFloat(document.getElementById('f-price-2dh').value) || null,
+    price_vinted: parseFloat(document.getElementById('f-price-vinted').value) || null,
+    price_ebay: parseFloat(document.getElementById('f-price-ebay').value) || null,
+    price_shopify: parseFloat(document.getElementById('f-price-shopify').value) || null,
+    brand: document.getElementById('f-brand').value.trim(),
+    size: document.getElementById('f-size').value,
+    color: document.getElementById('f-color').value.trim(),
+    material: document.getElementById('f-material').value.trim() || null,
+    ebay_category_id: getEbayCategoryId(),
+    category: document.getElementById('f-category').value,
+    gender: document.getElementById('f-gender').value,
+    condition: document.getElementById('f-condition').value,
+    photo_urls: getPhotoUrls(),
+  };
+}
+
+// Vergelijkt de formulierwaarden met die van het moment van openen, dus na
+// dezelfde omzetting: een leeg veld dat als null binnenkwam telt niet als
+// wijziging. Zonder beginstand gaat alles mee, zoals vroeger.
+function gewijzigdeVelden(nu, begin) {
+  if (!begin) return nu;
+  const gewijzigd = {};
+  for (const [veld, waarde] of Object.entries(nu)) {
+    if (JSON.stringify(waarde) !== JSON.stringify(begin[veld])) gewijzigd[veld] = waarde;
+  }
+  return gewijzigd;
+}
+
 function openAddItem() {
   importCreateCandidateId = null;
+  _bewerkBeginstand = null;
   document.getElementById('modal-title').textContent = 'New item';
   document.getElementById('edit-id').value = '';
   ['f-title','f-sku','f-desc','f-price','f-compare','f-purchase','f-brand','f-color','f-material','f-shopify-title','f-price-mp','f-price-2dh','f-price-vinted'].forEach(id => document.getElementById(id).value = '');
