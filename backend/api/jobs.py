@@ -437,6 +437,110 @@ def _haal_links_eruit(db, jobs: list) -> int:
     return aangepast
 
 
+# ── Vinted neemt hoogstens 2000 tekens omschrijving ──────────────────────────
+#
+# GEMETEN 17-09-2026, Johan Kist (Blackbird Guitars). Vinted weigerde zijn gitaren
+# met "Gebruik niet meer dan 2000 tekens voor je beschrijving": 11 van zijn 24
+# omschrijvingen komen van Marktplaats en zijn langer (tot 4219 tekens). Marktplaats
+# en eBay nemen dat wel, dus het artikel zelf blijft heel; alleen wat naar Vinted
+# gaat wordt ingekort. De langste omschrijving die Vinted bij ons ooit aannam was
+# 1904 tekens met 17 regels.
+#
+# We tellen voorzichtig: een regeleinde als twee tekens (een formulier stuurt het
+# als \r\n) en tekens zoals emoji zoals de browser ze telt. Afgebroken wordt op een
+# alinea, regel, zin of woord, en een vaste slottekst van de verkoper blijft staan.
+VINTED_MAX_OMSCHRIJVING = 2000
+_VINTED_MARGE = 10
+
+
+def _vinted_lengte(tekst: str) -> int:
+    return len(tekst.encode("utf-16-le")) // 2 + tekst.count("\n")
+
+
+def _platte_tekst(ruw: str) -> str:
+    """Wat de extensie er zelf van maakt (platteTekst in content/shared.js)."""
+    import html as _html
+    s = str(ruw or "")
+    if not re.search(r"[<&]", s):
+        return s
+    s = re.sub(r"<\s*br\s*/?\s*>", "\n", s, flags=re.I)
+    s = re.sub(r"<\s*/\s*(?:p|div|li|h[1-6]|tr)\s*>", "\n", s, flags=re.I)
+    s = re.sub(r"<\s*li\b[^>]*>", "- ", s, flags=re.I)
+    s = re.sub(r"<\s*(?:p|div|h[1-6]|tr)\b[^>]*>", "\n", s, flags=re.I)
+    s = re.sub(r"<[^>]+>", "", s)
+    s = _html.unescape(s).replace(" ", " ")
+    s = re.sub(r"[ \t]+\n", "\n", s)
+    return re.sub(r"\n{3,}", "\n\n", s).strip()
+
+
+def _knip_voor_vinted(tekst: str, grens: int) -> str:
+    if _vinted_lengte(tekst) <= grens:
+        return tekst
+    laag, hoog = 0, len(tekst)
+    while laag < hoog:                      # langste begin dat nog past
+        mid = (laag + hoog + 1) // 2
+        if _vinted_lengte(tekst[:mid]) <= grens:
+            laag = mid
+        else:
+            hoog = mid - 1
+    stuk = tekst[:laag]
+    ondergrens = int(laag * 0.7)            # nooit meer dan 30% extra weggooien
+    for scheiding, houd in (("\n\n", 0), ("\n", 0), (". ", 1), ("! ", 1), ("? ", 1), (" ", 0)):
+        i = stuk.rfind(scheiding)
+        if i >= ondergrens:
+            return stuk[:i + houd].rstrip()
+    return stuk.rstrip()
+
+
+def vinted_omschrijving(tekst: str, slot: str = "") -> str:
+    """De omschrijving zoals Vinted hem aanneemt: ongewijzigd als hij past."""
+    grens = VINTED_MAX_OMSCHRIJVING - _VINTED_MARGE
+    if _vinted_lengte(str(tekst or "")) <= grens:
+        return tekst
+    schoon = _platte_tekst(tekst)
+    if _vinted_lengte(schoon) <= grens:
+        return schoon
+    slot = (slot or "").strip()
+    if slot and schoon.rstrip().endswith(slot):
+        rest = "\n\n" + slot
+        ruimte = grens - _vinted_lengte(rest)
+        if ruimte >= grens // 2:
+            romp = schoon.rstrip()[:-len(slot)].rstrip()
+            return _knip_voor_vinted(romp, ruimte) + rest
+    return _knip_voor_vinted(schoon, grens)
+
+
+def _vinted_tekst_binnen_grens(db, jobs: list) -> int:
+    """Vlak voordat een Vinted-opdracht de deur uitgaat, net als _haal_links_eruit:
+    hier komt elke opdracht langs, welk pad hem ook klaarzette."""
+    aangepast = 0
+    for j in jobs or []:
+        if j.get("platform") != "vinted" or j.get("action") not in ("create", "edit", "content_refresh"):
+            continue
+        pl = j.get("payload")
+        if not isinstance(pl, dict) or not isinstance(pl.get("description"), str):
+            continue
+        slot = ""
+        try:
+            from backend.services.crosslist import slottekst_van
+            slot = slottekst_van(j.get("user_id") or "")
+        except Exception:  # noqa: BLE001 — zonder slottekst gewoon inkorten
+            pass
+        kort = vinted_omschrijving(pl["description"], slot)
+        if kort == pl["description"]:
+            continue
+        logger.info("job %s: Vinted-omschrijving ingekort van %d naar %d tekens",
+                    j.get("id"), _vinted_lengte(pl["description"]), _vinted_lengte(kort))
+        nieuw = {**pl, "description": kort}
+        j["payload"] = nieuw
+        aangepast += 1
+        try:
+            db.table("jobs").update({"payload": nieuw}).eq("id", j["id"]).execute()
+        except Exception as e:  # noqa: BLE001 — de opdracht die uitgaat is al goed
+            logger.warning("job %s: ingekorte tekst niet kunnen opslaan: %s", j.get("id"), e)
+    return aangepast
+
+
 # ── De rubriek waar de verkoper het artikel ZELF in heeft gezet ──────────────
 #
 # GEMETEN 13-09-2026, Egbert Brouwer (Papa's Plectrums). "Ik heb vandaag
