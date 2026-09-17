@@ -121,13 +121,19 @@ async def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--email", help="het e-mailadres van de verkoper")
     ap.add_argument("--user-id", help="of meteen zijn account-id, als het opzoeken niet mag")
-    ap.add_argument("--platform", default="marktplaats")
+    ap.add_argument("--platform", default="marktplaats", help="marktplaats of 2dehands")
     ap.add_argument("--alles", action="store_true",
                     help="ook tonen wat er op zijn lijst staat zonder koppeling bij ons")
     args = ap.parse_args()
 
+    try:
+        zoek_url, basis = adressen_voor(args.platform)
+    except ValueError as e:
+        print(f"Fout: {e}.")
+        return 1
+
     from backend.database import get_db
-    from backend.services.mp_enrich import BASIS, UA, zoek_verkoper_id
+    from backend.services.mp_enrich import UA, zoek_verkoper_id
     db = get_db()
 
     uid = args.user_id
