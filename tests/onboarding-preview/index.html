@@ -1,0 +1,49 @@
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Onboarding preview — Omnivaleur</title>
+<link rel="stylesheet" href="app.css">
+<style>body{background:var(--bg);padding:20px}.view{display:block!important}#knoppen{margin-bottom:14px;font-size:12px}</style>
+<!-- Scenario via ?s=nieuw|johan|uitgelogd|klaar -->
+<div id="knoppen"></div>
+<div class="content">
+  <div id="view-dashboard" class="view active">
+    <div class="view-header"><h1>Dashboard</h1><p>Overview of your items and listings across every platform.</p></div>
+    <div id="ob-checklist"></div>
+    <div class="card"><div class="card-header"><h2>Recent items</h2></div>
+      <table><thead><tr><th>Item</th><th>Price</th><th>Platforms<button class="ob-vraagje" onclick="OB.legenda(this, event)" aria-label="What do the icons mean?">?</button></th><th>Actions</th></tr></thead></table>
+    </div>
+    <h2 style="margin-top:24px">Platforms</h2>
+    <div id="platforms-body" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:12px;max-width:900px"></div>
+  </div>
+  <h2 style="margin-top:30px">Help</h2>
+  <div id="view-help" class="view"></div>
+</div>
+<script>
+const SCENARIO = new URLSearchParams(location.search).get("s") || "johan";
+const FEITEN = {
+  nieuw:     { server: { extensie: false, kanaal: false, gepubliceerd: false }, items: 0, kanalen: {} },
+  johan:     { server: { extensie: true, kanaal: true, gepubliceerd: false }, items: 24, kanalen: {} },
+  uitgelogd: { server: { extensie: true, kanaal: true, gepubliceerd: true }, items: 24, kanalen: { "2dehands": { ingelogd: false } } },
+  klaar:     { server: { extensie: true, kanaal: true, gepubliceerd: true }, items: 24, kanalen: {} },
+}[SCENARIO];
+let state = { items: Array(FEITEN.items).fill({}), connected: [], extStatus: { online: true }, listings: [] };
+let extState = { status: "ready", kanalen: FEITEN.kanalen };
+const API = "";
+async function apiFetch(url) { return { ok: true, json: async () => FEITEN.server }; }
+function showView(v) { console.log("showView", v); }
+function openAddItem() { alert("New item"); }
+document.getElementById("knoppen").innerHTML = ["nieuw", "johan", "uitgelogd", "klaar"]
+  .map(s => `<a href="?s=${s}" style="margin-right:10px;font-weight:${s === SCENARIO ? 800 : 400}">${s}</a>`).join("")
+  + ` <button onclick="localStorage.clear();location.reload()">reset</button>`;
+</script>
+<script src="onboarding.js"></script>
+<script>
+localStorage.clear();
+OB.opDashboard();
+OB.renderHelp();
+document.getElementById("platforms-body").innerHTML = ["marktplaats", "2dehands", "vinted"].map(p => {
+  const s = OB.kanaalStatus(p, p === "marktplaats" ? 22 : 0);
+  return `<div class="card" style="padding:16px 18px"><div style="display:flex;align-items:center;justify-content:space-between;gap:12px"><div style="font-weight:600">${p}</div>${s.badge}</div>${s.regel}</div>`;
+}).join("");
+</script>

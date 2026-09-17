@@ -1873,7 +1873,7 @@ def onboarding_status(user_id: str = Depends(get_current_user)):
                                        .limit(500).execute().data or [])]
             if items:
                 uit["gepubliceerd"] = bool(
-                    db.table("listings").select("id").in_("item_id", items[:IN_BROK])
+                    db.table("listings").select("id").in_("item_id", items[:200])
                     .in_("platform", ["ebay", "shopify"]).eq("status", "active")
                     .limit(1).execute().data)
     except Exception as e:  # noqa: BLE001 — een halve lijst is beter dan een kapot dashboard
@@ -2571,9 +2571,9 @@ async def _rond_publicatie_af(db, job: dict, body: dict) -> None:
         }).eq("id", wachtend[0]["id"]).execute()))
         return
     melding = ("Facebook didn't confirm this listing, so we can't tell whether it went live. "
-               "Check Marketplace > Your listings: if it's there, paste its link on the Facebook "
-               "icon of this item. If it isn't, publish it again. Update the Omnivaleur extension "
-               "so this is checked for you."
+               "Check Marketplace > Your listings: if it's there, click the Facebook icon of this "
+               "item and choose It is online. If it isn't, publish it again. Update the Omnivaleur "
+               "extension so this is checked for you."
                if job["platform"] == "facebook" else
                "Extension completed job but returned no platform_listing_id")
     (await naast_de_lus(lambda: db.table("listings").update({

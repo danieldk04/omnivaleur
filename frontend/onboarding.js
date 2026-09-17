@@ -35,7 +35,16 @@
     zet(k, v) { try { localStorage.setItem(k, v); } catch (e) { /* privé venster */ } },
     weg(k) { try { localStorage.removeItem(k); } catch (e) { /* privé venster */ } },
   };
-  const g = (naam) => { try { return eval(naam); } catch (e) { return undefined; } }; // eslint-disable-line no-eval
+  // De globale namen uit app.html (let/const op scriptniveau, dus niet op window).
+  const GLOBAAL = {
+    state: () => (typeof state !== "undefined" ? state : undefined),
+    extState: () => (typeof extState !== "undefined" ? extState : undefined),
+    apiFetch: () => (typeof apiFetch !== "undefined" ? apiFetch : undefined),
+    API: () => (typeof API !== "undefined" ? API : undefined),
+    platIcon: () => (typeof platIcon !== "undefined" ? platIcon : undefined),
+    showView: () => (typeof showView !== "undefined" ? showView : undefined),
+  };
+  const g = (naam) => { try { return GLOBAAL[naam](); } catch (e) { return undefined; } };
   const esc = (s) => String(s == null ? "" : s).replace(/[&<>"']/g,
     (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
   const EMOJI = { marktplaats: "🟧", "2dehands": "🟦", vinted: "🟩", facebook: "📘", ebay: "🛒", shopify: "🛍️" };
@@ -224,7 +233,7 @@
       {
         id: "extensie", klaar: !!f.extensie,
         titel: "Install the Chrome extension",
-        tekst: "The extension does the work: it opens Marktplaats, 2dehands, Vinted and Facebook in your own Chrome and fills in the forms for you. Install it on the computer you want to publish from, then sign in to it with your Omnivaleur account.",
+        tekst: "The extension does the work: it opens Marktplaats, 2dehands, Vinted and Facebook in your own Chrome and fills in the forms for you. Install it in the Chrome you want to publish from, then open Omnivaleur once in that same Chrome so the extension signs in with your account.",
         acties: `<a class="btn btn-primary btn-sm" href="${STORE_URL}" target="_blank" rel="noopener" style="text-decoration:none">Install extension</a>
                  <button class="btn btn-outline btn-sm" onclick="OB.verversLijst(true)">I've installed it</button>`,
       },
@@ -294,11 +303,19 @@
   }
 
   // ── Get started op het dashboard ───────────────────────────────────────────
+  // Het dashboard ververst elke paar seconden; alleen tekenen als er iets
+  // veranderde, anders springt een open stap of een knop onder je muis weg.
+  function zet(el, html) {
+    if (el._obHtml === html) return;
+    el._obHtml = html;
+    el.innerHTML = html;
+  }
+
   OB.opDashboard = async function (vers) {
     const doel = document.getElementById("ob-checklist");
     if (!doel) return;
     zorgVoorStijl();
-    if (opslag.lees(VERBORGEN_SLEUTEL) === "1") { doel.innerHTML = ""; return; }
+    if (opslag.lees(VERBORGEN_SLEUTEL) === "1") { zet(doel, ""); return; }
     const lokaal = lokaleFeiten();
     const server = await serverFeiten(vers);
     const stappen = OB.stappen({
@@ -309,17 +326,17 @@
     const kern = stappen.filter((s) => !s.optioneel);
     const klaar = kern.filter((s) => s.klaar).length;
     if (klaar === kern.length) {
-      if (opslag.lees(KLAAR_GEZIEN_SLEUTEL) === "1") { doel.innerHTML = ""; return; }
-      doel.innerHTML = `<div class="ob-card"><div class="ob-klaar-rij">
+      if (opslag.lees(KLAAR_GEZIEN_SLEUTEL) === "1") { zet(doel, ""); return; }
+      zet(doel, `<div class="ob-card"><div class="ob-klaar-rij">
           <span style="font-size:18px">🎉</span>
           <div style="flex:1"><b>You're set up.</b> Your items are going out to other marketplaces. Questions later on? Everything is under Help.</div>
           <button class="ob-link" onclick="OB.klaarGezien()">Close</button>
-        </div></div>`;
+        </div></div>`);
       return;
     }
     const open = OB._open || (stappen.find((s) => !s.klaar && !s.optioneel) || {}).id;
     const eerste = (stappen.find((s) => !s.klaar && !s.optioneel) || {}).id;
-    doel.innerHTML = `<div class="ob-card" role="region" aria-label="Get started">
+    zet(doel, `<div class="ob-card" role="region" aria-label="Get started">
       <div class="ob-kop">
         <div class="ob-kop-tekst">
           <div class="ob-titel">Get started with Omnivaleur</div>
@@ -348,7 +365,7 @@
           </div>
         </li>`).join("")}
       </ol>
-    </div>`;
+    </div>`);
   };
 
   OB.klap = function (id) {
@@ -447,7 +464,7 @@
       "Adverts go on ebay.nl, in Dutch.",
     ]],
     ["shopify", "Shopify", "Connect", [
-      "<b>Only if your webshop runs on Shopify.</b> Other webshops can't be connected or imported (yet).",
+      "<b>Only if your webshop runs on Shopify.</b> Other webshops can't be connected or imported.",
       "Connect under Platforms: the screen walks you through creating a small app in your Shopify admin.",
       "A paid order in your shop takes the item off your other marketplaces automatically.",
     ]],
@@ -473,13 +490,13 @@
     ["Publishing", "2dehands asks for payment",
       "Some 2dehands categories are paid after a few free adverts. Omnivaleur stops at that screen and never pays for you; the item shows a red icon with the reason. Decide per item whether you want to pay on 2dehands, or leave 2dehands off for those items."],
     ["Publishing", "Facebook says done, but I can't find my advert",
-      "Look under <b>Marketplace › Your listings</b>: a new advert sits in review there for a while. Is it there? Paste its link on the Facebook icon of the item. Not there? Publish again. From extension 1.0.338 Omnivaleur only says done when Facebook confirms it."],
+      "Look under <b>Marketplace › Your listings</b>: a new advert sits in review there for a while. Is it there? Click the Facebook icon on the item and choose <b>It is online</b>. Not there? Publish again. From extension 1.0.338 Omnivaleur only says done when Facebook confirms it."],
     ["Publishing", "Vinted keeps asking for the condition, or says the text is too long",
       "Both are handled for you: the condition is filled in again if Vinted draws the field late (extension 1.0.338), and texts over 2,000 characters are shortened for Vinted. Still seeing it? Your extension may be older; Chrome updates it by itself within a few hours."],
     ["Publishing", "The extension opens a tab but the advert isn't submitted",
       "Usually you're not signed in to that marketplace in this Chrome. Open the site, sign in, and publish again. If the tab shows a form with red fields, the icon on the item tells you what was missing."],
     ["Selling", "What happens when an item sells?",
-      "Press <b>Sold</b> on the item and pick where it sold: Omnivaleur takes it off your other marketplaces. A paid order on eBay or Shopify is picked up automatically. When an advert disappears from Vinted, Marktplaats or 2dehands you get a <b>Did this item sell?</b> question first, so nothing is taken down on a guess."],
+      "Press <b>Sold</b> on the item and pick where it sold: Omnivaleur takes it off your other marketplaces. A sale on Vinted, or a paid order on eBay or Shopify, is picked up automatically. When an advert simply disappears from Vinted, Marktplaats or 2dehands you get a <b>Did this item sell?</b> question first, so nothing is taken down on a guess."],
     ["Selling", "I sold something, but it's still on my business account",
       "On a business (Pro/Admarkt) account on Marktplaats or 2dehands, Omnivaleur can't take adverts offline. Remove the advert there yourself."],
     ["Selling", "Sold on Vinted, but still on Marktplaats",
@@ -502,7 +519,7 @@
     const fase = (nr, titel, tekst, mini) => `<div class="ob-fase"><div class="ob-fase-nr">Step ${nr}</div><div class="ob-fase-titel">${titel}</div><div class="ob-fase-tekst">${tekst}</div><div class="ob-mini" aria-hidden="true">${mini}</div></div>`;
     const pijl = `<div class="ob-flow-pijl" aria-hidden="true">${PIJL_RECHTS}</div>`;
     return `<div class="ob-flow">
-        ${fase(1, "Your items", "Import the adverts you already have, or create a new item. One item, one set of photos and one price for every marketplace.", MINI.items())}
+        ${fase(1, "Your items", "Import the adverts you already have, or create a new item. One item, one set of photos and one price for every marketplace.", `<div class="ob-m-rij"><span class="ob-m-pil">⤓ Import</span></div><div class="ob-m-rij"><span class="ob-m-pil">+ New item</span></div>`)}
         ${pijl}
         ${fase(2, "Publish", "Press Publish, tick the marketplaces, confirm. Nothing goes live until you do this.", `<span class="ob-m-vak aan"></span>2dehands<br><span class="ob-m-vak aan"></span>Vinted<br><span class="ob-m-knop" style="margin-top:6px">Publish</span>`)}
         ${pijl}
@@ -521,7 +538,7 @@
         <span class="ob-uitleg-duim"></span>
         <div><div style="font-weight:700;font-size:13px">Martin D-28 Custom Ambertone</div><div style="font-size:12px;color:#64748b">€ 3.300</div></div>
         <div class="ob-uitleg-icons">
-          ${[["marktplaats", "groen", "✓", 3], ["2dehands", "oranje", "…", 2], ["vinted", "rood", "!", 4], ["facebook", "grijs", "", 1], ["ebay", "paars", "⧉", 5]]
+          ${[["marktplaats", "grijs", "", 1], ["2dehands", "oranje", "…", 2], ["vinted", "groen", "✓", 3], ["facebook", "rood", "!", 4], ["ebay", "paars", "⧉", 5]]
             .map(([p, kleur, badge, nr]) => `<span class="ob-pin"><b>${nr}</b><span class="ob-m-icoon ${kleur}">${logo(p, 12)}${badge ? `<i>${badge}</i>` : ""}</span></span>`).join("")}
         </div>
       </div>
@@ -569,7 +586,7 @@
         `<ol style="margin:0;padding-left:18px;font-size:13px;line-height:1.7;color:var(--muted,#64748b)">${OB.stappen({}).map((s) =>
           `<li style="margin-bottom:8px"><b style="color:var(--text,#0f172a)">${esc(s.titel)}${s.optioneel ? " (optional)" : ""}.</b> ${s.tekst}</li>`).join("")}</ol>`)}
       ${sectie("iconen", "The icons on each item", "Every item shows one icon per marketplace. Its colour tells you where the item really is.", iconenHtml())}
-      ${sectie("kanalen", "What you need per marketplace", "And what the marketplaces themselves may charge. Omnivaleur costs €19.99 a month, whatever you list.", `<div class="ob-kanalen">${KANALEN.map(kanaalKaart).join("")}</div>`)}
+      ${sectie("kanalen", "What you need per marketplace", "And what the marketplaces themselves may charge. Those costs are between you and the marketplace; Omnivaleur never pays anything on your behalf.", `<div class="ob-kanalen">${KANALEN.map(kanaalKaart).join("")}</div>`)}
       ${sectie("vragen", "Questions", "", `<div id="ob-faq-lijst">${faqHtml()}</div><div class="ob-geen" id="ob-geen">Nothing found. Ask us directly below: we reply within one business day.</div>`)}
       <section class="ob-sectie" id="ob-contact"><div class="ob-card"><div style="padding:20px 22px;display:flex;align-items:center;justify-content:space-between;gap:20px;flex-wrap:wrap">
         <div><div style="font-weight:750;font-size:14px;margin-bottom:4px">Still stuck?</div>
@@ -588,6 +605,10 @@
     const el = document.getElementById(`ob-${sectieId}`);
     if (el) setTimeout(() => el.scrollIntoView({ behavior: "smooth", block: "start" }), 30);
   };
+
+  // De stijl meteen, niet pas als het dashboard tekent: het vraagteken naast
+  // "Platforms" staat ook op Items en Stale.
+  if (document.head) zorgVoorStijl();
 
   OB.zoek = function (tekst) {
     const q = String(tekst || "").trim().toLowerCase();

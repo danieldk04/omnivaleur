@@ -848,6 +848,9 @@ input[type="checkbox"].row-check { width: 15px; height: 15px; cursor: pointer; a
            Key for anyone working from their phone. Populated by loadExtensionStatus(). -->
       <div class="comp-status" style="display:none"></div>
 
+      <!-- Beginnen: vinkt af op wat er echt gebeurde. Zie frontend/onboarding.js. -->
+      <div id="ob-checklist"></div>
+
       <!-- Stats row -->
       <div class="stats" id="stats">
         <div class="stat">
@@ -887,8 +890,8 @@ input[type="checkbox"].row-check { width: 15px; height: 15px; cursor: pointer; a
         </div>
         <div class="table-wrap">
           <table>
-            <thead><tr><th>Item</th><th>Price</th><th>Platforms</th><th>Actions</th></tr></thead>
-            <tbody id="dashboard-items-body"><tr><td colspan="4"><div class="empty"><div class="empty-icon">📦</div><h3>No items yet</h3><p>Add your first item to get started</p><button class="btn btn-primary btn-sm" onclick="openAddItem()">+ New item</button></div></td></tr></tbody>
+            <thead><tr><th>Item</th><th>Price</th><th>Platforms<button class="ob-vraagje" onclick="window.OB&&OB.legenda(this, event)" aria-label="What do the icons mean?" title="What do the icons mean?">?</button></th><th>Actions</th></tr></thead>
+            <tbody id="dashboard-items-body"></tbody>
           </table>
         </div>
       </div>
@@ -1107,7 +1110,7 @@ input[type="checkbox"].row-check { width: 15px; height: 15px; cursor: pointer; a
                 <th class="hide-mobile">Condition</th>
                 <th class="hide-mobile">Created</th>
                 <th class="hide-mobile">First listed</th>
-                <th>Platforms</th>
+                <th>Platforms<button class="ob-vraagje" onclick="window.OB&&OB.legenda(this, event)" aria-label="What do the icons mean?" title="What do the icons mean?">?</button></th>
                 <th>Actions</th>
               </tr>
             </thead>
@@ -1160,7 +1163,7 @@ input[type="checkbox"].row-check { width: 15px; height: 15px; cursor: pointer; a
                 <th class="an-sales-num">Suggested</th>
                 <th class="hide-mobile">Live since</th>
                 <th class="an-sales-num">Days</th>
-                <th>Platforms</th>
+                <th>Platforms<button class="ob-vraagje" onclick="window.OB&&OB.legenda(this, event)" aria-label="What do the icons mean?" title="What do the icons mean?">?</button></th>
                 <th>Actions</th>
               </tr>
             </thead>
@@ -1216,7 +1219,7 @@ input[type="checkbox"].row-check { width: 15px; height: 15px; cursor: pointer; a
     <div id="view-platforms" class="view">
       <div class="view-header">
         <h1>Platforms</h1>
-        <p>Connect the marketplaces you want to publish to. Marktplaats, 2dehands and Vinted connect automatically via the Chrome extension — eBay and Shopify connect via their official API.</p>
+        <p>Marktplaats, 2dehands, Vinted and Facebook work through your own login in Chrome: sign in to each one there, in the Chrome with the extension. eBay and Shopify you connect once, below.</p>
       </div>
       <div id="platforms-body" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:12px;max-width:900px"></div>
 
@@ -1855,237 +1858,17 @@ input[type="checkbox"].row-check { width: 15px; height: 15px; cursor: pointer; a
 
     <!-- ── HELP VIEW ──────────────────────────────────────────────── -->
     <div id="view-help" class="view">
-      <div style="max-width:860px;margin:0 auto;display:flex;flex-direction:column;gap:20px">
-        <!-- How it works -->
-        <div class="card">
-          <div class="card-header"><h2>📋 How it works — step by step</h2></div>
-          <div style="padding:8px 24px 24px">
-            <div style="display:flex;flex-direction:column">
-              <div style="display:flex;gap:18px;align-items:flex-start;padding:18px 0;border-bottom:1px solid var(--border)">
-                <div style="width:32px;height:32px;border-radius:50%;background:var(--grad);color:#fff;font-size:13px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px;box-shadow:0 2px 8px rgba(37,99,235,.3)">1</div>
-                <div><div style="font-weight:700;font-size:14px;margin-bottom:4px;color:var(--text)">Install the Chrome extension</div><div style="font-size:13px;color:var(--muted);line-height:1.65">Download the Omnivaleur extension from the Chrome Web Store and log in with your account credentials. The extension runs silently in the background — you don't need to open it again after setup.</div></div>
-              </div>
-              <div style="display:flex;gap:18px;align-items:flex-start;padding:18px 0;border-bottom:1px solid var(--border)">
-                <div style="width:32px;height:32px;border-radius:50%;background:var(--grad);color:#fff;font-size:13px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px;box-shadow:0 2px 8px rgba(37,99,235,.3)">2</div>
-                <div><div style="font-weight:700;font-size:14px;margin-bottom:4px;color:var(--text)">Create an item</div><div style="font-size:13px;color:var(--muted);line-height:1.65">Click <strong style="color:var(--text)">+ New item</strong>, fill in the title, description, price, size and upload your photos. Write everything in English — Omnivaleur handles the Dutch translation for Marktplaats &amp; 2dehands automatically.</div></div>
-              </div>
-              <div style="display:flex;gap:18px;align-items:flex-start;padding:18px 0;border-bottom:1px solid var(--border)">
-                <div style="width:32px;height:32px;border-radius:50%;background:var(--grad);color:#fff;font-size:13px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px;box-shadow:0 2px 8px rgba(37,99,235,.3)">3</div>
-                <div><div style="font-weight:700;font-size:14px;margin-bottom:4px;color:var(--text)">Choose platforms and publish</div><div style="font-size:13px;color:var(--muted);line-height:1.65">Select which marketplaces to list on — Marktplaats, 2dehands, Vinted or Shopify — and click <strong style="color:var(--text)">Save &amp; publish</strong>. The publishing job is instantly added to the queue.</div></div>
-              </div>
-              <div style="display:flex;gap:18px;align-items:flex-start;padding:18px 0;border-bottom:1px solid var(--border)">
-                <div style="width:32px;height:32px;border-radius:50%;background:var(--grad);color:#fff;font-size:13px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px;box-shadow:0 2px 8px rgba(37,99,235,.3)">4</div>
-                <div><div style="font-weight:700;font-size:14px;margin-bottom:4px;color:var(--text)">Extension publishes automatically</div><div style="font-size:13px;color:var(--muted);line-height:1.65">Usually within a few minutes the Chrome extension picks up the job, opens the marketplace in a background tab, fills in all fields, uploads your photos and submits the listing. Fully automated — the tab closes when done. With Calm mode on it deliberately waits longer between listings.</div></div>
-              </div>
-              <div style="display:flex;gap:18px;align-items:flex-start;padding:18px 0">
-                <div style="width:32px;height:32px;border-radius:50%;background:var(--grad);color:#fff;font-size:13px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px;box-shadow:0 2px 8px rgba(37,99,235,.3)">5</div>
-                <div><div style="font-weight:700;font-size:14px;margin-bottom:4px;color:var(--text)">Item sold? Mark it once</div><div style="font-size:13px;color:var(--muted);line-height:1.65">When your item sells on any platform, click <strong style="color:var(--text)">Mark as sold</strong> in the dashboard. Omnivaleur automatically removes the listing from all other platforms — no double sales.</div></div>
-              </div>
-            </div>
-          </div>
+      <!-- De hulp wordt getekend door frontend/onboarding.js (OB.renderHelp):
+           schema, iconen, per kanaal wat je nodig hebt, en de vragen die het vaakst
+           binnenkomen. Dit blok is alleen wat je ziet als dat script niet laadt. -->
+      <div class="card" style="max-width:860px;margin:0 auto;padding:22px 24px">
+        <h2 style="margin:0 0 6px">Help</h2>
+        <p style="font-size:13px;color:var(--muted);margin:0 0 12px">Help could not load. Reload the page, or ask us directly: we reply within one business day.</p>
+        <div style="display:flex;gap:10px;flex-wrap:wrap">
+          <button onclick="openFounderCall()" class="btn btn-primary btn-sm">Talk to the founder</button>
+          <a href="mailto:info@revaleur.com" class="btn btn-outline btn-sm" style="text-decoration:none">Email support →</a>
         </div>
-
-        <!-- Extension setup: full-width and right after "How it works", because
-             nothing publishes without this — it doesn't belong squeezed next to
-             a reference card of equal visual weight. -->
-        <div class="card">
-          <div class="card-header"><h2>🧩 Extension setup</h2></div>
-          <div style="padding:16px 24px 22px;display:flex;flex-direction:column;gap:14px">
-            <div style="background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:12px 14px;font-size:13px;color:#92400e;line-height:1.55;display:flex;gap:10px;align-items:flex-start">
-              <span style="font-size:16px;flex-shrink:0;margin-top:1px">⚠️</span>
-              <span>The extension must be installed <em>and</em> logged in. Without this, nothing gets published.</span>
-            </div>
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:9px 24px" class="help-two-col">
-              <div style="display:flex;gap:10px;align-items:flex-start;font-size:13px;color:var(--muted)">
-                <div style="width:20px;height:20px;border-radius:50%;background:#dbeafe;color:var(--blue);font-size:11px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px">1</div>
-                <span>Install the extension from the Chrome Web Store</span>
-              </div>
-              <div style="display:flex;gap:10px;align-items:flex-start;font-size:13px;color:var(--muted)">
-                <div style="width:20px;height:20px;border-radius:50%;background:#dbeafe;color:var(--blue);font-size:11px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px">2</div>
-                <span>Click the extension icon → log in with your Omnivaleur email &amp; password</span>
-              </div>
-              <div style="display:flex;gap:10px;align-items:flex-start;font-size:13px;color:var(--muted)">
-                <div style="width:20px;height:20px;border-radius:50%;background:#dbeafe;color:var(--blue);font-size:11px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px">3</div>
-                <span>Verify you see <em style="color:var(--text)">"Extension active — ready to publish"</em></span>
-              </div>
-              <div style="display:flex;gap:10px;align-items:flex-start;font-size:13px;color:var(--muted)">
-                <div style="width:20px;height:20px;border-radius:50%;background:#dbeafe;color:var(--blue);font-size:11px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px">4</div>
-                <span>Log in to Marktplaats / 2dehands / Vinted once in Chrome</span>
-              </div>
-            </div>
-            <div style="font-size:12px;color:var(--muted);line-height:1.6;padding-top:2px">You can close every Chrome window — publishing keeps running in the background. Just keep the computer itself on and awake; a sleeping or shut-down computer pauses everything until it's back.</div>
-            <a href="https://chrome.google.com/webstore/detail/gfaogapbhaacfbpdppdcmnkjndlphleh" target="_blank" class="btn btn-primary btn-sm" style="text-decoration:none;text-align:center;display:block;max-width:280px">Download extension →</a>
-          </div>
-        </div>
-
-        <!-- Reference row: dashboard glossary and phone install carry the same
-             "look this up when you need it" weight, so they're paired together
-             instead of one of them competing with Extension setup above. -->
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px" class="help-two-col">
-
-          <!-- Dashboard explained -->
-          <div class="card">
-            <div class="card-header"><h2>🖥 Dashboard explained</h2></div>
-            <div style="padding:16px 22px 20px;display:flex;flex-direction:column;gap:10px">
-              <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
-                <div style="background:#f8fafc;border:1px solid var(--border);border-radius:8px;padding:12px 14px">
-                  <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);margin-bottom:5px">Total items</div>
-                  <div style="font-size:13px;color:var(--text);line-height:1.5">All items you have added, regardless of status.</div>
-                </div>
-                <div style="background:#f8fafc;border:1px solid var(--border);border-radius:8px;padding:12px 14px">
-                  <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);margin-bottom:5px">Active listings</div>
-                  <div style="font-size:13px;color:var(--text);line-height:1.5">Items live on at least one marketplace.</div>
-                </div>
-                <div style="background:#f8fafc;border:1px solid var(--border);border-radius:8px;padding:12px 14px">
-                  <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);margin-bottom:5px">Not published</div>
-                  <div style="font-size:13px;color:var(--text);line-height:1.5">Created but not yet sent to any platform.</div>
-                </div>
-                <div style="background:#f8fafc;border:1px solid var(--border);border-radius:8px;padding:12px 14px">
-                  <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);margin-bottom:5px">Queued</div>
-                  <div style="font-size:13px;color:var(--text);line-height:1.5">Jobs waiting for the extension to execute.</div>
-                </div>
-              </div>
-              <div style="font-size:13px;color:var(--muted);line-height:1.6;padding-top:4px">
-                The <strong style="color:#92400e">yellow banner</strong> appears when jobs are queued. It disappears once the extension has processed them. If it stays &gt;1 min, check your extension.
-              </div>
-            </div>
-          </div>
-
-          <!-- Install on phone -->
-          <div class="card">
-            <div class="card-header"><h2>📱 Install on your phone</h2></div>
-            <div style="padding:16px 22px 20px;display:flex;flex-direction:column;gap:10px">
-              <div style="font-size:13px;color:var(--muted);line-height:1.6">
-                A <strong style="color:var(--text)">web app</strong> — not in the App Store or Google Play. Open Omnivaleur in your phone's browser, then:
-              </div>
-              <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
-                <div style="background:#f8fafc;border:1px solid var(--border);border-radius:8px;padding:12px 14px">
-                  <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);margin-bottom:5px">iPhone / iPad — Safari</div>
-                  <div style="font-size:13px;color:var(--text);line-height:1.5">Tap <strong>Share</strong> → <strong>Add to Home Screen</strong>.</div>
-                </div>
-                <div style="background:#f8fafc;border:1px solid var(--border);border-radius:8px;padding:12px 14px">
-                  <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);margin-bottom:5px">Android — Chrome</div>
-                  <div style="font-size:13px;color:var(--text);line-height:1.5">Tap <strong>⋮</strong> → <strong>Install app</strong>.</div>
-                </div>
-              </div>
-              <div style="font-size:13px;color:var(--muted);line-height:1.6;padding-top:4px">
-                On your phone you can view and manage everything — items, messages &amp; offers, relisting. The automatic Vinted actions still run through the Chrome extension on your computer.
-              </div>
-            </div>
-          </div>
-
-        </div>
-
-        <!-- FAQ -->
-        <div class="card">
-          <div class="card-header"><h2>❓ Frequently asked questions</h2></div>
-          <div style="padding:0 24px 8px">
-            <div>
-
-              <div style="border-bottom:1px solid var(--border)">
-                <div style="display:flex;justify-content:space-between;align-items:center;padding:15px 0;cursor:pointer;font-size:13px;font-weight:600;color:var(--text);gap:12px;user-select:none" onclick="this.nextElementSibling.style.display=this.nextElementSibling.style.display==='block'?'none':'block';this.querySelector('svg').style.transform=this.nextElementSibling.style.display==='block'?'rotate(180deg)':''">
-                  Why is my listing stuck in "Queued"?
-                  <svg style="flex-shrink:0;color:var(--muted);transition:transform .2s" width="16" height="16" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"/></svg>
-                </div>
-                <div style="display:none;font-size:13px;color:var(--muted);line-height:1.65;padding-bottom:15px">The Chrome extension is either not installed, not logged in, or Chrome isn't running. Click the extension icon and make sure it shows "Extension active — ready to publish". Once active, it picks up the job — usually within a few minutes, and longer between listings if Calm mode is on.</div>
-              </div>
-
-              <div style="border-bottom:1px solid var(--border)">
-                <div style="display:flex;justify-content:space-between;align-items:center;padding:15px 0;cursor:pointer;font-size:13px;font-weight:600;color:var(--text);gap:12px;user-select:none" onclick="this.nextElementSibling.style.display=this.nextElementSibling.style.display==='block'?'none':'block';this.querySelector('svg').style.transform=this.nextElementSibling.style.display==='block'?'rotate(180deg)':''">
-                  The extension opens a tab but the listing doesn't get submitted — what's wrong?
-                  <svg style="flex-shrink:0;color:var(--muted);transition:transform .2s" width="16" height="16" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"/></svg>
-                </div>
-                <div style="display:none;font-size:13px;color:var(--muted);line-height:1.65;padding-bottom:15px">You are probably not logged in to that marketplace in Chrome. Open Marktplaats, 2dehands or Vinted manually, log in, then try publishing again. The extension uses your existing browser session.</div>
-              </div>
-
-              <div style="border-bottom:1px solid var(--border)">
-                <div style="display:flex;justify-content:space-between;align-items:center;padding:15px 0;cursor:pointer;font-size:13px;font-weight:600;color:var(--text);gap:12px;user-select:none" onclick="this.nextElementSibling.style.display=this.nextElementSibling.style.display==='block'?'none':'block';this.querySelector('svg').style.transform=this.nextElementSibling.style.display==='block'?'rotate(180deg)':''">
-                  Do I need to log in to the marketplaces separately?
-                  <svg style="flex-shrink:0;color:var(--muted);transition:transform .2s" width="16" height="16" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"/></svg>
-                </div>
-                <div style="display:none;font-size:13px;color:var(--muted);line-height:1.65;padding-bottom:15px">Yes — once. Log in to Marktplaats, 2dehands and Vinted in Chrome at least once. Your session will be remembered. Omnivaleur never stores your marketplace passwords.</div>
-              </div>
-
-              <div style="border-bottom:1px solid var(--border)">
-                <div style="display:flex;justify-content:space-between;align-items:center;padding:15px 0;cursor:pointer;font-size:13px;font-weight:600;color:var(--text);gap:12px;user-select:none" onclick="this.nextElementSibling.style.display=this.nextElementSibling.style.display==='block'?'none':'block';this.querySelector('svg').style.transform=this.nextElementSibling.style.display==='block'?'rotate(180deg)':''">
-                  Can I write my listings in English?
-                  <svg style="flex-shrink:0;color:var(--muted);transition:transform .2s" width="16" height="16" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"/></svg>
-                </div>
-                <div style="display:none;font-size:13px;color:var(--muted);line-height:1.65;padding-bottom:15px">Yes — always write in English. Omnivaleur automatically translates your title and description to Dutch for Marktplaats and 2dehands. Vinted and Shopify use the English text directly.</div>
-              </div>
-
-              <div style="border-bottom:1px solid var(--border)">
-                <div style="display:flex;justify-content:space-between;align-items:center;padding:15px 0;cursor:pointer;font-size:13px;font-weight:600;color:var(--text);gap:12px;user-select:none" onclick="this.nextElementSibling.style.display=this.nextElementSibling.style.display==='block'?'none':'block';this.querySelector('svg').style.transform=this.nextElementSibling.style.display==='block'?'rotate(180deg)':''">
-                  What happens when an item sells?
-                  <svg style="flex-shrink:0;color:var(--muted);transition:transform .2s" width="16" height="16" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"/></svg>
-                </div>
-                <div style="display:none;font-size:13px;color:var(--muted);line-height:1.65;padding-bottom:15px">Click <strong style="color:var(--text)">Mark as sold</strong> on the item and pick the platform it sold on. Omnivaleur then removes the listing from every other platform and counts it in Analytics — preventing double sales. A real paid order on Shopify or eBay is handled automatically. For a hand sale on Marktplaats or 2dehands we show a <strong style="color:var(--text)">"Did this sell?"</strong> question first and only remove the other listings once you confirm — nothing is taken down on a guess.</div>
-              </div>
-
-              <div style="border-bottom:1px solid var(--border)">
-                <div style="display:flex;justify-content:space-between;align-items:center;padding:15px 0;cursor:pointer;font-size:13px;font-weight:600;color:var(--text);gap:12px;user-select:none" onclick="this.nextElementSibling.style.display=this.nextElementSibling.style.display==='block'?'none':'block';this.querySelector('svg').style.transform=this.nextElementSibling.style.display==='block'?'rotate(180deg)':''">
-                  Which platforms are supported?
-                  <svg style="flex-shrink:0;color:var(--muted);transition:transform .2s" width="16" height="16" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"/></svg>
-                </div>
-                <div style="display:none;font-size:13px;color:var(--muted);line-height:1.65;padding-bottom:15px">Currently: <strong style="color:var(--text)">Marktplaats</strong>, <strong style="color:var(--text)">2dehands</strong>, <strong style="color:var(--text)">Vinted</strong>, <strong style="color:var(--text)">eBay</strong> and <strong style="color:var(--text)">Shopify</strong>. Etsy, Kleinanzeigen and Facebook Marketplace are in development. Marktplaats, 2dehands and Vinted use the Chrome extension; eBay and Shopify connect via their official API.</div>
-              </div>
-
-              <div style="border-bottom:1px solid var(--border)">
-                <div style="display:flex;justify-content:space-between;align-items:center;padding:15px 0;cursor:pointer;font-size:13px;font-weight:600;color:var(--text);gap:12px;user-select:none" onclick="this.nextElementSibling.style.display=this.nextElementSibling.style.display==='block'?'none':'block';this.querySelector('svg').style.transform=this.nextElementSibling.style.display==='block'?'rotate(180deg)':''">
-                  Are my marketplace passwords stored?
-                  <svg style="flex-shrink:0;color:var(--muted);transition:transform .2s" width="16" height="16" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"/></svg>
-                </div>
-                <div style="display:none;font-size:13px;color:var(--muted);line-height:1.65;padding-bottom:15px">No. Omnivaleur never sees or stores your marketplace passwords. The extension uses the browser session you already have open. Only your Omnivaleur account password is used to log in to this dashboard.</div>
-              </div>
-
-              <div style="border-bottom:1px solid var(--border)">
-                <div style="display:flex;justify-content:space-between;align-items:center;padding:15px 0;cursor:pointer;font-size:13px;font-weight:600;color:var(--text);gap:12px;user-select:none" onclick="this.nextElementSibling.style.display=this.nextElementSibling.style.display==='block'?'none':'block';this.querySelector('svg').style.transform=this.nextElementSibling.style.display==='block'?'rotate(180deg)':''">
-                  Can I use Omnivaleur on multiple devices?
-                  <svg style="flex-shrink:0;color:var(--muted);transition:transform .2s" width="16" height="16" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"/></svg>
-                </div>
-                <div style="display:none;font-size:13px;color:var(--muted);line-height:1.65;padding-bottom:15px">The dashboard works on any device and browser. The Chrome extension needs to be installed on the specific computer where publishing should happen. Jobs are processed by whichever Chrome has the extension active.</div>
-              </div>
-
-              <div style="border-bottom:1px solid var(--border)">
-                <div style="display:flex;justify-content:space-between;align-items:center;padding:15px 0;cursor:pointer;font-size:13px;font-weight:600;color:var(--text);gap:12px;user-select:none" onclick="this.nextElementSibling.style.display=this.nextElementSibling.style.display==='block'?'none':'block';this.querySelector('svg').style.transform=this.nextElementSibling.style.display==='block'?'rotate(180deg)':''">
-                  Does Chrome need to stay open on my screen?
-                  <svg style="flex-shrink:0;color:var(--muted);transition:transform .2s" width="16" height="16" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"/></svg>
-                </div>
-                <div style="display:none;font-size:13px;color:var(--muted);line-height:1.65;padding-bottom:15px">No — you can close every Chrome window and keep working. What does matter is that your <strong style="color:var(--text)">computer stays on and awake</strong>, since Chrome itself needs to keep running in the background for the extension to publish. If your laptop is asleep, shut down, or Chrome is fully quit, nothing gets published until it's back — and if that lasts more than 3 hours with work waiting, we email you so you're never left wondering why nothing happened.</div>
-              </div>
-
-              <div>
-                <div style="display:flex;justify-content:space-between;align-items:center;padding:15px 0;cursor:pointer;font-size:13px;font-weight:600;color:var(--text);gap:12px;user-select:none" onclick="this.nextElementSibling.style.display=this.nextElementSibling.style.display==='block'?'none':'block';this.querySelector('svg').style.transform=this.nextElementSibling.style.display==='block'?'rotate(180deg)':''">
-                  Is there a live chat?
-                  <svg style="flex-shrink:0;color:var(--muted);transition:transform .2s" width="16" height="16" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"/></svg>
-                </div>
-                <div style="display:none;font-size:13px;color:var(--muted);line-height:1.65;padding-bottom:15px">Not a live chat widget, no — but you can book a free video call with the founder any time via the button below, or email support and get a reply within one business day. "Messages" inside the dashboard refers to buyer messages and offers from your marketplace listings, not a support chat.</div>
-              </div>
-
-            </div>
-          </div>
-        </div>
-
-        <!-- Contact -->
-        <div class="card">
-          <div style="padding:22px 24px;display:flex;align-items:center;justify-content:space-between;gap:20px;flex-wrap:wrap">
-            <div>
-              <div style="font-weight:700;font-size:14px;color:var(--text);margin-bottom:4px">Still need help?</div>
-              <div style="font-size:13px;color:var(--muted)">Book a free video call with the founder — questions, setup help or feedback. Or email us and we reply within one business day.</div>
-              <div style="font-size:11px;color:var(--muted);margin-top:6px">Revaleur · KVK 86792423 · Kleine Melanen 5, 4614RG Bergen op Zoom</div>
-            </div>
-            <div style="display:flex;gap:10px;flex-wrap:wrap">
-              <button onclick="openFounderCall()" class="btn btn-primary btn-sm" style="white-space:nowrap">Talk to the founder</button>
-              <a href="mailto:info@revaleur.com" class="btn btn-outline btn-sm" style="text-decoration:none;white-space:nowrap">Email support →</a>
-            </div>
-          </div>
-        </div>
-
       </div>
-
-      <style>
-        @media(max-width:680px){ .help-two-col { grid-template-columns:1fr !important } }
-      </style>
     </div>
 
   </div>
@@ -3506,6 +3289,7 @@ function showView(name) {
     if (name === 'items') { clearSelection(); applyFilters(); }
     if (name === 'analytics') { renderAnalytics(); }
     if (name === 'platforms') { renderPlatforms(); }
+    if (name === 'help') { if (window.OB) OB.renderHelp(); }
     // Alle handmatige instellingen wonen nu op één scherm; ze komen alle vier
     // uit dezelfde /api/items/settings-aanroep, dus dat is één verzoek.
     if (name === 'preferences') { loadRelistDagen(); renderVintedGroepen(); }
@@ -4318,6 +4102,15 @@ async function loadAll(opties = {}) {
 }
 
 // ── Dashboard ────────────────────────────────────────────────────
+// Leeg dashboard: twee wegen, niet één. Wie al op Marktplaats of Vinted verkoopt
+// (Johan Kist, 24 gitaren) begint met importeren, niet met een nieuw item.
+const LEEG_DASHBOARD = `<tr><td colspan="4"><div class="empty"><div class="empty-icon">📦</div><h3>No items yet</h3>
+  <p>Already selling on Marktplaats, 2dehands or Vinted? Import those adverts. Starting fresh? Create a new item.</p>
+  <div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap">
+    <button class="btn btn-primary btn-sm" onclick="showView('import')">Import my adverts</button>
+    <button class="btn btn-outline btn-sm" onclick="openAddItem()">+ New item</button>
+  </div></div></td></tr>`;
+
 function renderDashboard() {
   const active = state.listings.filter(l => l.status === 'active').length;
   const queued = state.jobs.length;
@@ -4371,7 +4164,8 @@ function renderDashboard() {
       <button class="btn btn-sm btn-primary" onclick="openCrosslist('${item.id}')">Publish</button>
     </td>
   </tr>`).join('');
-  document.getElementById('dashboard-items-body').innerHTML = rows || '<tr><td colspan="4"><div class="empty"><h3>No items yet</h3><p>Add your first item to get started</p></div></td></tr>';
+  document.getElementById('dashboard-items-body').innerHTML = rows || LEEG_DASHBOARD;
+  if (window.OB) OB.opDashboard();
 }
 
 function renderListingBadges(itemId) {
@@ -5704,10 +5498,13 @@ function renderPlatforms() {
     const count = state.listings.filter(l => l.platform === p.id && l.status === 'active').length;
     const cfg = PLATFORM_CONNECT[p.id];
     let action = '';
+    // Hier stond bij elk extensiekanaal "✓ Auto-detected", altijd. Johan Kist las
+    // dat als "mijn account is gekoppeld". Zie OB.kanaalStatus in onboarding.js.
+    const kanaal = p.type === 'extension' && window.OB ? OB.kanaalStatus(p.id, count) : null;
     if (p.type === 'extension' && p.beta) {
       action = `<span class="badge" style="background:#fef3c7;color:#92400e">Beta · use at your own risk</span>`;
     } else if (p.type === 'extension') {
-      action = `<span class="badge active">✓ Auto-detected</span>`;
+      action = kanaal ? kanaal.badge : `<span class="badge">Uses your Chrome login</span>`;
     } else if (ok && cfg?.connectable) {
       action = `<div style="display:flex;align-items:center;gap:8px">
         <span class="badge active">✓ Connected</span>
@@ -5770,7 +5567,7 @@ function renderPlatforms() {
         </div>
         ${action}
       </div>
-      ${extra}
+      ${extra}${kanaal ? kanaal.regel : ''}
     </div>`;
   }).join('');
   const facebookNote = `<div style="font-size:12px;color:#92400e;background:#fef3c7;border-radius:8px;padding:10px 12px;margin-top:10px">
@@ -11670,5 +11467,6 @@ function renderAnalytics(force) {
     }
   })();
 </script>
+<script src="/onboarding.js?v=20260917"></script>
 </body>
 </html>

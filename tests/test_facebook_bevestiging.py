@@ -86,7 +86,7 @@ def test_bevestigde_facebook_publicatie_wordt_groen_en_was_rood():
 def test_onbevestigde_facebook_publicatie_blijft_rood_met_bruikbare_melding():
     rij = _afronden(nieuw, "facebook", {"platform_listing_id": None, "platform_listing_url": None})
     assert rij["status"] == "error"
-    assert "Your listings" in rij["error_message"] and "paste its link" in rij["error_message"]
+    assert "Your listings" in rij["error_message"] and "It is online" in rij["error_message"]
 
 
 def test_andere_kanalen_blijven_zoals_ze_waren():
