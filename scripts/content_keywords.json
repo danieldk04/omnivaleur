@@ -497,6 +497,22 @@
       "slug": "used-clothing-reselling-automation",
       "status": "published",
       "priority": 61
+    },
+    {
+      "keyword": "vintage art and prints reselling automation",
+      "region": "nl",
+      "pillar": "B",
+      "slug": "vintage-art-and-prints-reselling-automation",
+      "status": "published",
+      "priority": 62
+    },
+    {
+      "keyword": "used office furniture reselling automation",
+      "region": "nl",
+      "pillar": "B",
+      "slug": "used-office-furniture-reselling-automation",
+      "status": "pending",
+      "priority": 63
     }
   ],
   "published": [
@@ -1048,6 +1064,15 @@
       "action": "created",
       "url_path": "/reseller-tools/used-clothing-reselling-automation",
       "published_at": "2026-09-16T13:02:43.525250+00:00"
+    },
+    {
+      "keyword": "vintage art and prints reselling automation",
+      "slug": "vintage-art-and-prints-reselling-automation",
+      "region": "nl",
+      "pillar": "B",
+      "action": "created",
+      "url_path": "/reseller-tools/vintage-art-and-prints-reselling-automation",
+      "published_at": "2026-09-17T13:01:14.944508+00:00"
     }
   ]
 }
