@@ -80,13 +80,31 @@ def vergelijk(actief: list[dict], lijst: dict[str, str],
     return verdwenen, hernummerd, los
 
 
-async def openbare_lijst(client: httpx.AsyncClient, verkoper_id: int) -> dict[str, str]:
+def adressen_voor(platform: str) -> tuple[str, str]:
+    """(zoekadres, basisadres) van de openbare zoek-API van dit kanaal.
+
+    WAAROM GEEN STANDAARD (17-09-2026, Johan Kist): het script las bij
+    --platform 2dehands toch de Marktplaats-lijst, omdat het zoekadres en de
+    basis vast op marktplaats.nl stonden. Zijn vier echte 2dehands-advertenties
+    (m-nummers) kwamen daardoor terug als "staat er wel, maar onder een ander
+    nummer" met een Marktplaats a-nummer ernaast. Een kanaal dat we niet kennen
+    geeft daarom een fout, nooit stil de Marktplaats-lijst.
+    """
+    from backend.services.mp_enrich import ZOEK_PER_PLATFORM
+    if platform not in ZOEK_PER_PLATFORM:
+        raise ValueError(f"onbekend platform '{platform}': dit script kan alleen "
+                         f"{', '.join(sorted(ZOEK_PER_PLATFORM))} nakijken")
+    return ZOEK_PER_PLATFORM[platform]
+
+
+async def openbare_lijst(client: httpx.AsyncClient, verkoper_id: int,
+                         zoek_url: str) -> dict[str, str]:
     """Alle advertenties van deze verkoper: {advertentienummer: titel}."""
-    from backend.services.mp_enrich import ZOEK, PAGINA, MAX_PAGINAS, _json
+    from backend.services.mp_enrich import PAGINA, MAX_PAGINAS, _json
     uit: dict[str, str] = {}
     for pagina in range(MAX_PAGINAS):
-        data = await _json(client, ZOEK, {"sellerIds[]": verkoper_id,
-                                          "limit": PAGINA, "offset": pagina * PAGINA})
+        data = await _json(client, zoek_url, {"sellerIds[]": verkoper_id,
+                                              "limit": PAGINA, "offset": pagina * PAGINA})
         rijen = data.get("listings") or []
         for r in rijen:
             if r.get("itemId"):
