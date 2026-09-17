@@ -1660,6 +1660,13 @@
       const priceEl = qs('input[data-testid="price-input--input"]');
       const sizeEl  = qs('input[data-testid="category-size-single-grid-input"]');
       const colEl   = qs('input[data-testid="color-select-dropdown-input"]');
+      // DE STAAT HOORT HIER OOK BIJ (17-09-2026, Johan Kist). De staat werd maar
+      // één keer geprobeerd, meteen na de prijs. Tekent Vinted het veld pas later
+      // (het hangt aan de categorie), dan vond die ene poging niets en stond het
+      // veld bij het plaatsen leeg: "Vul je staat in om verder te gaan". Bij Johan
+      // zes van de acht gitaren, bij De Juiste Toon drie keer. Maat en kleur werden
+      // hier al opnieuw geprobeerd; de staat nooit.
+      const condEl  = qs('input[data-testid="category-condition-single-list-input"]');
 
       const missing = [];
       if (titleEl && titleEl.value !== wantTitle) missing.push("title");
