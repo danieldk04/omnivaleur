@@ -485,11 +485,22 @@ def _knip_voor_vinted(tekst: str, grens: int) -> str:
             hoog = mid - 1
     stuk = tekst[:laag]
     ondergrens = int(laag * 0.7)            # nooit meer dan 30% extra weggooien
-    for scheiding, houd in (("\n\n", 0), ("\n", 0), (". ", 1), ("! ", 1), ("? ", 1), (" ", 0)):
-        i = stuk.rfind(scheiding)
-        if i >= ondergrens:
-            return stuk[:i + houd].rstrip()
-    return stuk.rstrip()
+    # De LAATSTE nette plek: einde van een regel of een zin. Eerst op alinea's
+    # zoeken gooide bij Johans Duesenberg 450 tekens te veel weg, terwijl er
+    # vlak voor de grens gewoon een zin eindigde.
+    plekken = [stuk.rfind(s) + h for s, h in (("\n", 0), (". ", 1), ("! ", 1), ("? ", 1))]
+    plek = max(plekken)
+    if plek < ondergrens:
+        plek = stuk.rfind(" ")
+        if plek < ondergrens:
+            return stuk.rstrip()
+    kort = stuk[:plek].rstrip()
+    # Geen losse tussenkop onderaan ("Toon en speelbaarheid" zonder tekst eronder).
+    kop = kort.rsplit("\n", 1)
+    if len(kop) == 2 and len(kop[1]) < 60 and not re.search(r"[.!?:)]$", kop[1].strip()) \
+            and not kop[1].lstrip().startswith(("-", "•", "*")) and len(kop[0]) >= ondergrens:
+        kort = kop[0].rstrip()
+    return kort
 
 
 def vinted_omschrijving(tekst: str, slot: str = "") -> str:
