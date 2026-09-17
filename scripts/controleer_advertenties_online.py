@@ -28,6 +28,7 @@ losse controle thuis.
 Gebruik:
     python scripts/controleer_advertenties_online.py --email djt@dejuistetoon.eu
     python scripts/controleer_advertenties_online.py --email ... --alles
+    python scripts/controleer_advertenties_online.py --email ... --platform 2dehands
 """
 from __future__ import annotations
 
