@@ -79,6 +79,7 @@ function bouwWereld() {
     document, state,
     API: "",
     PLATFORM_LABELS: {},
+    PRIJSVORM_UITLEG: {},
     alert: (t) => meldingen.push(t),
     // Wat het dashboard bij het laden van de lijst binnenkrijgt.
     loadAll: async () => { state.items = [JSON.parse(JSON.stringify(server.rij))]; },
@@ -145,13 +146,12 @@ async function draai({ rij = ARTIKEL, opDeServer = {}, verkoper = () => {} }) {
   w.editItem(ID);
   w.server.rij = { ...w.server.rij, ...opDeServer };
   verkoper(w.document, w);
-  w.document.getElementById("save-btn");
   await w.saveItem();
   return w;
 }
 
 (async () => {
-  console.log(`\nBron: ${path.relative(process.cwd(), BESTAND)}`);
+  console.log(`\nBron: ${BESTAND}`);
 
   // ── 1. Precies wat er bij Johan Kist gebeurde ──────────────────────────────
   console.log("\nJohan Kist, 13-09-2026: prijsvorm hersteld terwijl het scherm openstond:");

@@ -10287,3 +10287,23 @@ verwijderen van een zakelijke Marktplaats-advertentie na verkoop elders is voor 
 niet bewezen (zijn twee pogingen op 14-09 faalden, extensie 1.0.327). Automatisch
 vernieuwen staat aan (27 dagen, eerste rond 10-10) en is bij een zakelijk
 Marktplaats-account niet getest.
+
+## 17-09-2026: bewerkscherm zette reparaties terug (Johan Kist, prijsvorm)
+
+Oorzaak van de teruggezette prijsvorm bij Johan Kist bewezen. Het bewerkscherm
+stuurde bij opslaan het hele formulier mee zoals het eruitzag bij openen, en de
+server schrijft elk meegestuurd veld weg. Alleen dat scherm stuurt `price_type`
+mee; de enige andere schrijver (crosslist.py) schrijft nooit leeg. Nagespeeld met
+de echte editItem, saveItem en update_item: scherm open, prijsvorm op de server
+op SEE_DESCRIPTION, verkoper past de tekst aan, opslaan geeft weer leeg en 0,01.
+Hetzelfde gold voor alle 23 velden van het scherm.
+
+Nu stuurt het scherm alleen de velden die de verkoper echt veranderde. Tweede
+fout erbij: een artikel met prijsvorm zonder bedrag kon niet worden opgeslagen
+("Title and price are required"), dus de enige uitweg was de vorm terugzetten.
+Ook dat is weg. Voor-en-na: `tests/bewerkscherm-overschrijft-geen-reparatie-test.js`
+(oud 29 fouten, nieuw 0).
+
+**Openstaand:** het dashboard herlaadt zichzelf niet na een uitrol. Wie het al open
+had, draait de oude opslagcode tot hij ververst. Na een datareparatie bij een klant
+dus laten verversen en de rij later nog eens nakijken.

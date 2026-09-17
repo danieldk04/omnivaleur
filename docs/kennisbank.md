@@ -32,6 +32,20 @@ publiceren naar die kanalen gebeurt niet meer, elke verkoop geeft nachtelijke
 verwijderopdrachten die falen, en `plan_vinted_scans` zet elk half uur een
 Vinted-scan klaar die faalt (die planner kijkt alleen of er een actieve Vinted-rij is).
 
+**Sinds 17-09-2026 dichtgezet, op twee plekken.** De echte klikroute was het grijze
+icoon in de artikelrij (`renderPlatformMatrix` → `markPlatformListed`, confirm "Mark
+this item as listed on X?"); `markListingActive` uit de melding werd al sinds juli
+nergens meer aangeroepen en is weggehaald. Grijs opent nu `kanaalKeuze`: Publish
+(opent het publiceervenster met dat kanaal aangevinkt) of link plakken; eBay/Shopify
+zonder koppeling alleen "Connect". Rood opent `showPublishError`. De server
+(`mark_listing_active`) weigert met 422: eBay/Shopify zonder `platform_credentials`,
+en elk kanaal zonder herkenbare advertentielink als er geen spoor van een plaatsing
+is (rij met nummer, status pending/queued/error/relisting, of open create-opdracht).
+Dat laatste houdt oude, gecachte kopieën van app.html ook tegen. Wie hier een route
+bijbouwt die "live" zet: geef een link mee of zorg dat er een spoor is, anders 422.
+Proef: `tests/test_kanaalicoon_is_geen_publiceren.py` en
+`tests/kanaalicoon-is-geen-publiceren-test.js` (beide met voor-proef op c7119a04).
+
 **Why:** een klant die "hoe upload ik effectief" vraagt, heeft dit waarschijnlijk
 gedaan. Het herkenningsteken: listed_at-tijden per artikel enkele seconden na
 elkaar over alle kanalen, en geen enkele create-opdracht op die kanalen.
@@ -39,9 +53,39 @@ elkaar over alle kanalen, en geen enkele create-opdracht op die kanalen.
 **How to apply:** bij een nieuwe klant eerst tellen: listings zonder
 platform_listing_id op kanalen zonder koppeling of zonder geslaagde create. Opruimen
 zoals `listings.py` het zelf doet: eerst `sync_events` van die rijen, dan de rijen.
-Tweede valkuil bij dezelfde klant: het bewerkscherm stuurt `price_type` altijd mee
-(`value || null`); een scherm dat openstond vóór een reparatie zet de prijsvorm bij
-opslaan terug. Zie "advertentie-zonder-vraagprijs" en "zakelijk-account-lijkt-op-uitgelogd".
+Tweede valkuil bij dezelfde klant: een bewerkscherm dat openstond vóór een reparatie
+zette de prijsvorm bij opslaan terug; sinds 17-09-2026 verholpen, zie
+"open-scherm-schrijft-reparatie-terug". Zie ook "advertentie-zonder-vraagprijs" en "zakelijk-account-lijkt-op-uitgelogd".
+
+---
+
+## open-scherm-schrijft-reparatie-terug
+
+*17-09-2026 — "Een bewerkscherm dat het hele formulier opslaat zet elke serverreparatie terug; sinds 17-09-2026 stuurt het alleen gewijzigde velden, maar een tabblad van vóór de uitrol draait de oude code tot verversen"*
+
+Het bewerkscherm (`editItem` / `saveItem` in frontend/app.html) stuurde tot
+17-09-2026 bij opslaan het hele formulier naar PATCH /api/items/{id}, zoals het
+eruitzag toen het openging. De server schrijft elk meegestuurd veld blind weg.
+Bij Johan Kist zette zo een openstaand scherm de prijsvorm die om 21:26 op
+SEE_DESCRIPTION was gezet om 21:32 terug op leeg met prijs 0,01. Nagemeten met de
+echte code: het gold voor alle 23 velden (omschrijving, foto's, rubriek, maat,
+prijzen). De enige andere schrijver van `price_type` is crosslist.py en die
+schrijft nooit leeg.
+
+Sindsdien onthoudt `editItem` de beginstand (`leesItemFormulier`) en stuurt
+opslaan alleen `gewijzigdeVelden`. Een artikel met prijsvorm zonder bedrag kon
+daarvoor ook niet worden opgeslagen ("Title and price are required"), waardoor de
+verkoper alleen de vorm kon terugzetten. Proef:
+`node tests/bewerkscherm-overschrijft-geen-reparatie-test.js [oude app.html]`.
+
+**Why:** het dashboard herlaadt zichzelf niet na een uitrol. Een klant met een
+tabblad van vóór 17-09-2026 draait de oude opslagcode tot hij ververst.
+
+**How to apply:** repareer je data van een klant op de server, laat hem daarna het
+dashboard verversen en controleer de rij een paar minuten later opnieuw. Bouw je
+een nieuw bewerkformulier of een bulkbewerking: stuur alleen wat de gebruiker
+veranderde, nooit het hele formulier. Zie "kanaalicoon-aanvinken-is-geen-publiceren"
+en "advertentie-zonder-vraagprijs".
 
 ---
 

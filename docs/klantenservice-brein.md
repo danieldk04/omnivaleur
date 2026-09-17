@@ -10,7 +10,7 @@ product verandert. De ontwikkelaar werkt dan zowel dit bestand in de repo als de
 kopie in Drive bij, in dezelfde beurt. Daniel hoeft niets te doen; de Gem leest
 de Drive-kopie de volgende keer opnieuw in.
 
-_Laatst bijgewerkt: 17-09-2026 (verkocht op Marktplaats of 2dehands met een zakelijk account wordt nu ook opgemerkt als vraag in het dashboard; 2dehands voor verkopers die in Nederland wonen: land en woonplaats invullen bij Preferences; al op een kanaal en net bewerkt: vervangen kan nu direct vanuit het publiceervenster. Eerder, 15-09: zakelijk account lijkt op uitgelogd; eBay in het Nederlands; wachtrij die stilstaat omdat de browser niet is ingelogd; Vinted plaatst door zonder open tabblad; rode 'Relist failed' meldingen hersteld in 1.0.334)_
+_Laatst bijgewerkt: 17-09-2026 (opslaan in het bewerkscherm zet niets meer terug wat de klant zelf niet veranderde, en een artikel met Bieden, Zie omschrijving of Gratis kan weer worden opgeslagen zonder bedrag; verkocht op Marktplaats of 2dehands met een zakelijk account wordt nu ook opgemerkt als vraag in het dashboard; 2dehands voor verkopers die in Nederland wonen: land en woonplaats invullen bij Preferences; al op een kanaal en net bewerkt: vervangen kan nu direct vanuit het publiceervenster. Eerder, 15-09: zakelijk account lijkt op uitgelogd; eBay in het Nederlands; wachtrij die stilstaat omdat de browser niet is ingelogd; Vinted plaatst door zonder open tabblad; rode 'Relist failed' meldingen hersteld in 1.0.334)_
 
 ---
 
@@ -275,6 +275,12 @@ Contact:
   tegelijk te wijzigen; hij hoeft dat niet per artikel te doen.
 - Bieden staat standaard UIT. Wil de klant wel biedingen, dan zet hij per artikel
   "Allow bidding" aan en vult hij een minimumbod in.
+- Opslaan in het bewerkscherm schrijft sinds 17-09-2026 alleen weg wat de klant
+  in dat scherm zelf veranderde. Daarvoor kon een scherm dat al openstond een
+  correctie van ons terugdraaien, bijvoorbeeld een prijsvorm die weer op 0,01
+  kwam. Heeft de klant het dashboard al lang open, laat hem dan één keer
+  verversen. Een artikel met Bieden, Zie omschrijving of Gratis kan ook weer
+  zonder bedrag worden opgeslagen.
 
 ## Modelantwoorden
 
