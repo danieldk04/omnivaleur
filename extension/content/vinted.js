@@ -1678,6 +1678,7 @@
       if (priceEl && !(await prijsIsGeaccepteerd())) missing.push("price");
       if (sizeEl && !(sizeEl.value || "").trim() && item.size) missing.push("size");
       if (colEl && !(colEl.value || "").trim()) missing.push("colour");
+      if (condEl && condEl.offsetParent !== null && !(condEl.value || "").trim()) missing.push("condition");
       if (!missing.length) return true;
 
       console.warn("[Omnivaleur] Vinted eindcontrole ronde " + (round + 1) + ", nog leeg:", missing.join(", "));
