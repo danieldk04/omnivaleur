@@ -45,6 +45,10 @@ def _parse_listing_id(platform: str, url: str) -> str | None:
         if p == "ebay":
             m = re.search(r"/itm/(\d+)", u)
             return m.group(1) if m else None
+        if p == "facebook":
+            # /marketplace/item/{id} — dezelfde vorm die de extensie opent
+            m = re.search(r"/marketplace/item/(\d+)", u)
+            return m.group(1) if m else None
         if p == "shopify":
             # /products/{numeric-id} or /products/{handle}
             m = re.search(r"/products/(\d+)", u)
