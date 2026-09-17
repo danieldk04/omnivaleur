@@ -6543,35 +6543,11 @@ let alLiveNaOpslaan = [];   // kanalen die bij het opslaan zijn overgeslagen omd
 async function saveItem() {
   if (_uploadsInFlight > 0) return alert('Photos are still uploading — please wait for them to finish before saving.');
   const id = document.getElementById('edit-id').value;
-  const data = {
-    title: document.getElementById('f-title').value.trim(),
-    sku: document.getElementById('f-sku').value.trim() || null,
-    description: document.getElementById('f-desc').value,
-    shopify_title: document.getElementById('f-shopify-title').value.trim() || null,
-    bid_percentage: document.getElementById('f-bid-enabled').checked ? (parseInt(document.getElementById('f-bid-pct').value) || null) : null,
-    price: parseFloat(document.getElementById('f-price').value) || 0,
-    price_type: document.getElementById('f-price-type').value || null,
-    compare_at_price: parseFloat(document.getElementById('f-compare').value) || null,
-    // NOT `|| null` — a free item has a purchase price of exactly 0, and `0 || null`
-    // is null. That silently threw the cost away, so the item kept showing
-    // "＋ Add cost" in the analytics and never counted towards profit.
-    purchase_price: numOrNull(document.getElementById('f-purchase').value),
-    price_marktplaats: parseFloat(document.getElementById('f-price-mp').value) || null,
-    price_2dehands: parseFloat(document.getElementById('f-price-2dh').value) || null,
-    price_vinted: parseFloat(document.getElementById('f-price-vinted').value) || null,
-    price_ebay: parseFloat(document.getElementById('f-price-ebay').value) || null,
-    price_shopify: parseFloat(document.getElementById('f-price-shopify').value) || null,
-    brand: document.getElementById('f-brand').value.trim(),
-    size: document.getElementById('f-size').value,
-    color: document.getElementById('f-color').value.trim(),
-    material: document.getElementById('f-material').value.trim() || null,
-    ebay_category_id: getEbayCategoryId(),
-    category: document.getElementById('f-category').value,
-    gender: document.getElementById('f-gender').value,
-    condition: document.getElementById('f-condition').value,
-    photo_urls: getPhotoUrls(),
-  };
-  if (!data.title || !data.price) return alert('Title and price are required');
+  const data = leesItemFormulier();
+  // Met een prijsvorm zonder bedrag (bieden, zie omschrijving, gratis) staat het
+  // prijsveld uit. Een bedrag eisen liet de verkoper dan alleen de uitweg om de
+  // vorm terug te zetten op vraagprijs, en dan gaat het artikel voor 0,01 weg.
+  if (!data.title || (!data.price && !data.price_type)) return alert('Title and price are required');
 
   const btn = document.getElementById('save-btn');
   btn.disabled = true; btn.textContent = 'Saving...';
