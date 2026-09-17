@@ -17,6 +17,53 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ---
 
+## extensiekopie-die-niet-meebeweegt
+
+*17-09-2026 — "Een kopie die dagen achterloopt op de Web Store werkt zichzelf niet bij; meet het af tegen de andere klanten, niet tegen een vaste ondergrens"*
+
+07-09-2026, Toon (dejuistetoon): "het beeld blijft wederom wegspringen", dezelfde
+rode rubriekmeldingen, dubbele advertenties. Zijn Chromebook draaide op dat moment
+**1.0.260 van 28 augustus** terwijl er **1.0.311** in de Chrome Web Store stond.
+De drie rubrieken waar hij op vastliep (`verkleedkleding`, `heren
+verkleedkleding`, `unisex verkleedkleding`) zijn precies de drie die ná 1.0.260
+zijn toegevoegd. Elke reparatie van tien dagen bestond bij hem niet.
+
+**Why:** de harde ondergrens (`MINIMALE_SCANVERSIE`, 1.0.244) moet met de hand mee
+omhoog en staat daardoor altijd te laag; hij liet 1.0.260 gewoon door. Het
+wegklikbare "er is een update"-balkje gaat ervan uit dat Chrome het wel oplost, en
+dat is precies wat bij een met de hand geladen kopie nooit gebeurt. Dat er twee
+versiestempels door elkaar in zijn foutmeldingen stonden (1.0.260 én 1.0.273 op
+02-09) is het extra teken dat er twee kopieën draaiden; zie
+"tweede-extensiekopie".
+
+**How to apply:** meet de achterstand tegen wat er vandaag in de Web Store staat,
+niet tegen een vaste grens, en ijk op de andere klanten van diezelfde dag. Toen
+Toon 51 versies achterliep stonden de vier andere actieve computers op 1, 2, 3 en
+0 versies achterstand: Chrome doet zijn werk dus wel. Boven `ACHTERSTAND_GRENS`
+(20, ruim vier dagen bij ~5 uitgaven per dag) geeft de uitgifte geen werk meer en
+toont het dashboard een venster zonder "toch doorgaan" — die knop zou een lege
+belofte zijn. Zie ook "extension-version-floor" en
+"rem-op-de-server-bij-een-extensiefout".
+
+En: houd de Web Store buiten de testsuite (`tests/conftest.py`). Tien tests met
+een vaste versie in de hand (1.0.286, 1.0.294) vielen anders vanzelf om zodra er
+een nieuwe versie uitging.
+
+**Hetzelfde onderwerp, eigen bestand** (samengevoegd in de index op 13-09-2026):
+- "tweede-extensiekopie" — handmatig geladen extensie bevriest en pikt tóch opdrachten; herkenbaar aan versiestempel
+- "stille-extensie-is-niet-altijd-uitgezet" — hartslagversie zegt of aanzetten überhaupt helpt
+
+**Oude kopie + zakelijk account = rij stil (16-09-2026, Toon, Edge 1.0.327).** Een
+kopie onder 1.0.332 leest een zakelijk account als uitgelogd en annuleert vóór het
+plaatsen. De uitgifte geeft zo'n kopie bij TRADER nu geen create/content_refresh
+meer (`_oude_kopie_leest_zakelijk_als_uitgelogd`). Herkenbaar: een geannuleerde
+opdracht zonder claimed_at met `cancelled: login unproven` en een versiestempel die
+achterloopt op de Web Store. De hartslagtabel heeft één rij per gebruiker, dus die
+toont alleen de laatst pollende kopie; de andere zie je aan `_progress.versie` in
+de opdrachten.
+
+---
+
 ## herplaatsen-verliest-advertenties
 
 *16-09-2026 — "Herplaatsen verwijdert eerst; een item zonder omschrijving raakte daardoor de advertentie definitief kwijt (Jaap, 60 stuks, 28-08-2026)"*
@@ -2701,44 +2748,6 @@ op 2dehands** (m2065499767 en m2222635983, allebei live in zijn openbare aanbod,
 allebei 40 euro) met verschillende foto-adressen, want elke import spiegelt de
 foto opnieuw. De dubbelcontrole op titel+foto-adres
 ("dubbele-advertentie-titel-en-foto") ziet die dus niet, en dat is terecht.
-
----
-
-## extensiekopie-die-niet-meebeweegt
-
-*07-09-2026 — "Een kopie die dagen achterloopt op de Web Store werkt zichzelf niet bij; meet het af tegen de andere klanten, niet tegen een vaste ondergrens"*
-
-07-09-2026, Toon (dejuistetoon): "het beeld blijft wederom wegspringen", dezelfde
-rode rubriekmeldingen, dubbele advertenties. Zijn Chromebook draaide op dat moment
-**1.0.260 van 28 augustus** terwijl er **1.0.311** in de Chrome Web Store stond.
-De drie rubrieken waar hij op vastliep (`verkleedkleding`, `heren
-verkleedkleding`, `unisex verkleedkleding`) zijn precies de drie die ná 1.0.260
-zijn toegevoegd. Elke reparatie van tien dagen bestond bij hem niet.
-
-**Why:** de harde ondergrens (`MINIMALE_SCANVERSIE`, 1.0.244) moet met de hand mee
-omhoog en staat daardoor altijd te laag; hij liet 1.0.260 gewoon door. Het
-wegklikbare "er is een update"-balkje gaat ervan uit dat Chrome het wel oplost, en
-dat is precies wat bij een met de hand geladen kopie nooit gebeurt. Dat er twee
-versiestempels door elkaar in zijn foutmeldingen stonden (1.0.260 én 1.0.273 op
-02-09) is het extra teken dat er twee kopieën draaiden; zie
-"tweede-extensiekopie".
-
-**How to apply:** meet de achterstand tegen wat er vandaag in de Web Store staat,
-niet tegen een vaste grens, en ijk op de andere klanten van diezelfde dag. Toen
-Toon 51 versies achterliep stonden de vier andere actieve computers op 1, 2, 3 en
-0 versies achterstand: Chrome doet zijn werk dus wel. Boven `ACHTERSTAND_GRENS`
-(20, ruim vier dagen bij ~5 uitgaven per dag) geeft de uitgifte geen werk meer en
-toont het dashboard een venster zonder "toch doorgaan" — die knop zou een lege
-belofte zijn. Zie ook "extension-version-floor" en
-"rem-op-de-server-bij-een-extensiefout".
-
-En: houd de Web Store buiten de testsuite (`tests/conftest.py`). Tien tests met
-een vaste versie in de hand (1.0.286, 1.0.294) vielen anders vanzelf om zodra er
-een nieuwe versie uitging.
-
-**Hetzelfde onderwerp, eigen bestand** (samengevoegd in de index op 13-09-2026):
-- "tweede-extensiekopie" — handmatig geladen extensie bevriest en pikt tóch opdrachten; herkenbaar aan versiestempel
-- "stille-extensie-is-niet-altijd-uitgezet" — hartslagversie zegt of aanzetten überhaupt helpt
 
 ---
 

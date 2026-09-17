@@ -10142,3 +10142,34 @@ een ander kanaal vult geen foto's aan vanaf een advertentie die al live staat; d
 doet alleen herplaatsen. Vooraf al rood en los van dit werk: 14 proeven, waaronder
 `test_marktplaats_krijgt_hem_ook`, `test_de_balk_vertelt_het_gemeten_tempo` en de
 reeks in `test_video_opvolging.py`.
+
+### 16-09-2026 (avond) — een tweede, oude extensiekopie legde zijn 2dehands-rij stil
+
+De twee lederhosen die om 19:22 opnieuw klaarstonden (nu met Etten-Leur in de
+opdracht) werden niet geplaatst. Om 19:43 annuleerde de server er een met "We
+stopped the 2dehands queue ...", zonder dat hij ooit was opgepakt. De melding
+citeerde `[extensie 1.0.327]`, en de hartslag kwam van Edge op Windows met 1.0.327.
+De Web Store stond op 1.0.336, de andere actieve computers ook. Toon heeft dus
+naast zijn bijgewerkte browser (1.0.336, die vanmiddag op Marktplaats plaatste)
+nog een Edge die niet bijwerkt.
+
+Zijn 2dehands-account is zakelijk (`"sellerType":"TRADER"` op zijn eigen
+advertentie, ook door de server zelf vastgesteld). In de code van 1.0.327
+(commit 4ab1aef0) doet `mpPlaatsenKlaarzetten` vóór elke create/content_refresh op
+Marktplaats en 2dehands een inlogcontrole op het persoonlijke overzicht. Bij een
+zakelijk account is dat 401, dus "niet ingelogd", dus `stop-platform`: twintig
+minuten pauze en één opdracht geannuleerd. Hersteld in 1.0.332, maar een kopie die
+niet bijwerkt doet het elke ronde opnieuw.
+
+**Nu:** `_oude_kopie_leest_zakelijk_als_uitgelogd` in `backend/api/jobs.py`. Een
+kopie onder 1.0.332 krijgt bij een zakelijk account geen create/content_refresh
+meer op Marktplaats en 2dehands. Zonder opdracht doet ze de foute controle niet, en
+de opdracht blijft staan voor een kopie die het wel kan. Verwijderen, Vinted,
+particulieren en een onbekende versie lopen gewoon door. Echte meting op zijn
+account: Edge 1.0.327 krijgt de lederhose niet, 1.0.336 wel. Proef:
+`tests/test_oude_kopie_zakelijk_account.py`. Maat 56 opnieuw klaargezet
+(c18554a5), maat 54 (dedf0a73) stond nog.
+
+**Openstaand:** Edge bij Toon bijwerken of Omnivaleur daaruit verwijderen; de
+reparatie hierboven voorkomt schade, maar die kopie doet verder niets nuttigs voor
+2dehands. En nog steeds: één echte geslaagde 2dehands-plaatsing met zijn locatie.
