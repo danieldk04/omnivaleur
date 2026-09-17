@@ -295,7 +295,6 @@ def mark_listing_active(body: dict, user_id: str = Depends(get_current_user)):
     if listing_id:
         link_fields["platform_listing_id"] = listing_id
 
-    existing = db.table("listings").select("id").eq("item_id", item_id).eq("platform", platform).execute()
     if existing.data:
         db.table("listings").update({
             "status": "active",
