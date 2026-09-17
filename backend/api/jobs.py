@@ -1837,6 +1837,50 @@ def extension_version(user_id: str = Depends(get_current_user)):
     }
 
 
+@router.get("/onboarding")
+def onboarding_status(user_id: str = Depends(get_current_user)):
+    """Hoe ver is deze verkoper met beginnen? Voedt de "Get started"-lijst op het
+    dashboard.
+
+    WAAROM (17-09-2026, Johan Kist). Na drie dagen had hij 24 advertenties
+    geïmporteerd, bij 23 gitaren elk kanaalicoon aangeklikt, en nog nergens iets
+    geplaatst. Hij dacht dat het gelukt was. Een lijst die afvinkt op wat er ECHT
+    gebeurde (niet op wat hij aanklikte) had dat meteen laten zien.
+
+    Elke stap is een feit uit de database, nooit een klik:
+    - extensie: de extensie heeft zich ooit gemeld;
+    - kanaal: een opdracht op een extensiekanaal is gelukt, dus hij is daar ingelogd;
+    - gepubliceerd: een plaatsing leverde echt een advertentie op (of eBay/Shopify,
+      die niet via opdrachten lopen maar ook niet te importeren zijn).
+    """
+    db = get_db()
+    uit = {"extensie": False, "kanaal": False, "gepubliceerd": False}
+    try:
+        uit["extensie"] = bool(db.table("extension_heartbeat").select("user_id")
+                               .eq("user_id", user_id).limit(1).execute().data)
+        klaar = (db.table("jobs").select("platform,action,result")
+                 .eq("user_id", user_id).eq("status", "done")
+                 .in_("platform", ["marktplaats", "2dehands", "vinted", "facebook"])
+                 .in_("action", ["create", "scan"])
+                 .order("done_at", desc=True).limit(50).execute().data or [])
+        uit["kanaal"] = bool(klaar)
+        uit["gepubliceerd"] = any(
+            j["action"] == "create" and isinstance(j.get("result"), dict)
+            and (j["result"].get("platform_listing_id") or j["result"].get("bevestigd"))
+            for j in klaar)
+        if not uit["gepubliceerd"]:
+            items = [i["id"] for i in (db.table("items").select("id").eq("user_id", user_id)
+                                       .limit(500).execute().data or [])]
+            if items:
+                uit["gepubliceerd"] = bool(
+                    db.table("listings").select("id").in_("item_id", items[:IN_BROK])
+                    .in_("platform", ["ebay", "shopify"]).eq("status", "active")
+                    .limit(1).execute().data)
+    except Exception as e:  # noqa: BLE001 — een halve lijst is beter dan een kapot dashboard
+        logger.warning("onboarding-status voor %s niet compleet: %s", user_id, e)
+    return uit
+
+
 @router.get("/extension-status")
 def extension_status(user_id: str = Depends(get_current_user)):
     """
