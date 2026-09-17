@@ -71,6 +71,37 @@ LUS_GRENS = 3                   # plaatsingen in POGING_VENSTER: daarboven is he
 POGING_VENSTER = timedelta(days=14)
 PAGINAS_PER_VERKOPER = 60       # 100 advertenties per pagina
 
+# ── VERDWENEN VAN DE OPENBARE LIJST: MOGELIJK VERKOCHT (17-09-2026) ──────────
+#
+# WAAROM. Toon (De Juiste Toon) verkoopt op Marktplaats en haalde daarna zelf zijn
+# 2dehands-zoekertjes weg, omdat dat automatisch afmelden bij hem nooit gebeurde.
+# Gemeten: bij hem stond er nog nooit één Marktplaats-verkoop in de boeken. 25 van
+# zijn Marktplaats-advertenties waren van de openbare lijst verdwenen terwijl wij
+# ze live noemden, en bij 12 daarvan stond het artikel nog op 2dehands. De
+# verkoopherkenning in de extensie leest "Mijn advertenties", en die pagina is
+# leeg bij een zakelijk account (zijn Marktplaats en 2dehands zijn allebei
+# zakelijk). De verkoopcontrole op de server slaat hem over: geen koppeling.
+#
+# Deze ronde ziet zijn advertenties wél, dus kijkt ze ook wat er ontbreekt. Een
+# verdwenen advertentie is een ZACHT signaal (Daniel, 07-09-2026: verkocht is op
+# Marktplaats niet te onderscheiden van verlopen of zelf weggehaald), dus het wordt
+# de bestaande vraag "is dit verkocht?" in het dashboard. Ja = overal af, via
+# handle_item_sold, precies zoals bij een Vinted-verkoop.
+#
+# DE REMMEN
+# - Alleen op een VOLLEDIGE lijst: evenveel advertenties als de API zelf telt.
+# - Pas na twee rondes afwezig (not_found_count), zodat één haperende ronde niets doet.
+# - Niet binnen 48 uur na plaatsen: de openbare lijst van Marktplaats liep op
+#   15-09-2026 uren achter bij nieuwe advertenties.
+# - Niet als er voor dat artikel op dat kanaal nog werk openstaat (herplaatsing,
+#   verwijdering): dan is afwezigheid onze eigen tussenstand.
+# - Niet voor verkopers met een koppeling op dat kanaal: die kijkt polling.py na.
+# - Ontbreekt er ineens een groot deel, dan meten we verkeerd en gebeurt er niets.
+VERDWENEN_MIN_LEEFTIJD = timedelta(hours=48)
+VERDWENEN_RONDES = 2
+VERDWENEN_MAX_AANTAL = 15
+VERDWENEN_MAX_AANDEEL = 0.25
+
 
 def _tijd(waarde) -> datetime | None:
     if not waarde:
@@ -112,9 +143,11 @@ async def _verkopersnummer(client, zoek_url: str, onze: list[dict]) -> int | Non
     return None
 
 
-async def _verkoperslijst(client, zoek_url: str, verkoper_id: int) -> list[dict]:
+async def _verkoperslijst(client, zoek_url: str, verkoper_id: int) -> tuple[list[dict], bool]:
+    """De hele openbare lijst, plus of hij compleet is (evenveel als de API telt)."""
     from backend.services.mp_enrich import _json, PAGINA
     uit: list[dict] = []
+    totaal = 0
     for pagina in range(PAGINAS_PER_VERKOPER):
         try:
             data = await _json(client, zoek_url, {"sellerIds[]": verkoper_id,
@@ -125,13 +158,86 @@ async def _verkoperslijst(client, zoek_url: str, verkoper_id: int) -> list[dict]
                         verkoper_id, pagina, e)
             # Halve lijst is geen lijst: wat we niet zagen mag niet als "zonder
             # foto" of als "weg" tellen.
-            return []
+            return [], False
         rijen = data.get("listings") or []
         uit += rijen
-        if not rijen or len(uit) >= (data.get("totalResultCount") or 0):
+        totaal = data.get("totalResultCount") or totaal
+        if not rijen or len(uit) >= totaal:
             break
         await asyncio.sleep(0.8)
-    return uit
+    return uit, bool(uit) and len({a.get("itemId") for a in uit}) >= totaal
+
+
+def verdwenen_beslissing(onze: list[dict], op_nummer: dict, open_werk: set,
+                         nu: datetime) -> tuple[list[dict], list[dict], bool]:
+    """Welke van onze advertenties ontbreken echt, en welke zijn er weer?
+
+    Geeft (weg, terug, te_veel). `weg` zijn advertenties die tellen als afwezig,
+    `terug` zijn advertenties met een afwezigheidsteller die er weer staan, en
+    `te_veel` betekent: dit is een meetfout, doe niets.
+    """
+    weg, terug = [], []
+    for r in onze:
+        if r["platform_listing_id"] in op_nummer:
+            if r.get("not_found_count"):
+                terug.append(r)
+            continue
+        geplaatst = _tijd(r.get("listed_at"))
+        if not geplaatst or nu - geplaatst < VERDWENEN_MIN_LEEFTIJD:
+            continue
+        if r["item_id"] in open_werk:
+            continue
+        weg.append(r)
+    te_veel = (len(weg) > VERDWENEN_MAX_AANTAL
+               and len(weg) / max(1, len(onze)) > VERDWENEN_MAX_AANDEEL)
+    return weg, terug, te_veel
+
+
+async def _verdwenen_als_vraag(db, user_id: str, platform: str, onze: list[dict],
+                               op_nummer: dict) -> int:
+    """Afwezig tellen, en na VERDWENEN_RONDES de vraag "verkocht?" stellen."""
+    from backend.api.listings import VERDENKING_REDENEN
+    open_werk = {r["item_id"] for r in ((await naast_de_lus(
+        lambda: db.table("jobs").select("item_id")
+        .eq("user_id", user_id).eq("platform", platform)
+        .in_("status", ["pending", "claimed"]).execute())).data or [])}
+    weg, terug, te_veel = verdwenen_beslissing(onze, op_nummer, open_werk,
+                                               datetime.now(timezone.utc))
+    for r in terug:
+        await naast_de_lus(lambda rr=r: db.table("listings").update({"not_found_count": 0})
+                           .eq("id", rr["id"]).execute())
+    if te_veel:
+        logger.error("verdwenen: %s van %s advertenties van %s ontbreken op %s. Dat is een "
+                     "meetfout, geen uitverkoop; er wordt niets gevraagd.",
+                     len(weg), len(onze), user_id, platform)
+        return 0
+    # Al bevestigd verkocht op een ander kanaal? Dan is er niets te vragen: de
+    # verdwenen advertentie is een oude regel en hoort in het archief. Gemeten bij
+    # Toon: vier artikelen verkocht op Vinted met een regel die nog "actief"
+    # heette, terwijl de advertentie al lang niet meer online stond.
+    elders_verkocht: set = set()
+    ids = list({r["item_id"] for r in weg})
+    for i in range(0, len(ids), 100):
+        elders_verkocht |= {s["item_id"] for s in ((await naast_de_lus(
+            lambda b=ids[i:i + 100]: db.table("listings").select("item_id")
+            .in_("item_id", b).eq("status", "sold").neq("platform", platform)
+            .execute())).data or [])}
+    gevraagd = 0
+    for r in weg:
+        teller = (r.get("not_found_count") or 0) + 1
+        velden: dict = {"not_found_count": teller}
+        if teller >= VERDWENEN_RONDES and r["item_id"] in elders_verkocht:
+            velden.update({"status": "delisted", "error_message": None})
+        elif teller >= VERDWENEN_RONDES:
+            velden.update({"status": "sold_unconfirmed",
+                           "error_message": VERDENKING_REDENEN["weg"]})
+            gevraagd += 1
+        await naast_de_lus(lambda v=velden, rr=r: db.table("listings").update(v)
+                           .eq("id", rr["id"]).eq("status", "active").execute())
+    if weg:
+        logger.warning("verdwenen: %s advertentie(s) van %s niet op de openbare lijst van %s; "
+                       "%s nu als vraag in het dashboard", len(weg), user_id, platform, gevraagd)
+    return gevraagd
 
 
 async def _pogingen_op(db, item_id: str, platform: str, nummer: str) -> int:
@@ -209,7 +315,8 @@ async def controleer_fotos_op_advertenties():
         # lijkt. Zie fetch_all in backend/database.py.
         rijen = await naast_de_lus(lambda p=platform: fetch_all(
             lambda: db.table("listings")
-            .select("item_id,platform_listing_id,items(user_id,title,photo_urls)")
+            .select("id,item_id,platform_listing_id,listed_at,not_found_count,"
+                    "items(user_id,title,photo_urls)")
             .eq("platform", p).eq("status", "active")
             .not_.is_("platform_listing_id", "null"),
             order_by="id"))
@@ -219,6 +326,9 @@ async def controleer_fotos_op_advertenties():
             if not ADVERTENTIENUMMER.match(str(r.get("platform_listing_id") or "")):
                 continue
             per_verkoper.setdefault(item.get("user_id"), []).append({
+                "id": r.get("id"),
+                "listed_at": r.get("listed_at"),
+                "not_found_count": r.get("not_found_count") or 0,
                 "item_id": r["item_id"],
                 "platform_listing_id": r["platform_listing_id"],
                 "titel": item.get("title"),
@@ -227,24 +337,32 @@ async def controleer_fotos_op_advertenties():
         per_verkoper.pop(None, None)
         if not per_verkoper:
             continue
+        # Wie op dit kanaal een koppeling heeft, wordt door polling.py nagekeken.
+        gekoppeld = {r.get("user_id") for r in ((await naast_de_lus(
+            lambda p=platform: db.table("platform_credentials").select("user_id")
+            .eq("platform", p).execute())).data or [])}
 
         async with httpx.AsyncClient(base_url=basis, headers={"User-Agent": UA},
                                      timeout=30, follow_redirects=True) as client:
             for user_id, onze in per_verkoper.items():
-                if hersteld >= MAX_HERSTEL_PER_RONDE:
-                    break
                 verkoper_id = await _verkopersnummer(client, zoek_url, onze)
                 if not verkoper_id:
                     logger.info("fotocontrole: %s op %s — verkopersnummer niet te "
                                 "bewijzen, geen uitspraak", user_id, platform)
                     continue
-                lijst = await _verkoperslijst(client, zoek_url, verkoper_id)
+                lijst, volledig = await _verkoperslijst(client, zoek_url, verkoper_id)
                 if not lijst:
                     logger.info("fotocontrole: lege verkoperslijst voor %s (%s) — "
                                 "dat is een storing, geen uitspraak", user_id, verkoper_id)
                     continue
 
                 op_nummer = {a.get("itemId"): a for a in lijst}
+                if volledig and user_id not in gekoppeld:
+                    try:
+                        await _verdwenen_als_vraag(db, user_id, platform, onze, op_nummer)
+                    except Exception as e:  # noqa: BLE001 — de fotoreparatie gaat altijd door
+                        logger.error("verdwenen: controle voor %s op %s mislukte: %s",
+                                     user_id, platform, e)
                 teruggevonden = [r for r in onze if r["platform_listing_id"] in op_nummer]
                 zonder = [r for r in teruggevonden
                           if not _fotos(op_nummer[r["platform_listing_id"]])]

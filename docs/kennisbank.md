@@ -87,6 +87,14 @@ geannuleerd. `_al_weg_voor_wij_er_waren` stelt die vraag nu alleen nog bij de
 automatische ronde. Let op: listed_at van een geïmporteerde rij is de importdatum,
 niet de leeftijd van de advertentie; elke leeftijdsregel daarop zit bij imports mis.
 
+**Zakelijk account = geen verkoopherkenning op MP/2dehands, tot 17-09-2026.** De
+extensie leest "Mijn advertenties" en die is leeg bij een zakelijk account; polling
+slaat verkopers zonder koppeling over. Bij Toon stond daardoor nooit één
+Marktplaats-verkoop geboekt en bleef 2dehands staan. Nu telt `foto_controle.py` op de
+openbare verkoperslijst wat verdwenen is (twee rondes, volledige lijst, 48 uur, geen
+open werk) en maakt er de gewone vraag van. Kijk bij "afmelden werkt niet" eerst of de
+verkoop überhaupt geboekt is: het afmelden zelf werkte wel.
+
 ---
 
 ## extensiekopie-die-niet-meebeweegt

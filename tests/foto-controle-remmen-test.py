@@ -91,7 +91,7 @@ async def _droge_ronde():
     fc.get_db = lambda: db
     fc.fetch_all = lambda bouw, order_by="id": rijen
     fc._verkopersnummer = lambda *a, **k: _klaar(12345)
-    fc._verkoperslijst = lambda *a, **k: _klaar([kaal, heel])
+    fc._verkoperslijst = lambda *a, **k: _klaar(([kaal, heel], False))  # onvolledig: hier alleen foto's
     fc._pogingen_op = lambda *a, **k: _klaar(0)
 
     gepland = []

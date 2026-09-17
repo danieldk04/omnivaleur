@@ -10,7 +10,7 @@ product verandert. De ontwikkelaar werkt dan zowel dit bestand in de repo als de
 kopie in Drive bij, in dezelfde beurt. Daniel hoeft niets te doen; de Gem leest
 de Drive-kopie de volgende keer opnieuw in.
 
-_Laatst bijgewerkt: 17-09-2026 (zelf een advertentie weghalen op 2dehands haalt het artikel nergens anders weg; 2dehands voor verkopers die in Nederland wonen: land en woonplaats invullen bij Preferences; al op een kanaal en net bewerkt: vervangen kan nu direct vanuit het publiceervenster. Eerder, 15-09: zakelijk account lijkt op uitgelogd; eBay in het Nederlands; wachtrij die stilstaat omdat de browser niet is ingelogd; Vinted plaatst door zonder open tabblad; rode 'Relist failed' meldingen hersteld in 1.0.334)_
+_Laatst bijgewerkt: 17-09-2026 (verkocht op Marktplaats of 2dehands met een zakelijk account wordt nu ook opgemerkt als vraag in het dashboard; 2dehands voor verkopers die in Nederland wonen: land en woonplaats invullen bij Preferences; al op een kanaal en net bewerkt: vervangen kan nu direct vanuit het publiceervenster. Eerder, 15-09: zakelijk account lijkt op uitgelogd; eBay in het Nederlands; wachtrij die stilstaat omdat de browser niet is ingelogd; Vinted plaatst door zonder open tabblad; rode 'Relist failed' meldingen hersteld in 1.0.334)_
 
 ---
 
@@ -244,13 +244,20 @@ Contact:
   opnieuw. Staat dat blok leeg, dan komt er niets op 2dehands en krijgt hij "Er
   stond geen adres op het formulier". Na invullen gewoon opnieuw op publiceren
   drukken. Marktplaats verandert er niet door.
-- Haalt een klant zelf een advertentie weg op 2dehands (of Marktplaats), dan haalt
-  Omnivaleur het artikel NIET weg op de andere kanalen. Dat gebeurt alleen bij een
-  verkoop die Omnivaleur zeker weet, of als de klant zelf op Sold drukt. Is het
-  weghalen omdat het verkocht is, dan moet hij in Omnivaleur zelf op Sold drukken,
-  anders blijft het elders te koop. Wil hij daarna de nieuwe versie op 2dehands,
-  dan publiceren en bij de vraag "vervangen" op OK; sinds 17-09-2026 komt daar
-  geen "is dit verkocht?"-vraag meer tussen.
+- Verkocht op Vinted: Omnivaleur ziet dat zelf en haalt het artikel automatisch van
+  Marktplaats en 2dehands af (mits de computer met Chrome en de uitbreiding aanstaat).
+- Verkocht op Marktplaats of 2dehands: die sites melden een verkoop niet, en een
+  verkochte advertentie ziet er van buiten hetzelfde uit als een verlopen of zelf
+  weggehaalde. Daarom kijkt Omnivaleur elke zes uur op de openbare advertentielijst
+  van de klant. Is een advertentie twee rondes achter elkaar verdwenen, dan komt
+  bovenaan het dashboard de vraag "Did this item sell?". Yes = van alle andere
+  kanalen af. No = blijft elders te koop. Sinds 17-09-2026 werkt dat ook bij een
+  zakelijk account; daarvoor zag Omnivaleur bij zakelijke accounts geen enkele
+  verkoop op Marktplaats of 2dehands. Wil de klant niet wachten: zelf op Sold drukken
+  in Omnivaleur haalt het meteen overal af.
+- Haalt een klant zelf een advertentie weg die NIET verkocht is, dan krijgt hij die
+  vraag ook; dan gewoon No kiezen. Wil hij daarna de nieuwe versie op 2dehands, dan
+  publiceren en bij "vervangen" op OK.
 - Staat een artikel al op een kanaal en drukt de klant na het bewerken opnieuw op
   publiceren, dan vraagt Omnivaleur sinds 16-09-2026 meteen of die advertentie
   vervangen moet worden door de bewerkte versie. OK haalt de oude weg en plaatst

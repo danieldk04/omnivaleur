@@ -10203,3 +10203,51 @@ tegen 65d89cc1.
 **Keerzijde voor hem:** haalt hij een 2dehands-advertentie weg omdat het artikel daar
 verkocht is, dan ziet Omnivaleur dat niet. Dan moet hij zelf op Sold drukken, anders
 blijft het op Marktplaats en Vinted te koop.
+
+## 17-09-2026 (vervolg) — Toon bedoelde: wordt een verkoop op Vinted of Marktplaats van 2dehands afgehaald?
+
+Hij haalde zelf oude zoekertjes weg op 2dehands omdat dat afmelden bij hem niet
+gebeurde. Gemeten per route, op zijn echte gegevens:
+
+- **Vinted naar 2dehands werkt.** Laatste volledige Vinted-scan (16-09 19:54): 138
+  gesloten advertenties, alle 28 die bij ons bekend zijn staan op verkocht. Van de 23
+  Vinted-verkopen die ook op 2dehands stonden zijn er 22 weg en afgemeld. Zijn
+  2dehands-verwijderingen sinds 01-09: 51 gelukt, 8 eerst mislukt en daarna alle 8
+  alsnog gelukt (geen van die advertenties staat nog online).
+- **Marktplaats naar 2dehands werkte bij hem NOOIT.** Er stond nog nooit één
+  Marktplaats-verkoop van hem in de boeken. De extensie zoekt verkopen op "Mijn
+  advertenties" (`checkSoldListings`), en die pagina is leeg bij een zakelijk account;
+  zijn Marktplaats en 2dehands zijn allebei zakelijk. `polling.py` slaat hem over:
+  geen koppeling. Op 17-09 stonden 24 Marktplaats-advertenties van hem niet meer
+  online (steekproef 4 van 4: HTTP 410) terwijl wij ze live noemden, 12 daarvan met het
+  artikel nog op 2dehands. Bij andere verkopers werkt de stap zelf wel: van 60
+  Marktplaats-verkopen sinds 20-08 met een 2dehands-advertentie erbij zijn er 7 via de
+  advertentiepagina verwijderd.
+
+**Wat er nu staat.** `backend/services/foto_controle.py` (elke 6 uur, leest toch al de
+openbare verkoperslijst) telt ook wat er ontbreekt. Twee rondes weg wordt de bestaande
+vraag "Did this item sell?" (`sold_unconfirmed`, reden "weg"); Yes gaat via
+`handle_item_sold`, dezelfde route als bij Vinted. Remmen: alleen op een volledige lijst,
+48 uur na plaatsen, geen open werk op dat artikel en kanaal, geen koppeling, en boven
+15 én 25% van de verkoper is het een meetfout. Is het artikel al elders verkocht, dan
+gaat de regel meteen naar het archief. Proef: `tests/test_verdwenen_van_de_openbare_lijst.py`;
+`tests/foto-controle-remmen-test.py` bijgewerkt voor de nieuwe teruggave van
+`_verkoperslijst`. Dat dit een vraag is en geen automatische afmelding volgt Daniels
+regel van 07-09: verkocht, verlopen en zelf weggehaald zijn op Marktplaats van buiten
+niet te onderscheiden.
+
+**Wat het bij andere klanten doet (droog gemeten 17-09, alle lijsten volledig):**
+Marktplaats 26cf5471 25, 0b28c1ce 33, 1f0fb938 12, 3bfbed2c 20, 19deaa3a 0; 2dehands
+alleen Toon 72. Steekproef 12 van 12 bij die vier: HTTP 410 of 404, dus echt offline.
+Die vragen verschijnen bij hen na twee rondes (ongeveer 12 uur na de deploy).
+
+**Opgeruimd bij Toon:** vier regels van artikelen die al op Vinted verkocht waren en
+aantoonbaar niet meer online stonden (Marktplaats m2398675873, m2400233175,
+m2420518449, 2dehands m2400235337), plus de Marktplaats-regel zonder nummer van
+"Lederhosen maat 54" (titel niet op zijn volledige openbare lijst). De Vinted-afmelding
+van "Vintage Nomaden Tas" (verkocht op 2dehands) faalde in zijn Edge 1.0.327 en staat
+opnieuw klaar; die advertentie stond al niet meer in zijn Vinted-kast.
+
+Voor Toon is de eerste telronde met de hand gedraaid (21 Marktplaats, 72 2dehands op
+`not_found_count` 1), zodat de tweede ronde van de server direct na de deploy zijn
+vragen zet in plaats van over zes uur.
