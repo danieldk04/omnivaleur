@@ -17,6 +17,37 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ---
 
+## vertaling-geeft-brontekst-terug
+
+*17-09-2026 — Haiku geeft een Engelse advertentietekst soms letterlijk onvertaald terug; dat is geen storing en geen leeg tegoed, en het alarm moet dat ook niet zeggen*
+
+Een alarm "vertaling ligt stil, vul je Anthropic-tegoed aan" betekent lang niet
+altijd dat het tegoed op is. Gemeten 17-09-2026: drie advertenties van JST
+stonden sinds 16-09 om 15:56 vast. De vertaaldienst deed het gewoon. Haiku gaf de
+Engelse omschrijving van een Atelier Munro-blazer in 5 van de 8 pogingen
+letterlijk onvertaald terug, zonder fout: het pakte de promptuitzondering "als de
+tekst al in het Nederlands staat, geef hem ongewijzigd terug" en paste die toe op
+een tekst vol merknamen en Italiaanse stofnamen. Lange, merknaam-zware teksten
+lokken dit uit.
+
+De zeef in `backend/api/jobs.py` zag terecht Engels en hield de advertentie tegen,
+maar liet dat door dezelfde melding lopen als een lege API-rekening. Daniel ging
+daardoor naar zijn Anthropic-rekening kijken terwijl daar niets mis was.
+
+**Why:** een alarm dat de verkeerde oorzaak noemt kost meer tijd dan geen alarm,
+en verbergt dat de echte fout in de prompt zit.
+
+**How to apply:** bij "blijft na vertaling Engels" eerst de tekst zelf door
+`_vertaal` halen en tellen hoe vaak hij onvertaald terugkomt, niet naar het
+tegoed kijken. `_vertaal` doet sinds 17-09-2026 een tweede poging met een
+scherpere opdracht (bron is Engels, de vorige poging gaf hem onvertaald terug,
+geen uitweg "al in het Nederlands"): voor-en-na op dezelfde blazer 0 van 6 tegen
+6 van 6. Twee keer mis en de brontekst blijft staan, dus de advertentie wacht
+gewoon. De twee alarmen zijn nu gescheiden, elk met een eigen uurklok. Zie
+"anthropic-sdk-pin-valstrik" en "vertaling-draait-de-richting-om".
+
+---
+
 ## verkoopkanaal-moet-bewezen-zijn
 
 *17-09-2026 — Een verkoop mag alleen op een kanaal geboekt worden dat het zelf zegt; afwezigheid van een advertentie bewijst niets en wordt een vraag*

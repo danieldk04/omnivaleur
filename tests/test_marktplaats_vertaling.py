@@ -372,3 +372,82 @@ def test_de_eigenaar_wordt_hooguit_een_keer_per_uur_gewaarschuwd(monkeypatch):
     api._meld_vertaalstoring("tegoed op")
     api._meld_vertaalstoring("tegoed op")
     assert len(verstuurd) <= 2, f"hooguit een mail per eigenaar per uur, kreeg er {len(verstuurd)}"
+
+
+# --- Het model dat de brontekst onvertaald teruggeeft --------------------------
+#
+# GEMETEN (17-09-2026). Drie advertenties van JST stonden sinds 16-09 om 15:56 in
+# de wachtrij en kwamen er niet uit. De vertaaldienst deed het gewoon: Haiku gaf
+# de Engelse omschrijving van een Atelier Munro-blazer in 5 van de 8 pogingen
+# letterlijk onvertaald terug. Het pakte de uitzondering "als de tekst al in het
+# Nederlands staat, geef hem ongewijzigd terug" en paste die toe op een tekst vol
+# merknamen en Italiaanse stofnamen. De zeef in jobs.py zag Engels, hield de
+# advertentie tegen — terecht — en mailde Daniel dat zijn Anthropic-tegoed op zou
+# zijn, terwijl dat gewoon vol zat.
+#
+# Voor-en-na op diezelfde blazer tegen de echte oude code: oud 0 van 6 vertaald,
+# nieuw 6 van 6.
+
+_ENGELS_STUK = (
+    "Atelier Munro Navy Wool Blazer Size 50 New - One of the finest pieces from my private "
+    "collection and it has never been worn.\n"
+    "The price is negotiable and reasonable offers are welcome, so feel free to send me a message."
+)
+_NEDERLANDS_STUK = (
+    "Atelier Munro marineblauwe wollen blazer maat 50 nieuw - Een van de mooiste stukken uit "
+    "mijn privecollectie en hij is nooit gedragen.\n"
+    "De prijs is bespreekbaar en redelijke biedingen zijn welkom, dus stuur me gerust een bericht."
+)
+
+
+class _NepModel:
+    """Geeft de brontekst terug tot `echo_keer` op is, daarna de vertaling."""
+
+    def __init__(self, echo_keer):
+        self.echo_keer = echo_keer
+        self.opdrachten = []
+        self.messages = self
+
+    def create(self, **kw):
+        opdracht = kw["messages"][0]["content"]
+        self.opdrachten.append(opdracht)
+        bron = opdracht.split("<text>", 1)[1].rsplit("</text>", 1)[0]
+        if len(self.opdrachten) <= self.echo_keer:
+            antwoord = bron                       # onvertaald terug
+        else:
+            antwoord = _NEDERLANDS_STUK.replace("\n", " §BR§ ")
+        return type("R", (), {"content": [type("C", (), {"text": antwoord})()]})()
+
+
+def test_model_dat_de_engelse_tekst_teruggeeft_krijgt_een_tweede_kans(monkeypatch):
+    """Eén luie poging mag een advertentie niet dagenlang laten wachten."""
+    nep = _NepModel(echo_keer=1)
+    monkeypatch.setattr(crosslist, "_claude_client", lambda: nep)
+
+    uit = crosslist._vertaal(_ENGELS_STUK, "nl")
+
+    assert uit == _NEDERLANDS_STUK, "de tweede poging had de Nederlandse tekst moeten opleveren"
+    assert len(nep.opdrachten) == 2, "er is geen tweede poging gedaan"
+    assert "returned the English text unchanged" in nep.opdrachten[1], (
+        "de tweede poging moet het model vertellen wat er de eerste keer misging")
+
+
+def test_de_oude_aanpak_liet_hem_wel_wachten(monkeypatch):
+    """Voor-en-na: zonder tweede poging bleef dezelfde tekst Engels."""
+    nep = _NepModel(echo_keer=1)
+    eerste = nep.create(messages=[{"role": "user", "content": f"<text>{_ENGELS_STUK}</text>"}])
+    antwoord = eerste.content[0].text
+    assert antwoord == _ENGELS_STUK, "de eerste poging geeft de brontekst terug"
+    assert crosslist.lijkt_al_in_taal(antwoord, "en"), (
+        "en die leest als Engels, dus de zeef in jobs.py houdt de advertentie tegen")
+
+
+def test_twee_keer_mis_en_de_advertentie_blijft_gewoon_wachten(monkeypatch):
+    """Blijft het model volhouden, dan houden wij de brontekst — en dus de rem."""
+    nep = _NepModel(echo_keer=5)
+    monkeypatch.setattr(crosslist, "_claude_client", lambda: nep)
+
+    uit = crosslist._vertaal(_ENGELS_STUK, "nl")
+
+    assert uit == _ENGELS_STUK, "zonder goede vertaling houden we de brontekst"
+    assert len(nep.opdrachten) == 2, "het mag bij twee pogingen blijven, niet eindeloos doorgaan"

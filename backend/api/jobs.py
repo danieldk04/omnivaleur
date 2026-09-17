@@ -758,9 +758,17 @@ def _zet_taal_goed(db, jobs: list) -> int:
             # vertrouwen en gaat deze advertentie NIET de deur uit. Hij blijft
             # gewoon 'pending' en loopt vanzelf door zodra het wel lukt —
             # dezelfde keuze als bij een vertaalstoring, om dezelfde reden.
+            #
+            # DIT IS IETS ANDERS DAN EEN VERTAALSTORING, EN DAT MOET DE MAIL OOK
+            # ZEGGEN (17-09-2026). De vertaaldienst deed het hier gewoon: het
+            # model gaf de Engelse tekst onvertaald terug. Dat liep tot nu toe
+            # door dezelfde melding als een lege API-rekening, dus stond er
+            # "vul je tegoed aan" in de mail terwijl daar niets mis mee was.
             if _leest_als_engels(nieuw, lijkt_al_in_taal):
-                raise VertalingOnbeschikbaar(
-                    "De tekst blijft na vertaling Engels, dus er is niets geplaatst.")
+                logger.error("job %s (%s) blijft wachten: de vertaling gaf de Engelse tekst terug",
+                             j.get("id"), j.get("platform"))
+                _meld_vertaalstoring_model(str(payload.get("title") or "")[:80])
+                continue
             if nieuw.get("title") != payload.get("title"):
                 logger.info("job %s: titel alsnog vertaald voor %s (%r -> %r)",
                             j.get("id"), platform,
@@ -787,7 +795,43 @@ def _zet_taal_goed(db, jobs: list) -> int:
 
 # Eén waarschuwing per uur, niet één per opdracht. Een lege API-rekening raakt
 # elke wachtende advertentie tegelijk; zonder deze rem stond de mailbox vol.
+# Twee aparte klokken: een hikkend model mag een echte storing niet stilhouden.
 _vertaalstoring_gemeld_op: float = 0.0
+_modelstoring_gemeld_op: float = 0.0
+
+
+def _stuur_naar_eigenaar(onderwerp: str, tekst: str) -> None:
+    try:
+        from backend.services.email import send_email
+        from backend.config import settings
+        for adres in [a.strip() for a in (settings.owner_email or "").split(",") if a.strip()]:
+            send_email(onderwerp, tekst, to=adres)
+    except Exception as e:  # noqa: BLE001 — een mislukte waarschuwing mag niets blokkeren
+        logger.warning("kon vertaalstoring niet melden: %s", e)
+
+
+def _meld_vertaalstoring_model(titel: str) -> None:
+    """De vertaaldienst wérkt, maar het model geeft deze tekst onvertaald terug.
+
+    Aanvullen van het tegoed helpt hier niets, en dat moet er dus ook niet in
+    staan: de vorige versie van deze mail stuurde Daniel naar zijn Anthropic-
+    rekening terwijl die gewoon vol zat.
+    """
+    global _modelstoring_gemeld_op
+    import time
+    if time.time() - _modelstoring_gemeld_op < 3600:
+        return
+    _modelstoring_gemeld_op = time.time()
+    _stuur_naar_eigenaar(
+        "Omnivaleur: een advertentie krijgt zijn Nederlandse tekst niet rond",
+        "De vertaling werkt op zich, maar bij minstens een advertentie komt de "
+        "tekst onvertaald terug. Die advertentie gaat NIET de deur uit; hij blijft "
+        "in de wachtrij staan en gaat vanzelf alsnog lopen zodra de vertaling wel "
+        "lukt. Er komt dus geen Engelse tekst op Marktplaats of 2dehands te staan.\n\n"
+        "Dit is GEEN kwestie van het Anthropic-tegoed. Aanvullen helpt hier niet.\n\n"
+        f"Het gaat om: {titel}\n\n"
+        "Blijft dit bij dezelfde advertentie terugkomen, laat het dan nakijken.",
+    )
 
 
 def _meld_vertaalstoring(reden: str) -> None:
@@ -797,25 +841,17 @@ def _meld_vertaalstoring(reden: str) -> None:
     if time.time() - _vertaalstoring_gemeld_op < 3600:
         return
     _vertaalstoring_gemeld_op = time.time()
-    try:
-        from backend.services.email import send_email
-        from backend.config import settings
-        ontvangers = [a.strip() for a in (settings.owner_email or "").split(",") if a.strip()]
-        for adres in ontvangers:
-            send_email(
-                "Omnivaleur: vertaling ligt stil, advertenties wachten",
-                "De vertaling naar het Nederlands werkt op dit moment niet.\n\n"
-                "Advertenties die vertaald moeten worden gaan NIET de deur uit; ze "
-                "blijven in de wachtrij staan en lopen vanzelf door zodra dit is "
-                "opgelost. Er komt dus geen Engelse tekst op Marktplaats of "
-                "2dehands te staan.\n\n"
-                "Meestal is dit het Anthropic-tegoed. Vul het aan, dan lost de "
-                "wachtrij zichzelf op.\n\n"
-                f"Melding van de server: {reden}",
-                to=adres,
-            )
-    except Exception as e:  # noqa: BLE001 — een mislukte waarschuwing mag niets blokkeren
-        logger.warning("kon vertaalstoring niet melden: %s", e)
+    _stuur_naar_eigenaar(
+        "Omnivaleur: vertaling ligt stil, advertenties wachten",
+        "De vertaling naar het Nederlands werkt op dit moment niet.\n\n"
+        "Advertenties die vertaald moeten worden gaan NIET de deur uit; ze "
+        "blijven in de wachtrij staan en lopen vanzelf door zodra dit is "
+        "opgelost. Er komt dus geen Engelse tekst op Marktplaats of "
+        "2dehands te staan.\n\n"
+        "Meestal is dit het Anthropic-tegoed. Vul het aan, dan lost de "
+        "wachtrij zichzelf op.\n\n"
+        f"Melding van de server: {reden}",
+    )
 
 
 # ── Wie is er als eerste aan de beurt? ────────────────────────────────────────

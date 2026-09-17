@@ -10397,3 +10397,34 @@ Testsuite: 1386 geslaagd, dezelfde 14 die ook op be14e3ea al faalden.
 Vinted-verkoop in de boeken. Van Shopify zijn alleen de bestellingen van de
 laatste 60 dagen leesbaar (Shopify-limiet zonder read_all_orders), dus een oudere
 verkoop elders is van buitenaf niet te controleren.
+
+## 17-09-2026: het vertaalalarm wees naar het verkeerde probleem
+
+Daniel kreeg om 11:47 de mail "vertaling ligt stil, advertenties wachten" met de
+raad zijn Anthropic-tegoed aan te vullen, terwijl dat gewoon vol zat. Hij vroeg
+of hij de enige is die die mail krijgt.
+
+Ja. De melding gaat uitsluitend naar `owner_email`, nooit naar klanten. Klanten
+merkten hier niets van, behalve dat drie advertenties bleven wachten.
+
+Gemeten: van de 318 wachtende plaatsopdrachten op Marktplaats en 2dehands lazen
+er drie als Engels, alle drie van dezelfde verkoper (JST), vast sinds 16-09 om
+15:56. De vertaaldienst deed het gewoon. Haiku gaf de Engelse omschrijving van
+een Atelier Munro-blazer in 5 van de 8 pogingen letterlijk onvertaald terug: het
+pakte de promptuitzondering "als de tekst al in het Nederlands staat, geef hem
+ongewijzigd terug" en paste die toe op een tekst vol merknamen en Italiaanse
+stofnamen. De zeef zag terecht Engels en hield de advertentie tegen, maar
+gebruikte daarvoor dezelfde mail als een lege API-rekening.
+
+Wat er nu staat:
+- `_vertaal` doet een tweede poging met een scherpere opdracht zodra het antwoord
+  in de brontaal terugkomt. Voor-en-na tegen de echte oude code (HEAD), zelfde
+  blazer, zes pogingen per kant: oud 0 van 6 vertaald, nieuw 6 van 6. Lukt het
+  twee keer niet, dan blijft de brontekst staan en wacht de advertentie gewoon.
+- Twee gescheiden alarmen met elk een eigen uurklok. Het nieuwe zegt met zoveel
+  woorden dat het tegoed hier niet de oorzaak is, en noemt de titel.
+
+De drie vastzittende advertenties lopen vanzelf door zodra dit live staat; er is
+niets met de hand rechtgezet.
+
+Testsuite: 1389 geslaagd, dezelfde 14 die ook op bea39057 al faalden.

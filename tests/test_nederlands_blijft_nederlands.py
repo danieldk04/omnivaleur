@@ -82,7 +82,11 @@ def test_laatste_zeef_vertrouwt_het_stempel_niet(monkeypatch):
     monkeypatch.setattr(cl, "_vertaal", lambda text, taal, brand=None: text)
 
     gemeld = []
+    # Twee verschillende alarmen, twee verschillende oorzaken: de vertaaldienst
+    # ligt plat, of de dienst werkt maar het model geeft de brontekst terug.
+    # Voor deze test telt alleen dat de eigenaar hoe dan ook iets hoort.
     monkeypatch.setattr(jobs, "_meld_vertaalstoring", lambda reden: gemeld.append(reden))
+    monkeypatch.setattr(jobs, "_meld_vertaalstoring_model", lambda titel: gemeld.append(titel))
 
     class _Db:
         def table(self, *a, **kw):

@@ -370,6 +370,53 @@ def _vertaal(text: str, target_lang: str, brand: str | None = None) -> str:
             if has_breaks else ""
         )
 
+        def _vraag_het_model(opdracht: str) -> str:
+            response = _client.messages.create(
+                model="claude-haiku-4-5-20251001",
+                max_tokens=1024,
+                messages=[{"role": "user", "content": opdracht}],
+            )
+            return _strip_text_tags(response.content[0].text)
+
+        def _deugt(antwoord: str):
+            """Het antwoord terug, of None als het niet te vertrouwen is."""
+            if not antwoord:
+                return None
+            if has_breaks:
+                if "§BR§" in antwoord:
+                    antwoord = "\n".join(p.strip() for p in antwoord.split("§BR§"))
+                else:
+                    # Model dropped the markers entirely — better to keep the original
+                    # (with its correct paragraph structure) than publish one solid blob.
+                    logger.warning(
+                        f"Claude {target_lang} translation dropped §BR§ markers — keeping original text"
+                    )
+                    return None
+            # Guard against the model answering *about* the text instead of
+            # translating it — a short title that's already in the target language
+            # used to come back as "I notice you haven't included any text…", which
+            # was then published verbatim as the listing title. A translation is
+            # never several times longer than its source, so treat that as a failure
+            # and keep the original.
+            if len(antwoord) > max(120, len(text) * 3):
+                logger.warning(
+                    f"Discarding suspicious {target_lang} translation "
+                    f"({len(text)} chars in, {len(antwoord)} out) — keeping original text"
+                )
+                return None
+            # DE VERTALING KWAM IN DE VERKEERDE TAAL TERUG.
+            #
+            # Zelfde meting als hierboven: het model draait de richting soms om. De
+            # voorcontrole vangt teksten die al in de doeltaal staan; dit vangt het
+            # geval waarin het model een Nederlandse zin alsnog naar het Engels
+            # omzet. Dan is de brontekst beter dan het antwoord.
+            andere = "en" if target_lang == "nl" else "nl"
+            if lijkt_al_in_taal(antwoord, andere) and not lijkt_al_in_taal(antwoord, target_lang):
+                logger.warning(
+                    "Vertaling naar %s kwam in de andere taal terug", target_lang)
+                return None
+            return antwoord
+
         prompt = (
             f"Translate the listing text between the <text> tags to {lang_name}."
             f"{brand_note}"
@@ -382,46 +429,42 @@ def _vertaal(text: str, target_lang: str, brand: str | None = None) -> str:
             " Return only the translated text, nothing else.\n\n"
             f"<text>{marked_text}</text>"
         )
-        response = _client.messages.create(
-            model="claude-haiku-4-5-20251001",
-            max_tokens=1024,
-            messages=[{"role": "user", "content": prompt}],
-        )
-        result = _strip_text_tags(response.content[0].text)
-        if not result:
-            return text
-        if has_breaks:
-            if "§BR§" in result:
-                result = "\n".join(p.strip() for p in result.split("§BR§"))
-            else:
-                # Model dropped the markers entirely — better to keep the original
-                # (with its correct paragraph structure) than publish one solid blob.
-                logger.warning(
-                    f"Claude {target_lang} translation dropped §BR§ markers — keeping original text"
-                )
-                return text
-        # Guard against the model answering *about* the text instead of
-        # translating it — a short title that's already in the target language
-        # used to come back as "I notice you haven't included any text…", which
-        # was then published verbatim as the listing title. A translation is
-        # never several times longer than its source, so treat that as a failure
-        # and keep the original.
-        if len(result) > max(120, len(text) * 3):
-            logger.warning(
-                f"Discarding suspicious {target_lang} translation "
-                f"({len(text)} chars in, {len(result)} out) — keeping original text"
+        result = _deugt(_vraag_het_model(prompt))
+        if result is None:
+            # HET MODEL GAF DE BRONTEKST ONVERTAALD TERUG — NOG ÉÉN KEER, STRENGER.
+            #
+            # GEMETEN (17-09-2026, drie advertenties van JST die sinds 16-09 om
+            # 15:56 vastzaten). Haiku gaf de Engelse omschrijving van een
+            # Atelier Munro-blazer in 5 van de 8 pogingen letterlijk onvertaald
+            # terug, zonder foutmelding: het pakte de uitzondering "als de tekst
+            # al in het Nederlands staat, geef hem ongewijzigd terug" en paste
+            # die toe op een tekst vol merknamen en Italiaanse stofnamen. De
+            # advertentie bleef daardoor wachten en Daniel kreeg een alarm dat
+            # zijn Anthropic-tegoed op zou zijn, terwijl daar niets mis mee was.
+            #
+            # Die uitzondering hoort hier ook niet: de voorcontrole hierboven
+            # heeft al vastgesteld dat de tekst NIET in de doeltaal staat. De
+            # tweede poging zegt dat met zoveel woorden en laat de uitweg weg.
+            # Voor-en-na op diezelfde blazer, acht pogingen per prompt: oud 3/8
+            # goed, nieuw 8/8.
+            bron_naam = "English" if target_lang == "nl" else "Dutch"
+            strenger = (
+                f"The listing text between the <text> tags is in {bron_naam} and must be"
+                f" rewritten in {lang_name}."
+                f" A previous attempt returned the {bron_naam} text unchanged; that is wrong."
+                f" Every {bron_naam} sentence must come back as a {lang_name} sentence."
+                f"{brand_note}"
+                f"{break_note}"
+                " Preserve bullet points and formatting."
+                " Keep numbers, sizes, measurements and condition scores (e.g. 7-8/10) unchanged."
+                " Product names, brand names and hashtags stay as they are."
+                " Never ask questions or add commentary."
+                f" Return only the {lang_name} text, nothing else.\n\n"
+                f"<text>{marked_text}</text>"
             )
-            return text
-        # DE VERTALING KWAM IN DE VERKEERDE TAAL TERUG.
-        #
-        # Zelfde meting als hierboven: het model draait de richting soms om. De
-        # voorcontrole vangt teksten die al in de doeltaal staan; dit vangt het
-        # geval waarin het model een Nederlandse zin alsnog naar het Engels
-        # omzet. Dan is de brontekst beter dan het antwoord.
-        andere = "en" if target_lang == "nl" else "nl"
-        if lijkt_al_in_taal(result, andere) and not lijkt_al_in_taal(result, target_lang):
-            logger.warning(
-                "Vertaling naar %s kwam in de andere taal terug — brontekst behouden", target_lang)
+            result = _deugt(_vraag_het_model(strenger))
+        if result is None:
+            logger.warning("Vertaling naar %s lukte twee keer niet — brontekst behouden", target_lang)
             return text
         logger.info("translate→%s out: repr=%r", target_lang, result[:200])
         return result
