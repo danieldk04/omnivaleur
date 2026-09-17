@@ -17,6 +17,39 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ---
 
+## onboarding-afvinken-op-feiten
+
+*17-09-2026 — "Get started-lijst en Help staan in frontend/onboarding.js; afvinken alleen op feiten; 'Auto-detected' op Platforms was een vaste tekst die klanten misleidde"*
+
+Sinds 17-09-2026 (na de call met Johan Kist) staat alle uitleg voor nieuwe klanten in
+`frontend/onboarding.js`, geladen onderaan app.html als `/onboarding.js?v=JJJJMMDD`.
+
+- **Get started** op het dashboard (`#ob-checklist`, `OB.opDashboard`): 4 stappen plus
+  eBay/Shopify optioneel. Afvinken gebeurt op feiten van `/api/jobs/onboarding`
+  (extensie gemeld, gelukte opdracht op een extensiekanaal, echte plaatsing met nummer
+  of Facebook `bevestigd`, of een actieve eBay/Shopify-advertentie) plus `state.items`
+  en een bewezen "niet ingelogd" uit `extState.kanalen`. Nooit op een klik: Johans 83
+  aangeklikte iconen hadden anders "gepubliceerd" afgevinkt.
+- **Help** (`#view-help`, `OB.renderHelp`): schema in vier stappen, geannoteerde
+  iconen, per kanaal wat je nodig hebt en wat het kost, vragen met zoekveld. Nieuwe
+  veelgestelde vraag? Zet hem in de `FAQ`-lijst daar, niet in app.html, en houd hem
+  gelijk met docs/klantenservice-brein.md.
+- **Platforms** zei bij elk extensiekanaal altijd "✓ Auto-detected". Johan en Daniel
+  lazen dat als "account gekoppeld". Nu "Uses your Chrome login", en alleen een bewezen
+  "Not signed in" (de enige meting die klopt, zie "kanaalsessie-moet-zichtbaar-zijn").
+  Beweer nooit "signed in": dat kan de extensie niet bewijzen.
+- Het vraagteken naast de kolom Platforms opent de iconenuitleg (`OB.legenda`).
+
+**How to apply:** tekst of stappen aanpassen in onboarding.js, daarna het `?v=` in
+app.html ophogen: de service worker (`frontend/sw.js`) geeft statische bestanden eerst
+uit de cache. Bekijken zonder in te loggen: `node tests/onboarding-preview/build.js`
+en de launch-config `onboarding-preview` (scenario's `?s=nieuw|johan|uitgelogd|klaar`).
+Proef: `tests/onboarding-stappen-test.js`, `tests/test_onboarding_status.py`.
+UI-tekst is Engels en zonder gedachtestreepjes. Een Nederlandse versie staat open
+(Johan noemde Engels lezen zijn grootste drempel). Zie "kanaalicoon-aanvinken-is-geen-publiceren".
+
+---
+
 ## facebook-marketplace-beta
 
 *17-09-2026 — "Facebook Marketplace is a beta best-effort extension platform; selectors unverified, account-ban risk"*

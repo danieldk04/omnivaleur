@@ -10456,3 +10456,30 @@ alle drie de reparaties, veilig en volledig.
 en de staat-herstelronde zijn niet op het echte Facebook- of Vinted-formulier gezien.
 De 14 falende pytest-tests en 11 falende node-tests bestonden al vóór deze wijziging
 (zelfde lijst op 48a9c4b9).
+
+## 17-09-2026: onboarding en Help herzien (na de call met Johan Kist)
+
+Daniel vroeg de uitleg in het dashboard van begin tot eind duidelijk te maken, met
+beelden, en elke veelgestelde vraag af te vangen. Gebaseerd op de call, het
+klantenservice-brein en de kennisbank. Gezocht naar goede onboarding: snel naar het
+eerste resultaat, een korte lijst van 3 tot 7 stappen die blijft staan en zichzelf
+afvinkt, uitleg op het moment dat je hem nodig hebt, een leeg scherm met een duidelijke
+volgende stap.
+- **Get started** op het dashboard: installeer de extensie, log in op je kanalen in
+  die Chrome, zet je artikelen erin (importeren of nieuw), publiceer naar een ander
+  kanaal; eBay/Shopify optioneel. Vinkt af op feiten uit de database, nooit op klikken.
+  Te verbergen, en onder Help weer terug te halen.
+- **Help** helemaal herschreven: schema in vier stappen met mini-schermpjes, een
+  voorbeeldrij met de iconen genummerd en uitgelegd, per kanaal wat je nodig hebt en
+  wat het kanaal zelf kan kosten, 18 vragen in groepen met een zoekveld. Oude onjuiste
+  tekst eruit: "schrijf alles in het Engels", "Facebook in ontwikkeling", beloftes over
+  Etsy en Kleinanzeigen.
+- **Platforms** zei bij elk extensiekanaal altijd "Auto-detected"; dat las iedereen
+  als "gekoppeld". Nu "Uses your Chrome login", met "Not signed in" als dat bewezen is.
+- Vraagteken naast de kolom Platforms legt de iconen uit; een leeg dashboard biedt
+  importeren en een nieuw artikel aan.
+
+**Openstaand:** niet bekeken in het echte ingelogde dashboard (inloggen mag ik niet);
+wel in een voorbeeldpagina met de echte code en stijl, op desktop en telefoonbreedte,
+en de aangepaste schermfuncties zijn met nepgegevens gedraaid. De Nederlandse versie
+van het dashboard blijft een losse beslissing voor Daniel.

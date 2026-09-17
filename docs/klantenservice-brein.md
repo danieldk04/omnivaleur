@@ -10,7 +10,7 @@ product verandert. De ontwikkelaar werkt dan zowel dit bestand in de repo als de
 kopie in Drive bij, in dezelfde beurt. Daniel hoeft niets te doen; de Gem leest
 de Drive-kopie de volgende keer opnieuw in.
 
-_Laatst bijgewerkt: 17-09-2026 (Vinted: te lange omschrijvingen worden voor Vinted zelf ingekort en de staat wordt opnieuw ingevuld als dat de eerste keer mislukt, extensie 1.0.338; Facebook meldt alleen nog klaar als Facebook het bevestigt; vervangen bij een zakelijk Marktplaats- of 2dehands-account wordt niet meer aangeboden; een verkoop wordt alleen nog op een kanaal geboekt als dat kanaal het zelf zegt of de klant het bevestigt: een advertentie die uit je Vinted-kast verdwenen is, wordt een vraag in het dashboard waarbij je zelf het kanaal aanwijst; een klik op een grijs kanaalicoon plaatst nu of vraagt de link, en zet niets meer zomaar op live; opslaan in het bewerkscherm zet niets meer terug wat de klant zelf niet veranderde, en een artikel met Bieden, Zie omschrijving of Gratis kan weer worden opgeslagen zonder bedrag; verkocht op Marktplaats of 2dehands met een zakelijk account wordt nu ook opgemerkt als vraag in het dashboard; 2dehands voor verkopers die in Nederland wonen: land en woonplaats invullen bij Preferences; al op een kanaal en net bewerkt: vervangen kan nu direct vanuit het publiceervenster. Eerder, 15-09: zakelijk account lijkt op uitgelogd; eBay in het Nederlands; wachtrij die stilstaat omdat de browser niet is ingelogd; Vinted plaatst door zonder open tabblad; rode 'Relist failed' meldingen hersteld in 1.0.334)_
+_Laatst bijgewerkt: 17-09-2026 (nieuwe klanten zien op hun dashboard een lijst 'Get started' die vanzelf afvinkt wat echt gelukt is, en Help in het dashboard legt met een schema uit hoe het werkt, wat de iconen betekenen en wat je per kanaal nodig hebt; op Platforms staat niet langer 'Auto-detected' maar 'Uses your Chrome login'; Vinted: te lange omschrijvingen worden voor Vinted zelf ingekort en de staat wordt opnieuw ingevuld als dat de eerste keer mislukt, extensie 1.0.338; Facebook meldt alleen nog klaar als Facebook het bevestigt; vervangen bij een zakelijk Marktplaats- of 2dehands-account wordt niet meer aangeboden; een verkoop wordt alleen nog op een kanaal geboekt als dat kanaal het zelf zegt of de klant het bevestigt: een advertentie die uit je Vinted-kast verdwenen is, wordt een vraag in het dashboard waarbij je zelf het kanaal aanwijst; een klik op een grijs kanaalicoon plaatst nu of vraagt de link, en zet niets meer zomaar op live; opslaan in het bewerkscherm zet niets meer terug wat de klant zelf niet veranderde, en een artikel met Bieden, Zie omschrijving of Gratis kan weer worden opgeslagen zonder bedrag; verkocht op Marktplaats of 2dehands met een zakelijk account wordt nu ook opgemerkt als vraag in het dashboard; 2dehands voor verkopers die in Nederland wonen: land en woonplaats invullen bij Preferences; al op een kanaal en net bewerkt: vervangen kan nu direct vanuit het publiceervenster. Eerder, 15-09: zakelijk account lijkt op uitgelogd; eBay in het Nederlands; wachtrij die stilstaat omdat de browser niet is ingelogd; Vinted plaatst door zonder open tabblad; rode 'Relist failed' meldingen hersteld in 1.0.334)_
 
 ---
 
@@ -113,6 +113,12 @@ Hoe de kanalen gekoppeld worden:
   te koppelen.
 - eBay en Shopify koppel je een keer in je dashboard, bij Platforms. Dat gaat via
   de officiele koppeling van het platform zelf.
+- Vraagt iemand wat "Uses your Chrome login" bij Platforms betekent: dat dat kanaal
+  via zijn eigen inlog in Chrome werkt. Het zegt niet dat hij ingelogd is. Is hij
+  aantoonbaar niet ingelogd, dan staat er "Not signed in". Tot 17-09-2026 stond daar
+  bij elk kanaal "Auto-detected", ook als er niets gekoppeld of ingelogd was.
+- Verwijs een nieuwe klant die zoekt hoe het werkt naar Help in het dashboard: daar
+  staat het in vier stappen met plaatjes, plus per kanaal wat hij nodig heeft.
 - Bij eBay regel je een paar dingen bij eBay zelf, niet bij ons. Je account moet
   eerst helemaal als verkoper klaarstaan: eBay vraagt je identiteit en je
   bankrekening voordat je iets mag aanbieden. Een eBay-account alleen aanmaken is
