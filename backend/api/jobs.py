@@ -2494,11 +2494,34 @@ async def _rond_publicatie_af(db, job: dict, body: dict) -> None:
                                    .eq("platform", job["platform"])
                                    .is_("platform_listing_id", "null")
                                    .execute())).data or []
-    if wachtend:
+    if not wachtend:
+        return
+    # FACEBOOK GEEFT GEEN NUMMER TERUG (17-09-2026, Johan Kist). Na publiceren
+    # stuurt Facebook door naar "Jouw advertenties" en staat de nieuwe advertentie
+    # eerst in beoordeling, zonder eigen adres. Een geslaagde publicatie kwam hier
+    # dus ALTIJD zonder nummer binnen en werd rood. Omgekeerd meldde de extensie
+    # tot 1.0.338 ook "klaar" als Facebook na 15 seconden nog op het formulier
+    # stond, dus dat rood was evengoed nodig: niemand kon het verschil zien.
+    # Sinds 1.0.338 meldt de extensie alleen "klaar" als Facebook echt van het
+    # formulier wegging, en zegt ze erbij hoe ze dat zag (`bevestigd`).
+    if job["platform"] == "facebook" and body.get("bevestigd"):
         (await naast_de_lus(lambda: db.table("listings").update({
-            "status": "error",
-            "error_message": "Extension completed job but returned no platform_listing_id",
+            "status": "active",
+            "error_message": None,
+            "platform_listing_url": body.get("platform_listing_url") or FB_EIGEN_ADVERTENTIES,
+            "listed_at": datetime.now(timezone.utc).isoformat(),
         }).eq("id", wachtend[0]["id"]).execute()))
+        return
+    melding = ("Facebook didn't confirm this listing, so we can't tell whether it went live. "
+               "Check Marketplace > Your listings: if it's there, paste its link on the Facebook "
+               "icon of this item. If it isn't, publish it again. Update the Omnivaleur extension "
+               "so this is checked for you."
+               if job["platform"] == "facebook" else
+               "Extension completed job but returned no platform_listing_id")
+    (await naast_de_lus(lambda: db.table("listings").update({
+        "status": "error",
+        "error_message": melding,
+    }).eq("id", wachtend[0]["id"]).execute()))
 
 
 # Statussen die een verwijderopdracht nooit mag overschrijven. Een bevestigde
