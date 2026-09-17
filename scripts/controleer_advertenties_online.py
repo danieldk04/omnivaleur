@@ -183,18 +183,19 @@ async def main() -> int:
     print(f"{args.email or uid}: {len(items)} artikelen, {len(actief)} advertenties die wij "
           f"'live op {args.platform}' noemen.")
 
-    async with httpx.AsyncClient(base_url=BASIS, headers={"User-Agent": UA},
+    async with httpx.AsyncClient(base_url=basis, headers={"User-Agent": UA},
                                  timeout=30, follow_redirects=True) as client:
         titels = [titel_van[r["item_id"]] for r in actief[:40] if titel_van.get(r["item_id"])]
-        verkoper_id = await zoek_verkoper_id(client, titels)
+        verkoper_id = await zoek_verkoper_id(client, titels, zoek_url=zoek_url)
         if not verkoper_id:
-            print("Zijn verkopersnummer is niet te vinden op de openbare zoekpagina. "
-                  "Zonder dat nummer is er niets te vergelijken; dit is geen uitspraak "
-                  "over zijn advertenties.")
+            print(f"Zijn verkopersnummer is niet te vinden op de openbare zoekpagina van "
+                  f"{args.platform}. Zonder dat nummer is er niets te vergelijken; dit is "
+                  "geen uitspraak over zijn advertenties.")
             return 2
-        lijst = await openbare_lijst(client, verkoper_id)
+        lijst = await openbare_lijst(client, verkoper_id, zoek_url)
 
-    print(f"Openbare verkoperspagina (nummer {verkoper_id}): {len(lijst)} advertenties.\n")
+    print(f"Openbare verkoperspagina op {args.platform} (nummer {verkoper_id}): "
+          f"{len(lijst)} advertenties.\n")
     if not lijst:
         print("De lijst kwam leeg terug. Dat is een reden om de meting te wantrouwen, "
               "geen reden om te denken dat er niets meer online staat.")
