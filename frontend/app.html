@@ -5018,8 +5018,24 @@ function renderSoldConfirmBar() {
 async function answerPossiblySold(itemId, platform, verkocht, suggested) {
   const label = PLATFORM_LABELS[platform] || platform;
   let sold_price = null;
+  let platform_verkocht = platform;
   if (verkocht) {
-    const raw = prompt(`What did it sell for on ${label}? (\u20ac)\n\nLeave blank if you don't know \u2014 you can fill it in later under Analytics.`,
+    // OP WELK KANAAL? De vraag hangt aan deze ene advertentie, maar het artikel
+    // kan net zo goed elders verkocht zijn \u2014 dat is juist waarom deze
+    // advertentie weg is. Boeken we dan het kanaal van de vraag, dan staat de
+    // omzet bij het verkeerde kanaal. Staat het artikel maar op \u00e9\u00e9n kanaal, dan
+    // valt er niets te kiezen en vragen we niets.
+    const kanalen = [...new Set((state.listings || [])
+      .filter(l => l.item_id === itemId)
+      .map(l => l.platform))];
+    if (kanalen.length > 1) {
+      const keuze = prompt(`Which channel did it actually sell on?\n\nThis listing is gone from ${label}, but the sale may have happened elsewhere \u2014 the revenue is recorded on the channel you name here.\n\nType one of: ${kanalen.join(', ')}`, platform);
+      if (keuze === null) return;
+      platform_verkocht = String(keuze).trim().toLowerCase();
+      if (!kanalen.includes(platform_verkocht)) return alert('Please type one of: ' + kanalen.join(', '));
+    }
+    const verkochtLabel = PLATFORM_LABELS[platform_verkocht] || platform_verkocht;
+    const raw = prompt(`What did it sell for on ${verkochtLabel}? (\u20ac)\n\nLeave blank if you don't know \u2014 you can fill it in later under Analytics.`,
       suggested || '');
     if (raw === null) return;                     // cancelled
     if (String(raw).trim() !== '') {
@@ -5033,19 +5049,23 @@ async function answerPossiblySold(itemId, platform, verkocht, suggested) {
   try {
     const r = await apiFetch(`${API}/api/listings/possibly-sold/answer`, {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ item_id: itemId, platform, verkocht, sold_price }),
+      body: JSON.stringify({ item_id: itemId, platform, verkocht, sold_price, platform_verkocht }),
     });
     const data = await parseJsonSafe(r);
     if (!r.ok) throw new Error(data.detail || 'Could not save your answer');
     const l = (state.listings || []).find(x => x.item_id === itemId && x.platform === platform && x.status === 'sold_unconfirmed');
     if (l) {
-      l.status = data.status;
+      // Elders verkocht? Dan is DEZE advertentie alleen maar weg; de verkoop
+      // staat op het kanaal dat de verkoper noemde en komt bij de volgende
+      // verversing binnen.
+      const hier = (data.platform_verkocht || platform) === platform;
+      l.status = hier ? data.status : 'delisted';
       l.error_message = null;
-      if (data.status === 'sold') l.sold_at = new Date().toISOString();
-      if (sold_price != null) l.sold_price = sold_price;
+      if (hier && data.status === 'sold') l.sold_at = new Date().toISOString();
+      if (hier && sold_price != null) l.sold_price = sold_price;
     }
     showToast(verkocht
-      ? `Marked sold on ${label} \u2014 removing it from your other platforms.`
+      ? `Marked sold on ${PLATFORM_LABELS[platform_verkocht] || platform_verkocht} \u2014 removing it from your other platforms.`
       : 'Moved to Archived.');
     renderSoldConfirmBar();
     applyFilters();

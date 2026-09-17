@@ -10355,3 +10355,45 @@ Gesprek tussen Daniel en Johan. Wat eruit kwam:
   Marktplaats af (zijn pogingen op 14-09 mislukten). In de vervolgmail staat dat hij
   die zelf weghaalt.
 - Proef loopt tot zondag 20-09 21:01. Nog geen betaalgegevens.
+
+## 17-09-2026: een verkoop wordt alleen geboekt op het kanaal dat het zelf zegt
+
+Daniel zag in Analytics dat artikel 1313 als verkocht op Vinted stond terwijl het
+op Shopify verkocht was, en vroeg alle 51 verkopen na te lopen.
+
+Gemeten, met bewijs per regel:
+- 1313 stond fout. Shopify-bestelling #1079 van 06-09 om 14:11, regel sku 1313
+  voor EUR 14,99, niet terugbetaald. De Vinted-advertentie 9256552127 geeft 404,
+  dus Vinted heeft nooit gezegd dat hij daar verkocht was. In de boeken stond
+  Vinted, 12-09, zonder bedrag. Hersteld naar Shopify met de echte datum en prijs.
+- 1349 stond helemaal fout: die advertentie staat op dit moment gewoon te koop op
+  Vinted (can_buy true), terwijl wij hem op 15-09 als verkocht hadden geboekt en
+  hem intussen van Marktplaats, 2dehands en Shopify hadden gehaald. Verkoop
+  teruggedraaid, de Vinted-rij staat weer op actief.
+- De overige 49: 33 Vinted-verkopen nagemeten op de openbare Vinted-pagina, 31
+  daarvan staan daar zelf op niet meer te koop. Twee (1019 en 1114) zijn door
+  Daniel weggehaald en zijn daarmee niet te bewijzen, geen van beide is
+  aantoonbaar fout. De Marktplaats-verkopen berusten op de verkocht-badge van
+  Marktplaats zelf of op Daniels eigen bevestiging.
+
+Twee redeneringen deden het:
+1. Weg uit de Vinted-kast gold sinds 12-09 als verkocht op Vinted. Juist een
+   verkoop elders is de reden dat iemand zijn Vinted-advertentie weghaalt.
+2. De Vinted-bestellingenpagina las "niet geannuleerd" als "verkocht", dus telde
+   elke rij mee die niet zichtbaar geannuleerd was, ook een gewoon gesprek.
+
+Wat er nu staat: handle_item_sold is de enige plek in de code die status 'sold'
+schrijft en eist een argument `bewijs` (een echte order van het kanaal, het
+kanaal dat zelf verkocht zegt, of de verkoper). Zonder bewijs wordt er niets
+geboekt en niets afgemeld: de advertentie gaat naar sold_unconfirmed en de
+verkoper krijgt de ja/nee-vraag, waarbij hij voortaan zelf het kanaal aanwijst.
+Een bestellingsregel zonder bedrag telt niet meer als bestelling.
+
+Voor-en-na gemeten tegen de echte oude functies (be14e3ea): oud boekte in de
+situatie van 1313 een Vinted-verkoop, nieuw boekt niets en stelt de vraag.
+Testsuite: 1386 geslaagd, dezelfde 14 die ook op be14e3ea al faalden.
+
+**Openstaand:** 1019 en 1114 zijn niet te bewijzen, die staan nog als
+Vinted-verkoop in de boeken. Van Shopify zijn alleen de bestellingen van de
+laatste 60 dagen leesbaar (Shopify-limiet zonder read_all_orders), dus een oudere
+verkoop elders is van buitenaf niet te controleren.

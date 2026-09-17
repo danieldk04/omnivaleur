@@ -3,7 +3,8 @@ from backend.models import ListingCreate
 from backend.database import get_db, fetch_all, naast_de_lus, execute_with_retry, IN_BROK
 from backend.services.crosslist import (publish_to_platforms, handle_item_sold,
                                         CrosslistValidationError, VertalingOnbeschikbaar,
-                                        API_PLATFORMS)
+                                        API_PLATFORMS, EXTENSION_PLATFORMS,
+                                        BEWIJS_BESTELLING, BEWIJS_VERKOPER)
 from backend.services.relist import (
     refresh_listing, refresh_stale_listings, renew_etsy_listing, relist_ended_ebay_listing,
     RefreshError, REFRESH_CAPABLE_PLATFORMS,
@@ -762,7 +763,14 @@ def answer_possibly_sold(body: dict, background_tasks: BackgroundTasks,
       op "live". Zo blijft de vraag ook niet terugkomen: de verkoopcontrole kijkt
       alleen naar actieve advertenties.
 
-    Body: {item_id, platform, verkocht: bool, sold_price?}
+    OP WELK KANAAL (17-09-2026, Daniel). De vraag hangt aan één advertentie, maar
+    het antwoord hoeft daar niet bij te horen: de advertentie op Vinted is weg
+    omdat het artikel op Shopify verkocht is. Boekten we dan toch Vinted, dan
+    staat de omzet weer bij het verkeerde kanaal — precies wat we hier de deur uit
+    doen. Daarom mag de verkoper het kanaal noemen; doet hij dat niet, dan geldt
+    het kanaal van de vraag.
+
+    Body: {item_id, platform, verkocht: bool, sold_price?, platform_verkocht?}
     """
     item_id = (body or {}).get("item_id")
     platform = (body or {}).get("platform")
@@ -786,11 +794,22 @@ def answer_possibly_sold(body: dict, background_tasks: BackgroundTasks,
             prijs = None if prijs in (None, "") else round(float(str(prijs).replace(",", ".")), 2)
         except (TypeError, ValueError):
             prijs = None
+
+        verkoopkanaal = str(body.get("platform_verkocht") or platform).strip().lower()
+        if verkoopkanaal not in (EXTENSION_PLATFORMS | API_PLATFORMS | {"etsy"}):
+            raise HTTPException(status_code=400, detail=f"Unknown platform: {verkoopkanaal}")
+        if verkoopkanaal != platform:
+            # Elders verkocht: deze advertentie is gewoon weg, geen verkoop hier.
+            db.table("listings").update({"status": "delisted", "error_message": None}) \
+              .eq("id", rij[0]["id"]).execute()
+
         # De datum is die van vandaag: wanneer het precies verkocht is weet
         # niemand hier. In Analytics is de datum aan te klikken en te corrigeren.
-        logger.info("[sold] bevestigd door de verkoper: item=%s platform=%s prijs=%s", item_id, platform, prijs)
-        background_tasks.add_task(handle_item_sold, item_id, platform, prijs)
-        return {"ok": True, "status": "sold"}
+        logger.info("[sold] bevestigd door de verkoper: item=%s gevraagd_op=%s verkocht_op=%s prijs=%s",
+                    item_id, platform, verkoopkanaal, prijs)
+        background_tasks.add_task(handle_item_sold, item_id, verkoopkanaal, prijs,
+                                  bewijs=BEWIJS_VERKOPER)
+        return {"ok": True, "status": "sold", "platform_verkocht": verkoopkanaal}
 
     db.table("listings").update({"status": "delisted", "error_message": None})         .eq("id", rij[0]["id"]).execute()
     logger.info("[sold] niet verkocht volgens de verkoper: item=%s platform=%s → archief", item_id, platform)
@@ -847,7 +866,8 @@ def mark_sold(item_id: str, platform: str, background_tasks: BackgroundTasks, re
         return {"status": "awaiting_confirmation"}
 
     logger.info("[sold] POST /sold item_id=%s platform=%s sold_price=%s -> delist triggered", item_id, platform, sold_price)
-    background_tasks.add_task(handle_item_sold, item_id, platform, sold_price)
+    background_tasks.add_task(handle_item_sold, item_id, platform, sold_price,
+                              bewijs=BEWIJS_VERKOPER)
     return {"status": "delist_triggered"}
 
 
@@ -1061,6 +1081,7 @@ async def reconcile_vinted_orders(body: dict, user_id: str = Depends(get_current
         return hits.pop() if len(hits) == 1 else None
 
     marked_sold = 0
+    zonder_bedrag = 0
     price_backfilled = 0
     date_fixed = 0
     zonder_datum = 0
@@ -1130,6 +1151,24 @@ async def reconcile_vinted_orders(body: dict, user_id: str = Depends(get_current
                         pass
             continue
 
+        # EEN REGEL ZONDER BEDRAG IS GEEN BESTELLING (17-09-2026, Daniel).
+        #
+        # De extensie leest de bestellingenpagina met een breed net (elke rij die
+        # naar een gesprek of bestelling linkt) en noemde alles wat niet zichtbaar
+        # geannuleerd was een verkoop. Daarmee kon een gewoon gesprek over een
+        # artikel als verkoop op Vinted worden geboekt. Zo kwam artikel 1313 — op
+        # Shopify verkocht — hier binnen als Vinted-verkoop zonder bedrag.
+        #
+        # Een echte bestelling toont altijd het bedrag. Geen bedrag, dus geen
+        # bestelling: we boeken niets. Is het artikel tóch op Vinted verkocht, dan
+        # zet Vinted de advertentie zelf op "gesloten" en boekt de kastscan hem
+        # alsnog — met Vinteds eigen woord als bewijs.
+        if price is None:
+            zonder_bedrag += 1
+            logger.info("[sold] reconcile-vinted-orders: regel zonder bedrag overgeslagen "
+                        "(item=%s) — een bestelling zonder bedrag is geen bewijs", item_id)
+            continue
+
         # New sale. Ensure a Vinted listing row exists so it shows in analytics,
         # then run the canonical sold flow (records price + delists other platforms).
         if not vinted_rows:
@@ -1137,7 +1176,8 @@ async def reconcile_vinted_orders(body: dict, user_id: str = Depends(get_current
                 "item_id": item_id, "platform": "vinted", "status": "active",
             }).execute()))
         try:
-            await handle_item_sold(item_id, "vinted", price, sold_at=datum)
+            await handle_item_sold(item_id, "vinted", price, sold_at=datum,
+                                   bewijs=BEWIJS_BESTELLING)
             marked_sold += 1
         except Exception:
             pass
@@ -1155,8 +1195,8 @@ async def reconcile_vinted_orders(body: dict, user_id: str = Depends(get_current
             marked_sold, user_id,
         )
     logger.info("[sold] reconcile-vinted-orders: matched=%d newly_sold=%d price_backfilled=%d "
-                "date_fixed=%d zonder_datum=%d unmatched=%d unmatched_skus=%s",
+                "date_fixed=%d zonder_datum=%d zonder_bedrag=%d unmatched=%d unmatched_skus=%s",
                 matched, marked_sold, price_backfilled, date_fixed, zonder_datum,
-                len(unmatched_skus), unmatched_skus)
+                zonder_bedrag, len(unmatched_skus), unmatched_skus)
     return {"ok": True, "marked_sold": marked_sold, "price_backfilled": price_backfilled,
             "date_fixed": date_fixed, "zonder_datum": zonder_datum}

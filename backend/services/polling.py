@@ -8,7 +8,7 @@ from datetime import datetime, timedelta, timezone
 
 from backend.database import get_db, IN_BROK
 from backend.platforms import get_platform
-from backend.services.crosslist import handle_item_sold
+from backend.services.crosslist import handle_item_sold, BEWIJS_KANAAL_ZEGT_VERKOCHT
 
 logger = logging.getLogger(__name__)
 
@@ -248,7 +248,9 @@ async def _check_one(listing: dict, credentials: dict):
     # advertentie in elk geval niet meer "aan de beurt" en blijft de rij lopen.
     if naderhand:
         try:
-            await handle_item_sold(naderhand, platform_name)
+            # Bewijs: de API van het kanaal zelf antwoordt 'sold'.
+            await handle_item_sold(naderhand, platform_name,
+                                   bewijs=BEWIJS_KANAAL_ZEGT_VERKOCHT)
         except Exception as e:  # noqa: BLE001
             logger.error(f"Poll: afmelden van item {naderhand} mislukt: {e}")
 

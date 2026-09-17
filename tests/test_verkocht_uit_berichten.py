@@ -184,7 +184,7 @@ def test_een_verkoop_telt_maar_een_keer_bij_meerdere_advertentierijen(monkeypatc
     # andere kanalen — heeft een veel rijkere database nodig en heeft zijn eigen
     # proeven; hier stopt het op de nagebootste bouwer (in_, order of single).
     try:
-        asyncio.run(cl.handle_item_sold("it1", "marktplaats"))
+        asyncio.run(cl.handle_item_sold("it1", "marktplaats", bewijs=cl.BEWIJS_VERKOPER))
     except AttributeError as e:
         assert any(w in str(e) for w in ("in_", "order", "single")), f"onverwachte fout: {e}"
 

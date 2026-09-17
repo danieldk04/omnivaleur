@@ -1852,13 +1852,61 @@ async def delist_all_platforms(item_id: str, user_id: str,
 _EXTENSION_DELIST_PLATFORMS = {"marktplaats", "2dehands", "vinted", "facebook"}
 
 
+# ── WELK BEWIJS TELT ALS "HIER VERKOCHT" ────────────────────────────────────
+#
+# WAAROM DIT ER IS (17-09-2026, Daniel). Artikel 1313 was op Shopify verkocht
+# (bestelling #1079 van 06-09, EUR 14,99) en stond in Analytics als verkocht op
+# VINTED, op 12-09, zonder bedrag. De Vinted-advertentie was op dat moment al
+# weg (de pagina geeft 404), dus Vinted heeft nooit gezegd dat hij daar verkocht
+# is. Zo'n regel is erger dan geen regel: de omzet staat bij het verkeerde
+# kanaal, de datum klopt niet, en het echte kanaal krijgt een verwijderopdracht
+# voor de advertentie waar de koper juist vandaan kwam.
+#
+# Daarom mag een verkoop maar op één manier op een kanaal geboekt worden: dat
+# kanaal moet het zelf zeggen, of de verkoper zegt het. Alles wat daar niet
+# onder valt — een advertentie die weg is, een regel zonder bedrag, een gok — is
+# een AANWIJZING en wordt de ja/nee-vraag in het dashboard, nooit een boeking.
+#
+# Elke aanroep van handle_item_sold noemt daarom zijn bewijs. Wie geen geldig
+# bewijs meegeeft, boekt niets: de advertentie gaat naar 'sold_unconfirmed' en
+# de verkoper beslist.
+BEWIJS_BESTELLING = "bestelling"        # een echte order van het kanaal zelf
+BEWIJS_KANAAL_ZEGT_VERKOCHT = "kanaal"  # het kanaal zet zelf 'verkocht' op de advertentie
+BEWIJS_VERKOPER = "verkoper"            # de verkoper zegt het zelf (knop of antwoord)
+GELDIG_BEWIJS = frozenset({BEWIJS_BESTELLING, BEWIJS_KANAAL_ZEGT_VERKOCHT, BEWIJS_VERKOPER})
+
+
+async def _vraag_het_de_verkoper(db, item_id: str, platform: str) -> None:
+    """Geen bewijs, dus geen boeking: de advertentie wordt de ja/nee-vraag.
+
+    Zo gaat er nooit iets verloren als een bron zijn bewijs niet kan leveren.
+    De verkoper ziet de vraag in het dashboard; zegt hij "ja, verkocht", dan
+    draait de gewone afhandeling alsnog (met BEWIJS_VERKOPER).
+    """
+    from backend.api.listings import VERDENKING_REDENEN
+    try:
+        (await naast_de_lus(lambda: db.table("listings").update({
+            "status": "sold_unconfirmed",
+            "error_message": VERDENKING_REDENEN["weg"],
+            "last_checked": datetime.now(timezone.utc).isoformat(),
+        }).eq("item_id", item_id).eq("platform", platform)
+          .in_("status", ["active", "relisting", "hidden", "pending"]).execute()))
+    except Exception as e:  # noqa: BLE001
+        logger.warning("[sold] kon de vraag niet klaarzetten voor %s/%s: %s", item_id, platform, e)
+
+
 async def handle_item_sold(item_id: str, sold_on_platform: str, sold_price: float | None = None,
-                           sold_at: datetime | str | None = None):
+                           sold_at: datetime | str | None = None, bewijs: str | None = None):
     """
     Called when an item is confirmed sold on one platform. Marks that listing
     sold and delists every OTHER active listing for the item — extension
     platforms via a queued delete job, API platforms via their API — so the item
     can't be double-sold.
+
+    bewijs: waarom we weten dat het op DIT kanaal verkocht is. Een van
+    BEWIJS_BESTELLING, BEWIJS_KANAAL_ZEGT_VERKOCHT of BEWIJS_VERKOPER. Zonder
+    geldig bewijs wordt er niets geboekt en niets afgemeld; de advertentie gaat
+    naar 'sold_unconfirmed' zodat de verkoper de vraag krijgt.
 
     sold_price: the amount actually received, when the source knows it (Shopify
     order total, eBay sale price). Left NULL for sources that don't — mainly the
@@ -1875,6 +1923,13 @@ async def handle_item_sold(item_id: str, sold_on_platform: str, sold_price: floa
     de echte datum vanzelf de te late stempel van een eerdere ronde.
     """
     db = get_db()
+
+    if bewijs not in GELDIG_BEWIJS:
+        logger.error(
+            "[sold] GEEN BEWIJS dat item %s op %s is verkocht (bewijs=%r) — niet geboekt, "
+            "de verkoper krijgt de vraag", item_id, sold_on_platform, bewijs)
+        await _vraag_het_de_verkoper(db, item_id, sold_on_platform)
+        return
 
     from backend.services.verkoopdatum import als_datum, lees_verkoopdatum
     echte_datum = lees_verkoopdatum(sold_at) if sold_at is not None else None

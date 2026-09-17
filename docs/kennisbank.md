@@ -17,6 +17,55 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ---
 
+## verkoopkanaal-moet-bewezen-zijn
+
+*17-09-2026 — Een verkoop mag alleen op een kanaal geboekt worden dat het zelf zegt; afwezigheid van een advertentie bewijst niets en wordt een vraag*
+
+Niet alleen "is het verkocht?" moet kloppen, ook "WAAR is het verkocht?". Een
+verkoop op het verkeerde kanaal is duurder dan geen verkoop: de omzet staat bij
+het verkeerde kanaal, de datum is de ontdekdag in plaats van de verkoopdag, het
+bedrag ontbreekt, en het kanaal waar de koper vandaan kwam krijgt juist een
+verwijderopdracht.
+
+**Gemeten 17-09-2026 (Daniel).** Artikel 1313 stond in Analytics als verkocht op
+Vinted (12-09, geen bedrag) terwijl het op Shopify was verkocht: bestelling
+\#1079 van 06-09, EUR 14,99, niet terugbetaald. De Vinted-advertentie gaf 404, dus
+Vinted heeft nooit gezegd dat hij daar verkocht was. En artikel 1349 stond als
+verkocht op Vinted terwijl de advertentie daar op dat moment gewoon te koop stond
+(`can_buy: true`): een verzonnen verkoop van EUR 29,99, en het artikel was
+intussen van Marktplaats, 2dehands en Shopify gehaald.
+
+Twee redeneringen deden dat:
+1. **Weg uit de Vinted-kast = verkocht op Vinted.** Juist een verkoop ELDERS is
+   de reden dat de verkoper zijn Vinted-advertentie weghaalt.
+2. **De bestellingenpagina las "niet geannuleerd" als "verkocht".** Elke rij die
+   niet zichtbaar geannuleerd was telde mee, dus ook een gewoon gesprek. Zie
+   "succes-nooit-uit-uitsluitingslijst".
+
+**Hoe het nu vastligt.** `handle_item_sold` is de enige plek in de hele code die
+`status='sold'` schrijft, en heeft sinds 17-09-2026 een verplicht argument
+`bewijs`: `BEWIJS_BESTELLING` (een echte order van het kanaal), 
+`BEWIJS_KANAAL_ZEGT_VERKOCHT` (Vinted `is_closed`, een verkocht-label, de API van
+het kanaal) of `BEWIJS_VERKOPER` (de knop of het antwoord op de vraag). Zonder
+geldig bewijs boekt hij niets en zet hij de advertentie op `sold_unconfirmed`:
+de ja/nee-vraag in het dashboard. Bij "ja, verkocht" mag de verkoper zelf het
+kanaal aanwijzen, want de vraag hangt aan de ene advertentie maar het antwoord
+hoeft daar niet bij te horen.
+
+Een bestellingsregel zonder bedrag is geen bestelling. Een echte order toont
+altijd het bedrag; is het er niet, dan boeken we niets en vangt de kastscan een
+echte Vinted-verkoop later alsnog op via `is_closed`.
+
+**Meetgereedschap.** Of een Vinted-advertentie echt verkocht is, is van buitenaf
+te zien: `https://www.vinted.nl/items/<nummer>` bevat `\"can_buy\":true` als hij
+gewoon te koop staat, `false` als hij verkocht of gereserveerd is, en geeft 404
+als de verkoper hem heeft weggehaald (dan zegt Vinted niets). Een antwoord van
+minder dan 100.000 tekens is geen meting maar een afknijping (429), niet meer dan
+ongeveer 15 per minuut. Zie ook "verkoop-signaal-hard-vs-zacht" en
+"vinted-tekst-alleen-op-de-pagina".
+
+---
+
 ## kanaalicoon-aanvinken-is-geen-publiceren
 
 *17-09-2026 — "Nieuwe klanten klikken de kanaaliconen aan in de veronderstelling dat dat plaatst; het vinkt alleen \"staat online\" aan zonder advertentie, en dat blokkeert daarna het echte plaatsen"*

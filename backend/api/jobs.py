@@ -3,7 +3,7 @@ from backend.database import (get_db, fetch_all, fetch_all_in, update_in, naast_
                               execute_with_retry, eerste_rij)
 from backend.api.deps import get_current_user, require_active_subscription
 from backend.api.imports import _backfill_item_from_candidate
-from backend.services.crosslist import handle_item_sold
+from backend.services.crosslist import handle_item_sold, BEWIJS_KANAAL_ZEGT_VERKOCHT
 from backend.services.kleur import normaliseer_kleur
 from datetime import datetime, timezone, timedelta
 from types import SimpleNamespace
@@ -2614,7 +2614,11 @@ async def complete_job(job_id: str, body: dict, user_id: str = Depends(get_curre
             logger.info("[sold] delete job %s reported a sale on %s — booking it instead of deleting",
                         job_id, job["platform"])
             try:
-                await handle_item_sold(job["item_id"], job["platform"], body.get("sold_price"))
+                # Bewijs: de extensie las op de advertentie zelf dat hij daar
+                # verkocht is (Vinted is_closed, of het "Verkocht"-label op het
+                # Marktplaats-overzicht). Dat zegt het kanaal, niet wij.
+                await handle_item_sold(job["item_id"], job["platform"], body.get("sold_price"),
+                                       bewijs=BEWIJS_KANAAL_ZEGT_VERKOCHT)
             except Exception as e:  # noqa: BLE001
                 logger.warning("[sold] booking sale from delete job %s failed: %s", job_id, e)
             return {"ok": True, "status": "sold_on_platform"}
@@ -2977,7 +2981,7 @@ async def _reconcile_vinted_sales(db, job, scraped: list[dict], scan_meta: dict 
     #                revenue and cross-delist live listings). Instead we just take
     #                it off "Live" → 'delisted', so it lands in Archived for the
     #                user to confirm and mark sold themselves if it really sold.
-    newly_sold, set_aside, matched_without_id, gevraagd, weg_en_verkocht = 0, 0, 0, 0, 0
+    newly_sold, set_aside, matched_without_id, gevraagd = 0, 0, 0, 0
     verdwenen: list[dict] = []
     for l in active:
         pid = l.get("platform_listing_id")
@@ -3006,7 +3010,8 @@ async def _reconcile_vinted_sales(db, job, scraped: list[dict], scan_meta: dict 
             except Exception as e:  # noqa: BLE001
                 logger.warning("Vinted reconcile: could not backfill listing id for %s: %s", l["item_id"], e)
             try:
-                await handle_item_sold(l["item_id"], "vinted")
+                await handle_item_sold(l["item_id"], "vinted",
+                                       bewijs=BEWIJS_KANAAL_ZEGT_VERKOCHT)
                 newly_sold += 1
             except Exception as e:
                 logger.warning(f"Vinted sale reconcile failed for item {l['item_id']}: {e}")
@@ -3014,59 +3019,41 @@ async def _reconcile_vinted_sales(db, job, scraped: list[dict], scan_meta: dict 
         pid = str(pid)
         if pid in closed_ids:
             try:
-                await handle_item_sold(l["item_id"], "vinted")
+                await handle_item_sold(l["item_id"], "vinted",
+                                       bewijs=BEWIJS_KANAAL_ZEGT_VERKOCHT)
                 newly_sold += 1
             except Exception as e:
                 logger.warning(f"Vinted sale reconcile failed for item {l['item_id']}: {e}")
         elif pid not in seen_ids:
             verdwenen.append(l)
 
-    # ── WEG UIT DE KAST IS VERKOCHT ─────────────────────────────────────────
+    # ── WEG UIT DE KAST IS EEN VRAAG, GEEN VERKOOP OP VINTED ────────────────
     #
-    # GEMETEN 12-09-2026 (De Juiste Toon). Hij verkocht 23 artikelen op Vinted
-    # en haalde die advertenties daar zelf weg, zoals vrijwel iedereen doet. Op
-    # Marktplaats bleven ze staan. Dat was geen storing maar het ontwerp: een
-    # verdwenen advertentie ging stil naar 'delisted' en verder gebeurde er
-    # niets, dus het antwoord op "wanneer gaan ze automatisch van Marktplaats
-    # af" was: nooit.
+    # Een advertentie die uit de kast verdwenen is, is door de verkoper zelf
+    # weggehaald. Meestal omdat het artikel verkocht is — maar Vinted heeft
+    # nergens gezegd dat het DAAR verkocht is, en dat is precies het verschil.
     #
-    # Op Vinted verloopt niets vanzelf en een verkochte advertentie blijft
-    # gewoon in de kast staan. Weg uit de kast betekent dus: de verkoper heeft
-    # hem met eigen hand verwijderd, en dat doet vrijwel iedereen meteen na een
-    # verkoop. Dat handelen we voortaan zelf af, zonder iets te vragen.
+    # GEMETEN 17-09-2026 (Daniel, artikel 1313). Het artikel was op Shopify
+    # verkocht (bestelling #1079 van 06-09, EUR 14,99). De Vinted-advertentie
+    # was weggehaald, en daarmee stond de verkoop op 12-09 in de boeken als een
+    # Vinted-verkoop zonder bedrag. De omzet stond bij het verkeerde kanaal, de
+    # datum was zes dagen mis, en Shopify — waar de koper vandaan kwam — kreeg
+    # een verwijderopdracht.
     #
-    # DE REM DIE ERBIJ HOORT. Deze conclusie is precies de conclusie die ooit
-    # levende advertenties overal weghaalde: de scan las toen alleen de 96
-    # nieuwste advertenties, waardoor alles daaronder "weg" leek. Daar liggen nu
-    # twee sloten op:
-    #   1. Alleen een als VOLLEDIG gemelde momentopname telt (hierboven).
-    #   2. En een volledige momentopname kan alsnog liegen, dus: verdwijnt er in
-    #      één ronde meer dan een tiende van de kast (met een ondergrens van
-    #      tien), dan is dat geen dag verkopen maar een kapotte scan. Dan wordt
-    #      er niets afgemeld en krijgt de verkoper de ja/nee-vraag, zoals
-    #      hiervoor. Bij Toon: 23 van de bijna duizend, ruim onder de rem.
+    # Daarom wordt afwezigheid weer wat het is: een aanwijzing. Staat het
+    # artikel nog ergens anders te koop, dan krijgt de verkoper de ja/nee-vraag
+    # (en bij "ja" gaat alsnog alles eraf, precies zoals voorheen, maar dan op
+    # het kanaal dat hij zelf aanwijst). Staat het nergens meer, dan valt er
+    # niets te vragen en gaat de rij het archief in.
     grens = max(VERDWIJN_ONDERGRENS, int(len(active) * VERDWIJN_AANDEEL))
     te_veel_ineens = len(verdwenen) > grens
     if te_veel_ineens:
         logger.warning(
             "Vinted reconcile voor %s: %d van de %d advertenties ineens weg (rem staat op %d). "
-            "Dat telt niet als verkopen; de verkoper krijgt de vraag.",
+            "Dat is het beeld van een kapotte scan, niet van verkopen.",
             job["user_id"], len(verdwenen), len(active), grens)
 
     for l in verdwenen:
-        if not te_veel_ineens:
-            # Gewoon verkocht: handle_item_sold boekt de verkoop en zet de
-            # verwijderopdrachten klaar voor Marktplaats, 2dehands en de rest.
-            try:
-                await handle_item_sold(l["item_id"], "vinted")
-                weg_en_verkocht += 1
-                continue
-            except Exception as e:  # noqa: BLE001
-                logger.warning("Vinted reconcile: afmelden van item %s mislukt, wordt een vraag: %s",
-                               l["item_id"], e)
-        # De rem staat erop (of het afmelden ging mis): vragen in plaats van doen.
-        # Staat het artikel nergens anders meer te koop, dan valt er niets te
-        # vragen en gaat de rij gewoon het archief in.
         vraag = l["item_id"] in elders_levend
         velden = ({"status": "sold_unconfirmed",
                    "error_message": VERDENKING_REDENEN["vinted_weg"],
@@ -3084,9 +3071,8 @@ async def _reconcile_vinted_sales(db, job, scraped: list[dict], scan_meta: dict 
             logger.warning(f"Vinted reconcile: could not archive vanished listing {l['item_id']}: {e}")
     logger.info(
         "[sold] Vinted reconcile for user %s: %d marked sold (is_closed, of which %d matched by SKU/title), "
-        "%d vanished → booked as sold and delisted elsewhere, %d vanished → asked the seller, "
-        "%d vanished → archived",
-        job["user_id"], newly_sold, matched_without_id, weg_en_verkocht, gevraagd, set_aside,
+        "%d vanished → asked the seller, %d vanished → archived",
+        job["user_id"], newly_sold, matched_without_id, gevraagd, set_aside,
     )
 
 

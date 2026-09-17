@@ -10,7 +10,7 @@ product verandert. De ontwikkelaar werkt dan zowel dit bestand in de repo als de
 kopie in Drive bij, in dezelfde beurt. Daniel hoeft niets te doen; de Gem leest
 de Drive-kopie de volgende keer opnieuw in.
 
-_Laatst bijgewerkt: 17-09-2026 (een klik op een grijs kanaalicoon plaatst nu of vraagt de link, en zet niets meer zomaar op live; opslaan in het bewerkscherm zet niets meer terug wat de klant zelf niet veranderde, en een artikel met Bieden, Zie omschrijving of Gratis kan weer worden opgeslagen zonder bedrag; verkocht op Marktplaats of 2dehands met een zakelijk account wordt nu ook opgemerkt als vraag in het dashboard; 2dehands voor verkopers die in Nederland wonen: land en woonplaats invullen bij Preferences; al op een kanaal en net bewerkt: vervangen kan nu direct vanuit het publiceervenster. Eerder, 15-09: zakelijk account lijkt op uitgelogd; eBay in het Nederlands; wachtrij die stilstaat omdat de browser niet is ingelogd; Vinted plaatst door zonder open tabblad; rode 'Relist failed' meldingen hersteld in 1.0.334)_
+_Laatst bijgewerkt: 17-09-2026 (een verkoop wordt alleen nog op een kanaal geboekt als dat kanaal het zelf zegt of de klant het bevestigt: een advertentie die uit je Vinted-kast verdwenen is, wordt een vraag in het dashboard waarbij je zelf het kanaal aanwijst; een klik op een grijs kanaalicoon plaatst nu of vraagt de link, en zet niets meer zomaar op live; opslaan in het bewerkscherm zet niets meer terug wat de klant zelf niet veranderde, en een artikel met Bieden, Zie omschrijving of Gratis kan weer worden opgeslagen zonder bedrag; verkocht op Marktplaats of 2dehands met een zakelijk account wordt nu ook opgemerkt als vraag in het dashboard; 2dehands voor verkopers die in Nederland wonen: land en woonplaats invullen bij Preferences; al op een kanaal en net bewerkt: vervangen kan nu direct vanuit het publiceervenster. Eerder, 15-09: zakelijk account lijkt op uitgelogd; eBay in het Nederlands; wachtrij die stilstaat omdat de browser niet is ingelogd; Vinted plaatst door zonder open tabblad; rode 'Relist failed' meldingen hersteld in 1.0.334)_
 
 ---
 
@@ -579,13 +579,15 @@ Hoi <voornaam>,
 
 Dat klopt en het ligt aan ons, niet aan jou. Vinted laat ons niet weten dat er
 iets verkocht is; wij lezen zelf je Vinted-kast uit en zien het daaraan. Haal je
-een verkochte advertentie zelf meteen van Vinted af, dan is er voor ons niets
-meer te zien en blijft hij op Marktplaats staan.
+een verkochte advertentie zelf meteen van Vinted af, dan zien wij alleen nog dat
+hij weg is.
 
-Dat is nu opgelost. Verdwijnt een advertentie uit je Vinted-kast, dan gaat het
-artikel vanzelf van Marktplaats en je andere kanalen af. Je hoeft er niets voor
-te doen en niets te bevestigen. Ook de advertenties die er nu nog staan komen bij
-de eerstvolgende controle langs.
+Weg uit je kast betekent voor ons niet automatisch verkocht op Vinted, want vaak
+haal je hem juist weg omdat je het ergens anders verkocht hebt. Daarom vragen we
+het: je krijgt het artikel bovenaan je dashboard te zien met de vraag of het
+verkocht is. Klik je op Ja, dan vraagt hij nog op welk kanaal, en daarna gaat het
+artikel van al je andere kanalen af en telt de verkoop mee in Analytics, bij het
+juiste kanaal. Dat is een klik, en je omzet klopt.
 
 Eén ding blijft nodig: je browser moet aanstaan met de Omnivaleur-uitbreiding
 erin, want het weghalen bij Marktplaats gebeurt vanuit jouw eigen sessie.

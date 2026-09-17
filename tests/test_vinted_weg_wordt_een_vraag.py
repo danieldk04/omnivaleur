@@ -1,22 +1,25 @@
-"""Weg uit de Vinted-kast is verkocht, en gaat vanzelf van de andere kanalen af.
+"""Weg uit de Vinted-kast is een VRAAG, geen verkoop op Vinted.
 
-WAAROM DIT ER IS (12-09-2026, De Juiste Toon)
-Hij verkocht 23 artikelen op Vinted en haalde die advertenties daar zelf weg,
-zoals vrijwel iedereen doet. Op Marktplaats bleven ze gewoon staan. Dat was geen
-storing: een uit de garderobe verdwenen advertentie ging stil naar 'delisted',
-er werd niets afgemeld en niets gevraagd. Het antwoord op "wanneer gaan ze
-automatisch van Marktplaats af" was dus: nooit.
+WAAROM DIT ER IS (17-09-2026, Daniel — artikel 1313)
+Artikel 1313 was op Shopify verkocht (bestelling #1079 van 06-09, EUR 14,99).
+Zijn Vinted-advertentie was weggehaald, en daardoor stond de verkoop in
+Analytics als een VINTED-verkoop van 12-09, zonder bedrag. Drie dingen fout in
+één regel: het kanaal, de datum en het bedrag. En Shopify, waar de koper vandaan
+kwam, kreeg een verwijderopdracht.
 
-Op Vinted verloopt niets vanzelf en een verkochte advertentie blijft gewoon in
-de kast staan, dus weg uit de kast betekent: de verkoper heeft hem zelf
-weggehaald, vrijwel altijd omdat het artikel verkocht is. Dat wordt nu zonder
-tussenkomst afgehandeld.
+De aanname erachter (12-09-2026, De Juiste Toon) was: op Vinted verloopt niets
+vanzelf, dus weg uit de kast betekent dat de verkoper hem zelf weghaalde, en dat
+doet vrijwel iedereen na een verkoop. Dat klopt — alleen zegt het niets over
+WAAR het verkocht is, en juist een verkoop elders is de reden dat de advertentie
+weg is.
 
-De rem erbij is even belangrijk als de reparatie zelf: precies deze conclusie
-heeft ooit levende advertenties overal weggehaald, omdat de scan alleen de
-nieuwste 96 advertenties las en al het oudere "weg" leek. Verdwijnt er in één
-ronde een te groot deel van de kast, dan gelooft de code zichzelf niet en wordt
-het alsnog een ja/nee-vraag.
+Dus: afwezigheid is weer een aanwijzing. Staat het artikel nog ergens anders te
+koop, dan krijgt de verkoper de ja/nee-vraag (en bij "ja" wijst hij het kanaal
+aan). Staat het nergens meer, dan gaat de rij het archief in. Vinteds eigen
+"gesloten"-vlag blijft wél gewoon een verkoop: dat zegt Vinted zelf.
+
+De rem op een kapotte scan blijft: verdwijnt er in één ronde een te groot deel
+van de kast, dan gelooft de code zichzelf niet.
 """
 import asyncio
 import sys
@@ -73,7 +76,9 @@ def _draai(db, scraped):
     """Roept de echte reconciliatie aan; geeft terug welke items zijn afgemeld."""
     afgemeld = []
 
-    async def _nep_sold(item_id, platform, prijs=None):
+    async def _nep_sold(item_id, platform, prijs=None, bewijs=None, **_k):
+        assert bewijs, ("elke boeking moet zeggen waarom we weten dat het op DIT "
+                        "kanaal verkocht is")
         afgemeld.append((item_id, platform))
 
     origineel = (J.fetch_all, J.fetch_all_in, J.naast_de_lus, J.handle_item_sold)
@@ -97,7 +102,7 @@ def _draai(db, scraped):
     return afgemeld
 
 
-def test_weg_van_vinted_gaat_vanzelf_van_marktplaats_af():
+def test_weg_van_vinted_wordt_een_vraag_en_nooit_een_vinted_verkoop():
     items = [
         {"id": "i1", "user_id": "u1", "sku": None, "title": "Kelim loper 74/42 cm"},
         {"id": "i2", "user_id": "u1", "sku": None, "title": "Smyrna kleedje 93/38 cm"},
@@ -117,9 +122,19 @@ def test_weg_van_vinted_gaat_vanzelf_van_marktplaats_af():
     afgemeld = _draai(db, [{"platform_listing_id": "999", "title": "Iets anders",
                             "is_closed": False}])
 
-    assert sorted(afgemeld) == [("i1", "vinted"), ("i2", "vinted")], (
-        "Een advertentie die uit de Vinted-kast verdwenen is, hoort als verkocht "
-        f"geboekt te worden zodat hij overal anders wordt afgemeld. Kreeg: {afgemeld}")
+    assert afgemeld == [], (
+        "Een verdwenen advertentie is geen bewijs van een verkoop OP VINTED; er "
+        f"mag niets geboekt worden. Kreeg: {afgemeld}")
+    v1 = next(l for l in listings if l["id"] == "l1")
+    assert v1["status"] == "sold_unconfirmed", (
+        "Staat het artikel nog op Marktplaats, dan hoort de verkoper de vraag te "
+        f"krijgen. Kreeg: {v1['status']}")
+    assert v1["error_message"] == VERDENKING_REDENEN["vinted_weg"]
+    assert next(l for l in listings if l["id"] == "l2")["status"] == "active", (
+        "de Marktplaats-advertentie mag niet zijn aangeraakt")
+    assert next(l for l in listings if l["id"] == "l3")["status"] == "delisted", (
+        "staat het nergens anders meer te koop, dan valt er niets te vragen en "
+        "gaat de rij naar het archief")
 
 
 def test_een_halve_kast_ineens_weg_is_geen_dag_verkopen():
@@ -155,9 +170,9 @@ def test_weg_van_vinted_en_nergens_anders_te_koop():
                  "platform_listing_id": "111"}]
     afgemeld = _draai(_DB(items, listings), [{"platform_listing_id": "999",
                                               "title": "Iets anders", "is_closed": False}])
-    # Ook dit is een verkoop: hij verdween uit de kast. Er is alleen niets om af
-    # te melden, dus handle_item_sold doet verder niets zichtbaars.
-    assert afgemeld == [("i1", "vinted")]
+    assert afgemeld == []
+    assert listings[0]["status"] == "delisted", (
+        "nergens anders te koop: geen vraag, gewoon het archief in")
 
 
 def test_gesloten_op_vinted_blijft_gewoon_een_verkoop():

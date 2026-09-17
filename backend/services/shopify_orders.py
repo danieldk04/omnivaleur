@@ -160,9 +160,11 @@ async def controleer_shopify_verkopen() -> dict:
                     if not item_id or item_id in gezien:
                         continue
                     gezien.add(item_id)
+                    from backend.services.crosslist import BEWIJS_BESTELLING
                     await handle_item_sold(item_id, "shopify",
                                            sold_price=ref.get("price"),
-                                           sold_at=besteld_op)
+                                           sold_at=besteld_op,
+                                           bewijs=BEWIJS_BESTELLING)
                     verwerkt += 1
                 except Exception as e:  # noqa: BLE001
                     logger.warning("shopify-verkoopcontrole: %s / regel %s: %s",

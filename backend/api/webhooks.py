@@ -11,7 +11,8 @@ import logging
 import time
 from datetime import datetime, timezone
 from fastapi import APIRouter, Request, HTTPException
-from backend.services.crosslist import handle_item_sold
+from backend.services.crosslist import (handle_item_sold, BEWIJS_BESTELLING,
+                                        BEWIJS_KANAAL_ZEGT_VERKOCHT)
 from backend.database import get_admin_db, get_db, naast_de_lus
 from backend.config import settings
 from backend.platforms.shopify import verify_webhook
@@ -91,7 +92,8 @@ async def ebay_webhook(request: Request):
         if listing.data:
             await handle_item_sold(listing.data[0]["item_id"], "ebay",
                                    sold_price=_ebay_sale_price(item_data),
-                                   sold_at=_ebay_sale_time(payload, item_data))
+                                   sold_at=_ebay_sale_time(payload, item_data),
+                                   bewijs=BEWIJS_BESTELLING)
 
     return {"status": "ok"}
 
@@ -144,7 +146,8 @@ async def shopify_order_paid(request: Request):
             continue
         gezien.add(item_id)
         await handle_item_sold(item_id, "shopify",
-                               sold_price=ref.get("price"), sold_at=besteld_op)
+                               sold_price=ref.get("price"), sold_at=besteld_op,
+                               bewijs=BEWIJS_BESTELLING)
         verwerkt.append(item_id)
 
     return {"status": "ok", "items_processed": verwerkt}
@@ -164,7 +167,8 @@ async def marktplaats_webhook(request: Request):
         db = get_db()
         listing = (await naast_de_lus(lambda: db.table("listings").select("item_id,platform").eq("platform_listing_id", ad_id).in_("platform", ["marktplaats", "2dehands"]).execute()))
         if listing.data:
-            await handle_item_sold(listing.data[0]["item_id"], listing.data[0]["platform"])
+            await handle_item_sold(listing.data[0]["item_id"], listing.data[0]["platform"],
+                                   bewijs=BEWIJS_KANAAL_ZEGT_VERKOCHT)
 
     return {"status": "ok"}
 
