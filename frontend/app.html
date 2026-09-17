@@ -6493,6 +6493,7 @@ function editItem(id) {
   resetPhotoUpload(item.photo_urls || []);
   document.getElementById('crosslist-group').style.display = 'none';
   document.getElementById('save-btn').textContent = 'Save';
+  _bewerkBeginstand = leesItemFormulier();
   document.getElementById('modal-add').style.display = 'flex';
 }
 
