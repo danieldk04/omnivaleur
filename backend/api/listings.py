@@ -244,6 +244,50 @@ def mark_listing_active(body: dict, user_id: str = Depends(get_current_user)):
     if listing_url and not listing_id:
         listing_id = _parse_listing_id(platform, listing_url)
 
+    # EEN KANAALICOON AANKLIKKEN IS GEEN PLAATSEN (17-09-2026, Johan Kist).
+    #
+    # Johan klikte op 14-09 bij 23 gitaren elk grijs icoon aan en bevestigde
+    # telkens "Mark this item as listed on X?". Hij dacht dat hij plaatste. Hier
+    # werden zo 83 rijen op actief gezet zonder advertentie, ook op eBay en
+    # Shopify die hij nooit had gekoppeld. Het dashboard toonde alles als live,
+    # echt plaatsen naar die kanalen gebeurde niet meer, verwijderopdrachten
+    # faalden elke nacht en er ging elk half uur een Vinted-scan de mist in.
+    #
+    # Het dashboard vraagt nu eerst of hij wil plaatsen. Maar een oude kopie van
+    # de pagina in iemands browser doet dat niet, dus weigert de server hier zelf:
+    #   1. eBay/Shopify zonder koppeling: daar kan Omnivaleur niets plaatsen,
+    #      verwijderen of volgen, dus "staat online" is daar nooit waar te maken;
+    #   2. geen herkenbare advertentielink én geen enkel spoor van een plaatsing.
+    #      Een spoor is: een eerdere of lopende poging (pending, queued, error,
+    #      relisting), een open plaatsopdracht, of een rij met advertentienummer.
+    #      Dan blijven een vastgelopen publicatie afsluiten, "het staat er wél"
+    #      bij een mislukte publicatie en zelf herplaatsen gewoon werken.
+    naam = _KANAALNAAM.get(platform, platform)
+    from backend.services.crosslist import API_PLATFORMS
+    if platform in API_PLATFORMS:
+        gekoppeld = (db.table("platform_credentials").select("id")
+                     .eq("user_id", user_id).eq("platform", platform).limit(1).execute().data)
+        if not gekoppeld:
+            raise HTTPException(status_code=422, detail=(
+                f"{naam} isn't connected to Omnivaleur, so nothing can be listed or tracked there. "
+                f"Connect {naam} under Platforms first."))
+
+    existing = (db.table("listings").select("id,status,platform_listing_id")
+                .eq("item_id", item_id).eq("platform", platform).execute())
+    if not listing_id:
+        spoor = any(r.get("platform_listing_id") or r.get("status") in _PLAATSING_BEZIG
+                    for r in (existing.data or []))
+        if not spoor:
+            spoor = bool(db.table("jobs").select("id")
+                         .eq("user_id", user_id).eq("item_id", item_id).eq("platform", platform)
+                         .eq("action", "create").in_("status", ["pending", "claimed"])
+                         .limit(1).execute().data)
+        if not spoor:
+            raise HTTPException(status_code=422, detail=(
+                f"That isn't a link to a {naam} advert. Paste the link to your advert on {naam}, "
+                f"or use Publish to list it there." if listing_url else
+                f"Paste the link to your advert on {naam}. Not on {naam} yet? Use Publish to list it there."))
+
     now = datetime.now(timezone.utc).isoformat()
     link_fields: dict = {}
     if listing_url:
