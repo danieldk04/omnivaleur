@@ -1664,8 +1664,8 @@
       // één keer geprobeerd, meteen na de prijs. Tekent Vinted het veld pas later
       // (het hangt aan de categorie), dan vond die ene poging niets en stond het
       // veld bij het plaatsen leeg: "Vul je staat in om verder te gaan". Bij Johan
-      // zes van de acht gitaren, bij De Juiste Toon drie keer. Maat en kleur werden
-      // hier al opnieuw geprobeerd; de staat nooit.
+      // zes gitaren op één middag, bij twee andere verkopers vier keer. Maat en
+      // kleur werden hier al opnieuw geprobeerd; de staat nooit.
       const condEl  = qs('input[data-testid="category-condition-single-list-input"]');
 
       const missing = [];

@@ -79,8 +79,8 @@
       send("JOB_DONE", {});
     } else {
       await fillForm(item);
-      const { id, url } = await publishAndCapture();
-      send("JOB_DONE", { platform_listing_id: id, platform_listing_url: url });
+      const { id, url, bevestigd } = await publishAndCapture(item);
+      send("JOB_DONE", { platform_listing_id: id, platform_listing_url: url, bevestigd });
     }
   } catch (e) {
     send("JOB_ERROR", null, String(e)); // tab stays open for manual recovery
@@ -375,7 +375,7 @@
   }
 
   // Click through FB's "Next" → "Publish" and capture the resulting item URL.
-  async function publishAndCapture() {
+  async function publishAndCapture(item) {
     // VERIFIED live 2026-07: FB's Volgende/Next button has BOTH matching textContent
     // AND an identical aria-label ("Volgende" + aria-label="Volgende"). The old
     // version concatenated the two sources into one string before testing
@@ -384,38 +384,101 @@
     // fillForm's work was thrown away, and the whole publish attempt died here
     // with a misleading "layout changed?" error (or hung, on the version that
     // didn't throw). Test each source independently instead.
+    const knopMet = (re) => [...document.querySelectorAll('[role="button"], button, [aria-label]')]
+      .find((b) => {
+        if (!isVisible(b)) return false;
+        const text = (b.textContent || "").trim();
+        const aria = (b.getAttribute("aria-label") || "").trim();
+        return re.test(text) || re.test(aria);
+      });
     const clickByText = (re) => {
-      const btn = [...document.querySelectorAll('[role="button"], button, [aria-label]')]
-        .find((b) => {
-          if (!isVisible(b)) return false;
-          const text = (b.textContent || "").trim();
-          const aria = (b.getAttribute("aria-label") || "").trim();
-          return re.test(text) || re.test(aria);
-        });
+      const btn = knopMet(re);
       if (btn) { btn.click(); return true; }
       return false;
     };
 
     // FB Marketplace has a "Next"/"Volgende" step before "Publish"/"Publiceren".
     if (clickByText(/^(volgende|next)$/i)) await sleep(1800);
-    if (!clickByText(/^(publiceren|publish)$/i)) throw new Error("Publish/Volgende button not found (Facebook layout changed?)");
+    const publiceer = knopMet(/^(publiceren|publish)$/i);
+    if (!publiceer) throw new Error("Publish/Volgende button not found (Facebook layout changed?)");
+    // EEN UITGESCHAKELDE KNOP IS GEEN PUBLICATIE (17-09-2026, Johan Kist). Facebook
+    // houdt Publiceren uitgeschakeld zolang er een verplicht veld leeg is. Klikken
+    // doet dan niets, en hieronder werd dat na 15 seconden toch "klaar".
+    if (publiceer.getAttribute("aria-disabled") === "true" || publiceer.disabled) {
+      throw new Error("Facebook did not publish this listing: its Publish button stayed disabled, "
+        + "which means a required field is still empty" + klachtenFb() + ". Nothing was published.");
+    }
+    publiceer.click();
 
     // VERIFIED live (NL, 2026-07): after publishing FB does NOT land on the new
     // item page — it redirects to "Your listings" (/marketplace/you/selling), and
     // the fresh listing sits in an "in review" state with no public item URL yet.
-    // So treat the redirect AWAY from /create/item (to /you/selling or, when FB
-    // does expose it, /item/{id}) as the success signal, and only capture the id
-    // if the item URL actually appears. Waiting for /item/{id} unconditionally used
-    // to burn the full timeout and always return null.
-    const deadline = Date.now() + 15000;
+    //
+    // ALLEEN WEG VAN HET FORMULIER TELT ALS GEPUBLICEERD (17-09-2026, Johan Kist).
+    // Hier stond: wacht 15 seconden, en is er niets gebeurd, meld dan toch "klaar"
+    // zonder nummer. Een geslaagde en een mislukte publicatie zagen er daardoor
+    // precies hetzelfde uit: Johan kreeg acht keer "klaar" en niemand kon zeggen
+    // of er iets op Facebook stond. Nu meldt dit alleen "klaar" als Facebook echt
+    // van het formulier wegging, met `bevestigd` erbij; blijft het formulier
+    // staan, dan is het een fout met wat Facebook er zelf over zegt.
+    const deadline = Date.now() + 45000;
     while (Date.now() < deadline) {
       const m = location.href.match(/\/marketplace\/item\/(\d+)/);
-      if (m) return { id: m[1], url: `https://www.facebook.com/marketplace/item/${m[1]}` };
-      if (/\/marketplace\/you\/selling/.test(location.href)) break; // published, no public id yet
+      if (m) return { id: m[1], url: `https://www.facebook.com/marketplace/item/${m[1]}`, bevestigd: "advertentiepagina" };
+      if (/\/marketplace\/you\/selling/.test(location.href)) {
+        const gevonden = await idOpEigenAdvertenties(item && item.title);
+        return gevonden
+          ? { id: gevonden, url: `https://www.facebook.com/marketplace/item/${gevonden}`, bevestigd: "jouw-advertenties" }
+          : { id: null, url: "https://www.facebook.com/marketplace/you/selling", bevestigd: "jouw-advertenties" };
+      }
+      if (/\/checkpoint|\/privacy\/consent/.test(location.href)) {
+        throw new Error("Facebook asked for a security check or consent right after Publish, so this "
+          + "listing was not confirmed. Complete that check in Facebook, then look at Marketplace > "
+          + "Your listings before publishing again.");
+      }
       await sleep(500);
     }
-    // Published (happy path) but FB gave us no item id/URL to store.
-    return { id: null, url: null };
+    throw new Error("Facebook did not confirm this listing: 45 seconds after clicking Publish the "
+      + "form was still open" + klachtenFb() + ". It is probably not on Marketplace. Check Marketplace > "
+      + "Your listings before publishing again, so it doesn't end up there twice.");
+  }
+
+  // Wat Facebook zelf zichtbaar over het formulier zegt (rode regels, meldingen).
+  function klachtenFb() {
+    const regels = [...document.querySelectorAll('[role="alert"], [aria-invalid="true"]')]
+      .filter(isVisible)
+      .map((e) => (e.getAttribute("aria-label") || e.textContent || "").trim())
+      .filter((t) => t && t.length < 160);
+    const uniek = [...new Set(regels)].slice(0, 4);
+    return uniek.length ? ` (Facebook says: ${uniek.join(" | ")})` : "";
+  }
+
+  // Het nummer van de net geplaatste advertentie, als "Jouw advertenties" er een
+  // link naar toont. Alleen een kaart waarin de titel staat telt; geen titel of
+  // geen link betekent geen nummer, nooit een gok.
+  async function idOpEigenAdvertenties(titel) {
+    const kern = normApos(String(titel || "")).trim().toLowerCase().slice(0, 40);
+    if (!kern) return null;
+    const tot = Date.now() + 8000;
+    while (Date.now() < tot) {
+      for (const a of document.querySelectorAll('a[href*="/marketplace/item/"]')) {
+        const m = (a.getAttribute("href") || "").match(/\/marketplace\/item\/(\d+)/);
+        if (!m) continue;
+        let kaart = a;
+        for (let i = 0; i < 6 && kaart; i++, kaart = kaart.parentElement) {
+          // Omvat dit blok al een tweede advertentie, dan is het de lijst en niet
+          // meer de kaart: dan hoort de titel die we erin zien misschien bij een
+          // ander. Stoppen, anders koppelen we het verkeerde nummer.
+          const nummers = new Set([...kaart.querySelectorAll('a[href*="/marketplace/item/"]')]
+            .map((x) => ((x.getAttribute("href") || "").match(/\/marketplace\/item\/(\d+)/) || [])[1])
+            .filter(Boolean));
+          if (nummers.size > 1) break;
+          if (normApos(kaart.textContent || "").toLowerCase().includes(kern)) return m[1];
+        }
+      }
+      await sleep(500);
+    }
+    return null;
   }
 
   // Best-effort delete. VERIFIED live (NL, 2026-07): because publish rarely yields

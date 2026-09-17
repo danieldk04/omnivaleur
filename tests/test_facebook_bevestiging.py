@@ -22,7 +22,7 @@ sys.path.insert(0, str(ROOT))
 
 from backend.api import jobs as nieuw  # noqa: E402
 
-VOOR_DE_REPARATIE = "dcddf2e6"
+VOOR_DE_REPARATIE = "48a9c4b9"
 
 
 def _oude_module():

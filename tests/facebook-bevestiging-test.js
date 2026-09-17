@@ -16,7 +16,7 @@ const { execSync } = require("child_process");
 const ROOT = path.join(__dirname, "..");
 // Vastgezet op de laatste versie van vóór de reparatie. "HEAD" zou na de commit
 // de nieuwe code zijn, en dan vergelijkt de proef zichzelf.
-const VOOR_DE_REPARATIE = "dcddf2e6";
+const VOOR_DE_REPARATIE = "48a9c4b9";
 
 const NIEUW = fs.readFileSync(path.join(ROOT, "extension/content/facebook.js"), "utf8");
 const OUD = execSync(`git show ${VOOR_DE_REPARATIE}:extension/content/facebook.js`, { cwd: ROOT }).toString();
