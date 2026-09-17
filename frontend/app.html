@@ -8636,7 +8636,9 @@ const VERVANGBAAR_KANAAL = ['marktplaats', '2dehands', 'vinted'];
 
 async function meldAlLive(itemId, alLive, kop) {
   const naam = r => PLATFORM_LABELS[r.platform] || r.platform;
-  const kan = itemId ? alLive.filter(r => VERVANGBAAR_KANAAL.includes(r.platform)) : [];
+  // vervangbaar === false: de server zag een zakelijk account, en daar kan
+  // vervangen niet. Dan niet vragen maar gewoon zeggen waarom (Johan Kist).
+  const kan = itemId ? alLive.filter(r => VERVANGBAAR_KANAAL.includes(r.platform) && r.vervangbaar !== false) : [];
   const rest = alLive.filter(r => !kan.includes(r));
   if (rest.length) {
     alert(kop + `Not published:\n`
