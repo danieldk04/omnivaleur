@@ -540,6 +540,19 @@ async def refresh_listing(item_id: str, platform: str, user_id: str, strategy: s
     if platform not in REFRESH_CAPABLE_PLATFORMS:
         raise RefreshError(f"Refresh isn't available for {platform} yet")
 
+    # ZAKELIJK ACCOUNT: VERVANGEN KAN DAAR NIET (17-09-2026, Johan Kist).
+    # Herplaatsen begint met weghalen, en dat gaat via het persoonlijke overzicht
+    # "Mijn advertenties". Bij een zakelijk account (Admarkt/Pro) is dat overzicht
+    # leeg, dus die verwijdering mislukt altijd. De bijbehorende plaatsing wordt
+    # dan terecht overgeslagen (anders stond hij er twee keer), maar de verkoper
+    # kreeg wel "vervangen" aangeboden, rode meldingen en een advertentie die
+    # niets veranderde. Johan klikte het die middag drie keer aan.
+    # Hier en niet in het scherm: dit dekt ook het automatisch herplaatsen en
+    # een dashboard dat nog een oude versie open heeft.
+    if strategy == "relist" and platform in ("marktplaats", "2dehands"):
+        if await zakelijk_account(db, user_id, platform):
+            raise RefreshError(melding_zakelijk_vervangen(platform))
+
     # Eerst: kunnen we deze advertentie straks überhaupt terugzetten? Zo niet,
     # dan halen we hem ook niet weg. Zie ontbreekt_voor_herplaatsen.
     # NU OOGSTEN, WANT STRAKS IS DE PAGINA WEG.
