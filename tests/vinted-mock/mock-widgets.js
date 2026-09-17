@@ -31,8 +31,14 @@
   //   nocommit   — clicking a colour never registers at all
   //   wipe       — Vinted re-renders once and empties the colour again
   //   list       — the colour picker renders as a checkbox LIST, not a grid
+  //   staatlaat  — het staat-veld verschijnt pas 4 seconden nadat de categorie
+  //                gekozen is. Zo liep het bij Johan Kist (17-09-2026): Vinted
+  //                tekende het veld te laat voor de ene poging van de extensie,
+  //                en het formulier ging weg met "Vul je staat in".
   const MODE = new URLSearchParams(location.search).get("mode") || "";
   window.__mode = MODE;
+  const staatRij = () => T('[data-testid="category-condition-single-list-input"]').closest(".row");
+  if (MODE === "staatlaat") staatRij().style.display = "none";
 
   const panelOf = {
     colour: "#colour-panel", material: "#material-panel", condition: "#condition-panel",
