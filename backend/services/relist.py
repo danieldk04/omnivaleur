@@ -342,6 +342,27 @@ class RefreshError(Exception):
     pass
 
 
+async def zakelijk_account(db, user_id: str, platform: str) -> bool:
+    """Is dit een zakelijk account op Marktplaats of 2dehands? Alleen "ja" als we
+    het op zijn eigen advertentiepagina zagen staan; "weet niet" telt als nee, dan
+    blijft alles werken zoals het deed. Zie _verkoper_soort in backend/api/jobs.py."""
+    if platform not in ("marktplaats", "2dehands"):
+        return False
+    try:
+        from backend.api.jobs import _verkoper_soort
+        return (await naast_de_lus(lambda: _verkoper_soort(db, user_id, platform))) == "TRADER"
+    except Exception as e:  # noqa: BLE001 — twijfel mag nooit iets blokkeren
+        logger.warning("kon accountsoort niet nakijken voor %s/%s: %s", user_id, platform, e)
+        return False
+
+
+def melding_zakelijk_vervangen(platform: str) -> str:
+    site = {"marktplaats": "Marktplaats", "2dehands": "2dehands"}.get(platform, platform)
+    return (f"Your {site} account is a business account. Omnivaleur can't take adverts "
+            f"offline on a business account, so it can't replace this one either. Nothing "
+            f"was changed: the advert stays live as it is. To change it, edit it on {site} itself.")
+
+
 # Wat een advertentie MOET hebben voordat we hem durven weg te halen.
 #
 # WAAROM DIT ER IS (28-08-2026, Jaap). Herplaatsen is twee stappen: eerst weg
