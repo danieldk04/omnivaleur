@@ -2385,6 +2385,9 @@ def report_job_progress(job_id: str, body: dict, user_id: str = Depends(get_curr
     return {"ok": True}
 
 
+FB_EIGEN_ADVERTENTIES = "https://www.facebook.com/marketplace/you/selling"
+
+
 async def _rond_publicatie_af(db, job: dict, body: dict) -> None:
     """Schrijf het resultaat van een geslaagde publicatie naar `listings`.
 
