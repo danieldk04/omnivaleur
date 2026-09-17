@@ -132,6 +132,33 @@ def _kopstuk_versie(waarde) -> tuple[int, int, int] | None:
     m = re.fullmatch(r"\s*(\d{1,3})\.(\d{1,3})\.(\d{1,4})\s*", str(waarde or ""))
     return (int(m.group(1)), int(m.group(2)), int(m.group(3))) if m else None
 
+
+def _oude_kopie_leest_zakelijk_als_uitgelogd(db, user_id: str, job: dict,
+                                            versie: tuple[int, int, int] | None) -> bool:
+    """Deze plaatsopdracht NIET aan deze kopie geven: zij zou hem kapot oordelen.
+
+    GEMETEN 16-09-2026 (De Juiste Toon). Zijn 2dehands-account is zakelijk
+    ("sellerType":"TRADER" op zijn eigen advertentie). Naast zijn bijgewerkte
+    browser draaide Edge nog 1.0.327, terwijl de Web Store al 1.0.336 had. Die
+    kopie doet vóór elke create/content_refresh op Marktplaats en 2dehands een
+    inlogcontrole op het persoonlijke overzicht, en dat geeft bij een zakelijk
+    account 401. Dus: "niet ingelogd", de rij twintig minuten op pauze, en een
+    lederhose die net klaargezet was geannuleerd, zonder dat de opdracht ooit is
+    geprobeerd. Gerepareerd in 1.0.332, maar een kopie die niet bijwerkt blijft
+    het doen, elke ronde weer.
+
+    Krijgt zo'n kopie de opdracht niet, dan doet ze die controle ook niet. De
+    opdracht blijft 'pending' voor een kopie die het wel kan. Onbekende versie of
+    onbekend accounttype: gewoon uitdelen, zoals overal in dit bestand.
+    """
+    if job.get("action") not in ("create", "content_refresh"):
+        return False
+    if job.get("platform") not in ("marktplaats", "2dehands"):
+        return False
+    if versie is None or versie >= MINIMALE_ZAKELIJK_VERSIE:
+        return False
+    return _verkoper_soort(db, user_id, job["platform"]) == "TRADER"
+
 # The optional import_candidates snapshot columns, dropped together if the
 # migration hasn't run (see _store_scan_results).
 RICH_KEYS = ("photo_urls", "description", "brand", "size", "condition",
