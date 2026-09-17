@@ -17,6 +17,300 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ---
 
+## facebook-marketplace-beta
+
+*17-09-2026 — "Facebook Marketplace is a beta best-effort extension platform; selectors unverified, account-ban risk"*
+
+Facebook Marketplace was added (2026-07-18) as a **beta, best-effort** extension platform, wired end-to-end like Vinted:
+- extension: `extension/content/facebook.js` (create happy-path + best-effort delete), `background.js` create/delete URLs + `EXTENSION_PLATFORMS`, manifest host-permission + content-script match (shipped in v1.0.102)
+- backend: `crosslist.py` → `EXTENSION_PLATFORMS`, `_PLATFORM_REQUIRED["facebook"] = ["category"]`, `_EXTENSION_DELIST_PLATFORMS`
+- frontend `app.html`: platform lists, labels, `📘` icon, margin calc, filter, mark-active, publish checkboxes, plus `BETA_PLATFORMS` risk warnings
+
+**Verified live (2026-07-18, NL account, read-only inspection):**
+- The create form (`/marketplace/create/item`) is fully localised. Required fields carry Dutch aria-labels: **Titel, Prijs, Categorie, Staat**; flow button is **Volgende** (not "Publish" — final step is "Publiceren"). "Staat" options: **Nieuw / Gebruikt - zo goed als nieuw / Gebruikt - in goede staat / Gebruikt - in redelijke staat**. facebook.js now matches NL+EN for all of these (v1.0.104).
+- FB gates the form behind a one-time **DMA/GDPR consent** (`/privacy/consent?flow=fb_dma_marketplace`) and can show `/checkpoint`. facebook.js loads on those URLs too and reports a clear job error instead of hanging (v1.0.103).
+
+**Selector mechanics (verified live, v1.0.105 — this is the crux):**
+- Titel/Prijs `<input>` and Categorie/Staat comboboxes have **NO aria-label/placeholder**. Their accessible name comes from the **wrapping `<label>`** (`<label><span>Titel</span><input></label>`). So field-finding MUST read `el.closest('label').textContent`, not aria-label. (First symptom of getting this wrong: "only condition fills" — because Staat's own matching happened to work while title/price/category didn't.)
+- Category is a **hierarchical tree of plain clickable `<div>`s (role=null), no free-text search** — not role=option. Match option nodes by exact text across a broad selector (div/span/li/a), innermost-first, then click. The flat clothing leaves **"Herenkleding en -schoenen" / "Dameskleding en -schoenen"** are directly selectable; map by gender. Generic fallback "Kleding en accessoires".
+- `typeInto` via the native value setter + input/change event sticks in FB's React inputs (verified).
+- **Price is INTEGER-ONLY** (verified live, NL). The field rounds whatever you type (29,50→€30, 19,95→€20, 1234,56→€1235) AND reads a "." as a thousands separator ("29.99"→2999 — the original "prijs klopt niet" bug). Fix (v1.0.106): type the rounded whole-euro amount with NO separator (`String(Math.round(price))`) — plain "30"/"1235" render as "€ 30"/"€ 1.235".
+- **Beschrijving is a `<textarea>` that only mounts AFTER a category is picked** (it's a clothing-specific field, alongside Grootte/Merk). A single findField right after the condition combo could miss it → description stayed empty while everything else filled. Fix (v1.0.106): poll (`waitForField`) until it mounts.
+- **Photo upload mechanism works** via DataTransfer: set the image `input[type=file]` (first of 3 — accept `image/*`, the others are video and a generic `file`), `.files`, dispatch change → FB renders a `blob:` preview `<img>`. Confirm success by waiting for a `blob:` img (NOT scontent — FB's own profile/chrome imgs are scontent). If photos were provided but no blob preview appears, throw (likely cross-origin fetch block on the image host) instead of publishing photoless. Whether real Supabase photo_urls fetch cleanly from facebook.com context is still UNconfirmed end-to-end.
+
+**Category mapping — non-clothing gap fixed (v1.0.107, 2026-07-19):**
+- FB has NO numeric category IDs; it's a flat click-list matched by exact visible text. `fbCategoryCandidates()` originally handled ONLY clothing (men/women), so every `games ...` / `electronics ...` item (Daniel's whole non-clothing catalog) fell through to "Kleding en accessoires" — wrong category + wrong (clothing) attribute fields. Fixed: non-clothing prefixes are now mapped BEFORE the gender logic.
+- **VERIFIED live (NL account, read-only DOM inspection of `/marketplace/create/item`):** FB top-level leaves that are directly selectable — **games → "Videogames"**, **electronics → "Elektronica en computers"** (both mount a Beschrijving field just like the clothing leaves; Videogames also mounts optional Platform/Genre/ESRB/Merk which we leave empty). Full top-level list also includes: Huis en tuin, Gereedschap, Meubels, Huishouden, Tuin, Apparaten, Amusement, Videogames, Boeken/films/muziek, Kleding en accessoires, Dameskleding en -schoenen, Herenkleding en -schoenen, Elektronica, Elektronica en computers, Mobiele telefoons, Speelgoed en spellen, Sport en buitenleven, Muziekinstrumenten, Antiek en verzamelobjecten, Voertuigen, Overig.
+- The create form loaded with NO consent gate this session (already granted on this account).
+
+**Publish + delete flow — VERIFIED end-to-end via a real test publish (NL account, 2026-07-19, item deleted right after):**
+- A full publish SUCCEEDED: photo (via canvas→File→DataTransfer, no external fetch) → Titel/Prijs(€5)/Categorie=Videogames/Staat/Beschrijving → **Volgende** advances to `/marketplace/create/item?step=audience` → **Publiceren**. So the two-step Volgende→Publiceren flow is real and works.
+- **Publish redirect (BUG fixed):** after Publiceren FB redirects to **`/marketplace/you/selling`**, NOT `/marketplace/item/{id}`, and the new listing sits "in beoordeling" with NO public item URL. The old `publishAndCapture` waited only for `/item/{id}` → burned the 15s timeout and always returned null. Fixed to treat the `/you/selling` redirect as success and capture an id only if one appears (usually none). Consequence: `platform_listing_id` is normally null, so delete jobs fall back to the `/you/selling` URL (see getDeleteUrl in background.js).
+- **Delete is a THREE-click flow (BUG fixed):** on `/you/selling` the card's "..." menu → **"Advertentie verwijderen"** → confirm **"Verwijderen"** → a SECOND survey **"Heb je dit artikel verkocht?"** (radio: Ja verkocht op FB / Ja ergens anders / Nee, niet verkocht / Ik geef liever geen antwoord) → **Volgende**. Old `deleteListingFb` (a) matched `/^verwijder/` which never hit "Advertentie verwijderen", (b) used the FIRST menu on the page (could delete the WRONG listing since /you/selling lists all items), and (c) skipped the survey step. Rewritten to scope to the card by exact title, match "verwijder" anywhere, and complete the survey. Delete VERIFIED to fully remove the listing (empty state after).
+- Photo upload via DataTransfer CONFIRMED working (blue test image rendered in thumbnail + preview). The blob:-preview check can be too fast; FB may render the thumbnail slightly later.
+
+**Fotobewijs — blob: bestaat NIET meer (v1.0.139, 2026-07-29, live geverifieerd):**
+- De create-pagina bevat **nul `<img>`-elementen** tot er een foto gekozen is. Zodra dat gebeurt uploadt FB direct naar zijn eigen CDN en rendert `scontent-*.fbcdn.net` met `alt="Advertentiefoto"`/`"Productfoto"`. Er is **geen `blob:`-preview** — de eerdere notitie hierboven klopt niet meer.
+- Dit brak alles: de Marktplaats-herschrijving van `uploadPhotos` (shared.js) gooit sinds v1.0.13x een fout als er geen thumbnail verschijnt, en zocht alleen naar `blob:`/MP/Vinted-hosts. Op Facebook wachtte hij dus 45s, gooide, en `fillForm` stierf **vóór het eerste veld** — de melding "er wordt niks ingevuld".
+- Fix: `uploadPhotos(urls, { thumbSelector })` accepteert nu een platform-eigen selector; facebook.js geeft `FB_PHOTO_THUMBS` mee. Matchen op `fbcdn.net` is veilig omdat de baseline nul is en uploadPhotos voor/na vergelijkt. `waitForPhotoPreview` is verwijderd (dubbelop).
+- Live bevestigd na de fix: foto + Titel + Prijs (€ 30) + Categorie (Videogames) + Staat + Beschrijving vullen allemaal. Selectors voor alle velden zijn dus nog steeds goed — het zat puur in de fotocontrole.
+- **Les:** `shared.js` is gedeeld met MP/2dehands/Vinted. Elke verscherping daar (throw i.p.v. return false, hardere verificatie) kan Facebook stilletzwijgend slopen, want FB's DOM lijkt op geen van de andere. Draai na elke shared.js-wijziging de veldcontrole op het live FB-formulier.
+
+**Key caveats / How to apply:**
+- A full **dry-run of field-filling** (title/price/category/condition) passed on the live form, but an actual **publish (Volgende→Publiceren) and the post-publish URL capture + delete flow were NOT executed** — still unproven. Pin any remaining issues from `[Omnivaleur]` console output of a real publish.
+- Facebook obfuscates markup (rotating class names) and detects automation — still best-effort, still account-ban risk.
+- Real **account-ban risk** for the seller — this is surfaced in the UI as an explicit beta warning; keep that warning whenever touching this platform. Advise a separate FB account.
+- Facebook is create-first; auto-delist on sale is wired but best-effort. No translation (uses the item's own NL text). No per-platform `price_facebook` column — falls back to base `price`.
+- See "extension-release-bump-version" and "extension-version-floor" for the build/version rules, and "deploy-pipeline" for going live.
+
+**"Klaar" zonder bevestiging (17-09-2026, Johan Kist, opgelost in 1.0.338).**
+`publishAndCapture` gaf na 15 seconden ALTIJD `{id:null}` terug, ook als Facebook
+op het formulier bleef staan of Publiceren uitgeschakeld was. Johan kreeg acht keer
+"done" en de server zette elke rij op rood ("returned no platform_listing_id"),
+ook de echte: niemand kon geslaagd van mislukt onderscheiden. Sinds 1.0.338:
+uitgeschakelde knop of 45 s op het formulier = JOB_ERROR met wat Facebook zelf
+zegt; alleen weg van het formulier (`/you/selling` of `/item/{id}`) = JOB_DONE met
+`bevestigd`. Op `/you/selling` wordt het nummer uit de kaart met de titel gehaald,
+en alleen uit een blok met precies één advertentielink (anders is het de lijst).
+De server (`_rond_publicatie_af`) zet Facebook met `bevestigd` op active zonder
+nummer; zonder `bevestigd` (oude kopie) rood met een melding die zegt wat te doen.
+Van 15-08 tot 17-09-2026 had verder niemand via ons naar Facebook geplaatst:
+elke Facebook-regel in de database was van Johan. Proef:
+`tests/facebook-bevestiging-test.js`, `tests/test_facebook_bevestiging.py`.
+Nog niet live gezien: of `/you/selling` na publiceren een link per kaart toont.
+
+---
+
+## vinted-omschrijving-2000-en-staat
+
+*17-09-2026 — "Vinted weigert omschrijvingen boven 2000 tekens en 'Vul je staat in' kwam van één enkele invulpoging; beide opgelost 17-09-2026"*
+
+Gemeten 17-09-2026 bij Johan Kist (gitaren, omschrijvingen van Marktplaats tot 4219
+tekens) en eerder bij De Juiste Toon en een derde verkoper.
+
+**2000 tekens.** "Gebruik niet meer dan 2000 tekens voor je beschrijving". Vinted
+krijgt de vertaalde tekst, dus de grens wordt bewaakt NA `_zet_taal_goed`, bij het
+uitdelen van de opdracht (`_vinted_tekst_binnen_grens` in backend/api/jobs.py, naast
+`_haal_links_eruit`). Dat dekt elk pad dat een opdracht klaarzet en werkt meteen
+zonder nieuwe extensie. Voorzichtig geteld: regeleinde als 2, emoji als 2. Afgebroken
+op het laatste regel- of zinseinde, geen losse tussenkop onderaan, slottekst blijft
+staan. Het artikel zelf blijft heel. Langste tekst die Vinted bij ons aannam: 1904.
+
+**"Vul je staat in".** De staat werd één keer geprobeerd, direct na de prijs, met 3 s
+wachten. Tekent Vinted het veld later (het hangt aan de categorie), dan bleef het
+leeg en deed de eindcontrole (`repairEmptyFieldsVinted`) niets, want die keek alleen
+naar titel, tekst, prijs, maat en kleur. Sinds 1.0.338 hoort de staat erbij.
+Bewezen in `tests/vinted-mock` met `?mode=staatlaat` (veld verschijnt 7 s na de
+prijs): oude code "REJECTED: condition", nieuwe code "condition (herstel): ok" en
+geplaatst. De diagnoseregels "Attribute fields: (leeg)", "Price field: LEEG" en
+"Photos the form holds: 0" in die foutmelding zijn onbetrouwbaar: in de proef
+stonden prijs en foto's er gewoon.
+
+Niet live bewezen: of Vinted bij een gitaar ooit een andere reden heeft voor een lege
+staat dan te laat tekenen. Kijk na 1.0.338 bij de volgende "Vul je staat in" of de
+stap "condition (herstel)" liep. Zie "vinted-tabblad-klok-stilstand" en
+"voor-en-na-proef-mag-geen-head-gebruiken".
+
+---
+
+## voor-en-na-proef-mag-geen-head-gebruiken
+
+*17-09-2026 — "Een voor-en-na-test die de oude code uit `git show HEAD:` haalt bewijst na de eerste commit niets meer en wordt rood"*
+
+De huisregel is: haal de oude versie erbij en laat die onder dezelfde
+omstandigheden falen, anders weet je alleen dat de nieuwe code werkt. Verschillende
+tests doen dat met `git show HEAD:<bestand>`.
+
+**Dat werkt precies één keer.** Zolang de reparatie nog niet gecommit is, is HEAD
+inderdaad de oude code. Zodra ze gecommit is — en met de auto-push-hook is dat
+binnen seconden, onder een titel als "auto: update shared.js" — is HEAD de nieuwe
+code en vergelijkt de voor-proef de reparatie met zichzelf. Alle "oude code:
+…"-regels worden dan rood terwijl er niets kapot is.
+
+Zo lag `tests/prijs-blijft-op-het-formulier-test.js` om met vier rode regels,
+terwijl blok 2 tot en met 4 gewoon groen waren. Dat is het herkenningsteken:
+alleen het VOOR-blok faalt, het NA-blok niet.
+
+**Hoe hiermee om te gaan:** zet in de voor-proef een vast commitnummer, niet HEAD.
+De commit die de reparatie deed is `X`, dus de code van vlak ervoor is `X^`. Dat
+nummer verandert nooit meer. `tests/vinted-inlogdomein-test.js` doet het al zo en
+legt het ook uit.
+
+Loopt een van deze tests om, dan is dat dus eerst een vraag en pas daarna een
+storing — net als bij "extensie-stempel-test-loopt-achter-op-het-scherm".
+De tests met `--oud` als vlag (`process.argv.includes("--oud")`) zijn hier veilig:
+die draaien de HEAD-variant alleen als je er zelf om vraagt.
+Zie ook "omnivaleur-altijd-bewijzen".
+
+**Hetzelfde onderwerp, eigen bestand** (samengevoegd in de index op 13-09-2026):
+- "extensie-stempel-test-loopt-achter-op-het-scherm" — functies op naam uit app.html knippen breekt zodra dat scherm er een aanroept
+
+**Ook `X^` is niet genoeg als de hook meeschrijft (17-09-2026).** De auto-push-hook
+commit en pusht elke Edit/Write binnen seconden, dus een reparatie van drie
+bestanden wordt tien losse "auto: update"-commits, en de reparatie staat al live
+op Railway voordat de proef draait. Zet de voor-versie dan op de laatste commit
+van VÓÓR je eerste wijziging van deze sessie (kijk met `git log --name-only` waar
+je eigen auto-commits beginnen). Bestanden die je via Bash of een script wijzigt
+neemt de hook niet mee; die moet je zelf committen.
+
+---
+
+## admarkt-zakelijke-marktplaats
+
+*17-09-2026 — Zakelijke Marktplaats-verkopers beheren hun advertenties in Admarkt; het persoonlijke overzicht is dan leeg en de scan vindt nul*
+
+Een **zakelijk** Marktplaats-account beheert zijn advertenties op
+`admarkt.marktplaats.nl/advertisements`, niet op de persoonlijke
+"Mijn advertenties"-pagina die de scan leest. Die pagina is dan gewoon leeg.
+Gemeten bij Egbert Brouwer (Papa's Plectrums, plectrums/muziekmerchandise):
+**5.540 advertenties in Admarkt tegenover 0 in het gewone overzicht.**
+
+De Admarkt-lijst toont per rij: miniatuur, titel, datum, CPC, biedstrategie,
+pagina, budget, kliks, klikratio — **geen prijs en geen omschrijving**. Die
+moeten dus alsnog van de advertentiepagina zelf komen, net als bij de gewone
+import.
+
+**Twee wegen, en de dure is niet nodig gebleken.**
+1. *Officieel:* de iCAS Sellside-API (`admarkt.marktplaats.nl/api/sellside/`,
+   OAuth2 authorization code, kan ook namens andere verkopers werken). Klinkt
+   perfect, maar: "To request a client id and secret please ask your contact at
+   the respective tenant." Er is geen aanmeldknop — Marktplaats moet je die
+   sleutels persoonlijk geven. Dat is een zakelijke horde, geen technische.
+2. *Wat gebouwd is (extensie 1.0.201):* de pagina in een tabblad laden en lezen
+   wat hij zelf ophaalt.
+
+**Gemeten op Daniels eigen (lege) Admarkt-account, 16-08-2026** — hij heeft
+Marktplaats Pro zonder advertenties, en dat is genoeg om de pagina te bestuderen:
+- De site is een React-SPA met een **catch-all**: élk onbekend pad geeft
+  **HTTP 200 met de gewone pagina** terug in plaats van 404. Raden naar een
+  endpoint "lukt" dus altijd en levert nooit iets op. De controle op
+  `content-type: json` is daarom geen nettigheid maar de énige manier om te zien
+  dat er niets is. `/api/v2/{advertisements,listings,ads,campaigns,account}` gaven
+  allemaal 200 text/html.
+- De pagina haalt **`/csrf-token`** op → de advertentielijst kan een POST zijn,
+  en die valt met een eigen GET nooit na te doen.
+- Met 0 advertenties doet de pagina **geen enkel** gegevensverzoek voor de lijst.
+  Een leeg account kan de aanpak dus niet bewijzen, alleen ontkrachten.
+- Het datamodel is **campagne → listing** (`/campaign/{id}/listing/edit/{id}`);
+  "Alle advertenties" is een samenvoeging.
+
+**DE KOPPELING (gevonden en uitgeprobeerd op een live advertentie, 16-08-2026).**
+Admarkt praat **tRPC**: `GET /api/trpc/<procedure>?batch=1&input=<urlencoded json>`
+met `{"0": {…}}` als invoer, op de sessiecookie van de ingelogde verkoper.
+- `campaign.getAllCampaigns` → `{campaigns:[{id,title,status,…}], total}`.
+  Iedereen heeft er minstens één ("Campagne zonder titel").
+- `ad.getAds` met `{campaignId, pageToken?}` → `{ads, count, nextPageToken}`.
+- Advertentievelden: `id, title, images[], categoryId, status, dateCreated,
+  campaignId, links`. Foto's zitten in `images[].links` op meerdere maten,
+  **1024x1024** is de grootste; protocol-relatief, dus `https:` ervoor.
+- **Hoe je hier zoekt:** een onbekend PAD geeft 200 + de gewone pagina (nutteloos),
+  maar een onbekende PROCEDURE geeft netjes **404**. Dat is de oracle waarmee
+  `ad.getAds` gevonden is. De API noemt bovendien zelf de geldige veldnamen in
+  zijn foutmelding (zo bleek de dimensie `am:adID` te heten, niet `am:adId`).
+
+**Admarkt kent GEEN prijs en GEEN omschrijving.** Het zijn advertenties die naar
+de **eigen webwinkel** van de verkoper wijzen (`links.url`), niet naar een
+Marktplaats-advertentie. Een import levert dus titel + foto's + categorie op; de
+verkoper vult prijs en tekst zelf aan. Sla bewust **geen** `platform_listing_url`
+op — dat adres is de webwinkel en zou later de verkeerde pagina openen of
+verwijderen. Er valt om dezelfde reden ook niets te verrijken.
+
+**De meekijker (1.0.205) staat er nog als vangnet.**
+`content/admarkt_sniffer.js` draait op `document_start` in de **MAIN world**,
+aangemeld via `chrome.scripting.registerContentScripts` zodra de toestemming er
+is (executeScript is altijd te laat — dan heeft de app haar gegevens al binnen).
+Hij haakt `fetch` en `XMLHttpRequest` en bewaart json-antwoorden op
+`window.__omnivaleurVangst`. Methode, adres, sleutels en cookies kloppen dan per
+definitie. **Antwoorden worden geKLOOND, nooit uitgelezen** — lees je het
+origineel, dan is de body op voor de pagina zelf en breekt de site onder de
+gebruiker. Locales, csrf-token en html worden genegeerd.
+
+**Het API-adres wordt niet geraden maar waargenomen.** Ik heb geen zakelijk
+account en kan die pagina niet zien; een geraden endpoint was een gok geweest.
+`bgScanAdmarkt` leest daarom na het laden `performance.getEntriesByType("resource")`
+uit, haalt de data-verzoeken die de pagina zelf deed nog eens op met
+`credentials: "include"`, en zoekt in die antwoorden een array van objecten met
+een id- en een titel-veld. Wat gewerkt heeft komt terug in `meta.bron` en
+`meta.velden`, zodat het daarna hard vastgelegd kan worden. Mislukt het, dan
+meldt de fout wélke adressen zijn geprobeerd en wat ze gaven.
+
+**`optional_host_permissions`, nooit `host_permissions`.** Een update die een
+nieuwe vaste host-toestemming toevoegt zet Chrome bij **iedere** gebruiker de
+extensie stil tot hij hem accepteert. De schakelaar "Business account (Admarkt)"
+in de popup levert bovendien de gebruikersklik die `permissions.request` eist —
+vanuit een achtergrondscan kun je die toestemming niet vragen.
+
+**Vraag nooit een toestemming vanuit het uitklapvenster van de extensie.**
+Chrome sluit dat venster op het moment dat hij de vraag toont; de code die op
+het antwoord wacht verdwijnt mee en bij heropenen staat de schakelaar
+onveranderd uit. Voor de gebruiker lijkt de schakelaar dan klem te zitten — dat
+gebeurde in 1.0.201. De oplossing in 1.0.202: dezelfde `popup.html` openen in een
+tabblad (`?tab=1`) en `permissions.request` daar doen. **Gemeten werkend op
+15-08-2026:** tabblad opent, Chrome stelt de vraag, schakelaar blijft aan staan.
+
+**`calmModeToggle` in popup.html is een dode schakelaar** — hij schuift (pure
+CSS) maar er is geen enkele code die hem uitleest of opslaat; "calmMode" komt
+nergens voor in background.js. Calm mode heeft dus nooit gewerkt. Daniel weet
+het sinds 15-08-2026 en heeft het bewust geparkeerd.
+
+**BEWEZEN OP EEN ECHT ZAKELIJK ACCOUNT, 16-08-2026.** Egbert Brouwer (Papa's
+Plectrums, 5.540 advertenties) meldde "Ok nu is het gelukt" met extensie 1.0.206.
+Daarmee is de hele keten rond: schakelaar → toestemming → tRPC → import.
+De weg ernaartoe kostte vijf versies (1.0.201 t/m 1.0.206); wat elke ronde
+kostte was steeds hetzelfde soort fout — een aanname die stil faalde in plaats
+van te klagen.
+
+**Oudere aantekening, inmiddels achterhaald: de scan was ongetest op 15-08-2026** — alleen de toestemming
+is bewezen. Zie "extension-release-bump-version" en
+"marktplaats-category-ids".
+
+**2DEHANDS HEEFT ER OOK EEN (gemeten 10-09-2026).** In background.js stond jaren
+de aanname dat alleen Marktplaats een Admarkt heeft, met zoveel woorden in
+`mpEmptyScanReason`: "2dehands, dat geen Admarkt heeft". Onjuist.
+`https://admarkt.2dehands.be/` stuurt door naar de 2dehands-login met een eigen
+OAuth-console voor de Belgische tenant (`client_id=twhbe_console`, scopes
+`console_ro console_rw`); `admarkt.2ememain.be` landt op dezelfde login. Sinds
+1.0.316 is de hele Admarkt-lezer per kanaal: `ADMARKT_ORIGINS`, `admarktOrigin()`,
+en de meekijker wordt per console apart aangemeld (id `omnivaleur-admarkt` blijft
+ONGEWIJZIGD, anders krijgt iedereen die hem al heeft een tweede kopie).
+
+Twee dingen die daarbij anders zijn dan op Marktplaats:
+- De toestemming ligt op 2dehands al vast in het manifest via
+  `https://*.2dehands.be/*`, dus er is niets te vragen en geen schakelaar. Leun
+  daar niet blind op `permissions.contains`: die korte weg loopt via
+  `manifestDektOrigin()`, en alleen voor 2dehands, zodat de Marktplaats-weg (waar
+  `contains` tegelijk het opt-in-sein van de popup-schakelaar is) onaangeraakt
+  blijft.
+- Omdat er geen schakelaar is, mag een mislukte Admarkt-ronde op 2dehands geen
+  rode fout worden als de site zelf al zei dat het account nul advertenties heeft.
+  Anders wordt de stille afronding van 03-09-2026 weer ongedaan gemaakt.
+
+**Wat NIET gemeten kon worden:** of de procedurenamen `campaign.getAllCampaigns`
+en `ad.getAds` op de Belgische tenant hetzelfde heten. Credential-vrij is dat niet
+vast te stellen: daar zit de authenticatie VOOR de routering, dus elke procedure
+geeft 401, ook een verzonnen naam. Het 404-orakel uit deze notitie werkt daar dus
+alleen met een ingelogde sessie. Wijkt de naam af, dan meldt de scan wel precies
+welke procedure faalde en met welke code.
+
+**Hetzelfde onderwerp, eigen bestand** (samengevoegd in de index op 13-09-2026):
+- "admarkt-pro-mag-niet-geautomatiseerd" — Pro automatiseren mag uitsluitend via een erkende API-partner; beloof het een klant nooit
+- "admarkt-omschrijving-via-openbaar-mp" — Admarkt geeft geen prijs of tekst, de openbare zoek-API wel
+
+**Vervangen bij een zakelijk account kan niet, en de herkenning zag geïmporteerde
+accounts niet (17-09-2026, Johan Kist).** Herplaatsen begint met verwijderen via
+het persoonlijke overzicht, en dat is bij zakelijk leeg: de verwijdering mislukt
+altijd en de plaatsing wordt terecht overgeslagen. Johan kreeg in het
+publiceervenster toch "Replace that advert?" en klikte drie keer OK voor niets.
+`_verkoper_soort` keek alleen naar advertenties die WIJ plaatsten; wie alles
+importeerde bleef "weet niet". Nu ook de eigen actieve advertenties met nummer, en
+een lettertje voor het nummer telt niet mee (`a1528596781` in de zoek-API tegenover
+`1528596781` bij de import). Johan live: voor `None`, na `TRADER`. `refresh_listing`
+weigert vervangen bij TRADER (dekt ook automatisch herplaatsen en een oud
+dashboard) en het publiceervenster biedt het niet meer aan (`vervangbaar: false`).
+Proef: `tests/test_zakelijk_vervangen.py`.
+
+---
+
 ## vertaling-geeft-brontekst-terug
 
 *17-09-2026 — Haiku geeft een Engelse advertentietekst soms letterlijk onvertaald terug; dat is geen storing en geen leeg tegoed, en het alarm moet dat ook niet zeggen*
@@ -2090,149 +2384,6 @@ eerst of er een `.single()` in het spoor staat.
 
 ---
 
-## admarkt-zakelijke-marktplaats
-
-*10-09-2026 — Zakelijke Marktplaats-verkopers beheren hun advertenties in Admarkt; het persoonlijke overzicht is dan leeg en de scan vindt nul*
-
-Een **zakelijk** Marktplaats-account beheert zijn advertenties op
-`admarkt.marktplaats.nl/advertisements`, niet op de persoonlijke
-"Mijn advertenties"-pagina die de scan leest. Die pagina is dan gewoon leeg.
-Gemeten bij Egbert Brouwer (Papa's Plectrums, plectrums/muziekmerchandise):
-**5.540 advertenties in Admarkt tegenover 0 in het gewone overzicht.**
-
-De Admarkt-lijst toont per rij: miniatuur, titel, datum, CPC, biedstrategie,
-pagina, budget, kliks, klikratio — **geen prijs en geen omschrijving**. Die
-moeten dus alsnog van de advertentiepagina zelf komen, net als bij de gewone
-import.
-
-**Twee wegen, en de dure is niet nodig gebleken.**
-1. *Officieel:* de iCAS Sellside-API (`admarkt.marktplaats.nl/api/sellside/`,
-   OAuth2 authorization code, kan ook namens andere verkopers werken). Klinkt
-   perfect, maar: "To request a client id and secret please ask your contact at
-   the respective tenant." Er is geen aanmeldknop — Marktplaats moet je die
-   sleutels persoonlijk geven. Dat is een zakelijke horde, geen technische.
-2. *Wat gebouwd is (extensie 1.0.201):* de pagina in een tabblad laden en lezen
-   wat hij zelf ophaalt.
-
-**Gemeten op Daniels eigen (lege) Admarkt-account, 16-08-2026** — hij heeft
-Marktplaats Pro zonder advertenties, en dat is genoeg om de pagina te bestuderen:
-- De site is een React-SPA met een **catch-all**: élk onbekend pad geeft
-  **HTTP 200 met de gewone pagina** terug in plaats van 404. Raden naar een
-  endpoint "lukt" dus altijd en levert nooit iets op. De controle op
-  `content-type: json` is daarom geen nettigheid maar de énige manier om te zien
-  dat er niets is. `/api/v2/{advertisements,listings,ads,campaigns,account}` gaven
-  allemaal 200 text/html.
-- De pagina haalt **`/csrf-token`** op → de advertentielijst kan een POST zijn,
-  en die valt met een eigen GET nooit na te doen.
-- Met 0 advertenties doet de pagina **geen enkel** gegevensverzoek voor de lijst.
-  Een leeg account kan de aanpak dus niet bewijzen, alleen ontkrachten.
-- Het datamodel is **campagne → listing** (`/campaign/{id}/listing/edit/{id}`);
-  "Alle advertenties" is een samenvoeging.
-
-**DE KOPPELING (gevonden en uitgeprobeerd op een live advertentie, 16-08-2026).**
-Admarkt praat **tRPC**: `GET /api/trpc/<procedure>?batch=1&input=<urlencoded json>`
-met `{"0": {…}}` als invoer, op de sessiecookie van de ingelogde verkoper.
-- `campaign.getAllCampaigns` → `{campaigns:[{id,title,status,…}], total}`.
-  Iedereen heeft er minstens één ("Campagne zonder titel").
-- `ad.getAds` met `{campaignId, pageToken?}` → `{ads, count, nextPageToken}`.
-- Advertentievelden: `id, title, images[], categoryId, status, dateCreated,
-  campaignId, links`. Foto's zitten in `images[].links` op meerdere maten,
-  **1024x1024** is de grootste; protocol-relatief, dus `https:` ervoor.
-- **Hoe je hier zoekt:** een onbekend PAD geeft 200 + de gewone pagina (nutteloos),
-  maar een onbekende PROCEDURE geeft netjes **404**. Dat is de oracle waarmee
-  `ad.getAds` gevonden is. De API noemt bovendien zelf de geldige veldnamen in
-  zijn foutmelding (zo bleek de dimensie `am:adID` te heten, niet `am:adId`).
-
-**Admarkt kent GEEN prijs en GEEN omschrijving.** Het zijn advertenties die naar
-de **eigen webwinkel** van de verkoper wijzen (`links.url`), niet naar een
-Marktplaats-advertentie. Een import levert dus titel + foto's + categorie op; de
-verkoper vult prijs en tekst zelf aan. Sla bewust **geen** `platform_listing_url`
-op — dat adres is de webwinkel en zou later de verkeerde pagina openen of
-verwijderen. Er valt om dezelfde reden ook niets te verrijken.
-
-**De meekijker (1.0.205) staat er nog als vangnet.**
-`content/admarkt_sniffer.js` draait op `document_start` in de **MAIN world**,
-aangemeld via `chrome.scripting.registerContentScripts` zodra de toestemming er
-is (executeScript is altijd te laat — dan heeft de app haar gegevens al binnen).
-Hij haakt `fetch` en `XMLHttpRequest` en bewaart json-antwoorden op
-`window.__omnivaleurVangst`. Methode, adres, sleutels en cookies kloppen dan per
-definitie. **Antwoorden worden geKLOOND, nooit uitgelezen** — lees je het
-origineel, dan is de body op voor de pagina zelf en breekt de site onder de
-gebruiker. Locales, csrf-token en html worden genegeerd.
-
-**Het API-adres wordt niet geraden maar waargenomen.** Ik heb geen zakelijk
-account en kan die pagina niet zien; een geraden endpoint was een gok geweest.
-`bgScanAdmarkt` leest daarom na het laden `performance.getEntriesByType("resource")`
-uit, haalt de data-verzoeken die de pagina zelf deed nog eens op met
-`credentials: "include"`, en zoekt in die antwoorden een array van objecten met
-een id- en een titel-veld. Wat gewerkt heeft komt terug in `meta.bron` en
-`meta.velden`, zodat het daarna hard vastgelegd kan worden. Mislukt het, dan
-meldt de fout wélke adressen zijn geprobeerd en wat ze gaven.
-
-**`optional_host_permissions`, nooit `host_permissions`.** Een update die een
-nieuwe vaste host-toestemming toevoegt zet Chrome bij **iedere** gebruiker de
-extensie stil tot hij hem accepteert. De schakelaar "Business account (Admarkt)"
-in de popup levert bovendien de gebruikersklik die `permissions.request` eist —
-vanuit een achtergrondscan kun je die toestemming niet vragen.
-
-**Vraag nooit een toestemming vanuit het uitklapvenster van de extensie.**
-Chrome sluit dat venster op het moment dat hij de vraag toont; de code die op
-het antwoord wacht verdwijnt mee en bij heropenen staat de schakelaar
-onveranderd uit. Voor de gebruiker lijkt de schakelaar dan klem te zitten — dat
-gebeurde in 1.0.201. De oplossing in 1.0.202: dezelfde `popup.html` openen in een
-tabblad (`?tab=1`) en `permissions.request` daar doen. **Gemeten werkend op
-15-08-2026:** tabblad opent, Chrome stelt de vraag, schakelaar blijft aan staan.
-
-**`calmModeToggle` in popup.html is een dode schakelaar** — hij schuift (pure
-CSS) maar er is geen enkele code die hem uitleest of opslaat; "calmMode" komt
-nergens voor in background.js. Calm mode heeft dus nooit gewerkt. Daniel weet
-het sinds 15-08-2026 en heeft het bewust geparkeerd.
-
-**BEWEZEN OP EEN ECHT ZAKELIJK ACCOUNT, 16-08-2026.** Egbert Brouwer (Papa's
-Plectrums, 5.540 advertenties) meldde "Ok nu is het gelukt" met extensie 1.0.206.
-Daarmee is de hele keten rond: schakelaar → toestemming → tRPC → import.
-De weg ernaartoe kostte vijf versies (1.0.201 t/m 1.0.206); wat elke ronde
-kostte was steeds hetzelfde soort fout — een aanname die stil faalde in plaats
-van te klagen.
-
-**Oudere aantekening, inmiddels achterhaald: de scan was ongetest op 15-08-2026** — alleen de toestemming
-is bewezen. Zie "extension-release-bump-version" en
-"marktplaats-category-ids".
-
-**2DEHANDS HEEFT ER OOK EEN (gemeten 10-09-2026).** In background.js stond jaren
-de aanname dat alleen Marktplaats een Admarkt heeft, met zoveel woorden in
-`mpEmptyScanReason`: "2dehands, dat geen Admarkt heeft". Onjuist.
-`https://admarkt.2dehands.be/` stuurt door naar de 2dehands-login met een eigen
-OAuth-console voor de Belgische tenant (`client_id=twhbe_console`, scopes
-`console_ro console_rw`); `admarkt.2ememain.be` landt op dezelfde login. Sinds
-1.0.316 is de hele Admarkt-lezer per kanaal: `ADMARKT_ORIGINS`, `admarktOrigin()`,
-en de meekijker wordt per console apart aangemeld (id `omnivaleur-admarkt` blijft
-ONGEWIJZIGD, anders krijgt iedereen die hem al heeft een tweede kopie).
-
-Twee dingen die daarbij anders zijn dan op Marktplaats:
-- De toestemming ligt op 2dehands al vast in het manifest via
-  `https://*.2dehands.be/*`, dus er is niets te vragen en geen schakelaar. Leun
-  daar niet blind op `permissions.contains`: die korte weg loopt via
-  `manifestDektOrigin()`, en alleen voor 2dehands, zodat de Marktplaats-weg (waar
-  `contains` tegelijk het opt-in-sein van de popup-schakelaar is) onaangeraakt
-  blijft.
-- Omdat er geen schakelaar is, mag een mislukte Admarkt-ronde op 2dehands geen
-  rode fout worden als de site zelf al zei dat het account nul advertenties heeft.
-  Anders wordt de stille afronding van 03-09-2026 weer ongedaan gemaakt.
-
-**Wat NIET gemeten kon worden:** of de procedurenamen `campaign.getAllCampaigns`
-en `ad.getAds` op de Belgische tenant hetzelfde heten. Credential-vrij is dat niet
-vast te stellen: daar zit de authenticatie VOOR de routering, dus elke procedure
-geeft 401, ook een verzonnen naam. Het 404-orakel uit deze notitie werkt daar dus
-alleen met een ingelogde sessie. Wijkt de naam af, dan meldt de scan wel precies
-welke procedure faalde en met welke code.
-
-**Hetzelfde onderwerp, eigen bestand** (samengevoegd in de index op 13-09-2026):
-- "admarkt-pro-mag-niet-geautomatiseerd" — Pro automatiseren mag uitsluitend via een erkende API-partner; beloof het een klant nooit
-- "admarkt-omschrijving-via-openbaar-mp" — Admarkt geeft geen prijs of tekst, de openbare zoek-API wel
-
----
-
 ## refresh-token-race-tussen-dashboard-en-extensie
 
 *10-09-2026 — Dashboard-tabblad en extensie verversen elk hun eigen Supabase-refreshtoken; de tweede met een geroteerd token trekt de hele sessiefamilie in. Server dedupt nu /api/auth/refresh 90s.*
@@ -2325,40 +2476,6 @@ voor je iets aan de code verandert. Zet alle functies in de lijst en alle losse
 variabelen (`_gepubliceerdeVersie`, `_blokkeerAchterstand`) in de sandbox. Een
 rode test is hier eerst een vraag: is het scherm veranderd, of is er echt iets
 kapot? Zie ook "voor-en-na-proef-mag-geen-head-gebruiken".
-
----
-
-## voor-en-na-proef-mag-geen-head-gebruiken
-
-*09-09-2026 — "Een voor-en-na-test die de oude code uit `git show HEAD:` haalt bewijst na de eerste commit niets meer en wordt rood"*
-
-De huisregel is: haal de oude versie erbij en laat die onder dezelfde
-omstandigheden falen, anders weet je alleen dat de nieuwe code werkt. Verschillende
-tests doen dat met `git show HEAD:<bestand>`.
-
-**Dat werkt precies één keer.** Zolang de reparatie nog niet gecommit is, is HEAD
-inderdaad de oude code. Zodra ze gecommit is — en met de auto-push-hook is dat
-binnen seconden, onder een titel als "auto: update shared.js" — is HEAD de nieuwe
-code en vergelijkt de voor-proef de reparatie met zichzelf. Alle "oude code:
-…"-regels worden dan rood terwijl er niets kapot is.
-
-Zo lag `tests/prijs-blijft-op-het-formulier-test.js` om met vier rode regels,
-terwijl blok 2 tot en met 4 gewoon groen waren. Dat is het herkenningsteken:
-alleen het VOOR-blok faalt, het NA-blok niet.
-
-**Hoe hiermee om te gaan:** zet in de voor-proef een vast commitnummer, niet HEAD.
-De commit die de reparatie deed is `X`, dus de code van vlak ervoor is `X^`. Dat
-nummer verandert nooit meer. `tests/vinted-inlogdomein-test.js` doet het al zo en
-legt het ook uit.
-
-Loopt een van deze tests om, dan is dat dus eerst een vraag en pas daarna een
-storing — net als bij "extensie-stempel-test-loopt-achter-op-het-scherm".
-De tests met `--oud` als vlag (`process.argv.includes("--oud")`) zijn hier veilig:
-die draaien de HEAD-variant alleen als je er zelf om vraagt.
-Zie ook "omnivaleur-altijd-bewijzen".
-
-**Hetzelfde onderwerp, eigen bestand** (samengevoegd in de index op 13-09-2026):
-- "extensie-stempel-test-loopt-achter-op-het-scherm" — functies op naam uit app.html knippen breekt zodra dat scherm er een aanroept
 
 ---
 
@@ -7001,54 +7118,6 @@ lees het terug vlak voor het plaatsen. Zie "extension-release-bump-version".
 
 **Hetzelfde onderwerp, eigen bestand** (samengevoegd in de index op 13-09-2026):
 - "zoekertjestekst-zit-in-react-hook-form" — de controle leest _formValues.description bij Vinted
-
----
-
-## facebook-marketplace-beta
-
-*29-07-2026 — "Facebook Marketplace is a beta best-effort extension platform; selectors unverified, account-ban risk"*
-
-Facebook Marketplace was added (2026-07-18) as a **beta, best-effort** extension platform, wired end-to-end like Vinted:
-- extension: `extension/content/facebook.js` (create happy-path + best-effort delete), `background.js` create/delete URLs + `EXTENSION_PLATFORMS`, manifest host-permission + content-script match (shipped in v1.0.102)
-- backend: `crosslist.py` → `EXTENSION_PLATFORMS`, `_PLATFORM_REQUIRED["facebook"] = ["category"]`, `_EXTENSION_DELIST_PLATFORMS`
-- frontend `app.html`: platform lists, labels, `📘` icon, margin calc, filter, mark-active, publish checkboxes, plus `BETA_PLATFORMS` risk warnings
-
-**Verified live (2026-07-18, NL account, read-only inspection):**
-- The create form (`/marketplace/create/item`) is fully localised. Required fields carry Dutch aria-labels: **Titel, Prijs, Categorie, Staat**; flow button is **Volgende** (not "Publish" — final step is "Publiceren"). "Staat" options: **Nieuw / Gebruikt - zo goed als nieuw / Gebruikt - in goede staat / Gebruikt - in redelijke staat**. facebook.js now matches NL+EN for all of these (v1.0.104).
-- FB gates the form behind a one-time **DMA/GDPR consent** (`/privacy/consent?flow=fb_dma_marketplace`) and can show `/checkpoint`. facebook.js loads on those URLs too and reports a clear job error instead of hanging (v1.0.103).
-
-**Selector mechanics (verified live, v1.0.105 — this is the crux):**
-- Titel/Prijs `<input>` and Categorie/Staat comboboxes have **NO aria-label/placeholder**. Their accessible name comes from the **wrapping `<label>`** (`<label><span>Titel</span><input></label>`). So field-finding MUST read `el.closest('label').textContent`, not aria-label. (First symptom of getting this wrong: "only condition fills" — because Staat's own matching happened to work while title/price/category didn't.)
-- Category is a **hierarchical tree of plain clickable `<div>`s (role=null), no free-text search** — not role=option. Match option nodes by exact text across a broad selector (div/span/li/a), innermost-first, then click. The flat clothing leaves **"Herenkleding en -schoenen" / "Dameskleding en -schoenen"** are directly selectable; map by gender. Generic fallback "Kleding en accessoires".
-- `typeInto` via the native value setter + input/change event sticks in FB's React inputs (verified).
-- **Price is INTEGER-ONLY** (verified live, NL). The field rounds whatever you type (29,50→€30, 19,95→€20, 1234,56→€1235) AND reads a "." as a thousands separator ("29.99"→2999 — the original "prijs klopt niet" bug). Fix (v1.0.106): type the rounded whole-euro amount with NO separator (`String(Math.round(price))`) — plain "30"/"1235" render as "€ 30"/"€ 1.235".
-- **Beschrijving is a `<textarea>` that only mounts AFTER a category is picked** (it's a clothing-specific field, alongside Grootte/Merk). A single findField right after the condition combo could miss it → description stayed empty while everything else filled. Fix (v1.0.106): poll (`waitForField`) until it mounts.
-- **Photo upload mechanism works** via DataTransfer: set the image `input[type=file]` (first of 3 — accept `image/*`, the others are video and a generic `file`), `.files`, dispatch change → FB renders a `blob:` preview `<img>`. Confirm success by waiting for a `blob:` img (NOT scontent — FB's own profile/chrome imgs are scontent). If photos were provided but no blob preview appears, throw (likely cross-origin fetch block on the image host) instead of publishing photoless. Whether real Supabase photo_urls fetch cleanly from facebook.com context is still UNconfirmed end-to-end.
-
-**Category mapping — non-clothing gap fixed (v1.0.107, 2026-07-19):**
-- FB has NO numeric category IDs; it's a flat click-list matched by exact visible text. `fbCategoryCandidates()` originally handled ONLY clothing (men/women), so every `games ...` / `electronics ...` item (Daniel's whole non-clothing catalog) fell through to "Kleding en accessoires" — wrong category + wrong (clothing) attribute fields. Fixed: non-clothing prefixes are now mapped BEFORE the gender logic.
-- **VERIFIED live (NL account, read-only DOM inspection of `/marketplace/create/item`):** FB top-level leaves that are directly selectable — **games → "Videogames"**, **electronics → "Elektronica en computers"** (both mount a Beschrijving field just like the clothing leaves; Videogames also mounts optional Platform/Genre/ESRB/Merk which we leave empty). Full top-level list also includes: Huis en tuin, Gereedschap, Meubels, Huishouden, Tuin, Apparaten, Amusement, Videogames, Boeken/films/muziek, Kleding en accessoires, Dameskleding en -schoenen, Herenkleding en -schoenen, Elektronica, Elektronica en computers, Mobiele telefoons, Speelgoed en spellen, Sport en buitenleven, Muziekinstrumenten, Antiek en verzamelobjecten, Voertuigen, Overig.
-- The create form loaded with NO consent gate this session (already granted on this account).
-
-**Publish + delete flow — VERIFIED end-to-end via a real test publish (NL account, 2026-07-19, item deleted right after):**
-- A full publish SUCCEEDED: photo (via canvas→File→DataTransfer, no external fetch) → Titel/Prijs(€5)/Categorie=Videogames/Staat/Beschrijving → **Volgende** advances to `/marketplace/create/item?step=audience` → **Publiceren**. So the two-step Volgende→Publiceren flow is real and works.
-- **Publish redirect (BUG fixed):** after Publiceren FB redirects to **`/marketplace/you/selling`**, NOT `/marketplace/item/{id}`, and the new listing sits "in beoordeling" with NO public item URL. The old `publishAndCapture` waited only for `/item/{id}` → burned the 15s timeout and always returned null. Fixed to treat the `/you/selling` redirect as success and capture an id only if one appears (usually none). Consequence: `platform_listing_id` is normally null, so delete jobs fall back to the `/you/selling` URL (see getDeleteUrl in background.js).
-- **Delete is a THREE-click flow (BUG fixed):** on `/you/selling` the card's "..." menu → **"Advertentie verwijderen"** → confirm **"Verwijderen"** → a SECOND survey **"Heb je dit artikel verkocht?"** (radio: Ja verkocht op FB / Ja ergens anders / Nee, niet verkocht / Ik geef liever geen antwoord) → **Volgende**. Old `deleteListingFb` (a) matched `/^verwijder/` which never hit "Advertentie verwijderen", (b) used the FIRST menu on the page (could delete the WRONG listing since /you/selling lists all items), and (c) skipped the survey step. Rewritten to scope to the card by exact title, match "verwijder" anywhere, and complete the survey. Delete VERIFIED to fully remove the listing (empty state after).
-- Photo upload via DataTransfer CONFIRMED working (blue test image rendered in thumbnail + preview). The blob:-preview check can be too fast; FB may render the thumbnail slightly later.
-
-**Fotobewijs — blob: bestaat NIET meer (v1.0.139, 2026-07-29, live geverifieerd):**
-- De create-pagina bevat **nul `<img>`-elementen** tot er een foto gekozen is. Zodra dat gebeurt uploadt FB direct naar zijn eigen CDN en rendert `scontent-*.fbcdn.net` met `alt="Advertentiefoto"`/`"Productfoto"`. Er is **geen `blob:`-preview** — de eerdere notitie hierboven klopt niet meer.
-- Dit brak alles: de Marktplaats-herschrijving van `uploadPhotos` (shared.js) gooit sinds v1.0.13x een fout als er geen thumbnail verschijnt, en zocht alleen naar `blob:`/MP/Vinted-hosts. Op Facebook wachtte hij dus 45s, gooide, en `fillForm` stierf **vóór het eerste veld** — de melding "er wordt niks ingevuld".
-- Fix: `uploadPhotos(urls, { thumbSelector })` accepteert nu een platform-eigen selector; facebook.js geeft `FB_PHOTO_THUMBS` mee. Matchen op `fbcdn.net` is veilig omdat de baseline nul is en uploadPhotos voor/na vergelijkt. `waitForPhotoPreview` is verwijderd (dubbelop).
-- Live bevestigd na de fix: foto + Titel + Prijs (€ 30) + Categorie (Videogames) + Staat + Beschrijving vullen allemaal. Selectors voor alle velden zijn dus nog steeds goed — het zat puur in de fotocontrole.
-- **Les:** `shared.js` is gedeeld met MP/2dehands/Vinted. Elke verscherping daar (throw i.p.v. return false, hardere verificatie) kan Facebook stilletzwijgend slopen, want FB's DOM lijkt op geen van de andere. Draai na elke shared.js-wijziging de veldcontrole op het live FB-formulier.
-
-**Key caveats / How to apply:**
-- A full **dry-run of field-filling** (title/price/category/condition) passed on the live form, but an actual **publish (Volgende→Publiceren) and the post-publish URL capture + delete flow were NOT executed** — still unproven. Pin any remaining issues from `[Omnivaleur]` console output of a real publish.
-- Facebook obfuscates markup (rotating class names) and detects automation — still best-effort, still account-ban risk.
-- Real **account-ban risk** for the seller — this is surfaced in the UI as an explicit beta warning; keep that warning whenever touching this platform. Advise a separate FB account.
-- Facebook is create-first; auto-delist on sale is wired but best-effort. No translation (uses the item's own NL text). No per-platform `price_facebook` column — falls back to base `price`.
-- See "extension-release-bump-version" and "extension-version-floor" for the build/version rules, and "deploy-pipeline" for going live.
 
 ---
 

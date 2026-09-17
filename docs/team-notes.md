@@ -10428,3 +10428,31 @@ De drie vastzittende advertenties lopen vanzelf door zodra dit live staat; er is
 niets met de hand rechtgezet.
 
 Testsuite: 1389 geslaagd, dezelfde 14 die ook op bea39057 al faalden.
+
+## 17-09-2026: drie reparaties na Johans eerste plaatsingen (Vinted, Facebook, zakelijk vervangen)
+
+Johan Kist ging na de call zelf plaatsen. Gemeten om 12:45: 4 gitaren echt online op
+2dehands (op 2dehands.be teruggevonden onder zijn naam), 3 geweigerd omdat 2dehands
+daar geld voor vraagt (twee gratis per gitaarrubriek), eBay 0 van 10 (vooral: eBay
+moet zijn account nog verifiëren), Vinted en Facebook zie hieronder. Daniel vroeg om
+alle drie de reparaties, veilig en volledig.
+- **Vinted.** Twee losse oorzaken. (1) Omschrijving boven 2000 tekens: nu ingekort
+  bij het uitdelen van de opdracht, na de vertaling, voor elk pad; live op de server,
+  ook voor zijn opdrachten die al klaarstonden. (2) "Vul je staat in": de staat werd
+  één keer geprobeerd en nooit hersteld; hoort nu in de eindcontrole (extensie
+  1.0.338). Voor-en-na in `tests/vinted-mock?mode=staatlaat`: oud geweigerd, nieuw
+  geplaatst; gewone run blijft slagen.
+- **Facebook.** Meldde altijd "klaar", ook als Facebook op het formulier bleef staan;
+  de server maakte elke rij rood, ook de echte. Nu alleen klaar met bevestiging
+  (1.0.338) en dan groen zonder nummer; zonder bevestiging een melding die zegt wat
+  te doen. Van zijn acht "klaar"-meldingen weten we niet welke echt online staan.
+- **Zakelijk vervangen.** Johan klikte drie keer "Replace" op Marktplaats; bij een
+  zakelijk account mislukt het weghalen altijd. De herkenning zag hem niet als
+  zakelijk (alleen door ons geplaatste advertenties telden); nu wel (live: TRADER).
+  Vervangen wordt geweigerd en niet meer aangeboden. Er zijn nooit dubbele
+  advertenties ontstaan: de gepaarde plaatsingen werden al overgeslagen.
+
+**Openstaand:** extensie 1.0.338 moet nog naar de Chrome Web Store (Daniel). Facebook
+en de staat-herstelronde zijn niet op het echte Facebook- of Vinted-formulier gezien.
+De 14 falende pytest-tests en 11 falende node-tests bestonden al vóór deze wijziging
+(zelfde lijst op 48a9c4b9).

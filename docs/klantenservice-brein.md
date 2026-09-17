@@ -10,7 +10,7 @@ product verandert. De ontwikkelaar werkt dan zowel dit bestand in de repo als de
 kopie in Drive bij, in dezelfde beurt. Daniel hoeft niets te doen; de Gem leest
 de Drive-kopie de volgende keer opnieuw in.
 
-_Laatst bijgewerkt: 17-09-2026 (een verkoop wordt alleen nog op een kanaal geboekt als dat kanaal het zelf zegt of de klant het bevestigt: een advertentie die uit je Vinted-kast verdwenen is, wordt een vraag in het dashboard waarbij je zelf het kanaal aanwijst; een klik op een grijs kanaalicoon plaatst nu of vraagt de link, en zet niets meer zomaar op live; opslaan in het bewerkscherm zet niets meer terug wat de klant zelf niet veranderde, en een artikel met Bieden, Zie omschrijving of Gratis kan weer worden opgeslagen zonder bedrag; verkocht op Marktplaats of 2dehands met een zakelijk account wordt nu ook opgemerkt als vraag in het dashboard; 2dehands voor verkopers die in Nederland wonen: land en woonplaats invullen bij Preferences; al op een kanaal en net bewerkt: vervangen kan nu direct vanuit het publiceervenster. Eerder, 15-09: zakelijk account lijkt op uitgelogd; eBay in het Nederlands; wachtrij die stilstaat omdat de browser niet is ingelogd; Vinted plaatst door zonder open tabblad; rode 'Relist failed' meldingen hersteld in 1.0.334)_
+_Laatst bijgewerkt: 17-09-2026 (Vinted: te lange omschrijvingen worden voor Vinted zelf ingekort en de staat wordt opnieuw ingevuld als dat de eerste keer mislukt, extensie 1.0.338; Facebook meldt alleen nog klaar als Facebook het bevestigt; vervangen bij een zakelijk Marktplaats- of 2dehands-account wordt niet meer aangeboden; een verkoop wordt alleen nog op een kanaal geboekt als dat kanaal het zelf zegt of de klant het bevestigt: een advertentie die uit je Vinted-kast verdwenen is, wordt een vraag in het dashboard waarbij je zelf het kanaal aanwijst; een klik op een grijs kanaalicoon plaatst nu of vraagt de link, en zet niets meer zomaar op live; opslaan in het bewerkscherm zet niets meer terug wat de klant zelf niet veranderde, en een artikel met Bieden, Zie omschrijving of Gratis kan weer worden opgeslagen zonder bedrag; verkocht op Marktplaats of 2dehands met een zakelijk account wordt nu ook opgemerkt als vraag in het dashboard; 2dehands voor verkopers die in Nederland wonen: land en woonplaats invullen bij Preferences; al op een kanaal en net bewerkt: vervangen kan nu direct vanuit het publiceervenster. Eerder, 15-09: zakelijk account lijkt op uitgelogd; eBay in het Nederlands; wachtrij die stilstaat omdat de browser niet is ingelogd; Vinted plaatst door zonder open tabblad; rode 'Relist failed' meldingen hersteld in 1.0.334)_
 
 ---
 
@@ -99,6 +99,12 @@ Ondersteunde kanalen (dit is de volledige lijst):
   "binnenkort".
 - Facebook Marketplace is nog in test. Noem dat niet uit jezelf; vraagt iemand
   er expliciet naar, zeg dan dat het er is maar nog in een testfase.
+  Zegt iemand dat Facebook "klaar" meldde maar dat hij de advertentie niet ziet:
+  vraag hem te kijken bij Marketplace, Jouw advertenties (een nieuwe advertentie
+  staat daar eerst even in beoordeling). Staat hij er, dan plakt hij de link op het
+  Facebook-icoon van dat artikel. Staat hij er niet, dan opnieuw publiceren. Tot
+  extensie 1.0.338 kon "klaar" ook betekenen dat Facebook het formulier nooit
+  accepteerde; vanaf 1.0.338 zegt Omnivaleur dan eerlijk dat het niet gelukt is.
 
 Hoe de kanalen gekoppeld worden:
 
@@ -220,6 +226,16 @@ Contact:
   heeft kan dit verwijt nog krijgen. Vraag in dat geval of hij zakelijk verkoopt
   op dat kanaal, en zet in het uitklapvenster "Business account (Admarkt)" aan.
   Zijn wachtrij blijft gewoon staan.
+- Een zakelijk Marktplaats- of 2dehands-account kan Omnivaleur niet offline halen
+  of vervangen: daar is het persoonlijke overzicht leeg. Een advertentie wijzigen
+  doet de klant dan op Marktplaats of 2dehands zelf. Verkoopt hij een artikel via
+  een ander kanaal, laat hem de advertentie op zijn zakelijke account zelf
+  weghalen; dat gaat daar niet vanzelf.
+- Vinted neemt hoogstens 2000 tekens omschrijving. Is de tekst van een artikel
+  langer, dan gaat er naar Vinted een ingekorte versie (afgebroken na een hele zin);
+  op de andere kanalen blijft de volledige tekst staan. De melding "Vul je staat in"
+  op Vinted is opgelost in extensie 1.0.338; wie hem nog krijgt, heeft een oudere
+  versie.
 - Staat een wachtrij stil zonder foutmelding, vraag dan of de klant
   op dat kanaal zelf is ingelogd in de browser waar de uitbreiding staat.
   Marktplaats en 2dehands zijn aparte sites met aparte inlogs. Wie elke dag op
