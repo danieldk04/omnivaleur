@@ -159,9 +159,16 @@ async def main() -> int:
             print(f"Geen account gevonden voor {args.email}")
             return 1
 
+    # MET .order("id"). Zonder vaste volgorde mag de database elke pagina anders
+    # sorteren: dan komen sommige artikelen dubbel terug en andere helemaal niet.
+    # Gemeten 18-09-2026 bij Zilverwebsite.nl: 1.047 van haar 1.234 advertenties
+    # werden opgehaald, waarna de 187 gemiste artikelen als "staat op zijn lijst
+    # zonder koppeling bij ons" werden gemeld. Dezelfde fout staat beschreven in
+    # backend/api/imports.py en backend/services/crosslist.py.
     items, off = [], 0
     while True:
-        blok = db.table("items").select("id,title").eq("user_id", uid).range(off, off + 999).execute().data
+        blok = (db.table("items").select("id,title").eq("user_id", uid).order("id")
+                .range(off, off + 999).execute().data)
         items += blok
         off += len(blok)
         if len(blok) < 1000:
