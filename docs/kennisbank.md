@@ -17,6 +17,51 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ---
 
+## dagrooster-crash-bleef-onopgemerkt
+
+*18-09-2026 — "mail_plan.dag bleef 13-08 t/m 17-09-2026 hangen op een oude datum omdat een schrijffout in _dagplan() ongezien de hele beurt liet crashen, elke tien minuten opnieuw, zonder alarm"*
+
+Op 18-09-2026 bleek uit de eigen administratie van de mailmachine (`mail_plan` in
+Supabase-tabel `leadgen_opslag`) dat het veld `gemist` 36 dagen bevatte: 13-08 tot
+en met 17-09-2026 zonder enige verstuurde koude mail. Dat kwam pas aan het licht
+doordat de dagteller die dag voor het eerst weer een schrijfactie liet slagen.
+
+**Het mechanisme, bewezen met een voor-en-na-proef:** `tick()` in
+`scripts/leadgen_mail.py` haalt `state = _state()` op met een try/except rond
+`OpslagOnbereikbaar` (meldt en stopt netjes als de administratie onbereikbaar is).
+Daarna riep het ongewijzigd `plan = _dagplan(state, ...)` aan, en `_dagplan()`
+schrijft zijn nieuwe dagrooster direct weg via `_save_plan()` zonder enige
+bescherming. Faalt die schrijfactie (bijvoorbeeld tijdens een Supabase-storing),
+dan crasht de hele beurt ongezien: geen melding, geen alarm, en omdat de oude
+`dag` in de administratie blijft staan, denkt de VOLGENDE beurt tien minuten later
+weer dat het rooster ververst moet worden — en crasht op precies dezelfde plek.
+Dat herhaalt zich oneindig totdat er een keer wél geschreven kan worden.
+
+De periode valt samen met de bekende Supabase-kwesties uit
+"supabase-gratis-plan-egress" (16-08 opslag 346%, 31-08 het hele project op
+slot) al is de exacte eerste crash op 13-08 niet met logs te bewijzen: Railway
+bewaart geen logboek dat zo ver terug gaat en er is geen Railway CLI of API-token
+in deze omgeving beschikbaar.
+
+**Fix (18-09-2026, `scripts/leadgen_mail.py`):** dezelfde bescherming die
+`_state()` al had staat nu ook om `_dagplan()`: bij `OpslagOnbereikbaar` stopt de
+beurt netjes en gaat `_storingsalarm()` eruit, in plaats van een ongeziene crash.
+Bewezen met een voor-en-na-proef: de oude code (uit git-geschiedenis teruggehaald)
+crasht aantoonbaar ongezien bij een gesimuleerde schrijffout; de nieuwe code stopt
+en meldt.
+
+**Why:** een crash die zichzelf elke tien minuten herhaalt zonder ooit een spoor
+achter te laten is erger dan een crash die één keer gebeurt en meteen gemeld
+wordt — de eerste kost weken, de tweede een uur.
+
+**How to apply:** iedere plek in `leadgen_mail.py` die tijdens `tick()`
+rechtstreeks naar Supabase schrijft zonder eigen try/except verdient dezelfde
+controle. Bij een volgende "de machine stond stil"-melding: begin bij `mail_plan`
+in Supabase (het veld `gemist`), niet bij giswerk over API-sleutels of
+pauzevlaggen.
+
+---
+
 ## voortgangsping-wist-de-fouttekst
 
 *18-09-2026 — Een late voortgangsping overschreef result van een afgeronde opdracht, waardoor elke rem blind werd en dezelfde betaalmuur vijftien keer opnieuw werd geraakt*
