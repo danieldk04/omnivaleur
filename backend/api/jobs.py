@@ -1587,11 +1587,30 @@ def get_pending_jobs(request: Request, platform: str = None, user_id: str = Depe
             continue
         if j["action"] == "create" and verkocht_op.get(j.get("item_id")):
             kanalen = ", ".join(sorted(set(verkocht_op[j["item_id"]])))
+            reden = f"Item already sold on {kanalen} — not published again."
             db.table("jobs").update({
                 "status": "cancelled",
-                "result": {"cancelled": f"Item already sold on {kanalen} — not published again."},
+                "result": {"cancelled": reden},
                 "done_at": now,
             }).eq("id", j["id"]).execute()
+            # DE ADVERTENTIERIJ MOET MEE (18-09-2026).
+            #
+            # Publiceren zet eerst een lege rij op 'pending' en maakt dan de
+            # opdracht. Werd die opdracht hier geannuleerd, dan bleef de rij
+            # eeuwig op 'pending' staan: het dashboard zei "Publishing…" voor
+            # werk dat nooit meer zou komen, en de verkoper zag nooit waaróm.
+            # Gemeten in Daniels eigen account: vier van zulke rijen, de oudste
+            # van 29-07. Alleen rijen zonder advertentienummer: een rij mét
+            # nummer hoort bij een advertentie die echt op het kanaal staat, en
+            # die mogen we niet op 'error' zetten.
+            try:
+                db.table("listings").update(
+                    {"status": "error", "error_message": reden}
+                ).eq("item_id", j["item_id"]).eq("platform", j["platform"]) \
+                 .eq("status", "pending").is_("platform_listing_id", "null").execute()
+            except Exception as e:  # noqa: BLE001 — de annulering zelf is het belangrijkst
+                logger.warning("Kon de wachtende advertentierij van %s op %s niet "
+                               "afsluiten: %s", j["item_id"], j["platform"], e)
             logger.info("Publicatie geannuleerd: item %s is al verkocht op %s",
                         j["item_id"], kanalen)
             continue
