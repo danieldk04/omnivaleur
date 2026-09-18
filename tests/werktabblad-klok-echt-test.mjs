@@ -133,7 +133,13 @@ try {
            ? chrome.storage.local.set({ ["jobtab_" + id]:
                { jobId: "proef", platform: "proef", action: "create",
                  serverUrl: "https://omnivaleur.com", startedAt: Date.now(), klokVast: true } })
-               .then(() => { startOntdooiTeller(); return verzekerKlok(id); }).then(() => id)
+               .then(() => {
+                 // Oudere versies kennen deze twee nog niet; de proef moet ook
+                 // tegen die versies kunnen draaien, anders is er geen
+                 // voor-en-na-proef.
+                 if (typeof startOntdooiTeller === "function") startOntdooiTeller();
+                 return typeof verzekerKlok === "function" ? verzekerKlok(id) : null;
+               }).then(() => id)
            : id)
          .catch(e => "fout: " + (e && e.message))`);
     check(`${k.naam}: er is een werk-tabblad geopend`, typeof k.tabId === "number", String(k.tabId));
