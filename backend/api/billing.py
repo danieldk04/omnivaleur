@@ -738,7 +738,7 @@ async def stripe_webhook(request: Request, stripe_signature: str = Header(None))
                 "stripe_customer_id": customer_id,
                 "stripe_subscription_id": stripe_sub_id,
                 "status": stripe_sub["status"],
-                "current_period_end": _ts(stripe_sub["current_period_end"]),
+                "current_period_end": _ts(_period_end(stripe_sub)),
                 "updated_at": _now(),
             }).eq("user_id", user_id).execute()))
             invalidate_access_cache(user_id)
