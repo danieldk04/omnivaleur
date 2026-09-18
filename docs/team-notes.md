@@ -10483,3 +10483,59 @@ volgende stap.
 wel in een voorbeeldpagina met de echte code en stijl, op desktop en telefoonbreedte,
 en de aangepaste schermfuncties zijn met nepgegevens gedraaid. De Nederlandse versie
 van het dashboard blijft een losse beslissing voor Daniel.
+
+### 18-09-2026 — Stripe verplaatste zijn velden, en vier van de zes betalende accounts stonden verkeerd
+
+Daniel vroeg om alle actieve accounts na te lopen op problemen. Het foutenlogboek
+(`leadgen_opslag/server_fouten`) wees naar `POST /api/billing/webhook`, 21 keer
+`KeyError 'current_period_end'`, laatste keer 12-09 om 05:12. Dat bleek de kop van
+een veel groter gat.
+
+**De oorzaak, gemeten en niet beredeneerd.** Het Stripe-account draait op
+API-versie `2026-06-24.dahlia`. Die versie heeft vier velden verplaatst waar
+`backend/api/billing.py` nog op rekende. Gemeten op de echte webhook-payloads uit
+het account, niet uit documentatie:
+
+- `subscription["current_period_end"]` staat nu onder `items.data[0]` — **KeyError**
+- `invoice["subscription"]` staat nu onder `parent.subscription_details` — **stil None**
+- `invoice["paid"]` is vervangen door `status == "paid"` — **stil None**
+- `invoice["payment_intent"]` hangt nu onder `payments.data[0].payment` — **stil None**
+
+Alleen de eerste gaf een foutmelding. De andere drie gaven geen fout, geen logregel,
+alleen een `if` die nooit waar werd. En let op: `expand[]=payment_intent` van een
+veld dat niet meer bestaat geeft **geen** foutmelding; het veld ontbreekt gewoon in
+het antwoord, dus een `try/except` vangt dat niet.
+
+**Wat dat aanrichtte.** Vier van de zes betalende accounts stonden verkeerd:
+
+| klant | onze database | Stripe | gevolg |
+|---|---|---|---|
+| c2371efe | payment_processing | active, factuur open, EUR 0 binnen | vliegt eruit op 02-10 |
+| 0b28c1ce | payment_processing | active, factuur betaald | zou eruit vliegen op 28-09 |
+| 26cf5471 | active | canceled | gratis toegang |
+| 02c44e89 | active | canceled | gratis toegang |
+
+**Gerepareerd** in `billing.py`: een `_period_end()`, `_factuur_abonnement()` en
+`_factuur_is_betaald()` die op de nieuwe plek kijken met terugval op de oude, en
+`_incasso_loopt_nog()` haalt de payment intent nu via `expand=["payments"]`. Voor en
+na gedraaid op dezelfde echte gebeurtenissen: de oude code faalt, de nieuwe niet.
+Live op commit `1c706218`, geverifieerd via `/health`.
+
+**Klant 0b28c1ce gelijkgetrokken** met toestemming van Daniel: factuur bij Stripe
+betaald (EUR 19,99 binnen), dus op `active` gezet t/m 05-10. Bewezen met
+`evaluate_access` uit de echte code: vóór de correctie viel zijn toegang weg op
+28-09, nu loopt hij door.
+
+**Klant c2371efe bewust NIET aangeraakt.** Daniel vroeg om "die twee betalende
+klanten" gelijk te trekken, maar bij deze staat de factuur nog open en is er nul
+euro binnen; de incasso loopt. `payment_processing` is bij hem dus de juiste status,
+en hem op `active` zetten zou een betaling beweren die niet bestaat.
+
+**Openstaand en belangrijk.** Het webhook-endpoint bij Stripe luistert alleen naar
+`checkout.session.completed`, `customer.subscription.updated`,
+`customer.subscription.deleted` en `invoice.payment_failed`. `invoice.paid` en
+`invoice.payment_succeeded` staan er **niet** bij, terwijl de code er wel handlers
+voor heeft. Dat is precies het gat waardoor een geslaagde SEPA-incasso niemand op
+`active` zet. Zolang dat niet aanstaat loopt c2371efe alsnog tegen 02-10 aan. Ook
+openstaand: de twee opgezegde klanten met gratis toegang, en een paar korte
+database-vertragingen (57014) van 17 en 18 september die niet verklaard zijn.

@@ -17,6 +17,76 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ---
 
+## stripe-webhook-mist-invoice-events
+
+*18-09-2026 — "Het Stripe-webhookendpoint luistert niet naar invoice.paid en invoice.payment_succeeded, terwijl billing.py daar wel handlers voor heeft; die code is dode code"*
+
+Het endpoint `we_1Tnjt809Y8J5okHsw8htmEuC` (https://omnivaleur.com/api/billing/webhook)
+staat bij Stripe ingesteld op precies vier gebeurtenissen:
+
+- `checkout.session.completed`
+- `customer.subscription.updated`
+- `customer.subscription.deleted`
+- `invoice.payment_failed`
+
+`backend/api/billing.py` heeft daarnaast een handler voor `invoice.paid` en
+`invoice.payment_succeeded`, maar die worden **nooit afgeleverd**. Dat is dode
+code, en het gat dat het achterlaat is echt: de handler is precies bedoeld om een
+klant van `payment_processing` terug op `active` te zetten zodra een SEPA-incasso
+rond is.
+
+**Waarom dit pijn doet:** een SEPA-incasso op een abonnement dat bij Stripe al
+`active` staat verandert niets aan de subscription, dus er komt ook geen
+`customer.subscription.updated`. Zonder `invoice.paid` komt er dan helemaal geen
+bericht, en blijft de klant op `payment_processing` staan tot
+`PROCESSING_GRACE_DAYS` (21) om is. Daarna ziet hij "your payment failed" terwijl
+hij gewoon betaald heeft. Zo stond klant 0b28c1ce op 18-09-2026 tien dagen voor
+zijn uitsluiting, met een betaalde factuur van EUR 19,99 bij Stripe.
+
+**Hoe toe te passen:** controleer bij elke klacht over toegang of betaalstatus
+eerst wélke gebeurtenissen het endpoint binnenkrijgt
+(`curl https://api.stripe.com/v1/webhook_endpoints`), niet alleen of de code de
+gebeurtenis aankan. Een handler in de code bewijst niet dat het bericht aankomt.
+
+Zie ook "stripe-api-versie-verplaatst-velden" en "sepa-incasso-bedenktijd-te-kort".
+
+---
+
+## stripe-api-versie-verplaatst-velden
+
+*18-09-2026 — "Stripe verplaatste current_period_end, subscription, paid en payment_intent stil naar andere plekken; de webhook crashte of deed stil niets en klantstatussen liepen weken scheef"*
+
+Op 18-09-2026 stonden vier van de zes betalende accounts verkeerd in de database:
+twee betalende klanten op `payment_processing` (en dus op weg naar uitsluiting),
+twee opgezegde klanten op `active` (en dus gratis aan het werk). Oorzaak: het
+Stripe-account draait op API-versie **2026-06-24.dahlia**, en die versie heeft
+velden verplaatst waar de code nog op rekende.
+
+**Wat waar naartoe ging (gemeten op echte webhook-payloads, niet uit documentatie):**
+
+| oud | nieuw | gedrag van de oude code |
+|---|---|---|
+| `subscription["current_period_end"]` | `subscription["items"]["data"][0]["current_period_end"]` | KeyError, 21x in het foutenlogboek |
+| `invoice["subscription"]` | `invoice["parent"]["subscription_details"]["subscription"]` | stil `None`, handler sloeg over |
+| `invoice["paid"]` | `invoice["status"] == "paid"` | stil `None`, handler sloeg over |
+| `invoice["payment_intent"]` | `invoice["payments"]["data"][0]["payment"]["payment_intent"]` | stil `None`, `expand=["payment_intent"]` geeft geen fout maar levert het veld niet |
+
+**Waarom:** de crash was zichtbaar (foutenlogboek), maar drie van de vier waren
+stil. De `invoice`-handlers gaven geen enkel signaal: geen fout, geen logregel,
+alleen een `if` die nooit waar werd. Een lopende SEPA-incasso werd daardoor niet
+meer herkend, en een geslaagde betaling zette niemand meer op `active`. Dat is
+weken doorgelopen zonder dat iemand iets merkte, tot een klant eruit zou vliegen.
+
+**Hoe toe te passen:** ga er bij Stripe nooit van uit dat een veld staat waar het
+stond. Meet het met een echte aanroep (`curl https://api.stripe.com/v1/...`) en
+lees `stripe-version` uit de antwoordkop. En let op: `expand[]=<veld>` van een
+veld dat niet meer bestaat geeft **geen** foutmelding, het veld ontbreekt gewoon
+in het antwoord. Een `try/except` vangt dat dus niet af.
+
+Zie ook "stripe-webhook-mist-invoice-events" en "sepa-incasso-bedenktijd-te-kort".
+
+---
+
 ## onboarding-afvinken-op-feiten
 
 *17-09-2026 — "Get started-lijst en Help staan in frontend/onboarding.js; afvinken alleen op feiten; 'Auto-detected' op Platforms was een vaste tekst die klanten misleidde"*
