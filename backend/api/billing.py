@@ -808,9 +808,20 @@ def _incasso_loopt_nog(stripe_sub) -> bool:
     if not inv:
         return False
     try:
-        if not hasattr(inv, "get"):
-            inv = stripe.Invoice.retrieve(inv, expand=["payment_intent"])
-        pi = inv.get("payment_intent")
+        # `payment_intent` staat niet meer op de factuur en is ook niet meer
+        # uitbreidbaar: hij hangt nu onder `payments`. Zonder deze weg gaf deze
+        # functie altijd False, en dan werd een lopende SEPA-incasso alsnog als
+        # mislukte betaling behandeld — precies waar de status
+        # 'payment_processing' voor bestaat.
+        inv_id = inv if not hasattr(inv, "get") else inv.get("id")
+        inv = stripe.Invoice.retrieve(inv_id, expand=["payments"])
+        pi = None
+        for betaling in ((inv.get("payments") or {}).get("data") or []):
+            pi = (betaling.get("payment") or {}).get("payment_intent")
+            if pi:
+                break
+        if not pi:
+            pi = inv.get("payment_intent")
         if isinstance(pi, str):
             pi = stripe.PaymentIntent.retrieve(pi)
         return bool(hasattr(pi, "get") and pi.get("status") == "processing")
