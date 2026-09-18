@@ -847,6 +847,23 @@ def _ts(unix_ts: int | None) -> str | None:
     return datetime.fromtimestamp(unix_ts, tz=timezone.utc).isoformat()
 
 
+def _factuur_abonnement(invoice) -> str | None:
+    """Het abonnement waar deze factuur bij hoort. Stripe haalde `subscription`
+    van de factuur af in dezelfde versiewissel als `current_period_end`; het
+    staat nu onder `parent.subscription_details`. De oude `invoice["subscription"]`
+    gaf geen fout maar stil None, waardoor invoice.paid en invoice.payment_failed
+    niets meer deden: een geslaagde SEPA-incasso zette niemand meer op actief."""
+    ouder = (invoice.get("parent") or {}).get("subscription_details") or {}
+    return ouder.get("subscription") or invoice.get("subscription")
+
+
+def _factuur_is_betaald(invoice) -> bool:
+    """Ook `paid` is van de factuur verdwenen; `status` zegt het nu."""
+    if invoice.get("status") is not None:
+        return invoice.get("status") == "paid"
+    return bool(invoice.get("paid"))
+
+
 def _period_end(stripe_sub) -> int | None:
     """current_period_end staat sinds Stripe API-versie 2025-03-31 niet meer op
     het Subscription-object zelf, maar op het eerste item in `items.data`. Het
