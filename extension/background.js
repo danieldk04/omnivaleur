@@ -2699,11 +2699,14 @@ async function processJob(job, serverUrl) {
     // other's photos, prices, titles and descriptions. Per-tab keying makes that
     // impossible even if two tabs ever run at once.
     chrome.storage.local.set({
-      [`jobtab_${tab.id}`]: { ...job, jobId: job.id, serverUrl, startedAt: Date.now() },
+      [`jobtab_${tab.id}`]: { ...job, jobId: job.id, serverUrl, startedAt: Date.now(), klokVast },
     });
     startOntdooiTeller();
     armJobWatchdog(tab.id);
-  });
+    // Het tabblad navigeert hierna nog naar de site zelf; de klok hoort daarna
+    // opnieuw vastgezet te worden. Meteen één keer, en daarna bij elke wissel.
+    if (klokVast) verzekerKlok(tab.id);
+  }, { klokVast });
 }
 
 // ── Per-tab watchdog for content-script-driven jobs ────────────────────────
