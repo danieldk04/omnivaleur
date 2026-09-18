@@ -17,6 +17,49 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ---
 
+## railway-doodt-lopend-verzoek-bij-deploy
+
+*18-09-2026 — Railway geeft de oude deployment standaard 0 seconden om af te ronden, dus elke push kapt lopende verzoeken midden in de uitvoering af*
+
+18-09-2026, gemeten op omnivaleur.com. Railway stuurt de vorige deployment een
+SIGTERM en meteen daarna een SIGKILL: de standaard voor `drainingSeconds` is
+**0**. Elke push kapt dus elk verzoek af dat op dat moment halverwege is. De
+browser ziet een 502 en de gebruiker een melding die niets zegt over wat er wel
+en niet gebeurd is.
+
+Wat dat kost hangt af van wat er halverwege stond. GEMETEN geval: Daniel drukte
+om 16:15:32 UTC op publiceren voor "(1370) Navy Quechua Trousers". De drie
+extensie-opdrachten (Marktplaats, 2dehands, Vinted) stonden om 16:15:34 in de
+wachtrij en overleefden het. De Shopify-rij werd om 16:15:34.9 aangemaakt en
+daarna hield het op: in de winkel bestond geen product met SKU 1370 en de rij
+stond een half uur later nog op `pending`, dus "Publishing…" in het dashboard
+voor werk dat nooit meer kwam. Dezelfde dag om 16:02 gebeurde het andersom bij
+(1366): daar was het Shopify-product wél aangemaakt en bleef alleen onze rij
+achter.
+
+**Wat je hieruit moet onthouden:**
+
+- `drainingSeconds` (en `overlapSeconds`) staan in railway.json onder `deploy`,
+  zie het officiële schema op https://railway.com/railway.schema.json. Op 60
+  gezet op 18-09-2026. Uvicorn wacht bij SIGTERM vanzelf op lopende verzoeken,
+  dus die 60 seconden zijn precies wat er nodig was.
+- Werk dat via een opdracht in de database loopt overleeft een herstart; werk dat
+  binnen het verzoek zelf naar een API praat niet. Voor dat tweede soort hoort er
+  altijd een ronde te zijn die het afmaakt:
+  `hervat_afgekapte_api_publicaties` in backend/services/publicatie_herstel.py,
+  elke tien minuten.
+- Wil je achteraf vaststellen wannéér de server werd vervangen, kijk dan naar het
+  eigen achtergrondwerk: de statuscontrole schrijft elke minuut `last_checked`
+  weg. Van 16:13:57 tot 16:16:27 UTC schreef hij niets, en daar zat de 502 in.
+  Een gat in dat ritme is een herstart.
+- Een deploy is ook zonder verkeer merkbaar: een meting van /health elke halve
+  seconde gaf op 18-09-2026 om 18:21:48 één seconde 502 tijdens het omschakelen.
+
+Zie ook "deploy-pipeline", "storing-mag-nooit-als-antwoord-tellen",
+"voortgangsping-wist-de-fouttekst".
+
+---
+
 ## vinted-tabblad-klok-stilstand
 
 *18-09-2026 — Een verborgen werk-tabblad staat bijna stil; alleen Emulation.setFocusEmulationEnabled zet de klok weer op vol tempo, de debugger aanhechten doet niets*

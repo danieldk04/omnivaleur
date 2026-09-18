@@ -10,7 +10,7 @@ product verandert. De ontwikkelaar werkt dan zowel dit bestand in de repo als de
 kopie in Drive bij, in dezelfde beurt. Daniel hoeft niets te doen; de Gem leest
 de Drive-kopie de volgende keer opnieuw in.
 
-_Laatst bijgewerkt: 18-09-2026 (een artikel dat je opnieuw inkoopt onder hetzelfde nummer wordt niet langer samengevoegd met het exemplaar dat al verkocht was, en verdwijnt dus niet meer onder Verkocht; een tweede exemplaar met een eigen nummer zoals 1349 - 2 wordt herkend en kan gewoon geplaatst worden. Eerder dezelfde dag: advertenties in een rubriek die op 2dehands geld kost werden keer op keer opnieuw geprobeerd doordat de fouttekst van zo'n mislukking kon verdwijnen; die tekst blijft nu staan, zo'n rubriek wordt onthouden en de rest van de wachtrij loopt door. Eerder dezelfde dag: 2dehands ging bij een klant helemaal uit omdat één advertentie in een betalende rubriek op de bestelpagina uitkwam; dat gebeurt niet meer, voortaan stopt alleen die rubriek en blijft de rest van de wachtrij lopen. Eerder dezelfde dag: de knop 'Clear queue' leegt nu de hele wachtrij in een klik en toont het echte aantal; hij ruimde er maximaal 50 per klik op terwijl de teller ook op 50 bleef staan, dus bij een lange rij leek er niets te gebeuren. Eerder, 17-09: nieuwe klanten zien op hun dashboard een lijst 'Get started' die vanzelf afvinkt wat echt gelukt is, en Help in het dashboard legt met een schema uit hoe het werkt, wat de iconen betekenen en wat je per kanaal nodig hebt; op Platforms staat niet langer 'Auto-detected' maar 'Uses your Chrome login'; Vinted: te lange omschrijvingen worden voor Vinted zelf ingekort en de staat wordt opnieuw ingevuld als dat de eerste keer mislukt, extensie 1.0.338; Facebook meldt alleen nog klaar als Facebook het bevestigt; vervangen bij een zakelijk Marktplaats- of 2dehands-account wordt niet meer aangeboden; een verkoop wordt alleen nog op een kanaal geboekt als dat kanaal het zelf zegt of de klant het bevestigt: een advertentie die uit je Vinted-kast verdwenen is, wordt een vraag in het dashboard waarbij je zelf het kanaal aanwijst; een klik op een grijs kanaalicoon plaatst nu of vraagt de link, en zet niets meer zomaar op live; opslaan in het bewerkscherm zet niets meer terug wat de klant zelf niet veranderde, en een artikel met Bieden, Zie omschrijving of Gratis kan weer worden opgeslagen zonder bedrag; verkocht op Marktplaats of 2dehands met een zakelijk account wordt nu ook opgemerkt als vraag in het dashboard; 2dehands voor verkopers die in Nederland wonen: land en woonplaats invullen bij Preferences; al op een kanaal en net bewerkt: vervangen kan nu direct vanuit het publiceervenster. Eerder, 15-09: zakelijk account lijkt op uitgelogd; eBay in het Nederlands; wachtrij die stilstaat omdat de browser niet is ingelogd; Vinted plaatst door zonder open tabblad; rode 'Relist failed' meldingen hersteld in 1.0.334)_
+_Laatst bijgewerkt: 18-09-2026 (de melding dat de server niet op tijd antwoordde (502) bij publiceren komt van een nieuwe versie die net live gaat: Marktplaats, 2dehands en Vinted lopen daarna gewoon door en Shopify en eBay maken zichzelf binnen tien minuten af; het plaatsformulier blijft nu ook op Marktplaats en 2dehands op vol tempo doorlopen in een tabblad dat niet in beeld staat, uitbreiding 1.0.339; een artikel dat je opnieuw inkoopt onder hetzelfde nummer wordt niet langer samengevoegd met het exemplaar dat al verkocht was, en verdwijnt dus niet meer onder Verkocht; een tweede exemplaar met een eigen nummer zoals 1349 - 2 wordt herkend en kan gewoon geplaatst worden. Eerder dezelfde dag: advertenties in een rubriek die op 2dehands geld kost werden keer op keer opnieuw geprobeerd doordat de fouttekst van zo'n mislukking kon verdwijnen; die tekst blijft nu staan, zo'n rubriek wordt onthouden en de rest van de wachtrij loopt door. Eerder dezelfde dag: 2dehands ging bij een klant helemaal uit omdat één advertentie in een betalende rubriek op de bestelpagina uitkwam; dat gebeurt niet meer, voortaan stopt alleen die rubriek en blijft de rest van de wachtrij lopen. Eerder dezelfde dag: de knop 'Clear queue' leegt nu de hele wachtrij in een klik en toont het echte aantal; hij ruimde er maximaal 50 per klik op terwijl de teller ook op 50 bleef staan, dus bij een lange rij leek er niets te gebeuren. Eerder, 17-09: nieuwe klanten zien op hun dashboard een lijst 'Get started' die vanzelf afvinkt wat echt gelukt is, en Help in het dashboard legt met een schema uit hoe het werkt, wat de iconen betekenen en wat je per kanaal nodig hebt; op Platforms staat niet langer 'Auto-detected' maar 'Uses your Chrome login'; Vinted: te lange omschrijvingen worden voor Vinted zelf ingekort en de staat wordt opnieuw ingevuld als dat de eerste keer mislukt, extensie 1.0.338; Facebook meldt alleen nog klaar als Facebook het bevestigt; vervangen bij een zakelijk Marktplaats- of 2dehands-account wordt niet meer aangeboden; een verkoop wordt alleen nog op een kanaal geboekt als dat kanaal het zelf zegt of de klant het bevestigt: een advertentie die uit je Vinted-kast verdwenen is, wordt een vraag in het dashboard waarbij je zelf het kanaal aanwijst; een klik op een grijs kanaalicoon plaatst nu of vraagt de link, en zet niets meer zomaar op live; opslaan in het bewerkscherm zet niets meer terug wat de klant zelf niet veranderde, en een artikel met Bieden, Zie omschrijving of Gratis kan weer worden opgeslagen zonder bedrag; verkocht op Marktplaats of 2dehands met een zakelijk account wordt nu ook opgemerkt als vraag in het dashboard; 2dehands voor verkopers die in Nederland wonen: land en woonplaats invullen bij Preferences; al op een kanaal en net bewerkt: vervangen kan nu direct vanuit het publiceervenster. Eerder, 15-09: zakelijk account lijkt op uitgelogd; eBay in het Nederlands; wachtrij die stilstaat omdat de browser niet is ingelogd; Vinted plaatst door zonder open tabblad; rode 'Relist failed' meldingen hersteld in 1.0.334)_
 
 ---
 
@@ -565,23 +565,22 @@ publiceren.
 Groetjes,
 Daniel
 
-### Plaatsen op Vinted blijft hangen tot ik naar dat tabblad klik
+### Plaatsen blijft hangen tot ik naar dat tabblad klik
 
 Hoi <voornaam>,
 
 Dat klopte, en het lag aan Chrome. Een tabblad dat niet in beeld staat wordt door
-de browser stilgezet om stroom te sparen: na een paar minuten gebeurt er
-praktisch niets meer. Bij Vinted duurt het invullen langer dan die paar minuten,
-dus daar viel het precies stil, en zodra jij op dat tabblad klikte liep het weer
-door.
+de browser stilgezet om stroom te sparen: het formulier loopt dan op ongeveer een
+honderdste van het normale tempo, en zodra jij op dat tabblad klikte liep het
+weer door.
 
 Vanaf uitbreiding 1.0.331 zetten we dat tabblad tijdens het plaatsen op vol
-tempo, ook als het op de achtergrond staat. Je hoeft er dus niet meer bij te
-blijven. Wat je wel kunt zien tijdens het plaatsen is een gele balk bovenin je
+tempo voor Vinted, en vanaf 1.0.339 ook voor Marktplaats en 2dehands. Je hoeft er
+dus niet meer bij te blijven. Wat je wel kunt zien tijdens het plaatsen is een gele balk bovenin je
 browser over foutopsporing; dat hoort erbij en verdwijnt vanzelf zodra de
 advertentie klaar is. Niet wegklikken, want dan valt het weer stil.
 
-Zorg dat de uitbreiding op 1.0.331 of hoger staat; Chrome werkt hem meestal
+Zorg dat de uitbreiding op 1.0.339 of hoger staat; Chrome werkt hem meestal
 vanzelf bij.
 
 Groetjes,
@@ -719,6 +718,29 @@ gewoon geplaatst.
 
 Je artikel staat weer in je lijst onder To list, met al je foto's erbij. Je kunt
 het meteen plaatsen.
+
+Groetjes,
+Daniel
+
+---
+
+### Ik kreeg de melding dat de server niet op tijd antwoordde (502) toen ik op publiceren drukte
+
+Hoi <voornaam>,
+
+Vervelend, en het lag niet aan jou. Die melding komt als wij op dat moment net
+een nieuwe versie live zetten. Jouw opdracht was toen halverwege en kreeg geen
+antwoord meer.
+
+Wat er intussen gebeurt: je advertenties voor Marktplaats, 2dehands en Vinted
+staan gewoon in de wachtrij en gaan vanzelf door, want die opdracht wordt
+bewaard. Shopify en eBay maken zichzelf sinds vandaag af: staat het product er
+al, dan koppelt Omnivaleur het, staat het er nog niet, dan plaatst hij het
+alsnog. Dat gebeurt binnen tien minuten, jij hoeft daar niets voor te doen.
+
+Ververs dus de pagina en kijk wat er staat voor je het opnieuw probeert. Druk je
+toch nog eens op publiceren, dan herkent Omnivaleur voor Marktplaats, 2dehands en
+Vinted de opdracht die al klaarstaat, dus daar komt niets dubbel van.
 
 Groetjes,
 Daniel

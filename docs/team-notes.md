@@ -10957,3 +10957,45 @@ Vinted-proef van 15-09):
 
 **Openstaand:** Daniel moet 1.0.339 zelf uploaden in de Chrome Web Store; tot dat
 is goedgekeurd draait iedereen nog op 1.0.338 en blijft dit spelen.
+
+---
+
+### 18-09-2026 — Een 502 tijdens publiceren: Railway kapt lopende verzoeken af
+
+Daniel kreeg voor de tweede keer die dag de melding "The server didn't answer in
+time (502)" op het moment dat hij op publiceren drukte, bij "(1370) Navy Quechua
+Trousers". De eerste keer was bij (1366), een kwartier eerder.
+
+**Wat er echt gebeurde, gemeten in de database.** Het verzoek kwam wél aan en
+liep drie seconden:
+
+    16:15:32.19  listings-rij marktplaats + opdracht
+    16:15:33.30  listings-rij 2dehands + opdracht
+    16:15:34.01  listings-rij vinted + opdracht
+    16:15:34.91  listings-rij shopify
+    daarna niets meer
+
+In de winkel zelf bestond geen product met SKU 1370 (gecontroleerd via de
+Shopify-API), dus het verzoek stierf binnen een seconde na die laatste rij. Bij
+(1366) om 16:02 was het spiegelbeeld: daar bestond het product wél
+(16048596812106) en bleef alleen onze rij op `pending` staan.
+
+**De oorzaak.** Railway geeft de oude deployment standaard **nul** seconden om af
+te ronden: SIGTERM en meteen SIGKILL. Elke push kapt dus elk lopend verzoek af.
+Het gat is ook in ons eigen achtergrondwerk te zien: de statuscontrole schrijft
+elke minuut `last_checked` weg, en deed dat van 16:13:57 tot 16:16:27 niet.
+Precies daarin viel de publicatie. Een meting van /health elke halve seconde gaf
+tijdens de volgende deploy opnieuw een seconde 502.
+
+**Twee reparaties.**
+
+1. `railway.json` zet `drainingSeconds` op 60. Uvicorn wacht bij SIGTERM vanzelf
+   op lopende verzoeken, dus daarmee overleeft een publicatie een deploy.
+2. `backend/services/publicatie_herstel.py` draait elke tien minuten. Shopify en
+   eBay worden vanuit het verzoek zelf gepubliceerd en hebben geen wachtrij die
+   het overneemt. Blijft zo'n rij op `pending` zonder advertentienummer staan,
+   dan koppelt hij hem aan het product dat er al staat, of publiceert alsnog, of
+   laat een leesbare fout achter. Nooit een "Publishing…" die nooit overgaat.
+
+Marktplaats, 2dehands en Vinted hadden dit nooit: hun opdracht staat in de
+wachtrij en overleeft een herstart gewoon.
