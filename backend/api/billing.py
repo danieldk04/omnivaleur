@@ -776,7 +776,7 @@ async def stripe_webhook(request: Request, stripe_signature: str = Header(None))
             try:
                 s = stripe.Subscription.retrieve(stripe_sub_id)
                 velden = {"status": s["status"], "updated_at": _now(),
-                          "current_period_end": _ts(s["current_period_end"])}
+                          "current_period_end": _ts(_period_end(s))}
             except Exception:
                 logger.exception("Kon abonnement niet ophalen na geslaagde betaling %s", stripe_sub_id)
                 velden = {"status": "active", "updated_at": _now()}
