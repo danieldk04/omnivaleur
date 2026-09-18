@@ -9628,14 +9628,18 @@ const ACTION_VERB = {
   extend: 'renewing a listing',
 };
 
-function describeJobs(jobs) {
+function describeJobs(jobs, totaal) {
   // "Vinted (removing a listing)" style, de-duplicated, max 3 shown.
   const parts = jobs.slice(0, 3).map(j => {
     const p = PLATFORM_LABELS[j.platform] || j.platform;
     const v = ACTION_VERB[j.action] || 'working';
     return `${p} (${v})`;
   });
-  const extra = jobs.length - parts.length;
+  // `totaal` is het ECHTE aantal. De lijst zelf stopt bij 50 (zie
+  // /api/jobs/active), dus zonder dit zei de kop "68 jobs queued" en de regel
+  // eronder "+47 more" — twee getallen die elkaar tegenspreken op precies het
+  // scherm waar iemand al twijfelt of er wel iets gebeurt.
+  const extra = Math.max(jobs.length, totaal || 0) - parts.length;
   return parts.join(', ') + (extra > 0 ? ` +${extra} more` : '');
 }
 
@@ -9810,14 +9814,14 @@ function renderActivityBar() {
         text.innerHTML = `The copy on your computer is <b>v${esc(ext.outdated_extension)}</b>`
           + (ext.published_extension ? ` while <b>v${esc(ext.published_extension)}</b> is the current one` : '')
           + `, so we stopped handing it work — it starts listings it cannot finish. `
-          + `Nothing will run until you replace it (${describeJobs(queued)}). `
+          + `Nothing will run until you replace it (${describeJobs(queued, nQueued)}). `
           + `On that computer: open <b>chrome://extensions</b>, remove <b>every</b> Omnivaleur entry, `
           + `<a href="https://chrome.google.com/webstore/detail/gfaogapbhaacfbpdppdcmnkjndlphleh" target="_blank" rel="noopener">install it from the Chrome Web Store</a>, `
           + `and open Omnivaleur once in that browser. <b>Nothing is lost</b> — the queue starts on its own after that.`;
       } else {
       title.textContent = `${nQueued} job${nQueued === 1 ? '' : 's'} queued — nothing is running`;
       text.innerHTML = `Your extension has not checked in${geleden}, so nothing will start `
-        + `(${describeJobs(queued)}). Open Chrome on the computer you use for Omnivaleur and make sure `
+        + `(${describeJobs(queued, nQueued)}). Open Chrome on the computer you use for Omnivaleur and make sure `
         + `the Omnivaleur extension is switched on at <b>chrome://extensions</b> — the queue picks up by itself after that. `
         + `Nothing is lost while it waits.`;
       }
@@ -9826,7 +9830,7 @@ function renderActivityBar() {
       title.textContent = `${nQueued} job${nQueued === 1 ? '' : 's'} queued — Calm mode is spacing them out`;
       text.innerHTML = `Calm mode is on, so the extension does about <b>one every ${minuten} minutes</b> `
         + `instead of back to back. These ${nQueued} will take ${fmtQueueEta(nQueued, pace.seconds_per_job || pace.seconds_between)} `
-        + `(${describeJobs(queued)}). <b>Nothing is stuck</b> — long quiet gaps are what Calm mode does. `
+        + `(${describeJobs(queued, nQueued)}). <b>Nothing is stuck</b> — long quiet gaps are what Calm mode does. `
         + `To run them straight through, click the Omnivaleur extension icon and switch Calm mode off.`
         + voortgang + stilZin;
     } else {
@@ -9843,7 +9847,7 @@ function renderActivityBar() {
         : '';
       title.textContent = `${nQueued} job${nQueued === 1 ? '' : 's'} queued — the extension is about to start`;
       text.innerHTML = 'Within ~15 seconds the extension opens a tab and handles this automatically ('
-        + describeJobs(queued) + ').' + eta + voortgang + stilZin + ' '
+        + describeJobs(queued, nQueued) + ').' + eta + voortgang + stilZin + ' '
         + '<b>Once it starts, leave the tab it opens alone</b> and hold off on new actions until it finishes.';
     }
   }
