@@ -840,7 +840,9 @@ def _now() -> str:
     return datetime.now(timezone.utc).isoformat()
 
 
-def _ts(unix_ts: int) -> str:
+def _ts(unix_ts: int | None) -> str | None:
+    if unix_ts is None:
+        return None
     from datetime import datetime, timezone
     return datetime.fromtimestamp(unix_ts, tz=timezone.utc).isoformat()
 
