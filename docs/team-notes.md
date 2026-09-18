@@ -10696,3 +10696,31 @@ advertentie weg en begint de teller opnieuw; haar "Gezien" staat op 5 tot 7.
 `.order()` en miste daardoor 187 van haar 1.236 artikelen, die het vervolgens als
 "staat op Marktplaats zonder koppeling bij ons" meldde. Voor-en-na gemeten: oude
 code 1.049 unieke artikelen, nieuwe 1.236.
+
+### 18-09-2026 (vervolg) — Henriettes 22 oude kopieën: op titel alleen 4 vals-positief
+
+Zij zei ja op "mag ik ze opruimen". Bij het echt bouwen van de verwijderlijst bleek
+titel-matching alleen (dezelfde valkuil als in
+`scripts/ruim_dubbele_advertenties_uit_import.py` al staat beschreven, ditmaal
+tegen antiek in plaats van kleding) 32 kandidaten op te leveren, waarvan er 4 een
+duidelijk andere prijs hadden dan het item dat we al volgen: "Granaten armband met
+zilveren slot, 20 cm." voor €75 naast dezelfde titel zonder punt voor €135, twee
+verschillende sieraden die toevallig hetzelfde heten. Prijs erbij als tweede,
+onafhankelijke controle (titel EN prijs op de cent moeten kloppen) hield er 28
+over; die 4 zijn met opzet met rust gelaten.
+
+28 is meer dan de "22" die vanochtend in de mail aan haar werd genoemd — dat getal
+kwam uit een eerdere sessie die het aantal beperkte tot advertenties van vóór haar
+importdatum (9 juni t/m 17 augustus) en nergens is opgeslagen; deze meting keek
+naar al haar 228 niet-gekoppelde advertenties zonder datumgrens. Geen tegenspraak,
+een andere afbakening.
+
+Voor die 28 staat nu een `delete`-opdracht klaar in `jobs` (payload: title +
+platform_listing_id van de OUDE advertentie, item_id verwijst naar het artikel dat
+we al volgen). `bgDeleteMp2dh` in de extensie selecteert op precies dat
+advertentienummer op het overzicht "Mijn zoekertjes" en verwijdert het; dat loopt
+vanzelf zodra haar extensie actief is, net als elke andere delete-opdracht.
+
+**Openstaand:** de 4 afgekeurde kandidaten en de overige ~200 niet-gekoppelde
+advertenties zijn niet beoordeeld — dat zijn vermoedelijk gewoon haar eigen
+losse voorraad naast Omnivaleur, niet per se dubbelen. Niet aangeraakt.
