@@ -10649,3 +10649,50 @@ komt alles op dat account terecht.
 
 Openstaand: zijn wachtrij van 68 is met opzet niet door ons geleegd. Hij drukt zelf
 op de knop zodra dit live staat, dan ziet hij ook dat het werkt.
+
+### 18-09-2026 — Henriette (Zilverwebsite.nl) meldde drie dingen; alle drie nagemeten
+
+Zij mailde dat Omnivaleur vastliep, met drie screenshots: Marktplaats toont meer
+advertenties dan Omnivaleur, het programma plaatste er vandaag twee en stopte
+daarna, en tijdens het typen van de mail verscheen "Activate your subscription".
+
+**1. Het abonnementsscherm was onze fout, en het was zij.** Zij is klant
+`26cf5471` / `cus_V7U6m3jY1slXh7`: precies het account dat hierboven om 07:38 UTC
+op `canceled` werd gezet en om 07:50:59 UTC is hersteld. Zij typte haar mail in
+dat venster van twaalf minuten. Nagemeten bij Stripe op 18-09: `sub_1U7F8x…`
+staat `active`, periode t/m 24-09 14:21 UTC, en onze rij komt daar exact mee
+overeen. `evaluate_access` op de echte rij geeft `allowed: true`. De cache in
+`billing.py` staat op 60 seconden, dus haar toegang was uiterlijk een minuut na
+het herstel weer terug.
+
+**2. "Twee geplaatst en toen gestopt" is geen storing maar voorsprong.** Haar
+`relist_dagen` staat op 30. Haar oudste actieve Marktplaats-advertentie is 27
+dagen oud (21-08, 60 stuks), er is niets van 28 dagen of ouder. Er stond dus
+niets klaar. De machine deed 03-09 t/m 15-09 zestig tot zeventig herplaatsingen
+per dag omdat er een berg geïmporteerde advertenties van juni en juli lag; die
+berg is op. Volgende lichting: 60 stuks op 20-09, daarna 20 tot 105 per dag.
+
+**3. Marktplaats toont er 1.257, wij 1.234. Het verschil is 23 en het klopt.**
+Openbare verkoperslijst: 1.276 advertenties, maar die lijst bevat ook verlopen
+advertenties. Elk van de 41 nummers zonder koppeling bij ons is apart opgehaald:
+18 gaven 410 (verlopen), 23 staan er echt. 1.234 + 23 = 1.257, precies haar
+scherm. Van die 23 is er bij 22 aantoonbaar een tweede, óók levende advertentie
+voor hetzelfde artikel.
+
+**Die 22 dubbelen komen niet van ons.** Alle 23 nummers zijn geplaatst tussen
+9 juni en 17 augustus, dus vóór of op haar importdatum (17 t/m 19 augustus). Er
+zit er geen enkele van na de import bij. Zij had die tweede exemplaren dus zelf
+al staan; de import koppelde er één per artikel en liet de tweelingen ongemoeid.
+Omnivaleur ververst sindsdien de gekoppelde en laat de tweeling staan.
+
+**Openstaand voor Daniel:** die 22 oude kopieën staan nog live op haar account.
+Weghalen kan alleen via haar extensie en is een ingreep op haar advertenties, dus
+niet zonder haar ja. Tweede punt om over na te denken: haar advertenties van eind
+juni staan in september nog gewoon online, dus de aanname dat Marktplaats na 30
+dagen opruimt geldt bij haar niet. Elke herplaatsing gooit dan een levende
+advertentie weg en begint de teller opnieuw; haar "Gezien" staat op 5 tot 7.
+
+**Ook gerepareerd:** `scripts/controleer_advertenties_online.py` pagineerde zonder
+`.order()` en miste daardoor 187 van haar 1.236 artikelen, die het vervolgens als
+"staat op Marktplaats zonder koppeling bij ons" meldde. Voor-en-na gemeten: oude
+code 1.049 unieke artikelen, nieuwe 1.236.

@@ -17,6 +17,53 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ---
 
+## pagineren-zonder-order-mist-rijen
+
+*18-09-2026 — .range() zonder .order() laat de database elke pagina anders sorteren; bij 1236 artikelen miste dat er reproduceerbaar 187*
+
+Elke lus die met `.range(offset, offset+999)` door een tabel pagineert MOET een
+`.order()` hebben. Zonder vaste volgorde mag Postgres elke pagina anders sorteren:
+sommige rijen komen dubbel terug, andere helemaal niet.
+
+**Why:** gemeten 18-09-2026 in `scripts/controleer_advertenties_online.py` bij
+Zilverwebsite.nl: 1.236 rijen opgehaald, maar slechts 1.049 unieke artikelen, twee
+keer achter elkaar hetzelfde. De 187 gemiste artikelen kwamen daarna terug als
+"staat op Marktplaats zonder koppeling bij ons", dus de fout gaf niet een verkeerd
+getal maar een verkeerde diagnose. Dezelfde fout was al eerder geraakt in
+`backend/api/imports.py` en `backend/services/crosslist.py`.
+
+**How to apply:** grep op `.range(` voordat je een tellend script vertrouwt, en
+wantrouw elk totaal dat lager uitvalt dan het dashboard. Zie ook
+"gekoppelde-vraag-ipv-brokken" en "wantrouw-lege-uitkomsten".
+
+---
+
+## openbare-lijst-toont-ook-verlopen
+
+*18-09-2026 — Een advertentie in de openbare Marktplaats-verkoperslijst kan al verlopen zijn; alleen de advertentiepagina zelf (200 zonder "verlopen") bewijst dat hij live is*
+
+De openbare zoek-API van Marktplaats (`sellerIds[]`) geeft ook advertenties terug
+die niet meer te koop staan. Gemeten 18-09-2026 bij Zilverwebsite.nl: de lijst gaf
+1.276 advertenties, waarvan er 41 niet aan onze administratie hingen. Van die 41
+gaven er 18 op hun eigen advertentiepagina HTTP 410 met de tekst "verlopen". Ze
+stonden dus nog in de lijst terwijl ze weg waren.
+
+Op die lijst alleen afgaan gaf hier een conclusie die 23 advertenties te hoog was:
+"40 dubbele advertenties" terwijl het er 22 waren.
+
+**Waarom:** de zoekindex loopt achter op de advertentiestatus, en anders dan bij
+"fetch-bewijst-niets-op-react-pagina" is een kale fetch van de ADVERTENTIEPAGINA
+hier juist wel betrouwbaar: 410 plus het woord "verlopen" in de opgehaalde pagina
+komt overeen met wat de browser toont.
+
+**How to apply:** de verkoperslijst is goed om te zien WELKE nummers er bestaan, en
+om te bewijzen dat iets er niet meer bij staat. Wil je weten of een nummer nu echt
+live is, haal dan de `vipUrl` van die rij op en eis HTTP 200 zonder "verlopen" in de
+tekst. Zie ook "openbare-verkoperslijst-toont-de-fotos" en
+"succes-nooit-uit-uitsluitingslijst".
+
+---
+
 ## teller-uit-een-afgekapte-lezing
 
 *18-09-2026 — Een aantal op het scherm mag nooit uit een lezing met .limit() komen; de knop eronder ruimde precies die limiet op en de teller sprong terug*
