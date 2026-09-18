@@ -226,6 +226,33 @@ def test_de_sku_die_wij_er_zelf_in_zetten_telt_niet_mee():
     assert zelfde_artikel(dict(een, sku="1032"), twee)
 
 
+def test_de_familie_laat_een_tweede_exemplaar_erbuiten():
+    """De familie bepaalt of publiceren wordt geweigerd ("staat al online onder
+    een dubbele rij"), of de verkoop-rem dichtvalt, en welke advertenties er bij
+    een verkoop weggaan. Een tweede exemplaar hoort daar op alle drie buiten."""
+    from backend.services.tweelingen import familie_ids
+
+    rijen = [{"id": "een", "brand": "Suitsupply", "sku": "1349"},
+             {"id": "twee", "brand": "Suitsupply", "sku": "1349 - 2"},
+             {"id": "import", "brand": "Suitsupply", "sku": "IMP-6901C73F"}]
+
+    class T:
+        def select(self, *a, **kw): return self
+        def eq(self, *a, **kw): return self
+        def or_(self, *a, **kw): return self
+        def limit(self, *a, **kw): return self
+        def execute(self): return types.SimpleNamespace(data=rijen)
+
+    class D:
+        def table(self, _naam): return T()
+
+    ids = familie_ids(D(), {"id": "twee", "user_id": "u1", "sku": "1349 - 2",
+                            "brand": "Suitsupply", "title": "(1349) Bodywarmer"})
+    assert ids == ["twee", "import"], (
+        "de rij met een ander eigen nummer is een ander voorwerp; "
+        "de importrij zonder eigen nummer hoort er wel bij")
+
+
 # ───────────────────────── de verkoop-rem ───────────────────────────────────
 
 class _JobsDb:
