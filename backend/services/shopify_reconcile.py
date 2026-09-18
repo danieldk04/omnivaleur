@@ -151,11 +151,26 @@ async def reconcile_shopify_catalog(user_id: str) -> dict:
         return {"gekoppeld": 0, "producten_gezien": len(producten)}
 
     item_ids = [i["id"] for i in items]
-    al_gekoppeld = {
-        r["item_id"] for r in
-        ((await naast_de_lus(lambda: db.table("listings").select("item_id")
-         .eq("platform", "shopify").in_("item_id", item_ids).execute())).data or [])
-    }
+    shopify_rijen = ((await naast_de_lus(lambda: db.table("listings")
+                      .select("id,item_id,status,platform_listing_id")
+                      .eq("platform", "shopify").in_("item_id", item_ids)
+                      .execute())).data or [])
+    al_gekoppeld = {r["item_id"] for r in shopify_rijen}
+
+    # EEN RIJ DIE BLIJFT STEKEN OP 'PENDING' ZONDER PRODUCTNUMMER (18-09-2026).
+    #
+    # Publiceren naar Shopify zet eerst een lege rij op 'pending' en roept dan de
+    # Shopify-API aan. Valt de server daartussen weg — Daniel drukte op Publish
+    # precies tijdens een herstart — dan staat het product wél in de winkel maar
+    # weet onze administratie dat niet. Het dashboard zegt dan eeuwig
+    # "Publishing…", en wie nog een keer op Publish drukt krijgt een TWEEDE
+    # product. Zo'n rij telde hierboven als "al gekoppeld" en werd dus nooit meer
+    # rechtgezet. Nu adopteren we hem: hetzelfde bewijs als bij een nieuwe
+    # koppeling (uniek nummer, uniek product, merk dat klopt), alleen schrijven
+    # we in de bestaande rij in plaats van een nieuwe.
+    wees_rij = {r["item_id"]: r["id"] for r in shopify_rijen
+                if r.get("status") == "pending" and not r.get("platform_listing_id")}
+    al_gekoppeld -= set(wees_rij)
 
     # Draagt hetzelfde nummer meer dan één artikel VAN DEZE VERKOPER, dan is niet
     # te zeggen welke van de twee bij het Shopify-product hoort. Overslaan.
