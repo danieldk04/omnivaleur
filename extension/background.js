@@ -2165,11 +2165,18 @@ const HEEFT_TOETSEN_NODIG = /^https:\/\/(?:www\.)?(?:marktplaats\.nl|2dehands\.b
 // elke keuzelijst, elke suggestie en elke controle wacht op een timer die bijna
 // stilstaat. Vandaar "er gebeurt niks".
 //
-// Marktplaats had dit nooit, om één reden: daar hangt de debugger van Chrome al
-// aan het tabblad (voor de echte toetsaanslag), en dat zet de rem uit — precies
-// zoals een open DevTools dat doet. Uit de echte opdrachten van klanten:
-// plaatsen op Marktplaats duurt 38 seconden (mediaan van 120), op Vinted 234
-// seconden (mediaan van 94), met uitschieters tot 80 minuten.
+// HIER STOND EEN AANNAME DIE NIET KLOPTE (rechtgezet 18-09-2026).
+//
+// "Marktplaats had dit nooit, want daar hangt de debugger al aan het tabblad en
+// dat zet de rem uit." Dat is op 18-09 weerlegd door een meting uit Daniels
+// eigen browser: een 2dehands-formulier mét debugger meldde "klokstand: 0,1/s
+// +23546ms hidden". Aanhechten haalt de rem er niet af; alleen de focus-emulatie
+// hieronder doet dat. Marktplaats leek sneller omdat het formulier korter is,
+// niet omdat de klok er wél liep. Zie zetDoorlopendeKlok.
+//
+// Uit de echte opdrachten van klanten: plaatsen op Marktplaats duurt 38 seconden
+// (mediaan van 120), op Vinted 234 seconden (mediaan van 94), met uitschieters
+// tot 80 minuten.
 //
 // Daarom koppelen we ook aan het Vinted-formulier. Niet om te typen, maar om de
 // rem eraf te halen. De prijs is Chrome's gele balk boven dat venster, dezelfde
