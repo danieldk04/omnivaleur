@@ -11009,3 +11009,78 @@ tijdens de volgende deploy opnieuw een seconde 502.
 
 Marktplaats, 2dehands en Vinted hadden dit nooit: hun opdracht staat in de
 wachtrij en overleeft een herstart gewoon.
+
+---
+
+### 18-09-2026 — Waarom een werk-tabblad stilstond, en wat er nu echt tegen helpt
+
+Daniel: "los nu echt met 1000% zekerheid op dat ik niet op het tabblad hoef te
+zitten om te publiceren, dit loopt telkens fout bij marktplaats en 2dehands", en
+even later: "vinted opent nog steeds in een ander venster in plaats van een ander
+tabblad, maar zelfde verhaal".
+
+**Waar de eerdere metingen fout zaten.** Zowel de Vinted-reparatie van 15-09 als
+de Marktplaats-reparatie van 18-09 zijn gemeten met een proef van tien seconden.
+Dat is te kort. Chrome knijpt een tabblad dat niet in beeld staat pas na ruim een
+minuut echt af. Negen minuten meten in een echte Chrome op deze machine
+(`tests/klok-varianten-echt-test.mjs`, alle varianten tegelijk, dus dezelfde
+machine en hetzelfde moment) geeft dit:
+
+    variant                                    na 30 sec   na 90 sec   na 9 min
+    achtergrondtabblad, kaal                      1,5/s       0,0/s       0,0/s
+    achtergrondtabblad + alleen de debugger       1,5/s       0,0/s       0,0/s
+    EIGEN VENSTER, ingeklapt, actief tabblad      2,4/s       0,0/s       0,0/s
+    achtergrondtabblad + focus-emulatie          11,5/s       9,9/s       9,5/s
+    eigen venster + focus-emulatie               11,3/s       9,5/s       9,4/s
+    + ontdooien, + screencast, geluid            geen enkel verschil
+
+Twee dingen staan daarmee vast. Eén: het eigen venster voor Vinted, dat op 15-09
+werd ingevoerd omdat het "92 tikken in 10 seconden" haalde, doet in werkelijkheid
+precies niets — het valt net zo hard stil als een achtergrondtabblad. Daniels
+eigen Vinted-opdrachten zeiden dat ook al: "klokstand: 0.0/s +44995ms" met
+looptijden van 1210, 1341 en 1690 seconden. Twee: het enige wat helpt is
+`Emulation.setFocusEmulationEnabled`. Ontdooien met `Page.setWebLifecycleState`,
+een screencast en een geluidje voegen er meetbaar niets aan toe.
+
+**Overleeft die instelling het navigeren?** Ja, ook over een procesoverstap heen.
+Gemeten op de échte Marktplaats-pagina, vijf minuten lang, met de teller pas na
+het laden in de pagina gezet:
+
+    geen focus-emulatie                          0,0/s
+    focus aan op het lege tabblad, dan navigeren 9,1/s
+    focus aan vóór én na het laden               9,0/s
+    focus pas na het laden                       9,0/s
+
+**Wat er veranderd is (1.0.340).**
+
+1. Vinted publiceert weer in een achtergrondtabblad in het venster waar de
+   verkoper toch al werkt. Het eigen, ingeklapte venster is eruit.
+2. De klok wordt vastgezet voor ELKE schrijvende klus (`create`, `delete`,
+   `content_refresh`, `extend`), op elk kanaal, in plaats van alleen op de
+   adressen `/plaats` en `/items/new`.
+3. De klok wordt hersteld na elke paginawissel (`chrome.tabs.onUpdated`) en elke
+   tien seconden tijdens de klus, inclusief opnieuw koppelen. Dat vangt de drie
+   manieren af waarop de rem er tussentijds weer op ging: een navigatie, de knop
+   "Annuleren" in Chrome's gele balk, en een service worker die Chrome opnieuw
+   startte.
+
+Voor-en-na met dezelfde proef (`tests/werktabblad-klok-echt-test.mjs`, nu vijf
+minuten in plaats van tien seconden, en alleen de laatste drie minuten tellen mee)
+staat onder aan deze notitie.
+
+**Wat hier niet mee is opgelost, en wel gemeten.** De wachtrij loopt strikt één
+klus tegelijk. Voor artikel 1370 zat er tussen het indrukken van publiceren en de
+Marktplaats-plaatsing 10,6 minuten, niet omdat er iets misging maar omdat 2dehands
+en Vinted eerst aan de beurt waren. Gemeten tussenpozen tussen twee opeenvolgende
+plaatsingen vanmiddag: 5,3 — 5,3 — 5,1 — 2,7 — 5,0 — 4,6 — 2,8 — 5,3 minuten. Vier
+kanalen kosten dus een kwartier tot twintig minuten per artikel. Dat voelt als
+"marktplaats doet het niet", terwijl het gewoon nog moet beginnen. Of dat sneller
+mag is een aparte afweging: sneller publiceren betekent minder rust tussen de
+plaatsingen, en dat is precies waar de kanalen op letten.
+
+**En een losse:** een loafer werd ingedeeld als "heren formele schoenen" (artikel
+1369, Suitsupply loafers). Bij dames gingen loafers zelfs naar "hakken". Op
+Marktplaats maakt dat niets uit — alle herenschoenen delen categorie 642 — maar op
+Vinted en eBay wel. Instappers, mocassins, penny loafers en bootschoenen gaan nu
+naar "heren schoenen" respectievelijk "schoenen dames"; alleen veterschoenen
+(oxford, derby, brogue) blijven formeel.

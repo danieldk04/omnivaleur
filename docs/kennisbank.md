@@ -17,77 +17,32 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ---
 
-## shopify-zoeken-op-sku-stopte-te-vroeg
+## korte-klokmeting-bewijst-niets
 
-*18-09-2026 — Zoeken op SKU in de Shopify-catalogus gaf "niet gevonden" voor bestaande producten omdat de paginagrootte na pagina 1 wegviel*
+*18-09-2026 — Een klokmeting van tien seconden in een verborgen tabblad geeft altijd groen licht; Chrome knijpt pas na ruim een minuut echt af, dus meet minstens vijf minuten en tel alleen het laatste stuk*
 
-18-09-2026, gemeten op ywqad3-xb.myshopify.com. `_find_shopify_product_id_by_sku`
-(backend/services/crosslist.py) vraagt `products.json?limit=250`. Shopify geeft de
-volgende pagina als kant-en-klare URL in de Link-kop, met alleen `page_info` erin.
-De code volgde die URL zonder parameters, en dan valt Shopify terug op zijn
-standaard van **50** per pagina. Veertig rondes gaven daardoor 2.200 producten in
-plaats van de bedoelde 10.000, en daarna kwam er gewoon `None` uit.
+18-09-2026. Twee reparaties op rij zijn goedgekeurd door een proef die tien
+seconden mat, en allebei bleken ze in de praktijk niet te werken:
 
-Dat kostte mij een verkeerde conclusie: SKU 1370 stond sinds 16:15:48 in de winkel
-en de functie zei "niet gevonden", terwijl `_alle_actieve_shopify_producten` (die
-wél doorpagineert, en bovendien op `status=active` filtert) hem meteen vond. Twee
-functies over dezelfde catalogus die elkaar tegenspreken is het signaal.
+- 15-09: "een tabblad dat in zijn eigen venster vooraan staat houdt vol tempo,
+  ook geminimaliseerd: 92 tikken in 10 seconden." Over negen minuten gemeten is
+  dat 0,0 tikken per seconde.
+- 18-09: "nieuw: 62 tikken per 10 sec." Datzelfde tabblad meldde in Daniels eigen
+  browser `klokstand: 0.0/s +44995ms`.
 
-**Wat je hieruit moet onthouden:**
+Chrome knijpt een tabblad dat niet in beeld staat in stappen af. De eerste dertig
+seconden gebeurt er nog bijna niets (11,5 tikken/s), na negentig seconden is het
+nul. Een proef van tien seconden meet dus precies het stuk waarin het probleem
+nog niet bestaat.
 
-- Bij cursor-paginering horen `limit` en `fields` telkens opnieuw mee. Alleen die
-  twee mogen naast `page_info` staan; al het andere weigert Shopify.
-- Een lus met een harde bovengrens mag nooit stil `None` teruggeven als hij die
-  grens raakt. Dat leest als "bestaat niet" terwijl het "niet ver genoeg gekeken"
-  is. Er staat nu een waarschuwing in het logboek.
-- De prijs van een verkeerde "niet gevonden" is hier concreet: die functie haalt
-  een verkocht artikel uit de winkel als het productnummer ontbreekt. Niet
-  gevonden betekent: blijft te koop staan.
+**Regel:** meet minstens vijf minuten en beoordeel alleen de laatste drie. Meet
+alle varianten tegelijk in één browser, anders vergelijk je twee momenten in
+plaats van twee varianten. En zet de teller pas ná het laden in de pagina, anders
+meet je de opstart van de site mee.
 
-Zie ook "pagineren-zonder-order-mist-rijen", "succes-nooit-uit-uitsluitingslijst",
-"railway-doodt-lopend-verzoek-bij-deploy".
-
----
-
-## railway-doodt-lopend-verzoek-bij-deploy
-
-*18-09-2026 — Railway geeft de oude deployment standaard 0 seconden om af te ronden, dus elke push kapt lopende verzoeken midden in de uitvoering af*
-
-18-09-2026, gemeten op omnivaleur.com. Railway stuurt de vorige deployment een
-SIGTERM en meteen daarna een SIGKILL: de standaard voor `drainingSeconds` is
-**0**. Elke push kapt dus elk verzoek af dat op dat moment halverwege is. De
-browser ziet een 502 en de gebruiker een melding die niets zegt over wat er wel
-en niet gebeurd is.
-
-Wat dat kost hangt af van wat er halverwege stond. GEMETEN geval: Daniel drukte
-om 16:15:32 UTC op publiceren voor "(1370) Navy Quechua Trousers". De drie
-extensie-opdrachten (Marktplaats, 2dehands, Vinted) stonden om 16:15:34 in de
-wachtrij en overleefden het. De Shopify-rij werd om 16:15:34.9 aangemaakt, het product
-zelf om 16:15:48 met alle acht foto's (16048603693386) — en daarna hield het op.
-Onze rij kreeg dat productnummer nooit te horen en stond een half uur later nog
-op `pending`, dus "Publishing…" in het dashboard voor werk dat allang gedaan was.
-Dezelfde dag om 16:02 gebeurde precies hetzelfde bij (1366).
-
-**Wat je hieruit moet onthouden:**
-
-- `drainingSeconds` (en `overlapSeconds`) staan in railway.json onder `deploy`,
-  zie het officiële schema op https://railway.com/railway.schema.json. Op 60
-  gezet op 18-09-2026. Uvicorn wacht bij SIGTERM vanzelf op lopende verzoeken,
-  dus die 60 seconden zijn precies wat er nodig was.
-- Werk dat via een opdracht in de database loopt overleeft een herstart; werk dat
-  binnen het verzoek zelf naar een API praat niet. Voor dat tweede soort hoort er
-  altijd een ronde te zijn die het afmaakt:
-  `hervat_afgekapte_api_publicaties` in backend/services/publicatie_herstel.py,
-  elke tien minuten.
-- Wil je achteraf vaststellen wannéér de server werd vervangen, kijk dan naar het
-  eigen achtergrondwerk: de statuscontrole schrijft elke minuut `last_checked`
-  weg. Van 16:13:57 tot 16:16:27 UTC schreef hij niets, en daar zat de 502 in.
-  Een gat in dat ritme is een herstart.
-- Een deploy is ook zonder verkeer merkbaar: een meting van /health elke halve
-  seconde gaf op 18-09-2026 om 18:21:48 één seconde 502 tijdens het omschakelen.
-
-Zie ook "deploy-pipeline", "storing-mag-nooit-als-antwoord-tellen",
-"voortgangsping-wist-de-fouttekst".
+Geldt voor alles wat Chrome pas na verloop van tijd afknijpt: pagina-klokken,
+Web Workers, achtergrondwerk. Zie "vinted-tabblad-klok-stilstand",
+"verborgen-tabblad-worker-timer" en "omnivaleur-altijd-bewijzen".
 
 ---
 
@@ -176,6 +131,109 @@ tikken per 10 sec (8 geminimaliseerd), nieuw `visible` en 62 (65 geminimaliseerd
 **De les erachter:** een aanname over waaróm iets ergens anders wél werkt is geen
 meting. "Marktplaats heeft er geen last van" kwam uit een sneller mediaan, en dat
 kwam uit een korter formulier.
+
+**18-09-2026, tweede correctie: het eigen venster voor Vinted deed niets, en de
+metingen waarop het gebaseerd was waren te kort.** Daniel: "vinted opent nog
+steeds in een ander venster in plaats van een ander tabblad, maar zelfde
+verhaal". Alle varianten tegelijk gemeten, negen minuten lang, in één echte
+Chrome (`tests/klok-varianten-echt-test.mjs`):
+
+| variant | na 30 sec | na 90 sec | na 9 min |
+|---|---|---|---|
+| achtergrondtabblad, kaal | 1,5/s | 0,0/s | 0,0/s |
+| achtergrondtabblad + alleen de debugger | 1,5/s | 0,0/s | 0,0/s |
+| eigen venster, ingeklapt, actief tabblad | 2,4/s | 0,0/s | 0,0/s |
+| achtergrondtabblad + focus-emulatie | 11,5/s | 9,9/s | 9,5/s |
+| eigen venster + focus-emulatie | 11,3/s | 9,5/s | 9,4/s |
+
+Ontdooien met `Page.setWebLifecycleState`, `Page.startScreencast` en een geluidje
+voegen er meetbaar niets aan toe. Het venster doet er dus niets toe, alleen de
+focus-emulatie. Het eigen venster is eruit; Vinted publiceert weer in een
+achtergrondtabblad in het venster van de verkoper.
+
+Ook opnieuw gemeten, nu op de échte Marktplaats-pagina met de teller pas ná het
+laden gezet: focus-emulatie overleeft een procesoverstap. Vijf minuten: geen
+emulatie 0,0/s, emulatie vooraf 9,1/s, emulatie erna 9,0/s.
+
+In 1.0.340 geldt de klok voor élke schrijvende klus (`create`, `delete`,
+`content_refresh`, `extend`) op elk kanaal, en wordt hij hersteld na elke
+paginawissel en elke tien seconden tijdens de klus — inclusief opnieuw koppelen
+als de verkoper op "Annuleren" drukte of Chrome de service worker herstartte.
+Zie "korte-klokmeting-bewijst-niets".
+
+---
+
+## shopify-zoeken-op-sku-stopte-te-vroeg
+
+*18-09-2026 — Zoeken op SKU in de Shopify-catalogus gaf "niet gevonden" voor bestaande producten omdat de paginagrootte na pagina 1 wegviel*
+
+18-09-2026, gemeten op ywqad3-xb.myshopify.com. `_find_shopify_product_id_by_sku`
+(backend/services/crosslist.py) vraagt `products.json?limit=250`. Shopify geeft de
+volgende pagina als kant-en-klare URL in de Link-kop, met alleen `page_info` erin.
+De code volgde die URL zonder parameters, en dan valt Shopify terug op zijn
+standaard van **50** per pagina. Veertig rondes gaven daardoor 2.200 producten in
+plaats van de bedoelde 10.000, en daarna kwam er gewoon `None` uit.
+
+Dat kostte mij een verkeerde conclusie: SKU 1370 stond sinds 16:15:48 in de winkel
+en de functie zei "niet gevonden", terwijl `_alle_actieve_shopify_producten` (die
+wél doorpagineert, en bovendien op `status=active` filtert) hem meteen vond. Twee
+functies over dezelfde catalogus die elkaar tegenspreken is het signaal.
+
+**Wat je hieruit moet onthouden:**
+
+- Bij cursor-paginering horen `limit` en `fields` telkens opnieuw mee. Alleen die
+  twee mogen naast `page_info` staan; al het andere weigert Shopify.
+- Een lus met een harde bovengrens mag nooit stil `None` teruggeven als hij die
+  grens raakt. Dat leest als "bestaat niet" terwijl het "niet ver genoeg gekeken"
+  is. Er staat nu een waarschuwing in het logboek.
+- De prijs van een verkeerde "niet gevonden" is hier concreet: die functie haalt
+  een verkocht artikel uit de winkel als het productnummer ontbreekt. Niet
+  gevonden betekent: blijft te koop staan.
+
+Zie ook "pagineren-zonder-order-mist-rijen", "succes-nooit-uit-uitsluitingslijst",
+"railway-doodt-lopend-verzoek-bij-deploy".
+
+---
+
+## railway-doodt-lopend-verzoek-bij-deploy
+
+*18-09-2026 — Railway geeft de oude deployment standaard 0 seconden om af te ronden, dus elke push kapt lopende verzoeken midden in de uitvoering af*
+
+18-09-2026, gemeten op omnivaleur.com. Railway stuurt de vorige deployment een
+SIGTERM en meteen daarna een SIGKILL: de standaard voor `drainingSeconds` is
+**0**. Elke push kapt dus elk verzoek af dat op dat moment halverwege is. De
+browser ziet een 502 en de gebruiker een melding die niets zegt over wat er wel
+en niet gebeurd is.
+
+Wat dat kost hangt af van wat er halverwege stond. GEMETEN geval: Daniel drukte
+om 16:15:32 UTC op publiceren voor "(1370) Navy Quechua Trousers". De drie
+extensie-opdrachten (Marktplaats, 2dehands, Vinted) stonden om 16:15:34 in de
+wachtrij en overleefden het. De Shopify-rij werd om 16:15:34.9 aangemaakt, het product
+zelf om 16:15:48 met alle acht foto's (16048603693386) — en daarna hield het op.
+Onze rij kreeg dat productnummer nooit te horen en stond een half uur later nog
+op `pending`, dus "Publishing…" in het dashboard voor werk dat allang gedaan was.
+Dezelfde dag om 16:02 gebeurde precies hetzelfde bij (1366).
+
+**Wat je hieruit moet onthouden:**
+
+- `drainingSeconds` (en `overlapSeconds`) staan in railway.json onder `deploy`,
+  zie het officiële schema op https://railway.com/railway.schema.json. Op 60
+  gezet op 18-09-2026. Uvicorn wacht bij SIGTERM vanzelf op lopende verzoeken,
+  dus die 60 seconden zijn precies wat er nodig was.
+- Werk dat via een opdracht in de database loopt overleeft een herstart; werk dat
+  binnen het verzoek zelf naar een API praat niet. Voor dat tweede soort hoort er
+  altijd een ronde te zijn die het afmaakt:
+  `hervat_afgekapte_api_publicaties` in backend/services/publicatie_herstel.py,
+  elke tien minuten.
+- Wil je achteraf vaststellen wannéér de server werd vervangen, kijk dan naar het
+  eigen achtergrondwerk: de statuscontrole schrijft elke minuut `last_checked`
+  weg. Van 16:13:57 tot 16:16:27 UTC schreef hij niets, en daar zat de 502 in.
+  Een gat in dat ritme is een herstart.
+- Een deploy is ook zonder verkeer merkbaar: een meting van /health elke halve
+  seconde gaf op 18-09-2026 om 18:21:48 één seconde 502 tijdens het omschakelen.
+
+Zie ook "deploy-pipeline", "storing-mag-nooit-als-antwoord-tellen",
+"voortgangsping-wist-de-fouttekst".
 
 ---
 
