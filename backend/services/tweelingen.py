@@ -204,6 +204,18 @@ def merken(text: str | None, bekend: set) -> set:
     return {b for b in bekend if b and re.search(rf"\b{re.escape(b)}\b", s)}
 
 
+# De sku's die wij er zelf bij het importeren in zetten. Die zeggen niets over
+# het voorwerp — ze komen uit het id van de rij — en verschillen dus juist bij
+# twee rijen van hetzelfde product.
+_AUTO_SKU = re.compile(r"^(?:imp|rev)-[0-9a-f]{6,}$", re.I)
+
+
+def _eigen_sku(sku) -> str:
+    """De sku zoals de verkoper hem zelf heeft ingevuld, of "" als wij hem zetten."""
+    s = str(sku or "").strip().lower()
+    return "" if not s or _AUTO_SKU.match(s) else s
+
+
 def plausibel(a: dict, b: dict, bekende_merken: set | None = None) -> str | None:
     """
     Harde controles waar geen taalmodel en geen nummer omheen praat. Geeft de
