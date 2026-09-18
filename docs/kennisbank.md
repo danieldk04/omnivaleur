@@ -19,10 +19,14 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ## stripe-webhook-mist-invoice-events
 
-*18-09-2026 — "Het Stripe-webhookendpoint luistert niet naar invoice.paid en invoice.payment_succeeded, terwijl billing.py daar wel handlers voor heeft; die code is dode code"*
+*18-09-2026 — "Het Stripe-webhookendpoint luisterde niet naar invoice.paid, waardoor een betalende SEPA-klant op payment_processing bleef hangen; op 18-09-2026 aangezet"*
+
+**Opgelost op 18-09-2026: `invoice.paid` staat nu aan.** Het endpoint luistert nu
+naar vijf gebeurtenissen. Wat hieronder staat is waaróm dat nodig was, en waar je
+moet kijken als betaalstatussen ooit weer scheef lopen.
 
 Het endpoint `we_1Tnjt809Y8J5okHsw8htmEuC` (https://omnivaleur.com/api/billing/webhook)
-staat bij Stripe ingesteld op precies vier gebeurtenissen:
+stond bij Stripe ingesteld op precies vier gebeurtenissen:
 
 - `checkout.session.completed`
 - `customer.subscription.updated`

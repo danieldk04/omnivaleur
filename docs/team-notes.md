@@ -10539,3 +10539,44 @@ voor heeft. Dat is precies het gat waardoor een geslaagde SEPA-incasso niemand o
 `active` zet. Zolang dat niet aanstaat loopt c2371efe alsnog tegen 02-10 aan. Ook
 openstaand: de twee opgezegde klanten met gratis toegang, en een paar korte
 database-vertragingen (57014) van 17 en 18 september die niet verklaard zijn.
+
+### 18-09-2026 (vervolg) — alles gelijkgetrokken, zes van de zes kloppen nu
+
+Met toestemming van Daniel afgemaakt. Alles hieronder is eerst gemeten, daarna pas
+gedaan.
+
+**`invoice.paid` aangezet** op het Stripe-endpoint. De oude vier gebeurtenissen zijn
+meegestuurd en staan er nog (de API vervángt de lijst, hij vult niet aan — wie dat
+vergeet sloopt de andere vier). Hiermee komt een geslaagde SEPA-incasso eindelijk
+binnen, en zet de gerepareerde handler de klant op `active`. Bewust niet ook
+`invoice.payment_succeeded` aangezet: die vuurt bij dezelfde betaling, dan draait de
+handler dubbel.
+
+**De twee opzeggers afgesloten**, allebei op bewijs en niet op de status alleen:
+
+- `02c44e89` zei per einde periode op, en die periode liep af op 08-09. Voorbij.
+- `26cf5471` leek eerst twijfelachtig: beëindigd op 29-08, maar `current_period_end`
+  stond op 24-09, dus het leek alsof hij nog betaalde tijd tegoed had. Bij Stripe
+  bleek zijn laatste betaling van EUR 19,99 op 24-08 **volledig terugbetaald**
+  (`amount_refunded` 1999, `refunded` true). Hij had dus niets meer tegoed en werkte
+  sinds 29 augustus gratis door.
+
+Gecontroleerd dat afsluiten geen mail afvuurt: de "buitengesloten"-mail in
+`services/billing.py` gaat alleen naar `trial_expired`, niet naar `canceled`.
+
+**Klant c2371efe bewust op `payment_processing` gelaten.** Daniel vroeg om "die twee
+betalende klanten" gelijk te trekken, maar bij hem is nog geen euro binnen: factuur
+`open`, EUR 0 van de 19,99 betaald, incasso `processing`. Hem op `active` zetten zou
+een betaling beweren die niet bestaat. Hij houdt gewoon toegang, en zodra zijn
+incasso rond komt zet `invoice.paid` hem automatisch goed — dat is precies waarom
+die gebeurtenis nu aanstaat.
+
+**Eindcontrole:** alle zes accounts met een Stripe-abonnement naast de echte
+Stripe-status gelegd en door `evaluate_access` uit de echte broncode gehaald. Zes van
+de zes kloppen. Niemand die betaalt staat op verlopen, niemand die gestopt is heeft
+nog toegang.
+
+**Blijft openstaan:** de korte database-vertragingen (Postgres 57014) van 17 en 18
+september op `/api/jobs/pending`, `/api/jobs/relist-status`, `/api/items/` en
+`/api/listings/`. Twee korte vensters, niet verklaard, geen aanwijzing dat ze met
+het bovenstaande te maken hebben.
