@@ -75,7 +75,7 @@ def familie_ids(db, item: dict) -> list[str]:
         # groepering, en dan komt er GEEN fout terug maar een lege lijst.
         # Gemeten op 30-08-2026: 1 van de 8 rijen gevonden, waardoor het
         # weghalen van de advertenties van een tweeling nooit heeft gewerkt.
-        rijen = (db.table("items").select("id,brand,title")
+        rijen = (db.table("items").select("id,brand,title,sku")
                  .eq("user_id", user_id)
                  .or_(f'sku.eq.{nummer},title.ilike."({nummer})%"')
                  .limit(50).execute().data or [])
