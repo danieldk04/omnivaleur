@@ -353,6 +353,37 @@ def list_duplicates(user_id: str = Depends(get_current_user)):
     for r in rijen:
         per_item.setdefault(r["item_id"], []).append(r)
 
+    # EEN VERKOCHTE RIJ HOORT NIET IN DEZELFDE GROEP ALS EEN ONVERKOCHTE.
+    #
+    # WAAROM (18-09-2026, Daniels eigen account). Artikel (987) was op 23-08 op
+    # Vinted verkocht. Op 18-09 maakte hij een nieuwe rij met datzelfde nummer
+    # aan — hetzelfde artikel, opnieuw ingekocht. Het dashboard bood die twee
+    # aan als dubbele rijen, hij drukte op "Merge into one", en de samenvoeging
+    # hield de OUDSTE rij aan (de verkochte) en verwijderde zijn nieuwe voorraad.
+    # Het artikel stond daarna onder "Sold" en was niet meer te publiceren.
+    # Hetzelfde overkwam een rij die hij zelf "1349 - 2" had genoemd.
+    #
+    # Hetzelfde nummer met één verkochte en één onverkochte rij is juist het
+    # signaal dat het om twee verschillende voorwerpen gaat. Die groep bieden we
+    # dus niet aan. Twee verkochte rijen of twee onverkochte rijen blijven wel
+    # een groep: daar is samenvoegen gewoon opruimen.
+    def _is_verkocht(item_id: str) -> bool:
+        return any(r.get("status") == "sold" for r in per_item.get(item_id, []))
+
+    gesplitst: list[list[dict]] = []
+    for g in groepen:
+        verkocht = [i for i in g if _is_verkocht(i["id"])]
+        rest = [i for i in g if not _is_verkocht(i["id"])]
+        if verkocht and rest:
+            logger.info("Dubbelgroep %s gesplitst: %d verkochte en %d onverkochte "
+                        "rij(en) zijn niet hetzelfde voorwerp",
+                        advertentiecode(g[0].get("title"), g[0].get("sku")),
+                        len(verkocht), len(rest))
+        for deel in (verkocht, rest):
+            if len(deel) > 1:
+                gesplitst.append(deel)
+    groepen = gesplitst
+
     return {"groups": [
         {
             "code": advertentiecode(g[0].get("title"), g[0].get("sku")),
