@@ -656,7 +656,7 @@ Hoi <voornaam>,
 
 Dat lag aan ons, en het is opgelost.
 
-Er kwam gisteravond een advertentie van je niet online maar op een bestelpagina
+Er kwam een advertentie van je niet online maar op een bestelpagina
 van 2dehands terecht: die ene rubriek vraagt daar geld per zoekertje. Onze
 machine trok daar de verkeerde conclusie uit en zette meteen heel 2dehands voor
 je uit, met een melding die zei dat er daar nog nooit iets online was gegaan. Dat
