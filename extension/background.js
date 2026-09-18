@@ -2465,7 +2465,7 @@ async function openWorkerTabInner(url, opts = {}) {
       // active:true is scoped to THAT window, so it never steals focus from the
       // user's foreground window — and does not un-minimise it either.
       await ensureKeeperTab(existing);
-      const tab = await maakWerkTabblad({ windowId: existing, active: true }, url);
+      const tab = await maakWerkTabblad({ windowId: existing, active: true }, url, opts);
       // Het vorige job-tabblad wordt pas 2 seconden NA afronding gesloten. Valt
       // dat samen met het openen van het volgende, dan sluit Chrome het venster
       // (laatste tabblad weg) en neemt het nieuwe tabblad meteen mee — het
@@ -2504,7 +2504,7 @@ async function openWorkerTabInner(url, opts = {}) {
     // Anker erbij: vanaf nu blijft dit ene venster bestaan in plaats van bij
     // elke klus opnieuw op te poppen.
     await ensureKeeperTab(w.id);
-    await koppelVroeg(w.tabs[0].id, url);
+    await koppelVroeg(w.tabs[0].id, url, !!opts.klokVast);
     await chrome.tabs.update(w.tabs[0].id, { url });
     // Navigeren kan het venster terugzetten; nog één keer wegduwen kost niets.
     await chrome.windows.update(w.id, { state: "minimized", focused: false }).catch(() => {});
@@ -2512,7 +2512,7 @@ async function openWorkerTabInner(url, opts = {}) {
   } catch {
     // Window creation blocked (rare) — fall back to a plain background tab so
     // the job still runs rather than failing outright.
-    return await maakWerkTabblad({ active: false }, url);
+    return await maakWerkTabblad({ active: false }, url, opts);
   }
 }
 
@@ -2681,6 +2681,12 @@ async function processJob(job, serverUrl) {
   }
 
   console.log(`[Omnivaleur v${chrome.runtime.getManifest().version}] Opening tab for ${job.platform} job ${job.id}: ${url}`);
+  // Een klus die iets SCHRIJFT vult een formulier in: honderden kleine pauzes,
+  // keuzelijsten en knoppen die allemaal op de klok van de pagina wachten. Die
+  // klok moet dus vastgezet worden, wat voor pagina het ook is. Scannen doet zijn
+  // werk in één aanvraag aan de site zelf en merkt van een trage klok niets, dus
+  // dat blijft zonder koppeling en dus zonder Chrome's gele balk.
+  const klokVast = SCHRIJVENDE_ACTIES.has(job.action);
   openWorkerTab(url, (tab) => {
     if (!tab) {
       reportError(job.id, serverUrl, "tabs.create failed: could not open a tab");
