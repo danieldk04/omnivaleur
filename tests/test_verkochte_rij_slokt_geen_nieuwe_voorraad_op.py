@@ -195,6 +195,37 @@ def test_een_echte_tweeling_blijft_wel_in_de_balk_staan(monkeypatch):
     assert [i["id"] for i in uit["groups"][0]["items"]] == [KEEP, ANDER]
 
 
+# ───────────────────── "1349" naast "1349 - 2" ──────────────────────────────
+
+def test_een_eigen_tweede_nummer_maakt_er_twee_voorwerpen_van():
+    """Daniel noemde zijn tweede exemplaar zelf "1349 - 2". Dat is geen dubbele
+    rij, dat is voorraad."""
+    from backend.services.tweelingen import zelfde_artikel, plausibel
+
+    een = {"title": "(1349) Grey Suitsupply Bodywarmer - Men M", "sku": "1349",
+           "brand": "Suitsupply", "price": 29.99}
+    twee = dict(een, sku="1349 - 2",
+                title="(1349) Grijze Suitsupply Bodywarmer - Heren M")
+
+    assert plausibel(een, twee) == "sku"
+    assert not zelfde_artikel(een, twee)
+
+
+def test_de_sku_die_wij_er_zelf_in_zetten_telt_niet_mee():
+    """Bij het importeren krijgt elke rij "IMP-<eigen id>". Daarop vergelijken
+    zou juist élke echte tweeling uit elkaar trekken."""
+    from backend.services.tweelingen import zelfde_artikel
+
+    een = {"title": "(1032) Grijs Ralph Lauren Zip Vest - Heren L",
+           "sku": "IMP-90A256B1", "brand": "Ralph Lauren", "price": 39.99}
+    twee = {"title": "(1032) Grey Ralph Lauren Zip Vest - Men L",
+            "sku": "IMP-046F2791", "brand": "Ralph Lauren", "price": 39.99}
+
+    assert zelfde_artikel(een, twee)
+    # En één eigen sku naast één automatische zegt ook niets.
+    assert zelfde_artikel(dict(een, sku="1032"), twee)
+
+
 # ───────────────────────── de verkoop-rem ───────────────────────────────────
 
 class _JobsDb:
