@@ -201,15 +201,23 @@ async def reconcile_shopify_catalog(user_id: str) -> dict:
         if merk_item and merk_shop and merk_item != merk_shop:
             overgeslagen_merkverschil += 1
             continue
+        velden = {
+            "status": "active",
+            "platform_listing_id": str(product["id"]),
+            "platform_listing_url": f"https://{shop}/products/{product.get('handle', '')}",
+            "listed_at": datetime.now(timezone.utc).isoformat(),
+        }
+        rij_id = wees_rij.get(item["id"])
         try:
-            await naast_de_lus(lambda item=item, product=product: db.table("listings").insert({
-                "item_id": item["id"],
-                "platform": "shopify",
-                "status": "active",
-                "platform_listing_id": str(product["id"]),
-                "platform_listing_url": f"https://{shop}/products/{product.get('handle', '')}",
-                "listed_at": datetime.now(timezone.utc).isoformat(),
-            }).execute())
+            if rij_id:
+                await naast_de_lus(lambda rij_id=rij_id, velden=velden: db.table("listings")
+                                   .update(velden).eq("id", rij_id)
+                                   .eq("status", "pending")
+                                   .is_("platform_listing_id", "null").execute())
+                hersteld += 1
+            else:
+                await naast_de_lus(lambda item=item, velden=velden: db.table("listings").insert(
+                    {"item_id": item["id"], "platform": "shopify", **velden}).execute())
             gekoppeld += 1
         except Exception as e:  # noqa: BLE001 — één mislukte koppeling mag de rest niet blokkeren
             logger.warning("shopify-reconciliatie: kon item %s niet koppelen: %s", item["id"], e)
