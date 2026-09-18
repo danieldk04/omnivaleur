@@ -475,6 +475,21 @@ def merge_items(body: dict, user_id: str = Depends(get_current_user)):
         if not zelfde_artikel(per_id[keep], ander, merken):
             geweigerd.append({"id": lid, "reason": "not_the_same_article"})
             continue
+        # ÉÉN VERKOCHT EN ÉÉN NIET IS GEEN DUBBELE RIJ, MAAR NIEUWE VOORRAAD.
+        #
+        # Zie de uitleg in list_duplicates hierboven. Dit is het slot op de
+        # server, want samenvoegen is niet terug te draaien: een oude aanroep,
+        # een tabblad dat nog de vorige lijst toont of een handmatig verzoek mag
+        # nooit het ene exemplaar door het andere laten opslokken. Gemeten op
+        # 18-09-2026: twee nieuwe artikelen van Daniel verdwenen zo in een rij
+        # die al maanden verkocht was.
+        if bool(verkocht_op.get(keep)) != bool(verkocht_op.get(lid)):
+            geweigerd.append({
+                "id": lid, "reason": "one_copy_is_sold",
+                "platforms": sorted(
+                    p for p in (verkocht_op.get(keep) or verkocht_op.get(lid) or set()) if p),
+            })
+            continue
         botsing = _botsende_kanalen(bezet.get(keep, set()), bezet.get(lid, set()))
         if botsing:
             geweigerd.append({"id": lid, "reason": "advert_on_same_platform",
