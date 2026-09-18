@@ -10889,8 +10889,10 @@ teruggezet uit hun momentopname, met hun eigen id, alle velden en alle foto's
 publicatiepoorten laten ze nu allebei door. De drie vastgelopen "Publishing…"-
 rijen zijn opgeruimd.
 
-**Openstaand.** In datzelfde account staan 13 artikelen die op Vinted of
-Marktplaats verkocht zijn nog steeds als actief in zijn Shopify-winkel. Die zijn
+**Openstaand.** In datzelfde account staan 15 artikelen die op het ene kanaal
+verkocht zijn nog steeds live op een ander; 14 daarvan als actief product in zijn
+Shopify-winkel. (Eerst geteld als 13: die lezing miste rijen omdat er in één keer
+duizend rijen werden opgevraagd. Opnieuw gemeten, gepagineerd op id.) Die zijn
 daar op 09-09 gekoppeld door `reconcile_shopify_catalog`, dat bestaande producten
 aan artikelen koppelt zonder te kijken of het artikel al verkocht is. De verkopen
 zijn van vóór die koppeling, dus er is nooit een verwijderopdracht voor geweest.
