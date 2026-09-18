@@ -5088,7 +5088,13 @@ async function mergeItems(keep, merge, stil = false) {
     // grens van het systeem waar de klant niets aan kan doen.
     const refused = data.refused || [];
     const zelfdeKanaal = refused.filter(r => r.reason === 'advert_on_same_platform');
-    const anders = refused.length - zelfdeKanaal.length;
+    // Eén rij verkocht, de andere niet: dat zijn twee verschillende voorwerpen.
+    // Samenvoegen zou de nieuwe voorraad in de verkochte rij laten verdwijnen.
+    const eenVerkocht = refused.filter(r => r.reason === 'one_copy_is_sold');
+    const anders = refused.length - zelfdeKanaal.length - eenVerkocht.length;
+    if (eenVerkocht.length) {
+      zeg(`${eenVerkocht.length} row(s) kept separate — one copy is already sold and the other is not, so these are two different pieces. Merging them would hide your new stock under the sold one. Nothing was lost.`);
+    }
     if (zelfdeKanaal.length) {
       const kanalen = [...new Set(zelfdeKanaal.flatMap(r => r.platforms || []))];
       zeg(`${zelfdeKanaal.length} row(s) kept separate — they have their own advert on ${kanalen.join(', ') || 'the same channel'}, and one item cannot hold two adverts on one channel. Nothing was lost.`);
