@@ -374,3 +374,116 @@ def test_de_server_neemt_de_hele_rij_terug_bij_de_eerste_betaalpagina():
     assert "_melding_kanaal_vraagt_geld" in fail
     # En vóór de opdracht wordt weggeschreven, zodat de melding op de rij klopt.
     assert fail.index("_BETAALMUUR.search") < fail.index('"status": "error"')
+
+
+# ── 8. EEN BETAALPAGINA OP EEN KANAAL DAT AANTOONBAAR GRATIS PLAATST ────────
+#
+# GEMETEN 18-09-2026 bij De Juiste Toon. Om 06:41 UTC kwam één advertentie
+# ("Wandkleed geborduurd 89/69 cm", rubriek wonen wanddecoraties) op de
+# betaalpagina uit. Om 06:29, twaalf minuten eerder, ging er nog een advertentie
+# van hem gratis online; de dag ervoor 200, in totaal 219. Toch ging het hele
+# kanaal dicht, werden zijn 36 wachtende opdrachten teruggenomen en las hij
+# "That is why nothing has ever gone online there".
+#
+# Dat is de duurste soort onwaar: een dicht kanaal maakt geen opdrachten meer
+# aan, dus komt er nooit een nieuwe rij die het oordeel kan herzien. Zonder
+# ingreep met de hand was hij 2dehands kwijt.
+
+GEPLAATST_OM = "2026-09-18T06:29:06+00:00"
+MUUR_OM = "2026-09-18T06:41:45+00:00"
+
+
+def _geplaatst(i, wanneer=GEPLAATST_OM, platform="2dehands"):
+    return {"id": f"ok{i}", "user_id": "u", "platform": platform, "action": "create",
+            "status": "done", "item_id": f"g{i}", "result": {},
+            "created_at": wanneer, "done_at": wanneer}
+
+
+def _muur(i, wanneer=MUUR_OM, status="error", result=None):
+    return {"id": f"m{i}", "user_id": "u", "platform": "2dehands", "action": "create",
+            "status": status, "item_id": f"m{i}",
+            "result": result if result is not None else {"error": BETAALMUUR},
+            "created_at": wanneer, "done_at": wanneer}
+
+
+def test_een_kanaal_dat_aantoonbaar_gratis_plaatst_gaat_niet_dicht():
+    """VOOR-EN-NA, met dezelfde waarneming en één verschil ernaast.
+
+    VOOR: één betaalpagina sloot het kanaal, ongeacht wat er die dag online was
+    gegaan. NA: staat er een geslaagde plaatsing, dan is "dit account plaatst
+    hier niet gratis" aantoonbaar onwaar en gaat het over deze advertentie.
+    """
+    muur = _muur(1)
+    assert api._kanaal_hard_dicht(_DB(jobs=[muur]), "u", "2dehands") is True
+    met_bewijs = _DB(jobs=[_geplaatst(i) for i in range(3)] + [muur])
+    assert api._kanaal_hard_dicht(met_bewijs, "u", "2dehands") is False
+
+
+def test_zesendertig_teruggenomen_opdrachten_zijn_samen_een_waarneming():
+    """De wachtrij-stop schrijft dezelfde tekst op alles wat nog wachtte.
+
+    Telden die mee, dan maakte één advertentie op de betaalpagina zichzelf tot
+    zevenendertig en haalde elke drempel zichzelf.
+    """
+    kopieen = [_muur(i, status="cancelled",
+                     result={"cancelled": "queue stopped", "error": BETAALMUUR})
+               for i in range(36)]
+    db = _DB(jobs=[_geplaatst(0)] + kopieen + [_muur(99)])
+    assert len(api._betaalmuur_waarnemingen(db, "u", "2dehands")) == 1
+    assert api._kanaal_hard_dicht(db, "u", "2dehands") is False
+
+
+def test_drie_betaalpaginas_na_de_laatste_plaatsing_sluiten_het_kanaal_alsnog():
+    """Wat als 2dehands een account echt omzet naar betaald? Dan blijkt dat.
+
+    Twee is nog geen bewijs: dat kunnen twee betalende rubrieken zijn. Bij drie
+    op rij, zonder dat er tussendoor nog iets gratis online gaat, ligt het niet
+    meer aan de rubriek. Dat kost hem drie onbetaalde bestelregels in plaats van
+    een kanaal dat het aantoonbaar deed.
+    """
+    geplaatst = [_geplaatst(0)]
+    muren = [_muur(i, wanneer=f"2026-09-18T07:0{i}:00+00:00") for i in (1, 2, 3)]
+    assert api._kanaal_hard_dicht(_DB(jobs=geplaatst + muren), "u", "2dehands") is True
+    assert api._kanaal_hard_dicht(_DB(jobs=geplaatst + muren[:2]), "u", "2dehands") is False
+
+
+def test_een_betaalpagina_van_voor_de_laatste_plaatsing_telt_niet_meer():
+    """Gaat er daarna weer iets gratis online, dan is de muur weg."""
+    muren = [_muur(i, wanneer=f"2026-09-17T20:0{i}:00+00:00") for i in (1, 2, 3)]
+    db = _DB(jobs=muren + [_geplaatst(9)])
+    assert api._kanaal_hard_dicht(db, "u", "2dehands") is False
+
+
+def test_de_melding_zegt_alleen_nooit_online_als_dat_klopt():
+    from datetime import datetime, timezone
+    nooit = api._melding_kanaal_vraagt_geld("2dehands")
+    assert "nothing has ever gone online there" in nooit
+    wel = api._melding_kanaal_vraagt_geld(
+        "2dehands", datetime(2026, 9, 18, tzinfo=timezone.utc))
+    assert "nothing has ever gone online there" not in wel
+    assert "did go online there for free until 18-09-2026" in wel
+
+
+def test_de_melding_op_die_ene_advertentie_wijst_de_rubriek_aan():
+    tekst = api._melding_advertentie_op_de_rekening("2dehands", "wonen wanddecoraties")
+    assert "nothing has ever gone online" not in tekst
+    assert "switched off for your account" not in tekst
+    assert '"wonen wanddecoraties"' in tekst
+    assert BETAALADRES in tekst
+    # En hij wordt herkend als "deze rubriek kost geld", zodat de volgende
+    # advertentie in diezelfde rubriek er niet opnieuw op stukloopt.
+    assert api._BETAALDE_RUBRIEK.search(tekst)
+
+
+def test_de_wachtrij_blijft_staan_als_het_kanaal_aantoonbaar_gratis_plaatst():
+    """De extensie in het veld stopt de rij; de server laat dat niet meer toe.
+
+    Een nieuwe extensie is bij een verkoper pas weken later binnen, dus moet de
+    server deze aanroep kunnen weigeren op wat hij zelf kan zien.
+    """
+    bron = (ROOT / "backend/api/jobs.py").read_text(encoding="utf-8")
+    stop = bron.split("def stop_platform(")[1].split("\ndef ")[0]
+    assert "_BETAALMUUR.search(ruw) and not _kanaal_hard_dicht(" in stop
+    fail = bron.split("def fail_job(")[1].split("\ndef ")[0]
+    assert "_melding_advertentie_op_de_rekening(" in fail
+    assert "rubriek=rubriek" in fail

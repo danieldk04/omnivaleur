@@ -3904,49 +3904,127 @@ _BETAALDE_RUBRIEK = re.compile(
     r"|charges for an advert in this category"
     # Onze eigen uitleg (_melding_rubriek_vraagt_geld). Die komt in result.error
     # te staan; wie later terugkijkt wat een rubriek kostte, moet hem herkennen.
-    r"|the site says this is a paid category",
+    r"|the site says this is a paid category"
+    # En die van _melding_advertentie_op_de_rekening: een advertentie die op de
+    # betaalpagina uitkwam terwijl het kanaal aantoonbaar wel gratis plaatst.
+    # Dat is dezelfde uitkomst voor die rubriek en hoort dus ook onthouden.
+    r"|put this advert on an order to be paid",
     re.I,
 )
 
 
-def _kanaal_hard_dicht(db, user_id: str, platform: str) -> bool:
-    """Vraagt dit kanaal dit account geld voor een advertentie?
+# WANNEER IS EEN BETAALPAGINA HET HELE KANAAL, EN WANNEER DEZE ENE ADVERTENTIE.
+#
+# GEMETEN OP 18-09-2026 bij De Juiste Toon. Om 06:41 UTC kwam één advertentie
+# ("Wandkleed geborduurd 89/69 cm", rubriek wonen wanddecoraties) op de
+# betaalpagina van 2dehands uit. Twaalf minuten eerder, om 06:29, ging er nog
+# een advertentie van hem gewoon gratis online; de dag ervoor 200 stuks, in
+# totaal 219 ooit. Toch ging op die ene waarneming het hele kanaal dicht, werden
+# zijn 36 wachtende opdrachten teruggenomen en las hij: "That is why nothing has
+# ever gone online there."
+#
+# Dat was aantoonbaar onwaar, en het was de duurste soort onwaar: een dicht
+# kanaal kan daarna niet meer vanzelf opengaan. Een geblokkeerde publicatie
+# maakt geen opdracht meer aan, dus komt er ook nooit een nieuwe rij die het
+# oordeel kan herzien. Zonder ingreep met de hand was hij 2dehands kwijt.
+#
+# De regel is daarom: een betaalpagina sluit het hele kanaal alleen als dit
+# account hier nog NOOIT gratis een advertentie online kreeg — het geval van
+# Egbert Brouwer (806 pogingen, nul geplaatst, winkelmandje van EUR 153). Krijgt
+# het account hier wel gratis advertenties online, dan gaat deze waarneming over
+# deze ene rubriek, precies zoals bij "Dit is een betalende categorie", en
+# blijft de rest van de rij gewoon lopen. Pas als er NA de laatste geslaagde
+# plaatsing drie advertenties op de betaalpagina zijn uitgekomen is bewezen dat
+# het niet meer aan één rubriek ligt, en gaat het kanaal alsnog dicht. Drie
+# bestelregels (die niemand betaalt zolang je ze niet afrekent) zijn dat bewijs
+# waard; een kanaal wegnemen dat aantoonbaar werkt is dat niet.
+_BETAALMUUR_DREMPEL = 3
 
-    Eén waarneming is genoeg. Anders dan bij de gewone rem hoeven we hier niets
-    af te wegen: een kanaal dat om geld vraagt gaat niet vanzelf weer gratis
-    plaatsen, en elke extra poging is een extra bestelregel.
+
+def _laatste_gratis_plaatsing(db, user_id: str, platform: str):
+    """Wanneer kwam hier voor het laatst een advertentie GRATIS online?
+
+    Dit is het tegenbewijs bij een betaalpagina. Een kanaal dat dit account voor
+    elke advertentie geld vraagt zet er geen enkele gratis online; staat er een
+    geslaagde plaatsing, dan ging die betaalpagina over die ene advertentie.
+
+    Alleen create/content_refresh telt, om dezelfde reden als in
+    `_nooit_gelukt_op`: een geslaagde scan is geen plaatsing.
     """
-    try:
-        rijen = (db.table("jobs").select("result,payload").eq("user_id", user_id)
-                 .eq("platform", platform).eq("action", "create")
-                 .in_("status", ["error", "cancelled"])
-                 .order("created_at", desc=True).limit(120).execute().data or [])
-    except Exception:  # noqa: BLE001 — een rem mag nooit op een storing dichtvallen
-        return False
+    rijen = (db.table("jobs").select("done_at,created_at").eq("user_id", user_id)
+             .eq("platform", platform).eq("status", "done")
+             .in_("action", ["create", "content_refresh"])
+             .order("created_at", desc=True).limit(5).execute().data or [])
+    momenten = [t for t in (_parse_ts(r.get("done_at") or r.get("created_at"))
+                            for r in rijen) if t]
+    return max(momenten) if momenten else None
+
+
+def _betaalmuur_waarnemingen(db, user_id: str, platform: str) -> list:
+    """De momenten waarop een advertentie ECHT op de betaalpagina uitkwam.
+
+    EEN TERUGGENOMEN OPDRACHT IS GEEN WAARNEMING (18-09-2026, De Juiste Toon).
+    `_stop_wachtrij` schrijft de tekst van de betaalpagina op elke opdracht die
+    nog stond te wachten; bij hem waren dat er 36, terwijl er precies één
+    advertentie op die pagina is uitgekomen. Zouden die 36 meetellen, dan
+    vermenigvuldigt één waarneming zichzelf tot zevenendertig en haalt elke
+    drempel zichzelf. Herkenbaar aan wat `_stop_wachtrij` erbij schrijft:
+    result.cancelled == "queue stopped".
+    """
+    rijen = (db.table("jobs").select("done_at,created_at,result,payload")
+             .eq("user_id", user_id)
+             .eq("platform", platform).eq("action", "create")
+             .in_("status", ["error", "cancelled"])
+             .order("created_at", desc=True).limit(120).execute().data or [])
     from backend.services.crosslist import _zonder_links  # laat: kringverwijzing
+    uit = []
     for j in rijen:
         res = j.get("result") or {}
+        if str(res.get("cancelled") or "") == "queue stopped":
+            continue
         tekst = f"{res.get('error') or ''} {res.get('error_oorspronkelijk') or ''}"
         if not _BETAALMUUR.search(tekst):
             continue
         # EEN MISLUKKING MET EEN VERKLAARDE OORZAAK TELT NIET MEE.
         #
-        # Elke betaalmuur die we tot nu toe hebben gezien kwam van een
-        # advertentie met een webadres in de tekst, en dáár rekende 2dehands
-        # voor (zie _zonder_links in crosslist.py). Dat webadres halen we er nu
-        # uit vóór we plaatsen, dus die mislukkingen zeggen niets meer over wat
-        # we nu zouden versturen. Zouden ze wél meetellen, dan bleef het kanaal
-        # dicht om een reden die er niet meer is: precies de muur die we bij de
-        # vorige rem al eens hebben moeten slopen.
-        #
-        # Blijft er een betaalmuur staan bij een advertentie die al schoon was,
-        # dan is er iets anders aan de hand (een limiet, een rubriek, een
-        # zakelijk account) en gaat het kanaal wél dicht.
+        # De eerste betaalmuren die we zagen kwamen van een advertentie met een
+        # webadres in de tekst, en daar rekende 2dehands voor (zie _zonder_links
+        # in crosslist.py). Dat webadres halen we er nu uit voor we plaatsen, dus
+        # die mislukkingen zeggen niets meer over wat we nu zouden versturen.
         tekstVanAdvertentie = str((j.get("payload") or {}).get("description") or "")
         if tekstVanAdvertentie and _zonder_links(tekstVanAdvertentie) != tekstVanAdvertentie:
             continue
+        # Een onleesbaar tijdstempel blijft een waarneming: hij telt mee voor
+        # "is hier ooit iets gratis geplaatst", alleen niet voor de drempel
+        # daarna. Wantrouw je eigen lege uitkomst, maar gooi hem niet weg.
+        uit.append(_parse_ts(j.get("done_at") or j.get("created_at")))
+    return uit
+
+
+def _kanaal_hard_dicht(db, user_id: str, platform: str, ook_nu: bool = False) -> bool:
+    """Vraagt dit kanaal dit account geld voor ELKE advertentie?
+
+    `ook_nu` telt de waarneming mee die op dit moment binnenkomt en nog niet in
+    de database staat: de opdracht die hem veroorzaakte is nog "claimed" en
+    wordt pas na deze afweging weggeschreven.
+
+    Zie de toelichting hierboven voor het waarom van de drempel.
+    """
+    try:
+        waarnemingen = _betaalmuur_waarnemingen(db, user_id, platform)
+        if ook_nu:
+            waarnemingen = [datetime.now(timezone.utc)] + waarnemingen
+        if not waarnemingen:
+            return False
+        laatste_succes = _laatste_gratis_plaatsing(db, user_id, platform)
+    except Exception:  # noqa: BLE001 - een rem mag nooit op een storing dichtvallen
+        return False
+    # Nooit een gratis advertentie online gekregen: dan is één waarneming genoeg,
+    # want er is niets dat het tegenspreekt. Ongewijzigd sinds 09-09-2026.
+    if laatste_succes is None:
         return True
-    return False
+    return sum(1 for w in waarnemingen
+               if w and w > laatste_succes) >= _BETAALMUUR_DREMPEL
 
 
 def _nooit_gelukt_op(db, user_id: str, platform: str) -> bool:
@@ -4280,21 +4358,78 @@ def _melding_link_uit_advertentie(platform: str) -> str:
     )
 
 
-def _melding_kanaal_vraagt_geld(platform: str) -> str:
+def _betaalpagina(platform: str) -> str:
+    return ("https://www.2dehands.be/payments/orderOverview/index.html"
+            if platform == "2dehands"
+            else "https://www.marktplaats.nl/payments/orderOverview/index.html")
+
+
+def _melding_advertentie_op_de_rekening(platform: str, rubriek: str | None,
+                                        sinds=None) -> str:
+    """Wat de verkoper leest als EEN advertentie op de betaalpagina uitkwam.
+
+    HET VERSCHIL MET _melding_kanaal_vraagt_geld (18-09-2026, De Juiste Toon).
+    Die tekst zegt "nothing has ever gone online there" en zet het kanaal uit.
+    Bij hem gingen er twaalf minuten eerder nog advertenties gratis online, en
+    219 in totaal. Dan is die zin onwaar en is het antwoord te zwaar: wat we
+    zagen is dat DEZE advertentie geld kost, en dat is een uitspraak over zijn
+    rubriek. Zelfde behandeling dus als "Dit is een betalende categorie".
+    """
+    site = {"marktplaats": "Marktplaats (marktplaats.nl)",
+            "2dehands": "2dehands (2dehands.be)"}.get(platform, platform)
+    naam = f'"{rubriek}"' if rubriek else "that category"
+    wanneer = (f" The last one went online on {sinds.strftime('%d-%m-%Y')}." if sinds else "")
+    return (
+        f"This advert did not go online: {site} put this advert on an order to be paid instead "
+        f"of publishing it. Nothing was published, nothing was ordered, and we never click a "
+        f"payment button for you.\n\n"
+        f"This is not your account being blocked: your adverts do go online for free on {site}."
+        f"{wanneer} What this says is that {site} wants money for an advert in {naam}, so we "
+        f"stop only that category and leave the rest of your queue running.\n\n"
+        f"One thing for you: the advert that ended up on that unpaid order is still there. Open "
+        f"this page and remove it with the bin icon, so nothing can be charged:\n"
+        f"{_betaalpagina(platform)}\n\n"
+        f"Want these online anyway? Either place them yourself on {site} and pay per advert, or "
+        f"move the items to a category that is free there."
+    )
+
+
+def _melding_kanaal_vraagt_geld_voor(db, user_id: str, platform: str) -> str:
+    """Dezelfde melding, maar met de feiten van DIT account erin.
+
+    Zo komt de zin "nothing has ever gone online there" alleen in beeld als het
+    logboek dat ook zegt. Zie _melding_kanaal_vraagt_geld.
+    """
+    try:
+        sinds = _laatste_gratis_plaatsing(db, user_id, platform)
+    except Exception:  # noqa: BLE001 - liever geen datum dan een verkeerde bewering
+        sinds = None
+    return _melding_kanaal_vraagt_geld(platform, sinds)
+
+
+def _melding_kanaal_vraagt_geld(platform: str, sinds=None) -> str:
     """Wat de verkoper leest als het kanaal geld vraagt voor elke advertentie.
 
     Bewust een andere tekst dan de pauze hieronder, want het is een ander
     verhaal: er komt geen proefadvertentie meer, en wachten heeft geen zin.
+
+    `sinds` is het moment waarop hier voor het laatst iets gratis online ging.
+    Staat dat er, dan mag de zin "nothing has ever gone online there" er niet in:
+    die was bij De Juiste Toon aantoonbaar onwaar (219 geplaatste advertenties).
     """
     site = {"marktplaats": "Marktplaats (marktplaats.nl)",
             "2dehands": "2dehands (2dehands.be)"}.get(platform, platform)
-    betaalpagina = ("https://www.2dehands.be/payments/orderOverview/index.html"
-                    if platform == "2dehands"
-                    else "https://www.marktplaats.nl/payments/orderOverview/index.html")
+    betaalpagina = _betaalpagina(platform)
+    verleden = (
+        f"Your adverts did go online there for free until {sinds.strftime('%d-%m-%Y')}; since "
+        f"then every one of them is put on that order instead."
+        if sinds else
+        "That is why nothing has ever gone online there."
+    )
     return (
         f"{site} does not let your account place adverts for free: it puts every advert on an "
-        f"order to be paid instead of publishing it. That is why nothing has ever gone online "
-        f"there. This is not a rejection of this item, and nothing has been paid.\n\n"
+        f"order to be paid instead of publishing it. {verleden} This is not a rejection of this "
+        f"item, and nothing has been paid.\n\n"
         f"{site} is switched off for your account, so we do not add anything else to that order. "
         f"Open this page and remove the unpaid lines with the bin icon:\n{betaalpagina}\n\n"
         f"Your other channels keep working and your items stay ready here. As soon as {site} "
@@ -4649,14 +4784,36 @@ def fail_job(job_id: str, body: dict, user_id: str = Depends(get_current_user)):
             and job.get("platform") in ("marktplaats", "2dehands")
             and _BETAALMUUR.search(str((body or {}).get("error") or ""))):
         try:
-            reden = _melding_kanaal_vraagt_geld(job.get("platform") or "")
-            body = {**body,
-                    "error_oorspronkelijk": body.get("error_oorspronkelijk") or body.get("error"),
-                    "error": reden}
-            aantal = _stop_wachtrij(db, user_id, job["platform"], reden)
-            _gelijk_de_kansloze_muur(db, user_id, job["platform"], reden)
-            logger.warning("Betaalmuur op %s bij %s: %d wachtende opdrachten teruggenomen",
-                           job["platform"], user_id, aantal)
+            kanaal = job.get("platform") or ""
+            # HET HELE KANAAL, OF ALLEEN DEZE RUBRIEK? Zie _kanaal_hard_dicht.
+            # Staat er een geslaagde plaatsing op dit kanaal, dan is "dit account
+            # plaatst hier niet gratis" aantoonbaar onwaar en gaat het over de
+            # rubriek van deze advertentie.
+            if _kanaal_hard_dicht(db, user_id, kanaal, ook_nu=True):
+                reden = _melding_kanaal_vraagt_geld_voor(db, user_id, kanaal)
+                body = {**body,
+                        "error_oorspronkelijk": body.get("error_oorspronkelijk") or body.get("error"),
+                        "error": reden}
+                aantal = _stop_wachtrij(db, user_id, kanaal, reden)
+                _gelijk_de_kansloze_muur(db, user_id, kanaal, reden)
+                logger.warning("Betaalmuur op %s bij %s: %d wachtende opdrachten teruggenomen",
+                               kanaal, user_id, aantal)
+            else:
+                rubriek = _rubriek_sleutel(job.get("payload"))
+                reden = _melding_advertentie_op_de_rekening(
+                    kanaal, _rubriek_leesbaar(job.get("payload")),
+                    _laatste_gratis_plaatsing(db, user_id, kanaal))
+                body = {**body,
+                        "error_oorspronkelijk": body.get("error_oorspronkelijk") or body.get("error"),
+                        "error": reden}
+                # Zonder rubriek valt er niets gericht te stoppen; dan blijft het
+                # bij deze ene uitgelegde melding. Zelfde afweging als bij
+                # _BETAALDE_RUBRIEK hieronder.
+                aantal = (_stop_wachtrij(db, user_id, kanaal, reden, rubriek=rubriek)
+                          if rubriek else 0)
+                logger.warning("Betaalpagina op %s (%s) bij %s: kanaal plaatst aantoonbaar "
+                               "gratis, %d wachtende opdrachten in die rubriek teruggenomen",
+                               kanaal, rubriek or "onbekend", user_id, aantal)
         except Exception:  # noqa: BLE001 — een fout hier mag de foutmelding niet opeten
             logger.warning("Betaalmuur: wachtrij niet teruggenomen voor %s/%s",
                            user_id, job.get("platform"))
@@ -5119,6 +5276,17 @@ def stop_platform(body: dict, request: Request, user_id: str = Depends(get_curre
     if _CLAIM_NIET_INGELOGD.search(ruw):
         return {"ok": True, "cancelled": _pauzeer_op_inlogverwijt(db, user_id, platform, reden),
                 "paused": True}
+    # EEN BETAALPAGINA WIST DE RIJ NIET MEER ALS DIT KANAAL AANTOONBAAR GRATIS
+    # PLAATST (18-09-2026, De Juiste Toon). De extensie die nu bij verkopers
+    # draait roept dit eindpunt aan zodra een tabblad op /payments/ uitkomt. Bij
+    # hem nam dat 36 wachtende opdrachten weg terwijl er twaalf minuten eerder
+    # nog advertenties van hem gratis online gingen. De foutmelding die hierna
+    # binnenkomt (fail_job) zet de rem wel op die ene rubriek; dat is het
+    # kleinere en juistere antwoord, en het kost hem zijn rij niet.
+    if _BETAALMUUR.search(ruw) and not _kanaal_hard_dicht(db, user_id, platform, ook_nu=True):
+        logger.warning("stop-platform: betaalpagina op %s bij %s, maar dit kanaal plaatst "
+                       "aantoonbaar gratis — wachtrij blijft staan", platform, user_id)
+        return {"ok": True, "cancelled": 0, "gericht": True}
     gestopt = _stop_wachtrij(db, user_id, platform, reden)
     # Is het kanaal aantoonbaar kansloos, trek dan ook de al bestaande rode balken
     # gelijk — anders blijft er een muur van oude, wisselende teksten staan naast

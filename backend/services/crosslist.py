@@ -1237,13 +1237,16 @@ async def publish_to_platforms(item_id: str, platforms: list[str], user_id: str)
     kansloos_geblokkeerd: dict[str, str] = {}
     if ext_platforms:
         from backend.api.jobs import (_kanaal_kansloos, _melding_kanaal_op_pauze,
-                                      _melding_kanaal_vraagt_geld)
+                                      _melding_kanaal_vraagt_geld_voor)
         for p in ext_platforms:
             try:
                 # Eerst de betaalmuur: die kent geen proefadvertentie, want die
                 # is niet gratis. Zie _kanaal_hard_dicht_gecached.
                 if await naast_de_lus(lambda p=p: _kanaal_hard_dicht_gecached(db, user_id, p)):
-                    kansloos_geblokkeerd[p] = _melding_kanaal_vraagt_geld(p)
+                    # Met de feiten van dit account erin: de zin "nothing has
+                    # ever gone online there" mag er alleen staan als dat klopt.
+                    kansloos_geblokkeerd[p] = await naast_de_lus(
+                        lambda p=p: _melding_kanaal_vraagt_geld_voor(db, user_id, p))
                 elif await naast_de_lus(lambda p=p: _kanaal_kansloos_gecached(db, user_id, p)):
                     kansloos_geblokkeerd[p] = _melding_kanaal_op_pauze(p)
             except Exception as e:  # noqa: BLE001 — een rem mag nooit publiceren blokkeren op een fout
