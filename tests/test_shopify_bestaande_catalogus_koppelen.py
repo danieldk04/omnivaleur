@@ -90,14 +90,25 @@ class _Tabel:
     def limit(self, n):
         return self
 
+    def is_(self, veld, waarde):
+        self._filters.append((veld, None if waarde == "null" else waarde))
+        return self
+
     def insert(self, rij):
         self.db.ingevoegd.append(rij)
         self._insert = rij
         return self
 
+    def update(self, patch):
+        self._update = patch
+        return self
+
     def execute(self):
         if getattr(self, "_insert", None) is not None:
             return type("R", (), {"data": [self._insert]})()
+        if getattr(self, "_update", None) is not None:
+            self.db.bijgewerkt.append((self.naam, list(self._filters), self._update))
+            return type("R", (), {"data": []})()
         rijen = list(self.db.tabellen.get(self.naam, []))
         for f in self._filters:
             if f[0] == "in":
@@ -113,6 +124,7 @@ class _DB:
     def __init__(self, tabellen):
         self.tabellen = tabellen
         self.ingevoegd = []
+        self.bijgewerkt = []
 
     def table(self, naam):
         return _Tabel(self, naam)
@@ -259,3 +271,48 @@ def test_sku_als_terugval_zonder_nummer_in_de_titel(monkeypatch):
 
     uit = asyncio.run(sr.reconcile_shopify_catalog("u1"))
     assert uit["gekoppeld"] == 1
+
+
+# ── 4. Een rij die op "Publishing…" is blijven steken ───────────────────────
+
+def test_een_vastgelopen_publishing_rij_wordt_alsnog_rechtgezet(monkeypatch):
+    """WAAROM (18-09-2026, Daniel). Publiceren naar Shopify zet eerst een lege
+    rij op 'pending' en roept dan de Shopify-API aan. Hij drukte op Publish
+    precies tijdens een herstart van de server, kreeg een 502, en het product
+    stond wél in zijn winkel terwijl onze rij op 'pending' bleef staan. Het
+    dashboard zei daarna eeuwig "Publishing…", en nog een keer publiceren zou
+    een TWEEDE product opleveren. Zo'n rij telde als "al gekoppeld" en werd dus
+    nooit meer rechtgezet."""
+    items = [_item("i1", "(1366) Brown Suitsupply Half Zip - Men XL", "Suitsupply")]
+    producten = [_product(16048596812106, "Brown Suitsupply Half Zip - Men XL", "1366",
+                          handle="brown-suitsupply-half-zip-men-xl")]
+    bestaand = [{"id": "rij1", "item_id": "i1", "platform": "shopify",
+                 "status": "pending", "platform_listing_id": None}]
+    db = _opzet(monkeypatch, items, producten, bestaande_listings=bestaand)
+
+    uit = asyncio.run(sr.reconcile_shopify_catalog("u1"))
+
+    assert uit["gekoppeld"] == 1 and uit["hersteld"] == 1
+    assert db.ingevoegd == [], "er hoort geen tweede rij bij te komen"
+    assert len(db.bijgewerkt) == 1
+    _, filters, patch = db.bijgewerkt[0]
+    assert ("id", "rij1") in filters
+    assert ("status", "pending") in filters and ("platform_listing_id", None) in filters, (
+        "alleen een rij die nog steeds wacht en nog geen productnummer draagt")
+    assert patch["status"] == "active"
+    assert patch["platform_listing_id"] == "16048596812106"
+    assert patch["platform_listing_url"].endswith("/products/brown-suitsupply-half-zip-men-xl")
+
+
+def test_een_wachtende_rij_met_productnummer_blijft_met_rust(monkeypatch):
+    """Die hoort bij een product dat er echt staat; daar gaat deze ronde niet over."""
+    items = [_item("i1", "(1366) Brown Suitsupply Half Zip - Men XL", "Suitsupply")]
+    producten = [_product(16048596812106, "Brown Suitsupply Half Zip - Men XL", "1366")]
+    bestaand = [{"id": "rij1", "item_id": "i1", "platform": "shopify",
+                 "status": "pending", "platform_listing_id": "999"}]
+    db = _opzet(monkeypatch, items, producten, bestaande_listings=bestaand)
+
+    uit = asyncio.run(sr.reconcile_shopify_catalog("u1"))
+
+    assert uit["gekoppeld"] == 0
+    assert db.ingevoegd == [] and db.bijgewerkt == []

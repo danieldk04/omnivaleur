@@ -10897,3 +10897,30 @@ daar op 09-09 gekoppeld door `reconcile_shopify_catalog`, dat bestaande producte
 aan artikelen koppelt zonder te kijken of het artikel al verkocht is. De verkopen
 zijn van vóór die koppeling, dus er is nooit een verwijderopdracht voor geweest.
 Risico: iemand koopt daar iets dat al weg is.
+
+### 18-09-2026 (18:02) — 502 tijdens het publiceren, Shopify-rij bleef op "Publishing…" staan
+
+Daniel drukte om 18:02 op Publish voor (1366) Brown Suitsupply Half Zip en kreeg
+"The server didn't answer in time (502)", terwijl het artikel wél begon te
+publiceren. De 502 kwam van de herstart van Railway voor de uitrol van de
+samenvoeg-reparatie van dezelfde middag; zijn klik viel er precies in.
+
+Nagemeten: de publicatie is volledig aangekomen. Vier advertentierijen (16:02:26
+tot 16:02:30 UTC) en drie opdrachten voor Marktplaats, 2dehands en Vinted, één
+keer, geen dubbele. Marktplaats was om 16:02:43 al opgepakt.
+
+**Wat er wel misging.** Shopify loopt niet via een opdracht maar via een
+rechtstreekse API-aanroep. Die viel met de herstart weg nadat het product al was
+aangemaakt: product 16048596812106 staat in zijn winkel, maar onze rij bleef op
+'pending' zonder productnummer. Het dashboard zegt dan eeuwig "Publishing…", en
+nog een keer publiceren zou een tweede product hebben opgeleverd. De rij is
+rechtgezet op het echte product.
+
+**Gerepareerd.** `reconcile_shopify_catalog` sloeg zo'n rij over: hij keek of er
+een Shopify-rij bestond, niet of die ergens over ging. Nu adopteert hij een rij
+die op 'pending' zonder productnummer is blijven steken, met hetzelfde bewijs als
+bij een nieuwe koppeling (uniek nummer, uniek product, merk dat klopt). Een
+wachtende rij die al een productnummer draagt blijft met rust. Gemeten over alle
+klanten: precies één zo'n rij, die van vanavond. Voor-en-na gedraaid: de nieuwe
+test meldt op de oude code "0 gekoppeld" en slaagt op de nieuwe; de tien
+bestaande tests van dat bestand slagen allebei de keren.
