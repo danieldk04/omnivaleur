@@ -10831,3 +10831,67 @@ niet tussen: die zijn nooit online gekomen.
 bestelpagina uitkwam, en dus ook of het weghalen van die bestelregel de
 advertentie meeneemt. Toon is daarom gevraagd die ene regel voorlopig te laten
 staan.
+
+### 18-09-2026 (avond) — "Merge into one" gooide twee keer nieuwe voorraad weg in Daniels eigen account
+
+Daniel: "Ik heb it publiceren maar die was al dubbel stond in dashboard. Toen zei
+ik oh merge into one voor twee artikelen, maar nou is die helemaal weg." Het ging
+om artikel 987 en om nog één.
+
+**Wat er echt gebeurde, nagemeten op de database.** Artikel (987) Blue Ralph
+Lauren Zip Vest is op 23-08-2026 op Vinted verkocht voor EUR 30,49. Op 18-09 om
+15:32:04 maakte Daniel een nieuwe rij aan met datzelfde nummer — hetzelfde
+artikel, opnieuw ingekocht, vijf eigen foto's. Tien seconden later drukte hij op
+Publish. Daarna, in deze volgorde:
+
+1. De verkoop-rem bij het uitdelen keek naar de hele familie (alle rijen met
+   hetzelfde nummer voor de titel) en zag de verkoop van 23-08 op de oude rij.
+   Alle drie de kanalen werden om 15:32:25 geannuleerd met "Item already sold on
+   vinted".
+2. De drie advertentierijen die het publiceren net had klaargezet bleven op
+   'pending' staan. Het dashboard zei "Publishing…" voor werk dat nooit meer kwam.
+3. Het dashboard bood de oude en de nieuwe rij aan als dubbele rijen.
+   Samenvoegen houdt de OUDSTE rij aan, en een verkochte advertentie stond dat
+   niet in de weg: de botsingscontrole keek alleen naar 'active'. Zijn nieuwe
+   artikel werd verwijderd.
+4. Een artikel met een verkochte advertentie staat onder "Sold". Uit Live, uit
+   To list, en niet meer te publiceren. Vandaar "helemaal weg".
+
+Hetzelfde overkwam op 15-09 een rij die hij zelf "1349 - 2" had genoemd — hij
+schreef er letterlijk bij dat het het tweede exemplaar was.
+
+**Het bewijs.** Elke publicatieopdracht draagt een volledige momentopname van het
+artikel in `payload`. Bij het samenvoegen verhuizen de opdrachten mee, dus die
+momentopname stond nog onder de overgebleven rij: `payload.id` noemde een artikel
+dat niet meer bestond. Zo zijn alle samenvoegingen van dit account terug te
+vinden: 17 in totaal, waarvan 15 gewone tweelingen (twee importrijen van één
+trui) en precies deze 2 schadelijk. Over alle klanten heen: alleen dit account is
+geraakt.
+
+**Gerepareerd.** (a) Eén verkochte en één onverkochte rij worden niet meer als
+dubbele groep aangeboden, en de server weigert zo'n samenvoeging. (b) De verkoop
+van een tweeling telt alleen nog als dit artikel toen al bestond; aangemaakt ná
+die verkoop is nieuwe voorraad. De eigen verkoop van een artikel blokkeert altijd.
+(c) Een eigen sku die verschilt ("1349" naast "1349 - 2") maakt er twee
+voorwerpen van, ook in de familiecontrole bij publiceren. De sku die wij er bij
+het importeren zelf in zetten (IMP-…, REV-…) telt daarbij niet mee. (d) Een
+geannuleerde publicatie neemt de wachtende advertentierij mee.
+
+Gemeten op alle 10.870 artikelen in de database: er waren precies twee
+dubbelgroepen, allebei van Daniel, en de sku-regel splitst er daarvan één. Geen
+enkele andere klant raakt een groep kwijt. Voor-en-na gedraaid: zes nieuwe tests
+vallen om op de oude code en slagen op de nieuwe; hele suite 15 mislukkingen voor
+en na, gelijk aan de bestaande.
+
+**Hersteld.** `scripts/herstel_opgeslokte_artikelen.py` heeft beide artikelen
+teruggezet uit hun momentopname, met hun eigen id, alle velden en alle foto's
+(5 en 10, alle vijftien nog bereikbaar op R2). Ze staan onder "To list" en de
+publicatiepoorten laten ze nu allebei door. De drie vastgelopen "Publishing…"-
+rijen zijn opgeruimd.
+
+**Openstaand.** In datzelfde account staan 13 artikelen die op Vinted of
+Marktplaats verkocht zijn nog steeds als actief in zijn Shopify-winkel. Die zijn
+daar op 09-09 gekoppeld door `reconcile_shopify_catalog`, dat bestaande producten
+aan artikelen koppelt zonder te kijken of het artikel al verkocht is. De verkopen
+zijn van vóór die koppeling, dus er is nooit een verwijderopdracht voor geweest.
+Risico: iemand koopt daar iets dat al weg is.

@@ -17,6 +17,55 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ---
 
+## samenvoegen-slokte-nieuwe-voorraad-op
+
+*18-09-2026 — "Merge into one" hield de oudste rij aan en verwijderde daarmee opnieuw ingekochte voorraad met hetzelfde artikelnummer*
+
+18-09-2026, Daniels eigen account (dkresellacademy@gmail.com). Een artikel dat
+opnieuw wordt ingekocht krijgt van de verkoper hetzelfde nummer, "(987)". Dat
+maakte er in vier stappen een verdwenen artikel van:
+
+1. De **verkoop-rem** bij het uitdelen keek naar de hele familie (alle rijen met
+   hetzelfde nummer) en zag de verkoop van maanden geleden op de oude rij. Alle
+   drie de kanalen werden geannuleerd met "Item already sold on vinted".
+2. De **advertentierijen** die het publiceren net had klaargezet bleven eeuwig
+   op `pending`. Het dashboard zei "Publishing…" voor werk dat nooit meer kwam.
+3. De **dubbel-balk** bood de oude en de nieuwe rij aan als dubbele rijen.
+   `groepeer` zet het OUDSTE item vooraan en dat is wat `merge_items` aanhoudt;
+   de botsingscontrole keek alleen naar `active`, dus een verkochte advertentie
+   stond de samenvoeging niet in de weg. De nieuwe rij werd verwijderd.
+4. `classifyItems` zet `sold` boven alles, dus het overgebleven artikel stond
+   onder "Sold": uit Live, uit To list, en niet meer te publiceren.
+
+Twee artikelen zo kwijtgeraakt: 987 (18-09) en een rij die hij zelf "1349 - 2"
+had genoemd (15-09). Allebei teruggehaald uit de momentopname die elke
+publicatieopdracht in `payload` draagt — dat is een volledige kopie van alle
+kolommen van de items-tabel, inclusief de foto's.
+
+**Wat je hieruit moet onthouden:**
+
+- Eén verkochte en één onverkochte rij met hetzelfde nummer zijn **twee
+  voorwerpen**, geen dubbele rijen. Zo'n groep wordt niet meer aangeboden en
+  `merge_items` weigert hem (`one_copy_is_sold`).
+- De verkoop van een **tweeling** telt alleen als dit artikel toen al bestond.
+  Aangemaakt ná die verkoop = nieuwe voorraad (`_is_nieuwe_voorraad` in
+  backend/api/jobs.py). De eigen verkoop van een artikel blokkeert altijd.
+- Een **eigen sku** die verschilt ("1349" naast "1349 - 2") maakt er twee
+  voorwerpen van, in `plausibel` én in `familie_ids`. De sku die wij er bij het
+  importeren zelf in zetten (`IMP-…`, `REV-…`) telt daarbij niet mee: die is per
+  rij anders en zou juist elke echte tweeling uit elkaar trekken. Gemeten op alle
+  10.870 artikelen: 10.679 dragen zo'n automatische sku.
+- Een **geannuleerde** publicatie moet de wachtende advertentierij meenemen,
+  anders blijft "Publishing…" eeuwig staan.
+- Herstel loopt via `scripts/herstel_opgeslokte_artikelen.py`: opdrachten waarvan
+  `payload.id` een artikel noemt dat niet meer bestaat zijn het handschrift van
+  een samenvoeging.
+
+Zie ook "dubbele-advertentie-titel-en-foto", "verkoop-signaal-hard-vs-zacht",
+"herplaatsen-verliest-advertenties".
+
+---
+
 ## dagrooster-crash-bleef-onopgemerkt
 
 *18-09-2026 — "mail_plan.dag bleef 13-08 t/m 17-09-2026 hangen op een oude datum omdat een schrijffout in _dagplan() ongezien de hele beurt liet crashen, elke tien minuten opnieuw, zonder alarm"*
