@@ -61,6 +61,7 @@ def start_scheduler():
     from backend.services.verkoop_reconciliatie import reconcileer_verkochte_artikelen
     from backend.services.verkoop_herinnering import herinner_onbevestigde_verkopen
     from backend.services.foto_controle import controleer_fotos_op_advertenties
+    from backend.services.publicatie_herstel import hervat_afgekapte_api_publicaties
     from backend.services.analytics_report import send_weekly_report
     from backend.services.week_meting import snapshot_vorige_week
     from backend.content.evaluator import run_evaluation_cycle_sync
@@ -173,6 +174,20 @@ def start_scheduler():
         "interval",
         hours=6,
         id="herstel_vastgelopen_werk",
+        replace_existing=True,
+    )
+    # PUBLICATIES DIE HALVERWEGE WERDEN AFGEKAPT (18-09-2026).
+    #
+    # Shopify en eBay worden rechtstreeks vanuit het verzoek gepubliceerd. Valt
+    # dat verzoek weg — bij elke nieuwe versie krijgt de oude server een SIGKILL —
+    # dan blijft de advertentierij op 'pending' staan en zegt het dashboard
+    # eeuwig "Publishing…" voor werk dat nooit meer komt. Elke tien minuten
+    # kijken we of zo'n rij blijft hangen en maken we het alsnog af.
+    _scheduler.add_job(
+        _off_the_request_loop(hervat_afgekapte_api_publicaties),
+        "interval",
+        minutes=10,
+        id="hervat_afgekapte_publicaties",
         replace_existing=True,
     )
     # Teksten die bij het importeren niet meekwamen alsnog ophalen. De extensie
