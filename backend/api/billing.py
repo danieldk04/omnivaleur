@@ -786,7 +786,7 @@ async def stripe_webhook(request: Request, stripe_signature: str = Header(None))
 
     elif event["type"] == "invoice.payment_failed":
         invoice = event["data"]["object"]
-        stripe_sub_id = invoice.get("subscription")
+        stripe_sub_id = _factuur_abonnement(invoice)
         if stripe_sub_id:
             # updated_at is the start of the grace period, so it must be stamped
             # here — otherwise a failed payment would inherit an old date and the
