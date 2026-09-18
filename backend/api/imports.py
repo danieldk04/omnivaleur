@@ -499,6 +499,10 @@ async def _classify_with_claude(title: str | None, description: str | None,
             "  SAME garment (e.g. Gymshark shorts = sportbroeken rather than shorts).\n"
             "- Footwear (shoes, sneakers, trainers, boots, loafers, heels, sandals) always\n"
             "  goes in a footwear category, whatever the brand is.\n"
+            "- Loafers, moccasins, penny loafers and boat shoes are NOT formal shoes:\n"
+            '  they belong in the plain shoes category ("heren schoenen" /\n'
+            '  "schoenen dames"). Only laced dress shoes (oxford, derby, brogue) are\n'
+            '  "heren formele schoenen".\n'
             "- Athletic shorts belong in a sportbroeken category, NOT shorts or jeans.\n"
             "- If gender is not stated or implied, use unisex where a sensible unisex\n"
             "  category exists; otherwise pick the most likely gender.\n"
