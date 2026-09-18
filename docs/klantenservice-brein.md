@@ -10,7 +10,7 @@ product verandert. De ontwikkelaar werkt dan zowel dit bestand in de repo als de
 kopie in Drive bij, in dezelfde beurt. Daniel hoeft niets te doen; de Gem leest
 de Drive-kopie de volgende keer opnieuw in.
 
-_Laatst bijgewerkt: 17-09-2026 (nieuwe klanten zien op hun dashboard een lijst 'Get started' die vanzelf afvinkt wat echt gelukt is, en Help in het dashboard legt met een schema uit hoe het werkt, wat de iconen betekenen en wat je per kanaal nodig hebt; op Platforms staat niet langer 'Auto-detected' maar 'Uses your Chrome login'; Vinted: te lange omschrijvingen worden voor Vinted zelf ingekort en de staat wordt opnieuw ingevuld als dat de eerste keer mislukt, extensie 1.0.338; Facebook meldt alleen nog klaar als Facebook het bevestigt; vervangen bij een zakelijk Marktplaats- of 2dehands-account wordt niet meer aangeboden; een verkoop wordt alleen nog op een kanaal geboekt als dat kanaal het zelf zegt of de klant het bevestigt: een advertentie die uit je Vinted-kast verdwenen is, wordt een vraag in het dashboard waarbij je zelf het kanaal aanwijst; een klik op een grijs kanaalicoon plaatst nu of vraagt de link, en zet niets meer zomaar op live; opslaan in het bewerkscherm zet niets meer terug wat de klant zelf niet veranderde, en een artikel met Bieden, Zie omschrijving of Gratis kan weer worden opgeslagen zonder bedrag; verkocht op Marktplaats of 2dehands met een zakelijk account wordt nu ook opgemerkt als vraag in het dashboard; 2dehands voor verkopers die in Nederland wonen: land en woonplaats invullen bij Preferences; al op een kanaal en net bewerkt: vervangen kan nu direct vanuit het publiceervenster. Eerder, 15-09: zakelijk account lijkt op uitgelogd; eBay in het Nederlands; wachtrij die stilstaat omdat de browser niet is ingelogd; Vinted plaatst door zonder open tabblad; rode 'Relist failed' meldingen hersteld in 1.0.334)_
+_Laatst bijgewerkt: 18-09-2026 (de knop 'Clear queue' leegt nu de hele wachtrij in een klik en toont het echte aantal; hij ruimde er maximaal 50 per klik op terwijl de teller ook op 50 bleef staan, dus bij een lange rij leek er niets te gebeuren. Eerder, 17-09: nieuwe klanten zien op hun dashboard een lijst 'Get started' die vanzelf afvinkt wat echt gelukt is, en Help in het dashboard legt met een schema uit hoe het werkt, wat de iconen betekenen en wat je per kanaal nodig hebt; op Platforms staat niet langer 'Auto-detected' maar 'Uses your Chrome login'; Vinted: te lange omschrijvingen worden voor Vinted zelf ingekort en de staat wordt opnieuw ingevuld als dat de eerste keer mislukt, extensie 1.0.338; Facebook meldt alleen nog klaar als Facebook het bevestigt; vervangen bij een zakelijk Marktplaats- of 2dehands-account wordt niet meer aangeboden; een verkoop wordt alleen nog op een kanaal geboekt als dat kanaal het zelf zegt of de klant het bevestigt: een advertentie die uit je Vinted-kast verdwenen is, wordt een vraag in het dashboard waarbij je zelf het kanaal aanwijst; een klik op een grijs kanaalicoon plaatst nu of vraagt de link, en zet niets meer zomaar op live; opslaan in het bewerkscherm zet niets meer terug wat de klant zelf niet veranderde, en een artikel met Bieden, Zie omschrijving of Gratis kan weer worden opgeslagen zonder bedrag; verkocht op Marktplaats of 2dehands met een zakelijk account wordt nu ook opgemerkt als vraag in het dashboard; 2dehands voor verkopers die in Nederland wonen: land en woonplaats invullen bij Preferences; al op een kanaal en net bewerkt: vervangen kan nu direct vanuit het publiceervenster. Eerder, 15-09: zakelijk account lijkt op uitgelogd; eBay in het Nederlands; wachtrij die stilstaat omdat de browser niet is ingelogd; Vinted plaatst door zonder open tabblad; rode 'Relist failed' meldingen hersteld in 1.0.334)_
 
 ---
 
@@ -544,6 +544,23 @@ Je advertentie staat klaar en er is niets misgegaan aan jouw kant. Bij ons wacht
 hij op de vertaling naar het Nederlands, en zolang die niet werkt zetten we hem
 liever niet online dan in de verkeerde taal. Zodra dat is opgelost gaat hij
 vanzelf alsnog de deur uit; je hoeft niets opnieuw te doen.
+
+Groetjes,
+Daniel
+
+### Wachtrij legen lukt niet, er gebeurt niets als ik op Clear queue klik
+
+Hoi <voornaam>,
+
+Je had gelijk, en het lag aan ons. De knop kon per klik maar 50 opdrachten
+opruimen, terwijl de teller ernaast ook nooit hoger dan 50 kwam. Bij een lange
+rij verdwenen er dus wel vijftig, maar sprong de teller meteen terug en leek er
+niets te gebeuren.
+
+Dat is opgelost. Ververs je dashboard even, dan zie je het echte aantal staan en
+haalt een klik op Clear queue ze allemaal weg, hoe lang de rij ook is. Je
+artikelen blijven gewoon in Omnivaleur staan, dus je kunt ze daarna opnieuw
+publiceren.
 
 Groetjes,
 Daniel
