@@ -50,17 +50,23 @@ def _tijd(waarde):
     return d.replace(tzinfo=timezone.utc) if d.tzinfo is None else d
 
 
-def _alle(db, tabel, kolommen, **eq):
+def _alle(db, tabel, kolommen, stap=200, **eq):
+    """Serieel lezen in kleine brokken.
+
+    Opdrachten dragen een volledige momentopname in `payload` plus een `result`;
+    duizend van die rijen tegelijk opvragen liep op de echte database in een
+    statement timeout (57014). Tweehonderd gaat goed.
+    """
     uit, start = [], 0
     while True:
         q = db.table(tabel).select(kolommen)
         for k, v in eq.items():
             q = q.eq(k, v)
-        rijen = q.order("created_at").range(start, start + 999).execute().data or []
+        rijen = q.order("created_at").range(start, start + stap - 1).execute().data or []
         uit += rijen
-        if len(rijen) < 1000:
+        if len(rijen) < stap:
             return uit
-        start += 1000
+        start += stap
 
 
 def main(user_id: str, apply: bool) -> None:
