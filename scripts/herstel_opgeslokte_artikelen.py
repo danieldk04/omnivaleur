@@ -67,7 +67,7 @@ def main(user_id: str, apply: bool) -> None:
     from backend.database import get_db
 
     db = get_db()
-    jobs = _alle(db, "jobs", "id,item_id,platform,action,status,created_at,payload",
+    jobs = _alle(db, "jobs", "id,item_id,platform,action,status,created_at,payload,result",
                  user_id=user_id)
     print(f"{len(jobs)} opdrachten gelezen voor {user_id}")
 
