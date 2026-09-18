@@ -50,19 +50,30 @@ def _tijd(waarde):
     return d.replace(tzinfo=timezone.utc) if d.tzinfo is None else d
 
 
-def _alle(db, tabel, kolommen, stap=200, **eq):
-    """Serieel lezen in kleine brokken.
+def _alle(db, tabel, kolommen, stap=100, **eq):
+    """Serieel lezen in kleine brokken, met herkansing.
 
     Opdrachten dragen een volledige momentopname in `payload` plus een `result`;
-    duizend van die rijen tegelijk opvragen liep op de echte database in een
-    statement timeout (57014). Tweehonderd gaat goed.
+    duizend van die rijen tegelijk opvragen liep op de echte database steevast in
+    een statement timeout (57014), en tweehonderd af en toe. Honderd per keer,
+    en een brok die alsnog omvalt krijgt drie kansen — lezen mag altijd opnieuw.
     """
+    import time
+
     uit, start = [], 0
     while True:
-        q = db.table(tabel).select(kolommen)
-        for k, v in eq.items():
-            q = q.eq(k, v)
-        rijen = q.order("created_at").range(start, start + stap - 1).execute().data or []
+        q = None
+        for poging in range(3):
+            try:
+                q = db.table(tabel).select(kolommen)
+                for k, v in eq.items():
+                    q = q.eq(k, v)
+                rijen = q.order("created_at").range(start, start + stap - 1).execute().data or []
+                break
+            except Exception:  # noqa: BLE001 — alleen lezen, herkansen is veilig
+                if poging == 2:
+                    raise
+                time.sleep(2 * (poging + 1))
         uit += rijen
         if len(rijen) < stap:
             return uit
