@@ -17,6 +17,38 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ---
 
+## klant-kan-twee-abonnementen-hebben
+
+*18-09-2026 — "Onze database bewaart één stripe_subscription_id per klant; wie twee keer afsluit kan gekoppeld staan aan de dode, waardoor een betalende klant buitengesloten wordt"*
+
+Een klant kan bij Stripe **meer dan één abonnement** hebben, bijvoorbeeld omdat hij
+het afsluiten twee keer heeft doorlopen. Onze `subscriptions`-tabel heeft één rij per
+gebruiker met één `stripe_subscription_id`, en die kan aan het verkeerde hangen.
+
+Gebeurd op 18-09-2026 met klant `26cf5471` / `cus_V7U6m3jY1slXh7`:
+
+- `sub_1U7F8x…` — aangemaakt 22-08, **active**, betaald EUR 19,99, loopt t/m 24-09
+- `sub_1U81e1…` — aangemaakt 24-08 (de dubbele), geannuleerd 29-08, EUR 19,99 **volledig terugbetaald**
+
+Onze rij hing aan de dubbele. Daardoor leek hij een opzegger die gratis doorwerkte,
+en is hij twaalf minuten lang ten onrechte buitengesloten voordat het opviel.
+
+**Waarom de gebruikelijke controle dit niet ving:** ik had per abonnement gemeten
+(status, einddatum, restitutie) en dat klopte allemaal — dat ene abonnement wás echt
+opgezegd en écht terugbetaald. De fout zat in de vraag: "is dit abonnement dood?" is
+niet hetzelfde als "heeft deze klant geen levend abonnement?".
+
+**Hoe toe te passen:** vóór je iemands toegang intrekt, vraag altijd álle
+abonnementen van die klant op, niet alleen degene waar onze rij aan hangt:
+`GET /v1/subscriptions?customer=<cus_…>&status=all`. Is er nog één met status
+`active`, `trialing`, `past_due` of `incomplete`, dan hoort onze rij daaraan te
+hangen en blijft de toegang staan. Hetzelfde geldt bij het beantwoorden van "hoeveel
+betalende klanten zijn er": tel per klant, niet per abonnement.
+
+Zie ook "stripe-api-versie-verplaatst-velden" en "proefperiode-en-toegangsslot".
+
+---
+
 ## stripe-webhook-mist-invoice-events
 
 *18-09-2026 — "Het Stripe-webhookendpoint luisterde niet naar invoice.paid, waardoor een betalende SEPA-klant op payment_processing bleef hangen; op 18-09-2026 aangezet"*

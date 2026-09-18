@@ -10580,3 +10580,33 @@ nog toegang.
 september op `/api/jobs/pending`, `/api/jobs/relist-status`, `/api/items/` en
 `/api/listings/`. Twee korte vensters, niet verklaard, geen aanwijzing dat ze met
 het bovenstaande te maken hebben.
+
+### 18-09-2026 (correctie) — ik heb een betalende klant twaalf minuten buitengesloten
+
+Daniel vroeg daarna hoeveel betalende klanten er nu écht zijn. Bij het natellen op
+facturen in plaats van op status bleek dat klant `cus_V7U6m3jY1slXh7` in twee lijsten
+tegelijk stond: gestopt én lopend-en-betaald. Dat kan niet allebei.
+
+Hij heeft **twee abonnementen** bij Stripe:
+
+- `sub_1U7F8x…` — 22-08 aangemaakt, **active**, EUR 19,99 betaald, loopt t/m 24-09
+- `sub_1U81e1…` — 24-08 aangemaakt (dubbel), geannuleerd 29-08, EUR 19,99 **terugbetaald**
+
+Onze rij hing aan de dubbele. Daardoor las ik hem hierboven als opzegger die gratis
+doorwerkte, en heb ik hem om 07:38 op `canceled` gezet. Om 07:50 hersteld: rij nu
+gekoppeld aan `sub_1U7F8x…`, status `active`, periode t/m 24-09. Tussen die twee
+momenten kreeg hij bij elke publiceeractie een 402.
+
+**De les, en het is een scherpe.** Mijn controle per abonnement klopte helemaal: dát
+abonnement was opgezegd en dát geld was terugbetaald. De fout zat in de vraag. "Is
+dit abonnement dood" is niet hetzelfde als "heeft deze klant geen levend abonnement".
+Vóór je iemands toegang intrekt hoor je `GET /v1/subscriptions?customer=<cus_…>&status=all`
+te doen en te kijken of er nóg één leeft.
+
+Daarna alle zes klanten nagelopen op deze fout: alleen deze had een dubbel abonnement,
+en alle zes hangen nu aan het juiste.
+
+**De echte stand op 18-09-2026:** drie klanten met geld binnen voor de lopende periode
+(3 x EUR 19,99), één met een lopende incasso waarvan nog niets binnen is, één in proef
+t/m 19-09, één echt gestopt. Ooit binnengekomen EUR 134,93, terugbetaald EUR 19,99,
+netto gehouden EUR 114,94.
