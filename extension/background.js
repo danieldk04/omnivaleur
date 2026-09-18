@@ -2239,7 +2239,7 @@ async function zetDoorlopendeKlok(tabId, url, altijd = false) {
   // mediaan van 25 seconden over zijn eigen 98 geslaagde Marktplaats-
   // publicaties. De debugger hangt er op die twee kanalen toch al aan voor de
   // echte toetsaanslag, dus dit kost geen extra gele balk.
-  if (!koppelingNodig(String(url || ""))) return;
+  if (!altijd && !koppelingNodig(String(url || ""))) return;
   await new Promise((res) => {
     try {
       chrome.debugger.sendCommand({ tabId }, "Emulation.setFocusEmulationEnabled",
