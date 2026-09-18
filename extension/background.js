@@ -2414,7 +2414,7 @@ function openWorkerTab(url, callback, opts = {}) {
   // Vinted gaat daarom net als Marktplaats en 2dehands naar een achtergrond-
   // tabblad in het venster waar hij toch al werkt.
 
-  openAchtergrondTabblad(url).then((tab) => {
+  openAchtergrondTabblad(url, opts).then((tab) => {
     if (tab) { callback(tab); return; }
     _workerWindowChain = _workerWindowChain
       .then(() => openWorkerTabInner(url, opts))
