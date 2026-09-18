@@ -455,8 +455,11 @@ def merge_items(body: dict, user_id: str = Depends(get_current_user)):
     # unieke index draagt `WHERE status = 'active'`, dus een verkochte of
     # ingetrokken advertentie blokkeert niets.
     bezet: dict[str, set] = {}
+    verkocht_op: dict[str, set] = {}
     for rij in (db.table("listings").select("item_id,platform,platform_listing_id,status")
                 .in_("item_id", [keep, *losers]).execute().data or []):
+        if rij.get("status") == "sold":
+            verkocht_op.setdefault(rij["item_id"], set()).add(rij.get("platform"))
         if rij.get("status") != "active":
             continue
         bezet.setdefault(rij["item_id"], set()).add(
