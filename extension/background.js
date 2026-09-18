@@ -2297,6 +2297,50 @@ async function koppelVroeg(tabId, url, altijd = false) {
   }
 }
 
+// DE KLOK MOET AAN BLIJVEN, DE HELE KLUS LANG.
+//
+// Eén keer aanzetten bij het openen van het tabblad is niet genoeg. Er zijn drie
+// manieren waarop de rem er tussentijds weer op gaat:
+//
+//   1. het tabblad navigeert (van het lege tabblad naar de site, en bij
+//      Marktplaats van het formulier naar de advertentiepagina);
+//   2. de verkoper drukt op "Annuleren" in Chrome's gele balk, waarmee hij de
+//      koppeling verbreekt (Egbert Brouwer, 04-09-2026);
+//   3. Chrome breekt de service worker af en start hem opnieuw, waarna onze
+//      lijst met gekoppelde tabbladen leeg is.
+//
+// In alle drie de gevallen valt de klok terug naar nul tikken per seconde en
+// staat het formulier stil tot de verkoper er zelf naartoe klikt. Daarom wordt
+// de klok na ELKE paginawissel opnieuw gezet, en wordt er zo nodig opnieuw
+// gekoppeld. Het commando is idempotent; twee keer aanzetten kost niets.
+async function verzekerKlok(tabId) {
+  try {
+    const sleutel = `jobtab_${tabId}`;
+    const { [sleutel]: meta } = await chrome.storage.local.get(sleutel);
+    if (!meta || !meta.klokVast) return;
+    if (!_vroegGekoppeld.has(tabId)) {
+      if (!(await heeftDebugger())) return;
+      const gelukt = await new Promise((res) => {
+        try {
+          chrome.debugger.attach({ tabId }, "1.3", () => {
+            const f = chrome.runtime.lastError;
+            // "Already attached" is geen fout: dan zijn wij het zelf, uit een
+            // vorig leven van de service worker.
+            res(!f || /already attached/i.test(f.message || ""));
+          });
+        } catch (_) { res(false); }
+      });
+      if (!gelukt) return;
+      _vroegGekoppeld.add(tabId);
+    }
+    await zetDoorlopendeKlok(tabId, null, true);
+  } catch (_) { /* dan werkt het zoals vroeger, alleen trager */ }
+}
+
+chrome.tabs.onUpdated.addListener((tabId, info) => {
+  if (info.status === "loading" || info.status === "complete") verzekerKlok(tabId);
+});
+
 function ontkoppelVroeg(tabId) {
   if (!_vroegGekoppeld.has(tabId)) return;
   _vroegGekoppeld.delete(tabId);
