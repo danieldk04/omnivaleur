@@ -1857,7 +1857,7 @@ async function maakWerkTabblad(opties, url, extra = {}) {
   // Chrome mag dit tabblad niet wegbezuinigen (Memory Saver / discard) terwijl
   // de klus nog loopt: dan sterft het content-script halverwege het invullen.
   chrome.tabs.update(tab.id, { autoDiscardable: false }).catch(() => {});
-  await koppelVroeg(tab.id, url);
+  await koppelVroeg(tab.id, url, !!extra.klokVast);
   await chrome.tabs.update(tab.id, { url });
   // Een nieuw tabblad haalt het venster op macOS terug in beeld.
   await houdWerkvensterGeminimaliseerd();
