@@ -10791,3 +10791,43 @@ op de echte database: oude code `hard_dicht=True` bij allebei, nieuwe code False
 regel (die wandkleed-advertentie). Die kost niets zolang hij hem niet afrekent,
 maar hij kan hem daar met het prullenbakje weghalen. En: wonen wanddecoraties
 kost bij hem geld, dus advertenties in die rubriek gaan daar niet gratis online.
+
+### 18-09-2026 (middag) — Een voortgangsping wiste de fouttekst, en daardoor liep dezelfde betaalmuur vijftien keer opnieuw
+
+Toon vroeg door: "bij tweedehands kan je maar beperkt artikelen in 1 rubriek
+plaatsen, dus vandaar dat we elke keer een andere rubriek moeten kiezen? Kan jij
+deze verdelen maken." Gemeten in zijn eigen account klopt die aanname niet als
+algemene regel: 616 advertenties staan live op 2dehands, 61 gratis in Heren
+broeken en pantalons, 59 in Dames broeken en pantalons, 20 in Dames jassen. Eén
+rubriek vraagt bij hem wél geld: Huis en Inrichting, Stoffering, Tapijten en
+Kleden. Vijftien tapijten liepen daar op vast.
+
+**Waarom de rem dat niet tegenhield.** `POST /jobs/{id}/progress` zette `result`
+in zijn geheel op `{"_progress": ...}`, zonder te kijken of de opdracht nog liep.
+Vijf mislukte tapijten van 10:47 tot 11:46 kregen om 11:52:26 allemaal hetzelfde
+voortgangsbericht en hielden daarna geen fouttekst meer over. Sinds 1 september
+overkwam dat 98 mislukte opdrachten, 57 daarvan op 2dehands. Elke rem leest die
+tekst: welke rubriek geld kost, of een kanaal kansloos is, of de betaalpagina al
+eerder voorbijkwam. Zonder tekst weet de machine niets en probeert ze het opnieuw,
+en op 2dehands is elke poging daar een bestelregel van EUR 9,00.
+
+**Wat er nu staat.** Een voortgangsbericht landt alleen nog op een opdracht met
+status pending of claimed. `_betaalde_rubriek_bekend` sorteert op het moment van
+afronden in plaats van aanmaken: vier tapijten werden in dezelfde seconde
+klaargezet (10:43:42) en liepen af om 10:47, 10:51, 11:01 en 11:46, dus de
+aanmaaktijd zegt niets over wat 2dehands het laatst zei. Vijftien opdrachten
+kregen hun fouttekst terug uit de advertentierij die hem nog wel droeg, waarna de
+rubriek weer als betalend bekend staat. Voor-en-na gedraaid: de twee nieuwe tests
+vallen om op de oude code en slagen op de nieuwe; hele suite 40 mislukkingen voor
+en na, gelijk aan de bestaande.
+
+**Correctie op de ochtendnotitie hierboven.** Het geborduurde wandkleed staat
+inmiddels wél online op 2dehands, nummer m2443850223. Zijn openbare
+verkoperspagina toont 615 advertenties en precies nul die wij niet kennen, dus
+wonen wanddecoraties is bij hem niet aantoonbaar betalend. De tapijten staan daar
+niet tussen: die zijn nooit online gekomen.
+
+**Openstaand:** onbekend waarom die ene advertentie online staat terwijl ze op de
+bestelpagina uitkwam, en dus ook of het weghalen van die bestelregel de
+advertentie meeneemt. Toon is daarom gevraagd die ene regel voorlopig te laten
+staan.

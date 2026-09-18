@@ -740,10 +740,18 @@ def _betaalde_rubriek_bekend(db, user_id: str, platform: str, sleutel: str) -> b
         return False
     grens = (datetime.now(timezone.utc) - _BETAALDE_RUBRIEK_GEHEUGEN).isoformat()
     rijen = (db.table("jobs")
-             .select("status,created_at,result,payload->category,payload->mp_category")
+             .select("status,created_at,done_at,result,payload->category,payload->mp_category")
              .eq("user_id", user_id).eq("platform", platform).eq("action", "create")
              .in_("status", ["done", "error"]).gte("created_at", grens)
              .order("created_at", desc=True).limit(1000).execute().data or [])
+    # Wat het laatst GEBEURDE telt, niet wat het laatst werd klaargezet. Bij een
+    # volle wachtrij gaan tientallen opdrachten in dezelfde seconde de rij in en
+    # lopen ze pas uren later af, in een andere volgorde. Gemeten bij De Juiste
+    # Toon: vier tapijten aangemaakt om 10:43:42, afgelopen om 10:47, 10:51,
+    # 11:01 en 11:46. Wie dan op aanmaaktijd sorteert leest een willekeurige van
+    # die vier als "het laatste wat we zagen", en een geslaagde plaatsing daar
+    # bovenop zet de rubriek weer open terwijl de betaalpagina later kwam.
+    rijen.sort(key=lambda r: str(r.get("done_at") or r.get("created_at") or ""), reverse=True)
     for r in rijen:
         if _rubriek_sleutel({"category": r.get("category"),
                              "mp_category": r.get("mp_category")}) != sleutel:
@@ -2458,14 +2466,28 @@ def report_job_progress(job_id: str, body: dict, user_id: str = Depends(get_curr
     Lightweight live-progress channel for long-running jobs (mainly scans). The
     extension posts a small {stage, message, current, total} object at each phase;
     the dashboard polls /status/{job_id} and renders it so the user can see exactly
-    what's happening and how far along it is. Stored in `result` under `_progress`
-    (the final /complete overwrites `result`, so this never lingers).
+    what's happening and how far along it is. Stored in `result` under `_progress`.
+
+    ALLEEN OP EEN OPDRACHT DIE NOG LOOPT (18-09-2026, De Juiste Toon).
+
+    Hier stond een update zonder voorwaarde op de status, en die zette `result`
+    in zijn geheel op {"_progress": ...}. Een late ping wiste daarmee de fout van
+    een opdracht die allang klaar was. Gemeten bij hem: vijf mislukte plaatsingen
+    van 10:47 tot 11:46 kregen allemaal om 11:52:26 hetzelfde voortgangsbericht
+    en hielden daarna geen fouttekst meer over. Sinds 1 september overkwam dat 98
+    mislukte opdrachten, waarvan 57 op 2dehands.
+
+    Dat is duur, want elke rem leest die fouttekst: welke rubriek geld kost, of
+    een kanaal kansloos is, of de betaalpagina al eerder voorbijkwam. Zonder die
+    tekst weet de machine niets meer en probeert ze dezelfde rubriek opnieuw, en
+    op 2dehands is elke poging daar een bestelregel van EUR 9,00. Zijn tapijten
+    liepen er vijftien keer op vast.
     """
     db = get_db()
     _record_extension_heartbeat(db, user_id)  # progress pings only come from the extension
     db.table("jobs").update({
         "result": {"_progress": {**body, "at": datetime.now(timezone.utc).isoformat()}},
-    }).eq("id", job_id).eq("user_id", user_id).execute()
+    }).eq("id", job_id).eq("user_id", user_id).in_("status", ["pending", "claimed"]).execute()
     return {"ok": True}
 
 

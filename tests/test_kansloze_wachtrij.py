@@ -43,6 +43,7 @@ class _Q:
         self.db, self.tabel = db, tabel
         self.filters, self.in_filters, self.tekstfilter = {}, {}, None
         self.op, self.velden, self.omgekeerd, self.grens = None, None, False, None
+        self.ondergrens = None
 
     def select(self, *_a, **_k): self.op = "select"; return self
     def filter(self, kolom, _op, patroon):
@@ -52,6 +53,7 @@ class _Q:
     def update(self, velden): self.op, self.velden = "update", velden; return self
     def eq(self, k, v): self.filters[k] = v; return self
     def in_(self, k, v): self.in_filters[k] = list(v); return self
+    def gte(self, kolom, waarde): self.ondergrens = (kolom, str(waarde)); return self
     def order(self, _k, desc=False): self.omgekeerd = desc; return self
     def limit(self, n): self.grens = n; return self
 
@@ -61,6 +63,9 @@ class _Q:
         rijen = [r for r in bron
                  if all(r.get(k) == v for k, v in self.filters.items())
                  and all(r.get(k) in v for k, v in self.in_filters.items())]
+        if self.ondergrens:
+            kolom, waarde = self.ondergrens
+            rijen = [r for r in rijen if str(r.get(kolom) or "") >= waarde]
         if self.tekstfilter:
             kolom, naald = self.tekstfilter
             if kolom == "result->>error":

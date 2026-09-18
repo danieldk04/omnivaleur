@@ -28,6 +28,7 @@ Twee dingen deden wij daarna fout, en allebei kostten ze hem iets:
 Draaien: python3 -m pytest tests/test_2dehands_betaalmuur.py
 """
 import sys
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 import pytest
@@ -487,3 +488,75 @@ def test_de_wachtrij_blijft_staan_als_het_kanaal_aantoonbaar_gratis_plaatst():
     fail = bron.split("def fail_job(")[1].split("\ndef ")[0]
     assert "_melding_advertentie_op_de_rekening(" in fail
     assert "rubriek=rubriek" in fail
+
+
+# ── 9. EEN VOORTGANGSBERICHT MAG DE FOUT NIET WISSEN ────────────────────────
+#
+# GEMETEN (18-09-2026, De Juiste Toon). Vijf tapijten liepen tussen 10:47 en
+# 11:46 vast op de betaalpagina van 2dehands. Om 11:52:26 kregen alle vijf
+# hetzelfde voortgangsbericht van de extensie, en daarna stond er in `result`
+# alleen nog {"_progress": ...}: geen fouttekst meer. Sinds 1 september
+# overkwam dat 98 mislukte opdrachten, 57 daarvan op 2dehands.
+#
+# Elke rem leest die fouttekst. Zonder tekst weet de machine niet meer dat die
+# rubriek geld kost en zet ze het volgende tapijt gewoon weer klaar, en op
+# 2dehands is dat elke keer een bestelregel van EUR 9,00.
+
+_NU = datetime.now(timezone.utc)
+_KLOK = {"aangemaakt": (_NU - timedelta(hours=3)).isoformat(),
+         "vroeg": (_NU - timedelta(hours=2)).isoformat(),
+         "laat": (_NU - timedelta(hours=1)).isoformat(),
+         "laatst": _NU.isoformat()}
+
+RUBRIEK_KOST_GELD = api._melding_rubriek_vraagt_geld(
+    "2dehands", "Huis en Inrichting Stoffering | Tapijten en Kleden")
+
+
+def _opdracht(status, result):
+    return _DB(jobs=[{"id": "j1", "user_id": "u", "platform": "2dehands", "action": "create",
+                      "status": status, "item_id": "i1", "result": result}])
+
+
+def test_een_late_voortgangsping_wist_de_fout_van_een_afgeronde_opdracht_niet(monkeypatch):
+    monkeypatch.setattr(api, "_record_extension_heartbeat", lambda *a, **k: None)
+    klaar = _opdracht("error", {"error": RUBRIEK_KOST_GELD})
+    monkeypatch.setattr(api, "get_db", lambda: klaar)
+    api.report_job_progress("j1", {"stap": "klokstand: 0.0/s"}, user_id="u")
+    assert klaar.jobs[0]["result"] == {"error": RUBRIEK_KOST_GELD}
+
+    # VOOR-EN-NA: op een opdracht die nog loopt hoort dezelfde ping wel te landen,
+    # anders zou het dashboard niets meer laten zien tijdens een scan.
+    loopt = _opdracht("claimed", {})
+    monkeypatch.setattr(api, "get_db", lambda: loopt)
+    api.report_job_progress("j1", {"stap": "klokstand: 0.0/s"}, user_id="u")
+    assert loopt.jobs[0]["result"]["_progress"]["stap"] == "klokstand: 0.0/s"
+
+
+def test_een_gewiste_fout_maakt_de_rubriekrem_blind():
+    """Waarom het wissen duur was: precies dit gebeurde met zijn tapijten."""
+    gewist = _DB(jobs=[{"id": "j1", "user_id": "u", "platform": "2dehands", "action": "create",
+                        "status": "error", "item_id": "i1", "category": "tapijten",
+                        "created_at": _KLOK["aangemaakt"], "done_at": _KLOK["laat"],
+                        "result": {"_progress": {"stap": "klokstand: 0.0/s"}}}])
+    assert api._betaalde_rubriek_bekend(gewist, "u", "2dehands", "tapijten") is False
+
+
+def test_de_rubriekrem_kijkt_naar_wanneer_de_opdracht_afliep():
+    """Vier tapijten werden in dezelfde seconde klaargezet en liepen uren later af.
+
+    Op aanmaaktijd is hun volgorde willekeurig; alleen het moment van afronden
+    zegt wat 2dehands het laatst tegen deze verkoper zei.
+    """
+    muur = {"id": "muur", "user_id": "u", "platform": "2dehands", "action": "create",
+            "status": "error", "item_id": "i1", "category": "tapijten",
+            "created_at": _KLOK["aangemaakt"], "done_at": _KLOK["laat"],
+            "result": {"error": RUBRIEK_KOST_GELD}}
+    gelukt = {"id": "ok", "user_id": "u", "platform": "2dehands", "action": "create",
+              "status": "done", "item_id": "i2", "category": "tapijten",
+              "created_at": _KLOK["aangemaakt"], "done_at": _KLOK["vroeg"], "result": {}}
+    assert api._betaalde_rubriek_bekend(_DB(jobs=[muur, gelukt]), "u", "2dehands",
+                                        "tapijten") is True
+    # En andersom: is de geslaagde plaatsing de laatste, dan is de rubriek weer vrij.
+    gelukt_laatst = dict(gelukt, done_at=_KLOK["laatst"])
+    assert api._betaalde_rubriek_bekend(_DB(jobs=[muur, gelukt_laatst]), "u", "2dehands",
+                                        "tapijten") is False

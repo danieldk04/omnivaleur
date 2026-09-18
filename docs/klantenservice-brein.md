@@ -10,7 +10,7 @@ product verandert. De ontwikkelaar werkt dan zowel dit bestand in de repo als de
 kopie in Drive bij, in dezelfde beurt. Daniel hoeft niets te doen; de Gem leest
 de Drive-kopie de volgende keer opnieuw in.
 
-_Laatst bijgewerkt: 18-09-2026 (2dehands ging bij een klant helemaal uit omdat één advertentie in een betalende rubriek op de bestelpagina uitkwam; dat gebeurt niet meer, voortaan stopt alleen die rubriek en blijft de rest van de wachtrij lopen. Eerder dezelfde dag: de knop 'Clear queue' leegt nu de hele wachtrij in een klik en toont het echte aantal; hij ruimde er maximaal 50 per klik op terwijl de teller ook op 50 bleef staan, dus bij een lange rij leek er niets te gebeuren. Eerder, 17-09: nieuwe klanten zien op hun dashboard een lijst 'Get started' die vanzelf afvinkt wat echt gelukt is, en Help in het dashboard legt met een schema uit hoe het werkt, wat de iconen betekenen en wat je per kanaal nodig hebt; op Platforms staat niet langer 'Auto-detected' maar 'Uses your Chrome login'; Vinted: te lange omschrijvingen worden voor Vinted zelf ingekort en de staat wordt opnieuw ingevuld als dat de eerste keer mislukt, extensie 1.0.338; Facebook meldt alleen nog klaar als Facebook het bevestigt; vervangen bij een zakelijk Marktplaats- of 2dehands-account wordt niet meer aangeboden; een verkoop wordt alleen nog op een kanaal geboekt als dat kanaal het zelf zegt of de klant het bevestigt: een advertentie die uit je Vinted-kast verdwenen is, wordt een vraag in het dashboard waarbij je zelf het kanaal aanwijst; een klik op een grijs kanaalicoon plaatst nu of vraagt de link, en zet niets meer zomaar op live; opslaan in het bewerkscherm zet niets meer terug wat de klant zelf niet veranderde, en een artikel met Bieden, Zie omschrijving of Gratis kan weer worden opgeslagen zonder bedrag; verkocht op Marktplaats of 2dehands met een zakelijk account wordt nu ook opgemerkt als vraag in het dashboard; 2dehands voor verkopers die in Nederland wonen: land en woonplaats invullen bij Preferences; al op een kanaal en net bewerkt: vervangen kan nu direct vanuit het publiceervenster. Eerder, 15-09: zakelijk account lijkt op uitgelogd; eBay in het Nederlands; wachtrij die stilstaat omdat de browser niet is ingelogd; Vinted plaatst door zonder open tabblad; rode 'Relist failed' meldingen hersteld in 1.0.334)_
+_Laatst bijgewerkt: 18-09-2026 (advertenties in een rubriek die op 2dehands geld kost werden keer op keer opnieuw geprobeerd doordat de fouttekst van zo'n mislukking kon verdwijnen; die tekst blijft nu staan, zo'n rubriek wordt onthouden en de rest van de wachtrij loopt door. Eerder dezelfde dag: 2dehands ging bij een klant helemaal uit omdat één advertentie in een betalende rubriek op de bestelpagina uitkwam; dat gebeurt niet meer, voortaan stopt alleen die rubriek en blijft de rest van de wachtrij lopen. Eerder dezelfde dag: de knop 'Clear queue' leegt nu de hele wachtrij in een klik en toont het echte aantal; hij ruimde er maximaal 50 per klik op terwijl de teller ook op 50 bleef staan, dus bij een lange rij leek er niets te gebeuren. Eerder, 17-09: nieuwe klanten zien op hun dashboard een lijst 'Get started' die vanzelf afvinkt wat echt gelukt is, en Help in het dashboard legt met een schema uit hoe het werkt, wat de iconen betekenen en wat je per kanaal nodig hebt; op Platforms staat niet langer 'Auto-detected' maar 'Uses your Chrome login'; Vinted: te lange omschrijvingen worden voor Vinted zelf ingekort en de staat wordt opnieuw ingevuld als dat de eerste keer mislukt, extensie 1.0.338; Facebook meldt alleen nog klaar als Facebook het bevestigt; vervangen bij een zakelijk Marktplaats- of 2dehands-account wordt niet meer aangeboden; een verkoop wordt alleen nog op een kanaal geboekt als dat kanaal het zelf zegt of de klant het bevestigt: een advertentie die uit je Vinted-kast verdwenen is, wordt een vraag in het dashboard waarbij je zelf het kanaal aanwijst; een klik op een grijs kanaalicoon plaatst nu of vraagt de link, en zet niets meer zomaar op live; opslaan in het bewerkscherm zet niets meer terug wat de klant zelf niet veranderde, en een artikel met Bieden, Zie omschrijving of Gratis kan weer worden opgeslagen zonder bedrag; verkocht op Marktplaats of 2dehands met een zakelijk account wordt nu ook opgemerkt als vraag in het dashboard; 2dehands voor verkopers die in Nederland wonen: land en woonplaats invullen bij Preferences; al op een kanaal en net bewerkt: vervangen kan nu direct vanuit het publiceervenster. Eerder, 15-09: zakelijk account lijkt op uitgelogd; eBay in het Nederlands; wachtrij die stilstaat omdat de browser niet is ingelogd; Vinted plaatst door zonder open tabblad; rode 'Relist failed' meldingen hersteld in 1.0.334)_
 
 ---
 
@@ -671,6 +671,28 @@ https://www.2dehands.be/payments/orderOverview/index.html
 
 Vanaf nu stoppen we bij zoiets alleen die ene rubriek en laat de rest van je rij
 gewoon doorlopen.
+
+Groetjes,
+Daniel
+
+### Moet ik op 2dehands steeds een andere rubriek kiezen, want daar blijven spullen hangen
+
+Hoi <voornaam>,
+
+Dat hoeft niet, en het is ook geen goed idee: zet je iets in een rubriek waar het
+niet thuishoort, dan haalt 2dehands de advertentie weg. Bij jou gaan de meeste
+rubrieken gewoon goed; daar staan er honderden van je online.
+
+Wat er wel speelt: 2dehands vraagt in sommige rubrieken geld per zoekertje. Komt
+een advertentie van je daar op een bestelpagina uit, dan stoppen wij alleen die
+rubriek en loopt de rest van je rij door. Wij klikken nooit op een betaalknop, dus
+er is niets besteld en niets betaald. Openstaande regels kun je zelf weghalen met
+het prullenbakje:
+https://www.2dehands.be/payments/orderOverview/index.html
+
+Wil je die artikelen toch op 2dehands, dan kan dat op twee manieren: zelf plaatsen
+en per advertentie betalen, of ze in een andere passende rubriek zetten die daar
+wel gratis is. Op je andere kanalen staan ze gewoon online.
 
 Groetjes,
 Daniel

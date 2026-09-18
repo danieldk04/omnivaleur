@@ -17,6 +17,34 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ---
 
+## voortgangsping-wist-de-fouttekst
+
+*18-09-2026 — Een late voortgangsping overschreef result van een afgeronde opdracht, waardoor elke rem blind werd en dezelfde betaalmuur vijftien keer opnieuw werd geraakt*
+
+`POST /jobs/{id}/progress` zette `result` in zijn geheel op `{"_progress": ...}`
+zonder te kijken of de opdracht nog liep. Een ping die binnenkwam nadat een
+opdracht al was mislukt wiste daarmee de fouttekst. Gemeten op 18-09-2026 bij De
+Juiste Toon: vijf mislukte tapijten van 10:47 tot 11:46 kregen om 11:52:26
+dezelfde voortgangsregel en hadden daarna geen fout meer. Sinds 1 september
+overkwam dat 98 mislukte opdrachten, 57 op 2dehands.
+
+**Why:** alle remmen lezen die fouttekst uit `result.error`, zie
+"betalende-rubriek-is-geen-formulierfout" en
+"betaalpagina-is-niet-het-hele-kanaal". Zonder tekst weet de machine niet meer
+dat die rubriek geld kost en zet ze het volgende artikel gewoon weer klaar. Op
+2dehands is dat elke keer een bestelregel van EUR 9,00; vijftien tapijten liepen
+er zo op vast terwijl de rem ernaast stond te kijken.
+
+**How to apply:** schrijf nooit een heel `result`-veld over vanuit een zijkanaal.
+Een voortgangsbericht hoort alleen op een opdracht met status pending of claimed,
+en de rest van het veld blijft staan. Wie een rem bouwt die op fouttekst leest,
+controleert eerst of die tekst er bij afgeronde opdrachten nog echt in staat.
+Verder: sorteer zulke geschiedenis op het moment van afronden, niet van aanmaken,
+want een volle wachtrij zet tientallen opdrachten in dezelfde seconde klaar en
+loopt ze uren later in een andere volgorde af.
+
+---
+
 ## betaalpagina-is-niet-het-hele-kanaal
 
 *18-09-2026 — Eén advertentie op /payments/ sloot heel 2dehands af bij een klant die er 219 gratis had geplaatst; een dicht kanaal kan daarna nooit meer vanzelf opengaan*
