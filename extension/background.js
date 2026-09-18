@@ -2268,7 +2268,7 @@ async function zetDoorlopendeKlok(tabId, url, altijd = false) {
   });
 }
 
-async function koppelVroeg(tabId, url) {
+async function koppelVroeg(tabId, url, altijd = false) {
   try {
     // GEEN GELE BALK WAAR HIJ NIETS OPLOST (30-08-2026).
     //
