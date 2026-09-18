@@ -94,13 +94,21 @@ def test_publiceren_gebruikt_een_achtergrond_tabblad_geen_eigen_venster():
     het vangnet voor als er geen enkel gewoon venster open is.
     """
     fn = BG.split("function openWorkerTab(")[1].split("\nasync function openWorkerTabInner(")[0]
-    assert "openAchtergrondTabblad(url)" in fn, \
+    assert "openAchtergrondTabblad(url" in fn, \
         "publiceren hoort eerst een achtergrond-tabblad te proberen"
     # het geminimaliseerde werkvenster is nog uitsluitend het vangnet
     assert "openWorkerTabInner(url, opts)" in fn
-    idx_bg = fn.index("openAchtergrondTabblad(url)")
+    idx_bg = fn.index("openAchtergrondTabblad(url")
     idx_win = fn.index("openWorkerTabInner(url, opts)")
     assert idx_bg < idx_win, "het aparte venster mag pas ná de tabblad-poging komen"
+    # 18-09-2026: Vinted had hier een uitzondering en kreeg een eigen,
+    # geminimaliseerd venster. Gemeten is dat zo'n venster de klok van de pagina
+    # net zo hard laat stilvallen als een achtergrondtabblad (0,0 tikken per
+    # seconde na anderhalve minuut), dus het kostte de verkoper alleen een extra
+    # venster. Daniel: "vinted opent nog steeds in een ander venster in plaats
+    # van een ander tabblad." Die uitzondering mag niet terugkomen.
+    assert "VINTED_FORMULIER_KLOK.test" not in fn, \
+        "Vinted hoort geen eigen venster meer te krijgen, net zomin als de rest"
 
 
 def test_werkvenster_vangnet_blijft_geminimaliseerd():
