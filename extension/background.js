@@ -2217,7 +2217,7 @@ function koppelingNodig(url) {
 const _klokAangezet = new Map();
 chrome.tabs.onRemoved.addListener((tabId) => _klokAangezet.delete(tabId));
 
-async function zetDoorlopendeKlok(tabId, url) {
+async function zetDoorlopendeKlok(tabId, url, altijd = false) {
   // OOK MARKTPLAATS EN 2DEHANDS. GEMETEN OP 18-09-2026, LIVE.
   //
   // Hierboven staat sinds 15-09: "Marktplaats had dit nooit, want daar hangt de
