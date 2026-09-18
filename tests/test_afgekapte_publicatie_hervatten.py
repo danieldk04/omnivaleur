@@ -245,3 +245,25 @@ def test_ebay_wordt_ook_hervat(monkeypatch):
 
     assert gepubliceerd == [("i1", ("ebay",), "u1")]
     assert uit["hervat"] == 1
+
+
+# ── 8. Een weigering mag geen eeuwige herhaling worden ─────────────────────
+
+def test_geweigerd_kanaal_laat_geen_eeuwige_pending_achter(monkeypatch):
+    """publish_to_platforms kan het kanaal weigeren (hetzelfde voorwerp staat er
+    al onder een dubbele rij, of het kanaal staat op pauze). Die weigering raakt
+    onze rij niet aan — dan moet de herstelronde hem zelf sluiten, anders
+    probeert hij het elke tien minuten opnieuw."""
+    db, _ = _opzet(monkeypatch, [_rij()], [_item()])
+
+    async def weigert(item_id, platforms, user_id):
+        return [{"platform": "shopify", "status": "duplicate",
+                 "error": "Already listed here under a duplicate copy of this item."}]
+    monkeypatch.setattr(cl, "publish_to_platforms", weigert)
+
+    uit = asyncio.run(ph.hervat_afgekapte_api_publicaties())
+
+    assert uit["gemeld"] == 1
+    rij = db.tabellen["listings"][0]
+    assert rij["status"] == "error"
+    assert "duplicate copy" in rij["error_message"]

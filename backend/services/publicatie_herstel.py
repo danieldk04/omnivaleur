@@ -146,10 +146,23 @@ async def _hervat_een(db, rij: dict, afgestemd: set[str]) -> tuple[int, int, int
                     f"This never went live ({type(e).__name__}). Press Publish again.")
         return (0, 0, 1)
 
-    geslaagd = any(u.get("status") in ("active", "already_live", "duplicate")
-                   for u in uitkomsten)
+    geslaagd = any(u.get("status") in ("active", "already_live") for u in uitkomsten)
     if geslaagd:
         logger.info("herstel: %s alsnog op %s gepubliceerd", item["id"], platform)
         return (0, 1, 0)
-    # _publish_one heeft de rij zelf al op 'error' met de echte reden gezet.
+
+    # DE RIJ MOET ALTIJD UIT 'pending' KOMEN, ook als publish_to_platforms er
+    # niet aan toe kwam. Wordt het kanaal geweigerd omdat hetzelfde voorwerp er
+    # al onder een dubbele rij op staat (status 'duplicate'), of omdat het kanaal
+    # op pauze staat ('blocked'), dan raakt die weigering onze rij niet aan —
+    # en dan zou deze ronde hem elke tien minuten opnieuw proberen, voor altijd.
+    achtergebleven = ((await naast_de_lus(lambda: db.table("listings")
+                      .select("status,platform_listing_id").eq("id", rij["id"])
+                      .limit(1).execute())).data or [None])[0]
+    if achtergebleven and achtergebleven.get("status") == "pending" \
+            and not achtergebleven.get("platform_listing_id"):
+        reden = next((u.get("error") or u.get("message") for u in uitkomsten
+                      if u.get("error") or u.get("message")), None)
+        await _meld(db, rij["id"], reden or "This never went live. Press Publish again.")
+    # Anders heeft _publish_one de rij zelf al op 'error' met de echte reden gezet.
     return (0, 0, 1)
