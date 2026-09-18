@@ -17,6 +17,94 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ---
 
+## vinted-tabblad-klok-stilstand
+
+*18-09-2026 — Een verborgen werk-tabblad staat bijna stil; alleen Emulation.setFocusEmulationEnabled zet de klok weer op vol tempo, de debugger aanhechten doet niets*
+
+15-09-2026. Daniel: "iedere keer als ik iets op Vinted probeer te publiceren
+gebeurt er niks in dat tabblad totdat ik er zelf naartoe klik, dan gaat ie weer
+verder."
+
+**Gemeten in een echte Chrome** (testpagina die elke 15 sec haar tikken doorgeeft,
+zie `tests/vinted-tabblad-klok-echt-test.mjs`):
+
+| tabblad | tikken pagina-klok / 15 sec | requestAnimationFrame |
+|---|---|---|
+| in beeld | 150 | 436 |
+| verborgen | 15 | 0 |
+| verborgen, na 5 min | 0 tot 1 | 0 |
+| verborgen + focus-emulatie | 147 | 1117 |
+
+Onze eigen `sleep()` loopt via een Web Worker en tikte de hele tijd ~145 per 15
+sec door ("verborgen-tabblad-worker-timer"). Het is Vinted's eigen formulier dat
+op de pagina-klok draait en dus stilvalt. Uit de echte opdrachtentabel: plaatsen
+duurt op Marktplaats 38 sec (mediaan van 120), op Vinted 234 sec (mediaan van 94),
+uitschieters tot 80 minuten.
+
+**Wat NIET werkt, allemaal gemeten**: de debugger kaal aanhechten (0 tot 1 tik,
+dus de oude aanname dat aanhechten de rem uitzet klopt niet), `Page.enable`,
+`Page.startScreencast`, een stil geluidje via WebAudio, een open WebSocket, een
+Web Lock. `Emulation.setPageVisibilityOverride` bestaat niet meer in Chrome.
+
+**Wat wel werkt**: `Emulation.setFocusEmulationEnabled {enabled:true}` over de
+debugger-koppeling. De pagina meldt zich daarna als `visible` en draait op vol
+tempo, terwijl het tabblad gewoon op de achtergrond blijft staan. Gemeten blijft
+dat staan over een navigatie heen, dus het mag al op `about:blank` vóór het
+tabblad naar het formulier gaat — precies waar `koppelVroeg` toch al zit.
+
+Zit in 1.0.331 (`zetDoorlopendeKlok` in background.js), alleen voor het
+Vinted-plaatsformulier en de bewerkpagina. Prijs: Chrome's gele
+foutopsporingsbalk staat tijdens een Vinted-plaatsing boven dat venster, net als
+bij elke Marktplaats-plaatsing al gebeurt. Blijft het tabblad open zodat de
+verkoper het zelf afmaakt, dan koppelen we los zodat die balk weg is.
+
+Voor-en-na met de échte extensie in een echte Chrome, achtergrondtabblad op
+vinted.nl: oud `hidden` en 10 tikken in 10 sec, nieuw `visible` en 89 tot 91
+tikken in 10 sec.
+
+Zie ook "extensie-echt-draaien-in-chrome" en "beloofd-tempo-moet-gemeten-tempo-zijn".
+
+**Wat de eerste meting uit Daniels eigen browser leerde (15-09-2026, 1.0.332).**
+De stappen liepen door: titel 16:00:00, foto's 16:02:26, categorie 16:02:35,
+plaatsklik 16:02:46, advertentie online 16:05:53. Geen stilstand. De klok meldde
+bij de eerste twee stappen 0,2/s met "visible+focus"; dat was niet de rem maar de
+opstart van Vinted zelf, want de meter telde vanaf het laden van het content
+script. Meet dus pas vanaf het moment dat het formulier er staat, anders meet je
+de laadtijd van de site en trek je de verkeerde conclusie.
+
+Ook gemeten: focus-emulatie werkt óók als het hele venster geminimaliseerd is
+(99 tikken in 10 seconden). Occlusie van het venster is dus niet de grens.
+
+De drie minuten tussen plaatsklik en bevestiging zijn Vinted die het artikel
+verwerkt (de garderobe-API toont het pas dan), niet iets van ons.
+
+**Openstaand:** of een plaatsing doorliep dankzij de reparatie of doordat de
+verkoper toevallig niet wegklikte, is met één meting niet te scheiden. Sneller is
+het niet aantoonbaar: 5 min 59 tegen een mediaan van 3 min 54 over de 94
+plaatsingen ervoor.
+
+
+**18-09-2026: het gold óók voor Marktplaats en 2dehands (1.0.339).** Daniel: "op
+marktplaats publiceerde hij weer niet zonder mijn invloed." De code beperkte
+`zetDoorlopendeKlok` tot het Vinted-formulier, met als reden dat Marktplaats de
+debugger toch al aan had hangen "en dat zet de rem uit" — precies de aanname die
+hierboven al weerlegd was. Live uit zijn browser, 2dehands mét debugger:
+`klokstand: 0.1/s +23546ms hidden`, en even later `0.4/s`. Zijn publicatie duurde
+5 min 20 tegen een mediaan van 25 sec over zijn 98 geslaagde Marktplaats-
+publicaties.
+
+Nu geldt de klok voor alles waar de debugger toch al aan hangt (het
+plaatsformulier van Marktplaats en 2dehands plus het Vinted-formulier), dus geen
+extra venster en geen extra gele balk. Voor-en-na met de échte extensie in een
+echte Chrome (`tests/marktplaats-tabblad-klok-echt-test.mjs`): oud `hidden` en 10
+tikken per 10 sec (8 geminimaliseerd), nieuw `visible` en 62 (65 geminimaliseerd).
+
+**De les erachter:** een aanname over waaróm iets ergens anders wél werkt is geen
+meting. "Marktplaats heeft er geen last van" kwam uit een sneller mediaan, en dat
+kwam uit een korter formulier.
+
+---
+
 ## samenvoegen-slokte-nieuwe-voorraad-op
 
 *18-09-2026 — "Merge into one" hield de oudste rij aan en verwijderde daarmee opnieuw ingekochte voorraad met hetzelfde artikelnummer*
@@ -1093,74 +1181,6 @@ particuliere verkoper naast. (2) Op Marktplaats staat er bij zo iemand ook
 Admarkt-adverteerder. (3) Onze eigen scan zegt het al: "Je persoonlijke
 advertentieoverzicht is leeg, bij een zakelijk account hoort dat zo". Zie
 "zakelijke-verkoper-account" en "admarkt-zakelijke-marktplaats".
-
----
-
-## vinted-tabblad-klok-stilstand
-
-*15-09-2026 — Een verborgen werk-tabblad staat bijna stil; alleen Emulation.setFocusEmulationEnabled zet de klok weer op vol tempo, de debugger aanhechten doet niets*
-
-15-09-2026. Daniel: "iedere keer als ik iets op Vinted probeer te publiceren
-gebeurt er niks in dat tabblad totdat ik er zelf naartoe klik, dan gaat ie weer
-verder."
-
-**Gemeten in een echte Chrome** (testpagina die elke 15 sec haar tikken doorgeeft,
-zie `tests/vinted-tabblad-klok-echt-test.mjs`):
-
-| tabblad | tikken pagina-klok / 15 sec | requestAnimationFrame |
-|---|---|---|
-| in beeld | 150 | 436 |
-| verborgen | 15 | 0 |
-| verborgen, na 5 min | 0 tot 1 | 0 |
-| verborgen + focus-emulatie | 147 | 1117 |
-
-Onze eigen `sleep()` loopt via een Web Worker en tikte de hele tijd ~145 per 15
-sec door ("verborgen-tabblad-worker-timer"). Het is Vinted's eigen formulier dat
-op de pagina-klok draait en dus stilvalt. Uit de echte opdrachtentabel: plaatsen
-duurt op Marktplaats 38 sec (mediaan van 120), op Vinted 234 sec (mediaan van 94),
-uitschieters tot 80 minuten.
-
-**Wat NIET werkt, allemaal gemeten**: de debugger kaal aanhechten (0 tot 1 tik,
-dus de oude aanname dat aanhechten de rem uitzet klopt niet), `Page.enable`,
-`Page.startScreencast`, een stil geluidje via WebAudio, een open WebSocket, een
-Web Lock. `Emulation.setPageVisibilityOverride` bestaat niet meer in Chrome.
-
-**Wat wel werkt**: `Emulation.setFocusEmulationEnabled {enabled:true}` over de
-debugger-koppeling. De pagina meldt zich daarna als `visible` en draait op vol
-tempo, terwijl het tabblad gewoon op de achtergrond blijft staan. Gemeten blijft
-dat staan over een navigatie heen, dus het mag al op `about:blank` vóór het
-tabblad naar het formulier gaat — precies waar `koppelVroeg` toch al zit.
-
-Zit in 1.0.331 (`zetDoorlopendeKlok` in background.js), alleen voor het
-Vinted-plaatsformulier en de bewerkpagina. Prijs: Chrome's gele
-foutopsporingsbalk staat tijdens een Vinted-plaatsing boven dat venster, net als
-bij elke Marktplaats-plaatsing al gebeurt. Blijft het tabblad open zodat de
-verkoper het zelf afmaakt, dan koppelen we los zodat die balk weg is.
-
-Voor-en-na met de échte extensie in een echte Chrome, achtergrondtabblad op
-vinted.nl: oud `hidden` en 10 tikken in 10 sec, nieuw `visible` en 89 tot 91
-tikken in 10 sec.
-
-Zie ook "extensie-echt-draaien-in-chrome" en "beloofd-tempo-moet-gemeten-tempo-zijn".
-
-**Wat de eerste meting uit Daniels eigen browser leerde (15-09-2026, 1.0.332).**
-De stappen liepen door: titel 16:00:00, foto's 16:02:26, categorie 16:02:35,
-plaatsklik 16:02:46, advertentie online 16:05:53. Geen stilstand. De klok meldde
-bij de eerste twee stappen 0,2/s met "visible+focus"; dat was niet de rem maar de
-opstart van Vinted zelf, want de meter telde vanaf het laden van het content
-script. Meet dus pas vanaf het moment dat het formulier er staat, anders meet je
-de laadtijd van de site en trek je de verkeerde conclusie.
-
-Ook gemeten: focus-emulatie werkt óók als het hele venster geminimaliseerd is
-(99 tikken in 10 seconden). Occlusie van het venster is dus niet de grens.
-
-De drie minuten tussen plaatsklik en bevestiging zijn Vinted die het artikel
-verwerkt (de garderobe-API toont het pas dan), niet iets van ons.
-
-**Openstaand:** of een plaatsing doorliep dankzij de reparatie of doordat de
-verkoper toevallig niet wegklikte, is met één meting niet te scheiden. Sneller is
-het niet aantoonbaar: 5 min 59 tegen een mediaan van 3 min 54 over de 94
-plaatsingen ervoor.
 
 ---
 
