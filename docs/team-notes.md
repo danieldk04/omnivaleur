@@ -17,6 +17,33 @@ memory can still be written on top for fast recall, but never as the only
 record: anything here has to survive a switch to a different Claude account
 without Daniel repeating himself.
 
+## 2026-09-18 — Marktplaats-automatiseringsrisico nu expliciet in de gebruiksvoorwaarden
+
+Aanleiding: klant Peter (JP MiniWheels) las de Marktplaats-voorwaarden zelf en
+vroeg rechtstreeks of Omnivaleur toestemming heeft van Marktplaats om
+geautomatiseerd te plaatsen. Antwoord aan hem: nee, die toestemming is er niet,
+en dat risico lag tot nu toe alleen in losse klantmails, niet in de
+voorwaarden zelf.
+
+Beslissing: nieuw hoofdstuk 3 toegevoegd aan `frontend/terms.html`
+("Third-party marketplace terms and automation risk"), met per platform de
+letterlijke, bij de bron nagetrokken bepaling (Marktplaats art. 7.4, 2dehands
+art. 7.4 sinds 5-02-2026, Vinted sectie 6, eBay sectie 3, Meta art. 3.2). De
+klant accepteert daarmee expliciet dat elke actie van een marktplaats tegen
+zijn eigen account (waarschuwing, beperking, verwijdering) voor eigen risico
+is, en dat wij daar niet voor aansprakelijk zijn. Aansprakelijkheidshoofdstuk
+(nu 10) verwijst terug naar dit nieuwe hoofdstuk 3.
+
+Feitelijk gecheckt voor dit hoofdstuk: eBay draait in Omnivaleur echt via de
+officiële Inventory-API in productie (`ebay_sandbox: bool = False` in
+`backend/config.py`, productie-eindpunten `api.ebay.com`), dus die claim in de
+voorwaarden klopt en is niet alleen een sandbox-belofte.
+
+Openstaand: deze tekst is niet juridisch getoetst door een advocaat. Bestaande
+klanten zijn nog niet geïnformeerd over deze materiële wijziging, terwijl
+hoofdstuk 14 van de voorwaarden een aankondiging van minstens 14 dagen vooraf
+belooft bij materiële wijzigingen.
+
 ## 2026-08-31 — Storing "niet ingelogd bij Marktplaats" was al gerepareerd
 
 MOET ZEKER-storing van de klantenservice: Dennis (retrogameking) en Egbert
