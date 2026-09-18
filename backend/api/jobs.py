@@ -287,6 +287,35 @@ def _parse_ts(ts):
     return dt.replace(tzinfo=timezone.utc) if dt.tzinfo is None else dt
 
 
+def _is_nieuwe_voorraad(item_gemaakt_op, zuster_verkocht_op) -> bool:
+    """Is dit artikel pas ná de verkoop van zijn tweeling aangemaakt?
+
+    WAAROM DIT BESTAAT (18-09-2026, Daniels eigen account).
+
+    De verkoop-rem hieronder kijkt naar de hele familie: alle artikelen met
+    hetzelfde nummer voor de titel. Dat is terecht voor een echte tweeling —
+    twee rijen die door twee imports van ÉÉN trui zijn ontstaan. Maar een
+    tweedehandsverkoper die hetzelfde artikel opnieuw inkoopt geeft het
+    gewoon weer nummer 987, en dan is het een ANDER voorwerp.
+
+    Gemeten: artikel (987) verkocht op Vinted op 23-08. Op 18-09 maakte Daniel
+    een nieuwe rij met nummer 987 aan en drukte tien seconden later op Publish.
+    Alle drie de kanalen werden geannuleerd met "Item already sold on vinted".
+    Hetzelfde op 15-09 met een rij die hij zelf "1349 - 2" had genoemd — hij
+    schreef er letterlijk bij dat het het tweede exemplaar was.
+
+    Het onderscheid is hard te maken: een tweelingrij ontstaat bij de import,
+    dus lang vóór de verkoop. Een nieuw exemplaar wordt erná aangemaakt. Bij
+    twijfel (een datum die we niet kunnen lezen) remmen we, want een dubbel
+    verkocht artikel is erger dan een publicatie die blijft wachten.
+    """
+    gemaakt = _parse_ts(item_gemaakt_op)
+    verkocht = _parse_ts(zuster_verkocht_op)
+    if gemaakt is None or verkocht is None:
+        return False
+    return gemaakt > verkocht
+
+
 def _recover_stale_claims(db, user_id: str, platform: str, now_dt: datetime) -> None:
     """
     Find jobs stuck in 'claimed' with no recent activity and get them unstuck.
