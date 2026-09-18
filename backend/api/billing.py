@@ -760,7 +760,7 @@ async def stripe_webhook(request: Request, stripe_signature: str = Header(None))
         if result.data:
             (await naast_de_lus(lambda: db.table("subscriptions").update({
                 "status": nieuwe_status,
-                "current_period_end": _ts(stripe_sub["current_period_end"]),
+                "current_period_end": _ts(_period_end(stripe_sub)),
                 "updated_at": _now(),
             }).eq("stripe_subscription_id", stripe_sub_id).execute()))
             invalidate_access_cache(result.data[0]["user_id"])
