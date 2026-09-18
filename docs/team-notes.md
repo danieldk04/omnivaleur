@@ -10924,3 +10924,36 @@ wachtende rij die al een productnummer draagt blijft met rust. Gemeten over alle
 klanten: precies één zo'n rij, die van vanavond. Voor-en-na gedraaid: de nieuwe
 test meldt op de oude code "0 gekoppeld" en slaagt op de nieuwe; de tien
 bestaande tests van dat bestand slagen allebei de keren.
+
+### 18-09-2026 (avond) — Het Marktplaats-formulier stond stil in een verborgen tabblad; de aanname dat de debugger dat oploste was fout
+
+Daniel: "op marktplaats publiceerde hij weer niet zonder mijn invloed, naar het
+tabblad gaan en alleen op publish drukken." Zijn publicatie van 16:02 duurde
+5 minuten 20, tegen een mediaan van 25 seconden over zijn 98 geslaagde
+Marktplaats-publicaties.
+
+**Gemeten, live in zijn browser.** Zijn 2dehands-opdracht stuurde op dat moment
+door: `klokstand: 0.1/s +23546ms hidden`. Eén tik per tien seconden in plaats van
+tien per seconde, en een korte pauze die 23,5 seconde uitliep, met de debugger er
+gewoon aan.
+
+**De verkeerde aanname.** In background.js stond sinds 15-09: "Marktplaats had
+dit nooit, want daar hangt de debugger al aan het tabblad en dat zet de rem uit."
+Dat klopt niet, en de meting van 15-09 zei het zelf al ("alleen de debugger
+aanhechten: 0 tot 1 tik"). Wat de rem er wél af haalt is
+`Emulation.setFocusEmulationEnabled`, en die stond alleen aan voor het
+Vinted-formulier. Marktplaats leek sneller omdat het formulier korter is.
+
+**Gerepareerd (1.0.339).** `zetDoorlopendeKlok` geldt nu voor alles waar de
+debugger toch al aan hangt: het plaatsformulier van Marktplaats en 2dehands en
+het Vinted-formulier. Geen extra venster, geen extra gele balk.
+
+**Voor-en-na gedraaid** met de échte extensie in een echte Chrome
+(`tests/marktplaats-tabblad-klok-echt-test.mjs`, naar het model van de
+Vinted-proef van 15-09):
+
+    oude versie : pagina meldt "hidden",  10 tikken per 10 sec (8 geminimaliseerd)
+    nieuwe versie: pagina meldt "visible", 62 tikken per 10 sec (65 geminimaliseerd)
+
+**Openstaand:** Daniel moet 1.0.339 zelf uploaden in de Chrome Web Store; tot dat
+is goedgekeurd draait iedereen nog op 1.0.338 en blijft dit spelen.
