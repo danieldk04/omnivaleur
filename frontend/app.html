@@ -9695,7 +9695,15 @@ function renderActivityBar() {
   if (!bar) return;
   const working = _activityState.working || [];
   const queued = _activityState.queued || [];
-  const nWorking = working.length, nQueued = queued.length;
+  // HET ECHTE AANTAL, NIET HET STUKJE DAT WE OPHAALDEN.
+  //
+  // WAAROM (17-09-2026, Egbert Brouwer). /api/jobs/active geeft er hooguit 50
+  // terug. Deze kop zei daardoor "50 jobs queued" terwijl er 168 stonden, en de
+  // knop eronder ruimde er precies vijftig op: klikken en de teller sprong terug
+  // naar 50. De server telt ze nu zelf; `queued_total` is dus de waarheid en
+  // `queued` alleen nog de lijst waaruit we de omschrijving maken.
+  const nWorking = working.length;
+  const nQueued = Math.max(queued.length, _activityState.queued_total || 0);
 
   if (nWorking === 0 && nQueued === 0) { bar.style.display = 'none'; return; }
 
@@ -9868,7 +9876,10 @@ function renderActivityBar() {
 async function cancelActiveJobs() {
   const working = _activityState.working || [];
   const queued = _activityState.queued || [];
+  // Het echte aantal wachtenden, niet de eerste vijftig. Zie renderActivityBar.
+  const nWachtend = Math.max(queued.length, _activityState.queued_total || 0);
   let ids;
+  let heleRij = false;
 
   if (working.length) {
     // Er draait er echt eentje. Dat is waar deze knop voor bedoeld is: een
@@ -9885,13 +9896,16 @@ async function cancelActiveJobs() {
   } else if (queued.length) {
     // Niets draait er. Dan is dit geen "afbreken" maar "weggooien", en dat moet
     // er ook staan, mét het aantal.
-    const n = queued.length;
+    const n = nWachtend;
     if (!confirm(`Remove all ${n} queued publication${n === 1 ? '' : 's'} from the queue?\n\n`
       + `Nothing gets published: ${n === 1 ? 'it disappears' : 'they disappear'} from the queue and `
       + `${n === 1 ? 'shows' : 'show'} up as not listed.\n\n`
       + 'Nothing is wrong with waiting — the queue runs by itself as soon as Chrome is open on '
       + 'the computer with the Omnivaleur extension. Your items stay in Omnivaleur either way, '
       + 'so you can always publish them again.')) return;
+    // NIET meer opdracht voor opdracht. De lijst hierboven is hooguit de eerste
+    // vijftig; de server leegt de hele rij in een keer. Zie /jobs/cancel-queued.
+    heleRij = true;
     ids = [...new Set(queued.map(j => j.id).filter(Boolean))];
   } else {
     renderActivityBar();
@@ -9902,22 +9916,43 @@ async function cancelActiveJobs() {
   const btn = document.getElementById('ext-activity-cancel');
   if (btn) { btn.disabled = true; btn.textContent = 'Cancelling…'; }
   try {
-    await Promise.all(ids.map(id =>
-      apiFetch(`${API}/api/jobs/${id}/cancel`, { method: 'POST' }).catch(() => {})
-    ));
-    // Alleen weghalen wat we ook echt geannuleerd hebben. Vroeger werd hier de
-    // hele stand leeggemaakt, dus na het stoppen van één lopende opdracht leek
-    // de wachtrij ook verdwenen terwijl die er gewoon nog stond.
-    const weg = new Set(ids);
-    _activityState = {
-      ..._activityState,
-      working: (_activityState.working || []).filter(j => !weg.has(j.id)),
-      queued: (_activityState.queued || []).filter(j => !weg.has(j.id)),
-    };
+    let aantal;
+    if (heleRij) {
+      // Eén verzoek voor de hele rij. Vroeger stuurde dit er een per opdracht,
+      // allemaal tegelijk, naar een server die ze op een rij afhandelt — en de
+      // mislukkingen werden hier weggegooid (`.catch(() => {})`), dus een rij
+      // die bleef staan zag eruit als een rij die leeg was geklikt.
+      const r = await apiFetch(`${API}/api/jobs/cancel-queued`, { method: 'POST' });
+      const body = await requireOk(r, 'Could not clear the queue');
+      aantal = body.cancelled ?? 0;
+      _activityState = { ..._activityState, queued: [], queued_total: 0 };
+    } else {
+      // Eén lopende opdracht afbreken. Ook hier telt alleen wat de server
+      // bevestigt: een geweigerd verzoek mag niet als "gelukt" van het scherm
+      // verdwijnen en dan bij de volgende peiling weer opduiken.
+      const uitkomsten = await Promise.all(ids.map(async id => {
+        try {
+          const r = await apiFetch(`${API}/api/jobs/${id}/cancel`, { method: 'POST' });
+          return r.ok ? id : null;
+        } catch { return null; }
+      }));
+      const gelukt = uitkomsten.filter(Boolean);
+      if (!gelukt.length) throw new Error('the server did not accept it');
+      aantal = gelukt.length;
+      // Alleen weghalen wat we ook echt geannuleerd hebben. Vroeger werd hier de
+      // hele stand leeggemaakt, dus na het stoppen van één lopende opdracht leek
+      // de wachtrij ook verdwenen terwijl die er gewoon nog stond.
+      const weg = new Set(gelukt);
+      _activityState = {
+        ..._activityState,
+        working: (_activityState.working || []).filter(j => !weg.has(j.id)),
+        queued: (_activityState.queued || []).filter(j => !weg.has(j.id)),
+      };
+    }
     renderActivityBar();
     renderKanaalSessie();
     await loadAll();
-    showToast(ids.length === 1 ? 'Cancelled.' : `Cancelled ${ids.length}.`);
+    showToast(aantal === 1 ? 'Cancelled.' : `Cancelled ${aantal}.`);
   } catch (e) {
     alert('Could not cancel: ' + e.message);
   } finally {
@@ -9935,7 +9970,9 @@ async function pollActivity() {
     if (!r.ok) return;
     const data = await r.json();
     const prevWorking = (_activityState.working || []).length;
-    _activityState = { working: data.working || [], queued: data.queued || [], pace: data.pace || null };
+    _activityState = { working: data.working || [], queued: data.queued || [],
+                       queued_total: data.queued_total ?? (data.queued || []).length,
+                       pace: data.pace || null };
     renderActivityBar();
     renderKanaalSessie();
     // When the extension finishes an active job, pull fresh data promptly so

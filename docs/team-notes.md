@@ -10610,3 +10610,42 @@ en alle zes hangen nu aan het juiste.
 (3 x EUR 19,99), één met een lopende incasso waarvan nog niets binnen is, één in proef
 t/m 19-09, één echt gestopt. Ooit binnengekomen EUR 134,93, terugbetaald EUR 19,99,
 netto gehouden EUR 114,94.
+
+### 18-09-2026 — Egbert Brouwer: "Clear queue" leegde 50 van de 168, twee keer op rij
+
+Egbert (Papa's Plectrums) mailde dat hij de wachtrij wilde legen om opnieuw te
+beginnen en dat er niets gebeurde. Dat klopte, en het is aantoonbaar:
+
+`/api/jobs/active` leest hooguit 50 rijen. Het dashboard zette dat aantal in de kop
+("50 jobs queued") én op de knop ("Clear queue (50)"), en de knop annuleerde precies
+de opdrachten die die lezing had teruggegeven. In zijn opdrachtenlijst staat het
+letterlijk: 17-09 om 18:23 exact 50 geannuleerd, om 18:24 exact 50. Hij had er 168.
+Elke klik haalde er vijftig weg en de teller sprong terug naar 50, dus voor hem
+gebeurde er niets. De 68 die overbleven stonden er vandaag nog.
+
+Nagespeeld met de echte code op 168 opdrachten: oude versie → 50 weg, scherm zegt
+weer 50, 118 open; nog een klik → 68 open, scherm zegt nog steeds 50. Nieuwe versie
+→ scherm zegt 68, één klik, 0 open, en de 50 gecontroleerde advertentierijen gingen
+van 'pending' naar 'error' (artikel toont dus eerlijk "niet geplaatst").
+
+Wat er is veranderd: de server telt de rij nu zelf (`queued_total`, alleen geteld
+als de lezing de grens van 50 raakt, dus kosteloos voor iedereen met een korte rij)
+en er is één endpoint `POST /api/jobs/cancel-queued` dat de hele rij in één keer
+afsluit, met dezelfde afhandeling als de losse annulering (herplaatsingen worden
+teruggenomen, verversbeurten teruggegeven, advertenties op 'error'). Met opzet géén
+scan erachteraan: dat leverde op 04-09 bij Toon een wachtrij vol ongevraagde scans
+op. Tegelijk gerepareerd dat mislukte annuleringen stil werden weggegooid
+(`.catch(() => {})`), waardoor een rij die bleef staan eruitzag als een rij die leeg
+was geklikt.
+
+**Zijn tweede punt (15-09, "alle 2ehands listings in hetzelfde account"):**
+gecontroleerd bij 2dehands zelf. Van de 262 advertentienummers die wij van hem
+hebben staan er 260 op één en hetzelfde account, "Papa's Plectrums" (verkoper
+27364566); 2 zijn niet meer terug te vinden in de openbare zoekmachine (weg of
+verlopen). Nul advertenties op een ander account. Dat kan ook niet anders: de
+extensie plaatst via de 2dehands-sessie die in zijn Chrome is ingelogd, wij kiezen
+of kennen geen account. Blijft hij met hetzelfde 2dehands-account ingelogd, dan
+komt alles op dat account terecht.
+
+Openstaand: zijn wachtrij van 68 is met opzet niet door ons geleegd. Hij drukt zelf
+op de knop zodra dit live staat, dan ziet hij ook dat het werkt.

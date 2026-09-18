@@ -17,6 +17,33 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ---
 
+## teller-uit-een-afgekapte-lezing
+
+*18-09-2026 — Een aantal op het scherm mag nooit uit een lezing met .limit() komen; de knop eronder ruimde precies die limiet op en de teller sprong terug*
+
+Een getal dat de klant leest ("50 jobs queued") en een knop die daarop werkt
+("Clear queue (50)") mogen niet uit dezelfde afgekapte lezing komen. `/api/jobs/active`
+stopte bij 50 rijen; het scherm zette dat aantal in de kop én de knop annuleerde
+precies die vijftig. Egbert Brouwer had er 168 staan: klik, vijftig weg, teller weer
+50. Nog een klik, vijftig weg, teller weer 50. Van buitenaf gebeurde er twee keer
+op rij letterlijk niets, en de 68 die overbleven stonden er een dag later nog.
+
+**Why:** een limiet is er voor de sérver, maar de klant leest hem als de waarheid.
+Bij een korte rij valt het samen en klopt het toevallig; juist bij de grote winkel
+die de knop nodig heeft, liegt het. En omdat de knop even hard werkt als de lezing
+lang is, lijkt de reparatie zelf stuk.
+
+**How to apply:** tel apart (`count="exact"`, en alleen als je de limiet echt raakt,
+dan kost het bij niemand anders een extra vraag) en laat massa-acties door de server
+doen in één verzoek, niet door de browser per rij. Honderd gelijktijdige verzoeken
+lopen bovendien tegen een server die ze op een rij afhandelt, en wat daar sneuvelt
+werd hier stil weggegooid met `.catch(() => {})` — een rij die bleef staan zag er
+dan uit als een rij die leeg was geklikt. Zie ook
+"annuleerknop-wist-de-hele-wachtrij", "frontend-parse-json-safe" en
+"omnivaleur-blocking-supabase-event-loop".
+
+---
+
 ## klant-kan-twee-abonnementen-hebben
 
 *18-09-2026 — "Onze database bewaart één stripe_subscription_id per klant; wie twee keer afsluit kan gekoppeld staan aan de dode, waardoor een betalende klant buitengesloten wordt"*

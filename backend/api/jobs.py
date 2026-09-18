@@ -2069,6 +2069,11 @@ def relist_status(user_id: str = Depends(get_current_user)):
     return out
 
 
+# Hoeveel rijen de balk-lezing hooguit ophaalt. Staat hier met een naam omdat
+# de teller eronder moet weten wanneer hij de grens raakt.
+_ACTIEF_LIMIET = 50
+
+
 @router.get("/active")
 def active_jobs(user_id: str = Depends(get_current_user)):
     """
@@ -2096,7 +2101,7 @@ def active_jobs(user_id: str = Depends(get_current_user)):
         .eq("user_id", user_id)
         .in_("status", ["pending", "claimed"])
         .order("created_at")
-        .limit(50)
+        .limit(_ACTIEF_LIMIET)
         .execute()
         .data
     )
@@ -2153,9 +2158,33 @@ def active_jobs(user_id: str = Depends(get_current_user)):
         elif not j.get("scheduled_for") or j["scheduled_for"] <= now:
             j.pop("result", None)
             queued.append(j)
+    # HOEVEEL ER ECHT WACHTEN, NIET HOEVEEL WE ER OPHAALDEN.
+    #
+    # WAAROM (17-09-2026, Egbert Brouwer). Deze lezing stopt bij 50 rijen. Het
+    # scherm zette dat aantal in de kop ("50 jobs queued") en op de knop
+    # ("Clear queue (50)"), en die knop annuleerde precies de vijftig die hier
+    # terugkwamen. Er stonden er 168. Klik: vijftig weg, teller weer 50. Nog een
+    # klik: vijftig weg, teller weer 50. Van buitenaf gebeurde er dus letterlijk
+    # niets, twee keer op rij, en de 68 die overbleven stonden er een dag later
+    # nog. Zie ook /cancel-queued: die leegt de rij wel in een keer.
+    #
+    # Alleen tellen als we de grens ook echt raken. Bij iedereen met een normale
+    # rij kost dit geen enkele extra vraag aan de database.
+    queued_total = len(queued)
+    if len(rows) >= _ACTIEF_LIMIET:
+        try:
+            telling = (db.table("jobs").select("id", count="exact")
+                       .eq("user_id", user_id).eq("status", "pending")
+                       .or_(f"scheduled_for.is.null,scheduled_for.lte.{now}")
+                       .limit(1).execute())
+            if telling.count is not None:
+                queued_total = telling.count
+        except Exception as e:  # noqa: BLE001 — een teller mag de balk nooit slopen
+            logger.warning("active_jobs: wachtrij niet te tellen: %s", e)
     # Het gemeten tempo mee terug: het dashboard beloofde "within ~15 seconds"
     # terwijl Calm mode er 3 tot 8 minuten van maakt. Zie _gemeten_tempo.
-    return {"working": working, "queued": queued, "pace": _gemeten_tempo(db, user_id)}
+    return {"working": working, "queued": queued, "queued_total": queued_total,
+            "pace": _gemeten_tempo(db, user_id)}
 
 
 @router.post("/reschedule-now")
@@ -5378,6 +5407,114 @@ def cancel_job(job_id: str, user_id: str = Depends(get_current_user)):
         if job.get("claimed_at"):
             _queue_scan(db, user_id, job["platform"])
     return {"ok": True, "status": "cancelled"}
+
+
+@router.post("/cancel-queued")
+def cancel_queued_jobs(user_id: str = Depends(get_current_user)):
+    """De hele wachtrij leegmaken, en niet alleen het stukje dat het scherm zag.
+
+    WAAROM DIT BESTAAT (17-09-2026, Egbert Brouwer). "Clear queue" annuleerde tot
+    nu toe de opdrachten die /active had teruggegeven, en die lezing stopt bij 50
+    rijen. Hij had er 168 staan: twee keer klikken haalde er honderd weg, maar de
+    teller sprong elke keer terug naar 50 omdat er meteen weer vijftig in beeld
+    kwamen. Voor hem gebeurde er niets, en de 68 die overbleven stonden er een
+    dag later nog. Een knop die "leeg de rij" heet hoort de rij ook echt te
+    legen, in een keer, ongeacht hoe lang hij is.
+
+    Zelfde inhoud als /{job_id}/cancel, maar dan voor alles wat staat te wachten
+    en in een handvol vragen aan de database in plaats van een per opdracht. Dat
+    is niet alleen sneller: honderd gelijktijdige verzoeken vanuit de browser
+    liepen tegen een server aan die ze op een rij afhandelt, en wat daar sneuvelde
+    verdween geruisloos.
+
+    WAT WE HIER MET OPZET NIET DOEN: een scan inplannen. De losse annulering doet
+    dat voor een opdracht die al bezig was, omdat de verkoper de advertentie dan
+    vaak zelf afmaakt. Hier gaat het om werk dat nooit is begonnen, en op
+    04-09-2026 (Toon) leverde datzelfde reflexje bij 39 annuleringen tegelijk een
+    wachtrij vol ongevraagde scans op.
+    """
+    db = get_db()
+    now_dt = datetime.now(timezone.utc)
+    now = now_dt.isoformat()
+
+    # Alleen wat NU aan de beurt is. Een herplaatsing die over drie uur staat
+    # gepland telt het scherm ook niet mee, dus die mag deze knop niet weggooien.
+    rijen = fetch_all(
+        lambda: db.table("jobs")
+        .select("id,user_id,action,platform,item_id,payload,created_at")
+        .eq("user_id", user_id).eq("status", "pending")
+        .or_(f"scheduled_for.is.null,scheduled_for.lte.{now}"),
+        order_by="created_at")
+    if not rijen:
+        return {"ok": True, "cancelled": 0}
+
+    # 1. Herplaatsingen eerst, want daar hangt meer aan dan een status.
+    #    De verwijdering terugnemen betekent: de oude advertentie blijft online,
+    #    de rij gaat terug naar 'active' en de gepaarde plaatsing vervalt mee.
+    #    Zonder dit zet de reddingsronde er uren later een kale plaatsing naast.
+    for job in rijen:
+        if job["action"] == "delete" and (job.get("payload") or {}).get("_refresh_rollback"):
+            try:
+                _neem_herplaatsing_terug(
+                    db, job, now,
+                    "Cancelled by you: the old listing was never removed and is still live here. "
+                    "Nothing was reposted.")
+            except Exception as e:  # noqa: BLE001 — een moeilijke mag de rest niet tegenhouden
+                logger.warning("cancel-queued: herplaatsing %s niet teruggenomen: %s",
+                               job.get("id"), e)
+
+    # 2. De rest in blokken afsluiten. `status=pending` blijft als voorwaarde
+    #    staan: wat hierboven al is teruggenomen, en wat de extensie in deze
+    #    seconde nog oppakte, laten we met rust.
+    ids = [j["id"] for j in rijen]
+    afgesloten = 0
+    for i in range(0, len(ids), 100):
+        brok = ids[i:i + 100]
+        try:
+            antwoord = (db.table("jobs").update({
+                "status": "cancelled",
+                "result": {"cancelled": "by user"},
+                "done_at": now,
+            }).in_("id", brok).eq("status", "pending").execute())
+            afgesloten += len(antwoord.data or [])
+        except Exception as e:  # noqa: BLE001
+            logger.warning("cancel-queued: blok niet afgesloten voor %s: %s", user_id, e)
+
+    # 3. Een verversbeurt of dagquotum dat bij het inplannen al was afgeboekt
+    #    teruggeven; er is niets ververst. (Verwijderopdrachten hierboven doen
+    #    dit zelf al.)
+    for job in rijen:
+        rollback = (job.get("payload") or {}).get("_refresh_rollback")
+        if rollback and job["action"] != "delete":
+            try:
+                from backend.services.relist import rollback_refresh
+                rollback_refresh(rollback, user_id)
+            except Exception as e:  # noqa: BLE001
+                logger.warning("cancel-queued: verversbeurt niet teruggedraaid: %s", e)
+
+    # 4. De nog niet bevestigde advertenties van geannuleerde plaatsingen op
+    #    'error' zetten, zodat het artikel laat zien wat waar is: niet geplaatst.
+    #    Een advertentie die al 'active' staat blijft ongemoeid.
+    per_kanaal: dict[str, list] = {}
+    for job in rijen:
+        if job["action"] == "create" and job.get("item_id"):
+            per_kanaal.setdefault(job["platform"], []).append(job["item_id"])
+    for platform, item_ids in per_kanaal.items():
+        item_ids = list(dict.fromkeys(item_ids))
+        for i in range(0, len(item_ids), 100):
+            try:
+                db.table("listings").update({
+                    "status": "error",
+                    "error_message": "Publishing was cancelled — the item is not listed. "
+                                     "Publish again, or mark it listed if it did go live.",
+                }).in_("item_id", item_ids[i:i + 100]).eq("platform", platform) \
+                  .eq("status", "pending").execute()
+            except Exception as e:  # noqa: BLE001
+                logger.warning("cancel-queued: advertenties niet bijgewerkt (%s): %s", platform, e)
+
+    logger.info("Wachtrij geleegd door gebruiker %s: %s van %s opdrachten",
+                user_id, afgesloten, len(ids))
+    return {"ok": True, "cancelled": afgesloten, "found": len(ids)}
 
 
 @router.get("/status/{job_id}")
