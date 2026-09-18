@@ -231,6 +231,23 @@ def plausibel(a: dict, b: dict, bekende_merken: set | None = None) -> str | None
     if ba and bb and not (ba & bb):
         return "brand"
 
+    # TWEE EIGEN SKU'S DIE VERSCHILLEN ZIJN TWEE VOORWERPEN (18-09-2026).
+    #
+    # Daniel kocht artikel 1349 opnieuw in en noemde de tweede rij "1349 - 2" —
+    # hij schreef er letterlijk bij dat het het tweede exemplaar was. De titel
+    # draagt bij allebei "(1349)", dus het dashboard bood ze aan als dubbele
+    # rijen en "Merge into one" gooide het tweede exemplaar weg.
+    #
+    # Alleen een sku die de verkoper zelf heeft gezet telt. Bij het importeren
+    # vullen we er zelf een ("IMP-5FEC9580", "REV-…") en die is per rij anders;
+    # daarop vergelijken zou juist elke echte tweeling uit elkaar trekken.
+    # Gemeten op alle 10.870 artikelen in de database: 10.679 dragen zo'n
+    # automatische sku, 191 een eigen. Deze regel splitst precies één groep, en
+    # dat is de groep die hier stukging.
+    sa_, sb_ = _eigen_sku(a.get("sku")), _eigen_sku(b.get("sku"))
+    if sa_ and sb_ and sa_ != sb_:
+        return "sku"
+
     return None
 
 
