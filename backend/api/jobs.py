@@ -1490,20 +1490,38 @@ def get_pending_jobs(request: Request, platform: str = None, user_id: str = Depe
         try:
             from backend.services.tweelingen import familie_ids
             familie_van: dict[str, list[str]] = {}
+            gemaakt_op: dict[str, str] = {}
             alle_ids: list[str] = []
             for iid in dict.fromkeys(te_toetsen):
-                rij = (db.table("items").select("id,user_id,title,sku,brand")
+                rij = (db.table("items").select("id,user_id,title,sku,brand,created_at")
                        .eq("id", iid).limit(1).execute().data or [None])[0]
                 fam = familie_ids(db, rij) if rij else [iid]
                 familie_van[iid] = fam
+                if rij and rij.get("created_at"):
+                    gemaakt_op[iid] = rij["created_at"]
                 alle_ids += fam
-            verkocht_per_item: dict[str, list[str]] = {}
-            for rij in (db.table("listings").select("item_id,platform")
+            verkocht_per_item: dict[str, list[tuple[str, object]]] = {}
+            for rij in (db.table("listings").select("item_id,platform,sold_at")
                         .in_("item_id", list(dict.fromkeys(alle_ids)))
                         .eq("status", "sold").execute().data or []):
-                verkocht_per_item.setdefault(rij["item_id"], []).append(rij["platform"])
+                verkocht_per_item.setdefault(rij["item_id"], []).append(
+                    (rij["platform"], rij.get("sold_at")))
             for iid, fam in familie_van.items():
-                kanalen = [p for f in fam for p in verkocht_per_item.get(f, [])]
+                # De eigen verkoop telt altijd: dit exemplaar is weg.
+                kanalen = [p for p, _ in verkocht_per_item.get(iid, [])]
+                # De verkoop van een TWEELING telt alleen als dit artikel toen al
+                # bestond. Zie _is_nieuwe_voorraad hieronder.
+                for zuster in fam:
+                    if zuster == iid:
+                        continue
+                    for kanaal, verkocht_dat in verkocht_per_item.get(zuster, []):
+                        if _is_nieuwe_voorraad(gemaakt_op.get(iid), verkocht_dat):
+                            logger.info(
+                                "Verkoop van tweeling %s op %s telt niet voor %s: "
+                                "dat artikel is pas na die verkoop aangemaakt",
+                                zuster, kanaal, iid)
+                            continue
+                        kanalen.append(kanaal)
                 if kanalen:
                     verkocht_op[iid] = kanalen
         except Exception as e:  # noqa: BLE001
