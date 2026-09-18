@@ -2280,7 +2280,7 @@ async function koppelVroeg(tabId, url, altijd = false) {
     // écht nodig is: het plaatsformulier van Marktplaats en 2dehands, en het
     // Vinted-formulier (zie VINTED_FORMULIER_KLOK — daar is de koppeling het
     // enige wat de klok van de pagina aan de praat houdt).
-    if (url && !koppelingNodig(url)) return false;
+    if (!altijd && url && !koppelingNodig(url)) return false;
     if (_vroegGekoppeld.has(tabId)) return true;
     if (!(await heeftDebugger())) return false;
     await new Promise((res, rej) => chrome.debugger.attach({ tabId }, "1.3", () => {
@@ -2289,7 +2289,7 @@ async function koppelVroeg(tabId, url, altijd = false) {
     _vroegGekoppeld.add(tabId);
     // Een fout hier mag de koppeling zelf nooit ongedaan maken: die is al gelukt
     // en Marktplaats heeft haar nodig om te kunnen typen.
-    try { await zetDoorlopendeKlok(tabId, url); } catch (_) { /* dan alleen trager */ }
+    try { await zetDoorlopendeKlok(tabId, url, altijd); } catch (_) { /* dan alleen trager */ }
     return true;
   } catch (e) {
     console.warn("[Omnivaleur] vroeg koppelen mislukt:", e.message);
