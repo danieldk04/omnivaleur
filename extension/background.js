@@ -908,6 +908,12 @@ async function ontdooiWerkTabbladen() {
       .filter((n) => Number.isFinite(n));
   } catch (_) { return; }
   for (const tabId of tabIds) {
+    // Geen koppeling meer? Dan is de klok ook weg. Dat gebeurt als de verkoper op
+    // "Annuleren" drukt in Chrome's gele balk, of als Chrome de service worker
+    // opnieuw heeft gestart. Eerst herstellen, dan pas ontdooien: zonder klok
+    // heeft ontdooien geen zin, en hierdoor duurt zo'n terugval hooguit tien
+    // seconden in plaats van de hele klus.
+    if (!_vroegGekoppeld.has(tabId)) { await verzekerKlok(tabId); }
     if (!_vroegGekoppeld.has(tabId)) continue;   // zonder koppeling geen commando
     const tab = await chrome.tabs.get(tabId).catch(() => null);
     if (!tab) continue;
