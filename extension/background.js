@@ -1852,7 +1852,7 @@ function openStilWerkTabblad(url, callback) {
 //
 // Eerst leeg openen, dan koppelen, dan pas navigeren. Andersom is te laat:
 // zodra Marktplaats geladen is weigert Chrome de koppeling (zie koppelVroeg).
-async function maakWerkTabblad(opties, url) {
+async function maakWerkTabblad(opties, url, extra = {}) {
   const tab = await chrome.tabs.create({ ...opties, url: "about:blank" });
   // Chrome mag dit tabblad niet wegbezuinigen (Memory Saver / discard) terwijl
   // de klus nog loopt: dan sterft het content-script halverwege het invullen.
