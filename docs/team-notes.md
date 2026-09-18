@@ -10975,10 +10975,20 @@ liep drie seconden:
     16:15:34.91  listings-rij shopify
     daarna niets meer
 
-In de winkel zelf bestond geen product met SKU 1370 (gecontroleerd via de
-Shopify-API), dus het verzoek stierf binnen een seconde na die laatste rij. Bij
-(1366) om 16:02 was het spiegelbeeld: daar bestond het product wél
-(16048596812106) en bleef alleen onze rij op `pending` staan.
+Het Shopify-product zelf werd wél aangemaakt, om 16:15:48 met alle acht foto's
+(16048603693386). Alleen onze rij kreeg dat nummer nooit te horen. Bij (1366) om
+16:02 gebeurde precies hetzelfde (16048596812106, aangemaakt om 16:02:46).
+
+**Correctie op mijn eigen meting.** Mijn eerste controle zei dat er géén product
+met SKU 1370 in de winkel stond. Dat was fout, en het lag aan onze eigen
+zoekfunctie: `_find_shopify_product_id_by_sku` vraagt 250 producten per pagina,
+maar gooide de paginagrootte weg zodra hij de vervolg-URL van Shopify volgde.
+Vanaf pagina twee kreeg hij er nog 50 per keer, en na veertig pagina's (2.200
+producten in plaats van 10.000) gaf hij "niet gevonden". Die functie wordt ook
+gebruikt om een verkocht artikel uit de winkel te halen als het productnummer
+ontbreekt, dus een verkeerde "niet gevonden" laat het gewoon te koop staan.
+Gerepareerd; voor-en-na op de echte winkel: SKU 1370 gaf eerst None en nu
+16048603693386.
 
 **De oorzaak.** Railway geeft de oude deployment standaard **nul** seconden om af
 te ronden: SIGTERM en meteen SIGKILL. Elke push kapt dus elk lopend verzoek af.

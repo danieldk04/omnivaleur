@@ -9,9 +9,9 @@ dat (hun opdracht staat in de wachtrij), Shopify en eBay niet: die worden
 rechtstreeks vanuit het verzoek gepubliceerd.
 
 GEMETEN: (1370) Navy Quechua Trousers, 16:15:32 UTC. Drie extensie-opdrachten
-klaargezet, Shopify-rij aangemaakt om 16:15:34.9, en daarna niets meer — in de
-winkel bestond geen product met SKU 1370, en de rij stond een half uur later nog
-steeds op 'pending' zonder advertentienummer.
+klaargezet, Shopify-rij aangemaakt om 16:15:34.9, product in de winkel aangemaakt
+om 16:15:48 — en daarna niets meer. De rij stond een half uur later nog steeds op
+'pending' zonder advertentienummer, terwijl het product er al die tijd stond.
 
 Deze tests bewaken de drie afslagen van de herstelronde: koppelen wat er al
 staat, alsnog publiceren wat er niet staat, en een leesbare fout achterlaten als

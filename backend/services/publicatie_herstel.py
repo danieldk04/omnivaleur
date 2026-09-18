@@ -14,8 +14,9 @@ seconden om af te ronden: bij elke nieuwe versie krijgt het proces een SIGTERM
 en meteen daarna een SIGKILL (railway.json zet dat nu op `drainingSeconds`).
 GEMETEN: op 18-09-2026 om 16:15:32 UTC drukte Daniel op publiceren voor
 "(1370) Navy Quechua Trousers". De drie extensie-opdrachten werden klaargezet
-(16:15:32 tot 16:15:34), de Shopify-rij werd aangemaakt om 16:15:34.9, en daarna
-hield het op: in de winkel zelf bestond geen product met SKU 1370. In dezelfde
+(16:15:32 tot 16:15:34), de Shopify-rij werd aangemaakt om 16:15:34.9, het
+product zelf om 16:15:48 — en daarna hield het op: onze rij hoorde het
+productnummer nooit en bleef "Publishing…" zeggen voor werk dat al gedaan was. In dezelfde
 minuten deed de server ook zijn eigen achtergrondwerk niet (de statuscontrole
 schreef van 16:13:57 tot 16:16:27 niets weg) — precies het gat waarin de nieuwe
 versie live ging.

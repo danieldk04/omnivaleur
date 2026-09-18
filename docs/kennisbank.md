@@ -17,6 +17,38 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ---
 
+## shopify-zoeken-op-sku-stopte-te-vroeg
+
+*18-09-2026 — Zoeken op SKU in de Shopify-catalogus gaf "niet gevonden" voor bestaande producten omdat de paginagrootte na pagina 1 wegviel*
+
+18-09-2026, gemeten op ywqad3-xb.myshopify.com. `_find_shopify_product_id_by_sku`
+(backend/services/crosslist.py) vraagt `products.json?limit=250`. Shopify geeft de
+volgende pagina als kant-en-klare URL in de Link-kop, met alleen `page_info` erin.
+De code volgde die URL zonder parameters, en dan valt Shopify terug op zijn
+standaard van **50** per pagina. Veertig rondes gaven daardoor 2.200 producten in
+plaats van de bedoelde 10.000, en daarna kwam er gewoon `None` uit.
+
+Dat kostte mij een verkeerde conclusie: SKU 1370 stond sinds 16:15:48 in de winkel
+en de functie zei "niet gevonden", terwijl `_alle_actieve_shopify_producten` (die
+wél doorpagineert, en bovendien op `status=active` filtert) hem meteen vond. Twee
+functies over dezelfde catalogus die elkaar tegenspreken is het signaal.
+
+**Wat je hieruit moet onthouden:**
+
+- Bij cursor-paginering horen `limit` en `fields` telkens opnieuw mee. Alleen die
+  twee mogen naast `page_info` staan; al het andere weigert Shopify.
+- Een lus met een harde bovengrens mag nooit stil `None` teruggeven als hij die
+  grens raakt. Dat leest als "bestaat niet" terwijl het "niet ver genoeg gekeken"
+  is. Er staat nu een waarschuwing in het logboek.
+- De prijs van een verkeerde "niet gevonden" is hier concreet: die functie haalt
+  een verkocht artikel uit de winkel als het productnummer ontbreekt. Niet
+  gevonden betekent: blijft te koop staan.
+
+Zie ook "pagineren-zonder-order-mist-rijen", "succes-nooit-uit-uitsluitingslijst",
+"railway-doodt-lopend-verzoek-bij-deploy".
+
+---
+
 ## railway-doodt-lopend-verzoek-bij-deploy
 
 *18-09-2026 — Railway geeft de oude deployment standaard 0 seconden om af te ronden, dus elke push kapt lopende verzoeken midden in de uitvoering af*
@@ -30,12 +62,11 @@ en niet gebeurd is.
 Wat dat kost hangt af van wat er halverwege stond. GEMETEN geval: Daniel drukte
 om 16:15:32 UTC op publiceren voor "(1370) Navy Quechua Trousers". De drie
 extensie-opdrachten (Marktplaats, 2dehands, Vinted) stonden om 16:15:34 in de
-wachtrij en overleefden het. De Shopify-rij werd om 16:15:34.9 aangemaakt en
-daarna hield het op: in de winkel bestond geen product met SKU 1370 en de rij
-stond een half uur later nog op `pending`, dus "Publishing…" in het dashboard
-voor werk dat nooit meer kwam. Dezelfde dag om 16:02 gebeurde het andersom bij
-(1366): daar was het Shopify-product wél aangemaakt en bleef alleen onze rij
-achter.
+wachtrij en overleefden het. De Shopify-rij werd om 16:15:34.9 aangemaakt, het product
+zelf om 16:15:48 met alle acht foto's (16048603693386) — en daarna hield het op.
+Onze rij kreeg dat productnummer nooit te horen en stond een half uur later nog
+op `pending`, dus "Publishing…" in het dashboard voor werk dat allang gedaan was.
+Dezelfde dag om 16:02 gebeurde precies hetzelfde bij (1366).
 
 **Wat je hieruit moet onthouden:**
 

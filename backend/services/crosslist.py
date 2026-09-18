@@ -2700,7 +2700,8 @@ async def _find_shopify_product_id_by_sku(sku: str, shop_token: tuple | None = N
 
     async with httpx.AsyncClient(timeout=20) as c:
         for _ in range(40):  # 40 x 250 = 10k products — far beyond any real shop
-            r = await c.get(url, params=params, headers=headers)
+            r = await c.get(url, params=params, headers=headers) if params \
+                else await c.get(url, headers=headers)
             r.raise_for_status()
             for p in r.json().get("products", []):
                 if any(v.get("sku") == sku for v in p.get("variants", [])):
@@ -2710,8 +2711,30 @@ async def _find_shopify_product_id_by_sku(sku: str, shop_token: tuple | None = N
             nxt = _re.search(r'<([^>]+)>;\s*rel="next"', link)
             if not nxt:
                 return None
-            url, params = nxt.group(1), {}
+            # DE PAGINAGROOTTE MOET MEE NAAR DE VOLGENDE PAGINA (18-09-2026).
+            #
+            # De vervolg-URL draagt alleen page_info. Zonder limit erbij valt
+            # Shopify terug op 50 per pagina, en dan haalde deze lus in veertig
+            # rondes 2.200 producten op in plaats van 10.000 — waarna hij "niet
+            # gevonden" zei voor een product dat er wél stond. GEMETEN op Daniels
+            # winkel: SKU 1370 stond er sinds 16:15:48 en werd niet gevonden,
+            # terwijl de reconciliatieronde (die wél doorpagineert) hem zo vond.
+            # Een verkeerde "niet gevonden" is hier duur: hij laat een verkocht
+            # artikel gewoon in de winkel staan.
+            url, params = _met_paginagrootte(nxt.group(1)), None
+        logger.warning("Shopify: SKU %s niet gevonden na 40 pagina's — de catalogus is "
+                       "groter dan deze zoektocht aankan", sku)
     return None
+
+
+def _met_paginagrootte(volgende_url: str, grootte: int = 250) -> str:
+    """Naast page_info mogen alleen limit en fields mee; die zetten we er terug in."""
+    from urllib.parse import parse_qs, urlencode, urlparse, urlunparse
+    u = urlparse(volgende_url)
+    q = parse_qs(u.query)
+    q["limit"] = [str(grootte)]
+    q.setdefault("fields", ["id,variants"])
+    return urlunparse(u._replace(query=urlencode(q, doseq=True)))
 
 
 async def _delist_one(listing: dict):
