@@ -159,8 +159,21 @@ _CATEGORY_RULES = [
     (("overhemd", "buttoned shirt", "dress shirt", "shirt", "blouse"),
      {"heren": "heren overhemden", "dames": "blouses"}),
     (("t-shirt", "tee", "t shirt"), {"heren": "heren t-shirts", "dames": "tops"}),
-    (("loafer", "loafers", "formal shoe", "derby", "brogue", "oxford", "nette schoen"),
-     {"heren": "heren formele schoenen", "dames": "hakken"}),
+    # EEN LOAFER IS GEEN NETTE SCHOEN (Daniel, 18-09-2026, artikel 1369).
+    #
+    # Instappers stonden hier op één hoop met derby's en brogues, en bij dames
+    # zelfs op "hakken" — een loafer heeft geen hak. Op Marktplaats maakt het
+    # niets uit (alle herenschoenen delen categorie 642), maar op Vinted en eBay
+    # wel: "heren formele schoenen" zoekt daar op formal/dress/oxford shoes,
+    # terwijl Vinted een eigen rubriek Loafers heeft die onder "heren schoenen"
+    # wordt gezocht. Een verkeerde rubriek kost vertoningen.
+    (("loafer", "loafers", "moccasin", "moccasins", "mocassin", "mocassins",
+      "penny loafer", "instapper", "instappers", "bootschoen", "boat shoe",
+      "boat shoes"),
+     {"heren": "heren schoenen", "dames": "schoenen dames"}),
+    (("formal shoe", "dress shoe", "derby", "brogue", "oxford", "nette schoen",
+      "veterschoen", "veterschoenen"),
+     {"heren": "heren formele schoenen", "dames": "schoenen dames"}),
     (("sneaker", "sneakers", "trainer", "trainers"), {"heren": "heren sneakers", "dames": "sneakers dames"}),
     (("boot", "boots", "laars", "laarzen"), {"heren": "heren laarzen", "dames": "laarzen dames"}),
     (("shoe", "shoes", "schoen", "schoenen"), {"heren": "heren schoenen", "dames": "schoenen dames"}),
