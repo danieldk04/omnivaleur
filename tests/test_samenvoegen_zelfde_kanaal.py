@@ -252,11 +252,18 @@ def test_twee_lopende_advertenties_zonder_nummer_botsen_ook(monkeypatch):
     assert uitslag["refused"][0]["reason"] == "advert_on_same_platform"
 
 
-def test_een_verkochte_advertentie_blokkeert_niets(monkeypatch):
-    """De index draagt `WHERE status = 'active'`. Een verkochte of ingetrokken
-    advertentie hoort dus niets in de weg te staan — de oude controle weigerde
-    die groepen onnodig."""
-    listings = [_advert(KEEP, "marktplaats", "m100", status="sold"),
+def test_een_ingetrokken_advertentie_blokkeert_niets(monkeypatch):
+    """De index draagt `WHERE status = 'active'`. Een ingetrokken advertentie
+    hoort dus niets in de weg te staan — de oude controle weigerde die groepen
+    onnodig.
+
+    Deze test stond hier tot 18-09-2026 met 'sold' op de ene rij. Dat mag nu
+    niet meer: één verkochte en één onverkochte rij zijn twee verschillende
+    voorwerpen en samenvoegen gooide Daniels nieuwe voorraad weg. Zie
+    tests/test_verkochte_rij_slokt_geen_nieuwe_voorraad_op.py. Wat deze test
+    bewaakt — de index en niets anders — is met 'delisted' net zo goed te
+    meten."""
+    listings = [_advert(KEEP, "marktplaats", "m100", status="delisted"),
                 _advert(ANDER, "marktplaats", "m100", status="delisted")]
 
     uitslag, _ = _draai(listings, [ANDER], monkeypatch)
