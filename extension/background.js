@@ -1880,13 +1880,13 @@ async function maakWerkTabblad(opties, url, extra = {}) {
 //
 // Een incognitovenster is dus geen bruikbaar venster. Is er geen enkel gewoon
 // venster, dan valt het terug op ons eigen werkvenster (dat is nooit incognito).
-async function openAchtergrondTabblad(url) {
+async function openAchtergrondTabblad(url, extra = {}) {
   try {
     const vensters = (await chrome.windows.getAll({ windowTypes: ["normal"] }))
       .filter(w => !w.incognito);
     const bruikbaar = vensters.find(w => w.state !== "minimized") || vensters[0];
     if (bruikbaar) {
-      return await maakWerkTabblad({ windowId: bruikbaar.id, active: false }, url);
+      return await maakWerkTabblad({ windowId: bruikbaar.id, active: false }, url, extra);
     }
   } catch (_) { /* val terug op het werkvenster */ }
   return null;
