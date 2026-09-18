@@ -699,6 +699,32 @@ Daniel
 
 ---
 
+### Ik heb hetzelfde artikel opnieuw ingekocht en na Merge into one is het weg
+
+Hoi <voornaam>,
+
+Dit was een fout van ons, en hij is opgelost.
+
+Je gaf je nieuwe exemplaar hetzelfde nummer als het exemplaar dat je eerder al
+had verkocht. Omnivaleur zag die twee regels als twee keer hetzelfde artikel en
+bood ze aan om samen te voegen. Bij het samenvoegen hield hij de oudste regel aan,
+en dat was net de verkochte. Je nieuwe artikel verdween daardoor onder Verkocht en
+was niet meer te plaatsen.
+
+Wat er nu anders is: een verkochte regel en een niet verkochte regel worden niet
+meer als dubbel aangeboden, want dat zijn twee verschillende spullen. Geef je je
+tweede exemplaar een eigen nummer, bijvoorbeeld 1349 - 2, dan houdt Omnivaleur ze
+ook uit elkaar. En een artikel dat je aanmaakt nadat het vorige verkocht is, wordt
+gewoon geplaatst.
+
+Je artikel staat weer in je lijst onder To list, met al je foto's erbij. Je kunt
+het meteen plaatsen.
+
+Groetjes,
+Daniel
+
+---
+
 ## Onderhoud
 
 Verandert er iets aan prijs, kanalen, termijnen of een veelvoorkomende bug, werk
