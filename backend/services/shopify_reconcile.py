@@ -110,10 +110,11 @@ async def reconcile_shopify_catalog(user_id: str) -> dict:
     """Koppel elk Omnivaleur-artikel van deze verkoper aan zijn bestaande
     Shopify-product, als dat er ondubbelzinnig één is.
 
-    Raakt nooit een bestaande listings-rij aan — alleen artikelen die nog geen
-    enkele Shopify-rij hebben (actief, verwijderd of anderszins) komen in
-    aanmerking. Veilig om vaker te draaien: een tweede ronde vindt gewoon niets
-    meer om te doen.
+    Alleen artikelen die nog geen enkele Shopify-rij hebben (actief, verwijderd
+    of anderszins) komen in aanmerking, plus sinds 18-09-2026 de rijen die op
+    'pending' zonder productnummer zijn blijven steken — zie de uitleg verderop.
+    Een rij die ergens anders over gaat wordt nooit aangeraakt. Veilig om vaker
+    te draaien: een tweede ronde vindt gewoon niets meer om te doen.
     """
     db = get_db()
     cred = ((await naast_de_lus(lambda: db.table("platform_credentials")
@@ -181,6 +182,7 @@ async def reconcile_shopify_catalog(user_id: str) -> dict:
             nummer_naar_items.setdefault(nr, []).append(it["id"])
 
     gekoppeld = 0
+    hersteld = 0          # rijen die op 'pending' bleven steken en nu kloppen
     overgeslagen_merkverschil = 0
     overgeslagen_dubbelzinnig = 0
     for item in items:
@@ -225,11 +227,13 @@ async def reconcile_shopify_catalog(user_id: str) -> dict:
     if gekoppeld:
         logger.info(
             "shopify-reconciliatie: %d artikel(en) gekoppeld aan hun bestaande Shopify-product voor %s "
-            "(overgeslagen: %d merkverschil, %d dubbelzinnig nummer)",
-            gekoppeld, user_id, overgeslagen_merkverschil, overgeslagen_dubbelzinnig,
+            "(waarvan %d vastgelopen 'Publishing…'-rijen; overgeslagen: %d merkverschil, "
+            "%d dubbelzinnig nummer)",
+            gekoppeld, user_id, hersteld, overgeslagen_merkverschil, overgeslagen_dubbelzinnig,
         )
     return {
         "gekoppeld": gekoppeld,
+        "hersteld": hersteld,
         "overgeslagen_merkverschil": overgeslagen_merkverschil,
         "overgeslagen_dubbelzinnig": overgeslagen_dubbelzinnig,
         "producten_gezien": len(producten),
