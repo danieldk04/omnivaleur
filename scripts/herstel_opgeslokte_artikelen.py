@@ -172,8 +172,22 @@ def main(user_id: str, apply: bool) -> None:
         print("\nProefronde. Draai met --apply om dit echt te doen.")
         return
 
+    # WELKE VELDEN MOGEN ER IN. Niet elke opdracht draagt dezelfde momentopname:
+    # een 2dehands-opdracht zet er bijvoorbeeld `levering` bij, en dat is geen
+    # kolom van items. Blind inserten gaf "Could not find the 'levering' column".
+    # Dus vragen we de echte kolomnamen op bij een bestaand artikel.
+    voorbeeld = (db.table("items").select("*").eq("user_id", user_id)
+                 .limit(1).execute().data or [{}])[0]
+    kolommen = set(voorbeeld) - GEEN_KOLOM
+    if not kolommen:
+        print("Kon de kolommen van items niet lezen — gestopt.")
+        return
+
     for pid, s in te_herstellen:
-        rij = {k: v for k, v in (s["payload"] or {}).items() if k not in GEEN_KOLOM}
+        rij = {k: v for k, v in (s["payload"] or {}).items() if k in kolommen}
+        overgeslagen = sorted(set(s["payload"] or {}) - kolommen - GEEN_KOLOM)
+        if overgeslagen:
+            print(f"  (velden uit de opdracht die geen kolom zijn: {', '.join(overgeslagen)})")
         rij["id"] = pid
         rij["user_id"] = user_id
         db.table("items").insert(rij).execute()
