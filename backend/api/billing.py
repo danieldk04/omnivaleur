@@ -771,8 +771,8 @@ async def stripe_webhook(request: Request, stripe_signature: str = Header(None))
         # De incasso is rond. Zet de rij weer op de echte Stripe-status (active)
         # zodat 'payment_processing' niet blijft hangen.
         invoice = event["data"]["object"]
-        stripe_sub_id = invoice.get("subscription")
-        if stripe_sub_id and invoice.get("paid"):
+        stripe_sub_id = _factuur_abonnement(invoice)
+        if stripe_sub_id and _factuur_is_betaald(invoice):
             try:
                 s = stripe.Subscription.retrieve(stripe_sub_id)
                 velden = {"status": s["status"], "updated_at": _now(),
