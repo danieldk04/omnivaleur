@@ -591,6 +591,37 @@ input[type="checkbox"].row-check { width: 15px; height: 15px; cursor: pointer; a
   /* Loading / empty / "no match" rows span the whole card width */
   table.items-table td[colspan] { grid-area: unset; grid-column: 1 / -1; }
 
+  /* Refresh table → stacked cards on mobile, same reasoning as items-table:
+     five columns squeezed into ~350px is unreadable, not just tight. */
+  .table-wrap:has(.rf-table) { overflow-x: visible; }
+  table.rf-table { display: block; width: 100%; }
+  table.rf-table thead { display: none; }
+  table.rf-table tbody { display: block; width: 100%; }
+  table.rf-table tr {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    grid-template-areas:
+      "info info"
+      "channel status"
+      "last last"
+      "action action";
+    gap: 8px 10px;
+    padding: 14px;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    margin-bottom: 10px;
+    background: #fff;
+  }
+  table.rf-table td { display: block; padding: 0 !important; border: none; }
+  table.rf-table .item-title { overflow-wrap: anywhere; }
+  table.rf-table td:nth-child(1) { grid-area: info; min-width: 0; }
+  table.rf-table td:nth-child(2) { grid-area: channel; align-self: start; }
+  table.rf-table td:nth-child(3) { grid-area: status; text-align: right; }
+  table.rf-table td:nth-child(4) { grid-area: last; color: var(--muted); font-size: 12px; }
+  table.rf-table td:nth-child(5) { grid-area: action; text-align: left !important; }
+  table.rf-table td:nth-child(5) .btn { width: 100%; }
+  table.rf-table td[colspan] { grid-area: unset; grid-column: 1 / -1; }
+
   /* Modals: full-width */
   .modal { max-width: 100%; border-radius: 16px 16px 0 0; margin-top: auto; max-height: 95vh; }
   .modal-overlay { align-items: flex-end; padding: 0; }
