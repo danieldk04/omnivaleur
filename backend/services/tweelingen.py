@@ -89,12 +89,26 @@ def familie_ids(db, item: dict) -> list[str]:
     # de tweelingen zijn juist vertalingen van elkaar ("Suitable Half Zip" en
     # "Geschikte Halve Rits").
     eigen_merk = str((item or {}).get("brand") or "").strip().lower()
+    # EN EEN EIGEN SKU DIE VERSCHILT MAAKT ER TWEE VOORWERPEN VAN (18-09-2026).
+    #
+    # Daniel kocht artikel 1349 opnieuw in en noemde die rij zelf "1349 - 2".
+    # De familie hier bepaalt drie dingen: of publiceren wordt geweigerd omdat
+    # "dit artikel al onder een dubbele rij online staat", of de verkoop-rem
+    # dichtvalt, en welke advertenties er bij een verkoop worden weggehaald. Op
+    # alle drie hoort een tweede exemplaar níét mee te tellen: het staat los te
+    # koop, het is niet verkocht, en het moet gewoon geplaatst kunnen worden.
+    # De sku die wij er zelf bij het importeren in zetten telt niet mee — zie
+    # _eigen_sku.
+    eigen_sku = _eigen_sku((item or {}).get("sku"))
     ids = []
     for r in rijen:
         if not r.get("id"):
             continue
         merk = str(r.get("brand") or "").strip().lower()
         if eigen_merk and merk and merk != eigen_merk:
+            continue
+        sku = _eigen_sku(r.get("sku"))
+        if eigen_sku and sku and sku != eigen_sku:
             continue
         ids.append(r["id"])
     return list(dict.fromkeys([eigen, *ids]))
