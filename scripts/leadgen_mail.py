@@ -4772,7 +4772,21 @@ def tick(args) -> None:
         print(f"!! de administratie is onbereikbaar — deze beurt gaat NIET door: {e}")
         _storingsalarm(str(e))
         return
-    plan = _dagplan(state, args.per_dag)
+    try:
+        plan = _dagplan(state, args.per_dag)
+    except OpslagOnbereikbaar as e:
+        # ZELFDE SLOT ALS HIERBOVEN, MAAR DAN VOOR HET ROOSTER (18-09-2026).
+        # _dagplan schrijft het nieuwe rooster meteen weg. Lukt dat schrijven niet
+        # (bijvoorbeeld tijdens een Supabase-storing), dan crashte de hele beurt
+        # hier ongezien — en omdat de oude "dag" in de administratie dan blijft
+        # staan, denkt de VOLGENDE beurt ook weer dat het rooster ververst moet
+        # worden, en loopt precies dezelfde crash zich elke tien minuten stil te
+        # herhalen. Dat is hoe het rooster op 13-08-2026 is blijven hangen tot
+        # 18-09-2026: geen enkele beurt kwam voorbij dit punt, en niemand kreeg
+        # bericht. Nu gaat de beurt net zo min door, maar Daniel krijgt bericht.
+        print(f"!! het dagrooster kon niet worden weggeschreven — deze beurt gaat NIET door: {e}")
+        _storingsalarm(str(e))
+        return
     nu = datetime.now().strftime("%H:%M")
 
     verlopen = sum(1 for t in plan["tijden"] if t <= nu)
