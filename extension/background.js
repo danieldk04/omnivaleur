@@ -2211,7 +2211,28 @@ const _klokAangezet = new Map();
 chrome.tabs.onRemoved.addListener((tabId) => _klokAangezet.delete(tabId));
 
 async function zetDoorlopendeKlok(tabId, url) {
-  if (!VINTED_FORMULIER_KLOK.test(String(url || ""))) return;
+  // OOK MARKTPLAATS EN 2DEHANDS. GEMETEN OP 18-09-2026, LIVE.
+  //
+  // Hierboven staat sinds 15-09: "Marktplaats had dit nooit, want daar hangt de
+  // debugger al aan het tabblad en dat zet de rem uit." Dat klopt niet. Daniel:
+  // "op marktplaats publiceerde hij weer niet zonder mijn invloed — naar het
+  // tabblad gaan en zelf op publish drukken." Zijn 2dehands-opdracht stuurde op
+  // dat moment deze voortgang door, uit zijn eigen browser, mét debugger:
+  //
+  //     klokstand: 0.1/s +23546ms hidden
+  //
+  // Eén tik per tien seconden in plaats van tien per seconde, en een korte pauze
+  // die 23,5 seconde uitliep. Aanhechten alleen haalt de rem er dus níét af —
+  // precies wat de meting van 15-09 ook al zei ("alleen de debugger aanhechten:
+  // 0 tot 1 tik"). Wat het wél doet is Emulation.setFocusEmulationEnabled, en
+  // dat gebeurde alleen op het Vinted-formulier.
+  //
+  // Gevolg voor de verkoper: het formulier staat stil tot hij zelf naar het
+  // tabblad klikt. Zijn publicatie van 16:02 duurde 5 minuten 20, tegen een
+  // mediaan van 25 seconden over zijn eigen 98 geslaagde Marktplaats-
+  // publicaties. De debugger hangt er op die twee kanalen toch al aan voor de
+  // echte toetsaanslag, dus dit kost geen extra gele balk.
+  if (!koppelingNodig(String(url || ""))) return;
   await new Promise((res) => {
     try {
       chrome.debugger.sendCommand({ tabId }, "Emulation.setFocusEmulationEnabled",
