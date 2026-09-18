@@ -17,6 +17,45 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ---
 
+## betaalpagina-is-niet-het-hele-kanaal
+
+*18-09-2026 — Eén advertentie op /payments/ sloot heel 2dehands af bij een klant die er 219 gratis had geplaatst; een dicht kanaal kan daarna nooit meer vanzelf opengaan*
+
+Een tabblad dat na de plaatsklik op `/payments/orderOverview` uitkomt is bewijs
+over **die ene advertentie**, niet over het account. Sinds 09-09-2026 sloot één
+zo'n waarneming het hele kanaal (`_kanaal_hard_dicht`), met de tekst "That is why
+nothing has ever gone online there".
+
+**Waarom dat mis is:** De Juiste Toon, 18-09-2026. Om 06:41 UTC kwam één
+advertentie ("Wandkleed geborduurd 89/69 cm", rubriek wonen wanddecoraties) op de
+betaalpagina uit. Om 06:29, twaalf minuten eerder, ging er nog een advertentie van
+hem gratis online; de dag ervoor 200, in totaal 219 ooit. Het hele kanaal ging
+dicht, zijn 36 wachtende opdrachten werden teruggenomen en hij kreeg een zin te
+lezen die aantoonbaar onwaar was. Een tweede klant liep er dezelfde ochtend om
+09:41 in met een gitaarrubriek, tien minuten na zijn laatste geslaagde plaatsing.
+
+**Het ergste is de eenrichtingsdeur:** een dicht kanaal weigert bij publiceren en
+maakt dus geen opdracht meer aan. Er komt daarna nooit een nieuwe rij die het
+oordeel kan herzien, dus gaat het kanaal nooit vanzelf open. Elke rem die zichzelf
+alleen op nieuwe rijen kan corrigeren moet dat pad openhouden.
+
+**How to apply:** het kanaal gaat alleen hard dicht als daar nog **nooit** iets
+gratis online ging (`_laatste_gratis_plaatsing is None`) — het geval-Egbert, 806
+pogingen, nul geplaatst. Plaatst het account er wel gratis, dan is het een
+rubriekrem, precies als bij "betalende-rubriek-is-geen-formulierfout". Pas drie
+betaalpagina's ná de laatste geslaagde plaatsing sluiten het kanaal alsnog: dat is
+het geval "2dehands heeft dit account echt omgezet", en het kost hooguit drie
+onbetaalde bestelregels. Tel nooit teruggenomen opdrachten mee als waarneming:
+`_stop_wachtrij` schrijft dezelfde tekst op alles wat nog wachtte, dus maakte één
+waarneming zichzelf tot zevenendertig (`result.cancelled == "queue stopped"` is
+het kenmerk). En `/stop-platform` wist de wachtrij niet meer op een betaalpagina
+zolang het kanaal aantoonbaar gratis plaatst — de extensie in het veld roept dat
+eindpunt aan en een nieuwe extensie is pas weken later binnen. Zie ook
+"storing-mag-nooit-als-antwoord-tellen" en
+"succes-nooit-uit-uitsluitingslijst".
+
+---
+
 ## pagineren-zonder-order-mist-rijen
 
 *18-09-2026 — .range() zonder .order() laat de database elke pagina anders sorteren; bij 1236 artikelen miste dat er reproduceerbaar 187*

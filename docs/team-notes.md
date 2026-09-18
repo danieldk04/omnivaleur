@@ -10751,3 +10751,43 @@ vanzelf zodra haar extensie actief is, net als elke andere delete-opdracht.
 **Openstaand:** de 4 afgekeurde kandidaten en de overige ~200 niet-gekoppelde
 advertenties zijn niet beoordeeld — dat zijn vermoedelijk gewoon haar eigen
 losse voorraad naast Omnivaleur, niet per se dubbelen. Niet aangeraakt.
+
+### 18-09-2026 — De Juiste Toon: "gisteren hoop op tweedehands gezet, vandaag lukt het niet"
+
+Hij kreeg bij publiceren het venster "2dehands does not let your account place
+adverts for free ... That is why nothing has ever gone online there." Die zin was
+onwaar, en het is nagemeten in zijn eigen logboek.
+
+**Wat er echt gebeurde.** Om 06:41:45 UTC kwam één advertentie van hem op
+`https://www.2dehands.be/payments/orderOverview/index.html` uit: "Wandkleed
+geborduurd 89/69 cm", rubriek wonen wanddecoraties. Dat is precies één keer, en
+het is de enige echte waarneming in zijn hele geschiedenis. Twaalf minuten eerder,
+om 06:29:06, ging er nog een advertentie van hem gratis online. Gisteren 200
+stuks, in totaal 219 geslaagde 2dehands-plaatsingen. Toch ging op die ene
+waarneming het hele kanaal dicht en werden zijn 36 wachtende opdrachten
+teruggenomen — alle 36 op hetzelfde moment, 06:41:42, en die 36 kopieën droegen
+daarna dezelfde tekst alsof het 36 waarnemingen waren.
+
+**Waarom dat niet vanzelf overgaat.** Een dicht kanaal weigert bij publiceren en
+maakt dus geen opdracht meer aan. Er komt dan nooit een nieuwe rij die het oordeel
+kan herzien: het kanaal gaat nooit meer vanzelf open. Zonder ingreep was hij
+2dehands kwijt.
+
+**Tweede klant, dezelfde ochtend.** Om 09:41:18 UTC liep account `f8c0cce9` er op
+dezelfde manier in, met een gitaarrubriek ("Fender Telecaster"), tien minuten na
+zijn laatste geslaagde plaatsing om 09:31:52.
+
+**Gerepareerd (commit 06a433a5).** Een betaalpagina sluit het hele kanaal alleen
+nog als daar nog nooit iets gratis online ging — het geval-Egbert (806 pogingen,
+nul geplaatst, winkelmandje van EUR 153). Plaatst het account er wel gratis, dan
+gaat het over de rubriek van die ene advertentie en blijft de rest van de rij
+lopen. Pas drie betaalpagina's ná de laatste geslaagde plaatsing sluiten het
+kanaal alsnog. `/stop-platform` weigert de wachtrij te wissen zolang het kanaal
+aantoonbaar gratis plaatst, want de extensie in het veld roept dat eindpunt aan en
+een nieuwe extensie is bij een verkoper pas weken later binnen. Voor-en-na gemeten
+op de echte database: oude code `hard_dicht=True` bij allebei, nieuwe code False.
+
+**Openstaand voor Daniel:** op zijn bestelpagina bij 2dehands staat één onbetaalde
+regel (die wandkleed-advertentie). Die kost niets zolang hij hem niet afrekent,
+maar hij kan hem daar met het prullenbakje weghalen. En: wonen wanddecoraties
+kost bij hem geld, dus advertenties in die rubriek gaan daar niet gratis online.
