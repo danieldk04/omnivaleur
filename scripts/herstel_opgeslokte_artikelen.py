@@ -102,19 +102,34 @@ def main(user_id: str, apply: bool) -> None:
     te_herstellen = []
     for pid, s in slachtoffers.items():
         gemaakt = _tijd((s["payload"] or {}).get("created_at"))
+        titel = (s["payload"] or {}).get("title") or "?"
+
+        # TWEE BEWIJZEN, EN ÉÉN IS GENOEG.
+        #
+        # 1. De verkoop-rem heeft dit artikel zelf tegengehouden omdat een rij
+        #    met hetzelfde nummer al verkocht was. Dat is precies het geval:
+        #    het systeem zag het als dubbel, hield het tegen, en daarna is het
+        #    in die verkochte rij verdwenen.
+        geremd = [j for j in s["jobs"]
+                  if j.get("action") == "create" and j.get("status") == "cancelled"
+                  and "already sold" in str(((j.get("result") or {})
+                                             if isinstance(j.get("result"), dict) else {})
+                                            .get("cancelled", "")).lower()]
+        # 2. Of: de rij die het opslokte was al verkocht vóórdat dit artikel
+        #    bestond. Dan is het per definitie een ander voorwerp.
         verkopen = [r for r in verkocht_van.get(s["keep"], []) if r["status"] == "sold"]
-        # Alleen als het artikel ná de verkoop van zijn opslokker is aangemaakt.
         na_de_verkoop = [r for r in verkopen
                          if gemaakt and _tijd(r.get("sold_at"))
                          and gemaakt > _tijd(r["sold_at"])]
-        titel = (s["payload"] or {}).get("title") or "?"
-        if not na_de_verkoop:
+
+        if not geremd and not na_de_verkoop:
             print(f"  overslaan  {pid[:8]}  {titel[:50]!r} — gewone tweeling, blijft samengevoegd")
             continue
-        kanalen = ", ".join(sorted({r["platform"] for r in na_de_verkoop}))
+        reden = ("de verkoop-rem hield dit artikel zelf tegen" if geremd else
+                 "de opslokkende rij was al verkocht: "
+                 + ", ".join(sorted({r["platform"] for r in na_de_verkoop})))
         print(f"  HERSTELLEN {pid[:8]}  {titel[:50]!r}")
-        print(f"               aangemaakt {gemaakt}, opgeslokt door {s['keep'][:8]} "
-              f"(verkocht op {kanalen})")
+        print(f"               aangemaakt {gemaakt}, opgeslokt door {s['keep'][:8]} — {reden}")
         te_herstellen.append((pid, s))
 
     if not te_herstellen:
