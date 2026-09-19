@@ -11677,7 +11677,7 @@ defcd54d, die laat zien dat de oude versie bij precies deze fout zweeg.
 geen code die kan mailen. Daarvoor is een bewaker van buiten nodig die elke paar
 minuten /health opvraagt. Dat staat open.
 
-## 19-09-2026 (vervolg 4) — Lynn zat een uur naar een leugen te kijken
+## 19-09-2026 (vervolg 5) — Lynn zat een uur naar een leugen te kijken
 
 De storing uit het vorige blok duurde tot ongeveer 17:00; hij ging niet vanzelf
 over, een andere sessie heeft de server herstart. In dat gat meldde Lynn
@@ -11718,5 +11718,7 @@ doet nul tekenrondes bij twee klikken, en wist de kanalenlijst en de voorkeuren.
 **Haar wachtrij was leeg**: 107 opdrachten in 30 uur, nul openstaand, de laatste
 van 12:30. Er is in het gat dus niets blijven hangen en niets half gepubliceerd.
 
-**Nog te doen:** we horen zo'n storing niet van een klant te horen. Er is geen
-alarm dat afgaat als de database niet antwoordt.
+**En het alarm dat hierbij hoort** is er sinds vanmiddag: een andere sessie
+bouwde het in dezelfde storing (vervolg 4 hierboven, commit a3167dc7). Dit blok
+gaat over wat de klant ondertussen op haar scherm ziet; dat blok over dat wij het
+zelf horen voordat zij het meldt.
