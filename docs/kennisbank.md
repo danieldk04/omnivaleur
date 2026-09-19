@@ -17,6 +17,45 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ---
 
+## twee-sleutels-die-niet-te-onderscheiden-zijn
+
+*19-09-2026 — "Een ja/nee in /health bewijst niet wélke sleutel er draait; twee Google-sleutels begonnen allebei met AQ.Ab8 en waren allebei 53 tekens, dus een vingerafdruk is nodig"*
+
+Gemeten 19-09-2026. Daniel maakte een eigen Google-sleutel voor Omnivaleur
+("Translations Items Omnivaleur", project 565759306934) om de geleende
+AxonGear-sleutel te vervangen, en zette die op Railway.
+
+**Beide sleutels waren van buitenaf identiek.** Ze beginnen allebei met
+`AQ.Ab8`, zijn allebei 53 tekens lang, en werken allebei. `/health` toonde
+`gemini_vertaalvangnet: true`, en dat is precies zo waar met de verkeerde
+sleutel als met de goede. "De nieuwe staat op Railway" was dus een aanname:
+er was geen enkele meting die het onderscheid kon maken.
+
+Let op dat de vorm van Google-sleutels veranderd is: de oude AI Studio-sleutels
+begonnen met `AIza`, de nieuwe met `AQ.`. Het prefix zegt dus niets over wélk
+project of wélke sleutel het is.
+
+**Wat het werd:** `/health` toont nu `google_sleutel_vingerafdruk`, de eerste 8
+tekens van de sha256 van de sleutel. Daar is niets uit terug te rekenen (de
+sleutel is 53 willekeurige tekens), en twee sleutels zijn er wel mee uit elkaar
+te houden. De Omnivaleur-sleutel is `f7c8c67f`, de oude AxonGear-sleutel
+`d01bdfc2`.
+
+**Why:** een geheim mag niet in een publiek antwoord, dus de reflex is een
+booleaan. Maar een booleaan beantwoordt de verkeerde vraag zodra er meer dan
+één geldige waarde bestaat, en dan draai je maanden op de verkeerde rekening
+zonder dat iets het zegt. Vergelijk "leadgen-status-leest-anon-sleutel" en
+"supabase-gratis-plan-egress": daar was het ook niet "is er een sleutel" maar
+"wélke sleutel".
+
+**How to apply:** staat er ergens een instelling waarvan meerdere waarden
+allemaal werken, toon dan een vingerafdruk in plaats van ja/nee. Een korte
+sha256-prefix is genoeg en lekt niets. Noteer de verwachte vingerafdruk in de
+code of in de notities, anders zegt het getal nog steeds niets. Zie ook
+"omnivaleur-altijd-bewijzen".
+
+---
+
 ## modellenlijst-van-de-dienst-is-geen-bewijs
 
 *19-09-2026 — "Google's ListModels noemt modellen die generateContent daarna met 404 weigert; alleen een echt antwoord telt, en het goedkoopste model schrijft slecht Nederlands"*

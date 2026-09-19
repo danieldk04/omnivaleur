@@ -11405,3 +11405,38 @@ drukke minuut schrijft het betere model niet af.
 **Eindmeting, drie echte advertenties, leeg Anthropic-tegoed:** alle drie
 vertaald, alinea-indeling intact, geen Engels meer over. Zonder sleutel gedraagt
 alles zich exact als daarvoor. `/health` toont `gemini_vertaalvangnet`.
+
+## 19-09-2026 (vervolg) — Omnivaleur heeft een eigen Google-sleutel, en /health zegt nu wélke
+
+Daniel maakte een eigen Google-sleutel in plaats van de geleende AxonGear-sleutel:
+"Translations Items Omnivaleur", project 565759306934. Die staat op Railway en
+sinds vandaag ook in de lokale `.env`, zodat het vertaalvangnet ook meedraait als
+er lokaal iets getest wordt.
+
+**Gemeten met die nieuwe sleutel, niet aangenomen.**
+
+- Acht modellen antwoorden echt: `gemini-flash-latest`, `gemini-3.8-flash`,
+  `gemini-3.7-flash`, `gemini-3.6-flash`, `gemini-3.5-flash`,
+  `gemini-flash-lite-latest`, `gemini-3.5-flash-lite`, `gemini-3.1-flash-lite`.
+  De vier kandidaten die `_kandidaten()` kiest zitten daar allemaal bij.
+- De modellenlijst liegt ook op deze sleutel, precies zoals gisteren vastgelegd:
+  `gemini-2.5-flash` en `gemini-2.5-flash-lite` staan erin en geven 404 met een
+  opvolger in de fouttekst. Het vangnet handelt dat af.
+- Eindproef door de echte `crosslist._vertaal` met Claude opzettelijk stuk (de
+  letterlijke fout bij een leeg tegoed): drie echte Engelse advertentieteksten,
+  alle drie vertaald, alinea-indeling intact, merknamen Ralph Lauren en Levi's
+  onvertaald gebleven.
+- De blogbeelden lopen op dezelfde `google_api_key`. Met de nieuwe sleutel geven
+  `gemini-2.5-flash-image` en `gemini-3.1-flash-image` allebei een echt beeld
+  terug, dus het wisselen van sleutel breekt de blog niet.
+- Testbak: 1511 goed, 14 stuk. Exact dezelfde 14 als zonder deze wijziging,
+  gemeten door hem eruit te halen en opnieuw te draaien.
+
+**Wat er misging in het onderscheiden van de twee sleutels.** `/health` zei
+alleen `gemini_vertaalvangnet: true`, en dat is met de oude AxonGear-sleutel net
+zo waar als met de nieuwe. Erger: beide sleutels beginnen met `AQ.Ab8` en zijn
+allebei 53 tekens lang, dus zelfs naast elkaar leggen hielp niet. "De nieuwe
+staat op Railway" was dus een aanname. `/health` toont nu
+`google_sleutel_vingerafdruk`: de eerste 8 tekens van de sha256. Daar is niets
+uit terug te rekenen en twee sleutels zijn er wel mee uit elkaar te houden. De
+Omnivaleur-sleutel is `f7c8c67f`, de oude AxonGear-sleutel `d01bdfc2`.
