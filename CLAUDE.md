@@ -28,6 +28,25 @@ Waarom dit erbij moest: een lijstje waarin alles even zwaar oogt zette hem twee
 keer aan het werk voor iets wat niets opleverde. Hij moet kunnen zien wat hij
 zonder schade kan laten liggen.
 
+Zo ziet een volledig bericht eruit (door Daniel goedgekeurd op 19-09-2026):
+
+> **Wat er aan de hand was**
+> Lynn keek een uur naar "nog even laden" terwijl de database plat lag, en Try
+> again deed zichtbaar niets.
+>
+> **Wat er nu veranderd is**
+> - Een storing heet een storing, met erbij dat het aan ons ligt en dat er niets kwijt is.
+> - Try again springt meteen op "Checking…" en zet het tijdstip van de laatste poging op het scherm.
+> - Een foutmelding telt niet meer als antwoord, dus haar kanalen en voorkeuren blijven staan.
+>
+> **Zekerheid: 93%**, getest tegen de oude versie, maar nog nooit bij een echte
+> klant in een echte storing gezien.
+>
+> **Actiepunten**
+> 1. [NU, 1 min] Mail Lynn de tekst, met erbij dat ze de pagina een keer moet verversen.
+> 2. [OOIT, 2 min] Logs van 15:00 exporteren, alleen als je wilt weten waarom de database omviel.
+> 3. [OVERSLAAN] De tests die de echte database aanspreken. Doe ik zelf.
+
 ## Begin elke sessie met kijken wat er veranderd is
 
 Voordat je aan wat dan ook begint — een codetaak, een vraag, een mail, een
