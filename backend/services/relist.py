@@ -353,13 +353,15 @@ async def herstel_vastgelopen_werk() -> dict:
                 continue          # al meegenomen met zijn verwijdering
             # De reden hoort in 'result'. De tabel heeft geen 'error'-kolom, en
             # daarop schrijven laat deze hele opruimronde stilletjes mislukken.
+            nu = datetime.now(timezone.utc)
+            wie = baan.get("user_id")
+            if wie not in uitleg_per_klant:
+                uitleg_per_klant[wie] = await naast_de_lus(
+                    lambda w=wie: _waarom_bleef_het_staan(db, w, nu))
             (await naast_de_lus(lambda: db.table("jobs").update({
                 "status": "error",
-                "done_at": datetime.now(timezone.utc).isoformat(),
-                "result": {"error": (
-                    f"Deze opdracht stond meer dan {VASTGELOPEN_NA_DAGEN} dagen te "
-                    "wachten en is niet uitgevoerd. Zet je computer met de "
-                    "Omnivaleur-extensie aan en probeer het opnieuw.")},
+                "done_at": nu.isoformat(),
+                "result": {"error": uitleg_per_klant[wie]},
             }).eq("id", baan["id"]).execute()))
             gemeld += 1
     except Exception as e:  # noqa: BLE001
