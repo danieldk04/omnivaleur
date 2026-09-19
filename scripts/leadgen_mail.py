@@ -2002,14 +2002,15 @@ def _al_gemaild_voor_het_lead_werd(state: dict, boek: "Leadboek") -> int:
             try:
                 if imap.select(f'"{map_}"')[0] != "OK":
                     continue
-                _, data = imap.search(None, f"(SINCE {_sinds(LAATST_DAGEN)})")
+                _, data = imap.search(None, f"(SINCE {_sinds(EERDER_CONTACT_DAGEN)})")
             except Exception:  # noqa: BLE001 — één onbereikbare map stopt de rest niet
                 continue
             for msg in _koppen_in_bulk(imap, (data[0] or b"").split()).values():
-                afzender = parseaddr(msg.get("From", ""))[1].lower()
-                if not afzender or SYSTEEM_AFZENDER.search(afzender) \
-                        or BOUNCE_AFZENDERS.search(afzender):
+                ruw = parseaddr(msg.get("From", ""))[1].lower()
+                if not ruw or SYSTEEM_AFZENDER.search(ruw) or BOUNCE_AFZENDERS.search(ruw):
                     continue
+                # Zelfde bedrijf, ander adres mag ook: zie _eigen_mail_meenemen.
+                afzender = ruw if ruw in per_adres else (_zelfde_bedrijf_uit(ruw, per_adres) or ruw)
                 if afzender in state or afzender not in per_adres:
                     continue
                 try:
