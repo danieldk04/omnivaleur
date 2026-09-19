@@ -339,6 +339,10 @@ async def herstel_vastgelopen_werk() -> dict:
         # reddingsronde hierboven er later een kale plaatsing naast.
         oud.sort(key=lambda b: 0 if b.get("action") == "delete" else 1)
         teruggenomen_paren: set = set()
+        # Eén keer per klant uitzoeken waarom het bleef staan, niet één keer per
+        # opdracht: bij 232 opdrachten van dezelfde verkoper zou dat 232 keer
+        # dezelfde twee vragen aan de database zijn.
+        uitleg_per_klant: dict = {}
         for baan in oud:
             sleutel = (baan.get("item_id"), baan.get("platform"))
             if (baan.get("action") == "delete"
