@@ -1528,6 +1528,13 @@ def _uid_berichten_in_bulk(imap, uids) -> dict:
 # alleen maar tijd.
 LAATST_DAGEN = 60
 
+# Hoe ver terug de "is hier al ÓÓIT contact geweest"-controles kijken
+# (_eigen_mail_meenemen, _al_gemaild_voor_het_lead_werd). Dit is geen vraag
+# over een lopend gesprek maar over wie nooit koud gemaild mag worden, dus
+# hier telt oud contact nog gewoon mee: LAATST_DAGEN is daarvoor te kort.
+# 400 dekt ruim de hele levensduur van het bedrijf tot nu toe (19-09-2026).
+EERDER_CONTACT_DAGEN = 400
+
 
 def _sinds(dagen: int) -> str:
     return (datetime.now() - timedelta(days=dagen)).strftime("%d-%b-%Y")
