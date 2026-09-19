@@ -168,6 +168,9 @@ async def health():
             # De rol staat onversleuteld in de sleutel zelf; dit lekt niets.
             "supabase_key_role": _supabase_key_role(),
             "anthropic_api_key": bool(_s.anthropic_api_key),
+            # Het vangnet voor het vertalen. Staat hier ja, dan blijft publiceren
+            # doorlopen als het Anthropic-tegoed op is.
+            "gemini_vertaalvangnet": bool(_s.google_api_key),
             # Staat dit op false, dan schrijft de server nieuwe foto's nog steeds
             # naar Supabase Storage en loopt die bucket dus gewoon weer vol. Dat
             # is van buitenaf verder niet te zien, vandaar hier.

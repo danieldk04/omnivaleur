@@ -17,6 +17,38 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ---
 
+## grens-bewijs-je-op-een-voorraad-die-opraakt
+
+*19-09-2026 — Een opgeefgrens of quotum laat zich alleen zien op een proefgroep die opraakt; op een grote voorraad lijkt hij altijd stuk*
+
+Een regel van de vorm "na N pogingen stoppen we" verandert pas iets als de lijst
+waaruit gelezen wordt ook echt leeg raakt. Leest de ronde 12 per nacht uit een
+voorraad van 367, dan vindt hij elke nacht twaalf verse kandidaten en meet je
+nul besparing, terwijl de grens perfect werkt.
+
+Gemeten 19-09-2026 (rubriekronde, `backend/services/categorie_herstel.py`). Eerste
+proef: grootste gebruiker, 367 rubriekloze artikelen, `limiet=12`. Uitkomst nacht
+4: 12 modelvragen, precies als nacht 1, conclusie "de grens doet niets". Tweede
+proef, alleen de proefgroep anders: gebruiker met 7 rubriekloze artikelen,
+zelfde `limiet=12`. Nacht 4 nieuw: 0 vragen. Nacht 4 met de vorige versie: 3
+vragen. Zelfde code, zelfde database, tegengestelde conclusie.
+
+**Why:** dit is de gevaarlijkste soort meetfout, want hij wijst de verkeerde
+kant op. Je gelooft dat je reparatie niet werkt en gaat hem "beter" maken, of je
+meldt aan Daniel dat het niet lukt terwijl het wel lukt. Het spiegelbeeld van
+"meet de zwaarste echte situatie": voor een grens is de zwaarste situatie juist
+de kleinste voorraad.
+
+**How to apply:** vraag je voor elke proef af welke voorwaarde het effect
+zichtbaar maakt, en kies de proefgroep daarop. Bij een grens, quotum, rem of
+opgeefregel: zorg dat `aantal kandidaten < wat er per ronde gelezen wordt`, zodat
+de lijst binnen de proef opdroogt. Tel de kandidaten eerst (`Counter` over de
+user_ids van de echte rijen) en kies daarna pas. Komt er "geen verschil" uit een
+proef, controleer dan eerst of het verschil in die opzet überhaupt kón ontstaan.
+Zie "omnivaleur-altijd-bewijzen" en "nagebootste-database-doet-geen-triggers".
+
+---
+
 ## nagebootste-database-doet-geen-triggers
 
 *19-09-2026 — Een testdubbel dat geen triggers nadoet bewijst niets; items zet updated_at bij ELKE schrijfactie*

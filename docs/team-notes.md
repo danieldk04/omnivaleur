@@ -11299,3 +11299,65 @@ nagemeten: 200 vragen, 1.927.627 prompttekens, tellers blijven op nul.
 dag een script dat niet bestaat". Dat klopte niet. `gh workflow list` geeft
 `disabled_manually` en de laatste poging was 06-09-2026. Er valt niets uit te
 zetten. Het lege yml-bestand staat er nog, dat kost niets.
+
+## 19-09-2026 (avond) — De opgeefgrens is nu live bewezen, en er is een vangnet voor het vertalen
+
+**1. De opgeefgrens werkt, gemeten tegen de echte database.**
+
+Daniel draaide `scripts/migratie_rubriek_pogingen.sql` opnieuw; alle drie de
+kolommen staan er (`rubriek_pogingen`, `rubriek_gepoogd_op`,
+`rubriek_gevraagd_over`). Daarmee kon de proef die vanochtend nog ontbrak wél:
+vijf echte nachten tegen Supabase, met een nepmodel maar een echte database,
+op een gebruiker met zeven rubriekloze artikelen (`limiet=12`, dus de voorraad
+raakt op — met de 367 van de grootste gebruiker leest de ronde elke nacht
+gewoon twaalf nieuwe en zie je de grens nooit werken).
+
+| nacht | wat er gebeurde | modelvragen |
+|---|---|---|
+| 1 | gewoon | 7 |
+| 2 | gewoon | 5 |
+| 3 | gewoon, daarna staan 3 artikelen op 3 pogingen mét vingerafdruk | 4 |
+| 4 | niets bewerkt, NIEUWE versie | **0** |
+| 4 | niets bewerkt, versie van vanochtend (bd02155d) | **3** |
+| 5 | verkoper past één titel aan, NIEUWE versie | **1** (alleen dat artikel) |
+
+Dat is de voor-en-na die vanochtend niet te doen was. De versie van vanochtend
+geeft de kansen terug omdat hij op `updated_at` afgaat en die door zijn eigen
+schrijfactie verzet is; de nieuwe vergelijkt de tekst en houdt op. Alles wat de
+proef schreef is teruggezet: 0 afwijkende rijen na afloop.
+
+**2. Vangnet voor het vertalen: Gemini.**
+
+Gemeten met de echte sleutel op 19-09-2026: bij een leeg tegoed geeft
+`client.messages.create` een `BadRequestError` met "Your credit balance is too
+low to access the Anthropic API". `_vertaal` maakt daar `VertalingOnbeschikbaar`
+van en dan staat publiceren volledig stil.
+
+Nieuw: `backend/services/gemini_vertaling.py`. Doet Claude het niet, dan krijgt
+Gemini letterlijk dezelfde opdracht, en het antwoord gaat door exact dezelfde
+controles (`_deugt`: §BR§-tekens terug, niet buitensporig lang, niet in de
+verkeerde taal). Drie dingen die bewust zo zijn:
+
+- Werkt Claude gewoon, dan wordt Gemini niet aangeroepen. Geen tweede mening,
+  geen bezuiniging, alleen een vangnet.
+- Levert het vangnet niets bruikbaars, dan wacht de advertentie — `_vertaal`
+  gooit dan de oorspronkelijke Claude-fout door in plaats van de brontekst
+  terug te geven. Anders zou de fout van 08-09-2026 terugkomen langs een andere
+  deur: een Engelse tekst die als "vertaald" de deur uit gaat.
+- Het model wordt gevraagd, niet geraden. Eén keer per serverproces vraagt het
+  bestand aan Google welke modellen er zijn en kiest de goedkoopste stabiele
+  (Flash-Lite boven Flash, kortste naam boven datumversies, geen preview/exp).
+  Modelnamen bij Google veranderen regelmatig en een 404 ontdek je anders pas
+  middenin een storing.
+
+Voor-en-na tegen `1b037f0b` (de echt vorige versie, niet HEAD — de auto-push-hook
+had mijn eigen wijzigingen al gecommit, precies de valstrik uit
+`voor-en-na-proef-mag-geen-head-gebruiken`): oude versie 2 van de 12 proeven
+stuk met exact de echte foutmelding, nieuwe versie 12 van de 12 goed.
+
+**Wat er nog niet bewezen is:** er is nergens een `GOOGLE_API_KEY` ingesteld, niet
+lokaal en voor zover zichtbaar ook niet op Railway. Zolang die leeg is bestaat
+het vangnet niet en gedraagt alles zich precies zoals daarvoor. `/health` toont
+nu `gemini_vertaalvangnet: true/false`, zodat je het van buitenaf kunt zien.
+Zodra de sleutel er staat hoort er een echte vertaling door Gemini gemeten te
+worden voordat iemand zegt dat het werkt.
