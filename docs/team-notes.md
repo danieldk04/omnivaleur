@@ -11589,6 +11589,13 @@ Vier tabbladen met focus-emulatie hielden dus tien minuten lang vol tempo, naast
 elkaar in hetzelfde venster. `zetDoorlopendeKlok` zet die emulatie bij élk
 schrijvend tabblad aan, dus dat is precies wat parallel publiceren nodig heeft.
 
+**En zitten drie tabbladen elkaar in de weg?** Nee. Gemeten in een echte Chrome
+(tests/parallel-tabbladen-echt-test.mjs), tien minuten, met een pagina die per
+stap wacht en daarna echt werk doet: kanaal 1 deed 96 stappen per 30 seconden
+toen het alleen draaide en 96 toen er twee kanalen naast kwamen, nul procent
+verschil, alle drie op 9,6 van de 10 kloktikken. De controle zonder
+focus-emulatie stond in dezelfde proef op 0,1 tik per seconde.
+
 **En een grens die mee moest.** De absolute bovengrens per opdracht stond op 4,5
 minuut. Dat was al krap (Vinted: mediaan 354 s, uitschieter 565 s) en zou met drie
 tabbladen tegelijk goede plaatsingen gaan afkappen. Die grens staat nu op 9
