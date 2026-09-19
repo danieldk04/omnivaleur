@@ -4867,6 +4867,18 @@ def tick(args) -> None:
         except Exception as e:  # noqa: BLE001 — dichte inbox stopt het mailen niet
             print(f"  (verzonden map niet gelezen: {e})")
             plan.setdefault("fouten", []).append(f"verzonden map niet gelezen: {e}")
+        # En de andere kant: iemand die Daniel zelf al mailde, nog vóór hij
+        # terugschreef. Zie _al_gemaild_voor_het_lead_werd (Second-Buy BV,
+        # 19-09-2026): zonder deze stap kon zo iemand alsnog als "koud" worden
+        # gezien zodra hij pas ná het contact als lead werd binnengehaald.
+        try:
+            inkomend = _al_gemaild_voor_het_lead_werd(state, boek)
+            if inkomend:
+                print(f"{datetime.now():%d-%m %H:%M} — {inkomend} lead(s) die jou al "
+                      f"hadden gemaild overgenomen; die krijgen niets van de machine")
+        except Exception as e:  # noqa: BLE001 — dichte inbox stopt het mailen niet
+            print(f"  (postvak in niet gelezen voor eerder contact: {e})")
+            plan.setdefault("fouten", []).append(f"postvak in niet gelezen voor eerder contact: {e}")
 
     if te_doen > 0 and not resend_mag_versturen():
         te_doen = 0                       # lezen en concepten schrijven mag wel
