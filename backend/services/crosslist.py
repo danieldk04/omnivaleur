@@ -2326,6 +2326,31 @@ async def _echte_datums_ophalen(db) -> None:
             logger.warning("echte datums voor %s mislukt: %s", user_id, e)
 
 
+def _mag_nog_werken(uid: str) -> bool:
+    """Mag er voor deze verkoper überhaupt nog werk worden klaargezet?
+
+    WAAROM (19-09-2026). De verversrondes lopen langs ADVERTENTIES, niet langs
+    klanten, en keken alleen naar de schakelaar auto_relist. Daardoor zetten ze
+    op 17-09 om 21:32 nog 26 en 8 opdrachten klaar voor twee accounts waarvan het
+    abonnement al weg was (opgezegd op 08-09, proef verlopen op 13-09) — bij een
+    van de twee bestond de inlog zelfs niet meer. De extensie krijgt dan een 402
+    en er gebeurt niets, dus die opdrachten bleven staan tot de driedagenveger ze
+    op fout zette. Bij een herplaatsing is dat meer dan alleen ruis: de
+    advertentie staat intussen dagen op 'relisting'.
+
+    Twijfel telt als ja. evaluate_access laat een ontbrekende rij bewust door, en
+    een hik in de database mag nooit iemands herplaatsing tegenhouden.
+    """
+    try:
+        from backend.services.billing import evaluate_access
+        sub = eerste_rij(get_db().table("subscriptions").select("*")
+                         .eq("user_id", uid).limit(1).execute())
+        return bool(evaluate_access(sub).get("allowed"))
+    except Exception as e:  # noqa: BLE001
+        logger.warning("abonnement niet na te gaan voor %s: %s — werk gaat gewoon door", uid, e)
+        return True
+
+
 async def relist_expiring_marktplaats():
     """
     Queue a new 'create' job for every Marktplaats listing that has been
