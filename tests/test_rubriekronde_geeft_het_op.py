@@ -295,6 +295,10 @@ def test_de_taxonomie_kent_geen_rubriek_voor_spellen():
     from backend.api.imports import _TAXONOMY
 
     alle = [c.lower() for cats in _TAXONOMY.values() for c in cats]
-    for woord in ("game", "spel", "console", "playstation", "dvd", "band", "auto"):
+    # Let op: "band" staat er niet bij, want "sieraden armbanden" en "muziek
+    # orkestbanden" bevatten dat woord terwijl ze niets met autobanden te maken
+    # hebben. Alleen woorden die eenduidig zijn.
+    for woord in ("game", "spel", "console", "playstation", "psp", "xbox",
+                  "dvd", "autoband", "elektronica"):
         assert not any(woord in c for c in alle), (
             f'er bestaat nu wél een rubriek met "{woord}" erin')
