@@ -31,6 +31,16 @@ een opvolger noemt gaat die meteen vooraan in de rij. Gemeten werkt op Daniels
 sleutel: gemini-flash-lite-latest, gemini-3.5-flash-lite, gemini-3.1-flash-lite,
 gemini-flash-latest, gemini-3.6-flash en gemini-3.8-flash. De pro-modellen geven
 429 op de gratis laag, wat nog een reden is om ze niet te proberen.
+
+EN FLASH GAAT VOOR FLASH-LITE, HOEWEL DAT DUURDER IS (gemeten 19-09-2026 op zes
+echte Engelse advertenties uit de voorraad). Flash-Lite maakte van "Grey Ralph
+Lauren Jumper" twee keer achter elkaar een verkeerd gespeld "Grije" en zelfs
+"Gri<arabisch teken>e"; dat zou zo als titel op Marktplaats staan, en geen enkele
+controle in `_vertaal` ziet een spelfout. Flash schreef "Grijze" en las verder
+netjes. Flash gaf wel 3 van de 6 keer een 503 ("high demand"), dus Flash-Lite
+blijft erachter staan als terugval: liever een advertentie met een schoonheidsfout
+dan een advertentie die blijft wachten. Het vangnet draait alleen tijdens een
+storing, dus het prijsverschil valt in het niet bij een verkeerd gespelde titel.
 """
 from __future__ import annotations
 
@@ -55,13 +65,21 @@ _NIET_BRUIKBAAR = ("image", "vision", "tts", "audio", "live", "embedding",
                    "gemma", "robotics", "computer-use", "lyria", "nano-banana",
                    "transcribe", "omni", "antigravity", "deep-research", "pro")
 
-# De alias die Google zelf bijhoudt. Die blijft goed als er een nieuwe reeks
-# uitkomt, dus hij staat vooraan; de rest is de terugval als de alias verdwijnt.
+# De aliassen die Google zelf bijhoudt. Die blijven goed als er een nieuwe reeks
+# uitkomt, dus ze gaan voor op een vaste naam, die ooit wordt opgeheven.
 _ALIAS_LITE = "gemini-flash-lite-latest"
 _ALIAS_FLASH = "gemini-flash-latest"
 _MAX_KANDIDATEN = 4
 
-_GEKOZEN: str | None = None
+# WAT WE WÉL ONTHOUDEN EN WAT NIET (19-09-2026). Eerst onthield dit bestand welk
+# model gewerkt had. Gevolg, live gemeten: Flash gaf één keer 503 ("high demand"),
+# het vangnet week uit naar Flash-Lite, en bleef daar de rest van de dag — dus
+# ook alle advertenties daarna kregen de slechtere vertaling. Eén mislukt verzoek
+# is geen reden om het betere model af te schrijven. Wat wél blijvend is: een 404
+# betekent dat het model is opgeheven, en die naam hoeven we nooit meer te
+# proberen. De lijst van Google verandert ook niet per minuut, dus die bewaren we.
+_OPGEHEVEN: set[str] = set()
+_LIJST: list[str] | None = None
 
 
 def beschikbaar() -> bool:
@@ -76,6 +94,9 @@ def _versie(naam: str) -> float:
 
 def _van_google() -> list[str]:
     """Namen die Google noemt. Leeg bij storing; dan doen de aliassen het werk."""
+    global _LIJST
+    if _LIJST is not None:
+        return _LIJST
     try:
         antwoord = httpx.get(f"{_BASIS}/models",
                              params={"key": settings.google_api_key},
@@ -83,7 +104,7 @@ def _van_google() -> list[str]:
         antwoord.raise_for_status()
     except Exception as e:  # noqa: BLE001
         logger.warning("Vertaalvangnet: modellenlijst ophalen mislukte (%s)", e)
-        return []
+        return []   # bewust niet bewaren: een storing mag geen blijvend lege lijst worden
     namen = []
     for model in antwoord.json().get("models", []):
         if "generateContent" not in (model.get("supportedGenerationMethods") or []):
@@ -91,18 +112,21 @@ def _van_google() -> list[str]:
         naam = (model.get("name") or "").replace("models/", "")
         if naam and not any(woord in naam for woord in _NIET_BRUIKBAAR):
             namen.append(naam)
+    _LIJST = namen
     return namen
 
 
 def _kandidaten() -> list[str]:
-    """Wie we achter elkaar proberen: goedkoopst en meest houdbaar eerst."""
+    """Wie we achter elkaar proberen: beste Nederlands eerst, dan beschikbaarheid."""
     namen = _van_google()
     lite = sorted((n for n in namen if "flash-lite" in n and n != _ALIAS_LITE),
                   key=_versie, reverse=True)
     flash = sorted((n for n in namen if "flash" in n and "lite" not in n
                     and n != _ALIAS_FLASH), key=_versie, reverse=True)
-    rij = [_ALIAS_LITE] + lite + [_ALIAS_FLASH] + flash
-    uniek = list(dict.fromkeys(rij))
+    # Twee keer kwaliteit, dan twee keer zekerheid: de alias die Google zelf
+    # bijhoudt en de nieuwste eigen naam, eerst van Flash en daarna van Flash-Lite.
+    rij = [_ALIAS_FLASH] + flash[:1] + [_ALIAS_LITE] + lite[:1]
+    uniek = [n for n in dict.fromkeys(rij) if n and n not in _OPGEHEVEN]
     return uniek[:_MAX_KANDIDATEN]
 
 
@@ -147,39 +171,36 @@ def _lees_antwoord(antwoord: httpx.Response) -> str | None:
 
 def vertaal(opdracht: str) -> str | None:
     """Stel dezelfde vertaalopdracht aan Gemini. None betekent: het lukte niet."""
-    global _GEKOZEN
     if not beschikbaar():
         return None
     try:
-        rij = [_GEKOZEN] if _GEKOZEN else _kandidaten()
+        rij = _kandidaten()
         geprobeerd: set[str] = set()
         while rij:
             model = rij.pop(0)
-            if model in geprobeerd:
+            if model in geprobeerd or model in _OPGEHEVEN:
                 continue
             geprobeerd.add(model)
             antwoord = _vraag(model, opdracht)
 
             if antwoord.status_code == 200:
-                tekst = _lees_antwoord(antwoord)
-                if tekst and _GEKOZEN != model:
-                    _GEKOZEN = model
-                    logger.info("Vertaalvangnet gebruikt Gemini-model %s", model)
-                return tekst
+                if len(geprobeerd) > 1:
+                    logger.info("Vertaalvangnet week uit naar Gemini-model %s", model)
+                return _lees_antwoord(antwoord)
 
             klacht = antwoord.text[:300]
-            if antwoord.status_code in (404, 429):
-                # Opgeheven of niet beschikbaar op deze rekening. De volgende
-                # kandidaat krijgt hem, en noemt de klacht zelf een opvolger,
-                # dan gaat die vooraan.
+            if antwoord.status_code in (404, 429, 500, 502, 503, 504):
+                # Opgeheven, niet beschikbaar op deze rekening, of te druk
+                # (gemeten: Flash gaf 3 van de 6 keer 503). De volgende kandidaat
+                # krijgt hem, en noemt de klacht zelf een opvolger, dan gaat die
+                # vooraan.
                 logger.warning("Vertaalvangnet: %s doet het niet (HTTP %s), volgende",
                                model, antwoord.status_code)
-                if _GEKOZEN == model:
-                    _GEKOZEN = None
-                    rij = _kandidaten()
-                opvolger = _opvolger_uit_de_klacht(klacht)
-                if opvolger and opvolger not in geprobeerd:
-                    rij.insert(0, opvolger)
+                if antwoord.status_code == 404:
+                    _OPGEHEVEN.add(model)
+                    opvolger = _opvolger_uit_de_klacht(klacht)
+                    if opvolger and opvolger not in geprobeerd:
+                        rij.insert(0, opvolger)
                 continue
 
             logger.warning("Vertaalvangnet: Gemini gaf HTTP %s (%s)",

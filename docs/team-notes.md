@@ -11361,3 +11361,47 @@ het vangnet niet en gedraagt alles zich precies zoals daarvoor. `/health` toont
 nu `gemini_vertaalvangnet: true/false`, zodat je het van buitenaf kunt zien.
 Zodra de sleutel er staat hoort er een echte vertaling door Gemini gemeten te
 worden voordat iemand zegt dat het werkt.
+
+## 19-09-2026 (avond, vervolg) — Het vangnet is live bewezen, en de modellenlijst van Google liegt
+
+Daniel vroeg hoe hij een Gemini-sleutel maakt. Die heeft hij al: in
+`~/Documents/axongear-ai-blog-automation/.env.local` staat een werkende
+`GOOGLE_API_KEY` van aistudio.google.com, aangemaakt voor de blog-beeldgeneratie
+van AxonGear. AxonGear is geparkeerd, dus die sleutel kan gewoon mee naar
+Omnivaleur. Met die sleutel is het vangnet end to end gemeten, tegen het echte
+lege Anthropic-tegoed en de echte Gemini-API.
+
+**Valstrik 1: `GET /v1beta/models` noemt modellen die de dienst zelf weigert.**
+De lijst gaf `gemini-2.5-flash-lite`, en een vertaalvraag aan datzelfde model
+antwoordde met 404: "This model is no longer available to new users. Please
+update your code to use models/gemini-3.5-flash-lite." Hetzelfde voor
+`gemini-2.5-flash` en `gemini-2.5-pro`. De eerste opzet van het vangnet koos
+netjes uit die lijst en lag daardoor plat op het moment dat het nodig was: drie
+echte advertenties gingen alle drie naar `VertalingOnbeschikbaar`.
+
+Wat er nu gebeurt: alleen een echt antwoord telt. Het vangnet probeert de
+kandidaten op volgorde, en noemt een 404 zelf een opvolger, dan gaat die
+vooraan. Werkend gemeten op deze sleutel: `gemini-flash-latest`,
+`gemini-flash-lite-latest`, `gemini-3.5-flash-lite`, `gemini-3.1-flash-lite`,
+`gemini-3.6-flash`, `gemini-3.8-flash`. De pro-modellen geven 429 op de gratis
+laag.
+
+**Valstrik 2: het goedkoopste model schrijft slecht Nederlands.** Op zes echte
+Engelse advertenties uit de voorraad maakte Flash-Lite van "Grey Ralph Lauren
+Jumper" twee keer achter elkaar een fout gespeld "Grije", en één keer zelfs
+"Gri" met een Arabisch teken erin. Dat zou zo als titel op Marktplaats staan, en
+geen enkele controle in `_vertaal` ziet een spelfout. Flash schreef "Grijze",
+"vest met rits" en "ritsvest", allemaal goed. Daarom gaat Flash voor, met
+Flash-Lite erachter als terugval: Flash gaf 3 van de 6 keer een 503 ("high
+demand"), en een advertentie met een schoonheidsfout is beter dan een
+advertentie die blijft wachten.
+
+**Valstrik 3: onthouden welk model werkte, werkte averechts.** Eén 503 op Flash
+en het vangnet bleef de rest van het serverproces op Flash-Lite hangen, dus ook
+alle advertenties daarna kregen de mindere vertaling. Nu wordt alleen een 404
+onthouden (dat model bestaat echt niet meer) en de modellenlijst zelf; een
+drukke minuut schrijft het betere model niet af.
+
+**Eindmeting, drie echte advertenties, leeg Anthropic-tegoed:** alle drie
+vertaald, alinea-indeling intact, geen Engels meer over. Zonder sleutel gedraagt
+alles zich exact als daarvoor. `/health` toont `gemini_vertaalvangnet`.

@@ -161,11 +161,13 @@ class NepAntwoord:
 
 
 MODELLENLIJST = {"models": [
-    {"name": "models/gemini-2.5-flash-image", "supportedGenerationMethods": ["generateContent"]},
-    {"name": "models/gemini-2.5-pro", "supportedGenerationMethods": ["generateContent"]},
-    {"name": "models/gemini-2.5-flash-lite-preview-09-2025", "supportedGenerationMethods": ["generateContent"]},
+    {"name": "models/gemini-3.1-flash-image", "supportedGenerationMethods": ["generateContent"]},
+    {"name": "models/gemini-3.5-pro", "supportedGenerationMethods": ["generateContent"]},
+    {"name": "models/gemini-flash-latest", "supportedGenerationMethods": ["generateContent"]},
+    {"name": "models/gemini-flash-lite-latest", "supportedGenerationMethods": ["generateContent"]},
     {"name": "models/gemini-2.5-flash-lite", "supportedGenerationMethods": ["generateContent"]},
-    {"name": "models/gemini-2.5-flash", "supportedGenerationMethods": ["generateContent"]},
+    {"name": "models/gemini-3.5-flash-lite", "supportedGenerationMethods": ["generateContent"]},
+    {"name": "models/gemini-3.6-flash", "supportedGenerationMethods": ["generateContent"]},
     {"name": "models/text-embedding-004", "supportedGenerationMethods": ["embedContent"]},
 ]}
 
@@ -175,42 +177,93 @@ def _antwoord(tekst: str, reden: str = "STOP"):
                             "content": {"parts": [{"text": tekst}]}}]}
 
 
+def _klacht(code: int, boodschap: str = ""):
+    return NepAntwoord(code, {"error": {"message": boodschap}}, boodschap)
+
+
 @pytest.fixture
 def gemini(monkeypatch):
-    """Nepnetwerk voor het vangnet. Geeft de gebruikte adressen terug."""
+    """Nepnetwerk voor het vangnet. Geeft de gebruikte modelnamen terug."""
     monkeypatch.setattr(gv.settings, "google_api_key", "test-sleutel")
-    monkeypatch.setattr(gv, "_GEKOZEN", None)
-    gebruikt = []
+    monkeypatch.setattr(gv, "_OPGEHEVEN", set())
+    monkeypatch.setattr(gv, "_LIJST", None)
+    gevraagd = []
 
-    def zet(post_antwoord):
+    def zet(*antwoorden):
+        """Elk volgend verzoek krijgt het volgende antwoord; het laatste blijft gelden."""
+        reeks = list(antwoorden)
+
         def nep_get(url, **kw):
-            gebruikt.append(("get", url))
             return NepAntwoord(200, MODELLENLIJST)
 
         def nep_post(url, **kw):
-            gebruikt.append(("post", url))
-            return post_antwoord
+            gevraagd.append(url.split("/models/")[1].split(":")[0])
+            return reeks.pop(0) if len(reeks) > 1 else reeks[0]
 
         monkeypatch.setattr(gv.httpx, "get", nep_get)
         monkeypatch.setattr(gv.httpx, "post", nep_post)
-        return gebruikt
+        return gevraagd
 
     return zet
 
 
-def test_vangnet_kiest_het_goedkoopste_stabiele_model(gemini):
-    gebruikt = gemini(NepAntwoord(200, _antwoord(NEDERLANDS)))
+def test_flash_gaat_voor_flash_lite(gemini):
+    """Gemeten 19-09-2026: Flash-Lite schreef "Grije" waar Flash "Grijze" schreef."""
+    gevraagd = gemini(NepAntwoord(200, _antwoord(NEDERLANDS)))
 
     assert gv.vertaal("vertaal dit") == NEDERLANDS
-    adres = [u for soort, u in gebruikt if soort == "post"][0]
-    assert adres.endswith("/models/gemini-2.5-flash-lite:generateContent"), adres
+    assert gevraagd == ["gemini-flash-latest"]
 
 
-def test_vangnet_vraagt_maar_een_keer_welke_modellen_er_zijn(gemini):
-    gebruikt = gemini(NepAntwoord(200, _antwoord(NEDERLANDS)))
+def test_een_overbelast_model_geeft_de_beurt_door(gemini):
+    """Gemeten: Flash gaf 3 van de 6 keer 503. Dan mag de advertentie niet wachten."""
+    gevraagd = gemini(_klacht(503, "high demand"), NepAntwoord(200, _antwoord(NEDERLANDS)))
+
+    assert gv.vertaal("vertaal dit") == NEDERLANDS
+    assert len(gevraagd) == 2 and gevraagd[0] == "gemini-flash-latest"
+
+
+def test_een_opgeheven_model_wijst_zelf_zijn_opvolger_aan(gemini):
+    """De echte 404 zegt: "Please update your code to use models/gemini-3.5-flash-lite"."""
+    gevraagd = gemini(
+        _klacht(404, "This model is no longer available to new users. Please update "
+                     "your code to use models/gemini-9.9-flash for the latest features."),
+        NepAntwoord(200, _antwoord(NEDERLANDS)))
+
+    assert gv.vertaal("vertaal dit") == NEDERLANDS
+    assert gevraagd[1] == "gemini-9.9-flash", gevraagd
+
+
+def test_de_lijst_van_google_bepaalt_niet_in_zijn_eentje(gemini):
+    """`gemini-2.5-flash-lite` staat in de lijst en geeft 404. Dat mag niet fataal zijn."""
+    kandidaten = gv._kandidaten()
+    assert kandidaten[0] == "gemini-flash-latest"
+    assert "gemini-3.5-pro" not in kandidaten
+    assert not any("image" in n for n in kandidaten)
+    assert "gemini-flash-lite-latest" in kandidaten
+
+
+def test_een_uitwijk_wordt_niet_onthouden(gemini):
+    """Gemeten: Flash gaf één keer 503 en daarna bleef alles op het mindere model.
+
+    Eén drukke minuut mag het betere model niet voor de rest van de dag afschrijven.
+    """
+    gevraagd = gemini(_klacht(503, "high demand"), NepAntwoord(200, _antwoord(NEDERLANDS)))
     gv.vertaal("een")
+    eerste_ronde = len(gevraagd)
     gv.vertaal("twee")
-    assert sum(1 for soort, _ in gebruikt if soort == "get") == 1
+
+    assert gevraagd[eerste_ronde] == "gemini-flash-latest", gevraagd
+
+
+def test_een_opgeheven_model_wordt_niet_nog_eens_geprobeerd(gemini):
+    """Een 404 is blijvend: die naam bestaat niet meer."""
+    gevraagd = gemini(_klacht(404, "no longer available"), NepAntwoord(200, _antwoord(NEDERLANDS)))
+    gv.vertaal("een")
+    gevraagd.clear()
+    gv.vertaal("twee")
+
+    assert "gemini-flash-latest" not in gevraagd, gevraagd
 
 
 def test_afgekapt_antwoord_wordt_geweigerd(gemini):
@@ -219,10 +272,10 @@ def test_afgekapt_antwoord_wordt_geweigerd(gemini):
     assert gv.vertaal("vertaal dit") is None
 
 
-def test_verdwenen_model_laat_de_keuze_los(gemini):
-    gemini(NepAntwoord(404, {}, "not found"))
+def test_valt_alles_uit_dan_wacht_de_advertentie(gemini):
+    gevraagd = gemini(_klacht(404, "not found"))
     assert gv.vertaal("vertaal dit") is None
-    assert gv._GEKOZEN is None, "de volgende poging blijft tegen een verdwenen naam praten"
+    assert len(gevraagd) >= 2, "het vangnet probeerde maar één model"
 
 
 def test_zonder_sleutel_gaat_er_geen_enkel_gesprek_uit(monkeypatch):

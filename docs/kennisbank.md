@@ -17,6 +17,50 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ---
 
+## modellenlijst-van-de-dienst-is-geen-bewijs
+
+*19-09-2026 — "Google's ListModels noemt modellen die generateContent daarna met 404 weigert; alleen een echt antwoord telt, en het goedkoopste model schrijft slecht Nederlands"*
+
+Gemeten 19-09-2026 met Daniels echte Google-sleutel, bij het bouwen van het
+vertaalvangnet (`backend/services/gemini_vertaling.py`).
+
+**De lijst liegt.** `GET https://generativelanguage.googleapis.com/v1beta/models`
+gaf `gemini-2.5-flash-lite` terug met `generateContent` in
+`supportedGenerationMethods`. Diezelfde naam aanroepen gaf 404: "This model is
+no longer available to new users. Please update your code to use
+models/gemini-3.5-flash-lite." Ook zo voor gemini-2.5-flash en gemini-2.5-pro.
+Een keuze die op die lijst vertrouwt lijkt zorgvuldig en ligt plat zodra je hem
+nodig hebt. De 404 noemt wel zelf de opvolger, dus die is uit de fouttekst te
+vissen (`use models/([A-Za-z0-9._-]+)`).
+
+Werkend op de gratis laag, 19-09-2026: `gemini-flash-latest`,
+`gemini-flash-lite-latest`, `gemini-3.5-flash-lite`, `gemini-3.1-flash-lite`,
+`gemini-3.5-flash`, `gemini-3.6-flash`, `gemini-3.8-flash`. De pro-modellen en
+alles wat lyria/omni/nano-banana heet geven 429. De deep-research- en
+antigravity-modellen geven 400: "This model only supports Interactions API".
+Flash gaf 3 van de 6 keer 503 "high demand", dus reken op uitwijken.
+
+**Het goedkoopste model is niet goed genoeg voor klanttekst.** Op zes echte
+Engelse advertenties maakte Flash-Lite van "Grey Ralph Lauren Jumper" twee keer
+"Grije" en één keer "Gri" met een Arabisch teken erin. Flash schreef "Grijze".
+Zo'n spelfout komt ongemerkt op Marktplaats te staan: taalherkenning ziet
+gewoon Nederlands.
+
+**Why:** dit is precies het soort aanname dat er redelijk uitziet ("ik vraag de
+dienst zelf welke modellen er zijn, dus ik gok niet") en toch een storing
+oplevert. En een vangnet dat aangaat tijdens een storing is het laatste wat
+iemand test.
+
+**How to apply:** kies een model nooit op een catalogus maar op een echt
+antwoord, met een rij kandidaten en een 200 als bewijs. Neem een `-latest`-alias
+vooraan, want vaste versienamen worden opgeheven. Onthoud alleen een 404 (dat
+model bestaat echt niet meer), nooit "deze werkte", anders schrijft één drukke
+minuut het betere model voor de rest van het proces af. En beoordeel de
+uitvoerkwaliteit op echte klantteksten, niet op een testzinnetje. Zie
+"anthropic-sdk-pin-valstrik" en "omnivaleur-altijd-bewijzen".
+
+---
+
 ## grens-bewijs-je-op-een-voorraad-die-opraakt
 
 *19-09-2026 — Een opgeefgrens of quotum laat zich alleen zien op een proefgroep die opraakt; op een grote voorraad lijkt hij altijd stuk*
