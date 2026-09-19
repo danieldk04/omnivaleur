@@ -11179,3 +11179,81 @@ te kijken. Die test blijft staan, want een zevende plek erbij zou de knop
 stilzwijgend half kapot maken.
 
 Voor Egbert staat de schakelaar uit gezet, op zijn eigen verzoek via Daniel.
+
+## 19-09-2026 — Waar het API-tegoed heen ging, en de rem op de nachtelijke rubriekronde
+
+Daniel zag "Publishing is on hold: we couldn't translate this listing" en dacht
+dat de vertaling zijn Anthropic-tegoed leegtrok. Nagemeten, en dat klopt niet.
+
+**Het tegoed was echt op.** Zelfs `count_tokens`, dat normaal gratis is, gaf
+400 met "your credit balance is too low". Dat is de directe oorzaak van de
+melding, niet een bug in de vertaling.
+
+**Waar de 174 dollar van de laatste 30 dagen heen ging** (uit de kostenexport
+van de console, sleutel `crosslisteu` = 164,42 van de 174,23):
+
+    Claude Opus 5      $106,64   64,9%
+    Claude Haiku 4.5   $ 47,35   28,8%
+    Claude Sonnet 5    $ 10,43    6,3%
+
+Alle Opus 5 zit in zes dagen: 29, 30, 31 augustus, 1 en 6 september, plus wat
+losse centen ervoor. Op 30-08 alleen al 28,17 dollar. Na 6 september staat Opus
+5 op nul, elke dag. Opus 5 komt in de hele codebase één keer voor, in
+`scripts/leadgen_mail.py` (`MODEL = "claude-opus-5"`, max_tokens 16000), en de
+notitie in `_zet_concept_klaar` beschrijft het incident zelf: de warme
+opvolgronde liet elke tien minuten voor tientallen leads een concept schrijven
+en gooide dat daarna weg. Dat lek is op 06-09 gedicht toen de AI uit de
+mailmachine ging. Nagelopen: de Opus-paden hangen nu alleen nog aan handmatige
+subcommando's (`herstel`, `wachtenden`, `advies`), niet aan `tick`, dus de cron
+raakt ze niet meer.
+
+**Sinds 7 september is het 1,00 tot 2,42 dollar per dag**, vrijwel allemaal
+Haiku. Vertalen is daarvan ongeveer tien cent per dag: gemeten over veertien
+dagen echte opdrachten gingen er van de 4.406 create-opdrachten maar 920 naar
+het model, want 78% van de teksten stond al in de goede taal en wordt
+overgeslagen. Naar een gratis model overstappen bespaart dus ongeveer drie
+dollar per maand. Dat is het niet waard als besparing; wél als vangnet, zodat
+publiceren doorloopt als het tegoed op is. Dat staat open.
+
+**De nachtelijke rubriekronde is wél een echte verspiller.** Gemeten door
+`herstel_rubrieken` met een nepmodel tegen de echte database te draaien: 200
+modelvragen per nacht, 1.927.627 tekens aan prompt (waarvan 8.435 per vraag
+alleen de taxonomielijst), ongeveer 551.000 invoertokens, zo'n 0,55 dollar per
+nacht aan invoer. Ruim 17 dollar per maand, ongeveer 43% van alle Haiku-uitgaven.
+
+En het kán niet lukken. Van de 200 artikelen die de ronde die nacht las waren er
+175 PlayStation- en PSP-spellen, plus autobanden en sneeuwkettingen; 178 van de
+200 zijn van één verkoper. `_TAXONOMY` kent 247 rubrieken over dames, heren,
+kinderen, unisex, sieraden, wonen, antiek en muziek, en geen enkele voor
+spellen, consoles, media of auto-onderdelen. Het model kan ze dus niet plaatsen,
+de controle gooit een verzonnen rubriek terecht weg, en de volgende nacht
+begint dezelfde vraag opnieuw. Van de 404 artikelen zonder rubriek is 386 tussen
+de 8 en 30 dagen oud.
+
+**Wat er is gebouwd.** Een artikel krijgt drie kansen; daarna vraagt de ronde
+er niet meer naar tot de verkoper de titel of omschrijving aanpast. Drie
+vangrails, alle drie met een proef vastgelegd in
+`tests/test_rubriekronde_geeft_het_op.py`:
+
+1. De teller loopt alleen als de ronde diezelfde nacht minstens één rubriek
+   heeft kunnen invullen. `_classify_with_claude` geeft `{}` terug zowel bij
+   "kan dit niet plaatsen" als bij "model deed het niet", dus zonder die
+   voorwaarde zou een leeg tegoed in drie nachten de hele voorraad afschrijven.
+   Precies dat stond vandaag te gebeuren.
+2. Staan de kolommen er nog niet, dan valt de ronde terug op exact de oude
+   vraag. De code mag dus vóór de migratie live.
+3. De ronde kan alleen een modelvraag overslaan, nooit een uitkomst veranderen.
+
+Voor-en-na gedraaid tegen `56ad84e8` (de echte vorige versie, niet HEAD: de
+auto-push-hook had de nieuwe versie al gecommit en dan vergelijkt de proef
+zichzelf). Oude code: 2 van de 7 proeven vallen om. Nieuwe code: 7 van de 7.
+Hele suite: 17 fouten voor en 17 dezelfde fouten na, dus niets stukgemaakt.
+
+Migratie: `scripts/migratie_rubriek_pogingen.sql`. Twee kolommen plus een
+partiële index. Die index is meteen nuttig los van deze wijziging: de leesvraag
+van de ronde liep vandaag één keer in een statement timeout.
+
+**Nog open:** geen uitgavenlimiet op de API-sleutel. Dit heeft 174 dollar
+gekost en niets houdt een volgende lus tegen. En `support-mail-agent.yml` start
+elke vijf minuten tussen 06:00 en 20:00 `scripts/support_mail_agent.py`, een
+bestand dat niet bestaat: 180 mislukte starts per dag.
