@@ -1,3 +1,4 @@
+import hashlib
 import logging
 import os
 logging.basicConfig(level=logging.INFO, format="%(levelname)s %(name)s: %(message)s")
@@ -171,6 +172,18 @@ async def health():
             # Het vangnet voor het vertalen. Staat hier ja, dan blijft publiceren
             # doorlopen als het Anthropic-tegoed op is.
             "gemini_vertaalvangnet": bool(_s.google_api_key),
+            # WÉLKE Google-sleutel hier draait, niet alleen dát er een is
+            # (19-09-2026). Daniel heeft twee sleutels die allebei met "AQ.Ab8"
+            # beginnen en allebei 53 tekens lang zijn: de oude van AxonGear en de
+            # nieuwe "Translations Items Omnivaleur". Van buitenaf waren die niet
+            # uit elkaar te houden, dus "de nieuwe staat op Railway" was een
+            # aanname en geen meting. Dit is de eerste 8 tekens van de sha256 van
+            # de sleutel: genoeg om twee sleutels uit elkaar te houden, en er is
+            # niets uit terug te rekenen. De nieuwe sleutel hoort f7c8c67f te zijn.
+            "google_sleutel_vingerafdruk": (
+                hashlib.sha256(_s.google_api_key.encode()).hexdigest()[:8]
+                if _s.google_api_key else None
+            ),
             # Staat dit op false, dan schrijft de server nieuwe foto's nog steeds
             # naar Supabase Storage en loopt die bucket dus gewoon weer vol. Dat
             # is van buitenaf verder niet te zien, vandaar hier.
