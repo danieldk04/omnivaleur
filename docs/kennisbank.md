@@ -17,6 +17,59 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ---
 
+## schakelaar-moet-op-elke-plek-gelden
+
+*19-09-2026 — Een uit-knop voor gedrag dat op meerdere plekken ontstaat: laat een test de broncode aftasten, anders mis je er een*
+
+Bij het uitzetbaar maken van de verkoopvraag (19-09-2026) had ik vijf plekken
+gevonden die een advertentie op `sold_unconfirmed` zetten en die allemaal keurig
+achter de nieuwe schakelaar gezet. Er waren er zes. De zesde
+(`_vraag_het_de_verkoper` in backend/services/crosslist.py, het vangnet voor een
+verkoop zonder geldig bewijs) kwam alleen boven doordat de test elk bestand onder
+`backend/` aftast op de letterlijke tekst `"status": "sold_unconfirmed"` en eist
+dat datzelfde bestand `verkoopvraag_aan` noemt.
+
+Zonder die test was de knop half kapot geweest, en juist op de stilste manier:
+hij doet wat hij belooft in vijf van de zes gevallen, dus de klant zet hem om,
+krijgt twee weken niets, en dan ineens toch een vraag. Dat is erger dan geen knop.
+
+Werkwijze die blijft: bouw je een schakelaar voor gedrag dat op meer dan één
+plek ontstaat, schrijf dan een test die de BRON aftast op de letterlijke
+schrijfactie en de schakelaar verplicht stelt. Grep met de hand is niet genoeg,
+want een zevende plek komt er later bij zonder dat iemand aan de knop denkt.
+Zelfde patroon als `test_beide_rondes_vragen_het_ook_echt_na`. Zie ook
+"filter-op-een-publicatiepad-is-geen-filter".
+
+---
+
+## verkoopvraag-past-niet-bij-nieuwe-voorraad
+
+*19-09-2026 — De vraag "is dit verkocht?" gaat uit van unica; wie nieuwe voorraad verkoopt heeft er tien van en krijgt alleen ruis*
+
+De hele verkoopvraag rust op één aanname: de verkoper heeft ÉÉN exemplaar dat op
+vier kanalen staat. Verdwijnt de advertentie op één kanaal, dan kan dat een
+verkoop zijn, en afmelden bij de rest is onherstelbaar. Daarom vragen we het.
+
+Bij nieuwe voorraad klopt die aanname niet. Egbert (info@papas-plectrums.nl,
+plectrums en gitaarminiaturen) op 19-09-2026: "Voor mij is dit totaal niet van
+toepassing omdat ik altijd nieuwe voorraad koop, zodra dit niet meer het geval is
+verwijder ik het product van de platformen." Hij haalt zijn advertentie zelf weg
+als de voorraad op is, dus een verdwenen advertentie is bij hem per definitie
+geen verkoopsignaal. Hij kreeg er een dashboardvraag en een herinneringsmail over.
+
+Sinds 19-09-2026 staat er een schakelaar bij Preferences > Upkeep
+(`verkoopvraag` in backend/services/instellingen.py), standaard aan. Staat hij
+uit, dan gaat een verdwenen advertentie meteen naar het archief, precies zoals
+wanneer de verkoper zelf "nee" antwoordt: er gaat nóóit iets van een ander kanaal
+af. Dat is de grens die deze knop veilig maakt. Uitzetten mag nooit gaan
+betekenen dat wij zelf maar aannemen dat iets verkocht is; zie
+"verkoopkanaal-moet-bewezen-zijn" en "verkoop-signaal-hard-vs-zacht".
+
+Twee soorten verkopers dus, niet één. Vraag bij een klacht over "rare meldingen"
+eerst of hij unica of nieuwe voorraad verkoopt.
+
+---
+
 ## leadgen-koude-mail-op-al-benaderde-lead
 
 *19-09-2026 — "Koude-mailmachine stuurde mail1 naar een lead die Daniel al persoonlijk had gemaild (Second-Buy BV, 19-09-2026); zo herken je en dicht je dit lek"*
