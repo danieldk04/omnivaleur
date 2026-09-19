@@ -1569,6 +1569,24 @@ input[type="checkbox"].row-check { width: 15px; height: 15px; cursor: pointer; a
           <span id="relist-dagen-status" style="font-size:12px;color:var(--muted)"></span>
         </div>
       </div>
+      <!-- De verkoopvraag. Wie nieuwe voorraad verkoopt heeft er tien van en
+           haalt zijn advertentie zelf weg als de voorraad op is; voor hem is
+           "is dit verkocht?" alleen ruis. Zie VERKOOPVRAAG in
+           backend/services/instellingen.py. -->
+      <div style="background:var(--card,#fff);border:1px solid var(--border,#e5e7eb);border-radius:12px;padding:16px 18px;margin-bottom:16px">
+        <div style="font-weight:700;margin-bottom:4px">Ask me when a listing disappears</div>
+        <div style="font-size:12.5px;color:var(--muted);line-height:1.6;margin-bottom:12px">
+          When a listing is gone from a channel, Omnivaleur asks you whether the item was sold, because taking it
+          off your other channels cannot be undone. Turn this off if you sell new stock and have more of the same
+          item: the listing is then simply archived, nothing is removed anywhere else, and you get no question and
+          no email about it.
+        </div>
+        <label class="vg-chip" style="max-width:420px">
+          <input type="checkbox" id="verkoopvraag-aan" onchange="saveVerkoopvraag()">
+          <span>Ask me before anything counts as sold</span>
+        </label>
+        <div style="margin-top:10px"><span id="verkoopvraag-status" style="font-size:12px;color:var(--muted)"></span></div>
+      </div>
       <h2 style="font-size:13px;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);margin:26px 0 10px;font-weight:800">What goes where</h2>
       <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:18px 20px">
         <div style="font-weight:800;font-size:15px;margin-bottom:4px">What may go on Vinted</div>
@@ -10384,6 +10402,11 @@ async function loadRelistDagen() {
       schakel.checked = data.auto_relist !== false;
       schakel.closest('.vg-chip').classList.toggle('on', schakel.checked);
     }
+    const vraagSchakel = document.getElementById('verkoopvraag-aan');
+    if (vraagSchakel) {
+      vraagSchakel.checked = data.verkoopvraag !== false;
+      vraagSchakel.closest('.vg-chip').classList.toggle('on', vraagSchakel.checked);
+    }
     state.settings = { ...state.settings, ...data };
     toonFabrikant(data);
     toonLocatie(data);
@@ -10590,6 +10613,33 @@ async function saveAutoRelist() {
       : 'Saved — nothing is relisted automatically any more. You stay in control from Refresh.';
   } catch (e) {
     melding.textContent = `Could not save: ${e.message}`;
+  }
+}
+
+// Uit is uit: openstaande vragen worden meteen opgeruimd (de server doet dat),
+// dus het scherm moet daarna opnieuw geladen worden.
+async function saveVerkoopvraag() {
+  const schakel = document.getElementById('verkoopvraag-aan');
+  const melding = document.getElementById('verkoopvraag-status');
+  if (!schakel) return;
+  schakel.closest('.vg-chip').classList.toggle('on', schakel.checked);
+  if (melding) melding.textContent = 'Saving…';
+  try {
+    const r = await apiFetchRetry(`${API}/api/items/settings`, {
+      method: 'PUT', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ verkoopvraag: schakel.checked }),
+    });
+    const data = await parseJsonSafe(r);
+    if (!r.ok) throw new Error(data.detail || `HTTP ${r.status}`);
+    state.settings = { ...state.settings, ...data };
+    schakel.checked = data.verkoopvraag !== false;
+    schakel.closest('.vg-chip').classList.toggle('on', schakel.checked);
+    if (melding) melding.textContent = schakel.checked
+      ? 'Saved — we keep asking before an item counts as sold.'
+      : 'Saved — no more questions. A listing that disappears is archived and nothing is removed elsewhere.';
+    if (!schakel.checked && typeof loadAll === 'function') loadAll();
+  } catch (e) {
+    if (melding) melding.textContent = `Could not save: ${e.message}`;
   }
 }
 

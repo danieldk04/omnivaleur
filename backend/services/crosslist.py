@@ -1938,7 +1938,19 @@ async def _vraag_het_de_verkoper(db, item_id: str, platform: str) -> None:
     draait de gewone afhandeling alsnog (met BEWIJS_VERKOPER).
     """
     from backend.api.listings import VERDENKING_REDENEN
+    from backend.services.instellingen import verkoopvraag_aan
     try:
+        # Heeft de verkoper de vraag uitgezet, dan gebeurt er hier niets: niet
+        # boeken (dat mocht toch al niet zonder bewijs) en niets weghalen. De
+        # advertentie staat er immers gewoon nog; alleen het onbewezen signaal
+        # gaat de prullenbak in. Zie VERKOOPVRAAG in
+        # backend/services/instellingen.py.
+        eigenaar = ((await naast_de_lus(lambda: db.table("items").select("user_id")
+                    .eq("id", item_id).limit(1).execute())).data or [{}])[0].get("user_id")
+        if eigenaar and not await naast_de_lus(lambda: verkoopvraag_aan(eigenaar)):
+            logger.info("[sold] geen bewijs voor %s op %s en de verkoopvraag staat uit — "
+                        "niets geboekt en niets weggehaald", item_id, platform)
+            return
         (await naast_de_lus(lambda: db.table("listings").update({
             "status": "sold_unconfirmed",
             "error_message": VERDENKING_REDENEN["weg"],

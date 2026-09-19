@@ -128,8 +128,25 @@ PAKKET_GRENS_MAX = 5000
 # 4.000 tekens is ruim: het langste blok dat we bij hem zagen is er nog geen 800.
 SLOTTEKST_MAX = 4000
 
+# VRAGEN OF IETS VERKOCHT IS, OF NIET (19-09-2026, Egbert van papas-plectrums.nl).
+#
+# Verdwijnt een advertentie van een kanaal, dan vragen we de verkoper of het
+# artikel verkocht is. Dat moet, want afmelden bij de andere kanalen is
+# onherstelbaar. Maar het slaat nergens op bij wie NIEUWE voorraad verkoopt:
+# daar staan tien dezelfde plectrums op de plank en haalt de verkoper zijn
+# advertentie zelf weg zodra de voorraad op is. Egbert: "Voor mij is dit totaal
+# niet van toepassing omdat ik altijd nieuwe voorraad koop, zodra dit niet meer
+# het geval is verwijder ik het product van de platformen." Hij kreeg de vraag
+# en daarna een herinneringsmail over een advertentie die hij zelf had
+# weggehaald.
+#
+# Staat dit uit, dan gaat een verdwenen advertentie meteen naar het archief:
+# precies wat er gebeurt als de verkoper zelf "nee" antwoordt. Er gaat niets van
+# een ander kanaal af, er komt geen vraag op het dashboard en geen mail.
+VERKOOPVRAAG = "verkoopvraag"
+
 STANDAARD = {"relist_dagen": RELIST_DAGEN_STANDAARD, "vinted_groepen": [],
-             "auto_relist": True,
+             "auto_relist": True, VERKOOPVRAAG: True,
              "fabrikant_naam": "", "fabrikant_adres": "", "fabrikant_email": "",
              FABRIKANT_MEESTUREN: True,
              "locatie_land": "", "locatie_plaats": "", "locatie_postcode": "",
@@ -153,6 +170,8 @@ def _schoon(rauw: dict | None) -> dict:
     # listen op marktplaats" is een terechte klacht als je die knop niet hebt.
     if "auto_relist" in rauw:
         uit["auto_relist"] = bool(rauw.get("auto_relist"))
+    if VERKOOPVRAAG in rauw:
+        uit[VERKOOPVRAAG] = bool(rauw.get(VERKOOPVRAAG))
     # Marktplaats kapt deze velden zelf af op 255 tekens; langer opslaan zou
     # betekenen dat het scherm iets anders toont dan wat er geplaatst wordt.
     for veld in FABRIKANT_VELDEN:
@@ -208,6 +227,18 @@ def schrijf(user_id: str, wijziging: dict) -> dict:
     ).execute()
     return nieuw
 
+
+def verkoopvraag_aan(user_id: str) -> bool:
+    """Wil deze verkoper de vraag "is dit verkocht?" krijgen?
+
+    Bij twijfel ja. Een hik in de instellingen mag nooit stilzwijgend een
+    verkoopsignaal weggooien: dan verdwijnt een echte verkoop uit de omzet en
+    blijft het artikel op de andere kanalen staan. Zie VERKOOPVRAAG."""
+    try:
+        return bool(lees(user_id).get(VERKOOPVRAAG, True))
+    except Exception as e:  # noqa: BLE001
+        logger.warning("verkoopvraag-instelling niet gelezen voor %s: %s", user_id, e)
+        return True
 
 def alle_relist_dagen() -> dict[str, int]:
     """Per verkoper het ingestelde aantal dagen, voor de dagelijkse ronde.

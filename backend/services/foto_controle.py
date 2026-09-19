@@ -222,11 +222,16 @@ async def _verdwenen_als_vraag(db, user_id: str, platform: str, onze: list[dict]
             lambda b=ids[i:i + 100]: db.table("listings").select("item_id")
             .in_("item_id", b).eq("status", "sold").neq("platform", platform)
             .execute())).data or [])}
+    # Wie de vraag "is dit verkocht?" heeft uitgezet, krijgt hem hier ook niet:
+    # de verdwenen advertentie gaat dan meteen het archief in. Zie VERKOOPVRAAG
+    # in backend/services/instellingen.py.
+    from backend.services.instellingen import verkoopvraag_aan
+    mag_vragen = await naast_de_lus(lambda: verkoopvraag_aan(user_id))
     gevraagd = 0
     for r in weg:
         teller = (r.get("not_found_count") or 0) + 1
         velden: dict = {"not_found_count": teller}
-        if teller >= VERDWENEN_RONDES and r["item_id"] in elders_verkocht:
+        if teller >= VERDWENEN_RONDES and (r["item_id"] in elders_verkocht or not mag_vragen):
             velden.update({"status": "delisted", "error_message": None})
         elif teller >= VERDWENEN_RONDES:
             velden.update({"status": "sold_unconfirmed",

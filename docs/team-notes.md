@@ -11148,3 +11148,34 @@ Gisteren om 16:30 UTC vertaalde productie nog gewoon ("Brown Suitsupply Loafers"
 werd "Bruine Suitsupply Loafers"), en vandaag is er geen enkele Engelse brontekst
 langsgekomen om het aan te toetsen. Is het dezelfde sleutel, dan gaat de
 eerstvolgende Engelse advertentie onvertaald de deur uit.
+
+## 19-09-2026 — De verkoopvraag kan uit, voor wie nieuwe voorraad verkoopt
+
+Egbert (info@papas-plectrums.nl) kreeg op 18-09 om 13:45 de herinneringsmail
+"You may have sold an item". Het ging om één advertentie, de Miniatuur replica
+Flea bass, die op 2dehands was verdwenen. Zijn reactie: "Voor mij is dit totaal
+niet van toepassing omdat ik altijd nieuwe voorraad koop, zodra dit niet meer
+het geval is verwijder ik het product van de platformen."
+
+Hij heeft gelijk, en het is een groepskenmerk en geen persoonlijke voorkeur. De
+hele verkoopvraag is gebouwd op de aanname dat een verkoper unica verkoopt: één
+exemplaar op vier kanalen, dus een verdwenen advertentie kan een verkoop zijn,
+en afmelden bij de andere kanalen is onherstelbaar. Bij nieuwe voorraad klopt die
+aanname niet. Daar zijn er tien van, en de advertentie verdwijnt omdat de
+verkoper hem zelf weghaalde.
+
+Daarom een schakelaar bij Preferences > Upkeep, standaard aan zodat er voor
+niemand iets verandert. Staat hij uit, dan gaat een verdwenen advertentie meteen
+naar het archief: precies wat er gebeurt als de verkoper zelf "nee" antwoordt.
+Er gaat nooit iets van een ander kanaal af, en de knop uitzetten kan dus nooit
+betekenen dat we zelf maar aannemen dat iets verkocht is.
+
+De vraag wordt op ZES plekken gesteld: de extensiemelding (possibly-sold), de
+verkocht-badge uit de berichtenlijst, de teruggenomen herplaatsing, de
+Vinted-reconciliatie, de fotocontrole en de verkoop zonder geldig bewijs in
+crosslist. Vijf had ik er gevonden; de zesde kwam uit de test die elk
+backend-bestand met `"status": "sold_unconfirmed"` verplicht naar de schakelaar
+te kijken. Die test blijft staan, want een zevende plek erbij zou de knop
+stilzwijgend half kapot maken.
+
+Voor Egbert staat de schakelaar uit gezet, op zijn eigen verzoek via Daniel.

@@ -614,10 +614,16 @@ def possibly_sold(body: dict, user_id: str = Depends(get_current_user)):
 
     Body: {listings: [{item_id, platform, platform_listing_id?, title?, reden?}]}
     """
+    from backend.services.instellingen import verkoopvraag_aan
+
     db = get_db()
     regels = (body or {}).get("listings") or []
     gemarkeerd = 0
     nu = datetime.now(timezone.utc).isoformat()
+    # Wie geen vraag wil, krijgt er geen: de verdwenen advertentie gaat meteen
+    # het archief in, hetzelfde als wanneer hij zelf "nee" had geantwoord. Zie
+    # VERKOOPVRAAG in backend/services/instellingen.py.
+    vragen = verkoopvraag_aan(user_id)
     for r in regels[:200]:
         item_id = r.get("item_id")
         platform = r.get("platform")
@@ -631,7 +637,9 @@ def possibly_sold(body: dict, user_id: str = Depends(get_current_user)):
         if not eigen:
             continue
         reden = VERDENKING_REDENEN.get(str(r.get("reden") or ""), VERDENKING_STANDAARD)
-        velden = {"status": "sold_unconfirmed", "error_message": reden, "last_checked": nu}
+        velden = ({"status": "sold_unconfirmed", "error_message": reden, "last_checked": nu}
+                  if vragen else
+                  {"status": "delisted", "error_message": None, "last_checked": nu})
 
         def _markeer(f):
             return (db.table("listings").update(f)
@@ -641,10 +649,11 @@ def possibly_sold(body: dict, user_id: str = Depends(get_current_user)):
             _markeer(velden)
         except Exception as e:  # noqa: BLE001 — de melding mag nooit op een veld stuklopen
             logger.warning("[sold] kon reden niet meeschrijven voor %s/%s: %s", item_id, platform, e)
-            _markeer({"status": "sold_unconfirmed"})
+            _markeer({"status": velden["status"]})
         gemarkeerd += 1
-    logger.info("[sold] %s advertentie(s) als mogelijk verkocht gemarkeerd voor %s",
-                gemarkeerd, user_id)
+    logger.info("[sold] %s advertentie(s) %s voor %s", gemarkeerd,
+                "als mogelijk verkocht gemarkeerd" if vragen
+                else "gearchiveerd zonder vraag (verkoopvraag staat uit)", user_id)
     return {"marked": gemarkeerd}
 
 
@@ -696,6 +705,17 @@ def sold_from_messages(body: dict, background_tasks: BackgroundTasks,
     regels = (body or {}).get("sold") or []
     if platform not in ("marktplaats", "2dehands"):
         raise HTTPException(status_code=400, detail="platform must be marktplaats or 2dehands")
+
+    from backend.services.instellingen import verkoopvraag_aan
+
+    # Een verkocht-badge is een AANWIJZING, geen bewijs, en dus altijd een vraag.
+    # Wie geen vragen wil, wil deze ook niet: hij heeft er nog tien van liggen.
+    # Er verandert dan niets aan de advertentie — die staat immers gewoon nog op
+    # het platform.
+    if not verkoopvraag_aan(user_id):
+        logger.info("[sold] berichten (%s): %d melding(en) overgeslagen, de "
+                    "verkoopvraag staat uit voor %s", platform, len(regels), user_id)
+        return {"asked": 0, "skipped": len(regels)}
 
     db = get_db()
     eigen = fetch_all(lambda: db.table("items").select("id,title").eq("user_id", user_id))

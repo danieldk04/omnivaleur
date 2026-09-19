@@ -378,10 +378,15 @@ async def reconcile_verweesde_shopify_listings(user_id: str) -> dict:
                            .select("platform").eq("item_id", item_id)
                            .eq("status", "sold").execute())).data or [])
         al_verkocht_elders = any(r.get("platform") != "shopify" for r in verkochte_rijen)
+        # Heeft de verkoper de vraag "is dit verkocht?" uitgezet, dan archiveren
+        # we net zo goed zonder vragen. Zie VERKOOPVRAAG in
+        # backend/services/instellingen.py.
+        from backend.services.instellingen import verkoopvraag_aan
+        geen_vraag = not await naast_de_lus(lambda: verkoopvraag_aan(user_id))
 
         for rij in weg:
             try:
-                if al_verkocht_elders:
+                if al_verkocht_elders or geen_vraag:
                     await naast_de_lus(lambda r=rij: db.table("listings").update({
                         "status": "delisted", "error_message": None, "last_checked": nu,
                     }).eq("id", r["id"]).execute())

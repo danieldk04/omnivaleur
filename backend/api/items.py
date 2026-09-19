@@ -199,14 +199,42 @@ def write_settings(body: dict, user_id: str = Depends(get_current_user)):
     """Instellingen opslaan. Geeft terug wat er echt is bewaard, want een waarde
     buiten bereik wordt bijgesteld en dat hoort het scherm te laten zien."""
     from backend.services.instellingen import (RELIST_DAGEN_MAX, RELIST_DAGEN_MIN,
-                                               schrijf)
+                                               VERKOOPVRAAG, schrijf)
     try:
         bewaard = schrijf(user_id, body or {})
     except Exception as e:  # noqa: BLE001
         logger.exception("instellingen opslaan mislukt voor %s", user_id)
         raise HTTPException(status_code=500, detail=f"Could not save settings: {e}")
+    # Zet hij de verkoopvraag uit, dan moeten de vragen die er al staan ook weg.
+    # Anders zet hij de knop om en blijven er zeven "is dit verkocht?" op zijn
+    # dashboard staan die nooit meer verdwijnen. Archiveren is hetzelfde antwoord
+    # als "nee": er gaat niets van een ander kanaal af.
+    if VERKOOPVRAAG in (body or {}) and not bewaard.get(VERKOOPVRAAG, True):
+        _sluit_openstaande_verkoopvragen(user_id)
     return {**bewaard, "relist_dagen_min": RELIST_DAGEN_MIN,
             "relist_dagen_max": RELIST_DAGEN_MAX}
+
+
+def _sluit_openstaande_verkoopvragen(user_id: str) -> int:
+    """Openstaande "is dit verkocht?"-vragen van deze verkoper archiveren."""
+    try:
+        db = get_db()
+        eigen = [r["id"] for r in fetch_all(
+            lambda: db.table("items").select("id").eq("user_id", user_id))]
+        gesloten = 0
+        for i in range(0, len(eigen), 50):
+            uit = (db.table("listings")
+                   .update({"status": "delisted", "error_message": None})
+                   .eq("status", "sold_unconfirmed")
+                   .in_("item_id", eigen[i:i + 50]).execute())
+            gesloten += len(uit.data or [])
+        if gesloten:
+            logger.info("[sold] %d openstaande verkoopvraag/vragen gearchiveerd voor %s "
+                        "omdat hij de vraag heeft uitgezet", gesloten, user_id)
+        return gesloten
+    except Exception as e:  # noqa: BLE001 — de instelling is al bewaard; dit is opruimwerk
+        logger.warning("kon openstaande verkoopvragen niet opruimen voor %s: %s", user_id, e)
+        return 0
 
 
 # Welke staten er bestaan. Alles daarbuiten weigeren, anders zet één typefout

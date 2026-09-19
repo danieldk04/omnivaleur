@@ -162,9 +162,17 @@ async def herinner_onbevestigde_verkopen(now: datetime | None = None) -> int:
     levend = {row["user_id"] for row in (db.table("subscriptions").select("user_id,status")
               .in_("status", list(LEVENDE_ABONNEMENTEN)).execute().data or []) if row.get("user_id")}
 
+    from backend.services.instellingen import verkoopvraag_aan
+
     verstuurd = 0
     for uid, klant_rijen in per_klant.items():
         if uid not in levend:
+            continue
+        # Wie de vraag heeft uitgezet krijgt er ook geen herinnering over. Dit is
+        # het vangnet voor vragen die al stonden voordat hij de knop omzette;
+        # nieuwe komen er niet meer bij. Zie VERKOOPVRAAG in
+        # backend/services/instellingen.py.
+        if not verkoopvraag_aan(uid):
             continue
         if _al_gemaild(uid, klant_rijen, now):
             continue

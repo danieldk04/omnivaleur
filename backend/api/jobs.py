@@ -2838,17 +2838,25 @@ async def _al_weg_voor_wij_er_waren(db, job: dict) -> bool:
         .select("platform").eq("item_id", job["item_id"]).eq("status", "sold")
         .execute())).data or [])
     al_verkocht_elders = [r for r in verkochte_rijen if r.get("platform") != job["platform"]]
-    if al_verkocht_elders:
+    # En wie de vraag "is dit verkocht?" heeft uitgezet krijgt hem ook hier niet:
+    # dan is een verdwenen advertentie gewoon een verdwenen advertentie. Zie
+    # VERKOOPVRAAG in backend/services/instellingen.py.
+    from backend.services.instellingen import verkoopvraag_aan
+    eigenaar = job.get("user_id")
+    geen_vraag = bool(eigenaar) and not await naast_de_lus(
+        lambda: verkoopvraag_aan(eigenaar))
+    if al_verkocht_elders or geen_vraag:
         for rij in jong:
             (await naast_de_lus(lambda r=rij: db.table("listings").update({
                 "status": "delisted",
                 "error_message": None,
                 "last_checked": datetime.now(timezone.utc).isoformat(),
             }).eq("id", r["id"]).execute()))
-        logger.info("[sold] item %s op %s: advertentie was al weg en het artikel is elders al "
-                    "verkocht (%s) — %d rij(en) gearchiveerd, geen vraag gesteld",
-                    job["item_id"], job["platform"],
-                    al_verkocht_elders[0]["platform"], len(jong))
+        logger.info("[sold] item %s op %s: advertentie was al weg — %d rij(en) "
+                    "gearchiveerd, geen vraag gesteld (%s)",
+                    job["item_id"], job["platform"], len(jong),
+                    f"elders al verkocht op {al_verkocht_elders[0]['platform']}"
+                    if al_verkocht_elders else "de verkoopvraag staat uit")
     else:
         from backend.api.listings import VERDENKING_REDENEN
         reden = VERDENKING_REDENEN["verdwenen_te_jong"]
@@ -3392,8 +3400,11 @@ async def _reconcile_vinted_sales(db, job, scraped: list[dict], scan_meta: dict 
             "Dat is het beeld van een kapotte scan, niet van verkopen.",
             job["user_id"], len(verdwenen), len(active), grens)
 
+    from backend.services.instellingen import verkoopvraag_aan
+    mag_vragen = (not job.get("user_id")) or await naast_de_lus(
+        lambda: verkoopvraag_aan(job["user_id"]))
     for l in verdwenen:
-        vraag = l["item_id"] in elders_levend
+        vraag = mag_vragen and l["item_id"] in elders_levend
         velden = ({"status": "sold_unconfirmed",
                    "error_message": VERDENKING_REDENEN["vinted_weg"],
                    "last_checked": datetime.now(timezone.utc).isoformat()}
