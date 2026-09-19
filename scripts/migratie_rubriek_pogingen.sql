@@ -21,8 +21,20 @@ alter table items
 alter table items
   add column if not exists rubriek_gepoogd_op timestamptz;
 
+-- 19-09-2026, na meting tegen de echte database: de items-tabel zet updated_at
+-- bij ELKE schrijfactie op de systeemtijd, ook bij die van de teller hierboven.
+-- Op "updated_at is nieuwer dan de laatste poging" afgaan betekent dus dat de
+-- ronde zijn eigen schrijfactie aanziet voor een bewerking door de verkoper en
+-- iedereen de volgende nacht weer drie kansen geeft; de besparing zou nul zijn.
+-- Daarom beslist de tekst zelf: hierin staat een korte vingerafdruk van titel,
+-- omschrijving en merk zoals ze in de laatste modelvraag stonden.
+alter table items
+  add column if not exists rubriek_gevraagd_over text;
+
 -- De ronde zoekt op "geen rubriek" plus "minder dan drie pogingen". Zonder deze
 -- index scant hij daarvoor de hele voorraad.
 create index if not exists items_rubriek_herstel_idx
   on items (rubriek_pogingen, created_at desc)
   where category is null or category = '';
+
+-- Dit bestand is opnieuw te draaien: elke regel is "if not exists".

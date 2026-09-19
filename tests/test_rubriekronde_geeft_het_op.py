@@ -25,6 +25,7 @@ drie zijn de vangrails die ervoor zorgen dat de besparing niets kapotmaakt:
 4. Staan de kolommen er nog niet, dan draait de ronde precies zoals hiervoor.
 """
 import asyncio
+from datetime import datetime, timezone
 
 import pytest
 
@@ -114,6 +115,13 @@ class _Tabel:
         if self._update is not None:
             for rij in treffers:
                 rij.update(self._update)
+                # ZO DOET DE ECHTE DATABASE HET (19-09-2026, nagemeten).
+                # items zet updated_at bij elke schrijfactie op de systeemtijd,
+                # ook bij die van de rubriekteller zelf. De eerste versie van
+                # deze nabootsing deed dat niet, en juist daardoor zag een
+                # kapotte herkansregel er hier gezond uit.
+                if "updated_at" in self._db.kolommen:
+                    rij["updated_at"] = datetime.now(timezone.utc).isoformat()
             self._db.schrijfacties.append((self._update, [r["id"] for r in treffers]))
             return _Antwoord(treffers)
         if self._limit is not None:
@@ -133,7 +141,8 @@ class _DB:
 
 BASISKOLOMMEN = ["id", "title", "description", "brand", "category", "gender",
                  "color", "user_id", "created_at", "updated_at"]
-NIEUWE_KOLOMMEN = BASISKOLOMMEN + ["rubriek_pogingen", "rubriek_gepoogd_op"]
+NIEUWE_KOLOMMEN = BASISKOLOMMEN + ["rubriek_pogingen", "rubriek_gepoogd_op",
+                                   "rubriek_gevraagd_over"]
 
 
 def _artikel(id_, titel, **extra):
@@ -141,7 +150,8 @@ def _artikel(id_, titel, **extra):
            "category": None, "gender": None, "color": None,
            "user_id": "verkoper", "created_at": "2026-09-01T00:00:00+00:00",
            "updated_at": "2026-09-01T00:00:00+00:00",
-           "rubriek_pogingen": 0, "rubriek_gepoogd_op": None}
+           "rubriek_pogingen": 0, "rubriek_gepoogd_op": None,
+           "rubriek_gevraagd_over": None}
     rij.update(extra)
     return rij
 
@@ -165,7 +175,10 @@ def test_na_drie_lege_nachten_wordt_er_niet_meer_gevraagd(monkeypatch):
     """DE KERN. Op de oude code wordt dit spel elke nacht opnieuw gevraagd."""
     db = _DB([
         _artikel("spel", "Gran Turismo Sony PSP FR", rubriek_pogingen=3,
-                 rubriek_gepoogd_op="2026-09-18T03:00:00+00:00"),
+                 rubriek_gepoogd_op="2026-09-18T03:00:00+00:00",
+                 rubriek_gevraagd_over=ch._tekstvinger(
+                     {"title": "Gran Turismo Sony PSP FR",
+                      "description": "", "brand": None})),
         _artikel("jas", "Wollen winterjas dames maat M"),
     ], NIEUWE_KOLOMMEN)
 
@@ -250,9 +263,12 @@ def test_een_storing_kost_niemand_een_kans(monkeypatch):
 def test_bewerkte_tekst_geeft_nieuwe_kansen(monkeypatch):
     """Vult de verkoper de titel aan, dan is het een andere vraag."""
     db = _DB([
-        _artikel("kleed", "Kleed", rubriek_pogingen=3,
+        _artikel("kleed", "Vloerkleed perzisch 200x300 wol", rubriek_pogingen=3,
                  rubriek_gepoogd_op="2026-09-18T03:00:00+00:00",
-                 updated_at="2026-09-19T10:00:00+00:00"),
+                 updated_at="2026-09-19T10:00:00+00:00",
+                 # hier vroegen we over, en dat is niet meer wat er nu staat
+                 rubriek_gevraagd_over=ch._tekstvinger(
+                     {"title": "Kleed", "description": "", "brand": None})),
         _artikel("jas", "Wollen winterjas dames maat M"),
     ], NIEUWE_KOLOMMEN)
 
@@ -260,8 +276,64 @@ def test_bewerkte_tekst_geeft_nieuwe_kansen(monkeypatch):
         "Wollen winterjas dames maat M": {"category": "dames jassen"},
     })
 
-    assert "Kleed" in gevraagd, (
+    assert "Vloerkleed perzisch 200x300 wol" in gevraagd, (
         "het artikel is na de laatste poging bewerkt en verdient een nieuwe beoordeling")
+
+
+def test_een_aanraking_zonder_tekstwijziging_geeft_geen_nieuwe_kansen(monkeypatch):
+    """DE VALSTRIK DIE DE HELE BESPARING BIJNA NUL MAAKTE (19-09-2026).
+
+    De items-tabel zet updated_at bij elke schrijfactie op de systeemtijd, ook
+    bij die van de rubriekteller zelf. Een regel die op updated_at afgaat ziet
+    de ronde zijn eigen schrijfactie dus aan voor een bewerking door de verkoper
+    en geeft de volgende nacht iedereen zijn kansen terug.
+
+    Hetzelfde geldt voor een prijswijziging of een nieuwe foto: die raken het
+    artikel aan, maar veranderen niets aan de vraag die het model krijgt.
+    """
+    tekst = {"title": "Need for Speed Playstation 2 PS2", "description": "",
+             "brand": None}
+    db = _DB([
+        _artikel("spel", tekst["title"], rubriek_pogingen=3,
+                 rubriek_gepoogd_op="2026-09-18T03:00:00+00:00",
+                 # ruim na de laatste poging aangeraakt, maar de tekst is gelijk
+                 updated_at="2026-09-19T11:30:00+00:00",
+                 rubriek_gevraagd_over=ch._tekstvinger(tekst)),
+        _artikel("jas", "Wollen winterjas dames maat M"),
+    ], NIEUWE_KOLOMMEN)
+
+    gevraagd, _ = _draai(monkeypatch, db, {
+        "Wollen winterjas dames maat M": {"category": "dames jassen"},
+    })
+
+    assert tekst["title"] not in gevraagd, (
+        "het artikel werd alleen aangeraakt, de vraag aan het model is "
+        "letterlijk dezelfde en het antwoord dus ook")
+    assert db.rijen[0]["rubriek_pogingen"] == 3
+
+
+def test_de_besparing_houdt_nacht_na_nacht_stand(monkeypatch):
+    """Tien nachten achter elkaar, precies zoals het in productie loopt.
+
+    Deze proef valt om op de versie die op updated_at besliste: die gaf het spel
+    elke nacht zijn kansen terug, omdat de tellerschrijfactie van de vorige nacht
+    updated_at had verzet. Dan zijn het 10 modelvragen in plaats van 3.
+    """
+    db = _DB([
+        _artikel("spel", "Gran Turismo 5 Playstation 3"),
+        _artikel("jas", "Wollen winterjas dames maat M"),
+    ], NIEUWE_KOLOMMEN)
+    lukt = {"Wollen winterjas dames maat M": {"category": "dames jassen"}}
+
+    gevraagd_over_het_spel = 0
+    for _ in range(10):
+        db.rijen[1]["category"] = None       # elke nacht slaagt er iets
+        gevraagd, _ = _draai(monkeypatch, db, lukt)
+        gevraagd_over_het_spel += gevraagd.count("Gran Turismo 5 Playstation 3")
+
+    assert gevraagd_over_het_spel == 3, (
+        f"het spel kostte {gevraagd_over_het_spel} modelvragen in tien nachten, "
+        f"er waren er drie afgesproken")
 
 
 def test_zonder_de_kolommen_verandert_er_niets(monkeypatch):
@@ -273,6 +345,7 @@ def test_zonder_de_kolommen_verandert_er_niets(monkeypatch):
     for rij in db.rijen:                      # de kolommen bestaan simpelweg niet
         rij.pop("rubriek_pogingen", None)
         rij.pop("rubriek_gepoogd_op", None)
+        rij.pop("rubriek_gevraagd_over", None)
 
     gevraagd, uit = _draai(monkeypatch, db, {
         "Wollen winterjas dames maat M": {"category": "dames jassen"},

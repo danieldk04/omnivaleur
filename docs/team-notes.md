@@ -11257,3 +11257,45 @@ van de ronde liep vandaag één keer in een statement timeout.
 gekost en niets houdt een volgende lus tegen. En `support-mail-agent.yml` start
 elke vijf minuten tussen 06:00 en 20:00 `scripts/support_mail_agent.py`, een
 bestand dat niet bestaat: 180 mislukte starts per dag.
+
+## 19-09-2026 (later die dag) — De opgeefgrens werkte niet, en waarom dat niet te zien was
+
+De migratie is gedraaid. Meteen daarna de ronde tegen de echte database gezet, en
+daar bleek de grens van vanochtend geen cent te besparen.
+
+**Wat er mis was.** De items-tabel zet `updated_at` bij elke schrijfactie op de
+systeemtijd. Ook bij de tellerschrijfactie van de rubriekronde zelf. Gemeten:
+teller gezet op 07:47:54.265728, `updated_at` sprong mee naar 07:47:54.265775,
+47 microseconden later. De herkansregel ("bewerkt na de laatste poging betekent
+een nieuwe vraag") zag daardoor zijn eigen schrijfactie aan voor een bewerking
+door de verkoper en zette alle uitgeputte artikelen prompt terug op nul. In de
+proef: tien nachten, tien modelvragen over hetzelfde spel in plaats van drie.
+
+**Waarom de proef dit miste.** De nagebootste database in
+`tests/test_rubriekronde_geeft_het_op.py` verzette `updated_at` niet bij een
+schrijfactie, en de echte doet dat wel. Zeven groene proeven, een kapotte regel.
+De nabootsing doet het nu wel, en daarmee vallen vijf van de negen proeven om op
+de oude versie. Les voor de kennisbank: een nagebootste database die geen
+triggers nadoet bewijst niets over wat de echte doet.
+
+**Wat er nu beslist.** Niet het tijdstip maar de tekst. Nieuwe kolom
+`rubriek_gevraagd_over` houdt een korte vingerafdruk bij van titel, omschrijving
+en merk zoals ze in de laatste modelvraag stonden. Verschilt die niet, dan zou de
+vraag letterlijk dezelfde zijn en wordt hij niet gesteld. Het tijdstip is nog wel
+de goedkope voorselectie, met vijf minuten marge voor klokverschil.
+
+**Waarom de marge alleen niet volstond.** Gemeten op de 404 artikelen zonder
+rubriek: 383 zijn de afgelopen 30 dagen aangeraakt, 101 in de laatste 7 dagen.
+Een prijswijziging of een nieuwe foto raakt `updated_at` net zo goed aan. Op het
+tijdstip afgaan zou dus ook zonder onze eigen schrijfactie het grootste deel van
+de besparing weer weggeven.
+
+**`scripts/migratie_rubriek_pogingen.sql` moet opnieuw.** Het bestand heeft er een
+derde kolom bij en is met opzet opnieuw te draaien: elke regel is "if not
+exists". Tot die kolom er staat gedraagt de ronde zich precies zoals hiervoor,
+nagemeten: 200 vragen, 1.927.627 prompttekens, tellers blijven op nul.
+
+**Supportmail-workflow: al uit.** Eerder deze dag gemeld als "start 180 keer per
+dag een script dat niet bestaat". Dat klopte niet. `gh workflow list` geeft
+`disabled_manually` en de laatste poging was 06-09-2026. Er valt niets uit te
+zetten. Het lege yml-bestand staat er nog, dat kost niets.

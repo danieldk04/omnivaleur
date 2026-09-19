@@ -38,8 +38,21 @@ dollar per nacht alleen aan invoer. Dat is ruim 17 dollar per maand voor vragen
 waarvan het antwoord van tevoren vaststaat.
 
 Vanaf nu krijgt een artikel drie kansen. Daarna vraagt de ronde er niet meer
-naar, tot de verkoper de titel of de omschrijving aanpast — dan begint het
-tellen opnieuw, want dan is het een andere vraag geworden.
+naar, tot de verkoper de titel of de omschrijving aanpast. Dan begint het tellen
+opnieuw, want dan is het een andere vraag geworden.
+
+DE VALSTRIK DIE DIT BIJNA WAARDELOOS MAAKTE (19-09-2026, gemeten na de migratie).
+
+De eerste versie besliste op updated_at: nieuwer dan de laatste poging betekende
+bewerkt. Maar de items-tabel zet updated_at bij elke schrijfactie op de
+systeemtijd, dus ook bij de tellerschrijfactie van deze ronde zelf. Gemeten:
+teller op 07:47:54.265728, updated_at 47 microseconden later. De herkansronde gaf
+daardoor prompt alle uitgeputte artikelen hun kansen terug en de besparing was
+precies nul. Zichtbaar was dat alleen door het tegen de echte database te draaien;
+de nabootsing in de proef verzette updated_at niet en zag er dus gezond uit.
+
+Nu beslist de tekst zelf, via een vingerafdruk van titel, omschrijving en merk.
+Het tijdstip is nog wel de goedkope voorselectie, met een ruime marge.
 
 DRIE DINGEN DIE HIER BEWUST ZO ZIJN:
 
@@ -57,6 +70,7 @@ DRIE DINGEN DIE HIER BEWUST ZO ZIJN:
 De migratie staat in scripts/migratie_rubriek_pogingen.sql.
 """
 from __future__ import annotations
+import hashlib
 import logging
 from datetime import datetime, timezone
 
@@ -77,6 +91,23 @@ HERKANSVENSTER = 2000
 
 _TELLER = "rubriek_pogingen"
 _GEPOOGD = "rubriek_gepoogd_op"
+_VINGER = "rubriek_gevraagd_over"
+
+# WAAROM DIT ER IS (19-09-2026, gemeten tegen de echte database).
+#
+# De items-tabel zet updated_at bij elke schrijfactie op de systeemtijd. Ook bij
+# onze eigen tellerschrijfactie: gemeten stond de teller op 07:47:54.265728 en
+# updated_at 47 microseconden later op 07:47:54.265775. Op "updated_at is nieuwer
+# dan de laatste poging" afgaan betekent dus dat de ronde zijn eigen schrijfactie
+# aanziet voor een bewerking door de verkoper en iedereen de volgende nacht
+# meteen weer drie kansen geeft. De besparing zou precies nul zijn.
+#
+# Daarom beslist niet het tijdstip maar de tekst zelf. Het tijdstip is alleen nog
+# een goedkope voorselectie: alles wat binnen deze marge na de laatste poging is
+# aangeraakt hoeven we niet eens na te kijken. Ruim genomen, want een klokverschil
+# tussen de app en de database van een paar seconden is normaal en een verkoper
+# bewerkt zijn advertentie niet binnen vijf minuten na de nachtronde van 05:00.
+MARGE_SECONDEN = 300
 
 
 def _tijd(waarde) -> datetime | None:
@@ -90,14 +121,35 @@ def _tijd(waarde) -> datetime | None:
     return dt.replace(tzinfo=timezone.utc) if dt.tzinfo is None else dt
 
 
+def _tekstvinger(item: dict) -> str:
+    """Korte vingerafdruk van precies de tekst die in de modelvraag terechtkomt.
+
+    Verandert deze niet, dan zou de vraag aan het model letterlijk dezelfde zijn
+    en staat het antwoord dus al vast. Verandert hij wel, dan is het een nieuwe
+    vraag en verdient het artikel een nieuwe beoordeling.
+    """
+    ruw = "|".join(str(item.get(k) or "").strip().lower()
+                   for k in ("title", "description", "brand"))
+    return hashlib.sha1(ruw.encode("utf-8")).hexdigest()[:16]
+
+
 def _geef_bewerkte_artikelen_een_nieuwe_kans(db, user_id: str | None) -> int:
-    """Zet de teller terug op nul voor artikelen die na hun laatste poging zijn bewerkt.
+    """Zet de teller terug op nul voor artikelen waarvan de tekst is veranderd.
 
     Een verkoper die de titel aanvult verdient een nieuwe beoordeling: het is
-    letterlijk een andere vraag dan de vorige keer. PostgREST kan twee kolommen
-    niet met elkaar vergelijken, dus we halen de uitgeputte artikelen op met
-    alleen hun twee tijdstempels en vergelijken hier.
+    letterlijk een andere vraag dan de vorige keer.
+
+    In twee stappen, want de tekst van duizenden artikelen ophalen is duur. Eerst
+    een goedkope lezing van alleen de tijdstempels om te zien wat er überhaupt is
+    aangeraakt sinds de laatste poging. Daarna pas, en alleen voor die paar, de
+    tekst zelf om te vergelijken. Het tijdstip mag nooit alleen beslissen: onze
+    eigen tellerschrijfactie verzet updated_at ook (zie MARGE_SECONDEN), en een
+    prijswijziging of een nieuwe foto verandert niets aan de vraag die het model
+    krijgt.
     """
+    def _brokken(rij_ids):
+        return (rij_ids[i:i + 100] for i in range(0, len(rij_ids), 100))
+
     q = (db.table("items")
          .select(f"id,updated_at,{_GEPOOGD}")
          .or_("category.is.null,category.eq.")
@@ -106,38 +158,73 @@ def _geef_bewerkte_artikelen_een_nieuwe_kans(db, user_id: str | None) -> int:
         q = q.eq("user_id", user_id)
     rijen = q.limit(HERKANSVENSTER).execute().data or []
 
-    opnieuw = []
+    verdacht = []
     for rij in rijen:
         gepoogd = _tijd(rij.get(_GEPOOGD))
         bewerkt = _tijd(rij.get("updated_at"))
         # Geen tijdstempel van de vorige poging betekent dat we niet kunnen
         # vaststellen dat er niets veranderd is. Dan geldt het voordeel van de
-        # twijfel en krijgt het artikel zijn kansen terug.
-        if gepoogd is None or (bewerkt is not None and bewerkt > gepoogd):
-            opnieuw.append(rij["id"])
+        # twijfel en kijken we de tekst na.
+        if gepoogd is None:
+            verdacht.append(rij["id"])
+        elif bewerkt is not None and (bewerkt - gepoogd).total_seconds() > MARGE_SECONDEN:
+            verdacht.append(rij["id"])
 
-    for brok in (opnieuw[i:i + 100] for i in range(0, len(opnieuw), 100)):
+    opnieuw = []
+    for brok in _brokken(verdacht):
+        tekst = (db.table("items")
+                 .select(f"id,title,description,brand,{_VINGER}")
+                 .in_("id", brok).execute().data or [])
+        for rij in tekst:
+            vorige = rij.get(_VINGER)
+            if not vorige or vorige != _tekstvinger(rij):
+                opnieuw.append(rij["id"])
+
+    for brok in _brokken(opnieuw):
         db.table("items").update({_TELLER: 0}).in_("id", brok).execute()
     if opnieuw:
         logger.info(f"Rubriekherstel: {len(opnieuw)} bewerkte artikelen krijgen "
-                    f"opnieuw {MAX_POGINGEN} kansen")
+                    f"opnieuw {MAX_POGINGEN} kansen "
+                    f"(van {len(verdacht)} aangeraakt sinds de laatste poging)")
     return len(opnieuw)
 
 
-def _schrijf_pogingen(db, per_aantal: dict[int, list[str]]) -> None:
-    """Werk de teller bij, gegroepeerd per nieuwe stand zodat het drie vragen blijft."""
+def _schrijf_pogingen(db, per_aantal: dict[int, list[dict]]) -> None:
+    """Werk de teller bij.
+
+    Artikelen die nog kansen over hebben gaan in bulk, gegroepeerd per stand, dus
+    honderden artikelen kosten een handvol schrijfacties. Artikelen die hun
+    laatste kans opgebruiken krijgen er de vingerafdruk van hun tekst bij, en die
+    verschilt per artikel, dus die moeten één voor één. Dat gebeurt per artikel
+    precies één keer in zijn leven.
+    """
     nu = datetime.now(timezone.utc).isoformat()
-    for aantal, ids in per_aantal.items():
+    mislukt = 0
+    for aantal, items in per_aantal.items():
+        if aantal >= MAX_POGINGEN:
+            for item in items:
+                try:
+                    (db.table("items")
+                       .update({_TELLER: aantal, _GEPOOGD: nu,
+                                _VINGER: _tekstvinger(item)})
+                       .eq("id", item["id"]).execute())
+                except Exception:  # noqa: BLE001
+                    mislukt += 1
+            continue
+        ids = [item["id"] for item in items]
         for brok in (ids[i:i + 100] for i in range(0, len(ids), 100)):
             try:
                 (db.table("items")
                    .update({_TELLER: aantal, _GEPOOGD: nu})
                    .in_("id", brok).execute())
-            except Exception as e:  # noqa: BLE001
-                # De teller bijhouden is een besparing, geen taak. Mislukt het,
-                # dan vraagt de ronde morgen gewoon opnieuw: dat is de oude
-                # situatie en die brak niets.
-                logger.warning(f"Rubriekteller bijwerken mislukt: {e}")
+            except Exception:  # noqa: BLE001
+                mislukt += len(brok)
+    if mislukt:
+        # De teller bijhouden is een besparing, geen taak. Mislukt het, dan
+        # vraagt de ronde morgen gewoon opnieuw: dat is de oude situatie en die
+        # brak niets. Eén regel, niet honderden.
+        logger.warning(f"Rubriekteller bijwerken mislukt voor {mislukt} artikelen; "
+                       f"staat scripts/migratie_rubriek_pogingen.sql volledig gedraaid?")
 
 
 async def herstel_rubrieken(limiet: int = STANDAARD_LIMIET,
@@ -184,7 +271,7 @@ async def herstel_rubrieken(limiet: int = STANDAARD_LIMIET,
             return {"gelezen": 0, "gevuld": 0, "leeg_gebleven": 0, "mislukt": 1}
 
     gevuld = leeg = mislukt = 0
-    zonder_uitkomst: dict[int, list[str]] = {}
+    zonder_uitkomst: dict[int, list[dict]] = {}
     for item in items:
         try:
             uitkomst = await _infer_attributes_smart(
@@ -202,7 +289,7 @@ async def herstel_rubrieken(limiet: int = STANDAARD_LIMIET,
         if not patch.get("category"):
             leeg += 1
             stand = int(item.get(_TELLER) or 0) + 1
-            zonder_uitkomst.setdefault(min(stand, MAX_POGINGEN), []).append(item["id"])
+            zonder_uitkomst.setdefault(min(stand, MAX_POGINGEN), []).append(item)
             continue
         try:
             db.table("items").update(patch).eq("id", item["id"]).execute()
