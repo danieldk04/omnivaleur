@@ -60,6 +60,7 @@ def start_scheduler():
     from backend.services.extension_offline import waarschuw_offline_extensies
     from backend.services.verkoop_reconciliatie import reconcileer_verkochte_artikelen
     from backend.services.verkoop_herinnering import herinner_onbevestigde_verkopen
+    from backend.services.verlopen_controle import controleer_verlopen_verkoopvragen
     from backend.services.foto_controle import controleer_fotos_op_advertenties
     from backend.services.publicatie_herstel import hervat_afgekapte_api_publicaties
     from backend.services.analytics_report import send_weekly_report
@@ -156,6 +157,23 @@ def start_scheduler():
         max_instances=1,
         coalesce=True,
         next_run_time=_dt.now() + _td(minutes=10),
+    )
+    # VERLOPEN IS GEEN VERKOOP (19-09-2026, Lynn van De Juiste Toon).
+    # Een verlopen zoekertje staat er voor de verkoper gewoon nog, met VERLOPEN
+    # erop, en kreeg tot nu toe "is dit verkocht?" mee. Deze ronde kijkt de
+    # openstaande vragen na op de advertentiepagina zelf en trekt in wat
+    # aantoonbaar alleen verlopen is. Vóór de herinneringsmail in de lijst, zodat
+    # een ingetrokken vraag ook geen herinnering meer oplevert. Zie
+    # backend/services/verlopen_controle.py.
+    _scheduler.add_job(
+        _off_the_request_loop(controleer_verlopen_verkoopvragen),
+        "interval",
+        minutes=30,
+        id="verlopen_controle",
+        replace_existing=True,
+        max_instances=1,
+        coalesce=True,
+        next_run_time=_dt.now() + _td(minutes=2),
     )
     # Herinneringsmail als een mogelijke verkoop op bevestiging blijft wachten.
     # Elk uur; de functie kijkt zelf of het overdag is en of er iets openstaat.

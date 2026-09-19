@@ -7216,7 +7216,7 @@ async function checkSoldListings() {
           try { await chrome.storage.local.set({ [startSleutel]: start + beurt.length }); } catch (_) {}
 
           const teBevestigen = [];
-          const tellers = { verkocht: 0, weg: 0, leeft: 0, onbekend: 0 };
+          const tellers = { verkocht: 0, verlopen: 0, weg: 0, leeft: 0, onbekend: 0 };
           let nagekeken = 0;
           for (const l of beurt) {
             // Rustig aan: veertig aanvragen achter elkaar op volle snelheid is
@@ -7233,6 +7233,12 @@ async function checkSoldListings() {
               // Bewijs op de pagina zelf. Geen tweede ronde nodig.
               delete staat[sleutel];
               teBevestigen.push({ ...regel, reden: "label" });
+            } else if (oordeel === "verlopen") {
+              // De advertentie zegt zelf dat hij verlopen is. Dat is bewijs, dus
+              // geen tweede ronde — en het is geen verkoop, dus de server maakt
+              // er geen vraag van maar archiveert hem. Zie bekijkEigenPagina.
+              delete staat[sleutel];
+              teBevestigen.push({ ...regel, reden: "verlopen" });
             } else if (oordeel === "weg") {
               const eerder = staat[sleutel];
               const nu = Date.now();
@@ -7350,24 +7356,41 @@ async function meldMogelijkeVerkopen(serverUrl, regels) {
   }
 }
 
-// Wat zegt de advertentie zelf? Vier uitkomsten, bewust uit elkaar gehouden —
+// Wat zegt de advertentie zelf? Vijf uitkomsten, bewust uit elkaar gehouden —
 // ze leiden tot heel verschillende conclusies:
 //
 //   "verkocht"  De pagina draagt zelf het label verkocht/gereserveerd. Het
 //               sterkste bewijs dat er is; hier hoeft niets bevestigd te worden
 //               met een tweede ronde.
-//   "weg"       De advertentie bestaat niet meer (404, of doorgestuurd naar iets
-//               anders dan deze advertentie). Dat kan verkocht zijn, maar op
-//               Marktplaats óók gewoon verlopen — dus nooit alleen hierop
-//               afgaan.
+//   "verlopen"  De pagina zegt zélf dat de advertentie verlopen is ("Dit
+//               zoekertje is helaas verlopen", of het verlopen-blok dat beide
+//               platforms eromheen zetten). Dat is GEEN verkoop en hoort dus
+//               nooit als verkoopvraag bij de verkoper terecht te komen.
+//   "weg"       De advertentie bestaat niet meer en de pagina zegt niet waarom
+//               (404, of doorgestuurd naar iets anders dan deze advertentie).
+//               Dat kan verkocht zijn, maar ook zelf weggehaald — dus vragen.
 //   "leeft"     Staat er nog gewoon. Elke verdenking vervalt.
 //   "onbekend"  401/403 (zakelijk account zonder sessie), serverfout, of geen
 //               verbinding. Niets bewezen, dus niets doen — en vooral geen
 //               verdenking laten staan die op een storing berust.
+//
+// WAAROM "verlopen" APART STAAT (19-09-2026, Lynn van De Juiste Toon).
+// Zij kreeg tientallen keren "Not found on the platform any more" te zien bij
+// zoekertjes die ze daarna gewoon terugvond op 2dehands. Allebei waar: de
+// advertentie is van de zoekresultaten af, maar haar eigen pagina staat er nog
+// mét foto's en tekst, met het stempel VERLOPEN erop. Gemeten op haar account:
+// van de 74 gemelde 2dehands-zoekertjes gaven er 55 een HTTP 410 met precies
+// die tekst erop, en nul van de vijf bewezen levende advertenties deed dat.
+// Verlopen is geen verkoop, dus het is ook geen vraag.
 // Zelfde meting als bij WEG_TEKST_BRON: "advertentie is helaas verlopen" (en op
 // 2dehands "zoekertje is helaas verlopen") viel hier buiten, dus een verlopen
 // advertentie gold als "leeft".
 const NIET_MEER_BESCHIKBAAR = new RegExp(WEG_MARKER_BRON + "|" + WEG_TEKST_BRON);
+// Alleen het bewijs dat de advertentie VERLOPEN is, niet "weg" in het algemeen.
+// Het blok eromheen (taalonafhankelijk, gemeten op beide kanten) en de zin die
+// Marktplaats en 2dehands erin zetten.
+const IS_VERLOPEN = new RegExp(
+  WEG_MARKER_BRON + "|(advertentie|zoekertje)\\s*(is)?\\s*(helaas)?\\s*verlopen");
 
 async function bekijkEigenPagina(platform, advertentieId) {
   if (!advertentieId) return "onbekend";
@@ -7375,7 +7398,14 @@ async function bekijkEigenPagina(platform, advertentieId) {
   const url = `${basis}/seller/view/${advertentieId}`;
   try {
     const r = await fetch(url, { credentials: "include", redirect: "follow" });
-    if (r.status === 404 || r.status === 410) return "weg";
+    // 410 is precies wat een verlopen advertentie geeft, en de pagina zelf zegt
+    // het er nog bij. Die tekst NIET lezen was de fout: dan ging een verlopen
+    // zoekertje als "misschien verkocht" de deur uit.
+    if (r.status === 404 || r.status === 410) {
+      let body = "";
+      try { body = (await r.text()).toLowerCase(); } catch (_) { body = ""; }
+      return IS_VERLOPEN.test(body) ? "verlopen" : "weg";
+    }
     if (!r.ok) return "onbekend";                  // 401/403/5xx: niets bewezen
     // Doorgestuurd naar iets anders dan deze advertentie (meestal de homepage of
     // een zoekpagina) betekent bij Marktplaats: deze advertentie bestaat niet meer.
@@ -7384,6 +7414,7 @@ async function bekijkEigenPagina(platform, advertentieId) {
     // Het label eerst: dat is bewijs, de rest is gevolgtrekking.
     if (/(^|[^a-z])(verkocht|gereserveerd)([^a-z]|$)/.test(html)
         && !/verkochte\s+artikelen|verkocht\?|meld het/.test(html)) return "verkocht";
+    if (IS_VERLOPEN.test(html)) return "verlopen";
     if (NIET_MEER_BESCHIKBAAR.test(html)) return "weg";
     // Een echte advertentiepagina noemt het advertentienummer. Staat dat er niet
     // in, dan kijken we niet naar deze advertentie en concluderen we niets.

@@ -11481,3 +11481,65 @@ bevriest de rest — precies waar de ontdooier (Page.setWebLifecycleState) al el
 tien seconden tegen vecht. Dat is alleen met een echte publicatie in Chrome te
 bewijzen, met twee kanalen tegelijk en een klokmeting van minstens 90 seconden.
 Niet doen op gevoel.
+
+## 19-09-2026 (vervolg) — "Not found on the platform anymore" bij zoekertjes die er nog staan
+
+Lynn van De Juiste Toon meldde via Daniel: bij Items, in het blok "did these
+items sell?", staat bij tientallen artikelen "Not found on the platform anymore",
+maar als ze die natrekt staan ze er gewoon nog. Voornamelijk op 2dehands.
+
+**Ze heeft gelijk, en wij hadden ook gelijk — dat was precies het probleem.** Een
+verlopen 2dehands-zoekertje is van de zoekresultaten af, maar zijn eigen pagina
+staat er nog: foto's, tekst, en het stempel VERLOPEN erop. Wie de melding natrekt
+ziet zijn advertentie staan en denkt aan een storing.
+
+**Gemeten, niet aangenomen.**
+
+- Haar account had 74 openstaande verkoopvragen op 2dehands (van de 133 die er in
+  totaal voor alle klanten stonden). 73 daarvan stonden niet meer op haar
+  openbare verkoperslijst, dus "weg" klopte.
+- Van die 74 gaven er 55 bij het ophalen HTTP 410 met "Dit zoekertje is helaas
+  verlopen" op de pagina. Nul ervan was verkocht. De overige 19 gaven 403 omdat
+  2dehands mijn meettempo afkapte; dat is geen tegenbewijs.
+- Vijf bewezen levende advertenties gaven dat verlopen-signaal nul keer: HTTP
+  200, geen verlopen-blok, geen verlopen-zin. Verlopen en levend zijn dus scherp
+  uit elkaar te houden.
+- Tempo telt: op volle snelheid weigerde 2dehands 24 van de 74 aanvragen met 403,
+  met acht seconden ertussen nul van de tien.
+
+**Waar het fout ging.** `bekijkEigenPagina` in de extensie gaf bij 404 én 410
+meteen "weg" terug zonder de pagina te lezen, terwijl juist die pagina zegt
+waarom de advertentie weg is. "Weg" gaat als verdenking naar de server en wordt
+daar een verkoopvraag. De zin die het had kunnen uitleggen ("op Marktplaats
+verdwijnt een gratis advertentie ook vanzelf na 30 dagen") schrijft de server
+wel, maar het dashboard gooide die weg en zette er "Not found on the platform any
+more" voor in de plaats.
+
+**Wat er nu staat.**
+
+1. De extensie (1.0.341) kent "verlopen" als aparte uitkomst en leest bij 404/410
+   de pagina wél. De server archiveert zo'n advertentie zonder vraag.
+2. `backend/services/verlopen_controle.py` draait elk half uur en trekt de al
+   openstaande vragen na op diezelfde openbare pagina. Alleen bewijs telt; 401,
+   403, een storing of een lege pagina laat de vraag staan, en een hele ronde
+   zonder antwoord breekt af. Nodig omdat een nieuwe extensieversie weken door de
+   Chrome Web Store doet en die 133 vragen nu al bij klanten staan.
+3. Het dashboard toont de uitleg van de server zelf onder de melding.
+4. Droog gedraaid tegen de echte database en de echte pagina's: 8 van 8
+   nagekeken vragen aantoonbaar verlopen, nul zonder uitspraak.
+
+**Openstaand punt, met cijfers: de verlengklok van 2dehands loopt op de
+importdatum.** Van haar 458 levende 2dehands-advertenties hebben er 288 een
+verkeerde `listed_at`, en 285 daarvan vallen precies door het verlengvenster van
+`extend_expiring_2dehands` (22 tot 45 dagen) heen. Ze heeft nog nooit één
+verlengopdracht gekregen. De echte data lopen terug tot mei 2022, `listed_at`
+staat voor alle 458 op de importdag 05-09-2026.
+
+Dit is NIET op te lossen door `listed_at` te overschrijven met de datum uit de
+zoek-API, en dat is bewust nagelaten: een geslaagde `extend` schuift `listed_at`
+zelf vooruit, dus die boekhouding zou elke ronde teruggedraaid worden. En de
+getoonde datum is op 2dehands niet de vervalklok — er staan advertenties van mei
+2022 gewoon live. De echte vervaldatum staat in het eigen overzicht van de
+verkoper en moet daar vandaan komen, via de extensie. Dat is een apart karwei.
+
+Testbak: 1524 goed, 14 stuk — exact dezelfde 14 als voor deze wijziging.

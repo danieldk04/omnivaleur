@@ -89,6 +89,16 @@ for (const id of ["sold-confirm-bar", "an-sold-confirm-bar"]) {
       `${id} zegt dat er niets is weggehaald en dat het nog niet meetelt in de omzet`);
 }
 // De oudere advertentie krijgt de nuance dat hij ook verlopen kán zijn.
+// 19-09-2026, Lynn van De Juiste Toon: het scherm gooide de uitleg van de server
+// weg en zette er drie kale woorden voor in de plaats ("Not found on the
+// platform any more"). Die uitleg hoort erbij te staan.
+for (const id of Object.keys(vakken)) {
+  eis(vakken[id].innerHTML.includes("de advertentie is niet meer te vinden"),
+      `${id} toont de uitleg van de server zelf`);
+  eis(!vakken[id].innerHTML.includes("Mogelijk verkocht:"),
+      `${id} herhaalt de aanhef niet nog een keer`);
+}
+
 eis(vakken["an-sold-confirm-bar"].innerHTML.includes("adverts expire after 30"),
     "een advertentie ouder dan 28 dagen krijgt de verlopen-nuance");
 

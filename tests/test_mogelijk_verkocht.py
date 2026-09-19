@@ -45,16 +45,23 @@ def test_een_leeg_overzicht_levert_geen_enkele_verdenking_op():
     assert "deze ronde wordt niets als verdwenen geteld" in aanhef
 
 
-def test_vier_uitkomsten_blijven_uit_elkaar():
-    """"Weg" en "verkocht" leiden tot verschillende conclusies, en "onbekend"
-    (401 bij een zakelijk account, serverfout) mag nooit als bewijs tellen."""
+def test_vijf_uitkomsten_blijven_uit_elkaar():
+    """"Weg", "verlopen" en "verkocht" leiden tot verschillende conclusies, en
+    "onbekend" (401 bij een zakelijk account, serverfout) mag nooit als bewijs
+    tellen.
+
+    "verlopen" staat er sinds 19-09-2026 apart in (Lynn van De Juiste Toon): een
+    zoekertje dat op zijn eigen pagina VERLOPEN heet is geen verkoop, en werd tot
+    dan toe als "weg" gemeld en dus een verkoopvraag."""
     functie = BG.split("async function bekijkEigenPagina(", 1)[1].split("\n}", 1)[0]
-    for oordeel in ('"verkocht"', '"weg"', '"leeft"', '"onbekend"'):
+    for oordeel in ('"verkocht"', '"verlopen"', '"weg"', '"leeft"', '"onbekend"'):
         assert oordeel in functie, f"{oordeel} wordt niet meer teruggegeven"
     # 401/403/5xx is niets bewezen, geen verdwenen advertentie.
     assert 'if (!r.ok) return "onbekend";' in functie
-    # 404 is dat wél.
-    assert 'if (r.status === 404 || r.status === 410) return "weg";' in functie
+    # 404/410 betekent dat hij weg is — maar de pagina mag er nog bij zeggen
+    # waaróm, en dat moet gelezen worden vóór er "weg" uit rolt.
+    assert "if (r.status === 404 || r.status === 410) {" in functie
+    assert 'return IS_VERLOPEN.test(body) ? "verlopen" : "weg";' in functie
 
 
 def test_een_label_telt_meteen_en_afwezigheid_pas_na_twee_rondes():
@@ -263,11 +270,19 @@ _GEVALLEN = [
     # 15-09-2026: dit is de zin die Marktplaats er echt neerzet. Hij matchte niet
     # en dus gold een verlopen advertentie als "leeft".
     ("tekst 'is helaas verlopen' (Marktplaats)",
-     {"html": "m123 Deze advertentie is helaas verlopen"}, "weg"),
+     {"html": "m123 Deze advertentie is helaas verlopen"}, "verlopen"),
     ("tekst 'is helaas verlopen' (2dehands)",
-     {"html": "m123 Dit zoekertje is helaas verlopen"}, "weg"),
+     {"html": "m123 Dit zoekertje is helaas verlopen"}, "verlopen"),
     ("het verlopen-blok in de HTML, zonder dat de zin leesbaar is",
-     {"html": '<div id="expired-listing-root"></div><div class="expiredlisting-module-root">m123</div>'}, "weg"),
+     {"html": '<div id="expired-listing-root"></div><div class="expiredlisting-module-root">m123</div>'}, "verlopen"),
+    # 19-09-2026, Lynn van De Juiste Toon. Dit is wat 2dehands echt teruggeeft bij
+    # een verlopen zoekertje: HTTP 410 mét de uitleg erop. Gemeten op 55 van haar
+    # advertenties. De statuscode alleen werd gelezen, de uitleg niet, en daarmee
+    # werd een verlopen zoekertje een vraag "is dit verkocht?".
+    ("410 met het verlopen-blok erop (2dehands, echt gemeten)",
+     {"status": 410, "html": '<div id="expired-listing-root">Dit zoekertje is helaas verlopen</div>'},
+     "verlopen"),
+    ("410 zonder enige uitleg blijft gewoon 'weg'", {"status": 410, "html": "<html></html>"}, "weg"),
     ("de knop 'Advertentie verwijderen' op een levende pagina is geen bewijs",
      {"html": "<h1>Blazer</h1> m123 39,50 <button>Advertentie verwijderen</button>"}, "leeft"),
     ("gewone levende advertentie", {"html": "<h1>Blazer</h1> m123 39,50 Bieden"}, "leeft"),

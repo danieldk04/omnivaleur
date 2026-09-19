@@ -4827,11 +4827,18 @@ function renderSoldConfirmBar() {
     const start = listing.listed_at || listing.created_at;
     const dagen = start ? Math.floor((Date.now() - new Date(start).getTime()) / 86400000) : null;
     const reden = listing.error_message || '';
+    // De server schrijft er een hele uitleg bij — waaróm we denken dat het
+    // verkocht kan zijn, en wat het óók kan betekenen. Daar stond hier drie
+    // kale woorden voor in de plaats ("Not found on the platform any more"), en
+    // dat leest als een storing. Lynn van De Juiste Toon (19-09-2026) ging ze
+    // nakijken, vond ze terug op 2dehands en meldde het als bug. Terecht: de
+    // zin die het had kunnen uitleggen werd weggegooid.
     const label = reden.includes('toont zelf')
       ? `<span style="color:#b45309;font-weight:600">The advert itself says sold</span>`
       : reden.includes('Verkocht!')
         ? `<span style="color:#b45309;font-weight:600">Marktplaats flagged your chat "Sold!"</span>`
         : `Not found on the platform any more`;
+    const uitleg = reden.replace(/^Mogelijk verkocht:\s*/i, '').trim();
     const ouderdom = dagen === null ? ''
       : (dagen >= 28 && (p === 'marktplaats' || p === '2dehands')
           ? ` &middot; online for ${dagen} days &mdash; adverts expire after 30, so this may just have run out`
@@ -4841,6 +4848,7 @@ function renderSoldConfirmBar() {
       <div style="flex:1;min-width:0">
         <div style="font-weight:600;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${PLATFORM_ICONS[p] || '🏪'} ${esc(item.title || 'Untitled')}</div>
         <div style="font-size:11.5px;color:var(--muted)">${PLATFORM_LABELS[p] || p} &middot; ${label}${ouderdom}</div>
+        ${uitleg ? `<div style="font-size:11px;color:var(--muted);opacity:.85;margin-top:2px">${esc(uitleg)}</div>` : ''}
       </div>
       <button class="btn btn-sm btn-success" onclick="answerPossiblySold('${item.id}','${p}',true,'${prijs}')">Yes, sold</button>
       <button class="btn btn-sm btn-outline" onclick="answerPossiblySold('${item.id}','${p}',false,'')">No</button>

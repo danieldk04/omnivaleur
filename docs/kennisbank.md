@@ -17,6 +17,79 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ---
 
+## 2dehands-verlengklok-loopt-op-de-importdatum
+
+*19-09-2026 — "285 van 458 levende 2dehands-advertenties bij De Juiste Toon missen het verlengvenster; nul verlengopdrachten ooit, want listed_at is de importdatum"*
+
+Op 2dehands staat bij elke geïmporteerde advertentie de IMPORTDATUM als
+plaatsingsdatum, en daar draait de verlengklok op. Voor Marktplaats corrigeert
+`_echte_datums_ophalen` (crosslist.py) dat met de echte datum van het platform;
+die functie doet alleen `platform == "marktplaats"`. Voor 2dehands bestaat die
+correctie niet.
+
+Gemeten 19-09-2026 bij De Juiste Toon: van haar 458 levende 2dehands-advertenties
+hebben er 288 een verkeerde `listed_at`, waarvan er 285 precies door het
+verlengvenster van `extend_expiring_2dehands` (22 tot 45 dagen) heen vallen. Ze
+kreeg nul verlengopdrachten, ooit. De echte data lopen terug tot mei 2022,
+terwijl `listed_at` voor alle 458 op de importdag 05-09-2026 staat.
+
+**Why:** de oude advertenties zien er bij ons splinternieuw uit, dus worden ze
+niet verlengd, dus verlopen ze, en elke verloper werd tot 19-09-2026 een
+verkoopvraag. Dezelfde verkeerde klok zit in `_al_weg_voor_wij_er_waren`
+(jobs.py): die noemt een advertentie "te jong om vanzelf te verlopen" en maakt er
+ook een verkoopvraag van.
+
+**How to apply:** NIET oplossen door `listed_at` op 2dehands te overschrijven met
+de datum uit de zoek-API. Twee redenen. Een geslaagde `extend` schuift `listed_at`
+zelf vooruit (jobs.py, rond regel 3100) — die boekhouding zou elke ronde
+teruggedraaid worden. En de getoonde datum is op 2dehands niet de vervalklok: er
+staan advertenties van mei 2022 gewoon live, dus 30 dagen na de getoonde datum
+klopt niet. De echte vervaldatum staat in het eigen overzicht van de verkoper en
+moet daar vandaan komen, via de extensie. Tot die tijd geldt de vangnetregel: een
+pagina die zelf VERLOPEN zegt is bewijs, zie "verlopen-is-geen-verkoop".
+
+---
+
+## verlopen-is-geen-verkoop
+
+*19-09-2026 — "Een verlopen zoekertje gaf HTTP 410 en werd \"misschien verkocht\"; bij De Juiste Toon 55 gemeten, de pagina zei er zelf VERLOPEN bij"*
+
+Een advertentie die het platform zelf als VERLOPEN aanmerkt is geen verkoop en
+mag nooit de vraag "is dit verkocht?" opleveren. Gemeten 19-09-2026 bij Lynn van
+De Juiste Toon: van de 74 gemelde 2dehands-zoekertjes gaven er 55 HTTP 410 met
+"Dit zoekertje is helaas verlopen" op de pagina (de overige 19 gaven 403 doordat
+2dehands mijn meettempo afkapte, geen tegenbewijs). Vijf bewezen levende
+advertenties gaven dat signaal nul keer. Verlopen en levend zijn dus scherp uit
+elkaar te houden, en tot die dag deden we dat niet.
+
+Haar klacht klonk als onzin en was het niet: "er staat Not found on the platform
+anymore, maar als ik die na ga staan ze er wel nog op." Allebei waar. Een
+verlopen zoekertje is van de zoekresultaten af, maar zijn eigen pagina staat er
+nog met foto's, tekst en een stempel VERLOPEN, en in haar eigen overzicht staat
+hij ook. Wie zo'n melding natrekt ziet zijn advertentie gewoon staan.
+
+**Why:** `bekijkEigenPagina` gaf bij status 404 én 410 meteen `"weg"` terug
+zonder de body te lezen — terwijl juist die body zegt waaróm hij weg is. `"weg"`
+gaat als verdenking naar `/api/listings/possibly-sold` en wordt daar een
+verkoopvraag. De regex die "is helaas verlopen" herkent bestond al (sinds
+15-09-2026, `WEG_TEKST_BRON`), maar viel samen met alle andere weg-redenen in één
+bak. Het scherm maakte het af: `renderSoldConfirmBar` gooide de uitleg van de
+server weg en zette er "Not found on the platform any more" voor in de plaats,
+dus zelfs de zin over de 30 dagen bereikte haar niet.
+
+**How to apply:** `bekijkEigenPagina` kent sinds 1.0.341 vijf uitkomsten, met
+`"verlopen"` los van `"weg"`; bij 404/410 wordt de body wél gelezen. De server
+archiveert reden `"verlopen"` zonder vraag. Omdat een nieuwe extensieversie weken
+door de Chrome Web Store doet, trekt `backend/services/verlopen_controle.py` elk
+half uur de al openstaande vragen na op dezelfde openbare pagina; alleen bewijs
+telt, 401/403 is geen uitspraak, en een hele ronde zonder antwoord breekt af.
+Meet zulke pagina's met minstens acht seconden ertussen: op volle snelheid gaf
+2dehands 24 van de 74 een 403, met acht seconden nul van de tien. Zie
+"openbare-lijst-toont-ook-verlopen", "verkoopkanaal-moet-bewezen-zijn" en
+"storing-mag-nooit-als-antwoord-tellen".
+
+---
+
 ## titel-op-het-kanaal-is-niet-de-brontitel
 
 *19-09-2026 — Zoeken op de titel uit de voorraad vindt onze eigen advertentie niet, want die staat vertaald op het kanaal; zoek op de verkoper, niet op de titel*

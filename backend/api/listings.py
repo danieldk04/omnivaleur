@@ -566,6 +566,13 @@ VERDENKING_REDENEN = {
              "kanalen af.",
     "weg": "Mogelijk verkocht: de advertentie is niet meer op het platform te vinden. "
            "Let op — op Marktplaats verdwijnt een gratis advertentie ook vanzelf na 30 dagen.",
+    # VERLOPEN IS GEEN VERKOOP (19-09-2026, Lynn van De Juiste Toon).
+    # Deze reden leidt NIET tot een vraag — zie possibly_sold. Hij staat hier
+    # zodat de verkoper in het archief kan teruglezen waarom de advertentie weg
+    # is, en zodat het verschil met "weg" in de logboeken zichtbaar blijft.
+    "verlopen": "Deze advertentie is op het platform zelf verlopen; de pagina zegt "
+                "dat letterlijk. Niet verkocht dus. Hij staat nu in het archief en "
+                "je zet hem met één klik opnieuw online.",
     "verdwenen_te_jong":
         "Mogelijk verkocht: de advertentie was al van het platform af toen we hem "
         "voor het herplaatsen wilden weghalen, en hij was nog te jong om vanzelf te "
@@ -619,6 +626,7 @@ def possibly_sold(body: dict, user_id: str = Depends(get_current_user)):
     db = get_db()
     regels = (body or {}).get("listings") or []
     gemarkeerd = 0
+    verlopen_gezien = 0
     nu = datetime.now(timezone.utc).isoformat()
     # Wie geen vraag wil, krijgt er geen: de verdwenen advertentie gaat meteen
     # het archief in, hetzelfde als wanneer hij zelf "nee" had geantwoord. Zie
@@ -636,10 +644,21 @@ def possibly_sold(body: dict, user_id: str = Depends(get_current_user)):
                  .eq("user_id", user_id).limit(1).execute().data or [])
         if not eigen:
             continue
-        reden = VERDENKING_REDENEN.get(str(r.get("reden") or ""), VERDENKING_STANDAARD)
-        velden = ({"status": "sold_unconfirmed", "error_message": reden, "last_checked": nu}
-                  if vragen else
-                  {"status": "delisted", "error_message": None, "last_checked": nu})
+        sleutel = str(r.get("reden") or "")
+        reden = VERDENKING_REDENEN.get(sleutel, VERDENKING_STANDAARD)
+        # VERLOPEN IS GEEN VERKOOP, DUS OOK GEEN VRAAG.
+        #
+        # De advertentiepagina zegt zelf dat hij verlopen is (HTTP 410 met het
+        # verlopen-blok, of "Dit zoekertje is helaas verlopen"). Dan valt er niets
+        # te vragen: hij gaat naar het archief, net als wanneer de verkoper "nee"
+        # had geantwoord, en hij is met één klik opnieuw te plaatsen.
+        if sleutel == "verlopen":
+            velden = {"status": "delisted", "error_message": reden, "last_checked": nu}
+            verlopen_gezien += 1
+        else:
+            velden = ({"status": "sold_unconfirmed", "error_message": reden, "last_checked": nu}
+                      if vragen else
+                      {"status": "delisted", "error_message": None, "last_checked": nu})
 
         def _markeer(f):
             return (db.table("listings").update(f)
@@ -651,10 +670,12 @@ def possibly_sold(body: dict, user_id: str = Depends(get_current_user)):
             logger.warning("[sold] kon reden niet meeschrijven voor %s/%s: %s", item_id, platform, e)
             _markeer({"status": velden["status"]})
         gemarkeerd += 1
-    logger.info("[sold] %s advertentie(s) %s voor %s", gemarkeerd,
+    logger.info("[sold] %s advertentie(s) %s voor %s (waarvan %s aantoonbaar verlopen "
+                "en dus zonder vraag gearchiveerd)", gemarkeerd,
                 "als mogelijk verkocht gemarkeerd" if vragen
-                else "gearchiveerd zonder vraag (verkoopvraag staat uit)", user_id)
-    return {"marked": gemarkeerd}
+                else "gearchiveerd zonder vraag (verkoopvraag staat uit)", user_id,
+                verlopen_gezien)
+    return {"marked": gemarkeerd, "expired": verlopen_gezien}
 
 
 # Statussen waarin een artikel nog "in de verkoop" is. Alleen dán boeken we een
