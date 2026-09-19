@@ -1959,6 +1959,60 @@ def _eigen_mail_meenemen(state: dict, boek: "Leadboek") -> int:
     return nieuw
 
 
+def _al_gemaild_voor_het_lead_werd(state: dict, boek: "Leadboek") -> int:
+    """De andere kant van _eigen_mail_meenemen: iemand die DANIEL het eerst
+    mailde, nog voordat de scraper hem als lead binnenhaalde en nog voordat
+    Daniel zelf had teruggeschreven.
+
+    Second-Buy BV (19-09-2026) mailde Daniel op 09-09 over de demo. Hij
+    antwoordde diezelfde dag, en dat ving _eigen_mail_meenemen inmiddels op.
+    Maar had hij toevallig nog niet geantwoord op het moment dat de scraper het
+    adres op 18-09 alsnog als lead binnenhaalde, dan was er nog steeds niets
+    dat de koude mail1 had tegengehouden: _eigen_mail_meenemen kijkt alleen naar
+    wat Daniel zelf verstuurde. Daarom hier ook de Postvak IN en Beantwoord
+    doorzoeken op afzenders die al in de leadlijst staan maar nog geen regel in
+    de administratie hebben. Elk zo'n adres is bewijs van eerder contact, punt,
+    ongeacht of Daniel er al op reageerde."""
+    host, gebruiker = os.environ.get("IMAP_HOST"), os.environ.get("MAIL_USER")
+    wachtwoord = os.environ.get("MAIL_PASS")
+    if not (host and gebruiker and wachtwoord):
+        return 0
+    per_adres = {l["email"].lower(): l for l in _leads()}
+    nieuw = 0
+    with imaplib.IMAP4_SSL(host, 993) as imap:
+        imap.login(gebruiker, wachtwoord)
+        for map_ in ("INBOX", MAP_BEANTWOORD):
+            try:
+                if imap.select(f'"{map_}"')[0] != "OK":
+                    continue
+                _, data = imap.search(None, f"(SINCE {_sinds(LAATST_DAGEN)})")
+            except Exception:  # noqa: BLE001 — één onbereikbare map stopt de rest niet
+                continue
+            for msg in _koppen_in_bulk(imap, (data[0] or b"").split()).values():
+                afzender = parseaddr(msg.get("From", ""))[1].lower()
+                if not afzender or SYSTEEM_AFZENDER.search(afzender) \
+                        or BOUNCE_AFZENDERS.search(afzender):
+                    continue
+                if afzender in state or afzender not in per_adres:
+                    continue
+                try:
+                    wanneer = parsedate_to_datetime(msg.get("Date", ""))
+                    op = wanneer.replace(tzinfo=None).isoformat(timespec="seconds")
+                except Exception:  # noqa: BLE001 — een rare datum mag dit niet stoppen
+                    op = datetime.now().isoformat(timespec="seconds")
+                state[afzender] = {
+                    "verstuurd": [{"beurt": "met de hand (zij mailden eerst)", "op": op}],
+                    "bedrijf": per_adres[afzender].get("bedrijf"),
+                    "laatste": op,
+                    "met_de_hand": True,
+                }
+                nieuw += 1
+                boek.met_de_hand(per_adres[afzender], op[:10])
+    if nieuw:
+        _save_state(state)
+    return nieuw
+
+
 def _afsluitmails(state: dict, boek: "Leadboek") -> int:
     """Verstuurt de ingeplande afsluitmailtjes waarvan de tijd om is.
 
