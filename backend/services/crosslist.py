@@ -341,8 +341,6 @@ def _vertaal(text: str, target_lang: str, brand: str | None = None) -> str:
         logger.info("translate→%s: tekst staat al in de doeltaal, ongewijzigd gelaten", target_lang)
         return text
     try:
-        _client = _claude_client()
-
         lang_name = "Dutch" if target_lang == "nl" else "English"
         brand_note = f' The word "{brand}" is a brand name — never translate it, keep it exactly as-is.' if brand else ""
 
