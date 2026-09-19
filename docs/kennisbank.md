@@ -17,6 +17,36 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ---
 
+## titel-op-het-kanaal-is-niet-de-brontitel
+
+*19-09-2026 — Zoeken op de titel uit de voorraad vindt onze eigen advertentie niet, want die staat vertaald op het kanaal; zoek op de verkoper, niet op de titel*
+
+Een advertentie terugvinden op een kanaal door op TITEL te zoeken werkt niet
+betrouwbaar: wij plaatsen met een vertaalde titel en bewaren in `items` de
+brontitel, en die is Engels bij alles wat uit Vinted of de webshop komt. Op
+19-09-2026 zocht `_zet_rubriek_van_marktplaats` op "(1367) White Columbia Fleece
+Jacket" terwijl de advertentie "(1367) Witte Columbia fleecejas" heet: nul
+resultaten. Nul leest daar als storing, dus bleef het zoekertje op 2dehands
+staan tot het geduld van zes uur op was. Bij één klant wachtten vier zoekertjes
+gemiddeld 381 minuten, terwijl het dashboard "binnen ~15 seconden" beloofde.
+
+**Why:** de titel is van ons, de advertentie is van het kanaal. Elke stap waar
+die twee uit elkaar kunnen lopen (vertaling, een correctie van de verkoper, een
+kanaal dat de titel afkapt) maakt een titelzoekopdracht stil onbetrouwbaar, en
+stil betekent hier: de klant ziet een wachtrij die niet beweegt.
+
+**How to apply:** zoek op de verkoper en match op advertentienummer, niet op
+titel. De zoek-API van Marktplaats geeft met alleen `sellerIds[]` de eigen
+advertenties nieuwste eerst terug, inclusief het `RelevantCategories`-facet, dus
+wat wij zojuist plaatsten staat altijd in de eerste honderd. Laat zo'n ronde
+alleen BEVESTIGEN: vindt hij de advertentie niet, dan is dat geen bewijs dat ze
+er niet is (bij meer dan honderd advertenties valt een oudere buiten de pagina),
+en het verschil tussen "niet gevonden" en "niet gezocht" is precies wat een
+geraden, betalende rubriek voorkomt. Zie "storing-mag-nooit-als-antwoord-tellen"
+en "geraden-rubriek-is-niet-de-rubriek-van-de-verkoper".
+
+---
+
 ## twee-sleutels-die-niet-te-onderscheiden-zijn
 
 *19-09-2026 — "Een ja/nee in /health bewijst niet wélke sleutel er draait; twee Google-sleutels begonnen allebei met AQ.Ab8 en waren allebei 53 tekens, dus een vingerafdruk is nodig"*

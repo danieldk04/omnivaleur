@@ -11440,3 +11440,44 @@ staat op Railway" was dus een aanname. `/health` toont nu
 `google_sleutel_vingerafdruk`: de eerste 8 tekens van de sha256. Daar is niets
 uit terug te rekenen en twee sleutels zijn er wel mee uit elkaar te houden. De
 Omnivaleur-sleutel is `f7c8c67f`, de oude AxonGear-sleutel `d01bdfc2`.
+
+## 19-09-2026 (vervolg) — waarom 2dehands uren "aan het openen" bleef
+
+Daniel: "hij doet heel lang over 2dehands openen, ik denk dat ie vastgelopen is."
+Gemeten in zijn eigen opdrachten, niet geschat.
+
+**Wat de klok zegt.** Over tien dagen, 118 opdrachten: een opdracht die als
+enige klaarstaat wordt binnen 7 seconden opgepakt (uitschieter 16). Staat er
+iets anders te draaien, dan is de mediaan 289 seconden. Het werk zelf duurt per
+advertentie 108 seconden op Marktplaats, 147 op 2dehands en 354 op Vinted. Er is
+dus geen trage poll en geen vastgelopen extensie: publicaties lopen strikt één
+voor één, en drie kanalen achter elkaar zijn gewoon zes tot tien minuten.
+
+**Maar vanochtend was het erger, en dat was een fout.** De Marktplaats-publicatie
+van 09:50:06 was om 09:53:34 klaar; het zoekertje op 2dehands van 09:50:08 stond
+om 10:08 nog steeds te wachten. Oorzaak: voor 2dehands zoeken we eerst de rubriek
+op waar de advertentie op Marktplaats in staat, en dat gebeurde door binnen het
+eigen aanbod op TITEL te zoeken. Wij plaatsen daar met een vertaalde titel en
+bewaren in de voorraad de brontitel — Engels bij alles uit Vinted of de webshop.
+"(1367) White Columbia Fleece Jacket" tegenover "(1367) Witte Columbia
+fleecejas": nul resultaten, en nul telt daar als storing, dus wachten tot het
+geduld van zes uur op is. Over dertig dagen raakte dit acht zoekertjes; vier
+daarvan bij één klant wachtten op 17-09 gemiddeld 381 minuten.
+
+De reparatie zoekt nu eerst met de geplaatste titel, en vindt hij niets, dan
+volgt één ronde zonder zoekterm langs de eigen advertenties van de verkoper
+(nieuwste eerst). Die ronde mag alleen bevestigen, nooit ontkennen: bij meer dan
+honderd advertenties valt een oudere buiten die pagina, en "niet gevonden" mag
+nooit "staat niet op Marktplaats" gaan betekenen — dat is precies wat op
+14-09 vijftig zoekertjes de betalende gitaarrubriek in duwde.
+
+**Nog open, bewust niet aangeraakt.** Publicaties lopen globaal serieel: er mag
+er maar één tegelijk draaien, ook als het om verschillende kanalen gaat. De
+oorspronkelijke reden (twee tabbladen deelden één opslagsleutel) bestaat niet
+meer, want elke opdracht hangt sinds 1.0.30x aan zijn eigen tabblad. Parallel
+publiceren zou de drie kanalen van tien minuten naar ongeveer zes brengen. Het
+risico zit elders: in één werkvenster is maar één tabblad actief, en Chrome
+bevriest de rest — precies waar de ontdooier (Page.setWebLifecycleState) al elke
+tien seconden tegen vecht. Dat is alleen met een echte publicatie in Chrome te
+bewijzen, met twee kanalen tegelijk en een klokmeting van minstens 90 seconden.
+Niet doen op gevoel.
