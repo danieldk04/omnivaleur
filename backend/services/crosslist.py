@@ -368,13 +368,37 @@ def _vertaal(text: str, target_lang: str, brand: str | None = None) -> str:
             if has_breaks else ""
         )
 
+        # HET VANGNET (19-09-2026). Doet Claude het niet — leeg tegoed, storing,
+        # tijdslimiet — dan krijgt Gemini letterlijk dezelfde opdracht. Het
+        # antwoord gaat daarna door dezelfde controles (`_deugt`), dus een slechte
+        # vertaling van het vangnet komt net zo min op een advertentie terecht als
+        # een slechte van Claude. Lukt ook dat niet, dan gooien we de oorspronkelijke
+        # fout van Claude door en wacht de advertentie, precies zoals hiervoor.
+        #
+        # Zolang Claude gewoon antwoordt wordt Gemini niet aangeroepen. Eén mislukte
+        # poging per vertaling is genoeg om te weten dat hij plat ligt; de tweede,
+        # strengere poging gaat dan meteen naar het vangnet.
+        claude_deed_het_niet: list[Exception] = []
+
         def _vraag_het_model(opdracht: str) -> str:
-            response = _client.messages.create(
-                model="claude-haiku-4-5-20251001",
-                max_tokens=1024,
-                messages=[{"role": "user", "content": opdracht}],
-            )
-            return _strip_text_tags(response.content[0].text)
+            if not claude_deed_het_niet:
+                try:
+                    response = _claude_client().messages.create(
+                        model="claude-haiku-4-5-20251001",
+                        max_tokens=1024,
+                        messages=[{"role": "user", "content": opdracht}],
+                    )
+                    return _strip_text_tags(response.content[0].text)
+                except Exception as e:  # noqa: BLE001
+                    claude_deed_het_niet.append(e)
+                    logger.warning("Vertalen via Claude lukte niet (%s: %s) — "
+                                   "vangnet Gemini wordt geprobeerd", type(e).__name__, e)
+            from backend.services import gemini_vertaling
+            antwoord = gemini_vertaling.vertaal(opdracht)
+            if antwoord is None:
+                raise claude_deed_het_niet[0]
+            logger.info("Vertaling naar %s kwam van het vangnet (Gemini)", target_lang)
+            return _strip_text_tags(antwoord)
 
         def _deugt(antwoord: str):
             """Het antwoord terug, of None als het niet te vertrouwen is."""
