@@ -17,6 +17,28 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ---
 
+## nagebootste-database-doet-geen-triggers
+
+*19-09-2026 — Een testdubbel dat geen triggers nadoet bewijst niets; items zet updated_at bij ELKE schrijfactie*
+
+De items-tabel in Supabase zet `updated_at` bij elke schrijfactie op de systeemtijd.
+Gemeten 19-09-2026: een update die alleen `rubriek_pogingen` en `rubriek_gepoogd_op`
+schreef, verzette `updated_at` 47 microseconden later mee. Elke regel die "is dit rij
+sinds moment X bewerkt?" op `updated_at` baseert, ziet dus ook zijn eigen schrijfactie.
+
+**Why:** de nagebootste PostgREST-tabel in de proef verzette `updated_at` niet, dus
+zeven proeven stonden groen terwijl de regel in productie precies nul opleverde. Alleen
+door de ronde tegen de echte database te draaien kwam het boven water.
+
+**How to apply:** laat elk testdubbel van de database de triggers nadoen die de echte
+heeft, `updated_at` voorop. En wil je weten of een verkoper de tekst heeft aangepast,
+vergelijk dan de tekst (een hash van titel, omschrijving, merk), niet het tijdstip:
+383 van de 404 artikelen zonder rubriek waren binnen 30 dagen aangeraakt zonder dat de
+tekst veranderde. Zie "voor-en-na-proef-mag-geen-head-gebruiken" en
+"omnivaleur-altijd-bewijzen".
+
+---
+
 ## schakelaar-moet-op-elke-plek-gelden
 
 *19-09-2026 — Een uit-knop voor gedrag dat op meerdere plekken ontstaat: laat een test de broncode aftasten, anders mis je er een*
