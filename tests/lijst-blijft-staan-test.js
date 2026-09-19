@@ -111,6 +111,9 @@ const stubs = `
   const itemsTab = "live";
   const itemsGroepeerOpDatum = false;
   const EMPTY_TAB = { live: { h: "", p: "" } };
+  // Erbij sinds 19-09-2026: de lege staat vertelt nu wanneer er voor het
+  // laatst geprobeerd is te laden (zie de storingstekst in renderItemsTable).
+  const _laadPoging = { bezig: false, om: null };
 `;
 
 const vm = require("vm");

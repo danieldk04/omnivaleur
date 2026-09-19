@@ -240,6 +240,8 @@ textarea { resize: vertical; min-height: 80px; }
 .empty-icon { font-size: 40px; margin-bottom: 16px; opacity: .6; }
 .empty h3 { font-size: 16px; font-weight: 700; color: var(--text); margin-bottom: 8px; }
 .empty p { font-size: 13px; margin-bottom: 20px; color: var(--muted); line-height: 1.6; }
+.empty-detail { font-size: 12px; opacity: .75; margin-bottom: 10px !important; }
+.empty-attempt { font-size: 12px; color: var(--muted); font-style: italic; }
 
 /* ── Views ──────────────────────────────────────────────────────── */
 .view { display: none; }
@@ -4084,6 +4086,11 @@ async function syncItems() {
   return samen;
 }
 
+// Wat de laatste laadronde deed: loopt hij nu, wanneer was hij klaar. Het scherm
+// heeft dit nodig om een mislukte poging te kunnen laten zien; zie de lege staat
+// in renderItemsTable.
+let _laadPoging = { bezig: false, om: null };
+
 async function loadAll(opties = {}) {
   // Alleen de tikkende ronde gaat "snel". Alles wat na een handeling ververst,
   // haalt bewust het volledige beeld op.
@@ -4123,13 +4130,35 @@ async function loadAll(opties = {}) {
     state.listingsLoadError = listingsRes.reason?.message || 'Could not load your listings';
   }
   if (jobsRes.status === 'fulfilled') state.jobs = Array.isArray(jobsRes.value) ? jobsRes.value : [];
-  if (platformsRes.status === 'fulfilled') state.connected = platformsRes.value.connected || [];
+  // EEN FOUTANTWOORD IS GEEN ANTWOORD (19-09-2026).
+  //
+  // parseJsonSafe geeft een nette JSON-foutbody ({"detail": "..."}) gewoon terug
+  // als waarde, dus een mislukt verzoek komt hier binnen als 'fulfilled'. Voor de
+  // kanalenlijst betekende dat: `.connected` bestaat niet in die body, dus werd
+  // het een lege lijst — en dan zegt het scherm dat je bij Marktplaats, Vinted en
+  // 2dehands niet meer gekoppeld bent terwijl je dat gewoon bent. Bij de
+  // instellingen nog erger: `{detail: "..."}` is een object, dus overschreef het
+  // de echte voorkeuren en leek alles teruggezet. Beide gemeten tijdens de
+  // Supabase-storing van 19-09 (15:10-17:00), toen élk verzoek een fout gaf.
+  //
+  // Dus: alleen overnemen wat de vorm heeft die we verwachten. Klopt de vorm
+  // niet, dan blijft staan wat we al hadden.
+  if (platformsRes.status === 'fulfilled' && Array.isArray(platformsRes.value?.connected)) {
+    state.connected = platformsRes.value.connected;
+  }
   // De eigen voorkeur moet binnen zijn vóór er iets wordt ingedeeld, anders
   // oordeelt het scherm even met een lege instelling en ziet hij artikelen die
   // hij juist heeft uitgezet gewoon als publiceerbaar staan.
-  if (settingsRes.status === 'fulfilled' && settingsRes.value && typeof settingsRes.value === 'object') {
+  if (settingsRes.status === 'fulfilled' && settingsRes.value
+      && typeof settingsRes.value === 'object' && !Array.isArray(settingsRes.value)
+      && !('detail' in settingsRes.value)) {
     state.settings = settingsRes.value;
   }
+  // Wanneer deze ronde klaar was, en of hij iets opleverde. Het scherm moet dat
+  // kunnen laten zien: zonder dit is een mislukte poging niet te onderscheiden
+  // van een poging die nooit gedaan is. Zie _laadPoging bij renderItemsTable.
+  _laadPoging.bezig = false;
+  _laadPoging.om = new Date();
   await loadDuplicates();
   renderDashboard();
   renderExtStatus();
@@ -5135,6 +5164,36 @@ async function mergeItems(keep, merge, stil = false) {
   }
 }
 
+// "Try again" moet zichtbaar iets doen.
+//
+// Hij hing rechtstreeks aan loadAll(). Dat is een async functie die pas op het
+// eind iets tekent, dus bij een storing: klik, twintig seconden niets, dezelfde
+// HTML, geen enkele verandering op het scherm. Lynn van De Juiste Toon
+// (19-09-2026) zei het precies zo: "als ik op try again klik gebeurt er (optisch
+// in iedergeval) niks". Nu gaat de knop meteen op "Checking…", en daarna staat er
+// hoe dan ook een nieuw tijdstip op het scherm.
+async function probeerOpnieuwLaden(knop) {
+  if (_laadPoging.bezig) return;
+  _laadPoging.bezig = true;
+  if (knop) { knop.disabled = true; knop.textContent = 'Checking…'; }
+  _hertekenNaLaadPoging();
+  try {
+    await loadAll();
+  } catch (e) {
+    // loadAll vangt de losse verzoeken zelf op (allSettled); dit is het vangnet
+    // voor een fout in het tekenen daarna. Ook dan mag de knop niet blijven hangen.
+    state.itemsLoadError = state.itemsLoadError || e?.message || 'Could not reach the server';
+  } finally {
+    _laadPoging.bezig = false;
+    _laadPoging.om = new Date();
+    _hertekenNaLaadPoging();
+  }
+}
+
+function _hertekenNaLaadPoging() {
+  if (document.getElementById('view-items')?.classList.contains('active')) applyFilters(false);
+}
+
 let _itemsTabelStempel = null;
 
 function renderItemsTable(items) {
@@ -5200,25 +5259,57 @@ function renderItemsTable(items) {
     stukken.push({ id: item.id, header, html: rijHtml });
     return header + rijHtml;
   }).join('');
-  const emptyHtml = (!state.listingsLoaded || state.listingsLoadError)
+  // WAT HET SCHERM ZEGT ALS HET LADEN MISLUKT (19-09-2026, Lynn van De Juiste Toon).
+  //
+  // Die middag lag Supabase er van 15:10 tot 17:00 uit. Elk verzoek van het
+  // dashboard kwam terug als fout, dus `listingsLoaded` bleef false — en dan
+  // stond hier "Loading your listings… Nothing is missing — we are still
+  // fetching". Precies het tegenovergestelde van wat er aan de hand was. Lynn
+  // zat er een uur op te wachten en zocht het bij zichzelf ("ben gewoon
+  // ingelogd op marktplaats enzo"). Ze klikte op "Try again": dat riep loadAll(),
+  // dat mislukte weer, en de HTML die eruit kwam was letter voor letter
+  // dezelfde — dus sloeg de stempelvergelijking onderaan deze functie het
+  // tekenen over en gebeurde er op haar scherm helemaal niets.
+  //
+  // Daarom: mislukt het ophalen, dan heet dat een storing en niet "nog even
+  // laden", en elke poging zet zijn eigen tijdstip in de tekst zodat een klik
+  // altijd zichtbaar iets doet — ook als de uitkomst dezelfde is.
+  const laadFout = state.listingsLoadError || state.itemsLoadError;
+  const pogingRegel = _laadPoging.bezig
+    ? `<div class="empty-attempt">Checking again…</div>`
+    : _laadPoging.om
+    ? `<div class="empty-attempt">Last checked at ${_laadPoging.om.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}${laadFout ? ', still no answer' : ''}.</div>`
+    : '';
+  const opnieuwKnop = `<div style="display:flex;gap:8px;justify-content:center;margin-top:12px">
+           <button class="btn btn-primary btn-sm" onclick="probeerOpnieuwLaden(this)"${_laadPoging.bezig ? ' disabled' : ''}>${_laadPoging.bezig ? 'Checking…' : 'Try again'}</button>
+         </div>`;
+  const storingHtml = `<tr><td colspan="8"><div class="empty">
+         <h3 style="color:var(--red,#dc2626)">We can't reach your data right now</h3>
+         <p>This is on our side, not your computer and not your login at
+            Marktplaats, 2dehands or Vinted. Nothing of yours is lost: your items
+            and your adverts stay exactly as they are, and nothing is published or
+            removed while this lasts. You don't have to do anything. This page
+            keeps checking by itself and fills in again the moment we are back.</p>
+         <p class="empty-detail">(${esc(laadFout || 'no answer from the server')})</p>
+         ${pogingRegel}
+         ${opnieuwKnop}
+       </div></td></tr>`;
+  const emptyHtml = (state.listingsLoaded && state.listingsLoadError)
     ? `<tr><td colspan="8"><div class="empty">
-         <h3>${state.listingsLoaded ? 'Your listings may be out of date' : 'Loading your listings…'}</h3>
-         <p>${state.listingsLoaded
-              ? 'Your items are all still there — this screen just could not fetch which of them are online right now, so the tabs are not filled in.'
-              : 'Nothing is missing — we are still fetching which of your items are online. The tabs fill in as soon as that arrives.'}
-            ${state.listingsLoadError ? `(${esc(state.listingsLoadError)})` : ''}</p>
-         <div style="display:flex;gap:8px;justify-content:center;margin-top:12px">
-           <button class="btn btn-primary btn-sm" onclick="loadAll()">Try again</button>
-         </div>
+         <h3>Your listings may be out of date</h3>
+         <p>Your items are all still there — this screen just could not fetch which
+            of them are online right now, so the tabs are not filled in.
+            (${esc(state.listingsLoadError)})</p>
+         ${pogingRegel}
+         ${opnieuwKnop}
        </div></td></tr>`
-    : state.itemsLoadError
+    : laadFout
+    ? storingHtml
+    : !state.listingsLoaded
     ? `<tr><td colspan="8"><div class="empty">
-         <h3 style="color:var(--red,#dc2626)">Could not load your items</h3>
-         <p>Your items are still there — this screen just could not fetch them
-            (${esc(state.itemsLoadError)}). This is usually a hiccup that a retry fixes.</p>
-         <div style="display:flex;gap:8px;justify-content:center;margin-top:12px">
-           <button class="btn btn-primary btn-sm" onclick="loadAll()">Try again</button>
-         </div>
+         <h3>Loading your listings…</h3>
+         <p>Nothing is missing — we are still fetching which of your items are
+            online. The tabs fill in as soon as that arrives.</p>
        </div></td></tr>`
     : state.items.length === 0
     ? `<tr><td colspan="8"><div class="empty">

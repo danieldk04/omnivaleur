@@ -17,6 +17,43 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ---
 
+## storing-mag-niet-nog-even-laden-heten
+
+*19-09-2026 — Tijdens de Supabase-storing van 19-09-2026 zei het dashboard "we are still fetching" terwijl het ophalen al mislukt was, en Try again tekende niets omdat de HTML identiek bleef*
+
+Een scherm dat een mislukte poging "nog even laden" noemt, laat de klant uren
+naar een leugen kijken en zichzelf de schuld geven. Gemeten 19-09-2026 bij Lynn
+(weekendhulp bij De Juiste Toon): Supabase lag van 15:10 tot ongeveer 17:00 plat
+(elk verzoek met apikey gaf Cloudflare 520/521/522, hetzelfde verzoek zónder
+apikey gaf gewoon 401 van de gateway; /health 200 in 0,3 s, /blog en
+/sitemap.xml 500). Zij had net haar laptop herstart, zag de itemlijst zeggen
+"Loading your listings… Nothing is missing — we are still fetching", en zocht het
+bij zichzelf: "ben gewoon ingelogd op marktplaats enzo". Haar tweede klacht was
+"als ik op try again klik gebeurt er (optisch in iedergeval) niks".
+
+**Why:** drie dingen tegelijk. (1) De lege staat koos zijn kop op
+`state.listingsLoaded`, niet op "is het ophalen mislukt", dus een fout zag eruit
+als traagheid. (2) "Try again" hing rechtstreeks aan `loadAll()`; mislukte die
+opnieuw, dan was de HTML letter voor letter dezelfde en sloeg de
+stempelvergelijking in `renderItemsTable` (gebouwd tegen Toons Chromebook) het
+tekenen over: nul DOM-schrijfbeurten, dus optisch niets. (3) `parseJsonSafe`
+geeft een JSON-foutbody `{"detail": ...}` terug als wáárde, dus telde een mislukt
+verzoek als geslaagd: `state.connected` werd leeg ("je bent nergens meer
+gekoppeld") en `state.settings` werd overschreven door de foutmelding. Alle drie
+bewezen met een voor-en-na-proef tegen commit defcd54d in
+tests/laadstoring-scherm-test.js.
+
+**How to apply:** mislukt het ophalen, dan heet het een storing, nooit "laden".
+Zeg erbij dat het aan onze kant ligt, niet aan hun computer of hun inlog bij een
+kanaal, en dat er niets kwijt is. Zet in elke wachttekst het tijdstip van de
+laatste poging, want een knop die twee keer dezelfde HTML oplevert doet op het
+scherm niets (zie "lijst-blijft-staan" voor waarom die vergelijking er staat).
+Neem nooit een antwoord over zonder de vorm te controleren: `Array.isArray(...)`
+of "zit er geen `detail` in". Zie ook
+"storing-mag-nooit-als-antwoord-tellen" en "verwijt-moet-uit-een-meting-komen".
+
+---
+
 ## alarm-bij-een-database-die-wegvalt
 
 *19-09-2026 — Sinds 19-09-2026 mailt de server zelf als de database drie minuten onbereikbaar is; het oude alarm dekte alleen de quota-blokkade*

@@ -11676,3 +11676,47 @@ defcd54d, die laat zien dat de oude versie bij precies deze fout zweeg.
 **Wat dit NIET dekt.** Ligt de hele server plat (Railway zelf), dan draait er ook
 geen code die kan mailen. Daarvoor is een bewaker van buiten nodig die elke paar
 minuten /health opvraagt. Dat staat open.
+
+## 19-09-2026 (vervolg 4) — Lynn zat een uur naar een leugen te kijken
+
+De storing uit het vorige blok duurde tot ongeveer 17:00; hij ging niet vanzelf
+over, een andere sessie heeft de server herstart. In dat gat meldde Lynn
+(weekendhulp bij De Juiste Toon) zich via Daniel: ze had haar laptop herstart,
+was gewoon ingelogd bij Marktplaats, en vroeg of het klopte dat het zo lang
+duurde. En: "als ik op try again klik gebeurt er (optisch in iedergeval) niks".
+
+**Allebei waar, en allebei onze schuld.**
+
+- De lege staat in de itemlijst koos zijn kop op `listingsLoaded`, niet op "is
+  het ophalen mislukt". Dus stond er bij een harde fout: "Loading your listings…
+  Nothing is missing, we are still fetching". Wie dat leest wacht, en zoekt het
+  daarna bij zichzelf. Lynn schreef er niet voor niets bij dat ze echt wel
+  ingelogd was.
+- "Try again" hing rechtstreeks aan `loadAll()`. Die tekent pas op het eind, en
+  mislukt hij opnieuw, dan is de HTML letter voor letter dezelfde. De
+  stempelvergelijking in `renderItemsTable` (gebouwd tegen het wegvallende beeld
+  op Toons Chromebook) sloeg het tekenen dan over: nul schrijfbeurten naar het
+  scherm. Optisch niks, precies zoals ze zei.
+- Erachter zat nog een derde: `parseJsonSafe` geeft een JSON-foutbody gewoon
+  terug als waarde, dus telde een mislukt verzoek als een geslaagd antwoord.
+  `state.connected` werd daardoor leeg (het scherm zei dat je bij geen enkel
+  kanaal meer gekoppeld was) en `state.settings` werd overschreven door de
+  foutmelding, waardoor haar voorkeuren teruggezet leken.
+
+**Wat er nu staat.** Mislukt het ophalen, dan heet dat een storing: "we can't
+reach your data right now", met erbij dat het aan onze kant ligt en niet aan hun
+computer of hun inlog, dat er niets kwijt is en dat ze niets hoeven te doen. Elke
+poging zet zijn eigen tijdstip op het scherm ("Last checked at 17:07:17, still no
+answer"), de knop gaat meteen op "Checking…", en een foutantwoord wordt niet meer
+voor een antwoord aangezien.
+
+**Proef.** tests/laadstoring-scherm-test.js draait de echte `renderItemsTable`,
+`_tekenRijen` en `loadAll` tegen een server die alleen 503'en geeft, en dezelfde
+proef tegen commit defcd54d. Die oude versie zegt inderdaad "Nothing is missing",
+doet nul tekenrondes bij twee klikken, en wist de kanalenlijst en de voorkeuren.
+
+**Haar wachtrij was leeg**: 107 opdrachten in 30 uur, nul openstaand, de laatste
+van 12:30. Er is in het gat dus niets blijven hangen en niets half gepubliceerd.
+
+**Nog te doen:** we horen zo'n storing niet van een klant te horen. Er is geen
+alarm dat afgaat als de database niet antwoordt.
