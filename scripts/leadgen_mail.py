@@ -1365,8 +1365,15 @@ def check(args) -> None:
                 print(f"  {st.get('bedrijf') or adres} — {adres}")
 
 
-def _zelfde_bedrijf(afzender: str, state: dict) -> str | None:
-    """Het adres uit de administratie dat bij deze afzender hoort, op domein.
+def _domeinstam(domein: str) -> str:
+    # Alleen de naam zelf: geen subdomein, geen extensie, geen streepjes.
+    # "info@mail.afstandsbediening-online.nl" → "afstandsbedieningonline".
+    kern = ".".join(domein.split(".")[-2:]).rsplit(".", 1)[0]
+    return re.sub(r"[^a-z0-9]", "", kern)
+
+
+def _zelfde_bedrijf_uit(afzender: str, kandidaten) -> str | None:
+    """Het adres uit `kandidaten` dat bij deze afzender hoort, op domein.
 
     Alleen bij precies één treffer. Twee mensen bij hetzelfde bedrijf die allebei
     zijn aangeschreven mag je niet op de gok aan elkaar knopen: dan zou het
@@ -1374,28 +1381,27 @@ def _zelfde_bedrijf(afzender: str, state: dict) -> str | None:
     domein = afzender.split("@")[-1].lower()
     if not domein or "." not in domein:
         return None
-
-    def stam(d: str) -> str:
-        # Alleen de naam zelf: geen subdomein, geen extensie, geen streepjes.
-        # "info@mail.afstandsbediening-online.nl" → "afstandsbedieningonline".
-        kern = ".".join(d.split(".")[-2:]).rsplit(".", 1)[0]
-        return re.sub(r"[^a-z0-9]", "", kern)
-
-    mij = stam(domein)
+    mij = _domeinstam(domein)
     if len(mij) < 8:                 # "shop", "abc" — te kort om iets te bewijzen
         return None
 
-    kandidaten = []
-    for adres in state:
-        ander = stam(adres.split("@")[-1].lower())
+    gevonden = []
+    for adres in kandidaten:
+        ander = _domeinstam(adres.split("@")[-1].lower())
         if len(ander) < 8:
             continue
         # Gelijk, of de een is het begin van de ander: afstandsbediening ↔
         # afstandsbedieningonline. Verderop in de naam laten we los, want dan
         # gaat het al snel over toevallige woorddelen.
         if mij == ander or mij.startswith(ander) or ander.startswith(mij):
-            kandidaten.append(adres)
-    return kandidaten[0] if len(kandidaten) == 1 else None
+            gevonden.append(adres)
+    return gevonden[0] if len(gevonden) == 1 else None
+
+
+def _zelfde_bedrijf(afzender: str, state: dict) -> str | None:
+    """Het adres uit de administratie dat bij deze afzender hoort, op domein.
+    Zie _zelfde_bedrijf_uit voor de regel zelf."""
+    return _zelfde_bedrijf_uit(afzender, state.keys())
 
 
 def _adres_uit_citaat(body: str, state: dict) -> str | None:
