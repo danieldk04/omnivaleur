@@ -1944,11 +1944,15 @@ def _eigen_mail_meenemen(state: dict, boek: "Leadboek") -> int:
     with imaplib.IMAP4_SSL(host, 993) as imap:
         imap.login(gebruiker, wachtwoord)
         imap.select('"Verzonden"')
-        _, data = imap.search(None, f"(SINCE {_sinds(LAATST_DAGEN)})")
+        _, data = imap.search(None, f"(SINCE {_sinds(EERDER_CONTACT_DAGEN)})")
         for msg in _koppen_in_bulk(imap, (data[0] or b"").split()).values():
-            ontvanger = parseaddr(msg.get("To", ""))[1].lower()
-            if not ontvanger:
+            ruw = parseaddr(msg.get("To", ""))[1].lower()
+            if not ruw:
                 continue
+            # Niet alleen het exacte adres: Tino Smits van Neopta mailde ooit
+            # vanaf een ander adres dan waar de lead op geregistreerd stond.
+            # Dezelfde domeinfamilie is dan ook bewijs van eerder contact.
+            ontvanger = ruw if ruw in per_adres else (_zelfde_bedrijf_uit(ruw, per_adres) or ruw)
             if ontvanger in state or ontvanger not in per_adres:
                 continue
             # Een van onze eigen sjabloononderwerpen betekent dat de machine dit
