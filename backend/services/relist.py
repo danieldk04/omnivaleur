@@ -105,6 +105,80 @@ CONTENT_PRICE_JITTER_PCT = 0.02  # +/-2% nudge, rounded to a sane price
 # is dus geen drukte meer maar een storing.
 VASTGELOPEN_NA_DAGEN = 3
 
+# HOE LANG "DE EXTENSIE DRAAIT" NOG WAAR IS.
+#
+# Elke ronde langs de wachtrij stempelt extension_heartbeat.last_seen. Is die
+# stempel van de afgelopen dag, dan stond de computer aan en draaide de
+# extensie; dan is "zet je computer aan" aantoonbaar onzin.
+KORTGELEDEN_GEZIEN = timedelta(hours=24)
+
+
+def _waarom_bleef_het_staan(db, user_id: str, nu: datetime) -> str:
+    """De uitleg bij een opdracht die drie dagen bleef staan, uit de feiten.
+
+    WAAROM DIT ER IS (19-09-2026). Hier stond één vaste zin: "Zet je computer met
+    de Omnivaleur-extensie aan en probeer het opnieuw." Bij een klant op proef
+    was die zin aantoonbaar onwaar. Zijn extensie was op 18-09 om 19:04 nog
+    gezien en had diezelfde dag 55 advertenties geplaatst; zijn computer stond
+    dus gewoon aan. Hij had er 232 in één keer klaargezet, de wachtrij doet er
+    ongeveer één per minuut en loopt alleen door zolang zijn browser openstaat,
+    en na drie dagen kregen twaalf ervan de schuld in de schoenen geschoven.
+
+    Bij twee andere klanten klopte de zin net zo min: hun abonnement liep niet
+    meer, dus de server wéigerde werk uit te geven. Hun computer aanzetten had
+    niets veranderd.
+
+    Drie oorzaken, drie teksten, en alle drie afgeleid uit iets wat we echt
+    hebben gemeten. Weten we het niet zeker, dan blijft de oude tekst staan: die
+    is dan de meest waarschijnlijke en hij vraagt niets onmogelijks.
+    """
+    kop = ("Deze opdracht stond meer dan "
+           f"{VASTGELOPEN_NA_DAGEN} dagen te wachten en is niet uitgevoerd. ")
+    try:
+        from backend.services.billing import evaluate_access
+        sub = eerste_rij(db.table("subscriptions").select("*")
+                         .eq("user_id", user_id).limit(1).execute())
+        oordeel = evaluate_access(sub)
+        if not oordeel.get("allowed"):
+            return (kop + "Je abonnement liep in die dagen niet meer, en zonder "
+                    "lopend abonnement geeft de server geen werk uit. Zet Pro weer "
+                    "aan en plaats hem opnieuw.")
+    except Exception as e:  # noqa: BLE001 — een uitleg mag de opruimronde nooit breken
+        logger.warning("uitleg: abonnement niet na te gaan voor %s: %s", user_id, e)
+
+    try:
+        hb = eerste_rij(db.table("extension_heartbeat").select("last_seen")
+                        .eq("user_id", user_id).limit(1).execute())
+        gezien = _tijd(hb.get("last_seen")) if hb else None
+    except Exception as e:  # noqa: BLE001
+        logger.warning("uitleg: hartslag niet na te gaan voor %s: %s", user_id, e)
+        gezien = None
+
+    if gezien and nu - gezien < KORTGELEDEN_GEZIEN:
+        return (kop + "Aan jou lag het niet: je computer stond aan en de extensie "
+                "draaide nog "
+                f"{gezien.strftime('%d-%m-%Y om %H:%M')} (UTC). De wachtrij was "
+                "alleen te lang om er binnen drie dagen aan toe te komen; er gaat "
+                "ongeveer één advertentie per minuut doorheen, en alleen zolang je "
+                "browser openstaat. Plaats hem opnieuw, dan gaat hij weer mee.")
+    if gezien:
+        return (kop + "De extensie is voor het laatst gezien op "
+                f"{gezien.strftime('%d-%m-%Y om %H:%M')} (UTC). Zet je computer met "
+                "de Omnivaleur-extensie aan en probeer het opnieuw.")
+    return kop + ("Zet je computer met de Omnivaleur-extensie aan en probeer het "
+                  "opnieuw.")
+
+
+def _tijd(waarde) -> datetime | None:
+    """Een tijdstempel uit de database, of None als hij er niet is of niet klopt."""
+    if not waarde:
+        return None
+    try:
+        t = datetime.fromisoformat(str(waarde).replace("Z", "+00:00"))
+    except ValueError:
+        return None
+    return t if t.tzinfo else t.replace(tzinfo=timezone.utc)
+
 
 async def herstel_vastgelopen_werk() -> dict:
     """Advertenties die halverwege een herplaatsing bleven steken weer vlot trekken.
