@@ -17,6 +17,32 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ---
 
+## alarm-bij-een-database-die-wegvalt
+
+*19-09-2026 — Sinds 19-09-2026 mailt de server zelf als de database drie minuten onbereikbaar is; het oude alarm dekte alleen de quota-blokkade*
+
+`backend/database.py` meldt sinds 19-09-2026 twee dingen: het project dat op slot
+gaat wegens verbruik (402, bestond al) én een database die simpelweg niet
+antwoordt. Dat tweede kwam er na een storing van bijna twee uur waarin PostgREST
+503 met PGRST002 gaf, de opslag 544 DatabaseTimeout, en er geen enkel bericht
+uitging. De site bleef ondertussen overeind op /health, want dat kijkt niet in de
+database.
+
+**Why:** een alarm dat maar één soort uitval kent, laat je geloven dat je gedekt
+bent. De duurste storing is die waarvan je hoort van een klant.
+
+**How to apply:** de melding hangt in `_is_herstelbaar` (elke mislukte aanroep
+komt daar langs) en de tegenhanger `database_deed_het()` in de leeslus. Drempel
+drie minuten zonder één geslaagde leesactie, daarna hoogstens elke twee uur een
+herinnering, plus een bericht zodra het over is. Een gewone queryfout (kolom
+bestaat niet, dubbele sleutel) telt met opzet NIET mee: een alarm dat bij elke
+programmeerfout afgaat wordt genegeerd. Wat het niet dekt: de hele server plat —
+dan draait er ook geen code die kan mailen, en daarvoor is een bewaker van buiten
+nodig. Zie "meten-op-de-productiedatabase" en
+"supabase-gratis-plan-egress".
+
+---
+
 ## meten-op-de-productiedatabase
 
 *19-09-2026 — Een meetquery over duizenden rijen draait op dezelfde kleine Supabase-instantie als de live site; meet in brokken met een tijdvenster en een limiet*

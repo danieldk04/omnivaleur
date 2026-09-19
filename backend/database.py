@@ -276,12 +276,140 @@ def meld_quotastoring(exc: BaseException) -> None:
         logger.exception("Kon de quotastoring niet mailen")
 
 
+# ─────────────────────────────────────────────────────────────────────────────
+# DE DATABASE IS WEG — MELD HET VOORDAT EEN KLANT HET DOET
+#
+# WAAROM DIT ER IS (19-09-2026). Tussen 15:10 en 16:57 gaf Supabase geen antwoord
+# meer: PostgREST 503 met PGRST002 ("Could not query the database for the schema
+# cache"), de opslag 544 DatabaseTimeout, auth helemaal niets. De site zelf bleef
+# staan — /health gaf 200 in 0,3 seconde, want dat kijkt niet in de database — en
+# alles wat wél gegevens nodig heeft gaf 500. Voor een klant: leeg dashboard, geen
+# publicaties, bijna twee uur lang. Er ging geen enkel bericht uit.
+#
+# Het alarm hieronder bestond al voor één geval: het project dat op slot gaat
+# wegens verbruik (402). Dat is precies één manier waarop de database wegvalt, en
+# vandaag was het een andere.
+#
+# DREMPEL, GEEN ENKELE FOUT. Een losse hik hoort niemand wakker te maken: de
+# verbinding valt regelmatig even weg en wordt gewoon herhaald (zie _HERSTELBAAR).
+# Pas als er DRIE MINUTEN lang geen enkele geslaagde leesactie tussen zit, is het
+# een storing die iemand moet oplossen.
+DB_STORING_DREMPEL_SECONDEN = 180
+DB_STORING_STILTE_UREN = 2
+_DB_EERSTE_FOUT = 0.0        # begin van de huidige reeks mislukkingen (monotonic)
+_DB_GEMELD_OP = 0.0
+_DB_SLOT = threading.Lock()
+
+# Alleen signalen die betekenen "de database is niet te bereiken". Een gewone
+# fout in een query (een kolom die niet bestaat, een dubbele sleutel) mag hier
+# NOOIT tussen komen: dan mailt hij bij elke programmeerfout en leert Daniel het
+# alarm negeren.
+_DATABASE_WEG_TEKST = (
+    "pgrst002",                               # PostgREST kan de database niet bevragen
+    "schema cache",
+    "databasetimeout",
+    "connection to the database timed out",
+    "502 bad gateway",
+    "503 service",
+    "504 gateway",
+    "522",                                    # Cloudflare: verbinding met de server liep af
+)
+
+
+def _is_database_weg(exc: BaseException) -> str:
+    """De reden waarom de database onbereikbaar lijkt, of "" als dit iets anders is."""
+    huidige: BaseException | None = exc
+    while huidige is not None:
+        if isinstance(huidige, _HERSTELBAAR):
+            return f"{type(huidige).__name__}: {str(huidige)[:200]}"
+        tekst = str(huidige)
+        laag = tekst.lower()
+        if any(fragment in laag for fragment in _DATABASE_WEG_TEKST) or _is_een_gateway_pagina(laag):
+            return tekst[:300]
+        huidige = huidige.__cause__ or huidige.__context__
+    return ""
+
+
+def _databasefout_gezien(exc: BaseException) -> None:
+    """Een mislukte databaseaanroep. Houdt bij hoe lang dit al duurt en mailt één
+    keer zodra het een storing is en geen hik."""
+    global _DB_EERSTE_FOUT, _DB_GEMELD_OP
+    reden = _is_database_weg(exc)
+    if not reden:
+        return
+    nu = time.monotonic()
+    with _DB_SLOT:
+        if not _DB_EERSTE_FOUT:
+            _DB_EERSTE_FOUT = nu
+            return
+        bezig = nu - _DB_EERSTE_FOUT
+        if bezig < DB_STORING_DREMPEL_SECONDEN:
+            return
+        if _DB_GEMELD_OP and nu - _DB_GEMELD_OP < DB_STORING_STILTE_UREN * 3600:
+            return
+        _DB_GEMELD_OP = nu
+    logger.error("DE DATABASE IS AL %d MINUTEN ONBEREIKBAAR: %s", bezig // 60, reden)
+    try:
+        from backend.services.email import send_email
+        send_email(
+            "Omnivaleur: de database geeft geen antwoord meer",
+            "De database van Omnivaleur reageert al "
+            f"{int(bezig // 60)} minuten niet. De site zelf staat nog overeind, "
+            "maar alles wat gegevens nodig heeft doet het niet: je klanten zien "
+            "een leeg dashboard en er wordt niets gepubliceerd.\n\n"
+            f"Wat de database teruggeeft:\n  {reden}\n\n"
+            "Wat je kunt doen:\n"
+            "  1. Open supabase.com/dashboard, ga naar het project en herstart het "
+            "(Settings, General, Restart project). Dat helpt bij deze fout meestal "
+            "binnen een paar minuten.\n"
+            "  2. Kijk daarna bij Reports of het geheugen of de processor vol liep. "
+            "Een zware zoekopdracht over een grote tabel kan dit veroorzaken.\n\n"
+            "Zodra de database weer antwoordt krijg je daar bericht van.\n"
+            f"Tot die tijd hoogstens elke {DB_STORING_STILTE_UREN} uur een herinnering.\n")
+    except Exception:  # noqa: BLE001 — een mislukt alarm mag nooit iets blokkeren
+        logger.exception("Kon de databasestoring niet mailen")
+
+
+def database_deed_het() -> None:
+    """Een geslaagde databaseaanroep. Zet de storingsteller terug en meldt het
+    herstel als er een storing gemeld wás.
+
+    Dit draait bij ELKE geslaagde leesactie, dus de gewone weg is precies één
+    vergelijking."""
+    global _DB_EERSTE_FOUT, _DB_GEMELD_OP
+    if not _DB_EERSTE_FOUT:
+        return
+    with _DB_SLOT:
+        if not _DB_EERSTE_FOUT:
+            return
+        duur = time.monotonic() - _DB_EERSTE_FOUT
+        gemeld = bool(_DB_GEMELD_OP)
+        _DB_EERSTE_FOUT = 0.0
+        _DB_GEMELD_OP = 0.0
+    if not gemeld:
+        return
+    logger.warning("De database antwoordt weer, na %d minuten", duur // 60)
+    try:
+        from backend.services.email import send_email
+        send_email(
+            "Omnivaleur: de database doet het weer",
+            f"De database antwoordt weer. De storing duurde ongeveer "
+            f"{int(duur // 60)} minuten.\n\n"
+            "Het dashboard en het publiceren lopen vanzelf weer door; je hoeft "
+            "niets te herstarten. Wat er tijdens de storing klaarstond staat er "
+            "nog steeds en wordt alsnog opgepakt.\n")
+    except Exception:  # noqa: BLE001
+        logger.exception("Kon het herstel niet mailen")
+
+
 def _is_herstelbaar(exc: BaseException) -> bool:
     # Een project dat op slot staat is niet "even weg": herhalen helpt niet en
     # verbruikt alleen nog meer van precies datgene wat op is.
     if _is_quotastoring(exc):
         meld_quotastoring(exc)
         return False
+    # Elke mislukte aanroep komt hier langs, of ze nu herhaald wordt of niet.
+    _databasefout_gezien(exc)
     huidige: BaseException | None = exc
     while huidige is not None:
         if isinstance(huidige, _HERSTELBAAR):
@@ -322,7 +450,12 @@ try:
         laatste: BaseException | None = None
         for poging in range(3):
             try:
-                return _ORIGINEEL_SELECT_EXECUTE(self, *a, **kw)
+                uitkomst = _ORIGINEEL_SELECT_EXECUTE(self, *a, **kw)
+                # Eén geslaagde leesactie betekent: de database leeft. Dit is de
+                # tegenhanger van _databasefout_gezien en kost in het gewone geval
+                # één vergelijking.
+                database_deed_het()
+                return uitkomst
             except Exception as e:  # noqa: BLE001
                 if not _is_herstelbaar(e) or poging == 2:
                     raise
@@ -411,7 +544,9 @@ def execute_with_retry(query, pogingen: int = 3, dubbel_is_ok: bool = False):
     laatste: BaseException | None = None
     for poging in range(pogingen):
         try:
-            return _eenmaal_uitvoeren(query)
+            uitkomst = _eenmaal_uitvoeren(query)
+            database_deed_het()
+            return uitkomst
         except Exception as e:  # noqa: BLE001 - alleen verbindingsfouten herhalen
             # Alleen ná een herhaling, en alleen op de primaire sleutel: dat id
             # is door ons bedacht, dus als dat al bestaat is het onze eigen

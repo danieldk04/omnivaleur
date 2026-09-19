@@ -212,6 +212,19 @@ def _extensie_opent(item: dict) -> str:
 
 def _uitgifte(module, monkeypatch, db):
     monkeypatch.setattr(module, "get_db", lambda: db)
+    # DEZE PROEF GAAT OVER DE RUBRIEK, NIET OVER VERSIES (19-09-2026).
+    #
+    # De uitgifte weigert werk aan een kopie die meer dan ACHTERSTAND_GRENS
+    # versies achterloopt op de Chrome Web Store, en die versie wordt bij Google
+    # opgevraagd. Daardoor ging deze proef vanzelf stuk zodra de gepubliceerde
+    # versie ver genoeg opliep: de nagebootste kopie hierboven staat op een vaste
+    # 1.0.320, en bij 1.0.341 in de Web Store is dat 21 versies. Dan deelde de
+    # uitgifte niets meer uit en leek het alsof de rubriek niet werkte.
+    #
+    # Bij twijfel houdt de uitgifte niets tegen (zie _kopie_staat_stil), en dat
+    # is precies wat we hier willen: geen mening over de versie.
+    if hasattr(module, "_gepubliceerde_extensieversie"):
+        monkeypatch.setattr(module, "_gepubliceerde_extensieversie", lambda: None)
     for naam in ("_record_extension_heartbeat", "_recover_stale_claims"):
         if hasattr(module, naam):
             monkeypatch.setattr(module, naam, lambda *a, **kw: None)

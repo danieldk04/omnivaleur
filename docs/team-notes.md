@@ -11637,3 +11637,42 @@ niet zonder de logs in het Supabase-dashboard.
 **Les die er hoe dan ook in hoort:** meten doe je in kleine brokken met een
 tijdvenster en een limiet, ook als het "maar lezen" is. Dit is een gratis plan met
 één kleine instantie, en de site deelt die instantie met de meting.
+
+## 19-09-2026 (vervolg 4) — een alarm voor een database die er gewoon uit ligt
+
+Daniel, na de storing van vanmiddag: "ja" op de vraag of dit gemeld moet worden.
+De storing duurde van ongeveer 15:10 tot 16:57, bijna twee uur, en er ging geen
+enkel bericht uit. Het bestaande alarm in `backend/database.py` dekte precies één
+manier waarop de database wegvalt: het project dat op slot gaat wegens verbruik
+(HTTP 402). Vandaag was het een andere: PostgREST 503 met PGRST002, de opslag 544
+DatabaseTimeout, auth helemaal geen antwoord.
+
+**Hoe het nu werkt.** Elke mislukte databaseaanroep komt langs `_is_herstelbaar`,
+en die geeft hem door aan `_databasefout_gezien`. Die kijkt of het signaal
+betekent "de database is niet te bereiken" (de weggevallen verbindingen die we al
+kenden, plus PGRST002, DatabaseTimeout, 502/503/504 en Cloudflare 522) en houdt
+bij hoe lang de reeks al duurt. Pas na drie minuten zonder één geslaagde leesactie
+gaat er een mail uit, met wat de database teruggeeft en met de knop die het
+oplost (Supabase dashboard, Settings, General, Restart project). Daarna hoogstens
+elke twee uur een herinnering, en zodra er weer een leesactie lukt een bericht dat
+het over is, met de duur erbij.
+
+**Waarom een drempel en geen melding per fout.** De verbinding valt geregeld even
+weg; daar is de herhaling voor. Een alarm dat bij elke hik afgaat wordt genegeerd,
+en dan is het er straks niet meer als het echt nodig is. Drie minuten zonder één
+geslaagde leesactie is geen hik.
+
+**Waarom een gewone queryfout niet meetelt.** Een kolom die niet bestaat of een
+dubbele sleutel is een fout in de vraag, niet in de database. Die staan met zoveel
+woorden buiten de herkenning, met een proef erop: anders mailt hij bij elke
+programmeerfout.
+
+**Proeven.** tests/test_databasestoring_alarm.py, 9 stuks, met de letterlijke
+fouttekst van vanmiddag. Daaronder twee die ertoe doen: een echte Supabase-client
+die een echte leesactie doet op een adres dat niet antwoordt (de aansluiting kan
+stuk zijn terwijl de meldfunctie perfect werkt), en een voor-en-na tegen commit
+defcd54d, die laat zien dat de oude versie bij precies deze fout zweeg.
+
+**Wat dit NIET dekt.** Ligt de hele server plat (Railway zelf), dan draait er ook
+geen code die kan mailen. Daarvoor is een bewaker van buiten nodig die elke paar
+minuten /health opvraagt. Dat staat open.
