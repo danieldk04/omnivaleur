@@ -11722,3 +11722,35 @@ van 12:30. Er is in het gat dus niets blijven hangen en niets half gepubliceerd.
 bouwde het in dezelfde storing (vervolg 4 hierboven, commit a3167dc7). Dit blok
 gaat over wat de klant ondertussen op haar scherm ziet; dat blok over dat wij het
 zelf horen voordat zij het meldt.
+
+## 19-09-2026 (vervolg 6) — achter elk actiepunt hoort te staan hoe hard het is
+
+Daniel, vandaag, nadat hij twee keer een actiepunt kreeg dat hem tijd kostte
+zonder dat er iets mee opgelost werd: "dat ik niet teveel tijd verpest aan dingen
+die minder waarde toevoegen."
+
+**De afspraak.** Elk bericht aan hem houdt de vier blokjes aan (wat er aan de
+hand was, wat er nu veranderd is, zekerheid met de reden, actiepunten), zo kort
+als het kan, ook als er geen code veranderde. Veranderde er niets, dan valt dat
+blokje weg in plaats van dat je het opvult.
+
+Nieuw: achter elk actiepunt staat een label en hoeveel tijd het hém kost.
+
+    1. [NU, 2 min]         er gaat vandaag iets mis; wachten kost klanten of geld
+    2. [DEZE WEEK, 10 min] het wordt een probleem, alleen niet vandaag
+    3. [OOIT, 5 min]       verbetering; er gaat niets stuk als het nooit gebeurt
+    4. [OVERSLAAN]         genoemd voor de volledigheid, mijn advies is niet doen
+
+Wat jij zelf al deed of zelf oppakt hoort niet in de lijst. Is er niets, dan
+"Niets, klaar."
+
+**Waarom dit niet alleen in memory staat.** Het geldt voor iedereen die hier
+rapporteert, dus het staat vanaf nu ook in `CLAUDE.md` van deze repo. Die laadt
+bij elke sessie, op elk account en op elke machine, en dat is precies waarom de
+afspraak daar hoort en niet in een geheugenmap die aan één account hangt.
+
+**Het gevaar waar het tegen beschermt.** Een lijst waarin alles even zwaar oogt
+is geen lijst. Vanmiddag stond "exporteer de logs van 15:00" naast "mail Lynn"
+alsof ze even hard waren; het eerste kon gewoon wachten tot de storing zich
+herhaalt, het tweede zat een klant op te wachten. Hij moet kunnen zien wat hij
+zonder schade kan laten liggen.

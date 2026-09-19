@@ -5,6 +5,29 @@ Code session opened against this repo — on any of Daniel's machines or
 Anthropic accounts. That makes it the right place for anything that must
 never depend on which account happens to be running.
 
+## Elk bericht: vier blokjes plus urgentie
+
+Daniel, 19-09-2026. Elk antwoord aan hem krijgt dezelfde vorm, ook als er geen
+code veranderde: wat er aan de hand was, wat er nu veranderd is, zekerheid in
+procenten met in een zin waarom het geen 100% is, en daaronder de actiepunten.
+Zo kort als het kan. Veranderde er niets, dan laat je dat blokje weg in plaats
+van het op te vullen.
+
+Nieuw is de urgentie. Achter elk actiepunt staat een label en hoeveel tijd het
+hem kost, zodat hij in een oogopslag ziet waar zijn uur het meeste oplevert:
+
+    1. [NU, 2 min]         er gaat vandaag iets mis; wachten kost klanten of geld
+    2. [DEZE WEEK, 10 min] het wordt een probleem, alleen niet vandaag
+    3. [OOIT, 5 min]       verbetering; er gaat niets stuk als het nooit gebeurt
+    4. [OVERSLAAN]         genoemd voor de volledigheid, mijn advies is niet doen
+
+De tijd die je noemt is zijn tijd, niet de jouwe. Wat jij zelf al deed of zelf
+oppakt hoort niet in de lijst. Staat er niets open, dan schrijf je "Niets, klaar."
+
+Waarom dit erbij moest: een lijstje waarin alles even zwaar oogt zette hem twee
+keer aan het werk voor iets wat niets opleverde. Hij moet kunnen zien wat hij
+zonder schade kan laten liggen.
+
 ## Begin elke sessie met kijken wat er veranderd is
 
 Voordat je aan wat dan ook begint — een codetaak, een vraag, een mail, een

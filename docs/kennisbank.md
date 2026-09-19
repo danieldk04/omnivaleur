@@ -17,6 +17,48 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ---
 
+## rapportage-in-gewone-taal
+
+*19-09-2026 — Rapporteer elke code-/backendwijziging in gewoon Nederlands met vier vaste blokjes plus een zekerheidspercentage*
+
+Na elke wijziging aan code of infrastructuur rapporteren in vier blokjes: wat er
+aan de hand was, wat er nu veranderd is (in gevolgen, niet in techniek),
+zekerheid in procenten met de reden waarom het geen 100% is, en genummerde
+actiepunten voor de gebruiker zelf. Kort en bondig. Vastgelegd in
+/Users/Danie/CLAUDE.md zodat het elke sessie geldt.
+
+**Why:** De gebruiker is geen programmeur. Technische uitleg kost hem tijd zonder
+dat hij er een beslissing mee kan nemen; hij wil weten wat het voor zijn
+gebruikers en zijn omzet betekent en wat hij zelf nog moet doen.
+
+**How to apply:** Geen jargon, geen bestandsnamen tenzij hij er zelf moet kijken,
+geen codeblokken tenzij hij iets moet plakken of draaien. Het
+zekerheidspercentage eerlijk houden — ongeteste code komt niet boven de 80%.
+Zie ook "always-push-to-live".
+
+**In e-mail nooit opmaaktekens** (Daniel, 17-08-2026). Mail gaat als platte
+tekst de deur uit, dus `**vet**` komt er letterlijk als sterretjes uit te zien —
+midden in een zin naar een klant. Geldt voor alles wat naar buiten gaat: koude
+mail, conceptantwoorden, afsluitberichten. Wil je nadruk, gebruik dan een
+kopregel op een eigen regel of gewoon de zin zelf. In het gesprek met Daniel in
+de terminal mag markdown wél.
+
+**Hetzelfde onderwerp, eigen bestand** (samengevoegd in de index op 13-09-2026):
+- "antwoorden-kort-houden" — strak indikken, geen uitleg over de oplossing, geen niet-gekozen afwegingen
+- "geen-gedachtestreepjes" — nooit een gedachtestreepje als leesteken, ook niet in uitgaande mail
+
+**Urgentie achter elk actiepunt** (Daniel, 19-09-2026). De vier blokjes gelden
+voor élk bericht, niet alleen na een codewijziging, en achter elk actiepunt staat
+hoe hard het is plus hoeveel tijd het hém kost: `[NU, 2 min]` (wachten kost
+vandaag klanten of geld), `[DEZE WEEK, 10 min]` (wordt een probleem, niet
+vandaag), `[OOIT, 5 min]` (er gaat niets stuk als het nooit gebeurt),
+`[OVERSLAAN]` (genoemd voor de volledigheid, advies is niet doen). Een lijst
+waarin alles even zwaar oogt zette hem twee keer aan het werk voor iets zonder
+opbrengst. Staat ook in CLAUDE.md van de repo en in docs/team-notes.md, omdat het
+net zo goed voor de tweede ontwikkelaar geldt.
+
+---
+
 ## storing-mag-niet-nog-even-laden-heten
 
 *19-09-2026 — Tijdens de Supabase-storing van 19-09-2026 zei het dashboard "we are still fetching" terwijl het ophalen al mislukt was, en Try again tekende niets omdat de HTML identiek bleef*
@@ -7449,38 +7491,6 @@ Koppelen gaat op genormaliseerde titel, binnen één verkoper. Het verkopersnumm
 wordt afgeleid door op de eigen titels te zoeken, dus de klant hoeft niets te weten.
 
 Zie "facebook-marketplace-beta" en "marktplaats-category-ids".
-
----
-
-## rapportage-in-gewone-taal
-
-*17-08-2026 — Rapporteer elke code-/backendwijziging in gewoon Nederlands met vier vaste blokjes plus een zekerheidspercentage*
-
-Na elke wijziging aan code of infrastructuur rapporteren in vier blokjes: wat er
-aan de hand was, wat er nu veranderd is (in gevolgen, niet in techniek),
-zekerheid in procenten met de reden waarom het geen 100% is, en genummerde
-actiepunten voor de gebruiker zelf. Kort en bondig. Vastgelegd in
-/Users/Danie/CLAUDE.md zodat het elke sessie geldt.
-
-**Why:** De gebruiker is geen programmeur. Technische uitleg kost hem tijd zonder
-dat hij er een beslissing mee kan nemen; hij wil weten wat het voor zijn
-gebruikers en zijn omzet betekent en wat hij zelf nog moet doen.
-
-**How to apply:** Geen jargon, geen bestandsnamen tenzij hij er zelf moet kijken,
-geen codeblokken tenzij hij iets moet plakken of draaien. Het
-zekerheidspercentage eerlijk houden — ongeteste code komt niet boven de 80%.
-Zie ook "always-push-to-live".
-
-**In e-mail nooit opmaaktekens** (Daniel, 17-08-2026). Mail gaat als platte
-tekst de deur uit, dus `**vet**` komt er letterlijk als sterretjes uit te zien —
-midden in een zin naar een klant. Geldt voor alles wat naar buiten gaat: koude
-mail, conceptantwoorden, afsluitberichten. Wil je nadruk, gebruik dan een
-kopregel op een eigen regel of gewoon de zin zelf. In het gesprek met Daniel in
-de terminal mag markdown wél.
-
-**Hetzelfde onderwerp, eigen bestand** (samengevoegd in de index op 13-09-2026):
-- "antwoorden-kort-houden" — strak indikken, geen uitleg over de oplossing, geen niet-gekozen afwegingen
-- "geen-gedachtestreepjes" — nooit een gedachtestreepje als leesteken, ook niet in uitgaande mail
 
 ---
 
