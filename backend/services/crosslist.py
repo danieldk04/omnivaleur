@@ -2377,6 +2377,13 @@ async def relist_expiring_marktplaats():
             _auto_aan[uid] = bool(_lees_instellingen(uid).get("auto_relist", True))
         return _auto_aan[uid]
 
+    _mag: dict[str, bool] = {}
+
+    def mag_werken(uid: str) -> bool:
+        if uid not in _mag:
+            _mag[uid] = _mag_nog_werken(uid)
+        return _mag[uid]
+
     ruimste = min([RELIST_DAGEN_STANDAARD, *dagen_per_verkoper.values()] or
                   [RELIST_DAGEN_STANDAARD])
     ruimste = max(RELIST_DAGEN_MIN, ruimste)
@@ -2463,6 +2470,12 @@ async def relist_expiring_marktplaats():
             # Uitgezet door de verkoper zelf: dan gebeurt er niets, ook niet
             # stilletjes. De advertentie blijft gewoon op 'active' staan.
             if not auto_relist_aan(eigenaar):
+                continue
+
+            # Zonder lopend abonnement weigert de server toch werk uit te geven.
+            # Dan is een herplaatsing schade: de advertentie gaat op 'relisting'
+            # en er komt niets voor terug. Zie _mag_nog_werken.
+            if not mag_werken(eigenaar):
                 continue
 
             # Is deze advertentie voor DEZE verkoper al oud genoeg? De query
@@ -2610,6 +2623,13 @@ async def extend_expiring_2dehands():
             _auto_aan[uid] = bool(_lees_instellingen(uid).get("auto_relist", True))
         return _auto_aan[uid]
 
+    _mag2: dict[str, bool] = {}
+
+    def mag_werken(uid: str) -> bool:
+        if uid not in _mag2:
+            _mag2[uid] = _mag_nog_werken(uid)
+        return _mag2[uid]
+
     vandaag = nu.date().isoformat()
     per_verkoper: dict[str, int] = {}
     for row in ((await naast_de_lus(lambda: db.table("jobs")
@@ -2628,6 +2648,11 @@ async def extend_expiring_2dehands():
                 continue
             eigenaar = item["user_id"]
             if not auto_aan(eigenaar):
+                continue
+
+            # Geen lopend abonnement, geen werk: de extensie krijgt er toch een
+            # 402 op en de opdracht blijft staan tot de veger hem opruimt.
+            if not mag_werken(eigenaar):
                 continue
 
             # Verkocht op welk kanaal dan ook? Dan nooit verlengen. Een verkoop
