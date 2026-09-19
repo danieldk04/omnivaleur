@@ -312,7 +312,8 @@ def lijkt_al_in_taal(text: str, taal: str) -> bool:
 
 
 def _vertaal(text: str, target_lang: str, brand: str | None = None) -> str:
-    """Translate text using Claude. Preserves brand names, formatting and paragraph structure.
+    """Translate text using Claude, met Gemini als vangnet. Preserves brand names,
+    formatting and paragraph structure.
 
     Synchroon met opzet. Het vertalen zelf is één netwerkgesprek met een
     synchrone client, en het wordt vanaf twee kanten aangeroepen: de
@@ -486,6 +487,12 @@ def _vertaal(text: str, target_lang: str, brand: str | None = None) -> str:
             )
             result = _deugt(_vraag_het_model(strenger))
         if result is None:
+            if claude_deed_het_niet:
+                # Claude deed het niet én het vangnet leverde niets bruikbaars op.
+                # Er is dus geen vertaling, en dan hoort de advertentie te wachten.
+                # De brontekst teruggeven zou hier de fout van 08-09-2026 terugzetten:
+                # een Engelse tekst die als "vertaald" de deur uit gaat.
+                raise claude_deed_het_niet[0]
             logger.warning("Vertaling naar %s lukte twee keer niet — brontekst behouden", target_lang)
             return text
         logger.info("translate→%s out: repr=%r", target_lang, result[:200])
