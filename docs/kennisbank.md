@@ -17,6 +17,64 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ---
 
+## leadgen-koude-mail-op-al-benaderde-lead
+
+*19-09-2026 — "Koude-mailmachine stuurde mail1 naar een lead die Daniel al persoonlijk had gemaild (Second-Buy BV, 19-09-2026); zo herken je en dicht je dit lek"*
+
+Op 19-09-2026 kreeg Second-Buy BV een koude introductiemail (mail1) van de
+automatische leadgen-reeks, terwijl Daniel hen op 09-09-2026 al persoonlijk had
+gemaild over dezelfde demo en toelichting. Voor de ontvanger leest dat als
+"deze afzender weet niet wat hij doet", en dat is precies het soort fout dat
+Daniel een klant kost.
+
+**Bewezen oorzaak** (uit de echte Supabase-tabel `leadgen_opslag`, sleutel
+`mail_state`, niet aangenomen): de scraper haalde `klantenservice@second-buy.nl`
+pas op 18-09 binnen als koude lead, negen dagen NA Daniel's persoonlijke
+mailwisseling met datzelfde adres. De enige twee vangnetten tegen dubbel
+contact zaten in `scripts/leadgen_mail.py`, en allebei hadden een gat:
+
+1. `_eigen_mail_meenemen` (Verzonden-map) sloeg elk bericht met "Re:" in het
+   onderwerp bewust over, met als aanname dat een antwoord altijd al ergens
+   vastlag. Dat klopt niet als het ONTVANGENDE adres nog geen lead was op het
+   moment dat Daniel terugschreef: dan bestond er nog geen regel om het aan te
+   herkennen.
+2. Er was HELEMAAL GEEN controle voor de omgekeerde richting: een bedrijf dat
+   Daniel voor het eerst mailt, en waar hij toevallig nog niet op heeft
+   teruggeschreven vóórdat de scraper het adres alsnog binnenhaalt.
+
+Beide functies matchten bovendien alleen op het EXACTE e-mailadres, zonder de
+domeinfamilie-fallback (`_zelfde_bedrijf`) die elders in hetzelfde bestand al
+bestond voor precies dit probleem (zie ook "afstandsbediening-online.nl vs
+afstandsbediening.nl" in kennisbank.md).
+
+**Fix (19-09-2026, zelfde dag):**
+- `_eigen_mail_meenemen` telt nu ook "Re:"-berichten mee.
+- Nieuwe functie `_al_gemaild_voor_het_lead_werd` doorzoekt INBOX en Beantwoord
+  op afzenders die al in de leadlijst staan maar nog geen regel in de
+  administratie hebben, ongeacht of Daniel al antwoordde.
+- Beide gebruiken nu `_zelfde_bedrijf_uit` (generalisatie van `_zelfde_bedrijf`)
+  zodat een ander adres bij hetzelfde bedrijf ook telt.
+- Nieuwe constante `EERDER_CONTACT_DAGEN = 400` (los van `LAATST_DAGEN = 60`):
+  voor "is er ooit contact geweest" moet je verder terugkijken dan voor "wie
+  sprak het laatst in een lopend gesprek".
+- Bewezen met een geïsoleerde simulatie (nep-IMAP, geen echte mailbox
+  aangeraakt) voor drie gevallen: Daniel antwoordde eerder zelf, het bedrijf
+  mailde Daniel eerst zonder dat hij al antwoordde, en een ander adres bij
+  hetzelfde bedrijfsdomein. Alle drie geven nu `met_de_hand=True` en
+  `_beurt()` geeft `None` terug (geen koude mail). Bestaande testsuite (195
+  tests in de leadgen/mail-bestanden) bleef groen; 9 falende tests in
+  `test_video_opvolging.py` bleken al vóór deze wijziging te falen (los
+  probleem met een test-stub, niet aangeraakt).
+
+**Restrisico, met zoveel woorden, niet weggemoffeld in een percentage:** een
+contact ouder dan 400 dagen wordt nog steeds gemist. Voor dit bedrijf (bestaat
+sinds medio 2026) dekt dat nu de hele levensduur, maar dit is geen oneindige
+garantie en moet over een jaar of twee opnieuw bekeken worden.
+
+Zie ook: "mailmachine-alleen-koude-reeks", "mailagent-op-de-server".
+
+---
+
 ## verwijt-moet-uit-een-meting-komen
 
 *19-09-2026 — Een foutmelding die de klant iets verwijt ("zet je computer aan") moet uit een meting komen; anders krijgt precies de verkeerde de schuld*
