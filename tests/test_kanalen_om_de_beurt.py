@@ -47,8 +47,11 @@ def _job(jid, platform, minuten_geleden, actie="create"):
     }
 
 
-def _bouw_db(wachtrij, laatst_bediend, laatst_geleden_sec=30):
-    """Nagemaakte Supabase-client: alleen wat de uitgifte echt vraagt."""
+def _bouw_db(wachtrij, laatst_bediend, laatst_geleden_sec=30, bezig=()):
+    """Nagemaakte Supabase-client: alleen wat de uitgifte echt vraagt.
+
+    `bezig` = de kanalen waar op dit moment echt een formulier openstaat (een
+    verse claim). Dat is wat bepaalt of er nog een tabblad bij mag."""
     op_id = {j["id"]: j for j in wachtrij}
 
     class _B:
@@ -82,7 +85,9 @@ def _bouw_db(wachtrij, laatst_bediend, laatst_geleden_sec=30):
             data = []
             if self.tabel == "jobs" and self.soort == "select":
                 if self.filters.get("status") == "claimed":
-                    data = []                      # niets in de lucht
+                    data = [{"platform": k, "action": "create",
+                             "claimed_at": (NU - timedelta(seconds=20)).isoformat(),
+                             "result": None} for k in bezig]
                 elif self.niet_leeg == "claimed_at":
                     # "wie deed de vorige publicatie?"
                     data = [{"platform": laatst_bediend, "action": "create",
@@ -166,3 +171,103 @@ def test_een_scan_geeft_geen_beurt_door(monkeypatch):
     db = _bouw_db(wachtrij, laatst_bediend="marktplaats")
     uit = _uitgifte(monkeypatch, db, "marktplaats")
     assert uit and uit[0]["id"] == "sc0", f"de scan hoort gewoon uitgedeeld te worden: {uit}"
+
+
+# ── 19-09-2026: kanalen mogen naast elkaar publiceren ────────────────────────
+#
+# Daniel: "hij doet heel lang over 2dehands openen." Gemeten over tien dagen in
+# zijn account: een opdracht die op een andere moest wachten stond 289 seconden
+# (mediaan) stil, terwijl het invullen zelf 108 seconden kost op Marktplaats,
+# 147 op 2dehands en 354 op Vinted. Drie kanalen achter elkaar is dus zes tot
+# tien minuten voor werk dat niets met elkaar te maken heeft.
+#
+# De reden dat er maar één tegelijk mocht — twee tabbladen deelden één
+# opslagplek, en publiceerden dan met elkaars foto's en prijzen — bestaat niet
+# meer: elke opdracht hangt aan zijn eigen tabblad. Wat blijft is: nooit twee
+# formulieren van dezelfde site.
+VOOR_PARALLEL = "b3c31f1b"
+
+
+def _oude_uitgifte():
+    """backend/api/jobs.py zoals het was toen alles nog één voor één ging."""
+    import importlib.util
+    import subprocess
+    import tempfile
+    bron = subprocess.run(["git", "show", f"{VOOR_PARALLEL}:backend/api/jobs.py"],
+                          cwd=ROOT, capture_output=True, text=True, check=True).stdout
+    assert "MAX_PARALLELLE_PUBLICATIES" not in bron, "verkeerd commitnummer gepind"
+    with tempfile.TemporaryDirectory() as map_:
+        pad = Path(map_) / "oude_jobs_parallel.py"
+        pad.write_text(bron)
+        spec = importlib.util.spec_from_file_location("oude_jobs_parallel", pad)
+        oud = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(oud)
+    return oud
+
+
+def _uitgifte_op(module, monkeypatch, db, platform):
+    monkeypatch.setattr(module, "get_db", lambda: db)
+    monkeypatch.setattr(module, "_record_extension_heartbeat", lambda *a, **kw: None)
+    monkeypatch.setattr(module, "_recover_stale_claims", lambda *a, **kw: None)
+    monkeypatch.setattr(module, "execute_with_retry", lambda q, *a, **k: q.execute())
+    monkeypatch.setattr(module, "_zet_kleur_goed", lambda rijen: None)
+    return module.get_pending_jobs(
+        request=type("R", (), {"headers": {"x-omnivaleur-ext": "1.0.305"}})(),
+        platform=platform, user_id="u1")
+
+
+def test_2dehands_mag_beginnen_terwijl_marktplaats_nog_bezig_is(monkeypatch):
+    """Precies Daniels geval van 19-09: Marktplaats vult in, 2dehands staat klaar."""
+    wachtrij = [_job("mp0", "marktplaats", 20), _job("td0", "2dehands", 20)]
+    db = _bouw_db(wachtrij, laatst_bediend=None, bezig=["marktplaats"])
+    uit = _uitgifte(monkeypatch, db, "2dehands")
+    assert uit and uit[0]["id"] == "td0", (
+        f"2dehands heeft eigen werk en een eigen tabblad nodig; gekregen: {uit}")
+
+    # En zoals het was: niets, tot Marktplaats klaar was.
+    oud = _oude_uitgifte()
+    oud_db = _bouw_db(wachtrij, laatst_bediend=None, bezig=["marktplaats"])
+    assert _uitgifte_op(oud, monkeypatch, oud_db, "2dehands") == [], (
+        "de oude uitgifte hield 2dehands juist tegen")
+
+
+def test_nooit_twee_formulieren_van_hetzelfde_kanaal(monkeypatch):
+    """De harde regel die blijft: één tabblad per kanaal."""
+    wachtrij = [_job("mp0", "marktplaats", 20), _job("mp1", "marktplaats", 19)]
+    db = _bouw_db(wachtrij, laatst_bediend=None, bezig=["marktplaats"])
+    assert _uitgifte(monkeypatch, db, "marktplaats") == [], (
+        "op Marktplaats staat al een formulier open; er mag er geen tweede bij")
+
+
+def test_boven_drie_tegelijk_gaat_er_niets_meer_uit(monkeypatch):
+    """Elk tabblad is een echt browservenster dat foto's uploadt; drie is genoeg."""
+    wachtrij = [_job("fb0", "facebook", 20)]
+    db = _bouw_db(wachtrij, laatst_bediend=None,
+                  bezig=["marktplaats", "2dehands", "vinted"])
+    assert _uitgifte(monkeypatch, db, "facebook") == [], (
+        "drie kanalen zijn al bezig, het vierde wacht op een vrije plek")
+    # Eén minder en het vierde kanaal mag wel.
+    db2 = _bouw_db(wachtrij, laatst_bediend=None, bezig=["marktplaats", "2dehands"])
+    uit = _uitgifte(monkeypatch, db2, "facebook")
+    assert uit and uit[0]["id"] == "fb0", f"er is nog een plek vrij: {uit}"
+
+
+def test_de_beurt_wordt_nooit_doorgegeven_aan_een_kanaal_dat_al_bezig_is(monkeypatch):
+    """De beurtverdeling mag geen tweede tabblad op een bezet kanaal openen.
+
+    Marktplaats deed de vorige publicatie én 2dehands is op dit moment aan het
+    invullen. De beurtverdeling zou 2dehands aanwijzen; dat zou nu een tweede
+    2dehands-formulier opleveren."""
+    wachtrij = [_job("mp0", "marktplaats", 20), _job("td0", "2dehands", 20)]
+    db = _bouw_db(wachtrij, laatst_bediend="marktplaats", bezig=["2dehands"])
+    uit = _uitgifte(monkeypatch, db, "marktplaats")
+    assert uit and uit[0]["platform"] == "marktplaats", (
+        f"2dehands is bezig, dus Marktplaats doet gewoon zijn eigen werk: {uit}")
+
+
+def test_een_scan_houdt_geen_enkel_kanaal_tegen(monkeypatch):
+    """Lezen blokkeert niets, ook niet met de nieuwe telling."""
+    wachtrij = [_job("mp0", "marktplaats", 20)]
+    db = _bouw_db(wachtrij, laatst_bediend=None, bezig=[])
+    uit = _uitgifte(monkeypatch, db, "marktplaats")
+    assert uit and uit[0]["id"] == "mp0"

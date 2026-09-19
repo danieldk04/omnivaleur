@@ -24,6 +24,25 @@ router = APIRouter(prefix="/jobs", tags=["jobs"])
 # re-surfaced those, so they hung "claimed" forever — blocking paired relists and
 # tripping the "extension is working" banner. We recover them below.
 STALE_CLAIM_MINUTES = 5
+
+# HOEVEEL KANALEN MOGEN ER NAAST ELKAAR PUBLICEREN? (19-09-2026)
+#
+# Hiervoor was het er precies één in het hele account: elke publicatie stuurt een
+# echt tabblad aan, en die tabbladen deelden vroeger één opslagplek per kanaal,
+# waardoor een tweede tabblad de gegevens van het eerste overschreef. Die reden
+# bestaat niet meer — elke opdracht hangt sinds 1.0.30x aan zijn eigen tabblad
+# (`jobtab_<tabId>`), en het invulscript vraagt de opdracht van ZIJN tabblad op.
+#
+# Wat het kostte: gemeten over tien dagen bij Daniel wachtte een opdracht die op
+# een andere moest wachten 289 seconden (mediaan), terwijl het werk zelf 108 tot
+# 354 seconden duurt. Drie kanalen achter elkaar is zes tot tien minuten, terwijl
+# de kanalen niets met elkaar te maken hebben.
+#
+# Waarom drie en niet vier: elk tabblad is een echt browservenster-proces dat
+# foto's uploadt. Drie is genoeg om Marktplaats, 2dehands en Vinted tegelijk te
+# doen — de combinatie waar iedereen op zit te wachten — en houdt de laptop van
+# de verkoper vrij. Op HETZELFDE kanaal blijft het er altijd één.
+MAX_PARALLELLE_PUBLICATIES = 3
 MAX_RECLAIMS = 2
 
 # De oudste extensieversie die we nog vertrouwen voor een scan.
@@ -1400,15 +1419,23 @@ def get_pending_jobs(request: Request, platform: str = None, user_id: str = Depe
         result = (db.table("jobs").select("*").eq("user_id", user_id)
                   .eq("status", "pending").order("created_at").limit(20).execute())
 
-    # STRICT GLOBAL SERIALISATION (extension dispatch only).
-    # Every job drives a REAL browser tab. The create path doesn't wait for one
-    # publish to finish before the next is claimed, and the extension stores the
-    # active job under a single per-platform key — so running two at once let a
-    # second tab overwrite the first's data, publishing listings with each other's
-    # photos, prices, titles and descriptions. To make that impossible we hand the
-    # extension exactly ONE job at a time and refuse to dispatch anything while a
-    # job is genuinely in flight (a fresh claim). The dashboard (which calls
-    # /pending WITHOUT a platform, just to count the queue) is never throttled.
+    # ÉÉN PER KANAAL, EN HOOGUIT DRIE KANALEN TEGELIJK (extension dispatch only).
+    #
+    # Elke opdracht stuurt een ECHT browser-tabblad aan. Hier stond tot 19-09-2026
+    # een slot op het hele account: er mocht er maar één tegelijk lopen, wát voor
+    # kanaal het ook was. De reden daarvoor was dat de extensie de lopende
+    # opdracht onder één sleutel per kanaal bewaarde, zodat een tweede tabblad de
+    # gegevens van het eerste overschreef en er advertenties online gingen met
+    # elkaars foto's, prijzen, titels en teksten.
+    #
+    # Die reden bestaat niet meer: elke opdracht hangt aan zijn eigen tabblad
+    # (`jobtab_<tabId>`) en het invulscript vraagt via GET_JOB de opdracht van
+    # ZIJN tabblad op. Wat overblijft is het echte bezwaar, en dat is per kanaal:
+    # twee formulieren van dezelfde site tegelijk. Dus staat het slot nu per
+    # kanaal, met een bovengrens op het totaal (MAX_PARALLELLE_PUBLICATIES).
+    #
+    # Het dashboard (dat /pending ZONDER platform aanroept, alleen om te tellen)
+    # wordt nooit geremd.
     #
     # NUANCE: alleen SCHRIJVENDE opdrachten blokkeren elkaar. Een scan ("reading
     # your listings") leest alleen en loopt door de hele garderobe — dat duurt
@@ -1429,6 +1456,7 @@ def get_pending_jobs(request: Request, platform: str = None, user_id: str = Depe
     # toevallig een leesronde loopt.
     is_extension_dispatch = platform is not None
     vinted_scan_bezig = False
+    bezette_kanalen: set[str] = set()   # kanalen waar op dit moment echt gepubliceerd wordt
     # Staat dit kanaal op pauze na een onbewezen inlogverwijt, dan gaat er even
     # niets uit. Alleen bij een echte poll van de extensie: het dashboard telt
     # hier alleen, en een wachtrij die er staat hoort gewoon geteld te worden.
@@ -1448,7 +1476,16 @@ def get_pending_jobs(request: Request, platform: str = None, user_id: str = Depe
                 continue
             ct = _parse_ts(c.get("claimed_at"))
             if ct and ct >= now_dt - timedelta(minutes=STALE_CLAIM_MINUTES):
-                return []  # er wordt nu echt gepubliceerd — nooit een 2e tabblad
+                bezette_kanalen.add(c.get("platform"))
+        # NOOIT TWEE TABBLADEN OP HETZELFDE KANAAL. Dat blijft de harde regel:
+        # twee formulieren van dezelfde site tegelijk is waar de gegevens door
+        # elkaar konden lopen, en het is ook precies wat een platform als
+        # geautomatiseerd ritme leest.
+        if platform in bezette_kanalen:
+            return []
+        # Maar wél naast elkaar op VERSCHILLENDE kanalen, tot de bovengrens.
+        if len(bezette_kanalen) >= MAX_PARALLELLE_PUBLICATIES:
+            return []
 
     # ── OM DE BEURT TUSSEN DE KANALEN ─────────────────────────────────────────
     #
@@ -1490,6 +1527,12 @@ def get_pending_jobs(request: Request, platform: str = None, user_id: str = Depe
                            .neq("platform", platform)
                            .or_(f"scheduled_for.is.null,scheduled_for.lte.{now}")
                            .order("created_at").limit(WACHTRIJ_KOP).execute().data or [])
+                # Een kanaal waar al een tabblad van openstaat is geen
+                # uitwijkmogelijkheid: dat zou alsnog het tweede formulier van
+                # dezelfde site openen. Sinds publicaties naast elkaar mogen
+                # lopen kan dat echt gebeuren, want een ander kanaal is nu
+                # gewoon aan het werk terwijl dit kanaal polt.
+                anderen = [j for j in anderen if j.get("platform") not in bezette_kanalen]
                 if anderen:
                     logger.info("Beurt doorgegeven aan %s: %s had de vorige "
                                 "publicatie (gebruiker %s)",

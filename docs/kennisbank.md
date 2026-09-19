@@ -17,6 +17,64 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ---
 
+## meten-op-de-productiedatabase
+
+*19-09-2026 — Een meetquery over duizenden rijen draait op dezelfde kleine Supabase-instantie als de live site; meet in brokken met een tijdvenster en een limiet*
+
+Metingen lezen uit de PRODUCTIEdatabase. Op 19-09-2026 draaide ik twee keer een
+telling over de jobs-tabel (veertien dagen, alle klanten, duizenden rijen); beide
+liepen in een read timeout, en kort daarna gaf heel Supabase PGRST002 ("Could not
+query the database for the schema cache") en de storage-laag DatabaseTimeout. De
+site bleef overeind op alles zonder database (/health 200) en gaf 500 op alles
+mét (/blog, /sitemap.xml): dashboard leeg, publiceren stil.
+
+**Why:** dit is een gratis plan met één kleine instantie, en de live site deelt
+die met de meting. "Ik lees alleen" is geen vrijbrief: een scan over een grote
+tabel kost precies het geheugen en de verbindingen die de klanten nodig hebben.
+Oorzaak-en-gevolg is hier niet bewezen (daarvoor zijn de dashboardlogs nodig),
+maar het was de enige ongewone belasting op dat moment.
+
+**How to apply:** meet per gebruiker of per kanaal, met een tijdvenster en een
+`limit`, in brokken van hooguit een paar honderd rijen, en met pauzes ertussen —
+dezelfde regel als "gekoppelde-vraag-ipv-brokken" en
+"pagineren-zonder-order-mist-rijen". Loopt een meetquery in een timeout, ga hem
+dan niet opnieuw draaien met dezelfde omvang: dat is het moment om hem op te
+delen. En check na een zware meting of de site nog antwoordt.
+
+---
+
+## kanalen-publiceren-naast-elkaar
+
+*19-09-2026 — Publiceren is niet meer één tegelijk in het hele account maar één per kanaal, hooguit drie tegelijk; focus-emulatie is wat een tweede tabblad laat doorwerken*
+
+Sinds 19-09-2026 (server) en extensie 1.0.342 publiceren kanalen naast elkaar:
+nooit twee formulieren van dezelfde site, hooguit drie kanalen tegelijk
+(`MAX_PARALLELLE_PUBLICATIES` in backend/api/jobs.py én background.js). De server
+is de scheidsrechter, want die kent de claims; het lijstje in de extensie is
+alleen een rem binnen één service worker.
+
+Daarvoor mocht er één publicatie tegelijk lopen in het hele account. Gemeten over
+tien dagen bij Daniel: wachten op een ander kanaal kostte 289 seconden (mediaan),
+terwijl het invullen zelf 108 seconden duurt op Marktplaats, 147 op 2dehands en
+354 op Vinted.
+
+**Why:** de reden voor één-tegelijk was dat twee tabbladen één opslagplek per
+kanaal deelden en elkaars gegevens overschreven. Dat is weg sinds elke opdracht
+aan `jobtab_<tabId>` hangt en het invulscript via GET_JOB de opdracht van zijn
+eigen tabblad opvraagt. Wat blijft is het echte bezwaar, en dat is per kanaal.
+
+**How to apply:** een tweede werk-tabblad werkt alleen door zolang
+`Emulation.setFocusEmulationEnabled` eraan staat. Gemeten, tien minuten, negen
+tabbladen tegelijk: met focus-emulatie 9,6 tikken/s (vol tempo 10), zonder 0,0 —
+kaal, met alleen de debugger, én in een eigen ingeklapt venster. Raak die
+aanroep in `zetDoorlopendeKlok` dus nooit aan zonder opnieuw te meten. Calm mode
+heeft sindsdien een klok per kanaal, en de absolute bovengrens per opdracht ging
+van 4,5 naar 9 minuten omdat drie tabbladen tegelijk elk iets trager zijn. Zie
+"verborgen-tabblad-worker-timer", "vinted-tabblad-klok-stilstand" en
+"korte-klokmeting-bewijst-niets".
+
+---
+
 ## 2dehands-verlengklok-loopt-op-de-importdatum
 
 *19-09-2026 — "285 van 458 levende 2dehands-advertenties bij De Juiste Toon missen het verlengvenster; nul verlengopdrachten ooit, want listed_at is de importdatum"*

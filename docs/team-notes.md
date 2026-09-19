@@ -11543,3 +11543,90 @@ getoonde datum is op 2dehands niet de vervalklok — er staan advertenties van m
 verkoper en moet daar vandaan komen, via de extensie. Dat is een apart karwei.
 
 Testbak: 1524 goed, 14 stuk — exact dezelfde 14 als voor deze wijziging.
+
+## 19-09-2026 (vervolg 2) — kanalen publiceren voortaan naast elkaar
+
+Daniel: "ja doe dat, kanalen naast elkaar laten draaien." Wat er veranderd is en
+wat het bewijs daarvoor is.
+
+**Wat er stond.** Er mocht één publicatie tegelijk lopen in het hele account,
+ongeacht het kanaal. De reden daarvoor was terecht maar is verouderd: de extensie
+bewaarde de lopende opdracht ooit onder één sleutel per kanaal, en een tweede
+tabblad overschreef dan de gegevens van het eerste (advertenties met elkaars
+foto's en prijzen). Sinds de per-tabblad-sleutel `jobtab_<tabId>` en GET_JOB
+bestaat dat gevaar niet meer: elk tabblad vraagt de opdracht van zichzelf op.
+
+**Wat het kostte.** Gemeten over tien dagen in Daniels account, 118 opdrachten:
+een opdracht die als enige klaarstond werd binnen 7 seconden opgepakt (uitschieter
+16). Moest hij op een andere wachten, dan was de mediaan 289 seconden. Het werk
+zelf duurt 108 seconden op Marktplaats, 147 op 2dehands en 354 op Vinted. Drie
+kanalen achter elkaar is dus zes tot tien minuten voor werk dat niets met elkaar
+te maken heeft.
+
+**Wat er nu geldt.** Nooit twee formulieren van dezelfde site, hooguit drie
+kanalen tegelijk (MAX_PARALLELLE_PUBLICATIES). De server is de scheidsrechter:
+die geeft per kanaal maar één verse claim uit en telt het totaal. De extensie
+houdt daarnaast zelf een lijstje bij, maar dat is alleen een rem tegen dubbel
+werk binnen één service worker — sterft die, dan blijft de server de grens
+bewaken. Calm mode heeft nu een klok per kanaal in plaats van één voor alles;
+anders zou de eerste publicatie alle andere kanalen drie tot acht minuten
+stilzetten, en dat is ook inhoudelijk juister: Marktplaats ziet niet wat er op
+Vinted gebeurt.
+
+**Het bewijs dat een tweede tabblad ook echt doorwerkt.** De vraag was niet of
+het sneller gaat maar of Chrome een werk-tabblad dat niet vooraan staat afknijpt.
+Gemeten in een echte Chrome, tien minuten lang, negen tabbladen tegelijk
+(tests/klok-varianten-echt-test.mjs):
+
+    kaal achtergrondtabblad                    0,0 tikken/s
+    alleen de debugger eraan                   0,0 tikken/s
+    ingeklapt venster, actief tabblad          0,0 tikken/s
+    debugger + focus-emulatie                  9,6 tikken/s  (vol tempo = 10)
+    debugger + focus + ontdooien               9,6 tikken/s
+    ingeklapt + debugger + focus + ontdooien   9,6 tikken/s
+
+Vier tabbladen met focus-emulatie hielden dus tien minuten lang vol tempo, naast
+elkaar in hetzelfde venster. `zetDoorlopendeKlok` zet die emulatie bij élk
+schrijvend tabblad aan, dus dat is precies wat parallel publiceren nodig heeft.
+
+**En een grens die mee moest.** De absolute bovengrens per opdracht stond op 4,5
+minuut. Dat was al krap (Vinted: mediaan 354 s, uitschieter 565 s) en zou met drie
+tabbladen tegelijk goede plaatsingen gaan afkappen. Die grens staat nu op 9
+minuten. De echte bewaking verandert niet: drie minuten zonder één teken van
+leven uit het tabblad blijft "vastgelopen".
+
+**Proeven.** tests/test_kanalen_om_de_beurt.py (9, waaronder een voor-en-na tegen
+commit b3c31f1b: de oude uitgifte hield 2dehands juist tegen) en
+tests/opdrachten-om-de-beurt-test.js (11 op de echte pollronde; de oude versie
+haalt er 4 niet, want die start er precies één tegelijk).
+
+**Nog te doen:** de extensie moet naar de Chrome Web Store (1.0.342,
+dist/omnivaleur-extension-1.0.342.zip). Tot die kopie bij hem draait verandert er
+voor Daniel niets: de server deelt wel parallel uit, maar een oudere extensie
+werkt zichzelf nog steeds één voor één af. Dat is ook precies waarom de
+serverwijziging veilig is voor iedereen die nog niet heeft bijgewerkt.
+
+## 19-09-2026 (vervolg 3) — de database lag er middenin uit
+
+Vanaf ongeveer 15:10 gaf Supabase geen antwoord meer. Wat er te zien was:
+
+    /rest/v1/…    503  PGRST002 "Could not query the database for the schema cache"
+    /storage/v1/… 544  DatabaseTimeout "The connection to the database timed out"
+    /auth/v1/…    geen antwoord binnen 20 seconden
+    /realtime/…   401 (leeft; die heeft de database niet nodig)
+
+Dus niet de API-laag maar de database zelf. De site bleef overeind op alles wat
+geen database nodig heeft (/health gaf 200 in 0,3 s) en gaf 500 of niets op alles
+wat dat wél nodig heeft (/blog, /sitemap.xml). Voor een klant betekent dat: het
+dashboard laadt niet en er wordt niets gepubliceerd.
+
+**Waar het vandaan komt is niet bewezen.** Wat wél vaststaat: er draaiden vlak
+ervoor twee zware metingen van mijn kant op de jobs-tabel (veertien dagen, alle
+klanten, duizenden rijen, twee keer afgebroken op een read timeout). Dat is de
+enige ongewone belasting die ik kan aanwijzen, en het past bij wat er al in de
+kennisbank staat over brokken van 200 rijen die 502 geven. Bewijzen kan ik het
+niet zonder de logs in het Supabase-dashboard.
+
+**Les die er hoe dan ook in hoort:** meten doe je in kleine brokken met een
+tijdvenster en een limiet, ook als het "maar lezen" is. Dit is een gratis plan met
+één kleine instantie, en de site deelt die instantie met de meting.

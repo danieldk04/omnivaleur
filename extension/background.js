@@ -816,7 +816,13 @@ function mpKidsSizeCat3(size, sizeMap) {
 // wachten zonder dat het iets veiliger maakt.
 const CALM_MIN_MS = 3 * 60 * 1000;
 const CALM_MAX_MS = 8 * 60 * 1000;
-const CALM_SLEUTEL = "calmVolgendeNa";
+// PER KANAAL, NIET VOOR DE HELE EXTENSIE (19-09-2026). Wat een platform als
+// ritme ziet is wat er OP DAT PLATFORM gebeurt; Marktplaats ziet niet wat er op
+// Vinted staat te gebeuren. Met één klok voor alles zou Calm mode bovendien het
+// naast elkaar publiceren meteen weer ongedaan maken: de eerste publicatie zette
+// dan de klok voor alle kanalen tegelijk stil.
+const CALM_SLEUTEL = "calmVolgendeNa";                    // oude, kanaalloze sleutel
+const calmSleutel = (platform) => `${CALM_SLEUTEL}_${platform || "alles"}`;
 const SCHRIJVENDE_ACTIES = new Set(["create", "delete", "content_refresh", "extend"]);
 // Zonder Calm mode stond hier helemaal geen rem: een grote stapel te herplaatsen
 // advertenties liep in één ronde achter elkaar door, en dan wisselt het werkvenster
@@ -836,21 +842,24 @@ async function calmAan() {
 // Mag er nu een schrijvende opdracht draaien? In de opslag, niet in het geheugen:
 // een service worker wordt door Chrome doodgemaakt zodra hij even niets doet, en
 // dan zou de wachttijd elke keer opnieuw op nul beginnen.
-async function calmMagNu() {
+async function calmMagNu(platform) {
   if (!await calmAan()) return true;
+  const sleutel = calmSleutel(platform);
   try {
-    const s = await chrome.storage.local.get(CALM_SLEUTEL);
-    const na = s[CALM_SLEUTEL] || 0;
+    const s = await chrome.storage.local.get([sleutel, CALM_SLEUTEL]);
+    // De oude sleutel telt nog mee zolang hij er staat: een kopie die net is
+    // bijgewerkt terwijl er een wachttijd liep, hoort die wachttijd uit te zitten.
+    const na = Math.max(s[sleutel] || 0, s[CALM_SLEUTEL] || 0);
     return Date.now() >= na;
   } catch (_) { return true; }
 }
 
-async function calmVolgendeInplannen() {
+async function calmVolgendeInplannen(platform) {
   if (!await calmAan()) return;
   const wacht = CALM_MIN_MS + Math.floor(Math.random() * (CALM_MAX_MS - CALM_MIN_MS));
   try {
-    await chrome.storage.local.set({ [CALM_SLEUTEL]: Date.now() + wacht });
-    console.log(`[Omnivaleur] Calm mode: volgende publicatie over ${Math.round(wacht / 60000)} min`);
+    await chrome.storage.local.set({ [calmSleutel(platform)]: Date.now() + wacht });
+    console.log(`[Omnivaleur] Calm mode: volgende publicatie op ${platform} over ${Math.round(wacht / 60000)} min`);
   } catch (_) {}
 }
 
@@ -866,7 +875,10 @@ chrome.storage.onChanged.addListener((wijzigingen, gebied) => {
     calmAlarmBijwerken();
     // Uitzetten mag meteen effect hebben: geen reden iemand te laten wachten op
     // een rem die hij zojuist heeft losgelaten.
-    if (!wijzigingen.calmMode.newValue) chrome.storage.local.remove(CALM_SLEUTEL);
+    if (!wijzigingen.calmMode.newValue) {
+      chrome.storage.local.remove(
+        [CALM_SLEUTEL, ...EXTENSION_PLATFORMS.map(calmSleutel)]);
+    }
   }
 });
 
@@ -1466,6 +1478,30 @@ let _pollNogmaals = false;
 // pollronde er nóg één starten, want een scan blokkeert de wachtrij niet meer.
 const _lopendeScans = new Set();
 
+// ── KANALEN NAAST ELKAAR (19-09-2026) ───────────────────────────────────────
+//
+// Publiceren liep één voor één, over alle kanalen heen. Gemeten bij Daniel over
+// tien dagen: een opdracht die op een andere moest wachten stond er 289 seconden
+// (mediaan) voor stil, terwijl het invullen zelf 108 seconden kost op
+// Marktplaats, 147 op 2dehands en 354 op Vinted. Wie op drie kanalen tegelijk
+// publiceert wacht dus zes tot tien minuten op iets wat niets met elkaar te
+// maken heeft.
+//
+// Waarom het kán: elke opdracht hangt aan zijn eigen tabblad (`jobtab_<tabId>`)
+// en het invulscript vraagt via GET_JOB de opdracht van ZIJN tabblad op. De
+// oude reden voor één-tegelijk (twee tabbladen deelden één opslagplek) bestaat
+// dus niet meer. Wat blijft is: nooit twee formulieren van DEZELFDE site.
+//
+// Gemeten dat het ook wérkt: een werk-tabblad dat niet het actieve tabblad is
+// houdt vol tempo zolang `Emulation.setFocusEmulationEnabled` eraan staat, en
+// dat zet zetDoorlopendeKlok bij elk schrijvend tabblad aan. Zie
+// tests/parallel-tabbladen-echt-test.mjs.
+//
+// Deze lijst is alleen een rem tegen dubbel werk binnen één service worker; de
+// echte bewaker staat op de server, die per kanaal maar één verse claim uitgeeft.
+const MAX_PARALLELLE_PUBLICATIES = 3;
+const _lopendePublicaties = new Set();
+
 // Tabbladen die er niet meer zijn, maar wél nog een lopende opdracht in de
 // administratie hebben staan. Bij netjes sluiten vangt tabs.onRemoved dat af,
 // maar bij een crash van Chrome of een herstart van de extensie draait die
@@ -1598,6 +1634,10 @@ async function pollJobsEenRonde() {
   await flushFinaliseQueue();
   const headers = await getAuthHeaders();
   for (const platform of await platformsOpBeurt()) {
+    // Op dit kanaal staat al een formulier open: niets vragen. De server weigert
+    // het ook (zie MAX_PARALLELLE_PUBLICATIES), maar dan hebben we het verzoek al
+    // gedaan — en bij vier kanalen elke ronde is dat zonde.
+    if (_lopendePublicaties.has(platform)) continue;
     try {
       const res = await fetch(`${serverUrl}/api/jobs/pending?platform=${platform}`, { headers });
       if (!res.ok) continue;
@@ -1622,47 +1662,76 @@ async function pollJobsEenRonde() {
             .finally(() => _lopendeScans.delete(job.platform));
           continue;
         }
+        const schrijvend = SCHRIJVENDE_ACTIES.has(job.action);
+        // LET OP: job.platform, niet platform. De server mag een opdracht van een
+        // ÁNDER kanaal teruggeven (de beurtverdeling daar), en dan hoort de
+        // administratie hieronder over dát kanaal te gaan.
+        const kanaal = job.platform || platform;
+
+        if (!schrijvend) {
+          verzet = true;
+          try {
+            await processJob(job, serverUrl);
+          } catch (e) {
+            console.error(`Omnivaleur job ${job.id} (${job.action}/${kanaal}) threw:`, e);
+            try { await reportError(job.id, serverUrl, `Extension error: ${e?.message || e}`); }
+            catch (e2) { console.error("Omnivaleur: failed to report job error:", e2); }
+          }
+          continue;
+        }
+
         // Calm mode: de opdracht blijft gewoon klaarstaan, hij begint alleen
         // later. Niets gaat verloren; de gebruiker ziet hem in het dashboard
         // in de wachtrij staan.
-        if (SCHRIJVENDE_ACTIES.has(job.action) && !(await calmMagNu())) continue;
+        if (!(await calmMagNu(kanaal))) continue;
+        if (_lopendePublicaties.has(kanaal)) continue;          // dit kanaal is al bezig
+        if (_lopendePublicaties.size >= MAX_PARALLELLE_PUBLICATIES) break;
 
         verzet = true;
-        const schrijvend = SCHRIJVENDE_ACTIES.has(job.action);
-        try {
-          await processJob(job, serverUrl);
-          if (schrijvend) {
-            await calmVolgendeInplannen();
-            await new Promise(r => setTimeout(r, MIN_GAP_MS));
-          }
-        } catch (e) {
-          // Last line of defence. processJob claims the job BEFORE doing any
-          // work, and the backend refuses to dispatch anything at all while a
-          // job sits claimed (strict global serialisation). So an unhandled
-          // throw here used to freeze the entire queue — every platform — until
-          // the 5-minute stale sweep, which then killed the job as "interrupted"
-          // rather than telling the user what actually went wrong. Report it
-          // against this job and keep going.
-          console.error(`Omnivaleur job ${job.id} (${job.action}/${platform}) threw:`, e);
-          try {
-            await reportError(job.id, serverUrl, `Extension error: ${e?.message || e}`);
-          } catch (e2) {
-            console.error("Omnivaleur: failed to report job error:", e2);
-          }
-        }
+        _lopendePublicaties.add(kanaal);
+        await calmVolgendeInplannen(kanaal);
+        // NIET afwachten: dit kanaal gaat zijn eigen gang, zodat de volgende
+        // kanalen in deze ronde meteen aan de beurt komen. De opdracht zelf blijft
+        // strikt één-tabblad-per-kanaal; de server bewaakt dat ook.
+        processJob(job, serverUrl)
+          .catch(async (e) => {
+            // Last line of defence. processJob claims the job BEFORE doing any
+            // work, and the backend refuses to dispatch anything on this channel
+            // while a job sits claimed. So an unhandled throw here used to freeze
+            // the queue until the 5-minute stale sweep, which then killed the job
+            // as "interrupted" rather than telling the user what actually went
+            // wrong. Report it against this job and keep going.
+            console.error(`Omnivaleur job ${job.id} (${job.action}/${kanaal}) threw:`, e);
+            try { await reportError(job.id, serverUrl, `Extension error: ${e?.message || e}`); }
+            catch (e2) { console.error("Omnivaleur: failed to report job error:", e2); }
+          })
+          .finally(() => {
+            _lopendePublicaties.delete(kanaal);
+            // Meteen kijken of er op dit kanaal nog meer klaarstaat. Zonder deze
+            // regel zou de volgende opdracht op de gewone klok wachten, en dat is
+            // precies het gat dat we hier aan het weghalen zijn. De korte pauze is
+            // MIN_GAP_MS: zie daar waarom er altijd even rust tussen twee
+            // tabbladen van hetzelfde kanaal zit.
+            setTimeout(() => { pollJobs(); }, MIN_GAP_MS);
+          });
         // Eén publicatie per kanaal per ronde, dan is het volgende kanaal aan de
         // beurt. Zonder deze rem draaide de hele Marktplaats-wachtrij leeg
         // voordat 2dehands ook maar één keer werd gevraagd.
-        if (schrijvend) {
-          await beurtDoorgeven(platform);
-          break;
-        }
+        await beurtDoorgeven(kanaal);
+        break;
       }
     } catch (e) {
       console.error(`Omnivaleur poll error (${platform}):`, e);
     }
   }
-  wakkerHouden(werkKlaar);
+  // DE COMPUTER MAG OOK NIET GAAN SLAPEN TERWIJL ER NOG IETS LOOPT (19-09-2026).
+  //
+  // Hiervoor wachtte deze ronde op de publicatie zelf, dus stond er tijdens het
+  // werk per definitie werk klaar. Nu de kanalen naast elkaar lopen is de ronde
+  // meteen klaar terwijl de tabbladen nog aan het invullen zijn — en dan zou hier
+  // de wakkerhouding worden losgelaten en de laptop alsnog in slaap vallen met
+  // drie halve advertenties open. Zie de toelichting bij wakkerHouden.
+  wakkerHouden(werkKlaar || _lopendePublicaties.size > 0 || _lopendeScans.size > 0);
   return verzet;
 }
 
@@ -2889,7 +2958,19 @@ async function meldNooitBegonnen(tabId, meta, snapshot) {
 
 // Hoe lang een opdracht in totaal mag doen over zijn tab. Ruim onder de vijf
 // minuten waarop de server een niet-afgemelde opdracht terugneemt.
-const JOB_MAX_LIFETIME_MS = 4.5 * 60 * 1000;
+// RUIMER SINDS DE KANALEN NAAST ELKAAR LOPEN (19-09-2026).
+//
+// Hier stond 4,5 minuut. Dat was al krap: gemeten over tien dagen bij Daniel
+// duurt een Vinted-plaatsing 354 seconden (mediaan) en uitschieters 565. Die
+// haalden het alleen doordat de bewaker bij Vinted eerst kijkt of de advertentie
+// er tóch staat. Nu er drie tabbladen tegelijk kunnen werken, wordt elk van hen
+// iets trager, en dan zou deze grens goede plaatsingen gaan afkappen — met een
+// rode melding bij een advertentie die gewoon bezig was.
+//
+// De echte bewaking verandert niet: drie minuten zonder één teken van leven uit
+// het tabblad blijft "vastgelopen". Dit is alleen de bovengrens voor een tabblad
+// dat wél doorwerkt.
+const JOB_MAX_LIFETIME_MS = 9 * 60 * 1000;
 
 // Teken van leven vanuit de tab: bewaker opnieuw opspannen, tenzij de opdracht
 // al te lang loopt of al aan de gebruiker is teruggegeven.

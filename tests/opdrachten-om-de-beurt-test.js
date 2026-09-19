@@ -61,13 +61,28 @@ const ok = (naam, v, extra) => {
 
 const CALM_MS = 5 * 60 * 1000;
 
+// Eén ronde draaien en zien of ze afloopt. "hangt" betekent: deze versie staat
+// te wachten tot de lopende publicatie klaar is (`await processJob`).
+const eenRonde = (omgeving) => Promise.race([
+  omgeving.pollJobsEenRonde().then(() => "klaar"),
+  new Promise((r) => setTimeout(() => r("hangt"), 50)),
+]);
+
 // Een nagebootste wachtrij plus de echte pollronde eromheen.
-async function draai({ mp, tweedehands, rondes, calm = true }) {
+//
+// `blijftHangen` laat de publicaties NIET vanzelf afronden, zodat zichtbaar is
+// hoeveel er tegelijk lopen. Dat is wat sinds 19-09-2026 de vraag is: kanalen
+// mogen naast elkaar publiceren, maar nooit twee op hetzelfde kanaal.
+async function draai({ mp, tweedehands, vinted = 0, facebook = 0, rondes,
+                       calm = true, blijftHangen = false }) {
   const wachtrij = [];
   for (let i = 0; i < mp; i++) wachtrij.push({ id: `mp${i}`, platform: "marktplaats", action: "create" });
   for (let i = 0; i < tweedehands; i++) wachtrij.push({ id: `td${i}`, platform: "2dehands", action: "create" });
+  for (let i = 0; i < vinted; i++) wachtrij.push({ id: `vi${i}`, platform: "vinted", action: "create" });
+  for (let i = 0; i < facebook; i++) wachtrij.push({ id: `fb${i}`, platform: "facebook", action: "create" });
 
-  const gedaan = [];            // volgorde waarin er echt gepubliceerd is
+  const gedaan = [];            // volgorde waarin er echt begonnen is
+  const lopend = [];            // publicaties die nu een tabblad open hebben
   let nu = 1_000_000;           // virtuele klok
   const opslag = {};            // chrome.storage.local
 
@@ -77,6 +92,10 @@ async function draai({ mp, tweedehands, rondes, calm = true }) {
     SCHRIJVENDE_ACTIES: new Set(["create", "delete", "content_refresh"]),
     MIN_GAP_MS: 0,
     _lopendeScans: new Set(),
+    _lopendePublicaties: new Set(),
+    MAX_PARALLELLE_PUBLICATIES: 3,
+    wakkerHouden: () => {},
+    pollJobs: async () => {},          // wordt na afloop van een klus aangeroepen
     PLATFORM_BEURT_SLEUTEL: "platformBeurt",
     chrome: {
       storage: {
@@ -91,22 +110,43 @@ async function draai({ mp, tweedehands, rondes, calm = true }) {
     flushFinaliseQueue: async () => {},
     reportError: async () => {},
     gaEvent: () => {},
-    // De server: alleen de openstaande opdrachten van het gevraagde platform.
+    // De server, met dezelfde regels als de echte uitgifte (get_pending_jobs):
+    // een opdracht die al is uitgegeven komt niet nog een keer langs, op een
+    // kanaal waar een formulier openstaat gaat er niets uit, en er lopen er
+    // nooit meer dan drie tegelijk. Zonder die regels zou deze proef een
+    // extensie goedkeuren die in het echt tegen een dichte deur loopt.
     fetch: async (url) => {
       const platform = decodeURIComponent(String(url).split("platform=")[1] || "");
-      const rij = wachtrij.filter((j) => j.platform === platform && !j.klaar).slice(0, 25);
+      const bezet = new Set(wachtrij.filter((j) => j.uitgegeven && !j.klaar)
+                                    .map((j) => j.platform));
+      if (bezet.has(platform) || bezet.size >= 3) {
+        return { ok: true, json: async () => [] };
+      }
+      const rij = wachtrij.filter((j) => j.platform === platform && !j.uitgegeven).slice(0, 25);
       return { ok: true, json: async () => rij.map((j) => ({ ...j })) };
     },
     // Publiceren duurt tijd; daarna staat de opdracht af.
-    processJob: async (job) => {
+    processJob: (job) => {
       const rij = wachtrij.find((j) => j.id === job.id);
-      if (rij) rij.klaar = true;
+      if (rij) rij.uitgegeven = true;          // de server claimt hem bij het oppakken
       gedaan.push(job.platform);
+      if (blijftHangen) {
+        // Het tabblad blijft open staan tot de proef hem zelf afrondt.
+        return new Promise((klaar) => lopend.push({
+          job, afronden: () => { if (rij) rij.klaar = true; klaar(); },
+        }));
+      }
+      if (rij) rij.klaar = true;
       nu += 30 * 1000;
+      return Promise.resolve();
     },
-    // Calm mode: één klok voor de hele extensie, precies als in het echt.
-    calmMagNu: async () => (calm ? nu >= (opslag.calmNa || 0) : true),
-    calmVolgendeInplannen: async () => { if (calm) opslag.calmNa = nu + CALM_MS; },
+    // Calm mode: sinds 19-09-2026 één klok PER KANAAL. Marktplaats ziet niet wat
+    // er op Vinted gebeurt, en één klok voor alles zou het naast elkaar
+    // publiceren meteen weer ongedaan maken.
+    calmMagNu: async (platform) => (calm ? nu >= (opslag[`calmNa_${platform}`] || 0) : true),
+    calmVolgendeInplannen: async (platform) => {
+      if (calm) opslag[`calmNa_${platform}`] = nu + CALM_MS;
+    },
     setTimeout: (f) => f(),
   };
   omgeving.Date = { now: () => nu };
@@ -124,12 +164,26 @@ async function draai({ mp, tweedehands, rondes, calm = true }) {
   }
 
   for (let r = 0; r < rondes; r++) {
-    await omgeving.pollJobsEenRonde();
+    // Met blijftHangen ronden de publicaties niet vanzelf af. De OUDE versie
+    // wacht die afronding af (`await processJob`) en komt dus nooit terug uit
+    // deze ronde. Dat is geen testfoutje maar precies het gedrag: zolang die
+    // ronde hangt begint er bij haar niets nieuws, want `_pollLoopt` laat er in
+    // het echt maar één ronde tegelijk lopen. Blijft ze hangen, dan stoppen we
+    // hier — verder tellen zou de oude versie rondes geven die ze nooit krijgt.
+    if (blijftHangen) {
+      if (await eenRonde(omgeving) === "hangt") break;
+    } else {
+      await omgeving.pollJobsEenRonde();
+    }
     // De klok loopt door tot calm mode de volgende publicatie toestaat; dat is
     // wat er in het echt gebeurt terwijl het alarm elke 15 seconden opnieuw kijkt.
-    if (calm && opslag.calmNa && opslag.calmNa > nu) nu = opslag.calmNa;
+    if (calm) {
+      const klokken = Object.entries(opslag)
+        .filter(([k, v]) => k.startsWith("calmNa_") && v > nu).map(([, v]) => v);
+      if (klokken.length && !lopend.length) nu = Math.min(...klokken);
+    }
   }
-  return { gedaan, wachtrij };
+  return { gedaan, wachtrij, lopend, omgeving };
 }
 
 (async () => {
@@ -158,6 +212,49 @@ async function draai({ mp, tweedehands, rondes, calm = true }) {
   // 4. Een kanaal zonder werk houdt niemand op.
   const d = await draai({ mp: 3, tweedehands: 0, rondes: 3 });
   ok("een leeg kanaal kost geen beurt", d.gedaan.length === 3, { volgorde: d.gedaan });
+
+  // ── 19-09-2026: kanalen naast elkaar ───────────────────────────────────────
+  //
+  // Daniel, over een 2dehands-zoekertje dat op Marktplaats stond te wachten:
+  // "hij doet heel lang over 2dehands openen, ik denk dat ie vastgelopen is."
+  // Gemeten over tien dagen: 289 seconden wachten (mediaan) op een publicatie
+  // op een ánder kanaal, bovenop de 108 tot 354 seconden die het invullen zelf
+  // kost.
+
+  // 5. Vier kanalen met werk: er gaan er drie tegelijk van start, elk op een
+  //    eigen kanaal, en het vierde wacht op een vrije plek.
+  const e = await draai({ mp: 3, tweedehands: 3, vinted: 3, facebook: 3,
+                          rondes: 3, calm: false, blijftHangen: true });
+  const kanalen = e.lopend.map((l) => l.job.platform);
+  ok("drie kanalen publiceren tegelijk", e.lopend.length === 3, { kanalen });
+  ok("elk op zijn eigen kanaal", new Set(kanalen).size === kanalen.length, { kanalen });
+  ok("het vierde kanaal wacht op een plek", !kanalen.includes(kanalen[3]), { kanalen });
+
+  // 6. Twintig Marktplaats-opdrachten en verder niets: er mag er precies ÉÉN
+  //    tegelijk lopen. Twee formulieren van dezelfde site is exact wat er nooit
+  //    mag gebeuren.
+  const f = await draai({ mp: 20, tweedehands: 0, rondes: 5, calm: false,
+                          blijftHangen: true });
+  ok("nooit twee tabbladen op hetzelfde kanaal", f.lopend.length === 1,
+     { lopend: f.lopend.map((l) => l.job.id) });
+
+  // 7. Zodra een kanaal klaar is, komt de volgende opdracht van DAT kanaal
+  //    aan de beurt en niet pas over een ronde.
+  if (!f.lopend.length) { ok("na afronden gaat hetzelfde kanaal meteen door", false, "niets liep"); }
+  else {
+  f.lopend[0].afronden();
+  await new Promise((r) => setImmediate(r));
+  await eenRonde(f.omgeving);
+  ok("na afronden gaat hetzelfde kanaal meteen door", f.lopend.length === 2,
+     { lopend: f.lopend.map((l) => l.job.id) });
+  }
+
+  // 8. Calm mode remt per kanaal, niet het hele huis. Anders zou de eerste
+  //    publicatie alle andere kanalen drie tot acht minuten stilzetten.
+  const g = await draai({ mp: 2, tweedehands: 2, vinted: 2, rondes: 1,
+                          calm: true, blijftHangen: true });
+  ok("calm mode houdt de andere kanalen niet tegen", g.lopend.length === 3,
+     { kanalen: g.lopend.map((l) => l.job.platform) });
 
   console.log(mislukt ? `\n${mislukt} controle(s) mislukt\n` : "\nAlles goed\n");
   process.exit(mislukt ? 1 : 0);
