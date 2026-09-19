@@ -707,10 +707,19 @@ def _zet_rubriek_van_marktplaats(db, user_id: str, job: dict) -> bool:
         rubriek = None
     else:
         from backend.services.mp_enrich import rubriek_van_eigen_advertentie
-        titel = (rij.get("items") or {}).get("title") or pl.get("title") or ""
+        # BEIDE TITELS, DE GEPLAATSTE EERST (19-09-2026).
+        #
+        # Op Marktplaats staat de titel waarmee wij de advertentie daar hebben
+        # gezet, en die is vertaald. In `items` staat de brontitel, en die is bij
+        # alles wat uit Vinted of de webshop komt Engels. Hier stond de brontitel
+        # voorop, dus werd er gezocht op "(1367) White Columbia Fleece Jacket"
+        # terwijl de advertentie "(1367) Witte Columbia fleecejas" heet: nul
+        # resultaten, en nul leest als een storing. Het zoekertje op 2dehands
+        # bleef daardoor staan tot het geduld van zes uur op was.
+        titels = [pl.get("title"), (rij.get("items") or {}).get("title")]
         try:
             rubriek = _draai_los(rubriek_van_eigen_advertentie(
-                db, user_id, titel, rij["platform_listing_id"]))
+                db, user_id, titels, rij["platform_listing_id"]))
         except Exception as e:  # noqa: BLE001
             logger.warning("job %s: rubriek opvragen mislukt: %s", job.get("id"), e)
             rubriek = None

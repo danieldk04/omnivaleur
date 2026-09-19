@@ -135,8 +135,10 @@ class _Vraag:
 
 
 class _DB:
-    def __init__(self, jobs, op_marktplaats=None, geschiedenis=None, eerder=None):
+    def __init__(self, jobs, op_marktplaats=None, geschiedenis=None, eerder=None,
+                 items_titel=None):
         self.jobs = jobs
+        self.items_titel = items_titel or TITEL     # de brontitel uit de voorraad
         self.op_marktplaats = op_marktplaats or {}      # item_id -> advertentienummer
         self.geschiedenis = geschiedenis or []
         self.eerder = eerder or {}                      # item_id -> eerder gevonden rubriek
@@ -153,7 +155,7 @@ class _DB:
             ids = v.f.get("item_id")
             ids = ids if isinstance(ids, list) else [ids]
             return [{"item_id": i, "platform_listing_id": self.op_marktplaats[i],
-                     "items": {"title": TITEL}} for i in ids if i in self.op_marktplaats]
+                     "items": {"title": self.items_titel}} for i in ids if i in self.op_marktplaats]
         if v.tabel == "jobs" and v.f.get("is:payload->mp_category") == "null":
             mc = self.eerder.get(v.f.get("item_id"))
             return [{"mp_category": mc}] if mc else []
@@ -402,3 +404,127 @@ def test_een_rubriek_die_al_geld_kostte_gaat_niet_opnieuw_de_deur_uit(monkeypatc
     assert any(t == "jobs" and w.get("status") == "cancelled" for t, _f, w in db.updates)
     herplaatsing = {**_echte_opdracht(), "payload": {**_echte_opdracht()["payload"], "_refresh_rollback": {"x": 1}}}
     assert J._weiger_bekende_betaalde_rubriek(_DB([], geschiedenis=[betaald]), USER, herplaatsing) is False
+
+
+# ── 19-09-2026: de advertentie heet op Marktplaats anders dan bij ons ────────
+#
+# Daniel: "hij doet heel lang over 2dehands openen, ik denk dat ie vastgelopen
+# is." Gemeten in zijn eigen opdrachten: Marktplaats ging om 09:50:14 open en
+# was om 09:53:34 klaar; het zoekertje op 2dehands van 09:50:08 stond om 10:02
+# nog steeds te wachten, terwijl het dashboard "binnen ~15 seconden" beloofde.
+#
+# De oorzaak: wij plaatsen op Marktplaats met een VERTAALDE titel en bewaren in
+# de voorraad de brontitel, en die is Engels bij alles wat uit Vinted of de
+# webshop komt. Er werd gezocht op "(1367) White Columbia Fleece Jacket" terwijl
+# de advertentie "(1367) Witte Columbia fleecejas" heet: nul resultaten, en nul
+# is hier niet "bestaat niet" maar "kon niet zoeken" — dus wachten, tot zes uur.
+VOOR_DE_TITELREPARATIE = "69c8ad7d"
+NL_TITEL = "(1367) Witte Columbia fleecejas - Heren XL - Zeer goed"
+EN_TITEL = "(1367) White Columbia Fleece Jacket - Men XL - Very Good"
+JAS_NUMMER = "m2444265405"
+JAS_ITEM = "88f41d7a-56a6-48c6-b742-2bcbcf7c0eaf"
+JAS_RUBRIEK = {"l1": 1776, "l1_naam": "Kleding | Heren",
+               "l2": 2788, "l2_naam": "Jassen | Winter"}
+
+# Letterlijk (ingekort) van /lrp/api/search met sellerIds[]=25837606, 19-09-2026.
+EIGEN_LIJST = {
+    "listings": [
+        {"itemId": "m2444265405", "title": NL_TITEL, "categoryId": 2788},
+        {"itemId": "m2444076253", "title": "(1370) Marineblauw Quechua Broek - Heren XL",
+         "categoryId": 2788},
+    ],
+    "facets": [{"key": "RelevantCategories", "categories": [
+        {"id": 1776, "label": "Kleding | Heren", "parentId": None},
+        {"id": 2788, "label": "Jassen | Winter", "parentId": 1776},
+    ]}],
+}
+
+
+class _ClientPerVraag:
+    """Antwoordt zoals Marktplaats het vandaag deed: de Engelse titel levert
+    niets op, de eigen advertentielijst (zonder zoekterm) levert alles."""
+
+    def __init__(self):
+        self.vragen = []
+
+    async def get(self, url, params=None, headers=None):
+        self.vragen.append(params)
+        vraag = (params or {}).get("query")
+        if not vraag:
+            return _Antwoord(EIGEN_LIJST)                 # de eigen advertenties
+        if vraag.split()[:2] == NL_TITEL.split()[:2]:
+            return _Antwoord(EIGEN_LIJST)                 # de titel zoals geplaatst
+        return _Antwoord({"listings": [], "facets": []})  # de Engelse brontitel
+
+    async def __aenter__(self):
+        return self
+
+    async def __aexit__(self, *_a):
+        return False
+
+
+def test_de_engelse_brontitel_vindt_de_advertentie_niet_maar_de_eigen_lijst_wel():
+    """Voor-en-na op precies de vraag die vanochtend bleef hangen."""
+    oud_mp = _oude_module("backend/services/mp_enrich.py", VOOR_DE_TITELREPARATIE,
+                          "oud_mp_titel", moet_missen=("_rubriek_uit_zoekantwoord",))
+    assert asyncio.run(oud_mp.rubriek_op_advertentienummer(
+        _ClientPerVraag(), 25837606, EN_TITEL, JAS_NUMMER)) is None, \
+        "de oude versie hoort hier juist te blijven wachten"
+
+    client = _ClientPerVraag()
+    assert asyncio.run(M.rubriek_op_advertentienummer(
+        client, 25837606, EN_TITEL, JAS_NUMMER)) == JAS_RUBRIEK
+    assert client.vragen[-1].get("query") is None, \
+        "de laatste ronde vraagt de eigen advertenties op, zonder zoekterm"
+    # En met beide titels is de eerste vraag meteen raak: geen extra ronde nodig.
+    kort = _ClientPerVraag()
+    assert asyncio.run(M.rubriek_op_advertentienummer(
+        kort, 25837606, [NL_TITEL, EN_TITEL], JAS_NUMMER)) == JAS_RUBRIEK
+    assert len(kort.vragen) == 1
+
+
+def test_een_nummer_dat_niet_van_deze_verkoper_is_blijft_leeg():
+    """De eigen lijst mag nooit een rubriek van een ANDERE advertentie opleveren."""
+    assert asyncio.run(M.rubriek_op_advertentienummer(
+        _ClientPerVraag(), 25837606, NL_TITEL, "m1111111111")) == {}
+
+
+def test_de_jas_gaat_nu_meteen_de_deur_uit_in_plaats_van_zes_uur_te_wachten(monkeypatch):
+    """De echte uitgifte, met de Engelse titel in de voorraad en de Nederlandse
+    in de opdracht — precies zoals het vanochtend in de database stond."""
+    opdracht = {"id": "48e41d01-ecc0-4be4-884f-83e92d549099", "user_id": USER,
+                "item_id": JAS_ITEM, "platform": "2dehands", "action": "create",
+                "status": "pending", "scheduled_for": None, "claimed_at": None,
+                "created_at": (datetime.now(timezone.utc) - timedelta(minutes=12)).isoformat(),
+                "payload": {"title": NL_TITEL, "category": "heren jassen", "price": 14.99,
+                            "_taal": "nl", "description": "Authentiek fleecejack van Columbia."}}
+
+    def opzetten(module, monkeypatch):
+        _zet_marktplaats_nep(monkeypatch, _ClientPerVraag(), mod=M)
+
+        async def verkoper(*_a, **_kw):
+            return 25837606
+        monkeypatch.setattr(M, "_verkopersnummer", verkoper)
+        return _DB([dict(opdracht)], op_marktplaats={JAS_ITEM: JAS_NUMMER},
+                   items_titel=EN_TITEL)
+
+    db = opzetten(J, monkeypatch)
+    uit = _uitgifte(J, monkeypatch, db)
+    assert len(uit) == 1, "de opdracht hoort nu gewoon uitgedeeld te worden"
+    assert uit[0]["payload"]["mp_category"] == JAS_RUBRIEK
+    assert "_rubriek_zoeken_sinds" not in uit[0]["payload"]
+
+    # En zoals het was: wachten, met een stempel en zonder rubriek.
+    oud_j = _oude_module("backend/api/jobs.py", VOOR_DE_TITELREPARATIE, "oude_jobs_titel",
+                         moet_bevatten=("_zet_rubriek_van_marktplaats",))
+    oud_m = _oude_module("backend/services/mp_enrich.py", VOOR_DE_TITELREPARATIE,
+                         "oud_mp_titel2", moet_missen=("_rubriek_uit_zoekantwoord",))
+    monkeypatch.setitem(sys.modules, "backend.services.mp_enrich", oud_m)
+    _zet_marktplaats_nep(monkeypatch, _ClientPerVraag(), mod=oud_m)
+
+    async def verkoper(*_a, **_kw):
+        return 25837606
+    monkeypatch.setattr(oud_m, "_verkopersnummer", verkoper)
+    oud_db = _DB([dict(opdracht)], op_marktplaats={JAS_ITEM: JAS_NUMMER}, items_titel=EN_TITEL)
+    assert _uitgifte(oud_j, monkeypatch, oud_db) == [], \
+        "de oude versie hield deze opdracht juist vast"

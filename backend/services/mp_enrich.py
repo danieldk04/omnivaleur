@@ -659,8 +659,32 @@ async def kenmerken_via_zoeken(db, user_id: str, platform: str, titel: str) -> d
     return await advertentie_kenmerken(url)
 
 
+def _rubriek_uit_zoekantwoord(data: dict, doel: str) -> dict | None:
+    """De rubriek van advertentie `doel` uit één zoekantwoord.
+
+    None als deze advertentie niet in dit antwoord zit — dat is geen uitspraak
+    over de advertentie, alleen over dit antwoord. Een leeg blok als ze er wél
+    in zit maar het rubriekenblok haar categorie niet kent: dan is er niets te
+    volgen en mag er niet half geraden worden.
+    """
+    for l in (data.get("listings") or []):
+        if re.sub(r"\D", "", str(l.get("itemId") or "")) != doel:
+            continue
+        l2 = l.get("categoryId")
+        rubrieken = next((f.get("categories") or [] for f in (data.get("facets") or [])
+                          if f.get("key") == "RelevantCategories"), [])
+        per_id = {c.get("id"): c for c in rubrieken}
+        sub = per_id.get(l2) or {}
+        l1 = sub.get("parentId")
+        if not (isinstance(l2, int) and isinstance(l1, int)):
+            return {}
+        return {"l1": l1, "l1_naam": (per_id.get(l1) or {}).get("label") or "",
+                "l2": l2, "l2_naam": sub.get("label") or ""}
+    return None
+
+
 async def rubriek_op_advertentienummer(client: httpx.AsyncClient, verkoper_id: int,
-                                      titel: str, nummer, zoek_url: str = ZOEK) -> dict:
+                                      titel, nummer, zoek_url: str = ZOEK) -> dict:
     """De rubriek waar deze verkoper deze advertentie ZELF in heeft gezet.
 
     WAAROM DIT ER IS (13-09-2026, Egbert Brouwer / Papa's Plectrums). Hij zette
@@ -690,44 +714,73 @@ async def rubriek_op_advertentienummer(client: httpx.AsyncClient, verkoper_id: i
     pas gezocht als we werkelijk advertenties van deze verkoper terugkregen.
     """
     doel = re.sub(r"\D", "", str(nummer or ""))
-    schoon = " ".join(html.unescape(str(titel or "")).split())
-    if not doel or not schoon:
+    # Eén titel of meerdere: de advertentie draagt op Marktplaats de titel
+    # waarmee ze daar geplaatst is, en dat hoeft niet de titel in de voorraad te
+    # zijn. Zie de aanroeper in jobs.py.
+    losse = [titel] if isinstance(titel, str) or titel is None else list(titel)
+    schone = []
+    for t in losse:
+        s = " ".join(html.unescape(str(t or "")).split())
+        if s and s not in schone:
+            schone.append(s)
+    if not doel or not schone:
         return {}
     iets_gezien = False
     # Tweede vraag met alleen de eerste woorden: Admarkt schrijft titels soms
     # net anders terug dan wij ze bewaren, en dan vindt de hele titel niets.
-    vragen = [schoon[:80]]
-    kort = " ".join(schoon.split()[:4])
-    if kort and kort != vragen[0]:
-        vragen.append(kort)
+    vragen = []
+    for schoon in schone:
+        for v in (schoon[:80], " ".join(schoon.split()[:4])):
+            if v and v not in vragen:
+                vragen.append(v)
     for vraag in vragen:
         try:
             data = await _json(client, zoek_url, {
                 "query": vraag, "limit": 100, "offset": 0, "sellerIds[]": verkoper_id})
         except Exception as e:  # noqa: BLE001
-            logger.warning("mp_enrich: rubriek niet opgezocht (%s): %s", schoon[:40], e)
+            logger.warning("mp_enrich: rubriek niet opgezocht (%s): %s", vraag[:40], e)
             continue
-        lijst = data.get("listings") or []
-        iets_gezien = iets_gezien or bool(lijst)
-        for l in lijst:
-            if re.sub(r"\D", "", str(l.get("itemId") or "")) != doel:
-                continue
-            l2 = l.get("categoryId")
-            rubrieken = next((f.get("categories") or [] for f in (data.get("facets") or [])
-                              if f.get("key") == "RelevantCategories"), [])
-            per_id = {c.get("id"): c for c in rubrieken}
-            sub = per_id.get(l2) or {}
-            l1 = sub.get("parentId")
-            if not (isinstance(l2, int) and isinstance(l1, int)):
-                return {}
-            return {"l1": l1, "l1_naam": (per_id.get(l1) or {}).get("label") or "",
-                    "l2": l2, "l2_naam": sub.get("label") or ""}
+        iets_gezien = iets_gezien or bool(data.get("listings"))
+        uit = _rubriek_uit_zoekantwoord(data, doel)
+        if uit is not None:
+            return uit
+    # DE TITEL IS NIET DE BRON — DE VERKOPER IS DAT (19-09-2026).
+    #
+    # Zoeken op titel binnen het eigen aanbod vindt niets zodra de advertentie
+    # op Marktplaats ANDERS heet dan bij ons. Dat is geen randgeval maar de
+    # regel: wij plaatsen met een vertaalde titel en bewaren de brontitel. Bij
+    # Daniel stond "(1367) Witte Columbia fleecejas" op Marktplaats terwijl er
+    # met "(1367) White Columbia Fleece Jacket" werd gezocht — nul resultaten,
+    # dat leest als een storing, en het bijbehorende zoekertje op 2dehands bleef
+    # daarom staan. Gemeten: vier van zulke opdrachten bij één klant wachtten
+    # gemiddeld 381 minuten voordat het geduld op was.
+    #
+    # Deze ronde vraagt geen titel maar de eigen advertenties van de verkoper,
+    # nieuwste eerst. Een advertentie die net geplaatst is staat daar bovenaan,
+    # dus wat wij zojuist online zetten vinden we hier altijd terug, hoe het
+    # ook heet. Alleen bevestigen: vinden we hem hier niet, dan zegt dat niets
+    # (bij meer dan honderd advertenties kan een oudere buiten deze pagina
+    # vallen) en blijft de uitkomst hieronder staan zoals ze was.
+    try:
+        data = await _json(client, zoek_url, {
+            "limit": PAGINA, "offset": 0, "sellerIds[]": verkoper_id})
+    except Exception as e:  # noqa: BLE001
+        logger.warning("mp_enrich: eigen advertenties niet opgehaald voor %s: %s", doel, e)
+    else:
+        uit = _rubriek_uit_zoekantwoord(data, doel)
+        if uit is not None:
+            logger.info("mp_enrich: rubriek van %s gevonden in de eigen lijst, "
+                        "niet op titel", doel)
+            return uit
     return {} if iets_gezien else None
 
 
-async def rubriek_van_eigen_advertentie(db, user_id: str, titel: str, nummer) -> dict | None:
+async def rubriek_van_eigen_advertentie(db, user_id: str, titel, nummer) -> dict | None:
     """`rubriek_op_advertentienummer` voor een verkoper van wie we het
-    verkopersnummer nog moeten achterhalen. None als er niet gezocht kon worden."""
+    verkopersnummer nog moeten achterhalen. None als er niet gezocht kon worden.
+
+    `titel` mag één titel zijn of meerdere: de titel waarmee de advertentie op
+    Marktplaats staat is niet altijd de titel die wij in de voorraad bewaren."""
     zoek_url, _ = ZOEK_PER_PLATFORM["marktplaats"]
     try:
         async with httpx.AsyncClient(timeout=20, follow_redirects=True,
