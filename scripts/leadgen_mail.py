@@ -1910,9 +1910,18 @@ def _eigen_mail_meenemen(state: dict, boek: "Leadboek") -> int:
     Verzonden en zet elk adres uit de leadlijst dat hij zelf heeft aangeschreven
     in de administratie, als 'met de hand'.
 
-    Alleen nieuwe mails tellen (geen 'Re:'): een antwoord op een lopend gesprek
-    zegt niets over wie er koud benaderd is, en de mails van de machine zelf staan
-    al in de administratie."""
+    Ook een 'Re:' telt mee, en dat is bewust. Dit stond er eerst niet in: de
+    gedachte was dat een antwoord op een lopend gesprek al in de administratie
+    stond. Klopt niet voor iemand die Daniel mailde VOORDAT de scraper hem als
+    lead binnenhaalde — dan bestaat er nog geen state-regel om aan te herkennen,
+    dus "in state" hieronder beschermt hem niet. Gemeten 19-09-2026: Daniel
+    beantwoordde op 09-09 een binnengekomen mail van klantenservice@second-buy.nl
+    over de demo ("Re: ..."), die uitwisseling stond nergens vastgelegd omdat het
+    adres toen nog geen lead was, en op 18-09 pikte de 2dehands-scraper hetzelfde
+    adres alsnog op als koude lead. Mail 1 ging gewoon de deur uit; Second-Buy
+    kreeg zo een overbodige koude mail op een gesprek dat al liep. Voor een adres
+    dat al WEL in de administratie staat verandert dit niets: dat wordt hieronder
+    nog steeds overgeslagen via `ontvanger in state`."""
     host, gebruiker = os.environ.get("IMAP_HOST"), os.environ.get("MAIL_USER")
     wachtwoord = os.environ.get("MAIL_PASS")
     if not (host and gebruiker and wachtwoord):
@@ -1925,8 +1934,7 @@ def _eigen_mail_meenemen(state: dict, boek: "Leadboek") -> int:
         _, data = imap.search(None, f"(SINCE {_sinds(LAATST_DAGEN)})")
         for msg in _koppen_in_bulk(imap, (data[0] or b"").split()).values():
             ontvanger = parseaddr(msg.get("To", ""))[1].lower()
-            onderwerp = str(msg.get("Subject", ""))
-            if not ontvanger or onderwerp.lower().startswith("re:"):
+            if not ontvanger:
                 continue
             if ontvanger in state or ontvanger not in per_adres:
                 continue
