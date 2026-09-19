@@ -11084,3 +11084,67 @@ Marktplaats maakt dat niets uit — alle herenschoenen delen categorie 642 — m
 Vinted en eBay wel. Instappers, mocassins, penny loafers en bootschoenen gaan nu
 naar "heren schoenen" respectievelijk "schoenen dames"; alleen veterschoenen
 (oxford, derby, brogue) blijven formeel.
+
+---
+
+### 19-09-2026 — De drie klanten met werk dat bleef staan, uitgezocht
+
+Daniel vroeg de drie accounts na te lopen waarvan er opdrachten open stonden.
+Geen van drieën had een wachtrij die door ons werd tegengehouden; het waren drie
+verschillende dingen.
+
+**1. info@papas-plectrums.nl — proef tot 19-10-2026, leeft.** Aangemeld 13-08,
+laatst ingelogd 18-09 om 17:56, Windows, extensie 1.0.338, laatst gezien 18-09 om
+19:04. Hij verkoopt gitaren en plectrums en publiceert alleen naar 2dehands.
+
+Zijn geschiedenis: 1507 opdrachten, waarvan 1019 geannuleerd. De grootste oorzaak
+is er één die wij inmiddels hebben opgelost: **786 opdrachten werden in bulk
+teruggenomen omdat zijn advertentietekst zijn eigen webadres bevatte.** 2dehands
+rekent EUR 9 voor een advertentie met een link erin, dus elke plaatsing kwam op de
+betaalpagina en de rem zette dan zijn hele wachtrij stop: 320 stuks in één klap op
+06-09, 275 op 03-09, 108 op 09-09, 106 op 10-09. Sinds de links eruit worden
+gehaald (laatste bulkstop was 12-09) loopt het weer: van de 232 die hij op 15-09
+klaarzette zijn er 116 geplaatst.
+
+Wat er van die partij niet doorkwam: hij heeft er zelf 100 weggegooid op 17-09 om
+18:23 en 18:24 (twee keer Clear queue, precies 50 per klik), en 12 zijn op 18-09
+om 23:18 door de driedagenveger op fout gezet. Daarnaast staat zijn
+2dehands-account als **zakelijk** te boek, wat onze inlogcontrole als "uitgelogd"
+leest, en zijn gitaarrubrieken kosten op 2dehands geld ("Muziek en Instrumenten
+Gitaren | Elektrisch" en drie varianten daarop, samen 123 opdrachten).
+
+Waard om hem te mailen: zijn wachtrij loopt, maar er gaat ongeveer één advertentie
+per minuut doorheen en alleen zolang zijn browser openstaat. 232 in één keer is
+dus bijna vier uur browser openhouden.
+
+**2. Account 02c44e89 — opgezegd op 08-09, inlog bestaat niet meer.** Het
+auth-account geeft een 404, alleen de abonnementsrij staat er nog. Extensie voor
+het laatst gezien op 10-09 (1.0.315). Toch zijn er op 17-09 om 21:32 nog 13
+herplaatsingen (create + delete) voor hem klaargezet.
+
+**3. davethefirst@hotmail.com — proef verlopen op 13-09.** Aangemeld 11-07,
+laatst ingelogd 01-09, extensie voor het laatst gezien op 27-08. Ook voor hem
+zette de ronde op 17-09 om 21:34 nog 4 herplaatsingen klaar.
+
+**Twee reparaties die hieruit volgen.**
+
+1. De driedagenveger schreef één vaste zin: "Zet je computer met de
+   Omnivaleur-extensie aan en probeer het opnieuw." Voor klant 1 was dat
+   aantoonbaar onwaar (zijn computer stond aan en had die dag 55 advertenties
+   geplaatst) en voor klant 2 en 3 ook (hun abonnement liep niet meer). De uitleg
+   komt nu uit het abonnement en uit `extension_heartbeat.last_seen`, met drie
+   uitkomsten: geen abonnement, wel gezien binnen 24 uur ("aan jou lag het niet,
+   de wachtrij was te lang"), of langer geleden gezien, met de datum erbij.
+2. De verversrondes lopen langs advertenties en keken alleen naar de schakelaar
+   auto_relist. Ze slaan een verkoper nu over als zijn abonnement geen werk meer
+   toelaat. Bij een verlenging scheelt dat ruis, bij een herplaatsing echte
+   schade: die zet de advertentie op 'relisting' en er komt dagenlang niets voor
+   terug.
+
+**Openstaand, en niet door mij op te lossen.** De Anthropic-sleutel in `.env`
+heeft geen tegoed meer; een echte aanroep geeft "Your credit balance is too low".
+Of de server op Railway dezelfde sleutel gebruikt is van hier niet te zien.
+Gisteren om 16:30 UTC vertaalde productie nog gewoon ("Brown Suitsupply Loafers"
+werd "Bruine Suitsupply Loafers"), en vandaag is er geen enkele Engelse brontekst
+langsgekomen om het aan te toetsen. Is het dezelfde sleutel, dan gaat de
+eerstvolgende Engelse advertentie onvertaald de deur uit.

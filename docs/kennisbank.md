@@ -17,6 +17,42 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ---
 
+## verwijt-moet-uit-een-meting-komen
+
+*19-09-2026 — Een foutmelding die de klant iets verwijt ("zet je computer aan") moet uit een meting komen; anders krijgt precies de verkeerde de schuld*
+
+19-09-2026. De driedagenveger in `backend/services/relist.py` zette elke opdracht
+die langer dan drie dagen stond op fout met één vaste zin: "Zet je computer met de
+Omnivaleur-extensie aan en probeer het opnieuw."
+
+Bij alle drie de klanten die het trof was die zin onwaar:
+
+- Een proefklant had op 15-09 in één keer 232 advertenties klaargezet. De wachtrij
+  doet er ongeveer één per minuut en loopt alleen zolang zijn browser openstaat.
+  Op 18-09 om 19:04 was zijn extensie nog gezien en had hij die dag 55
+  advertenties geplaatst; om 23:18 kregen twaalf wachtende opdrachten te horen dat
+  zijn computer uit had gestaan.
+- Twee andere klanten hadden geen lopend abonnement meer. De server weigert dan
+  werk uit te geven; hun computer aanzetten had niets veranderd.
+
+**Why:** Daniel verkoopt zekerheid. Een melding die de klant de schuld geeft
+terwijl hij niets fout deed, kost vertrouwen precies op het moment dat er al iets
+mislukt is. En het verbergt de echte oorzaak: bij de proefklant was dat een
+wachtrij die te lang was, bij de andere twee een abonnement dat afliep.
+
+**How to apply:** Schrijf nooit een vaste verwijtende zin in een foutmelding. Is
+er een meting die het kan onderbouwen, gebruik die dan (hier:
+`extension_heartbeat.last_seen` en `evaluate_access`). Is die er niet, schrijf dan
+wat je wél weet en vraag niets onmogelijks. Zoek de meting één keer per klant op,
+niet één keer per opdracht, en laat een storing in die opzoeking nooit de
+opruimronde breken.
+
+Hetzelfde geldt voor werk klaarzetten: de verversrondes lopen langs advertenties
+en zetten werk klaar voor accounts die het niet konden draaien. Zie
+"klanten-zijn-geen-leads" en "omnivaleur-altijd-bewijzen".
+
+---
+
 ## korte-klokmeting-bewijst-niets
 
 *18-09-2026 — Een klokmeting van tien seconden in een verborgen tabblad geeft altijd groen licht; Chrome knijpt pas na ruim een minuut echt af, dus meet minstens vijf minuten en tel alleen het laatste stuk*
