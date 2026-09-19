@@ -44,7 +44,12 @@ class Settings(BaseSettings):
     ebay_location_city: str = ""
 
     anthropic_api_key: str = ""
-    google_api_key: str = ""  # Gemini image-gen voor content_pages featured images
+    # Eén Google-sleutel voor alles wat Gemini doet: de featured images van
+    # content_pages (backend/content/images.py) en sinds 19-09-2026 het vangnet
+    # voor het vertalen (backend/services/gemini_vertaling.py). Is hij leeg, dan
+    # bestaat dat vangnet niet en wacht een advertentie bij een lege
+    # Anthropic-rekening gewoon, precies zoals daarvoor.
+    google_api_key: str = ""
 
     # Cloudflare R2 — de opslag voor advertentiefoto's. Supabase Storage gaf
     # 1 GB en rekende ook nog verkeer; R2 geeft 10 GB en verkeer is gratis.
