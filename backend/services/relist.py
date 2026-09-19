@@ -132,17 +132,31 @@ def _waarom_bleef_het_staan(db, user_id: str, nu: datetime) -> str:
     hebben gemeten. Weten we het niet zeker, dan blijft de oude tekst staan: die
     is dan de meest waarschijnlijke en hij vraagt niets onmogelijks.
     """
-    kop = ("Deze opdracht stond meer dan "
-           f"{VASTGELOPEN_NA_DAGEN} dagen te wachten en is niet uitgevoerd. ")
+    return ("Deze opdracht stond meer dan "
+            f"{VASTGELOPEN_NA_DAGEN} dagen te wachten en is niet uitgevoerd. "
+            + _oorzaak_zin(db, user_id, nu))
+
+
+def _verlopen_herplaatsing(db, user_id: str, nu: datetime) -> str:
+    """Zelfde uitleg, maar dan bij een herplaatsing die halverwege bleef staan."""
+    return ("Deze herplaatsing stond meer dan "
+            f"{VASTGELOPEN_NA_DAGEN} dagen te wachten en is niet uitgevoerd: de "
+            "oude advertentie is nooit weggehaald en staat dus nog gewoon online. "
+            "Er is niets opnieuw geplaatst. "
+            + _oorzaak_zin(db, user_id, nu))
+
+
+def _oorzaak_zin(db, user_id: str, nu: datetime) -> str:
+    """Alleen de oorzaak, uit wat we van deze klant gemeten hebben."""
     try:
         from backend.services.billing import evaluate_access
         sub = eerste_rij(db.table("subscriptions").select("*")
                          .eq("user_id", user_id).limit(1).execute())
         oordeel = evaluate_access(sub)
         if not oordeel.get("allowed"):
-            return (kop + "Je abonnement liep in die dagen niet meer, en zonder "
-                    "lopend abonnement geeft de server geen werk uit. Zet Pro weer "
-                    "aan en plaats hem opnieuw.")
+            return ("Je abonnement liep in die dagen niet meer, en zonder lopend "
+                    "abonnement geeft de server geen werk uit. Zet Pro weer aan en "
+                    "plaats hem opnieuw.")
     except Exception as e:  # noqa: BLE001 — een uitleg mag de opruimronde nooit breken
         logger.warning("uitleg: abonnement niet na te gaan voor %s: %s", user_id, e)
 
@@ -155,18 +169,17 @@ def _waarom_bleef_het_staan(db, user_id: str, nu: datetime) -> str:
         gezien = None
 
     if gezien and nu - gezien < KORTGELEDEN_GEZIEN:
-        return (kop + "Aan jou lag het niet: je computer stond aan en de extensie "
-                "draaide nog "
+        return ("Aan jou lag het niet: je computer stond aan en de extensie draaide "
+                "nog "
                 f"{gezien.strftime('%d-%m-%Y om %H:%M')} (UTC). De wachtrij was "
                 "alleen te lang om er binnen drie dagen aan toe te komen; er gaat "
                 "ongeveer één advertentie per minuut doorheen, en alleen zolang je "
                 "browser openstaat. Plaats hem opnieuw, dan gaat hij weer mee.")
     if gezien:
-        return (kop + "De extensie is voor het laatst gezien op "
+        return ("De extensie is voor het laatst gezien op "
                 f"{gezien.strftime('%d-%m-%Y om %H:%M')} (UTC). Zet je computer met "
                 "de Omnivaleur-extensie aan en probeer het opnieuw.")
-    return kop + ("Zet je computer met de Omnivaleur-extensie aan en probeer het "
-                  "opnieuw.")
+    return "Zet je computer met de Omnivaleur-extensie aan en probeer het opnieuw."
 
 
 def _tijd(waarde) -> datetime | None:
@@ -343,13 +356,19 @@ async def herstel_vastgelopen_werk() -> dict:
         # opdracht: bij 232 opdrachten van dezelfde verkoper zou dat 232 keer
         # dezelfde twee vragen aan de database zijn.
         uitleg_per_klant: dict = {}
+        verlopen_per_klant: dict = {}
         for baan in oud:
             sleutel = (baan.get("item_id"), baan.get("platform"))
             if (baan.get("action") == "delete"
                     and (baan.get("payload") or {}).get("_refresh_rollback")):
                 from backend.api.jobs import _neem_herplaatsing_terug
+                nu_tn = datetime.now(timezone.utc)
+                wie_tn = baan.get("user_id")
+                if wie_tn not in verlopen_per_klant:
+                    verlopen_per_klant[wie_tn] = await naast_de_lus(
+                        lambda w=wie_tn: _verlopen_herplaatsing(db, w, nu_tn))
                 await naast_de_lus(lambda b=baan: _neem_herplaatsing_terug(
-                    db, b, datetime.now(timezone.utc).isoformat(), VERLOPEN_HERPLAATSING))
+                    db, b, nu_tn.isoformat(), verlopen_per_klant[wie_tn]))
                 teruggenomen_paren.add(sleutel)
                 gemeld += 1
                 continue
@@ -384,12 +403,7 @@ HERPLAATSING_TERUGGENOMEN = (
     "Nothing was reposted, so there is no duplicate. It will be picked up again in a "
     "later relist round."
 )
-VERLOPEN_HERPLAATSING = (
-    f"Deze herplaatsing stond meer dan {VASTGELOPEN_NA_DAGEN} dagen te wachten en is "
-    "niet uitgevoerd: de oude advertentie is nooit weggehaald en staat dus nog gewoon "
-    "online. Er is niets opnieuw geplaatst. Zet je computer met de Omnivaleur-extensie "
-    "aan; de volgende herplaatsronde pakt hem opnieuw op."
-)
+
 
 
 async def _herplaatsing_terugnemen(db, rij: dict, verwijderopdracht: dict | None,

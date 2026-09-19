@@ -65,10 +65,12 @@ NU = datetime(2026, 9, 19, 8, 0, tzinfo=timezone.utc)
 KLANT = "klant-1"
 
 
-def _db(sub_status=None, laatst_gezien=None):
+def _db(sub_status=None, laatst_gezien=None, loopt_tot="2026-10-19T00:00:00+00:00"):
+    """loopt_tot is de echte scheidslijn: een proef of periode die al voorbij is
+    geeft geen toegang meer, wat er ook in de statuskolom staat."""
     subs = ([{"user_id": KLANT, "status": sub_status, "plan": "pro",
-              "current_period_end": "2026-10-19T00:00:00+00:00",
-              "trial_ends_at": "2026-10-19T00:00:00+00:00"}]
+              "current_period_end": loopt_tot,
+              "trial_ends_at": loopt_tot}]
             if sub_status else [])
     hb = ([{"user_id": KLANT, "last_seen": laatst_gezien}] if laatst_gezien else [])
     return _DB(subscriptions=subs, extension_heartbeat=hb)
@@ -86,14 +88,16 @@ def test_extensie_draaide_gewoon_dan_is_de_wachtrij_de_reden():
 
 def test_zonder_lopend_abonnement_noemen_we_het_abonnement():
     uitleg = relist._waarom_bleef_het_staan(
-        _db("canceled", (NU - timedelta(days=9)).isoformat()), KLANT, NU)
+        _db("canceled", (NU - timedelta(days=9)).isoformat(),
+            loopt_tot="2026-09-08T13:47:24+00:00"), KLANT, NU)
     assert "abonnement" in uitleg
     assert "Zet je computer" not in uitleg
 
 
 def test_een_verlopen_proef_telt_net_zo_goed_als_opgezegd():
     uitleg = relist._waarom_bleef_het_staan(
-        _db("trial_expired", (NU - timedelta(days=23)).isoformat()), KLANT, NU)
+        _db("trial_expired", (NU - timedelta(days=23)).isoformat(),
+            loopt_tot="2026-09-13T07:26:17+00:00"), KLANT, NU)
     assert "abonnement" in uitleg
 
 
