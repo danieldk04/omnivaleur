@@ -61,25 +61,40 @@ KANALEN = ("marktplaats", "2dehands")
 # Per ronde, en met deze pauze ertussen. Zie rem 2 hierboven.
 MAX_PER_RONDE = 25
 PAUZE_SECONDEN = 8.0
+# Wachten na een 403/429/503 en het opnieuw proberen: 3, 6, 9 seconden.
+HERKANSING_SECONDEN = 3.0
 UA = ("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 "
       "(KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36")
 
 
 async def _pagina_zegt_verlopen(client, url: str) -> bool | None:
-    """True = bewezen verlopen, False = bewezen niet, None = geen uitspraak."""
-    try:
-        r = await client.get(url, follow_redirects=True)
-    except Exception as e:                       # noqa: BLE001 — geen verbinding is geen uitspraak
-        logger.info("verlopen-controle: %s niet opgehaald: %s", url[:80], e)
+    """True = bewezen verlopen, False = bewezen niet, None = geen uitspraak.
+
+    Een 403 is bij Marktplaats en 2dehands geen fout maar een verzoek om rustiger
+    aan te doen. Even wachten en het opnieuw proberen is daar het juiste antwoord
+    — precies wat mp_enrich._pagina al jaren doet. Zonder die herkansing kost één
+    drukke seconde ons het oordeel over die advertentie, en blijft de verkoper
+    met een vraag zitten die nergens over gaat.
+    """
+    for poging in range(4):
+        try:
+            r = await client.get(url, follow_redirects=True)
+        except Exception as e:                   # noqa: BLE001 — geen verbinding is geen uitspraak
+            logger.info("verlopen-controle: %s niet opgehaald: %s", url[:80], e)
+            await asyncio.sleep(HERKANSING_SECONDEN)
+            continue
+        if r.status_code in (403, 429, 503):
+            await asyncio.sleep(HERKANSING_SECONDEN * (poging + 1))
+            continue
+        if r.status_code == 401 or r.status_code >= 500:
+            return None                          # niets bewezen
+        tekst = (r.text or "").lower()
+        if IS_VERLOPEN.search(tekst):
+            return True
+        if r.status_code == 200 and len(tekst) > 5000:
+            return False                         # een echte, levende pagina
         return None
-    if r.status_code in (401, 403) or r.status_code >= 500:
-        return None                              # afgekapt of storing: niets bewezen
-    tekst = (r.text or "").lower()
-    if IS_VERLOPEN.search(tekst):
-        return True
-    if r.status_code == 200 and len(tekst) > 5000:
-        return False                             # een echte, levende pagina
-    return None
+    return None                                  # vier keer afgekapt: geen uitspraak
 
 
 async def controleer_verlopen_verkoopvragen() -> dict:

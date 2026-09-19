@@ -153,6 +153,7 @@ def _draai(monkeypatch, listings, per_url):
     client = _Client(per_url)
     monkeypatch.setattr(vc, "get_db", lambda: db)
     monkeypatch.setattr(vc, "PAUZE_SECONDEN", 0)
+    monkeypatch.setattr(vc, "HERKANSING_SECONDEN", 0)
 
     async def _direct(fn):
         return fn()
@@ -195,7 +196,8 @@ def test_een_hele_ronde_zonder_antwoord_stopt(monkeypatch):
     vragen = [_vraag(f"m{i}", u) for i, u in enumerate(urls)]
     db, uit, client = _draai(monkeypatch, vragen, urls)
     assert uit["verlopen"] == 0
-    assert len(client.gevraagd) == 5, "na vijf keer niets stopt de ronde"
+    assert uit["nagekeken"] == 5, "na vijf keer niets stopt de ronde"
+    assert len(set(client.gevraagd)) == 5, "en het blijft bij die vijf advertenties"
     assert all(r["status"] == "sold_unconfirmed" for r in db.listings)
 
 
@@ -213,3 +215,39 @@ def test_zonder_adres_gebeurt_er_niets(monkeypatch):
     db, uit, client = _draai(monkeypatch, [rij], {})
     assert client.gevraagd == []
     assert db.listings[0]["status"] == "sold_unconfirmed"
+
+
+def test_een_403_wordt_beleefd_herkanst(monkeypatch):
+    """Marktplaats en 2dehands vragen met een 403 om rustiger aan te doen. Wie
+    het daarna opnieuw probeert krijgt zijn antwoord alsnog — zonder herkansing
+    kost een drukke seconde ons het oordeel (gemeten in mp_enrich: 52 van 240
+    teksten kwamen zonder herkansing niet binnen)."""
+    url = "https://www.2dehands.be/v/x/m777"
+
+    class _Wispelturig(_Client):
+        def __init__(s):
+            super().__init__({})
+            s.n = 0
+
+        async def get(s, u, **_k):
+            s.gevraagd.append(u)
+            s.n += 1
+            return _Antwoord(403, "") if s.n < 3 else _Antwoord(410, VERLOPEN_PAGINA)
+
+    import asyncio
+    import httpx
+    db = _DB([{"id": "it1", "user_id": "u1", "title": "t"}], [_vraag("m777", url)])
+    client = _Wispelturig()
+    monkeypatch.setattr(vc, "get_db", lambda: db)
+    monkeypatch.setattr(vc, "PAUZE_SECONDEN", 0)
+    monkeypatch.setattr(vc, "HERKANSING_SECONDEN", 0)
+
+    async def _direct(fn):
+        return fn()
+    monkeypatch.setattr(vc, "naast_de_lus", _direct)
+    monkeypatch.setattr(httpx, "AsyncClient", lambda *a, **k: client)
+
+    uit = asyncio.run(vc.controleer_verlopen_verkoopvragen())
+    assert client.n == 3, "twee keer afgekapt, de derde keer wel antwoord"
+    assert uit["verlopen"] == 1
+    assert db.listings[0]["status"] == "delisted"
