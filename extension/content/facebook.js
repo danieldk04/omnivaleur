@@ -262,6 +262,18 @@
       return ["Elektronica en computers", "Electronics & computers"];
     }
 
+    // MUZIEKINSTRUMENTEN IS EEN ECHTE RUBRIEK OP FACEBOOK.
+    //
+    // GEMETEN 20-09-2026 in het geopende keuzevenster van het echte formulier:
+    // "Muziekinstrumenten" staat in de lijst en zit in een `div[role=button]`,
+    // dus hij is aanklikbaar, en de keuzelogica hieronder vindt en klikt hem
+    // ook echt (live geprobeerd: het veld stond daarna op "Muziekinstrumenten").
+    // Zonder deze regel viel elke gitaar, versterker en effectpedaal van
+    // Blackbird Guitars door naar "Overig" — de laatste regel van deze functie.
+    // "Overig" blijft als terugval in de lijst staan voor het geval Facebook de
+    // rubriek voor een account niet toont.
+    if (cat.startsWith("muziek")) return ["Muziekinstrumenten", "Musical instruments", "Overig", "Other"];
+
     // Jewellery / watches / bags — their own item type, so the leaf is exact and
     // no title guessing is needed. Bags and suitcases have a separate Facebook
     // leaf from jewellery, which is the only split that matters here.
