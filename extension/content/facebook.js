@@ -447,7 +447,8 @@
       // knop Publiceren bestaat niet". Gemeten: zolang Facebook iets weigert
       // (te veel foto's, een leeg verplicht veld) komt de tweede stap — en
       // daarmee de knop Publiceren — er domweg nooit.
-      if (volgende && uit(volgende)) throw new Error(
+      const volgendeNu = knopMet(/^(volgende|next)$/i);
+      if (volgendeNu && uit(volgendeNu)) throw new Error(
         "Facebook kept its Volgende/Next button disabled for 30 seconds, so the publish step never "
         + "opened" + klachtenFb() + formulierstand() + ". Nothing was published.");
       throw new Error(
