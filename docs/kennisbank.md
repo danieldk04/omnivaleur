@@ -17,6 +17,48 @@ Bijwerken: `python3 scripts/export_kennisbank.py` en het resultaat committen.
 
 ---
 
+## verwijzing-maand-gratis-bij-eerste-betaling
+
+*20-09-2026 — "Klanten brengen klanten aan: één gratis maand, en die valt pas bij de eerste betaling van de aangebrachte klant"*
+
+Sinds 20-09-2026 heeft elke gebruiker een eigen verwijslink
+(`omnivaleur.com/r/<code>`, zelf te hernoemen; de oude code blijft als alias
+werken). Brengt hij iemand binnen die klant wordt, dan krijgt hij één maand
+gratis. De aangebrachte vriend betaalt zijn eerste maand voor de helft.
+
+DE REGEL DIE JE NIET MAG OMDRAAIEN: de beloning valt bij de EERSTE BETALING van
+de aangebrachte klant, niet bij zijn aanmelding. Bij aanmelding kan iedereen met
+tien e-mailadressen tien gratis maanden pakken zonder dat er een euro binnenkomt.
+
+Eén codetabel voor twee soorten, bewust niet twee tabellen (`/r/CODE` hoeft dan
+niet te gokken waar hij moet kijken):
+- `kind='creator'`, `owner_user_id` leeg: influencerdeal, beloning is geld
+  (25 euro bounty na 60 dagen betalen). Die krijgt GEEN gratis maand en zijn
+  aangebrachte klant krijgt GEEN 50% korting, anders betaal je twee keer.
+- `kind='user'`, `owner_user_id` gevuld: klantcode, beloning is een maand.
+
+Toekennen kan op drie manieren, afhankelijk van waar de aanbrenger staat:
+tegoed bij Stripe (`Customer.create_balance_transaction`, bedrag uit zijn EIGEN
+prijs, niet uit 1999), de Stripe-proef 30 dagen opschuiven, of de eigen
+proefperiode oprekken. Een `complimentary`-account krijgt niets: daar zou de
+proefstatus zijn onbeperkte toegang juist WEGNEMEN.
+
+De hele bescherming tegen dubbel uitkeren is één unieke sleutel:
+`referral_rewards.referred_user_id`. Nooit vervangen door een telling of een
+vlaggetje. Een ronde die elk uur draait
+(`verwerk_openstaande_beloningen`) kijkt zelf wie er betaalt en maakt af wat een
+gemiste webhook heeft laten liggen.
+
+Code: `backend/services/referral_codes.py`, `referral_rewards.py`,
+`referral_mail.py`, `backend/api/referrals.py`, korting bij het afrekenen in
+`backend/api/billing.py`. Migratie: `scripts/sql/referrals_gebruikers.sql`.
+Tests: `tests/test_verwijzing_gratis_maand.py`, `test_verwijzing_api.py`,
+`test_verwijscode.py`.
+
+Zie "always-push-to-live", "omnivaleur-altijd-bewijzen".
+
+---
+
 ## ons-werkvenster-wordt-zijn-venster
 
 *20-09-2026 — Het werkvenster dat wij maakten wordt na een Dock-klik het venster waar de verkoper in werkt; minimaliseren op venster-id klapte zijn dashboard weg*
